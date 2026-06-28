@@ -1,6 +1,7 @@
 import { type ReactNode } from 'react';
 import { View } from 'react-native';
 
+import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
 import { LoginScreen } from '@/components/screens/login-screen';
 import { OnboardingScreen } from '@/components/screens/onboarding-screen';
 import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
@@ -78,6 +79,15 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
         <SettingsScreen />
+      </View>
+    ),
+  },
+  {
+    name: 'AddRoutineScreen',
+    description: 'Ported from the prototype AddRoutineScreen (#5, add mode; sheets deferred).',
+    render: () => (
+      <View style={{ height: 760, alignSelf: 'stretch' }}>
+        <AddRoutineScreen />
       </View>
     ),
   },
