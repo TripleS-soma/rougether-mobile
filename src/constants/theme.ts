@@ -60,34 +60,49 @@ export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
 export const MaxContentWidth = 800;
 
 /**
- * Rougether brand design tokens — semantic color roles ported from the web
- * prototype's design system (`rougether-prototype/src/app/design-system/theme.ts`).
- * Use these for ported product screens (via `useTokens()`); the neutral `Colors`
- * above stay for the Expo template's own chrome until those screens migrate.
+ * Rougether brand design tokens — semantic color roles. Values keep the warm
+ * prototype brand (cozy/forest/hanok); the token *structure* follows the
+ * Astryx design-system standard (facebook/astryx) — semantic names mapped to
+ * background / text / accent / border / status roles. Astryx itself is web-only
+ * (React + StyleX), so we mirror its standard, not its code. Astryx role names
+ * are noted per token. Use via `useTokens()`; the neutral template `Colors`
+ * above stay for the Expo template chrome until screens migrate.
  */
 export type ThemeId = 'cozy' | 'forest' | 'hanok';
 
 export type SemanticColors = {
   /** App-shell background behind the screen (safe-area edges, gutters). */
   appShell: string;
-  /** Default screen background. */
+  /** Default screen background. Astryx: `background-body`. */
   screen: string;
-  /** Raised surface — cards, sheets, headers. */
+  /** Raised surface — sheets, headers, inputs. Astryx: `background-surface`. */
   surface: string;
-  /** Subtle filled surface — muted rows, chips. */
+  /** Elevated container. Astryx: `background-card`. */
+  card: string;
+  /** Subtle filled surface — muted rows, chips. Astryx: `background-muted`. */
   surfaceMuted: string;
-  /** Hairline borders / dividers. */
+  /** Hairline borders / dividers. Astryx: `border`. */
   border: string;
-  /** Primary text. */
+  /** Primary text. Astryx: `text-primary`. */
   text: string;
-  /** Secondary / muted text. */
+  /** Secondary / muted text. Astryx: `text-secondary`. */
   textMuted: string;
-  /** Brand accent — primary buttons, active states. */
+  /** Disabled text. Astryx: `text-disabled`. */
+  textDisabled: string;
+  /** Default icon color. Astryx: `icon`. */
+  icon: string;
+  /** Brand accent — primary buttons, active states. Astryx: `accent`. */
   primary: string;
   /** Pressed/active variant of `primary`. */
   primaryActive: string;
-  /** Text/icon on top of `primary`. */
+  /** Text/icon on top of `primary`. Astryx: `on-accent`. */
   onPrimary: string;
+  /** Status — positive. Astryx categorical green. */
+  success: string;
+  /** Status — caution. Astryx categorical orange/yellow. */
+  warning: string;
+  /** Status — negative. Astryx categorical red. */
+  danger: string;
 };
 
 export const Themes: Record<ThemeId, SemanticColors> = {
@@ -95,37 +110,55 @@ export const Themes: Record<ThemeId, SemanticColors> = {
     appShell: '#E8DCC8',
     screen: '#FBF8F3',
     surface: '#FFFFFF',
+    card: '#FFFFFF',
     surfaceMuted: '#F5F1E8',
     border: '#E8DCC8',
     text: '#4A403A',
     textMuted: '#8B7E74',
+    textDisabled: '#B5A89C',
+    icon: '#8B7E74',
     primary: '#7FA87F',
     primaryActive: '#6D926D',
     onPrimary: '#FFFFFF',
+    success: '#5F9B6A',
+    warning: '#E8A24A',
+    danger: '#D67878',
   },
   forest: {
     appShell: '#DCE8D0',
     screen: '#F6FAF1',
     surface: '#FFFFFF',
+    card: '#FFFFFF',
     surfaceMuted: '#EEF5E7',
     border: '#CFE0C3',
     text: '#334236',
     textMuted: '#667563',
+    textDisabled: '#9DAE97',
+    icon: '#667563',
     primary: '#5F9B6A',
     primaryActive: '#4D8657',
     onPrimary: '#FFFFFF',
+    success: '#5F9B6A',
+    warning: '#E8A24A',
+    danger: '#D67878',
   },
   hanok: {
     appShell: '#D8C8AF',
     screen: '#FAF5EA',
     surface: '#FFFDF8',
+    card: '#FFFDF8',
     surfaceMuted: '#F2E8D7',
     border: '#D9C5A4',
     text: '#493B2E',
     textMuted: '#7F6E5E',
+    textDisabled: '#A99B86',
+    icon: '#7F6E5E',
     primary: '#9A7B4F',
     primaryActive: '#83663F',
     onPrimary: '#FFFFFF',
+    success: '#7E9A6A',
+    warning: '#C9943F',
+    danger: '#C77A6A',
   },
 };
 
@@ -139,3 +172,50 @@ export const Radius = {
   lg: 16,
   pill: 999,
 } as const;
+
+/**
+ * Font weights. Astryx scale: normal / medium / semibold / bold.
+ * String values are what React Native's `fontWeight` expects.
+ */
+export const FontWeight = {
+  normal: '400',
+  medium: '500',
+  semibold: '600',
+  bold: '700',
+} as const;
+
+export type TypeRole =
+  | 'display1'
+  | 'display2'
+  | 'h1'
+  | 'h2'
+  | 'h3'
+  | 'large'
+  | 'body'
+  | 'label'
+  | 'supporting'
+  | 'code';
+
+export type TypeStyle = {
+  fontSize: number;
+  lineHeight: number;
+  fontWeight: (typeof FontWeight)[keyof typeof FontWeight];
+};
+
+/**
+ * Type scale, following the Astryx standard: named roles built on a modular
+ * scale (base ≈ 16, ratio ≈ 1.2; nudged to clean values for mobile). Pair with
+ * a color via tokens, e.g. `<Text style={[Typography.body, { color: t.text }]}>`.
+ */
+export const Typography: Record<TypeRole, TypeStyle> = {
+  display1: { fontSize: 34, lineHeight: 40, fontWeight: FontWeight.bold },
+  display2: { fontSize: 28, lineHeight: 34, fontWeight: FontWeight.bold },
+  h1: { fontSize: 24, lineHeight: 30, fontWeight: FontWeight.bold },
+  h2: { fontSize: 20, lineHeight: 26, fontWeight: FontWeight.bold },
+  h3: { fontSize: 18, lineHeight: 24, fontWeight: FontWeight.semibold },
+  large: { fontSize: 18, lineHeight: 26, fontWeight: FontWeight.medium },
+  body: { fontSize: 16, lineHeight: 24, fontWeight: FontWeight.normal },
+  label: { fontSize: 14, lineHeight: 20, fontWeight: FontWeight.semibold },
+  supporting: { fontSize: 12, lineHeight: 16, fontWeight: FontWeight.normal },
+  code: { fontSize: 13, lineHeight: 18, fontWeight: FontWeight.medium },
+};
