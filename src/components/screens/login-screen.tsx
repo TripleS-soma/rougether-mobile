@@ -1,6 +1,7 @@
-import { type ReactNode, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { Field } from '@/components/ui/field';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
 
@@ -116,33 +117,6 @@ export function LoginScreen({ onAuthSuccess, onGoSignup }: LoginScreenProps) {
   );
 }
 
-type FieldProps = {
-  placeholder: string;
-  value: string;
-  onChangeText: (v: string) => void;
-  secureTextEntry?: boolean;
-  keyboardType?: 'default' | 'email-address';
-  autoCapitalize?: 'none' | 'sentences';
-  trailing?: ReactNode;
-};
-
-function Field({ placeholder, value, onChangeText, trailing, ...input }: FieldProps) {
-  const t = useTokens();
-  return (
-    <View style={[styles.field, { backgroundColor: t.surfaceMuted }]}>
-      <TextInput
-        style={[styles.input, { color: t.text }]}
-        placeholder={placeholder}
-        placeholderTextColor={t.textMuted}
-        value={value}
-        onChangeText={onChangeText}
-        {...input}
-      />
-      {trailing}
-    </View>
-  );
-}
-
 type SocialButtonProps = {
   bg: string;
   textColor: string;
@@ -210,19 +184,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
-  },
-  field: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: Radius.lg,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    gap: Spacing.two,
-  },
-  input: {
-    flex: 1,
-    fontSize: 14,
-    paddingVertical: Spacing.half,
   },
   row: {
     flexDirection: 'row',

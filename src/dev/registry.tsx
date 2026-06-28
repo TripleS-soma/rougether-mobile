@@ -2,6 +2,7 @@ import { type ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { LoginScreen } from '@/components/screens/login-screen';
+import { SignupScreen } from '@/components/screens/signup-screen';
 import { SampleButton } from '@/components/sample-button';
 import { TokenSwatches } from '@/dev/token-swatches';
 
@@ -31,6 +32,15 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
         <LoginScreen />
+      </View>
+    ),
+  },
+  {
+    name: 'SignupScreen',
+    description: 'Ported from the prototype SignupScreen (#3). Preview at fixed height.',
+    render: () => (
+      <View style={{ height: 900, alignSelf: 'stretch' }}>
+        <SignupScreen />
       </View>
     ),
   },
