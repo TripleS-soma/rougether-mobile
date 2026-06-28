@@ -1,5 +1,7 @@
 import { type ReactNode } from 'react';
+import { View } from 'react-native';
 
+import { LoginScreen } from '@/components/screens/login-screen';
 import { SampleButton } from '@/components/sample-button';
 import { TokenSwatches } from '@/dev/token-swatches';
 
@@ -22,6 +24,15 @@ export const galleryEntries: GalleryEntry[] = [
     name: 'Design tokens · active theme',
     description: 'Brand semantic colors ported from the prototype (default: cozy).',
     render: () => <TokenSwatches />,
+  },
+  {
+    name: 'LoginScreen',
+    description: 'Ported from the prototype AuthScreen (#2). Preview at fixed height.',
+    render: () => (
+      <View style={{ height: 640, alignSelf: 'stretch' }}>
+        <LoginScreen />
+      </View>
+    ),
   },
   {
     name: 'SampleButton · primary',
