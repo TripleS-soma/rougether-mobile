@@ -1,6 +1,7 @@
 import { type ReactNode } from 'react';
 
 import { SampleButton } from '@/components/sample-button';
+import { TokenSwatches } from '@/dev/token-swatches';
 
 export type GalleryEntry = {
   /** Unique, human-readable name shown as the section header. */
@@ -17,6 +18,11 @@ export type GalleryEntry = {
  * real screen first. Add an entry whenever you build a new component.
  */
 export const galleryEntries: GalleryEntry[] = [
+  {
+    name: 'Design tokens · active theme',
+    description: 'Brand semantic colors ported from the prototype (default: cozy).',
+    render: () => <TokenSwatches />,
+  },
   {
     name: 'SampleButton · primary',
     description: 'Reference pattern for harness components — theme-aware, testable.',

@@ -1,8 +1,3 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
-
 import '@/global.css';
 
 import { Platform } from 'react-native';
@@ -63,3 +58,84 @@ export const Spacing = {
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
 export const MaxContentWidth = 800;
+
+/**
+ * Rougether brand design tokens — semantic color roles ported from the web
+ * prototype's design system (`rougether-prototype/src/app/design-system/theme.ts`).
+ * Use these for ported product screens (via `useTokens()`); the neutral `Colors`
+ * above stay for the Expo template's own chrome until those screens migrate.
+ */
+export type ThemeId = 'cozy' | 'forest' | 'hanok';
+
+export type SemanticColors = {
+  /** App-shell background behind the screen (safe-area edges, gutters). */
+  appShell: string;
+  /** Default screen background. */
+  screen: string;
+  /** Raised surface — cards, sheets, headers. */
+  surface: string;
+  /** Subtle filled surface — muted rows, chips. */
+  surfaceMuted: string;
+  /** Hairline borders / dividers. */
+  border: string;
+  /** Primary text. */
+  text: string;
+  /** Secondary / muted text. */
+  textMuted: string;
+  /** Brand accent — primary buttons, active states. */
+  primary: string;
+  /** Pressed/active variant of `primary`. */
+  primaryActive: string;
+  /** Text/icon on top of `primary`. */
+  onPrimary: string;
+};
+
+export const Themes: Record<ThemeId, SemanticColors> = {
+  cozy: {
+    appShell: '#E8DCC8',
+    screen: '#FBF8F3',
+    surface: '#FFFFFF',
+    surfaceMuted: '#F5F1E8',
+    border: '#E8DCC8',
+    text: '#4A403A',
+    textMuted: '#8B7E74',
+    primary: '#7FA87F',
+    primaryActive: '#6D926D',
+    onPrimary: '#FFFFFF',
+  },
+  forest: {
+    appShell: '#DCE8D0',
+    screen: '#F6FAF1',
+    surface: '#FFFFFF',
+    surfaceMuted: '#EEF5E7',
+    border: '#CFE0C3',
+    text: '#334236',
+    textMuted: '#667563',
+    primary: '#5F9B6A',
+    primaryActive: '#4D8657',
+    onPrimary: '#FFFFFF',
+  },
+  hanok: {
+    appShell: '#D8C8AF',
+    screen: '#FAF5EA',
+    surface: '#FFFDF8',
+    surfaceMuted: '#F2E8D7',
+    border: '#D9C5A4',
+    text: '#493B2E',
+    textMuted: '#7F6E5E',
+    primary: '#9A7B4F',
+    primaryActive: '#83663F',
+    onPrimary: '#FFFFFF',
+  },
+};
+
+/** Prototype default is "cozy" (포근). Theme switching arrives with the settings screen. */
+export const DEFAULT_THEME_ID: ThemeId = 'cozy';
+
+/** Corner-radius scale (prototype cards use ~16px / rounded-2xl). */
+export const Radius = {
+  sm: 8,
+  md: 12,
+  lg: 16,
+  pill: 999,
+} as const;
