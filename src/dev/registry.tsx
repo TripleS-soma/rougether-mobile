@@ -2,6 +2,7 @@ import { type ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
+import { GachaScreen } from '@/components/screens/gacha-screen';
 import { LoginScreen } from '@/components/screens/login-screen';
 import { OnboardingScreen } from '@/components/screens/onboarding-screen';
 import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
@@ -88,6 +89,15 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ height: 760, alignSelf: 'stretch' }}>
         <AddRoutineScreen />
+      </View>
+    ),
+  },
+  {
+    name: 'GachaScreen',
+    description: 'Ported from the prototype GachaScreen (#13). Pull animation deferred.',
+    render: () => (
+      <View style={{ height: 700, alignSelf: 'stretch' }}>
+        <GachaScreen leafBalance={5600} />
       </View>
     ),
   },
