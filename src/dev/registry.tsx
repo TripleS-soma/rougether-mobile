@@ -2,8 +2,10 @@ import { type ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { LoginScreen } from '@/components/screens/login-screen';
+import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
 import { SignupScreen } from '@/components/screens/signup-screen';
 import { SampleButton } from '@/components/sample-button';
+import { SAMPLE_ROUTINES } from '@/constants/routines';
 import { TokenSwatches } from '@/dev/token-swatches';
 import { TypeScalePreview } from '@/dev/type-scale-preview';
 
@@ -47,6 +49,15 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ height: 900, alignSelf: 'stretch' }}>
         <SignupScreen />
+      </View>
+    ),
+  },
+  {
+    name: 'RoutineManageScreen',
+    description: 'Ported from the prototype RoutineManageScreen (#6). Sample routines.',
+    render: () => (
+      <View style={{ height: 640, alignSelf: 'stretch' }}>
+        <RoutineManageScreen routines={SAMPLE_ROUTINES} />
       </View>
     ),
   },
