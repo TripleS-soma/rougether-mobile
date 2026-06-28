@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { LoginScreen } from '@/components/screens/login-screen';
 import { OnboardingScreen } from '@/components/screens/onboarding-screen';
 import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
+import { SettingsScreen } from '@/components/screens/settings-screen';
 import { SignupScreen } from '@/components/screens/signup-screen';
 import { SampleButton } from '@/components/sample-button';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
@@ -68,6 +69,15 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
         <RoutineManageScreen routines={SAMPLE_ROUTINES} />
+      </View>
+    ),
+  },
+  {
+    name: 'SettingsScreen',
+    description: 'Ported from the prototype SettingsScreen (#14): theme picker + rows.',
+    render: () => (
+      <View style={{ height: 640, alignSelf: 'stretch' }}>
+        <SettingsScreen />
       </View>
     ),
   },
