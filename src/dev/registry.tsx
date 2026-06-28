@@ -3,6 +3,7 @@ import { View } from 'react-native';
 
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
 import { GachaScreen } from '@/components/screens/gacha-screen';
+import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { LoginScreen } from '@/components/screens/login-screen';
 import { OnboardingScreen } from '@/components/screens/onboarding-screen';
 import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
@@ -98,6 +99,16 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ height: 700, alignSelf: 'stretch' }}>
         <GachaScreen leafBalance={5600} />
+      </View>
+    ),
+  },
+  {
+    name: 'HouseSearchScreen',
+    description:
+      'Ported from the prototype HouseSearchScreen (#11): invite code + recommended list.',
+    render: () => (
+      <View style={{ height: 760, alignSelf: 'stretch' }}>
+        <HouseSearchScreen />
       </View>
     ),
   },
