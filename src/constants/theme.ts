@@ -185,16 +185,7 @@ export const FontWeight = {
 } as const;
 
 export type TypeRole =
-  | 'display1'
-  | 'display2'
-  | 'h1'
-  | 'h2'
-  | 'h3'
-  | 'large'
-  | 'body'
-  | 'label'
-  | 'supporting'
-  | 'code';
+  'display1' | 'display2' | 'h1' | 'h2' | 'h3' | 'large' | 'body' | 'label' | 'supporting' | 'code';
 
 export type TypeStyle = {
   fontSize: number;
