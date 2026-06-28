@@ -5,6 +5,7 @@ import { LoginScreen } from '@/components/screens/login-screen';
 import { SignupScreen } from '@/components/screens/signup-screen';
 import { SampleButton } from '@/components/sample-button';
 import { TokenSwatches } from '@/dev/token-swatches';
+import { TypeScalePreview } from '@/dev/type-scale-preview';
 
 export type GalleryEntry = {
   /** Unique, human-readable name shown as the section header. */
@@ -23,8 +24,13 @@ export type GalleryEntry = {
 export const galleryEntries: GalleryEntry[] = [
   {
     name: 'Design tokens · active theme',
-    description: 'Brand semantic colors ported from the prototype (default: cozy).',
+    description: 'Brand semantic colors, Astryx-aligned naming (default: cozy).',
     render: () => <TokenSwatches />,
+  },
+  {
+    name: 'Type scale',
+    description: 'Named typography roles (Astryx standard: base ≈ 16, ratio ≈ 1.2).',
+    render: () => <TypeScalePreview />,
   },
   {
     name: 'LoginScreen',
