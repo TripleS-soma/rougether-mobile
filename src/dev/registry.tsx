@@ -3,6 +3,7 @@ import { View } from 'react-native';
 
 import { LoginScreen } from '@/components/screens/login-screen';
 import { OnboardingScreen } from '@/components/screens/onboarding-screen';
+import { SettingsScreen } from '@/components/screens/settings-screen';
 import { SignupScreen } from '@/components/screens/signup-screen';
 import { SampleButton } from '@/components/sample-button';
 import { TokenSwatches } from '@/dev/token-swatches';
@@ -57,6 +58,15 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ height: 720, alignSelf: 'stretch' }}>
         <OnboardingScreen />
+      </View>
+    ),
+  },
+  {
+    name: 'SettingsScreen',
+    description: 'Ported from the prototype SettingsScreen (#14): theme picker + rows.',
+    render: () => (
+      <View style={{ height: 640, alignSelf: 'stretch' }}>
+        <SettingsScreen />
       </View>
     ),
   },
