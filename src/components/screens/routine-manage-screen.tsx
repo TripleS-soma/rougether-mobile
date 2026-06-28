@@ -1,8 +1,9 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { Radius, Spacing, Typography } from '@/constants/theme';
 import { ROUTINE_CATEGORIES, type Routine, type RoutineCategoryMeta } from '@/constants/routines';
+import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
+import { formatTime } from '@/utils/datetime';
 
 export type RoutineManageScreenProps = {
   routines?: Routine[];
@@ -11,14 +12,6 @@ export type RoutineManageScreenProps = {
   onAdd?: () => void;
   onEdit?: (routine: Routine) => void;
 };
-
-/** "HH:MM" (24h) → "오전 7:00" / "오후 9:30". */
-function formatTime(time: string) {
-  const [h, m] = time.split(':').map((v) => parseInt(v, 10));
-  const ampm = h >= 12 ? '오후' : '오전';
-  const hour12 = h % 12 === 0 ? 12 : h % 12;
-  return `${ampm} ${hour12}:${String(m).padStart(2, '0')}`;
-}
 
 /**
  * Routine list grouped by category, ported from the prototype

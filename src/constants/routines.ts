@@ -40,6 +40,19 @@ export type Routine = {
   kind?: 'routine' | 'todo';
 };
 
+/** Payload for creating/editing a routine (from the Add/Edit routine screen). */
+export type NewRoutine = {
+  title: string;
+  emoji: string;
+  category: RoutineCategory;
+  days: number[];
+  startDate: string;
+  endDate?: string;
+  alarmEnabled: boolean;
+  time: string;
+  photoVerify: boolean;
+};
+
 /** Sample data for previews and tests (mirrors the prototype defaults). */
 export const SAMPLE_ROUTINES: Routine[] = [
   {
