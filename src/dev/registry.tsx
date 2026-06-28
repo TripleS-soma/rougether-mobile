@@ -2,6 +2,7 @@ import { type ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
+import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { GachaScreen } from '@/components/screens/gacha-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { LoginScreen } from '@/components/screens/login-screen';
@@ -109,6 +110,16 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ height: 760, alignSelf: 'stretch' }}>
         <HouseSearchScreen />
+      </View>
+    ),
+  },
+  {
+    name: 'CreateHouseScreen',
+    description:
+      'Ported from the prototype CreateHouseScreen (#12): preview, theme, capacity, code.',
+    render: () => (
+      <View style={{ height: 900, alignSelf: 'stretch' }}>
+        <CreateHouseScreen />
       </View>
     ),
   },
