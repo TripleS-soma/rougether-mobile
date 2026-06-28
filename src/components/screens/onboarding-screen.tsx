@@ -37,16 +37,16 @@ const SLIDES: Slide[] = [
   },
 ];
 
-type Goal = { id: string; label: string; emoji: string; color: string; bg: string };
+type Goal = { id: string; label: string; emoji: string; bg: string };
 
 const GOALS: Goal[] = [
-  { id: 'exercise', label: '운동', emoji: '🏃', color: '#7FA87F', bg: '#E4F0DC' },
-  { id: 'study', label: '공부', emoji: '📖', color: '#7FA8D4', bg: '#E3EEF8' },
-  { id: 'sleep', label: '수면', emoji: '🌙', color: '#8D86C9', bg: '#ECE8FA' },
-  { id: 'reading', label: '독서', emoji: '📚', color: '#C8869C', bg: '#F7E4EA' },
-  { id: 'organizing', label: '정리', emoji: '🧹', color: '#D4A574', bg: '#F7ECD8' },
-  { id: 'career', label: '취업 준비', emoji: '💼', color: '#6FB7B0', bg: '#DDF3F0' },
-  { id: 'habit', label: '생활 습관', emoji: '✨', color: '#E89A4A', bg: '#FFF0D8' },
+  { id: 'exercise', label: '운동', emoji: '🏃', bg: '#E4F0DC' },
+  { id: 'study', label: '공부', emoji: '📖', bg: '#E3EEF8' },
+  { id: 'sleep', label: '수면', emoji: '🌙', bg: '#ECE8FA' },
+  { id: 'reading', label: '독서', emoji: '📚', bg: '#F7E4EA' },
+  { id: 'organizing', label: '정리', emoji: '🧹', bg: '#F7ECD8' },
+  { id: 'career', label: '취업 준비', emoji: '💼', bg: '#DDF3F0' },
+  { id: 'habit', label: '생활 습관', emoji: '✨', bg: '#FFF0D8' },
 ];
 
 export type OnboardingScreenProps = {
