@@ -2,6 +2,7 @@ import { type ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { LoginScreen } from '@/components/screens/login-screen';
+import { OnboardingScreen } from '@/components/screens/onboarding-screen';
 import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
 import { SignupScreen } from '@/components/screens/signup-screen';
 import { SampleButton } from '@/components/sample-button';
@@ -49,6 +50,15 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ height: 900, alignSelf: 'stretch' }}>
         <SignupScreen />
+      </View>
+    ),
+  },
+  {
+    name: 'OnboardingScreen',
+    description: 'Ported from the prototype OnboardingScreen (#4): slides → goals → character.',
+    render: () => (
+      <View style={{ height: 720, alignSelf: 'stretch' }}>
+        <OnboardingScreen />
       </View>
     ),
   },
