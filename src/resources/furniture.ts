@@ -6,8 +6,19 @@
  */
 export type Rarity = '일반' | '희귀' | '전설';
 
+/**
+ * A placement position in the room (not a furniture type), so any furniture
+ * image can occupy any slot. Layout: 3 top / 2 mid sides / 3 bottom.
+ */
 export type FurnitureSlot =
-  'bed' | 'shelf' | 'window' | 'storage' | 'chair' | 'plant' | 'rug' | 'table';
+  | 'topLeft'
+  | 'topCenter'
+  | 'topRight'
+  | 'midLeft'
+  | 'midRight'
+  | 'bottomLeft'
+  | 'bottomCenter'
+  | 'bottomRight';
 
 /** Catalog tab a furniture item belongs to (decor screen filter). */
 export type FurnitureCategory = '가구' | '장식' | '러그' | '한옥';
@@ -33,7 +44,7 @@ export const FURNITURE_ITEMS: FurnitureItem[] = [
   {
     id: 'bed',
     name: '포근한 침대',
-    slot: 'bed',
+    slot: 'bottomLeft',
     category: '가구',
     price: 800,
     assetKey: fk('bed'),
@@ -41,27 +52,34 @@ export const FURNITURE_ITEMS: FurnitureItem[] = [
   {
     id: 'shelf',
     name: '책 선반',
-    slot: 'shelf',
+    slot: 'topLeft',
     category: '가구',
     price: 450,
     assetKey: fk('shelf'),
   },
-  { id: 'window', name: '햇살 창문', slot: 'window', category: '장식', price: 400, assetKey: fk('window') }, // prettier-ignore
-  { id: 'drawer', name: '민트 서랍', slot: 'storage', category: '가구', price: 500, assetKey: fk('drawer') }, // prettier-ignore
+  { id: 'window', name: '햇살 창문', slot: 'topCenter', category: '장식', price: 400, assetKey: fk('window') }, // prettier-ignore
+  { id: 'drawer', name: '민트 서랍', slot: 'topRight', category: '가구', price: 500, assetKey: fk('drawer') }, // prettier-ignore
   {
     id: 'sofa',
     name: '구름 소파',
-    slot: 'chair',
+    slot: 'bottomRight',
     category: '가구',
     price: 700,
     assetKey: fk('sofa'),
   },
-  { id: 'plant', name: '초록 식물', slot: 'plant', category: '장식', price: 250, assetKey: fk('plant') }, // prettier-ignore
-  { id: 'rug', name: '체크 러그', slot: 'rug', category: '러그', price: 380, assetKey: fk('rug') },
+  { id: 'plant', name: '초록 식물', slot: 'midLeft', category: '장식', price: 250, assetKey: fk('plant') }, // prettier-ignore
+  {
+    id: 'rug',
+    name: '체크 러그',
+    slot: 'bottomCenter',
+    category: '러그',
+    price: 380,
+    assetKey: fk('rug'),
+  },
   {
     id: 'clock',
     name: '벽 시계',
-    slot: 'table',
+    slot: 'midRight',
     category: '장식',
     price: 300,
     assetKey: fk('clock'),
@@ -70,7 +88,7 @@ export const FURNITURE_ITEMS: FurnitureItem[] = [
   {
     id: 'hanok-bed',
     name: '한옥 자개 침대',
-    slot: 'bed',
+    slot: 'bottomLeft',
     category: '한옥',
     price: 0,
     assetKey: fk('hanok-bed'),
@@ -80,7 +98,7 @@ export const FURNITURE_ITEMS: FurnitureItem[] = [
   {
     id: 'hanok-shelf',
     name: '한옥 벽 선반',
-    slot: 'shelf',
+    slot: 'topLeft',
     category: '한옥',
     price: 0,
     assetKey: fk('hanok-shelf'),
@@ -90,7 +108,7 @@ export const FURNITURE_ITEMS: FurnitureItem[] = [
   {
     id: 'hanok-window',
     name: '한옥 아치 창문',
-    slot: 'window',
+    slot: 'topCenter',
     category: '한옥',
     price: 0,
     assetKey: fk('hanok-window'),
@@ -100,7 +118,7 @@ export const FURNITURE_ITEMS: FurnitureItem[] = [
   {
     id: 'hanok-rug',
     name: '한옥 풀잎 러그',
-    slot: 'rug',
+    slot: 'bottomCenter',
     category: '한옥',
     price: 0,
     assetKey: fk('hanok-rug'),
@@ -110,7 +128,7 @@ export const FURNITURE_ITEMS: FurnitureItem[] = [
   {
     id: 'hanok-plant',
     name: '한옥 화분',
-    slot: 'plant',
+    slot: 'midLeft',
     category: '한옥',
     price: 0,
     assetKey: fk('hanok-plant'),
@@ -120,7 +138,7 @@ export const FURNITURE_ITEMS: FurnitureItem[] = [
   {
     id: 'hanok-teatable',
     name: '한옥 다과상',
-    slot: 'table',
+    slot: 'midRight',
     category: '한옥',
     price: 0,
     assetKey: fk('hanok-teatable'),
