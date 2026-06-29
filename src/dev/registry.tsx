@@ -16,6 +16,7 @@ import { RoutineManageScreen } from '@/components/screens/routine-manage-screen'
 import { SettingsScreen } from '@/components/screens/settings-screen';
 import { SignupScreen } from '@/components/screens/signup-screen';
 import { SampleButton } from '@/components/sample-button';
+import { Calendar } from '@/components/ui/calendar';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
 import { TokenSwatches } from '@/dev/token-swatches';
 import { TypeScalePreview } from '@/dev/type-scale-preview';
@@ -200,6 +201,15 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ height: 900, alignSelf: 'stretch' }}>
         <CreateHouseScreen />
+      </View>
+    ),
+  },
+  {
+    name: 'Calendar',
+    description: 'Pure-JS month-grid date picker used by the duration sheet (#5).',
+    render: () => (
+      <View style={{ alignSelf: 'stretch' }}>
+        <Calendar value="2026-06-15" onSelect={() => {}} />
       </View>
     ),
   },

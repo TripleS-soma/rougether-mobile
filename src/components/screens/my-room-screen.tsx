@@ -4,6 +4,7 @@ import { Room } from '@/components/room/room';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { ROUTINE_CATEGORIES, type Routine, type RoutineCategoryMeta } from '@/constants/routines';
 import { Radius, Spacing, Typography } from '@/constants/theme';
+import { captureVerificationPhoto } from '@/lib/photo-verify';
 import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
 import { useTokens } from '@/hooks/use-tokens';
 import { formatTime } from '@/utils/datetime';
@@ -28,6 +29,12 @@ export type MyRoomScreenProps = {
   onToggleRoutine?: (id: string) => void;
   onOpenGacha?: () => void;
   onClaimReward?: () => void;
+  /**
+   * Capture a verification photo when completing a 인증사진형 routine; resolves to
+   * the photo URI, or null to cancel the completion. Defaults to the device
+   * camera (expo-image-picker); inject a stub in tests.
+   */
+  onRequestPhoto?: () => Promise<string | null>;
 };
 
 /**
@@ -52,12 +59,26 @@ export function MyRoomScreen({
   onToggleRoutine,
   onOpenGacha,
   onClaimReward,
+  onRequestPhoto = captureVerificationPhoto,
 }: MyRoomScreenProps) {
   const t = useTokens();
   const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
   const knownIds = categories.map((c) => c.id);
   const completedCount = routines.filter((r) => r.completed).length;
   const progress = routines.length > 0 ? completedCount / routines.length : 0;
+
+  // Completing a 인증사진형 routine first requires a camera photo; if none is
+  // captured (cancelled / denied), the completion is aborted. Kept sync on the
+  // common (non-photo) path; only the photo path awaits the camera.
+  const handleToggle = (routine: Routine) => {
+    if (routine.photoVerify && !routine.completed) {
+      void onRequestPhoto().then((uri) => {
+        if (uri) onToggleRoutine?.(routine.id);
+      });
+      return;
+    }
+    onToggleRoutine?.(routine.id);
+  };
 
   return (
     <View style={[styles.screen, { backgroundColor: t.screen }]}>
@@ -147,7 +168,7 @@ export function MyRoomScreen({
                   {items.map((routine) => (
                     <Pressable
                       key={routine.id}
-                      onPress={() => onToggleRoutine?.(routine.id)}
+                      onPress={() => handleToggle(routine)}
                       accessibilityRole="checkbox"
                       accessibilityState={{ checked: routine.completed }}
                       accessibilityLabel={routine.title}
