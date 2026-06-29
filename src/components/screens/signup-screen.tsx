@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Field } from '@/components/ui/field';
 import { Radius, Spacing } from '@/constants/theme';
+import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 
 const ERROR = '#D67878';
@@ -110,7 +111,7 @@ export function SignupScreen({ onBack, onSignupSuccess }: SignupScreenProps) {
   const sendDisabled = !emailValid || emailVerified || secondsLeft > 150;
 
   return (
-    <View style={[styles.screen, { backgroundColor: t.screen }]}>
+    <View style={[styles.screen, useScreenStyle()]}>
       <View style={[styles.header, { backgroundColor: t.surface }]}>
         <Pressable
           onPress={onBack}
