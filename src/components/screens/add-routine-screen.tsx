@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { CategoryManagerSheet } from '@/components/screens/sheets/category-manager-sheet';
 import { DateRangeSheet } from '@/components/screens/sheets/date-range-sheet';
 import { TimePickerSheet } from '@/components/screens/sheets/time-picker-sheet';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
@@ -57,6 +58,8 @@ export type AddRoutineScreenProps = {
   onUpdate?: (id: string, routine: NewRoutine) => void;
   onDelete?: (id: string) => void;
   categories?: RoutineCategoryMeta[];
+  onCreateCategory?: (category: RoutineCategoryMeta) => void;
+  onDeleteCategory?: (id: string) => void;
 };
 
 function today() {
@@ -76,9 +79,12 @@ export function AddRoutineScreen({
   onUpdate,
   onDelete,
   categories = ROUTINE_CATEGORIES,
+  onCreateCategory,
+  onDeleteCategory,
 }: AddRoutineScreenProps) {
   const t = useTokens();
   const isEdit = Boolean(editRoutine);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [title, setTitle] = useState(editRoutine?.title ?? '');
   const [emoji, setEmoji] = useState(editRoutine?.emoji ?? '☀️');
   const [showEmoji, setShowEmoji] = useState(false);
@@ -178,7 +184,16 @@ export function AddRoutineScreen({
 
         {/* Category */}
         <View style={styles.field}>
-          <Text style={[styles.label, { color: t.text }]}>카테고리</Text>
+          <View style={styles.fieldHead}>
+            <Text style={[styles.label, { color: t.text }]}>카테고리</Text>
+            <Pressable
+              onPress={() => setShowCategoryManager(true)}
+              accessibilityRole="button"
+              accessibilityLabel="카테고리 관리"
+              hitSlop={8}>
+              <Text style={[Typography.label, { color: t.primary }]}>＋ 관리</Text>
+            </Pressable>
+          </View>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -336,6 +351,13 @@ export function AddRoutineScreen({
         }}
         onClose={() => setShowTimeSheet(false)}
       />
+      <CategoryManagerSheet
+        visible={showCategoryManager}
+        categories={categories}
+        onCreate={(c) => onCreateCategory?.(c)}
+        onDelete={(id) => onDeleteCategory?.(id)}
+        onClose={() => setShowCategoryManager(false)}
+      />
 
       <View style={[styles.footer, { backgroundColor: t.screen }]}>
         <Pressable
@@ -388,6 +410,11 @@ const styles = StyleSheet.create({
   backGlyph: { fontSize: 26, lineHeight: 28 },
   body: { padding: Spacing.four, gap: Spacing.four, paddingBottom: Spacing.six },
   field: { gap: Spacing.two },
+  fieldHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   label: { fontSize: 14, fontWeight: '600' },
   titleRow: {
     flexDirection: 'row',

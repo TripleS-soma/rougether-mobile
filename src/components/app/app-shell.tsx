@@ -17,6 +17,7 @@ import {
   type NewRoutine,
   ROUTINE_CATEGORIES,
   type Routine,
+  type RoutineCategoryMeta,
   SAMPLE_ROUTINES,
 } from '@/constants/routines';
 import {
@@ -77,6 +78,15 @@ export function AppShell() {
   );
   const [visitingFriend, setVisitingFriend] = useState('친구');
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
+  const [categories, setCategories] = useState<RoutineCategoryMeta[]>(ROUTINE_CATEGORIES);
+
+  const createCategory = (cat: RoutineCategoryMeta) => setCategories((prev) => [...prev, cat]);
+
+  const deleteCategory = (id: string) => {
+    setCategories((prev) => prev.filter((c) => c.id !== id));
+    // Routines in the removed category fall back to 기타.
+    setRoutines((prev) => prev.map((r) => (r.category === id ? { ...r, category: '기타' } : r)));
+  };
 
   const toggleRoutine = (id: string) =>
     setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, completed: !r.completed } : r)));
@@ -144,6 +154,7 @@ export function AppShell() {
         {screen === 'myRoom' ? (
           <MyRoomScreen
             routines={routines}
+            categories={categories}
             placedFurnitureIds={placedFurnitureIds}
             wallpaperId={wallpaperId}
             characterId={characterId}
@@ -174,7 +185,7 @@ export function AppShell() {
         {screen === 'routineManage' ? (
           <RoutineManageScreen
             routines={routines}
-            categories={ROUTINE_CATEGORIES}
+            categories={categories}
             onBack={() => setScreen('myRoom')}
             onAdd={() => {
               setEditingRoutine(null);
@@ -187,11 +198,13 @@ export function AppShell() {
 
         {screen === 'addRoutine' ? (
           <AddRoutineScreen
-            categories={ROUTINE_CATEGORIES}
+            categories={categories}
             editRoutine={editingRoutine}
             onAdd={addRoutine}
             onUpdate={updateRoutine}
             onDelete={deleteRoutine}
+            onCreateCategory={createCategory}
+            onDeleteCategory={deleteCategory}
             onBack={() => setScreen(addReturnScreen)}
           />
         ) : null}
