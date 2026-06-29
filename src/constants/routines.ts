@@ -7,6 +7,25 @@ export type RoutineCategory = string;
 
 export type CategoryVisibility = 'public' | 'neighbor' | 'partial';
 
+/** Human labels for each visibility option (category manager). */
+export const VISIBILITY_LABELS: Record<CategoryVisibility, string> = {
+  public: '전체 공개',
+  neighbor: '이웃 공개',
+  partial: '일부 공개',
+};
+
+/** Color palette assigned to newly created categories (cycled by index). */
+export const CATEGORY_COLORS = [
+  '#E8A87C',
+  '#7FA8D4',
+  '#C8869C',
+  '#7FA87F',
+  '#D4A574',
+  '#9B8BC4',
+  '#E6A0A0',
+  '#6FB7B0',
+];
+
 export type RoutineCategoryMeta = {
   id: RoutineCategory;
   label: string;
