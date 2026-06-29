@@ -1,81 +1,20 @@
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
+import { fetchRecommendedHouses, type HouseSummary } from '@/api/house';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
 
 const ERROR = '#D67878';
 const DISABLED = '#E5DACB';
-
-type House = {
-  id: string;
-  name: string;
-  members: number;
-  capacity: number;
-  tag: string;
-  emoji: string;
-  bg: string;
-  border: string;
-  description: string;
-};
-
-const RECOMMENDED: House[] = [
-  {
-    id: 'h1',
-    name: '아침형 인간 모임',
-    members: 3,
-    capacity: 4,
-    tag: '기상',
-    emoji: '🌅',
-    bg: '#FFEFD8',
-    border: '#F0C88A',
-    description: '오전 7시 전 기상 인증을 함께 해요',
-  },
-  {
-    id: 'h2',
-    name: '개발자 루틴',
-    members: 4,
-    capacity: 4,
-    tag: '코딩',
-    emoji: '💻',
-    bg: '#E4F0DC',
-    border: '#A8C898',
-    description: '매일 코테 한 문제씩, 함께 성장하기',
-  },
-  {
-    id: 'h3',
-    name: '독서 1시간',
-    members: 2,
-    capacity: 4,
-    tag: '독서',
-    emoji: '📖',
-    bg: '#E4DCF0',
-    border: '#B8A8D8',
-    description: '하루 1시간 독서하고 한줄평 남기기',
-  },
-  {
-    id: 'h4',
-    name: '홈트 챌린지',
-    members: 3,
-    capacity: 4,
-    tag: '운동',
-    emoji: '💪',
-    bg: '#FBE0E0',
-    border: '#E8B0A0',
-    description: '주 3회 홈트 인증 그룹',
-  },
-  {
-    id: 'h5',
-    name: '물 2L 클럽',
-    members: 4,
-    capacity: 4,
-    tag: '건강',
-    emoji: '💧',
-    bg: '#D8E8F0',
-    border: '#A8C4D8',
-    description: '하루 물 2L 마시기 인증',
-  },
-];
 
 export type HouseSearchScreenProps = {
   onBack?: () => void;
@@ -83,15 +22,31 @@ export type HouseSearchScreenProps = {
   onCreate?: () => void;
 };
 
-/** House search, ported from the prototype `HouseSearchScreen`: invite-code join,
- * search, recommended list, create-new. Theme tokens + type scale; icons emoji. */
+/**
+ * House search, ported from the prototype `HouseSearchScreen`: invite-code join,
+ * search, recommended list (fetched from the business API via MSW), create-new.
+ * Theme tokens + type scale; icons emoji.
+ */
 export function HouseSearchScreen({ onBack, onJoin, onCreate }: HouseSearchScreenProps) {
   const t = useTokens();
   const [code, setCode] = useState('');
   const [query, setQuery] = useState('');
   const [codeError, setCodeError] = useState<string | null>(null);
+  const [houses, setHouses] = useState<HouseSummary[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = RECOMMENDED.filter(
+  useEffect(() => {
+    let active = true;
+    fetchRecommendedHouses()
+      .then((data) => active && setHouses(data))
+      .catch(() => active && setHouses([]))
+      .finally(() => active && setLoading(false));
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const filtered = houses.filter(
     (h) =>
       query.length === 0 ||
       h.name.toLowerCase().includes(query.toLowerCase()) ||
@@ -183,7 +138,9 @@ export function HouseSearchScreen({ onBack, onJoin, onCreate }: HouseSearchScree
 
         {/* Recommended list */}
         <View style={styles.list}>
-          {filtered.length === 0 ? (
+          {loading ? (
+            <ActivityIndicator color={t.primary} style={styles.loading} />
+          ) : filtered.length === 0 ? (
             <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
               검색 결과가 없어요
             </Text>
@@ -294,6 +251,7 @@ const styles = StyleSheet.create({
   icon: { fontSize: 16 },
   msg: { fontSize: 12, marginLeft: Spacing.one },
   list: { gap: Spacing.two },
+  loading: { paddingVertical: Spacing.six },
   houseRow: {
     flexDirection: 'row',
     alignItems: 'center',

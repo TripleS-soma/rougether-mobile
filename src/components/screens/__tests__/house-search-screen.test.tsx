@@ -1,6 +1,20 @@
 import { fireEvent, render } from '@testing-library/react-native';
 
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
+import { RECOMMENDED_HOUSES } from '@/mocks/fixtures';
+
+// MSW handles dev runtime; tests mock fetch directly.
+const realFetch = global.fetch;
+beforeEach(() => {
+  global.fetch = jest.fn(async () => ({
+    ok: true,
+    status: 200,
+    json: async () => ({ items: RECOMMENDED_HOUSES }),
+  })) as unknown as typeof fetch;
+});
+afterEach(() => {
+  global.fetch = realFetch;
+});
 
 describe('HouseSearchScreen', () => {
   it('renders the title', async () => {
@@ -29,13 +43,15 @@ describe('HouseSearchScreen', () => {
     expect(onJoin).not.toHaveBeenCalled();
   });
 
-  it('filters by search query', async () => {
-    const { getByText, getByPlaceholderText, queryByText } = await render(<HouseSearchScreen />);
-    expect(getByText('개발자 루틴')).toBeTruthy();
+  it('loads recommended houses from the API and filters them', async () => {
+    const { findByText, getByPlaceholderText, queryByText } = await render(<HouseSearchScreen />);
+
+    // fetched from the (mocked) business API
+    expect(await findByText('개발자 루틴')).toBeTruthy();
 
     await fireEvent.changeText(getByPlaceholderText('집 이름, 태그로 검색'), '독서');
 
-    expect(getByText('독서 1시간')).toBeTruthy();
+    expect(await findByText('독서 1시간')).toBeTruthy();
     expect(queryByText('개발자 루틴')).toBeNull();
   });
 });
