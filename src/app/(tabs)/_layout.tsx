@@ -1,6 +1,10 @@
-import AppTabs from '@/components/app-tabs';
+import { Slot } from 'expo-router';
 
-/** Tab app shell (Home / Explore / Dev). Nested under the root Stack. */
+/**
+ * The app provides its own bottom navigation (see AppShell), so this group just
+ * renders the active route without a native tab bar. The /dev gallery and
+ * /explore routes still resolve for development; they're simply not in any nav.
+ */
 export default function TabsLayout() {
-  return <AppTabs />;
+  return <Slot />;
 }

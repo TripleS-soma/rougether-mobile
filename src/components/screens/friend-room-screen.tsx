@@ -4,6 +4,7 @@ import { Room } from '@/components/room/room';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { type Routine } from '@/constants/routines';
 import { Radius, Spacing, Typography } from '@/constants/theme';
+import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 import { formatTime } from '@/utils/datetime';
 
@@ -56,7 +57,7 @@ export function FriendRoomScreen({
   const progress = routines.length > 0 ? completedCount / routines.length : 0;
 
   return (
-    <View style={[styles.screen, { backgroundColor: t.screen }]}>
+    <View style={[styles.screen, useScreenStyle()]}>
       <View style={[styles.header, { backgroundColor: t.surface }]}>
         <Pressable
           onPress={onBack}
