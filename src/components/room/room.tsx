@@ -27,16 +27,16 @@ import { assetSource } from '@/resources/asset';
  */
 const SLOT_STYLE: Record<FurnitureSlot, ImageStyle> = {
   // Top row
-  shelf: { top: '8%', left: '5%' },
-  window: { top: '8%', left: '38%' },
-  storage: { top: '8%', right: '5%' },
+  topLeft: { top: '8%', left: '5%' },
+  topCenter: { top: '8%', left: '38%' },
+  topRight: { top: '8%', right: '5%' },
   // Bottom row (vertical mirror of the top row)
-  bed: { bottom: '8%', left: '5%' },
-  rug: { bottom: '8%', left: '38%' },
-  chair: { bottom: '8%', right: '5%' },
+  bottomLeft: { bottom: '8%', left: '5%' },
+  bottomCenter: { bottom: '8%', left: '38%' },
+  bottomRight: { bottom: '8%', right: '5%' },
   // Mid-height sides (horizontal mirror of each other)
-  plant: { top: '38%', left: '6%' },
-  table: { top: '38%', right: '6%' },
+  midLeft: { top: '38%', left: '6%' },
+  midRight: { top: '38%', right: '6%' },
 };
 
 export type RoomProps = {
