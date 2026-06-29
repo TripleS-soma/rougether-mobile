@@ -1,6 +1,7 @@
 import { type ReactNode } from 'react';
 import { View } from 'react-native';
 
+import { Room } from '@/components/room/room';
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { GachaScreen } from '@/components/screens/gacha-screen';
@@ -39,6 +40,35 @@ export const galleryEntries: GalleryEntry[] = [
     name: 'Type scale',
     description: 'Named typography roles (Astryx standard: base ≈ 16, ratio ≈ 1.2).',
     render: () => <TypeScalePreview />,
+  },
+  {
+    name: 'Room · default',
+    description: 'Room renderer — wallpaper + slot-placed furniture (dummy resources) + character.',
+    render: () => (
+      <View style={{ width: 280, alignSelf: 'center' }}>
+        <Room />
+      </View>
+    ),
+  },
+  {
+    name: 'Room · hanok theme',
+    description: 'Same renderer, hanok furniture + tiger character.',
+    render: () => (
+      <View style={{ width: 280, alignSelf: 'center' }}>
+        <Room
+          wallpaperId="hanok-simple"
+          characterId="tiger"
+          placedFurnitureIds={[
+            'hanok-bed',
+            'hanok-shelf',
+            'hanok-window',
+            'hanok-rug',
+            'hanok-plant',
+            'hanok-teatable',
+          ]}
+        />
+      </View>
+    ),
   },
   {
     name: 'LoginScreen',
