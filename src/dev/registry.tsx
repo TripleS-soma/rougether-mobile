@@ -4,11 +4,14 @@ import { View } from 'react-native';
 import { Room } from '@/components/room/room';
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
+import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
 import { GachaScreen } from '@/components/screens/gacha-screen';
 import { GroupHouseScreen } from '@/components/screens/group-house-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { LoginScreen } from '@/components/screens/login-screen';
+import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { OnboardingScreen } from '@/components/screens/onboarding-screen';
+import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
 import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
 import { SettingsScreen } from '@/components/screens/settings-screen';
 import { SignupScreen } from '@/components/screens/signup-screen';
@@ -67,6 +70,42 @@ export const galleryEntries: GalleryEntry[] = [
             'hanok-plant',
             'hanok-teatable',
           ]}
+        />
+      </View>
+    ),
+  },
+  {
+    name: 'MyRoomScreen',
+    description:
+      'Ported from the prototype MyRoomZoomScreen (#7): room view + today’s routines + reward.',
+    render: () => (
+      <View style={{ height: 900, alignSelf: 'stretch' }}>
+        <MyRoomScreen
+          routines={SAMPLE_ROUTINES}
+          placedFurnitureIds={['bed', 'window', 'plant', 'rug']}
+        />
+      </View>
+    ),
+  },
+  {
+    name: 'RoomDecorScreen',
+    description:
+      'Ported from the prototype RoomDecorScreen (#8): live room preview + wallpaper/furniture catalog.',
+    render: () => (
+      <View style={{ height: 900, alignSelf: 'stretch' }}>
+        <RoomDecorScreen />
+      </View>
+    ),
+  },
+  {
+    name: 'FriendRoomScreen',
+    description:
+      'Ported from the prototype FriendRoomScreen (#9): read-only room + routines + cheers.',
+    render: () => (
+      <View style={{ height: 860, alignSelf: 'stretch' }}>
+        <FriendRoomScreen
+          friendName="민지"
+          placedFurnitureIds={['bed', 'window', 'plant', 'rug']}
         />
       </View>
     ),
