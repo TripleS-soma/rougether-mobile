@@ -132,7 +132,7 @@ export function CategoryManagerSheet({
             </View>
 
             <Text style={[Typography.supporting, { color: t.textMuted }]}>공개 설정</Text>
-            <View style={styles.visibilityList}>
+            <View style={styles.segment}>
               {VISIBILITY_OPTIONS.map((v) => {
                 const active = visibility === v.id;
                 return (
@@ -143,22 +143,25 @@ export function CategoryManagerSheet({
                     accessibilityState={{ selected: active }}
                     accessibilityLabel={VISIBILITY_LABELS[v.id]}
                     style={[
-                      styles.visibilityRow,
-                      { backgroundColor: active ? `${t.primary}1A` : t.surfaceMuted },
-                      active && { borderColor: t.primary, borderWidth: 2 },
+                      styles.segItem,
+                      { backgroundColor: active ? t.primary : t.surfaceMuted },
                     ]}>
-                    <Text style={styles.visibilityIcon}>{v.icon}</Text>
-                    <View style={styles.flex}>
-                      <Text style={[Typography.body, { color: t.text }]}>
-                        {VISIBILITY_LABELS[v.id]}
-                      </Text>
-                      <Text style={[Typography.supporting, { color: t.textMuted }]}>{v.desc}</Text>
-                    </View>
-                    {active ? <Text style={{ color: t.primary }}>✓</Text> : null}
+                    <Text style={styles.segIcon}>{v.icon}</Text>
+                    <Text
+                      style={[
+                        Typography.supporting,
+                        styles.segLabel,
+                        { color: active ? t.onPrimary : t.textMuted },
+                      ]}>
+                      {VISIBILITY_LABELS[v.id]}
+                    </Text>
                   </Pressable>
                 );
               })}
             </View>
+            <Text style={[Typography.supporting, styles.segDesc, { color: t.textMuted }]}>
+              {VISIBILITY_OPTIONS.find((v) => v.id === visibility)?.desc}
+            </Text>
 
             <Pressable
               onPress={submit}
@@ -267,15 +270,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emojiGlyph: { fontSize: 18 },
-  visibilityList: { gap: Spacing.two },
-  visibilityRow: {
+  segment: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-    borderRadius: Radius.md,
-    padding: Spacing.three,
+    gap: Spacing.two,
   },
-  visibilityIcon: { fontSize: 18 },
+  segItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: Spacing.one,
+    paddingVertical: Spacing.three,
+    borderRadius: Radius.md,
+  },
+  segIcon: { fontSize: 18 },
+  segLabel: { fontWeight: '600' },
+  segDesc: { textAlign: 'center' },
   submit: {
     borderRadius: Radius.pill,
     paddingVertical: Spacing.three,
