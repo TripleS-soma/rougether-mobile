@@ -6,6 +6,7 @@ import { ROUTINE_CATEGORIES, type Routine, type RoutineCategoryMeta } from '@/co
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { captureVerificationPhoto } from '@/lib/photo-verify';
 import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
+import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 import { formatTime } from '@/utils/datetime';
 
@@ -81,7 +82,7 @@ export function MyRoomScreen({
   };
 
   return (
-    <View style={[styles.screen, { backgroundColor: t.screen }]}>
+    <View style={[styles.screen, useScreenStyle()]}>
       <View style={[styles.header, { backgroundColor: t.surface }]}>
         <View style={styles.headerLeft}>
           <View style={[styles.avatar, { backgroundColor: character.bg }]}>

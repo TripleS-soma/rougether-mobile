@@ -22,14 +22,10 @@ export default function AppTabs() {
       <TabList asChild>
         <CustomTabList>
           <TabTrigger name="home" href="/" asChild>
-            <TabButton>Home</TabButton>
+            <TabButton>나의 방</TabButton>
           </TabTrigger>
-          <TabTrigger name="explore" href="/explore" asChild>
-            <TabButton>Explore</TabButton>
-          </TabTrigger>
-          <TabTrigger name="dev" href="/dev" asChild>
-            <TabButton>Dev</TabButton>
-          </TabTrigger>
+          {/* Explore / Dev tabs are hidden from the shipped app (the /dev
+              gallery route still exists for development). */}
         </CustomTabList>
       </TabList>
     </Tabs>

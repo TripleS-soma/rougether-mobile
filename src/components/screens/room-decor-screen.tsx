@@ -11,6 +11,7 @@ import {
   type FurnitureItem,
   WALLPAPERS,
 } from '@/resources/furniture';
+import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 
 const ALL = '전체';
@@ -80,7 +81,7 @@ export function RoomDecorScreen({
         : ownedItems.filter((i) => i.category === activeCategory);
 
   return (
-    <View style={[styles.screen, { backgroundColor: t.screen }]}>
+    <View style={[styles.screen, useScreenStyle()]}>
       <View style={[styles.header, { backgroundColor: t.surface }]}>
         <Pressable
           onPress={onBack}
