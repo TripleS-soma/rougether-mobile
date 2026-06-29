@@ -6,6 +6,7 @@ import { TimePickerSheet } from '@/components/screens/sheets/time-picker-sheet';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import {
   type NewRoutine,
+  type Routine,
   ROUTINE_CATEGORIES,
   type RoutineCategory,
   type RoutineCategoryMeta,
@@ -50,6 +51,11 @@ const PRESETS: Preset[] = [
 export type AddRoutineScreenProps = {
   onBack?: () => void;
   onAdd?: (routine: NewRoutine) => void;
+  /** Edit-mode: the routine being edited; prefills the form and switches the
+   *  screen to "루틴 수정". */
+  editRoutine?: Routine | null;
+  onUpdate?: (id: string, routine: NewRoutine) => void;
+  onDelete?: (id: string) => void;
   categories?: RoutineCategoryMeta[];
 };
 
@@ -58,27 +64,33 @@ function today() {
 }
 
 /**
- * Add-routine form, ported from the prototype `AddRoutineScreen` (add mode).
- * Title + emoji, category, presets, repeat days, duration / alarm rows, photo
- * verify. The duration/time bottom-sheets, category manager, and edit/delete
- * mode are deferred follow-ups — the rows show current values for now.
+ * Add/edit-routine form, ported from the prototype `AddRoutineScreen`. Title +
+ * emoji, category, presets, repeat days, duration / alarm sheets, photo verify.
+ * When `editRoutine` is given, the form prefills its values and submitting calls
+ * `onUpdate` (with a delete action); otherwise it's add mode with `onAdd`.
  */
 export function AddRoutineScreen({
   onBack,
   onAdd,
+  editRoutine,
+  onUpdate,
+  onDelete,
   categories = ROUTINE_CATEGORIES,
 }: AddRoutineScreenProps) {
   const t = useTokens();
-  const [title, setTitle] = useState('');
-  const [emoji, setEmoji] = useState('☀️');
+  const isEdit = Boolean(editRoutine);
+  const [title, setTitle] = useState(editRoutine?.title ?? '');
+  const [emoji, setEmoji] = useState(editRoutine?.emoji ?? '☀️');
   const [showEmoji, setShowEmoji] = useState(false);
-  const [category, setCategory] = useState<RoutineCategory>(categories[0]?.id ?? '일정');
-  const [days, setDays] = useState<number[]>([1, 2, 3, 4, 5]);
-  const [alarmEnabled, setAlarmEnabled] = useState(true);
-  const [time, setTime] = useState('07:00');
-  const [startDate, setStartDate] = useState(today());
-  const [endDate, setEndDate] = useState<string | undefined>(undefined);
-  const [photoVerify, setPhotoVerify] = useState(false);
+  const [category, setCategory] = useState<RoutineCategory>(
+    editRoutine?.category ?? categories[0]?.id ?? '일정',
+  );
+  const [days, setDays] = useState<number[]>(editRoutine?.days ?? [1, 2, 3, 4, 5]);
+  const [alarmEnabled, setAlarmEnabled] = useState(editRoutine?.alarmEnabled ?? true);
+  const [time, setTime] = useState(editRoutine?.time ?? '07:00');
+  const [startDate, setStartDate] = useState(editRoutine?.startDate ?? today());
+  const [endDate, setEndDate] = useState<string | undefined>(editRoutine?.endDate);
+  const [photoVerify, setPhotoVerify] = useState(editRoutine?.photoVerify ?? false);
   const [showDateSheet, setShowDateSheet] = useState(false);
   const [showTimeSheet, setShowTimeSheet] = useState(false);
 
@@ -89,7 +101,7 @@ export function AddRoutineScreen({
 
   const submit = () => {
     if (!canSubmit) return;
-    onAdd?.({
+    const payload: NewRoutine = {
       title: title.trim(),
       emoji,
       category,
@@ -99,7 +111,9 @@ export function AddRoutineScreen({
       alarmEnabled,
       time,
       photoVerify,
-    });
+    };
+    if (editRoutine) onUpdate?.(editRoutine.id, payload);
+    else onAdd?.(payload);
     onBack?.();
   };
 
@@ -113,7 +127,7 @@ export function AddRoutineScreen({
           style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
           <Text style={[styles.backGlyph, { color: t.text }]}>‹</Text>
         </Pressable>
-        <Text style={[Typography.h2, { color: t.text }]}>루틴 추가</Text>
+        <Text style={[Typography.h2, { color: t.text }]}>{isEdit ? '루틴 수정' : '루틴 추가'}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
@@ -186,33 +200,35 @@ export function AddRoutineScreen({
           </ScrollView>
         </View>
 
-        {/* Presets */}
-        <View style={styles.field}>
-          <Text style={[styles.label, { color: t.text }]}>추천 루틴</Text>
-          <View style={styles.presetGrid}>
-            {PRESETS.map((p) => (
-              <Pressable
-                key={p.title}
-                onPress={() => {
-                  setTitle(p.title);
-                  setEmoji(p.emoji);
-                  setCategory(p.category);
-                }}
-                style={[
-                  styles.preset,
-                  {
-                    backgroundColor: t.surface,
-                    borderColor: title === p.title ? t.primary : 'transparent',
-                  },
-                ]}>
-                <Text style={styles.presetEmoji}>{p.emoji}</Text>
-                <Text style={[Typography.body, styles.flex, { color: t.text }]} numberOfLines={1}>
-                  {p.title}
-                </Text>
-              </Pressable>
-            ))}
+        {/* Presets (add mode only) */}
+        {!isEdit ? (
+          <View style={styles.field}>
+            <Text style={[styles.label, { color: t.text }]}>추천 루틴</Text>
+            <View style={styles.presetGrid}>
+              {PRESETS.map((p) => (
+                <Pressable
+                  key={p.title}
+                  onPress={() => {
+                    setTitle(p.title);
+                    setEmoji(p.emoji);
+                    setCategory(p.category);
+                  }}
+                  style={[
+                    styles.preset,
+                    {
+                      backgroundColor: t.surface,
+                      borderColor: title === p.title ? t.primary : 'transparent',
+                    },
+                  ]}>
+                  <Text style={styles.presetEmoji}>{p.emoji}</Text>
+                  <Text style={[Typography.body, styles.flex, { color: t.text }]} numberOfLines={1}>
+                    {p.title}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
-        </View>
+        ) : null}
 
         {/* Repeat days */}
         <View style={styles.field}>
@@ -331,8 +347,22 @@ export function AddRoutineScreen({
             { backgroundColor: canSubmit ? t.primary : DISABLED },
             pressed && canSubmit && { backgroundColor: t.primaryActive },
           ]}>
-          <Text style={[Typography.label, { color: t.onPrimary }]}>루틴 추가하기</Text>
+          <Text style={[Typography.label, { color: t.onPrimary }]}>
+            {isEdit ? '수정하기' : '루틴 추가하기'}
+          </Text>
         </Pressable>
+        {isEdit ? (
+          <Pressable
+            onPress={() => {
+              if (editRoutine) onDelete?.(editRoutine.id);
+              onBack?.();
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="루틴 삭제"
+            style={[styles.deleteBtn, { borderColor: t.danger }]}>
+            <Text style={[Typography.label, { color: t.danger }]}>삭제하기</Text>
+          </Pressable>
+        ) : null}
       </View>
     </View>
   );
@@ -443,6 +473,13 @@ const styles = StyleSheet.create({
   submit: {
     paddingVertical: Spacing.three,
     borderRadius: Radius.pill,
+    alignItems: 'center',
+  },
+  deleteBtn: {
+    marginTop: Spacing.two,
+    paddingVertical: Spacing.three,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
     alignItems: 'center',
   },
 });

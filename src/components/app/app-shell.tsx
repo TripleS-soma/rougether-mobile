@@ -76,9 +76,47 @@ export function AppShell() {
     FURNITURE_ITEMS.map((i) => i.id),
   );
   const [visitingFriend, setVisitingFriend] = useState('친구');
+  const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
 
   const toggleRoutine = (id: string) =>
     setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, completed: !r.completed } : r)));
+
+  const updateRoutine = (id: string, n: NewRoutine) =>
+    setRoutines((prev) =>
+      prev.map((r) =>
+        r.id === id
+          ? {
+              ...r,
+              title: n.title,
+              emoji: n.emoji,
+              category: n.category,
+              days: n.days,
+              startDate: n.startDate,
+              endDate: n.endDate,
+              alarmEnabled: n.alarmEnabled,
+              time: n.time,
+              photoVerify: n.photoVerify,
+            }
+          : r,
+      ),
+    );
+
+  const deleteRoutine = (id: string) => setRoutines((prev) => prev.filter((r) => r.id !== id));
+
+  const quickAddTodo = (category: string, title: string) =>
+    setRoutines((prev) => [
+      ...prev,
+      { id: String(Date.now()), title, completed: false, category, kind: 'todo' },
+    ]);
+
+  // Remember where the add/edit-routine screen was opened from, so its back
+  // button returns to the right place (my-room or routine manage).
+  const [addReturnScreen, setAddReturnScreen] = useState<Screen>('routineManage');
+  const openEditRoutine = (routine: Routine, from: Screen) => {
+    setEditingRoutine(routine);
+    setAddReturnScreen(from);
+    setScreen('addRoutine');
+  };
 
   const addRoutine = (n: NewRoutine) =>
     setRoutines((prev) => [
@@ -113,6 +151,9 @@ export function AppShell() {
             onEdit={() => setScreen('decor')}
             onAddRoutine={() => setScreen('routineManage')}
             onOpenGacha={() => setScreen('gacha')}
+            onQuickAddRoutine={quickAddTodo}
+            onEditRoutine={(r) => openEditRoutine(r, 'myRoom')}
+            onDeleteRoutine={deleteRoutine}
           />
         ) : null}
 
@@ -135,16 +176,23 @@ export function AppShell() {
             routines={routines}
             categories={ROUTINE_CATEGORIES}
             onBack={() => setScreen('myRoom')}
-            onAdd={() => setScreen('addRoutine')}
-            onEdit={() => setScreen('addRoutine')}
+            onAdd={() => {
+              setEditingRoutine(null);
+              setAddReturnScreen('routineManage');
+              setScreen('addRoutine');
+            }}
+            onEdit={(r) => openEditRoutine(r, 'routineManage')}
           />
         ) : null}
 
         {screen === 'addRoutine' ? (
           <AddRoutineScreen
             categories={ROUTINE_CATEGORIES}
+            editRoutine={editingRoutine}
             onAdd={addRoutine}
-            onBack={() => setScreen('routineManage')}
+            onUpdate={updateRoutine}
+            onDelete={deleteRoutine}
+            onBack={() => setScreen(addReturnScreen)}
           />
         ) : null}
 

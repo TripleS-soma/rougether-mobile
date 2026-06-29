@@ -1,4 +1,5 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Room } from '@/components/room/room';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
@@ -30,6 +31,12 @@ export type MyRoomScreenProps = {
   onToggleRoutine?: (id: string) => void;
   onOpenGacha?: () => void;
   onClaimReward?: () => void;
+  /** Quick-add a title-only todo to a category (the + on a category header). */
+  onQuickAddRoutine?: (category: string, title: string) => void;
+  /** Open the full edit screen for a routine (kebab → 수정). */
+  onEditRoutine?: (routine: Routine) => void;
+  /** Delete a routine (kebab → 삭제). */
+  onDeleteRoutine?: (id: string) => void;
   /**
    * Capture a verification photo when completing a 인증사진형 routine; resolves to
    * the photo URI, or null to cancel the completion. Defaults to the device
@@ -42,9 +49,9 @@ export type MyRoomScreenProps = {
  * "My room" (zoomed) screen, ported from the prototype `MyRoomZoomScreen`:
  * header (character + streak), the shared <Room /> view with a gacha shortcut,
  * today's routines grouped by category with a progress bar, and a reward card.
- * Pure + prop-driven; the web-only "save room photo" (SVG/canvas) is dropped and
- * inline routine editing (kebab menu / quick-add) is deferred. Spec domain:
- * rougether-spec domains/room.
+ * Each category header has a + to quick-add a todo, and each routine has a kebab
+ * menu (수정 / 삭제). Pure + prop-driven; the web-only "save room photo"
+ * (SVG/canvas) is dropped. Spec domain: rougether-spec domains/room.
  */
 export function MyRoomScreen({
   userName = '준서',
@@ -60,6 +67,9 @@ export function MyRoomScreen({
   onToggleRoutine,
   onOpenGacha,
   onClaimReward,
+  onQuickAddRoutine,
+  onEditRoutine,
+  onDeleteRoutine,
   onRequestPhoto = captureVerificationPhoto,
 }: MyRoomScreenProps) {
   const t = useTokens();
@@ -67,6 +77,19 @@ export function MyRoomScreen({
   const knownIds = categories.map((c) => c.id);
   const completedCount = routines.filter((r) => r.completed).length;
   const progress = routines.length > 0 ? completedCount / routines.length : 0;
+
+  // Which category's quick-add input is open, the in-progress todo text, and
+  // which routine's kebab menu is open.
+  const [addingCategory, setAddingCategory] = useState<string | null>(null);
+  const [newTodo, setNewTodo] = useState('');
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+
+  const commitTodo = (categoryId: string) => {
+    const title = newTodo.trim();
+    if (title) onQuickAddRoutine?.(categoryId, title);
+    setNewTodo('');
+    setAddingCategory(null);
+  };
 
   // Completing a 인증사진형 routine first requires a camera photo; if none is
   // captured (cancelled / denied), the completion is aborted. Kept sync on the
@@ -163,55 +186,136 @@ export function MyRoomScreen({
                   <Text style={[Typography.supporting, { color: t.textDisabled }]}>
                     {doneInCat}/{items.length}
                   </Text>
+                  <View style={styles.flex} />
+                  <Pressable
+                    onPress={() => {
+                      setNewTodo('');
+                      setAddingCategory((prev) => (prev === cat.id ? null : cat.id));
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${cat.label} 할 일 추가`}
+                    style={[styles.catAdd, { backgroundColor: cat.color }]}>
+                    <Text style={styles.catAddGlyph}>＋</Text>
+                  </Pressable>
                 </View>
 
                 <View style={styles.rows}>
-                  {items.map((routine) => (
-                    <Pressable
-                      key={routine.id}
-                      onPress={() => handleToggle(routine)}
-                      accessibilityRole="checkbox"
-                      accessibilityState={{ checked: routine.completed }}
-                      accessibilityLabel={routine.title}
-                      style={[
-                        styles.row,
-                        { backgroundColor: t.surface, borderLeftColor: cat.color },
-                      ]}>
-                      <Text
-                        style={[
-                          styles.check,
-                          { color: routine.completed ? t.primary : t.textDisabled },
-                        ]}>
-                        {routine.completed ? '☑' : '☐'}
-                      </Text>
-                      {routine.emoji ? <Text style={styles.rowEmoji}>{routine.emoji}</Text> : null}
-                      <View style={styles.flex}>
-                        <Text
+                  {items.map((routine) => {
+                    const menuOpen = menuOpenId === routine.id;
+                    return (
+                      <View key={routine.id}>
+                        <View
                           style={[
-                            Typography.body,
-                            routine.completed
-                              ? { color: t.textMuted, textDecorationLine: 'line-through' }
-                              : { color: t.text },
+                            styles.routineRow,
+                            { backgroundColor: t.surface, borderLeftColor: cat.color },
                           ]}>
-                          {routine.title}
-                        </Text>
-                        {(routine.alarmEnabled && routine.time) || routine.photoVerify ? (
-                          <View style={styles.badges}>
-                            {routine.alarmEnabled && routine.time ? (
-                              <Text style={[styles.badge, { color: t.textMuted }]}>
-                                🔔 {formatTime(routine.time)}
-                              </Text>
+                          <Pressable
+                            onPress={() => handleToggle(routine)}
+                            accessibilityRole="checkbox"
+                            accessibilityState={{ checked: routine.completed }}
+                            accessibilityLabel={routine.title}
+                            style={styles.rowMain}>
+                            <Text
+                              style={[
+                                styles.check,
+                                { color: routine.completed ? t.primary : t.textDisabled },
+                              ]}>
+                              {routine.completed ? '☑' : '☐'}
+                            </Text>
+                            {routine.emoji ? (
+                              <Text style={styles.rowEmoji}>{routine.emoji}</Text>
                             ) : null}
-                            {routine.photoVerify ? (
-                              <Text style={[styles.badge, { color: t.textMuted }]}>
-                                📷 사진 인증
+                            <View style={styles.flex}>
+                              <Text
+                                style={[
+                                  Typography.body,
+                                  routine.completed
+                                    ? { color: t.textMuted, textDecorationLine: 'line-through' }
+                                    : { color: t.text },
+                                ]}>
+                                {routine.title}
                               </Text>
-                            ) : null}
+                              {(routine.alarmEnabled && routine.time) || routine.photoVerify ? (
+                                <View style={styles.badges}>
+                                  {routine.alarmEnabled && routine.time ? (
+                                    <Text style={[styles.badge, { color: t.textMuted }]}>
+                                      🔔 {formatTime(routine.time)}
+                                    </Text>
+                                  ) : null}
+                                  {routine.photoVerify ? (
+                                    <Text style={[styles.badge, { color: t.textMuted }]}>
+                                      📷 사진 인증
+                                    </Text>
+                                  ) : null}
+                                </View>
+                              ) : null}
+                            </View>
+                          </Pressable>
+                          <Pressable
+                            onPress={() => setMenuOpenId(menuOpen ? null : routine.id)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`${routine.title} 메뉴`}
+                            style={styles.kebab}>
+                            <Text style={[styles.kebabGlyph, { color: t.textDisabled }]}>⋮</Text>
+                          </Pressable>
+                        </View>
+
+                        {menuOpen ? (
+                          <View
+                            style={[
+                              styles.menu,
+                              { backgroundColor: t.surface, borderColor: t.border },
+                            ]}>
+                            <Pressable
+                              onPress={() => {
+                                setMenuOpenId(null);
+                                onEditRoutine?.(routine);
+                              }}
+                              accessibilityRole="button"
+                              accessibilityLabel={`${routine.title} 수정`}
+                              style={styles.menuItem}>
+                              <Text style={[Typography.body, { color: t.text }]}>✎ 수정하기</Text>
+                            </Pressable>
+                            <Pressable
+                              onPress={() => {
+                                setMenuOpenId(null);
+                                onDeleteRoutine?.(routine.id);
+                              }}
+                              accessibilityRole="button"
+                              accessibilityLabel={`${routine.title} 삭제`}
+                              style={[
+                                styles.menuItem,
+                                { borderTopWidth: 1, borderTopColor: t.border },
+                              ]}>
+                              <Text style={[Typography.body, { color: t.danger }]}>🗑 삭제하기</Text>
+                            </Pressable>
                           </View>
                         ) : null}
                       </View>
-                    </Pressable>
-                  ))}
+                    );
+                  })}
+
+                  {addingCategory === cat.id ? (
+                    <View
+                      style={[
+                        styles.routineRow,
+                        { backgroundColor: t.surface, borderLeftColor: cat.color },
+                      ]}>
+                      <Text style={[styles.check, { color: t.textDisabled }]}>☐</Text>
+                      <TextInput
+                        autoFocus
+                        value={newTodo}
+                        onChangeText={setNewTodo}
+                        onSubmitEditing={() => commitTodo(cat.id)}
+                        onBlur={() => {
+                          if (!newTodo.trim()) setAddingCategory(null);
+                        }}
+                        placeholder="할 일 입력 후 완료"
+                        placeholderTextColor={t.textMuted}
+                        style={[styles.flex, styles.todoInput, { color: t.text }]}
+                      />
+                    </View>
+                  ) : null}
                 </View>
               </View>
             );
@@ -363,16 +467,56 @@ const styles = StyleSheet.create({
   catEmoji: {
     fontSize: 14,
   },
+  catAdd: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  catAddGlyph: {
+    fontSize: 14,
+    color: '#FFFFFF',
+  },
   rows: {
     gap: Spacing.two,
   },
-  row: {
+  routineRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
-    padding: Spacing.three,
     borderRadius: Radius.lg,
     borderLeftWidth: 4,
+    paddingLeft: Spacing.three,
+  },
+  rowMain: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    paddingVertical: Spacing.three,
+  },
+  kebab: {
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.three,
+  },
+  kebabGlyph: {
+    fontSize: 20,
+  },
+  menu: {
+    borderWidth: 1,
+    borderRadius: Radius.md,
+    marginTop: Spacing.one,
+    overflow: 'hidden',
+  },
+  menuItem: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.three,
+  },
+  todoInput: {
+    fontSize: 16,
+    paddingVertical: Spacing.three,
   },
   check: {
     fontSize: 22,
