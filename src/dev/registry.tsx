@@ -9,6 +9,7 @@ import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { LoginScreen } from '@/components/screens/login-screen';
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { OnboardingScreen } from '@/components/screens/onboarding-screen';
+import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
 import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
 import { SettingsScreen } from '@/components/screens/settings-screen';
 import { SignupScreen } from '@/components/screens/signup-screen';
@@ -81,6 +82,16 @@ export const galleryEntries: GalleryEntry[] = [
           routines={SAMPLE_ROUTINES}
           placedFurnitureIds={['bed', 'window', 'plant', 'rug']}
         />
+      </View>
+    ),
+  },
+  {
+    name: 'RoomDecorScreen',
+    description:
+      'Ported from the prototype RoomDecorScreen (#8): live room preview + wallpaper/furniture catalog.',
+    render: () => (
+      <View style={{ height: 900, alignSelf: 'stretch' }}>
+        <RoomDecorScreen />
       </View>
     ),
   },
