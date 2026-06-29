@@ -19,16 +19,24 @@ import {
 } from '@/resources/furniture';
 import { assetSource } from '@/resources/asset';
 
-/** Where each furniture slot sits inside the (square) room. */
+/**
+ * Where each furniture slot sits inside the (square) room. Symmetric layout:
+ * the bottom row (bed / rug / chair) vertically mirrors the top row
+ * (shelf / window / storage), and plant / table mirror each other left↔right at
+ * mid-height. Furniture is 24% wide, so left: '38%' centers an item.
+ */
 const SLOT_STYLE: Record<FurnitureSlot, ImageStyle> = {
-  window: { top: '6%', left: '38%' },
+  // Top row
   shelf: { top: '8%', left: '5%' },
+  window: { top: '8%', left: '38%' },
   storage: { top: '8%', right: '5%' },
-  plant: { bottom: '30%', left: '6%' },
-  table: { bottom: '34%', right: '8%' },
-  bed: { bottom: '8%', left: '4%' },
-  chair: { bottom: '8%', right: '4%' },
-  rug: { bottom: '6%', left: '32%' },
+  // Bottom row (vertical mirror of the top row)
+  bed: { bottom: '8%', left: '5%' },
+  rug: { bottom: '8%', left: '38%' },
+  chair: { bottom: '8%', right: '5%' },
+  // Mid-height sides (horizontal mirror of each other)
+  plant: { top: '38%', left: '6%' },
+  table: { top: '38%', right: '6%' },
 };
 
 export type RoomProps = {
