@@ -5,6 +5,7 @@ import { Room } from '@/components/room/room';
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { GachaScreen } from '@/components/screens/gacha-screen';
+import { GroupHouseScreen } from '@/components/screens/group-house-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { LoginScreen } from '@/components/screens/login-screen';
 import { OnboardingScreen } from '@/components/screens/onboarding-screen';
@@ -67,6 +68,16 @@ export const galleryEntries: GalleryEntry[] = [
             'hanok-teatable',
           ]}
         />
+      </View>
+    ),
+  },
+  {
+    name: 'GroupHouseScreen',
+    description:
+      'Ported from the prototype GroupHouseScreen (#10): house switcher, member rooms, group goals, kick flow.',
+    render: () => (
+      <View style={{ height: 900, alignSelf: 'stretch' }}>
+        <GroupHouseScreen leafBalance={5600} />
       </View>
     ),
   },
