@@ -11,6 +11,7 @@ import {
 
 import { fetchRecommendedHouses, type HouseSummary } from '@/api/house';
 import { Radius, Spacing, Typography } from '@/constants/theme';
+import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 
 const ERROR = '#D67878';
@@ -64,7 +65,7 @@ export function HouseSearchScreen({ onBack, onJoin, onCreate }: HouseSearchScree
   };
 
   return (
-    <View style={[styles.screen, { backgroundColor: t.screen }]}>
+    <View style={[styles.screen, useScreenStyle()]}>
       <View style={[styles.header, { backgroundColor: t.surface }]}>
         <Pressable
           onPress={onBack}

@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Radius, Spacing, Typography } from '@/constants/theme';
+import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 
 const DISABLED = '#D4C4B0';
@@ -60,6 +61,7 @@ export type OnboardingScreenProps = {
  */
 export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
   const t = useTokens();
+  const screenStyle = useScreenStyle();
   const [index, setIndex] = useState(0);
   const [showGoalSurvey, setShowGoalSurvey] = useState(false);
   const [showCharacterSelect, setShowCharacterSelect] = useState(false);
@@ -75,7 +77,7 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
   // --- Character select ---
   if (showCharacterSelect) {
     return (
-      <View style={[styles.screen, { backgroundColor: t.screen }]}>
+      <View style={[styles.screen, screenStyle]}>
         <View style={styles.intro}>
           <Text style={[Typography.h1, { color: t.text }]}>함께할 캐릭터를 골라주세요</Text>
           <Text style={[Typography.supporting, styles.introBody, { color: t.textMuted }]}>
@@ -124,7 +126,7 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
   if (showGoalSurvey) {
     const canStart = selectedGoals.length > 0;
     return (
-      <View style={[styles.screen, { backgroundColor: t.screen }]}>
+      <View style={[styles.screen, screenStyle]}>
         <View style={styles.intro}>
           <Text style={[Typography.h1, { color: t.text }]}>관심 있는 목표를 골라주세요</Text>
           <Text style={[Typography.supporting, styles.introBody, { color: t.textMuted }]}>
@@ -171,7 +173,7 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
 
   // --- Intro slides ---
   return (
-    <View style={[styles.screen, { backgroundColor: t.screen }]}>
+    <View style={[styles.screen, screenStyle]}>
       <View style={styles.skipRow}>
         {!isLast ? (
           <Pressable onPress={() => setShowGoalSurvey(true)} accessibilityRole="button">

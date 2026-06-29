@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Field } from '@/components/ui/field';
 import { Radius, Spacing } from '@/constants/theme';
+import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 
 export type LoginScreenProps = {
@@ -27,7 +28,7 @@ export function LoginScreen({ onAuthSuccess, onGoSignup }: LoginScreenProps) {
   const canSubmit = email.length > 0 && password.length > 0;
 
   return (
-    <View style={[styles.screen, { backgroundColor: t.screen }]}>
+    <View style={[styles.screen, useScreenStyle()]}>
       <View style={styles.header}>
         {/* TODO: replace with the ported CharacterAvatar */}
         <View style={[styles.avatar, { backgroundColor: t.surfaceMuted }]}>
