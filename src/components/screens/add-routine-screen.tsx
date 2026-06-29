@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { DateRangeSheet } from '@/components/screens/sheets/date-range-sheet';
+import { TimePickerSheet } from '@/components/screens/sheets/time-picker-sheet';
+import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import {
   type NewRoutine,
   ROUTINE_CATEGORIES,
@@ -72,9 +75,12 @@ export function AddRoutineScreen({
   const [category, setCategory] = useState<RoutineCategory>(categories[0]?.id ?? '일정');
   const [days, setDays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [alarmEnabled, setAlarmEnabled] = useState(true);
-  const [time] = useState('07:00');
-  const [startDate] = useState(today());
+  const [time, setTime] = useState('07:00');
+  const [startDate, setStartDate] = useState(today());
+  const [endDate, setEndDate] = useState<string | undefined>(undefined);
   const [photoVerify, setPhotoVerify] = useState(false);
+  const [showDateSheet, setShowDateSheet] = useState(false);
+  const [showTimeSheet, setShowTimeSheet] = useState(false);
 
   const toggleDay = (d: number) =>
     setDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort()));
@@ -89,6 +95,7 @@ export function AddRoutineScreen({
       category,
       days,
       startDate,
+      endDate,
       alarmEnabled,
       time,
       photoVerify,
@@ -229,28 +236,35 @@ export function AddRoutineScreen({
           </View>
         </View>
 
-        {/* Duration (sheet deferred) */}
+        {/* Duration */}
         <View style={styles.field}>
           <Text style={[styles.label, { color: t.text }]}>지속 기간</Text>
-          <View style={[styles.infoRow, { backgroundColor: t.surface }]}>
+          <Pressable
+            onPress={() => setShowDateSheet(true)}
+            accessibilityRole="button"
+            accessibilityLabel="지속 기간 선택"
+            style={[styles.infoRow, { backgroundColor: t.surface }]}>
             <View style={[styles.infoIcon, { backgroundColor: t.surfaceMuted }]}>
               <Text style={styles.icon}>📅</Text>
             </View>
             <View style={styles.flex}>
               <Text style={[Typography.body, { color: t.text }]}>
-                {formatDate(startDate)} ~ 계속
+                {formatDate(startDate)} ~ {endDate ? formatDate(endDate) : '계속'}
               </Text>
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                기간 선택 (곧 지원)
-              </Text>
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>기간 선택</Text>
             </View>
-          </View>
+            <Text style={[styles.chevron, { color: t.textDisabled }]}>›</Text>
+          </Pressable>
         </View>
 
-        {/* Alarm (sheet deferred, inline toggle) */}
+        {/* Alarm */}
         <View style={styles.field}>
           <Text style={[styles.label, { color: t.text }]}>알림 시간</Text>
-          <View style={[styles.infoRow, { backgroundColor: t.surface }]}>
+          <Pressable
+            onPress={() => setShowTimeSheet(true)}
+            accessibilityRole="button"
+            accessibilityLabel="알림 시간 선택"
+            style={[styles.infoRow, { backgroundColor: t.surface }]}>
             <View style={[styles.infoIcon, { backgroundColor: t.surfaceMuted }]}>
               <Text style={styles.icon}>🔔</Text>
             </View>
@@ -258,12 +272,10 @@ export function AddRoutineScreen({
               <Text style={[Typography.body, { color: t.text }]}>
                 {alarmEnabled ? formatTime(time) : '알림 없음'}
               </Text>
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                시간 선택 (곧 지원)
-              </Text>
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>시간 선택</Text>
             </View>
-            <Switch on={alarmEnabled} onToggle={() => setAlarmEnabled((v) => !v)} />
-          </View>
+            <Text style={[styles.chevron, { color: t.textDisabled }]}>›</Text>
+          </Pressable>
         </View>
 
         {/* Photo verify */}
@@ -279,10 +291,35 @@ export function AddRoutineScreen({
                 완료할 때 사진을 찍어 인증해요
               </Text>
             </View>
-            <Switch on={photoVerify} onToggle={() => setPhotoVerify((v) => !v)} />
+            <ToggleSwitch
+              value={photoVerify}
+              onToggle={() => setPhotoVerify((v) => !v)}
+              accessibilityLabel="인증사진형"
+            />
           </View>
         </View>
       </ScrollView>
+
+      <DateRangeSheet
+        visible={showDateSheet}
+        initialStartDate={startDate}
+        initialEndDate={endDate}
+        onSave={(start, end) => {
+          setStartDate(start);
+          setEndDate(end);
+        }}
+        onClose={() => setShowDateSheet(false)}
+      />
+      <TimePickerSheet
+        visible={showTimeSheet}
+        initialEnabled={alarmEnabled}
+        initialTime={time}
+        onSave={(enabled, value) => {
+          setAlarmEnabled(enabled);
+          setTime(value);
+        }}
+        onClose={() => setShowTimeSheet(false)}
+      />
 
       <View style={[styles.footer, { backgroundColor: t.screen }]}>
         <Pressable
@@ -298,19 +335,6 @@ export function AddRoutineScreen({
         </Pressable>
       </View>
     </View>
-  );
-}
-
-function Switch({ on, onToggle }: { on: boolean; onToggle: () => void }) {
-  const t = useTokens();
-  return (
-    <Pressable
-      onPress={onToggle}
-      accessibilityRole="switch"
-      accessibilityState={{ checked: on }}
-      style={[styles.switch, { backgroundColor: on ? t.primary : DISABLED }]}>
-      <View style={[styles.switchThumb, on && styles.switchThumbOn]} />
-    </Pressable>
   );
 }
 
@@ -411,20 +435,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   icon: { fontSize: 16 },
-  switch: {
-    width: 44,
-    height: 26,
-    borderRadius: 13,
-    padding: 2,
-    justifyContent: 'center',
-  },
-  switchThumb: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#FFFFFF',
-  },
-  switchThumbOn: { transform: [{ translateX: 18 }] },
+  chevron: { fontSize: 20 },
   footer: {
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.three,
