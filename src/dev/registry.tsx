@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { Room } from '@/components/room/room';
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
+import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
 import { GachaScreen } from '@/components/screens/gacha-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { LoginScreen } from '@/components/screens/login-screen';
@@ -66,6 +67,19 @@ export const galleryEntries: GalleryEntry[] = [
             'hanok-plant',
             'hanok-teatable',
           ]}
+        />
+      </View>
+    ),
+  },
+  {
+    name: 'FriendRoomScreen',
+    description:
+      'Ported from the prototype FriendRoomScreen (#9): read-only room + routines + cheers.',
+    render: () => (
+      <View style={{ height: 860, alignSelf: 'stretch' }}>
+        <FriendRoomScreen
+          friendName="민지"
+          placedFurnitureIds={['bed', 'window', 'plant', 'rug']}
         />
       </View>
     ),
