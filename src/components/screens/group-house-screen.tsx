@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Radius, Spacing, Typography } from '@/constants/theme';
+import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 
 export type RoomCell = {
@@ -93,6 +94,7 @@ export function GroupHouseScreen({
   onOpenSearch,
 }: GroupHouseScreenProps) {
   const t = useTokens();
+  const screenStyle = useScreenStyle();
   const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
 
   const [houseIndex, setHouseIndex] = useState(0);
@@ -117,7 +119,7 @@ export function GroupHouseScreen({
 
   if (showMembers) {
     return (
-      <View style={[styles.screen, { backgroundColor: t.screen }]}>
+      <View style={[styles.screen, screenStyle]}>
         <View style={[styles.header, { backgroundColor: t.surface }]}>
           <View style={styles.flex}>
             <Text style={[Typography.supporting, { color: t.primary }]}>{currentHouse.title}</Text>
@@ -231,7 +233,7 @@ export function GroupHouseScreen({
   }
 
   return (
-    <View style={[styles.screen, { backgroundColor: t.screen }]}>
+    <View style={[styles.screen, screenStyle]}>
       <View style={[styles.header, { backgroundColor: t.surface }]}>
         <View style={[styles.pill, { backgroundColor: t.surfaceMuted }]}>
           <Text style={[Typography.label, { color: t.text }]}>👑 Lv.20</Text>

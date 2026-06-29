@@ -1,6 +1,6 @@
-import { MyRoomApp } from '@/components/app/my-room-app';
+import { AppShell } from '@/components/app/app-shell';
 
-/** Home tab → the 나의 방 app (room view + decoration + routine add). */
+/** App entry → the full app shell (나의 방 / 집 / 설정 + sub-screens). */
 export default function HomeScreen() {
-  return <MyRoomApp />;
+  return <AppShell />;
 }
