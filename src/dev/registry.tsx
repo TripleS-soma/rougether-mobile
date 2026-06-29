@@ -7,6 +7,7 @@ import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { GachaScreen } from '@/components/screens/gacha-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { LoginScreen } from '@/components/screens/login-screen';
+import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { OnboardingScreen } from '@/components/screens/onboarding-screen';
 import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
 import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
@@ -67,6 +68,19 @@ export const galleryEntries: GalleryEntry[] = [
             'hanok-plant',
             'hanok-teatable',
           ]}
+        />
+      </View>
+    ),
+  },
+  {
+    name: 'MyRoomScreen',
+    description:
+      'Ported from the prototype MyRoomZoomScreen (#7): room view + today’s routines + reward.',
+    render: () => (
+      <View style={{ height: 900, alignSelf: 'stretch' }}>
+        <MyRoomScreen
+          routines={SAMPLE_ROUTINES}
+          placedFurnitureIds={['bed', 'window', 'plant', 'rug']}
         />
       </View>
     ),
