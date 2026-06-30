@@ -5,11 +5,24 @@ import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
 import { GachaScreen } from '@/components/screens/gacha-screen';
 import { GroupHouseScreen } from '@/components/screens/group-house-screen';
+import { HelpScreen } from '@/components/screens/help-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
+import {
+  DEFAULT_NOTIFICATION_SETTINGS,
+  type NotificationSettings,
+  NotificationSettingsScreen,
+} from '@/components/screens/notification-settings-screen';
+import { PasswordChangeScreen } from '@/components/screens/password-change-screen';
+import { ProfileEditScreen } from '@/components/screens/profile-edit-screen';
 import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
 import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
 import { SettingsScreen } from '@/components/screens/settings-screen';
+import {
+  DEFAULT_SOUND_SETTINGS,
+  type SoundSettings,
+  SoundSettingsScreen,
+} from '@/components/screens/sound-settings-screen';
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
 import { BottomNav, type NavTab } from '@/components/ui/bottom-nav';
 import { DEFAULT_CHARACTER_ID } from '@/constants/characters';
@@ -36,7 +49,12 @@ type Screen =
   | 'friendRoom'
   | 'houseSearch'
   | 'createHouse'
-  | 'settings';
+  | 'settings'
+  | 'profileEdit'
+  | 'passwordChange'
+  | 'notifications'
+  | 'sound'
+  | 'help';
 
 /** Which bottom-nav tab is active for each screen, or null to hide the nav. */
 const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
@@ -50,6 +68,11 @@ const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   houseSearch: null,
   createHouse: null,
   settings: 'settings',
+  profileEdit: null,
+  passwordChange: null,
+  notifications: null,
+  sound: null,
+  help: null,
 };
 
 const SCREEN_FOR_TAB: Record<NavTab, Screen> = {
@@ -79,6 +102,14 @@ export function AppShell() {
   const [visitingFriend, setVisitingFriend] = useState('친구');
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
   const [categories, setCategories] = useState<RoutineCategoryMeta[]>(ROUTINE_CATEGORIES);
+
+  // Profile + settings (persistence is local for now).
+  const [nickname, setNickname] = useState('준서');
+  const [bio, setBio] = useState('');
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(
+    DEFAULT_NOTIFICATION_SETTINGS,
+  );
+  const [soundSettings, setSoundSettings] = useState<SoundSettings>(DEFAULT_SOUND_SETTINGS);
 
   const createCategory = (cat: RoutineCategoryMeta) => setCategories((prev) => [...prev, cat]);
 
@@ -263,7 +294,54 @@ export function AppShell() {
           />
         ) : null}
 
-        {screen === 'settings' ? <SettingsScreen /> : null}
+        {screen === 'settings' ? (
+          <SettingsScreen
+            onEditProfile={() => setScreen('profileEdit')}
+            onChangePassword={() => setScreen('passwordChange')}
+            onOpenNotifications={() => setScreen('notifications')}
+            onOpenSound={() => setScreen('sound')}
+            onOpenHelp={() => setScreen('help')}
+          />
+        ) : null}
+
+        {screen === 'profileEdit' ? (
+          <ProfileEditScreen
+            initialNickname={nickname}
+            initialBio={bio}
+            characterId={characterId}
+            onSave={(nick, b) => {
+              setNickname(nick);
+              setBio(b);
+              setScreen('settings');
+            }}
+            onBack={() => setScreen('settings')}
+          />
+        ) : null}
+
+        {screen === 'passwordChange' ? (
+          <PasswordChangeScreen
+            onSubmit={() => setScreen('settings')}
+            onBack={() => setScreen('settings')}
+          />
+        ) : null}
+
+        {screen === 'notifications' ? (
+          <NotificationSettingsScreen
+            initialSettings={notificationSettings}
+            onChange={setNotificationSettings}
+            onBack={() => setScreen('settings')}
+          />
+        ) : null}
+
+        {screen === 'sound' ? (
+          <SoundSettingsScreen
+            initialSettings={soundSettings}
+            onChange={setSoundSettings}
+            onBack={() => setScreen('settings')}
+          />
+        ) : null}
+
+        {screen === 'help' ? <HelpScreen onBack={() => setScreen('settings')} /> : null}
       </View>
 
       {activeTab ? (

@@ -20,18 +20,29 @@ type Row = { icon: IconName; label: string; onPress?: () => void };
 export type SettingsScreenProps = {
   themeId?: ThemeId;
   onChangeTheme?: (id: ThemeId) => void;
+  onEditProfile?: () => void;
+  onChangePassword?: () => void;
+  onOpenNotifications?: () => void;
+  onOpenSound?: () => void;
+  onOpenHelp?: () => void;
   onLogout?: () => void;
 };
 
 /**
  * Settings screen, ported from the prototype `SettingsScreen`: theme picker +
  * account / notification / misc rows. Theme tokens + type scale; vector icons
- * via the shared Icon. The theme picker is prop-driven (onChangeTheme) — wiring it to a global
+ * via the shared Icon. Each row navigates to its sub-screen via the matching
+ * prop. The theme picker is prop-driven (onChangeTheme) — wiring it to a global
  * theme is a separate task.
  */
 export function SettingsScreen({
   themeId = DEFAULT_THEME_ID,
   onChangeTheme,
+  onEditProfile,
+  onChangePassword,
+  onOpenNotifications,
+  onOpenSound,
+  onOpenHelp,
   onLogout,
 }: SettingsScreenProps) {
   const t = useTokens();
@@ -40,21 +51,21 @@ export function SettingsScreen({
     {
       title: '계정',
       rows: [
-        { icon: 'profile', label: '프로필 편집' },
-        { icon: 'lock', label: '비밀번호 변경' },
+        { icon: 'profile', label: '프로필 편집', onPress: onEditProfile },
+        { icon: 'lock', label: '비밀번호 변경', onPress: onChangePassword },
       ],
     },
     {
       title: '알림',
       rows: [
-        { icon: 'bell', label: '푸시 알림' },
-        { icon: 'sound', label: '효과음' },
+        { icon: 'bell', label: '푸시 알림', onPress: onOpenNotifications },
+        { icon: 'sound', label: '효과음', onPress: onOpenSound },
       ],
     },
     {
       title: '기타',
       rows: [
-        { icon: 'help', label: '도움말' },
+        { icon: 'help', label: '도움말', onPress: onOpenHelp },
         { icon: 'leave', label: '로그아웃', onPress: onLogout },
       ],
     },

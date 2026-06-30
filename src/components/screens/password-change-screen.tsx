@@ -1,0 +1,106 @@
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { Field } from '@/components/ui/field';
+import { ScreenHeader } from '@/components/ui/screen-header';
+import { Radius, Spacing, Typography } from '@/constants/theme';
+import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useTokens } from '@/hooks/use-tokens';
+
+const MIN_LENGTH = 8;
+
+export type PasswordChangeScreenProps = {
+  onSubmit?: (current: string, next: string) => void;
+  onBack?: () => void;
+};
+
+/**
+ * "비밀번호 변경" screen reached from 설정 → 비밀번호 변경. Validates the new
+ * password length and match locally; the actual change request is delegated to
+ * onSubmit by the app shell.
+ */
+export function PasswordChangeScreen({ onSubmit, onBack }: PasswordChangeScreenProps) {
+  const t = useTokens();
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [confirm, setConfirm] = useState('');
+
+  const tooShort = next.length > 0 && next.length < MIN_LENGTH;
+  const mismatch = confirm.length > 0 && confirm !== next;
+  const canSubmit =
+    current.length > 0 && next.length >= MIN_LENGTH && confirm === next && next !== current;
+
+  return (
+    <View style={[styles.screen, useScreenStyle()]}>
+      <ScreenHeader title="비밀번호 변경" onBack={onBack} />
+
+      <ScrollView contentContainerStyle={styles.body}>
+        <Field
+          label="현재 비밀번호"
+          value={current}
+          onChangeText={setCurrent}
+          placeholder="현재 비밀번호"
+          secureTextEntry
+          autoCapitalize="none"
+        />
+        <Field
+          label="새 비밀번호"
+          value={next}
+          onChangeText={setNext}
+          placeholder={`${MIN_LENGTH}자 이상 입력해주세요`}
+          secureTextEntry
+          autoCapitalize="none"
+          error={
+            tooShort
+              ? `비밀번호는 ${MIN_LENGTH}자 이상이어야 해요.`
+              : next.length >= MIN_LENGTH && next === current
+                ? '현재 비밀번호와 다르게 입력해주세요.'
+                : undefined
+          }
+        />
+        <Field
+          label="새 비밀번호 확인"
+          value={confirm}
+          onChangeText={setConfirm}
+          placeholder="새 비밀번호를 다시 입력해주세요"
+          secureTextEntry
+          autoCapitalize="none"
+          error={mismatch ? '비밀번호가 일치하지 않아요.' : undefined}
+          success={confirm.length > 0 && !mismatch ? '비밀번호가 일치해요.' : undefined}
+        />
+      </ScrollView>
+
+      <View style={[styles.footer, { borderTopColor: t.border }]}>
+        <Pressable
+          onPress={() => canSubmit && onSubmit?.(current, next)}
+          disabled={!canSubmit}
+          accessibilityRole="button"
+          accessibilityLabel="비밀번호 변경"
+          style={[styles.submit, { backgroundColor: canSubmit ? t.primary : t.surfaceMuted }]}>
+          <Text style={[Typography.label, { color: canSubmit ? t.onPrimary : t.textMuted }]}>
+            변경하기
+          </Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+  },
+  body: {
+    padding: Spacing.four,
+    gap: Spacing.three,
+  },
+  footer: {
+    padding: Spacing.four,
+    borderTopWidth: 1,
+  },
+  submit: {
+    borderRadius: Radius.pill,
+    paddingVertical: Spacing.three,
+    alignItems: 'center',
+  },
+});
