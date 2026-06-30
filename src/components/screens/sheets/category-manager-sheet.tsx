@@ -7,6 +7,7 @@ import {
   type RoutineCategoryMeta,
   VISIBILITY_LABELS,
 } from '@/constants/routines';
+import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
 
@@ -90,7 +91,7 @@ export function CategoryManagerSheet({
             accessibilityRole="button"
             accessibilityLabel="닫기"
             style={[styles.close, { backgroundColor: t.surfaceMuted }]}>
-            <Text style={[styles.closeGlyph, { color: t.text }]}>✕</Text>
+            <Icon name="close" size={16} color={t.text} />
           </Pressable>
         </View>
 

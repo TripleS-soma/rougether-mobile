@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Calendar } from '@/components/ui/calendar';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
+import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
 import { formatDate } from '@/utils/datetime';
@@ -82,7 +83,7 @@ export function DateRangeSheet({
             accessibilityRole="button"
             accessibilityLabel="닫기"
             style={[styles.close, { backgroundColor: t.surfaceMuted }]}>
-            <Text style={[styles.closeGlyph, { color: t.text }]}>✕</Text>
+            <Icon name="close" size={16} color={t.text} />
           </Pressable>
         </View>
 

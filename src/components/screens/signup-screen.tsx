@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Field } from '@/components/ui/field';
+import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
@@ -118,7 +119,7 @@ export function SignupScreen({ onBack, onSignupSuccess }: SignupScreenProps) {
           accessibilityRole="button"
           accessibilityLabel="뒤로 가기"
           style={[styles.backBtn, { backgroundColor: t.surfaceMuted }]}>
-          <Text style={[styles.backGlyph, { color: t.text }]}>‹</Text>
+          <Icon name="back" size={26} color={t.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: t.text }]}>회원가입</Text>
         <View style={styles.backBtn} />
@@ -381,10 +382,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  backGlyph: {
-    fontSize: 28,
-    lineHeight: 30,
   },
   headerTitle: {
     fontSize: 16,
