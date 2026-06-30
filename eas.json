@@ -25,6 +25,13 @@
       "android": {
         "buildType": "app-bundle"
       }
+    },
+    "testflight": {
+      "autoIncrement": true,
+      "channel": "preview",
+      "ios": {
+        "distribution": "store"
+      }
     }
   },
   "submit": {
