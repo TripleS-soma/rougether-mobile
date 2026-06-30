@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Field } from '@/components/ui/field';
+import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
@@ -74,7 +75,7 @@ export function LoginScreen({ onAuthSuccess, onGoSignup }: LoginScreenProps) {
                 { borderColor: t.border },
                 keepLogin && { backgroundColor: t.primary, borderColor: t.primary },
               ]}>
-              {keepLogin ? <Text style={[styles.check, { color: t.onPrimary }]}>✓</Text> : null}
+              {keepLogin ? <Icon name="check" size={12} color={t.onPrimary} /> : null}
             </View>
             <Text style={[styles.smallText, { color: t.textMuted }]}>로그인 유지</Text>
           </Pressable>
@@ -203,10 +204,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  check: {
-    fontSize: 12,
-    fontWeight: '700',
   },
   submit: {
     marginTop: Spacing.three,

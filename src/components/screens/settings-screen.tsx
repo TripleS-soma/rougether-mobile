@@ -1,5 +1,6 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { Icon, type IconName } from '@/components/ui/icon';
 import { DEFAULT_THEME_ID, Radius, Spacing, type ThemeId, Typography } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
@@ -14,7 +15,7 @@ const THEME_OPTIONS: ThemeOption[] = [
   { id: 'hanok', name: '한옥', description: '차분한 전통 테마' },
 ];
 
-type Row = { icon: string; label: string; onPress?: () => void };
+type Row = { icon: IconName; label: string; onPress?: () => void };
 
 export type SettingsScreenProps = {
   themeId?: ThemeId;
@@ -24,8 +25,8 @@ export type SettingsScreenProps = {
 
 /**
  * Settings screen, ported from the prototype `SettingsScreen`: theme picker +
- * account / notification / misc rows. Theme tokens + type scale; icons are
- * emoji. The theme picker is prop-driven (onChangeTheme) — wiring it to a global
+ * account / notification / misc rows. Theme tokens + type scale; vector icons
+ * via the shared Icon. The theme picker is prop-driven (onChangeTheme) — wiring it to a global
  * theme is a separate task.
  */
 export function SettingsScreen({
@@ -39,22 +40,22 @@ export function SettingsScreen({
     {
       title: '계정',
       rows: [
-        { icon: '👤', label: '프로필 편집' },
-        { icon: '🔒', label: '비밀번호 변경' },
+        { icon: 'profile', label: '프로필 편집' },
+        { icon: 'lock', label: '비밀번호 변경' },
       ],
     },
     {
       title: '알림',
       rows: [
-        { icon: '🔔', label: '푸시 알림' },
-        { icon: '🔊', label: '효과음' },
+        { icon: 'bell', label: '푸시 알림' },
+        { icon: 'sound', label: '효과음' },
       ],
     },
     {
       title: '기타',
       rows: [
-        { icon: '❓', label: '도움말' },
-        { icon: '🚪', label: '로그아웃', onPress: onLogout },
+        { icon: 'help', label: '도움말' },
+        { icon: 'leave', label: '로그아웃', onPress: onLogout },
       ],
     },
   ];
@@ -72,7 +73,7 @@ export function SettingsScreen({
           <View style={[styles.card, { backgroundColor: t.surface }]}>
             <View style={styles.designHead}>
               <View style={[styles.iconCircle, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={styles.icon}>🎨</Text>
+                <Icon name="palette" size={20} color={t.text} />
               </View>
               <View style={styles.flex}>
                 <Text style={[Typography.label, { color: t.text }]}>화면 스타일</Text>
@@ -120,11 +121,11 @@ export function SettingsScreen({
                   ]}>
                   <View style={styles.rowLeft}>
                     <View style={[styles.iconCircle, { backgroundColor: t.surfaceMuted }]}>
-                      <Text style={styles.icon}>{row.icon}</Text>
+                      <Icon name={row.icon} size={20} color={t.text} />
                     </View>
                     <Text style={[Typography.body, { color: t.text }]}>{row.label}</Text>
                   </View>
-                  <Text style={[styles.chevron, { color: t.textDisabled }]}>›</Text>
+                  <Icon name="forward" size={16} color={t.textDisabled} />
                 </Pressable>
               ))}
             </View>
@@ -195,9 +196,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  icon: {
-    fontSize: 16,
-  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -209,8 +207,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
-  },
-  chevron: {
-    fontSize: 18,
   },
 });

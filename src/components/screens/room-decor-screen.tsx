@@ -206,7 +206,8 @@ export function RoomDecorScreen({
           accessibilityRole="button"
           accessibilityLabel="적용하기"
           style={[styles.applyBtn, { backgroundColor: t.primary }]}>
-          <Text style={[Typography.label, { color: t.onPrimary }]}>✓ 적용하기</Text>
+          <Icon name="check" size={16} color={t.onPrimary} />
+          <Text style={[Typography.label, { color: t.onPrimary }]}>적용하기</Text>
         </Pressable>
       </View>
     </View>
@@ -306,8 +307,11 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
   },
   applyBtn: {
+    flexDirection: 'row',
     borderRadius: Radius.pill,
     paddingVertical: Spacing.three,
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.one,
   },
 });

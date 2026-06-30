@@ -168,7 +168,7 @@ export function SignupScreen({ onBack, onSignupSuccess }: SignupScreenProps) {
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
-              {emailVerified ? <Text style={{ color: t.primary }}>✓</Text> : null}
+              {emailVerified ? <Icon name="check" size={16} color={t.primary} /> : null}
             </View>
             <Pressable
               onPress={handleSendCode}
@@ -328,7 +328,7 @@ function CheckBox({ checked }: { checked: boolean }) {
           ? { backgroundColor: t.primary, borderColor: t.primary }
           : { backgroundColor: t.surfaceMuted, borderColor: t.border },
       ]}>
-      {checked ? <Text style={[styles.checkGlyph, { color: t.onPrimary }]}>✓</Text> : null}
+      {checked ? <Icon name="check" size={14} color={t.onPrimary} /> : null}
     </View>
   );
 }
@@ -499,10 +499,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  checkGlyph: {
-    fontSize: 13,
-    fontWeight: '700',
   },
   submit: {
     marginHorizontal: Spacing.four,

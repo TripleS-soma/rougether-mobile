@@ -12,7 +12,7 @@ describe('RoutineManageScreen', () => {
   it('renders routines grouped by category', async () => {
     const { getByText } = await render(<RoutineManageScreen routines={SAMPLE_ROUTINES} />);
     expect(getByText('독서 30분')).toBeTruthy();
-    expect(getByText('🔔 오후 9:30')).toBeTruthy();
+    expect(getByText('오후 9:30')).toBeTruthy();
   });
 
   it('calls onEdit / onAdd / onBack', async () => {

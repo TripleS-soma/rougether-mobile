@@ -161,7 +161,11 @@ export function GroupHouseScreen({
                       styles.memberAvatar,
                       { backgroundColor: kickedOut ? t.surfaceMuted : member.color },
                     ]}>
-                    <Text style={styles.memberEmoji}>{kickedOut ? '🚪' : character.emoji}</Text>
+                    {kickedOut ? (
+                      <Icon name="leave" size={22} color={t.textMuted} />
+                    ) : (
+                      <Text style={styles.memberEmoji}>{character.emoji}</Text>
+                    )}
                   </View>
                   <View style={styles.flex}>
                     <View style={styles.memberNameRow}>
@@ -240,10 +244,9 @@ export function GroupHouseScreen({
           <Text style={[Typography.label, { color: t.text }]}>👑 Lv.20</Text>
         </View>
         <View style={styles.flex} />
-        <View style={[styles.pill, { backgroundColor: t.surfaceMuted }]}>
-          <Text style={[Typography.label, { color: t.text }]}>
-            🍃 {leafBalance.toLocaleString()}
-          </Text>
+        <View style={[styles.pill, styles.leafPill, { backgroundColor: t.surfaceMuted }]}>
+          <Icon name="leaf" size={16} color={t.text} />
+          <Text style={[Typography.label, { color: t.text }]}>{leafBalance.toLocaleString()}</Text>
         </View>
         <Pressable
           onPress={onOpenSearch}
@@ -328,7 +331,11 @@ export function GroupHouseScreen({
                           <Text style={[styles.myTagText, { color: t.text }]}>MY</Text>
                         </View>
                       ) : null}
-                      <Text style={styles.roomEmoji}>{empty ? '🚪' : character.emoji}</Text>
+                      {empty ? (
+                        <Icon name="leave" size={36} color={t.textMuted} />
+                      ) : (
+                        <Text style={styles.roomEmoji}>{character.emoji}</Text>
+                      )}
                       <Text style={[Typography.supporting, styles.roomName, { color: t.text }]}>
                         {empty ? '빈방' : room.isMine ? `${room.name} (나)` : room.name}
                       </Text>
@@ -409,6 +416,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.one,
     borderRadius: Radius.pill,
+  },
+  leafPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
   },
   body: {
     paddingBottom: Spacing.six,

@@ -17,7 +17,7 @@ export type RoutineManageScreenProps = {
 
 /**
  * Routine list grouped by category, ported from the prototype
- * `RoutineManageScreen`. Theme tokens + type scale; icons are text/emoji.
+ * `RoutineManageScreen`. Theme tokens + type scale; UI controls use `<Icon>`.
  */
 export function RoutineManageScreen({
   routines = [],
@@ -47,7 +47,7 @@ export function RoutineManageScreen({
           accessibilityRole="button"
           accessibilityLabel="루틴 추가"
           style={[styles.iconBtn, { backgroundColor: t.primary }]}>
-          <Text style={[styles.addGlyph, { color: t.onPrimary }]}>＋</Text>
+          <Icon name="add" size={20} color={t.onPrimary} />
         </Pressable>
       </View>
 
@@ -57,9 +57,12 @@ export function RoutineManageScreen({
             <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
               아직 만든 루틴이 없어요.
             </Text>
-            <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
-              ＋ 버튼으로 루틴을 추가해보세요.
-            </Text>
+            <View style={styles.emptyHint}>
+              <Icon name="add" size={16} color={t.textMuted} />
+              <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
+                버튼으로 루틴을 추가해보세요.
+              </Text>
+            </View>
           </View>
         ) : null}
 
@@ -99,12 +102,20 @@ export function RoutineManageScreen({
                       {(routine.alarmEnabled && routine.time) || routine.photoVerify ? (
                         <View style={styles.badges}>
                           {routine.alarmEnabled && routine.time ? (
-                            <Text style={[styles.badge, { color: t.textMuted }]}>
-                              🔔 {formatTime(routine.time)}
-                            </Text>
+                            <View style={styles.badge}>
+                              <Icon name="bell" size={11} color={t.textMuted} />
+                              <Text style={[styles.badgeText, { color: t.textMuted }]}>
+                                {formatTime(routine.time)}
+                              </Text>
+                            </View>
                           ) : null}
                           {routine.photoVerify ? (
-                            <Text style={[styles.badge, { color: t.textMuted }]}>📷 사진 인증</Text>
+                            <View style={styles.badge}>
+                              <Icon name="camera" size={11} color={t.textMuted} />
+                              <Text style={[styles.badgeText, { color: t.textMuted }]}>
+                                사진 인증
+                              </Text>
+                            </View>
                           ) : null}
                         </View>
                       ) : null}
@@ -150,10 +161,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  addGlyph: {
-    fontSize: 20,
-    lineHeight: 22,
-  },
   body: {
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.four,
@@ -162,6 +169,11 @@ const styles = StyleSheet.create({
   empty: {
     alignItems: 'center',
     paddingTop: Spacing.six,
+    gap: Spacing.half,
+  },
+  emptyHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: Spacing.half,
   },
   group: {
@@ -204,6 +216,11 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.half,
+  },
+  badgeText: {
     fontSize: 11,
   },
   chevron: {
