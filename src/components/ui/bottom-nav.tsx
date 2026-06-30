@@ -2,15 +2,16 @@ import { useContext } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
+import { Icon, type IconName } from '@/components/ui/icon';
 import { Spacing, Typography } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
 
 export type NavTab = 'myRoom' | 'house' | 'settings';
 
-const TABS: { key: NavTab; label: string; icon: string }[] = [
-  { key: 'myRoom', label: '나의 방', icon: '🏠' },
-  { key: 'house', label: '집', icon: '🏘️' },
-  { key: 'settings', label: '설정', icon: '⚙️' },
+const TABS: { key: NavTab; label: string; icon: IconName }[] = [
+  { key: 'myRoom', label: '나의 방', icon: 'myRoom' },
+  { key: 'house', label: '집', icon: 'house' },
+  { key: 'settings', label: '설정', icon: 'settings' },
 ];
 
 export type BottomNavProps = {
@@ -42,7 +43,7 @@ export function BottomNav({ active, onChange }: BottomNavProps) {
             accessibilityState={{ selected: isActive }}
             accessibilityLabel={label}
             style={styles.tab}>
-            <Text style={[styles.icon, { opacity: isActive ? 1 : 0.45 }]}>{icon}</Text>
+            <Icon name={icon} size={24} color={isActive ? t.primary : t.textMuted} />
             <Text style={[Typography.supporting, { color: isActive ? t.primary : t.textMuted }]}>
               {label}
             </Text>
@@ -64,8 +65,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 2,
     paddingHorizontal: Spacing.three,
-  },
-  icon: {
-    fontSize: 22,
   },
 });

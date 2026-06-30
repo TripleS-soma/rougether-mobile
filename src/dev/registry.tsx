@@ -16,7 +16,13 @@ import { RoutineManageScreen } from '@/components/screens/routine-manage-screen'
 import { SettingsScreen } from '@/components/screens/settings-screen';
 import { SignupScreen } from '@/components/screens/signup-screen';
 import { SampleButton } from '@/components/sample-button';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
+import { Card } from '@/components/ui/card';
+import { IconButton } from '@/components/ui/icon-button';
+import { Pill } from '@/components/ui/pill';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
 import { TokenSwatches } from '@/dev/token-swatches';
 import { TypeScalePreview } from '@/dev/type-scale-preview';
@@ -210,6 +216,55 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ alignSelf: 'stretch' }}>
         <Calendar value="2026-06-15" onSelect={() => {}} />
+      </View>
+    ),
+  },
+  {
+    name: 'UI · Button',
+    description: 'Shared button (primary / secondary / danger), token-styled, vector left icon.',
+    render: () => (
+      <View style={{ alignSelf: 'stretch', gap: 8 }}>
+        <Button label="저장" onPress={() => {}} />
+        <Button label="집 만들기" variant="secondary" leftIcon="add" onPress={() => {}} />
+        <Button label="삭제하기" variant="danger" leftIcon="trash" onPress={() => {}} />
+        <Button label="비활성" disabled onPress={() => {}} />
+      </View>
+    ),
+  },
+  {
+    name: 'UI · IconButton',
+    description: 'Circular icon button (Ionicons, no emoji) — header/action chrome.',
+    render: () => (
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <IconButton name="back" accessibilityLabel="뒤로" onPress={() => {}} />
+        <IconButton name="edit" accessibilityLabel="편집" onPress={() => {}} />
+        <IconButton name="gift" accessibilityLabel="가챠" variant="primary" onPress={() => {}} />
+        <IconButton name="close" accessibilityLabel="닫기" onPress={() => {}} />
+      </View>
+    ),
+  },
+  {
+    name: 'UI · ScreenHeader',
+    description: 'Standard header: back + title + right slot.',
+    render: () => (
+      <View style={{ alignSelf: 'stretch' }}>
+        <ScreenHeader title="가챠" onBack={() => {}} right={<Pill label="5,600" icon="leaf" />} />
+      </View>
+    ),
+  },
+  {
+    name: 'UI · Pill / Badge / Card',
+    description: 'Small chips and a surface card.',
+    render: () => (
+      <View style={{ alignSelf: 'stretch', gap: 8 }}>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <Pill label="Lv.20" icon="star" />
+          <Pill label="5,600" icon="leaf" />
+          <Badge label="전설" />
+        </View>
+        <Card>
+          <Badge label="MY" />
+        </Card>
       </View>
     ),
   },
