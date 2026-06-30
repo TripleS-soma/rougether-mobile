@@ -114,7 +114,10 @@ export function MyRoomScreen({
           </View>
           <View>
             <Text style={[Typography.h3, { color: t.text }]}>{userName}의 방</Text>
-            <Text style={[Typography.supporting, { color: t.warning }]}>🔥 {streakDays}일</Text>
+            <View style={styles.streak}>
+              <Icon name="flame" size={14} color={t.warning} />
+              <Text style={[Typography.supporting, { color: t.warning }]}>{streakDays}일</Text>
+            </View>
           </View>
         </View>
         <Pressable
@@ -154,7 +157,7 @@ export function MyRoomScreen({
                 accessibilityRole="button"
                 accessibilityLabel="루틴 추가"
                 style={[styles.addBtn, { backgroundColor: t.primary }]}>
-                <Text style={[styles.addGlyph, { color: t.onPrimary }]}>＋</Text>
+                <Icon name="add" size={18} color={t.onPrimary} />
               </Pressable>
             </View>
           </View>
@@ -196,7 +199,7 @@ export function MyRoomScreen({
                     accessibilityRole="button"
                     accessibilityLabel={`${cat.label} 할 일 추가`}
                     style={[styles.catAdd, { backgroundColor: cat.color }]}>
-                    <Text style={styles.catAddGlyph}>＋</Text>
+                    <Icon name="add" size={14} color={t.onPrimary} />
                   </Pressable>
                 </View>
 
@@ -216,13 +219,11 @@ export function MyRoomScreen({
                             accessibilityState={{ checked: routine.completed }}
                             accessibilityLabel={routine.title}
                             style={styles.rowMain}>
-                            <Text
-                              style={[
-                                styles.check,
-                                { color: routine.completed ? t.primary : t.textDisabled },
-                              ]}>
-                              {routine.completed ? '☑' : '☐'}
-                            </Text>
+                            <Icon
+                              name={routine.completed ? 'checkbox-on' : 'checkbox-off'}
+                              size={22}
+                              color={routine.completed ? t.primary : t.textDisabled}
+                            />
                             {routine.emoji ? (
                               <Text style={styles.rowEmoji}>{routine.emoji}</Text>
                             ) : null}
@@ -239,14 +240,20 @@ export function MyRoomScreen({
                               {(routine.alarmEnabled && routine.time) || routine.photoVerify ? (
                                 <View style={styles.badges}>
                                   {routine.alarmEnabled && routine.time ? (
-                                    <Text style={[styles.badge, { color: t.textMuted }]}>
-                                      🔔 {formatTime(routine.time)}
-                                    </Text>
+                                    <View style={styles.badge}>
+                                      <Icon name="bell" size={12} color={t.textMuted} />
+                                      <Text style={[styles.badgeText, { color: t.textMuted }]}>
+                                        {formatTime(routine.time)}
+                                      </Text>
+                                    </View>
                                   ) : null}
                                   {routine.photoVerify ? (
-                                    <Text style={[styles.badge, { color: t.textMuted }]}>
-                                      📷 사진 인증
-                                    </Text>
+                                    <View style={styles.badge}>
+                                      <Icon name="camera" size={12} color={t.textMuted} />
+                                      <Text style={[styles.badgeText, { color: t.textMuted }]}>
+                                        사진 인증
+                                      </Text>
+                                    </View>
                                   ) : null}
                                 </View>
                               ) : null}
@@ -257,7 +264,7 @@ export function MyRoomScreen({
                             accessibilityRole="button"
                             accessibilityLabel={`${routine.title} 메뉴`}
                             style={styles.kebab}>
-                            <Text style={[styles.kebabGlyph, { color: t.textDisabled }]}>⋮</Text>
+                            <Icon name="kebab" size={20} color={t.textDisabled} />
                           </Pressable>
                         </View>
 
@@ -275,7 +282,8 @@ export function MyRoomScreen({
                               accessibilityRole="button"
                               accessibilityLabel={`${routine.title} 수정`}
                               style={styles.menuItem}>
-                              <Text style={[Typography.body, { color: t.text }]}>✎ 수정하기</Text>
+                              <Icon name="edit" size={16} color={t.text} />
+                              <Text style={[Typography.body, { color: t.text }]}>수정하기</Text>
                             </Pressable>
                             <Pressable
                               onPress={() => {
@@ -288,7 +296,8 @@ export function MyRoomScreen({
                                 styles.menuItem,
                                 { borderTopWidth: 1, borderTopColor: t.border },
                               ]}>
-                              <Text style={[Typography.body, { color: t.danger }]}>🗑 삭제하기</Text>
+                              <Icon name="trash" size={16} color={t.danger} />
+                              <Text style={[Typography.body, { color: t.danger }]}>삭제하기</Text>
                             </Pressable>
                           </View>
                         ) : null}
@@ -302,7 +311,7 @@ export function MyRoomScreen({
                         styles.routineRow,
                         { backgroundColor: t.surface, borderLeftColor: cat.color },
                       ]}>
-                      <Text style={[styles.check, { color: t.textDisabled }]}>☐</Text>
+                      <Icon name="checkbox-off" size={22} color={t.textDisabled} />
                       <TextInput
                         autoFocus
                         value={newTodo}
@@ -330,9 +339,12 @@ export function MyRoomScreen({
                   루틴을 완료하고 보상을 받아보세요!
                 </Text>
               </View>
-              <Text style={styles.rewardStar}>⭐</Text>
+              <Icon name="star" size={28} color={t.onPrimary} />
             </View>
-            <Text style={[Typography.h2, { color: t.onPrimary }]}>🍃 +{rewardLeaves} 잎사귀</Text>
+            <View style={styles.rewardLeaves}>
+              <Icon name="leaf" size={24} color={t.onPrimary} />
+              <Text style={[Typography.h2, { color: t.onPrimary }]}>+{rewardLeaves} 잎사귀</Text>
+            </View>
             <Pressable
               onPress={onClaimReward}
               accessibilityRole="button"
@@ -347,7 +359,8 @@ export function MyRoomScreen({
             accessibilityRole="button"
             accessibilityLabel="방 편집하기"
             style={[styles.editBtn, { backgroundColor: t.surface, borderColor: t.border }]}>
-            <Text style={[Typography.label, { color: t.text }]}>✎ 방 편집</Text>
+            <Icon name="edit" size={16} color={t.text} />
+            <Text style={[Typography.label, { color: t.text }]}>방 편집</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -373,6 +386,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
+  },
+  streak: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.half,
   },
   avatar: {
     width: 40,
@@ -436,10 +454,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  addGlyph: {
-    fontSize: 18,
-    lineHeight: 20,
-  },
   progressTrack: {
     height: 10,
     borderRadius: Radius.pill,
@@ -475,10 +489,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  catAddGlyph: {
-    fontSize: 14,
-    color: '#FFFFFF',
-  },
   rows: {
     gap: Spacing.two,
   },
@@ -502,9 +512,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: Spacing.three,
   },
-  kebabGlyph: {
-    fontSize: 20,
-  },
   menu: {
     borderWidth: 1,
     borderRadius: Radius.md,
@@ -512,15 +519,15 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.three,
   },
   todoInput: {
     fontSize: 16,
     paddingVertical: Spacing.three,
-  },
-  check: {
-    fontSize: 22,
   },
   rowEmoji: {
     fontSize: 18,
@@ -532,6 +539,11 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.half,
+  },
+  badgeText: {
     fontSize: 11,
   },
   rewardCard: {
@@ -546,8 +558,10 @@ const styles = StyleSheet.create({
   rewardSub: {
     marginTop: Spacing.half,
   },
-  rewardStar: {
-    fontSize: 28,
+  rewardLeaves: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
   },
   claimBtn: {
     borderRadius: Radius.pill,
@@ -555,9 +569,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   editBtn: {
+    flexDirection: 'row',
+    gap: Spacing.two,
     borderRadius: Radius.pill,
     paddingVertical: Spacing.three,
     alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
   },
 });

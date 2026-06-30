@@ -88,7 +88,7 @@ export function TimePickerSheet({
 
         <View style={styles.body}>
           <View style={[styles.enableRow, { backgroundColor: t.surface }]}>
-            <Text style={styles.bell}>{enabled ? '🔔' : '🔕'}</Text>
+            <Icon name={enabled ? 'bell' : 'bell-off'} size={20} color={t.text} />
             <View style={styles.flex}>
               <Text style={[Typography.body, { color: t.text }]}>알림 받기</Text>
               <Text style={[Typography.supporting, { color: t.textMuted }]}>
@@ -232,9 +232,6 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     borderRadius: Radius.lg,
     padding: Spacing.three,
-  },
-  bell: {
-    fontSize: 20,
   },
   ampmRow: {
     flexDirection: 'row',

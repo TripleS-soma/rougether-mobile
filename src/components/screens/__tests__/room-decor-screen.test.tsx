@@ -18,7 +18,7 @@ describe('RoomDecorScreen', () => {
 
     // 'plant' occupies a different slot than 'bed', so both stay placed.
     await fireEvent.press(getByText('초록 식물'));
-    await fireEvent.press(getByText('✓ 적용하기'));
+    await fireEvent.press(getByText('적용하기'));
 
     expect(onApply).toHaveBeenCalledWith(['bed', 'plant'], 'paw');
   });
@@ -31,7 +31,7 @@ describe('RoomDecorScreen', () => {
 
     // '한옥 자개 침대' shares the 'bed' slot with '포근한 침대', so it replaces it.
     await fireEvent.press(getByText('한옥 자개 침대'));
-    await fireEvent.press(getByText('✓ 적용하기'));
+    await fireEvent.press(getByText('적용하기'));
 
     expect(onApply).toHaveBeenCalledWith(['hanok-bed'], 'simple');
   });

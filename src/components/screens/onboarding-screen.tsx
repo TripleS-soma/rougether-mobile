@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { Icon } from '@/components/ui/icon';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
@@ -264,7 +265,7 @@ function Check({ tint, on, small }: { tint: string; on: string; small?: boolean 
         styles.checkCircle,
         { width: size, height: size, borderRadius: size / 2, backgroundColor: tint },
       ]}>
-      <Text style={[styles.checkGlyph, { color: on }]}>✓</Text>
+      <Icon name="check" size={small ? 14 : 16} color={on} />
     </View>
   );
 }
@@ -345,10 +346,6 @@ const styles = StyleSheet.create({
   checkCircle: {
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  checkGlyph: {
-    fontSize: 13,
-    fontWeight: '700',
   },
   skipRow: {
     height: 44,

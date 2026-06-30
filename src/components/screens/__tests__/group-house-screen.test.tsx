@@ -6,7 +6,7 @@ describe('GroupHouseScreen', () => {
   it('renders the current house, members, and group goals', async () => {
     const { getByText } = await render(<GroupHouseScreen leafBalance={5600} />);
     expect(getByText('👑 소마파이팅')).toBeTruthy();
-    expect(getByText('🍃 5,600')).toBeTruthy();
+    expect(getByText('5,600')).toBeTruthy();
     expect(getByText('🎯 우리 그룹의 루틴')).toBeTruthy();
     expect(getByText('최준서')).toBeTruthy();
   });

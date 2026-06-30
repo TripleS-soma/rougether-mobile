@@ -170,7 +170,8 @@ export function CategoryManagerSheet({
               accessibilityRole="button"
               accessibilityLabel="카테고리 추가"
               style={[styles.submit, { backgroundColor: canSubmit ? t.primary : t.textDisabled }]}>
-              <Text style={[Typography.label, { color: t.onPrimary }]}>＋ 카테고리 추가</Text>
+              <Icon name="add" size={18} color={t.onPrimary} />
+              <Text style={[Typography.label, { color: t.onPrimary }]}>카테고리 추가</Text>
             </Pressable>
           </View>
 
@@ -196,7 +197,7 @@ export function CategoryManagerSheet({
                   accessibilityRole="button"
                   accessibilityLabel={`${c.label} 삭제`}
                   style={[styles.del, { backgroundColor: `${t.danger}22` }]}>
-                  <Text style={{ color: t.danger }}>🗑</Text>
+                  <Icon name="trash" size={16} color={t.danger} />
                 </Pressable>
               </View>
             ))}
@@ -286,9 +287,12 @@ const styles = StyleSheet.create({
   segLabel: { fontWeight: '600' },
   segDesc: { textAlign: 'center' },
   submit: {
+    flexDirection: 'row',
+    gap: Spacing.one,
     borderRadius: Radius.pill,
     paddingVertical: Spacing.three,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: Spacing.one,
   },
   listTitle: { marginTop: Spacing.one },

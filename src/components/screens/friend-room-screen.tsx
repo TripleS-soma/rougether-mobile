@@ -74,7 +74,10 @@ export function FriendRoomScreen({
           <Text style={[Typography.h3, { color: t.text }]} numberOfLines={1}>
             {friendName}의 방
           </Text>
-          <Text style={[Typography.supporting, { color: t.warning }]}>🔥 {streakDays}일</Text>
+          <View style={styles.streak}>
+            <Icon name="flame" size={14} color={t.warning} />
+            <Text style={[Typography.supporting, { color: t.warning }]}>{streakDays}일</Text>
+          </View>
         </View>
       </View>
 
@@ -109,10 +112,11 @@ export function FriendRoomScreen({
               <View
                 key={routine.id}
                 style={[styles.row, { backgroundColor: t.surface, borderLeftColor: t.primary }]}>
-                <Text
-                  style={[styles.check, { color: routine.completed ? t.primary : t.textDisabled }]}>
-                  {routine.completed ? '☑' : '☐'}
-                </Text>
+                <Icon
+                  name={routine.completed ? 'checkbox-on' : 'checkbox-off'}
+                  size={22}
+                  color={routine.completed ? t.primary : t.textDisabled}
+                />
                 {routine.emoji ? <Text style={styles.rowEmoji}>{routine.emoji}</Text> : null}
                 <View style={styles.flex}>
                   <Text
@@ -127,12 +131,18 @@ export function FriendRoomScreen({
                   {(routine.alarmEnabled && routine.time) || routine.photoVerify ? (
                     <View style={styles.badges}>
                       {routine.alarmEnabled && routine.time ? (
-                        <Text style={[styles.badge, { color: t.textMuted }]}>
-                          🔔 {formatTime(routine.time)}
-                        </Text>
+                        <View style={styles.badge}>
+                          <Icon name="bell" size={11} color={t.textMuted} />
+                          <Text style={[styles.badgeText, { color: t.textMuted }]}>
+                            {formatTime(routine.time)}
+                          </Text>
+                        </View>
                       ) : null}
                       {routine.photoVerify ? (
-                        <Text style={[styles.badge, { color: t.textMuted }]}>📷 사진 인증</Text>
+                        <View style={styles.badge}>
+                          <Icon name="camera" size={11} color={t.textMuted} />
+                          <Text style={[styles.badgeText, { color: t.textMuted }]}>사진 인증</Text>
+                        </View>
                       ) : null}
                     </View>
                   ) : null}
@@ -232,8 +242,10 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     borderLeftWidth: 4,
   },
-  check: {
-    fontSize: 22,
+  streak: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
   },
   rowEmoji: {
     fontSize: 18,
@@ -245,6 +257,11 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+  },
+  badgeText: {
     fontSize: 11,
   },
   cheers: {

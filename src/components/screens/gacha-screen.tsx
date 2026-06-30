@@ -384,13 +384,17 @@ function PullButton({
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
+      accessibilityLabel={`${label}, ${cost.toLocaleString()} 잎사귀`}
       style={({ pressed }) => [
         styles.pullBtn,
         { backgroundColor: disabled ? DISABLED : t.primary },
         pressed && !disabled && { backgroundColor: t.primaryActive },
       ]}>
       <Text style={[Typography.label, { color: t.onPrimary }]}>{label}</Text>
-      <Text style={[styles.cost, { color: t.onPrimary }]}>🍃 {cost.toLocaleString()}</Text>
+      <View style={styles.costRow}>
+        <Icon name="leaf" size={12} color={t.onPrimary} />
+        <Text style={[styles.cost, { color: t.onPrimary }]}>{cost.toLocaleString()}</Text>
+      </View>
     </Pressable>
   );
 }
@@ -467,6 +471,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 2,
   },
+  costRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.half },
   cost: { fontSize: 12, fontWeight: '600' },
 
   // Pull animation overlay (rendered inside a full-screen Modal)

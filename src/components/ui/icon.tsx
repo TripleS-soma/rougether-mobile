@@ -29,6 +29,12 @@ const ICONS = {
   flame: 'flame',
   star: 'star',
   leave: 'exit-outline',
+  // Settings menu rows
+  profile: 'person-outline',
+  lock: 'lock-closed-outline',
+  sound: 'volume-high-outline',
+  help: 'help-circle-outline',
+  palette: 'color-palette-outline',
   // Bottom-nav
   myRoom: 'home',
   house: 'business',

@@ -9,7 +9,7 @@ describe('MyRoomScreen', () => {
       <MyRoomScreen userName="준서" streakDays={7} routines={SAMPLE_ROUTINES} />,
     );
     expect(getByText('준서의 방')).toBeTruthy();
-    expect(getByText('🔥 7일')).toBeTruthy();
+    expect(getByText('7일')).toBeTruthy();
     // 3 of 5 sample routines completed.
     expect(getByText('3 / 5')).toBeTruthy();
   });

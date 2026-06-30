@@ -191,8 +191,10 @@ export function AddRoutineScreen({
               onPress={() => setShowCategoryManager(true)}
               accessibilityRole="button"
               accessibilityLabel="카테고리 관리"
-              hitSlop={8}>
-              <Text style={[Typography.label, { color: t.primary }]}>＋ 관리</Text>
+              hitSlop={8}
+              style={styles.manageBtn}>
+              <Icon name="add" size={16} color={t.primary} />
+              <Text style={[Typography.label, { color: t.primary }]}>관리</Text>
             </Pressable>
           </View>
           <ScrollView
@@ -277,7 +279,7 @@ export function AddRoutineScreen({
             accessibilityLabel="지속 기간 선택"
             style={[styles.infoRow, { backgroundColor: t.surface }]}>
             <View style={[styles.infoIcon, { backgroundColor: t.surfaceMuted }]}>
-              <Text style={styles.icon}>📅</Text>
+              <Icon name="calendar" size={16} color={t.icon} />
             </View>
             <View style={styles.flex}>
               <Text style={[Typography.body, { color: t.text }]}>
@@ -298,7 +300,7 @@ export function AddRoutineScreen({
             accessibilityLabel="알림 시간 선택"
             style={[styles.infoRow, { backgroundColor: t.surface }]}>
             <View style={[styles.infoIcon, { backgroundColor: t.surfaceMuted }]}>
-              <Text style={styles.icon}>🔔</Text>
+              <Icon name="bell" size={16} color={t.icon} />
             </View>
             <View style={styles.flex}>
               <Text style={[Typography.body, { color: t.text }]}>
@@ -315,7 +317,7 @@ export function AddRoutineScreen({
           <Text style={[styles.label, { color: t.text }]}>인증 방식</Text>
           <View style={[styles.infoRow, { backgroundColor: t.surface }]}>
             <View style={[styles.infoIcon, { backgroundColor: t.surfaceMuted }]}>
-              <Text style={styles.icon}>📷</Text>
+              <Icon name="camera" size={16} color={t.icon} />
             </View>
             <View style={styles.flex}>
               <Text style={[Typography.body, { color: t.text }]}>인증사진형</Text>
@@ -415,6 +417,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  manageBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.half,
+  },
   label: { fontSize: 14, fontWeight: '600' },
   titleRow: {
     flexDirection: 'row',
@@ -491,7 +498,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  icon: { fontSize: 16 },
   chevron: { fontSize: 20 },
   footer: {
     paddingHorizontal: Spacing.four,

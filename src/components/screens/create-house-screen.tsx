@@ -210,7 +210,11 @@ export function CreateHouseScreen({ onBack, onCreate }: CreateHouseScreenProps) 
               accessibilityRole="button"
               accessibilityLabel="초대코드 복사"
               style={[styles.codeBtn, { backgroundColor: t.surfaceMuted }]}>
-              <Text style={styles.codeBtnText}>{copied ? '✓' : '복사'}</Text>
+              {copied ? (
+                <Icon name="check" size={16} color={t.text} />
+              ) : (
+                <Text style={styles.codeBtnText}>복사</Text>
+              )}
             </Pressable>
             <Pressable
               onPress={() => setInviteCode(generateCode())}
