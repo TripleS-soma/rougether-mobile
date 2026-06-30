@@ -22,11 +22,13 @@ const ICONS = {
   'checkbox-on': 'checkbox',
   'checkbox-off': 'square-outline',
   bell: 'notifications-outline',
+  'bell-off': 'notifications-off-outline',
   camera: 'camera-outline',
   calendar: 'calendar-outline',
   leaf: 'leaf',
   flame: 'flame',
   star: 'star',
+  leave: 'exit-outline',
   // Bottom-nav
   myRoom: 'home',
   house: 'business',
