@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
@@ -64,7 +65,7 @@ export function CreateHouseScreen({ onBack, onCreate }: CreateHouseScreenProps) 
           accessibilityRole="button"
           accessibilityLabel="뒤로 가기"
           style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-          <Text style={[styles.backGlyph, { color: t.text }]}>‹</Text>
+          <Icon name="back" size={26} color={t.text} />
         </Pressable>
         <Text style={[Typography.h2, { color: t.text }]}>새 집 만들기</Text>
         <View style={styles.iconBtn} />
@@ -303,7 +304,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backGlyph: { fontSize: 26, lineHeight: 28 },
   body: { padding: Spacing.four, gap: Spacing.three, paddingBottom: Spacing.six },
   card: { borderRadius: Radius.lg, padding: Spacing.four, gap: Spacing.three },
   previewRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
+import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
@@ -130,7 +131,7 @@ export function GroupHouseScreen({
             accessibilityRole="button"
             accessibilityLabel="닫기"
             style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-            <Text style={[styles.iconGlyph, { color: t.text }]}>✕</Text>
+            <Icon name="close" size={18} color={t.text} />
           </Pressable>
         </View>
 
@@ -249,14 +250,14 @@ export function GroupHouseScreen({
           accessibilityRole="button"
           accessibilityLabel="집 탐색"
           style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-          <Text style={[styles.iconGlyph, { color: t.text }]}>🔍</Text>
+          <Icon name="search" size={18} color={t.text} />
         </Pressable>
         <Pressable
           onPress={() => setShowMembers(true)}
           accessibilityRole="button"
           accessibilityLabel="구성원 목록"
           style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-          <Text style={[styles.iconGlyph, { color: t.text }]}>👥</Text>
+          <Icon name="members" size={18} color={t.text} />
         </Pressable>
       </View>
 
@@ -267,7 +268,7 @@ export function GroupHouseScreen({
             accessibilityRole="button"
             accessibilityLabel="이전 집"
             style={[styles.iconBtn, { backgroundColor: t.surface }]}>
-            <Text style={[styles.iconGlyph, { color: t.text }]}>‹</Text>
+            <Icon name="back" size={18} color={t.text} />
           </Pressable>
           <View style={[styles.titleBadge, { backgroundColor: t.surface, borderColor: t.border }]}>
             <Text style={[Typography.h3, { color: t.text }]}>👑 {currentHouse.title}</Text>
@@ -277,7 +278,7 @@ export function GroupHouseScreen({
             accessibilityRole="button"
             accessibilityLabel="다음 집"
             style={[styles.iconBtn, { backgroundColor: t.surface }]}>
-            <Text style={[styles.iconGlyph, { color: t.text }]}>›</Text>
+            <Icon name="forward" size={18} color={t.text} />
           </Pressable>
         </View>
 

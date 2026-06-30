@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Room } from '@/components/room/room';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { type Routine } from '@/constants/routines';
+import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
@@ -64,7 +65,7 @@ export function FriendRoomScreen({
           accessibilityRole="button"
           accessibilityLabel="뒤로가기"
           style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-          <Text style={[styles.backGlyph, { color: t.text }]}>‹</Text>
+          <Icon name="back" size={26} color={t.text} />
         </Pressable>
         <View style={[styles.avatar, { backgroundColor: character.bg }]}>
           <Text style={styles.avatarEmoji}>{character.emoji}</Text>
@@ -183,10 +184,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  backGlyph: {
-    fontSize: 26,
-    lineHeight: 28,
   },
   avatar: {
     width: 40,

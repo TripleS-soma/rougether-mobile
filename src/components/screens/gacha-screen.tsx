@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 
+import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
@@ -165,11 +166,11 @@ export function GachaScreen({
           accessibilityRole="button"
           accessibilityLabel="뒤로 가기"
           style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-          <Text style={[styles.backGlyph, { color: t.text }]}>‹</Text>
+          <Icon name="back" size={26} color={t.text} />
         </Pressable>
         <Text style={[Typography.h2, { color: t.text }]}>가챠</Text>
         <View style={[styles.leafPill, { backgroundColor: t.surfaceMuted }]}>
-          <Text style={styles.leafIcon}>🍃</Text>
+          <Icon name="leaf" size={14} color={t.text} />
           <Text style={[Typography.label, { color: t.text }]}>{leafBalance.toLocaleString()}</Text>
         </View>
       </View>
@@ -411,7 +412,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backGlyph: { fontSize: 26, lineHeight: 28 },
   leafPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -420,7 +420,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.one,
     borderRadius: Radius.pill,
   },
-  leafIcon: { fontSize: 14 },
   body: { padding: Spacing.four, gap: Spacing.four },
   boxRow: { gap: Spacing.two, paddingVertical: Spacing.half },
   boxChip: {

@@ -12,6 +12,7 @@ import {
   type RoutineCategory,
   type RoutineCategoryMeta,
 } from '@/constants/routines';
+import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
@@ -131,7 +132,7 @@ export function AddRoutineScreen({
           accessibilityRole="button"
           accessibilityLabel="뒤로가기"
           style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-          <Text style={[styles.backGlyph, { color: t.text }]}>‹</Text>
+          <Icon name="back" size={26} color={t.text} />
         </Pressable>
         <Text style={[Typography.h2, { color: t.text }]}>{isEdit ? '루틴 수정' : '루틴 추가'}</Text>
       </View>
@@ -407,7 +408,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backGlyph: { fontSize: 26, lineHeight: 28 },
   body: { padding: Spacing.four, gap: Spacing.four, paddingBottom: Spacing.six },
   field: { gap: Spacing.two },
   fieldHead: {

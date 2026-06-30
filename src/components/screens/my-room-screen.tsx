@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { Room } from '@/components/room/room';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { ROUTINE_CATEGORIES, type Routine, type RoutineCategoryMeta } from '@/constants/routines';
+import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { captureVerificationPhoto } from '@/lib/photo-verify';
 import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
@@ -121,7 +122,7 @@ export function MyRoomScreen({
           accessibilityRole="button"
           accessibilityLabel="방 편집"
           style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-          <Text style={[styles.iconGlyph, { color: t.text }]}>✎</Text>
+          <Icon name="edit" size={18} color={t.text} />
         </Pressable>
       </View>
 
@@ -137,7 +138,7 @@ export function MyRoomScreen({
             accessibilityRole="button"
             accessibilityLabel="뽑기 상점"
             style={[styles.gachaBtn, { backgroundColor: t.surface }]}>
-            <Text style={styles.gachaGlyph}>🎁</Text>
+            <Icon name="gift" size={20} color={t.text} />
           </Pressable>
         </View>
 

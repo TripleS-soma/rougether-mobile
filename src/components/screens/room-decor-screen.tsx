@@ -3,6 +3,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 
 import { Room } from '@/components/room/room';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
+import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { assetSource } from '@/resources/asset';
 import {
@@ -88,7 +89,7 @@ export function RoomDecorScreen({
           accessibilityRole="button"
           accessibilityLabel="뒤로가기"
           style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-          <Text style={[styles.backGlyph, { color: t.text }]}>‹</Text>
+          <Icon name="back" size={26} color={t.text} />
         </Pressable>
         <Text style={[Typography.h2, { color: t.text }]}>나의 방 꾸미기</Text>
       </View>
@@ -231,10 +232,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  backGlyph: {
-    fontSize: 26,
-    lineHeight: 28,
   },
   body: {
     paddingBottom: Spacing.six,

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 
 import { fetchRecommendedHouses, type HouseSummary } from '@/api/house';
+import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
@@ -72,7 +73,7 @@ export function HouseSearchScreen({ onBack, onJoin, onCreate }: HouseSearchScree
           accessibilityRole="button"
           accessibilityLabel="뒤로 가기"
           style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-          <Text style={[styles.backGlyph, { color: t.text }]}>‹</Text>
+          <Icon name="back" size={26} color={t.text} />
         </Pressable>
         <Text style={[Typography.h2, { color: t.text }]}>집 탐색</Text>
         <View style={styles.iconBtn} />
@@ -126,7 +127,7 @@ export function HouseSearchScreen({ onBack, onJoin, onCreate }: HouseSearchScree
         <View style={styles.section}>
           <Text style={[Typography.label, { color: t.text }]}>✨ 추천 집 둘러보기</Text>
           <View style={[styles.searchBox, { backgroundColor: t.surface }]}>
-            <Text style={styles.icon}>🔍</Text>
+            <Icon name="search" size={16} color={t.text} />
             <TextInput
               style={[styles.input, { color: t.text }]}
               value={query}
@@ -219,7 +220,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backGlyph: { fontSize: 26, lineHeight: 28 },
   body: { padding: Spacing.four, gap: Spacing.four },
   section: { gap: Spacing.two },
   card: { borderRadius: Radius.lg, padding: Spacing.three, gap: Spacing.two },
