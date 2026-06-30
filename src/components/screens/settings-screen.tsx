@@ -32,8 +32,8 @@ export type SettingsScreenProps = {
  * Settings screen, ported from the prototype `SettingsScreen`: theme picker +
  * account / notification / misc rows. Theme tokens + type scale; vector icons
  * via the shared Icon. Each row navigates to its sub-screen via the matching
- * prop. The theme picker is prop-driven (onChangeTheme) — wiring it to a global
- * theme is a separate task.
+ * prop. The theme picker is prop-driven (onChangeTheme); the app shell wires it
+ * to the global BrandThemeProvider so the whole app re-tints.
  */
 export function SettingsScreen({
   themeId = DEFAULT_THEME_ID,

@@ -33,6 +33,7 @@ import {
   type RoutineCategoryMeta,
   SAMPLE_ROUTINES,
 } from '@/constants/routines';
+import { useBrandTheme } from '@/hooks/use-tokens';
 import {
   DEFAULT_PLACED_FURNITURE_IDS,
   DEFAULT_WALLPAPER_ID,
@@ -88,6 +89,7 @@ const SCREEN_FOR_TAB: Record<NavTab, Screen> = {
  * navigation, minus the auth flow.
  */
 export function AppShell() {
+  const { themeId, setThemeId } = useBrandTheme();
   const [screen, setScreen] = useState<Screen>('myRoom');
   const [routines, setRoutines] = useState<Routine[]>(SAMPLE_ROUTINES);
   const [placedFurnitureIds, setPlacedFurnitureIds] = useState<string[]>(
@@ -296,6 +298,8 @@ export function AppShell() {
 
         {screen === 'settings' ? (
           <SettingsScreen
+            themeId={themeId}
+            onChangeTheme={setThemeId}
             onEditProfile={() => setScreen('profileEdit')}
             onChangePassword={() => setScreen('passwordChange')}
             onOpenNotifications={() => setScreen('notifications')}
