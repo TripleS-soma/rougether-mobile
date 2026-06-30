@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Animated,
+  Easing,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
@@ -232,8 +241,9 @@ export function GachaScreen({
         </View>
       </ScrollView>
 
-      {/* Pull animation overlay (inline so its controls stay testable) */}
-      {phase !== 'idle' ? (
+      {/* Pull animation overlay — a Modal so it fills the whole screen and
+          centers regardless of the screen's safe-area padding. */}
+      <Modal visible={phase !== 'idle'} transparent animationType="fade" onRequestClose={close}>
         <View style={styles.overlay}>
           {phase === 'charging' ? (
             <>
@@ -243,7 +253,7 @@ export function GachaScreen({
           ) : (
             <>
               <Text style={[Typography.h3, styles.overlayText]}>축하해요!</Text>
-              <ScrollView contentContainerStyle={styles.revealGrid}>
+              <ScrollView style={styles.revealScroll} contentContainerStyle={styles.revealGrid}>
                 {pulled.map((it, idx) => (
                   <RevealCard key={`${it.name}-${idx}`} item={it} index={idx} />
                 ))}
@@ -258,7 +268,7 @@ export function GachaScreen({
             </>
           )}
         </View>
-      ) : null}
+      </Modal>
     </View>
   );
 }
@@ -460,18 +470,17 @@ const styles = StyleSheet.create({
   },
   cost: { fontSize: 12, fontWeight: '600' },
 
-  // Pull animation overlay
+  // Pull animation overlay (rendered inside a full-screen Modal)
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    flex: 1,
     backgroundColor: 'rgba(0,0,0,0.55)',
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.four,
     padding: Spacing.four,
-    zIndex: 100,
-    elevation: 100,
   },
   overlayText: { color: '#FFFFFF', textAlign: 'center' },
+  revealScroll: { flexGrow: 0, maxHeight: '70%' },
   chargeWrap: { alignItems: 'center', justifyContent: 'center', width: 200, height: 200 },
   glowRing: {
     position: 'absolute',
