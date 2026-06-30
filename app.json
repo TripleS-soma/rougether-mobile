@@ -48,7 +48,8 @@
         {
           "cameraPermission": "루틴 인증 사진을 촬영하기 위해 카메라를 사용합니다."
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,
