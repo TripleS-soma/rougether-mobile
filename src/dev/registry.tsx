@@ -177,7 +177,7 @@ export const galleryEntries: GalleryEntry[] = [
   },
   {
     name: 'GachaScreen',
-    description: 'Ported from the prototype GachaScreen (#13). Pull animation deferred.',
+    description: 'Ported from the prototype GachaScreen (#13): box select + pull animation.',
     render: () => (
       <View style={{ height: 700, alignSelf: 'stretch' }}>
         <GachaScreen leafBalance={5600} />

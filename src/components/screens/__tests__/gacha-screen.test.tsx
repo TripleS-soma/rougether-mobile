@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 
 import { GachaScreen } from '@/components/screens/gacha-screen';
 
@@ -9,28 +9,48 @@ describe('GachaScreen', () => {
     expect(getByText('5,600')).toBeTruthy();
   });
 
-  it('spends leaves and reports obtained items on a pull', async () => {
+  it('spends leaves on press and reveals the reward only after the charge delay', async () => {
     const onSpendLeaves = jest.fn(() => true);
     const onObtain = jest.fn();
     const { getByText } = await render(
       <GachaScreen leafBalance={5600} onSpendLeaves={onSpendLeaves} onObtain={onObtain} />,
     );
 
-    await fireEvent.press(getByText('1회 뽑기'));
+    jest.useFakeTimers();
+    try {
+      fireEvent.press(getByText('1회 뽑기'));
+      // Leaves are spent immediately, but the reward is held back during the
+      // charge animation.
+      expect(onSpendLeaves).toHaveBeenCalledWith(250);
+      expect(onObtain).not.toHaveBeenCalled();
 
-    expect(onSpendLeaves).toHaveBeenCalledWith(250);
-    expect(onObtain).toHaveBeenCalledWith(expect.arrayContaining([expect.any(String)]));
+      act(() => {
+        jest.advanceTimersByTime(1600);
+      });
+      expect(onObtain).toHaveBeenCalledWith(expect.arrayContaining([expect.any(String)]));
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
-  it('shows an error when the spend is rejected', async () => {
+  it('does not reveal a reward when the spend is rejected', async () => {
     const onSpendLeaves = jest.fn(() => false);
+    const onObtain = jest.fn();
     const { getByText } = await render(
-      <GachaScreen leafBalance={5600} onSpendLeaves={onSpendLeaves} />,
+      <GachaScreen leafBalance={5600} onSpendLeaves={onSpendLeaves} onObtain={onObtain} />,
     );
 
-    await fireEvent.press(getByText('1회 뽑기'));
+    jest.useFakeTimers();
+    try {
+      fireEvent.press(getByText('1회 뽑기'));
+      expect(onSpendLeaves).toHaveBeenCalledWith(250);
 
-    expect(onSpendLeaves).toHaveBeenCalledWith(250);
-    expect(getByText('잎사귀가 부족해요.')).toBeTruthy();
+      act(() => {
+        jest.advanceTimersByTime(1600);
+      });
+      expect(onObtain).not.toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
