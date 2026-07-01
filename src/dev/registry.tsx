@@ -7,13 +7,18 @@ import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
 import { GachaScreen } from '@/components/screens/gacha-screen';
 import { GroupHouseScreen } from '@/components/screens/group-house-screen';
+import { HelpScreen } from '@/components/screens/help-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { LoginScreen } from '@/components/screens/login-screen';
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
+import { NotificationSettingsScreen } from '@/components/screens/notification-settings-screen';
 import { OnboardingScreen } from '@/components/screens/onboarding-screen';
+import { PasswordChangeScreen } from '@/components/screens/password-change-screen';
+import { ProfileEditScreen } from '@/components/screens/profile-edit-screen';
 import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
 import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
 import { SettingsScreen } from '@/components/screens/settings-screen';
+import { SoundSettingsScreen } from '@/components/screens/sound-settings-screen';
 import { SignupScreen } from '@/components/screens/signup-screen';
 import { SampleButton } from '@/components/sample-button';
 import { Badge } from '@/components/ui/badge';
@@ -169,6 +174,51 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
         <SettingsScreen />
+      </View>
+    ),
+  },
+  {
+    name: 'ProfileEditScreen',
+    description: '설정 → 프로필 편집: 닉네임 + 한 줄 소개 편집.',
+    render: () => (
+      <View style={{ height: 640, alignSelf: 'stretch' }}>
+        <ProfileEditScreen />
+      </View>
+    ),
+  },
+  {
+    name: 'PasswordChangeScreen',
+    description: '설정 → 비밀번호 변경: 현재/새 비밀번호 검증.',
+    render: () => (
+      <View style={{ height: 640, alignSelf: 'stretch' }}>
+        <PasswordChangeScreen />
+      </View>
+    ),
+  },
+  {
+    name: 'NotificationSettingsScreen',
+    description: '설정 → 푸시 알림: 전체 스위치 + 카테고리별 토글.',
+    render: () => (
+      <View style={{ height: 640, alignSelf: 'stretch' }}>
+        <NotificationSettingsScreen />
+      </View>
+    ),
+  },
+  {
+    name: 'SoundSettingsScreen',
+    description: '설정 → 효과음: 효과음 / 배경 음악 / 햅틱 토글.',
+    render: () => (
+      <View style={{ height: 640, alignSelf: 'stretch' }}>
+        <SoundSettingsScreen />
+      </View>
+    ),
+  },
+  {
+    name: 'HelpScreen',
+    description: '설정 → 도움말: FAQ 아코디언 + 문의 + 버전.',
+    render: () => (
+      <View style={{ height: 640, alignSelf: 'stretch' }}>
+        <HelpScreen />
       </View>
     ),
   },
