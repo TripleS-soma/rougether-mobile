@@ -25,7 +25,7 @@ import {
 } from '@/components/screens/sound-settings-screen';
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
 import { BottomNav, type NavTab } from '@/components/ui/bottom-nav';
-import { DEFAULT_CHARACTER_ID } from '@/constants/characters';
+import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import {
   type NewRoutine,
   ROUTINE_CATEGORIES,
@@ -82,13 +82,18 @@ const SCREEN_FOR_TAB: Record<NavTab, Screen> = {
   settings: 'settings',
 };
 
+export type AppShellProps = {
+  /** Character chosen at onboarding; defaults to the sample character. */
+  characterId?: CharacterId;
+};
+
 /**
  * The app shell that wires every non-auth screen together with shared state:
  * 나의 방 / 집 / 설정 tabs plus the pushed sub-screens (decor, routine manage/add,
  * gacha, friend room, house search/create). Mirrors the prototype App.tsx
  * navigation, minus the auth flow.
  */
-export function AppShell() {
+export function AppShell({ characterId = DEFAULT_CHARACTER_ID }: AppShellProps) {
   const { themeId, setThemeId } = useBrandTheme();
   const [screen, setScreen] = useState<Screen>('myRoom');
   const [routines, setRoutines] = useState<Routine[]>(SAMPLE_ROUTINES);
@@ -96,7 +101,6 @@ export function AppShell() {
     DEFAULT_PLACED_FURNITURE_IDS,
   );
   const [wallpaperId, setWallpaperId] = useState(DEFAULT_WALLPAPER_ID);
-  const [characterId] = useState(DEFAULT_CHARACTER_ID);
   const [leafBalance, setLeafBalance] = useState(5600);
   const [ownedFurnitureIds, setOwnedFurnitureIds] = useState<string[]>(() =>
     FURNITURE_ITEMS.map((i) => i.id),
