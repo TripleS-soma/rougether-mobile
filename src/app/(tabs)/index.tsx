@@ -1,6 +1,6 @@
-import { AppShell } from '@/components/app/app-shell';
+import { AppRoot } from '@/components/app/app-root';
 
-/** App entry → the full app shell (나의 방 / 집 / 설정 + sub-screens). */
+/** App entry → onboarding gate, then the full app shell. */
 export default function HomeScreen() {
-  return <AppShell />;
+  return <AppRoot />;
 }
