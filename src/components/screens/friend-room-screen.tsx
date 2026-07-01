@@ -1,5 +1,6 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { CharacterAvatar } from '@/components/character-avatar';
 import { Room } from '@/components/room/room';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { type Routine } from '@/constants/routines';
@@ -68,7 +69,7 @@ export function FriendRoomScreen({
           <Icon name="back" size={26} color={t.text} />
         </Pressable>
         <View style={[styles.avatar, { backgroundColor: character.bg }]}>
-          <Text style={styles.avatarEmoji}>{character.emoji}</Text>
+          <CharacterAvatar characterId={characterId} size={36} />
         </View>
         <View style={styles.flex}>
           <Text style={[Typography.h3, { color: t.text }]} numberOfLines={1}>
@@ -201,9 +202,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  avatarEmoji: {
-    fontSize: 22,
   },
   body: {
     paddingBottom: Spacing.six,

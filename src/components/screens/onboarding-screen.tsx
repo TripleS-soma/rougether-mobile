@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { CharacterAvatar } from '@/components/character-avatar';
 import { Icon } from '@/components/ui/icon';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Radius, Spacing, Typography } from '@/constants/theme';
@@ -99,7 +100,7 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
                   { backgroundColor: t.surface, borderColor: selected ? t.primary : 'transparent' },
                 ]}>
                 <View style={[styles.characterAvatar, { backgroundColor: c.bg }]}>
-                  <Text style={styles.characterEmoji}>{c.emoji}</Text>
+                  <CharacterAvatar characterId={c.id} size={48} />
                 </View>
                 <View style={styles.flex}>
                   <Text style={[Typography.label, { color: t.text }]}>{c.name}</Text>
@@ -316,9 +317,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  characterEmoji: {
-    fontSize: 36,
   },
   goalCard: {
     width: '47%',
