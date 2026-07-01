@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { CharacterAvatar } from '@/components/character-avatar';
 import { Room } from '@/components/room/room';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { ROUTINE_CATEGORIES, type Routine, type RoutineCategoryMeta } from '@/constants/routines';
@@ -110,7 +111,7 @@ export function MyRoomScreen({
       <View style={[styles.header, { backgroundColor: t.surface }]}>
         <View style={styles.headerLeft}>
           <View style={[styles.avatar, { backgroundColor: character.bg }]}>
-            <Text style={styles.avatarEmoji}>{character.emoji}</Text>
+            <CharacterAvatar characterId={characterId} size={36} />
           </View>
           <View>
             <Text style={[Typography.h3, { color: t.text }]}>{userName}의 방</Text>
@@ -398,9 +399,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  avatarEmoji: {
-    fontSize: 22,
   },
   iconBtn: {
     width: 40,

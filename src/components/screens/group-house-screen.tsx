@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
+import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
+import { CharacterAvatar } from '@/components/character-avatar';
 import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
@@ -96,7 +97,6 @@ export function GroupHouseScreen({
 }: GroupHouseScreenProps) {
   const t = useTokens();
   const screenStyle = useScreenStyle();
-  const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
 
   const [houseIndex, setHouseIndex] = useState(0);
   const [showMembers, setShowMembers] = useState(false);
@@ -164,7 +164,7 @@ export function GroupHouseScreen({
                     {kickedOut ? (
                       <Icon name="leave" size={22} color={t.textMuted} />
                     ) : (
-                      <Text style={styles.memberEmoji}>{character.emoji}</Text>
+                      <CharacterAvatar characterId={characterId} size={36} />
                     )}
                   </View>
                   <View style={styles.flex}>
@@ -334,7 +334,7 @@ export function GroupHouseScreen({
                       {empty ? (
                         <Icon name="leave" size={36} color={t.textMuted} />
                       ) : (
-                        <Text style={styles.roomEmoji}>{character.emoji}</Text>
+                        <CharacterAvatar characterId={characterId} size={64} />
                       )}
                       <Text style={[Typography.supporting, styles.roomName, { color: t.text }]}>
                         {empty ? '빈방' : room.isMine ? `${room.name} (나)` : room.name}
@@ -469,9 +469,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: Spacing.one,
   },
-  roomEmoji: {
-    fontSize: 36,
-  },
   roomName: {
     fontWeight: '600',
   },
@@ -524,9 +521,6 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  memberEmoji: {
-    fontSize: 22,
   },
   memberNameRow: {
     flexDirection: 'row',

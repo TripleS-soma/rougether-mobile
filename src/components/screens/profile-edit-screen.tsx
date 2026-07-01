@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { CharacterAvatar } from '@/components/character-avatar';
 import { Field } from '@/components/ui/field';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
@@ -46,7 +47,7 @@ export function ProfileEditScreen({
       <ScrollView contentContainerStyle={styles.body}>
         <View style={styles.avatarWrap}>
           <View style={[styles.avatar, { backgroundColor: character.bg }]}>
-            <Text style={styles.avatarEmoji}>{character.emoji}</Text>
+            <CharacterAvatar characterId={characterId} size={88} />
           </View>
           <Text style={[Typography.supporting, { color: t.textMuted }]}>
             캐릭터는 나의 방에서 바꿀 수 있어요.
@@ -105,9 +106,6 @@ const styles = StyleSheet.create({
     borderRadius: 48,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  avatarEmoji: {
-    fontSize: 48,
   },
   form: {
     gap: Spacing.three,
