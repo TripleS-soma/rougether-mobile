@@ -1,15 +1,16 @@
 /**
- * Character metadata, ported from the prototype `character.ts`. Sprite images
- * are replaced with an emoji placeholder for now (TODO: port the character art
- * + CharacterAvatar). Pure data — reusable across onboarding, room, etc.
+ * Character metadata, ported from the prototype `character.ts`. Each character
+ * has an animated sprite (assets/images/characters/<id>.webp, wired through
+ * CharacterAvatar); the `emoji` is a fallback used where the sprite isn't shown.
+ * Pure data — reusable across onboarding, room, etc.
  */
-export type CharacterId = 'cat' | 'dog' | 'tiger';
+export type CharacterId = 'cat' | 'dog' | 'tiger' | 'panda' | 'bear' | 'sheep' | 'horse' | 'otter';
 
 export type CharacterOption = {
   id: CharacterId;
   name: string;
   description: string;
-  /** Placeholder until real sprites are ported. */
+  /** Fallback glyph used where the animated sprite isn't rendered. */
   emoji: string;
   bg: string;
 };
@@ -29,6 +30,29 @@ export const CHARACTER_OPTIONS: CharacterOption[] = [
     description: '당차고 용감한 루틴 친구',
     emoji: '🐯',
     bg: '#FFF0D8',
+  },
+  {
+    id: 'panda',
+    name: '판다',
+    description: '느긋하고 다정한 루틴 친구',
+    emoji: '🐼',
+    bg: '#EDEDED',
+  },
+  { id: 'bear', name: '곰', description: '든든하고 포근한 루틴 친구', emoji: '🐻', bg: '#F0E4D4' },
+  { id: 'sheep', name: '양', description: '부드럽고 순한 루틴 친구', emoji: '🐑', bg: '#F3EFE8' },
+  {
+    id: 'horse',
+    name: '망아지',
+    description: '씩씩하고 활기찬 루틴 친구',
+    emoji: '🐴',
+    bg: '#F3E7D6',
+  },
+  {
+    id: 'otter',
+    name: '수달',
+    description: '장난기 많고 사랑스러운 루틴 친구',
+    emoji: '🦦',
+    bg: '#E6E0D6',
   },
 ];
 

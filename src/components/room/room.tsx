@@ -3,12 +3,12 @@ import {
   type ImageStyle,
   type StyleProp,
   StyleSheet,
-  Text,
   View,
   type ViewStyle,
 } from 'react-native';
 
-import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
+import { CharacterAvatar } from '@/components/character-avatar';
+import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Radius } from '@/constants/theme';
 import {
   DEFAULT_PLACED_FURNITURE_IDS,
@@ -59,7 +59,6 @@ export function Room({
   style,
 }: RoomProps) {
   const wallpaper = WALLPAPERS.find((w) => w.id === wallpaperId) ?? WALLPAPERS[0];
-  const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
   const placed = FURNITURE_ITEMS.filter((f) => placedFurnitureIds.includes(f.id));
 
   return (
@@ -73,7 +72,7 @@ export function Room({
           style={[styles.furniture, SLOT_STYLE[item.slot]]}
         />
       ))}
-      <Text style={styles.character}>{character.emoji}</Text>
+      <CharacterAvatar characterId={characterId} style={styles.character} />
     </View>
   );
 }
@@ -93,7 +92,8 @@ const styles = StyleSheet.create({
   character: {
     position: 'absolute',
     alignSelf: 'center',
-    bottom: '20%',
-    fontSize: 48,
+    bottom: '16%',
+    width: '42%',
+    height: '42%',
   },
 });

@@ -15,3 +15,9 @@ declare module '*.svg' {
   const content: FC<SvgProps>;
   export default content;
 }
+
+// Image assets resolve to a Metro asset reference (number).
+declare module '*.webp' {
+  const asset: number;
+  export default asset;
+}
