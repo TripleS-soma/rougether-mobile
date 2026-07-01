@@ -180,7 +180,7 @@ export function RoomDecorScreen({
                     ]}>
                     <View style={[styles.thumbWrap, { backgroundColor: t.surfaceMuted }]}>
                       <Image
-                        source={assetSource(item.assetKey)}
+                        source={assetSource(item.assetKey, item.name)}
                         resizeMode="contain"
                         style={styles.thumb}
                       />

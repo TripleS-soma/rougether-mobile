@@ -67,7 +67,7 @@ export function Room({
       {placed.map((item) => (
         <Image
           key={item.id}
-          source={assetSource(item.assetKey)}
+          source={assetSource(item.assetKey, item.name)}
           accessibilityLabel={item.name}
           resizeMode="contain"
           style={[styles.furniture, SLOT_STYLE[item.slot]]}
