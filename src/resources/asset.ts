@@ -6,8 +6,13 @@
  */
 export const RESOURCE_BASE = 'https://placehold.co';
 
-/** Resolve an asset key to an <Image> source. Dummy placeholder for now. */
-export function assetSource(key?: string | null) {
-  const label = encodeURIComponent(key ?? 'asset');
-  return { uri: `${RESOURCE_BASE}/120x120/EADFD8/4A403A.png?text=${label}` };
+/**
+ * Resolve an asset key to an <Image> source. Dummy placeholder for now: the
+ * optional `label` (e.g. a furniture's Korean name) is drawn on the placeholder
+ * so slots are identifiable before the real art exists; it falls back to the
+ * key. Once RESOURCE_BASE points at the real CDN, `label` is simply ignored.
+ */
+export function assetSource(key?: string | null, label?: string | null) {
+  const text = encodeURIComponent(label ?? key ?? 'asset');
+  return { uri: `${RESOURCE_BASE}/120x120/EADFD8/4A403A.png?text=${text}` };
 }
