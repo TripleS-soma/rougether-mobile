@@ -11,6 +11,7 @@ import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 import { formatTime } from '@/utils/datetime';
+import { hapticSelection, hapticSuccess } from '@/utils/haptics';
 
 export type MyRoomScreenProps = {
   /** Room occupant's display name (header title becomes "{userName}의 방"). */
@@ -98,10 +99,15 @@ export function MyRoomScreen({
   const handleToggle = (routine: Routine) => {
     if (routine.photoVerify && !routine.completed) {
       void onRequestPhoto().then((uri) => {
-        if (uri) onToggleRoutine?.(routine.id);
+        if (uri) {
+          hapticSuccess();
+          onToggleRoutine?.(routine.id);
+        }
       });
       return;
     }
+    if (routine.completed) hapticSelection();
+    else hapticSuccess();
     onToggleRoutine?.(routine.id);
   };
 

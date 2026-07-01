@@ -1,6 +1,9 @@
 import { fireEvent, render } from '@testing-library/react-native';
+import * as Clipboard from 'expo-clipboard';
 
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
+
+jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn(() => Promise.resolve()) }));
 
 describe('CreateHouseScreen', () => {
   it('renders the title', async () => {
@@ -30,5 +33,13 @@ describe('CreateHouseScreen', () => {
     await fireEvent.press(getByText('집 만들기'));
 
     expect(onCreate).not.toHaveBeenCalled();
+  });
+
+  it('copies the invite code to the clipboard', async () => {
+    const { getByText } = await render(<CreateHouseScreen />);
+
+    await fireEvent.press(getByText('복사'));
+
+    expect(Clipboard.setStringAsync).toHaveBeenCalledWith(expect.any(String));
   });
 });

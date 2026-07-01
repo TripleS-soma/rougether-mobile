@@ -1,3 +1,4 @@
+import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -35,8 +36,8 @@ export type CreateHouseScreenProps = {
 /**
  * Create-house screen, ported from the prototype `CreateHouseScreen`: live
  * preview + name/description, theme, capacity, privacy, invite code. Theme
- * tokens + type scale; emoji icons. Real clipboard write (copy) is deferred —
- * the button shows visual feedback only.
+ * tokens + type scale; emoji icons. The copy button writes the invite code to
+ * the clipboard (expo-clipboard) with brief visual feedback.
  */
 export function CreateHouseScreen({ onBack, onCreate }: CreateHouseScreenProps) {
   const t = useTokens();
@@ -52,7 +53,7 @@ export function CreateHouseScreen({ onBack, onCreate }: CreateHouseScreenProps) 
   const canSubmit = name.trim().length >= 2;
 
   const copy = () => {
-    // TODO: real clipboard write (expo-clipboard); visual feedback only for now.
+    Clipboard.setStringAsync(inviteCode).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
