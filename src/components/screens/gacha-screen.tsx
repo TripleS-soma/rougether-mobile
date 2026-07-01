@@ -14,6 +14,7 @@ import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
+import { hapticImpact, hapticSuccess } from '@/utils/haptics';
 
 type Rarity = '일반' | '희귀' | '전설';
 const RARITY_COLOR: Record<Rarity, string> = {
@@ -142,12 +143,14 @@ export function GachaScreen({
       return;
     }
     setError('');
+    hapticImpact();
     const items = Array.from({ length: count }, (_, i) => box.pool[(i + count) % box.pool.length]);
     setPulled(items);
     setPhase('charging');
     clearTimer();
     timer.current = setTimeout(() => {
       setPhase('reveal');
+      hapticSuccess();
       onObtain?.(items.map((it) => it.name));
     }, CHARGE_MS);
   };

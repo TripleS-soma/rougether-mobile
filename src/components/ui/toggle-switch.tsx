@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useTokens } from '@/hooks/use-tokens';
+import { hapticSelection } from '@/utils/haptics';
 
 const OFF = '#D4C4B0';
 
@@ -15,7 +16,10 @@ export function ToggleSwitch({ value, onToggle, accessibilityLabel }: ToggleSwit
   const t = useTokens();
   return (
     <Pressable
-      onPress={onToggle}
+      onPress={() => {
+        hapticSelection();
+        onToggle();
+      }}
       accessibilityRole="switch"
       accessibilityState={{ checked: value }}
       accessibilityLabel={accessibilityLabel}
