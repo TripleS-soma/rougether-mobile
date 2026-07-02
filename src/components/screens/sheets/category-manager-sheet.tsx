@@ -46,7 +46,8 @@ export type CategoryManagerSheetProps = {
 
 /**
  * "카테고리 관리" bottom sheet, ported from the prototype `CategoryManagerModal`:
- * create a category (name + emoji + visibility) and delete existing ones. Pure
+ * create a category (name + emoji + visibility) and delete existing ones (with a
+ * confirmation modal). Pure
  * JS; rendered as an inline overlay (not a wrapper's children) so its controls
  * stay interactive in tests.
  */
@@ -61,6 +62,7 @@ export function CategoryManagerSheet({
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState(EMOJI_CHOICES[0]);
   const [visibility, setVisibility] = useState<CategoryVisibility>('public');
+  const [pendingDelete, setPendingDelete] = useState<RoutineCategoryMeta | null>(null);
 
   if (!visible) return null;
 
@@ -193,7 +195,7 @@ export function CategoryManagerSheet({
                   </Text>
                 </View>
                 <Pressable
-                  onPress={() => onDelete(c.id)}
+                  onPress={() => setPendingDelete(c)}
                   accessibilityRole="button"
                   accessibilityLabel={`${c.label} 삭제`}
                   style={[styles.del, { backgroundColor: `${t.danger}22` }]}>
@@ -204,6 +206,38 @@ export function CategoryManagerSheet({
           </View>
         </ScrollView>
       </View>
+
+      {pendingDelete ? (
+        <View style={styles.confirmOverlay}>
+          <Pressable style={styles.backdrop} onPress={() => setPendingDelete(null)} />
+          <View style={[styles.confirmCard, { backgroundColor: t.screen }]}>
+            <Text style={[Typography.h3, { color: t.text }]}>카테고리 삭제</Text>
+            <Text style={[Typography.body, styles.confirmText, { color: t.textMuted }]}>
+              &lsquo;{pendingDelete.label}&rsquo; 카테고리를 삭제할까요?{'\n'}이 카테고리의
+              루틴·투두는 &lsquo;기타&rsquo;로 이동해요.
+            </Text>
+            <View style={styles.confirmBtns}>
+              <Pressable
+                onPress={() => setPendingDelete(null)}
+                accessibilityRole="button"
+                accessibilityLabel="취소"
+                style={[styles.confirmBtn, { backgroundColor: t.surfaceMuted }]}>
+                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  onDelete(pendingDelete.id);
+                  setPendingDelete(null);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="삭제"
+                style={[styles.confirmBtn, { backgroundColor: t.danger }]}>
+                <Text style={[Typography.label, { color: t.onPrimary }]}>삭제</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -319,5 +353,33 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  confirmOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 200,
+    elevation: 200,
+  },
+  confirmCard: {
+    width: '80%',
+    maxWidth: 340,
+    borderRadius: Radius.lg,
+    padding: Spacing.four,
+    gap: Spacing.three,
+  },
+  confirmText: {
+    lineHeight: 22,
+  },
+  confirmBtns: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    marginTop: Spacing.one,
+  },
+  confirmBtn: {
+    flex: 1,
+    borderRadius: Radius.pill,
+    paddingVertical: Spacing.three,
+    alignItems: 'center',
   },
 });
