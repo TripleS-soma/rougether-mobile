@@ -110,9 +110,7 @@ export function FriendRoomScreen({
 
           <View style={styles.rows}>
             {routines.map((routine) => (
-              <View
-                key={routine.id}
-                style={[styles.row, { backgroundColor: t.surface, borderLeftColor: t.primary }]}>
+              <View key={routine.id} style={styles.row}>
                 <Icon
                   name={routine.completed ? 'checkbox-on' : 'checkbox-off'}
                   size={22}
@@ -229,15 +227,13 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
   },
   rows: {
-    gap: Spacing.two,
+    gap: 0,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.three,
-    padding: Spacing.three,
-    borderRadius: Radius.lg,
-    borderLeftWidth: 4,
+    gap: Spacing.two,
+    paddingVertical: Spacing.one,
   },
   streak: {
     flexDirection: 'row',

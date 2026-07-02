@@ -2,7 +2,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ROUTINE_CATEGORIES, type Routine, type RoutineCategoryMeta } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
-import { Radius, Spacing, Typography } from '@/constants/theme';
+import { Spacing, Typography } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 import { formatTime } from '@/utils/datetime';
@@ -92,10 +92,7 @@ export function RoutineManageScreen({
                     key={routine.id}
                     onPress={() => onEdit?.(routine)}
                     accessibilityRole="button"
-                    style={[
-                      styles.row,
-                      { backgroundColor: t.surface, borderLeftColor: cat.color },
-                    ]}>
+                    style={[styles.row, { borderLeftColor: cat.color }]}>
                     <View style={styles.flex}>
                       <Text style={[Typography.body, { color: t.text }]}>{routine.title}</Text>
                       {(routine.alarmEnabled && routine.time) || routine.photoVerify ? (
@@ -176,7 +173,7 @@ const styles = StyleSheet.create({
     gap: Spacing.half,
   },
   group: {
-    gap: Spacing.two,
+    gap: Spacing.half,
   },
   catHeader: {
     flexDirection: 'row',
@@ -195,15 +192,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   rows: {
-    gap: Spacing.two,
+    gap: 0,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.three,
-    padding: Spacing.three,
-    borderRadius: Radius.lg,
-    borderLeftWidth: 4,
+    gap: Spacing.two,
+    borderLeftWidth: 2,
+    paddingLeft: Spacing.two,
+    paddingVertical: Spacing.one,
   },
   badges: {
     flexDirection: 'row',
