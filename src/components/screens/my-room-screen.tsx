@@ -13,6 +13,7 @@ import {
 
 import { CharacterAvatar } from '@/components/character-avatar';
 import { Room } from '@/components/room/room';
+import { TimePickerSheet } from '@/components/screens/sheets/time-picker-sheet';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { ROUTINE_CATEGORIES, type Routine, type RoutineCategoryMeta } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
@@ -43,8 +44,10 @@ export type MyRoomScreenProps = {
   onOpenGacha?: () => void;
   /** Quick-add a title-only todo to a category (the + on a category header). */
   onQuickAddRoutine?: (category: string, title: string) => void;
-  /** Open the full edit screen for a routine (kebab → 수정). */
-  onEditRoutine?: (routine: Routine) => void;
+  /** Rename a routine (kebab → 수정: name only; full edit lives in 루틴 관리). */
+  onRenameRoutine?: (id: string, title: string) => void;
+  /** Update a routine's alarm time (kebab → 시간 수정, reuses TimePickerSheet). */
+  onUpdateRoutineTime?: (id: string, alarmEnabled: boolean, time: string) => void;
   /** Delete a routine (kebab → 삭제). */
   onDeleteRoutine?: (id: string) => void;
   /**
@@ -76,7 +79,8 @@ export function MyRoomScreen({
   onToggleRoutine,
   onOpenGacha,
   onQuickAddRoutine,
-  onEditRoutine,
+  onRenameRoutine,
+  onUpdateRoutineTime,
   onDeleteRoutine,
   onRequestPhoto = captureVerificationPhoto,
 }: MyRoomScreenProps) {
@@ -92,6 +96,12 @@ export function MyRoomScreen({
   const [newTodo, setNewTodo] = useState('');
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const menuRoutine = routines.find((r) => r.id === menuOpenId) ?? null;
+
+  // Kebab → 수정: rename only (id + draft text). Kebab → 시간 수정: TimePickerSheet.
+  const [renameId, setRenameId] = useState<string | null>(null);
+  const [renameText, setRenameText] = useState('');
+  const [timeId, setTimeId] = useState<string | null>(null);
+  const timeRoutine = routines.find((r) => r.id === timeId) ?? null;
 
   // Scroll the tapped category's quick-add input into view (above the keyboard).
   const scrollRef = useRef<ScrollView>(null);
@@ -358,7 +368,10 @@ export function MyRoomScreen({
                 onPress={() => {
                   const r = menuRoutine;
                   setMenuOpenId(null);
-                  if (r) onEditRoutine?.(r);
+                  if (r) {
+                    setRenameText(r.title);
+                    setRenameId(r.id);
+                  }
                 }}
                 accessibilityRole="button"
                 accessibilityLabel={`${menuRoutine?.title ?? ''} 수정`}
@@ -400,9 +413,84 @@ export function MyRoomScreen({
                 {menuRoutine?.completed ? '완료 취소' : '완료하기'}
               </Text>
             </Pressable>
+
+            <Pressable
+              onPress={() => {
+                const r = menuRoutine;
+                setMenuOpenId(null);
+                if (r) setTimeId(r.id);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`${menuRoutine?.title ?? ''} 시간 수정`}
+              style={styles.sheetItem}>
+              <View style={[styles.sheetItemIcon, { backgroundColor: t.warning }]}>
+                <Icon name="bell" size={18} color={t.onPrimary} />
+              </View>
+              <Text style={[Typography.body, { color: t.text }]}>시간 수정</Text>
+            </Pressable>
           </Pressable>
         </Pressable>
       </Modal>
+
+      <Modal
+        transparent
+        visible={renameId !== null}
+        animationType="fade"
+        onRequestClose={() => setRenameId(null)}>
+        <Pressable style={styles.dialogBackdrop} onPress={() => setRenameId(null)}>
+          <Pressable style={[styles.dialogCard, { backgroundColor: t.screen }]}>
+            <Text style={[Typography.h3, { color: t.text }]}>이름 수정</Text>
+            <TextInput
+              autoFocus
+              value={renameText}
+              onChangeText={setRenameText}
+              placeholder="루틴 이름"
+              placeholderTextColor={t.textMuted}
+              style={[styles.dialogInput, { color: t.text, backgroundColor: t.surfaceMuted }]}
+            />
+            <View style={styles.dialogBtns}>
+              <Pressable
+                onPress={() => setRenameId(null)}
+                accessibilityRole="button"
+                accessibilityLabel="취소"
+                style={[styles.dialogBtn, { backgroundColor: t.surfaceMuted }]}>
+                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  const title = renameText.trim();
+                  if (renameId && title) onRenameRoutine?.(renameId, title);
+                  setRenameId(null);
+                }}
+                disabled={!renameText.trim()}
+                accessibilityRole="button"
+                accessibilityLabel="저장"
+                style={[
+                  styles.dialogBtn,
+                  { backgroundColor: renameText.trim() ? t.primary : t.surfaceMuted },
+                ]}>
+                <Text
+                  style={[
+                    Typography.label,
+                    { color: renameText.trim() ? t.onPrimary : t.textMuted },
+                  ]}>
+                  저장
+                </Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <TimePickerSheet
+        visible={timeRoutine !== null}
+        initialEnabled={timeRoutine?.alarmEnabled ?? false}
+        initialTime={timeRoutine?.time ?? '07:00'}
+        onSave={(enabled, time) => {
+          if (timeId) onUpdateRoutineTime?.(timeId, enabled, time);
+        }}
+        onClose={() => setTimeId(null)}
+      />
     </View>
   );
 }
@@ -599,6 +687,36 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  dialogBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.four,
+  },
+  dialogCard: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: Radius.lg,
+    padding: Spacing.four,
+    gap: Spacing.three,
+  },
+  dialogInput: {
+    fontSize: 16,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.three,
+  },
+  dialogBtns: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+  },
+  dialogBtn: {
+    flex: 1,
+    borderRadius: Radius.pill,
+    paddingVertical: Spacing.three,
+    alignItems: 'center',
   },
   todoInput: {
     fontSize: 16,

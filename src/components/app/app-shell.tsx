@@ -168,6 +168,13 @@ export function AppShell({
 
   const deleteRoutine = (id: string) => setRoutines((prev) => prev.filter((r) => r.id !== id));
 
+  // Lightweight edits from 나의 방 (full edit lives in 루틴 관리).
+  const renameRoutine = (id: string, title: string) =>
+    setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, title } : r)));
+
+  const updateRoutineTime = (id: string, alarmEnabled: boolean, time: string) =>
+    setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, alarmEnabled, time } : r)));
+
   const quickAddTodo = (category: string, title: string) =>
     setRoutines((prev) => [
       ...prev,
@@ -217,7 +224,8 @@ export function AppShell({
             onAddRoutine={() => setScreen('routineManage')}
             onOpenGacha={() => setScreen('gacha')}
             onQuickAddRoutine={quickAddTodo}
-            onEditRoutine={(r) => openEditRoutine(r, 'myRoom')}
+            onRenameRoutine={renameRoutine}
+            onUpdateRoutineTime={updateRoutineTime}
             onDeleteRoutine={deleteRoutine}
           />
         ) : null}
