@@ -45,6 +45,7 @@ import {
   DEFAULT_WALLPAPER_ID,
   FURNITURE_ITEMS,
 } from '@/resources/furniture';
+import { todayIso } from '@/utils/datetime';
 
 type Screen =
   | 'myRoom'
@@ -108,6 +109,15 @@ export function AppShell({
   const { themeId, setThemeId } = useBrandTheme();
   const [screen, setScreen] = useState<Screen>('myRoom');
   const [routines, setRoutines] = useState<Routine[]>(SAMPLE_ROUTINES);
+  // Completion log keyed by routine id → completed dates ("YYYY-MM-DD"), the
+  // client-side shape of the spec's routine_logs. Seeded so the sample routines
+  // flagged `completed` count as done *today*.
+  const [completions, setCompletions] = useState<Record<string, string[]>>(() => {
+    const today = todayIso();
+    const seed: Record<string, string[]> = {};
+    for (const r of SAMPLE_ROUTINES) if (r.completed) seed[r.id] = [today];
+    return seed;
+  });
   const [placedFurnitureIds, setPlacedFurnitureIds] = useState<string[]>(
     DEFAULT_PLACED_FURNITURE_IDS,
   );
@@ -138,13 +148,18 @@ export function AppShell({
     setRoutines((prev) => prev.map((r) => (r.category === id ? { ...r, category: '기타' } : r)));
   };
 
-  // Completing a routine/todo grants coin; un-completing (same session) rolls it
-  // back. Spec: routine/todo completion → coin reward.
-  const toggleRoutine = (id: string) => {
-    const target = routines.find((r) => r.id === id);
-    const delta = target ? (target.completed ? -ROUTINE_REWARD_COIN : ROUTINE_REWARD_COIN) : 0;
-    setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, completed: !r.completed } : r)));
-    if (delta) setWallet((w) => ({ ...w, coin: Math.max(0, w.coin + delta) }));
+  // Completion is tracked per routine *per date* (spec: routine_logs keyed by
+  // routine_date). Marking done on a date grants coin; un-marking rolls it back.
+  const toggleCompletion = (id: string, date: string) => {
+    const wasDone = (completions[id] ?? []).includes(date);
+    setCompletions((prev) => {
+      const dates = prev[id] ?? [];
+      return { ...prev, [id]: wasDone ? dates.filter((d) => d !== date) : [...dates, date] };
+    });
+    setWallet((w) => ({
+      ...w,
+      coin: Math.max(0, w.coin + (wasDone ? -ROUTINE_REWARD_COIN : ROUTINE_REWARD_COIN)),
+    }));
   };
 
   const updateRoutine = (id: string, n: NewRoutine) =>
@@ -175,10 +190,10 @@ export function AppShell({
   const updateRoutineTime = (id: string, alarmEnabled: boolean, time: string) =>
     setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, alarmEnabled, time } : r)));
 
-  const quickAddTodo = (category: string, title: string) =>
+  const quickAddTodo = (category: string, title: string, dueDate: string) =>
     setRoutines((prev) => [
       ...prev,
-      { id: String(Date.now()), title, completed: false, category, kind: 'todo' },
+      { id: String(Date.now()), title, category, kind: 'todo', dueDate },
     ]);
 
   // Remember where the add/edit-routine screen was opened from, so its back
@@ -197,7 +212,6 @@ export function AppShell({
         id: String(Date.now()),
         title: n.title,
         category: n.category,
-        completed: false,
         days: n.days,
         startDate: n.startDate,
         endDate: n.endDate,
@@ -215,11 +229,12 @@ export function AppShell({
         {screen === 'myRoom' ? (
           <MyRoomScreen
             routines={routines}
+            completions={completions}
             categories={categories}
             placedFurnitureIds={placedFurnitureIds}
             wallpaperId={wallpaperId}
             characterId={characterId}
-            onToggleRoutine={toggleRoutine}
+            onToggleCompletion={toggleCompletion}
             onEdit={() => setScreen('decor')}
             onAddRoutine={() => setScreen('routineManage')}
             onOpenGacha={() => setScreen('gacha')}
