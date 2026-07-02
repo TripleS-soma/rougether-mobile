@@ -18,7 +18,6 @@ import { ProfileEditScreen } from '@/components/screens/profile-edit-screen';
 import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
 import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
 import { SettingsScreen } from '@/components/screens/settings-screen';
-import { ShopScreen } from '@/components/screens/shop-screen';
 import { SoundSettingsScreen } from '@/components/screens/sound-settings-screen';
 import { SignupScreen } from '@/components/screens/signup-screen';
 import { SampleButton } from '@/components/sample-button';
@@ -238,15 +237,6 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ height: 700, alignSelf: 'stretch' }}>
         <GachaScreen coinBalance={5600} />
-      </View>
-    ),
-  },
-  {
-    name: 'ShopScreen',
-    description: '상점(#74): 방 꾸미기(다이아 구매) / 캐릭터 악세서리(가챠 전용) 탭.',
-    render: () => (
-      <View style={{ height: 760, alignSelf: 'stretch' }}>
-        <ShopScreen diaBalance={480} ownedItemIds={['bed', 'rug']} />
       </View>
     ),
   },

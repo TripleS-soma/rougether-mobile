@@ -35,4 +35,27 @@ describe('RoomDecorScreen', () => {
 
     expect(onApply).toHaveBeenCalledWith(['hanok-bed'], 'simple');
   });
+
+  it('buys a not-yet-owned item with dia', async () => {
+    const onBuy = jest.fn();
+    const { getByLabelText } = await render(
+      <RoomDecorScreen ownedIds={['bed']} diaBalance={9999} onBuy={onBuy} />,
+    );
+
+    // '초록 식물' is not owned → its tile is a buy affordance.
+    await fireEvent.press(getByLabelText('초록 식물 구매'));
+
+    expect(onBuy).toHaveBeenCalledWith('plant');
+  });
+
+  it('does not buy when dia is insufficient', async () => {
+    const onBuy = jest.fn();
+    const { getByLabelText } = await render(
+      <RoomDecorScreen ownedIds={['bed']} diaBalance={0} onBuy={onBuy} />,
+    );
+
+    await fireEvent.press(getByLabelText('초록 식물 구매'));
+
+    expect(onBuy).not.toHaveBeenCalled();
+  });
 });

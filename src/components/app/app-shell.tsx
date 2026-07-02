@@ -18,7 +18,6 @@ import { ProfileEditScreen } from '@/components/screens/profile-edit-screen';
 import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
 import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
 import { SettingsScreen } from '@/components/screens/settings-screen';
-import { ShopScreen } from '@/components/screens/shop-screen';
 import {
   DEFAULT_SOUND_SETTINGS,
   type SoundSettings,
@@ -62,8 +61,7 @@ type Screen =
   | 'passwordChange'
   | 'notifications'
   | 'sound'
-  | 'help'
-  | 'shop';
+  | 'help';
 
 /** Which bottom-nav tab is active for each screen, or null to hide the nav. */
 const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
@@ -82,7 +80,6 @@ const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   notifications: null,
   sound: null,
   help: null,
-  shop: null,
 };
 
 const SCREEN_FOR_TAB: Record<NavTab, Screen> = {
@@ -221,7 +218,6 @@ export function AppShell({
             onEdit={() => setScreen('decor')}
             onAddRoutine={() => setScreen('routineManage')}
             onOpenGacha={() => setScreen('gacha')}
-            onOpenShop={() => setScreen('shop')}
             onQuickAddRoutine={quickAddTodo}
             onEditRoutine={(r) => openEditRoutine(r, 'myRoom')}
             onDeleteRoutine={deleteRoutine}
@@ -233,7 +229,14 @@ export function AppShell({
             initialPlacedIds={placedFurnitureIds}
             initialWallpaperId={wallpaperId}
             ownedIds={ownedFurnitureIds}
+            diaBalance={wallet.dia}
             characterId={characterId}
+            onBuy={(itemId) => {
+              const item = FURNITURE_ITEMS.find((i) => i.id === itemId);
+              if (!item || ownedFurnitureIds.includes(itemId) || wallet.dia < item.price) return;
+              setWallet((w) => ({ ...w, dia: w.dia - item.price }));
+              setOwnedFurnitureIds((prev) => Array.from(new Set([...prev, itemId])));
+            }}
             onApply={(ids, wp) => {
               setPlacedFurnitureIds(ids);
               setWallpaperId(wp);
@@ -289,20 +292,6 @@ export function AppShell({
               if (fresh.length) setObtainedItems((prev) => [...prev, ...fresh]);
               if (dia) setWallet((w) => ({ ...w, dia: w.dia + dia }));
             }}
-          />
-        ) : null}
-
-        {screen === 'shop' ? (
-          <ShopScreen
-            diaBalance={wallet.dia}
-            ownedItemIds={ownedFurnitureIds}
-            onBuy={(itemId) => {
-              const item = FURNITURE_ITEMS.find((i) => i.id === itemId);
-              if (!item || ownedFurnitureIds.includes(itemId) || wallet.dia < item.price) return;
-              setWallet((w) => ({ ...w, dia: w.dia - item.price }));
-              setOwnedFurnitureIds((prev) => Array.from(new Set([...prev, itemId])));
-            }}
-            onBack={() => setScreen('myRoom')}
           />
         ) : null}
 
