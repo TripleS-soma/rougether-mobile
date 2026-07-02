@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -28,8 +29,6 @@ export type MyRoomScreenProps = {
   userName?: string;
   /** Consecutive-day streak shown in the header. */
   streakDays?: number;
-  /** Reward coins offered by the reward card. */
-  rewardCoins?: number;
   // Room rendering (forwarded to <Room />).
   characterId?: CharacterId;
   wallpaperId?: string;
@@ -42,7 +41,6 @@ export type MyRoomScreenProps = {
   onAddRoutine?: () => void;
   onToggleRoutine?: (id: string) => void;
   onOpenGacha?: () => void;
-  onClaimReward?: () => void;
   /** Quick-add a title-only todo to a category (the + on a category header). */
   onQuickAddRoutine?: (category: string, title: string) => void;
   /** Open the full edit screen for a routine (kebab → 수정). */
@@ -60,15 +58,14 @@ export type MyRoomScreenProps = {
 /**
  * "My room" (zoomed) screen, ported from the prototype `MyRoomZoomScreen`:
  * header (character + streak), the shared <Room /> view with a gacha shortcut,
- * today's routines grouped by category with a progress bar, and a reward card.
- * Each category header has a + to quick-add a todo, and each routine has a kebab
- * menu (수정 / 삭제). Pure + prop-driven; the web-only "save room photo"
+ * today's routines grouped by category with a progress bar. Each category
+ * header has a + to quick-add a todo, and each routine has a kebab menu (수정 /
+ * 삭제) shown as a small modal. Pure + prop-driven; the web-only "save room photo"
  * (SVG/canvas) is dropped. Spec domain: rougether-spec domains/room.
  */
 export function MyRoomScreen({
   userName = '준서',
   streakDays = 7,
-  rewardCoins = 120,
   characterId = DEFAULT_CHARACTER_ID,
   wallpaperId = DEFAULT_WALLPAPER_ID,
   placedFurnitureIds,
@@ -78,7 +75,6 @@ export function MyRoomScreen({
   onAddRoutine,
   onToggleRoutine,
   onOpenGacha,
-  onClaimReward,
   onQuickAddRoutine,
   onEditRoutine,
   onDeleteRoutine,
@@ -95,6 +91,7 @@ export function MyRoomScreen({
   const [addingCategory, setAddingCategory] = useState<string | null>(null);
   const [newTodo, setNewTodo] = useState('');
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const menuRoutine = routines.find((r) => r.id === menuOpenId) ?? null;
 
   // Scroll the tapped category's quick-add input into view (above the keyboard).
   const scrollRef = useRef<ScrollView>(null);
@@ -307,40 +304,6 @@ export function MyRoomScreen({
                               <Icon name="kebab" size={20} color={t.textDisabled} />
                             </Pressable>
                           </View>
-
-                          {menuOpen ? (
-                            <View
-                              style={[
-                                styles.menu,
-                                { backgroundColor: t.surface, borderColor: t.border },
-                              ]}>
-                              <Pressable
-                                onPress={() => {
-                                  setMenuOpenId(null);
-                                  onEditRoutine?.(routine);
-                                }}
-                                accessibilityRole="button"
-                                accessibilityLabel={`${routine.title} 수정`}
-                                style={styles.menuItem}>
-                                <Icon name="edit" size={16} color={t.text} />
-                                <Text style={[Typography.body, { color: t.text }]}>수정하기</Text>
-                              </Pressable>
-                              <Pressable
-                                onPress={() => {
-                                  setMenuOpenId(null);
-                                  onDeleteRoutine?.(routine.id);
-                                }}
-                                accessibilityRole="button"
-                                accessibilityLabel={`${routine.title} 삭제`}
-                                style={[
-                                  styles.menuItem,
-                                  { borderTopWidth: 1, borderTopColor: t.border },
-                                ]}>
-                                <Icon name="trash" size={16} color={t.danger} />
-                                <Text style={[Typography.body, { color: t.danger }]}>삭제하기</Text>
-                              </Pressable>
-                            </View>
-                          ) : null}
                         </View>
                       );
                     })}
@@ -366,29 +329,6 @@ export function MyRoomScreen({
               );
             })}
 
-            <View style={[styles.rewardCard, { backgroundColor: t.primary }]}>
-              <View style={styles.rewardTop}>
-                <View style={styles.flex}>
-                  <Text style={[Typography.h3, { color: t.onPrimary }]}>오늘의 보상</Text>
-                  <Text style={[Typography.supporting, styles.rewardSub, { color: t.onPrimary }]}>
-                    루틴을 완료하고 보상을 받아보세요!
-                  </Text>
-                </View>
-                <Icon name="star" size={28} color={t.onPrimary} />
-              </View>
-              <View style={styles.rewardCoins}>
-                <Icon name="coin" size={24} color={t.onPrimary} />
-                <Text style={[Typography.h2, { color: t.onPrimary }]}>+{rewardCoins} 코인</Text>
-              </View>
-              <Pressable
-                onPress={onClaimReward}
-                accessibilityRole="button"
-                accessibilityLabel="보상 받기"
-                style={[styles.claimBtn, { backgroundColor: t.surface }]}>
-                <Text style={[Typography.label, { color: t.primary }]}>보상 받기</Text>
-              </Pressable>
-            </View>
-
             <Pressable
               onPress={onEdit}
               accessibilityRole="button"
@@ -400,6 +340,42 @@ export function MyRoomScreen({
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <Modal
+        transparent
+        visible={menuRoutine !== null}
+        animationType="fade"
+        onRequestClose={() => setMenuOpenId(null)}>
+        <Pressable style={styles.menuBackdrop} onPress={() => setMenuOpenId(null)}>
+          <Pressable
+            style={[styles.menuCard, { backgroundColor: t.surface, borderColor: t.border }]}>
+            <Pressable
+              onPress={() => {
+                const r = menuRoutine;
+                setMenuOpenId(null);
+                if (r) onEditRoutine?.(r);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`${menuRoutine?.title ?? ''} 수정`}
+              style={styles.menuItem}>
+              <Icon name="edit" size={16} color={t.text} />
+              <Text style={[Typography.body, { color: t.text }]}>수정하기</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                const r = menuRoutine;
+                setMenuOpenId(null);
+                if (r) onDeleteRoutine?.(r.id);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`${menuRoutine?.title ?? ''} 삭제`}
+              style={[styles.menuItem, { borderTopWidth: 1, borderTopColor: t.border }]}>
+              <Icon name="trash" size={16} color={t.danger} />
+              <Text style={[Typography.body, { color: t.danger }]}>삭제하기</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -550,10 +526,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: Spacing.two,
   },
-  menu: {
+  menuBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuCard: {
+    width: 200,
     borderWidth: 1,
-    borderRadius: Radius.md,
-    marginTop: Spacing.one,
+    borderRadius: Radius.lg,
     overflow: 'hidden',
   },
   menuItem: {
@@ -580,28 +562,6 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: 11,
-  },
-  rewardCard: {
-    borderRadius: Radius.lg,
-    padding: Spacing.four,
-    gap: Spacing.three,
-  },
-  rewardTop: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  rewardSub: {
-    marginTop: Spacing.half,
-  },
-  rewardCoins: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-  },
-  claimBtn: {
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.three,
-    alignItems: 'center',
   },
   editBtn: {
     flexDirection: 'row',

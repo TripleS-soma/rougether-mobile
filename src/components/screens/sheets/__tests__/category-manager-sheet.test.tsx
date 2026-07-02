@@ -35,7 +35,10 @@ describe('CategoryManagerSheet', () => {
       />,
     );
 
-    fireEvent.press(getByLabelText('일정 삭제'));
+    // Trash opens a confirm modal; delete only fires after confirming.
+    await fireEvent.press(getByLabelText('일정 삭제'));
+    expect(onDelete).not.toHaveBeenCalled();
+    await fireEvent.press(getByLabelText('삭제'));
     expect(onDelete).toHaveBeenCalledWith('일정');
   });
 
