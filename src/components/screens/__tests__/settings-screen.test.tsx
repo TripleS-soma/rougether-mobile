@@ -27,4 +27,13 @@ describe('SettingsScreen', () => {
 
     expect(onLogout).toHaveBeenCalledTimes(1);
   });
+
+  it('replays onboarding', async () => {
+    const onReplayOnboarding = jest.fn();
+    const { getByText } = await render(<SettingsScreen onReplayOnboarding={onReplayOnboarding} />);
+
+    await fireEvent.press(getByText('온보딩 다시 보기'));
+
+    expect(onReplayOnboarding).toHaveBeenCalledTimes(1);
+  });
 });
