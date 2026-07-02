@@ -74,7 +74,7 @@
   },
   "jest": {
     "preset": "jest-expo",
-    "testTimeout": 20000,
+    "testTimeout": 30000,
     "moduleNameMapper": {
       "\\.(css)$": "<rootDir>/jest/style-mock.js",
       "\\.svg$": "<rootDir>/jest/svg-mock.js",

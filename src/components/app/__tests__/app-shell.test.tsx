@@ -1,6 +1,7 @@
 import { render } from '@testing-library/react-native';
 
 import { AppShell } from '@/components/app/app-shell';
+import { AuthProvider } from '@/hooks/use-auth';
 
 // AppShell loads my-room data from the API on mount; return empty payloads so
 // the render is deterministic and hits no network.
@@ -22,7 +23,11 @@ afterEach(() => {
 
 describe('AppShell', () => {
   it('opens on the my-room screen with the bottom nav', async () => {
-    const { getByText, getByLabelText } = await render(<AppShell />);
+    const { getByText, getByLabelText } = await render(
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>,
+    );
     expect(getByText('준서의 방')).toBeTruthy(); // MyRoomScreen default
     expect(getByText('오늘의 루틴')).toBeTruthy();
     // Bottom nav tabs present.

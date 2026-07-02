@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
@@ -27,6 +27,7 @@ import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
 import { BottomNav, type NavTab } from '@/components/ui/bottom-nav';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { type Routine } from '@/constants/routines';
+import { useAuth } from '@/hooks/use-auth';
 import { useGacha } from '@/hooks/use-gacha';
 import { useMyRoomData } from '@/hooks/use-my-room-data';
 import { useBrandTheme } from '@/hooks/use-tokens';
@@ -105,6 +106,8 @@ export function AppShell({
     categories,
     wallet,
     setWallet,
+    nickname: apiNickname,
+    streak,
     toggleCompletion,
     quickAddTodo,
     addRoutine,
@@ -120,6 +123,8 @@ export function AppShell({
   // from the draw response).
   const { gachas, draw: drawGachaMachine } = useGacha(setWallet);
 
+  const { logout } = useAuth();
+
   const [placedFurnitureIds, setPlacedFurnitureIds] = useState<string[]>(
     DEFAULT_PLACED_FURNITURE_IDS,
   );
@@ -130,9 +135,13 @@ export function AppShell({
   const [visitingFriend, setVisitingFriend] = useState('친구');
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
 
-  // Profile + settings (persistence is local for now).
+  // Profile + settings. Nickname seeds from the API (/me); there's no PUT /me
+  // yet, so profile-edit saves + bio stay local.
   const [nickname, setNickname] = useState('준서');
   const [bio, setBio] = useState('');
+  useEffect(() => {
+    if (apiNickname) setNickname(apiNickname);
+  }, [apiNickname]);
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(
     DEFAULT_NOTIFICATION_SETTINGS,
   );
@@ -154,6 +163,8 @@ export function AppShell({
       <View style={styles.content}>
         {screen === 'myRoom' ? (
           <MyRoomScreen
+            userName={nickname}
+            streakDays={streak}
             routines={routines}
             completions={completions}
             categories={categories}
@@ -279,6 +290,10 @@ export function AppShell({
             onOpenSound={() => setScreen('sound')}
             onOpenHelp={() => setScreen('help')}
             onReplayOnboarding={onReplayOnboarding}
+            onLogout={() => {
+              // Clearing the session flips auth status → AppRoot redirects to /login.
+              void logout();
+            }}
           />
         ) : null}
 
