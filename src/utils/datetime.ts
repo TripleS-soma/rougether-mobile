@@ -10,3 +10,15 @@ export function formatTime(time: string) {
 export function formatDate(d: string) {
   return d.replaceAll('-', '.');
 }
+
+/** Local date → "YYYY-MM-DD" (KST-agnostic; uses the device's local day). */
+export function toIsoDate(dt: Date) {
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(
+    dt.getDate(),
+  ).padStart(2, '0')}`;
+}
+
+/** Today as "YYYY-MM-DD" in the device's local time. */
+export function todayIso() {
+  return toIsoDate(new Date());
+}

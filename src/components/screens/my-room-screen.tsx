@@ -23,11 +23,8 @@ import { captureVerificationPhoto } from '@/lib/photo-verify';
 import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
-import { formatTime } from '@/utils/datetime';
+import { formatDate, formatTime, todayIso } from '@/utils/datetime';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
-
-const toIso = (dt: Date) =>
-  `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
 
 export type MyRoomScreenProps = {
   /** Room occupant's display name (header title becomes "{userName}의 방"). */
@@ -40,14 +37,21 @@ export type MyRoomScreenProps = {
   placedFurnitureIds?: string[];
   // Routine list.
   routines?: Routine[];
+  /**
+   * Per-routine completion log: routine id → completed dates ("YYYY-MM-DD").
+   * Mirrors the spec's routine_logs; a routine is "done" on a date when that
+   * date is present here.
+   */
+  completions?: Record<string, string[]>;
   categories?: RoutineCategoryMeta[];
   // Callbacks (wired separately).
   onEdit?: () => void;
   onAddRoutine?: () => void;
-  onToggleRoutine?: (id: string) => void;
+  /** Toggle a routine's completion on a specific date ("YYYY-MM-DD"). */
+  onToggleCompletion?: (id: string, date: string) => void;
   onOpenGacha?: () => void;
-  /** Quick-add a title-only todo to a category (the + on a category header). */
-  onQuickAddRoutine?: (category: string, title: string) => void;
+  /** Quick-add a todo to a category with a due date (the + on a category header). */
+  onQuickAddRoutine?: (category: string, title: string, dueDate: string) => void;
   /** Rename a routine (kebab → 수정: name only; full edit lives in 루틴 관리). */
   onRenameRoutine?: (id: string, title: string) => void;
   /** Update a routine's alarm time (kebab → 시간 수정, reuses TimePickerSheet). */
@@ -77,10 +81,11 @@ export function MyRoomScreen({
   wallpaperId = DEFAULT_WALLPAPER_ID,
   placedFurnitureIds,
   routines = [],
+  completions = {},
   categories = ROUTINE_CATEGORIES,
   onEdit,
   onAddRoutine,
-  onToggleRoutine,
+  onToggleCompletion,
   onOpenGacha,
   onQuickAddRoutine,
   onRenameRoutine,
@@ -91,15 +96,24 @@ export function MyRoomScreen({
   const t = useTokens();
   const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
   const knownIds = categories.map((c) => c.id);
-  const completedCount = routines.filter((r) => r.completed).length;
-  const progress = routines.length > 0 ? completedCount / routines.length : 0;
 
-  // Which category's quick-add input is open, the in-progress todo text, and
-  // which routine's kebab menu is open.
+  const today = todayIso();
+  const isDone = (id: string, date: string) => (completions[id] ?? []).includes(date);
+
+  // The 방 tab shows today: recurring routines always, todos only if due today.
+  const roomRoutines = routines.filter((r) => r.kind !== 'todo' || r.dueDate === today);
+  const completedCount = roomRoutines.filter((r) => isDone(r.id, today)).length;
+  const progress = roomRoutines.length > 0 ? completedCount / roomRoutines.length : 0;
+
+  // Which category's quick-add input is open, the in-progress todo text + due
+  // date, and which routine's kebab menu is open.
   const [addingCategory, setAddingCategory] = useState<string | null>(null);
   const [newTodo, setNewTodo] = useState('');
+  const [newTodoDate, setNewTodoDate] = useState(today);
+  const [todoDateOpen, setTodoDateOpen] = useState(false);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const menuRoutine = routines.find((r) => r.id === menuOpenId) ?? null;
+  const menuDone = menuRoutine ? isDone(menuRoutine.id, today) : false;
 
   // Kebab → 수정: rename only (id + draft text). Kebab → 시간 수정: TimePickerSheet.
   const [renameId, setRenameId] = useState<string | null>(null);
@@ -107,15 +121,15 @@ export function MyRoomScreen({
   const [timeId, setTimeId] = useState<string | null>(null);
   const timeRoutine = routines.find((r) => r.id === timeId) ?? null;
 
-  // 방 / 달력 tab. The calendar lists routines scheduled on the selected date.
+  // 방 / 달력 tab. The calendar lists routines + todos on the selected date.
   const [tab, setTab] = useState<'room' | 'calendar'>('room');
-  const [selectedDate, setSelectedDate] = useState(() => toIso(new Date()));
+  const [selectedDate, setSelectedDate] = useState(() => todayIso());
   const selectedWeekday = (() => {
     const [y, m, d] = selectedDate.split('-').map(Number);
     return new Date(y, m - 1, d).getDay();
   })();
   const dateRoutines = routines.filter((r) => {
-    if (r.kind === 'todo') return false;
+    if (r.kind === 'todo') return r.dueDate === selectedDate;
     if (r.startDate && selectedDate < r.startDate) return false;
     if (r.endDate && selectedDate > r.endDate) return false;
     if (r.days && r.days.length) return r.days.includes(selectedWeekday);
@@ -126,9 +140,13 @@ export function MyRoomScreen({
   const scrollRef = useRef<ScrollView>(null);
   const sectionY = useRef(0);
   const groupY = useRef<Record<string, number>>({});
+  const todoInputRef = useRef<TextInput>(null);
+  // Set while opening the date picker so the input's blur doesn't commit/close.
+  const skipBlurCommit = useRef(false);
 
   const openQuickAdd = (categoryId: string) => {
     setNewTodo('');
+    setNewTodoDate(today);
     const opening = addingCategory !== categoryId;
     setAddingCategory(opening ? categoryId : null);
     if (opening) {
@@ -141,28 +159,35 @@ export function MyRoomScreen({
   };
 
   const commitTodo = (categoryId: string) => {
+    // Blur fired only to open the date picker → keep the input open.
+    if (skipBlurCommit.current) {
+      skipBlurCommit.current = false;
+      return;
+    }
     const title = newTodo.trim();
-    if (title) onQuickAddRoutine?.(categoryId, title);
+    if (title) onQuickAddRoutine?.(categoryId, title, newTodoDate);
     setNewTodo('');
     setAddingCategory(null);
   };
 
   // Completing a 인증사진형 routine first requires a camera photo; if none is
   // captured (cancelled / denied), the completion is aborted. Kept sync on the
-  // common (non-photo) path; only the photo path awaits the camera.
-  const handleToggle = (routine: Routine) => {
-    if (routine.photoVerify && !routine.completed) {
+  // common (non-photo) path; only the photo path awaits the camera. Completion
+  // is toggled for a specific date (오늘 in 방, 선택한 날짜 in 달력).
+  const handleToggle = (routine: Routine, date: string) => {
+    const done = isDone(routine.id, date);
+    if (routine.photoVerify && !done) {
       void onRequestPhoto().then((uri) => {
         if (uri) {
           hapticSuccess();
-          onToggleRoutine?.(routine.id);
+          onToggleCompletion?.(routine.id, date);
         }
       });
       return;
     }
-    if (routine.completed) hapticSelection();
+    if (done) hapticSelection();
     else hapticSuccess();
-    onToggleRoutine?.(routine.id);
+    onToggleCompletion?.(routine.id, date);
   };
 
   return (
@@ -246,7 +271,7 @@ export function MyRoomScreen({
                   <Text style={[Typography.h2, { color: t.text }]}>오늘의 루틴</Text>
                   <View style={styles.sectionHeadRight}>
                     <Text style={[Typography.label, { color: t.primary }]}>
-                      {completedCount} / {routines.length}
+                      {completedCount} / {roomRoutines.length}
                     </Text>
                     <Pressable
                       onPress={onAddRoutine}
@@ -269,12 +294,12 @@ export function MyRoomScreen({
 
                 {categories.map((cat, idx) => {
                   const isFallback = idx === categories.length - 1;
-                  const items = routines.filter((r) => {
+                  const items = roomRoutines.filter((r) => {
                     if (r.category === cat.id) return true;
                     return isFallback && (!r.category || !knownIds.includes(r.category));
                   });
                   if (items.length === 0) return null;
-                  const doneInCat = items.filter((r) => r.completed).length;
+                  const doneInCat = items.filter((r) => isDone(r.id, today)).length;
 
                   return (
                     <View
@@ -304,25 +329,26 @@ export function MyRoomScreen({
                       <View style={styles.rows}>
                         {items.map((routine) => {
                           const menuOpen = menuOpenId === routine.id;
+                          const done = isDone(routine.id, today);
                           return (
                             <View key={routine.id}>
                               <View style={styles.routineRow}>
                                 <Pressable
-                                  onPress={() => handleToggle(routine)}
+                                  onPress={() => handleToggle(routine, today)}
                                   accessibilityRole="checkbox"
-                                  accessibilityState={{ checked: routine.completed }}
+                                  accessibilityState={{ checked: done }}
                                   accessibilityLabel={routine.title}
                                   style={styles.rowMain}>
                                   <Icon
-                                    name={routine.completed ? 'checkbox-on' : 'checkbox-off'}
+                                    name={done ? 'checkbox-on' : 'checkbox-off'}
                                     size={22}
-                                    color={routine.completed ? cat.color : t.textDisabled}
+                                    color={done ? cat.color : t.textDisabled}
                                   />
                                   <View style={styles.flex}>
                                     <Text
                                       style={[
                                         Typography.body,
-                                        routine.completed
+                                        done
                                           ? {
                                               color: t.textMuted,
                                               textDecorationLine: 'line-through',
@@ -372,6 +398,7 @@ export function MyRoomScreen({
                           <View style={[styles.addRow, { backgroundColor: t.surface }]}>
                             <Icon name="checkbox-off" size={22} color={t.textDisabled} />
                             <TextInput
+                              ref={todoInputRef}
                               autoFocus
                               value={newTodo}
                               onChangeText={setNewTodo}
@@ -382,6 +409,21 @@ export function MyRoomScreen({
                               placeholderTextColor={t.textMuted}
                               style={[styles.flex, styles.todoInput, { color: t.text }]}
                             />
+                            <Pressable
+                              // onPressIn (fires before the input's blur) flags the
+                              // blur as picker-driven so the row stays open.
+                              onPressIn={() => {
+                                skipBlurCommit.current = true;
+                              }}
+                              onPress={() => setTodoDateOpen(true)}
+                              accessibilityRole="button"
+                              accessibilityLabel="할 일 날짜 선택"
+                              style={[styles.dateChip, { backgroundColor: t.surfaceMuted }]}>
+                              <Icon name="calendar" size={13} color={t.textMuted} />
+                              <Text style={[styles.dateChipText, { color: t.textMuted }]}>
+                                {newTodoDate === today ? '오늘' : formatDate(newTodoDate)}
+                              </Text>
+                            </Pressable>
                           </View>
                         ) : null}
                       </View>
@@ -413,25 +455,26 @@ export function MyRoomScreen({
                 dateRoutines.map((routine) => {
                   const catColor =
                     categories.find((c) => c.id === routine.category)?.color ?? t.primary;
+                  const done = isDone(routine.id, selectedDate);
                   return (
                     <Pressable
                       key={routine.id}
-                      onPress={() => handleToggle(routine)}
+                      onPress={() => handleToggle(routine, selectedDate)}
                       accessibilityRole="checkbox"
-                      accessibilityState={{ checked: routine.completed }}
+                      accessibilityState={{ checked: done }}
                       accessibilityLabel={routine.title}
                       style={styles.routineRow}>
                       <View style={styles.rowMain}>
                         <Icon
-                          name={routine.completed ? 'checkbox-on' : 'checkbox-off'}
+                          name={done ? 'checkbox-on' : 'checkbox-off'}
                           size={22}
-                          color={routine.completed ? catColor : t.textDisabled}
+                          color={done ? catColor : t.textDisabled}
                         />
                         <View style={styles.flex}>
                           <Text
                             style={[
                               Typography.body,
-                              routine.completed
+                              done
                                 ? { color: t.textMuted, textDecorationLine: 'line-through' }
                                 : { color: t.text },
                             ]}>
@@ -502,20 +545,16 @@ export function MyRoomScreen({
               onPress={() => {
                 const r = menuRoutine;
                 setMenuOpenId(null);
-                if (r) handleToggle(r);
+                if (r) handleToggle(r, today);
               }}
               accessibilityRole="button"
-              accessibilityLabel={`${menuRoutine?.title ?? ''} ${menuRoutine?.completed ? '완료 취소' : '완료'}`}
+              accessibilityLabel={`${menuRoutine?.title ?? ''} ${menuDone ? '완료 취소' : '완료'}`}
               style={styles.sheetItem}>
               <View style={[styles.sheetItemIcon, { backgroundColor: t.primary }]}>
-                <Icon
-                  name={menuRoutine?.completed ? 'checkbox-off' : 'check'}
-                  size={18}
-                  color={t.onPrimary}
-                />
+                <Icon name={menuDone ? 'checkbox-off' : 'check'} size={18} color={t.onPrimary} />
               </View>
               <Text style={[Typography.body, { color: t.text }]}>
-                {menuRoutine?.completed ? '완료 취소' : '완료하기'}
+                {menuDone ? '완료 취소' : '완료하기'}
               </Text>
             </Pressable>
 
@@ -583,6 +622,27 @@ export function MyRoomScreen({
                 </Text>
               </Pressable>
             </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        transparent
+        visible={todoDateOpen}
+        animationType="fade"
+        onRequestClose={() => setTodoDateOpen(false)}>
+        <Pressable style={styles.dialogBackdrop} onPress={() => setTodoDateOpen(false)}>
+          <Pressable style={[styles.dialogCard, { backgroundColor: t.screen }]}>
+            <Text style={[Typography.h3, { color: t.text }]}>할 일 날짜</Text>
+            <Calendar
+              value={newTodoDate}
+              onSelect={(date) => {
+                setNewTodoDate(date);
+                setTodoDateOpen(false);
+                // Re-focus the title input so blur-to-commit still works.
+                setTimeout(() => todoInputRef.current?.focus(), 60);
+              }}
+            />
           </Pressable>
         </Pressable>
       </Modal>
@@ -846,6 +906,17 @@ const styles = StyleSheet.create({
   todoInput: {
     fontSize: 16,
     paddingVertical: Spacing.three,
+  },
+  dateChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.half,
+    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: Spacing.one,
+  },
+  dateChipText: {
+    fontSize: 12,
   },
   badges: {
     flexDirection: 'row',

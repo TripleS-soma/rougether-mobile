@@ -45,12 +45,19 @@ export const ROUTINE_CATEGORIES: RoutineCategoryMeta[] = [
 export type Routine = {
   id: string;
   title: string;
-  completed: boolean;
+  /**
+   * Legacy single-shot flag — used only by the read-only friend preview.
+   * The owner's completion is tracked per date in a completion log (see the app
+   * shell's `completions` map), mirroring the spec's `routine_logs`.
+   */
+  completed?: boolean;
   category?: RoutineCategory;
   /** 0 (Sun) … 6 (Sat) */
   days?: number[];
   startDate?: string;
   endDate?: string;
+  /** Todo due date, "YYYY-MM-DD" (kind === 'todo'). */
+  dueDate?: string;
   alarmEnabled?: boolean;
   /** "HH:MM" 24h */
   time?: string;
