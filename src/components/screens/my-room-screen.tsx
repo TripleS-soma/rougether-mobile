@@ -255,11 +255,7 @@ export function MyRoomScreen({
                       const menuOpen = menuOpenId === routine.id;
                       return (
                         <View key={routine.id}>
-                          <View
-                            style={[
-                              styles.routineRow,
-                              { backgroundColor: t.surface, borderLeftColor: cat.color },
-                            ]}>
+                          <View style={styles.routineRow}>
                             <Pressable
                               onPress={() => handleToggle(routine)}
                               accessibilityRole="checkbox"
@@ -269,7 +265,7 @@ export function MyRoomScreen({
                               <Icon
                                 name={routine.completed ? 'checkbox-on' : 'checkbox-off'}
                                 size={22}
-                                color={routine.completed ? t.primary : t.textDisabled}
+                                color={routine.completed ? cat.color : t.textDisabled}
                               />
                               <View style={styles.flex}>
                                 <Text
@@ -350,11 +346,7 @@ export function MyRoomScreen({
                     })}
 
                     {addingCategory === cat.id ? (
-                      <View
-                        style={[
-                          styles.routineRow,
-                          { backgroundColor: t.surface, borderLeftColor: cat.color },
-                        ]}>
+                      <View style={[styles.addRow, { backgroundColor: t.surface }]}>
                         <Icon name="checkbox-off" size={22} color={t.textDisabled} />
                         <TextInput
                           autoFocus
@@ -505,7 +497,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
   },
   group: {
-    gap: Spacing.two,
+    gap: Spacing.half,
   },
   catHeader: {
     flexDirection: 'row',
@@ -531,27 +523,32 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rows: {
-    gap: Spacing.two,
+    gap: 0,
   },
   routineRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.three,
-    borderRadius: Radius.lg,
-    borderLeftWidth: 4,
-    paddingLeft: Spacing.three,
   },
   rowMain: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.three,
-    paddingVertical: Spacing.three,
+    gap: Spacing.two,
+    paddingVertical: Spacing.one,
+  },
+  addRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: Spacing.one,
+    marginTop: Spacing.half,
   },
   kebab: {
     alignSelf: 'stretch',
     justifyContent: 'center',
-    paddingHorizontal: Spacing.three,
+    paddingHorizontal: Spacing.two,
   },
   menu: {
     borderWidth: 1,
