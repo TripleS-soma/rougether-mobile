@@ -344,34 +344,61 @@ export function MyRoomScreen({
       <Modal
         transparent
         visible={menuRoutine !== null}
-        animationType="fade"
+        animationType="slide"
         onRequestClose={() => setMenuOpenId(null)}>
-        <Pressable style={styles.menuBackdrop} onPress={() => setMenuOpenId(null)}>
-          <Pressable
-            style={[styles.menuCard, { backgroundColor: t.surface, borderColor: t.border }]}>
+        <Pressable style={styles.sheetBackdrop} onPress={() => setMenuOpenId(null)}>
+          <Pressable style={[styles.sheet, { backgroundColor: t.screen }]}>
+            <View style={[styles.sheetHandle, { backgroundColor: t.border }]} />
+            <Text style={[Typography.h3, styles.sheetTitle, { color: t.text }]} numberOfLines={1}>
+              {menuRoutine?.title}
+            </Text>
+
+            <View style={styles.sheetActions}>
+              <Pressable
+                onPress={() => {
+                  const r = menuRoutine;
+                  setMenuOpenId(null);
+                  if (r) onEditRoutine?.(r);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`${menuRoutine?.title ?? ''} 수정`}
+                style={[styles.sheetAction, { backgroundColor: t.surface }]}>
+                <Icon name="edit" size={22} color={t.text} />
+                <Text style={[Typography.label, { color: t.text }]}>수정하기</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  const r = menuRoutine;
+                  setMenuOpenId(null);
+                  if (r) onDeleteRoutine?.(r.id);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`${menuRoutine?.title ?? ''} 삭제`}
+                style={[styles.sheetAction, { backgroundColor: t.surface }]}>
+                <Icon name="trash" size={22} color={t.danger} />
+                <Text style={[Typography.label, { color: t.danger }]}>삭제하기</Text>
+              </Pressable>
+            </View>
+
             <Pressable
               onPress={() => {
                 const r = menuRoutine;
                 setMenuOpenId(null);
-                if (r) onEditRoutine?.(r);
+                if (r) handleToggle(r);
               }}
               accessibilityRole="button"
-              accessibilityLabel={`${menuRoutine?.title ?? ''} 수정`}
-              style={styles.menuItem}>
-              <Icon name="edit" size={16} color={t.text} />
-              <Text style={[Typography.body, { color: t.text }]}>수정하기</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => {
-                const r = menuRoutine;
-                setMenuOpenId(null);
-                if (r) onDeleteRoutine?.(r.id);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={`${menuRoutine?.title ?? ''} 삭제`}
-              style={[styles.menuItem, { borderTopWidth: 1, borderTopColor: t.border }]}>
-              <Icon name="trash" size={16} color={t.danger} />
-              <Text style={[Typography.body, { color: t.danger }]}>삭제하기</Text>
+              accessibilityLabel={`${menuRoutine?.title ?? ''} ${menuRoutine?.completed ? '완료 취소' : '완료'}`}
+              style={styles.sheetItem}>
+              <View style={[styles.sheetItemIcon, { backgroundColor: t.primary }]}>
+                <Icon
+                  name={menuRoutine?.completed ? 'checkbox-off' : 'check'}
+                  size={18}
+                  color={t.onPrimary}
+                />
+              </View>
+              <Text style={[Typography.body, { color: t.text }]}>
+                {menuRoutine?.completed ? '완료 취소' : '완료하기'}
+              </Text>
             </Pressable>
           </Pressable>
         </Pressable>
@@ -526,24 +553,52 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: Spacing.two,
   },
-  menuBackdrop: {
+  sheetBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
   },
-  menuCard: {
-    width: 200,
-    borderWidth: 1,
-    borderRadius: Radius.lg,
-    overflow: 'hidden',
+  sheet: {
+    borderTopLeftRadius: Radius.lg,
+    borderTopRightRadius: Radius.lg,
+    paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.two,
+    paddingBottom: Spacing.six,
+    gap: Spacing.three,
   },
-  menuItem: {
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: Spacing.one,
+  },
+  sheetTitle: {
+    textAlign: 'center',
+  },
+  sheetActions: {
     flexDirection: 'row',
+    gap: Spacing.three,
+  },
+  sheetAction: {
+    flex: 1,
+    borderRadius: Radius.lg,
+    paddingVertical: Spacing.four,
     alignItems: 'center',
     gap: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.three,
+  },
+  sheetItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    paddingVertical: Spacing.two,
+  },
+  sheetItemIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   todoInput: {
     fontSize: 16,
