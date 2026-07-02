@@ -1,8 +1,9 @@
-import { type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
+import { useState } from 'react';
+import { Pressable, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 
-import { CharacterAvatar } from '@/components/character-avatar';
+import { CharacterAvatar, POSE_COUNT } from '@/components/character-avatar';
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
-import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
+import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Radius } from '@/constants/theme';
 import {
   DEFAULT_PLACED_FURNITURE_IDS,
@@ -36,23 +37,28 @@ export type RoomProps = {
   wallpaperId?: string;
   placedFurnitureIds?: string[];
   characterId?: CharacterId;
+  /** When true, tapping the character cycles through its poses (나의 방). */
+  interactiveCharacter?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
 /**
- * Renders a room: wallpaper background, placed furniture by slot, and the
  * character. Furniture uses in-app placeholders (FurniturePlaceholder) until
- * real art exists; the character is an animated sprite. Shared by the room
- * cluster screens (my room, decor, friend room, group house).
+ * real art exists. The character is a static pose frame; when
+ * `interactiveCharacter` is set, tapping it cycles the pose (나의 방), otherwise
+ * static. Shared by the room cluster screens (my room, decor, friend room).
  */
 export function Room({
   wallpaperId = DEFAULT_WALLPAPER_ID,
   placedFurnitureIds = DEFAULT_PLACED_FURNITURE_IDS,
   characterId = DEFAULT_CHARACTER_ID,
+  interactiveCharacter = false,
   style,
 }: RoomProps) {
   const wallpaper = WALLPAPERS.find((w) => w.id === wallpaperId) ?? WALLPAPERS[0];
   const placed = FURNITURE_ITEMS.filter((f) => placedFurnitureIds.includes(f.id));
+  const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
+  const [pose, setPose] = useState(0);
 
   return (
     <View style={[styles.room, { backgroundColor: wallpaper.color }, style]}>
@@ -61,7 +67,17 @@ export function Room({
           <FurniturePlaceholder item={item} />
         </View>
       ))}
-      <CharacterAvatar characterId={characterId} style={styles.character} />
+      {interactiveCharacter ? (
+        <Pressable
+          onPress={() => setPose((p) => (p + 1) % POSE_COUNT)}
+          accessibilityRole="button"
+          accessibilityLabel={`${character.name}, 눌러서 포즈 바꾸기`}
+          style={styles.character}>
+          <CharacterAvatar characterId={characterId} pose={pose} style={styles.characterFill} />
+        </Pressable>
+      ) : (
+        <CharacterAvatar characterId={characterId} style={styles.character} />
+      )}
     </View>
   );
 }
@@ -84,5 +100,9 @@ const styles = StyleSheet.create({
     bottom: '16%',
     width: '42%',
     height: '42%',
+  },
+  characterFill: {
+    width: '100%',
+    height: '100%',
   },
 });

@@ -142,6 +142,7 @@ export function MyRoomScreen({
             characterId={characterId}
             wallpaperId={wallpaperId}
             placedFurnitureIds={placedFurnitureIds}
+            interactiveCharacter
           />
           <Pressable
             onPress={onOpenGacha}
