@@ -29,6 +29,10 @@ const ICONS = {
   flame: 'flame',
   star: 'star',
   leave: 'exit-outline',
+  // Currency + shop
+  coin: 'ellipse',
+  dia: 'diamond',
+  shop: 'storefront-outline',
   // Settings menu rows
   profile: 'person-outline',
   lock: 'lock-closed-outline',

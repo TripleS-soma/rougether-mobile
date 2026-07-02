@@ -18,6 +18,7 @@ import { ProfileEditScreen } from '@/components/screens/profile-edit-screen';
 import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
 import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
 import { SettingsScreen } from '@/components/screens/settings-screen';
+import { ShopScreen } from '@/components/screens/shop-screen';
 import { SoundSettingsScreen } from '@/components/screens/sound-settings-screen';
 import { SignupScreen } from '@/components/screens/signup-screen';
 import { SampleButton } from '@/components/sample-button';
@@ -128,7 +129,7 @@ export const galleryEntries: GalleryEntry[] = [
       'Ported from the prototype GroupHouseScreen (#10): house switcher, member rooms, group goals, kick flow.',
     render: () => (
       <View style={{ height: 900, alignSelf: 'stretch' }}>
-        <GroupHouseScreen leafBalance={5600} />
+        <GroupHouseScreen coinBalance={5600} />
       </View>
     ),
   },
@@ -236,7 +237,16 @@ export const galleryEntries: GalleryEntry[] = [
     description: 'Ported from the prototype GachaScreen (#13): box select + pull animation.',
     render: () => (
       <View style={{ height: 700, alignSelf: 'stretch' }}>
-        <GachaScreen leafBalance={5600} />
+        <GachaScreen coinBalance={5600} />
+      </View>
+    ),
+  },
+  {
+    name: 'ShopScreen',
+    description: '상점(#74): 방 꾸미기(다이아 구매) / 캐릭터 악세서리(가챠 전용) 탭.',
+    render: () => (
+      <View style={{ height: 760, alignSelf: 'stretch' }}>
+        <ShopScreen diaBalance={480} ownedItemIds={['bed', 'rug']} />
       </View>
     ),
   },
@@ -298,7 +308,7 @@ export const galleryEntries: GalleryEntry[] = [
     description: 'Standard header: back + title + right slot.',
     render: () => (
       <View style={{ alignSelf: 'stretch' }}>
-        <ScreenHeader title="가챠" onBack={() => {}} right={<Pill label="5,600" icon="leaf" />} />
+        <ScreenHeader title="가챠" onBack={() => {}} right={<Pill label="5,600" icon="coin" />} />
       </View>
     ),
   },
@@ -309,7 +319,7 @@ export const galleryEntries: GalleryEntry[] = [
       <View style={{ alignSelf: 'stretch', gap: 8 }}>
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <Pill label="Lv.20" icon="star" />
-          <Pill label="5,600" icon="leaf" />
+          <Pill label="5,600" icon="coin" />
           <Badge label="전설" />
         </View>
         <Card>

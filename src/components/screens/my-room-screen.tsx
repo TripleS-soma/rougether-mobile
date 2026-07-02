@@ -19,8 +19,8 @@ export type MyRoomScreenProps = {
   userName?: string;
   /** Consecutive-day streak shown in the header. */
   streakDays?: number;
-  /** Reward leaves offered by the reward card. */
-  rewardLeaves?: number;
+  /** Reward coins offered by the reward card. */
+  rewardCoins?: number;
   // Room rendering (forwarded to <Room />).
   characterId?: CharacterId;
   wallpaperId?: string;
@@ -33,6 +33,7 @@ export type MyRoomScreenProps = {
   onAddRoutine?: () => void;
   onToggleRoutine?: (id: string) => void;
   onOpenGacha?: () => void;
+  onOpenShop?: () => void;
   onClaimReward?: () => void;
   /** Quick-add a title-only todo to a category (the + on a category header). */
   onQuickAddRoutine?: (category: string, title: string) => void;
@@ -59,7 +60,7 @@ export type MyRoomScreenProps = {
 export function MyRoomScreen({
   userName = '준서',
   streakDays = 7,
-  rewardLeaves = 120,
+  rewardCoins = 120,
   characterId = DEFAULT_CHARACTER_ID,
   wallpaperId = DEFAULT_WALLPAPER_ID,
   placedFurnitureIds,
@@ -69,6 +70,7 @@ export function MyRoomScreen({
   onAddRoutine,
   onToggleRoutine,
   onOpenGacha,
+  onOpenShop,
   onClaimReward,
   onQuickAddRoutine,
   onEditRoutine,
@@ -144,6 +146,13 @@ export function MyRoomScreen({
             placedFurnitureIds={placedFurnitureIds}
             interactiveCharacter
           />
+          <Pressable
+            onPress={onOpenShop}
+            accessibilityRole="button"
+            accessibilityLabel="상점"
+            style={[styles.shopBtn, { backgroundColor: t.surface }]}>
+            <Icon name="shop" size={20} color={t.text} />
+          </Pressable>
           <Pressable
             onPress={onOpenGacha}
             accessibilityRole="button"
@@ -349,9 +358,9 @@ export function MyRoomScreen({
               </View>
               <Icon name="star" size={28} color={t.onPrimary} />
             </View>
-            <View style={styles.rewardLeaves}>
-              <Icon name="leaf" size={24} color={t.onPrimary} />
-              <Text style={[Typography.h2, { color: t.onPrimary }]}>+{rewardLeaves} 잎사귀</Text>
+            <View style={styles.rewardCoins}>
+              <Icon name="coin" size={24} color={t.onPrimary} />
+              <Text style={[Typography.h2, { color: t.onPrimary }]}>+{rewardCoins} 코인</Text>
             </View>
             <Pressable
               onPress={onClaimReward}
@@ -428,6 +437,16 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: Spacing.four,
     bottom: Spacing.three,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shopBtn: {
+    position: 'absolute',
+    right: Spacing.four,
+    bottom: Spacing.three + 44 + Spacing.two,
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -563,7 +582,7 @@ const styles = StyleSheet.create({
   rewardSub: {
     marginTop: Spacing.half,
   },
-  rewardLeaves: {
+  rewardCoins: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
