@@ -1,8 +1,9 @@
 /**
  * Character metadata, ported from the prototype `character.ts`. Each character
- * has an animated sprite (assets/images/characters/<id>.webp, wired through
- * CharacterAvatar); the `emoji` is a fallback used where the sprite isn't shown.
- * Pure data — reusable across onboarding, room, etc.
+ * has 4 static pose frames (assets/images/characters/<id>-1..4.webp, wired
+ * through CharacterAvatar; 나의 방 cycles poses on tap, elsewhere pose 0); the
+ * `emoji` is a fallback used where the frame isn't shown. Pure data — reusable
+ * across onboarding, room, etc.
  */
 export type CharacterId = 'cat' | 'dog' | 'tiger' | 'panda' | 'bear' | 'sheep' | 'horse' | 'otter';
 
