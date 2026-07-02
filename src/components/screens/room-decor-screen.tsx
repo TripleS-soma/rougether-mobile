@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { Room } from '@/components/room/room';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
-import { assetSource } from '@/resources/asset';
 import {
   DEFAULT_WALLPAPER_ID,
   FURNITURE_ITEMS,
@@ -178,12 +178,8 @@ export function RoomDecorScreen({
                         borderColor: active ? t.primary : 'transparent',
                       },
                     ]}>
-                    <View style={[styles.thumbWrap, { backgroundColor: t.surfaceMuted }]}>
-                      <Image
-                        source={assetSource(item.assetKey, item.name)}
-                        resizeMode="contain"
-                        style={styles.thumb}
-                      />
+                    <View style={styles.thumbWrap}>
+                      <FurniturePlaceholder item={item} showName={false} />
                     </View>
                     <Text style={[styles.tileName, { color: t.text }]} numberOfLines={2}>
                       {item.name}
@@ -283,13 +279,7 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 1,
     borderRadius: Radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: Spacing.one,
-  },
-  thumb: {
-    width: '100%',
-    height: '100%',
+    overflow: 'hidden',
   },
   tileName: {
     fontSize: 11,
