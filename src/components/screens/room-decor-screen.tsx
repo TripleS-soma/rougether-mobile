@@ -22,10 +22,14 @@ export type RoomDecorScreenProps = {
   /** Furniture ids placed when the screen opens. */
   initialPlacedIds?: string[];
   initialWallpaperId?: string;
-  /** Ids the user owns; only these appear in the catalog (defaults to all). */
+  /** Ids the user owns; owned items are placeable, the rest are buyable with dia. */
   ownedIds?: string[];
+  /** Dia balance, for buying not-yet-owned items in the catalog. */
+  diaBalance?: number;
   characterId?: CharacterId;
   onBack?: () => void;
+  /** Buy a not-yet-owned catalog item with dia. */
+  onBuy?: (itemId: string) => void;
   /** Commit the current selection. */
   onApply?: (placedIds: string[], wallpaperId: string) => void;
 };
@@ -33,27 +37,28 @@ export type RoomDecorScreenProps = {
 /**
  * Room decoration screen, ported from the prototype `RoomDecorScreen`: live
  * <Room /> preview, category tabs, wallpaper + furniture catalogs, and an apply
- * bar. Selecting a furniture item replaces whatever occupies the same slot (one
- * item per slot). Selection state is local; `onApply` commits it. Spec domain:
- * rougether-spec domains/room.
+ * bar. The catalog doubles as the shop — owned items are placed (one item per
+ * slot; a new item replaces its slot), not-yet-owned items are bought with 다이아
+ * and then become placeable. Selection state is local; `onApply` commits it.
+ * Spec domain: rougether-spec domains/room + shop.
  */
 export function RoomDecorScreen({
   initialPlacedIds,
   initialWallpaperId = DEFAULT_WALLPAPER_ID,
   ownedIds,
+  diaBalance = 0,
   characterId = DEFAULT_CHARACTER_ID,
   onBack,
+  onBuy,
   onApply,
 }: RoomDecorScreenProps) {
   const t = useTokens();
 
-  const ownedItems = useMemo(
-    () => (ownedIds ? FURNITURE_ITEMS.filter((i) => ownedIds.includes(i.id)) : FURNITURE_ITEMS),
-    [ownedIds],
-  );
+  // Owned items are placeable; everything else in the catalog is buyable.
+  const owned = useMemo(() => new Set(ownedIds ?? FURNITURE_ITEMS.map((i) => i.id)), [ownedIds]);
   const categories = useMemo(
-    () => [ALL, WALLPAPER, ...Array.from(new Set(ownedItems.map((i) => i.category)))],
-    [ownedItems],
+    () => [ALL, WALLPAPER, ...Array.from(new Set(FURNITURE_ITEMS.map((i) => i.category)))],
+    [],
   );
 
   const [placed, setPlaced] = useState<string[]>(
@@ -76,10 +81,10 @@ export function RoomDecorScreen({
   const showWallpapers = activeCategory === ALL || activeCategory === WALLPAPER;
   const visibleItems =
     activeCategory === ALL
-      ? ownedItems
+      ? FURNITURE_ITEMS
       : activeCategory === WALLPAPER
         ? []
-        : ownedItems.filter((i) => i.category === activeCategory);
+        : FURNITURE_ITEMS.filter((i) => i.category === activeCategory);
 
   return (
     <View style={[styles.screen, useScreenStyle()]}>
@@ -91,7 +96,11 @@ export function RoomDecorScreen({
           style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
           <Icon name="back" size={26} color={t.text} />
         </Pressable>
-        <Text style={[Typography.h2, { color: t.text }]}>나의 방 꾸미기</Text>
+        <Text style={[Typography.h2, styles.flex, { color: t.text }]}>나의 방 꾸미기</Text>
+        <View style={[styles.diaPill, { backgroundColor: t.surfaceMuted }]}>
+          <Icon name="dia" size={14} color={t.primary} />
+          <Text style={[Typography.label, { color: t.text }]}>{diaBalance.toLocaleString()}</Text>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
@@ -163,19 +172,22 @@ export function RoomDecorScreen({
             ) : null}
             <View style={styles.grid}>
               {visibleItems.map((item: FurnitureItem) => {
-                const active = placed.includes(item.id);
+                const isOwned = owned.has(item.id);
+                const placedNow = placed.includes(item.id);
+                const affordable = diaBalance >= item.price;
                 return (
                   <Pressable
                     key={item.id}
-                    onPress={() => toggle(item.id)}
+                    onPress={() => (isOwned ? toggle(item.id) : affordable && onBuy?.(item.id))}
                     accessibilityRole="button"
-                    accessibilityState={{ selected: active }}
-                    accessibilityLabel={item.name}
+                    accessibilityState={{ selected: isOwned && placedNow }}
+                    accessibilityLabel={isOwned ? item.name : `${item.name} 구매`}
                     style={[
                       styles.tile,
                       {
                         backgroundColor: t.surface,
-                        borderColor: active ? t.primary : 'transparent',
+                        borderColor: isOwned && placedNow ? t.primary : 'transparent',
+                        opacity: !isOwned && !affordable ? 0.5 : 1,
                       },
                     ]}>
                     <View style={styles.thumbWrap}>
@@ -184,7 +196,14 @@ export function RoomDecorScreen({
                     <Text style={[styles.tileName, { color: t.text }]} numberOfLines={2}>
                       {item.name}
                     </Text>
-                    <Text style={[styles.tilePrice, { color: t.textMuted }]}>✨ {item.price}</Text>
+                    {isOwned ? (
+                      <Text style={[styles.tilePrice, { color: t.textMuted }]}>보유</Text>
+                    ) : (
+                      <View style={styles.priceRow}>
+                        <Icon name="dia" size={10} color={t.primary} />
+                        <Text style={[styles.tilePrice, { color: t.textMuted }]}>{item.price}</Text>
+                      </View>
+                    )}
                   </Pressable>
                 );
               })}
@@ -222,6 +241,22 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.three,
+  },
+  flex: {
+    flex: 1,
+  },
+  diaPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one,
+    borderRadius: Radius.pill,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.half,
   },
   iconBtn: {
     width: 40,

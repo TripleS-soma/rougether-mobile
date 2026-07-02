@@ -33,7 +33,6 @@ export type MyRoomScreenProps = {
   onAddRoutine?: () => void;
   onToggleRoutine?: (id: string) => void;
   onOpenGacha?: () => void;
-  onOpenShop?: () => void;
   onClaimReward?: () => void;
   /** Quick-add a title-only todo to a category (the + on a category header). */
   onQuickAddRoutine?: (category: string, title: string) => void;
@@ -70,7 +69,6 @@ export function MyRoomScreen({
   onAddRoutine,
   onToggleRoutine,
   onOpenGacha,
-  onOpenShop,
   onClaimReward,
   onQuickAddRoutine,
   onEditRoutine,
@@ -146,13 +144,6 @@ export function MyRoomScreen({
             placedFurnitureIds={placedFurnitureIds}
             interactiveCharacter
           />
-          <Pressable
-            onPress={onOpenShop}
-            accessibilityRole="button"
-            accessibilityLabel="상점"
-            style={[styles.shopBtn, { backgroundColor: t.surface }]}>
-            <Icon name="shop" size={20} color={t.text} />
-          </Pressable>
           <Pressable
             onPress={onOpenGacha}
             accessibilityRole="button"
@@ -437,16 +428,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: Spacing.four,
     bottom: Spacing.three,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  shopBtn: {
-    position: 'absolute',
-    right: Spacing.four,
-    bottom: Spacing.three + 44 + Spacing.two,
     width: 44,
     height: 44,
     borderRadius: 22,
