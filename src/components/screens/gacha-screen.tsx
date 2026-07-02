@@ -10,6 +10,8 @@ import {
   View,
 } from 'react-native';
 
+import type { GachaMachine } from '@/api/adapters';
+import type { DrawResult } from '@/api/types';
 import { Icon } from '@/components/ui/icon';
 import { WalletPills } from '@/components/ui/wallet-pills';
 import { Radius, Spacing, Typography } from '@/constants/theme';
@@ -17,149 +19,74 @@ import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 import { hapticImpact, hapticSuccess } from '@/utils/haptics';
 
-type Rarity = '일반' | '희귀' | '전설';
-const RARITY_COLOR: Record<Rarity, string> = {
+const RARITY_COLOR: Record<string, string> = {
   일반: '#9AA0A6',
   희귀: '#7FA8D4',
   전설: '#E8A24A',
 };
 const DISABLED = '#D4C4B0';
-const COST = { single: 250, multi: 1250 };
-/** Charge (build-up) duration before the reward reveal. */
-const CHARGE_MS = 1600;
-
-type GachaItem = { name: string; icon: string; rarity: Rarity };
-type GachaBox = {
-  id: string;
-  name: string;
-  icon: string;
-  accent: string;
-  obtained: number;
-  total: number;
-  pool: GachaItem[];
-};
 
 type Phase = 'idle' | 'charging' | 'reveal';
 
-// Box metadata (web gradient/particle/animation fields dropped). The hanok pool
-// uses placeholder items until the furniture system is ported.
-const BOXES: GachaBox[] = [
-  {
-    id: 'hanok',
-    name: '고즈넉 한옥 테마',
-    icon: '🏯',
-    accent: '#E8DCC8',
-    obtained: 3,
-    total: 12,
-    pool: [
-      { name: '청사초롱', icon: '🏮', rarity: '전설' },
-      { name: '다기 세트', icon: '🍵', rarity: '희귀' },
-      { name: '문창살 창문', icon: '🪟', rarity: '일반' },
-      { name: '난초 화분', icon: '🪴', rarity: '일반' },
-    ],
-  },
-  {
-    id: 'forest',
-    name: '숲 속 세이지 테마',
-    icon: '🌿',
-    accent: '#D6E4D2',
-    obtained: 0,
-    total: 12,
-    pool: [
-      { name: '작은 새 둥지', icon: '🪺', rarity: '전설' },
-      { name: '그루터기 의자', icon: '🪵', rarity: '희귀' },
-      { name: '버섯 조명', icon: '🍄', rarity: '희귀' },
-      { name: '이끼 화분', icon: '🪴', rarity: '일반' },
-    ],
-  },
-  {
-    id: 'bakery',
-    name: '작은 베이커리 아침 테마',
-    icon: '🥐',
-    accent: '#F7E6C8',
-    obtained: 0,
-    total: 12,
-    pool: [
-      { name: '에스프레소 머신', icon: '☕', rarity: '전설' },
-      { name: '빵 진열대', icon: '🥖', rarity: '희귀' },
-      { name: '구움 오븐', icon: '🔥', rarity: '희귀' },
-      { name: '크루아상 바구니', icon: '🥐', rarity: '일반' },
-    ],
-  },
-  {
-    id: 'space',
-    name: '포근한 우주 테마',
-    icon: '🌙',
-    accent: '#D8D2EC',
-    obtained: 0,
-    total: 12,
-    pool: [
-      { name: '달 무드등', icon: '🌙', rarity: '전설' },
-      { name: '별자리 러그', icon: '✨', rarity: '희귀' },
-      { name: '행성 모빌', icon: '🪐', rarity: '희귀' },
-      { name: '구름 쿠션', icon: '☁️', rarity: '일반' },
-    ],
-  },
-];
-
 export type GachaScreenProps = {
   onBack?: () => void;
+  /** Machines from the API (`GET /gacha`). */
+  gachas?: GachaMachine[];
   coinBalance?: number;
   diaBalance?: number;
-  onSpendCoins?: (amount: number) => boolean;
-  onObtain?: (items: string[]) => void;
+  /**
+   * Draw once from a machine; resolves the drawn results, or null on failure.
+   * Spending + dupe→dia conversion happen server-side; the wallet is updated by
+   * the caller from the draw response.
+   */
+  onDraw?: (gachaId: number) => Promise<DrawResult[] | null>;
 };
 
 /**
- * Gacha screen, ported from the prototype `GachaScreen` + `GachaAnimation`. Box
- * selection + single / multi pull with coin cost, and a two-phase pull animation
- * (charge build-up → staggered reward reveal). Coins are spent on press; the
- * reward is reported via onObtain when the reveal begins (repeats convert to dia
- * upstream). Uses the built-in Animated API (no worklets) so it runs in tests.
+ * Gacha screen, ported from the prototype `GachaScreen` + `GachaAnimation`, now
+ * API-driven: machines and rewards come from the server, and a draw shows a
+ * two-phase animation (charge build-up while the request is in flight → staggered
+ * reward reveal). Uses the built-in Animated API (no worklets) so it runs in
+ * tests.
  */
 export function GachaScreen({
   onBack,
+  gachas = [],
   coinBalance = 0,
   diaBalance = 0,
-  onSpendCoins,
-  onObtain,
+  onDraw,
 }: GachaScreenProps) {
   const t = useTokens();
-  const [selectedId, setSelectedId] = useState(BOXES[0].id);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [phase, setPhase] = useState<Phase>('idle');
-  const [pulled, setPulled] = useState<GachaItem[]>([]);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [pulled, setPulled] = useState<DrawResult[]>([]);
 
-  const box = BOXES.find((b) => b.id === selectedId) ?? BOXES[0];
+  const box = gachas.find((b) => b.id === selectedId) ?? gachas[0];
+  const balanceFor = (c: 'COIN' | 'DIAMOND') => (c === 'COIN' ? coinBalance : diaBalance);
+  const affordable = box ? balanceFor(box.costCurrencyType) >= box.costAmount : false;
 
-  const clearTimer = () => {
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = null;
-  };
-  useEffect(() => clearTimer, []);
-
-  const pull = (count: 1 | 10) => {
-    const cost = count === 1 ? COST.single : COST.multi;
-    if (coinBalance < cost || onSpendCoins?.(cost) === false) {
-      setError('코인이 부족해요.');
+  const pull = async () => {
+    if (!box || phase !== 'idle') return;
+    if (!affordable) {
+      setError('잔액이 부족해요.');
       return;
     }
     setError('');
     hapticImpact();
-    const items = Array.from({ length: count }, (_, i) => box.pool[(i + count) % box.pool.length]);
-    setPulled(items);
     setPhase('charging');
-    clearTimer();
-    timer.current = setTimeout(() => {
-      setPhase('reveal');
-      hapticSuccess();
-      onObtain?.(items.map((it) => it.name));
-    }, CHARGE_MS);
+    const results = await onDraw?.(box.id);
+    if (!results) {
+      setPhase('idle');
+      setError('뽑기에 실패했어요.');
+      return;
+    }
+    setPulled(results);
+    setPhase('reveal');
+    hapticSuccess();
   };
 
   const close = () => {
-    clearTimer();
     setPhase('idle');
     setPulled([]);
   };
@@ -179,13 +106,19 @@ export function GachaScreen({
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
-        {/* Box selector */}
+        {gachas.length === 0 ? (
+          <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
+            지금은 뽑을 수 있는 뽑기가 없어요.
+          </Text>
+        ) : null}
+
+        {/* Machine selector */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.boxRow}>
-          {BOXES.map((b) => {
-            const active = b.id === selectedId;
+          {gachas.map((b) => {
+            const active = b.id === box?.id;
             return (
               <Pressable
                 key={b.id}
@@ -193,6 +126,8 @@ export function GachaScreen({
                   setSelectedId(b.id);
                   setError('');
                 }}
+                accessibilityRole="button"
+                accessibilityLabel={b.name}
                 style={[
                   styles.boxChip,
                   { backgroundColor: b.accent, borderColor: active ? t.primary : 'transparent' },
@@ -203,46 +138,49 @@ export function GachaScreen({
           })}
         </ScrollView>
 
-        {/* Selected box */}
-        <View style={[styles.card, { backgroundColor: t.surface }]}>
-          <View style={[styles.boxHero, { backgroundColor: box.accent }]}>
-            <Text style={styles.boxHeroIcon}>{box.icon}</Text>
-          </View>
-          <Text style={[Typography.h3, styles.center, { color: t.text }]}>{box.name}</Text>
-          <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
-            획득 {box.obtained} / {box.total}
-          </Text>
-
-          <View style={styles.poolRow}>
-            {box.pool.map((it) => (
-              <View key={it.name} style={[styles.poolItem, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={styles.poolIcon}>{it.icon}</Text>
-                <Text style={[styles.rarity, { color: RARITY_COLOR[it.rarity] }]}>{it.rarity}</Text>
-              </View>
-            ))}
-          </View>
-
-          {error ? (
-            <Text style={[Typography.supporting, styles.center, { color: '#D67878' }]}>
-              {error}
+        {/* Selected machine */}
+        {box ? (
+          <View style={[styles.card, { backgroundColor: t.surface }]}>
+            <View style={[styles.boxHero, { backgroundColor: box.accent }]}>
+              <Text style={styles.boxHeroIcon}>{box.icon}</Text>
+            </View>
+            <Text style={[Typography.h3, styles.center, { color: t.text }]}>{box.name}</Text>
+            <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
+              1회 뽑기에 {box.drawCount}개 획득
             </Text>
-          ) : null}
 
-          <View style={styles.pullRow}>
-            <PullButton
-              label="1회 뽑기"
-              cost={COST.single}
-              disabled={coinBalance < COST.single}
-              onPress={() => pull(1)}
-            />
-            <PullButton
-              label="10회 뽑기"
-              cost={COST.multi}
-              disabled={coinBalance < COST.multi}
-              onPress={() => pull(10)}
-            />
+            {error ? (
+              <Text style={[Typography.supporting, styles.center, { color: '#D67878' }]}>
+                {error}
+              </Text>
+            ) : null}
+
+            <Pressable
+              onPress={pull}
+              disabled={!affordable || phase !== 'idle'}
+              accessibilityRole="button"
+              accessibilityLabel={`뽑기, ${box.costAmount.toLocaleString()} ${
+                box.costCurrencyType === 'COIN' ? '코인' : '다이아'
+              }`}
+              style={({ pressed }) => [
+                styles.pullBtn,
+                { backgroundColor: affordable ? t.primary : DISABLED },
+                pressed && affordable && { backgroundColor: t.primaryActive },
+              ]}>
+              <Text style={[Typography.label, { color: t.onPrimary }]}>뽑기</Text>
+              <View style={styles.costRow}>
+                <Icon
+                  name={box.costCurrencyType === 'COIN' ? 'coin' : 'dia'}
+                  size={12}
+                  color={t.onPrimary}
+                />
+                <Text style={[styles.cost, { color: t.onPrimary }]}>
+                  {box.costAmount.toLocaleString()}
+                </Text>
+              </View>
+            </Pressable>
           </View>
-        </View>
+        ) : null}
       </ScrollView>
 
       {/* Pull animation overlay — a Modal so it fills the whole screen and
@@ -251,7 +189,7 @@ export function GachaScreen({
         <View style={styles.overlay}>
           {phase === 'charging' ? (
             <>
-              <ChargingBox icon={box.icon} accent={box.accent} />
+              <ChargingBox icon={box?.icon ?? '🎁'} accent={box?.accent ?? '#E8DCC8'} />
               <Text style={[Typography.label, styles.overlayText]}>뽑는 중…</Text>
             </>
           ) : (
@@ -259,7 +197,7 @@ export function GachaScreen({
               <Text style={[Typography.h3, styles.overlayText]}>축하해요!</Text>
               <ScrollView style={styles.revealScroll} contentContainerStyle={styles.revealGrid}>
                 {pulled.map((it, idx) => (
-                  <RevealCard key={`${it.name}-${idx}`} item={it} index={idx} />
+                  <RevealCard key={`${it.name ?? 'item'}-${idx}`} item={it} index={idx} />
                 ))}
               </ScrollView>
               <Pressable
@@ -330,9 +268,10 @@ function ChargingBox({ icon, accent }: { icon: string; accent: string }) {
 }
 
 /** Reward card that pops in (scale + rotate) with a per-index stagger. */
-function RevealCard({ item, index }: { item: GachaItem; index: number }) {
+function RevealCard({ item, index }: { item: DrawResult; index: number }) {
   const t = useTokens();
   const p = useRef(new Animated.Value(0)).current;
+  const rarityColor = RARITY_COLOR[item.rarity ?? '일반'] ?? RARITY_COLOR['일반'];
 
   useEffect(() => {
     Animated.timing(p, {
@@ -354,51 +293,20 @@ function RevealCard({ item, index }: { item: GachaItem; index: number }) {
 
   return (
     <Animated.View
-      style={[
-        styles.revealCard,
-        style,
-        { backgroundColor: t.surface, borderColor: RARITY_COLOR[item.rarity] },
-      ]}>
-      <Text style={styles.revealIcon}>{item.icon}</Text>
-      <Text style={[styles.revealBadge, { backgroundColor: RARITY_COLOR[item.rarity] }]}>
-        {item.rarity}
+      style={[styles.revealCard, style, { backgroundColor: t.surface, borderColor: rarityColor }]}>
+      <Icon name="gift" size={34} color={rarityColor} />
+      <Text style={[styles.revealBadge, { backgroundColor: rarityColor }]}>
+        {item.rarity ?? '일반'}
       </Text>
-      <Text style={[Typography.supporting, styles.center, { color: t.text }]} numberOfLines={1}>
+      <Text style={[Typography.supporting, styles.center, { color: t.text }]} numberOfLines={2}>
         {item.name}
       </Text>
+      {item.converted ? (
+        <Text style={[styles.convertNote, { color: t.textMuted }]}>
+          중복 · 다이아 +{item.refundAmount ?? 0}
+        </Text>
+      ) : null}
     </Animated.View>
-  );
-}
-
-function PullButton({
-  label,
-  cost,
-  disabled,
-  onPress,
-}: {
-  label: string;
-  cost: number;
-  disabled?: boolean;
-  onPress: () => void;
-}) {
-  const t = useTokens();
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      accessibilityRole="button"
-      accessibilityLabel={`${label}, ${cost.toLocaleString()} 코인`}
-      style={({ pressed }) => [
-        styles.pullBtn,
-        { backgroundColor: disabled ? DISABLED : t.primary },
-        pressed && !disabled && { backgroundColor: t.primaryActive },
-      ]}>
-      <Text style={[Typography.label, { color: t.onPrimary }]}>{label}</Text>
-      <View style={styles.costRow}>
-        <Icon name="coin" size={12} color={t.onPrimary} />
-        <Text style={[styles.cost, { color: t.onPrimary }]}>{cost.toLocaleString()}</Text>
-      </View>
-    </Pressable>
   );
 }
 
@@ -443,24 +351,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   boxHeroIcon: { fontSize: 56 },
-  poolRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.two,
-    justifyContent: 'center',
-  },
-  poolItem: {
-    width: 64,
-    borderRadius: Radius.md,
-    paddingVertical: Spacing.two,
-    alignItems: 'center',
-    gap: Spacing.half,
-  },
-  poolIcon: { fontSize: 22 },
-  rarity: { fontSize: 10, fontWeight: '700' },
-  pullRow: { flexDirection: 'row', gap: Spacing.two },
   pullBtn: {
-    flex: 1,
     paddingVertical: Spacing.three,
     borderRadius: Radius.pill,
     alignItems: 'center',
@@ -511,7 +402,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.one,
   },
-  revealIcon: { fontSize: 40 },
   revealBadge: {
     color: '#FFFFFF',
     fontSize: 10,
@@ -521,6 +411,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.two,
     paddingVertical: 1,
   },
+  convertNote: { fontSize: 10, textAlign: 'center' },
   confirmBtn: {
     borderRadius: Radius.pill,
     paddingVertical: Spacing.three,
