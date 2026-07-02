@@ -1,0 +1,61 @@
+import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+
+import { devLogin, loadSession, logout as apiLogout } from '@/api';
+
+type AuthStatus = 'loading' | 'authed' | 'guest';
+
+type AuthContextValue = {
+  status: AuthStatus;
+  /** Dev-login by userId; resolves true on success. */
+  login: (userId: number) => Promise<boolean>;
+  logout: () => Promise<void>;
+};
+
+const AuthContext = createContext<AuthContextValue | null>(null);
+
+/**
+ * Reactive auth session. Restores a persisted session on mount, then exposes
+ * `status` (loading → authed | guest) plus login/logout. Wrap the app once in
+ * the root layout; consume via `useAuth()`.
+ */
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [status, setStatus] = useState<AuthStatus>('loading');
+
+  useEffect(() => {
+    let active = true;
+    void loadSession().then((session) => {
+      if (active) setStatus(session ? 'authed' : 'guest');
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      status,
+      login: async (userId) => {
+        try {
+          await devLogin(userId);
+          setStatus('authed');
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      logout: async () => {
+        await apiLogout();
+        setStatus('guest');
+      },
+    }),
+    [status],
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth(): AuthContextValue {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within an AuthProvider');
+  return ctx;
+}

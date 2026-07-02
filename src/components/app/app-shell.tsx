@@ -26,26 +26,15 @@ import {
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
 import { BottomNav, type NavTab } from '@/components/ui/bottom-nav';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
-import {
-  DEFAULT_WALLET,
-  DUPLICATE_DIA,
-  ROUTINE_REWARD_COIN,
-  type Wallet,
-} from '@/constants/currency';
-import {
-  type NewRoutine,
-  ROUTINE_CATEGORIES,
-  type Routine,
-  type RoutineCategoryMeta,
-  SAMPLE_ROUTINES,
-} from '@/constants/routines';
+import { DUPLICATE_DIA } from '@/constants/currency';
+import { type Routine } from '@/constants/routines';
+import { useMyRoomData } from '@/hooks/use-my-room-data';
 import { useBrandTheme } from '@/hooks/use-tokens';
 import {
   DEFAULT_PLACED_FURNITURE_IDS,
   DEFAULT_WALLPAPER_ID,
   FURNITURE_ITEMS,
 } from '@/resources/furniture';
-import { todayIso } from '@/utils/datetime';
 
 type Screen =
   | 'myRoom'
@@ -108,21 +97,29 @@ export function AppShell({
 }: AppShellProps) {
   const { themeId, setThemeId } = useBrandTheme();
   const [screen, setScreen] = useState<Screen>('myRoom');
-  const [routines, setRoutines] = useState<Routine[]>(SAMPLE_ROUTINES);
-  // Completion log keyed by routine id → completed dates ("YYYY-MM-DD"), the
-  // client-side shape of the spec's routine_logs. Seeded so the sample routines
-  // flagged `completed` count as done *today*.
-  const [completions, setCompletions] = useState<Record<string, string[]>>(() => {
-    const today = todayIso();
-    const seed: Record<string, string[]> = {};
-    for (const r of SAMPLE_ROUTINES) if (r.completed) seed[r.id] = [today];
-    return seed;
-  });
+
+  // Routines / todos / categories / completion / wallet come from the API.
+  const {
+    routines,
+    completions,
+    categories,
+    wallet,
+    setWallet,
+    toggleCompletion,
+    quickAddTodo,
+    addRoutine,
+    updateRoutine,
+    renameRoutine,
+    updateRoutineTime,
+    deleteRoutine,
+    createRoutineCategory,
+    deleteRoutineCategory,
+  } = useMyRoomData();
+
   const [placedFurnitureIds, setPlacedFurnitureIds] = useState<string[]>(
     DEFAULT_PLACED_FURNITURE_IDS,
   );
   const [wallpaperId, setWallpaperId] = useState(DEFAULT_WALLPAPER_ID);
-  const [wallet, setWallet] = useState<Wallet>(DEFAULT_WALLET);
   const [ownedFurnitureIds, setOwnedFurnitureIds] = useState<string[]>(() =>
     FURNITURE_ITEMS.map((i) => i.id),
   );
@@ -130,7 +127,6 @@ export function AppShell({
   const [obtainedItems, setObtainedItems] = useState<string[]>([]);
   const [visitingFriend, setVisitingFriend] = useState('친구');
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
-  const [categories, setCategories] = useState<RoutineCategoryMeta[]>(ROUTINE_CATEGORIES);
 
   // Profile + settings (persistence is local for now).
   const [nickname, setNickname] = useState('준서');
@@ -140,62 +136,6 @@ export function AppShell({
   );
   const [soundSettings, setSoundSettings] = useState<SoundSettings>(DEFAULT_SOUND_SETTINGS);
 
-  const createCategory = (cat: RoutineCategoryMeta) => setCategories((prev) => [...prev, cat]);
-
-  const deleteCategory = (id: string) => {
-    setCategories((prev) => prev.filter((c) => c.id !== id));
-    // Routines in the removed category fall back to 기타.
-    setRoutines((prev) => prev.map((r) => (r.category === id ? { ...r, category: '기타' } : r)));
-  };
-
-  // Completion is tracked per routine *per date* (spec: routine_logs keyed by
-  // routine_date). Marking done on a date grants coin; un-marking rolls it back.
-  const toggleCompletion = (id: string, date: string) => {
-    const wasDone = (completions[id] ?? []).includes(date);
-    setCompletions((prev) => {
-      const dates = prev[id] ?? [];
-      return { ...prev, [id]: wasDone ? dates.filter((d) => d !== date) : [...dates, date] };
-    });
-    setWallet((w) => ({
-      ...w,
-      coin: Math.max(0, w.coin + (wasDone ? -ROUTINE_REWARD_COIN : ROUTINE_REWARD_COIN)),
-    }));
-  };
-
-  const updateRoutine = (id: string, n: NewRoutine) =>
-    setRoutines((prev) =>
-      prev.map((r) =>
-        r.id === id
-          ? {
-              ...r,
-              title: n.title,
-              category: n.category,
-              days: n.days,
-              startDate: n.startDate,
-              endDate: n.endDate,
-              alarmEnabled: n.alarmEnabled,
-              time: n.time,
-              photoVerify: n.photoVerify,
-            }
-          : r,
-      ),
-    );
-
-  const deleteRoutine = (id: string) => setRoutines((prev) => prev.filter((r) => r.id !== id));
-
-  // Lightweight edits from 나의 방 (full edit lives in 루틴 관리).
-  const renameRoutine = (id: string, title: string) =>
-    setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, title } : r)));
-
-  const updateRoutineTime = (id: string, alarmEnabled: boolean, time: string) =>
-    setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, alarmEnabled, time } : r)));
-
-  const quickAddTodo = (category: string, title: string, dueDate: string) =>
-    setRoutines((prev) => [
-      ...prev,
-      { id: String(Date.now()), title, category, kind: 'todo', dueDate },
-    ]);
-
   // Remember where the add/edit-routine screen was opened from, so its back
   // button returns to the right place (my-room or routine manage).
   const [addReturnScreen, setAddReturnScreen] = useState<Screen>('routineManage');
@@ -204,22 +144,6 @@ export function AppShell({
     setAddReturnScreen(from);
     setScreen('addRoutine');
   };
-
-  const addRoutine = (n: NewRoutine) =>
-    setRoutines((prev) => [
-      ...prev,
-      {
-        id: String(Date.now()),
-        title: n.title,
-        category: n.category,
-        days: n.days,
-        startDate: n.startDate,
-        endDate: n.endDate,
-        alarmEnabled: n.alarmEnabled,
-        time: n.time,
-        photoVerify: n.photoVerify,
-      },
-    ]);
 
   const activeTab = TAB_FOR_SCREEN[screen];
 
@@ -288,8 +212,8 @@ export function AppShell({
             onAdd={addRoutine}
             onUpdate={updateRoutine}
             onDelete={deleteRoutine}
-            onCreateCategory={createCategory}
-            onDeleteCategory={deleteCategory}
+            onCreateCategory={createRoutineCategory}
+            onDeleteCategory={deleteRoutineCategory}
             onBack={() => setScreen(addReturnScreen)}
           />
         ) : null}

@@ -10,6 +10,12 @@ import { useTokens } from '@/hooks/use-tokens';
 export type LoginScreenProps = {
   onAuthSuccess?: () => void;
   onGoSignup?: () => void;
+  /**
+   * Sign in and start a session. The API currently offers only dev-login, so
+   * the userId is taken from the email field (numeric; defaults to 1). Resolves
+   * true on success. When omitted, submit just calls onAuthSuccess.
+   */
+  onLogin?: (userId: number) => Promise<boolean>;
 };
 
 /**
@@ -19,14 +25,29 @@ export type LoginScreenProps = {
  * Field/SocialButton are kept local — extract to `components/ui` once a second
  * screen needs them.
  */
-export function LoginScreen({ onAuthSuccess, onGoSignup }: LoginScreenProps) {
+export function LoginScreen({ onAuthSuccess, onGoSignup, onLogin }: LoginScreenProps) {
   const t = useTokens();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [keepLogin, setKeepLogin] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const canSubmit = email.length > 0 && password.length > 0;
+  const canSubmit = email.length > 0 && password.length > 0 && !submitting;
+
+  const submit = async () => {
+    if (!canSubmit) return;
+    setSubmitting(true);
+    setError(null);
+    // Dev-login: userId comes from the email field (numeric), else 1.
+    const parsed = Number.parseInt(email, 10);
+    const userId = Number.isFinite(parsed) ? parsed : 1;
+    const ok = onLogin ? await onLogin(userId) : true;
+    setSubmitting(false);
+    if (ok) onAuthSuccess?.();
+    else setError('로그인에 실패했어요. userId를 확인하고 다시 시도해 주세요.');
+  };
 
   return (
     <View style={[styles.screen, useScreenStyle()]}>
@@ -87,15 +108,25 @@ export function LoginScreen({ onAuthSuccess, onGoSignup }: LoginScreenProps) {
 
       <Pressable
         disabled={!canSubmit}
-        onPress={onAuthSuccess}
+        onPress={submit}
         accessibilityRole="button"
         style={({ pressed }) => [
           styles.submit,
           { backgroundColor: canSubmit ? t.primary : '#D9D2C5' },
           pressed && canSubmit && { backgroundColor: t.primaryActive },
         ]}>
-        <Text style={[styles.submitText, { color: t.onPrimary }]}>로그인</Text>
+        <Text style={[styles.submitText, { color: t.onPrimary }]}>
+          {submitting ? '로그인 중…' : '로그인'}
+        </Text>
       </Pressable>
+      {error ? (
+        <Text style={[styles.errorText, { color: t.danger }]} accessibilityRole="alert">
+          {error}
+        </Text>
+      ) : null}
+      <Text style={[styles.devHint, { color: t.textMuted }]}>
+        개발 로그인: 이메일 칸에 userId(숫자)를 넣으면 그 계정으로, 비우면 1번으로 접속돼요.
+      </Text>
 
       <View style={styles.divider}>
         <View style={[styles.line, { backgroundColor: t.border }]} />
@@ -214,6 +245,16 @@ const styles = StyleSheet.create({
   submitText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  errorText: {
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: Spacing.two,
+  },
+  devHint: {
+    fontSize: 11,
+    textAlign: 'center',
+    marginTop: Spacing.two,
   },
   divider: {
     flexDirection: 'row',
