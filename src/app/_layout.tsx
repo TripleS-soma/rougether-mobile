@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { loadSession } from '@/api';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { BrandThemeProvider } from '@/hooks/use-tokens';
 import { startMockServer } from '@/mocks/init';
@@ -18,6 +19,8 @@ export default function RootLayout() {
 
   useEffect(() => {
     startMockServer();
+    // Restore any persisted auth session so authed API calls work after a restart.
+    void loadSession();
   }, []);
 
   return (
