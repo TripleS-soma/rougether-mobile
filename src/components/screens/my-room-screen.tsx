@@ -271,9 +271,6 @@ export function MyRoomScreen({
                                 size={22}
                                 color={routine.completed ? t.primary : t.textDisabled}
                               />
-                              {routine.emoji ? (
-                                <Text style={styles.rowEmoji}>{routine.emoji}</Text>
-                              ) : null}
                               <View style={styles.flex}>
                                 <Text
                                   style={[
@@ -572,9 +569,6 @@ const styles = StyleSheet.create({
   todoInput: {
     fontSize: 16,
     paddingVertical: Spacing.three,
-  },
-  rowEmoji: {
-    fontSize: 18,
   },
   badges: {
     flexDirection: 'row',

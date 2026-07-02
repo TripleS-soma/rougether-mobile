@@ -118,7 +118,6 @@ export function FriendRoomScreen({
                   size={22}
                   color={routine.completed ? t.primary : t.textDisabled}
                 />
-                {routine.emoji ? <Text style={styles.rowEmoji}>{routine.emoji}</Text> : null}
                 <View style={styles.flex}>
                   <Text
                     style={[
@@ -244,9 +243,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.one,
-  },
-  rowEmoji: {
-    fontSize: 18,
   },
   badges: {
     flexDirection: 'row',
