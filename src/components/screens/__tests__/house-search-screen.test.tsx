@@ -9,7 +9,8 @@ beforeEach(() => {
   global.fetch = jest.fn(async () => ({
     ok: true,
     status: 200,
-    json: async () => ({ items: RECOMMENDED_HOUSES }),
+    // The API client parses via res.text() → JSON.parse.
+    text: async () => JSON.stringify({ items: RECOMMENDED_HOUSES }),
   })) as unknown as typeof fetch;
 });
 afterEach(() => {

@@ -68,7 +68,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "gen:api-types": "node scripts/gen-api-types.js"
   },
   "jest": {
     "preset": "jest-expo",
