@@ -1,13 +1,7 @@
-import {
-  Image,
-  type ImageStyle,
-  type StyleProp,
-  StyleSheet,
-  View,
-  type ViewStyle,
-} from 'react-native';
+import { type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { CharacterAvatar } from '@/components/character-avatar';
+import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Radius } from '@/constants/theme';
 import {
@@ -17,7 +11,6 @@ import {
   type FurnitureSlot,
   WALLPAPERS,
 } from '@/resources/furniture';
-import { assetSource } from '@/resources/asset';
 
 /**
  * Where each furniture slot sits inside the (square) room. Symmetric layout:
@@ -25,7 +18,7 @@ import { assetSource } from '@/resources/asset';
  * (shelf / window / storage), and plant / table mirror each other left↔right at
  * mid-height. Furniture is 24% wide, so left: '38%' centers an item.
  */
-const SLOT_STYLE: Record<FurnitureSlot, ImageStyle> = {
+const SLOT_STYLE: Record<FurnitureSlot, ViewStyle> = {
   // Top row
   topLeft: { top: '8%', left: '5%' },
   topCenter: { top: '8%', left: '38%' },
@@ -48,8 +41,8 @@ export type RoomProps = {
 
 /**
  * Renders a room: wallpaper background, placed furniture by slot, and the
- * character. Furniture/character art comes from the dummy resource layer
- * (assetSource); swap RESOURCE_BASE for the real CDN later. Shared by the room
+ * character. Furniture uses in-app placeholders (FurniturePlaceholder) until
+ * real art exists; the character is an animated sprite. Shared by the room
  * cluster screens (my room, decor, friend room, group house).
  */
 export function Room({
@@ -64,13 +57,9 @@ export function Room({
   return (
     <View style={[styles.room, { backgroundColor: wallpaper.color }, style]}>
       {placed.map((item) => (
-        <Image
-          key={item.id}
-          source={assetSource(item.assetKey, item.name)}
-          accessibilityLabel={item.name}
-          resizeMode="contain"
-          style={[styles.furniture, SLOT_STYLE[item.slot]]}
-        />
+        <View key={item.id} style={[styles.furniture, SLOT_STYLE[item.slot]]}>
+          <FurniturePlaceholder item={item} />
+        </View>
       ))}
       <CharacterAvatar characterId={characterId} style={styles.character} />
     </View>
