@@ -154,7 +154,6 @@ export function AppShell({
           ? {
               ...r,
               title: n.title,
-              emoji: n.emoji,
               category: n.category,
               days: n.days,
               startDate: n.startDate,
@@ -190,7 +189,6 @@ export function AppShell({
       {
         id: String(Date.now()),
         title: n.title,
-        emoji: n.emoji,
         category: n.category,
         completed: false,
         days: n.days,

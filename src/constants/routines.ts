@@ -46,7 +46,6 @@ export type Routine = {
   id: string;
   title: string;
   completed: boolean;
-  emoji?: string;
   category?: RoutineCategory;
   /** 0 (Sun) … 6 (Sat) */
   days?: number[];
@@ -62,7 +61,6 @@ export type Routine = {
 /** Payload for creating/editing a routine (from the Add/Edit routine screen). */
 export type NewRoutine = {
   title: string;
-  emoji: string;
   category: RoutineCategory;
   days: number[];
   startDate: string;
@@ -78,7 +76,6 @@ export const SAMPLE_ROUTINES: Routine[] = [
     id: '1',
     title: '아침 7시 기상',
     completed: true,
-    emoji: '⏰',
     category: '일정',
     alarmEnabled: true,
     time: '07:00',
@@ -87,7 +84,6 @@ export const SAMPLE_ROUTINES: Routine[] = [
     id: '2',
     title: '독서 30분',
     completed: true,
-    emoji: '📚',
     category: '취미',
     alarmEnabled: true,
     time: '21:30',
@@ -97,7 +93,6 @@ export const SAMPLE_ROUTINES: Routine[] = [
     id: '3',
     title: '물 2L 마시기',
     completed: true,
-    emoji: '💧',
     category: '건강',
     alarmEnabled: false,
     time: '12:00',
@@ -106,7 +101,6 @@ export const SAMPLE_ROUTINES: Routine[] = [
     id: '4',
     title: '영어 공부',
     completed: false,
-    emoji: '✏️',
     category: '공부',
     alarmEnabled: true,
     time: '20:00',
@@ -116,7 +110,6 @@ export const SAMPLE_ROUTINES: Routine[] = [
     id: '5',
     title: '하루 회고',
     completed: false,
-    emoji: '📝',
     category: '일정',
     alarmEnabled: true,
     time: '23:00',
