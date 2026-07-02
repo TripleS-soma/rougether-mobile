@@ -1,6 +1,18 @@
-import { act, fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
+import type { GachaMachine } from '@/api/adapters';
+import type { DrawResult } from '@/api/types';
 import { GachaScreen } from '@/components/screens/gacha-screen';
+
+const machine: GachaMachine = {
+  id: 1,
+  name: '작은 베이커리 아침 뽑기',
+  costCurrencyType: 'COIN',
+  costAmount: 250,
+  drawCount: 1,
+  icon: '🥐',
+  accent: '#F7E6C8',
+};
 
 describe('GachaScreen', () => {
   it('renders the title and balance', async () => {
@@ -9,48 +21,28 @@ describe('GachaScreen', () => {
     expect(getByText('5,600')).toBeTruthy();
   });
 
-  it('spends coins on press and reveals the reward only after the charge delay', async () => {
-    const onSpendCoins = jest.fn(() => true);
-    const onObtain = jest.fn();
+  it('draws from the API and reveals the reward', async () => {
+    const onDraw = jest.fn(async (): Promise<DrawResult[]> => [
+      { name: '허브 화분', rarity: '희귀', converted: false },
+    ]);
     const { getByText } = await render(
-      <GachaScreen coinBalance={5600} onSpendCoins={onSpendCoins} onObtain={onObtain} />,
+      <GachaScreen gachas={[machine]} coinBalance={5600} onDraw={onDraw} />,
     );
 
-    jest.useFakeTimers();
-    try {
-      fireEvent.press(getByText('1회 뽑기'));
-      // Coins are spent immediately, but the reward is held back during the
-      // charge animation.
-      expect(onSpendCoins).toHaveBeenCalledWith(250);
-      expect(onObtain).not.toHaveBeenCalled();
+    await fireEvent.press(getByText('뽑기'));
 
-      act(() => {
-        jest.advanceTimersByTime(1600);
-      });
-      expect(onObtain).toHaveBeenCalledWith(expect.arrayContaining([expect.any(String)]));
-    } finally {
-      jest.useRealTimers();
-    }
+    expect(onDraw).toHaveBeenCalledWith(1);
+    await waitFor(() => expect(getByText('허브 화분')).toBeTruthy());
   });
 
-  it('does not reveal a reward when the spend is rejected', async () => {
-    const onSpendCoins = jest.fn(() => false);
-    const onObtain = jest.fn();
+  it('does not draw when the balance is below the cost', async () => {
+    const onDraw = jest.fn();
     const { getByText } = await render(
-      <GachaScreen coinBalance={5600} onSpendCoins={onSpendCoins} onObtain={onObtain} />,
+      <GachaScreen gachas={[machine]} coinBalance={100} onDraw={onDraw} />,
     );
 
-    jest.useFakeTimers();
-    try {
-      fireEvent.press(getByText('1회 뽑기'));
-      expect(onSpendCoins).toHaveBeenCalledWith(250);
-
-      act(() => {
-        jest.advanceTimersByTime(1600);
-      });
-      expect(onObtain).not.toHaveBeenCalled();
-    } finally {
-      jest.useRealTimers();
-    }
+    // The pull button is disabled below cost, so the press is a no-op.
+    await fireEvent.press(getByText('뽑기'));
+    expect(onDraw).not.toHaveBeenCalled();
   });
 });

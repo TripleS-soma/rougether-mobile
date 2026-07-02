@@ -26,8 +26,8 @@ import {
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
 import { BottomNav, type NavTab } from '@/components/ui/bottom-nav';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
-import { DUPLICATE_DIA } from '@/constants/currency';
 import { type Routine } from '@/constants/routines';
+import { useGacha } from '@/hooks/use-gacha';
 import { useMyRoomData } from '@/hooks/use-my-room-data';
 import { useBrandTheme } from '@/hooks/use-tokens';
 import {
@@ -116,6 +116,10 @@ export function AppShell({
     deleteRoutineCategory,
   } = useMyRoomData();
 
+  // Gacha machines + draw (spend + dupe→dia handled server-side; wallet synced
+  // from the draw response).
+  const { gachas, draw: drawGachaMachine } = useGacha(setWallet);
+
   const [placedFurnitureIds, setPlacedFurnitureIds] = useState<string[]>(
     DEFAULT_PLACED_FURNITURE_IDS,
   );
@@ -123,8 +127,6 @@ export function AppShell({
   const [ownedFurnitureIds, setOwnedFurnitureIds] = useState<string[]>(() =>
     FURNITURE_ITEMS.map((i) => i.id),
   );
-  // Gacha reward names seen so far — a repeat pull converts to dia (spec rule).
-  const [obtainedItems, setObtainedItems] = useState<string[]>([]);
   const [visitingFriend, setVisitingFriend] = useState('친구');
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
 
@@ -220,25 +222,11 @@ export function AppShell({
 
         {screen === 'gacha' ? (
           <GachaScreen
+            gachas={gachas}
             coinBalance={wallet.coin}
             diaBalance={wallet.dia}
             onBack={() => setScreen('myRoom')}
-            onSpendCoins={(amount) => {
-              if (wallet.coin < amount) return false;
-              setWallet((w) => ({ ...w, coin: w.coin - amount }));
-              return true;
-            }}
-            onObtain={(names) => {
-              // Repeats convert to dia; first-time obtains are recorded.
-              let dia = 0;
-              const fresh: string[] = [];
-              for (const name of names) {
-                if (obtainedItems.includes(name) || fresh.includes(name)) dia += DUPLICATE_DIA;
-                else fresh.push(name);
-              }
-              if (fresh.length) setObtainedItems((prev) => [...prev, ...fresh]);
-              if (dia) setWallet((w) => ({ ...w, dia: w.dia + dia }));
-            }}
+            onDraw={drawGachaMachine}
           />
         ) : null}
 

@@ -16,6 +16,7 @@ import {
 import type {
   CategoryCreateRequest,
   CategoryResponse,
+  GachaResponse,
   RoutineCreateRequest,
   RoutineResponse,
   RoutineUpdateRequest,
@@ -23,7 +24,6 @@ import type {
   TodoCreateRequest,
   TodoResponse,
   TodoUpdateRequest,
-  WalletResponse,
 } from './types';
 
 // Weekday code by app day number (0 = Sunday … 6 = Saturday).
@@ -180,7 +180,11 @@ export function todayCompletions(today: TodayResponse, date: string): Record<str
 }
 
 // --- wallet -------------------------------------------------------------------
-export function toWallet(list: WalletResponse[]): Wallet {
+// Accepts both WalletResponse (from /me/wallets) and WalletSummary (embedded in
+// purchase/draw responses) — they share this shape.
+type WalletLike = { currencyType?: 'COIN' | 'DIAMOND'; balance?: number };
+
+export function toWallet(list: WalletLike[]): Wallet {
   let coin = 0;
   let dia = 0;
   for (const w of list) {
@@ -188,4 +192,32 @@ export function toWallet(list: WalletResponse[]): Wallet {
     else if (w.currencyType === 'DIAMOND') dia = w.balance ?? 0;
   }
   return { coin, dia };
+}
+
+// --- gacha --------------------------------------------------------------------
+// The API gacha carries no preview art, so decorate machines with a rotating
+// icon + accent by index (placeholder until themed art exists).
+const GACHA_ICONS = ['🎁', '🏯', '🌿', '🥐', '🌙', '🧸', '🪐', '🌸'];
+const GACHA_ACCENTS = ['#E8DCC8', '#D6E4D2', '#F7E6C8', '#D8D2EC', '#E6D2D2', '#D2E4E6'];
+
+export type GachaMachine = {
+  id: number;
+  name: string;
+  costCurrencyType: 'COIN' | 'DIAMOND';
+  costAmount: number;
+  drawCount: number;
+  icon: string;
+  accent: string;
+};
+
+export function toGachaMachine(g: GachaResponse, index = 0): GachaMachine {
+  return {
+    id: g.gachaId ?? 0,
+    name: g.name ?? '',
+    costCurrencyType: g.costCurrencyType ?? 'COIN',
+    costAmount: g.costAmount ?? 0,
+    drawCount: g.drawCount ?? 1,
+    icon: GACHA_ICONS[index % GACHA_ICONS.length],
+    accent: GACHA_ACCENTS[index % GACHA_ACCENTS.length],
+  };
 }
