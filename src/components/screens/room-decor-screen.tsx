@@ -5,6 +5,7 @@ import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { Room } from '@/components/room/room';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Icon } from '@/components/ui/icon';
+import { WalletPills } from '@/components/ui/wallet-pills';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import {
   DEFAULT_WALLPAPER_ID,
@@ -24,6 +25,8 @@ export type RoomDecorScreenProps = {
   initialWallpaperId?: string;
   /** Ids the user owns; owned items are placeable, the rest are buyable with dia. */
   ownedIds?: string[];
+  /** Coin + dia balances shown in the header. */
+  coinBalance?: number;
   /** Dia balance, for buying not-yet-owned items in the catalog. */
   diaBalance?: number;
   characterId?: CharacterId;
@@ -46,6 +49,7 @@ export function RoomDecorScreen({
   initialPlacedIds,
   initialWallpaperId = DEFAULT_WALLPAPER_ID,
   ownedIds,
+  coinBalance = 0,
   diaBalance = 0,
   characterId = DEFAULT_CHARACTER_ID,
   onBack,
@@ -97,10 +101,7 @@ export function RoomDecorScreen({
           <Icon name="back" size={26} color={t.text} />
         </Pressable>
         <Text style={[Typography.h2, styles.flex, { color: t.text }]}>나의 방 꾸미기</Text>
-        <View style={[styles.diaPill, { backgroundColor: t.surfaceMuted }]}>
-          <Icon name="dia" size={14} color={t.primary} />
-          <Text style={[Typography.label, { color: t.text }]}>{diaBalance.toLocaleString()}</Text>
-        </View>
+        <WalletPills coin={coinBalance} dia={diaBalance} />
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
@@ -244,14 +245,6 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
-  },
-  diaPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.one,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.one,
-    borderRadius: Radius.pill,
   },
   priceRow: {
     flexDirection: 'row',

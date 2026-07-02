@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { CharacterAvatar } from '@/components/character-avatar';
 import { Room } from '@/components/room/room';
@@ -136,242 +145,246 @@ export function MyRoomScreen({
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={styles.body}>
-        <View style={styles.roomWrap}>
-          <Room
-            characterId={characterId}
-            wallpaperId={wallpaperId}
-            placedFurnitureIds={placedFurnitureIds}
-            interactiveCharacter
-          />
-          <Pressable
-            onPress={onOpenGacha}
-            accessibilityRole="button"
-            accessibilityLabel="뽑기 상점"
-            style={[styles.gachaBtn, { backgroundColor: t.surface }]}>
-            <Icon name="gift" size={20} color={t.text} />
-          </Pressable>
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHead}>
-            <Text style={[Typography.h2, { color: t.text }]}>오늘의 루틴</Text>
-            <View style={styles.sectionHeadRight}>
-              <Text style={[Typography.label, { color: t.primary }]}>
-                {completedCount} / {routines.length}
-              </Text>
-              <Pressable
-                onPress={onAddRoutine}
-                accessibilityRole="button"
-                accessibilityLabel="루틴 추가"
-                style={[styles.addBtn, { backgroundColor: t.primary }]}>
-                <Icon name="add" size={18} color={t.onPrimary} />
-              </Pressable>
-            </View>
-          </View>
-
-          <View style={[styles.progressTrack, { backgroundColor: t.surfaceMuted }]}>
-            <View
-              style={[
-                styles.progressFill,
-                { backgroundColor: t.primary, width: `${progress * 100}%` },
-              ]}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+          <View style={styles.roomWrap}>
+            <Room
+              characterId={characterId}
+              wallpaperId={wallpaperId}
+              placedFurnitureIds={placedFurnitureIds}
+              interactiveCharacter
             />
-          </View>
-
-          {categories.map((cat, idx) => {
-            const isFallback = idx === categories.length - 1;
-            const items = routines.filter((r) => {
-              if (r.category === cat.id) return true;
-              return isFallback && (!r.category || !knownIds.includes(r.category));
-            });
-            if (items.length === 0) return null;
-            const doneInCat = items.filter((r) => r.completed).length;
-
-            return (
-              <View key={cat.id} style={styles.group}>
-                <View style={styles.catHeader}>
-                  <View style={[styles.catDot, { backgroundColor: `${cat.color}33` }]}>
-                    <Text style={styles.catEmoji}>{cat.emoji}</Text>
-                  </View>
-                  <Text style={[Typography.label, { color: cat.color }]}>{cat.label}</Text>
-                  <Text style={[Typography.supporting, { color: t.textDisabled }]}>
-                    {doneInCat}/{items.length}
-                  </Text>
-                  <View style={styles.flex} />
-                  <Pressable
-                    onPress={() => {
-                      setNewTodo('');
-                      setAddingCategory((prev) => (prev === cat.id ? null : cat.id));
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${cat.label} 할 일 추가`}
-                    style={[styles.catAdd, { backgroundColor: cat.color }]}>
-                    <Icon name="add" size={14} color={t.onPrimary} />
-                  </Pressable>
-                </View>
-
-                <View style={styles.rows}>
-                  {items.map((routine) => {
-                    const menuOpen = menuOpenId === routine.id;
-                    return (
-                      <View key={routine.id}>
-                        <View
-                          style={[
-                            styles.routineRow,
-                            { backgroundColor: t.surface, borderLeftColor: cat.color },
-                          ]}>
-                          <Pressable
-                            onPress={() => handleToggle(routine)}
-                            accessibilityRole="checkbox"
-                            accessibilityState={{ checked: routine.completed }}
-                            accessibilityLabel={routine.title}
-                            style={styles.rowMain}>
-                            <Icon
-                              name={routine.completed ? 'checkbox-on' : 'checkbox-off'}
-                              size={22}
-                              color={routine.completed ? t.primary : t.textDisabled}
-                            />
-                            {routine.emoji ? (
-                              <Text style={styles.rowEmoji}>{routine.emoji}</Text>
-                            ) : null}
-                            <View style={styles.flex}>
-                              <Text
-                                style={[
-                                  Typography.body,
-                                  routine.completed
-                                    ? { color: t.textMuted, textDecorationLine: 'line-through' }
-                                    : { color: t.text },
-                                ]}>
-                                {routine.title}
-                              </Text>
-                              {(routine.alarmEnabled && routine.time) || routine.photoVerify ? (
-                                <View style={styles.badges}>
-                                  {routine.alarmEnabled && routine.time ? (
-                                    <View style={styles.badge}>
-                                      <Icon name="bell" size={12} color={t.textMuted} />
-                                      <Text style={[styles.badgeText, { color: t.textMuted }]}>
-                                        {formatTime(routine.time)}
-                                      </Text>
-                                    </View>
-                                  ) : null}
-                                  {routine.photoVerify ? (
-                                    <View style={styles.badge}>
-                                      <Icon name="camera" size={12} color={t.textMuted} />
-                                      <Text style={[styles.badgeText, { color: t.textMuted }]}>
-                                        사진 인증
-                                      </Text>
-                                    </View>
-                                  ) : null}
-                                </View>
-                              ) : null}
-                            </View>
-                          </Pressable>
-                          <Pressable
-                            onPress={() => setMenuOpenId(menuOpen ? null : routine.id)}
-                            accessibilityRole="button"
-                            accessibilityLabel={`${routine.title} 메뉴`}
-                            style={styles.kebab}>
-                            <Icon name="kebab" size={20} color={t.textDisabled} />
-                          </Pressable>
-                        </View>
-
-                        {menuOpen ? (
-                          <View
-                            style={[
-                              styles.menu,
-                              { backgroundColor: t.surface, borderColor: t.border },
-                            ]}>
-                            <Pressable
-                              onPress={() => {
-                                setMenuOpenId(null);
-                                onEditRoutine?.(routine);
-                              }}
-                              accessibilityRole="button"
-                              accessibilityLabel={`${routine.title} 수정`}
-                              style={styles.menuItem}>
-                              <Icon name="edit" size={16} color={t.text} />
-                              <Text style={[Typography.body, { color: t.text }]}>수정하기</Text>
-                            </Pressable>
-                            <Pressable
-                              onPress={() => {
-                                setMenuOpenId(null);
-                                onDeleteRoutine?.(routine.id);
-                              }}
-                              accessibilityRole="button"
-                              accessibilityLabel={`${routine.title} 삭제`}
-                              style={[
-                                styles.menuItem,
-                                { borderTopWidth: 1, borderTopColor: t.border },
-                              ]}>
-                              <Icon name="trash" size={16} color={t.danger} />
-                              <Text style={[Typography.body, { color: t.danger }]}>삭제하기</Text>
-                            </Pressable>
-                          </View>
-                        ) : null}
-                      </View>
-                    );
-                  })}
-
-                  {addingCategory === cat.id ? (
-                    <View
-                      style={[
-                        styles.routineRow,
-                        { backgroundColor: t.surface, borderLeftColor: cat.color },
-                      ]}>
-                      <Icon name="checkbox-off" size={22} color={t.textDisabled} />
-                      <TextInput
-                        autoFocus
-                        value={newTodo}
-                        onChangeText={setNewTodo}
-                        onSubmitEditing={() => commitTodo(cat.id)}
-                        onBlur={() => {
-                          if (!newTodo.trim()) setAddingCategory(null);
-                        }}
-                        placeholder="할 일 입력 후 완료"
-                        placeholderTextColor={t.textMuted}
-                        style={[styles.flex, styles.todoInput, { color: t.text }]}
-                      />
-                    </View>
-                  ) : null}
-                </View>
-              </View>
-            );
-          })}
-
-          <View style={[styles.rewardCard, { backgroundColor: t.primary }]}>
-            <View style={styles.rewardTop}>
-              <View style={styles.flex}>
-                <Text style={[Typography.h3, { color: t.onPrimary }]}>오늘의 보상</Text>
-                <Text style={[Typography.supporting, styles.rewardSub, { color: t.onPrimary }]}>
-                  루틴을 완료하고 보상을 받아보세요!
-                </Text>
-              </View>
-              <Icon name="star" size={28} color={t.onPrimary} />
-            </View>
-            <View style={styles.rewardCoins}>
-              <Icon name="coin" size={24} color={t.onPrimary} />
-              <Text style={[Typography.h2, { color: t.onPrimary }]}>+{rewardCoins} 코인</Text>
-            </View>
             <Pressable
-              onPress={onClaimReward}
+              onPress={onOpenGacha}
               accessibilityRole="button"
-              accessibilityLabel="보상 받기"
-              style={[styles.claimBtn, { backgroundColor: t.surface }]}>
-              <Text style={[Typography.label, { color: t.primary }]}>보상 받기</Text>
+              accessibilityLabel="뽑기 상점"
+              style={[styles.gachaBtn, { backgroundColor: t.surface }]}>
+              <Icon name="gift" size={20} color={t.text} />
             </Pressable>
           </View>
 
-          <Pressable
-            onPress={onEdit}
-            accessibilityRole="button"
-            accessibilityLabel="방 편집하기"
-            style={[styles.editBtn, { backgroundColor: t.surface, borderColor: t.border }]}>
-            <Icon name="edit" size={16} color={t.text} />
-            <Text style={[Typography.label, { color: t.text }]}>방 편집</Text>
-          </Pressable>
-        </View>
-      </ScrollView>
+          <View style={styles.section}>
+            <View style={styles.sectionHead}>
+              <Text style={[Typography.h2, { color: t.text }]}>오늘의 루틴</Text>
+              <View style={styles.sectionHeadRight}>
+                <Text style={[Typography.label, { color: t.primary }]}>
+                  {completedCount} / {routines.length}
+                </Text>
+                <Pressable
+                  onPress={onAddRoutine}
+                  accessibilityRole="button"
+                  accessibilityLabel="루틴 추가"
+                  style={[styles.addBtn, { backgroundColor: t.primary }]}>
+                  <Icon name="add" size={18} color={t.onPrimary} />
+                </Pressable>
+              </View>
+            </View>
+
+            <View style={[styles.progressTrack, { backgroundColor: t.surfaceMuted }]}>
+              <View
+                style={[
+                  styles.progressFill,
+                  { backgroundColor: t.primary, width: `${progress * 100}%` },
+                ]}
+              />
+            </View>
+
+            {categories.map((cat, idx) => {
+              const isFallback = idx === categories.length - 1;
+              const items = routines.filter((r) => {
+                if (r.category === cat.id) return true;
+                return isFallback && (!r.category || !knownIds.includes(r.category));
+              });
+              if (items.length === 0) return null;
+              const doneInCat = items.filter((r) => r.completed).length;
+
+              return (
+                <View key={cat.id} style={styles.group}>
+                  <View style={styles.catHeader}>
+                    <View style={[styles.catDot, { backgroundColor: `${cat.color}33` }]}>
+                      <Text style={styles.catEmoji}>{cat.emoji}</Text>
+                    </View>
+                    <Text style={[Typography.label, { color: cat.color }]}>{cat.label}</Text>
+                    <Text style={[Typography.supporting, { color: t.textDisabled }]}>
+                      {doneInCat}/{items.length}
+                    </Text>
+                    <View style={styles.flex} />
+                    <Pressable
+                      onPress={() => {
+                        setNewTodo('');
+                        setAddingCategory((prev) => (prev === cat.id ? null : cat.id));
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${cat.label} 할 일 추가`}
+                      style={[styles.catAdd, { backgroundColor: cat.color }]}>
+                      <Icon name="add" size={14} color={t.onPrimary} />
+                    </Pressable>
+                  </View>
+
+                  <View style={styles.rows}>
+                    {items.map((routine) => {
+                      const menuOpen = menuOpenId === routine.id;
+                      return (
+                        <View key={routine.id}>
+                          <View
+                            style={[
+                              styles.routineRow,
+                              { backgroundColor: t.surface, borderLeftColor: cat.color },
+                            ]}>
+                            <Pressable
+                              onPress={() => handleToggle(routine)}
+                              accessibilityRole="checkbox"
+                              accessibilityState={{ checked: routine.completed }}
+                              accessibilityLabel={routine.title}
+                              style={styles.rowMain}>
+                              <Icon
+                                name={routine.completed ? 'checkbox-on' : 'checkbox-off'}
+                                size={22}
+                                color={routine.completed ? t.primary : t.textDisabled}
+                              />
+                              {routine.emoji ? (
+                                <Text style={styles.rowEmoji}>{routine.emoji}</Text>
+                              ) : null}
+                              <View style={styles.flex}>
+                                <Text
+                                  style={[
+                                    Typography.body,
+                                    routine.completed
+                                      ? { color: t.textMuted, textDecorationLine: 'line-through' }
+                                      : { color: t.text },
+                                  ]}>
+                                  {routine.title}
+                                </Text>
+                                {(routine.alarmEnabled && routine.time) || routine.photoVerify ? (
+                                  <View style={styles.badges}>
+                                    {routine.alarmEnabled && routine.time ? (
+                                      <View style={styles.badge}>
+                                        <Icon name="bell" size={12} color={t.textMuted} />
+                                        <Text style={[styles.badgeText, { color: t.textMuted }]}>
+                                          {formatTime(routine.time)}
+                                        </Text>
+                                      </View>
+                                    ) : null}
+                                    {routine.photoVerify ? (
+                                      <View style={styles.badge}>
+                                        <Icon name="camera" size={12} color={t.textMuted} />
+                                        <Text style={[styles.badgeText, { color: t.textMuted }]}>
+                                          사진 인증
+                                        </Text>
+                                      </View>
+                                    ) : null}
+                                  </View>
+                                ) : null}
+                              </View>
+                            </Pressable>
+                            <Pressable
+                              onPress={() => setMenuOpenId(menuOpen ? null : routine.id)}
+                              accessibilityRole="button"
+                              accessibilityLabel={`${routine.title} 메뉴`}
+                              style={styles.kebab}>
+                              <Icon name="kebab" size={20} color={t.textDisabled} />
+                            </Pressable>
+                          </View>
+
+                          {menuOpen ? (
+                            <View
+                              style={[
+                                styles.menu,
+                                { backgroundColor: t.surface, borderColor: t.border },
+                              ]}>
+                              <Pressable
+                                onPress={() => {
+                                  setMenuOpenId(null);
+                                  onEditRoutine?.(routine);
+                                }}
+                                accessibilityRole="button"
+                                accessibilityLabel={`${routine.title} 수정`}
+                                style={styles.menuItem}>
+                                <Icon name="edit" size={16} color={t.text} />
+                                <Text style={[Typography.body, { color: t.text }]}>수정하기</Text>
+                              </Pressable>
+                              <Pressable
+                                onPress={() => {
+                                  setMenuOpenId(null);
+                                  onDeleteRoutine?.(routine.id);
+                                }}
+                                accessibilityRole="button"
+                                accessibilityLabel={`${routine.title} 삭제`}
+                                style={[
+                                  styles.menuItem,
+                                  { borderTopWidth: 1, borderTopColor: t.border },
+                                ]}>
+                                <Icon name="trash" size={16} color={t.danger} />
+                                <Text style={[Typography.body, { color: t.danger }]}>삭제하기</Text>
+                              </Pressable>
+                            </View>
+                          ) : null}
+                        </View>
+                      );
+                    })}
+
+                    {addingCategory === cat.id ? (
+                      <View
+                        style={[
+                          styles.routineRow,
+                          { backgroundColor: t.surface, borderLeftColor: cat.color },
+                        ]}>
+                        <Icon name="checkbox-off" size={22} color={t.textDisabled} />
+                        <TextInput
+                          autoFocus
+                          value={newTodo}
+                          onChangeText={setNewTodo}
+                          onSubmitEditing={() => commitTodo(cat.id)}
+                          onBlur={() => {
+                            if (!newTodo.trim()) setAddingCategory(null);
+                          }}
+                          placeholder="할 일 입력 후 완료"
+                          placeholderTextColor={t.textMuted}
+                          style={[styles.flex, styles.todoInput, { color: t.text }]}
+                        />
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+              );
+            })}
+
+            <View style={[styles.rewardCard, { backgroundColor: t.primary }]}>
+              <View style={styles.rewardTop}>
+                <View style={styles.flex}>
+                  <Text style={[Typography.h3, { color: t.onPrimary }]}>오늘의 보상</Text>
+                  <Text style={[Typography.supporting, styles.rewardSub, { color: t.onPrimary }]}>
+                    루틴을 완료하고 보상을 받아보세요!
+                  </Text>
+                </View>
+                <Icon name="star" size={28} color={t.onPrimary} />
+              </View>
+              <View style={styles.rewardCoins}>
+                <Icon name="coin" size={24} color={t.onPrimary} />
+                <Text style={[Typography.h2, { color: t.onPrimary }]}>+{rewardCoins} 코인</Text>
+              </View>
+              <Pressable
+                onPress={onClaimReward}
+                accessibilityRole="button"
+                accessibilityLabel="보상 받기"
+                style={[styles.claimBtn, { backgroundColor: t.surface }]}>
+                <Text style={[Typography.label, { color: t.primary }]}>보상 받기</Text>
+              </Pressable>
+            </View>
+
+            <Pressable
+              onPress={onEdit}
+              accessibilityRole="button"
+              accessibilityLabel="방 편집하기"
+              style={[styles.editBtn, { backgroundColor: t.surface, borderColor: t.border }]}>
+              <Icon name="edit" size={16} color={t.text} />
+              <Text style={[Typography.label, { color: t.text }]}>방 편집</Text>
+            </Pressable>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }

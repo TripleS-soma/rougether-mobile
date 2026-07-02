@@ -229,6 +229,7 @@ export function AppShell({
             initialPlacedIds={placedFurnitureIds}
             initialWallpaperId={wallpaperId}
             ownedIds={ownedFurnitureIds}
+            coinBalance={wallet.coin}
             diaBalance={wallet.dia}
             characterId={characterId}
             onBuy={(itemId) => {
@@ -275,6 +276,7 @@ export function AppShell({
         {screen === 'gacha' ? (
           <GachaScreen
             coinBalance={wallet.coin}
+            diaBalance={wallet.dia}
             onBack={() => setScreen('myRoom')}
             onSpendCoins={(amount) => {
               if (wallet.coin < amount) return false;

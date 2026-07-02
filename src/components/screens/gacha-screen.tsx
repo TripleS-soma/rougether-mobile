@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
+import { WalletPills } from '@/components/ui/wallet-pills';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
@@ -104,6 +105,7 @@ const BOXES: GachaBox[] = [
 export type GachaScreenProps = {
   onBack?: () => void;
   coinBalance?: number;
+  diaBalance?: number;
   onSpendCoins?: (amount: number) => boolean;
   onObtain?: (items: string[]) => void;
 };
@@ -115,7 +117,13 @@ export type GachaScreenProps = {
  * reward is reported via onObtain when the reveal begins (repeats convert to dia
  * upstream). Uses the built-in Animated API (no worklets) so it runs in tests.
  */
-export function GachaScreen({ onBack, coinBalance = 0, onSpendCoins, onObtain }: GachaScreenProps) {
+export function GachaScreen({
+  onBack,
+  coinBalance = 0,
+  diaBalance = 0,
+  onSpendCoins,
+  onObtain,
+}: GachaScreenProps) {
   const t = useTokens();
   const [selectedId, setSelectedId] = useState(BOXES[0].id);
   const [error, setError] = useState('');
@@ -167,10 +175,7 @@ export function GachaScreen({ onBack, coinBalance = 0, onSpendCoins, onObtain }:
           <Icon name="back" size={26} color={t.text} />
         </Pressable>
         <Text style={[Typography.h2, { color: t.text }]}>가챠</Text>
-        <View style={[styles.leafPill, { backgroundColor: t.surfaceMuted }]}>
-          <Icon name="coin" size={14} color={t.warning} />
-          <Text style={[Typography.label, { color: t.text }]}>{coinBalance.toLocaleString()}</Text>
-        </View>
+        <WalletPills coin={coinBalance} dia={diaBalance} />
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
@@ -413,14 +418,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  leafPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.one,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.one,
-    borderRadius: Radius.pill,
   },
   body: { padding: Spacing.four, gap: Spacing.four },
   boxRow: { gap: Spacing.two, paddingVertical: Spacing.half },
