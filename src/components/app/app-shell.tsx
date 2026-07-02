@@ -18,6 +18,7 @@ import { ProfileEditScreen } from '@/components/screens/profile-edit-screen';
 import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
 import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
 import { SettingsScreen } from '@/components/screens/settings-screen';
+import { ShopScreen } from '@/components/screens/shop-screen';
 import {
   DEFAULT_SOUND_SETTINGS,
   type SoundSettings,
@@ -26,6 +27,12 @@ import {
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
 import { BottomNav, type NavTab } from '@/components/ui/bottom-nav';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
+import {
+  DEFAULT_WALLET,
+  DUPLICATE_DIA,
+  ROUTINE_REWARD_COIN,
+  type Wallet,
+} from '@/constants/currency';
 import {
   type NewRoutine,
   ROUTINE_CATEGORIES,
@@ -55,7 +62,8 @@ type Screen =
   | 'passwordChange'
   | 'notifications'
   | 'sound'
-  | 'help';
+  | 'help'
+  | 'shop';
 
 /** Which bottom-nav tab is active for each screen, or null to hide the nav. */
 const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
@@ -74,6 +82,7 @@ const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   notifications: null,
   sound: null,
   help: null,
+  shop: null,
 };
 
 const SCREEN_FOR_TAB: Record<NavTab, Screen> = {
@@ -106,10 +115,12 @@ export function AppShell({
     DEFAULT_PLACED_FURNITURE_IDS,
   );
   const [wallpaperId, setWallpaperId] = useState(DEFAULT_WALLPAPER_ID);
-  const [leafBalance, setLeafBalance] = useState(5600);
+  const [wallet, setWallet] = useState<Wallet>(DEFAULT_WALLET);
   const [ownedFurnitureIds, setOwnedFurnitureIds] = useState<string[]>(() =>
     FURNITURE_ITEMS.map((i) => i.id),
   );
+  // Gacha reward names seen so far — a repeat pull converts to dia (spec rule).
+  const [obtainedItems, setObtainedItems] = useState<string[]>([]);
   const [visitingFriend, setVisitingFriend] = useState('친구');
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
   const [categories, setCategories] = useState<RoutineCategoryMeta[]>(ROUTINE_CATEGORIES);
@@ -130,8 +141,14 @@ export function AppShell({
     setRoutines((prev) => prev.map((r) => (r.category === id ? { ...r, category: '기타' } : r)));
   };
 
-  const toggleRoutine = (id: string) =>
+  // Completing a routine/todo grants coin; un-completing (same session) rolls it
+  // back. Spec: routine/todo completion → coin reward.
+  const toggleRoutine = (id: string) => {
+    const target = routines.find((r) => r.id === id);
+    const delta = target ? (target.completed ? -ROUTINE_REWARD_COIN : ROUTINE_REWARD_COIN) : 0;
     setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, completed: !r.completed } : r)));
+    if (delta) setWallet((w) => ({ ...w, coin: Math.max(0, w.coin + delta) }));
+  };
 
   const updateRoutine = (id: string, n: NewRoutine) =>
     setRoutines((prev) =>
@@ -204,6 +221,7 @@ export function AppShell({
             onEdit={() => setScreen('decor')}
             onAddRoutine={() => setScreen('routineManage')}
             onOpenGacha={() => setScreen('gacha')}
+            onOpenShop={() => setScreen('shop')}
             onQuickAddRoutine={quickAddTodo}
             onEditRoutine={(r) => openEditRoutine(r, 'myRoom')}
             onDeleteRoutine={deleteRoutine}
@@ -253,22 +271,44 @@ export function AppShell({
 
         {screen === 'gacha' ? (
           <GachaScreen
-            leafBalance={leafBalance}
+            coinBalance={wallet.coin}
             onBack={() => setScreen('myRoom')}
-            onSpendLeaves={(amount) => {
-              if (leafBalance < amount) return false;
-              setLeafBalance((prev) => prev - amount);
+            onSpendCoins={(amount) => {
+              if (wallet.coin < amount) return false;
+              setWallet((w) => ({ ...w, coin: w.coin - amount }));
               return true;
             }}
-            onObtain={(ids) =>
-              setOwnedFurnitureIds((prev) => Array.from(new Set([...prev, ...ids])))
-            }
+            onObtain={(names) => {
+              // Repeats convert to dia; first-time obtains are recorded.
+              let dia = 0;
+              const fresh: string[] = [];
+              for (const name of names) {
+                if (obtainedItems.includes(name) || fresh.includes(name)) dia += DUPLICATE_DIA;
+                else fresh.push(name);
+              }
+              if (fresh.length) setObtainedItems((prev) => [...prev, ...fresh]);
+              if (dia) setWallet((w) => ({ ...w, dia: w.dia + dia }));
+            }}
+          />
+        ) : null}
+
+        {screen === 'shop' ? (
+          <ShopScreen
+            diaBalance={wallet.dia}
+            ownedItemIds={ownedFurnitureIds}
+            onBuy={(itemId) => {
+              const item = FURNITURE_ITEMS.find((i) => i.id === itemId);
+              if (!item || ownedFurnitureIds.includes(itemId) || wallet.dia < item.price) return;
+              setWallet((w) => ({ ...w, dia: w.dia - item.price }));
+              setOwnedFurnitureIds((prev) => Array.from(new Set([...prev, itemId])));
+            }}
+            onBack={() => setScreen('myRoom')}
           />
         ) : null}
 
         {screen === 'groupHouse' ? (
           <GroupHouseScreen
-            leafBalance={leafBalance}
+            coinBalance={wallet.coin}
             characterId={characterId}
             onVisitFriend={(name) => {
               setVisitingFriend(name);

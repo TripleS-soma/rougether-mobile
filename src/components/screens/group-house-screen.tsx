@@ -73,7 +73,7 @@ const DEFAULT_HOUSES: House[] = [
 
 export type GroupHouseScreenProps = {
   houses?: House[];
-  leafBalance?: number;
+  coinBalance?: number;
   characterId?: CharacterId;
   onVisitFriend?: (name: string) => void;
   onVisitMyRoom?: () => void;
@@ -89,7 +89,7 @@ export type GroupHouseScreenProps = {
  */
 export function GroupHouseScreen({
   houses = DEFAULT_HOUSES,
-  leafBalance = 0,
+  coinBalance = 0,
   characterId = DEFAULT_CHARACTER_ID,
   onVisitFriend,
   onVisitMyRoom,
@@ -245,8 +245,8 @@ export function GroupHouseScreen({
         </View>
         <View style={styles.flex} />
         <View style={[styles.pill, styles.leafPill, { backgroundColor: t.surfaceMuted }]}>
-          <Icon name="leaf" size={16} color={t.text} />
-          <Text style={[Typography.label, { color: t.text }]}>{leafBalance.toLocaleString()}</Text>
+          <Icon name="coin" size={16} color={t.warning} />
+          <Text style={[Typography.label, { color: t.text }]}>{coinBalance.toLocaleString()}</Text>
         </View>
         <Pressable
           onPress={onOpenSearch}

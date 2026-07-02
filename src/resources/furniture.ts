@@ -29,7 +29,7 @@ export type FurnitureItem = {
   slot: FurnitureSlot;
   /** Catalog tab grouping (decor screen). */
   category: FurnitureCategory;
-  /** Leaf cost in the catalog; gacha-only items are 0. */
+  /** Dia price in the shop; gacha-only items are 0. */
   price: number;
   /** Resource key → resolved to an image via assetSource(). */
   assetKey: string;
@@ -150,7 +150,7 @@ export const FURNITURE_ITEMS: FurnitureItem[] = [
 export type Wallpaper = {
   id: string;
   name: string;
-  /** Leaf cost in the catalog. */
+  /** Dia price in the shop. */
   price: number;
   assetKey: string;
   /** Fallback room background color while images are dummies. */

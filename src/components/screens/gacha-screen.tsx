@@ -103,24 +103,19 @@ const BOXES: GachaBox[] = [
 
 export type GachaScreenProps = {
   onBack?: () => void;
-  leafBalance?: number;
-  onSpendLeaves?: (amount: number) => boolean;
+  coinBalance?: number;
+  onSpendCoins?: (amount: number) => boolean;
   onObtain?: (items: string[]) => void;
 };
 
 /**
  * Gacha screen, ported from the prototype `GachaScreen` + `GachaAnimation`. Box
- * selection + single / multi pull with leaf cost, and a two-phase pull animation
- * (charge build-up → staggered reward reveal). Leaves are spent on press; the
- * reward is reported via onObtain when the reveal begins. Uses the built-in
- * Animated API (no worklets) so it runs in tests without extra setup.
+ * selection + single / multi pull with coin cost, and a two-phase pull animation
+ * (charge build-up → staggered reward reveal). Coins are spent on press; the
+ * reward is reported via onObtain when the reveal begins (repeats convert to dia
+ * upstream). Uses the built-in Animated API (no worklets) so it runs in tests.
  */
-export function GachaScreen({
-  onBack,
-  leafBalance = 0,
-  onSpendLeaves,
-  onObtain,
-}: GachaScreenProps) {
+export function GachaScreen({ onBack, coinBalance = 0, onSpendCoins, onObtain }: GachaScreenProps) {
   const t = useTokens();
   const [selectedId, setSelectedId] = useState(BOXES[0].id);
   const [error, setError] = useState('');
@@ -138,8 +133,8 @@ export function GachaScreen({
 
   const pull = (count: 1 | 10) => {
     const cost = count === 1 ? COST.single : COST.multi;
-    if (leafBalance < cost || onSpendLeaves?.(cost) === false) {
-      setError('잎사귀가 부족해요.');
+    if (coinBalance < cost || onSpendCoins?.(cost) === false) {
+      setError('코인이 부족해요.');
       return;
     }
     setError('');
@@ -173,8 +168,8 @@ export function GachaScreen({
         </Pressable>
         <Text style={[Typography.h2, { color: t.text }]}>가챠</Text>
         <View style={[styles.leafPill, { backgroundColor: t.surfaceMuted }]}>
-          <Icon name="leaf" size={14} color={t.text} />
-          <Text style={[Typography.label, { color: t.text }]}>{leafBalance.toLocaleString()}</Text>
+          <Icon name="coin" size={14} color={t.warning} />
+          <Text style={[Typography.label, { color: t.text }]}>{coinBalance.toLocaleString()}</Text>
         </View>
       </View>
 
@@ -232,13 +227,13 @@ export function GachaScreen({
             <PullButton
               label="1회 뽑기"
               cost={COST.single}
-              disabled={leafBalance < COST.single}
+              disabled={coinBalance < COST.single}
               onPress={() => pull(1)}
             />
             <PullButton
               label="10회 뽑기"
               cost={COST.multi}
-              disabled={leafBalance < COST.multi}
+              disabled={coinBalance < COST.multi}
               onPress={() => pull(10)}
             />
           </View>
@@ -387,7 +382,7 @@ function PullButton({
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
-      accessibilityLabel={`${label}, ${cost.toLocaleString()} 잎사귀`}
+      accessibilityLabel={`${label}, ${cost.toLocaleString()} 코인`}
       style={({ pressed }) => [
         styles.pullBtn,
         { backgroundColor: disabled ? DISABLED : t.primary },
@@ -395,7 +390,7 @@ function PullButton({
       ]}>
       <Text style={[Typography.label, { color: t.onPrimary }]}>{label}</Text>
       <View style={styles.costRow}>
-        <Icon name="leaf" size={12} color={t.onPrimary} />
+        <Icon name="coin" size={12} color={t.onPrimary} />
         <Text style={[styles.cost, { color: t.onPrimary }]}>{cost.toLocaleString()}</Text>
       </View>
     </Pressable>

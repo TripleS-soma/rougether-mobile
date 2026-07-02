@@ -13,7 +13,7 @@ export type PillProps = {
   style?: ViewStyle;
 };
 
-/** Small rounded label chip (e.g. leaf balance, level). */
+/** Small rounded label chip (e.g. coin balance, level). */
 export function Pill({ label, icon, background, color, style }: PillProps) {
   const t = useTokens();
   return (
