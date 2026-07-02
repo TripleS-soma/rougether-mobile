@@ -17,7 +17,7 @@ describe('AddRoutineScreen', () => {
     await fireEvent.press(getByText('루틴 추가하기'));
 
     expect(onAdd).toHaveBeenCalledWith(
-      expect.objectContaining({ title: '독서 30분', emoji: '📖', category: '취미' }),
+      expect.objectContaining({ title: '독서 30분', category: '취미' }),
     );
   });
 

@@ -21,33 +21,15 @@ import { formatDate, formatTime } from '@/utils/datetime';
 const SUNDAY = '#E89090';
 const DISABLED = '#D4C4B0';
 const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
-const EMOJI_CHOICES = [
-  '☀️',
-  '📖',
-  '💧',
-  '🏃',
-  '💖',
-  '✨',
-  '🌙',
-  '☕',
-  '🧘',
-  '🎵',
-  '🍳',
-  '💼',
-  '🌱',
-  '🐱',
-  '📝',
-  '🎨',
-];
 
-type Preset = { emoji: string; title: string; category: RoutineCategory };
+type Preset = { title: string; category: RoutineCategory };
 const PRESETS: Preset[] = [
-  { emoji: '☀️', title: '아침 기상', category: '일정' },
-  { emoji: '📖', title: '독서 30분', category: '취미' },
-  { emoji: '💧', title: '물 2L 마시기', category: '건강' },
-  { emoji: '🏃', title: '운동 인증', category: '건강' },
-  { emoji: '💖', title: '감사 일기', category: '취미' },
-  { emoji: '✨', title: '영어 공부', category: '공부' },
+  { title: '아침 기상', category: '일정' },
+  { title: '독서 30분', category: '취미' },
+  { title: '물 2L 마시기', category: '건강' },
+  { title: '운동 인증', category: '건강' },
+  { title: '감사 일기', category: '취미' },
+  { title: '영어 공부', category: '공부' },
 ];
 
 export type AddRoutineScreenProps = {
@@ -87,8 +69,6 @@ export function AddRoutineScreen({
   const isEdit = Boolean(editRoutine);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [title, setTitle] = useState(editRoutine?.title ?? '');
-  const [emoji, setEmoji] = useState(editRoutine?.emoji ?? '☀️');
-  const [showEmoji, setShowEmoji] = useState(false);
   const [category, setCategory] = useState<RoutineCategory>(
     editRoutine?.category ?? categories[0]?.id ?? '일정',
   );
@@ -110,7 +90,6 @@ export function AddRoutineScreen({
     if (!canSubmit) return;
     const payload: NewRoutine = {
       title: title.trim(),
-      emoji,
       category,
       days,
       startDate,
@@ -138,23 +117,10 @@ export function AddRoutineScreen({
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
-        {/* Title + emoji */}
+        {/* Title */}
         <View style={styles.field}>
           <Text style={[styles.label, { color: t.text }]}>루틴 이름</Text>
           <View style={[styles.titleRow, { backgroundColor: t.surface }]}>
-            <Pressable
-              onPress={() => setShowEmoji((v) => !v)}
-              accessibilityRole="button"
-              accessibilityLabel="이모지 선택"
-              style={[
-                styles.emojiBtn,
-                {
-                  backgroundColor: t.surfaceMuted,
-                  borderColor: showEmoji ? t.primary : 'transparent',
-                },
-              ]}>
-              <Text style={styles.emojiBig}>{emoji}</Text>
-            </Pressable>
             <TextInput
               style={[styles.titleInput, { color: t.text }]}
               value={title}
@@ -163,24 +129,6 @@ export function AddRoutineScreen({
               placeholderTextColor={t.textMuted}
             />
           </View>
-          {showEmoji ? (
-            <View style={[styles.emojiGrid, { backgroundColor: t.surface }]}>
-              {EMOJI_CHOICES.map((e) => (
-                <Pressable
-                  key={e}
-                  onPress={() => {
-                    setEmoji(e);
-                    setShowEmoji(false);
-                  }}
-                  style={[
-                    styles.emojiCell,
-                    { backgroundColor: emoji === e ? t.surfaceMuted : 'transparent' },
-                  ]}>
-                  <Text style={styles.emojiBig}>{e}</Text>
-                </Pressable>
-              ))}
-            </View>
-          ) : null}
         </View>
 
         {/* Category */}
@@ -228,7 +176,6 @@ export function AddRoutineScreen({
                   key={p.title}
                   onPress={() => {
                     setTitle(p.title);
-                    setEmoji(p.emoji);
                     setCategory(p.category);
                   }}
                   style={[
@@ -238,7 +185,6 @@ export function AddRoutineScreen({
                       borderColor: title === p.title ? t.primary : 'transparent',
                     },
                   ]}>
-                  <Text style={styles.presetEmoji}>{p.emoji}</Text>
                   <Text style={[Typography.body, styles.flex, { color: t.text }]} numberOfLines={1}>
                     {p.title}
                   </Text>
@@ -430,30 +376,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     padding: Spacing.two,
   },
-  emojiBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.md,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emojiBig: { fontSize: 22 },
   titleInput: { flex: 1, fontSize: 16, paddingVertical: Spacing.one },
-  emojiGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    borderRadius: Radius.lg,
-    padding: Spacing.two,
-    gap: Spacing.one,
-  },
-  emojiCell: {
-    width: '11%',
-    aspectRatio: 1,
-    borderRadius: Radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   chips: { gap: Spacing.two, paddingVertical: Spacing.half },
   chip: {
     flexDirection: 'row',
@@ -475,7 +398,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
   },
-  presetEmoji: { fontSize: 18 },
   dayRow: { flexDirection: 'row', gap: Spacing.one },
   day: {
     flex: 1,
