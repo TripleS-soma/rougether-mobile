@@ -63,7 +63,9 @@ export type OnboardingScreenProps = {
  */
 export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
   const t = useTokens();
-  const screenStyle = useScreenStyle();
+  // Pinned bottom action buttons → pad both edges so the notch / home indicator
+  // don't clip the top title or the bottom buttons.
+  const screenStyle = useScreenStyle(['top', 'bottom']);
   const [index, setIndex] = useState(0);
   const [showGoalSurvey, setShowGoalSurvey] = useState(false);
   const [showCharacterSelect, setShowCharacterSelect] = useState(false);
@@ -274,7 +276,6 @@ function Check({ tint, on, small }: { tint: string; on: string; small?: boolean 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    paddingBottom: Spacing.five,
   },
   flex: {
     flex: 1,
@@ -382,6 +383,8 @@ const styles = StyleSheet.create({
   },
   actions: {
     paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.two,
+    paddingBottom: Spacing.three,
     gap: Spacing.two,
   },
   primaryBtn: {
