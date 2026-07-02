@@ -1,8 +1,10 @@
+import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
 
 import { AppShell } from '@/components/app/app-shell';
 import { OnboardingScreen } from '@/components/screens/onboarding-screen';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
+import { useAuth } from '@/hooks/use-auth';
 import { loadOnboarding, resetOnboarding, saveOnboarding } from '@/lib/onboarding-store';
 
 /**
@@ -12,6 +14,7 @@ import { loadOnboarding, resetOnboarding, saveOnboarding } from '@/lib/onboardin
  * once.
  */
 export function AppRoot() {
+  const { status } = useAuth();
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
   const [characterId, setCharacterId] = useState<CharacterId>(DEFAULT_CHARACTER_ID);
 
@@ -31,8 +34,11 @@ export function AppRoot() {
     };
   }, []);
 
-  // Still loading the saved choice — the splash overlay covers this brief gap.
-  if (onboarded === null) return null;
+  // Wait for the session check; the splash overlay covers this brief gap.
+  if (status === 'loading' || onboarded === null) return null;
+
+  // Not signed in → send to the login route.
+  if (status === 'guest') return <Redirect href="/login" />;
 
   if (!onboarded) {
     return (
