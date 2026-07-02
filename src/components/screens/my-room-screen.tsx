@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -96,6 +96,24 @@ export function MyRoomScreen({
   const [newTodo, setNewTodo] = useState('');
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
 
+  // Scroll the tapped category's quick-add input into view (above the keyboard).
+  const scrollRef = useRef<ScrollView>(null);
+  const sectionY = useRef(0);
+  const groupY = useRef<Record<string, number>>({});
+
+  const openQuickAdd = (categoryId: string) => {
+    setNewTodo('');
+    const opening = addingCategory !== categoryId;
+    setAddingCategory(opening ? categoryId : null);
+    if (opening) {
+      // Let the input render, then scroll the category near the top.
+      setTimeout(() => {
+        const y = sectionY.current + (groupY.current[categoryId] ?? 0);
+        scrollRef.current?.scrollTo({ y: Math.max(0, y - 12), animated: true });
+      }, 80);
+    }
+  };
+
   const commitTodo = (categoryId: string) => {
     const title = newTodo.trim();
     if (title) onQuickAddRoutine?.(categoryId, title);
@@ -148,7 +166,10 @@ export function MyRoomScreen({
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={styles.body}
+          keyboardShouldPersistTaps="handled">
           <View style={styles.roomWrap}>
             <Room
               characterId={characterId}
@@ -165,7 +186,11 @@ export function MyRoomScreen({
             </Pressable>
           </View>
 
-          <View style={styles.section}>
+          <View
+            style={styles.section}
+            onLayout={(e) => {
+              sectionY.current = e.nativeEvent.layout.y;
+            }}>
             <View style={styles.sectionHead}>
               <Text style={[Typography.h2, { color: t.text }]}>오늘의 루틴</Text>
               <View style={styles.sectionHeadRight}>
@@ -201,7 +226,12 @@ export function MyRoomScreen({
               const doneInCat = items.filter((r) => r.completed).length;
 
               return (
-                <View key={cat.id} style={styles.group}>
+                <View
+                  key={cat.id}
+                  style={styles.group}
+                  onLayout={(e) => {
+                    groupY.current[cat.id] = e.nativeEvent.layout.y;
+                  }}>
                   <View style={styles.catHeader}>
                     <View style={[styles.catDot, { backgroundColor: `${cat.color}33` }]}>
                       <Text style={styles.catEmoji}>{cat.emoji}</Text>
@@ -212,10 +242,7 @@ export function MyRoomScreen({
                     </Text>
                     <View style={styles.flex} />
                     <Pressable
-                      onPress={() => {
-                        setNewTodo('');
-                        setAddingCategory((prev) => (prev === cat.id ? null : cat.id));
-                      }}
+                      onPress={() => openQuickAdd(cat.id)}
                       accessibilityRole="button"
                       accessibilityLabel={`${cat.label} 할 일 추가`}
                       style={[styles.catAdd, { backgroundColor: cat.color }]}>
@@ -336,10 +363,9 @@ export function MyRoomScreen({
                           autoFocus
                           value={newTodo}
                           onChangeText={setNewTodo}
-                          onSubmitEditing={() => commitTodo(cat.id)}
-                          onBlur={() => {
-                            if (!newTodo.trim()) setAddingCategory(null);
-                          }}
+                          // Commit on blur — pressing 완료 (single-line blurs on
+                          // submit) or tapping elsewhere both save the todo.
+                          onBlur={() => commitTodo(cat.id)}
                           placeholder="할 일 입력 후 완료"
                           placeholderTextColor={t.textMuted}
                           style={[styles.flex, styles.todoInput, { color: t.text }]}
