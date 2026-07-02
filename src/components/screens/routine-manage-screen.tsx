@@ -96,7 +96,6 @@ export function RoutineManageScreen({
                       styles.row,
                       { backgroundColor: t.surface, borderLeftColor: cat.color },
                     ]}>
-                    {routine.emoji ? <Text style={styles.rowEmoji}>{routine.emoji}</Text> : null}
                     <View style={styles.flex}>
                       <Text style={[Typography.body, { color: t.text }]}>{routine.title}</Text>
                       {(routine.alarmEnabled && routine.time) || routine.photoVerify ? (
@@ -205,9 +204,6 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     borderRadius: Radius.lg,
     borderLeftWidth: 4,
-  },
-  rowEmoji: {
-    fontSize: 18,
   },
   badges: {
     flexDirection: 'row',
