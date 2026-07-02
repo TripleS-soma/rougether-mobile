@@ -25,6 +25,7 @@ export type SettingsScreenProps = {
   onOpenNotifications?: () => void;
   onOpenSound?: () => void;
   onOpenHelp?: () => void;
+  onReplayOnboarding?: () => void;
   onLogout?: () => void;
 };
 
@@ -43,6 +44,7 @@ export function SettingsScreen({
   onOpenNotifications,
   onOpenSound,
   onOpenHelp,
+  onReplayOnboarding,
   onLogout,
 }: SettingsScreenProps) {
   const t = useTokens();
@@ -66,6 +68,7 @@ export function SettingsScreen({
       title: '기타',
       rows: [
         { icon: 'help', label: '도움말', onPress: onOpenHelp },
+        { icon: 'refresh', label: '온보딩 다시 보기', onPress: onReplayOnboarding },
         { icon: 'leave', label: '로그아웃', onPress: onLogout },
       ],
     },

@@ -85,6 +85,8 @@ const SCREEN_FOR_TAB: Record<NavTab, Screen> = {
 export type AppShellProps = {
   /** Character chosen at onboarding; defaults to the sample character. */
   characterId?: CharacterId;
+  /** Re-run the first-launch onboarding (설정 → 온보딩 다시 보기). */
+  onReplayOnboarding?: () => void;
 };
 
 /**
@@ -93,7 +95,10 @@ export type AppShellProps = {
  * gacha, friend room, house search/create). Mirrors the prototype App.tsx
  * navigation, minus the auth flow.
  */
-export function AppShell({ characterId = DEFAULT_CHARACTER_ID }: AppShellProps) {
+export function AppShell({
+  characterId = DEFAULT_CHARACTER_ID,
+  onReplayOnboarding,
+}: AppShellProps) {
   const { themeId, setThemeId } = useBrandTheme();
   const [screen, setScreen] = useState<Screen>('myRoom');
   const [routines, setRoutines] = useState<Routine[]>(SAMPLE_ROUTINES);
@@ -309,6 +314,7 @@ export function AppShell({ characterId = DEFAULT_CHARACTER_ID }: AppShellProps) 
             onOpenNotifications={() => setScreen('notifications')}
             onOpenSound={() => setScreen('sound')}
             onOpenHelp={() => setScreen('help')}
+            onReplayOnboarding={onReplayOnboarding}
           />
         ) : null}
 

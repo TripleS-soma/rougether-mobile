@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { AppShell } from '@/components/app/app-shell';
 import { OnboardingScreen } from '@/components/screens/onboarding-screen';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
-import { loadOnboarding, saveOnboarding } from '@/lib/onboarding-store';
+import { loadOnboarding, resetOnboarding, saveOnboarding } from '@/lib/onboarding-store';
 
 /**
  * App entry gate: on first launch shows the onboarding flow (intro → goals →
@@ -46,5 +46,13 @@ export function AppRoot() {
     );
   }
 
-  return <AppShell characterId={characterId} />;
+  return (
+    <AppShell
+      characterId={characterId}
+      onReplayOnboarding={() => {
+        void resetOnboarding();
+        setOnboarded(false);
+      }}
+    />
+  );
 }

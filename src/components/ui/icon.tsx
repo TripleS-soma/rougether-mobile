@@ -35,6 +35,7 @@ const ICONS = {
   sound: 'volume-high-outline',
   help: 'help-circle-outline',
   palette: 'color-palette-outline',
+  refresh: 'refresh-outline',
   // Bottom-nav
   myRoom: 'home',
   house: 'business',
