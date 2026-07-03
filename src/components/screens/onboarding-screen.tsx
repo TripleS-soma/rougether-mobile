@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { CharacterAvatar } from '@/components/character-avatar';
 import { Icon } from '@/components/ui/icon';
@@ -176,6 +176,22 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
   }
 
   // --- Intro slides ---
+  // Advance / go back by swiping the slide horizontally (in addition to the
+  // 다음/이전 buttons and the dots). Left = next (or on to the goal survey on the
+  // last slide), right = previous.
+  const goNext = () => (isLast ? setShowGoalSurvey(true) : setIndex((i) => i + 1));
+  const goPrev = () => setIndex((i) => Math.max(0, i - 1));
+  const SWIPE_THRESHOLD = 48;
+  const slidePan = PanResponder.create({
+    // Claim the gesture only for a deliberate horizontal drag, so taps and
+    // vertical scrolls still work.
+    onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 16 && Math.abs(g.dx) > Math.abs(g.dy),
+    onPanResponderRelease: (_, g) => {
+      if (g.dx <= -SWIPE_THRESHOLD) goNext();
+      else if (g.dx >= SWIPE_THRESHOLD) goPrev();
+    },
+  });
+
   return (
     <View style={[styles.screen, screenStyle]}>
       <View style={styles.skipRow}>
@@ -186,7 +202,7 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
         ) : null}
       </View>
 
-      <View style={styles.slideBody}>
+      <View style={styles.slideBody} {...slidePan.panHandlers}>
         <View style={[styles.slideCircle, { backgroundColor: slide.bg }]}>
           <Text style={styles.slideEmoji}>{slide.emoji}</Text>
         </View>
