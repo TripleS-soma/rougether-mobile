@@ -227,6 +227,8 @@ export function AppShell({
             onToggleCompletion={toggleCompletion}
             onEdit={() => setScreen('decor')}
             onAddRoutine={() => setScreen('routineManage')}
+            onCreateCategory={createRoutineCategory}
+            onDeleteCategory={deleteRoutineCategory}
             onOpenGacha={() => setScreen('gacha')}
             onQuickAddRoutine={quickAddTodo}
             onRenameRoutine={renameRoutine}

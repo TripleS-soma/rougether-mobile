@@ -34,6 +34,19 @@ export type RoutineCategoryMeta = {
   visibility: CategoryVisibility;
 };
 
+/**
+ * Pseudo-group for routines with no (or an unknown) category when the user has
+ * no categories at all — keeps them visible in category-grouped lists. The
+ * empty id means quick-adds from this group send no categoryId.
+ */
+export const UNCATEGORIZED_META: RoutineCategoryMeta = {
+  id: '',
+  label: '기타',
+  emoji: '✨',
+  color: '#B5A89C',
+  visibility: 'public',
+};
+
 export const ROUTINE_CATEGORIES: RoutineCategoryMeta[] = [
   { id: '일정', label: '일정', emoji: '🗓️', color: '#E8A87C', visibility: 'public' },
   { id: '공부', label: '공부', emoji: '📚', color: '#7FA8D4', visibility: 'public' },

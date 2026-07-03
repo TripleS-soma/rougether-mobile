@@ -1,6 +1,11 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { ROUTINE_CATEGORIES, type Routine, type RoutineCategoryMeta } from '@/constants/routines';
+import {
+  ROUTINE_CATEGORIES,
+  type Routine,
+  type RoutineCategoryMeta,
+  UNCATEGORIZED_META,
+} from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
 import { Spacing, Typography } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
@@ -28,6 +33,8 @@ export function RoutineManageScreen({
 }: RoutineManageScreenProps) {
   const t = useTokens();
   const knownIds = categories.map((c) => c.id);
+  // With no categories, uncategorized routines still need a group to render in.
+  const groups = categories.length > 0 ? categories : [UNCATEGORIZED_META];
 
   return (
     <View style={[styles.screen, useScreenStyle()]}>
@@ -66,8 +73,8 @@ export function RoutineManageScreen({
           </View>
         ) : null}
 
-        {categories.map((cat, idx) => {
-          const isFallback = idx === categories.length - 1;
+        {groups.map((cat, idx) => {
+          const isFallback = idx === groups.length - 1;
           const items = routines.filter((r) => {
             if (r.category === cat.id) return true;
             return isFallback && (!r.category || !knownIds.includes(r.category));
