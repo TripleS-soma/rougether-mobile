@@ -32,11 +32,11 @@ export type GachaScreenProps = {
   coinBalance?: number;
   diaBalance?: number;
   /**
-   * Draw once from a machine; resolves the drawn results, or null on failure.
-   * Spending + dupe→dia conversion happen server-side; the wallet is updated by
-   * the caller from the draw response.
+   * Draw from a machine (count: 1=단챠, 10=10연); resolves the drawn results, or
+   * null on failure. Spending + dupe→dia conversion happen server-side; the
+   * wallet is updated by the caller from the draw response.
    */
-  onDraw?: (gachaId: number) => Promise<DrawResult[] | null>;
+  onDraw?: (gachaId: number, count: 1 | 10) => Promise<DrawResult[] | null>;
 };
 
 /**
@@ -62,18 +62,19 @@ export function GachaScreen({
 
   const box = gachas.find((b) => b.id === selectedId) ?? gachas[0];
   const balanceFor = (c: 'COIN' | 'DIAMOND') => (c === 'COIN' ? coinBalance : diaBalance);
-  const affordable = box ? balanceFor(box.costCurrencyType) >= box.costAmount : false;
+  const canAfford = (count: 1 | 10) =>
+    box ? balanceFor(box.costCurrencyType) >= box.costAmount * count : false;
 
-  const pull = async () => {
+  const pull = async (count: 1 | 10) => {
     if (!box || phase !== 'idle') return;
-    if (!affordable) {
+    if (!canAfford(count)) {
       setError('잔액이 부족해요.');
       return;
     }
     setError('');
     hapticImpact();
     setPhase('charging');
-    const results = await onDraw?.(box.id);
+    const results = await onDraw?.(box.id, count);
     if (!results) {
       setPhase('idle');
       setError('뽑기에 실패했어요.');
@@ -161,30 +162,40 @@ export function GachaScreen({
               </Text>
             ) : null}
 
-            <Pressable
-              onPress={pull}
-              disabled={!affordable || phase !== 'idle'}
-              accessibilityRole="button"
-              accessibilityLabel={`뽑기, ${box.costAmount.toLocaleString()} ${
-                box.costCurrencyType === 'COIN' ? '코인' : '다이아'
-              }`}
-              style={({ pressed }) => [
-                styles.pullBtn,
-                { backgroundColor: affordable ? t.primary : t.disabledBg },
-                pressed && affordable && { backgroundColor: t.primaryActive },
-              ]}>
-              <Text style={[Typography.label, { color: t.onPrimary }]}>뽑기</Text>
-              <View style={styles.costRow}>
-                <Icon
-                  name={box.costCurrencyType === 'COIN' ? 'coin' : 'dia'}
-                  size={12}
-                  color={t.onPrimary}
-                />
-                <Text style={[styles.cost, { color: t.onPrimary }]}>
-                  {box.costAmount.toLocaleString()}
-                </Text>
-              </View>
-            </Pressable>
+            <View style={styles.pullRow}>
+              {([1, 10] as const).map((count) => {
+                const affordable = canAfford(count);
+                const cost = box.costAmount * count;
+                const label = count === 1 ? '1회 뽑기' : '10연 뽑기';
+                return (
+                  <Pressable
+                    key={count}
+                    onPress={() => pull(count)}
+                    disabled={!affordable || phase !== 'idle'}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${label}, ${cost.toLocaleString()} ${
+                      box.costCurrencyType === 'COIN' ? '코인' : '다이아'
+                    }`}
+                    style={({ pressed }) => [
+                      styles.pullBtn,
+                      { backgroundColor: affordable ? t.primary : t.disabledBg },
+                      pressed && affordable && { backgroundColor: t.primaryActive },
+                    ]}>
+                    <Text style={[Typography.label, { color: t.onPrimary }]}>{label}</Text>
+                    <View style={styles.costRow}>
+                      <Icon
+                        name={box.costCurrencyType === 'COIN' ? 'coin' : 'dia'}
+                        size={12}
+                        color={t.onPrimary}
+                      />
+                      <Text style={[styles.cost, { color: t.onPrimary }]}>
+                        {cost.toLocaleString()}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
         ) : null}
       </ScrollView>
@@ -358,7 +369,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   boxHeroIcon: { fontSize: 56 },
+  pullRow: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+  },
   pullBtn: {
+    flex: 1,
     paddingVertical: Spacing.three,
     borderRadius: Radius.pill,
     alignItems: 'center',

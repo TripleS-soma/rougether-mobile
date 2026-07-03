@@ -31,6 +31,10 @@ export type RoomDecorScreenProps = {
   wallpapers?: Wallpaper[];
   /** True while the catalogue is loading from the API. */
   loading?: boolean;
+  /** True when the catalogue failed to load (shows an error + 다시 시도). */
+  loadError?: boolean;
+  /** Re-run the failed catalogue load. */
+  onRetry?: () => void;
   /** Coin + dia balances shown in the header. */
   coinBalance?: number;
   /** Dia balance, for buying not-yet-owned items in the catalog. */
@@ -58,6 +62,8 @@ export function RoomDecorScreen({
   furniture = FURNITURE_ITEMS,
   wallpapers = WALLPAPERS,
   loading = false,
+  loadError = false,
+  onRetry,
   coinBalance = 0,
   diaBalance = 0,
   characterId = DEFAULT_CHARACTER_ID,
@@ -180,7 +186,22 @@ export function RoomDecorScreen({
           </View>
         ) : null}
 
-        {!loading && showWallpapers ? (
+        {!loading && loadError ? (
+          <View style={styles.loadingBlock}>
+            <Text style={[Typography.body, { color: t.textMuted }]}>
+              카탈로그를 불러오지 못했어요.
+            </Text>
+            <Pressable
+              onPress={onRetry}
+              accessibilityRole="button"
+              accessibilityLabel="다시 시도"
+              style={[styles.retryBtn, { backgroundColor: t.primary }]}>
+              <Text style={[Typography.label, { color: t.onPrimary }]}>다시 시도</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {!loading && !loadError && showWallpapers ? (
           <View style={styles.catalog}>
             <Text style={[Typography.label, styles.catalogTitle, { color: t.textMuted }]}>
               벽지
@@ -214,7 +235,7 @@ export function RoomDecorScreen({
           </View>
         ) : null}
 
-        {!loading && visibleItems.length > 0 ? (
+        {!loading && !loadError && visibleItems.length > 0 ? (
           <View style={styles.catalog}>
             {showWallpapers ? (
               <Text style={[Typography.label, styles.catalogTitle, { color: t.textMuted }]}>
@@ -334,6 +355,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.six,
     gap: Spacing.two,
+  },
+  retryBtn: {
+    borderRadius: Radius.pill,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.five,
   },
   catalogTitle: {
     marginBottom: Spacing.two,
