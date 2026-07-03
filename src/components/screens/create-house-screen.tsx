@@ -7,7 +7,6 @@ import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 
-const DISABLED = '#D9D2C5';
 const PRIVATE_ACCENT = '#D4A574';
 
 type Theme = { id: string; label: string; emoji: string; bg: string; border: string };
@@ -235,7 +234,7 @@ export function CreateHouseScreen({ onBack, onCreate }: CreateHouseScreenProps) 
           accessibilityRole="button"
           style={({ pressed }) => [
             styles.submit,
-            { backgroundColor: canSubmit ? t.primary : DISABLED },
+            { backgroundColor: canSubmit ? t.primary : t.disabledBg },
             pressed && canSubmit && { backgroundColor: t.primaryActive },
           ]}>
           <Text style={[Typography.label, { color: t.onPrimary }]}>집 만들기</Text>

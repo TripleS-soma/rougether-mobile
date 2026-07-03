@@ -103,6 +103,8 @@ export type SemanticColors = {
   warning: string;
   /** Status — negative. Astryx categorical red. */
   danger: string;
+  /** Background of disabled buttons/controls (text on it: `onPrimary`/`textMuted`). */
+  disabledBg: string;
 };
 
 export const Themes: Record<ThemeId, SemanticColors> = {
@@ -123,6 +125,7 @@ export const Themes: Record<ThemeId, SemanticColors> = {
     success: '#5F9B6A',
     warning: '#E8A24A',
     danger: '#D67878',
+    disabledBg: '#D9D2C5',
   },
   forest: {
     appShell: '#DCE8D0',
@@ -141,6 +144,7 @@ export const Themes: Record<ThemeId, SemanticColors> = {
     success: '#5F9B6A',
     warning: '#E8A24A',
     danger: '#D67878',
+    disabledBg: '#CBD8C4',
   },
   hanok: {
     appShell: '#D8C8AF',
@@ -159,6 +163,7 @@ export const Themes: Record<ThemeId, SemanticColors> = {
     success: '#7E9A6A',
     warning: '#C9943F',
     danger: '#C77A6A',
+    disabledBg: '#DCCFB9',
   },
 };
 

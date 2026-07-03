@@ -8,8 +8,6 @@ import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 
-const DISABLED = '#D4C4B0';
-
 type Slide = { emoji: string; bg: string; title: string; description: string };
 
 const SLIDES: Slide[] = [
@@ -259,7 +257,7 @@ function PrimaryButton({
       accessibilityRole="button"
       style={({ pressed }) => [
         styles.primaryBtn,
-        { backgroundColor: disabled ? DISABLED : t.primary },
+        { backgroundColor: disabled ? t.disabledBg : t.primary },
         pressed && !disabled && { backgroundColor: t.primaryActive },
       ]}>
       <Text style={[Typography.label, { color: t.onPrimary }]}>{label}</Text>

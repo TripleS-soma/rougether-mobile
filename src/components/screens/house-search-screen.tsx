@@ -15,9 +15,6 @@ import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 
-const ERROR = '#D67878';
-const DISABLED = '#E5DACB';
-
 export type HouseSearchScreenProps = {
   onBack?: () => void;
   onJoin?: (houseName: string) => void;
@@ -93,7 +90,7 @@ export function HouseSearchScreen({ onBack, onJoin, onCreate }: HouseSearchScree
                   styles.inputBox,
                   {
                     backgroundColor: t.surfaceMuted,
-                    borderColor: codeError ? ERROR : 'transparent',
+                    borderColor: codeError ? t.danger : 'transparent',
                   },
                 ]}>
                 <TextInput
@@ -114,12 +111,12 @@ export function HouseSearchScreen({ onBack, onJoin, onCreate }: HouseSearchScree
                 accessibilityRole="button"
                 style={[
                   styles.sideBtn,
-                  { backgroundColor: code.trim().length === 0 ? DISABLED : t.primary },
+                  { backgroundColor: code.trim().length === 0 ? t.disabledBg : t.primary },
                 ]}>
                 <Text style={[Typography.label, { color: t.onPrimary }]}>입주</Text>
               </Pressable>
             </View>
-            {codeError ? <Text style={[styles.msg, { color: ERROR }]}>{codeError}</Text> : null}
+            {codeError ? <Text style={[styles.msg, { color: t.danger }]}>{codeError}</Text> : null}
           </View>
         </View>
 
@@ -169,7 +166,7 @@ export function HouseSearchScreen({ onBack, onJoin, onCreate }: HouseSearchScree
                     </Text>
                     <Text style={[styles.meta, { color: t.textMuted }]}>
                       👥 {h.members} / {h.capacity}
-                      {full ? <Text style={{ color: ERROR }}> · 만석</Text> : null}
+                      {full ? <Text style={{ color: t.danger }}> · 만석</Text> : null}
                     </Text>
                   </View>
                   <Pressable
@@ -194,7 +191,7 @@ export function HouseSearchScreen({ onBack, onJoin, onCreate }: HouseSearchScree
         <Pressable
           onPress={onCreate}
           accessibilityRole="button"
-          style={[styles.createBtn, { borderColor: DISABLED }]}>
+          style={[styles.createBtn, { borderColor: t.disabledBg }]}>
           <Text style={[Typography.label, { color: t.textMuted }]}>👑 새 집 만들기</Text>
         </Pressable>
       </ScrollView>

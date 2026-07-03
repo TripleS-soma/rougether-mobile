@@ -6,6 +6,13 @@
  */
 export type Rarity = '일반' | '희귀' | '전설';
 
+/** Display color per rarity tier (badges, reveal cards). */
+export const RARITY_COLORS: Record<Rarity, string> = {
+  일반: '#9AA0A6',
+  희귀: '#7FA8D4',
+  전설: '#E8A24A',
+};
+
 /**
  * A placement position in the room (not a furniture type), so any furniture
  * image can occupy any slot. Layout: 3 top / 2 mid sides / 3 bottom.
