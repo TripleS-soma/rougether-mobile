@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Animated,
   Easing,
   Modal,
@@ -32,6 +33,8 @@ export type GachaScreenProps = {
   onBack?: () => void;
   /** Machines from the API (`GET /gacha`). */
   gachas?: GachaMachine[];
+  /** True while the machine list is loading from the API. */
+  loading?: boolean;
   coinBalance?: number;
   diaBalance?: number;
   /**
@@ -52,6 +55,7 @@ export type GachaScreenProps = {
 export function GachaScreen({
   onBack,
   gachas = [],
+  loading = false,
   coinBalance = 0,
   diaBalance = 0,
   onDraw,
@@ -106,7 +110,15 @@ export function GachaScreen({
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
-        {gachas.length === 0 ? (
+        {loading ? (
+          <View style={styles.loadingBlock}>
+            <ActivityIndicator color={t.primary} />
+            <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
+              뽑기 목록 불러오는 중…
+            </Text>
+          </View>
+        ) : null}
+        {!loading && gachas.length === 0 ? (
           <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
             지금은 뽑을 수 있는 뽑기가 없어요.
           </Text>
@@ -328,6 +340,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   body: { padding: Spacing.four, gap: Spacing.four },
+  loadingBlock: { alignItems: 'center', paddingVertical: Spacing.six, gap: Spacing.two },
   boxRow: { gap: Spacing.two, paddingVertical: Spacing.half },
   boxChip: {
     width: 56,

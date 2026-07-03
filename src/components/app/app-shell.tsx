@@ -105,6 +105,9 @@ export function AppShell({
     setWallet,
     nickname: apiNickname,
     streak,
+    loading: myRoomLoading,
+    error: myRoomError,
+    retry: retryMyRoom,
     toggleCompletion,
     quickAddTodo,
     addRoutine,
@@ -118,14 +121,20 @@ export function AppShell({
 
   // Gacha machines + draw (spend + dupe→dia handled server-side; wallet synced
   // from the draw response).
-  const { gachas, draw: drawGachaMachine } = useGacha(setWallet);
+  const { gachas, loading: gachasLoading, draw: drawGachaMachine } = useGacha(setWallet);
 
   const { logout } = useAuth();
 
   // Shop catalogue + purchase (dia via API; wallet synced from the purchase
   // response). Server-side room placement isn't wired yet, so arrangement is
   // client-side — seeded from the owned-items placement.
-  const { catalogue, ownedIds, placement, purchase: purchaseFurniture } = useShop(setWallet);
+  const {
+    catalogue,
+    ownedIds,
+    placement,
+    loading: shopLoading,
+    purchase: purchaseFurniture,
+  } = useShop(setWallet);
 
   const [placedFurnitureIds, setPlacedFurnitureIds] = useState<string[]>([]);
   const [wallpaperId, setWallpaperId] = useState(DEFAULT_WALLPAPER_ID);
@@ -170,6 +179,9 @@ export function AppShell({
             routines={routines}
             completions={completions}
             categories={categories}
+            loading={myRoomLoading}
+            loadError={!!myRoomError}
+            onRetry={retryMyRoom}
             placedFurnitureIds={placedFurnitureIds}
             wallpaperId={wallpaperId}
             furniture={catalogue.furniture}
@@ -193,6 +205,7 @@ export function AppShell({
             ownedIds={ownedIds}
             furniture={catalogue.furniture}
             wallpapers={catalogue.wallpapers}
+            loading={shopLoading}
             coinBalance={wallet.coin}
             diaBalance={wallet.dia}
             characterId={characterId}
@@ -237,6 +250,7 @@ export function AppShell({
         {screen === 'gacha' ? (
           <GachaScreen
             gachas={gachas}
+            loading={gachasLoading}
             coinBalance={wallet.coin}
             diaBalance={wallet.dia}
             onBack={() => setScreen('myRoom')}

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { Room } from '@/components/room/room';
@@ -29,6 +29,8 @@ export type RoomDecorScreenProps = {
   /** Item + wallpaper catalogue (defaults to the local set). */
   furniture?: FurnitureItem[];
   wallpapers?: Wallpaper[];
+  /** True while the catalogue is loading from the API. */
+  loading?: boolean;
   /** Coin + dia balances shown in the header. */
   coinBalance?: number;
   /** Dia balance, for buying not-yet-owned items in the catalog. */
@@ -55,6 +57,7 @@ export function RoomDecorScreen({
   ownedIds,
   furniture = FURNITURE_ITEMS,
   wallpapers = WALLPAPERS,
+  loading = false,
   coinBalance = 0,
   diaBalance = 0,
   characterId = DEFAULT_CHARACTER_ID,
@@ -145,7 +148,16 @@ export function RoomDecorScreen({
           })}
         </ScrollView>
 
-        {showWallpapers ? (
+        {loading ? (
+          <View style={styles.loadingBlock}>
+            <ActivityIndicator color={t.primary} />
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              카탈로그 불러오는 중…
+            </Text>
+          </View>
+        ) : null}
+
+        {!loading && showWallpapers ? (
           <View style={styles.catalog}>
             <Text style={[Typography.label, styles.catalogTitle, { color: t.textMuted }]}>
               벽지
@@ -179,7 +191,7 @@ export function RoomDecorScreen({
           </View>
         ) : null}
 
-        {visibleItems.length > 0 ? (
+        {!loading && visibleItems.length > 0 ? (
           <View style={styles.catalog}>
             {showWallpapers ? (
               <Text style={[Typography.label, styles.catalogTitle, { color: t.textMuted }]}>
@@ -294,6 +306,11 @@ const styles = StyleSheet.create({
   catalog: {
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.two,
+  },
+  loadingBlock: {
+    alignItems: 'center',
+    paddingVertical: Spacing.six,
+    gap: Spacing.two,
   },
   catalogTitle: {
     marginBottom: Spacing.two,

@@ -13,6 +13,7 @@ import type { Wallet } from '@/constants/currency';
 
 export function useGacha(onWallet: (wallet: Wallet) => void) {
   const [gachas, setGachas] = useState<GachaMachine[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
@@ -20,7 +21,8 @@ export function useGacha(onWallet: (wallet: Wallet) => void) {
       .then((list) => active && setGachas(list.map((g, i) => toGachaMachine(g, i))))
       .catch(() => {
         // Non-fatal; the screen shows an empty state.
-      });
+      })
+      .finally(() => active && setLoading(false));
     return () => {
       active = false;
     };
@@ -36,5 +38,5 @@ export function useGacha(onWallet: (wallet: Wallet) => void) {
     }
   };
 
-  return { gachas, draw };
+  return { gachas, loading, draw };
 }

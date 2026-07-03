@@ -34,6 +34,27 @@ describe('MyRoomScreen', () => {
     expect(getByLabelText('건강 할 일 추가')).toBeTruthy();
   });
 
+  it('keeps the quick-add button reachable on empty categories', async () => {
+    // No routines at all — every category header (and its +) must still render.
+    const { getByLabelText } = await render(<MyRoomScreen routines={[]} />);
+    expect(getByLabelText('일정 할 일 추가')).toBeTruthy();
+    expect(getByLabelText('취미 할 일 추가')).toBeTruthy();
+  });
+
+  it('shows a loading state, an error state with retry, and an empty state', async () => {
+    const loading = await render(<MyRoomScreen loading />);
+    expect(loading.getByText('불러오는 중…')).toBeTruthy();
+
+    const onRetry = jest.fn();
+    const failed = await render(<MyRoomScreen loadError onRetry={onRetry} />);
+    await fireEvent.press(failed.getByLabelText('다시 시도'));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+
+    // Brand-new user: no categories, no routines → guided empty state.
+    const empty = await render(<MyRoomScreen routines={[]} categories={[]} />);
+    expect(empty.getByText('아직 루틴이 없어요.')).toBeTruthy();
+  });
+
   // Camera test last: its photo path leaves a resolved promise that can disrupt
   // a following test's render in this harness.
   it('requires a camera photo to complete a 인증사진형 routine', async () => {

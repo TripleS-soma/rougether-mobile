@@ -41,6 +41,7 @@ import {
   toWallet,
   todayCompletions,
 } from '@/api/adapters';
+import { useToast } from '@/components/ui/toast';
 import { DEFAULT_WALLET, type Wallet } from '@/constants/currency';
 import type { NewRoutine, Routine, RoutineCategoryMeta } from '@/constants/routines';
 import { todayIso } from '@/utils/datetime';
@@ -55,6 +56,7 @@ export function useMyRoomData() {
   const [streak, setStreak] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { show: toast } = useToast();
 
   const reload = useCallback(async () => {
     const [cats, rts, tds, today, wals, me] = await Promise.all([
@@ -73,16 +75,22 @@ export function useMyRoomData() {
     if (me.nickname) setNickname(me.nickname);
   }, []);
 
-  useEffect(() => {
-    let active = true;
+  // Initial load + retry share the same load cycle (spinner → data | error).
+  const load = useCallback(async () => {
     setLoading(true);
-    reload()
-      .catch((e) => active && setError(e instanceof Error ? e.message : 'load failed'))
-      .finally(() => active && setLoading(false));
-    return () => {
-      active = false;
-    };
+    setError(null);
+    try {
+      await reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'load failed');
+    } finally {
+      setLoading(false);
+    }
   }, [reload]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const refreshWallet = useCallback(async () => {
     try {
@@ -115,6 +123,7 @@ export function useMyRoomData() {
         const dates = prev[id] ?? [];
         return { ...prev, [id]: wasDone ? [...dates, date] : dates.filter((d) => d !== date) };
       });
+      toast('완료 처리에 실패했어요', 'error');
     }
   };
 
@@ -123,7 +132,7 @@ export function useMyRoomData() {
       const created = await createTodo(toTodoCreate(category, title, dueDate));
       setRoutines((prev) => [...prev, toAppTodo(created)]);
     } catch {
-      // ignore; nothing added
+      toast('할 일을 추가하지 못했어요', 'error');
     }
   };
 
@@ -132,7 +141,7 @@ export function useMyRoomData() {
       const created = await createRoutine(toRoutineCreate(n));
       setRoutines((prev) => [...prev, toAppRoutine(created)]);
     } catch {
-      // ignore
+      toast('루틴을 만들지 못했어요', 'error');
     }
   };
 
@@ -148,7 +157,7 @@ export function useMyRoomData() {
         setRoutines((prev) => prev.map((r) => (r.id === id ? toAppRoutine(updated) : r)));
       }
     } catch {
-      // ignore
+      toast('수정에 실패했어요', 'error');
     }
   };
 
@@ -161,6 +170,7 @@ export function useMyRoomData() {
       else await apiUpdateRoutine(Number(id), toRoutineUpdate(item, { title }));
     } catch {
       setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, title: item.title } : r)));
+      toast('수정에 실패했어요', 'error');
     }
   };
 
@@ -176,6 +186,7 @@ export function useMyRoomData() {
           r.id === id ? { ...r, alarmEnabled: item.alarmEnabled, time: item.time } : r,
         ),
       );
+      toast('수정에 실패했어요', 'error');
     }
   };
 
@@ -188,6 +199,7 @@ export function useMyRoomData() {
       else await apiDeleteRoutine(Number(id));
     } catch {
       setRoutines((prev) => [...prev, item]);
+      toast('삭제에 실패했어요', 'error');
     }
   };
 
@@ -196,7 +208,7 @@ export function useMyRoomData() {
       const created = await createCategory(toCategoryCreate(cat, categories.length));
       setCategories((prev) => [...prev, toAppCategory(created, prev.length)]);
     } catch {
-      // ignore
+      toast('카테고리를 만들지 못했어요', 'error');
     }
   };
 
@@ -209,7 +221,7 @@ export function useMyRoomData() {
       const tds = await fetchTodos();
       setRoutines([...rts.map(toAppRoutine), ...tds.map(toAppTodo)]);
     } catch {
-      // ignore; category already removed locally
+      toast('카테고리 삭제에 실패했어요', 'error');
     }
   };
 
@@ -223,7 +235,8 @@ export function useMyRoomData() {
     streak,
     loading,
     error,
-    reload,
+    /** Re-run the full load cycle (used by the error state's 다시 시도). */
+    retry: load,
     toggleCompletion,
     quickAddTodo,
     addRoutine,

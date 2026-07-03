@@ -14,6 +14,7 @@ const DISABLED = '#E5DACB';
 
 export type SignupScreenProps = {
   onBack?: () => void;
+  /** Reserved for when the backend gains a signup endpoint (submit is disabled). */
   onSignupSuccess?: () => void;
 };
 
@@ -22,7 +23,7 @@ export type SignupScreenProps = {
  * the login screen; email + verification-code rows are custom (inline side
  * button) like the original. Icons are text placeholders for now.
  */
-export function SignupScreen({ onBack, onSignupSuccess }: SignupScreenProps) {
+export function SignupScreen({ onBack }: SignupScreenProps) {
   const t = useTokens();
 
   const [nickname, setNickname] = useState('');
@@ -100,15 +101,6 @@ export function SignupScreen({ onBack, onSignupSuccess }: SignupScreenProps) {
     setCodeError(null);
   };
 
-  const canSubmit =
-    nickname.length > 0 &&
-    emailValid &&
-    emailVerified &&
-    passwordValid &&
-    passwordMatch &&
-    agreeTerms &&
-    agreePrivacy;
-
   const sendDisabled = !emailValid || emailVerified || secondsLeft > 150;
 
   return (
@@ -129,6 +121,15 @@ export function SignupScreen({ onBack, onSignupSuccess }: SignupScreenProps) {
         <Text style={[styles.introTitle, { color: t.text }]}>마을의 새 친구를 환영해요 🐾</Text>
         <Text style={[styles.introSub, { color: t.textMuted }]}>
           정보를 입력하고 나만의 루게더를 시작하세요
+        </Text>
+      </View>
+
+      {/* The backend has no signup endpoint yet — be honest instead of a fake
+          flow that bounces back to login. */}
+      <View style={[styles.notice, { backgroundColor: `${t.warning}22`, borderColor: t.warning }]}>
+        <Text style={[styles.noticeText, { color: t.text }]}>
+          이메일 가입은 준비 중이에요. 지금은 로그인 화면의 개발 로그인(이메일 칸에 숫자 userId)으로
+          이용할 수 있어요.
         </Text>
       </View>
 
@@ -296,16 +297,14 @@ export function SignupScreen({ onBack, onSignupSuccess }: SignupScreenProps) {
         />
       </View>
 
+      {/* Signup API isn't available yet; keep the form as a preview but never
+          submit (onSignupSuccess stays for when the backend lands). */}
       <Pressable
-        onPress={onSignupSuccess}
-        disabled={!canSubmit}
+        disabled
         accessibilityRole="button"
-        style={({ pressed }) => [
-          styles.submit,
-          { backgroundColor: canSubmit ? t.primary : '#D9D2C5' },
-          pressed && canSubmit && { backgroundColor: t.primaryActive },
-        ]}>
-        <Text style={[styles.submitText, { color: t.onPrimary }]}>가입하고 마을 시작하기</Text>
+        accessibilityState={{ disabled: true }}
+        style={[styles.submit, { backgroundColor: '#D9D2C5' }]}>
+        <Text style={[styles.submitText, { color: t.onPrimary }]}>가입 준비 중</Text>
       </Pressable>
 
       <View style={styles.footer}>
@@ -391,6 +390,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.four,
     gap: Spacing.half,
+  },
+  notice: {
+    marginHorizontal: Spacing.four,
+    marginTop: Spacing.three,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+  },
+  noticeText: {
+    fontSize: 12,
+    lineHeight: 18,
   },
   introTitle: {
     fontSize: 20,
