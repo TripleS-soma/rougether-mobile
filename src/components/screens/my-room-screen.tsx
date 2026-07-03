@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -182,11 +183,25 @@ export function MyRoomScreen({
 
   // Scroll the tapped category's quick-add input into view (above the keyboard).
   const scrollRef = useRef<ScrollView>(null);
-  const sectionY = useRef(0);
-  const groupY = useRef<Record<string, number>>({});
+  const addRowRef = useRef<View>(null);
   const todoInputRef = useRef<TextInput>(null);
   // Set while opening the date picker so the input's blur doesn't commit/close.
   const skipBlurCommit = useRef(false);
+
+  // Bring the quick-add input itself into view (not just the category header —
+  // long categories left it hidden behind the keyboard). Measured against the
+  // ScrollView's inner view so nesting/list length don't matter.
+  const scrollToQuickAdd = useCallback(() => {
+    const scrollView = scrollRef.current;
+    const inner = scrollView?.getInnerViewNode?.();
+    const row = addRowRef.current;
+    if (!scrollView || !inner || !row) return;
+    row.measureLayout(
+      inner,
+      (_x, y) => scrollView.scrollTo({ y: Math.max(0, y - 160), animated: true }),
+      () => {},
+    );
+  }, []);
 
   const openQuickAdd = (categoryId: string) => {
     setNewTodo('');
@@ -194,11 +209,16 @@ export function MyRoomScreen({
     const opening = addingCategory !== categoryId;
     setAddingCategory(opening ? categoryId : null);
     if (opening) {
-      // Let the input render, then scroll the category near the top.
-      setTimeout(() => {
-        const y = sectionY.current + (groupY.current[categoryId] ?? 0);
-        scrollRef.current?.scrollTo({ y: Math.max(0, y - 12), animated: true });
-      }, 80);
+      // First pass once the input has rendered…
+      setTimeout(scrollToQuickAdd, 80);
+      // …then re-align after the keyboard actually appears — its resize/pan
+      // shifts the viewport and undoes the first scroll on device.
+      const sub = Keyboard.addListener('keyboardDidShow', () => {
+        scrollToQuickAdd();
+        sub.remove();
+      });
+      // Don't leak the listener if the keyboard never shows (hardware kb, web).
+      setTimeout(() => sub.remove(), 2000);
     }
   };
 
@@ -311,11 +331,7 @@ export function MyRoomScreen({
                 </Pressable>
               </View>
 
-              <View
-                style={styles.section}
-                onLayout={(e) => {
-                  sectionY.current = e.nativeEvent.layout.y;
-                }}>
+              <View style={styles.section}>
                 <View style={styles.sectionHead}>
                   <Text style={[Typography.h2, { color: t.text }]}>오늘의 루틴</Text>
                   <View style={styles.sectionHeadRight}>
@@ -396,12 +412,7 @@ export function MyRoomScreen({
                       const doneInCat = items.filter((r) => isDone(r.id, today)).length;
 
                       return (
-                        <View
-                          key={cat.id}
-                          style={styles.group}
-                          onLayout={(e) => {
-                            groupY.current[cat.id] = e.nativeEvent.layout.y;
-                          }}>
+                        <View key={cat.id} style={styles.group}>
                           <View style={styles.catHeader}>
                             <View style={[styles.catDot, { backgroundColor: `${cat.color}33` }]}>
                               <Text style={styles.catEmoji}>{cat.emoji}</Text>
@@ -503,7 +514,9 @@ export function MyRoomScreen({
                             })}
 
                             {addingCategory === cat.id ? (
-                              <View style={[styles.addRow, { backgroundColor: t.surface }]}>
+                              <View
+                                ref={addRowRef}
+                                style={[styles.addRow, { backgroundColor: t.surface }]}>
                                 <Icon name="checkbox-off" size={22} color={t.textDisabled} />
                                 <TextInput
                                   ref={todoInputRef}
