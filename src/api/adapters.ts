@@ -40,6 +40,12 @@ const DAY_CODES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'] as const;
 const dayNumToCode = (n: number) => DAY_CODES[n];
 const dayCodeToNum = (code: string) => DAY_CODES.indexOf(code as (typeof DAY_CODES)[number]);
 
+/** App category id (numeric string) → API categoryId; non-numeric ids are dropped. */
+const toCategoryId = (category?: string): number | undefined => {
+  const id = Number(category);
+  return category && Number.isFinite(id) ? id : undefined;
+};
+
 /** "07:00" → "07:00:00" (API wants seconds). */
 const toApiTime = (time: string) => (time.length === 5 ? `${time}:00` : time);
 /** "07:00:00" → "07:00". */
@@ -104,7 +110,7 @@ export function toRoutineCreate(n: NewRoutine): RoutineCreateRequest {
   const weekly = !!(n.days && n.days.length);
   return {
     title: n.title,
-    categoryId: n.category ? Number(n.category) : undefined,
+    categoryId: toCategoryId(n.category),
     authType: n.photoVerify ? 'PHOTO' : 'CHECK',
     repeatType: weekly ? 'WEEKLY' : 'DAILY',
     repeatDays: weekly ? { daysOfWeek: n.days!.map(dayNumToCode) } : undefined,
@@ -126,7 +132,7 @@ export function toRoutineUpdate(
   const weekly = !!(merged.days && merged.days.length);
   return {
     title: merged.title,
-    categoryId: merged.category ? Number(merged.category) : undefined,
+    categoryId: toCategoryId(merged.category),
     authType: merged.photoVerify ? 'PHOTO' : 'CHECK',
     repeatType: weekly ? 'WEEKLY' : 'DAILY',
     repeatDays: weekly ? { daysOfWeek: merged.days!.map(dayNumToCode) } : undefined,
@@ -154,7 +160,7 @@ export function toTodoCreate(
 ): TodoCreateRequest {
   return {
     title,
-    categoryId: category ? Number(category) : undefined,
+    categoryId: toCategoryId(category),
     dueDate,
   };
 }
@@ -163,7 +169,7 @@ export function toTodoUpdate(td: Routine, overrides: Partial<Routine> = {}): Tod
   const merged = { ...td, ...overrides };
   return {
     title: merged.title,
-    categoryId: merged.category ? Number(merged.category) : undefined,
+    categoryId: toCategoryId(merged.category),
     dueDate: merged.dueDate,
   };
 }

@@ -415,13 +415,17 @@ export function MyRoomScreen({
                               </Text>
                             ) : null}
                             <View style={styles.flex} />
-                            <Pressable
-                              onPress={() => openQuickAdd(cat.id)}
-                              accessibilityRole="button"
-                              accessibilityLabel={`${cat.label} 할 일 추가`}
-                              style={[styles.catAdd, { backgroundColor: cat.color }]}>
-                              <Icon name="add" size={14} color={t.onPrimary} />
-                            </Pressable>
+                            {/* The pseudo 기타 group (empty id) can't quick-add —
+                                uncategorized routines must not be creatable. */}
+                            {cat.id ? (
+                              <Pressable
+                                onPress={() => openQuickAdd(cat.id)}
+                                accessibilityRole="button"
+                                accessibilityLabel={`${cat.label} 할 일 추가`}
+                                style={[styles.catAdd, { backgroundColor: cat.color }]}>
+                                <Icon name="add" size={14} color={t.onPrimary} />
+                              </Pressable>
+                            ) : null}
                           </View>
 
                           <View style={styles.rows}>

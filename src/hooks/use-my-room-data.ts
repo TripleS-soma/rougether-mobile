@@ -43,7 +43,12 @@ import {
 } from '@/api/adapters';
 import { useToast } from '@/components/ui/toast';
 import { DEFAULT_WALLET, type Wallet } from '@/constants/currency';
-import type { NewRoutine, Routine, RoutineCategoryMeta } from '@/constants/routines';
+import {
+  type NewRoutine,
+  type Routine,
+  type RoutineCategoryMeta,
+  UNCATEGORIZED_META,
+} from '@/constants/routines';
 import { todayIso } from '@/utils/datetime';
 
 export function useMyRoomData() {
@@ -67,8 +72,42 @@ export function useMyRoomData() {
       fetchWallets(),
       fetchMe(),
     ]);
-    setCategories(cats.map((c, i) => toAppCategory(c, i)));
-    setRoutines([...rts.map(toAppRoutine), ...tds.map(toAppTodo)]);
+    let appCats = cats.map((c, i) => toAppCategory(c, i));
+    let items = [...rts.map(toAppRoutine), ...tds.map(toAppTodo)];
+
+    // Uncategorized routines must not exist: adopt any item without a (known)
+    // category into a real 기타 category, creating it server-side if needed.
+    // (Legacy data, or the server nulling categoryId on category delete.)
+    const known = new Set(appCats.map((c) => c.id));
+    const isOrphan = (r: Routine) => !r.category || !known.has(r.category);
+    if (items.some(isOrphan)) {
+      try {
+        let fallback = appCats.find((c) => c.label === UNCATEGORIZED_META.label);
+        if (!fallback) {
+          const created = await createCategory(
+            toCategoryCreate(UNCATEGORIZED_META, appCats.length),
+          );
+          fallback = toAppCategory(created, appCats.length);
+          appCats = [...appCats, fallback];
+        }
+        const target = fallback.id;
+        await Promise.all(
+          items
+            .filter(isOrphan)
+            .map((o) =>
+              o.kind === 'todo'
+                ? updateTodo(Number(o.id), toTodoUpdate(o, { category: target }))
+                : apiUpdateRoutine(Number(o.id), toRoutineUpdate(o, { category: target })),
+            ),
+        );
+        items = items.map((r) => (isOrphan(r) ? { ...r, category: target } : r));
+      } catch {
+        // Non-fatal: the pseudo 기타 group still keeps them visible.
+      }
+    }
+
+    setCategories(appCats);
+    setRoutines(items);
     setCompletions(todayCompletions(today, todayIso()));
     setWallet(toWallet(wals));
     setStreak(today.streak?.currentCount ?? 0);
@@ -221,10 +260,9 @@ export function useMyRoomData() {
     setCategories((prev) => prev.filter((c) => c.id !== id));
     try {
       await apiDeleteCategory(Number(id));
-      // Server may reassign the category's routines; refetch to stay in sync.
-      const rts = await fetchRoutines();
-      const tds = await fetchTodos();
-      setRoutines([...rts.map(toAppRoutine), ...tds.map(toAppTodo)]);
+      // The server may null out the deleted category's routines — a full reload
+      // re-adopts them into 기타 (uncategorized routines must not exist).
+      await reload();
     } catch {
       toast('카테고리 삭제에 실패했어요', 'error');
     }
