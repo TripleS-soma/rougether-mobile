@@ -19,6 +19,7 @@ import {
   deleteRoutine as apiDeleteRoutine,
   deleteTodo,
   fetchCategories,
+  fetchMe,
   fetchRoutines,
   fetchToday,
   fetchTodos,
@@ -49,21 +50,27 @@ export function useMyRoomData() {
   const [completions, setCompletions] = useState<Record<string, string[]>>({});
   const [categories, setCategories] = useState<RoutineCategoryMeta[]>([]);
   const [wallet, setWallet] = useState<Wallet>(DEFAULT_WALLET);
+  // Identity + streak, surfaced in the my-room header.
+  const [nickname, setNickname] = useState<string | null>(null);
+  const [streak, setStreak] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
-    const [cats, rts, tds, today, wals] = await Promise.all([
+    const [cats, rts, tds, today, wals, me] = await Promise.all([
       fetchCategories(),
       fetchRoutines(),
       fetchTodos(),
       fetchToday(),
       fetchWallets(),
+      fetchMe(),
     ]);
     setCategories(cats.map((c, i) => toAppCategory(c, i)));
     setRoutines([...rts.map(toAppRoutine), ...tds.map(toAppTodo)]);
     setCompletions(todayCompletions(today, todayIso()));
     setWallet(toWallet(wals));
+    setStreak(today.streak?.currentCount ?? 0);
+    if (me.nickname) setNickname(me.nickname);
   }, []);
 
   useEffect(() => {
@@ -212,6 +219,8 @@ export function useMyRoomData() {
     categories,
     wallet,
     setWallet,
+    nickname,
+    streak,
     loading,
     error,
     reload,

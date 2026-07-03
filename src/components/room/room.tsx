@@ -9,7 +9,9 @@ import {
   DEFAULT_PLACED_FURNITURE_IDS,
   DEFAULT_WALLPAPER_ID,
   FURNITURE_ITEMS,
+  type FurnitureItem,
   type FurnitureSlot,
+  type Wallpaper,
   WALLPAPERS,
 } from '@/resources/furniture';
 
@@ -37,6 +39,9 @@ export type RoomProps = {
   wallpaperId?: string;
   placedFurnitureIds?: string[];
   characterId?: CharacterId;
+  /** Item + wallpaper catalogue to resolve ids against (defaults to the local set). */
+  furniture?: FurnitureItem[];
+  wallpapers?: Wallpaper[];
   /** When true, tapping the character cycles through its poses (나의 방). */
   interactiveCharacter?: boolean;
   style?: StyleProp<ViewStyle>;
@@ -52,16 +57,18 @@ export function Room({
   wallpaperId = DEFAULT_WALLPAPER_ID,
   placedFurnitureIds = DEFAULT_PLACED_FURNITURE_IDS,
   characterId = DEFAULT_CHARACTER_ID,
+  furniture = FURNITURE_ITEMS,
+  wallpapers = WALLPAPERS,
   interactiveCharacter = false,
   style,
 }: RoomProps) {
-  const wallpaper = WALLPAPERS.find((w) => w.id === wallpaperId) ?? WALLPAPERS[0];
-  const placed = FURNITURE_ITEMS.filter((f) => placedFurnitureIds.includes(f.id));
+  const wallpaper = wallpapers.find((w) => w.id === wallpaperId) ?? wallpapers[0];
+  const placed = furniture.filter((f) => placedFurnitureIds.includes(f.id));
   const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
   const [pose, setPose] = useState(0);
 
   return (
-    <View style={[styles.room, { backgroundColor: wallpaper.color }, style]}>
+    <View style={[styles.room, { backgroundColor: wallpaper?.color ?? '#F3E9D6' }, style]}>
       {placed.map((item) => (
         <View key={item.id} style={[styles.furniture, SLOT_STYLE[item.slot]]}>
           <FurniturePlaceholder item={item} />

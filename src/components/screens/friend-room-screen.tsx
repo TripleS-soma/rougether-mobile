@@ -6,6 +6,7 @@ import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/con
 import { type Routine } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
+import { type FurnitureItem, type Wallpaper } from '@/resources/furniture';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 import { formatTime } from '@/utils/datetime';
@@ -33,6 +34,8 @@ export type FriendRoomScreenProps = {
   characterId?: CharacterId;
   wallpaperId?: string;
   placedFurnitureIds?: string[];
+  furniture?: FurnitureItem[];
+  wallpapers?: Wallpaper[];
   routines?: Routine[];
   onBack?: () => void;
   onCheer?: (type: CheerType) => void;
@@ -49,6 +52,8 @@ export function FriendRoomScreen({
   characterId = DEFAULT_CHARACTER_ID,
   wallpaperId,
   placedFurnitureIds,
+  furniture,
+  wallpapers,
   routines = DEFAULT_ROUTINES,
   onBack,
   onCheer,
@@ -88,6 +93,8 @@ export function FriendRoomScreen({
             characterId={characterId}
             wallpaperId={wallpaperId}
             placedFurnitureIds={placedFurnitureIds}
+            furniture={furniture}
+            wallpapers={wallpapers}
           />
         </View>
 

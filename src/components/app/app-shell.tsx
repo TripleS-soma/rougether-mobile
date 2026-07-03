@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
@@ -27,14 +27,12 @@ import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
 import { BottomNav, type NavTab } from '@/components/ui/bottom-nav';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { type Routine } from '@/constants/routines';
+import { useAuth } from '@/hooks/use-auth';
 import { useGacha } from '@/hooks/use-gacha';
 import { useMyRoomData } from '@/hooks/use-my-room-data';
+import { useShop } from '@/hooks/use-shop';
 import { useBrandTheme } from '@/hooks/use-tokens';
-import {
-  DEFAULT_PLACED_FURNITURE_IDS,
-  DEFAULT_WALLPAPER_ID,
-  FURNITURE_ITEMS,
-} from '@/resources/furniture';
+import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
 
 type Screen =
   | 'myRoom'
@@ -105,6 +103,8 @@ export function AppShell({
     categories,
     wallet,
     setWallet,
+    nickname: apiNickname,
+    streak,
     toggleCompletion,
     quickAddTodo,
     addRoutine,
@@ -120,19 +120,30 @@ export function AppShell({
   // from the draw response).
   const { gachas, draw: drawGachaMachine } = useGacha(setWallet);
 
-  const [placedFurnitureIds, setPlacedFurnitureIds] = useState<string[]>(
-    DEFAULT_PLACED_FURNITURE_IDS,
-  );
+  const { logout } = useAuth();
+
+  // Shop catalogue + purchase (dia via API; wallet synced from the purchase
+  // response). Server-side room placement isn't wired yet, so arrangement is
+  // client-side — seeded from the owned-items placement.
+  const { catalogue, ownedIds, placement, purchase: purchaseFurniture } = useShop(setWallet);
+
+  const [placedFurnitureIds, setPlacedFurnitureIds] = useState<string[]>([]);
   const [wallpaperId, setWallpaperId] = useState(DEFAULT_WALLPAPER_ID);
-  const [ownedFurnitureIds, setOwnedFurnitureIds] = useState<string[]>(() =>
-    FURNITURE_ITEMS.map((i) => i.id),
-  );
+  useEffect(() => {
+    setPlacedFurnitureIds(placement.placedFurnitureIds);
+    setWallpaperId(placement.wallpaperId);
+  }, [placement]);
+
   const [visitingFriend, setVisitingFriend] = useState('친구');
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
 
-  // Profile + settings (persistence is local for now).
+  // Profile + settings. Nickname seeds from the API (/me); there's no PUT /me
+  // yet, so profile-edit saves + bio stay local.
   const [nickname, setNickname] = useState('준서');
   const [bio, setBio] = useState('');
+  useEffect(() => {
+    if (apiNickname) setNickname(apiNickname);
+  }, [apiNickname]);
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(
     DEFAULT_NOTIFICATION_SETTINGS,
   );
@@ -154,11 +165,15 @@ export function AppShell({
       <View style={styles.content}>
         {screen === 'myRoom' ? (
           <MyRoomScreen
+            userName={nickname}
+            streakDays={streak}
             routines={routines}
             completions={completions}
             categories={categories}
             placedFurnitureIds={placedFurnitureIds}
             wallpaperId={wallpaperId}
+            furniture={catalogue.furniture}
+            wallpapers={catalogue.wallpapers}
             characterId={characterId}
             onToggleCompletion={toggleCompletion}
             onEdit={() => setScreen('decor')}
@@ -175,15 +190,14 @@ export function AppShell({
           <RoomDecorScreen
             initialPlacedIds={placedFurnitureIds}
             initialWallpaperId={wallpaperId}
-            ownedIds={ownedFurnitureIds}
+            ownedIds={ownedIds}
+            furniture={catalogue.furniture}
+            wallpapers={catalogue.wallpapers}
             coinBalance={wallet.coin}
             diaBalance={wallet.dia}
             characterId={characterId}
             onBuy={(itemId) => {
-              const item = FURNITURE_ITEMS.find((i) => i.id === itemId);
-              if (!item || ownedFurnitureIds.includes(itemId) || wallet.dia < item.price) return;
-              setWallet((w) => ({ ...w, dia: w.dia - item.price }));
-              setOwnedFurnitureIds((prev) => Array.from(new Set([...prev, itemId])));
+              void purchaseFurniture(itemId);
             }}
             onApply={(ids, wp) => {
               setPlacedFurnitureIds(ids);
@@ -248,6 +262,8 @@ export function AppShell({
             friendName={visitingFriend}
             placedFurnitureIds={placedFurnitureIds}
             wallpaperId={wallpaperId}
+            furniture={catalogue.furniture}
+            wallpapers={catalogue.wallpapers}
             characterId={characterId}
             routines={routines}
             onBack={() => setScreen('groupHouse')}
@@ -279,6 +295,10 @@ export function AppShell({
             onOpenSound={() => setScreen('sound')}
             onOpenHelp={() => setScreen('help')}
             onReplayOnboarding={onReplayOnboarding}
+            onLogout={() => {
+              // Clearing the session flips auth status → AppRoot redirects to /login.
+              void logout();
+            }}
           />
         ) : null}
 
