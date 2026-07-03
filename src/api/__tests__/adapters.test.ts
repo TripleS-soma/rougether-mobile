@@ -123,12 +123,13 @@ describe('API adapters', () => {
     const items: ItemResponse[] = [
       {
         id: 1,
-        name: '창문',
+        name: 'Forest Sage Set - Arched Window',
         placementType: 'positioned',
         defaultSlot: 'topLeft',
         categoryCode: 'decor',
         priceAmount: 100,
         assetKey: 'items/window.png',
+        theme: { id: 1, code: 'forest_sage', name: '숲속 세이지' },
         owned: true,
       },
       {
@@ -153,7 +154,14 @@ describe('API adapters', () => {
     ];
     const cat = toShopCatalogue(items);
     expect(cat.furniture.map((f) => f.id)).toEqual(['1', '2']);
-    expect(cat.furniture[0]).toMatchObject({ slot: 'topLeft', category: '장식', price: 100 });
+    // "…Set - " prefix is stripped for tiles; the theme rides along for filtering.
+    expect(cat.furniture[0]).toMatchObject({
+      name: 'Arched Window',
+      slot: 'topLeft',
+      category: '장식',
+      price: 100,
+      theme: '숲속 세이지',
+    });
     expect(cat.wallpapers.map((w) => w.id)).toEqual(['3']);
     expect(cat.ownedIds.sort()).toEqual(['1', '3']);
 

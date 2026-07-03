@@ -1,4 +1,5 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Icon, type IconName } from '@/components/ui/icon';
 import { DEFAULT_THEME_ID, Radius, Spacing, type ThemeId, Typography } from '@/constants/theme';
@@ -48,6 +49,8 @@ export function SettingsScreen({
   onLogout,
 }: SettingsScreenProps) {
   const t = useTokens();
+  // Logging out drops the session immediately, so gate it behind a confirm.
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   const sections: { title: string; rows: Row[] }[] = [
     {
@@ -69,7 +72,7 @@ export function SettingsScreen({
       rows: [
         { icon: 'help', label: '도움말', onPress: onOpenHelp },
         { icon: 'refresh', label: '온보딩 다시 보기', onPress: onReplayOnboarding },
-        { icon: 'leave', label: '로그아웃', onPress: onLogout },
+        { icon: 'leave', label: '로그아웃', onPress: () => setConfirmLogout(true) },
       ],
     },
   ];
@@ -146,6 +149,40 @@ export function SettingsScreen({
           </View>
         ))}
       </ScrollView>
+
+      <Modal
+        transparent
+        visible={confirmLogout}
+        animationType="fade"
+        onRequestClose={() => setConfirmLogout(false)}>
+        <Pressable style={styles.confirmBackdrop} onPress={() => setConfirmLogout(false)}>
+          <Pressable style={[styles.confirmCard, { backgroundColor: t.screen }]}>
+            <Text style={[Typography.h3, { color: t.text }]}>로그아웃할까요?</Text>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              다시 이용하려면 로그인이 필요해요.
+            </Text>
+            <View style={styles.confirmBtns}>
+              <Pressable
+                onPress={() => setConfirmLogout(false)}
+                accessibilityRole="button"
+                accessibilityLabel="취소"
+                style={[styles.confirmBtn, { backgroundColor: t.surfaceMuted }]}>
+                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setConfirmLogout(false);
+                  onLogout?.();
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="로그아웃 확인"
+                style={[styles.confirmBtn, { backgroundColor: t.danger }]}>
+                <Text style={[Typography.label, { color: t.onPrimary }]}>로그아웃</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -221,5 +258,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
+  },
+  confirmBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.four,
+  },
+  confirmCard: {
+    width: '100%',
+    maxWidth: 320,
+    borderRadius: Radius.lg,
+    padding: Spacing.four,
+    gap: Spacing.two,
+  },
+  confirmBtns: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    marginTop: Spacing.two,
+  },
+  confirmBtn: {
+    flex: 1,
+    borderRadius: Radius.pill,
+    paddingVertical: Spacing.three,
+    alignItems: 'center',
   },
 });

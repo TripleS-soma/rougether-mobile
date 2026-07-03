@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { BackHandler, StyleSheet, View } from 'react-native';
 
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
@@ -74,6 +74,29 @@ const SCREEN_FOR_TAB: Record<NavTab, Screen> = {
   myRoom: 'myRoom',
   house: 'groupHouse',
   settings: 'settings',
+};
+
+/**
+ * Where the Android hardware back button lands from each screen. `null` on
+ * myRoom = fall through to the OS default (exit the app). addRoutine is dynamic
+ * (returns to wherever it was opened from) and handled separately.
+ */
+const BACK_SCREEN: Record<Screen, Screen | null> = {
+  myRoom: null,
+  decor: 'myRoom',
+  routineManage: 'myRoom',
+  addRoutine: 'routineManage',
+  gacha: 'myRoom',
+  groupHouse: 'myRoom',
+  friendRoom: 'groupHouse',
+  houseSearch: 'groupHouse',
+  createHouse: 'houseSearch',
+  settings: 'myRoom',
+  profileEdit: 'settings',
+  passwordChange: 'settings',
+  notifications: 'settings',
+  sound: 'settings',
+  help: 'settings',
 };
 
 export type AppShellProps = {
@@ -167,6 +190,18 @@ export function AppShell({
     setScreen('addRoutine');
   };
 
+  // Android hardware back navigates the shell's own screen stack instead of
+  // exiting the app; only myRoom falls through to the OS default.
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      const target = screen === 'addRoutine' ? addReturnScreen : BACK_SCREEN[screen];
+      if (!target) return false;
+      setScreen(target);
+      return true;
+    });
+    return () => sub.remove();
+  }, [screen, addReturnScreen]);
+
   const activeTab = TAB_FOR_SCREEN[screen];
 
   return (
@@ -176,6 +211,8 @@ export function AppShell({
           <MyRoomScreen
             userName={nickname}
             streakDays={streak}
+            coinBalance={wallet.coin}
+            diaBalance={wallet.dia}
             routines={routines}
             completions={completions}
             categories={categories}

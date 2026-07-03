@@ -10,6 +10,7 @@ import { useTokens } from '@/hooks/use-tokens';
 const MIN_LENGTH = 8;
 
 export type PasswordChangeScreenProps = {
+  /** Reserved for when the backend gains password auth (submit is disabled). */
   onSubmit?: (current: string, next: string) => void;
   onBack?: () => void;
 };
@@ -19,7 +20,7 @@ export type PasswordChangeScreenProps = {
  * password length and match locally; the actual change request is delegated to
  * onSubmit by the app shell.
  */
-export function PasswordChangeScreen({ onSubmit, onBack }: PasswordChangeScreenProps) {
+export function PasswordChangeScreen({ onBack }: PasswordChangeScreenProps) {
   const t = useTokens();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
@@ -27,14 +28,20 @@ export function PasswordChangeScreen({ onSubmit, onBack }: PasswordChangeScreenP
 
   const tooShort = next.length > 0 && next.length < MIN_LENGTH;
   const mismatch = confirm.length > 0 && confirm !== next;
-  const canSubmit =
-    current.length > 0 && next.length >= MIN_LENGTH && confirm === next && next !== current;
 
   return (
     <View style={[styles.screen, useScreenStyle()]}>
       <ScreenHeader title="비밀번호 변경" onBack={onBack} />
 
       <ScrollView contentContainerStyle={styles.body}>
+        {/* The dev API has no password auth yet — be honest instead of a fake
+            success that just navigates back. */}
+        <View
+          style={[styles.notice, { backgroundColor: `${t.warning}22`, borderColor: t.warning }]}>
+          <Text style={[styles.noticeText, { color: t.text }]}>
+            비밀번호 변경은 준비 중이에요. 지금 계정은 개발 로그인이라 비밀번호가 없어요.
+          </Text>
+        </View>
         <Field
           label="현재 비밀번호"
           value={current}
@@ -71,15 +78,14 @@ export function PasswordChangeScreen({ onSubmit, onBack }: PasswordChangeScreenP
       </ScrollView>
 
       <View style={[styles.footer, { borderTopColor: t.border }]}>
+        {/* onSubmit is reserved for when a password API exists; disabled until then. */}
         <Pressable
-          onPress={() => canSubmit && onSubmit?.(current, next)}
-          disabled={!canSubmit}
+          disabled
           accessibilityRole="button"
+          accessibilityState={{ disabled: true }}
           accessibilityLabel="비밀번호 변경"
-          style={[styles.submit, { backgroundColor: canSubmit ? t.primary : t.surfaceMuted }]}>
-          <Text style={[Typography.label, { color: canSubmit ? t.onPrimary : t.textMuted }]}>
-            변경하기
-          </Text>
+          style={[styles.submit, { backgroundColor: t.surfaceMuted }]}>
+          <Text style={[Typography.label, { color: t.textMuted }]}>변경 준비 중</Text>
         </Pressable>
       </View>
     </View>
@@ -93,6 +99,16 @@ const styles = StyleSheet.create({
   body: {
     padding: Spacing.four,
     gap: Spacing.three,
+  },
+  notice: {
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+  },
+  noticeText: {
+    fontSize: 12,
+    lineHeight: 18,
   },
   footer: {
     padding: Spacing.four,

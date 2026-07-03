@@ -112,11 +112,16 @@ export function useMyRoomData() {
     });
     try {
       const numId = Number(id);
+      let rewardAmount: number | undefined;
       if (item?.kind === 'todo') {
-        await (wasDone ? uncompleteTodo(numId) : completeTodo(numId));
+        if (wasDone) await uncompleteTodo(numId);
+        else rewardAmount = (await completeTodo(numId)).rewardAmount;
       } else {
-        await (wasDone ? uncompleteRoutine(numId, date) : completeRoutine(numId, date));
+        if (wasDone) await uncompleteRoutine(numId, date);
+        else rewardAmount = (await completeRoutine(numId, date)).rewardAmount;
       }
+      // Completion pays out server-side — surface the actual amount.
+      if (!wasDone && rewardAmount) toast(`+${rewardAmount} 코인 획득!`, 'success');
       await refreshWallet();
     } catch {
       setCompletions((prev) => {
