@@ -252,7 +252,9 @@ const VALID_SLOTS: FurnitureSlot[] = [
 const WALLPAPER_COLOR = '#F3E9D6';
 
 const isPositioned = (i: ItemResponse) =>
-  i.placementType === 'positioned' && !!i.defaultSlot && VALID_SLOTS.includes(i.defaultSlot as FurnitureSlot);
+  i.placementType === 'positioned' &&
+  !!i.defaultSlot &&
+  VALID_SLOTS.includes(i.defaultSlot as FurnitureSlot);
 
 export function toFurnitureItem(item: ItemResponse): FurnitureItem {
   return {

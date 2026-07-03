@@ -20,11 +20,7 @@ import { ROUTINE_CATEGORIES, type Routine, type RoutineCategoryMeta } from '@/co
 import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { captureVerificationPhoto } from '@/lib/photo-verify';
-import {
-  DEFAULT_WALLPAPER_ID,
-  type FurnitureItem,
-  type Wallpaper,
-} from '@/resources/furniture';
+import { DEFAULT_WALLPAPER_ID, type FurnitureItem, type Wallpaper } from '@/resources/furniture';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 import { formatDate, formatTime, todayIso } from '@/utils/datetime';

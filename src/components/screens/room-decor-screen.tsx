@@ -65,7 +65,10 @@ export function RoomDecorScreen({
   const t = useTokens();
 
   // Owned items are placeable; everything else in the catalog is buyable.
-  const owned = useMemo(() => new Set(ownedIds ?? furniture.map((i) => i.id)), [ownedIds, furniture]);
+  const owned = useMemo(
+    () => new Set(ownedIds ?? furniture.map((i) => i.id)),
+    [ownedIds, furniture],
+  );
   const categories = useMemo(
     () => [ALL, WALLPAPER, ...Array.from(new Set(furniture.map((i) => i.category)))],
     [furniture],

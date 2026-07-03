@@ -30,12 +30,9 @@ import { type Routine } from '@/constants/routines';
 import { useAuth } from '@/hooks/use-auth';
 import { useGacha } from '@/hooks/use-gacha';
 import { useMyRoomData } from '@/hooks/use-my-room-data';
+import { useShop } from '@/hooks/use-shop';
 import { useBrandTheme } from '@/hooks/use-tokens';
-import {
-  DEFAULT_PLACED_FURNITURE_IDS,
-  DEFAULT_WALLPAPER_ID,
-  FURNITURE_ITEMS,
-} from '@/resources/furniture';
+import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
 
 type Screen =
   | 'myRoom'
@@ -125,13 +122,18 @@ export function AppShell({
 
   const { logout } = useAuth();
 
-  const [placedFurnitureIds, setPlacedFurnitureIds] = useState<string[]>(
-    DEFAULT_PLACED_FURNITURE_IDS,
-  );
+  // Shop catalogue + purchase (dia via API; wallet synced from the purchase
+  // response). Server-side room placement isn't wired yet, so arrangement is
+  // client-side — seeded from the owned-items placement.
+  const { catalogue, ownedIds, placement, purchase: purchaseFurniture } = useShop(setWallet);
+
+  const [placedFurnitureIds, setPlacedFurnitureIds] = useState<string[]>([]);
   const [wallpaperId, setWallpaperId] = useState(DEFAULT_WALLPAPER_ID);
-  const [ownedFurnitureIds, setOwnedFurnitureIds] = useState<string[]>(() =>
-    FURNITURE_ITEMS.map((i) => i.id),
-  );
+  useEffect(() => {
+    setPlacedFurnitureIds(placement.placedFurnitureIds);
+    setWallpaperId(placement.wallpaperId);
+  }, [placement]);
+
   const [visitingFriend, setVisitingFriend] = useState('친구');
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
 
@@ -170,6 +172,8 @@ export function AppShell({
             categories={categories}
             placedFurnitureIds={placedFurnitureIds}
             wallpaperId={wallpaperId}
+            furniture={catalogue.furniture}
+            wallpapers={catalogue.wallpapers}
             characterId={characterId}
             onToggleCompletion={toggleCompletion}
             onEdit={() => setScreen('decor')}
@@ -186,15 +190,14 @@ export function AppShell({
           <RoomDecorScreen
             initialPlacedIds={placedFurnitureIds}
             initialWallpaperId={wallpaperId}
-            ownedIds={ownedFurnitureIds}
+            ownedIds={ownedIds}
+            furniture={catalogue.furniture}
+            wallpapers={catalogue.wallpapers}
             coinBalance={wallet.coin}
             diaBalance={wallet.dia}
             characterId={characterId}
             onBuy={(itemId) => {
-              const item = FURNITURE_ITEMS.find((i) => i.id === itemId);
-              if (!item || ownedFurnitureIds.includes(itemId) || wallet.dia < item.price) return;
-              setWallet((w) => ({ ...w, dia: w.dia - item.price }));
-              setOwnedFurnitureIds((prev) => Array.from(new Set([...prev, itemId])));
+              void purchaseFurniture(itemId);
             }}
             onApply={(ids, wp) => {
               setPlacedFurnitureIds(ids);
@@ -259,6 +262,8 @@ export function AppShell({
             friendName={visitingFriend}
             placedFurnitureIds={placedFurnitureIds}
             wallpaperId={wallpaperId}
+            furniture={catalogue.furniture}
+            wallpapers={catalogue.wallpapers}
             characterId={characterId}
             routines={routines}
             onBack={() => setScreen('groupHouse')}
