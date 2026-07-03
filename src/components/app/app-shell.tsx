@@ -263,6 +263,9 @@ export function AppShell({
           <RoutineManageScreen
             routines={routines}
             categories={categories}
+            loading={myRoomLoading}
+            loadError={!!myRoomError}
+            onRetry={retryMyRoom}
             onBack={() => setScreen('myRoom')}
             onAdd={() => {
               setEditingRoutine(null);

@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import {
   ROUTINE_CATEGORIES,
@@ -7,7 +7,7 @@ import {
   UNCATEGORIZED_META,
 } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
-import { Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 import { formatTime } from '@/utils/datetime';
@@ -15,6 +15,12 @@ import { formatTime } from '@/utils/datetime';
 export type RoutineManageScreenProps = {
   routines?: Routine[];
   categories?: RoutineCategoryMeta[];
+  /** True while the routine data is loading (shows a spinner). */
+  loading?: boolean;
+  /** True when the load failed (shows an error + 다시 시도). */
+  loadError?: boolean;
+  /** Re-run the failed load. */
+  onRetry?: () => void;
   onBack?: () => void;
   onAdd?: () => void;
   onEdit?: (routine: Routine) => void;
@@ -27,6 +33,9 @@ export type RoutineManageScreenProps = {
 export function RoutineManageScreen({
   routines = [],
   categories = ROUTINE_CATEGORIES,
+  loading = false,
+  loadError = false,
+  onRetry,
   onBack,
   onAdd,
   onEdit,
@@ -59,7 +68,31 @@ export function RoutineManageScreen({
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
-        {routines.length === 0 ? (
+        {loading ? (
+          <View style={styles.empty}>
+            <ActivityIndicator color={t.primary} />
+            <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
+              불러오는 중…
+            </Text>
+          </View>
+        ) : null}
+
+        {!loading && loadError ? (
+          <View style={styles.empty}>
+            <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
+              데이터를 불러오지 못했어요.
+            </Text>
+            <Pressable
+              onPress={onRetry}
+              accessibilityRole="button"
+              accessibilityLabel="다시 시도"
+              style={[styles.retryBtn, { backgroundColor: t.primary }]}>
+              <Text style={[Typography.label, { color: t.onPrimary }]}>다시 시도</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {!loading && !loadError && routines.length === 0 ? (
           <View style={styles.empty}>
             <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
               아직 만든 루틴이 없어요.
@@ -73,63 +106,65 @@ export function RoutineManageScreen({
           </View>
         ) : null}
 
-        {groups.map((cat, idx) => {
-          const isFallback = idx === groups.length - 1;
-          const items = routines.filter((r) => {
-            if (r.category === cat.id) return true;
-            return isFallback && (!r.category || !knownIds.includes(r.category));
-          });
-          if (items.length === 0) return null;
+        {loading || loadError
+          ? null
+          : groups.map((cat, idx) => {
+              const isFallback = idx === groups.length - 1;
+              const items = routines.filter((r) => {
+                if (r.category === cat.id) return true;
+                return isFallback && (!r.category || !knownIds.includes(r.category));
+              });
+              if (items.length === 0) return null;
 
-          return (
-            <View key={cat.id} style={styles.group}>
-              <View style={styles.catHeader}>
-                <View style={[styles.catDot, { backgroundColor: `${cat.color}33` }]}>
-                  <Text style={styles.catEmoji}>{cat.emoji}</Text>
-                </View>
-                <Text style={[Typography.label, { color: cat.color }]}>{cat.label}</Text>
-                <Text style={[Typography.supporting, { color: t.textDisabled }]}>
-                  {items.length}
-                </Text>
-              </View>
+              return (
+                <View key={cat.id} style={styles.group}>
+                  <View style={styles.catHeader}>
+                    <View style={[styles.catDot, { backgroundColor: `${cat.color}33` }]}>
+                      <Text style={styles.catEmoji}>{cat.emoji}</Text>
+                    </View>
+                    <Text style={[Typography.label, { color: cat.color }]}>{cat.label}</Text>
+                    <Text style={[Typography.supporting, { color: t.textDisabled }]}>
+                      {items.length}
+                    </Text>
+                  </View>
 
-              <View style={styles.rows}>
-                {items.map((routine) => (
-                  <Pressable
-                    key={routine.id}
-                    onPress={() => onEdit?.(routine)}
-                    accessibilityRole="button"
-                    style={[styles.row, { borderLeftColor: cat.color }]}>
-                    <View style={styles.flex}>
-                      <Text style={[Typography.body, { color: t.text }]}>{routine.title}</Text>
-                      {(routine.alarmEnabled && routine.time) || routine.photoVerify ? (
-                        <View style={styles.badges}>
-                          {routine.alarmEnabled && routine.time ? (
-                            <View style={styles.badge}>
-                              <Icon name="bell" size={11} color={t.textMuted} />
-                              <Text style={[styles.badgeText, { color: t.textMuted }]}>
-                                {formatTime(routine.time)}
-                              </Text>
-                            </View>
-                          ) : null}
-                          {routine.photoVerify ? (
-                            <View style={styles.badge}>
-                              <Icon name="camera" size={11} color={t.textMuted} />
-                              <Text style={[styles.badgeText, { color: t.textMuted }]}>
-                                사진 인증
-                              </Text>
+                  <View style={styles.rows}>
+                    {items.map((routine) => (
+                      <Pressable
+                        key={routine.id}
+                        onPress={() => onEdit?.(routine)}
+                        accessibilityRole="button"
+                        style={[styles.row, { borderLeftColor: cat.color }]}>
+                        <View style={styles.flex}>
+                          <Text style={[Typography.body, { color: t.text }]}>{routine.title}</Text>
+                          {(routine.alarmEnabled && routine.time) || routine.photoVerify ? (
+                            <View style={styles.badges}>
+                              {routine.alarmEnabled && routine.time ? (
+                                <View style={styles.badge}>
+                                  <Icon name="bell" size={11} color={t.textMuted} />
+                                  <Text style={[styles.badgeText, { color: t.textMuted }]}>
+                                    {formatTime(routine.time)}
+                                  </Text>
+                                </View>
+                              ) : null}
+                              {routine.photoVerify ? (
+                                <View style={styles.badge}>
+                                  <Icon name="camera" size={11} color={t.textMuted} />
+                                  <Text style={[styles.badgeText, { color: t.textMuted }]}>
+                                    사진 인증
+                                  </Text>
+                                </View>
+                              ) : null}
                             </View>
                           ) : null}
                         </View>
-                      ) : null}
-                    </View>
-                    <Text style={[styles.chevron, { color: t.textDisabled }]}>›</Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-          );
-        })}
+                        <Text style={[styles.chevron, { color: t.textDisabled }]}>›</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+              );
+            })}
       </ScrollView>
     </View>
   );
@@ -172,7 +207,12 @@ const styles = StyleSheet.create({
   empty: {
     alignItems: 'center',
     paddingTop: Spacing.six,
-    gap: Spacing.half,
+    gap: Spacing.two,
+  },
+  retryBtn: {
+    borderRadius: Radius.pill,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.five,
   },
   emptyHint: {
     flexDirection: 'row',
