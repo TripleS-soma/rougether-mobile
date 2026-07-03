@@ -30,6 +30,19 @@ describe('AddRoutineScreen', () => {
     expect(onAdd).not.toHaveBeenCalled();
   });
 
+  it('does not submit without a category (uncategorized routines cannot exist)', async () => {
+    const onAdd = jest.fn();
+    const { getByText, getByPlaceholderText } = await render(
+      <AddRoutineScreen categories={[]} onAdd={onAdd} />,
+    );
+
+    expect(getByText(/카테고리가 없어요/)).toBeTruthy();
+    await fireEvent.changeText(getByPlaceholderText('예) 매일 30분 산책'), '산책');
+    await fireEvent.press(getByText('루틴 추가하기'));
+
+    expect(onAdd).not.toHaveBeenCalled();
+  });
+
   it('prefills the form and updates in edit mode', async () => {
     const onUpdate = jest.fn();
     const routine = SAMPLE_ROUTINES[3]; // '영어 공부' (id 4)

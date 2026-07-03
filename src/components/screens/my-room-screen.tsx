@@ -14,11 +14,17 @@ import {
 
 import { CharacterAvatar } from '@/components/character-avatar';
 import { Room } from '@/components/room/room';
+import { CategoryManagerSheet } from '@/components/screens/sheets/category-manager-sheet';
 import { TimePickerSheet } from '@/components/screens/sheets/time-picker-sheet';
 import { Calendar } from '@/components/ui/calendar';
 import { WalletPills } from '@/components/ui/wallet-pills';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
-import { ROUTINE_CATEGORIES, type Routine, type RoutineCategoryMeta } from '@/constants/routines';
+import {
+  ROUTINE_CATEGORIES,
+  type Routine,
+  type RoutineCategoryMeta,
+  UNCATEGORIZED_META,
+} from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { captureVerificationPhoto } from '@/lib/photo-verify';
@@ -60,6 +66,10 @@ export type MyRoomScreenProps = {
   // Callbacks (wired separately).
   onEdit?: () => void;
   onAddRoutine?: () => void;
+  /** Create a category (햄버거 메뉴 → 카테고리 관리 sheet). */
+  onCreateCategory?: (category: RoutineCategoryMeta) => void;
+  /** Delete a category (카테고리 관리 sheet). */
+  onDeleteCategory?: (id: string) => void;
   /** Toggle a routine's completion on a specific date ("YYYY-MM-DD"). */
   onToggleCompletion?: (id: string, date: string) => void;
   onOpenGacha?: () => void;
@@ -105,6 +115,8 @@ export function MyRoomScreen({
   onRetry,
   onEdit,
   onAddRoutine,
+  onCreateCategory,
+  onDeleteCategory,
   onToggleCompletion,
   onOpenGacha,
   onQuickAddRoutine,
@@ -124,6 +136,18 @@ export function MyRoomScreen({
   const roomRoutines = routines.filter((r) => r.kind !== 'todo' || r.dueDate === today);
   const completedCount = roomRoutines.filter((r) => isDone(r.id, today)).length;
   const progress = roomRoutines.length > 0 ? completedCount / roomRoutines.length : 0;
+
+  // Routines with a missing/unknown category land in the last group; with no
+  // categories at all, render a single pseudo-group so they stay visible
+  // (routines can exist without any category, e.g. after a category delete).
+  // A truly empty account shows just the guided empty state instead.
+  const groups =
+    categories.length > 0 ? categories : roomRoutines.length > 0 ? [UNCATEGORIZED_META] : [];
+
+  // Header hamburger popover (방 편집 / 카테고리 관리 / 루틴 관리) + the
+  // category manager sheet it opens.
+  const [navMenuOpen, setNavMenuOpen] = useState(false);
+  const [categorySheetOpen, setCategorySheetOpen] = useState(false);
 
   // Which category's quick-add input is open, the in-progress todo text + due
   // date, and which routine's kebab menu is open.
@@ -228,11 +252,11 @@ export function MyRoomScreen({
         <View style={styles.headerRight}>
           <WalletPills coin={coinBalance} dia={diaBalance} />
           <Pressable
-            onPress={onEdit}
+            onPress={() => setNavMenuOpen(true)}
             accessibilityRole="button"
-            accessibilityLabel="방 편집"
+            accessibilityLabel="메뉴"
             style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-            <Icon name="edit" size={18} color={t.text} />
+            <Icon name="menu" size={20} color={t.text} />
           </Pressable>
         </View>
       </View>
@@ -345,7 +369,7 @@ export function MyRoomScreen({
                   </View>
                 ) : null}
 
-                {!loading && !loadError && categories.length === 0 ? (
+                {!loading && !loadError && categories.length === 0 && roomRoutines.length === 0 ? (
                   <View style={styles.stateBlock}>
                     <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
                       아직 루틴이 없어요.
@@ -361,8 +385,8 @@ export function MyRoomScreen({
 
                 {loading || loadError
                   ? null
-                  : categories.map((cat, idx) => {
-                      const isFallback = idx === categories.length - 1;
+                  : groups.map((cat, idx) => {
+                      const isFallback = idx === groups.length - 1;
                       const items = roomRoutines.filter((r) => {
                         if (r.category === cat.id) return true;
                         return isFallback && (!r.category || !knownIds.includes(r.category));
@@ -391,13 +415,17 @@ export function MyRoomScreen({
                               </Text>
                             ) : null}
                             <View style={styles.flex} />
-                            <Pressable
-                              onPress={() => openQuickAdd(cat.id)}
-                              accessibilityRole="button"
-                              accessibilityLabel={`${cat.label} 할 일 추가`}
-                              style={[styles.catAdd, { backgroundColor: cat.color }]}>
-                              <Icon name="add" size={14} color={t.onPrimary} />
-                            </Pressable>
+                            {/* The pseudo 기타 group (empty id) can't quick-add —
+                                uncategorized routines must not be creatable. */}
+                            {cat.id ? (
+                              <Pressable
+                                onPress={() => openQuickAdd(cat.id)}
+                                accessibilityRole="button"
+                                accessibilityLabel={`${cat.label} 할 일 추가`}
+                                style={[styles.catAdd, { backgroundColor: cat.color }]}>
+                                <Icon name="add" size={14} color={t.onPrimary} />
+                              </Pressable>
+                            ) : null}
                           </View>
 
                           <View style={styles.rows}>
@@ -738,6 +766,64 @@ export function MyRoomScreen({
         </Pressable>
       </Modal>
 
+      {/* Header hamburger popover: quick links to the management screens. */}
+      <Modal
+        transparent
+        visible={navMenuOpen}
+        animationType="fade"
+        onRequestClose={() => setNavMenuOpen(false)}>
+        <Pressable style={styles.popoverBackdrop} onPress={() => setNavMenuOpen(false)}>
+          <View style={[styles.popover, { backgroundColor: t.screen, borderColor: t.border }]}>
+            {(
+              [
+                {
+                  icon: 'edit',
+                  label: '방 편집',
+                  onPress: () => onEdit?.(),
+                },
+                {
+                  icon: 'folder',
+                  label: '카테고리 관리',
+                  onPress: () => setCategorySheetOpen(true),
+                },
+                {
+                  icon: 'list',
+                  label: '루틴 관리',
+                  onPress: () => onAddRoutine?.(),
+                },
+              ] as const
+            ).map((item, idx, arr) => (
+              <Pressable
+                key={item.label}
+                onPress={() => {
+                  setNavMenuOpen(false);
+                  item.onPress();
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={item.label}
+                style={[
+                  styles.popoverItem,
+                  idx !== arr.length - 1 && {
+                    borderBottomColor: t.border,
+                    borderBottomWidth: StyleSheet.hairlineWidth,
+                  },
+                ]}>
+                <Icon name={item.icon} size={18} color={t.text} />
+                <Text style={[Typography.body, { color: t.text }]}>{item.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </Pressable>
+      </Modal>
+
+      <CategoryManagerSheet
+        visible={categorySheetOpen}
+        categories={categories}
+        onCreate={(cat) => onCreateCategory?.(cat)}
+        onDelete={(id) => onDeleteCategory?.(id)}
+        onClose={() => setCategorySheetOpen(false)}
+      />
+
       <TimePickerSheet
         visible={timeRoutine !== null}
         initialEnabled={timeRoutine?.alarmEnabled ?? false}
@@ -1031,6 +1117,32 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.five,
+  },
+  popoverBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+  },
+  popover: {
+    position: 'absolute',
+    // Anchored under the header's hamburger button (header ≈ status bar + 72).
+    top: 104,
+    right: Spacing.four,
+    minWidth: 176,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    overflow: 'hidden',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  popoverItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.three,
   },
   badges: {
     flexDirection: 'row',

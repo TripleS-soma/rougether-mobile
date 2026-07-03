@@ -227,6 +227,8 @@ export function AppShell({
             onToggleCompletion={toggleCompletion}
             onEdit={() => setScreen('decor')}
             onAddRoutine={() => setScreen('routineManage')}
+            onCreateCategory={createRoutineCategory}
+            onDeleteCategory={deleteRoutineCategory}
             onOpenGacha={() => setScreen('gacha')}
             onQuickAddRoutine={quickAddTodo}
             onRenameRoutine={renameRoutine}
@@ -261,6 +263,9 @@ export function AppShell({
           <RoutineManageScreen
             routines={routines}
             categories={categories}
+            loading={myRoomLoading}
+            loadError={!!myRoomError}
+            onRetry={retryMyRoom}
             onBack={() => setScreen('myRoom')}
             onAdd={() => {
               setEditingRoutine(null);

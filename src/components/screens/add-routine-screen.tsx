@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { CategoryManagerSheet } from '@/components/screens/sheets/category-manager-sheet';
@@ -70,8 +70,14 @@ export function AddRoutineScreen({
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [title, setTitle] = useState(editRoutine?.title ?? '');
   const [category, setCategory] = useState<RoutineCategory>(
-    editRoutine?.category ?? categories[0]?.id ?? '일정',
+    editRoutine?.category ?? categories[0]?.id ?? '',
   );
+  // Every routine must belong to an existing category — no uncategorized
+  // routines. Categories load async, so re-seed once they arrive.
+  const categoryValid = categories.some((c) => c.id === category);
+  useEffect(() => {
+    if (!categoryValid && categories.length > 0) setCategory(categories[0].id);
+  }, [categoryValid, categories]);
   const [days, setDays] = useState<number[]>(editRoutine?.days ?? [1, 2, 3, 4, 5]);
   const [alarmEnabled, setAlarmEnabled] = useState(editRoutine?.alarmEnabled ?? true);
   const [time, setTime] = useState(editRoutine?.time ?? '07:00');
@@ -84,7 +90,7 @@ export function AddRoutineScreen({
   const toggleDay = (d: number) =>
     setDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort()));
 
-  const canSubmit = title.trim().length > 0 && days.length > 0;
+  const canSubmit = title.trim().length > 0 && days.length > 0 && categoryValid;
 
   const submit = () => {
     if (!canSubmit) return;
@@ -164,6 +170,11 @@ export function AddRoutineScreen({
               );
             })}
           </ScrollView>
+          {categories.length === 0 ? (
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              카테고리가 없어요. 위의 관리 버튼으로 먼저 만들어주세요.
+            </Text>
+          ) : null}
         </View>
 
         {/* Presets (add mode only) */}
@@ -176,7 +187,12 @@ export function AddRoutineScreen({
                   key={p.title}
                   onPress={() => {
                     setTitle(p.title);
-                    setCategory(p.category);
+                    // Presets name local category labels; only switch when the
+                    // user actually has a matching category.
+                    const match = categories.find(
+                      (c) => c.id === p.category || c.label === p.category,
+                    );
+                    if (match) setCategory(match.id);
                   }}
                   style={[
                     styles.preset,

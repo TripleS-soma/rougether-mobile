@@ -41,6 +41,43 @@ describe('MyRoomScreen', () => {
     expect(getByLabelText('취미 할 일 추가')).toBeTruthy();
   });
 
+  it('opens the hamburger menu and routes each item', async () => {
+    const onEdit = jest.fn();
+    const onAddRoutine = jest.fn();
+    const { getByLabelText, getByText, queryByText } = await render(
+      <MyRoomScreen routines={SAMPLE_ROUTINES} onEdit={onEdit} onAddRoutine={onAddRoutine} />,
+    );
+
+    await fireEvent.press(getByLabelText('메뉴'));
+    // getByLabelText: the bottom "방 편집" button shares the same text.
+    await fireEvent.press(getByLabelText('방 편집'));
+    expect(onEdit).toHaveBeenCalledTimes(1);
+
+    await fireEvent.press(getByLabelText('메뉴'));
+    await fireEvent.press(getByText('루틴 관리'));
+    expect(onAddRoutine).toHaveBeenCalledTimes(1);
+
+    // 카테고리 관리 opens the manager sheet in-place.
+    await fireEvent.press(getByLabelText('메뉴'));
+    await fireEvent.press(getByText('카테고리 관리'));
+    expect(queryByText('새 카테고리 만들기')).toBeTruthy();
+  });
+
+  it('renders uncategorized routines even when the user has no categories', async () => {
+    // API state after a fresh account adds routines without a category:
+    // categories = [], routines have no category → must show in a 기타 group,
+    // not vanish while the counter says 0 / 2.
+    const routines = [
+      { id: '2', title: '아침 기상', kind: 'routine' as const },
+      { id: '3', title: '독서 30분', kind: 'routine' as const },
+    ];
+    const { getByText } = await render(<MyRoomScreen routines={routines} categories={[]} />);
+    expect(getByText('아침 기상')).toBeTruthy();
+    expect(getByText('독서 30분')).toBeTruthy();
+    expect(getByText('기타')).toBeTruthy();
+    expect(getByText('0 / 2')).toBeTruthy();
+  });
+
   it('shows a loading state, an error state with retry, and an empty state', async () => {
     const loading = await render(<MyRoomScreen loading />);
     expect(loading.getByText('불러오는 중…')).toBeTruthy();
