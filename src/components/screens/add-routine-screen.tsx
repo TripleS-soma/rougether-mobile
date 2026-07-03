@@ -18,8 +18,6 @@ import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 import { formatDate, formatTime } from '@/utils/datetime';
 
-const SUNDAY = '#E89090';
-const DISABLED = '#D4C4B0';
 const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
 type Preset = { title: string; category: RoutineCategory };
@@ -163,7 +161,7 @@ export function AddRoutineScreen({
                   onPress={() => setCategory(c.id)}
                   style={[styles.chip, { backgroundColor: active ? c.color : t.surface }]}>
                   <Text style={styles.chipEmoji}>{c.emoji}</Text>
-                  <Text style={[Typography.label, { color: active ? '#FFFFFF' : t.textMuted }]}>
+                  <Text style={[Typography.label, { color: active ? t.onPrimary : t.textMuted }]}>
                     {c.label}
                   </Text>
                 </Pressable>
@@ -216,14 +214,14 @@ export function AddRoutineScreen({
           <View style={styles.dayRow}>
             {DAYS.map((d, i) => {
               const active = days.includes(i);
-              const bg = active ? (i === 0 ? SUNDAY : t.primary) : t.surface;
+              const bg = active ? (i === 0 ? t.danger : t.primary) : t.surface;
               return (
                 <Pressable
                   key={d}
                   onPress={() => toggleDay(i)}
                   accessibilityRole="button"
                   style={[styles.day, { backgroundColor: bg }]}>
-                  <Text style={[Typography.label, { color: active ? '#FFFFFF' : t.textMuted }]}>
+                  <Text style={[Typography.label, { color: active ? t.onPrimary : t.textMuted }]}>
                     {d}
                   </Text>
                 </Pressable>
@@ -331,7 +329,7 @@ export function AddRoutineScreen({
           accessibilityRole="button"
           style={({ pressed }) => [
             styles.submit,
-            { backgroundColor: canSubmit ? t.primary : DISABLED },
+            { backgroundColor: canSubmit ? t.primary : t.disabledBg },
             pressed && canSubmit && { backgroundColor: t.primaryActive },
           ]}>
           <Text style={[Typography.label, { color: t.onPrimary }]}>

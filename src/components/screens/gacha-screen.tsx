@@ -18,14 +18,8 @@ import { WalletPills } from '@/components/ui/wallet-pills';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
+import { RARITY_COLORS, type Rarity } from '@/resources/furniture';
 import { hapticImpact, hapticSuccess } from '@/utils/haptics';
-
-const RARITY_COLOR: Record<string, string> = {
-  일반: '#9AA0A6',
-  희귀: '#7FA8D4',
-  전설: '#E8A24A',
-};
-const DISABLED = '#D4C4B0';
 
 type Phase = 'idle' | 'charging' | 'reveal';
 
@@ -162,7 +156,7 @@ export function GachaScreen({
             </Text>
 
             {error ? (
-              <Text style={[Typography.supporting, styles.center, { color: '#D67878' }]}>
+              <Text style={[Typography.supporting, styles.center, { color: t.danger }]}>
                 {error}
               </Text>
             ) : null}
@@ -176,7 +170,7 @@ export function GachaScreen({
               }`}
               style={({ pressed }) => [
                 styles.pullBtn,
-                { backgroundColor: affordable ? t.primary : DISABLED },
+                { backgroundColor: affordable ? t.primary : t.disabledBg },
                 pressed && affordable && { backgroundColor: t.primaryActive },
               ]}>
               <Text style={[Typography.label, { color: t.onPrimary }]}>뽑기</Text>
@@ -283,7 +277,7 @@ function ChargingBox({ icon, accent }: { icon: string; accent: string }) {
 function RevealCard({ item, index }: { item: DrawResult; index: number }) {
   const t = useTokens();
   const p = useRef(new Animated.Value(0)).current;
-  const rarityColor = RARITY_COLOR[item.rarity ?? '일반'] ?? RARITY_COLOR['일반'];
+  const rarityColor = RARITY_COLORS[(item.rarity as Rarity) ?? '일반'] ?? RARITY_COLORS['일반'];
 
   useEffect(() => {
     Animated.timing(p, {

@@ -117,7 +117,7 @@ export function LoginScreen({ onAuthSuccess, onGoSignup, onLogin }: LoginScreenP
         accessibilityRole="button"
         style={({ pressed }) => [
           styles.submit,
-          { backgroundColor: canSubmit ? t.primary : '#D9D2C5' },
+          { backgroundColor: canSubmit ? t.primary : t.disabledBg },
           pressed && canSubmit && { backgroundColor: t.primaryActive },
         ]}>
         <Text style={[styles.submitText, { color: t.onPrimary }]}>

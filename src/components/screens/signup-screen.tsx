@@ -7,11 +7,6 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 
-const ERROR = '#D67878';
-const ERROR_BORDER = '#E89A9A';
-const WARN = '#E89A4A';
-const DISABLED = '#E5DACB';
-
 export type SignupScreenProps = {
   onBack?: () => void;
   /** Reserved for when the backend gains a signup endpoint (submit is disabled). */
@@ -153,7 +148,7 @@ export function SignupScreen({ onBack }: SignupScreenProps) {
                 {
                   borderColor:
                     email.length > 0 && !emailValid
-                      ? ERROR_BORDER
+                      ? t.danger
                       : emailVerified
                         ? t.primary
                         : 'transparent',
@@ -175,14 +170,17 @@ export function SignupScreen({ onBack }: SignupScreenProps) {
               onPress={handleSendCode}
               disabled={sendDisabled}
               accessibilityRole="button"
-              style={[styles.sideBtn, { backgroundColor: sendDisabled ? DISABLED : t.primary }]}>
+              style={[
+                styles.sideBtn,
+                { backgroundColor: sendDisabled ? t.disabledBg : t.primary },
+              ]}>
               <Text style={[styles.sideBtnText, { color: t.onPrimary }]}>
                 {emailVerified ? '인증완료' : codeSent ? '재발송' : '인증요청'}
               </Text>
             </Pressable>
           </View>
           {email.length > 0 && !emailValid ? (
-            <Text style={[styles.msg, { color: ERROR }]}>이메일 형식이 올바르지 않아요</Text>
+            <Text style={[styles.msg, { color: t.danger }]}>이메일 형식이 올바르지 않아요</Text>
           ) : null}
           {emailVerified ? (
             <Text style={[styles.msg, { color: t.primary }]}>이메일 인증이 완료되었어요</Text>
@@ -198,7 +196,7 @@ export function SignupScreen({ onBack }: SignupScreenProps) {
                 style={[
                   styles.inputBox,
                   { backgroundColor: t.surfaceMuted },
-                  { borderColor: codeError ? ERROR_BORDER : 'transparent' },
+                  { borderColor: codeError ? t.danger : 'transparent' },
                 ]}>
                 <TextInput
                   style={[styles.input, styles.code, { color: t.text }]}
@@ -210,7 +208,9 @@ export function SignupScreen({ onBack }: SignupScreenProps) {
                   maxLength={6}
                 />
                 {secondsLeft > 0 ? (
-                  <Text style={[styles.timer, { color: WARN }]}>{formatTime(secondsLeft)}</Text>
+                  <Text style={[styles.timer, { color: t.warning }]}>
+                    {formatTime(secondsLeft)}
+                  </Text>
                 ) : null}
               </View>
               <Pressable
@@ -219,12 +219,12 @@ export function SignupScreen({ onBack }: SignupScreenProps) {
                 accessibilityRole="button"
                 style={[
                   styles.sideBtn,
-                  { backgroundColor: verificationCode.length !== 6 ? DISABLED : t.text },
+                  { backgroundColor: verificationCode.length !== 6 ? t.disabledBg : t.text },
                 ]}>
                 <Text style={[styles.sideBtnText, { color: t.onPrimary }]}>확인</Text>
               </Pressable>
             </View>
-            <Text style={[styles.msg, { color: codeError ? ERROR : t.textMuted }]}>
+            <Text style={[styles.msg, { color: codeError ? t.danger : t.textMuted }]}>
               {codeError ?? '메일함을 확인하고 6자리 인증번호를 입력해주세요'}
             </Text>
           </View>
@@ -303,7 +303,7 @@ export function SignupScreen({ onBack }: SignupScreenProps) {
         disabled
         accessibilityRole="button"
         accessibilityState={{ disabled: true }}
-        style={[styles.submit, { backgroundColor: '#D9D2C5' }]}>
+        style={[styles.submit, { backgroundColor: t.disabledBg }]}>
         <Text style={[styles.submitText, { color: t.onPrimary }]}>가입 준비 중</Text>
       </Pressable>
 
@@ -351,7 +351,7 @@ function AgreementItem({ checked, label, required, onChange }: AgreementItemProp
         <CheckBox checked={checked} />
         <Text style={[styles.agreeLabel, { color: t.text }]}>
           {label}{' '}
-          <Text style={{ color: required ? ERROR : t.textMuted }}>
+          <Text style={{ color: required ? t.danger : t.textMuted }}>
             ({required ? '필수' : '선택'})
           </Text>
         </Text>
