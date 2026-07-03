@@ -1,6 +1,16 @@
+import { Image } from 'expo-image';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
+import appIcon from '@/assets/images/icon.png';
 import { Field } from '@/components/ui/field';
 import { Icon } from '@/components/ui/icon';
 import { useToast } from '@/components/ui/toast';
@@ -55,121 +65,134 @@ export function LoginScreen({ onAuthSuccess, onGoSignup, onLogin }: LoginScreenP
   };
 
   return (
-    <View style={[styles.screen, useScreenStyle()]}>
-      <View style={styles.header}>
-        {/* TODO: replace with the ported CharacterAvatar */}
-        <View style={[styles.avatar, { backgroundColor: t.surfaceMuted }]}>
-          <Text style={styles.avatarGlyph}>🐱</Text>
-        </View>
-        <Text style={[styles.title, { color: t.text }]}>루게더</Text>
-        <Text style={[styles.subtitle, { color: t.textMuted }]}>
-          매일의 루틴으로 나만의 방과 집을 함께 키워요.
-        </Text>
-      </View>
-
-      <View style={[styles.card, { backgroundColor: t.surface, shadowColor: '#000' }]}>
-        <Field
-          placeholder="이메일"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-        <Field
-          placeholder="비밀번호"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry={!showPw}
-          trailing={
-            <Pressable onPress={() => setShowPw((v) => !v)} accessibilityRole="button">
-              <Text style={[styles.smallLink, { color: t.textMuted }]}>
-                {showPw ? '숨김' : '보기'}
-              </Text>
-            </Pressable>
-          }
-        />
-
-        <View style={styles.row}>
-          <Pressable
-            style={styles.checkboxRow}
-            onPress={() => setKeepLogin((v) => !v)}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: keepLogin }}>
-            <View
-              style={[
-                styles.checkbox,
-                { borderColor: t.border },
-                keepLogin && { backgroundColor: t.primary, borderColor: t.primary },
-              ]}>
-              {keepLogin ? <Icon name="check" size={12} color={t.onPrimary} /> : null}
+    <View style={[styles.screen, useScreenStyle(['top', 'bottom'])]}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          contentContainerStyle={styles.body}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+          <View style={styles.header}>
+            <View style={[styles.avatar, { backgroundColor: t.surfaceMuted }]}>
+              <Image
+                source={appIcon}
+                style={styles.avatarImg}
+                contentFit="cover"
+                accessibilityLabel="루게더 앱 아이콘"
+              />
             </View>
-            <Text style={[styles.smallText, { color: t.textMuted }]}>로그인 유지</Text>
+            <Text style={[styles.title, { color: t.text }]}>루게더</Text>
+            <Text style={[styles.subtitle, { color: t.textMuted }]}>
+              매일의 루틴으로 나만의 방과 집을 함께 키워요.
+            </Text>
+          </View>
+
+          <View style={[styles.card, { backgroundColor: t.surface, shadowColor: '#000' }]}>
+            <Field
+              placeholder="이메일"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            <Field
+              placeholder="비밀번호"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPw}
+              trailing={
+                <Pressable onPress={() => setShowPw((v) => !v)} accessibilityRole="button">
+                  <Text style={[styles.smallLink, { color: t.textMuted }]}>
+                    {showPw ? '숨김' : '보기'}
+                  </Text>
+                </Pressable>
+              }
+            />
+
+            <View style={styles.row}>
+              <Pressable
+                style={styles.checkboxRow}
+                onPress={() => setKeepLogin((v) => !v)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: keepLogin }}>
+                <View
+                  style={[
+                    styles.checkbox,
+                    { borderColor: t.border },
+                    keepLogin && { backgroundColor: t.primary, borderColor: t.primary },
+                  ]}>
+                  {keepLogin ? <Icon name="check" size={12} color={t.onPrimary} /> : null}
+                </View>
+                <Text style={[styles.smallText, { color: t.textMuted }]}>로그인 유지</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" onPress={notReady}>
+                <Text style={[styles.smallLink, { color: t.primary }]}>비밀번호 찾기</Text>
+              </Pressable>
+            </View>
+          </View>
+
+          <Pressable
+            disabled={!canSubmit}
+            onPress={submit}
+            accessibilityRole="button"
+            style={({ pressed }) => [
+              styles.submit,
+              { backgroundColor: canSubmit ? t.primary : t.disabledBg },
+              pressed && canSubmit && { backgroundColor: t.primaryActive },
+            ]}>
+            <Text style={[styles.submitText, { color: t.onPrimary }]}>
+              {submitting ? '로그인 중…' : '로그인'}
+            </Text>
           </Pressable>
-          <Pressable accessibilityRole="button" onPress={notReady}>
-            <Text style={[styles.smallLink, { color: t.primary }]}>비밀번호 찾기</Text>
-          </Pressable>
-        </View>
-      </View>
+          {error ? (
+            <Text style={[styles.errorText, { color: t.danger }]} accessibilityRole="alert">
+              {error}
+            </Text>
+          ) : null}
+          <Text style={[styles.devHint, { color: t.textMuted }]}>
+            개발 로그인: 이메일 칸에 userId(숫자)를 넣으면 그 계정으로, 비우면 1번으로 접속돼요.
+          </Text>
 
-      <Pressable
-        disabled={!canSubmit}
-        onPress={submit}
-        accessibilityRole="button"
-        style={({ pressed }) => [
-          styles.submit,
-          { backgroundColor: canSubmit ? t.primary : t.disabledBg },
-          pressed && canSubmit && { backgroundColor: t.primaryActive },
-        ]}>
-        <Text style={[styles.submitText, { color: t.onPrimary }]}>
-          {submitting ? '로그인 중…' : '로그인'}
-        </Text>
-      </Pressable>
-      {error ? (
-        <Text style={[styles.errorText, { color: t.danger }]} accessibilityRole="alert">
-          {error}
-        </Text>
-      ) : null}
-      <Text style={[styles.devHint, { color: t.textMuted }]}>
-        개발 로그인: 이메일 칸에 userId(숫자)를 넣으면 그 계정으로, 비우면 1번으로 접속돼요.
-      </Text>
+          <View style={styles.divider}>
+            <View style={[styles.line, { backgroundColor: t.border }]} />
+            <Text style={[styles.smallText, { color: t.textMuted }]}>간편 로그인</Text>
+            <View style={[styles.line, { backgroundColor: t.border }]} />
+          </View>
 
-      <View style={styles.divider}>
-        <View style={[styles.line, { backgroundColor: t.border }]} />
-        <Text style={[styles.smallText, { color: t.textMuted }]}>간편 로그인</Text>
-        <View style={[styles.line, { backgroundColor: t.border }]} />
-      </View>
+          <View style={styles.social}>
+            <SocialButton
+              bg="#FEE500"
+              textColor="#3C1E1E"
+              label="카카오"
+              glyph="K"
+              onPress={notReady}
+            />
+            <SocialButton
+              bg="#03C75A"
+              textColor="#FFFFFF"
+              label="네이버"
+              glyph="N"
+              onPress={notReady}
+            />
+            <SocialButton
+              bg="#FFFFFF"
+              textColor="#4A403A"
+              label="구글"
+              glyph="G"
+              bordered
+              onPress={notReady}
+            />
+          </View>
 
-      <View style={styles.social}>
-        <SocialButton
-          bg="#FEE500"
-          textColor="#3C1E1E"
-          label="카카오"
-          glyph="K"
-          onPress={notReady}
-        />
-        <SocialButton
-          bg="#03C75A"
-          textColor="#FFFFFF"
-          label="네이버"
-          glyph="N"
-          onPress={notReady}
-        />
-        <SocialButton
-          bg="#FFFFFF"
-          textColor="#4A403A"
-          label="구글"
-          glyph="G"
-          bordered
-          onPress={notReady}
-        />
-      </View>
-
-      <View style={styles.footer}>
-        <Text style={[styles.smallText, { color: t.textMuted }]}>아직 회원이 아니신가요? </Text>
-        <Pressable onPress={onGoSignup} accessibilityRole="button">
-          <Text style={[styles.smallLink, { color: t.primary }]}>회원가입</Text>
-        </Pressable>
-      </View>
+          <View style={styles.footer}>
+            <Text style={[styles.smallText, { color: t.textMuted }]}>아직 회원이 아니신가요? </Text>
+            <Pressable onPress={onGoSignup} accessibilityRole="button">
+              <Text style={[styles.smallLink, { color: t.primary }]}>회원가입</Text>
+            </Pressable>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -207,12 +230,21 @@ function SocialButton({ bg, textColor, label, glyph, bordered, onPress }: Social
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
+  },
+  flex: {
+    flex: 1,
+  },
+  // Generous edge padding so the submit/social buttons never hug the screen
+  // edges; small screens scroll instead of clipping.
+  body: {
+    flexGrow: 1,
     paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.four,
     paddingBottom: Spacing.five,
   },
   header: {
     alignItems: 'center',
-    paddingTop: Spacing.six,
+    paddingTop: Spacing.five,
     paddingBottom: Spacing.four,
     gap: Spacing.one,
   },
@@ -223,9 +255,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.two,
+    overflow: 'hidden',
   },
-  avatarGlyph: {
-    fontSize: 56,
+  avatarImg: {
+    width: '100%',
+    height: '100%',
   },
   title: {
     fontSize: 24,
