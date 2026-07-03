@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Field } from '@/components/ui/field';
 import { Icon } from '@/components/ui/icon';
+import { useToast } from '@/components/ui/toast';
 import { Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
@@ -33,8 +34,12 @@ export function LoginScreen({ onAuthSuccess, onGoSignup, onLogin }: LoginScreenP
   const [keepLogin, setKeepLogin] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { show: toast } = useToast();
 
   const canSubmit = email.length > 0 && password.length > 0 && !submitting;
+  // 비밀번호 찾기 / social sign-in have no backend yet — say so instead of
+  // silently doing nothing.
+  const notReady = () => toast('아직 준비 중이에요');
 
   const submit = async () => {
     if (!canSubmit) return;
@@ -100,7 +105,7 @@ export function LoginScreen({ onAuthSuccess, onGoSignup, onLogin }: LoginScreenP
             </View>
             <Text style={[styles.smallText, { color: t.textMuted }]}>로그인 유지</Text>
           </Pressable>
-          <Pressable accessibilityRole="button">
+          <Pressable accessibilityRole="button" onPress={notReady}>
             <Text style={[styles.smallLink, { color: t.primary }]}>비밀번호 찾기</Text>
           </Pressable>
         </View>
@@ -135,9 +140,28 @@ export function LoginScreen({ onAuthSuccess, onGoSignup, onLogin }: LoginScreenP
       </View>
 
       <View style={styles.social}>
-        <SocialButton bg="#FEE500" textColor="#3C1E1E" label="카카오" glyph="K" />
-        <SocialButton bg="#03C75A" textColor="#FFFFFF" label="네이버" glyph="N" />
-        <SocialButton bg="#FFFFFF" textColor="#4A403A" label="구글" glyph="G" bordered />
+        <SocialButton
+          bg="#FEE500"
+          textColor="#3C1E1E"
+          label="카카오"
+          glyph="K"
+          onPress={notReady}
+        />
+        <SocialButton
+          bg="#03C75A"
+          textColor="#FFFFFF"
+          label="네이버"
+          glyph="N"
+          onPress={notReady}
+        />
+        <SocialButton
+          bg="#FFFFFF"
+          textColor="#4A403A"
+          label="구글"
+          glyph="G"
+          bordered
+          onPress={notReady}
+        />
       </View>
 
       <View style={styles.footer}>
@@ -156,13 +180,15 @@ type SocialButtonProps = {
   label: string;
   glyph: string;
   bordered?: boolean;
+  onPress?: () => void;
 };
 
-function SocialButton({ bg, textColor, label, glyph, bordered }: SocialButtonProps) {
+function SocialButton({ bg, textColor, label, glyph, bordered, onPress }: SocialButtonProps) {
   const t = useTokens();
   return (
     <Pressable
       style={styles.socialItem}
+      onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${label}로 시작`}>
       <View

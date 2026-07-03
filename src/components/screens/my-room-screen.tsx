@@ -16,6 +16,7 @@ import { CharacterAvatar } from '@/components/character-avatar';
 import { Room } from '@/components/room/room';
 import { TimePickerSheet } from '@/components/screens/sheets/time-picker-sheet';
 import { Calendar } from '@/components/ui/calendar';
+import { WalletPills } from '@/components/ui/wallet-pills';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { ROUTINE_CATEGORIES, type Routine, type RoutineCategoryMeta } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
@@ -32,6 +33,9 @@ export type MyRoomScreenProps = {
   userName?: string;
   /** Consecutive-day streak shown in the header. */
   streakDays?: number;
+  /** Wallet balances shown in the header (완료 보상 피드백의 기준점). */
+  coinBalance?: number;
+  diaBalance?: number;
   // Room rendering (forwarded to <Room />).
   characterId?: CharacterId;
   wallpaperId?: string;
@@ -86,6 +90,8 @@ export type MyRoomScreenProps = {
 export function MyRoomScreen({
   userName = '준서',
   streakDays = 7,
+  coinBalance = 0,
+  diaBalance = 0,
   characterId = DEFAULT_CHARACTER_ID,
   wallpaperId = DEFAULT_WALLPAPER_ID,
   placedFurnitureIds,
@@ -219,13 +225,16 @@ export function MyRoomScreen({
             </View>
           </View>
         </View>
-        <Pressable
-          onPress={onEdit}
-          accessibilityRole="button"
-          accessibilityLabel="방 편집"
-          style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-          <Icon name="edit" size={18} color={t.text} />
-        </Pressable>
+        <View style={styles.headerRight}>
+          <WalletPills coin={coinBalance} dia={diaBalance} />
+          <Pressable
+            onPress={onEdit}
+            accessibilityRole="button"
+            accessibilityLabel="방 편집"
+            style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
+            <Icon name="edit" size={18} color={t.text} />
+          </Pressable>
+        </View>
       </View>
 
       <View style={styles.tabBar}>
@@ -518,6 +527,13 @@ export function MyRoomScreen({
               <Text style={[Typography.h3, styles.calListTitle, { color: t.text }]}>
                 이 날의 루틴
               </Text>
+              {selectedDate !== today ? (
+                // The API can't read back logs for arbitrary dates yet, so
+                // non-today checkmarks reset when the app reloads — say so.
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                  오늘 외 날짜의 완료 표시는 앱을 다시 열면 초기화될 수 있어요.
+                </Text>
+              ) : null}
               {loading ? (
                 <View style={styles.stateBlock}>
                   <ActivityIndicator color={t.primary} />
@@ -773,6 +789,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
   },
   streak: {
     flexDirection: 'row',

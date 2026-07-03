@@ -248,32 +248,38 @@ const VALID_SLOTS: FurnitureSlot[] = [
   'bottomCenter',
   'bottomRight',
 ];
-// Placeholder tint for wallpapers (the API supplies no room-fill color).
-const WALLPAPER_COLOR = '#F3E9D6';
+// Placeholder tints for wallpapers, cycled by index so tiles stay
+// distinguishable until real art exists (the API supplies no room-fill color).
+const WALLPAPER_TINTS = ['#F3E9D6', '#E4F0DC', '#F7E4EA', '#E3EEF8', '#ECE8FA', '#F7ECD8'];
 
 const isPositioned = (i: ItemResponse) =>
   i.placementType === 'positioned' &&
   !!i.defaultSlot &&
   VALID_SLOTS.includes(i.defaultSlot as FurnitureSlot);
 
+/** "Forest Sage Set - Arched Window" → "Arched Window" (theme shows separately). */
+const stripSetPrefix = (name?: string) => (name ?? '').replace(/^.*?Set\s*-\s*/, '');
+
 export function toFurnitureItem(item: ItemResponse): FurnitureItem {
   return {
     id: String(item.id ?? ''),
-    name: item.name ?? '',
+    name: stripSetPrefix(item.name),
     slot: (item.defaultSlot as FurnitureSlot) ?? 'topLeft',
     category: CATEGORY_LABEL[item.categoryCode ?? ''] ?? '장식',
     price: item.priceAmount ?? 0,
     assetKey: item.assetKey ?? '',
+    theme: item.theme?.name,
   };
 }
 
-export function toWallpaper(item: ItemResponse): Wallpaper {
+export function toWallpaper(item: ItemResponse, index = 0): Wallpaper {
   return {
     id: String(item.id ?? ''),
-    name: item.name ?? '',
+    name: stripSetPrefix(item.name),
     price: item.priceAmount ?? 0,
     assetKey: item.assetKey ?? '',
-    color: WALLPAPER_COLOR,
+    color: WALLPAPER_TINTS[index % WALLPAPER_TINTS.length],
+    theme: item.theme?.name,
   };
 }
 
@@ -286,7 +292,9 @@ export type ShopCatalogue = {
 export function toShopCatalogue(items: ItemResponse[]): ShopCatalogue {
   return {
     furniture: items.filter(isPositioned).map(toFurnitureItem),
-    wallpapers: items.filter((i) => i.categoryCode === 'wallpaper').map(toWallpaper),
+    wallpapers: items
+      .filter((i) => i.categoryCode === 'wallpaper')
+      .map((i, idx) => toWallpaper(i, idx)),
     ownedIds: items.filter((i) => i.owned).map((i) => String(i.id)),
   };
 }

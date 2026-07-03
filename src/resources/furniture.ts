@@ -155,6 +155,8 @@ export type Wallpaper = {
   assetKey: string;
   /** Fallback room background color while images are dummies. */
   color: string;
+  /** Theme (item set) name, for the decor screen's theme filter. */
+  theme?: string;
 };
 
 export const WALLPAPERS: Wallpaper[] = [
