@@ -20,7 +20,11 @@ import { ROUTINE_CATEGORIES, type Routine, type RoutineCategoryMeta } from '@/co
 import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { captureVerificationPhoto } from '@/lib/photo-verify';
-import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
+import {
+  DEFAULT_WALLPAPER_ID,
+  type FurnitureItem,
+  type Wallpaper,
+} from '@/resources/furniture';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 import { formatDate, formatTime, todayIso } from '@/utils/datetime';
@@ -35,6 +39,8 @@ export type MyRoomScreenProps = {
   characterId?: CharacterId;
   wallpaperId?: string;
   placedFurnitureIds?: string[];
+  furniture?: FurnitureItem[];
+  wallpapers?: Wallpaper[];
   // Routine list.
   routines?: Routine[];
   /**
@@ -80,6 +86,8 @@ export function MyRoomScreen({
   characterId = DEFAULT_CHARACTER_ID,
   wallpaperId = DEFAULT_WALLPAPER_ID,
   placedFurnitureIds,
+  furniture,
+  wallpapers,
   routines = [],
   completions = {},
   categories = ROUTINE_CATEGORIES,
@@ -251,6 +259,8 @@ export function MyRoomScreen({
                   characterId={characterId}
                   wallpaperId={wallpaperId}
                   placedFurnitureIds={placedFurnitureIds}
+                  furniture={furniture}
+                  wallpapers={wallpapers}
                   interactiveCharacter
                 />
                 <Pressable

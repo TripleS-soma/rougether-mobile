@@ -11,6 +11,7 @@ import {
   DEFAULT_WALLPAPER_ID,
   FURNITURE_ITEMS,
   type FurnitureItem,
+  type Wallpaper,
   WALLPAPERS,
 } from '@/resources/furniture';
 import { useScreenStyle } from '@/hooks/use-screen-style';
@@ -25,6 +26,9 @@ export type RoomDecorScreenProps = {
   initialWallpaperId?: string;
   /** Ids the user owns; owned items are placeable, the rest are buyable with dia. */
   ownedIds?: string[];
+  /** Item + wallpaper catalogue (defaults to the local set). */
+  furniture?: FurnitureItem[];
+  wallpapers?: Wallpaper[];
   /** Coin + dia balances shown in the header. */
   coinBalance?: number;
   /** Dia balance, for buying not-yet-owned items in the catalog. */
@@ -49,6 +53,8 @@ export function RoomDecorScreen({
   initialPlacedIds,
   initialWallpaperId = DEFAULT_WALLPAPER_ID,
   ownedIds,
+  furniture = FURNITURE_ITEMS,
+  wallpapers = WALLPAPERS,
   coinBalance = 0,
   diaBalance = 0,
   characterId = DEFAULT_CHARACTER_ID,
@@ -59,10 +65,10 @@ export function RoomDecorScreen({
   const t = useTokens();
 
   // Owned items are placeable; everything else in the catalog is buyable.
-  const owned = useMemo(() => new Set(ownedIds ?? FURNITURE_ITEMS.map((i) => i.id)), [ownedIds]);
+  const owned = useMemo(() => new Set(ownedIds ?? furniture.map((i) => i.id)), [ownedIds, furniture]);
   const categories = useMemo(
-    () => [ALL, WALLPAPER, ...Array.from(new Set(FURNITURE_ITEMS.map((i) => i.category)))],
-    [],
+    () => [ALL, WALLPAPER, ...Array.from(new Set(furniture.map((i) => i.category)))],
+    [furniture],
   );
 
   const [placed, setPlaced] = useState<string[]>(
@@ -71,7 +77,7 @@ export function RoomDecorScreen({
   const [wallpaperId, setWallpaperId] = useState(initialWallpaperId);
   const [activeCategory, setActiveCategory] = useState(ALL);
 
-  const slotOf = (id: string) => FURNITURE_ITEMS.find((i) => i.id === id)?.slot;
+  const slotOf = (id: string) => furniture.find((i) => i.id === id)?.slot;
 
   const toggle = (id: string) => {
     setPlaced((prev) => {
@@ -85,10 +91,10 @@ export function RoomDecorScreen({
   const showWallpapers = activeCategory === ALL || activeCategory === WALLPAPER;
   const visibleItems =
     activeCategory === ALL
-      ? FURNITURE_ITEMS
+      ? furniture
       : activeCategory === WALLPAPER
         ? []
-        : FURNITURE_ITEMS.filter((i) => i.category === activeCategory);
+        : furniture.filter((i) => i.category === activeCategory);
 
   return (
     <View style={[styles.screen, useScreenStyle()]}>
@@ -106,7 +112,13 @@ export function RoomDecorScreen({
 
       <ScrollView contentContainerStyle={styles.body}>
         <View style={styles.preview}>
-          <Room characterId={characterId} wallpaperId={wallpaperId} placedFurnitureIds={placed} />
+          <Room
+            characterId={characterId}
+            wallpaperId={wallpaperId}
+            placedFurnitureIds={placed}
+            furniture={furniture}
+            wallpapers={wallpapers}
+          />
         </View>
 
         <ScrollView
@@ -136,7 +148,7 @@ export function RoomDecorScreen({
               벽지
             </Text>
             <View style={styles.grid}>
-              {WALLPAPERS.map((wp) => {
+              {wallpapers.map((wp) => {
                 const active = wp.id === wallpaperId;
                 return (
                   <Pressable

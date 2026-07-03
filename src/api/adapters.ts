@@ -12,11 +12,19 @@ import {
   type Routine,
   type RoutineCategoryMeta,
 } from '@/constants/routines';
+import {
+  DEFAULT_WALLPAPER_ID,
+  type FurnitureCategory,
+  type FurnitureItem,
+  type FurnitureSlot,
+  type Wallpaper,
+} from '@/resources/furniture';
 
 import type {
   CategoryCreateRequest,
   CategoryResponse,
   GachaResponse,
+  ItemResponse,
   RoutineCreateRequest,
   RoutineResponse,
   RoutineUpdateRequest,
@@ -219,5 +227,82 @@ export function toGachaMachine(g: GachaResponse, index = 0): GachaMachine {
     drawCount: g.drawCount ?? 1,
     icon: GACHA_ICONS[index % GACHA_ICONS.length],
     accent: GACHA_ACCENTS[index % GACHA_ACCENTS.length],
+  };
+}
+
+// --- shop (items) -------------------------------------------------------------
+// The API's `defaultSlot` uses the same names as the app's FurnitureSlot, so
+// positioned items map straight onto the room's slots.
+const CATEGORY_LABEL: Record<string, FurnitureCategory> = {
+  furniture: '가구',
+  decor: '장식',
+  floor: '러그',
+};
+const VALID_SLOTS: FurnitureSlot[] = [
+  'topLeft',
+  'topCenter',
+  'topRight',
+  'midLeft',
+  'midRight',
+  'bottomLeft',
+  'bottomCenter',
+  'bottomRight',
+];
+// Placeholder tint for wallpapers (the API supplies no room-fill color).
+const WALLPAPER_COLOR = '#F3E9D6';
+
+const isPositioned = (i: ItemResponse) =>
+  i.placementType === 'positioned' && !!i.defaultSlot && VALID_SLOTS.includes(i.defaultSlot as FurnitureSlot);
+
+export function toFurnitureItem(item: ItemResponse): FurnitureItem {
+  return {
+    id: String(item.id ?? ''),
+    name: item.name ?? '',
+    slot: (item.defaultSlot as FurnitureSlot) ?? 'topLeft',
+    category: CATEGORY_LABEL[item.categoryCode ?? ''] ?? '장식',
+    price: item.priceAmount ?? 0,
+    assetKey: item.assetKey ?? '',
+  };
+}
+
+export function toWallpaper(item: ItemResponse): Wallpaper {
+  return {
+    id: String(item.id ?? ''),
+    name: item.name ?? '',
+    price: item.priceAmount ?? 0,
+    assetKey: item.assetKey ?? '',
+    color: WALLPAPER_COLOR,
+  };
+}
+
+export type ShopCatalogue = {
+  furniture: FurnitureItem[];
+  wallpapers: Wallpaper[];
+  ownedIds: string[];
+};
+
+export function toShopCatalogue(items: ItemResponse[]): ShopCatalogue {
+  return {
+    furniture: items.filter(isPositioned).map(toFurnitureItem),
+    wallpapers: items.filter((i) => i.categoryCode === 'wallpaper').map(toWallpaper),
+    ownedIds: items.filter((i) => i.owned).map((i) => String(i.id)),
+  };
+}
+
+/**
+ * A starting room built from owned items: one owned item per slot plus an owned
+ * wallpaper. Avoids an empty room while server-side placement isn't wired.
+ */
+export function ownedPlacement(cat: ShopCatalogue): {
+  placedFurnitureIds: string[];
+  wallpaperId: string;
+} {
+  const owned = new Set(cat.ownedIds);
+  const bySlot: Partial<Record<FurnitureSlot, string>> = {};
+  for (const f of cat.furniture) if (owned.has(f.id) && !bySlot[f.slot]) bySlot[f.slot] = f.id;
+  const wp = cat.wallpapers.find((w) => owned.has(w.id));
+  return {
+    placedFurnitureIds: Object.values(bySlot),
+    wallpaperId: wp?.id ?? cat.wallpapers[0]?.id ?? DEFAULT_WALLPAPER_ID,
   };
 }
