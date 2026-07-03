@@ -5,6 +5,7 @@ import { useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { ToastProvider } from '@/components/ui/toast';
 import { AuthProvider } from '@/hooks/use-auth';
 import { BrandThemeProvider } from '@/hooks/use-tokens';
 import { startMockServer } from '@/mocks/init';
@@ -25,10 +26,12 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <AuthProvider>
         <BrandThemeProvider>
-          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-            <AnimatedSplashOverlay />
-            <Stack screenOptions={{ headerShown: false }} />
-          </ThemeProvider>
+          <ToastProvider>
+            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+              <AnimatedSplashOverlay />
+              <Stack screenOptions={{ headerShown: false }} />
+            </ThemeProvider>
+          </ToastProvider>
         </BrandThemeProvider>
       </AuthProvider>
     </SafeAreaProvider>

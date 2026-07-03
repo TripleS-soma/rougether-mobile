@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -46,6 +47,12 @@ export type MyRoomScreenProps = {
    */
   completions?: Record<string, string[]>;
   categories?: RoutineCategoryMeta[];
+  /** True while the routine/category data is loading (shows a spinner). */
+  loading?: boolean;
+  /** True when the initial load failed (shows an error + 다시 시도). */
+  loadError?: boolean;
+  /** Re-run the failed load (다시 시도 button). */
+  onRetry?: () => void;
   // Callbacks (wired separately).
   onEdit?: () => void;
   onAddRoutine?: () => void;
@@ -87,6 +94,9 @@ export function MyRoomScreen({
   routines = [],
   completions = {},
   categories = ROUTINE_CATEGORIES,
+  loading = false,
+  loadError = false,
+  onRetry,
   onEdit,
   onAddRoutine,
   onToggleCompletion,
@@ -276,9 +286,11 @@ export function MyRoomScreen({
                 <View style={styles.sectionHead}>
                   <Text style={[Typography.h2, { color: t.text }]}>오늘의 루틴</Text>
                   <View style={styles.sectionHeadRight}>
-                    <Text style={[Typography.label, { color: t.primary }]}>
-                      {completedCount} / {roomRoutines.length}
-                    </Text>
+                    {roomRoutines.length > 0 ? (
+                      <Text style={[Typography.label, { color: t.primary }]}>
+                        {completedCount} / {roomRoutines.length}
+                      </Text>
+                    ) : null}
                     <Pressable
                       onPress={onAddRoutine}
                       accessibilityRole="button"
@@ -289,153 +301,206 @@ export function MyRoomScreen({
                   </View>
                 </View>
 
-                <View style={[styles.progressTrack, { backgroundColor: t.surfaceMuted }]}>
-                  <View
-                    style={[
-                      styles.progressFill,
-                      { backgroundColor: t.primary, width: `${progress * 100}%` },
-                    ]}
-                  />
-                </View>
+                {loading ? (
+                  <View style={styles.stateBlock}>
+                    <ActivityIndicator color={t.primary} />
+                    <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                      불러오는 중…
+                    </Text>
+                  </View>
+                ) : null}
 
-                {categories.map((cat, idx) => {
-                  const isFallback = idx === categories.length - 1;
-                  const items = roomRoutines.filter((r) => {
-                    if (r.category === cat.id) return true;
-                    return isFallback && (!r.category || !knownIds.includes(r.category));
-                  });
-                  if (items.length === 0) return null;
-                  const doneInCat = items.filter((r) => isDone(r.id, today)).length;
+                {!loading && loadError ? (
+                  <View style={styles.stateBlock}>
+                    <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
+                      데이터를 불러오지 못했어요.
+                    </Text>
+                    <Pressable
+                      onPress={onRetry}
+                      accessibilityRole="button"
+                      accessibilityLabel="다시 시도"
+                      style={[styles.retryBtn, { backgroundColor: t.primary }]}>
+                      <Text style={[Typography.label, { color: t.onPrimary }]}>다시 시도</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
 
-                  return (
+                {!loading && !loadError && roomRoutines.length > 0 ? (
+                  <View style={[styles.progressTrack, { backgroundColor: t.surfaceMuted }]}>
                     <View
-                      key={cat.id}
-                      style={styles.group}
-                      onLayout={(e) => {
-                        groupY.current[cat.id] = e.nativeEvent.layout.y;
-                      }}>
-                      <View style={styles.catHeader}>
-                        <View style={[styles.catDot, { backgroundColor: `${cat.color}33` }]}>
-                          <Text style={styles.catEmoji}>{cat.emoji}</Text>
-                        </View>
-                        <Text style={[Typography.label, { color: cat.color }]}>{cat.label}</Text>
-                        <Text style={[Typography.supporting, { color: t.textDisabled }]}>
-                          {doneInCat}/{items.length}
-                        </Text>
-                        <View style={styles.flex} />
-                        <Pressable
-                          onPress={() => openQuickAdd(cat.id)}
-                          accessibilityRole="button"
-                          accessibilityLabel={`${cat.label} 할 일 추가`}
-                          style={[styles.catAdd, { backgroundColor: cat.color }]}>
-                          <Icon name="add" size={14} color={t.onPrimary} />
-                        </Pressable>
-                      </View>
+                      style={[
+                        styles.progressFill,
+                        { backgroundColor: t.primary, width: `${progress * 100}%` },
+                      ]}
+                    />
+                  </View>
+                ) : null}
 
-                      <View style={styles.rows}>
-                        {items.map((routine) => {
-                          const menuOpen = menuOpenId === routine.id;
-                          const done = isDone(routine.id, today);
-                          return (
-                            <View key={routine.id}>
-                              <View style={styles.routineRow}>
-                                <Pressable
-                                  onPress={() => handleToggle(routine, today)}
-                                  accessibilityRole="checkbox"
-                                  accessibilityState={{ checked: done }}
-                                  accessibilityLabel={routine.title}
-                                  style={styles.rowMain}>
-                                  <Icon
-                                    name={done ? 'checkbox-on' : 'checkbox-off'}
-                                    size={22}
-                                    color={done ? cat.color : t.textDisabled}
-                                  />
-                                  <View style={styles.flex}>
-                                    <Text
-                                      style={[
-                                        Typography.body,
-                                        done
-                                          ? {
-                                              color: t.textMuted,
-                                              textDecorationLine: 'line-through',
-                                            }
-                                          : { color: t.text },
-                                      ]}>
-                                      {routine.title}
-                                    </Text>
-                                    {(routine.alarmEnabled && routine.time) ||
-                                    routine.photoVerify ? (
-                                      <View style={styles.badges}>
-                                        {routine.alarmEnabled && routine.time ? (
-                                          <View style={styles.badge}>
-                                            <Icon name="bell" size={12} color={t.textMuted} />
-                                            <Text
-                                              style={[styles.badgeText, { color: t.textMuted }]}>
-                                              {formatTime(routine.time)}
-                                            </Text>
-                                          </View>
-                                        ) : null}
-                                        {routine.photoVerify ? (
-                                          <View style={styles.badge}>
-                                            <Icon name="camera" size={12} color={t.textMuted} />
-                                            <Text
-                                              style={[styles.badgeText, { color: t.textMuted }]}>
-                                              사진 인증
-                                            </Text>
+                {!loading && !loadError && categories.length === 0 ? (
+                  <View style={styles.stateBlock}>
+                    <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
+                      아직 루틴이 없어요.
+                    </Text>
+                    <View style={styles.emptyHintRow}>
+                      <Icon name="add" size={16} color={t.textMuted} />
+                      <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
+                        위의 + 버튼으로 첫 루틴을 만들어보세요.
+                      </Text>
+                    </View>
+                  </View>
+                ) : null}
+
+                {loading || loadError
+                  ? null
+                  : categories.map((cat, idx) => {
+                      const isFallback = idx === categories.length - 1;
+                      const items = roomRoutines.filter((r) => {
+                        if (r.category === cat.id) return true;
+                        return isFallback && (!r.category || !knownIds.includes(r.category));
+                      });
+                      // Empty categories still render their header — the + quick-add
+                      // must stay reachable even before the first routine exists.
+                      const doneInCat = items.filter((r) => isDone(r.id, today)).length;
+
+                      return (
+                        <View
+                          key={cat.id}
+                          style={styles.group}
+                          onLayout={(e) => {
+                            groupY.current[cat.id] = e.nativeEvent.layout.y;
+                          }}>
+                          <View style={styles.catHeader}>
+                            <View style={[styles.catDot, { backgroundColor: `${cat.color}33` }]}>
+                              <Text style={styles.catEmoji}>{cat.emoji}</Text>
+                            </View>
+                            <Text style={[Typography.label, { color: cat.color }]}>
+                              {cat.label}
+                            </Text>
+                            {items.length > 0 ? (
+                              <Text style={[Typography.supporting, { color: t.textDisabled }]}>
+                                {doneInCat}/{items.length}
+                              </Text>
+                            ) : null}
+                            <View style={styles.flex} />
+                            <Pressable
+                              onPress={() => openQuickAdd(cat.id)}
+                              accessibilityRole="button"
+                              accessibilityLabel={`${cat.label} 할 일 추가`}
+                              style={[styles.catAdd, { backgroundColor: cat.color }]}>
+                              <Icon name="add" size={14} color={t.onPrimary} />
+                            </Pressable>
+                          </View>
+
+                          <View style={styles.rows}>
+                            {items.map((routine) => {
+                              const menuOpen = menuOpenId === routine.id;
+                              const done = isDone(routine.id, today);
+                              return (
+                                <View key={routine.id}>
+                                  <View style={styles.routineRow}>
+                                    <Pressable
+                                      onPress={() => handleToggle(routine, today)}
+                                      accessibilityRole="checkbox"
+                                      accessibilityState={{ checked: done }}
+                                      accessibilityLabel={routine.title}
+                                      style={styles.rowMain}>
+                                      <Icon
+                                        name={done ? 'checkbox-on' : 'checkbox-off'}
+                                        size={22}
+                                        color={done ? cat.color : t.textDisabled}
+                                      />
+                                      <View style={styles.flex}>
+                                        <Text
+                                          style={[
+                                            Typography.body,
+                                            done
+                                              ? {
+                                                  color: t.textMuted,
+                                                  textDecorationLine: 'line-through',
+                                                }
+                                              : { color: t.text },
+                                          ]}>
+                                          {routine.title}
+                                        </Text>
+                                        {(routine.alarmEnabled && routine.time) ||
+                                        routine.photoVerify ? (
+                                          <View style={styles.badges}>
+                                            {routine.alarmEnabled && routine.time ? (
+                                              <View style={styles.badge}>
+                                                <Icon name="bell" size={12} color={t.textMuted} />
+                                                <Text
+                                                  style={[
+                                                    styles.badgeText,
+                                                    { color: t.textMuted },
+                                                  ]}>
+                                                  {formatTime(routine.time)}
+                                                </Text>
+                                              </View>
+                                            ) : null}
+                                            {routine.photoVerify ? (
+                                              <View style={styles.badge}>
+                                                <Icon name="camera" size={12} color={t.textMuted} />
+                                                <Text
+                                                  style={[
+                                                    styles.badgeText,
+                                                    { color: t.textMuted },
+                                                  ]}>
+                                                  사진 인증
+                                                </Text>
+                                              </View>
+                                            ) : null}
                                           </View>
                                         ) : null}
                                       </View>
-                                    ) : null}
+                                    </Pressable>
+                                    <Pressable
+                                      onPress={() => setMenuOpenId(menuOpen ? null : routine.id)}
+                                      accessibilityRole="button"
+                                      accessibilityLabel={`${routine.title} 메뉴`}
+                                      style={styles.kebab}>
+                                      <Icon name="kebab" size={20} color={t.textDisabled} />
+                                    </Pressable>
                                   </View>
-                                </Pressable>
+                                </View>
+                              );
+                            })}
+
+                            {addingCategory === cat.id ? (
+                              <View style={[styles.addRow, { backgroundColor: t.surface }]}>
+                                <Icon name="checkbox-off" size={22} color={t.textDisabled} />
+                                <TextInput
+                                  ref={todoInputRef}
+                                  autoFocus
+                                  value={newTodo}
+                                  onChangeText={setNewTodo}
+                                  // Commit on blur — pressing 완료 (single-line blurs on
+                                  // submit) or tapping elsewhere both save the todo.
+                                  onBlur={() => commitTodo(cat.id)}
+                                  placeholder="할 일 입력 후 완료"
+                                  placeholderTextColor={t.textMuted}
+                                  style={[styles.flex, styles.todoInput, { color: t.text }]}
+                                />
                                 <Pressable
-                                  onPress={() => setMenuOpenId(menuOpen ? null : routine.id)}
+                                  // onPressIn (fires before the input's blur) flags the
+                                  // blur as picker-driven so the row stays open.
+                                  onPressIn={() => {
+                                    skipBlurCommit.current = true;
+                                  }}
+                                  onPress={() => setTodoDateOpen(true)}
                                   accessibilityRole="button"
-                                  accessibilityLabel={`${routine.title} 메뉴`}
-                                  style={styles.kebab}>
-                                  <Icon name="kebab" size={20} color={t.textDisabled} />
+                                  accessibilityLabel="할 일 날짜 선택"
+                                  style={[styles.dateChip, { backgroundColor: t.surfaceMuted }]}>
+                                  <Icon name="calendar" size={13} color={t.textMuted} />
+                                  <Text style={[styles.dateChipText, { color: t.textMuted }]}>
+                                    {newTodoDate === today ? '오늘' : formatDate(newTodoDate)}
+                                  </Text>
                                 </Pressable>
                               </View>
-                            </View>
-                          );
-                        })}
-
-                        {addingCategory === cat.id ? (
-                          <View style={[styles.addRow, { backgroundColor: t.surface }]}>
-                            <Icon name="checkbox-off" size={22} color={t.textDisabled} />
-                            <TextInput
-                              ref={todoInputRef}
-                              autoFocus
-                              value={newTodo}
-                              onChangeText={setNewTodo}
-                              // Commit on blur — pressing 완료 (single-line blurs on
-                              // submit) or tapping elsewhere both save the todo.
-                              onBlur={() => commitTodo(cat.id)}
-                              placeholder="할 일 입력 후 완료"
-                              placeholderTextColor={t.textMuted}
-                              style={[styles.flex, styles.todoInput, { color: t.text }]}
-                            />
-                            <Pressable
-                              // onPressIn (fires before the input's blur) flags the
-                              // blur as picker-driven so the row stays open.
-                              onPressIn={() => {
-                                skipBlurCommit.current = true;
-                              }}
-                              onPress={() => setTodoDateOpen(true)}
-                              accessibilityRole="button"
-                              accessibilityLabel="할 일 날짜 선택"
-                              style={[styles.dateChip, { backgroundColor: t.surfaceMuted }]}>
-                              <Icon name="calendar" size={13} color={t.textMuted} />
-                              <Text style={[styles.dateChipText, { color: t.textMuted }]}>
-                                {newTodoDate === today ? '오늘' : formatDate(newTodoDate)}
-                              </Text>
-                            </Pressable>
+                            ) : null}
                           </View>
-                        ) : null}
-                      </View>
-                    </View>
-                  );
-                })}
+                        </View>
+                      );
+                    })}
 
                 <Pressable
                   onPress={onEdit}
@@ -453,7 +518,11 @@ export function MyRoomScreen({
               <Text style={[Typography.h3, styles.calListTitle, { color: t.text }]}>
                 이 날의 루틴
               </Text>
-              {dateRoutines.length === 0 ? (
+              {loading ? (
+                <View style={styles.stateBlock}>
+                  <ActivityIndicator color={t.primary} />
+                </View>
+              ) : dateRoutines.length === 0 ? (
                 <Text style={[Typography.body, styles.calEmpty, { color: t.textMuted }]}>
                   예정된 루틴이 없어요.
                 </Text>
@@ -923,6 +992,24 @@ const styles = StyleSheet.create({
   },
   dateChipText: {
     fontSize: 12,
+  },
+  center: {
+    textAlign: 'center',
+  },
+  stateBlock: {
+    alignItems: 'center',
+    paddingVertical: Spacing.five,
+    gap: Spacing.two,
+  },
+  emptyHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.half,
+  },
+  retryBtn: {
+    borderRadius: Radius.pill,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.five,
   },
   badges: {
     flexDirection: 'row',

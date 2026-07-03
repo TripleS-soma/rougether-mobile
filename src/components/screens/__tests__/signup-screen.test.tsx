@@ -28,4 +28,13 @@ describe('SignupScreen', () => {
 
     expect(getByPlaceholderText('6자리 인증번호')).toBeTruthy();
   });
+
+  it('shows the not-ready notice and keeps submit disabled (no signup API yet)', async () => {
+    const { getByText } = await render(<SignupScreen />);
+
+    expect(getByText(/이메일 가입은 준비 중이에요/)).toBeTruthy();
+    // Pressing the disabled submit must be a no-op (it used to fake a success
+    // that bounced back to the login gate).
+    await fireEvent.press(getByText('가입 준비 중'));
+  });
 });

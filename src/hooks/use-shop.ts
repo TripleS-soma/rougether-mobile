@@ -10,8 +10,9 @@
  */
 import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
 
-import { fetchItems, purchaseItem } from '@/api';
+import { ApiError, fetchItems, purchaseItem } from '@/api';
 import { ownedPlacement, type ShopCatalogue, toShopCatalogue } from '@/api/adapters';
+import { useToast } from '@/components/ui/toast';
 import { type Wallet } from '@/constants/currency';
 import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
 
@@ -20,10 +21,12 @@ const EMPTY: ShopCatalogue = { furniture: [], wallpapers: [], ownedIds: [] };
 export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
   const [catalogue, setCatalogue] = useState<ShopCatalogue>(EMPTY);
   const [ownedIds, setOwnedIds] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
   const [placement, setPlacement] = useState<{
     placedFurnitureIds: string[];
     wallpaperId: string;
   }>({ placedFurnitureIds: [], wallpaperId: DEFAULT_WALLPAPER_ID });
+  const { show: toast } = useToast();
 
   useEffect(() => {
     let active = true;
@@ -37,7 +40,8 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
       })
       .catch(() => {
         // Non-fatal; the shop shows an empty catalogue.
-      });
+      })
+      .finally(() => active && setLoading(false));
     return () => {
       active = false;
     };
@@ -56,11 +60,17 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
         }));
       }
       setOwnedIds((prev) => (prev.includes(itemId) ? prev : [...prev, itemId]));
+      toast('구매 완료!', 'success');
       return true;
-    } catch {
+    } catch (err) {
+      const broke =
+        err instanceof ApiError &&
+        err.status === 409 &&
+        err.bodyText?.includes('SHOP_INSUFFICIENT_BALANCE');
+      toast(broke ? '다이아가 부족해요' : '구매에 실패했어요', 'error');
       return false;
     }
   };
 
-  return { catalogue, ownedIds, placement, purchase };
+  return { catalogue, ownedIds, placement, loading, purchase };
 }

@@ -28,6 +28,7 @@ import { Card } from '@/components/ui/card';
 import { IconButton } from '@/components/ui/icon-button';
 import { Pill } from '@/components/ui/pill';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { ToastProvider, useToast } from '@/components/ui/toast';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
 import { TokenSwatches } from '@/dev/token-swatches';
 import { TypeScalePreview } from '@/dev/type-scale-preview';
@@ -319,6 +320,15 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
+    name: 'UI · Toast',
+    description: '하단 토스트 (info / success / error) — useToast().show(...)로 발사.',
+    render: () => (
+      <ToastProvider>
+        <ToastDemo />
+      </ToastProvider>
+    ),
+  },
+  {
     name: 'SampleButton · primary',
     description: 'Reference pattern for harness components — theme-aware, testable.',
     render: () => <SampleButton label="Primary" variant="primary" />,
@@ -332,3 +342,23 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => <SampleButton label="Disabled" disabled />,
   },
 ];
+
+/** Buttons that fire each toast variant (needs its own provider in the gallery). */
+function ToastDemo() {
+  const { show } = useToast();
+  return (
+    <View style={{ alignSelf: 'stretch', gap: 8, minHeight: 200 }}>
+      <Button label="정보 토스트" onPress={() => show('저장했어요')} />
+      <Button
+        label="성공 토스트"
+        variant="secondary"
+        onPress={() => show('구매 완료!', 'success')}
+      />
+      <Button
+        label="에러 토스트"
+        variant="danger"
+        onPress={() => show('저장에 실패했어요', 'error')}
+      />
+    </View>
+  );
+}
