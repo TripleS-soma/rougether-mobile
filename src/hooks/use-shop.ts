@@ -8,7 +8,7 @@
  * that's only returned at purchase time — with no inventory endpoint, owned
  * items can't be re-placed — so arrangement stays client-side for now.
  */
-import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
+import { type Dispatch, type SetStateAction, useCallback, useEffect, useState } from 'react';
 
 import { ApiError, fetchItems, purchaseItem } from '@/api';
 import { ownedPlacement, type ShopCatalogue, toShopCatalogue } from '@/api/adapters';
@@ -22,30 +22,32 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
   const [catalogue, setCatalogue] = useState<ShopCatalogue>(EMPTY);
   const [ownedIds, setOwnedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [placement, setPlacement] = useState<{
     placedFurnitureIds: string[];
     wallpaperId: string;
   }>({ placedFurnitureIds: [], wallpaperId: DEFAULT_WALLPAPER_ID });
   const { show: toast } = useToast();
 
-  useEffect(() => {
-    let active = true;
-    fetchItems()
-      .then((items) => {
-        if (!active) return;
-        const cat = toShopCatalogue(items);
-        setCatalogue(cat);
-        setOwnedIds(cat.ownedIds);
-        setPlacement(ownedPlacement(cat));
-      })
-      .catch(() => {
-        // Non-fatal; the shop shows an empty catalogue.
-      })
-      .finally(() => active && setLoading(false));
-    return () => {
-      active = false;
-    };
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(false);
+    try {
+      const items = await fetchItems();
+      const cat = toShopCatalogue(items);
+      setCatalogue(cat);
+      setOwnedIds(cat.ownedIds);
+      setPlacement(ownedPlacement(cat));
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   /** Buy an item with dia. Returns true on success (false on insufficient funds). */
   const purchase = async (itemId: string): Promise<boolean> => {
@@ -72,5 +74,5 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
     }
   };
 
-  return { catalogue, ownedIds, placement, loading, purchase };
+  return { catalogue, ownedIds, placement, loading, error, retry: load, purchase };
 }

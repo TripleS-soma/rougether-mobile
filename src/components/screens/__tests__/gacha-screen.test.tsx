@@ -29,10 +29,22 @@ describe('GachaScreen', () => {
       <GachaScreen gachas={[machine]} coinBalance={5600} onDraw={onDraw} />,
     );
 
-    await fireEvent.press(getByText('뽑기'));
+    await fireEvent.press(getByText('1회 뽑기'));
 
-    expect(onDraw).toHaveBeenCalledWith(1);
+    expect(onDraw).toHaveBeenCalledWith(1, 1);
     await waitFor(() => expect(getByText('허브 화분')).toBeTruthy());
+  });
+
+  it('draws ten at once with the 10연 button', async () => {
+    const onDraw = jest.fn(async (): Promise<DrawResult[]> => []);
+    const { getByText } = await render(
+      <GachaScreen gachas={[machine]} coinBalance={5600} onDraw={onDraw} />,
+    );
+
+    // 10-pull costs costAmount × 10 (2,500) — affordable with 5,600.
+    expect(getByText('2,500')).toBeTruthy();
+    await fireEvent.press(getByText('10연 뽑기'));
+    expect(onDraw).toHaveBeenCalledWith(1, 10);
   });
 
   it('does not draw when the balance is below the cost', async () => {
@@ -41,8 +53,9 @@ describe('GachaScreen', () => {
       <GachaScreen gachas={[machine]} coinBalance={100} onDraw={onDraw} />,
     );
 
-    // The pull button is disabled below cost, so the press is a no-op.
-    await fireEvent.press(getByText('뽑기'));
+    // Both pull buttons are disabled below cost, so the presses are no-ops.
+    await fireEvent.press(getByText('1회 뽑기'));
+    await fireEvent.press(getByText('10연 뽑기'));
     expect(onDraw).not.toHaveBeenCalled();
   });
 });

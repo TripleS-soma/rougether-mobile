@@ -146,9 +146,20 @@ export function MyRoomScreen({
     categories.length > 0 ? categories : roomRoutines.length > 0 ? [UNCATEGORIZED_META] : [];
 
   // Header hamburger popover (방 편집 / 카테고리 관리 / 루틴 관리) + the
-  // category manager sheet it opens.
+  // category manager sheet it opens. The popover anchors under the measured
+  // button position — a fixed offset misaligns across notch/status-bar sizes.
   const [navMenuOpen, setNavMenuOpen] = useState(false);
+  const [navMenuTop, setNavMenuTop] = useState(104);
+  const menuBtnRef = useRef<View>(null);
   const [categorySheetOpen, setCategorySheetOpen] = useState(false);
+
+  const openNavMenu = () => {
+    setNavMenuOpen(true);
+    // measureInWindow is a no-op in tests/web — the fallback top then applies.
+    menuBtnRef.current?.measureInWindow?.((_x, y, _w, h) => {
+      if (typeof y === 'number' && typeof h === 'number') setNavMenuTop(y + h + Spacing.one);
+    });
+  };
 
   // Which category's quick-add input is open, the in-progress todo text + due
   // date, and which routine's kebab menu is open.
@@ -261,8 +272,10 @@ export function MyRoomScreen({
           <View style={[styles.avatar, { backgroundColor: character.bg }]}>
             <CharacterAvatar characterId={characterId} size={36} />
           </View>
-          <View>
-            <Text style={[Typography.h3, { color: t.text }]}>{userName}의 방</Text>
+          <View style={styles.headerName}>
+            <Text style={[Typography.h3, { color: t.text }]} numberOfLines={1}>
+              {userName}의 방
+            </Text>
             <View style={styles.streak}>
               <Icon name="flame" size={14} color={t.warning} />
               <Text style={[Typography.supporting, { color: t.warning }]}>{streakDays}일</Text>
@@ -272,7 +285,8 @@ export function MyRoomScreen({
         <View style={styles.headerRight}>
           <WalletPills coin={coinBalance} dia={diaBalance} />
           <Pressable
-            onPress={() => setNavMenuOpen(true)}
+            ref={menuBtnRef}
+            onPress={openNavMenu}
             accessibilityRole="button"
             accessibilityLabel="메뉴"
             style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
@@ -690,20 +704,23 @@ export function MyRoomScreen({
               </Text>
             </Pressable>
 
-            <Pressable
-              onPress={() => {
-                const r = menuRoutine;
-                setMenuOpenId(null);
-                if (r) setTimeId(r.id);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={`${menuRoutine?.title ?? ''} 시간 수정`}
-              style={styles.sheetItem}>
-              <View style={[styles.sheetItemIcon, { backgroundColor: t.warning }]}>
-                <Icon name="bell" size={18} color={t.onPrimary} />
-              </View>
-              <Text style={[Typography.body, { color: t.text }]}>시간 수정</Text>
-            </Pressable>
+            {/* Todos have no alarm time — hide the dead menu item for them. */}
+            {menuRoutine?.kind !== 'todo' ? (
+              <Pressable
+                onPress={() => {
+                  const r = menuRoutine;
+                  setMenuOpenId(null);
+                  if (r) setTimeId(r.id);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`${menuRoutine?.title ?? ''} 시간 수정`}
+                style={styles.sheetItem}>
+                <View style={[styles.sheetItemIcon, { backgroundColor: t.warning }]}>
+                  <Icon name="bell" size={18} color={t.onPrimary} />
+                </View>
+                <Text style={[Typography.body, { color: t.text }]}>시간 수정</Text>
+              </Pressable>
+            ) : null}
           </Pressable>
         </Pressable>
       </Modal>
@@ -786,7 +803,11 @@ export function MyRoomScreen({
         animationType="fade"
         onRequestClose={() => setNavMenuOpen(false)}>
         <Pressable style={styles.popoverBackdrop} onPress={() => setNavMenuOpen(false)}>
-          <View style={[styles.popover, { backgroundColor: t.screen, borderColor: t.border }]}>
+          <View
+            style={[
+              styles.popover,
+              { top: navMenuTop, backgroundColor: t.screen, borderColor: t.border },
+            ]}>
             {(
               [
                 {
@@ -885,9 +906,14 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
   },
   headerLeft: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
+    marginRight: Spacing.two,
+  },
+  headerName: {
+    flexShrink: 1,
   },
   headerRight: {
     flexDirection: 'row',
@@ -1136,9 +1162,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.2)',
   },
   popover: {
+    // `top` comes from the measured hamburger position (navMenuTop).
     position: 'absolute',
-    // Anchored under the header's hamburger button (header ≈ status bar + 72).
-    top: 104,
     right: Spacing.four,
     minWidth: 176,
     borderRadius: Radius.md,

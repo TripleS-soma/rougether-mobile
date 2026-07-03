@@ -9,6 +9,7 @@ import {
   useState,
 } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
@@ -91,6 +92,7 @@ function ToastView({
   onPress: () => void;
 }) {
   const t = useTokens();
+  const insets = useContext(SafeAreaInsetsContext);
   const bg = toast.type === 'error' ? t.danger : toast.type === 'success' ? t.success : t.text;
 
   return (
@@ -99,6 +101,8 @@ function ToastView({
       style={[
         styles.toast,
         {
+          // Above the bottom nav (≈64px) and the home indicator on any device.
+          bottom: (insets?.bottom ?? 0) + 80,
           backgroundColor: bg,
           opacity,
           transform: [
@@ -123,8 +127,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: Spacing.four,
     right: Spacing.four,
-    // Sits above the bottom nav (nav ≈ 64px + safe area).
-    bottom: 96,
     borderRadius: Radius.pill,
     paddingVertical: Spacing.three,
     paddingHorizontal: Spacing.four,

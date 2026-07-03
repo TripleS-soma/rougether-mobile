@@ -28,9 +28,10 @@ export function useGacha(onWallet: (wallet: Wallet) => void) {
     };
   }, []);
 
-  const draw = async (gachaId: number): Promise<DrawResult[] | null> => {
+  /** Draw `count` times (the server accepts 1=단챠 or 10=10연). */
+  const draw = async (gachaId: number, count: 1 | 10 = 1): Promise<DrawResult[] | null> => {
     try {
-      const res = await drawGacha(gachaId, 1);
+      const res = await drawGacha(gachaId, count);
       if (res.wallets?.length) onWallet(toWallet(res.wallets));
       return res.results ?? [];
     } catch {

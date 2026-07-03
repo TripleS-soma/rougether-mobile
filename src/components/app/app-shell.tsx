@@ -156,6 +156,8 @@ export function AppShell({
     ownedIds,
     placement,
     loading: shopLoading,
+    error: shopError,
+    retry: retryShop,
     purchase: purchaseFurniture,
   } = useShop(setWallet);
 
@@ -245,6 +247,8 @@ export function AppShell({
             furniture={catalogue.furniture}
             wallpapers={catalogue.wallpapers}
             loading={shopLoading}
+            loadError={shopError}
+            onRetry={retryShop}
             coinBalance={wallet.coin}
             diaBalance={wallet.dia}
             characterId={characterId}
