@@ -44,3 +44,10 @@ example
 # generated native folders
 /ios
 /android
+
+# secrets — never commit signing keys / API keys
+*.p8
+*.p12
+*.jks
+*.keystore
+*.mobileprovision
