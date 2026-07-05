@@ -35,6 +35,25 @@ import { useTokens } from '@/hooks/use-tokens';
 import { formatDate, formatTime, todayIso } from '@/utils/datetime';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
 
+/** Weekday (0 = Sun) of a local "YYYY-MM-DD" date. */
+const weekdayOf = (dateIso: string) => {
+  const [y, m, d] = dateIso.split('-').map(Number);
+  return new Date(y, m - 1, d).getDay();
+};
+
+/**
+ * Whether an item is scheduled on a date: todos by dueDate; routines by their
+ * start/end range and repeat days (no days = daily). Shared by the 방 tab
+ * (today) and the 달력 tab (selected date) so both always agree.
+ */
+const isScheduledOn = (r: Routine, dateIso: string) => {
+  if (r.kind === 'todo') return r.dueDate === dateIso;
+  if (r.startDate && dateIso < r.startDate) return false;
+  if (r.endDate && dateIso > r.endDate) return false;
+  if (r.days && r.days.length) return r.days.includes(weekdayOf(dateIso));
+  return true;
+};
+
 export type MyRoomScreenProps = {
   /** Room occupant's display name (header title becomes "{userName}의 방"). */
   userName?: string;
@@ -133,8 +152,10 @@ export function MyRoomScreen({
   const today = todayIso();
   const isDone = (id: string, date: string) => (completions[id] ?? []).includes(date);
 
-  // The 방 tab shows today: recurring routines always, todos only if due today.
-  const roomRoutines = routines.filter((r) => r.kind !== 'todo' || r.dueDate === today);
+  // The 방 tab lists only what's scheduled *today* (repeat days + start/end
+  // range) — the same rule the 달력 tab applies to its selected date. Without
+  // this, editing a routine's days never changed the today list.
+  const roomRoutines = routines.filter((r) => isScheduledOn(r, today));
   const completedCount = roomRoutines.filter((r) => isDone(r.id, today)).length;
   const progress = roomRoutines.length > 0 ? completedCount / roomRoutines.length : 0;
 
@@ -180,17 +201,7 @@ export function MyRoomScreen({
   // 방 / 달력 tab. The calendar lists routines + todos on the selected date.
   const [tab, setTab] = useState<'room' | 'calendar'>('room');
   const [selectedDate, setSelectedDate] = useState(() => todayIso());
-  const selectedWeekday = (() => {
-    const [y, m, d] = selectedDate.split('-').map(Number);
-    return new Date(y, m - 1, d).getDay();
-  })();
-  const dateRoutines = routines.filter((r) => {
-    if (r.kind === 'todo') return r.dueDate === selectedDate;
-    if (r.startDate && selectedDate < r.startDate) return false;
-    if (r.endDate && selectedDate > r.endDate) return false;
-    if (r.days && r.days.length) return r.days.includes(selectedWeekday);
-    return true;
-  });
+  const dateRoutines = routines.filter((r) => isScheduledOn(r, selectedDate));
 
   // Scroll the tapped category's quick-add input into view (above the keyboard).
   const scrollRef = useRef<ScrollView>(null);
