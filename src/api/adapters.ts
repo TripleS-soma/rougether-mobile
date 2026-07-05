@@ -381,6 +381,7 @@ export function toGroupHouse(
   detail: HouseDetailResponse,
   members: MemberSummary[],
   myUserId?: number,
+  myNickname?: string,
 ): House {
   const active = members.filter((m) => m.status !== 'LEFT');
   // Others first, me last → my room lands on the bottom floor.
@@ -389,7 +390,11 @@ export function toGroupHouse(
     ...active.filter((m) => m.userId === myUserId),
   ];
   const cells: RoomCell[] = ordered.map((m, i) => ({
-    name: m.nickname || `멤버 ${m.userId ?? i + 1}`,
+    // The members API may not carry my nickname (server nickname unset) — fall
+    // back to the profile nickname so my room reads by name, not '멤버 N'.
+    name:
+      m.nickname ||
+      (m.userId === myUserId && myNickname ? myNickname : `멤버 ${m.userId ?? i + 1}`),
     color: m.userId === myUserId ? MY_ROOM_TINT : ROOM_TINTS[i % ROOM_TINTS.length],
     isMine: m.userId === myUserId,
     membershipId: m.membershipId,

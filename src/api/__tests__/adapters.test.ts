@@ -9,6 +9,7 @@ import {
   toTodoCreate,
   toWallet,
   todayCompletions,
+  toGroupHouse,
 } from '@/api/adapters';
 import type { ItemResponse, RoutineResponse, TodayResponse } from '@/api/types';
 import type { NewRoutine } from '@/constants/routines';
@@ -183,5 +184,33 @@ describe('API adapters', () => {
         visibility: 'public',
       }),
     ).toMatchObject({ name: '취미', colorHex: '#123456', iconKey: '🎨', visibility: 'HOUSE' });
+  });
+
+  it('names my house room by profile nickname when the members API has none', () => {
+    const detail = { houseId: 1, name: '검증 하우스' };
+    const members = [
+      {
+        membershipId: 1,
+        userId: 6,
+        nickname: undefined,
+        role: 'OWNER' as const,
+        status: 'ACTIVE' as const,
+      },
+      {
+        membershipId: 2,
+        userId: 4,
+        nickname: '이웃',
+        role: 'MEMBER' as const,
+        status: 'ACTIVE' as const,
+      },
+    ];
+    const house = toGroupHouse(detail, members, 6, '준서');
+    const rooms = house.floors.flatMap((f) => f.rooms);
+    expect(rooms.find((r) => r.isMine)?.name).toBe('준서');
+    expect(rooms.find((r) => !r.isMine)?.name).toBe('이웃');
+
+    // Without a profile nickname it falls back to 멤버 N.
+    const anon = toGroupHouse(detail, members, 6);
+    expect(anon.floors.flatMap((f) => f.rooms).find((r) => r.isMine)?.name).toBe('멤버 6');
   });
 });

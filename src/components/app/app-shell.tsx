@@ -133,6 +133,7 @@ export function AppShell({
     error: myRoomError,
     retry: retryMyRoom,
     toggleCompletion,
+    saveNickname,
     quickAddTodo,
     addRoutine,
     updateRoutine,
@@ -405,7 +406,8 @@ export function AppShell({
             characterId={characterId}
             onSave={(nick, b) => {
               setNickname(nick);
-              setBio(b);
+              setBio(b); // bio has no server field yet — stays local
+              void saveNickname(nick);
               setScreen('settings');
             }}
             onBack={() => setScreen('settings')}

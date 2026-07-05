@@ -10,6 +10,7 @@ import {
   createHouse as apiCreateHouse,
   fetchHouse,
   fetchHouseMembers,
+  fetchMe,
   fetchGoals,
   fetchHouses,
   fetchMyHouses,
@@ -34,11 +35,15 @@ export function useHouses() {
   const reloadMyHouses = useCallback(async () => {
     const mine = await fetchMyHouses();
     const myUserId = getSessionUserId();
+    // My cell shows the profile nickname when the members API has none.
+    const myNickname = await fetchMe()
+      .then((me) => me.nickname ?? undefined)
+      .catch(() => undefined);
     const detailed = await Promise.all(
       mine.map(async (h) => {
         const id = h.houseId ?? 0;
         const [detail, members] = await Promise.all([fetchHouse(id), fetchHouseMembers(id)]);
-        return toGroupHouse(detail, members, myUserId);
+        return toGroupHouse(detail, members, myUserId, myNickname);
       }),
     );
     setHouses(detailed);

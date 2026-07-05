@@ -27,6 +27,7 @@ import {
   uncompleteRoutine,
   uncompleteTodo,
   updateCategory as apiUpdateCategory,
+  updateMe,
   updateRoutine as apiUpdateRoutine,
   updateTodo,
 } from '@/api';
@@ -248,6 +249,20 @@ export function useMyRoomData() {
     }
   };
 
+  const saveNickname = async (nick: string): Promise<boolean> => {
+    const before = nickname;
+    setNickname(nick);
+    try {
+      await updateMe({ nickname: nick });
+      toast('프로필이 저장되었어요', 'success');
+      return true;
+    } catch {
+      setNickname(before);
+      toast('프로필 저장에 실패했어요 (서버 준비 중)', 'error');
+      return false;
+    }
+  };
+
   const createRoutineCategory = async (cat: RoutineCategoryMeta) => {
     try {
       const created = await createCategory(toCategoryCreate(cat, categories.length));
@@ -298,6 +313,7 @@ export function useMyRoomData() {
     /** Re-run the full load cycle (used by the error state's 다시 시도). */
     retry: load,
     toggleCompletion,
+    saveNickname,
     quickAddTodo,
     addRoutine,
     updateRoutine,
