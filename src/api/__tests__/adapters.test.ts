@@ -10,6 +10,9 @@ import {
   toWallet,
   todayCompletions,
   toGroupHouse,
+  fromRoomSlots,
+  toSlotSaves,
+  toUserItemMap,
 } from '@/api/adapters';
 import type { ItemResponse, RoutineResponse, TodayResponse } from '@/api/types';
 import type { NewRoutine } from '@/constants/routines';
@@ -212,5 +215,54 @@ describe('API adapters', () => {
     // Without a profile nickname it falls back to 멤버 N.
     const anon = toGroupHouse(detail, members, 6);
     expect(anon.floors.flatMap((f) => f.rooms).find((r) => r.isMine)?.name).toBe('멤버 6');
+  });
+
+  it('round-trips room placement: slots → app placement → slot saves', () => {
+    const cat = {
+      furniture: [
+        {
+          id: '2',
+          name: '침대',
+          slot: 'bottomLeft' as const,
+          category: '가구' as const,
+          price: 0,
+          assetKey: 'items/a/bed.png',
+        },
+        {
+          id: '5',
+          name: '선반',
+          slot: 'topLeft' as const,
+          category: '가구' as const,
+          price: 0,
+          assetKey: 'items/a/shelf.png',
+        },
+      ],
+      wallpapers: [{ id: '9', name: '벽지', price: 0, assetKey: 'items/a/wp.png', color: '#FFF' }],
+      ownedIds: ['2', '5', '9'],
+    };
+    const inv = toUserItemMap([
+      { userItemId: 21, itemId: 2 },
+      { userItemId: 22, itemId: 5 },
+      { userItemId: 23, itemId: 9 },
+    ]);
+
+    const placement = fromRoomSlots(
+      [
+        { slotType: 'bottomLeft', userItemId: 21 },
+        { slotType: 'wallpaper', userItemId: 23 },
+        { slotType: 'topRight', userItemId: 999 }, // unknown userItemId → skipped
+      ],
+      cat,
+      inv,
+    );
+    expect(placement).toEqual({ placedFurnitureIds: ['2'], wallpaperId: '9' });
+
+    const saves = toSlotSaves(['2', '5'], '9', cat, inv);
+    expect(saves).toContainEqual({ slotType: 'bottomLeft', userItemId: 21 });
+    expect(saves).toContainEqual({ slotType: 'topLeft', userItemId: 22 });
+    expect(saves).toContainEqual({ slotType: 'wallpaper', userItemId: 23 });
+    // Every other positioned slot is cleared explicitly.
+    expect(saves).toContainEqual({ slotType: 'midLeft', userItemId: null });
+    expect(saves).toHaveLength(9);
   });
 });

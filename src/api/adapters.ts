@@ -22,11 +22,15 @@ import {
 } from '@/resources/furniture';
 
 import { type OnboardingGoal } from '@/components/screens/onboarding-screen';
+import { type RoomSlotSave } from './rooms';
+
 import type { Floor, House, RoomCell } from '@/components/screens/group-house-screen';
 import type { SearchHouse } from '@/components/screens/house-search-screen';
 
 import type {
   CategoryCreateRequest,
+  MyItemSummary,
+  RoomSlotResponse,
   CharacterItem,
   CategoryResponse,
   GachaResponse,
@@ -429,4 +433,73 @@ export function toSearchHouse(h: HouseSummary, index = 0): SearchHouse {
     border: HOUSE_BORDERS[index % HOUSE_BORDERS.length],
     description: `레벨 ${h.level ?? 0} 하우스 · 함께 루틴을 키워요`,
   };
+}
+
+// --- room placement (배치 저장) --------------------------------------------------
+
+const POSITIONED_SLOTS: FurnitureSlot[] = [
+  'topLeft',
+  'topCenter',
+  'topRight',
+  'midLeft',
+  'midRight',
+  'bottomLeft',
+  'bottomCenter',
+  'bottomRight',
+];
+
+/** Inventory → itemId(string) → userItemId map (placement saves need userItemId). */
+export function toUserItemMap(items: MyItemSummary[]): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const it of items)
+    if (it.itemId != null && it.userItemId != null) map.set(String(it.itemId), it.userItemId);
+  return map;
+}
+
+/** Server room slots → app placement. Unknown/unowned entries are skipped. */
+export function fromRoomSlots(
+  slots: RoomSlotResponse[],
+  cat: ShopCatalogue,
+  userItemMap: Map<string, number>,
+): { placedFurnitureIds: string[]; wallpaperId: string | null } {
+  const itemByUserItem = new Map<number, string>();
+  for (const [itemId, uid] of userItemMap) itemByUserItem.set(uid, itemId);
+  const placed: string[] = [];
+  let wallpaperId: string | null = null;
+  for (const s of slots) {
+    if (s.userItemId == null || !s.slotType) continue;
+    const itemId = itemByUserItem.get(s.userItemId);
+    if (!itemId) continue;
+    if (s.slotType === 'wallpaper') {
+      if (cat.wallpapers.some((w) => w.id === itemId)) wallpaperId = itemId;
+    } else if ((POSITIONED_SLOTS as string[]).includes(s.slotType)) {
+      if (cat.furniture.some((f) => f.id === itemId)) placed.push(itemId);
+    }
+  }
+  return { placedFurnitureIds: placed, wallpaperId };
+}
+
+/**
+ * App placement → the full slot layout for PUT /rooms/me/slots. Every
+ * positioned slot (+ wallpaper) is sent each save — null clears — so the
+ * server always mirrors the client exactly.
+ */
+export function toSlotSaves(
+  placedIds: string[],
+  wallpaperId: string,
+  cat: ShopCatalogue,
+  userItemMap: Map<string, number>,
+): RoomSlotSave[] {
+  const bySlot: Partial<Record<FurnitureSlot, number>> = {};
+  for (const id of placedIds) {
+    const item = cat.furniture.find((f) => f.id === id);
+    const uid = userItemMap.get(id);
+    if (item && uid != null && bySlot[item.slot] == null) bySlot[item.slot] = uid;
+  }
+  const saves: RoomSlotSave[] = POSITIONED_SLOTS.map((s) => ({
+    slotType: s,
+    userItemId: bySlot[s] ?? null,
+  }));
+  saves.push({ slotType: 'wallpaper', userItemId: userItemMap.get(wallpaperId) ?? null });
+  return saves;
 }

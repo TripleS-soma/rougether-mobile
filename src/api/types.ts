@@ -171,6 +171,47 @@ export type HouseMemberListResponse = {
   items?: MemberSummary[];
 };
 
+export type HouseMissionClaimResponse = {
+  missionId?: number;
+  status?: 'ACTIVE' | 'COMPLETED' | 'EXPIRED';
+  grantedGrowthPoints?: number;
+  houseGrowthPoints?: number;
+  houseLevel?: number;
+};
+
+export type HouseMissionContributeResponse = {
+  missionId?: number;
+  myContribution?: number;
+  currentValue?: number;
+  achieved?: boolean;
+};
+
+export type HouseMissionCreateRequest = {
+  title: string;
+  missionType: 'DAILY_MEMBER_RATE' | 'WEEKLY_MEMBER_COUNT' | 'STREAK_DAYS';
+  targetValue?: number;
+  startsAt?: string;
+  endsAt?: string;
+};
+
+export type HouseMissionListResponse = {
+  items?: MissionSummary[];
+};
+
+export type HouseMissionResponse = {
+  missionId?: number;
+  title?: string;
+  missionType?: 'DAILY_MEMBER_RATE' | 'WEEKLY_MEMBER_COUNT' | 'STREAK_DAYS';
+  targetValue?: number;
+  currentValue?: number;
+  status?: 'ACTIVE' | 'COMPLETED' | 'EXPIRED';
+  startsAt?: string;
+  endsAt?: string;
+  myContribution?: number;
+  achieved?: boolean;
+  createdAt?: string;
+};
+
 export type HousePreviewResponse = {
   houseId?: number;
   name?: string;
@@ -259,6 +300,18 @@ export type MemberSummary = {
   role?: 'OWNER' | 'MEMBER';
   status?: 'ACTIVE' | 'LEFT' | 'KICKED';
   joinedAt?: string;
+};
+
+export type MissionSummary = {
+  missionId?: number;
+  title?: string;
+  missionType?: 'DAILY_MEMBER_RATE' | 'WEEKLY_MEMBER_COUNT' | 'STREAK_DAYS';
+  targetValue?: number;
+  currentValue?: number;
+  status?: 'ACTIVE' | 'COMPLETED' | 'EXPIRED';
+  startsAt?: string;
+  endsAt?: string;
+  createdAt?: string;
 };
 
 export type MyHouseListResponse = {
