@@ -307,15 +307,22 @@ export function toWallpaper(item: ItemResponse, index = 0): Wallpaper {
 export type ShopCatalogue = {
   furniture: FurnitureItem[];
   wallpapers: Wallpaper[];
+  /** Floor/background surfaces (categoryCode floor/background) — single-select like wallpaper. */
+  floors: Wallpaper[];
+  backgrounds: Wallpaper[];
   ownedIds: string[];
 };
+
+// Surface items share the wallpaper shape: one per room surface slot.
+const bySurfaceCategory = (items: ItemResponse[], categoryCode: string) =>
+  items.filter((i) => i.categoryCode === categoryCode).map((i, idx) => toWallpaper(i, idx));
 
 export function toShopCatalogue(items: ItemResponse[]): ShopCatalogue {
   return {
     furniture: items.filter(isPositioned).map(toFurnitureItem),
-    wallpapers: items
-      .filter((i) => i.categoryCode === 'wallpaper')
-      .map((i, idx) => toWallpaper(i, idx)),
+    wallpapers: bySurfaceCategory(items, 'wallpaper'),
+    floors: bySurfaceCategory(items, 'floor'),
+    backgrounds: bySurfaceCategory(items, 'background'),
     ownedIds: items.filter((i) => i.owned).map((i) => String(i.id)),
   };
 }
@@ -327,6 +334,8 @@ export function toShopCatalogue(items: ItemResponse[]): ShopCatalogue {
 export function ownedPlacement(cat: ShopCatalogue): {
   placedFurnitureIds: string[];
   wallpaperId: string;
+  floorId: string | null;
+  backgroundId: string | null;
 } {
   const owned = new Set(cat.ownedIds);
   const bySlot: Partial<Record<FurnitureSlot, string>> = {};
@@ -335,6 +344,8 @@ export function ownedPlacement(cat: ShopCatalogue): {
   return {
     placedFurnitureIds: Object.values(bySlot),
     wallpaperId: wp?.id ?? cat.wallpapers[0]?.id ?? DEFAULT_WALLPAPER_ID,
+    floorId: cat.floors.find((f) => owned.has(f.id))?.id ?? null,
+    backgroundId: cat.backgrounds.find((b) => owned.has(b.id))?.id ?? null,
   };
 }
 
@@ -487,22 +498,33 @@ export function fromRoomSlots(
   slots: RoomSlotResponse[],
   cat: ShopCatalogue,
   userItemMap: Map<string, number>,
-): { placedFurnitureIds: string[]; wallpaperId: string | null } {
+): {
+  placedFurnitureIds: string[];
+  wallpaperId: string | null;
+  floorId: string | null;
+  backgroundId: string | null;
+} {
   const itemByUserItem = new Map<number, string>();
   for (const [itemId, uid] of userItemMap) itemByUserItem.set(uid, itemId);
   const placed: string[] = [];
   let wallpaperId: string | null = null;
+  let floorId: string | null = null;
+  let backgroundId: string | null = null;
   for (const s of slots) {
     if (s.userItemId == null || !s.slotType) continue;
     const itemId = itemByUserItem.get(s.userItemId);
     if (!itemId) continue;
     if (s.slotType === 'wallpaper') {
       if (cat.wallpapers.some((w) => w.id === itemId)) wallpaperId = itemId;
+    } else if (s.slotType === 'floor') {
+      if (cat.floors.some((f) => f.id === itemId)) floorId = itemId;
+    } else if (s.slotType === 'background') {
+      if (cat.backgrounds.some((b) => b.id === itemId)) backgroundId = itemId;
     } else if ((POSITIONED_SLOTS as string[]).includes(s.slotType)) {
       if (cat.furniture.some((f) => f.id === itemId)) placed.push(itemId);
     }
   }
-  return { placedFurnitureIds: placed, wallpaperId };
+  return { placedFurnitureIds: placed, wallpaperId, floorId, backgroundId };
 }
 
 /**
@@ -515,6 +537,8 @@ export function toSlotSaves(
   wallpaperId: string,
   cat: ShopCatalogue,
   userItemMap: Map<string, number>,
+  floorId?: string | null,
+  backgroundId?: string | null,
 ): RoomSlotSave[] {
   const bySlot: Partial<Record<FurnitureSlot, number>> = {};
   for (const id of placedIds) {
@@ -527,5 +551,10 @@ export function toSlotSaves(
     userItemId: bySlot[s] ?? null,
   }));
   saves.push({ slotType: 'wallpaper', userItemId: userItemMap.get(wallpaperId) ?? null });
+  saves.push({ slotType: 'floor', userItemId: (floorId && userItemMap.get(floorId)) || null });
+  saves.push({
+    slotType: 'background',
+    userItemId: (backgroundId && userItemMap.get(backgroundId)) || null,
+  });
   return saves;
 }

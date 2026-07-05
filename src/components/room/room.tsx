@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { useState } from 'react';
 import { Pressable, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 
@@ -5,6 +6,7 @@ import { CharacterAvatar, POSE_COUNT } from '@/components/character-avatar';
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Radius } from '@/constants/theme';
+import { assetSource, isCdnKey } from '@/resources/asset';
 import {
   DEFAULT_PLACED_FURNITURE_IDS,
   DEFAULT_WALLPAPER_ID,
@@ -37,11 +39,16 @@ const SLOT_STYLE: Record<FurnitureSlot, ViewStyle> = {
 
 export type RoomProps = {
   wallpaperId?: string;
+  /** Selected floor/background surface item ids (optional room layers). */
+  floorId?: string | null;
+  backgroundId?: string | null;
   placedFurnitureIds?: string[];
   characterId?: CharacterId;
   /** Item + wallpaper catalogue to resolve ids against (defaults to the local set). */
   furniture?: FurnitureItem[];
   wallpapers?: Wallpaper[];
+  floors?: Wallpaper[];
+  backgrounds?: Wallpaper[];
   /** When true, tapping the character cycles through its poses (나의 방). */
   interactiveCharacter?: boolean;
   style?: StyleProp<ViewStyle>;
@@ -55,20 +62,52 @@ export type RoomProps = {
  */
 export function Room({
   wallpaperId = DEFAULT_WALLPAPER_ID,
+  floorId,
+  backgroundId,
   placedFurnitureIds = DEFAULT_PLACED_FURNITURE_IDS,
   characterId = DEFAULT_CHARACTER_ID,
   furniture = FURNITURE_ITEMS,
   wallpapers = WALLPAPERS,
+  floors = [],
+  backgrounds = [],
   interactiveCharacter = false,
   style,
 }: RoomProps) {
   const wallpaper = wallpapers.find((w) => w.id === wallpaperId) ?? wallpapers[0];
+  const floor = floorId ? floors.find((f) => f.id === floorId) : undefined;
+  const background = backgroundId ? backgrounds.find((b) => b.id === backgroundId) : undefined;
   const placed = furniture.filter((f) => placedFurnitureIds.includes(f.id));
   const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
   const [pose, setPose] = useState(0);
 
   return (
     <View style={[styles.room, { backgroundColor: wallpaper?.color ?? '#F3E9D6' }, style]}>
+      {background ? (
+        isCdnKey(background.assetKey) ? (
+          <Image
+            source={assetSource(background.assetKey)}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            transition={120}
+            accessibilityLabel={background.name}
+          />
+        ) : (
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: background.color }]} />
+        )
+      ) : null}
+      {floor ? (
+        isCdnKey(floor.assetKey) ? (
+          <Image
+            source={assetSource(floor.assetKey)}
+            style={styles.floor}
+            contentFit="cover"
+            transition={120}
+            accessibilityLabel={floor.name}
+          />
+        ) : (
+          <View style={[styles.floor, { backgroundColor: floor.color }]} />
+        )
+      ) : null}
       {placed.map((item) => (
         <View key={item.id} style={[styles.furniture, SLOT_STYLE[item.slot]]}>
           <FurniturePlaceholder item={item} />
@@ -95,6 +134,13 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     borderRadius: Radius.lg,
     overflow: 'hidden',
+  },
+  floor: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '24%',
   },
   furniture: {
     position: 'absolute',

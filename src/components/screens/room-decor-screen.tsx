@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -7,6 +8,7 @@ import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Icon } from '@/components/ui/icon';
 import { WalletPills } from '@/components/ui/wallet-pills';
 import { Radius, Spacing, Typography } from '@/constants/theme';
+import { assetSource, isCdnKey } from '@/resources/asset';
 import {
   DEFAULT_WALLPAPER_ID,
   FURNITURE_ITEMS,
@@ -17,18 +19,25 @@ import {
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 
+// Tab labels for the API's surface categoryCodes (wallpaper/floor/background).
 const ALL = '전체';
 const WALLPAPER = '벽지';
+const FLOOR = '바닥';
+const BACKGROUND = '배경';
 
 export type RoomDecorScreenProps = {
   /** Furniture ids placed when the screen opens. */
   initialPlacedIds?: string[];
   initialWallpaperId?: string;
+  initialFloorId?: string | null;
+  initialBackgroundId?: string | null;
   /** Ids the user owns; owned items are placeable, the rest are buyable with dia. */
   ownedIds?: string[];
-  /** Item + wallpaper catalogue (defaults to the local set). */
+  /** Item + surface catalogue (defaults to the local set; floors/backgrounds are API-only). */
   furniture?: FurnitureItem[];
   wallpapers?: Wallpaper[];
+  floors?: Wallpaper[];
+  backgrounds?: Wallpaper[];
   /** True while the catalogue is loading from the API. */
   loading?: boolean;
   /** True when the catalogue failed to load (shows an error + 다시 시도). */
@@ -43,8 +52,13 @@ export type RoomDecorScreenProps = {
   onBack?: () => void;
   /** Buy a not-yet-owned catalog item with dia. */
   onBuy?: (itemId: string) => void;
-  /** Commit the current selection. */
-  onApply?: (placedIds: string[], wallpaperId: string) => void;
+  /** Commit the current selection (null floor/background = surface cleared). */
+  onApply?: (
+    placedIds: string[],
+    wallpaperId: string,
+    floorId: string | null,
+    backgroundId: string | null,
+  ) => void;
 };
 
 /**
@@ -58,9 +72,13 @@ export type RoomDecorScreenProps = {
 export function RoomDecorScreen({
   initialPlacedIds,
   initialWallpaperId = DEFAULT_WALLPAPER_ID,
+  initialFloorId = null,
+  initialBackgroundId = null,
   ownedIds,
   furniture = FURNITURE_ITEMS,
   wallpapers = WALLPAPERS,
+  floors = [],
+  backgrounds = [],
   loading = false,
   loadError = false,
   onRetry,
@@ -78,17 +96,25 @@ export function RoomDecorScreen({
     () => new Set(ownedIds ?? furniture.map((i) => i.id)),
     [ownedIds, furniture],
   );
-  // Filter tabs by item type — the API's categoryCode mapped to app labels
-  // (furniture→가구, decor→장식 …), plus 전체/벽지.
+  // Filter tabs by the API categoryCode: surfaces (벽지/바닥/배경, shown only when
+  // the catalogue has them) then the positioned-item categories (가구/장식 …).
   const categories = useMemo(
-    () => [ALL, WALLPAPER, ...Array.from(new Set(furniture.map((i) => i.category)))],
-    [furniture],
+    () => [
+      ALL,
+      WALLPAPER,
+      ...(floors.length > 0 ? [FLOOR] : []),
+      ...(backgrounds.length > 0 ? [BACKGROUND] : []),
+      ...Array.from(new Set(furniture.map((i) => i.category))),
+    ],
+    [floors, backgrounds, furniture],
   );
 
   const [placed, setPlaced] = useState<string[]>(
     () => initialPlacedIds ?? ['hanok-bed', 'hanok-shelf', 'hanok-window', 'hanok-rug'],
   );
   const [wallpaperId, setWallpaperId] = useState(initialWallpaperId);
+  const [floorId, setFloorId] = useState<string | null>(initialFloorId);
+  const [backgroundId, setBackgroundId] = useState<string | null>(initialBackgroundId);
   const [activeCategory, setActiveCategory] = useState(ALL);
 
   const slotOf = (id: string) => furniture.find((i) => i.id === id)?.slot;
@@ -102,12 +128,14 @@ export function RoomDecorScreen({
     });
   };
 
-  const visibleWallpapers = wallpapers;
   const showWallpapers = activeCategory === ALL || activeCategory === WALLPAPER;
+  const showFloors = floors.length > 0 && (activeCategory === ALL || activeCategory === FLOOR);
+  const showBackgrounds =
+    backgrounds.length > 0 && (activeCategory === ALL || activeCategory === BACKGROUND);
   const visibleItems =
     activeCategory === ALL
       ? furniture
-      : activeCategory === WALLPAPER
+      : [WALLPAPER, FLOOR, BACKGROUND].includes(activeCategory)
         ? []
         : furniture.filter((i) => i.category === activeCategory);
 
@@ -130,9 +158,13 @@ export function RoomDecorScreen({
           <Room
             characterId={characterId}
             wallpaperId={wallpaperId}
+            floorId={floorId}
+            backgroundId={backgroundId}
             placedFurnitureIds={placed}
             furniture={furniture}
             wallpapers={wallpapers}
+            floors={floors}
+            backgrounds={backgrounds}
           />
         </View>
 
@@ -182,42 +214,39 @@ export function RoomDecorScreen({
         ) : null}
 
         {!loading && !loadError && showWallpapers ? (
-          <View style={styles.catalog}>
-            <Text style={[Typography.label, styles.catalogTitle, { color: t.textMuted }]}>
-              벽지
-            </Text>
-            <View style={styles.grid}>
-              {visibleWallpapers.map((wp) => {
-                const active = wp.id === wallpaperId;
-                return (
-                  <Pressable
-                    key={wp.id}
-                    onPress={() => setWallpaperId(wp.id)}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: active }}
-                    accessibilityLabel={wp.name}
-                    style={[
-                      styles.tile,
-                      {
-                        backgroundColor: t.surface,
-                        borderColor: active ? t.primary : 'transparent',
-                      },
-                    ]}>
-                    <View style={[styles.swatch, { backgroundColor: wp.color }]} />
-                    <Text style={[styles.tileName, { color: t.text }]} numberOfLines={2}>
-                      {wp.name}
-                    </Text>
-                    <Text style={[styles.tilePrice, { color: t.textMuted }]}>✨ {wp.price}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
+          <SurfaceSection
+            title={WALLPAPER}
+            items={wallpapers}
+            selectedId={wallpaperId}
+            onSelect={(id) => setWallpaperId(id)}
+            t={t}
+          />
+        ) : null}
+
+        {!loading && !loadError && showFloors ? (
+          <SurfaceSection
+            title={FLOOR}
+            items={floors}
+            selectedId={floorId}
+            // Tapping the selected floor clears the surface (the room can have none).
+            onSelect={(id) => setFloorId((prev) => (prev === id ? null : id))}
+            t={t}
+          />
+        ) : null}
+
+        {!loading && !loadError && showBackgrounds ? (
+          <SurfaceSection
+            title={BACKGROUND}
+            items={backgrounds}
+            selectedId={backgroundId}
+            onSelect={(id) => setBackgroundId((prev) => (prev === id ? null : id))}
+            t={t}
+          />
         ) : null}
 
         {!loading && !loadError && visibleItems.length > 0 ? (
           <View style={styles.catalog}>
-            {showWallpapers ? (
+            {activeCategory === ALL ? (
               <Text style={[Typography.label, styles.catalogTitle, { color: t.textMuted }]}>
                 가구 · 소품
               </Text>
@@ -267,7 +296,7 @@ export function RoomDecorScreen({
       <View style={[styles.applyBar, { backgroundColor: t.screen, borderTopColor: t.border }]}>
         <Pressable
           onPress={() => {
-            onApply?.(placed, wallpaperId);
+            onApply?.(placed, wallpaperId, floorId, backgroundId);
             onBack?.();
           }}
           accessibilityRole="button"
@@ -276,6 +305,62 @@ export function RoomDecorScreen({
           <Icon name="check" size={16} color={t.onPrimary} />
           <Text style={[Typography.label, { color: t.onPrimary }]}>적용하기</Text>
         </Pressable>
+      </View>
+    </View>
+  );
+}
+
+/** One surface catalog section (벽지/바닥/배경): single-select swatch/art tiles. */
+function SurfaceSection({
+  title,
+  items,
+  selectedId,
+  onSelect,
+  t,
+}: {
+  title: string;
+  items: Wallpaper[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  t: ReturnType<typeof useTokens>;
+}) {
+  return (
+    <View style={styles.catalog}>
+      <Text style={[Typography.label, styles.catalogTitle, { color: t.textMuted }]}>{title}</Text>
+      <View style={styles.grid}>
+        {items.map((item) => {
+          const active = item.id === selectedId;
+          return (
+            <Pressable
+              key={item.id}
+              onPress={() => onSelect(item.id)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              accessibilityLabel={item.name}
+              style={[
+                styles.tile,
+                {
+                  backgroundColor: t.surface,
+                  borderColor: active ? t.primary : 'transparent',
+                },
+              ]}>
+              {isCdnKey(item.assetKey) ? (
+                <Image
+                  source={assetSource(item.assetKey)}
+                  style={styles.swatch}
+                  contentFit="cover"
+                  transition={120}
+                />
+              ) : (
+                <View style={[styles.swatch, { backgroundColor: item.color }]} />
+              )}
+              <Text style={[styles.tileName, { color: t.text }]} numberOfLines={2}>
+                {item.name}
+              </Text>
+              <Text style={[styles.tilePrice, { color: t.textMuted }]}>✨ {item.price}</Text>
+            </Pressable>
+          );
+        })}
       </View>
     </View>
   );

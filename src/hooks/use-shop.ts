@@ -34,17 +34,32 @@ import { useToast } from '@/components/ui/toast';
 import { type Wallet } from '@/constants/currency';
 import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
 
-const EMPTY: ShopCatalogue = { furniture: [], wallpapers: [], ownedIds: [] };
+const EMPTY: ShopCatalogue = {
+  furniture: [],
+  wallpapers: [],
+  floors: [],
+  backgrounds: [],
+  ownedIds: [],
+};
+
+export type RoomPlacement = {
+  placedFurnitureIds: string[];
+  wallpaperId: string;
+  floorId: string | null;
+  backgroundId: string | null;
+};
 
 export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
   const [catalogue, setCatalogue] = useState<ShopCatalogue>(EMPTY);
   const [ownedIds, setOwnedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [placement, setPlacement] = useState<{
-    placedFurnitureIds: string[];
-    wallpaperId: string;
-  }>({ placedFurnitureIds: [], wallpaperId: DEFAULT_WALLPAPER_ID });
+  const [placement, setPlacement] = useState<RoomPlacement>({
+    placedFurnitureIds: [],
+    wallpaperId: DEFAULT_WALLPAPER_ID,
+    floorId: null,
+    backgroundId: null,
+  });
   const { show: toast } = useToast();
   // itemId(string) → userItemId, needed to save placements.
   const userItemMapRef = useRef<Map<string, number>>(new Map());
@@ -75,6 +90,8 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
           ? {
               placedFurnitureIds: saved.placedFurnitureIds,
               wallpaperId: saved.wallpaperId ?? fallback.wallpaperId,
+              floorId: saved.floorId,
+              backgroundId: saved.backgroundId,
             }
           : fallback,
       );
@@ -118,11 +135,23 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
   };
 
   /** Persist the room layout (PUT /rooms/me/slots). Returns false on failure. */
-  const savePlacement = async (placedIds: string[], wallpaperId: string): Promise<boolean> => {
-    setPlacement({ placedFurnitureIds: placedIds, wallpaperId });
+  const savePlacement = async (
+    placedIds: string[],
+    wallpaperId: string,
+    floorId: string | null = null,
+    backgroundId: string | null = null,
+  ): Promise<boolean> => {
+    setPlacement({ placedFurnitureIds: placedIds, wallpaperId, floorId, backgroundId });
     try {
       await updateRoomSlots(
-        toSlotSaves(placedIds, wallpaperId, catalogueRef.current, userItemMapRef.current),
+        toSlotSaves(
+          placedIds,
+          wallpaperId,
+          catalogueRef.current,
+          userItemMapRef.current,
+          floorId,
+          backgroundId,
+        ),
       );
       toast('방 배치를 저장했어요', 'success');
       return true;

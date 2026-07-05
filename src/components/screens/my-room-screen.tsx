@@ -65,9 +65,13 @@ export type MyRoomScreenProps = {
   // Room rendering (forwarded to <Room />).
   characterId?: CharacterId;
   wallpaperId?: string;
+  floorId?: string | null;
+  backgroundId?: string | null;
   placedFurnitureIds?: string[];
   furniture?: FurnitureItem[];
   wallpapers?: Wallpaper[];
+  floors?: Wallpaper[];
+  backgrounds?: Wallpaper[];
   // Routine list.
   routines?: Routine[];
   /**
@@ -125,9 +129,13 @@ export function MyRoomScreen({
   diaBalance = 0,
   characterId = DEFAULT_CHARACTER_ID,
   wallpaperId = DEFAULT_WALLPAPER_ID,
+  floorId,
+  backgroundId,
   placedFurnitureIds,
   furniture,
   wallpapers,
+  floors,
+  backgrounds,
   routines = [],
   completions = {},
   categories = ROUTINE_CATEGORIES,
@@ -365,9 +373,13 @@ export function MyRoomScreen({
                 <Room
                   characterId={characterId}
                   wallpaperId={wallpaperId}
+                  floorId={floorId}
+                  backgroundId={backgroundId}
                   placedFurnitureIds={placedFurnitureIds}
                   furniture={furniture}
                   wallpapers={wallpapers}
+                  floors={floors}
+                  backgrounds={backgrounds}
                   interactiveCharacter
                 />
                 <Pressable
