@@ -38,9 +38,9 @@ const SLIDES: Slide[] = [
   },
 ];
 
-type Goal = { id: string; label: string; emoji: string; bg: string };
+export type OnboardingGoal = { id: string; label: string; emoji: string; bg: string };
 
-const GOALS: Goal[] = [
+const GOALS: OnboardingGoal[] = [
   { id: 'exercise', label: '운동', emoji: '🏃', bg: '#E4F0DC' },
   { id: 'study', label: '공부', emoji: '📖', bg: '#E3EEF8' },
   { id: 'sleep', label: '수면', emoji: '🌙', bg: '#ECE8FA' },
@@ -52,6 +52,8 @@ const GOALS: Goal[] = [
 
 export type OnboardingScreenProps = {
   onDone?: (goals: string[], characterId: CharacterId) => void;
+  /** Goal options from the server master; falls back to the local list while empty. */
+  goals?: OnboardingGoal[];
 };
 
 /**
@@ -59,7 +61,7 @@ export type OnboardingScreenProps = {
  * goal survey → character select. Theme tokens + type scale; emoji stand in for
  * the icon set and character sprites (TODO).
  */
-export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
+export function OnboardingScreen({ onDone, goals }: OnboardingScreenProps) {
   const t = useTokens();
   // Pinned bottom action buttons → pad both edges so the notch / home indicator
   // don't clip the top title or the bottom buttons.
@@ -126,6 +128,7 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
 
   // --- Goal survey ---
   if (showGoalSurvey) {
+    const goalOptions = goals && goals.length > 0 ? goals : GOALS;
     const canStart = selectedGoals.length > 0;
     return (
       <View style={[styles.screen, screenStyle]}>
@@ -136,7 +139,7 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
           </Text>
         </View>
         <ScrollView contentContainerStyle={styles.grid}>
-          {GOALS.map((g) => {
+          {goalOptions.map((g) => {
             const selected = selectedGoals.includes(g.id);
             return (
               <Pressable

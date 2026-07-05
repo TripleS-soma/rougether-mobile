@@ -27,4 +27,23 @@ describe('OnboardingScreen', () => {
 
     expect(onDone).toHaveBeenCalledWith(['exercise'], 'cat');
   });
+
+  it('uses server goal options when provided', async () => {
+    const onDone = jest.fn();
+    const goals = [
+      { id: '10', label: '갓생 살기', emoji: '🔥', bg: '#F7E4EA' },
+      { id: '11', label: '아침형 인간', emoji: '🌅', bg: '#E3EEF8' },
+    ];
+    const { getByText, queryByText } = await render(
+      <OnboardingScreen onDone={onDone} goals={goals} />,
+    );
+
+    await fireEvent.press(getByText('건너뛰기'));
+    expect(queryByText('운동')).toBeNull(); // local list replaced
+    await fireEvent.press(getByText('갓생 살기'));
+    await fireEvent.press(getByText('시작하기'));
+    await fireEvent.press(getByText('캐릭터 선택하기'));
+
+    expect(onDone).toHaveBeenCalledWith(['10'], 'cat');
+  });
 });

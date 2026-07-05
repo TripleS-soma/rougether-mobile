@@ -4,6 +4,7 @@
  * (the API's numeric id stringified), 0–6 weekday numbers (0 = Sun), and
  * "HH:MM" times; the API uses numeric ids, MON–SUN day codes, and "HH:mm:ss".
  */
+import { CHARACTER_OPTIONS, type CharacterId } from '@/constants/characters';
 import { type Wallet } from '@/constants/currency';
 import {
   CATEGORY_COLORS,
@@ -20,10 +21,14 @@ import {
   type Wallpaper,
 } from '@/resources/furniture';
 
+import { type OnboardingGoal } from '@/components/screens/onboarding-screen';
+
 import type {
   CategoryCreateRequest,
+  CharacterItem,
   CategoryResponse,
   GachaResponse,
+  GoalItem,
   ItemResponse,
   RoutineCreateRequest,
   RoutineResponse,
@@ -321,4 +326,58 @@ export function ownedPlacement(cat: ShopCatalogue): {
     placedFurnitureIds: Object.values(bySlot),
     wallpaperId: wp?.id ?? cat.wallpapers[0]?.id ?? DEFAULT_WALLPAPER_ID,
   };
+}
+
+// ---------- Onboarding ----------
+
+// Decorations for server master goals: match by code against the local goal
+// list's look, otherwise cycle a fallback palette (master has no art yet).
+const GOAL_DECOR: Record<string, { emoji: string; bg: string }> = {
+  exercise: { emoji: '🏃', bg: '#E4F0DC' },
+  study: { emoji: '📖', bg: '#E3EEF8' },
+  sleep: { emoji: '🌙', bg: '#ECE8FA' },
+  reading: { emoji: '📚', bg: '#F7E4EA' },
+  organizing: { emoji: '🧹', bg: '#F7ECD8' },
+  career: { emoji: '💼', bg: '#DDF3F0' },
+  habit: { emoji: '✨', bg: '#FFF0D8' },
+};
+
+const GOAL_FALLBACK_DECOR = [
+  { emoji: '🎯', bg: '#E4F0DC' },
+  { emoji: '🌱', bg: '#E3EEF8' },
+  { emoji: '⭐', bg: '#ECE8FA' },
+  { emoji: '🔥', bg: '#F7E4EA' },
+  { emoji: '💪', bg: '#F7ECD8' },
+];
+
+/** Server goal master → onboarding survey option (id is the numeric id stringified). */
+export function toOnboardingGoal(g: GoalItem, index: number): OnboardingGoal {
+  const decor =
+    (g.code && GOAL_DECOR[g.code]) || GOAL_FALLBACK_DECOR[index % GOAL_FALLBACK_DECOR.length];
+  return {
+    id: String(g.id ?? index),
+    label: g.name ?? g.code ?? '목표',
+    emoji: decor.emoji,
+    bg: decor.bg,
+  };
+}
+
+// App character ids double as server character codes (bear/otter/sheep/…), so
+// mapping is a code match against the /characters master.
+
+/** Server selectedCharacterId → app CharacterId (undefined if the code has no app art). */
+export function toAppCharacterId(
+  serverId: number,
+  masters: CharacterItem[],
+): CharacterId | undefined {
+  const code = masters.find((m) => m.id === serverId)?.code;
+  return CHARACTER_OPTIONS.find((o) => o.id === code)?.id;
+}
+
+/** App CharacterId → server character id (undefined if the server has no such code). */
+export function toServerCharacterId(
+  appId: CharacterId,
+  masters: CharacterItem[],
+): number | undefined {
+  return masters.find((m) => m.code === appId)?.id;
 }

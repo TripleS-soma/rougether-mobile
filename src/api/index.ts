@@ -21,6 +21,8 @@ export {
 } from './auth';
 
 export * from './categories';
+export * from './masters';
+export * from './onboarding';
 export * from './me';
 export * from './rooms';
 export * from './routines';
