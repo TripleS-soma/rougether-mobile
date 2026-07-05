@@ -40,6 +40,7 @@ export type AddRoutineScreenProps = {
   onDelete?: (id: string) => void;
   categories?: RoutineCategoryMeta[];
   onCreateCategory?: (category: RoutineCategoryMeta) => void;
+  onUpdateCategory?: (id: string, category: RoutineCategoryMeta) => void;
   onDeleteCategory?: (id: string) => void;
 };
 
@@ -61,6 +62,7 @@ export function AddRoutineScreen({
   onDelete,
   categories = ROUTINE_CATEGORIES,
   onCreateCategory,
+  onUpdateCategory,
   onDeleteCategory,
 }: AddRoutineScreenProps) {
   const t = useTokens();
@@ -318,6 +320,7 @@ export function AddRoutineScreen({
         visible={showCategoryManager}
         categories={categories}
         onCreate={(c) => onCreateCategory?.(c)}
+        onUpdate={(id, c) => onUpdateCategory?.(id, c)}
         onDelete={(id) => onDeleteCategory?.(id)}
         onClose={() => setShowCategoryManager(false)}
       />
