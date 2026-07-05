@@ -51,7 +51,7 @@ export function LoginScreen({ onAuthSuccess, onGoSignup, onLogin }: LoginScreenP
   const canSubmit = password.length > 0 && !submitting;
   // 비밀번호 찾기 / social sign-in have no backend yet — say so instead of
   // silently doing nothing.
-  const notReady = () => toast('아직 준비 중이에요');
+  const notReady = () => toast('서버 준비 중이에요');
 
   const submit = async () => {
     if (!canSubmit) return;

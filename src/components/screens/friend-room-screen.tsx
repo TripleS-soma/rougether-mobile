@@ -5,6 +5,7 @@ import { Room } from '@/components/room/room';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { type Routine } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
+import { PendingNotice } from '@/components/ui/pending-notice';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { type FurnitureItem, type Wallpaper } from '@/resources/furniture';
 import { useScreenStyle } from '@/hooks/use-screen-style';
@@ -98,6 +99,11 @@ export function FriendRoomScreen({
           />
         </View>
 
+        <PendingNotice
+          style={styles.pendingNotice}
+          text="친구 방 꾸미기·루틴 데이터는 서버 준비 중이라 미리보기로 보여드려요."
+        />
+
         <View style={styles.section}>
           <View style={styles.sectionHead}>
             <Text style={[Typography.h2, { color: t.text }]}>{friendName}의 루틴</Text>
@@ -180,6 +186,10 @@ export function FriendRoomScreen({
 }
 
 const styles = StyleSheet.create({
+  pendingNotice: {
+    marginHorizontal: Spacing.four,
+    marginTop: Spacing.two,
+  },
   screen: {
     flex: 1,
   },

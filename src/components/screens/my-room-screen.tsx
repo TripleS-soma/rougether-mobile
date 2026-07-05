@@ -620,7 +620,8 @@ export function MyRoomScreen({
                 // The API can't read back logs for arbitrary dates yet, so
                 // non-today checkmarks reset when the app reloads — say so.
                 <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                  오늘 외 날짜의 완료 표시는 앱을 다시 열면 초기화될 수 있어요.
+                  오늘 외 날짜의 완료 기록 조회는 서버 준비 중이라 앱을 다시 열면 초기화될 수
+                  있어요.
                 </Text>
               ) : null}
               {loading ? (
