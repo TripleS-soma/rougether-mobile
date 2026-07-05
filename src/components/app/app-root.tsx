@@ -1,8 +1,17 @@
 import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
 
+import {
+  fetchCharacters,
+  fetchGoals,
+  fetchOnboarding,
+  saveOnboardingCharacter,
+  saveOnboardingGoals,
+} from '@/api';
+import { toAppCharacterId, toOnboardingGoal, toServerCharacterId } from '@/api/adapters';
+import type { CharacterItem, GoalItem } from '@/api/types';
 import { AppShell } from '@/components/app/app-shell';
-import { OnboardingScreen } from '@/components/screens/onboarding-screen';
+import { OnboardingScreen, type OnboardingGoal } from '@/components/screens/onboarding-screen';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { useAuth } from '@/hooks/use-auth';
 import { loadOnboarding, resetOnboarding, saveOnboarding } from '@/lib/onboarding-store';
@@ -10,43 +19,68 @@ import { loadOnboarding, resetOnboarding, saveOnboarding } from '@/lib/onboardin
 /**
  * App entry gate: on first launch shows the onboarding flow (intro → goals →
  * character select); afterwards it goes straight to the app with the saved
- * character. The choice is persisted (onboarding-store) so the flow only runs
- * once.
+ * character. Completion lives on the server (GET /onboarding) with the local
+ * store as cache/fallback; selections are pushed back via PUT /onboarding/*.
  */
 export function AppRoot() {
   const { status } = useAuth();
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
   const [characterId, setCharacterId] = useState<CharacterId>(DEFAULT_CHARACTER_ID);
+  const [serverGoals, setServerGoals] = useState<OnboardingGoal[]>([]);
+  const [characters, setCharacters] = useState<CharacterItem[]>([]);
 
   useEffect(() => {
+    if (status !== 'authed') return;
     let active = true;
-    void loadOnboarding().then((saved) => {
+    void (async () => {
+      // Local cache + server state + masters in one round; the server may be
+      // unreachable (offline) — every remote call degrades to the local cache.
+      const [saved, remote, goals, chars] = await Promise.all([
+        loadOnboarding(),
+        fetchOnboarding().catch(() => null),
+        fetchGoals().catch(() => [] as GoalItem[]),
+        fetchCharacters().catch(() => [] as CharacterItem[]),
+      ]);
       if (!active) return;
-      if (saved) {
-        setCharacterId(saved.characterId);
-        setOnboarded(true);
-      } else {
-        setOnboarded(false);
-      }
-    });
+      setCharacters(chars);
+      setServerGoals(goals.map(toOnboardingGoal));
+      const remoteCharacter =
+        remote?.selectedCharacterId != null
+          ? toAppCharacterId(remote.selectedCharacterId, chars)
+          : undefined;
+      if (remoteCharacter) setCharacterId(remoteCharacter);
+      else if (saved) setCharacterId(saved.characterId);
+      setOnboarded(remote?.completed === true || saved != null);
+    })();
     return () => {
       active = false;
     };
-  }, []);
+  }, [status]);
 
   // Wait for the session check; the splash overlay covers this brief gap.
-  if (status === 'loading' || onboarded === null) return null;
+  if (status === 'loading') return null;
 
   // Not signed in → send to the login route.
   if (status === 'guest') return <Redirect href="/login" />;
 
+  if (onboarded === null) return null;
+
   if (!onboarded) {
     return (
       <OnboardingScreen
+        goals={serverGoals.length > 0 ? serverGoals : undefined}
         onDone={(goals, chosen) => {
           setCharacterId(chosen);
           setOnboarded(true);
           void saveOnboarding({ characterId: chosen, goals });
+          // Push the selections to the server, best-effort: goal ids are
+          // numeric only when the server master supplied them, and the
+          // character save can 409 (CHARACTER_NOT_OWNED) for legacy users.
+          const goalIds = goals.map(Number).filter((n) => Number.isFinite(n));
+          if (goalIds.length > 0) void saveOnboardingGoals(goalIds).catch(() => {});
+          const serverCharacterId = toServerCharacterId(chosen, characters);
+          if (serverCharacterId != null)
+            void saveOnboardingCharacter(serverCharacterId).catch(() => {});
         }}
       />
     );

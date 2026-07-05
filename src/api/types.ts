@@ -107,6 +107,10 @@ export type GoalSummary = {
   name?: string;
 };
 
+export type GoogleLoginRequest = {
+  idToken: string;
+};
+
 export type HouseCreateRequest = {
   name: string;
   description?: string;
@@ -186,6 +190,21 @@ export type HouseSummary = {
   goals?: GoalSummary[];
 };
 
+export type HouseUpdateRequest = {
+  name?: string;
+  description?: string;
+  coverImageKey?: string;
+  maxMembers?: number;
+};
+
+export type HouseUpdateResponse = {
+  houseId?: number;
+  name?: string;
+  description?: string;
+  coverImageKey?: string;
+  maxMembers?: number;
+};
+
 export type InviteCodeResponse = {
   inviteCode?: string;
   inviteExpiresAt?: string;
@@ -255,6 +274,24 @@ export type MyHouseSummary = {
   maxMembers?: number;
   myRole?: 'OWNER' | 'MEMBER';
   joinedAt?: string;
+};
+
+export type MyItemListResponse = {
+  items?: MyItemSummary[];
+};
+
+export type MyItemSummary = {
+  userItemId?: number;
+  itemId?: number;
+  name?: string;
+  assetKey?: string;
+  categoryCode?: string;
+  placementType?: string;
+  surfaceSlotType?: string;
+  characterSlotType?: string;
+  defaultSlot?: string;
+  theme?: ThemeSummary;
+  acquiredAt?: string;
 };
 
 export type OnboardingCharacterRequest = {

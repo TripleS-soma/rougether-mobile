@@ -48,4 +48,32 @@ describe('AppRoot', () => {
 
     await waitFor(() => expect(getByText('준서의 방')).toBeTruthy()); // MyRoom title
   });
+
+  it('skips onboarding when the server says completed (no local cache)', async () => {
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.endsWith('/onboarding'))
+        return {
+          ok: true,
+          status: 200,
+          text: async () =>
+            JSON.stringify({
+              goals: [{ goalId: 1, code: 'exercise' }],
+              primaryGoalId: 1,
+              selectedCharacterId: 1,
+              completed: true,
+            }),
+        };
+      if (url.endsWith('/characters'))
+        return {
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify({ items: [{ id: 1, code: 'bear', name: '곰' }] }),
+        };
+      return emptyRes(url);
+    }) as unknown as typeof fetch;
+
+    const { getByText } = await renderApp();
+
+    await waitFor(() => expect(getByText('준서의 방')).toBeTruthy());
+  });
 });

@@ -24,6 +24,7 @@ export {
 export * from './categories';
 export * from './houses';
 export * from './masters';
+export * from './onboarding';
 export * from './me';
 export * from './rooms';
 export * from './routines';
