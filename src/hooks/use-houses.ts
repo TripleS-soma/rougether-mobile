@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import {
+  ApiError,
   apiGet,
   claimHouseMission,
   contributeHouseMission,
@@ -171,8 +172,11 @@ export function useHouses() {
       const res = await contributeHouseMission(houseId, missionId);
       toast(res.achieved ? '기여 완료! 목표를 달성했어요 🎉' : '기여했어요 (+1)', 'success');
       await reloadMyHouses();
-    } catch {
-      toast('기여에 실패했어요', 'error');
+    } catch (err) {
+      // The server caps contributions at one per day per member.
+      const already =
+        err instanceof ApiError && err.bodyText?.includes('HOUSE_MISSION_ALREADY_CONTRIBUTED');
+      toast(already ? '오늘은 이미 기여했어요. 내일 또 만나요!' : '기여에 실패했어요', 'error');
     }
   };
 
@@ -181,8 +185,10 @@ export function useHouses() {
       const res = await claimHouseMission(houseId, missionId);
       toast(`보상 수령! 집 성장 포인트 +${res.grantedGrowthPoints ?? 0}`, 'success');
       await reloadMyHouses();
-    } catch {
-      toast('보상 받기에 실패했어요', 'error');
+    } catch (err) {
+      const notAchieved =
+        err instanceof ApiError && err.bodyText?.includes('HOUSE_MISSION_NOT_ACHIEVED');
+      toast(notAchieved ? '아직 목표를 달성하지 못했어요' : '보상 받기에 실패했어요', 'error');
     }
   };
 
