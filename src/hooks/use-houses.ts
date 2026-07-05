@@ -6,10 +6,15 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import {
+  ApiError,
   apiGet,
+  claimHouseMission,
+  contributeHouseMission,
   createHouse as apiCreateHouse,
+  createHouseMission,
   fetchHouse,
   fetchHouseMembers,
+  fetchHouseMissions,
   fetchMe,
   fetchGoals,
   fetchHouses,
@@ -20,9 +25,9 @@ import {
   kickHouseMember,
   leaveHouse as apiLeaveHouse,
 } from '@/api';
-import { toGroupHouse, toSearchHouse } from '@/api/adapters';
+import { toGroupHouse, toHouseMission, toSearchHouse } from '@/api/adapters';
 import { useToast } from '@/components/ui/toast';
-import type { House } from '@/components/screens/group-house-screen';
+import type { House, NewHouseMission } from '@/components/screens/group-house-screen';
 import type { SearchHouse } from '@/components/screens/house-search-screen';
 
 export function useHouses() {
@@ -42,8 +47,13 @@ export function useHouses() {
     const detailed = await Promise.all(
       mine.map(async (h) => {
         const id = h.houseId ?? 0;
-        const [detail, members] = await Promise.all([fetchHouse(id), fetchHouseMembers(id)]);
-        return toGroupHouse(detail, members, myUserId, myNickname);
+        const [detail, members, missions] = await Promise.all([
+          fetchHouse(id),
+          fetchHouseMembers(id),
+          // Missions are additive — a failure shouldn't take the house down.
+          fetchHouseMissions(id).catch(() => []),
+        ]);
+        return toGroupHouse(detail, members, myUserId, myNickname, missions.map(toHouseMission));
       }),
     );
     setHouses(detailed);
@@ -151,6 +161,41 @@ export function useHouses() {
     }
   };
 
+  const contributeMission = async (houseId: number, missionId: number) => {
+    try {
+      const res = await contributeHouseMission(houseId, missionId);
+      toast(res.achieved ? '기여 완료! 목표를 달성했어요 🎉' : '기여했어요 (+1)', 'success');
+      await reloadMyHouses();
+    } catch (err) {
+      // The server caps contributions at one per day per member.
+      const already =
+        err instanceof ApiError && err.bodyText?.includes('HOUSE_MISSION_ALREADY_CONTRIBUTED');
+      toast(already ? '오늘은 이미 기여했어요. 내일 또 만나요!' : '기여에 실패했어요', 'error');
+    }
+  };
+
+  const claimMission = async (houseId: number, missionId: number) => {
+    try {
+      const res = await claimHouseMission(houseId, missionId);
+      toast(`보상 수령! 집 성장 포인트 +${res.grantedGrowthPoints ?? 0}`, 'success');
+      await reloadMyHouses();
+    } catch (err) {
+      const notAchieved =
+        err instanceof ApiError && err.bodyText?.includes('HOUSE_MISSION_NOT_ACHIEVED');
+      toast(notAchieved ? '아직 목표를 달성하지 못했어요' : '보상 받기에 실패했어요', 'error');
+    }
+  };
+
+  const createMission = async (houseId: number, input: NewHouseMission) => {
+    try {
+      await createHouseMission(houseId, input);
+      toast('새 미션을 만들었어요!', 'success');
+      await reloadMyHouses();
+    } catch {
+      toast('미션 만들기에 실패했어요', 'error');
+    }
+  };
+
   return {
     houses,
     searchHouses,
@@ -161,5 +206,8 @@ export function useHouses() {
     create,
     kickMember,
     leaveHouse,
+    contributeMission,
+    claimMission,
+    createMission,
   };
 }

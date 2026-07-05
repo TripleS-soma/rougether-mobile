@@ -24,7 +24,7 @@ import {
 import { type OnboardingGoal } from '@/components/screens/onboarding-screen';
 import { type RoomSlotSave } from './rooms';
 
-import type { Floor, House, RoomCell } from '@/components/screens/group-house-screen';
+import type { Floor, House, HouseMission, RoomCell } from '@/components/screens/group-house-screen';
 import type { SearchHouse } from '@/components/screens/house-search-screen';
 
 import type {
@@ -39,6 +39,7 @@ import type {
   HouseSummary,
   ItemResponse,
   MemberSummary,
+  MissionSummary,
   RoutineCreateRequest,
   RoutineResponse,
   RoutineUpdateRequest,
@@ -386,6 +387,7 @@ export function toGroupHouse(
   members: MemberSummary[],
   myUserId?: number,
   myNickname?: string,
+  missions?: HouseMission[],
 ): House {
   const active = members.filter((m) => m.status !== 'LEFT');
   // Others first, me last → my room lands on the bottom floor.
@@ -417,6 +419,30 @@ export function toGroupHouse(
     inviteCode: detail.inviteCode ?? undefined,
     myRole: detail.myRole,
     floors,
+    missions,
+  };
+}
+
+// Mission-type presentation: emoji + the label shown under the progress bar.
+const MISSION_TYPE_META: Record<string, { emoji: string; label: string }> = {
+  DAILY_MEMBER_RATE: { emoji: '☀️', label: '일일 구성원 달성률' },
+  WEEKLY_MEMBER_COUNT: { emoji: '📅', label: '주간 구성원 달성 횟수' },
+  STREAK_DAYS: { emoji: '🔥', label: '연속 달성' },
+};
+
+/** House-mission card model from the API mission summary. */
+export function toHouseMission(m: MissionSummary): HouseMission {
+  const meta = MISSION_TYPE_META[m.missionType ?? ''] ?? { emoji: '🎯', label: '단체 미션' };
+  const target = m.targetValue ?? 0;
+  return {
+    id: m.missionId ?? 0,
+    title: m.title ?? '',
+    desc: meta.label,
+    emoji: meta.emoji,
+    current: m.currentValue ?? 0,
+    target: Math.max(1, target),
+    status: m.status ?? 'ACTIVE',
+    achieved: target > 0 && (m.currentValue ?? 0) >= target,
   };
 }
 
