@@ -14,6 +14,7 @@ export {
   clearSession,
   devLogin,
   getAccessToken,
+  getSessionUserId,
   isAuthenticated,
   loadSession,
   logout,
@@ -21,6 +22,8 @@ export {
 } from './auth';
 
 export * from './categories';
+export * from './houses';
+export * from './masters';
 export * from './me';
 export * from './rooms';
 export * from './routines';

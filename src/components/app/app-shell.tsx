@@ -29,6 +29,7 @@ import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { type Routine } from '@/constants/routines';
 import { useAuth } from '@/hooks/use-auth';
 import { useGacha } from '@/hooks/use-gacha';
+import { useHouses } from '@/hooks/use-houses';
 import { useMyRoomData } from '@/hooks/use-my-room-data';
 import { useShop } from '@/hooks/use-shop';
 import { useBrandTheme } from '@/hooks/use-tokens';
@@ -147,6 +148,19 @@ export function AppShell({
   const { gachas, loading: gachasLoading, draw: drawGachaMachine } = useGacha(setWallet);
 
   const { logout } = useAuth();
+
+  // Group houses (내 집 목록 + 탐색 + 참여/생성/강퇴/나가기) from the API.
+  const {
+    houses,
+    searchHouses,
+    loading: housesLoading,
+    searchLoading,
+    joinByCode,
+    joinHouse: joinSearchHouse,
+    create: createGroupHouse,
+    kickMember,
+    leaveHouse,
+  } = useHouses();
 
   // Shop catalogue + purchase (dia via API; wallet synced from the purchase
   // response). Server-side room placement isn't wired yet, so arrangement is
@@ -306,6 +320,8 @@ export function AppShell({
 
         {screen === 'groupHouse' ? (
           <GroupHouseScreen
+            houses={houses}
+            loading={housesLoading}
             coinBalance={wallet.coin}
             characterId={characterId}
             onVisitFriend={(name) => {
@@ -314,6 +330,12 @@ export function AppShell({
             }}
             onVisitMyRoom={() => setScreen('myRoom')}
             onOpenSearch={() => setScreen('houseSearch')}
+            onKickMember={(houseId, membershipId) => {
+              void kickMember(houseId, membershipId);
+            }}
+            onLeaveHouse={(houseId) => {
+              void leaveHouse(houseId);
+            }}
           />
         ) : null}
 
@@ -332,8 +354,17 @@ export function AppShell({
 
         {screen === 'houseSearch' ? (
           <HouseSearchScreen
+            houses={searchHouses}
+            loading={searchLoading}
             onBack={() => setScreen('groupHouse')}
-            onJoin={() => setScreen('groupHouse')}
+            onJoinByCode={async (code) => {
+              const ok = await joinByCode(code);
+              if (ok) setScreen('groupHouse');
+              return ok;
+            }}
+            onJoinHouse={(houseId) => {
+              void joinSearchHouse(houseId).then((ok) => ok && setScreen('groupHouse'));
+            }}
             onCreate={() => setScreen('createHouse')}
           />
         ) : null}
@@ -341,7 +372,9 @@ export function AppShell({
         {screen === 'createHouse' ? (
           <CreateHouseScreen
             onBack={() => setScreen('houseSearch')}
-            onCreate={() => setScreen('groupHouse')}
+            onCreate={(input) => {
+              void createGroupHouse(input).then((ok) => ok && setScreen('groupHouse'));
+            }}
           />
         ) : null}
 

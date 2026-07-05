@@ -1,7 +1,7 @@
-import type { HouseSummary } from '@/api/house';
+import type { SearchHouse } from '@/components/screens/house-search-screen';
 
-/** Mock business data served by MSW handlers (stand-in for the resource server). */
-export const RECOMMENDED_HOUSES: HouseSummary[] = [
+/** Sample browse-list houses for the dev gallery / screen tests. */
+export const RECOMMENDED_HOUSES: SearchHouse[] = [
   {
     id: 'h1',
     name: '아침형 인간 모임',
