@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import {
+  apiGet,
   createHouse as apiCreateHouse,
   fetchHouse,
   fetchHouseMembers,
@@ -95,14 +96,22 @@ export function useHouses() {
     maxMembers: number;
   }): Promise<boolean> => {
     try {
-      // The API requires ≥1 goalId. Until the create screen grows a goal
-      // picker, attach the first master goal; with an empty master (current
-      // dev server state) creation is impossible — say so honestly.
-      const goals = await fetchGoals();
-      const goalIds = goals
-        .map((g) => g.id)
-        .filter((id): id is number => id != null)
-        .slice(0, 1);
+      // The API requires ≥1 goalId. Prefer the goals the user picked during
+      // onboarding; fall back to the first master goal. With both empty
+      // (current dev server state) creation is impossible — say so honestly.
+      const onboarding = await apiGet<{ goals?: { goalId?: number }[] }>('/onboarding').catch(
+        () => null,
+      );
+      let goalIds = (onboarding?.goals ?? [])
+        .map((g) => g.goalId)
+        .filter((id): id is number => id != null);
+      if (goalIds.length === 0) {
+        const goals = await fetchGoals();
+        goalIds = goals
+          .map((g) => g.id)
+          .filter((id): id is number => id != null)
+          .slice(0, 1);
+      }
       if (goalIds.length === 0) {
         toast('목표 데이터가 아직 준비되지 않아 집을 만들 수 없어요', 'error');
         return false;
