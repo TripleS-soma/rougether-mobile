@@ -1,17 +1,35 @@
 /**
- * Shop catalogue + purchase, backed by the API (`GET /items`,
- * `POST /items/{id}/purchase`). Loads the item catalogue on mount and derives a
- * starting room from the owned items. Purchasing spends dia server-side and
- * returns the updated wallet.
- *
- * Note: server-side room *placement* (`PUT /rooms/me/slots`) needs a `userItemId`
- * that's only returned at purchase time — with no inventory endpoint, owned
- * items can't be re-placed — so arrangement stays client-side for now.
+ * Shop catalogue + purchase + room placement, backed by the API. Loads the
+ * catalogue (`GET /items`), the inventory (`GET /me/items`, itemId↔userItemId)
+ * and the saved room layout (`GET /rooms/me`) on mount; 배치하기 persists via
+ * `PUT /rooms/me/slots`. With no saved layout yet, the room seeds from owned
+ * items client-side until the first save.
  */
-import { type Dispatch, type SetStateAction, useCallback, useEffect, useState } from 'react';
+import {
+  type Dispatch,
+  type SetStateAction,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
-import { ApiError, fetchItems, purchaseItem } from '@/api';
-import { ownedPlacement, type ShopCatalogue, toShopCatalogue } from '@/api/adapters';
+import {
+  ApiError,
+  fetchItems,
+  fetchMyItems,
+  fetchMyRoom,
+  purchaseItem,
+  updateRoomSlots,
+} from '@/api';
+import {
+  fromRoomSlots,
+  ownedPlacement,
+  type ShopCatalogue,
+  toShopCatalogue,
+  toSlotSaves,
+  toUserItemMap,
+} from '@/api/adapters';
 import { useToast } from '@/components/ui/toast';
 import { type Wallet } from '@/constants/currency';
 import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
@@ -28,16 +46,38 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
     wallpaperId: string;
   }>({ placedFurnitureIds: [], wallpaperId: DEFAULT_WALLPAPER_ID });
   const { show: toast } = useToast();
+  // itemId(string) → userItemId, needed to save placements.
+  const userItemMapRef = useRef<Map<string, number>>(new Map());
+  const catalogueRef = useRef<ShopCatalogue>(EMPTY);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(false);
     try {
-      const items = await fetchItems();
+      const [items, myItems, room] = await Promise.all([
+        fetchItems(),
+        fetchMyItems().catch(() => []),
+        fetchMyRoom().catch(() => null),
+      ]);
       const cat = toShopCatalogue(items);
+      userItemMapRef.current = toUserItemMap(myItems);
+      catalogueRef.current = cat;
       setCatalogue(cat);
       setOwnedIds(cat.ownedIds);
-      setPlacement(ownedPlacement(cat));
+      // Prefer the layout saved on the server; fall back to seeding from owned
+      // items until the first save.
+      const saved = room?.slots?.length
+        ? fromRoomSlots(room.slots, cat, userItemMapRef.current)
+        : null;
+      const fallback = ownedPlacement(cat);
+      setPlacement(
+        saved
+          ? {
+              placedFurnitureIds: saved.placedFurnitureIds,
+              wallpaperId: saved.wallpaperId ?? fallback.wallpaperId,
+            }
+          : fallback,
+      );
     } catch {
       setError(true);
     } finally {
@@ -62,6 +102,9 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
         }));
       }
       setOwnedIds((prev) => (prev.includes(itemId) ? prev : [...prev, itemId]));
+      // Track the new userItemId so the item can be placed + saved right away.
+      if (res.itemId != null && res.userItemId != null)
+        userItemMapRef.current.set(String(res.itemId), res.userItemId);
       toast('구매 완료!', 'success');
       return true;
     } catch (err) {
@@ -74,5 +117,20 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
     }
   };
 
-  return { catalogue, ownedIds, placement, loading, error, retry: load, purchase };
+  /** Persist the room layout (PUT /rooms/me/slots). Returns false on failure. */
+  const savePlacement = async (placedIds: string[], wallpaperId: string): Promise<boolean> => {
+    setPlacement({ placedFurnitureIds: placedIds, wallpaperId });
+    try {
+      await updateRoomSlots(
+        toSlotSaves(placedIds, wallpaperId, catalogueRef.current, userItemMapRef.current),
+      );
+      toast('방 배치를 저장했어요', 'success');
+      return true;
+    } catch {
+      toast('방 배치 저장에 실패했어요', 'error');
+      return false;
+    }
+  };
+
+  return { catalogue, ownedIds, placement, loading, error, retry: load, purchase, savePlacement };
 }

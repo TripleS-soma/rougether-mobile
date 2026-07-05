@@ -175,6 +175,7 @@ export function AppShell({
     error: shopError,
     retry: retryShop,
     purchase: purchaseFurniture,
+    savePlacement,
   } = useShop(setWallet);
 
   const [placedFurnitureIds, setPlacedFurnitureIds] = useState<string[]>([]);
@@ -275,6 +276,7 @@ export function AppShell({
             onApply={(ids, wp) => {
               setPlacedFurnitureIds(ids);
               setWallpaperId(wp);
+              void savePlacement(ids, wp);
             }}
             onBack={() => setScreen('myRoom')}
           />

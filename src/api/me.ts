@@ -1,6 +1,6 @@
 /** Current user + wallet endpoints. */
 import { apiGet, apiGetList, apiPut } from './client';
-import type { MeResponse, WalletResponse } from './types';
+import type { MeResponse, MyItemSummary, WalletResponse } from './types';
 
 /** GET /me — the authenticated user's profile. */
 export function fetchMe() {
@@ -10,6 +10,11 @@ export function fetchMe() {
 /** GET /me/wallets — the user's currency balances (coin / diamond). */
 export function fetchWallets() {
   return apiGetList<WalletResponse>('/me/wallets');
+}
+
+/** GET /me/items — owned-item inventory (userItemId ↔ itemId, for room placement). */
+export function fetchMyItems() {
+  return apiGetList<MyItemSummary>('/me/items');
 }
 
 /**
