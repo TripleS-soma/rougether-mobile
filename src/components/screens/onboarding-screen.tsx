@@ -38,16 +38,16 @@ const SLIDES: Slide[] = [
   },
 ];
 
-export type OnboardingGoal = { id: string; label: string; emoji: string; bg: string };
+export type OnboardingGoal = { id: string; label: string };
 
 const GOALS: OnboardingGoal[] = [
-  { id: 'exercise', label: '운동', emoji: '🏃', bg: '#E4F0DC' },
-  { id: 'study', label: '공부', emoji: '📖', bg: '#E3EEF8' },
-  { id: 'sleep', label: '수면', emoji: '🌙', bg: '#ECE8FA' },
-  { id: 'reading', label: '독서', emoji: '📚', bg: '#F7E4EA' },
-  { id: 'organizing', label: '정리', emoji: '🧹', bg: '#F7ECD8' },
-  { id: 'career', label: '취업 준비', emoji: '💼', bg: '#DDF3F0' },
-  { id: 'habit', label: '생활 습관', emoji: '✨', bg: '#FFF0D8' },
+  { id: 'exercise', label: '운동' },
+  { id: 'study', label: '공부' },
+  { id: 'sleep', label: '수면' },
+  { id: 'reading', label: '독서' },
+  { id: 'organizing', label: '정리' },
+  { id: 'career', label: '취업 준비' },
+  { id: 'habit', label: '생활 습관' },
 ];
 
 export type OnboardingScreenProps = {
@@ -151,9 +151,6 @@ export function OnboardingScreen({ onDone, goals }: OnboardingScreenProps) {
                   styles.goalCard,
                   { backgroundColor: t.surface, borderColor: selected ? t.primary : 'transparent' },
                 ]}>
-                <View style={[styles.goalIcon, { backgroundColor: g.bg }]}>
-                  <Text style={styles.goalEmoji}>{g.emoji}</Text>
-                </View>
                 <Text style={[Typography.label, { color: t.text }]}>{g.label}</Text>
                 {selected ? (
                   <View style={styles.goalCheck}>
@@ -178,7 +175,7 @@ export function OnboardingScreen({ onDone, goals }: OnboardingScreenProps) {
 
   // --- Intro slides ---
   // Advance / go back by swiping the slide horizontally (in addition to the
-  // 다음/이전 buttons and the dots). Left = next (or on to the goal survey on the
+  // 다음 button and the dots). Left = next (or on to the goal survey on the
   // last slide), right = previous.
   const goNext = () => (isLast ? setShowGoalSurvey(true) : setIndex((i) => i + 1));
   const goPrev = () => setIndex((i) => Math.max(0, i - 1));
@@ -235,9 +232,6 @@ export function OnboardingScreen({ onDone, goals }: OnboardingScreenProps) {
           label={isLast ? '목표 선택하기' : '다음'}
           onPress={() => (isLast ? setShowGoalSurvey(true) : setIndex((i) => i + 1))}
         />
-        {index > 0 && !isLast ? (
-          <TextButton label="이전" onPress={() => setIndex((i) => i - 1)} />
-        ) : null}
       </View>
     </View>
   );
@@ -338,21 +332,11 @@ const styles = StyleSheet.create({
   },
   goalCard: {
     width: '47%',
-    minHeight: 104,
+    minHeight: 64,
     padding: Spacing.three,
     borderRadius: Radius.lg,
     borderWidth: 2,
-    gap: Spacing.two,
-  },
-  goalIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.md,
-    alignItems: 'center',
     justifyContent: 'center',
-  },
-  goalEmoji: {
-    fontSize: 20,
   },
   goalCheck: {
     position: 'absolute',

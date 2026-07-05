@@ -335,35 +335,11 @@ export function ownedPlacement(cat: ShopCatalogue): {
 
 // ---------- Onboarding ----------
 
-// Decorations for server master goals: match by code against the local goal
-// list's look, otherwise cycle a fallback palette (master has no art yet).
-const GOAL_DECOR: Record<string, { emoji: string; bg: string }> = {
-  exercise: { emoji: '🏃', bg: '#E4F0DC' },
-  study: { emoji: '📖', bg: '#E3EEF8' },
-  sleep: { emoji: '🌙', bg: '#ECE8FA' },
-  reading: { emoji: '📚', bg: '#F7E4EA' },
-  organizing: { emoji: '🧹', bg: '#F7ECD8' },
-  career: { emoji: '💼', bg: '#DDF3F0' },
-  habit: { emoji: '✨', bg: '#FFF0D8' },
-};
-
-const GOAL_FALLBACK_DECOR = [
-  { emoji: '🎯', bg: '#E4F0DC' },
-  { emoji: '🌱', bg: '#E3EEF8' },
-  { emoji: '⭐', bg: '#ECE8FA' },
-  { emoji: '🔥', bg: '#F7E4EA' },
-  { emoji: '💪', bg: '#F7ECD8' },
-];
-
 /** Server goal master → onboarding survey option (id is the numeric id stringified). */
 export function toOnboardingGoal(g: GoalItem, index: number): OnboardingGoal {
-  const decor =
-    (g.code && GOAL_DECOR[g.code]) || GOAL_FALLBACK_DECOR[index % GOAL_FALLBACK_DECOR.length];
   return {
     id: String(g.id ?? index),
     label: g.name ?? g.code ?? '목표',
-    emoji: decor.emoji,
-    bg: decor.bg,
   };
 }
 

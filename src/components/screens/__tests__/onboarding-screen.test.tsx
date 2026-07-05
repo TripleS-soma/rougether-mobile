@@ -31,8 +31,8 @@ describe('OnboardingScreen', () => {
   it('uses server goal options when provided', async () => {
     const onDone = jest.fn();
     const goals = [
-      { id: '10', label: '갓생 살기', emoji: '🔥', bg: '#F7E4EA' },
-      { id: '11', label: '아침형 인간', emoji: '🌅', bg: '#E3EEF8' },
+      { id: '10', label: '갓생 살기' },
+      { id: '11', label: '아침형 인간' },
     ];
     const { getByText, queryByText } = await render(
       <OnboardingScreen onDone={onDone} goals={goals} />,
