@@ -140,6 +140,7 @@ export function AppShell({
     updateRoutineTime,
     deleteRoutine,
     createRoutineCategory,
+    updateRoutineCategory,
     deleteRoutineCategory,
   } = useMyRoomData();
 
@@ -244,6 +245,7 @@ export function AppShell({
             onEdit={() => setScreen('decor')}
             onAddRoutine={() => setScreen('routineManage')}
             onCreateCategory={createRoutineCategory}
+            onUpdateCategory={updateRoutineCategory}
             onDeleteCategory={deleteRoutineCategory}
             onOpenGacha={() => setScreen('gacha')}
             onQuickAddRoutine={quickAddTodo}
@@ -302,6 +304,7 @@ export function AppShell({
             onUpdate={updateRoutine}
             onDelete={deleteRoutine}
             onCreateCategory={createRoutineCategory}
+            onUpdateCategory={updateRoutineCategory}
             onDeleteCategory={deleteRoutineCategory}
             onBack={() => setScreen(addReturnScreen)}
           />

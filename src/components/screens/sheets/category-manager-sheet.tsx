@@ -40,6 +40,8 @@ export type CategoryManagerSheetProps = {
   visible: boolean;
   categories: RoutineCategoryMeta[];
   onCreate: (category: RoutineCategoryMeta) => void;
+  /** Save edits to an existing category (name/emoji/visibility). */
+  onUpdate?: (id: string, category: RoutineCategoryMeta) => void;
   onDelete: (id: string) => void;
   onClose: () => void;
 };
@@ -55,6 +57,7 @@ export function CategoryManagerSheet({
   visible,
   categories,
   onCreate,
+  onUpdate,
   onDelete,
   onClose,
 }: CategoryManagerSheetProps) {
@@ -63,23 +66,41 @@ export function CategoryManagerSheet({
   const [emoji, setEmoji] = useState(EMOJI_CHOICES[0]);
   const [visibility, setVisibility] = useState<CategoryVisibility>('public');
   const [pendingDelete, setPendingDelete] = useState<RoutineCategoryMeta | null>(null);
+  // When set, the form edits this category instead of creating a new one.
+  const [editing, setEditing] = useState<RoutineCategoryMeta | null>(null);
 
   if (!visible) return null;
 
   const canSubmit = name.trim().length > 0;
 
-  const submit = () => {
-    if (!canSubmit) return;
-    onCreate({
-      id: `cat-${Date.now()}`,
-      label: name.trim(),
-      emoji,
-      color: CATEGORY_COLORS[categories.length % CATEGORY_COLORS.length],
-      visibility,
-    });
+  const resetForm = () => {
+    setEditing(null);
     setName('');
     setEmoji(EMOJI_CHOICES[0]);
     setVisibility('public');
+  };
+
+  const startEdit = (c: RoutineCategoryMeta) => {
+    setEditing(c);
+    setName(c.label);
+    setEmoji(c.emoji);
+    setVisibility(c.visibility);
+  };
+
+  const submit = () => {
+    if (!canSubmit) return;
+    if (editing) {
+      onUpdate?.(editing.id, { ...editing, label: name.trim(), emoji, visibility });
+    } else {
+      onCreate({
+        id: `cat-${Date.now()}`,
+        label: name.trim(),
+        emoji,
+        color: CATEGORY_COLORS[categories.length % CATEGORY_COLORS.length],
+        visibility,
+      });
+    }
+    resetForm();
   };
 
   return (
@@ -99,7 +120,9 @@ export function CategoryManagerSheet({
 
         <ScrollView contentContainerStyle={styles.body}>
           <View style={[styles.card, { backgroundColor: t.surface }]}>
-            <Text style={[Typography.label, { color: t.text }]}>새 카테고리 만들기</Text>
+            <Text style={[Typography.label, { color: t.text }]}>
+              {editing ? `'${editing.label}' 수정하기` : '새 카테고리 만들기'}
+            </Text>
 
             <View style={[styles.nameRow, { backgroundColor: t.surfaceMuted }]}>
               <Text style={styles.nameEmoji}>{emoji}</Text>
@@ -170,11 +193,22 @@ export function CategoryManagerSheet({
               onPress={submit}
               disabled={!canSubmit}
               accessibilityRole="button"
-              accessibilityLabel="카테고리 추가"
+              accessibilityLabel={editing ? '카테고리 저장' : '카테고리 추가'}
               style={[styles.submit, { backgroundColor: canSubmit ? t.primary : t.textDisabled }]}>
-              <Icon name="add" size={18} color={t.onPrimary} />
-              <Text style={[Typography.label, { color: t.onPrimary }]}>카테고리 추가</Text>
+              <Icon name={editing ? 'check' : 'add'} size={18} color={t.onPrimary} />
+              <Text style={[Typography.label, { color: t.onPrimary }]}>
+                {editing ? '저장하기' : '카테고리 추가'}
+              </Text>
             </Pressable>
+            {editing ? (
+              <Pressable
+                onPress={resetForm}
+                accessibilityRole="button"
+                accessibilityLabel="수정 취소"
+                style={styles.cancelEdit}>
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>수정 취소</Text>
+              </Pressable>
+            ) : null}
           </View>
 
           <Text style={[Typography.label, styles.listTitle, { color: t.text }]}>
@@ -194,6 +228,13 @@ export function CategoryManagerSheet({
                     {VISIBILITY_LABELS[c.visibility]}
                   </Text>
                 </View>
+                <Pressable
+                  onPress={() => startEdit(c)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${c.label} 수정`}
+                  style={[styles.del, { backgroundColor: t.surfaceMuted }]}>
+                  <Icon name="edit" size={16} color={t.text} />
+                </Pressable>
                 <Pressable
                   onPress={() => setPendingDelete(c)}
                   accessibilityRole="button"
@@ -328,6 +369,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: Spacing.one,
+  },
+  cancelEdit: {
+    alignItems: 'center',
+    paddingVertical: Spacing.one,
   },
   listTitle: { marginTop: Spacing.one },
   catList: { gap: Spacing.two },

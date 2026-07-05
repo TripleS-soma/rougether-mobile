@@ -26,6 +26,7 @@ import {
   fetchWallets,
   uncompleteRoutine,
   uncompleteTodo,
+  updateCategory as apiUpdateCategory,
   updateRoutine as apiUpdateRoutine,
   updateTodo,
 } from '@/api';
@@ -256,6 +257,22 @@ export function useMyRoomData() {
     }
   };
 
+  const updateRoutineCategory = async (id: string, cat: RoutineCategoryMeta) => {
+    const before = categories;
+    // Keep the id and sort position; only name/emoji/visibility change.
+    setCategories((prev) => prev.map((c) => (c.id === id ? { ...cat, id } : c)));
+    try {
+      const sortOrder = categories.findIndex((c) => c.id === id);
+      await apiUpdateCategory(
+        Number(id),
+        toCategoryCreate(cat, sortOrder >= 0 ? sortOrder : undefined),
+      );
+    } catch {
+      setCategories(before);
+      toast('카테고리 수정에 실패했어요', 'error');
+    }
+  };
+
   const deleteRoutineCategory = async (id: string) => {
     setCategories((prev) => prev.filter((c) => c.id !== id));
     try {
@@ -288,6 +305,7 @@ export function useMyRoomData() {
     updateRoutineTime,
     deleteRoutine,
     createRoutineCategory,
+    updateRoutineCategory,
     deleteRoutineCategory,
   };
 }
