@@ -28,6 +28,7 @@ import { Card } from '@/components/ui/card';
 import { IconButton } from '@/components/ui/icon-button';
 import { Pill } from '@/components/ui/pill';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { PendingNotice } from '@/components/ui/pending-notice';
 import { ToastProvider, useToast } from '@/components/ui/toast';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
 import { RECOMMENDED_HOUSES } from '@/mocks/fixtures';
@@ -319,6 +320,11 @@ export const galleryEntries: GalleryEntry[] = [
         </Card>
       </View>
     ),
+  },
+  {
+    name: 'UI · PendingNotice',
+    description: '서버 준비 중(엔드포인트 미구현) 정직화 배너.',
+    render: () => <PendingNotice text="이 기능은 서버 준비 중이에요." />,
   },
   {
     name: 'UI · Toast',

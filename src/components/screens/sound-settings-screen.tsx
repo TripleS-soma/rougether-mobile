@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { PendingNotice } from '@/components/ui/pending-notice';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Radius, Spacing, Typography } from '@/constants/theme';
@@ -55,6 +56,7 @@ export function SoundSettingsScreen({
       <ScreenHeader title="효과음" onBack={onBack} />
 
       <ScrollView contentContainerStyle={styles.body}>
+        <PendingNotice text="사운드 설정은 서버 준비 중이라 아직 이 기기에만 저장돼요." />
         <View style={[styles.card, { backgroundColor: t.surface }]}>
           {ROWS.map((r, idx) => (
             <View
