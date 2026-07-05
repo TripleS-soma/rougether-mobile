@@ -37,7 +37,21 @@ export type House = {
   myRole?: 'OWNER' | 'MEMBER';
   /** Group missions shown in the "우리 그룹의 미션" card. */
   missions?: HouseMission[];
+  /** House intro + capacity — prefill for the owner's edit form. */
+  description?: string;
+  maxMembers?: number;
+  memberCount?: number;
 };
+
+/** Owner's house-settings edit (PUT /houses/{id}; omitted fields are kept). */
+export type HouseEditInput = {
+  name: string;
+  description?: string;
+  maxMembers?: number;
+};
+
+/** Capacity choices for the edit form (server allows 1~10). */
+const CAPACITY_OPTIONS = [2, 3, 4, 6, 8, 10];
 
 /** Group mission (server house mission) shown in the missions card. */
 export type HouseMission = {
@@ -135,6 +149,10 @@ export type GroupHouseScreenProps = {
   onClaimMission?: (houseId: number, missionId: number) => void;
   /** Create a new group mission. */
   onCreateMission?: (houseId: number, input: NewHouseMission) => void;
+  /** Edit the house settings via the API (owner only). */
+  onUpdateHouse?: (houseId: number, input: HouseEditInput) => void;
+  /** Hand the OWNER role to a member via the API (owner only). */
+  onTransferOwnership?: (houseId: number, membershipId: number) => void;
 };
 
 /**
@@ -157,6 +175,8 @@ export function GroupHouseScreen({
   onContributeMission,
   onClaimMission,
   onCreateMission,
+  onUpdateHouse,
+  onTransferOwnership,
 }: GroupHouseScreenProps) {
   const t = useTokens();
   const screenStyle = useScreenStyle();
@@ -170,6 +190,11 @@ export function GroupHouseScreen({
   const [missionType, setMissionType] =
     useState<NewHouseMission['missionType']>('WEEKLY_MEMBER_COUNT');
   const [missionTarget, setMissionTarget] = useState('10');
+  const [showEditHouse, setShowEditHouse] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [editMax, setEditMax] = useState<number | undefined>(undefined);
+  const [transferTarget, setTransferTarget] = useState<RoomCell | null>(null);
 
   const currentHouse: House | undefined = houses[Math.min(houseIndex, houses.length - 1)];
   const members = useMemo(
@@ -202,6 +227,30 @@ export function GroupHouseScreen({
     setShowCreateMission(false);
     setMissionTitle('');
     setMissionTarget('10');
+  };
+  // Owner tools need the OWNER role and a server house id.
+  const isOwner = currentHouse?.myRole === 'OWNER' && !!currentHouse?.houseId;
+  const openEditHouse = () => {
+    setEditName(currentHouse?.title ?? '');
+    setEditDesc(currentHouse?.description ?? '');
+    setEditMax(currentHouse?.maxMembers);
+    setShowEditHouse(true);
+  };
+  const editNameValid = editName.trim().length >= 2 && editName.trim().length <= 30;
+  const submitEditHouse = () => {
+    if (!editNameValid || !currentHouse?.houseId) return;
+    onUpdateHouse?.(currentHouse.houseId, {
+      name: editName.trim(),
+      description: editDesc.trim() || undefined,
+      maxMembers: editMax,
+    });
+    setShowEditHouse(false);
+  };
+  const confirmTransfer = () => {
+    if (transferTarget?.membershipId && currentHouse?.houseId) {
+      onTransferOwnership?.(currentHouse.houseId, transferTarget.membershipId);
+    }
+    setTransferTarget(null);
   };
   const confirmKick = () => {
     if (memberToKick) {
@@ -282,6 +331,22 @@ export function GroupHouseScreen({
             </View>
           ) : null}
 
+          {isOwner && onUpdateHouse ? (
+            <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
+              <Text style={[Typography.label, { color: t.text }]}>집 정보</Text>
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                집 이름·소개·정원을 바꿀 수 있어요. (방장 전용)
+              </Text>
+              <Pressable
+                onPress={openEditHouse}
+                accessibilityRole="button"
+                accessibilityLabel="집 정보 수정"
+                style={[styles.editHouseBtn, { backgroundColor: t.surfaceMuted }]}>
+                <Text style={[Typography.label, { color: t.primary }]}>✏️ 집 정보 수정</Text>
+              </Pressable>
+            </View>
+          ) : null}
+
           <View style={styles.memberList}>
             {members.map((member) => {
               const kickedOut = isKicked(member.name);
@@ -314,6 +379,19 @@ export function GroupHouseScreen({
                       {kickedOut ? '강퇴된 멤버' : member.level}
                     </Text>
                   </View>
+                  {isOwner &&
+                  onTransferOwnership &&
+                  !member.isMine &&
+                  member.membershipId &&
+                  !kickedOut ? (
+                    <Pressable
+                      onPress={() => setTransferTarget(member)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${member.name} 방장 위임`}
+                      style={[styles.kickBtn, { backgroundColor: `${t.primary}22` }]}>
+                      <Text style={[Typography.supporting, { color: t.primary }]}>위임</Text>
+                    </Pressable>
+                  ) : null}
                   <Pressable
                     onPress={() => setMemberToKick(member)}
                     disabled={member.isMine || kickedOut}
@@ -361,6 +439,127 @@ export function GroupHouseScreen({
                   accessibilityLabel="강퇴 확인"
                   style={[styles.modalBtn, { backgroundColor: t.danger }]}>
                   <Text style={[Typography.label, { color: t.onPrimary }]}>강퇴</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        ) : null}
+
+        {transferTarget ? (
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modal, { backgroundColor: t.surface }]}>
+              <Text style={[Typography.h3, { color: t.text }]}>방장을 위임할까요?</Text>
+              <Text style={[Typography.body, styles.modalBody, { color: t.textMuted }]}>
+                {transferTarget.name}님에게 방장을 넘기면 집 관리 권한(정보 수정·강퇴·초대코드)이
+                이동하고 되돌릴 수 없어요.
+              </Text>
+              <View style={styles.modalActions}>
+                <Pressable
+                  onPress={() => setTransferTarget(null)}
+                  accessibilityRole="button"
+                  accessibilityLabel="위임 취소"
+                  style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
+                  <Text style={[Typography.label, { color: t.text }]}>취소</Text>
+                </Pressable>
+                <Pressable
+                  onPress={confirmTransfer}
+                  accessibilityRole="button"
+                  accessibilityLabel="위임 확인"
+                  style={[styles.modalBtn, { backgroundColor: t.primary }]}>
+                  <Text style={[Typography.label, { color: t.onPrimary }]}>위임</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        ) : null}
+
+        {showEditHouse ? (
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modal, { backgroundColor: t.surface }]}>
+              <Text style={[Typography.h3, { color: t.text }]}>집 정보 수정</Text>
+              <View style={styles.missionForm}>
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                  집 이름 (2~30자)
+                </Text>
+                <TextInput
+                  value={editName}
+                  onChangeText={(v) => setEditName(v.slice(0, 30))}
+                  accessibilityLabel="집 이름"
+                  placeholder="집 이름"
+                  placeholderTextColor={t.textMuted}
+                  style={[styles.missionInput, { backgroundColor: t.surfaceMuted, color: t.text }]}
+                />
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>한 줄 소개</Text>
+                <TextInput
+                  value={editDesc}
+                  onChangeText={setEditDesc}
+                  accessibilityLabel="집 소개"
+                  placeholder="어떤 루틴을 함께 하나요?"
+                  placeholderTextColor={t.textMuted}
+                  style={[styles.missionInput, { backgroundColor: t.surfaceMuted, color: t.text }]}
+                />
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                  정원{currentHouse.memberCount ? ` (현재 ${currentHouse.memberCount}명)` : ''}
+                </Text>
+                <View style={styles.missionTypeRow}>
+                  {CAPACITY_OPTIONS.map((n) => {
+                    const selected = n === editMax;
+                    // The server rejects a capacity below the current headcount.
+                    const tooSmall = !!currentHouse.memberCount && n < currentHouse.memberCount;
+                    return (
+                      <Pressable
+                        key={n}
+                        onPress={() => setEditMax(n)}
+                        disabled={tooSmall}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected }}
+                        accessibilityLabel={`정원 ${n}명`}
+                        style={[
+                          styles.capacityBtn,
+                          {
+                            backgroundColor: selected
+                              ? t.primary
+                              : tooSmall
+                                ? t.disabledBg
+                                : t.surfaceMuted,
+                          },
+                        ]}>
+                        <Text
+                          style={[
+                            Typography.supporting,
+                            {
+                              color: selected
+                                ? t.onPrimary
+                                : tooSmall
+                                  ? t.textDisabled
+                                  : t.textMuted,
+                            },
+                          ]}>
+                          {n}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+              <View style={styles.modalActions}>
+                <Pressable
+                  onPress={() => setShowEditHouse(false)}
+                  accessibilityRole="button"
+                  accessibilityLabel="집 정보 수정 취소"
+                  style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
+                  <Text style={[Typography.label, { color: t.text }]}>취소</Text>
+                </Pressable>
+                <Pressable
+                  onPress={submitEditHouse}
+                  disabled={!editNameValid}
+                  accessibilityRole="button"
+                  accessibilityLabel="집 정보 저장"
+                  style={[
+                    styles.modalBtn,
+                    { backgroundColor: editNameValid ? t.primary : t.disabledBg },
+                  ]}>
+                  <Text style={[Typography.label, { color: t.onPrimary }]}>저장</Text>
                 </Pressable>
               </View>
             </View>
@@ -889,6 +1088,18 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   missionTypeBtn: {
+    flex: 1,
+    borderRadius: Radius.pill,
+    paddingVertical: Spacing.two,
+    alignItems: 'center',
+  },
+  editHouseBtn: {
+    marginTop: Spacing.two,
+    borderRadius: Radius.pill,
+    paddingVertical: Spacing.two,
+    alignItems: 'center',
+  },
+  capacityBtn: {
     flex: 1,
     borderRadius: Radius.pill,
     paddingVertical: Spacing.two,

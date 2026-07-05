@@ -165,6 +165,8 @@ export function AppShell({
     contributeMission,
     claimMission,
     createMission,
+    updateHouse,
+    transferOwnership,
   } = useHouses();
 
   // Shop catalogue + purchase (dia via API; wallet synced from the purchase
@@ -353,6 +355,12 @@ export function AppShell({
             }}
             onCreateMission={(houseId, input) => {
               void createMission(houseId, input);
+            }}
+            onUpdateHouse={(houseId, input) => {
+              void updateHouse(houseId, input);
+            }}
+            onTransferOwnership={(houseId, membershipId) => {
+              void transferOwnership(houseId, membershipId);
             }}
           />
         ) : null}
