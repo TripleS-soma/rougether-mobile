@@ -22,6 +22,8 @@ import {
 } from '@/resources/furniture';
 
 import { type OnboardingGoal } from '@/components/screens/onboarding-screen';
+import type { Floor, House, RoomCell } from '@/components/screens/group-house-screen';
+import type { SearchHouse } from '@/components/screens/house-search-screen';
 
 import type {
   CategoryCreateRequest,
@@ -29,7 +31,10 @@ import type {
   CategoryResponse,
   GachaResponse,
   GoalItem,
+  HouseDetailResponse,
+  HouseSummary,
   ItemResponse,
+  MemberSummary,
   RoutineCreateRequest,
   RoutineResponse,
   RoutineUpdateRequest,
@@ -380,4 +385,67 @@ export function toServerCharacterId(
   masters: CharacterItem[],
 ): number | undefined {
   return masters.find((m) => m.code === appId)?.id;
+}
+
+// --- house (그룹하우스) ---------------------------------------------------------
+
+// Room tile tints + browse-card decorations, cycled by index (no art yet).
+const ROOM_TINTS = ['#F5E1D8', '#D9E8D4', '#F5E8C8', '#E4DCF0', '#FBE0D8', '#D8E8F0'];
+const HOUSE_EMOJIS = ['🏡', '🌅', '💻', '📚', '🏋️', '🎨', '🌙', '☕'];
+const HOUSE_BGS = ['#FFEFD8', '#E4F0DC', '#E3EEF8', '#F7E4EA', '#ECE8FA', '#F7ECD8'];
+const HOUSE_BORDERS = ['#F0C88A', '#A8C898', '#9FBEDD', '#DBA8BC', '#B7A8DD', '#DDC08A'];
+const MY_ROOM_TINT = '#E8E0D0';
+
+/**
+ * Build the group-house screen model from house detail + members. Rooms are
+ * laid out two per floor, top floor first, with my room on the bottom floor
+ * (mirrors the prototype layout).
+ */
+export function toGroupHouse(
+  detail: HouseDetailResponse,
+  members: MemberSummary[],
+  myUserId?: number,
+): House {
+  const active = members.filter((m) => m.status !== 'LEFT');
+  // Others first, me last → my room lands on the bottom floor.
+  const ordered = [
+    ...active.filter((m) => m.userId !== myUserId),
+    ...active.filter((m) => m.userId === myUserId),
+  ];
+  const cells: RoomCell[] = ordered.map((m, i) => ({
+    name: m.nickname || `멤버 ${m.userId ?? i + 1}`,
+    color: m.userId === myUserId ? MY_ROOM_TINT : ROOM_TINTS[i % ROOM_TINTS.length],
+    isMine: m.userId === myUserId,
+    membershipId: m.membershipId,
+  }));
+  const floorCount = Math.max(1, Math.ceil(cells.length / 2));
+  const floors: Floor[] = [];
+  for (let f = 0; f < floorCount; f++) {
+    floors.push({
+      level: `${floorCount - f}층`,
+      rooms: cells.slice(f * 2, f * 2 + 2),
+    });
+  }
+  return {
+    houseId: detail.houseId,
+    title: detail.name ?? '',
+    inviteCode: detail.inviteCode ?? undefined,
+    myRole: detail.myRole,
+    floors,
+  };
+}
+
+/** Browse-list card model from the API house summary (decorations cycled). */
+export function toSearchHouse(h: HouseSummary, index = 0): SearchHouse {
+  return {
+    id: String(h.houseId ?? ''),
+    name: h.name ?? '',
+    members: h.currentMemberCount ?? 0,
+    capacity: h.maxMembers ?? 0,
+    tag: h.goals?.[0]?.name ?? '루틴',
+    emoji: HOUSE_EMOJIS[index % HOUSE_EMOJIS.length],
+    bg: HOUSE_BGS[index % HOUSE_BGS.length],
+    border: HOUSE_BORDERS[index % HOUSE_BORDERS.length],
+    description: `레벨 ${h.level ?? 0} 하우스 · 함께 루틴을 키워요`,
+  };
 }

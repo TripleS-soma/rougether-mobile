@@ -190,6 +190,21 @@ export type HouseSummary = {
   goals?: GoalSummary[];
 };
 
+export type HouseUpdateRequest = {
+  name?: string;
+  description?: string;
+  coverImageKey?: string;
+  maxMembers?: number;
+};
+
+export type HouseUpdateResponse = {
+  houseId?: number;
+  name?: string;
+  description?: string;
+  coverImageKey?: string;
+  maxMembers?: number;
+};
+
 export type InviteCodeResponse = {
   inviteCode?: string;
   inviteExpiresAt?: string;

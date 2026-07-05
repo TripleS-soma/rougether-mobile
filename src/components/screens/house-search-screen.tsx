@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -9,15 +9,37 @@ import {
   View,
 } from 'react-native';
 
-import { fetchRecommendedHouses, type HouseSummary } from '@/api/house';
 import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 
+/** Browse-card display model (decorated from the API house summary). */
+export type SearchHouse = {
+  id: string;
+  name: string;
+  members: number;
+  capacity: number;
+  tag: string;
+  emoji: string;
+  bg: string;
+  border: string;
+  description: string;
+};
+
 export type HouseSearchScreenProps = {
+  /** Browsable houses from the API (`GET /houses`). */
+  houses?: SearchHouse[];
+  /** True while the browse list is loading. */
+  loading?: boolean;
   onBack?: () => void;
-  onJoin?: (houseName: string) => void;
+  /**
+   * Join with an invite code; resolves true on success (the caller navigates),
+   * false shows an inline error.
+   */
+  onJoinByCode?: (code: string) => Promise<boolean>;
+  /** Join a browsable house directly by its id. */
+  onJoinHouse?: (houseId: string) => void;
   onCreate?: () => void;
 };
 
@@ -26,24 +48,19 @@ export type HouseSearchScreenProps = {
  * search, recommended list (fetched from the business API via MSW), create-new.
  * Theme tokens + type scale; icons emoji.
  */
-export function HouseSearchScreen({ onBack, onJoin, onCreate }: HouseSearchScreenProps) {
+export function HouseSearchScreen({
+  houses = [],
+  loading = false,
+  onBack,
+  onJoinByCode,
+  onJoinHouse,
+  onCreate,
+}: HouseSearchScreenProps) {
   const t = useTokens();
   const [code, setCode] = useState('');
   const [query, setQuery] = useState('');
   const [codeError, setCodeError] = useState<string | null>(null);
-  const [houses, setHouses] = useState<HouseSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let active = true;
-    fetchRecommendedHouses()
-      .then((data) => active && setHouses(data))
-      .catch(() => active && setHouses([]))
-      .finally(() => active && setLoading(false));
-    return () => {
-      active = false;
-    };
-  }, []);
+  const [joining, setJoining] = useState(false);
 
   const filtered = houses.filter(
     (h) =>
@@ -52,14 +69,17 @@ export function HouseSearchScreen({ onBack, onJoin, onCreate }: HouseSearchScree
       h.tag.toLowerCase().includes(query.toLowerCase()),
   );
 
-  const joinByCode = () => {
+  const joinByCode = async () => {
     const trimmed = code.trim().toUpperCase();
     if (trimmed.length < 6) {
       setCodeError('초대코드는 6자리 이상이에요');
       return;
     }
     setCodeError(null);
-    onJoin?.(`초대코드 ${trimmed}`);
+    setJoining(true);
+    const ok = (await onJoinByCode?.(trimmed)) ?? false;
+    setJoining(false);
+    if (!ok) setCodeError('초대코드를 확인해주세요. 만료되었거나 없는 코드예요.');
   };
 
   return (
@@ -107,7 +127,7 @@ export function HouseSearchScreen({ onBack, onJoin, onCreate }: HouseSearchScree
               </View>
               <Pressable
                 onPress={joinByCode}
-                disabled={code.trim().length === 0}
+                disabled={code.trim().length === 0 || joining}
                 accessibilityRole="button"
                 style={[
                   styles.sideBtn,
@@ -170,7 +190,7 @@ export function HouseSearchScreen({ onBack, onJoin, onCreate }: HouseSearchScree
                     </Text>
                   </View>
                   <Pressable
-                    onPress={() => !full && onJoin?.(h.name)}
+                    onPress={() => !full && onJoinHouse?.(h.id)}
                     disabled={full}
                     accessibilityRole="button"
                     style={[

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { CharacterAvatar } from '@/components/character-avatar';
@@ -13,11 +13,21 @@ export type RoomCell = {
   /** Tile background tint (kept from the prototype palette). */
   color: string;
   isMine?: boolean;
+  /** API membership id — enables the server kick action when provided. */
+  membershipId?: number;
 };
 
 export type Floor = { level: string; rooms: RoomCell[] };
 
-export type House = { title: string; inviteCode: string; floors: Floor[] };
+export type House = {
+  title: string;
+  /** May be absent for non-owners (the API hides the code from members). */
+  inviteCode?: string;
+  floors: Floor[];
+  /** API house id — enables server actions (kick/leave) when provided. */
+  houseId?: number;
+  myRole?: 'OWNER' | 'MEMBER';
+};
 
 /** Group goal shown in the "우리 그룹의 루틴" card. */
 type GroupGoal = { emoji: string; title: string; desc: string; current: number; goal: number };
@@ -73,11 +83,17 @@ const DEFAULT_HOUSES: House[] = [
 
 export type GroupHouseScreenProps = {
   houses?: House[];
+  /** True while my houses are loading from the API. */
+  loading?: boolean;
   coinBalance?: number;
   characterId?: CharacterId;
   onVisitFriend?: (name: string) => void;
   onVisitMyRoom?: () => void;
   onOpenSearch?: () => void;
+  /** Kick a member via the API (owner only); shown when the house has ids. */
+  onKickMember?: (houseId: number, membershipId: number) => void;
+  /** Leave the current house via the API. */
+  onLeaveHouse?: (houseId: number) => void;
 };
 
 /**
@@ -89,11 +105,14 @@ export type GroupHouseScreenProps = {
  */
 export function GroupHouseScreen({
   houses = DEFAULT_HOUSES,
+  loading = false,
   coinBalance = 0,
   characterId = DEFAULT_CHARACTER_ID,
   onVisitFriend,
   onVisitMyRoom,
   onOpenSearch,
+  onKickMember,
+  onLeaveHouse,
 }: GroupHouseScreenProps) {
   const t = useTokens();
   const screenStyle = useScreenStyle();
@@ -101,11 +120,12 @@ export function GroupHouseScreen({
   const [houseIndex, setHouseIndex] = useState(0);
   const [showMembers, setShowMembers] = useState(false);
   const [kicked, setKicked] = useState<string[]>([]);
-  const [memberToKick, setMemberToKick] = useState<string | null>(null);
+  const [memberToKick, setMemberToKick] = useState<RoomCell | null>(null);
 
-  const currentHouse = houses[Math.min(houseIndex, houses.length - 1)];
+  const currentHouse: House | undefined = houses[Math.min(houseIndex, houses.length - 1)];
   const members = useMemo(
-    () => currentHouse.floors.flatMap((f) => f.rooms.map((r) => ({ ...r, level: f.level }))),
+    () =>
+      (currentHouse?.floors ?? []).flatMap((f) => f.rooms.map((r) => ({ ...r, level: f.level }))),
     [currentHouse],
   );
   const keyFor = (name: string) => `${houseIndex}-${name}`;
@@ -114,9 +134,47 @@ export function GroupHouseScreen({
   const prevHouse = () => setHouseIndex((i) => (i - 1 + houses.length) % houses.length);
   const nextHouse = () => setHouseIndex((i) => (i + 1) % houses.length);
   const confirmKick = () => {
-    if (memberToKick) setKicked((prev) => [...prev, keyFor(memberToKick)]);
+    if (memberToKick) {
+      // Server kick when wired to the API; local placeholder otherwise (demo).
+      if (onKickMember && currentHouse?.houseId && memberToKick.membershipId) {
+        onKickMember(currentHouse.houseId, memberToKick.membershipId);
+      } else {
+        setKicked((prev) => [...prev, keyFor(memberToKick.name)]);
+      }
+    }
     setMemberToKick(null);
   };
+
+  // No houses yet (fresh account) → guide to 집 탐색 instead of crashing on
+  // an empty switcher.
+  if (!currentHouse) {
+    return (
+      <View style={[styles.screen, screenStyle]}>
+        <View style={styles.emptyWrap}>
+          {loading ? (
+            <>
+              <ActivityIndicator color={t.primary} />
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>불러오는 중…</Text>
+            </>
+          ) : (
+            <>
+              <Text style={[Typography.h3, { color: t.text }]}>아직 함께하는 집이 없어요</Text>
+              <Text style={[Typography.body, styles.emptyBody, { color: t.textMuted }]}>
+                집을 만들거나 초대코드로 입주해 친구들과 루틴을 함께 키워보세요.
+              </Text>
+              <Pressable
+                onPress={onOpenSearch}
+                accessibilityRole="button"
+                accessibilityLabel="집 탐색"
+                style={[styles.emptyCta, { backgroundColor: t.primary }]}>
+                <Text style={[Typography.label, { color: t.onPrimary }]}>집 탐색하기</Text>
+              </Pressable>
+            </>
+          )}
+        </View>
+      </View>
+    );
+  }
 
   if (showMembers) {
     return (
@@ -136,18 +194,23 @@ export function GroupHouseScreen({
         </View>
 
         <ScrollView contentContainerStyle={styles.body}>
-          <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
-            <Text style={[Typography.label, { color: t.text }]}>초대코드</Text>
-            <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              친구에게 코드를 공유해 집에 초대하세요.
-            </Text>
-            <View
-              style={[styles.codeBox, { borderColor: t.border, backgroundColor: t.surfaceMuted }]}>
-              <Text style={[Typography.h3, styles.code, { color: t.text }]}>
-                {currentHouse.inviteCode}
+          {currentHouse.inviteCode ? (
+            <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
+              <Text style={[Typography.label, { color: t.text }]}>초대코드</Text>
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                친구에게 코드를 공유해 집에 초대하세요.
               </Text>
+              <View
+                style={[
+                  styles.codeBox,
+                  { borderColor: t.border, backgroundColor: t.surfaceMuted },
+                ]}>
+                <Text style={[Typography.h3, styles.code, { color: t.text }]}>
+                  {currentHouse.inviteCode}
+                </Text>
+              </View>
             </View>
-          </View>
+          ) : null}
 
           <View style={styles.memberList}>
             {members.map((member) => {
@@ -182,7 +245,7 @@ export function GroupHouseScreen({
                     </Text>
                   </View>
                   <Pressable
-                    onPress={() => setMemberToKick(member.name)}
+                    onPress={() => setMemberToKick(member)}
                     disabled={member.isMine || kickedOut}
                     accessibilityRole="button"
                     accessibilityLabel={`${member.name} 강퇴`}
@@ -212,7 +275,7 @@ export function GroupHouseScreen({
             <View style={[styles.modal, { backgroundColor: t.surface }]}>
               <Text style={[Typography.h3, { color: t.text }]}>정말 강퇴할까요?</Text>
               <Text style={[Typography.body, styles.modalBody, { color: t.textMuted }]}>
-                {memberToKick}님을 강퇴하면 집 화면에서 빈방으로 표시됩니다.
+                {memberToKick.name}님을 강퇴하면 집 화면에서 빈방으로 표시됩니다.
               </Text>
               <View style={styles.modalActions}>
                 <Pressable
@@ -391,6 +454,22 @@ export function GroupHouseScreen({
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
+  },
+  emptyWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.five,
+    gap: Spacing.two,
+  },
+  emptyBody: {
+    textAlign: 'center',
+  },
+  emptyCta: {
+    marginTop: Spacing.two,
+    borderRadius: Radius.pill,
+    paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.six,
   },
   flex: {
     flex: 1,

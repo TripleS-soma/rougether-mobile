@@ -88,6 +88,7 @@ export type MyRoomScreenProps = {
   onAddRoutine?: () => void;
   /** Create a category (햄버거 메뉴 → 카테고리 관리 sheet). */
   onCreateCategory?: (category: RoutineCategoryMeta) => void;
+  onUpdateCategory?: (id: string, category: RoutineCategoryMeta) => void;
   /** Delete a category (카테고리 관리 sheet). */
   onDeleteCategory?: (id: string) => void;
   /** Toggle a routine's completion on a specific date ("YYYY-MM-DD"). */
@@ -136,6 +137,7 @@ export function MyRoomScreen({
   onEdit,
   onAddRoutine,
   onCreateCategory,
+  onUpdateCategory,
   onDeleteCategory,
   onToggleCompletion,
   onOpenGacha,
@@ -886,6 +888,7 @@ export function MyRoomScreen({
         visible={categorySheetOpen}
         categories={categories}
         onCreate={(cat) => onCreateCategory?.(cat)}
+        onUpdate={(id, cat) => onUpdateCategory?.(id, cat)}
         onDelete={(id) => onDeleteCategory?.(id)}
         onClose={() => setCategorySheetOpen(false)}
       />
