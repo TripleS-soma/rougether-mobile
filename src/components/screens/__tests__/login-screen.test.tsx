@@ -21,6 +21,28 @@ describe('LoginScreen', () => {
     expect(onAuthSuccess).toHaveBeenCalledTimes(1);
   });
 
+  it('signs into a specific account when the field holds a numeric userId', async () => {
+    const onLogin = jest.fn(async () => true);
+    const { getByText, getByPlaceholderText } = await render(<LoginScreen onLogin={onLogin} />);
+
+    await fireEvent.changeText(getByPlaceholderText('이메일'), '7');
+    await fireEvent.changeText(getByPlaceholderText('비밀번호'), 'x');
+    await fireEvent.press(getByText('로그인'));
+
+    expect(onLogin).toHaveBeenCalledWith(7);
+  });
+
+  it('creates a fresh account when the userId field is empty', async () => {
+    const onLogin = jest.fn(async () => true);
+    const { getByText, getByPlaceholderText } = await render(<LoginScreen onLogin={onLogin} />);
+
+    // Only the password is required; empty userId → new-user login.
+    await fireEvent.changeText(getByPlaceholderText('비밀번호'), 'x');
+    await fireEvent.press(getByText('로그인'));
+
+    expect(onLogin).toHaveBeenCalledWith(undefined);
+  });
+
   it('navigates to signup', async () => {
     const onGoSignup = jest.fn();
     const { getByText } = await render(<LoginScreen onGoSignup={onGoSignup} />);

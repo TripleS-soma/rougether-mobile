@@ -123,8 +123,8 @@ export function SignupScreen({ onBack }: SignupScreenProps) {
           flow that bounces back to login. */}
       <View style={[styles.notice, { backgroundColor: `${t.warning}22`, borderColor: t.warning }]}>
         <Text style={[styles.noticeText, { color: t.text }]}>
-          이메일 가입은 준비 중이에요. 지금은 로그인 화면의 개발 로그인(이메일 칸에 숫자 userId)으로
-          이용할 수 있어요.
+          이메일 가입은 준비 중이에요. 지금은 로그인 화면에서 이메일 칸을 비우고 로그인하면 새
+          계정이 만들어져요.
         </Text>
       </View>
 
