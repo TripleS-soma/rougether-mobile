@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -18,6 +19,7 @@ import { WalletPills } from '@/components/ui/wallet-pills';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
+import { assetSource, isCdnKey } from '@/resources/asset';
 import { RARITY_COLORS, type Rarity } from '@/resources/furniture';
 import { hapticImpact, hapticSuccess } from '@/utils/haptics';
 
@@ -311,7 +313,16 @@ function RevealCard({ item, index }: { item: DrawResult; index: number }) {
   return (
     <Animated.View
       style={[styles.revealCard, style, { backgroundColor: t.surface, borderColor: rarityColor }]}>
-      <Icon name="gift" size={34} color={rarityColor} />
+      {isCdnKey(item.assetKey) ? (
+        <Image
+          source={assetSource(item.assetKey)}
+          style={styles.revealArt}
+          contentFit="contain"
+          transition={120}
+        />
+      ) : (
+        <Icon name="gift" size={34} color={rarityColor} />
+      )}
       <Text style={[styles.revealBadge, { backgroundColor: rarityColor }]}>
         {item.rarity ?? '일반'}
       </Text>
@@ -424,6 +435,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.two,
     alignItems: 'center',
     gap: Spacing.one,
+  },
+  revealArt: {
+    width: 48,
+    height: 48,
   },
   revealBadge: {
     color: '#FFFFFF',

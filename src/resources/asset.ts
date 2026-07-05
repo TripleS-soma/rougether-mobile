@@ -1,16 +1,18 @@
 /**
- * Resource (image) layer. Furniture/character art lives on a resource/CDN
- * server and is referenced by key (spec convention: `*_key` + CDN base). Until
- * the real server exists, every key resolves to a dummy placeholder image.
- *
- * NOTE: furniture is currently drawn in-app via FurniturePlaceholder (not this
- * dummy image) — the placeholder host can't render Korean text, so labels showed
- * as "???". Keep this for when RESOURCE_BASE points at the real CDN.
+ * Resource (image) layer. Item/character art lives on the asset CDN (S3) and is
+ * referenced by key (e.g. `items/forest-sage/furniture/forest-sage-bed.png`).
+ * Keys from the API resolve to real images; legacy local catalog keys
+ * (`furniture/bed` 등) have no CDN art — check with isCdnKey() before rendering
+ * an <Image> and fall back to the in-app placeholder.
  */
-export const RESOURCE_BASE = 'https://placehold.co';
+export const RESOURCE_BASE = 'https://rougether-assets.s3.ap-northeast-2.amazonaws.com';
 
-/** Resolve an asset key to an <Image> source. Dummy placeholder for now. */
+/** True when the key points at real CDN art (API asset keys). */
+export function isCdnKey(key?: string | null): boolean {
+  return !!key && /^(items|characters)\//.test(key);
+}
+
+/** Resolve an asset key to an <Image> source on the CDN. */
 export function assetSource(key?: string | null) {
-  const text = encodeURIComponent(key ?? 'asset');
-  return { uri: `${RESOURCE_BASE}/120x120/EADFD8/4A403A.png?text=${text}` };
+  return { uri: `${RESOURCE_BASE}/${(key ?? '').replace(/^\//, '')}` };
 }
