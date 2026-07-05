@@ -6,10 +6,16 @@ const MISSION_HOUSE: House = {
   houseId: 7,
   title: '실집',
   myRole: 'OWNER',
+  description: '아침 루틴 집',
+  maxMembers: 4,
+  memberCount: 2,
   floors: [
     {
       level: '1층',
-      rooms: [{ name: '나', color: '#E8E0D0', isMine: true, membershipId: 43 }],
+      rooms: [
+        { name: '친구', color: '#F5E1D8', membershipId: 42 },
+        { name: '나', color: '#E8E0D0', isMine: true, membershipId: 43 },
+      ],
     },
   ],
   missions: [
@@ -67,6 +73,49 @@ describe('GroupHouseScreen', () => {
       <GroupHouseScreen houses={[{ ...MISSION_HOUSE, missions: [] }]} />,
     );
     expect(getByText('아직 미션이 없어요. 첫 미션을 만들어 다 같이 도전해보세요!')).toBeTruthy();
+  });
+
+  it('lets the owner edit the house settings', async () => {
+    const onUpdateHouse = jest.fn();
+    const { getByLabelText } = await render(
+      <GroupHouseScreen houses={[MISSION_HOUSE]} onUpdateHouse={onUpdateHouse} />,
+    );
+    await fireEvent.press(getByLabelText('구성원 목록'));
+    await fireEvent.press(getByLabelText('집 정보 수정'));
+    await fireEvent.changeText(getByLabelText('집 이름'), '저녁 루틴 하우스');
+    await fireEvent.changeText(getByLabelText('집 소개'), '저녁 루틴으로 바꿨어요');
+    await fireEvent.press(getByLabelText('정원 6명'));
+    await fireEvent.press(getByLabelText('집 정보 저장'));
+    expect(onUpdateHouse).toHaveBeenCalledWith(7, {
+      name: '저녁 루틴 하우스',
+      description: '저녁 루틴으로 바꿨어요',
+      maxMembers: 6,
+    });
+  });
+
+  it('transfers ownership to a member after confirming', async () => {
+    const onTransferOwnership = jest.fn();
+    const { getByLabelText, getByText } = await render(
+      <GroupHouseScreen houses={[MISSION_HOUSE]} onTransferOwnership={onTransferOwnership} />,
+    );
+    await fireEvent.press(getByLabelText('구성원 목록'));
+    await fireEvent.press(getByLabelText('친구 방장 위임'));
+    expect(getByText('방장을 위임할까요?')).toBeTruthy();
+    await fireEvent.press(getByLabelText('위임 확인'));
+    expect(onTransferOwnership).toHaveBeenCalledWith(7, 42);
+  });
+
+  it('hides the owner tools from plain members', async () => {
+    const { getByLabelText, queryByLabelText } = await render(
+      <GroupHouseScreen
+        houses={[{ ...MISSION_HOUSE, myRole: 'MEMBER' }]}
+        onUpdateHouse={jest.fn()}
+        onTransferOwnership={jest.fn()}
+      />,
+    );
+    await fireEvent.press(getByLabelText('구성원 목록'));
+    expect(queryByLabelText('집 정보 수정')).toBeNull();
+    expect(queryByLabelText('친구 방장 위임')).toBeNull();
   });
 
   it('visits a friend room and my room on tap', async () => {
