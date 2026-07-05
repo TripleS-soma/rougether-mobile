@@ -34,5 +34,21 @@
 - **작업 시작 전 스펙 확인**: 기능 작업을 시작하기 전에 상위 폴더의 공유 계약 저장소 `../rougether-spec`를 읽으세요 — 루트의 `product.md` / `erd.md` / `api.md` / `open-questions.md`와 해당 도메인의 `domains/<도메인>/{prd,features,api}.md`(member / routine-todo / room / shop / gacha / house). 스웨거는 "지금 서버에 있는 것", 스펙은 "팀이 합의한 의도"입니다.
 - 컴포넌트를 만든 뒤에는 **`src/dev/registry.tsx`에 등록**해 Dev 탭에 노출시키고, 형제 `__tests__/*.test.tsx`를 작성하세요(React Native Testing Library; 스냅샷이 아니라 `getByText` / `getByLabelText`로 단언). `SampleButton`이 참고 패턴입니다.
 - 커밋 전: `npm run typecheck && npm run lint && npm run format:check && npm test` 실행. CI가 `main` 푸시와 모든 PR에서 이 네 가지를 돌리므로, 항상 통과 상태로 유지하세요.
-- 기능 하나당 `feat/<기능>` 브랜치, `main`으로 PR(기존 히스토리 규칙과 동일).
+- 기능 하나당 `feat/<기능>` 브랜치, `main`으로 PR(기존 히스토리 규칙과 동일). **PR 스택 금지** — 브랜치는 항상 `main`에서 직접 분기하세요(중간 브랜치가 먼저 머지되면 자식 PR이 표류합니다).
 - Expo/React Native API와 관련된 부분을 건드릴 때는 먼저 SDK 55 문서(상단 참고)로 확인하세요. 최근 SDK 사이에 API가 바뀌었습니다.
+
+## 이슈 · 프로젝트 보드
+
+업무는 GitHub Issues + 조직 프로젝트 보드(**TripleS-soma 프로젝트 #2**)로 관리합니다.
+
+- **이슈 먼저**: 기능/버그 작업은 이슈를 만들고 시작합니다. 라벨: `api`(서버 연동) / `ux` / `backend-blocked`(서버 엔드포인트 대기) / `native-build`(OTA 불가, 네이티브 빌드 필요). 담당자는 GitHub Actions가 자동으로 `evan7484`를 지정합니다(`.github/workflows/auto-assign-issues.yml`).
+- **보드 등록**: 새 이슈는 프로젝트 #2에 추가하고 Status(`Todo → In Progress → Done`)와 Priority(`P0 지금 / P1 다음 / P2 대기`)를 지정합니다.
+  ```sh
+  gh project item-add 2 --owner TripleS-soma --url <이슈 URL>
+  gh project item-edit --project-id PVT_kwDOEMVke84BcZqA --id <item-id> \
+    --field-id <field-id> --single-select-option-id <option-id>
+  # Status 필드: PVTSSF_lADOEMVke84BcZqAzhXCx0s (Todo f75ad846 / In Progress 47fc9ee4 / Done 98236657)
+  # Priority 필드: PVTSSF_lADOEMVke84BcZqAzhXIviY (P0 6711a274 / P1 267d66c3 / P2 473596d8)
+  ```
+- **PR 연결**: PR 본문에 `Closes #N`을 넣어 머지 시 이슈가 자동으로 닫히고 보드가 Done으로 이동하게 합니다.
+- **미연동 API 추적**: 스웨거(`/v3/api-docs`)에 새 엔드포인트가 생기면 연동 이슈를 만들어 보드에 올립니다. 서버에 없는 기능은 화면에서 `ui/PendingNotice`("서버 준비 중")로 정직하게 표시합니다.
