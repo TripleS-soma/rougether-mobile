@@ -1,6 +1,8 @@
+import { Image } from 'expo-image';
 import { type StyleProp, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
+import { assetSource, isCdnKey } from '@/resources/asset';
 import { type FurnitureCategory, type FurnitureItem } from '@/resources/furniture';
 
 /** Pastel background per catalog category, so slots read as distinct tiles. */
@@ -19,12 +21,23 @@ export type FurniturePlaceholderProps = {
 };
 
 /**
- * In-app placeholder for a furniture item, drawn natively (colored box + Korean
- * name) instead of a remote placeholder image — the previous placehold.co image
- * couldn't render Korean text (showed "???"). Swap this for a real <Image> once
- * the furniture art/CDN exists.
+ * Furniture tile: renders the real CDN art when the item's assetKey points at
+ * the asset bucket (API items), otherwise falls back to the in-app placeholder
+ * (colored box + Korean name) for legacy local-catalog items without art.
  */
 export function FurniturePlaceholder({ item, showName = true, style }: FurniturePlaceholderProps) {
+  if (isCdnKey(item.assetKey)) {
+    return (
+      <View accessibilityLabel={item.name} style={[styles.tile, style]}>
+        <Image
+          source={assetSource(item.assetKey)}
+          style={styles.art}
+          contentFit="contain"
+          transition={120}
+        />
+      </View>
+    );
+  }
   return (
     <View
       accessibilityLabel={item.name}
@@ -45,6 +58,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: Spacing.one,
+  },
+  art: {
+    width: '100%',
+    height: '100%',
   },
   name: {
     fontSize: 10,
