@@ -168,7 +168,7 @@ export function MyRoomScreen({
   const groups =
     categories.length > 0 ? categories : roomRoutines.length > 0 ? [UNCATEGORIZED_META] : [];
 
-  // Header hamburger popover (방 편집 / 카테고리 관리 / 루틴 관리) + the
+  // Header hamburger popover (방 꾸미기 / 카테고리 관리 / 루틴 관리) + the
   // category manager sheet it opens. The popover anchors under the measured
   // button position — a fixed offset misaligns across notch/status-bar sizes.
   const [navMenuOpen, setNavMenuOpen] = useState(false);
@@ -603,10 +603,10 @@ export function MyRoomScreen({
                 <Pressable
                   onPress={onEdit}
                   accessibilityRole="button"
-                  accessibilityLabel="방 편집하기"
+                  accessibilityLabel="방 꾸미기 열기"
                   style={[styles.editBtn, { backgroundColor: t.surface, borderColor: t.border }]}>
                   <Icon name="edit" size={16} color={t.text} />
-                  <Text style={[Typography.label, { color: t.text }]}>방 편집</Text>
+                  <Text style={[Typography.label, { color: t.text }]}>방 꾸미기</Text>
                 </Pressable>
               </View>
             </>
@@ -847,7 +847,7 @@ export function MyRoomScreen({
               [
                 {
                   icon: 'edit',
-                  label: '방 편집',
+                  label: '방 꾸미기',
                   onPress: () => onEdit?.(),
                 },
                 {

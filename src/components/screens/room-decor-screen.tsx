@@ -78,23 +78,11 @@ export function RoomDecorScreen({
     () => new Set(ownedIds ?? furniture.map((i) => i.id)),
     [ownedIds, furniture],
   );
-  // Filter tabs: themes (item sets) when the whole catalogue carries them —
-  // the natural shopping unit for the API's 150+ items. The local fallback set
-  // is only partially themed, so it keeps the item-type category tabs.
-  const themes = useMemo(() => {
-    if (furniture.length === 0 || !furniture.every((i) => i.theme)) return [];
-    const set = new Set<string>();
-    furniture.forEach((i) => i.theme && set.add(i.theme));
-    wallpapers.forEach((w) => w.theme && set.add(w.theme));
-    return Array.from(set);
-  }, [furniture, wallpapers]);
+  // Filter tabs by item type — the API's categoryCode mapped to app labels
+  // (furniture→가구, decor→장식 …), plus 전체/벽지.
   const categories = useMemo(
-    () => [
-      ALL,
-      WALLPAPER,
-      ...(themes.length > 0 ? themes : Array.from(new Set(furniture.map((i) => i.category)))),
-    ],
-    [themes, furniture],
+    () => [ALL, WALLPAPER, ...Array.from(new Set(furniture.map((i) => i.category)))],
+    [furniture],
   );
 
   const [placed, setPlaced] = useState<string[]>(
@@ -114,22 +102,14 @@ export function RoomDecorScreen({
     });
   };
 
-  const isThemeTab = themes.includes(activeCategory);
-  const visibleWallpapers = isThemeTab
-    ? wallpapers.filter((w) => w.theme === activeCategory)
-    : wallpapers;
-  const showWallpapers =
-    activeCategory === ALL ||
-    activeCategory === WALLPAPER ||
-    (isThemeTab && visibleWallpapers.length > 0);
+  const visibleWallpapers = wallpapers;
+  const showWallpapers = activeCategory === ALL || activeCategory === WALLPAPER;
   const visibleItems =
     activeCategory === ALL
       ? furniture
       : activeCategory === WALLPAPER
         ? []
-        : isThemeTab
-          ? furniture.filter((i) => i.theme === activeCategory)
-          : furniture.filter((i) => i.category === activeCategory);
+        : furniture.filter((i) => i.category === activeCategory);
 
   return (
     <View style={[styles.screen, useScreenStyle()]}>

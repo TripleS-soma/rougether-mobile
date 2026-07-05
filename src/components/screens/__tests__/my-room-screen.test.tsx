@@ -49,8 +49,8 @@ describe('MyRoomScreen', () => {
     );
 
     await fireEvent.press(getByLabelText('메뉴'));
-    // getByLabelText: the bottom "방 편집" button shares the same text.
-    await fireEvent.press(getByLabelText('방 편집'));
+    // getByLabelText: the bottom 방 꾸미기 button uses a distinct label (열기).
+    await fireEvent.press(getByLabelText('방 꾸미기'));
     expect(onEdit).toHaveBeenCalledTimes(1);
 
     await fireEvent.press(getByLabelText('메뉴'));
