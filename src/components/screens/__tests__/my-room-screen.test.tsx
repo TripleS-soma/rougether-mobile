@@ -63,6 +63,23 @@ describe('MyRoomScreen', () => {
     expect(queryByText('새 카테고리 만들기')).toBeTruthy();
   });
 
+  it('hides routines not scheduled today from the 방 tab (repeat days respected)', async () => {
+    const todayWd = new Date().getDay();
+    const otherWd = (todayWd + 1) % 7;
+    const routines = [
+      { id: '1', title: '오늘 루틴', kind: 'routine' as const, days: [todayWd] },
+      { id: '2', title: '다른 요일 루틴', kind: 'routine' as const, days: [otherWd] },
+      { id: '3', title: '매일 루틴', kind: 'routine' as const },
+    ];
+    const { getByText, queryByText } = await render(<MyRoomScreen routines={routines} />);
+
+    expect(getByText('오늘 루틴')).toBeTruthy();
+    expect(getByText('매일 루틴')).toBeTruthy();
+    // Edited to a different weekday → must drop out of today's list.
+    expect(queryByText('다른 요일 루틴')).toBeNull();
+    expect(getByText('0 / 2')).toBeTruthy();
+  });
+
   it('renders uncategorized routines even when the user has no categories', async () => {
     // API state after a fresh account adds routines without a category:
     // categories = [], routines have no category → must show in a 기타 group,
