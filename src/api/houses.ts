@@ -7,8 +7,13 @@ import type {
   HouseDetailResponse,
   HouseJoinResponse,
   HouseListResponse,
+  HouseMissionClaimResponse,
+  HouseMissionContributeResponse,
+  HouseMissionCreateRequest,
+  HouseMissionResponse,
   HousePreviewResponse,
   MemberSummary,
+  MissionSummary,
   MyHouseSummary,
 } from './types';
 
@@ -65,4 +70,31 @@ export function leaveHouse(houseId: number) {
 /** DELETE /houses/{id}/members/{membershipId} — kick a member (owner). */
 export function kickHouseMember(houseId: number, membershipId: number) {
   return apiDelete<void>(`/houses/${houseId}/members/${membershipId}`);
+}
+
+/** GET /houses/{id}/missions — group missions, newest first. */
+export function fetchHouseMissions(houseId: number) {
+  return apiGetList<MissionSummary>(`/houses/${houseId}/missions`);
+}
+
+/** GET /houses/{id}/missions/{missionId} — detail incl. my contribution. */
+export function fetchHouseMission(houseId: number, missionId: number) {
+  return apiGet<HouseMissionResponse>(`/houses/${houseId}/missions/${missionId}`);
+}
+
+/** POST /houses/{id}/missions — create a mission (STREAK_DAYS unsupported: 400). */
+export function createHouseMission(houseId: number, body: HouseMissionCreateRequest) {
+  return apiPost<HouseMissionResponse>(`/houses/${houseId}/missions`, body);
+}
+
+/** POST /houses/{id}/missions/{missionId}/contribute — add my +1 contribution. */
+export function contributeHouseMission(houseId: number, missionId: number) {
+  return apiPost<HouseMissionContributeResponse>(
+    `/houses/${houseId}/missions/${missionId}/contribute`,
+  );
+}
+
+/** POST /houses/{id}/missions/{missionId}/claim — claim the group reward (achieved only). */
+export function claimHouseMission(houseId: number, missionId: number) {
+  return apiPost<HouseMissionClaimResponse>(`/houses/${houseId}/missions/${missionId}/claim`);
 }

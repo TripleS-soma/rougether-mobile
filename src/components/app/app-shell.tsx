@@ -162,6 +162,9 @@ export function AppShell({
     create: createGroupHouse,
     kickMember,
     leaveHouse,
+    contributeMission,
+    claimMission,
+    createMission,
   } = useHouses();
 
   // Shop catalogue + purchase (dia via API; wallet synced from the purchase
@@ -341,6 +344,15 @@ export function AppShell({
             }}
             onLeaveHouse={(houseId) => {
               void leaveHouse(houseId);
+            }}
+            onContributeMission={(houseId, missionId) => {
+              void contributeMission(houseId, missionId);
+            }}
+            onClaimMission={(houseId, missionId) => {
+              void claimMission(houseId, missionId);
+            }}
+            onCreateMission={(houseId, input) => {
+              void createMission(houseId, input);
             }}
           />
         ) : null}

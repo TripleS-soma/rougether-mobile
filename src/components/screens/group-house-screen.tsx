@@ -1,5 +1,13 @@
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { CharacterAvatar } from '@/components/character-avatar';
@@ -27,21 +35,47 @@ export type House = {
   /** API house id — enables server actions (kick/leave) when provided. */
   houseId?: number;
   myRole?: 'OWNER' | 'MEMBER';
+  /** Group missions shown in the "우리 그룹의 미션" card. */
+  missions?: HouseMission[];
 };
 
-/** Group goal shown in the "우리 그룹의 루틴" card. */
-type GroupGoal = { emoji: string; title: string; desc: string; current: number; goal: number };
+/** Group mission (server house mission) shown in the missions card. */
+export type HouseMission = {
+  id: number;
+  title: string;
+  /** Mission-type description shown under the progress bar. */
+  desc: string;
+  emoji: string;
+  current: number;
+  target: number;
+  status: 'ACTIVE' | 'COMPLETED' | 'EXPIRED';
+  /** Target reached — the reward is claimable while ACTIVE. */
+  achieved?: boolean;
+};
 
-const GROUP_GOALS: GroupGoal[] = [
-  { emoji: '☀️', title: '80% 이상 기상 인증', desc: '오전 7시 전 기상', current: 3, goal: 4 },
-  { emoji: '💻', title: '이번 달 코테 문제 풀이 인증', desc: '10회 목표', current: 6, goal: 10 },
-  { emoji: '🏋️', title: '주 3회 운동 인증', desc: '전체 멤버 평균', current: 2, goal: 3 },
+/** Creatable mission types (STREAK_DAYS is not supported by the server yet). */
+export type NewHouseMission = {
+  title: string;
+  missionType: 'DAILY_MEMBER_RATE' | 'WEEKLY_MEMBER_COUNT';
+  targetValue: number;
+};
+
+const MISSION_TYPE_OPTIONS: { type: NewHouseMission['missionType']; label: string }[] = [
+  { type: 'DAILY_MEMBER_RATE', label: '☀️ 일일 달성률' },
+  { type: 'WEEKLY_MEMBER_COUNT', label: '📅 주간 달성 횟수' },
+];
+
+const DEMO_MISSIONS: HouseMission[] = [
+  { id: 1, title: '이번 주 다같이 루틴 지키기', desc: '주간 구성원 달성 횟수', emoji: '📅', current: 12, target: 20, status: 'ACTIVE' }, // prettier-ignore
+  { id: 2, title: '아침 기상 인증 모으기', desc: '일일 구성원 달성률', emoji: '☀️', current: 8, target: 8, status: 'ACTIVE', achieved: true }, // prettier-ignore
+  { id: 3, title: '지난주 스트레칭 미션', desc: '주간 구성원 달성 횟수', emoji: '📅', current: 20, target: 20, status: 'COMPLETED' }, // prettier-ignore
 ];
 
 const DEFAULT_HOUSES: House[] = [
   {
     title: '소마파이팅',
     inviteCode: 'SOMA-2143',
+    missions: DEMO_MISSIONS,
     floors: [
       {
         level: '2층',
@@ -62,6 +96,7 @@ const DEFAULT_HOUSES: House[] = [
   {
     title: '소마 2번째 집',
     inviteCode: 'SOMA-7788',
+    missions: DEMO_MISSIONS.slice(0, 1),
     floors: [
       {
         level: '2층',
@@ -94,6 +129,12 @@ export type GroupHouseScreenProps = {
   onKickMember?: (houseId: number, membershipId: number) => void;
   /** Leave the current house via the API. */
   onLeaveHouse?: (houseId: number) => void;
+  /** Add my +1 contribution to an active mission. */
+  onContributeMission?: (houseId: number, missionId: number) => void;
+  /** Claim the reward of an achieved mission. */
+  onClaimMission?: (houseId: number, missionId: number) => void;
+  /** Create a new group mission. */
+  onCreateMission?: (houseId: number, input: NewHouseMission) => void;
 };
 
 /**
@@ -113,6 +154,9 @@ export function GroupHouseScreen({
   onOpenSearch,
   onKickMember,
   onLeaveHouse,
+  onContributeMission,
+  onClaimMission,
+  onCreateMission,
 }: GroupHouseScreenProps) {
   const t = useTokens();
   const screenStyle = useScreenStyle();
@@ -121,6 +165,11 @@ export function GroupHouseScreen({
   const [showMembers, setShowMembers] = useState(false);
   const [kicked, setKicked] = useState<string[]>([]);
   const [memberToKick, setMemberToKick] = useState<RoomCell | null>(null);
+  const [showCreateMission, setShowCreateMission] = useState(false);
+  const [missionTitle, setMissionTitle] = useState('');
+  const [missionType, setMissionType] =
+    useState<NewHouseMission['missionType']>('WEEKLY_MEMBER_COUNT');
+  const [missionTarget, setMissionTarget] = useState('10');
 
   const currentHouse: House | undefined = houses[Math.min(houseIndex, houses.length - 1)];
   const members = useMemo(
@@ -133,6 +182,27 @@ export function GroupHouseScreen({
 
   const prevHouse = () => setHouseIndex((i) => (i - 1 + houses.length) % houses.length);
   const nextHouse = () => setHouseIndex((i) => (i + 1) % houses.length);
+
+  const missions = currentHouse?.missions ?? [];
+  // Creating needs the server house id; demo houses only display missions.
+  const canCreateMission = !!(onCreateMission && currentHouse?.houseId);
+  const missionTargetNum = Number(missionTarget);
+  const canSubmitMission =
+    missionTitle.trim().length > 0 &&
+    Number.isInteger(missionTargetNum) &&
+    missionTargetNum >= 1 &&
+    missionTargetNum <= 1000;
+  const submitMission = () => {
+    if (!canSubmitMission || !currentHouse?.houseId) return;
+    onCreateMission?.(currentHouse.houseId, {
+      title: missionTitle.trim(),
+      missionType,
+      targetValue: missionTargetNum,
+    });
+    setShowCreateMission(false);
+    setMissionTitle('');
+    setMissionTarget('10');
+  };
   const confirmKick = () => {
     if (memberToKick) {
       // Server kick when wired to the API; local placeholder otherwise (demo).
@@ -411,42 +481,171 @@ export function GroupHouseScreen({
         </View>
 
         <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
-          <Text style={[Typography.h3, { color: t.text }]}>🎯 우리 그룹의 루틴</Text>
-          <View style={styles.goals}>
-            {GROUP_GOALS.map((goal) => {
-              const pct = Math.min(1, goal.current / goal.goal);
-              return (
-                <View
-                  key={goal.title}
-                  style={[styles.goalRow, { backgroundColor: t.surfaceMuted }]}>
-                  <Text style={styles.goalEmoji}>{goal.emoji}</Text>
-                  <View style={styles.flex}>
-                    <View style={styles.goalHead}>
-                      <Text
-                        style={[Typography.label, styles.flex, { color: t.text }]}
-                        numberOfLines={1}>
-                        {goal.title}
-                      </Text>
-                      <Text style={[Typography.supporting, { color: t.primary }]}>
-                        {goal.current}/{goal.goal}
-                      </Text>
-                    </View>
-                    <View style={[styles.goalTrack, { backgroundColor: t.border }]}>
-                      <View
-                        style={[
-                          styles.goalFill,
-                          { backgroundColor: t.primary, width: `${pct * 100}%` },
-                        ]}
-                      />
-                    </View>
-                    <Text style={[Typography.supporting, { color: t.textMuted }]}>{goal.desc}</Text>
-                  </View>
-                </View>
-              );
-            })}
+          <View style={styles.missionHead}>
+            <Text style={[Typography.h3, styles.flex, { color: t.text }]}>🎯 우리 그룹의 미션</Text>
+            {canCreateMission ? (
+              <Pressable
+                onPress={() => setShowCreateMission(true)}
+                accessibilityRole="button"
+                accessibilityLabel="미션 만들기"
+                style={[styles.missionAddBtn, { backgroundColor: t.surfaceMuted }]}>
+                <Text style={[Typography.supporting, { color: t.primary }]}>＋ 만들기</Text>
+              </Pressable>
+            ) : null}
           </View>
+          {missions.length === 0 ? (
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              아직 미션이 없어요. 첫 미션을 만들어 다 같이 도전해보세요!
+            </Text>
+          ) : (
+            <View style={styles.goals}>
+              {missions.map((mission) => {
+                const pct = Math.min(1, mission.current / mission.target);
+                const claimable = mission.status === 'ACTIVE' && mission.achieved;
+                return (
+                  <View
+                    key={mission.id}
+                    style={[styles.goalRow, { backgroundColor: t.surfaceMuted }]}>
+                    <Text style={styles.goalEmoji}>{mission.emoji}</Text>
+                    <View style={styles.flex}>
+                      <View style={styles.goalHead}>
+                        <Text
+                          style={[Typography.label, styles.flex, { color: t.text }]}
+                          numberOfLines={1}>
+                          {mission.title}
+                        </Text>
+                        <Text style={[Typography.supporting, { color: t.primary }]}>
+                          {mission.current}/{mission.target}
+                        </Text>
+                      </View>
+                      <View style={[styles.goalTrack, { backgroundColor: t.border }]}>
+                        <View
+                          style={[
+                            styles.goalFill,
+                            { backgroundColor: t.primary, width: `${pct * 100}%` },
+                          ]}
+                        />
+                      </View>
+                      <View style={styles.missionFoot}>
+                        <Text
+                          style={[Typography.supporting, styles.flex, { color: t.textMuted }]}
+                          numberOfLines={1}>
+                          {mission.desc}
+                        </Text>
+                        {mission.status === 'COMPLETED' ? (
+                          <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                            완료 🎉
+                          </Text>
+                        ) : mission.status === 'EXPIRED' ? (
+                          <Text style={[Typography.supporting, { color: t.textDisabled }]}>
+                            기간 만료
+                          </Text>
+                        ) : claimable && currentHouse.houseId && onClaimMission ? (
+                          <Pressable
+                            onPress={() => onClaimMission(currentHouse.houseId!, mission.id)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`${mission.title} 보상 받기`}
+                            style={[styles.missionBtn, { backgroundColor: t.warning }]}>
+                            <Text style={[Typography.supporting, { color: t.text }]}>
+                              🎁 보상 받기
+                            </Text>
+                          </Pressable>
+                        ) : mission.status === 'ACTIVE' &&
+                          currentHouse.houseId &&
+                          onContributeMission ? (
+                          <Pressable
+                            onPress={() => onContributeMission(currentHouse.houseId!, mission.id)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`${mission.title} 기여하기`}
+                            style={[styles.missionBtn, { backgroundColor: t.primary }]}>
+                            <Text style={[Typography.supporting, { color: t.onPrimary }]}>
+                              기여 +1
+                            </Text>
+                          </Pressable>
+                        ) : null}
+                      </View>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
         </View>
       </ScrollView>
+
+      {showCreateMission ? (
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modal, { backgroundColor: t.surface }]}>
+            <Text style={[Typography.h3, { color: t.text }]}>새 미션 만들기</Text>
+            <View style={styles.missionForm}>
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>미션 제목</Text>
+              <TextInput
+                value={missionTitle}
+                onChangeText={(v) => setMissionTitle(v.slice(0, 160))}
+                placeholder="예) 이번 주 다같이 루틴 지키기"
+                placeholderTextColor={t.textMuted}
+                accessibilityLabel="미션 제목"
+                style={[styles.missionInput, { backgroundColor: t.surfaceMuted, color: t.text }]}
+              />
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>미션 유형</Text>
+              <View style={styles.missionTypeRow}>
+                {MISSION_TYPE_OPTIONS.map((opt) => {
+                  const selected = opt.type === missionType;
+                  return (
+                    <Pressable
+                      key={opt.type}
+                      onPress={() => setMissionType(opt.type)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected }}
+                      style={[
+                        styles.missionTypeBtn,
+                        { backgroundColor: selected ? t.primary : t.surfaceMuted },
+                      ]}>
+                      <Text
+                        style={[
+                          Typography.supporting,
+                          { color: selected ? t.onPrimary : t.textMuted },
+                        ]}>
+                        {opt.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                목표 수치 (1~1000)
+              </Text>
+              <TextInput
+                value={missionTarget}
+                onChangeText={setMissionTarget}
+                keyboardType="number-pad"
+                accessibilityLabel="목표 수치"
+                style={[styles.missionInput, { backgroundColor: t.surfaceMuted, color: t.text }]}
+              />
+            </View>
+            <View style={styles.modalActions}>
+              <Pressable
+                onPress={() => setShowCreateMission(false)}
+                accessibilityRole="button"
+                accessibilityLabel="미션 만들기 취소"
+                style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
+                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
+              </Pressable>
+              <Pressable
+                onPress={submitMission}
+                disabled={!canSubmitMission}
+                accessibilityRole="button"
+                accessibilityLabel="미션 만들기 확인"
+                style={[
+                  styles.modalBtn,
+                  { backgroundColor: canSubmitMission ? t.primary : t.disabledBg },
+                ]}>
+                <Text style={[Typography.label, { color: t.onPrimary }]}>만들기</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -653,6 +852,47 @@ const styles = StyleSheet.create({
   goals: {
     gap: Spacing.three,
     marginTop: Spacing.two,
+  },
+  missionHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  missionAddBtn: {
+    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one,
+  },
+  missionFoot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    marginTop: Spacing.one,
+  },
+  missionBtn: {
+    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one,
+  },
+  missionForm: {
+    marginTop: Spacing.three,
+    gap: Spacing.two,
+  },
+  missionInput: {
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    fontSize: 14,
+  },
+  missionTypeRow: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+  },
+  missionTypeBtn: {
+    flex: 1,
+    borderRadius: Radius.pill,
+    paddingVertical: Spacing.two,
+    alignItems: 'center',
   },
   goalRow: {
     flexDirection: 'row',
