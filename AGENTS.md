@@ -51,4 +51,5 @@
   # Priority 필드: PVTSSF_lADOEMVke84BcZqAzhXIviY (P0 6711a274 / P1 267d66c3 / P2 473596d8)
   ```
 - **PR 연결**: PR 본문에 `Closes #N`을 넣어 머지 시 이슈가 자동으로 닫히고 보드가 Done으로 이동하게 합니다.
+- **코드 리뷰**: 모든 PR에 Claude 자동 리뷰가 달립니다(`.github/workflows/claude-code-review.yml`). 머지 전에 리뷰 지적 사항을 확인하고 반영하거나 근거를 남기세요.
 - **미연동 API 추적**: 스웨거(`/v3/api-docs`)에 새 엔드포인트가 생기면 연동 이슈를 만들어 보드에 올립니다. 서버에 없는 기능은 화면에서 `ui/PendingNotice`("서버 준비 중")로 정직하게 표시합니다.
