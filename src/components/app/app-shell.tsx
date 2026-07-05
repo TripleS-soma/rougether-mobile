@@ -183,9 +183,13 @@ export function AppShell({
 
   const [placedFurnitureIds, setPlacedFurnitureIds] = useState<string[]>([]);
   const [wallpaperId, setWallpaperId] = useState(DEFAULT_WALLPAPER_ID);
+  const [floorId, setFloorId] = useState<string | null>(null);
+  const [backgroundId, setBackgroundId] = useState<string | null>(null);
   useEffect(() => {
     setPlacedFurnitureIds(placement.placedFurnitureIds);
     setWallpaperId(placement.wallpaperId);
+    setFloorId(placement.floorId);
+    setBackgroundId(placement.backgroundId);
   }, [placement]);
 
   const [visitingFriend, setVisitingFriend] = useState('친구');
@@ -243,8 +247,12 @@ export function AppShell({
             onRetry={retryMyRoom}
             placedFurnitureIds={placedFurnitureIds}
             wallpaperId={wallpaperId}
+            floorId={floorId}
+            backgroundId={backgroundId}
             furniture={catalogue.furniture}
             wallpapers={catalogue.wallpapers}
+            floors={catalogue.floors}
+            backgrounds={catalogue.backgrounds}
             characterId={characterId}
             onToggleCompletion={toggleCompletion}
             onEdit={() => setScreen('decor')}
@@ -264,9 +272,13 @@ export function AppShell({
           <RoomDecorScreen
             initialPlacedIds={placedFurnitureIds}
             initialWallpaperId={wallpaperId}
+            initialFloorId={floorId}
+            initialBackgroundId={backgroundId}
             ownedIds={ownedIds}
             furniture={catalogue.furniture}
             wallpapers={catalogue.wallpapers}
+            floors={catalogue.floors}
+            backgrounds={catalogue.backgrounds}
             loading={shopLoading}
             loadError={shopError}
             onRetry={retryShop}
@@ -276,10 +288,12 @@ export function AppShell({
             onBuy={(itemId) => {
               void purchaseFurniture(itemId);
             }}
-            onApply={(ids, wp) => {
+            onApply={(ids, wp, fl, bg) => {
               setPlacedFurnitureIds(ids);
               setWallpaperId(wp);
-              void savePlacement(ids, wp);
+              setFloorId(fl);
+              setBackgroundId(bg);
+              void savePlacement(ids, wp, fl, bg);
             }}
             onBack={() => setScreen('myRoom')}
           />
@@ -362,8 +376,12 @@ export function AppShell({
             friendName={visitingFriend}
             placedFurnitureIds={placedFurnitureIds}
             wallpaperId={wallpaperId}
+            floorId={floorId}
+            backgroundId={backgroundId}
             furniture={catalogue.furniture}
             wallpapers={catalogue.wallpapers}
+            floors={catalogue.floors}
+            backgrounds={catalogue.backgrounds}
             characterId={characterId}
             routines={routines}
             onBack={() => setScreen('groupHouse')}

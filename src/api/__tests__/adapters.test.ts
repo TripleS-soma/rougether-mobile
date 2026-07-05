@@ -153,8 +153,15 @@ describe('API adapters', () => {
         priceAmount: 50,
         owned: true,
       },
-      // surface floor item without a slot → excluded from positioned furniture.
-      { id: 4, name: '바닥', placementType: 'surface_slot', categoryCode: 'floor', owned: false },
+      // surface items (floor/background) land in their own catalogue lists.
+      { id: 4, name: '바닥재', placementType: 'surface_slot', categoryCode: 'floor', owned: true },
+      {
+        id: 5,
+        name: '배경',
+        placementType: 'surface_slot',
+        categoryCode: 'background',
+        owned: false,
+      },
     ];
     const cat = toShopCatalogue(items);
     expect(cat.furniture.map((f) => f.id)).toEqual(['1', '2']);
@@ -167,11 +174,15 @@ describe('API adapters', () => {
       theme: '숲속 세이지',
     });
     expect(cat.wallpapers.map((w) => w.id)).toEqual(['3']);
-    expect(cat.ownedIds.sort()).toEqual(['1', '3']);
+    expect(cat.floors.map((f) => f.id)).toEqual(['4']);
+    expect(cat.backgrounds.map((b) => b.id)).toEqual(['5']);
+    expect(cat.ownedIds.sort()).toEqual(['1', '3', '4']);
 
     const placed = ownedPlacement(cat);
     expect(placed.placedFurnitureIds).toEqual(['1']); // only owned furniture
     expect(placed.wallpaperId).toBe('3'); // owned wallpaper
+    expect(placed.floorId).toBe('4'); // owned floor
+    expect(placed.backgroundId).toBeNull(); // background not owned
   });
 
   it('maps category visibility both ways', () => {
@@ -238,31 +249,51 @@ describe('API adapters', () => {
         },
       ],
       wallpapers: [{ id: '9', name: '벽지', price: 0, assetKey: 'items/a/wp.png', color: '#FFF' }],
-      ownedIds: ['2', '5', '9'],
+      floors: [{ id: '11', name: '바닥재', price: 0, assetKey: 'items/a/fl.png', color: '#EEE' }],
+      backgrounds: [
+        { id: '12', name: '배경', price: 0, assetKey: 'items/a/bg.png', color: '#DDD' },
+      ],
+      ownedIds: ['2', '5', '9', '11', '12'],
     };
     const inv = toUserItemMap([
       { userItemId: 21, itemId: 2 },
       { userItemId: 22, itemId: 5 },
       { userItemId: 23, itemId: 9 },
+      { userItemId: 24, itemId: 11 },
+      { userItemId: 25, itemId: 12 },
     ]);
 
     const placement = fromRoomSlots(
       [
         { slotType: 'bottomLeft', userItemId: 21 },
         { slotType: 'wallpaper', userItemId: 23 },
+        { slotType: 'floor', userItemId: 24 },
+        { slotType: 'background', userItemId: 25 },
         { slotType: 'topRight', userItemId: 999 }, // unknown userItemId → skipped
       ],
       cat,
       inv,
     );
-    expect(placement).toEqual({ placedFurnitureIds: ['2'], wallpaperId: '9' });
+    expect(placement).toEqual({
+      placedFurnitureIds: ['2'],
+      wallpaperId: '9',
+      floorId: '11',
+      backgroundId: '12',
+    });
 
-    const saves = toSlotSaves(['2', '5'], '9', cat, inv);
+    const saves = toSlotSaves(['2', '5'], '9', cat, inv, '11', '12');
     expect(saves).toContainEqual({ slotType: 'bottomLeft', userItemId: 21 });
     expect(saves).toContainEqual({ slotType: 'topLeft', userItemId: 22 });
     expect(saves).toContainEqual({ slotType: 'wallpaper', userItemId: 23 });
+    expect(saves).toContainEqual({ slotType: 'floor', userItemId: 24 });
+    expect(saves).toContainEqual({ slotType: 'background', userItemId: 25 });
     // Every other positioned slot is cleared explicitly.
     expect(saves).toContainEqual({ slotType: 'midLeft', userItemId: null });
-    expect(saves).toHaveLength(9);
+    expect(saves).toHaveLength(11);
+
+    // Cleared surfaces save explicit nulls.
+    const cleared = toSlotSaves(['2'], '9', cat, inv, null, null);
+    expect(cleared).toContainEqual({ slotType: 'floor', userItemId: null });
+    expect(cleared).toContainEqual({ slotType: 'background', userItemId: null });
   });
 });

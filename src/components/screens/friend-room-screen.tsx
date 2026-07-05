@@ -34,9 +34,13 @@ export type FriendRoomScreenProps = {
   streakDays?: number;
   characterId?: CharacterId;
   wallpaperId?: string;
+  floorId?: string | null;
+  backgroundId?: string | null;
   placedFurnitureIds?: string[];
   furniture?: FurnitureItem[];
   wallpapers?: Wallpaper[];
+  floors?: Wallpaper[];
+  backgrounds?: Wallpaper[];
   routines?: Routine[];
   onBack?: () => void;
   onCheer?: (type: CheerType) => void;
@@ -52,9 +56,13 @@ export function FriendRoomScreen({
   streakDays = 7,
   characterId = DEFAULT_CHARACTER_ID,
   wallpaperId,
+  floorId,
+  backgroundId,
   placedFurnitureIds,
   furniture,
   wallpapers,
+  floors,
+  backgrounds,
   routines = DEFAULT_ROUTINES,
   onBack,
   onCheer,
@@ -93,9 +101,13 @@ export function FriendRoomScreen({
           <Room
             characterId={characterId}
             wallpaperId={wallpaperId}
+            floorId={floorId}
+            backgroundId={backgroundId}
             placedFurnitureIds={placedFurnitureIds}
             furniture={furniture}
             wallpapers={wallpapers}
+            floors={floors}
+            backgrounds={backgrounds}
           />
         </View>
 
