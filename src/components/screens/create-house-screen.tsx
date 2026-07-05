@@ -1,4 +1,3 @@
-import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -20,16 +19,16 @@ const THEMES: Theme[] = [
 ];
 const CAPACITIES = [2, 3, 4, 6, 8];
 
-function generateCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let out = 'VLG-';
-  for (let i = 0; i < 4; i++) out += chars[Math.floor(Math.random() * chars.length)];
-  return out;
-}
+export type CreateHouseInput = {
+  name: string;
+  description?: string;
+  maxMembers: number;
+};
 
 export type CreateHouseScreenProps = {
   onBack?: () => void;
-  onCreate?: (houseName: string) => void;
+  /** Create the house via the API — the server issues the real invite code. */
+  onCreate?: (input: CreateHouseInput) => void;
 };
 
 /**
@@ -45,17 +44,9 @@ export function CreateHouseScreen({ onBack, onCreate }: CreateHouseScreenProps) 
   const [themeId, setThemeId] = useState('morning');
   const [capacity, setCapacity] = useState(4);
   const [isPrivate, setIsPrivate] = useState(false);
-  const [inviteCode, setInviteCode] = useState(generateCode());
-  const [copied, setCopied] = useState(false);
 
   const theme = THEMES.find((x) => x.id === themeId) ?? THEMES[0];
   const canSubmit = name.trim().length >= 2;
-
-  const copy = () => {
-    Clipboard.setStringAsync(inviteCode).catch(() => {});
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
 
   return (
     <View style={[styles.screen, useScreenStyle()]}>
@@ -198,38 +189,20 @@ export function CreateHouseScreen({ onBack, onCreate }: CreateHouseScreenProps) 
           </View>
         </View>
 
-        {/* Invite code */}
+        {/* Invite code: issued by the server on creation */}
         <View style={[styles.card, { backgroundColor: t.surface }]}>
           <Text style={[styles.sectionLabel, { color: t.textMuted }]}>초대코드</Text>
-          <View style={styles.codeRow}>
-            <View style={[styles.codeBox, { backgroundColor: t.surfaceMuted }]}>
-              <Text style={[styles.codeText, { color: t.text }]}># {inviteCode}</Text>
-            </View>
-            <Pressable
-              onPress={copy}
-              accessibilityRole="button"
-              accessibilityLabel="초대코드 복사"
-              style={[styles.codeBtn, { backgroundColor: t.surfaceMuted }]}>
-              {copied ? (
-                <Icon name="check" size={16} color={t.text} />
-              ) : (
-                <Text style={styles.codeBtnText}>복사</Text>
-              )}
-            </Pressable>
-            <Pressable
-              onPress={() => setInviteCode(generateCode())}
-              accessibilityRole="button"
-              style={[styles.codeBtn, { backgroundColor: t.surfaceMuted }]}>
-              <Text style={[styles.codeBtnText, { color: t.textMuted }]}>재발급</Text>
-            </Pressable>
-          </View>
           <Text style={[styles.hint, { color: t.textMuted }]}>
-            친구에게 코드를 공유하면 바로 입주할 수 있어요.
+            집을 만들면 초대코드가 자동으로 발급돼요. 집 화면의 구성원 관리에서 확인하고 친구에게
+            공유할 수 있어요.
           </Text>
         </View>
 
         <Pressable
-          onPress={() => canSubmit && onCreate?.(name.trim())}
+          onPress={() =>
+            canSubmit &&
+            onCreate?.({ name: name.trim(), description: description.trim(), maxMembers: capacity })
+          }
           disabled={!canSubmit}
           accessibilityRole="button"
           style={({ pressed }) => [

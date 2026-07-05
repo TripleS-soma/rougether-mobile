@@ -30,6 +30,7 @@ import { Pill } from '@/components/ui/pill';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { ToastProvider, useToast } from '@/components/ui/toast';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
+import { RECOMMENDED_HOUSES } from '@/mocks/fixtures';
 import { TokenSwatches } from '@/dev/token-swatches';
 import { TypeScalePreview } from '@/dev/type-scale-preview';
 
@@ -247,7 +248,7 @@ export const galleryEntries: GalleryEntry[] = [
       'Ported from the prototype HouseSearchScreen (#11): invite code + recommended list.',
     render: () => (
       <View style={{ height: 760, alignSelf: 'stretch' }}>
-        <HouseSearchScreen />
+        <HouseSearchScreen houses={RECOMMENDED_HOUSES} />
       </View>
     ),
   },

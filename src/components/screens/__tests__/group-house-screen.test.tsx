@@ -23,6 +23,46 @@ describe('GroupHouseScreen', () => {
     expect(onVisitMyRoom).toHaveBeenCalled();
   });
 
+  it('shows the guided empty state when there are no houses', async () => {
+    const onOpenSearch = jest.fn();
+    const { getByText, getByLabelText } = await render(
+      <GroupHouseScreen houses={[]} onOpenSearch={onOpenSearch} />,
+    );
+    expect(getByText('아직 함께하는 집이 없어요')).toBeTruthy();
+    await fireEvent.press(getByLabelText('집 탐색'));
+    expect(onOpenSearch).toHaveBeenCalledTimes(1);
+  });
+
+  it('kicks via the API callback when the house carries server ids', async () => {
+    const onKickMember = jest.fn();
+    const houses = [
+      {
+        houseId: 7,
+        title: '실집',
+        inviteCode: 'ABC-123',
+        floors: [
+          {
+            level: '1층',
+            rooms: [
+              { name: '친구', color: '#F5E1D8', membershipId: 42 },
+              { name: '나', color: '#E8E0D0', isMine: true, membershipId: 43 },
+            ],
+          },
+        ],
+      },
+    ];
+    const { getByLabelText, getAllByText } = await render(
+      <GroupHouseScreen houses={houses} onKickMember={onKickMember} />,
+    );
+
+    await fireEvent.press(getByLabelText('구성원 목록'));
+    await fireEvent.press(getAllByText('강퇴')[0]);
+    const kicks = getAllByText('강퇴');
+    await fireEvent.press(kicks[kicks.length - 1]);
+
+    expect(onKickMember).toHaveBeenCalledWith(7, 42);
+  });
+
   it('opens member management and kicks a member after confirming', async () => {
     const { getByText, getByLabelText, getAllByText, queryByText } = await render(
       <GroupHouseScreen />,

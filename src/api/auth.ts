@@ -51,6 +51,11 @@ export function getAccessToken(): string | null {
   return session?.accessToken ?? null;
 }
 
+/** The signed-in user's id (from dev-login), if known. */
+export function getSessionUserId(): number | undefined {
+  return session?.userId;
+}
+
 export function isAuthenticated(): boolean {
   return session != null;
 }

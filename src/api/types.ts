@@ -32,6 +32,18 @@ export type CategoryUpdateRequest = {
   visibility?: 'PRIVATE' | 'HOUSE';
 };
 
+export type CharacterItem = {
+  id?: number;
+  code?: string;
+  name?: string;
+  baseAssetKey?: string;
+  sortOrder?: number;
+};
+
+export type CharacterListResponse = {
+  items?: CharacterItem[];
+};
+
 export type DevLoginRequest = {
   userId?: number;
 };
@@ -72,6 +84,113 @@ export type GachaResponse = {
   active?: boolean;
 };
 
+export type GoalItem = {
+  id?: number;
+  code?: string;
+  name?: string;
+  sortOrder?: number;
+};
+
+export type GoalListResponse = {
+  items?: GoalItem[];
+};
+
+export type GoalSelection = {
+  goalId?: number;
+  code?: string;
+  name?: string;
+};
+
+export type GoalSummary = {
+  goalId?: number;
+  code?: string;
+  name?: string;
+};
+
+export type HouseCreateRequest = {
+  name: string;
+  description?: string;
+  coverImageKey?: string;
+  maxMembers?: number;
+  goalIds: number[];
+};
+
+export type HouseCreateResponse = {
+  houseId?: number;
+  ownerUserId?: number;
+  inviteCode?: string;
+  inviteExpiresAt?: string;
+};
+
+export type HouseDetailResponse = {
+  houseId?: number;
+  name?: string;
+  description?: string;
+  coverImageKey?: string;
+  maxMembers?: number;
+  currentMemberCount?: number;
+  level?: number;
+  growthPoints?: number;
+  goals?: GoalSummary[];
+  myRole?: 'OWNER' | 'MEMBER';
+  inviteCode?: string;
+  inviteExpiresAt?: string;
+};
+
+export type HouseJoinByCodeRequest = {
+  inviteCode: string;
+};
+
+export type HouseJoinDetailResponse = {
+  membershipId?: number;
+  houseId?: number;
+  userId?: number;
+  role?: 'OWNER' | 'MEMBER';
+  status?: 'ACTIVE' | 'LEFT' | 'KICKED';
+  joinedAt?: string;
+};
+
+export type HouseJoinResponse = {
+  membershipId?: number;
+  houseId?: number;
+  status?: 'ACTIVE' | 'LEFT' | 'KICKED';
+};
+
+export type HouseListResponse = {
+  items?: HouseSummary[];
+  page?: number;
+  size?: number;
+  totalElements?: number;
+};
+
+export type HouseMemberListResponse = {
+  items?: MemberSummary[];
+};
+
+export type HousePreviewResponse = {
+  houseId?: number;
+  name?: string;
+  coverImageKey?: string;
+  currentMemberCount?: number;
+  maxMembers?: number;
+  inviteExpired?: boolean;
+};
+
+export type HouseSummary = {
+  houseId?: number;
+  name?: string;
+  coverImageKey?: string;
+  currentMemberCount?: number;
+  maxMembers?: number;
+  level?: number;
+  goals?: GoalSummary[];
+};
+
+export type InviteCodeResponse = {
+  inviteCode?: string;
+  inviteExpiresAt?: string;
+};
+
 export type ItemListResponse = {
   items?: ItemResponse[];
 };
@@ -92,6 +211,10 @@ export type ItemResponse = {
   owned?: boolean;
 };
 
+export type KakaoLoginRequest = {
+  accessToken: string;
+};
+
 export type LoginResponse = {
   userId?: number;
   accessToken?: string;
@@ -107,6 +230,62 @@ export type MeResponse = {
   userId?: number;
   nickname?: string;
   lastLoginAt?: string;
+  onboarding?: OnboardingSummary;
+};
+
+export type MemberSummary = {
+  membershipId?: number;
+  userId?: number;
+  nickname?: string;
+  role?: 'OWNER' | 'MEMBER';
+  status?: 'ACTIVE' | 'LEFT' | 'KICKED';
+  joinedAt?: string;
+};
+
+export type MyHouseListResponse = {
+  items?: MyHouseSummary[];
+};
+
+export type MyHouseSummary = {
+  houseId?: number;
+  name?: string;
+  coverImageKey?: string;
+  level?: number;
+  currentMemberCount?: number;
+  maxMembers?: number;
+  myRole?: 'OWNER' | 'MEMBER';
+  joinedAt?: string;
+};
+
+export type OnboardingCharacterRequest = {
+  characterId: number;
+};
+
+export type OnboardingCharacterResponse = {
+  selectedCharacterId?: number;
+};
+
+export type OnboardingGoalsRequest = {
+  goalIds?: number[];
+  primaryGoalId?: number;
+};
+
+export type OnboardingGoalsResponse = {
+  goals?: GoalSelection[];
+  primaryGoalId?: number;
+};
+
+export type OnboardingResponse = {
+  goals?: GoalSelection[];
+  primaryGoalId?: number;
+  selectedCharacterId?: number;
+  completed?: boolean;
+};
+
+export type OnboardingSummary = {
+  completed?: boolean;
+  primaryGoalId?: number;
+  selectedCharacterId?: number;
 };
 
 export type PurchaseResponse = {
@@ -308,6 +487,16 @@ export type TodoUpdateRequest = {
 export type TokenResponse = {
   accessToken?: string;
   refreshToken?: string;
+};
+
+export type TransferOwnershipRequest = {
+  targetMembershipId: number;
+};
+
+export type TransferOwnershipResponse = {
+  houseId?: number;
+  newOwnerMembershipId?: number;
+  newOwnerUserId?: number;
 };
 
 export type WalletListResponse = {
