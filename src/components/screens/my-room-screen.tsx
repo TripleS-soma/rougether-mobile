@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Keyboard,
@@ -199,6 +199,23 @@ export function MyRoomScreen({
   // Set while opening the date picker so the input's blur doesn't commit/close.
   const skipBlurCommit = useRef(false);
 
+  // Track the keyboard height: while the quick-add input is open, that much
+  // bottom padding is added to the scroll content. Without it, short content
+  // has no scroll range at all (scrollTo clamps at the content end) and the
+  // input stays hidden behind the keyboard — Android (edge-to-edge) overlays
+  // the keyboard without resizing the window.
+  const [keyboardPad, setKeyboardPad] = useState(0);
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', (e) =>
+      setKeyboardPad(e.endCoordinates?.height ?? 320),
+    );
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardPad(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+
   // Bring the quick-add input itself into view (not just the category header —
   // long categories left it hidden behind the keyboard). Measured against the
   // ScrollView's inner view so nesting/list length don't matter.
@@ -214,22 +231,23 @@ export function MyRoomScreen({
     );
   }, []);
 
+  // Re-align once the keyboard is up AND the extra bottom padding has been
+  // committed — only then is there guaranteed scroll range for the input.
+  useEffect(() => {
+    if (!addingCategory || keyboardPad === 0) return;
+    const timer = setTimeout(scrollToQuickAdd, 50);
+    return () => clearTimeout(timer);
+  }, [addingCategory, keyboardPad, scrollToQuickAdd]);
+
   const openQuickAdd = (categoryId: string) => {
     setNewTodo('');
     setNewTodoDate(today);
     const opening = addingCategory !== categoryId;
     setAddingCategory(opening ? categoryId : null);
     if (opening) {
-      // First pass once the input has rendered…
+      // First pass once the input has rendered (fast feedback); the effect
+      // above does the authoritative pass after the keyboard + padding settle.
       setTimeout(scrollToQuickAdd, 80);
-      // …then re-align after the keyboard actually appears — its resize/pan
-      // shifts the viewport and undoes the first scroll on device.
-      const sub = Keyboard.addListener('keyboardDidShow', () => {
-        scrollToQuickAdd();
-        sub.remove();
-      });
-      // Don't leak the listener if the keyboard never shows (hardware kb, web).
-      setTimeout(() => sub.remove(), 2000);
     }
   };
 
@@ -323,7 +341,10 @@ export function MyRoomScreen({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           ref={scrollRef}
-          contentContainerStyle={styles.body}
+          contentContainerStyle={[
+            styles.body,
+            addingCategory && keyboardPad > 0 ? { paddingBottom: keyboardPad + 120 } : null,
+          ]}
           keyboardShouldPersistTaps="handled">
           {tab === 'room' ? (
             <>
