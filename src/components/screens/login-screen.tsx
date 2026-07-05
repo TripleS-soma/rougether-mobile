@@ -22,11 +22,12 @@ export type LoginScreenProps = {
   onAuthSuccess?: () => void;
   onGoSignup?: () => void;
   /**
-   * Sign in and start a session. The API currently offers only dev-login, so
-   * the userId is taken from the email field (numeric; defaults to 1). Resolves
-   * true on success. When omitted, submit just calls onAuthSuccess.
+   * Sign in and start a session. The API currently offers only dev-login: a
+   * numeric userId in the email field signs into that account; an empty (or
+   * non-numeric) field creates a FRESH user server-side. Resolves true on
+   * success. When omitted, submit just calls onAuthSuccess.
    */
-  onLogin?: (userId: number) => Promise<boolean>;
+  onLogin?: (userId?: number) => Promise<boolean>;
 };
 
 /**
@@ -46,7 +47,8 @@ export function LoginScreen({ onAuthSuccess, onGoSignup, onLogin }: LoginScreenP
   const [error, setError] = useState<string | null>(null);
   const { show: toast } = useToast();
 
-  const canSubmit = email.length > 0 && password.length > 0 && !submitting;
+  // Dev-login: password is a formality; empty userId(email 칸) = new account.
+  const canSubmit = password.length > 0 && !submitting;
   // 비밀번호 찾기 / social sign-in have no backend yet — say so instead of
   // silently doing nothing.
   const notReady = () => toast('아직 준비 중이에요');
@@ -55,9 +57,10 @@ export function LoginScreen({ onAuthSuccess, onGoSignup, onLogin }: LoginScreenP
     if (!canSubmit) return;
     setSubmitting(true);
     setError(null);
-    // Dev-login: userId comes from the email field (numeric), else 1.
+    // Dev-login: numeric userId from the email field signs into that account;
+    // empty/non-numeric → undefined → the server creates a fresh user.
     const parsed = Number.parseInt(email, 10);
-    const userId = Number.isFinite(parsed) ? parsed : 1;
+    const userId = Number.isFinite(parsed) ? parsed : undefined;
     const ok = onLogin ? await onLogin(userId) : true;
     setSubmitting(false);
     if (ok) onAuthSuccess?.();
@@ -151,7 +154,7 @@ export function LoginScreen({ onAuthSuccess, onGoSignup, onLogin }: LoginScreenP
             </Text>
           ) : null}
           <Text style={[styles.devHint, { color: t.textMuted }]}>
-            개발 로그인: 이메일 칸에 userId(숫자)를 넣으면 그 계정으로, 비우면 1번으로 접속돼요.
+            개발 로그인: 이메일 칸에 userId(숫자)를 넣으면 그 계정으로, 비우면 새 계정이 만들어져요.
           </Text>
 
           <View style={styles.divider}>

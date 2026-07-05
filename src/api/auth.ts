@@ -65,10 +65,13 @@ export async function clearSession(): Promise<void> {
   ]);
 }
 
-/** Dev-only login: exchange a userId for a token pair and start a session. */
-export async function devLogin(userId: number): Promise<LoginResponse> {
+/**
+ * Dev-only login: exchange a userId for a token pair and start a session.
+ * Omit `userId` to have the server CREATE a fresh user (isNewUser: true).
+ */
+export async function devLogin(userId?: number): Promise<LoginResponse> {
   const res = await rawRequest<LoginResponse>('POST', '/auth/dev-login', {
-    body: { userId } satisfies DevLoginRequest,
+    body: { userId: userId ?? null } as DevLoginRequest,
   });
   if (res.accessToken && res.refreshToken) {
     await persist({

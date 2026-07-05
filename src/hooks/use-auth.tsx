@@ -6,8 +6,8 @@ type AuthStatus = 'loading' | 'authed' | 'guest';
 
 type AuthContextValue = {
   status: AuthStatus;
-  /** Dev-login by userId; resolves true on success. */
-  login: (userId: number) => Promise<boolean>;
+  /** Dev-login by userId — omit to create a fresh user. Resolves true on success. */
+  login: (userId?: number) => Promise<boolean>;
   logout: () => Promise<void>;
 };
 
