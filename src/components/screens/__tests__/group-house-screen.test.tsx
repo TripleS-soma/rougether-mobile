@@ -125,7 +125,7 @@ describe('GroupHouseScreen', () => {
       <GroupHouseScreen onVisitFriend={onVisitFriend} onVisitMyRoom={onVisitMyRoom} />,
     );
     await fireEvent.press(getByText('최준서'));
-    expect(onVisitFriend).toHaveBeenCalledWith('최준서');
+    expect(onVisitFriend).toHaveBeenCalledWith(expect.objectContaining({ name: '최준서' }));
     await fireEvent.press(getByText('나의 방 (나)'));
     expect(onVisitMyRoom).toHaveBeenCalled();
   });
