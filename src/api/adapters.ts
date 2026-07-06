@@ -469,6 +469,9 @@ export function toGroupHouse(
     myRole: detail.myRole,
     floors,
     missions,
+    description: detail.description ?? undefined,
+    maxMembers: detail.maxMembers ?? undefined,
+    memberCount: detail.currentMemberCount ?? active.length,
   };
 }
 
