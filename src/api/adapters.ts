@@ -25,12 +25,14 @@ import { type OnboardingGoal } from '@/components/screens/onboarding-screen';
 import { type RoomSlotSave } from './rooms';
 
 import type { Floor, House, HouseMission, RoomCell } from '@/components/screens/group-house-screen';
+import type { GuestbookEntry } from '@/components/screens/friend-room-screen';
 import type { SearchHouse } from '@/components/screens/house-search-screen';
 import type { CalendarDayItem } from '@/components/screens/my-room-screen';
 
 import type {
   CalendarDayResponse,
   CategoryCreateRequest,
+  GuestbookItem,
   MyItemSummary,
   RoomSlotResponse,
   CharacterItem,
@@ -450,6 +452,7 @@ export function toGroupHouse(
     color: m.userId === myUserId ? MY_ROOM_TINT : ROOM_TINTS[i % ROOM_TINTS.length],
     isMine: m.userId === myUserId,
     membershipId: m.membershipId,
+    userId: m.userId,
   }));
   const floorCount = Math.max(1, Math.ceil(cells.length / 2));
   const floors: Floor[] = [];
@@ -489,6 +492,17 @@ export function toHouseMission(m: MissionSummary): HouseMission {
     target: Math.max(1, target),
     status: m.status ?? 'ACTIVE',
     achieved: target > 0 && (m.currentValue ?? 0) >= target,
+  };
+}
+
+/** Guestbook note → friend-room list entry (date shown as "M월 D일"). */
+export function toGuestbookEntry(g: GuestbookItem): GuestbookEntry {
+  const d = g.createdAt ? new Date(g.createdAt) : null;
+  return {
+    id: String(g.guestbookId ?? ''),
+    author: g.authorNickname || `멤버 ${g.authorId ?? ''}`,
+    content: g.content ?? '',
+    date: d ? `${d.getMonth() + 1}월 ${d.getDate()}일` : '',
   };
 }
 

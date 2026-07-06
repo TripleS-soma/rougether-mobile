@@ -23,6 +23,15 @@ export type RoomCell = {
   isMine?: boolean;
   /** API membership id — enables the server kick action when provided. */
   membershipId?: number;
+  /** API user id — the friend's room owner id (guestbook, room visit). */
+  userId?: number;
+};
+
+/** Context handed to onVisitFriend — ids enable server features (방명록). */
+export type VisitedFriend = {
+  name: string;
+  userId?: number;
+  houseId?: number;
 };
 
 export type Floor = { level: string; rooms: RoomCell[] };
@@ -122,7 +131,7 @@ export type GroupHouseScreenProps = {
   loading?: boolean;
   coinBalance?: number;
   characterId?: CharacterId;
-  onVisitFriend?: (name: string) => void;
+  onVisitFriend?: (friend: VisitedFriend) => void;
   onVisitMyRoom?: () => void;
   onOpenSearch?: () => void;
   /** Kick a member via the API (owner only); shown when the house has ids. */
@@ -447,7 +456,11 @@ export function GroupHouseScreen({
                           ? undefined
                           : room.isMine
                             ? onVisitMyRoom?.()
-                            : onVisitFriend?.(room.name)
+                            : onVisitFriend?.({
+                                name: room.name,
+                                userId: room.userId,
+                                houseId: currentHouse.houseId,
+                              })
                       }
                       disabled={empty}
                       accessibilityRole="button"

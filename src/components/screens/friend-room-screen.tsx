@@ -1,4 +1,13 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { CharacterAvatar } from '@/components/character-avatar';
 import { Room } from '@/components/room/room';
@@ -29,6 +38,23 @@ const DEFAULT_ROUTINES: Routine[] = [
   { id: 'friend-5', title: '하루 회고', completed: false, alarmEnabled: true, time: '23:00' },
 ];
 
+/** One guestbook note on this room (server GET /rooms/{id}/guestbooks). */
+export type GuestbookEntry = {
+  id: string;
+  author: string;
+  content: string;
+  /** Display date, e.g. "7월 7일". */
+  date: string;
+};
+
+const DEFAULT_GUESTBOOK: GuestbookEntry[] = [
+  { id: 'g1', author: '임채영', content: '방 예쁘다! 오늘도 루틴 화이팅 🔥', date: '7월 6일' },
+  { id: 'g2', author: '장진형', content: '기상 인증 대단해요 👍', date: '7월 5일' },
+];
+
+/** 1~500 chars (server GuestbookCreateRequest). */
+const GUESTBOOK_MAX = 500;
+
 export type FriendRoomScreenProps = {
   friendName?: string;
   streakDays?: number;
@@ -42,8 +68,16 @@ export type FriendRoomScreenProps = {
   floors?: Wallpaper[];
   backgrounds?: Wallpaper[];
   routines?: Routine[];
+  /** Guestbook notes (newest first); defaults to a demo list when unwired. */
+  guestbook?: GuestbookEntry[];
+  guestbookLoading?: boolean;
+  /** More pages exist server-side (shows 더보기). */
+  guestbookHasNext?: boolean;
   onBack?: () => void;
   onCheer?: (type: CheerType) => void;
+  /** Post a guestbook note via the API. */
+  onWriteGuestbook?: (content: string) => void;
+  onLoadMoreGuestbook?: () => void;
 };
 
 /**
@@ -64,13 +98,31 @@ export function FriendRoomScreen({
   floors,
   backgrounds,
   routines = DEFAULT_ROUTINES,
+  guestbook,
+  guestbookLoading = false,
+  guestbookHasNext = false,
   onBack,
   onCheer,
+  onWriteGuestbook,
+  onLoadMoreGuestbook,
 }: FriendRoomScreenProps) {
   const t = useTokens();
   const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
   const completedCount = routines.filter((r) => r.completed).length;
   const progress = routines.length > 0 ? completedCount / routines.length : 0;
+
+  // Guestbook: server list when wired; a local demo list otherwise.
+  const [localNotes, setLocalNotes] = useState<GuestbookEntry[]>(DEFAULT_GUESTBOOK);
+  const [draft, setDraft] = useState('');
+  const notes = guestbook ?? localNotes;
+  const canSend = draft.trim().length > 0;
+  const sendNote = () => {
+    const content = draft.trim();
+    if (!content) return;
+    if (onWriteGuestbook) onWriteGuestbook(content);
+    else setLocalNotes((prev) => [{ id: `local-${prev.length}`, author: '나', content, date: '오늘' }, ...prev]); // prettier-ignore
+    setDraft('');
+  };
 
   return (
     <View style={[styles.screen, useScreenStyle()]}>
@@ -192,6 +244,62 @@ export function FriendRoomScreen({
             ))}
           </View>
         </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHead}>
+            <Text style={[Typography.h2, { color: t.text }]}>📖 방명록</Text>
+          </View>
+
+          <View style={styles.gbInputRow}>
+            <TextInput
+              value={draft}
+              onChangeText={(v) => setDraft(v.slice(0, GUESTBOOK_MAX))}
+              placeholder="따뜻한 한마디를 남겨보세요"
+              placeholderTextColor={t.textMuted}
+              accessibilityLabel="방명록 입력"
+              style={[styles.gbInput, { backgroundColor: t.surfaceMuted, color: t.text }]}
+            />
+            <Pressable
+              onPress={sendNote}
+              disabled={!canSend}
+              accessibilityRole="button"
+              accessibilityLabel="방명록 남기기"
+              style={[styles.gbSendBtn, { backgroundColor: canSend ? t.primary : t.disabledBg }]}>
+              <Text style={[Typography.label, { color: t.onPrimary }]}>남기기</Text>
+            </Pressable>
+          </View>
+
+          {guestbookLoading && notes.length === 0 ? (
+            <View style={styles.gbState}>
+              <ActivityIndicator color={t.primary} />
+            </View>
+          ) : notes.length === 0 ? (
+            <Text style={[Typography.supporting, styles.gbState, { color: t.textMuted }]}>
+              아직 방명록이 없어요. 첫 인사를 남겨보세요!
+            </Text>
+          ) : (
+            <View style={styles.gbList}>
+              {notes.map((note) => (
+                <View key={note.id} style={[styles.gbRow, { backgroundColor: t.surfaceMuted }]}>
+                  <View style={styles.gbRowHead}>
+                    <Text style={[Typography.label, { color: t.text }]}>{note.author}</Text>
+                    <Text style={[Typography.supporting, { color: t.textMuted }]}>{note.date}</Text>
+                  </View>
+                  <Text style={[Typography.body, { color: t.text }]}>{note.content}</Text>
+                </View>
+              ))}
+              {guestbookHasNext ? (
+                <Pressable
+                  onPress={onLoadMoreGuestbook}
+                  accessibilityRole="button"
+                  accessibilityLabel="방명록 더보기"
+                  style={[styles.gbMore, { backgroundColor: t.surfaceMuted }]}>
+                  <Text style={[Typography.label, { color: t.primary }]}>더보기</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          )}
+        </View>
       </ScrollView>
     </View>
   );
@@ -240,6 +348,45 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.four,
     gap: Spacing.three,
+  },
+  gbInputRow: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+  },
+  gbInput: {
+    flex: 1,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    fontSize: 14,
+  },
+  gbSendBtn: {
+    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.four,
+    justifyContent: 'center',
+  },
+  gbState: {
+    alignItems: 'center',
+    textAlign: 'center',
+    paddingVertical: Spacing.three,
+  },
+  gbList: {
+    gap: Spacing.two,
+  },
+  gbRow: {
+    borderRadius: Radius.md,
+    padding: Spacing.three,
+    gap: Spacing.one,
+  },
+  gbRowHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  gbMore: {
+    borderRadius: Radius.pill,
+    paddingVertical: Spacing.two,
+    alignItems: 'center',
   },
   sectionHead: {
     flexDirection: 'row',
