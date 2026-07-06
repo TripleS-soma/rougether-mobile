@@ -204,6 +204,7 @@ export function GroupHouseScreen({
   const [editDesc, setEditDesc] = useState('');
   const [editMax, setEditMax] = useState<number | undefined>(undefined);
   const [transferTarget, setTransferTarget] = useState<RoomCell | null>(null);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
   const currentHouse: House | undefined = houses[Math.min(houseIndex, houses.length - 1)];
   const members = useMemo(
@@ -260,6 +261,14 @@ export function GroupHouseScreen({
       onTransferOwnership?.(currentHouse.houseId, transferTarget.membershipId);
     }
     setTransferTarget(null);
+  };
+  // Leaving needs the server house id; the server rejects an OWNER's leave
+  // until ownership is transferred, so the owner sees guidance instead.
+  const canLeave = !!(onLeaveHouse && currentHouse?.houseId);
+  const confirmLeave = () => {
+    if (currentHouse?.houseId) onLeaveHouse?.(currentHouse.houseId);
+    setShowLeaveConfirm(false);
+    setShowMembers(false);
   };
   const confirmKick = () => {
     if (memberToKick) {
@@ -425,7 +434,52 @@ export function GroupHouseScreen({
               );
             })}
           </View>
+
+          {canLeave ? (
+            <View style={styles.leaveWrap}>
+              {isOwner ? (
+                <Text style={[Typography.supporting, styles.leaveHint, { color: t.textMuted }]}>
+                  방장은 다른 멤버에게 방장을 위임한 뒤 나갈 수 있어요.
+                </Text>
+              ) : (
+                <Pressable
+                  onPress={() => setShowLeaveConfirm(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="집 나가기"
+                  style={[styles.leaveBtn, { backgroundColor: `${t.danger}22` }]}>
+                  <Text style={[Typography.label, { color: t.danger }]}>🚪 집 나가기</Text>
+                </Pressable>
+              )}
+            </View>
+          ) : null}
         </ScrollView>
+
+        {showLeaveConfirm ? (
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modal, { backgroundColor: t.surface }]}>
+              <Text style={[Typography.h3, { color: t.text }]}>집에서 나갈까요?</Text>
+              <Text style={[Typography.body, styles.modalBody, { color: t.textMuted }]}>
+                나가면 이 집에 다시 참여할 수 없어요. 기여 기록은 유지됩니다.
+              </Text>
+              <View style={styles.modalActions}>
+                <Pressable
+                  onPress={() => setShowLeaveConfirm(false)}
+                  accessibilityRole="button"
+                  accessibilityLabel="나가기 취소"
+                  style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
+                  <Text style={[Typography.label, { color: t.text }]}>취소</Text>
+                </Pressable>
+                <Pressable
+                  onPress={confirmLeave}
+                  accessibilityRole="button"
+                  accessibilityLabel="나가기 확인"
+                  style={[styles.modalBtn, { backgroundColor: t.danger }]}>
+                  <Text style={[Typography.label, { color: t.onPrimary }]}>나가기</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        ) : null}
 
         {memberToKick ? (
           <View style={styles.modalOverlay}>
@@ -1110,6 +1164,18 @@ const styles = StyleSheet.create({
     marginTop: Spacing.two,
     borderRadius: Radius.pill,
     paddingVertical: Spacing.two,
+    alignItems: 'center',
+  },
+  leaveWrap: {
+    paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.five,
+  },
+  leaveHint: {
+    textAlign: 'center',
+  },
+  leaveBtn: {
+    borderRadius: Radius.pill,
+    paddingVertical: Spacing.three,
     alignItems: 'center',
   },
   capacityBtn: {
