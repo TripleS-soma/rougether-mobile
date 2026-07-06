@@ -92,9 +92,13 @@ export function RoomDecorScreen({
   const t = useTokens();
 
   // Owned items are placeable; everything else in the catalog is buyable.
+  // (The demo default owns the whole catalogue, surfaces included.)
   const owned = useMemo(
-    () => new Set(ownedIds ?? furniture.map((i) => i.id)),
-    [ownedIds, furniture],
+    () =>
+      new Set(
+        ownedIds ?? [...furniture, ...wallpapers, ...floors, ...backgrounds].map((i) => i.id),
+      ),
+    [ownedIds, furniture, wallpapers, floors, backgrounds],
   );
   // Filter tabs by the API categoryCode: surfaces (벽지/바닥/배경, shown only when
   // the catalogue has them) then the positioned-item categories (가구/장식 …).
@@ -219,6 +223,9 @@ export function RoomDecorScreen({
             items={wallpapers}
             selectedId={wallpaperId}
             onSelect={(id) => setWallpaperId(id)}
+            owned={owned}
+            diaBalance={diaBalance}
+            onBuy={onBuy}
             t={t}
           />
         ) : null}
@@ -230,6 +237,9 @@ export function RoomDecorScreen({
             selectedId={floorId}
             // Tapping the selected floor clears the surface (the room can have none).
             onSelect={(id) => setFloorId((prev) => (prev === id ? null : id))}
+            owned={owned}
+            diaBalance={diaBalance}
+            onBuy={onBuy}
             t={t}
           />
         ) : null}
@@ -240,6 +250,9 @@ export function RoomDecorScreen({
             items={backgrounds}
             selectedId={backgroundId}
             onSelect={(id) => setBackgroundId((prev) => (prev === id ? null : id))}
+            owned={owned}
+            diaBalance={diaBalance}
+            onBuy={onBuy}
             t={t}
           />
         ) : null}
@@ -310,18 +323,28 @@ export function RoomDecorScreen({
   );
 }
 
-/** One surface catalog section (벽지/바닥/배경): single-select swatch/art tiles. */
+/**
+ * One surface catalog section (벽지/바닥/배경): single-select swatch/art tiles.
+ * Owned items select; the rest buy with dia first (same rule as furniture) —
+ * unowned surfaces can't be picked, so nothing silently drops on save.
+ */
 function SurfaceSection({
   title,
   items,
   selectedId,
   onSelect,
+  owned,
+  diaBalance,
+  onBuy,
   t,
 }: {
   title: string;
   items: Wallpaper[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  owned: Set<string>;
+  diaBalance: number;
+  onBuy?: (itemId: string) => void;
   t: ReturnType<typeof useTokens>;
 }) {
   return (
@@ -329,19 +352,22 @@ function SurfaceSection({
       <Text style={[Typography.label, styles.catalogTitle, { color: t.textMuted }]}>{title}</Text>
       <View style={styles.grid}>
         {items.map((item) => {
-          const active = item.id === selectedId;
+          const isOwned = owned.has(item.id);
+          const active = isOwned && item.id === selectedId;
+          const affordable = diaBalance >= item.price;
           return (
             <Pressable
               key={item.id}
-              onPress={() => onSelect(item.id)}
+              onPress={() => (isOwned ? onSelect(item.id) : affordable && onBuy?.(item.id))}
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
-              accessibilityLabel={item.name}
+              accessibilityLabel={isOwned ? item.name : `${item.name} 구매`}
               style={[
                 styles.tile,
                 {
                   backgroundColor: t.surface,
                   borderColor: active ? t.primary : 'transparent',
+                  opacity: !isOwned && !affordable ? 0.5 : 1,
                 },
               ]}>
               {isCdnKey(item.assetKey) ? (
@@ -357,7 +383,14 @@ function SurfaceSection({
               <Text style={[styles.tileName, { color: t.text }]} numberOfLines={2}>
                 {item.name}
               </Text>
-              <Text style={[styles.tilePrice, { color: t.textMuted }]}>✨ {item.price}</Text>
+              {isOwned ? (
+                <Text style={[styles.tilePrice, { color: t.textMuted }]}>보유</Text>
+              ) : (
+                <View style={styles.priceRow}>
+                  <Icon name="dia" size={10} color={t.primary} />
+                  <Text style={[styles.tilePrice, { color: t.textMuted }]}>{item.price}</Text>
+                </View>
+              )}
             </Pressable>
           );
         })}

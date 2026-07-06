@@ -111,6 +111,41 @@ describe('RoomDecorScreen', () => {
     expect(onApply).toHaveBeenCalledWith([], 'simple', null, null);
   });
 
+  it('buys an unowned surface with dia instead of selecting it', async () => {
+    const onBuy = jest.fn();
+    const onApply = jest.fn();
+    const floors: Wallpaper[] = [
+      { id: 'f1', name: '원목 바닥재', price: 100, assetKey: 'items/a/floor.png', color: '#EEE' },
+    ];
+    const { getByText, getByLabelText } = await render(
+      <RoomDecorScreen
+        initialPlacedIds={[]}
+        floors={floors}
+        ownedIds={[]}
+        diaBalance={500}
+        onBuy={onBuy}
+        onApply={onApply}
+      />,
+    );
+    // Unowned → the tile is a buy affordance, not a selection.
+    await fireEvent.press(getByLabelText('원목 바닥재 구매'));
+    expect(onBuy).toHaveBeenCalledWith('f1');
+    await fireEvent.press(getByText('적용하기'));
+    expect(onApply).toHaveBeenCalledWith([], 'simple', null, null);
+  });
+
+  it('does not buy a surface when dia is insufficient', async () => {
+    const onBuy = jest.fn();
+    const floors: Wallpaper[] = [
+      { id: 'f1', name: '원목 바닥재', price: 100, assetKey: 'items/a/floor.png', color: '#EEE' },
+    ];
+    const { getByLabelText } = await render(
+      <RoomDecorScreen floors={floors} ownedIds={['bed']} diaBalance={0} onBuy={onBuy} />,
+    );
+    await fireEvent.press(getByLabelText('원목 바닥재 구매'));
+    expect(onBuy).not.toHaveBeenCalled();
+  });
+
   it('buys a not-yet-owned item with dia', async () => {
     const onBuy = jest.fn();
     const { getByLabelText } = await render(
