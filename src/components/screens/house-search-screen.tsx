@@ -27,6 +27,15 @@ export type SearchHouse = {
   description: string;
 };
 
+/** Pre-join preview of the house behind an invite code (GET /houses/by-code). */
+export type HousePreview = {
+  name: string;
+  members: number;
+  capacity?: number;
+  /** The code exists but is expired — joining would fail. */
+  expired?: boolean;
+};
+
 export type HouseSearchScreenProps = {
   /** Browsable houses from the API (`GET /houses`). */
   houses?: SearchHouse[];
@@ -38,6 +47,11 @@ export type HouseSearchScreenProps = {
    * false shows an inline error.
    */
   onJoinByCode?: (code: string) => Promise<boolean>;
+  /**
+   * Preview the house behind a code before joining; null = unknown code.
+   * When provided, 입주 first shows the house name/headcount for confirmation.
+   */
+  onPreviewCode?: (code: string) => Promise<HousePreview | null>;
   /** Join a browsable house directly by its id. */
   onJoinHouse?: (houseId: string) => void;
   onCreate?: () => void;
@@ -53,6 +67,7 @@ export function HouseSearchScreen({
   loading = false,
   onBack,
   onJoinByCode,
+  onPreviewCode,
   onJoinHouse,
   onCreate,
 }: HouseSearchScreenProps) {
@@ -61,6 +76,8 @@ export function HouseSearchScreen({
   const [query, setQuery] = useState('');
   const [codeError, setCodeError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
+  // Pre-join preview card (code + house info), shown after a successful lookup.
+  const [preview, setPreview] = useState<{ code: string; info: HousePreview } | null>(null);
 
   const filtered = houses.filter(
     (h) =>
@@ -76,10 +93,30 @@ export function HouseSearchScreen({
       return;
     }
     setCodeError(null);
+    setPreview(null);
     setJoining(true);
+    // With a preview handler, look the code up first and ask for confirmation;
+    // otherwise (demo/legacy) join directly.
+    if (onPreviewCode) {
+      const info = await onPreviewCode(trimmed);
+      setJoining(false);
+      if (!info) setCodeError('초대코드를 확인해주세요. 만료되었거나 없는 코드예요.');
+      else if (info.expired) setCodeError('만료된 초대코드예요. 새 코드를 받아주세요.');
+      else setPreview({ code: trimmed, info });
+      return;
+    }
     const ok = (await onJoinByCode?.(trimmed)) ?? false;
     setJoining(false);
     if (!ok) setCodeError('초대코드를 확인해주세요. 만료되었거나 없는 코드예요.');
+  };
+
+  const confirmJoinPreview = async () => {
+    if (!preview) return;
+    setJoining(true);
+    const ok = (await onJoinByCode?.(preview.code)) ?? false;
+    setJoining(false);
+    if (ok) setPreview(null);
+    else setCodeError('입주에 실패했어요. 만석이거나 이미 참여 중일 수 있어요.');
   };
 
   return (
@@ -137,6 +174,33 @@ export function HouseSearchScreen({
               </Pressable>
             </View>
             {codeError ? <Text style={[styles.msg, { color: t.danger }]}>{codeError}</Text> : null}
+
+            {preview ? (
+              <View style={[styles.previewCard, { backgroundColor: t.surfaceMuted }]}>
+                <Text style={[Typography.label, { color: t.text }]}>🏡 {preview.info.name}</Text>
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                  👥 {preview.info.members}
+                  {preview.info.capacity ? ` / ${preview.info.capacity}` : ''}명이 함께 살고 있어요
+                </Text>
+                <View style={styles.previewActions}>
+                  <Pressable
+                    onPress={() => setPreview(null)}
+                    accessibilityRole="button"
+                    accessibilityLabel="입주 취소"
+                    style={[styles.previewBtn, { backgroundColor: t.surface }]}>
+                    <Text style={[Typography.label, { color: t.text }]}>취소</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={confirmJoinPreview}
+                    disabled={joining}
+                    accessibilityRole="button"
+                    accessibilityLabel="이 집에 입주"
+                    style={[styles.previewBtn, { backgroundColor: t.primary }]}>
+                    <Text style={[Typography.label, { color: t.onPrimary }]}>이 집에 입주</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : null}
           </View>
         </View>
 
@@ -268,6 +332,23 @@ const styles = StyleSheet.create({
   },
   icon: { fontSize: 16 },
   msg: { fontSize: 12, marginLeft: Spacing.one },
+  previewCard: {
+    marginTop: Spacing.two,
+    borderRadius: Radius.md,
+    padding: Spacing.three,
+    gap: Spacing.one,
+  },
+  previewActions: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    marginTop: Spacing.two,
+  },
+  previewBtn: {
+    flex: 1,
+    borderRadius: Radius.pill,
+    paddingVertical: Spacing.two,
+    alignItems: 'center',
+  },
   list: { gap: Spacing.two },
   loading: { paddingVertical: Spacing.six },
   houseRow: {

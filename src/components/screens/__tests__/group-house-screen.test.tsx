@@ -118,6 +118,32 @@ describe('GroupHouseScreen', () => {
     expect(queryByLabelText('친구 방장 위임')).toBeNull();
   });
 
+  it('reissues the invite code after confirming (owner)', async () => {
+    const onReissueInviteCode = jest.fn();
+    const { getByText, getByLabelText } = await render(
+      <GroupHouseScreen
+        houses={[{ ...MISSION_HOUSE, inviteCode: 'ABCD2345' }]}
+        onReissueInviteCode={onReissueInviteCode}
+      />,
+    );
+    await fireEvent.press(getByLabelText('구성원 목록'));
+    await fireEvent.press(getByLabelText('초대코드 재발급'));
+    expect(getByText('초대코드를 재발급할까요?')).toBeTruthy();
+    await fireEvent.press(getByLabelText('재발급 확인'));
+    expect(onReissueInviteCode).toHaveBeenCalledWith(7);
+  });
+
+  it('hides the reissue button from plain members', async () => {
+    const { getByLabelText, queryByLabelText } = await render(
+      <GroupHouseScreen
+        houses={[{ ...MISSION_HOUSE, inviteCode: 'ABCD2345', myRole: 'MEMBER' }]}
+        onReissueInviteCode={jest.fn()}
+      />,
+    );
+    await fireEvent.press(getByLabelText('구성원 목록'));
+    expect(queryByLabelText('초대코드 재발급')).toBeNull();
+  });
+
   it('leaves the house after confirming (member)', async () => {
     const onLeaveHouse = jest.fn();
     const { getByText, getByLabelText } = await render(

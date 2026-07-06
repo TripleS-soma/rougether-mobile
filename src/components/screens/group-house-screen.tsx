@@ -162,6 +162,8 @@ export type GroupHouseScreenProps = {
   onUpdateHouse?: (houseId: number, input: HouseEditInput) => void;
   /** Hand the OWNER role to a member via the API (owner only). */
   onTransferOwnership?: (houseId: number, membershipId: number) => void;
+  /** Reissue the invite code via the API (owner only; the old code expires). */
+  onReissueInviteCode?: (houseId: number) => void;
 };
 
 /**
@@ -186,6 +188,7 @@ export function GroupHouseScreen({
   onCreateMission,
   onUpdateHouse,
   onTransferOwnership,
+  onReissueInviteCode,
 }: GroupHouseScreenProps) {
   const t = useTokens();
   const screenStyle = useScreenStyle();
@@ -205,6 +208,7 @@ export function GroupHouseScreen({
   const [editMax, setEditMax] = useState<number | undefined>(undefined);
   const [transferTarget, setTransferTarget] = useState<RoomCell | null>(null);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [showReissueConfirm, setShowReissueConfirm] = useState(false);
 
   const currentHouse: House | undefined = houses[Math.min(houseIndex, houses.length - 1)];
   const members = useMemo(
@@ -333,7 +337,18 @@ export function GroupHouseScreen({
         <ScrollView contentContainerStyle={styles.body}>
           {currentHouse.inviteCode ? (
             <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
-              <Text style={[Typography.label, { color: t.text }]}>초대코드</Text>
+              <View style={styles.codeHead}>
+                <Text style={[Typography.label, styles.flex, { color: t.text }]}>초대코드</Text>
+                {isOwner && onReissueInviteCode ? (
+                  <Pressable
+                    onPress={() => setShowReissueConfirm(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel="초대코드 재발급"
+                    style={[styles.reissueBtn, { backgroundColor: t.surfaceMuted }]}>
+                    <Text style={[Typography.supporting, { color: t.primary }]}>재발급</Text>
+                  </Pressable>
+                ) : null}
+              </View>
               <Text style={[Typography.supporting, { color: t.textMuted }]}>
                 친구에게 코드를 공유해 집에 초대하세요.
               </Text>
@@ -453,6 +468,36 @@ export function GroupHouseScreen({
             </View>
           ) : null}
         </ScrollView>
+
+        {showReissueConfirm ? (
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modal, { backgroundColor: t.surface }]}>
+              <Text style={[Typography.h3, { color: t.text }]}>초대코드를 재발급할까요?</Text>
+              <Text style={[Typography.body, styles.modalBody, { color: t.textMuted }]}>
+                기존 코드는 즉시 만료돼요. 이미 공유한 코드로는 더 이상 입주할 수 없어요.
+              </Text>
+              <View style={styles.modalActions}>
+                <Pressable
+                  onPress={() => setShowReissueConfirm(false)}
+                  accessibilityRole="button"
+                  accessibilityLabel="재발급 취소"
+                  style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
+                  <Text style={[Typography.label, { color: t.text }]}>취소</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    if (currentHouse.houseId) onReissueInviteCode?.(currentHouse.houseId);
+                    setShowReissueConfirm(false);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="재발급 확인"
+                  style={[styles.modalBtn, { backgroundColor: t.primary }]}>
+                  <Text style={[Typography.label, { color: t.onPrimary }]}>재발급</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        ) : null}
 
         {showLeaveConfirm ? (
           <View style={styles.modalOverlay}>
@@ -1170,6 +1215,16 @@ const styles = StyleSheet.create({
   leaveWrap: {
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.five,
+  },
+  codeHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  reissueBtn: {
+    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one,
   },
   leaveHint: {
     textAlign: 'center',

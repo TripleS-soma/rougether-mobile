@@ -161,6 +161,7 @@ export function AppShell({
     searchHouses,
     loading: housesLoading,
     searchLoading,
+    previewByCode,
     joinByCode,
     joinHouse: joinSearchHouse,
     create: createGroupHouse,
@@ -171,6 +172,7 @@ export function AppShell({
     createMission,
     updateHouse,
     transferOwnership,
+    reissueInviteCode,
   } = useHouses();
 
   // Shop catalogue + purchase (dia via API; wallet synced from the purchase
@@ -395,6 +397,9 @@ export function AppShell({
             onTransferOwnership={(houseId, membershipId) => {
               void transferOwnership(houseId, membershipId);
             }}
+            onReissueInviteCode={(houseId) => {
+              void reissueInviteCode(houseId);
+            }}
           />
         ) : null}
 
@@ -434,6 +439,7 @@ export function AppShell({
               if (ok) setScreen('groupHouse');
               return ok;
             }}
+            onPreviewCode={previewByCode}
             onJoinHouse={(houseId) => {
               void joinSearchHouse(houseId).then((ok) => ok && setScreen('groupHouse'));
             }}
