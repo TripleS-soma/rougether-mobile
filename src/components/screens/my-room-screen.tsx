@@ -54,6 +54,20 @@ const isScheduledOn = (r: Routine, dateIso: string) => {
   return true;
 };
 
+/**
+ * One routine/todo on a calendar date (server GET /calendar). Non-today dates
+ * are read-only — the server only accepts completion checks for today.
+ */
+export type CalendarDayItem = {
+  id: string;
+  kind: 'routine' | 'todo';
+  title: string;
+  time?: string;
+  completed: boolean;
+  /** Category id at record time — may reference a deleted category. */
+  category?: string;
+};
+
 export type MyRoomScreenProps = {
   /** Room occupant's display name (header title becomes "{userName}의 방"). */
   userName?: string;
@@ -74,6 +88,19 @@ export type MyRoomScreenProps = {
   backgrounds?: Wallpaper[];
   // Routine list.
   routines?: Routine[];
+  /**
+   * All categories including server-deleted ones — resolves the original
+   * name/color of past records in the 달력 tab. Defaults to `categories`.
+   */
+  allCategories?: RoutineCategoryMeta[];
+  /**
+   * Server-backed 달력 data per date (from GET /calendar). When wired together
+   * with onSelectDate, non-today dates render this read-only list; a missing
+   * date means "loading".
+   */
+  calendarDays?: Record<string, CalendarDayItem[]>;
+  /** Load a date's calendar data (fired when the user picks a date). */
+  onSelectDate?: (date: string) => void;
   /**
    * Per-routine completion log: routine id → completed dates ("YYYY-MM-DD").
    * Mirrors the spec's routine_logs; a routine is "done" on a date when that
@@ -137,6 +164,9 @@ export function MyRoomScreen({
   floors,
   backgrounds,
   routines = [],
+  allCategories,
+  calendarDays,
+  onSelectDate,
   completions = {},
   categories = ROUTINE_CATEGORIES,
   loading = false,
@@ -209,9 +239,20 @@ export function MyRoomScreen({
   const timeRoutine = routines.find((r) => r.id === timeId) ?? null;
 
   // 방 / 달력 tab. The calendar lists routines + todos on the selected date.
+  // Today renders from live client state (toggleable); other dates render the
+  // server /calendar list read-only when wired — the API only accepts
+  // completion checks for today, and past records keep their original
+  // (possibly deleted) category.
   const [tab, setTab] = useState<'room' | 'calendar'>('room');
   const [selectedDate, setSelectedDate] = useState(() => todayIso());
   const dateRoutines = routines.filter((r) => isScheduledOn(r, selectedDate));
+  const pickDate = (date: string) => {
+    setSelectedDate(date);
+    if (date !== today) onSelectDate?.(date);
+  };
+  const catMeta = allCategories ?? categories;
+  const serverBackedDay = !!onSelectDate && selectedDate !== today;
+  const dayItems = serverBackedDay ? calendarDays?.[selectedDate] : undefined;
 
   // Scroll the tapped category's quick-add input into view (above the keyboard).
   const scrollRef = useRef<ScrollView>(null);
@@ -624,22 +665,66 @@ export function MyRoomScreen({
             </>
           ) : (
             <View style={styles.calendarPanel}>
-              <Calendar value={selectedDate} onSelect={setSelectedDate} />
+              <Calendar value={selectedDate} onSelect={pickDate} />
               <Text style={[Typography.h3, styles.calListTitle, { color: t.text }]}>
                 이 날의 루틴
               </Text>
-              {selectedDate !== today ? (
-                // The API can't read back logs for arbitrary dates yet, so
-                // non-today checkmarks reset when the app reloads — say so.
+              {serverBackedDay ? (
+                // The server accepts completion checks for today only, so other
+                // dates are a read-only record view.
                 <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                  오늘 외 날짜의 완료 기록 조회는 서버 준비 중이라 앱을 다시 열면 초기화될 수
-                  있어요.
+                  완료 체크는 오늘 날짜에서만 할 수 있어요.
                 </Text>
               ) : null}
-              {loading ? (
+              {loading || (serverBackedDay && !dayItems) ? (
                 <View style={styles.stateBlock}>
                   <ActivityIndicator color={t.primary} />
                 </View>
+              ) : serverBackedDay ? (
+                dayItems!.length === 0 ? (
+                  <Text style={[Typography.body, styles.calEmpty, { color: t.textMuted }]}>
+                    예정된 루틴이 없어요.
+                  </Text>
+                ) : (
+                  dayItems!.map((item) => {
+                    const catColor =
+                      catMeta.find((c) => c.id === item.category)?.color ?? t.primary;
+                    return (
+                      <View
+                        key={`${item.kind}-${item.id}`}
+                        accessibilityRole="text"
+                        accessibilityLabel={item.title}
+                        style={styles.routineRow}>
+                        <View style={styles.rowMain}>
+                          <Icon
+                            name={item.completed ? 'checkbox-on' : 'checkbox-off'}
+                            size={22}
+                            color={item.completed ? catColor : t.textDisabled}
+                          />
+                          <View style={styles.flex}>
+                            <Text
+                              style={[
+                                Typography.body,
+                                item.completed
+                                  ? { color: t.textMuted, textDecorationLine: 'line-through' }
+                                  : { color: t.text },
+                              ]}>
+                              {item.title}
+                            </Text>
+                            {item.time ? (
+                              <View style={styles.badge}>
+                                <Icon name="bell" size={12} color={t.textMuted} />
+                                <Text style={[styles.badgeText, { color: t.textMuted }]}>
+                                  {formatTime(item.time)}
+                                </Text>
+                              </View>
+                            ) : null}
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  })
+                )
               ) : dateRoutines.length === 0 ? (
                 <Text style={[Typography.body, styles.calEmpty, { color: t.textMuted }]}>
                   예정된 루틴이 없어요.

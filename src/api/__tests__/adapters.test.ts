@@ -3,6 +3,7 @@ import {
   toAppCategory,
   toAppRoutine,
   toAppTodo,
+  toCalendarItems,
   toCategoryCreate,
   toRoutineCreate,
   toShopCatalogue,
@@ -108,7 +109,6 @@ describe('API adapters', () => {
       categories: [
         {
           categoryId: 1,
-          name: '건강',
           routines: [
             { id: 1, title: 'a', completed: true },
             { id: 2, title: 'b', completed: false },
@@ -121,6 +121,34 @@ describe('API adapters', () => {
     expect(map['1']).toEqual(['2026-07-02']);
     expect(map['2']).toBeUndefined();
     expect(map['3']).toEqual(['2026-07-02']);
+  });
+
+  it('flattens a /calendar day into 달력 items with the record-time category', () => {
+    const items = toCalendarItems({
+      date: '2026-07-06',
+      categories: [
+        {
+          categoryId: 7, // deleted server-side — still resolves by id
+          routines: [{ id: 1, title: '아침 운동', scheduledTime: '07:00:00', completed: true }],
+          todos: [{ id: 2, title: '장보기', status: 'PENDING' }],
+        },
+        { routines: [{ id: 3, title: '미분류 루틴', completed: false }], todos: [] },
+      ],
+    });
+    expect(items).toEqual([
+      { id: '1', kind: 'routine', title: '아침 운동', time: '07:00', completed: true, category: '7' }, // prettier-ignore
+      { id: '2', kind: 'todo', title: '장보기', completed: false, category: '7' },
+      { id: '3', kind: 'routine', title: '미분류 루틴', time: undefined, completed: false, category: undefined }, // prettier-ignore
+    ]);
+  });
+
+  it('keeps deleted categories flagged for historical lookup', () => {
+    expect(toAppCategory({ id: 9, name: '옛것', deleted: true })).toMatchObject({
+      id: '9',
+      label: '옛것',
+      deleted: true,
+    });
+    expect(toAppCategory({ id: 10, name: '현역' }).deleted).toBeUndefined();
   });
 
   it('splits the item catalogue and derives a room from owned items', () => {

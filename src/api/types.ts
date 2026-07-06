@@ -3,6 +3,12 @@
  * (http://43.203.209.107:8080/v3/api-docs). Regenerate with `npm run gen:api-types`. Do not edit by hand.
  */
 
+export type CalendarDayResponse = {
+  date?: string;
+  categories?: TodayCategoryGroup[];
+  summary?: TodaySummary;
+};
+
 export type CategoryCreateRequest = {
   name: string;
   colorHex?: string;
@@ -22,6 +28,7 @@ export type CategoryResponse = {
   iconKey?: string;
   sortOrder?: number;
   visibility?: 'PRIVATE' | 'HOUSE';
+  deleted?: boolean;
 };
 
 export type CategoryUpdateRequest = {
@@ -109,6 +116,34 @@ export type GoalSummary = {
 
 export type GoogleLoginRequest = {
   idToken: string;
+};
+
+export type GuestbookCreateRequest = {
+  houseId: number;
+  content: string;
+};
+
+export type GuestbookCreateResponse = {
+  guestbookId?: number;
+  roomOwnerId?: number;
+  authorId?: number;
+  houseId?: number;
+  content?: string;
+  createdAt?: string;
+};
+
+export type GuestbookItem = {
+  guestbookId?: number;
+  authorId?: number;
+  authorNickname?: string;
+  content?: string;
+  createdAt?: string;
+};
+
+export type GuestbookListResponse = {
+  items?: GuestbookItem[];
+  nextCursor?: number;
+  hasNext?: boolean;
 };
 
 export type HouseCreateRequest = {
@@ -302,6 +337,10 @@ export type MemberSummary = {
   joinedAt?: string;
 };
 
+export type MemberUpdateRequest = {
+  nickname: string;
+};
+
 export type MissionSummary = {
   missionId?: number;
   title?: string;
@@ -459,12 +498,13 @@ export type RoutineResponse = {
   title?: string;
   categoryId?: number;
   authType?: 'CHECK' | 'PHOTO';
-  status?: 'ACTIVE' | 'PAUSED' | 'ARCHIVED';
+  status?: 'ACTIVE';
   repeatType?: string;
   repeatDays?: RepeatDays;
   scheduledTime?: string;
   startsOn?: string;
   endsOn?: string;
+  originRoutineId?: number;
 };
 
 export type RoutineUpdateRequest = {
@@ -498,7 +538,6 @@ export type ThemeSummary = {
 
 export type TodayCategoryGroup = {
   categoryId?: number;
-  name?: string;
   routines?: TodayRoutineItem[];
   todos?: TodayTodoItem[];
 };

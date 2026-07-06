@@ -5,6 +5,9 @@ import { SAMPLE_ROUTINES } from '@/constants/routines';
 import { todayIso } from '@/utils/datetime';
 
 const TODAY = todayIso();
+// A non-today date guaranteed to sit in the calendar's current month view:
+// the 1st, or the 2nd when today is the 1st.
+const OTHER_DAY = `${TODAY.slice(0, 8)}${TODAY.endsWith('01') ? '02' : '01'}`;
 
 describe('MyRoomScreen', () => {
   it('renders the room title, streak, and today progress', async () => {
@@ -93,6 +96,49 @@ describe('MyRoomScreen', () => {
     expect(getByText('독서 30분')).toBeTruthy();
     expect(getByText('기타')).toBeTruthy();
     expect(getByText('0 / 2')).toBeTruthy();
+  });
+
+  it('renders a read-only server list for non-today dates in the 달력 tab', async () => {
+    const onSelectDate = jest.fn();
+    const onToggleCompletion = jest.fn();
+    const calendarDays = {
+      [OTHER_DAY]: [
+        { id: '1', kind: 'routine' as const, title: '옛 카테고리 루틴', completed: true, category: '99' }, // prettier-ignore
+      ],
+    };
+    const { getByText, getByLabelText, queryByText } = await render(
+      <MyRoomScreen
+        routines={SAMPLE_ROUTINES}
+        calendarDays={calendarDays}
+        onSelectDate={onSelectDate}
+        onToggleCompletion={onToggleCompletion}
+        allCategories={[
+          { id: '99', label: '옛것', emoji: '✨', color: '#FF0000', visibility: 'partial', deleted: true }, // prettier-ignore
+        ]}
+      />,
+    );
+
+    await fireEvent.press(getByText('달력'));
+    // Today renders the live client list — no read-only notice.
+    expect(queryByText('완료 체크는 오늘 날짜에서만 할 수 있어요.')).toBeNull();
+
+    await fireEvent.press(getByLabelText(OTHER_DAY));
+    expect(onSelectDate).toHaveBeenCalledWith(OTHER_DAY);
+    expect(getByText('옛 카테고리 루틴')).toBeTruthy();
+    expect(getByText('완료 체크는 오늘 날짜에서만 할 수 있어요.')).toBeTruthy();
+
+    // Read-only: the server-backed row is not a toggle.
+    await fireEvent.press(getByText('옛 카테고리 루틴'));
+    expect(onToggleCompletion).not.toHaveBeenCalled();
+  });
+
+  it('shows a spinner while a picked date is still loading from the server', async () => {
+    const { getByText, getByLabelText, queryByText } = await render(
+      <MyRoomScreen routines={SAMPLE_ROUTINES} calendarDays={{}} onSelectDate={jest.fn()} />,
+    );
+    await fireEvent.press(getByText('달력'));
+    await fireEvent.press(getByLabelText(OTHER_DAY));
+    expect(queryByText('예정된 루틴이 없어요.')).toBeNull();
   });
 
   it('shows a loading state, an error state with retry, and an empty state', async () => {
