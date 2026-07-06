@@ -4,7 +4,7 @@ import { BackHandler, StyleSheet, View } from 'react-native';
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
 import { GachaScreen } from '@/components/screens/gacha-screen';
-import { GroupHouseScreen } from '@/components/screens/group-house-screen';
+import { GroupHouseScreen, type VisitedFriend } from '@/components/screens/group-house-screen';
 import { HelpScreen } from '@/components/screens/help-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
@@ -29,6 +29,7 @@ import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { type Routine } from '@/constants/routines';
 import { useAuth } from '@/hooks/use-auth';
 import { useGacha } from '@/hooks/use-gacha';
+import { useGuestbook } from '@/hooks/use-guestbook';
 import { useHouses } from '@/hooks/use-houses';
 import { useMyRoomData } from '@/hooks/use-my-room-data';
 import { useShop } from '@/hooks/use-shop';
@@ -197,7 +198,16 @@ export function AppShell({
     setBackgroundId(placement.backgroundId);
   }, [placement]);
 
-  const [visitingFriend, setVisitingFriend] = useState('친구');
+  const [visitingFriend, setVisitingFriend] = useState<VisitedFriend>({ name: '친구' });
+  // Guestbook for the friend room being visited (loads on visit).
+  const {
+    entries: guestbookEntries,
+    loading: guestbookLoading,
+    hasNext: guestbookHasNext,
+    load: loadGuestbook,
+    loadMore: loadMoreGuestbook,
+    write: writeGuestbook,
+  } = useGuestbook();
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
 
   // Profile + settings. Nickname seeds from the API (/me); there's no PUT /me
@@ -357,8 +367,9 @@ export function AppShell({
             loading={housesLoading}
             coinBalance={wallet.coin}
             characterId={characterId}
-            onVisitFriend={(name) => {
-              setVisitingFriend(name);
+            onVisitFriend={(friend) => {
+              setVisitingFriend(friend);
+              void loadGuestbook(friend.userId, friend.houseId);
               setScreen('friendRoom');
             }}
             onVisitMyRoom={() => setScreen('myRoom')}
@@ -389,7 +400,16 @@ export function AppShell({
 
         {screen === 'friendRoom' ? (
           <FriendRoomScreen
-            friendName={visitingFriend}
+            friendName={visitingFriend.name}
+            guestbook={guestbookEntries}
+            guestbookLoading={guestbookLoading}
+            guestbookHasNext={guestbookHasNext}
+            onWriteGuestbook={(content) => {
+              void writeGuestbook(content);
+            }}
+            onLoadMoreGuestbook={() => {
+              void loadMoreGuestbook();
+            }}
             placedFurnitureIds={placedFurnitureIds}
             wallpaperId={wallpaperId}
             floorId={floorId}
