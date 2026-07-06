@@ -24,10 +24,16 @@ import {
   joinHouseByCode,
   kickHouseMember,
   leaveHouse as apiLeaveHouse,
+  transferHouseOwnership,
+  updateHouse as apiUpdateHouse,
 } from '@/api';
 import { toGroupHouse, toHouseMission, toSearchHouse } from '@/api/adapters';
 import { useToast } from '@/components/ui/toast';
-import type { House, NewHouseMission } from '@/components/screens/group-house-screen';
+import type {
+  House,
+  HouseEditInput,
+  NewHouseMission,
+} from '@/components/screens/group-house-screen';
 import type { SearchHouse } from '@/components/screens/house-search-screen';
 
 export function useHouses() {
@@ -196,6 +202,26 @@ export function useHouses() {
     }
   };
 
+  const updateHouse = async (houseId: number, input: HouseEditInput) => {
+    try {
+      await apiUpdateHouse(houseId, input);
+      toast('집 정보를 수정했어요', 'success');
+      await reloadMyHouses();
+    } catch {
+      toast('집 정보 수정에 실패했어요', 'error');
+    }
+  };
+
+  const transferOwnership = async (houseId: number, membershipId: number) => {
+    try {
+      await transferHouseOwnership(houseId, membershipId);
+      toast('방장을 위임했어요', 'success');
+      await reloadMyHouses();
+    } catch {
+      toast('방장 위임에 실패했어요', 'error');
+    }
+  };
+
   return {
     houses,
     searchHouses,
@@ -209,5 +235,7 @@ export function useHouses() {
     contributeMission,
     claimMission,
     createMission,
+    updateHouse,
+    transferOwnership,
   };
 }
