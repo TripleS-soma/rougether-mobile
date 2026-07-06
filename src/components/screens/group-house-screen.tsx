@@ -683,7 +683,8 @@ export function GroupHouseScreen({
         <View style={styles.dots}>
           {houses.map((house, i) => (
             <View
-              key={house.title}
+              // houseId when wired; titles can repeat, so fall back to index.
+              key={house.houseId ?? `demo-${i}`}
               style={[
                 styles.dot,
                 i === houseIndex
