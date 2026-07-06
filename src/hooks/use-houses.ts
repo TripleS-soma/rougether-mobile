@@ -222,9 +222,14 @@ export function useHouses() {
     }
   };
 
+  // 집 탐색 hides houses the user already belongs to (the API has no joined
+  // filter, and joining one again only 409s).
+  const joinedIds = new Set(houses.map((h) => String(h.houseId ?? '')));
+  const browsableHouses = searchHouses.filter((s) => !joinedIds.has(s.id));
+
   return {
     houses,
-    searchHouses,
+    searchHouses: browsableHouses,
     loading,
     searchLoading,
     joinByCode,
