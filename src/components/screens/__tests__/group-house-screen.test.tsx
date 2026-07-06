@@ -118,6 +118,30 @@ describe('GroupHouseScreen', () => {
     expect(queryByLabelText('친구 방장 위임')).toBeNull();
   });
 
+  it('leaves the house after confirming (member)', async () => {
+    const onLeaveHouse = jest.fn();
+    const { getByText, getByLabelText } = await render(
+      <GroupHouseScreen
+        houses={[{ ...MISSION_HOUSE, myRole: 'MEMBER' }]}
+        onLeaveHouse={onLeaveHouse}
+      />,
+    );
+    await fireEvent.press(getByLabelText('구성원 목록'));
+    await fireEvent.press(getByLabelText('집 나가기'));
+    expect(getByText('집에서 나갈까요?')).toBeTruthy();
+    await fireEvent.press(getByLabelText('나가기 확인'));
+    expect(onLeaveHouse).toHaveBeenCalledWith(7);
+  });
+
+  it('guides the owner to transfer ownership instead of leaving', async () => {
+    const { getByText, getByLabelText, queryByLabelText } = await render(
+      <GroupHouseScreen houses={[MISSION_HOUSE]} onLeaveHouse={jest.fn()} />,
+    );
+    await fireEvent.press(getByLabelText('구성원 목록'));
+    expect(queryByLabelText('집 나가기')).toBeNull();
+    expect(getByText('방장은 다른 멤버에게 방장을 위임한 뒤 나갈 수 있어요.')).toBeTruthy();
+  });
+
   it('visits a friend room and my room on tap', async () => {
     const onVisitFriend = jest.fn();
     const onVisitMyRoom = jest.fn();
