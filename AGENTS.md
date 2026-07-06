@@ -35,6 +35,9 @@
 - 컴포넌트를 만든 뒤에는 **`src/dev/registry.tsx`에 등록**해 Dev 탭에 노출시키고, 형제 `__tests__/*.test.tsx`를 작성하세요(React Native Testing Library; 스냅샷이 아니라 `getByText` / `getByLabelText`로 단언). `SampleButton`이 참고 패턴입니다.
 - 커밋 전: `npm run typecheck && npm run lint && npm run format:check && npm test` 실행. CI가 `main` 푸시와 모든 PR에서 이 네 가지를 돌리므로, 항상 통과 상태로 유지하세요.
 - 기능 하나당 `feat/<기능>` 브랜치, `main`으로 PR(기존 히스토리 규칙과 동일). **PR 스택 금지** — 브랜치는 항상 `main`에서 직접 분기하세요(중간 브랜치가 먼저 머지되면 자식 PR이 표류합니다).
+- **PR 본문 컨벤션**: 모든 PR은 아래 두 섹션을 포함하세요.
+  - `## 요약` — 작업사항 요약: 무엇을 왜 바꿨는지(사용자 관점 변화 + 주요 구현 결정). 관련 이슈는 `Closes #N`으로 연결.
+  - `## 리뷰 포인트` — 리뷰어에게 요구하는 것: 집중해서 봐줬으면 하는 부분(위험한 변경, 설계 판단, 트레이드오프)과 직접 확인하는 방법. 수행한 검증(4종 체크, dev 서버 스모크 등)도 여기에 적어 리뷰 범위를 줄여주세요.
 - Expo/React Native API와 관련된 부분을 건드릴 때는 먼저 SDK 55 문서(상단 참고)로 확인하세요. 최근 SDK 사이에 API가 바뀌었습니다.
 
 ## 이슈 · 프로젝트 보드
