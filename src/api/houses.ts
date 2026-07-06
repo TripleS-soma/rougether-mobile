@@ -1,5 +1,5 @@
 /** House (그룹하우스) endpoints. */
-import { apiDelete, apiGet, apiGetList, apiPost } from './client';
+import { apiDelete, apiGet, apiGetList, apiPost, apiPut } from './client';
 import { buildQuery } from './http';
 import type {
   HouseCreateRequest,
@@ -12,9 +12,12 @@ import type {
   HouseMissionCreateRequest,
   HouseMissionResponse,
   HousePreviewResponse,
+  HouseUpdateRequest,
+  HouseUpdateResponse,
   MemberSummary,
   MissionSummary,
   MyHouseSummary,
+  TransferOwnershipResponse,
 } from './types';
 
 /** GET /me/houses — houses the user belongs to. */
@@ -60,6 +63,18 @@ export function joinHouse(houseId: number) {
 /** POST /houses/{id}/invite-code — reissue the invite code (owner). */
 export function reissueInviteCode(houseId: number) {
   return apiPost<HouseCreateResponse>(`/houses/${houseId}/invite-code`);
+}
+
+/** PUT /houses/{id} — edit name/description/maxMembers (owner; omitted fields keep). */
+export function updateHouse(houseId: number, body: HouseUpdateRequest) {
+  return apiPut<HouseUpdateResponse>(`/houses/${houseId}`, body);
+}
+
+/** POST /houses/{id}/transfer-ownership — hand the OWNER role to a member. */
+export function transferHouseOwnership(houseId: number, targetMembershipId: number) {
+  return apiPost<TransferOwnershipResponse>(`/houses/${houseId}/transfer-ownership`, {
+    targetMembershipId,
+  });
 }
 
 /** DELETE /houses/{id}/members/me — leave the house. */
