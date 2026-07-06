@@ -24,17 +24,19 @@ import {
   joinHouseByCode,
   kickHouseMember,
   leaveHouse as apiLeaveHouse,
+  previewHouseByCode,
+  reissueInviteCode as apiReissueInviteCode,
   transferHouseOwnership,
   updateHouse as apiUpdateHouse,
 } from '@/api';
-import { toGroupHouse, toHouseMission, toSearchHouse } from '@/api/adapters';
+import { toGroupHouse, toHouseMission, toHousePreview, toSearchHouse } from '@/api/adapters';
 import { useToast } from '@/components/ui/toast';
 import type {
   House,
   HouseEditInput,
   NewHouseMission,
 } from '@/components/screens/group-house-screen';
-import type { SearchHouse } from '@/components/screens/house-search-screen';
+import type { HousePreview, SearchHouse } from '@/components/screens/house-search-screen';
 
 export function useHouses() {
   const [houses, setHouses] = useState<House[]>([]);
@@ -84,6 +86,15 @@ export function useHouses() {
       active = false;
     };
   }, [reloadMyHouses, reloadSearch]);
+
+  /** Look up the house behind an invite code (pre-join preview); null = unknown. */
+  const previewByCode = async (code: string): Promise<HousePreview | null> => {
+    try {
+      return toHousePreview(await previewHouseByCode(code));
+    } catch {
+      return null;
+    }
+  };
 
   /** Join with an invite code; true on success (my houses refreshed). */
   const joinByCode = async (code: string): Promise<boolean> => {
@@ -222,6 +233,16 @@ export function useHouses() {
     }
   };
 
+  const reissueInviteCode = async (houseId: number) => {
+    try {
+      await apiReissueInviteCode(houseId);
+      toast('새 초대코드가 발급됐어요', 'success');
+      await reloadMyHouses();
+    } catch {
+      toast('초대코드 재발급에 실패했어요', 'error');
+    }
+  };
+
   // 집 탐색 hides houses the user already belongs to (the API has no joined
   // filter, and joining one again only 409s).
   const joinedIds = new Set(houses.map((h) => String(h.houseId ?? '')));
@@ -232,6 +253,7 @@ export function useHouses() {
     searchHouses: browsableHouses,
     loading,
     searchLoading,
+    previewByCode,
     joinByCode,
     joinHouse,
     create,
@@ -242,5 +264,6 @@ export function useHouses() {
     createMission,
     updateHouse,
     transferOwnership,
+    reissueInviteCode,
   };
 }

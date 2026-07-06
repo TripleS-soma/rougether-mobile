@@ -26,7 +26,7 @@ import { type RoomSlotSave } from './rooms';
 
 import type { Floor, House, HouseMission, RoomCell } from '@/components/screens/group-house-screen';
 import type { GuestbookEntry } from '@/components/screens/friend-room-screen';
-import type { SearchHouse } from '@/components/screens/house-search-screen';
+import type { HousePreview, SearchHouse } from '@/components/screens/house-search-screen';
 import type { CalendarDayItem } from '@/components/screens/my-room-screen';
 
 import type {
@@ -40,6 +40,7 @@ import type {
   GachaResponse,
   GoalItem,
   HouseDetailResponse,
+  HousePreviewResponse,
   HouseSummary,
   ItemResponse,
   MemberSummary,
@@ -495,6 +496,16 @@ export function toHouseMission(m: MissionSummary): HouseMission {
     target: Math.max(1, target),
     status: m.status ?? 'ACTIVE',
     achieved: target > 0 && (m.currentValue ?? 0) >= target,
+  };
+}
+
+/** Invite-code lookup → pre-join preview card model. */
+export function toHousePreview(p: HousePreviewResponse): HousePreview {
+  return {
+    name: p.name ?? '',
+    members: p.currentMemberCount ?? 0,
+    capacity: p.maxMembers ?? undefined,
+    expired: p.inviteExpired ?? false,
   };
 }
 
