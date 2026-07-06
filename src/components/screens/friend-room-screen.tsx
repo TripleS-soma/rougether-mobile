@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -124,6 +127,30 @@ export function FriendRoomScreen({
     setDraft('');
   };
 
+  // Keyboard handling for the guestbook input (bottom of the scroll): Android
+  // (edge-to-edge) overlays the keyboard without resizing the window, so add
+  // its height as bottom padding while the input is focused and keep the input
+  // in view — the same fix as the 투두 quick-add (#113).
+  const scrollRef = useRef<ScrollView>(null);
+  const [inputFocused, setInputFocused] = useState(false);
+  const [keyboardPad, setKeyboardPad] = useState(0);
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', (e) =>
+      setKeyboardPad(e.endCoordinates?.height ?? 320),
+    );
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardPad(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+  // Re-align once the keyboard is up AND the extra padding has been committed.
+  useEffect(() => {
+    if (!inputFocused || keyboardPad === 0) return;
+    const timer = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
+    return () => clearTimeout(timer);
+  }, [inputFocused, keyboardPad]);
+
   return (
     <View style={[styles.screen, useScreenStyle()]}>
       <View style={[styles.header, { backgroundColor: t.surface }]}>
@@ -148,159 +175,175 @@ export function FriendRoomScreen({
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.body}>
-        <View style={styles.roomWrap}>
-          <Room
-            characterId={characterId}
-            wallpaperId={wallpaperId}
-            floorId={floorId}
-            backgroundId={backgroundId}
-            placedFurnitureIds={placedFurnitureIds}
-            furniture={furniture}
-            wallpapers={wallpapers}
-            floors={floors}
-            backgrounds={backgrounds}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={[
+            styles.body,
+            inputFocused && keyboardPad > 0 ? { paddingBottom: keyboardPad + 120 } : null,
+          ]}
+          keyboardShouldPersistTaps="handled">
+          <View style={styles.roomWrap}>
+            <Room
+              characterId={characterId}
+              wallpaperId={wallpaperId}
+              floorId={floorId}
+              backgroundId={backgroundId}
+              placedFurnitureIds={placedFurnitureIds}
+              furniture={furniture}
+              wallpapers={wallpapers}
+              floors={floors}
+              backgrounds={backgrounds}
+            />
+          </View>
+
+          <PendingNotice
+            style={styles.pendingNotice}
+            text="친구 방 꾸미기·루틴 데이터는 서버 준비 중이라 미리보기로 보여드려요."
           />
-        </View>
 
-        <PendingNotice
-          style={styles.pendingNotice}
-          text="친구 방 꾸미기·루틴 데이터는 서버 준비 중이라 미리보기로 보여드려요."
-        />
-
-        <View style={styles.section}>
-          <View style={styles.sectionHead}>
-            <Text style={[Typography.h2, { color: t.text }]}>{friendName}의 루틴</Text>
-            <Text style={[Typography.label, { color: t.primary }]}>
-              {completedCount} / {routines.length}
-            </Text>
-          </View>
-
-          <View style={[styles.progressTrack, { backgroundColor: t.surfaceMuted }]}>
-            <View
-              style={[
-                styles.progressFill,
-                { backgroundColor: t.primary, width: `${progress * 100}%` },
-              ]}
-            />
-          </View>
-
-          <View style={styles.rows}>
-            {routines.map((routine) => (
-              <View key={routine.id} style={styles.row}>
-                <Icon
-                  name={routine.completed ? 'checkbox-on' : 'checkbox-off'}
-                  size={22}
-                  color={routine.completed ? t.primary : t.textDisabled}
-                />
-                <View style={styles.flex}>
-                  <Text
-                    style={[
-                      Typography.body,
-                      routine.completed
-                        ? { color: t.textMuted, textDecorationLine: 'line-through' }
-                        : { color: t.text },
-                    ]}>
-                    {routine.title}
-                  </Text>
-                  {(routine.alarmEnabled && routine.time) || routine.photoVerify ? (
-                    <View style={styles.badges}>
-                      {routine.alarmEnabled && routine.time ? (
-                        <View style={styles.badge}>
-                          <Icon name="bell" size={11} color={t.textMuted} />
-                          <Text style={[styles.badgeText, { color: t.textMuted }]}>
-                            {formatTime(routine.time)}
-                          </Text>
-                        </View>
-                      ) : null}
-                      {routine.photoVerify ? (
-                        <View style={styles.badge}>
-                          <Icon name="camera" size={11} color={t.textMuted} />
-                          <Text style={[styles.badgeText, { color: t.textMuted }]}>사진 인증</Text>
-                        </View>
-                      ) : null}
-                    </View>
-                  ) : null}
-                </View>
-              </View>
-            ))}
-          </View>
-
-          <View style={styles.cheers}>
-            {CHEERS.map((cheer, idx) => (
-              <Pressable
-                key={cheer.type}
-                onPress={() => onCheer?.(cheer.type)}
-                accessibilityRole="button"
-                accessibilityLabel={cheer.label}
-                style={[
-                  styles.cheerBtn,
-                  { backgroundColor: idx === 0 ? t.primary : t.surfaceMuted },
-                ]}>
-                <Text style={[Typography.label, { color: idx === 0 ? t.onPrimary : t.text }]}>
-                  {cheer.emoji} {cheer.label}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHead}>
-            <Text style={[Typography.h2, { color: t.text }]}>📖 방명록</Text>
-          </View>
-
-          <View style={styles.gbInputRow}>
-            <TextInput
-              value={draft}
-              onChangeText={(v) => setDraft(v.slice(0, GUESTBOOK_MAX))}
-              placeholder="따뜻한 한마디를 남겨보세요"
-              placeholderTextColor={t.textMuted}
-              accessibilityLabel="방명록 입력"
-              style={[styles.gbInput, { backgroundColor: t.surfaceMuted, color: t.text }]}
-            />
-            <Pressable
-              onPress={sendNote}
-              disabled={!canSend}
-              accessibilityRole="button"
-              accessibilityLabel="방명록 남기기"
-              style={[styles.gbSendBtn, { backgroundColor: canSend ? t.primary : t.disabledBg }]}>
-              <Text style={[Typography.label, { color: t.onPrimary }]}>남기기</Text>
-            </Pressable>
-          </View>
-
-          {guestbookLoading && notes.length === 0 ? (
-            <View style={styles.gbState}>
-              <ActivityIndicator color={t.primary} />
+          <View style={styles.section}>
+            <View style={styles.sectionHead}>
+              <Text style={[Typography.h2, { color: t.text }]}>{friendName}의 루틴</Text>
+              <Text style={[Typography.label, { color: t.primary }]}>
+                {completedCount} / {routines.length}
+              </Text>
             </View>
-          ) : notes.length === 0 ? (
-            <Text style={[Typography.supporting, styles.gbState, { color: t.textMuted }]}>
-              아직 방명록이 없어요. 첫 인사를 남겨보세요!
-            </Text>
-          ) : (
-            <View style={styles.gbList}>
-              {notes.map((note) => (
-                <View key={note.id} style={[styles.gbRow, { backgroundColor: t.surfaceMuted }]}>
-                  <View style={styles.gbRowHead}>
-                    <Text style={[Typography.label, { color: t.text }]}>{note.author}</Text>
-                    <Text style={[Typography.supporting, { color: t.textMuted }]}>{note.date}</Text>
+
+            <View style={[styles.progressTrack, { backgroundColor: t.surfaceMuted }]}>
+              <View
+                style={[
+                  styles.progressFill,
+                  { backgroundColor: t.primary, width: `${progress * 100}%` },
+                ]}
+              />
+            </View>
+
+            <View style={styles.rows}>
+              {routines.map((routine) => (
+                <View key={routine.id} style={styles.row}>
+                  <Icon
+                    name={routine.completed ? 'checkbox-on' : 'checkbox-off'}
+                    size={22}
+                    color={routine.completed ? t.primary : t.textDisabled}
+                  />
+                  <View style={styles.flex}>
+                    <Text
+                      style={[
+                        Typography.body,
+                        routine.completed
+                          ? { color: t.textMuted, textDecorationLine: 'line-through' }
+                          : { color: t.text },
+                      ]}>
+                      {routine.title}
+                    </Text>
+                    {(routine.alarmEnabled && routine.time) || routine.photoVerify ? (
+                      <View style={styles.badges}>
+                        {routine.alarmEnabled && routine.time ? (
+                          <View style={styles.badge}>
+                            <Icon name="bell" size={11} color={t.textMuted} />
+                            <Text style={[styles.badgeText, { color: t.textMuted }]}>
+                              {formatTime(routine.time)}
+                            </Text>
+                          </View>
+                        ) : null}
+                        {routine.photoVerify ? (
+                          <View style={styles.badge}>
+                            <Icon name="camera" size={11} color={t.textMuted} />
+                            <Text style={[styles.badgeText, { color: t.textMuted }]}>
+                              사진 인증
+                            </Text>
+                          </View>
+                        ) : null}
+                      </View>
+                    ) : null}
                   </View>
-                  <Text style={[Typography.body, { color: t.text }]}>{note.content}</Text>
                 </View>
               ))}
-              {guestbookHasNext ? (
-                <Pressable
-                  onPress={onLoadMoreGuestbook}
-                  accessibilityRole="button"
-                  accessibilityLabel="방명록 더보기"
-                  style={[styles.gbMore, { backgroundColor: t.surfaceMuted }]}>
-                  <Text style={[Typography.label, { color: t.primary }]}>더보기</Text>
-                </Pressable>
-              ) : null}
             </View>
-          )}
-        </View>
-      </ScrollView>
+
+            <View style={styles.cheers}>
+              {CHEERS.map((cheer, idx) => (
+                <Pressable
+                  key={cheer.type}
+                  onPress={() => onCheer?.(cheer.type)}
+                  accessibilityRole="button"
+                  accessibilityLabel={cheer.label}
+                  style={[
+                    styles.cheerBtn,
+                    { backgroundColor: idx === 0 ? t.primary : t.surfaceMuted },
+                  ]}>
+                  <Text style={[Typography.label, { color: idx === 0 ? t.onPrimary : t.text }]}>
+                    {cheer.emoji} {cheer.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <View style={styles.sectionHead}>
+              <Text style={[Typography.h2, { color: t.text }]}>📖 방명록</Text>
+            </View>
+
+            <View style={styles.gbInputRow}>
+              <TextInput
+                value={draft}
+                onChangeText={(v) => setDraft(v.slice(0, GUESTBOOK_MAX))}
+                onFocus={() => setInputFocused(true)}
+                onBlur={() => setInputFocused(false)}
+                placeholder="따뜻한 한마디를 남겨보세요"
+                placeholderTextColor={t.textMuted}
+                accessibilityLabel="방명록 입력"
+                style={[styles.gbInput, { backgroundColor: t.surfaceMuted, color: t.text }]}
+              />
+              <Pressable
+                onPress={sendNote}
+                disabled={!canSend}
+                accessibilityRole="button"
+                accessibilityLabel="방명록 남기기"
+                style={[styles.gbSendBtn, { backgroundColor: canSend ? t.primary : t.disabledBg }]}>
+                <Text style={[Typography.label, { color: t.onPrimary }]}>남기기</Text>
+              </Pressable>
+            </View>
+
+            {guestbookLoading && notes.length === 0 ? (
+              <View style={styles.gbState}>
+                <ActivityIndicator color={t.primary} />
+              </View>
+            ) : notes.length === 0 ? (
+              <Text style={[Typography.supporting, styles.gbState, { color: t.textMuted }]}>
+                아직 방명록이 없어요. 첫 인사를 남겨보세요!
+              </Text>
+            ) : (
+              <View style={styles.gbList}>
+                {notes.map((note) => (
+                  <View key={note.id} style={[styles.gbRow, { backgroundColor: t.surfaceMuted }]}>
+                    <View style={styles.gbRowHead}>
+                      <Text style={[Typography.label, { color: t.text }]}>{note.author}</Text>
+                      <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                        {note.date}
+                      </Text>
+                    </View>
+                    <Text style={[Typography.body, { color: t.text }]}>{note.content}</Text>
+                  </View>
+                ))}
+                {guestbookHasNext ? (
+                  <Pressable
+                    onPress={onLoadMoreGuestbook}
+                    accessibilityRole="button"
+                    accessibilityLabel="방명록 더보기"
+                    style={[styles.gbMore, { backgroundColor: t.surfaceMuted }]}>
+                    <Text style={[Typography.label, { color: t.primary }]}>더보기</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            )}
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
