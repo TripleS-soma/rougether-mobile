@@ -1,10 +1,16 @@
 /** Routine/todo category endpoints. */
 import { apiDelete, apiGetList, apiPost, apiPut } from './client';
+import { buildQuery } from './http';
 import type { CategoryCreateRequest, CategoryResponse, CategoryUpdateRequest } from './types';
 
-/** GET /categories. */
-export function fetchCategories() {
-  return apiGetList<CategoryResponse>('/categories');
+/**
+ * GET /categories. With includeDeleted, deleted categories come back flagged
+ * (`deleted: true`) — needed to resolve past records' original category.
+ */
+export function fetchCategories(includeDeleted = false) {
+  return apiGetList<CategoryResponse>(
+    `/categories${buildQuery({ includeDeleted: includeDeleted ? 'true' : undefined })}`,
+  );
 }
 
 /** POST /categories. */

@@ -26,8 +26,10 @@ import { type RoomSlotSave } from './rooms';
 
 import type { Floor, House, HouseMission, RoomCell } from '@/components/screens/group-house-screen';
 import type { SearchHouse } from '@/components/screens/house-search-screen';
+import type { CalendarDayItem } from '@/components/screens/my-room-screen';
 
 import type {
+  CalendarDayResponse,
   CategoryCreateRequest,
   MyItemSummary,
   RoomSlotResponse,
@@ -85,6 +87,7 @@ export function toAppCategory(c: CategoryResponse, index = 0): RoutineCategoryMe
     emoji,
     color: c.colorHex || CATEGORY_COLORS[index % CATEGORY_COLORS.length],
     visibility: visToApp(c.visibility),
+    deleted: c.deleted || undefined,
   };
 }
 
@@ -195,6 +198,38 @@ export function toTodoUpdate(td: Routine, overrides: Partial<Routine> = {}): Tod
  * `completed`, and todo ids with status COMPLETED. The API has no "logs for an
  * arbitrary date" endpoint, so only today's completion is server-sourced.
  */
+/**
+ * /calendar day → flat list for the 달력 tab. Groups carry only categoryId —
+ * resolve name/color against /categories?includeDeleted=true so records under
+ * a deleted category still show as their original category.
+ */
+export function toCalendarItems(day: CalendarDayResponse): CalendarDayItem[] {
+  const items: CalendarDayItem[] = [];
+  for (const g of day.categories ?? []) {
+    const category = g.categoryId != null ? String(g.categoryId) : undefined;
+    for (const r of g.routines ?? []) {
+      items.push({
+        id: String(r.id ?? ''),
+        kind: 'routine',
+        title: r.title ?? '',
+        time: r.scheduledTime ? fromApiTime(r.scheduledTime) : undefined,
+        completed: !!r.completed,
+        category,
+      });
+    }
+    for (const td of g.todos ?? []) {
+      items.push({
+        id: String(td.id ?? ''),
+        kind: 'todo',
+        title: td.title ?? '',
+        completed: td.status === 'COMPLETED',
+        category,
+      });
+    }
+  }
+  return items;
+}
+
 export function todayCompletions(today: TodayResponse, date: string): Record<string, string[]> {
   const map: Record<string, string[]> = {};
   for (const group of today.categories ?? []) {

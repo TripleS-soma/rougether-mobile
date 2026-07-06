@@ -1,6 +1,6 @@
 /** Current user + wallet endpoints. */
 import { apiGet, apiGetList, apiPut } from './client';
-import type { MeResponse, MyItemSummary, WalletResponse } from './types';
+import type { MeResponse, MemberUpdateRequest, MyItemSummary, WalletResponse } from './types';
 
 /** GET /me — the authenticated user's profile. */
 export function fetchMe() {
@@ -17,10 +17,7 @@ export function fetchMyItems() {
   return apiGetList<MyItemSummary>('/me/items');
 }
 
-/**
- * PUT /me — update the profile (nickname). Not in the server spec yet — wired
- * ahead so it lights up the moment the backend ships it (#104).
- */
-export function updateMe(body: { nickname: string }) {
+/** PUT /me — update the profile (nickname, ≤30 chars, no blanks). */
+export function updateMe(body: MemberUpdateRequest) {
   return apiPut<MeResponse>('/me', body);
 }

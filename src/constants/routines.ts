@@ -32,6 +32,8 @@ export type RoutineCategoryMeta = {
   emoji: string;
   color: string;
   visibility: CategoryVisibility;
+  /** Server-deleted category, kept only to resolve past records' name/color. */
+  deleted?: boolean;
 };
 
 /**

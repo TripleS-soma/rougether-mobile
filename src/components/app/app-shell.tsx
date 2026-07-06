@@ -125,6 +125,9 @@ export function AppShell({
     routines,
     completions,
     categories,
+    allCategories,
+    calendarDays,
+    loadCalendarDay,
     wallet,
     setWallet,
     nickname: apiNickname,
@@ -242,6 +245,11 @@ export function AppShell({
             routines={routines}
             completions={completions}
             categories={categories}
+            allCategories={allCategories}
+            calendarDays={calendarDays}
+            onSelectDate={(date) => {
+              void loadCalendarDay(date);
+            }}
             loading={myRoomLoading}
             loadError={!!myRoomError}
             onRetry={retryMyRoom}

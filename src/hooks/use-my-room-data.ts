@@ -3,13 +3,13 @@
  * todos, today's completion and wallet on mount, and exposes the same callback
  * shapes the screens already use — so the app shell wires straight through.
  *
- * Note: the API has no "completion log for an arbitrary date" endpoint, so only
- * *today's* completion is server-sourced; toggles on other dates (달력 tab) are
- * kept client-side and sent to the API, but won't survive a reload.
+ * The 달력 tab reads non-today dates from GET /calendar (loadCalendarDay);
+ * completion toggles are server-accepted for today only.
  */
 import { useCallback, useEffect, useState } from 'react';
 
 import {
+  ApiError,
   completeRoutine,
   completeTodo,
   createCategory,
@@ -18,6 +18,7 @@ import {
   deleteCategory as apiDeleteCategory,
   deleteRoutine as apiDeleteRoutine,
   deleteTodo,
+  fetchCalendarDay,
   fetchCategories,
   fetchMe,
   fetchRoutines,
@@ -35,6 +36,7 @@ import {
   toAppCategory,
   toAppRoutine,
   toAppTodo,
+  toCalendarItems,
   toCategoryCreate,
   toRoutineCreate,
   toRoutineUpdate,
@@ -51,12 +53,17 @@ import {
   type RoutineCategoryMeta,
   UNCATEGORIZED_META,
 } from '@/constants/routines';
+import type { CalendarDayItem } from '@/components/screens/my-room-screen';
 import { todayIso } from '@/utils/datetime';
 
 export function useMyRoomData() {
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [completions, setCompletions] = useState<Record<string, string[]>>({});
   const [categories, setCategories] = useState<RoutineCategoryMeta[]>([]);
+  // Active + deleted categories — past records resolve their original meta here.
+  const [allCategories, setAllCategories] = useState<RoutineCategoryMeta[]>([]);
+  // 달력 tab data per date (server GET /calendar), refreshed on each pick.
+  const [calendarDays, setCalendarDays] = useState<Record<string, CalendarDayItem[]>>({});
   const [wallet, setWallet] = useState<Wallet>(DEFAULT_WALLET);
   // Identity + streak, surfaced in the my-room header.
   const [nickname, setNickname] = useState<string | null>(null);
@@ -67,14 +74,16 @@ export function useMyRoomData() {
 
   const reload = useCallback(async () => {
     const [cats, rts, tds, today, wals, me] = await Promise.all([
-      fetchCategories(),
+      // includeDeleted → deleted categories still resolve for past records.
+      fetchCategories(true),
       fetchRoutines(),
       fetchTodos(),
       fetchToday(),
       fetchWallets(),
       fetchMe(),
     ]);
-    let appCats = cats.map((c, i) => toAppCategory(c, i));
+    const appCatsAll = cats.map((c, i) => toAppCategory(c, i));
+    let appCats = appCatsAll.filter((c) => !c.deleted);
     let items = [...rts.map(toAppRoutine), ...tds.map(toAppTodo)];
 
     // Uncategorized routines must not exist: adopt any item without a (known)
@@ -109,6 +118,8 @@ export function useMyRoomData() {
     }
 
     setCategories(appCats);
+    // Active (incl. a just-created 기타) first, deleted ones behind for lookup.
+    setAllCategories([...appCats, ...appCatsAll.filter((c) => c.deleted)]);
     setRoutines(items);
     setCompletions(todayCompletions(today, todayIso()));
     setWallet(toWallet(wals));
@@ -140,6 +151,22 @@ export function useMyRoomData() {
       // Non-fatal; keep the last known balance.
     }
   }, []);
+
+  /**
+   * Load a date's 달력 list from GET /calendar. Always refetches (routine edits
+   * change future dates); the previous data stays visible until it lands.
+   */
+  const loadCalendarDay = useCallback(
+    async (date: string) => {
+      try {
+        const day = await fetchCalendarDay(date);
+        setCalendarDays((prev) => ({ ...prev, [date]: toCalendarItems(day) }));
+      } catch {
+        toast('달력 기록을 불러오지 못했어요', 'error');
+      }
+    },
+    [toast],
+  );
 
   const findItem = (id: string) => routines.find((r) => r.id === id);
 
@@ -258,7 +285,7 @@ export function useMyRoomData() {
       return true;
     } catch {
       setNickname(before);
-      toast('프로필 저장에 실패했어요 (서버 준비 중)', 'error');
+      toast('프로필 저장에 실패했어요', 'error');
       return false;
     }
   };
@@ -289,14 +316,24 @@ export function useMyRoomData() {
   };
 
   const deleteRoutineCategory = async (id: string) => {
+    // The server refuses to delete a category that still has routines/todos
+    // (409 CATEGORY_IN_USE) — check first so the category doesn't flicker away.
+    if (routines.some((r) => r.category === id)) {
+      toast('카테고리에 루틴이 남아 있어 삭제할 수 없어요', 'error');
+      return;
+    }
+    const before = categories;
     setCategories((prev) => prev.filter((c) => c.id !== id));
     try {
       await apiDeleteCategory(Number(id));
-      // The server may null out the deleted category's routines — a full reload
-      // re-adopts them into 기타 (uncategorized routines must not exist).
       await reload();
-    } catch {
-      toast('카테고리 삭제에 실패했어요', 'error');
+    } catch (err) {
+      setCategories(before);
+      const inUse = err instanceof ApiError && err.bodyText?.includes('CATEGORY_IN_USE');
+      toast(
+        inUse ? '카테고리에 루틴이 남아 있어 삭제할 수 없어요' : '카테고리 삭제에 실패했어요',
+        'error',
+      );
     }
   };
 
@@ -304,6 +341,9 @@ export function useMyRoomData() {
     routines,
     completions,
     categories,
+    allCategories,
+    calendarDays,
+    loadCalendarDay,
     wallet,
     setWallet,
     nickname,
