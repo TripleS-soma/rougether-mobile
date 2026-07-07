@@ -352,6 +352,9 @@ export function AppShell({
             onCreateCategory={createRoutineCategory}
             onUpdateCategory={updateRoutineCategory}
             onDeleteCategory={deleteRoutineCategory}
+            onReorderCategories={(orderedIds) => {
+              void reorderCategories(orderedIds);
+            }}
             onBack={() => setScreen(addReturnScreen)}
           />
         ) : null}

@@ -42,6 +42,8 @@ export type AddRoutineScreenProps = {
   onCreateCategory?: (category: RoutineCategoryMeta) => void;
   onUpdateCategory?: (id: string, category: RoutineCategoryMeta) => void;
   onDeleteCategory?: (id: string) => void;
+  /** Persist a new category order (카테고리 관리 sheet, long-press to move). */
+  onReorderCategories?: (orderedIds: string[]) => void;
 };
 
 function today() {
@@ -64,6 +66,7 @@ export function AddRoutineScreen({
   onCreateCategory,
   onUpdateCategory,
   onDeleteCategory,
+  onReorderCategories,
 }: AddRoutineScreenProps) {
   const t = useTokens();
   const isEdit = Boolean(editRoutine);
@@ -91,9 +94,25 @@ export function AddRoutineScreen({
     setDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort()));
 
   const canSubmit = title.trim().length > 0 && days.length > 0 && categoryValid;
+  // Why the submit is blocked — set when the user taps it anyway. Without this
+  // a fresh account (0 categories) just saw a dead gray button.
+  const [formError, setFormError] = useState('');
+  useEffect(() => {
+    if (canSubmit) setFormError('');
+  }, [canSubmit]);
 
   const submit = () => {
-    if (!canSubmit) return;
+    if (!canSubmit) {
+      if (!categoryValid) {
+        setFormError('카테고리가 필요해요 — 먼저 하나 만들어주세요.');
+        setShowCategoryManager(true);
+      } else if (title.trim().length === 0) {
+        setFormError('루틴 이름을 입력해주세요.');
+      } else {
+        setFormError('반복 요일을 하나 이상 선택해주세요.');
+      }
+      return;
+    }
     const payload: NewRoutine = {
       title: title.trim(),
       category,
@@ -322,14 +341,22 @@ export function AddRoutineScreen({
         onCreate={(c) => onCreateCategory?.(c)}
         onUpdate={(id, c) => onUpdateCategory?.(id, c)}
         onDelete={(id) => onDeleteCategory?.(id)}
+        onReorder={onReorderCategories}
         onClose={() => setShowCategoryManager(false)}
       />
 
       <View style={[styles.footer, { backgroundColor: t.screen }]}>
+        {formError ? (
+          <Text style={[Typography.supporting, styles.footerError, { color: t.danger }]}>
+            {formError}
+          </Text>
+        ) : null}
+        {/* Pressable even when invalid — the tap explains what's missing
+            (and opens the category manager when that's the blocker). */}
         <Pressable
           onPress={submit}
-          disabled={!canSubmit}
           accessibilityRole="button"
+          accessibilityState={{ disabled: !canSubmit }}
           style={({ pressed }) => [
             styles.submit,
             { backgroundColor: canSubmit ? t.primary : t.disabledBg },
@@ -441,6 +468,10 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.three,
+  },
+  footerError: {
+    textAlign: 'center',
+    marginBottom: Spacing.two,
   },
   submit: {
     paddingVertical: Spacing.three,
