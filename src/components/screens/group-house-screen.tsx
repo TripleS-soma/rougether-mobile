@@ -46,6 +46,8 @@ export type House = {
   /** API house id — enables server actions (kick/leave) when provided. */
   houseId?: number;
   myRole?: 'OWNER' | 'MEMBER';
+  /** House growth level (헤더 왕관 pill; missions raise it). */
+  level?: number;
   /** Group missions shown in the "우리 그룹의 미션" card. */
   missions?: HouseMission[];
   /** House intro + capacity — prefill for the owner's edit form. */
@@ -100,6 +102,7 @@ const DEFAULT_HOUSES: House[] = [
   {
     title: '소마파이팅',
     inviteCode: 'SOMA-2143',
+    level: 3,
     missions: DEMO_MISSIONS,
     floors: [
       {
@@ -121,6 +124,7 @@ const DEFAULT_HOUSES: House[] = [
   {
     title: '소마 2번째 집',
     inviteCode: 'SOMA-7788',
+    level: 1,
     missions: DEMO_MISSIONS.slice(0, 1),
     floors: [
       {
@@ -692,7 +696,7 @@ export function GroupHouseScreen({
     <View style={[styles.screen, screenStyle]}>
       <View style={[styles.header, { backgroundColor: t.surface }]}>
         <View style={[styles.pill, { backgroundColor: t.surfaceMuted }]}>
-          <Text style={[Typography.label, { color: t.text }]}>👑 Lv.20</Text>
+          <Text style={[Typography.label, { color: t.text }]}>👑 Lv.{currentHouse.level ?? 0}</Text>
         </View>
         <View style={styles.flex} />
         <View style={[styles.pill, styles.leafPill, { backgroundColor: t.surfaceMuted }]}>

@@ -29,6 +29,8 @@ describe('GroupHouseScreen', () => {
   it('renders the current house, members, and group missions', async () => {
     const { getByText } = await render(<GroupHouseScreen coinBalance={5600} />);
     expect(getByText('👑 소마파이팅')).toBeTruthy();
+    // The crown pill shows the house's real growth level (demo: 3).
+    expect(getByText('👑 Lv.3')).toBeTruthy();
     expect(getByText('5,600')).toBeTruthy();
     expect(getByText('🎯 우리 그룹의 미션')).toBeTruthy();
     expect(getByText('이번 주 다같이 루틴 지키기')).toBeTruthy();

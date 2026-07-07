@@ -480,6 +480,7 @@ export function toGroupHouse(
     title: detail.name ?? '',
     inviteCode: detail.inviteCode ?? undefined,
     myRole: detail.myRole,
+    level: detail.level ?? 0,
     floors,
     missions,
     description: detail.description ?? undefined,
