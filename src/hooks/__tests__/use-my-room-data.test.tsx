@@ -17,6 +17,51 @@ afterEach(() => {
   jest.clearAllMocks();
 });
 
+describe('useMyRoomData — completion routing on id collision', () => {
+  it('completes the todo (not the same-numbered routine) when server ids collide', async () => {
+    const now = new Date();
+    const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const calls: { url: string; method: string }[] = [];
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+      calls.push({ url, method });
+      if (url.includes('/categories')) {
+        return res({ items: [{ id: 1, name: '건강', colorHex: '#F00' }] });
+      }
+      if (url.endsWith('/routines')) {
+        return res({
+          items: [{ id: 5, title: '같은번호 루틴', categoryId: 1, repeatType: 'DAILY' }],
+        });
+      }
+      if (url.endsWith('/todos')) {
+        return res({
+          items: [
+            { id: 5, title: '같은번호 투두', categoryId: 1, dueDate: todayIso, status: 'PENDING' },
+          ],
+        });
+      }
+      if (method === 'POST' && url.endsWith('/todos/5/complete')) {
+        return res({ id: 5, status: 'COMPLETED', rewardAmount: 10 });
+      }
+      if (url.endsWith('/today')) return res({ categories: [], summary: {}, streak: {} });
+      if (url.endsWith('/me')) return res({ userId: 1, nickname: '테스터' });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useMyRoomData());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    const todo = result.current.routines.find((r) => r.kind === 'todo')!;
+    await result.current.toggleCompletion(todo.id, todayIso);
+
+    // The todo endpoint is hit — never the routine-log endpoint for id 5.
+    expect(calls.some((c) => c.method === 'POST' && c.url.endsWith('/todos/5/complete'))).toBe(
+      true,
+    );
+    expect(calls.some((c) => c.url.includes('/routines/5/logs'))).toBe(false);
+  });
+});
+
 describe('useMyRoomData — uncategorized adoption', () => {
   it('creates a 기타 category and reassigns orphan routines on load', async () => {
     const calls: { url: string; method: string; body?: string }[] = [];
