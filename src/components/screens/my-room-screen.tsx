@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Dimensions,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
@@ -301,11 +302,20 @@ export function MyRoomScreen({
   // input stays hidden behind the keyboard — Android (edge-to-edge) overlays
   // the keyboard without resizing the window.
   const [keyboardPad, setKeyboardPad] = useState(0);
+  // Ref mirrors for the measure callback below (kept out of its deps so the
+  // callback identity stays stable for the timers/effects that call it).
+  const keyboardPadRef = useRef(0);
+  const scrollYRef = useRef(0);
   useEffect(() => {
-    const show = Keyboard.addListener('keyboardDidShow', (e) =>
-      setKeyboardPad(e.endCoordinates?.height ?? 320),
-    );
-    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardPad(0));
+    const show = Keyboard.addListener('keyboardDidShow', (e) => {
+      const h = e.endCoordinates?.height ?? 320;
+      keyboardPadRef.current = h;
+      setKeyboardPad(h);
+    });
+    const hide = Keyboard.addListener('keyboardDidHide', () => {
+      keyboardPadRef.current = 0;
+      setKeyboardPad(0);
+    });
     return () => {
       show.remove();
       hide.remove();
@@ -313,18 +323,22 @@ export function MyRoomScreen({
   }, []);
 
   // Bring the quick-add input itself into view (not just the category header —
-  // long categories left it hidden behind the keyboard). Measured against the
-  // ScrollView's inner view so nesting/list length don't matter.
+  // long categories left it hidden behind the keyboard). Measured in window
+  // coordinates and scrolled by the overflow: measureLayout against
+  // getInnerViewNode() silently no-ops when that ref API is unavailable (new
+  // architecture), which left the input hidden behind the keyboard.
   const scrollToQuickAdd = useCallback(() => {
     const scrollView = scrollRef.current;
-    const inner = scrollView?.getInnerViewNode?.();
     const row = addRowRef.current;
-    if (!scrollView || !inner || !row) return;
-    row.measureLayout(
-      inner,
-      (_x, y) => scrollView.scrollTo({ y: Math.max(0, y - 160), animated: true }),
-      () => {},
-    );
+    if (!scrollView || !row) return;
+    row.measureInWindow?.((_x, y, _w, h) => {
+      // Keep the input row fully visible above the keyboard, with a margin.
+      const visibleBottom = Dimensions.get('window').height - keyboardPadRef.current - 24;
+      const overflow = y + h - visibleBottom;
+      if (overflow > 0) {
+        scrollView.scrollTo({ y: Math.max(0, scrollYRef.current + overflow), animated: true });
+      }
+    });
   }, []);
 
   // Re-align once the keyboard is up AND the extra bottom padding has been
@@ -441,6 +455,10 @@ export function MyRoomScreen({
             styles.body,
             addingCategory && keyboardPad > 0 ? { paddingBottom: keyboardPad + 120 } : null,
           ]}
+          onScroll={(e) => {
+            scrollYRef.current = e.nativeEvent.contentOffset.y;
+          }}
+          scrollEventThrottle={16}
           keyboardShouldPersistTaps="handled">
           {tab === 'room' ? (
             <>
