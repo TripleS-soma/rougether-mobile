@@ -32,7 +32,8 @@ describe('GroupHouseScreen', () => {
     expect(getByText('5,600')).toBeTruthy();
     expect(getByText('🎯 우리 그룹의 미션')).toBeTruthy();
     expect(getByText('이번 주 다같이 루틴 지키기')).toBeTruthy();
-    expect(getByText('최준서')).toBeTruthy();
+    // The demo owner's tile carries the 방장 crown.
+    expect(getByText('👑 최준서')).toBeTruthy();
   });
 
   it('contributes and claims via the API callbacks', async () => {
@@ -171,13 +172,37 @@ describe('GroupHouseScreen', () => {
   it('visits a friend room and my room on tap', async () => {
     const onVisitFriend = jest.fn();
     const onVisitMyRoom = jest.fn();
-    const { getByText } = await render(
+    const { getByLabelText, getByText } = await render(
       <GroupHouseScreen onVisitFriend={onVisitFriend} onVisitMyRoom={onVisitMyRoom} />,
     );
-    await fireEvent.press(getByText('최준서'));
+    // Tiles are addressed by accessibility label — the crown decorates the text.
+    await fireEvent.press(getByLabelText('최준서'));
     expect(onVisitFriend).toHaveBeenCalledWith(expect.objectContaining({ name: '최준서' }));
     await fireEvent.press(getByText('나의 방 (나)'));
     expect(onVisitMyRoom).toHaveBeenCalled();
+  });
+
+  it('marks the owner in the member management list', async () => {
+    const { getByLabelText, getByText } = await render(
+      <GroupHouseScreen
+        houses={[
+          {
+            ...MISSION_HOUSE,
+            floors: [
+              {
+                level: '1층',
+                rooms: [
+                  { name: '친구', color: '#F5E1D8', membershipId: 42, isOwner: true },
+                  { name: '나', color: '#E8E0D0', isMine: true, membershipId: 43 },
+                ],
+              },
+            ],
+          },
+        ]}
+      />,
+    );
+    await fireEvent.press(getByLabelText('구성원 목록'));
+    expect(getByText('👑 방장')).toBeTruthy();
   });
 
   it('shows the guided empty state when there are no houses', async () => {
