@@ -225,8 +225,13 @@ export function GroupHouseScreen({
   const nextHouse = () => setHouseIndex((i) => (i + 1) % houses.length);
 
   const missions = currentHouse?.missions ?? [];
-  // Creating needs the server house id; demo houses only display missions.
-  const canCreateMission = !!(onCreateMission && currentHouse?.houseId);
+  // Owner tools need the OWNER role and a server house id.
+  const isOwner = currentHouse?.myRole === 'OWNER' && !!currentHouse?.houseId;
+  // Kick is server-side owner-only too; the demo (no houseId) keeps the local
+  // placeholder flow so the gallery preview stays interactive.
+  const canKick = isOwner || !currentHouse?.houseId;
+  // Mission creation is owner-only on the server (403 HOUSE_NOT_OWNER).
+  const canCreateMission = !!(onCreateMission && isOwner);
   const missionTargetNum = Number(missionTarget);
   const canSubmitMission =
     missionTitle.trim().length > 0 &&
@@ -244,8 +249,6 @@ export function GroupHouseScreen({
     setMissionTitle('');
     setMissionTarget('10');
   };
-  // Owner tools need the OWNER role and a server house id.
-  const isOwner = currentHouse?.myRole === 'OWNER' && !!currentHouse?.houseId;
   const openEditHouse = () => {
     setEditName(currentHouse?.title ?? '');
     setEditDesc(currentHouse?.description ?? '');
@@ -436,26 +439,28 @@ export function GroupHouseScreen({
                       <Text style={[Typography.supporting, { color: t.primary }]}>위임</Text>
                     </Pressable>
                   ) : null}
-                  <Pressable
-                    onPress={() => setMemberToKick(member)}
-                    disabled={member.isMine || kickedOut}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${member.name} 강퇴`}
-                    style={[
-                      styles.kickBtn,
-                      {
-                        backgroundColor:
-                          member.isMine || kickedOut ? t.surfaceMuted : `${t.danger}22`,
-                      },
-                    ]}>
-                    <Text
+                  {canKick ? (
+                    <Pressable
+                      onPress={() => setMemberToKick(member)}
+                      disabled={member.isMine || kickedOut}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${member.name} 강퇴`}
                       style={[
-                        Typography.supporting,
-                        { color: member.isMine || kickedOut ? t.textDisabled : t.danger },
+                        styles.kickBtn,
+                        {
+                          backgroundColor:
+                            member.isMine || kickedOut ? t.surfaceMuted : `${t.danger}22`,
+                        },
                       ]}>
-                      {kickedOut ? '강퇴됨' : '강퇴'}
-                    </Text>
-                  </Pressable>
+                      <Text
+                        style={[
+                          Typography.supporting,
+                          { color: member.isMine || kickedOut ? t.textDisabled : t.danger },
+                        ]}>
+                        {kickedOut ? '강퇴됨' : '강퇴'}
+                      </Text>
+                    </Pressable>
+                  ) : null}
                 </View>
               );
             })}
