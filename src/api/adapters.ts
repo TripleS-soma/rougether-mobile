@@ -108,10 +108,21 @@ export function toCategoryCreate(
 }
 
 // --- routine ------------------------------------------------------------------
+// Routine and todo server ids live in separate sequences, so a routine and a
+// todo can share the same number. App ids are prefixed by kind ("r12"/"t12") —
+// the merged routines list, the completions map, and per-row lookups all key
+// on the app id, and a collision cross-wires them (kebab menu opening the
+// wrong item, a todo check marking a routine done).
+const routineAppId = (id?: number) => `r${id ?? ''}`;
+const todoAppId = (id?: number) => `t${id ?? ''}`;
+
+/** App item id ("r12"/"t12") → numeric server id for API paths. */
+export const toServerItemId = (id: string) => Number(id.replace(/^[rt]/, ''));
+
 export function toAppRoutine(r: RoutineResponse): Routine {
   const isWeekly = r.repeatType === 'WEEKLY';
   return {
-    id: String(r.id ?? ''),
+    id: routineAppId(r.id),
     title: r.title ?? '',
     category: r.categoryId != null ? String(r.categoryId) : undefined,
     photoVerify: r.authType === 'PHOTO',
@@ -166,7 +177,7 @@ export function toRoutineUpdate(
 // --- todo ---------------------------------------------------------------------
 export function toAppTodo(td: TodoResponse): Routine {
   return {
-    id: String(td.id ?? ''),
+    id: todoAppId(td.id),
     title: td.title ?? '',
     category: td.categoryId != null ? String(td.categoryId) : undefined,
     dueDate: td.dueDate,
@@ -212,7 +223,7 @@ export function toCalendarItems(day: CalendarDayResponse): CalendarDayItem[] {
     const category = g.categoryId != null ? String(g.categoryId) : undefined;
     for (const r of g.routines ?? []) {
       items.push({
-        id: String(r.id ?? ''),
+        id: routineAppId(r.id),
         kind: 'routine',
         title: r.title ?? '',
         time: r.scheduledTime ? fromApiTime(r.scheduledTime) : undefined,
@@ -222,7 +233,7 @@ export function toCalendarItems(day: CalendarDayResponse): CalendarDayItem[] {
     }
     for (const td of g.todos ?? []) {
       items.push({
-        id: String(td.id ?? ''),
+        id: todoAppId(td.id),
         kind: 'todo',
         title: td.title ?? '',
         completed: td.status === 'COMPLETED',
@@ -237,10 +248,10 @@ export function todayCompletions(today: TodayResponse, date: string): Record<str
   const map: Record<string, string[]> = {};
   for (const group of today.categories ?? []) {
     for (const r of group.routines ?? []) {
-      if (r.completed && r.id != null) map[String(r.id)] = [date];
+      if (r.completed && r.id != null) map[routineAppId(r.id)] = [date];
     }
     for (const td of group.todos ?? []) {
-      if (td.status === 'COMPLETED' && td.id != null) map[String(td.id)] = [date];
+      if (td.status === 'COMPLETED' && td.id != null) map[todoAppId(td.id)] = [date];
     }
   }
   return map;

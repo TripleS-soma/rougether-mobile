@@ -39,6 +39,7 @@ import {
   toCalendarItems,
   toCategoryCreate,
   toRoutineCreate,
+  toServerItemId,
   toRoutineUpdate,
   toTodoCreate,
   toTodoUpdate,
@@ -107,8 +108,8 @@ export function useMyRoomData() {
             .filter(isOrphan)
             .map((o) =>
               o.kind === 'todo'
-                ? updateTodo(Number(o.id), toTodoUpdate(o, { category: target }))
-                : apiUpdateRoutine(Number(o.id), toRoutineUpdate(o, { category: target })),
+                ? updateTodo(toServerItemId(o.id), toTodoUpdate(o, { category: target }))
+                : apiUpdateRoutine(toServerItemId(o.id), toRoutineUpdate(o, { category: target })),
             ),
         );
         items = items.map((r) => (isOrphan(r) ? { ...r, category: target } : r));
@@ -179,7 +180,7 @@ export function useMyRoomData() {
       return { ...prev, [id]: wasDone ? dates.filter((d) => d !== date) : [...dates, date] };
     });
     try {
-      const numId = Number(id);
+      const numId = toServerItemId(id);
       let rewardAmount: number | undefined;
       if (item?.kind === 'todo') {
         if (wasDone) await uncompleteTodo(numId);
@@ -223,10 +224,10 @@ export function useMyRoomData() {
     if (!item) return;
     try {
       if (item.kind === 'todo') {
-        const updated = await updateTodo(Number(id), toTodoUpdate(item, n));
+        const updated = await updateTodo(toServerItemId(id), toTodoUpdate(item, n));
         setRoutines((prev) => prev.map((r) => (r.id === id ? toAppTodo(updated) : r)));
       } else {
-        const updated = await apiUpdateRoutine(Number(id), toRoutineUpdate(item, n));
+        const updated = await apiUpdateRoutine(toServerItemId(id), toRoutineUpdate(item, n));
         setRoutines((prev) => prev.map((r) => (r.id === id ? toAppRoutine(updated) : r)));
       }
     } catch {
@@ -239,8 +240,8 @@ export function useMyRoomData() {
     if (!item) return;
     setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, title } : r)));
     try {
-      if (item.kind === 'todo') await updateTodo(Number(id), toTodoUpdate(item, { title }));
-      else await apiUpdateRoutine(Number(id), toRoutineUpdate(item, { title }));
+      if (item.kind === 'todo') await updateTodo(toServerItemId(id), toTodoUpdate(item, { title }));
+      else await apiUpdateRoutine(toServerItemId(id), toRoutineUpdate(item, { title }));
     } catch {
       setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, title: item.title } : r)));
       toast('수정에 실패했어요', 'error');
@@ -252,7 +253,7 @@ export function useMyRoomData() {
     if (!item || item.kind === 'todo') return;
     setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, alarmEnabled, time } : r)));
     try {
-      await apiUpdateRoutine(Number(id), toRoutineUpdate(item, { alarmEnabled, time }));
+      await apiUpdateRoutine(toServerItemId(id), toRoutineUpdate(item, { alarmEnabled, time }));
     } catch {
       setRoutines((prev) =>
         prev.map((r) =>
@@ -268,8 +269,8 @@ export function useMyRoomData() {
     if (!item) return;
     setRoutines((prev) => prev.filter((r) => r.id !== id));
     try {
-      if (item.kind === 'todo') await deleteTodo(Number(id));
-      else await apiDeleteRoutine(Number(id));
+      if (item.kind === 'todo') await deleteTodo(toServerItemId(id));
+      else await apiDeleteRoutine(toServerItemId(id));
     } catch {
       setRoutines((prev) => [...prev, item]);
       toast('삭제에 실패했어요', 'error');

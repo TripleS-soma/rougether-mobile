@@ -6,6 +6,7 @@ import {
   toCalendarItems,
   toCategoryCreate,
   toRoutineCreate,
+  toServerItemId,
   toShopCatalogue,
   toTodoCreate,
   toWallet,
@@ -33,7 +34,7 @@ describe('API adapters', () => {
     };
     const r = toAppRoutine(api);
     expect(r).toMatchObject({
-      id: '12',
+      id: 'r12',
       title: '운동',
       category: '3',
       photoVerify: true,
@@ -81,7 +82,7 @@ describe('API adapters', () => {
         status: 'PENDING',
       }),
     ).toMatchObject({
-      id: '9',
+      id: 't9',
       title: '장보기',
       category: '2',
       dueDate: '2026-07-03',
@@ -92,6 +93,15 @@ describe('API adapters', () => {
       categoryId: 2,
       dueDate: '2026-07-03',
     });
+  });
+
+  it('keeps routine/todo app ids distinct when server ids collide', () => {
+    // Routine and todo ids are separate server sequences — both can be 5.
+    const r = toAppRoutine({ id: 5, title: '루틴' });
+    const td = toAppTodo({ id: 5, title: '투두' });
+    expect(r.id).not.toBe(td.id);
+    expect(toServerItemId(r.id)).toBe(5);
+    expect(toServerItemId(td.id)).toBe(5);
   });
 
   it('reads wallets into coin/dia', () => {
@@ -118,9 +128,9 @@ describe('API adapters', () => {
       ],
     };
     const map = todayCompletions(today, '2026-07-02');
-    expect(map['1']).toEqual(['2026-07-02']);
-    expect(map['2']).toBeUndefined();
-    expect(map['3']).toEqual(['2026-07-02']);
+    expect(map['r1']).toEqual(['2026-07-02']);
+    expect(map['r2']).toBeUndefined();
+    expect(map['t3']).toEqual(['2026-07-02']);
   });
 
   it('flattens a /calendar day into 달력 items with the record-time category', () => {
@@ -136,9 +146,9 @@ describe('API adapters', () => {
       ],
     });
     expect(items).toEqual([
-      { id: '1', kind: 'routine', title: '아침 운동', time: '07:00', completed: true, category: '7' }, // prettier-ignore
-      { id: '2', kind: 'todo', title: '장보기', completed: false, category: '7' },
-      { id: '3', kind: 'routine', title: '미분류 루틴', time: undefined, completed: false, category: undefined }, // prettier-ignore
+      { id: 'r1', kind: 'routine', title: '아침 운동', time: '07:00', completed: true, category: '7' }, // prettier-ignore
+      { id: 't2', kind: 'todo', title: '장보기', completed: false, category: '7' },
+      { id: 'r3', kind: 'routine', title: '미분류 루틴', time: undefined, completed: false, category: undefined }, // prettier-ignore
     ]);
   });
 
