@@ -25,6 +25,10 @@ import { hapticImpact, hapticSuccess } from '@/utils/haptics';
 
 type Phase = 'idle' | 'charging' | 'reveal';
 
+/** Minimum charge-phase duration — keeps the build-up on screen even when the
+ * draw API answers in a few hundred ms. */
+const MIN_CHARGE_MS = 1800;
+
 export type GachaScreenProps = {
   onBack?: () => void;
   /** Machines from the API (`GET /gacha`). */
@@ -76,12 +80,17 @@ export function GachaScreen({
     setError('');
     hapticImpact();
     setPhase('charging');
+    const started = Date.now();
     const results = await onDraw?.(box.id, count);
     if (!results) {
       setPhase('idle');
       setError('뽑기에 실패했어요.');
       return;
     }
+    // The API answers fast — hold the charge build-up so the reveal lands
+    // after a beat of anticipation instead of flashing by.
+    const remain = MIN_CHARGE_MS - (Date.now() - started);
+    if (remain > 0) await new Promise((r) => setTimeout(r, remain));
     setPulled(results);
     setPhase('reveal');
     hapticSuccess();
@@ -216,7 +225,12 @@ export function GachaScreen({
               <Text style={[Typography.h3, styles.overlayText]}>축하해요!</Text>
               <ScrollView style={styles.revealScroll} contentContainerStyle={styles.revealGrid}>
                 {pulled.map((it, idx) => (
-                  <RevealCard key={`${it.name ?? 'item'}-${idx}`} item={it} index={idx} />
+                  <RevealCard
+                    key={`${it.name ?? 'item'}-${idx}`}
+                    item={it}
+                    index={idx}
+                    large={pulled.length === 1}
+                  />
                 ))}
               </ScrollView>
               <Pressable
@@ -286,8 +300,9 @@ function ChargingBox({ icon, accent }: { icon: string; accent: string }) {
   );
 }
 
-/** Reward card that pops in (scale + rotate) with a per-index stagger. */
-function RevealCard({ item, index }: { item: DrawResult; index: number }) {
+/** Reward card that pops in (scale + rotate) with a per-index stagger; a
+ * single pull gets one large hero card. */
+function RevealCard({ item, index, large }: { item: DrawResult; index: number; large?: boolean }) {
   const t = useTokens();
   const p = useRef(new Animated.Value(0)).current;
   const rarityColor = RARITY_COLORS[(item.rarity as Rarity) ?? '일반'] ?? RARITY_COLORS['일반'];
@@ -312,16 +327,21 @@ function RevealCard({ item, index }: { item: DrawResult; index: number }) {
 
   return (
     <Animated.View
-      style={[styles.revealCard, style, { backgroundColor: t.surface, borderColor: rarityColor }]}>
+      style={[
+        styles.revealCard,
+        large && styles.revealCardLarge,
+        style,
+        { backgroundColor: t.surface, borderColor: rarityColor },
+      ]}>
       {isCdnKey(item.assetKey) ? (
         <Image
           source={assetSource(item.assetKey)}
-          style={styles.revealArt}
+          style={large ? styles.revealArtLarge : styles.revealArt}
           contentFit="contain"
           transition={120}
         />
       ) : (
-        <Icon name="gift" size={34} color={rarityColor} />
+        <Icon name="gift" size={large ? 72 : 34} color={rarityColor} />
       )}
       <Text style={[styles.revealBadge, { backgroundColor: rarityColor }]}>
         {item.rarity ?? '일반'}
@@ -427,8 +447,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  revealCardLarge: {
+    width: 220,
+    paddingVertical: Spacing.five,
+    gap: Spacing.two,
+  },
+  revealArtLarge: {
+    width: 150,
+    height: 150,
+  },
   revealCard: {
-    width: 96,
+    width: 104,
     borderRadius: Radius.md,
     borderWidth: 2,
     paddingVertical: Spacing.three,
@@ -437,8 +466,8 @@ const styles = StyleSheet.create({
     gap: Spacing.one,
   },
   revealArt: {
-    width: 48,
-    height: 48,
+    width: 68,
+    height: 68,
   },
   revealBadge: {
     color: '#FFFFFF',
