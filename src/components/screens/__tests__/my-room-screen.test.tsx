@@ -125,11 +125,22 @@ describe('MyRoomScreen', () => {
     await fireEvent.press(getByLabelText(OTHER_DAY));
     expect(onSelectDate).toHaveBeenCalledWith(OTHER_DAY);
     expect(getByText('옛 카테고리 루틴')).toBeTruthy();
+    // Grouped under the record-time (deleted) category, like the room tab.
+    expect(getByText('옛것')).toBeTruthy();
     expect(getByText('완료 체크는 오늘 날짜에서만 할 수 있어요.')).toBeTruthy();
 
     // Read-only: the server-backed row is not a toggle.
     await fireEvent.press(getByText('옛 카테고리 루틴'));
     expect(onToggleCompletion).not.toHaveBeenCalled();
+  });
+
+  it('groups the 달력 list by category like the room tab', async () => {
+    const { getByText, getAllByText } = await render(<MyRoomScreen routines={SAMPLE_ROUTINES} />);
+    await fireEvent.press(getByText('달력'));
+    // Today's list renders under category headers (emoji + label + count).
+    expect(getAllByText('일정').length).toBeGreaterThan(0);
+    expect(getAllByText('건강').length).toBeGreaterThan(0);
+    expect(getByText('아침 7시 기상')).toBeTruthy();
   });
 
   it('shows a spinner while a picked date is still loading from the server', async () => {

@@ -254,6 +254,37 @@ export function MyRoomScreen({
   const serverBackedDay = !!onSelectDate && selectedDate !== today;
   const dayItems = serverBackedDay ? calendarDays?.[selectedDate] : undefined;
 
+  // 달력 lists mirror the room tab's category sections (emoji + colored label
+  // + done count); only non-empty groups render — the calendar has no
+  // quick-add, so empty headers would add nothing.
+  const calGroupsBase =
+    categories.length > 0 ? categories : dateRoutines.length > 0 ? [UNCATEGORIZED_META] : [];
+  const calClientGroups = calGroupsBase
+    .map((cat, idx) => {
+      const isFallback = idx === calGroupsBase.length - 1;
+      const items = dateRoutines.filter(
+        (r) =>
+          r.category === cat.id || (isFallback && (!r.category || !knownIds.includes(r.category))),
+      );
+      return { meta: cat, items };
+    })
+    .filter((g) => g.items.length > 0);
+  // Server days group by the record-time categoryId (kept in server order:
+  // categoryId asc, 미분류 last); deleted categories resolve via catMeta.
+  const calServerGroups = dayItems
+    ? (() => {
+        const byCat = new Map<string, CalendarDayItem[]>();
+        for (const item of dayItems) {
+          const key = item.category ?? '';
+          byCat.set(key, [...(byCat.get(key) ?? []), item]);
+        }
+        return Array.from(byCat, ([key, items]) => ({
+          meta: catMeta.find((c) => c.id === key) ?? UNCATEGORIZED_META,
+          items,
+        }));
+      })()
+    : undefined;
+
   // Scroll the tapped category's quick-add input into view (above the keyboard).
   const scrollRef = useRef<ScrollView>(null);
   const addRowRef = useRef<View>(null);
@@ -681,96 +712,121 @@ export function MyRoomScreen({
                   <ActivityIndicator color={t.primary} />
                 </View>
               ) : serverBackedDay ? (
-                dayItems!.length === 0 ? (
+                calServerGroups!.length === 0 ? (
                   <Text style={[Typography.body, styles.calEmpty, { color: t.textMuted }]}>
                     예정된 루틴이 없어요.
                   </Text>
                 ) : (
-                  dayItems!.map((item) => {
-                    const catColor =
-                      catMeta.find((c) => c.id === item.category)?.color ?? t.primary;
-                    return (
-                      <View
-                        key={`${item.kind}-${item.id}`}
-                        accessibilityRole="text"
-                        accessibilityLabel={item.title}
-                        style={styles.routineRow}>
-                        <View style={styles.rowMain}>
-                          <Icon
-                            name={item.completed ? 'checkbox-on' : 'checkbox-off'}
-                            size={22}
-                            color={item.completed ? catColor : t.textDisabled}
-                          />
-                          <View style={styles.flex}>
-                            <Text
-                              style={[
-                                Typography.body,
-                                item.completed
-                                  ? { color: t.textMuted, textDecorationLine: 'line-through' }
-                                  : { color: t.text },
-                              ]}>
-                              {item.title}
-                            </Text>
-                            {item.time ? (
-                              <View style={styles.badge}>
-                                <Icon name="bell" size={12} color={t.textMuted} />
-                                <Text style={[styles.badgeText, { color: t.textMuted }]}>
-                                  {formatTime(item.time)}
-                                </Text>
-                              </View>
-                            ) : null}
+                  calServerGroups!.map((group, gi) => (
+                    <View key={group.meta.id || `etc-${gi}`} style={styles.group}>
+                      <View style={styles.catHeader}>
+                        <View style={[styles.catDot, { backgroundColor: `${group.meta.color}33` }]}>
+                          <Text style={styles.catEmoji}>{group.meta.emoji}</Text>
+                        </View>
+                        <Text style={[Typography.label, { color: group.meta.color }]}>
+                          {group.meta.label}
+                        </Text>
+                        <Text style={[Typography.supporting, { color: t.textDisabled }]}>
+                          {group.items.filter((i) => i.completed).length}/{group.items.length}
+                        </Text>
+                      </View>
+                      {group.items.map((item) => (
+                        <View
+                          key={`${item.kind}-${item.id}`}
+                          accessibilityRole="text"
+                          accessibilityLabel={item.title}
+                          style={styles.routineRow}>
+                          <View style={styles.rowMain}>
+                            <Icon
+                              name={item.completed ? 'checkbox-on' : 'checkbox-off'}
+                              size={22}
+                              color={item.completed ? group.meta.color : t.textDisabled}
+                            />
+                            <View style={styles.flex}>
+                              <Text
+                                style={[
+                                  Typography.body,
+                                  item.completed
+                                    ? { color: t.textMuted, textDecorationLine: 'line-through' }
+                                    : { color: t.text },
+                                ]}>
+                                {item.title}
+                              </Text>
+                              {item.time ? (
+                                <View style={styles.badge}>
+                                  <Icon name="bell" size={12} color={t.textMuted} />
+                                  <Text style={[styles.badgeText, { color: t.textMuted }]}>
+                                    {formatTime(item.time)}
+                                  </Text>
+                                </View>
+                              ) : null}
+                            </View>
                           </View>
                         </View>
-                      </View>
-                    );
-                  })
+                      ))}
+                    </View>
+                  ))
                 )
-              ) : dateRoutines.length === 0 ? (
+              ) : calClientGroups.length === 0 ? (
                 <Text style={[Typography.body, styles.calEmpty, { color: t.textMuted }]}>
                   예정된 루틴이 없어요.
                 </Text>
               ) : (
-                dateRoutines.map((routine) => {
-                  const catColor =
-                    categories.find((c) => c.id === routine.category)?.color ?? t.primary;
-                  const done = isDone(routine.id, selectedDate);
-                  return (
-                    <Pressable
-                      key={routine.id}
-                      onPress={() => handleToggle(routine, selectedDate)}
-                      accessibilityRole="checkbox"
-                      accessibilityState={{ checked: done }}
-                      accessibilityLabel={routine.title}
-                      style={styles.routineRow}>
-                      <View style={styles.rowMain}>
-                        <Icon
-                          name={done ? 'checkbox-on' : 'checkbox-off'}
-                          size={22}
-                          color={done ? catColor : t.textDisabled}
-                        />
-                        <View style={styles.flex}>
-                          <Text
-                            style={[
-                              Typography.body,
-                              done
-                                ? { color: t.textMuted, textDecorationLine: 'line-through' }
-                                : { color: t.text },
-                            ]}>
-                            {routine.title}
-                          </Text>
-                          {routine.alarmEnabled && routine.time ? (
-                            <View style={styles.badge}>
-                              <Icon name="bell" size={12} color={t.textMuted} />
-                              <Text style={[styles.badgeText, { color: t.textMuted }]}>
-                                {formatTime(routine.time)}
-                              </Text>
-                            </View>
-                          ) : null}
-                        </View>
+                calClientGroups.map((group, gi) => (
+                  <View key={group.meta.id || `etc-${gi}`} style={styles.group}>
+                    <View style={styles.catHeader}>
+                      <View style={[styles.catDot, { backgroundColor: `${group.meta.color}33` }]}>
+                        <Text style={styles.catEmoji}>{group.meta.emoji}</Text>
                       </View>
-                    </Pressable>
-                  );
-                })
+                      <Text style={[Typography.label, { color: group.meta.color }]}>
+                        {group.meta.label}
+                      </Text>
+                      <Text style={[Typography.supporting, { color: t.textDisabled }]}>
+                        {group.items.filter((r) => isDone(r.id, selectedDate)).length}/
+                        {group.items.length}
+                      </Text>
+                    </View>
+                    {group.items.map((routine) => {
+                      const done = isDone(routine.id, selectedDate);
+                      return (
+                        <Pressable
+                          key={routine.id}
+                          onPress={() => handleToggle(routine, selectedDate)}
+                          accessibilityRole="checkbox"
+                          accessibilityState={{ checked: done }}
+                          accessibilityLabel={routine.title}
+                          style={styles.routineRow}>
+                          <View style={styles.rowMain}>
+                            <Icon
+                              name={done ? 'checkbox-on' : 'checkbox-off'}
+                              size={22}
+                              color={done ? group.meta.color : t.textDisabled}
+                            />
+                            <View style={styles.flex}>
+                              <Text
+                                style={[
+                                  Typography.body,
+                                  done
+                                    ? { color: t.textMuted, textDecorationLine: 'line-through' }
+                                    : { color: t.text },
+                                ]}>
+                                {routine.title}
+                              </Text>
+                              {routine.alarmEnabled && routine.time ? (
+                                <View style={styles.badge}>
+                                  <Icon name="bell" size={12} color={t.textMuted} />
+                                  <Text style={[styles.badgeText, { color: t.textMuted }]}>
+                                    {formatTime(routine.time)}
+                                  </Text>
+                                </View>
+                              ) : null}
+                            </View>
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                ))
               )}
             </View>
           )}
