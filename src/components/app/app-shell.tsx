@@ -147,6 +147,7 @@ export function AppShell({
     createRoutineCategory,
     updateRoutineCategory,
     deleteRoutineCategory,
+    reorderCategories,
   } = useMyRoomData();
 
   // Gacha machines + draw (spend + dupe→dia handled server-side; wallet synced
@@ -282,6 +283,9 @@ export function AppShell({
             onCreateCategory={createRoutineCategory}
             onUpdateCategory={updateRoutineCategory}
             onDeleteCategory={deleteRoutineCategory}
+            onReorderCategories={(orderedIds) => {
+              void reorderCategories(orderedIds);
+            }}
             onOpenGacha={() => setScreen('gacha')}
             onQuickAddRoutine={quickAddTodo}
             onRenameRoutine={renameRoutine}

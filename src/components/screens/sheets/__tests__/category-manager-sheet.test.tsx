@@ -23,6 +23,50 @@ describe('CategoryManagerSheet', () => {
     expect(getByText(`내 카테고리 (${ROUTINE_CATEGORIES.length})`)).toBeTruthy();
   });
 
+  it('reorders categories via long-press move mode', async () => {
+    const onReorder = jest.fn();
+    const { getByLabelText, queryByLabelText } = await render(
+      <CategoryManagerSheet
+        visible
+        categories={ROUTINE_CATEGORIES}
+        onCreate={noop}
+        onDelete={noop}
+        onReorder={onReorder}
+        onClose={noop}
+      />,
+    );
+
+    // Move buttons appear only after a long press on the row.
+    expect(queryByLabelText('일정 아래로 이동')).toBeNull();
+    await fireEvent(getByLabelText('일정 카테고리'), 'longPress');
+    await fireEvent.press(getByLabelText('일정 아래로 이동'));
+
+    const ids = ROUTINE_CATEGORIES.map((c) => c.id);
+    [ids[0], ids[1]] = [ids[1], ids[0]];
+    expect(onReorder).toHaveBeenCalledWith(ids);
+
+    // 완료 exits move mode.
+    await fireEvent.press(getByLabelText('순서 이동 완료'));
+    expect(queryByLabelText('일정 아래로 이동')).toBeNull();
+  });
+
+  it('does not move the first category up', async () => {
+    const onReorder = jest.fn();
+    const { getByLabelText } = await render(
+      <CategoryManagerSheet
+        visible
+        categories={ROUTINE_CATEGORIES}
+        onCreate={noop}
+        onDelete={noop}
+        onReorder={onReorder}
+        onClose={noop}
+      />,
+    );
+    await fireEvent(getByLabelText('일정 카테고리'), 'longPress');
+    await fireEvent.press(getByLabelText('일정 위로 이동'));
+    expect(onReorder).not.toHaveBeenCalled();
+  });
+
   it('deletes an existing category', async () => {
     const onDelete = jest.fn();
     const { getByLabelText } = await render(

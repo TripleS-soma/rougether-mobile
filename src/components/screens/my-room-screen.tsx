@@ -122,6 +122,8 @@ export type MyRoomScreenProps = {
   onUpdateCategory?: (id: string, category: RoutineCategoryMeta) => void;
   /** Delete a category (카테고리 관리 sheet). */
   onDeleteCategory?: (id: string) => void;
+  /** Persist a new category order (카테고리 관리 sheet, long-press to move). */
+  onReorderCategories?: (orderedIds: string[]) => void;
   /** Toggle a routine's completion on a specific date ("YYYY-MM-DD"). */
   onToggleCompletion?: (id: string, date: string) => void;
   onOpenGacha?: () => void;
@@ -177,6 +179,7 @@ export function MyRoomScreen({
   onCreateCategory,
   onUpdateCategory,
   onDeleteCategory,
+  onReorderCategories,
   onToggleCompletion,
   onOpenGacha,
   onQuickAddRoutine,
@@ -1044,6 +1047,7 @@ export function MyRoomScreen({
         onCreate={(cat) => onCreateCategory?.(cat)}
         onUpdate={(id, cat) => onUpdateCategory?.(id, cat)}
         onDelete={(id) => onDeleteCategory?.(id)}
+        onReorder={onReorderCategories}
         onClose={() => setCategorySheetOpen(false)}
       />
 

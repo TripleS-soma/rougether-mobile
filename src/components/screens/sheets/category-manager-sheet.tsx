@@ -43,6 +43,8 @@ export type CategoryManagerSheetProps = {
   /** Save edits to an existing category (name/emoji/visibility). */
   onUpdate?: (id: string, category: RoutineCategoryMeta) => void;
   onDelete: (id: string) => void;
+  /** Persist a new category order (ids top→bottom; long-press a row to move). */
+  onReorder?: (orderedIds: string[]) => void;
   onClose: () => void;
 };
 
@@ -59,6 +61,7 @@ export function CategoryManagerSheet({
   onCreate,
   onUpdate,
   onDelete,
+  onReorder,
   onClose,
 }: CategoryManagerSheetProps) {
   const t = useTokens();
@@ -68,8 +71,19 @@ export function CategoryManagerSheet({
   const [pendingDelete, setPendingDelete] = useState<RoutineCategoryMeta | null>(null);
   // When set, the form edits this category instead of creating a new one.
   const [editing, setEditing] = useState<RoutineCategoryMeta | null>(null);
+  // Long-pressed row in move mode: its edit/delete buttons become ▲▼.
+  const [movingId, setMovingId] = useState<string | null>(null);
 
   if (!visible) return null;
+
+  const moveCategory = (id: string, dir: -1 | 1) => {
+    const from = categories.findIndex((c) => c.id === id);
+    const to = from + dir;
+    if (from < 0 || to < 0 || to >= categories.length) return;
+    const ids = categories.map((c) => c.id);
+    [ids[from], ids[to]] = [ids[to], ids[from]];
+    onReorder?.(ids);
+  };
 
   const canSubmit = name.trim().length > 0;
 
@@ -214,36 +228,104 @@ export function CategoryManagerSheet({
           <Text style={[Typography.label, styles.listTitle, { color: t.text }]}>
             내 카테고리 ({categories.length})
           </Text>
+          {onReorder ? (
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              카테고리를 꾹 누르면 순서를 바꿀 수 있어요.
+            </Text>
+          ) : null}
           <View style={styles.catList}>
-            {categories.map((c) => (
-              <View
-                key={c.id}
-                style={[styles.catRow, { backgroundColor: t.surface, borderLeftColor: c.color }]}>
-                <View style={[styles.catDot, { backgroundColor: `${c.color}33` }]}>
-                  <Text style={styles.catEmoji}>{c.emoji}</Text>
-                </View>
-                <View style={styles.flex}>
-                  <Text style={[Typography.body, { color: t.text }]}>{c.label}</Text>
-                  <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                    {VISIBILITY_LABELS[c.visibility]}
-                  </Text>
-                </View>
+            {categories.map((c, idx) => {
+              const moving = movingId === c.id;
+              return (
                 <Pressable
-                  onPress={() => startEdit(c)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${c.label} 수정`}
-                  style={[styles.del, { backgroundColor: t.surfaceMuted }]}>
-                  <Icon name="edit" size={16} color={t.text} />
+                  key={c.id}
+                  onLongPress={onReorder ? () => setMovingId(moving ? null : c.id) : undefined}
+                  accessibilityLabel={`${c.label} 카테고리`}
+                  accessibilityHint={onReorder ? '꾹 누르면 순서 이동 모드가 켜져요' : undefined}
+                  style={[
+                    styles.catRow,
+                    { backgroundColor: t.surface, borderLeftColor: c.color },
+                    moving && { borderWidth: 2, borderColor: t.primary, borderLeftWidth: 4 },
+                  ]}>
+                  <View style={[styles.catDot, { backgroundColor: `${c.color}33` }]}>
+                    <Text style={styles.catEmoji}>{c.emoji}</Text>
+                  </View>
+                  <View style={styles.flex}>
+                    <Text style={[Typography.body, { color: t.text }]}>{c.label}</Text>
+                    <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                      {moving
+                        ? '순서 이동 중 — 완료를 누르면 끝나요'
+                        : VISIBILITY_LABELS[c.visibility]}
+                    </Text>
+                  </View>
+                  {moving ? (
+                    <>
+                      <Pressable
+                        onPress={() => moveCategory(c.id, -1)}
+                        disabled={idx === 0}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${c.label} 위로 이동`}
+                        style={[
+                          styles.del,
+                          { backgroundColor: idx === 0 ? t.surfaceMuted : `${t.primary}22` },
+                        ]}>
+                        <Text
+                          style={[
+                            styles.moveGlyph,
+                            { color: idx === 0 ? t.textDisabled : t.primary },
+                          ]}>
+                          ▲
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => moveCategory(c.id, 1)}
+                        disabled={idx === categories.length - 1}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${c.label} 아래로 이동`}
+                        style={[
+                          styles.del,
+                          {
+                            backgroundColor:
+                              idx === categories.length - 1 ? t.surfaceMuted : `${t.primary}22`,
+                          },
+                        ]}>
+                        <Text
+                          style={[
+                            styles.moveGlyph,
+                            { color: idx === categories.length - 1 ? t.textDisabled : t.primary },
+                          ]}>
+                          ▼
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => setMovingId(null)}
+                        accessibilityRole="button"
+                        accessibilityLabel="순서 이동 완료"
+                        style={[styles.del, { backgroundColor: t.primary }]}>
+                        <Icon name="check" size={16} color={t.onPrimary} />
+                      </Pressable>
+                    </>
+                  ) : (
+                    <>
+                      <Pressable
+                        onPress={() => startEdit(c)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${c.label} 수정`}
+                        style={[styles.del, { backgroundColor: t.surfaceMuted }]}>
+                        <Icon name="edit" size={16} color={t.text} />
+                      </Pressable>
+                      <Pressable
+                        onPress={() => setPendingDelete(c)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${c.label} 삭제`}
+                        style={[styles.del, { backgroundColor: `${t.danger}22` }]}>
+                        <Icon name="trash" size={16} color={t.danger} />
+                      </Pressable>
+                    </>
+                  )}
                 </Pressable>
-                <Pressable
-                  onPress={() => setPendingDelete(c)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${c.label} 삭제`}
-                  style={[styles.del, { backgroundColor: `${t.danger}22` }]}>
-                  <Icon name="trash" size={16} color={t.danger} />
-                </Pressable>
-              </View>
-            ))}
+              );
+            })}
           </View>
         </ScrollView>
       </View>
@@ -392,6 +474,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   catEmoji: { fontSize: 16 },
+  moveGlyph: { fontSize: 14, fontWeight: '700' },
   del: {
     width: 36,
     height: 36,

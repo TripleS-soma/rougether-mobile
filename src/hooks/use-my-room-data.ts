@@ -315,6 +315,25 @@ export function useMyRoomData() {
     }
   };
 
+  /** Persist a new category order (ids top→bottom) — sortOrder = list index. */
+  const reorderCategories = async (orderedIds: string[]) => {
+    const byId = new Map(categories.map((c) => [c.id, c]));
+    const next = orderedIds.map((id) => byId.get(id)).filter((c): c is RoutineCategoryMeta => !!c);
+    if (next.length !== categories.length) return;
+    const before = categories;
+    setCategories(next);
+    setAllCategories([...next, ...allCategories.filter((c) => c.deleted)]);
+    try {
+      await Promise.all(
+        next.map((cat, i) => apiUpdateCategory(Number(cat.id), toCategoryCreate(cat, i))),
+      );
+    } catch {
+      setCategories(before);
+      setAllCategories([...before, ...allCategories.filter((c) => c.deleted)]);
+      toast('카테고리 순서 저장에 실패했어요', 'error');
+    }
+  };
+
   const deleteRoutineCategory = async (id: string) => {
     // The server refuses to delete a category that still has routines/todos
     // (409 CATEGORY_IN_USE) — check first so the category doesn't flicker away.
@@ -363,5 +382,6 @@ export function useMyRoomData() {
     createRoutineCategory,
     updateRoutineCategory,
     deleteRoutineCategory,
+    reorderCategories,
   };
 }
