@@ -463,6 +463,7 @@ export function toGroupHouse(
       (m.userId === myUserId && myNickname ? myNickname : `멤버 ${m.userId ?? i + 1}`),
     color: m.userId === myUserId ? MY_ROOM_TINT : ROOM_TINTS[i % ROOM_TINTS.length],
     isMine: m.userId === myUserId,
+    isOwner: m.role === 'OWNER',
     membershipId: m.membershipId,
     userId: m.userId,
   }));

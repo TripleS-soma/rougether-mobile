@@ -21,6 +21,8 @@ export type RoomCell = {
   /** Tile background tint (kept from the prototype palette). */
   color: string;
   isMine?: boolean;
+  /** This member is the house OWNER (👑 on the tile + 방장 badge). */
+  isOwner?: boolean;
   /** API membership id — enables the server kick action when provided. */
   membershipId?: number;
   /** API user id — the friend's room owner id (guestbook, room visit). */
@@ -103,7 +105,7 @@ const DEFAULT_HOUSES: House[] = [
       {
         level: '2층',
         rooms: [
-          { name: '최준서', color: '#F5E1D8' },
+          { name: '최준서', color: '#F5E1D8', isOwner: true },
           { name: '장진형', color: '#D9E8D4' },
         ],
       },
@@ -124,7 +126,7 @@ const DEFAULT_HOUSES: House[] = [
       {
         level: '2층',
         rooms: [
-          { name: '김도현', color: '#E4DCF0' },
+          { name: '김도현', color: '#E4DCF0', isOwner: true },
           { name: '박서연', color: '#FBE0D8' },
         ],
       },
@@ -401,6 +403,15 @@ export function GroupHouseScreen({
                   <View style={styles.flex}>
                     <View style={styles.memberNameRow}>
                       <Text style={[Typography.label, { color: t.text }]}>{member.name}</Text>
+                      {member.isOwner ? (
+                        <Text
+                          style={[
+                            styles.myBadge,
+                            { backgroundColor: `${t.primary}22`, color: t.primary },
+                          ]}>
+                          👑 방장
+                        </Text>
+                      ) : null}
                       {member.isMine ? (
                         <Text
                           style={[styles.myBadge, { backgroundColor: t.warning, color: t.text }]}>
@@ -782,7 +793,9 @@ export function GroupHouseScreen({
                         <CharacterAvatar characterId={characterId} size={64} />
                       )}
                       <Text style={[Typography.supporting, styles.roomName, { color: t.text }]}>
-                        {empty ? '빈방' : room.isMine ? `${room.name} (나)` : room.name}
+                        {empty
+                          ? '빈방'
+                          : `${room.isOwner ? '👑 ' : ''}${room.isMine ? `${room.name} (나)` : room.name}`}
                       </Text>
                     </Pressable>
                   );
