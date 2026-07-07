@@ -17,7 +17,7 @@ import type { DrawResult } from '@/api/types';
 import { Icon } from '@/components/ui/icon';
 import { WalletPills } from '@/components/ui/wallet-pills';
 import { Radius, Spacing, Typography } from '@/constants/theme';
-import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 import { assetSource, isCdnKey } from '@/resources/asset';
 import { RARITY_COLORS, type Rarity } from '@/resources/furniture';
@@ -61,6 +61,7 @@ export function GachaScreen({
   onDraw,
 }: GachaScreenProps) {
   const t = useTokens();
+  const headerInset = useHeaderInsetStyle();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [phase, setPhase] = useState<Phase>('idle');
@@ -102,8 +103,8 @@ export function GachaScreen({
   };
 
   return (
-    <View style={[styles.screen, useScreenStyle()]}>
-      <View style={[styles.header, { backgroundColor: t.surface }]}>
+    <View style={[styles.screen, useScreenStyle([])]}>
+      <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
         <Pressable
           onPress={onBack}
           accessibilityRole="button"

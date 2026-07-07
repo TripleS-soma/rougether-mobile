@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Field } from '@/components/ui/field';
 import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing } from '@/constants/theme';
-import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 
 export type SignupScreenProps = {
@@ -20,6 +20,7 @@ export type SignupScreenProps = {
  */
 export function SignupScreen({ onBack }: SignupScreenProps) {
   const t = useTokens();
+  const headerInset = useHeaderInsetStyle();
 
   const [nickname, setNickname] = useState('');
   const [email, setEmail] = useState('');
@@ -99,8 +100,8 @@ export function SignupScreen({ onBack }: SignupScreenProps) {
   const sendDisabled = !emailValid || emailVerified || secondsLeft > 150;
 
   return (
-    <View style={[styles.screen, useScreenStyle()]}>
-      <View style={[styles.header, { backgroundColor: t.surface }]}>
+    <View style={[styles.screen, useScreenStyle([])]}>
+      <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
         <Pressable
           onPress={onBack}
           accessibilityRole="button"

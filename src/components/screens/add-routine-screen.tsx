@@ -14,7 +14,7 @@ import {
 } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
-import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 import { formatDate, formatTime } from '@/utils/datetime';
 
@@ -66,6 +66,7 @@ export function AddRoutineScreen({
   onDeleteCategory,
 }: AddRoutineScreenProps) {
   const t = useTokens();
+  const headerInset = useHeaderInsetStyle();
   const isEdit = Boolean(editRoutine);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [title, setTitle] = useState(editRoutine?.title ?? '');
@@ -110,8 +111,8 @@ export function AddRoutineScreen({
   };
 
   return (
-    <View style={[styles.screen, useScreenStyle()]}>
-      <View style={[styles.header, { backgroundColor: t.surface }]}>
+    <View style={[styles.screen, useScreenStyle([])]}>
+      <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
         <Pressable
           onPress={onBack}
           accessibilityRole="button"

@@ -20,7 +20,7 @@ import { Icon } from '@/components/ui/icon';
 import { PendingNotice } from '@/components/ui/pending-notice';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { type FurnitureItem, type Wallpaper } from '@/resources/furniture';
-import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 import { formatTime } from '@/utils/datetime';
 
@@ -110,6 +110,7 @@ export function FriendRoomScreen({
   onLoadMoreGuestbook,
 }: FriendRoomScreenProps) {
   const t = useTokens();
+  const headerInset = useHeaderInsetStyle();
   const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
   const completedCount = routines.filter((r) => r.completed).length;
   const progress = routines.length > 0 ? completedCount / routines.length : 0;
@@ -152,8 +153,8 @@ export function FriendRoomScreen({
   }, [inputFocused, keyboardPad]);
 
   return (
-    <View style={[styles.screen, useScreenStyle()]}>
-      <View style={[styles.header, { backgroundColor: t.surface }]}>
+    <View style={[styles.screen, useScreenStyle([])]}>
+      <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
         <Pressable
           onPress={onBack}
           accessibilityRole="button"

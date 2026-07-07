@@ -2,6 +2,7 @@ import { useContext } from 'react';
 import { type ViewStyle } from 'react-native';
 import { type Edge, SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
+import { Spacing } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
 
 const ZERO_INSETS = { top: 0, bottom: 0, left: 0, right: 0 };
@@ -26,4 +27,17 @@ export function useScreenStyle(edges: Edge[] = ['top']): ViewStyle {
     paddingLeft: edges.includes('left') ? insets.left : 0,
     paddingRight: edges.includes('right') ? insets.right : 0,
   };
+}
+
+/**
+ * Header top padding that extends the header's own background color under the
+ * status bar, so the status bar and header read as one bar. Use on screens
+ * whose header is a colored bar (t.surface): switch the root to
+ * `useScreenStyle([])` (so the root doesn't also pad the top) and append this
+ * AFTER the header's base style — it only overrides paddingTop
+ * (inset + the header's usual vertical padding).
+ */
+export function useHeaderInsetStyle(basePadding: number = Spacing.three): ViewStyle {
+  const insets = useContext(SafeAreaInsetsContext) ?? ZERO_INSETS;
+  return { paddingTop: insets.top + basePadding };
 }

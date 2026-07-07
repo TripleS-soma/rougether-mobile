@@ -8,7 +8,7 @@ import {
 } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
-import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 import { formatTime } from '@/utils/datetime';
 
@@ -41,13 +41,14 @@ export function RoutineManageScreen({
   onEdit,
 }: RoutineManageScreenProps) {
   const t = useTokens();
+  const headerInset = useHeaderInsetStyle();
   const knownIds = categories.map((c) => c.id);
   // With no categories, uncategorized routines still need a group to render in.
   const groups = categories.length > 0 ? categories : [UNCATEGORIZED_META];
 
   return (
-    <View style={[styles.screen, useScreenStyle()]}>
-      <View style={[styles.header, { backgroundColor: t.surface }]}>
+    <View style={[styles.screen, useScreenStyle([])]}>
+      <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
         <View style={styles.headerLeft}>
           <Pressable
             onPress={onBack}

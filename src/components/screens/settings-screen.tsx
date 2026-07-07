@@ -3,7 +3,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 
 import { Icon, type IconName } from '@/components/ui/icon';
 import { DEFAULT_THEME_ID, Radius, Spacing, type ThemeId, Typography } from '@/constants/theme';
-import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 
 type ThemeOption = { id: ThemeId; name: string; description: string };
@@ -49,6 +49,7 @@ export function SettingsScreen({
   onLogout,
 }: SettingsScreenProps) {
   const t = useTokens();
+  const headerInset = useHeaderInsetStyle();
   // Logging out drops the session immediately, so gate it behind a confirm.
   const [confirmLogout, setConfirmLogout] = useState(false);
 
@@ -78,8 +79,8 @@ export function SettingsScreen({
   ];
 
   return (
-    <View style={[styles.screen, useScreenStyle()]}>
-      <View style={[styles.header, { backgroundColor: t.surface }]}>
+    <View style={[styles.screen, useScreenStyle([])]}>
+      <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
         <Text style={[Typography.h2, { color: t.text }]}>설정</Text>
         <Text style={[Typography.supporting, { color: t.textMuted }]}>앱 환경을 관리해보세요.</Text>
       </View>
