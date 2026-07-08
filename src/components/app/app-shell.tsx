@@ -190,6 +190,7 @@ export function AppShell({
     error: shopError,
     retry: retryShop,
     purchase: purchaseFurniture,
+    refreshOwned,
     savePlacement,
   } = useShop(setWallet);
 
@@ -377,7 +378,13 @@ export function AppShell({
             coinBalance={wallet.coin}
             diaBalance={wallet.dia}
             onBack={() => setScreen('myRoom')}
-            onDraw={drawGachaMachine}
+            onDraw={async (gachaId, count) => {
+              const results = await drawGachaMachine(gachaId, count);
+              // Drawn items land in the inventory — re-sync so 방 꾸미기 shows
+              // them as 보유중 and placement saves know their userItemId.
+              if (results?.some((r) => r.itemId != null && !r.converted)) void refreshOwned();
+              return results;
+            }}
           />
         ) : null}
 
