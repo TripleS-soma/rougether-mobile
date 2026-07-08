@@ -208,8 +208,10 @@ export function useHouses() {
       await createHouseMission(houseId, input);
       toast('새 미션을 만들었어요!', 'success');
       await reloadMyHouses();
-    } catch {
-      toast('미션 만들기에 실패했어요', 'error');
+    } catch (err) {
+      // The server restricts mission creation to the OWNER (403).
+      const notOwner = err instanceof ApiError && err.bodyText?.includes('HOUSE_NOT_OWNER');
+      toast(notOwner ? '방장만 미션을 만들 수 있어요' : '미션 만들기에 실패했어요', 'error');
     }
   };
 

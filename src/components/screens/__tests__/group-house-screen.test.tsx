@@ -112,11 +112,17 @@ describe('GroupHouseScreen', () => {
         houses={[{ ...MISSION_HOUSE, myRole: 'MEMBER' }]}
         onUpdateHouse={jest.fn()}
         onTransferOwnership={jest.fn()}
+        onKickMember={jest.fn()}
+        onCreateMission={jest.fn()}
       />,
     );
+    // Mission creation is owner-only on the server (403 HOUSE_NOT_OWNER).
+    expect(queryByLabelText('미션 만들기')).toBeNull();
     await fireEvent.press(getByLabelText('구성원 목록'));
     expect(queryByLabelText('집 정보 수정')).toBeNull();
     expect(queryByLabelText('친구 방장 위임')).toBeNull();
+    // Kick is owner-only too.
+    expect(queryByLabelText('친구 강퇴')).toBeNull();
   });
 
   it('reissues the invite code after confirming (owner)', async () => {
@@ -222,6 +228,8 @@ describe('GroupHouseScreen', () => {
         houseId: 7,
         title: '실집',
         inviteCode: 'ABC-123',
+        // Kick is owner-only — a server-backed house shows it just to the OWNER.
+        myRole: 'OWNER' as const,
         floors: [
           {
             level: '1층',
