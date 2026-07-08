@@ -606,11 +606,13 @@ export function MyRoomScreen({
                                       accessibilityState={{ checked: done }}
                                       accessibilityLabel={routine.title}
                                       style={styles.rowMain}>
-                                      <Icon
-                                        name={done ? 'checkbox-on' : 'checkbox-off'}
-                                        size={22}
-                                        color={done ? cat.color : t.textDisabled}
-                                      />
+                                      <View style={styles.leadIcon}>
+                                        <Icon
+                                          name={done ? 'checkbox-on' : 'checkbox-off'}
+                                          size={22}
+                                          color={done ? cat.color : t.textDisabled}
+                                        />
+                                      </View>
                                       <View style={styles.flex}>
                                         <Text
                                           style={[
@@ -759,11 +761,13 @@ export function MyRoomScreen({
                           accessibilityLabel={item.title}
                           style={styles.routineRow}>
                           <View style={styles.rowMain}>
-                            <Icon
-                              name={item.completed ? 'checkbox-on' : 'checkbox-off'}
-                              size={22}
-                              color={item.completed ? group.meta.color : t.textDisabled}
-                            />
+                            <View style={styles.leadIcon}>
+                              <Icon
+                                name={item.completed ? 'checkbox-on' : 'checkbox-off'}
+                                size={22}
+                                color={item.completed ? group.meta.color : t.textDisabled}
+                              />
+                            </View>
                             <View style={styles.flex}>
                               <Text
                                 style={[
@@ -819,11 +823,13 @@ export function MyRoomScreen({
                           accessibilityLabel={routine.title}
                           style={styles.routineRow}>
                           <View style={styles.rowMain}>
-                            <Icon
-                              name={done ? 'checkbox-on' : 'checkbox-off'}
-                              size={22}
-                              color={done ? group.meta.color : t.textDisabled}
-                            />
+                            <View style={styles.leadIcon}>
+                              <Icon
+                                name={done ? 'checkbox-on' : 'checkbox-off'}
+                                size={22}
+                                color={done ? group.meta.color : t.textDisabled}
+                              />
+                            </View>
                             <View style={styles.flex}>
                               <Text
                                 style={[
@@ -1212,7 +1218,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
-    paddingHorizontal: Spacing.half,
   },
   catDot: {
     width: 28,
@@ -1244,6 +1249,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
     paddingVertical: Spacing.one,
+  },
+  // Same width as catDot so checkboxes center under the category emoji and
+  // row titles line up with the category label.
+  leadIcon: {
+    width: 28,
+    alignItems: 'center',
   },
   addRow: {
     flexDirection: 'row',
