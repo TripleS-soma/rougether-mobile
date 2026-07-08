@@ -66,6 +66,37 @@ describe('AddRoutineScreen', () => {
     expect(onAdd).not.toHaveBeenCalled();
   });
 
+  it('shows the day picker only for 매주 and submits 매일 with no days', async () => {
+    const onAdd = jest.fn();
+    const { getByText, getByPlaceholderText, queryByText } = await render(
+      <AddRoutineScreen onAdd={onAdd} />,
+    );
+
+    // Weekly by default — the day picker is visible.
+    expect(queryByText('반복 요일')).toBeTruthy();
+
+    await fireEvent.press(getByText('매일'));
+    expect(queryByText('반복 요일')).toBeNull();
+
+    await fireEvent.changeText(getByPlaceholderText('예) 매일 30분 산책'), '산책');
+    await fireEvent.press(getByText('루틴 추가하기'));
+    expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ title: '산책', days: [] }));
+  });
+
+  it('keeps unsupported cadences (격주/매월/매년) disabled', async () => {
+    const { getByText, queryByText } = await render(<AddRoutineScreen />);
+    await fireEvent.press(getByText('격주'));
+    // Still weekly — the disabled option did not take over.
+    expect(queryByText('반복 요일')).toBeTruthy();
+    expect(getByText('격주·매월·매년은 서버 준비 중이에요.')).toBeTruthy();
+  });
+
+  it('prefills 매일 for a routine without repeat days', async () => {
+    const routine = { id: 'r9', title: '스트레칭', category: '건강', kind: 'routine' as const };
+    const { queryByText } = await render(<AddRoutineScreen editRoutine={routine} />);
+    expect(queryByText('반복 요일')).toBeNull();
+  });
+
   it('prefills the form and updates in edit mode', async () => {
     const onUpdate = jest.fn();
     const routine = SAMPLE_ROUTINES[3]; // '영어 공부' (id 4)
