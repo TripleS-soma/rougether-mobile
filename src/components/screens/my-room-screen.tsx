@@ -216,6 +216,12 @@ export function MyRoomScreen({
 
   const today = todayIso();
   const isDone = (id: string, date: string) => (completions[id] ?? []).includes(date);
+  // Checked items sink below unchecked ones within their category (stable in
+  // each half), keeping the remaining work on top of every list.
+  const sinkDone = <T,>(items: T[], done: (item: T) => boolean): T[] => [
+    ...items.filter((i) => !done(i)),
+    ...items.filter(done),
+  ];
   // Categories that still hold routines/todos — the manager sheet blocks their
   // deletion with a warning (the server refuses it anyway).
   const inUseCategoryIds = Array.from(
@@ -301,7 +307,7 @@ export function MyRoomScreen({
         (r) =>
           r.category === cat.id || (isFallback && (!r.category || !knownIds.includes(r.category))),
       );
-      return { meta: cat, items };
+      return { meta: cat, items: sinkDone(items, (r) => isDone(r.id, selectedDate)) };
     })
     .filter((g) => g.items.length > 0);
   // Server days group by the record-time categoryId (kept in server order:
@@ -315,7 +321,7 @@ export function MyRoomScreen({
         }
         return Array.from(byCat, ([key, items]) => ({
           meta: catMeta.find((c) => c.id === key) ?? UNCATEGORIZED_META,
-          items,
+          items: sinkDone(items, (i) => i.completed),
         }));
       })()
     : undefined;
@@ -608,10 +614,13 @@ export function MyRoomScreen({
                   ? null
                   : groups.map((cat, idx) => {
                       const isFallback = idx === groups.length - 1;
-                      const items = roomRoutines.filter((r) => {
-                        if (r.category === cat.id) return true;
-                        return isFallback && (!r.category || !knownIds.includes(r.category));
-                      });
+                      const items = sinkDone(
+                        roomRoutines.filter((r) => {
+                          if (r.category === cat.id) return true;
+                          return isFallback && (!r.category || !knownIds.includes(r.category));
+                        }),
+                        (r) => isDone(r.id, today),
+                      );
                       // Empty categories still render their header — the + quick-add
                       // must stay reachable even before the first routine exists.
                       const doneInCat = items.filter((r) => isDone(r.id, today)).length;

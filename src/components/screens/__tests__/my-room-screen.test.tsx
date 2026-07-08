@@ -280,6 +280,36 @@ describe('MyRoomScreen', () => {
     expect(ui.getByText('미래 날짜는 완료할 수 없어요')).toBeTruthy();
   });
 
+  it('sinks checked routines below unchecked ones within their category', async () => {
+    const routines = [
+      { id: '1', title: '완료된 루틴', kind: 'routine' as const, category: '건강' },
+      { id: '2', title: '미완료 루틴', kind: 'routine' as const, category: '건강' },
+      { id: '3', title: '나중 완료 루틴', kind: 'routine' as const, category: '건강' },
+    ];
+    // Ids 1 and 3 are done today — both must render below the unchecked one,
+    // keeping their relative order.
+    const { getAllByRole } = await render(
+      <MyRoomScreen routines={routines} completions={{ '1': [TODAY], '3': [TODAY] }} />,
+    );
+    const labels = getAllByRole('checkbox').map((el) => el.props.accessibilityLabel);
+    expect(labels).toEqual(['미완료 루틴', '완료된 루틴', '나중 완료 루틴']);
+  });
+
+  it('sinks completed items on server-backed 달력 days too', async () => {
+    const calendarDays = {
+      [YESTERDAY]: [
+        { id: 't1', kind: 'todo' as const, title: '한 일', completed: true, category: '' },
+        { id: 't2', kind: 'todo' as const, title: '안 한 일', completed: false, category: '' },
+      ],
+    };
+    const ui = await render(
+      <MyRoomScreen routines={[]} calendarDays={calendarDays} onSelectDate={jest.fn()} />,
+    );
+    await pickCalendarDate(ui, YESTERDAY);
+    const labels = ui.getAllByRole('checkbox').map((el) => el.props.accessibilityLabel);
+    expect(labels).toEqual(['안 한 일', '한 일']);
+  });
+
   it('groups the 달력 list by category like the room tab', async () => {
     const { getByText, getAllByText } = await render(<MyRoomScreen routines={SAMPLE_ROUTINES} />);
     await fireEvent.press(getByText('달력'));
