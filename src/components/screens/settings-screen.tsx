@@ -2,27 +2,9 @@ import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Icon, type IconName } from '@/components/ui/icon';
-import {
-  DEFAULT_THEME_ID,
-  DEFAULT_THEME_MODE,
-  Radius,
-  Spacing,
-  type ThemeId,
-  type ThemeMode,
-  Typography,
-} from '@/constants/theme';
+import { DEFAULT_THEME_MODE, Radius, Spacing, type ThemeMode, Typography } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
-
-type ThemeOption = { id: ThemeId; name: string; description: string };
-
-// Theme display metadata (from the prototype design system). Kept local; extract
-// to constants when a real theme switcher consumes it.
-const THEME_OPTIONS: ThemeOption[] = [
-  { id: 'cozy', name: '포근', description: '따뜻한 기본 테마' },
-  { id: 'forest', name: '숲', description: '맑고 싱그러운 테마' },
-  { id: 'hanok', name: '한옥', description: '차분한 전통 테마' },
-];
 
 const MODE_OPTIONS: { id: ThemeMode; name: string }[] = [
   { id: 'system', name: '시스템' },
@@ -33,8 +15,6 @@ const MODE_OPTIONS: { id: ThemeMode; name: string }[] = [
 type Row = { icon: IconName; label: string; onPress?: () => void };
 
 export type SettingsScreenProps = {
-  themeId?: ThemeId;
-  onChangeTheme?: (id: ThemeId) => void;
   /** Light/dark preference ('system' follows the OS). */
   themeMode?: ThemeMode;
   onChangeThemeMode?: (mode: ThemeMode) => void;
@@ -48,15 +28,14 @@ export type SettingsScreenProps = {
 };
 
 /**
- * Settings screen, ported from the prototype `SettingsScreen`: theme picker +
- * account / notification / misc rows. Theme tokens + type scale; vector icons
+ * Settings screen, ported from the prototype `SettingsScreen`: dark-mode picker
+ * + account / notification / misc rows. Theme tokens + type scale; vector icons
  * via the shared Icon. Each row navigates to its sub-screen via the matching
- * prop. The theme picker is prop-driven (onChangeTheme); the app shell wires it
- * to the global BrandThemeProvider so the whole app re-tints.
+ * prop. The mode picker is prop-driven (onChangeThemeMode); the app shell wires
+ * it to the global BrandThemeProvider. (The 포근/숲/한옥 brand picker was
+ * removed with dark mode's arrival — cozy is the single brand theme now.)
  */
 export function SettingsScreen({
-  themeId = DEFAULT_THEME_ID,
-  onChangeTheme,
   themeMode = DEFAULT_THEME_MODE,
   onChangeThemeMode,
   onEditProfile,
@@ -109,36 +88,6 @@ export function SettingsScreen({
           <Text style={[styles.sectionTitle, { color: t.textMuted }]}>디자인</Text>
           <View style={[styles.card, { backgroundColor: t.surface }]}>
             <View style={styles.designHead}>
-              <View style={[styles.iconCircle, { backgroundColor: t.surfaceMuted }]}>
-                <Icon name="palette" size={20} color={t.text} />
-              </View>
-              <View style={styles.flex}>
-                <Text style={[Typography.label, { color: t.text }]}>화면 스타일</Text>
-                <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                  원하는 분위기로 전체 화면을 바꿔보세요.
-                </Text>
-              </View>
-            </View>
-            <View style={styles.themeGrid}>
-              {THEME_OPTIONS.map((opt) => {
-                const selected = opt.id === themeId;
-                return (
-                  <Pressable
-                    key={opt.id}
-                    onPress={() => onChangeTheme?.(opt.id)}
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected }}
-                    style={[styles.themeCard, { borderColor: selected ? t.primary : t.border }]}>
-                    <Text style={[Typography.label, { color: t.text }]}>{opt.name}</Text>
-                    <Text style={[styles.themeDesc, { color: t.textMuted }]}>
-                      {opt.description}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            <View style={[styles.modeHead, { borderTopColor: t.border }]}>
               <View style={[styles.iconCircle, { backgroundColor: t.surfaceMuted }]}>
                 <Icon name="moon" size={20} color={t.text} />
               </View>
@@ -276,19 +225,6 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     padding: Spacing.three,
   },
-  themeGrid: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingBottom: Spacing.three,
-  },
-  modeHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-    padding: Spacing.three,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
   modeRow: {
     flexDirection: 'row',
     gap: Spacing.two,
@@ -300,18 +236,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.two,
     borderRadius: Radius.pill,
-  },
-  themeCard: {
-    flex: 1,
-    borderRadius: Radius.md,
-    borderWidth: 2,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: Spacing.three,
-    gap: Spacing.half,
-  },
-  themeDesc: {
-    fontSize: 10,
-    lineHeight: 13,
   },
   iconCircle: {
     width: 32,

@@ -12,6 +12,7 @@ import {
 
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { Room } from '@/components/room/room';
+import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Icon } from '@/components/ui/icon';
 import { WalletPills } from '@/components/ui/wallet-pills';
@@ -216,17 +217,12 @@ export function RoomDecorScreen({
         </ScrollView>
 
         <View style={styles.filterRow}>
-          <Pressable
-            onPress={() => setOwnedOnly((v) => !v)}
-            accessibilityRole="switch"
-            accessibilityState={{ checked: ownedOnly }}
+          <Text style={[Typography.label, { color: t.text }]}>보유중</Text>
+          <ToggleSwitch
+            value={ownedOnly}
+            onToggle={() => setOwnedOnly((v) => !v)}
             accessibilityLabel="보유중만 보기"
-            style={[styles.ownedToggle, { backgroundColor: ownedOnly ? t.primary : t.surface }]}>
-            <Icon name="check" size={14} color={ownedOnly ? t.onPrimary : t.textMuted} />
-            <Text style={[Typography.label, { color: ownedOnly ? t.onPrimary : t.textMuted }]}>
-              보유중
-            </Text>
-          </Pressable>
+          />
         </View>
 
         {loading ? (
@@ -527,16 +523,10 @@ const styles = StyleSheet.create({
   },
   filterRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
     paddingHorizontal: Spacing.four,
     paddingBottom: Spacing.two,
-  },
-  ownedToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.half,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.one,
-    borderRadius: Radius.pill,
   },
   confirmBackdrop: {
     flex: 1,

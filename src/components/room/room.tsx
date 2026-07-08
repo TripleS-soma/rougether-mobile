@@ -95,6 +95,21 @@ export function Room({
           <View style={[StyleSheet.absoluteFill, { backgroundColor: background.color }]} />
         )
       ) : null}
+      {/* Wallpaper art renders as the wall band on top of the background —
+          the room backgroundColor alone is invisible once a background covers
+          it, which made applied wallpapers look like a no-op. (CDN wallpaper
+          art is wall-band shaped, ~1205x585.) */}
+      {wallpaper && isCdnKey(wallpaper.assetKey) ? (
+        <Image
+          source={assetSource(wallpaper.assetKey)}
+          style={styles.wall}
+          contentFit="cover"
+          transition={120}
+          accessibilityLabel={wallpaper.name}
+        />
+      ) : background && wallpaper ? (
+        <View style={[styles.wall, { backgroundColor: wallpaper.color }]} />
+      ) : null}
       {floor ? (
         isCdnKey(floor.assetKey) ? (
           <Image
@@ -134,6 +149,15 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     borderRadius: Radius.lg,
     overflow: 'hidden',
+  },
+  // Wall band: CDN wallpaper art is ~1205x585 (width:height ≈ 2:1), so it
+  // covers the top half of the square room above the floor band.
+  wall: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '48%',
   },
   floor: {
     position: 'absolute',
