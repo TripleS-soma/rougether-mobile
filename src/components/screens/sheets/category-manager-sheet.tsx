@@ -33,7 +33,8 @@ const EMOJI_CHOICES = [
 const VISIBILITY_OPTIONS: { id: CategoryVisibility; icon: string; desc: string }[] = [
   { id: 'public', icon: '🌐', desc: '누구나 볼 수 있어요' },
   { id: 'neighbor', icon: '👥', desc: '이웃에게만 보여요' },
-  { id: 'partial', icon: '🔒', desc: '선택한 사람에게만' },
+  { id: 'partial', icon: '🤝', desc: '선택한 사람에게만' },
+  { id: 'private', icon: '🔒', desc: '나만 볼 수 있어요' },
 ];
 
 export type CategoryManagerSheetProps = {

@@ -224,22 +224,22 @@ describe('API adapters', () => {
     expect(placed.backgroundId).toBeNull(); // background not owned
   });
 
-  it('maps category visibility both ways (lossless 3-level round-trip)', () => {
-    // Server → app: PUBLIC/HOUSE/FRIENDS map to 공개/이웃/일부; PRIVATE reads as
-    // the most restrictive app level.
+  it('maps category visibility both ways (lossless 4-level round-trip)', () => {
+    // 1:1 — 공개↔PUBLIC, 이웃 공개↔HOUSE, 일부 공개↔FRIENDS, 비공개↔PRIVATE.
     expect(toAppCategory({ id: 4, name: '취미', visibility: 'PUBLIC' }).visibility).toBe('public');
     expect(toAppCategory({ id: 4, name: '취미', visibility: 'HOUSE' }).visibility).toBe('neighbor');
     expect(toAppCategory({ id: 4, name: '취미', visibility: 'FRIENDS' }).visibility).toBe(
       'partial',
     );
     expect(toAppCategory({ id: 4, name: '취미', visibility: 'PRIVATE' }).visibility).toBe(
-      'partial',
+      'private',
     );
 
     const cat = { id: 'x', label: '취미', emoji: '🎨', color: '#123456' } as const;
     expect(toCategoryCreate({ ...cat, visibility: 'public' }).visibility).toBe('PUBLIC');
     expect(toCategoryCreate({ ...cat, visibility: 'neighbor' }).visibility).toBe('HOUSE');
     expect(toCategoryCreate({ ...cat, visibility: 'partial' }).visibility).toBe('FRIENDS');
+    expect(toCategoryCreate({ ...cat, visibility: 'private' }).visibility).toBe('PRIVATE');
   });
 
   it('clears alarm time and end date with explicit nulls on update', () => {
