@@ -1,0 +1,64 @@
+# lint/format 자동 수정 워크플로 — PR 브랜치에 eslint --fix + prettier --write
+# 결과를 봇 커밋으로 되밀어준다. GITHUB_TOKEN 푸시는 워크플로를 재트리거하지
+# 않으므로(무한 루프 방지) 수정 커밋에 CI가 다시 돌지 않는다 — 대신 이 잡이
+# 푸시 직후 같은 4종 체크를 직접 돌려 최신 커밋의 상태를 보장한다.
+name: Autofix
+
+on:
+  pull_request:
+
+# 같은 PR에 새 푸시가 오면 이전 autofix 실행은 취소한다.
+concurrency:
+  group: autofix-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  autofix:
+    # 포크 PR에는 푸시 권한이 없으므로 같은 저장소 브랜치만 대상.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # 기본값(merge ref)이 아니라 PR 브랜치를 체크아웃해야 푸시할 수 있다.
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: ESLint autofix
+        # 자동 수정만 적용한다. 남은(수정 불가) 위반은 CI의 Lint 스텝이 잡는다.
+        run: npx expo lint --fix || true
+
+      - name: Prettier autofix
+        run: npx prettier --write .
+
+      - name: Commit and push fixes
+        id: commit
+        run: |
+          if git diff --quiet; then
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
+            echo "No fixes needed."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -am "style: lint/format autofix"
+            git push
+            echo "pushed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify fixed code (CI won't re-run on the bot commit)
+        if: steps.commit.outputs.pushed == 'true'
+        run: |
+          npm run typecheck
+          npm run lint
+          npm run format:check
+          npm test -- --ci
