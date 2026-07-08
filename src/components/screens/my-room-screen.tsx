@@ -143,6 +143,12 @@ export type MyRoomScreenProps = {
   onUpdateRoutineTime?: (id: string, alarmEnabled: boolean, time: string) => void;
   /** Change a todo's due date (메뉴 시트 → 날짜 바꾸기, calendar sheet). */
   onUpdateTodoDueDate?: (id: string, dueDate: string) => void;
+  /**
+   * 날짜 바꾸기 on a routine: the server has no routine↔todo conversion, so
+   * this creates a todo on the picked date and deletes the routine (repeat
+   * settings and past logs are lost — the sheet warns before confirming).
+   */
+  onConvertRoutineToTodo?: (id: string, dueDate: string) => void;
   /** Delete a routine (kebab → 삭제). */
   onDeleteRoutine?: (id: string) => void;
   /**
@@ -197,6 +203,7 @@ export function MyRoomScreen({
   onRenameRoutine,
   onUpdateRoutineTime,
   onUpdateTodoDueDate,
+  onConvertRoutineToTodo,
   onDeleteRoutine,
   onRequestPhoto = captureVerificationPhoto,
 }: MyRoomScreenProps) {
@@ -259,9 +266,11 @@ export function MyRoomScreen({
   const [renameText, setRenameText] = useState('');
   const [timeId, setTimeId] = useState<string | null>(null);
   const timeRoutine = routines.find((r) => r.id === timeId) ?? null;
-  // 메뉴 → 날짜 바꾸기: calendar sheet editing a todo's due date.
+  // 메뉴 → 날짜 바꾸기: calendar sheet. Todos move their dueDate; routines are
+  // converted into a todo on the picked date. The pick is a draft until 확인.
   const [dateEditId, setDateEditId] = useState<string | null>(null);
-  const dateEditTodo = routines.find((r) => r.id === dateEditId) ?? null;
+  const dateEditItem = routines.find((r) => r.id === dateEditId) ?? null;
+  const [dateDraft, setDateDraft] = useState(today);
 
   // 방 / 달력 tab. The calendar lists routines + todos on the selected date.
   // Today renders from live client state (toggleable); other dates render the
@@ -966,33 +975,33 @@ export function MyRoomScreen({
               </Pressable>
             ) : null}
 
-            {/* Only todos carry a single date (dueDate) — routines change their
-                기간 in the full edit screen instead. */}
-            {menuRoutine?.kind === 'todo' ? (
-              <Pressable
-                onPress={() => {
-                  const r = menuRoutine;
-                  setMenuOpenId(null);
-                  if (r) setDateEditId(r.id);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`${menuRoutine?.title ?? ''} 날짜 바꾸기`}
-                style={styles.sheetItem}>
-                <View style={[styles.sheetItemIcon, { backgroundColor: t.success }]}>
-                  <Icon name="calendar" size={18} color={t.onPrimary} />
-                </View>
-                <Text style={[Typography.body, { color: t.text }]}>날짜 바꾸기</Text>
-              </Pressable>
-            ) : null}
+            {/* Todos move their dueDate; a routine gets converted into a todo
+                on the picked date (the calendar sheet warns first). */}
+            <Pressable
+              onPress={() => {
+                const r = menuRoutine;
+                setMenuOpenId(null);
+                if (r) {
+                  setDateDraft(r.dueDate ?? today);
+                  setDateEditId(r.id);
+                }
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`${menuRoutine?.title ?? ''} 날짜 바꾸기`}
+              style={styles.sheetItem}>
+              <View style={[styles.sheetItemIcon, { backgroundColor: t.success }]}>
+                <Icon name="calendar" size={18} color={t.onPrimary} />
+              </View>
+              <Text style={[Typography.body, { color: t.text }]}>날짜 바꾸기</Text>
+            </Pressable>
           </Pressable>
         </Pressable>
       </Modal>
 
-      {/* 날짜 바꾸기: calendar bottom sheet — picking a date is the whole
-          interaction, so the pick saves and closes immediately. */}
+      {/* 날짜 바꾸기: calendar bottom sheet — the pick stays a draft until 확인. */}
       <Modal
         transparent
-        visible={dateEditTodo !== null}
+        visible={dateEditItem !== null}
         animationType="slide"
         onRequestClose={() => setDateEditId(null)}>
         <Pressable style={styles.sheetBackdrop} onPress={() => setDateEditId(null)}>
@@ -1001,14 +1010,34 @@ export function MyRoomScreen({
             <Text style={[Typography.h3, styles.sheetTitle, { color: t.text }]} numberOfLines={1}>
               날짜 바꾸기
             </Text>
-            <Calendar
-              value={dateEditTodo?.dueDate ?? today}
-              onSelect={(date) => {
-                const r = dateEditTodo;
-                setDateEditId(null);
-                if (r) onUpdateTodoDueDate?.(r.id, date);
-              }}
-            />
+            {dateEditItem?.kind !== 'todo' ? (
+              <Text style={[Typography.supporting, styles.sheetNote, { color: t.textMuted }]}>
+                반복 루틴은 선택한 날짜의 할 일로 바뀌어요. 반복 설정과 지난 기록은 사라져요.
+              </Text>
+            ) : null}
+            <Calendar value={dateDraft} onSelect={setDateDraft} />
+            <View style={styles.dialogBtns}>
+              <Pressable
+                onPress={() => setDateEditId(null)}
+                accessibilityRole="button"
+                accessibilityLabel="취소"
+                style={[styles.dialogBtn, { backgroundColor: t.surfaceMuted }]}>
+                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  const r = dateEditItem;
+                  setDateEditId(null);
+                  if (!r) return;
+                  if (r.kind === 'todo') onUpdateTodoDueDate?.(r.id, dateDraft);
+                  else onConvertRoutineToTodo?.(r.id, dateDraft);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="확인"
+                style={[styles.dialogBtn, { backgroundColor: t.primary }]}>
+                <Text style={[Typography.label, { color: t.onPrimary }]}>확인</Text>
+              </Pressable>
+            </View>
           </Pressable>
         </Pressable>
       </Modal>
@@ -1359,6 +1388,9 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.one,
   },
   sheetTitle: {
+    textAlign: 'center',
+  },
+  sheetNote: {
     textAlign: 'center',
   },
   sheetActions: {

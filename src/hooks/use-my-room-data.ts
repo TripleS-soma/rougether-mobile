@@ -297,6 +297,29 @@ export function useMyRoomData() {
     }
   };
 
+  /**
+   * 루틴 → 할 일 전환 (메뉴 → 날짜 바꾸기 on a routine). The API has no
+   * conversion, so create the todo first, then delete the routine; if the
+   * delete fails the fresh todo is removed again so nothing is duplicated.
+   */
+  const convertRoutineToTodo = async (id: string, dueDate: string) => {
+    const item = findItem(id);
+    if (!item || item.kind === 'todo') return;
+    try {
+      const created = await createTodo(toTodoCreate(item.category, item.title, dueDate));
+      try {
+        await apiDeleteRoutine(toServerItemId(id));
+      } catch (e) {
+        if (created.id != null) await deleteTodo(created.id).catch(() => {});
+        throw e;
+      }
+      setRoutines((prev) => prev.map((r) => (r.id === id ? toAppTodo(created) : r)));
+      toast('할 일로 바꿔 날짜를 옮겼어요', 'success');
+    } catch {
+      toast('날짜 변경에 실패했어요', 'error');
+    }
+  };
+
   const deleteRoutine = async (id: string) => {
     const item = findItem(id);
     if (!item) return;
@@ -414,6 +437,7 @@ export function useMyRoomData() {
     renameRoutine,
     updateRoutineTime,
     updateTodoDueDate,
+    convertRoutineToTodo,
     deleteRoutine,
     createRoutineCategory,
     updateRoutineCategory,

@@ -71,7 +71,7 @@ describe('MyRoomScreen', () => {
     expect(onToggleCompletion).toHaveBeenCalledTimes(1);
   });
 
-  it('changes a todo due date via 날짜 바꾸기 in the menu sheet', async () => {
+  it('changes a todo due date via 날짜 바꾸기 (draft until 확인)', async () => {
     const onUpdateTodoDueDate = jest.fn();
     const todos = [
       { id: 't9', title: '장보기', kind: 'todo' as const, dueDate: TODAY, category: '건강' },
@@ -84,16 +84,44 @@ describe('MyRoomScreen', () => {
     expect(queryByText('시간 수정')).toBeNull(); // todos have no alarm item
 
     await fireEvent.press(getByText('날짜 바꾸기')); // → calendar bottom sheet
-    await fireEvent.press(getByLabelText(OTHER_DAY)); // picking saves + closes
+    await fireEvent.press(getByLabelText(OTHER_DAY)); // draft only — not saved yet
+    expect(onUpdateTodoDueDate).not.toHaveBeenCalled();
+
+    await fireEvent.press(getByLabelText('확인'));
     expect(onUpdateTodoDueDate).toHaveBeenCalledWith('t9', OTHER_DAY);
-    expect(queryByText('날짜 바꾸기')).toBeNull();
   });
 
-  it('hides 날짜 바꾸기 for routines in the menu sheet', async () => {
-    const { getByText, queryByText } = await render(<MyRoomScreen routines={SAMPLE_ROUTINES} />);
-    await fireEvent.press(getByText('하루 회고'));
-    expect(getByText('시간 수정')).toBeTruthy();
-    expect(queryByText('날짜 바꾸기')).toBeNull();
+  it('cancels a date change without saving', async () => {
+    const onUpdateTodoDueDate = jest.fn();
+    const todos = [
+      { id: 't9', title: '장보기', kind: 'todo' as const, dueDate: TODAY, category: '건강' },
+    ];
+    const { getByText, getByLabelText } = await render(
+      <MyRoomScreen routines={todos} onUpdateTodoDueDate={onUpdateTodoDueDate} />,
+    );
+
+    await fireEvent.press(getByText('장보기'));
+    await fireEvent.press(getByText('날짜 바꾸기'));
+    await fireEvent.press(getByLabelText(OTHER_DAY));
+    await fireEvent.press(getByLabelText('취소'));
+    expect(onUpdateTodoDueDate).not.toHaveBeenCalled();
+  });
+
+  it('converts a routine to a todo via 날짜 바꾸기 with a warning', async () => {
+    const onConvertRoutineToTodo = jest.fn();
+    const { getByText, getByLabelText } = await render(
+      <MyRoomScreen routines={SAMPLE_ROUTINES} onConvertRoutineToTodo={onConvertRoutineToTodo} />,
+    );
+
+    await fireEvent.press(getByText('하루 회고')); // routine row → menu sheet
+    await fireEvent.press(getByText('날짜 바꾸기'));
+    // The conversion warning shows for routines.
+    expect(getByText(/할 일로 바뀌어요/)).toBeTruthy();
+
+    await fireEvent.press(getByLabelText(OTHER_DAY));
+    expect(onConvertRoutineToTodo).not.toHaveBeenCalled();
+    await fireEvent.press(getByLabelText('확인'));
+    expect(onConvertRoutineToTodo).toHaveBeenCalledWith('5', OTHER_DAY);
   });
 
   it('keeps the quick-add button reachable on empty categories', async () => {
