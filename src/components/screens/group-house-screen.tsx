@@ -13,7 +13,7 @@ import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { CharacterAvatar } from '@/components/character-avatar';
 import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
-import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 
 export type RoomCell = {
@@ -197,7 +197,8 @@ export function GroupHouseScreen({
   onReissueInviteCode,
 }: GroupHouseScreenProps) {
   const t = useTokens();
-  const screenStyle = useScreenStyle();
+  const headerInset = useHeaderInsetStyle();
+  const screenStyle = useScreenStyle([]);
 
   const [houseIndex, setHouseIndex] = useState(0);
   const [showMembers, setShowMembers] = useState(false);
@@ -329,7 +330,7 @@ export function GroupHouseScreen({
   if (showMembers) {
     return (
       <View style={[styles.screen, screenStyle]}>
-        <View style={[styles.header, { backgroundColor: t.surface }]}>
+        <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
           <View style={styles.flex}>
             <Text style={[Typography.supporting, { color: t.primary }]}>{currentHouse.title}</Text>
             <Text style={[Typography.h3, { color: t.text }]}>구성원 관리</Text>
@@ -699,7 +700,7 @@ export function GroupHouseScreen({
 
   return (
     <View style={[styles.screen, screenStyle]}>
-      <View style={[styles.header, { backgroundColor: t.surface }]}>
+      <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
         <View style={[styles.pill, { backgroundColor: t.surfaceMuted }]}>
           <Text style={[Typography.label, { color: t.text }]}>👑 Lv.{currentHouse.level ?? 0}</Text>
         </View>

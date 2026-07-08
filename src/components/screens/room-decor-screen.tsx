@@ -16,7 +16,7 @@ import {
   type Wallpaper,
   WALLPAPERS,
 } from '@/resources/furniture';
-import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 
 // Tab labels for the API's surface categoryCodes (wallpaper/floor/background).
@@ -90,6 +90,7 @@ export function RoomDecorScreen({
   onApply,
 }: RoomDecorScreenProps) {
   const t = useTokens();
+  const headerInset = useHeaderInsetStyle();
 
   // Owned items are placeable; everything else in the catalog is buyable.
   // (The demo default owns the whole catalogue, surfaces included.)
@@ -144,8 +145,8 @@ export function RoomDecorScreen({
         : furniture.filter((i) => i.category === activeCategory);
 
   return (
-    <View style={[styles.screen, useScreenStyle()]}>
-      <View style={[styles.header, { backgroundColor: t.surface }]}>
+    <View style={[styles.screen, useScreenStyle([])]}>
+      <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
         <Pressable
           onPress={onBack}
           accessibilityRole="button"

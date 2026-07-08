@@ -11,7 +11,7 @@ import {
 
 import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
-import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 
 /** Browse-card display model (decorated from the API house summary). */
@@ -72,6 +72,7 @@ export function HouseSearchScreen({
   onCreate,
 }: HouseSearchScreenProps) {
   const t = useTokens();
+  const headerInset = useHeaderInsetStyle();
   const [code, setCode] = useState('');
   const [query, setQuery] = useState('');
   const [codeError, setCodeError] = useState<string | null>(null);
@@ -120,8 +121,8 @@ export function HouseSearchScreen({
   };
 
   return (
-    <View style={[styles.screen, useScreenStyle()]}>
-      <View style={[styles.header, { backgroundColor: t.surface }]}>
+    <View style={[styles.screen, useScreenStyle([])]}>
+      <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
         <Pressable
           onPress={onBack}
           accessibilityRole="button"

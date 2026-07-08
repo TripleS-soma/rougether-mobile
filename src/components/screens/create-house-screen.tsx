@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 
 import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
-import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 
 const PRIVATE_ACCENT = '#D4A574';
@@ -39,6 +39,7 @@ export type CreateHouseScreenProps = {
  */
 export function CreateHouseScreen({ onBack, onCreate }: CreateHouseScreenProps) {
   const t = useTokens();
+  const headerInset = useHeaderInsetStyle();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [themeId, setThemeId] = useState('morning');
@@ -49,8 +50,8 @@ export function CreateHouseScreen({ onBack, onCreate }: CreateHouseScreenProps) 
   const canSubmit = name.trim().length >= 2;
 
   return (
-    <View style={[styles.screen, useScreenStyle()]}>
-      <View style={[styles.header, { backgroundColor: t.surface }]}>
+    <View style={[styles.screen, useScreenStyle([])]}>
+      <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
         <Pressable
           onPress={onBack}
           accessibilityRole="button"
