@@ -1,6 +1,7 @@
 import { fireEvent, render } from '@testing-library/react-native';
 
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
+import { ToastProvider } from '@/components/ui/toast';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
 
 describe('AddRoutineScreen', () => {
@@ -95,6 +96,43 @@ describe('AddRoutineScreen', () => {
     await fireEvent.changeText(getByPlaceholderText('예) 매일 30분 산책'), '산책');
     await fireEvent.press(getByText('루틴 추가하기'));
     expect(getByText('이 반복 주기는 서버 준비가 끝나면 저장할 수 있어요.')).toBeTruthy();
+    expect(onAdd).not.toHaveBeenCalled();
+  });
+
+  it('blocks saving 매주 with no day picked and toasts', async () => {
+    const onAdd = jest.fn();
+    const { getByText, getByPlaceholderText } = await render(
+      <ToastProvider>
+        <AddRoutineScreen onAdd={onAdd} />
+      </ToastProvider>,
+    );
+
+    // Weekly default preselects 월~금 — deselect them all.
+    for (const d of ['월', '화', '수', '목', '금']) await fireEvent.press(getByText(d));
+    await fireEvent.changeText(getByPlaceholderText('예) 매일 30분 산책'), '산책');
+    await fireEvent.press(getByText('루틴 추가하기'));
+
+    expect(getByText('반복 요일을 하나 선택해주세요')).toBeTruthy();
+    expect(onAdd).not.toHaveBeenCalled();
+  });
+
+  it('asks for a day before the server-pending message on 격주 with no day', async () => {
+    const onAdd = jest.fn();
+    const { getByText, getByPlaceholderText, queryByText } = await render(
+      <ToastProvider>
+        <AddRoutineScreen onAdd={onAdd} />
+      </ToastProvider>,
+    );
+
+    await fireEvent.press(getByText('격주'));
+    for (const d of ['월', '화', '수', '목', '금']) await fireEvent.press(getByText(d));
+    await fireEvent.changeText(getByPlaceholderText('예) 매일 30분 산책'), '산책');
+    await fireEvent.press(getByText('루틴 추가하기'));
+
+    // The missing day is the actionable problem — the cadence pending message
+    // only shows once days are picked.
+    expect(getByText('반복 요일을 하나 선택해주세요')).toBeTruthy();
+    expect(queryByText('이 반복 주기는 서버 준비가 끝나면 저장할 수 있어요.')).toBeNull();
     expect(onAdd).not.toHaveBeenCalled();
   });
 

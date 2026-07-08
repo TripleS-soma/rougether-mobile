@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { CategoryManagerSheet } from '@/components/screens/sheets/category-manager-sheet';
 import { DateRangeSheet } from '@/components/screens/sheets/date-range-sheet';
 import { TimePickerSheet } from '@/components/screens/sheets/time-picker-sheet';
+import { useToast } from '@/components/ui/toast';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import {
   type NewRoutine,
@@ -87,6 +88,7 @@ export function AddRoutineScreen({
 }: AddRoutineScreenProps) {
   const t = useTokens();
   const headerInset = useHeaderInsetStyle();
+  const { show: toast } = useToast();
   const isEdit = Boolean(editRoutine);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [title, setTitle] = useState(editRoutine?.title ?? '');
@@ -138,10 +140,12 @@ export function AddRoutineScreen({
         setShowCategoryManager(true);
       } else if (title.trim().length === 0) {
         setFormError('루틴 이름을 입력해주세요.');
-      } else if (!repeatSupported) {
-        setFormError('이 반복 주기는 서버 준비가 끝나면 저장할 수 있어요.');
+      } else if (needsDays && days.length === 0) {
+        // 매주/격주 with no day picked — the day picker is the fix, so point at
+        // it with a toast rather than the footer error.
+        toast('반복 요일을 하나 선택해주세요', 'error');
       } else {
-        setFormError('반복 요일을 하나 이상 선택해주세요.');
+        setFormError('이 반복 주기는 서버 준비가 끝나면 저장할 수 있어요.');
       }
       return;
     }
