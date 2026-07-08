@@ -196,6 +196,11 @@ export function MyRoomScreen({
 
   const today = todayIso();
   const isDone = (id: string, date: string) => (completions[id] ?? []).includes(date);
+  // Categories that still hold routines/todos — the manager sheet blocks their
+  // deletion with a warning (the server refuses it anyway).
+  const inUseCategoryIds = Array.from(
+    new Set(routines.map((r) => r.category).filter((c): c is string => !!c)),
+  );
 
   // The 방 tab lists only what's scheduled *today* (repeat days + start/end
   // range) — the same rule the 달력 tab applies to its selected date. Without
@@ -1073,6 +1078,7 @@ export function MyRoomScreen({
         onUpdate={(id, cat) => onUpdateCategory?.(id, cat)}
         onDelete={(id) => onDeleteCategory?.(id)}
         onReorder={onReorderCategories}
+        inUseCategoryIds={inUseCategoryIds}
         onClose={() => setCategorySheetOpen(false)}
       />
 

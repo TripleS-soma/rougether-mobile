@@ -44,6 +44,8 @@ export type AddRoutineScreenProps = {
   onDeleteCategory?: (id: string) => void;
   /** Persist a new category order (카테고리 관리 sheet, long-press to move). */
   onReorderCategories?: (orderedIds: string[]) => void;
+  /** Categories with routines — deletion is blocked with a warning modal. */
+  inUseCategoryIds?: string[];
 };
 
 function today() {
@@ -67,6 +69,7 @@ export function AddRoutineScreen({
   onUpdateCategory,
   onDeleteCategory,
   onReorderCategories,
+  inUseCategoryIds,
 }: AddRoutineScreenProps) {
   const t = useTokens();
   const headerInset = useHeaderInsetStyle();
@@ -343,6 +346,7 @@ export function AddRoutineScreen({
         onUpdate={(id, c) => onUpdateCategory?.(id, c)}
         onDelete={(id) => onDeleteCategory?.(id)}
         onReorder={onReorderCategories}
+        inUseCategoryIds={inUseCategoryIds}
         onClose={() => setShowCategoryManager(false)}
       />
 
