@@ -45,6 +45,11 @@ export type CategoryManagerSheetProps = {
   onDelete: (id: string) => void;
   /** Persist a new category order (ids top→bottom; long-press a row to move). */
   onReorder?: (orderedIds: string[]) => void;
+  /**
+   * Categories that still have routines/todos — the server refuses to delete
+   * them, so 삭제 shows a warning modal instead of the delete confirm.
+   */
+  inUseCategoryIds?: string[];
   onClose: () => void;
 };
 
@@ -62,6 +67,7 @@ export function CategoryManagerSheet({
   onUpdate,
   onDelete,
   onReorder,
+  inUseCategoryIds = [],
   onClose,
 }: CategoryManagerSheetProps) {
   const t = useTokens();
@@ -69,6 +75,8 @@ export function CategoryManagerSheet({
   const [emoji, setEmoji] = useState(EMOJI_CHOICES[0]);
   const [visibility, setVisibility] = useState<CategoryVisibility>('public');
   const [pendingDelete, setPendingDelete] = useState<RoutineCategoryMeta | null>(null);
+  // Delete tapped on a category that still has routines — warning only.
+  const [blockedDelete, setBlockedDelete] = useState<RoutineCategoryMeta | null>(null);
   // When set, the form edits this category instead of creating a new one.
   const [editing, setEditing] = useState<RoutineCategoryMeta | null>(null);
   // Long-pressed row in move mode: its edit/delete buttons become ▲▼.
@@ -315,7 +323,11 @@ export function CategoryManagerSheet({
                         <Icon name="edit" size={16} color={t.text} />
                       </Pressable>
                       <Pressable
-                        onPress={() => setPendingDelete(c)}
+                        onPress={() =>
+                          inUseCategoryIds.includes(c.id)
+                            ? setBlockedDelete(c)
+                            : setPendingDelete(c)
+                        }
                         accessibilityRole="button"
                         accessibilityLabel={`${c.label} 삭제`}
                         style={[styles.del, { backgroundColor: `${t.danger}22` }]}>
@@ -330,14 +342,36 @@ export function CategoryManagerSheet({
         </ScrollView>
       </View>
 
+      {blockedDelete ? (
+        <View style={styles.confirmOverlay}>
+          <Pressable style={styles.backdrop} onPress={() => setBlockedDelete(null)} />
+          <View style={[styles.confirmCard, { backgroundColor: t.screen }]}>
+            <Text style={[Typography.h3, { color: t.text }]}>삭제할 수 없어요</Text>
+            <Text style={[Typography.body, styles.confirmText, { color: t.textMuted }]}>
+              &lsquo;{blockedDelete.label}&rsquo; 카테고리에 아직 루틴이 있어요.{'\n'}안의 루틴을
+              삭제하거나 다른 카테고리로 옮긴 뒤 삭제할 수 있어요.
+            </Text>
+            <View style={styles.confirmBtns}>
+              <Pressable
+                onPress={() => setBlockedDelete(null)}
+                accessibilityRole="button"
+                accessibilityLabel="삭제 불가 확인"
+                style={[styles.confirmBtn, { backgroundColor: t.primary }]}>
+                <Text style={[Typography.label, { color: t.onPrimary }]}>확인</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      ) : null}
+
       {pendingDelete ? (
         <View style={styles.confirmOverlay}>
           <Pressable style={styles.backdrop} onPress={() => setPendingDelete(null)} />
           <View style={[styles.confirmCard, { backgroundColor: t.screen }]}>
             <Text style={[Typography.h3, { color: t.text }]}>카테고리 삭제</Text>
             <Text style={[Typography.body, styles.confirmText, { color: t.textMuted }]}>
-              &lsquo;{pendingDelete.label}&rsquo; 카테고리를 삭제할까요?{'\n'}이 카테고리의
-              루틴·투두는 &lsquo;기타&rsquo;로 이동해요.
+              &lsquo;{pendingDelete.label}&rsquo; 카테고리를 삭제할까요?{'\n'}삭제해도 지난 기록은
+              달력에서 원래 카테고리로 보여요.
             </Text>
             <View style={styles.confirmBtns}>
               <Pressable

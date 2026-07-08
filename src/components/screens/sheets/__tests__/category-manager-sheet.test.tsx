@@ -67,6 +67,32 @@ describe('CategoryManagerSheet', () => {
     expect(onReorder).not.toHaveBeenCalled();
   });
 
+  it('blocks deleting a category that still has routines (warning modal)', async () => {
+    const onDelete = jest.fn();
+    const { getByLabelText, getByText, queryByText } = await render(
+      <CategoryManagerSheet
+        visible
+        categories={ROUTINE_CATEGORIES}
+        inUseCategoryIds={['일정']}
+        onCreate={noop}
+        onDelete={onDelete}
+        onClose={noop}
+      />,
+    );
+
+    await fireEvent.press(getByLabelText('일정 삭제'));
+    // Warning instead of the delete confirm — deletion never fires.
+    expect(getByText('삭제할 수 없어요')).toBeTruthy();
+    expect(queryByText('카테고리 삭제')).toBeNull();
+    await fireEvent.press(getByLabelText('삭제 불가 확인'));
+    expect(queryByText('삭제할 수 없어요')).toBeNull();
+    expect(onDelete).not.toHaveBeenCalled();
+
+    // Categories without routines still delete through the normal confirm.
+    await fireEvent.press(getByLabelText('공부 삭제'));
+    expect(getByText('카테고리 삭제')).toBeTruthy();
+  });
+
   it('deletes an existing category', async () => {
     const onDelete = jest.fn();
     const { getByLabelText } = await render(

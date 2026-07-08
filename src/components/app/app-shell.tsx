@@ -345,6 +345,9 @@ export function AppShell({
         {screen === 'addRoutine' ? (
           <AddRoutineScreen
             categories={categories}
+            inUseCategoryIds={Array.from(
+              new Set(routines.map((r) => r.category).filter((c): c is string => !!c)),
+            )}
             editRoutine={editingRoutine}
             onAdd={addRoutine}
             onUpdate={updateRoutine}
