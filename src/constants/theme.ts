@@ -167,8 +167,78 @@ export const Themes: Record<ThemeId, SemanticColors> = {
   },
 };
 
+/**
+ * Dark variants of the brand themes — same semantic roles, same hue identity
+ * per theme (cozy warm-brown, forest green, hanok tan), tuned for dark
+ * surfaces: darker warm backgrounds, lightened text, brightened accents with
+ * dark on-accent text for contrast.
+ */
+export const DarkThemes: Record<ThemeId, SemanticColors> = {
+  cozy: {
+    appShell: '#171310',
+    screen: '#211C16',
+    surface: '#2B251E',
+    card: '#2B251E',
+    surfaceMuted: '#362F26',
+    border: '#453C31',
+    text: '#EFE7DA',
+    textMuted: '#B5A99A',
+    textDisabled: '#7C7264',
+    icon: '#B5A99A',
+    primary: '#93BE93',
+    primaryActive: '#7FA87F',
+    onPrimary: '#1E2A1E',
+    success: '#7CB98A',
+    warning: '#EDB061',
+    danger: '#E08D8D',
+    disabledBg: '#3D362C',
+  },
+  forest: {
+    appShell: '#101711',
+    screen: '#18211A',
+    surface: '#212D23',
+    card: '#212D23',
+    surfaceMuted: '#2A382C',
+    border: '#3A473B',
+    text: '#E2EBE1',
+    textMuted: '#A3B2A0',
+    textDisabled: '#6E7D6B',
+    icon: '#A3B2A0',
+    primary: '#7FBC8B',
+    primaryActive: '#6BAA78',
+    onPrimary: '#14251A',
+    success: '#7CB98A',
+    warning: '#EDB061',
+    danger: '#E08D8D',
+    disabledBg: '#32402F',
+  },
+  hanok: {
+    appShell: '#1A150D',
+    screen: '#241E13',
+    surface: '#2F271A',
+    card: '#2F271A',
+    surfaceMuted: '#3A3122',
+    border: '#4E4230',
+    text: '#F0E7D7',
+    textMuted: '#BCAD97',
+    textDisabled: '#83765F',
+    icon: '#BCAD97',
+    primary: '#C4A16F',
+    primaryActive: '#B08D5B',
+    onPrimary: '#2A2113',
+    success: '#96B37F',
+    warning: '#DCA855',
+    danger: '#DA9384',
+    disabledBg: '#453A28',
+  },
+};
+
 /** Prototype default is "cozy" (포근). Theme switching arrives with the settings screen. */
 export const DEFAULT_THEME_ID: ThemeId = 'cozy';
+
+/** Light/dark mode preference: follow the OS, or force one. */
+export type ThemeMode = 'system' | 'light' | 'dark';
+export const DEFAULT_THEME_MODE: ThemeMode = 'system';
 
 /** Corner-radius scale (prototype cards use ~16px / rounded-2xl). */
 export const Radius = {

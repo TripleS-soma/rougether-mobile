@@ -118,7 +118,7 @@ export function AppShell({
   characterId = DEFAULT_CHARACTER_ID,
   onReplayOnboarding,
 }: AppShellProps) {
-  const { themeId, setThemeId } = useBrandTheme();
+  const { themeId, setThemeId, mode: themeMode, setMode: setThemeMode } = useBrandTheme();
   const [screen, setScreen] = useState<Screen>('myRoom');
 
   // Routines / todos / categories / completion / wallet come from the API.
@@ -478,6 +478,8 @@ export function AppShell({
           <SettingsScreen
             themeId={themeId}
             onChangeTheme={setThemeId}
+            themeMode={themeMode}
+            onChangeThemeMode={setThemeMode}
             onEditProfile={() => setScreen('profileEdit')}
             onChangePassword={() => setScreen('passwordChange')}
             onOpenNotifications={() => setScreen('notifications')}

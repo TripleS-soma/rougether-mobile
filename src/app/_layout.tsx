@@ -1,14 +1,24 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
-import { useEffect } from 'react';
-import { useColorScheme } from 'react-native';
+import { type ReactNode, useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { ToastProvider } from '@/components/ui/toast';
 import { AuthProvider } from '@/hooks/use-auth';
-import { BrandThemeProvider } from '@/hooks/use-tokens';
+import { BrandThemeProvider, useResolvedScheme } from '@/hooks/use-tokens';
 import { startMockServer } from '@/mocks/init';
+
+/**
+ * Navigation chrome follows the resolved scheme (OS scheme + the 다크 모드
+ * override from settings) — must sit below BrandThemeProvider to read it.
+ */
+function NavigationTheme({ children }: { children: ReactNode }) {
+  const scheme = useResolvedScheme();
+  return (
+    <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>{children}</ThemeProvider>
+  );
+}
 
 /**
  * Root navigator: a Stack holding the `(tabs)` app shell plus the auth routes
@@ -16,8 +26,6 @@ import { startMockServer } from '@/mocks/init';
  * post-signup onboarding step are follow-ups.
  */
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-
   useEffect(() => {
     startMockServer();
   }, []);
@@ -27,10 +35,10 @@ export default function RootLayout() {
       <AuthProvider>
         <BrandThemeProvider>
           <ToastProvider>
-            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+            <NavigationTheme>
               <AnimatedSplashOverlay />
               <Stack screenOptions={{ headerShown: false }} />
-            </ThemeProvider>
+            </NavigationTheme>
           </ToastProvider>
         </BrandThemeProvider>
       </AuthProvider>

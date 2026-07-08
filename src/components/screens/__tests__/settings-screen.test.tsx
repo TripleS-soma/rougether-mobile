@@ -19,6 +19,20 @@ describe('SettingsScreen', () => {
     expect(onChangeTheme).toHaveBeenCalledWith('forest');
   });
 
+  it('changes the dark mode preference', async () => {
+    const onChangeThemeMode = jest.fn();
+    const { getByText, getByLabelText } = await render(
+      <SettingsScreen onChangeThemeMode={onChangeThemeMode} />,
+    );
+
+    expect(getByText('다크 모드')).toBeTruthy();
+    await fireEvent.press(getByLabelText('다크'));
+    expect(onChangeThemeMode).toHaveBeenCalledWith('dark');
+
+    await fireEvent.press(getByLabelText('시스템'));
+    expect(onChangeThemeMode).toHaveBeenCalledWith('system');
+  });
+
   it('logs out only after confirming', async () => {
     const onLogout = jest.fn();
     const { getByText, getByLabelText } = await render(<SettingsScreen onLogout={onLogout} />);

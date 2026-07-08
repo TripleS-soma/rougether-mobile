@@ -2,7 +2,15 @@ import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Icon, type IconName } from '@/components/ui/icon';
-import { DEFAULT_THEME_ID, Radius, Spacing, type ThemeId, Typography } from '@/constants/theme';
+import {
+  DEFAULT_THEME_ID,
+  DEFAULT_THEME_MODE,
+  Radius,
+  Spacing,
+  type ThemeId,
+  type ThemeMode,
+  Typography,
+} from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 
@@ -16,11 +24,20 @@ const THEME_OPTIONS: ThemeOption[] = [
   { id: 'hanok', name: '한옥', description: '차분한 전통 테마' },
 ];
 
+const MODE_OPTIONS: { id: ThemeMode; name: string }[] = [
+  { id: 'system', name: '시스템' },
+  { id: 'light', name: '라이트' },
+  { id: 'dark', name: '다크' },
+];
+
 type Row = { icon: IconName; label: string; onPress?: () => void };
 
 export type SettingsScreenProps = {
   themeId?: ThemeId;
   onChangeTheme?: (id: ThemeId) => void;
+  /** Light/dark preference ('system' follows the OS). */
+  themeMode?: ThemeMode;
+  onChangeThemeMode?: (mode: ThemeMode) => void;
   onEditProfile?: () => void;
   onChangePassword?: () => void;
   onOpenNotifications?: () => void;
@@ -40,6 +57,8 @@ export type SettingsScreenProps = {
 export function SettingsScreen({
   themeId = DEFAULT_THEME_ID,
   onChangeTheme,
+  themeMode = DEFAULT_THEME_MODE,
+  onChangeThemeMode,
   onEditProfile,
   onChangePassword,
   onOpenNotifications,
@@ -113,6 +132,40 @@ export function SettingsScreen({
                     <Text style={[Typography.label, { color: t.text }]}>{opt.name}</Text>
                     <Text style={[styles.themeDesc, { color: t.textMuted }]}>
                       {opt.description}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <View style={[styles.modeHead, { borderTopColor: t.border }]}>
+              <View style={[styles.iconCircle, { backgroundColor: t.surfaceMuted }]}>
+                <Icon name="moon" size={20} color={t.text} />
+              </View>
+              <View style={styles.flex}>
+                <Text style={[Typography.label, { color: t.text }]}>다크 모드</Text>
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                  시스템을 따르거나 직접 골라보세요.
+                </Text>
+              </View>
+            </View>
+            <View style={styles.modeRow}>
+              {MODE_OPTIONS.map((opt) => {
+                const selected = opt.id === themeMode;
+                return (
+                  <Pressable
+                    key={opt.id}
+                    onPress={() => onChangeThemeMode?.(opt.id)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected }}
+                    accessibilityLabel={opt.name}
+                    style={[
+                      styles.modeChip,
+                      { backgroundColor: selected ? t.primary : t.surfaceMuted },
+                    ]}>
+                    <Text
+                      style={[Typography.label, { color: selected ? t.onPrimary : t.textMuted }]}>
+                      {opt.name}
                     </Text>
                   </Pressable>
                 );
@@ -228,6 +281,25 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     paddingHorizontal: Spacing.three,
     paddingBottom: Spacing.three,
+  },
+  modeHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    padding: Spacing.three,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  modeRow: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    paddingBottom: Spacing.three,
+  },
+  modeChip: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: Spacing.two,
+    borderRadius: Radius.pill,
   },
   themeCard: {
     flex: 1,
