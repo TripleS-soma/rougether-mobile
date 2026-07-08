@@ -72,12 +72,14 @@ const toApiTime = (time: string) => (time.length === 5 ? `${time}:00` : time);
 const fromApiTime = (time: string) => time.slice(0, 5);
 
 // --- visibility ---------------------------------------------------------------
-// The API models two visibilities (PRIVATE / HOUSE); the app has three. Map to
-// the closest match in each direction.
-const visToApp = (v?: 'PRIVATE' | 'HOUSE'): CategoryVisibility =>
-  v === 'HOUSE' ? 'public' : 'partial';
-const visToApi = (v: CategoryVisibility): 'PRIVATE' | 'HOUSE' =>
-  v === 'public' ? 'HOUSE' : 'PRIVATE';
+// API values: PRIVATE(비공개) / FRIENDS(친한친구) / HOUSE(집) / PUBLIC(공개).
+// The app's three levels round-trip losslessly — 일부(partial)↔FRIENDS,
+// 이웃(neighbor)↔HOUSE, 공개(public)↔PUBLIC; a server-side PRIVATE reads as the
+// most restrictive app level (partial).
+const visToApp = (v?: 'PRIVATE' | 'FRIENDS' | 'HOUSE' | 'PUBLIC'): CategoryVisibility =>
+  v === 'PUBLIC' ? 'public' : v === 'HOUSE' ? 'neighbor' : 'partial';
+const visToApi = (v: CategoryVisibility): 'FRIENDS' | 'HOUSE' | 'PUBLIC' =>
+  v === 'public' ? 'PUBLIC' : v === 'neighbor' ? 'HOUSE' : 'FRIENDS';
 
 // --- category -----------------------------------------------------------------
 export function toAppCategory(c: CategoryResponse, index = 0): RoutineCategoryMeta {
@@ -154,7 +156,9 @@ export function toRoutineCreate(n: NewRoutine): RoutineCreateRequest {
 
 /**
  * Build a full update body from the current app routine plus overrides. PUT
- * replaces the resource, so we always send the complete representation.
+ * replaces the resource, so we always send the complete representation —
+ * cleared optionals go as explicit null so the server unsets them (turning an
+ * alarm off or removing the 종료일 must actually stick).
  */
 export function toRoutineUpdate(
   r: Routine,
@@ -167,10 +171,10 @@ export function toRoutineUpdate(
     categoryId: toCategoryId(merged.category),
     authType: merged.photoVerify ? 'PHOTO' : 'CHECK',
     repeatType: weekly ? 'WEEKLY' : 'DAILY',
-    repeatDays: weekly ? { daysOfWeek: merged.days!.map(dayNumToCode) } : undefined,
-    scheduledTime: merged.alarmEnabled && merged.time ? toApiTime(merged.time) : undefined,
+    repeatDays: weekly ? { daysOfWeek: merged.days!.map(dayNumToCode) } : null,
+    scheduledTime: merged.alarmEnabled && merged.time ? toApiTime(merged.time) : null,
     startsOn: merged.startDate,
-    endsOn: merged.endDate,
+    endsOn: merged.endDate ?? null,
   };
 }
 
