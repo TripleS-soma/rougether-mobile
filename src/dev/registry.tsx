@@ -131,7 +131,7 @@ export const galleryEntries: GalleryEntry[] = [
       'Ported from the prototype GroupHouseScreen (#10): house switcher, member rooms, group goals, kick flow.',
     render: () => (
       <View style={{ height: 900, alignSelf: 'stretch' }}>
-        <GroupHouseScreen coinBalance={5600} />
+        <GroupHouseScreen />
       </View>
     ),
   },

@@ -27,11 +27,12 @@ const MISSION_HOUSE: House = {
 
 describe('GroupHouseScreen', () => {
   it('renders the current house, members, and group missions', async () => {
-    const { getByText } = await render(<GroupHouseScreen coinBalance={5600} />);
+    const { getByText, queryByText } = await render(<GroupHouseScreen />);
     expect(getByText('👑 소마파이팅')).toBeTruthy();
     // The crown pill shows the house's real growth level (demo: 3).
     expect(getByText('👑 Lv.3')).toBeTruthy();
-    expect(getByText('5,600')).toBeTruthy();
+    // The header carries no coin balance (집 화면은 재화 소비 화면이 아니다).
+    expect(queryByText('5,600')).toBeNull();
     expect(getByText('🎯 우리 그룹의 미션')).toBeTruthy();
     expect(getByText('이번 주 다같이 루틴 지키기')).toBeTruthy();
     // The demo owner's tile carries the 방장 crown.
