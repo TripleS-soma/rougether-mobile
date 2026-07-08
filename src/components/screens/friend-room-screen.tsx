@@ -71,7 +71,10 @@ export type FriendRoomScreenProps = {
   wallpapers?: Wallpaper[];
   floors?: Wallpaper[];
   backgrounds?: Wallpaper[];
+  /** Friend's routines+todos for today; omit for the demo preview list. */
   routines?: Routine[];
+  /** True while the friend's room/routines are loading from the server. */
+  loading?: boolean;
   /** Guestbook notes (newest first); defaults to a demo list when unwired. */
   guestbook?: GuestbookEntry[];
   guestbookLoading?: boolean;
@@ -101,7 +104,8 @@ export function FriendRoomScreen({
   wallpapers,
   floors,
   backgrounds,
-  routines = DEFAULT_ROUTINES,
+  routines,
+  loading = false,
   guestbook,
   guestbookLoading = false,
   guestbookHasNext = false,
@@ -113,8 +117,11 @@ export function FriendRoomScreen({
   const t = useTokens();
   const headerInset = useHeaderInsetStyle();
   const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
-  const completedCount = routines.filter((r) => r.completed).length;
-  const progress = routines.length > 0 ? completedCount / routines.length : 0;
+  // No routines prop = unwired demo preview (dev gallery); the notice says so.
+  const preview = routines === undefined;
+  const routineList = routines ?? DEFAULT_ROUTINES;
+  const completedCount = routineList.filter((r) => r.completed).length;
+  const progress = routineList.length > 0 ? completedCount / routineList.length : 0;
 
   // Guestbook: server list when wired; a local demo list otherwise.
   const [localNotes, setLocalNotes] = useState<GuestbookEntry[]>(DEFAULT_GUESTBOOK);
@@ -206,17 +213,21 @@ export function FriendRoomScreen({
             />
           </View>
 
-          <PendingNotice
-            style={styles.pendingNotice}
-            text="친구 방 꾸미기·루틴 데이터는 서버 준비 중이라 미리보기로 보여드려요."
-          />
+          {preview ? (
+            <PendingNotice
+              style={styles.pendingNotice}
+              text="친구 방 꾸미기·루틴 데이터는 서버 준비 중이라 미리보기로 보여드려요."
+            />
+          ) : null}
 
           <View style={styles.section}>
             <View style={styles.sectionHead}>
               <Text style={[Typography.h2, { color: t.text }]}>{friendName}의 루틴</Text>
-              <Text style={[Typography.label, { color: t.primary }]}>
-                {completedCount} / {routines.length}
-              </Text>
+              {loading ? null : (
+                <Text style={[Typography.label, { color: t.primary }]}>
+                  {completedCount} / {routineList.length}
+                </Text>
+              )}
             </View>
 
             <View style={[styles.progressTrack, { backgroundColor: t.surfaceMuted }]}>
@@ -228,8 +239,18 @@ export function FriendRoomScreen({
               />
             </View>
 
+            {loading ? (
+              <View style={styles.listState}>
+                <ActivityIndicator color={t.primary} />
+              </View>
+            ) : routineList.length === 0 ? (
+              <Text style={[Typography.supporting, styles.listState, { color: t.textMuted }]}>
+                오늘 예정된 루틴이 없어요.
+              </Text>
+            ) : null}
+
             <View style={styles.rows}>
-              {routines.map((routine) => (
+              {routineList.map((routine) => (
                 <View key={routine.id} style={styles.row}>
                   <Icon
                     name={routine.completed ? 'checkbox-on' : 'checkbox-off'}
@@ -418,6 +439,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   gbState: {
+    alignItems: 'center',
+    textAlign: 'center',
+    paddingVertical: Spacing.three,
+  },
+  listState: {
     alignItems: 'center',
     textAlign: 'center',
     paddingVertical: Spacing.three,

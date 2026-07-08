@@ -7,6 +7,7 @@ import type {
   HouseDetailResponse,
   HouseJoinResponse,
   HouseListResponse,
+  HouseMemberDayResponse,
   HouseMissionClaimResponse,
   HouseMissionContributeResponse,
   HouseMissionCreateRequest,
@@ -17,6 +18,7 @@ import type {
   MemberSummary,
   MissionSummary,
   MyHouseSummary,
+  RoomResponse,
   TransferOwnershipResponse,
 } from './types';
 
@@ -85,6 +87,18 @@ export function leaveHouse(houseId: number) {
 /** DELETE /houses/{id}/members/{membershipId} — kick a member (owner). */
 export function kickHouseMember(houseId: number, membershipId: number) {
   return apiDelete<void>(`/houses/${houseId}/members/${membershipId}`);
+}
+
+/** GET /houses/{id}/members/{membershipId}/room — a housemate's room (same shape as /rooms/me). */
+export function fetchHouseMemberRoom(houseId: number, membershipId: number) {
+  return apiGet<RoomResponse>(`/houses/${houseId}/members/${membershipId}/room`);
+}
+
+/** GET /houses/{id}/members/{membershipId}/day — that member's routines+todos on a date (default today, KST). */
+export function fetchHouseMemberDay(houseId: number, membershipId: number, date?: string) {
+  return apiGet<HouseMemberDayResponse>(
+    `/houses/${houseId}/members/${membershipId}/day${buildQuery({ date })}`,
+  );
 }
 
 /** GET /houses/{id}/missions — group missions, newest first. */

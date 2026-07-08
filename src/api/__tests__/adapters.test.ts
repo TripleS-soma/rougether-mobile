@@ -13,7 +13,10 @@ import {
   toWallet,
   todayCompletions,
   toGroupHouse,
+  characterIdFromCode,
+  fromFriendRoomSlots,
   fromRoomSlots,
+  toFriendRoutines,
   toSlotSaves,
   toUserItemMap,
 } from '@/api/adapters';
@@ -358,5 +361,70 @@ describe('API adapters', () => {
     const cleared = toSlotSaves(['2'], '9', cat, inv, null, null);
     expect(cleared).toContainEqual({ slotType: 'floor', userItemId: null });
     expect(cleared).toContainEqual({ slotType: 'background', userItemId: null });
+
+    // A friend's slots carry their (unknown) userItemIds — resolution goes by
+    // assetKey instead; keys missing from the catalogue are skipped.
+    const friend = fromFriendRoomSlots(
+      [
+        { slotType: 'bottomLeft', userItemId: 777, assetKey: 'items/a/bed.png' },
+        { slotType: 'wallpaper', userItemId: 778, assetKey: 'items/a/wp.png' },
+        { slotType: 'floor', userItemId: 779, assetKey: 'items/a/fl.png' },
+        { slotType: 'topRight', userItemId: 780, assetKey: 'items/other/unknown.png' },
+        { slotType: 'topLeft', userItemId: 781 }, // no assetKey → skipped
+      ],
+      cat,
+    );
+    expect(friend).toEqual({
+      placedFurnitureIds: ['2'],
+      wallpaperId: '9',
+      floorId: '11',
+      backgroundId: null,
+    });
+  });
+
+  it('maps a house member day to the friend routine list', () => {
+    const routines = toFriendRoutines({
+      date: '2026-07-08',
+      routines: [
+        {
+          id: 30,
+          originRoutineId: 3,
+          title: '아침 기상',
+          scheduledTime: '07:00:00',
+          authType: 'PHOTO',
+          completed: true,
+        },
+        { id: 41, originRoutineId: 4, title: '하루 회고', completed: false },
+      ],
+      todos: [{ id: 9, title: '장보기', status: 'COMPLETED' }],
+    });
+
+    expect(routines).toEqual([
+      {
+        id: '3', // stable lineage id, not the version id
+        title: '아침 기상',
+        kind: 'routine',
+        completed: true,
+        time: '07:00',
+        alarmEnabled: true,
+        photoVerify: true,
+      },
+      {
+        id: '4',
+        title: '하루 회고',
+        kind: 'routine',
+        completed: false,
+        time: undefined,
+        alarmEnabled: false,
+        photoVerify: false,
+      },
+      { id: 'todo-9', title: '장보기', kind: 'todo', completed: true },
+    ]);
+  });
+
+  it('maps a room character code to the app character id', () => {
+    expect(characterIdFromCode('cat')).toBe('cat');
+    expect(characterIdFromCode('unknown-code')).toBeUndefined();
+    expect(characterIdFromCode(undefined)).toBeUndefined();
   });
 });

@@ -69,6 +69,34 @@ describe('FriendRoomScreen', () => {
     expect(onLoadMoreGuestbook).toHaveBeenCalled();
   });
 
+  it('shows the preview notice only while unwired (no routines prop)', async () => {
+    const NOTICE = /서버 준비 중이라 미리보기/;
+    const preview = await render(<FriendRoomScreen />);
+    expect(preview.getByText(NOTICE)).toBeTruthy();
+
+    const live = await render(
+      <FriendRoomScreen
+        routines={[
+          { id: '1', title: '아침 기상', completed: true },
+          { id: 'todo-9', title: '장보기', kind: 'todo', completed: false },
+        ]}
+      />,
+    );
+    expect(live.queryByText(NOTICE)).toBeNull();
+    expect(live.getByText('아침 기상')).toBeTruthy();
+    expect(live.getByText('장보기')).toBeTruthy();
+    expect(live.getByText('1 / 2')).toBeTruthy();
+  });
+
+  it('shows a routine loading state, then an empty hint with no routines today', async () => {
+    const loading = await render(<FriendRoomScreen routines={[]} loading />);
+    expect(loading.queryByText('오늘 예정된 루틴이 없어요.')).toBeNull();
+    expect(loading.queryByText('0 / 0')).toBeNull();
+
+    const empty = await render(<FriendRoomScreen routines={[]} />);
+    expect(empty.getByText('오늘 예정된 루틴이 없어요.')).toBeTruthy();
+  });
+
   it('keeps a local demo guestbook when unwired', async () => {
     const { getByText, getByLabelText } = await render(<FriendRoomScreen />);
     expect(getByText('기상 인증 대단해요 👍')).toBeTruthy();

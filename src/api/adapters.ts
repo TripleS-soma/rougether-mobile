@@ -40,6 +40,7 @@ import type {
   GachaResponse,
   GoalItem,
   HouseDetailResponse,
+  HouseMemberDayResponse,
   HousePreviewResponse,
   HouseSummary,
   ItemResponse,
@@ -603,6 +604,72 @@ export function fromRoomSlots(
     }
   }
   return { placedFurnitureIds: placed, wallpaperId, floorId, backgroundId };
+}
+
+/**
+ * A friend's room slots → app placement. Their userItemIds mean nothing to us
+ * (we only hold our own inventory), so items resolve by assetKey against the
+ * shared catalogue instead. Entries without a catalogue match are skipped.
+ */
+export function fromFriendRoomSlots(
+  slots: RoomSlotResponse[],
+  cat: ShopCatalogue,
+): {
+  placedFurnitureIds: string[];
+  wallpaperId: string | null;
+  floorId: string | null;
+  backgroundId: string | null;
+} {
+  const byAsset = (list: { id: string; assetKey?: string }[], key: string) =>
+    list.find((i) => i.assetKey && i.assetKey === key)?.id ?? null;
+  const placed: string[] = [];
+  let wallpaperId: string | null = null;
+  let floorId: string | null = null;
+  let backgroundId: string | null = null;
+  for (const s of slots) {
+    if (!s.assetKey || !s.slotType) continue;
+    if (s.slotType === 'wallpaper') {
+      wallpaperId = byAsset(cat.wallpapers, s.assetKey) ?? wallpaperId;
+    } else if (s.slotType === 'floor') {
+      floorId = byAsset(cat.floors, s.assetKey) ?? floorId;
+    } else if (s.slotType === 'background') {
+      backgroundId = byAsset(cat.backgrounds, s.assetKey) ?? backgroundId;
+    } else if ((POSITIONED_SLOTS as string[]).includes(s.slotType)) {
+      const id = byAsset(cat.furniture, s.assetKey);
+      if (id) placed.push(id);
+    }
+  }
+  return { placedFurnitureIds: placed, wallpaperId, floorId, backgroundId };
+}
+
+/** Room character code (e.g. "cat") → app CharacterId, when the code exists app-side. */
+export function characterIdFromCode(code?: string): CharacterId | undefined {
+  return CHARACTER_OPTIONS.find((o) => o.id === code)?.id;
+}
+
+/**
+ * A member's day (GET …/members/{id}/day) → the friend-room routine list:
+ * routines first (server order: scheduled time asc), then todos. Uses the
+ * read-only `completed` flag — visitors can't toggle a friend's items.
+ */
+export function toFriendRoutines(day: HouseMemberDayResponse): Routine[] {
+  const routines = (day.routines ?? []).map((r): Routine => ({
+    // originRoutineId is the stable lineage id; version ids change on edit.
+    id: String(r.originRoutineId ?? r.id ?? ''),
+    title: r.title ?? '루틴',
+    kind: 'routine',
+    completed: r.completed === true,
+    time: r.scheduledTime ? r.scheduledTime.slice(0, 5) : undefined,
+    alarmEnabled: !!r.scheduledTime,
+    photoVerify: r.authType === 'PHOTO',
+  }));
+  const todos = (day.todos ?? []).map((t): Routine => ({
+    id: `todo-${t.id ?? ''}`,
+    title: t.title ?? '할 일',
+    kind: 'todo',
+    completed: t.status === 'COMPLETED',
+  }));
+  return [...routines, ...todos];
 }
 
 /**
