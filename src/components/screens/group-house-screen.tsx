@@ -150,7 +150,6 @@ export type GroupHouseScreenProps = {
   houses?: House[];
   /** True while my houses are loading from the API. */
   loading?: boolean;
-  coinBalance?: number;
   characterId?: CharacterId;
   onVisitFriend?: (friend: VisitedFriend) => void;
   onVisitMyRoom?: () => void;
@@ -183,7 +182,6 @@ export type GroupHouseScreenProps = {
 export function GroupHouseScreen({
   houses = DEFAULT_HOUSES,
   loading = false,
-  coinBalance = 0,
   characterId = DEFAULT_CHARACTER_ID,
   onVisitFriend,
   onVisitMyRoom,
@@ -721,10 +719,6 @@ export function GroupHouseScreen({
           <Text style={[Typography.label, { color: t.text }]}>👑 Lv.{currentHouse.level ?? 0}</Text>
         </View>
         <View style={styles.flex} />
-        <View style={[styles.pill, styles.leafPill, { backgroundColor: t.surfaceMuted }]}>
-          <Icon name="coin" size={16} color={t.warning} />
-          <Text style={[Typography.label, { color: t.text }]}>{coinBalance.toLocaleString()}</Text>
-        </View>
         <Pressable
           onPress={onOpenSearch}
           accessibilityRole="button"
@@ -1051,11 +1045,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.one,
     borderRadius: Radius.pill,
-  },
-  leafPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.one,
   },
   body: {
     paddingBottom: Spacing.six,

@@ -392,7 +392,6 @@ export function AppShell({
           <GroupHouseScreen
             houses={houses}
             loading={housesLoading}
-            coinBalance={wallet.coin}
             characterId={characterId}
             onVisitFriend={(friend) => {
               setVisitingFriend(friend);
