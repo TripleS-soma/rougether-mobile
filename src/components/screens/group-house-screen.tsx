@@ -30,11 +30,12 @@ export type RoomCell = {
   userId?: number;
 };
 
-/** Context handed to onVisitFriend — ids enable server features (방명록). */
+/** Context handed to onVisitFriend — ids enable server features (방명록, 방/루틴 조회). */
 export type VisitedFriend = {
   name: string;
   userId?: number;
   houseId?: number;
+  membershipId?: number;
 };
 
 export type Floor = { level: string; rooms: RoomCell[] };
@@ -790,6 +791,7 @@ export function GroupHouseScreen({
                                 name: room.name,
                                 userId: room.userId,
                                 houseId: currentHouse.houseId,
+                                membershipId: room.membershipId,
                               })
                       }
                       disabled={empty}

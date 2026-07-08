@@ -51,6 +51,15 @@ export type CharacterListResponse = {
   items?: CharacterItem[];
 };
 
+export type CompletionSummary = {
+  routineDate?: string;
+  completedAt?: string;
+  routineId?: number;
+  originRoutineId?: number;
+  title?: string;
+  categoryId?: number;
+};
+
 export type DevLoginRequest = {
   userId?: number;
 };
@@ -202,8 +211,20 @@ export type HouseListResponse = {
   totalElements?: number;
 };
 
+export type HouseMemberDayResponse = {
+  date?: string;
+  routines?: MemberRoutineItem[];
+  todos?: MemberTodoItem[];
+};
+
 export type HouseMemberListResponse = {
   items?: MemberSummary[];
+};
+
+export type HouseMemberRoutineCompletionListResponse = {
+  from?: string;
+  to?: string;
+  items?: CompletionSummary[];
 };
 
 export type HouseMissionClaimResponse = {
@@ -324,8 +345,19 @@ export type LogoutRequest = {
 export type MeResponse = {
   userId?: number;
   nickname?: string;
+  bio?: string;
   lastLoginAt?: string;
   onboarding?: OnboardingSummary;
+};
+
+export type MemberRoutineItem = {
+  id?: number;
+  originRoutineId?: number;
+  title?: string;
+  scheduledTime?: string;
+  authType?: 'CHECK' | 'PHOTO';
+  categoryId?: number;
+  completed?: boolean;
 };
 
 export type MemberSummary = {
@@ -337,8 +369,17 @@ export type MemberSummary = {
   joinedAt?: string;
 };
 
+export type MemberTodoItem = {
+  id?: number;
+  title?: string;
+  status?: 'PENDING' | 'COMPLETED';
+  completedAt?: string;
+  categoryId?: number;
+};
+
 export type MemberUpdateRequest = {
   nickname: string;
+  bio?: string;
 };
 
 export type MissionSummary = {

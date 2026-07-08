@@ -29,6 +29,7 @@ import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { type Routine } from '@/constants/routines';
 import { useAuth } from '@/hooks/use-auth';
 import { useGacha } from '@/hooks/use-gacha';
+import { useFriendRoom } from '@/hooks/use-friend-room';
 import { useGuestbook } from '@/hooks/use-guestbook';
 import { useHouses } from '@/hooks/use-houses';
 import { useMyRoomData } from '@/hooks/use-my-room-data';
@@ -206,6 +207,8 @@ export function AppShell({
   }, [placement]);
 
   const [visitingFriend, setVisitingFriend] = useState<VisitedFriend>({ name: '친구' });
+  // The visited friend's live room + today's routines (loads on visit, #149).
+  const { friendRoom, load: loadFriendRoom } = useFriendRoom();
   // Guestbook for the friend room being visited (loads on visit).
   const {
     entries: guestbookEntries,
@@ -396,6 +399,7 @@ export function AppShell({
             onVisitFriend={(friend) => {
               setVisitingFriend(friend);
               void loadGuestbook(friend.userId, friend.houseId);
+              void loadFriendRoom(friend.houseId, friend.membershipId, catalogue);
               setScreen('friendRoom');
             }}
             onVisitMyRoom={() => setScreen('myRoom')}
@@ -439,16 +443,18 @@ export function AppShell({
             onLoadMoreGuestbook={() => {
               void loadMoreGuestbook();
             }}
-            placedFurnitureIds={placedFurnitureIds}
-            wallpaperId={wallpaperId}
-            floorId={floorId}
-            backgroundId={backgroundId}
+            placedFurnitureIds={friendRoom.placement?.placedFurnitureIds ?? []}
+            wallpaperId={friendRoom.placement?.wallpaperId}
+            floorId={friendRoom.placement?.floorId ?? null}
+            backgroundId={friendRoom.placement?.backgroundId ?? null}
             furniture={catalogue.furniture}
             wallpapers={catalogue.wallpapers}
             floors={catalogue.floors}
             backgrounds={catalogue.backgrounds}
-            characterId={characterId}
-            routines={routines}
+            characterId={friendRoom.characterId}
+            streakDays={friendRoom.streakDays}
+            routines={friendRoom.routines}
+            loading={friendRoom.loading}
             onBack={() => setScreen('groupHouse')}
           />
         ) : null}
