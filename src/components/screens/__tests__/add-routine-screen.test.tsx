@@ -10,10 +10,26 @@ describe('AddRoutineScreen', () => {
     expect(getByText('루틴 추가')).toBeTruthy();
   });
 
+  it('keeps the presets collapsed until the header is tapped', async () => {
+    const { getByText, queryByText } = await render(<AddRoutineScreen />);
+
+    // Closed by default — regulars aren't shown suggestions they don't need.
+    expect(getByText('추천 루틴')).toBeTruthy();
+    expect(queryByText('독서 30분')).toBeNull();
+
+    await fireEvent.press(getByText('추천 루틴'));
+    expect(getByText('독서 30분')).toBeTruthy();
+
+    // Tapping the header again folds them away.
+    await fireEvent.press(getByText('추천 루틴'));
+    expect(queryByText('독서 30분')).toBeNull();
+  });
+
   it('applies a preset and submits a new routine', async () => {
     const onAdd = jest.fn();
     const { getByText } = await render(<AddRoutineScreen onAdd={onAdd} />);
 
+    await fireEvent.press(getByText('추천 루틴')); // unfold the accordion
     await fireEvent.press(getByText('독서 30분'));
     await fireEvent.press(getByText('루틴 추가하기'));
 

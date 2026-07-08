@@ -116,6 +116,8 @@ export function AddRoutineScreen({
   const [photoVerify, setPhotoVerify] = useState(editRoutine?.photoVerify ?? false);
   const [showDateSheet, setShowDateSheet] = useState(false);
   const [showTimeSheet, setShowTimeSheet] = useState(false);
+  // 추천 루틴 accordion — closed by default (add mode only).
+  const [presetsOpen, setPresetsOpen] = useState(false);
   // 삭제하기 tapped — deletion only proceeds through the confirm modal.
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -233,36 +235,51 @@ export function AddRoutineScreen({
           ) : null}
         </View>
 
-        {/* Presets (add mode only) */}
+        {/* Presets (add mode only) — collapsed by default: veterans type their
+            own title, so the suggestions only unfold on demand. */}
         {!isEdit ? (
           <View style={styles.field}>
-            <Text style={[styles.label, { color: t.text }]}>추천 루틴</Text>
-            <View style={styles.presetGrid}>
-              {PRESETS.map((p) => (
-                <Pressable
-                  key={p.title}
-                  onPress={() => {
-                    setTitle(p.title);
-                    // Presets name local category labels; only switch when the
-                    // user actually has a matching category.
-                    const match = categories.find(
-                      (c) => c.id === p.category || c.label === p.category,
-                    );
-                    if (match) setCategory(match.id);
-                  }}
-                  style={[
-                    styles.preset,
-                    {
-                      backgroundColor: t.surface,
-                      borderColor: title === p.title ? t.primary : 'transparent',
-                    },
-                  ]}>
-                  <Text style={[Typography.body, styles.flex, { color: t.text }]} numberOfLines={1}>
-                    {p.title}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
+            <Pressable
+              onPress={() => setPresetsOpen((v) => !v)}
+              accessibilityRole="button"
+              accessibilityLabel="추천 루틴"
+              accessibilityState={{ expanded: presetsOpen }}
+              style={styles.presetHead}>
+              <Text style={[styles.label, { color: t.text }]}>추천 루틴</Text>
+              <View style={presetsOpen ? styles.chevronOpen : styles.chevronClosed}>
+                <Icon name="forward" size={16} color={t.textMuted} />
+              </View>
+            </Pressable>
+            {presetsOpen ? (
+              <View style={styles.presetGrid}>
+                {PRESETS.map((p) => (
+                  <Pressable
+                    key={p.title}
+                    onPress={() => {
+                      setTitle(p.title);
+                      // Presets name local category labels; only switch when the
+                      // user actually has a matching category.
+                      const match = categories.find(
+                        (c) => c.id === p.category || c.label === p.category,
+                      );
+                      if (match) setCategory(match.id);
+                    }}
+                    style={[
+                      styles.preset,
+                      {
+                        backgroundColor: t.surface,
+                        borderColor: title === p.title ? t.primary : 'transparent',
+                      },
+                    ]}>
+                    <Text
+                      style={[Typography.body, styles.flex, { color: t.text }]}
+                      numberOfLines={1}>
+                      {p.title}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
           </View>
         ) : null}
 
@@ -582,6 +599,13 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
   },
   chipEmoji: { fontSize: 14 },
+  presetHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  chevronClosed: { transform: [{ rotate: '90deg' }] },
+  chevronOpen: { transform: [{ rotate: '-90deg' }] },
   presetGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   preset: {
     width: '48%',
