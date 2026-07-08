@@ -93,6 +93,8 @@ export function AddRoutineScreen({
   const [photoVerify, setPhotoVerify] = useState(editRoutine?.photoVerify ?? false);
   const [showDateSheet, setShowDateSheet] = useState(false);
   const [showTimeSheet, setShowTimeSheet] = useState(false);
+  // 삭제하기 tapped — deletion only proceeds through the confirm modal.
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const toggleDay = (d: number) =>
     setDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort()));
@@ -373,10 +375,7 @@ export function AddRoutineScreen({
         </Pressable>
         {isEdit ? (
           <Pressable
-            onPress={() => {
-              if (editRoutine) onDelete?.(editRoutine.id);
-              onBack?.();
-            }}
+            onPress={() => setConfirmDelete(true)}
             accessibilityRole="button"
             accessibilityLabel="루틴 삭제"
             style={[styles.deleteBtn, { borderColor: t.danger }]}>
@@ -384,6 +383,39 @@ export function AddRoutineScreen({
           </Pressable>
         ) : null}
       </View>
+
+      {confirmDelete && editRoutine ? (
+        <View style={styles.confirmOverlay}>
+          <Pressable style={styles.backdrop} onPress={() => setConfirmDelete(false)} />
+          <View style={[styles.confirmCard, { backgroundColor: t.screen }]}>
+            <Text style={[Typography.h3, { color: t.text }]}>루틴 삭제</Text>
+            <Text style={[Typography.body, styles.confirmText, { color: t.textMuted }]}>
+              &lsquo;{editRoutine.title}&rsquo; 루틴을 삭제할까요?{'\n'}삭제하면 지난 수행 기록도
+              함께 사라져요.
+            </Text>
+            <View style={styles.confirmBtns}>
+              <Pressable
+                onPress={() => setConfirmDelete(false)}
+                accessibilityRole="button"
+                accessibilityLabel="취소"
+                style={[styles.confirmBtn, { backgroundColor: t.surfaceMuted }]}>
+                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setConfirmDelete(false);
+                  onDelete?.(editRoutine.id);
+                  onBack?.();
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="삭제"
+                style={[styles.confirmBtn, { backgroundColor: t.danger }]}>
+                <Text style={[Typography.label, { color: t.onPrimary }]}>삭제</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -488,6 +520,38 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     borderRadius: Radius.pill,
     borderWidth: 1,
+    alignItems: 'center',
+  },
+  confirmOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 200,
+    elevation: 200,
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  confirmCard: {
+    width: '80%',
+    maxWidth: 340,
+    borderRadius: Radius.lg,
+    padding: Spacing.four,
+    gap: Spacing.three,
+  },
+  confirmText: {
+    lineHeight: 22,
+  },
+  confirmBtns: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    marginTop: Spacing.one,
+  },
+  confirmBtn: {
+    flex: 1,
+    borderRadius: Radius.pill,
+    paddingVertical: Spacing.three,
     alignItems: 'center',
   },
 });

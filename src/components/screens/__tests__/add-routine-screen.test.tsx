@@ -79,4 +79,37 @@ describe('AddRoutineScreen', () => {
     await fireEvent.press(getByText('수정하기'));
     expect(onUpdate).toHaveBeenCalledWith('4', expect.objectContaining({ title: '영어 공부' }));
   });
+
+  it('asks for confirmation before deleting in edit mode', async () => {
+    const onDelete = jest.fn();
+    const onBack = jest.fn();
+    const routine = SAMPLE_ROUTINES[3]; // '영어 공부' (id 4)
+    const { getByText, getByLabelText } = await render(
+      <AddRoutineScreen editRoutine={routine} onDelete={onDelete} onBack={onBack} />,
+    );
+
+    await fireEvent.press(getByLabelText('루틴 삭제'));
+    expect(getByText(/루틴을 삭제할까요/)).toBeTruthy();
+    expect(onDelete).not.toHaveBeenCalled();
+
+    await fireEvent.press(getByLabelText('삭제'));
+    expect(onDelete).toHaveBeenCalledWith('4');
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the routine when the delete confirm is cancelled', async () => {
+    const onDelete = jest.fn();
+    const onBack = jest.fn();
+    const routine = SAMPLE_ROUTINES[3];
+    const { queryByText, getByLabelText } = await render(
+      <AddRoutineScreen editRoutine={routine} onDelete={onDelete} onBack={onBack} />,
+    );
+
+    await fireEvent.press(getByLabelText('루틴 삭제'));
+    await fireEvent.press(getByLabelText('취소'));
+
+    expect(queryByText(/루틴을 삭제할까요/)).toBeNull();
+    expect(onDelete).not.toHaveBeenCalled();
+    expect(onBack).not.toHaveBeenCalled();
+  });
 });
