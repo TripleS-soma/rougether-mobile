@@ -144,11 +144,12 @@ export type MyRoomScreenProps = {
   /** Change a todo's due date (메뉴 시트 → 날짜 바꾸기, calendar sheet). */
   onUpdateTodoDueDate?: (id: string, dueDate: string) => void;
   /**
-   * 날짜 바꾸기 on a routine: the server has no routine↔todo conversion, so
-   * this creates a todo on the picked date and deletes the routine (repeat
-   * settings and past logs are lost — the sheet warns before confirming).
+   * 날짜 바꾸기 on a routine: move that day's occurrence only. The repeat
+   * schedule stays; a one-off todo with the routine's title is created on the
+   * picked date (no server per-occurrence skip yet, so the original day's
+   * instance still shows — the sheet says so).
    */
-  onConvertRoutineToTodo?: (id: string, dueDate: string) => void;
+  onMoveRoutineOccurrence?: (id: string, dueDate: string) => void;
   /** Delete a routine (kebab → 삭제). */
   onDeleteRoutine?: (id: string) => void;
   /**
@@ -203,7 +204,7 @@ export function MyRoomScreen({
   onRenameRoutine,
   onUpdateRoutineTime,
   onUpdateTodoDueDate,
-  onConvertRoutineToTodo,
+  onMoveRoutineOccurrence,
   onDeleteRoutine,
   onRequestPhoto = captureVerificationPhoto,
 }: MyRoomScreenProps) {
@@ -266,8 +267,8 @@ export function MyRoomScreen({
   const [renameText, setRenameText] = useState('');
   const [timeId, setTimeId] = useState<string | null>(null);
   const timeRoutine = routines.find((r) => r.id === timeId) ?? null;
-  // 메뉴 → 날짜 바꾸기: calendar sheet. Todos move their dueDate; routines are
-  // converted into a todo on the picked date. The pick is a draft until 확인.
+  // 메뉴 → 날짜 바꾸기: calendar sheet. Todos move their dueDate; routines move
+  // that day's occurrence only (repeat stays). The pick is a draft until 확인.
   const [dateEditId, setDateEditId] = useState<string | null>(null);
   const dateEditItem = routines.find((r) => r.id === dateEditId) ?? null;
   const [dateDraft, setDateDraft] = useState(today);
@@ -975,8 +976,8 @@ export function MyRoomScreen({
               </Pressable>
             ) : null}
 
-            {/* Todos move their dueDate; a routine gets converted into a todo
-                on the picked date (the calendar sheet warns first). */}
+            {/* Todos move their dueDate; a routine moves that day's occurrence
+                only — the repeat stays (the calendar sheet explains). */}
             <Pressable
               onPress={() => {
                 const r = menuRoutine;
@@ -1012,7 +1013,8 @@ export function MyRoomScreen({
             </Text>
             {dateEditItem?.kind !== 'todo' ? (
               <Text style={[Typography.supporting, styles.sheetNote, { color: t.textMuted }]}>
-                반복 루틴은 선택한 날짜의 할 일로 바뀌어요. 반복 설정과 지난 기록은 사라져요.
+                루틴 반복은 그대로 두고, 선택한 날짜에 이 날 몫이 할 일로 추가돼요.{'\n'}(원래
+                날짜에서 숨기는 건 서버 준비 중이에요)
               </Text>
             ) : null}
             <Calendar value={dateDraft} onSelect={setDateDraft} />
@@ -1030,7 +1032,7 @@ export function MyRoomScreen({
                   setDateEditId(null);
                   if (!r) return;
                   if (r.kind === 'todo') onUpdateTodoDueDate?.(r.id, dateDraft);
-                  else onConvertRoutineToTodo?.(r.id, dateDraft);
+                  else onMoveRoutineOccurrence?.(r.id, dateDraft);
                 }}
                 accessibilityRole="button"
                 accessibilityLabel="확인"

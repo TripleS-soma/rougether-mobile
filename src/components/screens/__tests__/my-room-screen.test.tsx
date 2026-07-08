@@ -107,21 +107,21 @@ describe('MyRoomScreen', () => {
     expect(onUpdateTodoDueDate).not.toHaveBeenCalled();
   });
 
-  it('converts a routine to a todo via 날짜 바꾸기 with a warning', async () => {
-    const onConvertRoutineToTodo = jest.fn();
+  it('moves a single routine occurrence via 날짜 바꾸기, repeat untouched', async () => {
+    const onMoveRoutineOccurrence = jest.fn();
     const { getByText, getByLabelText } = await render(
-      <MyRoomScreen routines={SAMPLE_ROUTINES} onConvertRoutineToTodo={onConvertRoutineToTodo} />,
+      <MyRoomScreen routines={SAMPLE_ROUTINES} onMoveRoutineOccurrence={onMoveRoutineOccurrence} />,
     );
 
     await fireEvent.press(getByText('하루 회고')); // routine row → menu sheet
     await fireEvent.press(getByText('날짜 바꾸기'));
-    // The conversion warning shows for routines.
-    expect(getByText(/할 일로 바뀌어요/)).toBeTruthy();
+    // Routines get the occurrence-move note.
+    expect(getByText(/루틴 반복은 그대로 두고/)).toBeTruthy();
 
     await fireEvent.press(getByLabelText(OTHER_DAY));
-    expect(onConvertRoutineToTodo).not.toHaveBeenCalled();
+    expect(onMoveRoutineOccurrence).not.toHaveBeenCalled();
     await fireEvent.press(getByLabelText('확인'));
-    expect(onConvertRoutineToTodo).toHaveBeenCalledWith('5', OTHER_DAY);
+    expect(onMoveRoutineOccurrence).toHaveBeenCalledWith('5', OTHER_DAY);
   });
 
   it('keeps the quick-add button reachable on empty categories', async () => {
