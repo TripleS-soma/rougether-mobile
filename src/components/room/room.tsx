@@ -21,17 +21,18 @@ import {
  * Where each furniture slot sits inside the (square) room. Symmetric layout:
  * the bottom row (bed / rug / chair) vertically mirrors the top row
  * (shelf / window / storage), and plant / table mirror each other left↔right at
- * mid-height. Furniture is 24% wide, so left: '38%' centers an item.
+ * mid-height. Default furniture is 28% wide, so left: '36%' centers an item;
+ * the bottom corners stay 24% so they don't crowd the character.
  */
 const SLOT_STYLE: Record<FurnitureSlot, ViewStyle> = {
   // Top row
   topLeft: { top: '8%', left: '5%' },
-  topCenter: { top: '8%', left: '38%' },
+  topCenter: { top: '8%', left: '36%' },
   topRight: { top: '8%', right: '5%' },
   // Bottom row (vertical mirror of the top row)
-  bottomLeft: { bottom: '8%', left: '5%' },
-  bottomCenter: { bottom: '8%', left: '38%' },
-  bottomRight: { bottom: '8%', right: '5%' },
+  bottomLeft: { bottom: '8%', left: '5%', width: '24%' },
+  bottomCenter: { bottom: '8%', left: '36%' },
+  bottomRight: { bottom: '8%', right: '5%', width: '24%' },
   // Mid-height sides (horizontal mirror of each other)
   midLeft: { top: '38%', left: '6%' },
   midRight: { top: '38%', right: '6%' },
@@ -167,9 +168,10 @@ const styles = StyleSheet.create({
     bottom: 0,
     height: '50%',
   },
+  // Slot styles may override the width (bottom corners stay 24%).
   furniture: {
     position: 'absolute',
-    width: '24%',
+    width: '28%',
     aspectRatio: 1,
   },
   character: {
