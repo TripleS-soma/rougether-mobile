@@ -17,6 +17,7 @@ import type { DrawResult } from '@/api/types';
 import { Icon } from '@/components/ui/icon';
 import { WalletPills } from '@/components/ui/wallet-pills';
 import { Radius, Spacing, Typography } from '@/constants/theme';
+import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 import { assetSource, isCdnKey } from '@/resources/asset';
@@ -62,6 +63,7 @@ export function GachaScreen({
 }: GachaScreenProps) {
   const t = useTokens();
   const headerInset = useHeaderInsetStyle();
+  const { show: toast } = useToast();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [phase, setPhase] = useState<Phase>('idle');
@@ -74,8 +76,9 @@ export function GachaScreen({
 
   const pull = async (count: 1 | 10) => {
     if (!box || phase !== 'idle') return;
+    // The button stays tappable when unaffordable — the tap says why.
     if (!canAfford(count)) {
-      setError('잔액이 부족해요.');
+      toast('잔액이 부족해요', 'error');
       return;
     }
     setError('');
@@ -183,7 +186,8 @@ export function GachaScreen({
                   <Pressable
                     key={count}
                     onPress={() => pull(count)}
-                    disabled={!affordable || phase !== 'idle'}
+                    disabled={phase !== 'idle'}
+                    accessibilityState={{ disabled: !affordable }}
                     accessibilityRole="button"
                     accessibilityLabel={`${label}, ${cost.toLocaleString()} ${
                       box.costCurrencyType === 'COIN' ? '코인' : '다이아'

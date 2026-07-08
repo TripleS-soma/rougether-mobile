@@ -11,6 +11,7 @@ import {
 
 import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
+import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 
@@ -74,6 +75,7 @@ export function HouseSearchScreen({
   const t = useTokens();
   const headerInset = useHeaderInsetStyle();
   const [code, setCode] = useState('');
+  const { show: toast } = useToast();
   const [query, setQuery] = useState('');
   const [codeError, setCodeError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
@@ -89,6 +91,8 @@ export function HouseSearchScreen({
 
   const joinByCode = async () => {
     const trimmed = code.trim().toUpperCase();
+    // Blocked taps explain themselves; only the in-flight state stays dead.
+    if (trimmed.length === 0) return toast('초대 코드를 입력해주세요', 'error');
     if (trimmed.length < 6) {
       setCodeError('초대코드는 6자리 이상이에요');
       return;
@@ -165,8 +169,9 @@ export function HouseSearchScreen({
               </View>
               <Pressable
                 onPress={joinByCode}
-                disabled={code.trim().length === 0 || joining}
+                disabled={joining}
                 accessibilityRole="button"
+                accessibilityState={{ disabled: code.trim().length === 0 }}
                 style={[
                   styles.sideBtn,
                   { backgroundColor: code.trim().length === 0 ? t.disabledBg : t.primary },
@@ -261,9 +266,11 @@ export function HouseSearchScreen({
                     </Text>
                   </View>
                   <Pressable
-                    onPress={() => !full && onJoinHouse?.(h.id)}
-                    disabled={full}
+                    onPress={() =>
+                      full ? toast('정원이 가득 찼어요', 'error') : onJoinHouse?.(h.id)
+                    }
                     accessibilityRole="button"
+                    accessibilityState={{ disabled: full }}
                     style={[
                       styles.joinBtn,
                       { backgroundColor: full ? t.surfaceMuted : t.primary },

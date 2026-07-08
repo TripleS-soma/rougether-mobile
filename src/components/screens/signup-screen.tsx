@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Field } from '@/components/ui/field';
 import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing } from '@/constants/theme';
+import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 
@@ -21,6 +22,7 @@ export type SignupScreenProps = {
 export function SignupScreen({ onBack }: SignupScreenProps) {
   const t = useTokens();
   const headerInset = useHeaderInsetStyle();
+  const { show: toast } = useToast();
 
   const [nickname, setNickname] = useState('');
   const [email, setEmail] = useState('');
@@ -77,7 +79,9 @@ export function SignupScreen({ onBack }: SignupScreenProps) {
   const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
 
   const handleSendCode = () => {
-    if (!emailValid) return;
+    // Blocked taps explain themselves (이미 인증 완료만 구조적으로 죽여둔다).
+    if (!emailValid) return toast('이메일 형식을 확인해주세요', 'error');
+    if (secondsLeft > 150) return toast('잠시 후 다시 시도해주세요', 'error');
     setCodeSent(true);
     setSecondsLeft(180);
     setVerificationCode('');
@@ -169,8 +173,9 @@ export function SignupScreen({ onBack }: SignupScreenProps) {
             </View>
             <Pressable
               onPress={handleSendCode}
-              disabled={sendDisabled}
+              disabled={emailVerified}
               accessibilityRole="button"
+              accessibilityState={{ disabled: sendDisabled }}
               style={[
                 styles.sideBtn,
                 { backgroundColor: sendDisabled ? t.disabledBg : t.primary },
@@ -217,8 +222,8 @@ export function SignupScreen({ onBack }: SignupScreenProps) {
               </View>
               <Pressable
                 onPress={handleVerifyCode}
-                disabled={verificationCode.length !== 6}
                 accessibilityRole="button"
+                accessibilityState={{ disabled: verificationCode.length !== 6 }}
                 style={[
                   styles.sideBtn,
                   { backgroundColor: verificationCode.length !== 6 ? t.disabledBg : t.text },
@@ -308,7 +313,7 @@ export function SignupScreen({ onBack }: SignupScreenProps) {
       {/* Signup API isn't available yet; keep the form as a preview but never
           submit (onSignupSuccess stays for when the backend lands). */}
       <Pressable
-        disabled
+        onPress={() => toast('이메일 가입은 서버 준비 중이에요', 'error')}
         accessibilityRole="button"
         accessibilityState={{ disabled: true }}
         style={[styles.submit, { backgroundColor: t.disabledBg }]}>

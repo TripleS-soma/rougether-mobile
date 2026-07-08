@@ -3,6 +3,7 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import type { GachaMachine } from '@/api/adapters';
 import type { DrawResult } from '@/api/types';
 import { GachaScreen } from '@/components/screens/gacha-screen';
+import { ToastProvider } from '@/components/ui/toast';
 
 const machine: GachaMachine = {
   id: 1,
@@ -47,15 +48,17 @@ describe('GachaScreen', () => {
     expect(onDraw).toHaveBeenCalledWith(1, 10);
   });
 
-  it('does not draw when the balance is below the cost', async () => {
+  it('explains an unaffordable pull with a toast instead of drawing', async () => {
     const onDraw = jest.fn();
     const { getByText } = await render(
-      <GachaScreen gachas={[machine]} coinBalance={100} onDraw={onDraw} />,
+      <ToastProvider>
+        <GachaScreen gachas={[machine]} coinBalance={100} onDraw={onDraw} />
+      </ToastProvider>,
     );
 
-    // Both pull buttons are disabled below cost, so the presses are no-ops.
+    // The blocked button stays tappable — the tap says why nothing happens.
     await fireEvent.press(getByText('1회 뽑기'));
-    await fireEvent.press(getByText('10연 뽑기'));
+    expect(getByText('잔액이 부족해요')).toBeTruthy();
     expect(onDraw).not.toHaveBeenCalled();
   });
 });

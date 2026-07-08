@@ -1,6 +1,7 @@
 import { fireEvent, render } from '@testing-library/react-native';
 
 import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
+import { ToastProvider } from '@/components/ui/toast';
 import type { FurnitureItem, Wallpaper } from '@/resources/furniture';
 
 describe('RoomDecorScreen', () => {
@@ -182,16 +183,19 @@ describe('RoomDecorScreen', () => {
     expect(queryByText('구매하시겠습니까?')).toBeNull();
   });
 
-  it('does not buy when dia is insufficient', async () => {
+  it('explains an unaffordable tile with a toast instead of the buy confirm', async () => {
     const onBuy = jest.fn();
-    const { getByLabelText, queryByText } = await render(
-      <RoomDecorScreen ownedIds={['bed']} diaBalance={0} onBuy={onBuy} />,
+    const { getByText, getByLabelText, queryByText } = await render(
+      <ToastProvider>
+        <RoomDecorScreen ownedIds={['bed']} diaBalance={0} onBuy={onBuy} />
+      </ToastProvider>,
     );
 
     await fireEvent.press(getByLabelText('초록 식물 구매'));
 
-    // Unaffordable tiles don't even open the confirm.
+    // Unaffordable tiles don't open the confirm — the toast says why.
     expect(queryByText('구매하시겠습니까?')).toBeNull();
+    expect(getByText('다이아가 부족해요')).toBeTruthy();
     expect(onBuy).not.toHaveBeenCalled();
   });
 

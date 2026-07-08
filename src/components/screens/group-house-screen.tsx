@@ -13,6 +13,7 @@ import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { CharacterAvatar } from '@/components/character-avatar';
 import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
+import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 
@@ -197,6 +198,7 @@ export function GroupHouseScreen({
   onReissueInviteCode,
 }: GroupHouseScreenProps) {
   const t = useTokens();
+  const { show: toast } = useToast();
   const headerInset = useHeaderInsetStyle();
   const screenStyle = useScreenStyle([]);
 
@@ -244,7 +246,11 @@ export function GroupHouseScreen({
     missionTargetNum >= 1 &&
     missionTargetNum <= 1000;
   const submitMission = () => {
-    if (!canSubmitMission || !currentHouse?.houseId) return;
+    // Blocked taps explain themselves, first unmet condition first.
+    if (missionTitle.trim().length === 0) return toast('미션 이름을 입력해주세요', 'error');
+    if (!Number.isInteger(missionTargetNum) || missionTargetNum < 1 || missionTargetNum > 1000)
+      return toast('목표값은 1~1000 사이 숫자로 입력해주세요', 'error');
+    if (!currentHouse?.houseId) return;
     onCreateMission?.(currentHouse.houseId, {
       title: missionTitle.trim(),
       missionType,
@@ -262,7 +268,8 @@ export function GroupHouseScreen({
   };
   const editNameValid = editName.trim().length >= 2 && editName.trim().length <= 30;
   const submitEditHouse = () => {
-    if (!editNameValid || !currentHouse?.houseId) return;
+    if (!editNameValid) return toast('집 이름은 2~30자로 입력해주세요', 'error');
+    if (!currentHouse?.houseId) return;
     onUpdateHouse?.(currentHouse.houseId, {
       name: editName.trim(),
       description: editDesc.trim() || undefined,
@@ -638,10 +645,13 @@ export function GroupHouseScreen({
                     return (
                       <Pressable
                         key={n}
-                        onPress={() => setEditMax(n)}
-                        disabled={tooSmall}
+                        onPress={() =>
+                          tooSmall
+                            ? toast('현재 인원보다 작게 줄일 수 없어요', 'error')
+                            : setEditMax(n)
+                        }
                         accessibilityRole="radio"
-                        accessibilityState={{ selected }}
+                        accessibilityState={{ selected, disabled: tooSmall }}
                         accessibilityLabel={`정원 ${n}명`}
                         style={[
                           styles.capacityBtn,
@@ -681,8 +691,8 @@ export function GroupHouseScreen({
                 </Pressable>
                 <Pressable
                   onPress={submitEditHouse}
-                  disabled={!editNameValid}
                   accessibilityRole="button"
+                  accessibilityState={{ disabled: !editNameValid }}
                   accessibilityLabel="집 정보 저장"
                   style={[
                     styles.modalBtn,
@@ -974,8 +984,8 @@ export function GroupHouseScreen({
               </Pressable>
               <Pressable
                 onPress={submitMission}
-                disabled={!canSubmitMission}
                 accessibilityRole="button"
+                accessibilityState={{ disabled: !canSubmitMission }}
                 accessibilityLabel="미션 만들기 확인"
                 style={[
                   styles.modalBtn,

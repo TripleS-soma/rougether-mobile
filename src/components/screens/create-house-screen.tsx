@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 
 import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
+import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 
@@ -48,6 +49,7 @@ export function CreateHouseScreen({ onBack, onCreate }: CreateHouseScreenProps) 
 
   const theme = THEMES.find((x) => x.id === themeId) ?? THEMES[0];
   const canSubmit = name.trim().length >= 2;
+  const { show: toast } = useToast();
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
@@ -200,12 +202,17 @@ export function CreateHouseScreen({ onBack, onCreate }: CreateHouseScreenProps) 
         </View>
 
         <Pressable
-          onPress={() =>
-            canSubmit &&
-            onCreate?.({ name: name.trim(), description: description.trim(), maxMembers: capacity })
-          }
-          disabled={!canSubmit}
+          onPress={() => {
+            // Blocked tap explains itself instead of a dead gray button.
+            if (!canSubmit) return toast('집 이름을 2자 이상 입력해주세요', 'error');
+            onCreate?.({
+              name: name.trim(),
+              description: description.trim(),
+              maxMembers: capacity,
+            });
+          }}
           accessibilityRole="button"
+          accessibilityState={{ disabled: !canSubmit }}
           style={({ pressed }) => [
             styles.submit,
             { backgroundColor: canSubmit ? t.primary : t.disabledBg },

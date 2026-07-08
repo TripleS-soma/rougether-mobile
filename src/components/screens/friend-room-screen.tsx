@@ -20,6 +20,7 @@ import { Icon } from '@/components/ui/icon';
 import { PendingNotice } from '@/components/ui/pending-notice';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { type FurnitureItem, type Wallpaper } from '@/resources/furniture';
+import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 import { formatTime } from '@/utils/datetime';
@@ -119,10 +120,12 @@ export function FriendRoomScreen({
   const [localNotes, setLocalNotes] = useState<GuestbookEntry[]>(DEFAULT_GUESTBOOK);
   const [draft, setDraft] = useState('');
   const notes = guestbook ?? localNotes;
+  const { show: toast } = useToast();
   const canSend = draft.trim().length > 0;
   const sendNote = () => {
     const content = draft.trim();
-    if (!content) return;
+    // Blocked tap explains itself instead of a dead gray button.
+    if (!content) return toast('방명록 내용을 입력해주세요', 'error');
     if (onWriteGuestbook) onWriteGuestbook(content);
     else setLocalNotes((prev) => [{ id: `local-${prev.length}`, author: '나', content, date: '오늘' }, ...prev]); // prettier-ignore
     setDraft('');
@@ -305,8 +308,8 @@ export function FriendRoomScreen({
               />
               <Pressable
                 onPress={sendNote}
-                disabled={!canSend}
                 accessibilityRole="button"
+                accessibilityState={{ disabled: !canSend }}
                 accessibilityLabel="방명록 남기기"
                 style={[styles.gbSendBtn, { backgroundColor: canSend ? t.primary : t.disabledBg }]}>
                 <Text style={[Typography.label, { color: canSend ? t.onPrimary : t.textMuted }]}>

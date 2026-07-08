@@ -1,6 +1,7 @@
 import { fireEvent, render } from '@testing-library/react-native';
 
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
+import { ToastProvider } from '@/components/ui/toast';
 
 describe('CreateHouseScreen', () => {
   it('renders the title and the server-issued invite-code notice', async () => {
@@ -24,15 +25,18 @@ describe('CreateHouseScreen', () => {
     );
   });
 
-  it('does not create with a too-short name', async () => {
+  it('explains a too-short name with a toast instead of creating', async () => {
     const onCreate = jest.fn();
     const { getByText, getByPlaceholderText } = await render(
-      <CreateHouseScreen onCreate={onCreate} />,
+      <ToastProvider>
+        <CreateHouseScreen onCreate={onCreate} />
+      </ToastProvider>,
     );
 
     await fireEvent.changeText(getByPlaceholderText('우리 집 이름을 정해주세요'), 'a');
     await fireEvent.press(getByText('집 만들기'));
 
+    expect(getByText('집 이름을 2자 이상 입력해주세요')).toBeTruthy();
     expect(onCreate).not.toHaveBeenCalled();
   });
 });
