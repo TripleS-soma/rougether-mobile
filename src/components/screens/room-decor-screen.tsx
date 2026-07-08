@@ -1,7 +1,8 @@
 import { Image } from 'expo-image';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  BackHandler,
   Modal,
   Pressable,
   ScrollView,
@@ -134,7 +135,44 @@ export function RoomDecorScreen({
   const [wallpaperId, setWallpaperId] = useState(initialWallpaperId);
   const [floorId, setFloorId] = useState<string | null>(initialFloorId);
   const [backgroundId, setBackgroundId] = useState<string | null>(initialBackgroundId);
+  // Snapshot of the selection at mount — leaving with a different selection
+  // (미적용 변경) asks whether to save first.
+  const initialRef = useRef({
+    placed: [...(initialPlacedIds ?? ['hanok-bed', 'hanok-shelf', 'hanok-window', 'hanok-rug'])],
+    wallpaperId: initialWallpaperId,
+    floorId: initialFloorId,
+    backgroundId: initialBackgroundId,
+  });
+  const dirty =
+    wallpaperId !== initialRef.current.wallpaperId ||
+    floorId !== initialRef.current.floorId ||
+    backgroundId !== initialRef.current.backgroundId ||
+    placed.length !== initialRef.current.placed.length ||
+    placed.some((id) => !initialRef.current.placed.includes(id));
+  const [confirmLeave, setConfirmLeave] = useState(false);
   const [activeCategory, setActiveCategory] = useState(ALL);
+
+  const apply = () => onApply?.(placed, wallpaperId, floorId, backgroundId);
+  const handleBack = () => {
+    if (dirty) setConfirmLeave(true);
+    else onBack?.();
+  };
+  // Android hardware back runs the same unsaved-changes guard; without a
+  // guard reason we fall through to the app shell's navigation handler.
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (confirmLeave) {
+        setConfirmLeave(false);
+        return true;
+      }
+      if (dirty) {
+        setConfirmLeave(true);
+        return true;
+      }
+      return false;
+    });
+    return () => sub.remove();
+  }, [confirmLeave, dirty]);
   // 보유중 filter: hide the shop side of the catalog, keep only placeable items.
   const [ownedOnly, setOwnedOnly] = useState(false);
   // Purchase pending the 구매하시겠습니까? confirm — buying is irreversible dia spend.
@@ -172,7 +210,7 @@ export function RoomDecorScreen({
     <View style={[styles.screen, useScreenStyle([])]}>
       <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
         <Pressable
-          onPress={onBack}
+          onPress={handleBack}
           accessibilityRole="button"
           accessibilityLabel="뒤로가기"
           style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
@@ -386,10 +424,56 @@ export function RoomDecorScreen({
         </Pressable>
       </Modal>
 
+      {/* Leaving with unapplied changes — save, discard, or stay. */}
+      <Modal
+        transparent
+        visible={confirmLeave}
+        animationType="fade"
+        onRequestClose={() => setConfirmLeave(false)}>
+        <Pressable style={styles.confirmBackdrop} onPress={() => setConfirmLeave(false)}>
+          <Pressable style={[styles.confirmCard, { backgroundColor: t.screen }]}>
+            <Text style={[Typography.h3, { color: t.text }]}>변경사항을 저장할까요?</Text>
+            <Text style={[Typography.body, styles.confirmText, { color: t.textMuted }]}>
+              적용하지 않은 꾸미기 변경이 있어요.
+            </Text>
+            <View style={styles.leaveBtns}>
+              <Pressable
+                onPress={() => {
+                  setConfirmLeave(false);
+                  apply();
+                  onBack?.();
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="저장하고 나가기"
+                style={[styles.leaveBtn, { backgroundColor: t.primary }]}>
+                <Text style={[Typography.label, { color: t.onPrimary }]}>저장하고 나가기</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setConfirmLeave(false);
+                  onBack?.();
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="저장하지 않고 나가기"
+                style={[styles.leaveBtn, { backgroundColor: t.surfaceMuted }]}>
+                <Text style={[Typography.label, { color: t.text }]}>저장하지 않고 나가기</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setConfirmLeave(false)}
+                accessibilityRole="button"
+                accessibilityLabel="계속 꾸미기"
+                style={styles.leaveStay}>
+                <Text style={[Typography.label, { color: t.textMuted }]}>계속 꾸미기</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       <View style={[styles.applyBar, { backgroundColor: t.screen, borderTopColor: t.border }]}>
         <Pressable
           onPress={() => {
-            onApply?.(placed, wallpaperId, floorId, backgroundId);
+            apply();
             onBack?.();
           }}
           accessibilityRole="button"
@@ -565,6 +649,19 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     paddingVertical: Spacing.three,
     alignItems: 'center',
+  },
+  leaveBtns: {
+    gap: Spacing.two,
+    marginTop: Spacing.one,
+  },
+  leaveBtn: {
+    borderRadius: Radius.pill,
+    paddingVertical: Spacing.three,
+    alignItems: 'center',
+  },
+  leaveStay: {
+    alignItems: 'center',
+    paddingVertical: Spacing.two,
   },
   tab: {
     paddingHorizontal: Spacing.three,
