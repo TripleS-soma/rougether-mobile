@@ -141,6 +141,8 @@ export type MyRoomScreenProps = {
   onRenameRoutine?: (id: string, title: string) => void;
   /** Update a routine's alarm time (kebab → 시간 수정, reuses TimePickerSheet). */
   onUpdateRoutineTime?: (id: string, alarmEnabled: boolean, time: string) => void;
+  /** Change a todo's due date (메뉴 시트 → 날짜 바꾸기, calendar sheet). */
+  onUpdateTodoDueDate?: (id: string, dueDate: string) => void;
   /** Delete a routine (kebab → 삭제). */
   onDeleteRoutine?: (id: string) => void;
   /**
@@ -194,6 +196,7 @@ export function MyRoomScreen({
   onQuickAddRoutine,
   onRenameRoutine,
   onUpdateRoutineTime,
+  onUpdateTodoDueDate,
   onDeleteRoutine,
   onRequestPhoto = captureVerificationPhoto,
 }: MyRoomScreenProps) {
@@ -256,6 +259,9 @@ export function MyRoomScreen({
   const [renameText, setRenameText] = useState('');
   const [timeId, setTimeId] = useState<string | null>(null);
   const timeRoutine = routines.find((r) => r.id === timeId) ?? null;
+  // 메뉴 → 날짜 바꾸기: calendar sheet editing a todo's due date.
+  const [dateEditId, setDateEditId] = useState<string | null>(null);
+  const dateEditTodo = routines.find((r) => r.id === dateEditId) ?? null;
 
   // 방 / 달력 tab. The calendar lists routines + todos on the selected date.
   // Today renders from live client state (toggleable); other dates render the
@@ -959,6 +965,50 @@ export function MyRoomScreen({
                 <Text style={[Typography.body, { color: t.text }]}>시간 수정</Text>
               </Pressable>
             ) : null}
+
+            {/* Only todos carry a single date (dueDate) — routines change their
+                기간 in the full edit screen instead. */}
+            {menuRoutine?.kind === 'todo' ? (
+              <Pressable
+                onPress={() => {
+                  const r = menuRoutine;
+                  setMenuOpenId(null);
+                  if (r) setDateEditId(r.id);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`${menuRoutine?.title ?? ''} 날짜 바꾸기`}
+                style={styles.sheetItem}>
+                <View style={[styles.sheetItemIcon, { backgroundColor: t.success }]}>
+                  <Icon name="calendar" size={18} color={t.onPrimary} />
+                </View>
+                <Text style={[Typography.body, { color: t.text }]}>날짜 바꾸기</Text>
+              </Pressable>
+            ) : null}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* 날짜 바꾸기: calendar bottom sheet — picking a date is the whole
+          interaction, so the pick saves and closes immediately. */}
+      <Modal
+        transparent
+        visible={dateEditTodo !== null}
+        animationType="slide"
+        onRequestClose={() => setDateEditId(null)}>
+        <Pressable style={styles.sheetBackdrop} onPress={() => setDateEditId(null)}>
+          <Pressable style={[styles.sheet, { backgroundColor: t.screen }]}>
+            <View style={[styles.sheetHandle, { backgroundColor: t.border }]} />
+            <Text style={[Typography.h3, styles.sheetTitle, { color: t.text }]} numberOfLines={1}>
+              날짜 바꾸기
+            </Text>
+            <Calendar
+              value={dateEditTodo?.dueDate ?? today}
+              onSelect={(date) => {
+                const r = dateEditTodo;
+                setDateEditId(null);
+                if (r) onUpdateTodoDueDate?.(r.id, date);
+              }}
+            />
           </Pressable>
         </Pressable>
       </Modal>

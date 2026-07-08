@@ -284,6 +284,19 @@ export function useMyRoomData() {
     }
   };
 
+  /** Change a todo's due date (메뉴 시트 → 날짜 바꾸기). */
+  const updateTodoDueDate = async (id: string, dueDate: string) => {
+    const item = findItem(id);
+    if (!item || item.kind !== 'todo') return;
+    setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, dueDate } : r)));
+    try {
+      await updateTodo(toServerItemId(id), toTodoUpdate(item, { dueDate }));
+    } catch {
+      setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, dueDate: item.dueDate } : r)));
+      toast('수정에 실패했어요', 'error');
+    }
+  };
+
   const deleteRoutine = async (id: string) => {
     const item = findItem(id);
     if (!item) return;
@@ -400,6 +413,7 @@ export function useMyRoomData() {
     updateRoutine,
     renameRoutine,
     updateRoutineTime,
+    updateTodoDueDate,
     deleteRoutine,
     createRoutineCategory,
     updateRoutineCategory,

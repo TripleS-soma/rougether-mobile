@@ -144,6 +144,7 @@ export function AppShell({
     updateRoutine,
     renameRoutine,
     updateRoutineTime,
+    updateTodoDueDate,
     deleteRoutine,
     createRoutineCategory,
     updateRoutineCategory,
@@ -294,6 +295,7 @@ export function AppShell({
             onQuickAddRoutine={quickAddTodo}
             onRenameRoutine={renameRoutine}
             onUpdateRoutineTime={updateRoutineTime}
+            onUpdateTodoDueDate={updateTodoDueDate}
             onDeleteRoutine={deleteRoutine}
           />
         ) : null}
