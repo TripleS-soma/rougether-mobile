@@ -27,6 +27,9 @@ export function AppRoot() {
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
   const [characterId, setCharacterId] = useState<CharacterId>(DEFAULT_CHARACTER_ID);
   const [serverGoals, setServerGoals] = useState<OnboardingGoal[]>([]);
+  // Previously selected goal ids — 온보딩 다시 보기 opens the goal survey as an
+  // edit of these instead of a blank slate.
+  const [selectedGoalIds, setSelectedGoalIds] = useState<string[]>([]);
   const [characters, setCharacters] = useState<CharacterItem[]>([]);
 
   useEffect(() => {
@@ -50,6 +53,10 @@ export function AppRoot() {
           : undefined;
       if (remoteCharacter) setCharacterId(remoteCharacter);
       else if (saved) setCharacterId(saved.characterId);
+      const remoteGoalIds =
+        remote?.goals?.flatMap((g) => (g.goalId != null ? [String(g.goalId)] : [])) ?? [];
+      if (remoteGoalIds.length > 0) setSelectedGoalIds(remoteGoalIds);
+      else if (saved) setSelectedGoalIds(saved.goals);
       setOnboarded(remote?.completed === true || saved != null);
     })();
     return () => {
@@ -69,8 +76,11 @@ export function AppRoot() {
     return (
       <OnboardingScreen
         goals={serverGoals.length > 0 ? serverGoals : undefined}
+        initialGoals={selectedGoalIds}
+        initialCharacterId={characterId}
         onDone={(goals, chosen) => {
           setCharacterId(chosen);
+          setSelectedGoalIds(goals);
           setOnboarded(true);
           void saveOnboarding({ characterId: chosen, goals });
           // Push the selections to the server, best-effort: goal ids are
