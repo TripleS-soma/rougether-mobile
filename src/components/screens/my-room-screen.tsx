@@ -626,8 +626,10 @@ export function MyRoomScreen({
                           </View>
 
                           <View style={styles.rows}>
+                            {/* The checkbox alone toggles completion; the rest
+                                of the row opens the 수정/삭제 bottom sheet (the
+                                old kebab's menu — the kebab itself is gone). */}
                             {items.map((routine) => {
-                              const menuOpen = menuOpenId === routine.id;
                               const done = isDone(routine.id, today);
                               return (
                                 <View key={routine.id}>
@@ -637,65 +639,54 @@ export function MyRoomScreen({
                                       accessibilityRole="checkbox"
                                       accessibilityState={{ checked: done }}
                                       accessibilityLabel={routine.title}
-                                      style={styles.rowMain}>
-                                      <View style={styles.leadIcon}>
-                                        <Icon
-                                          name={done ? 'checkbox-on' : 'checkbox-off'}
-                                          size={22}
-                                          color={done ? cat.color : t.textDisabled}
-                                        />
-                                      </View>
-                                      <View style={styles.flex}>
-                                        <Text
-                                          style={[
-                                            Typography.body,
-                                            done
-                                              ? {
-                                                  color: t.textMuted,
-                                                  textDecorationLine: 'line-through',
-                                                }
-                                              : { color: t.text },
-                                          ]}>
-                                          {routine.title}
-                                        </Text>
-                                        {(routine.alarmEnabled && routine.time) ||
-                                        routine.photoVerify ? (
-                                          <View style={styles.badges}>
-                                            {routine.alarmEnabled && routine.time ? (
-                                              <View style={styles.badge}>
-                                                <Icon name="bell" size={12} color={t.textMuted} />
-                                                <Text
-                                                  style={[
-                                                    styles.badgeText,
-                                                    { color: t.textMuted },
-                                                  ]}>
-                                                  {formatTime(routine.time)}
-                                                </Text>
-                                              </View>
-                                            ) : null}
-                                            {routine.photoVerify ? (
-                                              <View style={styles.badge}>
-                                                <Icon name="camera" size={12} color={t.textMuted} />
-                                                <Text
-                                                  style={[
-                                                    styles.badgeText,
-                                                    { color: t.textMuted },
-                                                  ]}>
-                                                  사진 인증
-                                                </Text>
-                                              </View>
-                                            ) : null}
-                                          </View>
-                                        ) : null}
-                                      </View>
+                                      hitSlop={8}
+                                      style={[styles.leadIcon, styles.checkbox]}>
+                                      <Icon
+                                        name={done ? 'checkbox-on' : 'checkbox-off'}
+                                        size={22}
+                                        color={done ? cat.color : t.textDisabled}
+                                      />
                                     </Pressable>
                                     <Pressable
-                                      onPress={() => setMenuOpenId(menuOpen ? null : routine.id)}
+                                      onPress={() => setMenuOpenId(routine.id)}
                                       accessibilityRole="button"
                                       accessibilityLabel={`${routine.title} 메뉴`}
-                                      hitSlop={8}
-                                      style={styles.kebab}>
-                                      <Icon name="kebab" size={20} color={t.textDisabled} />
+                                      style={[styles.flex, styles.rowBody]}>
+                                      <Text
+                                        style={[
+                                          Typography.body,
+                                          done
+                                            ? {
+                                                color: t.textMuted,
+                                                textDecorationLine: 'line-through',
+                                              }
+                                            : { color: t.text },
+                                        ]}>
+                                        {routine.title}
+                                      </Text>
+                                      {(routine.alarmEnabled && routine.time) ||
+                                      routine.photoVerify ? (
+                                        <View style={styles.badges}>
+                                          {routine.alarmEnabled && routine.time ? (
+                                            <View style={styles.badge}>
+                                              <Icon name="bell" size={12} color={t.textMuted} />
+                                              <Text
+                                                style={[styles.badgeText, { color: t.textMuted }]}>
+                                                {formatTime(routine.time)}
+                                              </Text>
+                                            </View>
+                                          ) : null}
+                                          {routine.photoVerify ? (
+                                            <View style={styles.badge}>
+                                              <Icon name="camera" size={12} color={t.textMuted} />
+                                              <Text
+                                                style={[styles.badgeText, { color: t.textMuted }]}>
+                                                사진 인증
+                                              </Text>
+                                            </View>
+                                          ) : null}
+                                        </View>
+                                      ) : null}
                                     </Pressable>
                                   </View>
                                 </View>
@@ -1278,6 +1269,13 @@ const styles = StyleSheet.create({
   routineRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: Spacing.two,
+  },
+  checkbox: {
+    justifyContent: 'center',
+  },
+  rowBody: {
+    paddingVertical: Spacing.one,
   },
   rowMain: {
     flex: 1,
@@ -1300,14 +1298,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.two,
     paddingVertical: Spacing.one,
     marginTop: Spacing.half,
-  },
-  // Same width as catAdd so the kebab and the category + button share one
-  // vertical axis at the right edge (tap area is restored via hitSlop).
-  kebab: {
-    width: 24,
-    alignSelf: 'stretch',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   sheetBackdrop: {
     flex: 1,
