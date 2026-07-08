@@ -14,7 +14,7 @@ export type CategoryCreateRequest = {
   colorHex?: string;
   iconKey?: string;
   sortOrder?: number;
-  visibility?: 'PRIVATE' | 'HOUSE';
+  visibility?: 'PRIVATE' | 'FRIENDS' | 'HOUSE' | 'PUBLIC';
 };
 
 export type CategoryListResponse = {
@@ -27,7 +27,7 @@ export type CategoryResponse = {
   colorHex?: string;
   iconKey?: string;
   sortOrder?: number;
-  visibility?: 'PRIVATE' | 'HOUSE';
+  visibility?: 'PRIVATE' | 'FRIENDS' | 'HOUSE' | 'PUBLIC';
   deleted?: boolean;
 };
 
@@ -36,7 +36,7 @@ export type CategoryUpdateRequest = {
   colorHex?: string;
   iconKey?: string;
   sortOrder?: number;
-  visibility?: 'PRIVATE' | 'HOUSE';
+  visibility?: 'PRIVATE' | 'FRIENDS' | 'HOUSE' | 'PUBLIC';
 };
 
 export type CharacterItem = {
@@ -512,10 +512,11 @@ export type RoutineUpdateRequest = {
   categoryId?: number;
   authType?: 'CHECK' | 'PHOTO';
   repeatType?: string;
-  repeatDays?: RepeatDays;
-  scheduledTime?: string;
+  // PUT replaces the resource: an explicit null clears the field server-side.
+  repeatDays?: RepeatDays | null;
+  scheduledTime?: string | null;
   startsOn?: string;
-  endsOn?: string;
+  endsOn?: string | null;
 };
 
 export type SlotAssignment = {

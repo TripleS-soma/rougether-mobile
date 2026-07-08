@@ -6,6 +6,7 @@ import {
   toCalendarItems,
   toCategoryCreate,
   toRoutineCreate,
+  toRoutineUpdate,
   toServerItemId,
   toShopCatalogue,
   toTodoCreate,
@@ -223,19 +224,43 @@ describe('API adapters', () => {
     expect(placed.backgroundId).toBeNull(); // background not owned
   });
 
-  it('maps category visibility both ways', () => {
-    expect(
-      toAppCategory({ id: 4, name: '취미', colorHex: '#123456', visibility: 'HOUSE' }),
-    ).toMatchObject({ id: '4', label: '취미', color: '#123456', visibility: 'public' });
-    expect(
-      toCategoryCreate({
-        id: 'x',
-        label: '취미',
-        emoji: '🎨',
-        color: '#123456',
-        visibility: 'public',
-      }),
-    ).toMatchObject({ name: '취미', colorHex: '#123456', iconKey: '🎨', visibility: 'HOUSE' });
+  it('maps category visibility both ways (lossless 3-level round-trip)', () => {
+    // Server → app: PUBLIC/HOUSE/FRIENDS map to 공개/이웃/일부; PRIVATE reads as
+    // the most restrictive app level.
+    expect(toAppCategory({ id: 4, name: '취미', visibility: 'PUBLIC' }).visibility).toBe('public');
+    expect(toAppCategory({ id: 4, name: '취미', visibility: 'HOUSE' }).visibility).toBe('neighbor');
+    expect(toAppCategory({ id: 4, name: '취미', visibility: 'FRIENDS' }).visibility).toBe(
+      'partial',
+    );
+    expect(toAppCategory({ id: 4, name: '취미', visibility: 'PRIVATE' }).visibility).toBe(
+      'partial',
+    );
+
+    const cat = { id: 'x', label: '취미', emoji: '🎨', color: '#123456' } as const;
+    expect(toCategoryCreate({ ...cat, visibility: 'public' }).visibility).toBe('PUBLIC');
+    expect(toCategoryCreate({ ...cat, visibility: 'neighbor' }).visibility).toBe('HOUSE');
+    expect(toCategoryCreate({ ...cat, visibility: 'partial' }).visibility).toBe('FRIENDS');
+  });
+
+  it('clears alarm time and end date with explicit nulls on update', () => {
+    const routine = {
+      id: 'r7',
+      title: '아침 운동',
+      category: '5',
+      days: [1, 5],
+      startDate: '2026-07-02',
+      endDate: '2026-12-31',
+      alarmEnabled: true,
+      time: '07:30',
+      kind: 'routine' as const,
+    };
+    // Turning the alarm off / dropping the 종료일 must send null (the server
+    // treats PUT as full replace — null unsets the column).
+    const req = toRoutineUpdate(routine, { alarmEnabled: false, endDate: undefined, days: [] });
+    expect(req.scheduledTime).toBeNull();
+    expect(req.endsOn).toBeNull();
+    expect(req.repeatDays).toBeNull();
+    expect(req.repeatType).toBe('DAILY');
   });
 
   it('names my house room by profile nickname when the members API has none', () => {
