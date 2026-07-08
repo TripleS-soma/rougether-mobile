@@ -1,6 +1,7 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
+import { ToastProvider } from '@/components/ui/toast';
 import { RECOMMENDED_HOUSES } from '@/mocks/fixtures';
 
 describe('HouseSearchScreen', () => {
@@ -43,6 +44,20 @@ describe('HouseSearchScreen', () => {
     await fireEvent.press(getByText('입주'));
 
     expect(getByText('초대코드는 6자리 이상이에요')).toBeTruthy();
+    expect(onJoinByCode).not.toHaveBeenCalled();
+  });
+
+  it('explains an empty invite code with a toast', async () => {
+    const onJoinByCode = jest.fn();
+    const { getByText } = await render(
+      <ToastProvider>
+        <HouseSearchScreen onJoinByCode={onJoinByCode} />
+      </ToastProvider>,
+    );
+
+    await fireEvent.press(getByText('입주'));
+
+    expect(getByText('초대 코드를 입력해주세요')).toBeTruthy();
     expect(onJoinByCode).not.toHaveBeenCalled();
   });
 

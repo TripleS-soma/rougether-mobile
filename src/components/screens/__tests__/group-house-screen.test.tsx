@@ -1,6 +1,7 @@
 import { fireEvent, render } from '@testing-library/react-native';
 
 import { GroupHouseScreen, type House } from '@/components/screens/group-house-screen';
+import { ToastProvider } from '@/components/ui/toast';
 
 const MISSION_HOUSE: House = {
   houseId: 7,
@@ -69,6 +70,20 @@ describe('GroupHouseScreen', () => {
       missionType: 'WEEKLY_MEMBER_COUNT',
       targetValue: 15,
     });
+  });
+
+  it('explains a missing mission title with a toast instead of creating', async () => {
+    const onCreateMission = jest.fn();
+    const { getByText, getByLabelText } = await render(
+      <ToastProvider>
+        <GroupHouseScreen houses={[MISSION_HOUSE]} onCreateMission={onCreateMission} />
+      </ToastProvider>,
+    );
+    await fireEvent.press(getByLabelText('미션 만들기'));
+    await fireEvent.press(getByLabelText('미션 만들기 확인'));
+
+    expect(getByText('미션 이름을 입력해주세요')).toBeTruthy();
+    expect(onCreateMission).not.toHaveBeenCalled();
   });
 
   it('shows the empty-mission hint when the house has no missions', async () => {

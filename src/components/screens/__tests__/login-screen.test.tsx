@@ -1,6 +1,7 @@
 import { fireEvent, render } from '@testing-library/react-native';
 
 import { LoginScreen } from '@/components/screens/login-screen';
+import { ToastProvider } from '@/components/ui/toast';
 
 describe('LoginScreen', () => {
   it('renders the brand title', async () => {
@@ -41,6 +42,20 @@ describe('LoginScreen', () => {
     await fireEvent.press(getByText('로그인'));
 
     expect(onLogin).toHaveBeenCalledWith(undefined);
+  });
+
+  it('explains an empty password with a toast instead of submitting', async () => {
+    const onLogin = jest.fn();
+    const { getByText } = await render(
+      <ToastProvider>
+        <LoginScreen onLogin={onLogin} />
+      </ToastProvider>,
+    );
+
+    await fireEvent.press(getByText('로그인'));
+
+    expect(getByText('비밀번호를 입력해주세요')).toBeTruthy();
+    expect(onLogin).not.toHaveBeenCalled();
   });
 
   it('navigates to signup', async () => {

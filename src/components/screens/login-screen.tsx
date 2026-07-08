@@ -54,7 +54,12 @@ export function LoginScreen({ onAuthSuccess, onGoSignup, onLogin }: LoginScreenP
   const notReady = () => toast('서버 준비 중이에요');
 
   const submit = async () => {
-    if (!canSubmit) return;
+    // Blocked taps explain themselves; only the in-flight state stays silent.
+    if (submitting) return;
+    if (password.length === 0) {
+      toast('비밀번호를 입력해주세요', 'error');
+      return;
+    }
     setSubmitting(true);
     setError(null);
     // Dev-login: numeric userId from the email field signs into that account;
@@ -136,9 +141,10 @@ export function LoginScreen({ onAuthSuccess, onGoSignup, onLogin }: LoginScreenP
           </View>
 
           <Pressable
-            disabled={!canSubmit}
+            disabled={submitting}
             onPress={submit}
             accessibilityRole="button"
+            accessibilityState={{ disabled: !canSubmit }}
             style={({ pressed }) => [
               styles.submit,
               { backgroundColor: canSubmit ? t.primary : t.disabledBg },
