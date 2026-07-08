@@ -19,6 +19,7 @@ import { Room } from '@/components/room/room';
 import { CategoryManagerSheet } from '@/components/screens/sheets/category-manager-sheet';
 import { TimePickerSheet } from '@/components/screens/sheets/time-picker-sheet';
 import { Calendar } from '@/components/ui/calendar';
+import { useToast } from '@/components/ui/toast';
 import { WalletPills } from '@/components/ui/wallet-pills';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import {
@@ -103,6 +104,12 @@ export type MyRoomScreenProps = {
   /** Load a date's calendar data (fired when the user picks a date). */
   onSelectDate?: (date: string) => void;
   /**
+   * Toggle a server-backed 달력 item's completion on a past date. Only fired
+   * for past todos — the screen blocks future dates and past routines (the
+   * server accepts routine logs for today only) with a toast.
+   */
+  onToggleCalendarItem?: (item: CalendarDayItem, date: string) => void;
+  /**
    * Per-routine completion log: routine id → completed dates ("YYYY-MM-DD").
    * Mirrors the spec's routine_logs; a routine is "done" on a date when that
    * date is present here.
@@ -170,6 +177,7 @@ export function MyRoomScreen({
   allCategories,
   calendarDays,
   onSelectDate,
+  onToggleCalendarItem,
   completions = {},
   categories = ROUTINE_CATEGORIES,
   loading = false,
@@ -191,6 +199,7 @@ export function MyRoomScreen({
 }: MyRoomScreenProps) {
   const t = useTokens();
   const headerInset = useHeaderInsetStyle();
+  const { show: toast } = useToast();
   const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
   const knownIds = categories.map((c) => c.id);
 
@@ -250,9 +259,9 @@ export function MyRoomScreen({
 
   // 방 / 달력 tab. The calendar lists routines + todos on the selected date.
   // Today renders from live client state (toggleable); other dates render the
-  // server /calendar list read-only when wired — the API only accepts
-  // completion checks for today, and past records keep their original
-  // (possibly deleted) category.
+  // server /calendar list, where only past todos toggle — future dates can't
+  // be completed, routines accept today-only logs server-side, and past
+  // records keep their original (possibly deleted) category.
   const [tab, setTab] = useState<'room' | 'calendar'>('room');
   const [selectedDate, setSelectedDate] = useState(() => todayIso());
   const dateRoutines = routines.filter((r) => isScheduledOn(r, selectedDate));
@@ -397,6 +406,23 @@ export function MyRoomScreen({
     if (done) hapticSelection();
     else hapticSuccess();
     onToggleCompletion?.(routine.id, date);
+  };
+
+  // Server-backed (non-today) 달력 rows: future dates are blocked outright;
+  // past routines are blocked too (the server rejects non-today logs with
+  // INVALID_ROUTINE_DATE); past todos toggle for real.
+  const handleCalendarItemPress = (item: CalendarDayItem) => {
+    if (selectedDate > today) {
+      toast('미래 날짜는 완료할 수 없어요', 'error');
+      return;
+    }
+    if (item.kind === 'routine') {
+      toast('지난 루틴 완료는 서버 준비 중이에요', 'error');
+      return;
+    }
+    if (item.completed) hapticSelection();
+    else hapticSuccess();
+    onToggleCalendarItem?.(item, selectedDate);
   };
 
   return (
@@ -730,10 +756,10 @@ export function MyRoomScreen({
                 이 날의 루틴
               </Text>
               {serverBackedDay ? (
-                // The server accepts completion checks for today only, so other
-                // dates are a read-only record view.
                 <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                  완료 체크는 오늘 날짜에서만 할 수 있어요.
+                  {selectedDate > today
+                    ? '미래 날짜는 아직 완료할 수 없어요.'
+                    : '지난 날짜는 할 일만 완료 체크할 수 있어요.'}
                 </Text>
               ) : null}
               {loading || (serverBackedDay && !dayItems) ? (
@@ -760,9 +786,11 @@ export function MyRoomScreen({
                         </Text>
                       </View>
                       {group.items.map((item) => (
-                        <View
+                        <Pressable
                           key={`${item.kind}-${item.id}`}
-                          accessibilityRole="text"
+                          onPress={() => handleCalendarItemPress(item)}
+                          accessibilityRole="checkbox"
+                          accessibilityState={{ checked: item.completed }}
                           accessibilityLabel={item.title}
                           style={styles.routineRow}>
                           <View style={styles.rowMain}>
@@ -793,7 +821,7 @@ export function MyRoomScreen({
                               ) : null}
                             </View>
                           </View>
-                        </View>
+                        </Pressable>
                       ))}
                     </View>
                   ))

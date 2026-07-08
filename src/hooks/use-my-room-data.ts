@@ -201,6 +201,26 @@ export function useMyRoomData() {
     }
   };
 
+  /**
+   * 달력 (non-today) completion toggle. Todos only — their completion is a
+   * status flip, not a dated log, so past ones work; the server rejects
+   * non-today routine logs (INVALID_ROUTINE_DATE). The screen pre-filters,
+   * this guard is a backstop. Refetches the day so the list mirrors the server.
+   */
+  const toggleCalendarItem = async (item: CalendarDayItem, date: string) => {
+    if (item.kind !== 'todo') return;
+    try {
+      const numId = toServerItemId(item.id);
+      let rewardAmount: number | undefined;
+      if (item.completed) await uncompleteTodo(numId);
+      else rewardAmount = (await completeTodo(numId)).rewardAmount;
+      if (rewardAmount) toast(`+${rewardAmount} 코인 획득!`, 'success');
+      await Promise.all([loadCalendarDay(date), refreshWallet()]);
+    } catch {
+      toast('완료 처리에 실패했어요', 'error');
+    }
+  };
+
   const quickAddTodo = async (category: string, title: string, dueDate: string) => {
     try {
       const created = await createTodo(toTodoCreate(category, title, dueDate));
@@ -373,6 +393,7 @@ export function useMyRoomData() {
     /** Re-run the full load cycle (used by the error state's 다시 시도). */
     retry: load,
     toggleCompletion,
+    toggleCalendarItem,
     saveNickname,
     quickAddTodo,
     addRoutine,

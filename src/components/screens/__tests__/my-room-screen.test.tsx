@@ -1,6 +1,7 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
+import { ToastProvider } from '@/components/ui/toast';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
 import { todayIso } from '@/utils/datetime';
 
@@ -8,6 +9,28 @@ const TODAY = todayIso();
 // A non-today date guaranteed to sit in the calendar's current month view:
 // the 1st, or the 2nd when today is the 1st.
 const OTHER_DAY = `${TODAY.slice(0, 8)}${TODAY.endsWith('01') ? '02' : '01'}`;
+
+/** TODAY shifted by n days (local), "YYYY-MM-DD". */
+const isoShift = (days: number) => {
+  const [y, m, d] = TODAY.split('-').map(Number);
+  const dt = new Date(y, m - 1, d + days);
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(
+    dt.getDate(),
+  ).padStart(2, '0')}`;
+};
+const YESTERDAY = isoShift(-1);
+const TOMORROW = isoShift(1);
+
+/** Open the 달력 tab and select a date, hopping months when needed. */
+const pickCalendarDate = async (
+  ui: { getByText: (t: string) => any; getByLabelText: (t: string) => any },
+  date: string,
+) => {
+  await fireEvent.press(ui.getByText('달력'));
+  if (date.slice(0, 7) < TODAY.slice(0, 7)) await fireEvent.press(ui.getByLabelText('이전 달'));
+  if (date.slice(0, 7) > TODAY.slice(0, 7)) await fireEvent.press(ui.getByLabelText('다음 달'));
+  await fireEvent.press(ui.getByLabelText(date));
+};
 
 describe('MyRoomScreen', () => {
   it('renders the room title, streak, and today progress', async () => {
@@ -98,40 +121,90 @@ describe('MyRoomScreen', () => {
     expect(getByText('0 / 2')).toBeTruthy();
   });
 
-  it('renders a read-only server list for non-today dates in the 달력 tab', async () => {
+  it('renders the server list for non-today dates and blocks past routine toggles', async () => {
     const onSelectDate = jest.fn();
-    const onToggleCompletion = jest.fn();
+    const onToggleCalendarItem = jest.fn();
     const calendarDays = {
-      [OTHER_DAY]: [
+      [YESTERDAY]: [
         { id: '1', kind: 'routine' as const, title: '옛 카테고리 루틴', completed: true, category: '99' }, // prettier-ignore
       ],
     };
-    const { getByText, getByLabelText, queryByText } = await render(
-      <MyRoomScreen
-        routines={SAMPLE_ROUTINES}
-        calendarDays={calendarDays}
-        onSelectDate={onSelectDate}
-        onToggleCompletion={onToggleCompletion}
-        allCategories={[
-          { id: '99', label: '옛것', emoji: '✨', color: '#FF0000', visibility: 'partial', deleted: true }, // prettier-ignore
-        ]}
-      />,
+    const ui = await render(
+      <ToastProvider>
+        <MyRoomScreen
+          routines={SAMPLE_ROUTINES}
+          calendarDays={calendarDays}
+          onSelectDate={onSelectDate}
+          onToggleCalendarItem={onToggleCalendarItem}
+          allCategories={[
+            { id: '99', label: '옛것', emoji: '✨', color: '#FF0000', visibility: 'partial', deleted: true }, // prettier-ignore
+          ]}
+        />
+      </ToastProvider>,
     );
+    const { getByText, queryByText } = ui;
 
-    await fireEvent.press(getByText('달력'));
-    // Today renders the live client list — no read-only notice.
-    expect(queryByText('완료 체크는 오늘 날짜에서만 할 수 있어요.')).toBeNull();
-
-    await fireEvent.press(getByLabelText(OTHER_DAY));
-    expect(onSelectDate).toHaveBeenCalledWith(OTHER_DAY);
+    await pickCalendarDate(ui, YESTERDAY);
+    expect(onSelectDate).toHaveBeenCalledWith(YESTERDAY);
     expect(getByText('옛 카테고리 루틴')).toBeTruthy();
     // Grouped under the record-time (deleted) category, like the room tab.
     expect(getByText('옛것')).toBeTruthy();
-    expect(getByText('완료 체크는 오늘 날짜에서만 할 수 있어요.')).toBeTruthy();
+    expect(getByText('지난 날짜는 할 일만 완료 체크할 수 있어요.')).toBeTruthy();
 
-    // Read-only: the server-backed row is not a toggle.
+    // Past routines don't toggle — the server accepts today-only logs.
     await fireEvent.press(getByText('옛 카테고리 루틴'));
-    expect(onToggleCompletion).not.toHaveBeenCalled();
+    expect(onToggleCalendarItem).not.toHaveBeenCalled();
+    expect(queryByText('지난 루틴 완료는 서버 준비 중이에요')).toBeTruthy();
+  });
+
+  it('toggles a past todo in the 달력 tab', async () => {
+    const onToggleCalendarItem = jest.fn();
+    const calendarDays = {
+      [YESTERDAY]: [
+        { id: 't1', kind: 'todo' as const, title: '지난 할 일', completed: false, category: '' },
+      ],
+    };
+    const ui = await render(
+      <MyRoomScreen
+        routines={[]}
+        calendarDays={calendarDays}
+        onSelectDate={jest.fn()}
+        onToggleCalendarItem={onToggleCalendarItem}
+      />,
+    );
+
+    await pickCalendarDate(ui, YESTERDAY);
+    await fireEvent.press(ui.getByText('지난 할 일'));
+    expect(onToggleCalendarItem).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 't1', kind: 'todo' }),
+      YESTERDAY,
+    );
+  });
+
+  it('blocks completion on future dates with a toast', async () => {
+    const onToggleCalendarItem = jest.fn();
+    const calendarDays = {
+      [TOMORROW]: [
+        { id: 't2', kind: 'todo' as const, title: '내일 할 일', completed: false, category: '' },
+      ],
+    };
+    const ui = await render(
+      <ToastProvider>
+        <MyRoomScreen
+          routines={[]}
+          calendarDays={calendarDays}
+          onSelectDate={jest.fn()}
+          onToggleCalendarItem={onToggleCalendarItem}
+        />
+      </ToastProvider>,
+    );
+
+    await pickCalendarDate(ui, TOMORROW);
+    expect(ui.getByText('미래 날짜는 아직 완료할 수 없어요.')).toBeTruthy();
+
+    await fireEvent.press(ui.getByText('내일 할 일'));
+    expect(onToggleCalendarItem).not.toHaveBeenCalled();
+    expect(ui.getByText('미래 날짜는 완료할 수 없어요')).toBeTruthy();
   });
 
   it('groups the 달력 list by category like the room tab', async () => {

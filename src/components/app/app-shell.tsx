@@ -137,6 +137,7 @@ export function AppShell({
     error: myRoomError,
     retry: retryMyRoom,
     toggleCompletion,
+    toggleCalendarItem,
     saveNickname,
     quickAddTodo,
     addRoutine,
@@ -264,6 +265,9 @@ export function AppShell({
             calendarDays={calendarDays}
             onSelectDate={(date) => {
               void loadCalendarDay(date);
+            }}
+            onToggleCalendarItem={(item, date) => {
+              void toggleCalendarItem(item, date);
             }}
             loading={myRoomLoading}
             loadError={!!myRoomError}
