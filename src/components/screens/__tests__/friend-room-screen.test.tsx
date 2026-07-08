@@ -13,6 +13,15 @@ describe('FriendRoomScreen', () => {
     expect(getByText('👍 잘하고 있어!')).toBeTruthy();
   });
 
+  it('keeps the 의 방 suffix visible on narrow screens (shrink + middle ellipsis)', async () => {
+    const { getByText } = await render(<FriendRoomScreen friendName="아주아주긴친구닉네임" />);
+    const title = getByText('아주아주긴친구닉네임의 방');
+    expect(title.props.adjustsFontSizeToFit).toBe(true);
+    expect(title.props.minimumFontScale).toBe(0.75);
+    expect(title.props.ellipsizeMode).toBe('middle');
+    expect(title.props.numberOfLines).toBe(1);
+  });
+
   it('fires onCheer with the chosen reaction', async () => {
     const onCheer = jest.fn();
     const { getByText } = await render(<FriendRoomScreen onCheer={onCheer} />);
