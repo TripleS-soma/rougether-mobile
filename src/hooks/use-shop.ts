@@ -134,6 +134,22 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
     }
   };
 
+  /**
+   * Re-sync the inventory after items were acquired outside the shop (가챠
+   * draws) — otherwise fresh rewards keep showing as buyable in 방 꾸미기 and
+   * can't be placed (their userItemId is unknown to placement saves).
+   */
+  const refreshOwned = useCallback(async () => {
+    try {
+      const myItems = await fetchMyItems();
+      const map = toUserItemMap(myItems);
+      userItemMapRef.current = map;
+      setOwnedIds((prev) => Array.from(new Set([...prev, ...map.keys()])));
+    } catch {
+      // Non-fatal: the next full catalogue load catches up.
+    }
+  }, []);
+
   /** Persist the room layout (PUT /rooms/me/slots). Returns false on failure. */
   const savePlacement = async (
     placedIds: string[],
@@ -161,5 +177,15 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
     }
   };
 
-  return { catalogue, ownedIds, placement, loading, error, retry: load, purchase, savePlacement };
+  return {
+    catalogue,
+    ownedIds,
+    placement,
+    loading,
+    error,
+    retry: load,
+    purchase,
+    refreshOwned,
+    savePlacement,
+  };
 }
