@@ -55,6 +55,10 @@ export type OnboardingScreenProps = {
   onDone?: (goals: string[], characterId: CharacterId) => void;
   /** Goal options from the server master; falls back to the local list while empty. */
   goals?: OnboardingGoal[];
+  /** Previously selected goal ids — a replay starts as an edit of these. */
+  initialGoals?: string[];
+  /** Previously chosen character — preselected on replay. */
+  initialCharacterId?: CharacterId;
 };
 
 /**
@@ -62,16 +66,29 @@ export type OnboardingScreenProps = {
  * goal survey → character select. Theme tokens + type scale; emoji stand in for
  * the icon set and character sprites (TODO).
  */
-export function OnboardingScreen({ onDone, goals }: OnboardingScreenProps) {
+export function OnboardingScreen({
+  onDone,
+  goals,
+  initialGoals,
+  initialCharacterId,
+}: OnboardingScreenProps) {
   const t = useTokens();
   // Pinned bottom action buttons → pad both edges so the notch / home indicator
   // don't clip the top title or the bottom buttons.
   const screenStyle = useScreenStyle(['top', 'bottom']);
+  const goalOptions = goals && goals.length > 0 ? goals : GOALS;
   const [index, setIndex] = useState(0);
   const [showGoalSurvey, setShowGoalSurvey] = useState(false);
   const [showCharacterSelect, setShowCharacterSelect] = useState(false);
-  const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
-  const [selectedCharacter, setSelectedCharacter] = useState<CharacterId>(DEFAULT_CHARACTER_ID);
+  // Seed from the previous selections (온보딩 다시 보기 edits rather than starts
+  // over); ids that no longer exist in the option list are dropped so a stale
+  // id can't hold the 시작하기 button open with nothing visibly checked.
+  const [selectedGoals, setSelectedGoals] = useState<string[]>(() =>
+    (initialGoals ?? []).filter((id) => goalOptions.some((g) => g.id === id)),
+  );
+  const [selectedCharacter, setSelectedCharacter] = useState<CharacterId>(
+    initialCharacterId ?? DEFAULT_CHARACTER_ID,
+  );
 
   const isLast = index === SLIDES.length - 1;
   const slide = SLIDES[index];
@@ -129,7 +146,6 @@ export function OnboardingScreen({ onDone, goals }: OnboardingScreenProps) {
 
   // --- Goal survey ---
   if (showGoalSurvey) {
-    const goalOptions = goals && goals.length > 0 ? goals : GOALS;
     const canStart = selectedGoals.length > 0;
     return (
       <View style={[styles.screen, screenStyle]}>
