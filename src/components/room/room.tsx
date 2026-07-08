@@ -157,14 +157,15 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: '48%',
+    height: '50%',
   },
+  // Floor band meets the wall band exactly at the midline — no bare strip.
   floor: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    height: '30%',
+    height: '50%',
   },
   furniture: {
     position: 'absolute',
