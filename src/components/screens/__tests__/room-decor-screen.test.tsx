@@ -13,6 +13,71 @@ describe('RoomDecorScreen', () => {
     expect(getAllByText('포근한 침대').length).toBeGreaterThan(0);
   });
 
+  it('goes straight back when nothing changed', async () => {
+    const onBack = jest.fn();
+    const { getByLabelText, queryByText } = await render(
+      <RoomDecorScreen initialPlacedIds={['bed']} onBack={onBack} />,
+    );
+
+    await fireEvent.press(getByLabelText('뒤로가기'));
+
+    expect(queryByText('변경사항을 저장할까요?')).toBeNull();
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks to save unapplied changes on back, and saves when confirmed', async () => {
+    const onBack = jest.fn();
+    const onApply = jest.fn();
+    const { getByText, getByLabelText } = await render(
+      <RoomDecorScreen
+        initialPlacedIds={['bed']}
+        initialWallpaperId="paw"
+        onBack={onBack}
+        onApply={onApply}
+      />,
+    );
+
+    // Change the selection (plant sits in a free slot), then leave.
+    await fireEvent.press(getByText('초록 식물'));
+    await fireEvent.press(getByLabelText('뒤로가기'));
+
+    expect(getByText('변경사항을 저장할까요?')).toBeTruthy();
+    expect(onBack).not.toHaveBeenCalled();
+
+    await fireEvent.press(getByLabelText('저장하고 나가기'));
+    expect(onApply).toHaveBeenCalledWith(['bed', 'plant'], 'paw', null, null);
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('discards changes when leaving without saving', async () => {
+    const onBack = jest.fn();
+    const onApply = jest.fn();
+    const { getByText, getByLabelText } = await render(
+      <RoomDecorScreen initialPlacedIds={['bed']} onBack={onBack} onApply={onApply} />,
+    );
+
+    await fireEvent.press(getByText('초록 식물'));
+    await fireEvent.press(getByLabelText('뒤로가기'));
+    await fireEvent.press(getByLabelText('저장하지 않고 나가기'));
+
+    expect(onApply).not.toHaveBeenCalled();
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('stays on the screen via 계속 꾸미기', async () => {
+    const onBack = jest.fn();
+    const { getByText, getByLabelText, queryByText } = await render(
+      <RoomDecorScreen initialPlacedIds={['bed']} onBack={onBack} />,
+    );
+
+    await fireEvent.press(getByText('초록 식물'));
+    await fireEvent.press(getByLabelText('뒤로가기'));
+    await fireEvent.press(getByLabelText('계속 꾸미기'));
+
+    expect(queryByText('변경사항을 저장할까요?')).toBeNull();
+    expect(onBack).not.toHaveBeenCalled();
+  });
+
   it('filters by defaultSlot-derived tabs, not categoryCode', async () => {
     const items: FurnitureItem[] = [
       { id: '1', name: '창문', slot: 'topLeft', category: '장식', price: 100, assetKey: 'a', theme: '숲속 세이지' }, // prettier-ignore
