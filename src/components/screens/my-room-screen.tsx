@@ -592,6 +592,7 @@ export function MyRoomScreen({
                                 onPress={() => openQuickAdd(cat.id)}
                                 accessibilityRole="button"
                                 accessibilityLabel={`${cat.label} 할 일 추가`}
+                                hitSlop={8}
                                 style={[styles.catAdd, { backgroundColor: cat.color }]}>
                                 <Icon name="add" size={14} color={t.onPrimary} />
                               </Pressable>
@@ -666,6 +667,7 @@ export function MyRoomScreen({
                                       onPress={() => setMenuOpenId(menuOpen ? null : routine.id)}
                                       accessibilityRole="button"
                                       accessibilityLabel={`${routine.title} 메뉴`}
+                                      hitSlop={8}
                                       style={styles.kebab}>
                                       <Icon name="kebab" size={20} color={t.textDisabled} />
                                     </Pressable>
@@ -1271,10 +1273,13 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.one,
     marginTop: Spacing.half,
   },
+  // Same width as catAdd so the kebab and the category + button share one
+  // vertical axis at the right edge (tap area is restored via hitSlop).
   kebab: {
+    width: 24,
     alignSelf: 'stretch',
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: Spacing.two,
   },
   sheetBackdrop: {
     flex: 1,
