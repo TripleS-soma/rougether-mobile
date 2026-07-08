@@ -19,6 +19,34 @@ describe('Room', () => {
     expect(getByLabelText('호랑이')).toBeTruthy();
   });
 
+  it('renders CDN wallpaper art even when a background covers the room', async () => {
+    const wallpapers = [
+      {
+        id: 'w1',
+        name: '나뭇잎 벽지',
+        price: 100,
+        assetKey: 'items/a/wallpaper.png',
+        color: '#EEE',
+      },
+    ];
+    const backgrounds = [
+      { id: 'b1', name: '해변 배경', price: 100, assetKey: 'items/a/bg.png', color: '#DDD' },
+    ];
+    const { getByLabelText } = await render(
+      <Room
+        placedFurnitureIds={[]}
+        wallpaperId="w1"
+        wallpapers={wallpapers}
+        backgroundId="b1"
+        backgrounds={backgrounds}
+      />,
+    );
+    // The wall band renders above the full-bleed background, so an applied
+    // wallpaper is always visible.
+    expect(getByLabelText('나뭇잎 벽지')).toBeTruthy();
+    expect(getByLabelText('해변 배경')).toBeTruthy();
+  });
+
   it('exposes a tappable character that cycles poses when interactive', async () => {
     const { getByLabelText } = await render(<Room interactiveCharacter />);
     const character = getByLabelText('고양이, 눌러서 포즈 바꾸기');

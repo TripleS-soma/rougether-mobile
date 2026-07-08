@@ -452,10 +452,14 @@ export function MyRoomScreen({
             <Text style={[Typography.h3, { color: t.text }]} numberOfLines={1}>
               {userName}의 방
             </Text>
-            <View style={styles.streak}>
-              <Icon name="flame" size={14} color={t.warning} />
-              <Text style={[Typography.supporting, { color: t.warning }]}>{streakDays}일</Text>
-            </View>
+            {/* A 0-day streak is nothing to celebrate — show the flame only
+                once a streak exists. */}
+            {streakDays > 0 ? (
+              <View style={styles.streak}>
+                <Icon name="flame" size={14} color={t.warning} />
+                <Text style={[Typography.supporting, { color: t.warning }]}>{streakDays}일</Text>
+              </View>
+            ) : null}
           </View>
         </View>
         <View style={styles.headerRight}>
