@@ -171,7 +171,13 @@ export function HouseSearchScreen({
                   styles.sideBtn,
                   { backgroundColor: code.trim().length === 0 ? t.disabledBg : t.primary },
                 ]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>입주</Text>
+                <Text
+                  style={[
+                    Typography.label,
+                    { color: code.trim().length === 0 ? t.textMuted : t.onPrimary },
+                  ]}>
+                  입주
+                </Text>
               </Pressable>
             </View>
             {codeError ? <Text style={[styles.msg, { color: t.danger }]}>{codeError}</Text> : null}

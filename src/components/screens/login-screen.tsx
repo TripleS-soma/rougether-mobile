@@ -144,7 +144,7 @@ export function LoginScreen({ onAuthSuccess, onGoSignup, onLogin }: LoginScreenP
               { backgroundColor: canSubmit ? t.primary : t.disabledBg },
               pressed && canSubmit && { backgroundColor: t.primaryActive },
             ]}>
-            <Text style={[styles.submitText, { color: t.onPrimary }]}>
+            <Text style={[styles.submitText, { color: canSubmit ? t.onPrimary : t.textMuted }]}>
               {submitting ? '로그인 중…' : '로그인'}
             </Text>
           </Pressable>
