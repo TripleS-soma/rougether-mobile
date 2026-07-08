@@ -1,6 +1,6 @@
 import { apiGetList } from '@/api/client';
 import { fetchMe } from '@/api/me';
-import { clearSession, devLogin, getAccessToken } from '@/api/auth';
+import { clearSession, devLogin, getAccessToken, onSessionCleared } from '@/api/auth';
 
 type MockRes = { ok: boolean; status: number; text: () => Promise<string> };
 const res = (status: number, body?: unknown): MockRes => ({
@@ -60,6 +60,27 @@ describe('API client', () => {
     // Replay used the refreshed token.
     expect(seen).toEqual(['Bearer a1', 'Bearer a2']);
     expect(getAccessToken()).toBe('a2');
+  });
+
+  it('clears the session and notifies listeners when the refresh also fails', async () => {
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.endsWith('/auth/dev-login')) {
+        return res(200, { userId: 1, accessToken: 'a1', refreshToken: 'r1' });
+      }
+      if (url.endsWith('/auth/refresh')) {
+        return res(401, { message: 'refresh expired' });
+      }
+      return res(401, { message: 'expired' });
+    }) as unknown as typeof fetch;
+
+    await devLogin(1);
+    const cleared = jest.fn();
+    const unsubscribe = onSessionCleared(cleared);
+
+    await expect(fetchMe()).rejects.toMatchObject({ status: 401 });
+    expect(getAccessToken()).toBeNull();
+    expect(cleared).toHaveBeenCalled();
+    unsubscribe();
   });
 
   it('unwraps the { items } list envelope', async () => {

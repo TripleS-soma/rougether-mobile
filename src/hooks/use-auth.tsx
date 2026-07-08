@@ -1,6 +1,6 @@
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 
-import { devLogin, loadSession, logout as apiLogout } from '@/api';
+import { devLogin, loadSession, logout as apiLogout, onSessionCleared } from '@/api';
 
 type AuthStatus = 'loading' | 'authed' | 'guest';
 
@@ -30,6 +30,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       active = false;
     };
   }, []);
+
+  // The API layer clears the session when a token refresh fails (expired /
+  // invalid tokens). Flip to guest so AppRoot redirects to /login.
+  useEffect(() => onSessionCleared(() => setStatus('guest')), []);
 
   const value = useMemo<AuthContextValue>(
     () => ({

@@ -60,6 +60,21 @@ export function isAuthenticated(): boolean {
   return session != null;
 }
 
+type SessionClearedListener = () => void;
+const sessionClearedListeners = new Set<SessionClearedListener>();
+
+/**
+ * Subscribe to session invalidation — logout, or a failed token refresh inside
+ * `client.ts`. Lets the UI layer (AuthProvider) flip to guest and redirect to
+ * the login screen even when the session dies mid-request. Returns unsubscribe.
+ */
+export function onSessionCleared(listener: SessionClearedListener): () => void {
+  sessionClearedListeners.add(listener);
+  return () => {
+    sessionClearedListeners.delete(listener);
+  };
+}
+
 /** Clear the in-memory + persisted session (e.g. on logout or refresh failure). */
 export async function clearSession(): Promise<void> {
   session = null;
@@ -68,6 +83,7 @@ export async function clearSession(): Promise<void> {
     AsyncStorage.removeItem(REFRESH_KEY),
     AsyncStorage.removeItem(USER_KEY),
   ]);
+  sessionClearedListeners.forEach((listener) => listener());
 }
 
 /**
