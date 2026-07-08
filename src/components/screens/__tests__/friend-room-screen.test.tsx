@@ -1,6 +1,7 @@
 import { fireEvent, render } from '@testing-library/react-native';
 
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
+import { ToastProvider } from '@/components/ui/toast';
 
 describe('FriendRoomScreen', () => {
   it('renders the friend name, routine progress, and cheer buttons', async () => {
@@ -36,6 +37,20 @@ describe('FriendRoomScreen', () => {
     await fireEvent.changeText(getByLabelText('방명록 입력'), '오늘도 화이팅!');
     await fireEvent.press(getByLabelText('방명록 남기기'));
     expect(onWriteGuestbook).toHaveBeenCalledWith('오늘도 화이팅!');
+  });
+
+  it('explains an empty guestbook draft with a toast instead of sending', async () => {
+    const onWriteGuestbook = jest.fn();
+    const { getByText, getByLabelText } = await render(
+      <ToastProvider>
+        <FriendRoomScreen guestbook={[]} onWriteGuestbook={onWriteGuestbook} />
+      </ToastProvider>,
+    );
+
+    await fireEvent.press(getByLabelText('방명록 남기기'));
+
+    expect(getByText('방명록 내용을 입력해주세요')).toBeTruthy();
+    expect(onWriteGuestbook).not.toHaveBeenCalled();
   });
 
   it('shows the empty hint and 더보기 pagination', async () => {

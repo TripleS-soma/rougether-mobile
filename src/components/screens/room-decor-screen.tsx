@@ -27,6 +27,7 @@ import {
   type Wallpaper,
   WALLPAPERS,
 } from '@/resources/furniture';
+import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 
@@ -101,6 +102,7 @@ export function RoomDecorScreen({
   onApply,
 }: RoomDecorScreenProps) {
   const t = useTokens();
+  const { show: toast } = useToast();
   const headerInset = useHeaderInsetStyle();
 
   // Owned items are placeable; everything else in the catalog is buyable.
@@ -258,6 +260,7 @@ export function RoomDecorScreen({
             owned={owned}
             diaBalance={diaBalance}
             onBuyRequest={setPendingBuy}
+            onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
             t={t}
           />
         ) : null}
@@ -272,6 +275,7 @@ export function RoomDecorScreen({
             owned={owned}
             diaBalance={diaBalance}
             onBuyRequest={setPendingBuy}
+            onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
             t={t}
           />
         ) : null}
@@ -285,6 +289,7 @@ export function RoomDecorScreen({
             owned={owned}
             diaBalance={diaBalance}
             onBuyRequest={setPendingBuy}
+            onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
             t={t}
           />
         ) : null}
@@ -307,8 +312,9 @@ export function RoomDecorScreen({
                     onPress={() =>
                       isOwned
                         ? toggle(item.id)
-                        : affordable &&
-                          setPendingBuy({ id: item.id, name: item.name, price: item.price })
+                        : affordable
+                          ? setPendingBuy({ id: item.id, name: item.name, price: item.price })
+                          : toast('다이아가 부족해요', 'error')
                     }
                     accessibilityRole="button"
                     accessibilityState={{ selected: isOwned && placedNow }}
@@ -410,6 +416,7 @@ function SurfaceSection({
   owned,
   diaBalance,
   onBuyRequest,
+  onBlockedBuy,
   t,
 }: {
   title: string;
@@ -420,6 +427,8 @@ function SurfaceSection({
   diaBalance: number;
   /** Ask the parent to confirm buying this item (opens the 구매 modal). */
   onBuyRequest: (item: { id: string; name: string; price: number }) => void;
+  /** Unaffordable tile tapped — the parent explains (다이아 부족 toast). */
+  onBlockedBuy: () => void;
   t: ReturnType<typeof useTokens>;
 }) {
   // The 보유중 filter can empty a section — drop the orphan header too.
@@ -438,7 +447,9 @@ function SurfaceSection({
               onPress={() =>
                 isOwned
                   ? onSelect(item.id)
-                  : affordable && onBuyRequest({ id: item.id, name: item.name, price: item.price })
+                  : affordable
+                    ? onBuyRequest({ id: item.id, name: item.name, price: item.price })
+                    : onBlockedBuy()
               }
               accessibilityRole="button"
               accessibilityState={{ selected: active }}

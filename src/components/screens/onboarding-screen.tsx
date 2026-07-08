@@ -5,6 +5,7 @@ import { CharacterAvatar } from '@/components/character-avatar';
 import { Icon } from '@/components/ui/icon';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Radius, Spacing, Typography } from '@/constants/theme';
+import { useToast } from '@/components/ui/toast';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 
@@ -165,6 +166,7 @@ export function OnboardingScreen({ onDone, goals }: OnboardingScreenProps) {
           <PrimaryButton
             label="시작하기"
             disabled={!canStart}
+            blockedMessage="목표를 하나 이상 선택해주세요"
             onPress={() => canStart && setShowCharacterSelect(true)}
           />
           <TextButton label="이전" onPress={() => setShowGoalSurvey(false)} />
@@ -241,17 +243,22 @@ function PrimaryButton({
   label,
   onPress,
   disabled,
+  blockedMessage,
 }: {
   label: string;
   onPress: () => void;
   disabled?: boolean;
+  /** When set, a disabled tap stays live and explains itself with this toast. */
+  blockedMessage?: string;
 }) {
   const t = useTokens();
+  const { show: toast } = useToast();
   return (
     <Pressable
-      onPress={onPress}
-      disabled={disabled}
+      onPress={disabled && blockedMessage ? () => toast(blockedMessage, 'error') : onPress}
+      disabled={disabled && !blockedMessage}
       accessibilityRole="button"
+      accessibilityState={{ disabled }}
       style={({ pressed }) => [
         styles.primaryBtn,
         { backgroundColor: disabled ? t.disabledBg : t.primary },

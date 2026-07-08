@@ -1,6 +1,7 @@
 import { fireEvent, render } from '@testing-library/react-native';
 
 import { SignupScreen } from '@/components/screens/signup-screen';
+import { ToastProvider } from '@/components/ui/toast';
 
 describe('SignupScreen', () => {
   it('renders the title', async () => {
@@ -29,12 +30,16 @@ describe('SignupScreen', () => {
     expect(getByPlaceholderText('6자리 인증번호')).toBeTruthy();
   });
 
-  it('shows the not-ready notice and keeps submit disabled (no signup API yet)', async () => {
-    const { getByText } = await render(<SignupScreen />);
+  it('shows the not-ready notice and explains the dead submit with a toast', async () => {
+    const { getByText } = await render(
+      <ToastProvider>
+        <SignupScreen />
+      </ToastProvider>,
+    );
 
     expect(getByText(/이메일 가입은 준비 중이에요/)).toBeTruthy();
-    // Pressing the disabled submit must be a no-op (it used to fake a success
-    // that bounced back to the login gate).
+    // Still never submits — the tap explains the server-pending state instead.
     await fireEvent.press(getByText('가입 준비 중'));
+    expect(getByText('이메일 가입은 서버 준비 중이에요')).toBeTruthy();
   });
 });

@@ -1,6 +1,7 @@
 import { fireEvent, render } from '@testing-library/react-native';
 
 import { OnboardingScreen } from '@/components/screens/onboarding-screen';
+import { ToastProvider } from '@/components/ui/toast';
 
 describe('OnboardingScreen', () => {
   it('renders the first welcome slide', async () => {
@@ -14,6 +15,21 @@ describe('OnboardingScreen', () => {
     await fireEvent.press(getByText('건너뛰기'));
 
     expect(getByText('관심 있는 목표를 골라주세요')).toBeTruthy();
+  });
+
+  it('explains a missing goal pick with a toast on 시작하기', async () => {
+    const onDone = jest.fn();
+    const { getByText } = await render(
+      <ToastProvider>
+        <OnboardingScreen onDone={onDone} />
+      </ToastProvider>,
+    );
+
+    await fireEvent.press(getByText('건너뛰기'));
+    await fireEvent.press(getByText('시작하기'));
+
+    expect(getByText('목표를 하나 이상 선택해주세요')).toBeTruthy();
+    expect(onDone).not.toHaveBeenCalled();
   });
 
   it('completes the flow and reports goals + character', async () => {
