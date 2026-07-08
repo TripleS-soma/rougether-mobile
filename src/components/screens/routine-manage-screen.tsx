@@ -42,6 +42,8 @@ export function RoutineManageScreen({
 }: RoutineManageScreenProps) {
   const t = useTokens();
   const headerInset = useHeaderInsetStyle();
+  // The routines prop carries the merged routine+todo list; this screen manages routines only.
+  const routineItems = routines.filter((r) => r.kind !== 'todo');
   const knownIds = categories.map((c) => c.id);
   // With no categories, uncategorized routines still need a group to render in.
   const groups = categories.length > 0 ? categories : [UNCATEGORIZED_META];
@@ -93,7 +95,7 @@ export function RoutineManageScreen({
           </View>
         ) : null}
 
-        {!loading && !loadError && routines.length === 0 ? (
+        {!loading && !loadError && routineItems.length === 0 ? (
           <View style={styles.empty}>
             <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
               아직 만든 루틴이 없어요.
@@ -111,7 +113,7 @@ export function RoutineManageScreen({
           ? null
           : groups.map((cat, idx) => {
               const isFallback = idx === groups.length - 1;
-              const items = routines.filter((r) => {
+              const items = routineItems.filter((r) => {
                 if (r.category === cat.id) return true;
                 return isFallback && (!r.category || !knownIds.includes(r.category));
               });

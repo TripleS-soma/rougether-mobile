@@ -32,6 +32,24 @@ describe('RoutineManageScreen', () => {
     expect(getByText('아침 기상')).toBeTruthy();
   });
 
+  it('excludes todos from the routine list', async () => {
+    const routines = [
+      { id: 'r1', title: '아침 기상', category: '건강', kind: 'routine' as const },
+      { id: 't1', title: '장보기', category: '건강', kind: 'todo' as const, dueDate: '2026-07-08' },
+    ];
+    const { getByText, queryByText } = await render(<RoutineManageScreen routines={routines} />);
+    expect(getByText('아침 기상')).toBeTruthy();
+    expect(queryByText('장보기')).toBeNull();
+  });
+
+  it('shows the empty state when only todos exist', async () => {
+    const routines = [
+      { id: 't1', title: '장보기', category: '건강', kind: 'todo' as const, dueDate: '2026-07-08' },
+    ];
+    const { getByText } = await render(<RoutineManageScreen routines={routines} />);
+    expect(getByText('아직 만든 루틴이 없어요.')).toBeTruthy();
+  });
+
   it('renders routines grouped by category', async () => {
     const { getByText } = await render(<RoutineManageScreen routines={SAMPLE_ROUTINES} />);
     expect(getByText('독서 30분')).toBeTruthy();
