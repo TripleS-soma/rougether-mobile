@@ -284,6 +284,37 @@ export function useMyRoomData() {
     }
   };
 
+  /** Change a todo's due date (메뉴 시트 → 날짜 바꾸기). */
+  const updateTodoDueDate = async (id: string, dueDate: string) => {
+    const item = findItem(id);
+    if (!item || item.kind !== 'todo') return;
+    setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, dueDate } : r)));
+    try {
+      await updateTodo(toServerItemId(id), toTodoUpdate(item, { dueDate }));
+    } catch {
+      setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, dueDate: item.dueDate } : r)));
+      toast('수정에 실패했어요', 'error');
+    }
+  };
+
+  /**
+   * 루틴의 그 날 몫 하나를 다른 날짜로 옮기기 (메뉴 → 날짜 바꾸기 on a
+   * routine). The repeat schedule stays untouched; a one-off todo with the
+   * routine's title lands on the picked date. The server has no
+   * per-occurrence skip yet, so the original day's instance still shows.
+   */
+  const moveRoutineOccurrence = async (id: string, dueDate: string) => {
+    const item = findItem(id);
+    if (!item || item.kind === 'todo') return;
+    try {
+      const created = await createTodo(toTodoCreate(item.category, item.title, dueDate));
+      setRoutines((prev) => [...prev, toAppTodo(created)]);
+      toast('선택한 날짜에 할 일로 추가했어요', 'success');
+    } catch {
+      toast('날짜 변경에 실패했어요', 'error');
+    }
+  };
+
   const deleteRoutine = async (id: string) => {
     const item = findItem(id);
     if (!item) return;
@@ -400,6 +431,8 @@ export function useMyRoomData() {
     updateRoutine,
     renameRoutine,
     updateRoutineTime,
+    updateTodoDueDate,
+    moveRoutineOccurrence,
     deleteRoutine,
     createRoutineCategory,
     updateRoutineCategory,

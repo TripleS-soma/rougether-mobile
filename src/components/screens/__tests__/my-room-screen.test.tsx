@@ -50,14 +50,78 @@ describe('MyRoomScreen', () => {
     expect(getByText('3 / 5')).toBeTruthy();
   });
 
-  it('shows a kebab menu button per routine and a quick-add button per category', async () => {
-    const { getByLabelText } = await render(<MyRoomScreen routines={SAMPLE_ROUTINES} />);
-    // Per-routine kebab (수정/삭제 menu trigger).
-    expect(getByLabelText('물 2L 마시기 메뉴')).toBeTruthy();
-    expect(getByLabelText('하루 회고 메뉴')).toBeTruthy();
-    // Per-category quick-add todo button.
+  it('toggles only via the checkbox; the row body opens the menu sheet', async () => {
+    const onToggleCompletion = jest.fn();
+    const { getByText, getByLabelText } = await render(
+      <MyRoomScreen routines={SAMPLE_ROUTINES} onToggleCompletion={onToggleCompletion} />,
+    );
+
+    // Per-category quick-add todo button still renders.
     expect(getByLabelText('일정 할 일 추가')).toBeTruthy();
     expect(getByLabelText('건강 할 일 추가')).toBeTruthy();
+
+    // The checkbox (labelled by the routine title) toggles completion.
+    await fireEvent.press(getByLabelText('하루 회고'));
+    expect(onToggleCompletion).toHaveBeenCalledWith('5', TODAY);
+
+    // The row body (title text) opens the bottom-sheet menu, no extra toggle.
+    await fireEvent.press(getByText('하루 회고'));
+    expect(getByText('수정하기')).toBeTruthy();
+    expect(getByText('삭제하기')).toBeTruthy();
+    expect(onToggleCompletion).toHaveBeenCalledTimes(1);
+  });
+
+  it('changes a todo due date via 날짜 바꾸기 (draft until 확인)', async () => {
+    const onUpdateTodoDueDate = jest.fn();
+    const todos = [
+      { id: 't9', title: '장보기', kind: 'todo' as const, dueDate: TODAY, category: '건강' },
+    ];
+    const { getByText, getByLabelText, queryByText } = await render(
+      <MyRoomScreen routines={todos} onUpdateTodoDueDate={onUpdateTodoDueDate} />,
+    );
+
+    await fireEvent.press(getByText('장보기')); // row body → menu sheet
+    expect(queryByText('시간 수정')).toBeNull(); // todos have no alarm item
+
+    await fireEvent.press(getByText('날짜 바꾸기')); // → calendar bottom sheet
+    await fireEvent.press(getByLabelText(OTHER_DAY)); // draft only — not saved yet
+    expect(onUpdateTodoDueDate).not.toHaveBeenCalled();
+
+    await fireEvent.press(getByLabelText('확인'));
+    expect(onUpdateTodoDueDate).toHaveBeenCalledWith('t9', OTHER_DAY);
+  });
+
+  it('cancels a date change without saving', async () => {
+    const onUpdateTodoDueDate = jest.fn();
+    const todos = [
+      { id: 't9', title: '장보기', kind: 'todo' as const, dueDate: TODAY, category: '건강' },
+    ];
+    const { getByText, getByLabelText } = await render(
+      <MyRoomScreen routines={todos} onUpdateTodoDueDate={onUpdateTodoDueDate} />,
+    );
+
+    await fireEvent.press(getByText('장보기'));
+    await fireEvent.press(getByText('날짜 바꾸기'));
+    await fireEvent.press(getByLabelText(OTHER_DAY));
+    await fireEvent.press(getByLabelText('취소'));
+    expect(onUpdateTodoDueDate).not.toHaveBeenCalled();
+  });
+
+  it('moves a single routine occurrence via 날짜 바꾸기, repeat untouched', async () => {
+    const onMoveRoutineOccurrence = jest.fn();
+    const { getByText, getByLabelText } = await render(
+      <MyRoomScreen routines={SAMPLE_ROUTINES} onMoveRoutineOccurrence={onMoveRoutineOccurrence} />,
+    );
+
+    await fireEvent.press(getByText('하루 회고')); // routine row → menu sheet
+    await fireEvent.press(getByText('날짜 바꾸기'));
+    // Routines get the occurrence-move note.
+    expect(getByText(/루틴 반복은 그대로 두고/)).toBeTruthy();
+
+    await fireEvent.press(getByLabelText(OTHER_DAY));
+    expect(onMoveRoutineOccurrence).not.toHaveBeenCalled();
+    await fireEvent.press(getByLabelText('확인'));
+    expect(onMoveRoutineOccurrence).toHaveBeenCalledWith('5', OTHER_DAY);
   });
 
   it('keeps the quick-add button reachable on empty categories', async () => {
@@ -152,7 +216,7 @@ describe('MyRoomScreen', () => {
     expect(getByText('지난 날짜는 할 일만 완료 체크할 수 있어요.')).toBeTruthy();
 
     // Past routines don't toggle — the server accepts today-only logs.
-    await fireEvent.press(getByText('옛 카테고리 루틴'));
+    await fireEvent.press(ui.getByLabelText('옛 카테고리 루틴'));
     expect(onToggleCalendarItem).not.toHaveBeenCalled();
     expect(queryByText('지난 루틴 완료는 서버 준비 중이에요')).toBeTruthy();
   });
@@ -174,7 +238,11 @@ describe('MyRoomScreen', () => {
     );
 
     await pickCalendarDate(ui, YESTERDAY);
+    // The row body is inert — only the checkbox toggles.
     await fireEvent.press(ui.getByText('지난 할 일'));
+    expect(onToggleCalendarItem).not.toHaveBeenCalled();
+
+    await fireEvent.press(ui.getByLabelText('지난 할 일'));
     expect(onToggleCalendarItem).toHaveBeenCalledWith(
       expect.objectContaining({ id: 't1', kind: 'todo' }),
       YESTERDAY,
@@ -202,7 +270,7 @@ describe('MyRoomScreen', () => {
     await pickCalendarDate(ui, TOMORROW);
     expect(ui.getByText('미래 날짜는 아직 완료할 수 없어요.')).toBeTruthy();
 
-    await fireEvent.press(ui.getByText('내일 할 일'));
+    await fireEvent.press(ui.getByLabelText('내일 할 일'));
     expect(onToggleCalendarItem).not.toHaveBeenCalled();
     expect(ui.getByText('미래 날짜는 완료할 수 없어요')).toBeTruthy();
   });
@@ -244,7 +312,7 @@ describe('MyRoomScreen', () => {
   it('requires a camera photo to complete a 인증사진형 routine', async () => {
     const onToggleCompletion = jest.fn();
     const onRequestPhoto = jest.fn().mockResolvedValue('file://verify.jpg');
-    const { getByText } = await render(
+    const { getByLabelText } = await render(
       <MyRoomScreen
         routines={SAMPLE_ROUTINES}
         onToggleCompletion={onToggleCompletion}
@@ -252,12 +320,12 @@ describe('MyRoomScreen', () => {
       />,
     );
 
-    // '하루 회고' (id 5): no photoVerify → toggles today immediately.
-    fireEvent.press(getByText('하루 회고'));
+    // '하루 회고' (id 5): no photoVerify → the checkbox toggles today immediately.
+    fireEvent.press(getByLabelText('하루 회고'));
     expect(onToggleCompletion).toHaveBeenCalledWith('5', TODAY);
 
     // '영어 공부' (id 4): photoVerify → camera, then toggle today.
-    fireEvent.press(getByText('영어 공부'));
+    fireEvent.press(getByLabelText('영어 공부'));
     await waitFor(() => expect(onToggleCompletion).toHaveBeenCalledWith('4', TODAY));
     expect(onRequestPhoto).toHaveBeenCalled();
   });

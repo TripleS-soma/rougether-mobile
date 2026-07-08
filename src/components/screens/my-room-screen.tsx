@@ -141,6 +141,15 @@ export type MyRoomScreenProps = {
   onRenameRoutine?: (id: string, title: string) => void;
   /** Update a routine's alarm time (kebab → 시간 수정, reuses TimePickerSheet). */
   onUpdateRoutineTime?: (id: string, alarmEnabled: boolean, time: string) => void;
+  /** Change a todo's due date (메뉴 시트 → 날짜 바꾸기, calendar sheet). */
+  onUpdateTodoDueDate?: (id: string, dueDate: string) => void;
+  /**
+   * 날짜 바꾸기 on a routine: move that day's occurrence only. The repeat
+   * schedule stays; a one-off todo with the routine's title is created on the
+   * picked date (no server per-occurrence skip yet, so the original day's
+   * instance still shows — the sheet says so).
+   */
+  onMoveRoutineOccurrence?: (id: string, dueDate: string) => void;
   /** Delete a routine (kebab → 삭제). */
   onDeleteRoutine?: (id: string) => void;
   /**
@@ -194,6 +203,8 @@ export function MyRoomScreen({
   onQuickAddRoutine,
   onRenameRoutine,
   onUpdateRoutineTime,
+  onUpdateTodoDueDate,
+  onMoveRoutineOccurrence,
   onDeleteRoutine,
   onRequestPhoto = captureVerificationPhoto,
 }: MyRoomScreenProps) {
@@ -256,6 +267,11 @@ export function MyRoomScreen({
   const [renameText, setRenameText] = useState('');
   const [timeId, setTimeId] = useState<string | null>(null);
   const timeRoutine = routines.find((r) => r.id === timeId) ?? null;
+  // 메뉴 → 날짜 바꾸기: calendar sheet. Todos move their dueDate; routines move
+  // that day's occurrence only (repeat stays). The pick is a draft until 확인.
+  const [dateEditId, setDateEditId] = useState<string | null>(null);
+  const dateEditItem = routines.find((r) => r.id === dateEditId) ?? null;
+  const [dateDraft, setDateDraft] = useState(today);
 
   // 방 / 달력 tab. The calendar lists routines + todos on the selected date.
   // Today renders from live client state (toggleable); other dates render the
@@ -626,8 +642,10 @@ export function MyRoomScreen({
                           </View>
 
                           <View style={styles.rows}>
+                            {/* The checkbox alone toggles completion; the rest
+                                of the row opens the 수정/삭제 bottom sheet (the
+                                old kebab's menu — the kebab itself is gone). */}
                             {items.map((routine) => {
-                              const menuOpen = menuOpenId === routine.id;
                               const done = isDone(routine.id, today);
                               return (
                                 <View key={routine.id}>
@@ -637,65 +655,54 @@ export function MyRoomScreen({
                                       accessibilityRole="checkbox"
                                       accessibilityState={{ checked: done }}
                                       accessibilityLabel={routine.title}
-                                      style={styles.rowMain}>
-                                      <View style={styles.leadIcon}>
-                                        <Icon
-                                          name={done ? 'checkbox-on' : 'checkbox-off'}
-                                          size={22}
-                                          color={done ? cat.color : t.textDisabled}
-                                        />
-                                      </View>
-                                      <View style={styles.flex}>
-                                        <Text
-                                          style={[
-                                            Typography.body,
-                                            done
-                                              ? {
-                                                  color: t.textMuted,
-                                                  textDecorationLine: 'line-through',
-                                                }
-                                              : { color: t.text },
-                                          ]}>
-                                          {routine.title}
-                                        </Text>
-                                        {(routine.alarmEnabled && routine.time) ||
-                                        routine.photoVerify ? (
-                                          <View style={styles.badges}>
-                                            {routine.alarmEnabled && routine.time ? (
-                                              <View style={styles.badge}>
-                                                <Icon name="bell" size={12} color={t.textMuted} />
-                                                <Text
-                                                  style={[
-                                                    styles.badgeText,
-                                                    { color: t.textMuted },
-                                                  ]}>
-                                                  {formatTime(routine.time)}
-                                                </Text>
-                                              </View>
-                                            ) : null}
-                                            {routine.photoVerify ? (
-                                              <View style={styles.badge}>
-                                                <Icon name="camera" size={12} color={t.textMuted} />
-                                                <Text
-                                                  style={[
-                                                    styles.badgeText,
-                                                    { color: t.textMuted },
-                                                  ]}>
-                                                  사진 인증
-                                                </Text>
-                                              </View>
-                                            ) : null}
-                                          </View>
-                                        ) : null}
-                                      </View>
+                                      hitSlop={8}
+                                      style={[styles.leadIcon, styles.checkbox]}>
+                                      <Icon
+                                        name={done ? 'checkbox-on' : 'checkbox-off'}
+                                        size={22}
+                                        color={done ? cat.color : t.textDisabled}
+                                      />
                                     </Pressable>
                                     <Pressable
-                                      onPress={() => setMenuOpenId(menuOpen ? null : routine.id)}
+                                      onPress={() => setMenuOpenId(routine.id)}
                                       accessibilityRole="button"
                                       accessibilityLabel={`${routine.title} 메뉴`}
-                                      hitSlop={8}
-                                      style={styles.kebab}>
-                                      <Icon name="kebab" size={20} color={t.textDisabled} />
+                                      style={[styles.flex, styles.rowBody]}>
+                                      <Text
+                                        style={[
+                                          Typography.body,
+                                          done
+                                            ? {
+                                                color: t.textMuted,
+                                                textDecorationLine: 'line-through',
+                                              }
+                                            : { color: t.text },
+                                        ]}>
+                                        {routine.title}
+                                      </Text>
+                                      {(routine.alarmEnabled && routine.time) ||
+                                      routine.photoVerify ? (
+                                        <View style={styles.badges}>
+                                          {routine.alarmEnabled && routine.time ? (
+                                            <View style={styles.badge}>
+                                              <Icon name="bell" size={12} color={t.textMuted} />
+                                              <Text
+                                                style={[styles.badgeText, { color: t.textMuted }]}>
+                                                {formatTime(routine.time)}
+                                              </Text>
+                                            </View>
+                                          ) : null}
+                                          {routine.photoVerify ? (
+                                            <View style={styles.badge}>
+                                              <Icon name="camera" size={12} color={t.textMuted} />
+                                              <Text
+                                                style={[styles.badgeText, { color: t.textMuted }]}>
+                                                사진 인증
+                                              </Text>
+                                            </View>
+                                          ) : null}
+                                        </View>
+                                      ) : null}
                                     </Pressable>
                                   </View>
                                 </View>
@@ -788,42 +795,40 @@ export function MyRoomScreen({
                         </Text>
                       </View>
                       {group.items.map((item) => (
-                        <Pressable
-                          key={`${item.kind}-${item.id}`}
-                          onPress={() => handleCalendarItemPress(item)}
-                          accessibilityRole="checkbox"
-                          accessibilityState={{ checked: item.completed }}
-                          accessibilityLabel={item.title}
-                          style={styles.routineRow}>
-                          <View style={styles.rowMain}>
-                            <View style={styles.leadIcon}>
-                              <Icon
-                                name={item.completed ? 'checkbox-on' : 'checkbox-off'}
-                                size={22}
-                                color={item.completed ? group.meta.color : t.textDisabled}
-                              />
-                            </View>
-                            <View style={styles.flex}>
-                              <Text
-                                style={[
-                                  Typography.body,
-                                  item.completed
-                                    ? { color: t.textMuted, textDecorationLine: 'line-through' }
-                                    : { color: t.text },
-                                ]}>
-                                {item.title}
-                              </Text>
-                              {item.time ? (
-                                <View style={styles.badge}>
-                                  <Icon name="bell" size={12} color={t.textMuted} />
-                                  <Text style={[styles.badgeText, { color: t.textMuted }]}>
-                                    {formatTime(item.time)}
-                                  </Text>
-                                </View>
-                              ) : null}
-                            </View>
+                        <View key={`${item.kind}-${item.id}`} style={styles.routineRow}>
+                          <Pressable
+                            onPress={() => handleCalendarItemPress(item)}
+                            accessibilityRole="checkbox"
+                            accessibilityState={{ checked: item.completed }}
+                            accessibilityLabel={item.title}
+                            hitSlop={8}
+                            style={[styles.leadIcon, styles.checkbox]}>
+                            <Icon
+                              name={item.completed ? 'checkbox-on' : 'checkbox-off'}
+                              size={22}
+                              color={item.completed ? group.meta.color : t.textDisabled}
+                            />
+                          </Pressable>
+                          <View style={[styles.flex, styles.rowBody]}>
+                            <Text
+                              style={[
+                                Typography.body,
+                                item.completed
+                                  ? { color: t.textMuted, textDecorationLine: 'line-through' }
+                                  : { color: t.text },
+                              ]}>
+                              {item.title}
+                            </Text>
+                            {item.time ? (
+                              <View style={styles.badge}>
+                                <Icon name="bell" size={12} color={t.textMuted} />
+                                <Text style={[styles.badgeText, { color: t.textMuted }]}>
+                                  {formatTime(item.time)}
+                                </Text>
+                              </View>
+                            ) : null}
                           </View>
-                        </Pressable>
+                        </View>
                       ))}
                     </View>
                   ))
@@ -850,42 +855,40 @@ export function MyRoomScreen({
                     {group.items.map((routine) => {
                       const done = isDone(routine.id, selectedDate);
                       return (
-                        <Pressable
-                          key={routine.id}
-                          onPress={() => handleToggle(routine, selectedDate)}
-                          accessibilityRole="checkbox"
-                          accessibilityState={{ checked: done }}
-                          accessibilityLabel={routine.title}
-                          style={styles.routineRow}>
-                          <View style={styles.rowMain}>
-                            <View style={styles.leadIcon}>
-                              <Icon
-                                name={done ? 'checkbox-on' : 'checkbox-off'}
-                                size={22}
-                                color={done ? group.meta.color : t.textDisabled}
-                              />
-                            </View>
-                            <View style={styles.flex}>
-                              <Text
-                                style={[
-                                  Typography.body,
-                                  done
-                                    ? { color: t.textMuted, textDecorationLine: 'line-through' }
-                                    : { color: t.text },
-                                ]}>
-                                {routine.title}
-                              </Text>
-                              {routine.alarmEnabled && routine.time ? (
-                                <View style={styles.badge}>
-                                  <Icon name="bell" size={12} color={t.textMuted} />
-                                  <Text style={[styles.badgeText, { color: t.textMuted }]}>
-                                    {formatTime(routine.time)}
-                                  </Text>
-                                </View>
-                              ) : null}
-                            </View>
+                        <View key={routine.id} style={styles.routineRow}>
+                          <Pressable
+                            onPress={() => handleToggle(routine, selectedDate)}
+                            accessibilityRole="checkbox"
+                            accessibilityState={{ checked: done }}
+                            accessibilityLabel={routine.title}
+                            hitSlop={8}
+                            style={[styles.leadIcon, styles.checkbox]}>
+                            <Icon
+                              name={done ? 'checkbox-on' : 'checkbox-off'}
+                              size={22}
+                              color={done ? group.meta.color : t.textDisabled}
+                            />
+                          </Pressable>
+                          <View style={[styles.flex, styles.rowBody]}>
+                            <Text
+                              style={[
+                                Typography.body,
+                                done
+                                  ? { color: t.textMuted, textDecorationLine: 'line-through' }
+                                  : { color: t.text },
+                              ]}>
+                              {routine.title}
+                            </Text>
+                            {routine.alarmEnabled && routine.time ? (
+                              <View style={styles.badge}>
+                                <Icon name="bell" size={12} color={t.textMuted} />
+                                <Text style={[styles.badgeText, { color: t.textMuted }]}>
+                                  {formatTime(routine.time)}
+                                </Text>
+                              </View>
+                            ) : null}
                           </View>
-                        </Pressable>
+                        </View>
                       );
                     })}
                   </View>
@@ -972,6 +975,71 @@ export function MyRoomScreen({
                 <Text style={[Typography.body, { color: t.text }]}>시간 수정</Text>
               </Pressable>
             ) : null}
+
+            {/* Todos move their dueDate; a routine moves that day's occurrence
+                only — the repeat stays (the calendar sheet explains). */}
+            <Pressable
+              onPress={() => {
+                const r = menuRoutine;
+                setMenuOpenId(null);
+                if (r) {
+                  setDateDraft(r.dueDate ?? today);
+                  setDateEditId(r.id);
+                }
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`${menuRoutine?.title ?? ''} 날짜 바꾸기`}
+              style={styles.sheetItem}>
+              <View style={[styles.sheetItemIcon, { backgroundColor: t.success }]}>
+                <Icon name="calendar" size={18} color={t.onPrimary} />
+              </View>
+              <Text style={[Typography.body, { color: t.text }]}>날짜 바꾸기</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* 날짜 바꾸기: calendar bottom sheet — the pick stays a draft until 확인. */}
+      <Modal
+        transparent
+        visible={dateEditItem !== null}
+        animationType="slide"
+        onRequestClose={() => setDateEditId(null)}>
+        <Pressable style={styles.sheetBackdrop} onPress={() => setDateEditId(null)}>
+          <Pressable style={[styles.sheet, { backgroundColor: t.screen }]}>
+            <View style={[styles.sheetHandle, { backgroundColor: t.border }]} />
+            <Text style={[Typography.h3, styles.sheetTitle, { color: t.text }]} numberOfLines={1}>
+              날짜 바꾸기
+            </Text>
+            {dateEditItem?.kind !== 'todo' ? (
+              <Text style={[Typography.supporting, styles.sheetNote, { color: t.textMuted }]}>
+                루틴 반복은 그대로 두고, 선택한 날짜에 이 날 몫이 할 일로 추가돼요.{'\n'}(원래
+                날짜에서 숨기는 건 서버 준비 중이에요)
+              </Text>
+            ) : null}
+            <Calendar value={dateDraft} onSelect={setDateDraft} />
+            <View style={styles.dialogBtns}>
+              <Pressable
+                onPress={() => setDateEditId(null)}
+                accessibilityRole="button"
+                accessibilityLabel="취소"
+                style={[styles.dialogBtn, { backgroundColor: t.surfaceMuted }]}>
+                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  const r = dateEditItem;
+                  setDateEditId(null);
+                  if (!r) return;
+                  if (r.kind === 'todo') onUpdateTodoDueDate?.(r.id, dateDraft);
+                  else onMoveRoutineOccurrence?.(r.id, dateDraft);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="확인"
+                style={[styles.dialogBtn, { backgroundColor: t.primary }]}>
+                <Text style={[Typography.label, { color: t.onPrimary }]}>확인</Text>
+              </Pressable>
+            </View>
           </Pressable>
         </Pressable>
       </Modal>
@@ -1278,12 +1346,12 @@ const styles = StyleSheet.create({
   routineRow: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  rowMain: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: Spacing.two,
+  },
+  checkbox: {
+    justifyContent: 'center',
+  },
+  rowBody: {
     paddingVertical: Spacing.one,
   },
   // Same width as catDot so checkboxes center under the category emoji and
@@ -1300,14 +1368,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.two,
     paddingVertical: Spacing.one,
     marginTop: Spacing.half,
-  },
-  // Same width as catAdd so the kebab and the category + button share one
-  // vertical axis at the right edge (tap area is restored via hitSlop).
-  kebab: {
-    width: 24,
-    alignSelf: 'stretch',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   sheetBackdrop: {
     flex: 1,
@@ -1330,6 +1390,9 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.one,
   },
   sheetTitle: {
+    textAlign: 'center',
+  },
+  sheetNote: {
     textAlign: 'center',
   },
   sheetActions: {
