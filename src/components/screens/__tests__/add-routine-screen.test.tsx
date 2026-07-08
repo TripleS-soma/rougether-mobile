@@ -83,12 +83,37 @@ describe('AddRoutineScreen', () => {
     expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ title: '산책', days: [] }));
   });
 
-  it('keeps unsupported cadences (격주/매월/매년) disabled', async () => {
-    const { getByText, queryByText } = await render(<AddRoutineScreen />);
+  it('shows the day picker for 격주 but blocks saving (server pending)', async () => {
+    const onAdd = jest.fn();
+    const { getByText, getByPlaceholderText, queryByText } = await render(
+      <AddRoutineScreen onAdd={onAdd} />,
+    );
+
     await fireEvent.press(getByText('격주'));
-    // Still weekly — the disabled option did not take over.
     expect(queryByText('반복 요일')).toBeTruthy();
-    expect(getByText('격주·매월·매년은 서버 준비 중이에요.')).toBeTruthy();
+
+    await fireEvent.changeText(getByPlaceholderText('예) 매일 30분 산책'), '산책');
+    await fireEvent.press(getByText('루틴 추가하기'));
+    expect(getByText('이 반복 주기는 서버 준비가 끝나면 저장할 수 있어요.')).toBeTruthy();
+    expect(onAdd).not.toHaveBeenCalled();
+  });
+
+  it('shows a day-of-month picker for 매월', async () => {
+    const { getByText, queryByText, getByLabelText } = await render(<AddRoutineScreen />);
+    await fireEvent.press(getByText('매월'));
+    expect(queryByText('반복 요일')).toBeNull();
+    expect(queryByText('반복 일자')).toBeTruthy();
+    await fireEvent.press(getByLabelText('31일'));
+    expect(getByLabelText('31일').props.accessibilityState.selected).toBe(true);
+  });
+
+  it('shows month + day pickers for 매년', async () => {
+    const { getByText, queryByText, getByLabelText } = await render(<AddRoutineScreen />);
+    await fireEvent.press(getByText('매년'));
+    expect(queryByText('반복 월')).toBeTruthy();
+    expect(queryByText('반복 일자')).toBeTruthy();
+    await fireEvent.press(getByLabelText('12월'));
+    expect(getByLabelText('12월').props.accessibilityState.selected).toBe(true);
   });
 
   it('prefills 매일 for a routine without repeat days', async () => {
