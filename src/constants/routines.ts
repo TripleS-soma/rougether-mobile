@@ -5,13 +5,15 @@
  */
 export type RoutineCategory = string;
 
-export type CategoryVisibility = 'public' | 'neighbor' | 'partial';
+/** Mirrors the API's four levels: PUBLIC / HOUSE / FRIENDS / PRIVATE. */
+export type CategoryVisibility = 'public' | 'neighbor' | 'partial' | 'private';
 
 /** Human labels for each visibility option (category manager). */
 export const VISIBILITY_LABELS: Record<CategoryVisibility, string> = {
   public: '전체 공개',
   neighbor: '이웃 공개',
   partial: '일부 공개',
+  private: '비공개',
 };
 
 /** Color palette assigned to newly created categories (cycled by index). */

@@ -72,14 +72,12 @@ const toApiTime = (time: string) => (time.length === 5 ? `${time}:00` : time);
 const fromApiTime = (time: string) => time.slice(0, 5);
 
 // --- visibility ---------------------------------------------------------------
-// API values: PRIVATE(비공개) / FRIENDS(친한친구) / HOUSE(집) / PUBLIC(공개).
-// The app's three levels round-trip losslessly — 일부(partial)↔FRIENDS,
-// 이웃(neighbor)↔HOUSE, 공개(public)↔PUBLIC; a server-side PRIVATE reads as the
-// most restrictive app level (partial).
+// 1:1 with the API's four levels: 공개(public)↔PUBLIC, 이웃 공개(neighbor)↔HOUSE,
+// 일부 공개(partial)↔FRIENDS, 비공개(private)↔PRIVATE.
 const visToApp = (v?: 'PRIVATE' | 'FRIENDS' | 'HOUSE' | 'PUBLIC'): CategoryVisibility =>
-  v === 'PUBLIC' ? 'public' : v === 'HOUSE' ? 'neighbor' : 'partial';
-const visToApi = (v: CategoryVisibility): 'FRIENDS' | 'HOUSE' | 'PUBLIC' =>
-  v === 'public' ? 'PUBLIC' : v === 'neighbor' ? 'HOUSE' : 'FRIENDS';
+  v === 'PUBLIC' ? 'public' : v === 'HOUSE' ? 'neighbor' : v === 'FRIENDS' ? 'partial' : 'private';
+const visToApi = (v: CategoryVisibility): 'PRIVATE' | 'FRIENDS' | 'HOUSE' | 'PUBLIC' =>
+  v === 'public' ? 'PUBLIC' : v === 'neighbor' ? 'HOUSE' : v === 'partial' ? 'FRIENDS' : 'PRIVATE';
 
 // --- category -----------------------------------------------------------------
 export function toAppCategory(c: CategoryResponse, index = 0): RoutineCategoryMeta {

@@ -23,6 +23,29 @@ describe('CategoryManagerSheet', () => {
     expect(getByText(`내 카테고리 (${ROUTINE_CATEGORIES.length})`)).toBeTruthy();
   });
 
+  it('creates a category with the 비공개 visibility level', async () => {
+    const onCreate = jest.fn();
+    const { getByText, getByLabelText, getByPlaceholderText } = await render(
+      <CategoryManagerSheet
+        visible
+        categories={[]}
+        onCreate={onCreate}
+        onDelete={noop}
+        onClose={noop}
+      />,
+    );
+
+    // All four levels render; picking 비공개 round-trips into the payload.
+    expect(getByLabelText('전체 공개')).toBeTruthy();
+    expect(getByLabelText('일부 공개')).toBeTruthy();
+    await fireEvent.press(getByLabelText('비공개'));
+    expect(getByText('나만 볼 수 있어요')).toBeTruthy();
+
+    await fireEvent.changeText(getByPlaceholderText('예) 자기계발'), '일기');
+    await fireEvent.press(getByLabelText('카테고리 추가'));
+    expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({ visibility: 'private' }));
+  });
+
   it('reorders categories via long-press move mode', async () => {
     const onReorder = jest.fn();
     const { getByLabelText, queryByLabelText } = await render(
