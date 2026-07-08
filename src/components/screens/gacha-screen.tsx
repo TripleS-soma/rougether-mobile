@@ -193,14 +193,20 @@ export function GachaScreen({
                       { backgroundColor: affordable ? t.primary : t.disabledBg },
                       pressed && affordable && { backgroundColor: t.primaryActive },
                     ]}>
-                    <Text style={[Typography.label, { color: t.onPrimary }]}>{label}</Text>
+                    {/* onPrimary is dark in dark mode — unreadable on
+                        disabledBg, so disabled text falls back to textMuted. */}
+                    <Text
+                      style={[Typography.label, { color: affordable ? t.onPrimary : t.textMuted }]}>
+                      {label}
+                    </Text>
                     <View style={styles.costRow}>
                       <Icon
                         name={box.costCurrencyType === 'COIN' ? 'coin' : 'dia'}
                         size={12}
-                        color={t.onPrimary}
+                        color={affordable ? t.onPrimary : t.textMuted}
                       />
-                      <Text style={[styles.cost, { color: t.onPrimary }]}>
+                      <Text
+                        style={[styles.cost, { color: affordable ? t.onPrimary : t.textMuted }]}>
                         {cost.toLocaleString()}
                       </Text>
                     </View>

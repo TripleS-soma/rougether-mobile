@@ -309,7 +309,9 @@ export function FriendRoomScreen({
                 accessibilityRole="button"
                 accessibilityLabel="방명록 남기기"
                 style={[styles.gbSendBtn, { backgroundColor: canSend ? t.primary : t.disabledBg }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>남기기</Text>
+                <Text style={[Typography.label, { color: canSend ? t.onPrimary : t.textMuted }]}>
+                  남기기
+                </Text>
               </Pressable>
             </View>
 

@@ -483,7 +483,7 @@ export function AddRoutineScreen({
             { backgroundColor: canSubmit ? t.primary : t.disabledBg },
             pressed && canSubmit && { backgroundColor: t.primaryActive },
           ]}>
-          <Text style={[Typography.label, { color: t.onPrimary }]}>
+          <Text style={[Typography.label, { color: canSubmit ? t.onPrimary : t.textMuted }]}>
             {isEdit ? '수정하기' : '루틴 추가하기'}
           </Text>
         </Pressable>

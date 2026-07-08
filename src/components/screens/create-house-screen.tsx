@@ -211,7 +211,9 @@ export function CreateHouseScreen({ onBack, onCreate }: CreateHouseScreenProps) 
             { backgroundColor: canSubmit ? t.primary : t.disabledBg },
             pressed && canSubmit && { backgroundColor: t.primaryActive },
           ]}>
-          <Text style={[Typography.label, { color: t.onPrimary }]}>집 만들기</Text>
+          <Text style={[Typography.label, { color: canSubmit ? t.onPrimary : t.textMuted }]}>
+            집 만들기
+          </Text>
         </Pressable>
       </ScrollView>
     </View>

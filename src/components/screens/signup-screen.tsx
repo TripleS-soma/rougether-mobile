@@ -175,7 +175,8 @@ export function SignupScreen({ onBack }: SignupScreenProps) {
                 styles.sideBtn,
                 { backgroundColor: sendDisabled ? t.disabledBg : t.primary },
               ]}>
-              <Text style={[styles.sideBtnText, { color: t.onPrimary }]}>
+              <Text
+                style={[styles.sideBtnText, { color: sendDisabled ? t.textMuted : t.onPrimary }]}>
                 {emailVerified ? '인증완료' : codeSent ? '재발송' : '인증요청'}
               </Text>
             </Pressable>
@@ -222,7 +223,13 @@ export function SignupScreen({ onBack }: SignupScreenProps) {
                   styles.sideBtn,
                   { backgroundColor: verificationCode.length !== 6 ? t.disabledBg : t.text },
                 ]}>
-                <Text style={[styles.sideBtnText, { color: t.onPrimary }]}>확인</Text>
+                <Text
+                  style={[
+                    styles.sideBtnText,
+                    { color: verificationCode.length !== 6 ? t.textMuted : t.onPrimary },
+                  ]}>
+                  확인
+                </Text>
               </Pressable>
             </View>
             <Text style={[styles.msg, { color: codeError ? t.danger : t.textMuted }]}>
@@ -305,7 +312,7 @@ export function SignupScreen({ onBack }: SignupScreenProps) {
         accessibilityRole="button"
         accessibilityState={{ disabled: true }}
         style={[styles.submit, { backgroundColor: t.disabledBg }]}>
-        <Text style={[styles.submitText, { color: t.onPrimary }]}>가입 준비 중</Text>
+        <Text style={[styles.submitText, { color: t.textMuted }]}>가입 준비 중</Text>
       </Pressable>
 
       <View style={styles.footer}>

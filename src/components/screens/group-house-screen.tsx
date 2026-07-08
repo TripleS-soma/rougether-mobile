@@ -688,7 +688,13 @@ export function GroupHouseScreen({
                     styles.modalBtn,
                     { backgroundColor: editNameValid ? t.primary : t.disabledBg },
                   ]}>
-                  <Text style={[Typography.label, { color: t.onPrimary }]}>저장</Text>
+                  <Text
+                    style={[
+                      Typography.label,
+                      { color: editNameValid ? t.onPrimary : t.textMuted },
+                    ]}>
+                    저장
+                  </Text>
                 </Pressable>
               </View>
             </View>
@@ -975,7 +981,13 @@ export function GroupHouseScreen({
                   styles.modalBtn,
                   { backgroundColor: canSubmitMission ? t.primary : t.disabledBg },
                 ]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>만들기</Text>
+                <Text
+                  style={[
+                    Typography.label,
+                    { color: canSubmitMission ? t.onPrimary : t.textMuted },
+                  ]}>
+                  만들기
+                </Text>
               </Pressable>
             </View>
           </View>

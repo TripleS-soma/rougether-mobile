@@ -257,7 +257,9 @@ function PrimaryButton({
         { backgroundColor: disabled ? t.disabledBg : t.primary },
         pressed && !disabled && { backgroundColor: t.primaryActive },
       ]}>
-      <Text style={[Typography.label, { color: t.onPrimary }]}>{label}</Text>
+      <Text style={[Typography.label, { color: disabled ? t.textMuted : t.onPrimary }]}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
