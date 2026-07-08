@@ -4,14 +4,15 @@ import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
 import type { FurnitureItem, Wallpaper } from '@/resources/furniture';
 
 describe('RoomDecorScreen', () => {
-  it('renders the title, category tabs, and a catalog item', async () => {
+  it('renders the title, slot tabs, and a catalog item', async () => {
     const { getByText, getAllByText } = await render(<RoomDecorScreen />);
     expect(getByText('나의 방 꾸미기')).toBeTruthy();
-    expect(getByText('가구')).toBeTruthy();
+    // Tabs come from the placement slots present in the catalogue.
+    expect(getByText('위 왼쪽')).toBeTruthy();
     expect(getAllByText('포근한 침대').length).toBeGreaterThan(0);
   });
 
-  it('filters by categoryCode-derived tabs (가구/장식)', async () => {
+  it('filters by defaultSlot-derived tabs, not categoryCode', async () => {
     const items: FurnitureItem[] = [
       { id: '1', name: '창문', slot: 'topLeft', category: '장식', price: 100, assetKey: 'a', theme: '숲속 세이지' }, // prettier-ignore
       { id: '2', name: '오븐', slot: 'topRight', category: '가구', price: 100, assetKey: 'b', theme: '작은 베이커리' }, // prettier-ignore
@@ -20,11 +21,14 @@ describe('RoomDecorScreen', () => {
       <RoomDecorScreen furniture={items} wallpapers={[]} />,
     );
 
-    // Item-type tabs from the API categoryCode mapping — no theme tabs.
-    expect(getByText('가구')).toBeTruthy();
+    // Slot tabs only — no categoryCode (가구/장식) or theme tabs.
+    expect(getByText('위 왼쪽')).toBeTruthy();
+    expect(getByText('위 오른쪽')).toBeTruthy();
+    expect(queryByText('가구')).toBeNull();
+    expect(queryByText('장식')).toBeNull();
     expect(queryByText('숲속 세이지')).toBeNull();
 
-    await fireEvent.press(getByText('장식'));
+    await fireEvent.press(getByText('위 왼쪽'));
     expect(getAllByText('창문').length).toBeGreaterThan(0);
     expect(queryByText('오븐')).toBeNull();
   });

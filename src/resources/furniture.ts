@@ -27,6 +27,30 @@ export type FurnitureSlot =
   | 'bottomCenter'
   | 'bottomRight';
 
+/** Canonical slot order (room layout: top row → mid sides → bottom row). */
+export const SLOT_ORDER: FurnitureSlot[] = [
+  'topLeft',
+  'topCenter',
+  'topRight',
+  'midLeft',
+  'midRight',
+  'bottomLeft',
+  'bottomCenter',
+  'bottomRight',
+];
+
+/** User-facing label per placement slot (decor screen filter tabs). */
+export const SLOT_LABELS: Record<FurnitureSlot, string> = {
+  topLeft: '위 왼쪽',
+  topCenter: '위 가운데',
+  topRight: '위 오른쪽',
+  midLeft: '중간 왼쪽',
+  midRight: '중간 오른쪽',
+  bottomLeft: '아래 왼쪽',
+  bottomCenter: '아래 가운데',
+  bottomRight: '아래 오른쪽',
+};
+
 /** Catalog tab a furniture item belongs to (decor screen filter). */
 export type FurnitureCategory = '가구' | '장식' | '러그' | '한옥';
 

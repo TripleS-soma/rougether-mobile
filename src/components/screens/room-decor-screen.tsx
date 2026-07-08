@@ -21,6 +21,8 @@ import {
   DEFAULT_WALLPAPER_ID,
   FURNITURE_ITEMS,
   type FurnitureItem,
+  SLOT_LABELS,
+  SLOT_ORDER,
   type Wallpaper,
   WALLPAPERS,
 } from '@/resources/furniture';
@@ -109,15 +111,16 @@ export function RoomDecorScreen({
       ),
     [ownedIds, furniture, wallpapers, floors, backgrounds],
   );
-  // Filter tabs by the API categoryCode: surfaces (벽지/바닥/배경, shown only when
-  // the catalogue has them) then the positioned-item categories (가구/장식 …).
+  // Filter tabs: surfaces (벽지/바닥/배경, shown only when the catalogue has
+  // them) then one tab per placement slot (defaultSlot) present in the
+  // catalogue — one slot holds one item, so users shop per position.
   const categories = useMemo(
     () => [
       ALL,
       WALLPAPER,
       ...(floors.length > 0 ? [FLOOR] : []),
       ...(backgrounds.length > 0 ? [BACKGROUND] : []),
-      ...Array.from(new Set(furniture.map((i) => i.category))),
+      ...SLOT_ORDER.filter((s) => furniture.some((i) => i.slot === s)).map((s) => SLOT_LABELS[s]),
     ],
     [floors, backgrounds, furniture],
   );
@@ -159,7 +162,7 @@ export function RoomDecorScreen({
       ? furniture
       : [WALLPAPER, FLOOR, BACKGROUND].includes(activeCategory)
         ? []
-        : furniture.filter((i) => i.category === activeCategory),
+        : furniture.filter((i) => SLOT_LABELS[i.slot] === activeCategory),
   );
 
   return (
