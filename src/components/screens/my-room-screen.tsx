@@ -779,42 +779,40 @@ export function MyRoomScreen({
                         </Text>
                       </View>
                       {group.items.map((item) => (
-                        <Pressable
-                          key={`${item.kind}-${item.id}`}
-                          onPress={() => handleCalendarItemPress(item)}
-                          accessibilityRole="checkbox"
-                          accessibilityState={{ checked: item.completed }}
-                          accessibilityLabel={item.title}
-                          style={styles.routineRow}>
-                          <View style={styles.rowMain}>
-                            <View style={styles.leadIcon}>
-                              <Icon
-                                name={item.completed ? 'checkbox-on' : 'checkbox-off'}
-                                size={22}
-                                color={item.completed ? group.meta.color : t.textDisabled}
-                              />
-                            </View>
-                            <View style={styles.flex}>
-                              <Text
-                                style={[
-                                  Typography.body,
-                                  item.completed
-                                    ? { color: t.textMuted, textDecorationLine: 'line-through' }
-                                    : { color: t.text },
-                                ]}>
-                                {item.title}
-                              </Text>
-                              {item.time ? (
-                                <View style={styles.badge}>
-                                  <Icon name="bell" size={12} color={t.textMuted} />
-                                  <Text style={[styles.badgeText, { color: t.textMuted }]}>
-                                    {formatTime(item.time)}
-                                  </Text>
-                                </View>
-                              ) : null}
-                            </View>
+                        <View key={`${item.kind}-${item.id}`} style={styles.routineRow}>
+                          <Pressable
+                            onPress={() => handleCalendarItemPress(item)}
+                            accessibilityRole="checkbox"
+                            accessibilityState={{ checked: item.completed }}
+                            accessibilityLabel={item.title}
+                            hitSlop={8}
+                            style={[styles.leadIcon, styles.checkbox]}>
+                            <Icon
+                              name={item.completed ? 'checkbox-on' : 'checkbox-off'}
+                              size={22}
+                              color={item.completed ? group.meta.color : t.textDisabled}
+                            />
+                          </Pressable>
+                          <View style={[styles.flex, styles.rowBody]}>
+                            <Text
+                              style={[
+                                Typography.body,
+                                item.completed
+                                  ? { color: t.textMuted, textDecorationLine: 'line-through' }
+                                  : { color: t.text },
+                              ]}>
+                              {item.title}
+                            </Text>
+                            {item.time ? (
+                              <View style={styles.badge}>
+                                <Icon name="bell" size={12} color={t.textMuted} />
+                                <Text style={[styles.badgeText, { color: t.textMuted }]}>
+                                  {formatTime(item.time)}
+                                </Text>
+                              </View>
+                            ) : null}
                           </View>
-                        </Pressable>
+                        </View>
                       ))}
                     </View>
                   ))
@@ -841,42 +839,40 @@ export function MyRoomScreen({
                     {group.items.map((routine) => {
                       const done = isDone(routine.id, selectedDate);
                       return (
-                        <Pressable
-                          key={routine.id}
-                          onPress={() => handleToggle(routine, selectedDate)}
-                          accessibilityRole="checkbox"
-                          accessibilityState={{ checked: done }}
-                          accessibilityLabel={routine.title}
-                          style={styles.routineRow}>
-                          <View style={styles.rowMain}>
-                            <View style={styles.leadIcon}>
-                              <Icon
-                                name={done ? 'checkbox-on' : 'checkbox-off'}
-                                size={22}
-                                color={done ? group.meta.color : t.textDisabled}
-                              />
-                            </View>
-                            <View style={styles.flex}>
-                              <Text
-                                style={[
-                                  Typography.body,
-                                  done
-                                    ? { color: t.textMuted, textDecorationLine: 'line-through' }
-                                    : { color: t.text },
-                                ]}>
-                                {routine.title}
-                              </Text>
-                              {routine.alarmEnabled && routine.time ? (
-                                <View style={styles.badge}>
-                                  <Icon name="bell" size={12} color={t.textMuted} />
-                                  <Text style={[styles.badgeText, { color: t.textMuted }]}>
-                                    {formatTime(routine.time)}
-                                  </Text>
-                                </View>
-                              ) : null}
-                            </View>
+                        <View key={routine.id} style={styles.routineRow}>
+                          <Pressable
+                            onPress={() => handleToggle(routine, selectedDate)}
+                            accessibilityRole="checkbox"
+                            accessibilityState={{ checked: done }}
+                            accessibilityLabel={routine.title}
+                            hitSlop={8}
+                            style={[styles.leadIcon, styles.checkbox]}>
+                            <Icon
+                              name={done ? 'checkbox-on' : 'checkbox-off'}
+                              size={22}
+                              color={done ? group.meta.color : t.textDisabled}
+                            />
+                          </Pressable>
+                          <View style={[styles.flex, styles.rowBody]}>
+                            <Text
+                              style={[
+                                Typography.body,
+                                done
+                                  ? { color: t.textMuted, textDecorationLine: 'line-through' }
+                                  : { color: t.text },
+                              ]}>
+                              {routine.title}
+                            </Text>
+                            {routine.alarmEnabled && routine.time ? (
+                              <View style={styles.badge}>
+                                <Icon name="bell" size={12} color={t.textMuted} />
+                                <Text style={[styles.badgeText, { color: t.textMuted }]}>
+                                  {formatTime(routine.time)}
+                                </Text>
+                              </View>
+                            ) : null}
                           </View>
-                        </Pressable>
+                        </View>
                       );
                     })}
                   </View>
@@ -1275,13 +1271,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rowBody: {
-    paddingVertical: Spacing.one,
-  },
-  rowMain: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
     paddingVertical: Spacing.one,
   },
   // Same width as catDot so checkboxes center under the category emoji and

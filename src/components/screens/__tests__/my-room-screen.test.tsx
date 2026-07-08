@@ -163,7 +163,7 @@ describe('MyRoomScreen', () => {
     expect(getByText('지난 날짜는 할 일만 완료 체크할 수 있어요.')).toBeTruthy();
 
     // Past routines don't toggle — the server accepts today-only logs.
-    await fireEvent.press(getByText('옛 카테고리 루틴'));
+    await fireEvent.press(ui.getByLabelText('옛 카테고리 루틴'));
     expect(onToggleCalendarItem).not.toHaveBeenCalled();
     expect(queryByText('지난 루틴 완료는 서버 준비 중이에요')).toBeTruthy();
   });
@@ -185,7 +185,11 @@ describe('MyRoomScreen', () => {
     );
 
     await pickCalendarDate(ui, YESTERDAY);
+    // The row body is inert — only the checkbox toggles.
     await fireEvent.press(ui.getByText('지난 할 일'));
+    expect(onToggleCalendarItem).not.toHaveBeenCalled();
+
+    await fireEvent.press(ui.getByLabelText('지난 할 일'));
     expect(onToggleCalendarItem).toHaveBeenCalledWith(
       expect.objectContaining({ id: 't1', kind: 'todo' }),
       YESTERDAY,
@@ -213,7 +217,7 @@ describe('MyRoomScreen', () => {
     await pickCalendarDate(ui, TOMORROW);
     expect(ui.getByText('미래 날짜는 아직 완료할 수 없어요.')).toBeTruthy();
 
-    await fireEvent.press(ui.getByText('내일 할 일'));
+    await fireEvent.press(ui.getByLabelText('내일 할 일'));
     expect(onToggleCalendarItem).not.toHaveBeenCalled();
     expect(ui.getByText('미래 날짜는 완료할 수 없어요')).toBeTruthy();
   });
