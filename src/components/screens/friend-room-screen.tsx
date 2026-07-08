@@ -169,10 +169,13 @@ export function FriendRoomScreen({
           <Text style={[Typography.h3, { color: t.text }]} numberOfLines={1}>
             {friendName}의 방
           </Text>
-          <View style={styles.streak}>
-            <Icon name="flame" size={14} color={t.warning} />
-            <Text style={[Typography.supporting, { color: t.warning }]}>{streakDays}일</Text>
-          </View>
+          {/* Same rule as 나의 방: a 0-day streak hides the flame badge. */}
+          {streakDays > 0 ? (
+            <View style={styles.streak}>
+              <Icon name="flame" size={14} color={t.warning} />
+              <Text style={[Typography.supporting, { color: t.warning }]}>{streakDays}일</Text>
+            </View>
+          ) : null}
         </View>
       </View>
 

@@ -50,6 +50,11 @@ describe('MyRoomScreen', () => {
     expect(getByText('3 / 5')).toBeTruthy();
   });
 
+  it('hides the streak badge when the streak is 0', async () => {
+    const { queryByText } = await render(<MyRoomScreen streakDays={0} routines={[]} />);
+    expect(queryByText('0일')).toBeNull();
+  });
+
   it('toggles only via the checkbox; the row body opens the menu sheet', async () => {
     const onToggleCompletion = jest.fn();
     const { getByText, getByLabelText } = await render(
