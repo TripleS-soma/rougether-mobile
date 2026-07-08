@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { CategoryManagerSheet } from '@/components/screens/sheets/category-manager-sheet';
 import { DateRangeSheet } from '@/components/screens/sheets/date-range-sheet';
 import { TimePickerSheet } from '@/components/screens/sheets/time-picker-sheet';
+import { useToast } from '@/components/ui/toast';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import {
   type NewRoutine,
@@ -19,6 +20,20 @@ import { useTokens } from '@/hooks/use-tokens';
 import { formatDate, formatTime } from '@/utils/datetime';
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
+
+type RepeatType = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly';
+// The server currently validates repeatType against DAILY|WEEKLY only — the
+// other cadences are pickable (their sub-pickers work) but saving is blocked
+// until the API supports them (#180).
+const REPEAT_OPTIONS: { id: RepeatType; label: string; supported: boolean }[] = [
+  { id: 'daily', label: '매일', supported: true },
+  { id: 'weekly', label: '매주', supported: true },
+  { id: 'biweekly', label: '격주', supported: false },
+  { id: 'monthly', label: '매월', supported: false },
+  { id: 'yearly', label: '매년', supported: false },
+];
+const MONTH_DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
+const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 
 type Preset = { title: string; category: RoutineCategory };
 const PRESETS: Preset[] = [
@@ -73,6 +88,7 @@ export function AddRoutineScreen({
 }: AddRoutineScreenProps) {
   const t = useTokens();
   const headerInset = useHeaderInsetStyle();
+  const { show: toast } = useToast();
   const isEdit = Boolean(editRoutine);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [title, setTitle] = useState(editRoutine?.title ?? '');
@@ -85,7 +101,14 @@ export function AddRoutineScreen({
   useEffect(() => {
     if (!categoryValid && categories.length > 0) setCategory(categories[0].id);
   }, [categoryValid, categories]);
+  // Repeat cadence: a routine with repeat days is weekly, without is daily.
+  const [repeat, setRepeat] = useState<RepeatType>(
+    editRoutine && !editRoutine.days?.length ? 'daily' : 'weekly',
+  );
   const [days, setDays] = useState<number[]>(editRoutine?.days ?? [1, 2, 3, 4, 5]);
+  // Sub-picks for the server-pending cadences: 매월 → day of month, 매년 → month + day.
+  const [monthDay, setMonthDay] = useState(1);
+  const [yearMonth, setYearMonth] = useState(1);
   const [alarmEnabled, setAlarmEnabled] = useState(editRoutine?.alarmEnabled ?? true);
   const [time, setTime] = useState(editRoutine?.time ?? '07:00');
   const [startDate, setStartDate] = useState(editRoutine?.startDate ?? today());
@@ -99,7 +122,10 @@ export function AddRoutineScreen({
   const toggleDay = (d: number) =>
     setDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort()));
 
-  const canSubmit = title.trim().length > 0 && days.length > 0 && categoryValid;
+  const repeatSupported = REPEAT_OPTIONS.find((o) => o.id === repeat)?.supported ?? false;
+  const needsDays = repeat === 'weekly' || repeat === 'biweekly';
+  const canSubmit =
+    title.trim().length > 0 && categoryValid && repeatSupported && (!needsDays || days.length > 0);
   // Why the submit is blocked — set when the user taps it anyway. Without this
   // a fresh account (0 categories) just saw a dead gray button.
   const [formError, setFormError] = useState('');
@@ -114,15 +140,20 @@ export function AddRoutineScreen({
         setShowCategoryManager(true);
       } else if (title.trim().length === 0) {
         setFormError('루틴 이름을 입력해주세요.');
+      } else if (needsDays && days.length === 0) {
+        // 매주/격주 with no day picked — the day picker is the fix, so point at
+        // it with a toast rather than the footer error.
+        toast('반복 요일을 하나 선택해주세요', 'error');
       } else {
-        setFormError('반복 요일을 하나 이상 선택해주세요.');
+        setFormError('이 반복 주기는 서버 준비가 끝나면 저장할 수 있어요.');
       }
       return;
     }
     const payload: NewRoutine = {
       title: title.trim(),
       category,
-      days,
+      // Empty days = daily (the adapter maps it to repeatType DAILY).
+      days: repeat === 'weekly' ? days : [],
       startDate,
       endDate,
       alarmEnabled,
@@ -235,26 +266,109 @@ export function AddRoutineScreen({
           </View>
         ) : null}
 
-        {/* Repeat days */}
+        {/* Repeat cadence + days */}
         <View style={styles.field}>
-          <Text style={[styles.label, { color: t.text }]}>반복 요일</Text>
-          <View style={styles.dayRow}>
-            {DAYS.map((d, i) => {
-              const active = days.includes(i);
-              const bg = active ? (i === 0 ? t.danger : t.primary) : t.surface;
+          <Text style={[styles.label, { color: t.text }]}>반복</Text>
+          <View style={styles.repeatRow}>
+            {REPEAT_OPTIONS.map((opt) => {
+              const active = repeat === opt.id;
               return (
                 <Pressable
-                  key={d}
-                  onPress={() => toggleDay(i)}
+                  key={opt.id}
+                  onPress={() => setRepeat(opt.id)}
                   accessibilityRole="button"
-                  style={[styles.day, { backgroundColor: bg }]}>
+                  accessibilityLabel={opt.label}
+                  accessibilityState={{ selected: active }}
+                  style={[styles.repeatChip, { backgroundColor: active ? t.primary : t.surface }]}>
                   <Text style={[Typography.label, { color: active ? t.onPrimary : t.textMuted }]}>
-                    {d}
+                    {opt.label}
                   </Text>
                 </Pressable>
               );
             })}
           </View>
+          {!repeatSupported ? (
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              격주·매월·매년 반복은 아직 서버 준비 중이에요.
+            </Text>
+          ) : null}
+          {needsDays ? (
+            <>
+              <Text style={[styles.label, styles.dayLabel, { color: t.text }]}>반복 요일</Text>
+              <View style={styles.dayRow}>
+                {DAYS.map((d, i) => {
+                  const active = days.includes(i);
+                  const bg = active ? (i === 0 ? t.danger : t.primary) : t.surface;
+                  return (
+                    <Pressable
+                      key={d}
+                      onPress={() => toggleDay(i)}
+                      accessibilityRole="button"
+                      style={[styles.day, { backgroundColor: bg }]}>
+                      <Text
+                        style={[Typography.label, { color: active ? t.onPrimary : t.textMuted }]}>
+                        {d}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </>
+          ) : null}
+          {repeat === 'yearly' ? (
+            <>
+              <Text style={[styles.label, styles.dayLabel, { color: t.text }]}>반복 월</Text>
+              <View style={styles.dateGrid}>
+                {MONTHS.map((m) => {
+                  const active = yearMonth === m;
+                  return (
+                    <Pressable
+                      key={m}
+                      onPress={() => setYearMonth(m)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${m}월`}
+                      accessibilityState={{ selected: active }}
+                      style={[
+                        styles.monthCell,
+                        { backgroundColor: active ? t.primary : t.surface },
+                      ]}>
+                      <Text
+                        style={[Typography.label, { color: active ? t.onPrimary : t.textMuted }]}>
+                        {m}월
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </>
+          ) : null}
+          {repeat === 'monthly' || repeat === 'yearly' ? (
+            <>
+              <Text style={[styles.label, styles.dayLabel, { color: t.text }]}>반복 일자</Text>
+              <View style={styles.dateGrid}>
+                {MONTH_DAYS.map((d) => {
+                  const active = monthDay === d;
+                  return (
+                    <Pressable
+                      key={d}
+                      onPress={() => setMonthDay(d)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${d}일`}
+                      accessibilityState={{ selected: active }}
+                      style={[
+                        styles.dateCell,
+                        { backgroundColor: active ? t.primary : t.surface },
+                      ]}>
+                      <Text
+                        style={[Typography.label, { color: active ? t.onPrimary : t.textMuted }]}>
+                        {d}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </>
+          ) : null}
         </View>
 
         {/* Duration */}
@@ -479,7 +593,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
   },
+  repeatRow: { flexDirection: 'row', gap: Spacing.one },
+  repeatChip: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: Spacing.two,
+    borderRadius: Radius.pill,
+  },
+  dayLabel: { marginTop: Spacing.two },
   dayRow: { flexDirection: 'row', gap: Spacing.one },
+  dateGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.one },
+  dateCell: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  monthCell: {
+    width: 64,
+    height: 40,
+    borderRadius: Radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   day: {
     flex: 1,
     height: 40,

@@ -1,6 +1,7 @@
 import { fireEvent, render } from '@testing-library/react-native';
 
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
+import { ToastProvider } from '@/components/ui/toast';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
 
 describe('AddRoutineScreen', () => {
@@ -64,6 +65,99 @@ describe('AddRoutineScreen', () => {
     await fireEvent.press(getByText('루틴 추가하기'));
     expect(getByText('루틴 이름을 입력해주세요.')).toBeTruthy();
     expect(onAdd).not.toHaveBeenCalled();
+  });
+
+  it('shows the day picker only for 매주 and submits 매일 with no days', async () => {
+    const onAdd = jest.fn();
+    const { getByText, getByPlaceholderText, queryByText } = await render(
+      <AddRoutineScreen onAdd={onAdd} />,
+    );
+
+    // Weekly by default — the day picker is visible.
+    expect(queryByText('반복 요일')).toBeTruthy();
+
+    await fireEvent.press(getByText('매일'));
+    expect(queryByText('반복 요일')).toBeNull();
+
+    await fireEvent.changeText(getByPlaceholderText('예) 매일 30분 산책'), '산책');
+    await fireEvent.press(getByText('루틴 추가하기'));
+    expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ title: '산책', days: [] }));
+  });
+
+  it('shows the day picker for 격주 but blocks saving (server pending)', async () => {
+    const onAdd = jest.fn();
+    const { getByText, getByPlaceholderText, queryByText } = await render(
+      <AddRoutineScreen onAdd={onAdd} />,
+    );
+
+    await fireEvent.press(getByText('격주'));
+    expect(queryByText('반복 요일')).toBeTruthy();
+
+    await fireEvent.changeText(getByPlaceholderText('예) 매일 30분 산책'), '산책');
+    await fireEvent.press(getByText('루틴 추가하기'));
+    expect(getByText('이 반복 주기는 서버 준비가 끝나면 저장할 수 있어요.')).toBeTruthy();
+    expect(onAdd).not.toHaveBeenCalled();
+  });
+
+  it('blocks saving 매주 with no day picked and toasts', async () => {
+    const onAdd = jest.fn();
+    const { getByText, getByPlaceholderText } = await render(
+      <ToastProvider>
+        <AddRoutineScreen onAdd={onAdd} />
+      </ToastProvider>,
+    );
+
+    // Weekly default preselects 월~금 — deselect them all.
+    for (const d of ['월', '화', '수', '목', '금']) await fireEvent.press(getByText(d));
+    await fireEvent.changeText(getByPlaceholderText('예) 매일 30분 산책'), '산책');
+    await fireEvent.press(getByText('루틴 추가하기'));
+
+    expect(getByText('반복 요일을 하나 선택해주세요')).toBeTruthy();
+    expect(onAdd).not.toHaveBeenCalled();
+  });
+
+  it('asks for a day before the server-pending message on 격주 with no day', async () => {
+    const onAdd = jest.fn();
+    const { getByText, getByPlaceholderText, queryByText } = await render(
+      <ToastProvider>
+        <AddRoutineScreen onAdd={onAdd} />
+      </ToastProvider>,
+    );
+
+    await fireEvent.press(getByText('격주'));
+    for (const d of ['월', '화', '수', '목', '금']) await fireEvent.press(getByText(d));
+    await fireEvent.changeText(getByPlaceholderText('예) 매일 30분 산책'), '산책');
+    await fireEvent.press(getByText('루틴 추가하기'));
+
+    // The missing day is the actionable problem — the cadence pending message
+    // only shows once days are picked.
+    expect(getByText('반복 요일을 하나 선택해주세요')).toBeTruthy();
+    expect(queryByText('이 반복 주기는 서버 준비가 끝나면 저장할 수 있어요.')).toBeNull();
+    expect(onAdd).not.toHaveBeenCalled();
+  });
+
+  it('shows a day-of-month picker for 매월', async () => {
+    const { getByText, queryByText, getByLabelText } = await render(<AddRoutineScreen />);
+    await fireEvent.press(getByText('매월'));
+    expect(queryByText('반복 요일')).toBeNull();
+    expect(queryByText('반복 일자')).toBeTruthy();
+    await fireEvent.press(getByLabelText('31일'));
+    expect(getByLabelText('31일').props.accessibilityState.selected).toBe(true);
+  });
+
+  it('shows month + day pickers for 매년', async () => {
+    const { getByText, queryByText, getByLabelText } = await render(<AddRoutineScreen />);
+    await fireEvent.press(getByText('매년'));
+    expect(queryByText('반복 월')).toBeTruthy();
+    expect(queryByText('반복 일자')).toBeTruthy();
+    await fireEvent.press(getByLabelText('12월'));
+    expect(getByLabelText('12월').props.accessibilityState.selected).toBe(true);
+  });
+
+  it('prefills 매일 for a routine without repeat days', async () => {
+    const routine = { id: 'r9', title: '스트레칭', category: '건강', kind: 'routine' as const };
+    const { queryByText } = await render(<AddRoutineScreen editRoutine={routine} />);
+    expect(queryByText('반복 요일')).toBeNull();
   });
 
   it('prefills the form and updates in edit mode', async () => {
