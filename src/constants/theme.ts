@@ -97,6 +97,12 @@ export type SemanticColors = {
   primaryActive: string;
   /** Text/icon on top of `primary`. Astryx: `on-accent`. */
   onPrimary: string;
+  /**
+   * Ink on fixed light tint surfaces (pastel room tiles, colored chips whose
+   * background does NOT follow the theme). Stays dark in dark mode — `text`
+   * flips light there and disappears against the unchanged pastel.
+   */
+  onTint: string;
   /** Status — positive. Astryx categorical green. */
   success: string;
   /** Status — caution. Astryx categorical orange/yellow. */
@@ -122,6 +128,7 @@ export const Themes: Record<ThemeId, SemanticColors> = {
     primary: '#7FA87F',
     primaryActive: '#6D926D',
     onPrimary: '#FFFFFF',
+    onTint: '#4A403A',
     success: '#5F9B6A',
     warning: '#E8A24A',
     danger: '#D67878',
@@ -141,6 +148,7 @@ export const Themes: Record<ThemeId, SemanticColors> = {
     primary: '#5F9B6A',
     primaryActive: '#4D8657',
     onPrimary: '#FFFFFF',
+    onTint: '#334236',
     success: '#5F9B6A',
     warning: '#E8A24A',
     danger: '#D67878',
@@ -160,6 +168,7 @@ export const Themes: Record<ThemeId, SemanticColors> = {
     primary: '#9A7B4F',
     primaryActive: '#83663F',
     onPrimary: '#FFFFFF',
+    onTint: '#493B2E',
     success: '#7E9A6A',
     warning: '#C9943F',
     danger: '#C77A6A',
@@ -188,6 +197,7 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = {
     primary: '#93BE93',
     primaryActive: '#7FA87F',
     onPrimary: '#1E2A1E',
+    onTint: '#4A403A',
     success: '#7CB98A',
     warning: '#EDB061',
     danger: '#E08D8D',
@@ -207,6 +217,7 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = {
     primary: '#7FBC8B',
     primaryActive: '#6BAA78',
     onPrimary: '#14251A',
+    onTint: '#334236',
     success: '#7CB98A',
     warning: '#EDB061',
     danger: '#E08D8D',
@@ -226,6 +237,7 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = {
     primary: '#C4A16F',
     primaryActive: '#B08D5B',
     onPrimary: '#2A2113',
+    onTint: '#493B2E',
     success: '#96B37F',
     warning: '#DCA855',
     danger: '#DA9384',

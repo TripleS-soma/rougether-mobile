@@ -1,5 +1,6 @@
 import {
   DEFAULT_THEME_ID,
+  DarkThemes,
   Themes,
   Typography,
   type SemanticColors,
@@ -21,6 +22,7 @@ const REQUIRED_ROLES: (keyof SemanticColors)[] = [
   'primary',
   'primaryActive',
   'onPrimary',
+  'onTint',
   'success',
   'warning',
   'danger',
@@ -41,6 +43,13 @@ describe('brand themes', () => {
     for (const role of REQUIRED_ROLES) {
       expect(Themes[id][role]).toMatch(/^#[0-9A-Fa-f]{6}$/);
     }
+  });
+
+  it.each(ids)('theme "%s" keeps onTint dark in dark mode (fixed pastel surfaces)', (id) => {
+    // Fixed pastel tiles don't change in dark mode, so their ink must not
+    // flip light with the theme — same dark ink in both modes.
+    expect(DarkThemes[id].onTint).toBe(Themes[id].onTint);
+    expect(DarkThemes[id].onTint).toBe(Themes[id].text);
   });
 });
 

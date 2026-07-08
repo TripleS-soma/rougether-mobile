@@ -428,7 +428,7 @@ export function GroupHouseScreen({
                       ) : null}
                       {member.isMine ? (
                         <Text
-                          style={[styles.myBadge, { backgroundColor: t.warning, color: t.text }]}>
+                          style={[styles.myBadge, { backgroundColor: t.warning, color: t.onTint }]}>
                           MY
                         </Text>
                       ) : null}
@@ -806,7 +806,7 @@ export function GroupHouseScreen({
                       ]}>
                       {room.isMine ? (
                         <View style={[styles.myTag, { backgroundColor: t.warning }]}>
-                          <Text style={[styles.myTagText, { color: t.text }]}>MY</Text>
+                          <Text style={[styles.myTagText, { color: t.onTint }]}>MY</Text>
                         </View>
                       ) : null}
                       {empty ? (
@@ -814,7 +814,14 @@ export function GroupHouseScreen({
                       ) : (
                         <CharacterAvatar characterId={characterId} size={64} />
                       )}
-                      <Text style={[Typography.supporting, styles.roomName, { color: t.text }]}>
+                      {/* Tiles keep their fixed pastel bg in dark mode — the
+                          name needs onTint ink, not the (light) theme text. */}
+                      <Text
+                        style={[
+                          Typography.supporting,
+                          styles.roomName,
+                          { color: empty ? t.textMuted : t.onTint },
+                        ]}>
                         {empty
                           ? '빈방'
                           : `${room.isOwner ? '👑 ' : ''}${room.isMine ? `${room.name} (나)` : room.name}`}
