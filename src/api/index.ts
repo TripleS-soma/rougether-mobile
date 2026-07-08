@@ -18,6 +18,7 @@ export {
   isAuthenticated,
   loadSession,
   logout,
+  onSessionCleared,
   refreshSession,
 } from './auth';
 
