@@ -216,7 +216,7 @@ describe('MyRoomScreen', () => {
           onSelectDate={onSelectDate}
           onToggleCalendarItem={onToggleCalendarItem}
           allCategories={[
-            { id: '99', label: '옛것', emoji: '✨', color: '#FF0000', visibility: 'partial', deleted: true }, // prettier-ignore
+            { id: '99', label: '옛것', icon: 'sparkle' as const, color: '#FF0000', visibility: 'partial', deleted: true }, // prettier-ignore
           ]}
         />
       </ToastProvider>,

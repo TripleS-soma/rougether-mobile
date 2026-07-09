@@ -76,7 +76,7 @@ describe('HouseSearchScreen', () => {
     await fireEvent.press(getByText('입주'));
 
     // The lookup runs first — join waits for explicit confirmation.
-    await waitFor(() => expect(getByText('🏡 아침 루틴 하우스')).toBeTruthy());
+    await waitFor(() => expect(getByText('아침 루틴 하우스')).toBeTruthy());
     expect(onPreviewCode).toHaveBeenCalledWith('VLG7K2X');
     expect(onJoinByCode).not.toHaveBeenCalled();
 
@@ -95,7 +95,7 @@ describe('HouseSearchScreen', () => {
     await fireEvent.press(getByText('입주'));
 
     await waitFor(() => expect(getByText(/만료된 초대코드예요/)).toBeTruthy());
-    expect(queryByText('🏡 옛집')).toBeNull();
+    expect(queryByText('옛집')).toBeNull();
     expect(onJoinByCode).not.toHaveBeenCalled();
   });
 
@@ -130,7 +130,7 @@ describe('HouseSearchScreen', () => {
         members: 1,
         capacity: 4,
         tag: '건강/운동',
-        emoji: '🌱',
+        icon: 'sprout' as const,
         bg: '#EEF5E7',
         border: '#CFE0C3',
         level: 2,
@@ -139,7 +139,7 @@ describe('HouseSearchScreen', () => {
     const { getByText, queryByText } = await render(<HouseSearchScreen houses={houses} />);
 
     expect(getByText('연동 검증 하우스')).toBeTruthy();
-    expect(getByText(/Lv\.2 · 👥 1 \/ 4/)).toBeTruthy();
+    expect(getByText(/Lv\.2 · 멤버 1 \/ 4/)).toBeTruthy();
     expect(queryByText(/함께 루틴을 키워요/)).toBeNull();
 
     // Demo fixtures still carry a real description — it renders as its own line.

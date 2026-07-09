@@ -14,6 +14,7 @@ import {
   type RoutineCategoryMeta,
 } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
+import { Pictogram } from '@/components/ui/pictograms';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
@@ -220,7 +221,7 @@ export function AddRoutineScreen({
                   key={c.id}
                   onPress={() => setCategory(c.id)}
                   style={[styles.chip, { backgroundColor: active ? c.color : t.surface }]}>
-                  <Text style={styles.chipEmoji}>{c.emoji}</Text>
+                  <Pictogram name={c.icon} size={14} color={active ? t.onPrimary : undefined} />
                   <Text style={[Typography.label, { color: active ? t.onPrimary : t.textMuted }]}>
                     {c.label}
                   </Text>
@@ -598,7 +599,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     borderRadius: Radius.pill,
   },
-  chipEmoji: { fontSize: 14 },
   presetHead: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -8,33 +8,34 @@ import {
   VISIBILITY_LABELS,
 } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
+import { Pictogram, type PictogramName } from '@/components/ui/pictograms';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
 
-const EMOJI_CHOICES = [
-  '🗓️',
-  '📚',
-  '🎨',
-  '💪',
-  '✨',
-  '☀️',
-  '🌙',
-  '💧',
-  '🏃',
-  '💖',
-  '☕',
-  '🎵',
-  '🍳',
-  '🧘',
-  '💼',
-  '🌱',
+const ICON_CHOICES: PictogramName[] = [
+  'calendar',
+  'book',
+  'palette',
+  'dumbbell',
+  'sparkle',
+  'sun',
+  'moon',
+  'water',
+  'run',
+  'heart',
+  'coffee',
+  'music',
+  'cooking',
+  'meditation',
+  'briefcase',
+  'sprout',
 ];
 
-const VISIBILITY_OPTIONS: { id: CategoryVisibility; icon: string; desc: string }[] = [
-  { id: 'public', icon: '🌐', desc: '누구나 볼 수 있어요' },
-  { id: 'neighbor', icon: '👥', desc: '이웃에게만 보여요' },
-  { id: 'partial', icon: '🤝', desc: '선택한 사람에게만' },
-  { id: 'private', icon: '🔒', desc: '나만 볼 수 있어요' },
+const VISIBILITY_OPTIONS: { id: CategoryVisibility; icon: PictogramName; desc: string }[] = [
+  { id: 'public', icon: 'globe', desc: '누구나 볼 수 있어요' },
+  { id: 'neighbor', icon: 'friends', desc: '이웃에게만 보여요' },
+  { id: 'partial', icon: 'handshake', desc: '선택한 사람에게만' },
+  { id: 'private', icon: 'lock', desc: '나만 볼 수 있어요' },
 ];
 
 export type CategoryManagerSheetProps = {
@@ -73,7 +74,7 @@ export function CategoryManagerSheet({
 }: CategoryManagerSheetProps) {
   const t = useTokens();
   const [name, setName] = useState('');
-  const [emoji, setEmoji] = useState(EMOJI_CHOICES[0]);
+  const [icon, setIcon] = useState<PictogramName>(ICON_CHOICES[0]);
   const [visibility, setVisibility] = useState<CategoryVisibility>('public');
   const [pendingDelete, setPendingDelete] = useState<RoutineCategoryMeta | null>(null);
   // Delete tapped on a category that still has routines — warning only.
@@ -99,26 +100,26 @@ export function CategoryManagerSheet({
   const resetForm = () => {
     setEditing(null);
     setName('');
-    setEmoji(EMOJI_CHOICES[0]);
+    setIcon(ICON_CHOICES[0]);
     setVisibility('public');
   };
 
   const startEdit = (c: RoutineCategoryMeta) => {
     setEditing(c);
     setName(c.label);
-    setEmoji(c.emoji);
+    setIcon(c.icon);
     setVisibility(c.visibility);
   };
 
   const submit = () => {
     if (!canSubmit) return;
     if (editing) {
-      onUpdate?.(editing.id, { ...editing, label: name.trim(), emoji, visibility });
+      onUpdate?.(editing.id, { ...editing, label: name.trim(), icon, visibility });
     } else {
       onCreate({
         id: `cat-${Date.now()}`,
         label: name.trim(),
-        emoji,
+        icon,
         color: CATEGORY_COLORS[categories.length % CATEGORY_COLORS.length],
         visibility,
       });
@@ -148,7 +149,7 @@ export function CategoryManagerSheet({
             </Text>
 
             <View style={[styles.nameRow, { backgroundColor: t.surfaceMuted }]}>
-              <Text style={styles.nameEmoji}>{emoji}</Text>
+              <Pictogram name={icon} size={20} />
               <TextInput
                 value={name}
                 onChangeText={setName}
@@ -158,23 +159,23 @@ export function CategoryManagerSheet({
               />
             </View>
 
-            <Text style={[Typography.supporting, { color: t.textMuted }]}>이모지</Text>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>아이콘</Text>
             <View style={styles.emojiGrid}>
-              {EMOJI_CHOICES.map((e) => {
-                const active = emoji === e;
+              {ICON_CHOICES.map((e) => {
+                const active = icon === e;
                 return (
                   <Pressable
                     key={e}
-                    onPress={() => setEmoji(e)}
+                    onPress={() => setIcon(e)}
                     accessibilityRole="button"
-                    accessibilityLabel={`이모지 ${e}`}
+                    accessibilityLabel={`아이콘 ${e}`}
                     accessibilityState={{ selected: active }}
                     style={[
                       styles.emojiCell,
                       { backgroundColor: active ? `${t.primary}22` : t.surfaceMuted },
                       active && { borderColor: t.primary, borderWidth: 2 },
                     ]}>
-                    <Text style={styles.emojiGlyph}>{e}</Text>
+                    <Pictogram name={e} size={18} />
                   </Pressable>
                 );
               })}
@@ -195,7 +196,7 @@ export function CategoryManagerSheet({
                       styles.segItem,
                       { backgroundColor: active ? t.primary : t.surfaceMuted },
                     ]}>
-                    <Text style={styles.segIcon}>{v.icon}</Text>
+                    <Pictogram name={v.icon} size={18} color={active ? t.onPrimary : undefined} />
                     <Text
                       style={[
                         Typography.supporting,
@@ -257,7 +258,7 @@ export function CategoryManagerSheet({
                     moving && { borderWidth: 2, borderColor: t.primary, borderLeftWidth: 4 },
                   ]}>
                   <View style={[styles.catDot, { backgroundColor: `${c.color}33` }]}>
-                    <Text style={styles.catEmoji}>{c.emoji}</Text>
+                    <Pictogram name={c.icon} size={16} />
                   </View>
                   <View style={styles.flex}>
                     <Text style={[Typography.body, { color: t.text }]}>{c.label}</Text>
@@ -449,7 +450,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.three,
   },
-  nameEmoji: { fontSize: 20 },
   nameInput: { fontSize: 16, paddingVertical: Spacing.three },
   emojiGrid: {
     flexDirection: 'row',
@@ -463,7 +463,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  emojiGlyph: { fontSize: 18 },
   segment: {
     flexDirection: 'row',
     gap: Spacing.two,
@@ -475,7 +474,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     borderRadius: Radius.md,
   },
-  segIcon: { fontSize: 18 },
   segLabel: { fontWeight: '600' },
   segDesc: { textAlign: 'center' },
   submit: {
@@ -508,7 +506,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  catEmoji: { fontSize: 16 },
   moveGlyph: { fontSize: 14, fontWeight: '700' },
   del: {
     width: 36,

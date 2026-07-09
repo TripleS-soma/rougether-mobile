@@ -18,7 +18,7 @@ import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/con
 import { type Routine } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
 import { PendingNotice } from '@/components/ui/pending-notice';
-import { Pictogram, type PictogramName } from '@/components/ui/pictograms';
+import { BookOpenPictogram, Pictogram, type PictogramName } from '@/components/ui/pictograms';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { type FurnitureItem, type Wallpaper } from '@/resources/furniture';
 import { useToast } from '@/components/ui/toast';
@@ -53,8 +53,8 @@ export type GuestbookEntry = {
 };
 
 const DEFAULT_GUESTBOOK: GuestbookEntry[] = [
-  { id: 'g1', author: '임채영', content: '방 예쁘다! 오늘도 루틴 화이팅 🔥', date: '7월 6일' },
-  { id: 'g2', author: '장진형', content: '기상 인증 대단해요 👍', date: '7월 5일' },
+  { id: 'g1', author: '임채영', content: '방 예쁘다! 오늘도 루틴 화이팅', date: '7월 6일' },
+  { id: 'g2', author: '장진형', content: '기상 인증 대단해요', date: '7월 5일' },
 ];
 
 /** 1~500 chars (server GuestbookCreateRequest). */
@@ -327,7 +327,10 @@ export function FriendRoomScreen({
 
           <View style={styles.section}>
             <View style={styles.sectionHead}>
-              <Text style={[Typography.h2, { color: t.text }]}>📖 방명록</Text>
+              <View style={styles.gbTitleRow}>
+                <BookOpenPictogram size={18} />
+                <Text style={[Typography.h2, { color: t.text }]}>방명록</Text>
+              </View>
             </View>
 
             <View style={styles.gbInputRow}>
@@ -461,6 +464,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     textAlign: 'center',
     paddingVertical: Spacing.three,
+  },
+  gbTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
   },
   gbList: {
     gap: Spacing.two,

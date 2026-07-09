@@ -238,7 +238,7 @@ describe('API adapters', () => {
       'private',
     );
 
-    const cat = { id: 'x', label: '취미', emoji: '🎨', color: '#123456' } as const;
+    const cat = { id: 'x', label: '취미', icon: 'palette', color: '#123456' } as const;
     expect(toCategoryCreate({ ...cat, visibility: 'public' }).visibility).toBe('PUBLIC');
     expect(toCategoryCreate({ ...cat, visibility: 'neighbor' }).visibility).toBe('HOUSE');
     expect(toCategoryCreate({ ...cat, visibility: 'partial' }).visibility).toBe('FRIENDS');

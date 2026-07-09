@@ -37,11 +37,11 @@ describe('FriendRoomScreen', () => {
         onWriteGuestbook={onWriteGuestbook}
       />,
     );
-    expect(getByText('📖 방명록')).toBeTruthy();
+    expect(getByText('방명록')).toBeTruthy();
     expect(getByText('이웃준서')).toBeTruthy();
     expect(getByText('방 예쁘다!')).toBeTruthy();
     // Server list replaces the demo entries.
-    expect(queryByText('기상 인증 대단해요 👍')).toBeNull();
+    expect(queryByText('기상 인증 대단해요')).toBeNull();
 
     await fireEvent.changeText(getByLabelText('방명록 입력'), '오늘도 화이팅!');
     await fireEvent.press(getByLabelText('방명록 남기기'));
@@ -108,7 +108,7 @@ describe('FriendRoomScreen', () => {
 
   it('keeps a local demo guestbook when unwired', async () => {
     const { getByText, getByLabelText } = await render(<FriendRoomScreen />);
-    expect(getByText('기상 인증 대단해요 👍')).toBeTruthy();
+    expect(getByText('기상 인증 대단해요')).toBeTruthy();
     await fireEvent.changeText(getByLabelText('방명록 입력'), '데모 방명록');
     await fireEvent.press(getByLabelText('방명록 남기기'));
     expect(getByText('데모 방명록')).toBeTruthy();

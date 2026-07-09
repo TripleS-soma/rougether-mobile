@@ -3,6 +3,8 @@
  * routine-todo domain (see rougether-spec) — keep field names aligned; the
  * spec repo is the source of truth for the contract.
  */
+import type { PictogramName } from '@/components/ui/pictograms';
+
 export type RoutineCategory = string;
 
 /** Mirrors the API's four levels: PUBLIC / HOUSE / FRIENDS / PRIVATE. */
@@ -31,7 +33,7 @@ export const CATEGORY_COLORS = [
 export type RoutineCategoryMeta = {
   id: RoutineCategory;
   label: string;
-  emoji: string;
+  icon: PictogramName;
   color: string;
   visibility: CategoryVisibility;
   /** Server-deleted category, kept only to resolve past records' name/color. */
@@ -46,17 +48,17 @@ export type RoutineCategoryMeta = {
 export const UNCATEGORIZED_META: RoutineCategoryMeta = {
   id: '',
   label: '기타',
-  emoji: '✨',
+  icon: 'sparkle',
   color: '#B5A89C',
   visibility: 'public',
 };
 
 export const ROUTINE_CATEGORIES: RoutineCategoryMeta[] = [
-  { id: '일정', label: '일정', emoji: '🗓️', color: '#E8A87C', visibility: 'public' },
-  { id: '공부', label: '공부', emoji: '📚', color: '#7FA8D4', visibility: 'public' },
-  { id: '취미', label: '취미', emoji: '🎨', color: '#C8869C', visibility: 'neighbor' },
-  { id: '건강', label: '건강', emoji: '💪', color: '#7FA87F', visibility: 'partial' },
-  { id: '기타', label: '기타', emoji: '✨', color: '#B5A89C', visibility: 'public' },
+  { id: '일정', label: '일정', icon: 'calendar', color: '#E8A87C', visibility: 'public' },
+  { id: '공부', label: '공부', icon: 'book', color: '#7FA8D4', visibility: 'public' },
+  { id: '취미', label: '취미', icon: 'palette', color: '#C8869C', visibility: 'neighbor' },
+  { id: '건강', label: '건강', icon: 'dumbbell', color: '#7FA87F', visibility: 'partial' },
+  { id: '기타', label: '기타', icon: 'sparkle', color: '#B5A89C', visibility: 'public' },
 ];
 
 export type Routine = {

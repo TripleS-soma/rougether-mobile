@@ -14,6 +14,8 @@ import { CharacterAvatar } from '@/components/character-avatar';
 import { Icon } from '@/components/ui/icon';
 import {
   CrownPictogram,
+  DoorPictogram,
+  PencilPictogram,
   Pictogram,
   type PictogramName,
   TargetPictogram,
@@ -401,7 +403,8 @@ export function GroupHouseScreen({
                 accessibilityRole="button"
                 accessibilityLabel="집 정보 수정"
                 style={[styles.editHouseBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.primary }]}>✏️ 집 정보 수정</Text>
+                <PencilPictogram size={14} />
+                <Text style={[Typography.label, { color: t.primary }]}>집 정보 수정</Text>
               </Pressable>
             </View>
           ) : null}
@@ -496,7 +499,8 @@ export function GroupHouseScreen({
                   accessibilityRole="button"
                   accessibilityLabel="집 나가기"
                   style={[styles.leaveBtn, { backgroundColor: `${t.danger}22` }]}>
-                  <Text style={[Typography.label, { color: t.danger }]}>🚪 집 나가기</Text>
+                  <DoorPictogram size={14} />
+                  <Text style={[Typography.label, { color: t.danger }]}>집 나가기</Text>
                 </Pressable>
               )}
             </View>
@@ -912,7 +916,7 @@ export function GroupHouseScreen({
                             accessibilityLabel={`${mission.title} 보상 받기`}
                             style={[styles.missionBtn, { backgroundColor: t.warning }]}>
                             <Text style={[Typography.supporting, { color: t.text }]}>
-                              🎁 보상 받기
+                              보상 받기
                             </Text>
                           </Pressable>
                         ) : mission.status === 'ACTIVE' &&

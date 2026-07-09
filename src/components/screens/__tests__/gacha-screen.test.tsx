@@ -11,7 +11,7 @@ const machine: GachaMachine = {
   costCurrencyType: 'COIN',
   costAmount: 250,
   drawCount: 1,
-  icon: '🥐',
+  icon: 'croissant' as const,
   accent: '#F7E6C8',
 };
 

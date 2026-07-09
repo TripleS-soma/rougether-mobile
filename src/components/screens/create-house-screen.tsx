@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
+import { CrownPictogram, Pictogram, type PictogramName } from '@/components/ui/pictograms';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
@@ -9,14 +10,14 @@ import { useTokens } from '@/hooks/use-tokens';
 
 const PRIVATE_ACCENT = '#D4A574';
 
-type Theme = { id: string; label: string; emoji: string; bg: string; border: string };
+type Theme = { id: string; label: string; icon: PictogramName; bg: string; border: string };
 const THEMES: Theme[] = [
-  { id: 'morning', label: '기상', emoji: '🌅', bg: '#FFEFD8', border: '#F0C88A' },
-  { id: 'study', label: '공부', emoji: '📚', bg: '#E4DCF0', border: '#B8A8D8' },
-  { id: 'code', label: '코딩', emoji: '💻', bg: '#E4F0DC', border: '#A8C898' },
-  { id: 'fitness', label: '운동', emoji: '💪', bg: '#FBE0E0', border: '#E8B0A0' },
-  { id: 'health', label: '건강', emoji: '💧', bg: '#D8E8F0', border: '#A8C4D8' },
-  { id: 'hobby', label: '취미', emoji: '🎨', bg: '#F5E1D8', border: '#E8B8A8' },
+  { id: 'morning', label: '기상', icon: 'sunrise', bg: '#FFEFD8', border: '#F0C88A' },
+  { id: 'study', label: '공부', icon: 'book', bg: '#E4DCF0', border: '#B8A8D8' },
+  { id: 'code', label: '코딩', icon: 'laptop', bg: '#E4F0DC', border: '#A8C898' },
+  { id: 'fitness', label: '운동', icon: 'dumbbell', bg: '#FBE0E0', border: '#E8B0A0' },
+  { id: 'health', label: '건강', icon: 'water', bg: '#D8E8F0', border: '#A8C4D8' },
+  { id: 'hobby', label: '취미', icon: 'palette', bg: '#F5E1D8', border: '#E8B8A8' },
 ];
 const CAPACITIES = [2, 3, 4, 6, 8];
 
@@ -70,17 +71,20 @@ export function CreateHouseScreen({ onBack, onCreate }: CreateHouseScreenProps) 
         <View style={[styles.card, styles.previewRow, { backgroundColor: t.surface }]}>
           <View
             style={[styles.previewEmoji, { backgroundColor: theme.bg, borderColor: theme.border }]}>
-            <Text style={styles.previewEmojiText}>{theme.emoji}</Text>
+            <Pictogram name={theme.icon} size={30} />
           </View>
           <View style={styles.flex}>
-            <Text style={[Typography.label, { color: t.text }]} numberOfLines={1}>
-              👑 {name.trim() || '집 이름'}
-            </Text>
+            <View style={styles.previewNameRow}>
+              <CrownPictogram size={13} />
+              <Text style={[Typography.label, { color: t.text }]} numberOfLines={1}>
+                {name.trim() || '집 이름'}
+              </Text>
+            </View>
             <Text style={[Typography.supporting, { color: t.textMuted }]} numberOfLines={1}>
               {description.trim() || '한 줄 설명이 여기에 표시돼요'}
             </Text>
             <Text style={[styles.meta, { color: t.textMuted }]}>
-              👥 0 / {capacity} · {isPrivate ? '🔒 비공개' : '🌐 공개'}
+              0 / {capacity}명 · {isPrivate ? '비공개' : '공개'}
             </Text>
           </View>
         </View>
@@ -134,7 +138,7 @@ export function CreateHouseScreen({ onBack, onCreate }: CreateHouseScreenProps) 
                       borderColor: selected ? t.primary : 'transparent',
                     },
                   ]}>
-                  <Text style={styles.themeEmoji}>{x.emoji}</Text>
+                  <Pictogram name={x.icon} size={22} />
                   <Text style={[styles.themeLabel, { color: t.text }]}>{x.label}</Text>
                 </Pressable>
               );
@@ -176,7 +180,7 @@ export function CreateHouseScreen({ onBack, onCreate }: CreateHouseScreenProps) 
             <PrivacyCard
               selected={!isPrivate}
               accent={t.primary}
-              title="🌐 공개"
+              title="공개"
               subtitle="추천 목록에 노출돼요"
               onPress={() => setIsPrivate(false)}
               t={t}
@@ -184,7 +188,7 @@ export function CreateHouseScreen({ onBack, onCreate }: CreateHouseScreenProps) 
             <PrivacyCard
               selected={isPrivate}
               accent={PRIVATE_ACCENT}
-              title="🔒 비공개"
+              title="비공개"
               subtitle="초대코드로만 입장 가능"
               onPress={() => setIsPrivate(true)}
               t={t}
@@ -302,7 +306,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  previewEmojiText: { fontSize: 30 },
+  previewNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+  },
   meta: { fontSize: 11, marginTop: 2 },
   labeled: { gap: Spacing.one },
   fieldLabel: { fontSize: 12, fontWeight: '600', marginLeft: Spacing.one },
@@ -326,7 +334,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.half,
   },
-  themeEmoji: { fontSize: 22 },
   themeLabel: { fontSize: 12, fontWeight: '600' },
   capacityHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   capRow: { flexDirection: 'row', gap: Spacing.two },

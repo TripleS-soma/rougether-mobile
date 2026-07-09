@@ -26,7 +26,7 @@ import { type RoomSlotSave } from './rooms';
 
 import type { Floor, House, HouseMission, RoomCell } from '@/components/screens/group-house-screen';
 import type { GuestbookEntry } from '@/components/screens/friend-room-screen';
-import type { PictogramName } from '@/components/ui/pictograms';
+import { isPictogramName, type PictogramName } from '@/components/ui/pictograms';
 import type { HousePreview, SearchHouse } from '@/components/screens/house-search-screen';
 import type { CalendarDayItem } from '@/components/screens/my-room-screen';
 
@@ -82,14 +82,41 @@ const visToApi = (v: CategoryVisibility): 'PRIVATE' | 'FRIENDS' | 'HOUSE' | 'PUB
   v === 'public' ? 'PUBLIC' : v === 'neighbor' ? 'HOUSE' : v === 'partial' ? 'FRIENDS' : 'PRIVATE';
 
 // --- category -----------------------------------------------------------------
+// Categories created before the pictogram switch stored the picker emoji as
+// their iconKey — map those to the equivalent pictogram so old accounts keep
+// their icons. New categories store the pictogram name directly.
+const LEGACY_EMOJI_ICONS: Record<string, PictogramName> = {
+  '🗓': 'calendar',
+  '📚': 'book',
+  '🎨': 'palette',
+  '💪': 'dumbbell',
+  '✨': 'sparkle',
+  '☀': 'sun',
+  '🌙': 'moon',
+  '💧': 'water',
+  '🏃': 'run',
+  '💖': 'heart',
+  '☕': 'coffee',
+  '🎵': 'music',
+  '🍳': 'cooking',
+  '🧘': 'meditation',
+  '💼': 'briefcase',
+  '🌱': 'sprout',
+};
+
+/** Server iconKey (pictogram name / legacy emoji / asset key) → pictogram. */
+export function toCategoryIcon(iconKey?: string): PictogramName {
+  if (!iconKey) return 'sparkle';
+  if (isPictogramName(iconKey)) return iconKey;
+  // Emoji lookups ignore the variation selector (🗓️ vs 🗓).
+  return LEGACY_EMOJI_ICONS[iconKey.replace(/️/g, '')] ?? 'sparkle';
+}
+
 export function toAppCategory(c: CategoryResponse, index = 0): RoutineCategoryMeta {
-  // iconKey holds an emoji (round-tripped) or an asset key like "icon_health";
-  // fall back to a default glyph for the latter.
-  const emoji = c.iconKey && !c.iconKey.startsWith('icon_') ? c.iconKey : '✨';
   return {
     id: String(c.id ?? ''),
     label: c.name ?? '',
-    emoji,
+    icon: toCategoryIcon(c.iconKey),
     color: c.colorHex || CATEGORY_COLORS[index % CATEGORY_COLORS.length],
     visibility: visToApp(c.visibility),
     deleted: c.deleted || undefined,
@@ -103,7 +130,7 @@ export function toCategoryCreate(
   return {
     name: cat.label,
     colorHex: cat.color,
-    iconKey: cat.emoji,
+    iconKey: cat.icon,
     sortOrder,
     visibility: visToApi(cat.visibility),
   };
@@ -279,7 +306,16 @@ export function toWallet(list: WalletLike[]): Wallet {
 // --- gacha --------------------------------------------------------------------
 // The API gacha carries no preview art, so decorate machines with a rotating
 // icon + accent by index (placeholder until themed art exists).
-const GACHA_ICONS = ['🎁', '🏯', '🌿', '🥐', '🌙', '🧸', '🪐', '🌸'];
+const GACHA_ICONS: PictogramName[] = [
+  'gift',
+  'pagoda',
+  'leaf',
+  'croissant',
+  'moon',
+  'teddy',
+  'planet',
+  'blossom',
+];
 const GACHA_ACCENTS = ['#E8DCC8', '#D6E4D2', '#F7E6C8', '#D8D2EC', '#E6D2D2', '#D2E4E6'];
 
 export type GachaMachine = {
@@ -288,7 +324,7 @@ export type GachaMachine = {
   costCurrencyType: 'COIN' | 'DIAMOND';
   costAmount: number;
   drawCount: number;
-  icon: string;
+  icon: PictogramName;
   accent: string;
 };
 
@@ -436,7 +472,16 @@ export function toServerCharacterId(
 
 // Room tile tints + browse-card decorations, cycled by index (no art yet).
 const ROOM_TINTS = ['#F5E1D8', '#D9E8D4', '#F5E8C8', '#E4DCF0', '#FBE0D8', '#D8E8F0'];
-const HOUSE_EMOJIS = ['🏡', '🌅', '💻', '📚', '🏋️', '🎨', '🌙', '☕'];
+const HOUSE_ICONS: PictogramName[] = [
+  'house',
+  'sunrise',
+  'laptop',
+  'book',
+  'dumbbell',
+  'palette',
+  'moon',
+  'coffee',
+];
 const HOUSE_BGS = ['#FFEFD8', '#E4F0DC', '#E3EEF8', '#F7E4EA', '#ECE8FA', '#F7ECD8'];
 const HOUSE_BORDERS = ['#F0C88A', '#A8C898', '#9FBEDD', '#DBA8BC', '#B7A8DD', '#DDC08A'];
 const MY_ROOM_TINT = '#E8E0D0';
@@ -545,7 +590,7 @@ export function toSearchHouse(h: HouseSummary, index = 0): SearchHouse {
     members: h.currentMemberCount ?? 0,
     capacity: h.maxMembers ?? 0,
     tag: h.goals?.[0]?.name ?? '루틴',
-    emoji: HOUSE_EMOJIS[index % HOUSE_EMOJIS.length],
+    icon: HOUSE_ICONS[index % HOUSE_ICONS.length],
     bg: HOUSE_BGS[index % HOUSE_BGS.length],
     border: HOUSE_BORDERS[index % HOUSE_BORDERS.length],
     // No description: the boilerplate one only ever truncated (#234); the
