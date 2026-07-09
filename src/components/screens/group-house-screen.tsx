@@ -12,6 +12,14 @@ import {
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { CharacterAvatar } from '@/components/character-avatar';
 import { Icon } from '@/components/ui/icon';
+import {
+  CrownPictogram,
+  DoorPictogram,
+  PencilPictogram,
+  Pictogram,
+  type PictogramName,
+  TargetPictogram,
+} from '@/components/ui/pictograms';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
@@ -74,7 +82,7 @@ export type HouseMission = {
   title: string;
   /** Mission-type description shown under the progress bar. */
   desc: string;
-  emoji: string;
+  icon: PictogramName;
   current: number;
   target: number;
   status: 'ACTIVE' | 'COMPLETED' | 'EXPIRED';
@@ -89,15 +97,19 @@ export type NewHouseMission = {
   targetValue: number;
 };
 
-const MISSION_TYPE_OPTIONS: { type: NewHouseMission['missionType']; label: string }[] = [
-  { type: 'DAILY_MEMBER_RATE', label: '☀️ 일일 달성률' },
-  { type: 'WEEKLY_MEMBER_COUNT', label: '📅 주간 달성 횟수' },
+const MISSION_TYPE_OPTIONS: {
+  type: NewHouseMission['missionType'];
+  icon: PictogramName;
+  label: string;
+}[] = [
+  { type: 'DAILY_MEMBER_RATE', icon: 'sun', label: '일일 달성률' },
+  { type: 'WEEKLY_MEMBER_COUNT', icon: 'calendar', label: '주간 달성 횟수' },
 ];
 
 const DEMO_MISSIONS: HouseMission[] = [
-  { id: 1, title: '이번 주 다같이 루틴 지키기', desc: '주간 구성원 달성 횟수', emoji: '📅', current: 12, target: 20, status: 'ACTIVE' }, // prettier-ignore
-  { id: 2, title: '아침 기상 인증 모으기', desc: '일일 구성원 달성률', emoji: '☀️', current: 8, target: 8, status: 'ACTIVE', achieved: true }, // prettier-ignore
-  { id: 3, title: '지난주 스트레칭 미션', desc: '주간 구성원 달성 횟수', emoji: '📅', current: 20, target: 20, status: 'COMPLETED' }, // prettier-ignore
+  { id: 1, title: '이번 주 다같이 루틴 지키기', desc: '주간 구성원 달성 횟수', icon: 'calendar', current: 12, target: 20, status: 'ACTIVE' }, // prettier-ignore
+  { id: 2, title: '아침 기상 인증 모으기', desc: '일일 구성원 달성률', icon: 'sun', current: 8, target: 8, status: 'ACTIVE', achieved: true }, // prettier-ignore
+  { id: 3, title: '지난주 스트레칭 미션', desc: '주간 구성원 달성 횟수', icon: 'calendar', current: 20, target: 20, status: 'COMPLETED' }, // prettier-ignore
 ];
 
 const DEFAULT_HOUSES: House[] = [
@@ -391,7 +403,8 @@ export function GroupHouseScreen({
                 accessibilityRole="button"
                 accessibilityLabel="집 정보 수정"
                 style={[styles.editHouseBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.primary }]}>✏️ 집 정보 수정</Text>
+                <PencilPictogram size={14} />
+                <Text style={[Typography.label, { color: t.primary }]}>집 정보 수정</Text>
               </Pressable>
             </View>
           ) : null}
@@ -418,13 +431,10 @@ export function GroupHouseScreen({
                     <View style={styles.memberNameRow}>
                       <Text style={[Typography.label, { color: t.text }]}>{member.name}</Text>
                       {member.isOwner ? (
-                        <Text
-                          style={[
-                            styles.myBadge,
-                            { backgroundColor: `${t.primary}22`, color: t.primary },
-                          ]}>
-                          👑 방장
-                        </Text>
+                        <View style={[styles.ownerBadge, { backgroundColor: `${t.primary}22` }]}>
+                          <CrownPictogram size={10} />
+                          <Text style={[styles.ownerBadgeText, { color: t.primary }]}>방장</Text>
+                        </View>
                       ) : null}
                       {member.isMine ? (
                         <Text
@@ -489,7 +499,8 @@ export function GroupHouseScreen({
                   accessibilityRole="button"
                   accessibilityLabel="집 나가기"
                   style={[styles.leaveBtn, { backgroundColor: `${t.danger}22` }]}>
-                  <Text style={[Typography.label, { color: t.danger }]}>🚪 집 나가기</Text>
+                  <DoorPictogram size={14} />
+                  <Text style={[Typography.label, { color: t.danger }]}>집 나가기</Text>
                 </Pressable>
               )}
             </View>
@@ -717,7 +728,8 @@ export function GroupHouseScreen({
     <View style={[styles.screen, screenStyle]}>
       <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
         <View style={[styles.pill, { backgroundColor: t.surfaceMuted }]}>
-          <Text style={[Typography.label, { color: t.text }]}>👑 Lv.{currentHouse.level ?? 0}</Text>
+          <CrownPictogram size={14} />
+          <Text style={[Typography.label, { color: t.text }]}>Lv.{currentHouse.level ?? 0}</Text>
         </View>
         <View style={styles.flex} />
         <Pressable
@@ -746,7 +758,8 @@ export function GroupHouseScreen({
             <Icon name="back" size={18} color={t.text} />
           </Pressable>
           <View style={[styles.titleBadge, { backgroundColor: t.surface, borderColor: t.border }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>👑 {currentHouse.title}</Text>
+            <CrownPictogram size={16} />
+            <Text style={[Typography.h3, { color: t.text }]}>{currentHouse.title}</Text>
           </View>
           <Pressable
             onPress={nextHouse}
@@ -816,16 +829,17 @@ export function GroupHouseScreen({
                       )}
                       {/* Tiles keep their fixed pastel bg in dark mode — the
                           name needs onTint ink, not the (light) theme text. */}
-                      <Text
-                        style={[
-                          Typography.supporting,
-                          styles.roomName,
-                          { color: empty ? t.textMuted : t.onTint },
-                        ]}>
-                        {empty
-                          ? '빈방'
-                          : `${room.isOwner ? '👑 ' : ''}${room.isMine ? `${room.name} (나)` : room.name}`}
-                      </Text>
+                      <View style={styles.roomNameRow}>
+                        {!empty && room.isOwner ? <CrownPictogram size={12} /> : null}
+                        <Text
+                          style={[
+                            Typography.supporting,
+                            styles.roomName,
+                            { color: empty ? t.textMuted : t.onTint },
+                          ]}>
+                          {empty ? '빈방' : room.isMine ? `${room.name} (나)` : room.name}
+                        </Text>
+                      </View>
                     </Pressable>
                   );
                 })}
@@ -836,7 +850,10 @@ export function GroupHouseScreen({
 
         <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
           <View style={styles.missionHead}>
-            <Text style={[Typography.h3, styles.flex, { color: t.text }]}>🎯 우리 그룹의 미션</Text>
+            <View style={[styles.flex, styles.missionTitleRow]}>
+              <TargetPictogram size={18} />
+              <Text style={[Typography.h3, { color: t.text }]}>우리 그룹의 미션</Text>
+            </View>
             {canCreateMission ? (
               <Pressable
                 onPress={() => setShowCreateMission(true)}
@@ -860,7 +877,7 @@ export function GroupHouseScreen({
                   <View
                     key={mission.id}
                     style={[styles.goalRow, { backgroundColor: t.surfaceMuted }]}>
-                    <Text style={styles.goalEmoji}>{mission.emoji}</Text>
+                    <Pictogram name={mission.icon} size={22} />
                     <View style={styles.flex}>
                       <View style={styles.goalHead}>
                         <Text
@@ -887,9 +904,7 @@ export function GroupHouseScreen({
                           {mission.desc}
                         </Text>
                         {mission.status === 'COMPLETED' ? (
-                          <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                            완료 🎉
-                          </Text>
+                          <Text style={[Typography.supporting, { color: t.textMuted }]}>완료</Text>
                         ) : mission.status === 'EXPIRED' ? (
                           <Text style={[Typography.supporting, { color: t.textDisabled }]}>
                             기간 만료
@@ -901,7 +916,7 @@ export function GroupHouseScreen({
                             accessibilityLabel={`${mission.title} 보상 받기`}
                             style={[styles.missionBtn, { backgroundColor: t.warning }]}>
                             <Text style={[Typography.supporting, { color: t.text }]}>
-                              🎁 보상 받기
+                              보상 받기
                             </Text>
                           </Pressable>
                         ) : mission.status === 'ACTIVE' &&
@@ -955,6 +970,11 @@ export function GroupHouseScreen({
                         styles.missionTypeBtn,
                         { backgroundColor: selected ? t.primary : t.surfaceMuted },
                       ]}>
+                      <Pictogram
+                        name={opt.icon}
+                        size={14}
+                        color={selected ? t.onPrimary : t.textMuted}
+                      />
                       <Text
                         style={[
                           Typography.supporting,
@@ -1051,6 +1071,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.one,
     borderRadius: Radius.pill,
@@ -1066,6 +1089,9 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.four,
   },
   titleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.two,
     borderRadius: Radius.pill,
@@ -1245,6 +1271,9 @@ const styles = StyleSheet.create({
   },
   missionTypeBtn: {
     flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: Spacing.one,
     borderRadius: Radius.pill,
     paddingVertical: Spacing.two,
     alignItems: 'center',
@@ -1290,8 +1319,27 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     borderRadius: Radius.md,
   },
-  goalEmoji: {
-    fontSize: 20,
+  roomNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+  },
+  missionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  ownerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 1,
+  },
+  ownerBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
   },
   goalHead: {
     flexDirection: 'row',

@@ -15,6 +15,7 @@ import {
 import type { GachaMachine } from '@/api/adapters';
 import type { DrawResult } from '@/api/types';
 import { Icon } from '@/components/ui/icon';
+import { Pictogram, type PictogramName } from '@/components/ui/pictograms';
 import { WalletPills } from '@/components/ui/wallet-pills';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
@@ -154,7 +155,7 @@ export function GachaScreen({
                   styles.boxChip,
                   { backgroundColor: b.accent, borderColor: active ? t.primary : 'transparent' },
                 ]}>
-                <Text style={styles.boxChipIcon}>{b.icon}</Text>
+                <Pictogram name={b.icon} size={26} />
               </Pressable>
             );
           })}
@@ -164,7 +165,7 @@ export function GachaScreen({
         {box ? (
           <View style={[styles.card, { backgroundColor: t.surface }]}>
             <View style={[styles.boxHero, { backgroundColor: box.accent }]}>
-              <Text style={styles.boxHeroIcon}>{box.icon}</Text>
+              <Pictogram name={box.icon} size={56} />
             </View>
             <Text style={[Typography.h3, styles.center, { color: t.text }]}>{box.name}</Text>
             <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
@@ -228,7 +229,7 @@ export function GachaScreen({
         <View style={styles.overlay}>
           {phase === 'charging' ? (
             <>
-              <ChargingBox icon={box?.icon ?? '🎁'} accent={box?.accent ?? '#E8DCC8'} />
+              <ChargingBox icon={box?.icon ?? 'gift'} accent={box?.accent ?? '#E8DCC8'} />
               <Text style={[Typography.label, styles.overlayText]}>뽑는 중…</Text>
             </>
           ) : (
@@ -260,7 +261,7 @@ export function GachaScreen({
 }
 
 /** Animated box shown during the charge phase: pulse + shake behind a glow ring. */
-function ChargingBox({ icon, accent }: { icon: string; accent: string }) {
+function ChargingBox({ icon, accent }: { icon: PictogramName; accent: string }) {
   const t = useTokens();
   const pulse = useRef(new Animated.Value(0)).current;
   const shake = useRef(new Animated.Value(0)).current;
@@ -305,7 +306,7 @@ function ChargingBox({ icon, accent }: { icon: string; accent: string }) {
     <View style={styles.chargeWrap}>
       <Animated.View style={[styles.glowRing, glowStyle, { backgroundColor: t.primary }]} />
       <Animated.View style={[styles.chargeBox, boxStyle, { backgroundColor: accent }]}>
-        <Text style={styles.chargeIcon}>{icon}</Text>
+        <Pictogram name={icon} size={56} />
       </Animated.View>
     </View>
   );
@@ -397,7 +398,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  boxChipIcon: { fontSize: 26 },
   card: {
     borderRadius: Radius.lg,
     padding: Spacing.four,
@@ -410,7 +410,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  boxHeroIcon: { fontSize: 56 },
   pullRow: {
     flexDirection: 'row',
     gap: Spacing.two,
@@ -450,7 +449,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  chargeIcon: { fontSize: 56 },
   revealGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

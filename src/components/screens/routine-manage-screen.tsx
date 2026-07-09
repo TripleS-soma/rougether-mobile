@@ -7,6 +7,7 @@ import {
   UNCATEGORIZED_META,
 } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
+import { Pictogram } from '@/components/ui/pictograms';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
@@ -123,7 +124,7 @@ export function RoutineManageScreen({
                 <View key={cat.id} style={styles.group}>
                   <View style={styles.catHeader}>
                     <View style={[styles.catDot, { backgroundColor: `${cat.color}33` }]}>
-                      <Text style={styles.catEmoji}>{cat.emoji}</Text>
+                      <Pictogram name={cat.icon} size={14} />
                     </View>
                     <Text style={[Typography.label, { color: cat.color }]}>{cat.label}</Text>
                     <Text style={[Typography.supporting, { color: t.textDisabled }]}>
@@ -237,9 +238,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  catEmoji: {
-    fontSize: 14,
   },
   rows: {
     gap: 0,

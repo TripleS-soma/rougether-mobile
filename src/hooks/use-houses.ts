@@ -181,7 +181,7 @@ export function useHouses() {
   const contributeMission = async (houseId: number, missionId: number) => {
     try {
       const res = await contributeHouseMission(houseId, missionId);
-      toast(res.achieved ? '기여 완료! 목표를 달성했어요 🎉' : '기여했어요 (+1)', 'success');
+      toast(res.achieved ? '기여 완료! 목표를 달성했어요' : '기여했어요 (+1)', 'success');
       await reloadMyHouses();
     } catch (err) {
       // The server caps contributions at one per day per member.

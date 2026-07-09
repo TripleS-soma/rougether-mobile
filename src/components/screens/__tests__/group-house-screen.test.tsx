@@ -20,24 +20,24 @@ const MISSION_HOUSE: House = {
     },
   ],
   missions: [
-    { id: 11, title: '주간 루틴 지키기', desc: '주간 구성원 달성 횟수', emoji: '📅', current: 3, target: 10, status: 'ACTIVE' }, // prettier-ignore
-    { id: 12, title: '기상 인증 모으기', desc: '일일 구성원 달성률', emoji: '☀️', current: 8, target: 8, status: 'ACTIVE', achieved: true }, // prettier-ignore
-    { id: 13, title: '지난 미션', desc: '주간 구성원 달성 횟수', emoji: '📅', current: 5, target: 5, status: 'COMPLETED' }, // prettier-ignore
+    { id: 11, title: '주간 루틴 지키기', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 3, target: 10, status: 'ACTIVE' }, // prettier-ignore
+    { id: 12, title: '기상 인증 모으기', desc: '일일 구성원 달성률', icon: 'sun' as const, current: 8, target: 8, status: 'ACTIVE', achieved: true }, // prettier-ignore
+    { id: 13, title: '지난 미션', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 5, target: 5, status: 'COMPLETED' }, // prettier-ignore
   ],
 };
 
 describe('GroupHouseScreen', () => {
   it('renders the current house, members, and group missions', async () => {
     const { getByText, queryByText } = await render(<GroupHouseScreen />);
-    expect(getByText('👑 소마파이팅')).toBeTruthy();
+    expect(getByText('소마파이팅')).toBeTruthy();
     // The crown pill shows the house's real growth level (demo: 3).
-    expect(getByText('👑 Lv.3')).toBeTruthy();
+    expect(getByText('Lv.3')).toBeTruthy();
     // The header carries no coin balance (집 화면은 재화 소비 화면이 아니다).
     expect(queryByText('5,600')).toBeNull();
-    expect(getByText('🎯 우리 그룹의 미션')).toBeTruthy();
+    expect(getByText('우리 그룹의 미션')).toBeTruthy();
     expect(getByText('이번 주 다같이 루틴 지키기')).toBeTruthy();
     // The demo owner's tile carries the 방장 crown.
-    expect(getByText('👑 최준서')).toBeTruthy();
+    expect(getByText('최준서')).toBeTruthy();
   });
 
   it('contributes and claims via the API callbacks', async () => {
@@ -54,7 +54,7 @@ describe('GroupHouseScreen', () => {
     expect(onContributeMission).toHaveBeenCalledWith(7, 11);
     await fireEvent.press(getByLabelText('기상 인증 모으기 보상 받기'));
     expect(onClaimMission).toHaveBeenCalledWith(7, 12);
-    expect(getByText('완료 🎉')).toBeTruthy();
+    expect(getByText('완료')).toBeTruthy();
   });
 
   it('creates a mission through the modal', async () => {
@@ -226,7 +226,7 @@ describe('GroupHouseScreen', () => {
       />,
     );
     await fireEvent.press(getByLabelText('구성원 목록'));
-    expect(getByText('👑 방장')).toBeTruthy();
+    expect(getByText('방장')).toBeTruthy();
   });
 
   it('shows the guided empty state when there are no houses', async () => {

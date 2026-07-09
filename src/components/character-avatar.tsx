@@ -1,13 +1,7 @@
 import { Image } from 'expo-image';
-import {
-  type ImageStyle,
-  type StyleProp,
-  StyleSheet,
-  Text,
-  View,
-  type ViewStyle,
-} from 'react-native';
+import { type ImageStyle, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 
+import { PawPictogram } from '@/components/ui/pictograms';
 import { CHARACTER_OPTIONS, type CharacterId } from '@/constants/characters';
 
 import bear1 from '@/assets/images/characters/bear-1.webp';
@@ -78,11 +72,12 @@ export function CharacterAvatar({ characterId, pose = 0, size = 96, style }: Cha
   const source = frames?.[((pose % POSE_COUNT) + POSE_COUNT) % POSE_COUNT];
 
   if (!source) {
+    // No frame art for this character yet — a neutral paw mark stands in.
     return (
-      <View style={[{ width: size, height: size }, styles.center, style as StyleProp<ViewStyle>]}>
-        <Text style={{ fontSize: size * 0.6 }} accessibilityLabel={character.name}>
-          {character.emoji}
-        </Text>
+      <View
+        style={[{ width: size, height: size }, styles.center, style as StyleProp<ViewStyle>]}
+        accessibilityLabel={character.name}>
+        <PawPictogram size={size * 0.55} />
       </View>
     );
   }

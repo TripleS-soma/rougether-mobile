@@ -10,6 +10,13 @@ import {
 } from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
+import {
+  CrownPictogram,
+  HousePictogram,
+  Pictogram,
+  type PictogramName,
+  SparklePictogram,
+} from '@/components/ui/pictograms';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
@@ -22,7 +29,7 @@ export type SearchHouse = {
   members: number;
   capacity: number;
   tag: string;
-  emoji: string;
+  icon: PictogramName;
   bg: string;
   border: string;
   /** House growth level (meta line, "Lv.N"). */
@@ -192,9 +199,12 @@ export function HouseSearchScreen({
 
             {preview ? (
               <View style={[styles.previewCard, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>🏡 {preview.info.name}</Text>
+                <View style={styles.iconLabelRow}>
+                  <HousePictogram size={14} />
+                  <Text style={[Typography.label, { color: t.text }]}>{preview.info.name}</Text>
+                </View>
                 <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                  👥 {preview.info.members}
+                  멤버 {preview.info.members}
                   {preview.info.capacity ? ` / ${preview.info.capacity}` : ''}명이 함께 살고 있어요
                 </Text>
                 <View style={styles.previewActions}>
@@ -221,7 +231,10 @@ export function HouseSearchScreen({
 
         {/* Search */}
         <View style={styles.section}>
-          <Text style={[Typography.label, { color: t.text }]}>✨ 추천 집 둘러보기</Text>
+          <View style={styles.iconLabelRow}>
+            <SparklePictogram size={14} />
+            <Text style={[Typography.label, { color: t.text }]}>추천 집 둘러보기</Text>
+          </View>
           <View style={[styles.searchBox, { backgroundColor: t.surface }]}>
             <Icon name="search" size={16} color={t.text} />
             <TextInput
@@ -249,7 +262,7 @@ export function HouseSearchScreen({
                 <View key={h.id} style={[styles.houseRow, { backgroundColor: t.surface }]}>
                   <View
                     style={[styles.houseEmoji, { backgroundColor: h.bg, borderColor: h.border }]}>
-                    <Text style={styles.houseEmojiText}>{h.emoji}</Text>
+                    <Pictogram name={h.icon} size={28} />
                   </View>
                   <View style={styles.flex}>
                     {/* The name owns its row — a same-row tag chip squeezed it
@@ -269,7 +282,7 @@ export function HouseSearchScreen({
                         <Text style={[styles.tagText, { color: t.onTint }]}>#{h.tag}</Text>
                       </View>
                       <Text style={[styles.meta, { color: t.textMuted }]} numberOfLines={1}>
-                        {h.level != null ? `Lv.${h.level} · ` : ''}👥 {h.members} / {h.capacity}
+                        {h.level != null ? `Lv.${h.level} · ` : ''}멤버 {h.members} / {h.capacity}
                         {full ? <Text style={{ color: t.danger }}> · 만석</Text> : null}
                       </Text>
                     </View>
@@ -299,7 +312,10 @@ export function HouseSearchScreen({
           onPress={onCreate}
           accessibilityRole="button"
           style={[styles.createBtn, { borderColor: t.disabledBg }]}>
-          <Text style={[Typography.label, { color: t.textMuted }]}>👑 새 집 만들기</Text>
+          <View style={styles.iconLabelRow}>
+            <CrownPictogram size={14} />
+            <Text style={[Typography.label, { color: t.textMuted }]}>새 집 만들기</Text>
+          </View>
         </Pressable>
       </ScrollView>
     </View>
@@ -389,7 +405,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  houseEmojiText: { fontSize: 24 },
+  iconLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+  },
   houseMetaRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one, marginTop: 2 },
   tag: {
     paddingHorizontal: Spacing.one,

@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Field } from '@/components/ui/field';
 import { Icon } from '@/components/ui/icon';
+import { PawPictogram } from '@/components/ui/pictograms';
 import { Radius, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
@@ -118,7 +119,10 @@ export function SignupScreen({ onBack }: SignupScreenProps) {
       </View>
 
       <View style={styles.intro}>
-        <Text style={[styles.introTitle, { color: t.text }]}>마을의 새 친구를 환영해요 🐾</Text>
+        <View style={styles.introTitleRow}>
+          <Text style={[styles.introTitle, { color: t.text }]}>마을의 새 친구를 환영해요</Text>
+          <PawPictogram size={18} />
+        </View>
         <Text style={[styles.introSub, { color: t.textMuted }]}>
           정보를 입력하고 나만의 루게더를 시작하세요
         </Text>
@@ -415,6 +419,12 @@ const styles = StyleSheet.create({
   noticeText: {
     fontSize: 12,
     lineHeight: 18,
+  },
+  introTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.one,
   },
   introTitle: {
     fontSize: 20,

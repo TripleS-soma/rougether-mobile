@@ -19,6 +19,7 @@ import { Room } from '@/components/room/room';
 import { CategoryManagerSheet } from '@/components/screens/sheets/category-manager-sheet';
 import { TimePickerSheet } from '@/components/screens/sheets/time-picker-sheet';
 import { Calendar } from '@/components/ui/calendar';
+import { Pictogram } from '@/components/ui/pictograms';
 import { useToast } from '@/components/ui/toast';
 import { WalletPills } from '@/components/ui/wallet-pills';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
@@ -636,7 +637,7 @@ export function MyRoomScreen({
                         <View key={cat.id} style={styles.group}>
                           <View style={styles.catHeader}>
                             <View style={[styles.catDot, { backgroundColor: `${cat.color}33` }]}>
-                              <Text style={styles.catEmoji}>{cat.emoji}</Text>
+                              <Pictogram name={cat.icon} size={14} />
                             </View>
                             <Text style={[Typography.label, { color: cat.color }]}>
                               {cat.label}
@@ -805,7 +806,7 @@ export function MyRoomScreen({
                     <View key={group.meta.id || `etc-${gi}`} style={styles.group}>
                       <View style={styles.catHeader}>
                         <View style={[styles.catDot, { backgroundColor: `${group.meta.color}33` }]}>
-                          <Text style={styles.catEmoji}>{group.meta.emoji}</Text>
+                          <Pictogram name={group.meta.icon} size={14} />
                         </View>
                         <Text style={[Typography.label, { color: group.meta.color }]}>
                           {group.meta.label}
@@ -862,7 +863,7 @@ export function MyRoomScreen({
                   <View key={group.meta.id || `etc-${gi}`} style={styles.group}>
                     <View style={styles.catHeader}>
                       <View style={[styles.catDot, { backgroundColor: `${group.meta.color}33` }]}>
-                        <Text style={styles.catEmoji}>{group.meta.emoji}</Text>
+                        <Pictogram name={group.meta.icon} size={14} />
                       </View>
                       <Text style={[Typography.label, { color: group.meta.color }]}>
                         {group.meta.label}
@@ -1349,9 +1350,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  catEmoji: {
-    fontSize: 14,
   },
   catAdd: {
     width: 24,

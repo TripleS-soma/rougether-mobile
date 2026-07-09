@@ -157,7 +157,7 @@ describe('CategoryManagerSheet', () => {
 
     expect(onUpdate).toHaveBeenCalledWith(
       '공부',
-      expect.objectContaining({ id: '공부', label: '심화 공부', emoji: '📚' }),
+      expect.objectContaining({ id: '공부', label: '심화 공부', icon: 'book' }),
     );
     // Submitting resets back to create mode.
     expect(getByText('새 카테고리 만들기')).toBeTruthy();
