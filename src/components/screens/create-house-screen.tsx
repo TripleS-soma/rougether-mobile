@@ -150,7 +150,7 @@ export function CreateHouseScreen({ onBack, onCreate }: CreateHouseScreenProps) 
         <View style={[styles.card, { backgroundColor: t.surface }]}>
           <View style={styles.capacityHead}>
             <Text style={[styles.sectionLabel, { color: t.textMuted }]}>정원</Text>
-            <Text style={[Typography.label, { color: t.primary }]}>{capacity}명</Text>
+            <Text style={[Typography.label, { color: t.primaryText }]}>{capacity}명</Text>
           </View>
           <View style={styles.capRow}>
             {CAPACITIES.map((n) => {

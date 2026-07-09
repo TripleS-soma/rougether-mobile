@@ -190,8 +190,8 @@ export function FriendRoomScreen({
           {/* Same rule as 나의 방: a 0-day streak hides the flame badge. */}
           {streakDays > 0 ? (
             <View style={styles.streak}>
-              <Icon name="flame" size={14} color={t.warning} />
-              <Text style={[Typography.supporting, { color: t.warning }]}>{streakDays}일</Text>
+              <Icon name="flame" size={14} color={t.warningText} />
+              <Text style={[Typography.supporting, { color: t.warningText }]}>{streakDays}일</Text>
             </View>
           ) : null}
         </View>
@@ -232,7 +232,7 @@ export function FriendRoomScreen({
             <View style={styles.sectionHead}>
               <Text style={[Typography.h2, { color: t.text }]}>{friendName}의 루틴</Text>
               {loading ? null : (
-                <Text style={[Typography.label, { color: t.primary }]}>
+                <Text style={[Typography.label, { color: t.primaryText }]}>
                   {completedCount} / {routineList.length}
                 </Text>
               )}
@@ -383,7 +383,7 @@ export function FriendRoomScreen({
                     accessibilityRole="button"
                     accessibilityLabel="방명록 더보기"
                     style={[styles.gbMore, { backgroundColor: t.surfaceMuted }]}>
-                    <Text style={[Typography.label, { color: t.primary }]}>더보기</Text>
+                    <Text style={[Typography.label, { color: t.primaryText }]}>더보기</Text>
                   </Pressable>
                 ) : null}
               </View>

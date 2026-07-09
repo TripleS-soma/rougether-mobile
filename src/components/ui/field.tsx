@@ -51,7 +51,9 @@ export function Field({
         {trailing}
       </View>
       {error ? <Text style={[styles.msg, { color: '#D67878' }]}>{error}</Text> : null}
-      {!error && success ? <Text style={[styles.msg, { color: t.primary }]}>{success}</Text> : null}
+      {!error && success ? (
+        <Text style={[styles.msg, { color: t.primaryText }]}>{success}</Text>
+      ) : null}
     </View>
   );
 }
