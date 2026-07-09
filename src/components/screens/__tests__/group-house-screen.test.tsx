@@ -40,6 +40,24 @@ describe('GroupHouseScreen', () => {
     expect(getByText('최준서')).toBeTruthy();
   });
 
+  it('keeps the visited house via the controlled index (#241)', async () => {
+    // The screen unmounts while visiting a friend's room — the shell holds the
+    // index and hands it back so the same house is shown after 뒤로가기.
+    const onHouseIndexChange = jest.fn();
+    const first = await render(
+      <GroupHouseScreen houseIndex={0} onHouseIndexChange={onHouseIndexChange} />,
+    );
+    expect(first.getByText('소마파이팅')).toBeTruthy();
+    await fireEvent.press(first.getByLabelText('다음 집'));
+    expect(onHouseIndexChange).toHaveBeenCalledWith(1);
+
+    // Fresh mount with the kept index = the friend-room round trip.
+    const second = await render(
+      <GroupHouseScreen houseIndex={1} onHouseIndexChange={onHouseIndexChange} />,
+    );
+    expect(second.getByText('소마 2번째 집')).toBeTruthy();
+  });
+
   it('contributes and claims via the API callbacks', async () => {
     const onContributeMission = jest.fn();
     const onClaimMission = jest.fn();

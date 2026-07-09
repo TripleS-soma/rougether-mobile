@@ -207,6 +207,9 @@ export function AppShell({
   }, [placement]);
 
   const [visitingFriend, setVisitingFriend] = useState<VisitedFriend>({ name: '친구' });
+  // Which house the 집 switcher is on — kept here because GroupHouseScreen
+  // unmounts while visiting a friend's room and must reopen on the same house.
+  const [houseIndex, setHouseIndex] = useState(0);
   // The visited friend's live room + today's routines (loads on visit, #149).
   const { friendRoom, load: loadFriendRoom } = useFriendRoom();
   // Guestbook for the friend room being visited (loads on visit).
@@ -396,6 +399,8 @@ export function AppShell({
             houses={houses}
             loading={housesLoading}
             characterId={characterId}
+            houseIndex={houseIndex}
+            onHouseIndexChange={setHouseIndex}
             onVisitFriend={(friend) => {
               setVisitingFriend(friend);
               void loadGuestbook(friend.userId, friend.houseId);

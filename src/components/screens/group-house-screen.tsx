@@ -164,6 +164,13 @@ export type GroupHouseScreenProps = {
   /** True while my houses are loading from the API. */
   loading?: boolean;
   characterId?: CharacterId;
+  /**
+   * Controlled house-switcher index. The screen unmounts while visiting a
+   * friend's room, so the shell keeps this to restore the house being viewed
+   * (#241). Omit for internal state (dev gallery).
+   */
+  houseIndex?: number;
+  onHouseIndexChange?: (index: number) => void;
   onVisitFriend?: (friend: VisitedFriend) => void;
   onVisitMyRoom?: () => void;
   onOpenSearch?: () => void;
@@ -196,6 +203,8 @@ export function GroupHouseScreen({
   houses = DEFAULT_HOUSES,
   loading = false,
   characterId = DEFAULT_CHARACTER_ID,
+  houseIndex: houseIndexProp,
+  onHouseIndexChange,
   onVisitFriend,
   onVisitMyRoom,
   onOpenSearch,
@@ -213,7 +222,12 @@ export function GroupHouseScreen({
   const headerInset = useHeaderInsetStyle();
   const screenStyle = useScreenStyle([]);
 
-  const [houseIndex, setHouseIndex] = useState(0);
+  const [internalHouseIndex, setInternalHouseIndex] = useState(0);
+  const houseIndex = houseIndexProp ?? internalHouseIndex;
+  const setHouseIndex = (next: number) => {
+    setInternalHouseIndex(next);
+    onHouseIndexChange?.(next);
+  };
   const [showMembers, setShowMembers] = useState(false);
   const [kicked, setKicked] = useState<string[]>([]);
   const [memberToKick, setMemberToKick] = useState<RoomCell | null>(null);
@@ -239,8 +253,8 @@ export function GroupHouseScreen({
   const keyFor = (name: string) => `${houseIndex}-${name}`;
   const isKicked = (name: string) => kicked.includes(keyFor(name));
 
-  const prevHouse = () => setHouseIndex((i) => (i - 1 + houses.length) % houses.length);
-  const nextHouse = () => setHouseIndex((i) => (i + 1) % houses.length);
+  const prevHouse = () => setHouseIndex((houseIndex - 1 + houses.length) % houses.length);
+  const nextHouse = () => setHouseIndex((houseIndex + 1) % houses.length);
 
   const missions = currentHouse?.missions ?? [];
   // Owner tools need the OWNER role and a server house id.
