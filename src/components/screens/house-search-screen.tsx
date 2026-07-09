@@ -254,7 +254,7 @@ export function HouseSearchScreen({
                         {h.name}
                       </Text>
                       <View style={[styles.tag, { backgroundColor: h.bg }]}>
-                        <Text style={styles.tagText}>#{h.tag}</Text>
+                        <Text style={[styles.tagText, { color: t.onTint }]}>#{h.tag}</Text>
                       </View>
                     </View>
                     <Text style={[Typography.supporting, { color: t.textMuted }]} numberOfLines={1}>
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
     borderRadius: Radius.pill,
   },
-  tagText: { fontSize: 10, fontWeight: '700', color: '#4A403A' },
+  tagText: { fontSize: 10, fontWeight: '700' },
   meta: { fontSize: 11, marginTop: 2 },
   joinBtn: {
     paddingHorizontal: Spacing.three,
