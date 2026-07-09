@@ -30,7 +30,7 @@ describe('GroupHouseScreen', () => {
   it('renders the current house, members, and group missions', async () => {
     const { getByText, queryByText } = await render(<GroupHouseScreen />);
     expect(getByText('소마파이팅')).toBeTruthy();
-    // The crown pill shows the house's real growth level (demo: 3).
+    // The level pill shows the house's real growth level (demo: 3).
     expect(getByText('Lv.3')).toBeTruthy();
     // The header carries no coin balance (집 화면은 재화 소비 화면이 아니다).
     expect(queryByText('5,600')).toBeNull();

@@ -15,6 +15,7 @@ import { Icon } from '@/components/ui/icon';
 import {
   CrownPictogram,
   DoorPictogram,
+  HousePictogram,
   PencilPictogram,
   Pictogram,
   type PictogramName,
@@ -56,7 +57,7 @@ export type House = {
   /** API house id — enables server actions (kick/leave) when provided. */
   houseId?: number;
   myRole?: 'OWNER' | 'MEMBER';
-  /** House growth level (헤더 왕관 pill; missions raise it). */
+  /** House growth level (헤더 레벨 pill; missions raise it). */
   level?: number;
   /** Group missions shown in the "우리 그룹의 미션" card. */
   missions?: HouseMission[];
@@ -742,7 +743,7 @@ export function GroupHouseScreen({
     <View style={[styles.screen, screenStyle]}>
       <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
         <View style={[styles.pill, { backgroundColor: t.surfaceMuted }]}>
-          <CrownPictogram size={14} />
+          <HousePictogram size={14} />
           <Text style={[Typography.label, { color: t.text }]}>Lv.{currentHouse.level ?? 0}</Text>
         </View>
         <View style={styles.flex} />
@@ -772,7 +773,6 @@ export function GroupHouseScreen({
             <Icon name="back" size={18} color={t.text} />
           </Pressable>
           <View style={[styles.titleBadge, { backgroundColor: t.surface, borderColor: t.border }]}>
-            <CrownPictogram size={16} />
             <Text style={[Typography.h3, { color: t.text }]}>{currentHouse.title}</Text>
           </View>
           <Pressable
