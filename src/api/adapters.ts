@@ -547,7 +547,9 @@ export function toSearchHouse(h: HouseSummary, index = 0): SearchHouse {
     emoji: HOUSE_EMOJIS[index % HOUSE_EMOJIS.length],
     bg: HOUSE_BGS[index % HOUSE_BGS.length],
     border: HOUSE_BORDERS[index % HOUSE_BORDERS.length],
-    description: `레벨 ${h.level ?? 0} 하우스 · 함께 루틴을 키워요`,
+    // No description: the boilerplate one only ever truncated (#234); the
+    // level rides the meta line instead. Server summaries carry no intro text.
+    level: h.level ?? 0,
   };
 }
 
