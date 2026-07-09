@@ -176,7 +176,14 @@ export function FriendRoomScreen({
           <CharacterAvatar characterId={characterId} size={36} />
         </View>
         <View style={styles.flex}>
-          <Text style={[Typography.h3, { color: t.text }]} numberOfLines={1}>
+          {/* Narrow phones: shrink the font (≥75%) first; if the title still
+              overflows, middle-ellipsize so the 의 방 suffix stays visible. */}
+          <Text
+            style={[Typography.h3, { color: t.text }]}
+            numberOfLines={1}
+            ellipsizeMode="middle"
+            adjustsFontSizeToFit
+            minimumFontScale={0.75}>
             {friendName}의 방
           </Text>
           {/* Same rule as 나의 방: a 0-day streak hides the flame badge. */}

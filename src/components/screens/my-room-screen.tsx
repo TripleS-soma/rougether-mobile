@@ -455,7 +455,14 @@ export function MyRoomScreen({
             <CharacterAvatar characterId={characterId} size={36} />
           </View>
           <View style={styles.headerName}>
-            <Text style={[Typography.h3, { color: t.text }]} numberOfLines={1}>
+            {/* Narrow phones: shrink the font (≥75%) first; if the title still
+                overflows, middle-ellipsize so the 의 방 suffix stays visible. */}
+            <Text
+              style={[Typography.h3, { color: t.text }]}
+              numberOfLines={1}
+              ellipsizeMode="middle"
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}>
               {userName}의 방
             </Text>
             {/* A 0-day streak is nothing to celebrate — show the flame only

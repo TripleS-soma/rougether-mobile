@@ -50,6 +50,16 @@ describe('MyRoomScreen', () => {
     expect(getByText('3 / 5')).toBeTruthy();
   });
 
+  it('keeps the 의 방 suffix visible on narrow screens (shrink + middle ellipsis)', async () => {
+    const { getByText } = await render(<MyRoomScreen userName="김철수베리롱네임" routines={[]} />);
+    const title = getByText('김철수베리롱네임의 방');
+    // Shrinks the font first, then ellipsizes the middle — never the suffix.
+    expect(title.props.adjustsFontSizeToFit).toBe(true);
+    expect(title.props.minimumFontScale).toBe(0.75);
+    expect(title.props.ellipsizeMode).toBe('middle');
+    expect(title.props.numberOfLines).toBe(1);
+  });
+
   it('hides the streak badge when the streak is 0', async () => {
     const { queryByText } = await render(<MyRoomScreen streakDays={0} routines={[]} />);
     expect(queryByText('0일')).toBeNull();
