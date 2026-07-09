@@ -35,7 +35,7 @@ import { useTokens } from '@/hooks/use-tokens';
  * of the surface layers. Tapping the room's wall opens the wallpaper picker
  * (with a 배경 segment); tapping the floor band opens the floor picker.
  */
-type PickerTarget = FurnitureSlot | 'wallpaper' | 'floor' | 'background' | null;
+type PickerTarget = FurnitureSlot | 'wallpaper' | 'floor' | 'background' | 'all' | null;
 
 export type RoomDecorScreenProps = {
   /** Furniture ids placed when the screen opens. */
@@ -178,11 +178,7 @@ export function RoomDecorScreen({
           : region,
     );
   const activeRegion: RoomRegion | null =
-    picker === 'wallpaper' || picker === 'background'
-      ? 'wall'
-      : picker === 'floor'
-        ? 'floor'
-        : picker;
+    picker === 'all' ? null : picker === 'wallpaper' || picker === 'background' ? 'wall' : picker;
 
   /** Place `id` into its slot, replacing whatever shares that slot. */
   const placeInSlot = (id: string, slot: FurnitureSlot) =>
@@ -257,13 +253,22 @@ export function RoomDecorScreen({
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
               비어 있는 자리는 +로 표시돼요. 벽이나 바닥을 누르면 벽지·바닥을 바꿀 수 있어요.
             </Text>
+            <Pressable
+              onPress={() => setPicker('all')}
+              accessibilityRole="button"
+              accessibilityLabel="전체보기"
+              style={[styles.allBtn, { backgroundColor: t.surfaceMuted }]}>
+              <Text style={[Typography.label, { color: t.primary }]}>전체보기</Text>
+            </Pressable>
           </View>
         ) : null}
 
         {!loading && !loadError && picker !== null ? (
           <View style={[styles.panel, { backgroundColor: t.surface }]}>
             <View style={styles.panelHead}>
-              {isSurfacePicker ? (
+              {picker === 'all' ? (
+                <Text style={[Typography.label, styles.flex, { color: t.text }]}>전체 아이템</Text>
+              ) : isSurfacePicker ? (
                 // 벽 탭은 벽지/배경을 함께 다룬다 (배경은 벽 너머 풍경).
                 <View style={styles.segment}>
                   {(
@@ -348,11 +353,73 @@ export function RoomDecorScreen({
                 t={t}
               />
             ) : null}
-            {!isSurfacePicker && picker !== null ? (
+            {picker === 'all' ? (
+              // 수정 전의 전체 카탈로그 뷰 — 표면 섹션 + 가구 전체. 가구 탭은
+              // 예전처럼 자기 기본 슬롯에 배치/해제(토글)한다.
+              <>
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>벽지</Text>
+                <SwatchGrid
+                  items={byOwnedFirst(wallpapers)}
+                  selectedId={wallpaperId}
+                  onSelect={(id) => setWallpaperId(id)}
+                  owned={owned}
+                  diaBalance={diaBalance}
+                  onBuyRequest={setPendingBuy}
+                  onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
+                  t={t}
+                />
+                {floors.length > 0 ? (
+                  <>
+                    <Text style={[Typography.supporting, { color: t.textMuted }]}>바닥</Text>
+                    <SwatchGrid
+                      items={byOwnedFirst(floors)}
+                      selectedId={floorId}
+                      onSelect={(id) => setFloorId((prev) => (prev === id ? null : id))}
+                      owned={owned}
+                      diaBalance={diaBalance}
+                      onBuyRequest={setPendingBuy}
+                      onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
+                      t={t}
+                    />
+                  </>
+                ) : null}
+                {backgrounds.length > 0 ? (
+                  <>
+                    <Text style={[Typography.supporting, { color: t.textMuted }]}>배경</Text>
+                    <SwatchGrid
+                      items={byOwnedFirst(backgrounds)}
+                      selectedId={backgroundId}
+                      onSelect={(id) => setBackgroundId((prev) => (prev === id ? null : id))}
+                      owned={owned}
+                      diaBalance={diaBalance}
+                      onBuyRequest={setPendingBuy}
+                      onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
+                      t={t}
+                    />
+                  </>
+                ) : null}
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>가구 · 소품</Text>
+                <FurnitureGrid
+                  items={byOwnedFirst(furniture)}
+                  placed={placed}
+                  onPlace={(item) =>
+                    placed.includes(item.id)
+                      ? setPlaced((prev) => prev.filter((p) => p !== item.id))
+                      : placeInSlot(item.id, item.slot)
+                  }
+                  owned={owned}
+                  diaBalance={diaBalance}
+                  onBuyRequest={setPendingBuy}
+                  onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
+                  t={t}
+                />
+              </>
+            ) : null}
+            {!isSurfacePicker && picker !== null && picker !== 'all' ? (
               <FurnitureGrid
                 items={byOwnedFirst(furniture.filter((i) => i.slot === picker))}
                 placed={placed}
-                onPlace={(id) => placeInSlot(id, picker)}
+                onPlace={(item) => placeInSlot(item.id, picker)}
                 onClear={
                   placed.some((p) => furniture.find((i) => i.id === p)?.slot === picker)
                     ? () => clearSlot(picker)
@@ -584,7 +651,7 @@ function FurnitureGrid({
 }: BuyProps & {
   items: FurnitureItem[];
   placed: string[];
-  onPlace: (id: string) => void;
+  onPlace: (item: FurnitureItem) => void;
   onClear?: () => void;
 }) {
   if (items.length === 0) {
@@ -606,7 +673,7 @@ function FurnitureGrid({
             key={item.id}
             onPress={() =>
               isOwned
-                ? onPlace(item.id)
+                ? onPlace(item)
                 : affordable
                   ? onBuyRequest({ id: item.id, name: item.name, price: item.price })
                   : onBlockedBuy()
@@ -678,6 +745,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingTop: Spacing.four,
     paddingBottom: Spacing.two,
+  },
+  allBtn: {
+    marginTop: Spacing.one,
+    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.two,
   },
   guideCard: {
     marginHorizontal: Spacing.four,

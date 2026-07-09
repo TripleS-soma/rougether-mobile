@@ -258,3 +258,37 @@ describe('RoomDecorScreen (#243 — 방을 직접 탭해서 꾸미기)', () => {
     expect(onBack).not.toHaveBeenCalled();
   });
 });
+
+describe('RoomDecorScreen — 전체보기', () => {
+  it('opens the full catalog from the guide and places by default slot', async () => {
+    const onApply = jest.fn();
+    const { getByText, getByLabelText } = await render(
+      <RoomDecorScreen initialPlacedIds={[]} onApply={onApply} />,
+    );
+
+    await fireEvent.press(getByLabelText('전체보기'));
+    expect(getByText('전체 아이템')).toBeTruthy();
+    // The old-style sections are all here.
+    expect(getByText('벽지')).toBeTruthy();
+    expect(getByText('가구 · 소품')).toBeTruthy();
+
+    // Furniture places into its own default slot, like before the redesign.
+    await fireEvent.press(getByText('초록 식물'));
+    await fireEvent.press(getByText('적용하기'));
+    expect(onApply).toHaveBeenCalledWith(['plant'], 'simple', null, null);
+  });
+
+  it('toggles a placed item off in the full catalog (old behavior)', async () => {
+    const onApply = jest.fn();
+    const { getAllByText, getByText, getByLabelText } = await render(
+      <RoomDecorScreen initialPlacedIds={['plant']} onApply={onApply} />,
+    );
+
+    await fireEvent.press(getByLabelText('전체보기'));
+    // The name renders in the room placeholder too — the tile comes last.
+    const tiles = getAllByText('초록 식물');
+    await fireEvent.press(tiles[tiles.length - 1]);
+    await fireEvent.press(getByText('적용하기'));
+    expect(onApply).toHaveBeenCalledWith([], 'simple', null, null);
+  });
+});
