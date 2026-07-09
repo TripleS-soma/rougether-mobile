@@ -12,8 +12,7 @@ import {
 } from 'react-native';
 
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
-import { Room } from '@/components/room/room';
-import { ToggleSwitch } from '@/components/ui/toggle-switch';
+import { Room, type RoomRegion } from '@/components/room/room';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Icon } from '@/components/ui/icon';
 import { WalletPills } from '@/components/ui/wallet-pills';
@@ -23,8 +22,7 @@ import {
   DEFAULT_WALLPAPER_ID,
   FURNITURE_ITEMS,
   type FurnitureItem,
-  SLOT_LABELS,
-  SLOT_ORDER,
+  type FurnitureSlot,
   type Wallpaper,
   WALLPAPERS,
 } from '@/resources/furniture';
@@ -32,11 +30,12 @@ import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 
-// Tab labels for the API's surface categoryCodes (wallpaper/floor/background).
-const ALL = '전체';
-const WALLPAPER = '벽지';
-const FLOOR = '바닥';
-const BACKGROUND = '배경';
+/**
+ * What the picker panel is currently choosing for: one furniture slot, or one
+ * of the surface layers. Tapping the room's wall opens the wallpaper picker
+ * (with a 배경 segment); tapping the floor band opens the floor picker.
+ */
+type PickerTarget = FurnitureSlot | 'wallpaper' | 'floor' | 'background' | null;
 
 export type RoomDecorScreenProps = {
   /** Furniture ids placed when the screen opens. */
@@ -75,11 +74,12 @@ export type RoomDecorScreenProps = {
 };
 
 /**
- * Room decoration screen, ported from the prototype `RoomDecorScreen`: live
- * <Room /> preview, category tabs, wallpaper + furniture catalogs, and an apply
- * bar. The catalog doubles as the shop — owned items are placed (one item per
- * slot; a new item replaces its slot), not-yet-owned items are bought with 다이아
- * and then become placeable. Selection state is local; `onApply` commits it.
+ * Room decoration screen (#243 redesign): the live <Room /> preview IS the
+ * catalog's entry point — empty slots show a dashed +, tapping any slot (or
+ * the wall/floor band) opens a picker for that exact spot, and picks preview
+ * instantly. No positional filter chips; position is expressed by touching the
+ * room. The picker doubles as the shop — owned items place, the rest are
+ * bought with 다이아 first. Selection is local until `onApply` commits it.
  * Spec domain: rougether-spec domains/room + shop.
  */
 export function RoomDecorScreen({
@@ -115,19 +115,6 @@ export function RoomDecorScreen({
       ),
     [ownedIds, furniture, wallpapers, floors, backgrounds],
   );
-  // Filter tabs: surfaces (벽지/바닥/배경, shown only when the catalogue has
-  // them) then one tab per placement slot (defaultSlot) present in the
-  // catalogue — one slot holds one item, so users shop per position.
-  const categories = useMemo(
-    () => [
-      ALL,
-      WALLPAPER,
-      ...(floors.length > 0 ? [FLOOR] : []),
-      ...(backgrounds.length > 0 ? [BACKGROUND] : []),
-      ...SLOT_ORDER.filter((s) => furniture.some((i) => i.slot === s)).map((s) => SLOT_LABELS[s]),
-    ],
-    [floors, backgrounds, furniture],
-  );
 
   const [placed, setPlaced] = useState<string[]>(
     () => initialPlacedIds ?? ['hanok-bed', 'hanok-shelf', 'hanok-window', 'hanok-rug'],
@@ -150,17 +137,21 @@ export function RoomDecorScreen({
     placed.length !== initialRef.current.placed.length ||
     placed.some((id) => !initialRef.current.placed.includes(id));
   const [confirmLeave, setConfirmLeave] = useState(false);
-  const [activeCategory, setActiveCategory] = useState(ALL);
+  const [picker, setPicker] = useState<PickerTarget>(null);
 
   const apply = () => onApply?.(placed, wallpaperId, floorId, backgroundId);
   const handleBack = () => {
     if (dirty) setConfirmLeave(true);
     else onBack?.();
   };
-  // Android hardware back runs the same unsaved-changes guard; without a
-  // guard reason we fall through to the app shell's navigation handler.
+  // Android hardware back: close the picker first, then run the same
+  // unsaved-changes guard; without a reason we fall through to the shell.
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (picker) {
+        setPicker(null);
+        return true;
+      }
       if (confirmLeave) {
         setConfirmLeave(false);
         return true;
@@ -172,39 +163,37 @@ export function RoomDecorScreen({
       return false;
     });
     return () => sub.remove();
-  }, [confirmLeave, dirty]);
-  // 보유중 filter: hide the shop side of the catalog, keep only placeable items.
-  const [ownedOnly, setOwnedOnly] = useState(false);
+  }, [picker, confirmLeave, dirty]);
   // Purchase pending the 구매하시겠습니까? confirm — buying is irreversible dia spend.
   const [pendingBuy, setPendingBuy] = useState<{ id: string; name: string; price: number } | null>(
     null,
   );
 
-  const byOwned = <T extends { id: string }>(arr: T[]) =>
-    ownedOnly ? arr.filter((i) => owned.has(i.id)) : arr;
+  const onRegionPress = (region: RoomRegion) =>
+    setPicker(
+      region === 'wall'
+        ? 'wallpaper'
+        : region === 'floor' && floors.length === 0
+          ? 'wallpaper' // no floor catalog yet — fall back to the surface picker
+          : region,
+    );
+  const activeRegion: RoomRegion | null =
+    picker === 'wallpaper' || picker === 'background'
+      ? 'wall'
+      : picker === 'floor'
+        ? 'floor'
+        : picker;
 
-  const slotOf = (id: string) => furniture.find((i) => i.id === id)?.slot;
+  /** Place `id` into its slot, replacing whatever shares that slot. */
+  const placeInSlot = (id: string, slot: FurnitureSlot) =>
+    setPlaced((prev) => [...prev.filter((p) => furniture.find((i) => i.id === p)?.slot !== slot), id]); // prettier-ignore
+  const clearSlot = (slot: FurnitureSlot) =>
+    setPlaced((prev) => prev.filter((p) => furniture.find((i) => i.id === p)?.slot !== slot));
 
-  const toggle = (id: string) => {
-    setPlaced((prev) => {
-      if (prev.includes(id)) return prev.filter((p) => p !== id);
-      const slot = slotOf(id);
-      // One item per slot: drop whatever shares this slot, then add.
-      return [...prev.filter((p) => slotOf(p) !== slot), id];
-    });
-  };
-
-  const showWallpapers = activeCategory === ALL || activeCategory === WALLPAPER;
-  const showFloors = floors.length > 0 && (activeCategory === ALL || activeCategory === FLOOR);
-  const showBackgrounds =
-    backgrounds.length > 0 && (activeCategory === ALL || activeCategory === BACKGROUND);
-  const visibleItems = byOwned(
-    activeCategory === ALL
-      ? furniture
-      : [WALLPAPER, FLOOR, BACKGROUND].includes(activeCategory)
-        ? []
-        : furniture.filter((i) => SLOT_LABELS[i.slot] === activeCategory),
-  );
+  // What the open picker offers, owned first so placing needs no digging.
+  const isSurfacePicker = picker === 'wallpaper' || picker === 'floor' || picker === 'background';
+  const byOwnedFirst = <T extends { id: string }>(arr: T[]) =>
+    [...arr].sort((a, b) => Number(owned.has(b.id)) - Number(owned.has(a.id)));
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
@@ -232,36 +221,9 @@ export function RoomDecorScreen({
             wallpapers={wallpapers}
             floors={floors}
             backgrounds={backgrounds}
-          />
-        </View>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabs}>
-          {categories.map((cat) => {
-            const active = cat === activeCategory;
-            return (
-              <Pressable
-                key={cat}
-                onPress={() => setActiveCategory(cat)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                style={[styles.tab, { backgroundColor: active ? t.primary : t.surface }]}>
-                <Text style={[Typography.label, { color: active ? t.onPrimary : t.textMuted }]}>
-                  {cat}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-
-        <View style={styles.filterRow}>
-          <Text style={[Typography.label, { color: t.text }]}>보유중</Text>
-          <ToggleSwitch
-            value={ownedOnly}
-            onToggle={() => setOwnedOnly((v) => !v)}
-            accessibilityLabel="보유중만 보기"
+            editable
+            onRegionPress={onRegionPress}
+            activeRegion={activeRegion}
           />
         </View>
 
@@ -289,100 +251,120 @@ export function RoomDecorScreen({
           </View>
         ) : null}
 
-        {!loading && !loadError && showWallpapers ? (
-          <SurfaceSection
-            title={WALLPAPER}
-            items={byOwned(wallpapers)}
-            selectedId={wallpaperId}
-            onSelect={(id) => setWallpaperId(id)}
-            owned={owned}
-            diaBalance={diaBalance}
-            onBuyRequest={setPendingBuy}
-            onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
-            t={t}
-          />
+        {!loading && !loadError && picker === null ? (
+          <View style={[styles.guideCard, { backgroundColor: t.surface }]}>
+            <Text style={[Typography.label, { color: t.text }]}>방을 눌러 꾸며보세요</Text>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              비어 있는 자리는 +로 표시돼요. 벽이나 바닥을 누르면 벽지·바닥을 바꿀 수 있어요.
+            </Text>
+          </View>
         ) : null}
 
-        {!loading && !loadError && showFloors ? (
-          <SurfaceSection
-            title={FLOOR}
-            items={byOwned(floors)}
-            selectedId={floorId}
-            // Tapping the selected floor clears the surface (the room can have none).
-            onSelect={(id) => setFloorId((prev) => (prev === id ? null : id))}
-            owned={owned}
-            diaBalance={diaBalance}
-            onBuyRequest={setPendingBuy}
-            onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
-            t={t}
-          />
-        ) : null}
-
-        {!loading && !loadError && showBackgrounds ? (
-          <SurfaceSection
-            title={BACKGROUND}
-            items={byOwned(backgrounds)}
-            selectedId={backgroundId}
-            onSelect={(id) => setBackgroundId((prev) => (prev === id ? null : id))}
-            owned={owned}
-            diaBalance={diaBalance}
-            onBuyRequest={setPendingBuy}
-            onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
-            t={t}
-          />
-        ) : null}
-
-        {!loading && !loadError && visibleItems.length > 0 ? (
-          <View style={styles.catalog}>
-            {activeCategory === ALL ? (
-              <Text style={[Typography.label, styles.catalogTitle, { color: t.textMuted }]}>
-                가구 · 소품
-              </Text>
-            ) : null}
-            <View style={styles.grid}>
-              {visibleItems.map((item: FurnitureItem) => {
-                const isOwned = owned.has(item.id);
-                const placedNow = placed.includes(item.id);
-                const affordable = diaBalance >= item.price;
-                return (
-                  <Pressable
-                    key={item.id}
-                    onPress={() =>
-                      isOwned
-                        ? toggle(item.id)
-                        : affordable
-                          ? setPendingBuy({ id: item.id, name: item.name, price: item.price })
-                          : toast('다이아가 부족해요', 'error')
-                    }
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: isOwned && placedNow }}
-                    accessibilityLabel={isOwned ? item.name : `${item.name} 구매`}
-                    style={[
-                      styles.tile,
-                      {
-                        backgroundColor: t.surface,
-                        borderColor: isOwned && placedNow ? t.primary : 'transparent',
-                        opacity: !isOwned && !affordable ? 0.5 : 1,
-                      },
-                    ]}>
-                    <View style={styles.thumbWrap}>
-                      <FurniturePlaceholder item={item} showName={false} />
-                    </View>
-                    <Text style={[styles.tileName, { color: t.text }]} numberOfLines={2}>
-                      {item.name}
-                    </Text>
-                    {isOwned ? (
-                      <Text style={[styles.tilePrice, { color: t.textMuted }]}>보유</Text>
-                    ) : (
-                      <View style={styles.priceRow}>
-                        <Icon name="dia" size={10} color={t.primary} />
-                        <Text style={[styles.tilePrice, { color: t.textMuted }]}>{item.price}</Text>
-                      </View>
-                    )}
-                  </Pressable>
-                );
-              })}
+        {!loading && !loadError && picker !== null ? (
+          <View style={[styles.panel, { backgroundColor: t.surface }]}>
+            <View style={styles.panelHead}>
+              {isSurfacePicker ? (
+                // 벽 탭은 벽지/배경을 함께 다룬다 (배경은 벽 너머 풍경).
+                <View style={styles.segment}>
+                  {(
+                    [
+                      ['wallpaper', '벽지'],
+                      ...(backgrounds.length > 0 ? [['background', '배경'] as const] : []),
+                      ...(floors.length > 0 ? [['floor', '바닥'] as const] : []),
+                    ] as const
+                  ).map(([key, label]) => {
+                    const active = picker === key;
+                    return (
+                      <Pressable
+                        key={key}
+                        onPress={() => setPicker(key)}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: active }}
+                        style={[
+                          styles.segBtn,
+                          { backgroundColor: active ? t.primary : t.surfaceMuted },
+                        ]}>
+                        <Text
+                          style={[
+                            Typography.supporting,
+                            { color: active ? t.onPrimary : t.textMuted },
+                          ]}>
+                          {label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : (
+                <Text style={[Typography.label, styles.flex, { color: t.text }]}>
+                  이 자리에 놓을 가구
+                </Text>
+              )}
+              <Pressable
+                onPress={() => setPicker(null)}
+                accessibilityRole="button"
+                accessibilityLabel="선택 닫기"
+                hitSlop={8}
+                style={[styles.closeBtn, { backgroundColor: t.surfaceMuted }]}>
+                <Icon name="close" size={14} color={t.text} />
+              </Pressable>
             </View>
+
+            {picker === 'wallpaper' ? (
+              <SwatchGrid
+                items={byOwnedFirst(wallpapers)}
+                selectedId={wallpaperId}
+                onSelect={(id) => setWallpaperId(id)}
+                owned={owned}
+                diaBalance={diaBalance}
+                onBuyRequest={setPendingBuy}
+                onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
+                t={t}
+              />
+            ) : null}
+            {picker === 'floor' ? (
+              <SwatchGrid
+                items={byOwnedFirst(floors)}
+                selectedId={floorId}
+                onSelect={(id) => setFloorId((prev) => (prev === id ? null : id))}
+                onClear={floorId ? () => setFloorId(null) : undefined}
+                owned={owned}
+                diaBalance={diaBalance}
+                onBuyRequest={setPendingBuy}
+                onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
+                t={t}
+              />
+            ) : null}
+            {picker === 'background' ? (
+              <SwatchGrid
+                items={byOwnedFirst(backgrounds)}
+                selectedId={backgroundId}
+                onSelect={(id) => setBackgroundId((prev) => (prev === id ? null : id))}
+                onClear={backgroundId ? () => setBackgroundId(null) : undefined}
+                owned={owned}
+                diaBalance={diaBalance}
+                onBuyRequest={setPendingBuy}
+                onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
+                t={t}
+              />
+            ) : null}
+            {!isSurfacePicker && picker !== null ? (
+              <FurnitureGrid
+                items={byOwnedFirst(furniture.filter((i) => i.slot === picker))}
+                placed={placed}
+                onPlace={(id) => placeInSlot(id, picker)}
+                onClear={
+                  placed.some((p) => furniture.find((i) => i.id === p)?.slot === picker)
+                    ? () => clearSlot(picker)
+                    : undefined
+                }
+                owned={owned}
+                diaBalance={diaBalance}
+                onBuyRequest={setPendingBuy}
+                onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
+                t={t}
+              />
+            ) : null}
           </View>
         ) : null}
       </ScrollView>
@@ -487,90 +469,176 @@ export function RoomDecorScreen({
   );
 }
 
-/**
- * One surface catalog section (벽지/바닥/배경): single-select swatch/art tiles.
- * Owned items select; the rest buy with dia first (same rule as furniture) —
- * unowned surfaces can't be picked, so nothing silently drops on save.
- */
-function SurfaceSection({
-  title,
-  items,
-  selectedId,
-  onSelect,
-  owned,
-  diaBalance,
-  onBuyRequest,
-  onBlockedBuy,
-  t,
-}: {
-  title: string;
-  items: Wallpaper[];
-  selectedId: string | null;
-  onSelect: (id: string) => void;
+type Tokens = ReturnType<typeof useTokens>;
+type BuyProps = {
   owned: Set<string>;
   diaBalance: number;
   /** Ask the parent to confirm buying this item (opens the 구매 modal). */
   onBuyRequest: (item: { id: string; name: string; price: number }) => void;
   /** Unaffordable tile tapped — the parent explains (다이아 부족 toast). */
   onBlockedBuy: () => void;
-  t: ReturnType<typeof useTokens>;
-}) {
-  // The 보유중 filter can empty a section — drop the orphan header too.
-  if (items.length === 0) return null;
+  t: Tokens;
+};
+
+/** 비우기 tile shared by the grids — clears the slot/surface being picked. */
+function ClearTile({ onClear, t }: { onClear?: () => void; t: Tokens }) {
+  if (!onClear) return null;
   return (
-    <View style={styles.catalog}>
-      <Text style={[Typography.label, styles.catalogTitle, { color: t.textMuted }]}>{title}</Text>
-      <View style={styles.grid}>
-        {items.map((item) => {
-          const isOwned = owned.has(item.id);
-          const active = isOwned && item.id === selectedId;
-          const affordable = diaBalance >= item.price;
-          return (
-            <Pressable
-              key={item.id}
-              onPress={() =>
-                isOwned
-                  ? onSelect(item.id)
-                  : affordable
-                    ? onBuyRequest({ id: item.id, name: item.name, price: item.price })
-                    : onBlockedBuy()
-              }
-              accessibilityRole="button"
-              accessibilityState={{ selected: active }}
-              accessibilityLabel={isOwned ? item.name : `${item.name} 구매`}
-              style={[
-                styles.tile,
-                {
-                  backgroundColor: t.surface,
-                  borderColor: active ? t.primary : 'transparent',
-                  opacity: !isOwned && !affordable ? 0.5 : 1,
-                },
-              ]}>
-              {isCdnKey(item.assetKey) ? (
-                <Image
-                  source={assetSource(item.assetKey)}
-                  style={styles.swatch}
-                  contentFit="cover"
-                  transition={120}
-                />
-              ) : (
-                <View style={[styles.swatch, { backgroundColor: item.color }]} />
-              )}
-              <Text style={[styles.tileName, { color: t.text }]} numberOfLines={2}>
-                {item.name}
-              </Text>
-              {isOwned ? (
-                <Text style={[styles.tilePrice, { color: t.textMuted }]}>보유</Text>
-              ) : (
-                <View style={styles.priceRow}>
-                  <Icon name="dia" size={10} color={t.primary} />
-                  <Text style={[styles.tilePrice, { color: t.textMuted }]}>{item.price}</Text>
-                </View>
-              )}
-            </Pressable>
-          );
-        })}
+    <Pressable
+      onPress={onClear}
+      accessibilityRole="button"
+      accessibilityLabel="비우기"
+      style={[styles.tile, styles.clearTile, { borderColor: t.border }]}>
+      <View style={[styles.thumbWrap, styles.clearThumb]}>
+        <Icon name="close" size={18} color={t.textMuted} />
       </View>
+      <Text style={[styles.tileName, { color: t.textMuted }]}>비우기</Text>
+    </Pressable>
+  );
+}
+
+/** Surface picker grid (벽지/바닥/배경): single-select swatch/art tiles. */
+function SwatchGrid({
+  items,
+  selectedId,
+  onSelect,
+  onClear,
+  owned,
+  diaBalance,
+  onBuyRequest,
+  onBlockedBuy,
+  t,
+}: BuyProps & {
+  items: Wallpaper[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  onClear?: () => void;
+}) {
+  return (
+    <View style={styles.grid}>
+      <ClearTile onClear={onClear} t={t} />
+      {items.map((item) => {
+        const isOwned = owned.has(item.id);
+        const active = isOwned && item.id === selectedId;
+        const affordable = diaBalance >= item.price;
+        return (
+          <Pressable
+            key={item.id}
+            onPress={() =>
+              isOwned
+                ? onSelect(item.id)
+                : affordable
+                  ? onBuyRequest({ id: item.id, name: item.name, price: item.price })
+                  : onBlockedBuy()
+            }
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
+            accessibilityLabel={isOwned ? item.name : `${item.name} 구매`}
+            style={[
+              styles.tile,
+              {
+                backgroundColor: t.surfaceMuted,
+                borderColor: active ? t.primary : 'transparent',
+                opacity: !isOwned && !affordable ? 0.5 : 1,
+              },
+            ]}>
+            {isCdnKey(item.assetKey) ? (
+              <Image
+                source={assetSource(item.assetKey)}
+                style={styles.swatch}
+                contentFit="cover"
+                transition={120}
+              />
+            ) : (
+              <View style={[styles.swatch, { backgroundColor: item.color }]} />
+            )}
+            <Text style={[styles.tileName, { color: t.text }]} numberOfLines={2}>
+              {item.name}
+            </Text>
+            {isOwned ? (
+              <Text style={[styles.tilePrice, { color: t.textMuted }]}>보유</Text>
+            ) : (
+              <View style={styles.priceRow}>
+                <Icon name="dia" size={10} color={t.primary} />
+                <Text style={[styles.tilePrice, { color: t.textMuted }]}>{item.price}</Text>
+              </View>
+            )}
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/** Furniture picker grid for one slot: tap places (replacing the slot). */
+function FurnitureGrid({
+  items,
+  placed,
+  onPlace,
+  onClear,
+  owned,
+  diaBalance,
+  onBuyRequest,
+  onBlockedBuy,
+  t,
+}: BuyProps & {
+  items: FurnitureItem[];
+  placed: string[];
+  onPlace: (id: string) => void;
+  onClear?: () => void;
+}) {
+  if (items.length === 0) {
+    return (
+      <Text style={[Typography.supporting, styles.emptyPicker, { color: t.textMuted }]}>
+        이 자리에 놓을 수 있는 가구가 아직 없어요.
+      </Text>
+    );
+  }
+  return (
+    <View style={styles.grid}>
+      <ClearTile onClear={onClear} t={t} />
+      {items.map((item) => {
+        const isOwned = owned.has(item.id);
+        const active = isOwned && placed.includes(item.id);
+        const affordable = diaBalance >= item.price;
+        return (
+          <Pressable
+            key={item.id}
+            onPress={() =>
+              isOwned
+                ? onPlace(item.id)
+                : affordable
+                  ? onBuyRequest({ id: item.id, name: item.name, price: item.price })
+                  : onBlockedBuy()
+            }
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
+            accessibilityLabel={isOwned ? item.name : `${item.name} 구매`}
+            style={[
+              styles.tile,
+              {
+                backgroundColor: t.surfaceMuted,
+                borderColor: active ? t.primary : 'transparent',
+                opacity: !isOwned && !affordable ? 0.5 : 1,
+              },
+            ]}>
+            <View style={styles.thumbWrap}>
+              <FurniturePlaceholder item={item} showName={false} />
+            </View>
+            <Text style={[styles.tileName, { color: t.text }]} numberOfLines={2}>
+              {item.name}
+            </Text>
+            {isOwned ? (
+              <Text style={[styles.tilePrice, { color: t.textMuted }]}>보유</Text>
+            ) : (
+              <View style={styles.priceRow}>
+                <Icon name="dia" size={10} color={t.primary} />
+                <Text style={[styles.tilePrice, { color: t.textMuted }]}>{item.price}</Text>
+              </View>
+            )}
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -611,17 +679,46 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.four,
     paddingBottom: Spacing.two,
   },
-  tabs: {
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two,
-    gap: Spacing.two,
+  guideCard: {
+    marginHorizontal: Spacing.four,
+    marginTop: Spacing.two,
+    borderRadius: Radius.lg,
+    padding: Spacing.four,
+    gap: Spacing.one,
+    alignItems: 'center',
   },
-  filterRow: {
+  panel: {
+    marginHorizontal: Spacing.three,
+    marginTop: Spacing.two,
+    borderRadius: Radius.lg,
+    padding: Spacing.three,
+    gap: Spacing.three,
+  },
+  panelHead: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
-    paddingHorizontal: Spacing.four,
-    paddingBottom: Spacing.two,
+  },
+  segment: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: Spacing.one,
+  },
+  segBtn: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one,
+    borderRadius: Radius.pill,
+  },
+  closeBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyPicker: {
+    textAlign: 'center',
+    paddingVertical: Spacing.three,
   },
   confirmBackdrop: {
     flex: 1,
@@ -663,15 +760,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.two,
   },
-  tab: {
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    borderRadius: Radius.pill,
-  },
-  catalog: {
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.two,
-  },
   loadingBlock: {
     alignItems: 'center',
     paddingVertical: Spacing.six,
@@ -682,14 +770,10 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.five,
   },
-  catalogTitle: {
-    marginBottom: Spacing.two,
-  },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: GRID_GAP,
-    marginBottom: Spacing.three,
   },
   tile: {
     // Four tiles per row, leaving room for the three inter-tile gaps.
@@ -699,6 +783,13 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     padding: Spacing.two,
     gap: Spacing.half,
+  },
+  clearTile: {
+    borderStyle: 'dashed',
+  },
+  clearThumb: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   swatch: {
     width: '100%',

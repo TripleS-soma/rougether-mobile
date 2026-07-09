@@ -7,15 +7,21 @@ import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Radius } from '@/constants/theme';
 import { assetSource, isCdnKey } from '@/resources/asset';
+import { useTokens } from '@/hooks/use-tokens';
 import {
   DEFAULT_PLACED_FURNITURE_IDS,
   DEFAULT_WALLPAPER_ID,
   FURNITURE_ITEMS,
   type FurnitureItem,
   type FurnitureSlot,
+  SLOT_LABELS,
+  SLOT_ORDER,
   type Wallpaper,
   WALLPAPERS,
 } from '@/resources/furniture';
+
+/** Region a decor-mode tap can target: a furniture slot or a surface band. */
+export type RoomRegion = FurnitureSlot | 'wall' | 'floor';
 
 /**
  * Where each furniture slot sits inside the (square) room. Symmetric layout:
@@ -52,6 +58,15 @@ export type RoomProps = {
   backgrounds?: Wallpaper[];
   /** When true, tapping the character cycles through its poses (나의 방). */
   interactiveCharacter?: boolean;
+  /**
+   * Decor-edit mode (#243): slots and surface bands become tappable and empty
+   * slots show a dashed + marker, so the room itself is the catalog's entry
+   * point instead of positional filter chips.
+   */
+  editable?: boolean;
+  onRegionPress?: (region: RoomRegion) => void;
+  /** Region whose picker is open — ring-highlighted. */
+  activeRegion?: RoomRegion | null;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -72,8 +87,12 @@ export function Room({
   floors = [],
   backgrounds = [],
   interactiveCharacter = false,
+  editable = false,
+  onRegionPress,
+  activeRegion = null,
   style,
 }: RoomProps) {
+  const t = useTokens();
   const wallpaper = wallpapers.find((w) => w.id === wallpaperId) ?? wallpapers[0];
   const floor = floorId ? floors.find((f) => f.id === floorId) : undefined;
   const background = backgroundId ? backgrounds.find((b) => b.id === backgroundId) : undefined;
@@ -124,11 +143,70 @@ export function Room({
           <View style={[styles.floor, { backgroundColor: floor.color }]} />
         )
       ) : null}
-      {placed.map((item) => (
-        <View key={item.id} style={[styles.furniture, SLOT_STYLE[item.slot]]}>
-          <FurniturePlaceholder item={item} />
-        </View>
-      ))}
+      {/* Surface touch bands sit under the furniture so item taps win. */}
+      {editable ? (
+        <>
+          <Pressable
+            onPress={() => onRegionPress?.('wall')}
+            accessibilityRole="button"
+            accessibilityLabel="벽 꾸미기"
+            style={[
+              styles.wall,
+              activeRegion === 'wall' && { borderWidth: 2.5, borderColor: t.primary },
+            ]}
+          />
+          <Pressable
+            onPress={() => onRegionPress?.('floor')}
+            accessibilityRole="button"
+            accessibilityLabel="바닥 꾸미기"
+            style={[
+              styles.floor,
+              activeRegion === 'floor' && { borderWidth: 2.5, borderColor: t.primary },
+            ]}
+          />
+        </>
+      ) : null}
+      {placed.map((item) =>
+        editable ? (
+          <Pressable
+            key={item.id}
+            onPress={() => onRegionPress?.(item.slot)}
+            accessibilityRole="button"
+            accessibilityLabel={`${SLOT_LABELS[item.slot]} 자리 — ${item.name}`}
+            style={[
+              styles.furniture,
+              SLOT_STYLE[item.slot],
+              activeRegion === item.slot && [styles.activeSlot, { borderColor: t.primary }],
+            ]}>
+            <FurniturePlaceholder item={item} />
+          </Pressable>
+        ) : (
+          <View key={item.id} style={[styles.furniture, SLOT_STYLE[item.slot]]}>
+            <FurniturePlaceholder item={item} />
+          </View>
+        ),
+      )}
+      {/* Empty slots invite a tap with a dashed + marker. */}
+      {editable
+        ? SLOT_ORDER.filter((slot) => !placed.some((i) => i.slot === slot)).map((slot) => (
+            <Pressable
+              key={slot}
+              onPress={() => onRegionPress?.(slot)}
+              accessibilityRole="button"
+              accessibilityLabel={`${SLOT_LABELS[slot]} 자리 비어 있음`}
+              style={[
+                styles.furniture,
+                SLOT_STYLE[slot],
+                styles.emptySlot,
+                activeRegion === slot && { borderColor: t.primary, borderStyle: 'solid' },
+              ]}>
+              <View style={styles.emptyPlus}>
+                <View style={[styles.plusH, { backgroundColor: 'rgba(80,66,55,0.55)' }]} />
+                <View style={[styles.plusV, { backgroundColor: 'rgba(80,66,55,0.55)' }]} />
+              </View>
+            </Pressable>
+          ))
+        : null}
       {interactiveCharacter ? (
         <Pressable
           onPress={() => setPose((p) => (p + 1) % POSE_COUNT)}
@@ -173,6 +251,37 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: '28%',
     aspectRatio: 1,
+  },
+  activeSlot: {
+    borderWidth: 2.5,
+    borderRadius: Radius.md,
+  },
+  emptySlot: {
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(80,66,55,0.35)',
+    borderRadius: Radius.md,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyPlus: {
+    width: 22,
+    height: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  plusH: {
+    position: 'absolute',
+    width: 18,
+    height: 3,
+    borderRadius: 2,
+  },
+  plusV: {
+    position: 'absolute',
+    width: 3,
+    height: 18,
+    borderRadius: 2,
   },
   character: {
     position: 'absolute',
