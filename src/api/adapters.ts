@@ -105,7 +105,7 @@ const LEGACY_EMOJI_ICONS: Record<string, PictogramName> = {
 };
 
 /** Server iconKey (pictogram name / legacy emoji / asset key) → pictogram. */
-export function toCategoryIcon(iconKey?: string): PictogramName {
+function toCategoryIcon(iconKey?: string): PictogramName {
   if (!iconKey) return 'sparkle';
   if (isPictogramName(iconKey)) return iconKey;
   // Emoji lookups ignore the variation selector (🗓️ vs 🗓).
@@ -370,7 +370,7 @@ const isPositioned = (i: ItemResponse) =>
 /** "Forest Sage Set - Arched Window" → "Arched Window" (theme shows separately). */
 const stripSetPrefix = (name?: string) => (name ?? '').replace(/^.*?Set\s*-\s*/, '');
 
-export function toFurnitureItem(item: ItemResponse): FurnitureItem {
+function toFurnitureItem(item: ItemResponse): FurnitureItem {
   return {
     id: String(item.id ?? ''),
     name: stripSetPrefix(item.name),
@@ -382,7 +382,7 @@ export function toFurnitureItem(item: ItemResponse): FurnitureItem {
   };
 }
 
-export function toWallpaper(item: ItemResponse, index = 0): Wallpaper {
+function toWallpaper(item: ItemResponse, index = 0): Wallpaper {
   return {
     id: String(item.id ?? ''),
     name: stripSetPrefix(item.name),

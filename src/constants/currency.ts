@@ -11,8 +11,3 @@ export type Wallet = { coin: number; dia: number };
 
 /** Placeholder shown until `/me/wallets` loads. */
 export const DEFAULT_WALLET: Wallet = { coin: 0, dia: 0 };
-
-export const CURRENCY_LABEL: Record<CurrencyType, string> = {
-  coin: '코인',
-  dia: '다이아',
-};
