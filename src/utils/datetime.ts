@@ -12,7 +12,7 @@ export function formatDate(d: string) {
 }
 
 /** Local date → "YYYY-MM-DD" (KST-agnostic; uses the device's local day). */
-export function toIsoDate(dt: Date) {
+function toIsoDate(dt: Date) {
   return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(
     dt.getDate(),
   ).padStart(2, '0')}`;

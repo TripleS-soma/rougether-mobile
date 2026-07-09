@@ -1,13 +1,12 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { ToastProvider } from '@/components/ui/toast';
 import { AuthProvider } from '@/hooks/use-auth';
 import { BrandThemeProvider, useResolvedScheme } from '@/hooks/use-tokens';
-import { startMockServer } from '@/mocks/init';
 
 /**
  * Navigation chrome follows the resolved scheme (OS scheme + the 다크 모드
@@ -26,10 +25,6 @@ function NavigationTheme({ children }: { children: ReactNode }) {
  * post-signup onboarding step are follow-ups.
  */
 export default function RootLayout() {
-  useEffect(() => {
-    startMockServer();
-  }, []);
-
   return (
     <SafeAreaProvider>
       <AuthProvider>

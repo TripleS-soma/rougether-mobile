@@ -56,10 +56,6 @@ export function getSessionUserId(): number | undefined {
   return session?.userId;
 }
 
-export function isAuthenticated(): boolean {
-  return session != null;
-}
-
 type SessionClearedListener = () => void;
 const sessionClearedListeners = new Set<SessionClearedListener>();
 

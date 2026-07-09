@@ -15,7 +15,6 @@ export {
   devLogin,
   getAccessToken,
   getSessionUserId,
-  isAuthenticated,
   loadSession,
   logout,
   onSessionCleared,

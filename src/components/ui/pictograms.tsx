@@ -83,7 +83,7 @@ export function TargetPictogram({ size = 24, color }: PictogramProps) {
   );
 }
 
-export function SproutPictogram({ size = 24 }: PictogramProps) {
+function SproutPictogram({ size = 24 }: PictogramProps) {
   const t = useTokens();
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -94,7 +94,7 @@ export function SproutPictogram({ size = 24 }: PictogramProps) {
   );
 }
 
-export function ChecklistPictogram({ size = 24 }: PictogramProps) {
+function ChecklistPictogram({ size = 24 }: PictogramProps) {
   const t = useTokens();
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -130,7 +130,7 @@ export function HousePictogram({ size = 24 }: PictogramProps) {
   );
 }
 
-export function FriendsPictogram({ size = 24 }: PictogramProps) {
+function FriendsPictogram({ size = 24 }: PictogramProps) {
   const t = useTokens();
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -142,7 +142,7 @@ export function FriendsPictogram({ size = 24 }: PictogramProps) {
   );
 }
 
-export function ThumbUpPictogram({ size = 24, color }: PictogramProps) {
+function ThumbUpPictogram({ size = 24, color }: PictogramProps) {
   const t = useTokens();
   const c = color ?? t.primary;
   return (
@@ -156,7 +156,7 @@ export function ThumbUpPictogram({ size = 24, color }: PictogramProps) {
   );
 }
 
-export function HeartPictogram({ size = 24, color }: PictogramProps) {
+function HeartPictogram({ size = 24, color }: PictogramProps) {
   const t = useTokens();
   const c = color ?? t.warning;
   return (
@@ -184,7 +184,7 @@ export function SparklePictogram({ size = 24, color }: PictogramProps) {
   );
 }
 
-export function SunPictogram({ size = 24, color }: PictogramProps) {
+function SunPictogram({ size = 24, color }: PictogramProps) {
   const t = useTokens();
   const c = color ?? t.warning;
   const rays = [];
@@ -208,7 +208,7 @@ export function SunPictogram({ size = 24, color }: PictogramProps) {
   );
 }
 
-export function CalendarPictogram({ size = 24, color }: PictogramProps) {
+function CalendarPictogram({ size = 24, color }: PictogramProps) {
   const t = useTokens();
   const c = color ?? t.primary;
   return (
@@ -223,7 +223,7 @@ export function CalendarPictogram({ size = 24, color }: PictogramProps) {
   );
 }
 
-export function BookPictogram({ size = 24, color }: PictogramProps) {
+function BookPictogram({ size = 24, color }: PictogramProps) {
   const t = useTokens();
   const c = color ?? t.primary;
   return (
@@ -263,7 +263,7 @@ export function BookOpenPictogram({ size = 24, color }: PictogramProps) {
   );
 }
 
-export function DumbbellPictogram({ size = 24, color }: PictogramProps) {
+function DumbbellPictogram({ size = 24, color }: PictogramProps) {
   const t = useTokens();
   const c = color ?? t.danger;
   return (
@@ -277,7 +277,7 @@ export function DumbbellPictogram({ size = 24, color }: PictogramProps) {
   );
 }
 
-export function PalettePictogram({ size = 24, color }: PictogramProps) {
+function PalettePictogram({ size = 24, color }: PictogramProps) {
   const t = useTokens();
   const c = color ?? t.icon;
   return (
@@ -294,7 +294,7 @@ export function PalettePictogram({ size = 24, color }: PictogramProps) {
   );
 }
 
-export function WaterPictogram({ size = 24, color }: PictogramProps) {
+function WaterPictogram({ size = 24, color }: PictogramProps) {
   const t = useTokens();
   const c = color ?? t.primary;
   return (
@@ -315,7 +315,7 @@ export function WaterPictogram({ size = 24, color }: PictogramProps) {
   );
 }
 
-export function RunPictogram({ size = 24, color }: PictogramProps) {
+function RunPictogram({ size = 24, color }: PictogramProps) {
   const t = useTokens();
   const c = color ?? t.success;
   return (
@@ -346,7 +346,7 @@ export function RunPictogram({ size = 24, color }: PictogramProps) {
   );
 }
 
-export function MusicPictogram({ size = 24, color }: PictogramProps) {
+function MusicPictogram({ size = 24, color }: PictogramProps) {
   const t = useTokens();
   const c = color ?? t.icon;
   return (
@@ -363,7 +363,7 @@ export function MusicPictogram({ size = 24, color }: PictogramProps) {
   );
 }
 
-export function CookingPictogram({ size = 24, color }: PictogramProps) {
+function CookingPictogram({ size = 24, color }: PictogramProps) {
   const t = useTokens();
   const c = color ?? t.warning;
   return (
@@ -375,7 +375,7 @@ export function CookingPictogram({ size = 24, color }: PictogramProps) {
   );
 }
 
-export function MeditationPictogram({ size = 24, color }: PictogramProps) {
+function MeditationPictogram({ size = 24, color }: PictogramProps) {
   const t = useTokens();
   const c = color ?? t.primary;
   return (
@@ -388,7 +388,7 @@ export function MeditationPictogram({ size = 24, color }: PictogramProps) {
   );
 }
 
-export function BriefcasePictogram({ size = 24, color }: PictogramProps) {
+function BriefcasePictogram({ size = 24, color }: PictogramProps) {
   const t = useTokens();
   const c = color ?? t.icon;
   return (
@@ -400,7 +400,7 @@ export function BriefcasePictogram({ size = 24, color }: PictogramProps) {
   );
 }
 
-export function HandshakePictogram({ size = 24, color }: PictogramProps) {
+function HandshakePictogram({ size = 24, color }: PictogramProps) {
   const t = useTokens();
   const c = color ?? t.warning;
   return (
@@ -430,7 +430,7 @@ export function HandshakePictogram({ size = 24, color }: PictogramProps) {
   );
 }
 
-export function LockPictogram({ size = 24, color }: PictogramProps) {
+function LockPictogram({ size = 24, color }: PictogramProps) {
   const t = useTokens();
   const c = color ?? t.icon;
   return (
@@ -447,7 +447,7 @@ export function LockPictogram({ size = 24, color }: PictogramProps) {
   );
 }
 
-export function GlobePictogram({ size = 24, color }: PictogramProps) {
+function GlobePictogram({ size = 24, color }: PictogramProps) {
   const t = useTokens();
   const c = color ?? t.primary;
   return (
@@ -463,7 +463,7 @@ export function GlobePictogram({ size = 24, color }: PictogramProps) {
   );
 }
 
-export function MoonPictogram({ size = 24, color }: PictogramProps) {
+function MoonPictogram({ size = 24, color }: PictogramProps) {
   const t = useTokens();
   const c = color ?? t.warning;
   return (
@@ -477,7 +477,7 @@ export function MoonPictogram({ size = 24, color }: PictogramProps) {
   );
 }
 
-export function CoffeePictogram({ size = 24, color }: PictogramProps) {
+function CoffeePictogram({ size = 24, color }: PictogramProps) {
   const t = useTokens();
   const c = color ?? t.icon;
   return (
@@ -505,7 +505,7 @@ export function CoffeePictogram({ size = 24, color }: PictogramProps) {
   );
 }
 
-export function SunrisePictogram({ size = 24, color }: PictogramProps) {
+function SunrisePictogram({ size = 24, color }: PictogramProps) {
   const t = useTokens();
   const c = color ?? t.warning;
   return (
@@ -527,7 +527,7 @@ export function SunrisePictogram({ size = 24, color }: PictogramProps) {
   );
 }
 
-export function LaptopPictogram({ size = 24, color }: PictogramProps) {
+function LaptopPictogram({ size = 24, color }: PictogramProps) {
   const t = useTokens();
   const c = color ?? t.icon;
   return (
@@ -541,7 +541,7 @@ export function LaptopPictogram({ size = 24, color }: PictogramProps) {
   );
 }
 
-export function GiftPictogram({ size = 24, color }: PictogramProps) {
+function GiftPictogram({ size = 24, color }: PictogramProps) {
   const t = useTokens();
   const c = color ?? t.danger;
   return (
@@ -617,7 +617,7 @@ export function DoorPictogram({ size = 24, color }: PictogramProps) {
   );
 }
 
-export function LeafPictogram({ size = 24, color }: PictogramProps) {
+function LeafPictogram({ size = 24, color }: PictogramProps) {
   const t = useTokens();
   const c = color ?? t.success;
   return (
@@ -638,7 +638,7 @@ export function LeafPictogram({ size = 24, color }: PictogramProps) {
   );
 }
 
-export function CroissantPictogram({ size = 24, color }: PictogramProps) {
+function CroissantPictogram({ size = 24, color }: PictogramProps) {
   const t = useTokens();
   const c = color ?? t.warning;
   return (
@@ -654,7 +654,7 @@ export function CroissantPictogram({ size = 24, color }: PictogramProps) {
   );
 }
 
-export function PagodaPictogram({ size = 24, color }: PictogramProps) {
+function PagodaPictogram({ size = 24, color }: PictogramProps) {
   const t = useTokens();
   const c = color ?? t.danger;
   return (
@@ -671,7 +671,7 @@ export function PagodaPictogram({ size = 24, color }: PictogramProps) {
   );
 }
 
-export function TeddyPictogram({ size = 24, color }: PictogramProps) {
+function TeddyPictogram({ size = 24, color }: PictogramProps) {
   const t = useTokens();
   const c = color ?? t.warning;
   return (
@@ -692,7 +692,7 @@ export function TeddyPictogram({ size = 24, color }: PictogramProps) {
   );
 }
 
-export function PlanetPictogram({ size = 24, color }: PictogramProps) {
+function PlanetPictogram({ size = 24, color }: PictogramProps) {
   const t = useTokens();
   const c = color ?? t.primary;
   return (
@@ -710,7 +710,7 @@ export function PlanetPictogram({ size = 24, color }: PictogramProps) {
   );
 }
 
-export function BlossomPictogram({ size = 24, color }: PictogramProps) {
+function BlossomPictogram({ size = 24, color }: PictogramProps) {
   const t = useTokens();
   const c = color ?? t.danger;
   const petals = [];
