@@ -26,6 +26,7 @@ import { type RoomSlotSave } from './rooms';
 
 import type { Floor, House, HouseMission, RoomCell } from '@/components/screens/group-house-screen';
 import type { GuestbookEntry } from '@/components/screens/friend-room-screen';
+import type { PictogramName } from '@/components/ui/pictograms';
 import type { HousePreview, SearchHouse } from '@/components/screens/house-search-screen';
 import type { CalendarDayItem } from '@/components/screens/my-room-screen';
 
@@ -493,21 +494,21 @@ export function toGroupHouse(
 }
 
 // Mission-type presentation: emoji + the label shown under the progress bar.
-const MISSION_TYPE_META: Record<string, { emoji: string; label: string }> = {
-  DAILY_MEMBER_RATE: { emoji: '☀️', label: '일일 구성원 달성률' },
-  WEEKLY_MEMBER_COUNT: { emoji: '📅', label: '주간 구성원 달성 횟수' },
-  STREAK_DAYS: { emoji: '🔥', label: '연속 달성' },
+const MISSION_TYPE_META: Record<string, { icon: PictogramName; label: string }> = {
+  DAILY_MEMBER_RATE: { icon: 'sun', label: '일일 구성원 달성률' },
+  WEEKLY_MEMBER_COUNT: { icon: 'calendar', label: '주간 구성원 달성 횟수' },
+  STREAK_DAYS: { icon: 'sparkle', label: '연속 달성' },
 };
 
 /** House-mission card model from the API mission summary. */
 export function toHouseMission(m: MissionSummary): HouseMission {
-  const meta = MISSION_TYPE_META[m.missionType ?? ''] ?? { emoji: '🎯', label: '단체 미션' };
+  const meta = MISSION_TYPE_META[m.missionType ?? ''] ?? { icon: 'target', label: '단체 미션' };
   const target = m.targetValue ?? 0;
   return {
     id: m.missionId ?? 0,
     title: m.title ?? '',
     desc: meta.label,
-    emoji: meta.emoji,
+    icon: meta.icon,
     current: m.currentValue ?? 0,
     target: Math.max(1, target),
     status: m.status ?? 'ACTIVE',

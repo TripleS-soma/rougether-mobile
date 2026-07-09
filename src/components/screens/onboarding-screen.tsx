@@ -5,34 +5,35 @@ import { CharacterAvatar } from '@/components/character-avatar';
 import { Icon } from '@/components/ui/icon';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Radius, Spacing, Typography } from '@/constants/theme';
+import { Pictogram, type PictogramName } from '@/components/ui/pictograms';
 import { useToast } from '@/components/ui/toast';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 
-type Slide = { emoji: string; bg: string; title: string; description: string };
+type Slide = { icon: PictogramName; bg: string; title: string; description: string };
 
 const SLIDES: Slide[] = [
   {
-    emoji: '🌱',
+    icon: 'sprout',
     bg: '#F1E7D6',
     title: '루게더에 오신 걸 환영해요',
     description:
       '매일의 작은 루틴이 모여 나만의 마을을 만들어가요.\n캐릭터 친구와 함께 시작해볼까요?',
   },
   {
-    emoji: '✅',
+    icon: 'checklist',
     bg: '#E4F0DC',
     title: '오늘의 루틴을 완료해요',
     description: '기상, 독서, 운동 같은 루틴을 만들고\n매일 체크하며 보상을 받아보세요.',
   },
   {
-    emoji: '🏠',
+    icon: 'house',
     bg: '#F5D8C8',
     title: '방을 꾸미고 캐릭터를 키워요',
     description: '루틴을 완료할수록 캐릭터가 성장하고\n보상으로 방을 더 따뜻하게 채워가요.',
   },
   {
-    emoji: '👫',
+    icon: 'friends',
     bg: '#D8E4F0',
     title: '친구들과 함께 집을 만들어요',
     description: '친구의 방을 구경하고 그룹 미션을 함께\n성공하며 마을을 더 생기있게 만들어보세요.',
@@ -220,7 +221,7 @@ export function OnboardingScreen({
 
       <View style={styles.slideBody} {...slidePan.panHandlers}>
         <View style={[styles.slideCircle, { backgroundColor: slide.bg }]}>
-          <Text style={styles.slideEmoji}>{slide.emoji}</Text>
+          <Pictogram name={slide.icon} size={96} />
         </View>
         <Text style={[Typography.h2, styles.center, { color: t.text }]}>{slide.title}</Text>
         <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
@@ -392,9 +393,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.four,
-  },
-  slideEmoji: {
-    fontSize: 88,
   },
   dots: {
     flexDirection: 'row',

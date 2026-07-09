@@ -18,6 +18,7 @@ import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/con
 import { type Routine } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
 import { PendingNotice } from '@/components/ui/pending-notice';
+import { Pictogram, type PictogramName } from '@/components/ui/pictograms';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { type FurnitureItem, type Wallpaper } from '@/resources/furniture';
 import { useToast } from '@/components/ui/toast';
@@ -28,10 +29,10 @@ import { formatTime } from '@/utils/datetime';
 /** Cheer reactions a visitor can leave on a friend's room. */
 export type CheerType = 'great' | 'support' | 'best';
 
-const CHEERS: { type: CheerType; emoji: string; label: string }[] = [
-  { type: 'great', emoji: '👍', label: '잘하고 있어!' },
-  { type: 'support', emoji: '💛', label: '응원하기' },
-  { type: 'best', emoji: '✨', label: '오늘도 최고!' },
+const CHEERS: { type: CheerType; icon: PictogramName; label: string }[] = [
+  { type: 'great', icon: 'thumb-up', label: '잘하고 있어!' },
+  { type: 'support', icon: 'heart', label: '응원하기' },
+  { type: 'best', icon: 'sparkle', label: '오늘도 최고!' },
 ];
 
 const DEFAULT_ROUTINES: Routine[] = [
@@ -310,8 +311,14 @@ export function FriendRoomScreen({
                     styles.cheerBtn,
                     { backgroundColor: idx === 0 ? t.primary : t.surfaceMuted },
                   ]}>
+                  {/* On the filled first button the mark follows the text ink. */}
+                  <Pictogram
+                    name={cheer.icon}
+                    size={16}
+                    color={idx === 0 ? t.onPrimary : undefined}
+                  />
                   <Text style={[Typography.label, { color: idx === 0 ? t.onPrimary : t.text }]}>
-                    {cheer.emoji} {cheer.label}
+                    {cheer.label}
                   </Text>
                 </Pressable>
               ))}
@@ -520,6 +527,9 @@ const styles = StyleSheet.create({
     marginTop: Spacing.two,
   },
   cheerBtn: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: Spacing.two,
     borderRadius: Radius.pill,
     paddingVertical: Spacing.three,
     alignItems: 'center',
