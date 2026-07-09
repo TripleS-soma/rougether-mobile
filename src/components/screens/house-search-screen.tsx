@@ -25,7 +25,10 @@ export type SearchHouse = {
   emoji: string;
   bg: string;
   border: string;
-  description: string;
+  /** House growth level (meta line, "Lv.N"). */
+  level?: number;
+  /** Optional intro line — the server summary has none today (demo data only). */
+  description?: string;
 };
 
 /** Pre-join preview of the house behind an invite code (GET /houses/by-code). */
@@ -249,21 +252,27 @@ export function HouseSearchScreen({
                     <Text style={styles.houseEmojiText}>{h.emoji}</Text>
                   </View>
                   <View style={styles.flex}>
-                    <View style={styles.houseTitleRow}>
-                      <Text style={[Typography.label, { color: t.text }]} numberOfLines={1}>
-                        {h.name}
+                    {/* The name owns its row — a same-row tag chip squeezed it
+                        into truncating even short names (#234). */}
+                    <Text style={[Typography.label, { color: t.text }]} numberOfLines={1}>
+                      {h.name}
+                    </Text>
+                    {h.description ? (
+                      <Text
+                        style={[Typography.supporting, { color: t.textMuted }]}
+                        numberOfLines={1}>
+                        {h.description}
                       </Text>
+                    ) : null}
+                    <View style={styles.houseMetaRow}>
                       <View style={[styles.tag, { backgroundColor: h.bg }]}>
                         <Text style={[styles.tagText, { color: t.onTint }]}>#{h.tag}</Text>
                       </View>
+                      <Text style={[styles.meta, { color: t.textMuted }]} numberOfLines={1}>
+                        {h.level != null ? `Lv.${h.level} · ` : ''}👥 {h.members} / {h.capacity}
+                        {full ? <Text style={{ color: t.danger }}> · 만석</Text> : null}
+                      </Text>
                     </View>
-                    <Text style={[Typography.supporting, { color: t.textMuted }]} numberOfLines={1}>
-                      {h.description}
-                    </Text>
-                    <Text style={[styles.meta, { color: t.textMuted }]}>
-                      👥 {h.members} / {h.capacity}
-                      {full ? <Text style={{ color: t.danger }}> · 만석</Text> : null}
-                    </Text>
                   </View>
                   <Pressable
                     onPress={() =>
@@ -381,14 +390,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   houseEmojiText: { fontSize: 24 },
-  houseTitleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  houseMetaRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one, marginTop: 2 },
   tag: {
     paddingHorizontal: Spacing.one,
     paddingVertical: 1,
     borderRadius: Radius.pill,
   },
   tagText: { fontSize: 10, fontWeight: '700' },
-  meta: { fontSize: 11, marginTop: 2 },
+  meta: { fontSize: 11, flexShrink: 1 },
   joinBtn: {
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,

@@ -119,4 +119,31 @@ describe('HouseSearchScreen', () => {
     expect(queryByText('개발자 루틴')).toBeTruthy();
     expect(queryByText('아침형 인간 모임')).toBeNull();
   });
+
+  it('shows the level on the meta line and skips the missing description (#234)', async () => {
+    // API houses carry a level and no intro text — the old boilerplate
+    // description only ever truncated.
+    const houses = [
+      {
+        id: '9',
+        name: '연동 검증 하우스',
+        members: 1,
+        capacity: 4,
+        tag: '건강/운동',
+        emoji: '🌱',
+        bg: '#EEF5E7',
+        border: '#CFE0C3',
+        level: 2,
+      },
+    ];
+    const { getByText, queryByText } = await render(<HouseSearchScreen houses={houses} />);
+
+    expect(getByText('연동 검증 하우스')).toBeTruthy();
+    expect(getByText(/Lv\.2 · 👥 1 \/ 4/)).toBeTruthy();
+    expect(queryByText(/함께 루틴을 키워요/)).toBeNull();
+
+    // Demo fixtures still carry a real description — it renders as its own line.
+    const withDesc = await render(<HouseSearchScreen houses={RECOMMENDED_HOUSES.slice(0, 1)} />);
+    expect(withDesc.getByText('오전 7시 전 기상 인증을 함께 해요')).toBeTruthy();
+  });
 });
