@@ -292,3 +292,24 @@ describe('RoomDecorScreen — 전체보기', () => {
     expect(onApply).toHaveBeenCalledWith([], 'simple', null, null);
   });
 });
+
+describe('RoomDecorScreen — 보유중 필터', () => {
+  it('hides the shop side of the picker with the 보유중 toggle', async () => {
+    const { getByText, getByLabelText, queryByText, queryByLabelText } = await render(
+      <RoomDecorScreen initialPlacedIds={[]} ownedIds={['bed']} diaBalance={9999} />,
+    );
+
+    await fireEvent.press(getByLabelText('전체보기'));
+    // Both sides show by default: owned bed and buyable plant.
+    expect(getByText('포근한 침대')).toBeTruthy();
+    expect(getByLabelText('초록 식물 구매')).toBeTruthy();
+
+    await fireEvent.press(getByLabelText('보유중만 보기'));
+    expect(getByText('포근한 침대')).toBeTruthy();
+    expect(queryByText('초록 식물')).toBeNull();
+
+    // Toggling back restores the shop side.
+    await fireEvent.press(getByLabelText('보유중만 보기'));
+    expect(queryByLabelText('초록 식물 구매')).toBeTruthy();
+  });
+});

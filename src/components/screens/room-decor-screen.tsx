@@ -13,6 +13,7 @@ import {
 
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { Room, type RoomRegion } from '@/components/room/room';
+import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Icon } from '@/components/ui/icon';
 import { WalletPills } from '@/components/ui/wallet-pills';
@@ -187,9 +188,13 @@ export function RoomDecorScreen({
     setPlaced((prev) => prev.filter((p) => furniture.find((i) => i.id === p)?.slot !== slot));
 
   // What the open picker offers, owned first so placing needs no digging.
+  // 보유중 filter hides the shop side of every picker (slot/surface/전체보기).
+  const [ownedOnly, setOwnedOnly] = useState(false);
   const isSurfacePicker = picker === 'wallpaper' || picker === 'floor' || picker === 'background';
   const byOwnedFirst = <T extends { id: string }>(arr: T[]) =>
-    [...arr].sort((a, b) => Number(owned.has(b.id)) - Number(owned.has(a.id)));
+    (ownedOnly ? arr.filter((i) => owned.has(i.id)) : [...arr]).sort(
+      (a, b) => Number(owned.has(b.id)) - Number(owned.has(a.id)),
+    );
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
@@ -313,6 +318,15 @@ export function RoomDecorScreen({
                 style={[styles.closeBtn, { backgroundColor: t.surfaceMuted }]}>
                 <Icon name="close" size={14} color={t.text} />
               </Pressable>
+            </View>
+
+            <View style={styles.filterRow}>
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>보유중만 보기</Text>
+              <ToggleSwitch
+                value={ownedOnly}
+                onToggle={() => setOwnedOnly((v) => !v)}
+                accessibilityLabel="보유중만 보기"
+              />
             </View>
 
             {picker === 'wallpaper' ? (
@@ -745,6 +759,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingTop: Spacing.four,
     paddingBottom: Spacing.two,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: Spacing.two,
   },
   allBtn: {
     marginTop: Spacing.one,
