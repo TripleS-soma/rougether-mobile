@@ -8,6 +8,7 @@ import { GroupHouseScreen, type VisitedFriend } from '@/components/screens/group
 import { HelpScreen } from '@/components/screens/help-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
+import { NotificationListScreen } from '@/components/screens/notification-list-screen';
 import {
   DEFAULT_NOTIFICATION_SETTINGS,
   type NotificationSettings,
@@ -33,6 +34,7 @@ import { useFriendRoom } from '@/hooks/use-friend-room';
 import { useGuestbook } from '@/hooks/use-guestbook';
 import { useHouses } from '@/hooks/use-houses';
 import { useMyRoomData } from '@/hooks/use-my-room-data';
+import { useNotifications } from '@/hooks/use-notifications';
 import { useShop } from '@/hooks/use-shop';
 import { useBrandTheme } from '@/hooks/use-tokens';
 import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
@@ -50,6 +52,7 @@ type Screen =
   | 'settings'
   | 'profileEdit'
   | 'passwordChange'
+  | 'notificationList'
   | 'notifications'
   | 'sound'
   | 'help';
@@ -68,6 +71,7 @@ const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   settings: 'settings',
   profileEdit: null,
   passwordChange: null,
+  notificationList: null,
   notifications: null,
   sound: null,
   help: null,
@@ -97,6 +101,7 @@ const BACK_SCREEN: Record<Screen, Screen | null> = {
   settings: 'myRoom',
   profileEdit: 'settings',
   passwordChange: 'settings',
+  notificationList: 'myRoom',
   notifications: 'settings',
   sound: 'settings',
   help: 'settings',
@@ -159,6 +164,22 @@ export function AppShell({
   const { gachas, loading: gachasLoading, draw: drawGachaMachine } = useGacha(setWallet);
 
   const { logout } = useAuth();
+
+  // 알림 (list + read receipts); loaded on mount so the header bell can show
+  // the unread dot, refreshed each time the list opens.
+  const {
+    entries: notificationEntries,
+    unreadCount,
+    loading: notificationsLoading,
+    hasNext: notificationsHasNext,
+    load: loadNotifications,
+    loadMore: loadMoreNotifications,
+    markRead: markNotificationRead,
+    markAllRead: markAllNotificationsRead,
+  } = useNotifications();
+  useEffect(() => {
+    void loadNotifications();
+  }, [loadNotifications]);
 
   // Group houses (내 집 목록 + 탐색 + 참여/생성/강퇴/나가기) from the API.
   const {
@@ -293,6 +314,11 @@ export function AppShell({
             onToggleCompletion={toggleCompletion}
             onEdit={() => setScreen('decor')}
             onAddRoutine={() => setScreen('routineManage')}
+            onOpenNotifications={() => {
+              void loadNotifications();
+              setScreen('notificationList');
+            }}
+            unreadNotificationCount={unreadCount}
             onCreateCategory={createRoutineCategory}
             onUpdateCategory={updateRoutineCategory}
             onDeleteCategory={deleteRoutineCategory}
@@ -520,6 +546,24 @@ export function AppShell({
               setScreen('settings');
             }}
             onBack={() => setScreen('settings')}
+          />
+        ) : null}
+
+        {screen === 'notificationList' ? (
+          <NotificationListScreen
+            notifications={notificationEntries}
+            loading={notificationsLoading}
+            hasNext={notificationsHasNext}
+            onBack={() => setScreen('myRoom')}
+            onRead={(id) => {
+              void markNotificationRead(id);
+            }}
+            onReadAll={() => {
+              void markAllNotificationsRead();
+            }}
+            onLoadMore={() => {
+              void loadMoreNotifications();
+            }}
           />
         ) : null}
 

@@ -8,7 +8,15 @@
  */
 export { API_BASE } from './config';
 export { ApiError } from './http';
-export { apiDelete, apiGet, apiGetList, apiPost, apiPut, type RequestOptions } from './client';
+export {
+  apiDelete,
+  apiGet,
+  apiGetList,
+  apiPatch,
+  apiPost,
+  apiPut,
+  type RequestOptions,
+} from './client';
 
 export {
   clearSession,
@@ -26,6 +34,7 @@ export * from './houses';
 export * from './masters';
 export * from './onboarding';
 export * from './me';
+export * from './notifications';
 export * from './rooms';
 export * from './routines';
 export * from './shop';
