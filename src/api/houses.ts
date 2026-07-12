@@ -8,6 +8,7 @@ import type {
   HouseJoinResponse,
   HouseListResponse,
   HouseMemberDayResponse,
+  HouseMemberRoutineCompletionListResponse,
   HouseMissionClaimResponse,
   HouseMissionContributeResponse,
   HouseMissionCreateRequest,
@@ -98,6 +99,24 @@ export function fetchHouseMemberRoom(houseId: number, membershipId: number) {
 export function fetchHouseMemberDay(houseId: number, membershipId: number, date?: string) {
   return apiGet<HouseMemberDayResponse>(
     `/houses/${houseId}/members/${membershipId}/day${buildQuery({ date })}`,
+  );
+}
+
+/**
+ * GET /houses/{id}/members/{membershipId}/routine-completions — that member's
+ * completion history (HOUSE/PUBLIC categories only; default last 14 days,
+ * max 92; date desc). The applied period comes back as response from/to.
+ */
+export function fetchHouseMemberRoutineCompletions(
+  houseId: number,
+  membershipId: number,
+  range?: { from?: string; to?: string },
+) {
+  return apiGet<HouseMemberRoutineCompletionListResponse>(
+    `/houses/${houseId}/members/${membershipId}/routine-completions${buildQuery({
+      from: range?.from,
+      to: range?.to,
+    })}`,
   );
 }
 

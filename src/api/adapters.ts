@@ -25,7 +25,7 @@ import { type OnboardingGoal } from '@/components/screens/onboarding-screen';
 import { type RoomSlotSave } from './rooms';
 
 import type { Floor, House, HouseMission, RoomCell } from '@/components/screens/group-house-screen';
-import type { GuestbookEntry } from '@/components/screens/friend-room-screen';
+import type { FriendActivityDay, GuestbookEntry } from '@/components/screens/friend-room-screen';
 import { isPictogramName, type PictogramName } from '@/components/ui/pictograms';
 import type { HousePreview, SearchHouse } from '@/components/screens/house-search-screen';
 import type { CalendarDayItem } from '@/components/screens/my-room-screen';
@@ -42,6 +42,7 @@ import type {
   GoalItem,
   HouseDetailResponse,
   HouseMemberDayResponse,
+  HouseMemberRoutineCompletionListResponse,
   HousePreviewResponse,
   HouseSummary,
   ItemResponse,
@@ -718,6 +719,29 @@ export function toFriendRoutines(day: HouseMemberDayResponse): Routine[] {
     completed: t.status === 'COMPLETED',
   }));
   return [...routines, ...todos];
+}
+
+/**
+ * Completion history (GET …/routine-completions) → per-day rows for the
+ * friend-room 최근 활동 list. The server already sorts date desc; rows keep
+ * that order, each with a "M월 D일" label and the day's completed titles.
+ */
+export function toFriendActivity(
+  resp: HouseMemberRoutineCompletionListResponse,
+): FriendActivityDay[] {
+  const days: FriendActivityDay[] = [];
+  for (const c of resp.items ?? []) {
+    const date = c.routineDate ?? '';
+    if (!date) continue;
+    let day = days[days.length - 1];
+    if (!day || day.date !== date) {
+      const [, m, d] = date.split('-').map(Number);
+      day = { date, label: `${m}월 ${d}일`, titles: [] };
+      days.push(day);
+    }
+    day.titles.push(c.title ?? '루틴');
+  }
+  return days;
 }
 
 /**

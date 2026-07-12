@@ -22,6 +22,26 @@ describe('FriendRoomScreen', () => {
     expect(title.props.numberOfLines).toBe(1);
   });
 
+  it('renders the recent-activity history when wired', async () => {
+    const recentActivity = [
+      { date: '2026-07-08', label: '7월 8일', titles: ['아침 기상'] },
+      { date: '2026-07-07', label: '7월 7일', titles: ['아침 기상', '독서 30분'] },
+    ];
+    const { getByText } = await render(<FriendRoomScreen recentActivity={recentActivity} />);
+    expect(getByText('최근 활동')).toBeTruthy();
+    expect(getByText('7월 8일')).toBeTruthy();
+    expect(getByText('2개 완료')).toBeTruthy();
+    expect(getByText('아침 기상 · 독서 30분')).toBeTruthy();
+  });
+
+  it('shows an empty-state line for an empty history and hides the section when unwired', async () => {
+    const empty = await render(<FriendRoomScreen recentActivity={[]} />);
+    expect(empty.getByText('최근 2주간 완료한 공개 루틴이 없어요.')).toBeTruthy();
+
+    const unwired = await render(<FriendRoomScreen />);
+    expect(unwired.queryByText('최근 활동')).toBeNull();
+  });
+
   it('fires onCheer with the chosen reaction', async () => {
     const onCheer = jest.fn();
     const { getByText } = await render(<FriendRoomScreen onCheer={onCheer} />);

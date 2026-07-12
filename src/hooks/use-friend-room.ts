@@ -6,13 +6,19 @@
  */
 import { useRef, useState } from 'react';
 
-import { fetchHouseMemberDay, fetchHouseMemberRoom } from '@/api';
+import {
+  fetchHouseMemberDay,
+  fetchHouseMemberRoom,
+  fetchHouseMemberRoutineCompletions,
+} from '@/api';
 import {
   characterIdFromCode,
   fromFriendRoomSlots,
   type ShopCatalogue,
+  toFriendActivity,
   toFriendRoutines,
 } from '@/api/adapters';
+import type { FriendActivityDay } from '@/components/screens/friend-room-screen';
 import type { CharacterId } from '@/constants/characters';
 import type { Routine } from '@/constants/routines';
 import type { RoomPlacement } from '@/hooks/use-shop';
@@ -24,6 +30,8 @@ export type FriendRoom = {
   characterId?: CharacterId;
   streakDays: number;
   routines: Routine[];
+  /** Recent completion history (14 days); undefined while unloaded/failed. */
+  recentActivity?: FriendActivityDay[];
   loading: boolean;
 };
 
@@ -42,10 +50,11 @@ export function useFriendRoom() {
       return;
     }
     setFriendRoom({ ...EMPTY, loading: true });
-    // Each endpoint fails soft so one outage doesn't blank the other's data.
-    const [room, day] = await Promise.all([
+    // Each endpoint fails soft so one outage doesn't blank the others' data.
+    const [room, day, completions] = await Promise.all([
       fetchHouseMemberRoom(houseId, membershipId).catch(() => null),
       fetchHouseMemberDay(houseId, membershipId).catch(() => null),
+      fetchHouseMemberRoutineCompletions(houseId, membershipId).catch(() => null),
     ]);
     if (seq !== seqRef.current) return;
     const resolved = room && catalogue ? fromFriendRoomSlots(room.slots ?? [], catalogue) : null;
@@ -56,6 +65,8 @@ export function useFriendRoom() {
       characterId: characterIdFromCode(room?.character?.code),
       streakDays: room?.streak?.currentCount ?? 0,
       routines: day ? toFriendRoutines(day) : [],
+      // undefined on failure hides the section instead of faking an empty history.
+      recentActivity: completions ? toFriendActivity(completions) : undefined,
       loading: false,
     });
   };

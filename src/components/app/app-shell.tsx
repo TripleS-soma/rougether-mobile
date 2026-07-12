@@ -459,6 +459,7 @@ export function AppShell({
             characterId={friendRoom.characterId}
             streakDays={friendRoom.streakDays}
             routines={friendRoom.routines}
+            recentActivity={friendRoom.recentActivity}
             loading={friendRoom.loading}
             onBack={() => setScreen('groupHouse')}
           />
