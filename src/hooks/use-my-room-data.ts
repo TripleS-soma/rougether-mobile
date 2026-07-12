@@ -4,7 +4,8 @@
  * shapes the screens already use — so the app shell wires straight through.
  *
  * The 달력 tab reads non-today dates from GET /calendar (loadCalendarDay);
- * completion toggles are server-accepted for today only.
+ * completion toggles are server-accepted for today and past dates (past
+ * routine completions pay 0 coins); future dates are rejected.
  */
 import { useCallback, useEffect, useState } from 'react';
 
@@ -202,18 +203,22 @@ export function useMyRoomData() {
   };
 
   /**
-   * 달력 (non-today) completion toggle. Todos only — their completion is a
-   * status flip, not a dated log, so past ones work; the server rejects
-   * non-today routine logs (INVALID_ROUTINE_DATE). The screen pre-filters,
-   * this guard is a backstop. Refetches the day so the list mirrors the server.
+   * 달력 (non-today) completion toggle. Todos flip status (date-agnostic);
+   * routines log against the picked date — the server accepts past dates
+   * (reward 0 for non-today, #183) and rejects future ones (screen blocks
+   * those first). Refetches the day so the list mirrors the server.
    */
   const toggleCalendarItem = async (item: CalendarDayItem, date: string) => {
-    if (item.kind !== 'todo') return;
     try {
       const numId = toServerItemId(item.id);
       let rewardAmount: number | undefined;
-      if (item.completed) await uncompleteTodo(numId);
-      else rewardAmount = (await completeTodo(numId)).rewardAmount;
+      if (item.kind === 'todo') {
+        if (item.completed) await uncompleteTodo(numId);
+        else rewardAmount = (await completeTodo(numId)).rewardAmount;
+      } else {
+        if (item.completed) await uncompleteRoutine(numId, date);
+        else rewardAmount = (await completeRoutine(numId, date)).rewardAmount;
+      }
       if (rewardAmount) toast(`+${rewardAmount} 코인 획득!`, 'success');
       await Promise.all([loadCalendarDay(date), refreshWallet()]);
     } catch {

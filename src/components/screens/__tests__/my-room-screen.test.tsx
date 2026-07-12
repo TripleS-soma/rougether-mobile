@@ -200,7 +200,7 @@ describe('MyRoomScreen', () => {
     expect(getByText('0 / 2')).toBeTruthy();
   });
 
-  it('renders the server list for non-today dates and blocks past routine toggles', async () => {
+  it('renders the server list for non-today dates and toggles past routines', async () => {
     const onSelectDate = jest.fn();
     const onToggleCalendarItem = jest.fn();
     const calendarDays = {
@@ -221,19 +221,23 @@ describe('MyRoomScreen', () => {
         />
       </ToastProvider>,
     );
-    const { getByText, queryByText } = ui;
+    const { getByText } = ui;
 
     await pickCalendarDate(ui, YESTERDAY);
     expect(onSelectDate).toHaveBeenCalledWith(YESTERDAY);
     expect(getByText('옛 카테고리 루틴')).toBeTruthy();
     // Grouped under the record-time (deleted) category, like the room tab.
     expect(getByText('옛것')).toBeTruthy();
-    expect(getByText('지난 날짜는 할 일만 완료 체크할 수 있어요.')).toBeTruthy();
+    expect(
+      getByText('지난 날짜도 완료 체크할 수 있어요. (코인은 당일 완료에만 지급돼요)'),
+    ).toBeTruthy();
 
-    // Past routines don't toggle — the server accepts today-only logs.
+    // Past routines toggle for real — the server accepts past-date logs (#183).
     await fireEvent.press(ui.getByLabelText('옛 카테고리 루틴'));
-    expect(onToggleCalendarItem).not.toHaveBeenCalled();
-    expect(queryByText('지난 루틴 완료는 서버 준비 중이에요')).toBeTruthy();
+    expect(onToggleCalendarItem).toHaveBeenCalledWith(
+      expect.objectContaining({ id: '1', kind: 'routine' }),
+      YESTERDAY,
+    );
   });
 
   it('toggles a past todo in the 달력 tab', async () => {

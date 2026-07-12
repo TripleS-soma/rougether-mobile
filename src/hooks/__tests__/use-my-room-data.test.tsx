@@ -62,6 +62,68 @@ describe('useMyRoomData — completion routing on id collision', () => {
   });
 });
 
+describe('useMyRoomData — 달력 past-date routine completion (#183)', () => {
+  it('logs a past routine against the picked date and refetches the day', async () => {
+    const calls: { url: string; method: string; body?: string }[] = [];
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+      calls.push({ url, method, body: init?.body as string | undefined });
+      if (method === 'POST' && url.endsWith('/routines/7/logs')) {
+        return res({ routineId: 7, routineDate: '2026-07-10', rewardAmount: 0 });
+      }
+      if (url.endsWith('/today')) return res({ categories: [], summary: {}, streak: {} });
+      if (url.endsWith('/me')) return res({ userId: 1, nickname: '테스터' });
+      if (url.includes('/calendar')) return res({ categories: [], summary: {} });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useMyRoomData());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await result.current.toggleCalendarItem(
+      { id: '7', kind: 'routine', title: '지난 루틴', completed: false, category: '' },
+      '2026-07-10',
+    );
+
+    // The dated routine-log endpoint is hit with the picked (past) date…
+    const post = calls.find((c) => c.method === 'POST' && c.url.endsWith('/routines/7/logs'));
+    expect(JSON.parse(post?.body ?? '{}').routineDate).toBe('2026-07-10');
+    // …and the day is refetched so the list mirrors the server.
+    expect(calls.some((c) => c.url.includes('/calendar') && c.url.includes('2026-07-10'))).toBe(
+      true,
+    );
+  });
+
+  it('deletes a past routine log on uncheck', async () => {
+    const calls: { url: string; method: string }[] = [];
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+      calls.push({ url, method });
+      if (url.endsWith('/today')) return res({ categories: [], summary: {}, streak: {} });
+      if (url.endsWith('/me')) return res({ userId: 1, nickname: '테스터' });
+      if (url.includes('/calendar')) return res({ categories: [], summary: {} });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useMyRoomData());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await result.current.toggleCalendarItem(
+      { id: '7', kind: 'routine', title: '지난 루틴', completed: true, category: '' },
+      '2026-07-10',
+    );
+
+    expect(
+      calls.some(
+        (c) =>
+          c.method === 'DELETE' &&
+          c.url.includes('/routines/7/logs') &&
+          c.url.includes('2026-07-10'),
+      ),
+    ).toBe(true);
+  });
+});
+
 describe('useMyRoomData — uncategorized adoption', () => {
   it('creates a 기타 category and reassigns orphan routines on load', async () => {
     const calls: { url: string; method: string; body?: string }[] = [];
