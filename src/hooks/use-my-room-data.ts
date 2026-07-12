@@ -66,8 +66,9 @@ export function useMyRoomData() {
   // 달력 tab data per date (server GET /calendar), refreshed on each pick.
   const [calendarDays, setCalendarDays] = useState<Record<string, CalendarDayItem[]>>({});
   const [wallet, setWallet] = useState<Wallet>(DEFAULT_WALLET);
-  // Identity + streak, surfaced in the my-room header.
+  // Identity + streak, surfaced in the my-room header / profile edit.
   const [nickname, setNickname] = useState<string | null>(null);
+  const [bio, setBio] = useState<string | null>(null);
   const [streak, setStreak] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -126,6 +127,7 @@ export function useMyRoomData() {
     setWallet(toWallet(wals));
     setStreak(today.streak?.currentCount ?? 0);
     if (me.nickname) setNickname(me.nickname);
+    if (me.bio != null) setBio(me.bio);
   }, []);
 
   // Initial load + retry share the same load cycle (spinner → data | error).
@@ -328,15 +330,18 @@ export function useMyRoomData() {
     }
   };
 
-  const saveNickname = async (nick: string): Promise<boolean> => {
-    const before = nickname;
+  /** Persist the profile (PUT /me) — nickname + bio together, optimistic. */
+  const saveProfile = async (nick: string, newBio: string): Promise<boolean> => {
+    const before = { nickname, bio };
     setNickname(nick);
+    setBio(newBio);
     try {
-      await updateMe({ nickname: nick });
+      await updateMe({ nickname: nick, bio: newBio });
       toast('프로필이 저장되었어요', 'success');
       return true;
     } catch {
-      setNickname(before);
+      setNickname(before.nickname);
+      setBio(before.bio);
       toast('프로필 저장에 실패했어요', 'error');
       return false;
     }
@@ -418,6 +423,7 @@ export function useMyRoomData() {
     wallet,
     setWallet,
     nickname,
+    bio,
     streak,
     loading,
     error,
@@ -425,7 +431,7 @@ export function useMyRoomData() {
     retry: load,
     toggleCompletion,
     toggleCalendarItem,
-    saveNickname,
+    saveProfile,
     quickAddTodo,
     addRoutine,
     updateRoutine,
