@@ -135,7 +135,7 @@ export function LoginScreen({ onAuthSuccess, onGoSignup, onLogin }: LoginScreenP
                 <Text style={[styles.smallText, { color: t.textMuted }]}>로그인 유지</Text>
               </Pressable>
               <Pressable accessibilityRole="button" onPress={notReady}>
-                <Text style={[styles.smallLink, { color: t.primary }]}>비밀번호 찾기</Text>
+                <Text style={[styles.smallLink, { color: t.primaryText }]}>비밀번호 찾기</Text>
               </Pressable>
             </View>
           </View>
@@ -197,7 +197,7 @@ export function LoginScreen({ onAuthSuccess, onGoSignup, onLogin }: LoginScreenP
           <View style={styles.footer}>
             <Text style={[styles.smallText, { color: t.textMuted }]}>아직 회원이 아니신가요? </Text>
             <Pressable onPress={onGoSignup} accessibilityRole="button">
-              <Text style={[styles.smallLink, { color: t.primary }]}>회원가입</Text>
+              <Text style={[styles.smallLink, { color: t.primaryText }]}>회원가입</Text>
             </Pressable>
           </View>
         </ScrollView>

@@ -365,7 +365,9 @@ export function GroupHouseScreen({
       <View style={[styles.screen, screenStyle]}>
         <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
           <View style={styles.flex}>
-            <Text style={[Typography.supporting, { color: t.primary }]}>{currentHouse.title}</Text>
+            <Text style={[Typography.supporting, { color: t.primaryText }]}>
+              {currentHouse.title}
+            </Text>
             <Text style={[Typography.h3, { color: t.text }]}>구성원 관리</Text>
           </View>
           <Pressable
@@ -388,7 +390,7 @@ export function GroupHouseScreen({
                     accessibilityRole="button"
                     accessibilityLabel="초대코드 재발급"
                     style={[styles.reissueBtn, { backgroundColor: t.surfaceMuted }]}>
-                    <Text style={[Typography.supporting, { color: t.primary }]}>재발급</Text>
+                    <Text style={[Typography.supporting, { color: t.primaryText }]}>재발급</Text>
                   </Pressable>
                 ) : null}
               </View>
@@ -419,7 +421,7 @@ export function GroupHouseScreen({
                 accessibilityLabel="집 정보 수정"
                 style={[styles.editHouseBtn, { backgroundColor: t.surfaceMuted }]}>
                 <PencilPictogram size={14} />
-                <Text style={[Typography.label, { color: t.primary }]}>집 정보 수정</Text>
+                <Text style={[Typography.label, { color: t.primaryText }]}>집 정보 수정</Text>
               </Pressable>
             </View>
           ) : null}
@@ -448,7 +450,9 @@ export function GroupHouseScreen({
                       {member.isOwner ? (
                         <View style={[styles.ownerBadge, { backgroundColor: `${t.primary}22` }]}>
                           <CrownPictogram size={10} />
-                          <Text style={[styles.ownerBadgeText, { color: t.primary }]}>방장</Text>
+                          <Text style={[styles.ownerBadgeText, { color: t.primaryText }]}>
+                            방장
+                          </Text>
                         </View>
                       ) : null}
                       {member.isMine ? (
@@ -472,7 +476,7 @@ export function GroupHouseScreen({
                       accessibilityRole="button"
                       accessibilityLabel={`${member.name} 방장 위임`}
                       style={[styles.kickBtn, { backgroundColor: `${t.primary}22` }]}>
-                      <Text style={[Typography.supporting, { color: t.primary }]}>위임</Text>
+                      <Text style={[Typography.supporting, { color: t.primaryText }]}>위임</Text>
                     </Pressable>
                   ) : null}
                   {canKick ? (
@@ -874,7 +878,7 @@ export function GroupHouseScreen({
                 accessibilityRole="button"
                 accessibilityLabel="미션 만들기"
                 style={[styles.missionAddBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.supporting, { color: t.primary }]}>＋ 만들기</Text>
+                <Text style={[Typography.supporting, { color: t.primaryText }]}>＋ 만들기</Text>
               </Pressable>
             ) : null}
           </View>
@@ -899,7 +903,7 @@ export function GroupHouseScreen({
                           numberOfLines={1}>
                           {mission.title}
                         </Text>
-                        <Text style={[Typography.supporting, { color: t.primary }]}>
+                        <Text style={[Typography.supporting, { color: t.primaryText }]}>
                           {mission.current}/{mission.target}
                         </Text>
                       </View>

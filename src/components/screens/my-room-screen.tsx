@@ -35,6 +35,7 @@ import { captureVerificationPhoto } from '@/lib/photo-verify';
 import { DEFAULT_WALLPAPER_ID, type FurnitureItem, type Wallpaper } from '@/resources/furniture';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
+import { readableTextColor } from '@/utils/color';
 import { formatDate, formatTime, todayIso } from '@/utils/datetime';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
 
@@ -470,8 +471,10 @@ export function MyRoomScreen({
                 once a streak exists. */}
             {streakDays > 0 ? (
               <View style={styles.streak}>
-                <Icon name="flame" size={14} color={t.warning} />
-                <Text style={[Typography.supporting, { color: t.warning }]}>{streakDays}일</Text>
+                <Icon name="flame" size={14} color={t.warningText} />
+                <Text style={[Typography.supporting, { color: t.warningText }]}>
+                  {streakDays}일
+                </Text>
               </View>
             ) : null}
           </View>
@@ -504,7 +507,7 @@ export function MyRoomScreen({
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
               style={[styles.tab, active && { borderBottomColor: t.primary }]}>
-              <Text style={[Typography.label, { color: active ? t.primary : t.textMuted }]}>
+              <Text style={[Typography.label, { color: active ? t.primaryText : t.textMuted }]}>
                 {label}
               </Text>
             </Pressable>
@@ -555,7 +558,7 @@ export function MyRoomScreen({
                   <Text style={[Typography.h2, { color: t.text }]}>오늘의 루틴</Text>
                   <View style={styles.sectionHeadRight}>
                     {roomRoutines.length > 0 ? (
-                      <Text style={[Typography.label, { color: t.primary }]}>
+                      <Text style={[Typography.label, { color: t.primaryText }]}>
                         {completedCount} / {roomRoutines.length}
                       </Text>
                     ) : null}
@@ -639,7 +642,11 @@ export function MyRoomScreen({
                             <View style={[styles.catDot, { backgroundColor: `${cat.color}33` }]}>
                               <Pictogram name={cat.icon} size={14} />
                             </View>
-                            <Text style={[Typography.label, { color: cat.color }]}>
+                            <Text
+                              style={[
+                                Typography.label,
+                                { color: readableTextColor(cat.color, t.surfaceMuted) },
+                              ]}>
                               {cat.label}
                             </Text>
                             {items.length > 0 ? (
@@ -808,7 +815,11 @@ export function MyRoomScreen({
                         <View style={[styles.catDot, { backgroundColor: `${group.meta.color}33` }]}>
                           <Pictogram name={group.meta.icon} size={14} />
                         </View>
-                        <Text style={[Typography.label, { color: group.meta.color }]}>
+                        <Text
+                          style={[
+                            Typography.label,
+                            { color: readableTextColor(group.meta.color, t.surfaceMuted) },
+                          ]}>
                           {group.meta.label}
                         </Text>
                         <Text style={[Typography.supporting, { color: t.textDisabled }]}>
@@ -865,7 +876,11 @@ export function MyRoomScreen({
                       <View style={[styles.catDot, { backgroundColor: `${group.meta.color}33` }]}>
                         <Pictogram name={group.meta.icon} size={14} />
                       </View>
-                      <Text style={[Typography.label, { color: group.meta.color }]}>
+                      <Text
+                        style={[
+                          Typography.label,
+                          { color: readableTextColor(group.meta.color, t.surfaceMuted) },
+                        ]}>
                         {group.meta.label}
                       </Text>
                       <Text style={[Typography.supporting, { color: t.textDisabled }]}>

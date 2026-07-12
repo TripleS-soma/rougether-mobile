@@ -206,8 +206,8 @@ export function AddRoutineScreen({
               accessibilityLabel="카테고리 관리"
               hitSlop={8}
               style={styles.manageBtn}>
-              <Icon name="add" size={16} color={t.primary} />
-              <Text style={[Typography.label, { color: t.primary }]}>관리</Text>
+              <Icon name="add" size={16} color={t.primaryText} />
+              <Text style={[Typography.label, { color: t.primaryText }]}>관리</Text>
             </Pressable>
           </View>
           <ScrollView

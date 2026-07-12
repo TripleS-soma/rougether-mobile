@@ -98,6 +98,12 @@ export type SemanticColors = {
   /** Text/icon on top of `primary`. Astryx: `on-accent`. */
   onPrimary: string;
   /**
+   * Brand-hued text/labels sitting on surfaces (active tabs, links, "＋ 만들기").
+   * AA-darkened variant of `primary` — `primary` itself is a fill color and
+   * falls short of 4.5:1 as text on light backgrounds.
+   */
+  primaryText: string;
+  /**
    * Ink on fixed light tint surfaces (pastel room tiles, colored chips whose
    * background does NOT follow the theme). Stays dark in dark mode — `text`
    * flips light there and disappears against the unchanged pastel.
@@ -107,6 +113,8 @@ export type SemanticColors = {
   success: string;
   /** Status — caution. Astryx categorical orange/yellow. */
   warning: string;
+  /** Warning-hued text on surfaces (스트릭 "N일", 타이머) — AA variant of `warning`. */
+  warningText: string;
   /** Status — negative. Astryx categorical red. */
   danger: string;
   /** Background of disabled buttons/controls (text on it: `onPrimary`/`textMuted`). */
@@ -127,10 +135,12 @@ export const Themes: Record<ThemeId, SemanticColors> = {
     icon: '#8B7E74',
     primary: '#7FA87F',
     primaryActive: '#6D926D',
-    onPrimary: '#FFFFFF',
+    onPrimary: '#2D2623',
+    primaryText: '#517751',
     onTint: '#4A403A',
     success: '#5F9B6A',
     warning: '#E8A24A',
+    warningText: '#9D6014',
     danger: '#D67878',
     disabledBg: '#D9D2C5',
   },
@@ -147,10 +157,12 @@ export const Themes: Record<ThemeId, SemanticColors> = {
     icon: '#667563',
     primary: '#5F9B6A',
     primaryActive: '#4D8657',
-    onPrimary: '#FFFFFF',
+    onPrimary: '#202A22',
+    primaryText: '#4A7953',
     onTint: '#334236',
     success: '#5F9B6A',
     warning: '#E8A24A',
+    warningText: '#9D6014',
     danger: '#D67878',
     disabledBg: '#CBD8C4',
   },
@@ -167,10 +179,12 @@ export const Themes: Record<ThemeId, SemanticColors> = {
     icon: '#7F6E5E',
     primary: '#9A7B4F',
     primaryActive: '#83663F',
-    onPrimary: '#FFFFFF',
+    onPrimary: '#1C1712',
+    primaryText: '#7F6541',
     onTint: '#493B2E',
     success: '#7E9A6A',
     warning: '#C9943F',
+    warningText: '#886226',
     danger: '#C77A6A',
     disabledBg: '#DCCFB9',
   },
@@ -197,9 +211,12 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = {
     primary: '#93BE93',
     primaryActive: '#7FA87F',
     onPrimary: '#1E2A1E',
+    // Bright accents already clear 4.5:1 as text on the dark surfaces.
+    primaryText: '#93BE93',
     onTint: '#4A403A',
     success: '#7CB98A',
     warning: '#EDB061',
+    warningText: '#EDB061',
     danger: '#E08D8D',
     disabledBg: '#3D362C',
   },
@@ -217,9 +234,11 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = {
     primary: '#7FBC8B',
     primaryActive: '#6BAA78',
     onPrimary: '#14251A',
+    primaryText: '#7FBC8B',
     onTint: '#334236',
     success: '#7CB98A',
     warning: '#EDB061',
+    warningText: '#EDB061',
     danger: '#E08D8D',
     disabledBg: '#32402F',
   },
@@ -237,9 +256,11 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = {
     primary: '#C4A16F',
     primaryActive: '#B08D5B',
     onPrimary: '#2A2113',
+    primaryText: '#C4A16F',
     onTint: '#493B2E',
     success: '#96B37F',
     warning: '#DCA855',
+    warningText: '#DCA855',
     danger: '#DA9384',
     disabledBg: '#453A28',
   },

@@ -173,7 +173,7 @@ export function SignupScreen({ onBack }: SignupScreenProps) {
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
-              {emailVerified ? <Icon name="check" size={16} color={t.primary} /> : null}
+              {emailVerified ? <Icon name="check" size={16} color={t.primaryText} /> : null}
             </View>
             <Pressable
               onPress={handleSendCode}
@@ -194,7 +194,7 @@ export function SignupScreen({ onBack }: SignupScreenProps) {
             <Text style={[styles.msg, { color: t.danger }]}>이메일 형식이 올바르지 않아요</Text>
           ) : null}
           {emailVerified ? (
-            <Text style={[styles.msg, { color: t.primary }]}>이메일 인증이 완료되었어요</Text>
+            <Text style={[styles.msg, { color: t.primaryText }]}>이메일 인증이 완료되었어요</Text>
           ) : null}
         </View>
 
@@ -219,7 +219,7 @@ export function SignupScreen({ onBack }: SignupScreenProps) {
                   maxLength={6}
                 />
                 {secondsLeft > 0 ? (
-                  <Text style={[styles.timer, { color: t.warning }]}>
+                  <Text style={[styles.timer, { color: t.warningText }]}>
                     {formatTime(secondsLeft)}
                   </Text>
                 ) : null}
@@ -327,7 +327,7 @@ export function SignupScreen({ onBack }: SignupScreenProps) {
       <View style={styles.footer}>
         <Text style={[styles.msg, { color: t.textMuted }]}>이미 계정이 있으신가요? </Text>
         <Pressable onPress={onBack} accessibilityRole="button">
-          <Text style={[styles.footerLink, { color: t.primary }]}>로그인</Text>
+          <Text style={[styles.footerLink, { color: t.primaryText }]}>로그인</Text>
         </Pressable>
       </View>
     </View>

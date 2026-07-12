@@ -51,7 +51,8 @@ export function BottomNav({ active, onChange }: BottomNavProps) {
             accessibilityLabel={label}
             style={styles.tab}>
             <NavIcon width={24} height={24} />
-            <Text style={[Typography.supporting, { color: isActive ? t.primary : t.textMuted }]}>
+            <Text
+              style={[Typography.supporting, { color: isActive ? t.primaryText : t.textMuted }]}>
               {label}
             </Text>
           </Pressable>

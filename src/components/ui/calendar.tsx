@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Spacing, Typography } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
+import { readableTextColor } from '@/utils/color';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 const SUNDAY = '#E89090';
@@ -75,7 +76,13 @@ export function Calendar({ value, min, max, onSelect }: CalendarProps) {
       <View style={styles.grid}>
         {WEEKDAYS.map((w, i) => (
           <View key={w} style={styles.cell}>
-            <Text style={[styles.weekday, { color: i === 0 ? SUNDAY : t.textMuted }]}>{w}</Text>
+            <Text
+              style={[
+                styles.weekday,
+                { color: i === 0 ? readableTextColor(SUNDAY, t.surfaceMuted) : t.textMuted },
+              ]}>
+              {w}
+            </Text>
           </View>
         ))}
         {cells.map((day, i) => {

@@ -263,7 +263,7 @@ export function RoomDecorScreen({
               accessibilityRole="button"
               accessibilityLabel="전체보기"
               style={[styles.allBtn, { backgroundColor: t.surfaceMuted }]}>
-              <Text style={[Typography.label, { color: t.primary }]}>전체보기</Text>
+              <Text style={[Typography.label, { color: t.primaryText }]}>전체보기</Text>
             </Pressable>
           </View>
         ) : null}
