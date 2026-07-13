@@ -491,6 +491,9 @@ export type RefreshRequest = {
 
 export type RepeatDays = {
   daysOfWeek?: string[];
+  dayOfMonth?: number;
+  month?: number;
+  day?: number;
 };
 
 export type RoomCharacterResponse = {

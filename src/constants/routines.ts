@@ -61,6 +61,12 @@ export const ROUTINE_CATEGORIES: RoutineCategoryMeta[] = [
   { id: '기타', label: '기타', icon: 'sparkle', color: '#B5A89C', visibility: 'public' },
 ];
 
+/**
+ * Repeat cadence, mirroring the API's repeatType. Omitted on a routine =
+ * legacy derivation: with `days` it's weekly, without it's daily.
+ */
+export type RepeatKind = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly';
+
 export type Routine = {
   id: string;
   title: string;
@@ -71,8 +77,13 @@ export type Routine = {
    */
   completed?: boolean;
   category?: RoutineCategory;
-  /** 0 (Sun) … 6 (Sat) */
+  repeat?: RepeatKind;
+  /** 0 (Sun) … 6 (Sat) — weekly/biweekly (biweekly weeks anchor on startDate). */
   days?: number[];
+  /** Day of month 1–31 — monthly, or yearly together with `month`. */
+  dayOfMonth?: number;
+  /** Month 1–12 — yearly. */
+  month?: number;
   startDate?: string;
   endDate?: string;
   /** Todo due date, "YYYY-MM-DD" (kind === 'todo'). */
@@ -88,7 +99,13 @@ export type Routine = {
 export type NewRoutine = {
   title: string;
   category: RoutineCategory;
+  /** Omitted = legacy derivation (days ? weekly : daily). */
+  repeat?: RepeatKind;
   days: number[];
+  /** Monthly (or yearly, with `month`) repeat day 1–31. */
+  dayOfMonth?: number;
+  /** Yearly repeat month 1–12. */
+  month?: number;
   startDate: string;
   endDate?: string;
   alarmEnabled: boolean;
