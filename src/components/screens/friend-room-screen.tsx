@@ -43,6 +43,16 @@ const DEFAULT_ROUTINES: Routine[] = [
   { id: 'friend-5', title: '하루 회고', completed: false, alarmEnabled: true, time: '23:00' },
 ];
 
+/** One day of a friend's completion history (server GET …/routine-completions). */
+export type FriendActivityDay = {
+  /** "YYYY-MM-DD" — list key. */
+  date: string;
+  /** Display date, e.g. "7월 8일". */
+  label: string;
+  /** Completed routine titles on that day (server order). */
+  titles: string[];
+};
+
 /** One guestbook note on this room (server GET /rooms/{id}/guestbooks). */
 export type GuestbookEntry = {
   id: string;
@@ -74,6 +84,12 @@ export type FriendRoomScreenProps = {
   backgrounds?: Wallpaper[];
   /** Friend's routines+todos for today; omit for the demo preview list. */
   routines?: Routine[];
+  /**
+   * Recent completion history (last 14 days, HOUSE/PUBLIC categories), date
+   * desc. Omit to hide the 최근 활동 section (unwired/demo); [] shows an
+   * empty-state line.
+   */
+  recentActivity?: FriendActivityDay[];
   /** True while the friend's room/routines are loading from the server. */
   loading?: boolean;
   /** Guestbook notes (newest first); defaults to a demo list when unwired. */
@@ -106,6 +122,7 @@ export function FriendRoomScreen({
   floors,
   backgrounds,
   routines,
+  recentActivity,
   loading = false,
   guestbook,
   guestbookLoading = false,
@@ -325,6 +342,42 @@ export function FriendRoomScreen({
             </View>
           </View>
 
+          {recentActivity ? (
+            <View style={styles.section}>
+              <View style={styles.sectionHead}>
+                <Text style={[Typography.h2, { color: t.text }]}>최근 활동</Text>
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                  최근 14일 · 공개 루틴 기준
+                </Text>
+              </View>
+              {recentActivity.length === 0 ? (
+                <Text style={[Typography.supporting, styles.listState, { color: t.textMuted }]}>
+                  최근 2주간 완료한 공개 루틴이 없어요.
+                </Text>
+              ) : (
+                <View style={styles.activityList}>
+                  {recentActivity.map((day) => (
+                    <View
+                      key={day.date}
+                      style={[styles.activityRow, { backgroundColor: t.surfaceMuted }]}>
+                      <View style={styles.activityRowHead}>
+                        <Text style={[Typography.label, { color: t.text }]}>{day.label}</Text>
+                        <Text style={[Typography.supporting, { color: t.primaryText }]}>
+                          {day.titles.length}개 완료
+                        </Text>
+                      </View>
+                      <Text
+                        style={[Typography.supporting, { color: t.textMuted }]}
+                        numberOfLines={2}>
+                        {day.titles.join(' · ')}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          ) : null}
+
           <View style={styles.section}>
             <View style={styles.sectionHead}>
               <View style={styles.gbTitleRow}>
@@ -469,6 +522,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
+  },
+  activityList: {
+    gap: Spacing.two,
+  },
+  activityRow: {
+    borderRadius: Radius.md,
+    padding: Spacing.three,
+    gap: Spacing.one,
+  },
+  activityRowHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   gbList: {
     gap: Spacing.two,

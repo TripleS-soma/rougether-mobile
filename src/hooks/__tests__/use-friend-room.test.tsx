@@ -40,6 +40,17 @@ describe('useFriendRoom', () => {
           ],
         });
       }
+      if (url.includes('/routine-completions')) {
+        return res({
+          from: '2026-06-25',
+          to: '2026-07-08',
+          items: [
+            { routineDate: '2026-07-08', routineId: 30, originRoutineId: 3, title: '아침 기상' },
+            { routineDate: '2026-07-07', routineId: 30, originRoutineId: 3, title: '아침 기상' },
+            { routineDate: '2026-07-07', routineId: 31, originRoutineId: 8, title: '독서 30분' },
+          ],
+        });
+      }
       return res({
         date: '2026-07-08',
         routines: [{ id: 30, originRoutineId: 3, title: '아침 기상', completed: true }],
@@ -55,6 +66,7 @@ describe('useFriendRoom', () => {
 
     expect(urls.some((u) => u.endsWith('/houses/11/members/42/room'))).toBe(true);
     expect(urls.some((u) => u.endsWith('/houses/11/members/42/day'))).toBe(true);
+    expect(urls.some((u) => u.endsWith('/houses/11/members/42/routine-completions'))).toBe(true);
 
     const { friendRoom } = result.current;
     expect(friendRoom.characterId).toBe('otter');
@@ -68,6 +80,28 @@ describe('useFriendRoom', () => {
     expect(friendRoom.routines).toHaveLength(2);
     expect(friendRoom.routines[0]).toMatchObject({ id: '3', completed: true });
     expect(friendRoom.routines[1]).toMatchObject({ id: 'todo-9', completed: false });
+    // Completion history grouped per day (server order preserved, date desc).
+    expect(friendRoom.recentActivity).toEqual([
+      { date: '2026-07-08', label: '7월 8일', titles: ['아침 기상'] },
+      { date: '2026-07-07', label: '7월 7일', titles: ['아침 기상', '독서 30분'] },
+    ]);
+  });
+
+  it('hides the activity section (undefined) when the history endpoint fails', async () => {
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/routine-completions')) {
+        return { ok: false, status: 500, text: async () => '{}' };
+      }
+      return res({});
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useFriendRoom());
+    await act(async () => {
+      await result.current.load(11, 42, CATALOGUE);
+    });
+    await waitFor(() => expect(result.current.friendRoom.loading).toBe(false));
+
+    expect(result.current.friendRoom.recentActivity).toBeUndefined();
   });
 
   it('resets to the empty state when the ids are missing (demo houses)', async () => {
