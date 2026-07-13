@@ -64,6 +64,11 @@ export type DevLoginRequest = {
   userId?: number;
 };
 
+export type DeviceTokenRegisterRequest = {
+  token: string;
+  platform: 'IOS' | 'ANDROID';
+};
+
 export type DrawResult = {
   rewardType?: string;
   itemId?: number;
@@ -427,6 +432,21 @@ export type MyItemSummary = {
   acquiredAt?: string;
 };
 
+export type NotificationItem = {
+  notificationId?: number;
+  type?: 'HOUSE_KICK' | 'ROUTINE_REMINDER';
+  title?: string;
+  body?: string;
+  isRead?: boolean;
+  createdAt?: string;
+};
+
+export type NotificationListResponse = {
+  items?: NotificationItem[];
+  nextCursor?: number;
+  hasNext?: boolean;
+};
+
 export type OnboardingCharacterRequest = {
   characterId: number;
 };
@@ -553,7 +573,8 @@ export type RoutineUpdateRequest = {
   categoryId?: number;
   authType?: 'CHECK' | 'PHOTO';
   repeatType?: string;
-  // PUT replaces the resource: an explicit null clears the field server-side.
+  // Manual patch: PUT replaces the resource — explicit null unsets an optional
+  // (alarm off / 종료일 제거). Restore after `npm run gen:api-types`.
   repeatDays?: RepeatDays | null;
   scheduledTime?: string | null;
   startsOn?: string;

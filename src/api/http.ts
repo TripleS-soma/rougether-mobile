@@ -6,7 +6,7 @@
  */
 import { API_BASE } from './config';
 
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 /** Build a `?a=b&c=d` query string, skipping null/undefined values. */
 export function buildQuery(params: Record<string, string | number | undefined | null>): string {

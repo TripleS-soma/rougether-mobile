@@ -124,6 +124,56 @@ describe('useMyRoomData — 달력 past-date routine completion (#183)', () => {
   });
 });
 
+describe('useMyRoomData — profile save (PUT /me)', () => {
+  it('seeds bio from /me and sends nickname+bio on saveProfile', async () => {
+    const calls: { url: string; method: string; body?: string }[] = [];
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+      calls.push({ url, method, body: init?.body as string | undefined });
+      if (method === 'PUT' && url.endsWith('/me')) {
+        return res({ userId: 1, nickname: '새닉', bio: '새 소개' });
+      }
+      if (url.endsWith('/today')) return res({ categories: [], summary: {}, streak: {} });
+      if (url.endsWith('/me')) return res({ userId: 1, nickname: '테스터', bio: '기존 소개' });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useMyRoomData());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    // bio seeds from GET /me.
+    expect(result.current.bio).toBe('기존 소개');
+
+    await result.current.saveProfile('새닉', '새 소개');
+
+    const put = calls.find((c) => c.method === 'PUT' && c.url.endsWith('/me'));
+    expect(JSON.parse(put?.body ?? '{}')).toEqual({ nickname: '새닉', bio: '새 소개' });
+    await waitFor(() => expect(result.current.nickname).toBe('새닉'));
+    expect(result.current.bio).toBe('새 소개');
+  });
+
+  it('rolls back nickname and bio when PUT /me fails', async () => {
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+      if (method === 'PUT' && url.endsWith('/me')) {
+        return { ok: false, status: 500, text: async () => '{}' };
+      }
+      if (url.endsWith('/today')) return res({ categories: [], summary: {}, streak: {} });
+      if (url.endsWith('/me')) return res({ userId: 1, nickname: '테스터', bio: '기존 소개' });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useMyRoomData());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    const ok = await result.current.saveProfile('새닉', '새 소개');
+
+    expect(ok).toBe(false);
+    expect(result.current.nickname).toBe('테스터');
+    expect(result.current.bio).toBe('기존 소개');
+  });
+});
+
 describe('useMyRoomData — uncategorized adoption', () => {
   it('creates a 기타 category and reassigns orphan routines on load', async () => {
     const calls: { url: string; method: string; body?: string }[] = [];

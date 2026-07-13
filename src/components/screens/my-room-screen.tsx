@@ -127,6 +127,10 @@ export type MyRoomScreenProps = {
   // Callbacks (wired separately).
   onEdit?: () => void;
   onAddRoutine?: () => void;
+  /** Open the 알림 list (header bell; hidden when unwired). */
+  onOpenNotifications?: () => void;
+  /** Unread notification count — >0 shows a dot on the bell. */
+  unreadNotificationCount?: number;
   /** Create a category (햄버거 메뉴 → 카테고리 관리 sheet). */
   onCreateCategory?: (category: RoutineCategoryMeta) => void;
   onUpdateCategory?: (id: string, category: RoutineCategoryMeta) => void;
@@ -196,6 +200,8 @@ export function MyRoomScreen({
   onRetry,
   onEdit,
   onAddRoutine,
+  onOpenNotifications,
+  unreadNotificationCount = 0,
   onCreateCategory,
   onUpdateCategory,
   onDeleteCategory,
@@ -477,6 +483,18 @@ export function MyRoomScreen({
         </View>
         <View style={styles.headerRight}>
           <WalletPills coin={coinBalance} dia={diaBalance} />
+          {onOpenNotifications ? (
+            <Pressable
+              onPress={onOpenNotifications}
+              accessibilityRole="button"
+              accessibilityLabel="알림"
+              style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
+              <Icon name="bell" size={20} color={t.text} />
+              {unreadNotificationCount > 0 ? (
+                <View style={[styles.bellDot, { backgroundColor: t.danger }]} />
+              ) : null}
+            </Pressable>
+          ) : null}
           <Pressable
             ref={menuBtnRef}
             onPress={openNavMenu}
@@ -1292,6 +1310,14 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  bellDot: {
+    position: 'absolute',
+    top: 8,
+    right: 9,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   iconGlyph: {
     fontSize: 18,

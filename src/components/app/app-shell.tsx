@@ -8,6 +8,7 @@ import { GroupHouseScreen, type VisitedFriend } from '@/components/screens/group
 import { HelpScreen } from '@/components/screens/help-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
+import { NotificationListScreen } from '@/components/screens/notification-list-screen';
 import {
   DEFAULT_NOTIFICATION_SETTINGS,
   type NotificationSettings,
@@ -33,6 +34,7 @@ import { useFriendRoom } from '@/hooks/use-friend-room';
 import { useGuestbook } from '@/hooks/use-guestbook';
 import { useHouses } from '@/hooks/use-houses';
 import { useMyRoomData } from '@/hooks/use-my-room-data';
+import { useNotifications } from '@/hooks/use-notifications';
 import { useShop } from '@/hooks/use-shop';
 import { useBrandTheme } from '@/hooks/use-tokens';
 import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
@@ -50,6 +52,7 @@ type Screen =
   | 'settings'
   | 'profileEdit'
   | 'passwordChange'
+  | 'notificationList'
   | 'notifications'
   | 'sound'
   | 'help';
@@ -68,6 +71,7 @@ const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   settings: 'settings',
   profileEdit: null,
   passwordChange: null,
+  notificationList: null,
   notifications: null,
   sound: null,
   help: null,
@@ -97,6 +101,7 @@ const BACK_SCREEN: Record<Screen, Screen | null> = {
   settings: 'myRoom',
   profileEdit: 'settings',
   passwordChange: 'settings',
+  notificationList: 'myRoom',
   notifications: 'settings',
   sound: 'settings',
   help: 'settings',
@@ -133,13 +138,14 @@ export function AppShell({
     wallet,
     setWallet,
     nickname: apiNickname,
+    bio: apiBio,
     streak,
     loading: myRoomLoading,
     error: myRoomError,
     retry: retryMyRoom,
     toggleCompletion,
     toggleCalendarItem,
-    saveNickname,
+    saveProfile,
     quickAddTodo,
     addRoutine,
     updateRoutine,
@@ -159,6 +165,22 @@ export function AppShell({
   const { gachas, loading: gachasLoading, draw: drawGachaMachine } = useGacha(setWallet);
 
   const { logout } = useAuth();
+
+  // 알림 (list + read receipts); loaded on mount so the header bell can show
+  // the unread dot, refreshed each time the list opens.
+  const {
+    entries: notificationEntries,
+    unreadCount,
+    loading: notificationsLoading,
+    hasNext: notificationsHasNext,
+    load: loadNotifications,
+    loadMore: loadMoreNotifications,
+    markRead: markNotificationRead,
+    markAllRead: markAllNotificationsRead,
+  } = useNotifications();
+  useEffect(() => {
+    void loadNotifications();
+  }, [loadNotifications]);
 
   // Group houses (내 집 목록 + 탐색 + 참여/생성/강퇴/나가기) from the API.
   const {
@@ -223,13 +245,16 @@ export function AppShell({
   } = useGuestbook();
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
 
-  // Profile + settings. Nickname seeds from the API (/me); there's no PUT /me
-  // yet, so profile-edit saves + bio stay local.
+  // Profile + settings. Nickname/bio seed from the API (/me) and persist via
+  // PUT /me (saveProfile); local state keeps edits visible immediately.
   const [nickname, setNickname] = useState('준서');
   const [bio, setBio] = useState('');
   useEffect(() => {
     if (apiNickname) setNickname(apiNickname);
   }, [apiNickname]);
+  useEffect(() => {
+    if (apiBio != null) setBio(apiBio);
+  }, [apiBio]);
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(
     DEFAULT_NOTIFICATION_SETTINGS,
   );
@@ -293,6 +318,11 @@ export function AppShell({
             onToggleCompletion={toggleCompletion}
             onEdit={() => setScreen('decor')}
             onAddRoutine={() => setScreen('routineManage')}
+            onOpenNotifications={() => {
+              void loadNotifications();
+              setScreen('notificationList');
+            }}
+            unreadNotificationCount={unreadCount}
             onCreateCategory={createRoutineCategory}
             onUpdateCategory={updateRoutineCategory}
             onDeleteCategory={deleteRoutineCategory}
@@ -459,6 +489,7 @@ export function AppShell({
             characterId={friendRoom.characterId}
             streakDays={friendRoom.streakDays}
             routines={friendRoom.routines}
+            recentActivity={friendRoom.recentActivity}
             loading={friendRoom.loading}
             onBack={() => setScreen('groupHouse')}
           />
@@ -515,11 +546,29 @@ export function AppShell({
             characterId={characterId}
             onSave={(nick, b) => {
               setNickname(nick);
-              setBio(b); // bio has no server field yet — stays local
-              void saveNickname(nick);
+              setBio(b);
+              void saveProfile(nick, b);
               setScreen('settings');
             }}
             onBack={() => setScreen('settings')}
+          />
+        ) : null}
+
+        {screen === 'notificationList' ? (
+          <NotificationListScreen
+            notifications={notificationEntries}
+            loading={notificationsLoading}
+            hasNext={notificationsHasNext}
+            onBack={() => setScreen('myRoom')}
+            onRead={(id) => {
+              void markNotificationRead(id);
+            }}
+            onReadAll={() => {
+              void markAllNotificationsRead();
+            }}
+            onLoadMore={() => {
+              void loadMoreNotifications();
+            }}
           />
         ) : null}
 
