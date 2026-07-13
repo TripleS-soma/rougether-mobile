@@ -133,13 +133,14 @@ export function AppShell({
     wallet,
     setWallet,
     nickname: apiNickname,
+    bio: apiBio,
     streak,
     loading: myRoomLoading,
     error: myRoomError,
     retry: retryMyRoom,
     toggleCompletion,
     toggleCalendarItem,
-    saveNickname,
+    saveProfile,
     quickAddTodo,
     addRoutine,
     updateRoutine,
@@ -223,13 +224,16 @@ export function AppShell({
   } = useGuestbook();
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
 
-  // Profile + settings. Nickname seeds from the API (/me); there's no PUT /me
-  // yet, so profile-edit saves + bio stay local.
+  // Profile + settings. Nickname/bio seed from the API (/me) and persist via
+  // PUT /me (saveProfile); local state keeps edits visible immediately.
   const [nickname, setNickname] = useState('준서');
   const [bio, setBio] = useState('');
   useEffect(() => {
     if (apiNickname) setNickname(apiNickname);
   }, [apiNickname]);
+  useEffect(() => {
+    if (apiBio != null) setBio(apiBio);
+  }, [apiBio]);
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(
     DEFAULT_NOTIFICATION_SETTINGS,
   );
@@ -515,8 +519,8 @@ export function AppShell({
             characterId={characterId}
             onSave={(nick, b) => {
               setNickname(nick);
-              setBio(b); // bio has no server field yet — stays local
-              void saveNickname(nick);
+              setBio(b);
+              void saveProfile(nick, b);
               setScreen('settings');
             }}
             onBack={() => setScreen('settings')}
