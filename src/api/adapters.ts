@@ -29,6 +29,7 @@ import type { FriendActivityDay, GuestbookEntry } from '@/components/screens/fri
 import { isPictogramName, type PictogramName } from '@/components/ui/pictograms';
 import type { HousePreview, SearchHouse } from '@/components/screens/house-search-screen';
 import type { CalendarDayItem } from '@/components/screens/my-room-screen';
+import type { NotificationEntry } from '@/components/screens/notification-list-screen';
 
 import type {
   CalendarDayResponse,
@@ -48,6 +49,7 @@ import type {
   ItemResponse,
   MemberSummary,
   MissionSummary,
+  NotificationItem,
   RoutineCreateRequest,
   RoutineResponse,
   RoutineUpdateRequest,
@@ -579,6 +581,19 @@ export function toGuestbookEntry(g: GuestbookItem): GuestbookEntry {
     id: String(g.guestbookId ?? ''),
     author: g.authorNickname || `멤버 ${g.authorId ?? ''}`,
     content: g.content ?? '',
+    date: d ? `${d.getMonth() + 1}월 ${d.getDate()}일` : '',
+  };
+}
+
+/** Notification → 알림 list row (date shown as "M월 D일"). */
+export function toNotificationEntry(n: NotificationItem): NotificationEntry {
+  const d = n.createdAt ? new Date(n.createdAt) : null;
+  return {
+    id: n.notificationId ?? 0,
+    type: n.type,
+    title: n.title ?? '알림',
+    body: n.body ?? '',
+    read: n.isRead === true,
     date: d ? `${d.getMonth() + 1}월 ${d.getDate()}일` : '',
   };
 }

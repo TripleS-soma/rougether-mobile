@@ -11,6 +11,7 @@ import { HelpScreen } from '@/components/screens/help-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { LoginScreen } from '@/components/screens/login-screen';
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
+import { NotificationListScreen } from '@/components/screens/notification-list-screen';
 import { NotificationSettingsScreen } from '@/components/screens/notification-settings-screen';
 import { OnboardingScreen } from '@/components/screens/onboarding-screen';
 import { PasswordChangeScreen } from '@/components/screens/password-change-screen';
@@ -195,6 +196,15 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
         <PasswordChangeScreen />
+      </View>
+    ),
+  },
+  {
+    name: 'NotificationListScreen',
+    description: '나의 방 헤더 벨 → 알림 목록: 안 읽음 점 + 개별/전체 읽음.',
+    render: () => (
+      <View style={{ height: 640, alignSelf: 'stretch' }}>
+        <NotificationListScreen />
       </View>
     ),
   },
