@@ -439,15 +439,11 @@ export function MyRoomScreen({
   };
 
   // Server-backed (non-today) 달력 rows: future dates are blocked outright;
-  // past routines are blocked too (the server rejects non-today logs with
-  // INVALID_ROUTINE_DATE); past todos toggle for real.
+  // past routines and todos both toggle for real (the server accepts past-date
+  // routine logs — reward is 0 coins for non-today completion, #183).
   const handleCalendarItemPress = (item: CalendarDayItem) => {
     if (selectedDate > today) {
       toast('미래 날짜는 완료할 수 없어요', 'error');
-      return;
-    }
-    if (item.kind === 'routine') {
-      toast('지난 루틴 완료는 서버 준비 중이에요', 'error');
       return;
     }
     if (item.completed) hapticSelection();
@@ -814,7 +810,7 @@ export function MyRoomScreen({
                 <Text style={[Typography.supporting, { color: t.textMuted }]}>
                   {selectedDate > today
                     ? '미래 날짜는 아직 완료할 수 없어요.'
-                    : '지난 날짜는 할 일만 완료 체크할 수 있어요.'}
+                    : '지난 날짜도 완료 체크할 수 있어요. (코인은 당일 완료에만 지급돼요)'}
                 </Text>
               ) : null}
               {loading || (serverBackedDay && !dayItems) ? (
