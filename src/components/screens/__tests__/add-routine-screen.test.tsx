@@ -100,7 +100,7 @@ describe('AddRoutineScreen', () => {
     expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ title: '산책', days: [] }));
   });
 
-  it('shows the day picker for 격주 but blocks saving (server pending)', async () => {
+  it('submits 격주 with its repeat days (#255)', async () => {
     const onAdd = jest.fn();
     const { getByText, getByPlaceholderText, queryByText } = await render(
       <AddRoutineScreen onAdd={onAdd} />,
@@ -111,8 +111,33 @@ describe('AddRoutineScreen', () => {
 
     await fireEvent.changeText(getByPlaceholderText('예) 매일 30분 산책'), '산책');
     await fireEvent.press(getByText('루틴 추가하기'));
-    expect(getByText('이 반복 주기는 서버 준비가 끝나면 저장할 수 있어요.')).toBeTruthy();
-    expect(onAdd).not.toHaveBeenCalled();
+    expect(onAdd).toHaveBeenCalledWith(
+      expect.objectContaining({ repeat: 'biweekly', days: [1, 2, 3, 4, 5] }),
+    );
+  });
+
+  it('submits 매월 with the picked day and 매년 with month+day (#255)', async () => {
+    const onAdd = jest.fn();
+    const ui = await render(<AddRoutineScreen onAdd={onAdd} />);
+
+    await fireEvent.changeText(ui.getByPlaceholderText('예) 매일 30분 산책'), '결산');
+    await fireEvent.press(ui.getByText('매월'));
+    expect(ui.queryByText('반복 요일')).toBeNull();
+    await fireEvent.press(ui.getByLabelText('15일'));
+    await fireEvent.press(ui.getByText('루틴 추가하기'));
+    expect(onAdd).toHaveBeenLastCalledWith(
+      expect.objectContaining({ repeat: 'monthly', dayOfMonth: 15, month: undefined, days: [] }),
+    );
+
+    const yearly = await render(<AddRoutineScreen onAdd={onAdd} />);
+    await fireEvent.changeText(yearly.getByPlaceholderText('예) 매일 30분 산책'), '기념일');
+    await fireEvent.press(yearly.getByText('매년'));
+    await fireEvent.press(yearly.getByLabelText('7월'));
+    await fireEvent.press(yearly.getByLabelText('12일'));
+    await fireEvent.press(yearly.getByText('루틴 추가하기'));
+    expect(onAdd).toHaveBeenLastCalledWith(
+      expect.objectContaining({ repeat: 'yearly', month: 7, dayOfMonth: 12 }),
+    );
   });
 
   it('blocks saving 매주 with no day picked and toasts', async () => {

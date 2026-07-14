@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/toast';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import {
   type NewRoutine,
+  type RepeatKind,
   type Routine,
   ROUTINE_CATEGORIES,
   type RoutineCategory,
@@ -22,16 +23,12 @@ import { formatDate, formatTime } from '@/utils/datetime';
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
-type RepeatType = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly';
-// The server currently validates repeatType against DAILY|WEEKLY only — the
-// other cadences are pickable (their sub-pickers work) but saving is blocked
-// until the API supports them (#180).
-const REPEAT_OPTIONS: { id: RepeatType; label: string; supported: boolean }[] = [
-  { id: 'daily', label: '매일', supported: true },
-  { id: 'weekly', label: '매주', supported: true },
-  { id: 'biweekly', label: '격주', supported: false },
-  { id: 'monthly', label: '매월', supported: false },
-  { id: 'yearly', label: '매년', supported: false },
+const REPEAT_OPTIONS: { id: RepeatKind; label: string }[] = [
+  { id: 'daily', label: '매일' },
+  { id: 'weekly', label: '매주' },
+  { id: 'biweekly', label: '격주' },
+  { id: 'monthly', label: '매월' },
+  { id: 'yearly', label: '매년' },
 ];
 const MONTH_DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -102,14 +99,17 @@ export function AddRoutineScreen({
   useEffect(() => {
     if (!categoryValid && categories.length > 0) setCategory(categories[0].id);
   }, [categoryValid, categories]);
-  // Repeat cadence: a routine with repeat days is weekly, without is daily.
-  const [repeat, setRepeat] = useState<RepeatType>(
-    editRoutine && !editRoutine.days?.length ? 'daily' : 'weekly',
+  // Repeat cadence — legacy routines without an explicit repeat derive it
+  // from their days (with days = weekly, without = daily).
+  const [repeat, setRepeat] = useState<RepeatKind>(
+    editRoutine
+      ? (editRoutine.repeat ?? (editRoutine.days?.length ? 'weekly' : 'daily'))
+      : 'weekly',
   );
   const [days, setDays] = useState<number[]>(editRoutine?.days ?? [1, 2, 3, 4, 5]);
-  // Sub-picks for the server-pending cadences: 매월 → day of month, 매년 → month + day.
-  const [monthDay, setMonthDay] = useState(1);
-  const [yearMonth, setYearMonth] = useState(1);
+  // Sub-picks: 매월 → day of month (yearly reuses it), 매년 → month.
+  const [monthDay, setMonthDay] = useState(editRoutine?.dayOfMonth ?? 1);
+  const [yearMonth, setYearMonth] = useState(editRoutine?.month ?? 1);
   const [alarmEnabled, setAlarmEnabled] = useState(editRoutine?.alarmEnabled ?? true);
   const [time, setTime] = useState(editRoutine?.time ?? '07:00');
   const [startDate, setStartDate] = useState(editRoutine?.startDate ?? today());
@@ -125,10 +125,8 @@ export function AddRoutineScreen({
   const toggleDay = (d: number) =>
     setDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort()));
 
-  const repeatSupported = REPEAT_OPTIONS.find((o) => o.id === repeat)?.supported ?? false;
   const needsDays = repeat === 'weekly' || repeat === 'biweekly';
-  const canSubmit =
-    title.trim().length > 0 && categoryValid && repeatSupported && (!needsDays || days.length > 0);
+  const canSubmit = title.trim().length > 0 && categoryValid && (!needsDays || days.length > 0);
   // Why the submit is blocked — set when the user taps it anyway. Without this
   // a fresh account (0 categories) just saw a dead gray button.
   const [formError, setFormError] = useState('');
@@ -147,16 +145,16 @@ export function AddRoutineScreen({
         // 매주/격주 with no day picked — the day picker is the fix, so point at
         // it with a toast rather than the footer error.
         toast('반복 요일을 하나 선택해주세요', 'error');
-      } else {
-        setFormError('이 반복 주기는 서버 준비가 끝나면 저장할 수 있어요.');
       }
       return;
     }
     const payload: NewRoutine = {
       title: title.trim(),
       category,
-      // Empty days = daily (the adapter maps it to repeatType DAILY).
-      days: repeat === 'weekly' ? days : [],
+      repeat,
+      days: needsDays ? days : [],
+      dayOfMonth: repeat === 'monthly' || repeat === 'yearly' ? monthDay : undefined,
+      month: repeat === 'yearly' ? yearMonth : undefined,
       startDate,
       endDate,
       alarmEnabled,
@@ -305,9 +303,9 @@ export function AddRoutineScreen({
               );
             })}
           </View>
-          {!repeatSupported ? (
+          {repeat === 'biweekly' ? (
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              격주·매월·매년 반복은 아직 서버 준비 중이에요.
+              시작일이 속한 주부터 2주 간격으로 반복돼요.
             </Text>
           ) : null}
           {needsDays ? (

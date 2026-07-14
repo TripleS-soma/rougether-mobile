@@ -76,6 +76,58 @@ describe('API adapters', () => {
     expect(req.scheduledTime).toBeUndefined();
   });
 
+  it('round-trips 격주/매월/매년 repeats (#255)', () => {
+    // BIWEEKLY: daysOfWeek travel like WEEKLY, kind is kept.
+    const biweekly = toAppRoutine({
+      id: 1,
+      title: '분리수거',
+      repeatType: 'BIWEEKLY',
+      repeatDays: { daysOfWeek: ['TUE'] },
+      startsOn: '2026-07-07',
+    });
+    expect(biweekly).toMatchObject({ repeat: 'biweekly', days: [2] });
+    expect(
+      toRoutineCreate({
+        title: '분리수거', category: '1', repeat: 'biweekly', days: [2],
+        startDate: '2026-07-07', alarmEnabled: false, time: '', photoVerify: false,
+      }), // prettier-ignore
+    ).toMatchObject({ repeatType: 'BIWEEKLY', repeatDays: { daysOfWeek: ['TUE'] } });
+
+    // MONTHLY: dayOfMonth both ways.
+    const monthly = toAppRoutine({
+      id: 2,
+      title: '월말 결산',
+      repeatType: 'MONTHLY',
+      repeatDays: { dayOfMonth: 31 },
+    });
+    expect(monthly).toMatchObject({ repeat: 'monthly', dayOfMonth: 31, days: undefined });
+    expect(
+      toRoutineCreate({
+        title: '월말 결산', category: '1', repeat: 'monthly', days: [], dayOfMonth: 31,
+        startDate: '2026-07-01', alarmEnabled: false, time: '', photoVerify: false,
+      }), // prettier-ignore
+    ).toMatchObject({ repeatType: 'MONTHLY', repeatDays: { dayOfMonth: 31 } });
+
+    // YEARLY: the API's month/day fold into the app's month/dayOfMonth.
+    const yearly = toAppRoutine({
+      id: 3,
+      title: '건강검진',
+      repeatType: 'YEARLY',
+      repeatDays: { month: 7, day: 12 },
+    });
+    expect(yearly).toMatchObject({ repeat: 'yearly', month: 7, dayOfMonth: 12 });
+    expect(
+      toRoutineCreate({
+        title: '건강검진', category: '1', repeat: 'yearly', days: [], dayOfMonth: 12, month: 7,
+        startDate: '2026-07-01', alarmEnabled: false, time: '', photoVerify: false,
+      }), // prettier-ignore
+    ).toMatchObject({ repeatType: 'YEARLY', repeatDays: { month: 7, day: 12 } });
+
+    // Update keeps the cadence when an unrelated field changes.
+    const req = toRoutineUpdate(monthly, { title: '결산' });
+    expect(req).toMatchObject({ repeatType: 'MONTHLY', repeatDays: { dayOfMonth: 31 } });
+  });
+
   it('maps todos and builds a todo create request', () => {
     expect(
       toAppTodo({

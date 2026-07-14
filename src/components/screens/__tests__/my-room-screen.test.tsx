@@ -168,6 +168,31 @@ describe('MyRoomScreen', () => {
     expect(queryByText('새 카테고리 만들기')).toBeTruthy();
   });
 
+  it('schedules 격주/매월/매년 routines by their cadence (#255)', async () => {
+    const [y, m, d] = TODAY.split('-').map(Number);
+    const todayWd = new Date(y, m - 1, d).getDay();
+    const weekAgo = isoShift(-7);
+    const routines = [
+      // Biweekly anchored this week → scheduled today; anchored last week → not.
+      { id: '1', title: '이번주 격주', kind: 'routine' as const, repeat: 'biweekly' as const, days: [todayWd], startDate: TODAY }, // prettier-ignore
+      { id: '2', title: '지난주 격주', kind: 'routine' as const, repeat: 'biweekly' as const, days: [todayWd], startDate: weekAgo }, // prettier-ignore
+      // Monthly on today's day-of-month vs a different day.
+      { id: '3', title: '오늘 매월', kind: 'routine' as const, repeat: 'monthly' as const, dayOfMonth: d }, // prettier-ignore
+      { id: '4', title: '다른날 매월', kind: 'routine' as const, repeat: 'monthly' as const, dayOfMonth: d === 1 ? 2 : 1 }, // prettier-ignore
+      // Yearly on today's month+day vs a different month.
+      { id: '5', title: '오늘 매년', kind: 'routine' as const, repeat: 'yearly' as const, month: m, dayOfMonth: d }, // prettier-ignore
+      { id: '6', title: '다른달 매년', kind: 'routine' as const, repeat: 'yearly' as const, month: m === 1 ? 2 : 1, dayOfMonth: d }, // prettier-ignore
+    ];
+    const { getByText, queryByText } = await render(<MyRoomScreen routines={routines} />);
+
+    expect(getByText('이번주 격주')).toBeTruthy();
+    expect(queryByText('지난주 격주')).toBeNull();
+    expect(getByText('오늘 매월')).toBeTruthy();
+    expect(queryByText('다른날 매월')).toBeNull();
+    expect(getByText('오늘 매년')).toBeTruthy();
+    expect(queryByText('다른달 매년')).toBeNull();
+  });
+
   it('hides routines not scheduled today from the 방 tab (repeat days respected)', async () => {
     const todayWd = new Date().getDay();
     const otherWd = (todayWd + 1) % 7;

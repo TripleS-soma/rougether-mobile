@@ -10,6 +10,7 @@ import {
   CATEGORY_COLORS,
   type CategoryVisibility,
   type NewRoutine,
+  type RepeatKind,
   type Routine,
   type RoutineCategoryMeta,
 } from '@/constants/routines';
@@ -50,6 +51,7 @@ import type {
   MemberSummary,
   MissionSummary,
   NotificationItem,
+  RepeatDays,
   RoutineCreateRequest,
   RoutineResponse,
   RoutineUpdateRequest,
@@ -151,17 +153,67 @@ const todoAppId = (id?: number) => `t${id ?? ''}`;
 /** App item id ("r12"/"t12") → numeric server id for API paths. */
 export const toServerItemId = (id: string) => Number(id.replace(/^[rt]/, ''));
 
+// Repeat cadence ↔ the API's repeatType. Legacy app payloads may omit
+// `repeat` — days present means weekly, absent means daily.
+const REPEAT_TO_API: Record<RepeatKind, string> = {
+  daily: 'DAILY',
+  weekly: 'WEEKLY',
+  biweekly: 'BIWEEKLY',
+  monthly: 'MONTHLY',
+  yearly: 'YEARLY',
+};
+const REPEAT_TO_APP: Record<string, RepeatKind> = {
+  DAILY: 'daily',
+  WEEKLY: 'weekly',
+  BIWEEKLY: 'biweekly',
+  MONTHLY: 'monthly',
+  YEARLY: 'yearly',
+};
+
+const effectiveRepeat = (r: { repeat?: RepeatKind; days?: number[] }): RepeatKind =>
+  r.repeat ?? (r.days && r.days.length ? 'weekly' : 'daily');
+
+/** repeatType + repeatDays request fields from an app-side repeat description. */
+function toApiRepeat(r: {
+  repeat?: RepeatKind;
+  days?: number[];
+  dayOfMonth?: number;
+  month?: number;
+}): { repeatType: string; repeatDays: RepeatDays | undefined } {
+  const kind = effectiveRepeat(r);
+  const repeatDays =
+    kind === 'weekly' || kind === 'biweekly'
+      ? { daysOfWeek: (r.days ?? []).map(dayNumToCode) }
+      : kind === 'monthly'
+        ? { dayOfMonth: r.dayOfMonth }
+        : kind === 'yearly'
+          ? { month: r.month, day: r.dayOfMonth }
+          : undefined;
+  return { repeatType: REPEAT_TO_API[kind], repeatDays };
+}
+
 export function toAppRoutine(r: RoutineResponse): Routine {
-  const isWeekly = r.repeatType === 'WEEKLY';
+  const kind = REPEAT_TO_APP[r.repeatType ?? ''] ?? 'daily';
+  const hasDays = kind === 'weekly' || kind === 'biweekly';
   return {
     id: routineAppId(r.id),
     title: r.title ?? '',
     category: r.categoryId != null ? String(r.categoryId) : undefined,
     photoVerify: r.authType === 'PHOTO',
+    repeat: kind,
     days:
-      isWeekly && r.repeatDays?.daysOfWeek
+      hasDays && r.repeatDays?.daysOfWeek
         ? r.repeatDays.daysOfWeek.map(dayCodeToNum).filter((n) => n >= 0)
         : undefined,
+    // The API names the yearly day `day` and the monthly one `dayOfMonth`;
+    // the app folds both into `dayOfMonth`.
+    dayOfMonth:
+      kind === 'monthly'
+        ? r.repeatDays?.dayOfMonth
+        : kind === 'yearly'
+          ? r.repeatDays?.day
+          : undefined,
+    month: kind === 'yearly' ? r.repeatDays?.month : undefined,
     startDate: r.startsOn,
     endDate: r.endsOn,
     alarmEnabled: !!r.scheduledTime,
@@ -171,13 +223,13 @@ export function toAppRoutine(r: RoutineResponse): Routine {
 }
 
 export function toRoutineCreate(n: NewRoutine): RoutineCreateRequest {
-  const weekly = !!(n.days && n.days.length);
+  const { repeatType, repeatDays } = toApiRepeat(n);
   return {
     title: n.title,
     categoryId: toCategoryId(n.category),
     authType: n.photoVerify ? 'PHOTO' : 'CHECK',
-    repeatType: weekly ? 'WEEKLY' : 'DAILY',
-    repeatDays: weekly ? { daysOfWeek: n.days!.map(dayNumToCode) } : undefined,
+    repeatType,
+    repeatDays,
     scheduledTime: n.alarmEnabled && n.time ? toApiTime(n.time) : undefined,
     startsOn: n.startDate,
     endsOn: n.endDate,
@@ -195,13 +247,14 @@ export function toRoutineUpdate(
   overrides: Partial<Routine> = {},
 ): RoutineUpdateRequest {
   const merged = { ...r, ...overrides };
-  const weekly = !!(merged.days && merged.days.length);
+  const { repeatType, repeatDays } = toApiRepeat(merged);
   return {
     title: merged.title,
     categoryId: toCategoryId(merged.category),
     authType: merged.photoVerify ? 'PHOTO' : 'CHECK',
-    repeatType: weekly ? 'WEEKLY' : 'DAILY',
-    repeatDays: weekly ? { daysOfWeek: merged.days!.map(dayNumToCode) } : null,
+    repeatType,
+    // DAILY has no repeatDays — send null so a WEEKLY→DAILY edit clears them.
+    repeatDays: repeatDays ?? null,
     scheduledTime: merged.alarmEnabled && merged.time ? toApiTime(merged.time) : null,
     startsOn: merged.startDate,
     endsOn: merged.endDate ?? null,
