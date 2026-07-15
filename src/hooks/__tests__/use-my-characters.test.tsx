@@ -30,9 +30,9 @@ describe('useMyCharacters', () => {
     const { result } = await renderHook(() => useMyCharacters());
     await waitFor(() => expect(result.current.characters).toHaveLength(2));
 
-    expect(result.current.characters.map((c) => c.id)).toEqual(['cat', 'panda']);
+    expect(result.current.characters?.map((c) => c.id)).toEqual(['cat', 'panda']);
     // The server's CDN art key rides along for the picker to render.
-    expect(result.current.characters[0].assetKey).toBe('characters/cat_sitting.png');
+    expect(result.current.characters?.[0].assetKey).toBe('characters/cat_sitting.png');
     expect(result.current.selectedCharacterId).toBe('panda');
   });
 

@@ -12,7 +12,9 @@ import { useToast } from '@/components/ui/toast';
 import type { OwnedCharacter } from '@/components/screens/sheets/character-picker-sheet';
 
 export function useMyCharacters() {
-  const [characters, setCharacters] = useState<OwnedCharacter[]>([]);
+  // undefined until the first load lands — distinguishes "loading" from
+  // "owns none" (the picker entry stays hidden while undefined).
+  const [characters, setCharacters] = useState<OwnedCharacter[] | undefined>(undefined);
   const { show: toast } = useToast();
 
   const load = useCallback(async () => {
@@ -31,7 +33,7 @@ export function useMyCharacters() {
   /** Wear a character (optimistic — exactly one selected at a time). */
   const select = async (serverId: number) => {
     const before = characters;
-    setCharacters((prev) => prev.map((c) => ({ ...c, selected: c.serverId === serverId })));
+    setCharacters((prev) => prev?.map((c) => ({ ...c, selected: c.serverId === serverId })));
     try {
       await selectCharacter(serverId);
       toast('캐릭터를 교체했어요', 'success');
@@ -42,7 +44,7 @@ export function useMyCharacters() {
   };
 
   /** The worn character's app id, once the server list has loaded. */
-  const selectedCharacterId = characters.find((c) => c.selected)?.id;
+  const selectedCharacterId = characters?.find((c) => c.selected)?.id;
 
   return { characters, selectedCharacterId, reload: load, select };
 }

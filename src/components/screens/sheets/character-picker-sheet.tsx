@@ -93,6 +93,7 @@ export function CharacterPickerSheet({
                           style={styles.cdnArt}
                           contentFit="contain"
                           accessibilityLabel={c.name}
+                          testID="cdn-art"
                         />
                       ) : (
                         <CharacterAvatar characterId={c.id} size={56} />

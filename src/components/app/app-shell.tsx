@@ -173,6 +173,7 @@ export function AppShell({
     characters: ownedCharacters,
     selectedCharacterId,
     select: selectWornCharacter,
+    reload: reloadMyCharacters,
   } = useMyCharacters();
   const wornCharacterId = selectedCharacterId ?? characterId;
 
@@ -433,6 +434,9 @@ export function AppShell({
               // Drawn items land in the inventory — re-sync so 방 꾸미기 shows
               // them as 보유중 and placement saves know their userItemId.
               if (results?.some((r) => r.itemId != null && !r.converted)) void refreshOwned();
+              // A drawn character must show up in the 캐릭터 교체 picker too.
+              if (results?.some((r) => r.characterId != null && !r.converted))
+                void reloadMyCharacters();
               return results;
             }}
           />

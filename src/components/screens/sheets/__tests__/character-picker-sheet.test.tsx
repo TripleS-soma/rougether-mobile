@@ -34,6 +34,17 @@ describe('CharacterPickerSheet', () => {
     expect(onClose).toHaveBeenCalledTimes(2);
   });
 
+  it('renders CDN art when the asset key is valid, local sprite otherwise', async () => {
+    const mixed = [
+      { serverId: 1, id: 'cat' as const, name: '고양이', assetKey: 'characters/cat_sitting.png', selected: true }, // prettier-ignore
+      { serverId: 4, id: 'panda' as const, name: '판다', selected: false }, // no key → local sprite
+    ];
+    const { queryAllByTestId } = await render(
+      <CharacterPickerSheet visible characters={mixed} onSelect={jest.fn()} onClose={jest.fn()} />,
+    );
+    expect(queryAllByTestId('cdn-art')).toHaveLength(1);
+  });
+
   it('shows the empty hint and hides entirely when not visible', async () => {
     const empty = await render(
       <CharacterPickerSheet visible characters={[]} onSelect={jest.fn()} onClose={jest.fn()} />,
