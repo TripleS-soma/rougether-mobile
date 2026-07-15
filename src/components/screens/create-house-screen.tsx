@@ -1,12 +1,15 @@
+import { Image } from 'expo-image';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { type HouseCover, HouseCoverPicker } from '@/components/house-cover-picker';
 import { Icon } from '@/components/ui/icon';
 import { CrownPictogram, Pictogram, type PictogramName } from '@/components/ui/pictograms';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
+import { assetSource } from '@/resources/asset';
 
 const PRIVATE_ACCENT = '#D4A574';
 
@@ -25,9 +28,13 @@ export type CreateHouseInput = {
   name: string;
   description?: string;
   maxMembers: number;
+  /** Selected cover from GET /houses/cover-images; omitted when none picked. */
+  coverImageKey?: string;
 };
 
 export type CreateHouseScreenProps = {
+  /** Cover catalog (GET /houses/cover-images); empty hides the section. */
+  covers?: HouseCover[];
   onBack?: () => void;
   /** Create the house via the API — the server issues the real invite code. */
   onCreate?: (input: CreateHouseInput) => void;
@@ -39,12 +46,13 @@ export type CreateHouseScreenProps = {
  * tokens + type scale; emoji icons. The copy button writes the invite code to
  * the clipboard (expo-clipboard) with brief visual feedback.
  */
-export function CreateHouseScreen({ onBack, onCreate }: CreateHouseScreenProps) {
+export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouseScreenProps) {
   const t = useTokens();
   const headerInset = useHeaderInsetStyle();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [themeId, setThemeId] = useState('morning');
+  const [coverKey, setCoverKey] = useState<string | undefined>(undefined);
   const [capacity, setCapacity] = useState(4);
   const [isPrivate, setIsPrivate] = useState(false);
 
@@ -71,7 +79,17 @@ export function CreateHouseScreen({ onBack, onCreate }: CreateHouseScreenProps) 
         <View style={[styles.card, styles.previewRow, { backgroundColor: t.surface }]}>
           <View
             style={[styles.previewEmoji, { backgroundColor: theme.bg, borderColor: theme.border }]}>
-            <Pictogram name={theme.icon} size={30} />
+            {coverKey ? (
+              <Image
+                source={assetSource(coverKey)}
+                style={styles.previewCover}
+                contentFit="cover"
+                accessibilityLabel="선택한 대표 이미지"
+                testID="preview-cover"
+              />
+            ) : (
+              <Pictogram name={theme.icon} size={30} />
+            )}
           </View>
           <View style={styles.flex}>
             <View style={styles.previewNameRow}>
@@ -118,6 +136,14 @@ export function CreateHouseScreen({ onBack, onCreate }: CreateHouseScreenProps) 
             </View>
           </Labeled>
         </View>
+
+        {/* Cover image (server catalog) — hidden while the catalog is empty */}
+        {covers.length > 0 ? (
+          <View style={[styles.card, { backgroundColor: t.surface }]}>
+            <Text style={[styles.sectionLabel, { color: t.textMuted }]}>대표 이미지</Text>
+            <HouseCoverPicker covers={covers} selectedKey={coverKey} onSelect={setCoverKey} />
+          </View>
+        ) : null}
 
         {/* Theme */}
         <View style={[styles.card, { backgroundColor: t.surface }]}>
@@ -213,6 +239,7 @@ export function CreateHouseScreen({ onBack, onCreate }: CreateHouseScreenProps) 
               name: name.trim(),
               description: description.trim(),
               maxMembers: capacity,
+              coverImageKey: coverKey,
             });
           }}
           accessibilityRole="button"
@@ -305,6 +332,11 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  previewCover: {
+    width: '100%',
+    height: '100%',
   },
   previewNameRow: {
     flexDirection: 'row',

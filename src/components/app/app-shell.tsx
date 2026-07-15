@@ -32,6 +32,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useGacha } from '@/hooks/use-gacha';
 import { useFriendRoom } from '@/hooks/use-friend-room';
 import { useGuestbook } from '@/hooks/use-guestbook';
+import { useHouseCovers } from '@/hooks/use-house-covers';
 import { useHouses } from '@/hooks/use-houses';
 import { useMyCharacters } from '@/hooks/use-my-characters';
 import { useMyRoomData } from '@/hooks/use-my-room-data';
@@ -212,6 +213,9 @@ export function AppShell({
     transferOwnership,
     reissueInviteCode,
   } = useHouses();
+
+  // Selectable house-cover catalog (집 생성·집 정보 수정).
+  const { covers: houseCovers } = useHouseCovers();
 
   // Shop catalogue + purchase (dia via API; wallet synced from the purchase
   // response). Server-side room placement isn't wired yet, so arrangement is
@@ -446,6 +450,7 @@ export function AppShell({
           <GroupHouseScreen
             houses={houses}
             loading={housesLoading}
+            covers={houseCovers}
             characterId={wornCharacterId}
             houseIndex={houseIndex}
             onHouseIndexChange={setHouseIndex}
@@ -533,6 +538,7 @@ export function AppShell({
 
         {screen === 'createHouse' ? (
           <CreateHouseScreen
+            covers={houseCovers}
             onBack={() => setScreen('houseSearch')}
             onCreate={(input) => {
               void createGroupHouse(input).then((ok) => ok && setScreen('groupHouse'));

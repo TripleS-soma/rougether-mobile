@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -21,6 +22,7 @@ import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
+import { assetSource, isCdnKey } from '@/resources/asset';
 
 /** Browse-card display model (decorated from the API house summary). */
 export type SearchHouse = {
@@ -29,6 +31,8 @@ export type SearchHouse = {
   members: number;
   capacity: number;
   tag: string;
+  /** Server cover art; the pictogram tile is the fallback. */
+  coverImageKey?: string;
   icon: PictogramName;
   bg: string;
   border: string;
@@ -262,7 +266,19 @@ export function HouseSearchScreen({
                 <View key={h.id} style={[styles.houseRow, { backgroundColor: t.surface }]}>
                   <View
                     style={[styles.houseEmoji, { backgroundColor: h.bg, borderColor: h.border }]}>
-                    <Pictogram name={h.icon} size={28} />
+                    {/* Server cover art first; the pictogram tile is the fallback. */}
+                    {isCdnKey(h.coverImageKey) ? (
+                      <Image
+                        source={assetSource(h.coverImageKey)}
+                        style={styles.houseCover}
+                        contentFit="cover"
+                        transition={120}
+                        accessibilityLabel={`${h.name} 대표 이미지`}
+                        testID="house-cover"
+                      />
+                    ) : (
+                      <Pictogram name={h.icon} size={28} />
+                    )}
                   </View>
                   <View style={styles.flex}>
                     {/* The name owns its row — a same-row tag chip squeezed it
@@ -404,6 +420,11 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  houseCover: {
+    width: '100%',
+    height: '100%',
   },
   iconLabelRow: {
     flexDirection: 'row',

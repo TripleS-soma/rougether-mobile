@@ -1,6 +1,7 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 import { View } from 'react-native';
 
+import { type HouseCover, HouseCoverPicker } from '@/components/house-cover-picker';
 import { Room } from '@/components/room/room';
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
@@ -288,9 +289,15 @@ export const galleryEntries: GalleryEntry[] = [
       'Ported from the prototype CreateHouseScreen (#12): preview, theme, capacity, code.',
     render: () => (
       <View style={{ height: 900, alignSelf: 'stretch' }}>
-        <CreateHouseScreen />
+        <CreateHouseScreen covers={SAMPLE_HOUSE_COVERS} />
       </View>
     ),
+  },
+  {
+    name: 'HouseCoverPicker',
+    description:
+      '집 대표 이미지 선택 그리드 — 서버 커버 카탈로그(GET /houses/cover-images) (#261).',
+    render: () => <HouseCoverPickerDemo />,
   },
   {
     name: 'Calendar',
@@ -378,6 +385,40 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => <SampleButton label="Disabled" disabled />,
   },
 ];
+
+/** Server cover catalog snapshot (2026-07-15) for gallery/preview use. */
+const SAMPLE_HOUSE_COVERS: HouseCover[] = [
+  {
+    code: 'cloud_balloon',
+    name: '구름 풍선 집',
+    coverImageKey: 'house/cloud-balloon/house-unified-cloud-balloon-frame.png',
+  },
+  {
+    code: 'coral_aquarium',
+    name: '산호 수족관 집',
+    coverImageKey: 'house/coral-aquarium/house-unified-coral-aquarium-frame.png',
+  },
+  {
+    code: 'mushroom_forest',
+    name: '버섯 숲 집',
+    coverImageKey: 'house/mushroom-forest/house-unified-mushroom-forest-frame.png',
+  },
+  {
+    code: 'night_observatory',
+    name: '밤의 천문대 집',
+    coverImageKey: 'house/night-observatory/house-unified-night-observatory-frame-v3.png',
+  },
+];
+
+/** Interactive cover grid — tap to move the selection ring. */
+function HouseCoverPickerDemo() {
+  const [selected, setSelected] = useState<string | undefined>(
+    SAMPLE_HOUSE_COVERS[0].coverImageKey,
+  );
+  return (
+    <HouseCoverPicker covers={SAMPLE_HOUSE_COVERS} selectedKey={selected} onSelect={setSelected} />
+  );
+}
 
 /** Buttons that fire each toast variant (needs its own provider in the gallery). */
 function ToastDemo() {
