@@ -1,6 +1,13 @@
 /** Current user + wallet endpoints. */
 import { apiGet, apiGetList, apiPut } from './client';
-import type { MeResponse, MemberUpdateRequest, MyItemSummary, WalletResponse } from './types';
+import type {
+  CharacterSelectResponse,
+  MeResponse,
+  MemberUpdateRequest,
+  MyCharacterItem,
+  MyItemSummary,
+  WalletResponse,
+} from './types';
 
 /** GET /me — the authenticated user's profile. */
 export function fetchMe() {
@@ -20,4 +27,18 @@ export function fetchMyItems() {
 /** PUT /me — update the profile (nickname, ≤30 chars, no blanks). */
 export function updateMe(body: MemberUpdateRequest) {
   return apiPut<MeResponse>('/me', body);
+}
+
+/**
+ * GET /me/characters — owned characters (master sortOrder). Exactly one item
+ * has selected=true: the character shown in the room. Retired (inactive)
+ * characters are excluded even when owned.
+ */
+export function fetchMyCharacters() {
+  return apiGetList<MyCharacterItem>('/me/characters');
+}
+
+/** PUT /me/characters/select — switch the worn character (owned only; 409 CHARACTER_NOT_OWNED). */
+export function selectCharacter(characterId: number) {
+  return apiPut<CharacterSelectResponse>('/me/characters/select', { characterId });
 }

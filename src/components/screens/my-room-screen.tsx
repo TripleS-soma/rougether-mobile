@@ -17,6 +17,10 @@ import {
 import { CharacterAvatar } from '@/components/character-avatar';
 import { Room } from '@/components/room/room';
 import { CategoryManagerSheet } from '@/components/screens/sheets/category-manager-sheet';
+import {
+  CharacterPickerSheet,
+  type OwnedCharacter,
+} from '@/components/screens/sheets/character-picker-sheet';
 import { TimePickerSheet } from '@/components/screens/sheets/time-picker-sheet';
 import { Calendar } from '@/components/ui/calendar';
 import { Pictogram } from '@/components/ui/pictograms';
@@ -170,6 +174,10 @@ export type MyRoomScreenProps = {
   onOpenNotifications?: () => void;
   /** Unread notification count — >0 shows a dot on the menu button + item. */
   unreadNotificationCount?: number;
+  /** Owned characters (햄버거 메뉴 → 캐릭터 교체 sheet; hidden when unwired). */
+  ownedCharacters?: OwnedCharacter[];
+  /** Wear the picked character (PUT /me/characters/select). */
+  onSelectCharacter?: (serverId: number) => void;
   /** Create a category (햄버거 메뉴 → 카테고리 관리 sheet). */
   onCreateCategory?: (category: RoutineCategoryMeta) => void;
   onUpdateCategory?: (id: string, category: RoutineCategoryMeta) => void;
@@ -241,6 +249,8 @@ export function MyRoomScreen({
   onAddRoutine,
   onOpenNotifications,
   unreadNotificationCount = 0,
+  ownedCharacters,
+  onSelectCharacter,
   onCreateCategory,
   onUpdateCategory,
   onDeleteCategory,
@@ -296,6 +306,7 @@ export function MyRoomScreen({
   const [navMenuTop, setNavMenuTop] = useState(104);
   const menuBtnRef = useRef<View>(null);
   const [categorySheetOpen, setCategorySheetOpen] = useState(false);
+  const [characterSheetOpen, setCharacterSheetOpen] = useState(false);
 
   const openNavMenu = () => {
     setNavMenuOpen(true);
@@ -1222,6 +1233,15 @@ export function MyRoomScreen({
                       },
                     ]
                   : []),
+                ...(ownedCharacters && onSelectCharacter
+                  ? [
+                      {
+                        icon: 'profile' as const,
+                        label: '캐릭터 교체',
+                        onPress: () => setCharacterSheetOpen(true),
+                      },
+                    ]
+                  : []),
                 {
                   icon: 'edit' as const,
                   label: '방 꾸미기',
@@ -1264,6 +1284,13 @@ export function MyRoomScreen({
           </View>
         </Pressable>
       </Modal>
+
+      <CharacterPickerSheet
+        visible={characterSheetOpen}
+        characters={ownedCharacters ?? []}
+        onSelect={(serverId) => onSelectCharacter?.(serverId)}
+        onClose={() => setCharacterSheetOpen(false)}
+      />
 
       <CategoryManagerSheet
         visible={categorySheetOpen}

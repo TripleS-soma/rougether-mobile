@@ -11,6 +11,7 @@ import { HelpScreen } from '@/components/screens/help-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { LoginScreen } from '@/components/screens/login-screen';
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
+import { CharacterPickerSheet } from '@/components/screens/sheets/character-picker-sheet';
 import { NotificationListScreen } from '@/components/screens/notification-list-screen';
 import { NotificationSettingsScreen } from '@/components/screens/notification-settings-screen';
 import { OnboardingScreen } from '@/components/screens/onboarding-screen';
@@ -196,6 +197,24 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
         <PasswordChangeScreen />
+      </View>
+    ),
+  },
+  {
+    name: 'CharacterPickerSheet',
+    description: '나의 방 햄버거 → 캐릭터 교체: 보유 캐릭터 그리드 + 착용 중 배지.',
+    render: () => (
+      <View style={{ height: 560, alignSelf: 'stretch' }}>
+        <CharacterPickerSheet
+          visible
+          characters={[
+            { serverId: 1, id: 'cat', name: '고양이', selected: true },
+            { serverId: 4, id: 'panda', name: '판다', selected: false },
+            { serverId: 8, id: 'otter', name: '수달', selected: false },
+          ]}
+          onSelect={() => {}}
+          onClose={() => {}}
+        />
       </View>
     ),
   },

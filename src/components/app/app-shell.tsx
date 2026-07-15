@@ -33,6 +33,7 @@ import { useGacha } from '@/hooks/use-gacha';
 import { useFriendRoom } from '@/hooks/use-friend-room';
 import { useGuestbook } from '@/hooks/use-guestbook';
 import { useHouses } from '@/hooks/use-houses';
+import { useMyCharacters } from '@/hooks/use-my-characters';
 import { useMyRoomData } from '@/hooks/use-my-room-data';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useShop } from '@/hooks/use-shop';
@@ -165,6 +166,15 @@ export function AppShell({
   const { gachas, loading: gachasLoading, draw: drawGachaMachine } = useGacha(setWallet);
 
   const { logout } = useAuth();
+
+  // Owned characters + worn one (GET /me/characters). Once loaded, the worn
+  // character overrides the onboarding pick everywhere but friend rooms.
+  const {
+    characters: ownedCharacters,
+    selectedCharacterId,
+    select: selectWornCharacter,
+  } = useMyCharacters();
+  const wornCharacterId = selectedCharacterId ?? characterId;
 
   // 알림 (list + read receipts); loaded on mount so the header bell can show
   // the unread dot, refreshed each time the list opens.
@@ -314,7 +324,7 @@ export function AppShell({
             wallpapers={catalogue.wallpapers}
             floors={catalogue.floors}
             backgrounds={catalogue.backgrounds}
-            characterId={characterId}
+            characterId={wornCharacterId}
             onToggleCompletion={toggleCompletion}
             onEdit={() => setScreen('decor')}
             onAddRoutine={() => setScreen('routineManage')}
@@ -323,6 +333,10 @@ export function AppShell({
               setScreen('notificationList');
             }}
             unreadNotificationCount={unreadCount}
+            ownedCharacters={ownedCharacters}
+            onSelectCharacter={(serverId) => {
+              void selectWornCharacter(serverId);
+            }}
             onCreateCategory={createRoutineCategory}
             onUpdateCategory={updateRoutineCategory}
             onDeleteCategory={deleteRoutineCategory}
@@ -355,7 +369,7 @@ export function AppShell({
             onRetry={retryShop}
             coinBalance={wallet.coin}
             diaBalance={wallet.dia}
-            characterId={characterId}
+            characterId={wornCharacterId}
             onBuy={(itemId) => {
               void purchaseFurniture(itemId);
             }}
@@ -428,7 +442,7 @@ export function AppShell({
           <GroupHouseScreen
             houses={houses}
             loading={housesLoading}
-            characterId={characterId}
+            characterId={wornCharacterId}
             houseIndex={houseIndex}
             onHouseIndexChange={setHouseIndex}
             onVisitFriend={(friend) => {
@@ -543,7 +557,7 @@ export function AppShell({
           <ProfileEditScreen
             initialNickname={nickname}
             initialBio={bio}
-            characterId={characterId}
+            characterId={wornCharacterId}
             onSave={(nick, b) => {
               setNickname(nick);
               setBio(b);
