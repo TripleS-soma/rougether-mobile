@@ -168,6 +168,30 @@ describe('MyRoomScreen', () => {
     expect(queryByText('새 카테고리 만들기')).toBeTruthy();
   });
 
+  it('puts 알림 inside the hamburger menu, not the header (#257)', async () => {
+    const onOpenNotifications = jest.fn();
+    const { getByLabelText, queryByLabelText } = await render(
+      <MyRoomScreen
+        routines={[]}
+        onOpenNotifications={onOpenNotifications}
+        unreadNotificationCount={2}
+      />,
+    );
+
+    // No standalone bell button crowding the header — 알림 appears only after
+    // opening the menu popover.
+    expect(queryByLabelText('알림')).toBeNull();
+    await fireEvent.press(getByLabelText('메뉴'));
+    await fireEvent.press(getByLabelText('알림'));
+    expect(onOpenNotifications).toHaveBeenCalledTimes(1);
+  });
+
+  it('hides the 알림 menu item when unwired', async () => {
+    const { getByLabelText, queryByLabelText } = await render(<MyRoomScreen routines={[]} />);
+    await fireEvent.press(getByLabelText('메뉴'));
+    expect(queryByLabelText('알림')).toBeNull();
+  });
+
   it('schedules 격주/매월/매년 routines by their cadence (#255)', async () => {
     const [y, m, d] = TODAY.split('-').map(Number);
     const todayWd = new Date(y, m - 1, d).getDay();

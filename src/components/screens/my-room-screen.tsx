@@ -29,7 +29,7 @@ import {
   type RoutineCategoryMeta,
   UNCATEGORIZED_META,
 } from '@/constants/routines';
-import { Icon } from '@/components/ui/icon';
+import { Icon, type IconName } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { captureVerificationPhoto } from '@/lib/photo-verify';
 import { DEFAULT_WALLPAPER_ID, type FurnitureItem, type Wallpaper } from '@/resources/furniture';
@@ -166,9 +166,9 @@ export type MyRoomScreenProps = {
   // Callbacks (wired separately).
   onEdit?: () => void;
   onAddRoutine?: () => void;
-  /** Open the 알림 list (header bell; hidden when unwired). */
+  /** Open the 알림 list (햄버거 메뉴 항목; hidden when unwired). */
   onOpenNotifications?: () => void;
-  /** Unread notification count — >0 shows a dot on the bell. */
+  /** Unread notification count — >0 shows a dot on the menu button + item. */
   unreadNotificationCount?: number;
   /** Create a category (햄버거 메뉴 → 카테고리 관리 sheet). */
   onCreateCategory?: (category: RoutineCategoryMeta) => void;
@@ -522,18 +522,9 @@ export function MyRoomScreen({
         </View>
         <View style={styles.headerRight}>
           <WalletPills coin={coinBalance} dia={diaBalance} />
-          {onOpenNotifications ? (
-            <Pressable
-              onPress={onOpenNotifications}
-              accessibilityRole="button"
-              accessibilityLabel="알림"
-              style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-              <Icon name="bell" size={20} color={t.text} />
-              {unreadNotificationCount > 0 ? (
-                <View style={[styles.bellDot, { backgroundColor: t.danger }]} />
-              ) : null}
-            </Pressable>
-          ) : null}
+          {/* 알림 lives inside this popover (#257 — a separate bell button
+              crowded the header and crushed the title); unread shows as a dot
+              on the menu button. */}
           <Pressable
             ref={menuBtnRef}
             onPress={openNavMenu}
@@ -541,6 +532,9 @@ export function MyRoomScreen({
             accessibilityLabel="메뉴"
             style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
             <Icon name="menu" size={20} color={t.text} />
+            {onOpenNotifications && unreadNotificationCount > 0 ? (
+              <View style={[styles.menuDot, { backgroundColor: t.danger }]} />
+            ) : null}
           </Pressable>
         </View>
       </View>
@@ -1218,22 +1212,32 @@ export function MyRoomScreen({
             ]}>
             {(
               [
+                ...(onOpenNotifications
+                  ? [
+                      {
+                        icon: 'bell' as const,
+                        label: '알림',
+                        dot: unreadNotificationCount > 0,
+                        onPress: () => onOpenNotifications(),
+                      },
+                    ]
+                  : []),
                 {
-                  icon: 'edit',
+                  icon: 'edit' as const,
                   label: '방 꾸미기',
                   onPress: () => onEdit?.(),
                 },
                 {
-                  icon: 'folder',
+                  icon: 'folder' as const,
                   label: '카테고리 관리',
                   onPress: () => setCategorySheetOpen(true),
                 },
                 {
-                  icon: 'list',
+                  icon: 'list' as const,
                   label: '루틴 관리',
                   onPress: () => onAddRoutine?.(),
                 },
-              ] as const
+              ] as { icon: IconName; label: string; dot?: boolean; onPress: () => void }[]
             ).map((item, idx, arr) => (
               <Pressable
                 key={item.label}
@@ -1252,6 +1256,9 @@ export function MyRoomScreen({
                 ]}>
                 <Icon name={item.icon} size={18} color={t.text} />
                 <Text style={[Typography.body, { color: t.text }]}>{item.label}</Text>
+                {item.dot ? (
+                  <View style={[styles.popoverDot, { backgroundColor: t.danger }]} />
+                ) : null}
               </Pressable>
             ))}
           </View>
@@ -1350,13 +1357,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  bellDot: {
+  menuDot: {
     position: 'absolute',
     top: 8,
     right: 9,
     width: 8,
     height: 8,
     borderRadius: 4,
+  },
+  popoverDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginLeft: 'auto',
   },
   iconGlyph: {
     fontSize: 18,
