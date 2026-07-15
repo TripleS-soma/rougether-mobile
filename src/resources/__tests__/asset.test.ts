@@ -13,9 +13,11 @@ describe('assetSource', () => {
 });
 
 describe('isCdnKey', () => {
-  it('accepts API item/character keys', () => {
+  it('accepts API item/character/house keys', () => {
     expect(isCdnKey('items/forest-sage/furniture/forest-sage-bed.png')).toBe(true);
     expect(isCdnKey('characters/bear_sitting_figma_ready_v2.png')).toBe(true);
+    // House cover catalog keys (GET /houses/cover-images, #261).
+    expect(isCdnKey('house/cloud-balloon/house-unified-cloud-balloon-frame.png')).toBe(true);
   });
 
   it('rejects legacy local catalog keys and empty values', () => {

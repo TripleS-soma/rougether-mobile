@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { FontWeight, Radius, Spacing, Typography } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
 import { assetSource } from '@/resources/asset';
 
@@ -55,7 +55,7 @@ export function HouseCoverPicker({ covers, selectedKey, onSelect }: HouseCoverPi
               accessibilityLabel={c.name}
               testID="cover-art"
             />
-            <Text style={[styles.name, { color: t.text }]} numberOfLines={1}>
+            <Text style={[Typography.supporting, styles.name, { color: t.text }]} numberOfLines={1}>
               {c.name}
             </Text>
           </Pressable>
@@ -85,8 +85,8 @@ const styles = StyleSheet.create({
     aspectRatio: 1.4,
     borderRadius: Radius.sm,
   },
+  // Typography.supporting base; the label carries the selection so it reads bolder.
   name: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontWeight: FontWeight.semibold,
   },
 });

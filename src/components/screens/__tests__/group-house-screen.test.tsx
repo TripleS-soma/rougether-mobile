@@ -130,6 +130,41 @@ describe('GroupHouseScreen', () => {
     });
   });
 
+  it('prefills the current cover, sends the new pick, and hides the section without a catalog', async () => {
+    const covers = [
+      { code: 'cloud', name: '구름 풍선 집', coverImageKey: 'house/cloud-balloon/f.png' },
+      { code: 'coral', name: '산호 수족관 집', coverImageKey: 'house/coral-aquarium/f.png' },
+    ];
+    const onUpdateHouse = jest.fn();
+    const { getByLabelText, getByText } = await render(
+      <GroupHouseScreen
+        houses={[{ ...MISSION_HOUSE, coverImageKey: 'house/cloud-balloon/f.png' }]}
+        covers={covers}
+        onUpdateHouse={onUpdateHouse}
+      />,
+    );
+    await fireEvent.press(getByLabelText('구성원 목록'));
+    await fireEvent.press(getByLabelText('집 정보 수정'));
+    expect(getByText('대표 이미지')).toBeTruthy();
+    // The house's current cover arrives pre-selected.
+    expect(getByLabelText('구름 풍선 집 커버').props.accessibilityState.selected).toBe(true);
+
+    await fireEvent.press(getByLabelText('산호 수족관 집 커버'));
+    await fireEvent.press(getByLabelText('집 정보 저장'));
+    expect(onUpdateHouse).toHaveBeenCalledWith(
+      7,
+      expect.objectContaining({ coverImageKey: 'house/coral-aquarium/f.png' }),
+    );
+
+    // No catalog (load failed / server empty) → the section stays hidden.
+    const bare = await render(
+      <GroupHouseScreen houses={[MISSION_HOUSE]} onUpdateHouse={jest.fn()} />,
+    );
+    await fireEvent.press(bare.getByLabelText('구성원 목록'));
+    await fireEvent.press(bare.getByLabelText('집 정보 수정'));
+    expect(bare.queryByText('대표 이미지')).toBeNull();
+  });
+
   it('transfers ownership to a member after confirming', async () => {
     const onTransferOwnership = jest.fn();
     const { getByLabelText, getByText } = await render(
