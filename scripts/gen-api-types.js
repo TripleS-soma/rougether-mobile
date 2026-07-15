@@ -9,7 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const SPEC_URL = process.argv[2] || 'http://43.203.209.107:8080/v3/api-docs';
+const SPEC_URL = process.argv[2] || 'http://3.35.167.122:8080/v3/api-docs';
 const OUT = path.join(__dirname, '..', 'src', 'api', 'types.ts');
 
 function tsType(v) {
