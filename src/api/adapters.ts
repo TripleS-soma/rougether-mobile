@@ -768,9 +768,8 @@ export function characterIdFromCode(code?: string): CharacterId | undefined {
 
 /**
  * Owned character (GET /me/characters) → picker model. Characters whose code
- * has no local sprite art drop out (they can't render yet) — null result.
- * Known limit: if the SERVER-selected character is such a code, the room falls
- * back to the onboarding pick until #263 (CDN room rendering) lands.
+ * has no local sprite art drop out (the picker model needs an app CharacterId
+ * for fallback art and metadata) — null result.
  */
 export function toOwnedCharacter(c: MyCharacterItem): OwnedCharacter | null {
   const id = characterIdFromCode(c.code);
@@ -781,6 +780,7 @@ export function toOwnedCharacter(c: MyCharacterItem): OwnedCharacter | null {
     id,
     name: c.name || meta?.name || '',
     assetKey: c.baseAssetKey,
+    animations: c.animations,
     selected: c.selected === true,
   };
 }

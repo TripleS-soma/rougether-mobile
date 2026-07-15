@@ -18,6 +18,7 @@ import {
   toFriendActivity,
   toFriendRoutines,
 } from '@/api/adapters';
+import type { CharacterAnimationSet } from '@/components/character-avatar';
 import type { FriendActivityDay } from '@/components/screens/friend-room-screen';
 import type { CharacterId } from '@/constants/characters';
 import type { Routine } from '@/constants/routines';
@@ -28,6 +29,8 @@ export type FriendRoom = {
   /** null until the room endpoint answered (renders as an empty room). */
   placement: RoomPlacement | null;
   characterId?: CharacterId;
+  /** The friend's CDN animation keys (room response); local sprite fallback. */
+  characterAnimations?: CharacterAnimationSet;
   streakDays: number;
   routines: Routine[];
   /** Recent completion history (14 days); undefined while unloaded/failed. */
@@ -63,6 +66,7 @@ export function useFriendRoom() {
         ? { ...resolved, wallpaperId: resolved.wallpaperId ?? DEFAULT_WALLPAPER_ID }
         : null,
       characterId: characterIdFromCode(room?.character?.code),
+      characterAnimations: room?.character?.animations,
       streakDays: room?.streak?.currentCount ?? 0,
       routines: day ? toFriendRoutines(day) : [],
       // undefined on failure hides the section instead of faking an empty history.

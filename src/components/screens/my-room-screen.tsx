@@ -14,7 +14,7 @@ import {
   View,
 } from 'react-native';
 
-import { CharacterAvatar } from '@/components/character-avatar';
+import { CharacterAvatar, type CharacterAnimationSet } from '@/components/character-avatar';
 import { Room } from '@/components/room/room';
 import { CategoryManagerSheet } from '@/components/screens/sheets/category-manager-sheet';
 import {
@@ -125,6 +125,8 @@ export type MyRoomScreenProps = {
   diaBalance?: number;
   // Room rendering (forwarded to <Room />).
   characterId?: CharacterId;
+  /** Worn character's CDN animation keys (forwarded to <Room />). */
+  characterAnimations?: CharacterAnimationSet;
   wallpaperId?: string;
   floorId?: string | null;
   backgroundId?: string | null;
@@ -227,6 +229,7 @@ export function MyRoomScreen({
   coinBalance = 0,
   diaBalance = 0,
   characterId = DEFAULT_CHARACTER_ID,
+  characterAnimations,
   wallpaperId = DEFAULT_WALLPAPER_ID,
   floorId,
   backgroundId,
@@ -592,6 +595,7 @@ export function MyRoomScreen({
               <View style={styles.roomWrap}>
                 <Room
                   characterId={characterId}
+                  characterAnimations={characterAnimations}
                   wallpaperId={wallpaperId}
                   floorId={floorId}
                   backgroundId={backgroundId}

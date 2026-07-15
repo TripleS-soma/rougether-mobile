@@ -172,6 +172,7 @@ export function AppShell({
   const {
     characters: ownedCharacters,
     selectedCharacterId,
+    selectedCharacterAnimations: wornCharacterAnimations,
     select: selectWornCharacter,
     reload: reloadMyCharacters,
   } = useMyCharacters();
@@ -326,6 +327,7 @@ export function AppShell({
             floors={catalogue.floors}
             backgrounds={catalogue.backgrounds}
             characterId={wornCharacterId}
+            characterAnimations={wornCharacterAnimations}
             onToggleCompletion={toggleCompletion}
             onEdit={() => setScreen('decor')}
             onAddRoutine={() => setScreen('routineManage')}
@@ -371,6 +373,7 @@ export function AppShell({
             coinBalance={wallet.coin}
             diaBalance={wallet.dia}
             characterId={wornCharacterId}
+            characterAnimations={wornCharacterAnimations}
             onBuy={(itemId) => {
               void purchaseFurniture(itemId);
             }}
@@ -505,6 +508,7 @@ export function AppShell({
             floors={catalogue.floors}
             backgrounds={catalogue.backgrounds}
             characterId={friendRoom.characterId}
+            characterAnimations={friendRoom.characterAnimations}
             streakDays={friendRoom.streakDays}
             routines={friendRoom.routines}
             recentActivity={friendRoom.recentActivity}

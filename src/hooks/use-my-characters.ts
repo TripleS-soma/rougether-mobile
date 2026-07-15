@@ -43,8 +43,15 @@ export function useMyCharacters() {
     }
   };
 
-  /** The worn character's app id, once the server list has loaded. */
-  const selectedCharacterId = characters?.find((c) => c.selected)?.id;
+  // The worn character, once the server list has loaded. Its CDN animation
+  // keys ride along so the room can render the server art (#263).
+  const selectedCharacter = characters?.find((c) => c.selected);
 
-  return { characters, selectedCharacterId, reload: load, select };
+  return {
+    characters,
+    selectedCharacterId: selectedCharacter?.id,
+    selectedCharacterAnimations: selectedCharacter?.animations,
+    reload: load,
+    select,
+  };
 }

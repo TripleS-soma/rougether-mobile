@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { useState } from 'react';
 import { Pressable, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 
-import { CharacterAvatar, POSE_COUNT } from '@/components/character-avatar';
+import { CharacterAvatar, type CharacterAnimationSet } from '@/components/character-avatar';
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Radius } from '@/constants/theme';
@@ -51,6 +51,8 @@ export type RoomProps = {
   backgroundId?: string | null;
   placedFurnitureIds?: string[];
   characterId?: CharacterId;
+  /** Server CDN animation keys for the occupant; local sprite fallback when absent. */
+  characterAnimations?: CharacterAnimationSet;
   /** Item + wallpaper catalogue to resolve ids against (defaults to the local set). */
   furniture?: FurnitureItem[];
   wallpapers?: Wallpaper[];
@@ -82,6 +84,7 @@ export function Room({
   backgroundId,
   placedFurnitureIds = DEFAULT_PLACED_FURNITURE_IDS,
   characterId = DEFAULT_CHARACTER_ID,
+  characterAnimations,
   furniture = FURNITURE_ITEMS,
   wallpapers = WALLPAPERS,
   floors = [],
@@ -209,14 +212,25 @@ export function Room({
         : null}
       {interactiveCharacter ? (
         <Pressable
-          onPress={() => setPose((p) => (p + 1) % POSE_COUNT)}
+          // The avatar wraps the pose over however many frames it has (4 local
+          // sprites vs. the server's CDN animation set) — just keep counting.
+          onPress={() => setPose((p) => p + 1)}
           accessibilityRole="button"
           accessibilityLabel={`${character.name}, 눌러서 포즈 바꾸기`}
           style={styles.character}>
-          <CharacterAvatar characterId={characterId} pose={pose} style={styles.characterFill} />
+          <CharacterAvatar
+            characterId={characterId}
+            animations={characterAnimations}
+            pose={pose}
+            style={styles.characterFill}
+          />
         </Pressable>
       ) : (
-        <CharacterAvatar characterId={characterId} style={styles.character} />
+        <CharacterAvatar
+          characterId={characterId}
+          animations={characterAnimations}
+          style={styles.character}
+        />
       )}
     </View>
   );

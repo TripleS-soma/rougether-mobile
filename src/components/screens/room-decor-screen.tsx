@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 
+import { type CharacterAnimationSet } from '@/components/character-avatar';
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { Room, type RoomRegion } from '@/components/room/room';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
@@ -62,6 +63,8 @@ export type RoomDecorScreenProps = {
   /** Dia balance, for buying not-yet-owned items in the catalog. */
   diaBalance?: number;
   characterId?: CharacterId;
+  /** Worn character's CDN animation keys (forwarded to the <Room /> preview). */
+  characterAnimations?: CharacterAnimationSet;
   onBack?: () => void;
   /** Buy a not-yet-owned catalog item with dia. */
   onBuy?: (itemId: string) => void;
@@ -99,6 +102,7 @@ export function RoomDecorScreen({
   coinBalance = 0,
   diaBalance = 0,
   characterId = DEFAULT_CHARACTER_ID,
+  characterAnimations,
   onBack,
   onBuy,
   onApply,
@@ -214,6 +218,7 @@ export function RoomDecorScreen({
         <View style={styles.preview}>
           <Room
             characterId={characterId}
+            characterAnimations={characterAnimations}
             wallpaperId={wallpaperId}
             floorId={floorId}
             backgroundId={backgroundId}
