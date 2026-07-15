@@ -19,7 +19,7 @@ description: ../rougether-spec의 도메인 스펙과 이 앱의 실제 구현(�
    - `src/hooks/use-*.ts` (상태/로딩 로직) → `src/components/screens/*.tsx` (UI 노출)
    - 클라이언트 함수가 있어도 훅/화면이 안 쓰면 "클라이언트만 존재"로 별도 분류.
    - `ui/PendingNotice` 사용처 grep — "서버 준비 중" 고지가 붙은 곳이 곧 알려진 갭 목록.
-3. **서버**: `curl http://43.203.209.107:8080/v3/api-docs`로 스웨거를 받아 경로 목록 추출.
+3. **서버**: `curl http://3.35.167.122:8080/v3/api-docs`로 스웨거를 받아 경로 목록 추출.
    `src/api/*.ts`의 `apiGet|apiPost|apiPut|apiDelete` 호출 경로와 대조(둘 다 정렬해 diff).
 
 ## 2. 갭 분류
