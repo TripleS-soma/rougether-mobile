@@ -10,8 +10,8 @@ const res = (body: unknown) => ({
 
 const OWNED = {
   items: [
-    { userCharacterId: 11, characterId: 1, code: 'cat', name: '고양이', selected: false },
-    { userCharacterId: 12, characterId: 4, code: 'panda', name: '판다', selected: true },
+    { userCharacterId: 11, characterId: 1, code: 'cat', name: '고양이', baseAssetKey: 'characters/cat_sitting.png', selected: false }, // prettier-ignore
+    { userCharacterId: 12, characterId: 4, code: 'panda', name: '판다', baseAssetKey: 'characters/panda_sitting.png', selected: true }, // prettier-ignore
     // Unknown code (no local sprite art) — must drop out of the picker.
     { userCharacterId: 13, characterId: 9, code: 'dragon', name: '용', selected: false },
   ],
@@ -31,6 +31,8 @@ describe('useMyCharacters', () => {
     await waitFor(() => expect(result.current.characters).toHaveLength(2));
 
     expect(result.current.characters.map((c) => c.id)).toEqual(['cat', 'panda']);
+    // The server's CDN art key rides along for the picker to render.
+    expect(result.current.characters[0].assetKey).toBe('characters/cat_sitting.png');
     expect(result.current.selectedCharacterId).toBe('panda');
   });
 

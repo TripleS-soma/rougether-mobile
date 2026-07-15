@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { CharacterAvatar } from '@/components/character-avatar';
@@ -5,13 +6,16 @@ import { Icon } from '@/components/ui/icon';
 import { CHARACTER_OPTIONS, type CharacterId } from '@/constants/characters';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
+import { assetSource, isCdnKey } from '@/resources/asset';
 
-/** One owned character (server GET /me/characters), mapped to local sprite art. */
+/** One owned character (server GET /me/characters). */
 export type OwnedCharacter = {
   /** Server character id — the PUT /me/characters/select payload. */
   serverId: number;
   id: CharacterId;
   name: string;
+  /** CDN art key (baseAssetKey); local sprite fallback when absent/invalid. */
+  assetKey?: string;
   /** Currently worn (exactly one per account). */
   selected: boolean;
 };
@@ -82,7 +86,17 @@ export function CharacterPickerSheet({
                       },
                     ]}>
                     <View style={[styles.avatar, { backgroundColor: meta?.bg ?? t.surfaceMuted }]}>
-                      <CharacterAvatar characterId={c.id} size={56} />
+                      {/* Server CDN art first; the bundled sprite is the fallback. */}
+                      {isCdnKey(c.assetKey) ? (
+                        <Image
+                          source={assetSource(c.assetKey)}
+                          style={styles.cdnArt}
+                          contentFit="contain"
+                          accessibilityLabel={c.name}
+                        />
+                      ) : (
+                        <CharacterAvatar characterId={c.id} size={56} />
+                      )}
                     </View>
                     <Text style={[Typography.label, { color: t.text }]}>{c.name}</Text>
                     {c.selected ? (
@@ -165,6 +179,11 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  cdnArt: {
+    width: 56,
+    height: 56,
   },
   badge: {
     flexDirection: 'row',

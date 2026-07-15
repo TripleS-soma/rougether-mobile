@@ -778,6 +778,7 @@ export function toOwnedCharacter(c: MyCharacterItem): OwnedCharacter | null {
     serverId: c.characterId,
     id,
     name: c.name || meta?.name || '',
+    assetKey: c.baseAssetKey,
     selected: c.selected === true,
   };
 }
