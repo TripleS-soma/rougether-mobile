@@ -39,16 +39,31 @@ export type CategoryUpdateRequest = {
   visibility?: 'PRIVATE' | 'FRIENDS' | 'HOUSE' | 'PUBLIC';
 };
 
+export type CharacterAnimations = {
+  idle?: string;
+  poseCycle?: string;
+  wave?: string;
+};
+
 export type CharacterItem = {
   id?: number;
   code?: string;
   name?: string;
   baseAssetKey?: string;
+  animations?: CharacterAnimations;
   sortOrder?: number;
 };
 
 export type CharacterListResponse = {
   items?: CharacterItem[];
+};
+
+export type CharacterSelectRequest = {
+  characterId: number;
+};
+
+export type CharacterSelectResponse = {
+  selectedCharacterId?: number;
 };
 
 export type CompletionSummary = {
@@ -158,6 +173,16 @@ export type GuestbookListResponse = {
   items?: GuestbookItem[];
   nextCursor?: number;
   hasNext?: boolean;
+};
+
+export type HouseCoverImage = {
+  code?: string;
+  name?: string;
+  coverImageKey?: string;
+};
+
+export type HouseCoverImageListResponse = {
+  items?: HouseCoverImage[];
 };
 
 export type HouseCreateRequest = {
@@ -399,6 +424,21 @@ export type MissionSummary = {
   createdAt?: string;
 };
 
+export type MyCharacterItem = {
+  userCharacterId?: number;
+  characterId?: number;
+  code?: string;
+  name?: string;
+  baseAssetKey?: string;
+  animations?: CharacterAnimations;
+  selected?: boolean;
+  acquiredAt?: string;
+};
+
+export type MyCharacterListResponse = {
+  items?: MyCharacterItem[];
+};
+
 export type MyHouseListResponse = {
   items?: MyHouseSummary[];
 };
@@ -501,6 +541,7 @@ export type RoomCharacterResponse = {
   code?: string;
   name?: string;
   assetKey?: string;
+  animations?: CharacterAnimations;
 };
 
 export type RoomResponse = {

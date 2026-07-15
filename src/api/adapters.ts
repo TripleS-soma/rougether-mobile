@@ -31,11 +31,13 @@ import { isPictogramName, type PictogramName } from '@/components/ui/pictograms'
 import type { HousePreview, SearchHouse } from '@/components/screens/house-search-screen';
 import type { CalendarDayItem } from '@/components/screens/my-room-screen';
 import type { NotificationEntry } from '@/components/screens/notification-list-screen';
+import type { OwnedCharacter } from '@/components/screens/sheets/character-picker-sheet';
 
 import type {
   CalendarDayResponse,
   CategoryCreateRequest,
   GuestbookItem,
+  MyCharacterItem,
   MyItemSummary,
   RoomSlotResponse,
   CharacterItem,
@@ -762,6 +764,25 @@ export function fromFriendRoomSlots(
 /** Room character code (e.g. "cat") → app CharacterId, when the code exists app-side. */
 export function characterIdFromCode(code?: string): CharacterId | undefined {
   return CHARACTER_OPTIONS.find((o) => o.id === code)?.id;
+}
+
+/**
+ * Owned character (GET /me/characters) → picker model. Characters whose code
+ * has no local sprite art drop out (they can't render yet) — null result.
+ * Known limit: if the SERVER-selected character is such a code, the room falls
+ * back to the onboarding pick until #263 (CDN room rendering) lands.
+ */
+export function toOwnedCharacter(c: MyCharacterItem): OwnedCharacter | null {
+  const id = characterIdFromCode(c.code);
+  if (!id || c.characterId == null) return null;
+  const meta = CHARACTER_OPTIONS.find((o) => o.id === id);
+  return {
+    serverId: c.characterId,
+    id,
+    name: c.name || meta?.name || '',
+    assetKey: c.baseAssetKey,
+    selected: c.selected === true,
+  };
 }
 
 /**

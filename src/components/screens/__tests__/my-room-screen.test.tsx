@@ -192,6 +192,26 @@ describe('MyRoomScreen', () => {
     expect(queryByLabelText('알림')).toBeNull();
   });
 
+  it('opens the character picker from the hamburger menu and wears a pick (#260)', async () => {
+    const onSelectCharacter = jest.fn();
+    const owned = [
+      { serverId: 1, id: 'cat' as const, name: '고양이', selected: true },
+      { serverId: 4, id: 'panda' as const, name: '판다', selected: false },
+    ];
+    const { getByLabelText, getByText, queryByText } = await render(
+      <MyRoomScreen routines={[]} ownedCharacters={owned} onSelectCharacter={onSelectCharacter} />,
+    );
+
+    await fireEvent.press(getByLabelText('메뉴'));
+    await fireEvent.press(getByText('캐릭터 교체'));
+    expect(getByText('착용 중')).toBeTruthy();
+
+    await fireEvent.press(getByLabelText('판다 착용'));
+    expect(onSelectCharacter).toHaveBeenCalledWith(4);
+    // The sheet closes after picking.
+    expect(queryByText('착용 중')).toBeNull();
+  });
+
   it('schedules 격주/매월/매년 routines by their cadence (#255)', async () => {
     const [y, m, d] = TODAY.split('-').map(Number);
     const todayWd = new Date(y, m - 1, d).getDay();
