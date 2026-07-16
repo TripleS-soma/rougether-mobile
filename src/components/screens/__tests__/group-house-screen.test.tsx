@@ -418,6 +418,21 @@ describe('GroupHouseScreen', () => {
     expect(getAllByText('친구')).toBeTruthy();
   });
 
+  it('keeps a half-width filler next to the lone seat of an odd capacity', async () => {
+    const house = {
+      ...MISSION_HOUSE,
+      maxMembers: 3,
+      floors: [
+        { level: '2층', rooms: [{ name: '빈방', color: 'transparent', vacant: true }] },
+        ...MISSION_HOUSE.floors,
+      ],
+    };
+    const { getByTestId, getByText } = await render(<GroupHouseScreen houses={[house]} />);
+    // 정원 3 → 위 행은 타일 1개 + 투명 자리채움이라 반칸 크기가 유지된다.
+    expect(getByTestId('room-spacer')).toBeTruthy();
+    expect(getByText('빈방')).toBeTruthy();
+  });
+
   it('marks the owner in the member management list', async () => {
     const { getByLabelText, getByText } = await render(
       <GroupHouseScreen

@@ -1059,7 +1059,7 @@ export function GroupHouseScreen({
                   );
                 })}
                 {/* Odd capacity → invisible filler keeps the lone tile half-width. */}
-                {pair.length === 1 ? <View style={styles.roomSpacer} /> : null}
+                {pair.length === 1 ? <View style={styles.roomSpacer} testID="room-spacer" /> : null}
               </View>
             </View>
           ))}
