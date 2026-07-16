@@ -13,13 +13,37 @@ const machine: GachaMachine = {
   drawCount: 1,
   icon: 'croissant' as const,
   accent: '#F7E6C8',
+  kind: 'furniture',
+};
+
+const characterMachine: GachaMachine = {
+  id: 12,
+  name: '캐릭터 뽑기',
+  costCurrencyType: 'COIN',
+  costAmount: 1000,
+  drawCount: 1,
+  icon: 'paw' as const,
+  accent: '#D6E4D2',
+  kind: 'character',
 };
 
 describe('GachaScreen', () => {
   it('renders the title and balance', async () => {
     const { getByText } = await render(<GachaScreen coinBalance={5600} />);
-    expect(getByText('가챠')).toBeTruthy();
+    expect(getByText('뽑기')).toBeTruthy();
     expect(getByText('5,600')).toBeTruthy();
+  });
+
+  it('splits the selector into furniture and character rows', async () => {
+    const both = await render(
+      <GachaScreen gachas={[machine, characterMachine]} coinBalance={5600} />,
+    );
+    expect(both.getByText('가구 뽑기')).toBeTruthy();
+    expect(both.getByText('캐릭터 뽑기')).toBeTruthy();
+
+    // Without a character machine the character row disappears entirely.
+    const onlyFurniture = await render(<GachaScreen gachas={[machine]} coinBalance={5600} />);
+    expect(onlyFurniture.queryByText('캐릭터 뽑기')).toBeNull();
   });
 
   it('draws from the API and reveals the reward', async () => {

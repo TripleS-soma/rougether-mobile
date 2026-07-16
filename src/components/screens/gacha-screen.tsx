@@ -71,6 +71,9 @@ export function GachaScreen({
   const [pulled, setPulled] = useState<DrawResult[]>([]);
 
   const box = gachas.find((b) => b.id === selectedId) ?? gachas[0];
+  // Selector rows: themed furniture machines first, the character gacha below.
+  const furnitureMachines = gachas.filter((b) => b.kind !== 'character');
+  const characterMachines = gachas.filter((b) => b.kind === 'character');
   const balanceFor = (c: 'COIN' | 'DIAMOND') => (c === 'COIN' ? coinBalance : diaBalance);
   const canAfford = (count: 1 | 10) =>
     box ? balanceFor(box.costCurrencyType) >= box.costAmount * count : false;
@@ -116,7 +119,7 @@ export function GachaScreen({
           style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
           <Icon name="back" size={26} color={t.text} />
         </Pressable>
-        <Text style={[Typography.h2, { color: t.text }]}>가챠</Text>
+        <Text style={[Typography.h2, { color: t.text }]}>뽑기</Text>
         <WalletPills coin={coinBalance} dia={diaBalance} />
       </View>
 
@@ -135,31 +138,48 @@ export function GachaScreen({
           </Text>
         ) : null}
 
-        {/* Machine selector */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.boxRow}>
-          {gachas.map((b) => {
-            const active = b.id === box?.id;
-            return (
-              <Pressable
-                key={b.id}
-                onPress={() => {
-                  setSelectedId(b.id);
-                  setError('');
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={b.name}
-                style={[
-                  styles.boxChip,
-                  { backgroundColor: b.accent, borderColor: active ? t.primary : 'transparent' },
-                ]}>
-                <Pictogram name={b.icon} size={26} />
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+        {/* Machine selector — one labeled row per machine kind. */}
+        <View style={styles.selector}>
+          {(
+            [
+              ['가구 뽑기', furnitureMachines],
+              ['캐릭터 뽑기', characterMachines],
+            ] as const
+          ).map(([label, machines]) =>
+            machines.length === 0 ? null : (
+              <View key={label} style={styles.rowBlock}>
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>{label}</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.boxRow}>
+                  {machines.map((b) => {
+                    const active = b.id === box?.id;
+                    return (
+                      <Pressable
+                        key={b.id}
+                        onPress={() => {
+                          setSelectedId(b.id);
+                          setError('');
+                        }}
+                        accessibilityRole="button"
+                        accessibilityLabel={b.name}
+                        style={[
+                          styles.boxChip,
+                          {
+                            backgroundColor: b.accent,
+                            borderColor: active ? t.primary : 'transparent',
+                          },
+                        ]}>
+                        <Pictogram name={b.icon} size={26} />
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            ),
+          )}
+        </View>
 
         {/* Selected machine */}
         {box ? (
@@ -389,6 +409,8 @@ const styles = StyleSheet.create({
   },
   body: { padding: Spacing.four, gap: Spacing.four },
   loadingBlock: { alignItems: 'center', paddingVertical: Spacing.six, gap: Spacing.two },
+  selector: { gap: Spacing.two },
+  rowBlock: { gap: Spacing.one },
   boxRow: { gap: Spacing.two, paddingVertical: Spacing.half },
   boxChip: {
     width: 56,
