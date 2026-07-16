@@ -53,6 +53,23 @@ describe('useMemberRoomPreviews', () => {
     });
   });
 
+  it('does not poison the cache while the catalogue is still loading', async () => {
+    global.fetch = jest.fn(async () => res({ slots: [] })) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useMemberRoomPreviews());
+    await act(async () => {
+      // Pre-load catalogue (EMPTY): must neither fetch nor mark the house done.
+      await result.current.load(11, [42], CATALOGUE, false);
+    });
+    expect(global.fetch).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await result.current.load(11, [42], CATALOGUE, true);
+    });
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(result.current.previews[42]).toBeTruthy();
+  });
+
   it('loads a house once and refetches only when the house changes', async () => {
     global.fetch = jest.fn(async () => res({ slots: [] })) as unknown as typeof fetch;
 

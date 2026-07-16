@@ -259,8 +259,10 @@ export function AppShell({
     const membershipIds = currentHouse.floors
       .flatMap((f) => f.rooms.map((r) => r.membershipId))
       .filter((id): id is number => id != null);
-    void loadRoomPreviews(currentHouse.houseId, membershipIds, catalogue);
-  }, [screen, currentHouse, catalogue, loadRoomPreviews]);
+    // catalogueReady=!shopLoading: an EMPTY pre-load catalogue must not fill
+    // the per-house cache with blank rooms (the effect re-fires when it lands).
+    void loadRoomPreviews(currentHouse.houseId, membershipIds, catalogue, !shopLoading);
+  }, [screen, currentHouse, catalogue, shopLoading, loadRoomPreviews]);
   // Guestbook for the friend room being visited (loads on visit).
   const {
     entries: guestbookEntries,

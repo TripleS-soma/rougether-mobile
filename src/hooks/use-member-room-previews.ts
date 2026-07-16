@@ -17,7 +17,15 @@ export function useMemberRoomPreviews() {
   const loadedHouseRef = useRef<number | null>(null);
 
   const load = useCallback(
-    async (houseId: number, membershipIds: number[], catalogue: ShopCatalogue) => {
+    async (
+      houseId: number,
+      membershipIds: number[],
+      catalogue: ShopCatalogue,
+      catalogueReady = true,
+    ) => {
+      // A not-yet-loaded catalogue maps every slot to nothing — loading with it
+      // would cache empty rooms for the whole house. Wait for the real one.
+      if (!catalogueReady) return;
       if (loadedHouseRef.current === houseId) return;
       loadedHouseRef.current = houseId;
       setPreviews({});
