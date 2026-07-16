@@ -419,6 +419,37 @@ describe('GroupHouseScreen', () => {
     expect(onKickMember).toHaveBeenCalledWith(7, 42);
   });
 
+  it('hides the kick button on my own card and uses a back button header', async () => {
+    const onKickMember = jest.fn();
+    const houses = [
+      {
+        title: '실집',
+        houseId: 7,
+        myRole: 'OWNER' as const,
+        floors: [
+          {
+            level: '1층',
+            rooms: [
+              { name: '친구', color: '#F5E1D8', membershipId: 42 },
+              { name: '나', color: '#E8E0D0', isMine: true, membershipId: 43 },
+            ],
+          },
+        ],
+      },
+    ];
+    const { getByLabelText, getByText, queryByLabelText } = await render(
+      <GroupHouseScreen houses={houses} onKickMember={onKickMember} />,
+    );
+    await fireEvent.press(getByLabelText('구성원 목록'));
+    // 내 카드엔 강퇴 버튼이 아예 없다 (disabled가 아니라 미노출).
+    expect(getByLabelText('친구 강퇴')).toBeTruthy();
+    expect(queryByLabelText('나 강퇴')).toBeNull();
+    // 헤더는 X 대신 다른 화면과 같은 왼쪽 뒤로가기.
+    expect(queryByLabelText('닫기')).toBeNull();
+    await fireEvent.press(getByLabelText('뒤로 가기'));
+    expect(getByText('우리 그룹의 미션')).toBeTruthy();
+  });
+
   it('opens member management and kicks a member after confirming', async () => {
     const { getByText, getByLabelText, getAllByText, queryByText } = await render(
       <GroupHouseScreen />,

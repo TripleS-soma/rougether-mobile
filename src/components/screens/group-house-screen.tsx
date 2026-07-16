@@ -450,19 +450,19 @@ export function GroupHouseScreen({
     return (
       <View style={[styles.screen, screenStyle]}>
         <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
+          <Pressable
+            onPress={() => setShowMembers(false)}
+            accessibilityRole="button"
+            accessibilityLabel="뒤로 가기"
+            style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
+            <Icon name="back" size={26} color={t.text} />
+          </Pressable>
           <View style={styles.flex}>
             <Text style={[Typography.supporting, { color: t.primaryText }]}>
               {currentHouse.title}
             </Text>
             <Text style={[Typography.h3, { color: t.text }]}>구성원 관리</Text>
           </View>
-          <Pressable
-            onPress={() => setShowMembers(false)}
-            accessibilityRole="button"
-            accessibilityLabel="닫기"
-            style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-            <Icon name="close" size={18} color={t.text} />
-          </Pressable>
         </View>
 
         <ScrollView contentContainerStyle={styles.body}>
@@ -565,23 +565,21 @@ export function GroupHouseScreen({
                       <Text style={[Typography.supporting, { color: t.primaryText }]}>위임</Text>
                     </Pressable>
                   ) : null}
-                  {canKick ? (
+                  {/* 내 카드에는 강퇴 버튼 자체를 두지 않는다 (disable 아님). */}
+                  {canKick && !member.isMine ? (
                     <Pressable
                       onPress={() => setMemberToKick(member)}
-                      disabled={member.isMine || kickedOut}
+                      disabled={kickedOut}
                       accessibilityRole="button"
                       accessibilityLabel={`${member.name} 강퇴`}
                       style={[
                         styles.kickBtn,
-                        {
-                          backgroundColor:
-                            member.isMine || kickedOut ? t.surfaceMuted : `${t.danger}22`,
-                        },
+                        { backgroundColor: kickedOut ? t.surfaceMuted : `${t.danger}22` },
                       ]}>
                       <Text
                         style={[
                           Typography.supporting,
-                          { color: member.isMine || kickedOut ? t.textDisabled : t.danger },
+                          { color: kickedOut ? t.textDisabled : t.danger },
                         ]}>
                         {kickedOut ? '강퇴됨' : '강퇴'}
                       </Text>
