@@ -13,6 +13,7 @@ import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { CharacterAvatar } from '@/components/character-avatar';
 import { type HouseCover, HouseCoverPicker } from '@/components/house-cover-picker';
 import { Room } from '@/components/room/room';
+import { DateRangeSheet } from '@/components/screens/sheets/date-range-sheet';
 import { Icon } from '@/components/ui/icon';
 import {
   CrownPictogram,
@@ -24,10 +25,12 @@ import {
   TargetPictogram,
 } from '@/components/ui/pictograms';
 import { Radius, Spacing, Typography } from '@/constants/theme';
+import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 import type { FurnitureItem, Wallpaper } from '@/resources/furniture';
+import { formatDate, todayIso } from '@/utils/datetime';
 
 /**
  * A member's live room resolved for the tile preview (their placement + worn
@@ -108,6 +111,8 @@ export type HouseMission = {
   status: 'ACTIVE' | 'COMPLETED' | 'EXPIRED';
   /** Target reached — the reward is claimable while ACTIVE. */
   achieved?: boolean;
+  /** Mission end date (device-local "YYYY-MM-DD"); absent = 무기한. */
+  endsOn?: string;
 };
 
 /** Creatable mission types (STREAK_DAYS is not supported by the server yet). */
@@ -115,7 +120,19 @@ export type NewHouseMission = {
   title: string;
   missionType: 'DAILY_MEMBER_RATE' | 'WEEKLY_MEMBER_COUNT';
   targetValue: number;
+  /** Optional period (ISO date-time, KST); omitted = 즉시 시작·무기한. */
+  startsAt?: string;
+  endsAt?: string;
 };
+
+/** "YYYY-MM-DD" + n days → "YYYY-MM-DD" (device-local; noon avoids DST edges). */
+function addDaysIso(iso: string, days: number) {
+  const d = new Date(`${iso}T12:00:00`);
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+    d.getDate(),
+  ).padStart(2, '0')}`;
+}
 
 const MISSION_TYPE_OPTIONS: {
   type: NewHouseMission['missionType'];
@@ -271,6 +288,11 @@ export function GroupHouseScreen({
   const [missionType, setMissionType] =
     useState<NewHouseMission['missionType']>('WEEKLY_MEMBER_COUNT');
   const [missionTarget, setMissionTarget] = useState('10');
+  // Optional mission period (기간 설정 토글) — off sends nothing (즉시 시작·무기한).
+  const [missionHasPeriod, setMissionHasPeriod] = useState(false);
+  const [missionStart, setMissionStart] = useState(todayIso());
+  const [missionEnd, setMissionEnd] = useState<string | undefined>(undefined);
+  const [showPeriodSheet, setShowPeriodSheet] = useState(false);
   const [showEditHouse, setShowEditHouse] = useState(false);
   const [editName, setEditName] = useState('');
   const [editDesc, setEditDesc] = useState('');
@@ -316,10 +338,30 @@ export function GroupHouseScreen({
       title: missionTitle.trim(),
       missionType,
       targetValue: missionTargetNum,
+      // KST day bounds: 시작일 자정부터 종료일 하루 끝까지 (종료일 당일 포함).
+      ...(missionHasPeriod
+        ? {
+            startsAt: `${missionStart}T00:00:00+09:00`,
+            endsAt: missionEnd ? `${missionEnd}T23:59:59+09:00` : undefined,
+          }
+        : {}),
     });
     setShowCreateMission(false);
     setMissionTitle('');
     setMissionTarget('10');
+    setMissionHasPeriod(false);
+  };
+  const toggleMissionPeriod = () => {
+    setMissionHasPeriod((prev) => {
+      const next = !prev;
+      if (next) {
+        // Re-derive on each enable — the mounted default goes stale overnight.
+        const start = todayIso();
+        setMissionStart(start);
+        setMissionEnd(addDaysIso(start, 7));
+      }
+      return next;
+    });
   };
   const openEditHouse = () => {
     setEditName(currentHouse?.title ?? '');
@@ -992,6 +1034,13 @@ export function GroupHouseScreen({
                           numberOfLines={1}>
                           {mission.desc}
                         </Text>
+                        {/* Own node (not a desc suffix) so the long type label
+                            truncates instead of the date. */}
+                        {mission.endsOn && mission.status === 'ACTIVE' ? (
+                          <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                            ~{mission.endsOn.slice(5).replace('-', '.')}
+                          </Text>
+                        ) : null}
                         {mission.status === 'COMPLETED' ? (
                           <Text style={[Typography.supporting, { color: t.textMuted }]}>완료</Text>
                         ) : mission.status === 'EXPIRED' ? (
@@ -1085,6 +1134,25 @@ export function GroupHouseScreen({
                 accessibilityLabel="목표 수치"
                 style={[styles.missionInput, { backgroundColor: t.surfaceMuted, color: t.text }]}
               />
+              <View style={styles.periodRow}>
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>기간 설정</Text>
+                <ToggleSwitch
+                  value={missionHasPeriod}
+                  onToggle={toggleMissionPeriod}
+                  accessibilityLabel="기간 설정"
+                />
+              </View>
+              {missionHasPeriod ? (
+                <Pressable
+                  onPress={() => setShowPeriodSheet(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="미션 기간 선택"
+                  style={[styles.missionInput, { backgroundColor: t.surfaceMuted }]}>
+                  <Text style={[Typography.supporting, { color: t.text }]}>
+                    {formatDate(missionStart)} ~ {missionEnd ? formatDate(missionEnd) : '무기한'}
+                  </Text>
+                </Pressable>
+              ) : null}
             </View>
             <View style={styles.modalActions}>
               <Pressable
@@ -1115,6 +1183,18 @@ export function GroupHouseScreen({
           </View>
         </View>
       ) : null}
+
+      {/* Mission period picker — its overlay (zIndex 100) sits above the modal. */}
+      <DateRangeSheet
+        visible={showPeriodSheet}
+        initialStartDate={missionStart}
+        initialEndDate={missionEnd}
+        onSave={(start, end) => {
+          setMissionStart(start);
+          setMissionEnd(end);
+        }}
+        onClose={() => setShowPeriodSheet(false)}
+      />
     </View>
   );
 }
@@ -1369,6 +1449,11 @@ const styles = StyleSheet.create({
   missionForm: {
     marginTop: Spacing.three,
     gap: Spacing.two,
+  },
+  periodRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   missionInput: {
     borderRadius: Radius.md,

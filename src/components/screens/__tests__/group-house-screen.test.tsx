@@ -132,6 +132,32 @@ describe('GroupHouseScreen', () => {
     expect(getByLabelText('수달')).toBeTruthy();
   });
 
+  it('sends the mission period only when the toggle is on (KST day bounds)', async () => {
+    const onCreateMission = jest.fn();
+    const { getByLabelText } = await render(
+      <GroupHouseScreen houses={[MISSION_HOUSE]} onCreateMission={onCreateMission} />,
+    );
+
+    // Toggle off (default): no period fields at all.
+    await fireEvent.press(getByLabelText('미션 만들기'));
+    await fireEvent.changeText(getByLabelText('미션 제목'), '기간 없는 미션');
+    await fireEvent.press(getByLabelText('미션 만들기 확인'));
+    expect(onCreateMission).toHaveBeenLastCalledWith(
+      7,
+      expect.not.objectContaining({ startsAt: expect.anything() }),
+    );
+
+    // Toggle on: defaults to 오늘 ~ +7일, sent as KST day bounds.
+    await fireEvent.press(getByLabelText('미션 만들기'));
+    await fireEvent.changeText(getByLabelText('미션 제목'), '기간 있는 미션');
+    await fireEvent.press(getByLabelText('기간 설정'));
+    await fireEvent.press(getByLabelText('미션 만들기 확인'));
+    const input = onCreateMission.mock.calls.at(-1)[1];
+    expect(input.startsAt).toMatch(/^\d{4}-\d{2}-\d{2}T00:00:00\+09:00$/);
+    expect(input.endsAt).toMatch(/^\d{4}-\d{2}-\d{2}T23:59:59\+09:00$/);
+    expect(input.endsAt > input.startsAt).toBe(true);
+  });
+
   it('lets the owner edit the house settings', async () => {
     const onUpdateHouse = jest.fn();
     const { getByLabelText } = await render(
