@@ -19,6 +19,13 @@ describe('Room', () => {
     expect(getByLabelText('호랑이')).toBeTruthy();
   });
 
+  it('renders an unoccupied room without any character when characterId is null', async () => {
+    const { queryByLabelText } = await render(<Room placedFurnitureIds={[]} characterId={null} />);
+    // 빈방 타일(#281): 방만 있고 캐릭터·가구가 없다.
+    expect(queryByLabelText('고양이')).toBeNull();
+    expect(queryByLabelText('포근한 침대')).toBeNull();
+  });
+
   it('renders CDN wallpaper art even when a background covers the room', async () => {
     const wallpapers = [
       {

@@ -155,6 +155,12 @@ const DEMO_MISSIONS: HouseMission[] = [
   { id: 3, title: '지난주 스트레칭 미션', desc: '주간 구성원 달성 횟수', icon: 'calendar', current: 20, target: 20, status: 'COMPLETED' }, // prettier-ignore
 ];
 
+// 빈방 타일의 바닥 밴드 — 일반 빈 방(#281)이라 서버 카탈로그와 무관한 고정
+// 파스텔(방 타일 팔레트와 같은 결)로 그린다.
+const VACANT_FLOOR: Wallpaper[] = [
+  { id: 'vacant-floor', name: '빈방 바닥', price: 0, assetKey: 'vacant-floor', color: '#E7D9BE' },
+];
+
 // Demo layout mirrors the adapter's default fill: my room bottom-left, others
 // in join order, vacant capacity seats on the top floor (정원 6 / 멤버 4).
 const DEFAULT_HOUSES: House[] = [
@@ -1170,26 +1176,45 @@ export function GroupHouseScreen({
                               />
                             </View>
                           ) : null}
+                          {/* 빈 좌석은 캐릭터 없는 기본 빈 방을 낮춘 톤으로 —
+                          "방은 준비돼 있고 주인만 없다" (#281, 시안 A). */}
+                          {empty ? (
+                            <View
+                              style={styles.roomPreview}
+                              pointerEvents="none"
+                              testID="vacant-room">
+                              <Room
+                                placedFurnitureIds={[]}
+                                characterId={null}
+                                floorId={VACANT_FLOOR[0].id}
+                                floors={VACANT_FLOOR}
+                                style={[styles.roomPreviewFill, styles.vacantRoom]}
+                              />
+                            </View>
+                          ) : null}
                           {room.isMine ? (
                             <View style={[styles.myTag, { backgroundColor: t.warning }]}>
                               <Text style={[styles.myTagText, { color: t.onTint }]}>MY</Text>
                             </View>
                           ) : null}
-                          {empty ? (
-                            <Icon name="leave" size={36} color={t.textMuted} />
-                          ) : preview ? null : (
+                          {empty || preview ? null : (
                             <CharacterAvatar characterId={characterId} size={64} />
                           )}
                           {/* Tiles keep their fixed pastel bg in dark mode — the
                           name needs onTint ink, not the (light) theme text.
-                          Over a preview it drops to a bottom scrim for contrast. */}
-                          <View style={[styles.roomNameRow, preview && styles.roomNameOverlay]}>
+                          Over a preview (or the vacant room) it drops to a
+                          bottom scrim for contrast. */}
+                          <View
+                            style={[
+                              styles.roomNameRow,
+                              (preview || empty) && styles.roomNameOverlay,
+                            ]}>
                             {!empty && room.isOwner ? <CrownPictogram size={12} /> : null}
                             <Text
                               style={[
                                 Typography.supporting,
                                 styles.roomName,
-                                { color: empty ? t.textMuted : preview ? '#FFFFFF' : t.onTint },
+                                { color: preview || empty ? '#FFFFFF' : t.onTint },
                               ]}>
                               {empty ? '빈방' : room.isMine ? `${room.name} (나)` : room.name}
                             </Text>
@@ -1563,6 +1588,10 @@ const styles = StyleSheet.create({
   },
   roomPreview: {
     ...StyleSheet.absoluteFillObject,
+  },
+  // 빈 좌석의 빈 방은 톤을 낮춰 멤버 방과 확실히 구분한다 (시안 A).
+  vacantRoom: {
+    opacity: 0.55,
   },
   roomPreviewFill: {
     width: '100%',
