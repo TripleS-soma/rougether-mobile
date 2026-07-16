@@ -132,6 +132,46 @@ describe('GroupHouseScreen', () => {
     expect(getByLabelText('수달')).toBeTruthy();
   });
 
+  it('sends the mission period only when the toggle is on (KST day bounds)', async () => {
+    const onCreateMission = jest.fn();
+    const { getByLabelText } = await render(
+      <GroupHouseScreen houses={[MISSION_HOUSE]} onCreateMission={onCreateMission} />,
+    );
+
+    // Toggle off (default): no period fields at all.
+    await fireEvent.press(getByLabelText('미션 만들기'));
+    await fireEvent.changeText(getByLabelText('미션 제목'), '기간 없는 미션');
+    await fireEvent.press(getByLabelText('미션 만들기 확인'));
+    expect(onCreateMission).toHaveBeenLastCalledWith(
+      7,
+      expect.not.objectContaining({ startsAt: expect.anything() }),
+    );
+
+    // Toggle on: defaults to 오늘 ~ +7일, sent as KST day bounds.
+    await fireEvent.press(getByLabelText('미션 만들기'));
+    await fireEvent.changeText(getByLabelText('미션 제목'), '기간 있는 미션');
+    await fireEvent.press(getByLabelText('기간 설정'));
+    await fireEvent.press(getByLabelText('미션 만들기 확인'));
+    const input = onCreateMission.mock.calls.at(-1)[1];
+    expect(input.startsAt).toMatch(/^\d{4}-\d{2}-\d{2}T00:00:00\+09:00$/);
+    expect(input.endsAt).toMatch(/^\d{4}-\d{2}-\d{2}T23:59:59\+09:00$/);
+    expect(input.endsAt > input.startsAt).toBe(true);
+  });
+
+  it('shows the end date on active missions with a period', async () => {
+    const house = {
+      ...MISSION_HOUSE,
+      missions: [
+        { id: 21, title: '기간 미션', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 0, target: 5, status: 'ACTIVE' as const, endsOn: '2026-07-23' }, // prettier-ignore
+        { id: 22, title: '끝난 기간 미션', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 5, target: 5, status: 'COMPLETED' as const, endsOn: '2026-07-01' }, // prettier-ignore
+      ],
+    };
+    const { getByText, queryByText } = await render(<GroupHouseScreen houses={[house]} />);
+    expect(getByText('~07.23')).toBeTruthy();
+    // Finished missions show their status, not a stale end date.
+    expect(queryByText('~07.01')).toBeNull();
+  });
+
   it('lets the owner edit the house settings', async () => {
     const onUpdateHouse = jest.fn();
     const { getByLabelText } = await render(

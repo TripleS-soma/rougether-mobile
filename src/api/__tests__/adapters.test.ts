@@ -13,6 +13,7 @@ import {
   toWallet,
   todayCompletions,
   toGroupHouse,
+  toHouseMission,
   toHouseCover,
   characterIdFromCode,
   toGachaMachine,
@@ -508,6 +509,21 @@ describe('API adapters', () => {
       'furniture',
     );
     expect(toGachaMachine({ gachaId: 12, name: '캐릭터 뽑기' }).kind).toBe('character');
+  });
+
+  it('maps a mission end time to a local end date for the card', () => {
+    expect(
+      toHouseMission({
+        missionId: 1,
+        title: '기간 미션',
+        missionType: 'WEEKLY_MEMBER_COUNT',
+        targetValue: 5,
+        endsAt: '2026-07-23T23:59:59+09:00',
+      }).endsOn,
+    ).toBe('2026-07-23');
+    expect(
+      toHouseMission({ missionId: 2, title: '무기한', missionType: 'DAILY_MEMBER_RATE' }).endsOn,
+    ).toBeUndefined();
   });
 
   it('maps a room character code to the app character id', () => {

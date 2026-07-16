@@ -23,6 +23,7 @@ import {
 } from '@/resources/furniture';
 
 import { type OnboardingGoal } from '@/components/screens/onboarding-screen';
+import { toIsoDate } from '@/utils/datetime';
 import { type RoomSlotSave } from './rooms';
 
 import type { HouseCover } from '@/components/house-cover-picker';
@@ -624,6 +625,12 @@ const MISSION_TYPE_META: Record<string, { icon: PictogramName; label: string }> 
 };
 
 /** House-mission card model from the API mission summary. */
+/** Server date-time → device-local "YYYY-MM-DD" (mission period display). */
+function localDateOf(dateTime: string): string | undefined {
+  const d = new Date(dateTime);
+  return Number.isNaN(d.getTime()) ? undefined : toIsoDate(d);
+}
+
 export function toHouseMission(m: MissionSummary): HouseMission {
   const meta = MISSION_TYPE_META[m.missionType ?? ''] ?? { icon: 'target', label: '단체 미션' };
   const target = m.targetValue ?? 0;
@@ -636,6 +643,7 @@ export function toHouseMission(m: MissionSummary): HouseMission {
     target: Math.max(1, target),
     status: m.status ?? 'ACTIVE',
     achieved: target > 0 && (m.currentValue ?? 0) >= target,
+    endsOn: m.endsAt ? localDateOf(m.endsAt) : undefined,
   };
 }
 
