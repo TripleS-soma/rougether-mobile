@@ -1,7 +1,9 @@
 import { Image } from 'expo-image';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
+  PanResponder,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -257,6 +259,12 @@ export type GroupHouseScreenProps = {
   onTransferOwnership?: (houseId: number, membershipId: number) => void;
   /** Reissue the invite code via the API (owner only; the old code expires). */
   onReissueInviteCode?: (houseId: number) => void;
+  /**
+   * Drag-and-drop tile swap (#278). Seat indices are display order (top-left
+   * first) of the houses handed in — the shell persists and re-arranges via
+   * useRoomLayouts. Omitted (demo gallery) falls back to a local swap.
+   */
+  onSwapSeats?: (houseId: number, seatA: number, seatB: number) => void;
 };
 
 /**
@@ -291,6 +299,7 @@ export function GroupHouseScreen({
   backgrounds,
   onTransferOwnership,
   onReissueInviteCode,
+  onSwapSeats,
 }: GroupHouseScreenProps) {
   const t = useTokens();
   const { show: toast } = useToast();
@@ -353,7 +362,104 @@ export function GroupHouseScreen({
     currentHouse?.growthPoints != null ? 100 - (currentHouse.growthPoints % 100) : undefined;
   // 층 라벨 없이 한 그리드로 — 행은 어댑터의 층 구성을 그대로 쓴다. 홀수 정원의
   // 반쪽 행이 위층에 있어서, 평탄화 후 2개씩 다시 끊으면 행이 밀린다.
-  const roomPairs: RoomCell[][] = (currentHouse?.floors ?? []).map((f) => f.rooms);
+  const rowShapes = (currentHouse?.floors ?? []).map((f) => f.rooms.length);
+  const cellsInOrder = (currentHouse?.floors ?? []).flatMap((f) => f.rooms);
+  // Demo fallback (#278): without onSwapSeats a local permutation keeps the
+  // gallery drag interactive. Wired houses arrive already re-arranged.
+  const [demoPerm, setDemoPerm] = useState<Record<number, number[]>>({});
+  const perm = demoPerm[houseIndex];
+  const displayCells =
+    !onSwapSeats && perm?.length === cellsInOrder.length
+      ? perm.map((i) => cellsInOrder[i])
+      : cellsInOrder;
+  const roomPairs: RoomCell[][] = [];
+  const rowOffsets: number[] = [];
+  let seatOffset = 0;
+  for (const size of rowShapes) {
+    rowOffsets.push(seatOffset);
+    roomPairs.push(displayCells.slice(seatOffset, seatOffset + size));
+    seatOffset += size;
+  }
+
+  // --- 타일 드래그 앤 드롭 (자리 맞바꾸기, #278) ---
+  // Long-press lifts a tile, the grid captures the active touch and the tile
+  // follows the finger; releasing over another seat swaps the two. Seat rects
+  // are measured (window coords) at lift time, so drops hit-test directly
+  // against gestureState.moveX/Y.
+  const [dragSeat, setDragSeat] = useState<number | null>(null);
+  const dragSeatRef = useRef<number | null>(null);
+  const dragGranted = useRef(false);
+  const dragPan = useRef(new Animated.ValueXY()).current;
+  const tileRefs = useRef(new Map<number, View>());
+  const tileRects = useRef(new Map<number, { x: number; y: number; w: number; h: number }>());
+
+  const startDrag = (seat: number) => {
+    tileRects.current.clear();
+    tileRefs.current.forEach((ref, idx) =>
+      ref.measureInWindow((x, y, w, h) => tileRects.current.set(idx, { x, y, w, h })),
+    );
+    dragSeatRef.current = seat;
+    dragGranted.current = false;
+    setDragSeat(seat);
+  };
+  const endDrag = () => {
+    dragSeatRef.current = null;
+    dragGranted.current = false;
+    dragPan.setValue({ x: 0, y: 0 });
+    setDragSeat(null);
+  };
+  const dropAt = (x: number, y: number) => {
+    const from = dragSeatRef.current;
+    if (from != null) {
+      let to: number | null = null;
+      tileRects.current.forEach((r, idx) => {
+        if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) to = idx;
+      });
+      if (to != null && to !== from) {
+        if (onSwapSeats && currentHouse?.houseId != null) {
+          onSwapSeats(currentHouse.houseId, from, to);
+        } else {
+          const target = to;
+          setDemoPerm((prev) => {
+            const base =
+              prev[houseIndex]?.length === displayCells.length
+                ? [...prev[houseIndex]]
+                : displayCells.map((_, i) => i);
+            [base[from], base[target]] = [base[target], base[from]];
+            return { ...prev, [houseIndex]: base };
+          });
+        }
+      }
+    }
+    endDrag();
+  };
+  // The responder is created once — route through a ref so the release sees
+  // the current house/permutation, not the mount-time closure.
+  const dropAtRef = useRef(dropAt);
+  dropAtRef.current = dropAt;
+  const gridPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      // Claim the ongoing touch only once a long-press lifted a tile.
+      onMoveShouldSetPanResponderCapture: () => dragSeatRef.current != null,
+      onPanResponderGrant: () => {
+        dragGranted.current = true;
+      },
+      onPanResponderMove: Animated.event([null, { dx: dragPan.x, dy: dragPan.y }], {
+        useNativeDriver: false,
+      }),
+      onPanResponderRelease: (_evt, g) => dropAtRef.current(g.moveX, g.moveY),
+      onPanResponderTerminate: () => endDrag(),
+    }),
+  ).current;
+  // A lift with no movement never grants the responder — the tile's pressOut
+  // is then the only release signal, so it clears the stuck lift.
+  const onTilePressOut = () => {
+    if (dragSeatRef.current == null) return;
+    setTimeout(() => {
+      if (!dragGranted.current) endDrag();
+    }, 80);
+  };
   // Owner tools need the OWNER role and a server house id.
   const isOwner = currentHouse?.myRole === 'OWNER' && !!currentHouse?.houseId;
   // Kick is server-side owner-only too; the demo (no houseId) keeps the local
@@ -890,7 +996,11 @@ export function GroupHouseScreen({
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={styles.body}>
+      {/* 타일 드래그 중에는 스크롤이 제스처를 뺏지 않게 잠근다 (#278). */}
+      <ScrollView
+        contentContainerStyle={styles.body}
+        scrollEnabled={dragSeat == null}
+        testID="house-scroll">
         {/* 커버 히어로 — #261의 대표 이미지를 집 화면이 사용한다 (B안). */}
         <View style={styles.hero}>
           {isCdnKey(currentHouse.coverImageKey) ? (
@@ -976,93 +1086,126 @@ export function GroupHouseScreen({
           </View>
         </View>
 
-        <View style={styles.floors}>
-          {roomPairs.map((pair, pairIdx) => (
-            // Vacant rows share the '빈방' name — the row index keys them.
-            <View key={`${pairIdx}-${pair[0]?.name ?? ''}`} style={styles.floor}>
-              <View style={styles.floorRooms}>
-                {pair.map((room, i) => {
-                  const empty = room.vacant || isKicked(room.name);
-                  const preview =
-                    !empty && room.membershipId != null
-                      ? roomPreviews?.[room.membershipId]
-                      : undefined;
-                  return (
-                    <Pressable
-                      // Vacant seats all read '빈방' — the seat index keys them.
-                      key={`${i}-${room.name}`}
-                      onPress={() =>
-                        empty
-                          ? undefined
-                          : room.isMine
-                            ? onVisitMyRoom?.()
-                            : onVisitFriend?.({
-                                name: room.name,
-                                userId: room.userId,
-                                houseId: currentHouse.houseId,
-                                membershipId: room.membershipId,
-                              })
-                      }
-                      disabled={empty}
-                      accessibilityRole="button"
-                      accessibilityLabel={room.isMine ? `${room.name} (나)` : room.name}
-                      style={[
-                        styles.roomCell,
-                        {
-                          backgroundColor: empty ? t.surfaceMuted : room.color,
-                          borderColor: t.border,
-                        },
-                      ]}>
-                      {/* The member's live room fills the tile (visit preview);
+        <View style={styles.floors} {...gridPanResponder.panHandlers}>
+          {roomPairs.map((pair, pairIdx) => {
+            // The dragged tile must float above sibling rows too.
+            const rowHasDrag =
+              dragSeat != null &&
+              dragSeat >= rowOffsets[pairIdx] &&
+              dragSeat < rowOffsets[pairIdx] + pair.length;
+            return (
+              // Vacant rows share the '빈방' name — the row index keys them.
+              <View
+                key={`${pairIdx}-${pair[0]?.name ?? ''}`}
+                style={[styles.floor, rowHasDrag && styles.dragRow]}>
+                <View style={styles.floorRooms}>
+                  {pair.map((room, i) => {
+                    const seatIdx = rowOffsets[pairIdx] + i;
+                    const dragging = dragSeat === seatIdx;
+                    const empty = room.vacant || isKicked(room.name);
+                    const preview =
+                      !empty && room.membershipId != null
+                        ? roomPreviews?.[room.membershipId]
+                        : undefined;
+                    return (
+                      <Animated.View
+                        // Vacant seats all read '빈방' — the seat index keys them.
+                        key={`${i}-${room.name}`}
+                        ref={(el: View | null) => {
+                          if (el) tileRefs.current.set(seatIdx, el);
+                          else tileRefs.current.delete(seatIdx);
+                        }}
+                        style={[
+                          styles.roomCellWrap,
+                          dragging && {
+                            transform: [...dragPan.getTranslateTransform(), { scale: 1.05 }],
+                            ...styles.roomCellLifted,
+                          },
+                        ]}>
+                        <Pressable
+                          onPress={() =>
+                            empty
+                              ? undefined
+                              : room.isMine
+                                ? onVisitMyRoom?.()
+                                : onVisitFriend?.({
+                                    name: room.name,
+                                    userId: room.userId,
+                                    houseId: currentHouse.houseId,
+                                    membershipId: room.membershipId,
+                                  })
+                          }
+                          onLongPress={empty ? undefined : () => startDrag(seatIdx)}
+                          delayLongPress={220}
+                          onPressOut={onTilePressOut}
+                          disabled={empty}
+                          accessibilityRole="button"
+                          accessibilityLabel={room.isMine ? `${room.name} (나)` : room.name}
+                          accessibilityHint={empty ? undefined : '길게 눌러 자리 옮기기'}
+                          style={[
+                            styles.roomCell,
+                            {
+                              backgroundColor: empty ? t.surfaceMuted : room.color,
+                              borderColor: t.border,
+                            },
+                          ]}>
+                          {/* The member's live room fills the tile (visit preview);
                           plain tint + avatar stand in until it loads. */}
-                      {preview ? (
-                        <View style={styles.roomPreview} pointerEvents="none" testID="room-preview">
-                          <Room
-                            placedFurnitureIds={preview.placedFurnitureIds}
-                            wallpaperId={preview.wallpaperId}
-                            floorId={preview.floorId}
-                            backgroundId={preview.backgroundId}
-                            characterId={preview.characterId}
-                            furniture={furniture}
-                            wallpapers={wallpapers}
-                            floors={floorSurfaces}
-                            backgrounds={backgrounds}
-                            style={styles.roomPreviewFill}
-                          />
-                        </View>
-                      ) : null}
-                      {room.isMine ? (
-                        <View style={[styles.myTag, { backgroundColor: t.warning }]}>
-                          <Text style={[styles.myTagText, { color: t.onTint }]}>MY</Text>
-                        </View>
-                      ) : null}
-                      {empty ? (
-                        <Icon name="leave" size={36} color={t.textMuted} />
-                      ) : preview ? null : (
-                        <CharacterAvatar characterId={characterId} size={64} />
-                      )}
-                      {/* Tiles keep their fixed pastel bg in dark mode — the
+                          {preview ? (
+                            <View
+                              style={styles.roomPreview}
+                              pointerEvents="none"
+                              testID="room-preview">
+                              <Room
+                                placedFurnitureIds={preview.placedFurnitureIds}
+                                wallpaperId={preview.wallpaperId}
+                                floorId={preview.floorId}
+                                backgroundId={preview.backgroundId}
+                                characterId={preview.characterId}
+                                furniture={furniture}
+                                wallpapers={wallpapers}
+                                floors={floorSurfaces}
+                                backgrounds={backgrounds}
+                                style={styles.roomPreviewFill}
+                              />
+                            </View>
+                          ) : null}
+                          {room.isMine ? (
+                            <View style={[styles.myTag, { backgroundColor: t.warning }]}>
+                              <Text style={[styles.myTagText, { color: t.onTint }]}>MY</Text>
+                            </View>
+                          ) : null}
+                          {empty ? (
+                            <Icon name="leave" size={36} color={t.textMuted} />
+                          ) : preview ? null : (
+                            <CharacterAvatar characterId={characterId} size={64} />
+                          )}
+                          {/* Tiles keep their fixed pastel bg in dark mode — the
                           name needs onTint ink, not the (light) theme text.
                           Over a preview it drops to a bottom scrim for contrast. */}
-                      <View style={[styles.roomNameRow, preview && styles.roomNameOverlay]}>
-                        {!empty && room.isOwner ? <CrownPictogram size={12} /> : null}
-                        <Text
-                          style={[
-                            Typography.supporting,
-                            styles.roomName,
-                            { color: empty ? t.textMuted : preview ? '#FFFFFF' : t.onTint },
-                          ]}>
-                          {empty ? '빈방' : room.isMine ? `${room.name} (나)` : room.name}
-                        </Text>
-                      </View>
-                    </Pressable>
-                  );
-                })}
-                {/* Odd capacity → invisible filler keeps the lone tile half-width. */}
-                {pair.length === 1 ? <View style={styles.roomSpacer} testID="room-spacer" /> : null}
+                          <View style={[styles.roomNameRow, preview && styles.roomNameOverlay]}>
+                            {!empty && room.isOwner ? <CrownPictogram size={12} /> : null}
+                            <Text
+                              style={[
+                                Typography.supporting,
+                                styles.roomName,
+                                { color: empty ? t.textMuted : preview ? '#FFFFFF' : t.onTint },
+                              ]}>
+                              {empty ? '빈방' : room.isMine ? `${room.name} (나)` : room.name}
+                            </Text>
+                          </View>
+                        </Pressable>
+                      </Animated.View>
+                    );
+                  })}
+                  {/* Odd capacity → invisible filler keeps the lone tile half-width. */}
+                  {pair.length === 1 ? (
+                    <View style={styles.roomSpacer} testID="room-spacer" />
+                  ) : null}
+                </View>
               </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
 
         <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
@@ -1395,8 +1538,21 @@ const styles = StyleSheet.create({
   roomSpacer: {
     flex: 1,
   },
-  roomCell: {
+  roomCellWrap: {
     flex: 1,
+  },
+  // Lifted (dragging) tile floats above its row; the row itself gets dragRow
+  // so it also floats above sibling rows.
+  roomCellLifted: {
+    zIndex: 10,
+    elevation: 8,
+  },
+  dragRow: {
+    zIndex: 10,
+    elevation: 8,
+  },
+  roomCell: {
+    width: '100%',
     aspectRatio: 1,
     borderRadius: Radius.lg,
     borderWidth: 1,

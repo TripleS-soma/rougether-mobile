@@ -433,6 +433,16 @@ describe('GroupHouseScreen', () => {
     expect(getByText('빈방')).toBeTruthy();
   });
 
+  it('locks scrolling while a tile is lifted for drag (#278)', async () => {
+    const { getByLabelText, getByTestId } = await render(
+      <GroupHouseScreen houses={[MISSION_HOUSE]} />,
+    );
+    expect(getByTestId('house-scroll').props.scrollEnabled).toBe(true);
+    // Long-press lifts the tile: the grid owns the touch, so the scroll locks.
+    await fireEvent(getByLabelText('친구'), 'longPress');
+    expect(getByTestId('house-scroll').props.scrollEnabled).toBe(false);
+  });
+
   it('marks the owner in the member management list', async () => {
     const { getByLabelText, getByText } = await render(
       <GroupHouseScreen

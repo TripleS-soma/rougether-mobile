@@ -37,6 +37,7 @@ import { useToast } from '@/components/ui/toast';
 import { useHouseCovers } from '@/hooks/use-house-covers';
 import { useHouses } from '@/hooks/use-houses';
 import { useMemberRoomPreviews, withMyCharacter } from '@/hooks/use-member-room-previews';
+import { useRoomLayouts } from '@/hooks/use-room-layouts';
 import { useMyCharacters } from '@/hooks/use-my-characters';
 import { useMyRoomData } from '@/hooks/use-my-room-data';
 import { useNotifications } from '@/hooks/use-notifications';
@@ -220,6 +221,10 @@ export function AppShell({
     transferOwnership,
     reissueInviteCode,
   } = useHouses();
+
+  // Locally saved tile arrangements (#278) — the 집 화면 shows arranged houses
+  // and drag-and-drop swaps persist per viewer+house on this device.
+  const { houses: arrangedHouses, swapSeats } = useRoomLayouts(houses);
 
   // Selectable house-cover catalog (집 생성·집 정보 수정).
   const { covers: houseCovers } = useHouseCovers();
@@ -557,7 +562,8 @@ export function AppShell({
 
         {screen === 'groupHouse' ? (
           <GroupHouseScreen
-            houses={houses}
+            houses={arrangedHouses}
+            onSwapSeats={swapSeats}
             loading={housesLoading}
             covers={houseCovers}
             characterId={wornCharacterId}
