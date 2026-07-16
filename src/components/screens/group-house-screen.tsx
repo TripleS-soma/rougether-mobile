@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -30,6 +31,7 @@ import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 import type { FurnitureItem, Wallpaper } from '@/resources/furniture';
+import { assetSource, isCdnKey } from '@/resources/asset';
 import { formatDate, todayIso, toIsoDate } from '@/utils/datetime';
 
 /**
@@ -75,8 +77,10 @@ export type House = {
   /** API house id — enables server actions (kick/leave) when provided. */
   houseId?: number;
   myRole?: 'OWNER' | 'MEMBER';
-  /** House growth level (헤더 레벨 pill; missions raise it). */
+  /** House growth level (히어로 레벨 pill; missions raise it). */
   level?: number;
+  /** Accumulated growth points — 레벨 진행도(100pt/레벨) 표시용. */
+  growthPoints?: number;
   /** Group missions shown in the "우리 그룹의 미션" card. */
   missions?: HouseMission[];
   /** House intro + capacity — prefill for the owner's edit form. */
@@ -321,6 +325,18 @@ export function GroupHouseScreen({
   const nextHouse = () => setHouseIndex((houseIndex + 1) % houses.length);
 
   const missions = currentHouse?.missions ?? [];
+  const activeMissions = missions.filter((m) => m.status === 'ACTIVE');
+  /** 오늘 기여 완료 판정 — 세션 추적 또는 연동 루틴의 오늘 완료에서 파생. */
+  const isContributed = (mission: HouseMission) =>
+    contributedMissionIds.includes(mission.id) ||
+    linkedRoutines.some((r) => r.title === mission.title && r.completedToday);
+  const contributedToday = activeMissions.filter(isContributed).length;
+  const toNextLevel =
+    currentHouse?.growthPoints != null ? 100 - (currentHouse.growthPoints % 100) : undefined;
+  // 층 구분 없이 한 그리드로 — 2개씩 끊어 행을 만든다 (내 방은 정렬상 마지막).
+  const roomPairs: RoomCell[][] = [];
+  const flatRooms = (currentHouse?.floors ?? []).flatMap((f) => f.rooms);
+  for (let i = 0; i < flatRooms.length; i += 2) roomPairs.push(flatRooms.slice(i, i + 2));
   // Owner tools need the OWNER role and a server house id.
   const isOwner = currentHouse?.myRole === 'OWNER' && !!currentHouse?.houseId;
   // Kick is server-side owner-only too; the demo (no houseId) keeps the local
@@ -840,10 +856,6 @@ export function GroupHouseScreen({
   return (
     <View style={[styles.screen, screenStyle]}>
       <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
-        <View style={[styles.pill, { backgroundColor: t.surfaceMuted }]}>
-          <HousePictogram size={14} />
-          <Text style={[Typography.label, { color: t.text }]}>Lv.{currentHouse.level ?? 0}</Text>
-        </View>
         <View style={styles.flex} />
         <Pressable
           onPress={onOpenSearch}
@@ -862,24 +874,53 @@ export function GroupHouseScreen({
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
-        <View style={styles.switcher}>
-          <Pressable
-            onPress={prevHouse}
-            accessibilityRole="button"
-            accessibilityLabel="이전 집"
-            style={[styles.iconBtn, { backgroundColor: t.surface }]}>
-            <Icon name="back" size={18} color={t.text} />
-          </Pressable>
-          <View style={[styles.titleBadge, { backgroundColor: t.surface, borderColor: t.border }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>{currentHouse.title}</Text>
+        {/* 커버 히어로 — #261의 대표 이미지를 집 화면이 사용한다 (B안). */}
+        <View style={styles.hero}>
+          {isCdnKey(currentHouse.coverImageKey) ? (
+            <Image
+              source={assetSource(currentHouse.coverImageKey)}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+              transition={120}
+              accessibilityLabel={`${currentHouse.title} 대표 이미지`}
+              testID="house-hero-cover"
+            />
+          ) : (
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: t.surfaceMuted }]} />
+          )}
+          {/* 고정 밝기 스크림 위 텍스트 — 테마와 무관한 커버 위라 literal 사용. */}
+          <View style={[styles.heroPill, { backgroundColor: 'rgba(255,255,255,0.88)' }]}>
+            <HousePictogram size={12} />
+            <Text style={[Typography.supporting, styles.heroPillText]}>
+              Lv.{currentHouse.level ?? 0}
+              {currentHouse.growthPoints != null ? ` · ${currentHouse.growthPoints % 100}/100` : ''}
+            </Text>
           </View>
-          <Pressable
-            onPress={nextHouse}
-            accessibilityRole="button"
-            accessibilityLabel="다음 집"
-            style={[styles.iconBtn, { backgroundColor: t.surface }]}>
-            <Icon name="forward" size={18} color={t.text} />
-          </Pressable>
+          {houses.length > 1 ? (
+            <>
+              <Pressable
+                onPress={prevHouse}
+                accessibilityRole="button"
+                accessibilityLabel="이전 집"
+                style={[styles.heroNav, styles.heroNavLeft]}>
+                <Icon name="back" size={16} color="#4A403A" />
+              </Pressable>
+              <Pressable
+                onPress={nextHouse}
+                accessibilityRole="button"
+                accessibilityLabel="다음 집"
+                style={[styles.heroNav, styles.heroNavRight]}>
+                <Icon name="forward" size={16} color="#4A403A" />
+              </Pressable>
+            </>
+          ) : null}
+          <View style={styles.heroFoot}>
+            <Text style={[Typography.h3, styles.heroName]}>{currentHouse.title}</Text>
+            <Text style={[Typography.supporting, styles.heroMeta]}>
+              멤버 {currentHouse.memberCount ?? flatRooms.length}
+              {currentHouse.maxMembers ? ` / ${currentHouse.maxMembers}` : ''}
+            </Text>
+          </View>
         </View>
 
         <View style={styles.dots}>
@@ -897,12 +938,29 @@ export function GroupHouseScreen({
           ))}
         </View>
 
+        {/* 요약 스탯 — 스크롤 없이 집의 오늘이 보인다 (B안). */}
+        <View style={styles.summaryRow}>
+          <View style={[styles.stat, { backgroundColor: t.surface, borderColor: t.border }]}>
+            <Text style={[styles.statV, { color: t.primaryText }]}>{activeMissions.length}</Text>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>진행 중 미션</Text>
+          </View>
+          <View style={[styles.stat, { backgroundColor: t.surface, borderColor: t.border }]}>
+            <Text style={[styles.statV, { color: t.primaryText }]}>
+              {contributedToday}/{activeMissions.length}
+            </Text>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>오늘 나의 기여</Text>
+          </View>
+          <View style={[styles.stat, { backgroundColor: t.surface, borderColor: t.border }]}>
+            <Text style={[styles.statV, { color: t.primaryText }]}>{toNextLevel ?? '—'}</Text>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>다음 레벨까지</Text>
+          </View>
+        </View>
+
         <View style={styles.floors}>
-          {currentHouse.floors.map((floor) => (
-            <View key={floor.level} style={styles.floor}>
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>{floor.level}</Text>
+          {roomPairs.map((pair, pairIdx) => (
+            <View key={pair[0]?.name ?? pairIdx} style={styles.floor}>
               <View style={styles.floorRooms}>
-                {floor.rooms.map((room) => {
+                {pair.map((room) => {
                   const empty = isKicked(room.name);
                   const preview =
                     !empty && room.membershipId != null
@@ -1061,11 +1119,7 @@ export function GroupHouseScreen({
                               보상 받기
                             </Text>
                           </Pressable>
-                        ) : mission.status === 'ACTIVE' &&
-                          (contributedMissionIds.includes(mission.id) ||
-                            linkedRoutines.some(
-                              (r) => r.title === mission.title && r.completedToday,
-                            )) ? (
+                        ) : mission.status === 'ACTIVE' && isContributed(mission) ? (
                           // 오늘 기여 완료 — 연동 루틴의 오늘 완료 여부로도 파생되어
                           // 앱을 다시 켜도 라벨이 유지된다.
                           <Text style={[Typography.supporting, { color: t.primaryText }]}>
@@ -1085,7 +1139,9 @@ export function GroupHouseScreen({
                             accessibilityRole="button"
                             accessibilityLabel={`${mission.title} 내 루틴에 추가`}
                             style={[styles.missionBtn, { backgroundColor: t.primary }]}>
-                            <Text style={[Typography.supporting, { color: t.onPrimary }]}>＋</Text>
+                            <Text style={[Typography.supporting, { color: t.onPrimary }]}>
+                              ＋ 내 루틴에
+                            </Text>
                           </Pressable>
                         ) : null}
                       </View>
@@ -1472,6 +1528,65 @@ const styles = StyleSheet.create({
   goals: {
     gap: Spacing.three,
     marginTop: Spacing.two,
+  },
+  hero: {
+    position: 'relative',
+    height: 132,
+    borderRadius: Radius.lg,
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
+  },
+  heroPill: {
+    position: 'absolute',
+    top: Spacing.two,
+    left: Spacing.two,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 3,
+  },
+  // 커버 위 고정 밝기 요소들 — 테마와 무관해 literal 잉크를 쓴다.
+  heroPillText: {
+    color: '#4A403A',
+    fontWeight: '700',
+  },
+  heroNav: {
+    position: 'absolute',
+    top: '50%',
+    marginTop: -14,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.78)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroNavLeft: { left: Spacing.two },
+  heroNavRight: { right: Spacing.two },
+  heroFoot: {
+    backgroundColor: 'rgba(0,0,0,0.38)',
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+  },
+  heroName: { color: '#FFFFFF' },
+  heroMeta: { color: 'rgba(255,255,255,0.85)' },
+  summaryRow: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+  },
+  stat: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: Spacing.two,
+    gap: 2,
+  },
+  statV: {
+    fontSize: 18,
+    fontWeight: '800',
   },
   missionHead: {
     flexDirection: 'row',

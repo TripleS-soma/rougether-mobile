@@ -207,6 +207,41 @@ describe('GroupHouseScreen', () => {
     expect(queryByText('~07.01')).toBeNull();
   });
 
+  it('renders the cover hero with level progress and summary stats (B안)', async () => {
+    const house = {
+      ...MISSION_HOUSE,
+      level: 1,
+      growthPoints: 130,
+      coverImageKey: 'house/cloud-balloon/frame.png',
+    };
+    const { getByTestId, getByText } = await render(
+      <GroupHouseScreen
+        houses={[house]}
+        onAddMissionRoutine={jest.fn()}
+        linkedRoutines={[{ title: '주간 루틴 지키기', completedToday: true }]}
+      />,
+    );
+    // 커버 이미지 히어로 + 레벨 진행도 (130pt → 30/100, 다음 레벨까지 70).
+    expect(getByTestId('house-hero-cover')).toBeTruthy();
+    expect(getByText('Lv.1 · 30/100')).toBeTruthy();
+    expect(getByText('70')).toBeTruthy();
+    // 진행 중 미션 2(ACTIVE 11·12), 오늘 나의 기여 1/2 (11이 연동 완료).
+    expect(getByText('2')).toBeTruthy();
+    expect(getByText('1/2')).toBeTruthy();
+    // + 버튼은 텍스트로 목적을 말한다.
+    expect(getByText('＋ 내 루틴에')).toBeTruthy();
+  });
+
+  it('falls back to a plain hero without a cover and hides nav for one house', async () => {
+    const { queryByTestId, queryByLabelText, getByText } = await render(
+      <GroupHouseScreen houses={[MISSION_HOUSE]} />,
+    );
+    expect(queryByTestId('house-hero-cover')).toBeNull();
+    expect(getByText('실집')).toBeTruthy();
+    // 집이 하나면 히어로 좌우 전환 화살표가 없다.
+    expect(queryByLabelText('이전 집')).toBeNull();
+  });
+
   it('lets the owner edit the house settings', async () => {
     const onUpdateHouse = jest.fn();
     const { getByLabelText } = await render(

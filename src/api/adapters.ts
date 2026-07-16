@@ -601,6 +601,7 @@ export function toGroupHouse(
     maxMembers: detail.maxMembers ?? undefined,
     memberCount: detail.currentMemberCount ?? active.length,
     coverImageKey: detail.coverImageKey ?? undefined,
+    growthPoints: detail.growthPoints ?? undefined,
   };
 }
 
