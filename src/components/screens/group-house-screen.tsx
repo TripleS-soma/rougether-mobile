@@ -902,6 +902,7 @@ export function GroupHouseScreen({
                 onPress={prevHouse}
                 accessibilityRole="button"
                 accessibilityLabel="이전 집"
+                hitSlop={8}
                 style={[styles.heroNav, styles.heroNavLeft]}>
                 <Icon name="back" size={16} color="#4A403A" />
               </Pressable>
@@ -909,6 +910,7 @@ export function GroupHouseScreen({
                 onPress={nextHouse}
                 accessibilityRole="button"
                 accessibilityLabel="다음 집"
+                hitSlop={8}
                 style={[styles.heroNav, styles.heroNavRight]}>
                 <Icon name="forward" size={16} color="#4A403A" />
               </Pressable>
@@ -1343,32 +1345,8 @@ const styles = StyleSheet.create({
   iconGlyph: {
     fontSize: 18,
   },
-  pill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.one,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.one,
-    borderRadius: Radius.pill,
-  },
   body: {
     paddingBottom: Spacing.six,
-  },
-  switcher: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.three,
-    paddingTop: Spacing.four,
-  },
-  titleBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two,
-    borderRadius: Radius.pill,
-    borderWidth: 1,
   },
   dots: {
     flexDirection: 'row',
