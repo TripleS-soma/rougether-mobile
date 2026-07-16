@@ -389,6 +389,35 @@ describe('GroupHouseScreen', () => {
     expect(onVisitMyRoom).toHaveBeenCalled();
   });
 
+  it('shows vacant capacity seats as quiet tiles, excluded from member management', async () => {
+    const onVisitFriend = jest.fn();
+    const house = {
+      ...MISSION_HOUSE,
+      floors: [
+        {
+          level: '2층',
+          rooms: [
+            { name: '빈방', color: 'transparent', vacant: true },
+            { name: '빈방', color: 'transparent', vacant: true },
+          ],
+        },
+        ...MISSION_HOUSE.floors,
+      ],
+    };
+    const { getAllByText, getByLabelText, queryAllByText } = await render(
+      <GroupHouseScreen houses={[house]} onVisitFriend={onVisitFriend} />,
+    );
+    // 정원 4 / 멤버 2 → the two unfilled seats render as quiet 빈방 tiles.
+    const vacantTiles = getAllByText('빈방');
+    expect(vacantTiles).toHaveLength(2);
+    await fireEvent.press(vacantTiles[0]);
+    expect(onVisitFriend).not.toHaveBeenCalled();
+    // Vacant seats are tiles only — 구성원 관리 lists real members.
+    await fireEvent.press(getByLabelText('구성원 목록'));
+    expect(queryAllByText('빈방')).toHaveLength(0);
+    expect(getAllByText('친구')).toBeTruthy();
+  });
+
   it('marks the owner in the member management list', async () => {
     const { getByLabelText, getByText } = await render(
       <GroupHouseScreen

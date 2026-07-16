@@ -50,6 +50,8 @@ export type RoomCell = {
   name: string;
   /** Tile background tint (kept from the prototype palette). */
   color: string;
+  /** A capacity seat nobody joined yet — quiet non-tappable tile. */
+  vacant?: boolean;
   isMine?: boolean;
   /** This member is the house OWNER (👑 on the tile + 방장 badge). */
   isOwner?: boolean;
@@ -151,25 +153,36 @@ const DEMO_MISSIONS: HouseMission[] = [
   { id: 3, title: '지난주 스트레칭 미션', desc: '주간 구성원 달성 횟수', icon: 'calendar', current: 20, target: 20, status: 'COMPLETED' }, // prettier-ignore
 ];
 
+// Demo layout mirrors the adapter's default fill: my room bottom-left, others
+// in join order, vacant capacity seats on the top floor (정원 6 / 멤버 4).
 const DEFAULT_HOUSES: House[] = [
   {
     title: '소마파이팅',
     inviteCode: 'SOMA-2143',
     level: 3,
     missions: DEMO_MISSIONS,
+    maxMembers: 6,
+    memberCount: 4,
     floors: [
+      {
+        level: '3층',
+        rooms: [
+          { name: '빈방', color: 'transparent', vacant: true },
+          { name: '빈방', color: 'transparent', vacant: true },
+        ],
+      },
       {
         level: '2층',
         rooms: [
-          { name: '최준서', color: '#F5E1D8', isOwner: true },
           { name: '장진형', color: '#D9E8D4' },
+          { name: '임채영', color: '#F5E8C8' },
         ],
       },
       {
         level: '1층',
         rooms: [
-          { name: '임채영', color: '#F5E8C8' },
           { name: '나의 방', color: '#E8E0D0', isMine: true },
+          { name: '최준서', color: '#F5E1D8', isOwner: true },
         ],
       },
     ],
@@ -179,19 +192,21 @@ const DEFAULT_HOUSES: House[] = [
     inviteCode: 'SOMA-7788',
     level: 1,
     missions: DEMO_MISSIONS.slice(0, 1),
+    maxMembers: 4,
+    memberCount: 4,
     floors: [
       {
         level: '2층',
         rooms: [
-          { name: '김도현', color: '#E4DCF0', isOwner: true },
           { name: '박서연', color: '#FBE0D8' },
+          { name: '이지우', color: '#D8E8F0' },
         ],
       },
       {
         level: '1층',
         rooms: [
-          { name: '이지우', color: '#D8E8F0' },
           { name: '나의 방', color: '#E8E0D0', isMine: true },
+          { name: '김도현', color: '#E4DCF0', isOwner: true },
         ],
       },
     ],
@@ -315,7 +330,10 @@ export function GroupHouseScreen({
   const currentHouse: House | undefined = houses[Math.min(houseIndex, houses.length - 1)];
   const members = useMemo(
     () =>
-      (currentHouse?.floors ?? []).flatMap((f) => f.rooms.map((r) => ({ ...r, level: f.level }))),
+      (currentHouse?.floors ?? []).flatMap((f) =>
+        // Vacant capacity seats are tiles only — they are not members to manage.
+        f.rooms.filter((r) => !r.vacant).map((r) => ({ ...r, level: f.level })),
+      ),
     [currentHouse],
   );
   const keyFor = (name: string) => `${houseIndex}-${name}`;
@@ -333,10 +351,9 @@ export function GroupHouseScreen({
   const contributedToday = activeMissions.filter(isContributed).length;
   const toNextLevel =
     currentHouse?.growthPoints != null ? 100 - (currentHouse.growthPoints % 100) : undefined;
-  // 층 구분 없이 한 그리드로 — 2개씩 끊어 행을 만든다 (내 방은 정렬상 마지막).
-  const roomPairs: RoomCell[][] = [];
-  const flatRooms = (currentHouse?.floors ?? []).flatMap((f) => f.rooms);
-  for (let i = 0; i < flatRooms.length; i += 2) roomPairs.push(flatRooms.slice(i, i + 2));
+  // 층 라벨 없이 한 그리드로 — 행은 어댑터의 층 구성을 그대로 쓴다. 홀수 정원의
+  // 반쪽 행이 위층에 있어서, 평탄화 후 2개씩 다시 끊으면 행이 밀린다.
+  const roomPairs: RoomCell[][] = (currentHouse?.floors ?? []).map((f) => f.rooms);
   // Owner tools need the OWNER role and a server house id.
   const isOwner = currentHouse?.myRole === 'OWNER' && !!currentHouse?.houseId;
   // Kick is server-side owner-only too; the demo (no houseId) keeps the local
@@ -919,7 +936,8 @@ export function GroupHouseScreen({
           <View style={styles.heroFoot}>
             <Text style={[Typography.h3, styles.heroName]}>{currentHouse.title}</Text>
             <Text style={[Typography.supporting, styles.heroMeta]}>
-              멤버 {currentHouse.memberCount ?? flatRooms.length}
+              {/* Vacant seats are not members — count the real ones. */}
+              멤버 {currentHouse.memberCount ?? members.length}
               {currentHouse.maxMembers ? ` / ${currentHouse.maxMembers}` : ''}
             </Text>
           </View>
@@ -960,17 +978,19 @@ export function GroupHouseScreen({
 
         <View style={styles.floors}>
           {roomPairs.map((pair, pairIdx) => (
-            <View key={pair[0]?.name ?? pairIdx} style={styles.floor}>
+            // Vacant rows share the '빈방' name — the row index keys them.
+            <View key={`${pairIdx}-${pair[0]?.name ?? ''}`} style={styles.floor}>
               <View style={styles.floorRooms}>
-                {pair.map((room) => {
-                  const empty = isKicked(room.name);
+                {pair.map((room, i) => {
+                  const empty = room.vacant || isKicked(room.name);
                   const preview =
                     !empty && room.membershipId != null
                       ? roomPreviews?.[room.membershipId]
                       : undefined;
                   return (
                     <Pressable
-                      key={room.name}
+                      // Vacant seats all read '빈방' — the seat index keys them.
+                      key={`${i}-${room.name}`}
                       onPress={() =>
                         empty
                           ? undefined
@@ -1038,6 +1058,8 @@ export function GroupHouseScreen({
                     </Pressable>
                   );
                 })}
+                {/* Odd capacity → invisible filler keeps the lone tile half-width. */}
+                {pair.length === 1 ? <View style={styles.roomSpacer} /> : null}
               </View>
             </View>
           ))}
@@ -1369,6 +1391,9 @@ const styles = StyleSheet.create({
   floorRooms: {
     flexDirection: 'row',
     gap: Spacing.three,
+  },
+  roomSpacer: {
+    flex: 1,
   },
   roomCell: {
     flex: 1,

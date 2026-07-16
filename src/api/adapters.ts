@@ -552,9 +552,10 @@ const HOUSE_BORDERS = ['#F0C88A', '#A8C898', '#9FBEDD', '#DBA8BC', '#B7A8DD', '#
 const MY_ROOM_TINT = '#E8E0D0';
 
 /**
- * Build the group-house screen model from house detail + members. Rooms are
- * laid out two per floor, top floor first, with my room on the bottom floor
- * (mirrors the prototype layout).
+ * Build the group-house screen model from house detail + members. The grid is
+ * sized by the house capacity (not the headcount): rooms fill two per floor
+ * from the bottom-left — my room first, then the others in join order — and
+ * the yet-unfilled seats render as quiet vacant tiles on the upper floors.
  */
 export function toGroupHouse(
   detail: HouseDetailResponse,
@@ -564,10 +565,10 @@ export function toGroupHouse(
   missions?: HouseMission[],
 ): House {
   const active = members.filter((m) => m.status !== 'LEFT');
-  // Others first, me last → my room lands on the bottom floor.
+  // Me first → my room lands on the bottom-left seat.
   const ordered = [
-    ...active.filter((m) => m.userId !== myUserId),
     ...active.filter((m) => m.userId === myUserId),
+    ...active.filter((m) => m.userId !== myUserId),
   ];
   const cells: RoomCell[] = ordered.map((m, i) => ({
     // The members API may not carry my nickname (server nickname unset) — fall
@@ -581,11 +582,18 @@ export function toGroupHouse(
     membershipId: m.membershipId,
     userId: m.userId,
   }));
+  // Pad to the capacity so the house always shows 정원 seats; the server keeps
+  // maxMembers >= headcount, but clamp anyway so a stale detail can't drop rooms.
+  const seats = Math.max(cells.length, detail.maxMembers ?? 0);
+  for (let i = cells.length; i < seats; i++) {
+    cells.push({ name: '빈방', color: 'transparent', vacant: true });
+  }
   const floorCount = Math.max(1, Math.ceil(cells.length / 2));
   const floors: Floor[] = [];
-  for (let f = 0; f < floorCount; f++) {
+  // cells[0] is the 1층 왼쪽 seat; the screen renders top floor first.
+  for (let f = floorCount - 1; f >= 0; f--) {
     floors.push({
-      level: `${floorCount - f}층`,
+      level: `${f + 1}층`,
       rooms: cells.slice(f * 2, f * 2 + 2),
     });
   }
