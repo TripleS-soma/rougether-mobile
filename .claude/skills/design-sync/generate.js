@@ -12,54 +12,151 @@ const OUT = path.join(__dirname, 'out');
 
 const THEMES = {
   cozy: {
-    appShell: '#E8DCC8', screen: '#FBF8F3', surface: '#FFFFFF', card: '#FFFFFF',
-    surfaceMuted: '#F5F1E8', border: '#E8DCC8', text: '#4A403A', textMuted: '#8B7E74',
-    textDisabled: '#B5A89C', icon: '#8B7E74', primary: '#7FA87F', primaryActive: '#6D926D',
-    onPrimary: '#2D2623', primaryText: '#517751', onTint: '#4A403A', success: '#5F9B6A',
-    warning: '#E8A24A', warningText: '#9D6014', danger: '#D67878', disabledBg: '#D9D2C5',
+    appShell: '#E8DCC8',
+    screen: '#FBF8F3',
+    surface: '#FFFFFF',
+    card: '#FFFFFF',
+    surfaceMuted: '#F5F1E8',
+    border: '#E8DCC8',
+    text: '#4A403A',
+    textMuted: '#8B7E74',
+    textDisabled: '#B5A89C',
+    icon: '#8B7E74',
+    primary: '#7FA87F',
+    primaryActive: '#6D926D',
+    onPrimary: '#2D2623',
+    primaryText: '#517751',
+    onTint: '#4A403A',
+    success: '#5F9B6A',
+    warning: '#E8A24A',
+    warningText: '#9D6014',
+    danger: '#D67878',
+    disabledBg: '#D9D2C5',
   },
   forest: {
-    appShell: '#DCE8D0', screen: '#F6FAF1', surface: '#FFFFFF', card: '#FFFFFF',
-    surfaceMuted: '#EEF5E7', border: '#CFE0C3', text: '#334236', textMuted: '#667563',
-    textDisabled: '#9DAE97', icon: '#667563', primary: '#5F9B6A', primaryActive: '#4D8657',
-    onPrimary: '#202A22', primaryText: '#4A7953', onTint: '#334236', success: '#5F9B6A',
-    warning: '#E8A24A', warningText: '#9D6014', danger: '#D67878', disabledBg: '#CBD8C4',
+    appShell: '#DCE8D0',
+    screen: '#F6FAF1',
+    surface: '#FFFFFF',
+    card: '#FFFFFF',
+    surfaceMuted: '#EEF5E7',
+    border: '#CFE0C3',
+    text: '#334236',
+    textMuted: '#667563',
+    textDisabled: '#9DAE97',
+    icon: '#667563',
+    primary: '#5F9B6A',
+    primaryActive: '#4D8657',
+    onPrimary: '#202A22',
+    primaryText: '#4A7953',
+    onTint: '#334236',
+    success: '#5F9B6A',
+    warning: '#E8A24A',
+    warningText: '#9D6014',
+    danger: '#D67878',
+    disabledBg: '#CBD8C4',
   },
   hanok: {
-    appShell: '#D8C8AF', screen: '#FAF5EA', surface: '#FFFDF8', card: '#FFFDF8',
-    surfaceMuted: '#F2E8D7', border: '#D9C5A4', text: '#493B2E', textMuted: '#7F6E5E',
-    textDisabled: '#A99B86', icon: '#7F6E5E', primary: '#9A7B4F', primaryActive: '#83663F',
-    onPrimary: '#1C1712', primaryText: '#7F6541', onTint: '#493B2E', success: '#7E9A6A',
-    warning: '#C9943F', warningText: '#886226', danger: '#C77A6A', disabledBg: '#DCCFB9',
+    appShell: '#D8C8AF',
+    screen: '#FAF5EA',
+    surface: '#FFFDF8',
+    card: '#FFFDF8',
+    surfaceMuted: '#F2E8D7',
+    border: '#D9C5A4',
+    text: '#493B2E',
+    textMuted: '#7F6E5E',
+    textDisabled: '#A99B86',
+    icon: '#7F6E5E',
+    primary: '#9A7B4F',
+    primaryActive: '#83663F',
+    onPrimary: '#1C1712',
+    primaryText: '#7F6541',
+    onTint: '#493B2E',
+    success: '#7E9A6A',
+    warning: '#C9943F',
+    warningText: '#886226',
+    danger: '#C77A6A',
+    disabledBg: '#DCCFB9',
   },
 };
 const DARK = {
   cozy: {
-    appShell: '#171310', screen: '#211C16', surface: '#2B251E', card: '#2B251E',
-    surfaceMuted: '#362F26', border: '#453C31', text: '#EFE7DA', textMuted: '#B5A99A',
-    textDisabled: '#7C7264', icon: '#B5A99A', primary: '#93BE93', primaryActive: '#7FA87F',
-    onPrimary: '#1E2A1E', primaryText: '#93BE93', onTint: '#4A403A', success: '#7CB98A',
-    warning: '#EDB061', warningText: '#EDB061', danger: '#E08D8D', disabledBg: '#3D362C',
+    appShell: '#171310',
+    screen: '#211C16',
+    surface: '#2B251E',
+    card: '#2B251E',
+    surfaceMuted: '#362F26',
+    border: '#453C31',
+    text: '#EFE7DA',
+    textMuted: '#B5A99A',
+    textDisabled: '#7C7264',
+    icon: '#B5A99A',
+    primary: '#93BE93',
+    primaryActive: '#7FA87F',
+    onPrimary: '#1E2A1E',
+    primaryText: '#93BE93',
+    onTint: '#4A403A',
+    success: '#7CB98A',
+    warning: '#EDB061',
+    warningText: '#EDB061',
+    danger: '#E08D8D',
+    disabledBg: '#3D362C',
   },
   forest: {
-    appShell: '#101711', screen: '#18211A', surface: '#212D23', card: '#212D23',
-    surfaceMuted: '#2A382C', border: '#3A473B', text: '#E2EBE1', textMuted: '#A3B2A0',
-    textDisabled: '#6E7D6B', icon: '#A3B2A0', primary: '#7FBC8B', primaryActive: '#6BAA78',
-    onPrimary: '#14251A', primaryText: '#7FBC8B', onTint: '#334236', success: '#7CB98A',
-    warning: '#EDB061', warningText: '#EDB061', danger: '#E08D8D', disabledBg: '#32402F',
+    appShell: '#101711',
+    screen: '#18211A',
+    surface: '#212D23',
+    card: '#212D23',
+    surfaceMuted: '#2A382C',
+    border: '#3A473B',
+    text: '#E2EBE1',
+    textMuted: '#A3B2A0',
+    textDisabled: '#6E7D6B',
+    icon: '#A3B2A0',
+    primary: '#7FBC8B',
+    primaryActive: '#6BAA78',
+    onPrimary: '#14251A',
+    primaryText: '#7FBC8B',
+    onTint: '#334236',
+    success: '#7CB98A',
+    warning: '#EDB061',
+    warningText: '#EDB061',
+    danger: '#E08D8D',
+    disabledBg: '#32402F',
   },
   hanok: {
-    appShell: '#1A150D', screen: '#241E13', surface: '#2F271A', card: '#2F271A',
-    surfaceMuted: '#3A3122', border: '#4E4230', text: '#F0E7D7', textMuted: '#BCAD97',
-    textDisabled: '#83765F', icon: '#BCAD97', primary: '#C4A16F', primaryActive: '#B08D5B',
-    onPrimary: '#2A2113', primaryText: '#C4A16F', onTint: '#493B2E', success: '#96B37F',
-    warning: '#DCA855', warningText: '#DCA855', danger: '#DA9384', disabledBg: '#453A28',
+    appShell: '#1A150D',
+    screen: '#241E13',
+    surface: '#2F271A',
+    card: '#2F271A',
+    surfaceMuted: '#3A3122',
+    border: '#4E4230',
+    text: '#F0E7D7',
+    textMuted: '#BCAD97',
+    textDisabled: '#83765F',
+    icon: '#BCAD97',
+    primary: '#C4A16F',
+    primaryActive: '#B08D5B',
+    onPrimary: '#2A2113',
+    primaryText: '#C4A16F',
+    onTint: '#493B2E',
+    success: '#96B37F',
+    warning: '#DCA855',
+    warningText: '#DCA855',
+    danger: '#DA9384',
+    disabledBg: '#453A28',
   },
 };
 const TYPE = {
-  display1: [34, 40, 700], display2: [28, 34, 700], h1: [24, 30, 700], h2: [20, 26, 700],
-  h3: [18, 24, 600], large: [18, 26, 500], body: [16, 24, 400], label: [14, 20, 600],
-  supporting: [12, 16, 400], code: [13, 18, 500],
+  display1: [34, 40, 700],
+  display2: [28, 34, 700],
+  h1: [24, 30, 700],
+  h2: [20, 26, 700],
+  h3: [18, 24, 600],
+  large: [18, 26, 500],
+  body: [16, 24, 400],
+  label: [14, 20, 600],
+  supporting: [12, 16, 400],
+  code: [13, 18, 500],
 };
 const SPACING = { half: 2, one: 4, two: 8, three: 16, four: 24, five: 32, six: 64 };
 const RADIUS = { sm: 8, md: 12, lg: 16, pill: 999 };
@@ -99,20 +196,43 @@ const out = (rel, html) => {
       <div class="chip" style="background:${hex};color:${ink ?? '#fff'}"></div>
       <div class="meta"><b>${name}</b><span>${hex}</span></div>
     </div>`;
-  const roleOrder = ['appShell','screen','surface','surfaceMuted','border','text','textMuted','textDisabled','primary','primaryActive','onPrimary','primaryText','onTint','success','warning','warningText','danger','disabledBg'];
+  const roleOrder = [
+    'appShell',
+    'screen',
+    'surface',
+    'surfaceMuted',
+    'border',
+    'text',
+    'textMuted',
+    'textDisabled',
+    'primary',
+    'primaryActive',
+    'onPrimary',
+    'primaryText',
+    'onTint',
+    'success',
+    'warning',
+    'warningText',
+    'danger',
+    'disabledBg',
+  ];
   const block = (label, theme, dark) => `
     <div class="theme" style="background:${dark ? theme.screen : theme.screen};border:1px solid ${theme.border}">
       <div class="tname" style="color:${theme.text}">${label}</div>
-      <div class="grid">${roleOrder.map((r) => `
+      <div class="grid">${roleOrder
+        .map(
+          (r) => `
         <div class="sw">
           <div class="chip" style="background:${theme[r]};border:1px solid ${theme.border}"></div>
           <div class="meta" style="color:${theme.textMuted}"><b style="color:${theme.text}">${r}</b><span>${theme[r]}</span></div>
-        </div>`).join('')}
+        </div>`,
+        )
+        .join('')}
       </div>
     </div>`;
   const body = `
 <div class="sub">Semantic roles — Astryx 구조, 브랜드 3테마 × 라이트/다크 (theme.ts와 1:1)</div>
-${['cozy','forest','hanok'].map((id) => block(`${id} · light`, THEMES[id], false) + block(`${id} · dark`, DARK[id], true)).join('')}`;
+${['cozy', 'forest', 'hanok'].map((id) => block(`${id} · light`, THEMES[id], false) + block(`${id} · dark`, DARK[id], true)).join('')}`;
   const css = `
   .theme { border-radius: 16px; padding: 16px; margin-bottom: 16px; }
   .tname { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
@@ -126,23 +246,43 @@ ${['cozy','forest','hanok'].map((id) => block(`${id} · light`, THEMES[id], fals
 
 /* ---------- foundations/typography ---------- */
 {
-  const rows = Object.entries(TYPE).map(([role, [fs_, lh, fw]]) => `
+  const rows = Object.entries(TYPE)
+    .map(
+      ([role, [fs_, lh, fw]]) => `
     <div class="row">
       <div class="demo" style="font-size:${fs_}px;line-height:${lh}px;font-weight:${fw}">루틴을 함께, 매일 조금씩</div>
       <div class="spec">${role} · ${fs_}/${lh} · ${fw}</div>
-    </div>`).join('');
+    </div>`,
+    )
+    .join('');
   const css = `
   .row { padding: 10px 0; border-bottom: 1px dashed ${t.border}; }
   .spec { font-size: 11px; color: ${t.textMuted}; margin-top: 2px; font-variant-numeric: tabular-nums; }`;
-  out('foundations/typography.html', page('Foundations', 'Typography — type scale (base 16 · ratio 1.2)', `<div class="sub">Typography 토큰 (theme.ts)</div>${rows}`, css));
+  out(
+    'foundations/typography.html',
+    page(
+      'Foundations',
+      'Typography — type scale (base 16 · ratio 1.2)',
+      `<div class="sub">Typography 토큰 (theme.ts)</div>${rows}`,
+      css,
+    ),
+  );
 }
 
 /* ---------- foundations/spacing-radius ---------- */
 {
-  const sp = Object.entries(SPACING).map(([k, v]) => `
-    <div class="sprow"><span class="k">${k}</span><div class="bar" style="width:${v * 3}px"></div><span class="v">${v}px</span></div>`).join('');
-  const rad = Object.entries(RADIUS).map(([k, v]) => `
-    <div class="radbox" style="border-radius:${Math.min(v, 32)}px"><b>${k}</b><span>${v === 999 ? 'pill' : v + 'px'}</span></div>`).join('');
+  const sp = Object.entries(SPACING)
+    .map(
+      ([k, v]) => `
+    <div class="sprow"><span class="k">${k}</span><div class="bar" style="width:${v * 3}px"></div><span class="v">${v}px</span></div>`,
+    )
+    .join('');
+  const rad = Object.entries(RADIUS)
+    .map(
+      ([k, v]) => `
+    <div class="radbox" style="border-radius:${Math.min(v, 32)}px"><b>${k}</b><span>${v === 999 ? 'pill' : v + 'px'}</span></div>`,
+    )
+    .join('');
   const body = `
 <div class="sub">Spacing / Radius 토큰 (theme.ts)</div>
 <div class="section">Spacing</div>${sp}
@@ -161,7 +301,8 @@ ${['cozy','forest','hanok'].map((id) => block(`${id} · light`, THEMES[id], fals
 
 /* ---------- components/buttons ---------- */
 {
-  const btn = (bg, fg, label, extra = '') => `<button class="btn" style="background:${bg};color:${fg};${extra}">${label}</button>`;
+  const btn = (bg, fg, label, extra = '') =>
+    `<button class="btn" style="background:${bg};color:${fg};${extra}">${label}</button>`;
   const body = `
 <div class="sub">ui/button — pill 버튼 (radius pill · padding 16/24)</div>
 <div class="section">Variants</div>
@@ -327,8 +468,12 @@ ${['cozy','forest','hanok'].map((id) => block(`${id} · light`, THEMES[id], fals
 
 /* ---------- patterns/gacha-selector ---------- */
 {
-  const chips = (n, active) => Array.from({ length: n }, (_, i) => `
-    <span class="chip${i === active ? ' on' : ''}" style="background:${['#E8DCC8','#D6E4D2','#F7E6C8','#D8D2EC','#E6D2D2','#D2E4E6'][i % 6]}">${['🎁','🌲','🍃','🌙','☁️','🧵'][i % 6]}</span>`).join('');
+  const chips = (n, active) =>
+    Array.from(
+      { length: n },
+      (_, i) => `
+    <span class="chip${i === active ? ' on' : ''}" style="background:${['#E8DCC8', '#D6E4D2', '#F7E6C8', '#D8D2EC', '#E6D2D2', '#D2E4E6'][i % 6]}">${['🎁', '🌲', '🍃', '🌙', '☁️', '🧵'][i % 6]}</span>`,
+    ).join('');
   const body = `
 <div class="sub">뽑기 머신 선택 — 종류별 두 행 (가구 / 캐릭터), 선택 칩은 primary 링</div>
 <div class="section">가구 뽑기</div>
