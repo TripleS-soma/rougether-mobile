@@ -25,6 +25,7 @@ import {
 import { type OnboardingGoal } from '@/components/screens/onboarding-screen';
 import { type RoomSlotSave } from './rooms';
 
+import type { HouseCover } from '@/components/house-cover-picker';
 import type { Floor, House, HouseMission, RoomCell } from '@/components/screens/group-house-screen';
 import type { FriendActivityDay, GuestbookEntry } from '@/components/screens/friend-room-screen';
 import { isPictogramName, type PictogramName } from '@/components/ui/pictograms';
@@ -44,6 +45,7 @@ import type {
   CategoryResponse,
   GachaResponse,
   GoalItem,
+  HouseCoverImage,
   HouseDetailResponse,
   HouseMemberDayResponse,
   HouseMemberRoutineCompletionListResponse,
@@ -597,6 +599,20 @@ export function toGroupHouse(
     description: detail.description ?? undefined,
     maxMembers: detail.maxMembers ?? undefined,
     memberCount: detail.currentMemberCount ?? active.length,
+    coverImageKey: detail.coverImageKey ?? undefined,
+  };
+}
+
+/**
+ * Cover catalog entry (GET /houses/cover-images) → picker model. Entries
+ * without a key can't render or be submitted — null result.
+ */
+export function toHouseCover(c: HouseCoverImage): HouseCover | null {
+  if (!c.coverImageKey) return null;
+  return {
+    code: c.code ?? c.coverImageKey,
+    name: c.name ?? '',
+    coverImageKey: c.coverImageKey,
   };
 }
 
@@ -665,6 +681,7 @@ export function toSearchHouse(h: HouseSummary, index = 0): SearchHouse {
     members: h.currentMemberCount ?? 0,
     capacity: h.maxMembers ?? 0,
     tag: h.goals?.[0]?.name ?? '루틴',
+    coverImageKey: h.coverImageKey ?? undefined,
     icon: HOUSE_ICONS[index % HOUSE_ICONS.length],
     bg: HOUSE_BGS[index % HOUSE_BGS.length],
     border: HOUSE_BORDERS[index % HOUSE_BORDERS.length],

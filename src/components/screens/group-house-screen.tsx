@@ -11,6 +11,7 @@ import {
 
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { CharacterAvatar } from '@/components/character-avatar';
+import { type HouseCover, HouseCoverPicker } from '@/components/house-cover-picker';
 import { Icon } from '@/components/ui/icon';
 import {
   CrownPictogram,
@@ -65,6 +66,8 @@ export type House = {
   description?: string;
   maxMembers?: number;
   memberCount?: number;
+  /** Current cover art key — prefill for the owner's edit form. */
+  coverImageKey?: string;
 };
 
 /** Owner's house-settings edit (PUT /houses/{id}; omitted fields are kept). */
@@ -72,6 +75,8 @@ export type HouseEditInput = {
   name: string;
   description?: string;
   maxMembers?: number;
+  /** Cover from GET /houses/cover-images; omitted = keep the current one. */
+  coverImageKey?: string;
 };
 
 /** Capacity choices for the edit form (server allows 1~10). */
@@ -187,6 +192,8 @@ export type GroupHouseScreenProps = {
   onCreateMission?: (houseId: number, input: NewHouseMission) => void;
   /** Edit the house settings via the API (owner only). */
   onUpdateHouse?: (houseId: number, input: HouseEditInput) => void;
+  /** Cover catalog (GET /houses/cover-images); empty hides the edit section. */
+  covers?: HouseCover[];
   /** Hand the OWNER role to a member via the API (owner only). */
   onTransferOwnership?: (houseId: number, membershipId: number) => void;
   /** Reissue the invite code via the API (owner only; the old code expires). */
@@ -215,6 +222,7 @@ export function GroupHouseScreen({
   onClaimMission,
   onCreateMission,
   onUpdateHouse,
+  covers = [],
   onTransferOwnership,
   onReissueInviteCode,
 }: GroupHouseScreenProps) {
@@ -241,6 +249,7 @@ export function GroupHouseScreen({
   const [editName, setEditName] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [editMax, setEditMax] = useState<number | undefined>(undefined);
+  const [editCover, setEditCover] = useState<string | undefined>(undefined);
   const [transferTarget, setTransferTarget] = useState<RoomCell | null>(null);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [showReissueConfirm, setShowReissueConfirm] = useState(false);
@@ -290,6 +299,7 @@ export function GroupHouseScreen({
     setEditName(currentHouse?.title ?? '');
     setEditDesc(currentHouse?.description ?? '');
     setEditMax(currentHouse?.maxMembers);
+    setEditCover(currentHouse?.coverImageKey);
     setShowEditHouse(true);
   };
   const editNameValid = editName.trim().length >= 2 && editName.trim().length <= 30;
@@ -300,6 +310,8 @@ export function GroupHouseScreen({
       name: editName.trim(),
       description: editDesc.trim() || undefined,
       maxMembers: editMax,
+      // Omitted keeps the server value — only send an actual pick.
+      coverImageKey: editCover,
     });
     setShowEditHouse(false);
   };
@@ -642,7 +654,7 @@ export function GroupHouseScreen({
           <View style={styles.modalOverlay}>
             <View style={[styles.modal, { backgroundColor: t.surface }]}>
               <Text style={[Typography.h3, { color: t.text }]}>집 정보 수정</Text>
-              <View style={styles.missionForm}>
+              <ScrollView style={styles.editScroll} contentContainerStyle={styles.missionForm}>
                 <Text style={[Typography.supporting, { color: t.textMuted }]}>
                   집 이름 (2~30자)
                 </Text>
@@ -709,7 +721,17 @@ export function GroupHouseScreen({
                     );
                   })}
                 </View>
-              </View>
+                {covers.length > 0 ? (
+                  <>
+                    <Text style={[Typography.supporting, { color: t.textMuted }]}>대표 이미지</Text>
+                    <HouseCoverPicker
+                      covers={covers}
+                      selectedKey={editCover}
+                      onSelect={setEditCover}
+                    />
+                  </>
+                ) : null}
+              </ScrollView>
               <View style={styles.modalActions}>
                 <Pressable
                   onPress={() => setShowEditHouse(false)}
@@ -1231,8 +1253,13 @@ const styles = StyleSheet.create({
   modal: {
     width: '100%',
     maxWidth: 360,
+    maxHeight: '85%',
     borderRadius: Radius.lg,
     padding: Spacing.four,
+  },
+  // The edit form scrolls (cover grid makes it taller than small screens).
+  editScroll: {
+    flexGrow: 0,
   },
   modalBody: {
     marginTop: Spacing.two,

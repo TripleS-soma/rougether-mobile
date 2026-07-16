@@ -126,6 +126,7 @@ export function useHouses() {
     name: string;
     description?: string;
     maxMembers: number;
+    coverImageKey?: string;
   }): Promise<boolean> => {
     try {
       // The API requires ≥1 goalId. Prefer the goals the user picked during

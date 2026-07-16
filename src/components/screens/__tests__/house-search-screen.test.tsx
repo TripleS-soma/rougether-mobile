@@ -10,6 +10,15 @@ describe('HouseSearchScreen', () => {
     expect(getByText('집 탐색')).toBeTruthy();
   });
 
+  it('renders the server cover on a browse card, pictogram tile otherwise', async () => {
+    const houses = [
+      { ...RECOMMENDED_HOUSES[0], id: 'c1', coverImageKey: 'house/cloud-balloon/frame.png' },
+      { ...RECOMMENDED_HOUSES[1], id: 'c2' }, // no cover → pictogram fallback
+    ];
+    const { queryAllByTestId } = await render(<HouseSearchScreen houses={houses} />);
+    expect(queryAllByTestId('house-cover')).toHaveLength(1);
+  });
+
   it('joins by invite code via the API callback', async () => {
     const onJoinByCode = jest.fn(async () => true);
     const { getByText, getByPlaceholderText } = await render(

@@ -2,6 +2,7 @@
 import { apiDelete, apiGet, apiGetList, apiPost, apiPut } from './client';
 import { buildQuery } from './http';
 import type {
+  HouseCoverImage,
   HouseCreateRequest,
   HouseCreateResponse,
   HouseDetailResponse,
@@ -26,6 +27,11 @@ import type {
 /** GET /me/houses — houses the user belongs to. */
 export function fetchMyHouses() {
   return apiGetList<MyHouseSummary>('/me/houses');
+}
+
+/** GET /houses/cover-images — selectable cover catalog (집 생성·설정). */
+export function fetchHouseCoverImages() {
+  return apiGetList<HouseCoverImage>('/houses/cover-images');
 }
 
 /** GET /houses — browse/search houses (paginated). */

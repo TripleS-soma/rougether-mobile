@@ -13,6 +13,7 @@ import {
   toWallet,
   todayCompletions,
   toGroupHouse,
+  toHouseCover,
   characterIdFromCode,
   toGachaMachine,
   fromFriendRoomSlots,
@@ -346,6 +347,32 @@ describe('API adapters', () => {
     // Without a profile nickname it falls back to 멤버 N.
     const anon = toGroupHouse(detail, members, 6);
     expect(anon.floors.flatMap((f) => f.rooms).find((r) => r.isMine)?.name).toBe('멤버 6');
+  });
+
+  it('carries the house cover key through to the edit-form prefill', () => {
+    const detail = {
+      houseId: 1,
+      name: '검증 하우스',
+      coverImageKey: 'house/cloud-balloon/frame.png',
+    };
+    expect(toGroupHouse(detail, [], 6).coverImageKey).toBe('house/cloud-balloon/frame.png');
+    expect(toGroupHouse({ houseId: 2, name: '무커버' }, [], 6).coverImageKey).toBeUndefined();
+  });
+
+  it('maps a cover catalog entry and drops keyless ones', () => {
+    expect(
+      toHouseCover({
+        code: 'cloud_balloon',
+        name: '구름 풍선 집',
+        coverImageKey: 'house/cloud-balloon/frame.png',
+      }),
+    ).toEqual({
+      code: 'cloud_balloon',
+      name: '구름 풍선 집',
+      coverImageKey: 'house/cloud-balloon/frame.png',
+    });
+    // Without a key there is nothing to render or submit.
+    expect(toHouseCover({ code: 'broken', name: '키 없음' })).toBeNull();
   });
 
   it('round-trips room placement: slots → app placement → slot saves', () => {
