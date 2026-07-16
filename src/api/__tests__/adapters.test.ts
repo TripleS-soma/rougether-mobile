@@ -350,6 +350,14 @@ describe('API adapters', () => {
     expect(anon.floors.flatMap((f) => f.rooms).find((r) => r.isMine)?.name).toBe('멤버 6');
   });
 
+  it('carries growth points through for the level-progress pill', () => {
+    expect(toGroupHouse({ houseId: 1, name: '집', growthPoints: 130 }, [], 6).growthPoints).toBe(
+      130,
+    );
+    expect(toGroupHouse({ houseId: 1, name: '집', growthPoints: 0 }, [], 6).growthPoints).toBe(0);
+    expect(toGroupHouse({ houseId: 2, name: '집' }, [], 6).growthPoints).toBeUndefined();
+  });
+
   it('carries the house cover key through to the edit-form prefill', () => {
     const detail = {
       houseId: 1,
