@@ -358,6 +358,88 @@ describe('API adapters', () => {
     expect(toGroupHouse({ houseId: 2, name: '집' }, [], 6).growthPoints).toBeUndefined();
   });
 
+  it('pads the grid to the house capacity with vacant seats, my room bottom-left', () => {
+    const detail = { houseId: 1, name: '정원 하우스', maxMembers: 4 };
+    const members = [
+      {
+        membershipId: 1,
+        userId: 9,
+        nickname: '방장',
+        role: 'OWNER' as const,
+        status: 'ACTIVE' as const,
+      },
+      {
+        membershipId: 2,
+        userId: 6,
+        nickname: '나야',
+        role: 'MEMBER' as const,
+        status: 'ACTIVE' as const,
+      },
+      {
+        membershipId: 3,
+        userId: 4,
+        nickname: '떠남',
+        role: 'MEMBER' as const,
+        status: 'LEFT' as const,
+      },
+    ];
+    const house = toGroupHouse(detail, members, 6);
+    // Top floor renders first; the yet-unfilled seats pad the upper floor.
+    expect(house.floors.map((f) => f.level)).toEqual(['2층', '1층']);
+    expect(house.floors[0].rooms.map((r) => r.vacant)).toEqual([true, true]);
+    // 1층 fills from the left: my room first, then the others in join order.
+    expect(house.floors[1].rooms.map((r) => r.name)).toEqual(['나야', '방장']);
+    expect(house.floors[1].rooms[0].isMine).toBe(true);
+  });
+
+  it('mixes a member and a vacant seat on the same row when the headcount is odd', () => {
+    const members = [
+      {
+        membershipId: 1,
+        userId: 6,
+        nickname: '나야',
+        role: 'OWNER' as const,
+        status: 'ACTIVE' as const,
+      },
+      {
+        membershipId: 2,
+        userId: 9,
+        nickname: '이웃1',
+        role: 'MEMBER' as const,
+        status: 'ACTIVE' as const,
+      },
+      {
+        membershipId: 3,
+        userId: 10,
+        nickname: '이웃2',
+        role: 'MEMBER' as const,
+        status: 'ACTIVE' as const,
+      },
+    ];
+    const house = toGroupHouse({ houseId: 1, name: '섞임집', maxMembers: 6 }, members, 6);
+    // 정원 6 / 멤버 3 → 마지막 멤버는 가운데 행에서 빈방과 나란히 앉는다.
+    expect(house.floors.map((f) => f.rooms.map((r) => (r.vacant ? '빈방' : r.name)))).toEqual([
+      ['빈방', '빈방'],
+      ['이웃2', '빈방'],
+      ['나야', '이웃1'],
+    ]);
+  });
+
+  it('keeps a lone top-floor seat when the capacity is odd', () => {
+    const members = [
+      {
+        membershipId: 1,
+        userId: 6,
+        nickname: '나야',
+        role: 'OWNER' as const,
+        status: 'ACTIVE' as const,
+      },
+    ];
+    const house = toGroupHouse({ houseId: 1, name: '홀수집', maxMembers: 3 }, members, 6);
+    expect(house.floors.map((f) => f.rooms.length)).toEqual([1, 2]);
+    expect(house.floors[1].rooms.map((r) => r.name)).toEqual(['나야', '빈방']);
+  });
+
   it('carries the house cover key through to the edit-form prefill', () => {
     const detail = {
       houseId: 1,

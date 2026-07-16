@@ -389,6 +389,50 @@ describe('GroupHouseScreen', () => {
     expect(onVisitMyRoom).toHaveBeenCalled();
   });
 
+  it('shows vacant capacity seats as quiet tiles, excluded from member management', async () => {
+    const onVisitFriend = jest.fn();
+    const house = {
+      ...MISSION_HOUSE,
+      floors: [
+        {
+          level: '2층',
+          rooms: [
+            { name: '빈방', color: 'transparent', vacant: true },
+            { name: '빈방', color: 'transparent', vacant: true },
+          ],
+        },
+        ...MISSION_HOUSE.floors,
+      ],
+    };
+    const { getAllByText, getByLabelText, queryAllByText } = await render(
+      <GroupHouseScreen houses={[house]} onVisitFriend={onVisitFriend} />,
+    );
+    // 정원 4 / 멤버 2 → the two unfilled seats render as quiet 빈방 tiles.
+    const vacantTiles = getAllByText('빈방');
+    expect(vacantTiles).toHaveLength(2);
+    await fireEvent.press(vacantTiles[0]);
+    expect(onVisitFriend).not.toHaveBeenCalled();
+    // Vacant seats are tiles only — 구성원 관리 lists real members.
+    await fireEvent.press(getByLabelText('구성원 목록'));
+    expect(queryAllByText('빈방')).toHaveLength(0);
+    expect(getAllByText('친구')).toBeTruthy();
+  });
+
+  it('keeps a half-width filler next to the lone seat of an odd capacity', async () => {
+    const house = {
+      ...MISSION_HOUSE,
+      maxMembers: 3,
+      floors: [
+        { level: '2층', rooms: [{ name: '빈방', color: 'transparent', vacant: true }] },
+        ...MISSION_HOUSE.floors,
+      ],
+    };
+    const { getByTestId, getByText } = await render(<GroupHouseScreen houses={[house]} />);
+    // 정원 3 → 위 행은 타일 1개 + 투명 자리채움이라 반칸 크기가 유지된다.
+    expect(getByTestId('room-spacer')).toBeTruthy();
+    expect(getByText('빈방')).toBeTruthy();
+  });
+
   it('marks the owner in the member management list', async () => {
     const { getByLabelText, getByText } = await render(
       <GroupHouseScreen
