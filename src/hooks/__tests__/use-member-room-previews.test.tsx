@@ -1,0 +1,71 @@
+import { act, renderHook } from '@testing-library/react-native';
+
+import type { ShopCatalogue } from '@/api/adapters';
+import { useMemberRoomPreviews } from '@/hooks/use-member-room-previews';
+
+const res = (body: unknown) => ({
+  ok: true,
+  status: 200,
+  text: async () => JSON.stringify(body),
+});
+
+const CATALOGUE: ShopCatalogue = {
+  furniture: [
+    { id: '2', name: '침대', slot: 'bottomLeft', category: '가구', price: 0, assetKey: 'items/a/bed.png' }, // prettier-ignore
+  ],
+  wallpapers: [{ id: '9', name: '벽지', price: 0, assetKey: 'items/a/wp.png', color: '#FFF' }],
+  floors: [],
+  backgrounds: [],
+  ownedIds: [],
+};
+
+const realFetch = global.fetch;
+afterEach(() => {
+  global.fetch = realFetch;
+  jest.clearAllMocks();
+});
+
+describe('useMemberRoomPreviews', () => {
+  it('maps each member room and drops the ones that fail', async () => {
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.endsWith('/members/42/room')) {
+        return res({
+          character: { characterId: 1, code: 'otter' },
+          slots: [
+            { slotType: 'bottomLeft', userItemId: 777, assetKey: 'items/a/bed.png' },
+            { slotType: 'wallpaper', userItemId: 778, assetKey: 'items/a/wp.png' },
+          ],
+        });
+      }
+      return { ok: false, status: 500, text: async () => '{}' };
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useMemberRoomPreviews());
+    await act(async () => {
+      await result.current.load(11, [42, 43], CATALOGUE);
+    });
+
+    expect(Object.keys(result.current.previews)).toEqual(['42']);
+    expect(result.current.previews[42]).toMatchObject({
+      placedFurnitureIds: ['2'],
+      wallpaperId: '9',
+      characterId: 'otter',
+    });
+  });
+
+  it('loads a house once and refetches only when the house changes', async () => {
+    global.fetch = jest.fn(async () => res({ slots: [] })) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useMemberRoomPreviews());
+    await act(async () => {
+      await result.current.load(11, [42], CATALOGUE);
+      await result.current.load(11, [42], CATALOGUE); // same house — cached
+    });
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      await result.current.load(12, [55], CATALOGUE); // house switch — reload
+    });
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+});

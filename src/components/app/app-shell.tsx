@@ -34,6 +34,7 @@ import { useFriendRoom } from '@/hooks/use-friend-room';
 import { useGuestbook } from '@/hooks/use-guestbook';
 import { useHouseCovers } from '@/hooks/use-house-covers';
 import { useHouses } from '@/hooks/use-houses';
+import { useMemberRoomPreviews } from '@/hooks/use-member-room-previews';
 import { useMyCharacters } from '@/hooks/use-my-characters';
 import { useMyRoomData } from '@/hooks/use-my-room-data';
 import { useNotifications } from '@/hooks/use-notifications';
@@ -250,6 +251,16 @@ export function AppShell({
   const [houseIndex, setHouseIndex] = useState(0);
   // The visited friend's live room + today's routines (loads on visit, #149).
   const { friendRoom, load: loadFriendRoom } = useFriendRoom();
+  // Mini room previews for the current house's member tiles (#268).
+  const { previews: memberRoomPreviews, load: loadRoomPreviews } = useMemberRoomPreviews();
+  const currentHouse = houses[houseIndex] ?? houses[0];
+  useEffect(() => {
+    if (screen !== 'groupHouse' || !currentHouse?.houseId) return;
+    const membershipIds = currentHouse.floors
+      .flatMap((f) => f.rooms.map((r) => r.membershipId))
+      .filter((id): id is number => id != null);
+    void loadRoomPreviews(currentHouse.houseId, membershipIds, catalogue);
+  }, [screen, currentHouse, catalogue, loadRoomPreviews]);
   // Guestbook for the friend room being visited (loads on visit).
   const {
     entries: guestbookEntries,
@@ -455,6 +466,11 @@ export function AppShell({
             loading={housesLoading}
             covers={houseCovers}
             characterId={wornCharacterId}
+            roomPreviews={memberRoomPreviews}
+            furniture={catalogue.furniture}
+            wallpapers={catalogue.wallpapers}
+            floors={catalogue.floors}
+            backgrounds={catalogue.backgrounds}
             houseIndex={houseIndex}
             onHouseIndexChange={setHouseIndex}
             onVisitFriend={(friend) => {

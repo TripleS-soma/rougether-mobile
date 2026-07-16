@@ -112,6 +112,26 @@ describe('GroupHouseScreen', () => {
     expect(getByText('아직 미션이 없어요. 첫 미션을 만들어 다 같이 도전해보세요!')).toBeTruthy();
   });
 
+  it('renders a live room preview on tiles that have one, plain tile otherwise', async () => {
+    const roomPreviews = {
+      42: {
+        placedFurnitureIds: ['bed'],
+        wallpaperId: 'cream',
+        floorId: null,
+        backgroundId: null,
+        characterId: 'otter' as const,
+      },
+    };
+    const { queryAllByTestId, getByLabelText } = await render(
+      <GroupHouseScreen houses={[MISSION_HOUSE]} roomPreviews={roomPreviews} />,
+    );
+    // Only 멤버 42 has a preview — 43 keeps the plain tint tile.
+    expect(queryAllByTestId('room-preview')).toHaveLength(1);
+    // The preview renders the member's actual furniture and character.
+    expect(getByLabelText('포근한 침대')).toBeTruthy();
+    expect(getByLabelText('수달')).toBeTruthy();
+  });
+
   it('lets the owner edit the house settings', async () => {
     const onUpdateHouse = jest.fn();
     const { getByLabelText } = await render(
