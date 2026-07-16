@@ -33,6 +33,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useGacha } from '@/hooks/use-gacha';
 import { useFriendRoom } from '@/hooks/use-friend-room';
 import { useGuestbook } from '@/hooks/use-guestbook';
+import { useToast } from '@/components/ui/toast';
 import { useHouseCovers } from '@/hooks/use-house-covers';
 import { useHouses } from '@/hooks/use-houses';
 import { useMemberRoomPreviews } from '@/hooks/use-member-room-previews';
@@ -181,6 +182,7 @@ export function AppShell({
     reload: reloadMyCharacters,
   } = useMyCharacters();
   const wornCharacterId = selectedCharacterId ?? characterId;
+  const { show: toast } = useToast();
 
   // 알림 (list + read receipts); loaded on mount so the header bell can show
   // the unread dot, refreshed each time the list opens.
@@ -320,13 +322,33 @@ export function AppShell({
     .filter((c) => houses.some((h) => h.title === c.label))
     .map((c) => c.id);
 
-  // 현재 집 카테고리에 속한 내 루틴 제목들 (미션 카드의 '루틴 연동됨' 판정).
+  // 현재 집 카테고리에 속한 내 루틴 (미션 카드의 연동/기여함 라벨 판정 —
+  // 오늘 완료 여부가 곧 '기여함'이라 앱 재시작 후에도 라벨이 유지된다).
   const houseCategory = categories.find((c) => c.label === currentHouse?.title);
-  const houseRoutineTitles = houseCategory
+  const houseLinkedRoutines = houseCategory
     ? routines
         .filter((r) => r.kind === 'routine' && r.category === houseCategory.id)
-        .map((r) => r.title)
+        .map((r) => ({
+          title: r.title,
+          completedToday: (completions[r.id] ?? []).includes(todayIso()),
+        }))
     : [];
+
+  /** 연동 루틴의 완료 취소를 막는다 — 미션 기여는 회수되지 않는다. */
+  const toggleWithMissionGuard = (id: string, date: string) => {
+    const item = routines.find((r) => r.id === id);
+    const done = (completions[id] ?? []).includes(date);
+    if (item && done) {
+      const label = categories.find((c) => c.id === item.category)?.label;
+      const house = label ? houses.find((h) => h.title === label) : undefined;
+      const linked = house?.missions?.some((m) => m.status === 'ACTIVE' && m.title === item.title);
+      if (linked) {
+        toast('미션에 기여된 루틴은 완료를 취소할 수 없어요', 'error');
+        return;
+      }
+    }
+    void toggleCompletion(id, date, contributeLinkedMission);
+  };
   // Guestbook for the friend room being visited (loads on visit).
   const {
     entries: guestbookEntries,
@@ -409,7 +431,7 @@ export function AppShell({
             backgrounds={catalogue.backgrounds}
             characterId={wornCharacterId}
             characterAnimations={wornCharacterAnimations}
-            onToggleCompletion={(id, date) => toggleCompletion(id, date, contributeLinkedMission)}
+            onToggleCompletion={toggleWithMissionGuard}
             onEdit={() => setScreen('decor')}
             onAddRoutine={() => setScreen('routineManage')}
             onOpenNotifications={() => {
@@ -554,7 +576,7 @@ export function AppShell({
             onLeaveHouse={(houseId) => {
               void leaveHouse(houseId);
             }}
-            linkedRoutineTitles={houseRoutineTitles}
+            linkedRoutines={houseLinkedRoutines}
             contributedMissionIds={[...contributedMissionIds]}
             onAddMissionRoutine={(houseId, mission) => {
               void addMissionRoutine(houseId, mission);

@@ -111,6 +111,27 @@ describe('AppShell — 공동미션 연동', () => {
     );
   });
 
+  it('blocks un-toggling a linked routine — contributions cannot be revoked', async () => {
+    const { getByLabelText } = await render(
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(calls.some((c) => c.url.includes('/houses/2/missions'))).toBe(true));
+
+    // 완료(기여) 후 다시 누르면 서버 호출 없이 차단된다.
+    await fireEvent.press(getByLabelText('아침 스트레칭'));
+    await waitFor(() =>
+      expect(calls.some((c) => c.method === 'POST' && c.url.includes('/routines/44/logs'))).toBe(
+        true,
+      ),
+    );
+    const callsBefore = calls.length;
+    await fireEvent.press(getByLabelText('아침 스트레칭'));
+    // Un-complete would be a DELETE on the log — none may fire.
+    expect(calls.slice(callsBefore).some((c) => c.method === 'DELETE')).toBe(false);
+  });
+
   it('adding a mission routine reuses the existing house category (no duplicate)', async () => {
     const { getByLabelText, getByText } = await render(
       <AuthProvider>

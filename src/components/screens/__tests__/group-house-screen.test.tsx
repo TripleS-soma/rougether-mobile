@@ -86,15 +86,28 @@ describe('GroupHouseScreen', () => {
       <GroupHouseScreen
         houses={[MISSION_HOUSE]}
         onAddMissionRoutine={jest.fn()}
-        linkedRoutineTitles={['주간 루틴 지키기']}
+        linkedRoutines={[{ title: '주간 루틴 지키기' }]}
         contributedMissionIds={[12]}
       />,
     );
     // Linked mission: no + button, 연동 라벨.
     expect(queryByLabelText('주간 루틴 지키기 내 루틴에 추가')).toBeNull();
     expect(getByText('루틴 연동됨')).toBeTruthy();
-    // Contributed-today mission (no claim handler → falls through to 기여됨).
-    expect(getByText('기여됨')).toBeTruthy();
+    // Contributed-today mission (no claim handler → falls through to 기여함).
+    expect(getByText('기여함')).toBeTruthy();
+  });
+
+  it('derives 기여함 from a linked routine completed today (재시작에도 유지)', async () => {
+    const { getByText, queryByText } = await render(
+      <GroupHouseScreen
+        houses={[MISSION_HOUSE]}
+        onAddMissionRoutine={jest.fn()}
+        linkedRoutines={[{ title: '주간 루틴 지키기', completedToday: true }]}
+      />,
+    );
+    // 세션 추적(contributedMissionIds) 없이도 오늘 완료 = 기여함.
+    expect(getByText('기여함')).toBeTruthy();
+    expect(queryByText('루틴 연동됨')).toBeNull();
   });
 
   it('creates a mission through the modal', async () => {

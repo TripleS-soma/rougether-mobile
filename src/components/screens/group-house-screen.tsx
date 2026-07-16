@@ -215,9 +215,9 @@ export type GroupHouseScreenProps = {
   onLeaveHouse?: (houseId: number) => void;
   /** File a mission as a daily routine under the house-named category. */
   onAddMissionRoutine?: (houseId: number, mission: HouseMission) => void;
-  /** Titles of my routines in this house's category (루틴 연동됨 판정). */
-  linkedRoutineTitles?: string[];
-  /** Mission ids I already contributed to today — cards show 기여됨. */
+  /** My routines in this house's category — 연동/기여함 라벨 판정. */
+  linkedRoutines?: { title: string; completedToday?: boolean }[];
+  /** Mission ids contributed this session (기여 직후 즉시 반영용 보조 신호). */
   contributedMissionIds?: number[];
   /** Claim the reward of an achieved mission. */
   onClaimMission?: (houseId: number, missionId: number) => void;
@@ -259,7 +259,7 @@ export function GroupHouseScreen({
   onKickMember,
   onLeaveHouse,
   onAddMissionRoutine,
-  linkedRoutineTitles = [],
+  linkedRoutines = [],
   contributedMissionIds = [],
   onClaimMission,
   onCreateMission,
@@ -1064,13 +1064,17 @@ export function GroupHouseScreen({
                             </Text>
                           </Pressable>
                         ) : mission.status === 'ACTIVE' &&
-                          contributedMissionIds.includes(mission.id) ? (
-                          // Today's contribution landed (직접이든 루틴 완료든).
+                          (contributedMissionIds.includes(mission.id) ||
+                            linkedRoutines.some(
+                              (r) => r.title === mission.title && r.completedToday,
+                            )) ? (
+                          // 오늘 기여 완료 — 연동 루틴의 오늘 완료 여부로도 파생되어
+                          // 앱을 다시 켜도 라벨이 유지된다.
                           <Text style={[Typography.supporting, { color: t.primaryText }]}>
-                            기여됨
+                            기여함
                           </Text>
                         ) : mission.status === 'ACTIVE' &&
-                          linkedRoutineTitles.includes(mission.title) ? (
+                          linkedRoutines.some((r) => r.title === mission.title) ? (
                           // Filed as my routine — completing it contributes.
                           <Text style={[Typography.supporting, { color: t.textMuted }]}>
                             루틴 연동됨
