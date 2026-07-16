@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BackHandler, StyleSheet, View } from 'react-native';
 
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
@@ -27,11 +27,13 @@ import {
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
 import { BottomNav, type NavTab } from '@/components/ui/bottom-nav';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
-import { type Routine } from '@/constants/routines';
+import { CATEGORY_COLORS, type Routine } from '@/constants/routines';
+import { todayIso } from '@/utils/datetime';
 import { useAuth } from '@/hooks/use-auth';
 import { useGacha } from '@/hooks/use-gacha';
 import { useFriendRoom } from '@/hooks/use-friend-room';
 import { useGuestbook } from '@/hooks/use-guestbook';
+import { useToast } from '@/components/ui/toast';
 import { useHouseCovers } from '@/hooks/use-house-covers';
 import { useHouses } from '@/hooks/use-houses';
 import { useMemberRoomPreviews } from '@/hooks/use-member-room-previews';
@@ -158,6 +160,7 @@ export function AppShell({
     moveRoutineOccurrence,
     deleteRoutine,
     createRoutineCategory,
+    ensureCategory,
     updateRoutineCategory,
     deleteRoutineCategory,
     reorderCategories,
@@ -179,6 +182,7 @@ export function AppShell({
     reload: reloadMyCharacters,
   } = useMyCharacters();
   const wornCharacterId = selectedCharacterId ?? characterId;
+  const { show: toast } = useToast();
 
   // 알림 (list + read receipts); loaded on mount so the header bell can show
   // the unread dot, refreshed each time the list opens.
@@ -206,6 +210,7 @@ export function AppShell({
     joinByCode,
     joinHouse: joinSearchHouse,
     create: createGroupHouse,
+    contributedMissionIds,
     kickMember,
     leaveHouse,
     contributeMission,
@@ -263,6 +268,87 @@ export function AppShell({
     // the per-house cache with blank rooms (the effect re-fires when it lands).
     void loadRoomPreviews(currentHouse.houseId, membershipIds, catalogue, !shopLoading);
   }, [screen, currentHouse, catalogue, shopLoading, loadRoomPreviews]);
+
+  // --- 공동미션 ↔ 내 루틴 연동 (#272). Link convention: 카테고리명 == 집 이름,
+  // 루틴명 == 미션명 — the server has no link field, so names carry it.
+  const contributeLinkedMission = (item: Routine) => {
+    const categoryLabel = categories.find((c) => c.id === item.category)?.label;
+    if (!categoryLabel) return;
+    const house = houses.find((h) => h.title === categoryLabel);
+    const mission = house?.missions?.find((m) => m.status === 'ACTIVE' && m.title === item.title);
+    if (house?.houseId && mission && !contributedMissionIds.has(mission.id))
+      void contributeMission(house.houseId, mission.id);
+  };
+
+  /** 미션의 + → 집 이름 카테고리(없으면 생성) 아래 매일 루틴 생성. */
+  const addingMissionRef = useRef(false);
+  const addMissionRoutine = async (houseId: number, mission: { title: string }) => {
+    // A double-fired press must not create the category twice.
+    if (addingMissionRef.current) return;
+    addingMissionRef.current = true;
+    try {
+      await addMissionRoutineInner(houseId, mission);
+    } finally {
+      addingMissionRef.current = false;
+    }
+  };
+  const addMissionRoutineInner = async (houseId: number, mission: { title: string }) => {
+    const house = houses.find((h) => h.houseId === houseId);
+    if (!house) return;
+    // Server-fresh find-or-create — stale local state must not duplicate it.
+    const category = await ensureCategory({
+      id: '',
+      label: house.title,
+      icon: 'house',
+      color: CATEGORY_COLORS[categories.length % CATEGORY_COLORS.length],
+      // 집 구성원과 공유하는 맥락이므로 이웃 공개(HOUSE).
+      visibility: 'neighbor',
+    });
+    if (!category) return;
+    await addRoutine({
+      title: mission.title,
+      category: category.id,
+      repeat: 'daily',
+      days: [],
+      startDate: todayIso(),
+      alarmEnabled: false,
+      time: '',
+      photoVerify: false,
+    });
+  };
+
+  // 집 이름과 같은(=미션 연동) 카테고리들 — 나의 방 quick-add를 막는다.
+  const houseCategoryIds = categories
+    .filter((c) => houses.some((h) => h.title === c.label))
+    .map((c) => c.id);
+
+  // 현재 집 카테고리에 속한 내 루틴 (미션 카드의 연동/기여함 라벨 판정 —
+  // 오늘 완료 여부가 곧 '기여함'이라 앱 재시작 후에도 라벨이 유지된다).
+  const houseCategory = categories.find((c) => c.label === currentHouse?.title);
+  const houseLinkedRoutines = houseCategory
+    ? routines
+        .filter((r) => r.kind === 'routine' && r.category === houseCategory.id)
+        .map((r) => ({
+          title: r.title,
+          completedToday: (completions[r.id] ?? []).includes(todayIso()),
+        }))
+    : [];
+
+  /** 연동 루틴의 완료 취소를 막는다 — 미션 기여는 회수되지 않는다. */
+  const toggleWithMissionGuard = (id: string, date: string) => {
+    const item = routines.find((r) => r.id === id);
+    const done = (completions[id] ?? []).includes(date);
+    if (item && done) {
+      const label = categories.find((c) => c.id === item.category)?.label;
+      const house = label ? houses.find((h) => h.title === label) : undefined;
+      const linked = house?.missions?.some((m) => m.status === 'ACTIVE' && m.title === item.title);
+      if (linked) {
+        toast('미션에 기여된 루틴은 완료를 취소할 수 없어요', 'error');
+        return;
+      }
+    }
+    void toggleCompletion(id, date, contributeLinkedMission);
+  };
   // Guestbook for the friend room being visited (loads on visit).
   const {
     entries: guestbookEntries,
@@ -345,7 +431,7 @@ export function AppShell({
             backgrounds={catalogue.backgrounds}
             characterId={wornCharacterId}
             characterAnimations={wornCharacterAnimations}
-            onToggleCompletion={toggleCompletion}
+            onToggleCompletion={toggleWithMissionGuard}
             onEdit={() => setScreen('decor')}
             onAddRoutine={() => setScreen('routineManage')}
             onOpenNotifications={() => {
@@ -365,6 +451,7 @@ export function AppShell({
             }}
             onOpenGacha={() => setScreen('gacha')}
             onQuickAddRoutine={quickAddTodo}
+            quickAddDisabledCategoryIds={houseCategoryIds}
             onRenameRoutine={renameRoutine}
             onUpdateRoutineTime={updateRoutineTime}
             onUpdateTodoDueDate={updateTodoDueDate}
@@ -489,8 +576,10 @@ export function AppShell({
             onLeaveHouse={(houseId) => {
               void leaveHouse(houseId);
             }}
-            onContributeMission={(houseId, missionId) => {
-              void contributeMission(houseId, missionId);
+            linkedRoutines={houseLinkedRoutines}
+            contributedMissionIds={[...contributedMissionIds]}
+            onAddMissionRoutine={(houseId, mission) => {
+              void addMissionRoutine(houseId, mission);
             }}
             onClaimMission={(houseId, missionId) => {
               void claimMission(houseId, missionId);

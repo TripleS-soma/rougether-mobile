@@ -192,6 +192,11 @@ export type MyRoomScreenProps = {
   onOpenGacha?: () => void;
   /** Quick-add a todo to a category with a due date (the + on a category header). */
   onQuickAddRoutine?: (category: string, title: string, dueDate: string) => void;
+  /**
+   * Categories whose quick-add(+) is hidden — 공동미션 연동 카테고리는 미션의
+   * + 버튼으로만 항목이 생겨야 하므로 임의 투두 추가를 막는다 (#272).
+   */
+  quickAddDisabledCategoryIds?: string[];
   /** Rename a routine (kebab → 수정: name only; full edit lives in 루틴 관리). */
   onRenameRoutine?: (id: string, title: string) => void;
   /** Update a routine's alarm time (kebab → 시간 수정, reuses TimePickerSheet). */
@@ -261,6 +266,7 @@ export function MyRoomScreen({
   onToggleCompletion,
   onOpenGacha,
   onQuickAddRoutine,
+  quickAddDisabledCategoryIds = [],
   onRenameRoutine,
   onUpdateRoutineTime,
   onUpdateTodoDueDate,
@@ -718,8 +724,9 @@ export function MyRoomScreen({
                             ) : null}
                             <View style={styles.flex} />
                             {/* The pseudo 기타 group (empty id) can't quick-add —
-                                uncategorized routines must not be creatable. */}
-                            {cat.id ? (
+                                uncategorized routines must not be creatable.
+                                미션 연동 카테고리도 임의 추가를 막는다. */}
+                            {cat.id && !quickAddDisabledCategoryIds.includes(cat.id) ? (
                               <Pressable
                                 onPress={() => openQuickAdd(cat.id)}
                                 accessibilityRole="button"

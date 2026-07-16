@@ -174,7 +174,15 @@ export function useMyRoomData() {
 
   const findItem = (id: string) => routines.find((r) => r.id === id);
 
-  const toggleCompletion = async (id: string, date: string) => {
+  /**
+   * `onCompleted` fires only after a successful completion (not an
+   * un-complete) — the shell uses it to auto-contribute linked house missions.
+   */
+  const toggleCompletion = async (
+    id: string,
+    date: string,
+    onCompleted?: (item: Routine) => void,
+  ) => {
     const item = findItem(id);
     const wasDone = (completions[id] ?? []).includes(date);
     // Optimistic update; revert on failure.
@@ -195,6 +203,7 @@ export function useMyRoomData() {
       // Completion pays out server-side — surface the actual amount.
       if (!wasDone && rewardAmount) toast(`+${rewardAmount} 코인 획득!`, 'success');
       await refreshWallet();
+      if (!wasDone && item) onCompleted?.(item);
     } catch {
       setCompletions((prev) => {
         const dates = prev[id] ?? [];
@@ -352,12 +361,37 @@ export function useMyRoomData() {
     }
   };
 
+  /**
+   * Find a category by label — refreshing from the server first, since another
+   * session may have created it (stale local state must not duplicate the
+   * house-named category, #272) — creating it only when genuinely absent.
+   */
+  const ensureCategory = async (cat: RoutineCategoryMeta): Promise<RoutineCategoryMeta | null> => {
+    try {
+      const cats = await fetchCategories();
+      const appCats = cats.map((c, i) => toAppCategory(c, i)).filter((c) => !c.deleted);
+      setCategories(appCats);
+      const existing = appCats.find((c) => c.label === cat.label);
+      if (existing) return existing;
+    } catch {
+      // Offline lookup fallback: trust local state below.
+      const existing = categories.find((c) => c.label === cat.label);
+      if (existing) return existing;
+    }
+    return createRoutineCategory(cat);
+  };
+
+  /** Create a category; returns the created meta (null on failure) so callers
+   * can immediately file a routine under it (미션 → 루틴 연동). */
   const createRoutineCategory = async (cat: RoutineCategoryMeta) => {
     try {
       const created = await createCategory(toCategoryCreate(cat, categories.length));
-      setCategories((prev) => [...prev, toAppCategory(created, prev.length)]);
+      const meta = toAppCategory(created, categories.length);
+      setCategories((prev) => [...prev, meta]);
+      return meta;
     } catch {
       toast('카테고리를 만들지 못했어요', 'error');
+      return null;
     }
   };
 
@@ -446,6 +480,7 @@ export function useMyRoomData() {
     moveRoutineOccurrence,
     deleteRoutine,
     createRoutineCategory,
+    ensureCategory,
     updateRoutineCategory,
     deleteRoutineCategory,
     reorderCategories,

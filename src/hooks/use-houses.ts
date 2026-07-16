@@ -40,6 +40,9 @@ import type { HousePreview, SearchHouse } from '@/components/screens/house-searc
 
 export function useHouses() {
   const [houses, setHouses] = useState<House[]>([]);
+  // Mission ids I contributed to today (session-scoped — the list API doesn't
+  // expose per-member daily contribution, so this seeds from contribute calls).
+  const [contributedMissionIds, setContributedMissionIds] = useState<Set<number>>(new Set());
   const [searchHouses, setSearchHouses] = useState<SearchHouse[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchLoading, setSearchLoading] = useState(true);
@@ -182,12 +185,15 @@ export function useHouses() {
   const contributeMission = async (houseId: number, missionId: number) => {
     try {
       const res = await contributeHouseMission(houseId, missionId);
+      setContributedMissionIds((prev) => new Set(prev).add(missionId));
       toast(res.achieved ? '기여 완료! 목표를 달성했어요' : '기여했어요 (+1)', 'success');
       await reloadMyHouses();
     } catch (err) {
       // The server caps contributions at one per day per member.
       const already =
         err instanceof ApiError && err.bodyText?.includes('HOUSE_MISSION_ALREADY_CONTRIBUTED');
+      // Already-today still means "contributed" — the card shows 기여됨.
+      if (already) setContributedMissionIds((prev) => new Set(prev).add(missionId));
       toast(already ? '오늘은 이미 기여했어요. 내일 또 만나요!' : '기여에 실패했어요', 'error');
     }
   };
@@ -253,6 +259,7 @@ export function useHouses() {
 
   return {
     houses,
+    contributedMissionIds,
     searchHouses: browsableHouses,
     loading,
     searchLoading,

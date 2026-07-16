@@ -213,8 +213,12 @@ export type GroupHouseScreenProps = {
   onKickMember?: (houseId: number, membershipId: number) => void;
   /** Leave the current house via the API. */
   onLeaveHouse?: (houseId: number) => void;
-  /** Add my +1 contribution to an active mission. */
-  onContributeMission?: (houseId: number, missionId: number) => void;
+  /** File a mission as a daily routine under the house-named category. */
+  onAddMissionRoutine?: (houseId: number, mission: HouseMission) => void;
+  /** My routines in this house's category — 연동/기여함 라벨 판정. */
+  linkedRoutines?: { title: string; completedToday?: boolean }[];
+  /** Mission ids contributed this session (기여 직후 즉시 반영용 보조 신호). */
+  contributedMissionIds?: number[];
   /** Claim the reward of an achieved mission. */
   onClaimMission?: (houseId: number, missionId: number) => void;
   /** Create a new group mission. */
@@ -254,7 +258,9 @@ export function GroupHouseScreen({
   onOpenSearch,
   onKickMember,
   onLeaveHouse,
-  onContributeMission,
+  onAddMissionRoutine,
+  linkedRoutines = [],
+  contributedMissionIds = [],
   onClaimMission,
   onCreateMission,
   onUpdateHouse,
@@ -291,6 +297,8 @@ export function GroupHouseScreen({
   const [missionStart, setMissionStart] = useState(todayIso());
   const [missionEnd, setMissionEnd] = useState<string | undefined>(undefined);
   const [showPeriodSheet, setShowPeriodSheet] = useState(false);
+  // 미션 → 내 루틴 추가 확인 모달의 대상.
+  const [missionToAdd, setMissionToAdd] = useState<HouseMission | null>(null);
   const [showEditHouse, setShowEditHouse] = useState(false);
   const [editName, setEditName] = useState('');
   const [editDesc, setEditDesc] = useState('');
@@ -442,19 +450,19 @@ export function GroupHouseScreen({
     return (
       <View style={[styles.screen, screenStyle]}>
         <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
+          <Pressable
+            onPress={() => setShowMembers(false)}
+            accessibilityRole="button"
+            accessibilityLabel="뒤로 가기"
+            style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
+            <Icon name="back" size={26} color={t.text} />
+          </Pressable>
           <View style={styles.flex}>
             <Text style={[Typography.supporting, { color: t.primaryText }]}>
               {currentHouse.title}
             </Text>
             <Text style={[Typography.h3, { color: t.text }]}>구성원 관리</Text>
           </View>
-          <Pressable
-            onPress={() => setShowMembers(false)}
-            accessibilityRole="button"
-            accessibilityLabel="닫기"
-            style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-            <Icon name="close" size={18} color={t.text} />
-          </Pressable>
         </View>
 
         <ScrollView contentContainerStyle={styles.body}>
@@ -557,23 +565,21 @@ export function GroupHouseScreen({
                       <Text style={[Typography.supporting, { color: t.primaryText }]}>위임</Text>
                     </Pressable>
                   ) : null}
-                  {canKick ? (
+                  {/* 내 카드에는 강퇴 버튼 자체를 두지 않는다 (disable 아님). */}
+                  {canKick && !member.isMine ? (
                     <Pressable
                       onPress={() => setMemberToKick(member)}
-                      disabled={member.isMine || kickedOut}
+                      disabled={kickedOut}
                       accessibilityRole="button"
                       accessibilityLabel={`${member.name} 강퇴`}
                       style={[
                         styles.kickBtn,
-                        {
-                          backgroundColor:
-                            member.isMine || kickedOut ? t.surfaceMuted : `${t.danger}22`,
-                        },
+                        { backgroundColor: kickedOut ? t.surfaceMuted : `${t.danger}22` },
                       ]}>
                       <Text
                         style={[
                           Typography.supporting,
-                          { color: member.isMine || kickedOut ? t.textDisabled : t.danger },
+                          { color: kickedOut ? t.textDisabled : t.danger },
                         ]}>
                         {kickedOut ? '강퇴됨' : '강퇴'}
                       </Text>
@@ -1056,16 +1062,30 @@ export function GroupHouseScreen({
                             </Text>
                           </Pressable>
                         ) : mission.status === 'ACTIVE' &&
+                          (contributedMissionIds.includes(mission.id) ||
+                            linkedRoutines.some(
+                              (r) => r.title === mission.title && r.completedToday,
+                            )) ? (
+                          // 오늘 기여 완료 — 연동 루틴의 오늘 완료 여부로도 파생되어
+                          // 앱을 다시 켜도 라벨이 유지된다.
+                          <Text style={[Typography.supporting, { color: t.primaryText }]}>
+                            기여함
+                          </Text>
+                        ) : mission.status === 'ACTIVE' &&
+                          linkedRoutines.some((r) => r.title === mission.title) ? (
+                          // Filed as my routine — completing it contributes.
+                          <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                            루틴 연동됨
+                          </Text>
+                        ) : mission.status === 'ACTIVE' &&
                           currentHouse.houseId &&
-                          onContributeMission ? (
+                          onAddMissionRoutine ? (
                           <Pressable
-                            onPress={() => onContributeMission(currentHouse.houseId!, mission.id)}
+                            onPress={() => setMissionToAdd(mission)}
                             accessibilityRole="button"
-                            accessibilityLabel={`${mission.title} 기여하기`}
+                            accessibilityLabel={`${mission.title} 내 루틴에 추가`}
                             style={[styles.missionBtn, { backgroundColor: t.primary }]}>
-                            <Text style={[Typography.supporting, { color: t.onPrimary }]}>
-                              기여 +1
-                            </Text>
+                            <Text style={[Typography.supporting, { color: t.onPrimary }]}>＋</Text>
                           </Pressable>
                         ) : null}
                       </View>
@@ -1077,6 +1097,36 @@ export function GroupHouseScreen({
           )}
         </View>
       </ScrollView>
+
+      {missionToAdd && currentHouse?.houseId ? (
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modal, { backgroundColor: t.surface }]}>
+            <Text style={[Typography.h3, { color: t.text }]}>내 루틴에 추가하시겠습니까?</Text>
+            <Text style={[Typography.body, styles.modalBody, { color: t.textMuted }]}>
+              {`'${currentHouse.title}' 카테고리에 '${missionToAdd.title}' 루틴이 만들어져요. 루틴을 완료하면 자동으로 미션에 기여돼요.`}
+            </Text>
+            <View style={styles.modalActions}>
+              <Pressable
+                onPress={() => setMissionToAdd(null)}
+                accessibilityRole="button"
+                accessibilityLabel="루틴 추가 취소"
+                style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
+                <Text style={[Typography.label, { color: t.text }]}>아니요</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  onAddMissionRoutine?.(currentHouse.houseId!, missionToAdd);
+                  setMissionToAdd(null);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="루틴 추가 확인"
+                style={[styles.modalBtn, { backgroundColor: t.primary }]}>
+                <Text style={[Typography.label, { color: t.onPrimary }]}>네</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      ) : null}
 
       {showCreateMission ? (
         <View style={styles.modalOverlay}>

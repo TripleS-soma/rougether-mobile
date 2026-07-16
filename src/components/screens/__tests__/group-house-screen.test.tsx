@@ -58,21 +58,56 @@ describe('GroupHouseScreen', () => {
     expect(second.getByText('소마 2번째 집')).toBeTruthy();
   });
 
-  it('contributes and claims via the API callbacks', async () => {
-    const onContributeMission = jest.fn();
+  it('adds a mission to my routines through the confirm modal, and claims', async () => {
+    const onAddMissionRoutine = jest.fn();
     const onClaimMission = jest.fn();
     const { getByLabelText, getByText } = await render(
       <GroupHouseScreen
         houses={[MISSION_HOUSE]}
-        onContributeMission={onContributeMission}
+        onAddMissionRoutine={onAddMissionRoutine}
         onClaimMission={onClaimMission}
       />,
     );
-    await fireEvent.press(getByLabelText('주간 루틴 지키기 기여하기'));
-    expect(onContributeMission).toHaveBeenCalledWith(7, 11);
+    // 기여 버튼 대신 + → 확인 모달 → 네 = 집 카테고리 아래 루틴 생성 요청.
+    await fireEvent.press(getByLabelText('주간 루틴 지키기 내 루틴에 추가'));
+    expect(getByText('내 루틴에 추가하시겠습니까?')).toBeTruthy();
+    await fireEvent.press(getByLabelText('루틴 추가 확인'));
+    expect(onAddMissionRoutine).toHaveBeenCalledWith(
+      7,
+      expect.objectContaining({ id: 11, title: '주간 루틴 지키기' }),
+    );
     await fireEvent.press(getByLabelText('기상 인증 모으기 보상 받기'));
     expect(onClaimMission).toHaveBeenCalledWith(7, 12);
     expect(getByText('완료')).toBeTruthy();
+  });
+
+  it('shows 기여됨/루틴 연동됨 labels instead of + when applicable', async () => {
+    const { queryByLabelText, getByText } = await render(
+      <GroupHouseScreen
+        houses={[MISSION_HOUSE]}
+        onAddMissionRoutine={jest.fn()}
+        linkedRoutines={[{ title: '주간 루틴 지키기' }]}
+        contributedMissionIds={[12]}
+      />,
+    );
+    // Linked mission: no + button, 연동 라벨.
+    expect(queryByLabelText('주간 루틴 지키기 내 루틴에 추가')).toBeNull();
+    expect(getByText('루틴 연동됨')).toBeTruthy();
+    // Contributed-today mission (no claim handler → falls through to 기여함).
+    expect(getByText('기여함')).toBeTruthy();
+  });
+
+  it('derives 기여함 from a linked routine completed today (재시작에도 유지)', async () => {
+    const { getByText, queryByText } = await render(
+      <GroupHouseScreen
+        houses={[MISSION_HOUSE]}
+        onAddMissionRoutine={jest.fn()}
+        linkedRoutines={[{ title: '주간 루틴 지키기', completedToday: true }]}
+      />,
+    );
+    // 세션 추적(contributedMissionIds) 없이도 오늘 완료 = 기여함.
+    expect(getByText('기여함')).toBeTruthy();
+    expect(queryByText('루틴 연동됨')).toBeNull();
   });
 
   it('creates a mission through the modal', async () => {
@@ -382,6 +417,37 @@ describe('GroupHouseScreen', () => {
     await fireEvent.press(kicks[kicks.length - 1]);
 
     expect(onKickMember).toHaveBeenCalledWith(7, 42);
+  });
+
+  it('hides the kick button on my own card and uses a back button header', async () => {
+    const onKickMember = jest.fn();
+    const houses = [
+      {
+        title: '실집',
+        houseId: 7,
+        myRole: 'OWNER' as const,
+        floors: [
+          {
+            level: '1층',
+            rooms: [
+              { name: '친구', color: '#F5E1D8', membershipId: 42 },
+              { name: '나', color: '#E8E0D0', isMine: true, membershipId: 43 },
+            ],
+          },
+        ],
+      },
+    ];
+    const { getByLabelText, getByText, queryByLabelText } = await render(
+      <GroupHouseScreen houses={houses} onKickMember={onKickMember} />,
+    );
+    await fireEvent.press(getByLabelText('구성원 목록'));
+    // 내 카드엔 강퇴 버튼이 아예 없다 (disabled가 아니라 미노출).
+    expect(getByLabelText('친구 강퇴')).toBeTruthy();
+    expect(queryByLabelText('나 강퇴')).toBeNull();
+    // 헤더는 X 대신 다른 화면과 같은 왼쪽 뒤로가기.
+    expect(queryByLabelText('닫기')).toBeNull();
+    await fireEvent.press(getByLabelText('뒤로 가기'));
+    expect(getByText('우리 그룹의 미션')).toBeTruthy();
   });
 
   it('opens member management and kicks a member after confirming', async () => {
