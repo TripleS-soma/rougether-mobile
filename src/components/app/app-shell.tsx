@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, StyleSheet, View } from 'react-native';
 
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
@@ -36,7 +36,7 @@ import { useGuestbook } from '@/hooks/use-guestbook';
 import { useToast } from '@/components/ui/toast';
 import { useHouseCovers } from '@/hooks/use-house-covers';
 import { useHouses } from '@/hooks/use-houses';
-import { useMemberRoomPreviews } from '@/hooks/use-member-room-previews';
+import { useMemberRoomPreviews, withMyCharacter } from '@/hooks/use-member-room-previews';
 import { useMyCharacters } from '@/hooks/use-my-characters';
 import { useMyRoomData } from '@/hooks/use-my-room-data';
 import { useNotifications } from '@/hooks/use-notifications';
@@ -258,6 +258,12 @@ export function AppShell({
   const { friendRoom, load: loadFriendRoom } = useFriendRoom();
   // Mini room previews for the current house's member tiles (#268).
   const { previews: memberRoomPreviews, load: loadRoomPreviews } = useMemberRoomPreviews();
+  // 캐릭터 교체가 집 화면 내 타일에 즉시 반영되도록(#282), 캐시된 프리뷰 위에
+  // 내 좌석의 캐릭터만 착용 캐릭터로 파생한다 (서버 재조회 없음).
+  const roomPreviews = useMemo(
+    () => withMyCharacter(memberRoomPreviews, houses, selectedCharacterId),
+    [memberRoomPreviews, houses, selectedCharacterId],
+  );
   const currentHouse = houses[houseIndex] ?? houses[0];
   useEffect(() => {
     if (screen !== 'groupHouse' || !currentHouse?.houseId) return;
@@ -555,7 +561,7 @@ export function AppShell({
             loading={housesLoading}
             covers={houseCovers}
             characterId={wornCharacterId}
-            roomPreviews={memberRoomPreviews}
+            roomPreviews={roomPreviews}
             furniture={catalogue.furniture}
             wallpapers={catalogue.wallpapers}
             floors={catalogue.floors}
