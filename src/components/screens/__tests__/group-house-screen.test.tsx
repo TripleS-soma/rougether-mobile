@@ -28,16 +28,19 @@ const MISSION_HOUSE: House = {
 
 describe('GroupHouseScreen', () => {
   it('renders the current house, members, and group missions', async () => {
-    const { getByText, queryByText } = await render(<GroupHouseScreen />);
+    const { getByText, getByLabelText, queryByText } = await render(<GroupHouseScreen />);
     expect(getByText('소마파이팅')).toBeTruthy();
     // The level pill shows the house's real growth level (demo: 3).
     expect(getByText('Lv.3')).toBeTruthy();
     // The header carries no coin balance (집 화면은 재화 소비 화면이 아니다).
     expect(queryByText('5,600')).toBeNull();
-    expect(getByText('우리 그룹의 미션')).toBeTruthy();
-    expect(getByText('이번 주 다같이 루틴 지키기')).toBeTruthy();
     // The demo owner's tile carries the 방장 crown.
     expect(getByText('최준서')).toBeTruthy();
+    // 공동 미션은 플로팅 버튼 → 시트로 (#287).
+    expect(queryByText('우리 그룹의 미션')).toBeNull();
+    await fireEvent.press(getByLabelText('공동 미션'));
+    expect(getByText('우리 그룹의 미션')).toBeTruthy();
+    expect(getByText('이번 주 다같이 루틴 지키기')).toBeTruthy();
   });
 
   it('keeps the visited house via the controlled index (#241)', async () => {
@@ -69,6 +72,7 @@ describe('GroupHouseScreen', () => {
       />,
     );
     // 기여 버튼 대신 + → 확인 모달 → 네 = 집 카테고리 아래 루틴 생성 요청.
+    await fireEvent.press(getByLabelText('공동 미션'));
     await fireEvent.press(getByLabelText('주간 루틴 지키기 내 루틴에 추가'));
     expect(getByText('내 루틴에 추가하시겠습니까?')).toBeTruthy();
     await fireEvent.press(getByLabelText('루틴 추가 확인'));
@@ -82,7 +86,7 @@ describe('GroupHouseScreen', () => {
   });
 
   it('shows 기여됨/루틴 연동됨 labels instead of + when applicable', async () => {
-    const { queryByLabelText, getByText } = await render(
+    const { queryByLabelText, getByText, getByLabelText } = await render(
       <GroupHouseScreen
         houses={[MISSION_HOUSE]}
         onAddMissionRoutine={jest.fn()}
@@ -90,6 +94,7 @@ describe('GroupHouseScreen', () => {
         contributedMissionIds={[12]}
       />,
     );
+    await fireEvent.press(getByLabelText('공동 미션'));
     // Linked mission: no + button, 연동 라벨.
     expect(queryByLabelText('주간 루틴 지키기 내 루틴에 추가')).toBeNull();
     expect(getByText('루틴 연동됨')).toBeTruthy();
@@ -98,13 +103,14 @@ describe('GroupHouseScreen', () => {
   });
 
   it('derives 기여함 from a linked routine completed today (재시작에도 유지)', async () => {
-    const { getByText, queryByText } = await render(
+    const { getByText, getByLabelText, queryByText } = await render(
       <GroupHouseScreen
         houses={[MISSION_HOUSE]}
         onAddMissionRoutine={jest.fn()}
         linkedRoutines={[{ title: '주간 루틴 지키기', completedToday: true }]}
       />,
     );
+    await fireEvent.press(getByLabelText('공동 미션'));
     // 세션 추적(contributedMissionIds) 없이도 오늘 완료 = 기여함.
     expect(getByText('기여함')).toBeTruthy();
     expect(queryByText('루틴 연동됨')).toBeNull();
@@ -115,6 +121,7 @@ describe('GroupHouseScreen', () => {
     const { getByLabelText } = await render(
       <GroupHouseScreen houses={[MISSION_HOUSE]} onCreateMission={onCreateMission} />,
     );
+    await fireEvent.press(getByLabelText('공동 미션'));
     await fireEvent.press(getByLabelText('미션 만들기'));
     await fireEvent.changeText(getByLabelText('미션 제목'), '새 미션');
     await fireEvent.changeText(getByLabelText('목표 수치'), '15');
@@ -133,6 +140,7 @@ describe('GroupHouseScreen', () => {
         <GroupHouseScreen houses={[MISSION_HOUSE]} onCreateMission={onCreateMission} />
       </ToastProvider>,
     );
+    await fireEvent.press(getByLabelText('공동 미션'));
     await fireEvent.press(getByLabelText('미션 만들기'));
     await fireEvent.press(getByLabelText('미션 만들기 확인'));
 
@@ -141,9 +149,10 @@ describe('GroupHouseScreen', () => {
   });
 
   it('shows the empty-mission hint when the house has no missions', async () => {
-    const { getByText } = await render(
+    const { getByText, getByLabelText } = await render(
       <GroupHouseScreen houses={[{ ...MISSION_HOUSE, missions: [] }]} />,
     );
+    await fireEvent.press(getByLabelText('공동 미션'));
     expect(getByText('아직 미션이 없어요. 첫 미션을 만들어 다 같이 도전해보세요!')).toBeTruthy();
   });
 
@@ -174,6 +183,7 @@ describe('GroupHouseScreen', () => {
     );
 
     // Toggle off (default): no period fields at all.
+    await fireEvent.press(getByLabelText('공동 미션'));
     await fireEvent.press(getByLabelText('미션 만들기'));
     await fireEvent.changeText(getByLabelText('미션 제목'), '기간 없는 미션');
     await fireEvent.press(getByLabelText('미션 만들기 확인'));
@@ -201,34 +211,40 @@ describe('GroupHouseScreen', () => {
         { id: 22, title: '끝난 기간 미션', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 5, target: 5, status: 'COMPLETED' as const, endsOn: '2026-07-01' }, // prettier-ignore
       ],
     };
-    const { getByText, queryByText } = await render(<GroupHouseScreen houses={[house]} />);
+    const { getByText, getByLabelText, queryByText } = await render(
+      <GroupHouseScreen houses={[house]} />,
+    );
+    await fireEvent.press(getByLabelText('공동 미션'));
     expect(getByText('~07.23')).toBeTruthy();
     // Finished missions show their status, not a stale end date.
     expect(queryByText('~07.01')).toBeNull();
   });
 
-  it('renders the cover hero with level progress and summary stats (B안)', async () => {
+  it('renders the house frame with level progress and summary stats (#287)', async () => {
     const house = {
       ...MISSION_HOUSE,
       level: 1,
       growthPoints: 130,
       coverImageKey: 'house/cloud-balloon/frame.png',
     };
-    const { getByTestId, getByText } = await render(
+    const { getByTestId, getByText, getByLabelText } = await render(
       <GroupHouseScreen
         houses={[house]}
         onAddMissionRoutine={jest.fn()}
         linkedRoutines={[{ title: '주간 루틴 지키기', completedToday: true }]}
       />,
     );
-    // 커버 이미지 히어로 + 레벨 진행도 (130pt → 30/100, 다음 레벨까지 70).
-    expect(getByTestId('house-hero-cover')).toBeTruthy();
+    // 커버 프레임이 집 본체 — 창문 안에 좌석, 모서리에 레벨 진행도 pill.
+    expect(getByTestId('house-frame')).toBeTruthy();
     expect(getByText('Lv.1 · 30/100')).toBeTruthy();
     expect(getByText('70')).toBeTruthy();
     // 진행 중 미션 2(ACTIVE 11·12), 오늘 나의 기여 1/2 (11이 연동 완료).
     expect(getByText('2')).toBeTruthy();
     expect(getByText('1/2')).toBeTruthy();
-    // + 버튼은 텍스트로 목적을 말한다.
+    // 방 타일은 창문 안에서도 그대로 (정원 4 → 좌석 2 + 빈방 2).
+    expect(getByText('나 (나)')).toBeTruthy();
+    // + 버튼은 시트 안에서 텍스트로 목적을 말한다.
+    await fireEvent.press(getByLabelText('공동 미션'));
     expect(getByText('＋ 내 루틴에')).toBeTruthy();
   });
 
@@ -528,7 +544,7 @@ describe('GroupHouseScreen', () => {
         ],
       },
     ];
-    const { getByLabelText, getByText, queryByLabelText } = await render(
+    const { getByLabelText, queryByLabelText } = await render(
       <GroupHouseScreen houses={houses} onKickMember={onKickMember} />,
     );
     await fireEvent.press(getByLabelText('구성원 목록'));
@@ -538,7 +554,7 @@ describe('GroupHouseScreen', () => {
     // 헤더는 X 대신 다른 화면과 같은 왼쪽 뒤로가기.
     expect(queryByLabelText('닫기')).toBeNull();
     await fireEvent.press(getByLabelText('뒤로 가기'));
-    expect(getByText('우리 그룹의 미션')).toBeTruthy();
+    expect(getByLabelText('공동 미션')).toBeTruthy();
   });
 
   it('opens member management and kicks a member after confirming', async () => {

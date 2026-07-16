@@ -161,6 +161,16 @@ const VACANT_FLOOR: Wallpaper[] = [
   { id: 'vacant-floor', name: '빈방 바닥', price: 0, assetKey: 'vacant-floor', color: '#E7D9BE' },
 ];
 
+// 커버 프레임 PNG(house-unified-*-frame.png, 3종 공통 567×508)의 투명 창문
+// 4칸 — 알파 채널 측정값 (#287). 좌상·우상·좌하·우하 순.
+const FRAME_ASPECT = 567 / 508;
+const WINDOW_RECTS = [
+  { left: '15.7%', top: '25.4%', width: '30%', height: '28.3%' },
+  { left: '54.3%', top: '25.4%', width: '30%', height: '28.3%' },
+  { left: '15.7%', top: '59.1%', width: '30%', height: '28.3%' },
+  { left: '54.3%', top: '59.1%', width: '30%', height: '28.3%' },
+] as const;
+
 // Demo layout mirrors the adapter's default fill: my room bottom-left, others
 // in join order, vacant capacity seats on the top floor (정원 6 / 멤버 4).
 const DEFAULT_HOUSES: House[] = [
@@ -322,6 +332,8 @@ export function GroupHouseScreen({
   const [kicked, setKicked] = useState<string[]>([]);
   const [memberToKick, setMemberToKick] = useState<RoomCell | null>(null);
   const [showCreateMission, setShowCreateMission] = useState(false);
+  // 공동 미션 시트 (#287) — 하단 카드 대신 플로팅 버튼으로 연다.
+  const [showMissions, setShowMissions] = useState(false);
   const [missionTitle, setMissionTitle] = useState('');
   const [missionType, setMissionType] =
     useState<NewHouseMission['missionType']>('WEEKLY_MEMBER_COUNT');
@@ -378,14 +390,34 @@ export function GroupHouseScreen({
     !onSwapSeats && perm?.length === cellsInOrder.length
       ? perm.map((i) => cellsInOrder[i])
       : cellsInOrder;
-  const roomPairs: RoomCell[][] = [];
-  const rowOffsets: number[] = [];
-  let seatOffset = 0;
-  for (const size of rowShapes) {
-    rowOffsets.push(seatOffset);
-    roomPairs.push(displayCells.slice(seatOffset, seatOffset + size));
-    seatOffset += size;
+  // 표시 행(어댑터 층 구성)별 좌석 인덱스.
+  const seatRows: number[][] = [];
+  {
+    let seatOffset = 0;
+    for (const size of rowShapes) {
+      seatRows.push(Array.from({ length: size }, (_, i) => seatOffset + i));
+      seatOffset += size;
+    }
   }
+  // 프레임 모드(#287): 커버 PNG는 창문 4칸(2×2)이 투명하게 뚫린 집 프레임이다.
+  // 아래 두 행(내 방·초기 멤버)이 창문에 들어가고, 그 위 행들(초과 좌석·빈방)은
+  // 프레임 아래 그리드로 이어붙는다. 커버가 없으면 기존 히어로+그리드 폴백.
+  const frameActive = isCdnKey(currentHouse?.coverImageKey);
+  const frameRows = frameActive ? seatRows.slice(-2) : [];
+  // WINDOW_RECTS 순서(좌상·우상·좌하·우하)로 좌석 매핑 — 아래 행이 아래 창문.
+  const windowSlots: (number | null)[] = [null, null, null, null];
+  frameRows
+    .slice()
+    .reverse()
+    .forEach((row, r) =>
+      row.forEach((seatIdx, c) => {
+        const slot = (r === 0 ? 2 : 0) + c;
+        if (slot < windowSlots.length) windowSlots[slot] = seatIdx;
+      }),
+    );
+  const gridSeatRows = frameActive ? seatRows.slice(0, -2) : seatRows;
+  const roomPairs: RoomCell[][] = gridSeatRows.map((row) => row.map((i) => displayCells[i]));
+  const rowOffsets: number[] = gridSeatRows.map((row) => row[0] ?? 0);
 
   // --- 타일 드래그 앤 드롭 (자리 맞바꾸기, #278) ---
   // Long-press lifts a tile, the grid captures the active touch and the tile
@@ -982,6 +1014,111 @@ export function GroupHouseScreen({
     );
   }
 
+  // 좌석 타일 — 프레임 창문(#287)과 평면 그리드가 같은 타일을 공유한다.
+  // fill=true(창문)면 슬롯을 가득 채우고, 아니면 반칸 정사각형.
+  const renderSeatTile = (room: RoomCell, seatIdx: number, fill = false) => {
+    const dragging = dragSeat === seatIdx;
+    const empty = room.vacant || isKicked(room.name);
+    const preview =
+      !empty && room.membershipId != null ? roomPreviews?.[room.membershipId] : undefined;
+    return (
+      <Animated.View
+        // Vacant seats all read '빈방' — the seat index keys them.
+        key={`seat-${seatIdx}-${room.name}`}
+        ref={(el: View | null) => {
+          if (el) tileRefs.current.set(seatIdx, el);
+          else tileRefs.current.delete(seatIdx);
+        }}
+        style={[
+          styles.roomCellWrap,
+          dragging && {
+            transform: [...dragPan.getTranslateTransform(), { scale: 1.05 }],
+            ...styles.roomCellLifted,
+          },
+        ]}>
+        <Pressable
+          onPress={() =>
+            empty
+              ? undefined
+              : room.isMine
+                ? onVisitMyRoom?.()
+                : onVisitFriend?.({
+                    name: room.name,
+                    userId: room.userId,
+                    houseId: currentHouse?.houseId,
+                    membershipId: room.membershipId,
+                  })
+          }
+          onLongPress={empty ? undefined : () => startDrag(seatIdx)}
+          delayLongPress={220}
+          onPressOut={onTilePressOut}
+          disabled={empty}
+          accessibilityRole="button"
+          accessibilityLabel={room.isMine ? `${room.name} (나)` : room.name}
+          accessibilityHint={empty ? undefined : '길게 눌러 자리 옮기기'}
+          style={[
+            fill ? styles.roomCellFill : styles.roomCell,
+            {
+              backgroundColor: empty ? t.surfaceMuted : room.color,
+              borderColor: t.border,
+            },
+          ]}>
+          {/* The member's live room fills the tile (visit preview);
+              plain tint + avatar stand in until it loads. */}
+          {preview ? (
+            <View style={styles.roomPreview} pointerEvents="none" testID="room-preview">
+              <Room
+                placedFurnitureIds={preview.placedFurnitureIds}
+                wallpaperId={preview.wallpaperId}
+                floorId={preview.floorId}
+                backgroundId={preview.backgroundId}
+                characterId={preview.characterId}
+                furniture={furniture}
+                wallpapers={wallpapers}
+                floors={floorSurfaces}
+                backgrounds={backgrounds}
+                style={styles.roomPreviewFill}
+              />
+            </View>
+          ) : null}
+          {/* 빈 좌석은 캐릭터 없는 기본 빈 방을 낮춘 톤으로 —
+              "방은 준비돼 있고 주인만 없다" (#281, 시안 A). */}
+          {empty ? (
+            <View style={styles.roomPreview} pointerEvents="none" testID="vacant-room">
+              <Room
+                placedFurnitureIds={[]}
+                characterId={null}
+                floorId={VACANT_FLOOR[0].id}
+                floors={VACANT_FLOOR}
+                style={[styles.roomPreviewFill, styles.vacantRoom]}
+              />
+            </View>
+          ) : null}
+          {room.isMine ? (
+            <View style={[styles.myTag, { backgroundColor: t.warning }]}>
+              <Text style={[styles.myTagText, { color: t.onTint }]}>MY</Text>
+            </View>
+          ) : null}
+          {empty || preview ? null : <CharacterAvatar characterId={characterId} size={64} />}
+          {/* Tiles keep their fixed pastel bg in dark mode — the name needs
+              onTint ink, not the (light) theme text. Over a preview (or the
+              vacant room) it drops to a bottom scrim for contrast. */}
+          <View style={[styles.roomNameRow, (preview || empty) && styles.roomNameOverlay]}>
+            {!empty && room.isOwner ? <CrownPictogram size={12} /> : null}
+            <Text
+              style={[
+                Typography.supporting,
+                styles.roomName,
+                { color: preview || empty ? '#FFFFFF' : t.onTint },
+              ]}>
+              {empty ? '빈방' : room.isMine ? `${room.name} (나)` : room.name}
+            </Text>
+          </View>
+        </Pressable>
+      </Animated.View>
+    );
+  };
+
   return (
     <View style={[styles.screen, screenStyle]}>
       <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
@@ -1007,72 +1144,166 @@ export function GroupHouseScreen({
         contentContainerStyle={styles.body}
         scrollEnabled={dragSeat == null}
         testID="house-scroll">
-        {/* 커버 히어로 — #261의 대표 이미지를 집 화면이 사용한다 (B안). */}
-        <View style={styles.hero}>
-          {isCdnKey(currentHouse.coverImageKey) ? (
-            <Image
-              source={assetSource(currentHouse.coverImageKey)}
-              style={StyleSheet.absoluteFill}
-              contentFit="cover"
-              transition={120}
-              accessibilityLabel={`${currentHouse.title} 대표 이미지`}
-              testID="house-hero-cover"
-            />
-          ) : (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: t.surfaceMuted }]} />
-          )}
-          {/* 고정 밝기 스크림 위 텍스트 — 테마와 무관한 커버 위라 literal 사용. */}
-          <View style={[styles.heroPill, { backgroundColor: 'rgba(255,255,255,0.88)' }]}>
-            <HousePictogram size={12} />
-            <Text style={[Typography.supporting, styles.heroPillText]}>
-              Lv.{currentHouse.level ?? 0}
-              {currentHouse.growthPoints != null ? ` · ${currentHouse.growthPoints % 100}/100` : ''}
-            </Text>
+        {frameActive ? (
+          /* 프레임 모드(#287) — 하늘 위에 스위처·집 프레임, 방은 창문 안에. */
+          <View style={[styles.skySection, { backgroundColor: t.sky }]}>
+            {/* 마당 잔디 — 프레임 하단이 밟고 서는 밴드. */}
+            <View style={[styles.grassBand, { backgroundColor: t.grass }]} />
+            <View style={styles.switcher}>
+              {houses.length > 1 ? (
+                <Pressable
+                  onPress={prevHouse}
+                  accessibilityRole="button"
+                  accessibilityLabel="이전 집"
+                  hitSlop={8}
+                  style={[styles.iconBtn, { backgroundColor: t.surface }]}>
+                  <Icon name="back" size={18} color={t.text} />
+                </Pressable>
+              ) : null}
+              <View style={[styles.titleBadge, { backgroundColor: t.surface }]}>
+                {currentHouse.myRole === 'OWNER' ? (
+                  <CrownPictogram size={14} />
+                ) : (
+                  <HousePictogram size={14} />
+                )}
+                <Text style={[Typography.h3, { color: t.text }]}>{currentHouse.title}</Text>
+              </View>
+              {houses.length > 1 ? (
+                <Pressable
+                  onPress={nextHouse}
+                  accessibilityRole="button"
+                  accessibilityLabel="다음 집"
+                  hitSlop={8}
+                  style={[styles.iconBtn, { backgroundColor: t.surface }]}>
+                  <Icon name="forward" size={18} color={t.text} />
+                </Pressable>
+              ) : null}
+            </View>
+            <View style={styles.dots}>
+              {houses.map((house, i) => (
+                <View
+                  key={house.houseId ?? `demo-${i}`}
+                  style={[
+                    styles.dot,
+                    i === houseIndex
+                      ? { width: 20, backgroundColor: t.primary }
+                      : { width: 6, backgroundColor: t.surface },
+                  ]}
+                />
+              ))}
+            </View>
+            <View style={styles.frameWrap} {...gridPanResponder.panHandlers}>
+              {/* 창문 뒤 좌석 — 프레임 PNG의 투명 창문으로 방이 보인다. */}
+              {WINDOW_RECTS.map((rect, w) => {
+                const seatIdx = windowSlots[w];
+                return (
+                  <View
+                    key={`window-${w}`}
+                    style={[
+                      styles.windowSlot,
+                      rect,
+                      seatIdx != null && dragSeat === seatIdx && styles.dragRow,
+                    ]}>
+                    {seatIdx != null ? (
+                      renderSeatTile(displayCells[seatIdx], seatIdx, true)
+                    ) : (
+                      /* 정원 밖 창문 — 조용한 벽 패널. */
+                      <View style={[styles.windowFiller, { backgroundColor: t.surfaceMuted }]} />
+                    )}
+                  </View>
+                );
+              })}
+              <Image
+                source={assetSource(currentHouse.coverImageKey)}
+                style={StyleSheet.absoluteFill}
+                contentFit="contain"
+                transition={120}
+                pointerEvents="none"
+                accessibilityLabel={`${currentHouse.title} 집`}
+                testID="house-frame"
+              />
+              {/* 모서리 pill — 고정 밝기 스크림 위 텍스트라 literal 잉크. */}
+              <View
+                style={[styles.heroPill, { backgroundColor: 'rgba(255,255,255,0.88)' }]}
+                pointerEvents="none">
+                <HousePictogram size={12} />
+                <Text style={[Typography.supporting, styles.heroPillText]}>
+                  Lv.{currentHouse.level ?? 0}
+                  {currentHouse.growthPoints != null
+                    ? ` · ${currentHouse.growthPoints % 100}/100`
+                    : ''}
+                </Text>
+              </View>
+              <View
+                style={[styles.framePillRight, { backgroundColor: 'rgba(255,255,255,0.88)' }]}
+                pointerEvents="none">
+                <Text style={[Typography.supporting, styles.heroPillText]}>
+                  {/* Vacant seats are not members — count the real ones. */}
+                  멤버 {currentHouse.memberCount ?? members.length}
+                  {currentHouse.maxMembers ? ` / ${currentHouse.maxMembers}` : ''}
+                </Text>
+              </View>
+            </View>
           </View>
-          {houses.length > 1 ? (
-            <>
-              <Pressable
-                onPress={prevHouse}
-                accessibilityRole="button"
-                accessibilityLabel="이전 집"
-                hitSlop={8}
-                style={[styles.heroNav, styles.heroNavLeft]}>
-                <Icon name="back" size={16} color="#4A403A" />
-              </Pressable>
-              <Pressable
-                onPress={nextHouse}
-                accessibilityRole="button"
-                accessibilityLabel="다음 집"
-                hitSlop={8}
-                style={[styles.heroNav, styles.heroNavRight]}>
-                <Icon name="forward" size={16} color="#4A403A" />
-              </Pressable>
-            </>
-          ) : null}
-          <View style={styles.heroFoot}>
-            <Text style={[Typography.h3, styles.heroName]}>{currentHouse.title}</Text>
-            <Text style={[Typography.supporting, styles.heroMeta]}>
-              {/* Vacant seats are not members — count the real ones. */}
-              멤버 {currentHouse.memberCount ?? members.length}
-              {currentHouse.maxMembers ? ` / ${currentHouse.maxMembers}` : ''}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.dots}>
-          {houses.map((house, i) => (
-            <View
-              // houseId when wired; titles can repeat, so fall back to index.
-              key={house.houseId ?? `demo-${i}`}
-              style={[
-                styles.dot,
-                i === houseIndex
-                  ? { width: 20, backgroundColor: t.primary }
-                  : { width: 6, backgroundColor: t.border },
-              ]}
-            />
-          ))}
-        </View>
+        ) : (
+          <>
+            {/* 커버가 없는 집 — 기존 히어로 폴백 (#276 B안). */}
+            <View style={styles.hero}>
+              <View style={[StyleSheet.absoluteFill, { backgroundColor: t.surfaceMuted }]} />
+              <View style={[styles.heroPill, { backgroundColor: 'rgba(255,255,255,0.88)' }]}>
+                <HousePictogram size={12} />
+                <Text style={[Typography.supporting, styles.heroPillText]}>
+                  Lv.{currentHouse.level ?? 0}
+                  {currentHouse.growthPoints != null
+                    ? ` · ${currentHouse.growthPoints % 100}/100`
+                    : ''}
+                </Text>
+              </View>
+              {houses.length > 1 ? (
+                <>
+                  <Pressable
+                    onPress={prevHouse}
+                    accessibilityRole="button"
+                    accessibilityLabel="이전 집"
+                    hitSlop={8}
+                    style={[styles.heroNav, styles.heroNavLeft]}>
+                    <Icon name="back" size={16} color="#4A403A" />
+                  </Pressable>
+                  <Pressable
+                    onPress={nextHouse}
+                    accessibilityRole="button"
+                    accessibilityLabel="다음 집"
+                    hitSlop={8}
+                    style={[styles.heroNav, styles.heroNavRight]}>
+                    <Icon name="forward" size={16} color="#4A403A" />
+                  </Pressable>
+                </>
+              ) : null}
+              <View style={styles.heroFoot}>
+                <Text style={[Typography.h3, styles.heroName]}>{currentHouse.title}</Text>
+                <Text style={[Typography.supporting, styles.heroMeta]}>
+                  {/* Vacant seats are not members — count the real ones. */}
+                  멤버 {currentHouse.memberCount ?? members.length}
+                  {currentHouse.maxMembers ? ` / ${currentHouse.maxMembers}` : ''}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.dots}>
+              {houses.map((house, i) => (
+                <View
+                  // houseId when wired; titles can repeat, so fall back to index.
+                  key={house.houseId ?? `demo-${i}`}
+                  style={[
+                    styles.dot,
+                    i === houseIndex
+                      ? { width: 20, backgroundColor: t.primary }
+                      : { width: 6, backgroundColor: t.border },
+                  ]}
+                />
+              ))}
+            </View>
+          </>
+        )}
 
         {/* 요약 스탯 — 스크롤 없이 집의 오늘이 보인다 (B안). */}
         <View style={styles.summaryRow}>
@@ -1105,124 +1336,7 @@ export function GroupHouseScreen({
                 key={`${pairIdx}-${pair[0]?.name ?? ''}`}
                 style={[styles.floor, rowHasDrag && styles.dragRow]}>
                 <View style={styles.floorRooms}>
-                  {pair.map((room, i) => {
-                    const seatIdx = rowOffsets[pairIdx] + i;
-                    const dragging = dragSeat === seatIdx;
-                    const empty = room.vacant || isKicked(room.name);
-                    const preview =
-                      !empty && room.membershipId != null
-                        ? roomPreviews?.[room.membershipId]
-                        : undefined;
-                    return (
-                      <Animated.View
-                        // Vacant seats all read '빈방' — the seat index keys them.
-                        key={`${i}-${room.name}`}
-                        ref={(el: View | null) => {
-                          if (el) tileRefs.current.set(seatIdx, el);
-                          else tileRefs.current.delete(seatIdx);
-                        }}
-                        style={[
-                          styles.roomCellWrap,
-                          dragging && {
-                            transform: [...dragPan.getTranslateTransform(), { scale: 1.05 }],
-                            ...styles.roomCellLifted,
-                          },
-                        ]}>
-                        <Pressable
-                          onPress={() =>
-                            empty
-                              ? undefined
-                              : room.isMine
-                                ? onVisitMyRoom?.()
-                                : onVisitFriend?.({
-                                    name: room.name,
-                                    userId: room.userId,
-                                    houseId: currentHouse.houseId,
-                                    membershipId: room.membershipId,
-                                  })
-                          }
-                          onLongPress={empty ? undefined : () => startDrag(seatIdx)}
-                          delayLongPress={220}
-                          onPressOut={onTilePressOut}
-                          disabled={empty}
-                          accessibilityRole="button"
-                          accessibilityLabel={room.isMine ? `${room.name} (나)` : room.name}
-                          accessibilityHint={empty ? undefined : '길게 눌러 자리 옮기기'}
-                          style={[
-                            styles.roomCell,
-                            {
-                              backgroundColor: empty ? t.surfaceMuted : room.color,
-                              borderColor: t.border,
-                            },
-                          ]}>
-                          {/* The member's live room fills the tile (visit preview);
-                          plain tint + avatar stand in until it loads. */}
-                          {preview ? (
-                            <View
-                              style={styles.roomPreview}
-                              pointerEvents="none"
-                              testID="room-preview">
-                              <Room
-                                placedFurnitureIds={preview.placedFurnitureIds}
-                                wallpaperId={preview.wallpaperId}
-                                floorId={preview.floorId}
-                                backgroundId={preview.backgroundId}
-                                characterId={preview.characterId}
-                                furniture={furniture}
-                                wallpapers={wallpapers}
-                                floors={floorSurfaces}
-                                backgrounds={backgrounds}
-                                style={styles.roomPreviewFill}
-                              />
-                            </View>
-                          ) : null}
-                          {/* 빈 좌석은 캐릭터 없는 기본 빈 방을 낮춘 톤으로 —
-                          "방은 준비돼 있고 주인만 없다" (#281, 시안 A). */}
-                          {empty ? (
-                            <View
-                              style={styles.roomPreview}
-                              pointerEvents="none"
-                              testID="vacant-room">
-                              <Room
-                                placedFurnitureIds={[]}
-                                characterId={null}
-                                floorId={VACANT_FLOOR[0].id}
-                                floors={VACANT_FLOOR}
-                                style={[styles.roomPreviewFill, styles.vacantRoom]}
-                              />
-                            </View>
-                          ) : null}
-                          {room.isMine ? (
-                            <View style={[styles.myTag, { backgroundColor: t.warning }]}>
-                              <Text style={[styles.myTagText, { color: t.onTint }]}>MY</Text>
-                            </View>
-                          ) : null}
-                          {empty || preview ? null : (
-                            <CharacterAvatar characterId={characterId} size={64} />
-                          )}
-                          {/* Tiles keep their fixed pastel bg in dark mode — the
-                          name needs onTint ink, not the (light) theme text.
-                          Over a preview (or the vacant room) it drops to a
-                          bottom scrim for contrast. */}
-                          <View
-                            style={[
-                              styles.roomNameRow,
-                              (preview || empty) && styles.roomNameOverlay,
-                            ]}>
-                            {!empty && room.isOwner ? <CrownPictogram size={12} /> : null}
-                            <Text
-                              style={[
-                                Typography.supporting,
-                                styles.roomName,
-                                { color: preview || empty ? '#FFFFFF' : t.onTint },
-                              ]}>
-                              {empty ? '빈방' : room.isMine ? `${room.name} (나)` : room.name}
-                            </Text>
-                          </View>
-                        </Pressable>
-                      </Animated.View>
-                    );
-                  })}
+                  {pair.map((room, i) => renderSeatTile(room, rowOffsets[pairIdx] + i))}
                   {/* Odd capacity → invisible filler keeps the lone tile half-width. */}
                   {pair.length === 1 ? (
                     <View style={styles.roomSpacer} testID="room-spacer" />
@@ -1232,119 +1346,148 @@ export function GroupHouseScreen({
             );
           })}
         </View>
-
-        <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
-          <View style={styles.missionHead}>
-            <View style={[styles.flex, styles.missionTitleRow]}>
-              <TargetPictogram size={18} />
-              <Text style={[Typography.h3, { color: t.text }]}>우리 그룹의 미션</Text>
-            </View>
-            {canCreateMission ? (
-              <Pressable
-                onPress={() => setShowCreateMission(true)}
-                accessibilityRole="button"
-                accessibilityLabel="미션 만들기"
-                style={[styles.missionAddBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.supporting, { color: t.primaryText }]}>＋ 만들기</Text>
-              </Pressable>
-            ) : null}
-          </View>
-          {missions.length === 0 ? (
-            <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              아직 미션이 없어요. 첫 미션을 만들어 다 같이 도전해보세요!
-            </Text>
-          ) : (
-            <View style={styles.goals}>
-              {missions.map((mission) => {
-                const pct = Math.min(1, mission.current / mission.target);
-                const claimable = mission.status === 'ACTIVE' && mission.achieved;
-                return (
-                  <View
-                    key={mission.id}
-                    style={[styles.goalRow, { backgroundColor: t.surfaceMuted }]}>
-                    <Pictogram name={mission.icon} size={22} />
-                    <View style={styles.flex}>
-                      <View style={styles.goalHead}>
-                        <Text
-                          style={[Typography.label, styles.flex, { color: t.text }]}
-                          numberOfLines={1}>
-                          {mission.title}
-                        </Text>
-                        <Text style={[Typography.supporting, { color: t.primaryText }]}>
-                          {mission.current}/{mission.target}
-                        </Text>
-                      </View>
-                      <View style={[styles.goalTrack, { backgroundColor: t.border }]}>
-                        <View
-                          style={[
-                            styles.goalFill,
-                            { backgroundColor: t.primary, width: `${pct * 100}%` },
-                          ]}
-                        />
-                      </View>
-                      <View style={styles.missionFoot}>
-                        <Text
-                          style={[Typography.supporting, styles.flex, { color: t.textMuted }]}
-                          numberOfLines={1}>
-                          {mission.desc}
-                        </Text>
-                        {/* Own node (not a desc suffix) so the long type label
-                            truncates instead of the date. */}
-                        {mission.endsOn && mission.status === 'ACTIVE' ? (
-                          <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                            ~{mission.endsOn.slice(5).replace('-', '.')}
-                          </Text>
-                        ) : null}
-                        {mission.status === 'COMPLETED' ? (
-                          <Text style={[Typography.supporting, { color: t.textMuted }]}>완료</Text>
-                        ) : mission.status === 'EXPIRED' ? (
-                          <Text style={[Typography.supporting, { color: t.textDisabled }]}>
-                            기간 만료
-                          </Text>
-                        ) : claimable && currentHouse.houseId && onClaimMission ? (
-                          <Pressable
-                            onPress={() => onClaimMission(currentHouse.houseId!, mission.id)}
-                            accessibilityRole="button"
-                            accessibilityLabel={`${mission.title} 보상 받기`}
-                            style={[styles.missionBtn, { backgroundColor: t.warning }]}>
-                            <Text style={[Typography.supporting, { color: t.text }]}>
-                              보상 받기
-                            </Text>
-                          </Pressable>
-                        ) : mission.status === 'ACTIVE' && isContributed(mission) ? (
-                          // 오늘 기여 완료 — 연동 루틴의 오늘 완료 여부로도 파생되어
-                          // 앱을 다시 켜도 라벨이 유지된다.
-                          <Text style={[Typography.supporting, { color: t.primaryText }]}>
-                            기여함
-                          </Text>
-                        ) : mission.status === 'ACTIVE' &&
-                          linkedRoutines.some((r) => r.title === mission.title) ? (
-                          // Filed as my routine — completing it contributes.
-                          <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                            루틴 연동됨
-                          </Text>
-                        ) : mission.status === 'ACTIVE' &&
-                          currentHouse.houseId &&
-                          onAddMissionRoutine ? (
-                          <Pressable
-                            onPress={() => setMissionToAdd(mission)}
-                            accessibilityRole="button"
-                            accessibilityLabel={`${mission.title} 내 루틴에 추가`}
-                            style={[styles.missionBtn, { backgroundColor: t.primary }]}>
-                            <Text style={[Typography.supporting, { color: t.onPrimary }]}>
-                              ＋ 내 루틴에
-                            </Text>
-                          </Pressable>
-                        ) : null}
-                      </View>
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          )}
-        </View>
       </ScrollView>
+
+      {/* 공동 미션 플로팅 버튼 (#287) — 보상 수령 가능하면 점 표시. */}
+      <Pressable
+        onPress={() => setShowMissions(true)}
+        accessibilityRole="button"
+        accessibilityLabel="공동 미션"
+        style={[styles.missionFab, { backgroundColor: t.primary }]}>
+        <TargetPictogram size={24} color={t.onPrimary} />
+        {missions.some((m) => m.status === 'ACTIVE' && m.achieved) ? (
+          <View style={[styles.fabDot, { backgroundColor: t.warning }]} />
+        ) : null}
+      </Pressable>
+
+      {showMissions ? (
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modal, { backgroundColor: t.surface }]}>
+            <View style={styles.missionHead}>
+              <View style={[styles.flex, styles.missionTitleRow]}>
+                <TargetPictogram size={18} />
+                <Text style={[Typography.h3, { color: t.text }]}>우리 그룹의 미션</Text>
+              </View>
+              {canCreateMission ? (
+                <Pressable
+                  onPress={() => setShowCreateMission(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="미션 만들기"
+                  style={[styles.missionAddBtn, { backgroundColor: t.surfaceMuted }]}>
+                  <Text style={[Typography.supporting, { color: t.primaryText }]}>＋ 만들기</Text>
+                </Pressable>
+              ) : null}
+            </View>
+            <ScrollView style={styles.editScroll}>
+              {missions.length === 0 ? (
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                  아직 미션이 없어요. 첫 미션을 만들어 다 같이 도전해보세요!
+                </Text>
+              ) : (
+                <View style={styles.goals}>
+                  {missions.map((mission) => {
+                    const pct = Math.min(1, mission.current / mission.target);
+                    const claimable = mission.status === 'ACTIVE' && mission.achieved;
+                    return (
+                      <View
+                        key={mission.id}
+                        style={[styles.goalRow, { backgroundColor: t.surfaceMuted }]}>
+                        <Pictogram name={mission.icon} size={22} />
+                        <View style={styles.flex}>
+                          <View style={styles.goalHead}>
+                            <Text
+                              style={[Typography.label, styles.flex, { color: t.text }]}
+                              numberOfLines={1}>
+                              {mission.title}
+                            </Text>
+                            <Text style={[Typography.supporting, { color: t.primaryText }]}>
+                              {mission.current}/{mission.target}
+                            </Text>
+                          </View>
+                          <View style={[styles.goalTrack, { backgroundColor: t.border }]}>
+                            <View
+                              style={[
+                                styles.goalFill,
+                                { backgroundColor: t.primary, width: `${pct * 100}%` },
+                              ]}
+                            />
+                          </View>
+                          <View style={styles.missionFoot}>
+                            <Text
+                              style={[Typography.supporting, styles.flex, { color: t.textMuted }]}
+                              numberOfLines={1}>
+                              {mission.desc}
+                            </Text>
+                            {/* Own node (not a desc suffix) so the long type label
+                            truncates instead of the date. */}
+                            {mission.endsOn && mission.status === 'ACTIVE' ? (
+                              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                                ~{mission.endsOn.slice(5).replace('-', '.')}
+                              </Text>
+                            ) : null}
+                            {mission.status === 'COMPLETED' ? (
+                              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                                완료
+                              </Text>
+                            ) : mission.status === 'EXPIRED' ? (
+                              <Text style={[Typography.supporting, { color: t.textDisabled }]}>
+                                기간 만료
+                              </Text>
+                            ) : claimable && currentHouse.houseId && onClaimMission ? (
+                              <Pressable
+                                onPress={() => onClaimMission(currentHouse.houseId!, mission.id)}
+                                accessibilityRole="button"
+                                accessibilityLabel={`${mission.title} 보상 받기`}
+                                style={[styles.missionBtn, { backgroundColor: t.warning }]}>
+                                <Text style={[Typography.supporting, { color: t.text }]}>
+                                  보상 받기
+                                </Text>
+                              </Pressable>
+                            ) : mission.status === 'ACTIVE' && isContributed(mission) ? (
+                              // 오늘 기여 완료 — 연동 루틴의 오늘 완료 여부로도 파생되어
+                              // 앱을 다시 켜도 라벨이 유지된다.
+                              <Text style={[Typography.supporting, { color: t.primaryText }]}>
+                                기여함
+                              </Text>
+                            ) : mission.status === 'ACTIVE' &&
+                              linkedRoutines.some((r) => r.title === mission.title) ? (
+                              // Filed as my routine — completing it contributes.
+                              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                                루틴 연동됨
+                              </Text>
+                            ) : mission.status === 'ACTIVE' &&
+                              currentHouse.houseId &&
+                              onAddMissionRoutine ? (
+                              <Pressable
+                                onPress={() => setMissionToAdd(mission)}
+                                accessibilityRole="button"
+                                accessibilityLabel={`${mission.title} 내 루틴에 추가`}
+                                style={[styles.missionBtn, { backgroundColor: t.primary }]}>
+                                <Text style={[Typography.supporting, { color: t.onPrimary }]}>
+                                  ＋ 내 루틴에
+                                </Text>
+                              </Pressable>
+                            ) : null}
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+            </ScrollView>
+            <View style={styles.modalActions}>
+              <Pressable
+                onPress={() => setShowMissions(false)}
+                accessibilityRole="button"
+                accessibilityLabel="공동 미션 닫기"
+                style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
+                <Text style={[Typography.label, { color: t.text }]}>닫기</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      ) : null}
 
       {missionToAdd && currentHouse?.houseId ? (
         <View style={styles.modalOverlay}>
@@ -1723,6 +1866,91 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     overflow: 'hidden',
     justifyContent: 'flex-end',
+  },
+  // --- 프레임 모드 (#287) ---
+  skySection: {
+    position: 'relative',
+    paddingTop: Spacing.three,
+    paddingBottom: Spacing.four,
+    marginBottom: Spacing.two,
+  },
+  // 잔디 밴드 — 프레임 하단 뒤에 깔린다.
+  grassBand: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 56,
+  },
+  switcher: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.three,
+  },
+  titleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.two,
+    borderRadius: Radius.pill,
+  },
+  frameWrap: {
+    marginTop: Spacing.two,
+    marginHorizontal: Spacing.three,
+    aspectRatio: FRAME_ASPECT,
+  },
+  // 프레임 PNG의 투명 창문 자리 — 좌석 타일이 이 안을 가득 채운다.
+  windowSlot: {
+    position: 'absolute',
+  },
+  windowFiller: {
+    flex: 1,
+    borderRadius: Radius.md,
+    opacity: 0.6,
+  },
+  // 창문용 타일 — 슬롯을 가득 채운다 (정사각형 비율 대신).
+  roomCellFill: {
+    width: '100%',
+    height: '100%',
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.one,
+    overflow: 'hidden',
+  },
+  framePillRight: {
+    position: 'absolute',
+    top: Spacing.two,
+    right: Spacing.two,
+    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 3,
+  },
+  missionFab: {
+    position: 'absolute',
+    right: Spacing.four,
+    bottom: Spacing.five,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  fabDot: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
   heroPill: {
     position: 'absolute',
