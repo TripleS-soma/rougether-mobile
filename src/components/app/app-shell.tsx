@@ -27,7 +27,8 @@ import {
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
 import { BottomNav, type NavTab } from '@/components/ui/bottom-nav';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
-import { type Routine } from '@/constants/routines';
+import { CATEGORY_COLORS, type Routine } from '@/constants/routines';
+import { todayIso } from '@/utils/datetime';
 import { useAuth } from '@/hooks/use-auth';
 import { useGacha } from '@/hooks/use-gacha';
 import { useFriendRoom } from '@/hooks/use-friend-room';
@@ -206,6 +207,7 @@ export function AppShell({
     joinByCode,
     joinHouse: joinSearchHouse,
     create: createGroupHouse,
+    contributedMissionIds,
     kickMember,
     leaveHouse,
     contributeMission,
@@ -263,6 +265,58 @@ export function AppShell({
     // the per-house cache with blank rooms (the effect re-fires when it lands).
     void loadRoomPreviews(currentHouse.houseId, membershipIds, catalogue, !shopLoading);
   }, [screen, currentHouse, catalogue, shopLoading, loadRoomPreviews]);
+
+  // --- 공동미션 ↔ 내 루틴 연동 (#272). Link convention: 카테고리명 == 집 이름,
+  // 루틴명 == 미션명 — the server has no link field, so names carry it.
+  const contributeLinkedMission = (item: Routine) => {
+    const categoryLabel = categories.find((c) => c.id === item.category)?.label;
+    if (!categoryLabel) return;
+    const house = houses.find((h) => h.title === categoryLabel);
+    const mission = house?.missions?.find((m) => m.status === 'ACTIVE' && m.title === item.title);
+    if (house?.houseId && mission && !contributedMissionIds.has(mission.id))
+      void contributeMission(house.houseId, mission.id);
+  };
+
+  /** 미션의 + → 집 이름 카테고리(없으면 생성) 아래 매일 루틴 생성. */
+  const addMissionRoutine = async (houseId: number, mission: { title: string }) => {
+    const house = houses.find((h) => h.houseId === houseId);
+    if (!house) return;
+    let category = categories.find((c) => c.label === house.title);
+    if (!category) {
+      category =
+        (await createRoutineCategory({
+          id: '',
+          label: house.title,
+          icon: 'house',
+          color: CATEGORY_COLORS[categories.length % CATEGORY_COLORS.length],
+          // 집 구성원과 공유하는 맥락이므로 이웃 공개(HOUSE).
+          visibility: 'neighbor',
+        })) ?? undefined;
+    }
+    if (!category) return;
+    await addRoutine({
+      title: mission.title,
+      category: category.id,
+      repeat: 'daily',
+      days: [],
+      startDate: todayIso(),
+      alarmEnabled: false,
+      time: '',
+      photoVerify: false,
+    });
+  };
+
+  // 현재 집 카테고리에 속한 내 루틴 (집 화면의 내 루틴 섹션 + 연동 판정).
+  const houseCategory = categories.find((c) => c.label === currentHouse?.title);
+  const houseRoutines = houseCategory
+    ? routines
+        .filter((r) => r.kind === 'routine' && r.category === houseCategory.id)
+        .map((r) => ({
+          id: r.id,
+          title: r.title,
+          completed: (completions[r.id] ?? []).includes(todayIso()),
+        }))
+    : [];
   // Guestbook for the friend room being visited (loads on visit).
   const {
     entries: guestbookEntries,
@@ -345,7 +399,7 @@ export function AppShell({
             backgrounds={catalogue.backgrounds}
             characterId={wornCharacterId}
             characterAnimations={wornCharacterAnimations}
-            onToggleCompletion={toggleCompletion}
+            onToggleCompletion={(id, date) => toggleCompletion(id, date, contributeLinkedMission)}
             onEdit={() => setScreen('decor')}
             onAddRoutine={() => setScreen('routineManage')}
             onOpenNotifications={() => {
@@ -489,8 +543,13 @@ export function AppShell({
             onLeaveHouse={(houseId) => {
               void leaveHouse(houseId);
             }}
-            onContributeMission={(houseId, missionId) => {
-              void contributeMission(houseId, missionId);
+            myRoutines={houseRoutines}
+            contributedMissionIds={[...contributedMissionIds]}
+            onAddMissionRoutine={(houseId, mission) => {
+              void addMissionRoutine(houseId, mission);
+            }}
+            onToggleMyRoutine={(id) => {
+              void toggleCompletion(id, todayIso(), contributeLinkedMission);
             }}
             onClaimMission={(houseId, missionId) => {
               void claimMission(houseId, missionId);

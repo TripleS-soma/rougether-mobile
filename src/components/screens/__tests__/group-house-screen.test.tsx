@@ -58,21 +58,68 @@ describe('GroupHouseScreen', () => {
     expect(second.getByText('소마 2번째 집')).toBeTruthy();
   });
 
-  it('contributes and claims via the API callbacks', async () => {
-    const onContributeMission = jest.fn();
+  it('adds a mission to my routines through the confirm modal, and claims', async () => {
+    const onAddMissionRoutine = jest.fn();
     const onClaimMission = jest.fn();
     const { getByLabelText, getByText } = await render(
       <GroupHouseScreen
         houses={[MISSION_HOUSE]}
-        onContributeMission={onContributeMission}
+        onAddMissionRoutine={onAddMissionRoutine}
         onClaimMission={onClaimMission}
       />,
     );
-    await fireEvent.press(getByLabelText('주간 루틴 지키기 기여하기'));
-    expect(onContributeMission).toHaveBeenCalledWith(7, 11);
+    // 기여 버튼 대신 + → 확인 모달 → 네 = 집 카테고리 아래 루틴 생성 요청.
+    await fireEvent.press(getByLabelText('주간 루틴 지키기 내 루틴에 추가'));
+    expect(getByText('내 루틴에 추가하시겠습니까?')).toBeTruthy();
+    await fireEvent.press(getByLabelText('루틴 추가 확인'));
+    expect(onAddMissionRoutine).toHaveBeenCalledWith(
+      7,
+      expect.objectContaining({ id: 11, title: '주간 루틴 지키기' }),
+    );
     await fireEvent.press(getByLabelText('기상 인증 모으기 보상 받기'));
     expect(onClaimMission).toHaveBeenCalledWith(7, 12);
     expect(getByText('완료')).toBeTruthy();
+  });
+
+  it('shows 기여됨/루틴 연동됨 labels instead of + when applicable', async () => {
+    const { queryByLabelText, getByText } = await render(
+      <GroupHouseScreen
+        houses={[MISSION_HOUSE]}
+        onAddMissionRoutine={jest.fn()}
+        myRoutines={[{ id: 'r1', title: '주간 루틴 지키기', completed: false }]}
+        contributedMissionIds={[12]}
+      />,
+    );
+    // Linked mission: no + button, 연동 라벨.
+    expect(queryByLabelText('주간 루틴 지키기 내 루틴에 추가')).toBeNull();
+    expect(getByText('루틴 연동됨')).toBeTruthy();
+    // Contributed-today mission (no claim handler → falls through to 기여됨).
+    expect(getByText('기여됨')).toBeTruthy();
+  });
+
+  it('toggles my house routine and switches section layout', async () => {
+    const onToggleMyRoutine = jest.fn();
+    const { getByLabelText, getByText, queryByText } = await render(
+      <GroupHouseScreen
+        houses={[MISSION_HOUSE]}
+        myRoutines={[{ id: 'r7', title: '아침 스트레칭', completed: false }]}
+        onToggleMyRoutine={onToggleMyRoutine}
+      />,
+    );
+    // 한눈에(기본): 두 섹션이 함께 보인다.
+    expect(getByText('우리 그룹의 미션')).toBeTruthy();
+    expect(getByText('내 루틴')).toBeTruthy();
+    await fireEvent.press(getByLabelText('아침 스트레칭 완료'));
+    expect(onToggleMyRoutine).toHaveBeenCalledWith('r7');
+
+    // 탭 모드: 공동미션 탭이 기본, 내 루틴 탭으로 전환 가능.
+    // (탭 라벨 자체가 '내 루틴' 텍스트라 섹션 내용으로 노출 여부를 판별한다.)
+    await fireEvent.press(getByLabelText('화면 구성 전환'));
+    expect(getByText('우리 그룹의 미션')).toBeTruthy();
+    expect(queryByText('아침 스트레칭')).toBeNull();
+    await fireEvent.press(getByLabelText('내 루틴 탭'));
+    expect(queryByText('우리 그룹의 미션')).toBeNull();
+    expect(getByText('아침 스트레칭')).toBeTruthy();
   });
 
   it('creates a mission through the modal', async () => {

@@ -44,6 +44,13 @@ export type MemberRoomPreview = {
   characterId?: CharacterId;
 };
 
+/** My routine filed under this house's category (완료 토글 → 미션 자동 기여). */
+export type HouseRoutineItem = {
+  id: string;
+  title: string;
+  completed: boolean;
+};
+
 export type RoomCell = {
   name: string;
   /** Tile background tint (kept from the prototype palette). */
@@ -213,8 +220,14 @@ export type GroupHouseScreenProps = {
   onKickMember?: (houseId: number, membershipId: number) => void;
   /** Leave the current house via the API. */
   onLeaveHouse?: (houseId: number) => void;
-  /** Add my +1 contribution to an active mission. */
-  onContributeMission?: (houseId: number, missionId: number) => void;
+  /** File a mission as a daily routine under the house-named category. */
+  onAddMissionRoutine?: (houseId: number, mission: HouseMission) => void;
+  /** My routines in this house's category (내 루틴 섹션 + 연동 판정). */
+  myRoutines?: HouseRoutineItem[];
+  /** Toggle one of my house routines complete (완료 시 셸이 자동 기여). */
+  onToggleMyRoutine?: (id: string) => void;
+  /** Mission ids I already contributed to today — cards show 기여됨. */
+  contributedMissionIds?: number[];
   /** Claim the reward of an achieved mission. */
   onClaimMission?: (houseId: number, missionId: number) => void;
   /** Create a new group mission. */
@@ -254,7 +267,10 @@ export function GroupHouseScreen({
   onOpenSearch,
   onKickMember,
   onLeaveHouse,
-  onContributeMission,
+  onAddMissionRoutine,
+  myRoutines = [],
+  onToggleMyRoutine,
+  contributedMissionIds = [],
   onClaimMission,
   onCreateMission,
   onUpdateHouse,
@@ -291,6 +307,11 @@ export function GroupHouseScreen({
   const [missionStart, setMissionStart] = useState(todayIso());
   const [missionEnd, setMissionEnd] = useState<string | undefined>(undefined);
   const [showPeriodSheet, setShowPeriodSheet] = useState(false);
+  // 미션 → 내 루틴 추가 확인 모달의 대상.
+  const [missionToAdd, setMissionToAdd] = useState<HouseMission | null>(null);
+  // 화면 구성: 공동미션/내 루틴을 한 화면에 쌓거나 탭으로 나눠 본다.
+  const [sectionLayout, setSectionLayout] = useState<'combined' | 'tabs'>('combined');
+  const [activeSection, setActiveSection] = useState<'missions' | 'routines'>('missions');
   const [showEditHouse, setShowEditHouse] = useState(false);
   const [editName, setEditName] = useState('');
   const [editDesc, setEditDesc] = useState('');
@@ -977,106 +998,253 @@ export function GroupHouseScreen({
           ))}
         </View>
 
-        <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
-          <View style={styles.missionHead}>
-            <View style={[styles.flex, styles.missionTitleRow]}>
-              <TargetPictogram size={18} />
-              <Text style={[Typography.h3, { color: t.text }]}>우리 그룹의 미션</Text>
-            </View>
-            {canCreateMission ? (
-              <Pressable
-                onPress={() => setShowCreateMission(true)}
-                accessibilityRole="button"
-                accessibilityLabel="미션 만들기"
-                style={[styles.missionAddBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.supporting, { color: t.primaryText }]}>＋ 만들기</Text>
-              </Pressable>
-            ) : null}
-          </View>
-          {missions.length === 0 ? (
-            <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              아직 미션이 없어요. 첫 미션을 만들어 다 같이 도전해보세요!
-            </Text>
-          ) : (
-            <View style={styles.goals}>
-              {missions.map((mission) => {
-                const pct = Math.min(1, mission.current / mission.target);
-                const claimable = mission.status === 'ACTIVE' && mission.achieved;
+        {/* 화면 구성: 탭 모드면 섹션 하나만, 한눈에 모드면 둘 다 쌓인다. */}
+        <View style={styles.sectionBar}>
+          {sectionLayout === 'tabs' ? (
+            <View style={styles.sectionTabs}>
+              {(
+                [
+                  ['missions', '공동미션'],
+                  ['routines', '내 루틴'],
+                ] as const
+              ).map(([key, label]) => {
+                const selected = activeSection === key;
                 return (
-                  <View
-                    key={mission.id}
-                    style={[styles.goalRow, { backgroundColor: t.surfaceMuted }]}>
-                    <Pictogram name={mission.icon} size={22} />
-                    <View style={styles.flex}>
-                      <View style={styles.goalHead}>
-                        <Text
-                          style={[Typography.label, styles.flex, { color: t.text }]}
-                          numberOfLines={1}>
-                          {mission.title}
-                        </Text>
-                        <Text style={[Typography.supporting, { color: t.primaryText }]}>
-                          {mission.current}/{mission.target}
-                        </Text>
-                      </View>
-                      <View style={[styles.goalTrack, { backgroundColor: t.border }]}>
-                        <View
-                          style={[
-                            styles.goalFill,
-                            { backgroundColor: t.primary, width: `${pct * 100}%` },
-                          ]}
-                        />
-                      </View>
-                      <View style={styles.missionFoot}>
-                        <Text
-                          style={[Typography.supporting, styles.flex, { color: t.textMuted }]}
-                          numberOfLines={1}>
-                          {mission.desc}
-                        </Text>
-                        {/* Own node (not a desc suffix) so the long type label
-                            truncates instead of the date. */}
-                        {mission.endsOn && mission.status === 'ACTIVE' ? (
-                          <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                            ~{mission.endsOn.slice(5).replace('-', '.')}
-                          </Text>
-                        ) : null}
-                        {mission.status === 'COMPLETED' ? (
-                          <Text style={[Typography.supporting, { color: t.textMuted }]}>완료</Text>
-                        ) : mission.status === 'EXPIRED' ? (
-                          <Text style={[Typography.supporting, { color: t.textDisabled }]}>
-                            기간 만료
-                          </Text>
-                        ) : claimable && currentHouse.houseId && onClaimMission ? (
-                          <Pressable
-                            onPress={() => onClaimMission(currentHouse.houseId!, mission.id)}
-                            accessibilityRole="button"
-                            accessibilityLabel={`${mission.title} 보상 받기`}
-                            style={[styles.missionBtn, { backgroundColor: t.warning }]}>
-                            <Text style={[Typography.supporting, { color: t.text }]}>
-                              보상 받기
-                            </Text>
-                          </Pressable>
-                        ) : mission.status === 'ACTIVE' &&
-                          currentHouse.houseId &&
-                          onContributeMission ? (
-                          <Pressable
-                            onPress={() => onContributeMission(currentHouse.houseId!, mission.id)}
-                            accessibilityRole="button"
-                            accessibilityLabel={`${mission.title} 기여하기`}
-                            style={[styles.missionBtn, { backgroundColor: t.primary }]}>
-                            <Text style={[Typography.supporting, { color: t.onPrimary }]}>
-                              기여 +1
-                            </Text>
-                          </Pressable>
-                        ) : null}
-                      </View>
-                    </View>
-                  </View>
+                  <Pressable
+                    key={key}
+                    onPress={() => setActiveSection(key)}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected }}
+                    accessibilityLabel={`${label} 탭`}
+                    style={[
+                      styles.sectionTab,
+                      { backgroundColor: selected ? t.primary : t.surfaceMuted },
+                    ]}>
+                    <Text
+                      style={[
+                        Typography.supporting,
+                        { color: selected ? t.onPrimary : t.textMuted },
+                      ]}>
+                      {label}
+                    </Text>
+                  </Pressable>
                 );
               })}
             </View>
+          ) : (
+            <View style={styles.flex} />
           )}
+          <Pressable
+            onPress={() => setSectionLayout((l) => (l === 'combined' ? 'tabs' : 'combined'))}
+            accessibilityRole="button"
+            accessibilityLabel="화면 구성 전환"
+            style={[styles.layoutBtn, { backgroundColor: t.surfaceMuted }]}>
+            <Text style={[Typography.supporting, { color: t.primaryText }]}>
+              {sectionLayout === 'combined' ? '탭으로 보기' : '한눈에 보기'}
+            </Text>
+          </Pressable>
         </View>
+
+        {sectionLayout === 'combined' || activeSection === 'missions' ? (
+          <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
+            <View style={styles.missionHead}>
+              <View style={[styles.flex, styles.missionTitleRow]}>
+                <TargetPictogram size={18} />
+                <Text style={[Typography.h3, { color: t.text }]}>우리 그룹의 미션</Text>
+              </View>
+              {canCreateMission ? (
+                <Pressable
+                  onPress={() => setShowCreateMission(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="미션 만들기"
+                  style={[styles.missionAddBtn, { backgroundColor: t.surfaceMuted }]}>
+                  <Text style={[Typography.supporting, { color: t.primaryText }]}>＋ 만들기</Text>
+                </Pressable>
+              ) : null}
+            </View>
+            {missions.length === 0 ? (
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                아직 미션이 없어요. 첫 미션을 만들어 다 같이 도전해보세요!
+              </Text>
+            ) : (
+              <View style={styles.goals}>
+                {missions.map((mission) => {
+                  const pct = Math.min(1, mission.current / mission.target);
+                  const claimable = mission.status === 'ACTIVE' && mission.achieved;
+                  return (
+                    <View
+                      key={mission.id}
+                      style={[styles.goalRow, { backgroundColor: t.surfaceMuted }]}>
+                      <Pictogram name={mission.icon} size={22} />
+                      <View style={styles.flex}>
+                        <View style={styles.goalHead}>
+                          <Text
+                            style={[Typography.label, styles.flex, { color: t.text }]}
+                            numberOfLines={1}>
+                            {mission.title}
+                          </Text>
+                          <Text style={[Typography.supporting, { color: t.primaryText }]}>
+                            {mission.current}/{mission.target}
+                          </Text>
+                        </View>
+                        <View style={[styles.goalTrack, { backgroundColor: t.border }]}>
+                          <View
+                            style={[
+                              styles.goalFill,
+                              { backgroundColor: t.primary, width: `${pct * 100}%` },
+                            ]}
+                          />
+                        </View>
+                        <View style={styles.missionFoot}>
+                          <Text
+                            style={[Typography.supporting, styles.flex, { color: t.textMuted }]}
+                            numberOfLines={1}>
+                            {mission.desc}
+                          </Text>
+                          {/* Own node (not a desc suffix) so the long type label
+                            truncates instead of the date. */}
+                          {mission.endsOn && mission.status === 'ACTIVE' ? (
+                            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                              ~{mission.endsOn.slice(5).replace('-', '.')}
+                            </Text>
+                          ) : null}
+                          {mission.status === 'COMPLETED' ? (
+                            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                              완료
+                            </Text>
+                          ) : mission.status === 'EXPIRED' ? (
+                            <Text style={[Typography.supporting, { color: t.textDisabled }]}>
+                              기간 만료
+                            </Text>
+                          ) : claimable && currentHouse.houseId && onClaimMission ? (
+                            <Pressable
+                              onPress={() => onClaimMission(currentHouse.houseId!, mission.id)}
+                              accessibilityRole="button"
+                              accessibilityLabel={`${mission.title} 보상 받기`}
+                              style={[styles.missionBtn, { backgroundColor: t.warning }]}>
+                              <Text style={[Typography.supporting, { color: t.text }]}>
+                                보상 받기
+                              </Text>
+                            </Pressable>
+                          ) : mission.status === 'ACTIVE' &&
+                            contributedMissionIds.includes(mission.id) ? (
+                            // Today's contribution landed (직접이든 루틴 완료든).
+                            <Text style={[Typography.supporting, { color: t.primaryText }]}>
+                              기여됨
+                            </Text>
+                          ) : mission.status === 'ACTIVE' &&
+                            myRoutines.some((r) => r.title === mission.title) ? (
+                            // Filed as my routine — completing it contributes.
+                            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                              루틴 연동됨
+                            </Text>
+                          ) : mission.status === 'ACTIVE' &&
+                            currentHouse.houseId &&
+                            onAddMissionRoutine ? (
+                            <Pressable
+                              onPress={() => setMissionToAdd(mission)}
+                              accessibilityRole="button"
+                              accessibilityLabel={`${mission.title} 내 루틴에 추가`}
+                              style={[styles.missionBtn, { backgroundColor: t.primary }]}>
+                              <Text style={[Typography.supporting, { color: t.onPrimary }]}>
+                                ＋
+                              </Text>
+                            </Pressable>
+                          ) : null}
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+          </View>
+        ) : null}
+
+        {sectionLayout === 'combined' || activeSection === 'routines' ? (
+          <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
+            <View style={styles.missionHead}>
+              <View style={[styles.flex, styles.missionTitleRow]}>
+                <PencilPictogram size={18} />
+                <Text style={[Typography.h3, { color: t.text }]}>내 루틴</Text>
+              </View>
+            </View>
+            {myRoutines.length === 0 ? (
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                아직 이 집 카테고리의 루틴이 없어요. 미션의 + 버튼으로 추가해보세요!
+              </Text>
+            ) : (
+              <View style={styles.goals}>
+                {myRoutines.map((routine) => (
+                  <Pressable
+                    key={routine.id}
+                    onPress={() => onToggleMyRoutine?.(routine.id)}
+                    disabled={!onToggleMyRoutine}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: routine.completed }}
+                    accessibilityLabel={`${routine.title} 완료`}
+                    style={[styles.routineRow, { backgroundColor: t.surfaceMuted }]}>
+                    <View
+                      style={[
+                        styles.routineCheck,
+                        {
+                          backgroundColor: routine.completed ? t.primary : t.surface,
+                          borderColor: routine.completed ? t.primary : t.border,
+                        },
+                      ]}>
+                      {routine.completed ? (
+                        <Icon name="check" size={12} color={t.onPrimary} />
+                      ) : null}
+                    </View>
+                    <Text
+                      style={[
+                        Typography.body,
+                        styles.flex,
+                        {
+                          color: routine.completed ? t.textMuted : t.text,
+                          textDecorationLine: routine.completed ? 'line-through' : 'none',
+                        },
+                      ]}
+                      numberOfLines={1}>
+                      {routine.title}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </View>
+        ) : null}
       </ScrollView>
+
+      {missionToAdd && currentHouse?.houseId ? (
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modal, { backgroundColor: t.surface }]}>
+            <Text style={[Typography.h3, { color: t.text }]}>내 루틴에 추가하시겠습니까?</Text>
+            <Text style={[Typography.body, styles.modalBody, { color: t.textMuted }]}>
+              {`'${currentHouse.title}' 카테고리에 '${missionToAdd.title}' 루틴이 만들어져요. 루틴을 완료하면 자동으로 미션에 기여돼요.`}
+            </Text>
+            <View style={styles.modalActions}>
+              <Pressable
+                onPress={() => setMissionToAdd(null)}
+                accessibilityRole="button"
+                accessibilityLabel="루틴 추가 취소"
+                style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
+                <Text style={[Typography.label, { color: t.text }]}>아니요</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  onAddMissionRoutine?.(currentHouse.houseId!, missionToAdd);
+                  setMissionToAdd(null);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="루틴 추가 확인"
+                style={[styles.modalBtn, { backgroundColor: t.primary }]}>
+                <Text style={[Typography.label, { color: t.onPrimary }]}>네</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      ) : null}
 
       {showCreateMission ? (
         <View style={styles.modalOverlay}>
@@ -1422,6 +1590,42 @@ const styles = StyleSheet.create({
   goals: {
     gap: Spacing.three,
     marginTop: Spacing.two,
+  },
+  sectionBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  sectionTabs: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: Spacing.one,
+  },
+  sectionTab: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one,
+    borderRadius: Radius.pill,
+  },
+  layoutBtn: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one,
+    borderRadius: Radius.pill,
+  },
+  routineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+  },
+  routineCheck: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   missionHead: {
     flexDirection: 'row',

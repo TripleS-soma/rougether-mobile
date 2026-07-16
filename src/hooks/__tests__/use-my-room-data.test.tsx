@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useMyRoomData } from '@/hooks/use-my-room-data';
 
@@ -59,6 +59,43 @@ describe('useMyRoomData — completion routing on id collision', () => {
       true,
     );
     expect(calls.some((c) => c.url.includes('/routines/5/logs'))).toBe(false);
+  });
+});
+
+describe('useMyRoomData — completion callback (미션 연동, #272)', () => {
+  it('fires onCompleted only for a successful completion, not an un-complete', async () => {
+    const now = new Date();
+    const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes('/categories')) return res({ items: [{ id: 1, name: '집카테고리' }] });
+      if (url.endsWith('/routines'))
+        return res({
+          items: [{ id: 9, title: '아침 스트레칭', categoryId: 1, repeatType: 'DAILY' }],
+        });
+      if ((init?.method ?? 'GET') === 'POST' && url.includes('/routines/9/logs'))
+        return res({ rewardAmount: 0 });
+      if ((init?.method ?? 'GET') === 'DELETE') return res({});
+      if (url.endsWith('/today')) return res({ categories: [], summary: {}, streak: {} });
+      if (url.endsWith('/me')) return res({ userId: 1 });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useMyRoomData());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    const routine = result.current.routines[0];
+    const onCompleted = jest.fn();
+
+    await act(async () => {
+      await result.current.toggleCompletion(routine.id, todayIso, onCompleted);
+    });
+    expect(onCompleted).toHaveBeenCalledWith(expect.objectContaining({ title: '아침 스트레칭' }));
+
+    onCompleted.mockClear();
+    // Now completed → the same call un-completes; the callback must stay quiet.
+    await act(async () => {
+      await result.current.toggleCompletion(routine.id, todayIso, onCompleted);
+    });
+    expect(onCompleted).not.toHaveBeenCalled();
   });
 });
 
