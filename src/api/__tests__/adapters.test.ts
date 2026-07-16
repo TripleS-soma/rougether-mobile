@@ -392,6 +392,39 @@ describe('API adapters', () => {
     expect(house.floors[1].rooms[0].isMine).toBe(true);
   });
 
+  it('mixes a member and a vacant seat on the same row when the headcount is odd', () => {
+    const members = [
+      {
+        membershipId: 1,
+        userId: 6,
+        nickname: '나야',
+        role: 'OWNER' as const,
+        status: 'ACTIVE' as const,
+      },
+      {
+        membershipId: 2,
+        userId: 9,
+        nickname: '이웃1',
+        role: 'MEMBER' as const,
+        status: 'ACTIVE' as const,
+      },
+      {
+        membershipId: 3,
+        userId: 10,
+        nickname: '이웃2',
+        role: 'MEMBER' as const,
+        status: 'ACTIVE' as const,
+      },
+    ];
+    const house = toGroupHouse({ houseId: 1, name: '섞임집', maxMembers: 6 }, members, 6);
+    // 정원 6 / 멤버 3 → 마지막 멤버는 가운데 행에서 빈방과 나란히 앉는다.
+    expect(house.floors.map((f) => f.rooms.map((r) => (r.vacant ? '빈방' : r.name)))).toEqual([
+      ['빈방', '빈방'],
+      ['이웃2', '빈방'],
+      ['나야', '이웃1'],
+    ]);
+  });
+
   it('keeps a lone top-floor seat when the capacity is odd', () => {
     const members = [
       {
