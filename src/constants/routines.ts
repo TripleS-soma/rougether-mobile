@@ -18,6 +18,17 @@ export const VISIBILITY_LABELS: Record<CategoryVisibility, string> = {
   private: '비공개',
 };
 
+/**
+ * Visibility pictogram per option — shared by the category manager sheet and
+ * the 나의 방 category headers (#285) so the same mark means the same scope.
+ */
+export const VISIBILITY_ICONS: Record<CategoryVisibility, PictogramName> = {
+  public: 'globe',
+  neighbor: 'friends',
+  partial: 'handshake',
+  private: 'lock',
+};
+
 /** Color palette assigned to newly created categories (cycled by index). */
 export const CATEGORY_COLORS = [
   '#E8A87C',

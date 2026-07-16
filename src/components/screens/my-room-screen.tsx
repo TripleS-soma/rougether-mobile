@@ -28,10 +28,13 @@ import { useToast } from '@/components/ui/toast';
 import { WalletPills } from '@/components/ui/wallet-pills';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import {
+  type CategoryVisibility,
   ROUTINE_CATEGORIES,
   type Routine,
   type RoutineCategoryMeta,
   UNCATEGORIZED_META,
+  VISIBILITY_ICONS,
+  VISIBILITY_LABELS,
 } from '@/constants/routines';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
@@ -228,6 +231,19 @@ export type MyRoomScreenProps = {
  * 삭제) shown as a small modal. Pure + prop-driven; the web-only "save room photo"
  * (SVG/canvas) is dropped. Spec domain: rougether-spec domains/room.
  */
+/**
+ * 카테고리명 옆 공개범위 픽토그램(#285) — 관리 시트를 열지 않아도 각
+ * 카테고리의 노출 범위(전체/이웃/일부/비공개)가 헤더에서 읽힌다.
+ */
+function VisibilityMark({ visibility }: { visibility: CategoryVisibility }) {
+  const t = useTokens();
+  return (
+    <View accessible accessibilityLabel={VISIBILITY_LABELS[visibility]}>
+      <Pictogram name={VISIBILITY_ICONS[visibility]} size={12} color={t.textMuted} />
+    </View>
+  );
+}
+
 export function MyRoomScreen({
   userName = '준서',
   streakDays = 7,
@@ -717,6 +733,8 @@ export function MyRoomScreen({
                               ]}>
                               {cat.label}
                             </Text>
+                            {/* 미분류(pseudo) 그룹은 실제 카테고리가 아니라 표시하지 않는다. */}
+                            {cat.id ? <VisibilityMark visibility={cat.visibility} /> : null}
                             {items.length > 0 ? (
                               <Text style={[Typography.supporting, { color: t.textDisabled }]}>
                                 {doneInCat}/{items.length}
@@ -891,6 +909,9 @@ export function MyRoomScreen({
                           ]}>
                           {group.meta.label}
                         </Text>
+                        {group.meta.id ? (
+                          <VisibilityMark visibility={group.meta.visibility} />
+                        ) : null}
                         <Text style={[Typography.supporting, { color: t.textDisabled }]}>
                           {group.items.filter((i) => i.completed).length}/{group.items.length}
                         </Text>
@@ -952,6 +973,7 @@ export function MyRoomScreen({
                         ]}>
                         {group.meta.label}
                       </Text>
+                      {group.meta.id ? <VisibilityMark visibility={group.meta.visibility} /> : null}
                       <Text style={[Typography.supporting, { color: t.textDisabled }]}>
                         {group.items.filter((r) => isDone(r.id, selectedDate)).length}/
                         {group.items.length}

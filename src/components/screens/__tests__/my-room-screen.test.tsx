@@ -50,6 +50,16 @@ describe('MyRoomScreen', () => {
     expect(getByText('3 / 5')).toBeTruthy();
   });
 
+  it('marks each category header with its visibility scope (#285)', async () => {
+    const { getByLabelText, getAllByLabelText } = await render(
+      <MyRoomScreen routines={SAMPLE_ROUTINES} />,
+    );
+    // 데모 카테고리: 취미=이웃, 건강=일부, 나머지=전체 공개.
+    expect(getByLabelText('이웃 공개')).toBeTruthy();
+    expect(getByLabelText('일부 공개')).toBeTruthy();
+    expect(getAllByLabelText('전체 공개').length).toBeGreaterThan(0);
+  });
+
   it('keeps the 의 방 suffix visible on narrow screens (shrink + middle ellipsis)', async () => {
     const { getByText } = await render(<MyRoomScreen userName="김철수베리롱네임" routines={[]} />);
     const title = getByText('김철수베리롱네임의 방');
