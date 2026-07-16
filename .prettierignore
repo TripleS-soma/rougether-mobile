@@ -5,3 +5,4 @@ android/
 ios/
 package-lock.json
 *.png
+.claude/skills/design-sync/out/
