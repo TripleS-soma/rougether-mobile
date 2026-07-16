@@ -32,7 +32,11 @@ describe('useFriendRoom', () => {
       urls.push(url);
       if (url.includes('/room')) {
         return res({
-          character: { characterId: 1, code: 'otter' },
+          character: {
+            characterId: 1,
+            code: 'otter',
+            animations: { idle: 'characters/otter/animations/idle.webp' },
+          },
           streak: { currentCount: 5 },
           slots: [
             { slotType: 'bottomLeft', userItemId: 777, assetKey: 'items/a/bed.png' },
@@ -70,6 +74,10 @@ describe('useFriendRoom', () => {
 
     const { friendRoom } = result.current;
     expect(friendRoom.characterId).toBe('otter');
+    // A matched code carries its CDN animation keys to the room (#263).
+    expect(friendRoom.characterAnimations).toEqual({
+      idle: 'characters/otter/animations/idle.webp',
+    });
     expect(friendRoom.streakDays).toBe(5);
     expect(friendRoom.placement).toEqual({
       placedFurnitureIds: ['2'],
@@ -85,6 +93,32 @@ describe('useFriendRoom', () => {
       { date: '2026-07-08', label: '7월 8일', titles: ['아침 기상'] },
       { date: '2026-07-07', label: '7월 7일', titles: ['아침 기상', '독서 30분'] },
     ]);
+  });
+
+  it('drops the animations when the character code has no app-side match', async () => {
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/room')) {
+        return res({
+          // A species the app doesn't know: the room falls back to the default
+          // character, so the server animations must not ride along.
+          character: {
+            characterId: 9,
+            code: 'dragon',
+            animations: { idle: 'characters/dragon/animations/idle.webp' },
+          },
+        });
+      }
+      return res({});
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useFriendRoom());
+    await act(async () => {
+      await result.current.load(11, 42, CATALOGUE);
+    });
+    await waitFor(() => expect(result.current.friendRoom.loading).toBe(false));
+
+    expect(result.current.friendRoom.characterId).toBeUndefined();
+    expect(result.current.friendRoom.characterAnimations).toBeUndefined();
   });
 
   it('hides the activity section (undefined) when the history endpoint fails', async () => {

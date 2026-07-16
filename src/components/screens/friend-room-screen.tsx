@@ -12,7 +12,7 @@ import {
   View,
 } from 'react-native';
 
-import { CharacterAvatar } from '@/components/character-avatar';
+import { CharacterAvatar, type CharacterAnimationSet } from '@/components/character-avatar';
 import { Room } from '@/components/room/room';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { type Routine } from '@/constants/routines';
@@ -74,6 +74,8 @@ export type FriendRoomScreenProps = {
   friendName?: string;
   streakDays?: number;
   characterId?: CharacterId;
+  /** Friend's CDN animation keys (forwarded to <Room />). */
+  characterAnimations?: CharacterAnimationSet;
   wallpaperId?: string;
   floorId?: string | null;
   backgroundId?: string | null;
@@ -113,6 +115,7 @@ export function FriendRoomScreen({
   friendName = '친구',
   streakDays = 7,
   characterId = DEFAULT_CHARACTER_ID,
+  characterAnimations,
   wallpaperId,
   floorId,
   backgroundId,
@@ -227,6 +230,7 @@ export function FriendRoomScreen({
           <View style={styles.roomWrap}>
             <Room
               characterId={characterId}
+              characterAnimations={characterAnimations}
               wallpaperId={wallpaperId}
               floorId={floorId}
               backgroundId={backgroundId}

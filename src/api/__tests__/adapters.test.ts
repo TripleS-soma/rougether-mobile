@@ -15,9 +15,11 @@ import {
   toGroupHouse,
   toHouseCover,
   characterIdFromCode,
+  toGachaMachine,
   fromFriendRoomSlots,
   fromRoomSlots,
   toFriendRoutines,
+  toOwnedCharacter,
   toSlotSaves,
   toUserItemMap,
 } from '@/api/adapters';
@@ -501,9 +503,63 @@ describe('API adapters', () => {
     ]);
   });
 
+  it('groups gacha machines by theme: themed → furniture, unthemed → character', () => {
+    expect(toGachaMachine({ gachaId: 1, name: '숲속 세이지 뽑기', themeId: 1 }).kind).toBe(
+      'furniture',
+    );
+    expect(toGachaMachine({ gachaId: 12, name: '캐릭터 뽑기' }).kind).toBe('character');
+  });
+
   it('maps a room character code to the app character id', () => {
     expect(characterIdFromCode('cat')).toBe('cat');
     expect(characterIdFromCode('unknown-code')).toBeUndefined();
     expect(characterIdFromCode(undefined)).toBeUndefined();
+  });
+
+  it('maps an owned character with its CDN art and animation keys', () => {
+    expect(
+      toOwnedCharacter({
+        userCharacterId: 5,
+        characterId: 6,
+        code: 'panda',
+        name: '판다',
+        baseAssetKey: 'characters/panda_sitting.png',
+        animations: {
+          idle: 'characters/panda/animations/idle.webp',
+          poseCycle: 'characters/panda/animations/pose-cycle.webp',
+          wave: 'characters/panda/animations/wave.webp',
+        },
+        selected: true,
+      }),
+    ).toEqual({
+      serverId: 6,
+      id: 'panda',
+      name: '판다',
+      assetKey: 'characters/panda_sitting.png',
+      animations: {
+        idle: 'characters/panda/animations/idle.webp',
+        poseCycle: 'characters/panda/animations/pose-cycle.webp',
+        wave: 'characters/panda/animations/wave.webp',
+      },
+      selected: true,
+    });
+  });
+
+  it('drops owned characters without an app-side code or a server id', () => {
+    // Unknown code: no local sprite to fall back to → not renderable.
+    expect(toOwnedCharacter({ characterId: 9, code: 'dragon', selected: false })).toBeNull();
+    // Missing characterId: nothing to send to PUT /me/characters/select.
+    expect(toOwnedCharacter({ code: 'cat', selected: false })).toBeNull();
+  });
+
+  it('falls back to the local character name when the server omits one', () => {
+    expect(toOwnedCharacter({ characterId: 1, code: 'cat', selected: false })).toEqual({
+      serverId: 1,
+      id: 'cat',
+      name: '고양이',
+      assetKey: undefined,
+      animations: undefined,
+      selected: false,
+    });
   });
 });
