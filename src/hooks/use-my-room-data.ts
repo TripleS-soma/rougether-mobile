@@ -361,6 +361,26 @@ export function useMyRoomData() {
     }
   };
 
+  /**
+   * Find a category by label — refreshing from the server first, since another
+   * session may have created it (stale local state must not duplicate the
+   * house-named category, #272) — creating it only when genuinely absent.
+   */
+  const ensureCategory = async (cat: RoutineCategoryMeta): Promise<RoutineCategoryMeta | null> => {
+    try {
+      const cats = await fetchCategories();
+      const appCats = cats.map((c, i) => toAppCategory(c, i)).filter((c) => !c.deleted);
+      setCategories(appCats);
+      const existing = appCats.find((c) => c.label === cat.label);
+      if (existing) return existing;
+    } catch {
+      // Offline lookup fallback: trust local state below.
+      const existing = categories.find((c) => c.label === cat.label);
+      if (existing) return existing;
+    }
+    return createRoutineCategory(cat);
+  };
+
   /** Create a category; returns the created meta (null on failure) so callers
    * can immediately file a routine under it (미션 → 루틴 연동). */
   const createRoutineCategory = async (cat: RoutineCategoryMeta) => {
@@ -460,6 +480,7 @@ export function useMyRoomData() {
     moveRoutineOccurrence,
     deleteRoutine,
     createRoutineCategory,
+    ensureCategory,
     updateRoutineCategory,
     deleteRoutineCategory,
     reorderCategories,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BackHandler, StyleSheet, View } from 'react-native';
 
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
@@ -159,6 +159,7 @@ export function AppShell({
     moveRoutineOccurrence,
     deleteRoutine,
     createRoutineCategory,
+    ensureCategory,
     updateRoutineCategory,
     deleteRoutineCategory,
     reorderCategories,
@@ -278,21 +279,29 @@ export function AppShell({
   };
 
   /** 미션의 + → 집 이름 카테고리(없으면 생성) 아래 매일 루틴 생성. */
+  const addingMissionRef = useRef(false);
   const addMissionRoutine = async (houseId: number, mission: { title: string }) => {
+    // A double-fired press must not create the category twice.
+    if (addingMissionRef.current) return;
+    addingMissionRef.current = true;
+    try {
+      await addMissionRoutineInner(houseId, mission);
+    } finally {
+      addingMissionRef.current = false;
+    }
+  };
+  const addMissionRoutineInner = async (houseId: number, mission: { title: string }) => {
     const house = houses.find((h) => h.houseId === houseId);
     if (!house) return;
-    let category = categories.find((c) => c.label === house.title);
-    if (!category) {
-      category =
-        (await createRoutineCategory({
-          id: '',
-          label: house.title,
-          icon: 'house',
-          color: CATEGORY_COLORS[categories.length % CATEGORY_COLORS.length],
-          // 집 구성원과 공유하는 맥락이므로 이웃 공개(HOUSE).
-          visibility: 'neighbor',
-        })) ?? undefined;
-    }
+    // Server-fresh find-or-create — stale local state must not duplicate it.
+    const category = await ensureCategory({
+      id: '',
+      label: house.title,
+      icon: 'house',
+      color: CATEGORY_COLORS[categories.length % CATEGORY_COLORS.length],
+      // 집 구성원과 공유하는 맥락이므로 이웃 공개(HOUSE).
+      visibility: 'neighbor',
+    });
     if (!category) return;
     await addRoutine({
       title: mission.title,
@@ -306,16 +315,17 @@ export function AppShell({
     });
   };
 
-  // 현재 집 카테고리에 속한 내 루틴 (집 화면의 내 루틴 섹션 + 연동 판정).
+  // 집 이름과 같은(=미션 연동) 카테고리들 — 나의 방 quick-add를 막는다.
+  const houseCategoryIds = categories
+    .filter((c) => houses.some((h) => h.title === c.label))
+    .map((c) => c.id);
+
+  // 현재 집 카테고리에 속한 내 루틴 제목들 (미션 카드의 '루틴 연동됨' 판정).
   const houseCategory = categories.find((c) => c.label === currentHouse?.title);
-  const houseRoutines = houseCategory
+  const houseRoutineTitles = houseCategory
     ? routines
         .filter((r) => r.kind === 'routine' && r.category === houseCategory.id)
-        .map((r) => ({
-          id: r.id,
-          title: r.title,
-          completed: (completions[r.id] ?? []).includes(todayIso()),
-        }))
+        .map((r) => r.title)
     : [];
   // Guestbook for the friend room being visited (loads on visit).
   const {
@@ -419,6 +429,7 @@ export function AppShell({
             }}
             onOpenGacha={() => setScreen('gacha')}
             onQuickAddRoutine={quickAddTodo}
+            quickAddDisabledCategoryIds={houseCategoryIds}
             onRenameRoutine={renameRoutine}
             onUpdateRoutineTime={updateRoutineTime}
             onUpdateTodoDueDate={updateTodoDueDate}
@@ -543,13 +554,10 @@ export function AppShell({
             onLeaveHouse={(houseId) => {
               void leaveHouse(houseId);
             }}
-            myRoutines={houseRoutines}
+            linkedRoutineTitles={houseRoutineTitles}
             contributedMissionIds={[...contributedMissionIds]}
             onAddMissionRoutine={(houseId, mission) => {
               void addMissionRoutine(houseId, mission);
-            }}
-            onToggleMyRoutine={(id) => {
-              void toggleCompletion(id, todayIso(), contributeLinkedMission);
             }}
             onClaimMission={(houseId, missionId) => {
               void claimMission(houseId, missionId);

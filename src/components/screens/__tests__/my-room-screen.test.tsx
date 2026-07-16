@@ -65,6 +65,15 @@ describe('MyRoomScreen', () => {
     expect(queryByText('0일')).toBeNull();
   });
 
+  it('hides the quick-add button for mission-linked categories (#272)', async () => {
+    // 기본 카테고리 id는 라벨과 동일('일정' 등) — 일정을 미션 연동으로 지정.
+    const { getByLabelText, queryByLabelText } = await render(
+      <MyRoomScreen routines={SAMPLE_ROUTINES} quickAddDisabledCategoryIds={['일정']} />,
+    );
+    expect(queryByLabelText('일정 할 일 추가')).toBeNull();
+    expect(getByLabelText('건강 할 일 추가')).toBeTruthy();
+  });
+
   it('toggles only via the checkbox; the row body opens the menu sheet', async () => {
     const onToggleCompletion = jest.fn();
     const { getByText, getByLabelText } = await render(
