@@ -12,6 +12,7 @@ import {
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { CharacterAvatar } from '@/components/character-avatar';
 import { type HouseCover, HouseCoverPicker } from '@/components/house-cover-picker';
+import { Room } from '@/components/room/room';
 import { Icon } from '@/components/ui/icon';
 import {
   CrownPictogram,
@@ -26,6 +27,19 @@ import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
+import type { FurnitureItem, Wallpaper } from '@/resources/furniture';
+
+/**
+ * A member's live room resolved for the tile preview (their placement + worn
+ * character). Absent entry = not loaded / fetch failed → plain tile fallback.
+ */
+export type MemberRoomPreview = {
+  placedFurnitureIds: string[];
+  wallpaperId?: string;
+  floorId?: string | null;
+  backgroundId?: string | null;
+  characterId?: CharacterId;
+};
 
 export type RoomCell = {
   name: string;
@@ -194,6 +208,13 @@ export type GroupHouseScreenProps = {
   onUpdateHouse?: (houseId: number, input: HouseEditInput) => void;
   /** Cover catalog (GET /houses/cover-images); empty hides the edit section. */
   covers?: HouseCover[];
+  /** Live room previews by membershipId — tiles render the member's actual room. */
+  roomPreviews?: Record<number, MemberRoomPreview>;
+  // Catalogue the previews resolve against (server shop items; local defaults otherwise).
+  furniture?: FurnitureItem[];
+  wallpapers?: Wallpaper[];
+  floors?: Wallpaper[];
+  backgrounds?: Wallpaper[];
   /** Hand the OWNER role to a member via the API (owner only). */
   onTransferOwnership?: (houseId: number, membershipId: number) => void;
   /** Reissue the invite code via the API (owner only; the old code expires). */
@@ -223,6 +244,11 @@ export function GroupHouseScreen({
   onCreateMission,
   onUpdateHouse,
   covers = [],
+  roomPreviews,
+  furniture,
+  wallpapers,
+  floors: floorSurfaces,
+  backgrounds,
   onTransferOwnership,
   onReissueInviteCode,
 }: GroupHouseScreenProps) {
@@ -832,6 +858,10 @@ export function GroupHouseScreen({
               <View style={styles.floorRooms}>
                 {floor.rooms.map((room) => {
                   const empty = isKicked(room.name);
+                  const preview =
+                    !empty && room.membershipId != null
+                      ? roomPreviews?.[room.membershipId]
+                      : undefined;
                   return (
                     <Pressable
                       key={room.name}
@@ -857,6 +887,24 @@ export function GroupHouseScreen({
                           borderColor: t.border,
                         },
                       ]}>
+                      {/* The member's live room fills the tile (visit preview);
+                          plain tint + avatar stand in until it loads. */}
+                      {preview ? (
+                        <View style={styles.roomPreview} pointerEvents="none" testID="room-preview">
+                          <Room
+                            placedFurnitureIds={preview.placedFurnitureIds}
+                            wallpaperId={preview.wallpaperId}
+                            floorId={preview.floorId}
+                            backgroundId={preview.backgroundId}
+                            characterId={preview.characterId}
+                            furniture={furniture}
+                            wallpapers={wallpapers}
+                            floors={floorSurfaces}
+                            backgrounds={backgrounds}
+                            style={styles.roomPreviewFill}
+                          />
+                        </View>
+                      ) : null}
                       {room.isMine ? (
                         <View style={[styles.myTag, { backgroundColor: t.warning }]}>
                           <Text style={[styles.myTagText, { color: t.onTint }]}>MY</Text>
@@ -864,18 +912,19 @@ export function GroupHouseScreen({
                       ) : null}
                       {empty ? (
                         <Icon name="leave" size={36} color={t.textMuted} />
-                      ) : (
+                      ) : preview ? null : (
                         <CharacterAvatar characterId={characterId} size={64} />
                       )}
                       {/* Tiles keep their fixed pastel bg in dark mode — the
-                          name needs onTint ink, not the (light) theme text. */}
-                      <View style={styles.roomNameRow}>
+                          name needs onTint ink, not the (light) theme text.
+                          Over a preview it drops to a bottom scrim for contrast. */}
+                      <View style={[styles.roomNameRow, preview && styles.roomNameOverlay]}>
                         {!empty && room.isOwner ? <CrownPictogram size={12} /> : null}
                         <Text
                           style={[
                             Typography.supporting,
                             styles.roomName,
-                            { color: empty ? t.textMuted : t.onTint },
+                            { color: empty ? t.textMuted : preview ? '#FFFFFF' : t.onTint },
                           ]}>
                           {empty ? '빈방' : room.isMine ? `${room.name} (나)` : room.name}
                         </Text>
@@ -1167,6 +1216,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.one,
+    overflow: 'hidden',
+  },
+  roomPreview: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  roomPreviewFill: {
+    width: '100%',
+    height: '100%',
+  },
+  // Over a room preview the name drops to the bottom edge on a dark scrim.
+  roomNameOverlay: {
+    position: 'absolute',
+    bottom: Spacing.one,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 2,
   },
   roomName: {
     fontWeight: '600',
