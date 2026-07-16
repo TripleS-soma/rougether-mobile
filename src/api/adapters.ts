@@ -384,6 +384,8 @@ export type GachaMachine = {
   drawCount: number;
   icon: PictogramName;
   accent: string;
+  /** Selector row grouping — themed machines drop furniture, the rest characters. */
+  kind: 'furniture' | 'character';
 };
 
 export function toGachaMachine(g: GachaResponse, index = 0): GachaMachine {
@@ -395,6 +397,8 @@ export function toGachaMachine(g: GachaResponse, index = 0): GachaMachine {
     drawCount: g.drawCount ?? 1,
     icon: GACHA_ICONS[index % GACHA_ICONS.length],
     accent: GACHA_ACCENTS[index % GACHA_ACCENTS.length],
+    // Furniture gachas draw from a room theme; the character gacha has none.
+    kind: g.themeId == null ? 'character' : 'furniture',
   };
 }
 
