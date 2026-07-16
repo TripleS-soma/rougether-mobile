@@ -5,6 +5,7 @@ import {
   CATEGORY_COLORS,
   type CategoryVisibility,
   type RoutineCategoryMeta,
+  VISIBILITY_ICONS,
   VISIBILITY_LABELS,
 } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
@@ -31,11 +32,13 @@ const ICON_CHOICES: PictogramName[] = [
   'sprout',
 ];
 
-const VISIBILITY_OPTIONS: { id: CategoryVisibility; icon: PictogramName; desc: string }[] = [
-  { id: 'public', icon: 'globe', desc: '누구나 볼 수 있어요' },
-  { id: 'neighbor', icon: 'friends', desc: '이웃에게만 보여요' },
-  { id: 'partial', icon: 'handshake', desc: '선택한 사람에게만' },
-  { id: 'private', icon: 'lock', desc: '나만 볼 수 있어요' },
+// Icons come from the shared VISIBILITY_ICONS so the 나의 방 headers (#285)
+// and this picker always show the same mark per scope.
+const VISIBILITY_OPTIONS: { id: CategoryVisibility; desc: string }[] = [
+  { id: 'public', desc: '누구나 볼 수 있어요' },
+  { id: 'neighbor', desc: '이웃에게만 보여요' },
+  { id: 'partial', desc: '선택한 사람에게만' },
+  { id: 'private', desc: '나만 볼 수 있어요' },
 ];
 
 export type CategoryManagerSheetProps = {
@@ -196,7 +199,11 @@ export function CategoryManagerSheet({
                       styles.segItem,
                       { backgroundColor: active ? t.primary : t.surfaceMuted },
                     ]}>
-                    <Pictogram name={v.icon} size={18} color={active ? t.onPrimary : undefined} />
+                    <Pictogram
+                      name={VISIBILITY_ICONS[v.id]}
+                      size={18}
+                      color={active ? t.onPrimary : undefined}
+                    />
                     <Text
                       style={[
                         Typography.supporting,
