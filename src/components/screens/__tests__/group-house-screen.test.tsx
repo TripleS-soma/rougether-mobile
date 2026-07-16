@@ -158,6 +158,20 @@ describe('GroupHouseScreen', () => {
     expect(input.endsAt > input.startsAt).toBe(true);
   });
 
+  it('shows the end date on active missions with a period', async () => {
+    const house = {
+      ...MISSION_HOUSE,
+      missions: [
+        { id: 21, title: '기간 미션', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 0, target: 5, status: 'ACTIVE' as const, endsOn: '2026-07-23' }, // prettier-ignore
+        { id: 22, title: '끝난 기간 미션', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 5, target: 5, status: 'COMPLETED' as const, endsOn: '2026-07-01' }, // prettier-ignore
+      ],
+    };
+    const { getByText, queryByText } = await render(<GroupHouseScreen houses={[house]} />);
+    expect(getByText('~07.23')).toBeTruthy();
+    // Finished missions show their status, not a stale end date.
+    expect(queryByText('~07.01')).toBeNull();
+  });
+
   it('lets the owner edit the house settings', async () => {
     const onUpdateHouse = jest.fn();
     const { getByLabelText } = await render(

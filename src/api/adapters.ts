@@ -23,6 +23,7 @@ import {
 } from '@/resources/furniture';
 
 import { type OnboardingGoal } from '@/components/screens/onboarding-screen';
+import { toIsoDate } from '@/utils/datetime';
 import { type RoomSlotSave } from './rooms';
 
 import type { HouseCover } from '@/components/house-cover-picker';
@@ -627,10 +628,7 @@ const MISSION_TYPE_META: Record<string, { icon: PictogramName; label: string }> 
 /** Server date-time → device-local "YYYY-MM-DD" (mission period display). */
 function localDateOf(dateTime: string): string | undefined {
   const d = new Date(dateTime);
-  if (Number.isNaN(d.getTime())) return undefined;
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
-    d.getDate(),
-  ).padStart(2, '0')}`;
+  return Number.isNaN(d.getTime()) ? undefined : toIsoDate(d);
 }
 
 export function toHouseMission(m: MissionSummary): HouseMission {

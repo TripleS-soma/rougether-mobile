@@ -30,7 +30,7 @@ import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 import type { FurnitureItem, Wallpaper } from '@/resources/furniture';
-import { formatDate, todayIso } from '@/utils/datetime';
+import { formatDate, todayIso, toIsoDate } from '@/utils/datetime';
 
 /**
  * A member's live room resolved for the tile preview (their placement + worn
@@ -129,9 +129,7 @@ export type NewHouseMission = {
 function addDaysIso(iso: string, days: number) {
   const d = new Date(`${iso}T12:00:00`);
   d.setDate(d.getDate() + days);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
-    d.getDate(),
-  ).padStart(2, '0')}`;
+  return toIsoDate(d);
 }
 
 const MISSION_TYPE_OPTIONS: {
