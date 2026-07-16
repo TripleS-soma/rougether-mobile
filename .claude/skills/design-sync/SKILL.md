@@ -38,7 +38,7 @@ node .claude/skills/design-sync/generate.js   # → .claude/skills/design-sync/o
 
 ## 동기화 절차 (증분, 통째 교체 금지)
 
-1. `node generate.js`로 재생성 → 바뀐 카드만 파악 (`git diff`가 아니라 out/ 비교 или 전체 재푸시도 카드 수가 적어 무방).
+1. `node generate.js`로 재생성 → 바뀐 카드만 파악 (`git diff`가 아니라 out/ 비교 — 또는 전체 재푸시도 카드 수가 적어 무방).
 2. `DesignSync list_files`(projectId 위)로 원격 구조 확인.
 3. `finalize_plan` — writes: 바뀐 경로(또는 `foundations/*.html` 등 글롭), deletes: 제거할 카드, `localDir`: `out/` 절대경로.
 4. `write_files` — 각 파일 `localPath`로 업로드. 마커 기반이라 register_assets 불필요.

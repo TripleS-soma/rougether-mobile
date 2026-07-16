@@ -216,8 +216,8 @@ const out = (rel, html) => {
     'danger',
     'disabledBg',
   ];
-  const block = (label, theme, dark) => `
-    <div class="theme" style="background:${dark ? theme.screen : theme.screen};border:1px solid ${theme.border}">
+  const block = (label, theme) => `
+    <div class="theme" style="background:${theme.screen};border:1px solid ${theme.border}">
       <div class="tname" style="color:${theme.text}">${label}</div>
       <div class="grid">${roleOrder
         .map(
@@ -232,7 +232,7 @@ const out = (rel, html) => {
     </div>`;
   const body = `
 <div class="sub">Semantic roles — Astryx 구조, 브랜드 3테마 × 라이트/다크 (theme.ts와 1:1)</div>
-${['cozy', 'forest', 'hanok'].map((id) => block(`${id} · light`, THEMES[id], false) + block(`${id} · dark`, DARK[id], true)).join('')}`;
+${['cozy', 'forest', 'hanok'].map((id) => block(`${id} · light`, THEMES[id]) + block(`${id} · dark`, DARK[id])).join('')}`;
   const css = `
   .theme { border-radius: 16px; padding: 16px; margin-bottom: 16px; }
   .tname { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
