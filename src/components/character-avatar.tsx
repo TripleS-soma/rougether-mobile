@@ -1,8 +1,10 @@
 import { Image } from 'expo-image';
+import { useEffect } from 'react';
 import { type ImageStyle, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { PawPictogram } from '@/components/ui/pictograms';
 import { CHARACTER_OPTIONS, type CharacterId } from '@/constants/characters';
+import { assetSource, isCdnKey, RESOURCE_BASE } from '@/resources/asset';
 
 import bear1 from '@/assets/images/characters/bear-1.webp';
 import bear2 from '@/assets/images/characters/bear-2.webp';
@@ -52,24 +54,80 @@ const FRAMES: Record<CharacterId, number[]> = {
 /** Number of poses available per character. */
 export const POSE_COUNT = 4;
 
+/** Server CDN animation keys (animated webp) — GET /me/characters `animations`. */
+export type CharacterAnimationSet = {
+  idle?: string;
+  poseCycle?: string;
+  wave?: string;
+};
+
+/** `pose` wraps over however many frames the avatar actually has. */
+function wrapPose(pose: number, count: number) {
+  return ((pose % count) + count) % count;
+}
+
 export type CharacterAvatarProps = {
   characterId: CharacterId;
-  /** Which pose frame to show (0–3); wraps if out of range. Defaults to 0. */
+  /**
+   * Server CDN animation keys. When any is a valid CDN key the avatar renders
+   * the animated webp (idle first; `pose` cycles idle → poseCycle → wave)
+   * instead of the bundled sprite.
+   */
+  animations?: CharacterAnimationSet;
+  /** Which pose frame to show; wraps over the available frames. Defaults to 0. */
   pose?: number;
   size?: number;
   style?: StyleProp<ImageStyle>;
 };
 
 /**
- * Renders a character as a static pose frame via `expo-image`. `pose` selects the
- * frame (the room in 나의 방 cycles it on tap; elsewhere it stays at 0). Falls back
- * to the emoji glyph if the frame is missing. Shared by the room and any
- * single-character display.
+ * Renders a character via `expo-image`: the server's CDN animation (animated
+ * webp) when `animations` carries a valid key, else the bundled static pose
+ * frame. `pose` selects the frame (the room in 나의 방 cycles it on tap;
+ * elsewhere it stays at 0). Falls back to the paw mark if no art exists.
+ * Shared by the room and any single-character display.
  */
-export function CharacterAvatar({ characterId, pose = 0, size = 96, style }: CharacterAvatarProps) {
+export function CharacterAvatar({
+  characterId,
+  animations,
+  pose = 0,
+  size = 96,
+  style,
+}: CharacterAvatarProps) {
   const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
+
+  // Tap-cycle order: idle → poseCycle → wave (only the keys the server sent).
+  const cdnFrames = [animations?.idle, animations?.poseCycle, animations?.wave].filter(isCdnKey);
+  const cdnFrameList = cdnFrames.join('|');
+
+  // Warm every frame up front so the first tap swaps without a blank flash
+  // (and a revisit works offline from the disk cache).
+  useEffect(() => {
+    const keys = cdnFrameList ? cdnFrameList.split('|') : [];
+    if (keys.length > 1) {
+      Image.prefetch?.(
+        keys.map((key) => `${RESOURCE_BASE}/${key}`),
+        { cachePolicy: 'memory-disk' },
+      )?.catch(() => {});
+    }
+  }, [cdnFrameList]);
+
+  if (cdnFrames.length > 0) {
+    const key = cdnFrames[wrapPose(pose, cdnFrames.length)];
+    return (
+      <Image
+        source={assetSource(key)}
+        style={[{ width: size, height: size }, style]}
+        contentFit="contain"
+        cachePolicy="memory-disk"
+        accessibilityLabel={character.name}
+        testID="cdn-animation"
+      />
+    );
+  }
+
   const frames = FRAMES[characterId];
-  const source = frames?.[((pose % POSE_COUNT) + POSE_COUNT) % POSE_COUNT];
+  const source = frames?.[wrapPose(pose, POSE_COUNT)];
 
   if (!source) {
     // No frame art for this character yet — a neutral paw mark stands in.

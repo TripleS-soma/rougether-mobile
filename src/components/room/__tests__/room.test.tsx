@@ -55,4 +55,40 @@ describe('Room', () => {
     fireEvent.press(character);
     expect(getByLabelText('고양이, 눌러서 포즈 바꾸기')).toBeTruthy();
   });
+
+  const PANDA_ANIMATIONS = {
+    idle: 'characters/panda/animations/idle.webp',
+    poseCycle: 'characters/panda/animations/pose-cycle.webp',
+    wave: 'characters/panda/animations/wave.webp',
+  };
+
+  it('renders the CDN idle animation when the server sent animation keys', async () => {
+    const { getByTestId } = await render(
+      <Room characterId="panda" characterAnimations={PANDA_ANIMATIONS} />,
+    );
+    expect(getByTestId('cdn-animation').props.source[0].uri).toContain(
+      'characters/panda/animations/idle.webp',
+    );
+  });
+
+  it('cycles CDN animations idle → poseCycle → wave → idle on tap', async () => {
+    const { getByLabelText, getByTestId } = await render(
+      <Room characterId="panda" characterAnimations={PANDA_ANIMATIONS} interactiveCharacter />,
+    );
+    const character = getByLabelText('판다, 눌러서 포즈 바꾸기');
+    await fireEvent.press(character);
+    expect(getByTestId('cdn-animation').props.source[0].uri).toContain('pose-cycle.webp');
+    await fireEvent.press(character);
+    expect(getByTestId('cdn-animation').props.source[0].uri).toContain('wave.webp');
+    await fireEvent.press(character);
+    expect(getByTestId('cdn-animation').props.source[0].uri).toContain('idle.webp');
+  });
+
+  it('falls back to the bundled sprite when the animation keys are not CDN keys', async () => {
+    const { queryByTestId, getByLabelText } = await render(
+      <Room characterId="panda" characterAnimations={{ idle: 'legacy/panda.webp' }} />,
+    );
+    expect(queryByTestId('cdn-animation')).toBeNull();
+    expect(getByLabelText('판다')).toBeTruthy();
+  });
 });

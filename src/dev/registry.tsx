@@ -72,6 +72,23 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
+    name: 'Room · CDN character animations',
+    description: 'Server animations(idle/poseCycle/wave) art — tap the character to cycle (#263).',
+    render: () => (
+      <View style={{ width: 280, alignSelf: 'center' }}>
+        <Room
+          characterId="panda"
+          characterAnimations={{
+            idle: 'characters/panda/animations/idle.webp',
+            poseCycle: 'characters/panda/animations/pose-cycle.webp',
+            wave: 'characters/panda/animations/wave.webp',
+          }}
+          interactiveCharacter
+        />
+      </View>
+    ),
+  },
+  {
     name: 'Room · hanok theme',
     description: 'Same renderer, hanok furniture + tiger character.',
     render: () => (

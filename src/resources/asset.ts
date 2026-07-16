@@ -8,7 +8,7 @@
 export const RESOURCE_BASE = 'https://rougether-assets.s3.ap-northeast-2.amazonaws.com';
 
 /** True when the key points at real CDN art (API asset keys). */
-export function isCdnKey(key?: string | null): boolean {
+export function isCdnKey(key?: string | null): key is string {
   return !!key && /^(items|characters)\//.test(key);
 }
 
