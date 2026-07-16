@@ -8,8 +8,36 @@ import { useCallback, useRef, useState } from 'react';
 
 import { fetchHouseMemberRoom } from '@/api';
 import { characterIdFromCode, fromFriendRoomSlots, type ShopCatalogue } from '@/api/adapters';
-import type { MemberRoomPreview } from '@/components/screens/group-house-screen';
+import type { House, MemberRoomPreview } from '@/components/screens/group-house-screen';
+import type { CharacterId } from '@/constants/characters';
 import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
+
+/**
+ * Re-derive my tiles' character from the live worn character (#282). The
+ * per-house preview cache goes stale the moment I swap characters — instead of
+ * refetching the whole house, my seats simply wear `characterId`. Pass the
+ * server-confirmed worn id only; `undefined` (not loaded yet) changes nothing,
+ * so a swap made on another device isn't masked by a local guess.
+ */
+export function withMyCharacter(
+  previews: Record<number, MemberRoomPreview>,
+  houses: House[],
+  characterId?: CharacterId,
+): Record<number, MemberRoomPreview> {
+  if (!characterId) return previews;
+  const myMembershipIds = houses.flatMap((h) =>
+    h.floors.flatMap((f) =>
+      f.rooms.filter((r) => r.isMine && r.membershipId != null).map((r) => r.membershipId!),
+    ),
+  );
+  const stale = myMembershipIds.filter(
+    (id) => previews[id] && previews[id].characterId !== characterId,
+  );
+  if (stale.length === 0) return previews;
+  const next = { ...previews };
+  for (const id of stale) next[id] = { ...next[id], characterId };
+  return next;
+}
 
 export function useMemberRoomPreviews() {
   const [previews, setPreviews] = useState<Record<number, MemberRoomPreview>>({});

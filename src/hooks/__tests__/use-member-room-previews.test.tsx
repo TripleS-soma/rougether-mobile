@@ -1,7 +1,8 @@
 import { act, renderHook } from '@testing-library/react-native';
 
 import type { ShopCatalogue } from '@/api/adapters';
-import { useMemberRoomPreviews } from '@/hooks/use-member-room-previews';
+import { useMemberRoomPreviews, withMyCharacter } from '@/hooks/use-member-room-previews';
+import type { House, MemberRoomPreview } from '@/components/screens/group-house-screen';
 
 const res = (body: unknown) => ({
   ok: true,
@@ -84,5 +85,40 @@ describe('useMemberRoomPreviews', () => {
       await result.current.load(12, [55], CATALOGUE); // house switch — reload
     });
     expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('withMyCharacter', () => {
+  const HOUSES: House[] = [
+    {
+      houseId: 11,
+      title: '집',
+      floors: [
+        {
+          level: '1층',
+          rooms: [
+            { name: '나', color: '#EEE', isMine: true, membershipId: 43 },
+            { name: '친구', color: '#EEE', membershipId: 42 },
+          ],
+        },
+      ],
+    },
+  ];
+  const previews: Record<number, MemberRoomPreview> = {
+    42: { placedFurnitureIds: [], characterId: 'otter' },
+    43: { placedFurnitureIds: [], characterId: 'otter' },
+  };
+
+  it('re-wears only my seats with the worn character (#282)', () => {
+    const next = withMyCharacter(previews, HOUSES, 'tiger');
+    expect(next[43].characterId).toBe('tiger'); // 내 좌석 = 착용 캐릭터
+    expect(next[42].characterId).toBe('otter'); // 친구 좌석은 그대로
+  });
+
+  it('changes nothing before the worn character loads, or when already current', () => {
+    // 서버 확정값이 없으면 손대지 않는다 (다른 기기에서 바꾼 경우 안전).
+    expect(withMyCharacter(previews, HOUSES, undefined)).toBe(previews);
+    // 이미 일치하면 같은 참조를 돌려줘 불필요한 리렌더가 없다.
+    expect(withMyCharacter(previews, HOUSES, 'otter')).toBe(previews);
   });
 });
