@@ -19,7 +19,9 @@ description: Rougether 디자인 시스템을 claude.ai/design 프로젝트와 �
 
 - 카드 = 자기완결 HTML 1파일. **첫 줄에 반드시** `<!-- @dsCard group="…" -->` 마커.
 - 그룹: `Foundations`(colors/typography/spacing-radius) / `Components`(버튼·칩·토글 등
-  ui/ 프리미티브) / `Patterns`(미션 카드, 방 타일, 커버 피커, 뽑기 선택기 등 화면 패턴).
+  ui/ 프리미티브) / `Patterns`(미션 카드, 방 타일, 커버 피커, 뽑기 선택기 등 화면 패턴) /
+  `Proposals`(**코드에 아직 없는 후보안** — 새 컨트롤·위젯 제안. 채택되면 `ui/`로
+  구현하고 카드를 Components로 옮긴다. 기각되면 카드 삭제).
 - 경로 = 프로젝트 경로: `foundations/*.html`, `components/*.html`, `patterns/*.html`.
 - 새 UI 패턴을 앱에 추가했으면 대응 카드도 추가한다 (dev registry 등록과 같은 결의 규칙).
 

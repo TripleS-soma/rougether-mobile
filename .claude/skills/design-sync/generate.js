@@ -488,4 +488,122 @@ ${['cozy', 'forest', 'hanok'].map((id) => block(`${id} · light`, THEMES[id]) + 
   out('patterns/gacha-selector.html', page('Patterns', 'Gacha machine selector', body, css));
 }
 
+/* ---------- proposals (코드에 아직 없는 후보안 — 채택되면 ui/로 구현) ---------- */
+
+/* icon buttons */
+{
+  const b = (cls, inner, style2 = '') =>
+    `<span class="ib ${cls}" style="${style2}">${inner}</span>`;
+  const body = `
+<div class="sub">아이콘 버튼 변형 — 현재 앱은 surfaceMuted 원형 1종만 사용. 위계별 3변형 제안</div>
+<div class="section">Filled · Tonal · Ghost (40px)</div>
+<div class="rowset">
+  ${b('f', '＋')}${b('t', '🔍')}${b('g', '⋯')}
+  ${b('t', '👥')}${b('t', '🔔')}${b('d', '🗑')}
+</div>
+<div class="section">Small (32px) — 카드 안 인라인 액션</div>
+<div class="rowset">
+  ${b('f sm', '＋')}${b('t sm', '✏️')}${b('g sm', '⋯')}
+</div>
+<div class="section">뱃지 달림 (알림)</div>
+<div class="rowset"><span style="position:relative">${b('t', '🔔')}<span class="dot"></span></span></div>`;
+  const css = `
+  .rowset { display: flex; gap: 12px; align-items: center; }
+  .ib { width: 40px; height: 40px; border-radius: 999px; display: inline-flex; align-items: center;
+    justify-content: center; font-size: 16px; }
+  .ib.sm { width: 32px; height: 32px; font-size: 13px; }
+  .ib.f { background: ${t.primary}; color: ${t.onPrimary}; }
+  .ib.t { background: ${t.surfaceMuted}; color: ${t.text}; }
+  .ib.g { background: transparent; border: 1px solid ${t.border}; color: ${t.textMuted}; }
+  .ib.d { background: ${t.danger}22; color: ${t.danger}; }
+  .dot { position: absolute; top: 2px; right: 2px; width: 8px; height: 8px; border-radius: 4px;
+    background: ${t.danger}; border: 2px solid ${t.screen}; }`;
+  out(
+    'proposals/icon-buttons.html',
+    page('Proposals', 'Icon buttons — filled/tonal/ghost', body, css),
+  );
+}
+
+/* progress ring */
+{
+  const ring = (pct, size, label, sub) => `
+  <div class="ringwrap">
+    <div class="ring" style="width:${size}px;height:${size}px;background:conic-gradient(${t.primary} 0 ${pct}%, ${t.border} ${pct}% 100%)">
+      <div class="hole" style="width:${size - 16}px;height:${size - 16}px"><b>${label}</b>${sub ? `<span>${sub}</span>` : ''}</div>
+    </div>
+  </div>`;
+  const body = `
+<div class="sub">미션·스트릭 진행률 링 — RN에선 react-native-svg Circle strokeDasharray로 구현</div>
+<div class="section">Sizes & states</div>
+<div class="rowset">
+  ${ring(0, 72, '0%', '이번 주')}
+  ${ring(65, 72, '65%', '이번 주')}
+  ${ring(100, 72, '✓', '달성')}
+  ${ring(40, 48, '2/5', '')}
+</div>
+<div class="section">스탯 카드 결합 (집 화면 요약과 합성 가능)</div>
+<div class="card2">
+  ${ring(65, 64, '65%', '')}
+  <div><b style="font-size:14px">우리 집 미션 진행률</b><div style="font-size:11px;color:${t.textMuted};margin-top:2px">2개 진행 중 · 오늘 기여 1/2</div></div>
+</div>`;
+  const css = `
+  .rowset { display: flex; gap: 16px; align-items: center; }
+  .ring { border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .hole { border-radius: 50%; background: ${t.surface}; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; }
+  .hole b { font-size: 14px; } .hole span { font-size: 8px; color: ${t.textMuted}; }
+  .card2 { display: flex; gap: 14px; align-items: center; background: ${t.surface};
+    border: 1px solid ${t.border}; border-radius: 16px; padding: 14px; max-width: 320px; margin-top: 8px; }`;
+  out('proposals/progress-ring.html', page('Proposals', 'Progress ring', body, css));
+}
+
+/* stepper */
+{
+  const body = `
+<div class="sub">수치 입력 스테퍼 — 미션 목표 수치(1~1000)·집 정원처럼 키보드가 과한 입력용</div>
+<div class="section">Default</div>
+<div class="stepper"><button>−</button><b>10</b><button class="p">＋</button></div>
+<div class="section">한계값 (min에서 − 비활성)</div>
+<div class="stepper"><button class="dis">−</button><b>1</b><button class="p">＋</button></div>
+<div class="section">라벨 결합</div>
+<div class="fieldrow"><span class="lab">목표 수치</span><div class="stepper sm"><button>−</button><b>20</b><button class="p">＋</button></div></div>`;
+  const css = `
+  .stepper { display: inline-flex; align-items: center; gap: 2px; background: ${t.surfaceMuted};
+    border-radius: 999px; padding: 4px; }
+  .stepper button { width: 34px; height: 34px; border-radius: 999px; border: 0; font-size: 16px;
+    background: ${t.surface}; color: ${t.text}; font-family: inherit; }
+  .stepper button.p { background: ${t.primary}; color: ${t.onPrimary}; }
+  .stepper button.dis { color: ${t.textDisabled}; }
+  .stepper b { min-width: 48px; text-align: center; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .stepper.sm button { width: 28px; height: 28px; font-size: 13px; }
+  .stepper.sm b { min-width: 38px; font-size: 13px; }
+  .fieldrow { display: flex; align-items: center; gap: 12px; }
+  .lab { font-size: 12px; color: ${t.textMuted}; font-weight: 600; }`;
+  out('proposals/stepper.html', page('Proposals', 'Stepper — 수치 입력', body, css));
+}
+
+/* segmented control */
+{
+  const seg = (items, active, grow = false) => `
+  <div class="seg${grow ? ' grow' : ''}">${items.map((x, i) => `<span class="${i === active ? 'on' : ''}">${x}</span>`).join('')}</div>`;
+  const body = `
+<div class="sub">세그먼트 컨트롤 — 미션 유형·공개/비공개처럼 2~3택 라디오를 통일 (현재는 화면마다 개별 스타일)</div>
+<div class="section">2분할</div>
+${seg(['공개', '비공개'], 0)}
+<div class="section">아이콘 결합 (미션 유형)</div>
+${seg(['☀️ 일일 달성률', '📅 주간 달성 횟수'], 1, true)}
+<div class="section">3분할</div>
+${seg(['전체', '루틴', '투두'], 0, true)}`;
+  const css = `
+  .seg { display: inline-flex; background: ${t.surfaceMuted}; border-radius: 999px; padding: 3px;
+    gap: 2px; margin-bottom: 4px; }
+  .seg.grow { display: flex; max-width: 340px; }
+  .seg.grow span { flex: 1; text-align: center; }
+  .seg span { padding: 7px 16px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
+    color: ${t.textMuted}; }
+  .seg span.on { background: ${t.surface}; color: ${t.primaryText};
+    box-shadow: 0 1px 3px rgba(74,64,58,.15); }`;
+  out('proposals/segmented-control.html', page('Proposals', 'Segmented control', body, css));
+}
+
 console.log('done');
