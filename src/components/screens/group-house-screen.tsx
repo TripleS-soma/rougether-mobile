@@ -2000,6 +2000,9 @@ const styles = StyleSheet.create({
   summaryRow: {
     flexDirection: 'row',
     gap: Spacing.two,
+    // 스탯 카드가 화면 선에 붙지 않게 — pill 행·미션 카드와 같은 여백.
+    paddingHorizontal: Spacing.four,
+    marginTop: Spacing.three,
   },
   stat: {
     flex: 1,
