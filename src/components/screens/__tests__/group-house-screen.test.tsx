@@ -420,15 +420,13 @@ describe('GroupHouseScreen', () => {
         ...MISSION_HOUSE.floors,
       ],
     };
-    const { getAllByText, getByLabelText, queryAllByText, queryAllByTestId } = await render(
-      <GroupHouseScreen houses={[house]} onVisitFriend={onVisitFriend} />,
-    );
-    // 정원 4 / 멤버 2 → the two unfilled seats render as quiet 빈방 tiles.
-    const vacantTiles = getAllByText('빈방');
-    expect(vacantTiles).toHaveLength(2);
-    // 각 빈 좌석은 캐릭터 없는 빈 방으로 채워진다 (#281, 시안 A).
+    const { getAllByText, getAllByLabelText, getByLabelText, queryAllByText, queryAllByTestId } =
+      await render(<GroupHouseScreen houses={[house]} onVisitFriend={onVisitFriend} />);
+    // 정원 4 / 멤버 2 → 빈 좌석은 캐릭터 없는 빈 방으로, 텍스트 라벨 없이 (#281).
     expect(queryAllByTestId('vacant-room')).toHaveLength(2);
-    await fireEvent.press(vacantTiles[0]);
+    expect(queryAllByText('빈방')).toHaveLength(0);
+    // 접근성 라벨은 유지 — 탭은 불가.
+    await fireEvent.press(getAllByLabelText('빈방')[0]);
     expect(onVisitFriend).not.toHaveBeenCalled();
     // Vacant seats are tiles only — 구성원 관리 lists real members.
     await fireEvent.press(getByLabelText('구성원 목록'));
@@ -445,10 +443,11 @@ describe('GroupHouseScreen', () => {
         ...MISSION_HOUSE.floors,
       ],
     };
-    const { getByTestId, getByText } = await render(<GroupHouseScreen houses={[house]} />);
+    const { getByTestId, queryByText } = await render(<GroupHouseScreen houses={[house]} />);
     // 정원 3 → 위 행은 타일 1개 + 투명 자리채움이라 반칸 크기가 유지된다.
     expect(getByTestId('room-spacer')).toBeTruthy();
-    expect(getByText('빈방')).toBeTruthy();
+    // 빈 좌석은 텍스트 라벨 없이 빈 방 비주얼만.
+    expect(queryByText('빈방')).toBeNull();
   });
 
   it('locks scrolling while a tile is lifted for drag (#278)', async () => {

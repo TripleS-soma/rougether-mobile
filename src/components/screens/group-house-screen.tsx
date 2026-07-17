@@ -1101,19 +1101,22 @@ export function GroupHouseScreen({
           ) : null}
           {empty || preview ? null : <CharacterAvatar characterId={characterId} size={64} />}
           {/* Tiles keep their fixed pastel bg in dark mode — the name needs
-              onTint ink, not the (light) theme text. Over a preview (or the
-              vacant room) it drops to a bottom scrim for contrast. */}
-          <View style={[styles.roomNameRow, (preview || empty) && styles.roomNameOverlay]}>
-            {!empty && room.isOwner ? <CrownPictogram size={12} /> : null}
-            <Text
-              style={[
-                Typography.supporting,
-                styles.roomName,
-                { color: preview || empty ? '#FFFFFF' : t.onTint },
-              ]}>
-              {empty ? '빈방' : room.isMine ? `${room.name} (나)` : room.name}
-            </Text>
-          </View>
+              onTint ink, not the (light) theme text. Over a preview it drops
+              to a bottom scrim for contrast. 빈 좌석은 라벨 없이 빈 방
+              비주얼만 — 접근성 라벨은 Pressable이 유지한다. */}
+          {empty ? null : (
+            <View style={[styles.roomNameRow, preview && styles.roomNameOverlay]}>
+              {room.isOwner ? <CrownPictogram size={12} /> : null}
+              <Text
+                style={[
+                  Typography.supporting,
+                  styles.roomName,
+                  { color: preview ? '#FFFFFF' : t.onTint },
+                ]}>
+                {room.isMine ? `${room.name} (나)` : room.name}
+              </Text>
+            </View>
+          )}
         </Pressable>
       </Animated.View>
     );
@@ -1192,6 +1195,26 @@ export function GroupHouseScreen({
                 />
               ))}
             </View>
+            {/* 레벨·멤버 pill — 프레임 여백과 정렬된 행 (모서리 절대배치는
+                화면 끝에 걸려 보였다). 고정 밝기 스크림 위라 literal 잉크. */}
+            <View style={styles.framePillsRow}>
+              <View style={[styles.skyPill, { backgroundColor: 'rgba(255,255,255,0.88)' }]}>
+                <HousePictogram size={12} />
+                <Text style={[Typography.supporting, styles.heroPillText]}>
+                  Lv.{currentHouse.level ?? 0}
+                  {currentHouse.growthPoints != null
+                    ? ` · ${currentHouse.growthPoints % 100}/100`
+                    : ''}
+                </Text>
+              </View>
+              <View style={[styles.skyPill, { backgroundColor: 'rgba(255,255,255,0.88)' }]}>
+                <Text style={[Typography.supporting, styles.heroPillText]}>
+                  {/* Vacant seats are not members — count the real ones. */}
+                  멤버 {currentHouse.memberCount ?? members.length}
+                  {currentHouse.maxMembers ? ` / ${currentHouse.maxMembers}` : ''}
+                </Text>
+              </View>
+            </View>
             <View style={styles.frameWrap} {...gridPanResponder.panHandlers}>
               {/* 창문 뒤 좌석 — 프레임 PNG의 투명 창문으로 방이 보인다. */}
               {WINDOW_RECTS.map((rect, w) => {
@@ -1222,27 +1245,6 @@ export function GroupHouseScreen({
                 accessibilityLabel={`${currentHouse.title} 집`}
                 testID="house-frame"
               />
-              {/* 모서리 pill — 고정 밝기 스크림 위 텍스트라 literal 잉크. */}
-              <View
-                style={[styles.heroPill, { backgroundColor: 'rgba(255,255,255,0.88)' }]}
-                pointerEvents="none">
-                <HousePictogram size={12} />
-                <Text style={[Typography.supporting, styles.heroPillText]}>
-                  Lv.{currentHouse.level ?? 0}
-                  {currentHouse.growthPoints != null
-                    ? ` · ${currentHouse.growthPoints % 100}/100`
-                    : ''}
-                </Text>
-              </View>
-              <View
-                style={[styles.framePillRight, { backgroundColor: 'rgba(255,255,255,0.88)' }]}
-                pointerEvents="none">
-                <Text style={[Typography.supporting, styles.heroPillText]}>
-                  {/* Vacant seats are not members — count the real ones. */}
-                  멤버 {currentHouse.memberCount ?? members.length}
-                  {currentHouse.maxMembers ? ` / ${currentHouse.maxMembers}` : ''}
-                </Text>
-              </View>
             </View>
           </View>
         ) : (
@@ -1921,13 +1923,20 @@ const styles = StyleSheet.create({
     gap: Spacing.one,
     overflow: 'hidden',
   },
-  framePillRight: {
-    position: 'absolute',
-    top: Spacing.two,
-    right: Spacing.two,
+  framePillsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.four,
+    marginTop: Spacing.three,
+  },
+  skyPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
     borderRadius: Radius.pill,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: 3,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one,
   },
   missionFab: {
     position: 'absolute',
