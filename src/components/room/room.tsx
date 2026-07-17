@@ -50,7 +50,8 @@ export type RoomProps = {
   floorId?: string | null;
   backgroundId?: string | null;
   placedFurnitureIds?: string[];
-  characterId?: CharacterId;
+  /** `null` renders an unoccupied room — no character (빈방 타일, #281). */
+  characterId?: CharacterId | null;
   /** Server CDN animation keys for the occupant; local sprite fallback when absent. */
   characterAnimations?: CharacterAnimationSet;
   /** Item + wallpaper catalogue to resolve ids against (defaults to the local set). */
@@ -210,7 +211,7 @@ export function Room({
             </Pressable>
           ))
         : null}
-      {interactiveCharacter ? (
+      {characterId === null ? null : interactiveCharacter ? (
         <Pressable
           // The avatar wraps the pose over however many frames it has (4 local
           // sprites vs. the server's CDN animation set) — just keep counting.
