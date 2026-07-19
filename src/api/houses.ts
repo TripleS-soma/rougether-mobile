@@ -152,3 +152,8 @@ export function contributeHouseMission(houseId: number, missionId: number) {
 export function claimHouseMission(houseId: number, missionId: number) {
   return apiPost<HouseMissionClaimResponse>(`/houses/${houseId}/missions/${missionId}/claim`);
 }
+
+/** DELETE /houses/{id}/missions/{missionId} — OWNER only; COMPLETED missions 409. */
+export function deleteHouseMission(houseId: number, missionId: number) {
+  return apiDelete<void>(`/houses/${houseId}/missions/${missionId}`);
+}

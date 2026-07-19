@@ -85,6 +85,37 @@ describe('GroupHouseScreen', () => {
     expect(getByText('완료')).toBeTruthy();
   });
 
+  it('deletes a mission through the confirm modal (owner, #305)', async () => {
+    const onDeleteMission = jest.fn();
+    const { getByLabelText, getByText, queryByLabelText, queryByText } = await render(
+      <GroupHouseScreen houses={[MISSION_HOUSE]} onDeleteMission={onDeleteMission} />,
+    );
+    await fireEvent.press(getByLabelText('공동 미션'));
+    // COMPLETED missions are not deletable on the server (409) — no button.
+    expect(queryByLabelText('지난 미션 삭제')).toBeNull();
+    // 취소 closes without calling.
+    await fireEvent.press(getByLabelText('주간 루틴 지키기 삭제'));
+    expect(getByText('미션 삭제')).toBeTruthy();
+    await fireEvent.press(getByLabelText('미션 삭제 취소'));
+    expect(queryByText('미션 삭제')).toBeNull();
+    expect(onDeleteMission).not.toHaveBeenCalled();
+    // 삭제 confirms.
+    await fireEvent.press(getByLabelText('주간 루틴 지키기 삭제'));
+    await fireEvent.press(getByLabelText('미션 삭제 확인'));
+    expect(onDeleteMission).toHaveBeenCalledWith(7, 11);
+  });
+
+  it('hides mission delete from plain members', async () => {
+    const { getByLabelText, queryByLabelText } = await render(
+      <GroupHouseScreen
+        houses={[{ ...MISSION_HOUSE, myRole: 'MEMBER' }]}
+        onDeleteMission={jest.fn()}
+      />,
+    );
+    await fireEvent.press(getByLabelText('공동 미션'));
+    expect(queryByLabelText('주간 루틴 지키기 삭제')).toBeNull();
+  });
+
   it('shows 기여됨/루틴 연동됨 labels instead of + when applicable', async () => {
     const { queryByLabelText, getByText, getByLabelText } = await render(
       <GroupHouseScreen
