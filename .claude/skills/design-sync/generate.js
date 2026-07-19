@@ -32,6 +32,8 @@ const THEMES = {
     warningText: '#9D6014',
     danger: '#D67878',
     disabledBg: '#D9D2C5',
+    sky: '#C3E0F5',
+    grass: '#B5D89A',
   },
   forest: {
     appShell: '#DCE8D0',
@@ -54,6 +56,8 @@ const THEMES = {
     warningText: '#9D6014',
     danger: '#D67878',
     disabledBg: '#CBD8C4',
+    sky: '#C3E0F5',
+    grass: '#B5D89A',
   },
   hanok: {
     appShell: '#D8C8AF',
@@ -76,6 +80,8 @@ const THEMES = {
     warningText: '#886226',
     danger: '#C77A6A',
     disabledBg: '#DCCFB9',
+    sky: '#C3E0F5',
+    grass: '#B5D89A',
   },
 };
 const DARK = {
@@ -100,6 +106,8 @@ const DARK = {
     warningText: '#EDB061',
     danger: '#E08D8D',
     disabledBg: '#3D362C',
+    sky: '#2A3448',
+    grass: '#33422E',
   },
   forest: {
     appShell: '#101711',
@@ -122,6 +130,8 @@ const DARK = {
     warningText: '#EDB061',
     danger: '#E08D8D',
     disabledBg: '#32402F',
+    sky: '#2A3448',
+    grass: '#33422E',
   },
   hanok: {
     appShell: '#1A150D',
@@ -144,6 +154,8 @@ const DARK = {
     warningText: '#DCA855',
     danger: '#DA9384',
     disabledBg: '#453A28',
+    sky: '#2A3448',
+    grass: '#33422E',
   },
 };
 const TYPE = {
@@ -215,6 +227,8 @@ const out = (rel, html) => {
     'warningText',
     'danger',
     'disabledBg',
+    'sky',
+    'grass',
   ];
   const block = (label, theme) => `
     <div class="theme" style="background:${theme.screen};border:1px solid ${theme.border}">

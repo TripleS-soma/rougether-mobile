@@ -141,6 +141,8 @@ describe('AppShell — 공동미션 연동', () => {
     await waitFor(() => expect(calls.some((c) => c.url.includes('/houses/2/missions'))).toBe(true));
 
     await fireEvent.press(getByLabelText('집'));
+    // 공동 미션은 플로팅 버튼 → 시트 (#287).
+    await fireEvent.press(getByLabelText('공동 미션'));
     await fireEvent.press(getByLabelText('물 마시기 내 루틴에 추가'));
     expect(getByText('내 루틴에 추가하시겠습니까?')).toBeTruthy();
     await fireEvent.press(getByLabelText('루틴 추가 확인'));

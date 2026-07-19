@@ -119,6 +119,10 @@ export type SemanticColors = {
   danger: string;
   /** Background of disabled buttons/controls (text on it: `onPrimary`/`textMuted`). */
   disabledBg: string;
+  /** 집 화면 야외 배경 — 프레임 뒤 하늘 (#287). 커버와 무관한 고정 톤. */
+  sky: string;
+  /** 집 화면 야외 배경 — 프레임 아래 잔디 밴드 (#287). */
+  grass: string;
 };
 
 export const Themes: Record<ThemeId, SemanticColors> = {
@@ -143,6 +147,8 @@ export const Themes: Record<ThemeId, SemanticColors> = {
     warningText: '#9D6014',
     danger: '#D67878',
     disabledBg: '#D9D2C5',
+    sky: '#C3E0F5',
+    grass: '#B5D89A',
   },
   forest: {
     appShell: '#DCE8D0',
@@ -165,6 +171,8 @@ export const Themes: Record<ThemeId, SemanticColors> = {
     warningText: '#9D6014',
     danger: '#D67878',
     disabledBg: '#CBD8C4',
+    sky: '#C3E0F5',
+    grass: '#B5D89A',
   },
   hanok: {
     appShell: '#D8C8AF',
@@ -187,6 +195,8 @@ export const Themes: Record<ThemeId, SemanticColors> = {
     warningText: '#886226',
     danger: '#C77A6A',
     disabledBg: '#DCCFB9',
+    sky: '#C3E0F5',
+    grass: '#B5D89A',
   },
 };
 
@@ -219,6 +229,8 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = {
     warningText: '#EDB061',
     danger: '#E08D8D',
     disabledBg: '#3D362C',
+    sky: '#2A3448',
+    grass: '#33422E',
   },
   forest: {
     appShell: '#101711',
@@ -241,6 +253,8 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = {
     warningText: '#EDB061',
     danger: '#E08D8D',
     disabledBg: '#32402F',
+    sky: '#2A3448',
+    grass: '#33422E',
   },
   hanok: {
     appShell: '#1A150D',
@@ -263,6 +277,8 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = {
     warningText: '#DCA855',
     danger: '#DA9384',
     disabledBg: '#453A28',
+    sky: '#2A3448',
+    grass: '#33422E',
   },
 };
 

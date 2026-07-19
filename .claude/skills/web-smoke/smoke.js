@@ -122,7 +122,8 @@ const netFailures = [];
   await step('house-tab', async () => {
     await tapLabel('집');
     // Either the empty-state guide or a populated house view is fine.
-    await Promise.race([see('아직 함께하는 집이 없어요'), see('우리 그룹의 미션')]);
+    // #287: 미션 카드는 플로팅 버튼 → 시트로 이동 — 스탯 행이 집 화면 앵커.
+    await Promise.race([see('아직 함께하는 집이 없어요'), see('진행 중 미션')]);
   });
 
   await step('house-search', async () => {
@@ -149,7 +150,8 @@ const netFailures = [];
 
   await step('gacha-screen', async () => {
     await tapLabel('뽑기 상점');
-    await see('가챠', 15000);
+    // 화면 타이틀은 '뽑기' — 탭 라벨('가구 뽑기')이 안정적인 앵커.
+    await see('가구 뽑기', 15000);
     await page.waitForTimeout(1500); // machine list loads from the API
   });
 
