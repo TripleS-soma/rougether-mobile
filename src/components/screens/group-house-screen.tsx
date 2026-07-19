@@ -1181,6 +1181,7 @@ export function GroupHouseScreen({
                 wallpapers={wallpapers}
                 floors={floorSurfaces}
                 backgrounds={backgrounds}
+                fill
                 style={styles.roomPreviewFill}
               />
             </View>
@@ -1194,6 +1195,7 @@ export function GroupHouseScreen({
                 characterId={null}
                 floorId={VACANT_FLOOR[0].id}
                 floors={VACANT_FLOOR}
+                fill
                 style={[styles.roomPreviewFill, styles.vacantRoom]}
               />
             </View>
