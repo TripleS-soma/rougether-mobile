@@ -873,15 +873,6 @@ export function MyRoomScreen({
                         </View>
                       );
                     })}
-
-                <Pressable
-                  onPress={onEdit}
-                  accessibilityRole="button"
-                  accessibilityLabel="방 꾸미기 열기"
-                  style={[styles.editBtn, { backgroundColor: t.surface, borderColor: t.border }]}>
-                  <Icon name="edit" size={16} color={t.text} />
-                  <Text style={[Typography.label, { color: t.text }]}>방 꾸미기</Text>
-                </Pressable>
               </View>
             </>
           ) : (
@@ -1703,14 +1694,5 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: 11,
-  },
-  editBtn: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.three,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
   },
 });
