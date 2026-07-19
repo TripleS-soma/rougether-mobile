@@ -602,6 +602,26 @@ export function GroupHouseScreen({
     }),
   ).current;
 
+  // --- 집 스와이프 전환 (#297) — 가로 우세 플링이면 이전/다음 집. ---
+  // 확대 중(카메라 팬)·드래그 중에는 양보하고, 버블 단계라 자식 제스처가 우선.
+  const switchRef = useRef({ prev: () => {}, next: () => {} });
+  switchRef.current = { prev: prevHouse, next: nextHouse };
+  const swipeResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (evt, g) =>
+        dragSeatRef.current == null &&
+        !zoomedRef.current &&
+        evt.nativeEvent.touches.length === 1 &&
+        Math.abs(g.dx) > 24 &&
+        Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+      onPanResponderRelease: (_evt, g) => {
+        if (g.dx <= -40) switchRef.current.next();
+        else if (g.dx >= 40) switchRef.current.prev();
+      },
+      onPanResponderTerminationRequest: () => true,
+    }),
+  ).current;
+
   // Owner tools need the OWNER role and a server house id.
   const isOwner = currentHouse?.myRole === 'OWNER' && !!currentHouse?.houseId;
   // Kick is server-side owner-only too; the demo (no houseId) keeps the local
@@ -1255,7 +1275,9 @@ export function GroupHouseScreen({
         testID="house-scroll">
         {frameActive ? (
           /* 프레임 모드(#287) — 하늘 위에 스위처·집 프레임, 방은 창문 안에. */
-          <View style={[styles.skySection, { backgroundColor: t.sky }]}>
+          <View
+            style={[styles.skySection, { backgroundColor: t.sky }]}
+            {...swipeResponder.panHandlers}>
             {/* 마당 잔디 — 프레임 하단이 밟고 서는 밴드. */}
             <View style={[styles.grassBand, { backgroundColor: t.grass }]} />
             <View style={styles.switcher}>
@@ -1382,7 +1404,7 @@ export function GroupHouseScreen({
         ) : (
           <>
             {/* 커버가 없는 집 — 기존 히어로 폴백 (#276 B안). */}
-            <View style={styles.hero}>
+            <View style={styles.hero} {...swipeResponder.panHandlers}>
               <View style={[StyleSheet.absoluteFill, { backgroundColor: t.surfaceMuted }]} />
               <View style={[styles.heroPill, { backgroundColor: 'rgba(255,255,255,0.88)' }]}>
                 <HousePictogram size={12} />
