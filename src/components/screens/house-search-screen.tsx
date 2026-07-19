@@ -431,14 +431,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.one,
   },
-  houseMetaRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one, marginTop: 2 },
+  // 320px에선 태그+메타가 한 줄에 안 들어간다(#291) — 메타가 아랫줄로 내려간다.
+  houseMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: Spacing.one,
+    marginTop: 2,
+  },
   tag: {
     paddingHorizontal: Spacing.one,
     paddingVertical: 1,
     borderRadius: Radius.pill,
   },
   tagText: { fontSize: 10, fontWeight: '700' },
-  meta: { fontSize: 11, flexShrink: 1 },
+  // flexShrink를 주면 줄바꿈 대신 계속 줄어들며 잘린다 — 온전한 너비로 개행.
+  meta: { fontSize: 11 },
   joinBtn: {
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
