@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import { GroupHouseScreen, type House } from '@/components/screens/group-house-screen';
 import { ToastProvider } from '@/components/ui/toast';
@@ -277,6 +277,54 @@ describe('GroupHouseScreen', () => {
     // + 버튼은 시트 안에서 텍스트로 목적을 말한다.
     await fireEvent.press(getByLabelText('공동 미션'));
     expect(getByText('＋ 내 루틴에')).toBeTruthy();
+  });
+
+  it('frame tiles: a single tap visits after the double-tap window (#307)', async () => {
+    const onVisitFriend = jest.fn();
+    const { getByLabelText } = await render(
+      <GroupHouseScreen
+        houses={[{ ...MISSION_HOUSE, coverImageKey: 'house/cloud-balloon/frame.png' }]}
+        onVisitFriend={onVisitFriend}
+      />,
+    );
+    await fireEvent.press(getByLabelText('친구'));
+    // 방문은 더블탭 판정 간격(260ms)만큼 미뤄 실행된다.
+    expect(onVisitFriend).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(onVisitFriend).toHaveBeenCalledWith(
+        expect.objectContaining({ name: '친구', membershipId: 42 }),
+      ),
+    );
+  });
+
+  it('frame tiles: a double tap zooms the camera instead of visiting (#307)', async () => {
+    // 두 탭이 같은 타임스탬프 = 확실한 더블탭 (fake timer는 렌더러와 충돌).
+    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1_000_000);
+    try {
+      const onVisitFriend = jest.fn();
+      const { getByLabelText, getByTestId, queryByLabelText } = await render(
+        <GroupHouseScreen
+          houses={[{ ...MISSION_HOUSE, coverImageKey: 'house/cloud-balloon/frame.png' }]}
+          onVisitFriend={onVisitFriend}
+        />,
+      );
+      // 줌 좌표 계산에 프레임 크기가 필요하다 — 레이아웃 이벤트 주입.
+      await fireEvent(getByTestId('frame-camera'), 'layout', {
+        nativeEvent: { layout: { width: 358, height: 321 } },
+      });
+      expect(queryByLabelText('확대 종료')).toBeNull();
+      await fireEvent.press(getByLabelText('친구'));
+      await fireEvent.press(getByLabelText('친구'));
+      // 더블탭 = 방 줌인 — 리셋 칩이 뜨고 방문 예약은 취소된다.
+      expect(getByLabelText('확대 종료')).toBeTruthy();
+      await act(() => new Promise((resolve) => setTimeout(resolve, 320)));
+      expect(onVisitFriend).not.toHaveBeenCalled();
+      // ⟲ = 기본(방 4칸) 뷰 복귀.
+      await fireEvent.press(getByLabelText('확대 종료'));
+      expect(queryByLabelText('확대 종료')).toBeNull();
+    } finally {
+      nowSpy.mockRestore();
+    }
   });
 
   it('falls back to a plain hero without a cover and hides nav for one house', async () => {

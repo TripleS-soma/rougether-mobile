@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -171,6 +171,17 @@ const WINDOW_RECTS = [
   { left: '12.7%', top: '59.1%', width: '35%', height: '30%' },
   { left: '51.3%', top: '59.1%', width: '35%', height: '30%' },
 ] as const;
+
+// 기본 카메라 확대 (#307, 시안 B) — 방 4칸이 뷰포트를 채우는 배율. 창문 블록이
+// 가로 12.7%~86.3%를 쓰므로 1.34를 넘으면 창이 좌우로 잘린다.
+const CAM_DEFAULT_SCALE = 1.3;
+// 창문 블록 세로 중심(25.4%~89.1% → 57.25%)을 뷰포트 중앙에 맞추는 기준값.
+const CAM_WINDOW_CENTER_Y = 0.5725;
+const CAM_MAX_SCALE = 3;
+// 방 더블탭 줌 — 창문(폭 35%)이 카메라 뷰포트를 거의 가득 채우는 배율.
+const CAM_ROOM_SCALE = 2.9;
+// 이 간격 안의 두 번째 탭 = 더블탭(줌). 한 번 탭(방문)은 이만큼 기다렸다 실행.
+const DOUBLE_TAP_MS = 260;
 
 // Demo layout mirrors the adapter's default fill: my room bottom-left, others
 // in join order, vacant capacity seats on the top floor (정원 6 / 멤버 4).
@@ -519,33 +530,74 @@ export function GroupHouseScreen({
   const panAnchor = useRef({ x: 0, y: 0, tx: 0, ty: 0 });
   const camTouchCount = useRef(0);
 
-  const setCam = (scale: number, tx: number, ty: number) => {
+  // 기본 카메라 = 방 4칸 클로즈업 (#307). 원배율(1×)은 지붕·마당까지 보이는
+  // 축소 뷰로, 핀치 아웃으로만 진입한다.
+  const camDefault = () => ({
+    scale: CAM_DEFAULT_SCALE,
+    tx: 0,
+    ty: -(CAM_WINDOW_CENTER_Y - 0.5) * frameSize.current.h * CAM_DEFAULT_SCALE,
+  });
+  const clampCam = (scale: number, tx: number, ty: number) => {
     const { w, h } = frameSize.current;
-    const s = Math.min(2.5, Math.max(1, scale));
+    const s = Math.min(CAM_MAX_SCALE, Math.max(1, scale));
     // 팬은 프레임 경계까지 — translate는 스케일 바깥(화면 px) 기준.
     const maxTx = ((s - 1) * w) / 2;
     const maxTy = ((s - 1) * h) / 2;
-    const nx = Math.min(maxTx, Math.max(-maxTx, tx));
-    const ny = Math.min(maxTy, Math.max(-maxTy, ty));
-    cam.current = { scale: s, tx: nx, ty: ny };
-    camScale.setValue(s);
-    camTx.setValue(nx);
-    camTy.setValue(ny);
-    const isZoomed = s > 1.001;
-    if (isZoomed !== zoomedRef.current) {
-      zoomedRef.current = isZoomed;
-      setZoomed(isZoomed);
+    return {
+      scale: s,
+      tx: Math.min(maxTx, Math.max(-maxTx, tx)),
+      ty: Math.min(maxTy, Math.max(-maxTy, ty)),
+    };
+  };
+  // ⟲ 리셋·팬·드래그 게이트는 "기본 프리셋에서 벗어났는가"로 판단한다.
+  const isCamAway = (c: { scale: number; tx: number; ty: number }) => {
+    const d = camDefault();
+    return (
+      Math.abs(c.scale - d.scale) > 0.04 || Math.abs(c.tx - d.tx) > 6 || Math.abs(c.ty - d.ty) > 6
+    );
+  };
+  const syncZoomed = () => {
+    const away = isCamAway(cam.current);
+    if (away !== zoomedRef.current) {
+      zoomedRef.current = away;
+      setZoomed(away);
     }
   };
-  const resetCam = () => {
-    cam.current = { scale: 1, tx: 0, ty: 0 };
-    zoomedRef.current = false;
-    setZoomed(false);
+  const setCam = (scale: number, tx: number, ty: number) => {
+    const c = clampCam(scale, tx, ty);
+    cam.current = c;
+    camScale.setValue(c.scale);
+    camTx.setValue(c.tx);
+    camTy.setValue(c.ty);
+    syncZoomed();
+  };
+  const animateCamTo = (scale: number, tx: number, ty: number) => {
+    const c = clampCam(scale, tx, ty);
+    cam.current = c;
+    syncZoomed();
     Animated.parallel([
-      Animated.spring(camScale, { toValue: 1, useNativeDriver: false }),
-      Animated.spring(camTx, { toValue: 0, useNativeDriver: false }),
-      Animated.spring(camTy, { toValue: 0, useNativeDriver: false }),
+      Animated.spring(camScale, { toValue: c.scale, useNativeDriver: false }),
+      Animated.spring(camTx, { toValue: c.tx, useNativeDriver: false }),
+      Animated.spring(camTy, { toValue: c.ty, useNativeDriver: false }),
     ]).start();
+  };
+  const resetCam = () => {
+    const d = camDefault();
+    animateCamTo(d.scale, d.tx, d.ty);
+  };
+  // 더블탭 줌 — 그 방의 창문이 카메라 뷰포트를 거의 가득 채우게 (#307).
+  const zoomToSeat = (seatIdx: number) => {
+    const slot = windowSlots.indexOf(seatIdx);
+    const { w, h } = frameSize.current;
+    if (slot < 0 || !w) return;
+    const rect = WINDOW_RECTS[slot];
+    const cx = (parseFloat(rect.left) + parseFloat(rect.width) / 2) / 100;
+    const cy = (parseFloat(rect.top) + parseFloat(rect.height) / 2) / 100;
+    animateCamTo(
+      CAM_ROOM_SCALE,
+      -CAM_ROOM_SCALE * (cx - 0.5) * w,
+      -CAM_ROOM_SCALE * (cy - 0.5) * h,
+    );
   };
   const anchorCamera = (evt: { nativeEvent: { touches: { pageX: number; pageY: number }[] } }) => {
     const ts = evt.nativeEvent.touches;
@@ -599,8 +651,8 @@ export function GroupHouseScreen({
       },
       onPanResponderRelease: () => {
         camTouchCount.current = 0;
-        // 거의 원배율이면 원위치로 스냅.
-        if (cam.current.scale < 1.05) resetCam();
+        // 거의 원배율(축소 조망)이면 딱 1×로 스냅 — 기본(방 뷰) 복귀는 ⟲로.
+        if (cam.current.scale < 1.05) animateCamTo(1, 0, 0);
       },
       onPanResponderTerminate: () => {
         camTouchCount.current = 0;
@@ -726,6 +778,18 @@ export function GroupHouseScreen({
 
   // No houses yet (fresh account) → guide to 집 탐색 instead of crashing on
   // an empty switcher.
+  // 창문 타일 탭 판정 (#307): 한 번 탭 = 방문(더블탭 간격만큼 지연 실행),
+  // 더블탭 = 그 방으로 카메라 줌인. 그리드 타일(프레임 밖)은 기존 즉시 방문.
+  // (훅이라 조건부 return들보다 앞에 있어야 한다.)
+  const pendingVisit = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSeatTap = useRef({ seatIdx: -1, at: 0 });
+  useEffect(
+    () => () => {
+      if (pendingVisit.current) clearTimeout(pendingVisit.current);
+    },
+    [],
+  );
+
   if (!currentHouse) {
     return (
       <View style={[styles.screen, screenStyle]}>
@@ -1148,6 +1212,32 @@ export function GroupHouseScreen({
 
   // 좌석 타일 — 프레임 창문(#287)과 평면 그리드가 같은 타일을 공유한다.
   // fill=true(창문)면 슬롯을 가득 채우고, 아니면 반칸 정사각형.
+  const visitSeat = (room: RoomCell) => {
+    if (room.isMine) return onVisitMyRoom?.();
+    onVisitFriend?.({
+      name: room.name,
+      userId: room.userId,
+      houseId: currentHouse?.houseId,
+      membershipId: room.membershipId,
+    });
+  };
+  const onSeatPress = (room: RoomCell, seatIdx: number, inWindow: boolean) => {
+    if (!inWindow) return visitSeat(room);
+    const now = Date.now();
+    const isDouble =
+      lastSeatTap.current.seatIdx === seatIdx && now - lastSeatTap.current.at < DOUBLE_TAP_MS;
+    lastSeatTap.current = { seatIdx: isDouble ? -1 : seatIdx, at: now };
+    if (pendingVisit.current) {
+      clearTimeout(pendingVisit.current);
+      pendingVisit.current = null;
+    }
+    if (isDouble) return zoomToSeat(seatIdx);
+    pendingVisit.current = setTimeout(() => {
+      pendingVisit.current = null;
+      visitSeat(room);
+    }, DOUBLE_TAP_MS);
+  };
+
   const renderSeatTile = (room: RoomCell, seatIdx: number, fill = false) => {
     const dragging = dragSeat === seatIdx;
     const empty = room.vacant || isKicked(room.name);
@@ -1169,25 +1259,20 @@ export function GroupHouseScreen({
           },
         ]}>
         <Pressable
-          onPress={() =>
-            empty
-              ? undefined
-              : room.isMine
-                ? onVisitMyRoom?.()
-                : onVisitFriend?.({
-                    name: room.name,
-                    userId: room.userId,
-                    houseId: currentHouse?.houseId,
-                    membershipId: room.membershipId,
-                  })
-          }
+          onPress={empty ? undefined : () => onSeatPress(room, seatIdx, fill)}
           onLongPress={empty || zoomed ? undefined : () => startDrag(seatIdx)}
           delayLongPress={220}
           onPressOut={onTilePressOut}
           disabled={empty}
           accessibilityRole="button"
           accessibilityLabel={room.isMine ? `${room.name} (나)` : room.name}
-          accessibilityHint={empty ? undefined : '길게 눌러 자리 옮기기'}
+          accessibilityHint={
+            empty
+              ? undefined
+              : fill
+                ? '두 번 탭해 확대, 길게 눌러 자리 옮기기'
+                : '길게 눌러 자리 옮기기'
+          }
           style={[
             fill ? styles.roomCellFill : styles.roomCell,
             {
@@ -1356,15 +1441,29 @@ export function GroupHouseScreen({
                 style={{
                   transform: [{ translateX: camTx }, { translateY: camTy }, { scale: camScale }],
                 }}>
-                <View
-                  style={styles.frameWrap}
-                  {...gridPanResponder.panHandlers}
-                  onLayout={(e) => {
-                    frameSize.current = {
-                      w: e.nativeEvent.layout.width,
-                      h: e.nativeEvent.layout.height,
-                    };
-                  }}>
+                <View style={styles.frameWrap} {...gridPanResponder.panHandlers}>
+                  {/* 프레임 측정용 — 반응자 프롭이 있는 부모에는 테스트에서
+                      layout 이벤트가 닿지 않아 absolute-fill 형제로 잰다. */}
+                  <View
+                    testID="frame-camera"
+                    pointerEvents="none"
+                    style={StyleSheet.absoluteFill}
+                    onLayout={(e) => {
+                      const first = frameSize.current.w === 0;
+                      frameSize.current = {
+                        w: e.nativeEvent.layout.width,
+                        h: e.nativeEvent.layout.height,
+                      };
+                      // 첫 레이아웃에 기본 카메라(방 4칸 클로즈업)를 즉시 적용 (#307).
+                      if (first) {
+                        const d = camDefault();
+                        cam.current = d;
+                        camScale.setValue(d.scale);
+                        camTx.setValue(d.tx);
+                        camTy.setValue(d.ty);
+                      }
+                    }}
+                  />
                   {/* 창문 뒤 좌석 — 프레임 PNG의 투명 창문으로 방이 보인다. */}
                   {WINDOW_RECTS.map((rect, w) => {
                     const seatIdx = windowSlots[w];
