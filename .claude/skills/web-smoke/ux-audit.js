@@ -135,7 +135,7 @@ async function runConfig(browser, cfg) {
     ['house-search', async () => tapLabel('집 탐색'), '초대코드로 들어가기'],
     ['settings', async () => { await tapLabel('뒤로 가기'); await tapLabel('설정'); }, '온보딩 다시 보기'], // prettier-ignore
     ['decor', async () => { await tapLabel('나의 방'); await tapLabel('메뉴'); await page.getByLabel('방 꾸미기', { exact: true }).first().click(); }, '적용하기'], // prettier-ignore
-    ['gacha', async () => { await tapLabel('뒤로가기'); await tapLabel('뽑기 상점'); }, '가챠'], // prettier-ignore
+    ['gacha', async () => { await tapLabel('뒤로가기'); await tapLabel('뽑기 상점'); }, '가구 뽑기'], // prettier-ignore
   ];
 
   const perScreen = {};
