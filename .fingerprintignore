@@ -1,0 +1,7 @@
+# CNG(managed) — ios/android는 prebuild 산출물이라 지문에서 제외.
+# EAS 워커가 prebuild 후 지문을 재계산할 때 로컬(디렉토리 없음)과 어긋나는 문제 방지.
+ios/**/*
+android/**/*
+# pod install이 각 라이브러리에 생성하는 autolinking patch — @expo/fingerprint 0.19+의
+# 기본 제외 규칙을 SDK 55(0.16.x)에 백포트 (expo/expo#34005 계열 mismatch 수정).
+**/node_modules/**/*.podspec.json
