@@ -37,9 +37,9 @@ describe('GroupHouseScreen', () => {
     // The demo owner's tile carries the 방장 crown.
     expect(getByText('최준서')).toBeTruthy();
     // 공동 미션은 플로팅 버튼 → 시트로 (#287).
-    expect(queryByText('우리 그룹의 미션')).toBeNull();
+    expect(queryByText('우리 집의 목표')).toBeNull();
     await fireEvent.press(getByLabelText('공동 미션'));
-    expect(getByText('우리 그룹의 미션')).toBeTruthy();
+    expect(getByText('우리 집의 목표')).toBeTruthy();
     expect(getByText('이번 주 다같이 루틴 지키기')).toBeTruthy();
   });
 
