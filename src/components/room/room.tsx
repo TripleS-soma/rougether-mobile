@@ -70,6 +70,12 @@ export type RoomProps = {
   onRegionPress?: (region: RoomRegion) => void;
   /** Region whose picker is open — ring-highlighted. */
   activeRegion?: RoomRegion | null;
+  /**
+   * 부모 크기를 그대로 채운다 — 정사각형(aspectRatio 1) 강제 해제. 프레임
+   * 창문처럼 정사각형이 아닌 칸에 쓴다. 네이티브 Yoga는 width/height보다
+   * aspectRatio를 우선해 정사각형이 칸을 벗어난다.
+   */
+  fill?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -94,6 +100,7 @@ export function Room({
   editable = false,
   onRegionPress,
   activeRegion = null,
+  fill = false,
   style,
 }: RoomProps) {
   const t = useTokens();
@@ -105,7 +112,12 @@ export function Room({
   const [pose, setPose] = useState(0);
 
   return (
-    <View style={[styles.room, { backgroundColor: wallpaper?.color ?? '#F3E9D6' }, style]}>
+    <View
+      style={[
+        fill ? styles.roomFill : styles.room,
+        { backgroundColor: wallpaper?.color ?? '#F3E9D6' },
+        style,
+      ]}>
       {background ? (
         isCdnKey(background.assetKey) ? (
           <Image
@@ -238,6 +250,12 @@ export function Room({
 }
 
 const styles = StyleSheet.create({
+  roomFill: {
+    width: '100%',
+    height: '100%',
+    borderRadius: Radius.lg,
+    overflow: 'hidden',
+  },
   room: {
     width: '100%',
     aspectRatio: 1,
