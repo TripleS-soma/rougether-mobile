@@ -2,12 +2,12 @@ import { Image } from 'expo-image';
 import { useState } from 'react';
 import { Pressable, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 
-import { CharacterAvatar, type CharacterAnimationSet } from '@/components/character-avatar';
+import { type CharacterAnimationSet, CharacterAvatar } from '@/components/character-avatar';
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Radius } from '@/constants/theme';
-import { assetSource, isCdnKey } from '@/resources/asset';
 import { useTokens } from '@/hooks/use-tokens';
+import { assetSource, isCdnKey } from '@/resources/asset';
 import {
   DEFAULT_PLACED_FURNITURE_IDS,
   DEFAULT_WALLPAPER_ID,
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
   roomFill: {
     width: '100%',
     height: '100%',
-    borderRadius: Radius.lg,
+    borderRadius: Radius.sm,
     overflow: 'hidden',
   },
   room: {
