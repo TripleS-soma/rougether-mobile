@@ -39,6 +39,7 @@ import {
 import { Icon, type IconName } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { captureVerificationPhoto } from '@/lib/photo-verify';
+import { saveRoomImage } from '@/lib/room-capture';
 import { DEFAULT_WALLPAPER_ID, type FurnitureItem, type Wallpaper } from '@/resources/furniture';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
@@ -409,6 +410,16 @@ export function MyRoomScreen({
       })()
     : undefined;
 
+  // 방 뷰 캡처 대상 (#245) — 갤러리 저장은 네이티브 전용.
+  const roomShotRef = useRef<View>(null);
+  const onSaveRoomImage = async () => {
+    const result = await saveRoomImage(roomShotRef);
+    if (result === 'saved') toast('방 이미지를 갤러리에 저장했어요', 'success');
+    else if (result === 'denied') toast('사진 접근 권한을 허용해주세요', 'error');
+    else if (result === 'unsupported') toast('웹에서는 이미지 저장을 지원하지 않아요', 'error');
+    else toast('이미지 저장에 실패했어요', 'error');
+  };
+
   // Scroll the tapped category's quick-add input into view (above the keyboard).
   const scrollRef = useRef<ScrollView>(null);
   const addRowRef = useRef<View>(null);
@@ -614,7 +625,7 @@ export function MyRoomScreen({
           keyboardShouldPersistTaps="handled">
           {tab === 'room' ? (
             <>
-              <View style={styles.roomWrap}>
+              <View style={styles.roomWrap} ref={roomShotRef} collapsable={false}>
                 <Room
                   characterId={characterId}
                   characterAnimations={characterAnimations}
@@ -1279,6 +1290,11 @@ export function MyRoomScreen({
                   icon: 'edit' as const,
                   label: '방 꾸미기',
                   onPress: () => onEdit?.(),
+                },
+                {
+                  icon: 'camera' as const,
+                  label: '방 이미지 저장',
+                  onPress: () => void onSaveRoomImage(),
                 },
                 {
                   icon: 'folder' as const,

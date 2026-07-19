@@ -165,6 +165,18 @@ describe('MyRoomScreen', () => {
     expect(getByLabelText('취미 할 일 추가')).toBeTruthy();
   });
 
+  it('saves the room image from the hamburger menu (#245)', async () => {
+    const { getByLabelText, getByText } = await render(
+      <ToastProvider>
+        <MyRoomScreen routines={[]} />
+      </ToastProvider>,
+    );
+    await fireEvent.press(getByLabelText('메뉴'));
+    await fireEvent.press(getByText('방 이미지 저장'));
+    // jest 목: 권한 허용 + 캡처 성공 → 성공 토스트.
+    await waitFor(() => expect(getByText('방 이미지를 갤러리에 저장했어요')).toBeTruthy());
+  });
+
   it('opens the hamburger menu and routes each item', async () => {
     const onEdit = jest.fn();
     const onAddRoutine = jest.fn();

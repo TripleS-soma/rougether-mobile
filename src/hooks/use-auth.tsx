@@ -1,6 +1,7 @@
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 
 import { devLogin, loadSession, logout as apiLogout, onSessionCleared } from '@/api';
+import { clearPushToken, syncPushToken } from '@/lib/push-token';
 
 type AuthStatus = 'loading' | 'authed' | 'guest';
 
@@ -42,12 +43,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           await devLogin(userId);
           setStatus('authed');
+          // 푸시 토큰 등록(#250)은 백그라운드로 — 실패해도 로그인은 막지 않는다.
+          void syncPushToken();
           return true;
         } catch {
           return false;
         }
       },
       logout: async () => {
+        // 이 기기로 오는 푸시를 먼저 끊고 세션을 정리한다 (#250).
+        await clearPushToken();
         await apiLogout();
         setStatus('guest');
       },
