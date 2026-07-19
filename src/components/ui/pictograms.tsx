@@ -4,6 +4,10 @@
  * so they follow theme switches and dark mode — emoji never could. Single-tone
  * marks accept a `color` override for use on colored surfaces (e.g. a filled
  * button); the multi-tone ones ignore it.
+ *
+ * Category-pickable icons (#318) use a chunky "sticker" fill: solid silhouette
+ * in the given color with fixed #FFFFFF details. The white is deliberate — it
+ * stays white in dark mode so the marks keep reading as stickers, not chrome.
  */
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
@@ -174,11 +178,13 @@ export function SparklePictogram({ size = 24, color }: PictogramProps) {
   const c = color ?? t.warning;
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 3 Q13 9.4 19.4 10.5 Q13 11.6 12 18 Q11 11.6 4.6 10.5 Q11 9.4 12 3 Z" fill={c} />
       <Path
-        d="M18.6 15.4 Q19 17.6 21.2 18 Q19 18.4 18.6 20.6 Q18.2 18.4 16 18 Q18.2 17.6 18.6 15.4 Z"
+        d="M12 2.6 Q13.4 9.2 20.6 10.4 Q13.4 11.6 12 18.2 Q10.6 11.6 3.4 10.4 Q10.6 9.2 12 2.6 Z"
         fill={c}
-        fillOpacity={0.7}
+      />
+      <Path
+        d="M18.4 15 Q18.9 17.7 21.6 18.2 Q18.9 18.7 18.4 21.4 Q17.9 18.7 15.2 18.2 Q17.9 17.7 18.4 15 Z"
+        fill={c}
       />
     </Svg>
   );
@@ -213,12 +219,11 @@ function CalendarPictogram({ size = 24, color }: PictogramProps) {
   const c = color ?? t.primary;
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Rect x={4} y={5.6} width={16} height={14.4} rx={2.4} stroke={c} strokeWidth={2} />
-      <Path d="M4.6 10 L19.4 10" stroke={c} strokeWidth={2} />
-      <Path d="M8.4 3.4 V7" stroke={c} strokeWidth={2} strokeLinecap="round" />
-      <Path d="M15.6 3.4 V7" stroke={c} strokeWidth={2} strokeLinecap="round" />
-      <Circle cx={9} cy={14} r={1.3} fill={c} />
-      <Circle cx={13.5} cy={14} r={1.3} fill={c} />
+      <Rect x={3.5} y={5} width={17} height={15.5} rx={4} fill={c} />
+      <Path d="M8 2.6 V6 M16 2.6 V6" stroke={c} strokeWidth={2.6} strokeLinecap="round" />
+      <Rect x={3.5} y={9.6} width={17} height={1.8} fill="#FFFFFF" fillOpacity={0.9} />
+      <Circle cx={9} cy={15.3} r={1.5} fill="#FFFFFF" />
+      <Circle cx={14} cy={15.3} r={1.5} fill="#FFFFFF" />
     </Svg>
   );
 }
@@ -229,20 +234,24 @@ function BookPictogram({ size = 24, color }: PictogramProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
-        d="M6 3.6 Q4.4 3.6 4.4 5.2 L4.4 18.4 Q4.4 20.4 6.4 20.4 L19.6 20.4 L19.6 17.4"
-        stroke={c}
-        strokeWidth={2}
-        strokeLinejoin="round"
-        fill="none"
+        d="M7.2 3.5 L18.5 3.5 Q20 3.5 20 5 L20 19 Q20 20.5 18.5 20.5 L7.2 20.5 Q4 20.5 4 17.3 L4 6.7 Q4 3.5 7.2 3.5 Z"
+        fill={c}
       />
       <Path
-        d="M7 3.6 L19.6 3.6 L19.6 17.2 L7 17.2 Q4.4 17.2 4.4 18.4"
-        stroke={c}
-        strokeWidth={2}
-        strokeLinejoin="round"
+        d="M4.6 17.3 Q5.4 15.8 7.6 15.8 L19.4 15.8"
+        stroke="#FFFFFF"
+        strokeWidth={1.8}
+        strokeLinecap="round"
         fill="none"
+        opacity={0.9}
       />
-      <Path d="M9.6 8 L15.6 8" stroke={c} strokeWidth={1.8} strokeLinecap="round" />
+      <Path
+        d="M9 8.4 L15.4 8.4"
+        stroke="#FFFFFF"
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        opacity={0.9}
+      />
     </Svg>
   );
 }
@@ -268,11 +277,11 @@ function DumbbellPictogram({ size = 24, color }: PictogramProps) {
   const c = color ?? t.danger;
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M8 12 L16 12" stroke={c} strokeWidth={2.4} />
-      <Rect x={4.6} y={7.6} width={3.2} height={8.8} rx={1.2} fill={c} />
-      <Rect x={16.2} y={7.6} width={3.2} height={8.8} rx={1.2} fill={c} />
-      <Rect x={2} y={9.6} width={2} height={4.8} rx={1} fill={c} fillOpacity={0.6} />
-      <Rect x={20} y={9.6} width={2} height={4.8} rx={1} fill={c} fillOpacity={0.6} />
+      <Rect x={8} y={10.4} width={8} height={3.2} rx={1.6} fill={c} />
+      <Rect x={4.8} y={6.8} width={4} height={10.4} rx={2} fill={c} />
+      <Rect x={15.2} y={6.8} width={4} height={10.4} rx={2} fill={c} />
+      <Rect x={1.8} y={9.2} width={2.4} height={5.6} rx={1.2} fill={c} />
+      <Rect x={19.8} y={9.2} width={2.4} height={5.6} rx={1.2} fill={c} />
     </Svg>
   );
 }
@@ -283,13 +292,12 @@ function PalettePictogram({ size = 24, color }: PictogramProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
-        d="M12 3.6 Q20.4 3.6 20.4 11 Q20.4 15.4 16.4 15.4 L14 15.4 Q12.6 15.4 12.6 16.8 Q12.6 17.6 13.2 18.2 Q13.8 20.4 11.6 20.4 Q3.6 19.6 3.6 12 Q3.6 3.6 12 3.6 Z"
-        stroke={c}
-        strokeWidth={2}
+        d="M12 3.4 Q20.6 3.4 20.6 10.9 Q20.6 15.4 16.3 15.4 L14.3 15.4 Q13 15.4 13 16.7 Q13 17.5 13.6 18.2 Q14.2 20.6 11.7 20.6 Q3.4 19.8 3.4 12 Q3.4 3.4 12 3.4 Z"
+        fill={c}
       />
-      <Circle cx={8.6} cy={9} r={1.4} fill={color ?? t.danger} />
-      <Circle cx={13.4} cy={7.6} r={1.4} fill={color ?? t.warning} />
-      <Circle cx={7.6} cy={13.6} r={1.4} fill={color ?? t.primary} />
+      <Circle cx={8.6} cy={9} r={1.5} fill="#FFFFFF" />
+      <Circle cx={13.6} cy={7.6} r={1.5} fill="#FFFFFF" />
+      <Circle cx={7.6} cy={13.6} r={1.5} fill="#FFFFFF" />
     </Svg>
   );
 }
@@ -320,25 +328,25 @@ function RunPictogram({ size = 24, color }: PictogramProps) {
   const c = color ?? t.success;
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx={14.6} cy={5.4} r={2.2} fill={c} />
+      <Circle cx={14.6} cy={5.4} r={2.4} fill={c} />
       <Path
         d="M8.2 9.6 L12.6 8.4 L15 12 L18.6 13"
         stroke={c}
-        strokeWidth={2.2}
+        strokeWidth={2.6}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <Path
         d="M12.6 8.4 L11 13.6 L14 16.4 L13 20.4"
         stroke={c}
-        strokeWidth={2.2}
+        strokeWidth={2.6}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <Path
         d="M11 13.6 L7.6 15.6 L5.4 19"
         stroke={c}
-        strokeWidth={2.2}
+        strokeWidth={2.6}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -354,11 +362,11 @@ function MusicPictogram({ size = 24, color }: PictogramProps) {
       <Path
         d="M9.4 17.4 L9.4 5.4 L18.6 3.6 L18.6 15.6"
         stroke={c}
-        strokeWidth={2}
+        strokeWidth={2.4}
         strokeLinejoin="round"
       />
-      <Circle cx={6.8} cy={17.6} r={2.8} fill={c} />
-      <Circle cx={16} cy={15.8} r={2.8} fill={c} />
+      <Circle cx={6.8} cy={17.6} r={2.9} fill={c} />
+      <Circle cx={16} cy={15.8} r={2.9} fill={c} />
     </Svg>
   );
 }
@@ -368,9 +376,9 @@ function CookingPictogram({ size = 24, color }: PictogramProps) {
   const c = color ?? t.warning;
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx={10} cy={13.6} r={6.4} stroke={c} strokeWidth={2} />
-      <Circle cx={10} cy={13.6} r={2.2} fill={c} fillOpacity={0.5} />
-      <Path d="M16 9.4 L21 4.4" stroke={c} strokeWidth={2.2} strokeLinecap="round" />
+      <Circle cx={10} cy={13.6} r={6.6} fill={c} />
+      <Circle cx={10} cy={13.6} r={2.8} fill="#FFFFFF" fillOpacity={0.9} />
+      <Path d="M15.8 9.2 L21 4.2" stroke={c} strokeWidth={2.8} strokeLinecap="round" />
     </Svg>
   );
 }
@@ -393,9 +401,10 @@ function BriefcasePictogram({ size = 24, color }: PictogramProps) {
   const c = color ?? t.icon;
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Rect x={3.6} y={7.6} width={16.8} height={12} rx={2.4} stroke={c} strokeWidth={2} />
-      <Path d="M9 7.2 Q9 4.4 12 4.4 Q15 4.4 15 7.2" stroke={c} strokeWidth={2} />
-      <Path d="M3.8 12.4 L20.2 12.4" stroke={c} strokeWidth={1.8} />
+      <Rect x={3.4} y={7.4} width={17.2} height={12.4} rx={2.8} fill={c} />
+      <Path d="M9 7 Q9 4.2 12 4.2 Q15 4.2 15 7" stroke={c} strokeWidth={2.2} fill="none" />
+      <Path d="M3.6 12.4 L20.4 12.4" stroke="#FFFFFF" strokeWidth={1.8} opacity={0.9} />
+      <Rect x={10.6} y={11.2} width={2.8} height={2.4} rx={0.8} fill="#FFFFFF" />
     </Svg>
   );
 }
@@ -482,24 +491,27 @@ function CoffeePictogram({ size = 24, color }: PictogramProps) {
   const c = color ?? t.icon;
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M4.4 9 L16.4 9 L16.4 15 Q16.4 19.8 10.4 19.8 Q4.4 19.8 4.4 15 Z" fill={c} />
       <Path
-        d="M4.4 9.4 L16.4 9.4 L16.4 15.4 Q16.4 19.6 10.4 19.6 Q4.4 19.6 4.4 15.4 Z"
+        d="M16.6 10.8 Q20.4 10.8 20.4 13.4 Q20.4 16 16.4 15.8"
         stroke={c}
-        strokeWidth={2}
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M16.6 11 Q20.2 11 20.2 13.4 Q20.2 15.8 16.4 15.6"
-        stroke={c}
-        strokeWidth={2}
+        strokeWidth={2.2}
         fill="none"
       />
       <Path
-        d="M8.4 4 Q9.4 5.4 8.4 6.8 M12.4 4 Q13.4 5.4 12.4 6.8"
+        d="M8.4 3.6 Q9.4 5 8.4 6.4 M12.4 3.6 Q13.4 5 12.4 6.4"
         stroke={c}
+        strokeWidth={2}
+        strokeLinecap="round"
+        fill="none"
+      />
+      <Path
+        d="M7.2 12 Q7.2 15.4 9.6 16.6"
+        stroke="#FFFFFF"
         strokeWidth={1.6}
         strokeLinecap="round"
         fill="none"
+        opacity={0.85}
       />
     </Svg>
   );
