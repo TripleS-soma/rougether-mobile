@@ -699,6 +699,9 @@ export function GroupHouseScreen({
   // Leaving needs the server house id; the server rejects an OWNER's leave
   // until ownership is transferred, so the owner sees guidance instead.
   const canLeave = !!(onLeaveHouse && currentHouse?.houseId);
+  // 혼자 남은 방장은 위임 상대가 없어 바로 탈퇴할 수 있고, 마지막 구성원이
+  // 나가면 집이 정리된다(서버 계약) — 버튼을 '집 삭제'로 정직하게 표기 (#309).
+  const isLoneOwner = isOwner && members.filter((m) => !isKicked(m.name)).length <= 1;
   const confirmLeave = () => {
     if (currentHouse?.houseId) onLeaveHouse?.(currentHouse.houseId);
     setShowLeaveConfirm(false);
@@ -893,7 +896,7 @@ export function GroupHouseScreen({
 
           {canLeave ? (
             <View style={styles.leaveWrap}>
-              {isOwner ? (
+              {isOwner && !isLoneOwner ? (
                 <Text style={[Typography.supporting, styles.leaveHint, { color: t.textMuted }]}>
                   방장은 다른 멤버에게 방장을 위임한 뒤 나갈 수 있어요.
                 </Text>
@@ -901,10 +904,12 @@ export function GroupHouseScreen({
                 <Pressable
                   onPress={() => setShowLeaveConfirm(true)}
                   accessibilityRole="button"
-                  accessibilityLabel="집 나가기"
+                  accessibilityLabel={isLoneOwner ? '집 삭제' : '집 나가기'}
                   style={[styles.leaveBtn, { backgroundColor: `${t.danger}22` }]}>
                   <DoorPictogram size={14} />
-                  <Text style={[Typography.label, { color: t.danger }]}>집 나가기</Text>
+                  <Text style={[Typography.label, { color: t.danger }]}>
+                    {isLoneOwner ? '집 삭제' : '집 나가기'}
+                  </Text>
                 </Pressable>
               )}
             </View>
@@ -944,9 +949,13 @@ export function GroupHouseScreen({
         {showLeaveConfirm ? (
           <View style={styles.modalOverlay}>
             <View style={[styles.modal, { backgroundColor: t.surface }]}>
-              <Text style={[Typography.h3, { color: t.text }]}>집에서 나갈까요?</Text>
+              <Text style={[Typography.h3, { color: t.text }]}>
+                {isLoneOwner ? '집을 삭제할까요?' : '집에서 나갈까요?'}
+              </Text>
               <Text style={[Typography.body, styles.modalBody, { color: t.textMuted }]}>
-                나가면 이 집에 다시 참여할 수 없어요. 기여 기록은 유지됩니다.
+                {isLoneOwner
+                  ? `혼자 남은 집이라 나가면 '${currentHouse?.title}' 집이 삭제되고 탐색·조회에서 사라져요.`
+                  : '나가도 기여 기록은 유지되고, 초대를 받아 다시 참여하면 이전 기록이 복원돼요.'}
               </Text>
               <View style={styles.modalActions}>
                 <Pressable
@@ -959,9 +968,11 @@ export function GroupHouseScreen({
                 <Pressable
                   onPress={confirmLeave}
                   accessibilityRole="button"
-                  accessibilityLabel="나가기 확인"
+                  accessibilityLabel={isLoneOwner ? '집 삭제 확인' : '나가기 확인'}
                   style={[styles.modalBtn, { backgroundColor: t.danger }]}>
-                  <Text style={[Typography.label, { color: t.onPrimary }]}>나가기</Text>
+                  <Text style={[Typography.label, { color: t.onPrimary }]}>
+                    {isLoneOwner ? '삭제' : '나가기'}
+                  </Text>
                 </Pressable>
               </View>
             </View>
