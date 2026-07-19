@@ -94,6 +94,9 @@ function ToastView({
   const t = useTokens();
   const insets = useContext(SafeAreaInsetsContext);
   const bg = toast.type === 'error' ? t.danger : toast.type === 'success' ? t.success : t.text;
+  // 기본(무타입) 토스트는 중립 반전 배경(t.text) — onPrimary(짙은 잉크)를 쓰면
+  // 라이트 모드에서 어두운 배경 위 어두운 글자가 된다. 반전 잉크는 surface.
+  const ink = toast.type === 'error' || toast.type === 'success' ? t.onPrimary : t.surface;
 
   return (
     <Animated.View
@@ -111,7 +114,7 @@ function ToastView({
         },
       ]}>
       <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel="알림 닫기">
-        <Text style={[Typography.label, styles.text, { color: t.onPrimary }]} numberOfLines={2}>
+        <Text style={[Typography.label, styles.text, { color: ink }]} numberOfLines={2}>
           {toast.message}
         </Text>
       </Pressable>
