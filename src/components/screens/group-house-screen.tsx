@@ -85,7 +85,7 @@ export type House = {
   level?: number;
   /** Accumulated growth points — 레벨 진행도(100pt/레벨) 표시용. */
   growthPoints?: number;
-  /** Group missions shown in the "우리 그룹의 미션" card. */
+  /** Group missions shown in the "우리 집의 목표" card. */
   missions?: HouseMission[];
   /** House intro + capacity — prefill for the owner's edit form. */
   description?: string;
@@ -1368,7 +1368,7 @@ export function GroupHouseScreen({
             <View style={styles.missionHead}>
               <View style={[styles.flex, styles.missionTitleRow]}>
                 <TargetPictogram size={18} />
-                <Text style={[Typography.h3, { color: t.text }]}>우리 그룹의 미션</Text>
+                <Text style={[Typography.h3, { color: t.text }]}>우리 집의 목표</Text>
               </View>
               {canCreateMission ? (
                 <Pressable
