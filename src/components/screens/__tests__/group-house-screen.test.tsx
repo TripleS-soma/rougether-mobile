@@ -471,6 +471,36 @@ describe('GroupHouseScreen', () => {
     expect(getByText('방장은 다른 멤버에게 방장을 위임한 뒤 나갈 수 있어요.')).toBeTruthy();
   });
 
+  it('lets a lone owner delete the house through leave (#309)', async () => {
+    const onLeaveHouse = jest.fn();
+    // 활성 멤버가 나뿐인 집 — 위임 상대가 없다.
+    const loneHouse: House = {
+      ...MISSION_HOUSE,
+      memberCount: 1,
+      floors: [
+        {
+          level: '1층',
+          rooms: [
+            { name: '나', color: '#E8E0D0', isMine: true, membershipId: 43 },
+            { name: '빈방', color: 'transparent', vacant: true },
+          ],
+        },
+      ],
+    };
+    const { getByText, getByLabelText, queryByText } = await render(
+      <GroupHouseScreen houses={[loneHouse]} onLeaveHouse={onLeaveHouse} />,
+    );
+    await fireEvent.press(getByLabelText('구성원 목록'));
+    // 위임 안내 대신 집 삭제 버튼.
+    expect(queryByText('방장은 다른 멤버에게 방장을 위임한 뒤 나갈 수 있어요.')).toBeNull();
+    await fireEvent.press(getByLabelText('집 삭제'));
+    // 삭제 경고 문구 — 집이 정리되어 탐색·조회에서 사라진다.
+    expect(getByText('집을 삭제할까요?')).toBeTruthy();
+    expect(getByText(/삭제되고 탐색·조회에서 사라져요/)).toBeTruthy();
+    await fireEvent.press(getByLabelText('집 삭제 확인'));
+    expect(onLeaveHouse).toHaveBeenCalledWith(7);
+  });
+
   it('visits a friend room and my room on tap', async () => {
     const onVisitFriend = jest.fn();
     const onVisitMyRoom = jest.fn();
