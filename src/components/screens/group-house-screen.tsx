@@ -12,7 +12,6 @@ import {
   View,
 } from 'react-native';
 
-import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { CharacterAvatar } from '@/components/character-avatar';
 import { type HouseCover, HouseCoverPicker } from '@/components/house-cover-picker';
 import { Room } from '@/components/room/room';
@@ -27,13 +26,14 @@ import {
   type PictogramName,
   TargetPictogram,
 } from '@/components/ui/pictograms';
-import { Radius, Spacing, Typography } from '@/constants/theme';
-import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { useToast } from '@/components/ui/toast';
+import { ToggleSwitch } from '@/components/ui/toggle-switch';
+import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
+import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
-import type { FurnitureItem, Wallpaper } from '@/resources/furniture';
 import { assetSource, isCdnKey } from '@/resources/asset';
+import type { FurnitureItem, Wallpaper } from '@/resources/furniture';
 import { formatDate, todayIso, toIsoDate } from '@/utils/datetime';
 
 /**
@@ -165,10 +165,10 @@ const VACANT_FLOOR: Wallpaper[] = [
 // 4칸 — 알파 채널 측정값 (#287). 좌상·우상·좌하·우하 순.
 const FRAME_ASPECT = 567 / 508;
 const WINDOW_RECTS = [
-  { left: '15.7%', top: '25.4%', width: '30%', height: '28.3%' },
-  { left: '54.3%', top: '25.4%', width: '30%', height: '28.3%' },
-  { left: '15.7%', top: '59.1%', width: '30%', height: '28.3%' },
-  { left: '54.3%', top: '59.1%', width: '30%', height: '28.3%' },
+  { left: '12.7%', top: '25.4%', width: '35%', height: '30%' },
+  { left: '51.3%', top: '25.4%', width: '35%', height: '30%' },
+  { left: '12.7%', top: '59.1%', width: '35%', height: '30%' },
+  { left: '51.3%', top: '59.1%', width: '35%', height: '30%' },
 ] as const;
 
 // Demo layout mirrors the adapter's default fill: my room bottom-left, others
@@ -1856,7 +1856,7 @@ const styles = StyleSheet.create({
   roomCell: {
     width: '100%',
     aspectRatio: 1,
-    borderRadius: Radius.lg,
+    borderRadius: Radius.sm,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -2070,7 +2070,7 @@ const styles = StyleSheet.create({
   roomCellFill: {
     width: '100%',
     height: '100%',
-    borderRadius: Radius.lg,
+    borderRadius: Radius.sm,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
