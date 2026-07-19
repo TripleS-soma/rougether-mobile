@@ -498,6 +498,110 @@ export function GroupHouseScreen({
       if (!dragGranted.current) endDrag();
     }, 80);
   };
+
+  // --- 프레임 카메라 (핀치줌·팬, #290) ---
+  // 두 손가락으로 확대(1×~2.5×), 확대 상태에서 한 손가락 팬. 확대 중에는
+  // 자리 교환 드래그를 끄고(좌표계 어긋남 방지) 탭 방문만 유지한다.
+  const [zoomed, setZoomed] = useState(false);
+  const zoomedRef = useRef(false);
+  const camScale = useRef(new Animated.Value(1)).current;
+  const camTx = useRef(new Animated.Value(0)).current;
+  const camTy = useRef(new Animated.Value(0)).current;
+  const cam = useRef({ scale: 1, tx: 0, ty: 0 });
+  const frameSize = useRef({ w: 0, h: 0 });
+  const pinchAnchor = useRef({ dist: 0, cx: 0, cy: 0, scale: 1, tx: 0, ty: 0 });
+  const panAnchor = useRef({ x: 0, y: 0, tx: 0, ty: 0 });
+  const camTouchCount = useRef(0);
+
+  const setCam = (scale: number, tx: number, ty: number) => {
+    const { w, h } = frameSize.current;
+    const s = Math.min(2.5, Math.max(1, scale));
+    // 팬은 프레임 경계까지 — translate는 스케일 바깥(화면 px) 기준.
+    const maxTx = ((s - 1) * w) / 2;
+    const maxTy = ((s - 1) * h) / 2;
+    const nx = Math.min(maxTx, Math.max(-maxTx, tx));
+    const ny = Math.min(maxTy, Math.max(-maxTy, ty));
+    cam.current = { scale: s, tx: nx, ty: ny };
+    camScale.setValue(s);
+    camTx.setValue(nx);
+    camTy.setValue(ny);
+    const isZoomed = s > 1.001;
+    if (isZoomed !== zoomedRef.current) {
+      zoomedRef.current = isZoomed;
+      setZoomed(isZoomed);
+    }
+  };
+  const resetCam = () => {
+    cam.current = { scale: 1, tx: 0, ty: 0 };
+    zoomedRef.current = false;
+    setZoomed(false);
+    Animated.parallel([
+      Animated.spring(camScale, { toValue: 1, useNativeDriver: false }),
+      Animated.spring(camTx, { toValue: 0, useNativeDriver: false }),
+      Animated.spring(camTy, { toValue: 0, useNativeDriver: false }),
+    ]).start();
+  };
+  const anchorCamera = (evt: { nativeEvent: { touches: { pageX: number; pageY: number }[] } }) => {
+    const ts = evt.nativeEvent.touches;
+    camTouchCount.current = ts.length;
+    if (ts.length >= 2) {
+      const dx = ts[0].pageX - ts[1].pageX;
+      const dy = ts[0].pageY - ts[1].pageY;
+      pinchAnchor.current = {
+        dist: Math.hypot(dx, dy),
+        cx: (ts[0].pageX + ts[1].pageX) / 2,
+        cy: (ts[0].pageY + ts[1].pageY) / 2,
+        scale: cam.current.scale,
+        tx: cam.current.tx,
+        ty: cam.current.ty,
+      };
+    } else if (ts.length === 1) {
+      panAnchor.current = {
+        x: ts[0].pageX,
+        y: ts[0].pageY,
+        tx: cam.current.tx,
+        ty: cam.current.ty,
+      };
+    }
+  };
+  const cameraResponder = useRef(
+    PanResponder.create({
+      // 두 손가락은 즉시, 한 손가락은 확대 상태에서만 (드래그 중엔 양보).
+      onStartShouldSetPanResponderCapture: (evt) => evt.nativeEvent.touches.length >= 2,
+      onMoveShouldSetPanResponderCapture: (evt) =>
+        dragSeatRef.current == null && (evt.nativeEvent.touches.length >= 2 || zoomedRef.current),
+      onPanResponderGrant: (evt) => anchorCamera(evt),
+      onPanResponderMove: (evt) => {
+        const ts = evt.nativeEvent.touches;
+        // 손가락 수가 바뀌면(2→1, 1→2) 기준점을 다시 잡는다.
+        if (ts.length !== camTouchCount.current) {
+          anchorCamera(evt);
+          return;
+        }
+        if (ts.length >= 2) {
+          const a = pinchAnchor.current;
+          if (a.dist === 0) return;
+          const dx = ts[0].pageX - ts[1].pageX;
+          const dy = ts[0].pageY - ts[1].pageY;
+          const cx = (ts[0].pageX + ts[1].pageX) / 2;
+          const cy = (ts[0].pageY + ts[1].pageY) / 2;
+          setCam(a.scale * (Math.hypot(dx, dy) / a.dist), a.tx + (cx - a.cx), a.ty + (cy - a.cy));
+        } else if (ts.length === 1 && zoomedRef.current) {
+          const a = panAnchor.current;
+          setCam(cam.current.scale, a.tx + (ts[0].pageX - a.x), a.ty + (ts[0].pageY - a.y));
+        }
+      },
+      onPanResponderRelease: () => {
+        camTouchCount.current = 0;
+        // 거의 원배율이면 원위치로 스냅.
+        if (cam.current.scale < 1.05) resetCam();
+      },
+      onPanResponderTerminate: () => {
+        camTouchCount.current = 0;
+      },
+    }),
+  ).current;
+
   // Owner tools need the OWNER role and a server house id.
   const isOwner = currentHouse?.myRole === 'OWNER' && !!currentHouse?.houseId;
   // Kick is server-side owner-only too; the demo (no houseId) keeps the local
@@ -1049,7 +1153,7 @@ export function GroupHouseScreen({
                     membershipId: room.membershipId,
                   })
           }
-          onLongPress={empty ? undefined : () => startDrag(seatIdx)}
+          onLongPress={empty || zoomed ? undefined : () => startDrag(seatIdx)}
           delayLongPress={220}
           onPressOut={onTilePressOut}
           disabled={empty}
@@ -1215,36 +1319,62 @@ export function GroupHouseScreen({
                 </Text>
               </View>
             </View>
-            <View style={styles.frameWrap} {...gridPanResponder.panHandlers}>
-              {/* 창문 뒤 좌석 — 프레임 PNG의 투명 창문으로 방이 보인다. */}
-              {WINDOW_RECTS.map((rect, w) => {
-                const seatIdx = windowSlots[w];
-                return (
-                  <View
-                    key={`window-${w}`}
-                    style={[
-                      styles.windowSlot,
-                      rect,
-                      seatIdx != null && dragSeat === seatIdx && styles.dragRow,
-                    ]}>
-                    {seatIdx != null ? (
-                      renderSeatTile(displayCells[seatIdx], seatIdx, true)
-                    ) : (
-                      /* 정원 밖 창문 — 조용한 벽 패널. */
-                      <View style={[styles.windowFiller, { backgroundColor: t.surfaceMuted }]} />
-                    )}
-                  </View>
-                );
-              })}
-              <Image
-                source={assetSource(currentHouse.coverImageKey)}
-                style={StyleSheet.absoluteFill}
-                contentFit="contain"
-                transition={120}
-                pointerEvents="none"
-                accessibilityLabel={`${currentHouse.title} 집`}
-                testID="house-frame"
-              />
+            <View style={styles.cameraViewport} {...cameraResponder.panHandlers}>
+              <Animated.View
+                style={{
+                  transform: [{ translateX: camTx }, { translateY: camTy }, { scale: camScale }],
+                }}>
+                <View
+                  style={styles.frameWrap}
+                  {...gridPanResponder.panHandlers}
+                  onLayout={(e) => {
+                    frameSize.current = {
+                      w: e.nativeEvent.layout.width,
+                      h: e.nativeEvent.layout.height,
+                    };
+                  }}>
+                  {/* 창문 뒤 좌석 — 프레임 PNG의 투명 창문으로 방이 보인다. */}
+                  {WINDOW_RECTS.map((rect, w) => {
+                    const seatIdx = windowSlots[w];
+                    return (
+                      <View
+                        key={`window-${w}`}
+                        style={[
+                          styles.windowSlot,
+                          rect,
+                          seatIdx != null && dragSeat === seatIdx && styles.dragRow,
+                        ]}>
+                        {seatIdx != null ? (
+                          renderSeatTile(displayCells[seatIdx], seatIdx, true)
+                        ) : (
+                          /* 정원 밖 창문 — 조용한 벽 패널. */
+                          <View
+                            style={[styles.windowFiller, { backgroundColor: t.surfaceMuted }]}
+                          />
+                        )}
+                      </View>
+                    );
+                  })}
+                  <Image
+                    source={assetSource(currentHouse.coverImageKey)}
+                    style={StyleSheet.absoluteFill}
+                    contentFit="contain"
+                    transition={120}
+                    pointerEvents="none"
+                    accessibilityLabel={`${currentHouse.title} 집`}
+                    testID="house-frame"
+                  />
+                </View>
+              </Animated.View>
+              {zoomed ? (
+                <Pressable
+                  onPress={resetCam}
+                  accessibilityRole="button"
+                  accessibilityLabel="확대 종료"
+                  style={[styles.camReset, { backgroundColor: t.surface }]}>
+                  <Icon name="refresh" size={16} color={t.text} />
+                </Pressable>
+              ) : null}
             </View>
           </View>
         ) : (
@@ -1899,10 +2029,31 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     borderRadius: Radius.pill,
   },
-  frameWrap: {
+  cameraViewport: {
     marginTop: Spacing.two,
     marginHorizontal: Spacing.three,
+    overflow: 'hidden',
+  },
+  frameWrap: {
+    width: '100%',
     aspectRatio: FRAME_ASPECT,
+  },
+  camReset: {
+    position: 'absolute',
+    right: Spacing.two,
+    bottom: Spacing.two,
+    // 확대된 프레임 콘텐츠 위에 떠야 한다.
+    zIndex: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
   },
   // 프레임 PNG의 투명 창문 자리 — 좌석 타일이 이 안을 가득 채운다.
   windowSlot: {
