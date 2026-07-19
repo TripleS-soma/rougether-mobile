@@ -12,6 +12,7 @@ import {
   contributeHouseMission,
   createHouse as apiCreateHouse,
   createHouseMission,
+  deleteHouseMission,
   fetchHouse,
   fetchHouseMembers,
   fetchHouseMissions,
@@ -222,6 +223,27 @@ export function useHouses() {
     }
   };
 
+  const deleteMission = async (houseId: number, missionId: number) => {
+    try {
+      await deleteHouseMission(houseId, missionId);
+      toast('미션을 삭제했어요', 'success');
+      await reloadMyHouses();
+    } catch (err) {
+      // The server keeps COMPLETED missions (growth points already granted).
+      const claimed =
+        err instanceof ApiError && err.bodyText?.includes('HOUSE_MISSION_ALREADY_CLAIMED');
+      const notOwner = err instanceof ApiError && err.bodyText?.includes('HOUSE_NOT_OWNER');
+      toast(
+        claimed
+          ? '보상을 받은 미션은 삭제할 수 없어요'
+          : notOwner
+            ? '방장만 미션을 삭제할 수 있어요'
+            : '미션 삭제에 실패했어요',
+        'error',
+      );
+    }
+  };
+
   const updateHouse = async (houseId: number, input: HouseEditInput) => {
     try {
       await apiUpdateHouse(houseId, input);
@@ -272,6 +294,7 @@ export function useHouses() {
     contributeMission,
     claimMission,
     createMission,
+    deleteMission,
     updateHouse,
     transferOwnership,
     reissueInviteCode,

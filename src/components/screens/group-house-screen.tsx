@@ -25,6 +25,7 @@ import {
   Pictogram,
   type PictogramName,
   TargetPictogram,
+  TrashPictogram,
 } from '@/components/ui/pictograms';
 import { useToast } from '@/components/ui/toast';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
@@ -260,6 +261,8 @@ export type GroupHouseScreenProps = {
   onClaimMission?: (houseId: number, missionId: number) => void;
   /** Create a new group mission. */
   onCreateMission?: (houseId: number, input: NewHouseMission) => void;
+  /** Delete a mission (server: OWNER only, COMPLETED not deletable). */
+  onDeleteMission?: (houseId: number, missionId: number) => void;
   /** Edit the house settings via the API (owner only). */
   onUpdateHouse?: (houseId: number, input: HouseEditInput) => void;
   /** Cover catalog (GET /houses/cover-images); empty hides the edit section. */
@@ -306,6 +309,7 @@ export function GroupHouseScreen({
   contributedMissionIds = [],
   onClaimMission,
   onCreateMission,
+  onDeleteMission,
   onUpdateHouse,
   covers = [],
   roomPreviews,
@@ -345,6 +349,8 @@ export function GroupHouseScreen({
   const [showPeriodSheet, setShowPeriodSheet] = useState(false);
   // 미션 → 내 루틴 추가 확인 모달의 대상.
   const [missionToAdd, setMissionToAdd] = useState<HouseMission | null>(null);
+  // 미션 삭제 확인 모달의 대상 (#305).
+  const [missionToDelete, setMissionToDelete] = useState<HouseMission | null>(null);
   const [showEditHouse, setShowEditHouse] = useState(false);
   const [editName, setEditName] = useState('');
   const [editDesc, setEditDesc] = useState('');
@@ -629,6 +635,8 @@ export function GroupHouseScreen({
   const canKick = isOwner || !currentHouse?.houseId;
   // Mission creation is owner-only on the server (403 HOUSE_NOT_OWNER).
   const canCreateMission = !!(onCreateMission && isOwner);
+  // Mission deletion too; COMPLETED rows hide the button (server 409s them).
+  const canDeleteMission = !!(onDeleteMission && isOwner);
   const missionTargetNum = Number(missionTarget);
   const canSubmitMission =
     missionTitle.trim().length > 0 &&
@@ -1559,6 +1567,16 @@ export function GroupHouseScreen({
                             <Text style={[Typography.supporting, { color: t.primaryText }]}>
                               {mission.current}/{mission.target}
                             </Text>
+                            {canDeleteMission && mission.status !== 'COMPLETED' ? (
+                              <Pressable
+                                onPress={() => setMissionToDelete(mission)}
+                                accessibilityRole="button"
+                                accessibilityLabel={`${mission.title} 삭제`}
+                                hitSlop={8}
+                                style={styles.missionDeleteBtn}>
+                                <TrashPictogram size={14} color={t.textMuted} />
+                              </Pressable>
+                            ) : null}
                           </View>
                           <View style={[styles.goalTrack, { backgroundColor: t.border }]}>
                             <View
@@ -1669,6 +1687,36 @@ export function GroupHouseScreen({
                 accessibilityLabel="루틴 추가 확인"
                 style={[styles.modalBtn, { backgroundColor: t.primary }]}>
                 <Text style={[Typography.label, { color: t.onPrimary }]}>네</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      ) : null}
+
+      {missionToDelete && currentHouse?.houseId ? (
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modal, { backgroundColor: t.surface }]}>
+            <Text style={[Typography.h3, { color: t.text }]}>미션 삭제</Text>
+            <Text style={[Typography.body, styles.modalBody, { color: t.textMuted }]}>
+              {`'${missionToDelete.title}' 미션을 삭제할까요?\n지금까지의 기여 기록은 남지만 미션은 목록에서 사라져요. 멤버들이 만든 연동 루틴은 삭제되지 않아요.`}
+            </Text>
+            <View style={styles.modalActions}>
+              <Pressable
+                onPress={() => setMissionToDelete(null)}
+                accessibilityRole="button"
+                accessibilityLabel="미션 삭제 취소"
+                style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
+                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  onDeleteMission?.(currentHouse.houseId!, missionToDelete.id);
+                  setMissionToDelete(null);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="미션 삭제 확인"
+                style={[styles.modalBtn, { backgroundColor: t.danger }]}>
+                <Text style={[Typography.label, { color: t.onPrimary }]}>삭제</Text>
               </Pressable>
             </View>
           </View>
@@ -2212,6 +2260,9 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.one,
+  },
+  missionDeleteBtn: {
+    marginLeft: Spacing.one,
   },
   missionForm: {
     marginTop: Spacing.three,

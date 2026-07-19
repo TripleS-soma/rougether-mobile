@@ -593,6 +593,37 @@ export function PencilPictogram({ size = 24, color }: PictogramProps) {
   );
 }
 
+export function TrashPictogram({ size = 24, color }: PictogramProps) {
+  const t = useTokens();
+  const c = color ?? t.danger;
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M6.4 7.4 L7.4 19.6 Q7.5 20.6 8.5 20.6 L15.5 20.6 Q16.5 20.6 16.6 19.6 L17.6 7.4"
+        stroke={c}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      <Path d="M4.6 6.4 L19.4 6.4" stroke={c} strokeWidth={2} strokeLinecap="round" />
+      <Path
+        d="M9.6 6 Q9.6 3.8 12 3.8 Q14.4 3.8 14.4 6"
+        stroke={c}
+        strokeWidth={2}
+        strokeLinecap="round"
+        fill="none"
+      />
+      <Path
+        d="M10 10.2 L10.3 17 M14 10.2 L13.7 17"
+        stroke={c}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
+
 export function DoorPictogram({ size = 24, color }: PictogramProps) {
   const t = useTokens();
   const c = color ?? t.danger;

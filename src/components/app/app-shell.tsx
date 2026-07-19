@@ -217,6 +217,7 @@ export function AppShell({
     contributeMission,
     claimMission,
     createMission,
+    deleteMission,
     updateHouse,
     transferOwnership,
     reissueInviteCode,
@@ -598,6 +599,9 @@ export function AppShell({
             }}
             onCreateMission={(houseId, input) => {
               void createMission(houseId, input);
+            }}
+            onDeleteMission={(houseId, missionId) => {
+              void deleteMission(houseId, missionId);
             }}
             onUpdateHouse={(houseId, input) => {
               void updateHouse(houseId, input);
