@@ -28,4 +28,4 @@ jobs:
         with:
           profile: preview
           branch: preview
-          platform: all
+          platform: android
