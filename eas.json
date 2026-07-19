@@ -41,7 +41,7 @@
         "ascAppId": "6785735477",
         "ascApiKeyId": "6G2698ZUCN",
         "ascApiKeyIssuerId": "371e21a1-aa0c-4582-938e-005de68485b5",
-        "ascApiKeyPath": "/Users/choijunseo/credentials/AuthKey_6G2698ZUCN.p8"
+        "ascApiKeyPath": "./asc-api-key.p8"
       }
     }
   }

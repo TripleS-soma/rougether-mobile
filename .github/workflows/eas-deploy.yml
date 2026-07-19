@@ -1,6 +1,7 @@
 # dev 브랜치 CI/CD: 머지될 때마다 네이티브 지문을 비교해
 # 변화 없으면 OTA(preview 채널), 변했으면 EAS 네이티브 빌드를 자동 실행.
-# 필요 시크릿: EXPO_TOKEN (expo.dev → Access tokens → repo Settings/Secrets에 등록)
+# Android는 preview APK, iOS는 testflight 빌드 + App Store Connect 자동 제출.
+# 필요 시크릿: EXPO_TOKEN (expo.dev → Access tokens), ASC_API_KEY_P8 (ASC API 키 .p8 원문)
 name: eas-deploy
 on:
   push:
@@ -23,9 +24,24 @@ jobs:
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
-      # 지문 비교 → 동일하면 eas update(OTA), 다르면 eas build --auto-submit 없이 빌드
-      - uses: expo/expo-github-action/continuous-deploy-fingerprint@main
+      # 지문 비교 → 동일하면 eas update(OTA), 다르면 새 빌드.
+      # Android: preview APK (internal 배포).
+      - name: Android — OTA or preview build
+        uses: expo/expo-github-action/continuous-deploy-fingerprint@main
         with:
           profile: preview
           branch: preview
-          platform: all
+          platform: android
+      # iOS 제출용 ASC API 키 복원 — eas.json의 ascApiKeyPath(./asc-api-key.p8)가 읽는다.
+      - name: Restore ASC API key
+        run: printf '%s' "$ASC_API_KEY_P8" > asc-api-key.p8
+        env:
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+      # iOS: 네이티브 변경 시 testflight 빌드 + TestFlight 자동 제출 (ad-hoc 미사용).
+      - name: iOS — OTA or TestFlight build
+        uses: expo/expo-github-action/continuous-deploy-fingerprint@main
+        with:
+          profile: testflight
+          branch: preview
+          platform: ios
+          auto-submit-builds: true
