@@ -20,7 +20,7 @@ import { Icon } from '@/components/ui/icon';
 import { PendingNotice } from '@/components/ui/pending-notice';
 import { BookOpenPictogram, Pictogram, type PictogramName } from '@/components/ui/pictograms';
 import { Radius, Spacing, Typography } from '@/constants/theme';
-import { type FurnitureItem, type Wallpaper } from '@/resources/furniture';
+import { type FurnitureItem, type PlacedFurniture, type Wallpaper } from '@/resources/furniture';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
@@ -80,6 +80,8 @@ export type FriendRoomScreenProps = {
   floorId?: string | null;
   backgroundId?: string | null;
   placedFurnitureIds?: string[];
+  /** 자유 배치(FREE_V1, #327) — 주어지면 슬롯 대신 정규화 좌표로 렌더. */
+  placements?: PlacedFurniture[] | null;
   furniture?: FurnitureItem[];
   wallpapers?: Wallpaper[];
   floors?: Wallpaper[];
@@ -120,6 +122,7 @@ export function FriendRoomScreen({
   floorId,
   backgroundId,
   placedFurnitureIds,
+  placements = null,
   furniture,
   wallpapers,
   floors,
@@ -235,6 +238,7 @@ export function FriendRoomScreen({
               floorId={floorId}
               backgroundId={backgroundId}
               placedFurnitureIds={placedFurnitureIds}
+              placements={placements}
               furniture={furniture}
               wallpapers={wallpapers}
               floors={floors}

@@ -51,6 +51,52 @@ export const SLOT_LABELS: Record<FurnitureSlot, string> = {
   bottomRight: '아래 오른쪽',
 };
 
+/**
+ * 자유 배치 한 점 (FREE_V1, #327) — 좌표는 방 렌더 영역 기준 0.0~1.0 정규화,
+ * 가구의 **중심점**. z는 쌓임 순서(클수록 위). scale/rotation/flip은 2차에서
+ * 편집 UI가 붙고, 렌더는 1차부터 지원한다.
+ */
+export type PlacedFurniture = {
+  furnitureId: string;
+  x: number;
+  y: number;
+  z: number;
+  scale?: number;
+  rotationDeg?: number;
+  flipped?: boolean;
+};
+
+/**
+ * 기존 슬롯 배치의 자유 배치 프리필 좌표 (#327) — Room의 SLOT_STYLE 앵커
+ * (기본 폭 28%, 아래 코너 24%, 정사각 방)에서 계산한 중심점. 첫 자유 배치
+ * 진입 시 SLOT_V1 방을 같은 모습으로 이어서 편집하게 한다.
+ */
+export const SLOT_NORM_CENTERS: Record<FurnitureSlot, { x: number; y: number }> = {
+  topLeft: { x: 0.19, y: 0.22 },
+  topCenter: { x: 0.5, y: 0.22 },
+  topRight: { x: 0.81, y: 0.22 },
+  midLeft: { x: 0.2, y: 0.52 },
+  midRight: { x: 0.8, y: 0.52 },
+  bottomLeft: { x: 0.17, y: 0.8 },
+  bottomCenter: { x: 0.5, y: 0.78 },
+  bottomRight: { x: 0.83, y: 0.8 },
+};
+
+/** 슬롯 배치 id 목록 → 자유 배치 프리필 (z는 슬롯 순서). */
+export function slotIdsToPlacements(
+  placedIds: string[],
+  furniture: FurnitureItem[],
+): PlacedFurniture[] {
+  return placedIds
+    .map((id, i) => {
+      const item = furniture.find((f) => f.id === id);
+      if (!item) return null;
+      const c = SLOT_NORM_CENTERS[item.slot];
+      return { furnitureId: id, x: c.x, y: c.y, z: i + 1 };
+    })
+    .filter((p): p is PlacedFurniture => p !== null);
+}
+
 /** Catalog tab a furniture item belongs to (decor screen filter). */
 export type FurnitureCategory = '가구' | '장식' | '러그' | '한옥';
 

@@ -1,6 +1,8 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { type ReactNode } from 'react';
+import { StyleSheet } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
@@ -26,17 +28,22 @@ function NavigationTheme({ children }: { children: ReactNode }) {
  */
 export default function RootLayout() {
   return (
-    <SafeAreaProvider>
-      <AuthProvider>
-        <BrandThemeProvider>
-          <ToastProvider>
-            <NavigationTheme>
-              <AnimatedSplashOverlay />
-              <Stack screenOptions={{ headerShown: false }} />
-            </NavigationTheme>
-          </ToastProvider>
-        </BrandThemeProvider>
-      </AuthProvider>
-    </SafeAreaProvider>
+    // RNGH 제스처(방 꾸미기 자유 배치 #327 등)의 루트 컨텍스트.
+    <GestureHandlerRootView style={styles.root}>
+      <SafeAreaProvider>
+        <AuthProvider>
+          <BrandThemeProvider>
+            <ToastProvider>
+              <NavigationTheme>
+                <AnimatedSplashOverlay />
+                <Stack screenOptions={{ headerShown: false }} />
+              </NavigationTheme>
+            </ToastProvider>
+          </BrandThemeProvider>
+        </AuthProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({ root: { flex: 1 } });

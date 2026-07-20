@@ -84,6 +84,8 @@ describe('useFriendRoom', () => {
       wallpaperId: '9',
       floorId: null,
       backgroundId: null,
+      // 슬롯 방(SLOT_V1)은 자유 배치 없음 (#327).
+      placements: null,
     });
     expect(friendRoom.routines).toHaveLength(2);
     expect(friendRoom.routines[0]).toMatchObject({ id: '3', completed: true });

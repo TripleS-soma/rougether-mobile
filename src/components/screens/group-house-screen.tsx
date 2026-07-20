@@ -34,7 +34,7 @@ import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 import { assetSource, isCdnKey } from '@/resources/asset';
-import type { FurnitureItem, Wallpaper } from '@/resources/furniture';
+import type { FurnitureItem, PlacedFurniture, Wallpaper } from '@/resources/furniture';
 import { formatDate, todayIso, toIsoDate } from '@/utils/datetime';
 
 /**
@@ -43,6 +43,8 @@ import { formatDate, todayIso, toIsoDate } from '@/utils/datetime';
  */
 export type MemberRoomPreview = {
   placedFurnitureIds: string[];
+  /** FREE_V1 방의 자유 배치 (#327) — null이면 슬롯 렌더. */
+  placements?: PlacedFurniture[] | null;
   wallpaperId?: string;
   floorId?: string | null;
   backgroundId?: string | null;
@@ -1297,6 +1299,7 @@ export function GroupHouseScreen({
             <View style={styles.roomPreview} pointerEvents="none" testID="room-preview">
               <Room
                 placedFurnitureIds={preview.placedFurnitureIds}
+                placements={preview.placements ?? null}
                 wallpaperId={preview.wallpaperId}
                 floorId={preview.floorId}
                 backgroundId={preview.backgroundId}
