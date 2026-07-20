@@ -12,7 +12,12 @@ import {
 } from 'react-native';
 
 import { type CharacterAnimationSet, CharacterAvatar } from '@/components/character-avatar';
-import { DraggableFurniture, DRAG_OUT_MARGIN } from '@/components/room/draggable-furniture';
+import {
+  DraggableFurniture,
+  DRAG_OUT_MARGIN,
+  SCALE_MAX,
+  SCALE_MIN,
+} from '@/components/room/draggable-furniture';
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { Room, type RoomRegion } from '@/components/room/room';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
@@ -212,6 +217,8 @@ export function RoomDecorScreen({
 
   // 방 렌더 영역 크기(px) — 정규화 좌표의 기준 (#327).
   const [roomSize, setRoomSize] = useState({ w: 0, h: 0 });
+  // 선택된 가구 — 링 + 툴바(회전/반전/앞뒤/빼기) + 크기 핸들 대상 (#333).
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   /** 가운데에 새 가구를 놓는다 — 같은 가구는 방에 1개만. */
   const addItem = (id: string) => {
@@ -222,7 +229,10 @@ export function RoomDecorScreen({
     const maxZ = items.reduce((m, p) => Math.max(m, p.z), 0);
     setItems((prev) => [...prev, { furnitureId: id, x: 0.5, y: 0.55, z: maxZ + 1 }]);
   };
-  const removeItem = (id: string) => setItems((prev) => prev.filter((p) => p.furnitureId !== id));
+  const removeItem = (id: string) => {
+    setItems((prev) => prev.filter((p) => p.furnitureId !== id));
+    setSelectedId((prev) => (prev === id ? null : prev));
+  };
   /** 드래그 종료 — 방 밖이면 빼고, 안이면 좌표 커밋 + 최상위 승격. */
   const commitDrag = (id: string, x: number, y: number) => {
     const out =
@@ -243,6 +253,33 @@ export function RoomDecorScreen({
       );
     });
   };
+  /** 핀치/핸들 종료 — 스케일 클램프 후 커밋 (#333). */
+  const commitScale = (id: string, scale: number) => {
+    const clamped = Math.round(Math.min(SCALE_MAX, Math.max(SCALE_MIN, scale)) * 100) / 100;
+    setItems((prev) => prev.map((p) => (p.furnitureId === id ? { ...p, scale: clamped } : p)));
+  };
+  /** 선택된 가구만 바꾼다 — 툴바 액션 공용 (#333). */
+  const mutateSelected = (fn: (p: PlacedFurniture) => PlacedFurniture) =>
+    setItems((prev) => prev.map((p) => (p.furnitureId === selectedId ? fn(p) : p)));
+  const rotateSelected = () =>
+    mutateSelected((p) => ({ ...p, rotationDeg: ((p.rotationDeg ?? 0) + 15) % 360 }));
+  const flipSelected = () => mutateSelected((p) => ({ ...p, flipped: !p.flipped }));
+  /** z 순서에서 이웃과 자리 바꾸기 — 앞으로(+1)/뒤로(-1) 한 칸씩. */
+  const stepZ = (dir: 1 | -1) =>
+    setItems((prev) => {
+      const sorted = [...prev].sort((a, b) => a.z - b.z);
+      const idx = sorted.findIndex((p) => p.furnitureId === selectedId);
+      const other = sorted[idx + dir];
+      if (idx < 0 || !other) return prev;
+      const me = sorted[idx];
+      return prev.map((p) =>
+        p.furnitureId === me.furnitureId
+          ? { ...p, z: other.z }
+          : p.furnitureId === other.furnitureId
+            ? { ...p, z: me.z }
+            : p,
+      );
+    });
 
   // What the open picker offers, owned first so placing needs no digging.
   // 보유중 filter hides the shop side of every picker (slot/surface/전체보기).
@@ -272,6 +309,7 @@ export function RoomDecorScreen({
           {/* 캔버스 = 방과 정확히 같은 박스 — 오버레이 좌표·정규화의 기준.
               (preview의 padding 박스 기준으로 재면 저장 좌표가 어긋난다.) */}
           <View
+            testID="decor-canvas"
             style={styles.canvas}
             onLayout={(e) =>
               setRoomSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.width })
@@ -291,6 +329,16 @@ export function RoomDecorScreen({
               onRegionPress={onRegionPress}
               activeRegion={activeRegion}
             />
+            {/* 선택 중에만 존재하는 투명 레이어 — 빈 캔버스 탭 = 선택 해제.
+                아이템(z≥1)보다 아래라 가구 탭·드래그는 그대로 통과한다. */}
+            {selectedId ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="선택 해제"
+                style={StyleSheet.absoluteFill}
+                onPress={() => setSelectedId(null)}
+              />
+            ) : null}
             {roomSize.w > 0
               ? [...items]
                   .sort((a, b) => a.z - b.z)
@@ -303,7 +351,10 @@ export function RoomDecorScreen({
                         item={item}
                         placement={p}
                         roomSize={roomSize}
+                        selected={p.furnitureId === selectedId}
+                        onSelect={setSelectedId}
                         onDragEnd={commitDrag}
+                        onScaleEnd={commitScale}
                       />
                     );
                   })
@@ -316,6 +367,30 @@ export function RoomDecorScreen({
                 style={styles.characterFigure}
               />
             </View>
+            {/* 선택 툴바 (#333) — 캔버스 위 고정, 캐릭터 레이어보다도 위. */}
+            {selectedId ? (
+              <View style={[styles.toolbar, { backgroundColor: t.surface, borderColor: t.border }]}>
+                {(
+                  [
+                    ['refresh', '회전', rotateSelected],
+                    ['flip', '좌우 반전', flipSelected],
+                    ['layer-up', '앞으로', () => stepZ(1)],
+                    ['layer-down', '뒤로', () => stepZ(-1)],
+                    ['trash', '빼기', () => removeItem(selectedId)],
+                  ] as const
+                ).map(([icon, label, onPress]) => (
+                  <Pressable
+                    key={icon}
+                    onPress={onPress}
+                    accessibilityRole="button"
+                    accessibilityLabel={label}
+                    hitSlop={4}
+                    style={[styles.toolBtn, { backgroundColor: t.surfaceMuted }]}>
+                    <Icon name={icon} size={18} color={icon === 'trash' ? t.danger : t.text} />
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
           </View>
         </View>
 
@@ -913,6 +988,25 @@ const styles = StyleSheet.create({
   characterLayer: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 10000,
+  },
+  // 선택 툴바 (#333) — 캔버스 상단 중앙, 모든 레이어 위.
+  toolbar: {
+    position: 'absolute',
+    top: Spacing.two,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    gap: Spacing.one,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    padding: Spacing.one,
+    zIndex: 10001,
+  },
+  toolBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   // Room의 캐릭터 배치와 동일한 자리 (absolute center-bottom, 42%).
   characterFigure: {
