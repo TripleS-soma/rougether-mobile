@@ -241,6 +241,9 @@ export function useMyRoomData() {
     try {
       const created = await createTodo(toTodoCreate(category, title, dueDate));
       setRoutines((prev) => [...prev, toAppTodo(created)]);
+      // 달력의 서버 백업 날짜(오늘 외)에 추가한 경우 그 날짜 기록을 재조회해
+      // 목록에 즉시 반영한다 (#323).
+      if (dueDate !== todayIso()) void loadCalendarDay(dueDate);
     } catch {
       toast('할 일을 추가하지 못했어요', 'error');
     }

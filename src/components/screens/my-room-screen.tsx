@@ -379,9 +379,16 @@ export function MyRoomScreen({
   const serverBackedDay = !!onSelectDate && selectedDate !== today;
   const dayItems = serverBackedDay ? calendarDays?.[selectedDate] : undefined;
 
+  // Quick-add is limited to real (non-deleted) categories; 미분류(pseudo)와
+  // 미션 연동 카테고리는 임의 추가를 막는다 — 방탭·달력탭 공통 규칙 (#323).
+  const canQuickAdd = (categoryId?: string) =>
+    !!categoryId &&
+    categories.some((c) => c.id === categoryId) &&
+    !quickAddDisabledCategoryIds.includes(categoryId);
+
   // 달력 lists mirror the room tab's category sections (emoji + colored label
-  // + done count); only non-empty groups render — the calendar has no
-  // quick-add, so empty headers would add nothing.
+  // + done count). Empty groups still render when they can quick-add — the +
+  // must stay reachable on any date, like the room tab (#323).
   const calGroupsBase =
     categories.length > 0 ? categories : dateRoutines.length > 0 ? [UNCATEGORIZED_META] : [];
   const calClientGroups = calGroupsBase
@@ -393,7 +400,7 @@ export function MyRoomScreen({
       );
       return { meta: cat, items: sinkDone(items, (r) => isDone(r.id, selectedDate)) };
     })
-    .filter((g) => g.items.length > 0);
+    .filter((g) => g.items.length > 0 || canQuickAdd(g.meta.id));
   // Server days group by the record-time categoryId (kept in server order:
   // categoryId asc, 미분류 last); deleted categories resolve via catMeta.
   const calServerGroups = dayItems
@@ -403,10 +410,17 @@ export function MyRoomScreen({
           const key = item.category ?? '';
           byCat.set(key, [...(byCat.get(key) ?? []), item]);
         }
-        return Array.from(byCat, ([key, items]) => ({
+        const groups = Array.from(byCat, ([key, items]) => ({
           meta: catMeta.find((c) => c.id === key) ?? UNCATEGORIZED_META,
           items: sinkDone(items, (i) => i.completed),
         }));
+        // 그 날 항목이 없는 현재 카테고리도 헤더를 렌더 — +로 할 일 추가 (#323).
+        for (const cat of categories) {
+          if (canQuickAdd(cat.id) && !groups.some((g) => g.meta.id === cat.id)) {
+            groups.push({ meta: cat, items: [] });
+          }
+        }
+        return groups;
       })()
     : undefined;
 
@@ -480,9 +494,10 @@ export function MyRoomScreen({
     return () => clearTimeout(timer);
   }, [addingCategory, keyboardPad, scrollToQuickAdd]);
 
-  const openQuickAdd = (categoryId: string) => {
+  // 방탭은 오늘, 달력탭은 선택한 날짜를 기본 마감일로 연다 (#323).
+  const openQuickAdd = (categoryId: string, defaultDate = today) => {
     setNewTodo('');
-    setNewTodoDate(today);
+    setNewTodoDate(defaultDate);
     const opening = addingCategory !== categoryId;
     setAddingCategory(opening ? categoryId : null);
     if (opening) {
@@ -503,6 +518,53 @@ export function MyRoomScreen({
     setNewTodo('');
     setAddingCategory(null);
   };
+
+  // 카테고리 헤더의 + 버튼 — 방탭·달력탭 공용 (#323).
+  const renderQuickAddButton = (meta: RoutineCategoryMeta, defaultDate: string) =>
+    canQuickAdd(meta.id) ? (
+      <Pressable
+        onPress={() => openQuickAdd(meta.id, defaultDate)}
+        accessibilityRole="button"
+        accessibilityLabel={`${meta.label} 할 일 추가`}
+        hitSlop={8}
+        style={[styles.catAdd, { backgroundColor: meta.color }]}>
+        <Icon name="add" size={14} color={t.onPrimary} />
+      </Pressable>
+    ) : null;
+
+  // 퀵애드 입력행 — 제목 입력 + 마감일 칩, blur가 커밋. 방탭·달력탭 공용 (#323).
+  const renderQuickAddRow = (categoryId: string) => (
+    <View ref={addRowRef} style={[styles.addRow, { backgroundColor: t.surface }]}>
+      <Icon name="checkbox-off" size={22} color={t.textDisabled} />
+      <TextInput
+        ref={todoInputRef}
+        autoFocus
+        value={newTodo}
+        onChangeText={setNewTodo}
+        // Commit on blur — pressing 완료 (single-line blurs on submit) or
+        // tapping elsewhere both save the todo.
+        onBlur={() => commitTodo(categoryId)}
+        placeholder="할 일 입력 후 완료"
+        placeholderTextColor={t.textMuted}
+        style={[styles.flex, styles.todoInput, { color: t.text }]}
+      />
+      <Pressable
+        // onPressIn (fires before the input's blur) flags the blur as
+        // picker-driven so the row stays open.
+        onPressIn={() => {
+          skipBlurCommit.current = true;
+        }}
+        onPress={() => setTodoDateOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel="할 일 날짜 선택"
+        style={[styles.dateChip, { backgroundColor: t.surfaceMuted }]}>
+        <Icon name="calendar" size={13} color={t.textMuted} />
+        <Text style={[styles.dateChipText, { color: t.textMuted }]}>
+          {newTodoDate === today ? '오늘' : formatDate(newTodoDate)}
+        </Text>
+      </Pressable>
+    </View>
+  );
 
   // Completing a 인증사진형 routine first requires a camera photo; if none is
   // captured (cancelled / denied), the completion is aborted. Kept sync on the
@@ -752,19 +814,7 @@ export function MyRoomScreen({
                               </Text>
                             ) : null}
                             <View style={styles.flex} />
-                            {/* The pseudo 기타 group (empty id) can't quick-add —
-                                uncategorized routines must not be creatable.
-                                미션 연동 카테고리도 임의 추가를 막는다. */}
-                            {cat.id && !quickAddDisabledCategoryIds.includes(cat.id) ? (
-                              <Pressable
-                                onPress={() => openQuickAdd(cat.id)}
-                                accessibilityRole="button"
-                                accessibilityLabel={`${cat.label} 할 일 추가`}
-                                hitSlop={8}
-                                style={[styles.catAdd, { backgroundColor: cat.color }]}>
-                                <Icon name="add" size={14} color={t.onPrimary} />
-                              </Pressable>
-                            ) : null}
+                            {renderQuickAddButton(cat, today)}
                           </View>
 
                           <View style={styles.rows}>
@@ -835,40 +885,7 @@ export function MyRoomScreen({
                               );
                             })}
 
-                            {addingCategory === cat.id ? (
-                              <View
-                                ref={addRowRef}
-                                style={[styles.addRow, { backgroundColor: t.surface }]}>
-                                <Icon name="checkbox-off" size={22} color={t.textDisabled} />
-                                <TextInput
-                                  ref={todoInputRef}
-                                  autoFocus
-                                  value={newTodo}
-                                  onChangeText={setNewTodo}
-                                  // Commit on blur — pressing 완료 (single-line blurs on
-                                  // submit) or tapping elsewhere both save the todo.
-                                  onBlur={() => commitTodo(cat.id)}
-                                  placeholder="할 일 입력 후 완료"
-                                  placeholderTextColor={t.textMuted}
-                                  style={[styles.flex, styles.todoInput, { color: t.text }]}
-                                />
-                                <Pressable
-                                  // onPressIn (fires before the input's blur) flags the
-                                  // blur as picker-driven so the row stays open.
-                                  onPressIn={() => {
-                                    skipBlurCommit.current = true;
-                                  }}
-                                  onPress={() => setTodoDateOpen(true)}
-                                  accessibilityRole="button"
-                                  accessibilityLabel="할 일 날짜 선택"
-                                  style={[styles.dateChip, { backgroundColor: t.surfaceMuted }]}>
-                                  <Icon name="calendar" size={13} color={t.textMuted} />
-                                  <Text style={[styles.dateChipText, { color: t.textMuted }]}>
-                                    {newTodoDate === today ? '오늘' : formatDate(newTodoDate)}
-                                  </Text>
-                                </Pressable>
-                              </View>
-                            ) : null}
+                            {addingCategory === cat.id ? renderQuickAddRow(cat.id) : null}
                           </View>
                         </View>
                       );
@@ -914,10 +931,15 @@ export function MyRoomScreen({
                         {group.meta.id ? (
                           <VisibilityMark visibility={group.meta.visibility} />
                         ) : null}
-                        <Text style={[Typography.supporting, { color: t.textDisabled }]}>
-                          {group.items.filter((i) => i.completed).length}/{group.items.length}
-                        </Text>
+                        {group.items.length > 0 ? (
+                          <Text style={[Typography.supporting, { color: t.textDisabled }]}>
+                            {group.items.filter((i) => i.completed).length}/{group.items.length}
+                          </Text>
+                        ) : null}
+                        <View style={styles.flex} />
+                        {renderQuickAddButton(group.meta, selectedDate)}
                       </View>
+                      {addingCategory === group.meta.id ? renderQuickAddRow(group.meta.id) : null}
                       {group.items.map((item) => (
                         <View key={`${item.kind}-${item.id}`} style={styles.routineRow}>
                           <Pressable
@@ -976,11 +998,16 @@ export function MyRoomScreen({
                         {group.meta.label}
                       </Text>
                       {group.meta.id ? <VisibilityMark visibility={group.meta.visibility} /> : null}
-                      <Text style={[Typography.supporting, { color: t.textDisabled }]}>
-                        {group.items.filter((r) => isDone(r.id, selectedDate)).length}/
-                        {group.items.length}
-                      </Text>
+                      {group.items.length > 0 ? (
+                        <Text style={[Typography.supporting, { color: t.textDisabled }]}>
+                          {group.items.filter((r) => isDone(r.id, selectedDate)).length}/
+                          {group.items.length}
+                        </Text>
+                      ) : null}
+                      <View style={styles.flex} />
+                      {renderQuickAddButton(group.meta, selectedDate)}
                     </View>
+                    {addingCategory === group.meta.id ? renderQuickAddRow(group.meta.id) : null}
                     {group.items.map((routine) => {
                       const done = isDone(routine.id, selectedDate);
                       return (

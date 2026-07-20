@@ -368,6 +368,46 @@ describe('MyRoomScreen', () => {
     );
   });
 
+  it('달력 탭에서 +로 할 일 추가 — 서버 백업 날짜, 기본 마감일은 선택 날짜 (#323)', async () => {
+    const onQuickAddRoutine = jest.fn();
+    // 어제엔 기록이 없어도 현재 카테고리 헤더가 렌더돼 +가 접근 가능해야 한다.
+    const calendarDays = { [YESTERDAY]: [] };
+    const ui = await render(
+      <MyRoomScreen
+        routines={SAMPLE_ROUTINES}
+        calendarDays={calendarDays}
+        onSelectDate={jest.fn()}
+        onQuickAddRoutine={onQuickAddRoutine}
+        quickAddDisabledCategoryIds={['일정']}
+      />,
+    );
+    await pickCalendarDate(ui, YESTERDAY);
+    // 미션 연동 카테고리는 달력에서도 + 미노출 (방탭과 같은 규칙).
+    expect(ui.queryByLabelText('일정 할 일 추가')).toBeNull();
+    await fireEvent.press(ui.getByLabelText('건강 할 일 추가'));
+    // 날짜 칩이 선택한 날짜(어제)로 프리필된다.
+    expect(ui.getByText(YESTERDAY.replaceAll('-', '.'))).toBeTruthy();
+    const input = ui.getByPlaceholderText('할 일 입력 후 완료');
+    await fireEvent.changeText(input, '어제 밀린 일');
+    await fireEvent(input, 'blur');
+    expect(onQuickAddRoutine).toHaveBeenCalledWith('건강', '어제 밀린 일', YESTERDAY);
+  });
+
+  it('달력 탭 오늘 날짜에서도 +로 할 일 추가 (#323)', async () => {
+    const onQuickAddRoutine = jest.fn();
+    const ui = await render(
+      <MyRoomScreen routines={SAMPLE_ROUTINES} onQuickAddRoutine={onQuickAddRoutine} />,
+    );
+    await pickCalendarDate(ui, TODAY);
+    await fireEvent.press(ui.getByLabelText('건강 할 일 추가'));
+    // 오늘이면 날짜 칩은 '오늘'.
+    expect(ui.getByText('오늘')).toBeTruthy();
+    const input = ui.getByPlaceholderText('할 일 입력 후 완료');
+    await fireEvent.changeText(input, '오늘 할 일');
+    await fireEvent(input, 'blur');
+    expect(onQuickAddRoutine).toHaveBeenCalledWith('건강', '오늘 할 일', TODAY);
+  });
+
   it('blocks completion on future dates with a toast', async () => {
     const onToggleCalendarItem = jest.fn();
     const calendarDays = {
