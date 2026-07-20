@@ -376,7 +376,7 @@ export type MeResponse = {
   userId?: number;
   nickname?: string;
   bio?: string;
-  lastLoginAt?: string;
+  lastAccessedAt?: string;
   onboarding?: OnboardingSummary;
 };
 
@@ -518,6 +518,16 @@ export type OnboardingSummary = {
   selectedCharacterId?: number;
 };
 
+export type PlacementItem = {
+  userItemId: number;
+  positionX: number;
+  positionY: number;
+  zIndex?: number;
+  scale?: number;
+  rotationDeg?: number;
+  flipped?: boolean;
+};
+
 export type PurchaseResponse = {
   userItemId?: number;
   itemId?: number;
@@ -544,11 +554,32 @@ export type RoomCharacterResponse = {
   animations?: CharacterAnimations;
 };
 
+export type RoomLayoutUpdateRequest = {
+  baseRevision: number;
+  surfaceSlots: SurfaceSlotAssignment[];
+  placements: PlacementItem[];
+};
+
+export type RoomPlacementResponse = {
+  userItemId?: number;
+  assetKey?: string;
+  positionX?: number;
+  positionY?: number;
+  zIndex?: number;
+  scale?: number;
+  rotationDeg?: number;
+  flipped?: boolean;
+  updatedAt?: string;
+};
+
 export type RoomResponse = {
   roomUserId?: number;
   growthLevel?: number;
+  layoutFormat?: 'SLOT_V1' | 'FREE_V1';
+  layoutRevision?: number;
   character?: RoomCharacterResponse;
   slots?: RoomSlotResponse[];
+  placements?: RoomPlacementResponse[];
   streak?: RoomStreakResponse;
   updatedAt?: string;
 };
@@ -591,7 +622,7 @@ export type RoutineLogCreateRequest = {
 export type RoutineLogResponse = {
   id?: number;
   routineDate?: string;
-  status?: 'PENDING' | 'COMPLETED' | 'MISSED';
+  status?: 'PENDING' | 'COMPLETED' | 'FAILED';
   completedAt?: string;
   rewardCurrencyType?: 'COIN' | 'DIAMOND';
   rewardAmount?: number;
@@ -634,6 +665,11 @@ export type StreakSummaryResponse = {
   currentCount?: number;
   longestCount?: number;
   lastSuccessDate?: string;
+};
+
+export type SurfaceSlotAssignment = {
+  slotType: string;
+  userItemId?: number;
 };
 
 export type ThemeSummary = {
@@ -680,6 +716,7 @@ export type TodayTodoItem = {
   id?: number;
   title?: string;
   dueDate?: string;
+  dueTime?: string;
   status?: 'PENDING' | 'COMPLETED';
   completedAt?: string;
 };
@@ -697,6 +734,7 @@ export type TodoCreateRequest = {
   description?: string;
   categoryId?: number;
   dueDate?: string;
+  dueTime?: string;
 };
 
 export type TodoListResponse = {
@@ -709,6 +747,7 @@ export type TodoResponse = {
   description?: string;
   categoryId?: number;
   dueDate?: string;
+  dueTime?: string;
   status?: 'PENDING' | 'COMPLETED';
   completedAt?: string;
 };
@@ -718,6 +757,7 @@ export type TodoUpdateRequest = {
   description?: string;
   categoryId?: number;
   dueDate?: string;
+  dueTime?: string;
 };
 
 export type TokenResponse = {
