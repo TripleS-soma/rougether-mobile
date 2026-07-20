@@ -8,8 +8,10 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ApiError,
   apiGet,
+  cheerHouseMember,
   claimHouseMission,
   contributeHouseMission,
+  type HouseCheerType,
   createHouse as apiCreateHouse,
   createHouseMission,
   deleteHouseMission,
@@ -211,6 +213,18 @@ export function useHouses() {
     }
   };
 
+  // 원탭 응원 — 성공하면 서버가 대상에게 푸시를 보낸다 (#329).
+  const cheerMember = async (houseId: number, membershipId: number, type: HouseCheerType) => {
+    try {
+      await cheerHouseMember(houseId, membershipId, type);
+      toast('응원을 보냈어요! 친구에게 알림이 가요', 'success');
+    } catch (err) {
+      // 같은 대상·같은 타입은 하루(KST) 1회.
+      const dup = err instanceof ApiError && err.bodyText?.includes('HOUSE_CHEER_DUPLICATED');
+      toast(dup ? '오늘은 이미 같은 응원을 보냈어요' : '응원 보내기에 실패했어요', 'error');
+    }
+  };
+
   const createMission = async (houseId: number, input: NewHouseMission) => {
     try {
       await createHouseMission(houseId, input);
@@ -292,6 +306,7 @@ export function useHouses() {
     kickMember,
     leaveHouse,
     contributeMission,
+    cheerMember,
     claimMission,
     createMission,
     deleteMission,
