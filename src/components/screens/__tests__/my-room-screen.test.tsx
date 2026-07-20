@@ -408,6 +408,54 @@ describe('MyRoomScreen', () => {
     expect(onQuickAddRoutine).toHaveBeenCalledWith('건강', '오늘 할 일', TODAY);
   });
 
+  it('달력 탭 행 본문 탭 → 방탭과 같은 메뉴 시트 (오늘, #325)', async () => {
+    const onToggleCompletion = jest.fn();
+    const ui = await render(
+      <MyRoomScreen routines={SAMPLE_ROUTINES} onToggleCompletion={onToggleCompletion} />,
+    );
+    await pickCalendarDate(ui, TODAY);
+    await fireEvent.press(ui.getByLabelText('하루 회고 메뉴'));
+    expect(ui.getByText('수정하기')).toBeTruthy();
+    expect(ui.getByText('삭제하기')).toBeTruthy();
+    // 완료하기는 메뉴를 연 날짜(오늘) 기준으로 토글.
+    await fireEvent.press(ui.getByLabelText('하루 회고 완료'));
+    expect(onToggleCompletion).toHaveBeenCalledWith('5', TODAY);
+  });
+
+  it('달력 서버 날짜의 행도 메뉴 시트 — 완료는 달력 규칙으로 토글 (#325)', async () => {
+    const onToggleCalendarItem = jest.fn();
+    const todos = [
+      {
+        id: 't9',
+        title: '지난 할 일',
+        kind: 'todo' as const,
+        dueDate: YESTERDAY,
+        category: '건강',
+      },
+    ];
+    const calendarDays = {
+      [YESTERDAY]: [
+        { id: 't9', kind: 'todo' as const, title: '지난 할 일', completed: false, category: '' },
+      ],
+    };
+    const ui = await render(
+      <MyRoomScreen
+        routines={todos}
+        calendarDays={calendarDays}
+        onSelectDate={jest.fn()}
+        onToggleCalendarItem={onToggleCalendarItem}
+      />,
+    );
+    await pickCalendarDate(ui, YESTERDAY);
+    await fireEvent.press(ui.getByLabelText('지난 할 일 메뉴'));
+    expect(ui.getByText('수정하기')).toBeTruthy();
+    await fireEvent.press(ui.getByLabelText('지난 할 일 완료'));
+    expect(onToggleCalendarItem).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 't9', kind: 'todo' }),
+      YESTERDAY,
+    );
+  });
+
   it('blocks completion on future dates with a toast', async () => {
     const onToggleCalendarItem = jest.fn();
     const calendarDays = {

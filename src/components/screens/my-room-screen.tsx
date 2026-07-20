@@ -349,8 +349,13 @@ export function MyRoomScreen({
   const [newTodoDate, setNewTodoDate] = useState(today);
   const [todoDateOpen, setTodoDateOpen] = useState(false);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  // 메뉴 시트의 날짜 문맥 — 방탭은 오늘, 달력탭은 선택한 날짜로 연다 (#325).
+  const [menuDate, setMenuDate] = useState(today);
   const menuRoutine = routines.find((r) => r.id === menuOpenId) ?? null;
-  const menuDone = menuRoutine ? isDone(menuRoutine.id, today) : false;
+  const openRowMenu = (id: string, date = today) => {
+    setMenuDate(date);
+    setMenuOpenId(id);
+  };
 
   // Kebab → 수정: rename only (id + draft text). Kebab → 시간 수정: TimePickerSheet.
   const [renameId, setRenameId] = useState<string | null>(null);
@@ -378,6 +383,16 @@ export function MyRoomScreen({
   const catMeta = allCategories ?? categories;
   const serverBackedDay = !!onSelectDate && selectedDate !== today;
   const dayItems = serverBackedDay ? calendarDays?.[selectedDate] : undefined;
+
+  // 달력 서버 날짜에서 연 메뉴 — 완료 라벨/토글은 그 날의 기록과 달력 규칙
+  // (미래 차단, 과거 허용)을 따른다 (#325).
+  const menuCalItem =
+    menuOpenId && serverBackedDay ? dayItems?.find((i) => i.id === menuOpenId) : undefined;
+  const menuDone = menuCalItem
+    ? menuCalItem.completed
+    : menuRoutine
+      ? isDone(menuRoutine.id, menuDate)
+      : false;
 
   // Quick-add is limited to real (non-deleted) categories; 미분류(pseudo)와
   // 미션 연동 카테고리는 임의 추가를 막는다 — 방탭·달력탭 공통 규칙 (#323).
@@ -840,7 +855,7 @@ export function MyRoomScreen({
                                       />
                                     </Pressable>
                                     <Pressable
-                                      onPress={() => setMenuOpenId(routine.id)}
+                                      onPress={() => openRowMenu(routine.id)}
                                       accessibilityRole="button"
                                       accessibilityLabel={`${routine.title} 메뉴`}
                                       style={[styles.flex, styles.rowBody]}>
@@ -955,7 +970,16 @@ export function MyRoomScreen({
                               color={item.completed ? group.meta.color : t.textDisabled}
                             />
                           </Pressable>
-                          <View style={[styles.flex, styles.rowBody]}>
+                          <Pressable
+                            // 기록만 남은(삭제된) 항목은 메뉴를 열 수 없다 — 그대로 표시만.
+                            onPress={
+                              routines.some((r) => r.id === item.id)
+                                ? () => openRowMenu(item.id, selectedDate)
+                                : undefined
+                            }
+                            accessibilityRole="button"
+                            accessibilityLabel={`${item.title} 메뉴`}
+                            style={[styles.flex, styles.rowBody]}>
                             <Text
                               style={[
                                 Typography.body,
@@ -973,7 +997,7 @@ export function MyRoomScreen({
                                 </Text>
                               </View>
                             ) : null}
-                          </View>
+                          </Pressable>
                         </View>
                       ))}
                     </View>
@@ -1025,7 +1049,11 @@ export function MyRoomScreen({
                               color={done ? group.meta.color : t.textDisabled}
                             />
                           </Pressable>
-                          <View style={[styles.flex, styles.rowBody]}>
+                          <Pressable
+                            onPress={() => openRowMenu(routine.id, selectedDate)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`${routine.title} 메뉴`}
+                            style={[styles.flex, styles.rowBody]}>
                             <Text
                               style={[
                                 Typography.body,
@@ -1043,7 +1071,7 @@ export function MyRoomScreen({
                                 </Text>
                               </View>
                             ) : null}
-                          </View>
+                          </Pressable>
                         </View>
                       );
                     })}
@@ -1100,8 +1128,12 @@ export function MyRoomScreen({
             <Pressable
               onPress={() => {
                 const r = menuRoutine;
+                const cal = menuCalItem;
                 setMenuOpenId(null);
-                if (r) handleToggle(r, today);
+                // 서버 백업 날짜에서 연 메뉴는 달력 체크박스와 같은 규칙으로
+                // 토글한다 (미래 차단 토스트, 과거 실토글) (#325).
+                if (cal) handleCalendarItemPress(cal);
+                else if (r) handleToggle(r, menuDate);
               }}
               accessibilityRole="button"
               accessibilityLabel={`${menuRoutine?.title ?? ''} ${menuDone ? '완료 취소' : '완료'}`}
