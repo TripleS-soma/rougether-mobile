@@ -11,7 +11,8 @@ import {
   View,
 } from 'react-native';
 
-import { type CharacterAnimationSet } from '@/components/character-avatar';
+import { type CharacterAnimationSet, CharacterAvatar } from '@/components/character-avatar';
+import { DraggableFurniture, DRAG_OUT_MARGIN } from '@/components/room/draggable-furniture';
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { Room, type RoomRegion } from '@/components/room/room';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
@@ -24,7 +25,8 @@ import {
   DEFAULT_WALLPAPER_ID,
   FURNITURE_ITEMS,
   type FurnitureItem,
-  type FurnitureSlot,
+  type PlacedFurniture,
+  slotIdsToPlacements,
   type Wallpaper,
   WALLPAPERS,
 } from '@/resources/furniture';
@@ -37,11 +39,13 @@ import { useTokens } from '@/hooks/use-tokens';
  * of the surface layers. Tapping the room's wall opens the wallpaper picker
  * (with a 배경 segment); tapping the floor band opens the floor picker.
  */
-type PickerTarget = FurnitureSlot | 'wallpaper' | 'floor' | 'background' | 'all' | null;
+type PickerTarget = 'wallpaper' | 'floor' | 'background' | 'all' | null;
 
 export type RoomDecorScreenProps = {
-  /** Furniture ids placed when the screen opens. */
-  initialPlacedIds?: string[];
+  /** 자유 배치 초기 상태 (#327); 없으면 데모 프리필. */
+  initialItems?: PlacedFurniture[];
+  /** 방이 이미 FREE_V1로 전환됐는지 — 첫 저장 전환 확인 모달 판단. */
+  freeLayout?: boolean;
   initialWallpaperId?: string;
   initialFloorId?: string | null;
   initialBackgroundId?: string | null;
@@ -68,13 +72,18 @@ export type RoomDecorScreenProps = {
   onBack?: () => void;
   /** Buy a not-yet-owned catalog item with dia. */
   onBuy?: (itemId: string) => void;
-  /** Commit the current selection (null floor/background = surface cleared). */
+  /**
+   * Commit the current layout (null floor/background = surface cleared).
+   * 'conflict' = 다른 기기 선저장(409) — 화면이 재로드 모달을 띄운다.
+   */
   onApply?: (
-    placedIds: string[],
+    items: PlacedFurniture[],
     wallpaperId: string,
     floorId: string | null,
     backgroundId: string | null,
-  ) => void;
+  ) => Promise<'ok' | 'conflict' | 'fail'> | void;
+  /** 리비전 충돌 모달의 '새로 불러오기' — 서버 상태로 재로드 후 화면을 나간다. */
+  onConflictReload?: () => void;
 };
 
 /**
@@ -87,7 +96,9 @@ export type RoomDecorScreenProps = {
  * Spec domain: rougether-spec domains/room + shop.
  */
 export function RoomDecorScreen({
-  initialPlacedIds,
+  initialItems,
+  freeLayout = false,
+  onConflictReload,
   initialWallpaperId = DEFAULT_WALLPAPER_ID,
   initialFloorId = null,
   initialBackgroundId = null,
@@ -121,30 +132,47 @@ export function RoomDecorScreen({
     [ownedIds, furniture, wallpapers, floors, backgrounds],
   );
 
-  const [placed, setPlaced] = useState<string[]>(
-    () => initialPlacedIds ?? ['hanok-bed', 'hanok-shelf', 'hanok-window', 'hanok-rug'],
-  );
+  // 자유 배치 상태 (#327). 데모(스토리) 프리필은 기존 한옥 세트를 슬롯 앵커로.
+  const demoItems = () =>
+    slotIdsToPlacements(['hanok-bed', 'hanok-shelf', 'hanok-window', 'hanok-rug'], furniture);
+  const [items, setItems] = useState<PlacedFurniture[]>(() => initialItems ?? demoItems());
+  const placed = useMemo(() => items.map((p) => p.furnitureId), [items]);
   const [wallpaperId, setWallpaperId] = useState(initialWallpaperId);
   const [floorId, setFloorId] = useState<string | null>(initialFloorId);
   const [backgroundId, setBackgroundId] = useState<string | null>(initialBackgroundId);
-  // Snapshot of the selection at mount — leaving with a different selection
-  // (미적용 변경) asks whether to save first.
-  const initialRef = useRef({
-    placed: [...(initialPlacedIds ?? ['hanok-bed', 'hanok-shelf', 'hanok-window', 'hanok-rug'])],
-    wallpaperId: initialWallpaperId,
-    floorId: initialFloorId,
-    backgroundId: initialBackgroundId,
-  });
-  const dirty =
-    wallpaperId !== initialRef.current.wallpaperId ||
-    floorId !== initialRef.current.floorId ||
-    backgroundId !== initialRef.current.backgroundId ||
-    placed.length !== initialRef.current.placed.length ||
-    placed.some((id) => !initialRef.current.placed.includes(id));
+  // Snapshot of the layout at mount — leaving with a different layout
+  // (미적용 변경) asks whether to save first. 좌표까지 비교한다.
+  const snap = (its: PlacedFurniture[], wp: string, fl: string | null, bg: string | null): string =>
+    JSON.stringify({ its, wp, fl, bg });
+  const initialSnapRef = useRef<string | null>(null);
+  if (initialSnapRef.current === null) {
+    initialSnapRef.current = snap(items, wallpaperId, floorId, backgroundId);
+  }
+  const dirty = snap(items, wallpaperId, floorId, backgroundId) !== initialSnapRef.current;
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [picker, setPicker] = useState<PickerTarget>(null);
+  // 첫 자유 배치 저장은 SLOT_V1→FREE_V1 비가역 전환 — 한 번 확인받는다 (#327).
+  const [confirmMigrate, setConfirmMigrate] = useState(false);
+  const migrateOkRef = useRef(freeLayout);
+  const pendingBackRef = useRef(true);
+  // 409 리비전 충돌(다른 기기 선저장) — 재로드 안내 모달.
+  const [conflictOpen, setConflictOpen] = useState(false);
 
-  const apply = () => onApply?.(placed, wallpaperId, floorId, backgroundId);
+  const doApply = async (thenBack: boolean) => {
+    const result = await onApply?.(items, wallpaperId, floorId, backgroundId);
+    if (result === 'conflict') return setConflictOpen(true);
+    if (result === 'fail') return; // 실패 토스트는 훅이 띄운다.
+    initialSnapRef.current = snap(items, wallpaperId, floorId, backgroundId);
+    if (thenBack) onBack?.();
+  };
+  const apply = (thenBack = true) => {
+    if (!migrateOkRef.current) {
+      pendingBackRef.current = thenBack;
+      setConfirmMigrate(true);
+      return;
+    }
+    void doApply(thenBack);
+  };
   const handleBack = () => {
     if (dirty) setConfirmLeave(true);
     else onBack?.();
@@ -174,22 +202,47 @@ export function RoomDecorScreen({
     null,
   );
 
-  const onRegionPress = (region: RoomRegion) =>
-    setPicker(
-      region === 'wall'
-        ? 'wallpaper'
-        : region === 'floor' && floors.length === 0
-          ? 'wallpaper' // no floor catalog yet — fall back to the surface picker
-          : region,
-    );
+  // 자유 배치 모드에선 방의 벽/바닥 밴드만 픽커 진입점이다 (가구는 트레이·전체보기).
+  const onRegionPress = (region: RoomRegion) => {
+    if (region !== 'wall' && region !== 'floor') return;
+    setPicker(region === 'wall' || floors.length === 0 ? 'wallpaper' : 'floor');
+  };
   const activeRegion: RoomRegion | null =
     picker === 'all' ? null : picker === 'wallpaper' || picker === 'background' ? 'wall' : picker;
 
-  /** Place `id` into its slot, replacing whatever shares that slot. */
-  const placeInSlot = (id: string, slot: FurnitureSlot) =>
-    setPlaced((prev) => [...prev.filter((p) => furniture.find((i) => i.id === p)?.slot !== slot), id]); // prettier-ignore
-  const clearSlot = (slot: FurnitureSlot) =>
-    setPlaced((prev) => prev.filter((p) => furniture.find((i) => i.id === p)?.slot !== slot));
+  // 방 렌더 영역 크기(px) — 정규화 좌표의 기준 (#327).
+  const [roomSize, setRoomSize] = useState({ w: 0, h: 0 });
+
+  /** 가운데에 새 가구를 놓는다 — 같은 가구는 방에 1개만. */
+  const addItem = (id: string) => {
+    if (items.some((p) => p.furnitureId === id)) {
+      toast('이미 배치된 가구예요', 'error');
+      return;
+    }
+    const maxZ = items.reduce((m, p) => Math.max(m, p.z), 0);
+    setItems((prev) => [...prev, { furnitureId: id, x: 0.5, y: 0.55, z: maxZ + 1 }]);
+  };
+  const removeItem = (id: string) => setItems((prev) => prev.filter((p) => p.furnitureId !== id));
+  /** 드래그 종료 — 방 밖이면 빼고, 안이면 좌표 커밋 + 최상위 승격. */
+  const commitDrag = (id: string, x: number, y: number) => {
+    const out =
+      x < -DRAG_OUT_MARGIN ||
+      x > 1 + DRAG_OUT_MARGIN ||
+      y < -DRAG_OUT_MARGIN ||
+      y > 1 + DRAG_OUT_MARGIN;
+    if (out) {
+      removeItem(id);
+      toast('가구를 뺐어요');
+      return;
+    }
+    const clamp = (v: number) => Math.min(0.92, Math.max(0.08, v));
+    setItems((prev) => {
+      const maxZ = prev.reduce((m, p) => Math.max(m, p.z), 0);
+      return prev.map((p) =>
+        p.furnitureId === id ? { ...p, x: clamp(x), y: clamp(y), z: maxZ + 1 } : p,
+      );
+    });
+  };
 
   // What the open picker offers, owned first so placing needs no digging.
   // 보유중 filter hides the shop side of every picker (slot/surface/전체보기).
@@ -216,21 +269,54 @@ export function RoomDecorScreen({
 
       <ScrollView contentContainerStyle={styles.body}>
         <View style={styles.preview}>
-          <Room
-            characterId={characterId}
-            characterAnimations={characterAnimations}
-            wallpaperId={wallpaperId}
-            floorId={floorId}
-            backgroundId={backgroundId}
-            placedFurnitureIds={placed}
-            furniture={furniture}
-            wallpapers={wallpapers}
-            floors={floors}
-            backgrounds={backgrounds}
-            editable
-            onRegionPress={onRegionPress}
-            activeRegion={activeRegion}
-          />
+          {/* 캔버스 = 방과 정확히 같은 박스 — 오버레이 좌표·정규화의 기준.
+              (preview의 padding 박스 기준으로 재면 저장 좌표가 어긋난다.) */}
+          <View
+            style={styles.canvas}
+            onLayout={(e) =>
+              setRoomSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.width })
+            }>
+            {/* 가구는 Room이 아니라 드래그 오버레이가 그린다 — 방은 표면만. */}
+            <Room
+              characterId={null}
+              wallpaperId={wallpaperId}
+              floorId={floorId}
+              backgroundId={backgroundId}
+              placements={[]}
+              furniture={furniture}
+              wallpapers={wallpapers}
+              floors={floors}
+              backgrounds={backgrounds}
+              editable
+              onRegionPress={onRegionPress}
+              activeRegion={activeRegion}
+            />
+            {roomSize.w > 0
+              ? [...items]
+                  .sort((a, b) => a.z - b.z)
+                  .map((p) => {
+                    const item = furniture.find((f) => f.id === p.furnitureId);
+                    if (!item) return null;
+                    return (
+                      <DraggableFurniture
+                        key={p.furnitureId}
+                        item={item}
+                        placement={p}
+                        roomSize={roomSize}
+                        onDragEnd={commitDrag}
+                      />
+                    );
+                  })
+              : null}
+            {/* 캐릭터는 항상 가구 앞 — 오버레이(드래그 중 z 9999)보다 위 전용 레이어. */}
+            <View pointerEvents="none" style={styles.characterLayer}>
+              <CharacterAvatar
+                characterId={characterId}
+                animations={characterAnimations}
+                style={styles.characterFigure}
+              />
+            </View>
+          </View>
         </View>
 
         {loading ? (
@@ -259,9 +345,10 @@ export function RoomDecorScreen({
 
         {!loading && !loadError && picker === null ? (
           <View style={[styles.guideCard, { backgroundColor: t.surface }]}>
-            <Text style={[Typography.label, { color: t.text }]}>방을 눌러 꾸며보세요</Text>
+            <Text style={[Typography.label, { color: t.text }]}>가구를 끌어서 꾸며보세요</Text>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              비어 있는 자리는 +로 표시돼요. 벽이나 바닥을 누르면 벽지·바닥을 바꿀 수 있어요.
+              가구를 끌면 원하는 곳으로 옮겨지고, 방 밖으로 끌면 빠져요. 벽·바닥을 누르면 벽지와
+              바닥을 바꿀 수 있어요.
             </Text>
             <Pressable
               onPress={() => setPicker('all')}
@@ -421,10 +508,9 @@ export function RoomDecorScreen({
                 <FurnitureGrid
                   items={byOwnedFirst(furniture)}
                   placed={placed}
+                  // 배치 안 된 가구는 방 가운데로 추가, 배치된 가구는 다시 빼기.
                   onPlace={(item) =>
-                    placed.includes(item.id)
-                      ? setPlaced((prev) => prev.filter((p) => p !== item.id))
-                      : placeInSlot(item.id, item.slot)
+                    placed.includes(item.id) ? removeItem(item.id) : addItem(item.id)
                   }
                   owned={owned}
                   diaBalance={diaBalance}
@@ -433,23 +519,6 @@ export function RoomDecorScreen({
                   t={t}
                 />
               </>
-            ) : null}
-            {!isSurfacePicker && picker !== null && picker !== 'all' ? (
-              <FurnitureGrid
-                items={byOwnedFirst(furniture.filter((i) => i.slot === picker))}
-                placed={placed}
-                onPlace={(item) => placeInSlot(item.id, picker)}
-                onClear={
-                  placed.some((p) => furniture.find((i) => i.id === p)?.slot === picker)
-                    ? () => clearSlot(picker)
-                    : undefined
-                }
-                owned={owned}
-                diaBalance={diaBalance}
-                onBuyRequest={setPendingBuy}
-                onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
-                t={t}
-              />
             ) : null}
           </View>
         ) : null}
@@ -508,8 +577,7 @@ export function RoomDecorScreen({
               <Pressable
                 onPress={() => {
                   setConfirmLeave(false);
-                  apply();
-                  onBack?.();
+                  apply(true);
                 }}
                 accessibilityRole="button"
                 accessibilityLabel="저장하고 나가기"
@@ -538,12 +606,83 @@ export function RoomDecorScreen({
         </Pressable>
       </Modal>
 
+      {/* 첫 자유 배치 저장 — SLOT_V1→FREE_V1 비가역 전환 확인 (#327). */}
+      <Modal
+        transparent
+        visible={confirmMigrate}
+        animationType="fade"
+        onRequestClose={() => setConfirmMigrate(false)}>
+        <Pressable style={styles.confirmBackdrop} onPress={() => setConfirmMigrate(false)}>
+          <Pressable style={[styles.confirmCard, { backgroundColor: t.screen }]}>
+            <Text style={[Typography.h3, { color: t.text }]}>새 꾸미기 방식으로 전환할까요?</Text>
+            <Text style={[Typography.body, styles.confirmText, { color: t.textMuted }]}>
+              자유 배치로 저장하면 가구를 어디든 옮길 수 있어요.{'\n'}전환한 뒤에는 이전 방식으로
+              되돌릴 수 없어요.
+            </Text>
+            <View style={styles.confirmBtns}>
+              <Pressable
+                onPress={() => setConfirmMigrate(false)}
+                accessibilityRole="button"
+                accessibilityLabel="전환 취소"
+                style={[styles.confirmBtn, { backgroundColor: t.surfaceMuted }]}>
+                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  migrateOkRef.current = true;
+                  setConfirmMigrate(false);
+                  void doApply(pendingBackRef.current);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="전환하고 저장"
+                style={[styles.confirmBtn, { backgroundColor: t.primary }]}>
+                <Text style={[Typography.label, { color: t.onPrimary }]}>전환하고 저장</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* 다른 기기가 먼저 저장한 경우(409) — 서버 상태로 다시 시작해야 한다. */}
+      <Modal
+        transparent
+        visible={conflictOpen}
+        animationType="fade"
+        onRequestClose={() => setConflictOpen(false)}>
+        <Pressable style={styles.confirmBackdrop} onPress={() => setConflictOpen(false)}>
+          <Pressable style={[styles.confirmCard, { backgroundColor: t.screen }]}>
+            <Text style={[Typography.h3, { color: t.text }]}>다른 기기에서 먼저 저장했어요</Text>
+            <Text style={[Typography.body, styles.confirmText, { color: t.textMuted }]}>
+              방 배치가 다른 곳에서 바뀌어 지금 편집을 저장할 수 없어요.{'\n'}새로 불러오면 지금
+              편집한 내용은 사라져요.
+            </Text>
+            <View style={styles.confirmBtns}>
+              <Pressable
+                onPress={() => setConflictOpen(false)}
+                accessibilityRole="button"
+                accessibilityLabel="충돌 모달 닫기"
+                style={[styles.confirmBtn, { backgroundColor: t.surfaceMuted }]}>
+                <Text style={[Typography.label, { color: t.text }]}>계속 보기</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setConflictOpen(false);
+                  onConflictReload?.();
+                  onBack?.();
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="새로 불러오기"
+                style={[styles.confirmBtn, { backgroundColor: t.primary }]}>
+                <Text style={[Typography.label, { color: t.onPrimary }]}>새로 불러오기</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       <View style={[styles.applyBar, { backgroundColor: t.screen, borderTopColor: t.border }]}>
         <Pressable
-          onPress={() => {
-            apply();
-            onBack?.();
-          }}
+          onPress={() => apply(true)}
           accessibilityRole="button"
           accessibilityLabel="적용하기"
           style={[styles.applyBtn, { backgroundColor: t.primary }]}>
@@ -764,6 +903,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingTop: Spacing.four,
     paddingBottom: Spacing.two,
+  },
+  // 오버레이·정규화 좌표의 기준 박스 — Room(정사각)과 정확히 일치.
+  canvas: {
+    width: '100%',
+    aspectRatio: 1,
+  },
+  // 캐릭터는 항상 가구 앞 (#327) — 드래그 중 아이템(z 9999)보다도 위.
+  characterLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 10000,
+  },
+  // Room의 캐릭터 배치와 동일한 자리 (absolute center-bottom, 42%).
+  characterFigure: {
+    position: 'absolute',
+    alignSelf: 'center',
+    bottom: '16%',
+    width: '42%',
+    height: '42%',
   },
   filterRow: {
     flexDirection: 'row',

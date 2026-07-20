@@ -19,12 +19,13 @@ import {
   type FurnitureCategory,
   type FurnitureItem,
   type FurnitureSlot,
+  type PlacedFurniture,
   type Wallpaper,
 } from '@/resources/furniture';
 
 import { type OnboardingGoal } from '@/components/screens/onboarding-screen';
 import { toIsoDate } from '@/utils/datetime';
-import { type RoomSlotSave } from './rooms';
+import { type RoomPlacementSave, type RoomPlacementWire, type RoomSlotSave } from './rooms';
 
 import type { HouseCover } from '@/components/house-cover-picker';
 import type { Floor, House, HouseMission, RoomCell } from '@/components/screens/group-house-screen';
@@ -769,6 +770,62 @@ export function fromRoomSlots(
     }
   }
   return { placedFurnitureIds: placed, wallpaperId, floorId, backgroundId };
+}
+
+/**
+ * FREE_V1 방 조회의 placements → 자유 배치 모델 (#327). 내 방은 userItemMap으로,
+ * 남의 방은 assetKey로 카탈로그 아이템을 찾는다(둘 다 시도). z 미지정은 배열
+ * 순서를 따른다. 카탈로그에 없는 항목은 건너뛴다.
+ */
+export function fromRoomPlacements(
+  placements: RoomPlacementWire[],
+  cat: ShopCatalogue,
+  userItemMap?: Map<string, number>,
+): PlacedFurniture[] {
+  const itemByUserItem = new Map<number, string>();
+  if (userItemMap) for (const [itemId, uid] of userItemMap) itemByUserItem.set(uid, itemId);
+  const out: PlacedFurniture[] = [];
+  for (const [i, p] of placements.entries()) {
+    const byUid = p.userItemId != null ? itemByUserItem.get(p.userItemId) : undefined;
+    const byAsset = p.assetKey
+      ? cat.furniture.find((f) => f.assetKey === p.assetKey)?.id
+      : undefined;
+    const furnitureId = byUid ?? byAsset;
+    if (!furnitureId || !cat.furniture.some((f) => f.id === furnitureId)) continue;
+    out.push({
+      furnitureId,
+      x: p.positionX ?? 0.5,
+      y: p.positionY ?? 0.5,
+      z: p.zIndex ?? i + 1,
+      scale: p.scale,
+      rotationDeg: p.rotationDeg,
+      flipped: p.flipped,
+    });
+  }
+  return out;
+}
+
+/** 자유 배치 모델 → PUT /rooms/me/layout placements (내 인벤토리의 userItemId 필요). */
+export function toLayoutPlacements(
+  items: PlacedFurniture[],
+  userItemMap: Map<string, number>,
+): RoomPlacementSave[] {
+  const saves: RoomPlacementSave[] = [];
+  for (const p of items) {
+    const uid = userItemMap.get(p.furnitureId);
+    if (uid == null) continue;
+    saves.push({
+      userItemId: uid,
+      // 서버는 소수 좌표를 그대로 저장 — 전송 전 0..1로 클램프만 해준다.
+      positionX: Math.min(1, Math.max(0, p.x)),
+      positionY: Math.min(1, Math.max(0, p.y)),
+      zIndex: p.z,
+      scale: p.scale,
+      rotationDeg: p.rotationDeg,
+      flipped: p.flipped,
+    });
+  }
+  return saves;
 }
 
 /**

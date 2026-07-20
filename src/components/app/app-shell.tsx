@@ -43,7 +43,7 @@ import { useMyRoomData } from '@/hooks/use-my-room-data';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useShop } from '@/hooks/use-shop';
 import { useBrandTheme } from '@/hooks/use-tokens';
-import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
+import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furniture';
 
 type Screen =
   | 'myRoom'
@@ -243,14 +243,16 @@ export function AppShell({
     retry: retryShop,
     purchase: purchaseFurniture,
     refreshOwned,
-    savePlacement,
+    saveLayout,
   } = useShop(setWallet);
 
+  const [placedItems, setPlacedItems] = useState<PlacedFurniture[]>([]);
   const [placedFurnitureIds, setPlacedFurnitureIds] = useState<string[]>([]);
   const [wallpaperId, setWallpaperId] = useState(DEFAULT_WALLPAPER_ID);
   const [floorId, setFloorId] = useState<string | null>(null);
   const [backgroundId, setBackgroundId] = useState<string | null>(null);
   useEffect(() => {
+    setPlacedItems(placement.items);
     setPlacedFurnitureIds(placement.placedFurnitureIds);
     setWallpaperId(placement.wallpaperId);
     setFloorId(placement.floorId);
@@ -435,6 +437,7 @@ export function AppShell({
             loadError={!!myRoomError}
             onRetry={retryMyRoom}
             placedFurnitureIds={placedFurnitureIds}
+            placements={placement.freeLayout ? placedItems : null}
             wallpaperId={wallpaperId}
             floorId={floorId}
             backgroundId={backgroundId}
@@ -475,7 +478,8 @@ export function AppShell({
 
         {screen === 'decor' ? (
           <RoomDecorScreen
-            initialPlacedIds={placedFurnitureIds}
+            initialItems={placedItems}
+            freeLayout={placement.freeLayout}
             initialWallpaperId={wallpaperId}
             initialFloorId={floorId}
             initialBackgroundId={backgroundId}
@@ -494,12 +498,19 @@ export function AppShell({
             onBuy={(itemId) => {
               void purchaseFurniture(itemId);
             }}
-            onApply={(ids, wp, fl, bg) => {
-              setPlacedFurnitureIds(ids);
-              setWallpaperId(wp);
-              setFloorId(fl);
-              setBackgroundId(bg);
-              void savePlacement(ids, wp, fl, bg);
+            onApply={async (its, wp, fl, bg) => {
+              const result = await saveLayout(its, wp, fl, bg);
+              if (result === 'ok') {
+                setPlacedItems(its);
+                setPlacedFurnitureIds(its.map((p) => p.furnitureId));
+                setWallpaperId(wp);
+                setFloorId(fl);
+                setBackgroundId(bg);
+              }
+              return result;
+            }}
+            onConflictReload={() => {
+              void retryShop();
             }}
             onBack={() => setScreen('myRoom')}
           />
@@ -635,6 +646,7 @@ export function AppShell({
               void loadMoreGuestbook();
             }}
             placedFurnitureIds={friendRoom.placement?.placedFurnitureIds ?? []}
+            placements={friendRoom.placement?.placements ?? null}
             wallpaperId={friendRoom.placement?.wallpaperId}
             floorId={friendRoom.placement?.floorId ?? null}
             backgroundId={friendRoom.placement?.backgroundId ?? null}

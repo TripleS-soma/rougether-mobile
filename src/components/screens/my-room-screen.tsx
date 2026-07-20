@@ -40,7 +40,12 @@ import { Icon, type IconName } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { captureVerificationPhoto } from '@/lib/photo-verify';
 import { saveRoomImage } from '@/lib/room-capture';
-import { DEFAULT_WALLPAPER_ID, type FurnitureItem, type Wallpaper } from '@/resources/furniture';
+import {
+  DEFAULT_WALLPAPER_ID,
+  type FurnitureItem,
+  type PlacedFurniture,
+  type Wallpaper,
+} from '@/resources/furniture';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
@@ -135,6 +140,8 @@ export type MyRoomScreenProps = {
   floorId?: string | null;
   backgroundId?: string | null;
   placedFurnitureIds?: string[];
+  /** 자유 배치(FREE_V1, #327) — 주어지면 슬롯 대신 정규화 좌표로 렌더. */
+  placements?: PlacedFurniture[] | null;
   furniture?: FurnitureItem[];
   wallpapers?: Wallpaper[];
   floors?: Wallpaper[];
@@ -256,6 +263,7 @@ export function MyRoomScreen({
   floorId,
   backgroundId,
   placedFurnitureIds,
+  placements = null,
   furniture,
   wallpapers,
   floors,
@@ -712,6 +720,7 @@ export function MyRoomScreen({
                   floorId={floorId}
                   backgroundId={backgroundId}
                   placedFurnitureIds={placedFurnitureIds}
+                  placements={placements}
                   furniture={furniture}
                   wallpapers={wallpapers}
                   floors={floors}

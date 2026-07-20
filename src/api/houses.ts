@@ -1,6 +1,7 @@
 /** House (그룹하우스) endpoints. */
 import { apiDelete, apiGet, apiGetList, apiPost, apiPut } from './client';
 import { buildQuery } from './http';
+import type { RoomWithLayout } from './rooms';
 import type {
   HouseCoverImage,
   HouseCreateRequest,
@@ -20,7 +21,6 @@ import type {
   MemberSummary,
   MissionSummary,
   MyHouseSummary,
-  RoomResponse,
   TransferOwnershipResponse,
 } from './types';
 
@@ -98,7 +98,7 @@ export function kickHouseMember(houseId: number, membershipId: number) {
 
 /** GET /houses/{id}/members/{membershipId}/room — a housemate's room (same shape as /rooms/me). */
 export function fetchHouseMemberRoom(houseId: number, membershipId: number) {
-  return apiGet<RoomResponse>(`/houses/${houseId}/members/${membershipId}/room`);
+  return apiGet<RoomWithLayout>(`/houses/${houseId}/members/${membershipId}/room`);
 }
 
 /** GET /houses/{id}/members/{membershipId}/day — that member's routines+todos on a date (default today, KST). */

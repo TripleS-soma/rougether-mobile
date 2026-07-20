@@ -7,7 +7,12 @@
 import { useCallback, useRef, useState } from 'react';
 
 import { fetchHouseMemberRoom } from '@/api';
-import { characterIdFromCode, fromFriendRoomSlots, type ShopCatalogue } from '@/api/adapters';
+import {
+  characterIdFromCode,
+  fromFriendRoomSlots,
+  fromRoomPlacements,
+  type ShopCatalogue,
+} from '@/api/adapters';
 import type { House, MemberRoomPreview } from '@/components/screens/group-house-screen';
 import type { CharacterId } from '@/constants/characters';
 import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
@@ -64,6 +69,11 @@ export function useMemberRoomPreviews() {
             const placement = fromFriendRoomSlots(room.slots ?? [], catalogue);
             const preview: MemberRoomPreview = {
               placedFurnitureIds: placement.placedFurnitureIds,
+              // FREE_V1 멤버 방은 자유 좌표 그대로 타일에 렌더 (#327).
+              placements:
+                room.layoutFormat === 'FREE_V1' && room.placements?.length
+                  ? fromRoomPlacements(room.placements, catalogue)
+                  : null,
               wallpaperId: placement.wallpaperId ?? DEFAULT_WALLPAPER_ID,
               floorId: placement.floorId,
               backgroundId: placement.backgroundId,
