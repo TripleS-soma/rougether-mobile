@@ -351,6 +351,8 @@ export function MyRoomScreen({
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const menuRoutine = routines.find((r) => r.id === menuOpenId) ?? null;
   const menuDone = menuRoutine ? isDone(menuRoutine.id, today) : false;
+  // 시간이 없는 루틴/투두는 '시간 추가', 있으면 '시간 수정' (#325).
+  const menuTimeLabel = menuRoutine?.alarmEnabled && menuRoutine?.time ? '시간 수정' : '시간 추가';
 
   // Kebab → 수정: rename only (id + draft text). Kebab → 시간 수정: TimePickerSheet.
   const [renameId, setRenameId] = useState<string | null>(null);
@@ -1087,23 +1089,21 @@ export function MyRoomScreen({
               </Text>
             </Pressable>
 
-            {/* Todos have no alarm time — hide the dead menu item for them. */}
-            {menuRoutine?.kind !== 'todo' ? (
-              <Pressable
-                onPress={() => {
-                  const r = menuRoutine;
-                  setMenuOpenId(null);
-                  if (r) setTimeId(r.id);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`${menuRoutine?.title ?? ''} 시간 수정`}
-                style={styles.sheetItem}>
-                <View style={[styles.sheetItemIcon, { backgroundColor: t.warning }]}>
-                  <Icon name="bell" size={18} color={t.onPrimary} />
-                </View>
-                <Text style={[Typography.body, { color: t.text }]}>시간 수정</Text>
-              </Pressable>
-            ) : null}
+            {/* 루틴은 알림 시간, 투두는 마감 시각(dueTime) — 같은 항목으로 다룬다 (#325). */}
+            <Pressable
+              onPress={() => {
+                const r = menuRoutine;
+                setMenuOpenId(null);
+                if (r) setTimeId(r.id);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`${menuRoutine?.title ?? ''} ${menuTimeLabel}`}
+              style={styles.sheetItem}>
+              <View style={[styles.sheetItemIcon, { backgroundColor: t.warning }]}>
+                <Icon name="bell" size={18} color={t.onPrimary} />
+              </View>
+              <Text style={[Typography.body, { color: t.text }]}>{menuTimeLabel}</Text>
+            </Pressable>
 
             {/* Todos move their dueDate; a routine moves that day's occurrence
                 only — the repeat stays (the calendar sheet explains). */}

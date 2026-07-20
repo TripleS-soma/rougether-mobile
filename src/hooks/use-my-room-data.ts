@@ -286,10 +286,20 @@ export function useMyRoomData() {
 
   const updateRoutineTime = async (id: string, alarmEnabled: boolean, time: string) => {
     const item = findItem(id);
-    if (!item || item.kind === 'todo') return;
+    if (!item) return;
+    // 투두 마감 시각(dueTime) 해제는 서버 미지원(null = 기존 값 유지) — 켠 채
+    // 저장만 반영하고, 끄기는 정직하게 안내한다 (#325).
+    if (item.kind === 'todo' && !alarmEnabled) {
+      if (item.time) toast('할 일 시간 삭제는 서버 준비 중이에요', 'error');
+      return;
+    }
     setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, alarmEnabled, time } : r)));
     try {
-      await apiUpdateRoutine(toServerItemId(id), toRoutineUpdate(item, { alarmEnabled, time }));
+      if (item.kind === 'todo') {
+        await updateTodo(toServerItemId(id), toTodoUpdate(item, { alarmEnabled, time }));
+      } else {
+        await apiUpdateRoutine(toServerItemId(id), toRoutineUpdate(item, { alarmEnabled, time }));
+      }
     } catch {
       setRoutines((prev) =>
         prev.map((r) =>

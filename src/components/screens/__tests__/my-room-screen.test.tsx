@@ -115,7 +115,7 @@ describe('MyRoomScreen', () => {
     );
 
     await fireEvent.press(getByText('장보기')); // row body → menu sheet
-    expect(queryByText('시간 수정')).toBeNull(); // todos have no alarm item
+    expect(queryByText('시간 수정')).toBeNull(); // 시간 없는 항목은 '시간 추가' (#325)
 
     await fireEvent.press(getByText('날짜 바꾸기')); // → calendar bottom sheet
     await fireEvent.press(getByLabelText(OTHER_DAY)); // draft only — not saved yet
@@ -123,6 +123,38 @@ describe('MyRoomScreen', () => {
 
     await fireEvent.press(getByLabelText('확인'));
     expect(onUpdateTodoDueDate).toHaveBeenCalledWith('t9', OTHER_DAY);
+  });
+
+  it('투두에도 시간 항목 — 없으면 시간 추가, 저장 시 dueTime 콜백 (#325)', async () => {
+    const onUpdateRoutineTime = jest.fn();
+    const todos = [
+      { id: 't9', title: '장보기', kind: 'todo' as const, dueDate: TODAY, category: '건강' },
+    ];
+    const { getByText, getByLabelText } = await render(
+      <MyRoomScreen routines={todos} onUpdateRoutineTime={onUpdateRoutineTime} />,
+    );
+    await fireEvent.press(getByText('장보기'));
+    // 알림 시간 시트 재사용 — 토글 켜고 저장하면 기본 07:00으로 콜백.
+    await fireEvent.press(getByText('시간 추가'));
+    await fireEvent.press(getByLabelText('알림 받기'));
+    await fireEvent.press(getByLabelText('알림 저장'));
+    expect(onUpdateRoutineTime).toHaveBeenCalledWith('t9', true, '07:00');
+  });
+
+  it('시간 라벨 분기 — 시간 있는 루틴은 시간 수정, 없는 루틴은 시간 추가 (#325)', async () => {
+    const { getByText, queryByText, getByLabelText } = await render(
+      <MyRoomScreen routines={SAMPLE_ROUTINES} />,
+    );
+    // '하루 회고'는 23:00 알림 보유 → 시간 수정.
+    await fireEvent.press(getByText('하루 회고'));
+    expect(getByText('시간 수정')).toBeTruthy();
+    // 시간 수정 → 알림 시트 열림(메뉴 닫힘) → 닫기.
+    await fireEvent.press(getByText('시간 수정'));
+    await fireEvent.press(getByLabelText('닫기'));
+    // '물 2L 마시기'는 alarmEnabled: false → 시간 추가.
+    await fireEvent.press(getByText('물 2L 마시기'));
+    expect(queryByText('시간 수정')).toBeNull();
+    expect(getByText('시간 추가')).toBeTruthy();
   });
 
   it('cancels a date change without saving', async () => {

@@ -273,6 +273,10 @@ export function toAppTodo(td: TodoResponse): Routine {
     title: td.title ?? '',
     category: td.categoryId != null ? String(td.categoryId) : undefined,
     dueDate: td.dueDate,
+    // 마감 시각(dueTime) — 루틴의 알림 시간과 같은 자리(time)에 얹어 배지와
+    // 시간 시트가 그대로 동작한다 (#325).
+    time: td.dueTime ? fromApiTime(td.dueTime) : undefined,
+    alarmEnabled: !!td.dueTime,
     kind: 'todo',
   };
 }
@@ -295,6 +299,9 @@ export function toTodoUpdate(td: Routine, overrides: Partial<Routine> = {}): Tod
     title: merged.title,
     categoryId: toCategoryId(merged.category),
     dueDate: merged.dueDate,
+    // dueTime 해제는 서버 미지원(null = 기존 값 유지, 2026-07-20 실호출 확인) —
+    // 값이 있을 때만 보낸다 (#325).
+    dueTime: merged.alarmEnabled && merged.time ? toApiTime(merged.time) : undefined,
   };
 }
 
@@ -328,6 +335,7 @@ export function toCalendarItems(day: CalendarDayResponse): CalendarDayItem[] {
         id: todoAppId(td.id),
         kind: 'todo',
         title: td.title ?? '',
+        time: td.dueTime ? fromApiTime(td.dueTime) : undefined,
         completed: td.status === 'COMPLETED',
         category,
       });

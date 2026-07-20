@@ -10,6 +10,7 @@ import {
   toServerItemId,
   toShopCatalogue,
   toTodoCreate,
+  toTodoUpdate,
   toWallet,
   todayCompletions,
   toGroupHouse,
@@ -153,6 +154,16 @@ describe('API adapters', () => {
       categoryId: 2,
       dueDate: '2026-07-03',
     });
+  });
+
+  it('maps todo dueTime to the shared time slot and back (#325)', () => {
+    // dueTime 있는 투두 → time/alarmEnabled, 없으면 알람 없음.
+    const timed = toAppTodo({ id: 9, title: '장보기', dueDate: '2026-07-03', dueTime: '18:00:00' });
+    expect(timed).toMatchObject({ time: '18:00', alarmEnabled: true });
+    expect(toAppTodo({ id: 9, title: '장보기' })).toMatchObject({ alarmEnabled: false });
+    // 업데이트: 시간이 켜져 있을 때만 dueTime 전송(HH:mm:ss) — 해제는 서버 미지원.
+    expect(toTodoUpdate(timed, { alarmEnabled: true, time: '09:05' }).dueTime).toBe('09:05:00');
+    expect(toTodoUpdate(toAppTodo({ id: 9, title: '장보기' })).dueTime).toBeUndefined();
   });
 
   it('keeps routine/todo app ids distinct when server ids collide', () => {
