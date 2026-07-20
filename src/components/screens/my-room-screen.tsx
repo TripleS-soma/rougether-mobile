@@ -349,7 +349,7 @@ export function MyRoomScreen({
   const [newTodoDate, setNewTodoDate] = useState(today);
   const [todoDateOpen, setTodoDateOpen] = useState(false);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
-  // 메뉴 시트의 날짜 문맥 — 방탭은 오늘, 달력탭은 선택한 날짜로 연다 (#325).
+  // 메뉴 시트의 날짜 문맥 — 방탭은 오늘, 달력탭은 선택한 날짜로 연다 (#323).
   const [menuDate, setMenuDate] = useState(today);
   const menuRoutine = routines.find((r) => r.id === menuOpenId) ?? null;
   const openRowMenu = (id: string, date = today) => {
@@ -385,7 +385,7 @@ export function MyRoomScreen({
   const dayItems = serverBackedDay ? calendarDays?.[selectedDate] : undefined;
 
   // 달력 서버 날짜에서 연 메뉴 — 완료 라벨/토글은 그 날의 기록과 달력 규칙
-  // (미래 차단, 과거 허용)을 따른다 (#325).
+  // (미래 차단, 과거 허용)을 따른다 (#323).
   const menuCalItem =
     menuOpenId && serverBackedDay ? dayItems?.find((i) => i.id === menuOpenId) : undefined;
   const menuDone = menuCalItem
@@ -1131,7 +1131,7 @@ export function MyRoomScreen({
                 const cal = menuCalItem;
                 setMenuOpenId(null);
                 // 서버 백업 날짜에서 연 메뉴는 달력 체크박스와 같은 규칙으로
-                // 토글한다 (미래 차단 토스트, 과거 실토글) (#325).
+                // 토글한다 (미래 차단 토스트, 과거 실토글) (#323).
                 if (cal) handleCalendarItemPress(cal);
                 else if (r) handleToggle(r, menuDate);
               }}

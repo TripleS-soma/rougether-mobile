@@ -408,7 +408,7 @@ describe('MyRoomScreen', () => {
     expect(onQuickAddRoutine).toHaveBeenCalledWith('건강', '오늘 할 일', TODAY);
   });
 
-  it('달력 탭 행 본문 탭 → 방탭과 같은 메뉴 시트 (오늘, #325)', async () => {
+  it('달력 탭 행 본문 탭 → 방탭과 같은 메뉴 시트 (오늘, #323)', async () => {
     const onToggleCompletion = jest.fn();
     const ui = await render(
       <MyRoomScreen routines={SAMPLE_ROUTINES} onToggleCompletion={onToggleCompletion} />,
@@ -422,7 +422,7 @@ describe('MyRoomScreen', () => {
     expect(onToggleCompletion).toHaveBeenCalledWith('5', TODAY);
   });
 
-  it('달력 서버 날짜의 행도 메뉴 시트 — 완료는 달력 규칙으로 토글 (#325)', async () => {
+  it('달력 서버 날짜의 행도 메뉴 시트 — 완료는 달력 규칙으로 토글 (#323)', async () => {
     const onToggleCalendarItem = jest.fn();
     const todos = [
       {
