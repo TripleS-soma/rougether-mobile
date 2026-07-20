@@ -174,6 +174,12 @@ export function useMyRoomData() {
 
   const findItem = (id: string) => routines.find((r) => r.id === id);
 
+  // 시트 액션(이름/시간/날짜/삭제)이 달력 탭의 서버 캐시에도 반영되도록,
+  // 캐시된 날짜들을 재조회한다 (#323). 방문한 날짜 수만큼만 호출된다.
+  const refreshCachedCalendarDays = () => {
+    for (const date of Object.keys(calendarDays)) void loadCalendarDay(date);
+  };
+
   /**
    * `onCompleted` fires only after a successful completion (not an
    * un-complete) — the shell uses it to auto-contribute linked house missions.
@@ -241,6 +247,9 @@ export function useMyRoomData() {
     try {
       const created = await createTodo(toTodoCreate(category, title, dueDate));
       setRoutines((prev) => [...prev, toAppTodo(created)]);
+      // 달력의 서버 백업 날짜(오늘 외)에 추가한 경우 그 날짜 기록을 재조회해
+      // 목록에 즉시 반영한다 (#323).
+      if (dueDate !== todayIso()) void loadCalendarDay(dueDate);
     } catch {
       toast('할 일을 추가하지 못했어요', 'error');
     }
@@ -278,6 +287,7 @@ export function useMyRoomData() {
     try {
       if (item.kind === 'todo') await updateTodo(toServerItemId(id), toTodoUpdate(item, { title }));
       else await apiUpdateRoutine(toServerItemId(id), toRoutineUpdate(item, { title }));
+      refreshCachedCalendarDays();
     } catch {
       setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, title: item.title } : r)));
       toast('수정에 실패했어요', 'error');
@@ -290,6 +300,7 @@ export function useMyRoomData() {
     setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, alarmEnabled, time } : r)));
     try {
       await apiUpdateRoutine(toServerItemId(id), toRoutineUpdate(item, { alarmEnabled, time }));
+      refreshCachedCalendarDays();
     } catch {
       setRoutines((prev) =>
         prev.map((r) =>
@@ -307,6 +318,7 @@ export function useMyRoomData() {
     setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, dueDate } : r)));
     try {
       await updateTodo(toServerItemId(id), toTodoUpdate(item, { dueDate }));
+      refreshCachedCalendarDays();
     } catch {
       setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, dueDate: item.dueDate } : r)));
       toast('수정에 실패했어요', 'error');
@@ -325,6 +337,7 @@ export function useMyRoomData() {
     try {
       const created = await createTodo(toTodoCreate(item.category, item.title, dueDate));
       setRoutines((prev) => [...prev, toAppTodo(created)]);
+      refreshCachedCalendarDays();
       toast('선택한 날짜에 할 일로 추가했어요', 'success');
     } catch {
       toast('날짜 변경에 실패했어요', 'error');
@@ -338,6 +351,7 @@ export function useMyRoomData() {
     try {
       if (item.kind === 'todo') await deleteTodo(toServerItemId(id));
       else await apiDeleteRoutine(toServerItemId(id));
+      refreshCachedCalendarDays();
     } catch {
       setRoutines((prev) => [...prev, item]);
       toast('삭제에 실패했어요', 'error');
