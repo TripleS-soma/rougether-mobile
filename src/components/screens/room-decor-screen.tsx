@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 
-import { type CharacterAnimationSet } from '@/components/character-avatar';
+import { type CharacterAnimationSet, CharacterAvatar } from '@/components/character-avatar';
 import { DraggableFurniture, DRAG_OUT_MARGIN } from '@/components/room/draggable-furniture';
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { Room, type RoomRegion } from '@/components/room/room';
@@ -268,44 +268,55 @@ export function RoomDecorScreen({
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
-        <View
-          style={styles.preview}
-          onLayout={(e) =>
-            setRoomSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.width })
-          }>
-          {/* 가구는 Room이 아니라 드래그 오버레이가 그린다 — 방은 표면+캐릭터. */}
-          <Room
-            characterId={characterId}
-            characterAnimations={characterAnimations}
-            wallpaperId={wallpaperId}
-            floorId={floorId}
-            backgroundId={backgroundId}
-            placements={[]}
-            furniture={furniture}
-            wallpapers={wallpapers}
-            floors={floors}
-            backgrounds={backgrounds}
-            editable
-            onRegionPress={onRegionPress}
-            activeRegion={activeRegion}
-          />
-          {roomSize.w > 0
-            ? [...items]
-                .sort((a, b) => a.z - b.z)
-                .map((p) => {
-                  const item = furniture.find((f) => f.id === p.furnitureId);
-                  if (!item) return null;
-                  return (
-                    <DraggableFurniture
-                      key={p.furnitureId}
-                      item={item}
-                      placement={p}
-                      roomSize={roomSize}
-                      onDragEnd={commitDrag}
-                    />
-                  );
-                })
-            : null}
+        <View style={styles.preview}>
+          {/* 캔버스 = 방과 정확히 같은 박스 — 오버레이 좌표·정규화의 기준.
+              (preview의 padding 박스 기준으로 재면 저장 좌표가 어긋난다.) */}
+          <View
+            style={styles.canvas}
+            onLayout={(e) =>
+              setRoomSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.width })
+            }>
+            {/* 가구는 Room이 아니라 드래그 오버레이가 그린다 — 방은 표면만. */}
+            <Room
+              characterId={null}
+              wallpaperId={wallpaperId}
+              floorId={floorId}
+              backgroundId={backgroundId}
+              placements={[]}
+              furniture={furniture}
+              wallpapers={wallpapers}
+              floors={floors}
+              backgrounds={backgrounds}
+              editable
+              onRegionPress={onRegionPress}
+              activeRegion={activeRegion}
+            />
+            {roomSize.w > 0
+              ? [...items]
+                  .sort((a, b) => a.z - b.z)
+                  .map((p) => {
+                    const item = furniture.find((f) => f.id === p.furnitureId);
+                    if (!item) return null;
+                    return (
+                      <DraggableFurniture
+                        key={p.furnitureId}
+                        item={item}
+                        placement={p}
+                        roomSize={roomSize}
+                        onDragEnd={commitDrag}
+                      />
+                    );
+                  })
+              : null}
+            {/* 캐릭터는 항상 가구 앞 — 오버레이(드래그 중 z 9999)보다 위 전용 레이어. */}
+            <View pointerEvents="none" style={styles.characterLayer}>
+              <CharacterAvatar
+                characterId={characterId}
+                animations={characterAnimations}
+                style={styles.characterFigure}
+              />
+            </View>
+          </View>
         </View>
 
         {loading ? (
@@ -892,6 +903,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingTop: Spacing.four,
     paddingBottom: Spacing.two,
+  },
+  // 오버레이·정규화 좌표의 기준 박스 — Room(정사각)과 정확히 일치.
+  canvas: {
+    width: '100%',
+    aspectRatio: 1,
+  },
+  // 캐릭터는 항상 가구 앞 (#327) — 드래그 중 아이템(z 9999)보다도 위.
+  characterLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 10000,
+  },
+  // Room의 캐릭터 배치와 동일한 자리 (absolute center-bottom, 42%).
+  characterFigure: {
+    position: 'absolute',
+    alignSelf: 'center',
+    bottom: '16%',
+    width: '42%',
+    height: '42%',
   },
   filterRow: {
     flexDirection: 'row',
