@@ -213,6 +213,7 @@ export function AppShell({
     joinHouse: joinSearchHouse,
     create: createGroupHouse,
     contributedMissionIds,
+    cheerMember,
     kickMember,
     leaveHouse,
     contributeMission,
@@ -624,6 +625,12 @@ export function AppShell({
             guestbookHasNext={guestbookHasNext}
             onWriteGuestbook={(content) => {
               void writeGuestbook(content);
+            }}
+            onCheer={(type) => {
+              // 응원은 같은 집 활성 멤버 사이에서만 — 서버 집 문맥이 있을 때만 배선.
+              const { houseId, membershipId } = visitingFriend;
+              if (houseId && membershipId) void cheerMember(houseId, membershipId, type);
+              else toast('이 방에서는 응원을 보낼 수 없어요', 'error');
             }}
             onLoadMoreGuestbook={() => {
               void loadMoreGuestbook();
