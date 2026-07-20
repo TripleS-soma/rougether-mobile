@@ -153,6 +153,22 @@ export function claimHouseMission(houseId: number, missionId: number) {
   return apiPost<HouseMissionClaimResponse>(`/houses/${houseId}/missions/${missionId}/claim`);
 }
 
+// 응원 타입/응답 — 스웨거 HouseCheerRequest/Response (다음 gen:api-types 때 types.ts로 흡수).
+export type HouseCheerType = 'great' | 'support' | 'best';
+export type HouseCheerResult = {
+  cheerId?: number;
+  houseId?: number;
+  targetMembershipId?: number;
+  targetUserId?: number;
+  type?: string;
+  cheerDate?: string;
+};
+
+/** POST /houses/{id}/members/{membershipId}/cheer — 원탭 응원 (같은 타입 하루 1회: 409). */
+export function cheerHouseMember(houseId: number, membershipId: number, type: HouseCheerType) {
+  return apiPost<HouseCheerResult>(`/houses/${houseId}/members/${membershipId}/cheer`, { type });
+}
+
 /** DELETE /houses/{id}/missions/{missionId} — OWNER only; COMPLETED missions 409. */
 export function deleteHouseMission(houseId: number, missionId: number) {
   return apiDelete<void>(`/houses/${houseId}/missions/${missionId}`);

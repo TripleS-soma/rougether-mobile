@@ -68,3 +68,33 @@ describe('useHouses — 기여 추적', () => {
     expect([...result.current.contributedMissionIds].sort()).toEqual([11, 12]);
   });
 });
+
+describe('useHouses — 응원 보내기 (#329)', () => {
+  it('sends a cheer and hits the daily-duplicate branch without throwing', async () => {
+    const calls: string[] = [];
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes('/members/16/cheer') && init?.method === 'POST') {
+        calls.push(String(init?.body));
+        return res({ cheerId: 1, houseId: 6, targetMembershipId: 16, type: 'support' });
+      }
+      if (url.includes('/members/17/cheer') && init?.method === 'POST')
+        return {
+          ok: false,
+          status: 409,
+          text: async () =>
+            JSON.stringify({ code: 'HOUSE_CHEER_DUPLICATED', message: '오늘은 이미' }),
+        };
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useHouses());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      await result.current.cheerMember(6, 16, 'support');
+      // 같은 타입 하루 1회 초과(409) — 던지지 않고 토스트로 처리된다.
+      await result.current.cheerMember(6, 17, 'best');
+    });
+    expect(calls).toEqual([JSON.stringify({ type: 'support' })]);
+  });
+});
