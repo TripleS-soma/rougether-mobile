@@ -153,6 +153,25 @@ export function claimHouseMission(houseId: number, missionId: number) {
   return apiPost<HouseMissionClaimResponse>(`/houses/${houseId}/missions/${missionId}/claim`);
 }
 
+// 집 미리보기 응답 — 스웨거 HousePreviewDetailResponse (다음 gen:api-types 때 types.ts로 흡수).
+export type HousePreviewDetailWire = {
+  houseId?: number;
+  name?: string;
+  description?: string;
+  coverImageKey?: string;
+  maxMembers?: number;
+  currentMemberCount?: number;
+  level?: number;
+  goals?: { goalId?: number; code?: string; name?: string }[];
+  isMember?: boolean;
+  isFull?: boolean;
+};
+
+/** GET /houses/{id}/preview — 참여 전 미리보기 (비구성원·강퇴 이력자 포함 조회 가능). */
+export function fetchHousePreviewDetail(houseId: number) {
+  return apiGet<HousePreviewDetailWire>(`/houses/${houseId}/preview`);
+}
+
 /** DELETE /houses/{id}/missions/{missionId} — OWNER only; COMPLETED missions 409. */
 export function deleteHouseMission(houseId: number, missionId: number) {
   return apiDelete<void>(`/houses/${houseId}/missions/${missionId}`);
