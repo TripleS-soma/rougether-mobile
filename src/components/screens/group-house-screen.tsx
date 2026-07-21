@@ -31,9 +31,17 @@ import {
 } from '@/components/ui/pictograms';
 import { WalletPills } from '@/components/ui/wallet-pills';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
-import { Radius, Spacing, Typography } from '@/constants/theme';
+import { RainOverlay } from '@/components/rain-overlay';
+import {
+  Radius,
+  RAIN_SKY,
+  SKY_BY_PHASE,
+  skyPhaseForHour,
+  Spacing,
+  Typography,
+} from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
-import { useTokens } from '@/hooks/use-tokens';
+import { useResolvedScheme, useTokens } from '@/hooks/use-tokens';
 import { assetSource, isCdnKey } from '@/resources/asset';
 import type { FurnitureItem, PlacedFurniture, Wallpaper } from '@/resources/furniture';
 
@@ -231,6 +239,10 @@ export type GroupHouseScreenProps = {
   onVisitFriend?: (friend: VisitedFriend) => void;
   onVisitMyRoom?: () => void;
   onOpenSearch?: () => void;
+  /** 하늘색 시간대 판정용 현재 시(0~23) — 테스트 주입용, 기본은 기기 시각 (#358). */
+  nowHour?: number;
+  /** 지금 비가 오는지 — 셸이 use-weather로 주입, 하늘을 흐린 톤 + 빗줄기로 (#360). */
+  raining?: boolean;
   /** 헤더 지갑 필 — 나의 방 헤더와 동일 (#353). */
   coinBalance?: number;
   diaBalance?: number;
@@ -289,6 +301,8 @@ export function GroupHouseScreen({
   onVisitFriend,
   onVisitMyRoom,
   onOpenSearch,
+  nowHour,
+  raining = false,
   coinBalance = 0,
   diaBalance = 0,
   onKickMember,
@@ -311,6 +325,11 @@ export function GroupHouseScreen({
   onSwapSeats,
 }: GroupHouseScreenProps) {
   const t = useTokens();
+  // 시간대별 하늘 (#358) — 새벽/낮/노을/밤. 낮은 기존 sky 토큰과 동일.
+  const scheme = useResolvedScheme();
+  const skyColor = raining
+    ? RAIN_SKY[scheme]
+    : SKY_BY_PHASE[scheme][skyPhaseForHour(nowHour ?? new Date().getHours())];
   const headerInset = useHeaderInsetStyle();
   const screenStyle = useScreenStyle([]);
 
@@ -876,10 +895,12 @@ export function GroupHouseScreen({
         {/* 프레임 모드(#287) — 하늘 위에 스위처·집 프레임, 방은 창문 안에.
             커버가 없어도 기본 프레임으로 통일(#328)이라 유일한 경로다. */}
         <View
-          style={[styles.skySection, { backgroundColor: t.sky }]}
+          style={[styles.skySection, { backgroundColor: skyColor }]}
+          testID="sky-section"
           {...swipeResponder.panHandlers}>
           {/* 마당 잔디 — 프레임 하단이 밟고 서는 밴드. */}
           <View style={[styles.grassBand, { backgroundColor: t.grass }]} />
+          {raining ? <RainOverlay /> : null}
           <View style={styles.switcher}>
             {houses.length > 1 ? (
               <Pressable

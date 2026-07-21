@@ -48,6 +48,7 @@ import { useMyCharacters } from '@/hooks/use-my-characters';
 import { useMyRoomData } from '@/hooks/use-my-room-data';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useShop } from '@/hooks/use-shop';
+import { useWeather } from '@/hooks/use-weather';
 import { useBrandTheme } from '@/hooks/use-tokens';
 import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furniture';
 
@@ -198,6 +199,8 @@ export function AppShell({
   startTutorial = false,
 }: AppShellProps) {
   const { mode: themeMode, setMode: setThemeMode } = useBrandTheme();
+  // 집 하늘 연출용 현재 비 여부 (#360) — 서울 고정, 30분 캐시.
+  const { raining } = useWeather();
   const [screen, setScreen] = useState<Screen>('myRoom');
 
   // 코치마크 튜토리얼 (#351) — 온보딩 직후 시작, 단계마다 해당 화면으로 전환.
@@ -754,6 +757,7 @@ export function AppShell({
               onOpenSearch={() => setScreen('houseSearch')}
               coinBalance={wallet.coin}
               diaBalance={wallet.dia}
+              raining={raining}
               onKickMember={(houseId, membershipId) => {
                 void kickMember(houseId, membershipId);
               }}
