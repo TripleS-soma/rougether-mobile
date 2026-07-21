@@ -58,6 +58,20 @@ describe('LoginScreen', () => {
     expect(onLogin).not.toHaveBeenCalled();
   });
 
+  it('offers 카카오·애플·구글 social login (spec lineup, no 네이버)', async () => {
+    const { getByLabelText, queryByLabelText } = await render(<LoginScreen />);
+
+    expect(getByLabelText('카카오로 시작')).toBeTruthy();
+    expect(getByLabelText('애플로 시작')).toBeTruthy();
+    expect(getByLabelText('구글로 시작')).toBeTruthy();
+    expect(queryByLabelText('네이버로 시작')).toBeNull();
+  });
+
+  it('does not show the dev-login hint', async () => {
+    const { queryByText } = await render(<LoginScreen />);
+    expect(queryByText(/개발 로그인/)).toBeNull();
+  });
+
   it('navigates to signup', async () => {
     const onGoSignup = jest.fn();
     const { getByText } = await render(<LoginScreen onGoSignup={onGoSignup} />);

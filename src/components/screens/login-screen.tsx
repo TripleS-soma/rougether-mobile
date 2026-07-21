@@ -159,10 +159,6 @@ export function LoginScreen({ onAuthSuccess, onGoSignup, onLogin }: LoginScreenP
               {error}
             </Text>
           ) : null}
-          <Text style={[styles.devHint, { color: t.textMuted }]}>
-            개발 로그인: 이메일 칸에 userId(숫자)를 넣으면 그 계정으로, 비우면 새 계정이 만들어져요.
-          </Text>
-
           <View style={styles.divider}>
             <View style={[styles.line, { backgroundColor: t.border }]} />
             <Text style={[styles.smallText, { color: t.textMuted }]}>간편 로그인</Text>
@@ -178,10 +174,10 @@ export function LoginScreen({ onAuthSuccess, onGoSignup, onLogin }: LoginScreenP
               onPress={notReady}
             />
             <SocialButton
-              bg="#03C75A"
+              bg="#000000"
               textColor="#FFFFFF"
-              label="네이버"
-              glyph="N"
+              label="애플"
+              glyph="A"
               onPress={notReady}
             />
             <SocialButton
@@ -317,11 +313,6 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 13,
-    textAlign: 'center',
-    marginTop: Spacing.two,
-  },
-  devHint: {
-    fontSize: 11,
     textAlign: 'center',
     marginTop: Spacing.two,
   },
