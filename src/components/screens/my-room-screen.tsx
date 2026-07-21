@@ -36,6 +36,7 @@ import {
   VISIBILITY_ICONS,
   VISIBILITY_LABELS,
 } from '@/constants/routines';
+import { BearCheck } from '@/components/ui/bear-check';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { captureVerificationPhoto } from '@/lib/photo-verify';
@@ -564,7 +565,7 @@ export function MyRoomScreen({
   // 퀵애드 입력행 — 제목 입력 + 마감일 칩, blur가 커밋. 방탭·달력탭 공용 (#323).
   const renderQuickAddRow = (categoryId: string) => (
     <View ref={addRowRef} style={[styles.addRow, { backgroundColor: t.surface }]}>
-      <Icon name="checkbox-off" size={22} color={t.textDisabled} />
+      <BearCheck checked={false} size={22} />
       <TextInput
         ref={todoInputRef}
         autoFocus
@@ -856,19 +857,12 @@ export function MyRoomScreen({
                               return (
                                 <View key={routine.id}>
                                   <View style={styles.routineRow}>
-                                    <Pressable
+                                    <BearCheck
+                                      checked={done}
+                                      color={cat.color}
                                       onPress={() => handleToggle(routine, today)}
-                                      accessibilityRole="checkbox"
-                                      accessibilityState={{ checked: done }}
                                       accessibilityLabel={routine.title}
-                                      hitSlop={8}
-                                      style={[styles.leadIcon, styles.checkbox]}>
-                                      <Icon
-                                        name={done ? 'checkbox-on' : 'checkbox-off'}
-                                        size={22}
-                                        color={done ? cat.color : t.textDisabled}
-                                      />
-                                    </Pressable>
+                                    />
                                     <Pressable
                                       onPress={() => openRowMenu(routine.id)}
                                       accessibilityRole="button"
@@ -972,19 +966,12 @@ export function MyRoomScreen({
                       {addingCategory === group.meta.id ? renderQuickAddRow(group.meta.id) : null}
                       {group.items.map((item) => (
                         <View key={`${item.kind}-${item.id}`} style={styles.routineRow}>
-                          <Pressable
+                          <BearCheck
+                            checked={!!item.completed}
+                            color={group.meta.color}
                             onPress={() => handleCalendarItemPress(item)}
-                            accessibilityRole="checkbox"
-                            accessibilityState={{ checked: item.completed }}
                             accessibilityLabel={item.title}
-                            hitSlop={8}
-                            style={[styles.leadIcon, styles.checkbox]}>
-                            <Icon
-                              name={item.completed ? 'checkbox-on' : 'checkbox-off'}
-                              size={22}
-                              color={item.completed ? group.meta.color : t.textDisabled}
-                            />
-                          </Pressable>
+                          />
                           <Pressable
                             // 기록만 남은(삭제된) 항목은 메뉴를 열 수 없다 — 그대로 표시만.
                             onPress={
@@ -1051,19 +1038,12 @@ export function MyRoomScreen({
                       const done = isDone(routine.id, selectedDate);
                       return (
                         <View key={routine.id} style={styles.routineRow}>
-                          <Pressable
+                          <BearCheck
+                            checked={done}
+                            color={group.meta.color}
                             onPress={() => handleToggle(routine, selectedDate)}
-                            accessibilityRole="checkbox"
-                            accessibilityState={{ checked: done }}
                             accessibilityLabel={routine.title}
-                            hitSlop={8}
-                            style={[styles.leadIcon, styles.checkbox]}>
-                            <Icon
-                              name={done ? 'checkbox-on' : 'checkbox-off'}
-                              size={22}
-                              color={done ? group.meta.color : t.textDisabled}
-                            />
-                          </Pressable>
+                          />
                           <Pressable
                             onPress={() => openRowMenu(routine.id, selectedDate)}
                             accessibilityRole="button"

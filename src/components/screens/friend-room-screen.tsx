@@ -16,6 +16,7 @@ import { CharacterAvatar, type CharacterAnimationSet } from '@/components/charac
 import { Room } from '@/components/room/room';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { type Routine } from '@/constants/routines';
+import { BearCheck } from '@/components/ui/bear-check';
 import { Icon } from '@/components/ui/icon';
 import { PendingNotice } from '@/components/ui/pending-notice';
 import { BookOpenPictogram, Pictogram, type PictogramName } from '@/components/ui/pictograms';
@@ -285,11 +286,7 @@ export function FriendRoomScreen({
             <View style={styles.rows}>
               {routineList.map((routine) => (
                 <View key={routine.id} style={styles.row}>
-                  <Icon
-                    name={routine.completed ? 'checkbox-on' : 'checkbox-off'}
-                    size={22}
-                    color={routine.completed ? t.primary : t.textDisabled}
-                  />
+                  <BearCheck checked={!!routine.completed} size={22} />
                   <View style={styles.flex}>
                     <Text
                       style={[
