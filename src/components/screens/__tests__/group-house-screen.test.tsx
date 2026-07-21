@@ -27,6 +27,15 @@ const MISSION_HOUSE: House = {
 };
 
 describe('GroupHouseScreen', () => {
+  it('헤더에 우리 집 타이틀과 지갑 필이 보인다 (#353)', async () => {
+    const { getByText } = await render(
+      <GroupHouseScreen houses={[MISSION_HOUSE]} coinBalance={1200} diaBalance={34} />,
+    );
+    expect(getByText('우리 집')).toBeTruthy();
+    expect(getByText('1,200')).toBeTruthy();
+    expect(getByText('34')).toBeTruthy();
+  });
+
   it('renders the current house, members, and group missions', async () => {
     const { getByText, getByLabelText, queryByText } = await render(<GroupHouseScreen />);
     expect(getByText('소마파이팅')).toBeTruthy();

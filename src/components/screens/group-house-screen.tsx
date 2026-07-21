@@ -29,6 +29,7 @@ import {
   type PictogramName,
   TargetPictogram,
 } from '@/components/ui/pictograms';
+import { WalletPills } from '@/components/ui/wallet-pills';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
@@ -230,6 +231,9 @@ export type GroupHouseScreenProps = {
   onVisitFriend?: (friend: VisitedFriend) => void;
   onVisitMyRoom?: () => void;
   onOpenSearch?: () => void;
+  /** 헤더 지갑 필 — 나의 방 헤더와 동일 (#353). */
+  coinBalance?: number;
+  diaBalance?: number;
   /** Kick a member via the API (owner only); shown when the house has ids. */
   onKickMember?: (houseId: number, membershipId: number) => void;
   /** Leave the current house via the API. */
@@ -285,6 +289,8 @@ export function GroupHouseScreen({
   onVisitFriend,
   onVisitMyRoom,
   onOpenSearch,
+  coinBalance = 0,
+  diaBalance = 0,
   onKickMember,
   onLeaveHouse,
   onAddMissionRoutine,
@@ -841,7 +847,9 @@ export function GroupHouseScreen({
   return (
     <View style={[styles.screen, screenStyle]}>
       <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
-        <View style={styles.flex} />
+        {/* 빈 스페이서였던 왼쪽에 타이틀, 오른쪽에 나의 방과 같은 지갑 필 (#353). */}
+        <Text style={[Typography.h2, styles.flex, { color: t.text }]}>우리 집</Text>
+        <WalletPills coin={coinBalance} dia={diaBalance} />
         <CoachTarget id="house-search">
           <Pressable
             onPress={onOpenSearch}
