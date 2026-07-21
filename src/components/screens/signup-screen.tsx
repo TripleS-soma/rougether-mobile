@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Field } from '@/components/ui/field';
+import { type PolicyDoc } from '@/constants/policy';
 import { Icon } from '@/components/ui/icon';
 import { PawPictogram } from '@/components/ui/pictograms';
 import { Radius, Spacing } from '@/constants/theme';
@@ -13,6 +14,8 @@ export type SignupScreenProps = {
   onBack?: () => void;
   /** Reserved for when the backend gains a signup endpoint (submit is disabled). */
   onSignupSuccess?: () => void;
+  /** Opens the given policy document (약관/처리방침 '보기'); rows hide the link when omitted. */
+  onViewPolicy?: (doc: PolicyDoc) => void;
 };
 
 /**
@@ -20,7 +23,7 @@ export type SignupScreenProps = {
  * the login screen; email + verification-code rows are custom (inline side
  * button) like the original. Icons are text placeholders for now.
  */
-export function SignupScreen({ onBack }: SignupScreenProps) {
+export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
   const t = useTokens();
   const headerInset = useHeaderInsetStyle();
   const { show: toast } = useToast();
@@ -290,6 +293,7 @@ export function SignupScreen({ onBack }: SignupScreenProps) {
           checked={agreeTerms}
           required
           label="이용약관 동의"
+          onView={onViewPolicy && (() => onViewPolicy('terms'))}
           onChange={(v) => {
             setAgreeTerms(v);
             syncAgreeAll(v, agreePrivacy, agreeMarketing);
@@ -299,11 +303,13 @@ export function SignupScreen({ onBack }: SignupScreenProps) {
           checked={agreePrivacy}
           required
           label="개인정보 처리방침 동의"
+          onView={onViewPolicy && (() => onViewPolicy('privacy'))}
           onChange={(v) => {
             setAgreePrivacy(v);
             syncAgreeAll(agreeTerms, v, agreeMarketing);
           }}
         />
+        {/* Marketing consent has no standalone document yet — no '보기' link. */}
         <AgreementItem
           checked={agreeMarketing}
           label="마케팅 정보 수신 동의"
@@ -354,9 +360,11 @@ type AgreementItemProps = {
   label: string;
   required?: boolean;
   onChange: (v: boolean) => void;
+  /** Opens the linked document; the '보기' link renders only when provided. */
+  onView?: () => void;
 };
 
-function AgreementItem({ checked, label, required, onChange }: AgreementItemProps) {
+function AgreementItem({ checked, label, required, onChange, onView }: AgreementItemProps) {
   const t = useTokens();
   return (
     <View style={styles.agreeItem}>
@@ -373,9 +381,11 @@ function AgreementItem({ checked, label, required, onChange }: AgreementItemProp
           </Text>
         </Text>
       </Pressable>
-      <Pressable accessibilityRole="button">
-        <Text style={[styles.viewLink, { color: t.textMuted }]}>보기</Text>
-      </Pressable>
+      {onView ? (
+        <Pressable onPress={onView} accessibilityRole="button" accessibilityLabel={`${label} 보기`}>
+          <Text style={[styles.viewLink, { color: t.textMuted }]}>보기</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
