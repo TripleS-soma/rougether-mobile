@@ -21,6 +21,41 @@ afterEach(() => {
   global.fetch = realFetch;
 });
 
+describe('AppShell — 코치마크 튜토리얼 (#351)', () => {
+  it('startTutorial이면 첫 단계부터 시작해 다음으로 순회하고 마지막에 닫힌다', async () => {
+    const { getByText, getByLabelText, queryByTestId } = await render(
+      <AuthProvider>
+        <AppShell startTutorial />
+      </AuthProvider>,
+    );
+    // '오늘의 루틴'은 화면 제목과 말풍선에 모두 있어 카운터로 1단계를 확인.
+    expect(getByText('곰 발바닥을 누르면 루틴 완료! 완료하면 코인이 쌓여요.')).toBeTruthy();
+    expect(getByText('1 / 9')).toBeTruthy();
+    // 8번 다음 → 마지막 단계(설정), 시작하기로 종료.
+    for (let i = 0; i < 8; i++) await fireEvent.press(getByLabelText('다음 단계'));
+    expect(getByText('9 / 9')).toBeTruthy();
+    await fireEvent.press(getByLabelText('튜토리얼 마치기'));
+    expect(queryByTestId('coach-overlay')).toBeNull();
+  });
+
+  it('건너뛰기는 즉시 종료하고, startTutorial 없으면 오버레이가 없다', async () => {
+    const off = await render(
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>,
+    );
+    expect(off.queryByTestId('coach-overlay')).toBeNull();
+
+    const on = await render(
+      <AuthProvider>
+        <AppShell startTutorial />
+      </AuthProvider>,
+    );
+    await fireEvent.press(on.getByLabelText('튜토리얼 건너뛰기'));
+    expect(on.queryByTestId('coach-overlay')).toBeNull();
+  });
+});
+
 describe('AppShell', () => {
   it('opens on the my-room screen with the bottom nav', async () => {
     const { getByText, getByLabelText } = await render(

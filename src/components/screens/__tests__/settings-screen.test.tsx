@@ -53,7 +53,7 @@ describe('SettingsScreen', () => {
     const onReplayOnboarding = jest.fn();
     const { getByText } = await render(<SettingsScreen onReplayOnboarding={onReplayOnboarding} />);
 
-    await fireEvent.press(getByText('온보딩 다시 보기'));
+    await fireEvent.press(getByText('튜토리얼 다시 보기'));
 
     expect(onReplayOnboarding).toHaveBeenCalledTimes(1);
   });

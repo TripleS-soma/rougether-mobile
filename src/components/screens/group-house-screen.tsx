@@ -19,6 +19,7 @@ import {
   FRAME_ASPECT,
   WINDOW_RECTS,
 } from '@/components/room/house-preview-frame';
+import { CoachTarget } from '@/components/ui/coach-mark';
 import { Room } from '@/components/room/room';
 import { DateRangeSheet } from '@/components/screens/sheets/date-range-sheet';
 import { Icon } from '@/components/ui/icon';
@@ -1368,13 +1369,15 @@ export function GroupHouseScreen({
     <View style={[styles.screen, screenStyle]}>
       <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
         <View style={styles.flex} />
-        <Pressable
-          onPress={onOpenSearch}
-          accessibilityRole="button"
-          accessibilityLabel="집 탐색"
-          style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-          <Icon name="search" size={18} color={t.text} />
-        </Pressable>
+        <CoachTarget id="house-search">
+          <Pressable
+            onPress={onOpenSearch}
+            accessibilityRole="button"
+            accessibilityLabel="집 탐색"
+            style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
+            <Icon name="search" size={18} color={t.text} />
+          </Pressable>
+        </CoachTarget>
         <Pressable
           onPress={() => setShowMembers(true)}
           accessibilityRole="button"
@@ -1459,78 +1462,80 @@ export function GroupHouseScreen({
                 </Text>
               </View>
             </View>
-            <View style={styles.cameraViewport} {...cameraResponder.panHandlers}>
-              <Animated.View
-                style={{
-                  transform: [{ translateX: camTx }, { translateY: camTy }, { scale: camScale }],
-                }}>
-                <View style={styles.frameWrap} {...gridPanResponder.panHandlers}>
-                  {/* 프레임 측정용 — 반응자 프롭이 있는 부모에는 테스트에서
+            <CoachTarget id="house-frame">
+              <View style={styles.cameraViewport} {...cameraResponder.panHandlers}>
+                <Animated.View
+                  style={{
+                    transform: [{ translateX: camTx }, { translateY: camTy }, { scale: camScale }],
+                  }}>
+                  <View style={styles.frameWrap} {...gridPanResponder.panHandlers}>
+                    {/* 프레임 측정용 — 반응자 프롭이 있는 부모에는 테스트에서
                       layout 이벤트가 닿지 않아 absolute-fill 형제로 잰다. */}
-                  <View
-                    testID="frame-camera"
-                    pointerEvents="none"
-                    style={StyleSheet.absoluteFill}
-                    onLayout={(e) => {
-                      const first = frameSize.current.w === 0;
-                      frameSize.current = {
-                        w: e.nativeEvent.layout.width,
-                        h: e.nativeEvent.layout.height,
-                      };
-                      // 첫 레이아웃에 기본 카메라(방 4칸 클로즈업)를 즉시 적용 (#307).
-                      if (first) {
-                        const d = camDefault();
-                        cam.current = d;
-                        camScale.setValue(d.scale);
-                        camTx.setValue(d.tx);
-                        camTy.setValue(d.ty);
-                      }
-                    }}
-                  />
-                  {/* 창문 뒤 좌석 — 프레임 PNG의 투명 창문으로 방이 보인다. */}
-                  {WINDOW_RECTS.map((rect, w) => {
-                    const seatIdx = windowSlots[w];
-                    return (
-                      <View
-                        key={`window-${w}`}
-                        style={[
-                          styles.windowSlot,
-                          rect,
-                          seatIdx != null && dragSeat === seatIdx && styles.dragRow,
-                        ]}>
-                        {seatIdx != null ? (
-                          renderSeatTile(displayCells[seatIdx], seatIdx, true)
-                        ) : (
-                          /* 정원 밖 창문 — 조용한 벽 패널. */
-                          <View
-                            style={[styles.windowFiller, { backgroundColor: t.surfaceMuted }]}
-                            testID="window-filler"
-                          />
-                        )}
-                      </View>
-                    );
-                  })}
-                  <Image
-                    source={assetSource(coverKey)}
-                    style={StyleSheet.absoluteFill}
-                    contentFit="contain"
-                    transition={120}
-                    pointerEvents="none"
-                    accessibilityLabel={`${currentHouse.title} 집`}
-                    testID="house-frame"
-                  />
-                </View>
-              </Animated.View>
-              {zoomed ? (
-                <Pressable
-                  onPress={resetCam}
-                  accessibilityRole="button"
-                  accessibilityLabel="확대 종료"
-                  style={[styles.camReset, { backgroundColor: t.surface }]}>
-                  <Icon name="refresh" size={16} color={t.text} />
-                </Pressable>
-              ) : null}
-            </View>
+                    <View
+                      testID="frame-camera"
+                      pointerEvents="none"
+                      style={StyleSheet.absoluteFill}
+                      onLayout={(e) => {
+                        const first = frameSize.current.w === 0;
+                        frameSize.current = {
+                          w: e.nativeEvent.layout.width,
+                          h: e.nativeEvent.layout.height,
+                        };
+                        // 첫 레이아웃에 기본 카메라(방 4칸 클로즈업)를 즉시 적용 (#307).
+                        if (first) {
+                          const d = camDefault();
+                          cam.current = d;
+                          camScale.setValue(d.scale);
+                          camTx.setValue(d.tx);
+                          camTy.setValue(d.ty);
+                        }
+                      }}
+                    />
+                    {/* 창문 뒤 좌석 — 프레임 PNG의 투명 창문으로 방이 보인다. */}
+                    {WINDOW_RECTS.map((rect, w) => {
+                      const seatIdx = windowSlots[w];
+                      return (
+                        <View
+                          key={`window-${w}`}
+                          style={[
+                            styles.windowSlot,
+                            rect,
+                            seatIdx != null && dragSeat === seatIdx && styles.dragRow,
+                          ]}>
+                          {seatIdx != null ? (
+                            renderSeatTile(displayCells[seatIdx], seatIdx, true)
+                          ) : (
+                            /* 정원 밖 창문 — 조용한 벽 패널. */
+                            <View
+                              style={[styles.windowFiller, { backgroundColor: t.surfaceMuted }]}
+                              testID="window-filler"
+                            />
+                          )}
+                        </View>
+                      );
+                    })}
+                    <Image
+                      source={assetSource(coverKey)}
+                      style={StyleSheet.absoluteFill}
+                      contentFit="contain"
+                      transition={120}
+                      pointerEvents="none"
+                      accessibilityLabel={`${currentHouse.title} 집`}
+                      testID="house-frame"
+                    />
+                  </View>
+                </Animated.View>
+                {zoomed ? (
+                  <Pressable
+                    onPress={resetCam}
+                    accessibilityRole="button"
+                    accessibilityLabel="확대 종료"
+                    style={[styles.camReset, { backgroundColor: t.surface }]}>
+                    <Icon name="refresh" size={16} color={t.text} />
+                  </Pressable>
+                ) : null}
+              </View>
+            </CoachTarget>
           </View>
         ) : (
           <>
@@ -1641,7 +1646,10 @@ export function GroupHouseScreen({
         accessibilityRole="button"
         accessibilityLabel="공동 미션"
         style={[styles.missionFab, { backgroundColor: t.primary }]}>
-        <TargetPictogram size={24} color={t.onPrimary} />
+        {/* absolute FAB이라 래퍼 대신 내용을 측정 (#351). */}
+        <CoachTarget id="house-missions">
+          <TargetPictogram size={24} color={t.onPrimary} />
+        </CoachTarget>
         {missions.some((m) => m.status === 'ACTIVE' && m.achieved) ? (
           <View style={[styles.fabDot, { backgroundColor: t.warning }]} />
         ) : null}
