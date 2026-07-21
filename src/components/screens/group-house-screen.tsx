@@ -170,11 +170,6 @@ const VACANT_FLOOR: Wallpaper[] = [
 // FRAME_ASPECT / WINDOW_RECTS는 집 탐색 미리보기(#328)와 공유 —
 // house-preview-frame.tsx가 단일 출처.
 
-// 기본 카메라 확대 (#307, 시안 B) — 방 4칸이 뷰포트를 채우는 배율. 창문 블록이
-// 가로 12.7%~86.3%를 쓰므로 1.34를 넘으면 창이 좌우로 잘린다.
-const CAM_DEFAULT_SCALE = 1.3;
-// 창문 블록 세로 중심(25.4%~89.1% → 57.25%)을 뷰포트 중앙에 맞추는 기준값.
-const CAM_WINDOW_CENTER_Y = 0.5725;
 const CAM_MAX_SCALE = 3;
 // 방 더블탭 줌 — 창문(폭 35%)이 카메라 뷰포트를 거의 가득 채우는 배율.
 const CAM_ROOM_SCALE = 2.9;
@@ -528,13 +523,9 @@ export function GroupHouseScreen({
   const panAnchor = useRef({ x: 0, y: 0, tx: 0, ty: 0 });
   const camTouchCount = useRef(0);
 
-  // 기본 카메라 = 방 4칸 클로즈업 (#307). 원배율(1×)은 지붕·마당까지 보이는
-  // 축소 뷰로, 핀치 아웃으로만 진입한다.
-  const camDefault = () => ({
-    scale: CAM_DEFAULT_SCALE,
-    tx: 0,
-    ty: -(CAM_WINDOW_CENTER_Y - 0.5) * frameSize.current.h * CAM_DEFAULT_SCALE,
-  });
+  // 기본 카메라 = 집 전체(원배율) — 확대(1.3)는 프레임을 좌우로 잘라내서
+  // 기본에서는 쓰지 않는다. 방 클로즈업은 더블탭/핀치로만 진입한다.
+  const camDefault = () => ({ scale: 1, tx: 0, ty: 0 });
   const clampCam = (scale: number, tx: number, ty: number) => {
     const { w, h } = frameSize.current;
     const s = Math.min(CAM_MAX_SCALE, Math.max(1, scale));
@@ -2210,9 +2201,10 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     borderRadius: Radius.pill,
   },
+  // 여백 없이 화면 폭을 다 쓴다 — 기본 뷰(원배율)에서 집이 최대한 크게,
+  // 잘리는 부분 없이 보이도록 (높이는 aspectRatio가 따라온다).
   cameraViewport: {
     marginTop: Spacing.two,
-    marginHorizontal: Spacing.three,
     overflow: 'hidden',
   },
   frameWrap: {
