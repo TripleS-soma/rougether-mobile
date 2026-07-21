@@ -349,6 +349,39 @@ export function AppShell({
         }))
     : [];
 
+  /** 미션 +로 만든 연동 루틴 — 집 이름 카테고리 아래, 미션 제목과 같은 루틴. */
+  const linkedRoutinesFor = (houseTitle: string, missionTitles: string[]) => {
+    const cat = categories.find((c) => c.label === houseTitle);
+    if (!cat) return [];
+    return routines.filter(
+      (r) => r.kind === 'routine' && r.category === cat.id && missionTitles.includes(r.title),
+    );
+  };
+
+  /** 미션 삭제 성공 시 내 연동 루틴도 함께 삭제 — 고아 연동물 방지 (#338). */
+  const deleteMissionWithLinked = async (houseId: number, missionId: number) => {
+    const house = houses.find((h) => h.houseId === houseId);
+    const mission = house?.missions?.find((m) => m.id === missionId);
+    const linked = house && mission ? linkedRoutinesFor(house.title, [mission.title]) : [];
+    if (!(await deleteMission(houseId, missionId))) return;
+    for (const r of linked) await deleteRoutine(r.id);
+    if (linked.length > 0) toast('연동된 루틴도 함께 삭제했어요');
+  };
+
+  /** 집 나가기/삭제 성공 시 그 집 미션들의 연동 루틴도 정리 (#338). */
+  const leaveHouseWithLinked = async (houseId: number) => {
+    const house = houses.find((h) => h.houseId === houseId);
+    const linked = house
+      ? linkedRoutinesFor(
+          house.title,
+          (house.missions ?? []).map((m) => m.title),
+        )
+      : [];
+    if (!(await leaveHouse(houseId))) return;
+    for (const r of linked) await deleteRoutine(r.id);
+    if (linked.length > 0) toast('연동된 루틴도 함께 삭제했어요');
+  };
+
   /** 연동 루틴의 완료 취소를 막는다 — 미션 기여는 회수되지 않는다. */
   const toggleWithMissionGuard = (id: string, date: string) => {
     const item = routines.find((r) => r.id === id);
@@ -599,7 +632,7 @@ export function AppShell({
               void kickMember(houseId, membershipId);
             }}
             onLeaveHouse={(houseId) => {
-              void leaveHouse(houseId);
+              void leaveHouseWithLinked(houseId);
             }}
             linkedRoutines={houseLinkedRoutines}
             contributedMissionIds={[...contributedMissionIds]}
@@ -613,7 +646,7 @@ export function AppShell({
               void createMission(houseId, input);
             }}
             onDeleteMission={(houseId, missionId) => {
-              void deleteMission(houseId, missionId);
+              void deleteMissionWithLinked(houseId, missionId);
             }}
             onUpdateHouse={(houseId, input) => {
               void updateHouse(houseId, input);

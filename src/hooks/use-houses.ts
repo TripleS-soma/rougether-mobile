@@ -175,13 +175,16 @@ export function useHouses() {
     }
   };
 
-  const leaveHouse = async (houseId: number) => {
+  /** 집 나가기(1인 방장은 집 삭제) — 성공 여부 반환 (연동 루틴 정리 판단, #338). */
+  const leaveHouse = async (houseId: number): Promise<boolean> => {
     try {
       await apiLeaveHouse(houseId);
       toast('집에서 나왔어요');
       await reloadMyHouses();
+      return true;
     } catch {
       toast('나가기에 실패했어요', 'error');
+      return false;
     }
   };
 
@@ -237,11 +240,13 @@ export function useHouses() {
     }
   };
 
-  const deleteMission = async (houseId: number, missionId: number) => {
+  /** 미션 삭제 — 성공 여부 반환 (연동 루틴 정리 판단, #338). */
+  const deleteMission = async (houseId: number, missionId: number): Promise<boolean> => {
     try {
       await deleteHouseMission(houseId, missionId);
       toast('미션을 삭제했어요', 'success');
       await reloadMyHouses();
+      return true;
     } catch (err) {
       // The server keeps COMPLETED missions (growth points already granted).
       const claimed =
@@ -255,6 +260,7 @@ export function useHouses() {
             : '미션 삭제에 실패했어요',
         'error',
       );
+      return false;
     }
   };
 

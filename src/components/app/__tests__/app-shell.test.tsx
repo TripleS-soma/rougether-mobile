@@ -154,4 +154,52 @@ describe('AppShell — 공동미션 연동', () => {
     // ensureCategory가 서버 재조회로 기존 TripleS(20)를 재사용 — 중복 생성 없음.
     expect(calls.some((c) => c.method === 'POST' && c.url.includes('/categories'))).toBe(false);
   });
+
+  it('미션 삭제 시 연동 루틴도 함께 삭제된다 (#338)', async () => {
+    const { getByLabelText } = await render(
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(calls.some((c) => c.url.includes('/houses/2/missions'))).toBe(true));
+
+    await fireEvent.press(getByLabelText('집'));
+    await fireEvent.press(getByLabelText('공동 미션'));
+    await fireEvent.press(getByLabelText('아침 스트레칭 삭제'));
+    await fireEvent.press(getByLabelText('미션 삭제 확인'));
+
+    await waitFor(() =>
+      expect(
+        calls.some((c) => c.method === 'DELETE' && c.url.includes('/houses/2/missions/6')),
+      ).toBe(true),
+    );
+    // 미션 제목과 같은 TripleS 카테고리 루틴(44)이 함께 지워진다.
+    await waitFor(() =>
+      expect(calls.some((c) => c.method === 'DELETE' && c.url.includes('/routines/44'))).toBe(true),
+    );
+  });
+
+  it('집 나가기/삭제 시 그 집 미션들의 연동 루틴도 정리된다 (#338)', async () => {
+    const { getByLabelText } = await render(
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(calls.some((c) => c.url.includes('/houses/2/missions'))).toBe(true));
+
+    await fireEvent.press(getByLabelText('집'));
+    await fireEvent.press(getByLabelText('구성원 목록'));
+    // 구성원 0명 세계라 1인 방장 = '집 삭제' 라벨.
+    await fireEvent.press(getByLabelText(/집 삭제|집 나가기/));
+    await fireEvent.press(getByLabelText(/집 삭제 확인|나가기 확인/));
+
+    await waitFor(() =>
+      expect(
+        calls.some((c) => c.method === 'DELETE' && c.url.includes('/houses/2/members/me')),
+      ).toBe(true),
+    );
+    await waitFor(() =>
+      expect(calls.some((c) => c.method === 'DELETE' && c.url.includes('/routines/44'))).toBe(true),
+    );
+  });
 });
