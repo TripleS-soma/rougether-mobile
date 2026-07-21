@@ -45,7 +45,7 @@ export type CategoryManagerSheetProps = {
   visible: boolean;
   categories: RoutineCategoryMeta[];
   onCreate: (category: RoutineCategoryMeta) => void;
-  /** Save edits to an existing category (name/emoji/visibility). */
+  /** Save edits to an existing category (name/icon/color/visibility). */
   onUpdate?: (id: string, category: RoutineCategoryMeta) => void;
   onDelete: (id: string) => void;
   /** Persist a new category order (ids top→bottom; long-press a row to move). */
@@ -60,7 +60,7 @@ export type CategoryManagerSheetProps = {
 
 /**
  * "카테고리 관리" bottom sheet, ported from the prototype `CategoryManagerModal`:
- * create a category (name + emoji + visibility) and delete existing ones (with a
+ * create a category (name + icon + color + visibility) and delete existing ones (with a
  * confirmation modal). Pure
  * JS; rendered as an inline overlay (not a wrapper's children) so its controls
  * stay interactive in tests.
@@ -76,8 +76,11 @@ export function CategoryManagerSheet({
   onClose,
 }: CategoryManagerSheetProps) {
   const t = useTokens();
+  // 새 카테고리의 기본 색 — 기존 자동 배정(생성 순서 순환)과 같은 색에서 시작.
+  const autoColor = () => CATEGORY_COLORS[categories.length % CATEGORY_COLORS.length];
   const [name, setName] = useState('');
   const [icon, setIcon] = useState<PictogramName>(ICON_CHOICES[0]);
+  const [color, setColor] = useState(autoColor());
   const [visibility, setVisibility] = useState<CategoryVisibility>('public');
   const [pendingDelete, setPendingDelete] = useState<RoutineCategoryMeta | null>(null);
   // Delete tapped on a category that still has routines — warning only.
@@ -104,6 +107,7 @@ export function CategoryManagerSheet({
     setEditing(null);
     setName('');
     setIcon(ICON_CHOICES[0]);
+    setColor(autoColor());
     setVisibility('public');
   };
 
@@ -111,19 +115,20 @@ export function CategoryManagerSheet({
     setEditing(c);
     setName(c.label);
     setIcon(c.icon);
+    setColor(c.color);
     setVisibility(c.visibility);
   };
 
   const submit = () => {
     if (!canSubmit) return;
     if (editing) {
-      onUpdate?.(editing.id, { ...editing, label: name.trim(), icon, visibility });
+      onUpdate?.(editing.id, { ...editing, label: name.trim(), icon, color, visibility });
     } else {
       onCreate({
         id: `cat-${Date.now()}`,
         label: name.trim(),
         icon,
-        color: CATEGORY_COLORS[categories.length % CATEGORY_COLORS.length],
+        color,
         visibility,
       });
     }
@@ -179,6 +184,28 @@ export function CategoryManagerSheet({
                       active && { borderColor: t.primary, borderWidth: 2 },
                     ]}>
                     <Pictogram name={e} size={18} />
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>색상</Text>
+            <View style={styles.colorRow}>
+              {CATEGORY_COLORS.map((c) => {
+                const active = color === c;
+                return (
+                  <Pressable
+                    key={c}
+                    onPress={() => setColor(c)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`색상 ${c}`}
+                    accessibilityState={{ selected: active }}
+                    style={[
+                      styles.colorCell,
+                      { backgroundColor: c },
+                      active && [styles.colorCellActive, { borderColor: t.text }],
+                    ]}>
+                    {active ? <Icon name="check" size={14} color="#FFFFFF" /> : null}
                   </Pressable>
                 );
               })}
@@ -469,6 +496,21 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  colorRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.two,
+  },
+  colorCell: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  colorCellActive: {
+    borderWidth: 2.5,
   },
   segment: {
     flexDirection: 'row',
