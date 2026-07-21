@@ -164,6 +164,7 @@ export function AppShell({
     ensureCategory,
     updateRoutineCategory,
     deleteRoutineCategory,
+    deleteCategoryCascade,
     reorderCategories,
   } = useMyRoomData();
 
@@ -349,6 +350,61 @@ export function AppShell({
           completedToday: (completions[r.id] ?? []).includes(todayIso()),
         }))
     : [];
+
+  /** 미션 +로 만든 연동 루틴 — 집 이름 카테고리 아래, 미션 제목과 같은 루틴. */
+  const linkedRoutinesFor = (houseTitle: string, missionTitles: string[]) => {
+    const cat = categories.find((c) => c.label === houseTitle);
+    if (!cat) return [];
+    return routines.filter(
+      (r) => r.kind === 'routine' && r.category === cat.id && missionTitles.includes(r.title),
+    );
+  };
+
+  /** 미션 삭제 성공 시 내 연동 루틴도 함께 삭제 — 고아 연동물 방지 (#338). */
+  const deleteMissionWithLinked = async (houseId: number, missionId: number) => {
+    const house = houses.find((h) => h.houseId === houseId);
+    const mission = house?.missions?.find((m) => m.id === missionId);
+    const linked = house && mission ? linkedRoutinesFor(house.title, [mission.title]) : [];
+    if (!(await deleteMission(houseId, missionId))) return;
+    for (const r of linked) await deleteRoutine(r.id);
+    if (linked.length > 0) toast('연동된 루틴도 함께 삭제했어요');
+  };
+
+  /** 집 나가기/삭제 성공 시 집 이름 카테고리를 루틴째 통삭제 (#338). */
+  const leaveHouseWithLinked = async (houseId: number) => {
+    const house = houses.find((h) => h.houseId === houseId);
+    const cat = house ? categories.find((c) => c.label === house.title) : undefined;
+    if (!(await leaveHouse(houseId))) return;
+    if (!cat) return;
+    await deleteCategoryCascade(cat.id);
+    toast('연동된 카테고리와 루틴도 함께 삭제했어요');
+  };
+
+  // 미션이 사라진 연동 루틴 자동 정리 (#338) — 방장이 미션을 지웠거나 과거
+  // 삭제분이 남아 미션 목록과 어긋난 경우, 데이터가 다 실린 뒤 한 번 맞춘다.
+  // 미션 목록이 비면(조회 실패와 구분 불가) 건드리지 않는다.
+  const sweptRef = useRef(false);
+  useEffect(() => {
+    if (sweptRef.current || myRoomLoading || housesLoading) return;
+    if (houses.length === 0 || routines.length === 0) return;
+    sweptRef.current = true;
+    const orphans = houses.flatMap((h) => {
+      const missions = h.missions ?? [];
+      if (missions.length === 0) return [];
+      const cat = categories.find((c) => c.label === h.title);
+      if (!cat) return [];
+      const titles = new Set(missions.map((m) => m.title));
+      return routines.filter(
+        (r) => r.kind === 'routine' && r.category === cat.id && !titles.has(r.title),
+      );
+    });
+    if (orphans.length === 0) return;
+    void (async () => {
+      for (const r of orphans) await deleteRoutine(r.id);
+      toast('사라진 미션의 연동 루틴을 정리했어요');
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myRoomLoading, housesLoading, houses, routines, categories]);
 
   /** 연동 루틴의 완료 취소를 막는다 — 미션 기여는 회수되지 않는다. */
   const toggleWithMissionGuard = (id: string, date: string) => {
@@ -606,7 +662,7 @@ export function AppShell({
               void kickMember(houseId, membershipId);
             }}
             onLeaveHouse={(houseId) => {
-              void leaveHouse(houseId);
+              void leaveHouseWithLinked(houseId);
             }}
             linkedRoutines={houseLinkedRoutines}
             contributedMissionIds={[...contributedMissionIds]}
@@ -620,7 +676,7 @@ export function AppShell({
               void createMission(houseId, input);
             }}
             onDeleteMission={(houseId, missionId) => {
-              void deleteMission(houseId, missionId);
+              void deleteMissionWithLinked(houseId, missionId);
             }}
             onUpdateHouse={(houseId, input) => {
               void updateHouse(houseId, input);

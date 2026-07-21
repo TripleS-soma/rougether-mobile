@@ -154,4 +154,117 @@ describe('AppShell — 공동미션 연동', () => {
     // ensureCategory가 서버 재조회로 기존 TripleS(20)를 재사용 — 중복 생성 없음.
     expect(calls.some((c) => c.method === 'POST' && c.url.includes('/categories'))).toBe(false);
   });
+
+  it('미션 삭제 시 연동 루틴도 함께 삭제된다 (#338)', async () => {
+    const { getByLabelText } = await render(
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(calls.some((c) => c.url.includes('/houses/2/missions'))).toBe(true));
+
+    await fireEvent.press(getByLabelText('집'));
+    await fireEvent.press(getByLabelText('공동 미션'));
+    await fireEvent.press(getByLabelText('아침 스트레칭 삭제'));
+    await fireEvent.press(getByLabelText('미션 삭제 확인'));
+
+    await waitFor(() =>
+      expect(
+        calls.some((c) => c.method === 'DELETE' && c.url.includes('/houses/2/missions/6')),
+      ).toBe(true),
+    );
+    // 미션 제목과 같은 TripleS 카테고리 루틴(44)이 함께 지워진다.
+    await waitFor(() =>
+      expect(calls.some((c) => c.method === 'DELETE' && c.url.includes('/routines/44'))).toBe(true),
+    );
+  });
+
+  it('집 나가기/삭제 시 그 집 미션들의 연동 루틴도 정리된다 (#338)', async () => {
+    const { getByLabelText } = await render(
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(calls.some((c) => c.url.includes('/houses/2/missions'))).toBe(true));
+
+    await fireEvent.press(getByLabelText('집'));
+    await fireEvent.press(getByLabelText('구성원 목록'));
+    // 구성원 0명 세계라 1인 방장 = '집 삭제' 라벨.
+    await fireEvent.press(getByLabelText(/집 삭제|집 나가기/));
+    await fireEvent.press(getByLabelText(/집 삭제 확인|나가기 확인/));
+
+    await waitFor(() =>
+      expect(
+        calls.some((c) => c.method === 'DELETE' && c.url.includes('/houses/2/members/me')),
+      ).toBe(true),
+    );
+    // 카테고리 통삭제 — 안의 루틴을 지우고 카테고리 자체도 지운다 (#338).
+    await waitFor(() =>
+      expect(calls.some((c) => c.method === 'DELETE' && c.url.includes('/routines/44'))).toBe(true),
+    );
+    await waitFor(() =>
+      expect(calls.some((c) => c.method === 'DELETE' && c.url.includes('/categories/20'))).toBe(
+        true,
+      ),
+    );
+  });
+});
+
+// --- 미션 목록과 어긋난 잔여 연동 루틴 자동 정리 (#338). ---
+describe('AppShell — 연동 루틴 스윕', () => {
+  const json = (body: unknown) => ({
+    ok: true,
+    status: 200,
+    text: async () => JSON.stringify(body),
+  });
+  let calls: { url: string; method: string }[] = [];
+
+  beforeEach(() => {
+    calls = [];
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+      calls.push({ url, method });
+      if (url.includes('/auth/')) return json({ accessToken: 't', refreshToken: 'r' });
+      if (url.includes('/categories')) return json({ items: [{ id: 20, name: 'TripleS' }] });
+      if (url.endsWith('/routines'))
+        return json({
+          items: [
+            // 44는 살아있는 미션과 제목 일치, 45는 미션이 사라진 잔여물.
+            { id: 44, title: '아침 스트레칭', categoryId: 20, repeatType: 'DAILY' },
+            { id: 45, title: '사라진 미션', categoryId: 20, repeatType: 'DAILY' },
+          ],
+        });
+      if (url.endsWith('/me/houses')) return json({ items: [{ houseId: 2, name: 'TripleS' }] });
+      if (url.includes('/houses/2/missions'))
+        return json({
+          items: [
+            {
+              missionId: 6,
+              title: '아침 스트레칭',
+              missionType: 'WEEKLY_MEMBER_COUNT',
+              targetValue: 5,
+              currentValue: 0,
+              status: 'ACTIVE',
+            },
+          ],
+        });
+      if (url.includes('/houses/2/members')) return json({ items: [] });
+      if (url.includes('/houses/2')) return json({ houseId: 2, name: 'TripleS', myRole: 'OWNER' });
+      if (url.endsWith('/today')) return json({ categories: [], summary: {}, streak: {} });
+      if (url.endsWith('/me')) return json({ userId: 4, nickname: '준서' });
+      return json({ items: [] });
+    }) as unknown as typeof fetch;
+  });
+
+  it('미션이 사라진 연동 루틴은 로드 후 자동 삭제되고, 일치하는 루틴은 남는다', async () => {
+    await render(
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>,
+    );
+    await waitFor(() =>
+      expect(calls.some((c) => c.method === 'DELETE' && c.url.includes('/routines/45'))).toBe(true),
+    );
+    expect(calls.some((c) => c.method === 'DELETE' && c.url.includes('/routines/44'))).toBe(false);
+  });
 });
