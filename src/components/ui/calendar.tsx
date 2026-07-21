@@ -6,7 +6,6 @@ import { useTokens } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
-const SUNDAY = '#E89090';
 
 type YMD = { y: number; m: number; d: number };
 
@@ -79,7 +78,7 @@ export function Calendar({ value, min, max, onSelect }: CalendarProps) {
             <Text
               style={[
                 styles.weekday,
-                { color: i === 0 ? readableTextColor(SUNDAY, t.surfaceMuted) : t.textMuted },
+                { color: i === 0 ? readableTextColor(t.danger, t.surfaceMuted) : t.textMuted },
               ]}>
               {w}
             </Text>
@@ -110,7 +109,7 @@ export function Calendar({ value, min, max, onSelect }: CalendarProps) {
                         : isSelected
                           ? t.onPrimary
                           : isSunday
-                            ? SUNDAY
+                            ? t.danger
                             : t.text,
                     },
                   ]}>

@@ -290,6 +290,19 @@ export type ThemeMode = 'system' | 'light' | 'dark';
 export const DEFAULT_THEME_MODE: ThemeMode = 'system';
 
 /** Corner-radius scale (prototype cards use ~16px / rounded-2xl). */
+/**
+ * Fixed white for marks/text on colored fills and dark scrims (category-color
+ * check marks, overlay captions). Theme-independent — `onPrimary` is dark ink
+ * on the pastel primaries, not white.
+ */
+export const StaticWhite = '#FFFFFF';
+
+/**
+ * Animated splash overlay background — MUST match the expo-splash-screen
+ * `backgroundColor` in app.json, or the native → JS splash handoff flashes.
+ */
+export const SplashBackground = '#208AEF';
+
 export const Radius = {
   sm: 8,
   md: 12,

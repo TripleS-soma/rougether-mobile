@@ -38,6 +38,7 @@ import {
   SKY_BY_PHASE,
   skyPhaseForHour,
   Spacing,
+  StaticWhite,
   Typography,
 } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
@@ -852,7 +853,7 @@ export function GroupHouseScreen({
                 style={[
                   Typography.supporting,
                   styles.roomName,
-                  { color: preview ? '#FFFFFF' : t.onTint },
+                  { color: preview ? StaticWhite : t.onTint },
                 ]}>
                 {room.isMine ? `${room.name} (나)` : room.name}
               </Text>

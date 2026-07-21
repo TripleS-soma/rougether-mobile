@@ -10,7 +10,7 @@ import {
 } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
 import { Pictogram, type PictogramName } from '@/components/ui/pictograms';
-import { Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing, StaticWhite, Typography } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
 
 const ICON_CHOICES: PictogramName[] = [
@@ -205,7 +205,7 @@ export function CategoryManagerSheet({
                       { backgroundColor: c },
                       active && [styles.colorCellActive, { borderColor: t.text }],
                     ]}>
-                    {active ? <Icon name="check" size={14} color="#FFFFFF" /> : null}
+                    {active ? <Icon name="check" size={14} color={StaticWhite} /> : null}
                   </Pressable>
                 );
               })}
