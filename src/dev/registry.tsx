@@ -26,6 +26,7 @@ import { SoundSettingsScreen } from '@/components/screens/sound-settings-screen'
 import { SignupScreen } from '@/components/screens/signup-screen';
 import { SampleButton } from '@/components/sample-button';
 import { Badge } from '@/components/ui/badge';
+import { BearCheck } from '@/components/ui/bear-check';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card } from '@/components/ui/card';
@@ -63,6 +64,20 @@ export const galleryEntries: GalleryEntry[] = [
     name: 'Type scale',
     description: 'Named typography roles (Astryx standard: base ≈ 16, ratio ≈ 1.2).',
     render: () => <TypeScalePreview />,
+  },
+  {
+    name: 'BearCheck · 곰 헤드 체크 토글',
+    description:
+      '루틴 완료 토글 (#344, design-sync 시안 A) — 미완료 윤곽 / 완료 = 카테고리 색 + 흰 체크.',
+    render: () => (
+      <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center', alignSelf: 'center' }}>
+        <BearCheck checked={false} />
+        <BearCheck checked color="#E8A87C" />
+        <BearCheck checked color="#7FA8D4" />
+        <BearCheck checked color="#C8869C" />
+        <BearCheck checked color="#7FA87F" />
+      </View>
+    ),
   },
   {
     name: 'Room · default',
