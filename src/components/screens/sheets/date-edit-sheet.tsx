@@ -3,7 +3,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Calendar } from '@/components/ui/calendar';
 import type { Routine } from '@/constants/routines';
-import { Radius, Spacing, Typography } from '@/constants/theme';
+import { Overlay, Radius, Spacing, Typography } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
 import { todayIso } from '@/utils/datetime';
 
@@ -80,7 +80,7 @@ export function DateEditSheet({
 const styles = StyleSheet.create({
   sheetBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: Overlay.dim,
     justifyContent: 'flex-end',
   },
   sheet: {

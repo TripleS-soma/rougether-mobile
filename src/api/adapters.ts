@@ -7,6 +7,14 @@
 import { CHARACTER_OPTIONS, type CharacterId } from '@/constants/characters';
 import { type Wallet } from '@/constants/currency';
 import {
+  GachaAccents,
+  HouseBgs,
+  HouseBorders,
+  MyRoomTint,
+  RoomTints,
+  WallpaperTints,
+} from '@/constants/theme';
+import {
   CATEGORY_COLORS,
   type CategoryVisibility,
   type NewRoutine,
@@ -392,7 +400,6 @@ const GACHA_ICONS: PictogramName[] = [
   'planet',
   'blossom',
 ];
-const GACHA_ACCENTS = ['#E8DCC8', '#D6E4D2', '#F7E6C8', '#D8D2EC', '#E6D2D2', '#D2E4E6'];
 
 export type GachaMachine = {
   id: number;
@@ -414,7 +421,7 @@ export function toGachaMachine(g: GachaResponse, index = 0): GachaMachine {
     costAmount: g.costAmount ?? 0,
     drawCount: g.drawCount ?? 1,
     icon: GACHA_ICONS[index % GACHA_ICONS.length],
-    accent: GACHA_ACCENTS[index % GACHA_ACCENTS.length],
+    accent: GachaAccents[index % GachaAccents.length],
     // Furniture gachas draw from a room theme; the character gacha has none.
     kind: g.themeId == null ? 'character' : 'furniture',
   };
@@ -440,7 +447,6 @@ const VALID_SLOTS: FurnitureSlot[] = [
 ];
 // Placeholder tints for wallpapers, cycled by index so tiles stay
 // distinguishable until real art exists (the API supplies no room-fill color).
-const WALLPAPER_TINTS = ['#F3E9D6', '#E4F0DC', '#F7E4EA', '#E3EEF8', '#ECE8FA', '#F7ECD8'];
 
 const isPositioned = (i: ItemResponse) =>
   i.placementType === 'positioned' &&
@@ -468,7 +474,7 @@ function toWallpaper(item: ItemResponse, index = 0): Wallpaper {
     name: stripSetPrefix(item.name),
     price: item.priceAmount ?? 0,
     assetKey: item.assetKey ?? '',
-    color: WALLPAPER_TINTS[index % WALLPAPER_TINTS.length],
+    color: WallpaperTints[index % WallpaperTints.length],
     theme: item.theme?.name,
   };
 }
@@ -551,7 +557,6 @@ export function toServerCharacterId(
 // --- house (그룹하우스) ---------------------------------------------------------
 
 // Room tile tints + browse-card decorations, cycled by index (no art yet).
-const ROOM_TINTS = ['#F5E1D8', '#D9E8D4', '#F5E8C8', '#E4DCF0', '#FBE0D8', '#D8E8F0'];
 const HOUSE_ICONS: PictogramName[] = [
   'house',
   'sunrise',
@@ -562,9 +567,6 @@ const HOUSE_ICONS: PictogramName[] = [
   'moon',
   'coffee',
 ];
-const HOUSE_BGS = ['#FFEFD8', '#E4F0DC', '#E3EEF8', '#F7E4EA', '#ECE8FA', '#F7ECD8'];
-const HOUSE_BORDERS = ['#F0C88A', '#A8C898', '#9FBEDD', '#DBA8BC', '#B7A8DD', '#DDC08A'];
-const MY_ROOM_TINT = '#E8E0D0';
 
 /**
  * Build the group-house screen model from house detail + members. The grid is
@@ -591,7 +593,7 @@ export function toGroupHouse(
     name:
       m.nickname ||
       (m.userId === myUserId && myNickname ? myNickname : `멤버 ${m.userId ?? i + 1}`),
-    color: m.userId === myUserId ? MY_ROOM_TINT : ROOM_TINTS[i % ROOM_TINTS.length],
+    color: m.userId === myUserId ? MyRoomTint : RoomTints[i % RoomTints.length],
     isMine: m.userId === myUserId,
     isOwner: m.role === 'OWNER',
     membershipId: m.membershipId,
@@ -731,8 +733,8 @@ export function toSearchHouse(h: HouseSummary, index = 0): SearchHouse {
     tag: h.goals?.[0]?.name ?? '루틴',
     coverImageKey: h.coverImageKey ?? undefined,
     icon: HOUSE_ICONS[index % HOUSE_ICONS.length],
-    bg: HOUSE_BGS[index % HOUSE_BGS.length],
-    border: HOUSE_BORDERS[index % HOUSE_BORDERS.length],
+    bg: HouseBgs[index % HouseBgs.length],
+    border: HouseBorders[index % HouseBorders.length],
     // No description: the boilerplate one only ever truncated (#234); the
     // level rides the meta line instead. Server summaries carry no intro text.
     level: h.level ?? 0,

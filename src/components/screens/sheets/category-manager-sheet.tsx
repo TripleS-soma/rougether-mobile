@@ -10,7 +10,7 @@ import {
 } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
 import { Pictogram, type PictogramName } from '@/components/ui/pictograms';
-import { Radius, Spacing, StaticWhite, Typography } from '@/constants/theme';
+import { Overlay, Radius, Spacing, StaticWhite, Typography } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
 
 const ICON_CHOICES: PictogramName[] = [
@@ -180,7 +180,7 @@ export function CategoryManagerSheet({
                     accessibilityState={{ selected: active }}
                     style={[
                       styles.emojiCell,
-                      { backgroundColor: active ? `${t.primary}22` : t.surfaceMuted },
+                      { backgroundColor: active ? t.primarySoft : t.surfaceMuted },
                       active && { borderColor: t.primary, borderWidth: 2 },
                     ]}>
                     <Pictogram name={e} size={18} />
@@ -311,7 +311,7 @@ export function CategoryManagerSheet({
                         accessibilityLabel={`${c.label} 위로 이동`}
                         style={[
                           styles.del,
-                          { backgroundColor: idx === 0 ? t.surfaceMuted : `${t.primary}22` },
+                          { backgroundColor: idx === 0 ? t.surfaceMuted : t.primarySoft },
                         ]}>
                         <Text
                           style={[
@@ -330,7 +330,7 @@ export function CategoryManagerSheet({
                           styles.del,
                           {
                             backgroundColor:
-                              idx === categories.length - 1 ? t.surfaceMuted : `${t.primary}22`,
+                              idx === categories.length - 1 ? t.surfaceMuted : t.primarySoft,
                           },
                         ]}>
                         <Text
@@ -366,7 +366,7 @@ export function CategoryManagerSheet({
                         }
                         accessibilityRole="button"
                         accessibilityLabel={`${c.label} 삭제`}
-                        style={[styles.del, { backgroundColor: `${t.danger}22` }]}>
+                        style={[styles.del, { backgroundColor: t.dangerSoft }]}>
                         <Icon name="trash" size={16} color={t.danger} />
                       </Pressable>
                     </>
@@ -445,7 +445,7 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: Overlay.dim,
   },
   sheet: {
     borderTopLeftRadius: Radius.lg,

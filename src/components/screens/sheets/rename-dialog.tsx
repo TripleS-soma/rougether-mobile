@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import type { Routine } from '@/constants/routines';
-import { Radius, Spacing, Typography } from '@/constants/theme';
+import { Overlay, Radius, Spacing, Typography } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
 
 export type RenameDialogProps = {
@@ -73,7 +73,7 @@ export function RenameDialog({ item, onClose, onRename }: RenameDialogProps) {
 const styles = StyleSheet.create({
   dialogBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: Overlay.dim,
     alignItems: 'center',
     justifyContent: 'center',
     padding: Spacing.four,

@@ -17,7 +17,7 @@ export function PendingNotice({ text, style }: PendingNoticeProps) {
   const t = useTokens();
   return (
     <View
-      style={[styles.notice, { backgroundColor: `${t.warning}22`, borderColor: t.warning }, style]}>
+      style={[styles.notice, { backgroundColor: t.warningSoft, borderColor: t.warning }, style]}>
       <Text style={[Typography.supporting, { color: t.text }]}>{text}</Text>
     </View>
   );

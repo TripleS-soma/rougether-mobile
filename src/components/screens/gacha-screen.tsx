@@ -17,7 +17,7 @@ import type { DrawResult } from '@/api/types';
 import { Icon } from '@/components/ui/icon';
 import { Pictogram, type PictogramName } from '@/components/ui/pictograms';
 import { WalletPills } from '@/components/ui/wallet-pills';
-import { Radius, Spacing, StaticWhite, Typography } from '@/constants/theme';
+import { Overlay, Radius, Spacing, StaticWhite, Typography } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
   // Pull animation overlay (rendered inside a full-screen Modal)
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    backgroundColor: Overlay.strong,
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.four,

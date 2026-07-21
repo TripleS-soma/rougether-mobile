@@ -218,7 +218,7 @@ export function HouseMembersScreen({
                   <View style={styles.memberNameRow}>
                     <Text style={[Typography.label, { color: t.text }]}>{member.name}</Text>
                     {member.isOwner ? (
-                      <View style={[styles.ownerBadge, { backgroundColor: `${t.primary}22` }]}>
+                      <View style={[styles.ownerBadge, { backgroundColor: t.primarySoft }]}>
                         <CrownPictogram size={10} />
                         <Text style={[styles.ownerBadgeText, { color: t.primaryText }]}>방장</Text>
                       </View>
@@ -243,7 +243,7 @@ export function HouseMembersScreen({
                     onPress={() => setTransferTarget(member)}
                     accessibilityRole="button"
                     accessibilityLabel={`${member.name} 방장 위임`}
-                    style={[styles.kickBtn, { backgroundColor: `${t.primary}22` }]}>
+                    style={[styles.kickBtn, { backgroundColor: t.primarySoft }]}>
                     <Text style={[Typography.supporting, { color: t.primaryText }]}>위임</Text>
                   </Pressable>
                 ) : null}
@@ -256,7 +256,7 @@ export function HouseMembersScreen({
                     accessibilityLabel={`${member.name} 강퇴`}
                     style={[
                       styles.kickBtn,
-                      { backgroundColor: kickedOut ? t.surfaceMuted : `${t.danger}22` },
+                      { backgroundColor: kickedOut ? t.surfaceMuted : t.dangerSoft },
                     ]}>
                     <Text
                       style={[
@@ -283,7 +283,7 @@ export function HouseMembersScreen({
                 onPress={() => setShowLeaveConfirm(true)}
                 accessibilityRole="button"
                 accessibilityLabel={isLoneOwner ? '집 삭제' : '집 나가기'}
-                style={[styles.leaveBtn, { backgroundColor: `${t.danger}22` }]}>
+                style={[styles.leaveBtn, { backgroundColor: t.dangerSoft }]}>
                 <DoorPictogram size={14} />
                 <Text style={[Typography.label, { color: t.danger }]}>
                   {isLoneOwner ? '집 삭제' : '집 나가기'}

@@ -33,6 +33,7 @@ import { WalletPills } from '@/components/ui/wallet-pills';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { RainOverlay } from '@/components/rain-overlay';
 import {
+  Overlay,
   Radius,
   RAIN_SKY,
   SKY_BY_PHASE,
@@ -1221,7 +1222,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: Spacing.one,
     // 0.4는 밝은 방 프리뷰 위에서 흰 글자가 4.5:1 아래로 떨어졌다(UX 감사).
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    backgroundColor: Overlay.strong,
     borderRadius: Radius.pill,
     paddingHorizontal: Spacing.two,
     paddingVertical: 2,

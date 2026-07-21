@@ -133,7 +133,7 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
 
       {/* The backend has no signup endpoint yet — be honest instead of a fake
           flow that bounces back to login. */}
-      <View style={[styles.notice, { backgroundColor: `${t.warning}22`, borderColor: t.warning }]}>
+      <View style={[styles.notice, { backgroundColor: t.warningSoft, borderColor: t.warning }]}>
         <Text style={[styles.noticeText, { color: t.text }]}>
           이메일 가입은 준비 중이에요. 지금은 로그인 화면에서 이메일 칸을 비우고 로그인하면 새
           계정이 만들어져요.
