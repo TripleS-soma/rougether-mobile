@@ -4,7 +4,6 @@ import {
   Dimensions,
   Keyboard,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -15,13 +14,18 @@ import {
 } from 'react-native';
 
 import { CharacterAvatar, type CharacterAnimationSet } from '@/components/character-avatar';
+import { NavMenuPopover } from '@/components/screens/nav-menu-popover';
 import { Room } from '@/components/room/room';
 import { CategoryManagerSheet } from '@/components/screens/sheets/category-manager-sheet';
 import {
   CharacterPickerSheet,
   type OwnedCharacter,
 } from '@/components/screens/sheets/character-picker-sheet';
+import { DateEditSheet } from '@/components/screens/sheets/date-edit-sheet';
+import { RenameDialog } from '@/components/screens/sheets/rename-dialog';
+import { RoutineMenuSheet } from '@/components/screens/sheets/routine-menu-sheet';
 import { TimePickerSheet } from '@/components/screens/sheets/time-picker-sheet';
+import { TodoDateDialog } from '@/components/screens/sheets/todo-date-dialog';
 import { Calendar } from '@/components/ui/calendar';
 import { CoachTarget } from '@/components/ui/coach-mark';
 import { Pictogram } from '@/components/ui/pictograms';
@@ -38,7 +42,7 @@ import {
   VISIBILITY_LABELS,
 } from '@/constants/routines';
 import { BearCheck } from '@/components/ui/bear-check';
-import { Icon, type IconName } from '@/components/ui/icon';
+import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { captureVerificationPhoto } from '@/lib/photo-verify';
 import { saveRoomImage } from '@/lib/room-capture';
@@ -366,23 +370,21 @@ export function MyRoomScreen({
   // 메뉴 시트의 날짜 문맥 — 방탭은 오늘, 달력탭은 선택한 날짜로 연다 (#323).
   const [menuDate, setMenuDate] = useState(today);
   const menuRoutine = routines.find((r) => r.id === menuOpenId) ?? null;
-  // 시간이 없는 루틴/투두는 '시간 추가', 있으면 '시간 수정' (#325).
-  const menuTimeLabel = menuRoutine?.alarmEnabled && menuRoutine?.time ? '시간 수정' : '시간 추가';
   const openRowMenu = (id: string, date = today) => {
     setMenuDate(date);
     setMenuOpenId(id);
   };
 
-  // Kebab → 수정: rename only (id + draft text). Kebab → 시간 수정: TimePickerSheet.
+  // Kebab → 수정: rename only (the dialog holds the draft text). Kebab → 시간
+  // 수정: TimePickerSheet.
   const [renameId, setRenameId] = useState<string | null>(null);
-  const [renameText, setRenameText] = useState('');
+  const renameItem = routines.find((r) => r.id === renameId) ?? null;
   const [timeId, setTimeId] = useState<string | null>(null);
   const timeRoutine = routines.find((r) => r.id === timeId) ?? null;
   // 메뉴 → 날짜 바꾸기: calendar sheet. Todos move their dueDate; routines move
-  // that day's occurrence only (repeat stays). The pick is a draft until 확인.
+  // that day's occurrence only (repeat stays). The draft date lives in the sheet.
   const [dateEditId, setDateEditId] = useState<string | null>(null);
   const dateEditItem = routines.find((r) => r.id === dateEditId) ?? null;
-  const [dateDraft, setDateDraft] = useState(today);
 
   // 방 / 달력 tab. The calendar lists routines + todos on the selected date.
   // Today renders from live client state (toggleable); other dates render the
@@ -1117,305 +1119,64 @@ export function MyRoomScreen({
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <Modal
-        transparent
-        visible={menuRoutine !== null}
-        animationType="slide"
-        onRequestClose={() => setMenuOpenId(null)}>
-        <Pressable style={styles.sheetBackdrop} onPress={() => setMenuOpenId(null)}>
-          <Pressable style={[styles.sheet, { backgroundColor: t.screen }]}>
-            <View style={[styles.sheetHandle, { backgroundColor: t.border }]} />
-            <Text style={[Typography.h3, styles.sheetTitle, { color: t.text }]} numberOfLines={1}>
-              {menuRoutine?.title}
-            </Text>
-
-            <View style={styles.sheetActions}>
-              <Pressable
-                onPress={() => {
-                  const r = menuRoutine;
-                  setMenuOpenId(null);
-                  if (r) {
-                    setRenameText(r.title);
-                    setRenameId(r.id);
-                  }
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`${menuRoutine?.title ?? ''} 수정`}
-                style={[styles.sheetAction, { backgroundColor: t.surface }]}>
-                <Icon name="edit" size={22} color={t.text} />
-                <Text style={[Typography.label, { color: t.text }]}>수정하기</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  const r = menuRoutine;
-                  setMenuOpenId(null);
-                  if (r) onDeleteRoutine?.(r.id);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`${menuRoutine?.title ?? ''} 삭제`}
-                style={[styles.sheetAction, { backgroundColor: t.surface }]}>
-                <Icon name="trash" size={22} color={t.danger} />
-                <Text style={[Typography.label, { color: t.danger }]}>삭제하기</Text>
-              </Pressable>
-            </View>
-
-            <Pressable
-              onPress={() => {
-                const r = menuRoutine;
-                const cal = menuCalItem;
-                setMenuOpenId(null);
-                // 서버 백업 날짜에서 연 메뉴는 달력 체크박스와 같은 규칙으로
-                // 토글한다 (미래 차단 토스트, 과거 실토글) (#323).
-                if (cal) handleCalendarItemPress(cal);
-                else if (r) handleToggle(r, menuDate);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={`${menuRoutine?.title ?? ''} ${menuDone ? '완료 취소' : '완료'}`}
-              style={styles.sheetItem}>
-              <View style={[styles.sheetItemIcon, { backgroundColor: t.primary }]}>
-                <Icon name={menuDone ? 'checkbox-off' : 'check'} size={18} color={t.onPrimary} />
-              </View>
-              <Text style={[Typography.body, { color: t.text }]}>
-                {menuDone ? '완료 취소' : '완료하기'}
-              </Text>
-            </Pressable>
-
-            {/* 루틴은 알림 시간, 투두는 마감 시각(dueTime) — 같은 항목으로 다룬다 (#325). */}
-            <Pressable
-              onPress={() => {
-                const r = menuRoutine;
-                setMenuOpenId(null);
-                if (r) setTimeId(r.id);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={`${menuRoutine?.title ?? ''} ${menuTimeLabel}`}
-              style={styles.sheetItem}>
-              <View style={[styles.sheetItemIcon, { backgroundColor: t.warning }]}>
-                <Icon name="bell" size={18} color={t.onPrimary} />
-              </View>
-              <Text style={[Typography.body, { color: t.text }]}>{menuTimeLabel}</Text>
-            </Pressable>
-
-            {/* Todos move their dueDate; a routine moves that day's occurrence
-                only — the repeat stays (the calendar sheet explains). */}
-            <Pressable
-              onPress={() => {
-                const r = menuRoutine;
-                setMenuOpenId(null);
-                if (r) {
-                  setDateDraft(r.dueDate ?? today);
-                  setDateEditId(r.id);
-                }
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={`${menuRoutine?.title ?? ''} 날짜 바꾸기`}
-              style={styles.sheetItem}>
-              <View style={[styles.sheetItemIcon, { backgroundColor: t.success }]}>
-                <Icon name="calendar" size={18} color={t.onPrimary} />
-              </View>
-              <Text style={[Typography.body, { color: t.text }]}>날짜 바꾸기</Text>
-            </Pressable>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <RoutineMenuSheet
+        item={menuRoutine}
+        done={menuDone}
+        onClose={() => setMenuOpenId(null)}
+        onRename={(r) => setRenameId(r.id)}
+        onDelete={(r) => onDeleteRoutine?.(r.id)}
+        onToggleComplete={(r) => {
+          // 서버 백업 날짜에서 연 메뉴는 달력 체크박스와 같은 규칙으로
+          // 토글한다 (미래 차단 토스트, 과거 실토글) (#323).
+          if (menuCalItem) handleCalendarItemPress(menuCalItem);
+          else handleToggle(r, menuDate);
+        }}
+        onEditTime={(r) => setTimeId(r.id)}
+        onChangeDate={(r) => setDateEditId(r.id)}
+      />
 
       {/* 날짜 바꾸기: calendar bottom sheet — the pick stays a draft until 확인. */}
-      <Modal
-        transparent
-        visible={dateEditItem !== null}
-        animationType="slide"
-        onRequestClose={() => setDateEditId(null)}>
-        <Pressable style={styles.sheetBackdrop} onPress={() => setDateEditId(null)}>
-          <Pressable style={[styles.sheet, { backgroundColor: t.screen }]}>
-            <View style={[styles.sheetHandle, { backgroundColor: t.border }]} />
-            <Text style={[Typography.h3, styles.sheetTitle, { color: t.text }]} numberOfLines={1}>
-              날짜 바꾸기
-            </Text>
-            {dateEditItem?.kind !== 'todo' ? (
-              <Text style={[Typography.supporting, styles.sheetNote, { color: t.textMuted }]}>
-                루틴 반복은 그대로 두고, 선택한 날짜에 이 날 몫이 할 일로 추가돼요.{'\n'}(원래
-                날짜에서 숨기는 건 서버 준비 중이에요)
-              </Text>
-            ) : null}
-            <Calendar value={dateDraft} onSelect={setDateDraft} />
-            <View style={styles.dialogBtns}>
-              <Pressable
-                onPress={() => setDateEditId(null)}
-                accessibilityRole="button"
-                accessibilityLabel="취소"
-                style={[styles.dialogBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  const r = dateEditItem;
-                  setDateEditId(null);
-                  if (!r) return;
-                  if (r.kind === 'todo') onUpdateTodoDueDate?.(r.id, dateDraft);
-                  else onMoveRoutineOccurrence?.(r.id, dateDraft);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="확인"
-                style={[styles.dialogBtn, { backgroundColor: t.primary }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>확인</Text>
-              </Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <DateEditSheet
+        item={dateEditItem}
+        onClose={() => setDateEditId(null)}
+        onUpdateTodoDueDate={onUpdateTodoDueDate}
+        onMoveRoutineOccurrence={onMoveRoutineOccurrence}
+      />
 
-      <Modal
-        transparent
-        visible={renameId !== null}
-        animationType="fade"
-        onRequestClose={() => setRenameId(null)}>
-        <Pressable style={styles.dialogBackdrop} onPress={() => setRenameId(null)}>
-          <Pressable style={[styles.dialogCard, { backgroundColor: t.screen }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>이름 수정</Text>
-            <TextInput
-              autoFocus
-              value={renameText}
-              onChangeText={setRenameText}
-              placeholder="루틴 이름"
-              placeholderTextColor={t.textMuted}
-              style={[styles.dialogInput, { color: t.text, backgroundColor: t.surfaceMuted }]}
-            />
-            <View style={styles.dialogBtns}>
-              <Pressable
-                onPress={() => setRenameId(null)}
-                accessibilityRole="button"
-                accessibilityLabel="취소"
-                style={[styles.dialogBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  const title = renameText.trim();
-                  if (renameId && title) onRenameRoutine?.(renameId, title);
-                  setRenameId(null);
-                }}
-                disabled={!renameText.trim()}
-                accessibilityRole="button"
-                accessibilityLabel="저장"
-                style={[
-                  styles.dialogBtn,
-                  { backgroundColor: renameText.trim() ? t.primary : t.surfaceMuted },
-                ]}>
-                <Text
-                  style={[
-                    Typography.label,
-                    { color: renameText.trim() ? t.onPrimary : t.textMuted },
-                  ]}>
-                  저장
-                </Text>
-              </Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <RenameDialog
+        item={renameItem}
+        onClose={() => setRenameId(null)}
+        onRename={onRenameRoutine}
+      />
 
-      <Modal
-        transparent
+      <TodoDateDialog
         visible={todoDateOpen}
-        animationType="fade"
-        onRequestClose={() => setTodoDateOpen(false)}>
-        <Pressable style={styles.dialogBackdrop} onPress={() => setTodoDateOpen(false)}>
-          <Pressable style={[styles.dialogCard, { backgroundColor: t.screen }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>할 일 날짜</Text>
-            <Calendar
-              value={newTodoDate}
-              onSelect={(date) => {
-                setNewTodoDate(date);
-                setTodoDateOpen(false);
-                // Re-focus the title input so blur-to-commit still works.
-                setTimeout(() => todoInputRef.current?.focus(), 60);
-              }}
-            />
-          </Pressable>
-        </Pressable>
-      </Modal>
+        value={newTodoDate}
+        onSelect={(date) => {
+          setNewTodoDate(date);
+          setTodoDateOpen(false);
+          // Re-focus the title input so blur-to-commit still works.
+          setTimeout(() => todoInputRef.current?.focus(), 60);
+        }}
+        onClose={() => setTodoDateOpen(false)}
+      />
 
       {/* Header hamburger popover: quick links to the management screens. */}
-      <Modal
-        transparent
+      <NavMenuPopover
         visible={navMenuOpen}
-        animationType="fade"
-        onRequestClose={() => setNavMenuOpen(false)}>
-        <Pressable style={styles.popoverBackdrop} onPress={() => setNavMenuOpen(false)}>
-          <View
-            style={[
-              styles.popover,
-              { top: navMenuTop, backgroundColor: t.screen, borderColor: t.border },
-            ]}>
-            {(
-              [
-                ...(onOpenNotifications
-                  ? [
-                      {
-                        icon: 'bell' as const,
-                        label: '알림',
-                        dot: unreadNotificationCount > 0,
-                        onPress: () => onOpenNotifications(),
-                      },
-                    ]
-                  : []),
-                ...(ownedCharacters && onSelectCharacter
-                  ? [
-                      {
-                        icon: 'profile' as const,
-                        label: '캐릭터 교체',
-                        onPress: () => setCharacterSheetOpen(true),
-                      },
-                    ]
-                  : []),
-                {
-                  icon: 'edit' as const,
-                  label: '방 꾸미기',
-                  onPress: () => onEdit?.(),
-                },
-                {
-                  icon: 'camera' as const,
-                  label: '방 이미지 저장',
-                  onPress: () => void onSaveRoomImage(),
-                },
-                {
-                  icon: 'folder' as const,
-                  label: '카테고리 관리',
-                  onPress: () => setCategorySheetOpen(true),
-                },
-                {
-                  icon: 'list' as const,
-                  label: '루틴 관리',
-                  // + 버튼(onAddRoutine)은 바로 추가로 가고, 관리는 여기서만 (#335).
-                  onPress: () => (onManageRoutines ?? onAddRoutine)?.(),
-                },
-              ] as { icon: IconName; label: string; dot?: boolean; onPress: () => void }[]
-            ).map((item, idx, arr) => (
-              <Pressable
-                key={item.label}
-                onPress={() => {
-                  setNavMenuOpen(false);
-                  item.onPress();
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={item.label}
-                style={[
-                  styles.popoverItem,
-                  idx !== arr.length - 1 && {
-                    borderBottomColor: t.border,
-                    borderBottomWidth: StyleSheet.hairlineWidth,
-                  },
-                ]}>
-                <Icon name={item.icon} size={18} color={t.text} />
-                <Text style={[Typography.body, { color: t.text }]}>{item.label}</Text>
-                {item.dot ? (
-                  <View style={[styles.popoverDot, { backgroundColor: t.danger }]} />
-                ) : null}
-              </Pressable>
-            ))}
-          </View>
-        </Pressable>
-      </Modal>
+        top={navMenuTop}
+        onClose={() => setNavMenuOpen(false)}
+        onOpenNotifications={onOpenNotifications}
+        notificationDot={unreadNotificationCount > 0}
+        onOpenCharacterPicker={
+          ownedCharacters && onSelectCharacter ? () => setCharacterSheetOpen(true) : undefined
+        }
+        onEditRoom={onEdit}
+        onSaveRoomImage={() => void onSaveRoomImage()}
+        onOpenCategoryManager={() => setCategorySheetOpen(true)}
+        // + 버튼(onAddRoutine)은 바로 추가로 가고, 관리는 여기서만 (#335).
+        onManageRoutines={onManageRoutines ?? onAddRoutine}
+      />
 
       <CharacterPickerSheet
         visible={characterSheetOpen}
@@ -1531,15 +1292,6 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
   },
-  popoverDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginLeft: 'auto',
-  },
-  iconGlyph: {
-    fontSize: 18,
-  },
   body: {
     paddingBottom: Spacing.six,
   },
@@ -1556,9 +1308,6 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  gachaGlyph: {
-    fontSize: 20,
   },
   section: {
     paddingHorizontal: Spacing.four,
@@ -1635,86 +1384,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.one,
     marginTop: Spacing.half,
   },
-  sheetBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    borderTopLeftRadius: Radius.lg,
-    borderTopRightRadius: Radius.lg,
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.two,
-    paddingBottom: Spacing.six,
-    gap: Spacing.three,
-  },
-  sheetHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: Spacing.one,
-  },
-  sheetTitle: {
-    textAlign: 'center',
-  },
-  sheetNote: {
-    textAlign: 'center',
-  },
-  sheetActions: {
-    flexDirection: 'row',
-    gap: Spacing.three,
-  },
-  sheetAction: {
-    flex: 1,
-    borderRadius: Radius.lg,
-    paddingVertical: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.two,
-  },
-  sheetItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingVertical: Spacing.two,
-  },
-  sheetItemIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dialogBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: Spacing.four,
-  },
-  dialogCard: {
-    width: '100%',
-    maxWidth: 340,
-    borderRadius: Radius.lg,
-    padding: Spacing.four,
-    gap: Spacing.three,
-  },
-  dialogInput: {
-    fontSize: 16,
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.three,
-  },
-  dialogBtns: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-  },
-  dialogBtn: {
-    flex: 1,
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.three,
-    alignItems: 'center',
-  },
   todoInput: {
     fontSize: 16,
     paddingVertical: Spacing.three,
@@ -1747,31 +1416,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.five,
-  },
-  popoverBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-  },
-  popover: {
-    // `top` comes from the measured hamburger position (navMenuTop).
-    position: 'absolute',
-    right: Spacing.four,
-    minWidth: 176,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    overflow: 'hidden',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-  },
-  popoverItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.three,
   },
   badges: {
     flexDirection: 'row',
