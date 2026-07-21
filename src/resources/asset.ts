@@ -5,7 +5,13 @@
  * (`furniture/bed` 등) have no CDN art — check with isCdnKey() before rendering
  * an <Image> and fall back to the in-app placeholder.
  */
-export const RESOURCE_BASE = 'https://rougether-assets.s3.ap-northeast-2.amazonaws.com';
+const FALLBACK_RESOURCE_BASE = 'https://rougether-assets.s3.ap-northeast-2.amazonaws.com';
+
+/** Overridable per environment (`EXPO_PUBLIC_ASSET_URL`, inlined at bundle time). */
+export const RESOURCE_BASE = (process.env.EXPO_PUBLIC_ASSET_URL ?? FALLBACK_RESOURCE_BASE).replace(
+  /\/+$/,
+  '',
+);
 
 /** True when the key points at real CDN art (API asset keys). */
 export function isCdnKey(key?: string | null): key is string {
