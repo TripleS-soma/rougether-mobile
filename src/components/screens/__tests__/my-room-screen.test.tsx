@@ -367,6 +367,40 @@ describe('MyRoomScreen', () => {
     expect(getByText('0 / 2')).toBeTruthy();
   });
 
+  it('달력탭에 선택 날짜의 전체 완료/총 개수와 진행 바가 보인다 (#346)', async () => {
+    // 오늘(로컬 날짜): 5개 중 3개 완료 — 방탭과 같은 집계가 달력탭에도 표시.
+    const completions = { '1': [TODAY], '2': [TODAY], '3': [TODAY] };
+    const local = await render(
+      <MyRoomScreen routines={SAMPLE_ROUTINES} completions={completions} />,
+    );
+    await fireEvent.press(local.getByText('달력'));
+    expect(local.getByText('이 날의 루틴')).toBeTruthy();
+    expect(local.getByText('3 / 5')).toBeTruthy();
+
+    // 서버 날짜(어제): completed 플래그로 집계 — 1/2.
+    const calendarDays = {
+      [YESTERDAY]: [
+        {
+          id: '1',
+          kind: 'routine' as const,
+          title: '지난 루틴',
+          completed: true,
+          category: '건강',
+        },
+        { id: '2', kind: 'todo' as const, title: '지난 할 일', completed: false, category: '건강' },
+      ],
+    };
+    const server = await render(
+      <MyRoomScreen
+        routines={SAMPLE_ROUTINES}
+        calendarDays={calendarDays}
+        onSelectDate={jest.fn()}
+      />,
+    );
+    await pickCalendarDate(server, YESTERDAY);
+    expect(server.getByText('1 / 2')).toBeTruthy();
+  });
+
   it('renders the server list for non-today dates and toggles past routines', async () => {
     const onSelectDate = jest.fn();
     const onToggleCalendarItem = jest.fn();
