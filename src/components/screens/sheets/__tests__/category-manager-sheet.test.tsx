@@ -46,6 +46,44 @@ describe('CategoryManagerSheet', () => {
     expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({ visibility: 'private' }));
   });
 
+  it('creates a category with a picked color (#340)', async () => {
+    const onCreate = jest.fn();
+    const { getByLabelText, getByPlaceholderText } = await render(
+      <CategoryManagerSheet
+        visible
+        categories={[]}
+        onCreate={onCreate}
+        onDelete={noop}
+        onClose={noop}
+      />,
+    );
+
+    await fireEvent.changeText(getByPlaceholderText('예) 자기계발'), '자기계발');
+    await fireEvent.press(getByLabelText('색상 #C8869C'));
+    await fireEvent.press(getByLabelText('카테고리 추가'));
+    expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({ color: '#C8869C' }));
+  });
+
+  it('edit starts from the current color and saves a changed one (#340)', async () => {
+    const onUpdate = jest.fn();
+    const cat = ROUTINE_CATEGORIES[0];
+    const { getByLabelText } = await render(
+      <CategoryManagerSheet
+        visible
+        categories={ROUTINE_CATEGORIES}
+        onCreate={noop}
+        onUpdate={onUpdate}
+        onDelete={noop}
+        onClose={noop}
+      />,
+    );
+
+    await fireEvent.press(getByLabelText(`${cat.label} 수정`));
+    await fireEvent.press(getByLabelText('색상 #6FB7B0'));
+    await fireEvent.press(getByLabelText('카테고리 저장'));
+    expect(onUpdate).toHaveBeenCalledWith(cat.id, expect.objectContaining({ color: '#6FB7B0' }));
+  });
+
   it('reorders categories via long-press move mode', async () => {
     const onReorder = jest.fn();
     const { getByLabelText, queryByLabelText } = await render(
