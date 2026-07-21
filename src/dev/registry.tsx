@@ -188,6 +188,15 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
+    name: 'GroupHouseScreen · 비 오는 날',
+    description: '흐린 하늘 + 빗줄기 오버레이 (#360) — raining 주입.',
+    render: () => (
+      <View style={{ height: 700, alignSelf: 'stretch' }}>
+        <GroupHouseScreen raining nowHour={10} />
+      </View>
+    ),
+  },
+  {
     name: 'GroupHouseScreen',
     description:
       'Ported from the prototype GroupHouseScreen (#10): house switcher, member rooms, group goals, kick flow.',

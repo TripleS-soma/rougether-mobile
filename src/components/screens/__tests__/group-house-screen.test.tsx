@@ -39,6 +39,13 @@ describe('GroupHouseScreen', () => {
     expect(await skyOf(22)).toBe('#3E4A6B'); // 밤
   });
 
+  it('비가 오면 시간대와 무관하게 흐린 하늘 + 빗줄기 (#360)', async () => {
+    const ui = await render(<GroupHouseScreen houses={[MISSION_HOUSE]} nowHour={10} raining />);
+    const style = StyleSheet.flatten(ui.getByTestId('sky-section').props.style);
+    expect(style.backgroundColor).toBe('#A9B3C2');
+    expect(ui.getByTestId('rain-overlay')).toBeTruthy();
+  });
+
   it('헤더에 함께 크는 집 타이틀과 지갑 필이 보인다 (#353)', async () => {
     const { getByText } = await render(
       <GroupHouseScreen houses={[MISSION_HOUSE]} coinBalance={1200} diaBalance={34} />,

@@ -314,6 +314,12 @@ export function skyPhaseForHour(hour: number): SkyPhase {
  * 시간대별 하늘색 — 라이트/다크 각각. day는 기존 sky 토큰과 동일 값이라
  * 낮 시간의 모습은 종전과 같다.
  */
+/** 비 오는 날 하늘 (#360) — 시간대 색 위에 우선하는 흐린 회톤. */
+export const RAIN_SKY: Record<'light' | 'dark', string> = {
+  light: '#A9B3C2',
+  dark: '#222834',
+};
+
 export const SKY_BY_PHASE: Record<'light' | 'dark', Record<SkyPhase, string>> = {
   light: {
     dawn: '#DCD6EC',
