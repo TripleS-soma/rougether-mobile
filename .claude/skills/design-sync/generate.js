@@ -264,15 +264,16 @@ ${['cozy', 'forest', 'hanok'].map((id) => block(`${id} · light`, THEMES[id]) + 
   const skyRow = (label, set) => `
     <div class="tname">${label}</div>
     <div class="grid">${Object.entries(set)
-      .map(([k, v]) => `
+      .map(
+        ([k, v]) => `
       <div class="sw"><div class="chip" style="background:${v}"></div>
-      <div class="meta"><b>${k}</b><span>${v}</span></div></div>`)
+      <div class="meta"><b>${k}</b><span>${v}</span></div></div>`,
+      )
       .join('')}</div>`;
   const skyBody = `
 <div class="sub">집 화면 하늘 — 기기 시각 기준 새벽(05–08)/낮(08–17)/노을(17–20)/밤 (#358)</div>
 ${skyRow('light', SKY_BY_PHASE.light)}${skyRow('dark', SKY_BY_PHASE.dark)}`;
   out('foundations/sky-by-phase.html', page('Foundations', 'Sky · 시간대', skyBody, css));
-
 }
 
 /* ---------- foundations/typography ---------- */
