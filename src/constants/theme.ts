@@ -297,6 +297,38 @@ export const Radius = {
   pill: 999,
 } as const;
 
+// ---------- 시간대별 하늘 (#358) ----------
+
+/** 집 화면 하늘의 하루 국면 — 기기 시각 기준. */
+export type SkyPhase = 'dawn' | 'day' | 'sunset' | 'night';
+
+/** 현재 시(0~23) → 하늘 국면. 새벽 05–08 / 낮 08–17 / 노을 17–20 / 밤 20–05. */
+export function skyPhaseForHour(hour: number): SkyPhase {
+  if (hour >= 5 && hour < 8) return 'dawn';
+  if (hour >= 8 && hour < 17) return 'day';
+  if (hour >= 17 && hour < 20) return 'sunset';
+  return 'night';
+}
+
+/**
+ * 시간대별 하늘색 — 라이트/다크 각각. day는 기존 sky 토큰과 동일 값이라
+ * 낮 시간의 모습은 종전과 같다.
+ */
+export const SKY_BY_PHASE: Record<'light' | 'dark', Record<SkyPhase, string>> = {
+  light: {
+    dawn: '#DCD6EC',
+    day: '#C3E0F5',
+    sunset: '#F6CDAB',
+    night: '#3E4A6B',
+  },
+  dark: {
+    dawn: '#33324A',
+    day: '#2A3448',
+    sunset: '#463527',
+    night: '#1E2536',
+  },
+};
+
 /**
  * Font weights. Astryx scale: normal / medium / semibold / bold.
  * String values are what React Native's `fontWeight` expects.

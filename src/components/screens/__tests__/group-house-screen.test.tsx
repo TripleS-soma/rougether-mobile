@@ -1,4 +1,5 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 
 import { GroupHouseScreen, type House } from '@/components/screens/group-house-screen';
 import { ToastProvider } from '@/components/ui/toast';
@@ -27,6 +28,17 @@ const MISSION_HOUSE: House = {
 };
 
 describe('GroupHouseScreen', () => {
+  it('하늘색이 시간대에 따라 바뀐다 (#358)', async () => {
+    const skyOf = async (hour: number) => {
+      const ui = await render(<GroupHouseScreen houses={[MISSION_HOUSE]} nowHour={hour} />);
+      return StyleSheet.flatten(ui.getByTestId('sky-section').props.style).backgroundColor;
+    };
+    expect(await skyOf(10)).toBe('#C3E0F5'); // 낮 = 기존 sky
+    expect(await skyOf(6)).toBe('#DCD6EC'); // 새벽
+    expect(await skyOf(18)).toBe('#F6CDAB'); // 노을
+    expect(await skyOf(22)).toBe('#3E4A6B'); // 밤
+  });
+
   it('헤더에 함께 크는 집 타이틀과 지갑 필이 보인다 (#353)', async () => {
     const { getByText } = await render(
       <GroupHouseScreen houses={[MISSION_HOUSE]} coinBalance={1200} diaBalance={34} />,

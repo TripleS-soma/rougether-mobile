@@ -256,6 +256,23 @@ ${['cozy', 'forest', 'hanok'].map((id) => block(`${id} · light`, THEMES[id]) + 
   .meta { display: flex; flex-direction: column; font-size: 10px; }
   .meta b { font-size: 11px; font-weight: 600; }`;
   out('foundations/colors.html', page('Foundations', 'Colors — semantic roles', body, css));
+  // 시간대별 하늘 (#358) — theme.ts SKY_BY_PHASE 수동 사본
+  const SKY_BY_PHASE = {
+    light: { dawn: '#DCD6EC', day: '#C3E0F5', sunset: '#F6CDAB', night: '#3E4A6B' },
+    dark: { dawn: '#33324A', day: '#2A3448', sunset: '#463527', night: '#1E2536' },
+  };
+  const skyRow = (label, set) => `
+    <div class="tname">${label}</div>
+    <div class="grid">${Object.entries(set)
+      .map(([k, v]) => `
+      <div class="sw"><div class="chip" style="background:${v}"></div>
+      <div class="meta"><b>${k}</b><span>${v}</span></div></div>`)
+      .join('')}</div>`;
+  const skyBody = `
+<div class="sub">집 화면 하늘 — 기기 시각 기준 새벽(05–08)/낮(08–17)/노을(17–20)/밤 (#358)</div>
+${skyRow('light', SKY_BY_PHASE.light)}${skyRow('dark', SKY_BY_PHASE.dark)}`;
+  out('foundations/sky-by-phase.html', page('Foundations', 'Sky · 시간대', skyBody, css));
+
 }
 
 /* ---------- foundations/typography ---------- */
