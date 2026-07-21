@@ -1,4 +1,6 @@
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { State } from 'react-native-gesture-handler';
+import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
 import { ToastProvider } from '@/components/ui/toast';
@@ -14,6 +16,26 @@ import {
 const items = (ids: string[]) => slotIdsToPlacements(ids, FURNITURE_ITEMS);
 const firstArgIds = (fn: jest.Mock) =>
   (fn.mock.calls[0][0] as PlacedFurniture[]).map((p) => p.furnitureId);
+
+// 드래그 오버레이는 캔버스 onLayout으로 크기를 알아야 렌더된다 — 테스트에서
+// 레이아웃 이벤트를 직접 쏴 320px 정사각을 흉내낸다. (await로 상태 플러시)
+const layoutCanvas = (getByTestId: (id: string) => unknown) =>
+  fireEvent(getByTestId('decor-canvas') as never, 'layout', {
+    nativeEvent: { layout: { width: 320, height: 320 } },
+  });
+
+/** 가구 탭 제스처(선택)를 성공 상태로 발사한다. */
+const tapItem = (id: string) =>
+  act(() =>
+    fireGestureHandler(getByGestureTestId(`item-tap-${id}`), [
+      { state: State.BEGAN },
+      { state: State.ACTIVE },
+      { state: State.END },
+    ]),
+  );
+
+const lastApply = (fn: jest.Mock) =>
+  fn.mock.calls[fn.mock.calls.length - 1][0] as PlacedFurniture[];
 
 describe('RoomDecorScreen (#327 — 자유 배치)', () => {
   it('renders the title and the drag guide; slot pickers are gone', async () => {
@@ -308,6 +330,215 @@ describe('RoomDecorScreen — 저장 흐름', () => {
 
     expect(queryByText('변경사항을 저장할까요?')).toBeNull();
     expect(onBack).not.toHaveBeenCalled();
+  });
+});
+
+describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
+  it('tapping an item selects it: ring + toolbar appear, empty-canvas tap deselects', async () => {
+    const { getByTestId, getByLabelText, queryByLabelText, queryByTestId } = await render(
+      <RoomDecorScreen initialItems={items(['plant'])} freeLayout />,
+    );
+    await layoutCanvas(getByTestId);
+
+    expect(queryByLabelText('오른쪽 회전')).toBeNull();
+    await tapItem('plant');
+    expect(getByTestId('selection-ring-plant')).toBeTruthy();
+    expect(getByLabelText('왼쪽 회전')).toBeTruthy();
+    expect(getByLabelText('오른쪽 회전')).toBeTruthy();
+    expect(getByLabelText('좌우 반전')).toBeTruthy();
+    expect(getByLabelText('맨 앞으로')).toBeTruthy();
+    expect(getByLabelText('맨 뒤로')).toBeTruthy();
+    expect(getByLabelText('빼기')).toBeTruthy();
+
+    await fireEvent.press(getByLabelText('선택 해제'));
+    expect(queryByTestId('selection-ring-plant')).toBeNull();
+    expect(queryByLabelText('오른쪽 회전')).toBeNull();
+  });
+
+  it('좌·우 회전은 15° 스텝(음수는 360으로 래핑); 좌우 반전 토글', async () => {
+    const onApply = jest.fn();
+    const { getByTestId, getByText, getByLabelText } = await render(
+      <RoomDecorScreen initialItems={items(['plant'])} freeLayout onApply={onApply} />,
+    );
+    await layoutCanvas(getByTestId);
+    await tapItem('plant');
+
+    await fireEvent.press(getByLabelText('오른쪽 회전'));
+    await fireEvent.press(getByLabelText('오른쪽 회전'));
+    await fireEvent.press(getByLabelText('왼쪽 회전'));
+    await fireEvent.press(getByLabelText('좌우 반전'));
+    await fireEvent.press(getByText('적용하기'));
+    await waitFor(() => expect(onApply).toHaveBeenCalled());
+    expect(lastApply(onApply)[0]).toEqual(
+      expect.objectContaining({ furnitureId: 'plant', rotationDeg: 15, flipped: true }),
+    );
+
+    // 0°에서 왼쪽으로 더 돌리면 345°로 래핑; 반전 재탭은 원상복구.
+    await fireEvent.press(getByLabelText('왼쪽 회전'));
+    await fireEvent.press(getByLabelText('왼쪽 회전'));
+    await fireEvent.press(getByLabelText('좌우 반전'));
+    await fireEvent.press(getByText('적용하기'));
+    await waitFor(() => expect(onApply).toHaveBeenCalledTimes(2));
+    expect(lastApply(onApply)[0]).toEqual(
+      expect.objectContaining({ rotationDeg: 345, flipped: false }),
+    );
+  });
+
+  it('맨 앞으로/맨 뒤로 jumps the selected item across the whole stack', async () => {
+    const onApply = jest.fn();
+    // bed z=1(맨 뒤), plant z=2, rug z=3(맨 앞).
+    const { getByTestId, getByText, getByLabelText } = await render(
+      <RoomDecorScreen
+        initialItems={items(['bed', 'plant', 'rug'])}
+        freeLayout
+        onApply={onApply}
+      />,
+    );
+    await layoutCanvas(getByTestId);
+    await tapItem('bed');
+
+    await fireEvent.press(getByLabelText('맨 앞으로'));
+    await fireEvent.press(getByText('적용하기'));
+    await waitFor(() => expect(onApply).toHaveBeenCalled());
+    const zOf = (id: string) => lastApply(onApply).find((p) => p.furnitureId === id)?.z ?? 0;
+    // 한 번에 전체 스택 위로 — 중간(z 이웃)과의 스왑이 아니다.
+    expect(zOf('bed')).toBeGreaterThan(zOf('rug'));
+    expect(zOf('rug')).toBeGreaterThan(zOf('plant'));
+
+    await fireEvent.press(getByLabelText('맨 뒤로'));
+    await fireEvent.press(getByText('적용하기'));
+    await waitFor(() => expect(onApply).toHaveBeenCalledTimes(2));
+    expect(zOf('bed')).toBeLessThan(zOf('plant'));
+    expect(zOf('plant')).toBeLessThan(zOf('rug'));
+  });
+
+  it('빼기 removes the selected item and closes the toolbar', async () => {
+    const onApply = jest.fn();
+    const { getByTestId, getByText, getByLabelText, queryByLabelText } = await render(
+      <RoomDecorScreen initialItems={items(['plant'])} freeLayout onApply={onApply} />,
+    );
+    await layoutCanvas(getByTestId);
+    await tapItem('plant');
+
+    await fireEvent.press(getByLabelText('빼기'));
+    expect(queryByLabelText('오른쪽 회전')).toBeNull();
+    await fireEvent.press(getByText('적용하기'));
+    await waitFor(() => expect(onApply).toHaveBeenCalled());
+    expect(firstArgIds(onApply)).toEqual([]);
+  });
+
+  it('pinch scale commits clamped to 0.5–2.0', async () => {
+    const onApply = jest.fn();
+    const { getByTestId, getByText } = await render(
+      <RoomDecorScreen initialItems={items(['plant'])} freeLayout onApply={onApply} />,
+    );
+    await layoutCanvas(getByTestId);
+
+    await act(() =>
+      fireGestureHandler(getByGestureTestId('item-pinch-plant'), [
+        { state: State.BEGAN },
+        { state: State.ACTIVE },
+        { state: State.ACTIVE, scale: 5 },
+        { state: State.END, scale: 5 },
+      ]),
+    );
+    await fireEvent.press(getByText('적용하기'));
+    await waitFor(() => expect(onApply).toHaveBeenCalled());
+    expect(lastApply(onApply)[0]).toEqual(expect.objectContaining({ scale: 2 }));
+
+    await act(() =>
+      fireGestureHandler(getByGestureTestId('item-pinch-plant'), [
+        { state: State.BEGAN },
+        { state: State.ACTIVE },
+        { state: State.ACTIVE, scale: 0.01 },
+        { state: State.END, scale: 0.01 },
+      ]),
+    );
+    await fireEvent.press(getByText('적용하기'));
+    await waitFor(() => expect(onApply).toHaveBeenCalledTimes(2));
+    expect(lastApply(onApply)[0]).toEqual(expect.objectContaining({ scale: 0.5 }));
+  });
+
+  it('resize handle drag commits a new scale', async () => {
+    const onApply = jest.fn();
+    const { getByTestId, getByText } = await render(
+      <RoomDecorScreen initialItems={items(['plant'])} freeLayout onApply={onApply} />,
+    );
+    await layoutCanvas(getByTestId);
+    await tapItem('plant');
+
+    // itemW = 320 * 0.28 = 89.6px; (45+45)/89.6 ≈ +1.0 → scale ≈ 2 (클램프 상한).
+    await act(() =>
+      fireGestureHandler(getByGestureTestId('item-handle-plant'), [
+        { state: State.BEGAN },
+        { state: State.ACTIVE },
+        { state: State.ACTIVE, translationX: 45, translationY: 45 },
+        { state: State.END, translationX: 45, translationY: 45 },
+      ]),
+    );
+    await fireEvent.press(getByText('적용하기'));
+    await waitFor(() => expect(onApply).toHaveBeenCalled());
+    expect(lastApply(onApply)[0]).toEqual(expect.objectContaining({ scale: 2 }));
+  });
+
+  it('drag is clamped to the room bounds — no drag-out removal', async () => {
+    const onApply = jest.fn();
+    const { getByTestId, getByText } = await render(
+      <RoomDecorScreen initialItems={items(['plant'])} freeLayout onApply={onApply} />,
+    );
+    await layoutCanvas(getByTestId);
+
+    // 캔버스 폭(320px)만큼 오른쪽으로 끌어도 UI 스레드 클램프에 걸려
+    // 중심이 DRAG_CLAMP_MAX(0.86)에서 멈춘다 — 가구는 빠지지 않는다.
+    await act(() =>
+      fireGestureHandler(getByGestureTestId('item-pan-plant'), [
+        { state: State.BEGAN },
+        { state: State.ACTIVE },
+        { state: State.ACTIVE, translationX: 400, translationY: 0 },
+        { state: State.END, translationX: 400, translationY: 0 },
+      ]),
+    );
+    await fireEvent.press(getByText('적용하기'));
+    await waitFor(() => expect(onApply).toHaveBeenCalled());
+    expect(lastApply(onApply)[0]).toEqual(
+      expect.objectContaining({ furnitureId: 'plant', x: 0.86 }),
+    );
+  });
+});
+
+describe('RoomDecorScreen — 전체보기 탭', () => {
+  it('splits the full catalog into tabs: 가구 default, 벽지 on switch', async () => {
+    const onApply = jest.fn();
+    const { getByText, getByLabelText, queryByText } = await render(
+      <RoomDecorScreen initialItems={[]} freeLayout onApply={onApply} />,
+    );
+
+    await fireEvent.press(getByLabelText('전체보기'));
+    // 기본 탭은 가구·소품 — 벽지 스와치는 아직 안 보인다.
+    expect(getByText('초록 식물')).toBeTruthy();
+    expect(queryByText('발자국 패턴')).toBeNull();
+
+    await fireEvent.press(getByLabelText('벽지 탭'));
+    expect(queryByText('초록 식물')).toBeNull();
+    await fireEvent.press(getByText('발자국 패턴'));
+    await fireEvent.press(getByText('적용하기'));
+    await waitFor(() => expect(onApply).toHaveBeenCalledWith([], 'paw', null, null));
+  });
+
+  it('shows 바닥/배경 tabs only when the catalogue has them', async () => {
+    const floors: Wallpaper[] = [
+      { id: 'f1', name: '원목 바닥재', price: 100, assetKey: 'items/a/floor.png', color: '#EEE' },
+    ];
+
+    const bare = await render(<RoomDecorScreen initialItems={[]} />);
+    await fireEvent.press(bare.getByLabelText('전체보기'));
+    expect(bare.queryByLabelText('바닥 탭')).toBeNull();
+    expect(bare.queryByLabelText('배경 탭')).toBeNull();
+
+    const withFloors = await render(<RoomDecorScreen initialItems={[]} floors={floors} />);
+    await fireEvent.press(withFloors.getByLabelText('전체보기'));
+    await fireEvent.press(withFloors.getByLabelText('바닥 탭'));
+    expect(withFloors.getByText('원목 바닥재')).toBeTruthy();
   });
 });
 
