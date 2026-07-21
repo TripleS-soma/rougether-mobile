@@ -1621,18 +1621,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
   },
-  checkbox: {
-    justifyContent: 'center',
-  },
   rowBody: {
     paddingVertical: Spacing.one,
   },
   // Same width as catDot so checkboxes center under the category emoji and
   // row titles line up with the category label.
-  leadIcon: {
-    width: 28,
-    alignItems: 'center',
-  },
   addRow: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -431,8 +431,7 @@ export function GroupHouseScreen({
     currentHouse?.coverImageKey && isCdnKey(currentHouse.coverImageKey)
       ? currentHouse.coverImageKey
       : DEFAULT_HOUSE_COVER_KEY;
-  const frameActive = currentHouse != null && isCdnKey(coverKey);
-  const frameRows = frameActive ? seatRows.slice(-2) : [];
+  const frameRows = seatRows.slice(-2);
   // WINDOW_RECTS 순서(좌상·우상·좌하·우하)로 좌석 매핑 — 아래 행이 아래 창문.
   const windowSlots: (number | null)[] = [null, null, null, null];
   frameRows
@@ -444,7 +443,7 @@ export function GroupHouseScreen({
         if (slot < windowSlots.length) windowSlots[slot] = seatIdx;
       }),
     );
-  const gridSeatRows = frameActive ? seatRows.slice(0, -2) : seatRows;
+  const gridSeatRows = seatRows.slice(0, -2);
   const roomPairs: RoomCell[][] = gridSeatRows.map((row) => row.map((i) => displayCells[i]));
   const rowOffsets: number[] = gridSeatRows.map((row) => row[0] ?? 0);
 
@@ -1392,211 +1391,151 @@ export function GroupHouseScreen({
         contentContainerStyle={styles.body}
         scrollEnabled={dragSeat == null}
         testID="house-scroll">
-        {frameActive ? (
-          /* 프레임 모드(#287) — 하늘 위에 스위처·집 프레임, 방은 창문 안에. */
-          <View
-            style={[styles.skySection, { backgroundColor: t.sky }]}
-            {...swipeResponder.panHandlers}>
-            {/* 마당 잔디 — 프레임 하단이 밟고 서는 밴드. */}
-            <View style={[styles.grassBand, { backgroundColor: t.grass }]} />
-            <View style={styles.switcher}>
-              {houses.length > 1 ? (
-                <Pressable
-                  onPress={prevHouse}
-                  accessibilityRole="button"
-                  accessibilityLabel="이전 집"
-                  hitSlop={8}
-                  style={[styles.iconBtn, { backgroundColor: t.surface }]}>
-                  <Icon name="back" size={18} color={t.text} />
-                </Pressable>
-              ) : null}
-              <View style={[styles.titleBadge, { backgroundColor: t.surface }]}>
-                {currentHouse.myRole === 'OWNER' ? (
-                  <CrownPictogram size={14} />
-                ) : (
-                  <HousePictogram size={14} />
-                )}
-                <Text style={[Typography.h3, { color: t.text }]}>{currentHouse.title}</Text>
-              </View>
-              {houses.length > 1 ? (
-                <Pressable
-                  onPress={nextHouse}
-                  accessibilityRole="button"
-                  accessibilityLabel="다음 집"
-                  hitSlop={8}
-                  style={[styles.iconBtn, { backgroundColor: t.surface }]}>
-                  <Icon name="forward" size={18} color={t.text} />
-                </Pressable>
-              ) : null}
+        {/* 프레임 모드(#287) — 하늘 위에 스위처·집 프레임, 방은 창문 안에.
+            커버가 없어도 기본 프레임으로 통일(#328)이라 유일한 경로다. */}
+        <View
+          style={[styles.skySection, { backgroundColor: t.sky }]}
+          {...swipeResponder.panHandlers}>
+          {/* 마당 잔디 — 프레임 하단이 밟고 서는 밴드. */}
+          <View style={[styles.grassBand, { backgroundColor: t.grass }]} />
+          <View style={styles.switcher}>
+            {houses.length > 1 ? (
+              <Pressable
+                onPress={prevHouse}
+                accessibilityRole="button"
+                accessibilityLabel="이전 집"
+                hitSlop={8}
+                style={[styles.iconBtn, { backgroundColor: t.surface }]}>
+                <Icon name="back" size={18} color={t.text} />
+              </Pressable>
+            ) : null}
+            <View style={[styles.titleBadge, { backgroundColor: t.surface }]}>
+              {currentHouse.myRole === 'OWNER' ? (
+                <CrownPictogram size={14} />
+              ) : (
+                <HousePictogram size={14} />
+              )}
+              <Text style={[Typography.h3, { color: t.text }]}>{currentHouse.title}</Text>
             </View>
-            <View style={styles.dots}>
-              {houses.map((house, i) => (
-                <View
-                  key={house.houseId ?? `demo-${i}`}
-                  style={[
-                    styles.dot,
-                    i === houseIndex
-                      ? { width: 20, backgroundColor: t.primary }
-                      : { width: 6, backgroundColor: t.surface },
-                  ]}
-                />
-              ))}
-            </View>
-            {/* 레벨·멤버 pill — 프레임 여백과 정렬된 행 (모서리 절대배치는
-                화면 끝에 걸려 보였다). 고정 밝기 스크림 위라 literal 잉크. */}
-            <View style={styles.framePillsRow}>
-              <View style={[styles.skyPill, { backgroundColor: 'rgba(255,255,255,0.88)' }]}>
-                <HousePictogram size={12} />
-                <Text style={[Typography.supporting, styles.heroPillText]}>
-                  Lv.{currentHouse.level ?? 0}
-                  {currentHouse.growthPoints != null
-                    ? ` · ${currentHouse.growthPoints % 100}/100`
-                    : ''}
-                </Text>
-              </View>
-              <View style={[styles.skyPill, { backgroundColor: 'rgba(255,255,255,0.88)' }]}>
-                <Text style={[Typography.supporting, styles.heroPillText]}>
-                  {/* Vacant seats are not members — count the real ones. */}
-                  멤버 {currentHouse.memberCount ?? members.length}
-                  {currentHouse.maxMembers ? ` / ${currentHouse.maxMembers}` : ''}
-                </Text>
-              </View>
-            </View>
-            <CoachTarget id="house-frame">
-              <View style={styles.cameraViewport} {...cameraResponder.panHandlers}>
-                <Animated.View
-                  style={{
-                    transform: [{ translateX: camTx }, { translateY: camTy }, { scale: camScale }],
-                  }}>
-                  <View style={styles.frameWrap} {...gridPanResponder.panHandlers}>
-                    {/* 프레임 측정용 — 반응자 프롭이 있는 부모에는 테스트에서
-                      layout 이벤트가 닿지 않아 absolute-fill 형제로 잰다. */}
-                    <View
-                      testID="frame-camera"
-                      pointerEvents="none"
-                      style={StyleSheet.absoluteFill}
-                      onLayout={(e) => {
-                        const first = frameSize.current.w === 0;
-                        frameSize.current = {
-                          w: e.nativeEvent.layout.width,
-                          h: e.nativeEvent.layout.height,
-                        };
-                        // 첫 레이아웃에 기본 카메라(방 4칸 클로즈업)를 즉시 적용 (#307).
-                        if (first) {
-                          const d = camDefault();
-                          cam.current = d;
-                          camScale.setValue(d.scale);
-                          camTx.setValue(d.tx);
-                          camTy.setValue(d.ty);
-                        }
-                      }}
-                    />
-                    {/* 창문 뒤 좌석 — 프레임 PNG의 투명 창문으로 방이 보인다. */}
-                    {WINDOW_RECTS.map((rect, w) => {
-                      const seatIdx = windowSlots[w];
-                      return (
-                        <View
-                          key={`window-${w}`}
-                          style={[
-                            styles.windowSlot,
-                            rect,
-                            seatIdx != null && dragSeat === seatIdx && styles.dragRow,
-                          ]}>
-                          {seatIdx != null ? (
-                            renderSeatTile(displayCells[seatIdx], seatIdx, true)
-                          ) : (
-                            /* 정원 밖 창문 — 조용한 벽 패널. */
-                            <View
-                              style={[styles.windowFiller, { backgroundColor: t.surfaceMuted }]}
-                              testID="window-filler"
-                            />
-                          )}
-                        </View>
-                      );
-                    })}
-                    <Image
-                      source={assetSource(coverKey)}
-                      style={StyleSheet.absoluteFill}
-                      contentFit="contain"
-                      transition={120}
-                      pointerEvents="none"
-                      accessibilityLabel={`${currentHouse.title} 집`}
-                      testID="house-frame"
-                    />
-                  </View>
-                </Animated.View>
-                {zoomed ? (
-                  <Pressable
-                    onPress={resetCam}
-                    accessibilityRole="button"
-                    accessibilityLabel="확대 종료"
-                    style={[styles.camReset, { backgroundColor: t.surface }]}>
-                    <Icon name="refresh" size={16} color={t.text} />
-                  </Pressable>
-                ) : null}
-              </View>
-            </CoachTarget>
+            {houses.length > 1 ? (
+              <Pressable
+                onPress={nextHouse}
+                accessibilityRole="button"
+                accessibilityLabel="다음 집"
+                hitSlop={8}
+                style={[styles.iconBtn, { backgroundColor: t.surface }]}>
+                <Icon name="forward" size={18} color={t.text} />
+              </Pressable>
+            ) : null}
           </View>
-        ) : (
-          <>
-            {/* 커버가 없는 집 — 기존 히어로 폴백 (#276 B안). */}
-            <View style={styles.hero} {...swipeResponder.panHandlers}>
-              <View style={[StyleSheet.absoluteFill, { backgroundColor: t.surfaceMuted }]} />
-              <View style={[styles.heroPill, { backgroundColor: 'rgba(255,255,255,0.88)' }]}>
-                <HousePictogram size={12} />
-                <Text style={[Typography.supporting, styles.heroPillText]}>
-                  Lv.{currentHouse.level ?? 0}
-                  {currentHouse.growthPoints != null
-                    ? ` · ${currentHouse.growthPoints % 100}/100`
-                    : ''}
-                </Text>
-              </View>
-              {houses.length > 1 ? (
-                <>
-                  <Pressable
-                    onPress={prevHouse}
-                    accessibilityRole="button"
-                    accessibilityLabel="이전 집"
-                    hitSlop={8}
-                    style={[styles.heroNav, styles.heroNavLeft]}>
-                    <Icon name="back" size={16} color="#4A403A" />
-                  </Pressable>
-                  <Pressable
-                    onPress={nextHouse}
-                    accessibilityRole="button"
-                    accessibilityLabel="다음 집"
-                    hitSlop={8}
-                    style={[styles.heroNav, styles.heroNavRight]}>
-                    <Icon name="forward" size={16} color="#4A403A" />
-                  </Pressable>
-                </>
+          <View style={styles.dots}>
+            {houses.map((house, i) => (
+              <View
+                key={house.houseId ?? `demo-${i}`}
+                style={[
+                  styles.dot,
+                  i === houseIndex
+                    ? { width: 20, backgroundColor: t.primary }
+                    : { width: 6, backgroundColor: t.surface },
+                ]}
+              />
+            ))}
+          </View>
+          {/* 레벨·멤버 pill — 프레임 여백과 정렬된 행 (모서리 절대배치는
+                화면 끝에 걸려 보였다). 고정 밝기 스크림 위라 literal 잉크. */}
+          <View style={styles.framePillsRow}>
+            <View style={[styles.skyPill, { backgroundColor: 'rgba(255,255,255,0.88)' }]}>
+              <HousePictogram size={12} />
+              <Text style={[Typography.supporting, styles.heroPillText]}>
+                Lv.{currentHouse.level ?? 0}
+                {currentHouse.growthPoints != null
+                  ? ` · ${currentHouse.growthPoints % 100}/100`
+                  : ''}
+              </Text>
+            </View>
+            <View style={[styles.skyPill, { backgroundColor: 'rgba(255,255,255,0.88)' }]}>
+              <Text style={[Typography.supporting, styles.heroPillText]}>
+                {/* Vacant seats are not members — count the real ones. */}
+                멤버 {currentHouse.memberCount ?? members.length}
+                {currentHouse.maxMembers ? ` / ${currentHouse.maxMembers}` : ''}
+              </Text>
+            </View>
+          </View>
+          <CoachTarget id="house-frame">
+            <View style={styles.cameraViewport} {...cameraResponder.panHandlers}>
+              <Animated.View
+                style={{
+                  transform: [{ translateX: camTx }, { translateY: camTy }, { scale: camScale }],
+                }}>
+                <View style={styles.frameWrap} {...gridPanResponder.panHandlers}>
+                  {/* 프레임 측정용 — 반응자 프롭이 있는 부모에는 테스트에서
+                      layout 이벤트가 닿지 않아 absolute-fill 형제로 잰다. */}
+                  <View
+                    testID="frame-camera"
+                    pointerEvents="none"
+                    style={StyleSheet.absoluteFill}
+                    onLayout={(e) => {
+                      const first = frameSize.current.w === 0;
+                      frameSize.current = {
+                        w: e.nativeEvent.layout.width,
+                        h: e.nativeEvent.layout.height,
+                      };
+                      // 첫 레이아웃에 기본 카메라(방 4칸 클로즈업)를 즉시 적용 (#307).
+                      if (first) {
+                        const d = camDefault();
+                        cam.current = d;
+                        camScale.setValue(d.scale);
+                        camTx.setValue(d.tx);
+                        camTy.setValue(d.ty);
+                      }
+                    }}
+                  />
+                  {/* 창문 뒤 좌석 — 프레임 PNG의 투명 창문으로 방이 보인다. */}
+                  {WINDOW_RECTS.map((rect, w) => {
+                    const seatIdx = windowSlots[w];
+                    return (
+                      <View
+                        key={`window-${w}`}
+                        style={[
+                          styles.windowSlot,
+                          rect,
+                          seatIdx != null && dragSeat === seatIdx && styles.dragRow,
+                        ]}>
+                        {seatIdx != null ? (
+                          renderSeatTile(displayCells[seatIdx], seatIdx, true)
+                        ) : (
+                          /* 정원 밖 창문 — 조용한 벽 패널. */
+                          <View
+                            style={[styles.windowFiller, { backgroundColor: t.surfaceMuted }]}
+                            testID="window-filler"
+                          />
+                        )}
+                      </View>
+                    );
+                  })}
+                  <Image
+                    source={assetSource(coverKey)}
+                    style={StyleSheet.absoluteFill}
+                    contentFit="contain"
+                    transition={120}
+                    pointerEvents="none"
+                    accessibilityLabel={`${currentHouse.title} 집`}
+                    testID="house-frame"
+                  />
+                </View>
+              </Animated.View>
+              {zoomed ? (
+                <Pressable
+                  onPress={resetCam}
+                  accessibilityRole="button"
+                  accessibilityLabel="확대 종료"
+                  style={[styles.camReset, { backgroundColor: t.surface }]}>
+                  <Icon name="refresh" size={16} color={t.text} />
+                </Pressable>
               ) : null}
-              <View style={styles.heroFoot}>
-                <Text style={[Typography.h3, styles.heroName]}>{currentHouse.title}</Text>
-                <Text style={[Typography.supporting, styles.heroMeta]}>
-                  {/* Vacant seats are not members — count the real ones. */}
-                  멤버 {currentHouse.memberCount ?? members.length}
-                  {currentHouse.maxMembers ? ` / ${currentHouse.maxMembers}` : ''}
-                </Text>
-              </View>
             </View>
-            <View style={styles.dots}>
-              {houses.map((house, i) => (
-                <View
-                  // houseId when wired; titles can repeat, so fall back to index.
-                  key={house.houseId ?? `demo-${i}`}
-                  style={[
-                    styles.dot,
-                    i === houseIndex
-                      ? { width: 20, backgroundColor: t.primary }
-                      : { width: 6, backgroundColor: t.border },
-                  ]}
-                />
-              ))}
-            </View>
-          </>
-        )}
-
+          </CoachTarget>
+        </View>
         {/* 요약 스탯 — 스크롤 없이 집의 오늘이 보인다 (B안). */}
         <View style={styles.summaryRow}>
           <View style={[styles.stat, { backgroundColor: t.surface, borderColor: t.border }]}>
@@ -1614,7 +1553,6 @@ export function GroupHouseScreen({
             <Text style={[Typography.supporting, { color: t.textMuted }]}>다음 레벨까지</Text>
           </View>
         </View>
-
         <View style={styles.floors} {...gridPanResponder.panHandlers}>
           {roomPairs.map((pair, pairIdx) => {
             // The dragged tile must float above sibling rows too.
@@ -2196,13 +2134,6 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     marginTop: Spacing.two,
   },
-  hero: {
-    position: 'relative',
-    height: 132,
-    borderRadius: Radius.lg,
-    overflow: 'hidden',
-    justifyContent: 'flex-end',
-  },
   // --- 프레임 모드 (#287) ---
   skySection: {
     position: 'relative',
@@ -2317,42 +2248,11 @@ const styles = StyleSheet.create({
     height: 12,
     borderRadius: 6,
   },
-  heroPill: {
-    position: 'absolute',
-    top: Spacing.two,
-    left: Spacing.two,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.one,
-    borderRadius: Radius.pill,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: 3,
-  },
   // 커버 위 고정 밝기 요소들 — 테마와 무관해 literal 잉크를 쓴다.
   heroPillText: {
     color: '#4A403A',
     fontWeight: '700',
   },
-  heroNav: {
-    position: 'absolute',
-    top: '50%',
-    marginTop: -14,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.78)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroNavLeft: { left: Spacing.two },
-  heroNavRight: { right: Spacing.two },
-  heroFoot: {
-    backgroundColor: 'rgba(0,0,0,0.38)',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-  },
-  heroName: { color: '#FFFFFF' },
-  heroMeta: { color: 'rgba(255,255,255,0.85)' },
   summaryRow: {
     flexDirection: 'row',
     gap: Spacing.two,

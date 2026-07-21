@@ -71,7 +71,7 @@ export type PlacedFurniture = {
  * (기본 폭 28%, 아래 코너 24%, 정사각 방)에서 계산한 중심점. 첫 자유 배치
  * 진입 시 SLOT_V1 방을 같은 모습으로 이어서 편집하게 한다.
  */
-export const SLOT_NORM_CENTERS: Record<FurnitureSlot, { x: number; y: number }> = {
+const SLOT_NORM_CENTERS: Record<FurnitureSlot, { x: number; y: number }> = {
   topLeft: { x: 0.19, y: 0.22 },
   topCenter: { x: 0.5, y: 0.22 },
   topRight: { x: 0.81, y: 0.22 },
