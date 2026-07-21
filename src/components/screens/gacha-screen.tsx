@@ -17,7 +17,7 @@ import type { DrawResult } from '@/api/types';
 import { Icon } from '@/components/ui/icon';
 import { Pictogram, type PictogramName } from '@/components/ui/pictograms';
 import { WalletPills } from '@/components/ui/wallet-pills';
-import { Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing, StaticWhite, Typography } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
@@ -455,7 +455,7 @@ const styles = StyleSheet.create({
     gap: Spacing.four,
     padding: Spacing.four,
   },
-  overlayText: { color: '#FFFFFF', textAlign: 'center' },
+  overlayText: { color: StaticWhite, textAlign: 'center' },
   revealScroll: { flexGrow: 0, maxHeight: '70%' },
   chargeWrap: { alignItems: 'center', justifyContent: 'center', width: 200, height: 200 },
   glowRing: {
@@ -501,7 +501,7 @@ const styles = StyleSheet.create({
     height: 68,
   },
   revealBadge: {
-    color: '#FFFFFF',
+    color: StaticWhite,
     fontSize: 10,
     fontWeight: '700',
     overflow: 'hidden',

@@ -3,6 +3,8 @@ import { Dimensions, StyleSheet } from 'react-native';
 import Animated, { Easing, Keyframe } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
+import { SplashBackground } from '@/constants/theme';
+
 const INITIAL_SCALE_FACTOR = Dimensions.get('screen').height / 90;
 const DURATION = 600;
 
@@ -46,7 +48,7 @@ export function AnimatedSplashOverlay() {
 const styles = StyleSheet.create({
   backgroundSolidColor: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: '#208AEF',
+    backgroundColor: SplashBackground,
     zIndex: 1000,
   },
 });

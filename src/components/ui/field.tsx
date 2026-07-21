@@ -34,7 +34,7 @@ export function Field({
   ...input
 }: FieldProps) {
   const t = useTokens();
-  const borderColor = error ? '#E89A9A' : success ? t.primary : 'transparent';
+  const borderColor = error ? t.danger : success ? t.primary : 'transparent';
 
   return (
     <View style={styles.wrap}>
@@ -50,7 +50,7 @@ export function Field({
         />
         {trailing}
       </View>
-      {error ? <Text style={[styles.msg, { color: '#D67878' }]}>{error}</Text> : null}
+      {error ? <Text style={[styles.msg, { color: t.danger }]}>{error}</Text> : null}
       {!error && success ? (
         <Text style={[styles.msg, { color: t.primaryText }]}>{success}</Text>
       ) : null}
