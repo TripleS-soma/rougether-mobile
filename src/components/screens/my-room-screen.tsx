@@ -852,11 +852,12 @@ export function MyRoomScreen({
                         <View key={cat.id} style={styles.group}>
                           <View style={styles.catHeader}>
                             <View style={[styles.catDot, { backgroundColor: `${cat.color}33` }]}>
-                              <Pictogram name={cat.icon} size={14} />
+                              <Pictogram name={cat.icon} size={18} />
                             </View>
                             <Text
                               style={[
                                 Typography.label,
+                                styles.catLabel,
                                 { color: readableTextColor(cat.color, t.surfaceMuted) },
                               ]}>
                               {cat.label}
@@ -984,11 +985,12 @@ export function MyRoomScreen({
                     <View key={group.meta.id || `etc-${gi}`} style={styles.group}>
                       <View style={styles.catHeader}>
                         <View style={[styles.catDot, { backgroundColor: `${group.meta.color}33` }]}>
-                          <Pictogram name={group.meta.icon} size={14} />
+                          <Pictogram name={group.meta.icon} size={18} />
                         </View>
                         <Text
                           style={[
                             Typography.label,
+                            styles.catLabel,
                             { color: readableTextColor(group.meta.color, t.surfaceMuted) },
                           ]}>
                           {group.meta.label}
@@ -1055,11 +1057,12 @@ export function MyRoomScreen({
                   <View key={group.meta.id || `etc-${gi}`} style={styles.group}>
                     <View style={styles.catHeader}>
                       <View style={[styles.catDot, { backgroundColor: `${group.meta.color}33` }]}>
-                        <Pictogram name={group.meta.icon} size={14} />
+                        <Pictogram name={group.meta.icon} size={18} />
                       </View>
                       <Text
                         style={[
                           Typography.label,
+                          styles.catLabel,
                           { color: readableTextColor(group.meta.color, t.surfaceMuted) },
                         ]}>
                         {group.meta.label}
@@ -1348,10 +1351,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
   },
+  // 카테고리 라벨 확대 (#356) — label 토큰(14) 위에 크기만 한 단계 올린다.
+  catLabel: {
+    fontSize: 16,
+    lineHeight: 22,
+  },
   catDot: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
