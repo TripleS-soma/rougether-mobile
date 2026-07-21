@@ -848,7 +848,7 @@ export function GroupHouseScreen({
     <View style={[styles.screen, screenStyle]}>
       <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
         {/* 빈 스페이서였던 왼쪽에 타이틀, 오른쪽에 나의 방과 같은 지갑 필 (#353). */}
-        <Text style={[Typography.h2, styles.flex, { color: t.text }]}>우리 집</Text>
+        <Text style={[Typography.h2, styles.flex, { color: t.text }]}>함께 크는 집</Text>
         <WalletPills coin={coinBalance} dia={diaBalance} />
         <CoachTarget id="house-search">
           <Pressable

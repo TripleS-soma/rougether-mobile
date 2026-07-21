@@ -752,6 +752,8 @@ export function AppShell({
               }}
               onVisitMyRoom={() => setScreen('myRoom')}
               onOpenSearch={() => setScreen('houseSearch')}
+              coinBalance={wallet.coin}
+              diaBalance={wallet.dia}
               onKickMember={(houseId, membershipId) => {
                 void kickMember(houseId, membershipId);
               }}
