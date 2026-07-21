@@ -454,6 +454,32 @@ export function useMyRoomData() {
     }
   };
 
+  /**
+   * 카테고리와 그 안의 루틴·투두를 통째로 삭제 (#338) — 집 삭제 시 연동
+   * 카테고리 정리용. 개별 실패는 무시하고 끝까지 진행한 뒤 서버 상태로
+   * 재동기화한다(집이 이미 사라진 뒤라 남겨둘 이유가 없다).
+   */
+  const deleteCategoryCascade = async (categoryId: string) => {
+    const items = routines.filter((r) => r.category === categoryId);
+    setRoutines((prev) => prev.filter((r) => r.category !== categoryId));
+    setCategories((prev) => prev.filter((c) => c.id !== categoryId));
+    for (const item of items) {
+      try {
+        if (item.kind === 'todo') await deleteTodo(toServerItemId(item.id));
+        else await apiDeleteRoutine(toServerItemId(item.id));
+      } catch {
+        // 진행 — 지워지지 않은 항목은 reload가 되살린다.
+      }
+    }
+    try {
+      await apiDeleteCategory(Number(categoryId));
+    } catch {
+      // CATEGORY_IN_USE 등 — reload가 실제 상태를 복원한다.
+    }
+    refreshCachedCalendarDays();
+    await reload();
+  };
+
   const deleteRoutineCategory = async (id: string) => {
     // The server refuses to delete a category that still has routines/todos
     // (409 CATEGORY_IN_USE) — check first so the category doesn't flicker away.
@@ -507,6 +533,7 @@ export function useMyRoomData() {
     ensureCategory,
     updateRoutineCategory,
     deleteRoutineCategory,
+    deleteCategoryCascade,
     reorderCategories,
   };
 }
