@@ -449,7 +449,13 @@ export function AppShell({
             characterAnimations={wornCharacterAnimations}
             onToggleCompletion={toggleWithMissionGuard}
             onEdit={() => setScreen('decor')}
-            onAddRoutine={() => setScreen('routineManage')}
+            // + 버튼은 바로 추가 화면으로 — 뒤로 가면 나의 방으로 복귀 (#335).
+            onAddRoutine={() => {
+              setEditingRoutine(null);
+              setAddReturnScreen('myRoom');
+              setScreen('addRoutine');
+            }}
+            onManageRoutines={() => setScreen('routineManage')}
             onOpenNotifications={() => {
               void loadNotifications();
               setScreen('notificationList');

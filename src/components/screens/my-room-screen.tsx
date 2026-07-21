@@ -182,7 +182,10 @@ export type MyRoomScreenProps = {
   onRetry?: () => void;
   // Callbacks (wired separately).
   onEdit?: () => void;
+  /** 오늘의 루틴 + 버튼 — 바로 루틴 추가 화면으로 (#335). */
   onAddRoutine?: () => void;
+  /** 햄버거 메뉴의 루틴 관리 항목 (없으면 onAddRoutine으로 폴백). */
+  onManageRoutines?: () => void;
   /** Open the 알림 list (햄버거 메뉴 항목; hidden when unwired). */
   onOpenNotifications?: () => void;
   /** Unread notification count — >0 shows a dot on the menu button + item. */
@@ -280,6 +283,7 @@ export function MyRoomScreen({
   onRetry,
   onEdit,
   onAddRoutine,
+  onManageRoutines,
   onOpenNotifications,
   unreadNotificationCount = 0,
   ownedCharacters,
@@ -1363,7 +1367,8 @@ export function MyRoomScreen({
                 {
                   icon: 'list' as const,
                   label: '루틴 관리',
-                  onPress: () => onAddRoutine?.(),
+                  // + 버튼(onAddRoutine)은 바로 추가로 가고, 관리는 여기서만 (#335).
+                  onPress: () => (onManageRoutines ?? onAddRoutine)?.(),
                 },
               ] as { icon: IconName; label: string; dot?: boolean; onPress: () => void }[]
             ).map((item, idx, arr) => (

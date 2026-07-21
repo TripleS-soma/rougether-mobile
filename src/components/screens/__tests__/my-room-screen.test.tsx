@@ -212,8 +212,14 @@ describe('MyRoomScreen', () => {
   it('opens the hamburger menu and routes each item', async () => {
     const onEdit = jest.fn();
     const onAddRoutine = jest.fn();
+    const onManageRoutines = jest.fn();
     const { getByLabelText, getByText, queryByText } = await render(
-      <MyRoomScreen routines={SAMPLE_ROUTINES} onEdit={onEdit} onAddRoutine={onAddRoutine} />,
+      <MyRoomScreen
+        routines={SAMPLE_ROUTINES}
+        onEdit={onEdit}
+        onAddRoutine={onAddRoutine}
+        onManageRoutines={onManageRoutines}
+      />,
     );
 
     await fireEvent.press(getByLabelText('메뉴'));
@@ -221,14 +227,43 @@ describe('MyRoomScreen', () => {
     await fireEvent.press(getByLabelText('방 꾸미기'));
     expect(onEdit).toHaveBeenCalledTimes(1);
 
+    // 메뉴의 루틴 관리는 onManageRoutines로 — +의 바로 추가와 분리 (#335).
     await fireEvent.press(getByLabelText('메뉴'));
     await fireEvent.press(getByText('루틴 관리'));
-    expect(onAddRoutine).toHaveBeenCalledTimes(1);
+    expect(onManageRoutines).toHaveBeenCalledTimes(1);
+    expect(onAddRoutine).not.toHaveBeenCalled();
 
     // 카테고리 관리 opens the manager sheet in-place.
     await fireEvent.press(getByLabelText('메뉴'));
     await fireEvent.press(getByText('카테고리 관리'));
     expect(queryByText('새 카테고리 만들기')).toBeTruthy();
+  });
+
+  it('오늘의 루틴 + 버튼은 바로 루틴 추가 콜백을 부른다 (#335)', async () => {
+    const onAddRoutine = jest.fn();
+    const onManageRoutines = jest.fn();
+    const { getByLabelText } = await render(
+      <MyRoomScreen
+        routines={SAMPLE_ROUTINES}
+        onAddRoutine={onAddRoutine}
+        onManageRoutines={onManageRoutines}
+      />,
+    );
+
+    await fireEvent.press(getByLabelText('루틴 추가'));
+    expect(onAddRoutine).toHaveBeenCalledTimes(1);
+    expect(onManageRoutines).not.toHaveBeenCalled();
+  });
+
+  it('onManageRoutines 미배선이면 메뉴의 루틴 관리는 onAddRoutine으로 폴백', async () => {
+    const onAddRoutine = jest.fn();
+    const { getByLabelText, getByText } = await render(
+      <MyRoomScreen routines={SAMPLE_ROUTINES} onAddRoutine={onAddRoutine} />,
+    );
+
+    await fireEvent.press(getByLabelText('메뉴'));
+    await fireEvent.press(getByText('루틴 관리'));
+    expect(onAddRoutine).toHaveBeenCalledTimes(1);
   });
 
   it('puts 알림 inside the hamburger menu, not the header (#257)', async () => {
