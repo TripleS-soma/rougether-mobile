@@ -52,7 +52,7 @@ const FRAMES: Record<CharacterId, number[]> = {
 };
 
 /** Number of poses available per character. */
-export const POSE_COUNT = 4;
+const POSE_COUNT = 4;
 
 /** Server CDN animation keys (animated webp) — GET /me/characters `animations`. */
 export type CharacterAnimationSet = {

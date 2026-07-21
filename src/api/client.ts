@@ -7,10 +7,6 @@
 import { clearSession, getAccessToken, refreshSession } from './auth';
 import { ApiError, type HttpMethod, rawRequest } from './http';
 
-// Re-exported for MSW handlers (which key mocks off the base) and diagnostics.
-export { API_BASE } from './config';
-export { ApiError } from './http';
-
 export type RequestOptions = {
   /** Attach the bearer token (default true). Set false for public endpoints. */
   auth?: boolean;

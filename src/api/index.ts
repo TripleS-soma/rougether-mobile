@@ -6,7 +6,6 @@
  * → client (authed apiGet/apiPost/…) → per-domain modules below. Types live in
  * `./types` (generated from the OpenAPI spec).
  */
-export { API_BASE } from './config';
 export { ApiError } from './http';
 export {
   apiDelete,
