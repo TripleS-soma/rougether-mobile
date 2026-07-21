@@ -508,10 +508,13 @@ describe('GroupHouseScreen', () => {
       <GroupHouseScreen onVisitFriend={onVisitFriend} onVisitMyRoom={onVisitMyRoom} />,
     );
     // Tiles are addressed by accessibility label — the crown decorates the text.
+    // 창문 좌석의 한 번 탭 방문은 더블탭 판별 시간(260ms)만큼 늦게 실행된다.
     await fireEvent.press(getByLabelText('최준서'));
-    expect(onVisitFriend).toHaveBeenCalledWith(expect.objectContaining({ name: '최준서' }));
+    await waitFor(() =>
+      expect(onVisitFriend).toHaveBeenCalledWith(expect.objectContaining({ name: '최준서' })),
+    );
     await fireEvent.press(getByText('나의 방 (나)'));
-    expect(onVisitMyRoom).toHaveBeenCalled();
+    await waitFor(() => expect(onVisitMyRoom).toHaveBeenCalled());
   });
 
   it('shows vacant capacity seats as quiet tiles, excluded from member management', async () => {
@@ -543,7 +546,7 @@ describe('GroupHouseScreen', () => {
     expect(getAllByText('친구')).toBeTruthy();
   });
 
-  it('keeps a half-width filler next to the lone seat of an odd capacity', async () => {
+  it('odd capacity fills the windows and leaves the extra window as a quiet panel', async () => {
     const house = {
       ...MISSION_HOUSE,
       maxMembers: 3,
@@ -552,9 +555,10 @@ describe('GroupHouseScreen', () => {
         ...MISSION_HOUSE.floors,
       ],
     };
-    const { getByTestId, queryByText } = await render(<GroupHouseScreen houses={[house]} />);
-    // 정원 3 → 위 행은 타일 1개 + 투명 자리채움이라 반칸 크기가 유지된다.
-    expect(getByTestId('room-spacer')).toBeTruthy();
+    const { getAllByTestId, queryByText } = await render(<GroupHouseScreen houses={[house]} />);
+    // 기본 프레임이 항상 켜지므로(커버 없음 → 기본 커버) 정원 3은 창문 3칸을
+    // 쓰고, 정원 밖 남는 1칸은 조용한 벽 패널로 남는다.
+    expect(getAllByTestId('window-filler')).toHaveLength(1);
     // 빈 좌석은 텍스트 라벨 없이 빈 방 비주얼만.
     expect(queryByText('빈방')).toBeNull();
   });

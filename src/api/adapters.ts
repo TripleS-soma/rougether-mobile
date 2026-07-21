@@ -31,7 +31,12 @@ import type { HouseCover } from '@/components/house-cover-picker';
 import type { Floor, House, HouseMission, RoomCell } from '@/components/screens/group-house-screen';
 import type { FriendActivityDay, GuestbookEntry } from '@/components/screens/friend-room-screen';
 import { isPictogramName, type PictogramName } from '@/components/ui/pictograms';
-import type { HousePreview, SearchHouse } from '@/components/screens/house-search-screen';
+import type {
+  HousePreview,
+  HousePreviewDetail,
+  SearchHouse,
+} from '@/components/screens/house-search-screen';
+import type { HousePreviewDetailWire } from './houses';
 import type { CalendarDayItem } from '@/components/screens/my-room-screen';
 import type { NotificationEntry } from '@/components/screens/notification-list-screen';
 import type { OwnedCharacter } from '@/components/screens/sheets/character-picker-sheet';
@@ -700,6 +705,22 @@ export function toNotificationEntry(n: NotificationItem): NotificationEntry {
 }
 
 /** Browse-list card model from the API house summary (decorations cycled). */
+/** GET /houses/{id}/preview → 탐색 미리보기 모달 모델 (#328). */
+export function toHousePreviewDetail(p: HousePreviewDetailWire): HousePreviewDetail {
+  return {
+    id: String(p.houseId ?? ''),
+    name: p.name ?? '',
+    description: p.description || undefined,
+    coverImageKey: p.coverImageKey ?? undefined,
+    members: p.currentMemberCount ?? 0,
+    capacity: p.maxMembers ?? undefined,
+    level: p.level ?? undefined,
+    goals: (p.goals ?? []).map((g) => g.name ?? '').filter(Boolean),
+    isMember: p.isMember,
+    isFull: p.isFull,
+  };
+}
+
 export function toSearchHouse(h: HouseSummary, index = 0): SearchHouse {
   return {
     id: String(h.houseId ?? ''),

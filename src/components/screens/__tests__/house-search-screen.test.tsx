@@ -156,3 +156,77 @@ describe('HouseSearchScreen', () => {
     expect(withDesc.getByText('오전 7시 전 기상 인증을 함께 해요')).toBeTruthy();
   });
 });
+
+describe('HouseSearchScreen — 참여 전 미리보기 (#328)', () => {
+  const DETAIL = {
+    id: 'c1',
+    name: '아침집',
+    description: '아침 루틴을 함께해요',
+    members: 2,
+    capacity: 4,
+    level: 3,
+    goals: ['미라클모닝', '운동'],
+  };
+
+  it('opens the preview modal from the card body and joins from it', async () => {
+    const onPreviewHouse = jest.fn(async () => DETAIL);
+    const onJoinHouse = jest.fn();
+    const houses = [{ ...RECOMMENDED_HOUSES[0], id: 'c1', name: '아침집' }];
+    const { getByLabelText, getByText } = await render(
+      <HouseSearchScreen
+        houses={houses}
+        onPreviewHouse={onPreviewHouse}
+        onJoinHouse={onJoinHouse}
+      />,
+    );
+    await fireEvent.press(getByLabelText('아침집 미리보기'));
+    await waitFor(() => expect(getByText('아침 루틴을 함께해요')).toBeTruthy());
+    expect(onPreviewHouse).toHaveBeenCalledWith('c1');
+    expect(getByText('#미라클모닝')).toBeTruthy();
+    await fireEvent.press(getByLabelText('이 집에 참여하기'));
+    expect(onJoinHouse).toHaveBeenCalledWith('c1');
+  });
+
+  it('blocks joining a full house with a toast, and shows 이미 참여 중', async () => {
+    const onJoinHouse = jest.fn();
+    const full = { ...DETAIL, isFull: true };
+    const houses = [{ ...RECOMMENDED_HOUSES[0], id: 'c1', name: '아침집' }];
+    const ui = await render(
+      <ToastProvider>
+        <HouseSearchScreen
+          houses={houses}
+          onPreviewHouse={jest.fn(async () => full)}
+          onJoinHouse={onJoinHouse}
+        />
+      </ToastProvider>,
+    );
+    await fireEvent.press(ui.getByLabelText('아침집 미리보기'));
+    await waitFor(() => expect(ui.getByLabelText('이 집에 참여하기')).toBeTruthy());
+    await fireEvent.press(ui.getByLabelText('이 집에 참여하기'));
+    expect(onJoinHouse).not.toHaveBeenCalled();
+    expect(ui.getByText('정원이 가득 찼어요')).toBeTruthy();
+  });
+
+  it('renders the house frame with member-count mock rooms in the windows', async () => {
+    const houses = [{ ...RECOMMENDED_HOUSES[0], id: 'c1', name: '아침집' }];
+    const ui = await render(
+      <HouseSearchScreen houses={houses} onPreviewHouse={jest.fn(async () => DETAIL)} />,
+    );
+    await fireEvent.press(ui.getByLabelText('아침집 미리보기'));
+    await waitFor(() => expect(ui.getByTestId('house-preview-frame')).toBeTruthy());
+    // 멤버 2명 → 창문 2칸에 기본 방 목업, 나머지 2칸은 빈자리 (창문 4칸).
+    expect(ui.getAllByTestId('preview-room')).toHaveLength(2);
+    expect(ui.getAllByTestId('preview-vacant')).toHaveLength(2);
+  });
+
+  it('shows 이미 참여 중 instead of the join button for a member', async () => {
+    const member = { ...DETAIL, isMember: true };
+    const houses = [{ ...RECOMMENDED_HOUSES[0], id: 'c1', name: '아침집' }];
+    const ui = await render(
+      <HouseSearchScreen houses={houses} onPreviewHouse={jest.fn(async () => member)} />,
+    );
+    await fireEvent.press(ui.getByLabelText('아침집 미리보기'));
+    await waitFor(() => expect(ui.getByText('이미 참여 중')).toBeTruthy());
+    expect(ui.queryByLabelText('이 집에 참여하기')).toBeNull();
+  });
+});

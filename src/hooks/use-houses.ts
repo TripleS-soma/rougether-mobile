@@ -18,6 +18,7 @@ import {
   fetchHouse,
   fetchHouseMembers,
   fetchHouseMissions,
+  fetchHousePreviewDetail,
   fetchMe,
   fetchGoals,
   fetchHouses,
@@ -32,14 +33,24 @@ import {
   transferHouseOwnership,
   updateHouse as apiUpdateHouse,
 } from '@/api';
-import { toGroupHouse, toHouseMission, toHousePreview, toSearchHouse } from '@/api/adapters';
+import {
+  toGroupHouse,
+  toHouseMission,
+  toHousePreview,
+  toHousePreviewDetail,
+  toSearchHouse,
+} from '@/api/adapters';
 import { useToast } from '@/components/ui/toast';
 import type {
   House,
   HouseEditInput,
   NewHouseMission,
 } from '@/components/screens/group-house-screen';
-import type { HousePreview, SearchHouse } from '@/components/screens/house-search-screen';
+import type {
+  HousePreview,
+  HousePreviewDetail,
+  SearchHouse,
+} from '@/components/screens/house-search-screen';
 
 export function useHouses() {
   const [houses, setHouses] = useState<House[]>([]);
@@ -213,6 +224,16 @@ export function useHouses() {
     }
   };
 
+  // 탐색 카드 → 참여 전 미리보기 (#328). null이면 호출측은 모달을 열지 않는다.
+  const previewHouse = async (houseId: string): Promise<HousePreviewDetail | null> => {
+    try {
+      return toHousePreviewDetail(await fetchHousePreviewDetail(Number(houseId)));
+    } catch {
+      toast('집 정보를 불러오지 못했어요', 'error');
+      return null;
+    }
+  };
+
   // 원탭 응원 — 성공하면 서버가 대상에게 푸시를 보낸다 (#329).
   const cheerMember = async (houseId: number, membershipId: number, type: HouseCheerType) => {
     try {
@@ -308,6 +329,7 @@ export function useHouses() {
     contributeMission,
     cheerMember,
     claimMission,
+    previewHouse,
     createMission,
     deleteMission,
     updateHouse,

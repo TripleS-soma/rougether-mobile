@@ -208,6 +208,7 @@ export function AppShell({
     loading: housesLoading,
     searchLoading,
     previewByCode,
+    previewHouse,
     joinByCode,
     joinHouse: joinSearchHouse,
     create: createGroupHouse,
@@ -675,6 +676,7 @@ export function AppShell({
               return ok;
             }}
             onPreviewCode={previewByCode}
+            onPreviewHouse={previewHouse}
             onJoinHouse={(houseId) => {
               void joinSearchHouse(houseId).then((ok) => ok && setScreen('groupHouse'));
             }}

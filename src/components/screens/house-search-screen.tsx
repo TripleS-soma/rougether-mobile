@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 
+import { HousePreviewFrame } from '@/components/room/house-preview-frame';
 import { Icon } from '@/components/ui/icon';
 import {
   CrownPictogram,
@@ -51,6 +52,23 @@ export type HousePreview = {
   expired?: boolean;
 };
 
+/** 탐색 카드 탭 → 참여 전 집 미리보기 (GET /houses/{id}/preview, #328). */
+export type HousePreviewDetail = {
+  id: string;
+  name: string;
+  description?: string;
+  coverImageKey?: string;
+  members: number;
+  capacity?: number;
+  level?: number;
+  /** Goal names shown as chips. */
+  goals: string[];
+  /** Requester is already an active member — joining is meaningless. */
+  isMember?: boolean;
+  /** At capacity — the join button disables. */
+  isFull?: boolean;
+};
+
 export type HouseSearchScreenProps = {
   /** Browsable houses from the API (`GET /houses`). */
   houses?: SearchHouse[];
@@ -69,6 +87,8 @@ export type HouseSearchScreenProps = {
   onPreviewCode?: (code: string) => Promise<HousePreview | null>;
   /** Join a browsable house directly by its id. */
   onJoinHouse?: (houseId: string) => void;
+  /** Load the pre-join preview for a browsable house; null = load failed. */
+  onPreviewHouse?: (houseId: string) => Promise<HousePreviewDetail | null>;
   onCreate?: () => void;
 };
 
@@ -84,6 +104,7 @@ export function HouseSearchScreen({
   onJoinByCode,
   onPreviewCode,
   onJoinHouse,
+  onPreviewHouse,
   onCreate,
 }: HouseSearchScreenProps) {
   const t = useTokens();
@@ -95,6 +116,13 @@ export function HouseSearchScreen({
   const [joining, setJoining] = useState(false);
   // Pre-join preview card (code + house info), shown after a successful lookup.
   const [preview, setPreview] = useState<{ code: string; info: HousePreview } | null>(null);
+  // 탐색 카드 탭 → 미리보기 모달 (#328). 실패는 훅이 토스트로 알린다.
+  const [housePreview, setHousePreview] = useState<HousePreviewDetail | null>(null);
+  const openHousePreview = async (houseId: string) => {
+    if (!onPreviewHouse) return;
+    const detail = await onPreviewHouse(houseId);
+    if (detail) setHousePreview(detail);
+  };
 
   const filtered = houses.filter(
     (h) =>
@@ -264,45 +292,53 @@ export function HouseSearchScreen({
               const full = h.members >= h.capacity;
               return (
                 <View key={h.id} style={[styles.houseRow, { backgroundColor: t.surface }]}>
-                  <View
-                    style={[styles.houseEmoji, { backgroundColor: h.bg, borderColor: h.border }]}>
-                    {/* Server cover art first; the pictogram tile is the fallback. */}
-                    {isCdnKey(h.coverImageKey) ? (
-                      <Image
-                        source={assetSource(h.coverImageKey)}
-                        style={styles.houseCover}
-                        contentFit="cover"
-                        transition={120}
-                        accessibilityLabel={`${h.name} 대표 이미지`}
-                        testID="house-cover"
-                      />
-                    ) : (
-                      <Pictogram name={h.icon} size={28} />
-                    )}
-                  </View>
-                  <View style={styles.flex}>
-                    {/* The name owns its row — a same-row tag chip squeezed it
-                        into truncating even short names (#234). */}
-                    <Text style={[Typography.label, { color: t.text }]} numberOfLines={1}>
-                      {h.name}
-                    </Text>
-                    {h.description ? (
-                      <Text
-                        style={[Typography.supporting, { color: t.textMuted }]}
-                        numberOfLines={1}>
-                        {h.description}
-                      </Text>
-                    ) : null}
-                    <View style={styles.houseMetaRow}>
-                      <View style={[styles.tag, { backgroundColor: h.bg }]}>
-                        <Text style={[styles.tagText, { color: t.onTint }]}>#{h.tag}</Text>
-                      </View>
-                      <Text style={[styles.meta, { color: t.textMuted }]} numberOfLines={1}>
-                        {h.level != null ? `Lv.${h.level} · ` : ''}멤버 {h.members} / {h.capacity}
-                        {full ? <Text style={{ color: t.danger }}> · 만석</Text> : null}
-                      </Text>
+                  {/* 카드 본문 탭 = 참여 전 미리보기 (#328); 입주 신청 버튼은 그대로. */}
+                  <Pressable
+                    onPress={() => void openHousePreview(h.id)}
+                    disabled={!onPreviewHouse}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${h.name} 미리보기`}
+                    style={[styles.flex, styles.houseBody]}>
+                    <View
+                      style={[styles.houseEmoji, { backgroundColor: h.bg, borderColor: h.border }]}>
+                      {/* Server cover art first; the pictogram tile is the fallback. */}
+                      {isCdnKey(h.coverImageKey) ? (
+                        <Image
+                          source={assetSource(h.coverImageKey)}
+                          style={styles.houseCover}
+                          contentFit="cover"
+                          transition={120}
+                          accessibilityLabel={`${h.name} 대표 이미지`}
+                          testID="house-cover"
+                        />
+                      ) : (
+                        <Pictogram name={h.icon} size={28} />
+                      )}
                     </View>
-                  </View>
+                    <View style={styles.flex}>
+                      {/* The name owns its row — a same-row tag chip squeezed it
+                        into truncating even short names (#234). */}
+                      <Text style={[Typography.label, { color: t.text }]} numberOfLines={1}>
+                        {h.name}
+                      </Text>
+                      {h.description ? (
+                        <Text
+                          style={[Typography.supporting, { color: t.textMuted }]}
+                          numberOfLines={1}>
+                          {h.description}
+                        </Text>
+                      ) : null}
+                      <View style={styles.houseMetaRow}>
+                        <View style={[styles.tag, { backgroundColor: h.bg }]}>
+                          <Text style={[styles.tagText, { color: t.onTint }]}>#{h.tag}</Text>
+                        </View>
+                        <Text style={[styles.meta, { color: t.textMuted }]} numberOfLines={1}>
+                          {h.level != null ? `Lv.${h.level} · ` : ''}멤버 {h.members} / {h.capacity}
+                          {full ? <Text style={{ color: t.danger }}> · 만석</Text> : null}
+                        </Text>
+                      </View>
+                    </View>
+                  </Pressable>
                   <Pressable
                     onPress={() =>
                       full ? toast('정원이 가득 찼어요', 'error') : onJoinHouse?.(h.id)
@@ -334,6 +370,81 @@ export function HouseSearchScreen({
           </View>
         </Pressable>
       </ScrollView>
+
+      {/* 참여 전 집 미리보기 모달 (#328) — isFull은 참여 비활성, isMember는 안내만. */}
+      {housePreview ? (
+        <View style={styles.hpOverlay}>
+          <Pressable style={styles.hpBackdrop} onPress={() => setHousePreview(null)} />
+          <View style={[styles.hpCard, { backgroundColor: t.screen }]}>
+            {/* 집 화면과 같은 프레임+창문 비주얼 — 비구성원은 방 데이터가 없어
+                (멤버 API 403) 입주 인원수만큼 기본 방 목업을 보여준다. */}
+            <HousePreviewFrame
+              coverImageKey={housePreview.coverImageKey}
+              memberCount={housePreview.members}
+              name={housePreview.name}
+            />
+            <Text style={[Typography.h2, { color: t.text }]} numberOfLines={1}>
+              {housePreview.name}
+            </Text>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              {housePreview.level != null ? `Lv.${housePreview.level} · ` : ''}멤버{' '}
+              {housePreview.members}
+              {housePreview.capacity ? ` / ${housePreview.capacity}` : ''}
+              {housePreview.isFull ? <Text style={{ color: t.danger }}> · 만석</Text> : null}
+            </Text>
+            {housePreview.description ? (
+              <Text style={[Typography.body, styles.hpDesc, { color: t.text }]}>
+                {housePreview.description}
+              </Text>
+            ) : null}
+            {housePreview.goals.length > 0 ? (
+              <View style={styles.hpGoals}>
+                {housePreview.goals.map((g) => (
+                  <View key={g} style={[styles.tag, { backgroundColor: t.surfaceMuted }]}>
+                    <Text style={[styles.tagText, { color: t.onTint }]}>#{g}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+            <View style={styles.hpActions}>
+              <Pressable
+                onPress={() => setHousePreview(null)}
+                accessibilityRole="button"
+                accessibilityLabel="미리보기 닫기"
+                style={[styles.hpBtn, { backgroundColor: t.surfaceMuted }]}>
+                <Text style={[Typography.label, { color: t.text }]}>닫기</Text>
+              </Pressable>
+              {housePreview.isMember ? (
+                <View style={[styles.hpBtn, { backgroundColor: t.disabledBg }]}>
+                  <Text style={[Typography.label, { color: t.textMuted }]}>이미 참여 중</Text>
+                </View>
+              ) : (
+                <Pressable
+                  onPress={() => {
+                    if (housePreview.isFull) return toast('정원이 가득 찼어요', 'error');
+                    onJoinHouse?.(housePreview.id);
+                    setHousePreview(null);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="이 집에 참여하기"
+                  accessibilityState={{ disabled: !!housePreview.isFull }}
+                  style={[
+                    styles.hpBtn,
+                    { backgroundColor: housePreview.isFull ? t.disabledBg : t.primary },
+                  ]}>
+                  <Text
+                    style={[
+                      Typography.label,
+                      { color: housePreview.isFull ? t.textMuted : t.onPrimary },
+                    ]}>
+                    참여하기
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -412,6 +523,46 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     borderRadius: Radius.lg,
     padding: Spacing.three,
+  },
+  // 탭 가능한 카드 본문(커버+정보) — 입주 버튼과 분리 (#328).
+  houseBody: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+  },
+  hpOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    padding: Spacing.four,
+  },
+  hpBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  hpCard: {
+    borderRadius: Radius.lg,
+    padding: Spacing.four,
+    gap: Spacing.two,
+  },
+  hpDesc: {
+    marginTop: Spacing.one,
+  },
+  hpGoals: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.one,
+    marginTop: Spacing.one,
+  },
+  hpActions: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    marginTop: Spacing.three,
+  },
+  hpBtn: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: Spacing.three,
+    borderRadius: Radius.pill,
   },
   houseEmoji: {
     width: 56,
