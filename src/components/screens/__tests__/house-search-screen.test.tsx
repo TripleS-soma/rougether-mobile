@@ -207,6 +207,18 @@ describe('HouseSearchScreen — 참여 전 미리보기 (#328)', () => {
     expect(ui.getByText('정원이 가득 찼어요')).toBeTruthy();
   });
 
+  it('renders the house frame with member-count mock rooms in the windows', async () => {
+    const houses = [{ ...RECOMMENDED_HOUSES[0], id: 'c1', name: '아침집' }];
+    const ui = await render(
+      <HouseSearchScreen houses={houses} onPreviewHouse={jest.fn(async () => DETAIL)} />,
+    );
+    await fireEvent.press(ui.getByLabelText('아침집 미리보기'));
+    await waitFor(() => expect(ui.getByTestId('house-preview-frame')).toBeTruthy());
+    // 멤버 2명 → 창문 2칸에 기본 방 목업, 나머지 2칸은 빈자리 (창문 4칸).
+    expect(ui.getAllByTestId('preview-room')).toHaveLength(2);
+    expect(ui.getAllByTestId('preview-vacant')).toHaveLength(2);
+  });
+
   it('shows 이미 참여 중 instead of the join button for a member', async () => {
     const member = { ...DETAIL, isMember: true };
     const houses = [{ ...RECOMMENDED_HOUSES[0], id: 'c1', name: '아침집' }];

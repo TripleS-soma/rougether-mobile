@@ -14,6 +14,7 @@ import {
 
 import { CharacterAvatar } from '@/components/character-avatar';
 import { type HouseCover, HouseCoverPicker } from '@/components/house-cover-picker';
+import { FRAME_ASPECT, WINDOW_RECTS } from '@/components/room/house-preview-frame';
 import { Room } from '@/components/room/room';
 import { DateRangeSheet } from '@/components/screens/sheets/date-range-sheet';
 import { Icon } from '@/components/ui/icon';
@@ -166,13 +167,8 @@ const VACANT_FLOOR: Wallpaper[] = [
 
 // 커버 프레임 PNG(house-unified-*-frame.png, 3종 공통 567×508)의 투명 창문
 // 4칸 — 알파 채널 측정값 (#287). 좌상·우상·좌하·우하 순.
-const FRAME_ASPECT = 567 / 508;
-const WINDOW_RECTS = [
-  { left: '12.7%', top: '25.4%', width: '35%', height: '30%' },
-  { left: '51.3%', top: '25.4%', width: '35%', height: '30%' },
-  { left: '12.7%', top: '59.1%', width: '35%', height: '30%' },
-  { left: '51.3%', top: '59.1%', width: '35%', height: '30%' },
-] as const;
+// FRAME_ASPECT / WINDOW_RECTS는 집 탐색 미리보기(#328)와 공유 —
+// house-preview-frame.tsx가 단일 출처.
 
 // 기본 카메라 확대 (#307, 시안 B) — 방 4칸이 뷰포트를 채우는 배율. 창문 블록이
 // 가로 12.7%~86.3%를 쓰므로 1.34를 넘으면 창이 좌우로 잘린다.

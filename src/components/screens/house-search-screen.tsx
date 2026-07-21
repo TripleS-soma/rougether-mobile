@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 
+import { HousePreviewFrame } from '@/components/room/house-preview-frame';
 import { Icon } from '@/components/ui/icon';
 import {
   CrownPictogram,
@@ -375,15 +376,13 @@ export function HouseSearchScreen({
         <View style={styles.hpOverlay}>
           <Pressable style={styles.hpBackdrop} onPress={() => setHousePreview(null)} />
           <View style={[styles.hpCard, { backgroundColor: t.screen }]}>
-            {isCdnKey(housePreview.coverImageKey) ? (
-              <Image
-                source={assetSource(housePreview.coverImageKey)}
-                style={styles.hpCover}
-                contentFit="cover"
-                transition={120}
-                accessibilityLabel={`${housePreview.name} 대표 이미지`}
-              />
-            ) : null}
+            {/* 집 화면과 같은 프레임+창문 비주얼 — 비구성원은 방 데이터가 없어
+                (멤버 API 403) 입주 인원수만큼 기본 방 목업을 보여준다. */}
+            <HousePreviewFrame
+              coverImageKey={housePreview.coverImageKey}
+              memberCount={housePreview.members}
+              name={housePreview.name}
+            />
             <Text style={[Typography.h2, { color: t.text }]} numberOfLines={1}>
               {housePreview.name}
             </Text>
@@ -544,12 +543,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     padding: Spacing.four,
     gap: Spacing.two,
-  },
-  hpCover: {
-    width: '100%',
-    height: 140,
-    borderRadius: Radius.lg,
-    marginBottom: Spacing.one,
   },
   hpDesc: {
     marginTop: Spacing.one,
