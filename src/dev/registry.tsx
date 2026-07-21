@@ -75,7 +75,7 @@ export const galleryEntries: GalleryEntry[] = [
   },
   {
     name: 'HousePreviewFrame · 기본 프레임 (커버 없음)',
-    description: '집 탐색 미리보기 (#328) — 커버 없는 집: 단색 벽 + 창틀, 멤버 2/4.',
+    description: '집 탐색 미리보기 (#328) — 커버 없는 집은 기본 프레임 PNG로 폴백, 멤버 2/4.',
     render: () => (
       <View style={{ width: 280, alignSelf: 'center' }}>
         <HousePreviewFrame memberCount={2} name="데모 집" />

@@ -9,6 +9,12 @@ import { assetSource, isCdnKey } from '@/resources/asset';
 /** 커버(프레임 PNG) 원본 비율 — 그룹하우스 화면과 동일. */
 export const FRAME_ASPECT = 567 / 508;
 
+/**
+ * 커버를 고르지 않은 집(서버 값 null)의 기본 프레임 — 어느 집이든 "커버 위에
+ * 방이 보이는" 같은 형태를 유지한다 (집 화면·탐색 미리보기 공용).
+ */
+export const DEFAULT_HOUSE_COVER_KEY = 'house/cloud-balloon/house-unified-cloud-balloon-frame.png';
+
 /** 프레임 PNG의 투명 창문 위치(좌상·우상·좌하·우하) — 그룹하우스 화면과 동일. */
 export const WINDOW_RECTS = [
   { left: '12.7%', top: '25.4%', width: '35%', height: '30%' },
@@ -18,7 +24,7 @@ export const WINDOW_RECTS = [
 ] as const;
 
 export type HousePreviewFrameProps = {
-  /** 커버(프레임 PNG) 키 — CDN 키가 아니면 기본 프레임(단색 벽 + 창틀)로 렌더. */
+  /** 커버(프레임 PNG) 키 — 없거나 CDN 키가 아니면 기본 프레임 PNG로 렌더. */
   coverImageKey?: string;
   /** 입주 인원 — 이만큼의 창문에 기본 방 목업이 들어간다 (최대 창문 수). */
   memberCount?: number;
@@ -39,7 +45,11 @@ export function HousePreviewFrame({
   name,
 }: HousePreviewFrameProps) {
   const t = useTokens();
-  const hasFrame = isCdnKey(coverImageKey);
+  // 커버가 없으면 기본 프레임으로 — 모든 집이 같은 형태. (창틀 직접 그리기는
+  // 에셋 자체가 깨진 비정상 키일 때만 남는 안전망.)
+  const coverKey =
+    coverImageKey && isCdnKey(coverImageKey) ? coverImageKey : DEFAULT_HOUSE_COVER_KEY;
+  const hasFrame = isCdnKey(coverKey);
   return (
     <View
       style={[styles.frame, !hasFrame && { backgroundColor: t.surfaceMuted }]}
@@ -70,7 +80,7 @@ export function HousePreviewFrame({
       })}
       {hasFrame ? (
         <Image
-          source={assetSource(coverImageKey)}
+          source={assetSource(coverKey)}
           style={StyleSheet.absoluteFill}
           contentFit="contain"
           transition={120}
