@@ -506,6 +506,42 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
   });
 });
 
+describe('RoomDecorScreen — 전체보기 탭', () => {
+  it('splits the full catalog into tabs: 가구 default, 벽지 on switch', async () => {
+    const onApply = jest.fn();
+    const { getByText, getByLabelText, queryByText } = await render(
+      <RoomDecorScreen initialItems={[]} freeLayout onApply={onApply} />,
+    );
+
+    await fireEvent.press(getByLabelText('전체보기'));
+    // 기본 탭은 가구·소품 — 벽지 스와치는 아직 안 보인다.
+    expect(getByText('초록 식물')).toBeTruthy();
+    expect(queryByText('발자국 패턴')).toBeNull();
+
+    await fireEvent.press(getByLabelText('벽지 탭'));
+    expect(queryByText('초록 식물')).toBeNull();
+    await fireEvent.press(getByText('발자국 패턴'));
+    await fireEvent.press(getByText('적용하기'));
+    await waitFor(() => expect(onApply).toHaveBeenCalledWith([], 'paw', null, null));
+  });
+
+  it('shows 바닥/배경 tabs only when the catalogue has them', async () => {
+    const floors: Wallpaper[] = [
+      { id: 'f1', name: '원목 바닥재', price: 100, assetKey: 'items/a/floor.png', color: '#EEE' },
+    ];
+
+    const bare = await render(<RoomDecorScreen initialItems={[]} />);
+    await fireEvent.press(bare.getByLabelText('전체보기'));
+    expect(bare.queryByLabelText('바닥 탭')).toBeNull();
+    expect(bare.queryByLabelText('배경 탭')).toBeNull();
+
+    const withFloors = await render(<RoomDecorScreen initialItems={[]} floors={floors} />);
+    await fireEvent.press(withFloors.getByLabelText('전체보기'));
+    await fireEvent.press(withFloors.getByLabelText('바닥 탭'));
+    expect(withFloors.getByText('원목 바닥재')).toBeTruthy();
+  });
+});
+
 describe('RoomDecorScreen — 보유중 필터', () => {
   it('hides the shop side of the picker with the 보유중 toggle', async () => {
     const { getByText, getByLabelText, queryByText, queryByLabelText } = await render(

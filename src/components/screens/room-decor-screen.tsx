@@ -273,6 +273,11 @@ export function RoomDecorScreen({
   // What the open picker offers, owned first so placing needs no digging.
   // 보유중 filter hides the shop side of every picker (slot/surface/전체보기).
   const [ownedOnly, setOwnedOnly] = useState(false);
+  // 전체보기 탭 — 서버 분류(surfaceSlotType: 가구/벽지/바닥/배경)별로 나눠
+  // 한 번에 한 그리드만 보여준다 (통짜 세로 나열은 스크롤이 너무 길다).
+  const [allTab, setAllTab] = useState<'furniture' | 'wallpaper' | 'floor' | 'background'>(
+    'furniture',
+  );
   const isSurfacePicker = picker === 'wallpaper' || picker === 'floor' || picker === 'background';
   const byOwnedFirst = <T extends { id: string }>(arr: T[]) =>
     (ownedOnly ? arr.filter((i) => owned.has(i.id)) : [...arr]).sort(
@@ -429,7 +434,39 @@ export function RoomDecorScreen({
           <View style={[styles.panel, { backgroundColor: t.surface }]}>
             <View style={styles.panelHead}>
               {picker === 'all' ? (
-                <Text style={[Typography.label, styles.flex, { color: t.text }]}>전체 아이템</Text>
+                // 전체보기: 서버 분류별 탭 — 가구·소품이 기본, 표면류는 있을 때만.
+                <View style={styles.segment}>
+                  {(
+                    [
+                      ['furniture', '가구·소품'] as const,
+                      ['wallpaper', '벽지'] as const,
+                      ...(floors.length > 0 ? [['floor', '바닥'] as const] : []),
+                      ...(backgrounds.length > 0 ? [['background', '배경'] as const] : []),
+                    ] as const
+                  ).map(([key, label]) => {
+                    const active = allTab === key;
+                    return (
+                      <Pressable
+                        key={key}
+                        onPress={() => setAllTab(key)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${label} 탭`}
+                        accessibilityState={{ selected: active }}
+                        style={[
+                          styles.segBtn,
+                          { backgroundColor: active ? t.primary : t.surfaceMuted },
+                        ]}>
+                        <Text
+                          style={[
+                            Typography.supporting,
+                            { color: active ? t.onPrimary : t.textMuted },
+                          ]}>
+                          {label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
               ) : isSurfacePicker ? (
                 // 벽 탭은 벽지/배경을 함께 다룬다 (배경은 벽 너머 풍경).
                 <View style={styles.segment}>
@@ -524,66 +561,58 @@ export function RoomDecorScreen({
                 t={t}
               />
             ) : null}
-            {picker === 'all' ? (
-              // 수정 전의 전체 카탈로그 뷰 — 표면 섹션 + 가구 전체. 가구 탭은
-              // 예전처럼 자기 기본 슬롯에 배치/해제(토글)한다.
-              <>
-                <Text style={[Typography.supporting, { color: t.textMuted }]}>벽지</Text>
-                <SwatchGrid
-                  items={byOwnedFirst(wallpapers)}
-                  selectedId={wallpaperId}
-                  onSelect={(id) => setWallpaperId(id)}
-                  owned={owned}
-                  diaBalance={diaBalance}
-                  onBuyRequest={setPendingBuy}
-                  onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
-                  t={t}
-                />
-                {floors.length > 0 ? (
-                  <>
-                    <Text style={[Typography.supporting, { color: t.textMuted }]}>바닥</Text>
-                    <SwatchGrid
-                      items={byOwnedFirst(floors)}
-                      selectedId={floorId}
-                      onSelect={(id) => setFloorId((prev) => (prev === id ? null : id))}
-                      owned={owned}
-                      diaBalance={diaBalance}
-                      onBuyRequest={setPendingBuy}
-                      onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
-                      t={t}
-                    />
-                  </>
-                ) : null}
-                {backgrounds.length > 0 ? (
-                  <>
-                    <Text style={[Typography.supporting, { color: t.textMuted }]}>배경</Text>
-                    <SwatchGrid
-                      items={byOwnedFirst(backgrounds)}
-                      selectedId={backgroundId}
-                      onSelect={(id) => setBackgroundId((prev) => (prev === id ? null : id))}
-                      owned={owned}
-                      diaBalance={diaBalance}
-                      onBuyRequest={setPendingBuy}
-                      onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
-                      t={t}
-                    />
-                  </>
-                ) : null}
-                <Text style={[Typography.supporting, { color: t.textMuted }]}>가구 · 소품</Text>
-                <FurnitureGrid
-                  items={byOwnedFirst(furniture)}
-                  placed={placed}
-                  // 배치 안 된 가구는 방 가운데로 추가, 배치된 가구는 다시 빼기.
-                  onPlace={(item) =>
-                    placed.includes(item.id) ? removeItem(item.id) : addItem(item.id)
-                  }
-                  owned={owned}
-                  diaBalance={diaBalance}
-                  onBuyRequest={setPendingBuy}
-                  onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
-                  t={t}
-                />
-              </>
+            {picker === 'all' && allTab === 'furniture' ? (
+              <FurnitureGrid
+                items={byOwnedFirst(furniture)}
+                placed={placed}
+                // 배치 안 된 가구는 방 가운데로 추가, 배치된 가구는 다시 빼기.
+                onPlace={(item) =>
+                  placed.includes(item.id) ? removeItem(item.id) : addItem(item.id)
+                }
+                owned={owned}
+                diaBalance={diaBalance}
+                onBuyRequest={setPendingBuy}
+                onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
+                t={t}
+              />
+            ) : null}
+            {picker === 'all' && allTab === 'wallpaper' ? (
+              <SwatchGrid
+                items={byOwnedFirst(wallpapers)}
+                selectedId={wallpaperId}
+                onSelect={(id) => setWallpaperId(id)}
+                owned={owned}
+                diaBalance={diaBalance}
+                onBuyRequest={setPendingBuy}
+                onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
+                t={t}
+              />
+            ) : null}
+            {picker === 'all' && allTab === 'floor' ? (
+              <SwatchGrid
+                items={byOwnedFirst(floors)}
+                selectedId={floorId}
+                onSelect={(id) => setFloorId((prev) => (prev === id ? null : id))}
+                onClear={floorId ? () => setFloorId(null) : undefined}
+                owned={owned}
+                diaBalance={diaBalance}
+                onBuyRequest={setPendingBuy}
+                onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
+                t={t}
+              />
+            ) : null}
+            {picker === 'all' && allTab === 'background' ? (
+              <SwatchGrid
+                items={byOwnedFirst(backgrounds)}
+                selectedId={backgroundId}
+                onSelect={(id) => setBackgroundId((prev) => (prev === id ? null : id))}
+                onClear={backgroundId ? () => setBackgroundId(null) : undefined}
+                owned={owned}
+                diaBalance={diaBalance}
+                onBuyRequest={setPendingBuy}
+                onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
+                t={t}
+              />
             ) : null}
           </View>
         ) : null}
