@@ -14,6 +14,7 @@ import {
 import {
   characterIdFromCode,
   fromFriendRoomSlots,
+  fromRoomPlacements,
   type ShopCatalogue,
   toFriendActivity,
   toFriendRoutines,
@@ -22,12 +23,20 @@ import type { CharacterAnimationSet } from '@/components/character-avatar';
 import type { FriendActivityDay } from '@/components/screens/friend-room-screen';
 import type { CharacterId } from '@/constants/characters';
 import type { Routine } from '@/constants/routines';
-import type { RoomPlacement } from '@/hooks/use-shop';
-import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
+import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furniture';
+
+/** 친구 방 배치 — FREE_V1이면 placements, 아니면 슬롯 id 목록으로 렌더 (#327). */
+export type FriendRoomPlacement = {
+  placedFurnitureIds: string[];
+  wallpaperId: string;
+  floorId: string | null;
+  backgroundId: string | null;
+  placements: PlacedFurniture[] | null;
+};
 
 export type FriendRoom = {
   /** null until the room endpoint answered (renders as an empty room). */
-  placement: RoomPlacement | null;
+  placement: FriendRoomPlacement | null;
   characterId?: CharacterId;
   /** The friend's CDN animation keys (room response); local sprite fallback. */
   characterAnimations?: CharacterAnimationSet;
@@ -61,12 +70,21 @@ export function useFriendRoom() {
     ]);
     if (seq !== seqRef.current) return;
     const resolved = room && catalogue ? fromFriendRoomSlots(room.slots ?? [], catalogue) : null;
+    // FREE_V1 친구 방은 placements를 assetKey 기준으로 해석해 그대로 렌더 (#327).
+    const friendPlacements =
+      room && catalogue && room.layoutFormat === 'FREE_V1' && room.placements?.length
+        ? fromRoomPlacements(room.placements, catalogue)
+        : null;
     // Same guard as toOwnedCharacter: a code the app doesn't know renders as the
     // default character, so its animations must not ride along (wrong pairing).
     const friendCharacterId = characterIdFromCode(room?.character?.code);
     setFriendRoom({
       placement: resolved
-        ? { ...resolved, wallpaperId: resolved.wallpaperId ?? DEFAULT_WALLPAPER_ID }
+        ? {
+            ...resolved,
+            wallpaperId: resolved.wallpaperId ?? DEFAULT_WALLPAPER_ID,
+            placements: friendPlacements,
+          }
         : null,
       characterId: friendCharacterId,
       characterAnimations: friendCharacterId ? room?.character?.animations : undefined,

@@ -14,11 +14,15 @@ import {
   FURNITURE_ITEMS,
   type FurnitureItem,
   type FurnitureSlot,
+  type PlacedFurniture,
   SLOT_LABELS,
   SLOT_ORDER,
   type Wallpaper,
   WALLPAPERS,
 } from '@/resources/furniture';
+
+/** 자유 배치 아이템의 기본 폭 — 방 폭 대비 비율 (슬롯 기본 28%와 동일). */
+export const FREE_ITEM_WIDTH = 0.28;
 
 /** Region a decor-mode tap can target: a furniture slot or a surface band. */
 export type RoomRegion = FurnitureSlot | 'wall' | 'floor';
@@ -59,6 +63,12 @@ export type RoomProps = {
   wallpapers?: Wallpaper[];
   floors?: Wallpaper[];
   backgrounds?: Wallpaper[];
+  /**
+   * 자유 배치(FREE_V1, #327) — 주어지면 슬롯 배치 대신 정규화 좌표(중심점)로
+   * 렌더한다. z 오름차순으로 쌓이고, 터치는 받지 않는다(편집은 꾸미기 화면의
+   * 오버레이가 담당). 빈 배열 = 가구 없는 방.
+   */
+  placements?: PlacedFurniture[] | null;
   /** When true, tapping the character cycles through its poses (나의 방). */
   interactiveCharacter?: boolean;
   /**
@@ -96,6 +106,7 @@ export function Room({
   wallpapers = WALLPAPERS,
   floors = [],
   backgrounds = [],
+  placements = null,
   interactiveCharacter = false,
   editable = false,
   onRegionPress,
@@ -182,28 +193,59 @@ export function Room({
           />
         </>
       ) : null}
-      {placed.map((item) =>
-        editable ? (
-          <Pressable
-            key={item.id}
-            onPress={() => onRegionPress?.(item.slot)}
-            accessibilityRole="button"
-            accessibilityLabel={`${SLOT_LABELS[item.slot]} 자리 — ${item.name}`}
-            style={[
-              styles.furniture,
-              SLOT_STYLE[item.slot],
-              activeRegion === item.slot && [styles.activeSlot, { borderColor: t.primary }],
-            ]}>
-            <FurniturePlaceholder item={item} />
-          </Pressable>
-        ) : (
-          <View key={item.id} style={[styles.furniture, SLOT_STYLE[item.slot]]}>
-            <FurniturePlaceholder item={item} />
-          </View>
-        ),
-      )}
-      {/* Empty slots invite a tap with a dashed + marker. */}
-      {editable
+      {/* 자유 배치 경로 (#327) — z 오름차순, 중심점 앵커(폭 28%의 절반 보정). */}
+      {placements
+        ? [...placements]
+            .sort((a, b) => a.z - b.z)
+            .map((p) => {
+              const item = furniture.find((f) => f.id === p.furnitureId);
+              if (!item) return null;
+              const transforms = [
+                ...(p.scale != null && p.scale !== 1 ? [{ scale: p.scale }] : []),
+                ...(p.rotationDeg ? [{ rotate: `${p.rotationDeg}deg` }] : []),
+                ...(p.flipped ? [{ scaleX: -1 }] : []),
+              ];
+              return (
+                <View
+                  key={p.furnitureId}
+                  pointerEvents="none"
+                  style={[
+                    styles.furniture,
+                    {
+                      left: `${(p.x - FREE_ITEM_WIDTH / 2) * 100}%`,
+                      top: `${(p.y - FREE_ITEM_WIDTH / 2) * 100}%`,
+                    },
+                    transforms.length > 0 && { transform: transforms },
+                  ]}>
+                  <FurniturePlaceholder item={item} />
+                </View>
+              );
+            })
+        : null}
+      {placements
+        ? null
+        : placed.map((item) =>
+            editable ? (
+              <Pressable
+                key={item.id}
+                onPress={() => onRegionPress?.(item.slot)}
+                accessibilityRole="button"
+                accessibilityLabel={`${SLOT_LABELS[item.slot]} 자리 — ${item.name}`}
+                style={[
+                  styles.furniture,
+                  SLOT_STYLE[item.slot],
+                  activeRegion === item.slot && [styles.activeSlot, { borderColor: t.primary }],
+                ]}>
+                <FurniturePlaceholder item={item} />
+              </Pressable>
+            ) : (
+              <View key={item.id} style={[styles.furniture, SLOT_STYLE[item.slot]]}>
+                <FurniturePlaceholder item={item} />
+              </View>
+            ),
+          )}
+      {/* Empty slots invite a tap with a dashed + marker (슬롯 모드 전용). */}
+      {editable && placements == null
         ? SLOT_ORDER.filter((slot) => !placed.some((i) => i.slot === slot)).map((slot) => (
             <Pressable
               key={slot}

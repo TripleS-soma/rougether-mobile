@@ -78,6 +78,8 @@
     "preset": "jest-expo",
     "testTimeout": 30000,
     "moduleNameMapper": {
+      "^react-native-worklets(/.*)?$": "<rootDir>/jest/worklets-mock.js",
+      "^react-native-reanimated$": "react-native-reanimated/mock",
       "\\.(css)$": "<rootDir>/jest/style-mock.js",
       "\\.svg$": "<rootDir>/jest/svg-mock.js",
       "^expo-haptics$": "<rootDir>/jest/expo-haptics-mock.js",
@@ -91,6 +93,9 @@
     },
     "transformIgnorePatterns": [
       "node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg))"
+    ],
+    "setupFiles": [
+      "react-native-gesture-handler/jestSetup.js"
     ]
   },
   "private": true
