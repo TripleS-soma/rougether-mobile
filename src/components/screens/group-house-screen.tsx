@@ -8,12 +8,11 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 
 import { CharacterAvatar } from '@/components/character-avatar';
-import { type HouseCover, HouseCoverPicker } from '@/components/house-cover-picker';
+import { type HouseCover } from '@/components/house-cover-picker';
 import {
   DEFAULT_HOUSE_COVER_KEY,
   FRAME_ASPECT,
@@ -21,27 +20,21 @@ import {
 } from '@/components/room/house-preview-frame';
 import { CoachTarget } from '@/components/ui/coach-mark';
 import { Room } from '@/components/room/room';
-import { DateRangeSheet } from '@/components/screens/sheets/date-range-sheet';
+import { HouseMembersScreen } from '@/components/screens/house-members-screen';
+import { HouseMissionsSheet } from '@/components/screens/sheets/house-missions-sheet';
 import { Icon } from '@/components/ui/icon';
 import {
   CrownPictogram,
-  DoorPictogram,
   HousePictogram,
-  PencilPictogram,
-  Pictogram,
   type PictogramName,
   TargetPictogram,
-  TrashPictogram,
 } from '@/components/ui/pictograms';
-import { useToast } from '@/components/ui/toast';
-import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 import { assetSource, isCdnKey } from '@/resources/asset';
 import type { FurnitureItem, PlacedFurniture, Wallpaper } from '@/resources/furniture';
-import { formatDate, todayIso, toIsoDate } from '@/utils/datetime';
 
 /**
  * A member's live room resolved for the tile preview (their placement + worn
@@ -113,9 +106,6 @@ export type HouseEditInput = {
   coverImageKey?: string;
 };
 
-/** Capacity choices for the edit form (server allows 1~10). */
-const CAPACITY_OPTIONS = [2, 3, 4, 6, 8, 10];
-
 /** Group mission (server house mission) shown in the missions card. */
 export type HouseMission = {
   id: number;
@@ -141,22 +131,6 @@ export type NewHouseMission = {
   startsAt?: string;
   endsAt?: string;
 };
-
-/** "YYYY-MM-DD" + n days → "YYYY-MM-DD" (device-local; noon avoids DST edges). */
-function addDaysIso(iso: string, days: number) {
-  const d = new Date(`${iso}T12:00:00`);
-  d.setDate(d.getDate() + days);
-  return toIsoDate(d);
-}
-
-const MISSION_TYPE_OPTIONS: {
-  type: NewHouseMission['missionType'];
-  icon: PictogramName;
-  label: string;
-}[] = [
-  { type: 'DAILY_MEMBER_RATE', icon: 'sun', label: '일일 달성률' },
-  { type: 'WEEKLY_MEMBER_COUNT', icon: 'calendar', label: '주간 달성 횟수' },
-];
 
 const DEMO_MISSIONS: HouseMission[] = [
   { id: 1, title: '이번 주 다같이 루틴 지키기', desc: '주간 구성원 달성 횟수', icon: 'calendar', current: 12, target: 20, status: 'ACTIVE' }, // prettier-ignore
@@ -331,7 +305,6 @@ export function GroupHouseScreen({
   onSwapSeats,
 }: GroupHouseScreenProps) {
   const t = useTokens();
-  const { show: toast } = useToast();
   const headerInset = useHeaderInsetStyle();
   const screenStyle = useScreenStyle([]);
 
@@ -343,31 +316,8 @@ export function GroupHouseScreen({
   };
   const [showMembers, setShowMembers] = useState(false);
   const [kicked, setKicked] = useState<string[]>([]);
-  const [memberToKick, setMemberToKick] = useState<RoomCell | null>(null);
-  const [showCreateMission, setShowCreateMission] = useState(false);
   // 공동 미션 시트 (#287) — 하단 카드 대신 플로팅 버튼으로 연다.
   const [showMissions, setShowMissions] = useState(false);
-  const [missionTitle, setMissionTitle] = useState('');
-  const [missionType, setMissionType] =
-    useState<NewHouseMission['missionType']>('WEEKLY_MEMBER_COUNT');
-  const [missionTarget, setMissionTarget] = useState('10');
-  // Optional mission period (기간 설정 토글) — off sends nothing (즉시 시작·무기한).
-  const [missionHasPeriod, setMissionHasPeriod] = useState(false);
-  const [missionStart, setMissionStart] = useState(todayIso());
-  const [missionEnd, setMissionEnd] = useState<string | undefined>(undefined);
-  const [showPeriodSheet, setShowPeriodSheet] = useState(false);
-  // 미션 → 내 루틴 추가 확인 모달의 대상.
-  const [missionToAdd, setMissionToAdd] = useState<HouseMission | null>(null);
-  // 미션 삭제 확인 모달의 대상 (#305).
-  const [missionToDelete, setMissionToDelete] = useState<HouseMission | null>(null);
-  const [showEditHouse, setShowEditHouse] = useState(false);
-  const [editName, setEditName] = useState('');
-  const [editDesc, setEditDesc] = useState('');
-  const [editMax, setEditMax] = useState<number | undefined>(undefined);
-  const [editCover, setEditCover] = useState<string | undefined>(undefined);
-  const [transferTarget, setTransferTarget] = useState<RoomCell | null>(null);
-  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
-  const [showReissueConfirm, setShowReissueConfirm] = useState(false);
 
   const currentHouse: House | undefined = houses[Math.min(houseIndex, houses.length - 1)];
   const members = useMemo(
@@ -689,102 +639,6 @@ export function GroupHouseScreen({
 
   // Owner tools need the OWNER role and a server house id.
   const isOwner = currentHouse?.myRole === 'OWNER' && !!currentHouse?.houseId;
-  // Kick is server-side owner-only too; the demo (no houseId) keeps the local
-  // placeholder flow so the gallery preview stays interactive.
-  const canKick = isOwner || !currentHouse?.houseId;
-  // Mission creation is owner-only on the server (403 HOUSE_NOT_OWNER).
-  const canCreateMission = !!(onCreateMission && isOwner);
-  // Mission deletion too; COMPLETED rows hide the button (server 409s them).
-  const canDeleteMission = !!(onDeleteMission && isOwner);
-  const missionTargetNum = Number(missionTarget);
-  const canSubmitMission =
-    missionTitle.trim().length > 0 &&
-    Number.isInteger(missionTargetNum) &&
-    missionTargetNum >= 1 &&
-    missionTargetNum <= 1000;
-  const submitMission = () => {
-    // Blocked taps explain themselves, first unmet condition first.
-    if (missionTitle.trim().length === 0) return toast('미션 이름을 입력해주세요', 'error');
-    if (!Number.isInteger(missionTargetNum) || missionTargetNum < 1 || missionTargetNum > 1000)
-      return toast('목표값은 1~1000 사이 숫자로 입력해주세요', 'error');
-    if (!currentHouse?.houseId) return;
-    onCreateMission?.(currentHouse.houseId, {
-      title: missionTitle.trim(),
-      missionType,
-      targetValue: missionTargetNum,
-      // KST day bounds: 시작일 자정부터 종료일 하루 끝까지 (종료일 당일 포함).
-      ...(missionHasPeriod
-        ? {
-            startsAt: `${missionStart}T00:00:00+09:00`,
-            endsAt: missionEnd ? `${missionEnd}T23:59:59+09:00` : undefined,
-          }
-        : {}),
-    });
-    setShowCreateMission(false);
-    setMissionTitle('');
-    setMissionTarget('10');
-    setMissionHasPeriod(false);
-  };
-  const toggleMissionPeriod = () => {
-    setMissionHasPeriod((prev) => {
-      const next = !prev;
-      if (next) {
-        // Re-derive on each enable — the mounted default goes stale overnight.
-        const start = todayIso();
-        setMissionStart(start);
-        setMissionEnd(addDaysIso(start, 7));
-      }
-      return next;
-    });
-  };
-  const openEditHouse = () => {
-    setEditName(currentHouse?.title ?? '');
-    setEditDesc(currentHouse?.description ?? '');
-    setEditMax(currentHouse?.maxMembers);
-    setEditCover(currentHouse?.coverImageKey);
-    setShowEditHouse(true);
-  };
-  const editNameValid = editName.trim().length >= 2 && editName.trim().length <= 30;
-  const submitEditHouse = () => {
-    if (!editNameValid) return toast('집 이름은 2~30자로 입력해주세요', 'error');
-    if (!currentHouse?.houseId) return;
-    onUpdateHouse?.(currentHouse.houseId, {
-      name: editName.trim(),
-      description: editDesc.trim() || undefined,
-      maxMembers: editMax,
-      // Omitted keeps the server value — only send an actual pick.
-      coverImageKey: editCover,
-    });
-    setShowEditHouse(false);
-  };
-  const confirmTransfer = () => {
-    if (transferTarget?.membershipId && currentHouse?.houseId) {
-      onTransferOwnership?.(currentHouse.houseId, transferTarget.membershipId);
-    }
-    setTransferTarget(null);
-  };
-  // Leaving needs the server house id; the server rejects an OWNER's leave
-  // until ownership is transferred, so the owner sees guidance instead.
-  const canLeave = !!(onLeaveHouse && currentHouse?.houseId);
-  // 혼자 남은 방장은 위임 상대가 없어 바로 탈퇴할 수 있고, 마지막 구성원이
-  // 나가면 집이 정리된다(서버 계약) — 버튼을 '집 삭제'로 정직하게 표기 (#309).
-  const isLoneOwner = isOwner && members.filter((m) => !isKicked(m.name)).length <= 1;
-  const confirmLeave = () => {
-    if (currentHouse?.houseId) onLeaveHouse?.(currentHouse.houseId);
-    setShowLeaveConfirm(false);
-    setShowMembers(false);
-  };
-  const confirmKick = () => {
-    if (memberToKick) {
-      // Server kick when wired to the API; local placeholder otherwise (demo).
-      if (onKickMember && currentHouse?.houseId && memberToKick.membershipId) {
-        onKickMember(currentHouse.houseId, memberToKick.membershipId);
-      } else {
-        setKicked((prev) => [...prev, keyFor(memberToKick.name)]);
-      }
-    }
-    setMemberToKick(null);
-  };
 
   // No houses yet (fresh account) → guide to 집 탐색 instead of crashing on
   // an empty switcher.
@@ -831,402 +685,22 @@ export function GroupHouseScreen({
 
   if (showMembers) {
     return (
-      <View style={[styles.screen, screenStyle]}>
-        <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
-          <Pressable
-            onPress={() => setShowMembers(false)}
-            accessibilityRole="button"
-            accessibilityLabel="뒤로 가기"
-            style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-            <Icon name="back" size={26} color={t.text} />
-          </Pressable>
-          <View style={styles.flex}>
-            <Text style={[Typography.supporting, { color: t.primaryText }]}>
-              {currentHouse.title}
-            </Text>
-            <Text style={[Typography.h3, { color: t.text }]}>구성원 관리</Text>
-          </View>
-        </View>
-
-        <ScrollView contentContainerStyle={styles.body}>
-          {currentHouse.inviteCode ? (
-            <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
-              <View style={styles.codeHead}>
-                <Text style={[Typography.label, styles.flex, { color: t.text }]}>초대코드</Text>
-                {isOwner && onReissueInviteCode ? (
-                  <Pressable
-                    onPress={() => setShowReissueConfirm(true)}
-                    accessibilityRole="button"
-                    accessibilityLabel="초대코드 재발급"
-                    style={[styles.reissueBtn, { backgroundColor: t.surfaceMuted }]}>
-                    <Text style={[Typography.supporting, { color: t.primaryText }]}>재발급</Text>
-                  </Pressable>
-                ) : null}
-              </View>
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                친구에게 코드를 공유해 집에 초대하세요.
-              </Text>
-              <View
-                style={[
-                  styles.codeBox,
-                  { borderColor: t.border, backgroundColor: t.surfaceMuted },
-                ]}>
-                <Text style={[Typography.h3, styles.code, { color: t.text }]}>
-                  {currentHouse.inviteCode}
-                </Text>
-              </View>
-            </View>
-          ) : null}
-
-          {isOwner && onUpdateHouse ? (
-            <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
-              <Text style={[Typography.label, { color: t.text }]}>집 정보</Text>
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                집 이름·소개·정원을 바꿀 수 있어요. (방장 전용)
-              </Text>
-              <Pressable
-                onPress={openEditHouse}
-                accessibilityRole="button"
-                accessibilityLabel="집 정보 수정"
-                style={[styles.editHouseBtn, { backgroundColor: t.surfaceMuted }]}>
-                <PencilPictogram size={14} />
-                <Text style={[Typography.label, { color: t.primaryText }]}>집 정보 수정</Text>
-              </Pressable>
-            </View>
-          ) : null}
-
-          <View style={styles.memberList}>
-            {members.map((member) => {
-              const kickedOut = isKicked(member.name);
-              return (
-                <View
-                  key={`${member.level}-${member.name}`}
-                  style={[styles.memberRow, { backgroundColor: t.surface }]}>
-                  <View
-                    style={[
-                      styles.memberAvatar,
-                      { backgroundColor: kickedOut ? t.surfaceMuted : member.color },
-                    ]}>
-                    {kickedOut ? (
-                      <Icon name="leave" size={22} color={t.textMuted} />
-                    ) : (
-                      // 각자 자기 캐릭터(방 프리뷰) — 아직 안 실렸으면 남에게 내
-                      // 캐릭터를 씌우지 않고 기본 캐릭터로 (#342).
-                      <CharacterAvatar characterId={memberCharacterId(member)} size={36} />
-                    )}
-                  </View>
-                  <View style={styles.flex}>
-                    <View style={styles.memberNameRow}>
-                      <Text style={[Typography.label, { color: t.text }]}>{member.name}</Text>
-                      {member.isOwner ? (
-                        <View style={[styles.ownerBadge, { backgroundColor: `${t.primary}22` }]}>
-                          <CrownPictogram size={10} />
-                          <Text style={[styles.ownerBadgeText, { color: t.primaryText }]}>
-                            방장
-                          </Text>
-                        </View>
-                      ) : null}
-                      {member.isMine ? (
-                        <Text
-                          style={[styles.myBadge, { backgroundColor: t.warning, color: t.onTint }]}>
-                          MY
-                        </Text>
-                      ) : null}
-                    </View>
-                    <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                      {kickedOut ? '강퇴된 멤버' : member.level}
-                    </Text>
-                  </View>
-                  {isOwner &&
-                  onTransferOwnership &&
-                  !member.isMine &&
-                  member.membershipId &&
-                  !kickedOut ? (
-                    <Pressable
-                      onPress={() => setTransferTarget(member)}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${member.name} 방장 위임`}
-                      style={[styles.kickBtn, { backgroundColor: `${t.primary}22` }]}>
-                      <Text style={[Typography.supporting, { color: t.primaryText }]}>위임</Text>
-                    </Pressable>
-                  ) : null}
-                  {/* 내 카드에는 강퇴 버튼 자체를 두지 않는다 (disable 아님). */}
-                  {canKick && !member.isMine ? (
-                    <Pressable
-                      onPress={() => setMemberToKick(member)}
-                      disabled={kickedOut}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${member.name} 강퇴`}
-                      style={[
-                        styles.kickBtn,
-                        { backgroundColor: kickedOut ? t.surfaceMuted : `${t.danger}22` },
-                      ]}>
-                      <Text
-                        style={[
-                          Typography.supporting,
-                          { color: kickedOut ? t.textDisabled : t.danger },
-                        ]}>
-                        {kickedOut ? '강퇴됨' : '강퇴'}
-                      </Text>
-                    </Pressable>
-                  ) : null}
-                </View>
-              );
-            })}
-          </View>
-
-          {canLeave ? (
-            <View style={styles.leaveWrap}>
-              {isOwner && !isLoneOwner ? (
-                <Text style={[Typography.supporting, styles.leaveHint, { color: t.textMuted }]}>
-                  방장은 다른 멤버에게 방장을 위임한 뒤 나갈 수 있어요.
-                </Text>
-              ) : (
-                <Pressable
-                  onPress={() => setShowLeaveConfirm(true)}
-                  accessibilityRole="button"
-                  accessibilityLabel={isLoneOwner ? '집 삭제' : '집 나가기'}
-                  style={[styles.leaveBtn, { backgroundColor: `${t.danger}22` }]}>
-                  <DoorPictogram size={14} />
-                  <Text style={[Typography.label, { color: t.danger }]}>
-                    {isLoneOwner ? '집 삭제' : '집 나가기'}
-                  </Text>
-                </Pressable>
-              )}
-            </View>
-          ) : null}
-        </ScrollView>
-
-        {showReissueConfirm ? (
-          <View style={styles.modalOverlay}>
-            <View style={[styles.modal, { backgroundColor: t.surface }]}>
-              <Text style={[Typography.h3, { color: t.text }]}>초대코드를 재발급할까요?</Text>
-              <Text style={[Typography.body, styles.modalBody, { color: t.textMuted }]}>
-                기존 코드는 즉시 만료돼요. 이미 공유한 코드로는 더 이상 입주할 수 없어요.
-              </Text>
-              <View style={styles.modalActions}>
-                <Pressable
-                  onPress={() => setShowReissueConfirm(false)}
-                  accessibilityRole="button"
-                  accessibilityLabel="재발급 취소"
-                  style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
-                  <Text style={[Typography.label, { color: t.text }]}>취소</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => {
-                    if (currentHouse.houseId) onReissueInviteCode?.(currentHouse.houseId);
-                    setShowReissueConfirm(false);
-                  }}
-                  accessibilityRole="button"
-                  accessibilityLabel="재발급 확인"
-                  style={[styles.modalBtn, { backgroundColor: t.primary }]}>
-                  <Text style={[Typography.label, { color: t.onPrimary }]}>재발급</Text>
-                </Pressable>
-              </View>
-            </View>
-          </View>
-        ) : null}
-
-        {showLeaveConfirm ? (
-          <View style={styles.modalOverlay}>
-            <View style={[styles.modal, { backgroundColor: t.surface }]}>
-              <Text style={[Typography.h3, { color: t.text }]}>
-                {isLoneOwner ? '집을 삭제할까요?' : '집에서 나갈까요?'}
-              </Text>
-              <Text style={[Typography.body, styles.modalBody, { color: t.textMuted }]}>
-                {isLoneOwner
-                  ? `혼자 남은 집이라 나가면 '${currentHouse?.title}' 집이 삭제되고 탐색·조회에서 사라져요.`
-                  : '나가도 기여 기록은 유지되고, 초대를 받아 다시 참여하면 이전 기록이 복원돼요.'}
-              </Text>
-              <View style={styles.modalActions}>
-                <Pressable
-                  onPress={() => setShowLeaveConfirm(false)}
-                  accessibilityRole="button"
-                  accessibilityLabel="나가기 취소"
-                  style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
-                  <Text style={[Typography.label, { color: t.text }]}>취소</Text>
-                </Pressable>
-                <Pressable
-                  onPress={confirmLeave}
-                  accessibilityRole="button"
-                  accessibilityLabel={isLoneOwner ? '집 삭제 확인' : '나가기 확인'}
-                  style={[styles.modalBtn, { backgroundColor: t.danger }]}>
-                  <Text style={[Typography.label, { color: t.onPrimary }]}>
-                    {isLoneOwner ? '삭제' : '나가기'}
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
-          </View>
-        ) : null}
-
-        {memberToKick ? (
-          <View style={styles.modalOverlay}>
-            <View style={[styles.modal, { backgroundColor: t.surface }]}>
-              <Text style={[Typography.h3, { color: t.text }]}>정말 강퇴할까요?</Text>
-              <Text style={[Typography.body, styles.modalBody, { color: t.textMuted }]}>
-                {memberToKick.name}님을 강퇴하면 집 화면에서 빈방으로 표시됩니다.
-              </Text>
-              <View style={styles.modalActions}>
-                <Pressable
-                  onPress={() => setMemberToKick(null)}
-                  accessibilityRole="button"
-                  accessibilityLabel="취소"
-                  style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
-                  <Text style={[Typography.label, { color: t.text }]}>취소</Text>
-                </Pressable>
-                <Pressable
-                  onPress={confirmKick}
-                  accessibilityRole="button"
-                  accessibilityLabel="강퇴 확인"
-                  style={[styles.modalBtn, { backgroundColor: t.danger }]}>
-                  <Text style={[Typography.label, { color: t.onPrimary }]}>강퇴</Text>
-                </Pressable>
-              </View>
-            </View>
-          </View>
-        ) : null}
-
-        {transferTarget ? (
-          <View style={styles.modalOverlay}>
-            <View style={[styles.modal, { backgroundColor: t.surface }]}>
-              <Text style={[Typography.h3, { color: t.text }]}>방장을 위임할까요?</Text>
-              <Text style={[Typography.body, styles.modalBody, { color: t.textMuted }]}>
-                {transferTarget.name}님에게 방장을 넘기면 집 관리 권한(정보 수정·강퇴·초대코드)이
-                이동하고 되돌릴 수 없어요.
-              </Text>
-              <View style={styles.modalActions}>
-                <Pressable
-                  onPress={() => setTransferTarget(null)}
-                  accessibilityRole="button"
-                  accessibilityLabel="위임 취소"
-                  style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
-                  <Text style={[Typography.label, { color: t.text }]}>취소</Text>
-                </Pressable>
-                <Pressable
-                  onPress={confirmTransfer}
-                  accessibilityRole="button"
-                  accessibilityLabel="위임 확인"
-                  style={[styles.modalBtn, { backgroundColor: t.primary }]}>
-                  <Text style={[Typography.label, { color: t.onPrimary }]}>위임</Text>
-                </Pressable>
-              </View>
-            </View>
-          </View>
-        ) : null}
-
-        {showEditHouse ? (
-          <View style={styles.modalOverlay}>
-            <View style={[styles.modal, { backgroundColor: t.surface }]}>
-              <Text style={[Typography.h3, { color: t.text }]}>집 정보 수정</Text>
-              <ScrollView style={styles.editScroll} contentContainerStyle={styles.missionForm}>
-                <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                  집 이름 (2~30자)
-                </Text>
-                <TextInput
-                  value={editName}
-                  onChangeText={(v) => setEditName(v.slice(0, 30))}
-                  accessibilityLabel="집 이름"
-                  placeholder="집 이름"
-                  placeholderTextColor={t.textMuted}
-                  style={[styles.missionInput, { backgroundColor: t.surfaceMuted, color: t.text }]}
-                />
-                <Text style={[Typography.supporting, { color: t.textMuted }]}>한 줄 소개</Text>
-                <TextInput
-                  value={editDesc}
-                  onChangeText={setEditDesc}
-                  accessibilityLabel="집 소개"
-                  placeholder="어떤 루틴을 함께 하나요?"
-                  placeholderTextColor={t.textMuted}
-                  style={[styles.missionInput, { backgroundColor: t.surfaceMuted, color: t.text }]}
-                />
-                <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                  정원{currentHouse.memberCount ? ` (현재 ${currentHouse.memberCount}명)` : ''}
-                </Text>
-                <View style={styles.missionTypeRow}>
-                  {CAPACITY_OPTIONS.map((n) => {
-                    const selected = n === editMax;
-                    // The server rejects a capacity below the current headcount.
-                    const tooSmall = !!currentHouse.memberCount && n < currentHouse.memberCount;
-                    return (
-                      <Pressable
-                        key={n}
-                        onPress={() =>
-                          tooSmall
-                            ? toast('현재 인원보다 작게 줄일 수 없어요', 'error')
-                            : setEditMax(n)
-                        }
-                        accessibilityRole="radio"
-                        accessibilityState={{ selected, disabled: tooSmall }}
-                        accessibilityLabel={`정원 ${n}명`}
-                        style={[
-                          styles.capacityBtn,
-                          {
-                            backgroundColor: selected
-                              ? t.primary
-                              : tooSmall
-                                ? t.disabledBg
-                                : t.surfaceMuted,
-                          },
-                        ]}>
-                        <Text
-                          style={[
-                            Typography.supporting,
-                            {
-                              color: selected
-                                ? t.onPrimary
-                                : tooSmall
-                                  ? t.textDisabled
-                                  : t.textMuted,
-                            },
-                          ]}>
-                          {n}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-                {covers.length > 0 ? (
-                  <>
-                    <Text style={[Typography.supporting, { color: t.textMuted }]}>대표 이미지</Text>
-                    <HouseCoverPicker
-                      covers={covers}
-                      selectedKey={editCover}
-                      onSelect={setEditCover}
-                    />
-                  </>
-                ) : null}
-              </ScrollView>
-              <View style={styles.modalActions}>
-                <Pressable
-                  onPress={() => setShowEditHouse(false)}
-                  accessibilityRole="button"
-                  accessibilityLabel="집 정보 수정 취소"
-                  style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
-                  <Text style={[Typography.label, { color: t.text }]}>취소</Text>
-                </Pressable>
-                <Pressable
-                  onPress={submitEditHouse}
-                  accessibilityRole="button"
-                  accessibilityState={{ disabled: !editNameValid }}
-                  accessibilityLabel="집 정보 저장"
-                  style={[
-                    styles.modalBtn,
-                    { backgroundColor: editNameValid ? t.primary : t.disabledBg },
-                  ]}>
-                  <Text
-                    style={[
-                      Typography.label,
-                      { color: editNameValid ? t.onPrimary : t.textMuted },
-                    ]}>
-                    저장
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
-          </View>
-        ) : null}
-      </View>
+      <HouseMembersScreen
+        house={currentHouse}
+        members={members}
+        isOwner={isOwner}
+        covers={covers}
+        isKicked={isKicked}
+        memberCharacterId={memberCharacterId}
+        onBack={() => setShowMembers(false)}
+        onKickMember={onKickMember}
+        onLocalKick={(name) => setKicked((prev) => [...prev, keyFor(name)])}
+        onTransferOwnership={onTransferOwnership}
+        onReissueInviteCode={onReissueInviteCode}
+        onUpdateHouse={onUpdateHouse}
+        onLeaveHouse={onLeaveHouse}
+        onLeaveDone={() => setShowMembers(false)}
+      />
     );
   }
 
@@ -1593,319 +1067,18 @@ export function GroupHouseScreen({
         ) : null}
       </Pressable>
 
-      {showMissions ? (
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modal, { backgroundColor: t.surface }]}>
-            <View style={styles.missionHead}>
-              <View style={[styles.flex, styles.missionTitleRow]}>
-                <TargetPictogram size={18} />
-                <Text style={[Typography.h3, { color: t.text }]}>우리 집의 목표</Text>
-              </View>
-              {canCreateMission ? (
-                <Pressable
-                  onPress={() => setShowCreateMission(true)}
-                  accessibilityRole="button"
-                  accessibilityLabel="미션 만들기"
-                  style={[styles.missionAddBtn, { backgroundColor: t.surfaceMuted }]}>
-                  <Text style={[Typography.supporting, { color: t.primaryText }]}>＋ 만들기</Text>
-                </Pressable>
-              ) : null}
-            </View>
-            <ScrollView style={styles.editScroll}>
-              {missions.length === 0 ? (
-                <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                  아직 미션이 없어요. 첫 미션을 만들어 다 같이 도전해보세요!
-                </Text>
-              ) : (
-                <View style={styles.goals}>
-                  {missions.map((mission) => {
-                    const pct = Math.min(1, mission.current / mission.target);
-                    const claimable = mission.status === 'ACTIVE' && mission.achieved;
-                    return (
-                      <View
-                        key={mission.id}
-                        style={[styles.goalRow, { backgroundColor: t.surfaceMuted }]}>
-                        <Pictogram name={mission.icon} size={22} />
-                        <View style={styles.flex}>
-                          <View style={styles.goalHead}>
-                            <Text
-                              style={[Typography.label, styles.flex, { color: t.text }]}
-                              numberOfLines={1}>
-                              {mission.title}
-                            </Text>
-                            <Text style={[Typography.supporting, { color: t.primaryText }]}>
-                              {mission.current}/{mission.target}
-                            </Text>
-                            {canDeleteMission && mission.status !== 'COMPLETED' ? (
-                              <Pressable
-                                onPress={() => setMissionToDelete(mission)}
-                                accessibilityRole="button"
-                                accessibilityLabel={`${mission.title} 삭제`}
-                                hitSlop={8}
-                                style={styles.missionDeleteBtn}>
-                                <TrashPictogram size={14} color={t.textMuted} />
-                              </Pressable>
-                            ) : null}
-                          </View>
-                          <View style={[styles.goalTrack, { backgroundColor: t.border }]}>
-                            <View
-                              style={[
-                                styles.goalFill,
-                                { backgroundColor: t.primary, width: `${pct * 100}%` },
-                              ]}
-                            />
-                          </View>
-                          <View style={styles.missionFoot}>
-                            <Text
-                              style={[Typography.supporting, styles.flex, { color: t.textMuted }]}
-                              numberOfLines={1}>
-                              {mission.desc}
-                            </Text>
-                            {/* Own node (not a desc suffix) so the long type label
-                            truncates instead of the date. */}
-                            {mission.endsOn && mission.status === 'ACTIVE' ? (
-                              <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                                ~{mission.endsOn.slice(5).replace('-', '.')}
-                              </Text>
-                            ) : null}
-                            {mission.status === 'COMPLETED' ? (
-                              <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                                완료
-                              </Text>
-                            ) : mission.status === 'EXPIRED' ? (
-                              <Text style={[Typography.supporting, { color: t.textDisabled }]}>
-                                기간 만료
-                              </Text>
-                            ) : claimable && currentHouse.houseId && onClaimMission ? (
-                              <Pressable
-                                onPress={() => onClaimMission(currentHouse.houseId!, mission.id)}
-                                accessibilityRole="button"
-                                accessibilityLabel={`${mission.title} 보상 받기`}
-                                style={[styles.missionBtn, { backgroundColor: t.warning }]}>
-                                <Text style={[Typography.supporting, { color: t.text }]}>
-                                  보상 받기
-                                </Text>
-                              </Pressable>
-                            ) : mission.status === 'ACTIVE' && isContributed(mission) ? (
-                              // 오늘 기여 완료 — 연동 루틴의 오늘 완료 여부로도 파생되어
-                              // 앱을 다시 켜도 라벨이 유지된다.
-                              <Text style={[Typography.supporting, { color: t.primaryText }]}>
-                                기여함
-                              </Text>
-                            ) : mission.status === 'ACTIVE' &&
-                              linkedRoutines.some((r) => r.title === mission.title) ? (
-                              // Filed as my routine — completing it contributes.
-                              <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                                루틴 연동됨
-                              </Text>
-                            ) : mission.status === 'ACTIVE' &&
-                              currentHouse.houseId &&
-                              onAddMissionRoutine ? (
-                              <Pressable
-                                onPress={() => setMissionToAdd(mission)}
-                                accessibilityRole="button"
-                                accessibilityLabel={`${mission.title} 내 루틴에 추가`}
-                                style={[styles.missionBtn, { backgroundColor: t.primary }]}>
-                                <Text style={[Typography.supporting, { color: t.onPrimary }]}>
-                                  ＋ 내 루틴에
-                                </Text>
-                              </Pressable>
-                            ) : null}
-                          </View>
-                        </View>
-                      </View>
-                    );
-                  })}
-                </View>
-              )}
-            </ScrollView>
-            <View style={styles.modalActions}>
-              <Pressable
-                onPress={() => setShowMissions(false)}
-                accessibilityRole="button"
-                accessibilityLabel="공동 미션 닫기"
-                style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>닫기</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      ) : null}
-
-      {missionToAdd && currentHouse?.houseId ? (
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modal, { backgroundColor: t.surface }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>내 루틴에 추가하시겠습니까?</Text>
-            <Text style={[Typography.body, styles.modalBody, { color: t.textMuted }]}>
-              {`'${currentHouse.title}' 카테고리에 '${missionToAdd.title}' 루틴이 만들어져요. 루틴을 완료하면 자동으로 미션에 기여돼요.`}
-            </Text>
-            <View style={styles.modalActions}>
-              <Pressable
-                onPress={() => setMissionToAdd(null)}
-                accessibilityRole="button"
-                accessibilityLabel="루틴 추가 취소"
-                style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>아니요</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  onAddMissionRoutine?.(currentHouse.houseId!, missionToAdd);
-                  setMissionToAdd(null);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="루틴 추가 확인"
-                style={[styles.modalBtn, { backgroundColor: t.primary }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>네</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      ) : null}
-
-      {missionToDelete && currentHouse?.houseId ? (
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modal, { backgroundColor: t.surface }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>미션 삭제</Text>
-            <Text style={[Typography.body, styles.modalBody, { color: t.textMuted }]}>
-              {`'${missionToDelete.title}' 미션을 삭제할까요?\n지금까지의 기여 기록은 남지만 미션은 목록에서 사라져요. 멤버들이 만든 연동 루틴은 삭제되지 않아요.`}
-            </Text>
-            <View style={styles.modalActions}>
-              <Pressable
-                onPress={() => setMissionToDelete(null)}
-                accessibilityRole="button"
-                accessibilityLabel="미션 삭제 취소"
-                style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  onDeleteMission?.(currentHouse.houseId!, missionToDelete.id);
-                  setMissionToDelete(null);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="미션 삭제 확인"
-                style={[styles.modalBtn, { backgroundColor: t.danger }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>삭제</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      ) : null}
-
-      {showCreateMission ? (
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modal, { backgroundColor: t.surface }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>새 미션 만들기</Text>
-            <View style={styles.missionForm}>
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>미션 제목</Text>
-              <TextInput
-                value={missionTitle}
-                onChangeText={(v) => setMissionTitle(v.slice(0, 160))}
-                placeholder="예) 이번 주 다같이 루틴 지키기"
-                placeholderTextColor={t.textMuted}
-                accessibilityLabel="미션 제목"
-                style={[styles.missionInput, { backgroundColor: t.surfaceMuted, color: t.text }]}
-              />
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>미션 유형</Text>
-              <View style={styles.missionTypeRow}>
-                {MISSION_TYPE_OPTIONS.map((opt) => {
-                  const selected = opt.type === missionType;
-                  return (
-                    <Pressable
-                      key={opt.type}
-                      onPress={() => setMissionType(opt.type)}
-                      accessibilityRole="radio"
-                      accessibilityState={{ selected }}
-                      style={[
-                        styles.missionTypeBtn,
-                        { backgroundColor: selected ? t.primary : t.surfaceMuted },
-                      ]}>
-                      <Pictogram
-                        name={opt.icon}
-                        size={14}
-                        color={selected ? t.onPrimary : t.textMuted}
-                      />
-                      <Text
-                        style={[
-                          Typography.supporting,
-                          { color: selected ? t.onPrimary : t.textMuted },
-                        ]}>
-                        {opt.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                목표 수치 (1~1000)
-              </Text>
-              <TextInput
-                value={missionTarget}
-                onChangeText={setMissionTarget}
-                keyboardType="number-pad"
-                accessibilityLabel="목표 수치"
-                style={[styles.missionInput, { backgroundColor: t.surfaceMuted, color: t.text }]}
-              />
-              <View style={styles.periodRow}>
-                <Text style={[Typography.supporting, { color: t.textMuted }]}>기간 설정</Text>
-                <ToggleSwitch
-                  value={missionHasPeriod}
-                  onToggle={toggleMissionPeriod}
-                  accessibilityLabel="기간 설정"
-                />
-              </View>
-              {missionHasPeriod ? (
-                <Pressable
-                  onPress={() => setShowPeriodSheet(true)}
-                  accessibilityRole="button"
-                  accessibilityLabel="미션 기간 선택"
-                  style={[styles.missionInput, { backgroundColor: t.surfaceMuted }]}>
-                  <Text style={[Typography.supporting, { color: t.text }]}>
-                    {formatDate(missionStart)} ~ {missionEnd ? formatDate(missionEnd) : '무기한'}
-                  </Text>
-                </Pressable>
-              ) : null}
-            </View>
-            <View style={styles.modalActions}>
-              <Pressable
-                onPress={() => setShowCreateMission(false)}
-                accessibilityRole="button"
-                accessibilityLabel="미션 만들기 취소"
-                style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
-              </Pressable>
-              <Pressable
-                onPress={submitMission}
-                accessibilityRole="button"
-                accessibilityState={{ disabled: !canSubmitMission }}
-                accessibilityLabel="미션 만들기 확인"
-                style={[
-                  styles.modalBtn,
-                  { backgroundColor: canSubmitMission ? t.primary : t.disabledBg },
-                ]}>
-                <Text
-                  style={[
-                    Typography.label,
-                    { color: canSubmitMission ? t.onPrimary : t.textMuted },
-                  ]}>
-                  만들기
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      ) : null}
-
-      {/* Mission period picker — its overlay (zIndex 100) sits above the modal. */}
-      <DateRangeSheet
-        visible={showPeriodSheet}
-        initialStartDate={missionStart}
-        initialEndDate={missionEnd}
-        onSave={(start, end) => {
-          setMissionStart(start);
-          setMissionEnd(end);
-        }}
-        onClose={() => setShowPeriodSheet(false)}
+      <HouseMissionsSheet
+        visible={showMissions}
+        house={currentHouse}
+        missions={missions}
+        isOwner={isOwner}
+        linkedRoutines={linkedRoutines}
+        contributedMissionIds={contributedMissionIds}
+        onClose={() => setShowMissions(false)}
+        onCreateMission={onCreateMission}
+        onDeleteMission={onDeleteMission}
+        onClaimMission={onClaimMission}
+        onAddMissionRoutine={onAddMissionRoutine}
       />
     </View>
   );
@@ -2037,102 +1210,6 @@ const styles = StyleSheet.create({
   myTagText: {
     fontSize: 9,
     fontWeight: '700',
-  },
-  card: {
-    marginHorizontal: Spacing.four,
-    marginTop: Spacing.five,
-    padding: Spacing.four,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    gap: Spacing.two,
-  },
-  codeBox: {
-    marginTop: Spacing.two,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderRadius: Radius.md,
-    paddingVertical: Spacing.three,
-    alignItems: 'center',
-  },
-  code: {
-    letterSpacing: 4,
-  },
-  memberList: {
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.four,
-    gap: Spacing.three,
-  },
-  memberRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-    padding: Spacing.three,
-    borderRadius: Radius.lg,
-  },
-  memberAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  memberNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-  },
-  myBadge: {
-    fontSize: 9,
-    fontWeight: '700',
-    overflow: 'hidden',
-    borderRadius: Radius.pill,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: 1,
-  },
-  kickBtn: {
-    borderRadius: Radius.pill,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-  },
-  modalOverlay: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.four,
-  },
-  modal: {
-    width: '100%',
-    maxWidth: 360,
-    maxHeight: '85%',
-    borderRadius: Radius.lg,
-    padding: Spacing.four,
-  },
-  // The edit form scrolls (cover grid makes it taller than small screens).
-  editScroll: {
-    flexGrow: 0,
-  },
-  modalBody: {
-    marginTop: Spacing.two,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-    marginTop: Spacing.four,
-  },
-  modalBtn: {
-    flex: 1,
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.three,
-    alignItems: 'center',
-  },
-  goals: {
-    gap: Spacing.three,
-    marginTop: Spacing.two,
   },
   // --- 프레임 모드 (#287) ---
   skySection: {
@@ -2272,134 +1349,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
   },
-  missionHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-  },
-  missionAddBtn: {
-    borderRadius: Radius.pill,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.one,
-  },
-  missionFoot: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    marginTop: Spacing.one,
-  },
-  missionBtn: {
-    borderRadius: Radius.pill,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.one,
-  },
-  missionDeleteBtn: {
-    marginLeft: Spacing.one,
-  },
-  missionForm: {
-    marginTop: Spacing.three,
-    gap: Spacing.two,
-  },
-  periodRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  missionInput: {
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    fontSize: 14,
-  },
-  missionTypeRow: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-  },
-  missionTypeBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: Spacing.one,
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.two,
-    alignItems: 'center',
-  },
-  editHouseBtn: {
-    marginTop: Spacing.two,
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.two,
-    alignItems: 'center',
-  },
-  leaveWrap: {
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.five,
-  },
-  codeHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-  },
-  reissueBtn: {
-    borderRadius: Radius.pill,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.one,
-  },
-  leaveHint: {
-    textAlign: 'center',
-  },
-  leaveBtn: {
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.three,
-    alignItems: 'center',
-  },
-  capacityBtn: {
-    flex: 1,
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.two,
-    alignItems: 'center',
-  },
-  goalRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-    padding: Spacing.three,
-    borderRadius: Radius.md,
-  },
   roomNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.one,
-  },
-  missionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-  },
-  ownerBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    borderRadius: Radius.pill,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: 1,
-  },
-  ownerBadgeText: {
-    fontSize: 9,
-    fontWeight: '700',
-  },
-  goalHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    marginBottom: Spacing.one,
-  },
-  goalTrack: {
-    height: 6,
-    borderRadius: Radius.pill,
-    overflow: 'hidden',
-  },
-  goalFill: {
-    height: '100%',
-    borderRadius: Radius.pill,
   },
 });
