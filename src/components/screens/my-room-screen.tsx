@@ -398,6 +398,11 @@ export function MyRoomScreen({
   const catMeta = allCategories ?? categories;
   const serverBackedDay = !!onSelectDate && selectedDate !== today;
   const dayItems = serverBackedDay ? calendarDays?.[selectedDate] : undefined;
+  // 선택한 날짜의 전체 완료/총 개수 (#346) — 방탭의 2/4 + 진행 바와 같은 표시.
+  const calDayTotal = serverBackedDay ? (dayItems?.length ?? 0) : dateRoutines.length;
+  const calDayDone = serverBackedDay
+    ? (dayItems?.filter((i) => i.completed).length ?? 0)
+    : dateRoutines.filter((r) => isDone(r.id, selectedDate)).length;
 
   // 달력 서버 날짜에서 연 메뉴 — 완료 라벨/토글은 그 날의 기록과 달력 규칙
   // (미래 차단, 과거 허용)을 따른다 (#323).
@@ -919,9 +924,26 @@ export function MyRoomScreen({
           ) : (
             <View style={styles.calendarPanel}>
               <Calendar value={selectedDate} onSelect={pickDate} />
-              <Text style={[Typography.h3, styles.calListTitle, { color: t.text }]}>
-                이 날의 루틴
-              </Text>
+              <View style={styles.calListHead}>
+                <Text style={[Typography.h3, styles.calListTitle, { color: t.text }]}>
+                  이 날의 루틴
+                </Text>
+                {calDayTotal > 0 ? (
+                  <Text style={[Typography.label, { color: t.primaryText }]}>
+                    {calDayDone} / {calDayTotal}
+                  </Text>
+                ) : null}
+              </View>
+              {calDayTotal > 0 ? (
+                <View style={[styles.progressTrack, { backgroundColor: t.surfaceMuted }]}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      { backgroundColor: t.primary, width: `${(calDayDone / calDayTotal) * 100}%` },
+                    ]}
+                  />
+                </View>
+              ) : null}
               {serverBackedDay ? (
                 <Text style={[Typography.supporting, { color: t.textMuted }]}>
                   {selectedDate > today
@@ -1439,6 +1461,13 @@ const styles = StyleSheet.create({
   },
   calListTitle: {
     marginTop: Spacing.three,
+  },
+  // 이 날의 루틴 제목 + 완료/총 카운트 행 (#346) — 방탭 sectionHead와 같은 결.
+  calListHead: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: Spacing.two,
   },
   calEmpty: {
     paddingVertical: Spacing.three,
