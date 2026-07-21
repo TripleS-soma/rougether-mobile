@@ -340,21 +340,22 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
     );
     await layoutCanvas(getByTestId);
 
-    expect(queryByLabelText('회전')).toBeNull();
+    expect(queryByLabelText('오른쪽 회전')).toBeNull();
     await tapItem('plant');
     expect(getByTestId('selection-ring-plant')).toBeTruthy();
-    expect(getByLabelText('회전')).toBeTruthy();
+    expect(getByLabelText('왼쪽 회전')).toBeTruthy();
+    expect(getByLabelText('오른쪽 회전')).toBeTruthy();
     expect(getByLabelText('좌우 반전')).toBeTruthy();
-    expect(getByLabelText('앞으로')).toBeTruthy();
-    expect(getByLabelText('뒤로')).toBeTruthy();
+    expect(getByLabelText('맨 앞으로')).toBeTruthy();
+    expect(getByLabelText('맨 뒤로')).toBeTruthy();
     expect(getByLabelText('빼기')).toBeTruthy();
 
     await fireEvent.press(getByLabelText('선택 해제'));
     expect(queryByTestId('selection-ring-plant')).toBeNull();
-    expect(queryByLabelText('회전')).toBeNull();
+    expect(queryByLabelText('오른쪽 회전')).toBeNull();
   });
 
-  it('회전 rotates in 15° steps; 좌우 반전 toggles the flip', async () => {
+  it('좌·우 회전은 15° 스텝(음수는 360으로 래핑); 좌우 반전 토글', async () => {
     const onApply = jest.fn();
     const { getByTestId, getByText, getByLabelText } = await render(
       <RoomDecorScreen initialItems={items(['plant'])} freeLayout onApply={onApply} />,
@@ -362,51 +363,53 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
     await layoutCanvas(getByTestId);
     await tapItem('plant');
 
-    await fireEvent.press(getByLabelText('회전'));
-    await fireEvent.press(getByLabelText('회전'));
+    await fireEvent.press(getByLabelText('오른쪽 회전'));
+    await fireEvent.press(getByLabelText('오른쪽 회전'));
+    await fireEvent.press(getByLabelText('왼쪽 회전'));
     await fireEvent.press(getByLabelText('좌우 반전'));
     await fireEvent.press(getByText('적용하기'));
     await waitFor(() => expect(onApply).toHaveBeenCalled());
     expect(lastApply(onApply)[0]).toEqual(
-      expect.objectContaining({ furnitureId: 'plant', rotationDeg: 30, flipped: true }),
+      expect.objectContaining({ furnitureId: 'plant', rotationDeg: 15, flipped: true }),
     );
 
-    // 반전을 한 번 더 누르면 원래 방향으로 돌아온다.
+    // 0°에서 왼쪽으로 더 돌리면 345°로 래핑; 반전 재탭은 원상복구.
+    await fireEvent.press(getByLabelText('왼쪽 회전'));
+    await fireEvent.press(getByLabelText('왼쪽 회전'));
     await fireEvent.press(getByLabelText('좌우 반전'));
     await fireEvent.press(getByText('적용하기'));
     await waitFor(() => expect(onApply).toHaveBeenCalledTimes(2));
     expect(lastApply(onApply)[0]).toEqual(
-      expect.objectContaining({ rotationDeg: 30, flipped: false }),
+      expect.objectContaining({ rotationDeg: 345, flipped: false }),
     );
   });
 
-  it('앞으로/뒤로 swaps z with the neighbor in stacking order', async () => {
+  it('맨 앞으로/맨 뒤로 jumps the selected item across the whole stack', async () => {
     const onApply = jest.fn();
-    // bed z=1(뒤), plant z=2(앞).
+    // bed z=1(맨 뒤), plant z=2, rug z=3(맨 앞).
     const { getByTestId, getByText, getByLabelText } = await render(
-      <RoomDecorScreen initialItems={items(['bed', 'plant'])} freeLayout onApply={onApply} />,
+      <RoomDecorScreen
+        initialItems={items(['bed', 'plant', 'rug'])}
+        freeLayout
+        onApply={onApply}
+      />,
     );
     await layoutCanvas(getByTestId);
     await tapItem('bed');
 
-    await fireEvent.press(getByLabelText('앞으로'));
+    await fireEvent.press(getByLabelText('맨 앞으로'));
     await fireEvent.press(getByText('적용하기'));
     await waitFor(() => expect(onApply).toHaveBeenCalled());
-    const zOf = (id: string) => lastApply(onApply).find((p) => p.furnitureId === id)?.z;
-    expect(zOf('bed')).toBe(2);
-    expect(zOf('plant')).toBe(1);
+    const zOf = (id: string) => lastApply(onApply).find((p) => p.furnitureId === id)?.z ?? 0;
+    // 한 번에 전체 스택 위로 — 중간(z 이웃)과의 스왑이 아니다.
+    expect(zOf('bed')).toBeGreaterThan(zOf('rug'));
+    expect(zOf('rug')).toBeGreaterThan(zOf('plant'));
 
-    // 이미 맨 앞이면 앞으로는 아무 것도 바꾸지 않는다.
-    await fireEvent.press(getByLabelText('앞으로'));
+    await fireEvent.press(getByLabelText('맨 뒤로'));
     await fireEvent.press(getByText('적용하기'));
     await waitFor(() => expect(onApply).toHaveBeenCalledTimes(2));
-    expect(zOf('bed')).toBe(2);
-
-    await fireEvent.press(getByLabelText('뒤로'));
-    await fireEvent.press(getByText('적용하기'));
-    await waitFor(() => expect(onApply).toHaveBeenCalledTimes(3));
-    expect(zOf('bed')).toBe(1);
-    expect(zOf('plant')).toBe(2);
+    expect(zOf('bed')).toBeLessThan(zOf('plant'));
+    expect(zOf('plant')).toBeLessThan(zOf('rug'));
   });
 
   it('빼기 removes the selected item and closes the toolbar', async () => {
@@ -418,7 +421,7 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
     await tapItem('plant');
 
     await fireEvent.press(getByLabelText('빼기'));
-    expect(queryByLabelText('회전')).toBeNull();
+    expect(queryByLabelText('오른쪽 회전')).toBeNull();
     await fireEvent.press(getByText('적용하기'));
     await waitFor(() => expect(onApply).toHaveBeenCalled());
     expect(firstArgIds(onApply)).toEqual([]);
@@ -478,17 +481,15 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
     expect(lastApply(onApply)[0]).toEqual(expect.objectContaining({ scale: 2 }));
   });
 
-  it('dragging out removes the item and clears its selection', async () => {
+  it('drag is clamped to the room bounds — no drag-out removal', async () => {
     const onApply = jest.fn();
-    const { getByTestId, getByText, queryByLabelText } = await render(
-      <ToastProvider>
-        <RoomDecorScreen initialItems={items(['plant'])} freeLayout onApply={onApply} />
-      </ToastProvider>,
+    const { getByTestId, getByText } = await render(
+      <RoomDecorScreen initialItems={items(['plant'])} freeLayout onApply={onApply} />,
     );
     await layoutCanvas(getByTestId);
-    await tapItem('plant');
 
-    // plant 중심(0.5, 0.52·SLOT 기준)에서 오른쪽으로 캔버스 폭만큼 — 방 밖.
+    // 캔버스 폭(320px)만큼 오른쪽으로 끌어도 UI 스레드 클램프에 걸려
+    // 중심이 DRAG_CLAMP_MAX(0.86)에서 멈춘다 — 가구는 빠지지 않는다.
     await act(() =>
       fireGestureHandler(getByGestureTestId('item-pan-plant'), [
         { state: State.BEGAN },
@@ -497,11 +498,11 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
         { state: State.END, translationX: 400, translationY: 0 },
       ]),
     );
-    await waitFor(() => expect(getByText('가구를 뺐어요')).toBeTruthy());
-    expect(queryByLabelText('회전')).toBeNull();
     await fireEvent.press(getByText('적용하기'));
     await waitFor(() => expect(onApply).toHaveBeenCalled());
-    expect(firstArgIds(onApply)).toEqual([]);
+    expect(lastApply(onApply)[0]).toEqual(
+      expect.objectContaining({ furnitureId: 'plant', x: 0.86 }),
+    );
   });
 });
 

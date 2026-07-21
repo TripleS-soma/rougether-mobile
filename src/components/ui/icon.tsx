@@ -34,6 +34,8 @@ const ICONS = {
   leave: 'exit-outline',
   // 방 꾸미기 선택 툴바 (#333)
   flip: 'swap-horizontal',
+  'rotate-ccw': 'arrow-undo-outline',
+  'rotate-cw': 'arrow-redo-outline',
   'layer-up': 'arrow-up',
   'layer-down': 'arrow-down',
   // Currency + shop

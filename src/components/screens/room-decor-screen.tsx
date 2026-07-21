@@ -14,7 +14,8 @@ import {
 import { type CharacterAnimationSet, CharacterAvatar } from '@/components/character-avatar';
 import {
   DraggableFurniture,
-  DRAG_OUT_MARGIN,
+  DRAG_CLAMP_MAX,
+  DRAG_CLAMP_MIN,
   SCALE_MAX,
   SCALE_MIN,
 } from '@/components/room/draggable-furniture';
@@ -233,19 +234,9 @@ export function RoomDecorScreen({
     setItems((prev) => prev.filter((p) => p.furnitureId !== id));
     setSelectedId((prev) => (prev === id ? null : prev));
   };
-  /** 드래그 종료 — 방 밖이면 빼고, 안이면 좌표 커밋 + 최상위 승격. */
+  /** 드래그 종료 — 방 안으로 클램프해 좌표 커밋 + 최상위 승격. */
   const commitDrag = (id: string, x: number, y: number) => {
-    const out =
-      x < -DRAG_OUT_MARGIN ||
-      x > 1 + DRAG_OUT_MARGIN ||
-      y < -DRAG_OUT_MARGIN ||
-      y > 1 + DRAG_OUT_MARGIN;
-    if (out) {
-      removeItem(id);
-      toast('가구를 뺐어요');
-      return;
-    }
-    const clamp = (v: number) => Math.min(0.92, Math.max(0.08, v));
+    const clamp = (v: number) => Math.min(DRAG_CLAMP_MAX, Math.max(DRAG_CLAMP_MIN, v));
     setItems((prev) => {
       const maxZ = prev.reduce((m, p) => Math.max(m, p.z), 0);
       return prev.map((p) =>
@@ -261,25 +252,23 @@ export function RoomDecorScreen({
   /** 선택된 가구만 바꾼다 — 툴바 액션 공용 (#333). */
   const mutateSelected = (fn: (p: PlacedFurniture) => PlacedFurniture) =>
     setItems((prev) => prev.map((p) => (p.furnitureId === selectedId ? fn(p) : p)));
-  const rotateSelected = () =>
-    mutateSelected((p) => ({ ...p, rotationDeg: ((p.rotationDeg ?? 0) + 15) % 360 }));
+  const rotateSelected = (dir: 1 | -1) =>
+    mutateSelected((p) => ({
+      ...p,
+      rotationDeg: ((((p.rotationDeg ?? 0) + dir * 15) % 360) + 360) % 360,
+    }));
   const flipSelected = () => mutateSelected((p) => ({ ...p, flipped: !p.flipped }));
-  /** z 순서에서 이웃과 자리 바꾸기 — 앞으로(+1)/뒤로(-1) 한 칸씩. */
-  const stepZ = (dir: 1 | -1) =>
+  // z 이웃과 한 칸 스왑은 겹치지 않은 아이템과 순서만 바뀌어 "안 눌리는" 것처럼
+  // 보인다 — 항상 눈에 보이는 맨 앞/맨 뒤 점프로 한다 (#333).
+  const bringToFront = () =>
     setItems((prev) => {
-      const sorted = [...prev].sort((a, b) => a.z - b.z);
-      const idx = sorted.findIndex((p) => p.furnitureId === selectedId);
-      const other = sorted[idx + dir];
-      if (idx < 0 || !other) return prev;
-      const me = sorted[idx];
-      return prev.map((p) =>
-        p.furnitureId === me.furnitureId
-          ? { ...p, z: other.z }
-          : p.furnitureId === other.furnitureId
-            ? { ...p, z: me.z }
-            : p,
-      );
+      const maxZ = prev.reduce((m, p) => Math.max(m, p.z), 0);
+      return prev.map((p) => (p.furnitureId === selectedId ? { ...p, z: maxZ + 1 } : p));
     });
+  const sendToBack = () =>
+    setItems((prev) =>
+      prev.map((p) => (p.furnitureId === selectedId ? { ...p, z: 1 } : { ...p, z: p.z + 1 })),
+    );
 
   // What the open picker offers, owned first so placing needs no digging.
   // 보유중 filter hides the shop side of every picker (slot/surface/전체보기).
@@ -372,10 +361,11 @@ export function RoomDecorScreen({
               <View style={[styles.toolbar, { backgroundColor: t.surface, borderColor: t.border }]}>
                 {(
                   [
-                    ['refresh', '회전', rotateSelected],
+                    ['rotate-ccw', '왼쪽 회전', () => rotateSelected(-1)],
+                    ['rotate-cw', '오른쪽 회전', () => rotateSelected(1)],
                     ['flip', '좌우 반전', flipSelected],
-                    ['layer-up', '앞으로', () => stepZ(1)],
-                    ['layer-down', '뒤로', () => stepZ(-1)],
+                    ['layer-up', '맨 앞으로', bringToFront],
+                    ['layer-down', '맨 뒤로', sendToBack],
                     ['trash', '빼기', () => removeItem(selectedId)],
                   ] as const
                 ).map(([icon, label, onPress]) => (
@@ -422,8 +412,8 @@ export function RoomDecorScreen({
           <View style={[styles.guideCard, { backgroundColor: t.surface }]}>
             <Text style={[Typography.label, { color: t.text }]}>가구를 끌어서 꾸며보세요</Text>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              가구를 끌면 원하는 곳으로 옮겨지고, 방 밖으로 끌면 빠져요. 벽·바닥을 누르면 벽지와
-              바닥을 바꿀 수 있어요.
+              가구를 끌어 원하는 곳으로 옮기고, 가구를 탭하면 회전·크기 조절·빼기를 할 수 있어요.
+              벽·바닥을 누르면 벽지와 바닥을 바꿀 수 있어요.
             </Text>
             <Pressable
               onPress={() => setPicker('all')}

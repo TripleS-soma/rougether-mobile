@@ -13,11 +13,12 @@ import { FREE_ITEM_WIDTH } from '@/components/room/room';
 import { useTokens } from '@/hooks/use-tokens';
 import type { FurnitureItem, PlacedFurniture } from '@/resources/furniture';
 
-/** 중심 좌표가 이 범위를 벗어나면 드래그아웃 = 빼기 (#327). */
-export const DRAG_OUT_MARGIN = 0.08;
 /** 크기 조절 클램프 (#333) — 서버 제약은 없지만 방을 벗어나지 않는 선. */
 export const SCALE_MIN = 0.5;
 export const SCALE_MAX = 2.0;
+/** 드래그 중심 좌표 클램프 — 기본 박스가 방 밖으로 못 나가는 범위 (#333). */
+export const DRAG_CLAMP_MIN = FREE_ITEM_WIDTH / 2;
+export const DRAG_CLAMP_MAX = 1 - FREE_ITEM_WIDTH / 2;
 
 export type DraggableFurnitureProps = {
   item: FurnitureItem;
@@ -29,8 +30,8 @@ export type DraggableFurnitureProps = {
   /** 짧은 탭 = 선택 (#333). */
   onSelect?: (furnitureId: string) => void;
   /**
-   * 드래그 종료 — 정규화 중심 좌표. 방 밖(DRAG_OUT_MARGIN 초과)이면 화면이
-   * 빼기로 처리하고, 안이면 좌표를 커밋한다(z 최상위 승격 포함).
+   * 드래그 종료 — 정규화 중심 좌표(방 안으로 클램프됨). 호출측이 좌표를
+   * 커밋한다(z 최상위 승격 포함). 빼기는 툴바 버튼으로만 (#333).
    */
   onDragEnd: (furnitureId: string, x: number, y: number) => void;
   /** 핀치/핸들 종료 — 스케일 커밋 (호출측이 SCALE_MIN~MAX로 클램프). */
@@ -80,8 +81,15 @@ export function DraggableFurniture({
       start.value = { x: cx.value, y: cy.value };
     })
     .onUpdate((e) => {
-      cx.value = start.value.x + e.translationX;
-      cy.value = start.value.y + e.translationY;
+      // 방 경계 클램프 — 가구가 방 밖으로 끌려나가지 않는다 (#333).
+      cx.value = Math.min(
+        DRAG_CLAMP_MAX * roomSize.w,
+        Math.max(DRAG_CLAMP_MIN * roomSize.w, start.value.x + e.translationX),
+      );
+      cy.value = Math.min(
+        DRAG_CLAMP_MAX * roomSize.h,
+        Math.max(DRAG_CLAMP_MIN * roomSize.h, start.value.y + e.translationY),
+      );
     })
     .onEnd(() => {
       dragging.value = false;
@@ -154,7 +162,7 @@ export function DraggableFurniture({
         accessible
         accessibilityRole="button"
         accessibilityLabel={`${item.name} 옮기기`}
-        accessibilityHint="탭해서 선택, 끌어서 이동, 방 밖으로 끌면 빼요"
+        accessibilityHint="탭해서 선택, 끌어서 이동해요"
         accessibilityState={{ selected }}
         style={animStyle}>
         {/* 자식(이미지·이름표)이 이벤트 타깃이 되지 않게 — 제스처는 래퍼가 받는다. */}
