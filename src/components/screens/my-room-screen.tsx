@@ -23,6 +23,7 @@ import {
 } from '@/components/screens/sheets/character-picker-sheet';
 import { TimePickerSheet } from '@/components/screens/sheets/time-picker-sheet';
 import { Calendar } from '@/components/ui/calendar';
+import { CoachTarget } from '@/components/ui/coach-mark';
 import { Pictogram } from '@/components/ui/pictograms';
 import { useToast } from '@/components/ui/toast';
 import { WalletPills } from '@/components/ui/wallet-pills';
@@ -669,17 +670,19 @@ export function MyRoomScreen({
           {/* 알림 lives inside this popover (#257 — a separate bell button
               crowded the header and crushed the title); unread shows as a dot
               on the menu button. */}
-          <Pressable
-            ref={menuBtnRef}
-            onPress={openNavMenu}
-            accessibilityRole="button"
-            accessibilityLabel="메뉴"
-            style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-            <Icon name="menu" size={20} color={t.text} />
-            {onOpenNotifications && unreadNotificationCount > 0 ? (
-              <View style={[styles.menuDot, { backgroundColor: t.danger }]} />
-            ) : null}
-          </Pressable>
+          <CoachTarget id="room-menu">
+            <Pressable
+              ref={menuBtnRef}
+              onPress={openNavMenu}
+              accessibilityRole="button"
+              accessibilityLabel="메뉴"
+              style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
+              <Icon name="menu" size={20} color={t.text} />
+              {onOpenNotifications && unreadNotificationCount > 0 ? (
+                <View style={[styles.menuDot, { backgroundColor: t.danger }]} />
+              ) : null}
+            </Pressable>
+          </CoachTarget>
         </View>
       </View>
 
@@ -691,9 +694,8 @@ export function MyRoomScreen({
           ] as const
         ).map(([key, label]) => {
           const active = tab === key;
-          return (
+          const btn = (
             <Pressable
-              key={key}
               onPress={() => setTab(key)}
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
@@ -702,6 +704,14 @@ export function MyRoomScreen({
                 {label}
               </Text>
             </Pressable>
+          );
+          // 달력 탭은 코치마크 대상 (#351).
+          return key === 'calendar' ? (
+            <CoachTarget key={key} id="room-tab-calendar">
+              {btn}
+            </CoachTarget>
+          ) : (
+            <View key={key}>{btn}</View>
           );
         })}
       </View>
@@ -742,28 +752,35 @@ export function MyRoomScreen({
                   accessibilityRole="button"
                   accessibilityLabel="뽑기 상점"
                   style={[styles.gachaBtn, { backgroundColor: t.surface }]}>
-                  <Icon name="gift" size={20} color={t.text} />
+                  {/* absolute 버튼이라 래퍼 대신 내용을 측정 (#351). */}
+                  <CoachTarget id="room-gacha">
+                    <Icon name="gift" size={20} color={t.text} />
+                  </CoachTarget>
                 </Pressable>
               </View>
 
               <View style={styles.section}>
-                <View style={styles.sectionHead}>
-                  <Text style={[Typography.h2, { color: t.text }]}>오늘의 루틴</Text>
-                  <View style={styles.sectionHeadRight}>
-                    {roomRoutines.length > 0 ? (
-                      <Text style={[Typography.label, { color: t.primaryText }]}>
-                        {completedCount} / {roomRoutines.length}
-                      </Text>
-                    ) : null}
-                    <Pressable
-                      onPress={onAddRoutine}
-                      accessibilityRole="button"
-                      accessibilityLabel="루틴 추가"
-                      style={[styles.addBtn, { backgroundColor: t.primary }]}>
-                      <Icon name="add" size={18} color={t.onPrimary} />
-                    </Pressable>
+                <CoachTarget id="room-routines">
+                  <View style={styles.sectionHead}>
+                    <Text style={[Typography.h2, { color: t.text }]}>오늘의 루틴</Text>
+                    <View style={styles.sectionHeadRight}>
+                      {roomRoutines.length > 0 ? (
+                        <Text style={[Typography.label, { color: t.primaryText }]}>
+                          {completedCount} / {roomRoutines.length}
+                        </Text>
+                      ) : null}
+                      <CoachTarget id="room-add-routine">
+                        <Pressable
+                          onPress={onAddRoutine}
+                          accessibilityRole="button"
+                          accessibilityLabel="루틴 추가"
+                          style={[styles.addBtn, { backgroundColor: t.primary }]}>
+                          <Icon name="add" size={18} color={t.onPrimary} />
+                        </Pressable>
+                      </CoachTarget>
+                    </View>
                   </View>
-                </View>
+                </CoachTarget>
 
                 {loading ? (
                   <View style={styles.stateBlock}>

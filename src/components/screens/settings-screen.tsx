@@ -70,7 +70,7 @@ export function SettingsScreen({
       title: '기타',
       rows: [
         { icon: 'help', label: '도움말', onPress: onOpenHelp },
-        { icon: 'refresh', label: '온보딩 다시 보기', onPress: onReplayOnboarding },
+        { icon: 'refresh', label: '튜토리얼 다시 보기', onPress: onReplayOnboarding },
         { icon: 'leave', label: '로그아웃', onPress: () => setConfirmLogout(true) },
       ],
     },

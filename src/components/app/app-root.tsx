@@ -25,6 +25,8 @@ import { loadOnboarding, resetOnboarding, saveOnboarding } from '@/lib/onboardin
 export function AppRoot() {
   const { status } = useAuth();
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
+  // 이 세션에서 온보딩을 갓 마쳤는지 — 튜토리얼 자동 시작 신호 (#351).
+  const [justOnboarded, setJustOnboarded] = useState(false);
   const [characterId, setCharacterId] = useState<CharacterId>(DEFAULT_CHARACTER_ID);
   const [serverGoals, setServerGoals] = useState<OnboardingGoal[]>([]);
   // Previously selected goal ids — 온보딩 다시 보기 opens the goal survey as an
@@ -82,6 +84,8 @@ export function AppRoot() {
           setCharacterId(chosen);
           setSelectedGoalIds(goals);
           setOnboarded(true);
+          // 온보딩을 방금 마침 — 셸이 코치마크 튜토리얼을 시작한다 (#351).
+          setJustOnboarded(true);
           void saveOnboarding({ characterId: chosen, goals });
           // Push the selections to the server, best-effort: goal ids are
           // numeric only when the server master supplied them, and the
@@ -99,6 +103,7 @@ export function AppRoot() {
   return (
     <AppShell
       characterId={characterId}
+      startTutorial={justOnboarded}
       onReplayOnboarding={() => {
         void resetOnboarding();
         setOnboarded(false);

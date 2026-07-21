@@ -29,6 +29,7 @@ import { Badge } from '@/components/ui/badge';
 import { BearCheck } from '@/components/ui/bear-check';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
+import { CoachMarkOverlay } from '@/components/ui/coach-mark';
 import { Card } from '@/components/ui/card';
 import { IconButton } from '@/components/ui/icon-button';
 import { Pill } from '@/components/ui/pill';
@@ -76,6 +77,22 @@ export const galleryEntries: GalleryEntry[] = [
         <BearCheck checked color="#7FA8D4" />
         <BearCheck checked color="#C8869C" />
         <BearCheck checked color="#7FA87F" />
+      </View>
+    ),
+  },
+  {
+    name: 'CoachMarkOverlay · 스포트라이트',
+    description: '코치마크 튜토리얼 오버레이 (#351) — 구멍 뚫린 딤 + 말풍선.',
+    render: () => (
+      <View style={{ height: 420, alignSelf: 'stretch' }}>
+        <CoachMarkOverlay
+          steps={[{ target: 'demo', title: '오늘의 루틴', body: '곰 발바닥을 누르면 루틴 완료!' }]}
+          index={0}
+          targets={{ demo: { x: 40, y: 60, w: 220, h: 48 } }}
+          frame={{ w: 340, h: 420 }}
+          onNext={() => {}}
+          onSkip={() => {}}
+        />
       </View>
     ),
   },
