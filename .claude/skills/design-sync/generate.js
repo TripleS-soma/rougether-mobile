@@ -375,6 +375,35 @@ ${['cozy', 'forest', 'hanok'].map((id) => block(`${id} · light`, THEMES[id]) + 
   out('components/chips-toggle.html', page('Components', 'Chips · Badges · Toggle', body, css));
 }
 
+/* ---------- components/bear-check ---------- */
+{
+  // ui/bear-check (#344, design-sync 시안 A 채택) — 곰 헤드 루틴 체크 토글.
+  const CAT = ['#E8A87C', '#7FA8D4', '#C8869C', '#7FA87F'];
+  const bear = (fill, line, checked) => `
+  <span class="bc">
+    <i class="ear l" style="background:${fill};border-color:${line}"></i>
+    <i class="ear r" style="background:${fill};border-color:${line}"></i>
+    <i class="head" style="background:${fill};border-color:${line}">${checked ? '<svg viewBox="0 0 100 100" class="tick"><path d="M20 55 L42 74 L80 30"/></svg>' : ''}</i>
+  </span>`;
+  const body = `
+<div class="sub">ui/bear-check — 루틴 완료 토글 (#344). 미완료 = 윤곽선, 완료 = 카테고리 색 + 흰 체크.</div>
+<div class="section">States</div>
+<div class="rowset">${bear(t.surface, t.textDisabled, false)}${bear(CAT[0], CAT[0], true)}</div>
+<div class="section">Category colors</div>
+<div class="rowset">${CAT.map((c) => bear(c, c, true)).join('')}</div>`;
+  const css = `
+  .rowset { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+  .bc { position: relative; display: inline-block; width: 30px; height: 34px; }
+  .bc .ear { position: absolute; top: 0; width: 13px; height: 13px; border-radius: 50%; border: 2.5px solid; }
+  .bc .ear.l { left: 0; transform: rotate(-14deg); }
+  .bc .ear.r { right: 0; transform: rotate(14deg); }
+  .bc .head { position: absolute; left: 1px; right: 1px; top: 5px; bottom: 0; border-radius: 46%;
+    border: 2.5px solid; display: flex; align-items: center; justify-content: center; }
+  .bc .tick { width: 14px; height: 14px; }
+  .bc .tick path { stroke: #fff; stroke-width: 14; stroke-linecap: round; stroke-linejoin: round; fill: none; }`;
+  out('components/bear-check.html', page('Components', 'BearCheck · 루틴 체크 토글', body, css));
+}
+
 /* ---------- patterns/mission-card ---------- */
 {
   const row = (icon, title, prog, pct, meta, right) => `
