@@ -207,6 +207,26 @@ describe('GroupHouseScreen', () => {
     expect(getByLabelText('수달')).toBeTruthy();
   });
 
+  it('구성원 관리 아바타는 각자 캐릭터 — 프리뷰 없으면 내 것만 내 캐릭터 (#342)', async () => {
+    const roomPreviews = {
+      42: {
+        placedFurnitureIds: [],
+        wallpaperId: 'cream',
+        floorId: null,
+        backgroundId: null,
+        characterId: 'otter' as const,
+      },
+    };
+    const { getByLabelText, getAllByLabelText } = await render(
+      <GroupHouseScreen houses={[MISSION_HOUSE]} characterId="tiger" roomPreviews={roomPreviews} />,
+    );
+    await fireEvent.press(getByLabelText('구성원 목록'));
+    // 구성원 관리는 전체 화면 교체라 시트 행 아바타만 남는다: 친구(42)는
+    // 프리뷰의 수달, 나(43)는 내 호랑이 — 수정 전엔 둘 다 호랑이(2/0)였다.
+    expect(getAllByLabelText('수달')).toHaveLength(1);
+    expect(getAllByLabelText('호랑이')).toHaveLength(1);
+  });
+
   it('sends the mission period only when the toggle is on (KST day bounds)', async () => {
     const onCreateMission = jest.fn();
     const { getByLabelText } = await render(

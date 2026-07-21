@@ -380,6 +380,15 @@ export function GroupHouseScreen({
   const keyFor = (name: string) => `${houseIndex}-${name}`;
   const isKicked = (name: string) => kicked.includes(keyFor(name));
 
+  /**
+   * 그 멤버 자신의 캐릭터 (#342) — 방 프리뷰에서 온다. 서버 멤버 목록에는
+   * 캐릭터가 없어, 프리뷰가 아직 없으면 내 행만 내 캐릭터고 남은 기본 캐릭터.
+   * (구성원 관리가 조기 return이라 여기서 선언해야 양쪽에서 보인다.)
+   */
+  const memberCharacterId = (member: RoomCell) =>
+    (member.membershipId != null ? roomPreviews?.[member.membershipId]?.characterId : undefined) ??
+    (member.isMine ? characterId : DEFAULT_CHARACTER_ID);
+
   const prevHouse = () => setHouseIndex((houseIndex - 1 + houses.length) % houses.length);
   const nextHouse = () => setHouseIndex((houseIndex + 1) % houses.length);
 
@@ -901,7 +910,9 @@ export function GroupHouseScreen({
                     {kickedOut ? (
                       <Icon name="leave" size={22} color={t.textMuted} />
                     ) : (
-                      <CharacterAvatar characterId={characterId} size={36} />
+                      // 각자 자기 캐릭터(방 프리뷰) — 아직 안 실렸으면 남에게 내
+                      // 캐릭터를 씌우지 않고 기본 캐릭터로 (#342).
+                      <CharacterAvatar characterId={memberCharacterId(member)} size={36} />
                     )}
                   </View>
                   <View style={styles.flex}>
@@ -1328,7 +1339,9 @@ export function GroupHouseScreen({
               <Text style={[styles.myTagText, { color: t.onTint }]}>MY</Text>
             </View>
           ) : null}
-          {empty || preview ? null : <CharacterAvatar characterId={characterId} size={64} />}
+          {empty || preview ? null : (
+            <CharacterAvatar characterId={memberCharacterId(room)} size={64} />
+          )}
           {/* Tiles keep their fixed pastel bg in dark mode — the name needs
               onTint ink, not the (light) theme text. Over a preview it drops
               to a bottom scrim for contrast. 빈 좌석은 라벨 없이 빈 방
