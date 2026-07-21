@@ -175,6 +175,19 @@ export type GuestbookListResponse = {
   hasNext?: boolean;
 };
 
+export type HouseCheerRequest = {
+  type: string;
+};
+
+export type HouseCheerResponse = {
+  cheerId?: number;
+  houseId?: number;
+  targetMembershipId?: number;
+  targetUserId?: number;
+  type?: string;
+  cheerDate?: string;
+};
+
 export type HouseCoverImage = {
   code?: string;
   name?: string;
@@ -298,6 +311,19 @@ export type HouseMissionResponse = {
   createdAt?: string;
 };
 
+export type HousePreviewDetailResponse = {
+  houseId?: number;
+  name?: string;
+  description?: string;
+  coverImageKey?: string;
+  maxMembers?: number;
+  currentMemberCount?: number;
+  level?: number;
+  goals?: GoalSummary[];
+  isMember?: boolean;
+  isFull?: boolean;
+};
+
 export type HousePreviewResponse = {
   houseId?: number;
   name?: string;
@@ -397,6 +423,7 @@ export type MemberSummary = {
   role?: 'OWNER' | 'MEMBER';
   status?: 'ACTIVE' | 'LEFT' | 'KICKED';
   joinedAt?: string;
+  lastAccessedAt?: string;
 };
 
 export type MemberTodoItem = {
@@ -474,7 +501,7 @@ export type MyItemSummary = {
 
 export type NotificationItem = {
   notificationId?: number;
-  type?: 'HOUSE_KICK' | 'ROUTINE_REMINDER';
+  type?: 'HOUSE_KICK' | 'ROUTINE_REMINDER' | 'FRIEND_CHEER';
   title?: string;
   body?: string;
   isRead?: boolean;

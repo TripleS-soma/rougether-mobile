@@ -3,6 +3,7 @@ import { apiDelete, apiGet, apiGetList, apiPost, apiPut } from './client';
 import { buildQuery } from './http';
 import type { RoomWithLayout } from './rooms';
 import type {
+  HouseCheerResponse,
   HouseCoverImage,
   HouseCreateRequest,
   HouseCreateResponse,
@@ -15,6 +16,7 @@ import type {
   HouseMissionContributeResponse,
   HouseMissionCreateRequest,
   HouseMissionResponse,
+  HousePreviewDetailResponse,
   HousePreviewResponse,
   HouseUpdateRequest,
   HouseUpdateResponse,
@@ -153,39 +155,17 @@ export function claimHouseMission(houseId: number, missionId: number) {
   return apiPost<HouseMissionClaimResponse>(`/houses/${houseId}/missions/${missionId}/claim`);
 }
 
-// 집 미리보기 응답 — 스웨거 HousePreviewDetailResponse (다음 gen:api-types 때 types.ts로 흡수).
-export type HousePreviewDetailWire = {
-  houseId?: number;
-  name?: string;
-  description?: string;
-  coverImageKey?: string;
-  maxMembers?: number;
-  currentMemberCount?: number;
-  level?: number;
-  goals?: { goalId?: number; code?: string; name?: string }[];
-  isMember?: boolean;
-  isFull?: boolean;
-};
-
 /** GET /houses/{id}/preview — 참여 전 미리보기 (비구성원·강퇴 이력자 포함 조회 가능). */
 export function fetchHousePreviewDetail(houseId: number) {
-  return apiGet<HousePreviewDetailWire>(`/houses/${houseId}/preview`);
+  return apiGet<HousePreviewDetailResponse>(`/houses/${houseId}/preview`);
 }
 
-// 응원 타입/응답 — 스웨거 HouseCheerRequest/Response (다음 gen:api-types 때 types.ts로 흡수).
+/** 응원 3종 — 서버는 소문자 문자열로 받는다. */
 export type HouseCheerType = 'great' | 'support' | 'best';
-export type HouseCheerResult = {
-  cheerId?: number;
-  houseId?: number;
-  targetMembershipId?: number;
-  targetUserId?: number;
-  type?: string;
-  cheerDate?: string;
-};
 
 /** POST /houses/{id}/members/{membershipId}/cheer — 원탭 응원 (같은 타입 하루 1회: 409). */
 export function cheerHouseMember(houseId: number, membershipId: number, type: HouseCheerType) {
-  return apiPost<HouseCheerResult>(`/houses/${houseId}/members/${membershipId}/cheer`, { type });
+  return apiPost<HouseCheerResponse>(`/houses/${houseId}/members/${membershipId}/cheer`, { type });
 }
 
 /** DELETE /houses/{id}/missions/{missionId} — OWNER only; COMPLETED missions 409. */
