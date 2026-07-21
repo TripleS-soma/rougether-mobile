@@ -1,3 +1,4 @@
+import { openBrowserAsync } from 'expo-web-browser';
 import { type ReactNode, useState } from 'react';
 import { View } from 'react-native';
 
@@ -36,6 +37,7 @@ import { Pill } from '@/components/ui/pill';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { PendingNotice } from '@/components/ui/pending-notice';
 import { ToastProvider, useToast } from '@/components/ui/toast';
+import { PolicyUrls } from '@/constants/policy';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
 import { RECOMMENDED_HOUSES } from '@/mocks/fixtures';
 import { TokenSwatches } from '@/dev/token-swatches';
@@ -220,7 +222,7 @@ export const galleryEntries: GalleryEntry[] = [
     description: 'Ported from the prototype SignupScreen (#3). Preview at fixed height.',
     render: () => (
       <View style={{ height: 900, alignSelf: 'stretch' }}>
-        <SignupScreen />
+        <SignupScreen onViewPolicy={(doc) => openBrowserAsync(PolicyUrls[doc])} />
       </View>
     ),
   },
