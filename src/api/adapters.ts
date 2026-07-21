@@ -36,7 +36,7 @@ import type {
   HousePreviewDetail,
   SearchHouse,
 } from '@/components/screens/house-search-screen';
-import type { HousePreviewDetailWire } from './houses';
+
 import type { CalendarDayItem } from '@/components/screens/my-room-screen';
 import type { NotificationEntry } from '@/components/screens/notification-list-screen';
 import type { OwnedCharacter } from '@/components/screens/sheets/character-picker-sheet';
@@ -56,6 +56,7 @@ import type {
   HouseDetailResponse,
   HouseMemberDayResponse,
   HouseMemberRoutineCompletionListResponse,
+  HousePreviewDetailResponse,
   HousePreviewResponse,
   HouseSummary,
   ItemResponse,
@@ -706,7 +707,7 @@ export function toNotificationEntry(n: NotificationItem): NotificationEntry {
 
 /** Browse-list card model from the API house summary (decorations cycled). */
 /** GET /houses/{id}/preview → 탐색 미리보기 모달 모델 (#328). */
-export function toHousePreviewDetail(p: HousePreviewDetailWire): HousePreviewDetail {
+export function toHousePreviewDetail(p: HousePreviewDetailResponse): HousePreviewDetail {
   return {
     id: String(p.houseId ?? ''),
     name: p.name ?? '',

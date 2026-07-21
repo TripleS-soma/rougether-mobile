@@ -32,6 +32,7 @@ const ICONS = {
   flame: 'flame',
   star: 'star',
   leave: 'exit-outline',
+  heart: 'heart',
   // 방 꾸미기 선택 툴바 (#333)
   flip: 'swap-horizontal',
   'rotate-ccw': 'arrow-undo-outline',
