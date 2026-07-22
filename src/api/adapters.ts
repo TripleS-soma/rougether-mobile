@@ -36,7 +36,13 @@ import { toIsoDate } from '@/utils/datetime';
 import { type RoomPlacementSave, type RoomPlacementWire, type RoomSlotSave } from './rooms';
 
 import type { HouseCover } from '@/components/house-cover-picker';
-import type { Floor, House, HouseMission, RoomCell } from '@/components/screens/group-house-screen';
+import type {
+  Floor,
+  House,
+  HouseMission,
+  MemberRoomPreview,
+  RoomCell,
+} from '@/components/screens/group-house-screen';
 import type { FriendActivityDay, GuestbookEntry } from '@/components/screens/friend-room-screen';
 import { isPictogramName, type PictogramName } from '@/components/ui/pictograms';
 import type {
@@ -55,6 +61,7 @@ import type {
   GuestbookItem,
   MyCharacterItem,
   MyItemSummary,
+  RoomResponse,
   RoomSlotResponse,
   CharacterItem,
   CategoryResponse,
@@ -65,6 +72,7 @@ import type {
   HouseMemberDayResponse,
   HouseMemberRoutineCompletionListResponse,
   HousePreviewDetailResponse,
+  PreviewMemberRoom,
   HousePreviewResponse,
   HouseSummary,
   ItemResponse,
@@ -708,8 +716,39 @@ export function toNotificationEntry(n: NotificationItem): NotificationEntry {
 }
 
 /** Browse-list card model from the API house summary (decorations cycled). */
-/** GET /houses/{id}/preview → 탐색 미리보기 모달 모델 (#328). */
-export function toHousePreviewDetail(p: HousePreviewDetailResponse): HousePreviewDetail {
+/**
+ * 미리보기 memberRooms 항목 → 창문 타일 렌더 모델 (#386) — 집 화면 멤버 방과
+ * 같은 변환(assetKey를 카탈로그로 역해석). room이 null(방 미생성)이면 집
+ * 화면의 목업과 같은 기본 빈 방을 그린다.
+ */
+function toPreviewRoom(
+  room: RoomResponse | null | undefined,
+  cat: ShopCatalogue,
+): MemberRoomPreview {
+  if (!room) return { placedFurnitureIds: [], placements: [] };
+  const placement = fromFriendRoomSlots(room.slots ?? [], cat);
+  return {
+    placedFurnitureIds: placement.placedFurnitureIds,
+    placements:
+      room.layoutFormat === 'FREE_V1' && room.placements?.length
+        ? fromRoomPlacements(room.placements, cat)
+        : null,
+    wallpaperId: placement.wallpaperId ?? DEFAULT_WALLPAPER_ID,
+    floorId: placement.floorId,
+    backgroundId: placement.backgroundId,
+    characterId: characterIdFromCode(room.character?.code),
+  };
+}
+
+/**
+ * GET /houses/{id}/preview → 탐색 미리보기 모달 모델 (#328). 카탈로그가 있으면
+ * memberRooms를 실제 방 렌더 모델로 함께 변환한다 (#386) — 없으면(상점 미로드)
+ * rooms를 비워 화면이 기존 목업으로 폴백하게 둔다.
+ */
+export function toHousePreviewDetail(
+  p: HousePreviewDetailResponse,
+  catalogue?: ShopCatalogue,
+): HousePreviewDetail {
   return {
     id: String(p.houseId ?? ''),
     name: p.name ?? '',
@@ -721,6 +760,9 @@ export function toHousePreviewDetail(p: HousePreviewDetailResponse): HousePrevie
     goals: (p.goals ?? []).map((g) => g.name ?? '').filter(Boolean),
     isMember: p.isMember,
     isFull: p.isFull,
+    rooms: catalogue
+      ? (p.memberRooms ?? []).map((m: PreviewMemberRoom) => toPreviewRoom(m.room, catalogue))
+      : undefined,
   };
 }
 

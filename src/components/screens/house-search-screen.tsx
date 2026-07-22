@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 
 import { HousePreviewFrame } from '@/components/room/house-preview-frame';
+import type { MemberRoomPreview } from '@/components/screens/group-house-screen';
+import type { FurnitureItem, Wallpaper } from '@/resources/furniture';
 import { Icon } from '@/components/ui/icon';
 import {
   CrownPictogram,
@@ -67,6 +69,8 @@ export type HousePreviewDetail = {
   isMember?: boolean;
   /** At capacity — the join button disables. */
   isFull?: boolean;
+  /** 구성원별 실제 방 (#386, 가입순) — 없으면 인원수 목업으로 폴백. */
+  rooms?: MemberRoomPreview[];
 };
 
 export type HouseSearchScreenProps = {
@@ -89,6 +93,11 @@ export type HouseSearchScreenProps = {
   onJoinHouse?: (houseId: string) => void;
   /** Load the pre-join preview for a browsable house; null = load failed. */
   onPreviewHouse?: (houseId: string) => Promise<HousePreviewDetail | null>;
+  /** 상점 카탈로그 (#386) — 미리보기 창문의 실제 방 렌더에 필요. */
+  furniture?: FurnitureItem[];
+  wallpapers?: Wallpaper[];
+  floors?: Wallpaper[];
+  backgrounds?: Wallpaper[];
   onCreate?: () => void;
 };
 
@@ -105,6 +114,10 @@ export function HouseSearchScreen({
   onPreviewCode,
   onJoinHouse,
   onPreviewHouse,
+  furniture,
+  wallpapers,
+  floors,
+  backgrounds,
   onCreate,
 }: HouseSearchScreenProps) {
   const t = useTokens();
@@ -376,11 +389,16 @@ export function HouseSearchScreen({
         <View style={styles.hpOverlay}>
           <Pressable style={styles.hpBackdrop} onPress={() => setHousePreview(null)} />
           <View style={[styles.hpCard, { backgroundColor: t.screen }]}>
-            {/* 집 화면과 같은 프레임+창문 비주얼 — 비구성원은 방 데이터가 없어
-                (멤버 API 403) 입주 인원수만큼 기본 방 목업을 보여준다. */}
+            {/* 집 화면과 같은 프레임+창문 비주얼 — 프리뷰 응답의 memberRooms로
+                실제 방을 그리고 (#386), 없으면 인원수 목업으로 폴백. */}
             <HousePreviewFrame
               coverImageKey={housePreview.coverImageKey}
               memberCount={housePreview.members}
+              rooms={housePreview.rooms}
+              furniture={furniture}
+              wallpapers={wallpapers}
+              floors={floors}
+              backgrounds={backgrounds}
               name={housePreview.name}
             />
             <Text style={[Typography.h2, { color: t.text }]} numberOfLines={1}>
