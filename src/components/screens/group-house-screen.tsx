@@ -1047,15 +1047,18 @@ export function GroupHouseScreen({
                       </View>
                     );
                   })}
-                  <Image
-                    source={assetSource(coverKey)}
-                    style={StyleSheet.absoluteFill}
-                    contentFit="contain"
-                    transition={120}
-                    pointerEvents="none"
-                    accessibilityLabel={`${currentHouse.title} 집`}
-                    testID="house-frame"
-                  />
+                  {/* Android는 Image 계열이 pointerEvents prop을 무시하고 터치를
+                      삼킨다(#401) — ViewGroup 래퍼가 확실하게 투과시킨다. */}
+                  <View style={StyleSheet.absoluteFill} pointerEvents="none">
+                    <Image
+                      source={assetSource(coverKey)}
+                      style={StyleSheet.absoluteFill}
+                      contentFit="contain"
+                      transition={120}
+                      accessibilityLabel={`${currentHouse.title} 집`}
+                      testID="house-frame"
+                    />
+                  </View>
                 </View>
               </Animated.View>
               {zoomed ? (
