@@ -9,8 +9,8 @@ import {
 } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Radius, Spacing, Typography } from '@/constants/theme';
-import { useTokens } from '@/hooks/use-tokens';
+import { Radius, Spacing } from '@/constants/theme';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 /** 화면(윈도) 좌표계의 대상 사각형. */
 export type TargetRect = { x: number; y: number; w: number; h: number };
@@ -106,6 +106,7 @@ export function CoachMarkOverlay({
   frame,
 }: CoachMarkOverlayProps) {
   const t = useTokens();
+  const Typography = useTypography();
   const step = steps[index];
   if (!step) return null;
   // 셸 onLayout 전(또는 테스트 환경)엔 관례적 폰 크기로 그린다 — 곧 보정됨.

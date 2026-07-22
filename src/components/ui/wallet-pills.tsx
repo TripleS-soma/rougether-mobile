@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon, type IconName } from '@/components/ui/icon';
-import { Radius, Spacing, Typography } from '@/constants/theme';
-import { useTokens } from '@/hooks/use-tokens';
+import { Radius, Spacing } from '@/constants/theme';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 export type WalletPillsProps = {
   coin: number;
@@ -25,6 +25,7 @@ function Pill({
   value: number;
 }) {
   const t = useTokens();
+  const Typography = useTypography();
   const [revealed, setRevealed] = useState(false);
   const overCap = value > CAP;
   const shown = overCap && !revealed ? `${CAP}+` : value.toLocaleString();

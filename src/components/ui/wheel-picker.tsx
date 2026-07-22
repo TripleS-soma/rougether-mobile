@@ -11,8 +11,7 @@ import {
   View,
 } from 'react-native';
 
-import { Typography } from '@/constants/theme';
-import { useTokens } from '@/hooks/use-tokens';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 /** Row height — the selection band and snap interval both derive from this. */
 export const WHEEL_ITEM_HEIGHT = 44;
@@ -51,6 +50,7 @@ export function WheelPicker<T extends string | number>({
   testID,
 }: WheelPickerProps<T>) {
   const t = useTokens();
+  const Typography = useTypography();
   const scrollRef = useRef<ScrollView>(null);
   const index = Math.max(
     0,

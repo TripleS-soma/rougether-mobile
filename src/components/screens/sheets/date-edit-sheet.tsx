@@ -3,8 +3,8 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Calendar } from '@/components/ui/calendar';
 import type { Routine } from '@/constants/routines';
-import { Overlay, Radius, Spacing, Typography } from '@/constants/theme';
-import { useTokens } from '@/hooks/use-tokens';
+import { Overlay, Radius, Spacing } from '@/constants/theme';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { todayIso } from '@/utils/datetime';
 
 export type DateEditSheetProps = {
@@ -29,6 +29,7 @@ export function DateEditSheet({
   onMoveRoutineOccurrence,
 }: DateEditSheetProps) {
   const t = useTokens();
+  const Typography = useTypography();
   const [draft, setDraft] = useState(() => todayIso());
   useEffect(() => {
     if (item) setDraft(item.dueDate ?? todayIso());

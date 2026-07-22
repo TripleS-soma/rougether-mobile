@@ -16,9 +16,9 @@ import {
 } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
 import { Pictogram } from '@/components/ui/pictograms';
-import { Overlay, Radius, Spacing, Typography } from '@/constants/theme';
+import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
-import { useTokens } from '@/hooks/use-tokens';
+import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { formatDate, formatTime } from '@/utils/datetime';
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -85,6 +85,8 @@ export function AddRoutineScreen({
   inUseCategoryIds,
 }: AddRoutineScreenProps) {
   const t = useTokens();
+  const Typography = useTypography();
+  const emph = useFontEmphasis();
   const headerInset = useHeaderInsetStyle();
   const { show: toast } = useToast();
   const isEdit = Boolean(editRoutine);
@@ -182,7 +184,7 @@ export function AddRoutineScreen({
       <ScrollView contentContainerStyle={styles.body}>
         {/* Title */}
         <View style={styles.field}>
-          <Text style={[styles.label, { color: t.text }]}>루틴 이름</Text>
+          <Text style={[styles.label, emph('semibold'), { color: t.text }]}>루틴 이름</Text>
           <View style={[styles.titleRow, { backgroundColor: t.surface }]}>
             <TextInput
               style={[styles.titleInput, { color: t.text }]}
@@ -197,7 +199,7 @@ export function AddRoutineScreen({
         {/* Category */}
         <View style={styles.field}>
           <View style={styles.fieldHead}>
-            <Text style={[styles.label, { color: t.text }]}>카테고리</Text>
+            <Text style={[styles.label, emph('semibold'), { color: t.text }]}>카테고리</Text>
             <Pressable
               onPress={() => setShowCategoryManager(true)}
               accessibilityRole="button"
@@ -244,7 +246,7 @@ export function AddRoutineScreen({
               accessibilityLabel="추천 루틴"
               accessibilityState={{ expanded: presetsOpen }}
               style={styles.presetHead}>
-              <Text style={[styles.label, { color: t.text }]}>추천 루틴</Text>
+              <Text style={[styles.label, emph('semibold'), { color: t.text }]}>추천 루틴</Text>
               <View style={presetsOpen ? styles.chevronOpen : styles.chevronClosed}>
                 <Icon name="forward" size={16} color={t.textMuted} />
               </View>
@@ -284,7 +286,7 @@ export function AddRoutineScreen({
 
         {/* Repeat cadence + days */}
         <View style={styles.field}>
-          <Text style={[styles.label, { color: t.text }]}>반복</Text>
+          <Text style={[styles.label, emph('semibold'), { color: t.text }]}>반복</Text>
           <View style={styles.repeatRow}>
             {REPEAT_OPTIONS.map((opt) => {
               const active = repeat === opt.id;
@@ -310,7 +312,9 @@ export function AddRoutineScreen({
           ) : null}
           {needsDays ? (
             <>
-              <Text style={[styles.label, styles.dayLabel, { color: t.text }]}>반복 요일</Text>
+              <Text style={[styles.label, emph('semibold'), styles.dayLabel, { color: t.text }]}>
+                반복 요일
+              </Text>
               <View style={styles.dayRow}>
                 {DAYS.map((d, i) => {
                   const active = days.includes(i);
@@ -333,7 +337,9 @@ export function AddRoutineScreen({
           ) : null}
           {repeat === 'yearly' ? (
             <>
-              <Text style={[styles.label, styles.dayLabel, { color: t.text }]}>반복 월</Text>
+              <Text style={[styles.label, emph('semibold'), styles.dayLabel, { color: t.text }]}>
+                반복 월
+              </Text>
               <View style={styles.dateGrid}>
                 {MONTHS.map((m) => {
                   const active = yearMonth === m;
@@ -360,7 +366,9 @@ export function AddRoutineScreen({
           ) : null}
           {repeat === 'monthly' || repeat === 'yearly' ? (
             <>
-              <Text style={[styles.label, styles.dayLabel, { color: t.text }]}>반복 일자</Text>
+              <Text style={[styles.label, emph('semibold'), styles.dayLabel, { color: t.text }]}>
+                반복 일자
+              </Text>
               <View style={styles.dateGrid}>
                 {MONTH_DAYS.map((d) => {
                   const active = monthDay === d;
@@ -389,7 +397,7 @@ export function AddRoutineScreen({
 
         {/* Duration */}
         <View style={styles.field}>
-          <Text style={[styles.label, { color: t.text }]}>지속 기간</Text>
+          <Text style={[styles.label, emph('semibold'), { color: t.text }]}>지속 기간</Text>
           <Pressable
             onPress={() => setShowDateSheet(true)}
             accessibilityRole="button"
@@ -410,7 +418,7 @@ export function AddRoutineScreen({
 
         {/* Alarm */}
         <View style={styles.field}>
-          <Text style={[styles.label, { color: t.text }]}>알림 시간</Text>
+          <Text style={[styles.label, emph('semibold'), { color: t.text }]}>알림 시간</Text>
           <Pressable
             onPress={() => setShowTimeSheet(true)}
             accessibilityRole="button"
@@ -431,7 +439,7 @@ export function AddRoutineScreen({
 
         {/* Photo verify */}
         <View style={styles.field}>
-          <Text style={[styles.label, { color: t.text }]}>인증 방식</Text>
+          <Text style={[styles.label, emph('semibold'), { color: t.text }]}>인증 방식</Text>
           <View style={[styles.infoRow, { backgroundColor: t.surface }]}>
             <View style={[styles.infoIcon, { backgroundColor: t.surfaceMuted }]}>
               <Icon name="camera" size={16} color={t.icon} />
@@ -579,7 +587,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.half,
   },
-  label: { fontSize: 14, fontWeight: '600' },
+  label: { fontSize: 14 },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',

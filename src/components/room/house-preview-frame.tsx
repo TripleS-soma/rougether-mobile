@@ -2,6 +2,8 @@ import { Image } from 'expo-image';
 import { StyleSheet, View } from 'react-native';
 
 import { Room } from '@/components/room/room';
+import type { MemberRoomPreview } from '@/components/screens/group-house-screen';
+import type { FurnitureItem, Wallpaper } from '@/resources/furniture';
 import { Radius } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
 import { assetSource, isCdnKey } from '@/resources/asset';
@@ -26,22 +28,34 @@ export const WINDOW_RECTS = [
 export type HousePreviewFrameProps = {
   /** 커버(프레임 PNG) 키 — 없거나 CDN 키가 아니면 기본 프레임 PNG로 렌더. */
   coverImageKey?: string;
-  /** 입주 인원 — 이만큼의 창문에 기본 방 목업이 들어간다 (최대 창문 수). */
+  /** 입주 인원 — rooms가 없을 때 이만큼의 창문에 기본 방 목업이 들어간다. */
   memberCount?: number;
+  /** 구성원별 실제 방 (#386, 가입순) — 있으면 목업 대신 이걸 그린다. */
+  rooms?: MemberRoomPreview[];
+  /** 상점 카탈로그 — 실제 방의 assetKey 아이템 해석용 (없으면 로컬 기본). */
+  furniture?: FurnitureItem[];
+  wallpapers?: Wallpaper[];
+  floors?: Wallpaper[];
+  backgrounds?: Wallpaper[];
   /** 접근성 라벨용 집 이름. */
   name?: string;
 };
 
 /**
  * 집 탐색 미리보기용 미니 하우스 (#328) — 그룹하우스 화면과 같은 "프레임 PNG의
- * 투명 창문 뒤로 방이 보이는" 형태. 비구성원은 멤버 방 데이터를 받을 수 없어
- * (멤버 API 403) 입주 인원수만큼 기본 방 목업을 창문에 채운다. 서버가 프리뷰
- * 응답에 방 레이아웃을 실어주면 실제 방으로 교체한다. 커버가 없는 집도 기본
- * 프레임으로 같은 형태를 유지한다.
+ * 투명 창문 뒤로 방이 보이는" 형태. 프리뷰 응답의 memberRooms(#386)가 있으면
+ * 구성원들의 실제 방을 창문에 그리고, 없으면(카탈로그 미로드·데모) 입주
+ * 인원수만큼 기본 방 목업으로 폴백한다. 커버가 없는 집도 기본 프레임으로
+ * 같은 형태를 유지한다.
  */
 export function HousePreviewFrame({
   coverImageKey,
   memberCount = 0,
+  rooms,
+  furniture,
+  wallpapers,
+  floors,
+  backgrounds,
   name,
 }: HousePreviewFrameProps) {
   const t = useTokens();
@@ -55,7 +69,9 @@ export function HousePreviewFrame({
       style={[styles.frame, !hasFrame && { backgroundColor: t.surfaceMuted }]}
       testID="house-preview-frame">
       {WINDOW_RECTS.map((rect, i) => {
-        const occupied = i < Math.min(memberCount, WINDOW_RECTS.length);
+        const seats = rooms ? rooms.length : memberCount;
+        const occupied = i < Math.min(seats, WINDOW_RECTS.length);
+        const room = rooms?.[i];
         return (
           <View
             key={`window-${i}`}
@@ -67,7 +83,19 @@ export function HousePreviewFrame({
             ]}>
             {occupied ? (
               <View style={StyleSheet.absoluteFill} pointerEvents="none" testID="preview-room">
-                <Room characterId={null} placedFurnitureIds={[]} placements={[]} />
+                <Room
+                  characterId={room?.characterId ?? null}
+                  placedFurnitureIds={room?.placedFurnitureIds ?? []}
+                  placements={room ? (room.placements ?? null) : []}
+                  wallpaperId={room?.wallpaperId}
+                  floorId={room?.floorId}
+                  backgroundId={room?.backgroundId}
+                  furniture={furniture}
+                  wallpapers={wallpapers}
+                  floors={floors}
+                  backgrounds={backgrounds}
+                  fill
+                />
               </View>
             ) : (
               <View

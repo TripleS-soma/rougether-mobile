@@ -1,8 +1,8 @@
 import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
 import { Icon, type IconName } from '@/components/ui/icon';
-import { Radius, Spacing, Typography } from '@/constants/theme';
-import { useTokens } from '@/hooks/use-tokens';
+import { Radius, Spacing } from '@/constants/theme';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'danger';
 
@@ -25,6 +25,7 @@ export function Button({
   style,
 }: ButtonProps) {
   const t = useTokens();
+  const Typography = useTypography();
   const bg = variant === 'secondary' ? t.surface : variant === 'danger' ? t.danger : t.primary;
   const fg = variant === 'secondary' ? t.text : t.onPrimary;
 

@@ -1,6 +1,9 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
-import { HouseSearchScreen } from '@/components/screens/house-search-screen';
+import {
+  type HousePreviewDetail,
+  HouseSearchScreen,
+} from '@/components/screens/house-search-screen';
 import { ToastProvider } from '@/components/ui/toast';
 import { RECOMMENDED_HOUSES } from '@/mocks/fixtures';
 
@@ -217,6 +220,28 @@ describe('HouseSearchScreen — 참여 전 미리보기 (#328)', () => {
     // 멤버 2명 → 창문 2칸에 기본 방 목업, 나머지 2칸은 빈자리 (창문 4칸).
     expect(ui.getAllByTestId('preview-room')).toHaveLength(2);
     expect(ui.getAllByTestId('preview-vacant')).toHaveLength(2);
+  });
+
+  it('renders the actual member rooms in the windows when the preview carries them (#386)', async () => {
+    const withRooms: HousePreviewDetail = {
+      ...DETAIL,
+      members: 3,
+      rooms: [
+        // 실제 방(가구+캐릭터), FREE_V1 방, 방 미생성(기본 빈 방) — 3칸 모두 실렌더.
+        { placedFurnitureIds: ['hanok-bed'], placements: null, wallpaperId: 'wp-1', characterId: 'cat' as const }, // prettier-ignore
+        { placedFurnitureIds: ['hanok-rug'], placements: [{ furnitureId: 'hanok-rug', x: 0.5, y: 0.8, z: 1 }] }, // prettier-ignore
+        { placedFurnitureIds: [], placements: [] },
+      ],
+    };
+    const houses = [{ ...RECOMMENDED_HOUSES[0], id: 'c1', name: '아침집' }];
+    const ui = await render(
+      <HouseSearchScreen houses={houses} onPreviewHouse={jest.fn(async () => withRooms)} />,
+    );
+    await fireEvent.press(ui.getByLabelText('아침집 미리보기'));
+    await waitFor(() => expect(ui.getByTestId('house-preview-frame')).toBeTruthy());
+    // rooms가 있으면 인원수(3)가 아니라 rooms 길이대로 실제 방을 그린다.
+    expect(ui.getAllByTestId('preview-room')).toHaveLength(3);
+    expect(ui.getAllByTestId('preview-vacant')).toHaveLength(1);
   });
 
   it('shows 이미 참여 중 instead of the join button for a member', async () => {

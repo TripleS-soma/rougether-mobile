@@ -1,8 +1,8 @@
 import { Modal, Pressable, StyleSheet, Text } from 'react-native';
 
 import { Calendar } from '@/components/ui/calendar';
-import { Overlay, Radius, Spacing, Typography } from '@/constants/theme';
-import { useTokens } from '@/hooks/use-tokens';
+import { Overlay, Radius, Spacing } from '@/constants/theme';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 export type TodoDateDialogProps = {
   visible: boolean;
@@ -20,6 +20,7 @@ export type TodoDateDialogProps = {
  */
 export function TodoDateDialog({ visible, value, onSelect, onClose }: TodoDateDialogProps) {
   const t = useTokens();
+  const Typography = useTypography();
 
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>

@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { useFontEmphasis } from '@/hooks/use-tokens';
 import { type StyleProp, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
@@ -26,6 +27,7 @@ export type FurniturePlaceholderProps = {
  * (colored box + Korean name) for legacy local-catalog items without art.
  */
 export function FurniturePlaceholder({ item, showName = true, style }: FurniturePlaceholderProps) {
+  const emph = useFontEmphasis();
   if (isCdnKey(item.assetKey)) {
     return (
       <View accessibilityLabel={item.name} style={[styles.tile, style]}>
@@ -43,7 +45,7 @@ export function FurniturePlaceholder({ item, showName = true, style }: Furniture
       accessibilityLabel={item.name}
       style={[styles.tile, { backgroundColor: CATEGORY_BG[item.category] }, style]}>
       {showName ? (
-        <Text style={styles.name} numberOfLines={2}>
+        <Text style={[styles.name, emph('semibold')]} numberOfLines={2}>
           {item.name}
         </Text>
       ) : null}
@@ -66,7 +68,6 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 10,
     lineHeight: 13,
-    fontWeight: '600',
     textAlign: 'center',
     color: '#5A4F45',
   },
