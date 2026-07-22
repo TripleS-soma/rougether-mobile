@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { CategoryFormSheet } from '@/components/screens/sheets/category-form-sheet';
 import { Icon } from '@/components/ui/icon';
-import { Pictogram } from '@/components/ui/pictograms';
+import { CategoryIcon } from '@/components/ui/category-icon';
 import { type RoutineCategoryMeta, VISIBILITY_LABELS } from '@/constants/routines';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
@@ -117,7 +117,7 @@ export function CategoryManageScreen({
                       moving && { borderWidth: 2, borderColor: t.primary, borderLeftWidth: 4 },
                     ]}>
                     <View style={[styles.catDot, { backgroundColor: `${c.color}33` }]}>
-                      <Pictogram name={c.icon} size={16} />
+                      <CategoryIcon name={c.icon} color={c.color} size={16} />
                     </View>
                     <View style={styles.flex}>
                       <Text style={[Typography.body, { color: t.text }]}>{c.label}</Text>

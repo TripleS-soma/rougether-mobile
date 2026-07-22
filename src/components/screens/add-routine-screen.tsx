@@ -15,7 +15,7 @@ import {
   type RoutineCategoryMeta,
 } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
-import { Pictogram } from '@/components/ui/pictograms';
+import { CategoryIcon } from '@/components/ui/category-icon';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
@@ -212,7 +212,12 @@ export function AddRoutineScreen({
                   key={c.id}
                   onPress={() => setCategory(c.id)}
                   style={[styles.chip, { backgroundColor: active ? c.color : t.surface }]}>
-                  <Pictogram name={c.icon} size={14} color={active ? t.onPrimary : undefined} />
+                  <CategoryIcon
+                    name={c.icon}
+                    color={c.color}
+                    size={14}
+                    mono={active ? t.onPrimary : undefined}
+                  />
                   <Text style={[Typography.label, { color: active ? t.onPrimary : t.textMuted }]}>
                     {c.label}
                   </Text>

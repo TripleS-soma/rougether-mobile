@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
+import { CategoryIcon } from '@/components/ui/category-icon';
 import { Pictogram, type PictogramName } from '@/components/ui/pictograms';
 import {
   CATEGORY_COLORS,
@@ -117,7 +118,7 @@ export function CategoryFormSheet({
 
         <ScrollView contentContainerStyle={styles.body}>
           <View style={[styles.nameRow, { backgroundColor: t.surface }]}>
-            <Pictogram name={icon} size={20} />
+            <CategoryIcon name={icon} color={color} size={20} />
             <TextInput
               value={name}
               onChangeText={setName}
@@ -143,7 +144,7 @@ export function CategoryFormSheet({
                     { backgroundColor: active ? t.primarySoft : t.surfaceMuted },
                     active && { borderColor: t.primary, borderWidth: 2 },
                   ]}>
-                  <Pictogram name={e} size={18} />
+                  <CategoryIcon name={e} color={color} size={18} />
                 </Pressable>
               );
             })}
