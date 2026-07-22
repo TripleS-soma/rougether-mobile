@@ -117,6 +117,12 @@ export type SemanticColors = {
   warningText: string;
   /** Status — negative. Astryx categorical red. */
   danger: string;
+  /** Soft tint of `primary` (8-digit hex, ~13% alpha) — selected chips, owner badges. */
+  primarySoft: string;
+  /** Soft tint of `warning` — notice/banner backgrounds. */
+  warningSoft: string;
+  /** Soft tint of `danger` — destructive-action backgrounds (삭제/나가기). */
+  dangerSoft: string;
   /** Background of disabled buttons/controls (text on it: `onPrimary`/`textMuted`). */
   disabledBg: string;
   /** 집 화면 야외 배경 — 프레임 뒤 하늘 (#287). 커버와 무관한 고정 톤. */
@@ -146,6 +152,9 @@ export const Themes: Record<ThemeId, SemanticColors> = {
     warning: '#E8A24A',
     warningText: '#9D6014',
     danger: '#D67878',
+    primarySoft: '#7FA87F22',
+    warningSoft: '#E8A24A22',
+    dangerSoft: '#D6787822',
     disabledBg: '#D9D2C5',
     sky: '#C3E0F5',
     grass: '#B5D89A',
@@ -170,6 +179,9 @@ export const Themes: Record<ThemeId, SemanticColors> = {
     warning: '#E8A24A',
     warningText: '#9D6014',
     danger: '#D67878',
+    primarySoft: '#5F9B6A22',
+    warningSoft: '#E8A24A22',
+    dangerSoft: '#D6787822',
     disabledBg: '#CBD8C4',
     sky: '#C3E0F5',
     grass: '#B5D89A',
@@ -194,6 +206,9 @@ export const Themes: Record<ThemeId, SemanticColors> = {
     warning: '#C9943F',
     warningText: '#886226',
     danger: '#C77A6A',
+    primarySoft: '#9A7B4F22',
+    warningSoft: '#C9943F22',
+    dangerSoft: '#C77A6A22',
     disabledBg: '#DCCFB9',
     sky: '#C3E0F5',
     grass: '#B5D89A',
@@ -228,6 +243,9 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = {
     warning: '#EDB061',
     warningText: '#EDB061',
     danger: '#E08D8D',
+    primarySoft: '#93BE9322',
+    warningSoft: '#EDB06122',
+    dangerSoft: '#E08D8D22',
     disabledBg: '#3D362C',
     sky: '#2A3448',
     grass: '#33422E',
@@ -252,6 +270,9 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = {
     warning: '#EDB061',
     warningText: '#EDB061',
     danger: '#E08D8D',
+    primarySoft: '#7FBC8B22',
+    warningSoft: '#EDB06122',
+    dangerSoft: '#E08D8D22',
     disabledBg: '#32402F',
     sky: '#2A3448',
     grass: '#33422E',
@@ -276,6 +297,9 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = {
     warning: '#DCA855',
     warningText: '#DCA855',
     danger: '#DA9384',
+    primarySoft: '#C4A16F22',
+    warningSoft: '#DCA85522',
+    dangerSoft: '#DA938422',
     disabledBg: '#453A28',
     sky: '#2A3448',
     grass: '#33422E',
@@ -302,6 +326,25 @@ export const StaticWhite = '#FFFFFF';
  * `backgroundColor` in app.json, or the native → JS splash handoff flashes.
  */
 export const SplashBackground = '#208AEF';
+
+/** Dim scrims behind sheets/dialogs/full-screen overlays — theme-independent. */
+export const Overlay = {
+  dim: 'rgba(0,0,0,0.4)',
+  strong: 'rgba(0,0,0,0.55)',
+} as const;
+
+/**
+ * Derived data palettes — deterministic client-side colors for entities the
+ * server doesn't color yet (gacha boxes, wallpapers, member rooms, houses).
+ * Picked by list position (`index % length`) in `src/api/adapters.ts`.
+ */
+export const GachaAccents = ['#E8DCC8', '#D6E4D2', '#F7E6C8', '#D8D2EC', '#E6D2D2', '#D2E4E6'];
+export const WallpaperTints = ['#F3E9D6', '#E4F0DC', '#F7E4EA', '#E3EEF8', '#ECE8FA', '#F7ECD8'];
+export const RoomTints = ['#F5E1D8', '#D9E8D4', '#F5E8C8', '#E4DCF0', '#FBE0D8', '#D8E8F0'];
+/** 내 방 타일 — 멤버 로테이션과 구분되는 고정 톤. */
+export const MyRoomTint = '#E8E0D0';
+export const HouseBgs = ['#FFEFD8', '#E4F0DC', '#E3EEF8', '#F7E4EA', '#ECE8FA', '#F7ECD8'];
+export const HouseBorders = ['#F0C88A', '#A8C898', '#9FBEDD', '#DBA8BC', '#B7A8DD', '#DDC08A'];
 
 export const Radius = {
   sm: 8,

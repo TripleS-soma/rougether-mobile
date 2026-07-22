@@ -1,7 +1,7 @@
 import { Modal, Pressable, StyleSheet, Text } from 'react-native';
 
 import { Calendar } from '@/components/ui/calendar';
-import { Radius, Spacing, Typography } from '@/constants/theme';
+import { Overlay, Radius, Spacing, Typography } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
 
 export type TodoDateDialogProps = {
@@ -36,7 +36,7 @@ export function TodoDateDialog({ visible, value, onSelect, onClose }: TodoDateDi
 const styles = StyleSheet.create({
   dialogBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: Overlay.dim,
     alignItems: 'center',
     justifyContent: 'center',
     padding: Spacing.four,

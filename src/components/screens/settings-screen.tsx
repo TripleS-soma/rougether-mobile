@@ -2,7 +2,14 @@ import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Icon, type IconName } from '@/components/ui/icon';
-import { DEFAULT_THEME_MODE, Radius, Spacing, type ThemeMode, Typography } from '@/constants/theme';
+import {
+  Overlay,
+  DEFAULT_THEME_MODE,
+  Radius,
+  Spacing,
+  type ThemeMode,
+  Typography,
+} from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 
@@ -258,7 +265,7 @@ const styles = StyleSheet.create({
   },
   confirmBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: Overlay.dim,
     alignItems: 'center',
     justifyContent: 'center',
     padding: Spacing.four,

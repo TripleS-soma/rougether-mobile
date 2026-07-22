@@ -4,7 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { CharacterAvatar, type CharacterAnimationSet } from '@/components/character-avatar';
 import { Icon } from '@/components/ui/icon';
 import { CHARACTER_OPTIONS, type CharacterId } from '@/constants/characters';
-import { Radius, Spacing, Typography } from '@/constants/theme';
+import { Overlay, Radius, Spacing, Typography } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
 import { assetSource, isCdnKey } from '@/resources/asset';
 
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: Overlay.dim,
   },
   sheet: {
     borderTopLeftRadius: Radius.lg,

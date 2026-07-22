@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Calendar } from '@/components/ui/calendar';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Icon } from '@/components/ui/icon';
-import { Radius, Spacing, Typography } from '@/constants/theme';
+import { Overlay, Radius, Spacing, Typography } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
 import { formatDate } from '@/utils/datetime';
 
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: Overlay.dim,
   },
   sheet: {
     borderTopLeftRadius: Radius.lg,

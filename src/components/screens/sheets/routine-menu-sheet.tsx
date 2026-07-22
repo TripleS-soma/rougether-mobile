@@ -2,7 +2,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
 import type { Routine } from '@/constants/routines';
-import { Radius, Spacing, Typography } from '@/constants/theme';
+import { Overlay, Radius, Spacing, Typography } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
 
 export type RoutineMenuSheetProps = {
@@ -136,7 +136,7 @@ export function RoutineMenuSheet({
 const styles = StyleSheet.create({
   sheetBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: Overlay.dim,
     justifyContent: 'flex-end',
   },
   sheet: {
