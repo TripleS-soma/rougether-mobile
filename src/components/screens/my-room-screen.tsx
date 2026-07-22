@@ -44,7 +44,7 @@ import {
 } from '@/constants/routines';
 import { BearCheck } from '@/components/ui/bear-check';
 import { Icon } from '@/components/ui/icon';
-import { Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { captureVerificationPhoto } from '@/lib/photo-verify';
 import { saveRoomImage } from '@/lib/room-capture';
 import {
@@ -54,7 +54,7 @@ import {
   type Wallpaper,
 } from '@/resources/furniture';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
-import { useTokens } from '@/hooks/use-tokens';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
 import { formatDate, formatTime, todayIso } from '@/utils/datetime';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
@@ -311,6 +311,7 @@ export function MyRoomScreen({
   onRequestPhoto = captureVerificationPhoto,
 }: MyRoomScreenProps) {
   const t = useTokens();
+  const Typography = useTypography();
   const headerInset = useHeaderInsetStyle();
   const { show: toast } = useToast();
   const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];

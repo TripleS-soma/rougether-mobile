@@ -2,9 +2,9 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 
 import { Icon, type IconName } from '@/components/ui/icon';
 import { ScreenHeader } from '@/components/ui/screen-header';
-import { Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
-import { useTokens } from '@/hooks/use-tokens';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 /** One notification row (server GET /notifications). */
 export type NotificationEntry = {
@@ -60,6 +60,7 @@ export function NotificationListScreen({
   onLoadMore,
 }: NotificationListScreenProps) {
   const t = useTokens();
+  const Typography = useTypography();
   const entries = notifications ?? DEFAULT_NOTIFICATIONS;
   const hasUnread = entries.some((n) => !n.read);
 

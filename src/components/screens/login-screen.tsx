@@ -16,7 +16,7 @@ import { Icon } from '@/components/ui/icon';
 import { useToast } from '@/components/ui/toast';
 import { Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
-import { useTokens } from '@/hooks/use-tokens';
+import { useFontEmphasis, useTokens } from '@/hooks/use-tokens';
 
 export type LoginScreenProps = {
   onAuthSuccess?: () => void;
@@ -39,6 +39,7 @@ export type LoginScreenProps = {
  */
 export function LoginScreen({ onAuthSuccess, onGoSignup, onLogin }: LoginScreenProps) {
   const t = useTokens();
+  const emph = useFontEmphasis();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
@@ -90,7 +91,7 @@ export function LoginScreen({ onAuthSuccess, onGoSignup, onLogin }: LoginScreenP
                 accessibilityLabel="루게더 앱 아이콘"
               />
             </View>
-            <Text style={[styles.title, { color: t.text }]}>루게더</Text>
+            <Text style={[styles.title, emph('bold'), { color: t.text }]}>루게더</Text>
             <Text style={[styles.subtitle, { color: t.textMuted }]}>
               매일의 루틴으로 나만의 방과 집을 함께 키워요.
             </Text>
@@ -111,7 +112,7 @@ export function LoginScreen({ onAuthSuccess, onGoSignup, onLogin }: LoginScreenP
               secureTextEntry={!showPw}
               trailing={
                 <Pressable onPress={() => setShowPw((v) => !v)} accessibilityRole="button">
-                  <Text style={[styles.smallLink, { color: t.textMuted }]}>
+                  <Text style={[styles.smallLink, emph('semibold'), { color: t.textMuted }]}>
                     {showPw ? '숨김' : '보기'}
                   </Text>
                 </Pressable>
@@ -135,7 +136,9 @@ export function LoginScreen({ onAuthSuccess, onGoSignup, onLogin }: LoginScreenP
                 <Text style={[styles.smallText, { color: t.textMuted }]}>로그인 유지</Text>
               </Pressable>
               <Pressable accessibilityRole="button" onPress={notReady}>
-                <Text style={[styles.smallLink, { color: t.primaryText }]}>비밀번호 찾기</Text>
+                <Text style={[styles.smallLink, emph('semibold'), { color: t.primaryText }]}>
+                  비밀번호 찾기
+                </Text>
               </Pressable>
             </View>
           </View>
@@ -150,7 +153,12 @@ export function LoginScreen({ onAuthSuccess, onGoSignup, onLogin }: LoginScreenP
               { backgroundColor: canSubmit ? t.primary : t.disabledBg },
               pressed && canSubmit && { backgroundColor: t.primaryActive },
             ]}>
-            <Text style={[styles.submitText, { color: canSubmit ? t.onPrimary : t.textMuted }]}>
+            <Text
+              style={[
+                styles.submitText,
+                emph('semibold'),
+                { color: canSubmit ? t.onPrimary : t.textMuted },
+              ]}>
               {submitting ? '로그인 중…' : '로그인'}
             </Text>
           </Pressable>
@@ -193,7 +201,9 @@ export function LoginScreen({ onAuthSuccess, onGoSignup, onLogin }: LoginScreenP
           <View style={styles.footer}>
             <Text style={[styles.smallText, { color: t.textMuted }]}>아직 회원이 아니신가요? </Text>
             <Pressable onPress={onGoSignup} accessibilityRole="button">
-              <Text style={[styles.smallLink, { color: t.primaryText }]}>회원가입</Text>
+              <Text style={[styles.smallLink, emph('semibold'), { color: t.primaryText }]}>
+                회원가입
+              </Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -213,6 +223,7 @@ type SocialButtonProps = {
 
 function SocialButton({ bg, textColor, label, glyph, bordered, onPress }: SocialButtonProps) {
   const t = useTokens();
+  const emph = useFontEmphasis();
   return (
     <Pressable
       style={styles.socialItem}
@@ -225,7 +236,7 @@ function SocialButton({ bg, textColor, label, glyph, bordered, onPress }: Social
           { backgroundColor: bg },
           bordered && { borderWidth: StyleSheet.hairlineWidth, borderColor: t.border },
         ]}>
-        <Text style={[styles.socialGlyph, { color: textColor }]}>{glyph}</Text>
+        <Text style={[styles.socialGlyph, emph('bold'), { color: textColor }]}>{glyph}</Text>
       </View>
       <Text style={[styles.smallText, { color: t.textMuted }]}>{label}</Text>
     </Pressable>
@@ -268,7 +279,6 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: '700',
   },
   subtitle: {
     fontSize: 14,
@@ -309,7 +319,6 @@ const styles = StyleSheet.create({
   },
   submitText: {
     fontSize: 16,
-    fontWeight: '600',
   },
   errorText: {
     fontSize: 13,
@@ -344,7 +353,6 @@ const styles = StyleSheet.create({
   },
   socialGlyph: {
     fontSize: 20,
-    fontWeight: '700',
   },
   footer: {
     flexDirection: 'row',
@@ -357,6 +365,5 @@ const styles = StyleSheet.create({
   },
   smallLink: {
     fontSize: 12,
-    fontWeight: '600',
   },
 });

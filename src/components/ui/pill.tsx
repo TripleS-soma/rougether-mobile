@@ -1,8 +1,8 @@
 import { StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
 import { Icon, type IconName } from '@/components/ui/icon';
-import { Radius, Spacing, Typography } from '@/constants/theme';
-import { useTokens } from '@/hooks/use-tokens';
+import { Radius, Spacing } from '@/constants/theme';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 export type PillProps = {
   label: string;
@@ -16,6 +16,7 @@ export type PillProps = {
 /** Small rounded label chip (e.g. coin balance, level). */
 export function Pill({ label, icon, background, color, style }: PillProps) {
   const t = useTokens();
+  const Typography = useTypography();
   return (
     <View style={[styles.pill, { backgroundColor: background ?? t.surfaceMuted }, style]}>
       {icon ? <Icon name={icon} size={14} color={color ?? t.text} /> : null}

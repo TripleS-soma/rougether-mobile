@@ -5,9 +5,9 @@ import { CharacterAvatar } from '@/components/character-avatar';
 import { Field } from '@/components/ui/field';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
-import { Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
-import { useTokens } from '@/hooks/use-tokens';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 const NICKNAME_MAX = 12;
 const BIO_MAX = 40;
@@ -33,6 +33,7 @@ export function ProfileEditScreen({
   onBack,
 }: ProfileEditScreenProps) {
   const t = useTokens();
+  const Typography = useTypography();
   const [nickname, setNickname] = useState(initialNickname);
   const [bio, setBio] = useState(initialBio);
   const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];

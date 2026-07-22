@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import type { Routine } from '@/constants/routines';
-import { Overlay, Radius, Spacing, Typography } from '@/constants/theme';
-import { useTokens } from '@/hooks/use-tokens';
+import { Overlay, Radius, Spacing } from '@/constants/theme';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 export type RenameDialogProps = {
   /** 이름을 바꿀 루틴/투두 — null이면 다이얼로그가 닫힌다. */
@@ -20,6 +20,7 @@ export type RenameDialogProps = {
  */
 export function RenameDialog({ item, onClose, onRename }: RenameDialogProps) {
   const t = useTokens();
+  const Typography = useTypography();
   const [text, setText] = useState('');
   useEffect(() => {
     if (item) setText(item.title);

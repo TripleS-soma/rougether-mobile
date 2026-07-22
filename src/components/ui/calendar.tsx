@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Spacing, Typography } from '@/constants/theme';
-import { useTokens } from '@/hooks/use-tokens';
+import { Spacing } from '@/constants/theme';
+import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -34,6 +34,8 @@ export type CalendarProps = {
  */
 export function Calendar({ value, min, max, onSelect }: CalendarProps) {
   const t = useTokens();
+  const Typography = useTypography();
+  const emph = useFontEmphasis();
   const selected = parse(value);
   const [view, setView] = useState({ y: selected.y, m: selected.m });
 
@@ -78,6 +80,7 @@ export function Calendar({ value, min, max, onSelect }: CalendarProps) {
             <Text
               style={[
                 styles.weekday,
+                emph('semibold'),
                 { color: i === 0 ? readableTextColor(t.danger, t.surfaceMuted) : t.textMuted },
               ]}>
               {w}
@@ -157,7 +160,6 @@ const styles = StyleSheet.create({
   },
   weekday: {
     fontSize: 12,
-    fontWeight: '600',
   },
   dayCircle: {
     width: 34,

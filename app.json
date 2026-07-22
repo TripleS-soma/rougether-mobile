@@ -35,6 +35,25 @@
     "plugins": [
       "expo-router",
       [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/NanumSquareRoundR.ttf",
+            "./assets/fonts/NanumSquareRoundB.ttf",
+            "./assets/fonts/NanumSquareRoundEB.ttf",
+            "./assets/fonts/Pretendard-Regular.otf",
+            "./assets/fonts/Pretendard-Medium.otf",
+            "./assets/fonts/Pretendard-SemiBold.otf",
+            "./assets/fonts/Pretendard-Bold.otf",
+            "./assets/fonts/Jua-Regular.ttf",
+            "./assets/fonts/SUIT-Regular.otf",
+            "./assets/fonts/SUIT-Medium.otf",
+            "./assets/fonts/SUIT-SemiBold.otf",
+            "./assets/fonts/SUIT-Bold.otf"
+          ]
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#208AEF",

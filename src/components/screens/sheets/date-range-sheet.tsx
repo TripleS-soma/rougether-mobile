@@ -4,8 +4,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Calendar } from '@/components/ui/calendar';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Icon } from '@/components/ui/icon';
-import { Overlay, Radius, Spacing, Typography } from '@/constants/theme';
-import { useTokens } from '@/hooks/use-tokens';
+import { Overlay, Radius, Spacing } from '@/constants/theme';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { formatDate } from '@/utils/datetime';
 
 export type DateRangeSheetProps = {
@@ -30,6 +30,7 @@ export function DateRangeSheet({
   onClose,
 }: DateRangeSheetProps) {
   const t = useTokens();
+  const Typography = useTypography();
   const [startDate, setStartDate] = useState(initialStartDate);
   const [hasEndDate, setHasEndDate] = useState(Boolean(initialEndDate));
   const [endDate, setEndDate] = useState(initialEndDate ?? initialStartDate);
@@ -164,6 +165,7 @@ function Tab({
   onPress: () => void;
 }) {
   const t = useTokens();
+  const Typography = useTypography();
   return (
     <Pressable
       onPress={onPress}

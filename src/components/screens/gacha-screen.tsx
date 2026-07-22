@@ -17,10 +17,10 @@ import type { DrawResult } from '@/api/types';
 import { Icon } from '@/components/ui/icon';
 import { Pictogram, type PictogramName } from '@/components/ui/pictograms';
 import { WalletPills } from '@/components/ui/wallet-pills';
-import { Overlay, Radius, Spacing, StaticWhite, Typography } from '@/constants/theme';
+import { Overlay, Radius, Spacing, StaticWhite } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
-import { useTokens } from '@/hooks/use-tokens';
+import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { assetSource, isCdnKey } from '@/resources/asset';
 import { RARITY_COLORS, type Rarity } from '@/resources/furniture';
 import { hapticImpact, hapticSuccess } from '@/utils/haptics';
@@ -63,6 +63,8 @@ export function GachaScreen({
   onDraw,
 }: GachaScreenProps) {
   const t = useTokens();
+  const Typography = useTypography();
+  const emph = useFontEmphasis();
   const headerInset = useHeaderInsetStyle();
   const { show: toast } = useToast();
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -231,7 +233,11 @@ export function GachaScreen({
                         color={affordable ? t.onPrimary : t.textMuted}
                       />
                       <Text
-                        style={[styles.cost, { color: affordable ? t.onPrimary : t.textMuted }]}>
+                        style={[
+                          styles.cost,
+                          emph('semibold'),
+                          { color: affordable ? t.onPrimary : t.textMuted },
+                        ]}>
                         {cost.toLocaleString()}
                       </Text>
                     </View>
@@ -336,6 +342,8 @@ function ChargingBox({ icon, accent }: { icon: PictogramName; accent: string }) 
  * single pull gets one large hero card. */
 function RevealCard({ item, index, large }: { item: DrawResult; index: number; large?: boolean }) {
   const t = useTokens();
+  const Typography = useTypography();
+  const emph = useFontEmphasis();
   const p = useRef(new Animated.Value(0)).current;
   const rarityColor = RARITY_COLORS[(item.rarity as Rarity) ?? '일반'] ?? RARITY_COLORS['일반'];
 
@@ -375,7 +383,7 @@ function RevealCard({ item, index, large }: { item: DrawResult; index: number; l
       ) : (
         <Icon name="gift" size={large ? 72 : 34} color={rarityColor} />
       )}
-      <Text style={[styles.revealBadge, { backgroundColor: rarityColor }]}>
+      <Text style={[styles.revealBadge, emph('bold'), { backgroundColor: rarityColor }]}>
         {item.rarity ?? '일반'}
       </Text>
       <Text style={[Typography.supporting, styles.center, { color: t.text }]} numberOfLines={2}>
@@ -444,7 +452,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   costRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.half },
-  cost: { fontSize: 12, fontWeight: '600' },
+  cost: { fontSize: 12 },
 
   // Pull animation overlay (rendered inside a full-screen Modal)
   overlay: {
@@ -503,7 +511,6 @@ const styles = StyleSheet.create({
   revealBadge: {
     color: StaticWhite,
     fontSize: 10,
-    fontWeight: '700',
     overflow: 'hidden',
     borderRadius: Radius.pill,
     paddingHorizontal: Spacing.two,

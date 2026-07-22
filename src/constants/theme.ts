@@ -408,7 +408,9 @@ export type TypeRole =
 export type TypeStyle = {
   fontSize: number;
   lineHeight: number;
-  fontWeight: (typeof FontWeight)[keyof typeof FontWeight];
+  /** Set for the system font only — custom fonts select weight via fontFamily. */
+  fontWeight?: (typeof FontWeight)[keyof typeof FontWeight];
+  fontFamily?: string;
 };
 
 /**
@@ -428,3 +430,101 @@ export const Typography: Record<TypeRole, TypeStyle> = {
   supporting: { fontSize: 12, lineHeight: 16, fontWeight: FontWeight.normal },
   code: { fontSize: 13, lineHeight: 18, fontWeight: FontWeight.medium },
 };
+
+// ---------- 앱 폰트 선택 (#382) ----------
+
+/** Selectable app font. Persisted with the theme choice; 'system' is the OS default. */
+export type BrandFontId = 'nanum' | 'pretendard' | 'jua' | 'suit' | 'system';
+
+export const DEFAULT_FONT_ID: BrandFontId = 'nanum';
+
+/** Settings picker entries, in display order. */
+export const FONT_OPTIONS: { id: BrandFontId; name: string }[] = [
+  { id: 'nanum', name: '나눔스퀘어라운드' },
+  { id: 'pretendard', name: '프리텐다드' },
+  { id: 'jua', name: '주아 혼합' },
+  { id: 'suit', name: 'SUIT' },
+  { id: 'system', name: '시스템 기본' },
+];
+
+export type FontWeightKey = keyof typeof FontWeight;
+
+/**
+ * Weight → font family (PostScript name). Files in `assets/fonts` are named
+ * after their PostScript names so the same string resolves on iOS (PostScript
+ * lookup) and Android (asset filename lookup). Custom-font styles must NOT set
+ * `fontWeight` — Android would synthesize a fake bold on top of the real face.
+ * NanumSquareRound has no 500 face, so medium reuses regular.
+ */
+const FontFamilies: Record<
+  Exclude<BrandFontId, 'system' | 'jua'>,
+  Record<FontWeightKey, string>
+> = {
+  nanum: {
+    normal: 'NanumSquareRoundR',
+    medium: 'NanumSquareRoundR',
+    semibold: 'NanumSquareRoundB',
+    bold: 'NanumSquareRoundEB',
+  },
+  pretendard: {
+    normal: 'Pretendard-Regular',
+    medium: 'Pretendard-Medium',
+    semibold: 'Pretendard-SemiBold',
+    bold: 'Pretendard-Bold',
+  },
+  suit: {
+    normal: 'SUIT-Regular',
+    medium: 'SUIT-Medium',
+    semibold: 'SUIT-SemiBold',
+    bold: 'SUIT-Bold',
+  },
+};
+
+/** 주아 혼합: headings get the chunky BM Jua face, running text stays Pretendard. */
+const JUA_HEADING_ROLES: ReadonlySet<TypeRole> = new Set(['display1', 'display2', 'h1', 'h2']);
+
+const WEIGHT_KEY_BY_VALUE = Object.fromEntries(
+  Object.entries(FontWeight).map(([k, v]) => [v, k]),
+) as Record<(typeof FontWeight)[FontWeightKey], FontWeightKey>;
+
+/**
+ * The type scale for a selected font: same sizes/line-heights as `Typography`,
+ * with each role's weight mapped to the matching font file. 'system' returns
+ * `Typography` itself. Jua is display-only (single weight) — body roles fall
+ * back to Pretendard. Use via `useTypography()`, not directly.
+ */
+export function typographyFor(fontId: BrandFontId): Record<TypeRole, TypeStyle> {
+  if (fontId === 'system') return Typography;
+  const out = {} as Record<TypeRole, TypeStyle>;
+  for (const [role, style] of Object.entries(Typography) as [TypeRole, TypeStyle][]) {
+    if (fontId === 'jua' && JUA_HEADING_ROLES.has(role)) {
+      out[role] = {
+        fontSize: style.fontSize,
+        lineHeight: style.lineHeight,
+        fontFamily: 'Jua-Regular',
+      };
+      continue;
+    }
+    const families = FontFamilies[fontId === 'jua' ? 'pretendard' : fontId];
+    const weightKey = WEIGHT_KEY_BY_VALUE[style.fontWeight ?? FontWeight.normal];
+    out[role] = {
+      fontSize: style.fontSize,
+      lineHeight: style.lineHeight,
+      fontFamily: families[weightKey],
+    };
+  }
+  return out;
+}
+
+/**
+ * Weight emphasis that works with the active font: the system font takes a
+ * real `fontWeight`, custom fonts swap the family (fake-bold guard above).
+ * For ad-hoc `fontWeight:` overrides on top of a Typography role.
+ */
+export type EmphasisStyle = Pick<TypeStyle, 'fontWeight' | 'fontFamily'>;
+
+export function fontEmphasis(fontId: BrandFontId, weight: FontWeightKey): EmphasisStyle {
+  if (fontId === 'system') return { fontWeight: FontWeight[weight] };
+  if (fontId === 'jua') return { fontFamily: FontFamilies.pretendard[weight] };
+  return { fontFamily: FontFamilies[fontId][weight] };
+}

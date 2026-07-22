@@ -1,8 +1,8 @@
 import { Image } from 'expo-image';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { FontWeight, Radius, Spacing, Typography } from '@/constants/theme';
-import { useTokens } from '@/hooks/use-tokens';
+import { Radius, Spacing } from '@/constants/theme';
+import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { assetSource } from '@/resources/asset';
 
 /** One selectable house cover (server GET /houses/cover-images). */
@@ -27,6 +27,8 @@ export type HouseCoverPickerProps = {
  */
 export function HouseCoverPicker({ covers, selectedKey, onSelect }: HouseCoverPickerProps) {
   const t = useTokens();
+  const Typography = useTypography();
+  const emph = useFontEmphasis();
   if (covers.length === 0) return null;
 
   return (
@@ -55,7 +57,10 @@ export function HouseCoverPicker({ covers, selectedKey, onSelect }: HouseCoverPi
               accessibilityLabel={c.name}
               testID="cover-art"
             />
-            <Text style={[Typography.supporting, styles.name, { color: t.text }]} numberOfLines={1}>
+            {/* Supporting base; the label carries the selection so it reads bolder. */}
+            <Text
+              style={[Typography.supporting, emph('semibold'), { color: t.text }]}
+              numberOfLines={1}>
               {c.name}
             </Text>
           </Pressable>
@@ -84,9 +89,5 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 1.4,
     borderRadius: Radius.sm,
-  },
-  // Typography.supporting base; the label carries the selection so it reads bolder.
-  name: {
-    fontWeight: FontWeight.semibold,
   },
 });
