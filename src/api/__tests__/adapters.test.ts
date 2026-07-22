@@ -14,6 +14,7 @@ import {
   toWallet,
   todayCompletions,
   toGroupHouse,
+  toPresence,
   toHouseMission,
   toHouseCover,
   characterIdFromCode,
@@ -359,6 +360,49 @@ describe('API adapters', () => {
     // Without a profile nickname it falls back to 멤버 N.
     const anon = toGroupHouse(detail, members, 6);
     expect(anon.floors.flatMap((f) => f.rooms).find((r) => r.isMine)?.name).toBe('멤버 6');
+  });
+
+  it('derives tile presence from lastAccessedAt (#383)', () => {
+    const now = Date.parse('2026-07-22T12:00:00Z');
+    // 40분 창 안 → 접속 중, 라벨 없음.
+    expect(toPresence('2026-07-22T11:30:00Z', now)).toEqual({ online: true });
+    // 창 밖 → 상대 시각 라벨.
+    expect(toPresence('2026-07-22T11:10:00Z', now)).toEqual({ lastSeenLabel: '50분 전' });
+    expect(toPresence('2026-07-22T09:00:00Z', now)).toEqual({ lastSeenLabel: '3시간 전' });
+    expect(toPresence('2026-07-20T12:00:00Z', now)).toEqual({ lastSeenLabel: '2일 전' });
+    expect(toPresence('2025-07-22T12:00:00Z', now)).toEqual({ lastSeenLabel: '오래 전' });
+    // 존 표기가 빠진 UTC(서버 계약)도 로컬로 오독하지 않는다.
+    expect(toPresence('2026-07-22T11:30:00', now)).toEqual({ online: true });
+    // 이력 없음/깨진 값 → 아무것도 표시하지 않음.
+    expect(toPresence(undefined, now)).toEqual({});
+    expect(toPresence('not-a-date', now)).toEqual({});
+
+    const detail = { houseId: 1, name: '집' };
+    const members = [
+      {
+        membershipId: 1,
+        userId: 6,
+        role: 'OWNER' as const,
+        status: 'ACTIVE' as const,
+        nickname: '나',
+        lastAccessedAt: '2026-07-22T11:50:00Z',
+      },
+      {
+        membershipId: 2,
+        userId: 4,
+        role: 'MEMBER' as const,
+        status: 'ACTIVE' as const,
+        nickname: '이웃',
+        lastAccessedAt: '2026-07-22T06:00:00Z',
+      },
+    ];
+    const rooms = toGroupHouse(detail, members, 6, undefined, undefined, now).floors.flatMap(
+      (f) => f.rooms,
+    );
+    expect(rooms.find((r) => r.isMine)?.online).toBe(true);
+    const neighbor = rooms.find((r) => !r.isMine);
+    expect(neighbor?.online).toBeUndefined();
+    expect(neighbor?.lastSeenLabel).toBe('6시간 전');
   });
 
   it('carries growth points through for the level-progress pill', () => {

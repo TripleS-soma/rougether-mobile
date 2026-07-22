@@ -569,10 +569,43 @@ const HOUSE_ICONS: PictogramName[] = [
 ];
 
 /**
+ * 접속 중 판정 창 (#383) — lastAccessedAt은 로그인/refresh 시에만 갱신되는
+ * access token TTL(30분) 해상도라, TTL + 여유 10분 안이면 "접속 중"으로 본다.
+ */
+const ONLINE_WINDOW_MS = 40 * 60 * 1000;
+
+/**
+ * MemberSummary.lastAccessedAt(UTC) → 방 타일 접속 표시 (#383). 창 안이면
+ * online, 밖이면 상대 시각 라벨("3시간 전"). 값이 없거나(접속 이력 없음)
+ * 못 읽으면 둘 다 생략 — 타일은 아무것도 덧붙이지 않는다.
+ */
+export function toPresence(
+  lastAccessedAt: string | undefined,
+  nowMs: number,
+): { online?: boolean; lastSeenLabel?: string } {
+  if (!lastAccessedAt) return {};
+  // 스웨거는 UTC를 약속하지만 존 표기가 빠져 오면 로컬로 오독된다 — Z를 보강.
+  const iso = /[zZ]|[+-]\d{2}:?\d{2}$/.test(lastAccessedAt) ? lastAccessedAt : `${lastAccessedAt}Z`;
+  const then = Date.parse(iso);
+  if (Number.isNaN(then)) return {};
+  const diff = nowMs - then;
+  if (diff <= ONLINE_WINDOW_MS) return { online: true };
+  const minutes = Math.floor(diff / 60_000);
+  if (minutes < 60) return { lastSeenLabel: `${minutes}분 전` };
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return { lastSeenLabel: `${hours}시간 전` };
+  const days = Math.floor(hours / 24);
+  if (days < 30) return { lastSeenLabel: `${days}일 전` };
+  return { lastSeenLabel: '오래 전' };
+}
+
+/**
  * Build the group-house screen model from house detail + members. The grid is
  * sized by the house capacity (not the headcount): rooms fill two per floor
  * from the bottom-left — my room first, then the others in join order — and
  * the yet-unfilled seats render as quiet vacant tiles on the upper floors.
+ * Occupied tiles carry the member's presence (#383) derived from
+ * `lastAccessedAt` at `nowMs` (injectable for tests).
  */
 export function toGroupHouse(
   detail: HouseDetailResponse,
@@ -580,6 +613,7 @@ export function toGroupHouse(
   myUserId?: number,
   myNickname?: string,
   missions?: HouseMission[],
+  nowMs: number = Date.now(),
 ): House {
   const active = members.filter((m) => m.status !== 'LEFT');
   // Me first → my room lands on the bottom-left seat.
@@ -598,6 +632,7 @@ export function toGroupHouse(
     isOwner: m.role === 'OWNER',
     membershipId: m.membershipId,
     userId: m.userId,
+    ...toPresence(m.lastAccessedAt, nowMs),
   }));
   // Pad to the capacity so the house always shows 정원 seats; the server keeps
   // maxMembers >= headcount, but clamp anyway so a stale detail can't drop rooms.

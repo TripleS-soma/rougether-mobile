@@ -70,6 +70,10 @@ export type RoomCell = {
   isMine?: boolean;
   /** This member is the house OWNER (👑 on the tile + 방장 badge). */
   isOwner?: boolean;
+  /** 최근 40분 내 앱 접속 (#383) — 이름 앞 초록 점. lastAccessedAt 근사치. */
+  online?: boolean;
+  /** 오프라인일 때 이름 아래 붙는 마지막 접속 상대 시각 ("3시간 전"). */
+  lastSeenLabel?: string;
   /** API membership id — enables the server kick action when provided. */
   membershipId?: number;
   /** API user id — the friend's room owner id (guestbook, room visit). */
@@ -187,15 +191,15 @@ const DEFAULT_HOUSES: House[] = [
       {
         level: '2층',
         rooms: [
-          { name: '장진형', color: '#D9E8D4' },
-          { name: '임채영', color: '#F5E8C8' },
+          { name: '장진형', color: '#D9E8D4', online: true },
+          { name: '임채영', color: '#F5E8C8', lastSeenLabel: '3시간 전' },
         ],
       },
       {
         level: '1층',
         rooms: [
-          { name: '나의 방', color: '#E8E0D0', isMine: true },
-          { name: '최준서', color: '#F5E1D8', isOwner: true },
+          { name: '나의 방', color: '#E8E0D0', isMine: true, online: true },
+          { name: '최준서', color: '#F5E1D8', isOwner: true, lastSeenLabel: '2일 전' },
         ],
       },
     ],
@@ -786,7 +790,12 @@ export function GroupHouseScreen({
           onPressOut={onTilePressOut}
           disabled={empty}
           accessibilityRole="button"
-          accessibilityLabel={room.isMine ? `${room.name} (나)` : room.name}
+          accessibilityLabel={[
+            room.isMine ? `${room.name} (나)` : room.name,
+            room.online ? '접속 중' : room.lastSeenLabel && `${room.lastSeenLabel} 접속`,
+          ]
+            .filter(Boolean)
+            .join(', ')}
           accessibilityHint={
             empty
               ? undefined
@@ -848,16 +857,35 @@ export function GroupHouseScreen({
               to a bottom scrim for contrast. 빈 좌석은 라벨 없이 빈 방
               비주얼만 — 접근성 라벨은 Pressable이 유지한다. */}
           {empty ? null : (
-            <View style={[styles.roomNameRow, preview && styles.roomNameOverlay]}>
-              {room.isOwner ? <CrownPictogram size={12} /> : null}
-              <Text
-                style={[
-                  Typography.supporting,
-                  styles.roomName,
-                  { color: preview ? StaticWhite : t.onTint },
-                ]}>
-                {room.isMine ? `${room.name} (나)` : room.name}
-              </Text>
+            <View style={[styles.roomMeta, preview && styles.roomNameOverlay]}>
+              <View style={styles.roomNameRow}>
+                {room.isOwner ? <CrownPictogram size={12} /> : null}
+                {room.online ? (
+                  // 최근 접속(#383) — 초록 점. 정확한 실시간이 아니라 40분 근사.
+                  <View
+                    style={[styles.onlineDot, { backgroundColor: t.success }]}
+                    testID="online-dot"
+                  />
+                ) : null}
+                <Text
+                  style={[
+                    Typography.supporting,
+                    styles.roomName,
+                    { color: preview ? StaticWhite : t.onTint },
+                  ]}>
+                  {room.isMine ? `${room.name} (나)` : room.name}
+                </Text>
+              </View>
+              {!room.online && room.lastSeenLabel ? (
+                <Text
+                  style={[
+                    Typography.supporting,
+                    styles.lastSeen,
+                    { color: preview ? StaticWhite : t.onTint },
+                  ]}>
+                  {room.lastSeenLabel}
+                </Text>
+              ) : null}
             </View>
           )}
         </Pressable>
@@ -1384,5 +1412,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.one,
+  },
+  // Name row + optional last-seen line (#383), centered as one block.
+  roomMeta: {
+    alignItems: 'center',
+  },
+  onlineDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  lastSeen: {
+    opacity: 0.75,
   },
 });
