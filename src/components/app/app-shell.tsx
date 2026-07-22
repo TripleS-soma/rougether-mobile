@@ -838,7 +838,12 @@ export function AppShell({
                 return ok;
               }}
               onPreviewCode={previewByCode}
-              onPreviewHouse={previewHouse}
+              // 카탈로그를 얹어 미리보기 창문에 실제 방을 그린다 (#386).
+              onPreviewHouse={(houseId) => previewHouse(houseId, catalogue)}
+              furniture={catalogue.furniture}
+              wallpapers={catalogue.wallpapers}
+              floors={catalogue.floors}
+              backgrounds={catalogue.backgrounds}
               onJoinHouse={(houseId) => {
                 void joinSearchHouse(houseId).then((ok) => ok && setScreen('groupHouse'));
               }}

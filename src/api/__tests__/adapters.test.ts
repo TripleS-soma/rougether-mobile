@@ -17,6 +17,7 @@ import {
   toPresence,
   toHouseMission,
   toHouseCover,
+  toHousePreviewDetail,
   characterIdFromCode,
   toGachaMachine,
   fromFriendRoomSlots,
@@ -607,6 +608,50 @@ describe('API adapters', () => {
       floorId: '11',
       backgroundId: null,
     });
+  });
+
+  it('converts preview memberRooms into window room models with the catalogue (#386)', () => {
+    const cat = {
+      furniture: [
+        { id: '2', name: '침대', slot: 'bottomLeft' as const, category: '가구' as const, price: 0, assetKey: 'items/a/bed.png' }, // prettier-ignore
+      ],
+      wallpapers: [{ id: '9', name: '벽지', price: 0, assetKey: 'items/a/wp.png', color: '#FFF' }],
+      floors: [],
+      backgrounds: [],
+      ownedIds: [],
+    };
+    const wire = {
+      houseId: 3,
+      name: '미리보기집',
+      currentMemberCount: 2,
+      memberRooms: [
+        {
+          membershipId: 1,
+          room: {
+            layoutFormat: 'SLOT_V1' as const,
+            character: { code: 'cat' },
+            slots: [
+              { slotType: 'bottomLeft', userItemId: 777, assetKey: 'items/a/bed.png' },
+              { slotType: 'wallpaper', userItemId: 778, assetKey: 'items/a/wp.png' },
+            ],
+          },
+        },
+        // 방 미생성 구성원 → 기본 빈 방.
+        { membershipId: 2, room: null },
+      ],
+    };
+    const detail = toHousePreviewDetail(wire, cat);
+    expect(detail.rooms).toHaveLength(2);
+    expect(detail.rooms![0]).toMatchObject({
+      placedFurnitureIds: ['2'],
+      wallpaperId: '9',
+      placements: null,
+      characterId: 'cat',
+    });
+    expect(detail.rooms![1]).toEqual({ placedFurnitureIds: [], placements: [] });
+
+    // 카탈로그가 없으면(상점 미로드) rooms를 만들지 않아 목업으로 폴백한다.
+    expect(toHousePreviewDetail(wire).rooms).toBeUndefined();
   });
 
   it('maps a house member day to the friend routine list', () => {
