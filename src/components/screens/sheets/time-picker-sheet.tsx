@@ -247,6 +247,8 @@ const styles = StyleSheet.create({
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    // 고정폭 칩의 wrap 그리드 — 가운데 정렬로 좌우 여백을 같게 (#388).
+    justifyContent: 'center',
     gap: Spacing.two,
     paddingVertical: Spacing.half,
   },
