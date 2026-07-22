@@ -102,13 +102,12 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
       const freeLayout = room?.layoutFormat === 'FREE_V1';
       // FREE_V1 방은 서버 placements 그대로, 슬롯 방은 앵커 좌표로 프리필해
       // 같은 모습에서 이어서 편집한다 (#327).
-      const placedItems =
-        freeLayout && room?.placements?.length
-          ? fromRoomPlacements(room.placements, cat, userItemMapRef.current)
-          : slotIdsToPlacements(
-              saved?.placedFurnitureIds ?? fallback.placedFurnitureIds,
-              cat.furniture,
-            );
+      const placedItems = freeLayout
+        ? fromRoomPlacements(room?.placements ?? [], cat, userItemMapRef.current)
+        : slotIdsToPlacements(
+            saved?.placedFurnitureIds ?? fallback.placedFurnitureIds,
+            cat.furniture,
+          );
       setPlacement({
         items: placedItems,
         placedFurnitureIds: placedItems.map((p) => p.furnitureId),

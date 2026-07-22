@@ -222,7 +222,7 @@ export function RoomDecorScreen({
   // 선택된 가구 — 링 + 툴바(회전/반전/앞뒤/빼기) + 크기 핸들 대상 (#333).
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  /** 가운데에 새 가구를 놓는다 — 같은 가구는 방에 1개만. */
+  /** 아이템별 FREE 기본 위치에 새 가구를 놓는다 — 같은 가구는 방에 1개만. */
   const addItem = (item: FurnitureItem) => {
     if (items.some((p) => p.furnitureId === item.id)) {
       toast('이미 배치된 가구예요', 'error');
@@ -230,7 +230,15 @@ export function RoomDecorScreen({
     }
     const maxZ = items.reduce((m, p) => Math.max(m, p.z), 0);
     const scale = Math.min(SCALE_MAX, Math.max(SCALE_MIN, item.defaultScale ?? 1));
-    const { x, y } = ROOM_RENDER_CONTRACT.furniture.newPlacementCenter;
+    const center = ROOM_RENDER_CONTRACT.furniture.newPlacementCenter;
+    const hasItemDefault =
+      typeof item.defaultPositionX === 'number' && typeof item.defaultPositionY === 'number';
+    const preferredX = hasItemDefault ? item.defaultPositionX! : center.x;
+    const preferredY = hasItemDefault ? item.defaultPositionY! : center.y;
+    const bounds = dragClampBounds(scale);
+    const clamp = (value: number) => Math.min(bounds.max, Math.max(bounds.min, value));
+    const x = clamp(preferredX);
+    const y = clamp(preferredY);
     setItems((prev) => [...prev, { furnitureId: item.id, x, y, z: maxZ + 1, scale }]);
   };
   const removeItem = (id: string) => {

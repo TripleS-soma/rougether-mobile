@@ -242,6 +242,8 @@ describe('API adapters', () => {
         placementType: 'positioned',
         defaultSlot: 'topLeft',
         defaultScale: 1.24,
+        defaultPositionX: 0.35,
+        defaultPositionY: 0.65,
         categoryCode: 'decor',
         priceAmount: 100,
         assetKey: 'items/window.png',
@@ -253,6 +255,8 @@ describe('API adapters', () => {
         name: '침대',
         placementType: 'positioned',
         defaultSlot: 'bottomLeft',
+        defaultPositionX: null,
+        defaultPositionY: null,
         categoryCode: 'furniture',
         priceAmount: 100,
         owned: false,
@@ -284,7 +288,13 @@ describe('API adapters', () => {
       category: '장식',
       price: 100,
       defaultScale: 1.24,
+      defaultPositionX: 0.35,
+      defaultPositionY: 0.65,
       theme: '숲속 세이지',
+    });
+    expect(cat.furniture[1]).toMatchObject({
+      defaultPositionX: undefined,
+      defaultPositionY: undefined,
     });
     expect(cat.wallpapers.map((w) => w.id)).toEqual(['3']);
     expect(cat.floors.map((f) => f.id)).toEqual(['4']);

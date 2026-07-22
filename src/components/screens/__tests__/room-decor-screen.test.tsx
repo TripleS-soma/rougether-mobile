@@ -64,7 +64,7 @@ describe('RoomDecorScreen (#327 — 자유 배치)', () => {
     expect(onApply.mock.calls[0].slice(1)).toEqual(['simple', null, null]);
   });
 
-  it('snapshots defaultScale only when a new FREE_V1 item is placed', async () => {
+  it('snapshots item render defaults only when a new FREE_V1 item is placed', async () => {
     const onApply = jest.fn();
     const furniture = [
       {
@@ -72,6 +72,8 @@ describe('RoomDecorScreen (#327 — 자유 배치)', () => {
         id: 'scale-reference',
         name: '기준 램프',
         defaultScale: 1.24,
+        defaultPositionX: 0.35,
+        defaultPositionY: 0.65,
       },
     ];
     const { getByText, getByLabelText } = await render(
@@ -84,7 +86,63 @@ describe('RoomDecorScreen (#327 — 자유 배치)', () => {
 
     await waitFor(() => expect(onApply).toHaveBeenCalled());
     expect(onApply.mock.calls[0][0]).toEqual([
-      expect.objectContaining({ furnitureId: 'scale-reference', scale: 1.24 }),
+      expect.objectContaining({
+        furnitureId: 'scale-reference',
+        scale: 1.24,
+        x: 0.35,
+        y: 0.65,
+      }),
+    ]);
+  });
+
+  it('uses the shared center when either item default coordinate is missing', async () => {
+    const onApply = jest.fn();
+    const furniture = [
+      {
+        ...FURNITURE_ITEMS[0],
+        id: 'partial-position',
+        name: '좌표 한쪽만 있는 램프',
+        defaultPositionX: 0.2,
+        defaultPositionY: undefined,
+      },
+    ];
+    const { getByText, getByLabelText } = await render(
+      <RoomDecorScreen initialItems={[]} freeLayout furniture={furniture} onApply={onApply} />,
+    );
+
+    await fireEvent.press(getByLabelText('전체보기'));
+    await fireEvent.press(getByText('좌표 한쪽만 있는 램프'));
+    await fireEvent.press(getByText('적용하기'));
+
+    await waitFor(() => expect(onApply).toHaveBeenCalled());
+    expect(onApply.mock.calls[0][0]).toEqual([
+      expect.objectContaining({ furnitureId: 'partial-position', x: 0.5, y: 0.55 }),
+    ]);
+  });
+
+  it('clamps a large item default position inside the room', async () => {
+    const onApply = jest.fn();
+    const furniture = [
+      {
+        ...FURNITURE_ITEMS[0],
+        id: 'edge-position',
+        name: '가장자리 큰 램프',
+        defaultScale: 2,
+        defaultPositionX: 0,
+        defaultPositionY: 1,
+      },
+    ];
+    const { getByText, getByLabelText } = await render(
+      <RoomDecorScreen initialItems={[]} freeLayout furniture={furniture} onApply={onApply} />,
+    );
+
+    await fireEvent.press(getByLabelText('전체보기'));
+    await fireEvent.press(getByText('가장자리 큰 램프'));
+    await fireEvent.press(getByText('적용하기'));
+
+    await waitFor(() => expect(onApply).toHaveBeenCalled());
+    expect(onApply.mock.calls[0][0]).toEqual([
+      expect.objectContaining({ furnitureId: 'edge-position', scale: 2, x: 0.28, y: 0.72 }),
     ]);
   });
 
@@ -96,6 +154,8 @@ describe('RoomDecorScreen (#327 — 자유 배치)', () => {
         id: 'scale-reference',
         name: '기준 램프',
         defaultScale: 1.24,
+        defaultPositionX: 0.2,
+        defaultPositionY: 0.8,
       },
     ];
     const existing: PlacedFurniture = {

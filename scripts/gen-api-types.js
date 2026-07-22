@@ -2,7 +2,7 @@
 /**
  * Regenerate `src/api/types.ts` from the live OpenAPI spec.
  *
- *   node scripts/gen-api-types.js [specUrl]
+ *   node scripts/gen-api-types.js [specUrl] [outputPath]
  *
  * Defaults to the shared dev server. Requires Node 18+ (global fetch).
  */
@@ -10,28 +10,51 @@ const fs = require('fs');
 const path = require('path');
 
 const SPEC_URL = process.argv[2] || 'http://3.35.167.122:8080/v3/api-docs';
-const OUT = path.join(__dirname, '..', 'src', 'api', 'types.ts');
+const OUT = process.argv[3]
+  ? path.resolve(process.argv[3])
+  : path.join(__dirname, '..', 'src', 'api', 'types.ts');
 
-function tsType(v) {
+function tsType(v, includeNull = true) {
   if (!v) return 'unknown';
-  if (v.$ref) return v.$ref.split('/').pop();
-  if (v.allOf && v.allOf.length) return tsType(v.allOf[0]);
-  if (v.enum) return v.enum.map((e) => JSON.stringify(e)).join(' | ');
-  switch (v.type) {
-    case 'string':
-      return 'string';
-    case 'integer':
-    case 'number':
-      return 'number';
-    case 'boolean':
-      return 'boolean';
-    case 'array':
-      return `${tsType(v.items)}[]`;
-    case 'object':
-      return 'Record<string, unknown>';
-    default:
-      return 'unknown';
-  }
+  const nullable =
+    includeNull &&
+    (v.nullable === true ||
+      (Array.isArray(v.type) && v.type.includes('null')) ||
+      [...(v.oneOf || []), ...(v.anyOf || [])].some((part) => part.type === 'null'));
+  const variants = [...(v.oneOf || []), ...(v.anyOf || [])].filter((part) => part.type !== 'null');
+  const value = variants.length === 1 ? variants[0] : v;
+  const type = Array.isArray(value.type)
+    ? value.type.find((entry) => entry !== 'null')
+    : value.type;
+
+  let result;
+  if (value.$ref) result = value.$ref.split('/').pop();
+  else if (value.allOf && value.allOf.length) result = tsType(value.allOf[0], false);
+  else if (value.enum) result = value.enum.map((e) => JSON.stringify(e)).join(' | ');
+  else
+    switch (type) {
+      case 'string':
+        result = 'string';
+        break;
+      case 'integer':
+      case 'number':
+        result = 'number';
+        break;
+      case 'boolean':
+        result = 'boolean';
+        break;
+      case 'array': {
+        const itemType = tsType(value.items);
+        result = itemType.includes(' | ') ? `(${itemType})[]` : `${itemType}[]`;
+        break;
+      }
+      case 'object':
+        result = 'Record<string, unknown>';
+        break;
+      default:
+        result = 'unknown';
+    }
+  return nullable ? `${result} | null` : result;
 }
 
 async function main() {
@@ -60,7 +83,11 @@ async function main() {
   console.log(`Wrote ${names.length} types to ${path.relative(process.cwd(), OUT)}`);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}
+
+module.exports = { tsType };

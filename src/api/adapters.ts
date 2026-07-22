@@ -473,6 +473,8 @@ function toFurnitureItem(item: ItemResponse): FurnitureItem {
     price: item.priceAmount ?? 0,
     assetKey: item.assetKey ?? '',
     defaultScale: item.defaultScale ?? 1,
+    defaultPositionX: item.defaultPositionX ?? undefined,
+    defaultPositionY: item.defaultPositionY ?? undefined,
     theme: item.theme?.name,
   };
 }
