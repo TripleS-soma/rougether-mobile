@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { useState } from 'react';
 import { PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -5,38 +6,41 @@ import { CharacterAvatar } from '@/components/character-avatar';
 import { Icon } from '@/components/ui/icon';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Radius, Spacing } from '@/constants/theme';
-import { Pictogram, type PictogramName } from '@/components/ui/pictograms';
 import { useToast } from '@/components/ui/toast';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 
-type Slide = { icon: PictogramName; bg: string; title: string; description: string };
+type Slide = { image: number; title: string; description: string };
 
+/**
+ * 인트로 5장 (#412, design-sync A안): 비주얼은 계정 4로 촬영한 실제 앱 화면
+ * 캡처(라이트, 390×844 → 560px 최적화). UI가 크게 바뀌면 재촬영해 교체한다.
+ */
 const SLIDES: Slide[] = [
   {
-    icon: 'sprout',
-    bg: '#F1E7D6',
-    title: '루게더에 오신 걸 환영해요',
-    description:
-      '매일의 작은 루틴이 모여 나만의 마을을 만들어가요.\n캐릭터 친구와 함께 시작해볼까요?',
+    image: require('@/assets/images/onboarding/my-room.png'),
+    title: '매일의 루틴이\n포근한 방이 되는 곳',
+    description: '루게더에 오신 걸 환영해요',
   },
   {
-    icon: 'checklist',
-    bg: '#E4F0DC',
-    title: '오늘의 루틴을 완료해요',
-    description: '기상, 독서, 운동 같은 루틴을 만들고\n매일 체크하며 보상을 받아보세요.',
+    image: require('@/assets/images/onboarding/routines.png'),
+    title: '오늘의 루틴을\n곰 체크로 완료해요',
+    description: '카테고리로 모아 보고, 알림·사진 인증까지',
   },
   {
-    icon: 'house',
-    bg: '#F5D8C8',
-    title: '방을 꾸미고 캐릭터를 키워요',
-    description: '루틴을 완료할수록 캐릭터가 성장하고\n보상으로 방을 더 따뜻하게 채워가요.',
+    image: require('@/assets/images/onboarding/decor.png'),
+    title: '모은 보상으로\n내 방을 꾸며요',
+    description: '가구·벽지·바닥을 원하는 자리에 자유 배치',
   },
   {
-    icon: 'friends',
-    bg: '#D8E4F0',
-    title: '친구들과 함께 집을 만들어요',
-    description: '친구의 방을 구경하고 그룹 미션을 함께\n성공하며 마을을 더 생기있게 만들어보세요.',
+    image: require('@/assets/images/onboarding/house.png'),
+    title: '친구들과 한 집에서\n함께 자라요',
+    description: '방 구경 · 응원 보내기 · 공동 미션으로 집 레벨 업',
+  },
+  {
+    image: require('@/assets/images/onboarding/calendar.png'),
+    title: '기록은 달력으로,\n보상은 뽑기로',
+    description: '지난 완료를 돌아보고 캐릭터·가구를 모아요',
   },
 ];
 
@@ -221,13 +225,20 @@ export function OnboardingScreen({
       </View>
 
       <View style={styles.slideBody} {...slidePan.panHandlers}>
-        <View style={[styles.slideCircle, { backgroundColor: slide.bg }]}>
-          <Pictogram name={slide.icon} size={96} />
-        </View>
         <Text style={[Typography.h2, styles.center, { color: t.text }]}>{slide.title}</Text>
         <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
           {slide.description}
         </Text>
+        {/* 실제 앱 화면 캡처 — 폰 프레임 카드 (#412). 390:844 비율 유지. */}
+        <View style={[styles.captureFrame, { borderColor: t.border, backgroundColor: t.surface }]}>
+          <Image
+            source={slide.image}
+            style={styles.captureImage}
+            contentFit="cover"
+            transition={150}
+            accessibilityLabel={slide.title.replace('\n', ' ')}
+          />
+        </View>
       </View>
 
       <View style={styles.dots}>
@@ -389,13 +400,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.five,
     gap: Spacing.three,
   },
-  slideCircle: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.four,
+  captureFrame: {
+    // 캡처 원본(390×844) 비율의 폰 프레임 카드 — 세로 공간에 맞춰 줄어든다.
+    width: 210,
+    aspectRatio: 390 / 844,
+    maxHeight: 460,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    overflow: 'hidden',
+    alignSelf: 'center',
+    marginTop: Spacing.two,
+    elevation: 3,
+    shadowColor: '#4A403A',
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  captureImage: {
+    width: '100%',
+    height: '100%',
   },
   dots: {
     flexDirection: 'row',
