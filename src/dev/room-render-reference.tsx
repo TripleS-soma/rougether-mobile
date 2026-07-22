@@ -2,6 +2,7 @@ import { View } from 'react-native';
 
 import { Room } from '@/components/room/room';
 import { ROOM_RENDER_CONTRACT } from '@/components/room/room-render-contract';
+import { WallpaperTints } from '@/constants/theme';
 import type { FurnitureItem, PlacedFurniture, Wallpaper } from '@/resources/furniture';
 
 const fixture = ROOM_RENDER_CONTRACT.referenceFixture;
@@ -15,7 +16,7 @@ const furniture: FurnitureItem = {
 const surface = (kind: 'background' | 'wallpaper' | 'floor'): Wallpaper => ({
   ...fixture.surfaces[kind],
   price: 0,
-  color: '#F3E9D6',
+  color: WallpaperTints[0],
 });
 
 const placement: PlacedFurniture = {

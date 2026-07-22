@@ -500,7 +500,8 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
     );
     await fireEvent.press(getByText('적용하기'));
     await waitFor(() => expect(onApply).toHaveBeenCalled());
-    expect(lastApply(onApply)[0]).toEqual(expect.objectContaining({ scale: 2 }));
+    // scale 2에서 실제 폭이 0.56이 되므로 기존 x=0.20도 최소 중심 0.28로 재클램프된다.
+    expect(lastApply(onApply)[0]).toEqual(expect.objectContaining({ scale: 2, x: 0.28 }));
 
     await act(() =>
       fireGestureHandler(getByGestureTestId('item-pinch-plant'), [
