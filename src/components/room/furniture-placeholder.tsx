@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { useFontEmphasis } from '@/hooks/use-tokens';
 import { type StyleProp, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { ROOM_RENDER_CONTRACT } from '@/components/room/room-render-contract';
 import { assetSource, isCdnKey } from '@/resources/asset';
 import { type FurnitureCategory, type FurnitureItem } from '@/resources/furniture';
 
@@ -56,10 +56,10 @@ export function FurniturePlaceholder({ item, showName = true, style }: Furniture
 const styles = StyleSheet.create({
   tile: {
     flex: 1,
-    borderRadius: Radius.md,
+    borderRadius: ROOM_RENDER_CONTRACT.furniture.borderRadiusPx,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: Spacing.one,
+    padding: ROOM_RENDER_CONTRACT.furniture.imagePaddingPx,
   },
   art: {
     width: '100%',

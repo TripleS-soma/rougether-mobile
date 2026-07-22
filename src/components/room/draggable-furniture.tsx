@@ -9,16 +9,21 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
-import { FREE_ITEM_WIDTH } from '@/components/room/room';
+import { ROOM_RENDER_CONTRACT } from '@/components/room/room-render-contract';
 import { useTokens } from '@/hooks/use-tokens';
 import type { FurnitureItem, PlacedFurniture } from '@/resources/furniture';
 
 /** 크기 조절 클램프 (#333) — 서버 제약은 없지만 방을 벗어나지 않는 선. */
-export const SCALE_MIN = 0.5;
-export const SCALE_MAX = 2.0;
-/** 드래그 중심 좌표 클램프 — 기본 박스가 방 밖으로 못 나가는 범위 (#333). */
-export const DRAG_CLAMP_MIN = FREE_ITEM_WIDTH / 2;
-export const DRAG_CLAMP_MAX = 1 - FREE_ITEM_WIDTH / 2;
+export const SCALE_MIN = ROOM_RENDER_CONTRACT.furniture.editorScale.min;
+export const SCALE_MAX = ROOM_RENDER_CONTRACT.furniture.editorScale.max;
+/** 드래그 중심 좌표 클램프의 기본값(스케일 1) (#333). */
+const FREE_ITEM_WIDTH = ROOM_RENDER_CONTRACT.furniture.baseWidth;
+export const dragClampBounds = (scale = 1) => {
+  'worklet';
+  const clampedScale = Math.min(SCALE_MAX, Math.max(SCALE_MIN, scale));
+  const min = (FREE_ITEM_WIDTH * clampedScale) / 2;
+  return { min, max: 1 - min };
+};
 
 export type DraggableFurnitureProps = {
   item: FurnitureItem;
@@ -81,14 +86,15 @@ export function DraggableFurniture({
       start.value = { x: cx.value, y: cy.value };
     })
     .onUpdate((e) => {
-      // 방 경계 클램프 — 가구가 방 밖으로 끌려나가지 않는다 (#333).
+      // 실제 렌더 크기(기본 박스 × scale)까지 방 안에 남게 한다 (#333).
+      const clamp = dragClampBounds(scaleSV.value);
       cx.value = Math.min(
-        DRAG_CLAMP_MAX * roomSize.w,
-        Math.max(DRAG_CLAMP_MIN * roomSize.w, start.value.x + e.translationX),
+        clamp.max * roomSize.w,
+        Math.max(clamp.min * roomSize.w, start.value.x + e.translationX),
       );
       cy.value = Math.min(
-        DRAG_CLAMP_MAX * roomSize.h,
-        Math.max(DRAG_CLAMP_MIN * roomSize.h, start.value.y + e.translationY),
+        clamp.max * roomSize.h,
+        Math.max(clamp.min * roomSize.h, start.value.y + e.translationY),
       );
     })
     .onEnd(() => {

@@ -4,6 +4,7 @@ import { Pressable, type StyleProp, StyleSheet, View, type ViewStyle } from 'rea
 
 import { type CharacterAnimationSet, CharacterAvatar } from '@/components/character-avatar';
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
+import { ROOM_RENDER_CONTRACT, roomPercent } from '@/components/room/room-render-contract';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Radius } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
@@ -22,7 +23,7 @@ import {
 } from '@/resources/furniture';
 
 /** 자유 배치 아이템의 기본 폭 — 방 폭 대비 비율 (슬롯 기본 28%와 동일). */
-export const FREE_ITEM_WIDTH = 0.28;
+export const FREE_ITEM_WIDTH = ROOM_RENDER_CONTRACT.furniture.baseWidth;
 
 /** Region a decor-mode tap can target: a furniture slot or a surface band. */
 export type RoomRegion = FurnitureSlot | 'wall' | 'floor';
@@ -34,19 +35,19 @@ export type RoomRegion = FurnitureSlot | 'wall' | 'floor';
  * mid-height. Default furniture is 28% wide, so left: '36%' centers an item;
  * the bottom corners stay 24% so they don't crowd the character.
  */
-const SLOT_STYLE: Record<FurnitureSlot, ViewStyle> = {
-  // Top row
-  topLeft: { top: '8%', left: '5%' },
-  topCenter: { top: '8%', left: '36%' },
-  topRight: { top: '8%', right: '5%' },
-  // Bottom row (vertical mirror of the top row)
-  bottomLeft: { bottom: '8%', left: '5%', width: '24%' },
-  bottomCenter: { bottom: '8%', left: '36%' },
-  bottomRight: { bottom: '8%', right: '5%', width: '24%' },
-  // Mid-height sides (horizontal mirror of each other)
-  midLeft: { top: '38%', left: '6%' },
-  midRight: { top: '38%', right: '6%' },
-};
+const SLOT_STYLE = Object.fromEntries(
+  SLOT_ORDER.map((slot) => {
+    const rect = ROOM_RENDER_CONTRACT.furniture.slots[slot];
+    return [
+      slot,
+      {
+        top: roomPercent(rect.top),
+        left: roomPercent(rect.left),
+        width: roomPercent(rect.width),
+      },
+    ];
+  }),
+) as Record<FurnitureSlot, ViewStyle>;
 
 export type RoomProps = {
   wallpaperId?: string;
@@ -300,32 +301,32 @@ const styles = StyleSheet.create({
   },
   room: {
     width: '100%',
-    aspectRatio: 1,
-    borderRadius: Radius.lg,
+    aspectRatio: ROOM_RENDER_CONTRACT.room.aspectRatio,
+    borderRadius: ROOM_RENDER_CONTRACT.room.borderRadiusPx,
     overflow: 'hidden',
   },
   // Wall band: CDN wallpaper art is ~1205x585 (width:height ≈ 2:1), so it
   // covers the top half of the square room above the floor band.
   wall: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: '50%',
+    top: roomPercent(ROOM_RENDER_CONTRACT.surfaces.wallpaper.top),
+    left: roomPercent(ROOM_RENDER_CONTRACT.surfaces.wallpaper.left),
+    width: roomPercent(ROOM_RENDER_CONTRACT.surfaces.wallpaper.width),
+    height: roomPercent(ROOM_RENDER_CONTRACT.surfaces.wallpaper.height),
   },
   // Floor band meets the wall band exactly at the midline — no bare strip.
   floor: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: '50%',
+    top: roomPercent(ROOM_RENDER_CONTRACT.surfaces.floor.top),
+    left: roomPercent(ROOM_RENDER_CONTRACT.surfaces.floor.left),
+    width: roomPercent(ROOM_RENDER_CONTRACT.surfaces.floor.width),
+    height: roomPercent(ROOM_RENDER_CONTRACT.surfaces.floor.height),
   },
   // Slot styles may override the width (bottom corners stay 24%).
   furniture: {
     position: 'absolute',
-    width: '28%',
-    aspectRatio: 1,
+    width: roomPercent(ROOM_RENDER_CONTRACT.furniture.baseWidth),
+    aspectRatio: ROOM_RENDER_CONTRACT.furniture.aspectRatio,
   },
   activeSlot: {
     borderWidth: 2.5,
@@ -360,10 +361,12 @@ const styles = StyleSheet.create({
   },
   character: {
     position: 'absolute',
-    alignSelf: 'center',
-    bottom: '16%',
-    width: '42%',
-    height: '42%',
+    left: roomPercent(
+      ROOM_RENDER_CONTRACT.character.centerX - ROOM_RENDER_CONTRACT.character.width / 2,
+    ),
+    bottom: roomPercent(ROOM_RENDER_CONTRACT.character.bottom),
+    width: roomPercent(ROOM_RENDER_CONTRACT.character.width),
+    height: roomPercent(ROOM_RENDER_CONTRACT.character.height),
   },
   characterFill: {
     width: '100%',

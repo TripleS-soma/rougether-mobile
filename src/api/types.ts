@@ -384,6 +384,7 @@ export type ItemResponse = {
   surfaceSlotType?: string;
   characterSlotType?: string;
   defaultSlot?: string;
+  defaultScale?: number;
   categoryCode?: string;
   purchaseCurrencyType?: string;
   priceAmount?: number;
@@ -504,6 +505,7 @@ export type MyItemSummary = {
   surfaceSlotType?: string;
   characterSlotType?: string;
   defaultSlot?: string;
+  defaultScale?: number;
   theme?: ThemeSummary;
   acquiredAt?: string;
 };

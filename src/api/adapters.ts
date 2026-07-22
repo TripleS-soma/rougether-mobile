@@ -472,6 +472,7 @@ function toFurnitureItem(item: ItemResponse): FurnitureItem {
     category: CATEGORY_LABEL[item.categoryCode ?? ''] ?? '장식',
     price: item.priceAmount ?? 0,
     assetKey: item.assetKey ?? '',
+    defaultScale: item.defaultScale ?? 1,
     theme: item.theme?.name,
   };
 }
