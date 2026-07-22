@@ -1,7 +1,18 @@
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import { AppShell } from '@/components/app/app-shell';
 import { AuthProvider } from '@/hooks/use-auth';
+
+// 푸시 탭 콜백을 붙잡아 테스트에서 직접 발화한다 (#405).
+let notificationTapCb: (() => void) | null = null;
+jest.mock('@/lib/push-events', () => ({
+  onNotificationTap: (cb: () => void) => {
+    notificationTapCb = cb;
+    return () => {
+      notificationTapCb = null;
+    };
+  },
+}));
 
 // AppShell loads my-room data from the API on mount; return empty payloads so
 // the render is deterministic and hits no network.
@@ -19,6 +30,21 @@ beforeEach(() => {
 });
 afterEach(() => {
   global.fetch = realFetch;
+});
+
+describe('AppShell — 푸시 탭 라우팅 (#405)', () => {
+  it('알림 탭 콜백이 발화하면 알림 목록 화면으로 이동한다', async () => {
+    const { getByText } = await render(
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>,
+    );
+    expect(notificationTapCb).toBeTruthy();
+
+    await act(async () => notificationTapCb?.());
+
+    await waitFor(() => getByText('알림'));
+  });
 });
 
 describe('AppShell — 코치마크 튜토리얼 (#351)', () => {

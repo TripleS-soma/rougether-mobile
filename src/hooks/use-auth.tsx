@@ -26,6 +26,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let active = true;
     void loadSession().then((session) => {
       if (active) setStatus(session ? 'authed' : 'guest');
+      // 복원된 세션도 토큰을 최신화 (#405) — 자동 로그인만 하는 기기가
+      // 재로그인 없이 (재)등록 기회를 갖는다. 실패해도 무해(soft-fail).
+      if (session) void syncPushToken();
     });
     return () => {
       active = false;
