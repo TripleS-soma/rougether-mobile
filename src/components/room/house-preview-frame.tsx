@@ -107,14 +107,16 @@ export function HousePreviewFrame({
         );
       })}
       {hasFrame ? (
-        <Image
-          source={assetSource(coverKey)}
-          style={StyleSheet.absoluteFill}
-          contentFit="contain"
-          transition={120}
-          pointerEvents="none"
-          accessibilityLabel={name ? `${name} 집 미리보기` : '집 미리보기'}
-        />
+        // Android는 Image 계열이 pointerEvents prop을 무시한다(#401) — View 래퍼로 투과.
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <Image
+            source={assetSource(coverKey)}
+            style={StyleSheet.absoluteFill}
+            contentFit="contain"
+            transition={120}
+            accessibilityLabel={name ? `${name} 집 미리보기` : '집 미리보기'}
+          />
+        </View>
       ) : null}
     </View>
   );
