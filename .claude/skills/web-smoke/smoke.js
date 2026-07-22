@@ -176,14 +176,14 @@ const isoShift = (days) => {
     await tap('프로필 편집');
     await see('닉네임');
     await tapLabel('뒤로 가기');
-    await see('온보딩 다시 보기');
+    await see('튜토리얼 다시 보기');
   });
 
   await step('onboarding-replay-prefilled', async () => {
-    // 온보딩 다시 보기 must open as an EDIT of the previous picks (PR #220):
+    // 튜토리얼 다시 보기 must open as an EDIT of the previous picks (PR #220):
     // at least one goal arrives pre-checked. Completing it re-saves the same
     // selections, so account 4 is left unchanged.
-    await tap('온보딩 다시 보기');
+    await tap('튜토리얼 다시 보기');
     await see('루게더에 오신 걸 환영해요');
     await tap('건너뛰기');
     await see('관심 있는 목표를 골라주세요');
