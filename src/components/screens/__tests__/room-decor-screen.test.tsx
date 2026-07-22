@@ -64,6 +64,62 @@ describe('RoomDecorScreen (#327 — 자유 배치)', () => {
     expect(onApply.mock.calls[0].slice(1)).toEqual(['simple', null, null]);
   });
 
+  it('snapshots defaultScale only when a new FREE_V1 item is placed', async () => {
+    const onApply = jest.fn();
+    const furniture = [
+      {
+        ...FURNITURE_ITEMS[0],
+        id: 'scale-reference',
+        name: '기준 램프',
+        defaultScale: 1.24,
+      },
+    ];
+    const { getByText, getByLabelText } = await render(
+      <RoomDecorScreen initialItems={[]} freeLayout furniture={furniture} onApply={onApply} />,
+    );
+
+    await fireEvent.press(getByLabelText('전체보기'));
+    await fireEvent.press(getByText('기준 램프'));
+    await fireEvent.press(getByText('적용하기'));
+
+    await waitFor(() => expect(onApply).toHaveBeenCalled());
+    expect(onApply.mock.calls[0][0]).toEqual([
+      expect.objectContaining({ furnitureId: 'scale-reference', scale: 1.24 }),
+    ]);
+  });
+
+  it('keeps an existing placement scale instead of reapplying the catalogue default', async () => {
+    const onApply = jest.fn();
+    const furniture = [
+      {
+        ...FURNITURE_ITEMS[0],
+        id: 'scale-reference',
+        name: '기준 램프',
+        defaultScale: 1.24,
+      },
+    ];
+    const existing: PlacedFurniture = {
+      furnitureId: 'scale-reference',
+      x: 0.4,
+      y: 0.6,
+      z: 1,
+      scale: 0.8,
+    };
+    const { getByText } = await render(
+      <RoomDecorScreen
+        initialItems={[existing]}
+        freeLayout
+        furniture={furniture}
+        onApply={onApply}
+      />,
+    );
+
+    await fireEvent.press(getByText('적용하기'));
+
+    await waitFor(() => expect(onApply).toHaveBeenCalled());
+    expect(onApply.mock.calls[0][0]).toEqual([existing]);
+  });
+
   it('toggles a placed item off in the full catalog', async () => {
     const onApply = jest.fn();
     const { getAllByText, getByText, getByLabelText } = await render(
@@ -444,7 +500,8 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
     );
     await fireEvent.press(getByText('적용하기'));
     await waitFor(() => expect(onApply).toHaveBeenCalled());
-    expect(lastApply(onApply)[0]).toEqual(expect.objectContaining({ scale: 2 }));
+    // scale 2에서 실제 폭이 0.56이 되므로 기존 x=0.20도 최소 중심 0.28로 재클램프된다.
+    expect(lastApply(onApply)[0]).toEqual(expect.objectContaining({ scale: 2, x: 0.28 }));
 
     await act(() =>
       fireGestureHandler(getByGestureTestId('item-pinch-plant'), [
@@ -489,7 +546,7 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
     await layoutCanvas(getByTestId);
 
     // 캔버스 폭(320px)만큼 오른쪽으로 끌어도 UI 스레드 클램프에 걸려
-    // 중심이 DRAG_CLAMP_MAX(0.86)에서 멈춘다 — 가구는 빠지지 않는다.
+    // scale 1 기준 중심 0.86에서 멈춘다 — 가구는 빠지지 않는다.
     await act(() =>
       fireGestureHandler(getByGestureTestId('item-pan-plant'), [
         { state: State.BEGAN },
@@ -502,6 +559,30 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
     await waitFor(() => expect(onApply).toHaveBeenCalled());
     expect(lastApply(onApply)[0]).toEqual(
       expect.objectContaining({ furnitureId: 'plant', x: 0.86 }),
+    );
+  });
+
+  it('scaled furniture drag clamp uses its rendered width', async () => {
+    const onApply = jest.fn();
+    const scaled = items(['plant']).map((item) => ({ ...item, scale: 2 }));
+    const { getByTestId, getByText } = await render(
+      <RoomDecorScreen initialItems={scaled} freeLayout onApply={onApply} />,
+    );
+    await layoutCanvas(getByTestId);
+
+    await act(() =>
+      fireGestureHandler(getByGestureTestId('item-pan-plant'), [
+        { state: State.BEGAN },
+        { state: State.ACTIVE },
+        { state: State.ACTIVE, translationX: 400, translationY: 0 },
+        { state: State.END, translationX: 400, translationY: 0 },
+      ]),
+    );
+    await fireEvent.press(getByText('적용하기'));
+    await waitFor(() => expect(onApply).toHaveBeenCalled());
+    // 0.28 기본 폭 × scale 2 = 0.56, 반경 0.28을 제외한 오른쪽 경계.
+    expect(lastApply(onApply)[0]).toEqual(
+      expect.objectContaining({ furnitureId: 'plant', x: 0.72 }),
     );
   });
 });

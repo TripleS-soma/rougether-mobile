@@ -43,6 +43,7 @@ import { WheelPicker } from '@/components/ui/wheel-picker';
 import { PolicyUrls } from '@/constants/policy';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
 import { RECOMMENDED_HOUSES } from '@/mocks/fixtures';
+import { RoomRenderReference } from '@/dev/room-render-reference';
 import { TokenSwatches } from '@/dev/token-swatches';
 import { TypeScalePreview } from '@/dev/type-scale-preview';
 
@@ -76,6 +77,12 @@ function WheelPickerDemo() {
 }
 
 export const galleryEntries: GalleryEntry[] = [
+  {
+    name: 'Room · renderer contract v1 reference',
+    description:
+      '관리자 크기 스튜디오와 동일한 geometry JSON·여름 바다 CDN fixture·캐릭터 애니메이션.',
+    render: () => <RoomRenderReference />,
+  },
   {
     name: 'Design tokens · active theme',
     description: 'Brand semantic colors, Astryx-aligned naming (default: cozy).',

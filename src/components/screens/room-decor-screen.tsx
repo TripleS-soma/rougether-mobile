@@ -14,13 +14,13 @@ import {
 import { type CharacterAnimationSet, CharacterAvatar } from '@/components/character-avatar';
 import {
   DraggableFurniture,
-  DRAG_CLAMP_MAX,
-  DRAG_CLAMP_MIN,
+  dragClampBounds,
   SCALE_MAX,
   SCALE_MIN,
 } from '@/components/room/draggable-furniture';
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { Room, type RoomRegion } from '@/components/room/room';
+import { ROOM_RENDER_CONTRACT, roomPercent } from '@/components/room/room-render-contract';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Icon } from '@/components/ui/icon';
@@ -223,13 +223,15 @@ export function RoomDecorScreen({
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   /** 가운데에 새 가구를 놓는다 — 같은 가구는 방에 1개만. */
-  const addItem = (id: string) => {
-    if (items.some((p) => p.furnitureId === id)) {
+  const addItem = (item: FurnitureItem) => {
+    if (items.some((p) => p.furnitureId === item.id)) {
       toast('이미 배치된 가구예요', 'error');
       return;
     }
     const maxZ = items.reduce((m, p) => Math.max(m, p.z), 0);
-    setItems((prev) => [...prev, { furnitureId: id, x: 0.5, y: 0.55, z: maxZ + 1 }]);
+    const scale = Math.min(SCALE_MAX, Math.max(SCALE_MIN, item.defaultScale ?? 1));
+    const { x, y } = ROOM_RENDER_CONTRACT.furniture.newPlacementCenter;
+    setItems((prev) => [...prev, { furnitureId: item.id, x, y, z: maxZ + 1, scale }]);
   };
   const removeItem = (id: string) => {
     setItems((prev) => prev.filter((p) => p.furnitureId !== id));
@@ -237,9 +239,11 @@ export function RoomDecorScreen({
   };
   /** 드래그 종료 — 방 안으로 클램프해 좌표 커밋 + 최상위 승격. */
   const commitDrag = (id: string, x: number, y: number) => {
-    const clamp = (v: number) => Math.min(DRAG_CLAMP_MAX, Math.max(DRAG_CLAMP_MIN, v));
     setItems((prev) => {
       const maxZ = prev.reduce((m, p) => Math.max(m, p.z), 0);
+      const target = prev.find((p) => p.furnitureId === id);
+      const bounds = dragClampBounds(target?.scale ?? 1);
+      const clamp = (v: number) => Math.min(bounds.max, Math.max(bounds.min, v));
       return prev.map((p) =>
         p.furnitureId === id ? { ...p, x: clamp(x), y: clamp(y), z: maxZ + 1 } : p,
       );
@@ -248,7 +252,13 @@ export function RoomDecorScreen({
   /** 핀치/핸들 종료 — 스케일 클램프 후 커밋 (#333). */
   const commitScale = (id: string, scale: number) => {
     const clamped = Math.round(Math.min(SCALE_MAX, Math.max(SCALE_MIN, scale)) * 100) / 100;
-    setItems((prev) => prev.map((p) => (p.furnitureId === id ? { ...p, scale: clamped } : p)));
+    const bounds = dragClampBounds(clamped);
+    const clamp = (v: number) => Math.min(bounds.max, Math.max(bounds.min, v));
+    setItems((prev) =>
+      prev.map((p) =>
+        p.furnitureId === id ? { ...p, x: clamp(p.x), y: clamp(p.y), scale: clamped } : p,
+      ),
+    );
   };
   /** 선택된 가구만 바꾼다 — 툴바 액션 공용 (#333). */
   const mutateSelected = (fn: (p: PlacedFurniture) => PlacedFurniture) =>
@@ -567,9 +577,7 @@ export function RoomDecorScreen({
                 items={byOwnedFirst(furniture)}
                 placed={placed}
                 // 배치 안 된 가구는 방 가운데로 추가, 배치된 가구는 다시 빼기.
-                onPlace={(item) =>
-                  placed.includes(item.id) ? removeItem(item.id) : addItem(item.id)
-                }
+                onPlace={(item) => (placed.includes(item.id) ? removeItem(item.id) : addItem(item))}
                 owned={owned}
                 diaBalance={diaBalance}
                 onBuyRequest={setPendingBuy}
@@ -1006,7 +1014,7 @@ const styles = StyleSheet.create({
   // 오버레이·정규화 좌표의 기준 박스 — Room(정사각)과 정확히 일치.
   canvas: {
     width: '100%',
-    aspectRatio: 1,
+    aspectRatio: ROOM_RENDER_CONTRACT.room.aspectRatio,
   },
   // 캐릭터는 항상 가구 앞 (#327) — 드래그 중 아이템(z 9999)보다도 위.
   characterLayer: {
@@ -1035,10 +1043,12 @@ const styles = StyleSheet.create({
   // Room의 캐릭터 배치와 동일한 자리 (absolute center-bottom, 42%).
   characterFigure: {
     position: 'absolute',
-    alignSelf: 'center',
-    bottom: '16%',
-    width: '42%',
-    height: '42%',
+    left: roomPercent(
+      ROOM_RENDER_CONTRACT.character.centerX - ROOM_RENDER_CONTRACT.character.width / 2,
+    ),
+    bottom: roomPercent(ROOM_RENDER_CONTRACT.character.bottom),
+    width: roomPercent(ROOM_RENDER_CONTRACT.character.width),
+    height: roomPercent(ROOM_RENDER_CONTRACT.character.height),
   },
   filterRow: {
     flexDirection: 'row',

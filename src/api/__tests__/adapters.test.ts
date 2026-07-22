@@ -241,6 +241,7 @@ describe('API adapters', () => {
         name: 'Forest Sage Set - Arched Window',
         placementType: 'positioned',
         defaultSlot: 'topLeft',
+        defaultScale: 1.24,
         categoryCode: 'decor',
         priceAmount: 100,
         assetKey: 'items/window.png',
@@ -282,6 +283,7 @@ describe('API adapters', () => {
       slot: 'topLeft',
       category: '장식',
       price: 100,
+      defaultScale: 1.24,
       theme: '숲속 세이지',
     });
     expect(cat.wallpapers.map((w) => w.id)).toEqual(['3']);
