@@ -6,6 +6,7 @@ import { type HouseCover, HouseCoverPicker } from '@/components/house-cover-pick
 import { HousePreviewFrame } from '@/components/room/house-preview-frame';
 import { Room } from '@/components/room/room';
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
+import { CategoryManageScreen } from '@/components/screens/category-manage-screen';
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
 import { GachaScreen } from '@/components/screens/gacha-screen';
@@ -353,6 +354,15 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ height: 760, alignSelf: 'stretch' }}>
         <AddRoutineScreen />
+      </View>
+    ),
+  },
+  {
+    name: 'CategoryManageScreen',
+    description: '카테고리 관리 독립 화면 (#394) — 목록(순서·수정·삭제) + 헤더 +로 생성 시트.',
+    render: () => (
+      <View style={{ height: 640, alignSelf: 'stretch' }}>
+        <CategoryManageScreen onReorder={() => {}} />
       </View>
     ),
   },

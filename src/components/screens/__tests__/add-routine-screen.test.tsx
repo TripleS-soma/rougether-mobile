@@ -69,9 +69,10 @@ describe('AddRoutineScreen', () => {
     await fireEvent.changeText(getByPlaceholderText('예) 매일 30분 산책'), '산책');
     await fireEvent.press(getByText('루틴 추가하기'));
 
-    // The dead-button mystery is gone: the tap says why and opens the manager.
+    // The dead-button mystery is gone: the tap says why and opens the
+    // quick-create sheet (#394 — 전체 관리는 카테고리 관리 화면으로 분리됨).
     expect(getByText('카테고리가 필요해요 — 먼저 하나 만들어주세요.')).toBeTruthy();
-    expect(queryByText('새 카테고리 만들기')).toBeTruthy();
+    expect(queryByText('새 카테고리')).toBeTruthy();
     expect(onAdd).not.toHaveBeenCalled();
   });
 

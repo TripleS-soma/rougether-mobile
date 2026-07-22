@@ -17,6 +17,7 @@ import {
 import { PasswordChangeScreen } from '@/components/screens/password-change-screen';
 import { ProfileEditScreen } from '@/components/screens/profile-edit-screen';
 import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
+import { CategoryManageScreen } from '@/components/screens/category-manage-screen';
 import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
 import { SettingsScreen } from '@/components/screens/settings-screen';
 import {
@@ -57,6 +58,7 @@ type Screen =
   | 'decor'
   | 'routineManage'
   | 'addRoutine'
+  | 'categoryManage'
   | 'gacha'
   | 'groupHouse'
   | 'friendRoom'
@@ -76,6 +78,7 @@ const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   decor: null,
   routineManage: null,
   addRoutine: null,
+  categoryManage: null,
   gacha: null,
   groupHouse: 'house',
   friendRoom: null,
@@ -106,6 +109,7 @@ const BACK_SCREEN: Record<Screen, Screen | null> = {
   decor: 'myRoom',
   routineManage: 'myRoom',
   addRoutine: 'routineManage',
+  categoryManage: 'myRoom',
   gacha: 'myRoom',
   groupHouse: 'myRoom',
   friendRoom: 'groupHouse',
@@ -619,12 +623,7 @@ export function AppShell({
               onSelectCharacter={(serverId) => {
                 void selectWornCharacter(serverId);
               }}
-              onCreateCategory={createRoutineCategory}
-              onUpdateCategory={updateRoutineCategory}
-              onDeleteCategory={deleteRoutineCategory}
-              onReorderCategories={(orderedIds) => {
-                void reorderCategories(orderedIds);
-              }}
+              onManageCategories={() => setScreen('categoryManage')}
               onOpenGacha={() => setScreen('gacha')}
               onQuickAddRoutine={quickAddTodo}
               quickAddDisabledCategoryIds={houseCategoryIds}
@@ -696,20 +695,28 @@ export function AppShell({
           {screen === 'addRoutine' ? (
             <AddRoutineScreen
               categories={categories}
-              inUseCategoryIds={Array.from(
-                new Set(routines.map((r) => r.category).filter((c): c is string => !!c)),
-              )}
               editRoutine={editingRoutine}
               onAdd={addRoutine}
               onUpdate={updateRoutine}
               onDelete={deleteRoutine}
               onCreateCategory={createRoutineCategory}
-              onUpdateCategory={updateRoutineCategory}
-              onDeleteCategory={deleteRoutineCategory}
-              onReorderCategories={(orderedIds) => {
+              onBack={() => setScreen(addReturnScreen)}
+            />
+          ) : null}
+
+          {screen === 'categoryManage' ? (
+            <CategoryManageScreen
+              categories={categories}
+              inUseCategoryIds={Array.from(
+                new Set(routines.map((r) => r.category).filter((c): c is string => !!c)),
+              )}
+              onCreate={createRoutineCategory}
+              onUpdate={updateRoutineCategory}
+              onDelete={deleteRoutineCategory}
+              onReorder={(orderedIds) => {
                 void reorderCategories(orderedIds);
               }}
-              onBack={() => setScreen(addReturnScreen)}
+              onBack={() => setScreen('myRoom')}
             />
           ) : null}
 

@@ -17,7 +17,6 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { CharacterAvatar, type CharacterAnimationSet } from '@/components/character-avatar';
 import { NavMenuPopover } from '@/components/screens/nav-menu-popover';
 import { Room } from '@/components/room/room';
-import { CategoryManagerSheet } from '@/components/screens/sheets/category-manager-sheet';
 import {
   CharacterPickerSheet,
   type OwnedCharacter,
@@ -201,13 +200,8 @@ export type MyRoomScreenProps = {
   ownedCharacters?: OwnedCharacter[];
   /** Wear the picked character (PUT /me/characters/select). */
   onSelectCharacter?: (serverId: number) => void;
-  /** Create a category (햄버거 메뉴 → 카테고리 관리 sheet). */
-  onCreateCategory?: (category: RoutineCategoryMeta) => void;
-  onUpdateCategory?: (id: string, category: RoutineCategoryMeta) => void;
-  /** Delete a category (카테고리 관리 sheet). */
-  onDeleteCategory?: (id: string) => void;
-  /** Persist a new category order (카테고리 관리 sheet, long-press to move). */
-  onReorderCategories?: (orderedIds: string[]) => void;
+  /** 햄버거 메뉴 → 카테고리 관리 화면으로 이동 (#394). */
+  onManageCategories?: () => void;
   /** Toggle a routine's completion on a specific date ("YYYY-MM-DD"). */
   onToggleCompletion?: (id: string, date: string) => void;
   onOpenGacha?: () => void;
@@ -295,10 +289,7 @@ export function MyRoomScreen({
   unreadNotificationCount = 0,
   ownedCharacters,
   onSelectCharacter,
-  onCreateCategory,
-  onUpdateCategory,
-  onDeleteCategory,
-  onReorderCategories,
+  onManageCategories,
   onToggleCompletion,
   onOpenGacha,
   onQuickAddRoutine,
@@ -325,12 +316,6 @@ export function MyRoomScreen({
     ...items.filter((i) => !done(i)),
     ...items.filter(done),
   ];
-  // Categories that still hold routines/todos — the manager sheet blocks their
-  // deletion with a warning (the server refuses it anyway).
-  const inUseCategoryIds = Array.from(
-    new Set(routines.map((r) => r.category).filter((c): c is string => !!c)),
-  );
-
   // The 방 tab lists only what's scheduled *today* (repeat days + start/end
   // range) — the same rule the 달력 tab applies to its selected date. Without
   // this, editing a routine's days never changed the today list.
@@ -351,7 +336,6 @@ export function MyRoomScreen({
   const [navMenuOpen, setNavMenuOpen] = useState(false);
   const [navMenuTop, setNavMenuTop] = useState(104);
   const menuBtnRef = useRef<View>(null);
-  const [categorySheetOpen, setCategorySheetOpen] = useState(false);
   const [characterSheetOpen, setCharacterSheetOpen] = useState(false);
 
   const openNavMenu = () => {
@@ -1192,7 +1176,7 @@ export function MyRoomScreen({
         }
         onEditRoom={onEdit}
         onSaveRoomImage={() => void onSaveRoomImage()}
-        onOpenCategoryManager={() => setCategorySheetOpen(true)}
+        onOpenCategoryManager={() => onManageCategories?.()}
         // + 버튼(onAddRoutine)은 바로 추가로 가고, 관리는 여기서만 (#335).
         onManageRoutines={onManageRoutines ?? onAddRoutine}
       />
@@ -1202,17 +1186,6 @@ export function MyRoomScreen({
         characters={ownedCharacters ?? []}
         onSelect={(serverId) => onSelectCharacter?.(serverId)}
         onClose={() => setCharacterSheetOpen(false)}
-      />
-
-      <CategoryManagerSheet
-        visible={categorySheetOpen}
-        categories={categories}
-        onCreate={(cat) => onCreateCategory?.(cat)}
-        onUpdate={(id, cat) => onUpdateCategory?.(id, cat)}
-        onDelete={(id) => onDeleteCategory?.(id)}
-        onReorder={onReorderCategories}
-        inUseCategoryIds={inUseCategoryIds}
-        onClose={() => setCategorySheetOpen(false)}
       />
 
       <TimePickerSheet
