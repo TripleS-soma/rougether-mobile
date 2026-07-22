@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, StyleSheet, View } from 'react-native';
 
@@ -35,6 +36,7 @@ import {
 } from '@/components/ui/coach-mark';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { CATEGORY_COLORS, type Routine } from '@/constants/routines';
+import { onNotificationTap } from '@/lib/push-events';
 import { todayIso } from '@/utils/datetime';
 import { useAuth } from '@/hooks/use-auth';
 import { useGacha } from '@/hooks/use-gacha';
@@ -123,6 +125,9 @@ const BACK_SCREEN: Record<Screen, Screen | null> = {
   sound: 'settings',
   help: 'settings',
 };
+
+/** 알림/사운드 설정의 기기 보관 키 (#405) — 서버 설정 API가 생기면 마이그레이션. */
+const DEVICE_SETTINGS_KEY = 'rougether.device-settings';
 
 export type AppShellProps = {
   /** Character chosen at onboarding; defaults to the sample character. */
@@ -537,6 +542,39 @@ export function AppShell({
   );
   const [soundSettings, setSoundSettings] = useState<SoundSettings>(DEFAULT_SOUND_SETTINGS);
 
+  // 알림/사운드 설정은 서버 API가 생기기 전까지 기기(AsyncStorage)에 보관 (#405)
+  // — 화면 문구("이 기기에만 저장돼요")와 실제 동작을 일치시킨다.
+  useEffect(() => {
+    void AsyncStorage.getItem(DEVICE_SETTINGS_KEY).then((raw) => {
+      if (!raw) return;
+      try {
+        const saved = JSON.parse(raw) as {
+          notifications?: NotificationSettings;
+          sound?: SoundSettings;
+        };
+        if (saved.notifications) setNotificationSettings((p) => ({ ...p, ...saved.notifications }));
+        if (saved.sound) setSoundSettings((p) => ({ ...p, ...saved.sound }));
+      } catch {
+        // 손상된 저장값은 기본값으로 무시.
+      }
+    });
+  }, []);
+  const persistDeviceSettings = (notifications: NotificationSettings, sound: SoundSettings) => {
+    void AsyncStorage.setItem(DEVICE_SETTINGS_KEY, JSON.stringify({ notifications, sound })).catch(
+      () => {},
+    );
+  };
+
+  // 푸시 탭(콜드 스타트 포함) → 알림 목록으로 (#405).
+  useEffect(
+    () =>
+      onNotificationTap(() => {
+        void loadNotifications();
+        setScreen('notificationList');
+      }),
+    [loadNotifications],
+  );
+
   // Remember where the add/edit-routine screen was opened from, so its back
   // button returns to the right place (my-room or routine manage).
   const [addReturnScreen, setAddReturnScreen] = useState<Screen>('routineManage');
@@ -930,7 +968,10 @@ export function AppShell({
           {screen === 'notifications' ? (
             <NotificationSettingsScreen
               initialSettings={notificationSettings}
-              onChange={setNotificationSettings}
+              onChange={(next) => {
+                setNotificationSettings(next);
+                persistDeviceSettings(next, soundSettings);
+              }}
               onBack={() => setScreen('settings')}
             />
           ) : null}
@@ -938,7 +979,10 @@ export function AppShell({
           {screen === 'sound' ? (
             <SoundSettingsScreen
               initialSettings={soundSettings}
-              onChange={setSoundSettings}
+              onChange={(next) => {
+                setSoundSettings(next);
+                persistDeviceSettings(notificationSettings, next);
+              }}
               onBack={() => setScreen('settings')}
             />
           ) : null}

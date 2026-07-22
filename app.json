@@ -72,6 +72,13 @@
       ],
       "expo-asset",
       "expo-audio",
+      [
+        "expo-notifications",
+        {
+          "color": "#7FA87F",
+          "defaultChannel": "default"
+        }
+      ],
       "expo-secure-store",
       [
         "expo-camera",

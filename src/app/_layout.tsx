@@ -10,6 +10,10 @@ import { ToastProvider } from '@/components/ui/toast';
 import { AuthProvider } from '@/hooks/use-auth';
 import { BrandThemeProvider, useResolvedScheme } from '@/hooks/use-tokens';
 import { useWebFonts } from '@/hooks/use-web-fonts';
+import { initPushDisplay } from '@/lib/push-events';
+
+// 포그라운드 푸시 표시 + Android 채널 (#405) — 앱 시작 시 1회, 웹은 no-op.
+initPushDisplay();
 
 /**
  * Navigation chrome follows the resolved scheme (OS scheme + the 다크 모드
