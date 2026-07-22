@@ -147,10 +147,6 @@ export function TimePickerSheet({
                   />
                 </View>
               </View>
-
-              <Text style={[Typography.h2, styles.preview, { color: t.text }]}>
-                {ampm === 'AM' ? '오전' : '오후'} {hour12}:{String(minute).padStart(2, '0')}
-              </Text>
             </>
           ) : null}
         </View>
@@ -232,10 +228,6 @@ const styles = StyleSheet.create({
     top: (WHEEL_ITEM_HEIGHT * (WHEEL_VISIBLE_ROWS - 1)) / 2,
     height: WHEEL_ITEM_HEIGHT,
     borderRadius: Radius.md,
-  },
-  preview: {
-    textAlign: 'center',
-    marginTop: Spacing.two,
   },
   footer: {
     paddingHorizontal: Spacing.four,

@@ -20,12 +20,13 @@ describe('time helpers', () => {
 
 describe('TimePickerSheet', () => {
   it('renders the title and the enabled time controls', async () => {
-    const { getByText } = await render(
+    const { getByText, getByLabelText } = await render(
       <TimePickerSheet visible initialEnabled initialTime="07:00" onSave={noop} onClose={noop} />,
     );
+    // 미리보기 텍스트는 제거됨 — 선택 상태는 휠 자체가 보여준다.
+    expect(getByLabelText('7시').props.accessibilityState.selected).toBe(true);
     expect(getByText('알림 시간')).toBeTruthy();
     expect(getByText('알림 받기')).toBeTruthy();
-    expect(getByText('오전 7:00')).toBeTruthy(); // preview
   });
 
   it('saves the initial time through the footer', async () => {
@@ -46,7 +47,6 @@ describe('TimePickerSheet', () => {
     await fireEvent.press(getByText('오후'));
     await fireEvent.press(getByLabelText('9시'));
     await fireEvent.press(getByLabelText('30분'));
-    expect(getByText('오후 9:30')).toBeTruthy(); // preview
 
     await fireEvent.press(getByText('저장'));
     expect(onSave).toHaveBeenCalledWith(true, '21:30');
@@ -57,7 +57,7 @@ describe('TimePickerSheet', () => {
     const ui = await render(
       <TimePickerSheet visible initialEnabled initialTime="21:30" onSave={onSave} onClose={noop} />,
     );
-    expect(ui.getByText('오후 9:30')).toBeTruthy();
     expect(ui.getByLabelText('9시').props.accessibilityState.selected).toBe(true);
+    expect(ui.getByLabelText('30분').props.accessibilityState.selected).toBe(true);
   });
 });
