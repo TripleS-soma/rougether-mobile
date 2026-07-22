@@ -36,4 +36,28 @@ describe('TimePickerSheet', () => {
     fireEvent.press(getByText('저장'));
     expect(onSave).toHaveBeenCalledWith(true, '07:00');
   });
+
+  it('changes the time through the wheels and saves it (#390)', async () => {
+    const onSave = jest.fn();
+    const { getByText, getByLabelText } = await render(
+      <TimePickerSheet visible initialEnabled initialTime="07:00" onSave={onSave} onClose={noop} />,
+    );
+    // 휠 행 탭 선택 — 스와이프와 같은 경로(onChange)로 커밋된다.
+    await fireEvent.press(getByText('오후'));
+    await fireEvent.press(getByLabelText('9시'));
+    await fireEvent.press(getByLabelText('30분'));
+    expect(getByText('오후 9:30')).toBeTruthy(); // preview
+
+    await fireEvent.press(getByText('저장'));
+    expect(onSave).toHaveBeenCalledWith(true, '21:30');
+  });
+
+  it('re-syncs the wheels when reopened with a different time', async () => {
+    const onSave = jest.fn();
+    const ui = await render(
+      <TimePickerSheet visible initialEnabled initialTime="21:30" onSave={onSave} onClose={noop} />,
+    );
+    expect(ui.getByText('오후 9:30')).toBeTruthy();
+    expect(ui.getByLabelText('9시').props.accessibilityState.selected).toBe(true);
+  });
 });
