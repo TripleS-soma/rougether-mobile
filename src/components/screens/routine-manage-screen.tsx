@@ -256,6 +256,8 @@ const styles = StyleSheet.create({
     borderLeftWidth: 2,
     paddingLeft: Spacing.two,
     paddingVertical: Spacing.one,
+    // 부제 줄 유무와 무관한 고정 행 리듬 (#392) — 나의 방 리스트와 동일.
+    minHeight: 48,
   },
   badges: {
     flexDirection: 'row',

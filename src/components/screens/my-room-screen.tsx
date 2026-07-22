@@ -1392,6 +1392,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
+    // 부제 줄(사진 인증·알림) 있는 행 높이(≈48)에 맞춘 고정 리듬 (#392) —
+    // 부제 없는 행에서 곰 체크(귀 포함 ~30px)가 행을 꽉 채우지 않게 한다.
+    minHeight: 48,
   },
   rowBody: {
     paddingVertical: Spacing.one,
