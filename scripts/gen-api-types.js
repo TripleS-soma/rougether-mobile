@@ -43,9 +43,11 @@ function tsType(v, includeNull = true) {
       case 'boolean':
         result = 'boolean';
         break;
-      case 'array':
-        result = `${tsType(value.items)}[]`;
+      case 'array': {
+        const itemType = tsType(value.items);
+        result = itemType.includes(' | ') ? `(${itemType})[]` : `${itemType}[]`;
         break;
+      }
       case 'object':
         result = 'Record<string, unknown>';
         break;
@@ -81,7 +83,11 @@ async function main() {
   console.log(`Wrote ${names.length} types to ${path.relative(process.cwd(), OUT)}`);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}
+
+module.exports = { tsType };
