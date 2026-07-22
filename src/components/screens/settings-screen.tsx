@@ -3,15 +3,18 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 
 import { Icon, type IconName } from '@/components/ui/icon';
 import {
-  Overlay,
+  type BrandFontId,
+  DEFAULT_FONT_ID,
   DEFAULT_THEME_MODE,
+  FONT_OPTIONS,
+  Overlay,
   Radius,
   Spacing,
   type ThemeMode,
-  Typography,
+  typographyFor,
 } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
-import { useTokens } from '@/hooks/use-tokens';
+import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
 const MODE_OPTIONS: { id: ThemeMode; name: string }[] = [
   { id: 'system', name: '시스템' },
@@ -19,12 +22,25 @@ const MODE_OPTIONS: { id: ThemeMode; name: string }[] = [
   { id: 'dark', name: '다크' },
 ];
 
+/**
+ * Chip label style previewing each font with its own faces (#382): label-sized,
+ * but 주아 혼합 shows the Jua display face — its body half is Pretendard, so the
+ * label role alone wouldn't show what makes it different.
+ */
+function fontPreviewStyle(id: BrandFontId) {
+  const label = typographyFor(id).label;
+  return id === 'jua' ? { ...label, fontFamily: 'Jua-Regular' } : label;
+}
+
 type Row = { icon: IconName; label: string; onPress?: () => void };
 
 export type SettingsScreenProps = {
   /** Light/dark preference ('system' follows the OS). */
   themeMode?: ThemeMode;
   onChangeThemeMode?: (mode: ThemeMode) => void;
+  /** App font choice (#382). */
+  fontId?: BrandFontId;
+  onChangeFont?: (id: BrandFontId) => void;
   onEditProfile?: () => void;
   onChangePassword?: () => void;
   onOpenNotifications?: () => void;
@@ -45,6 +61,8 @@ export type SettingsScreenProps = {
 export function SettingsScreen({
   themeMode = DEFAULT_THEME_MODE,
   onChangeThemeMode,
+  fontId = DEFAULT_FONT_ID,
+  onChangeFont,
   onEditProfile,
   onChangePassword,
   onOpenNotifications,
@@ -54,7 +72,11 @@ export function SettingsScreen({
   onLogout,
 }: SettingsScreenProps) {
   const t = useTokens();
+  const Typography = useTypography();
+  const emph = useFontEmphasis();
   const headerInset = useHeaderInsetStyle();
+  // Section captions: supporting size with a semibold face via the active font.
+  const sectionTitleStyle = [Typography.supporting, emph('semibold'), styles.sectionTitle];
   // Logging out drops the session immediately, so gate it behind a confirm.
   const [confirmLogout, setConfirmLogout] = useState(false);
 
@@ -92,7 +114,7 @@ export function SettingsScreen({
 
       <ScrollView contentContainerStyle={styles.body}>
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: t.textMuted }]}>디자인</Text>
+          <Text style={[...sectionTitleStyle, { color: t.textMuted }]}>디자인</Text>
           <View style={[styles.card, { backgroundColor: t.surface }]}>
             <View style={styles.designHead}>
               <View style={[styles.iconCircle, { backgroundColor: t.surfaceMuted }]}>
@@ -128,11 +150,50 @@ export function SettingsScreen({
               })}
             </View>
           </View>
+
+          <View style={[styles.card, { backgroundColor: t.surface }]}>
+            <View style={styles.designHead}>
+              <View style={[styles.iconCircle, { backgroundColor: t.surfaceMuted }]}>
+                <Icon name="edit" size={20} color={t.text} />
+              </View>
+              <View style={styles.flex}>
+                <Text style={[Typography.label, { color: t.text }]}>폰트</Text>
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                  앱 전체에 쓰이는 글꼴을 골라보세요.
+                </Text>
+              </View>
+            </View>
+            <View style={styles.fontGrid}>
+              {FONT_OPTIONS.map((opt) => {
+                const selected = opt.id === fontId;
+                return (
+                  <Pressable
+                    key={opt.id}
+                    onPress={() => onChangeFont?.(opt.id)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected }}
+                    accessibilityLabel={`${opt.name} 폰트`}
+                    style={[
+                      styles.fontChip,
+                      { backgroundColor: selected ? t.primary : t.surfaceMuted },
+                    ]}>
+                    <Text
+                      style={[
+                        fontPreviewStyle(opt.id),
+                        { color: selected ? t.onPrimary : t.textMuted },
+                      ]}>
+                      {opt.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
         </View>
 
         {sections.map((section) => (
           <View key={section.title} style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: t.textMuted }]}>{section.title}</Text>
+            <Text style={[...sectionTitleStyle, { color: t.textMuted }]}>{section.title}</Text>
             <View style={[styles.card, { backgroundColor: t.surface }]}>
               {section.rows.map((row, idx) => (
                 <Pressable
@@ -218,8 +279,6 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   sectionTitle: {
-    fontSize: 12,
-    fontWeight: '600',
     paddingHorizontal: Spacing.two,
   },
   card: {
@@ -242,6 +301,21 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingVertical: Spacing.two,
+    borderRadius: Radius.pill,
+  },
+  fontGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    paddingBottom: Spacing.three,
+  },
+  fontChip: {
+    flexGrow: 1,
+    flexBasis: '30%',
+    alignItems: 'center',
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.two,
     borderRadius: Radius.pill,
   },
   iconCircle: {

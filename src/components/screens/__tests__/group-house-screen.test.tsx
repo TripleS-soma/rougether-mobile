@@ -55,6 +55,30 @@ describe('GroupHouseScreen', () => {
     expect(getByText('34')).toBeTruthy();
   });
 
+  it('shows a green dot for online members and a last-seen label offline (#383)', async () => {
+    const presenceHouse: House = {
+      ...MISSION_HOUSE,
+      floors: [
+        {
+          level: '1층',
+          rooms: [
+            { name: '친구', color: '#F5E1D8', membershipId: 42, lastSeenLabel: '3시간 전' },
+            { name: '나', color: '#E8E0D0', isMine: true, membershipId: 43, online: true },
+          ],
+        },
+      ],
+    };
+    const { getByText, getByTestId, getByLabelText } = await render(
+      <GroupHouseScreen houses={[presenceHouse]} />,
+    );
+    // 접속 중인 내 타일: 초록 점 + 접근성 라벨, 상대 시각 없음.
+    expect(getByTestId('online-dot')).toBeTruthy();
+    expect(getByLabelText('나 (나), 접속 중')).toBeTruthy();
+    // 오프라인 친구 타일: 마지막 접속 상대 시각.
+    expect(getByText('3시간 전')).toBeTruthy();
+    expect(getByLabelText('친구, 3시간 전 접속')).toBeTruthy();
+  });
+
   it('renders the current house, members, and group missions', async () => {
     const { getByText, getByLabelText, queryByText } = await render(<GroupHouseScreen />);
     expect(getByText('소마파이팅')).toBeTruthy();
@@ -555,9 +579,10 @@ describe('GroupHouseScreen', () => {
     const { getByLabelText, getByText } = await render(
       <GroupHouseScreen onVisitFriend={onVisitFriend} onVisitMyRoom={onVisitMyRoom} />,
     );
-    // Tiles are addressed by accessibility label — the crown decorates the text.
+    // Tiles are addressed by accessibility label — the crown decorates the
+    // text and presence (#383) appends ", N일 전 접속" so match the prefix.
     // 창문 좌석의 한 번 탭 방문은 더블탭 판별 시간(260ms)만큼 늦게 실행된다.
-    await fireEvent.press(getByLabelText('최준서'));
+    await fireEvent.press(getByLabelText(/^최준서/));
     await waitFor(() =>
       expect(onVisitFriend).toHaveBeenCalledWith(expect.objectContaining({ name: '최준서' })),
     );

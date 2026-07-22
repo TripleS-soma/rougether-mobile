@@ -14,8 +14,10 @@ import {
   toWallet,
   todayCompletions,
   toGroupHouse,
+  toPresence,
   toHouseMission,
   toHouseCover,
+  toHousePreviewDetail,
   characterIdFromCode,
   toGachaMachine,
   fromFriendRoomSlots,
@@ -361,6 +363,49 @@ describe('API adapters', () => {
     expect(anon.floors.flatMap((f) => f.rooms).find((r) => r.isMine)?.name).toBe('멤버 6');
   });
 
+  it('derives tile presence from lastAccessedAt (#383)', () => {
+    const now = Date.parse('2026-07-22T12:00:00Z');
+    // 40분 창 안 → 접속 중, 라벨 없음.
+    expect(toPresence('2026-07-22T11:30:00Z', now)).toEqual({ online: true });
+    // 창 밖 → 상대 시각 라벨.
+    expect(toPresence('2026-07-22T11:10:00Z', now)).toEqual({ lastSeenLabel: '50분 전' });
+    expect(toPresence('2026-07-22T09:00:00Z', now)).toEqual({ lastSeenLabel: '3시간 전' });
+    expect(toPresence('2026-07-20T12:00:00Z', now)).toEqual({ lastSeenLabel: '2일 전' });
+    expect(toPresence('2025-07-22T12:00:00Z', now)).toEqual({ lastSeenLabel: '오래 전' });
+    // 존 표기가 빠진 UTC(서버 계약)도 로컬로 오독하지 않는다.
+    expect(toPresence('2026-07-22T11:30:00', now)).toEqual({ online: true });
+    // 이력 없음/깨진 값 → 아무것도 표시하지 않음.
+    expect(toPresence(undefined, now)).toEqual({});
+    expect(toPresence('not-a-date', now)).toEqual({});
+
+    const detail = { houseId: 1, name: '집' };
+    const members = [
+      {
+        membershipId: 1,
+        userId: 6,
+        role: 'OWNER' as const,
+        status: 'ACTIVE' as const,
+        nickname: '나',
+        lastAccessedAt: '2026-07-22T11:50:00Z',
+      },
+      {
+        membershipId: 2,
+        userId: 4,
+        role: 'MEMBER' as const,
+        status: 'ACTIVE' as const,
+        nickname: '이웃',
+        lastAccessedAt: '2026-07-22T06:00:00Z',
+      },
+    ];
+    const rooms = toGroupHouse(detail, members, 6, undefined, undefined, now).floors.flatMap(
+      (f) => f.rooms,
+    );
+    expect(rooms.find((r) => r.isMine)?.online).toBe(true);
+    const neighbor = rooms.find((r) => !r.isMine);
+    expect(neighbor?.online).toBeUndefined();
+    expect(neighbor?.lastSeenLabel).toBe('6시간 전');
+  });
+
   it('carries growth points through for the level-progress pill', () => {
     expect(toGroupHouse({ houseId: 1, name: '집', growthPoints: 130 }, [], 6).growthPoints).toBe(
       130,
@@ -563,6 +608,50 @@ describe('API adapters', () => {
       floorId: '11',
       backgroundId: null,
     });
+  });
+
+  it('converts preview memberRooms into window room models with the catalogue (#386)', () => {
+    const cat = {
+      furniture: [
+        { id: '2', name: '침대', slot: 'bottomLeft' as const, category: '가구' as const, price: 0, assetKey: 'items/a/bed.png' }, // prettier-ignore
+      ],
+      wallpapers: [{ id: '9', name: '벽지', price: 0, assetKey: 'items/a/wp.png', color: '#FFF' }],
+      floors: [],
+      backgrounds: [],
+      ownedIds: [],
+    };
+    const wire = {
+      houseId: 3,
+      name: '미리보기집',
+      currentMemberCount: 2,
+      memberRooms: [
+        {
+          membershipId: 1,
+          room: {
+            layoutFormat: 'SLOT_V1' as const,
+            character: { code: 'cat' },
+            slots: [
+              { slotType: 'bottomLeft', userItemId: 777, assetKey: 'items/a/bed.png' },
+              { slotType: 'wallpaper', userItemId: 778, assetKey: 'items/a/wp.png' },
+            ],
+          },
+        },
+        // 방 미생성 구성원 → 기본 빈 방.
+        { membershipId: 2, room: null },
+      ],
+    };
+    const detail = toHousePreviewDetail(wire, cat);
+    expect(detail.rooms).toHaveLength(2);
+    expect(detail.rooms![0]).toMatchObject({
+      placedFurnitureIds: ['2'],
+      wallpaperId: '9',
+      placements: null,
+      characterId: 'cat',
+    });
+    expect(detail.rooms![1]).toEqual({ placedFurnitureIds: [], placements: [] });
+
+    // 카탈로그가 없으면(상점 미로드) rooms를 만들지 않아 목업으로 폴백한다.
+    expect(toHousePreviewDetail(wire).rooms).toBeUndefined();
   });
 
   it('maps a house member day to the friend routine list', () => {

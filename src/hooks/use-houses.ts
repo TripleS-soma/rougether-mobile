@@ -39,6 +39,7 @@ import {
   toHousePreview,
   toHousePreviewDetail,
   toSearchHouse,
+  type ShopCatalogue,
 } from '@/api/adapters';
 import { useToast } from '@/components/ui/toast';
 import type {
@@ -228,9 +229,13 @@ export function useHouses() {
   };
 
   // 탐색 카드 → 참여 전 미리보기 (#328). null이면 호출측은 모달을 열지 않는다.
-  const previewHouse = async (houseId: string): Promise<HousePreviewDetail | null> => {
+  // 카탈로그를 주면 memberRooms를 실제 방 렌더 모델로 변환한다 (#386).
+  const previewHouse = async (
+    houseId: string,
+    catalogue?: ShopCatalogue,
+  ): Promise<HousePreviewDetail | null> => {
     try {
-      return toHousePreviewDetail(await fetchHousePreviewDetail(Number(houseId)));
+      return toHousePreviewDetail(await fetchHousePreviewDetail(Number(houseId)), catalogue);
     } catch {
       toast('집 정보를 불러오지 못했어요', 'error');
       return null;

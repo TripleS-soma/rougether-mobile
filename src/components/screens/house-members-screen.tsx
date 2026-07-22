@@ -8,9 +8,9 @@ import { Icon } from '@/components/ui/icon';
 import { CrownPictogram, DoorPictogram, PencilPictogram } from '@/components/ui/pictograms';
 import { useToast } from '@/components/ui/toast';
 import type { CharacterId } from '@/constants/characters';
-import { Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
-import { useTokens } from '@/hooks/use-tokens';
+import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
 /** Capacity choices for the edit form (server allows 1~10). */
 const CAPACITY_OPTIONS = [2, 3, 4, 6, 8, 10];
@@ -65,6 +65,8 @@ export function HouseMembersScreen({
   onLeaveDone,
 }: HouseMembersScreenProps) {
   const t = useTokens();
+  const Typography = useTypography();
+  const emph = useFontEmphasis();
   const { show: toast } = useToast();
   const headerInset = useHeaderInsetStyle();
   const screenStyle = useScreenStyle([]);
@@ -220,12 +222,19 @@ export function HouseMembersScreen({
                     {member.isOwner ? (
                       <View style={[styles.ownerBadge, { backgroundColor: t.primarySoft }]}>
                         <CrownPictogram size={10} />
-                        <Text style={[styles.ownerBadgeText, { color: t.primaryText }]}>방장</Text>
+                        <Text
+                          style={[styles.ownerBadgeText, emph('bold'), { color: t.primaryText }]}>
+                          방장
+                        </Text>
                       </View>
                     ) : null}
                     {member.isMine ? (
                       <Text
-                        style={[styles.myBadge, { backgroundColor: t.warning, color: t.onTint }]}>
+                        style={[
+                          styles.myBadge,
+                          emph('bold'),
+                          { backgroundColor: t.warning, color: t.onTint },
+                        ]}>
                         MY
                       </Text>
                     ) : null}
@@ -611,11 +620,9 @@ const styles = StyleSheet.create({
   },
   ownerBadgeText: {
     fontSize: 9,
-    fontWeight: '700',
   },
   myBadge: {
     fontSize: 9,
-    fontWeight: '700',
     overflow: 'hidden',
     borderRadius: Radius.pill,
     paddingHorizontal: Spacing.two,

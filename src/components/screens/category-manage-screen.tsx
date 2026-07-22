@@ -5,9 +5,9 @@ import { CategoryFormSheet } from '@/components/screens/sheets/category-form-she
 import { Icon } from '@/components/ui/icon';
 import { Pictogram } from '@/components/ui/pictograms';
 import { type RoutineCategoryMeta, VISIBILITY_LABELS } from '@/constants/routines';
-import { Overlay, Radius, Spacing, Typography } from '@/constants/theme';
+import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
-import { useTokens } from '@/hooks/use-tokens';
+import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
 export type CategoryManageScreenProps = {
   categories?: RoutineCategoryMeta[];
@@ -39,6 +39,8 @@ export function CategoryManageScreen({
   onBack,
 }: CategoryManageScreenProps) {
   const t = useTokens();
+  const Typography = useTypography();
+  const emph = useFontEmphasis();
   const headerInset = useHeaderInsetStyle();
   // null = 시트 닫힘, 'new' = 생성, 카테고리 = 그 항목 수정.
   const [formTarget, setFormTarget] = useState<'new' | RoutineCategoryMeta | null>(null);
@@ -139,6 +141,7 @@ export function CategoryManageScreen({
                           <Text
                             style={[
                               styles.moveGlyph,
+                              emph('bold'),
                               { color: idx === 0 ? t.textDisabled : t.primary },
                             ]}>
                             ▲
@@ -321,7 +324,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  moveGlyph: { fontSize: 14, fontWeight: '700' },
+  moveGlyph: { fontSize: 14 },
   rowBtn: {
     width: 36,
     height: 36,

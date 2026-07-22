@@ -36,7 +36,13 @@ import { toIsoDate } from '@/utils/datetime';
 import { type RoomPlacementSave, type RoomPlacementWire, type RoomSlotSave } from './rooms';
 
 import type { HouseCover } from '@/components/house-cover-picker';
-import type { Floor, House, HouseMission, RoomCell } from '@/components/screens/group-house-screen';
+import type {
+  Floor,
+  House,
+  HouseMission,
+  MemberRoomPreview,
+  RoomCell,
+} from '@/components/screens/group-house-screen';
 import type { FriendActivityDay, GuestbookEntry } from '@/components/screens/friend-room-screen';
 import { isPictogramName, type PictogramName } from '@/components/ui/pictograms';
 import type {
@@ -55,6 +61,7 @@ import type {
   GuestbookItem,
   MyCharacterItem,
   MyItemSummary,
+  RoomResponse,
   RoomSlotResponse,
   CharacterItem,
   CategoryResponse,
@@ -65,6 +72,7 @@ import type {
   HouseMemberDayResponse,
   HouseMemberRoutineCompletionListResponse,
   HousePreviewDetailResponse,
+  PreviewMemberRoom,
   HousePreviewResponse,
   HouseSummary,
   ItemResponse,
@@ -569,10 +577,43 @@ const HOUSE_ICONS: PictogramName[] = [
 ];
 
 /**
+ * 접속 중 판정 창 (#383) — lastAccessedAt은 로그인/refresh 시에만 갱신되는
+ * access token TTL(30분) 해상도라, TTL + 여유 10분 안이면 "접속 중"으로 본다.
+ */
+const ONLINE_WINDOW_MS = 40 * 60 * 1000;
+
+/**
+ * MemberSummary.lastAccessedAt(UTC) → 방 타일 접속 표시 (#383). 창 안이면
+ * online, 밖이면 상대 시각 라벨("3시간 전"). 값이 없거나(접속 이력 없음)
+ * 못 읽으면 둘 다 생략 — 타일은 아무것도 덧붙이지 않는다.
+ */
+export function toPresence(
+  lastAccessedAt: string | undefined,
+  nowMs: number,
+): { online?: boolean; lastSeenLabel?: string } {
+  if (!lastAccessedAt) return {};
+  // 스웨거는 UTC를 약속하지만 존 표기가 빠져 오면 로컬로 오독된다 — Z를 보강.
+  const iso = /[zZ]|[+-]\d{2}:?\d{2}$/.test(lastAccessedAt) ? lastAccessedAt : `${lastAccessedAt}Z`;
+  const then = Date.parse(iso);
+  if (Number.isNaN(then)) return {};
+  const diff = nowMs - then;
+  if (diff <= ONLINE_WINDOW_MS) return { online: true };
+  const minutes = Math.floor(diff / 60_000);
+  if (minutes < 60) return { lastSeenLabel: `${minutes}분 전` };
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return { lastSeenLabel: `${hours}시간 전` };
+  const days = Math.floor(hours / 24);
+  if (days < 30) return { lastSeenLabel: `${days}일 전` };
+  return { lastSeenLabel: '오래 전' };
+}
+
+/**
  * Build the group-house screen model from house detail + members. The grid is
  * sized by the house capacity (not the headcount): rooms fill two per floor
  * from the bottom-left — my room first, then the others in join order — and
  * the yet-unfilled seats render as quiet vacant tiles on the upper floors.
+ * Occupied tiles carry the member's presence (#383) derived from
+ * `lastAccessedAt` at `nowMs` (injectable for tests).
  */
 export function toGroupHouse(
   detail: HouseDetailResponse,
@@ -580,6 +621,7 @@ export function toGroupHouse(
   myUserId?: number,
   myNickname?: string,
   missions?: HouseMission[],
+  nowMs: number = Date.now(),
 ): House {
   const active = members.filter((m) => m.status !== 'LEFT');
   // Me first → my room lands on the bottom-left seat.
@@ -598,6 +640,7 @@ export function toGroupHouse(
     isOwner: m.role === 'OWNER',
     membershipId: m.membershipId,
     userId: m.userId,
+    ...toPresence(m.lastAccessedAt, nowMs),
   }));
   // Pad to the capacity so the house always shows 정원 seats; the server keeps
   // maxMembers >= headcount, but clamp anyway so a stale detail can't drop rooms.
@@ -708,8 +751,39 @@ export function toNotificationEntry(n: NotificationItem): NotificationEntry {
 }
 
 /** Browse-list card model from the API house summary (decorations cycled). */
-/** GET /houses/{id}/preview → 탐색 미리보기 모달 모델 (#328). */
-export function toHousePreviewDetail(p: HousePreviewDetailResponse): HousePreviewDetail {
+/**
+ * 미리보기 memberRooms 항목 → 창문 타일 렌더 모델 (#386) — 집 화면 멤버 방과
+ * 같은 변환(assetKey를 카탈로그로 역해석). room이 null(방 미생성)이면 집
+ * 화면의 목업과 같은 기본 빈 방을 그린다.
+ */
+function toPreviewRoom(
+  room: RoomResponse | null | undefined,
+  cat: ShopCatalogue,
+): MemberRoomPreview {
+  if (!room) return { placedFurnitureIds: [], placements: [] };
+  const placement = fromFriendRoomSlots(room.slots ?? [], cat);
+  return {
+    placedFurnitureIds: placement.placedFurnitureIds,
+    placements:
+      room.layoutFormat === 'FREE_V1' && room.placements?.length
+        ? fromRoomPlacements(room.placements, cat)
+        : null,
+    wallpaperId: placement.wallpaperId ?? DEFAULT_WALLPAPER_ID,
+    floorId: placement.floorId,
+    backgroundId: placement.backgroundId,
+    characterId: characterIdFromCode(room.character?.code),
+  };
+}
+
+/**
+ * GET /houses/{id}/preview → 탐색 미리보기 모달 모델 (#328). 카탈로그가 있으면
+ * memberRooms를 실제 방 렌더 모델로 함께 변환한다 (#386) — 없으면(상점 미로드)
+ * rooms를 비워 화면이 기존 목업으로 폴백하게 둔다.
+ */
+export function toHousePreviewDetail(
+  p: HousePreviewDetailResponse,
+  catalogue?: ShopCatalogue,
+): HousePreviewDetail {
   return {
     id: String(p.houseId ?? ''),
     name: p.name ?? '',
@@ -721,6 +795,9 @@ export function toHousePreviewDetail(p: HousePreviewDetailResponse): HousePrevie
     goals: (p.goals ?? []).map((g) => g.name ?? '').filter(Boolean),
     isMember: p.isMember,
     isFull: p.isFull,
+    rooms: catalogue
+      ? (p.memberRooms ?? []).map((m: PreviewMemberRoom) => toPreviewRoom(m.room, catalogue))
+      : undefined,
   };
 }
 

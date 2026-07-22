@@ -11,8 +11,8 @@ import {
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
-import { Radius, Spacing, Typography } from '@/constants/theme';
-import { useTokens } from '@/hooks/use-tokens';
+import { Radius, Spacing } from '@/constants/theme';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 export type ToastType = 'info' | 'success' | 'error';
 
@@ -92,6 +92,7 @@ function ToastView({
   onPress: () => void;
 }) {
   const t = useTokens();
+  const Typography = useTypography();
   const insets = useContext(SafeAreaInsetsContext);
   const bg = toast.type === 'error' ? t.danger : toast.type === 'success' ? t.success : t.text;
   // 기본(무타입) 토스트는 중립 반전 배경(t.text) — onPrimary(짙은 잉크)를 쓰면

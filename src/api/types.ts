@@ -311,6 +311,14 @@ export type HouseMissionResponse = {
   createdAt?: string;
 };
 
+/** 미리보기 응답의 구성원별 방 렌더 데이터 (#386) — 가입순, ACTIVE 구성원만. */
+export type PreviewMemberRoom = {
+  membershipId?: number;
+  nickname?: string;
+  /** 방을 아직 만들지 않은 구성원은 null — 기본 빈 방으로 렌더. */
+  room?: RoomResponse | null;
+};
+
 export type HousePreviewDetailResponse = {
   houseId?: number;
   name?: string;
@@ -322,6 +330,7 @@ export type HousePreviewDetailResponse = {
   goals?: GoalSummary[];
   isMember?: boolean;
   isFull?: boolean;
+  memberRooms?: PreviewMemberRoom[];
 };
 
 export type HousePreviewResponse = {

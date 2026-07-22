@@ -2,7 +2,7 @@ import { type ReactNode } from 'react';
 import { StyleSheet, Text, TextInput, type TextInputProps, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
-import { useTokens } from '@/hooks/use-tokens';
+import { useFontEmphasis, useTokens } from '@/hooks/use-tokens';
 
 export type FieldProps = {
   value: string;
@@ -34,11 +34,14 @@ export function Field({
   ...input
 }: FieldProps) {
   const t = useTokens();
+  const emph = useFontEmphasis();
   const borderColor = error ? t.danger : success ? t.primary : 'transparent';
 
   return (
     <View style={styles.wrap}>
-      {label ? <Text style={[styles.label, { color: t.textMuted }]}>{label}</Text> : null}
+      {label ? (
+        <Text style={[styles.label, emph('semibold'), { color: t.textMuted }]}>{label}</Text>
+      ) : null}
       <View style={[styles.box, { backgroundColor: t.surfaceMuted, borderColor }]}>
         <TextInput
           style={[styles.input, { color: t.text }]}
@@ -64,7 +67,6 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 12,
-    fontWeight: '600',
     marginLeft: Spacing.one,
   },
   box: {

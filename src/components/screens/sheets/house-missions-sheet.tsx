@@ -11,8 +11,8 @@ import {
 } from '@/components/ui/pictograms';
 import { useToast } from '@/components/ui/toast';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
-import { Radius, Spacing, Typography } from '@/constants/theme';
-import { useTokens } from '@/hooks/use-tokens';
+import { Radius, Spacing } from '@/constants/theme';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { formatDate, todayIso, toIsoDate } from '@/utils/datetime';
 
 /** "YYYY-MM-DD" + n days → "YYYY-MM-DD" (device-local; noon avoids DST edges). */
@@ -71,6 +71,7 @@ export function HouseMissionsSheet({
   onAddMissionRoutine,
 }: HouseMissionsSheetProps) {
   const t = useTokens();
+  const Typography = useTypography();
   const { show: toast } = useToast();
 
   const [showCreateMission, setShowCreateMission] = useState(false);

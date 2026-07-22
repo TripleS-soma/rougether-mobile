@@ -9,6 +9,7 @@ import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { ToastProvider } from '@/components/ui/toast';
 import { AuthProvider } from '@/hooks/use-auth';
 import { BrandThemeProvider, useResolvedScheme } from '@/hooks/use-tokens';
+import { useWebFonts } from '@/hooks/use-web-fonts';
 
 /**
  * Navigation chrome follows the resolved scheme (OS scheme + the 다크 모드
@@ -27,6 +28,8 @@ function NavigationTheme({ children }: { children: ReactNode }) {
  * post-signup onboarding step are follow-ups.
  */
 export default function RootLayout() {
+  // Web-only app-font registration (#382); native embeds them at build time.
+  useWebFonts();
   return (
     // RNGH 제스처(방 꾸미기 자유 배치 #327 등)의 루트 컨텍스트.
     <GestureHandlerRootView style={styles.root}>

@@ -43,7 +43,7 @@ import {
 } from '@/constants/routines';
 import { BearCheck } from '@/components/ui/bear-check';
 import { Icon } from '@/components/ui/icon';
-import { Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { captureVerificationPhoto } from '@/lib/photo-verify';
 import { saveRoomImage } from '@/lib/room-capture';
 import {
@@ -53,7 +53,7 @@ import {
   type Wallpaper,
 } from '@/resources/furniture';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
-import { useTokens } from '@/hooks/use-tokens';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
 import { formatDate, formatTime, todayIso } from '@/utils/datetime';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
@@ -302,6 +302,7 @@ export function MyRoomScreen({
   onRequestPhoto = captureVerificationPhoto,
 }: MyRoomScreenProps) {
   const t = useTokens();
+  const Typography = useTypography();
   const headerInset = useHeaderInsetStyle();
   const { show: toast } = useToast();
   const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
@@ -1365,6 +1366,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
+    // 부제 줄(사진 인증·알림) 있는 행 높이(≈48)에 맞춘 고정 리듬 (#392) —
+    // 부제 없는 행에서 곰 체크(귀 포함 ~30px)가 행을 꽉 채우지 않게 한다.
+    minHeight: 48,
   },
   rowBody: {
     paddingVertical: Spacing.one,

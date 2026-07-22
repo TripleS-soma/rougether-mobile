@@ -40,10 +40,9 @@ import {
   skyPhaseForHour,
   Spacing,
   StaticWhite,
-  Typography,
 } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
-import { useResolvedScheme, useTokens } from '@/hooks/use-tokens';
+import { useFontEmphasis, useResolvedScheme, useTokens, useTypography } from '@/hooks/use-tokens';
 import { assetSource, isCdnKey } from '@/resources/asset';
 import type { FurnitureItem, PlacedFurniture, Wallpaper } from '@/resources/furniture';
 
@@ -70,6 +69,10 @@ export type RoomCell = {
   isMine?: boolean;
   /** This member is the house OWNER (👑 on the tile + 방장 badge). */
   isOwner?: boolean;
+  /** 최근 40분 내 앱 접속 (#383) — 이름 앞 초록 점. lastAccessedAt 근사치. */
+  online?: boolean;
+  /** 오프라인일 때 이름 아래 붙는 마지막 접속 상대 시각 ("3시간 전"). */
+  lastSeenLabel?: string;
   /** API membership id — enables the server kick action when provided. */
   membershipId?: number;
   /** API user id — the friend's room owner id (guestbook, room visit). */
@@ -187,15 +190,15 @@ const DEFAULT_HOUSES: House[] = [
       {
         level: '2층',
         rooms: [
-          { name: '장진형', color: '#D9E8D4' },
-          { name: '임채영', color: '#F5E8C8' },
+          { name: '장진형', color: '#D9E8D4', online: true },
+          { name: '임채영', color: '#F5E8C8', lastSeenLabel: '3시간 전' },
         ],
       },
       {
         level: '1층',
         rooms: [
-          { name: '나의 방', color: '#E8E0D0', isMine: true },
-          { name: '최준서', color: '#F5E1D8', isOwner: true },
+          { name: '나의 방', color: '#E8E0D0', isMine: true, online: true },
+          { name: '최준서', color: '#F5E1D8', isOwner: true, lastSeenLabel: '2일 전' },
         ],
       },
     ],
@@ -327,6 +330,8 @@ export function GroupHouseScreen({
   onSwapSeats,
 }: GroupHouseScreenProps) {
   const t = useTokens();
+  const Typography = useTypography();
+  const emph = useFontEmphasis();
   // 시간대별 하늘 (#358) — 새벽/낮/노을/밤. 낮은 기존 sky 토큰과 동일.
   const scheme = useResolvedScheme();
   const skyColor = raining
@@ -786,7 +791,12 @@ export function GroupHouseScreen({
           onPressOut={onTilePressOut}
           disabled={empty}
           accessibilityRole="button"
-          accessibilityLabel={room.isMine ? `${room.name} (나)` : room.name}
+          accessibilityLabel={[
+            room.isMine ? `${room.name} (나)` : room.name,
+            room.online ? '접속 중' : room.lastSeenLabel && `${room.lastSeenLabel} 접속`,
+          ]
+            .filter(Boolean)
+            .join(', ')}
           accessibilityHint={
             empty
               ? undefined
@@ -837,7 +847,7 @@ export function GroupHouseScreen({
           ) : null}
           {room.isMine ? (
             <View style={[styles.myTag, { backgroundColor: t.warning }]}>
-              <Text style={[styles.myTagText, { color: t.onTint }]}>MY</Text>
+              <Text style={[styles.myTagText, emph('bold'), { color: t.onTint }]}>MY</Text>
             </View>
           ) : null}
           {empty || preview ? null : (
@@ -848,16 +858,35 @@ export function GroupHouseScreen({
               to a bottom scrim for contrast. 빈 좌석은 라벨 없이 빈 방
               비주얼만 — 접근성 라벨은 Pressable이 유지한다. */}
           {empty ? null : (
-            <View style={[styles.roomNameRow, preview && styles.roomNameOverlay]}>
-              {room.isOwner ? <CrownPictogram size={12} /> : null}
-              <Text
-                style={[
-                  Typography.supporting,
-                  styles.roomName,
-                  { color: preview ? StaticWhite : t.onTint },
-                ]}>
-                {room.isMine ? `${room.name} (나)` : room.name}
-              </Text>
+            <View style={[styles.roomMeta, preview && styles.roomNameOverlay]}>
+              <View style={styles.roomNameRow}>
+                {room.isOwner ? <CrownPictogram size={12} /> : null}
+                {room.online ? (
+                  // 최근 접속(#383) — 초록 점. 정확한 실시간이 아니라 40분 근사.
+                  <View
+                    style={[styles.onlineDot, { backgroundColor: t.success }]}
+                    testID="online-dot"
+                  />
+                ) : null}
+                <Text
+                  style={[
+                    Typography.supporting,
+                    styles.roomName,
+                    { color: preview ? StaticWhite : t.onTint },
+                  ]}>
+                  {room.isMine ? `${room.name} (나)` : room.name}
+                </Text>
+              </View>
+              {!room.online && room.lastSeenLabel ? (
+                <Text
+                  style={[
+                    Typography.supporting,
+                    styles.lastSeen,
+                    { color: preview ? StaticWhite : t.onTint },
+                  ]}>
+                  {room.lastSeenLabel}
+                </Text>
+              ) : null}
             </View>
           )}
         </Pressable>
@@ -1044,17 +1073,21 @@ export function GroupHouseScreen({
         {/* 요약 스탯 — 스크롤 없이 집의 오늘이 보인다 (B안). */}
         <View style={styles.summaryRow}>
           <View style={[styles.stat, { backgroundColor: t.surface, borderColor: t.border }]}>
-            <Text style={[styles.statV, { color: t.primaryText }]}>{activeMissions.length}</Text>
+            <Text style={[styles.statV, emph('bold'), { color: t.primaryText }]}>
+              {activeMissions.length}
+            </Text>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>진행 중 미션</Text>
           </View>
           <View style={[styles.stat, { backgroundColor: t.surface, borderColor: t.border }]}>
-            <Text style={[styles.statV, { color: t.primaryText }]}>
+            <Text style={[styles.statV, emph('bold'), { color: t.primaryText }]}>
               {contributedToday}/{activeMissions.length}
             </Text>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>오늘 나의 기여</Text>
           </View>
           <View style={[styles.stat, { backgroundColor: t.surface, borderColor: t.border }]}>
-            <Text style={[styles.statV, { color: t.primaryText }]}>{toNextLevel ?? '—'}</Text>
+            <Text style={[styles.statV, emph('bold'), { color: t.primaryText }]}>
+              {toNextLevel ?? '—'}
+            </Text>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>다음 레벨까지</Text>
           </View>
         </View>
@@ -1227,9 +1260,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.two,
     paddingVertical: 2,
   },
-  roomName: {
-    fontWeight: '600',
-  },
+  roomName: {},
   myTag: {
     position: 'absolute',
     top: Spacing.two,
@@ -1240,7 +1271,6 @@ const styles = StyleSheet.create({
   },
   myTagText: {
     fontSize: 9,
-    fontWeight: '700',
   },
   // --- 프레임 모드 (#287) ---
   skySection: {
@@ -1359,7 +1389,6 @@ const styles = StyleSheet.create({
   // 커버 위 고정 밝기 요소들 — 테마와 무관해 literal 잉크를 쓴다.
   heroPillText: {
     color: '#4A403A',
-    fontWeight: '700',
   },
   summaryRow: {
     flexDirection: 'row',
@@ -1378,11 +1407,22 @@ const styles = StyleSheet.create({
   },
   statV: {
     fontSize: 18,
-    fontWeight: '800',
   },
   roomNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.one,
+  },
+  // Name row + optional last-seen line (#383), centered as one block.
+  roomMeta: {
+    alignItems: 'center',
+  },
+  onlineDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  lastSeen: {
+    opacity: 0.75,
   },
 });

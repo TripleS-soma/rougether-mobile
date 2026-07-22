@@ -20,11 +20,11 @@ import { BearCheck } from '@/components/ui/bear-check';
 import { Icon } from '@/components/ui/icon';
 import { PendingNotice } from '@/components/ui/pending-notice';
 import { BookOpenPictogram, Pictogram, type PictogramName } from '@/components/ui/pictograms';
-import { Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { type FurnitureItem, type PlacedFurniture, type Wallpaper } from '@/resources/furniture';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
-import { useTokens } from '@/hooks/use-tokens';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { formatTime } from '@/utils/datetime';
 
 /** Cheer reactions a visitor can leave on a friend's room. */
@@ -140,6 +140,7 @@ export function FriendRoomScreen({
   onLoadMoreGuestbook,
 }: FriendRoomScreenProps) {
   const t = useTokens();
+  const Typography = useTypography();
   const headerInset = useHeaderInsetStyle();
   const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
   // No routines prop = unwired demo preview (dev gallery); the notice says so.
@@ -581,6 +582,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
     paddingVertical: Spacing.one,
+    // 부제 줄 유무와 무관한 고정 행 리듬 (#392) — 나의 방 리스트와 동일.
+    minHeight: 48,
   },
   streak: {
     flexDirection: 'row',

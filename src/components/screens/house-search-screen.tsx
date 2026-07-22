@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 
 import { HousePreviewFrame } from '@/components/room/house-preview-frame';
+import type { MemberRoomPreview } from '@/components/screens/group-house-screen';
+import type { FurnitureItem, Wallpaper } from '@/resources/furniture';
 import { Icon } from '@/components/ui/icon';
 import {
   CrownPictogram,
@@ -19,10 +21,10 @@ import {
   type PictogramName,
   SparklePictogram,
 } from '@/components/ui/pictograms';
-import { Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
-import { useTokens } from '@/hooks/use-tokens';
+import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { assetSource, isCdnKey } from '@/resources/asset';
 
 /** Browse-card display model (decorated from the API house summary). */
@@ -67,6 +69,8 @@ export type HousePreviewDetail = {
   isMember?: boolean;
   /** At capacity — the join button disables. */
   isFull?: boolean;
+  /** 구성원별 실제 방 (#386, 가입순) — 없으면 인원수 목업으로 폴백. */
+  rooms?: MemberRoomPreview[];
 };
 
 export type HouseSearchScreenProps = {
@@ -89,6 +93,11 @@ export type HouseSearchScreenProps = {
   onJoinHouse?: (houseId: string) => void;
   /** Load the pre-join preview for a browsable house; null = load failed. */
   onPreviewHouse?: (houseId: string) => Promise<HousePreviewDetail | null>;
+  /** 상점 카탈로그 (#386) — 미리보기 창문의 실제 방 렌더에 필요. */
+  furniture?: FurnitureItem[];
+  wallpapers?: Wallpaper[];
+  floors?: Wallpaper[];
+  backgrounds?: Wallpaper[];
   onCreate?: () => void;
 };
 
@@ -105,9 +114,15 @@ export function HouseSearchScreen({
   onPreviewCode,
   onJoinHouse,
   onPreviewHouse,
+  furniture,
+  wallpapers,
+  floors,
+  backgrounds,
   onCreate,
 }: HouseSearchScreenProps) {
   const t = useTokens();
+  const Typography = useTypography();
+  const emph = useFontEmphasis();
   const headerInset = useHeaderInsetStyle();
   const [code, setCode] = useState('');
   const { show: toast } = useToast();
@@ -330,7 +345,9 @@ export function HouseSearchScreen({
                       ) : null}
                       <View style={styles.houseMetaRow}>
                         <View style={[styles.tag, { backgroundColor: h.bg }]}>
-                          <Text style={[styles.tagText, { color: t.onTint }]}>#{h.tag}</Text>
+                          <Text style={[styles.tagText, emph('bold'), { color: t.onTint }]}>
+                            #{h.tag}
+                          </Text>
                         </View>
                         <Text style={[styles.meta, { color: t.textMuted }]} numberOfLines={1}>
                           {h.level != null ? `Lv.${h.level} · ` : ''}멤버 {h.members} / {h.capacity}
@@ -349,7 +366,12 @@ export function HouseSearchScreen({
                       styles.joinBtn,
                       { backgroundColor: full ? t.surfaceMuted : t.primary },
                     ]}>
-                    <Text style={[styles.joinText, { color: full ? t.textMuted : t.onPrimary }]}>
+                    <Text
+                      style={[
+                        styles.joinText,
+                        emph('semibold'),
+                        { color: full ? t.textMuted : t.onPrimary },
+                      ]}>
                       {full ? '대기' : '입주 신청'}
                     </Text>
                   </Pressable>
@@ -376,11 +398,16 @@ export function HouseSearchScreen({
         <View style={styles.hpOverlay}>
           <Pressable style={styles.hpBackdrop} onPress={() => setHousePreview(null)} />
           <View style={[styles.hpCard, { backgroundColor: t.screen }]}>
-            {/* 집 화면과 같은 프레임+창문 비주얼 — 비구성원은 방 데이터가 없어
-                (멤버 API 403) 입주 인원수만큼 기본 방 목업을 보여준다. */}
+            {/* 집 화면과 같은 프레임+창문 비주얼 — 프리뷰 응답의 memberRooms로
+                실제 방을 그리고 (#386), 없으면 인원수 목업으로 폴백. */}
             <HousePreviewFrame
               coverImageKey={housePreview.coverImageKey}
               memberCount={housePreview.members}
+              rooms={housePreview.rooms}
+              furniture={furniture}
+              wallpapers={wallpapers}
+              floors={floors}
+              backgrounds={backgrounds}
               name={housePreview.name}
             />
             <Text style={[Typography.h2, { color: t.text }]} numberOfLines={1}>
@@ -401,7 +428,7 @@ export function HouseSearchScreen({
               <View style={styles.hpGoals}>
                 {housePreview.goals.map((g) => (
                   <View key={g} style={[styles.tag, { backgroundColor: t.surfaceMuted }]}>
-                    <Text style={[styles.tagText, { color: t.onTint }]}>#{g}</Text>
+                    <Text style={[styles.tagText, emph('bold'), { color: t.onTint }]}>#{g}</Text>
                   </View>
                 ))}
               </View>
@@ -595,7 +622,7 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
     borderRadius: Radius.pill,
   },
-  tagText: { fontSize: 10, fontWeight: '700' },
+  tagText: { fontSize: 10 },
   // flexShrink를 주면 줄바꿈 대신 계속 줄어들며 잘린다 — 온전한 너비로 개행.
   meta: { fontSize: 11 },
   joinBtn: {
@@ -603,7 +630,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     borderRadius: Radius.pill,
   },
-  joinText: { fontSize: 12, fontWeight: '600' },
+  joinText: { fontSize: 12 },
   createBtn: {
     borderWidth: 2,
     borderStyle: 'dashed',

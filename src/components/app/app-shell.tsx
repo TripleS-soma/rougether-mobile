@@ -202,7 +202,7 @@ export function AppShell({
   onReplayOnboarding,
   startTutorial = false,
 }: AppShellProps) {
-  const { mode: themeMode, setMode: setThemeMode } = useBrandTheme();
+  const { mode: themeMode, setMode: setThemeMode, fontId, setFontId } = useBrandTheme();
   // 집 하늘 연출용 현재 비 여부 (#360) — 서울 고정, 30분 캐시.
   const { raining } = useWeather();
   const [screen, setScreen] = useState<Screen>('myRoom');
@@ -845,7 +845,12 @@ export function AppShell({
                 return ok;
               }}
               onPreviewCode={previewByCode}
-              onPreviewHouse={previewHouse}
+              // 카탈로그를 얹어 미리보기 창문에 실제 방을 그린다 (#386).
+              onPreviewHouse={(houseId) => previewHouse(houseId, catalogue)}
+              furniture={catalogue.furniture}
+              wallpapers={catalogue.wallpapers}
+              floors={catalogue.floors}
+              backgrounds={catalogue.backgrounds}
               onJoinHouse={(houseId) => {
                 void joinSearchHouse(houseId).then((ok) => ok && setScreen('groupHouse'));
               }}
@@ -867,6 +872,8 @@ export function AppShell({
             <SettingsScreen
               themeMode={themeMode}
               onChangeThemeMode={setThemeMode}
+              fontId={fontId}
+              onChangeFont={setFontId}
               onEditProfile={() => setScreen('profileEdit')}
               onChangePassword={() => setScreen('passwordChange')}
               onOpenNotifications={() => setScreen('notifications')}

@@ -38,6 +38,7 @@ import { Pill } from '@/components/ui/pill';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { PendingNotice } from '@/components/ui/pending-notice';
 import { ToastProvider, useToast } from '@/components/ui/toast';
+import { WheelPicker } from '@/components/ui/wheel-picker';
 import { PolicyUrls } from '@/constants/policy';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
 import { RECOMMENDED_HOUSES } from '@/mocks/fixtures';
@@ -58,6 +59,21 @@ export type GalleryEntry = {
  * component in isolation on device / simulator / web without wiring it into a
  * real screen first. Add an entry whenever you build a new component.
  */
+/** 휠 데모 (#390) — 시 휠 하나로 스와이프/탭 선택을 확인한다. */
+function WheelPickerDemo() {
+  const [hour, setHour] = useState(7);
+  return (
+    <View style={{ width: 120, alignSelf: 'center' }}>
+      <WheelPicker
+        items={Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: `${i + 1}시` }))}
+        value={hour}
+        onChange={setHour}
+        accessibilityLabel="시 선택"
+      />
+    </View>
+  );
+}
+
 export const galleryEntries: GalleryEntry[] = [
   {
     name: 'Design tokens · active theme',
@@ -82,6 +98,12 @@ export const galleryEntries: GalleryEntry[] = [
         <BearCheck checked color="#7FA87F" />
       </View>
     ),
+  },
+  {
+    name: 'WheelPicker · 스와이프 휠',
+    description:
+      '알림 시간 시트의 시간 선택 휠 (#390, design-sync Time wheel picker 채택) — 스냅 스와이프 + 행 탭 선택.',
+    render: () => <WheelPickerDemo />,
   },
   {
     name: 'CoachMarkOverlay · 스포트라이트',

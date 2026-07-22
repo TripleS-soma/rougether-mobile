@@ -10,8 +10,8 @@ import {
   VISIBILITY_ICONS,
   VISIBILITY_LABELS,
 } from '@/constants/routines';
-import { Overlay, Radius, Spacing, StaticWhite, Typography } from '@/constants/theme';
-import { useTokens } from '@/hooks/use-tokens';
+import { Overlay, Radius, Spacing, StaticWhite } from '@/constants/theme';
+import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
 const ICON_CHOICES: PictogramName[] = [
   'calendar',
@@ -67,6 +67,8 @@ export function CategoryFormSheet({
   onClose,
 }: CategoryFormSheetProps) {
   const t = useTokens();
+  const Typography = useTypography();
+  const emph = useFontEmphasis();
   // 새 카테고리의 기본 색 — 기존 자동 배정(생성 순서 순환)과 같은 색에서 시작.
   const autoColor = CATEGORY_COLORS[categoryCount % CATEGORY_COLORS.length];
   const [name, setName] = useState('');
@@ -192,7 +194,7 @@ export function CategoryFormSheet({
                   <Text
                     style={[
                       Typography.supporting,
-                      styles.segLabel,
+                      emph('semibold'),
                       { color: active ? t.onPrimary : t.textMuted },
                     ]}>
                     {VISIBILITY_LABELS[v.id]}
@@ -309,7 +311,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     borderRadius: Radius.md,
   },
-  segLabel: { fontWeight: '600' },
   segDesc: { textAlign: 'center' },
   footer: {
     paddingHorizontal: Spacing.four,

@@ -50,6 +50,10 @@ node .claude/skills/design-sync/generate.js   # → .claude/skills/design-sync/o
 1. **화면 단위 시안**: 화면 리디자인은 artifact-design 스킬 + Artifact로 폰 프레임
    시안 2~3종을 만들어 비교한다 (토큰만 사용 — 채택 시 레이아웃 포팅만 남게).
    컴포넌트 단위 다듬기는 claude.ai/design에서 직접 반복해도 된다.
+   **시안은 반드시 Artifact 링크로도 전달한다** — Proposals 카드를 design
+   프로젝트에 푸시했더라도, 같은 내용을 Artifact로 게시해 바로 여는 링크를
+   응답에 명시할 것 (사용자가 design 프로젝트를 탐색하게 하지 말 것).
+   갱신 시 같은 파일 경로로 재게시해 URL을 유지한다.
 2. **채택**: 사용자가 방향을 고르면 이슈 생성(보드 등록) → RN 구현 (기존 워크플로 그대로:
    feat 브랜치, 4종 체크, 실서버 웹 검증, PR).
 3. **되반영**: 구현이 머지되면 바뀐 토큰/패턴을 생성기에 반영하고 카드 재푸시.
