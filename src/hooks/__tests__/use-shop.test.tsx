@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useShop } from '@/hooks/use-shop';
 
@@ -48,8 +48,34 @@ describe('useShop — refreshOwned (가챠 획득 동기화)', () => {
     expect(result.current.ownedIds).toEqual(['1']);
 
     // The gacha rewarded item 2 — refreshOwned re-reads the inventory.
-    await result.current.refreshOwned();
+    await act(async () => {
+      await result.current.refreshOwned();
+    });
     await waitFor(() => expect(result.current.ownedIds).toContain('2'));
     expect(result.current.ownedIds).toContain('1');
+  });
+
+  it('keeps an intentionally empty FREE_V1 room empty', async () => {
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/me/items')) {
+        return res({ items: [{ itemId: 1, userItemId: 11 }] });
+      }
+      if (url.includes('/rooms/me')) {
+        return res({
+          layoutFormat: 'FREE_V1',
+          placements: [],
+          slots: [{ slotType: 'bottomLeft', userItemId: 11 }],
+        });
+      }
+      if (url.includes('/items')) return res(ITEMS);
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useShop(jest.fn()));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.placement.freeLayout).toBe(true);
+    expect(result.current.placement.items).toEqual([]);
+    expect(result.current.placement.placedFurnitureIds).toEqual([]);
   });
 });

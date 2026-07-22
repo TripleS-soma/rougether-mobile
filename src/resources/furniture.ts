@@ -103,6 +103,9 @@ export type FurnitureItem = {
   assetKey: string;
   /** 새 FREE_V1 배치에만 적용되는 초기 배율. 기존 배치에는 소급하지 않는다. */
   defaultScale?: number;
+  /** 새 FREE_V1 배치 중심점의 정규화 좌표. 둘 중 하나라도 없으면 공통 기본 위치를 사용한다. */
+  defaultPositionX?: number;
+  defaultPositionY?: number;
   /** Gacha reward metadata (optional). */
   theme?: string;
   rarity?: Rarity;

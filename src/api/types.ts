@@ -385,6 +385,8 @@ export type ItemResponse = {
   characterSlotType?: string;
   defaultSlot?: string;
   defaultScale?: number;
+  defaultPositionX?: number | null;
+  defaultPositionY?: number | null;
   categoryCode?: string;
   purchaseCurrencyType?: string;
   priceAmount?: number;
@@ -506,6 +508,8 @@ export type MyItemSummary = {
   characterSlotType?: string;
   defaultSlot?: string;
   defaultScale?: number;
+  defaultPositionX?: number | null;
+  defaultPositionY?: number | null;
   theme?: ThemeSummary;
   acquiredAt?: string;
 };
