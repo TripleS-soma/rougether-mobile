@@ -9,6 +9,23 @@ describe('OnboardingScreen', () => {
     expect(getByText('루게더에 오신 걸 환영해요')).toBeTruthy();
   });
 
+  it('walks all five intro slides with the updated copy (#412)', async () => {
+    const { getByText, getByLabelText } = await render(<OnboardingScreen />);
+    // 5장 도트 — 마지막 장까지 존재.
+    expect(getByLabelText('5번째 슬라이드로 이동')).toBeTruthy();
+    await fireEvent.press(getByText('다음'));
+    expect(getByText(/곰 체크로 완료해요/)).toBeTruthy();
+    await fireEvent.press(getByText('다음'));
+    expect(getByText(/내 방을 꾸며요/)).toBeTruthy();
+    await fireEvent.press(getByText('다음'));
+    expect(getByText(/한 집에서/)).toBeTruthy();
+    await fireEvent.press(getByText('다음'));
+    expect(getByText(/기록은 달력으로/)).toBeTruthy();
+    // 마지막 장 CTA는 목표 선택으로 이어진다.
+    await fireEvent.press(getByText('목표 선택하기'));
+    expect(getByText('관심 있는 목표를 골라주세요')).toBeTruthy();
+  });
+
   it('skips straight to the goal survey', async () => {
     const { getByText } = await render(<OnboardingScreen />);
 
