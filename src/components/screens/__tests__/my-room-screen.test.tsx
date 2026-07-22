@@ -230,12 +230,14 @@ describe('MyRoomScreen', () => {
     const onEdit = jest.fn();
     const onAddRoutine = jest.fn();
     const onManageRoutines = jest.fn();
-    const { getByLabelText, getByText, queryByText } = await render(
+    const onManageCategories = jest.fn();
+    const { getByLabelText, getByText } = await render(
       <MyRoomScreen
         routines={SAMPLE_ROUTINES}
         onEdit={onEdit}
         onAddRoutine={onAddRoutine}
         onManageRoutines={onManageRoutines}
+        onManageCategories={onManageCategories}
       />,
     );
 
@@ -250,10 +252,10 @@ describe('MyRoomScreen', () => {
     expect(onManageRoutines).toHaveBeenCalledTimes(1);
     expect(onAddRoutine).not.toHaveBeenCalled();
 
-    // 카테고리 관리 opens the manager sheet in-place.
+    // 카테고리 관리 routes to the dedicated screen (#394).
     await fireEvent.press(getByLabelText('메뉴'));
     await fireEvent.press(getByText('카테고리 관리'));
-    expect(queryByText('새 카테고리 만들기')).toBeTruthy();
+    expect(onManageCategories).toHaveBeenCalledTimes(1);
   });
 
   it('오늘의 루틴 + 버튼은 바로 루틴 추가 콜백을 부른다 (#335)', async () => {

@@ -6,6 +6,7 @@ import { type HouseCover, HouseCoverPicker } from '@/components/house-cover-pick
 import { HousePreviewFrame } from '@/components/room/house-preview-frame';
 import { Room } from '@/components/room/room';
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
+import { CategoryManageScreen } from '@/components/screens/category-manage-screen';
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
 import { GachaScreen } from '@/components/screens/gacha-screen';
@@ -28,6 +29,7 @@ import { SignupScreen } from '@/components/screens/signup-screen';
 import { SampleButton } from '@/components/sample-button';
 import { Badge } from '@/components/ui/badge';
 import { BearCheck } from '@/components/ui/bear-check';
+import { CATEGORY_ICON_GEOMETRY, CategoryIcon } from '@/components/ui/category-icon';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { CoachMarkOverlay } from '@/components/ui/coach-mark';
@@ -37,6 +39,7 @@ import { Pill } from '@/components/ui/pill';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { PendingNotice } from '@/components/ui/pending-notice';
 import { ToastProvider, useToast } from '@/components/ui/toast';
+import { WheelPicker } from '@/components/ui/wheel-picker';
 import { PolicyUrls } from '@/constants/policy';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
 import { RECOMMENDED_HOUSES } from '@/mocks/fixtures';
@@ -58,6 +61,21 @@ export type GalleryEntry = {
  * component in isolation on device / simulator / web without wiring it into a
  * real screen first. Add an entry whenever you build a new component.
  */
+/** 휠 데모 (#390) — 시 휠 하나로 스와이프/탭 선택을 확인한다. */
+function WheelPickerDemo() {
+  const [hour, setHour] = useState(7);
+  return (
+    <View style={{ width: 120, alignSelf: 'center' }}>
+      <WheelPicker
+        items={Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: `${i + 1}시` }))}
+        value={hour}
+        onChange={setHour}
+        accessibilityLabel="시 선택"
+      />
+    </View>
+  );
+}
+
 export const galleryEntries: GalleryEntry[] = [
   {
     name: 'Room · renderer contract v1 reference',
@@ -86,6 +104,31 @@ export const galleryEntries: GalleryEntry[] = [
         <BearCheck checked color="#7FA8D4" />
         <BearCheck checked color="#C8869C" />
         <BearCheck checked color="#7FA87F" />
+      </View>
+    ),
+  },
+  {
+    name: 'WheelPicker · 스와이프 휠',
+    description:
+      '알림 시간 시트의 시간 선택 휠 (#390, design-sync Time wheel picker 채택) — 스냅 스와이프 + 행 탭 선택.',
+    render: () => <WheelPickerDemo />,
+  },
+  {
+    name: 'CategoryIcon · 스티커 팝',
+    description:
+      '카테고리 아이콘 16종 (#398, design-sync A안) — 카테고리 색 하나에서 파스텔·액센트·포인트 톤 파생.',
+    render: () => (
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
+        {(Object.keys(CATEGORY_ICON_GEOMETRY) as (keyof typeof CATEGORY_ICON_GEOMETRY)[]).map(
+          (n, i) => (
+            <CategoryIcon
+              key={n}
+              name={n}
+              color={['#E8A87C', '#7FA8D4', '#C8869C', '#96B39A'][i % 4]}
+              size={32}
+            />
+          ),
+        )}
       </View>
     ),
   },
@@ -338,6 +381,15 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ height: 760, alignSelf: 'stretch' }}>
         <AddRoutineScreen />
+      </View>
+    ),
+  },
+  {
+    name: 'CategoryManageScreen',
+    description: '카테고리 관리 독립 화면 (#394) — 목록(순서·수정·삭제) + 헤더 +로 생성 시트.',
+    render: () => (
+      <View style={{ height: 640, alignSelf: 'stretch' }}>
+        <CategoryManageScreen onReorder={() => {}} />
       </View>
     ),
   },

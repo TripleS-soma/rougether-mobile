@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { CategoryManagerSheet } from '@/components/screens/sheets/category-manager-sheet';
+import { CategoryFormSheet } from '@/components/screens/sheets/category-form-sheet';
 import { DateRangeSheet } from '@/components/screens/sheets/date-range-sheet';
 import { TimePickerSheet } from '@/components/screens/sheets/time-picker-sheet';
 import { useToast } from '@/components/ui/toast';
@@ -15,7 +15,7 @@ import {
   type RoutineCategoryMeta,
 } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
-import { Pictogram } from '@/components/ui/pictograms';
+import { CategoryIcon } from '@/components/ui/category-icon';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
@@ -52,13 +52,8 @@ export type AddRoutineScreenProps = {
   onUpdate?: (id: string, routine: NewRoutine) => void;
   onDelete?: (id: string) => void;
   categories?: RoutineCategoryMeta[];
+  /** 카테고리 빠른 생성 (#394) — 폼을 벗어나지 않는 CategoryFormSheet 경유. */
   onCreateCategory?: (category: RoutineCategoryMeta) => void;
-  onUpdateCategory?: (id: string, category: RoutineCategoryMeta) => void;
-  onDeleteCategory?: (id: string) => void;
-  /** Persist a new category order (카테고리 관리 sheet, long-press to move). */
-  onReorderCategories?: (orderedIds: string[]) => void;
-  /** Categories with routines — deletion is blocked with a warning modal. */
-  inUseCategoryIds?: string[];
 };
 
 function today() {
@@ -79,10 +74,6 @@ export function AddRoutineScreen({
   onDelete,
   categories = ROUTINE_CATEGORIES,
   onCreateCategory,
-  onUpdateCategory,
-  onDeleteCategory,
-  onReorderCategories,
-  inUseCategoryIds,
 }: AddRoutineScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
@@ -203,11 +194,11 @@ export function AddRoutineScreen({
             <Pressable
               onPress={() => setShowCategoryManager(true)}
               accessibilityRole="button"
-              accessibilityLabel="카테고리 관리"
+              accessibilityLabel="새 카테고리"
               hitSlop={8}
               style={styles.manageBtn}>
               <Icon name="add" size={16} color={t.primaryText} />
-              <Text style={[Typography.label, { color: t.primaryText }]}>관리</Text>
+              <Text style={[Typography.label, { color: t.primaryText }]}>추가</Text>
             </Pressable>
           </View>
           <ScrollView
@@ -221,7 +212,12 @@ export function AddRoutineScreen({
                   key={c.id}
                   onPress={() => setCategory(c.id)}
                   style={[styles.chip, { backgroundColor: active ? c.color : t.surface }]}>
-                  <Pictogram name={c.icon} size={14} color={active ? t.onPrimary : undefined} />
+                  <CategoryIcon
+                    name={c.icon}
+                    color={c.color}
+                    size={14}
+                    mono={active ? t.onPrimary : undefined}
+                  />
                   <Text style={[Typography.label, { color: active ? t.onPrimary : t.textMuted }]}>
                     {c.label}
                   </Text>
@@ -479,14 +475,12 @@ export function AddRoutineScreen({
         }}
         onClose={() => setShowTimeSheet(false)}
       />
-      <CategoryManagerSheet
+      {/* 루틴 작성 흐름을 벗어나지 않는 카테고리 빠른 생성 (#394) —
+          전체 관리(순서·삭제)는 나의 방 햄버거 → 카테고리 관리 화면에서. */}
+      <CategoryFormSheet
         visible={showCategoryManager}
-        categories={categories}
+        categoryCount={categories.length}
         onCreate={(c) => onCreateCategory?.(c)}
-        onUpdate={(id, c) => onUpdateCategory?.(id, c)}
-        onDelete={(id) => onDeleteCategory?.(id)}
-        onReorder={onReorderCategories}
-        inUseCategoryIds={inUseCategoryIds}
         onClose={() => setShowCategoryManager(false)}
       />
 
