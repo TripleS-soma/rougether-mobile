@@ -1,4 +1,6 @@
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { State } from 'react-native-gesture-handler';
+import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { ToastProvider } from '@/components/ui/toast';
@@ -48,6 +50,21 @@ describe('MyRoomScreen', () => {
     expect(getByText('7일')).toBeTruthy();
     // 3 of 5 routines completed today.
     expect(getByText('3 / 5')).toBeTruthy();
+  });
+
+  it('double-tapping the room opens 방꾸미기 (#376)', async () => {
+    const onEdit = jest.fn();
+    await render(<MyRoomScreen routines={SAMPLE_ROUTINES} onEdit={onEdit} />);
+
+    await act(() =>
+      fireGestureHandler(getByGestureTestId('room-decor-double-tap'), [
+        { state: State.BEGAN },
+        { state: State.ACTIVE },
+        { state: State.END },
+      ]),
+    );
+
+    expect(onEdit).toHaveBeenCalledTimes(1);
   });
 
   it('marks each category header with its visibility scope (#285)', async () => {
