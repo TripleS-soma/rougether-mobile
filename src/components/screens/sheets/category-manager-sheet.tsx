@@ -488,6 +488,8 @@ const styles = StyleSheet.create({
   emojiGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    // 고정폭 셀의 wrap 그리드 — 가운데 정렬로 좌우 여백을 같게 (#388).
+    justifyContent: 'center',
     gap: Spacing.two,
   },
   emojiCell: {
@@ -500,6 +502,7 @@ const styles = StyleSheet.create({
   colorRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'center',
     gap: Spacing.two,
   },
   colorCell: {
