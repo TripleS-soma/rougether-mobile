@@ -12,6 +12,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import { CharacterAvatar, type CharacterAnimationSet } from '@/components/character-avatar';
 import { NavMenuPopover } from '@/components/screens/nav-menu-popover';
@@ -637,6 +638,16 @@ export function MyRoomScreen({
     onToggleCalendarItem?.(item, selectedDate);
   };
 
+  // 방 더블탭 = 방꾸미기 진입 (#376) — 햄버거 메뉴 '방 꾸미기'와 같은 경로.
+  // 내부 단일 탭(캐릭터 포즈 등, RN Pressable)과는 독립적으로 인식된다.
+  const decorDoubleTap = Gesture.Tap()
+    .numberOfTaps(2)
+    .withTestId('room-decor-double-tap')
+    .runOnJS(true)
+    .onEnd((_e, success) => {
+      if (success) onEdit?.();
+    });
+
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
       <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
@@ -735,20 +746,24 @@ export function MyRoomScreen({
           {tab === 'room' ? (
             <>
               <View style={styles.roomWrap} ref={roomShotRef} collapsable={false}>
-                <Room
-                  characterId={characterId}
-                  characterAnimations={characterAnimations}
-                  wallpaperId={wallpaperId}
-                  floorId={floorId}
-                  backgroundId={backgroundId}
-                  placedFurnitureIds={placedFurnitureIds}
-                  placements={placements}
-                  furniture={furniture}
-                  wallpapers={wallpapers}
-                  floors={floors}
-                  backgrounds={backgrounds}
-                  interactiveCharacter
-                />
+                <GestureDetector gesture={decorDoubleTap}>
+                  <View collapsable={false}>
+                    <Room
+                      characterId={characterId}
+                      characterAnimations={characterAnimations}
+                      wallpaperId={wallpaperId}
+                      floorId={floorId}
+                      backgroundId={backgroundId}
+                      placedFurnitureIds={placedFurnitureIds}
+                      placements={placements}
+                      furniture={furniture}
+                      wallpapers={wallpapers}
+                      floors={floors}
+                      backgrounds={backgrounds}
+                      interactiveCharacter
+                    />
+                  </View>
+                </GestureDetector>
                 <Pressable
                   onPress={onOpenGacha}
                   accessibilityRole="button"
