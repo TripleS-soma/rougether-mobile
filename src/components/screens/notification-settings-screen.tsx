@@ -4,9 +4,9 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { PendingNotice } from '@/components/ui/pending-notice';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
-import { Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
-import { useTokens } from '@/hooks/use-tokens';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 export type NotificationSettings = {
   all: boolean;
@@ -49,6 +49,7 @@ export function NotificationSettingsScreen({
   onBack,
 }: NotificationSettingsScreenProps) {
   const t = useTokens();
+  const Typography = useTypography();
   const [settings, setSettings] = useState(initialSettings);
 
   const update = (next: NotificationSettings) => {

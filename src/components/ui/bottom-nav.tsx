@@ -10,8 +10,8 @@ import HouseInactive from '@/assets/images/common/house-icon.svg';
 import SettingsActive from '@/assets/images/common/settings-icon-active.svg';
 import SettingsInactive from '@/assets/images/common/settings-icon.svg';
 import { CoachTarget } from '@/components/ui/coach-mark';
-import { Spacing, Typography } from '@/constants/theme';
-import { useTokens } from '@/hooks/use-tokens';
+import { Spacing } from '@/constants/theme';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 export type NavTab = 'myRoom' | 'house' | 'settings';
 
@@ -29,6 +29,7 @@ export type BottomNavProps = {
 /** App bottom navigation (나의 방 / 집 / 설정) with custom SVG icons. */
 export function BottomNav({ active, onChange }: BottomNavProps) {
   const t = useTokens();
+  const Typography = useTypography();
   const insets = useContext(SafeAreaInsetsContext);
   return (
     <View

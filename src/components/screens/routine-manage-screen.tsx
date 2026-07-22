@@ -8,9 +8,9 @@ import {
 } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
 import { Pictogram } from '@/components/ui/pictograms';
-import { Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
-import { useTokens } from '@/hooks/use-tokens';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
 import { formatTime } from '@/utils/datetime';
 
@@ -43,6 +43,7 @@ export function RoutineManageScreen({
   onEdit,
 }: RoutineManageScreenProps) {
   const t = useTokens();
+  const Typography = useTypography();
   const headerInset = useHeaderInsetStyle();
   // The routines prop carries the merged routine+todo list; this screen manages routines only.
   const routineItems = routines.filter((r) => r.kind !== 'todo');

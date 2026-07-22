@@ -4,11 +4,11 @@ import { PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from 'rea
 import { CharacterAvatar } from '@/components/character-avatar';
 import { Icon } from '@/components/ui/icon';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
-import { Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { Pictogram, type PictogramName } from '@/components/ui/pictograms';
 import { useToast } from '@/components/ui/toast';
 import { useScreenStyle } from '@/hooks/use-screen-style';
-import { useTokens } from '@/hooks/use-tokens';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 type Slide = { icon: PictogramName; bg: string; title: string; description: string };
 
@@ -74,6 +74,7 @@ export function OnboardingScreen({
   initialCharacterId,
 }: OnboardingScreenProps) {
   const t = useTokens();
+  const Typography = useTypography();
   // Pinned bottom action buttons → pad both edges so the notch / home indicator
   // don't clip the top title or the bottom buttons.
   const screenStyle = useScreenStyle(['top', 'bottom']);
@@ -269,6 +270,7 @@ function PrimaryButton({
   blockedMessage?: string;
 }) {
   const t = useTokens();
+  const Typography = useTypography();
   const { show: toast } = useToast();
   return (
     <Pressable
@@ -290,6 +292,7 @@ function PrimaryButton({
 
 function TextButton({ label, onPress }: { label: string; onPress: () => void }) {
   const t = useTokens();
+  const Typography = useTypography();
   return (
     <Pressable onPress={onPress} accessibilityRole="button" style={styles.textBtn}>
       <Text style={[Typography.supporting, { color: t.textMuted }]}>{label}</Text>

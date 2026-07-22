@@ -2,8 +2,8 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
 import type { Routine } from '@/constants/routines';
-import { Overlay, Radius, Spacing, Typography } from '@/constants/theme';
-import { useTokens } from '@/hooks/use-tokens';
+import { Overlay, Radius, Spacing } from '@/constants/theme';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 export type RoutineMenuSheetProps = {
   /** 메뉴를 연 행의 루틴/투두 — null이면 시트가 닫힌다. */
@@ -39,6 +39,7 @@ export function RoutineMenuSheet({
   onChangeDate,
 }: RoutineMenuSheetProps) {
   const t = useTokens();
+  const Typography = useTypography();
   // 시간이 없는 루틴/투두는 '시간 추가', 있으면 '시간 수정' (#325).
   const timeLabel = item?.alarmEnabled && item?.time ? '시간 수정' : '시간 추가';
 

@@ -3,8 +3,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Icon } from '@/components/ui/icon';
-import { Overlay, Radius, Spacing, Typography } from '@/constants/theme';
-import { useTokens } from '@/hooks/use-tokens';
+import { Overlay, Radius, Spacing } from '@/constants/theme';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 1);
 const MINUTES = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
@@ -49,6 +49,7 @@ export function TimePickerSheet({
   onClose,
 }: TimePickerSheetProps) {
   const t = useTokens();
+  const Typography = useTypography();
   const init = parse(initialTime || '07:00');
   const [enabled, setEnabled] = useState(initialEnabled);
   const [ampm, setAmpm] = useState<Ampm>(init.ampm);

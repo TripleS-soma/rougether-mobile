@@ -40,10 +40,9 @@ import {
   skyPhaseForHour,
   Spacing,
   StaticWhite,
-  Typography,
 } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
-import { useResolvedScheme, useTokens } from '@/hooks/use-tokens';
+import { useFontEmphasis, useResolvedScheme, useTokens, useTypography } from '@/hooks/use-tokens';
 import { assetSource, isCdnKey } from '@/resources/asset';
 import type { FurnitureItem, PlacedFurniture, Wallpaper } from '@/resources/furniture';
 
@@ -327,6 +326,8 @@ export function GroupHouseScreen({
   onSwapSeats,
 }: GroupHouseScreenProps) {
   const t = useTokens();
+  const Typography = useTypography();
+  const emph = useFontEmphasis();
   // 시간대별 하늘 (#358) — 새벽/낮/노을/밤. 낮은 기존 sky 토큰과 동일.
   const scheme = useResolvedScheme();
   const skyColor = raining
@@ -837,7 +838,7 @@ export function GroupHouseScreen({
           ) : null}
           {room.isMine ? (
             <View style={[styles.myTag, { backgroundColor: t.warning }]}>
-              <Text style={[styles.myTagText, { color: t.onTint }]}>MY</Text>
+              <Text style={[styles.myTagText, emph('bold'), { color: t.onTint }]}>MY</Text>
             </View>
           ) : null}
           {empty || preview ? null : (
@@ -1044,17 +1045,21 @@ export function GroupHouseScreen({
         {/* 요약 스탯 — 스크롤 없이 집의 오늘이 보인다 (B안). */}
         <View style={styles.summaryRow}>
           <View style={[styles.stat, { backgroundColor: t.surface, borderColor: t.border }]}>
-            <Text style={[styles.statV, { color: t.primaryText }]}>{activeMissions.length}</Text>
+            <Text style={[styles.statV, emph('bold'), { color: t.primaryText }]}>
+              {activeMissions.length}
+            </Text>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>진행 중 미션</Text>
           </View>
           <View style={[styles.stat, { backgroundColor: t.surface, borderColor: t.border }]}>
-            <Text style={[styles.statV, { color: t.primaryText }]}>
+            <Text style={[styles.statV, emph('bold'), { color: t.primaryText }]}>
               {contributedToday}/{activeMissions.length}
             </Text>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>오늘 나의 기여</Text>
           </View>
           <View style={[styles.stat, { backgroundColor: t.surface, borderColor: t.border }]}>
-            <Text style={[styles.statV, { color: t.primaryText }]}>{toNextLevel ?? '—'}</Text>
+            <Text style={[styles.statV, emph('bold'), { color: t.primaryText }]}>
+              {toNextLevel ?? '—'}
+            </Text>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>다음 레벨까지</Text>
           </View>
         </View>
@@ -1227,9 +1232,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.two,
     paddingVertical: 2,
   },
-  roomName: {
-    fontWeight: '600',
-  },
+  roomName: {},
   myTag: {
     position: 'absolute',
     top: Spacing.two,
@@ -1240,7 +1243,6 @@ const styles = StyleSheet.create({
   },
   myTagText: {
     fontSize: 9,
-    fontWeight: '700',
   },
   // --- 프레임 모드 (#287) ---
   skySection: {
@@ -1359,7 +1361,6 @@ const styles = StyleSheet.create({
   // 커버 위 고정 밝기 요소들 — 테마와 무관해 literal 잉크를 쓴다.
   heroPillText: {
     color: '#4A403A',
-    fontWeight: '700',
   },
   summaryRow: {
     flexDirection: 'row',
@@ -1378,7 +1379,6 @@ const styles = StyleSheet.create({
   },
   statV: {
     fontSize: 18,
-    fontWeight: '800',
   },
   roomNameRow: {
     flexDirection: 'row',

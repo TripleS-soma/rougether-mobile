@@ -49,6 +49,30 @@ describe('SettingsScreen', () => {
     expect(onLogout).not.toHaveBeenCalled();
   });
 
+  it('renders the font picker with all five options (#382)', async () => {
+    const { getByText, getByLabelText } = await render(<SettingsScreen />);
+    expect(getByText('폰트')).toBeTruthy();
+    for (const name of ['나눔스퀘어라운드', '프리텐다드', '주아 혼합', 'SUIT', '시스템 기본']) {
+      expect(getByLabelText(`${name} 폰트`)).toBeTruthy();
+    }
+  });
+
+  it('changes the app font and marks the active one selected', async () => {
+    const onChangeFont = jest.fn();
+    const { getByLabelText } = await render(
+      <SettingsScreen fontId="nanum" onChangeFont={onChangeFont} />,
+    );
+
+    expect(getByLabelText('나눔스퀘어라운드 폰트').props.accessibilityState.selected).toBe(true);
+    expect(getByLabelText('SUIT 폰트').props.accessibilityState.selected).toBe(false);
+
+    await fireEvent.press(getByLabelText('프리텐다드 폰트'));
+    expect(onChangeFont).toHaveBeenCalledWith('pretendard');
+
+    await fireEvent.press(getByLabelText('시스템 기본 폰트'));
+    expect(onChangeFont).toHaveBeenCalledWith('system');
+  });
+
   it('replays onboarding', async () => {
     const onReplayOnboarding = jest.fn();
     const { getByText } = await render(<SettingsScreen onReplayOnboarding={onReplayOnboarding} />);

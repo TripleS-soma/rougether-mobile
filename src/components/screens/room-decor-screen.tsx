@@ -25,7 +25,7 @@ import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Icon } from '@/components/ui/icon';
 import { WalletPills } from '@/components/ui/wallet-pills';
-import { Overlay, Radius, Spacing, Typography } from '@/constants/theme';
+import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { assetSource, isCdnKey } from '@/resources/asset';
 import {
   DEFAULT_WALLPAPER_ID,
@@ -38,7 +38,7 @@ import {
 } from '@/resources/furniture';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
-import { useTokens } from '@/hooks/use-tokens';
+import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
 /**
  * What the picker panel is currently choosing for: one furniture slot, or one
@@ -125,6 +125,7 @@ export function RoomDecorScreen({
   onApply,
 }: RoomDecorScreenProps) {
   const t = useTokens();
+  const Typography = useTypography();
   const { show: toast } = useToast();
   const headerInset = useHeaderInsetStyle();
 
@@ -801,6 +802,7 @@ type BuyProps = {
 
 /** 비우기 tile shared by the grids — clears the slot/surface being picked. */
 function ClearTile({ onClear, t }: { onClear?: () => void; t: Tokens }) {
+  const emph = useFontEmphasis();
   if (!onClear) return null;
   return (
     <Pressable
@@ -811,7 +813,7 @@ function ClearTile({ onClear, t }: { onClear?: () => void; t: Tokens }) {
       <View style={[styles.thumbWrap, styles.clearThumb]}>
         <Icon name="close" size={18} color={t.textMuted} />
       </View>
-      <Text style={[styles.tileName, { color: t.textMuted }]}>비우기</Text>
+      <Text style={[styles.tileName, emph('medium'), { color: t.textMuted }]}>비우기</Text>
     </Pressable>
   );
 }
@@ -833,6 +835,7 @@ function SwatchGrid({
   onSelect: (id: string) => void;
   onClear?: () => void;
 }) {
+  const emph = useFontEmphasis();
   return (
     <View style={styles.grid}>
       <ClearTile onClear={onClear} t={t} />
@@ -871,7 +874,7 @@ function SwatchGrid({
             ) : (
               <View style={[styles.swatch, { backgroundColor: item.color }]} />
             )}
-            <Text style={[styles.tileName, { color: t.text }]} numberOfLines={2}>
+            <Text style={[styles.tileName, emph('medium'), { color: t.text }]} numberOfLines={2}>
               {item.name}
             </Text>
             {isOwned ? (
@@ -906,6 +909,8 @@ function FurnitureGrid({
   onPlace: (item: FurnitureItem) => void;
   onClear?: () => void;
 }) {
+  const Typography = useTypography();
+  const emph = useFontEmphasis();
   if (items.length === 0) {
     return (
       <Text style={[Typography.supporting, styles.emptyPicker, { color: t.textMuted }]}>
@@ -944,7 +949,7 @@ function FurnitureGrid({
             <View style={styles.thumbWrap}>
               <FurniturePlaceholder item={item} showName={false} />
             </View>
-            <Text style={[styles.tileName, { color: t.text }]} numberOfLines={2}>
+            <Text style={[styles.tileName, emph('medium'), { color: t.text }]} numberOfLines={2}>
               {item.name}
             </Text>
             {isOwned ? (
@@ -1173,7 +1178,6 @@ const styles = StyleSheet.create({
   tileName: {
     fontSize: 11,
     lineHeight: 14,
-    fontWeight: '500',
     minHeight: 28,
   },
   tilePrice: {

@@ -198,7 +198,7 @@ export function AppShell({
   onReplayOnboarding,
   startTutorial = false,
 }: AppShellProps) {
-  const { mode: themeMode, setMode: setThemeMode } = useBrandTheme();
+  const { mode: themeMode, setMode: setThemeMode, fontId, setFontId } = useBrandTheme();
   // 집 하늘 연출용 현재 비 여부 (#360) — 서울 고정, 30분 캐시.
   const { raining } = useWeather();
   const [screen, setScreen] = useState<Screen>('myRoom');
@@ -860,6 +860,8 @@ export function AppShell({
             <SettingsScreen
               themeMode={themeMode}
               onChangeThemeMode={setThemeMode}
+              fontId={fontId}
+              onChangeFont={setFontId}
               onEditProfile={() => setScreen('profileEdit')}
               onChangePassword={() => setScreen('passwordChange')}
               onOpenNotifications={() => setScreen('notifications')}

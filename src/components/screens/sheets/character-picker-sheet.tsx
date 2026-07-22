@@ -4,8 +4,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { CharacterAvatar, type CharacterAnimationSet } from '@/components/character-avatar';
 import { Icon } from '@/components/ui/icon';
 import { CHARACTER_OPTIONS, type CharacterId } from '@/constants/characters';
-import { Overlay, Radius, Spacing, Typography } from '@/constants/theme';
-import { useTokens } from '@/hooks/use-tokens';
+import { Overlay, Radius, Spacing } from '@/constants/theme';
+import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { assetSource, isCdnKey } from '@/resources/asset';
 
 /** One owned character (server GET /me/characters). */
@@ -43,6 +43,8 @@ export function CharacterPickerSheet({
   onClose,
 }: CharacterPickerSheetProps) {
   const t = useTokens();
+  const Typography = useTypography();
+  const emph = useFontEmphasis();
   if (!visible) return null;
 
   return (
@@ -105,7 +107,9 @@ export function CharacterPickerSheet({
                     {c.selected ? (
                       <View style={[styles.badge, { backgroundColor: t.primary }]}>
                         <Icon name="check" size={10} color={t.onPrimary} />
-                        <Text style={[styles.badgeText, { color: t.onPrimary }]}>착용 중</Text>
+                        <Text style={[styles.badgeText, emph('semibold'), { color: t.onPrimary }]}>
+                          착용 중
+                        </Text>
                       </View>
                     ) : (
                       <Text style={[Typography.supporting, { color: t.textMuted }]}>
@@ -198,6 +202,5 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: 11,
-    fontWeight: '600',
   },
 });

@@ -10,8 +10,8 @@ import {
 } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
 import { Pictogram, type PictogramName } from '@/components/ui/pictograms';
-import { Overlay, Radius, Spacing, StaticWhite, Typography } from '@/constants/theme';
-import { useTokens } from '@/hooks/use-tokens';
+import { Overlay, Radius, Spacing, StaticWhite } from '@/constants/theme';
+import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
 const ICON_CHOICES: PictogramName[] = [
   'calendar',
@@ -76,6 +76,8 @@ export function CategoryManagerSheet({
   onClose,
 }: CategoryManagerSheetProps) {
   const t = useTokens();
+  const Typography = useTypography();
+  const emph = useFontEmphasis();
   // 새 카테고리의 기본 색 — 기존 자동 배정(생성 순서 순환)과 같은 색에서 시작.
   const autoColor = () => CATEGORY_COLORS[categories.length % CATEGORY_COLORS.length];
   const [name, setName] = useState('');
@@ -235,6 +237,7 @@ export function CategoryManagerSheet({
                       style={[
                         Typography.supporting,
                         styles.segLabel,
+                        emph('semibold'),
                         { color: active ? t.onPrimary : t.textMuted },
                       ]}>
                       {VISIBILITY_LABELS[v.id]}
@@ -316,6 +319,7 @@ export function CategoryManagerSheet({
                         <Text
                           style={[
                             styles.moveGlyph,
+                            emph('bold'),
                             { color: idx === 0 ? t.textDisabled : t.primary },
                           ]}>
                           ▲
@@ -336,6 +340,7 @@ export function CategoryManagerSheet({
                         <Text
                           style={[
                             styles.moveGlyph,
+                            emph('bold'),
                             { color: idx === categories.length - 1 ? t.textDisabled : t.primary },
                           ]}>
                           ▼
@@ -555,7 +560,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  moveGlyph: { fontSize: 14, fontWeight: '700' },
+  moveGlyph: { fontSize: 14 },
   del: {
     width: 36,
     height: 36,
