@@ -324,8 +324,9 @@ export const StaticWhite = '#FFFFFF';
 /**
  * Animated splash overlay background — MUST match the expo-splash-screen
  * `backgroundColor` in app.json, or the native → JS splash handoff flashes.
+ * 앱 아이콘의 크림 배경 실측값 (#409) — 아이콘 아트가 배경 위에 떠 보인다.
  */
-export const SplashBackground = '#208AEF';
+export const SplashBackground = '#FCF0D8';
 
 /** Dim scrims behind sheets/dialogs/full-screen overlays — theme-independent. */
 export const Overlay = {
