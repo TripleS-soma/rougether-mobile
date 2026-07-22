@@ -99,7 +99,8 @@
         }
       ],
       "@react-native-firebase/app",
-      "@react-native-firebase/messaging"
+      "@react-native-firebase/messaging",
+      "./plugins/with-fcm-channel-manifest-fix.js"
     ],
     "experiments": {
       "typedRoutes": true,
