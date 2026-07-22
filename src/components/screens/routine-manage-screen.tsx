@@ -7,7 +7,7 @@ import {
   UNCATEGORIZED_META,
 } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
-import { Pictogram } from '@/components/ui/pictograms';
+import { CategoryIcon } from '@/components/ui/category-icon';
 import { Radius, Spacing } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
@@ -126,7 +126,7 @@ export function RoutineManageScreen({
                 <View key={cat.id} style={styles.group}>
                   <View style={styles.catHeader}>
                     <View style={[styles.catDot, { backgroundColor: `${cat.color}33` }]}>
-                      <Pictogram name={cat.icon} size={14} />
+                      <CategoryIcon name={cat.icon} color={cat.color} size={14} />
                     </View>
                     <Text
                       style={[

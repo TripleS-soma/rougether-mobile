@@ -28,6 +28,7 @@ import { TimePickerSheet } from '@/components/screens/sheets/time-picker-sheet';
 import { TodoDateDialog } from '@/components/screens/sheets/todo-date-dialog';
 import { Calendar } from '@/components/ui/calendar';
 import { CoachTarget } from '@/components/ui/coach-mark';
+import { CategoryIcon } from '@/components/ui/category-icon';
 import { Pictogram } from '@/components/ui/pictograms';
 import { useToast } from '@/components/ui/toast';
 import { WalletPills } from '@/components/ui/wallet-pills';
@@ -852,7 +853,7 @@ export function MyRoomScreen({
                         <View key={cat.id} style={styles.group}>
                           <View style={styles.catHeader}>
                             <View style={[styles.catDot, { backgroundColor: `${cat.color}33` }]}>
-                              <Pictogram name={cat.icon} size={18} />
+                              <CategoryIcon name={cat.icon} color={cat.color} size={18} />
                             </View>
                             <Text
                               style={[

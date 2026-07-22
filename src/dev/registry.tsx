@@ -29,6 +29,7 @@ import { SignupScreen } from '@/components/screens/signup-screen';
 import { SampleButton } from '@/components/sample-button';
 import { Badge } from '@/components/ui/badge';
 import { BearCheck } from '@/components/ui/bear-check';
+import { CATEGORY_ICON_GEOMETRY, CategoryIcon } from '@/components/ui/category-icon';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { CoachMarkOverlay } from '@/components/ui/coach-mark';
@@ -104,6 +105,25 @@ export const galleryEntries: GalleryEntry[] = [
     description:
       '알림 시간 시트의 시간 선택 휠 (#390, design-sync Time wheel picker 채택) — 스냅 스와이프 + 행 탭 선택.',
     render: () => <WheelPickerDemo />,
+  },
+  {
+    name: 'CategoryIcon · 스티커 팝',
+    description:
+      '카테고리 아이콘 16종 (#398, design-sync A안) — 카테고리 색 하나에서 파스텔·액센트·포인트 톤 파생.',
+    render: () => (
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
+        {(Object.keys(CATEGORY_ICON_GEOMETRY) as (keyof typeof CATEGORY_ICON_GEOMETRY)[]).map(
+          (n, i) => (
+            <CategoryIcon
+              key={n}
+              name={n}
+              color={['#E8A87C', '#7FA8D4', '#C8869C', '#96B39A'][i % 4]}
+              size={32}
+            />
+          ),
+        )}
+      </View>
+    ),
   },
   {
     name: 'CoachMarkOverlay · 스포트라이트',
