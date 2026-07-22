@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Icon } from '@/components/ui/icon';
+import { WHEEL_ITEM_HEIGHT, WHEEL_VISIBLE_ROWS, WheelPicker } from '@/components/ui/wheel-picker';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 
@@ -10,6 +11,17 @@ const HOURS = Array.from({ length: 12 }, (_, i) => i + 1);
 const MINUTES = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
 
 type Ampm = 'AM' | 'PM';
+
+const AMPM_ITEMS = [
+  { value: 'AM' as Ampm, label: '오전' },
+  { value: 'PM' as Ampm, label: '오후' },
+];
+const HOUR_ITEMS = HOURS.map((h) => ({ value: h, label: String(h), accessibilityLabel: `${h}시` }));
+const MINUTE_ITEMS = MINUTES.map((m) => ({
+  value: m,
+  label: String(m).padStart(2, '0'),
+  accessibilityLabel: `${String(m).padStart(2, '0')}분`,
+}));
 
 /** "HH:MM" 24h → { ampm, hour12, minute (snapped to 5) }. Exported for tests. */
 export function parse(time: string) {
@@ -105,68 +117,37 @@ export function TimePickerSheet({
 
           {enabled ? (
             <>
-              <View style={styles.ampmRow}>
-                {(['AM', 'PM'] as const).map((p) => {
-                  const active = ampm === p;
-                  return (
-                    <Pressable
-                      key={p}
-                      onPress={() => setAmpm(p)}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: active }}
-                      style={[styles.ampm, { backgroundColor: active ? t.primary : t.surface }]}>
-                      <Text
-                        style={[Typography.label, { color: active ? t.onPrimary : t.textMuted }]}>
-                        {p === 'AM' ? '오전' : '오후'}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
+              {/* 오전/오후 · 시 · 분 3열 스와이프 휠 (#390) — 중앙 밴드 하나가
+                  세 휠을 가로지른다. 스와이프 외에 행 탭으로도 선택 가능. */}
+              <View style={styles.wheelWrap}>
+                <View
+                  style={[styles.band, { backgroundColor: t.surfaceMuted }]}
+                  pointerEvents="none"
+                />
+                <View style={styles.wheels}>
+                  <WheelPicker
+                    items={AMPM_ITEMS}
+                    value={ampm}
+                    onChange={setAmpm}
+                    accessibilityLabel="오전/오후 선택"
+                    testID="wheel-ampm"
+                  />
+                  <WheelPicker
+                    items={HOUR_ITEMS}
+                    value={hour12}
+                    onChange={setHour12}
+                    accessibilityLabel="시 선택"
+                    testID="wheel-hour"
+                  />
+                  <WheelPicker
+                    items={MINUTE_ITEMS}
+                    value={minute}
+                    onChange={setMinute}
+                    accessibilityLabel="분 선택"
+                    testID="wheel-minute"
+                  />
+                </View>
               </View>
-
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>시</Text>
-              <View style={styles.chipRow}>
-                {HOURS.map((h) => {
-                  const active = hour12 === h;
-                  return (
-                    <Pressable
-                      key={h}
-                      onPress={() => setHour12(h)}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${h}시`}
-                      accessibilityState={{ selected: active }}
-                      style={[styles.chip, { backgroundColor: active ? t.primary : t.surface }]}>
-                      <Text style={[Typography.label, { color: active ? t.onPrimary : t.text }]}>
-                        {h}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>분</Text>
-              <View style={styles.chipRow}>
-                {MINUTES.map((m) => {
-                  const active = minute === m;
-                  return (
-                    <Pressable
-                      key={m}
-                      onPress={() => setMinute(m)}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${String(m).padStart(2, '0')}분`}
-                      accessibilityState={{ selected: active }}
-                      style={[styles.chip, { backgroundColor: active ? t.primary : t.surface }]}>
-                      <Text style={[Typography.label, { color: active ? t.onPrimary : t.text }]}>
-                        {String(m).padStart(2, '0')}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-
-              <Text style={[Typography.h2, styles.preview, { color: t.text }]}>
-                {ampm === 'AM' ? '오전' : '오후'} {hour12}:{String(minute).padStart(2, '0')}
-              </Text>
             </>
           ) : null}
         </View>
@@ -234,34 +215,20 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     padding: Spacing.three,
   },
-  ampmRow: {
+  wheelWrap: {
+    position: 'relative',
+  },
+  wheels: {
     flexDirection: 'row',
     gap: Spacing.two,
   },
-  ampm: {
-    flex: 1,
-    paddingVertical: Spacing.three,
+  band: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: (WHEEL_ITEM_HEIGHT * (WHEEL_VISIBLE_ROWS - 1)) / 2,
+    height: WHEEL_ITEM_HEIGHT,
     borderRadius: Radius.md,
-    alignItems: 'center',
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    // 고정폭 칩의 wrap 그리드 — 가운데 정렬로 좌우 여백을 같게 (#388).
-    justifyContent: 'center',
-    gap: Spacing.two,
-    paddingVertical: Spacing.half,
-  },
-  chip: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  preview: {
-    textAlign: 'center',
-    marginTop: Spacing.two,
   },
   footer: {
     paddingHorizontal: Spacing.four,
