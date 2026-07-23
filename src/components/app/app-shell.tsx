@@ -515,7 +515,7 @@ export function AppShell({
         return;
       }
     }
-    void toggleCompletion(id, date, contributeLinkedMission);
+    return toggleCompletion(id, date, contributeLinkedMission);
   };
   // Guestbook for the friend room being visited (loads on visit).
   const {
