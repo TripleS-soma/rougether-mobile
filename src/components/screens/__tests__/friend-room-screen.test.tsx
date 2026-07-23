@@ -49,6 +49,43 @@ describe('FriendRoomScreen', () => {
     expect(onCheer).toHaveBeenCalledWith('support');
   });
 
+  it('같은 타입 재요청은 확인 모달을 거친다 — 취소는 미전송, 보내기는 전송 (#427)', async () => {
+    const onCheer = jest.fn();
+    const { getByText, getByLabelText, queryByText } = await render(
+      <FriendRoomScreen onCheer={onCheer} />,
+    );
+
+    // 첫 요청은 모달 없이 즉시 전송.
+    await fireEvent.press(getByText('응원하기'));
+    expect(onCheer).toHaveBeenCalledTimes(1);
+
+    // 같은 타입 재탭 → 전송 대신 확인 모달.
+    await fireEvent.press(getByText('응원하기'));
+    expect(onCheer).toHaveBeenCalledTimes(1);
+    expect(getByText('오늘은 이미 보낸 응원이에요. 그래도 보낼까요?')).toBeTruthy();
+
+    // 취소 → 닫히고 미전송.
+    await fireEvent.press(getByLabelText('응원 다시 보내기 취소'));
+    expect(queryByText('응원 다시 보내기')).toBeNull();
+    expect(onCheer).toHaveBeenCalledTimes(1);
+
+    // 재탭 → 보내기 확인 → 전송 시도.
+    await fireEvent.press(getByText('응원하기'));
+    await fireEvent.press(getByLabelText('응원 다시 보내기 확인'));
+    expect(onCheer).toHaveBeenCalledTimes(2);
+    expect(onCheer).toHaveBeenLastCalledWith('support');
+  });
+
+  it('다른 타입 응원은 모달 없이 즉시 전송된다 (#427)', async () => {
+    const onCheer = jest.fn();
+    const { getByText, queryByText } = await render(<FriendRoomScreen onCheer={onCheer} />);
+    await fireEvent.press(getByText('응원하기'));
+    await fireEvent.press(getByText('잘하고 있어!'));
+    expect(queryByText('오늘은 이미 보낸 응원이에요. 그래도 보낼까요?')).toBeNull();
+    expect(onCheer).toHaveBeenCalledTimes(2);
+    expect(onCheer).toHaveBeenLastCalledWith('great');
+  });
+
   it('renders the server guestbook and writes through the API callback', async () => {
     const onWriteGuestbook = jest.fn();
     const { getByText, getByLabelText, queryByText } = await render(

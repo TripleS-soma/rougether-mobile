@@ -20,7 +20,7 @@ import { BearCheck } from '@/components/ui/bear-check';
 import { Icon } from '@/components/ui/icon';
 import { PendingNotice } from '@/components/ui/pending-notice';
 import { BookOpenPictogram, Pictogram, type PictogramName } from '@/components/ui/pictograms';
-import { Radius, Spacing } from '@/constants/theme';
+import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { type FurnitureItem, type PlacedFurniture, type Wallpaper } from '@/resources/furniture';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
@@ -148,6 +148,20 @@ export function FriendRoomScreen({
   const routineList = routines ?? DEFAULT_ROUTINES;
   const completedCount = routineList.filter((r) => r.completed).length;
   const progress = routineList.length > 0 ? completedCount / routineList.length : 0;
+
+  // 응원 재요청 확인 (#427) — 이번 방문에서 요청한 타입을 기억하고, 같은
+  // 타입 재탭이면 바로 보내지 않고 확인 모달을 거친다. 세션 한정 기억이라
+  // 앱 재시작 후 중복은 기존 서버 409 토스트가 방어한다.
+  const [cheeredTypes, setCheeredTypes] = useState<CheerType[]>([]);
+  const [confirmCheer, setConfirmCheer] = useState<CheerType | null>(null);
+  const sendCheer = (type: CheerType) => {
+    setCheeredTypes((prev) => (prev.includes(type) ? prev : [...prev, type]));
+    onCheer?.(type);
+  };
+  const requestCheer = (type: CheerType) => {
+    if (cheeredTypes.includes(type)) setConfirmCheer(type);
+    else sendCheer(type);
+  };
 
   // Guestbook: server list when wired; a local demo list otherwise.
   const [localNotes, setLocalNotes] = useState<GuestbookEntry[]>(DEFAULT_GUESTBOOK);
@@ -327,7 +341,7 @@ export function FriendRoomScreen({
               {CHEERS.map((cheer, idx) => (
                 <Pressable
                   key={cheer.type}
-                  onPress={() => onCheer?.(cheer.type)}
+                  onPress={() => requestCheer(cheer.type)}
                   accessibilityRole="button"
                   accessibilityLabel={cheer.label}
                   style={[
@@ -450,11 +464,68 @@ export function FriendRoomScreen({
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {confirmCheer ? (
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modal, { backgroundColor: t.surface }]}>
+            <Text style={[Typography.h3, { color: t.text }]}>응원 다시 보내기</Text>
+            <Text style={[Typography.body, styles.modalBody, { color: t.textMuted }]}>
+              오늘은 이미 보낸 응원이에요. 그래도 보낼까요?
+            </Text>
+            <View style={styles.modalActions}>
+              <Pressable
+                onPress={() => setConfirmCheer(null)}
+                accessibilityRole="button"
+                accessibilityLabel="응원 다시 보내기 취소"
+                style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
+                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  sendCheer(confirmCheer);
+                  setConfirmCheer(null);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="응원 다시 보내기 확인"
+                style={[styles.modalBtn, { backgroundColor: t.primary }]}>
+                <Text style={[Typography.label, { color: t.onPrimary }]}>보내기</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  modalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: Overlay.dim,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.four,
+  },
+  modal: {
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: Radius.lg,
+    padding: Spacing.four,
+  },
+  modalBody: {
+    marginTop: Spacing.two,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    marginTop: Spacing.four,
+  },
+  modalBtn: {
+    flex: 1,
+    borderRadius: Radius.pill,
+    paddingVertical: Spacing.three,
+    alignItems: 'center',
+  },
   pendingNotice: {
     marginHorizontal: Spacing.four,
     marginTop: Spacing.two,
