@@ -6,13 +6,11 @@ name: native-prebuild-check
 on:
   pull_request:
     types: [opened, synchronize, reopened, labeled]
-  push:
-    branches: [chore/native-prebuild-check] # TODO: 검증 후 제거 (임시 자가 테스트용)
 
 jobs:
   prebuild:
-    # 라벨이 native-build인 PR에서만 (push 자가 테스트는 예외).
-    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'native-build')
+    # 라벨이 native-build인 PR에서만.
+    if: contains(github.event.pull_request.labels.*.name, 'native-build')
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
