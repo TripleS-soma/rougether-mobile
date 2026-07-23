@@ -8,6 +8,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
@@ -33,6 +34,7 @@ import { WalletPills } from '@/components/ui/wallet-pills';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { RainOverlay } from '@/components/rain-overlay';
 import {
+  NarrowScreenWidth,
   Overlay,
   Radius,
   RAIN_SKY,
@@ -345,6 +347,9 @@ export function GroupHouseScreen({
   const headerInset = useHeaderInsetStyle();
   const headerCharacter =
     CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
+  // 좁은 폰은 콤팩트 지갑 필(코인만) (#425) — 닉네임 열이 필 2개에 밀려
+  // 뭉개지는 것 방지. 다이아는 뽑기 상점·꾸미기에서 보인다.
+  const compactWallet = useWindowDimensions().width < NarrowScreenWidth;
   const screenStyle = useScreenStyle([]);
 
   const [internalHouseIndex, setInternalHouseIndex] = useState(0);
@@ -928,7 +933,7 @@ export function GroupHouseScreen({
             ) : null}
           </View>
         </View>
-        <WalletPills coin={coinBalance} dia={diaBalance} />
+        <WalletPills coin={coinBalance} dia={diaBalance} compact={compactWallet} />
         <CoachTarget id="house-search">
           <Pressable
             onPress={onOpenSearch}

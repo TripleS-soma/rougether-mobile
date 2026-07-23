@@ -10,6 +10,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -44,7 +45,7 @@ import {
 } from '@/constants/routines';
 import { BearCheck } from '@/components/ui/bear-check';
 import { Icon } from '@/components/ui/icon';
-import { Radius, Spacing } from '@/constants/theme';
+import { NarrowScreenWidth, Radius, Spacing } from '@/constants/theme';
 import { captureVerificationPhoto } from '@/lib/photo-verify';
 import { saveRoomImage } from '@/lib/room-capture';
 import {
@@ -305,6 +306,9 @@ export function MyRoomScreen({
   const t = useTokens();
   const Typography = useTypography();
   const headerInset = useHeaderInsetStyle();
+  // 좁은 폰은 콤팩트 지갑 필(코인만) (#425) — 닉네임 열이 필 2개에 밀려
+  // 뭉개지는 것 방지. 다이아는 뽑기 상점·꾸미기에서 보인다.
+  const compactWallet = useWindowDimensions().width < NarrowScreenWidth;
   const { show: toast } = useToast();
   const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
   const knownIds = categories.map((c) => c.id);
@@ -665,7 +669,7 @@ export function MyRoomScreen({
           </View>
         </View>
         <View style={styles.headerRight}>
-          <WalletPills coin={coinBalance} dia={diaBalance} />
+          <WalletPills coin={coinBalance} dia={diaBalance} compact={compactWallet} />
           {/* 알림 lives inside this popover (#257 — a separate bell button
               crowded the header and crushed the title); unread shows as a dot
               on the menu button. */}
