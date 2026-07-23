@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/coach-mark';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { CATEGORY_COLORS, type Routine } from '@/constants/routines';
+import { screenView, track } from '@/lib/analytics';
 import { onNotificationTap } from '@/lib/push-events';
 import { todayIso } from '@/utils/datetime';
 import { useAuth } from '@/hooks/use-auth';
@@ -569,11 +570,17 @@ export function AppShell({
   useEffect(
     () =>
       onNotificationTap(() => {
+        track('push_open');
         void loadNotifications();
         setScreen('notificationList');
       }),
     [loadNotifications],
   );
+
+  // 화면 전환 추적 (#437) — 셸의 screen 상태가 곧 내비게이션 단위.
+  useEffect(() => {
+    screenView(screen);
+  }, [screen]);
 
   // Remember where the add/edit-routine screen was opened from, so its back
   // button returns to the right place (my-room or routine manage).
@@ -795,6 +802,7 @@ export function AppShell({
               houseIndex={houseIndex}
               onHouseIndexChange={setHouseIndex}
               onVisitFriend={(friend) => {
+                track('friend_room_visit');
                 setVisitingFriend(friend);
                 void loadGuestbook(friend.userId, friend.houseId);
                 void loadFriendRoom(friend.houseId, friend.membershipId, catalogue);

@@ -2,6 +2,7 @@ import { createContext, type ReactNode, useContext, useEffect, useMemo, useState
 
 import { devLogin, loadSession, logout as apiLogout, onSessionCleared } from '@/api';
 import { clearPushToken, syncPushToken } from '@/lib/push-token';
+import { resetAnalyticsUser } from '@/lib/analytics';
 
 type AuthStatus = 'loading' | 'authed' | 'guest';
 
@@ -54,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       },
       logout: async () => {
+        resetAnalyticsUser();
         // 이 기기로 오는 푸시를 먼저 끊고 세션을 정리한다 (#250).
         await clearPushToken();
         await apiLogout();
