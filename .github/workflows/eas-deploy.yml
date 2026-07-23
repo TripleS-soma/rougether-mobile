@@ -26,7 +26,11 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
       # 지문 비교 → 동일하면 eas update(OTA), 다르면 새 빌드.
       # Android: preview APK (internal 배포).
+      # continue-on-error: Android 실패(쿼터 소진 등)가 iOS 배포까지 죽이지
+      # 않게 한다 (#429) — 실패는 말미 스텝이 다시 표면화해 잡은 빨간색 유지.
       - name: Android — OTA or preview build
+        id: android
+        continue-on-error: true
         uses: expo/expo-github-action/continuous-deploy-fingerprint@main
         with:
           profile: preview
@@ -45,3 +49,9 @@ jobs:
           branch: preview
           platform: ios
           auto-submit-builds: true
+      # Android 실패를 잡 결과로 재표면화 — iOS까지 돌린 뒤에 빨간불을 켠다.
+      - name: Surface Android failure
+        if: steps.android.outcome == 'failure'
+        run: |
+          echo "::error::Android 배포 실패 — 위 'Android — OTA or preview build' 로그 확인 (쿼터 소진이면 8/1 리셋 또는 플랜 업그레이드)"
+          exit 1
