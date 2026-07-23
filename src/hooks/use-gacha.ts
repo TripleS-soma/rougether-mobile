@@ -10,6 +10,7 @@ import { drawGacha, fetchGachas } from '@/api';
 import { type GachaMachine, toGachaMachine, toWallet } from '@/api/adapters';
 import type { DrawResult } from '@/api/types';
 import type { Wallet } from '@/constants/currency';
+import { track } from '@/lib/analytics';
 
 export function useGacha(onWallet: (wallet: Wallet) => void) {
   const [gachas, setGachas] = useState<GachaMachine[]>([]);
@@ -33,6 +34,7 @@ export function useGacha(onWallet: (wallet: Wallet) => void) {
     try {
       const res = await drawGacha(gachaId, count);
       if (res.wallets?.length) onWallet(toWallet(res.wallets));
+      track('gacha_draw', { gachaId, count });
       return res.results ?? [];
     } catch {
       return null;

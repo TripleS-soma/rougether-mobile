@@ -10,6 +10,7 @@ import { createGuestbook, fetchGuestbooks } from '@/api';
 import { toGuestbookEntry } from '@/api/adapters';
 import { useToast } from '@/components/ui/toast';
 import type { GuestbookEntry } from '@/components/screens/friend-room-screen';
+import { track } from '@/lib/analytics';
 
 export function useGuestbook() {
   const [entries, setEntries] = useState<GuestbookEntry[] | undefined>(undefined);
@@ -71,6 +72,7 @@ export function useGuestbook() {
         });
         setEntries((prev) => [{ ...entry, author: '나' }, ...(prev ?? [])]);
         toast('방명록을 남겼어요', 'success');
+        track('guestbook_write');
       } catch {
         toast('방명록 작성에 실패했어요', 'error');
       }

@@ -33,6 +33,7 @@ import {
 } from '@/api/adapters';
 import { useToast } from '@/components/ui/toast';
 import { type Wallet } from '@/constants/currency';
+import { track } from '@/lib/analytics';
 import {
   DEFAULT_WALLPAPER_ID,
   type PlacedFurniture,
@@ -141,6 +142,7 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
         }));
       }
       setOwnedIds((prev) => (prev.includes(itemId) ? prev : [...prev, itemId]));
+      track('shop_purchase', { itemId });
       // Track the new userItemId so the item can be placed + saved right away.
       if (res.itemId != null && res.userItemId != null)
         userItemMapRef.current.set(String(res.itemId), res.userItemId);

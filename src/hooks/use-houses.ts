@@ -47,6 +47,7 @@ import type {
   HouseEditInput,
   NewHouseMission,
 } from '@/components/screens/group-house-screen';
+import { track } from '@/lib/analytics';
 import type {
   HousePreview,
   HousePreviewDetail,
@@ -247,6 +248,7 @@ export function useHouses() {
     try {
       await cheerHouseMember(houseId, membershipId, type);
       toast('응원을 보냈어요! 친구에게 알림이 가요', 'success');
+      track('cheer_send', { type });
     } catch (err) {
       // 같은 대상·같은 타입은 하루(KST) 1회.
       const dup = err instanceof ApiError && err.bodyText?.includes('HOUSE_CHEER_DUPLICATED');
