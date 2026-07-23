@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
@@ -52,6 +52,42 @@ export function Calendar({ value, min, max, onSelect }: CalendarProps) {
       return { y: y + Math.floor(next / 12), m: ((next % 12) + 12) % 12 };
     });
 
+  // 선택 원 슬라이드 (#452) — 원이 이전 날짜에서 새 날짜로 스프링 이동.
+  // 셀은 7열 고정 격자라 (요일 헤더 1행 + firstWeekday 오프셋)로 좌표가
+  // 결정된다. 다른 달로 넘어가면 원을 숨긴다.
+  const [gridW, setGridW] = useState(0);
+  const selPos = useRef(new Animated.ValueXY({ x: -999, y: -999 })).current;
+  const selOpacity = useRef(new Animated.Value(0)).current;
+  const selVisibleRef = useRef(false);
+  const cellW = gridW / 7;
+  const selectedInView = selected.y === view.y && selected.m === view.m;
+  useEffect(() => {
+    if (!gridW) return;
+    if (!selectedInView) {
+      selVisibleRef.current = false;
+      Animated.timing(selOpacity, { toValue: 0, duration: 120, useNativeDriver: false }).start();
+      return;
+    }
+    const gridIdx = 7 + firstWeekday + (selected.d - 1);
+    const target = {
+      x: (gridIdx % 7) * cellW + (cellW - 34) / 2,
+      y: Math.floor(gridIdx / 7) * cellW + (cellW - 34) / 2,
+    };
+    if (!selVisibleRef.current) {
+      // 처음 나타날 때(월 이동 직후 포함)는 점프 + 페이드 인.
+      selVisibleRef.current = true;
+      selPos.setValue(target);
+      Animated.timing(selOpacity, { toValue: 1, duration: 140, useNativeDriver: false }).start();
+      return;
+    }
+    Animated.spring(selPos, {
+      toValue: target,
+      friction: 7,
+      tension: 90,
+      useNativeDriver: false,
+    }).start();
+  }, [gridW, cellW, selectedInView, selected.d, firstWeekday, selPos, selOpacity]);
+
   return (
     <View style={styles.wrap}>
       <View style={styles.head}>
@@ -74,7 +110,18 @@ export function Calendar({ value, min, max, onSelect }: CalendarProps) {
         </Pressable>
       </View>
 
-      <View style={styles.grid}>
+      <View style={styles.grid} onLayout={(e) => setGridW(e.nativeEvent.layout.width)}>
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.selCircle,
+            {
+              backgroundColor: t.primary,
+              opacity: selOpacity,
+              transform: selPos.getTranslateTransform(),
+            },
+          ]}
+        />
         {WEEKDAYS.map((w, i) => (
           <View key={w} style={styles.cell}>
             <Text
@@ -102,7 +149,7 @@ export function Calendar({ value, min, max, onSelect }: CalendarProps) {
               accessibilityLabel={date}
               accessibilityState={{ selected: isSelected, disabled: !!disabled }}
               style={styles.cell}>
-              <View style={[styles.dayCircle, isSelected && { backgroundColor: t.primary }]}>
+              <View style={styles.dayCircle}>
                 <Text
                   style={[
                     Typography.body,
@@ -160,6 +207,12 @@ const styles = StyleSheet.create({
   },
   weekday: {
     fontSize: 12,
+  },
+  selCircle: {
+    position: 'absolute',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
   },
   dayCircle: {
     width: 34,
