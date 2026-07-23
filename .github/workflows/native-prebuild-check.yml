@@ -1,0 +1,33 @@
+# native-build 라벨 PR 사전 검증 (#433): EAS 빌드(쿼터·과금)를 태우기 전에
+# GitHub Actions에서 prebuild 산출물과 Android 매니페스트 병합을 공짜로 검증한다.
+# 매니페스트 병합(:app:processReleaseMainManifest)은 #414류 config-plugin 충돌을
+# 전체 빌드 없이 잡아내는 최소 Gradle 태스크다.
+name: native-prebuild-check
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  push:
+    branches: [chore/native-prebuild-check] # TODO: 검증 후 제거 (임시 자가 테스트용)
+
+jobs:
+  prebuild:
+    # 라벨이 native-build인 PR에서만 (push 자가 테스트는 예외).
+    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'native-build')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: npm ci
+      - name: Expo prebuild (android)
+        run: npx expo prebuild --platform android --no-install
+      - name: Android manifest merge
+        working-directory: android
+        run: ./gradlew :app:processReleaseMainManifest --no-daemon --stacktrace
