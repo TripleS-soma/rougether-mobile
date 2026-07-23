@@ -630,13 +630,14 @@ export function AppShell({
       // 뒤로 복귀(백맵 목적지·서브→탭) — 좌측에서 되돌아온다.
       slide = -28;
     }
-    transOpacity.setValue(0);
+    // 페이드가 짧으면 깜빡임으로 읽힌다 — 바닥을 0.08로 띄우고 넉넉하게.
+    transOpacity.setValue(0.08);
     transX.setValue(slide);
     Animated.parallel([
-      Animated.timing(transOpacity, { toValue: 1, duration: 180, useNativeDriver: true }),
+      Animated.timing(transOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
       Animated.timing(transX, {
         toValue: 0,
-        duration: 220,
+        duration: 340,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
