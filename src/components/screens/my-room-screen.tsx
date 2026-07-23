@@ -209,7 +209,8 @@ export type MyRoomScreenProps = {
   /** 햄버거 메뉴 → 카테고리 관리 화면으로 이동 (#394). */
   onManageCategories?: () => void;
   /** Toggle a routine's completion on a specific date ("YYYY-MM-DD"). */
-  onToggleCompletion?: (id: string, date: string) => void;
+  /** 완료 토글 — 완료 시 서버 보상액(코인)을 resolve하면 코인 연출에 쓴다 (#444). */
+  onToggleCompletion?: (id: string, date: string) => void | Promise<number | null | undefined>;
   onOpenGacha?: () => void;
   /** Quick-add a todo to a category with a due date (the + on a category header). */
   onQuickAddRoutine?: (category: string, title: string, dueDate: string) => void;
@@ -328,8 +329,7 @@ export function MyRoomScreen({
       flyTarget.current = { x: x + w / 2, y: y + h / 2 };
     });
   };
-  const launchCoin = (e: GestureResponderEvent) => {
-    const { pageX, pageY } = e.nativeEvent;
+  const launchCoinAt = ({ x: pageX, y: pageY }: { x: number; y: number }) => {
     rootRef.current?.measureInWindow((rx, ry) => {
       const target = flyTarget.current;
       if (!target.x && !target.y) return;
@@ -648,22 +648,31 @@ export function MyRoomScreen({
   // is toggled for a specific date (오늘 in 방, 선택한 날짜 in 달력).
   const handleToggle = (routine: Routine, date: string, e?: GestureResponderEvent) => {
     const done = isDone(routine.id, date);
-    // 완료(보상이 있는 오늘 완료)에만 코인 플라이 (#440).
-    const fly = !done && date === today && e;
+    // 코인 플라이는 서버가 실제 보상을 준 완료에만 (#444) — 탭 좌표는 지금
+    // 읽어두고, 발사는 보상액이 확인된 뒤에 한다. 상한 도달(보상 0)은 훅이
+    // 상한 토스트를 띄우고 여기선 침묵.
+    const flyFrom =
+      !done && date === today && e ? { x: e.nativeEvent.pageX, y: e.nativeEvent.pageY } : null;
+    const fire = () => {
+      const res = onToggleCompletion?.(routine.id, date);
+      if (flyFrom && res && typeof res.then === 'function') {
+        void res.then((reward) => {
+          if (reward) launchCoinAt(flyFrom);
+        });
+      }
+    };
     if (routine.photoVerify && !done) {
       void onRequestPhoto().then((uri) => {
         if (uri) {
           hapticSuccess();
-          if (fly) launchCoin(e);
-          onToggleCompletion?.(routine.id, date);
+          fire();
         }
       });
       return;
     }
     if (done) hapticSelection();
     else hapticSuccess();
-    if (fly) launchCoin(e);
-    onToggleCompletion?.(routine.id, date);
+    fire();
   };
 
   // Server-backed (non-today) 달력 rows: future dates are blocked outright;

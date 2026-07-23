@@ -99,6 +99,49 @@ describe('useMyRoomData — completion callback (미션 연동, #272)', () => {
   });
 });
 
+describe('useMyRoomData — 코인 상한 피드백 (#444)', () => {
+  it('보상이 있으면 보상액을 반환하고, 상한 도달(보상 0)이면 0 반환 + 상한 토스트', async () => {
+    const now = new Date();
+    const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    let reward = 10;
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes('/categories')) return res({ items: [{ id: 1, name: '건강' }] });
+      if (url.endsWith('/routines'))
+        return res({ items: [{ id: 9, title: '운동', categoryId: 1, repeatType: 'DAILY' }] });
+      if ((init?.method ?? 'GET') === 'POST' && url.includes('/routines/9/logs'))
+        return res({ rewardAmount: reward });
+      if ((init?.method ?? 'GET') === 'DELETE') return res({});
+      if (url.endsWith('/today')) return res({ categories: [], summary: {}, streak: {} });
+      if (url.endsWith('/me')) return res({ userId: 1 });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useMyRoomData());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    const routine = result.current.routines[0];
+
+    // 보상 있는 완료 → 보상액 반환 (화면은 이 값으로 코인을 발사한다).
+    let returned: number | null | undefined;
+    await act(async () => {
+      returned = await result.current.toggleCompletion(routine.id, todayIso);
+    });
+    expect(returned).toBe(10);
+
+    // 해제 → null (코인 없음).
+    await act(async () => {
+      returned = await result.current.toggleCompletion(routine.id, todayIso);
+    });
+    expect(returned).toBeNull();
+
+    // 상한 도달(보상 0) 완료 → 0 반환 (코인 억제).
+    reward = 0;
+    await act(async () => {
+      returned = await result.current.toggleCompletion(routine.id, todayIso);
+    });
+    expect(returned).toBe(0);
+  });
+});
+
 describe('useMyRoomData — 달력 past-date routine completion (#183)', () => {
   it('logs a past routine against the picked date and refetches the day', async () => {
     const calls: { url: string; method: string; body?: string }[] = [];

@@ -208,17 +208,22 @@ export function useMyRoomData() {
         if (wasDone) await uncompleteRoutine(numId, date);
         else rewardAmount = (await completeRoutine(numId, date)).rewardAmount;
       }
-      // Completion pays out server-side — surface the actual amount.
+      // Completion pays out server-side — surface the actual amount. 일일
+      // 상한을 다 받은 오늘 완료(보상 0)는 코인 대신 상한 안내 (#444);
+      // 과거 날짜는 원래 보상 0이라(#183) 조용히 지나간다.
       if (!wasDone && rewardAmount) toast(`+${rewardAmount} 코인 획득!`, 'success');
+      else if (!wasDone && date === todayIso()) toast('오늘 받을 수 있는 코인을 다 모았어요');
       if (!wasDone) track('routine_complete', { kind: item?.kind ?? 'routine' });
       await refreshWallet();
       if (!wasDone && item) onCompleted?.(item);
+      return wasDone ? null : (rewardAmount ?? 0);
     } catch {
       setCompletions((prev) => {
         const dates = prev[id] ?? [];
         return { ...prev, [id]: wasDone ? [...dates, date] : dates.filter((d) => d !== date) };
       });
       toast('완료 처리에 실패했어요', 'error');
+      return null;
     }
   };
 
