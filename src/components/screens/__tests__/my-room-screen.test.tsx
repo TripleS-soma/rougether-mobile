@@ -52,6 +52,26 @@ describe('MyRoomScreen', () => {
     expect(getByText('3 / 5')).toBeTruthy();
   });
 
+  it('좁은 폭에서는 콤팩트 지갑 필 — 코인만 남고 다이아는 숨긴다 (#425)', async () => {
+    const { Dimensions } = require('react-native');
+    const spy = jest
+      .spyOn(Dimensions, 'get')
+      .mockReturnValue({ width: 360, height: 800, scale: 2, fontScale: 1 });
+    const { queryByText, getByText } = await render(
+      <MyRoomScreen
+        userName="준서"
+        routines={SAMPLE_ROUTINES}
+        coinBalance={1200}
+        diaBalance={34}
+      />,
+    );
+    // 닉네임·코인 필은 그대로, 다이아 필만 사라진다.
+    expect(getByText('준서의 방')).toBeTruthy();
+    expect(getByText('1,200')).toBeTruthy();
+    expect(queryByText('34')).toBeNull();
+    spy.mockRestore();
+  });
+
   it('double-tapping the room opens 방꾸미기 (#376)', async () => {
     const onEdit = jest.fn();
     await render(<MyRoomScreen routines={SAMPLE_ROUTINES} onEdit={onEdit} />);

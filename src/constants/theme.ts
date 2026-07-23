@@ -58,6 +58,8 @@ export const Spacing = {
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
 export const MaxContentWidth = 800;
+/** 좁은 폰 브레이크포인트 (#425) — 이 미만이면 헤더가 콤팩트 지갑 필(코인만)로. */
+export const NarrowScreenWidth = 400;
 
 /**
  * Rougether brand design tokens — semantic color roles. Values keep the warm
