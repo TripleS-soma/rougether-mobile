@@ -180,6 +180,7 @@ export function SettingsScreen({
                     <Text
                       style={[
                         fontPreviewStyle(opt.id),
+                        styles.fontChipLabel,
                         { color: selected ? t.onPrimary : t.textMuted },
                       ]}>
                       {opt.name}
@@ -317,6 +318,10 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.two,
     borderRadius: Radius.pill,
+  },
+  // 긴 라벨(나눔스퀘어라운드)이 두 줄로 감길 때도 가운데 정렬 (#423).
+  fontChipLabel: {
+    textAlign: 'center',
   },
   iconCircle: {
     width: 32,
