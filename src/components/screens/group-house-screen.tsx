@@ -31,6 +31,7 @@ import {
   TargetPictogram,
 } from '@/components/ui/pictograms';
 import { WalletPills } from '@/components/ui/wallet-pills';
+import { ScalePressable } from '@/components/ui/scale-pressable';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { RainOverlay } from '@/components/rain-overlay';
 import {
@@ -713,13 +714,13 @@ export function GroupHouseScreen({
               <Text style={[Typography.body, styles.emptyBody, { color: t.textMuted }]}>
                 집을 만들거나 초대코드로 입주해 친구들과 루틴을 함께 키워보세요.
               </Text>
-              <Pressable
+              <ScalePressable
                 onPress={onOpenSearch}
                 accessibilityRole="button"
                 accessibilityLabel="집 탐색"
                 style={[styles.emptyCta, { backgroundColor: t.primary }]}>
                 <Text style={[Typography.label, { color: t.onPrimary }]}>집 탐색하기</Text>
-              </Pressable>
+              </ScalePressable>
             </>
           )}
         </View>
@@ -943,13 +944,13 @@ export function GroupHouseScreen({
             <Icon name="search" size={18} color={t.text} />
           </Pressable>
         </CoachTarget>
-        <Pressable
+        <ScalePressable
           onPress={() => setShowMembers(true)}
           accessibilityRole="button"
           accessibilityLabel="구성원 목록"
           style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
           <Icon name="members" size={18} color={t.text} />
-        </Pressable>
+        </ScalePressable>
       </View>
 
       {/* 타일 드래그 중에는 스크롤이 제스처를 뺏지 않게 잠근다 (#278). */}
@@ -1154,7 +1155,7 @@ export function GroupHouseScreen({
       </ScrollView>
 
       {/* 공동 미션 플로팅 버튼 (#287) — 보상 수령 가능하면 점 표시. */}
-      <Pressable
+      <ScalePressable
         onPress={() => setShowMissions(true)}
         accessibilityRole="button"
         accessibilityLabel="공동 미션"
@@ -1166,7 +1167,7 @@ export function GroupHouseScreen({
         {missions.some((m) => m.status === 'ACTIVE' && m.achieved) ? (
           <View style={[styles.fabDot, { backgroundColor: t.warning }]} />
         ) : null}
-      </Pressable>
+      </ScalePressable>
 
       <HouseMissionsSheet
         visible={showMissions}

@@ -1,6 +1,7 @@
-import { Pressable, StyleSheet, type ViewStyle } from 'react-native';
+import { StyleSheet, type ViewStyle } from 'react-native';
 
 import { Icon, type IconName } from '@/components/ui/icon';
+import { ScalePressable } from '@/components/ui/scale-pressable';
 import { useTokens } from '@/hooks/use-tokens';
 
 export type IconButtonVariant = 'muted' | 'primary' | 'ghost';
@@ -31,7 +32,7 @@ export function IconButton({
     variant === 'primary' ? t.primary : variant === 'ghost' ? 'transparent' : t.surfaceMuted;
   const iconColor = variant === 'primary' ? t.onPrimary : t.text;
   return (
-    <Pressable
+    <ScalePressable
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
@@ -48,7 +49,7 @@ export function IconButton({
         size={Math.round(size * 0.5)}
         color={disabled ? t.textDisabled : iconColor}
       />
-    </Pressable>
+    </ScalePressable>
   );
 }
 

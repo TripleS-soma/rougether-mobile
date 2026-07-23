@@ -15,6 +15,7 @@ import {
 import type { GachaMachine } from '@/api/adapters';
 import type { DrawResult } from '@/api/types';
 import { Icon } from '@/components/ui/icon';
+import { ScalePressable } from '@/components/ui/scale-pressable';
 import { Pictogram, type PictogramName } from '@/components/ui/pictograms';
 import { WalletPills } from '@/components/ui/wallet-pills';
 import { Overlay, Radius, Spacing, StaticWhite } from '@/constants/theme';
@@ -179,7 +180,7 @@ export function GachaScreen({
                   {machines.map((b) => {
                     const active = b.id === box?.id;
                     return (
-                      <Pressable
+                      <ScalePressable
                         key={b.id}
                         onPress={() => {
                           setSelectedId(b.id);
@@ -195,7 +196,7 @@ export function GachaScreen({
                           },
                         ]}>
                         <Pictogram name={b.icon} size={26} />
-                      </Pressable>
+                      </ScalePressable>
                     );
                   })}
                 </ScrollView>
@@ -227,7 +228,7 @@ export function GachaScreen({
                 const cost = box.costAmount * count;
                 const label = count === 1 ? '1회 뽑기' : '10연 뽑기';
                 return (
-                  <Pressable
+                  <ScalePressable
                     key={count}
                     onPress={() => pull(count)}
                     disabled={phase !== 'idle'}
@@ -236,10 +237,9 @@ export function GachaScreen({
                     accessibilityLabel={`${label}, ${cost.toLocaleString()} ${
                       box.costCurrencyType === 'COIN' ? '코인' : '다이아'
                     }`}
-                    style={({ pressed }) => [
+                    style={[
                       styles.pullBtn,
                       { backgroundColor: affordable ? t.primary : t.disabledBg },
-                      pressed && affordable && { backgroundColor: t.primaryActive },
                     ]}>
                     {/* onPrimary is dark in dark mode — unreadable on
                         disabledBg, so disabled text falls back to textMuted. */}
@@ -262,7 +262,7 @@ export function GachaScreen({
                         {cost.toLocaleString()}
                       </Text>
                     </View>
-                  </Pressable>
+                  </ScalePressable>
                 );
               })}
             </View>
@@ -294,13 +294,13 @@ export function GachaScreen({
                   ))
                 )}
               </ScrollView>
-              <Pressable
+              <ScalePressable
                 onPress={close}
                 accessibilityRole="button"
                 accessibilityLabel="확인"
                 style={[styles.confirmBtn, { backgroundColor: t.primary }]}>
                 <Text style={[Typography.label, { color: t.onPrimary }]}>확인</Text>
-              </Pressable>
+              </ScalePressable>
             </>
           )}
         </View>

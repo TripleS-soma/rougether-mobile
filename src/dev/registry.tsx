@@ -1,6 +1,6 @@
 import { openBrowserAsync } from 'expo-web-browser';
 import { type ReactNode, useState } from 'react';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { type HouseCover, HouseCoverPicker } from '@/components/house-cover-picker';
 import { HousePreviewFrame } from '@/components/room/house-preview-frame';
@@ -29,6 +29,7 @@ import { SignupScreen } from '@/components/screens/signup-screen';
 import { SampleButton } from '@/components/sample-button';
 import { Badge } from '@/components/ui/badge';
 import { BearCheck } from '@/components/ui/bear-check';
+import { ScalePressable } from '@/components/ui/scale-pressable';
 import { CATEGORY_ICON_GEOMETRY, CategoryIcon } from '@/components/ui/category-icon';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -92,6 +93,24 @@ export const galleryEntries: GalleryEntry[] = [
     name: 'Type scale',
     description: 'Named typography roles (Astryx standard: base ≈ 16, ratio ≈ 1.2).',
     render: () => <TypeScalePreview />,
+  },
+  {
+    name: 'ScalePressable · 프레스 스케일',
+    description: '누르는 동안 0.96으로 눌리는 공용 Pressable (#442) — 버튼 기본 손맛.',
+    render: () => (
+      <ScalePressable
+        accessibilityRole="button"
+        accessibilityLabel="눌러보기"
+        style={{
+          alignSelf: 'center',
+          backgroundColor: '#7FA87F',
+          borderRadius: 999,
+          paddingHorizontal: 24,
+          paddingVertical: 12,
+        }}>
+        <Text style={{ color: '#FFFFFF' }}>눌러보기</Text>
+      </ScalePressable>
+    ),
   },
   {
     name: 'BearCheck · 곰 헤드 체크 토글',
