@@ -30,7 +30,7 @@ import {
   TargetPictogram,
 } from '@/components/ui/pictograms';
 import { WalletPills } from '@/components/ui/wallet-pills';
-import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
+import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { RainOverlay } from '@/components/rain-overlay';
 import {
   Overlay,
@@ -234,6 +234,9 @@ export type GroupHouseScreenProps = {
   /** True while my houses are loading from the API. */
   loading?: boolean;
   characterId?: CharacterId;
+  /** 헤더 프로필 블록 — 나의 방 헤더와 같은 아바타·닉네임·스트릭 (#420). */
+  userName?: string;
+  streakDays?: number;
   /**
    * Controlled house-switcher index. The screen unmounts while visiting a
    * friend's room, so the shell keeps this to restore the house being viewed
@@ -301,6 +304,8 @@ export function GroupHouseScreen({
   houses = DEFAULT_HOUSES,
   loading = false,
   characterId = DEFAULT_CHARACTER_ID,
+  userName = '준서',
+  streakDays = 0,
   houseIndex: houseIndexProp,
   onHouseIndexChange,
   onVisitFriend,
@@ -338,6 +343,8 @@ export function GroupHouseScreen({
     ? RAIN_SKY[scheme]
     : SKY_BY_PHASE[scheme][skyPhaseForHour(nowHour ?? new Date().getHours())];
   const headerInset = useHeaderInsetStyle();
+  const headerCharacter =
+    CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
   const screenStyle = useScreenStyle([]);
 
   const [internalHouseIndex, setInternalHouseIndex] = useState(0);
@@ -897,8 +904,30 @@ export function GroupHouseScreen({
   return (
     <View style={[styles.screen, screenStyle]}>
       <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
-        {/* 빈 스페이서였던 왼쪽에 타이틀, 오른쪽에 나의 방과 같은 지갑 필 (#353). */}
-        <Text style={[Typography.h2, styles.flex, { color: t.text }]}>함께 크는 집</Text>
+        {/* 나의 방 헤더와 같은 프로필 블록 — 아바타·닉네임·스트릭 (#420). */}
+        <View style={styles.headerLeft}>
+          <View style={[styles.headerAvatar, { backgroundColor: headerCharacter.bg }]}>
+            <CharacterAvatar characterId={characterId} size={36} />
+          </View>
+          <View style={styles.headerName}>
+            <Text
+              style={[Typography.h3, { color: t.text }]}
+              numberOfLines={1}
+              ellipsizeMode="middle"
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}>
+              {userName}
+            </Text>
+            {streakDays > 0 ? (
+              <View style={styles.headerStreak}>
+                <Icon name="flame" size={14} color={t.warningText} />
+                <Text style={[Typography.supporting, { color: t.warningText }]}>
+                  {streakDays}일
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        </View>
         <WalletPills coin={coinBalance} dia={diaBalance} />
         <CoachTarget id="house-search">
           <Pressable
@@ -1171,15 +1200,34 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     paddingHorizontal: Spacing.six,
   },
-  flex: {
-    flex: 1,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.three,
+  },
+  headerLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    marginRight: Spacing.two,
+  },
+  headerName: {
+    flexShrink: 1,
+  },
+  headerStreak: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.half,
+  },
+  headerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   iconBtn: {
     width: 40,

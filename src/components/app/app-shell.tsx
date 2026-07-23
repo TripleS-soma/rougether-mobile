@@ -785,6 +785,8 @@ export function AppShell({
               loading={housesLoading}
               covers={houseCovers}
               characterId={wornCharacterId}
+              userName={nickname}
+              streakDays={streak}
               roomPreviews={roomPreviews}
               furniture={catalogue.furniture}
               wallpapers={catalogue.wallpapers}
