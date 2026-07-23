@@ -605,9 +605,9 @@ export function AppShell({
 
   const activeTab = TAB_FOR_SCREEN[screen];
 
-  // 화면 전환 손맛 (#446) — 들어오는 화면을 탭 간엔 크로스페이드, 서브화면
-  // 진입엔 우측 슬라이드+페이드로 맞이한다. 나가는 화면은 이미 언마운트라
-  // 엔터 연출만으로 충분히 부드럽다.
+  // 화면 전환 손맛 (#446) — 들어오는 화면이 이동 방향에서 밀려 들어온다.
+  // 진입(서브화면)은 우측에서, 복귀(뒤로)는 좌측에서, 탭 간 전환은 탭 순서
+  // 방향에서. 페이드만 쓰면 깜빡임으로 읽혀서 항상 슬라이드를 동반한다.
   const transOpacity = useRef(new Animated.Value(1)).current;
   const transX = useRef(new Animated.Value(0)).current;
   const prevScreenRef = useRef<Screen>(screen);
@@ -615,9 +615,21 @@ export function AppShell({
     const prev = prevScreenRef.current;
     if (prev === screen) return;
     prevScreenRef.current = screen;
-    // 탭 레벨 화면으로의 이동(탭 전환·뒤로 복귀)은 페이드만, 서브화면
-    // 진입은 우측에서 살짝 밀려 들어온다.
-    const slide = TAB_FOR_SCREEN[screen] == null ? 28 : 0;
+    const TAB_ORDER: Record<NavTab, number> = { myRoom: 0, house: 1, settings: 2 };
+    const prevTab = TAB_FOR_SCREEN[prev];
+    const nextTab = TAB_FOR_SCREEN[screen];
+    let slide = 28; // 기본: 서브화면 진입(우측에서)
+    if (prevTab != null && nextTab != null) {
+      // 탭 간 전환 — 이동 방향에서 들어온다.
+      slide = TAB_ORDER[nextTab] > TAB_ORDER[prevTab] ? 24 : -24;
+    } else if (
+      BACK_SCREEN[prev] === screen ||
+      (prev === 'addRoutine' && screen === addReturnScreen) ||
+      nextTab != null
+    ) {
+      // 뒤로 복귀(백맵 목적지·서브→탭) — 좌측에서 되돌아온다.
+      slide = -28;
+    }
     transOpacity.setValue(0);
     transX.setValue(slide);
     Animated.parallel([
@@ -629,7 +641,7 @@ export function AppShell({
         useNativeDriver: true,
       }),
     ]).start();
-  }, [screen, transOpacity, transX]);
+  }, [screen, addReturnScreen, transOpacity, transX]);
 
   return (
     <CoachTargetProvider>
