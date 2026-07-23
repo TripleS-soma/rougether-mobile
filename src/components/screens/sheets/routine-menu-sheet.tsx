@@ -1,8 +1,9 @@
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Icon } from '@/components/ui/icon';
 import type { Routine } from '@/constants/routines';
-import { Overlay, Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 export type RoutineMenuSheetProps = {
@@ -44,102 +45,94 @@ export function RoutineMenuSheet({
   const timeLabel = item?.alarmEnabled && item?.time ? '시간 수정' : '시간 추가';
 
   return (
-    <Modal transparent visible={item !== null} animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.sheetBackdrop} onPress={onClose}>
-        <Pressable style={[styles.sheet, { backgroundColor: t.screen }]}>
-          <View style={[styles.sheetHandle, { backgroundColor: t.border }]} />
-          <Text style={[Typography.h3, styles.sheetTitle, { color: t.text }]} numberOfLines={1}>
-            {item?.title}
-          </Text>
+    <BottomSheet
+      visible={item !== null}
+      onClose={onClose}
+      cardStyle={[styles.sheet, { backgroundColor: t.screen }]}>
+      <View style={[styles.sheetHandle, { backgroundColor: t.border }]} />
+      <Text style={[Typography.h3, styles.sheetTitle, { color: t.text }]} numberOfLines={1}>
+        {item?.title}
+      </Text>
 
-          <View style={styles.sheetActions}>
-            <Pressable
-              onPress={() => {
-                const r = item;
-                onClose();
-                if (r) onRename(r);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={`${item?.title ?? ''} 수정`}
-              style={[styles.sheetAction, { backgroundColor: t.surface }]}>
-              <Icon name="edit" size={22} color={t.text} />
-              <Text style={[Typography.label, { color: t.text }]}>수정하기</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => {
-                const r = item;
-                onClose();
-                if (r) onDelete(r);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={`${item?.title ?? ''} 삭제`}
-              style={[styles.sheetAction, { backgroundColor: t.surface }]}>
-              <Icon name="trash" size={22} color={t.danger} />
-              <Text style={[Typography.label, { color: t.danger }]}>삭제하기</Text>
-            </Pressable>
-          </View>
-
-          <Pressable
-            onPress={() => {
-              const r = item;
-              onClose();
-              if (r) onToggleComplete(r);
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={`${item?.title ?? ''} ${done ? '완료 취소' : '완료'}`}
-            style={styles.sheetItem}>
-            <View style={[styles.sheetItemIcon, { backgroundColor: t.primary }]}>
-              <Icon name={done ? 'checkbox-off' : 'check'} size={18} color={t.onPrimary} />
-            </View>
-            <Text style={[Typography.body, { color: t.text }]}>
-              {done ? '완료 취소' : '완료하기'}
-            </Text>
-          </Pressable>
-
-          {/* 루틴은 알림 시간, 투두는 마감 시각(dueTime) — 같은 항목으로 다룬다 (#325). */}
-          <Pressable
-            onPress={() => {
-              const r = item;
-              onClose();
-              if (r) onEditTime(r);
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={`${item?.title ?? ''} ${timeLabel}`}
-            style={styles.sheetItem}>
-            <View style={[styles.sheetItemIcon, { backgroundColor: t.warning }]}>
-              <Icon name="bell" size={18} color={t.onPrimary} />
-            </View>
-            <Text style={[Typography.body, { color: t.text }]}>{timeLabel}</Text>
-          </Pressable>
-
-          {/* Todos move their dueDate; a routine moves that day's occurrence
-              only — the repeat stays (the calendar sheet explains). */}
-          <Pressable
-            onPress={() => {
-              const r = item;
-              onClose();
-              if (r) onChangeDate(r);
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={`${item?.title ?? ''} 날짜 바꾸기`}
-            style={styles.sheetItem}>
-            <View style={[styles.sheetItemIcon, { backgroundColor: t.success }]}>
-              <Icon name="calendar" size={18} color={t.onPrimary} />
-            </View>
-            <Text style={[Typography.body, { color: t.text }]}>날짜 바꾸기</Text>
-          </Pressable>
+      <View style={styles.sheetActions}>
+        <Pressable
+          onPress={() => {
+            const r = item;
+            onClose();
+            if (r) onRename(r);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={`${item?.title ?? ''} 수정`}
+          style={[styles.sheetAction, { backgroundColor: t.surface }]}>
+          <Icon name="edit" size={22} color={t.text} />
+          <Text style={[Typography.label, { color: t.text }]}>수정하기</Text>
         </Pressable>
+        <Pressable
+          onPress={() => {
+            const r = item;
+            onClose();
+            if (r) onDelete(r);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={`${item?.title ?? ''} 삭제`}
+          style={[styles.sheetAction, { backgroundColor: t.surface }]}>
+          <Icon name="trash" size={22} color={t.danger} />
+          <Text style={[Typography.label, { color: t.danger }]}>삭제하기</Text>
+        </Pressable>
+      </View>
+
+      <Pressable
+        onPress={() => {
+          const r = item;
+          onClose();
+          if (r) onToggleComplete(r);
+        }}
+        accessibilityRole="button"
+        accessibilityLabel={`${item?.title ?? ''} ${done ? '완료 취소' : '완료'}`}
+        style={styles.sheetItem}>
+        <View style={[styles.sheetItemIcon, { backgroundColor: t.primary }]}>
+          <Icon name={done ? 'checkbox-off' : 'check'} size={18} color={t.onPrimary} />
+        </View>
+        <Text style={[Typography.body, { color: t.text }]}>{done ? '완료 취소' : '완료하기'}</Text>
       </Pressable>
-    </Modal>
+
+      {/* 루틴은 알림 시간, 투두는 마감 시각(dueTime) — 같은 항목으로 다룬다 (#325). */}
+      <Pressable
+        onPress={() => {
+          const r = item;
+          onClose();
+          if (r) onEditTime(r);
+        }}
+        accessibilityRole="button"
+        accessibilityLabel={`${item?.title ?? ''} ${timeLabel}`}
+        style={styles.sheetItem}>
+        <View style={[styles.sheetItemIcon, { backgroundColor: t.warning }]}>
+          <Icon name="bell" size={18} color={t.onPrimary} />
+        </View>
+        <Text style={[Typography.body, { color: t.text }]}>{timeLabel}</Text>
+      </Pressable>
+
+      {/* Todos move their dueDate; a routine moves that day's occurrence
+              only — the repeat stays (the calendar sheet explains). */}
+      <Pressable
+        onPress={() => {
+          const r = item;
+          onClose();
+          if (r) onChangeDate(r);
+        }}
+        accessibilityRole="button"
+        accessibilityLabel={`${item?.title ?? ''} 날짜 바꾸기`}
+        style={styles.sheetItem}>
+        <View style={[styles.sheetItemIcon, { backgroundColor: t.success }]}>
+          <Icon name="calendar" size={18} color={t.onPrimary} />
+        </View>
+        <Text style={[Typography.body, { color: t.text }]}>날짜 바꾸기</Text>
+      </Pressable>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  sheetBackdrop: {
-    flex: 1,
-    backgroundColor: Overlay.dim,
-    justifyContent: 'flex-end',
-  },
   sheet: {
     borderTopLeftRadius: Radius.lg,
     borderTopRightRadius: Radius.lg,

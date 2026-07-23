@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Icon } from '@/components/ui/icon';
 import { WHEEL_ITEM_HEIGHT, WHEEL_VISIBLE_ROWS, WheelPicker } from '@/components/ui/wheel-picker';
-import { Overlay, Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -77,108 +78,96 @@ export function TimePickerSheet({
     setMinute(p.minute);
   }, [visible, initialEnabled, initialTime]);
 
-  if (!visible) return null;
-
   const save = () => {
     onSave(enabled, to24(ampm, hour12, minute));
     onClose();
   };
 
   return (
-    <View style={styles.overlay}>
-      <Pressable style={styles.backdrop} onPress={onClose} />
-      <View style={[styles.sheet, { backgroundColor: t.screen }]}>
-        <View style={[styles.head, { borderBottomColor: t.border }]}>
-          <Text style={[Typography.h3, { color: t.text }]}>알림 시간</Text>
-          <Pressable
-            onPress={onClose}
-            accessibilityRole="button"
-            accessibilityLabel="닫기"
-            style={[styles.close, { backgroundColor: t.surfaceMuted }]}>
-            <Icon name="close" size={16} color={t.text} />
-          </Pressable>
-        </View>
-
-        <View style={styles.body}>
-          <View style={[styles.enableRow, { backgroundColor: t.surface }]}>
-            <Icon name={enabled ? 'bell' : 'bell-off'} size={20} color={t.text} />
-            <View style={styles.flex}>
-              <Text style={[Typography.body, { color: t.text }]}>알림 받기</Text>
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                {enabled ? '설정한 시간에 알려드려요' : '알림 없이 진행해요'}
-              </Text>
-            </View>
-            <ToggleSwitch
-              value={enabled}
-              onToggle={() => setEnabled((v) => !v)}
-              accessibilityLabel="알림 받기"
-            />
-          </View>
-
-          {enabled ? (
-            <>
-              {/* 오전/오후 · 시 · 분 3열 스와이프 휠 (#390) — 중앙 밴드 하나가
-                  세 휠을 가로지른다. 스와이프 외에 행 탭으로도 선택 가능. */}
-              <View style={styles.wheelWrap}>
-                <View
-                  style={[styles.band, { backgroundColor: t.surfaceMuted }]}
-                  pointerEvents="none"
-                />
-                <View style={styles.wheels}>
-                  <WheelPicker
-                    items={AMPM_ITEMS}
-                    value={ampm}
-                    onChange={setAmpm}
-                    accessibilityLabel="오전/오후 선택"
-                    testID="wheel-ampm"
-                  />
-                  <WheelPicker
-                    items={HOUR_ITEMS}
-                    value={hour12}
-                    onChange={setHour12}
-                    accessibilityLabel="시 선택"
-                    testID="wheel-hour"
-                  />
-                  <WheelPicker
-                    items={MINUTE_ITEMS}
-                    value={minute}
-                    onChange={setMinute}
-                    accessibilityLabel="분 선택"
-                    testID="wheel-minute"
-                  />
-                </View>
-              </View>
-            </>
-          ) : null}
-        </View>
-
-        <View style={[styles.footer, { borderTopColor: t.border }]}>
-          <Pressable
-            onPress={save}
-            accessibilityRole="button"
-            accessibilityLabel="알림 저장"
-            style={[styles.save, { backgroundColor: t.primary }]}>
-            <Text style={[Typography.label, { color: t.onPrimary }]}>저장</Text>
-          </Pressable>
-        </View>
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      cardStyle={[styles.sheet, { backgroundColor: t.screen }]}>
+      <View style={[styles.head, { borderBottomColor: t.border }]}>
+        <Text style={[Typography.h3, { color: t.text }]}>알림 시간</Text>
+        <Pressable
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="닫기"
+          style={[styles.close, { backgroundColor: t.surfaceMuted }]}>
+          <Icon name="close" size={16} color={t.text} />
+        </Pressable>
       </View>
-    </View>
+
+      <View style={styles.body}>
+        <View style={[styles.enableRow, { backgroundColor: t.surface }]}>
+          <Icon name={enabled ? 'bell' : 'bell-off'} size={20} color={t.text} />
+          <View style={styles.flex}>
+            <Text style={[Typography.body, { color: t.text }]}>알림 받기</Text>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              {enabled ? '설정한 시간에 알려드려요' : '알림 없이 진행해요'}
+            </Text>
+          </View>
+          <ToggleSwitch
+            value={enabled}
+            onToggle={() => setEnabled((v) => !v)}
+            accessibilityLabel="알림 받기"
+          />
+        </View>
+
+        {enabled ? (
+          <>
+            {/* 오전/오후 · 시 · 분 3열 스와이프 휠 (#390) — 중앙 밴드 하나가
+                  세 휠을 가로지른다. 스와이프 외에 행 탭으로도 선택 가능. */}
+            <View style={styles.wheelWrap}>
+              <View
+                style={[styles.band, { backgroundColor: t.surfaceMuted }]}
+                pointerEvents="none"
+              />
+              <View style={styles.wheels}>
+                <WheelPicker
+                  items={AMPM_ITEMS}
+                  value={ampm}
+                  onChange={setAmpm}
+                  accessibilityLabel="오전/오후 선택"
+                  testID="wheel-ampm"
+                />
+                <WheelPicker
+                  items={HOUR_ITEMS}
+                  value={hour12}
+                  onChange={setHour12}
+                  accessibilityLabel="시 선택"
+                  testID="wheel-hour"
+                />
+                <WheelPicker
+                  items={MINUTE_ITEMS}
+                  value={minute}
+                  onChange={setMinute}
+                  accessibilityLabel="분 선택"
+                  testID="wheel-minute"
+                />
+              </View>
+            </View>
+          </>
+        ) : null}
+      </View>
+
+      <View style={[styles.footer, { borderTopColor: t.border }]}>
+        <Pressable
+          onPress={save}
+          accessibilityRole="button"
+          accessibilityLabel="알림 저장"
+          style={[styles.save, { backgroundColor: t.primary }]}>
+          <Text style={[Typography.label, { color: t.onPrimary }]}>저장</Text>
+        </Pressable>
+      </View>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'flex-end',
-    zIndex: 100,
-    elevation: 100,
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: Overlay.dim,
   },
   sheet: {
     borderTopLeftRadius: Radius.lg,

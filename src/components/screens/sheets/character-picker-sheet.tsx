@@ -2,9 +2,10 @@ import { Image } from 'expo-image';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { CharacterAvatar, type CharacterAnimationSet } from '@/components/character-avatar';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Icon } from '@/components/ui/icon';
 import { CHARACTER_OPTIONS, type CharacterId } from '@/constants/characters';
-import { Overlay, Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { assetSource, isCdnKey } from '@/resources/asset';
 
@@ -45,99 +46,87 @@ export function CharacterPickerSheet({
   const t = useTokens();
   const Typography = useTypography();
   const emph = useFontEmphasis();
-  if (!visible) return null;
-
   return (
-    <View style={styles.overlay}>
-      <Pressable style={styles.backdrop} onPress={onClose} />
-      <View style={[styles.sheet, { backgroundColor: t.screen }]}>
-        <View style={[styles.head, { borderBottomColor: t.border }]}>
-          <Text style={[Typography.h3, { color: t.text }]}>캐릭터 교체</Text>
-          <Pressable
-            onPress={onClose}
-            accessibilityRole="button"
-            accessibilityLabel="닫기"
-            style={[styles.close, { backgroundColor: t.surfaceMuted }]}>
-            <Icon name="close" size={16} color={t.text} />
-          </Pressable>
-        </View>
-
-        <ScrollView contentContainerStyle={styles.body}>
-          {characters.length === 0 ? (
-            <Text style={[Typography.supporting, styles.empty, { color: t.textMuted }]}>
-              보유한 캐릭터가 없어요. 뽑기 상점에서 새 친구를 만나보세요!
-            </Text>
-          ) : (
-            <View style={styles.grid}>
-              {characters.map((c) => {
-                const meta = CHARACTER_OPTIONS.find((o) => o.id === c.id);
-                return (
-                  <Pressable
-                    key={c.serverId}
-                    onPress={() => {
-                      if (!c.selected) onSelect(c.serverId);
-                      onClose();
-                    }}
-                    accessibilityRole="button"
-                    // The avatar art inside already carries the bare name label.
-                    accessibilityLabel={`${c.name} 착용`}
-                    accessibilityState={{ selected: c.selected }}
-                    style={[
-                      styles.cell,
-                      {
-                        backgroundColor: t.surface,
-                        borderColor: c.selected ? t.primary : 'transparent',
-                      },
-                    ]}>
-                    <View style={[styles.avatar, { backgroundColor: meta?.bg ?? t.surfaceMuted }]}>
-                      {/* Server CDN art first; the bundled sprite is the fallback. */}
-                      {isCdnKey(c.assetKey) ? (
-                        <Image
-                          source={assetSource(c.assetKey)}
-                          style={styles.cdnArt}
-                          contentFit="contain"
-                          accessibilityLabel={c.name}
-                          testID="cdn-art"
-                        />
-                      ) : (
-                        <CharacterAvatar characterId={c.id} size={56} />
-                      )}
-                    </View>
-                    <Text style={[Typography.label, { color: t.text }]}>{c.name}</Text>
-                    {c.selected ? (
-                      <View style={[styles.badge, { backgroundColor: t.primary }]}>
-                        <Icon name="check" size={10} color={t.onPrimary} />
-                        <Text style={[styles.badgeText, emph('semibold'), { color: t.onPrimary }]}>
-                          착용 중
-                        </Text>
-                      </View>
-                    ) : (
-                      <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                        {meta?.description ?? ''}
-                      </Text>
-                    )}
-                  </Pressable>
-                );
-              })}
-            </View>
-          )}
-        </ScrollView>
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      cardStyle={[styles.sheet, { backgroundColor: t.screen }]}>
+      <View style={[styles.head, { borderBottomColor: t.border }]}>
+        <Text style={[Typography.h3, { color: t.text }]}>캐릭터 교체</Text>
+        <Pressable
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="닫기"
+          style={[styles.close, { backgroundColor: t.surfaceMuted }]}>
+          <Icon name="close" size={16} color={t.text} />
+        </Pressable>
       </View>
-    </View>
+
+      <ScrollView contentContainerStyle={styles.body}>
+        {characters.length === 0 ? (
+          <Text style={[Typography.supporting, styles.empty, { color: t.textMuted }]}>
+            보유한 캐릭터가 없어요. 뽑기 상점에서 새 친구를 만나보세요!
+          </Text>
+        ) : (
+          <View style={styles.grid}>
+            {characters.map((c) => {
+              const meta = CHARACTER_OPTIONS.find((o) => o.id === c.id);
+              return (
+                <Pressable
+                  key={c.serverId}
+                  onPress={() => {
+                    if (!c.selected) onSelect(c.serverId);
+                    onClose();
+                  }}
+                  accessibilityRole="button"
+                  // The avatar art inside already carries the bare name label.
+                  accessibilityLabel={`${c.name} 착용`}
+                  accessibilityState={{ selected: c.selected }}
+                  style={[
+                    styles.cell,
+                    {
+                      backgroundColor: t.surface,
+                      borderColor: c.selected ? t.primary : 'transparent',
+                    },
+                  ]}>
+                  <View style={[styles.avatar, { backgroundColor: meta?.bg ?? t.surfaceMuted }]}>
+                    {/* Server CDN art first; the bundled sprite is the fallback. */}
+                    {isCdnKey(c.assetKey) ? (
+                      <Image
+                        source={assetSource(c.assetKey)}
+                        style={styles.cdnArt}
+                        contentFit="contain"
+                        accessibilityLabel={c.name}
+                        testID="cdn-art"
+                      />
+                    ) : (
+                      <CharacterAvatar characterId={c.id} size={56} />
+                    )}
+                  </View>
+                  <Text style={[Typography.label, { color: t.text }]}>{c.name}</Text>
+                  {c.selected ? (
+                    <View style={[styles.badge, { backgroundColor: t.primary }]}>
+                      <Icon name="check" size={10} color={t.onPrimary} />
+                      <Text style={[styles.badgeText, emph('semibold'), { color: t.onPrimary }]}>
+                        착용 중
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                      {meta?.description ?? ''}
+                    </Text>
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
+      </ScrollView>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'flex-end',
-    zIndex: 100,
-    elevation: 100,
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: Overlay.dim,
-  },
   sheet: {
     borderTopLeftRadius: Radius.lg,
     borderTopRightRadius: Radius.lg,

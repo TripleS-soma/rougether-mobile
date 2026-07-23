@@ -345,8 +345,8 @@ describe('MyRoomScreen', () => {
 
     await fireEvent.press(getByLabelText('판다 착용'));
     expect(onSelectCharacter).toHaveBeenCalledWith(4);
-    // The sheet closes after picking.
-    expect(queryByText('착용 중')).toBeNull();
+    // The sheet closes after picking — 퇴장 애니메이션(#448)이 끝나길 기다린다.
+    await waitFor(() => expect(queryByText('착용 중')).toBeNull());
   });
 
   it('schedules 격주/매월/매년 routines by their cadence (#255)', async () => {

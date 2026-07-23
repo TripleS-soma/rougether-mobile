@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Icon } from '@/components/ui/icon';
 import { CategoryIcon } from '@/components/ui/category-icon';
 import { Pictogram, type PictogramName } from '@/components/ui/pictograms';
@@ -11,7 +12,7 @@ import {
   VISIBILITY_ICONS,
   VISIBILITY_LABELS,
 } from '@/constants/routines';
-import { Overlay, Radius, Spacing, StaticWhite } from '@/constants/theme';
+import { Radius, Spacing, StaticWhite } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
 const ICON_CHOICES: PictogramName[] = [
@@ -86,8 +87,6 @@ export function CategoryFormSheet({
     setVisibility(editing?.visibility ?? 'public');
   }, [visible, editing, autoColor]);
 
-  if (!visible) return null;
-
   const canSubmit = name.trim().length > 0;
   const submit = () => {
     if (!canSubmit) return;
@@ -100,145 +99,132 @@ export function CategoryFormSheet({
   };
 
   return (
-    <View style={styles.overlay}>
-      <Pressable style={styles.backdrop} onPress={onClose} />
-      <View style={[styles.sheet, { backgroundColor: t.screen }]}>
-        <View style={[styles.head, { borderBottomColor: t.border }]}>
-          <Text style={[Typography.h3, { color: t.text }]}>
-            {editing ? `'${editing.label}' 수정하기` : '새 카테고리'}
-          </Text>
-          <Pressable
-            onPress={onClose}
-            accessibilityRole="button"
-            accessibilityLabel="닫기"
-            style={[styles.close, { backgroundColor: t.surfaceMuted }]}>
-            <Icon name="close" size={16} color={t.text} />
-          </Pressable>
-        </View>
-
-        <ScrollView contentContainerStyle={styles.body}>
-          <View style={[styles.nameRow, { backgroundColor: t.surface }]}>
-            <CategoryIcon name={icon} color={color} size={20} />
-            <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholder="예) 자기계발"
-              placeholderTextColor={t.textMuted}
-              style={[styles.flex, styles.nameInput, { color: t.text }]}
-            />
-          </View>
-
-          <Text style={[Typography.supporting, { color: t.textMuted }]}>아이콘</Text>
-          <View style={styles.emojiGrid}>
-            {ICON_CHOICES.map((e) => {
-              const active = icon === e;
-              return (
-                <Pressable
-                  key={e}
-                  onPress={() => setIcon(e)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`아이콘 ${e}`}
-                  accessibilityState={{ selected: active }}
-                  style={[
-                    styles.emojiCell,
-                    { backgroundColor: active ? t.primarySoft : t.surfaceMuted },
-                    active && { borderColor: t.primary, borderWidth: 2 },
-                  ]}>
-                  <CategoryIcon name={e} color={color} size={18} />
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <Text style={[Typography.supporting, { color: t.textMuted }]}>색상</Text>
-          <View style={styles.colorRow}>
-            {CATEGORY_COLORS.map((c) => {
-              const active = color === c;
-              return (
-                <Pressable
-                  key={c}
-                  onPress={() => setColor(c)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`색상 ${c}`}
-                  accessibilityState={{ selected: active }}
-                  style={[
-                    styles.colorCell,
-                    { backgroundColor: c },
-                    active && [styles.colorCellActive, { borderColor: t.text }],
-                  ]}>
-                  {active ? <Icon name="check" size={14} color={StaticWhite} /> : null}
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <Text style={[Typography.supporting, { color: t.textMuted }]}>공개 설정</Text>
-          <View style={styles.segment}>
-            {VISIBILITY_OPTIONS.map((v) => {
-              const active = visibility === v.id;
-              return (
-                <Pressable
-                  key={v.id}
-                  onPress={() => setVisibility(v.id)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  accessibilityLabel={VISIBILITY_LABELS[v.id]}
-                  style={[
-                    styles.segItem,
-                    { backgroundColor: active ? t.primary : t.surfaceMuted },
-                  ]}>
-                  <Pictogram
-                    name={VISIBILITY_ICONS[v.id]}
-                    size={18}
-                    color={active ? t.onPrimary : undefined}
-                  />
-                  <Text
-                    style={[
-                      Typography.supporting,
-                      emph('semibold'),
-                      { color: active ? t.onPrimary : t.textMuted },
-                    ]}>
-                    {VISIBILITY_LABELS[v.id]}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-          <Text style={[Typography.supporting, styles.segDesc, { color: t.textMuted }]}>
-            {VISIBILITY_OPTIONS.find((v) => v.id === visibility)?.desc}
-          </Text>
-        </ScrollView>
-
-        <View style={[styles.footer, { borderTopColor: t.border }]}>
-          <Pressable
-            onPress={submit}
-            disabled={!canSubmit}
-            accessibilityRole="button"
-            accessibilityLabel={editing ? '카테고리 저장' : '카테고리 추가'}
-            style={[styles.submit, { backgroundColor: canSubmit ? t.primary : t.textDisabled }]}>
-            <Icon name={editing ? 'check' : 'add'} size={18} color={t.onPrimary} />
-            <Text style={[Typography.label, { color: t.onPrimary }]}>
-              {editing ? '저장하기' : '카테고리 추가'}
-            </Text>
-          </Pressable>
-        </View>
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      cardStyle={[styles.sheet, { backgroundColor: t.screen }]}>
+      <View style={[styles.head, { borderBottomColor: t.border }]}>
+        <Text style={[Typography.h3, { color: t.text }]}>
+          {editing ? `'${editing.label}' 수정하기` : '새 카테고리'}
+        </Text>
+        <Pressable
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="닫기"
+          style={[styles.close, { backgroundColor: t.surfaceMuted }]}>
+          <Icon name="close" size={16} color={t.text} />
+        </Pressable>
       </View>
-    </View>
+
+      <ScrollView contentContainerStyle={styles.body}>
+        <View style={[styles.nameRow, { backgroundColor: t.surface }]}>
+          <CategoryIcon name={icon} color={color} size={20} />
+          <TextInput
+            value={name}
+            onChangeText={setName}
+            placeholder="예) 자기계발"
+            placeholderTextColor={t.textMuted}
+            style={[styles.flex, styles.nameInput, { color: t.text }]}
+          />
+        </View>
+
+        <Text style={[Typography.supporting, { color: t.textMuted }]}>아이콘</Text>
+        <View style={styles.emojiGrid}>
+          {ICON_CHOICES.map((e) => {
+            const active = icon === e;
+            return (
+              <Pressable
+                key={e}
+                onPress={() => setIcon(e)}
+                accessibilityRole="button"
+                accessibilityLabel={`아이콘 ${e}`}
+                accessibilityState={{ selected: active }}
+                style={[
+                  styles.emojiCell,
+                  { backgroundColor: active ? t.primarySoft : t.surfaceMuted },
+                  active && { borderColor: t.primary, borderWidth: 2 },
+                ]}>
+                <CategoryIcon name={e} color={color} size={18} />
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <Text style={[Typography.supporting, { color: t.textMuted }]}>색상</Text>
+        <View style={styles.colorRow}>
+          {CATEGORY_COLORS.map((c) => {
+            const active = color === c;
+            return (
+              <Pressable
+                key={c}
+                onPress={() => setColor(c)}
+                accessibilityRole="button"
+                accessibilityLabel={`색상 ${c}`}
+                accessibilityState={{ selected: active }}
+                style={[
+                  styles.colorCell,
+                  { backgroundColor: c },
+                  active && [styles.colorCellActive, { borderColor: t.text }],
+                ]}>
+                {active ? <Icon name="check" size={14} color={StaticWhite} /> : null}
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <Text style={[Typography.supporting, { color: t.textMuted }]}>공개 설정</Text>
+        <View style={styles.segment}>
+          {VISIBILITY_OPTIONS.map((v) => {
+            const active = visibility === v.id;
+            return (
+              <Pressable
+                key={v.id}
+                onPress={() => setVisibility(v.id)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={VISIBILITY_LABELS[v.id]}
+                style={[styles.segItem, { backgroundColor: active ? t.primary : t.surfaceMuted }]}>
+                <Pictogram
+                  name={VISIBILITY_ICONS[v.id]}
+                  size={18}
+                  color={active ? t.onPrimary : undefined}
+                />
+                <Text
+                  style={[
+                    Typography.supporting,
+                    emph('semibold'),
+                    { color: active ? t.onPrimary : t.textMuted },
+                  ]}>
+                  {VISIBILITY_LABELS[v.id]}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        <Text style={[Typography.supporting, styles.segDesc, { color: t.textMuted }]}>
+          {VISIBILITY_OPTIONS.find((v) => v.id === visibility)?.desc}
+        </Text>
+      </ScrollView>
+
+      <View style={[styles.footer, { borderTopColor: t.border }]}>
+        <Pressable
+          onPress={submit}
+          disabled={!canSubmit}
+          accessibilityRole="button"
+          accessibilityLabel={editing ? '카테고리 저장' : '카테고리 추가'}
+          style={[styles.submit, { backgroundColor: canSubmit ? t.primary : t.textDisabled }]}>
+          <Icon name={editing ? 'check' : 'add'} size={18} color={t.onPrimary} />
+          <Text style={[Typography.label, { color: t.onPrimary }]}>
+            {editing ? '저장하기' : '카테고리 추가'}
+          </Text>
+        </Pressable>
+      </View>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'flex-end',
-    zIndex: 100,
-    elevation: 100,
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: Overlay.dim,
-  },
   sheet: {
     borderTopLeftRadius: Radius.lg,
     borderTopRightRadius: Radius.lg,

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Calendar } from '@/components/ui/calendar';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Icon } from '@/components/ui/icon';
-import { Overlay, Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { formatDate } from '@/utils/datetime';
 
@@ -45,8 +46,6 @@ export function DateRangeSheet({
     setEditing('start');
   }, [visible, initialStartDate, initialEndDate]);
 
-  if (!visible) return null;
-
   const endValid = !hasEndDate || endDate >= startDate;
 
   const save = () => {
@@ -74,80 +73,76 @@ export function DateRangeSheet({
   };
 
   return (
-    <View style={styles.overlay}>
-      <Pressable style={styles.backdrop} onPress={onClose} />
-      <View style={[styles.sheet, { backgroundColor: t.screen }]}>
-        <View style={[styles.head, { borderBottomColor: t.border }]}>
-          <Text style={[Typography.h3, { color: t.text }]}>지속 기간</Text>
-          <Pressable
-            onPress={onClose}
-            accessibilityRole="button"
-            accessibilityLabel="닫기"
-            style={[styles.close, { backgroundColor: t.surfaceMuted }]}>
-            <Icon name="close" size={16} color={t.text} />
-          </Pressable>
-        </View>
-
-        <View style={styles.body}>
-          <View style={styles.tabs}>
-            <Tab
-              active={editing === 'start'}
-              label="시작일"
-              value={formatDate(startDate)}
-              onPress={() => setEditing('start')}
-            />
-            <Tab
-              active={editing === 'end'}
-              label="종료일"
-              value={hasEndDate ? formatDate(endDate) : '없음'}
-              disabled={!hasEndDate}
-              onPress={() => hasEndDate && setEditing('end')}
-            />
-          </View>
-
-          <View style={[styles.endRow, { backgroundColor: t.surface }]}>
-            <View style={styles.flex}>
-              <Text style={[Typography.body, { color: t.text }]}>종료일 설정</Text>
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                {hasEndDate ? '선택한 날짜까지 진행해요' : '종료일 없이 계속 진행해요'}
-              </Text>
-            </View>
-            <ToggleSwitch
-              value={hasEndDate}
-              onToggle={toggleEnd}
-              accessibilityLabel="종료일 설정"
-            />
-          </View>
-
-          {editing === 'start' ? (
-            <Calendar
-              value={startDate}
-              max={hasEndDate ? endDate : undefined}
-              onSelect={selectStart}
-            />
-          ) : (
-            <Calendar value={endDate} min={startDate} onSelect={setEndDate} />
-          )}
-
-          {!endValid ? (
-            <Text style={[Typography.supporting, { color: t.danger }]}>
-              종료일은 시작일 이후로 선택해주세요.
-            </Text>
-          ) : null}
-        </View>
-
-        <View style={[styles.footer, { borderTopColor: t.border }]}>
-          <Pressable
-            onPress={save}
-            disabled={!endValid}
-            accessibilityRole="button"
-            accessibilityLabel="기간 저장"
-            style={[styles.save, { backgroundColor: endValid ? t.primary : t.textDisabled }]}>
-            <Text style={[Typography.label, { color: t.onPrimary }]}>저장</Text>
-          </Pressable>
-        </View>
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      cardStyle={[styles.sheet, { backgroundColor: t.screen }]}>
+      <View style={[styles.head, { borderBottomColor: t.border }]}>
+        <Text style={[Typography.h3, { color: t.text }]}>지속 기간</Text>
+        <Pressable
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="닫기"
+          style={[styles.close, { backgroundColor: t.surfaceMuted }]}>
+          <Icon name="close" size={16} color={t.text} />
+        </Pressable>
       </View>
-    </View>
+
+      <View style={styles.body}>
+        <View style={styles.tabs}>
+          <Tab
+            active={editing === 'start'}
+            label="시작일"
+            value={formatDate(startDate)}
+            onPress={() => setEditing('start')}
+          />
+          <Tab
+            active={editing === 'end'}
+            label="종료일"
+            value={hasEndDate ? formatDate(endDate) : '없음'}
+            disabled={!hasEndDate}
+            onPress={() => hasEndDate && setEditing('end')}
+          />
+        </View>
+
+        <View style={[styles.endRow, { backgroundColor: t.surface }]}>
+          <View style={styles.flex}>
+            <Text style={[Typography.body, { color: t.text }]}>종료일 설정</Text>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              {hasEndDate ? '선택한 날짜까지 진행해요' : '종료일 없이 계속 진행해요'}
+            </Text>
+          </View>
+          <ToggleSwitch value={hasEndDate} onToggle={toggleEnd} accessibilityLabel="종료일 설정" />
+        </View>
+
+        {editing === 'start' ? (
+          <Calendar
+            value={startDate}
+            max={hasEndDate ? endDate : undefined}
+            onSelect={selectStart}
+          />
+        ) : (
+          <Calendar value={endDate} min={startDate} onSelect={setEndDate} />
+        )}
+
+        {!endValid ? (
+          <Text style={[Typography.supporting, { color: t.danger }]}>
+            종료일은 시작일 이후로 선택해주세요.
+          </Text>
+        ) : null}
+      </View>
+
+      <View style={[styles.footer, { borderTopColor: t.border }]}>
+        <Pressable
+          onPress={save}
+          disabled={!endValid}
+          accessibilityRole="button"
+          accessibilityLabel="기간 저장"
+          style={[styles.save, { backgroundColor: endValid ? t.primary : t.textDisabled }]}>
+          <Text style={[Typography.label, { color: t.onPrimary }]}>저장</Text>
+        </Pressable>
+      </View>
+    </BottomSheet>
   );
 }
 
@@ -185,16 +180,6 @@ function Tab({
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'flex-end',
-    zIndex: 100,
-    elevation: 100,
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: Overlay.dim,
   },
   sheet: {
     borderTopLeftRadius: Radius.lg,
