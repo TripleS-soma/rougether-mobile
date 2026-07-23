@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { BackHandler, StyleSheet, View } from 'react-native';
+import { Animated, BackHandler, Easing, StyleSheet, View } from 'react-native';
 
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
@@ -605,6 +605,32 @@ export function AppShell({
 
   const activeTab = TAB_FOR_SCREEN[screen];
 
+  // 화면 전환 손맛 (#446) — 들어오는 화면을 탭 간엔 크로스페이드, 서브화면
+  // 진입엔 우측 슬라이드+페이드로 맞이한다. 나가는 화면은 이미 언마운트라
+  // 엔터 연출만으로 충분히 부드럽다.
+  const transOpacity = useRef(new Animated.Value(1)).current;
+  const transX = useRef(new Animated.Value(0)).current;
+  const prevScreenRef = useRef<Screen>(screen);
+  useEffect(() => {
+    const prev = prevScreenRef.current;
+    if (prev === screen) return;
+    prevScreenRef.current = screen;
+    // 탭 레벨 화면으로의 이동(탭 전환·뒤로 복귀)은 페이드만, 서브화면
+    // 진입은 우측에서 살짝 밀려 들어온다.
+    const slide = TAB_FOR_SCREEN[screen] == null ? 28 : 0;
+    transOpacity.setValue(0);
+    transX.setValue(slide);
+    Animated.parallel([
+      Animated.timing(transOpacity, { toValue: 1, duration: 180, useNativeDriver: true }),
+      Animated.timing(transX, {
+        toValue: 0,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [screen, transOpacity, transX]);
+
   return (
     <CoachTargetProvider>
       <View
@@ -618,7 +644,8 @@ export function AppShell({
             setShellFrame({ w: width, h: height });
           });
         }}>
-        <View style={styles.content}>
+        <Animated.View
+          style={[styles.content, { opacity: transOpacity, transform: [{ translateX: transX }] }]}>
           {screen === 'myRoom' ? (
             <MyRoomScreen
               userName={nickname}
@@ -998,7 +1025,7 @@ export function AppShell({
           ) : null}
 
           {screen === 'help' ? <HelpScreen onBack={() => setScreen('settings')} /> : null}
-        </View>
+        </Animated.View>
 
         {activeTab ? (
           <BottomNav active={activeTab} onChange={(tab) => setScreen(SCREEN_FOR_TAB[tab])} />
