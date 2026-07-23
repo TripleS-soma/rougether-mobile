@@ -57,6 +57,7 @@ import {
 } from '@/constants/routines';
 import type { CalendarDayItem } from '@/components/screens/my-room-screen';
 import { todayIso } from '@/utils/datetime';
+import { identifyUser, track } from '@/lib/analytics';
 
 export function useMyRoomData() {
   const [routines, setRoutines] = useState<Routine[]>([]);
@@ -129,6 +130,7 @@ export function useMyRoomData() {
     setStreak(today.streak?.currentCount ?? 0);
     if (me.nickname) setNickname(me.nickname);
     if (me.bio != null) setBio(me.bio);
+    if (me.userId != null) identifyUser(me.userId);
   }, []);
 
   // Initial load + retry share the same load cycle (spinner → data | error).
@@ -208,6 +210,7 @@ export function useMyRoomData() {
       }
       // Completion pays out server-side — surface the actual amount.
       if (!wasDone && rewardAmount) toast(`+${rewardAmount} 코인 획득!`, 'success');
+      if (!wasDone) track('routine_complete', { kind: item?.kind ?? 'routine' });
       await refreshWallet();
       if (!wasDone && item) onCompleted?.(item);
     } catch {

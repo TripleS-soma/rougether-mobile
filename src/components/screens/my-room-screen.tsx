@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   Dimensions,
+  Easing,
+  type GestureResponderEvent,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -46,7 +49,7 @@ import {
 import { BearCheck } from '@/components/ui/bear-check';
 import { Icon } from '@/components/ui/icon';
 import { ScalePressable } from '@/components/ui/scale-pressable';
-import { NarrowScreenWidth, Radius, Spacing } from '@/constants/theme';
+import { NarrowScreenWidth, Radius, Spacing, StaticWhite } from '@/constants/theme';
 import { captureVerificationPhoto } from '@/lib/photo-verify';
 import { saveRoomImage } from '@/lib/room-capture';
 import {
@@ -310,6 +313,49 @@ export function MyRoomScreen({
   // 좁은 폰은 콤팩트 지갑 필(코인만) (#425) — 닉네임 열이 필 2개에 밀려
   // 뭉개지는 것 방지. 다이아는 뽑기 상점·꾸미기에서 보인다.
   const compactWallet = useWindowDimensions().width < NarrowScreenWidth;
+
+  // 코인 플라이 (#440) — 완료 탭 지점에서 헤더 지갑 필로 포물선 비행.
+  const rootRef = useRef<View>(null);
+  const walletRef = useRef<View>(null);
+  const flyTarget = useRef({ x: 0, y: 0 });
+  const walletPulse = useRef(new Animated.Value(1)).current;
+  const coinSeq = useRef(0);
+  const [flyingCoins, setFlyingCoins] = useState<
+    { id: number; x: number; y: number; tx: number; ty: number }[]
+  >([]);
+  const measureWallet = () => {
+    walletRef.current?.measureInWindow((x, y, w, h) => {
+      flyTarget.current = { x: x + w / 2, y: y + h / 2 };
+    });
+  };
+  const launchCoin = (e: GestureResponderEvent) => {
+    const { pageX, pageY } = e.nativeEvent;
+    rootRef.current?.measureInWindow((rx, ry) => {
+      const target = flyTarget.current;
+      if (!target.x && !target.y) return;
+      const id = coinSeq.current++;
+      setFlyingCoins((prev) => [
+        ...prev,
+        { id, x: pageX - rx, y: pageY - ry, tx: target.x - rx, ty: target.y - ry },
+      ]);
+    });
+  };
+  const onCoinArrive = (id: number) => {
+    setFlyingCoins((prev) => prev.filter((c) => c.id !== id));
+    walletPulse.setValue(1.18);
+    Animated.spring(walletPulse, { toValue: 1, friction: 3.5, useNativeDriver: true }).start();
+  };
+
+  // 스트릭 펄스 (#440) — 수치가 오르는 순간 🔥가 한 번 크게 일렁.
+  const streakPulse = useRef(new Animated.Value(1)).current;
+  const prevStreak = useRef(streakDays);
+  useEffect(() => {
+    if (streakDays > prevStreak.current) {
+      streakPulse.setValue(1.5);
+      Animated.spring(streakPulse, { toValue: 1, friction: 3, useNativeDriver: true }).start();
+    }
+    prevStreak.current = streakDays;
+  }, [streakDays, streakPulse]);
   const { show: toast } = useToast();
   const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
   const knownIds = categories.map((c) => c.id);
@@ -600,12 +646,15 @@ export function MyRoomScreen({
   // captured (cancelled / denied), the completion is aborted. Kept sync on the
   // common (non-photo) path; only the photo path awaits the camera. Completion
   // is toggled for a specific date (오늘 in 방, 선택한 날짜 in 달력).
-  const handleToggle = (routine: Routine, date: string) => {
+  const handleToggle = (routine: Routine, date: string, e?: GestureResponderEvent) => {
     const done = isDone(routine.id, date);
+    // 완료(보상이 있는 오늘 완료)에만 코인 플라이 (#440).
+    const fly = !done && date === today && e;
     if (routine.photoVerify && !done) {
       void onRequestPhoto().then((uri) => {
         if (uri) {
           hapticSuccess();
+          if (fly) launchCoin(e);
           onToggleCompletion?.(routine.id, date);
         }
       });
@@ -613,6 +662,7 @@ export function MyRoomScreen({
     }
     if (done) hapticSelection();
     else hapticSuccess();
+    if (fly) launchCoin(e);
     onToggleCompletion?.(routine.id, date);
   };
 
@@ -640,7 +690,7 @@ export function MyRoomScreen({
     });
 
   return (
-    <View style={[styles.screen, useScreenStyle([])]}>
+    <View ref={rootRef} style={[styles.screen, useScreenStyle([])]}>
       <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
         <View style={styles.headerLeft}>
           <View style={[styles.avatar, { backgroundColor: character.bg }]}>
@@ -660,17 +710,22 @@ export function MyRoomScreen({
             {/* A 0-day streak is nothing to celebrate — show the flame only
                 once a streak exists. */}
             {streakDays > 0 ? (
-              <View style={styles.streak}>
+              <Animated.View style={[styles.streak, { transform: [{ scale: streakPulse }] }]}>
                 <Icon name="flame" size={14} color={t.warningText} />
                 <Text style={[Typography.supporting, { color: t.warningText }]}>
                   {streakDays}일
                 </Text>
-              </View>
+              </Animated.View>
             ) : null}
           </View>
         </View>
         <View style={styles.headerRight}>
-          <WalletPills coin={coinBalance} dia={diaBalance} compact={compactWallet} />
+          <Animated.View
+            ref={walletRef}
+            onLayout={measureWallet}
+            style={{ transform: [{ scale: walletPulse }] }}>
+            <WalletPills coin={coinBalance} dia={diaBalance} compact={compactWallet} />
+          </Animated.View>
           {/* 알림 lives inside this popover (#257 — a separate bell button
               crowded the header and crushed the title); unread shows as a dot
               on the menu button. */}
@@ -816,12 +871,7 @@ export function MyRoomScreen({
 
                 {!loading && !loadError && roomRoutines.length > 0 ? (
                   <View style={[styles.progressTrack, { backgroundColor: t.surfaceMuted }]}>
-                    <View
-                      style={[
-                        styles.progressFill,
-                        { backgroundColor: t.primary, width: `${progress * 100}%` },
-                      ]}
-                    />
+                    <SpringProgressFill progress={progress} color={t.primary} />
                   </View>
                 ) : null}
 
@@ -891,7 +941,7 @@ export function MyRoomScreen({
                                     <BearCheck
                                       checked={done}
                                       color={cat.color}
-                                      onPress={() => handleToggle(routine, today)}
+                                      onPress={(e) => handleToggle(routine, today, e)}
                                       accessibilityLabel={routine.title}
                                     />
                                     <Pressable
@@ -962,12 +1012,7 @@ export function MyRoomScreen({
               </View>
               {calDayTotal > 0 ? (
                 <View style={[styles.progressTrack, { backgroundColor: t.surfaceMuted }]}>
-                  <View
-                    style={[
-                      styles.progressFill,
-                      { backgroundColor: t.primary, width: `${(calDayDone / calDayTotal) * 100}%` },
-                    ]}
-                  />
+                  <SpringProgressFill progress={calDayDone / calDayTotal} color={t.primary} />
                 </View>
               ) : null}
               {serverBackedDay ? (
@@ -1091,7 +1136,7 @@ export function MyRoomScreen({
                           <BearCheck
                             checked={done}
                             color={group.meta.color}
-                            onPress={() => handleToggle(routine, selectedDate)}
+                            onPress={(e) => handleToggle(routine, selectedDate, e)}
                             accessibilityLabel={routine.title}
                           />
                           <Pressable
@@ -1203,7 +1248,94 @@ export function MyRoomScreen({
         }}
         onClose={() => setTimeId(null)}
       />
+
+      {/* 완료 보상 코인 플라이 오버레이 (#440) — 탭 지점 → 지갑 필. */}
+      {flyingCoins.map((c) => (
+        <FlyingCoin key={c.id} {...c} onDone={() => onCoinArrive(c.id)} />
+      ))}
     </View>
+  );
+}
+
+/** 완료 탭 지점에서 지갑까지 포물선으로 나는 코인 (#440). */
+function FlyingCoin({
+  x,
+  y,
+  tx,
+  ty,
+  onDone,
+}: {
+  x: number;
+  y: number;
+  tx: number;
+  ty: number;
+  onDone: () => void;
+}) {
+  const t = useTokens();
+  const p = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(p, {
+      toValue: 1,
+      duration: 550,
+      easing: Easing.in(Easing.quad),
+      useNativeDriver: true,
+    }).start(({ finished }) => finished && onDone());
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 마운트 시 1회 발사
+  }, []);
+  // 정점은 출발·도착 중 높은 쪽보다 70px 위 — 포물선 궤적.
+  const apexY = Math.min(y, ty) - 70;
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        styles.flyCoin,
+        {
+          opacity: p.interpolate({ inputRange: [0, 0.85, 1], outputRange: [1, 1, 0] }),
+          transform: [
+            { translateX: p.interpolate({ inputRange: [0, 1], outputRange: [x, tx] }) },
+            {
+              translateY: p.interpolate({ inputRange: [0, 0.45, 1], outputRange: [y, apexY, ty] }),
+            },
+            { scale: p.interpolate({ inputRange: [0, 1], outputRange: [1, 0.55] }) },
+          ],
+        },
+      ]}>
+      <Icon name="coin" size={18} color={t.warning} />
+    </Animated.View>
+  );
+}
+
+/** 스프링으로 차오르는 진행바 채움 — 100% 도달 순간 흰 플래시 (#440). */
+function SpringProgressFill({ progress, color }: { progress: number; color: string }) {
+  const w = useRef(new Animated.Value(progress)).current;
+  const flash = useRef(new Animated.Value(0)).current;
+  const prev = useRef(progress);
+  useEffect(() => {
+    Animated.spring(w, {
+      toValue: progress,
+      friction: 8,
+      tension: 50,
+      useNativeDriver: false,
+    }).start();
+    if (progress >= 1 && prev.current < 1) {
+      flash.setValue(0.85);
+      Animated.timing(flash, { toValue: 0, duration: 650, useNativeDriver: false }).start();
+    }
+    prev.current = progress;
+  }, [progress, w, flash]);
+  return (
+    <Animated.View
+      style={[
+        styles.progressFill,
+        {
+          backgroundColor: color,
+          width: w.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
+        },
+      ]}>
+      <Animated.View
+        style={[StyleSheet.absoluteFillObject, { backgroundColor: StaticWhite, opacity: flash }]}
+      />
+    </Animated.View>
   );
 }
 
@@ -1334,9 +1466,15 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     overflow: 'hidden',
   },
+  flyCoin: {
+    position: 'absolute',
+    left: -9,
+    top: -9,
+  },
   progressFill: {
     height: '100%',
     borderRadius: Radius.pill,
+    overflow: 'hidden',
   },
   group: {
     gap: Spacing.half,
