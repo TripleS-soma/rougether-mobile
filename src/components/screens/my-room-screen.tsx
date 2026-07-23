@@ -48,6 +48,7 @@ import {
 } from '@/constants/routines';
 import { BearCheck } from '@/components/ui/bear-check';
 import { Icon } from '@/components/ui/icon';
+import { ScalePressable } from '@/components/ui/scale-pressable';
 import { NarrowScreenWidth, Radius, Spacing, StaticWhite } from '@/constants/theme';
 import { captureVerificationPhoto } from '@/lib/photo-verify';
 import { saveRoomImage } from '@/lib/room-capture';
@@ -597,14 +598,14 @@ export function MyRoomScreen({
   // 카테고리 헤더의 + 버튼 — 방탭·달력탭 공용 (#323).
   const renderQuickAddButton = (meta: RoutineCategoryMeta, defaultDate: string) =>
     canQuickAdd(meta.id) ? (
-      <Pressable
+      <ScalePressable
         onPress={() => openQuickAdd(meta.id, defaultDate)}
         accessibilityRole="button"
         accessibilityLabel={`${meta.label} 할 일 추가`}
         hitSlop={8}
         style={[styles.catAdd, { backgroundColor: meta.color }]}>
         <Icon name="add" size={14} color={t.onPrimary} />
-      </Pressable>
+      </ScalePressable>
     ) : null;
 
   // 퀵애드 입력행 — 제목 입력 + 마감일 칩, blur가 커밋. 방탭·달력탭 공용 (#323).
@@ -729,7 +730,7 @@ export function MyRoomScreen({
               crowded the header and crushed the title); unread shows as a dot
               on the menu button. */}
           <CoachTarget id="room-menu">
-            <Pressable
+            <ScalePressable
               ref={menuBtnRef}
               onPress={openNavMenu}
               accessibilityRole="button"
@@ -739,7 +740,7 @@ export function MyRoomScreen({
               {onOpenNotifications && unreadNotificationCount > 0 ? (
                 <View style={[styles.menuDot, { backgroundColor: t.danger }]} />
               ) : null}
-            </Pressable>
+            </ScalePressable>
           </CoachTarget>
         </View>
       </View>

@@ -18,6 +18,7 @@ import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/con
 import { type Routine } from '@/constants/routines';
 import { BearCheck } from '@/components/ui/bear-check';
 import { Icon } from '@/components/ui/icon';
+import { ScalePressable } from '@/components/ui/scale-pressable';
 import { PendingNotice } from '@/components/ui/pending-notice';
 import { BookOpenPictogram, Pictogram, type PictogramName } from '@/components/ui/pictograms';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
@@ -339,7 +340,7 @@ export function FriendRoomScreen({
 
             <View style={styles.cheers}>
               {CHEERS.map((cheer, idx) => (
-                <Pressable
+                <ScalePressable
                   key={cheer.type}
                   onPress={() => requestCheer(cheer.type)}
                   accessibilityRole="button"
@@ -357,7 +358,7 @@ export function FriendRoomScreen({
                   <Text style={[Typography.label, { color: idx === 0 ? t.onPrimary : t.text }]}>
                     {cheer.label}
                   </Text>
-                </Pressable>
+                </ScalePressable>
               ))}
             </View>
           </View>
@@ -417,7 +418,7 @@ export function FriendRoomScreen({
                 accessibilityLabel="방명록 입력"
                 style={[styles.gbInput, { backgroundColor: t.surfaceMuted, color: t.text }]}
               />
-              <Pressable
+              <ScalePressable
                 onPress={sendNote}
                 accessibilityRole="button"
                 accessibilityState={{ disabled: !canSend }}
@@ -426,7 +427,7 @@ export function FriendRoomScreen({
                 <Text style={[Typography.label, { color: canSend ? t.onPrimary : t.textMuted }]}>
                   남기기
                 </Text>
-              </Pressable>
+              </ScalePressable>
             </View>
 
             {guestbookLoading && notes.length === 0 ? (
