@@ -618,10 +618,11 @@ export function AppShell({
     const TAB_ORDER: Record<NavTab, number> = { myRoom: 0, house: 1, settings: 2 };
     const prevTab = TAB_FOR_SCREEN[prev];
     const nextTab = TAB_FOR_SCREEN[screen];
+    const tabToTab = prevTab != null && nextTab != null;
     let slide = 28; // 기본: 서브화면 진입(우측에서)
-    if (prevTab != null && nextTab != null) {
+    if (tabToTab) {
       // 탭 간 전환 — 이동 방향에서 들어온다.
-      slide = TAB_ORDER[nextTab] > TAB_ORDER[prevTab] ? 24 : -24;
+      slide = TAB_ORDER[nextTab!] > TAB_ORDER[prevTab!] ? 32 : -32;
     } else if (
       BACK_SCREEN[prev] === screen ||
       (prev === 'addRoutine' && screen === addReturnScreen) ||
@@ -630,8 +631,9 @@ export function AppShell({
       // 뒤로 복귀(백맵 목적지·서브→탭) — 좌측에서 되돌아온다.
       slide = -28;
     }
-    // 페이드가 짧으면 깜빡임으로 읽힌다 — 바닥을 0.08로 띄우고 넉넉하게.
-    transOpacity.setValue(0.08);
+    // 페이드가 짧으면 깜빡임으로 읽힌다 — 서브화면은 바닥 0.08에서 넉넉히,
+    // 무거운 탭 화면은 페이드 자체가 깜빡임이라 슬라이드만 쓴다.
+    transOpacity.setValue(tabToTab ? 1 : 0.08);
     transX.setValue(slide);
     Animated.parallel([
       Animated.timing(transOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
