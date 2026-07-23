@@ -36,6 +36,14 @@ jobs:
           profile: preview
           branch: preview
           platform: android
+      # Android 빌드 생성 실패(쿼터 소진 등) 시 OTA만이라도 발행 (#435) —
+      # 같은 지문의 로컬 빌드 APK가 JS 변경을 계속 받는다. 빌드가 성공하는
+      # 평시에는 액션이 스스로 업데이트를 발행하므로 이 스텝은 건너뛴다.
+      - name: Android — OTA fallback
+        if: steps.android.outcome == 'failure'
+        run: eas update --branch preview --platform android --non-interactive --auto
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       # iOS 제출용 ASC API 키 복원 — eas.json의 ascApiKeyPath(./asc-api-key.p8)가 읽는다.
       - name: Restore ASC API key
         run: printf '%s' "$ASC_API_KEY_P8" > asc-api-key.p8
