@@ -46,13 +46,28 @@ describe('GroupHouseScreen', () => {
     expect(ui.getByTestId('rain-overlay')).toBeTruthy();
   });
 
-  it('헤더에 함께 크는 집 타이틀과 지갑 필이 보인다 (#353)', async () => {
-    const { getByText } = await render(
-      <GroupHouseScreen houses={[MISSION_HOUSE]} coinBalance={1200} diaBalance={34} />,
+  it('헤더에 아바타·닉네임·스트릭 프로필 블록과 지갑 필이 보인다 (#420)', async () => {
+    const { getByText, queryByText } = await render(
+      <GroupHouseScreen
+        houses={[MISSION_HOUSE]}
+        userName="채영"
+        streakDays={4}
+        coinBalance={1200}
+        diaBalance={34}
+      />,
     );
-    expect(getByText('함께 크는 집')).toBeTruthy();
+    expect(queryByText('함께 크는 집')).toBeNull();
+    expect(getByText('채영')).toBeTruthy();
+    expect(getByText('4일')).toBeTruthy();
     expect(getByText('1,200')).toBeTruthy();
     expect(getByText('34')).toBeTruthy();
+  });
+
+  it('스트릭 0일이면 스트릭 라벨을 숨긴다 (#420)', async () => {
+    const { queryByText } = await render(
+      <GroupHouseScreen houses={[MISSION_HOUSE]} userName="채영" streakDays={0} />,
+    );
+    expect(queryByText(/0일/)).toBeNull();
   });
 
   it('shows a green dot for online members and a last-seen label offline (#383)', async () => {
