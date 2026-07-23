@@ -57,7 +57,29 @@ describe('GachaScreen', () => {
     await fireEvent.press(getByText('1회 뽑기'));
 
     expect(onDraw).toHaveBeenCalledWith(1, 1);
-    await waitFor(() => expect(getByText('허브 화분')).toBeTruthy());
+    // 차지(1.8s) → 버스트(0.65s)를 지나 리빌 — 실제 타이머라 여유를 둔다 (#431).
+    await waitFor(() => expect(getByText('허브 화분')).toBeTruthy(), { timeout: 8000 });
+  });
+
+  it('10연은 뒷면 카드로 깔리고 탭하면 즉시 뒤집힌다 (#431)', async () => {
+    const onDraw = jest.fn(async (): Promise<DrawResult[]> => [
+      { name: '허브 화분', rarity: '희귀', converted: false },
+      { name: '나무 의자', rarity: '일반', converted: false },
+    ]);
+    const { getByText, getByLabelText } = await render(
+      <GachaScreen gachas={[machine]} coinBalance={5600} onDraw={onDraw} />,
+    );
+
+    await fireEvent.press(getByText('10연 뽑기'));
+    await waitFor(() => expect(getByText('축하해요!')).toBeTruthy(), { timeout: 8000 });
+
+    // 두 장 모두 뒷면 카드로 깔린다 (자동 플립 전).
+    const first = getByLabelText('1번째 카드 뒤집기');
+    expect(getByLabelText('2번째 카드 뒤집기')).toBeTruthy();
+
+    // 탭하면 그 카드는 즉시 뒤집혀 아이템 라벨이 된다.
+    await fireEvent.press(first);
+    await waitFor(() => expect(getByLabelText('허브 화분')).toBeTruthy());
   });
 
   it('draws ten at once with the 10연 button', async () => {
