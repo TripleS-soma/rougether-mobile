@@ -25,11 +25,20 @@ import { assetSource, isCdnKey } from '@/resources/asset';
 import { RARITY_COLORS, type Rarity } from '@/resources/furniture';
 import { hapticImpact, hapticSuccess } from '@/utils/haptics';
 
-type Phase = 'idle' | 'charging' | 'reveal';
+type Phase = 'idle' | 'charging' | 'burst' | 'reveal';
 
 /** Minimum charge-phase duration — keeps the build-up on screen even when the
  * draw API answers in a few hundred ms. */
 const MIN_CHARGE_MS = 1800;
+/** Burst transition (#431) — flash → rays/particles, then the reveal lands. */
+const BURST_MS = 650;
+/** 레어도 우선순위 — 버스트 색은 뽑은 것 중 최고 레어도를 따른다. */
+const bestRarity = (results: DrawResult[]): Rarity =>
+  results.some((r) => r.rarity === '전설')
+    ? '전설'
+    : results.some((r) => r.rarity === '희귀')
+      ? '희귀'
+      : '일반';
 
 export type GachaScreenProps = {
   onBack?: () => void;
@@ -71,6 +80,11 @@ export function GachaScreen({
   const [error, setError] = useState('');
   const [phase, setPhase] = useState<Phase>('idle');
   const [pulled, setPulled] = useState<DrawResult[]>([]);
+  // 버스트 연출 파라미터 (#431) — 최고 레어도의 색, 일반은 짧은 버스트.
+  const [burstColor, setBurstColor] = useState(RARITY_COLORS['일반']);
+  const [burstStrong, setBurstStrong] = useState(false);
+  const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => clearTimeout(revealTimer.current ?? undefined), []);
 
   const box = gachas.find((b) => b.id === selectedId) ?? gachas[0];
   // Selector rows: themed furniture machines first, the character gacha below.
@@ -102,11 +116,18 @@ export function GachaScreen({
     const remain = MIN_CHARGE_MS - (Date.now() - started);
     if (remain > 0) await new Promise((r) => setTimeout(r, remain));
     setPulled(results);
-    setPhase('reveal');
+    // 정점 버스트 (#431) — 최고 레어도 색의 광선·파티클, 전설은 햅틱 2연타.
+    const best = bestRarity(results);
+    setBurstColor(RARITY_COLORS[best]);
+    setBurstStrong(best !== '일반');
+    setPhase('burst');
     hapticSuccess();
+    if (best === '전설') setTimeout(hapticSuccess, 180);
+    revealTimer.current = setTimeout(() => setPhase('reveal'), BURST_MS);
   };
 
   const close = () => {
+    clearTimeout(revealTimer.current ?? undefined);
     setPhase('idle');
     setPulled([]);
   };
@@ -258,18 +279,20 @@ export function GachaScreen({
               <ChargingBox icon={box?.icon ?? 'gift'} accent={box?.accent ?? '#E8DCC8'} />
               <Text style={[Typography.label, styles.overlayText]}>뽑는 중…</Text>
             </>
+          ) : phase === 'burst' ? (
+            <BurstOverlay color={burstColor} strong={burstStrong} />
           ) : (
             <>
               <Text style={[Typography.h3, styles.overlayText]}>축하해요!</Text>
               <ScrollView style={styles.revealScroll} contentContainerStyle={styles.revealGrid}>
-                {pulled.map((it, idx) => (
-                  <RevealCard
-                    key={`${it.name ?? 'item'}-${idx}`}
-                    item={it}
-                    index={idx}
-                    large={pulled.length === 1}
-                  />
-                ))}
+                {pulled.length === 1 ? (
+                  <RevealCard item={pulled[0]} index={0} large />
+                ) : (
+                  // 10연은 뒷면 카드가 깔린 뒤 순차 플립 — 탭하면 즉시 (#431).
+                  pulled.map((it, idx) => (
+                    <FlipCard key={`${it.name ?? 'item'}-${idx}`} item={it} index={idx} />
+                  ))
+                )}
               </ScrollView>
               <Pressable
                 onPress={close}
@@ -286,41 +309,67 @@ export function GachaScreen({
   );
 }
 
-/** Animated box shown during the charge phase: pulse + shake behind a glow ring. */
+/**
+ * Animated box shown during the charge phase (#431): the shake escalates —
+ * amplitude grows while the period shrinks over MIN_CHARGE_MS, then holds an
+ * intense loop until the burst. The growing tension makes the same 1.8s read
+ * far more dramatic than the old uniform wobble.
+ */
 function ChargingBox({ icon, accent }: { icon: PictogramName; accent: string }) {
   const t = useTokens();
-  const pulse = useRef(new Animated.Value(0)).current;
+  const grow = useRef(new Animated.Value(0)).current;
   const shake = useRef(new Animated.Value(0)).current;
   const glow = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const loop = (v: Animated.Value, steps: { toValue: number; duration: number }[]) =>
-      Animated.loop(
-        Animated.sequence(steps.map((s) => Animated.timing(v, { ...s, useNativeDriver: true }))),
-      );
-    const anims = [
-      loop(pulse, [
-        { toValue: 1, duration: 300 },
-        { toValue: 0, duration: 300 },
-      ]),
-      loop(shake, [
-        { toValue: 1, duration: 120 },
-        { toValue: -1, duration: 240 },
-        { toValue: 0, duration: 120 },
-      ]),
-      loop(glow, [
-        { toValue: 1, duration: 550 },
-        { toValue: 0, duration: 550 },
-      ]),
+    // 진폭↑·주기↓ 에스컬레이션 (~1760ms) 후 최고 강도 루프 유지.
+    const steps: { amp: number; dur: number; reps: number }[] = [
+      { amp: 1, dur: 280, reps: 1 },
+      { amp: 1.7, dur: 200, reps: 1 },
+      { amp: 2.4, dur: 150, reps: 2 },
+      { amp: 3, dur: 100, reps: 1 },
     ];
-    anims.forEach((a) => a.start());
-    return () => anims.forEach((a) => a.stop());
-  }, [pulse, shake, glow]);
+    const seq: Animated.CompositeAnimation[] = [];
+    for (const s of steps)
+      for (let i = 0; i < s.reps; i++)
+        seq.push(
+          Animated.timing(shake, { toValue: s.amp, duration: s.dur, useNativeDriver: true }),
+          Animated.timing(shake, { toValue: -s.amp, duration: s.dur, useNativeDriver: true }),
+        );
+    const intense = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shake, { toValue: 3.4, duration: 70, useNativeDriver: true }),
+        Animated.timing(shake, { toValue: -3.4, duration: 70, useNativeDriver: true }),
+      ]),
+    );
+    const escalate = Animated.sequence(seq);
+    escalate.start(({ finished }) => finished && intense.start());
+    const growAnim = Animated.timing(grow, {
+      toValue: 1,
+      duration: MIN_CHARGE_MS,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    });
+    growAnim.start();
+    const glowLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glow, { toValue: 1, duration: 420, useNativeDriver: true }),
+        Animated.timing(glow, { toValue: 0, duration: 420, useNativeDriver: true }),
+      ]),
+    );
+    glowLoop.start();
+    return () => {
+      escalate.stop();
+      intense.stop();
+      growAnim.stop();
+      glowLoop.stop();
+    };
+  }, [grow, shake, glow]);
 
   const boxStyle = {
     transform: [
-      { scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.06] }) },
-      { rotate: shake.interpolate({ inputRange: [-1, 1], outputRange: ['-4deg', '4deg'] }) },
+      { scale: grow.interpolate({ inputRange: [0, 1], outputRange: [1, 1.22] }) },
+      { rotate: shake.interpolate({ inputRange: [-3.4, 3.4], outputRange: ['-12deg', '12deg'] }) },
     ],
   };
   const glowStyle = {
@@ -338,31 +387,118 @@ function ChargingBox({ icon, accent }: { icon: PictogramName; accent: string }) 
   );
 }
 
-/** Reward card that pops in (scale + rotate) with a per-index stagger; a
- * single pull gets one large hero card. */
+/** 파티클 비산 좌표 — 버스트 중심에서 바깥으로 (#431). */
+const BURST_PARTICLES = [
+  { dx: -84, dy: -100 },
+  { dx: 88, dy: -74 },
+  { dx: -100, dy: 32 },
+  { dx: 96, dy: 56 },
+  { dx: -44, dy: -126 },
+  { dx: 52, dy: -122 },
+];
+
+/**
+ * Peak-moment burst (#431): white flash → rarity-colored rays + expanding ring
+ * + particles. `strong` (희귀 이상) lengthens the rays and doubles particles;
+ * 일반 keeps it short so the rarity difference is felt.
+ */
+function BurstOverlay({ color, strong }: { color: string; strong: boolean }) {
+  const t = useTokens();
+  const p = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(p, {
+      toValue: 1,
+      duration: BURST_MS,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [p]);
+
+  const flashStyle = {
+    opacity: p.interpolate({ inputRange: [0, 0.12, 0.32, 1], outputRange: [0.95, 0.65, 0, 0] }),
+  };
+  const ringStyle = {
+    opacity: p.interpolate({ inputRange: [0, 0.15, 0.8, 1], outputRange: [0, 0.8, 0.15, 0] }),
+    transform: [{ scale: p.interpolate({ inputRange: [0, 1], outputRange: [0.4, 2] }) }],
+  };
+  const rayOpacity = p.interpolate({
+    inputRange: [0, 0.2, 0.75, 1],
+    outputRange: [0, 0.95, 0.35, 0],
+  });
+  const rayScale = p.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0.1, 1, 1.15] });
+  const particles = strong ? BURST_PARTICLES : BURST_PARTICLES.slice(0, 3);
+  const particleColors = [color, t.warning, t.primary];
+
+  return (
+    <View style={styles.burstWrap} pointerEvents="none" testID="gacha-burst">
+      <Animated.View style={[styles.flash, flashStyle]} />
+      {[0, 45, 90, 135].map((deg) => (
+        <Animated.View
+          key={deg}
+          style={[
+            styles.ray,
+            { height: strong ? 260 : 150, backgroundColor: color, opacity: rayOpacity },
+            { transform: [{ rotate: `${deg}deg` }, { scaleY: rayScale }] },
+          ]}
+        />
+      ))}
+      <Animated.View style={[styles.burstRing, ringStyle, { borderColor: color }]} />
+      {particles.map((pt, i) => (
+        <Animated.View
+          key={`${pt.dx}-${pt.dy}`}
+          style={[
+            styles.particle,
+            {
+              backgroundColor: particleColors[i % particleColors.length],
+              opacity: p.interpolate({
+                inputRange: [0, 0.15, 0.85, 1],
+                outputRange: [0, 1, 0.6, 0],
+              }),
+              transform: [
+                { translateX: p.interpolate({ inputRange: [0, 1], outputRange: [0, pt.dx] }) },
+                { translateY: p.interpolate({ inputRange: [0, 1], outputRange: [0, pt.dy] }) },
+                { scale: p.interpolate({ inputRange: [0, 1], outputRange: [1, 0.3] }) },
+              ],
+            },
+          ]}
+        />
+      ))}
+    </View>
+  );
+}
+
+/** Single-pull hero card (#431): slams down from above with a bounce — the
+ * burst's momentum carries straight into the reward landing. */
 function RevealCard({ item, index, large }: { item: DrawResult; index: number; large?: boolean }) {
   const t = useTokens();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const p = useRef(new Animated.Value(0)).current;
+  const fade = useRef(new Animated.Value(0)).current;
   const rarityColor = RARITY_COLORS[(item.rarity as Rarity) ?? '일반'] ?? RARITY_COLORS['일반'];
 
   useEffect(() => {
-    Animated.timing(p, {
-      toValue: 1,
-      duration: 420,
-      delay: index * 120,
-      easing: Easing.out(Easing.back(1.6)),
-      useNativeDriver: true,
-    }).start();
-  }, [p, index]);
+    Animated.parallel([
+      Animated.timing(p, {
+        toValue: 1,
+        duration: 620,
+        delay: index * 120,
+        easing: Easing.bounce,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fade, {
+        toValue: 1,
+        duration: 160,
+        delay: index * 120,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [p, fade, index]);
 
   const style = {
-    opacity: p,
-    transform: [
-      { scale: p.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }) },
-      { rotate: p.interpolate({ inputRange: [0, 1], outputRange: ['-12deg', '0deg'] }) },
-    ],
+    opacity: fade,
+    transform: [{ translateY: p.interpolate({ inputRange: [0, 1], outputRange: [-180, 0] }) }],
   };
 
   return (
@@ -394,6 +530,139 @@ function RevealCard({ item, index, large }: { item: DrawResult; index: number; l
           중복 · 다이아 +{item.refundAmount ?? 0}
         </Text>
       ) : null}
+    </Animated.View>
+  );
+}
+
+/** 뒷면 카드가 깔린 뒤 자동 플립되는 간격 — 탭하면 그 카드는 즉시 뒤집힌다. */
+const FLIP_DEAL_MS = 300;
+const FLIP_STAGGER_MS = 70;
+const FLIP_AUTO_BASE_MS = 500;
+const FLIP_AUTO_STEP_MS = 110;
+
+/**
+ * 10연 reveal card (#431): deals in face-down from the top-right, then flips
+ * on its own (staggered) or immediately on tap. 전설 cards leak a gold glow
+ * before flipping so the good pull announces itself.
+ */
+function FlipCard({ item, index }: { item: DrawResult; index: number }) {
+  const t = useTokens();
+  const Typography = useTypography();
+  const emph = useFontEmphasis();
+  const deal = useRef(new Animated.Value(0)).current;
+  const flip = useRef(new Animated.Value(0)).current;
+  const glow = useRef(new Animated.Value(0.3)).current;
+  const [flipped, setFlipped] = useState(false);
+  const autoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rarityColor = RARITY_COLORS[(item.rarity as Rarity) ?? '일반'] ?? RARITY_COLORS['일반'];
+  const legend = item.rarity === '전설';
+
+  const runFlip = () => {
+    clearTimeout(autoTimer.current ?? undefined);
+    setFlipped((was) => {
+      if (!was)
+        Animated.timing(flip, {
+          toValue: 1,
+          duration: 420,
+          easing: Easing.inOut(Easing.cubic),
+          useNativeDriver: true,
+        }).start();
+      return true;
+    });
+  };
+
+  useEffect(() => {
+    Animated.timing(deal, {
+      toValue: 1,
+      duration: FLIP_DEAL_MS,
+      delay: index * FLIP_STAGGER_MS,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+    autoTimer.current = setTimeout(
+      runFlip,
+      index * FLIP_STAGGER_MS + FLIP_DEAL_MS + FLIP_AUTO_BASE_MS + index * FLIP_AUTO_STEP_MS,
+    );
+    return () => clearTimeout(autoTimer.current ?? undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 마운트 시 1회 딜·예약
+  }, []);
+
+  useEffect(() => {
+    if (!legend || flipped) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glow, { toValue: 1, duration: 500, useNativeDriver: true }),
+        Animated.timing(glow, { toValue: 0.3, duration: 500, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [legend, flipped, glow]);
+
+  const dealStyle = {
+    opacity: deal,
+    transform: [
+      { translateX: deal.interpolate({ inputRange: [0, 1], outputRange: [140, 0] }) },
+      { translateY: deal.interpolate({ inputRange: [0, 1], outputRange: [-200, 0] }) },
+      { rotate: deal.interpolate({ inputRange: [0, 1], outputRange: ['14deg', '0deg'] }) },
+    ],
+  };
+  const backStyle = {
+    transform: [
+      { perspective: 850 },
+      { rotateY: flip.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] }) },
+    ],
+  };
+  const frontStyle = {
+    transform: [
+      { perspective: 850 },
+      { rotateY: flip.interpolate({ inputRange: [0, 1], outputRange: ['180deg', '360deg'] }) },
+    ],
+  };
+
+  return (
+    <Animated.View style={[styles.flipWrap, dealStyle]}>
+      {legend && !flipped ? (
+        <Animated.View style={[styles.flipGlow, { backgroundColor: rarityColor, opacity: glow }]} />
+      ) : null}
+      <Pressable
+        onPress={runFlip}
+        disabled={flipped}
+        accessibilityRole="button"
+        accessibilityLabel={flipped ? (item.name ?? '아이템') : `${index + 1}번째 카드 뒤집기`}
+        style={styles.flipInner}>
+        <Animated.View style={[styles.flipFace, backStyle, { backgroundColor: t.primary }]}>
+          <Pictogram name="paw" size={34} />
+        </Animated.View>
+        <Animated.View
+          style={[
+            styles.flipFace,
+            frontStyle,
+            { backgroundColor: t.surface, borderColor: rarityColor },
+          ]}>
+          {isCdnKey(item.assetKey) ? (
+            <Image
+              source={assetSource(item.assetKey)}
+              style={styles.revealArt}
+              contentFit="contain"
+              transition={120}
+            />
+          ) : (
+            <Icon name="gift" size={34} color={rarityColor} />
+          )}
+          <Text style={[styles.revealBadge, emph('bold'), { backgroundColor: rarityColor }]}>
+            {item.rarity ?? '일반'}
+          </Text>
+          <Text style={[Typography.supporting, styles.center, { color: t.text }]} numberOfLines={2}>
+            {item.name}
+          </Text>
+          {item.converted ? (
+            <Text style={[styles.convertNote, { color: t.textMuted }]}>
+              중복 · 다이아 +{item.refundAmount ?? 0}
+            </Text>
+          ) : null}
+        </Animated.View>
+      </Pressable>
     </Animated.View>
   );
 }
@@ -517,6 +786,44 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
   },
   convertNote: { fontSize: 10, textAlign: 'center' },
+
+  // Burst (#431)
+  burstWrap: { width: 200, height: 200, alignItems: 'center', justifyContent: 'center' },
+  flash: {
+    ...StyleSheet.absoluteFillObject,
+    top: -600,
+    bottom: -600,
+    left: -300,
+    right: -300,
+    backgroundColor: StaticWhite,
+  },
+  ray: { position: 'absolute', width: 5, borderRadius: 3 },
+  burstRing: { position: 'absolute', width: 150, height: 150, borderRadius: 75, borderWidth: 3 },
+  particle: { position: 'absolute', width: 10, height: 10, borderRadius: 5 },
+
+  // 10연 flip reveal (#431)
+  flipWrap: { width: 104, height: 158 },
+  flipInner: { flex: 1 },
+  flipGlow: {
+    position: 'absolute',
+    top: -5,
+    left: -5,
+    right: -5,
+    bottom: -5,
+    borderRadius: Radius.md,
+  },
+  flipFace: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: Radius.md,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.one,
+    paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.two,
+    backfaceVisibility: 'hidden',
+  },
   confirmBtn: {
     borderRadius: Radius.pill,
     paddingVertical: Spacing.three,
