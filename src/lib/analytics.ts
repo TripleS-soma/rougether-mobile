@@ -9,7 +9,7 @@ import PostHog from 'posthog-react-native';
  */
 
 /** PostHog 프로젝트 API 키 — GA 측정 ID 성격의 클라이언트 공개 키. */
-const POSTHOG_API_KEY = '';
+const POSTHOG_API_KEY = 'phc_r5mctDRFdz73b9mSRsNw4aJXjHkmftzKYrsrfMJWP9kZ';
 const POSTHOG_HOST = 'https://us.i.posthog.com';
 
 /** 계측하는 핵심 이벤트 — 추가할 때 여기 유니온부터 넓힌다. */
@@ -24,10 +24,15 @@ export type AnalyticsEvent =
 
 let client: PostHog | null = null;
 
-/** 앱 루트에서 1회 호출 — 키가 없으면 조용히 비활성. */
+/** 앱 루트에서 1회 호출 — 키가 없거나 초기화가 실패하면 조용히 비활성.
+ * 분석은 어떤 경우에도 앱을 죽이면 안 된다. */
 export function initAnalytics() {
   if (!POSTHOG_API_KEY || client) return;
-  client = new PostHog(POSTHOG_API_KEY, { host: POSTHOG_HOST });
+  try {
+    client = new PostHog(POSTHOG_API_KEY, { host: POSTHOG_HOST });
+  } catch {
+    client = null;
+  }
 }
 
 /** 로그인 후 사용자 식별 — 서버 회원 id 기준(이벤트가 사용자로 묶인다). */
