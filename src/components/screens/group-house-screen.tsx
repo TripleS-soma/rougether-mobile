@@ -9,7 +9,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  useWindowDimensions,
   View,
 } from 'react-native';
 
@@ -33,10 +32,9 @@ import {
 } from '@/components/ui/pictograms';
 import { WalletPills } from '@/components/ui/wallet-pills';
 import { ScalePressable } from '@/components/ui/scale-pressable';
-import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
+import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { RainOverlay } from '@/components/rain-overlay';
 import {
-  NarrowScreenWidth,
   Overlay,
   Radius,
   RAIN_SKY,
@@ -348,11 +346,6 @@ export function GroupHouseScreen({
     ? RAIN_SKY[scheme]
     : SKY_BY_PHASE[scheme][skyPhaseForHour(nowHour ?? new Date().getHours())];
   const headerInset = useHeaderInsetStyle();
-  const headerCharacter =
-    CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
-  // 좁은 폰은 콤팩트 지갑 필(코인만) (#425) — 닉네임 열이 필 2개에 밀려
-  // 뭉개지는 것 방지. 다이아는 뽑기 상점·꾸미기에서 보인다.
-  const compactWallet = useWindowDimensions().width < NarrowScreenWidth;
   const screenStyle = useScreenStyle([]);
 
   const [internalHouseIndex, setInternalHouseIndex] = useState(0);
@@ -941,11 +934,8 @@ export function GroupHouseScreen({
   return (
     <View style={[styles.screen, screenStyle]}>
       <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
-        {/* 나의 방 헤더와 같은 프로필 블록 — 아바타·닉네임·스트릭 (#420). */}
+        {/* 나의 방 헤더와 같은 프로필 블록 — 닉네임·스트릭 (아바타 제거, #461). */}
         <View style={styles.headerLeft}>
-          <View style={[styles.headerAvatar, { backgroundColor: headerCharacter.bg }]}>
-            <CharacterAvatar characterId={characterId} size={36} />
-          </View>
           <View style={styles.headerName}>
             <Text
               style={[Typography.h3, { color: t.text }]}
@@ -965,7 +955,7 @@ export function GroupHouseScreen({
             ) : null}
           </View>
         </View>
-        <WalletPills coin={coinBalance} dia={diaBalance} compact={compactWallet} />
+        <WalletPills coin={coinBalance} dia={diaBalance} />
         <CoachTarget id="house-search">
           <Pressable
             onPress={onOpenSearch}
@@ -1296,13 +1286,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.half,
-  },
-  headerAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   iconBtn: {
     width: 40,

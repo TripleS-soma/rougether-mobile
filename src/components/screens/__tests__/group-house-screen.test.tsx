@@ -46,7 +46,7 @@ describe('GroupHouseScreen', () => {
     expect(ui.getByTestId('rain-overlay')).toBeTruthy();
   });
 
-  it('헤더에 아바타·닉네임·스트릭 프로필 블록과 지갑 필이 보인다 (#420)', async () => {
+  it('헤더에 닉네임·스트릭 프로필 블록과 코인·다이아 지갑 필이 보인다 (#420)', async () => {
     const { getByText, queryByText } = await render(
       <GroupHouseScreen
         houses={[MISSION_HOUSE]}
@@ -70,12 +70,8 @@ describe('GroupHouseScreen', () => {
     expect(queryByText(/0일/)).toBeNull();
   });
 
-  it('좁은 폭에서는 콤팩트 지갑 필 — 코인만 남고 다이아는 숨긴다 (#425)', async () => {
-    const { Dimensions } = require('react-native');
-    const spy = jest
-      .spyOn(Dimensions, 'get')
-      .mockReturnValue({ width: 360, height: 800, scale: 2, fontScale: 1 });
-    const { queryByText, getByText } = await render(
+  it('헤더에 코인·다이아 필을 함께 보여준다 (프로필 아바타 제거로 확보한 자리)', async () => {
+    const { getByText } = await render(
       <GroupHouseScreen
         houses={[MISSION_HOUSE]}
         userName="채영"
@@ -83,11 +79,10 @@ describe('GroupHouseScreen', () => {
         diaBalance={34}
       />,
     );
-    // 프로필 블록·코인 필은 그대로, 다이아 필만 사라진다.
+    // 아바타를 빼고 다이아를 상시 노출 — 좁은 폭 코인-only(#425)를 되돌림.
     expect(getByText('채영')).toBeTruthy();
     expect(getByText('1,200')).toBeTruthy();
-    expect(queryByText('34')).toBeNull();
-    spy.mockRestore();
+    expect(getByText('34')).toBeTruthy();
   });
 
   it('shows a green dot for online members and a last-seen label offline (#383)', async () => {
