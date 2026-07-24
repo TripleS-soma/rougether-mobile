@@ -503,8 +503,16 @@ export function MyRoomScreen({
 
   // 방 뷰 캡처 대상 (#245) — 갤러리 저장은 네이티브 전용.
   const roomShotRef = useRef<View>(null);
+  // 캡처 동안 뽑기 버튼을 숨긴다 (#475) — view-shot이 보이는 트리를 찍으므로,
+  // 이 플래그로 버튼을 잠깐 감췄다가 저장 후 되돌린다.
+  const [capturing, setCapturing] = useState(false);
   const onSaveRoomImage = async () => {
-    const result = await saveRoomImage(roomShotRef);
+    setCapturing(true);
+    // 상태 반영(버튼 숨김)이 네이티브에 커밋된 뒤 찍히도록 두 프레임 양보.
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
+    const result = await saveRoomImage(roomShotRef).finally(() => setCapturing(false));
     if (result === 'saved') toast('방 이미지를 갤러리에 저장했어요', 'success');
     else if (result === 'denied') toast('사진 접근 권한을 허용해주세요', 'error');
     else if (result === 'unsupported') toast('웹에서는 이미지 저장을 지원하지 않아요', 'error');
@@ -823,7 +831,13 @@ export function MyRoomScreen({
                   onPress={onOpenGacha}
                   accessibilityRole="button"
                   accessibilityLabel="뽑기 상점"
-                  style={[styles.gachaBtn, { backgroundColor: t.surface }]}>
+                  // 방 이미지 저장 중에는 숨겨 사진에서 제외한다 (#475).
+                  pointerEvents={capturing ? 'none' : 'auto'}
+                  style={[
+                    styles.gachaBtn,
+                    { backgroundColor: t.surface },
+                    capturing && styles.hidden,
+                  ]}>
                   {/* absolute 버튼이라 래퍼 대신 내용을 측정 (#351). */}
                   <CoachTarget id="room-gacha">
                     <Icon name="gift" size={20} color={t.text} />
@@ -1441,6 +1455,10 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // 방 이미지 저장 캡처 중 뽑기 버튼을 투명 처리해 사진에서 제외 (#475).
+  hidden: {
+    opacity: 0,
   },
   section: {
     paddingHorizontal: Spacing.four,
