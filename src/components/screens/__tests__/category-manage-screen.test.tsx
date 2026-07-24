@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import { CategoryManageScreen } from '@/components/screens/category-manage-screen';
 import { ROUTINE_CATEGORIES } from '@/constants/routines';
@@ -29,8 +29,8 @@ describe('CategoryManageScreen', () => {
     await fireEvent.changeText(getByPlaceholderText('예) 자기계발'), '일기');
     await fireEvent.press(getByLabelText('카테고리 추가'));
     expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({ label: '일기' }));
-    // 제출 후 시트가 닫힌다.
-    expect(queryByText('새 카테고리')).toBeNull();
+    // 제출 후 시트가 닫힌다 — 퇴장 애니메이션(#448)이 끝나길 기다린다.
+    await waitFor(() => expect(queryByText('새 카테고리')).toBeNull());
   });
 
   it('opens the edit sheet prefilled from a row pencil', async () => {

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Calendar } from '@/components/ui/calendar';
 import type { Routine } from '@/constants/routines';
-import { Overlay, Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { todayIso } from '@/utils/datetime';
 
@@ -36,54 +37,48 @@ export function DateEditSheet({
   }, [item]);
 
   return (
-    <Modal transparent visible={item !== null} animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.sheetBackdrop} onPress={onClose}>
-        <Pressable style={[styles.sheet, { backgroundColor: t.screen }]}>
-          <View style={[styles.sheetHandle, { backgroundColor: t.border }]} />
-          <Text style={[Typography.h3, styles.sheetTitle, { color: t.text }]} numberOfLines={1}>
-            날짜 바꾸기
-          </Text>
-          {item?.kind !== 'todo' ? (
-            <Text style={[Typography.supporting, styles.sheetNote, { color: t.textMuted }]}>
-              루틴 반복은 그대로 두고, 선택한 날짜에 이 날 몫이 할 일로 추가돼요.{'\n'}(원래
-              날짜에서 숨기는 건 서버 준비 중이에요)
-            </Text>
-          ) : null}
-          <Calendar value={draft} onSelect={setDraft} />
-          <View style={styles.dialogBtns}>
-            <Pressable
-              onPress={onClose}
-              accessibilityRole="button"
-              accessibilityLabel="취소"
-              style={[styles.dialogBtn, { backgroundColor: t.surfaceMuted }]}>
-              <Text style={[Typography.label, { color: t.text }]}>취소</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => {
-                const r = item;
-                onClose();
-                if (!r) return;
-                if (r.kind === 'todo') onUpdateTodoDueDate?.(r.id, draft);
-                else onMoveRoutineOccurrence?.(r.id, draft);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="확인"
-              style={[styles.dialogBtn, { backgroundColor: t.primary }]}>
-              <Text style={[Typography.label, { color: t.onPrimary }]}>확인</Text>
-            </Pressable>
-          </View>
+    <BottomSheet
+      visible={item !== null}
+      onClose={onClose}
+      cardStyle={[styles.sheet, { backgroundColor: t.screen }]}>
+      <View style={[styles.sheetHandle, { backgroundColor: t.border }]} />
+      <Text style={[Typography.h3, styles.sheetTitle, { color: t.text }]} numberOfLines={1}>
+        날짜 바꾸기
+      </Text>
+      {item?.kind !== 'todo' ? (
+        <Text style={[Typography.supporting, styles.sheetNote, { color: t.textMuted }]}>
+          루틴 반복은 그대로 두고, 선택한 날짜에 이 날 몫이 할 일로 추가돼요.{'\n'}(원래 날짜에서
+          숨기는 건 서버 준비 중이에요)
+        </Text>
+      ) : null}
+      <Calendar value={draft} onSelect={setDraft} />
+      <View style={styles.dialogBtns}>
+        <Pressable
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="취소"
+          style={[styles.dialogBtn, { backgroundColor: t.surfaceMuted }]}>
+          <Text style={[Typography.label, { color: t.text }]}>취소</Text>
         </Pressable>
-      </Pressable>
-    </Modal>
+        <Pressable
+          onPress={() => {
+            const r = item;
+            onClose();
+            if (!r) return;
+            if (r.kind === 'todo') onUpdateTodoDueDate?.(r.id, draft);
+            else onMoveRoutineOccurrence?.(r.id, draft);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="확인"
+          style={[styles.dialogBtn, { backgroundColor: t.primary }]}>
+          <Text style={[Typography.label, { color: t.onPrimary }]}>확인</Text>
+        </Pressable>
+      </View>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  sheetBackdrop: {
-    flex: 1,
-    backgroundColor: Overlay.dim,
-    justifyContent: 'flex-end',
-  },
   sheet: {
     borderTopLeftRadius: Radius.lg,
     borderTopRightRadius: Radius.lg,
