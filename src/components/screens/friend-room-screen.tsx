@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
+  Easing,
   ActivityIndicator,
   Keyboard,
   KeyboardAvoidingView,
@@ -27,6 +29,7 @@ import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { formatTime } from '@/utils/datetime';
+import { hapticSuccess } from '@/utils/haptics';
 
 /** Cheer reactions a visitor can leave on a friend's room. */
 export type CheerType = 'great' | 'support' | 'best';
@@ -155,8 +158,14 @@ export function FriendRoomScreen({
   // 앱 재시작 후 중복은 기존 서버 409 토스트가 방어한다.
   const [cheeredTypes, setCheeredTypes] = useState<CheerType[]>([]);
   const [confirmCheer, setConfirmCheer] = useState<CheerType | null>(null);
+  // 응원 발사 (#450) — 실제 전송 시 해당 이모지가 버튼에서 떠올라 사라진다.
+  const burstSeq = useRef(0);
+  const [bursts, setBursts] = useState<{ id: number; type: CheerType }[]>([]);
   const sendCheer = (type: CheerType) => {
     setCheeredTypes((prev) => (prev.includes(type) ? prev : [...prev, type]));
+    hapticSuccess();
+    const id = burstSeq.current++;
+    setBursts((prev) => [...prev, { id, type }]);
     onCheer?.(type);
   };
   const requestCheer = (type: CheerType) => {
@@ -339,6 +348,13 @@ export function FriendRoomScreen({
             </View>
 
             <View style={styles.cheers}>
+              {bursts.map((b) => (
+                <CheerBurst
+                  key={b.id}
+                  type={b.type}
+                  onDone={() => setBursts((prev) => prev.filter((x) => x.id !== b.id))}
+                />
+              ))}
               {CHEERS.map((cheer, idx) => (
                 <ScalePressable
                   key={cheer.type}
@@ -496,6 +512,45 @@ export function FriendRoomScreen({
         </View>
       ) : null}
     </View>
+  );
+}
+
+/** 전송된 응원이 버튼 줄 위로 떠올라 사라지는 버스트 (#450). */
+function CheerBurst({ type, onDone }: { type: CheerType; onDone: () => void }) {
+  const p = useRef(new Animated.Value(0)).current;
+  const icon = CHEERS.find((c) => c.type === type)?.icon ?? 'heart';
+  const idx = Math.max(
+    CHEERS.findIndex((c) => c.type === type),
+    0,
+  );
+  useEffect(() => {
+    Animated.timing(p, {
+      toValue: 1,
+      duration: 750,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start(({ finished }) => finished && onDone());
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 마운트 시 1회 발사
+  }, []);
+  // 버튼 3개가 세로 스택이라 해당 버튼 높이 근처(y)에서 떠오른다.
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        styles.cheerBurst,
+        {
+          top: idx * 56 + 8,
+          opacity: p.interpolate({ inputRange: [0, 0.15, 0.75, 1], outputRange: [0, 1, 0.8, 0] }),
+          transform: [
+            { translateY: p.interpolate({ inputRange: [0, 1], outputRange: [0, -84] }) },
+            { translateX: p.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 10, -6] }) },
+            { scale: p.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0.7, 1.25, 1] }) },
+            { rotate: p.interpolate({ inputRange: [0, 1], outputRange: ['-8deg', '10deg'] }) },
+          ],
+        },
+      ]}>
+      <Pictogram name={icon} size={26} />
+    </Animated.View>
   );
 }
 
@@ -679,6 +734,13 @@ const styles = StyleSheet.create({
   cheers: {
     gap: Spacing.two,
     marginTop: Spacing.two,
+    // 응원 버스트(#450)의 좌표 기준.
+    position: 'relative',
+  },
+  cheerBurst: {
+    position: 'absolute',
+    alignSelf: 'center',
+    zIndex: 10,
   },
   cheerBtn: {
     flexDirection: 'row',

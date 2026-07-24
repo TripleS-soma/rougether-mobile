@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  Easing,
   PanResponder,
   Pressable,
   ScrollView,
@@ -47,6 +48,7 @@ import {
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useFontEmphasis, useResolvedScheme, useTokens, useTypography } from '@/hooks/use-tokens';
 import { assetSource, isCdnKey } from '@/resources/asset';
+import { hapticSelection, hapticSuccess } from '@/utils/haptics';
 import type { FurnitureItem, PlacedFurniture, Wallpaper } from '@/resources/furniture';
 
 /**
@@ -355,6 +357,27 @@ export function GroupHouseScreen({
 
   const [internalHouseIndex, setInternalHouseIndex] = useState(0);
   const houseIndex = houseIndexProp ?? internalHouseIndex;
+  // 집 전환 넛지 (#450) — 이동 방향에서 프레임이 살짝 밀려 들어온다.
+  const switchX = useRef(new Animated.Value(0)).current;
+  const switchFade = useRef(new Animated.Value(1)).current;
+  const prevHouseIndex = useRef(houseIndex);
+  useEffect(() => {
+    const prev = prevHouseIndex.current;
+    if (prev === houseIndex) return;
+    const dir = houseIndex > prev ? 1 : -1;
+    prevHouseIndex.current = houseIndex;
+    switchX.setValue(36 * dir);
+    switchFade.setValue(0.4);
+    Animated.parallel([
+      Animated.timing(switchX, {
+        toValue: 0,
+        duration: 240,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(switchFade, { toValue: 1, duration: 200, useNativeDriver: true }),
+    ]).start();
+  }, [houseIndex, switchX, switchFade]);
   const setHouseIndex = (next: number) => {
     setInternalHouseIndex(next);
     onHouseIndexChange?.(next);
@@ -454,7 +477,17 @@ export function GroupHouseScreen({
   const tileRefs = useRef(new Map<number, View>());
   const tileRects = useRef(new Map<number, { x: number; y: number; w: number; h: number }>());
 
+  // 픽업 순간 스프링으로 살짝 떠오르는 리프트 (#450).
+  const liftScale = useRef(new Animated.Value(1)).current;
   const startDrag = (seat: number) => {
+    hapticSelection();
+    liftScale.setValue(1);
+    Animated.spring(liftScale, {
+      toValue: 1.07,
+      friction: 4,
+      tension: 220,
+      useNativeDriver: false,
+    }).start();
     tileRects.current.clear();
     tileRefs.current.forEach((ref, idx) =>
       ref.measureInWindow((x, y, w, h) => tileRects.current.set(idx, { x, y, w, h })),
@@ -477,6 +510,7 @@ export function GroupHouseScreen({
         if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) to = idx;
       });
       if (to != null && to !== from) {
+        hapticSuccess();
         if (onSwapSeats && currentHouse?.houseId != null) {
           onSwapSeats(currentHouse.houseId, from, to);
         } else {
@@ -793,7 +827,7 @@ export function GroupHouseScreen({
         style={[
           styles.roomCellWrap,
           dragging && {
-            transform: [...dragPan.getTranslateTransform(), { scale: 1.05 }],
+            transform: [...dragPan.getTranslateTransform(), { scale: liftScale }],
             ...styles.roomCellLifted,
           },
         ]}>
@@ -875,11 +909,8 @@ export function GroupHouseScreen({
               <View style={styles.roomNameRow}>
                 {room.isOwner ? <CrownPictogram size={12} /> : null}
                 {room.online ? (
-                  // 최근 접속(#383) — 초록 점. 정확한 실시간이 아니라 40분 근사.
-                  <View
-                    style={[styles.onlineDot, { backgroundColor: t.success }]}
-                    testID="online-dot"
-                  />
+                  // 최근 접속(#383) — 초록 점. 은은한 펄스로 "지금 있음" (#450).
+                  <OnlineDot color={t.success} />
                 ) : null}
                 <Text
                   style={[
@@ -1031,81 +1062,87 @@ export function GroupHouseScreen({
             </View>
           </View>
           <CoachTarget id="house-frame">
-            <View style={styles.cameraViewport} {...cameraResponder.panHandlers}>
-              <Animated.View
-                style={{
-                  transform: [{ translateX: camTx }, { translateY: camTy }, { scale: camScale }],
-                }}>
-                <View style={styles.frameWrap} {...gridPanResponder.panHandlers}>
-                  {/* 프레임 측정용 — 반응자 프롭이 있는 부모에는 테스트에서
+            <Animated.View
+              style={[
+                styles.cameraViewportOuter,
+                { opacity: switchFade, transform: [{ translateX: switchX }] },
+              ]}>
+              <View style={styles.cameraViewport} {...cameraResponder.panHandlers}>
+                <Animated.View
+                  style={{
+                    transform: [{ translateX: camTx }, { translateY: camTy }, { scale: camScale }],
+                  }}>
+                  <View style={styles.frameWrap} {...gridPanResponder.panHandlers}>
+                    {/* 프레임 측정용 — 반응자 프롭이 있는 부모에는 테스트에서
                       layout 이벤트가 닿지 않아 absolute-fill 형제로 잰다. */}
-                  <View
-                    testID="frame-camera"
-                    pointerEvents="none"
-                    style={StyleSheet.absoluteFill}
-                    onLayout={(e) => {
-                      const first = frameSize.current.w === 0;
-                      frameSize.current = {
-                        w: e.nativeEvent.layout.width,
-                        h: e.nativeEvent.layout.height,
-                      };
-                      // 첫 레이아웃에 기본 카메라(방 4칸 클로즈업)를 즉시 적용 (#307).
-                      if (first) {
-                        const d = camDefault();
-                        cam.current = d;
-                        camScale.setValue(d.scale);
-                        camTx.setValue(d.tx);
-                        camTy.setValue(d.ty);
-                      }
-                    }}
-                  />
-                  {/* 창문 뒤 좌석 — 프레임 PNG의 투명 창문으로 방이 보인다. */}
-                  {WINDOW_RECTS.map((rect, w) => {
-                    const seatIdx = windowSlots[w];
-                    return (
-                      <View
-                        key={`window-${w}`}
-                        style={[
-                          styles.windowSlot,
-                          rect,
-                          seatIdx != null && dragSeat === seatIdx && styles.dragRow,
-                        ]}>
-                        {seatIdx != null ? (
-                          renderSeatTile(displayCells[seatIdx], seatIdx, true)
-                        ) : (
-                          /* 정원 밖 창문 — 조용한 벽 패널. */
-                          <View
-                            style={[styles.windowFiller, { backgroundColor: t.surfaceMuted }]}
-                            testID="window-filler"
-                          />
-                        )}
-                      </View>
-                    );
-                  })}
-                  {/* Android는 Image 계열이 pointerEvents prop을 무시하고 터치를
-                      삼킨다(#401) — ViewGroup 래퍼가 확실하게 투과시킨다. */}
-                  <View style={StyleSheet.absoluteFill} pointerEvents="none">
-                    <Image
-                      source={assetSource(coverKey)}
+                    <View
+                      testID="frame-camera"
+                      pointerEvents="none"
                       style={StyleSheet.absoluteFill}
-                      contentFit="contain"
-                      transition={120}
-                      accessibilityLabel={`${currentHouse.title} 집`}
-                      testID="house-frame"
+                      onLayout={(e) => {
+                        const first = frameSize.current.w === 0;
+                        frameSize.current = {
+                          w: e.nativeEvent.layout.width,
+                          h: e.nativeEvent.layout.height,
+                        };
+                        // 첫 레이아웃에 기본 카메라(방 4칸 클로즈업)를 즉시 적용 (#307).
+                        if (first) {
+                          const d = camDefault();
+                          cam.current = d;
+                          camScale.setValue(d.scale);
+                          camTx.setValue(d.tx);
+                          camTy.setValue(d.ty);
+                        }
+                      }}
                     />
+                    {/* 창문 뒤 좌석 — 프레임 PNG의 투명 창문으로 방이 보인다. */}
+                    {WINDOW_RECTS.map((rect, w) => {
+                      const seatIdx = windowSlots[w];
+                      return (
+                        <View
+                          key={`window-${w}`}
+                          style={[
+                            styles.windowSlot,
+                            rect,
+                            seatIdx != null && dragSeat === seatIdx && styles.dragRow,
+                          ]}>
+                          {seatIdx != null ? (
+                            renderSeatTile(displayCells[seatIdx], seatIdx, true)
+                          ) : (
+                            /* 정원 밖 창문 — 조용한 벽 패널. */
+                            <View
+                              style={[styles.windowFiller, { backgroundColor: t.surfaceMuted }]}
+                              testID="window-filler"
+                            />
+                          )}
+                        </View>
+                      );
+                    })}
+                    {/* Android는 Image 계열이 pointerEvents prop을 무시하고 터치를
+                      삼킨다(#401) — ViewGroup 래퍼가 확실하게 투과시킨다. */}
+                    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+                      <Image
+                        source={assetSource(coverKey)}
+                        style={StyleSheet.absoluteFill}
+                        contentFit="contain"
+                        transition={120}
+                        accessibilityLabel={`${currentHouse.title} 집`}
+                        testID="house-frame"
+                      />
+                    </View>
                   </View>
-                </View>
-              </Animated.View>
-              {zoomed ? (
-                <Pressable
-                  onPress={resetCam}
-                  accessibilityRole="button"
-                  accessibilityLabel="확대 종료"
-                  style={[styles.camReset, { backgroundColor: t.surface }]}>
-                  <Icon name="refresh" size={16} color={t.text} />
-                </Pressable>
-              ) : null}
-            </View>
+                </Animated.View>
+                {zoomed ? (
+                  <Pressable
+                    onPress={resetCam}
+                    accessibilityRole="button"
+                    accessibilityLabel="확대 종료"
+                    style={[styles.camReset, { backgroundColor: t.surface }]}>
+                    <Icon name="refresh" size={16} color={t.text} />
+                  </Pressable>
+                ) : null}
+              </View>
+            </Animated.View>
           </CoachTarget>
         </View>
         {/* 요약 스탯 — 스크롤 없이 집의 오늘이 보인다 (B안). */}
@@ -1183,6 +1220,34 @@ export function GroupHouseScreen({
         onAddMissionRoutine={onAddMissionRoutine}
       />
     </View>
+  );
+}
+
+/** 접속 점 — 은은한 숨쉬기 펄스 (#450). */
+function OnlineDot({ color }: { color: string }) {
+  const pulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 900, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+  return (
+    <Animated.View
+      testID="online-dot"
+      style={[
+        styles.onlineDot,
+        {
+          backgroundColor: color,
+          opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] }),
+          transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.25] }) }],
+        },
+      ]}
+    />
   );
 }
 
@@ -1363,6 +1428,9 @@ const styles = StyleSheet.create({
   cameraViewport: {
     marginTop: Spacing.two,
     overflow: 'hidden',
+  },
+  cameraViewportOuter: {
+    width: '100%',
   },
   frameWrap: {
     width: '100%',
