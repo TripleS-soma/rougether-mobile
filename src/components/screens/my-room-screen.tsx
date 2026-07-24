@@ -14,12 +14,11 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  useWindowDimensions,
   View,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
-import { CharacterAvatar, type CharacterAnimationSet } from '@/components/character-avatar';
+import { type CharacterAnimationSet } from '@/components/character-avatar';
 import { NavMenuPopover } from '@/components/screens/nav-menu-popover';
 import { Room } from '@/components/room/room';
 import {
@@ -37,7 +36,7 @@ import { CategoryIcon } from '@/components/ui/category-icon';
 import { Pictogram } from '@/components/ui/pictograms';
 import { useToast } from '@/components/ui/toast';
 import { WalletPills } from '@/components/ui/wallet-pills';
-import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
+import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import {
   type CategoryVisibility,
   ROUTINE_CATEGORIES,
@@ -50,7 +49,7 @@ import {
 import { BearCheck } from '@/components/ui/bear-check';
 import { Icon } from '@/components/ui/icon';
 import { ScalePressable } from '@/components/ui/scale-pressable';
-import { NarrowScreenWidth, Radius, Spacing, StaticWhite } from '@/constants/theme';
+import { Radius, Spacing, StaticWhite } from '@/constants/theme';
 import { captureVerificationPhoto } from '@/lib/photo-verify';
 import { saveRoomImage } from '@/lib/room-capture';
 import {
@@ -314,7 +313,6 @@ export function MyRoomScreen({
   const headerInset = useHeaderInsetStyle();
   // 좁은 폰은 콤팩트 지갑 필(코인만) (#425) — 닉네임 열이 필 2개에 밀려
   // 뭉개지는 것 방지. 다이아는 뽑기 상점·꾸미기에서 보인다.
-  const compactWallet = useWindowDimensions().width < NarrowScreenWidth;
 
   // 코인 플라이 (#440) — 완료 탭 지점에서 헤더 지갑 필로 포물선 비행.
   const rootRef = useRef<View>(null);
@@ -358,7 +356,6 @@ export function MyRoomScreen({
     prevStreak.current = streakDays;
   }, [streakDays, streakPulse]);
   const { show: toast } = useToast();
-  const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
   const knownIds = categories.map((c) => c.id);
 
   const today = todayIso();
@@ -705,9 +702,6 @@ export function MyRoomScreen({
     <View ref={rootRef} style={[styles.screen, useScreenStyle([])]}>
       <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
         <View style={styles.headerLeft}>
-          <View style={[styles.avatar, { backgroundColor: character.bg }]}>
-            <CharacterAvatar characterId={characterId} size={36} />
-          </View>
           <View style={styles.headerName}>
             {/* Narrow phones: shrink the font (≥75%) first; if the title still
                 overflows, middle-ellipsize so the 의 방 suffix stays visible. */}
@@ -736,7 +730,7 @@ export function MyRoomScreen({
             ref={walletRef}
             onLayout={measureWallet}
             style={{ transform: [{ scale: walletPulse }] }}>
-            <WalletPills coin={coinBalance} dia={diaBalance} compact={compactWallet} />
+            <WalletPills coin={coinBalance} dia={diaBalance} />
           </Animated.View>
           {/* 알림 lives inside this popover (#257 — a separate bell button
               crowded the header and crushed the title); unread shows as a dot
@@ -1411,13 +1405,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.half,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   iconBtn: {
     width: 40,
