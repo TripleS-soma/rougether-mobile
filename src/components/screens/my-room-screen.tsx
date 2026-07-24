@@ -1008,7 +1008,7 @@ export function MyRoomScreen({
             </>
           ) : (
             <View style={styles.calendarPanel}>
-              <Calendar value={selectedDate} onSelect={pickDate} />
+              <Calendar value={selectedDate} onSelect={pickDate} today={today} />
               <View style={styles.calListHead}>
                 <Text style={[Typography.h3, styles.calListTitle, { color: t.text }]}>
                   이 날의 루틴

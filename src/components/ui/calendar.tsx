@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
 
@@ -28,6 +28,13 @@ export type CalendarProps = {
   min?: string;
   max?: string;
   onSelect: (date: string) => void;
+  /**
+   * Today's date "YYYY-MM-DD" (#467). When set, a "오늘" chip in the month header
+   * jumps the view + selection back to today — but only while off-today (a
+   * different date is selected, or the view scrolled to another month). Omit
+   * (date-picker sheets) to hide the chip entirely.
+   */
+  today?: string;
 };
 
 /**
@@ -35,12 +42,23 @@ export type CalendarProps = {
  * EAS Update. ISO date strings sort lexicographically, so min/max comparisons
  * are plain string compares.
  */
-export function Calendar({ value, min, max, onSelect }: CalendarProps) {
+export function Calendar({ value, min, max, onSelect, today }: CalendarProps) {
   const t = useTokens();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const selected = parse(value);
   const [view, setView] = useState({ y: selected.y, m: selected.m });
+
+  // "오늘" 칩 (#467) — 오늘이 아닐 때(선택이 오늘이 아니거나, 뷰가 오늘 달을
+  // 벗어났을 때)만 노출. 누르면 뷰와 선택을 오늘로 되돌린다.
+  const todayYmd = today ? parse(today) : null;
+  const showToday =
+    todayYmd != null && (value !== today || view.y !== todayYmd.y || view.m !== todayYmd.m);
+  const goToday = () => {
+    if (!today || !todayYmd) return;
+    setView({ y: todayYmd.y, m: todayYmd.m });
+    onSelect(today);
+  };
 
   const firstWeekday = new Date(view.y, view.m, 1).getDay();
   const daysInMonth = new Date(view.y, view.m + 1, 0).getDate();
@@ -110,9 +128,22 @@ export function Calendar({ value, min, max, onSelect }: CalendarProps) {
           style={[styles.navBtn, { backgroundColor: t.surfaceMuted }]}>
           <Text style={[styles.navGlyph, { color: t.text }]}>‹</Text>
         </Pressable>
-        <Text style={[Typography.label, { color: t.text }]}>
-          {view.y}년 {view.m + 1}월
-        </Text>
+        <View style={styles.headCenter}>
+          <Text style={[Typography.label, { color: t.text }]}>
+            {view.y}년 {view.m + 1}월
+          </Text>
+          {showToday ? (
+            <Pressable
+              onPress={goToday}
+              accessibilityRole="button"
+              accessibilityLabel="오늘로"
+              style={[styles.todayChip, { backgroundColor: t.primarySoft }]}>
+              <Text style={[Typography.supporting, emph('semibold'), { color: t.primaryText }]}>
+                오늘
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
         <Pressable
           onPress={() => shiftMonth(1)}
           accessibilityRole="button"
@@ -200,6 +231,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.one,
+  },
+  headCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  todayChip: {
+    paddingHorizontal: Spacing.two,
+    paddingVertical: Spacing.half,
+    borderRadius: Radius.pill,
   },
   navBtn: {
     width: 32,
