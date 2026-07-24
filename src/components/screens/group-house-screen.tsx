@@ -14,11 +14,7 @@ import {
 
 import { CharacterAvatar } from '@/components/character-avatar';
 import { type HouseCover } from '@/components/house-cover-picker';
-import {
-  DEFAULT_HOUSE_COVER_KEY,
-  FRAME_ASPECT,
-  WINDOW_RECTS,
-} from '@/components/room/house-preview-frame';
+import { FRAME_ASPECT, houseCoverKey, WINDOW_RECTS } from '@/components/room/house-preview-frame';
 import { CoachTarget } from '@/components/ui/coach-mark';
 import { Room } from '@/components/room/room';
 import { HouseMembersScreen } from '@/components/screens/house-members-screen';
@@ -45,7 +41,7 @@ import {
 } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useFontEmphasis, useResolvedScheme, useTokens, useTypography } from '@/hooks/use-tokens';
-import { assetSource, isCdnKey } from '@/resources/asset';
+import { assetSource } from '@/resources/asset';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
 import type { FurnitureItem, PlacedFurniture, Wallpaper } from '@/resources/furniture';
 
@@ -438,10 +434,7 @@ export function GroupHouseScreen({
   // 아래 두 행(내 방·초기 멤버)이 창문에 들어가고, 그 위 행들(초과 좌석·빈방)은
   // 프레임 아래 그리드로 이어붙는다. 커버를 안 고른 집도 기본 프레임으로 —
   // 어느 집이든 "커버 위에 방이 보이는" 같은 형태 (히어로 폴백은 안전망).
-  const coverKey =
-    currentHouse?.coverImageKey && isCdnKey(currentHouse.coverImageKey)
-      ? currentHouse.coverImageKey
-      : DEFAULT_HOUSE_COVER_KEY;
+  const coverKey = houseCoverKey(currentHouse?.coverImageKey);
   const frameRows = seatRows.slice(-2);
   // WINDOW_RECTS 순서(좌상·우상·좌하·우하)로 좌석 매핑 — 아래 행이 아래 창문.
   const windowSlots: (number | null)[] = [null, null, null, null];
@@ -1116,6 +1109,8 @@ export function GroupHouseScreen({
                         style={StyleSheet.absoluteFill}
                         contentFit="contain"
                         transition={120}
+                        // 디스크 캐시 유지 — 앱 재실행 후에도 재요청 없이 즉시 (#463).
+                        cachePolicy="memory-disk"
                         accessibilityLabel={`${currentHouse.title} 집`}
                         testID="house-frame"
                       />
