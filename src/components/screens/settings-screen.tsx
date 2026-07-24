@@ -41,6 +41,8 @@ export type SettingsScreenProps = {
   /** App font choice (#382). */
   fontId?: BrandFontId;
   onChangeFont?: (id: BrandFontId) => void;
+  /** Opens the 테마 색상 picker screen (#459). */
+  onOpenTheme?: () => void;
   onEditProfile?: () => void;
   onChangePassword?: () => void;
   onOpenNotifications?: () => void;
@@ -63,6 +65,7 @@ export function SettingsScreen({
   onChangeThemeMode,
   fontId = DEFAULT_FONT_ID,
   onChangeFont,
+  onOpenTheme,
   onEditProfile,
   onChangePassword,
   onOpenNotifications,
@@ -189,6 +192,23 @@ export function SettingsScreen({
                 );
               })}
             </View>
+          </View>
+
+          {/* 테마 색상 — 색이 많은 선택지라 인라인 칩 대신 별도 화면으로 (#459). */}
+          <View style={[styles.card, { backgroundColor: t.surface }]}>
+            <Pressable
+              onPress={onOpenTheme}
+              accessibilityRole="button"
+              accessibilityLabel="테마 색상"
+              style={styles.row}>
+              <View style={styles.rowLeft}>
+                <View style={[styles.iconCircle, { backgroundColor: t.surfaceMuted }]}>
+                  <Icon name="palette" size={20} color={t.text} />
+                </View>
+                <Text style={[Typography.body, { color: t.text }]}>테마 색상</Text>
+              </View>
+              <Icon name="forward" size={16} color={t.textDisabled} />
+            </Pressable>
           </View>
         </View>
 
