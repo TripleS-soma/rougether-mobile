@@ -3,7 +3,7 @@ import { Stack } from 'expo-router';
 import { type ReactNode } from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { ToastProvider } from '@/components/ui/toast';
@@ -39,7 +39,9 @@ export default function RootLayout() {
   return (
     // RNGH 제스처(방 꾸미기 자유 배치 #327 등)의 루트 컨텍스트.
     <GestureHandlerRootView style={styles.root}>
-      <SafeAreaProvider>
+      {/* initialMetrics: 첫 프레임부터 정확한 인셋을 동기로 준다 — 없으면 인셋이
+          0에서 시작해 하단 탭바가 내비게이션 바 아래에 깔렸다가 보정된다 (#456). */}
+      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
         <AuthProvider>
           <BrandThemeProvider>
             <ToastProvider>

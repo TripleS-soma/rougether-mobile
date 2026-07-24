@@ -1,6 +1,6 @@
-import { type FC, useContext, useEffect, useRef } from 'react';
+import { type FC, useEffect, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { type SvgProps } from 'react-native-svg';
 
 import HomeActive from '@/assets/images/common/home-icon-active.svg';
@@ -53,7 +53,7 @@ function TabIcon({ isActive, Icon: NavIcon }: { isActive: boolean; Icon: FC<SvgP
 export function BottomNav({ active, onChange }: BottomNavProps) {
   const t = useTokens();
   const Typography = useTypography();
-  const insets = useContext(SafeAreaInsetsContext);
+  const insets = useSafeAreaInsets();
   return (
     <View
       style={[
@@ -61,7 +61,9 @@ export function BottomNav({ active, onChange }: BottomNavProps) {
         {
           backgroundColor: t.surface,
           borderTopColor: t.border,
-          paddingBottom: (insets?.bottom ?? 0) + Spacing.two,
+          // 시스템 내비게이션 바 높이(insets.bottom) + 여유(Spacing.three) — 여유가
+          // 8dp(Spacing.two)면 내비 바가 높은 기기에서 겹쳐 보인다 (#456).
+          paddingBottom: insets.bottom + Spacing.three,
         },
       ]}>
       {TABS.map(({ key, label, active: ActiveIcon, inactive: InactiveIcon }) => {

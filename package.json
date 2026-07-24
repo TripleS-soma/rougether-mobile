@@ -95,6 +95,9 @@
     ],
     "setupFiles": [
       "react-native-gesture-handler/jestSetup.js"
+    ],
+    "setupFilesAfterEnv": [
+      "<rootDir>/jest/setup-after-env.js"
     ]
   },
   "private": true
