@@ -219,8 +219,10 @@ export type MyRoomScreenProps = {
    * + 버튼으로만 항목이 생겨야 하므로 임의 투두 추가를 막는다 (#272).
    */
   quickAddDisabledCategoryIds?: string[];
-  /** Rename a routine (kebab → 수정: name only; full edit lives in 루틴 관리). */
+  /** Rename a routine (메뉴 시트 → 이름 변경: name only). */
   onRenameRoutine?: (id: string, title: string) => void;
+  /** Full-edit a routine (메뉴 시트 → 루틴 수정): opens the routine editor (#465). */
+  onEditRoutine?: (routine: Routine) => void;
   /** Update a routine's alarm time (kebab → 시간 수정, reuses TimePickerSheet). */
   onUpdateRoutineTime?: (id: string, alarmEnabled: boolean, time: string) => void;
   /** Change a todo's due date (메뉴 시트 → 날짜 바꾸기, calendar sheet). */
@@ -302,6 +304,7 @@ export function MyRoomScreen({
   onQuickAddRoutine,
   quickAddDisabledCategoryIds = [],
   onRenameRoutine,
+  onEditRoutine,
   onUpdateRoutineTime,
   onUpdateTodoDueDate,
   onMoveRoutineOccurrence,
@@ -1184,6 +1187,7 @@ export function MyRoomScreen({
         done={menuDone}
         onClose={() => setMenuOpenId(null)}
         onRename={(r) => setRenameId(r.id)}
+        onEdit={(r) => onEditRoutine?.(r)}
         onDelete={(r) => onDeleteRoutine?.(r.id)}
         onToggleComplete={(r) => {
           // 서버 백업 날짜에서 연 메뉴는 달력 체크박스와 같은 규칙으로

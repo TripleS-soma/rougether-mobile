@@ -12,8 +12,10 @@ export type RoutineMenuSheetProps = {
   /** 메뉴를 연 날짜 기준 완료 여부 — 완료하기/완료 취소 라벨과 토글 방향. */
   done: boolean;
   onClose: () => void;
-  /** 수정하기 — 이름 변경 다이얼로그 열기. */
+  /** 이름 변경 — 이름만 바꾸는 다이얼로그 열기. */
   onRename: (item: Routine) => void;
+  /** 루틴 수정 — 전체 편집 화면(AddRoutineScreen edit 모드) 열기 (#465). 투두엔 안 보임. */
+  onEdit: (item: Routine) => void;
   /** 삭제하기. */
   onDelete: (item: Routine) => void;
   /** 완료하기/완료 취소 — 날짜 규칙(오늘/과거/미래)은 부모가 판정 (#323). */
@@ -34,6 +36,7 @@ export function RoutineMenuSheet({
   done,
   onClose,
   onRename,
+  onEdit,
   onDelete,
   onToggleComplete,
   onEditTime,
@@ -43,6 +46,8 @@ export function RoutineMenuSheet({
   const Typography = useTypography();
   // 시간이 없는 루틴/투두는 '시간 추가', 있으면 '시간 수정' (#325).
   const timeLabel = item?.alarmEnabled && item?.time ? '시간 수정' : '시간 추가';
+  // 전체 편집은 반복 루틴 전용 — 투두는 필드가 달라(마감일 등) 이름/날짜만 (#465).
+  const canFullEdit = item != null && item.kind !== 'todo';
 
   return (
     <BottomSheet
@@ -62,10 +67,10 @@ export function RoutineMenuSheet({
             if (r) onRename(r);
           }}
           accessibilityRole="button"
-          accessibilityLabel={`${item?.title ?? ''} 수정`}
+          accessibilityLabel={`${item?.title ?? ''} 이름 변경`}
           style={[styles.sheetAction, { backgroundColor: t.surface }]}>
           <Icon name="edit" size={22} color={t.text} />
-          <Text style={[Typography.label, { color: t.text }]}>수정하기</Text>
+          <Text style={[Typography.label, { color: t.text }]}>이름 변경</Text>
         </Pressable>
         <Pressable
           onPress={() => {
@@ -80,6 +85,25 @@ export function RoutineMenuSheet({
           <Text style={[Typography.label, { color: t.danger }]}>삭제하기</Text>
         </Pressable>
       </View>
+
+      {/* 루틴 수정 — 전체 편집 화면으로. 이름 변경(위)과 별개로 카테고리·반복·
+          알람·인증사진까지 바꾼다 (#465). 투두는 숨김. */}
+      {canFullEdit ? (
+        <Pressable
+          onPress={() => {
+            const r = item;
+            onClose();
+            if (r) onEdit(r);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={`${item?.title ?? ''} 루틴 수정`}
+          style={styles.sheetItem}>
+          <View style={[styles.sheetItemIcon, { backgroundColor: t.surfaceMuted }]}>
+            <Icon name="settings" size={18} color={t.text} />
+          </View>
+          <Text style={[Typography.body, { color: t.text }]}>루틴 수정</Text>
+        </Pressable>
+      ) : null}
 
       <Pressable
         onPress={() => {

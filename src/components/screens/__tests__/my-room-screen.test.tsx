@@ -82,6 +82,17 @@ describe('MyRoomScreen', () => {
     expect(onEdit).toHaveBeenCalledTimes(1);
   });
 
+  it('행 메뉴 → 루틴 수정을 누르면 그 루틴으로 onEditRoutine을 부른다 (#465)', async () => {
+    const onEditRoutine = jest.fn();
+    const { getByLabelText } = await render(
+      <MyRoomScreen routines={SAMPLE_ROUTINES} onEditRoutine={onEditRoutine} />,
+    );
+    // 행 본문 탭 → 메뉴 시트, 거기서 '루틴 수정' → 편집 진입 콜백.
+    await fireEvent.press(getByLabelText('아침 7시 기상 메뉴'));
+    await fireEvent.press(getByLabelText('아침 7시 기상 루틴 수정'));
+    expect(onEditRoutine).toHaveBeenCalledWith(expect.objectContaining({ id: '1' }));
+  });
+
   it('marks each category header with its visibility scope (#285)', async () => {
     const { getByLabelText, getAllByLabelText } = await render(
       <MyRoomScreen routines={SAMPLE_ROUTINES} />,
@@ -132,7 +143,7 @@ describe('MyRoomScreen', () => {
 
     // The row body (title text) opens the bottom-sheet menu, no extra toggle.
     await fireEvent.press(getByText('하루 회고'));
-    expect(getByText('수정하기')).toBeTruthy();
+    expect(getByText('이름 변경')).toBeTruthy();
     expect(getByText('삭제하기')).toBeTruthy();
     expect(onToggleCompletion).toHaveBeenCalledTimes(1);
   });
@@ -550,7 +561,7 @@ describe('MyRoomScreen', () => {
     );
     await pickCalendarDate(ui, TODAY);
     await fireEvent.press(ui.getByLabelText('하루 회고 메뉴'));
-    expect(ui.getByText('수정하기')).toBeTruthy();
+    expect(ui.getByText('이름 변경')).toBeTruthy();
     expect(ui.getByText('삭제하기')).toBeTruthy();
     // 완료하기는 메뉴를 연 날짜(오늘) 기준으로 토글.
     await fireEvent.press(ui.getByLabelText('하루 회고 완료'));
@@ -583,7 +594,7 @@ describe('MyRoomScreen', () => {
     );
     await pickCalendarDate(ui, YESTERDAY);
     await fireEvent.press(ui.getByLabelText('지난 할 일 메뉴'));
-    expect(ui.getByText('수정하기')).toBeTruthy();
+    expect(ui.getByText('이름 변경')).toBeTruthy();
     await fireEvent.press(ui.getByLabelText('지난 할 일 완료'));
     expect(onToggleCalendarItem).toHaveBeenCalledWith(
       expect.objectContaining({ id: 't9', kind: 'todo' }),
