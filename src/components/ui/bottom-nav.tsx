@@ -1,5 +1,5 @@
-import { type FC, useContext } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { type FC, useContext, useEffect, useRef } from 'react';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { type SvgProps } from 'react-native-svg';
 
@@ -26,6 +26,29 @@ export type BottomNavProps = {
   onChange: (tab: NavTab) => void;
 };
 
+/** 활성 전환 시 스프링으로 한 번 통 튀는 탭 아이콘 (#446). */
+function TabIcon({ isActive, Icon: NavIcon }: { isActive: boolean; Icon: FC<SvgProps> }) {
+  const bounce = useRef(new Animated.Value(1)).current;
+  const wasActive = useRef(isActive);
+  useEffect(() => {
+    if (isActive && !wasActive.current) {
+      bounce.setValue(0.72);
+      Animated.spring(bounce, {
+        toValue: 1,
+        friction: 3.4,
+        tension: 240,
+        useNativeDriver: true,
+      }).start();
+    }
+    wasActive.current = isActive;
+  }, [isActive, bounce]);
+  return (
+    <Animated.View style={{ transform: [{ scale: bounce }] }}>
+      <NavIcon width={24} height={24} />
+    </Animated.View>
+  );
+}
+
 /** App bottom navigation (나의 방 / 집 / 설정) with custom SVG icons. */
 export function BottomNav({ active, onChange }: BottomNavProps) {
   const t = useTokens();
@@ -43,7 +66,6 @@ export function BottomNav({ active, onChange }: BottomNavProps) {
       ]}>
       {TABS.map(({ key, label, active: ActiveIcon, inactive: InactiveIcon }) => {
         const isActive = key === active;
-        const NavIcon = isActive ? ActiveIcon : InactiveIcon;
         const inner = (
           <Pressable
             onPress={() => onChange(key)}
@@ -51,7 +73,7 @@ export function BottomNav({ active, onChange }: BottomNavProps) {
             accessibilityState={{ selected: isActive }}
             accessibilityLabel={label}
             style={styles.tab}>
-            <NavIcon width={24} height={24} />
+            <TabIcon isActive={isActive} Icon={isActive ? ActiveIcon : InactiveIcon} />
             <Text
               style={[Typography.supporting, { color: isActive ? t.primaryText : t.textMuted }]}>
               {label}
