@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Image } from 'expo-image';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, BackHandler, Easing, StyleSheet, View } from 'react-native';
 
@@ -28,6 +29,7 @@ import {
   SoundSettingsScreen,
 } from '@/components/screens/sound-settings-screen';
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
+import { houseCoverKey } from '@/components/room/house-preview-frame';
 import { BottomNav, type NavTab } from '@/components/ui/bottom-nav';
 import {
   CoachMarkOverlay,
@@ -55,6 +57,7 @@ import { useNotifications } from '@/hooks/use-notifications';
 import { useShop } from '@/hooks/use-shop';
 import { useWeather } from '@/hooks/use-weather';
 import { useBrandTheme } from '@/hooks/use-tokens';
+import { assetSource } from '@/resources/asset';
 import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furniture';
 
 type Screen =
@@ -336,6 +339,14 @@ export function AppShell({
   // Locally saved tile arrangements (#278) — the 집 화면 shows arranged houses
   // and drag-and-drop swaps persist per viewer+house on this device.
   const { houses: arrangedHouses, swapSeats } = useRoomLayouts(houses);
+
+  // 집 커버는 원격(S3)이고 groupHouse 화면은 탭 진입 때 처음 마운트돼, 그때부터
+  // fetch가 시작되면 프레임이 늦게 뜬다 (#463). 항상 마운트된 셸에서 집 목록이
+  // 오면 모든 커버(현재+스위처 대상)를 미리 디스크 캐시에 데워 둔다.
+  useEffect(() => {
+    const uris = houses.map((h) => assetSource(houseCoverKey(h.coverImageKey)).uri);
+    if (uris.length) void Image.prefetch?.(uris, { cachePolicy: 'memory-disk' });
+  }, [houses]);
 
   // Selectable house-cover catalog (집 생성·집 정보 수정).
   const { covers: houseCovers } = useHouseCovers();

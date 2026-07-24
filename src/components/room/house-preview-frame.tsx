@@ -17,6 +17,16 @@ export const FRAME_ASPECT = 567 / 508;
  */
 export const DEFAULT_HOUSE_COVER_KEY = 'house/cloud-balloon/house-unified-cloud-balloon-frame.png';
 
+/**
+ * The CDN cover key actually rendered for a house — the server value when it's
+ * real CDN art, else the shared default frame. Single source for the group-house
+ * screen, this preview, and the app-shell prefetch (#463) so all three warm and
+ * render the same image.
+ */
+export function houseCoverKey(coverImageKey?: string | null): string {
+  return coverImageKey && isCdnKey(coverImageKey) ? coverImageKey : DEFAULT_HOUSE_COVER_KEY;
+}
+
 /** 프레임 PNG의 투명 창문 위치(좌상·우상·좌하·우하) — 그룹하우스 화면과 동일. */
 export const WINDOW_RECTS = [
   { left: '12.7%', top: '25.4%', width: '35%', height: '30%' },
@@ -61,8 +71,7 @@ export function HousePreviewFrame({
   const t = useTokens();
   // 커버가 없으면 기본 프레임으로 — 모든 집이 같은 형태. (창틀 직접 그리기는
   // 에셋 자체가 깨진 비정상 키일 때만 남는 안전망.)
-  const coverKey =
-    coverImageKey && isCdnKey(coverImageKey) ? coverImageKey : DEFAULT_HOUSE_COVER_KEY;
+  const coverKey = houseCoverKey(coverImageKey);
   const hasFrame = isCdnKey(coverKey);
   return (
     <View
