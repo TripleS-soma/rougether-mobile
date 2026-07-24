@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon, type IconName } from '@/components/ui/icon';
 import { Radius, Spacing } from '@/constants/theme';
@@ -18,6 +18,33 @@ export type WalletPillsProps = {
 /** Balances above four digits render capped ("9999+"); a tap reveals the truth. */
 const CAP = 9999;
 
+/** 잔액 변동을 550ms 카운트 롤링으로 보여준다 (#452). */
+function useRollingNumber(value: number) {
+  const [display, setDisplay] = useState(value);
+  const anim = useRef(new Animated.Value(0)).current;
+  const fromRef = useRef(value);
+  useEffect(() => {
+    const from = fromRef.current;
+    if (from === value) return;
+    fromRef.current = value;
+    anim.setValue(0);
+    const id = anim.addListener(({ value: p }) =>
+      setDisplay(Math.round(from + (value - from) * p)),
+    );
+    Animated.timing(anim, {
+      toValue: 1,
+      duration: 550,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start(() => {
+      anim.removeListener(id);
+      setDisplay(value);
+    });
+    return () => anim.removeListener(id);
+  }, [value, anim]);
+  return display;
+}
+
 function Pill({
   icon,
   color,
@@ -34,8 +61,9 @@ function Pill({
   const t = useTokens();
   const Typography = useTypography();
   const [revealed, setRevealed] = useState(false);
-  const overCap = value > CAP;
-  const shown = overCap && !revealed ? `${CAP}+` : value.toLocaleString();
+  const rolled = useRollingNumber(value);
+  const overCap = rolled > CAP;
+  const shown = overCap && !revealed ? `${CAP}+` : rolled.toLocaleString();
   return (
     <Pressable
       onPress={() => setRevealed((v) => !v)}

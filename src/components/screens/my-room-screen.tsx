@@ -7,6 +7,7 @@ import {
   type GestureResponderEvent,
   Keyboard,
   KeyboardAvoidingView,
+  LayoutAnimation,
   Platform,
   Pressable,
   ScrollView,
@@ -590,6 +591,8 @@ export function MyRoomScreen({
       return;
     }
     const title = newTodo.trim();
+    // 새 행이 뚝 나타나는 대신 부드럽게 삽입되고 기존 행이 밀려난다 (#452).
+    if (title) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     if (title) onQuickAddRoutine?.(categoryId, title, newTodoDate);
     setNewTodo('');
     setAddingCategory(null);
