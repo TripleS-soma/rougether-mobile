@@ -726,6 +726,7 @@ export function AppShell({
               onQuickAddRoutine={quickAddTodo}
               quickAddDisabledCategoryIds={houseCategoryIds}
               onRenameRoutine={renameRoutine}
+              onEditRoutine={(r) => openEditRoutine(r, 'myRoom')}
               onUpdateRoutineTime={updateRoutineTime}
               onUpdateTodoDueDate={updateTodoDueDate}
               onMoveRoutineOccurrence={moveRoutineOccurrence}
