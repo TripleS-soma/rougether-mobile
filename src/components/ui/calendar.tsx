@@ -7,6 +7,9 @@ import { readableTextColor } from '@/utils/color';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
+// 선택 원 지름 — 원 배치 계산과 스타일이 공유하는 단일 출처.
+const SEL_SIZE = 34;
+
 type YMD = { y: number; m: number; d: number };
 
 function parse(date: string): YMD {
@@ -53,40 +56,49 @@ export function Calendar({ value, min, max, onSelect }: CalendarProps) {
     });
 
   // 선택 원 슬라이드 (#452) — 원이 이전 날짜에서 새 날짜로 스프링 이동.
-  // 셀은 7열 고정 격자라 (요일 헤더 1행 + firstWeekday 오프셋)로 좌표가
-  // 결정된다. 다른 달로 넘어가면 원을 숨긴다.
-  const [gridW, setGridW] = useState(0);
+  // 원 좌표는 계산(cellW·행 높이 가정)이 아니라 각 날짜 셀이 onLayout으로
+  // 보고한 실측 위치를 쓴다 — aspectRatio 셀 높이가 기기마다 gridW/7과
+  // 정확히 일치하지 않아 세로가 한 행씩 어긋났다(#452 후속). 다른 달로
+  // 넘어가면 원을 숨긴다.
   const selPos = useRef(new Animated.ValueXY({ x: -999, y: -999 })).current;
   const selOpacity = useRef(new Animated.Value(0)).current;
   const selVisibleRef = useRef(false);
-  const cellW = gridW / 7;
+  const dayLayouts = useRef<
+    Record<string, { x: number; y: number; width: number; height: number }>
+  >({});
   const selectedInView = selected.y === view.y && selected.m === view.m;
+  // 실측 셀 위치로 원을 놓는다. appearing(첫 등장·월 이동 복귀)이면 점프+페이드,
+  // 같은 달 내 재선택이면 스프링. 셀이 아직 측정 전이면 no-op(onLayout이 뒤이어 호출).
+  const placeCircle = (animate: boolean) => {
+    const l = dayLayouts.current[value];
+    if (!l) return;
+    const target = { x: l.x + (l.width - SEL_SIZE) / 2, y: l.y + (l.height - SEL_SIZE) / 2 };
+    const appearing = !selVisibleRef.current;
+    if (appearing || !animate) {
+      selPos.setValue(target);
+    } else {
+      Animated.spring(selPos, {
+        toValue: target,
+        friction: 7,
+        tension: 90,
+        useNativeDriver: false,
+      }).start();
+    }
+    if (appearing) {
+      selVisibleRef.current = true;
+      Animated.timing(selOpacity, { toValue: 1, duration: 140, useNativeDriver: false }).start();
+    }
+  };
   useEffect(() => {
-    if (!gridW) return;
     if (!selectedInView) {
       selVisibleRef.current = false;
       Animated.timing(selOpacity, { toValue: 0, duration: 120, useNativeDriver: false }).start();
       return;
     }
-    const gridIdx = 7 + firstWeekday + (selected.d - 1);
-    const target = {
-      x: (gridIdx % 7) * cellW + (cellW - 34) / 2,
-      y: Math.floor(gridIdx / 7) * cellW + (cellW - 34) / 2,
-    };
-    if (!selVisibleRef.current) {
-      // 처음 나타날 때(월 이동 직후 포함)는 점프 + 페이드 인.
-      selVisibleRef.current = true;
-      selPos.setValue(target);
-      Animated.timing(selOpacity, { toValue: 1, duration: 140, useNativeDriver: false }).start();
-      return;
-    }
-    Animated.spring(selPos, {
-      toValue: target,
-      friction: 7,
-      tension: 90,
-      useNativeDriver: false,
-    }).start();
-  }, [gridW, cellW, selectedInView, selected.d, firstWeekday, selPos, selOpacity]);
+    placeCircle(true);
+    // placeCircle은 렌더마다 새로 만들어지는 클로저 — value/selectedInView만 의존.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, selectedInView]);
 
   return (
     <View style={styles.wrap}>
@@ -110,7 +122,7 @@ export function Calendar({ value, min, max, onSelect }: CalendarProps) {
         </Pressable>
       </View>
 
-      <View style={styles.grid} onLayout={(e) => setGridW(e.nativeEvent.layout.width)}>
+      <View style={styles.grid}>
         <Animated.View
           pointerEvents="none"
           style={[
@@ -148,6 +160,11 @@ export function Calendar({ value, min, max, onSelect }: CalendarProps) {
               accessibilityRole="button"
               accessibilityLabel={date}
               accessibilityState={{ selected: isSelected, disabled: !!disabled }}
+              onLayout={(e) => {
+                dayLayouts.current[date] = e.nativeEvent.layout;
+                // 월 이동으로 이 셀이 새로 측정될 때, 선택 날짜면 즉시 원을 얹는다.
+                if (date === value && selectedInView) placeCircle(false);
+              }}
               style={styles.cell}>
               <View style={styles.dayCircle}>
                 <Text
@@ -210,14 +227,14 @@ const styles = StyleSheet.create({
   },
   selCircle: {
     position: 'absolute',
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: SEL_SIZE,
+    height: SEL_SIZE,
+    borderRadius: SEL_SIZE / 2,
   },
   dayCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: SEL_SIZE,
+    height: SEL_SIZE,
+    borderRadius: SEL_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
   },

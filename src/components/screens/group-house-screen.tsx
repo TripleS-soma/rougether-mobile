@@ -1132,16 +1132,20 @@ export function GroupHouseScreen({
                     </View>
                   </View>
                 </Animated.View>
-                {zoomed ? (
-                  <Pressable
-                    onPress={resetCam}
-                    accessibilityRole="button"
-                    accessibilityLabel="확대 종료"
-                    style={[styles.camReset, { backgroundColor: t.surface }]}>
-                    <Icon name="refresh" size={16} color={t.text} />
-                  </Pressable>
-                ) : null}
               </View>
+              {/* ⟲ 리셋 버튼은 cameraResponder(팬 responder)를 가진 cameraViewport
+                  바깥, 그 형제로 둔다 — zoomed 동안 부모의 capture move 핸들러가
+                  버튼 위 탭의 미세한 손가락 이동마저 가로채 onPress가 취소됐다
+                  (실기기, #307 후속). cameraViewportOuter가 절대배치 기준. */}
+              {zoomed ? (
+                <Pressable
+                  onPress={resetCam}
+                  accessibilityRole="button"
+                  accessibilityLabel="확대 종료"
+                  style={[styles.camReset, { backgroundColor: t.surface }]}>
+                  <Icon name="refresh" size={16} color={t.text} />
+                </Pressable>
+              ) : null}
             </Animated.View>
           </CoachTarget>
         </View>
