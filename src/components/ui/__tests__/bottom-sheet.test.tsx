@@ -1,7 +1,19 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
-import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { BottomSheet, shouldDismiss } from '@/components/ui/bottom-sheet';
+
+describe('shouldDismiss (#469)', () => {
+  it('닫는다: 충분히 끌어내렸거나(거리) 빠르게 튕겼을(속도) 때', () => {
+    expect(shouldDismiss(120, 0)).toBe(true); // 거리 초과
+    expect(shouldDismiss(20, 1.2)).toBe(true); // 빠른 플링
+  });
+
+  it('유지: 조금 끌다 놓으면(거리·속도 모두 미달) 제자리로', () => {
+    expect(shouldDismiss(20, 0.1)).toBe(false);
+    expect(shouldDismiss(0, 0)).toBe(false);
+  });
+});
 
 describe('BottomSheet', () => {
   it('열림 렌더·백드롭 닫기·퇴장 후 언마운트 계약 (#448)', async () => {
