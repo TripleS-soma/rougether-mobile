@@ -21,6 +21,7 @@ import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
 import { CategoryManageScreen } from '@/components/screens/category-manage-screen';
 import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
 import { SettingsScreen } from '@/components/screens/settings-screen';
+import { ThemeScreen } from '@/components/screens/theme-screen';
 import {
   DEFAULT_SOUND_SETTINGS,
   type SoundSettings,
@@ -68,6 +69,7 @@ type Screen =
   | 'houseSearch'
   | 'createHouse'
   | 'settings'
+  | 'theme'
   | 'profileEdit'
   | 'passwordChange'
   | 'notificationList'
@@ -88,6 +90,7 @@ const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   houseSearch: null,
   createHouse: null,
   settings: 'settings',
+  theme: null,
   profileEdit: null,
   passwordChange: null,
   notificationList: null,
@@ -119,6 +122,7 @@ const BACK_SCREEN: Record<Screen, Screen | null> = {
   houseSearch: 'groupHouse',
   createHouse: 'houseSearch',
   settings: 'myRoom',
+  theme: 'settings',
   profileEdit: 'settings',
   passwordChange: 'settings',
   notificationList: 'myRoom',
@@ -208,7 +212,14 @@ export function AppShell({
   onReplayOnboarding,
   startTutorial = false,
 }: AppShellProps) {
-  const { mode: themeMode, setMode: setThemeMode, fontId, setFontId } = useBrandTheme();
+  const {
+    themeId,
+    setThemeId,
+    mode: themeMode,
+    setMode: setThemeMode,
+    fontId,
+    setFontId,
+  } = useBrandTheme();
   // 집 하늘 연출용 현재 비 여부 (#360) — 서울 고정, 30분 캐시.
   const { raining } = useWeather();
   const [screen, setScreen] = useState<Screen>('myRoom');
@@ -964,6 +975,7 @@ export function AppShell({
               onChangeThemeMode={setThemeMode}
               fontId={fontId}
               onChangeFont={setFontId}
+              onOpenTheme={() => setScreen('theme')}
               onEditProfile={() => setScreen('profileEdit')}
               onChangePassword={() => setScreen('passwordChange')}
               onOpenNotifications={() => setScreen('notifications')}
@@ -974,6 +986,14 @@ export function AppShell({
                 // Clearing the session flips auth status → AppRoot redirects to /login.
                 void logout();
               }}
+            />
+          ) : null}
+
+          {screen === 'theme' ? (
+            <ThemeScreen
+              themeId={themeId}
+              onChangeThemeId={setThemeId}
+              onBack={() => setScreen('settings')}
             />
           ) : null}
 
