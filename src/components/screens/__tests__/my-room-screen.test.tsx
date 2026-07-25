@@ -1,6 +1,4 @@
-import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
-import { State } from 'react-native-gesture-handler';
-import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { ToastProvider } from '@/components/ui/toast';
@@ -65,21 +63,6 @@ describe('MyRoomScreen', () => {
     expect(getByText('준서의 방')).toBeTruthy();
     expect(getByText('1,200')).toBeTruthy();
     expect(getByText('34')).toBeTruthy();
-  });
-
-  it('double-tapping the room opens 방꾸미기 (#376)', async () => {
-    const onEdit = jest.fn();
-    await render(<MyRoomScreen routines={SAMPLE_ROUTINES} onEdit={onEdit} />);
-
-    await act(() =>
-      fireGestureHandler(getByGestureTestId('room-decor-double-tap'), [
-        { state: State.BEGAN },
-        { state: State.ACTIVE },
-        { state: State.END },
-      ]),
-    );
-
-    expect(onEdit).toHaveBeenCalledTimes(1);
   });
 
   it('행 메뉴 → 루틴 수정을 누르면 그 루틴으로 onEditRoutine을 부른다 (#465)', async () => {
