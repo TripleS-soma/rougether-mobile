@@ -1044,7 +1044,9 @@ export function MyRoomScreen({
                     <View key={group.meta.id || `etc-${gi}`} style={styles.group}>
                       <View style={styles.catHeader}>
                         <View style={[styles.catDot, { backgroundColor: `${group.meta.color}33` }]}>
-                          <Pictogram name={group.meta.icon} size={18} />
+                          {/* 방탭(919)과 같은 CategoryIcon — 원시 Pictogram은 고유
+                              원색이라 탭 간 아이콘 색이 달랐다 (#482 후속). */}
+                          <CategoryIcon name={group.meta.icon} color={group.meta.color} size={18} />
                         </View>
                         <Text
                           style={[
@@ -1116,7 +1118,8 @@ export function MyRoomScreen({
                   <View key={group.meta.id || `etc-${gi}`} style={styles.group}>
                     <View style={styles.catHeader}>
                       <View style={[styles.catDot, { backgroundColor: `${group.meta.color}33` }]}>
-                        <Pictogram name={group.meta.icon} size={18} />
+                        {/* 방탭과 동일한 CategoryIcon — 탭 간 아이콘 색 통일 (#482 후속). */}
+                        <CategoryIcon name={group.meta.icon} color={group.meta.color} size={18} />
                       </View>
                       <Text
                         style={[
