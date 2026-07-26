@@ -1,5 +1,13 @@
-import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import {
+  BackHandler,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { CategoryFormSheet } from '@/components/screens/sheets/category-form-sheet';
 import { DateRangeSheet } from '@/components/screens/sheets/date-range-sheet';
@@ -114,6 +122,60 @@ export function AddRoutineScreen({
   const [presetsOpen, setPresetsOpen] = useState(false);
   // 삭제하기 tapped — deletion only proceeds through the confirm modal.
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // 뒤로가기 시 "변경사항 폐기" 확인 (#473) — 추가·수정 모두.
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+
+  // 폼이 초기값에서 바뀌었는가(dirty). 마운트 시 스냅샷 대비 비교 — category는
+  // 카테고리 async 도착에 맞춰 재시드되므로 동적 기준값과 비교한다.
+  const initial = useRef({
+    title: editRoutine?.title ?? '',
+    repeat: editRoutine
+      ? (editRoutine.repeat ?? (editRoutine.days?.length ? 'weekly' : 'daily'))
+      : 'weekly',
+    days: editRoutine?.days ?? [1, 2, 3, 4, 5],
+    monthDay: editRoutine?.dayOfMonth ?? 1,
+    yearMonth: editRoutine?.month ?? 1,
+    alarmEnabled: editRoutine?.alarmEnabled ?? true,
+    time: editRoutine?.time ?? '07:00',
+    startDate: editRoutine?.startDate ?? today(),
+    endDate: editRoutine?.endDate,
+    photoVerify: editRoutine?.photoVerify ?? false,
+  }).current;
+  const initialCategory = editRoutine?.category ?? categories[0]?.id ?? '';
+  const dirty =
+    title !== initial.title ||
+    category !== initialCategory ||
+    repeat !== initial.repeat ||
+    days.join(',') !== initial.days.join(',') ||
+    monthDay !== initial.monthDay ||
+    yearMonth !== initial.yearMonth ||
+    alarmEnabled !== initial.alarmEnabled ||
+    time !== initial.time ||
+    startDate !== initial.startDate ||
+    endDate !== initial.endDate ||
+    photoVerify !== initial.photoVerify;
+
+  // 헤더 백: 변경이 있으면 확인 모달, 없으면 바로 나간다.
+  const requestBack = () => {
+    if (dirty) setConfirmDiscard(true);
+    else onBack?.();
+  };
+  // 안드로이드 하드웨어 백: 헤더와 같은 가드. 여기서 false를 반환하면 app-shell의
+  // BackHandler가 기본 뒤로가기를 처리한다(변경 없을 때). 모달이 열려 있으면 닫는다.
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (confirmDiscard) {
+        setConfirmDiscard(false);
+        return true;
+      }
+      if (dirty) {
+        setConfirmDiscard(true);
+        return true;
+      }
+      return false;
+    });
+    return () => sub.remove();
+  }, [dirty, confirmDiscard]);
 
   const toggleDay = (d: number) =>
     setDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort()));
@@ -163,7 +225,7 @@ export function AddRoutineScreen({
     <View style={[styles.screen, useScreenStyle([])]}>
       <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
         <Pressable
-          onPress={onBack}
+          onPress={requestBack}
           accessibilityRole="button"
           accessibilityLabel="뒤로가기"
           style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
@@ -543,6 +605,37 @@ export function AddRoutineScreen({
                 accessibilityLabel="삭제"
                 style={[styles.confirmBtn, { backgroundColor: t.danger }]}>
                 <Text style={[Typography.label, { color: t.onPrimary }]}>삭제</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      ) : null}
+
+      {confirmDiscard ? (
+        <View style={styles.confirmOverlay}>
+          <Pressable style={styles.backdrop} onPress={() => setConfirmDiscard(false)} />
+          <View style={[styles.confirmCard, { backgroundColor: t.screen }]}>
+            <Text style={[Typography.h3, { color: t.text }]}>정말 나가시겠습니까?</Text>
+            <Text style={[Typography.body, styles.confirmText, { color: t.textMuted }]}>
+              지금 나가면 입력한 내용이 저장되지 않고 사라져요.
+            </Text>
+            <View style={styles.confirmBtns}>
+              <Pressable
+                onPress={() => setConfirmDiscard(false)}
+                accessibilityRole="button"
+                accessibilityLabel="취소"
+                style={[styles.confirmBtn, { backgroundColor: t.surfaceMuted }]}>
+                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setConfirmDiscard(false);
+                  onBack?.();
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="나가기"
+                style={[styles.confirmBtn, { backgroundColor: t.danger }]}>
+                <Text style={[Typography.label, { color: t.onPrimary }]}>나가기</Text>
               </Pressable>
             </View>
           </View>

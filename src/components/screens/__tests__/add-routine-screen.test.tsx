@@ -38,6 +38,41 @@ describe('AddRoutineScreen', () => {
     );
   });
 
+  it('변경이 있으면 뒤로가기 시 나가기 확인 모달을 띄운다 (#473)', async () => {
+    const onBack = jest.fn();
+    const { getByPlaceholderText, getByLabelText, getByText } = await render(
+      <AddRoutineScreen onBack={onBack} />,
+    );
+    await fireEvent.changeText(getByPlaceholderText('예) 매일 30분 산책'), '물 마시기');
+    await fireEvent.press(getByLabelText('뒤로가기'));
+    // 아직 안 나가고 확인부터 — '나가기'를 눌러야 onBack.
+    expect(getByText('정말 나가시겠습니까?')).toBeTruthy();
+    expect(onBack).not.toHaveBeenCalled();
+
+    await fireEvent.press(getByLabelText('나가기'));
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('변경이 없으면 뒤로가기 시 바로 나간다 (확인 없음)', async () => {
+    const onBack = jest.fn();
+    const { getByLabelText, queryByText } = await render(<AddRoutineScreen onBack={onBack} />);
+    await fireEvent.press(getByLabelText('뒤로가기'));
+    expect(onBack).toHaveBeenCalledTimes(1);
+    expect(queryByText('정말 나가시겠습니까?')).toBeNull();
+  });
+
+  it('나가기 확인에서 취소하면 그대로 머문다', async () => {
+    const onBack = jest.fn();
+    const { getByPlaceholderText, getByLabelText, queryByText } = await render(
+      <AddRoutineScreen onBack={onBack} />,
+    );
+    await fireEvent.changeText(getByPlaceholderText('예) 매일 30분 산책'), '물 마시기');
+    await fireEvent.press(getByLabelText('뒤로가기'));
+    await fireEvent.press(getByLabelText('취소'));
+    expect(onBack).not.toHaveBeenCalled();
+    expect(queryByText('정말 나가시겠습니까?')).toBeNull();
+  });
+
   it('does not submit without a title', async () => {
     const onAdd = jest.fn();
     const { getByText } = await render(<AddRoutineScreen onAdd={onAdd} />);
