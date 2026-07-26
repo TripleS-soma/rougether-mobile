@@ -295,3 +295,52 @@ describe('useMyRoomData — uncategorized adoption', () => {
     expect(result.current.routines.every((r) => r.category === '9')).toBe(true);
   });
 });
+
+describe('useMyRoomData — 카테고리 메타를 달력 소스(allCategories)에도 동기화 (#481)', () => {
+  // 달력 서버 날짜 그룹은 allCategories로 아이콘/이름/색을 해석하므로,
+  // 카테고리 수정·생성이 categories에만 반영되면 달력만 stale해진다.
+  const catFetch = () =>
+    jest.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+      if (url.includes('/categories') && method === 'GET')
+        return res({ items: [{ id: 1, name: '건강', colorHex: '#F00', iconKey: 'dumbbell' }] });
+      if (url.includes('/categories') && method === 'POST')
+        return res({ id: 2, name: '새분류', colorHex: '#0F0', iconKey: 'leaf' });
+      if (url.includes('/categories') && method === 'PUT') return res({ id: 1 });
+      if (url.endsWith('/today')) return res({ categories: [], summary: {}, streak: {} });
+      if (url.endsWith('/me')) return res({ userId: 1 });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+  it('카테고리 수정(아이콘 등)이 allCategories에도 반영된다', async () => {
+    global.fetch = catFetch();
+    const { result } = await renderHook(() => useMyRoomData());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    const cat = result.current.categories[0];
+    expect(result.current.allCategories.find((c) => c.id === cat.id)?.icon).toBe('dumbbell');
+
+    await act(async () => {
+      await result.current.updateRoutineCategory(cat.id, { ...cat, icon: 'leaf' });
+    });
+    expect(result.current.categories.find((c) => c.id === cat.id)?.icon).toBe('leaf');
+    expect(result.current.allCategories.find((c) => c.id === cat.id)?.icon).toBe('leaf');
+  });
+
+  it('새 카테고리가 allCategories에도 추가된다', async () => {
+    global.fetch = catFetch();
+    const { result } = await renderHook(() => useMyRoomData());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      await result.current.createRoutineCategory({
+        id: '',
+        label: '새분류',
+        icon: 'leaf',
+        color: '#0F0',
+        visibility: 'public',
+      });
+    });
+    expect(result.current.allCategories.some((c) => c.id === '2' && c.icon === 'leaf')).toBe(true);
+  });
+});

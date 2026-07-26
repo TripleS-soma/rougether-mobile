@@ -698,6 +698,132 @@ export function MyRoomScreen({
     onToggleCalendarItem?.(item, selectedDate);
   };
 
+  // ---------- 방탭·달력탭 공용 카테고리 그룹 렌더 (#482 후속) ----------
+  // 같은 그룹(헤더+행)이 3벌 복붙돼 아이콘 색·배지 유무가 탭마다 어긋났다.
+  // 행 데이터를 RowSpec으로 정규화해 Routine(방탭·달력 클라이언트)과 서버
+  // CalendarDayItem이 같은 코드로 그려진다.
+  type RowSpec = {
+    key: string;
+    title: string;
+    done: boolean;
+    /** 알림/마감 시각 — 있으면 종 배지. */
+    time?: string;
+    /** 사진 인증 루틴 — 카메라 배지. */
+    photoVerify?: boolean;
+    onToggle: (e?: GestureResponderEvent) => void;
+    /** 없으면(기록만 남은 삭제 항목) 행 본문이 메뉴를 열지 않는다. */
+    onMenu?: () => void;
+  };
+
+  const rowFromRoutine = (routine: Routine, date: string): RowSpec => ({
+    key: routine.id,
+    title: routine.title,
+    done: isDone(routine.id, date),
+    time: routine.alarmEnabled && routine.time ? routine.time : undefined,
+    photoVerify: routine.photoVerify,
+    onToggle: (e) => handleToggle(routine, date, e),
+    onMenu: () => openRowMenu(routine.id, date),
+  });
+
+  const rowFromCalendarItem = (item: CalendarDayItem): RowSpec => ({
+    key: `${item.kind}-${item.id}`,
+    title: item.title,
+    done: item.completed,
+    time: item.time,
+    onToggle: () => handleCalendarItemPress(item),
+    // 기록만 남은(삭제된) 항목은 메뉴를 열 수 없다 — 그대로 표시만.
+    onMenu: routines.some((r) => r.id === item.id)
+      ? () => openRowMenu(item.id, selectedDate)
+      : undefined,
+  });
+
+  const renderRoutineRow = (row: RowSpec, color: string) => (
+    <View key={row.key} style={styles.routineRow}>
+      {/* The checkbox alone toggles completion; the rest of the row opens the
+          수정/삭제 bottom sheet. */}
+      <BearCheck
+        checked={row.done}
+        color={color}
+        onPress={(e) => row.onToggle(e)}
+        accessibilityLabel={row.title}
+      />
+      <Pressable
+        onPress={row.onMenu}
+        accessibilityRole="button"
+        accessibilityLabel={`${row.title} 메뉴`}
+        style={[styles.flex, styles.rowBody]}>
+        <Text
+          style={[
+            Typography.body,
+            row.done
+              ? { color: t.textMuted, textDecorationLine: 'line-through' }
+              : { color: t.text },
+          ]}>
+          {row.title}
+        </Text>
+        {row.time || row.photoVerify ? (
+          <View style={styles.badges}>
+            {row.time ? (
+              <View style={styles.badge}>
+                <Icon name="bell" size={12} color={t.textMuted} />
+                <Text style={[styles.badgeText, { color: t.textMuted }]}>
+                  {formatTime(row.time)}
+                </Text>
+              </View>
+            ) : null}
+            {row.photoVerify ? (
+              <View style={styles.badge}>
+                <Icon name="camera" size={12} color={t.textMuted} />
+                <Text style={[styles.badgeText, { color: t.textMuted }]}>사진 인증</Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+      </Pressable>
+    </View>
+  );
+
+  // 카테고리 그룹 = 헤더(아이콘·라벨·공개범위·카운트·＋) + 행들 + 퀵애드 입력행.
+  // 빈 그룹도 헤더는 그린다 — ＋가 항상 닿아야 한다 (#323).
+  const renderCategoryGroup = (
+    key: string,
+    meta: RoutineCategoryMeta,
+    rows: RowSpec[],
+    date: string,
+  ) => {
+    const doneCount = rows.filter((r) => r.done).length;
+    return (
+      <View key={key} style={styles.group}>
+        <View style={styles.catHeader}>
+          <View style={[styles.catDot, { backgroundColor: `${meta.color}33` }]}>
+            <CategoryIcon name={meta.icon} color={meta.color} size={18} />
+          </View>
+          <Text
+            style={[
+              Typography.label,
+              styles.catLabel,
+              { color: readableTextColor(meta.color, t.surfaceMuted) },
+            ]}>
+            {meta.label}
+          </Text>
+          {/* 미분류(pseudo) 그룹은 실제 카테고리가 아니라 표시하지 않는다. */}
+          {meta.id ? <VisibilityMark visibility={meta.visibility} /> : null}
+          {rows.length > 0 ? (
+            <Text style={[Typography.supporting, { color: t.textDisabled }]}>
+              {doneCount}/{rows.length}
+            </Text>
+          ) : null}
+          <View style={styles.flex} />
+          {renderQuickAddButton(meta, date)}
+        </View>
+        <View style={styles.rows}>
+          {rows.map((row) => renderRoutineRow(row, meta.color))}
+          {addingCategory === meta.id ? renderQuickAddRow(meta.id) : null}
+        </View>
+      </View>
+    );
+  };
+
   return (
     <View ref={rootRef} style={[styles.screen, useScreenStyle([])]}>
       <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
@@ -913,97 +1039,11 @@ export function MyRoomScreen({
                       );
                       // Empty categories still render their header — the + quick-add
                       // must stay reachable even before the first routine exists.
-                      const doneInCat = items.filter((r) => isDone(r.id, today)).length;
-
-                      return (
-                        <View key={cat.id} style={styles.group}>
-                          <View style={styles.catHeader}>
-                            <View style={[styles.catDot, { backgroundColor: `${cat.color}33` }]}>
-                              <CategoryIcon name={cat.icon} color={cat.color} size={18} />
-                            </View>
-                            <Text
-                              style={[
-                                Typography.label,
-                                styles.catLabel,
-                                { color: readableTextColor(cat.color, t.surfaceMuted) },
-                              ]}>
-                              {cat.label}
-                            </Text>
-                            {/* 미분류(pseudo) 그룹은 실제 카테고리가 아니라 표시하지 않는다. */}
-                            {cat.id ? <VisibilityMark visibility={cat.visibility} /> : null}
-                            {items.length > 0 ? (
-                              <Text style={[Typography.supporting, { color: t.textDisabled }]}>
-                                {doneInCat}/{items.length}
-                              </Text>
-                            ) : null}
-                            <View style={styles.flex} />
-                            {renderQuickAddButton(cat, today)}
-                          </View>
-
-                          <View style={styles.rows}>
-                            {/* The checkbox alone toggles completion; the rest
-                                of the row opens the 수정/삭제 bottom sheet (the
-                                old kebab's menu — the kebab itself is gone). */}
-                            {items.map((routine) => {
-                              const done = isDone(routine.id, today);
-                              return (
-                                <View key={routine.id}>
-                                  <View style={styles.routineRow}>
-                                    <BearCheck
-                                      checked={done}
-                                      color={cat.color}
-                                      onPress={(e) => handleToggle(routine, today, e)}
-                                      accessibilityLabel={routine.title}
-                                    />
-                                    <Pressable
-                                      onPress={() => openRowMenu(routine.id)}
-                                      accessibilityRole="button"
-                                      accessibilityLabel={`${routine.title} 메뉴`}
-                                      style={[styles.flex, styles.rowBody]}>
-                                      <Text
-                                        style={[
-                                          Typography.body,
-                                          done
-                                            ? {
-                                                color: t.textMuted,
-                                                textDecorationLine: 'line-through',
-                                              }
-                                            : { color: t.text },
-                                        ]}>
-                                        {routine.title}
-                                      </Text>
-                                      {(routine.alarmEnabled && routine.time) ||
-                                      routine.photoVerify ? (
-                                        <View style={styles.badges}>
-                                          {routine.alarmEnabled && routine.time ? (
-                                            <View style={styles.badge}>
-                                              <Icon name="bell" size={12} color={t.textMuted} />
-                                              <Text
-                                                style={[styles.badgeText, { color: t.textMuted }]}>
-                                                {formatTime(routine.time)}
-                                              </Text>
-                                            </View>
-                                          ) : null}
-                                          {routine.photoVerify ? (
-                                            <View style={styles.badge}>
-                                              <Icon name="camera" size={12} color={t.textMuted} />
-                                              <Text
-                                                style={[styles.badgeText, { color: t.textMuted }]}>
-                                                사진 인증
-                                              </Text>
-                                            </View>
-                                          ) : null}
-                                        </View>
-                                      ) : null}
-                                    </Pressable>
-                                  </View>
-                                </View>
-                              );
-                            })}
-
-                            {addingCategory === cat.id ? renderQuickAddRow(cat.id) : null}
-                          </View>
-                        </View>
+                      return renderCategoryGroup(
+                        cat.id,
+                        cat,
+                        items.map((r) => rowFromRoutine(r, today)),
+                        today,
                       );
                     })}
               </View>
@@ -1043,141 +1083,28 @@ export function MyRoomScreen({
                     예정된 루틴이 없어요.
                   </Text>
                 ) : (
-                  calServerGroups!.map((group, gi) => (
-                    <View key={group.meta.id || `etc-${gi}`} style={styles.group}>
-                      <View style={styles.catHeader}>
-                        <View style={[styles.catDot, { backgroundColor: `${group.meta.color}33` }]}>
-                          <Pictogram name={group.meta.icon} size={18} />
-                        </View>
-                        <Text
-                          style={[
-                            Typography.label,
-                            styles.catLabel,
-                            { color: readableTextColor(group.meta.color, t.surfaceMuted) },
-                          ]}>
-                          {group.meta.label}
-                        </Text>
-                        {group.meta.id ? (
-                          <VisibilityMark visibility={group.meta.visibility} />
-                        ) : null}
-                        {group.items.length > 0 ? (
-                          <Text style={[Typography.supporting, { color: t.textDisabled }]}>
-                            {group.items.filter((i) => i.completed).length}/{group.items.length}
-                          </Text>
-                        ) : null}
-                        <View style={styles.flex} />
-                        {renderQuickAddButton(group.meta, selectedDate)}
-                      </View>
-                      {addingCategory === group.meta.id ? renderQuickAddRow(group.meta.id) : null}
-                      {group.items.map((item) => (
-                        <View key={`${item.kind}-${item.id}`} style={styles.routineRow}>
-                          <BearCheck
-                            checked={!!item.completed}
-                            color={group.meta.color}
-                            onPress={() => handleCalendarItemPress(item)}
-                            accessibilityLabel={item.title}
-                          />
-                          <Pressable
-                            // 기록만 남은(삭제된) 항목은 메뉴를 열 수 없다 — 그대로 표시만.
-                            onPress={
-                              routines.some((r) => r.id === item.id)
-                                ? () => openRowMenu(item.id, selectedDate)
-                                : undefined
-                            }
-                            accessibilityRole="button"
-                            accessibilityLabel={`${item.title} 메뉴`}
-                            style={[styles.flex, styles.rowBody]}>
-                            <Text
-                              style={[
-                                Typography.body,
-                                item.completed
-                                  ? { color: t.textMuted, textDecorationLine: 'line-through' }
-                                  : { color: t.text },
-                              ]}>
-                              {item.title}
-                            </Text>
-                            {item.time ? (
-                              <View style={styles.badge}>
-                                <Icon name="bell" size={12} color={t.textMuted} />
-                                <Text style={[styles.badgeText, { color: t.textMuted }]}>
-                                  {formatTime(item.time)}
-                                </Text>
-                              </View>
-                            ) : null}
-                          </Pressable>
-                        </View>
-                      ))}
-                    </View>
-                  ))
+                  calServerGroups!.map((group, gi) =>
+                    renderCategoryGroup(
+                      group.meta.id || `etc-${gi}`,
+                      group.meta,
+                      group.items.map(rowFromCalendarItem),
+                      selectedDate,
+                    ),
+                  )
                 )
               ) : calClientGroups.length === 0 ? (
                 <Text style={[Typography.body, styles.calEmpty, { color: t.textMuted }]}>
                   예정된 루틴이 없어요.
                 </Text>
               ) : (
-                calClientGroups.map((group, gi) => (
-                  <View key={group.meta.id || `etc-${gi}`} style={styles.group}>
-                    <View style={styles.catHeader}>
-                      <View style={[styles.catDot, { backgroundColor: `${group.meta.color}33` }]}>
-                        <Pictogram name={group.meta.icon} size={18} />
-                      </View>
-                      <Text
-                        style={[
-                          Typography.label,
-                          styles.catLabel,
-                          { color: readableTextColor(group.meta.color, t.surfaceMuted) },
-                        ]}>
-                        {group.meta.label}
-                      </Text>
-                      {group.meta.id ? <VisibilityMark visibility={group.meta.visibility} /> : null}
-                      {group.items.length > 0 ? (
-                        <Text style={[Typography.supporting, { color: t.textDisabled }]}>
-                          {group.items.filter((r) => isDone(r.id, selectedDate)).length}/
-                          {group.items.length}
-                        </Text>
-                      ) : null}
-                      <View style={styles.flex} />
-                      {renderQuickAddButton(group.meta, selectedDate)}
-                    </View>
-                    {addingCategory === group.meta.id ? renderQuickAddRow(group.meta.id) : null}
-                    {group.items.map((routine) => {
-                      const done = isDone(routine.id, selectedDate);
-                      return (
-                        <View key={routine.id} style={styles.routineRow}>
-                          <BearCheck
-                            checked={done}
-                            color={group.meta.color}
-                            onPress={(e) => handleToggle(routine, selectedDate, e)}
-                            accessibilityLabel={routine.title}
-                          />
-                          <Pressable
-                            onPress={() => openRowMenu(routine.id, selectedDate)}
-                            accessibilityRole="button"
-                            accessibilityLabel={`${routine.title} 메뉴`}
-                            style={[styles.flex, styles.rowBody]}>
-                            <Text
-                              style={[
-                                Typography.body,
-                                done
-                                  ? { color: t.textMuted, textDecorationLine: 'line-through' }
-                                  : { color: t.text },
-                              ]}>
-                              {routine.title}
-                            </Text>
-                            {routine.alarmEnabled && routine.time ? (
-                              <View style={styles.badge}>
-                                <Icon name="bell" size={12} color={t.textMuted} />
-                                <Text style={[styles.badgeText, { color: t.textMuted }]}>
-                                  {formatTime(routine.time)}
-                                </Text>
-                              </View>
-                            ) : null}
-                          </Pressable>
-                        </View>
-                      );
-                    })}
-                  </View>
-                ))
+                calClientGroups.map((group, gi) =>
+                  renderCategoryGroup(
+                    group.meta.id || `etc-${gi}`,
+                    group.meta,
+                    group.items.map((r) => rowFromRoutine(r, selectedDate)),
+                    selectedDate,
+                  ),
+                )
               )}
             </View>
           )}

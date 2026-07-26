@@ -420,6 +420,9 @@ export function useMyRoomData() {
       const created = await createCategory(toCategoryCreate(cat, categories.length));
       const meta = toAppCategory(created, categories.length);
       setCategories((prev) => [...prev, meta]);
+      // 달력(서버 날짜)은 allCategories로 메타를 해석하므로 같이 추가 —
+      // 안 하면 새 카테고리 항목이 과거/미래 날짜에서 '기타'로 폴백 (#481).
+      setAllCategories((prev) => [...prev, meta]);
       return meta;
     } catch {
       toast('카테고리를 만들지 못했어요', 'error');
@@ -429,8 +432,12 @@ export function useMyRoomData() {
 
   const updateRoutineCategory = async (id: string, cat: RoutineCategoryMeta) => {
     const before = categories;
+    const beforeAll = allCategories;
     // Keep the id and sort position; only name/emoji/visibility change.
     setCategories((prev) => prev.map((c) => (c.id === id ? { ...cat, id } : c)));
+    // 달력(서버 날짜)의 메타 소스도 동기화 — 안 하면 아이콘/이름/색 변경이
+    // 달력 탭에 반영되지 않는다 (reorderCategories와 같은 규칙, #481).
+    setAllCategories((prev) => prev.map((c) => (c.id === id ? { ...cat, id } : c)));
     try {
       const sortOrder = categories.findIndex((c) => c.id === id);
       await apiUpdateCategory(
@@ -439,6 +446,7 @@ export function useMyRoomData() {
       );
     } catch {
       setCategories(before);
+      setAllCategories(beforeAll);
       toast('카테고리 수정에 실패했어요', 'error');
     }
   };

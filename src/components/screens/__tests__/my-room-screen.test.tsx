@@ -545,6 +545,9 @@ describe('MyRoomScreen', () => {
       <MyRoomScreen routines={SAMPLE_ROUTINES} onToggleCompletion={onToggleCompletion} />,
     );
     await pickCalendarDate(ui, TODAY);
+    // 카테고리 헤더 아이콘은 방탭과 같은 CategoryIcon(카테고리색 틴트) —
+    // 원시 Pictogram이면 탭 간 아이콘 색이 달랐다 (#482 후속).
+    expect(ui.getAllByTestId(/^category-icon-/).length).toBeGreaterThan(0);
     await fireEvent.press(ui.getByLabelText('하루 회고 메뉴'));
     expect(ui.getByText('이름 변경')).toBeTruthy();
     expect(ui.getByText('삭제하기')).toBeTruthy();
