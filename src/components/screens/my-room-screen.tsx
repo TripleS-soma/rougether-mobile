@@ -841,12 +841,15 @@ export function MyRoomScreen({
                         </Text>
                       ) : null}
                       <CoachTarget id="room-add-routine">
+                        {/* '＋ 루틴' 라벨 필 (#483) — 카테고리의 원형 ＋(할 일 추가)와
+                            같은 문법이라 헷갈렸다. 라벨로 용도를 말해 구분한다. */}
                         <Pressable
                           onPress={onAddRoutine}
                           accessibilityRole="button"
                           accessibilityLabel="루틴 추가"
-                          style={[styles.addBtn, { backgroundColor: t.primary }]}>
-                          <Icon name="add" size={18} color={t.onPrimary} />
+                          style={[styles.addPill, { backgroundColor: t.primary }]}>
+                          <Icon name="add" size={14} color={t.onPrimary} />
+                          <Text style={[Typography.label, { color: t.onPrimary }]}>루틴</Text>
                         </Pressable>
                       </CoachTarget>
                     </View>
@@ -1460,12 +1463,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.three,
   },
-  addBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  // '＋ 루틴' 라벨 필 (#483) — 높이는 기존 32px 원과 동일하게 유지.
+  addPill: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: Spacing.half,
+    height: 32,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.pill,
   },
   progressTrack: {
     height: 10,
