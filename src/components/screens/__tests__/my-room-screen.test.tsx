@@ -270,7 +270,7 @@ describe('MyRoomScreen', () => {
   it('오늘의 루틴 + 버튼은 바로 루틴 추가 콜백을 부른다 (#335)', async () => {
     const onAddRoutine = jest.fn();
     const onManageRoutines = jest.fn();
-    const { getByLabelText } = await render(
+    const { getByLabelText, getByText } = await render(
       <MyRoomScreen
         routines={SAMPLE_ROUTINES}
         onAddRoutine={onAddRoutine}
@@ -278,6 +278,8 @@ describe('MyRoomScreen', () => {
       />,
     );
 
+    // '＋ 루틴' 라벨 필 (#483) — 카테고리 ＋(할 일 추가)와 구분되는 가시 라벨.
+    expect(getByText('루틴')).toBeTruthy();
     await fireEvent.press(getByLabelText('루틴 추가'));
     expect(onAddRoutine).toHaveBeenCalledTimes(1);
     expect(onManageRoutines).not.toHaveBeenCalled();
