@@ -800,6 +800,10 @@ export function GroupHouseScreen({
   const renderSeatTile = (room: RoomCell, seatIdx: number, fill = false) => {
     const dragging = dragSeat === seatIdx;
     const empty = room.vacant || isKicked(room.name);
+    // 내 타일 이름은 라이브 userName(=현재 닉네임)으로 — houses는 프로필 저장 시
+    // 재요청되지 않아 room.name이 stale하다. 헤더가 이미 userName을 쓰므로 타일도
+    // 맞춘다(캐릭터를 withMyCharacter로 즉시 주입하는 것과 같은 결, #479).
+    const displayName = room.isMine ? userName : room.name;
     const preview =
       !empty && room.membershipId != null ? roomPreviews?.[room.membershipId] : undefined;
     return (
@@ -825,7 +829,7 @@ export function GroupHouseScreen({
           disabled={empty}
           accessibilityRole="button"
           accessibilityLabel={[
-            room.isMine ? `${room.name} (나)` : room.name,
+            room.isMine ? `${displayName} (나)` : displayName,
             room.online ? '접속 중' : room.lastSeenLabel && `${room.lastSeenLabel} 접속`,
           ]
             .filter(Boolean)
@@ -904,7 +908,7 @@ export function GroupHouseScreen({
                     styles.roomName,
                     { color: preview ? StaticWhite : t.onTint },
                   ]}>
-                  {room.isMine ? `${room.name} (나)` : room.name}
+                  {room.isMine ? `${displayName} (나)` : displayName}
                 </Text>
               </View>
               {!room.online && room.lastSeenLabel ? (

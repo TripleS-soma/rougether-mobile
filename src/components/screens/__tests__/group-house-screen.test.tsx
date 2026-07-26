@@ -99,7 +99,7 @@ describe('GroupHouseScreen', () => {
       ],
     };
     const { getByText, getByTestId, getByLabelText } = await render(
-      <GroupHouseScreen houses={[presenceHouse]} />,
+      <GroupHouseScreen houses={[presenceHouse]} userName="나" />,
     );
     // 접속 중인 내 타일: 초록 점 + 접근성 라벨, 상대 시각 없음.
     expect(getByTestId('online-dot')).toBeTruthy();
@@ -107,6 +107,29 @@ describe('GroupHouseScreen', () => {
     // 오프라인 친구 타일: 마지막 접속 상대 시각.
     expect(getByText('3시간 전')).toBeTruthy();
     expect(getByLabelText('친구, 3시간 전 접속')).toBeTruthy();
+  });
+
+  it('내 타일 이름은 stale한 houses 값이 아니라 라이브 userName을 쓴다 (#479)', async () => {
+    const staleHouse: House = {
+      title: '테스트 집',
+      floors: [
+        {
+          level: '1층',
+          rooms: [
+            { name: '옛날닉', color: '#E8E0D0', isMine: true, membershipId: 43 },
+            { name: '친구', color: '#F5E1D8', membershipId: 42 },
+          ],
+        },
+      ],
+    };
+    const { getByText, queryByText } = await render(
+      <GroupHouseScreen houses={[staleHouse]} userName="새닉네임" />,
+    );
+    // 닉네임을 바꾸면(=userName) 집 타일도 즉시 새 이름으로 — 옛 이름은 사라진다.
+    expect(getByText('새닉네임 (나)')).toBeTruthy();
+    expect(queryByText('옛날닉 (나)')).toBeNull();
+    // 친구 타일은 houses 값 그대로.
+    expect(getByText('친구')).toBeTruthy();
   });
 
   it('renders the current house, members, and group missions', async () => {
@@ -363,6 +386,7 @@ describe('GroupHouseScreen', () => {
     const { getByTestId, getByText, getByLabelText } = await render(
       <GroupHouseScreen
         houses={[house]}
+        userName="나"
         onAddMissionRoutine={jest.fn()}
         linkedRoutines={[{ title: '주간 루틴 지키기', completedToday: true }]}
       />,
@@ -607,7 +631,11 @@ describe('GroupHouseScreen', () => {
     const onVisitFriend = jest.fn();
     const onVisitMyRoom = jest.fn();
     const { getByLabelText, getByText } = await render(
-      <GroupHouseScreen onVisitFriend={onVisitFriend} onVisitMyRoom={onVisitMyRoom} />,
+      <GroupHouseScreen
+        userName="나의 방"
+        onVisitFriend={onVisitFriend}
+        onVisitMyRoom={onVisitMyRoom}
+      />,
     );
     // Tiles are addressed by accessibility label — the crown decorates the
     // text and presence (#383) appends ", N일 전 접속" so match the prefix.
