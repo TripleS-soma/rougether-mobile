@@ -157,7 +157,9 @@ export function RoomDecorScreen({
   }
   const dirty = snap(items, wallpaperId, floorId, backgroundId) !== initialSnapRef.current;
   const [confirmLeave, setConfirmLeave] = useState(false);
-  const [picker, setPicker] = useState<PickerTarget>(null);
+  // 진입 즉시 가구 패널이 열려 있다 (#487) — 전체보기 버튼/가이드 카드 없이
+  // 'all'이 기본 상태. 서브픽커(벽지/바닥)를 닫으면 'all'로 복귀한다.
+  const [picker, setPicker] = useState<PickerTarget>('all');
   // 첫 자유 배치 저장은 SLOT_V1→FREE_V1 비가역 전환 — 한 번 확인받는다 (#327).
   const [confirmMigrate, setConfirmMigrate] = useState(false);
   const migrateOkRef = useRef(freeLayout);
@@ -188,8 +190,9 @@ export function RoomDecorScreen({
   // unsaved-changes guard; without a reason we fall through to the shell.
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (picker) {
-        setPicker(null);
+      // 서브픽커만 닫는다 — 'all'은 기본 상태라 다음 가드(dirty)로 넘어간다 (#487).
+      if (picker !== 'all') {
+        setPicker('all');
         return true;
       }
       if (confirmLeave) {
@@ -432,23 +435,6 @@ export function RoomDecorScreen({
           </View>
         ) : null}
 
-        {!loading && !loadError && picker === null ? (
-          <View style={[styles.guideCard, { backgroundColor: t.surface }]}>
-            <Text style={[Typography.label, { color: t.text }]}>가구를 끌어서 꾸며보세요</Text>
-            <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              가구를 끌어 원하는 곳으로 옮기고, 가구를 탭하면 회전·크기 조절·빼기를 할 수 있어요.
-              벽·바닥을 누르면 벽지와 바닥을 바꿀 수 있어요.
-            </Text>
-            <Pressable
-              onPress={() => setPicker('all')}
-              accessibilityRole="button"
-              accessibilityLabel="전체보기"
-              style={[styles.allBtn, { backgroundColor: t.surfaceMuted }]}>
-              <Text style={[Typography.label, { color: t.primaryText }]}>전체보기</Text>
-            </Pressable>
-          </View>
-        ) : null}
-
         {!loading && !loadError && picker !== null ? (
           <View style={[styles.panel, { backgroundColor: t.surface }]}>
             <View style={styles.panelHead}>
@@ -523,14 +509,17 @@ export function RoomDecorScreen({
                   이 자리에 놓을 가구
                 </Text>
               )}
-              <Pressable
-                onPress={() => setPicker(null)}
-                accessibilityRole="button"
-                accessibilityLabel="선택 닫기"
-                hitSlop={8}
-                style={[styles.closeBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Icon name="close" size={14} color={t.text} />
-              </Pressable>
+              {/* 'all'은 기본 상태라 닫을 곳이 없다 — 서브픽커에서만 전체로 복귀 (#487). */}
+              {picker !== 'all' ? (
+                <Pressable
+                  onPress={() => setPicker('all')}
+                  accessibilityRole="button"
+                  accessibilityLabel="선택 닫기"
+                  hitSlop={8}
+                  style={[styles.closeBtn, { backgroundColor: t.surfaceMuted }]}>
+                  <Icon name="close" size={14} color={t.text} />
+                </Pressable>
+              ) : null}
             </View>
 
             <View style={styles.filterRow}>
@@ -851,7 +840,6 @@ function SwatchGrid({
   onSelect: (id: string) => void;
   onClear?: () => void;
 }) {
-  const emph = useFontEmphasis();
   return (
     <View style={styles.grid}>
       <ClearTile onClear={onClear} t={t} />
@@ -890,9 +878,7 @@ function SwatchGrid({
             ) : (
               <View style={[styles.swatch, { backgroundColor: item.color }]} />
             )}
-            <Text style={[styles.tileName, emph('medium'), { color: t.text }]} numberOfLines={2}>
-              {item.name}
-            </Text>
+            {/* 이름은 표시하지 않는다 (#487) — 이미지가 곧 정보. 접근성 라벨은 유지. */}
             {isOwned ? (
               <Text style={[styles.tilePrice, { color: t.textMuted }]}>보유</Text>
             ) : (
@@ -926,7 +912,6 @@ function FurnitureGrid({
   onClear?: () => void;
 }) {
   const Typography = useTypography();
-  const emph = useFontEmphasis();
   if (items.length === 0) {
     return (
       <Text style={[Typography.supporting, styles.emptyPicker, { color: t.textMuted }]}>
@@ -962,12 +947,14 @@ function FurnitureGrid({
                 opacity: !isOwned && !affordable ? 0.5 : 1,
               },
             ]}>
-            <View style={styles.thumbWrap}>
+            {/* 미리보기는 접근성에서 숨긴다 — 타일 Pressable 라벨과 이중 안내 방지. */}
+            <View
+              style={styles.thumbWrap}
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants">
               <FurniturePlaceholder item={item} showName={false} />
             </View>
-            <Text style={[styles.tileName, emph('medium'), { color: t.text }]} numberOfLines={2}>
-              {item.name}
-            </Text>
+            {/* 이름은 표시하지 않는다 (#487) — 접근성 라벨은 유지. */}
             {isOwned ? (
               <Text style={[styles.tilePrice, { color: t.textMuted }]}>보유</Text>
             ) : (
@@ -1063,20 +1050,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
     gap: Spacing.two,
-  },
-  allBtn: {
-    marginTop: Spacing.one,
-    borderRadius: Radius.pill,
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two,
-  },
-  guideCard: {
-    marginHorizontal: Spacing.four,
-    marginTop: Spacing.two,
-    borderRadius: Radius.lg,
-    padding: Spacing.four,
-    gap: Spacing.one,
-    alignItems: 'center',
   },
   panel: {
     marginHorizontal: Spacing.three,
