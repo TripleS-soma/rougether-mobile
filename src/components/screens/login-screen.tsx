@@ -22,12 +22,17 @@ export type LoginScreenProps = {
   onAuthSuccess?: () => void;
   onGoSignup?: () => void;
   /**
-   * Sign in and start a session. The API currently offers only dev-login: a
-   * numeric userId in the email field signs into that account; an empty (or
-   * non-numeric) field creates a FRESH user server-side. Resolves true on
-   * success. When omitted, submit just calls onAuthSuccess.
+   * Dev-login (개발 빌드 전용 폼): a numeric userId in the email field signs
+   * into that account; an empty (or non-numeric) field creates a FRESH user
+   * server-side. Resolves true on success. When omitted, submit just calls
+   * onAuthSuccess.
    */
   onLogin?: (userId?: number) => Promise<boolean>;
+  /**
+   * 구글 로그인 (#489) — 계정 시트 → 서버 교환까지 수행하고 결과를 돌려준다.
+   * 'cancelled'는 조용히 무시, 'failed'만 에러로 알린다.
+   */
+  onGoogleLogin?: () => Promise<'ok' | 'cancelled' | 'failed'>;
 };
 
 /**
@@ -37,7 +42,12 @@ export type LoginScreenProps = {
  * Field/SocialButton are kept local — extract to `components/ui` once a second
  * screen needs them.
  */
-export function LoginScreen({ onAuthSuccess, onGoSignup, onLogin }: LoginScreenProps) {
+export function LoginScreen({
+  onAuthSuccess,
+  onGoSignup,
+  onLogin,
+  onGoogleLogin,
+}: LoginScreenProps) {
   const t = useTokens();
   const emph = useFontEmphasis();
   const [email, setEmail] = useState('');
@@ -73,6 +83,17 @@ export function LoginScreen({ onAuthSuccess, onGoSignup, onLogin }: LoginScreenP
     else setError('로그인에 실패했어요. userId를 확인하고 다시 시도해 주세요.');
   };
 
+  // 구글 로그인 (#489) — 취소는 조용히, 실패만 에러 문구로.
+  const submitGoogle = async () => {
+    if (submitting || !onGoogleLogin) return;
+    setSubmitting(true);
+    setError(null);
+    const result = await onGoogleLogin();
+    setSubmitting(false);
+    if (result === 'ok') onAuthSuccess?.();
+    else if (result === 'failed') setError('구글 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.');
+  };
+
   return (
     <View style={[styles.screen, useScreenStyle(['top', 'bottom'])]}>
       <KeyboardAvoidingView
@@ -97,71 +118,76 @@ export function LoginScreen({ onAuthSuccess, onGoSignup, onLogin }: LoginScreenP
             </Text>
           </View>
 
-          <View style={[styles.card, { backgroundColor: t.surface, shadowColor: '#000' }]}>
-            <Field
-              placeholder="이메일"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            <Field
-              placeholder="비밀번호"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPw}
-              trailing={
-                <Pressable onPress={() => setShowPw((v) => !v)} accessibilityRole="button">
-                  <Text style={[styles.smallLink, emph('semibold'), { color: t.textMuted }]}>
-                    {showPw ? '숨김' : '보기'}
-                  </Text>
-                </Pressable>
-              }
-            />
+          {/* dev-login 폼(#489) — 개발 빌드 전용. 배포 빌드는 소셜 로그인만. */}
+          {__DEV__ ? (
+            <>
+              <View style={[styles.card, { backgroundColor: t.surface, shadowColor: '#000' }]}>
+                <Field
+                  placeholder="이메일"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+                <Field
+                  placeholder="비밀번호"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPw}
+                  trailing={
+                    <Pressable onPress={() => setShowPw((v) => !v)} accessibilityRole="button">
+                      <Text style={[styles.smallLink, emph('semibold'), { color: t.textMuted }]}>
+                        {showPw ? '숨김' : '보기'}
+                      </Text>
+                    </Pressable>
+                  }
+                />
 
-            <View style={styles.row}>
-              <Pressable
-                style={styles.checkboxRow}
-                onPress={() => setKeepLogin((v) => !v)}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: keepLogin }}>
-                <View
-                  style={[
-                    styles.checkbox,
-                    { borderColor: t.border },
-                    keepLogin && { backgroundColor: t.primary, borderColor: t.primary },
-                  ]}>
-                  {keepLogin ? <Icon name="check" size={12} color={t.onPrimary} /> : null}
+                <View style={styles.row}>
+                  <Pressable
+                    style={styles.checkboxRow}
+                    onPress={() => setKeepLogin((v) => !v)}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: keepLogin }}>
+                    <View
+                      style={[
+                        styles.checkbox,
+                        { borderColor: t.border },
+                        keepLogin && { backgroundColor: t.primary, borderColor: t.primary },
+                      ]}>
+                      {keepLogin ? <Icon name="check" size={12} color={t.onPrimary} /> : null}
+                    </View>
+                    <Text style={[styles.smallText, { color: t.textMuted }]}>로그인 유지</Text>
+                  </Pressable>
+                  <Pressable accessibilityRole="button" onPress={notReady}>
+                    <Text style={[styles.smallLink, emph('semibold'), { color: t.primaryText }]}>
+                      비밀번호 찾기
+                    </Text>
+                  </Pressable>
                 </View>
-                <Text style={[styles.smallText, { color: t.textMuted }]}>로그인 유지</Text>
-              </Pressable>
-              <Pressable accessibilityRole="button" onPress={notReady}>
-                <Text style={[styles.smallLink, emph('semibold'), { color: t.primaryText }]}>
-                  비밀번호 찾기
+              </View>
+
+              <Pressable
+                disabled={submitting}
+                onPress={submit}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: !canSubmit }}
+                style={({ pressed }) => [
+                  styles.submit,
+                  { backgroundColor: canSubmit ? t.primary : t.disabledBg },
+                  pressed && canSubmit && { backgroundColor: t.primaryActive },
+                ]}>
+                <Text
+                  style={[
+                    styles.submitText,
+                    emph('semibold'),
+                    { color: canSubmit ? t.onPrimary : t.textMuted },
+                  ]}>
+                  {submitting ? '로그인 중…' : '로그인'}
                 </Text>
               </Pressable>
-            </View>
-          </View>
-
-          <Pressable
-            disabled={submitting}
-            onPress={submit}
-            accessibilityRole="button"
-            accessibilityState={{ disabled: !canSubmit }}
-            style={({ pressed }) => [
-              styles.submit,
-              { backgroundColor: canSubmit ? t.primary : t.disabledBg },
-              pressed && canSubmit && { backgroundColor: t.primaryActive },
-            ]}>
-            <Text
-              style={[
-                styles.submitText,
-                emph('semibold'),
-                { color: canSubmit ? t.onPrimary : t.textMuted },
-              ]}>
-              {submitting ? '로그인 중…' : '로그인'}
-            </Text>
-          </Pressable>
+            </>
+          ) : null}
           {error ? (
             <Text style={[styles.errorText, { color: t.danger }]} accessibilityRole="alert">
               {error}
@@ -194,7 +220,8 @@ export function LoginScreen({ onAuthSuccess, onGoSignup, onLogin }: LoginScreenP
               label="구글"
               glyph="G"
               bordered
-              onPress={notReady}
+              // 실연동 (#489) — 나머지 provider는 아직 서버 준비 중 안내.
+              onPress={onGoogleLogin ? submitGoogle : notReady}
             />
           </View>
 

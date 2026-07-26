@@ -98,7 +98,13 @@
       ],
       "@react-native-firebase/app",
       "@react-native-firebase/messaging",
-      "./plugins/with-fcm-channel-manifest-fix.js"
+      "./plugins/with-fcm-channel-manifest-fix.js",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.437063052004-k78kolutmicbs7p4537296ne873quev3"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

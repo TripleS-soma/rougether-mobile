@@ -7,6 +7,7 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-firebase/app": "^25.1.0",
     "@react-native-firebase/messaging": "^25.1.0",
+    "@react-native-google-signin/google-signin": "^16.1.2",
     "@react-navigation/native": "7.3.4",
     "expo": "~55.0.27",
     "expo-asset": "~55.0.17",
@@ -87,6 +88,7 @@
       "^expo-device$": "<rootDir>/jest/expo-device-mock.js",
       "^expo-media-library$": "<rootDir>/jest/expo-media-library-mock.js",
       "^react-native-view-shot$": "<rootDir>/jest/view-shot-mock.js",
+      "^@react-native-google-signin/google-signin$": "<rootDir>/jest/google-signin-mock.js",
       "^@/assets/(.*)$": "<rootDir>/assets/$1",
       "^@/(.*)$": "<rootDir>/src/$1"
     },

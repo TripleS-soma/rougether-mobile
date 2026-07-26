@@ -1,6 +1,7 @@
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 
-import { devLogin, loadSession, logout as apiLogout, onSessionCleared } from '@/api';
+import { devLogin, googleLogin, loadSession, logout as apiLogout, onSessionCleared } from '@/api';
+import { getGoogleIdToken, signOutGoogle } from '@/lib/google-auth';
 import { clearPushToken, syncPushToken } from '@/lib/push-token';
 import { resetAnalyticsUser } from '@/lib/analytics';
 
@@ -10,6 +11,11 @@ type AuthContextValue = {
   status: AuthStatus;
   /** Dev-login by userId — omit to create a fresh user. Resolves true on success. */
   login: (userId?: number) => Promise<boolean>;
+  /**
+   * 구글 로그인 (#489): 계정 시트 → id token → POST /auth/google.
+   * 'ok' 성공 / 'cancelled' 사용자가 시트를 닫음(조용히 무시) / 'failed' 실패.
+   */
+  loginWithGoogle: () => Promise<'ok' | 'cancelled' | 'failed'>;
   logout: () => Promise<void>;
 };
 
@@ -54,10 +60,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return false;
         }
       },
+      loginWithGoogle: async () => {
+        try {
+          const idToken = await getGoogleIdToken();
+          if (idToken == null) return 'cancelled';
+          await googleLogin(idToken);
+          setStatus('authed');
+          void syncPushToken();
+          return 'ok';
+        } catch {
+          return 'failed';
+        }
+      },
       logout: async () => {
         resetAnalyticsUser();
         // 이 기기로 오는 푸시를 먼저 끊고 세션을 정리한다 (#250).
         await clearPushToken();
+        // 구글 세션도 정리 — 다음 로그인 때 계정 선택이 다시 뜨게 (best-effort).
+        await signOutGoogle();
         await apiLogout();
         setStatus('guest');
       },

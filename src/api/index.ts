@@ -20,6 +20,7 @@ export {
 export {
   clearSession,
   devLogin,
+  googleLogin,
   getAccessToken,
   getSessionUserId,
   loadSession,
