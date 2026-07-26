@@ -39,10 +39,12 @@ import { Card } from '@/components/ui/card';
 import { IconButton } from '@/components/ui/icon-button';
 import { Pill } from '@/components/ui/pill';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { SocialLoginButton } from '@/components/ui/social-login-button';
 import { PendingNotice } from '@/components/ui/pending-notice';
 import { ToastProvider, useToast } from '@/components/ui/toast';
 import { WheelPicker } from '@/components/ui/wheel-picker';
 import { PolicyUrls } from '@/constants/policy';
+import { Spacing } from '@/constants/theme';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
 import { RECOMMENDED_HOUSES } from '@/mocks/fixtures';
 import { RoomRenderReference } from '@/dev/room-render-reference';
@@ -519,6 +521,18 @@ export const galleryEntries: GalleryEntry[] = [
     name: 'UI · PendingNotice',
     description: '서버 준비 중(엔드포인트 미구현) 정직화 배너.',
     render: () => <PendingNotice text="이 기능은 서버 준비 중이에요." />,
+  },
+  {
+    name: 'UI · SocialLoginButton',
+    description:
+      '간편 로그인 심볼형 버튼 — 카카오/구글/애플 공식 브랜드 가이드의 마크·컨테이너 색을 그대로 사용. 애플은 다크 모드에서 화이트 스타일로 전환.',
+    render: () => (
+      <View style={{ flexDirection: 'row', gap: Spacing.four }}>
+        <SocialLoginButton provider="kakao" />
+        <SocialLoginButton provider="apple" />
+        <SocialLoginButton provider="google" />
+      </View>
+    ),
   },
   {
     name: 'UI · Toast',

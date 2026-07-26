@@ -13,6 +13,7 @@ import {
 import appIcon from '@/assets/images/icon.png';
 import { Field } from '@/components/ui/field';
 import { Icon } from '@/components/ui/icon';
+import { SocialLoginButton } from '@/components/ui/social-login-button';
 import { useToast } from '@/components/ui/toast';
 import { Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
@@ -32,10 +33,9 @@ export type LoginScreenProps = {
 
 /**
  * Login / auth entry screen, ported from the prototype `AuthScreen`.
- * Brand colors come from `useTokens()`; icons and the character avatar are
- * placeholders for now (TODO: port the character system, add an icon set).
- * Field/SocialButton are kept local — extract to `components/ui` once a second
- * screen needs them.
+ * Brand colors come from `useTokens()`; the character avatar is a placeholder
+ * for now (TODO: port the character system). The 간편 로그인 row uses
+ * `SocialLoginButton`, which follows each provider's own branding guideline.
  */
 export function LoginScreen({ onAuthSuccess, onGoSignup, onLogin }: LoginScreenProps) {
   const t = useTokens();
@@ -174,28 +174,9 @@ export function LoginScreen({ onAuthSuccess, onGoSignup, onLogin }: LoginScreenP
           </View>
 
           <View style={styles.social}>
-            <SocialButton
-              bg="#FEE500"
-              textColor="#3C1E1E"
-              label="카카오"
-              glyph="K"
-              onPress={notReady}
-            />
-            <SocialButton
-              bg="#000000"
-              textColor="#FFFFFF"
-              label="애플"
-              glyph="A"
-              onPress={notReady}
-            />
-            <SocialButton
-              bg="#FFFFFF"
-              textColor="#4A403A"
-              label="구글"
-              glyph="G"
-              bordered
-              onPress={notReady}
-            />
+            <SocialLoginButton provider="kakao" onPress={notReady} />
+            <SocialLoginButton provider="apple" onPress={notReady} />
+            <SocialLoginButton provider="google" onPress={notReady} />
           </View>
 
           <View style={styles.footer}>
@@ -209,37 +190,6 @@ export function LoginScreen({ onAuthSuccess, onGoSignup, onLogin }: LoginScreenP
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
-  );
-}
-
-type SocialButtonProps = {
-  bg: string;
-  textColor: string;
-  label: string;
-  glyph: string;
-  bordered?: boolean;
-  onPress?: () => void;
-};
-
-function SocialButton({ bg, textColor, label, glyph, bordered, onPress }: SocialButtonProps) {
-  const t = useTokens();
-  const emph = useFontEmphasis();
-  return (
-    <Pressable
-      style={styles.socialItem}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`${label}로 시작`}>
-      <View
-        style={[
-          styles.socialCircle,
-          { backgroundColor: bg },
-          bordered && { borderWidth: StyleSheet.hairlineWidth, borderColor: t.border },
-        ]}>
-        <Text style={[styles.socialGlyph, emph('bold'), { color: textColor }]}>{glyph}</Text>
-      </View>
-      <Text style={[styles.smallText, { color: t.textMuted }]}>{label}</Text>
-    </Pressable>
   );
 }
 
@@ -339,20 +289,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     gap: Spacing.four,
-  },
-  socialItem: {
-    alignItems: 'center',
-    gap: Spacing.one,
-  },
-  socialCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  socialGlyph: {
-    fontSize: 20,
   },
   footer: {
     flexDirection: 'row',
