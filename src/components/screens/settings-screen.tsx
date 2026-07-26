@@ -112,7 +112,6 @@ export function SettingsScreen({
     <View style={[styles.screen, useScreenStyle([])]}>
       <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
         <Text style={[Typography.h2, { color: t.text }]}>설정</Text>
-        <Text style={[Typography.supporting, { color: t.textMuted }]}>앱 환경을 관리해보세요.</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
@@ -125,9 +124,6 @@ export function SettingsScreen({
               </View>
               <View style={styles.flex}>
                 <Text style={[Typography.label, { color: t.text }]}>다크 모드</Text>
-                <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                  시스템을 따르거나 직접 골라보세요.
-                </Text>
               </View>
             </View>
             <View style={styles.modeRow}>
@@ -161,9 +157,6 @@ export function SettingsScreen({
               </View>
               <View style={styles.flex}>
                 <Text style={[Typography.label, { color: t.text }]}>폰트</Text>
-                <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                  앱 전체에 쓰이는 글꼴을 골라보세요.
-                </Text>
               </View>
             </View>
             <View style={styles.fontGrid}>
