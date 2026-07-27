@@ -12,6 +12,15 @@ import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 /** 스크린샷 첨부 한도 — 서버 계약(최대 3장, png·jpeg·webp 각 10MB). */
 export const MAX_BUG_REPORT_IMAGES = 3;
 
+/**
+ * 내용 최대 길이. 서버 계약은 2000자지만 title/content가 쿼리 파라미터로
+ * 전송되는 구조라 URL 길이 한도에 걸린다 — 실서버 실측(2026-07-27) 결과
+ * 한글(percent-encoding 9배) 기준 ~850자부터 Tomcat 400. 한글 제목 100자를
+ * 더해도 안전한 600자로 클램프한다. 서버가 content를 multipart 파트로 받게
+ * 되면 2000으로 되돌릴 것.
+ */
+export const MAX_BUG_REPORT_CONTENT = 600;
+
 export type BugReportStatus = 'RECEIVED' | 'IN_PROGRESS' | 'RESOLVED';
 
 /** View model of one submitted report (GET /me/bug-reports). */
@@ -125,7 +134,7 @@ export function BugReportScreen({
               onChangeText={setContent}
               multiline
               textAlignVertical="top"
-              maxLength={2000}
+              maxLength={MAX_BUG_REPORT_CONTENT}
             />
           </View>
 
@@ -191,7 +200,8 @@ export function BugReportScreen({
               const badge = badgeColors(e.status);
               return (
                 <View
-                  key={e.id}
+                  // 서버가 bugReportId를 빠뜨리면 id가 0으로 겹칠 수 있어 idx를 섞는다.
+                  key={`${e.id}-${idx}`}
                   style={[
                     styles.entryRow,
                     idx !== entries.length - 1 && {
