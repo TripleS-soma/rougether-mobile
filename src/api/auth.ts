@@ -10,6 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { rawRequest } from './http';
 import type {
+  AppleLoginRequest,
   DevLoginRequest,
   GoogleLoginRequest,
   KakaoLoginRequest,
@@ -133,6 +134,25 @@ export async function googleLogin(idToken: string): Promise<LoginResponse> {
 export async function kakaoLogin(accessToken: string): Promise<LoginResponse> {
   const res = await rawRequest<LoginResponse>('POST', '/auth/kakao', {
     body: { accessToken } as KakaoLoginRequest,
+  });
+  if (res.accessToken && res.refreshToken) {
+    await persist({
+      accessToken: res.accessToken,
+      refreshToken: res.refreshToken,
+      userId: res.userId,
+    });
+  }
+  return res;
+}
+
+/**
+ * 애플 로그인 (#489 소셜 3차): Sign in with Apple이 얻은 identityToken을 서버로
+ * 보내 토큰 쌍을 받고 세션을 시작한다. 최초 로그인이면 자동 가입. 서버가
+ * 서명·발급자·aud(번들 ID)·만료를 검증한다.
+ */
+export async function appleLogin(idToken: string): Promise<LoginResponse> {
+  const res = await rawRequest<LoginResponse>('POST', '/auth/apple', {
+    body: { idToken } as AppleLoginRequest,
   });
   if (res.accessToken && res.refreshToken) {
     await persist({

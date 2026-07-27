@@ -35,6 +35,8 @@ export type LoginScreenProps = {
   onGoogleLogin?: () => Promise<'ok' | 'cancelled' | 'failed'>;
   /** 카카오 로그인 (#489 소셜 2차) — 시맨틱은 onGoogleLogin과 동일. */
   onKakaoLogin?: () => Promise<'ok' | 'cancelled' | 'failed'>;
+  /** 애플 로그인 (#489 소셜 3차) — iOS 전용 버튼(다른 플랫폼에선 숨김). */
+  onAppleLogin?: () => Promise<'ok' | 'cancelled' | 'failed'>;
 };
 
 /**
@@ -50,6 +52,7 @@ export function LoginScreen({
   onLogin,
   onGoogleLogin,
   onKakaoLogin,
+  onAppleLogin,
 }: LoginScreenProps) {
   const t = useTokens();
   const emph = useFontEmphasis();
@@ -103,6 +106,8 @@ export function LoginScreen({
     submitSocial(onGoogleLogin, '구글 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.');
   const submitKakao = () =>
     submitSocial(onKakaoLogin, '카카오 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.');
+  const submitApple = () =>
+    submitSocial(onAppleLogin, '애플 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.');
 
   return (
     <View style={[styles.screen, useScreenStyle(['top', 'bottom'])]}>
@@ -218,13 +223,17 @@ export function LoginScreen({
               // 실연동 (#489 소셜 2차).
               onPress={onKakaoLogin ? submitKakao : notReady}
             />
-            <SocialButton
-              bg="#000000"
-              textColor="#FFFFFF"
-              label="애플"
-              glyph="A"
-              onPress={notReady}
-            />
+            {/* Sign in with Apple은 iOS 전용(expo-apple-authentication) — 다른
+                플랫폼에선 동작할 수 없는 버튼을 보여주지 않는다 (#489 소셜 3차). */}
+            {Platform.OS === 'ios' ? (
+              <SocialButton
+                bg="#000000"
+                textColor="#FFFFFF"
+                label="애플"
+                glyph="A"
+                onPress={onAppleLogin ? submitApple : notReady}
+              />
+            ) : null}
             <SocialButton
               bg="#FFFFFF"
               textColor="#4A403A"

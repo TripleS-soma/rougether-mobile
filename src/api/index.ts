@@ -18,6 +18,7 @@ export {
 } from './client';
 
 export {
+  appleLogin,
   clearSession,
   devLogin,
   googleLogin,

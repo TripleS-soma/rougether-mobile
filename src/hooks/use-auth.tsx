@@ -1,6 +1,7 @@
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 
 import {
+  appleLogin,
   devLogin,
   googleLogin,
   kakaoLogin,
@@ -8,6 +9,7 @@ import {
   logout as apiLogout,
   onSessionCleared,
 } from '@/api';
+import { getAppleIdentityToken } from '@/lib/apple-auth';
 import { getGoogleIdToken, signOutGoogle } from '@/lib/google-auth';
 import { getKakaoAccessToken, signOutKakao } from '@/lib/kakao-auth';
 import { clearPushToken, syncPushToken } from '@/lib/push-token';
@@ -26,6 +28,8 @@ type AuthContextValue = {
   loginWithGoogle: () => Promise<'ok' | 'cancelled' | 'failed'>;
   /** 카카오 로그인 (#489 소셜 2차): 카카오 SDK → access token → POST /auth/kakao. */
   loginWithKakao: () => Promise<'ok' | 'cancelled' | 'failed'>;
+  /** 애플 로그인 (#489 소셜 3차, iOS 전용): Apple 시트 → identityToken → POST /auth/apple. */
+  loginWithApple: () => Promise<'ok' | 'cancelled' | 'failed'>;
   logout: () => Promise<void>;
 };
 
@@ -87,6 +91,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const accessToken = await getKakaoAccessToken();
           if (accessToken == null) return 'cancelled';
           await kakaoLogin(accessToken);
+          setStatus('authed');
+          void syncPushToken();
+          return 'ok';
+        } catch {
+          return 'failed';
+        }
+      },
+      loginWithApple: async () => {
+        try {
+          const idToken = await getAppleIdentityToken();
+          if (idToken == null) return 'cancelled';
+          await appleLogin(idToken);
           setStatus('authed');
           void syncPushToken();
           return 'ok';
