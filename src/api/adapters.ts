@@ -72,10 +72,10 @@ import type {
   HouseMemberDayResponse,
   HouseMemberRoutineCompletionListResponse,
   HousePreviewDetailResponse,
-  PreviewMemberRoom,
   HousePreviewResponse,
   HouseSummary,
   ItemResponse,
+  MemberRoomSummary,
   MemberSummary,
   MissionSummary,
   NotificationItem,
@@ -799,7 +799,7 @@ export function toHousePreviewDetail(
     isMember: p.isMember,
     isFull: p.isFull,
     rooms: catalogue
-      ? (p.memberRooms ?? []).map((m: PreviewMemberRoom) => toPreviewRoom(m.room, catalogue))
+      ? (p.memberRooms ?? []).map((m: MemberRoomSummary) => toPreviewRoom(m.room, catalogue))
       : undefined,
   };
 }
