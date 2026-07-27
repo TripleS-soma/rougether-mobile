@@ -153,25 +153,60 @@ export function FriendRoomScreen({
   const completedCount = routineList.filter((r) => r.completed).length;
   const progress = routineList.length > 0 ? completedCount / routineList.length : 0;
 
-  // 응원 재요청 확인 (#427) — 이번 방문에서 요청한 타입을 기억하고, 같은
+  // 응원 재요청 확인 (#427) — 이번 방문에서 전송한 타입을 기억하고, 같은
   // 타입 재탭이면 바로 보내지 않고 확인 모달을 거친다. 세션 한정 기억이라
   // 앱 재시작 후 중복은 기존 서버 409 토스트가 방어한다.
   const [cheeredTypes, setCheeredTypes] = useState<CheerType[]>([]);
   const [confirmCheer, setConfirmCheer] = useState<CheerType | null>(null);
-  // 응원 발사 (#450) — 실제 전송 시 해당 이모지가 버튼에서 떠올라 사라진다.
+  // 응원 발사 (#450) — 탭마다 해당 이모지가 버튼에서 떠올라 사라진다.
   const burstSeq = useRef(0);
   const [bursts, setBursts] = useState<{ id: number; type: CheerType }[]>([]);
-  const sendCheer = (type: CheerType) => {
-    setCheeredTypes((prev) => (prev.includes(type) ? prev : [...prev, type]));
+  const playCheerFx = (type: CheerType) => {
     hapticSuccess();
     const id = burstSeq.current++;
     setBursts((prev) => [...prev, { id, type }]);
+  };
+  // 연타 윈도우 (#491) — 첫 탭부터 5초는 자유 연타(연출만) 후 딱 1회 전송.
+  // 서버 cheer는 count 없는 원탭 + 같은 타입 하루 1회(409)라 연타를 모아
+  // 보낼 수 없다: 연타 = 연출, 전송 = 윈도우당 1회. 전송이 끝난 타입을
+  // 다시 누르면 기존 재전송 확인 모달(#427)로 이어진다.
+  const CHEER_SEND_DELAY_MS = 5000;
+  const pendingCheers = useRef<Map<CheerType, ReturnType<typeof setTimeout>>>(new Map());
+  const onCheerRef = useRef(onCheer);
+  onCheerRef.current = onCheer;
+  const fireCheer = (type: CheerType) => {
+    pendingCheers.current.delete(type);
+    setCheeredTypes((prev) => (prev.includes(type) ? prev : [...prev, type]));
+    onCheerRef.current?.(type);
+  };
+  // 재전송(확인 모달 통과)은 지금처럼 즉시 — 사용자가 명시적으로 확인했다.
+  const sendCheer = (type: CheerType) => {
+    setCheeredTypes((prev) => (prev.includes(type) ? prev : [...prev, type]));
+    playCheerFx(type);
     onCheer?.(type);
   };
   const requestCheer = (type: CheerType) => {
-    if (cheeredTypes.includes(type)) setConfirmCheer(type);
-    else sendCheer(type);
+    // 윈도우 진행 중인 타입 — 연출만 (자유 연타 구간).
+    if (pendingCheers.current.has(type)) return playCheerFx(type);
+    if (cheeredTypes.includes(type)) return setConfirmCheer(type);
+    playCheerFx(type);
+    pendingCheers.current.set(
+      type,
+      setTimeout(() => fireCheer(type), CHEER_SEND_DELAY_MS),
+    );
   };
+  // 윈도우가 끝나기 전에 화면을 나가면 미전송 응원을 즉시 flush —
+  // 누른 응원이 조용히 사라지지 않게.
+  useEffect(
+    () => () => {
+      for (const [type, timer] of pendingCheers.current) {
+        clearTimeout(timer);
+        onCheerRef.current?.(type);
+      }
+      pendingCheers.current.clear();
+    },
+    [],
+  );
 
   // Guestbook: server list when wired; a local demo list otherwise.
   const [localNotes, setLocalNotes] = useState<GuestbookEntry[]>(DEFAULT_GUESTBOOK);
