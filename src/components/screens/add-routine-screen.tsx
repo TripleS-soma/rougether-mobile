@@ -108,7 +108,8 @@ export function AddRoutineScreen({
       ? (editRoutine.repeat ?? (editRoutine.days?.length ? 'weekly' : 'daily'))
       : 'weekly',
   );
-  const [days, setDays] = useState<number[]>(editRoutine?.days ?? [1, 2, 3, 4, 5]);
+  // 새 루틴의 반복 요일은 전부 해제가 기본 — 사용자가 직접 고르게 한다.
+  const [days, setDays] = useState<number[]>(editRoutine?.days ?? []);
   // Sub-picks: 매월 → day of month (yearly reuses it), 매년 → month.
   const [monthDay, setMonthDay] = useState(editRoutine?.dayOfMonth ?? 1);
   const [yearMonth, setYearMonth] = useState(editRoutine?.month ?? 1);
@@ -136,7 +137,7 @@ export function AddRoutineScreen({
     repeat: editRoutine
       ? (editRoutine.repeat ?? (editRoutine.days?.length ? 'weekly' : 'daily'))
       : 'weekly',
-    days: editRoutine?.days ?? [1, 2, 3, 4, 5],
+    days: editRoutine?.days ?? [],
     monthDay: editRoutine?.dayOfMonth ?? 1,
     yearMonth: editRoutine?.month ?? 1,
     alarmEnabled: editRoutine?.alarmEnabled ?? true,

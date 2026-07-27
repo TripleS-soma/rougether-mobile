@@ -31,6 +31,7 @@ describe('AddRoutineScreen', () => {
 
     await fireEvent.press(getByText('추천 루틴')); // unfold the accordion
     await fireEvent.press(getByText('독서 30분'));
+    await fireEvent.press(getByText('월')); // 요일은 전부 해제가 기본 — 하나 골라야 저장된다.
     await fireEvent.press(getByText('루틴 추가하기'));
 
     expect(onAdd).toHaveBeenCalledWith(
@@ -145,10 +146,13 @@ describe('AddRoutineScreen', () => {
     await fireEvent.press(getByText('격주'));
     expect(queryByText('반복 요일')).toBeTruthy();
 
+    // 요일은 전부 해제가 기본 — 직접 고른 요일만 실린다.
+    await fireEvent.press(getByText('월'));
+    await fireEvent.press(getByText('목'));
     await fireEvent.changeText(getByPlaceholderText('예) 매일 30분 산책'), '산책');
     await fireEvent.press(getByText('루틴 추가하기'));
     expect(onAdd).toHaveBeenCalledWith(
-      expect.objectContaining({ repeat: 'biweekly', days: [1, 2, 3, 4, 5] }),
+      expect.objectContaining({ repeat: 'biweekly', days: [1, 4] }),
     );
   });
 
@@ -184,8 +188,7 @@ describe('AddRoutineScreen', () => {
       </ToastProvider>,
     );
 
-    // Weekly default preselects 월~금 — deselect them all.
-    for (const d of ['월', '화', '수', '목', '금']) await fireEvent.press(getByText(d));
+    // 요일은 전부 해제가 기본 — 그대로 저장하려 하면 막힌다.
     await fireEvent.changeText(getByPlaceholderText('예) 매일 30분 산책'), '산책');
     await fireEvent.press(getByText('루틴 추가하기'));
 
@@ -202,7 +205,6 @@ describe('AddRoutineScreen', () => {
     );
 
     await fireEvent.press(getByText('격주'));
-    for (const d of ['월', '화', '수', '목', '금']) await fireEvent.press(getByText(d));
     await fireEvent.changeText(getByPlaceholderText('예) 매일 30분 산책'), '산책');
     await fireEvent.press(getByText('루틴 추가하기'));
 
