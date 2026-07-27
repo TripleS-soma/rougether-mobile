@@ -53,7 +53,7 @@ export function SoundSettingsScreen({
   };
 
   return (
-    <View style={[styles.screen, useScreenStyle()]}>
+    <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader title="효과음" onBack={onBack} />
 
       <ScrollView contentContainerStyle={styles.body}>

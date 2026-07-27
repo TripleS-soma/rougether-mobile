@@ -43,7 +43,7 @@ export function HelpScreen({ appVersion = '1.0.0', onContact, onBack }: HelpScre
   const [openIdx, setOpenIdx] = useState<number | null>(null);
 
   return (
-    <View style={[styles.screen, useScreenStyle()]}>
+    <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader title="도움말" onBack={onBack} />
 
       <ScrollView contentContainerStyle={styles.body}>

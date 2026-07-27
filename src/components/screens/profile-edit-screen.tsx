@@ -42,7 +42,7 @@ export function ProfileEditScreen({
   const canSave = trimmed.length > 0;
 
   return (
-    <View style={[styles.screen, useScreenStyle()]}>
+    <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader title="프로필 편집" onBack={onBack} />
 
       <ScrollView contentContainerStyle={styles.body}>

@@ -30,7 +30,7 @@ export function ThemeScreen({
   const emph = useFontEmphasis();
 
   return (
-    <View style={[styles.screen, useScreenStyle()]}>
+    <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader title="테마 색상" onBack={onBack} />
 
       <ScrollView contentContainerStyle={styles.body}>

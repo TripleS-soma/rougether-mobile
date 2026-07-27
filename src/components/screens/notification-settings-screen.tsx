@@ -58,7 +58,7 @@ export function NotificationSettingsScreen({
   };
 
   return (
-    <View style={[styles.screen, useScreenStyle()]}>
+    <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader title="푸시 알림" onBack={onBack} />
 
       <ScrollView contentContainerStyle={styles.body}>
