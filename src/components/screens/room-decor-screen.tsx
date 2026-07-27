@@ -297,11 +297,17 @@ export function RoomDecorScreen({
   // What the open picker offers, owned first so placing needs no digging.
   // 보유중 filter hides the shop side of every picker (slot/surface/전체보기).
   const [ownedOnly, setOwnedOnly] = useState(false);
-  // 전체보기 탭 — 서버 분류(surfaceSlotType: 가구/벽지/바닥/배경)별로 나눠
-  // 한 번에 한 그리드만 보여준다 (통짜 세로 나열은 스크롤이 너무 길다).
-  const [allTab, setAllTab] = useState<'furniture' | 'wallpaper' | 'floor' | 'background'>(
-    'furniture',
-  );
+  // 전체보기 탭 — 표면류(surfaceSlotType: 벽지/바닥/배경)에 더해, positioned
+  // 아이템은 categoryCode(가구/소품)로 한 번 더 나눈다 (#488). 한 번에 한
+  // 그리드만 — 통짜 세로 나열은 스크롤이 너무 길다.
+  const [allTab, setAllTab] = useState<
+    'furniture' | 'decor' | 'wallpaper' | 'floor' | 'background'
+  >('furniture');
+  // 소품 = 서버 categoryCode 'decor'(장식)와 'floor'(러그); 가구 = 나머지
+  // (서버 'furniture', 데모 '한옥' 세트 포함).
+  const isDecorItem = (i: FurnitureItem) => i.category === '장식' || i.category === '러그';
+  const furnitureTabItems = useMemo(() => furniture.filter((i) => !isDecorItem(i)), [furniture]);
+  const decorTabItems = useMemo(() => furniture.filter(isDecorItem), [furniture]);
   const isSurfacePicker = picker === 'wallpaper' || picker === 'floor' || picker === 'background';
   const byOwnedFirst = <T extends { id: string }>(arr: T[]) =>
     (ownedOnly ? arr.filter((i) => owned.has(i.id)) : [...arr]).sort(
@@ -441,11 +447,13 @@ export function RoomDecorScreen({
           <View style={[styles.panel, { backgroundColor: t.surface }]}>
             <View style={styles.panelHead}>
               {picker === 'all' ? (
-                // 전체보기: 서버 분류별 탭 — 가구·소품이 기본, 표면류는 있을 때만.
+                // 전체보기: 서버 분류별 탭 — 가구가 기본, 소품(categoryCode
+                // decor·러그)은 분리, 표면류는 있을 때만 (#488).
                 <View style={styles.segment}>
                   {(
                     [
-                      ['furniture', '가구·소품'] as const,
+                      ['furniture', '가구'] as const,
+                      ['decor', '소품'] as const,
                       ['wallpaper', '벽지'] as const,
                       ...(floors.length > 0 ? [['floor', '바닥'] as const] : []),
                       ...(backgrounds.length > 0 ? [['background', '배경'] as const] : []),
@@ -571,9 +579,9 @@ export function RoomDecorScreen({
                 t={t}
               />
             ) : null}
-            {picker === 'all' && allTab === 'furniture' ? (
+            {picker === 'all' && (allTab === 'furniture' || allTab === 'decor') ? (
               <FurnitureGrid
-                items={byOwnedFirst(furniture)}
+                items={byOwnedFirst(allTab === 'furniture' ? furnitureTabItems : decorTabItems)}
                 placed={placed}
                 // 배치 안 된 가구는 방 가운데로 추가, 배치된 가구는 다시 빼기.
                 onPlace={(item) => (placed.includes(item.id) ? removeItem(item.id) : addItem(item))}
