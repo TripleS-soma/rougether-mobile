@@ -31,8 +31,13 @@ export async function getKakaoAccessToken(): Promise<string | null> {
     if (!token.accessToken) throw new Error('no accessToken in Kakao login response');
     return token.accessToken;
   } catch (err) {
-    // SDK는 사용자 취소도 예외로 던진다 — 메시지/코드로 걸러 조용히 무시.
-    const msg = `${(err as { message?: string }).message ?? ''} ${(err as { code?: string }).code ?? ''}`;
+    // SDK는 사용자 취소도 예외로 던진다. 양 플랫폼 공히 취소는 Kakao SDK의
+    // ClientError(reason=Cancelled)가 reason 이름 그대로 code로 전달된다
+    // (Android RNCKakaoUtil.kt reject(e.reason.name…) / iOS "\(reason)") —
+    // 구조화된 code 비교가 1차, 메시지 매칭은 SDK 변형 대비 보조.
+    const code = (err as { code?: string }).code ?? '';
+    if (code === 'Cancelled') return null;
+    const msg = `${(err as { message?: string }).message ?? ''} ${code}`;
     if (/cancel/i.test(msg)) return null;
     throw err;
   }

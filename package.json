@@ -93,6 +93,7 @@
       "^react-native-view-shot$": "<rootDir>/jest/view-shot-mock.js",
       "^@react-native-google-signin/google-signin$": "<rootDir>/jest/google-signin-mock.js",
       "^@react-native-kakao/core$": "<rootDir>/jest/kakao-core-mock.js",
+      "^expo-apple-authentication$": "<rootDir>/jest/expo-apple-authentication-mock.js",
       "^@react-native-kakao/user$": "<rootDir>/jest/kakao-user-mock.js",
       "^@/assets/(.*)$": "<rootDir>/assets/$1",
       "^@/(.*)$": "<rootDir>/src/$1"
