@@ -1,7 +1,15 @@
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 
-import { devLogin, googleLogin, loadSession, logout as apiLogout, onSessionCleared } from '@/api';
+import {
+  devLogin,
+  googleLogin,
+  kakaoLogin,
+  loadSession,
+  logout as apiLogout,
+  onSessionCleared,
+} from '@/api';
 import { getGoogleIdToken, signOutGoogle } from '@/lib/google-auth';
+import { getKakaoAccessToken, signOutKakao } from '@/lib/kakao-auth';
 import { clearPushToken, syncPushToken } from '@/lib/push-token';
 import { resetAnalyticsUser } from '@/lib/analytics';
 
@@ -16,6 +24,8 @@ type AuthContextValue = {
    * 'ok' 성공 / 'cancelled' 사용자가 시트를 닫음(조용히 무시) / 'failed' 실패.
    */
   loginWithGoogle: () => Promise<'ok' | 'cancelled' | 'failed'>;
+  /** 카카오 로그인 (#489 소셜 2차): 카카오 SDK → access token → POST /auth/kakao. */
+  loginWithKakao: () => Promise<'ok' | 'cancelled' | 'failed'>;
   logout: () => Promise<void>;
 };
 
@@ -72,12 +82,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return 'failed';
         }
       },
+      loginWithKakao: async () => {
+        try {
+          const accessToken = await getKakaoAccessToken();
+          if (accessToken == null) return 'cancelled';
+          await kakaoLogin(accessToken);
+          setStatus('authed');
+          void syncPushToken();
+          return 'ok';
+        } catch {
+          return 'failed';
+        }
+      },
       logout: async () => {
         resetAnalyticsUser();
         // 이 기기로 오는 푸시를 먼저 끊고 세션을 정리한다 (#250).
         await clearPushToken();
-        // 구글 세션도 정리 — 다음 로그인 때 계정 선택이 다시 뜨게 (best-effort).
+        // 소셜 세션도 정리 — 다음 로그인 때 계정 선택이 다시 뜨게 (best-effort).
         await signOutGoogle();
+        await signOutKakao();
         await apiLogout();
         setStatus('guest');
       },

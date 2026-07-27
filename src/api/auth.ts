@@ -9,7 +9,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { rawRequest } from './http';
-import type { DevLoginRequest, GoogleLoginRequest, LoginResponse, TokenResponse } from './types';
+import type {
+  DevLoginRequest,
+  GoogleLoginRequest,
+  KakaoLoginRequest,
+  LoginResponse,
+  TokenResponse,
+} from './types';
 
 const ACCESS_KEY = 'rougether.auth.accessToken';
 const REFRESH_KEY = 'rougether.auth.refreshToken';
@@ -108,6 +114,25 @@ export async function devLogin(userId?: number): Promise<LoginResponse> {
 export async function googleLogin(idToken: string): Promise<LoginResponse> {
   const res = await rawRequest<LoginResponse>('POST', '/auth/google', {
     body: { idToken } as GoogleLoginRequest,
+  });
+  if (res.accessToken && res.refreshToken) {
+    await persist({
+      accessToken: res.accessToken,
+      refreshToken: res.refreshToken,
+      userId: res.userId,
+    });
+  }
+  return res;
+}
+
+/**
+ * 카카오 로그인 (#489 소셜 2차): 네이티브 SDK가 얻은 access token을 서버로
+ * 보내 토큰 쌍을 받고 세션을 시작한다. 최초 로그인이면 자동 가입. 서버가
+ * 카카오 API로 토큰 유효성·앱 id를 검증한다.
+ */
+export async function kakaoLogin(accessToken: string): Promise<LoginResponse> {
+  const res = await rawRequest<LoginResponse>('POST', '/auth/kakao', {
+    body: { accessToken } as KakaoLoginRequest,
   });
   if (res.accessToken && res.refreshToken) {
     await persist({

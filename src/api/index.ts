@@ -21,6 +21,7 @@ export {
   clearSession,
   devLogin,
   googleLogin,
+  kakaoLogin,
   getAccessToken,
   getSessionUserId,
   loadSession,

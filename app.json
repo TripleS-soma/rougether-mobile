@@ -104,6 +104,18 @@
         {
           "iosUrlScheme": "com.googleusercontent.apps.499923665503-b1brsuooa940tjrs8vapo4dl2m8mri19"
         }
+      ],
+      [
+        "@react-native-kakao/core",
+        {
+          "nativeAppKey": "51365df21c97a355d92bc098e7677d3f",
+          "android": {
+            "authCodeHandlerActivity": true
+          },
+          "ios": {
+            "handleKakaoOpenUrl": true
+          }
+        }
       ]
     ],
     "experiments": {

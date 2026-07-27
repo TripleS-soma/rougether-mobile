@@ -33,6 +33,8 @@ export type LoginScreenProps = {
    * 'cancelled'는 조용히 무시, 'failed'만 에러로 알린다.
    */
   onGoogleLogin?: () => Promise<'ok' | 'cancelled' | 'failed'>;
+  /** 카카오 로그인 (#489 소셜 2차) — 시맨틱은 onGoogleLogin과 동일. */
+  onKakaoLogin?: () => Promise<'ok' | 'cancelled' | 'failed'>;
 };
 
 /**
@@ -47,6 +49,7 @@ export function LoginScreen({
   onGoSignup,
   onLogin,
   onGoogleLogin,
+  onKakaoLogin,
 }: LoginScreenProps) {
   const t = useTokens();
   const emph = useFontEmphasis();
@@ -83,16 +86,23 @@ export function LoginScreen({
     else setError('로그인에 실패했어요. userId를 확인하고 다시 시도해 주세요.');
   };
 
-  // 구글 로그인 (#489) — 취소는 조용히, 실패만 에러 문구로.
-  const submitGoogle = async () => {
-    if (submitting || !onGoogleLogin) return;
+  // 소셜 로그인 (#489) — 취소는 조용히, 실패만 에러 문구로.
+  const submitSocial = async (
+    login: (() => Promise<'ok' | 'cancelled' | 'failed'>) | undefined,
+    failMessage: string,
+  ) => {
+    if (submitting || !login) return;
     setSubmitting(true);
     setError(null);
-    const result = await onGoogleLogin();
+    const result = await login();
     setSubmitting(false);
     if (result === 'ok') onAuthSuccess?.();
-    else if (result === 'failed') setError('구글 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.');
+    else if (result === 'failed') setError(failMessage);
   };
+  const submitGoogle = () =>
+    submitSocial(onGoogleLogin, '구글 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.');
+  const submitKakao = () =>
+    submitSocial(onKakaoLogin, '카카오 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.');
 
   return (
     <View style={[styles.screen, useScreenStyle(['top', 'bottom'])]}>
@@ -205,7 +215,8 @@ export function LoginScreen({
               textColor="#3C1E1E"
               label="카카오"
               glyph="K"
-              onPress={notReady}
+              // 실연동 (#489 소셜 2차).
+              onPress={onKakaoLogin ? submitKakao : notReady}
             />
             <SocialButton
               bg="#000000"

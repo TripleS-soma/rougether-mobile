@@ -95,6 +95,27 @@ describe('LoginScreen', () => {
     expect(failed.getByText(/구글 로그인에 실패했어요/)).toBeTruthy();
   });
 
+  it('카카오 버튼이 onKakaoLogin을 부르고 성공 시 onAuthSuccess (#489 소셜 2차)', async () => {
+    const onKakaoLogin = jest.fn(async () => 'ok' as const);
+    const onAuthSuccess = jest.fn();
+    const { getByLabelText } = await render(
+      <LoginScreen onKakaoLogin={onKakaoLogin} onAuthSuccess={onAuthSuccess} />,
+    );
+    await fireEvent.press(getByLabelText('카카오로 시작'));
+    expect(onKakaoLogin).toHaveBeenCalledTimes(1);
+    expect(onAuthSuccess).toHaveBeenCalledTimes(1);
+  });
+
+  it('카카오 실패는 에러 문구, 취소는 조용히 (#489)', async () => {
+    const failed = await render(<LoginScreen onKakaoLogin={async () => 'failed'} />);
+    await fireEvent.press(failed.getByLabelText('카카오로 시작'));
+    expect(failed.getByText(/카카오 로그인에 실패했어요/)).toBeTruthy();
+
+    const cancelled = await render(<LoginScreen onKakaoLogin={async () => 'cancelled'} />);
+    await fireEvent.press(cancelled.getByLabelText('카카오로 시작'));
+    expect(cancelled.queryByText(/카카오 로그인에 실패했어요/)).toBeNull();
+  });
+
   it('does not show the dev-login hint', async () => {
     const { queryByText } = await render(<LoginScreen />);
     expect(queryByText(/개발 로그인/)).toBeNull();
