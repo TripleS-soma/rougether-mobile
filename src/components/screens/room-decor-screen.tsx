@@ -41,11 +41,13 @@ import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
 /**
- * What the picker panel is currently choosing for: one furniture slot, or one
- * of the surface layers. Tapping the room's wall opens the wallpaper picker
- * (with a 배경 segment); tapping the floor band opens the floor picker.
+ * What the picker panel is currently choosing for: the full catalog ('all',
+ * 기본 상태 — 항상 열려 있다 #487), or one of the surface layers. Tapping the
+ * room's wall opens the wallpaper picker (with a 배경 segment); tapping the
+ * floor band opens the floor picker. null 상태는 없다 — 서브픽커를 닫으면
+ * 'all'로 복귀한다.
  */
-type PickerTarget = 'wallpaper' | 'floor' | 'background' | 'all' | null;
+type PickerTarget = 'wallpaper' | 'floor' | 'background' | 'all';
 
 export type RoomDecorScreenProps = {
   /** 자유 배치 초기 상태 (#327); 없으면 데모 프리필. */
@@ -435,7 +437,7 @@ export function RoomDecorScreen({
           </View>
         ) : null}
 
-        {!loading && !loadError && picker !== null ? (
+        {!loading && !loadError ? (
           <View style={[styles.panel, { backgroundColor: t.surface }]}>
             <View style={styles.panelHead}>
               {picker === 'all' ? (

@@ -1,4 +1,5 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { BackHandler } from 'react-native';
 import { State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
@@ -286,6 +287,41 @@ describe('RoomDecorScreen (#327 — 자유 배치)', () => {
     await fireEvent.press(getByLabelText('선택 닫기'));
     expect(getByLabelText('가구·소품 탭')).toBeTruthy();
     expect(queryByLabelText('선택 닫기')).toBeNull();
+  });
+});
+
+describe('RoomDecorScreen — 안드로이드 하드웨어 백 (#488)', () => {
+  it('서브픽커는 all로 복귀, all에선 폴스루, dirty면 나가기 확인', async () => {
+    const spy = jest.spyOn(BackHandler, 'addEventListener');
+    const { getByLabelText, getByText } = await render(
+      <RoomDecorScreen initialItems={[]} freeLayout />,
+    );
+    const lastHandler = () =>
+      spy.mock.calls[spy.mock.calls.length - 1][1] as unknown as () => boolean;
+
+    // 벽지 서브픽커에서 백 → 소비(true)하고 전체 패널로 복귀.
+    await fireEvent.press(getByLabelText('벽 꾸미기'));
+    let handled = false;
+    await act(async () => {
+      handled = lastHandler()();
+    });
+    expect(handled).toBe(true);
+    expect(getByLabelText('가구·소품 탭')).toBeTruthy();
+
+    // 기본(all) + 변경 없음 → false (셸의 기본 뒤로가기로 폴스루).
+    await act(async () => {
+      handled = lastHandler()();
+    });
+    expect(handled).toBe(false);
+
+    // 아이템 추가(dirty) 후 백 → 나가기 확인 모달을 띄우고 소비.
+    await fireEvent.press(getByLabelText('초록 식물'));
+    await act(async () => {
+      handled = lastHandler()();
+    });
+    expect(handled).toBe(true);
+    expect(getByText('변경사항을 저장할까요?')).toBeTruthy();
+    spy.mockRestore();
   });
 });
 
