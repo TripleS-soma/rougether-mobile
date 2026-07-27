@@ -41,11 +41,13 @@ import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
 /**
- * What the picker panel is currently choosing for: one furniture slot, or one
- * of the surface layers. Tapping the room's wall opens the wallpaper picker
- * (with a 배경 segment); tapping the floor band opens the floor picker.
+ * What the picker panel is currently choosing for: the full catalog ('all',
+ * 기본 상태 — 항상 열려 있다 #487), or one of the surface layers. Tapping the
+ * room's wall opens the wallpaper picker (with a 배경 segment); tapping the
+ * floor band opens the floor picker. null 상태는 없다 — 서브픽커를 닫으면
+ * 'all'로 복귀한다.
  */
-type PickerTarget = 'wallpaper' | 'floor' | 'background' | 'all' | null;
+type PickerTarget = 'wallpaper' | 'floor' | 'background' | 'all';
 
 export type RoomDecorScreenProps = {
   /** 자유 배치 초기 상태 (#327); 없으면 데모 프리필. */
@@ -157,7 +159,9 @@ export function RoomDecorScreen({
   }
   const dirty = snap(items, wallpaperId, floorId, backgroundId) !== initialSnapRef.current;
   const [confirmLeave, setConfirmLeave] = useState(false);
-  const [picker, setPicker] = useState<PickerTarget>(null);
+  // 진입 즉시 가구 패널이 열려 있다 (#487) — 전체보기 버튼/가이드 카드 없이
+  // 'all'이 기본 상태. 서브픽커(벽지/바닥)를 닫으면 'all'로 복귀한다.
+  const [picker, setPicker] = useState<PickerTarget>('all');
   // 첫 자유 배치 저장은 SLOT_V1→FREE_V1 비가역 전환 — 한 번 확인받는다 (#327).
   const [confirmMigrate, setConfirmMigrate] = useState(false);
   const migrateOkRef = useRef(freeLayout);
@@ -188,8 +192,9 @@ export function RoomDecorScreen({
   // unsaved-changes guard; without a reason we fall through to the shell.
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (picker) {
-        setPicker(null);
+      // 서브픽커만 닫는다 — 'all'은 기본 상태라 다음 가드(dirty)로 넘어간다 (#487).
+      if (picker !== 'all') {
+        setPicker('all');
         return true;
       }
       if (confirmLeave) {
@@ -292,11 +297,17 @@ export function RoomDecorScreen({
   // What the open picker offers, owned first so placing needs no digging.
   // 보유중 filter hides the shop side of every picker (slot/surface/전체보기).
   const [ownedOnly, setOwnedOnly] = useState(false);
-  // 전체보기 탭 — 서버 분류(surfaceSlotType: 가구/벽지/바닥/배경)별로 나눠
-  // 한 번에 한 그리드만 보여준다 (통짜 세로 나열은 스크롤이 너무 길다).
-  const [allTab, setAllTab] = useState<'furniture' | 'wallpaper' | 'floor' | 'background'>(
-    'furniture',
-  );
+  // 전체보기 탭 — 표면류(surfaceSlotType: 벽지/바닥/배경)에 더해, positioned
+  // 아이템은 categoryCode(가구/소품)로 한 번 더 나눈다 (#488). 한 번에 한
+  // 그리드만 — 통짜 세로 나열은 스크롤이 너무 길다.
+  const [allTab, setAllTab] = useState<
+    'furniture' | 'decor' | 'wallpaper' | 'floor' | 'background'
+  >('furniture');
+  // 소품 = 서버 categoryCode 'decor'(장식)와 'floor'(러그); 가구 = 나머지
+  // (서버 'furniture', 데모 '한옥' 세트 포함).
+  const isDecorItem = (i: FurnitureItem) => i.category === '장식' || i.category === '러그';
+  const furnitureTabItems = useMemo(() => furniture.filter((i) => !isDecorItem(i)), [furniture]);
+  const decorTabItems = useMemo(() => furniture.filter(isDecorItem), [furniture]);
   const isSurfacePicker = picker === 'wallpaper' || picker === 'floor' || picker === 'background';
   const byOwnedFirst = <T extends { id: string }>(arr: T[]) =>
     (ownedOnly ? arr.filter((i) => owned.has(i.id)) : [...arr]).sort(
@@ -432,32 +443,17 @@ export function RoomDecorScreen({
           </View>
         ) : null}
 
-        {!loading && !loadError && picker === null ? (
-          <View style={[styles.guideCard, { backgroundColor: t.surface }]}>
-            <Text style={[Typography.label, { color: t.text }]}>가구를 끌어서 꾸며보세요</Text>
-            <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              가구를 끌어 원하는 곳으로 옮기고, 가구를 탭하면 회전·크기 조절·빼기를 할 수 있어요.
-              벽·바닥을 누르면 벽지와 바닥을 바꿀 수 있어요.
-            </Text>
-            <Pressable
-              onPress={() => setPicker('all')}
-              accessibilityRole="button"
-              accessibilityLabel="전체보기"
-              style={[styles.allBtn, { backgroundColor: t.surfaceMuted }]}>
-              <Text style={[Typography.label, { color: t.primaryText }]}>전체보기</Text>
-            </Pressable>
-          </View>
-        ) : null}
-
-        {!loading && !loadError && picker !== null ? (
+        {!loading && !loadError ? (
           <View style={[styles.panel, { backgroundColor: t.surface }]}>
             <View style={styles.panelHead}>
               {picker === 'all' ? (
-                // 전체보기: 서버 분류별 탭 — 가구·소품이 기본, 표면류는 있을 때만.
+                // 전체보기: 서버 분류별 탭 — 가구가 기본, 소품(categoryCode
+                // decor·러그)은 분리, 표면류는 있을 때만 (#488).
                 <View style={styles.segment}>
                   {(
                     [
-                      ['furniture', '가구·소품'] as const,
+                      ['furniture', '가구'] as const,
+                      ['decor', '소품'] as const,
                       ['wallpaper', '벽지'] as const,
                       ...(floors.length > 0 ? [['floor', '바닥'] as const] : []),
                       ...(backgrounds.length > 0 ? [['background', '배경'] as const] : []),
@@ -523,14 +519,17 @@ export function RoomDecorScreen({
                   이 자리에 놓을 가구
                 </Text>
               )}
-              <Pressable
-                onPress={() => setPicker(null)}
-                accessibilityRole="button"
-                accessibilityLabel="선택 닫기"
-                hitSlop={8}
-                style={[styles.closeBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Icon name="close" size={14} color={t.text} />
-              </Pressable>
+              {/* 'all'은 기본 상태라 닫을 곳이 없다 — 서브픽커에서만 전체로 복귀 (#487). */}
+              {picker !== 'all' ? (
+                <Pressable
+                  onPress={() => setPicker('all')}
+                  accessibilityRole="button"
+                  accessibilityLabel="선택 닫기"
+                  hitSlop={8}
+                  style={[styles.closeBtn, { backgroundColor: t.surfaceMuted }]}>
+                  <Icon name="close" size={14} color={t.text} />
+                </Pressable>
+              ) : null}
             </View>
 
             <View style={styles.filterRow}>
@@ -580,9 +579,9 @@ export function RoomDecorScreen({
                 t={t}
               />
             ) : null}
-            {picker === 'all' && allTab === 'furniture' ? (
+            {picker === 'all' && (allTab === 'furniture' || allTab === 'decor') ? (
               <FurnitureGrid
-                items={byOwnedFirst(furniture)}
+                items={byOwnedFirst(allTab === 'furniture' ? furnitureTabItems : decorTabItems)}
                 placed={placed}
                 // 배치 안 된 가구는 방 가운데로 추가, 배치된 가구는 다시 빼기.
                 onPlace={(item) => (placed.includes(item.id) ? removeItem(item.id) : addItem(item))}
@@ -851,7 +850,6 @@ function SwatchGrid({
   onSelect: (id: string) => void;
   onClear?: () => void;
 }) {
-  const emph = useFontEmphasis();
   return (
     <View style={styles.grid}>
       <ClearTile onClear={onClear} t={t} />
@@ -890,9 +888,7 @@ function SwatchGrid({
             ) : (
               <View style={[styles.swatch, { backgroundColor: item.color }]} />
             )}
-            <Text style={[styles.tileName, emph('medium'), { color: t.text }]} numberOfLines={2}>
-              {item.name}
-            </Text>
+            {/* 이름은 표시하지 않는다 (#487) — 이미지가 곧 정보. 접근성 라벨은 유지. */}
             {isOwned ? (
               <Text style={[styles.tilePrice, { color: t.textMuted }]}>보유</Text>
             ) : (
@@ -926,7 +922,6 @@ function FurnitureGrid({
   onClear?: () => void;
 }) {
   const Typography = useTypography();
-  const emph = useFontEmphasis();
   if (items.length === 0) {
     return (
       <Text style={[Typography.supporting, styles.emptyPicker, { color: t.textMuted }]}>
@@ -962,12 +957,14 @@ function FurnitureGrid({
                 opacity: !isOwned && !affordable ? 0.5 : 1,
               },
             ]}>
-            <View style={styles.thumbWrap}>
+            {/* 미리보기는 접근성에서 숨긴다 — 타일 Pressable 라벨과 이중 안내 방지. */}
+            <View
+              style={styles.thumbWrap}
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants">
               <FurniturePlaceholder item={item} showName={false} />
             </View>
-            <Text style={[styles.tileName, emph('medium'), { color: t.text }]} numberOfLines={2}>
-              {item.name}
-            </Text>
+            {/* 이름은 표시하지 않는다 (#487) — 접근성 라벨은 유지. */}
             {isOwned ? (
               <Text style={[styles.tilePrice, { color: t.textMuted }]}>보유</Text>
             ) : (
@@ -1063,20 +1060,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
     gap: Spacing.two,
-  },
-  allBtn: {
-    marginTop: Spacing.one,
-    borderRadius: Radius.pill,
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two,
-  },
-  guideCard: {
-    marginHorizontal: Spacing.four,
-    marginTop: Spacing.two,
-    borderRadius: Radius.lg,
-    padding: Spacing.four,
-    gap: Spacing.one,
-    alignItems: 'center',
   },
   panel: {
     marginHorizontal: Spacing.three,
