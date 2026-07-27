@@ -3,6 +3,23 @@
  * (http://3.35.167.122:8080/v3/api-docs). Regenerate with `npm run gen:api-types`. Do not edit by hand.
  */
 
+export type AppleLoginRequest = {
+  idToken: string;
+};
+
+export type BugReportListResponse = {
+  items?: BugReportResponse[];
+};
+
+export type BugReportResponse = {
+  bugReportId?: number;
+  title?: string;
+  content?: string;
+  status?: 'RECEIVED' | 'IN_PROGRESS' | 'RESOLVED';
+  screenshotKeys?: string[];
+  createdAt?: string;
+};
+
 export type CalendarDayResponse = {
   date?: string;
   categories?: TodayCategoryGroup[];
@@ -308,15 +325,8 @@ export type HouseMissionResponse = {
   endsAt?: string;
   myContribution?: number;
   achieved?: boolean;
+  todayClaimed?: boolean;
   createdAt?: string;
-};
-
-/** 미리보기 응답의 구성원별 방 렌더 데이터 (#386) — 가입순, ACTIVE 구성원만. */
-export type PreviewMemberRoom = {
-  membershipId?: number;
-  nickname?: string;
-  /** 방을 아직 만들지 않은 구성원은 null — 기본 빈 방으로 렌더. */
-  room?: RoomResponse | null;
 };
 
 export type HousePreviewDetailResponse = {
@@ -330,7 +340,7 @@ export type HousePreviewDetailResponse = {
   goals?: GoalSummary[];
   isMember?: boolean;
   isFull?: boolean;
-  memberRooms?: PreviewMemberRoom[];
+  memberRooms?: MemberRoomSummary[];
 };
 
 export type HousePreviewResponse = {
@@ -414,8 +424,17 @@ export type MeResponse = {
   userId?: number;
   nickname?: string;
   bio?: string;
+  profileImageKey?: string;
   lastAccessedAt?: string;
   onboarding?: OnboardingSummary;
+};
+
+export type MemberRoomSummary = {
+  membershipId?: number;
+  nickname?: string;
+  // Manual patch: 방을 아직 만들지 않은 구성원은 null — 기본 빈 방으로 렌더.
+  // Restore after `npm run gen:api-types`.
+  room?: RoomRenderResponse | null;
 };
 
 export type MemberRoutineItem = {
@@ -460,6 +479,7 @@ export type MissionSummary = {
   status?: 'ACTIVE' | 'COMPLETED' | 'EXPIRED';
   startsAt?: string;
   endsAt?: string;
+  todayClaimed?: boolean;
   createdAt?: string;
 };
 
@@ -516,7 +536,14 @@ export type MyItemSummary = {
 
 export type NotificationItem = {
   notificationId?: number;
-  type?: 'HOUSE_KICK' | 'ROUTINE_REMINDER' | 'FRIEND_CHEER';
+  type?:
+    | 'HOUSE_KICK'
+    | 'ROUTINE_REMINDER'
+    | 'TODO_REMINDER'
+    | 'FRIEND_CHEER'
+    | 'HOUSE_MISSION_ACHIEVED'
+    | 'HOUSE_MEMBER_JOINED'
+    | 'HOUSE_MEMBER_LEFT';
   title?: string;
   body?: string;
   isRead?: boolean;
@@ -527,6 +554,18 @@ export type NotificationListResponse = {
   items?: NotificationItem[];
   nextCursor?: number;
   hasNext?: boolean;
+};
+
+export type NotificationSettingResponse = {
+  all?: boolean;
+  reminder?: boolean;
+  house?: boolean;
+};
+
+export type NotificationSettingUpdateRequest = {
+  all?: boolean;
+  reminder?: boolean;
+  house?: boolean;
 };
 
 export type OnboardingCharacterRequest = {
@@ -570,6 +609,10 @@ export type PlacementItem = {
   flipped?: boolean;
 };
 
+export type ProfileImageResponse = {
+  profileImageKey?: string;
+};
+
 export type PurchaseResponse = {
   userItemId?: number;
   itemId?: number;
@@ -579,6 +622,21 @@ export type PurchaseResponse = {
 
 export type RefreshRequest = {
   refreshToken: string;
+};
+
+export type RenderPlacement = {
+  assetKey?: string;
+  positionX?: number;
+  positionY?: number;
+  zIndex?: number;
+  scale?: number;
+  rotationDeg?: number;
+  flipped?: boolean;
+};
+
+export type RenderSlot = {
+  slotType?: string;
+  assetKey?: string;
 };
 
 export type RepeatDays = {
@@ -612,6 +670,14 @@ export type RoomPlacementResponse = {
   rotationDeg?: number;
   flipped?: boolean;
   updatedAt?: string;
+};
+
+export type RoomRenderResponse = {
+  growthLevel?: number;
+  layoutFormat?: 'SLOT_V1' | 'FREE_V1';
+  character?: RoomCharacterResponse;
+  slots?: RenderSlot[];
+  placements?: RenderPlacement[];
 };
 
 export type RoomResponse = {

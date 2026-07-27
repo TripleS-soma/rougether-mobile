@@ -53,6 +53,7 @@ import type {
 
 import type { CalendarDayItem } from '@/components/screens/my-room-screen';
 import type { NotificationEntry } from '@/components/screens/notification-list-screen';
+import type { NotificationSettings } from '@/components/screens/notification-settings-screen';
 import type { OwnedCharacter } from '@/components/screens/sheets/character-picker-sheet';
 
 import type {
@@ -72,13 +73,14 @@ import type {
   HouseMemberDayResponse,
   HouseMemberRoutineCompletionListResponse,
   HousePreviewDetailResponse,
-  PreviewMemberRoom,
   HousePreviewResponse,
   HouseSummary,
   ItemResponse,
+  MemberRoomSummary,
   MemberSummary,
   MissionSummary,
   NotificationItem,
+  NotificationSettingResponse,
   RepeatDays,
   RoutineCreateRequest,
   RoutineResponse,
@@ -753,6 +755,14 @@ export function toNotificationEntry(n: NotificationItem): NotificationEntry {
   };
 }
 
+/**
+ * Push 알림 설정 (#495) — 서버가 안 내려준 필드는 서버 기본과 같게 켜짐(true)
+ * 으로 본다.
+ */
+export function toNotificationSettings(res: NotificationSettingResponse): NotificationSettings {
+  return { all: res.all ?? true, reminder: res.reminder ?? true, house: res.house ?? true };
+}
+
 /** Browse-list card model from the API house summary (decorations cycled). */
 /**
  * 미리보기 memberRooms 항목 → 창문 타일 렌더 모델 (#386) — 집 화면 멤버 방과
@@ -799,7 +809,7 @@ export function toHousePreviewDetail(
     isMember: p.isMember,
     isFull: p.isFull,
     rooms: catalogue
-      ? (p.memberRooms ?? []).map((m: PreviewMemberRoom) => toPreviewRoom(m.room, catalogue))
+      ? (p.memberRooms ?? []).map((m: MemberRoomSummary) => toPreviewRoom(m.room, catalogue))
       : undefined,
   };
 }
