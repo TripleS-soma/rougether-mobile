@@ -678,26 +678,39 @@ describe('MyRoomScreen', () => {
     expect(empty.getByText('아직 루틴이 없어요.')).toBeTruthy();
   });
 
-  // Camera test last: its photo path leaves a resolved promise that can disrupt
-  // a following test's render in this harness.
-  it('requires a camera photo to complete a 인증사진형 routine', async () => {
+  // 인증사진형 잠시 내림 (#499) — PHOTO 루틴도 카메라 없이 일반 체크로 완료된다.
+  // 복구 시 아래 주석의 카메라 게이트 테스트를 되살릴 것.
+  it('completes a 인증사진형 routine without the camera while shelved (#499)', async () => {
     const onToggleCompletion = jest.fn();
-    const onRequestPhoto = jest.fn().mockResolvedValue('file://verify.jpg');
     const { getByLabelText } = await render(
-      <MyRoomScreen
-        routines={SAMPLE_ROUTINES}
-        onToggleCompletion={onToggleCompletion}
-        onRequestPhoto={onRequestPhoto}
-      />,
+      <MyRoomScreen routines={SAMPLE_ROUTINES} onToggleCompletion={onToggleCompletion} />,
     );
 
-    // '하루 회고' (id 5): no photoVerify → the checkbox toggles today immediately.
-    fireEvent.press(getByLabelText('하루 회고'));
-    expect(onToggleCompletion).toHaveBeenCalledWith('5', TODAY);
-
-    // '영어 공부' (id 4): photoVerify → camera, then toggle today.
+    // '영어 공부' (id 4): photoVerify여도 즉시 완료 토글.
     fireEvent.press(getByLabelText('영어 공부'));
-    await waitFor(() => expect(onToggleCompletion).toHaveBeenCalledWith('4', TODAY));
-    expect(onRequestPhoto).toHaveBeenCalled();
+    expect(onToggleCompletion).toHaveBeenCalledWith('4', TODAY);
   });
+
+  // // Camera test last: its photo path leaves a resolved promise that can disrupt
+  // // a following test's render in this harness.
+  // it('requires a camera photo to complete a 인증사진형 routine', async () => {
+  //   const onToggleCompletion = jest.fn();
+  //   const onRequestPhoto = jest.fn().mockResolvedValue('file://verify.jpg');
+  //   const { getByLabelText } = await render(
+  //     <MyRoomScreen
+  //       routines={SAMPLE_ROUTINES}
+  //       onToggleCompletion={onToggleCompletion}
+  //       onRequestPhoto={onRequestPhoto}
+  //     />,
+  //   );
+  //
+  //   // '하루 회고' (id 5): no photoVerify → the checkbox toggles today immediately.
+  //   fireEvent.press(getByLabelText('하루 회고'));
+  //   expect(onToggleCompletion).toHaveBeenCalledWith('5', TODAY);
+  //
+  //   // '영어 공부' (id 4): photoVerify → camera, then toggle today.
+  //   fireEvent.press(getByLabelText('영어 공부'));
+  //   await waitFor(() => expect(onToggleCompletion).toHaveBeenCalledWith('4', TODAY));
+  //   expect(onRequestPhoto).toHaveBeenCalled();
+  // });
 });

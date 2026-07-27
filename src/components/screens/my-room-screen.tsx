@@ -49,7 +49,8 @@ import { BearCheck } from '@/components/ui/bear-check';
 import { Icon } from '@/components/ui/icon';
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { Radius, Spacing, StaticWhite } from '@/constants/theme';
-import { captureVerificationPhoto } from '@/lib/photo-verify';
+// 인증사진형 잠시 내림 (#499) — 복구 시 카메라 캡처 import를 되살릴 것.
+// import { captureVerificationPhoto } from '@/lib/photo-verify';
 import { saveRoomImage } from '@/lib/room-capture';
 import {
   DEFAULT_WALLPAPER_ID,
@@ -235,12 +236,13 @@ export type MyRoomScreenProps = {
   onMoveRoutineOccurrence?: (id: string, dueDate: string) => void;
   /** Delete a routine (kebab → 삭제). */
   onDeleteRoutine?: (id: string) => void;
-  /**
-   * Capture a verification photo when completing a 인증사진형 routine; resolves to
-   * the photo URI, or null to cancel the completion. Defaults to the device
-   * camera (expo-image-picker); inject a stub in tests.
-   */
-  onRequestPhoto?: () => Promise<string | null>;
+  // 인증사진형 잠시 내림 (#499) — 복구 시 아래 prop을 되살릴 것.
+  // /**
+  //  * Capture a verification photo when completing a 인증사진형 routine; resolves to
+  //  * the photo URI, or null to cancel the completion. Defaults to the device
+  //  * camera (expo-image-picker); inject a stub in tests.
+  //  */
+  // onRequestPhoto?: () => Promise<string | null>;
 };
 
 /**
@@ -308,7 +310,7 @@ export function MyRoomScreen({
   onUpdateTodoDueDate,
   onMoveRoutineOccurrence,
   onDeleteRoutine,
-  onRequestPhoto = captureVerificationPhoto,
+  // onRequestPhoto = captureVerificationPhoto, // 인증사진형 잠시 내림 (#499)
 }: MyRoomScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
@@ -652,10 +654,8 @@ export function MyRoomScreen({
     </View>
   );
 
-  // Completing a 인증사진형 routine first requires a camera photo; if none is
-  // captured (cancelled / denied), the completion is aborted. Kept sync on the
-  // common (non-photo) path; only the photo path awaits the camera. Completion
-  // is toggled for a specific date (오늘 in 방, 선택한 날짜 in 달력).
+  // Completion is toggled for a specific date (오늘 in 방, 선택한 날짜 in 달력).
+  // (인증사진형 카메라 게이트는 잠시 내림 — #499, 아래 주석 블록.)
   const handleToggle = (routine: Routine, date: string, e?: GestureResponderEvent) => {
     const done = isDone(routine.id, date);
     // 코인 플라이는 서버가 실제 보상을 준 완료에만 (#444) — 탭 좌표는 지금
@@ -671,15 +671,17 @@ export function MyRoomScreen({
         });
       }
     };
-    if (routine.photoVerify && !done) {
-      void onRequestPhoto().then((uri) => {
-        if (uri) {
-          hapticSuccess();
-          fire();
-        }
-      });
-      return;
-    }
+    // 인증사진형 잠시 내림 (#499) — PHOTO 루틴도 일반 체크로 완료된다.
+    // 복구 시 이 카메라 게이트를 되살릴 것 (사진은 서버 전송 없는 로컬 게이트).
+    // if (routine.photoVerify && !done) {
+    //   void onRequestPhoto().then((uri) => {
+    //     if (uri) {
+    //       hapticSuccess();
+    //       fire();
+    //     }
+    //   });
+    //   return;
+    // }
     if (done) hapticSelection();
     else hapticSuccess();
     fire();
@@ -761,7 +763,7 @@ export function MyRoomScreen({
           ]}>
           {row.title}
         </Text>
-        {row.time || row.photoVerify ? (
+        {row.time ? (
           <View style={styles.badges}>
             {row.time ? (
               <View style={styles.badge}>
@@ -771,12 +773,13 @@ export function MyRoomScreen({
                 </Text>
               </View>
             ) : null}
+            {/* 인증사진형 잠시 내림 (#499) — 복구 시 사진 인증 배지를 되살릴 것.
             {row.photoVerify ? (
               <View style={styles.badge}>
                 <Icon name="camera" size={12} color={t.textMuted} />
                 <Text style={[styles.badgeText, { color: t.textMuted }]}>사진 인증</Text>
               </View>
-            ) : null}
+            ) : null} */}
           </View>
         ) : null}
       </Pressable>
