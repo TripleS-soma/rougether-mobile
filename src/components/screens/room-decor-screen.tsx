@@ -78,8 +78,11 @@ export type RoomDecorScreenProps = {
   /** Worn character's CDN animation keys (forwarded to the <Room /> preview). */
   characterAnimations?: CharacterAnimationSet;
   onBack?: () => void;
-  /** Buy a not-yet-owned catalog item with dia. */
-  onBuy?: (itemId: string) => void;
+  /**
+   * Buy a not-yet-owned catalog item with dia. Resolve true on success —
+   * 일괄 구매(프리뷰 확인 모달)가 실패 시 저장을 중단한다 (#501).
+   */
+  onBuy?: (itemId: string) => Promise<boolean> | void;
   /**
    * Commit the current layout (null floor/background = surface cleared).
    * 'conflict' = 다른 기기 선저장(409) — 화면이 재로드 모달을 띄운다.
@@ -159,6 +162,67 @@ export function RoomDecorScreen({
   }
   const dirty = snap(items, wallpaperId, floorId, backgroundId) !== initialSnapRef.current;
   const [confirmLeave, setConfirmLeave] = useState(false);
+
+  // --- 프리뷰 (#501): 미보유인데 배치/적용돼 있는 아이템. 별도 상태 없이
+  // owned와의 차집합으로 유도한다 — 구매 성공으로 ownedIds가 갱신되면 그
+  // 자리에서 자동으로 정식 배치가 된다.
+  type SurfaceKind = 'wallpaper' | 'floor' | 'background';
+  const SURFACE_LABEL: Record<SurfaceKind, string> = {
+    wallpaper: '벽지',
+    floor: '바닥',
+    background: '배경',
+  };
+  const surfacePreviews = useMemo(() => {
+    const out: { kind: SurfaceKind; id: string; name: string; price: number }[] = [];
+    // 진입 시점 값(서버 저장/시드)은 미보유여도 프리뷰가 아니다 — 사용자가
+    // 고르지 않은 표면의 구매를 강요하지 않는다 (신규 계정 기본 벽지 등).
+    const push = (
+      kind: SurfaceKind,
+      id: string | null,
+      initial: string | null,
+      arr: Wallpaper[],
+    ) => {
+      if (!id || id === initial || owned.has(id)) return;
+      const it = arr.find((w) => w.id === id);
+      if (it) out.push({ kind, id: it.id, name: it.name, price: it.price });
+    };
+    push('wallpaper', wallpaperId, initialWallpaperId, wallpapers);
+    push('floor', floorId, initialFloorId, floors);
+    push('background', backgroundId, initialBackgroundId, backgrounds);
+    return out;
+  }, [
+    owned,
+    wallpaperId,
+    floorId,
+    backgroundId,
+    wallpapers,
+    floors,
+    backgrounds,
+    initialWallpaperId,
+    initialFloorId,
+    initialBackgroundId,
+  ]);
+  const furniturePreviews = useMemo(
+    () =>
+      items
+        .filter((pl) => !owned.has(pl.furnitureId))
+        .map((pl) => furniture.find((f) => f.id === pl.furnitureId))
+        .filter((f): f is FurnitureItem => !!f)
+        .map((f) => ({ id: f.id, name: f.name, price: f.price })),
+    [items, owned, furniture],
+  );
+  /** 적용 시점에 구매가 필요한 프리뷰 전체 (가구 + 표면류). */
+  const pendingPreviews = useMemo(
+    () => [
+      ...furniturePreviews,
+      ...surfacePreviews.map(({ id, name, price }) => ({ id, name, price })),
+    ],
+    [furniturePreviews, surfacePreviews],
+  );
+  const previewTotal = pendingPreviews.reduce((sum, i) => sum + i.price, 0);
+  // 적용하기 시 미구매 프리뷰 일괄 확인 모달 (#501).
+  const [confirmPreviews, setConfirmPreviews] = useState(false);
+  const [bulkBuying, setBulkBuying] = useState(false);
   // 진입 즉시 가구 패널이 열려 있다 (#487) — 전체보기 버튼/가이드 카드 없이
   // 'all'이 기본 상태. 서브픽커(벽지/바닥)를 닫으면 'all'로 복귀한다.
   const [picker, setPicker] = useState<PickerTarget>('all');
@@ -169,20 +233,77 @@ export function RoomDecorScreen({
   // 409 리비전 충돌(다른 기기 선저장) — 재로드 안내 모달.
   const [conflictOpen, setConflictOpen] = useState(false);
 
-  const doApply = async (thenBack: boolean) => {
-    const result = await onApply?.(items, wallpaperId, floorId, backgroundId);
+  type ApplyValues = {
+    items: PlacedFurniture[];
+    wallpaperId: string;
+    floorId: string | null;
+    backgroundId: string | null;
+  };
+  const currentValues = (): ApplyValues => ({ items, wallpaperId, floorId, backgroundId });
+  // 제외하고 저장 등에서 넘어온 값 — 마이그레이션 확인을 건너뛴 뒤에도 유지.
+  const pendingApplyRef = useRef<ApplyValues | null>(null);
+  const doApply = async (thenBack: boolean, v: ApplyValues = currentValues()) => {
+    const result = await onApply?.(v.items, v.wallpaperId, v.floorId, v.backgroundId);
     if (result === 'conflict') return setConflictOpen(true);
     if (result === 'fail') return; // 실패 토스트는 훅이 띄운다.
-    initialSnapRef.current = snap(items, wallpaperId, floorId, backgroundId);
+    initialSnapRef.current = snap(v.items, v.wallpaperId, v.floorId, v.backgroundId);
     if (thenBack) onBack?.();
   };
-  const apply = (thenBack = true) => {
+  /** 프리뷰 정리가 끝난 값으로 저장을 이어간다 — 마이그레이션 게이트 포함. */
+  const proceedApply = (thenBack: boolean, v: ApplyValues) => {
     if (!migrateOkRef.current) {
       pendingBackRef.current = thenBack;
+      pendingApplyRef.current = v;
       setConfirmMigrate(true);
       return;
     }
-    void doApply(thenBack);
+    void doApply(thenBack, v);
+  };
+  const apply = (thenBack = true) => {
+    // 미구매 프리뷰가 남아 있으면 일괄 확인부터 (#501) — 서버는 미보유를
+    // 저장할 수 없다(placement에 userItemId 필수).
+    if (pendingPreviews.length > 0) {
+      pendingBackRef.current = thenBack;
+      setConfirmPreviews(true);
+      return;
+    }
+    proceedApply(thenBack, currentValues());
+  };
+  /** 프리뷰를 뺀 저장값 — 표면류는 진입 시점 값으로 복원한다. */
+  const strippedValues = (): ApplyValues => ({
+    items: items.filter((pl) => owned.has(pl.furnitureId)),
+    wallpaperId: owned.has(wallpaperId) ? wallpaperId : initialWallpaperId,
+    floorId: floorId && owned.has(floorId) ? floorId : initialFloorId,
+    backgroundId: backgroundId && owned.has(backgroundId) ? backgroundId : initialBackgroundId,
+  });
+  const saveWithoutPreviews = () => {
+    const v = strippedValues();
+    // 화면 상태도 저장값과 맞춘다 — 프리뷰가 방에 남아 보이면 안 된다.
+    setItems(v.items);
+    setWallpaperId(v.wallpaperId);
+    setFloorId(v.floorId);
+    setBackgroundId(v.backgroundId);
+    setConfirmPreviews(false);
+    proceedApply(pendingBackRef.current, v);
+  };
+  const buyAllAndSave = async () => {
+    if (!onBuy) return;
+    setBulkBuying(true);
+    try {
+      for (const pv of pendingPreviews) {
+        const ok = await onBuy(pv.id);
+        if (ok === false) {
+          // 실패(잔액 부족 등) 토스트는 구매 훅이 띄운다 — 모달을 닫고
+          // 프리뷰는 그대로 두어 사용자가 정리하게 한다.
+          setConfirmPreviews(false);
+          return;
+        }
+      }
+      setConfirmPreviews(false);
+      proceedApply(pendingBackRef.current, currentValues());
+    } finally {
+      setBulkBuying(false);
+    }
   };
   const handleBack = () => {
     if (dirty) setConfirmLeave(true);
@@ -213,6 +334,14 @@ export function RoomDecorScreen({
   const [pendingBuy, setPendingBuy] = useState<{ id: string; name: string; price: number } | null>(
     null,
   );
+  /** 구매 진입점 공통 (#501) — 잔액 부족은 모달 대신 토스트로 끝낸다. */
+  const requestBuy = (item: { id: string; name: string; price: number }) => {
+    if (diaBalance < item.price) {
+      toast('다이아가 부족해요', 'error');
+      return;
+    }
+    setPendingBuy(item);
+  };
 
   // 자유 배치 모드에선 방의 벽/바닥 밴드만 픽커 진입점이다 (가구는 트레이·전체보기).
   const onRegionPress = (region: RoomRegion) => {
@@ -226,6 +355,15 @@ export function RoomDecorScreen({
   const [roomSize, setRoomSize] = useState({ w: 0, h: 0 });
   // 선택된 가구 — 링 + 툴바(회전/반전/앞뒤/빼기) + 크기 핸들 대상 (#333).
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // 프리뷰 가구는 "선택된 상태에서 한 번 더 탭"이 구매다 (#501).
+  const handleFurnitureSelect = (id: string) => {
+    if (selectedId === id && !owned.has(id)) {
+      const item = furniture.find((f) => f.id === id);
+      if (item) requestBuy({ id: item.id, name: item.name, price: item.price });
+      return;
+    }
+    setSelectedId(id);
+  };
 
   /** 아이템별 FREE 기본 위치에 새 가구를 놓는다 — 같은 가구는 방에 1개만. */
   const addItem = (item: FurnitureItem) => {
@@ -376,13 +514,36 @@ export function RoomDecorScreen({
                         placement={p}
                         roomSize={roomSize}
                         selected={p.furnitureId === selectedId}
-                        onSelect={setSelectedId}
+                        onSelect={handleFurnitureSelect}
                         onDragEnd={commitDrag}
                         onScaleEnd={commitScale}
+                        preview={!owned.has(p.furnitureId)}
+                        previewPrice={item.price}
                       />
                     );
                   })
               : null}
+            {/* 표면류 프리뷰 가격 칩 (#501) — 탭하면 구매 확인. */}
+            {surfacePreviews.length > 0 ? (
+              <View style={styles.previewChips} pointerEvents="box-none">
+                {surfacePreviews.map((sp) => (
+                  <Pressable
+                    key={sp.kind}
+                    onPress={() => requestBuy({ id: sp.id, name: sp.name, price: sp.price })}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${SURFACE_LABEL[sp.kind]} 프리뷰 구매`}
+                    style={[
+                      styles.previewChip,
+                      { backgroundColor: t.surface, borderColor: t.border },
+                    ]}>
+                    <Icon name="dia" size={10} color={t.primary} />
+                    <Text style={[Typography.supporting, { color: t.text }]}>
+                      {SURFACE_LABEL[sp.kind]} {sp.price}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
             {/* 캐릭터는 항상 가구 앞 — 오버레이(드래그 중 z 9999)보다 위 전용 레이어. */}
             <View pointerEvents="none" style={styles.characterLayer}>
               <CharacterAvatar
@@ -394,6 +555,28 @@ export function RoomDecorScreen({
             {/* 선택 툴바 (#333) — 캔버스 위 고정, 캐릭터 레이어보다도 위. */}
             {selectedId ? (
               <View style={[styles.toolbar, { backgroundColor: t.surface, borderColor: t.border }]}>
+                {/* 프리뷰 가구 구매 버튼 (#501) — 재탭과 같은 동작의 명시적 진입점. */}
+                {!owned.has(selectedId)
+                  ? (() => {
+                      const sel = furniture.find((f) => f.id === selectedId);
+                      if (!sel) return null;
+                      return (
+                        <Pressable
+                          onPress={() =>
+                            requestBuy({ id: sel.id, name: sel.name, price: sel.price })
+                          }
+                          accessibilityRole="button"
+                          accessibilityLabel={`${sel.name} 구매`}
+                          hitSlop={4}
+                          style={[styles.toolBuyBtn, { backgroundColor: t.primary }]}>
+                          <Icon name="dia" size={12} color={t.onPrimary} />
+                          <Text style={[styles.toolBuyText, { color: t.onPrimary }]}>
+                            {sel.price}
+                          </Text>
+                        </Pressable>
+                      );
+                    })()
+                  : null}
                 {(
                   [
                     ['rotate-ccw', '왼쪽 회전', () => rotateSelected(-1)],
@@ -586,9 +769,6 @@ export function RoomDecorScreen({
                 // 배치 안 된 가구는 방 가운데로 추가, 배치된 가구는 다시 빼기.
                 onPlace={(item) => (placed.includes(item.id) ? removeItem(item.id) : addItem(item))}
                 owned={owned}
-                diaBalance={diaBalance}
-                onBuyRequest={setPendingBuy}
-                onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
                 t={t}
               />
             ) : null}
@@ -716,6 +896,91 @@ export function RoomDecorScreen({
         </Pressable>
       </Modal>
 
+      {/* 적용 시 미구매 프리뷰 일괄 확인 (#501) — 서버는 미보유 저장 불가. */}
+      <Modal
+        transparent
+        visible={confirmPreviews}
+        animationType="fade"
+        onRequestClose={() => setConfirmPreviews(false)}>
+        <Pressable style={styles.confirmBackdrop} onPress={() => setConfirmPreviews(false)}>
+          <Pressable style={[styles.confirmCard, { backgroundColor: t.screen }]}>
+            <Text style={[Typography.h3, { color: t.text }]}>
+              구매하지 않은 프리뷰가 {pendingPreviews.length}개 있어요
+            </Text>
+            <View style={styles.previewList}>
+              {pendingPreviews.map((pv) => (
+                <View key={pv.id} style={styles.previewRow}>
+                  <Text style={[Typography.body, styles.flex, { color: t.text }]} numberOfLines={1}>
+                    {pv.name}
+                  </Text>
+                  <View style={styles.priceRow}>
+                    <Icon name="dia" size={11} color={t.primary} />
+                    <Text style={[Typography.body, { color: t.text }]}>{pv.price}</Text>
+                  </View>
+                </View>
+              ))}
+              <View
+                style={[styles.previewRow, styles.previewTotalRow, { borderTopColor: t.border }]}>
+                <Text style={[Typography.body, styles.flex, { color: t.textMuted }]}>
+                  합계 (보유 {diaBalance})
+                </Text>
+                <View style={styles.priceRow}>
+                  <Icon name="dia" size={11} color={t.primary} />
+                  <Text style={[Typography.body, { color: t.text }]}>{previewTotal}</Text>
+                </View>
+              </View>
+            </View>
+            <View style={styles.leaveBtns}>
+              <Pressable
+                onPress={() => void buyAllAndSave()}
+                disabled={bulkBuying || !onBuy || diaBalance < previewTotal}
+                accessibilityRole="button"
+                accessibilityLabel="모두 구매하고 저장"
+                accessibilityState={{ disabled: bulkBuying || !onBuy || diaBalance < previewTotal }}
+                style={[
+                  styles.leaveBtn,
+                  {
+                    backgroundColor:
+                      bulkBuying || !onBuy || diaBalance < previewTotal ? t.disabledBg : t.primary,
+                  },
+                ]}>
+                <Text
+                  style={[
+                    Typography.label,
+                    {
+                      color:
+                        bulkBuying || !onBuy || diaBalance < previewTotal
+                          ? t.textMuted
+                          : t.onPrimary,
+                    },
+                  ]}>
+                  {bulkBuying
+                    ? '구매 중…'
+                    : diaBalance < previewTotal
+                      ? '다이아가 부족해요'
+                      : '모두 구매하고 저장'}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={saveWithoutPreviews}
+                disabled={bulkBuying}
+                accessibilityRole="button"
+                accessibilityLabel="제외하고 저장"
+                style={[styles.leaveBtn, { backgroundColor: t.surfaceMuted }]}>
+                <Text style={[Typography.label, { color: t.text }]}>프리뷰 제외하고 저장</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setConfirmPreviews(false)}
+                accessibilityRole="button"
+                accessibilityLabel="프리뷰 계속 보기"
+                style={styles.leaveStay}>
+                <Text style={[Typography.label, { color: t.textMuted }]}>계속 꾸미기</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       {/* 첫 자유 배치 저장 — SLOT_V1→FREE_V1 비가역 전환 확인 (#327). */}
       <Modal
         transparent
@@ -741,7 +1006,8 @@ export function RoomDecorScreen({
                 onPress={() => {
                   migrateOkRef.current = true;
                   setConfirmMigrate(false);
-                  void doApply(pendingBackRef.current);
+                  void doApply(pendingBackRef.current, pendingApplyRef.current ?? undefined);
+                  pendingApplyRef.current = null;
                 }}
                 accessibilityRole="button"
                 accessibilityLabel="전환하고 저장"
@@ -855,7 +1121,8 @@ function SwatchGrid({
       <ClearTile onClear={onClear} t={t} />
       {items.map((item) => {
         const isOwned = owned.has(item.id);
-        const active = isOwned && item.id === selectedId;
+        // 프리뷰(#501)도 선택 링을 받는다 — 적용 중인 표면이 곧 프리뷰다.
+        const active = item.id === selectedId;
         const affordable = diaBalance >= item.price;
         return (
           <Pressable
@@ -863,19 +1130,23 @@ function SwatchGrid({
             onPress={() =>
               isOwned
                 ? onSelect(item.id)
-                : affordable
-                  ? onBuyRequest({ id: item.id, name: item.name, price: item.price })
-                  : onBlockedBuy()
+                : active
+                  ? // 프리뷰 적용 중 재탭 = 구매 (#501). 잔액 부족은 토스트.
+                    affordable
+                    ? onBuyRequest({ id: item.id, name: item.name, price: item.price })
+                    : onBlockedBuy()
+                  : onSelect(item.id)
             }
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
-            accessibilityLabel={isOwned ? item.name : `${item.name} 구매`}
+            accessibilityLabel={
+              isOwned ? item.name : active ? `${item.name} 구매` : `${item.name} 미리 적용`
+            }
             style={[
               styles.tile,
               {
                 backgroundColor: t.surfaceMuted,
                 borderColor: active ? t.primary : 'transparent',
-                opacity: !isOwned && !affordable ? 0.5 : 1,
               },
             ]}>
             {isCdnKey(item.assetKey) ? (
@@ -904,22 +1175,25 @@ function SwatchGrid({
   );
 }
 
-/** Furniture picker grid for one slot: tap places (replacing the slot). */
+/**
+ * Furniture picker grid for one slot: tap places (replacing the slot).
+ * 미보유도 프리뷰로 배치되므로(#501) 구매 관련 prop이 없다 — 구매는 방의
+ * 프리뷰 재탭/툴바에서.
+ */
 function FurnitureGrid({
   items,
   placed,
   onPlace,
   onClear,
   owned,
-  diaBalance,
-  onBuyRequest,
-  onBlockedBuy,
   t,
-}: BuyProps & {
+}: {
   items: FurnitureItem[];
   placed: string[];
   onPlace: (item: FurnitureItem) => void;
   onClear?: () => void;
+  owned: Set<string>;
+  t: Tokens;
 }) {
   const Typography = useTypography();
   if (items.length === 0) {
@@ -934,27 +1208,21 @@ function FurnitureGrid({
       <ClearTile onClear={onClear} t={t} />
       {items.map((item) => {
         const isOwned = owned.has(item.id);
-        const active = isOwned && placed.includes(item.id);
-        const affordable = diaBalance >= item.price;
+        // 프리뷰(#501)도 배치 상태 링을 받는다.
+        const active = placed.includes(item.id);
         return (
           <Pressable
             key={item.id}
-            onPress={() =>
-              isOwned
-                ? onPlace(item)
-                : affordable
-                  ? onBuyRequest({ id: item.id, name: item.name, price: item.price })
-                  : onBlockedBuy()
-            }
+            // 미보유도 일단 배치(프리뷰) — 구매는 방의 프리뷰를 다시 탭 (#501).
+            onPress={() => onPlace(item)}
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
-            accessibilityLabel={isOwned ? item.name : `${item.name} 구매`}
+            accessibilityLabel={isOwned ? item.name : `${item.name} 미리 배치`}
             style={[
               styles.tile,
               {
                 backgroundColor: t.surfaceMuted,
                 borderColor: active ? t.primary : 'transparent',
-                opacity: !isOwned && !affordable ? 0.5 : 1,
               },
             ]}>
             {/* 미리보기는 접근성에서 숨긴다 — 타일 Pressable 라벨과 이중 안내 방지. */}
@@ -995,6 +1263,50 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
+  },
+  previewChips: {
+    position: 'absolute',
+    top: Spacing.two,
+    left: Spacing.two,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.one,
+    zIndex: 10000,
+  },
+  previewChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 3,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  toolBuyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: Spacing.two,
+    height: 32,
+    borderRadius: 8,
+  },
+  toolBuyText: {
+    fontSize: 12,
+  },
+  previewList: {
+    alignSelf: 'stretch',
+    gap: Spacing.one,
+    marginTop: Spacing.two,
+  },
+  previewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  previewTotalRow: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: Spacing.one,
+    marginTop: Spacing.half,
   },
   priceRow: {
     flexDirection: 'row',

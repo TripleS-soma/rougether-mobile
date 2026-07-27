@@ -758,9 +758,8 @@ export function AppShell({
               diaBalance={wallet.dia}
               characterId={wornCharacterId}
               characterAnimations={wornCharacterAnimations}
-              onBuy={(itemId) => {
-                void purchaseFurniture(itemId);
-              }}
+              // 일괄 구매(프리뷰 저장, #501)가 결과를 기다린다 — Promise를 그대로.
+              onBuy={(itemId) => purchaseFurniture(itemId)}
               onApply={async (its, wp, fl, bg) => {
                 const result = await saveLayout(its, wp, fl, bg);
                 if (result === 'ok') {
