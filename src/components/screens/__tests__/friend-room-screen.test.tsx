@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
 import { ToastProvider } from '@/components/ui/toast';
@@ -42,24 +42,55 @@ describe('FriendRoomScreen', () => {
     expect(unwired.queryByText('최근 활동')).toBeNull();
   });
 
-  it('fires onCheer with the chosen reaction', async () => {
+  it('첫 탭 후 5초 연타 윈도우 — 연타는 전송 0, 5초 지점에 1회만 (#491)', async () => {
+    jest.useFakeTimers();
     const onCheer = jest.fn();
     const { getByText } = await render(<FriendRoomScreen onCheer={onCheer} />);
+
+    // 윈도우 안의 연타는 연출만 — 요청이 나가지 않는다.
     await fireEvent.press(getByText('응원하기'));
+    await fireEvent.press(getByText('응원하기'));
+    await fireEvent.press(getByText('응원하기'));
+    expect(onCheer).not.toHaveBeenCalled();
+
+    await act(async () => {
+      jest.advanceTimersByTime(5000);
+    });
+    expect(onCheer).toHaveBeenCalledTimes(1);
     expect(onCheer).toHaveBeenCalledWith('support');
+    jest.useRealTimers();
+  });
+
+  it('윈도우가 끝나기 전에 나가면 미전송 응원을 flush한다 (#491)', async () => {
+    jest.useFakeTimers();
+    const onCheer = jest.fn();
+    const ui = await render(<FriendRoomScreen onCheer={onCheer} />);
+    await fireEvent.press(ui.getByText('응원하기'));
+    expect(onCheer).not.toHaveBeenCalled();
+
+    await act(async () => {
+      ui.unmount(); // 5초 전 이탈 — 나가면서 전송.
+    });
+    expect(onCheer).toHaveBeenCalledTimes(1);
+    expect(onCheer).toHaveBeenCalledWith('support');
+    jest.useRealTimers();
   });
 
   it('같은 타입 재요청은 확인 모달을 거친다 — 취소는 미전송, 보내기는 전송 (#427)', async () => {
+    jest.useFakeTimers();
     const onCheer = jest.fn();
     const { getByText, getByLabelText, queryByText } = await render(
       <FriendRoomScreen onCheer={onCheer} />,
     );
 
-    // 첫 요청은 모달 없이 즉시 전송.
+    // 첫 요청은 모달 없이 — 5초 윈도우가 끝나면 전송 (#491).
     await fireEvent.press(getByText('응원하기'));
+    await act(async () => {
+      jest.advanceTimersByTime(5000);
+    });
     expect(onCheer).toHaveBeenCalledTimes(1);
 
-    // 같은 타입 재탭 → 전송 대신 확인 모달.
+    // 전송이 끝난 같은 타입 재탭 → 전송 대신 확인 모달.
     await fireEvent.press(getByText('응원하기'));
     expect(onCheer).toHaveBeenCalledTimes(1);
     expect(getByText('오늘은 이미 보낸 응원이에요. 그래도 보낼까요?')).toBeTruthy();
@@ -74,16 +105,23 @@ describe('FriendRoomScreen', () => {
     await fireEvent.press(getByLabelText('응원 다시 보내기 확인'));
     expect(onCheer).toHaveBeenCalledTimes(2);
     expect(onCheer).toHaveBeenLastCalledWith('support');
+    jest.useRealTimers();
   });
 
-  it('다른 타입 응원은 모달 없이 즉시 전송된다 (#427)', async () => {
+  it('다른 타입 응원은 각자 윈도우로 모달 없이 전송된다 (#427/#491)', async () => {
+    jest.useFakeTimers();
     const onCheer = jest.fn();
     const { getByText, queryByText } = await render(<FriendRoomScreen onCheer={onCheer} />);
     await fireEvent.press(getByText('응원하기'));
     await fireEvent.press(getByText('잘하고 있어!'));
     expect(queryByText('오늘은 이미 보낸 응원이에요. 그래도 보낼까요?')).toBeNull();
+    await act(async () => {
+      jest.advanceTimersByTime(5000);
+    });
     expect(onCheer).toHaveBeenCalledTimes(2);
-    expect(onCheer).toHaveBeenLastCalledWith('great');
+    expect(onCheer).toHaveBeenCalledWith('support');
+    expect(onCheer).toHaveBeenCalledWith('great');
+    jest.useRealTimers();
   });
 
   it('renders the server guestbook and writes through the API callback', async () => {
