@@ -90,6 +90,7 @@
           "defaultChannel": "default"
         }
       ],
+      "expo-apple-authentication",
       "expo-secure-store",
       [
         "expo-camera",
@@ -101,7 +102,8 @@
         "expo-build-properties",
         {
           "android": {
-            "usesCleartextTraffic": true
+            "usesCleartextTraffic": true,
+            "extraMavenRepos": ["https://devrepo.kakao.com/nexus/content/groups/public/"]
           },
           "ios": {
             "useFrameworks": "static"
@@ -110,7 +112,25 @@
       ],
       "@react-native-firebase/app",
       "@react-native-firebase/messaging",
-      "./plugins/with-fcm-channel-manifest-fix.js"
+      "./plugins/with-fcm-channel-manifest-fix.js",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.499923665503-b1brsuooa940tjrs8vapo4dl2m8mri19"
+        }
+      ],
+      [
+        "@react-native-kakao/core",
+        {
+          "nativeAppKey": "51365df21c97a355d92bc098e7677d3f",
+          "android": {
+            "authCodeHandlerActivity": true
+          },
+          "ios": {
+            "handleKakaoOpenUrl": true
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
