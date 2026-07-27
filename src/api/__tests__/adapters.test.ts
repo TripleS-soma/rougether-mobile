@@ -643,8 +643,8 @@ describe('API adapters', () => {
             layoutFormat: 'SLOT_V1' as const,
             character: { code: 'cat' },
             slots: [
-              { slotType: 'bottomLeft', userItemId: 777, assetKey: 'items/a/bed.png' },
-              { slotType: 'wallpaper', userItemId: 778, assetKey: 'items/a/wp.png' },
+              { slotType: 'bottomLeft', assetKey: 'items/a/bed.png' },
+              { slotType: 'wallpaper', assetKey: 'items/a/wp.png' },
             ],
           },
         },
