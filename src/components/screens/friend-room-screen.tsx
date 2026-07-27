@@ -357,7 +357,7 @@ export function FriendRoomScreen({
                       ]}>
                       {routine.title}
                     </Text>
-                    {(routine.alarmEnabled && routine.time) || routine.photoVerify ? (
+                    {routine.alarmEnabled && routine.time ? (
                       <View style={styles.badges}>
                         {routine.alarmEnabled && routine.time ? (
                           <View style={styles.badge}>
@@ -367,6 +367,7 @@ export function FriendRoomScreen({
                             </Text>
                           </View>
                         ) : null}
+                        {/* 인증사진형 잠시 내림 (#499) — 복구 시 사진 인증 배지를 되살릴 것.
                         {routine.photoVerify ? (
                           <View style={styles.badge}>
                             <Icon name="camera" size={11} color={t.textMuted} />
@@ -374,7 +375,7 @@ export function FriendRoomScreen({
                               사진 인증
                             </Text>
                           </View>
-                        ) : null}
+                        ) : null} */}
                       </View>
                     ) : null}
                   </View>
