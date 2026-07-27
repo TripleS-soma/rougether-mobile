@@ -28,6 +28,7 @@ export {
   refreshSession,
 } from './auth';
 
+export * from './bug-reports';
 export * from './categories';
 export * from './houses';
 export * from './masters';

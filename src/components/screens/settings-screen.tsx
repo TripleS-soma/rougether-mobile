@@ -48,6 +48,8 @@ export type SettingsScreenProps = {
   onOpenNotifications?: () => void;
   onOpenSound?: () => void;
   onOpenHelp?: () => void;
+  /** 버그 제보 화면 열기 (#496). */
+  onReportBug?: () => void;
   onReplayOnboarding?: () => void;
   onLogout?: () => void;
 };
@@ -71,6 +73,7 @@ export function SettingsScreen({
   onOpenNotifications,
   onOpenSound,
   onOpenHelp,
+  onReportBug,
   onReplayOnboarding,
   onLogout,
 }: SettingsScreenProps) {
@@ -102,6 +105,7 @@ export function SettingsScreen({
       title: '기타',
       rows: [
         { icon: 'help', label: '도움말', onPress: onOpenHelp },
+        { icon: 'bug', label: '버그 제보', onPress: onReportBug },
         { icon: 'refresh', label: '튜토리얼 다시 보기', onPress: onReplayOnboarding },
         { icon: 'leave', label: '로그아웃', onPress: () => setConfirmLogout(true) },
       ],

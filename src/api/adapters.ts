@@ -52,6 +52,7 @@ import type {
 } from '@/components/screens/house-search-screen';
 
 import type { CalendarDayItem } from '@/components/screens/my-room-screen';
+import type { BugReportEntry } from '@/components/screens/bug-report-screen';
 import type { NotificationEntry } from '@/components/screens/notification-list-screen';
 import type { OwnedCharacter } from '@/components/screens/sheets/character-picker-sheet';
 
@@ -78,6 +79,7 @@ import type {
   MemberRoomSummary,
   MemberSummary,
   MissionSummary,
+  BugReportResponse,
   NotificationItem,
   RepeatDays,
   RoutineCreateRequest,
@@ -749,6 +751,17 @@ export function toNotificationEntry(n: NotificationItem): NotificationEntry {
     title: n.title ?? '알림',
     body: n.body ?? '',
     read: n.isRead === true,
+    date: d ? `${d.getMonth() + 1}월 ${d.getDate()}일` : '',
+  };
+}
+
+/** Bug report → 내 제보 내역 row (#496) — 미지정 상태는 접수됨으로 본다. */
+export function toBugReportEntry(b: BugReportResponse): BugReportEntry {
+  const d = b.createdAt ? new Date(b.createdAt) : null;
+  return {
+    id: b.bugReportId ?? 0,
+    title: b.title ?? '',
+    status: b.status ?? 'RECEIVED',
     date: d ? `${d.getMonth() + 1}월 ${d.getDate()}일` : '',
   };
 }
