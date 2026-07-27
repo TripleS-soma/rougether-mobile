@@ -31,7 +31,7 @@ export function PasswordChangeScreen({ onBack }: PasswordChangeScreenProps) {
   const mismatch = confirm.length > 0 && confirm !== next;
 
   return (
-    <View style={[styles.screen, useScreenStyle()]}>
+    <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader title="비밀번호 변경" onBack={onBack} />
 
       <ScrollView contentContainerStyle={styles.body}>

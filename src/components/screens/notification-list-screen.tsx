@@ -65,7 +65,7 @@ export function NotificationListScreen({
   const hasUnread = entries.some((n) => !n.read);
 
   return (
-    <View style={[styles.screen, useScreenStyle()]}>
+    <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader
         title="알림"
         onBack={onBack}
