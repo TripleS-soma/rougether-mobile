@@ -40,10 +40,10 @@ const lastApply = (fn: jest.Mock) =>
 
 describe('RoomDecorScreen (#327 — 자유 배치)', () => {
   it('renders the title with the furniture panel open by default (#487)', async () => {
-    const { getByText, getByLabelText, queryByText, queryByLabelText } = await render(
-      <RoomDecorScreen />,
-    );
-    expect(getByText('나의 방 꾸미기')).toBeTruthy();
+    const { getByLabelText, queryByText, queryByLabelText } = await render(<RoomDecorScreen />);
+    // 헤더 제거(#510) — 제목 없이 플로팅 뒤로가기·재화만 남는다.
+    expect(queryByText('나의 방 꾸미기')).toBeNull();
+    expect(getByLabelText('뒤로가기')).toBeTruthy();
     // 전체보기 버튼/가이드 카드 없이 진입 즉시 가구·소품 탭이 열려 있다.
     expect(getByLabelText('가구 탭')).toBeTruthy();
     expect(queryByLabelText('전체보기')).toBeNull();

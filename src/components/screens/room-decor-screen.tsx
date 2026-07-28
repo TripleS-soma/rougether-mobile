@@ -454,19 +454,9 @@ export function RoomDecorScreen({
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
-      <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
-        <Pressable
-          onPress={handleBack}
-          accessibilityRole="button"
-          accessibilityLabel="뒤로가기"
-          style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-          <Icon name="back" size={26} color={t.text} />
-        </Pressable>
-        <Text style={[Typography.h2, styles.flex, { color: t.text }]}>나의 방 꾸미기</Text>
-        <WalletPills coin={coinBalance} dia={diaBalance} />
-      </View>
-
-      <ScrollView contentContainerStyle={styles.body}>
+      {/* 헤더 대신 화면 고정 플로팅 (#510) — 패널이 그만큼 올라와 가구가 더
+          보인다. 뒤로가기는 상시 접근, 재화는 프리뷰 구매(#501) 잔액 확인용. */}
+      <ScrollView contentContainerStyle={[styles.body, headerInset]}>
         <View style={styles.preview}>
           {/* 캔버스 = 방과 정확히 같은 박스 — 오버레이 좌표·정규화의 기준.
               (preview의 padding 박스 기준으로 재면 저장 좌표가 어긋난다.) */}
@@ -813,6 +803,29 @@ export function RoomDecorScreen({
           </View>
         ) : null}
       </ScrollView>
+
+      {/* 화면 고정 플로팅 뒤로가기·재화 (#510) — 스크롤과 무관하게 유지. */}
+      <View style={[styles.floatBar, headerInset]} pointerEvents="box-none">
+        <Pressable
+          onPress={handleBack}
+          accessibilityRole="button"
+          accessibilityLabel="뒤로가기"
+          style={[
+            styles.iconBtn,
+            styles.floatBtn,
+            { backgroundColor: t.surface, borderColor: t.border },
+          ]}>
+          <Icon name="back" size={26} color={t.text} />
+        </Pressable>
+        <View
+          style={[
+            styles.floatBtn,
+            styles.floatWallet,
+            { backgroundColor: t.surface, borderColor: t.border },
+          ]}>
+          <WalletPills coin={coinBalance} dia={diaBalance} />
+        </View>
+      </View>
 
       {/* Buying spends dia irreversibly — confirm before calling onBuy. */}
       <Modal
@@ -1254,19 +1267,37 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
   },
-  header: {
+  floatBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.three,
+    justifyContent: 'space-between',
     paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.three,
+  },
+  floatBtn: {
+    borderWidth: StyleSheet.hairlineWidth,
+    // 그리드 위에 떠도 가독되게 살짝 띄운 카드 느낌.
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  floatWallet: {
+    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.one,
+    paddingVertical: 2,
   },
   flex: {
     flex: 1,
   },
   previewChips: {
     position: 'absolute',
-    top: Spacing.two,
+    // 플로팅 뒤로가기(#510) 아래로 — 캔버스 상단은 버튼 차지.
+    top: Spacing.two + 48,
     left: Spacing.two,
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1341,7 +1372,8 @@ const styles = StyleSheet.create({
   // 선택 툴바 (#333) — 캔버스 상단 중앙, 모든 레이어 위.
   toolbar: {
     position: 'absolute',
-    top: Spacing.two,
+    // 플로팅 재화 필(#510)과 겹치지 않게 버튼 줄 아래에서 시작.
+    top: Spacing.two + 48,
     alignSelf: 'center',
     flexDirection: 'row',
     gap: Spacing.one,
