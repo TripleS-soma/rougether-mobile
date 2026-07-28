@@ -201,10 +201,11 @@ async function doRefreshSession(): Promise<boolean> {
     await clearSession();
     return false;
   } catch (err) {
-    // 서버가 토큰을 거부했을 때만 로그아웃한다 (#515) — 네트워크 오류
-    // (오프라인·서버 다운)로 멀쩡한 세션을 지우면 안 된다. 보존된 세션은
-    // 다음 요청의 401 → 재갱신 경로에서 다시 기회를 얻는다.
-    if (err instanceof ApiError) await clearSession();
+    // 서버가 토큰을 명시적으로 거부(4xx)했을 때만 로그아웃한다 (#515) —
+    // 네트워크 오류(TypeError)는 물론, 재배포 순단·게이트웨이 타임아웃 같은
+    // 5xx도 세션을 보존한다. 보존된 세션은 다음 요청의 401 → 재갱신 경로에서
+    // 다시 기회를 얻는다.
+    if (err instanceof ApiError && err.status >= 400 && err.status < 500) await clearSession();
     return false;
   }
 }

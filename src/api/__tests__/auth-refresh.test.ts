@@ -80,6 +80,19 @@ describe('refreshSession — single-flight (#515)', () => {
     expect(getAccessToken()).toBeNull();
   });
 
+  it('갱신이 5xx(서버 순단)면 세션을 보존한다', async () => {
+    await seedSession();
+
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/auth/refresh')) return res(503, { code: 'GATEWAY_TIMEOUT' });
+      return res(401, { code: 'AUTH_TOKEN_EXPIRED' });
+    }) as unknown as typeof fetch;
+
+    await expect(apiGet('/routines')).rejects.toThrow();
+    // 재배포 순단일 뿐 — 로그아웃하지 않고 다음 기회를 기다린다.
+    expect(getAccessToken()).toBe('a1');
+  });
+
   it('갱신 완료 후의 다음 갱신은 새로 뛴다 (플라이트 해제)', async () => {
     await seedSession();
     let refreshCalls = 0;
