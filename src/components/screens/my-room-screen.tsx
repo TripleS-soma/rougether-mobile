@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -360,20 +360,29 @@ export function MyRoomScreen({
     prevStreak.current = streakDays;
   }, [streakDays, streakPulse]);
   const { show: toast } = useToast();
-  const knownIds = categories.map((c) => c.id);
+  const knownIds = useMemo(() => categories.map((c) => c.id), [categories]);
 
   const today = todayIso();
-  const isDone = (id: string, date: string) => (completions[id] ?? []).includes(date);
+  const isDone = useCallback(
+    (id: string, date: string) => (completions[id] ?? []).includes(date),
+    [completions],
+  );
   // Checked items sink below unchecked ones within their category (stable in
   // each half), keeping the remaining work on top of every list.
-  const sinkDone = <T,>(items: T[], done: (item: T) => boolean): T[] => [
-    ...items.filter((i) => !done(i)),
-    ...items.filter(done),
-  ];
+  const sinkDone = useCallback(
+    <T,>(items: T[], done: (item: T) => boolean): T[] => [
+      ...items.filter((i) => !done(i)),
+      ...items.filter(done),
+    ],
+    [],
+  );
   // The 방 tab lists only what's scheduled *today* (repeat days + start/end
   // range) — the same rule the 달력 tab applies to its selected date. Without
   // this, editing a routine's days never changed the today list.
-  const roomRoutines = routines.filter((r) => isScheduledOn(r, today));
+  const roomRoutines = useMemo(
+    () => routines.filter((r) => isScheduledOn(r, today)),
+    [routines, today],
+  );
   const completedCount = roomRoutines.filter((r) => isDone(r.id, today)).length;
   const progress = roomRoutines.length > 0 ? completedCount / roomRoutines.length : 0;
 
@@ -383,15 +392,29 @@ export function MyRoomScreen({
   // A truly empty account shows just the guided empty state instead.
   // 미분류(카테고리 삭제 UNASSIGN 산물, #517)는 마지막 카테고리에 섞지 않고
   // 전용 '미분류' 그룹으로 맨 뒤에 붙인다.
-  const hasUncategorizedRoom = roomRoutines.some(
-    (r) => !r.category || !knownIds.includes(r.category),
-  );
-  const groups =
-    categories.length > 0
-      ? [...categories, ...(hasUncategorizedRoom ? [UNCATEGORIZED_META] : [])]
-      : roomRoutines.length > 0
-        ? [UNCATEGORIZED_META]
-        : [];
+  const roomGroups = useMemo(() => {
+    const hasUncategorizedRoom = roomRoutines.some(
+      (r) => !r.category || !knownIds.includes(r.category),
+    );
+    const metas =
+      categories.length > 0
+        ? [...categories, ...(hasUncategorizedRoom ? [UNCATEGORIZED_META] : [])]
+        : roomRoutines.length > 0
+          ? [UNCATEGORIZED_META]
+          : [];
+    return metas.map((cat) => {
+      // 미분류 그룹(id '')이 무소속·미상 카테고리 항목을 받는다 (#517).
+      const isUncat = cat.id === '';
+      const items = sinkDone(
+        roomRoutines.filter((r) => {
+          if (r.category === cat.id) return true;
+          return isUncat && (!r.category || !knownIds.includes(r.category));
+        }),
+        (r) => isDone(r.id, today),
+      );
+      return { meta: cat, items };
+    });
+  }, [categories, roomRoutines, knownIds, sinkDone, isDone, today]);
 
   // Header hamburger popover (방 꾸미기 / 카테고리 관리 / 루틴 관리) + the
   // category manager sheet it opens. The popover anchors under the measured
@@ -442,7 +465,10 @@ export function MyRoomScreen({
   // records keep their original (possibly deleted) category.
   const [tab, setTab] = useState<'room' | 'calendar'>('room');
   const [selectedDate, setSelectedDate] = useState(() => todayIso());
-  const dateRoutines = routines.filter((r) => isScheduledOn(r, selectedDate));
+  const dateRoutines = useMemo(
+    () => routines.filter((r) => isScheduledOn(r, selectedDate)),
+    [routines, selectedDate],
+  );
   const pickDate = (date: string) => {
     setSelectedDate(date);
     if (date !== today) onSelectDate?.(date);
@@ -468,55 +494,59 @@ export function MyRoomScreen({
 
   // Quick-add is limited to real (non-deleted) categories; 미분류(pseudo)와
   // 미션 연동 카테고리는 임의 추가를 막는다 — 방탭·달력탭 공통 규칙 (#323).
-  const canQuickAdd = (categoryId?: string) =>
-    !!categoryId &&
-    categories.some((c) => c.id === categoryId) &&
-    !quickAddDisabledCategoryIds.includes(categoryId);
+  const canQuickAdd = useCallback(
+    (categoryId?: string) =>
+      !!categoryId &&
+      categories.some((c) => c.id === categoryId) &&
+      !quickAddDisabledCategoryIds.includes(categoryId),
+    [categories, quickAddDisabledCategoryIds],
+  );
 
   // 달력 lists mirror the room tab's category sections (emoji + colored label
   // + done count). Empty groups still render when they can quick-add — the +
   // must stay reachable on any date, like the room tab (#323).
-  const hasUncategorizedCal = dateRoutines.some(
-    (r) => !r.category || !knownIds.includes(r.category),
-  );
-  const calGroupsBase =
-    categories.length > 0
-      ? [...categories, ...(hasUncategorizedCal ? [UNCATEGORIZED_META] : [])]
-      : dateRoutines.length > 0
-        ? [UNCATEGORIZED_META]
-        : [];
-  const calClientGroups = calGroupsBase
-    .map((cat) => {
-      const isUncat = cat.id === '';
-      const items = dateRoutines.filter(
-        (r) =>
-          r.category === cat.id || (isUncat && (!r.category || !knownIds.includes(r.category))),
-      );
-      return { meta: cat, items: sinkDone(items, (r) => isDone(r.id, selectedDate)) };
-    })
-    .filter((g) => g.items.length > 0 || canQuickAdd(g.meta.id));
+  const calClientGroups = useMemo(() => {
+    const hasUncategorizedCal = dateRoutines.some(
+      (r) => !r.category || !knownIds.includes(r.category),
+    );
+    const calGroupsBase =
+      categories.length > 0
+        ? [...categories, ...(hasUncategorizedCal ? [UNCATEGORIZED_META] : [])]
+        : dateRoutines.length > 0
+          ? [UNCATEGORIZED_META]
+          : [];
+    return calGroupsBase
+      .map((cat) => {
+        const isUncat = cat.id === '';
+        const items = dateRoutines.filter(
+          (r) =>
+            r.category === cat.id || (isUncat && (!r.category || !knownIds.includes(r.category))),
+        );
+        return { meta: cat, items: sinkDone(items, (r) => isDone(r.id, selectedDate)) };
+      })
+      .filter((g) => g.items.length > 0 || canQuickAdd(g.meta.id));
+  }, [categories, dateRoutines, knownIds, sinkDone, isDone, selectedDate, canQuickAdd]);
   // Server days group by the record-time categoryId (kept in server order:
   // categoryId asc, 미분류 last); deleted categories resolve via catMeta.
-  const calServerGroups = dayItems
-    ? (() => {
-        const byCat = new Map<string, CalendarDayItem[]>();
-        for (const item of dayItems) {
-          const key = item.category ?? '';
-          byCat.set(key, [...(byCat.get(key) ?? []), item]);
-        }
-        const groups = Array.from(byCat, ([key, items]) => ({
-          meta: catMeta.find((c) => c.id === key) ?? UNCATEGORIZED_META,
-          items: sinkDone(items, (i) => i.completed),
-        }));
-        // 그 날 항목이 없는 현재 카테고리도 헤더를 렌더 — +로 할 일 추가 (#323).
-        for (const cat of categories) {
-          if (canQuickAdd(cat.id) && !groups.some((g) => g.meta.id === cat.id)) {
-            groups.push({ meta: cat, items: [] });
-          }
-        }
-        return groups;
-      })()
-    : undefined;
+  const calServerGroups = useMemo(() => {
+    if (!dayItems) return undefined;
+    const byCat = new Map<string, CalendarDayItem[]>();
+    for (const item of dayItems) {
+      const key = item.category ?? '';
+      byCat.set(key, [...(byCat.get(key) ?? []), item]);
+    }
+    const groups = Array.from(byCat, ([key, items]) => ({
+      meta: catMeta.find((c) => c.id === key) ?? UNCATEGORIZED_META,
+      items: sinkDone(items, (i) => i.completed),
+    }));
+    // 그 날 항목이 없는 현재 카테고리도 헤더를 렌더 — +로 할 일 추가 (#323).
+    for (const cat of categories) {
+      if (canQuickAdd(cat.id) && !groups.some((g) => g.meta.id === cat.id)) {
+        groups.push({ meta: cat, items: [] });
+      }
+    }
+    return groups;
+  }, [dayItems, catMeta, categories, canQuickAdd, sinkDone]);
 
   // 방 뷰 캡처 대상 (#245) — 갤러리 저장은 네이티브 전용.
   const roomShotRef = useRef<View>(null);
@@ -1047,25 +1077,16 @@ export function MyRoomScreen({
 
                 {loading || loadError
                   ? null
-                  : groups.map((cat) => {
-                      // 미분류 그룹(id '')이 무소속·미상 카테고리 항목을 받는다 (#517).
-                      const isUncat = cat.id === '';
-                      const items = sinkDone(
-                        roomRoutines.filter((r) => {
-                          if (r.category === cat.id) return true;
-                          return isUncat && (!r.category || !knownIds.includes(r.category));
-                        }),
-                        (r) => isDone(r.id, today),
-                      );
+                  : roomGroups.map(({ meta: cat, items }) =>
                       // Empty categories still render their header — the + quick-add
                       // must stay reachable even before the first routine exists.
-                      return renderCategoryGroup(
+                      renderCategoryGroup(
                         cat.id,
                         cat,
                         items.map((r) => rowFromRoutine(r, today)),
                         today,
-                      );
-                    })}
+                      ),
+                    )}
               </View>
             </>
           ) : (

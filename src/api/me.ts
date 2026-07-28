@@ -9,9 +9,17 @@ import type {
   WalletResponse,
 } from './types';
 
+// Single-flight /me — concurrent boot callers share one in-flight request.
+let meInFlight: Promise<MeResponse> | null = null;
+
 /** GET /me — the authenticated user's profile. */
 export function fetchMe() {
-  return apiGet<MeResponse>('/me');
+  if (!meInFlight) {
+    meInFlight = apiGet<MeResponse>('/me').finally(() => {
+      meInFlight = null;
+    });
+  }
+  return meInFlight;
 }
 
 /** GET /me/wallets — the user's currency balances (coin / diamond). */

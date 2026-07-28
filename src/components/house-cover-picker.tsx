@@ -53,6 +53,7 @@ export function HouseCoverPicker({ covers, selectedKey, onSelect }: HouseCoverPi
               source={assetSource(c.coverImageKey)}
               style={styles.art}
               contentFit="cover"
+              cachePolicy="memory-disk"
               transition={120}
               accessibilityLabel={c.name}
               testID="cover-art"

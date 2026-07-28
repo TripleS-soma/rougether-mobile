@@ -96,6 +96,7 @@ export function CharacterPickerSheet({
                         source={assetSource(c.assetKey)}
                         style={styles.cdnArt}
                         contentFit="contain"
+                        cachePolicy="memory-disk"
                         accessibilityLabel={c.name}
                         testID="cdn-art"
                       />

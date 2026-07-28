@@ -428,45 +428,62 @@ export function GroupHouseScreen({
     currentHouse?.growthPoints != null ? 100 - (currentHouse.growthPoints % 100) : undefined;
   // 층 라벨 없이 한 그리드로 — 행은 어댑터의 층 구성을 그대로 쓴다. 홀수 정원의
   // 반쪽 행이 위층에 있어서, 평탄화 후 2개씩 다시 끊으면 행이 밀린다.
-  const rowShapes = (currentHouse?.floors ?? []).map((f) => f.rooms.length);
-  const cellsInOrder = (currentHouse?.floors ?? []).flatMap((f) => f.rooms);
+  const rowShapes = useMemo(
+    () => (currentHouse?.floors ?? []).map((f) => f.rooms.length),
+    [currentHouse],
+  );
+  const cellsInOrder = useMemo(
+    () => (currentHouse?.floors ?? []).flatMap((f) => f.rooms),
+    [currentHouse],
+  );
   // Demo fallback (#278): without onSwapSeats a local permutation keeps the
   // gallery drag interactive. Wired houses arrive already re-arranged.
   const [demoPerm, setDemoPerm] = useState<Record<number, number[]>>({});
   const perm = demoPerm[houseIndex];
-  const displayCells =
-    !onSwapSeats && perm?.length === cellsInOrder.length
-      ? perm.map((i) => cellsInOrder[i])
-      : cellsInOrder;
+  const displayCells = useMemo(
+    () =>
+      !onSwapSeats && perm?.length === cellsInOrder.length
+        ? perm.map((i) => cellsInOrder[i])
+        : cellsInOrder,
+    [onSwapSeats, perm, cellsInOrder],
+  );
   // 표시 행(어댑터 층 구성)별 좌석 인덱스.
-  const seatRows: number[][] = [];
-  {
+  const seatRows = useMemo(() => {
+    const rows: number[][] = [];
     let seatOffset = 0;
     for (const size of rowShapes) {
-      seatRows.push(Array.from({ length: size }, (_, i) => seatOffset + i));
+      rows.push(Array.from({ length: size }, (_, i) => seatOffset + i));
       seatOffset += size;
     }
-  }
+    return rows;
+  }, [rowShapes]);
   // 프레임 모드(#287): 커버 PNG는 창문 4칸(2×2)이 투명하게 뚫린 집 프레임이다.
   // 아래 두 행(내 방·초기 멤버)이 창문에 들어가고, 그 위 행들(초과 좌석·빈방)은
   // 프레임 아래 그리드로 이어붙는다. 커버를 안 고른 집도 기본 프레임으로 —
   // 어느 집이든 "커버 위에 방이 보이는" 같은 형태 (히어로 폴백은 안전망).
   const coverKey = houseCoverKey(currentHouse?.coverImageKey);
-  const frameRows = seatRows.slice(-2);
   // WINDOW_RECTS 순서(좌상·우상·좌하·우하)로 좌석 매핑 — 아래 행이 아래 창문.
-  const windowSlots: (number | null)[] = [null, null, null, null];
-  frameRows
-    .slice()
-    .reverse()
-    .forEach((row, r) =>
-      row.forEach((seatIdx, c) => {
-        const slot = (r === 0 ? 2 : 0) + c;
-        if (slot < windowSlots.length) windowSlots[slot] = seatIdx;
-      }),
-    );
-  const gridSeatRows = seatRows.slice(0, -2);
-  const roomPairs: RoomCell[][] = gridSeatRows.map((row) => row.map((i) => displayCells[i]));
-  const rowOffsets: number[] = gridSeatRows.map((row) => row[0] ?? 0);
+  const windowSlots = useMemo(() => {
+    const frameRows = seatRows.slice(-2);
+    const slots: (number | null)[] = [null, null, null, null];
+    frameRows
+      .slice()
+      .reverse()
+      .forEach((row, r) =>
+        row.forEach((seatIdx, c) => {
+          const slot = (r === 0 ? 2 : 0) + c;
+          if (slot < slots.length) slots[slot] = seatIdx;
+        }),
+      );
+    return slots;
+  }, [seatRows]);
+  const { roomPairs, rowOffsets } = useMemo(() => {
+    const gridSeatRows = seatRows.slice(0, -2);
+    return {
+      roomPairs: gridSeatRows.map((row) => row.map((i) => displayCells[i])) as RoomCell[][],
+      rowOffsets: gridSeatRows.map((row) => row[0] ?? 0),
+    };
+  }, [seatRows, displayCells]);
 
   // --- 타일 드래그 앤 드롭 (자리 맞바꾸기, #278) ---
   // Long-press lifts a tile, the grid captures the active touch and the tile
@@ -615,9 +632,9 @@ export function GroupHouseScreen({
     cam.current = c;
     syncZoomed();
     Animated.parallel([
-      Animated.spring(camScale, { toValue: c.scale, useNativeDriver: false }),
-      Animated.spring(camTx, { toValue: c.tx, useNativeDriver: false }),
-      Animated.spring(camTy, { toValue: c.ty, useNativeDriver: false }),
+      Animated.spring(camScale, { toValue: c.scale, useNativeDriver: true }),
+      Animated.spring(camTx, { toValue: c.tx, useNativeDriver: true }),
+      Animated.spring(camTy, { toValue: c.ty, useNativeDriver: true }),
     ]).start();
   };
   const resetCam = () => {

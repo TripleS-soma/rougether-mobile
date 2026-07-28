@@ -95,11 +95,14 @@ export function useHouses() {
   }, []);
 
   const reloadMyHouses = useCallback(async () => {
-    const mine = await fetchMyHouses();
     // My cell shows the profile nickname when the members API has none.
-    myNicknameRef.current = await fetchMe()
-      .then((me) => me.nickname ?? undefined)
-      .catch(() => myNicknameRef.current);
+    const [mine, nickname] = await Promise.all([
+      fetchMyHouses(),
+      fetchMe()
+        .then((me) => me.nickname ?? undefined)
+        .catch(() => myNicknameRef.current),
+    ]);
+    myNicknameRef.current = nickname;
     const detailed = await Promise.all(mine.map((h) => fetchHouseBundle(h.houseId ?? 0)));
     setHouses(detailed);
   }, [fetchHouseBundle]);

@@ -136,6 +136,7 @@ export function Room({
             source={assetSource(background.assetKey)}
             style={StyleSheet.absoluteFill}
             contentFit="cover"
+            cachePolicy="memory-disk"
             transition={120}
             accessibilityLabel={background.name}
           />
@@ -152,6 +153,7 @@ export function Room({
           source={assetSource(wallpaper.assetKey)}
           style={styles.wall}
           contentFit="cover"
+          cachePolicy="memory-disk"
           transition={120}
           accessibilityLabel={wallpaper.name}
         />
@@ -164,6 +166,7 @@ export function Room({
             source={assetSource(floor.assetKey)}
             style={styles.floor}
             contentFit="cover"
+            cachePolicy="memory-disk"
             transition={120}
             accessibilityLabel={floor.name}
           />
