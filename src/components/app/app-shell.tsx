@@ -207,9 +207,12 @@ export function AppShell({
     searchHouses,
     loading: housesLoading,
     searchLoading,
+    refreshHouses,
     previewByCode,
     joinByCode,
     joinHouse: joinSearchHouse,
+    acceptJoinRequest,
+    rejectJoinRequest,
     create: createGroupHouse,
     contributedMissionIds,
     kickMember,
@@ -582,6 +585,9 @@ export function AppShell({
             }}
             onVisitMyRoom={() => setScreen('myRoom')}
             onOpenSearch={() => setScreen('houseSearch')}
+            onOpenMemberManagement={() => {
+              void refreshHouses();
+            }}
             onKickMember={(houseId, membershipId) => {
               void kickMember(houseId, membershipId);
             }}
@@ -607,6 +613,12 @@ export function AppShell({
             }}
             onReissueInviteCode={(houseId) => {
               void reissueInviteCode(houseId);
+            }}
+            onAcceptJoinRequest={(houseId, requestId) => {
+              void acceptJoinRequest(houseId, requestId);
+            }}
+            onRejectJoinRequest={(houseId, requestId) => {
+              void rejectJoinRequest(houseId, requestId);
             }}
           />
         ) : null}

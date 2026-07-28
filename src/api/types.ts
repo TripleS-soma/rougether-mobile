@@ -219,6 +219,17 @@ export type HouseJoinByCodeRequest = {
   inviteCode: string;
 };
 
+export type HouseJoinRequestStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED';
+
+export type HouseJoinRequestResponse = {
+  requestId?: number;
+  houseId?: number;
+  userId?: number;
+  nickname?: string;
+  status?: HouseJoinRequestStatus;
+  requestedAt?: string;
+};
+
 export type HouseJoinDetailResponse = {
   membershipId?: number;
   houseId?: number;
@@ -315,6 +326,7 @@ export type HouseSummary = {
   maxMembers?: number;
   level?: number;
   goals?: GoalSummary[];
+  myJoinRequestStatus?: HouseJoinRequestStatus;
 };
 
 export type HouseUpdateRequest = {

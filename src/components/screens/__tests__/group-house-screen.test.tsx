@@ -556,6 +556,41 @@ describe('GroupHouseScreen', () => {
     expect(getByLabelText('공동 미션')).toBeTruthy();
   });
 
+  it('lets the owner accept or reject pending join requests', async () => {
+    const onAcceptJoinRequest = jest.fn();
+    const onRejectJoinRequest = jest.fn();
+    const house = {
+      title: '신청 받는 집',
+      houseId: 7,
+      myRole: 'OWNER' as const,
+      joinRequests: [
+        { requestId: 21, nickname: '신청자 A' },
+        { requestId: 22, nickname: '신청자 B' },
+      ],
+      floors: [
+        {
+          level: '1층',
+          rooms: [{ name: '나', color: '#E8E0D0', isMine: true, isOwner: true }],
+        },
+      ],
+    };
+    const { getByLabelText, getByText } = await render(
+      <GroupHouseScreen
+        houses={[house]}
+        onAcceptJoinRequest={onAcceptJoinRequest}
+        onRejectJoinRequest={onRejectJoinRequest}
+      />,
+    );
+
+    await fireEvent.press(getByLabelText('구성원 목록'));
+    expect(getByText('입주 신청 2건')).toBeTruthy();
+    await fireEvent.press(getByLabelText('신청자 A 입주 수락'));
+    await fireEvent.press(getByLabelText('신청자 B 입주 거절'));
+
+    expect(onAcceptJoinRequest).toHaveBeenCalledWith(7, 21);
+    expect(onRejectJoinRequest).toHaveBeenCalledWith(7, 22);
+  });
+
   it('opens member management and kicks a member after confirming', async () => {
     const { getByText, getByLabelText, getAllByText, queryByText } = await render(
       <GroupHouseScreen />,
