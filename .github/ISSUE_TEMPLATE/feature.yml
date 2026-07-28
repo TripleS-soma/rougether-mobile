@@ -1,0 +1,42 @@
+name: 기능 · 개선
+description: 새 기능, UX 개선, API 연동 작업을 제안합니다 (배경·작업 목록·완료 조건 포함)
+title: '[하려는 것 요약]'
+body:
+  - type: textarea
+    id: background
+    attributes:
+      label: 배경
+      description: 왜 필요한가 — 사용자 관점 문제 또는 근거(실서버 확인, 스펙 문서, 디자인 결정). 관련 이슈는 링크.
+      placeholder: 서버 배포로 DELETE /categories/{id} 계약이 변경됐다. 클라이언트는 mode 없이 호출해 모든 삭제가 400으로 실패 중.
+    validations:
+      required: true
+  - type: textarea
+    id: tasks
+    attributes:
+      label: 작업
+      description: 번호 매긴 작업 목록. 합의된 설계 결정이 있으면 함께 적으세요.
+      placeholder: |
+        1. deleteCategory(id, mode) — mode 필수 반영
+        2. 삭제 모달 재설계 — 살아있는 루틴 있으면 차단 안내
+        3. 미분류 그룹 신설
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: 완료 조건
+      description: 무엇이 확인되면 닫을 수 있나 — 검증 방법 포함.
+      placeholder: |
+        - 빈 카테고리 삭제가 UNASSIGN/PURGE 각각 204로 성공 (실서버 확인)
+        - 살아있는 루틴이 있으면 409 안내 모달
+    validations:
+      required: true
+  - type: checkboxes
+    id: labels-check
+    attributes:
+      label: 해당 사항 체크
+      description: 해당하면 체크하고, 이슈 라벨도 같이 붙여주세요.
+      options:
+        - label: 서버 연동 필요 (`api` 라벨)
+        - label: 서버 엔드포인트 대기 (`backend-blocked` 라벨)
+        - label: 네이티브 빌드 필요 — OTA 불가 (`native-build` 라벨)
