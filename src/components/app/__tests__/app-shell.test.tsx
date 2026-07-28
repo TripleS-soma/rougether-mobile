@@ -334,12 +334,11 @@ describe('AppShell — 연동 루틴 스윕', () => {
 describe('AppShell — 루트 뒤로가기 종료 확인 (#522)', () => {
   it('루트에서 뒤로가기는 종료 대신 확인 모달을 띄우고, 취소하면 남는다', async () => {
     const handlers: (() => boolean)[] = [];
-    const spy = jest
-      .spyOn(BackHandler, 'addEventListener')
-      .mockImplementation((_e: string, cb: () => boolean) => {
-        handlers.push(cb);
-        return { remove: () => handlers.splice(handlers.indexOf(cb), 1) } as never;
-      });
+    const spy = jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_e, cb) => {
+      const handler = () => cb() === true;
+      handlers.push(handler);
+      return { remove: () => handlers.splice(handlers.indexOf(handler), 1) } as never;
+    });
     const exitSpy = jest.spyOn(BackHandler, 'exitApp').mockImplementation(() => {});
 
     const ui = await render(
