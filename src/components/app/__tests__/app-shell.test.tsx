@@ -360,6 +360,19 @@ describe('AppShell — 루트 뒤로가기 종료 확인 (#522)', () => {
     await fireEvent.press(ui.getByLabelText('종료 취소'));
     await waitFor(() => expect(ui.queryByText('앱을 종료할까요?')).toBeNull());
 
+    // 모달이 열린 상태의 하드웨어 뒤로가기 — 종료하지 않고 모달만 닫는다.
+    await act(async () => {
+      handlers.some((h) => h());
+    });
+    expect(ui.getByText('앱을 종료할까요?')).toBeTruthy();
+    let handledWhileOpen = false;
+    await act(async () => {
+      handledWhileOpen = handlers.some((h) => h());
+    });
+    expect(handledWhileOpen).toBe(true);
+    await waitFor(() => expect(ui.queryByText('앱을 종료할까요?')).toBeNull());
+    expect(exitSpy).not.toHaveBeenCalled();
+
     // 다시 열고 종료 → exitApp 호출.
     await act(async () => {
       handlers.some((h) => h());

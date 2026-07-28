@@ -43,7 +43,7 @@ import {
   CoachTargetProvider,
   useCoachTargets,
 } from '@/components/ui/coach-mark';
-import { Radius, Spacing } from '@/constants/theme';
+import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { CATEGORY_COLORS, type Routine } from '@/constants/routines';
 import { screenView, track } from '@/lib/analytics';
@@ -1201,13 +1201,14 @@ function TutorialLayer({
 const styles = StyleSheet.create({
   exitBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: Overlay.dim,
     alignItems: 'center',
     justifyContent: 'center',
     padding: Spacing.five,
   },
   exitCard: {
     alignSelf: 'stretch',
+    maxWidth: 340,
     borderRadius: Radius.lg,
     padding: Spacing.four,
     gap: Spacing.three,
