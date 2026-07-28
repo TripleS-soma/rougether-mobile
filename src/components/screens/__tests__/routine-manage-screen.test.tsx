@@ -25,10 +25,10 @@ describe('RoutineManageScreen', () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
-  it('renders uncategorized routines in a 기타 group when there are no categories', async () => {
+  it('renders uncategorized routines in a 미분류 group when there are no categories', async () => {
     const routines = [{ id: '2', title: '아침 기상', kind: 'routine' as const }];
     const { getByText } = await render(<RoutineManageScreen routines={routines} categories={[]} />);
-    expect(getByText('기타')).toBeTruthy();
+    expect(getByText('미분류')).toBeTruthy();
     expect(getByText('아침 기상')).toBeTruthy();
   });
 

@@ -58,7 +58,7 @@ export type RoutineCategoryMeta = {
  */
 export const UNCATEGORIZED_META: RoutineCategoryMeta = {
   id: '',
-  label: '기타',
+  label: '미분류',
   icon: 'sparkle',
   color: '#B5A89C',
   visibility: 'public',

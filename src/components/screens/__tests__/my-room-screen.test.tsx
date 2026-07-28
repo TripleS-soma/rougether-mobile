@@ -384,7 +384,7 @@ describe('MyRoomScreen', () => {
 
   it('renders uncategorized routines even when the user has no categories', async () => {
     // API state after a fresh account adds routines without a category:
-    // categories = [], routines have no category → must show in a 기타 group,
+    // categories = [], routines have no category → must show in a 미분류 group,
     // not vanish while the counter says 0 / 2.
     const routines = [
       { id: '2', title: '아침 기상', kind: 'routine' as const },
@@ -393,7 +393,7 @@ describe('MyRoomScreen', () => {
     const { getByText } = await render(<MyRoomScreen routines={routines} categories={[]} />);
     expect(getByText('아침 기상')).toBeTruthy();
     expect(getByText('독서 30분')).toBeTruthy();
-    expect(getByText('기타')).toBeTruthy();
+    expect(getByText('미분류')).toBeTruthy();
     expect(getByText('0 / 2')).toBeTruthy();
   });
 

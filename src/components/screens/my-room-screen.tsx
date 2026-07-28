@@ -381,8 +381,17 @@ export function MyRoomScreen({
   // categories at all, render a single pseudo-group so they stay visible
   // (routines can exist without any category, e.g. after a category delete).
   // A truly empty account shows just the guided empty state instead.
+  // 미분류(카테고리 삭제 UNASSIGN 산물, #517)는 마지막 카테고리에 섞지 않고
+  // 전용 '미분류' 그룹으로 맨 뒤에 붙인다.
+  const hasUncategorizedRoom = roomRoutines.some(
+    (r) => !r.category || !knownIds.includes(r.category),
+  );
   const groups =
-    categories.length > 0 ? categories : roomRoutines.length > 0 ? [UNCATEGORIZED_META] : [];
+    categories.length > 0
+      ? [...categories, ...(hasUncategorizedRoom ? [UNCATEGORIZED_META] : [])]
+      : roomRoutines.length > 0
+        ? [UNCATEGORIZED_META]
+        : [];
 
   // Header hamburger popover (방 꾸미기 / 카테고리 관리 / 루틴 관리) + the
   // category manager sheet it opens. The popover anchors under the measured
@@ -467,14 +476,21 @@ export function MyRoomScreen({
   // 달력 lists mirror the room tab's category sections (emoji + colored label
   // + done count). Empty groups still render when they can quick-add — the +
   // must stay reachable on any date, like the room tab (#323).
+  const hasUncategorizedCal = dateRoutines.some(
+    (r) => !r.category || !knownIds.includes(r.category),
+  );
   const calGroupsBase =
-    categories.length > 0 ? categories : dateRoutines.length > 0 ? [UNCATEGORIZED_META] : [];
+    categories.length > 0
+      ? [...categories, ...(hasUncategorizedCal ? [UNCATEGORIZED_META] : [])]
+      : dateRoutines.length > 0
+        ? [UNCATEGORIZED_META]
+        : [];
   const calClientGroups = calGroupsBase
-    .map((cat, idx) => {
-      const isFallback = idx === calGroupsBase.length - 1;
+    .map((cat) => {
+      const isUncat = cat.id === '';
       const items = dateRoutines.filter(
         (r) =>
-          r.category === cat.id || (isFallback && (!r.category || !knownIds.includes(r.category))),
+          r.category === cat.id || (isUncat && (!r.category || !knownIds.includes(r.category))),
       );
       return { meta: cat, items: sinkDone(items, (r) => isDone(r.id, selectedDate)) };
     })
@@ -1031,12 +1047,13 @@ export function MyRoomScreen({
 
                 {loading || loadError
                   ? null
-                  : groups.map((cat, idx) => {
-                      const isFallback = idx === groups.length - 1;
+                  : groups.map((cat) => {
+                      // 미분류 그룹(id '')이 무소속·미상 카테고리 항목을 받는다 (#517).
+                      const isUncat = cat.id === '';
                       const items = sinkDone(
                         roomRoutines.filter((r) => {
                           if (r.category === cat.id) return true;
-                          return isFallback && (!r.category || !knownIds.includes(r.category));
+                          return isUncat && (!r.category || !knownIds.includes(r.category));
                         }),
                         (r) => isDone(r.id, today),
                       );

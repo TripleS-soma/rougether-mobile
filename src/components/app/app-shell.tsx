@@ -830,9 +830,6 @@ export function AppShell({
                 },
                 {},
               )}
-              onDeleteCascade={(id) => {
-                void deleteCategoryCascade(id);
-              }}
               onCreate={createRoutineCategory}
               onUpdate={updateRoutineCategory}
               onDelete={deleteRoutineCategory}

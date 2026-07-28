@@ -48,8 +48,13 @@ export function RoutineManageScreen({
   // The routines prop carries the merged routine+todo list; this screen manages routines only.
   const routineItems = routines.filter((r) => r.kind !== 'todo');
   const knownIds = categories.map((c) => c.id);
-  // With no categories, uncategorized routines still need a group to render in.
-  const groups = categories.length > 0 ? categories : [UNCATEGORIZED_META];
+  // 미분류(카테고리 삭제 UNASSIGN 산물, #517)·미상 카테고리 항목은 마지막
+  // 카테고리에 섞지 않고 전용 '미분류' 그룹으로 맨 뒤에 붙는다.
+  const hasUncategorized = routineItems.some((r) => !r.category || !knownIds.includes(r.category));
+  const groups =
+    categories.length > 0
+      ? [...categories, ...(hasUncategorized ? [UNCATEGORIZED_META] : [])]
+      : [UNCATEGORIZED_META];
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
@@ -114,11 +119,11 @@ export function RoutineManageScreen({
 
         {loading || loadError
           ? null
-          : groups.map((cat, idx) => {
-              const isFallback = idx === groups.length - 1;
+          : groups.map((cat) => {
+              const isUncat = cat.id === '';
               const items = routineItems.filter((r) => {
                 if (r.category === cat.id) return true;
-                return isFallback && (!r.category || !knownIds.includes(r.category));
+                return isUncat && (!r.category || !knownIds.includes(r.category));
               });
               if (items.length === 0) return null;
 

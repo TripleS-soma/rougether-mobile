@@ -382,6 +382,16 @@ export type InviteCodeResponse = {
   inviteExpiresAt?: string;
 };
 
+export type InviteRedeemRequest = {
+  code: string;
+};
+
+export type InviteRedeemResponse = {
+  rewardCoin?: number;
+  coinBalance?: number;
+  inviterRewarded?: boolean;
+};
+
 export type ItemListResponse = {
   items?: ItemResponse[];
 };
@@ -511,6 +521,14 @@ export type MyHouseSummary = {
   maxMembers?: number;
   myRole?: 'OWNER' | 'MEMBER';
   joinedAt?: string;
+};
+
+export type MyInviteCodeResponse = {
+  code?: string;
+  rewardedCount?: number;
+  inviterRewardCoin?: number;
+  inviteeRewardCoin?: number;
+  maxRewardedCount?: number;
 };
 
 export type MyItemListResponse = {

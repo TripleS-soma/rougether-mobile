@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { CategoryFormSheet } from '@/components/screens/sheets/category-form-sheet';
+import type { CategoryDeleteMode } from '@/api/categories';
 import { Icon } from '@/components/ui/icon';
 import { CategoryIcon } from '@/components/ui/category-icon';
 import { type RoutineCategoryMeta, VISIBILITY_LABELS } from '@/constants/routines';
@@ -12,16 +13,15 @@ import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 export type CategoryManageScreenProps = {
   categories?: RoutineCategoryMeta[];
   /**
-   * 카테고리별 남은 항목 수 — 서버는 항목이 남은 카테고리 삭제를 거부한다
-   * (CATEGORY_IN_USE). 지난·완료된 할 일처럼 화면에 안 보이는 항목도
-   * 세므로(#505), 삭제 탭 시 개수를 보여주고 일괄 삭제를 제안한다.
+   * 카테고리별 남은 항목 수 (#517) — 서버는 "살아있는 루틴"이 있을 때만
+   * 삭제를 거부한다(409). 루틴 수는 삭제 차단 안내에, 할 일 수는 삭제 모드
+   * 선택 문구에 쓴다.
    */
   inUseCounts?: Record<string, { routines: number; todos: number }>;
-  /** 남은 항목까지 모두 지우고 카테고리를 삭제 (#505 — cascade). */
-  onDeleteCascade?: (id: string) => void;
   onCreate?: (category: RoutineCategoryMeta) => void;
   onUpdate?: (id: string, category: RoutineCategoryMeta) => void;
-  onDelete?: (id: string) => void;
+  /** 삭제 실행 (#517) — mode: UNASSIGN(미분류 전환) | PURGE(기록까지 삭제). */
+  onDelete?: (id: string, mode: CategoryDeleteMode) => void;
   /** Persist a new category order (ids top→bottom; long-press a row to move). */
   onReorder?: (orderedIds: string[]) => void;
   onBack?: () => void;
@@ -35,7 +35,6 @@ export type CategoryManageScreenProps = {
 export function CategoryManageScreen({
   categories = [],
   inUseCounts = {},
-  onDeleteCascade,
   onCreate,
   onUpdate,
   onDelete,
@@ -192,8 +191,9 @@ export function CategoryManageScreen({
                         </Pressable>
                         <Pressable
                           onPress={() => {
-                            const used = inUseCounts[c.id];
-                            if (used && used.routines + used.todos > 0) setBlockedDelete(c);
+                            // 살아있는 루틴만 삭제를 막는다 (#517) — 할 일은
+                            // 삭제 모드(미분류/완전 삭제)가 처리한다.
+                            if ((inUseCounts[c.id]?.routines ?? 0) > 0) setBlockedDelete(c);
                             else setPendingDelete(c);
                           }}
                           accessibilityRole="button"
@@ -224,42 +224,20 @@ export function CategoryManageScreen({
         <View style={styles.confirmOverlay}>
           <Pressable style={styles.backdrop} onPress={() => setBlockedDelete(null)} />
           <View style={[styles.confirmCard, { backgroundColor: t.screen }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>남은 항목까지 삭제할까요?</Text>
+            <Text style={[Typography.h3, { color: t.text }]}>루틴을 먼저 정리해주세요</Text>
             <Text style={[Typography.body, styles.confirmText, { color: t.textMuted }]}>
-              &lsquo;{blockedDelete.label}&rsquo; 카테고리에{' '}
-              {[
-                (inUseCounts[blockedDelete.id]?.routines ?? 0) > 0
-                  ? `루틴 ${inUseCounts[blockedDelete.id]?.routines}개`
-                  : null,
-                (inUseCounts[blockedDelete.id]?.todos ?? 0) > 0
-                  ? `할 일 ${inUseCounts[blockedDelete.id]?.todos}개`
-                  : null,
-              ]
-                .filter(Boolean)
-                .join('·')}
-              가 남아 있어요. 지난 날짜의 완료된 할 일처럼 화면에 안 보이는 항목도 포함돼요.
-              {'\n'}모두 삭제하면 되돌릴 수 없어요.
+              &lsquo;{blockedDelete.label}&rsquo; 카테고리에 루틴{' '}
+              {inUseCounts[blockedDelete.id]?.routines ?? 0}개가 있어요.{'\n'}루틴을 삭제하거나 다른
+              카테고리로 옮긴 뒤 삭제할 수 있어요.
             </Text>
             <View style={styles.confirmBtns}>
               <Pressable
                 onPress={() => setBlockedDelete(null)}
                 accessibilityRole="button"
-                accessibilityLabel="카테고리 삭제 취소"
-                style={[styles.confirmBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
+                accessibilityLabel="삭제 불가 확인"
+                style={[styles.confirmBtn, { backgroundColor: t.primary }]}>
+                <Text style={[Typography.label, { color: t.onPrimary }]}>확인</Text>
               </Pressable>
-              {onDeleteCascade ? (
-                <Pressable
-                  onPress={() => {
-                    onDeleteCascade(blockedDelete.id);
-                    setBlockedDelete(null);
-                  }}
-                  accessibilityRole="button"
-                  accessibilityLabel="남은 항목까지 모두 삭제"
-                  style={[styles.confirmBtn, { backgroundColor: t.danger }]}>
-                  <Text style={[Typography.label, { color: t.onPrimary }]}>모두 삭제</Text>
-                </Pressable>
-              ) : null}
             </View>
           </View>
         </View>
@@ -269,28 +247,42 @@ export function CategoryManageScreen({
         <View style={styles.confirmOverlay}>
           <Pressable style={styles.backdrop} onPress={() => setPendingDelete(null)} />
           <View style={[styles.confirmCard, { backgroundColor: t.screen }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>카테고리 삭제</Text>
-            <Text style={[Typography.body, styles.confirmText, { color: t.textMuted }]}>
-              &lsquo;{pendingDelete.label}&rsquo; 카테고리를 삭제할까요?{'\n'}삭제해도 지난 기록은
-              달력에서 원래 카테고리로 보여요.
+            <Text style={[Typography.h3, { color: t.text }]}>
+              &lsquo;{pendingDelete.label}&rsquo; 카테고리를 삭제할까요?
             </Text>
-            <View style={styles.confirmBtns}>
+            <Text style={[Typography.body, styles.confirmText, { color: t.textMuted }]}>
+              {(inUseCounts[pendingDelete.id]?.todos ?? 0) > 0
+                ? `할 일 ${inUseCounts[pendingDelete.id]?.todos}개가 남아 있어요 — 미분류로 남기거나 함께 삭제할 수 있어요.\n`
+                : ''}
+              완전 삭제는 이 카테고리 루틴의 과거 수행 기록까지 지워져 되돌릴 수 없어요.
+            </Text>
+            <View style={styles.leaveBtns}>
+              <Pressable
+                onPress={() => {
+                  onDelete?.(pendingDelete.id, 'UNASSIGN');
+                  setPendingDelete(null);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="미분류로 두고 삭제"
+                style={[styles.leaveBtn, { backgroundColor: t.primary }]}>
+                <Text style={[Typography.label, { color: t.onPrimary }]}>미분류로 두고 삭제</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  onDelete?.(pendingDelete.id, 'PURGE');
+                  setPendingDelete(null);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="기록까지 완전 삭제"
+                style={[styles.leaveBtn, { backgroundColor: t.danger }]}>
+                <Text style={[Typography.label, { color: t.onPrimary }]}>기록까지 완전 삭제</Text>
+              </Pressable>
               <Pressable
                 onPress={() => setPendingDelete(null)}
                 accessibilityRole="button"
                 accessibilityLabel="취소"
-                style={[styles.confirmBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  onDelete?.(pendingDelete.id);
-                  setPendingDelete(null);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="삭제"
-                style={[styles.confirmBtn, { backgroundColor: t.danger }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>삭제</Text>
+                style={styles.leaveStay}>
+                <Text style={[Typography.label, { color: t.textMuted }]}>취소</Text>
               </Pressable>
             </View>
           </View>
@@ -379,6 +371,20 @@ const styles = StyleSheet.create({
   },
   confirmText: {
     lineHeight: 22,
+  },
+  leaveBtns: {
+    alignSelf: 'stretch',
+    gap: Spacing.two,
+    marginTop: Spacing.two,
+  },
+  leaveBtn: {
+    paddingVertical: Spacing.three,
+    borderRadius: Radius.pill,
+    alignItems: 'center',
+  },
+  leaveStay: {
+    paddingVertical: Spacing.two,
+    alignItems: 'center',
   },
   confirmBtns: {
     flexDirection: 'row',
