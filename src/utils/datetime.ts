@@ -22,3 +22,20 @@ export function toIsoDate(dt: Date) {
 export function todayIso() {
   return toIsoDate(new Date());
 }
+
+/**
+ * 상대 시간 라벨 (#508) — 알림처럼 "얼마나 전"이 중요한 목록용.
+ * 방금 전 → N분 전 → N시간 전 → N일 전(7일 미만) → 그 이후는 "M월 D일".
+ * 미래 시각(서버 시계 편차)은 방금 전으로 뭉갠다.
+ */
+export function relativeTimeLabel(at: Date, now: Date = new Date()): string {
+  const diffMs = now.getTime() - at.getTime();
+  const min = Math.floor(diffMs / 60_000);
+  if (min < 1) return '방금 전';
+  if (min < 60) return `${min}분 전`;
+  const hours = Math.floor(min / 60);
+  if (hours < 24) return `${hours}시간 전`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}일 전`;
+  return `${at.getMonth() + 1}월 ${at.getDate()}일`;
+}
