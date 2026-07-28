@@ -32,7 +32,7 @@ import {
 } from '@/resources/furniture';
 
 import { type OnboardingGoal } from '@/components/screens/onboarding-screen';
-import { toIsoDate } from '@/utils/datetime';
+import { toIsoDate, relativeTimeLabel } from '@/utils/datetime';
 import { type RoomPlacementSave, type RoomPlacementWire, type RoomSlotSave } from './rooms';
 
 import type { HouseCover } from '@/components/house-cover-picker';
@@ -744,7 +744,7 @@ export function toGuestbookEntry(g: GuestbookItem): GuestbookEntry {
   };
 }
 
-/** Notification → 알림 list row (date shown as "M월 D일"). */
+/** Notification → 알림 list row (상대 시간 "N분 전"; 7일 지나면 "M월 D일", #508). */
 export function toNotificationEntry(n: NotificationItem): NotificationEntry {
   const d = n.createdAt ? new Date(n.createdAt) : null;
   return {
@@ -753,7 +753,7 @@ export function toNotificationEntry(n: NotificationItem): NotificationEntry {
     title: n.title ?? '알림',
     body: n.body ?? '',
     read: n.isRead === true,
-    date: d ? `${d.getMonth() + 1}월 ${d.getDate()}일` : '',
+    date: d ? relativeTimeLabel(d) : '',
   };
 }
 
