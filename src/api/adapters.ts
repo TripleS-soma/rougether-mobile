@@ -836,6 +836,8 @@ export function toHousePreviewDetail(
     rooms: catalogue
       ? (p.memberRooms ?? []).map((m: MemberRoomSummary) => toPreviewRoom(m.room, catalogue))
       : undefined,
+    // 단체미션 미리보기 (#532) — 프리뷰 응답의 진행 중 미션.
+    missions: (p.missions ?? []).map(toHouseMission),
   };
 }
 

@@ -122,6 +122,46 @@ describe('HouseSearchScreen', () => {
     expect(onJoinHouse).toHaveBeenCalledWith('h1');
   });
 
+  it('shows group mission progress in a read-only browse preview', async () => {
+    const onPreviewHouse = jest.fn(async () => ({
+      id: 'h1',
+      name: '아침형 인간 모임',
+      description: '같이 아침 루틴 지켜요',
+      members: 3,
+      capacity: 4,
+      level: 2,
+      goals: [],
+      missions: [
+        {
+          id: 31,
+          title: '오늘 다같이 루틴 지키기',
+          desc: '일일 구성원 달성률',
+          icon: 'sun' as const,
+          current: 66,
+          target: 70,
+          status: 'ACTIVE' as const,
+        },
+      ],
+    }));
+    const onJoinHouse = jest.fn();
+    const { getByLabelText, getByText } = await render(
+      <HouseSearchScreen
+        houses={RECOMMENDED_HOUSES.slice(0, 1)}
+        onPreviewHouse={onPreviewHouse}
+        onJoinHouse={onJoinHouse}
+      />,
+    );
+
+    await fireEvent.press(getByLabelText('아침형 인간 모임 미리보기'));
+
+    await waitFor(() => expect(getByText('단체미션 미리보기')).toBeTruthy());
+    expect(getByText('오늘 다같이 루틴 지키기')).toBeTruthy();
+    expect(getByText('66/70')).toBeTruthy();
+    expect(getByText('입주 후 미션에 참여하고 보상을 받을 수 있어요')).toBeTruthy();
+    expect(onPreviewHouse).toHaveBeenCalledWith('h1');
+    expect(onJoinHouse).not.toHaveBeenCalled();
+  });
+
   it('shows a pending join request and prevents duplicate submission', async () => {
     const onJoinHouse = jest.fn();
     const houses = [

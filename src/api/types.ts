@@ -340,6 +340,15 @@ export type HouseMissionResponse = {
   createdAt?: string;
 };
 
+export type HousePreviewResponse = {
+  houseId?: number;
+  name?: string;
+  coverImageKey?: string;
+  currentMemberCount?: number;
+  maxMembers?: number;
+  inviteExpired?: boolean;
+};
+
 export type HousePreviewDetailResponse = {
   houseId?: number;
   name?: string;
@@ -351,16 +360,9 @@ export type HousePreviewDetailResponse = {
   goals?: GoalSummary[];
   isMember?: boolean;
   isFull?: boolean;
+  myJoinRequestStatus?: HouseJoinRequestStatus;
+  missions?: MissionSummary[];
   memberRooms?: MemberRoomSummary[];
-};
-
-export type HousePreviewResponse = {
-  houseId?: number;
-  name?: string;
-  coverImageKey?: string;
-  currentMemberCount?: number;
-  maxMembers?: number;
-  inviteExpired?: boolean;
 };
 
 export type HouseSummary = {

@@ -47,6 +47,11 @@ export function fetchHouse(houseId: number) {
   return apiGet<HouseDetailResponse>(`/houses/${houseId}`);
 }
 
+/** GET /houses/{id}/preview — public read-only house and mission summary. */
+export function fetchHousePreview(houseId: number) {
+  return apiGet<HousePreviewDetailResponse>(`/houses/${houseId}/preview`);
+}
+
 /** GET /houses/{id}/members. */
 export function fetchHouseMembers(houseId: number) {
   return apiGetList<MemberSummary>(`/houses/${houseId}/members`);

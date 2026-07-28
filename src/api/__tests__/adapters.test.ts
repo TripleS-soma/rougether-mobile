@@ -760,6 +760,36 @@ describe('API adapters', () => {
     ).toBeUndefined();
   });
 
+  it('미리보기 응답의 단체미션을 진행 모델로 매핑한다 (#532, 통합 어댑터)', () => {
+    expect(
+      toHousePreviewDetail({
+        houseId: 7,
+        name: '미리보기 집',
+        description: '함께 루틴을 지켜요',
+        currentMemberCount: 2,
+        maxMembers: 4,
+        level: 3,
+        missions: [
+          {
+            missionId: 9,
+            title: '주간 미션',
+            missionType: 'WEEKLY_MEMBER_COUNT',
+            currentValue: 4,
+            targetValue: 10,
+            status: 'ACTIVE',
+          },
+        ],
+      }),
+    ).toMatchObject({
+      id: '7',
+      name: '미리보기 집',
+      members: 2,
+      capacity: 4,
+      level: 3,
+      missions: [expect.objectContaining({ id: 9, current: 4, target: 10 })],
+    });
+  });
+
   it('maps a room character code to the app character id', () => {
     expect(characterIdFromCode('cat')).toBe('cat');
     expect(characterIdFromCode('unknown-code')).toBeUndefined();
