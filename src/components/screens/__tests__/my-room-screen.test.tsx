@@ -392,7 +392,7 @@ describe('MyRoomScreen', () => {
       {
         id: '건강',
         label: '건강',
-        icon: 'dumbbell',
+        icon: 'dumbbell' as const,
         color: '#7FA87F',
         visibility: 'public' as const,
       },
