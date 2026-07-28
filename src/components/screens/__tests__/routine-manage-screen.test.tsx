@@ -32,6 +32,28 @@ describe('RoutineManageScreen', () => {
     expect(getByText('아침 기상')).toBeTruthy();
   });
 
+  it('카테고리가 있어도 무소속·미상 항목은 미분류 그룹으로 분리된다 (#517)', async () => {
+    const routines = [
+      { id: 'r1', title: '아침 기상', category: '건강', kind: 'routine' as const },
+      // 카테고리 삭제(UNASSIGN)로 무소속이 됐거나, 알 수 없는 카테고리를 참조.
+      { id: 'r2', title: '고아 루틴', kind: 'routine' as const },
+      { id: 'r3', title: '미상 카테고리 루틴', category: 'ghost', kind: 'routine' as const },
+    ];
+    const { getByText, queryByText } = await render(
+      <RoutineManageScreen
+        routines={routines}
+        categories={[
+          { id: '건강', label: '건강', icon: 'dumbbell', color: '#7FA8D4', visibility: 'public' },
+        ]}
+      />,
+    );
+    // 무소속 항목이 '건강'(마지막 실제 카테고리)에 섞이지 않고 미분류로.
+    expect(getByText('미분류')).toBeTruthy();
+    expect(getByText('고아 루틴')).toBeTruthy();
+    expect(getByText('미상 카테고리 루틴')).toBeTruthy();
+    expect(queryByText('기타')).toBeNull();
+  });
+
   it('excludes todos from the routine list', async () => {
     const routines = [
       { id: 'r1', title: '아침 기상', category: '건강', kind: 'routine' as const },
