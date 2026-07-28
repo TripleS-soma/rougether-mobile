@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { useState } from 'react';
 import {
   ActivityIndicator,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -23,6 +24,7 @@ import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 import { assetSource, isCdnKey } from '@/resources/asset';
+import type { HouseMission } from '@/components/screens/group-house-screen';
 
 /** Browse-card display model (decorated from the API house summary). */
 export type SearchHouse = {
@@ -53,6 +55,17 @@ export type HousePreview = {
   expired?: boolean;
 };
 
+/** Read-only detail shown when a user taps a house in the browse list. */
+export type BrowseHousePreview = {
+  houseId: number;
+  name: string;
+  description?: string;
+  members: number;
+  capacity?: number;
+  level: number;
+  missions: HouseMission[];
+};
+
 export type HouseSearchScreenProps = {
   /** Browsable houses from the API (`GET /houses`). */
   houses?: SearchHouse[];
@@ -69,6 +82,8 @@ export type HouseSearchScreenProps = {
    * When provided, 입주 first shows the house name/headcount for confirmation.
    */
   onPreviewCode?: (code: string) => Promise<HousePreview | null>;
+  /** Load house info and mission progress for the browse preview sheet. */
+  onPreviewHouse?: (houseId: string) => Promise<BrowseHousePreview | null>;
   /** Join a browsable house directly by its id. */
   onJoinHouse?: (houseId: string) => void;
   onCreate?: () => void;
@@ -85,6 +100,7 @@ export function HouseSearchScreen({
   onBack,
   onJoinByCode,
   onPreviewCode,
+  onPreviewHouse,
   onJoinHouse,
   onCreate,
 }: HouseSearchScreenProps) {
@@ -95,6 +111,8 @@ export function HouseSearchScreen({
   const [query, setQuery] = useState('');
   const [codeError, setCodeError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
+  const [previewingHouseId, setPreviewingHouseId] = useState<string | null>(null);
+  const [housePreview, setHousePreview] = useState<BrowseHousePreview | null>(null);
   // Pre-join preview card (code + house info), shown after a successful lookup.
   const [preview, setPreview] = useState<{ code: string; info: HousePreview } | null>(null);
 
@@ -138,6 +156,20 @@ export function HouseSearchScreen({
     setJoining(false);
     if (ok) setPreview(null);
     else setCodeError('입주에 실패했어요. 만석이거나 이미 참여 중일 수 있어요.');
+  };
+
+  const openHousePreview = async (houseId: string) => {
+    if (!onPreviewHouse || previewingHouseId) return;
+    setPreviewingHouseId(houseId);
+    try {
+      const detail = await onPreviewHouse(houseId);
+      if (detail) setHousePreview(detail);
+      else toast('집 미리보기를 불러오지 못했어요', 'error');
+    } catch {
+      toast('집 미리보기를 불러오지 못했어요', 'error');
+    } finally {
+      setPreviewingHouseId(null);
+    }
   };
 
   return (
@@ -268,45 +300,56 @@ export function HouseSearchScreen({
               const accepted = h.joinRequestStatus === 'ACCEPTED';
               return (
                 <View key={h.id} style={[styles.houseRow, { backgroundColor: t.surface }]}>
-                  <View
-                    style={[styles.houseEmoji, { backgroundColor: h.bg, borderColor: h.border }]}>
-                    {/* Server cover art first; the pictogram tile is the fallback. */}
-                    {isCdnKey(h.coverImageKey) ? (
-                      <Image
-                        source={assetSource(h.coverImageKey)}
-                        style={styles.houseCover}
-                        contentFit="cover"
-                        transition={120}
-                        accessibilityLabel={`${h.name} 대표 이미지`}
-                        testID="house-cover"
-                      />
-                    ) : (
-                      <Pictogram name={h.icon} size={28} />
-                    )}
-                  </View>
-                  <View style={styles.flex}>
-                    {/* The name owns its row — a same-row tag chip squeezed it
-                        into truncating even short names (#234). */}
-                    <Text style={[Typography.label, { color: t.text }]} numberOfLines={1}>
-                      {h.name}
-                    </Text>
-                    {h.description ? (
-                      <Text
-                        style={[Typography.supporting, { color: t.textMuted }]}
-                        numberOfLines={1}>
-                        {h.description}
-                      </Text>
-                    ) : null}
-                    <View style={styles.houseMetaRow}>
-                      <View style={[styles.tag, { backgroundColor: h.bg }]}>
-                        <Text style={[styles.tagText, { color: t.onTint }]}>#{h.tag}</Text>
-                      </View>
-                      <Text style={[styles.meta, { color: t.textMuted }]} numberOfLines={1}>
-                        {h.level != null ? `Lv.${h.level} · ` : ''}멤버 {h.members} / {h.capacity}
-                        {full ? <Text style={{ color: t.danger }}> · 만석</Text> : null}
-                      </Text>
+                  <Pressable
+                    onPress={() => void openHousePreview(h.id)}
+                    disabled={!onPreviewHouse || previewingHouseId !== null}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${h.name} 미리보기`}
+                    accessibilityState={{ busy: previewingHouseId === h.id }}
+                    style={styles.housePreviewTarget}>
+                    <View
+                      style={[styles.houseEmoji, { backgroundColor: h.bg, borderColor: h.border }]}>
+                      {/* Server cover art first; the pictogram tile is the fallback. */}
+                      {isCdnKey(h.coverImageKey) ? (
+                        <Image
+                          source={assetSource(h.coverImageKey)}
+                          style={styles.houseCover}
+                          contentFit="cover"
+                          transition={120}
+                          accessibilityLabel={`${h.name} 대표 이미지`}
+                          testID="house-cover"
+                        />
+                      ) : (
+                        <Pictogram name={h.icon} size={28} />
+                      )}
                     </View>
-                  </View>
+                    <View style={styles.flex}>
+                      {/* The name owns its row — a same-row tag chip squeezed it
+                        into truncating even short names (#234). */}
+                      <Text style={[Typography.label, { color: t.text }]} numberOfLines={1}>
+                        {h.name}
+                      </Text>
+                      {h.description ? (
+                        <Text
+                          style={[Typography.supporting, { color: t.textMuted }]}
+                          numberOfLines={1}>
+                          {h.description}
+                        </Text>
+                      ) : null}
+                      <View style={styles.houseMetaRow}>
+                        <View style={[styles.tag, { backgroundColor: h.bg }]}>
+                          <Text style={[styles.tagText, { color: t.onTint }]}>#{h.tag}</Text>
+                        </View>
+                        <Text style={[styles.meta, { color: t.textMuted }]} numberOfLines={1}>
+                          {h.level != null ? `Lv.${h.level} · ` : ''}멤버 {h.members} / {h.capacity}
+                          {full ? <Text style={{ color: t.danger }}> · 만석</Text> : null}
+                        </Text>
+                      </View>
+                    </View>
+                    {previewingHouseId === h.id ? (
+                      <ActivityIndicator color={t.primary} size="small" />
+                    ) : null}
+                  </Pressable>
                   <Pressable
                     onPress={() =>
                       full
@@ -358,6 +401,110 @@ export function HouseSearchScreen({
           </View>
         </Pressable>
       </ScrollView>
+
+      <Modal
+        visible={housePreview !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setHousePreview(null)}>
+        <View style={styles.modalOverlay}>
+          {housePreview ? (
+            <View
+              style={[styles.previewModal, { backgroundColor: t.surface }]}
+              accessibilityViewIsModal>
+              <View style={styles.previewModalHead}>
+                <View style={styles.flex}>
+                  <Text style={[Typography.h3, { color: t.text }]}>{housePreview.name}</Text>
+                  <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                    Lv.{housePreview.level} · 멤버 {housePreview.members}
+                    {housePreview.capacity ? ` / ${housePreview.capacity}` : ''}
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={() => setHousePreview(null)}
+                  accessibilityRole="button"
+                  accessibilityLabel="집 미리보기 닫기"
+                  style={[styles.modalCloseIcon, { backgroundColor: t.surfaceMuted }]}>
+                  <Icon name="close" size={18} color={t.text} />
+                </Pressable>
+              </View>
+              {housePreview.description ? (
+                <Text style={[Typography.body, { color: t.textMuted }]}>
+                  {housePreview.description}
+                </Text>
+              ) : null}
+              <View style={styles.previewMissionHeading}>
+                <SparklePictogram size={14} />
+                <Text style={[Typography.label, { color: t.text }]}>단체미션 미리보기</Text>
+              </View>
+              <ScrollView style={styles.previewMissionScroll}>
+                {housePreview.missions.length === 0 ? (
+                  <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                    아직 등록된 단체미션이 없어요
+                  </Text>
+                ) : (
+                  <View style={styles.previewMissionList}>
+                    {housePreview.missions.map((mission) => {
+                      const progress = Math.min(1, mission.current / mission.target);
+                      return (
+                        <View
+                          key={mission.id}
+                          style={[styles.previewMission, { backgroundColor: t.surfaceMuted }]}>
+                          <Pictogram name={mission.icon} size={20} />
+                          <View style={styles.flex}>
+                            <View style={styles.previewMissionHead}>
+                              <Text
+                                style={[Typography.label, styles.flex, { color: t.text }]}
+                                numberOfLines={1}>
+                                {mission.title}
+                              </Text>
+                              <Text style={[Typography.supporting, { color: t.primaryText }]}>
+                                {mission.current}/{mission.target}
+                              </Text>
+                            </View>
+                            <View
+                              style={[styles.previewMissionTrack, { backgroundColor: t.border }]}>
+                              <View
+                                style={[
+                                  styles.previewMissionFill,
+                                  { backgroundColor: t.primary, width: `${progress * 100}%` },
+                                ]}
+                              />
+                            </View>
+                            <View style={styles.previewMissionFoot}>
+                              <Text
+                                style={[Typography.supporting, styles.flex, { color: t.textMuted }]}
+                                numberOfLines={1}>
+                                {mission.desc}
+                              </Text>
+                              {mission.status === 'COMPLETED' ? (
+                                <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                                  완료
+                                </Text>
+                              ) : mission.status === 'EXPIRED' ? (
+                                <Text style={[Typography.supporting, { color: t.textDisabled }]}>
+                                  기간 만료
+                                </Text>
+                              ) : mission.endsOn ? (
+                                <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                                  ~{mission.endsOn.slice(5).replace('-', '.')}
+                                </Text>
+                              ) : null}
+                            </View>
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
+                )}
+              </ScrollView>
+              <Text style={[Typography.supporting, styles.readOnlyHint, { color: t.textMuted }]}>
+                입주 후 미션에 참여하고 보상을 받을 수 있어요
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -437,6 +584,13 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     padding: Spacing.three,
   },
+  housePreviewTarget: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+  },
   houseEmoji: {
     width: 56,
     height: 56,
@@ -483,5 +637,73 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     paddingVertical: Spacing.four,
     alignItems: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.four,
+  },
+  previewModal: {
+    width: '100%',
+    maxWidth: 360,
+    maxHeight: '80%',
+    borderRadius: Radius.lg,
+    padding: Spacing.four,
+    gap: Spacing.three,
+  },
+  previewModalHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  modalCloseIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewMissionHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+  },
+  previewMissionScroll: {
+    flexGrow: 0,
+  },
+  previewMissionList: {
+    gap: Spacing.two,
+  },
+  previewMission: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    padding: Spacing.three,
+    borderRadius: Radius.md,
+  },
+  previewMissionHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  previewMissionTrack: {
+    height: 6,
+    borderRadius: Radius.pill,
+    overflow: 'hidden',
+    marginTop: Spacing.one,
+  },
+  previewMissionFill: {
+    height: '100%',
+    borderRadius: Radius.pill,
+  },
+  previewMissionFoot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    marginTop: Spacing.one,
+  },
+  readOnlyHint: {
+    textAlign: 'center',
   },
 });

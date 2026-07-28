@@ -15,6 +15,7 @@ import type {
   HouseMissionContributeResponse,
   HouseMissionCreateRequest,
   HouseMissionResponse,
+  HousePreviewDetailResponse,
   HousePreviewResponse,
   HouseUpdateRequest,
   HouseUpdateResponse,
@@ -43,6 +44,11 @@ export function fetchHouses(page = 0, size = 20) {
 /** GET /houses/{id} — detail (includes inviteCode for members). */
 export function fetchHouse(houseId: number) {
   return apiGet<HouseDetailResponse>(`/houses/${houseId}`);
+}
+
+/** GET /houses/{id}/preview — public read-only house and mission summary. */
+export function fetchHousePreview(houseId: number) {
+  return apiGet<HousePreviewDetailResponse>(`/houses/${houseId}/preview`);
 }
 
 /** GET /houses/{id}/members. */
