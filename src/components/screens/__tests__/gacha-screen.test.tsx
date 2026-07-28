@@ -60,16 +60,16 @@ describe('GachaScreen', () => {
     await waitFor(() => expect(getByText('허브 화분')).toBeTruthy());
   });
 
-  it('draws ten at once with the 10연 button', async () => {
+  it('draws six for the price of five with the 5+1 button', async () => {
     const onDraw = jest.fn(async (): Promise<DrawResult[]> => []);
     const { getByText } = await render(
       <GachaScreen gachas={[machine]} coinBalance={5600} onDraw={onDraw} />,
     );
 
-    // 10-pull costs costAmount × 10 (2,500) — affordable with 5,600.
-    expect(getByText('2,500')).toBeTruthy();
-    await fireEvent.press(getByText('10연 뽑기'));
-    expect(onDraw).toHaveBeenCalledWith(1, 10);
+    // 5+1 costs costAmount × 5 (1,250) and requests six results.
+    expect(getByText('1,250')).toBeTruthy();
+    await fireEvent.press(getByText('5+1회 뽑기'));
+    expect(onDraw).toHaveBeenCalledWith(1, 6);
   });
 
   it('explains an unaffordable pull with a toast instead of drawing', async () => {
