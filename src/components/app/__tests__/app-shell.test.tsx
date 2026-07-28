@@ -1,6 +1,8 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { BackHandler } from 'react-native';
 
 import { AppShell } from '@/components/app/app-shell';
+import { ToastProvider } from '@/components/ui/toast';
 import { AuthProvider } from '@/hooks/use-auth';
 
 // 푸시 탭 콜백을 붙잡아 테스트에서 직접 발화한다 (#405).
@@ -327,5 +329,78 @@ describe('AppShell — 연동 루틴 스윕', () => {
       expect(calls.some((c) => c.method === 'DELETE' && c.url.includes('/routines/45'))).toBe(true),
     );
     expect(calls.some((c) => c.method === 'DELETE' && c.url.includes('/routines/44'))).toBe(false);
+  });
+});
+
+describe('AppShell — 루트 뒤로가기 더블 백 종료 (#522)', () => {
+  it('첫 뒤로가기는 토스트 안내, 2초 안에 한 번 더 누르면 종료한다', async () => {
+    const handlers: (() => boolean)[] = [];
+    const spy = jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_e, cb) => {
+      const handler = () => cb() === true;
+      handlers.push(handler);
+      return { remove: () => handlers.splice(handlers.indexOf(handler), 1) } as never;
+    });
+    const exitSpy = jest.spyOn(BackHandler, 'exitApp').mockImplementation(() => {});
+
+    const ui = await render(
+      <ToastProvider>
+        <AuthProvider>
+          <AppShell />
+        </AuthProvider>
+      </ToastProvider>,
+    );
+
+    // 첫 입력 — 종료하지 않고 안내 토스트.
+    let handled = false;
+    await act(async () => {
+      handled = handlers.some((h) => h());
+    });
+    expect(handled).toBe(true);
+    expect(ui.getByText('한 번 더 뒤로가면 앱이 꺼져요')).toBeTruthy();
+    expect(exitSpy).not.toHaveBeenCalled();
+
+    // 허용 창(2초) 안의 두 번째 입력 — 종료.
+    await act(async () => {
+      handlers.some((h) => h());
+    });
+    expect(exitSpy).toHaveBeenCalled();
+
+    spy.mockRestore();
+    exitSpy.mockRestore();
+  });
+
+  it('허용 창이 지나면 다시 안내부터 시작한다', async () => {
+    const handlers: (() => boolean)[] = [];
+    const spy = jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_e, cb) => {
+      const handler = () => cb() === true;
+      handlers.push(handler);
+      return { remove: () => handlers.splice(handlers.indexOf(handler), 1) } as never;
+    });
+    const exitSpy = jest.spyOn(BackHandler, 'exitApp').mockImplementation(() => {});
+    const nowSpy = jest.spyOn(Date, 'now');
+
+    const ui = await render(
+      <ToastProvider>
+        <AuthProvider>
+          <AppShell />
+        </AuthProvider>
+      </ToastProvider>,
+    );
+
+    nowSpy.mockReturnValue(1_000_000);
+    await act(async () => {
+      handlers.some((h) => h());
+    });
+    // 2초 창을 지나서 누르면 종료 대신 다시 안내.
+    nowSpy.mockReturnValue(1_003_500);
+    await act(async () => {
+      handlers.some((h) => h());
+    });
+    expect(exitSpy).not.toHaveBeenCalled();
+    expect(ui.getByText('한 번 더 뒤로가면 앱이 꺼져요')).toBeTruthy();
+
+    nowSpy.mockRestore();
+    spy.mockRestore();
+    exitSpy.mockRestore();
   });
 });

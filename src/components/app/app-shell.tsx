@@ -137,6 +137,9 @@ const BACK_SCREEN: Record<Screen, Screen | null> = {
   help: 'settings',
 };
 
+/** 더블 백 종료 허용 창 (#522) — 토스트 표시와 체감이 맞는 2초. */
+const EXIT_WINDOW_MS = 2000;
+
 /** 사운드 설정의 기기 보관 키 (#405) — 알림 설정은 서버로 이관됨 (#495). */
 const DEVICE_SETTINGS_KEY = 'rougether.device-settings';
 
@@ -619,17 +622,29 @@ export function AppShell({
     setScreen('addRoutine');
   };
 
-  // Android hardware back navigates the shell's own screen stack instead of
-  // exiting the app; only myRoom falls through to the OS default.
+  // Android hardware back navigates the shell's own screen stack; 루트(나의 방)
+  // 에서는 바로 끄지 않고 더블 백으로 종료한다 (#522) — 첫 입력은 토스트
+  // 안내, EXIT_WINDOW 안에 한 번 더 누르면 종료. (iOS는 시스템 종료
+  // 뒤로가기가 없고 코드 종료도 금지라 해당 경로 자체가 없다.)
+  const lastBackRef = useRef(0);
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       const target = screen === 'addRoutine' ? addReturnScreen : BACK_SCREEN[screen];
-      if (!target) return false;
+      if (!target) {
+        const now = Date.now();
+        if (now - lastBackRef.current <= EXIT_WINDOW_MS) {
+          BackHandler.exitApp();
+          return true;
+        }
+        lastBackRef.current = now;
+        toast('한 번 더 뒤로가면 앱이 꺼져요');
+        return true;
+      }
       setScreen(target);
       return true;
     });
     return () => sub.remove();
-  }, [screen, addReturnScreen]);
+  }, [screen, addReturnScreen, toast]);
 
   const activeTab = TAB_FOR_SCREEN[screen];
 
