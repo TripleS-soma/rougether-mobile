@@ -27,7 +27,15 @@ export type BottomNavProps = {
 };
 
 /** 활성 전환 시 스프링으로 한 번 통 튀는 탭 아이콘 (#446). */
-function TabIcon({ isActive, Icon: NavIcon }: { isActive: boolean; Icon: FC<SvgProps> }) {
+function TabIcon({
+  isActive,
+  Icon: NavIcon,
+  color,
+}: {
+  isActive: boolean;
+  Icon: FC<SvgProps>;
+  color: string;
+}) {
   const bounce = useRef(new Animated.Value(1)).current;
   const wasActive = useRef(isActive);
   useEffect(() => {
@@ -44,7 +52,8 @@ function TabIcon({ isActive, Icon: NavIcon }: { isActive: boolean; Icon: FC<SvgP
   }, [isActive, bounce]);
   return (
     <Animated.View style={{ transform: [{ scale: bounce }] }}>
-      <NavIcon width={24} height={24} />
+      {/* SVG 스트로크는 currentColor (#529) — 테마 토큰이 color로 주입된다. */}
+      <NavIcon width={24} height={24} color={color} />
     </Animated.View>
   );
 }
@@ -75,7 +84,11 @@ export function BottomNav({ active, onChange }: BottomNavProps) {
             accessibilityState={{ selected: isActive }}
             accessibilityLabel={label}
             style={styles.tab}>
-            <TabIcon isActive={isActive} Icon={isActive ? ActiveIcon : InactiveIcon} />
+            <TabIcon
+              isActive={isActive}
+              Icon={isActive ? ActiveIcon : InactiveIcon}
+              color={isActive ? t.primary : t.icon}
+            />
             <Text
               style={[Typography.supporting, { color: isActive ? t.primaryText : t.textMuted }]}>
               {label}
