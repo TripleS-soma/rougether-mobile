@@ -142,12 +142,9 @@ describe('LoginScreen', () => {
     expect(queryByText(/개발 로그인/)).toBeNull();
   });
 
-  it('navigates to signup', async () => {
-    const onGoSignup = jest.fn();
-    const { getByText } = await render(<LoginScreen onGoSignup={onGoSignup} />);
-
-    await fireEvent.press(getByText('회원가입'));
-
-    expect(onGoSignup).toHaveBeenCalledTimes(1);
+  it('이메일 가입 잠정 제외 — 회원가입 진입 링크가 없다', async () => {
+    const { queryByText } = await render(<LoginScreen onGoSignup={jest.fn()} />);
+    expect(queryByText('회원가입')).toBeNull();
+    expect(queryByText(/아직 회원이 아니신가요/)).toBeNull();
   });
 });

@@ -1,5 +1,7 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
+import Svg, { Path } from 'react-native-svg';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -20,6 +22,7 @@ import { useFontEmphasis, useTokens } from '@/hooks/use-tokens';
 
 export type LoginScreenProps = {
   onAuthSuccess?: () => void;
+  /** 이메일 가입 잠정 제외 — 진입 링크가 주석 처리돼 현재는 미사용. */
   onGoSignup?: () => void;
   /**
    * Dev-login (개발 빌드 전용 폼): a numeric userId in the email field signs
@@ -214,13 +217,14 @@ export function LoginScreen({
             <View style={[styles.line, { backgroundColor: t.border }]} />
           </View>
 
+          {/* 브랜드 로고 카드 열 (#524) — 원형 아이콘 3개에서 전폭 버튼
+              스택으로. 브랜드 규정색 유지, 접근성 라벨은 기존 계약 그대로. */}
           <View style={styles.social}>
             <SocialButton
               bg="#FEE500"
-              textColor="#3C1E1E"
+              textColor="#191919"
               label="카카오"
-              glyph="K"
-              // 실연동 (#489 소셜 2차).
+              logo={<Ionicons name="chatbubble" size={18} color="#191919" />}
               onPress={onKakaoLogin ? submitKakao : notReady}
             />
             {/* Sign in with Apple은 iOS 전용(expo-apple-authentication) — 다른
@@ -230,7 +234,7 @@ export function LoginScreen({
                 bg="#000000"
                 textColor="#FFFFFF"
                 label="애플"
-                glyph="A"
+                logo={<Ionicons name="logo-apple" size={20} color="#FFFFFF" />}
                 onPress={onAppleLogin ? submitApple : notReady}
               />
             ) : null}
@@ -238,13 +242,14 @@ export function LoginScreen({
               bg="#FFFFFF"
               textColor="#4A403A"
               label="구글"
-              glyph="G"
+              logo={<GoogleG size={18} />}
               bordered
-              // 실연동 (#489) — 나머지 provider는 아직 서버 준비 중 안내.
               onPress={onGoogleLogin ? submitGoogle : notReady}
             />
           </View>
 
+          {/* 이메일 가입 잠정 제외 — 소셜 로그인만 제공. 이메일 가입을
+              되살릴 때 아래 회원가입 진입 링크를 복구할 것.
           <View style={styles.footer}>
             <Text style={[styles.smallText, { color: t.textMuted }]}>아직 회원이 아니신가요? </Text>
             <Pressable onPress={onGoSignup} accessibilityRole="button">
@@ -252,10 +257,34 @@ export function LoginScreen({
                 회원가입
               </Text>
             </Pressable>
-          </View>
+          </View> */}
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
+  );
+}
+
+/** 구글 공식 4색 G 마크 — 카드 버튼용 (#524). */
+function GoogleG({ size = 18 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 48 48">
+      <Path
+        fill="#EA4335"
+        d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
+      />
+      <Path
+        fill="#4285F4"
+        d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
+      />
+      <Path
+        fill="#FBBC05"
+        d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
+      />
+      <Path
+        fill="#34A853"
+        d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
+      />
+    </Svg>
   );
 }
 
@@ -263,29 +292,29 @@ type SocialButtonProps = {
   bg: string;
   textColor: string;
   label: string;
-  glyph: string;
+  logo: ReactNode;
   bordered?: boolean;
   onPress?: () => void;
 };
 
-function SocialButton({ bg, textColor, label, glyph, bordered, onPress }: SocialButtonProps) {
+function SocialButton({ bg, textColor, label, logo, bordered, onPress }: SocialButtonProps) {
   const t = useTokens();
   const emph = useFontEmphasis();
   return (
     <Pressable
-      style={styles.socialItem}
+      style={({ pressed }) => [
+        styles.socialCard,
+        { backgroundColor: bg },
+        bordered && { borderWidth: StyleSheet.hairlineWidth, borderColor: t.border },
+        pressed && styles.socialCardPressed,
+      ]}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${label}로 시작`}>
-      <View
-        style={[
-          styles.socialCircle,
-          { backgroundColor: bg },
-          bordered && { borderWidth: StyleSheet.hairlineWidth, borderColor: t.border },
-        ]}>
-        <Text style={[styles.socialGlyph, emph('bold'), { color: textColor }]}>{glyph}</Text>
-      </View>
-      <Text style={[styles.smallText, { color: t.textMuted }]}>{label}</Text>
+      <View style={styles.socialLogo}>{logo}</View>
+      <Text style={[styles.socialLabel, emph('semibold'), { color: textColor }]}>
+        {label === '구글' ? 'Google로 시작하기' : `${label}로 시작하기`}
+      </Text>
     </Pressable>
   );
 }
@@ -383,23 +412,24 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
   },
   social: {
+    gap: Spacing.two,
+  },
+  socialCard: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: Spacing.four,
-  },
-  socialItem: {
-    alignItems: 'center',
-    gap: Spacing.one,
-  },
-  socialCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: Spacing.three,
+    borderRadius: Radius.md,
   },
-  socialGlyph: {
-    fontSize: 20,
+  socialCardPressed: {
+    opacity: 0.85,
+  },
+  socialLogo: {
+    position: 'absolute',
+    left: Spacing.four,
+  },
+  socialLabel: {
+    fontSize: 15,
   },
   footer: {
     flexDirection: 'row',
