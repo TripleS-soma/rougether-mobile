@@ -98,3 +98,136 @@ describe('useHouses — 응원 보내기 (#329)', () => {
     expect(calls).toEqual([JSON.stringify({ type: 'support' })]);
   });
 });
+
+describe('useHouses — 입주 신청 처리', () => {
+  it('reports an already-pending browse request without joining the house', async () => {
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes('/houses/2/join-requests') && init?.method === 'POST') {
+        return {
+          ok: false,
+          status: 409,
+          text: async () =>
+            JSON.stringify({
+              code: 'HOUSE_JOIN_REQUEST_ALREADY_PENDING',
+              message: '이미 신청 중',
+            }),
+        };
+      }
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useHouses());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    let succeeded = true;
+    await act(async () => {
+      succeeded = await result.current.joinHouse('2');
+    });
+
+    expect(succeeded).toBe(false);
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/houses/2/join-requests'),
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+
+  it('calls the owner accept and reject endpoints', async () => {
+    global.fetch = jest.fn(async () => res({ items: [] })) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useHouses());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      await result.current.acceptJoinRequest(7, 21);
+      await result.current.rejectJoinRequest(7, 22);
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/houses/7/join-requests/21/accept'),
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/houses/7/join-requests/22/reject'),
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+});
+
+// 집 안 이벤트는 전체 리로드 대신 해당 집만 재동기화한다 (#534).
+describe('useHouses — 단일 집 갱신 (#534)', () => {
+  it('수락은 신청을 즉시(낙관) 지우고, 그 집 번들만 다시 받는다', async () => {
+    const calls: string[] = [];
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      calls.push(`${init?.method ?? 'GET'} ${url}`);
+      if (url.endsWith('/me/houses')) return res({ items: [{ houseId: 6 }] });
+      if (url.includes('/houses/6/join-requests') && init?.method === 'POST') return res({});
+      if (url.includes('/houses/6/join-requests/9/accept')) return res({});
+      if (url.includes('/houses/6/join-requests'))
+        return res({ items: [{ requestId: 9, nickname: '대기자', status: 'PENDING' }] });
+      if (url.includes('/houses/6/members')) return res({ items: [] });
+      if (url.includes('/houses/6/missions')) return res({ items: [] });
+      if (url.includes('/houses/6')) return res({ houseId: 6, name: '집', myRole: 'OWNER' });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useHouses());
+    await waitFor(() => expect(result.current.houses.length).toBe(1));
+    expect(result.current.houses[0].joinRequests?.length).toBe(1);
+
+    calls.length = 0;
+    await act(async () => {
+      await result.current.acceptJoinRequest(6, 9);
+    });
+    // 낙관 제거 후 백그라운드 재동기화가 그 집 번들만 요청 — 전체 목록
+    // (/me/houses)·프로필(/me)은 다시 긁지 않는다.
+    await waitFor(() =>
+      expect(calls.some((c) => c.includes('/join-requests/9/accept'))).toBe(true),
+    );
+    expect(calls.some((c) => c.endsWith('/me/houses'))).toBe(false);
+  });
+});
+
+describe('useHouses — 탐색 미리보기', () => {
+  it('loads public house detail and maps its missions', async () => {
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/houses/7/preview')) {
+        return res({
+          houseId: 7,
+          name: '미리보기 집',
+          currentMemberCount: 2,
+          maxMembers: 4,
+          level: 1,
+          missions: [
+            {
+              missionId: 91,
+              title: '다같이 10번',
+              missionType: 'WEEKLY_MEMBER_COUNT',
+              currentValue: 3,
+              targetValue: 10,
+              status: 'ACTIVE',
+            },
+          ],
+        });
+      }
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useHouses());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    let preview = null;
+    await act(async () => {
+      preview = await result.current.previewHouse('7');
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/houses/7/preview'),
+      expect.any(Object),
+    );
+    expect(preview).toMatchObject({
+      id: '7',
+      name: '미리보기 집',
+      missions: [{ id: 91, current: 3, target: 10 }],
+    });
+  });
+});

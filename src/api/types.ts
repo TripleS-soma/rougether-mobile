@@ -249,6 +249,17 @@ export type HouseJoinByCodeRequest = {
   inviteCode: string;
 };
 
+export type HouseJoinRequestStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED';
+
+export type HouseJoinRequestResponse = {
+  requestId?: number;
+  houseId?: number;
+  userId?: number;
+  nickname?: string;
+  status?: HouseJoinRequestStatus;
+  requestedAt?: string;
+};
+
 export type HouseJoinDetailResponse = {
   membershipId?: number;
   houseId?: number;
@@ -329,6 +340,15 @@ export type HouseMissionResponse = {
   createdAt?: string;
 };
 
+export type HousePreviewResponse = {
+  houseId?: number;
+  name?: string;
+  coverImageKey?: string;
+  currentMemberCount?: number;
+  maxMembers?: number;
+  inviteExpired?: boolean;
+};
+
 export type HousePreviewDetailResponse = {
   houseId?: number;
   name?: string;
@@ -340,16 +360,9 @@ export type HousePreviewDetailResponse = {
   goals?: GoalSummary[];
   isMember?: boolean;
   isFull?: boolean;
+  myJoinRequestStatus?: HouseJoinRequestStatus;
+  missions?: MissionSummary[];
   memberRooms?: MemberRoomSummary[];
-};
-
-export type HousePreviewResponse = {
-  houseId?: number;
-  name?: string;
-  coverImageKey?: string;
-  currentMemberCount?: number;
-  maxMembers?: number;
-  inviteExpired?: boolean;
 };
 
 export type HouseSummary = {
@@ -360,6 +373,7 @@ export type HouseSummary = {
   maxMembers?: number;
   level?: number;
   goals?: GoalSummary[];
+  myJoinRequestStatus?: HouseJoinRequestStatus;
 };
 
 export type HouseUpdateRequest = {

@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 
 import type { GachaMachine } from '@/api/adapters';
-import type { DrawResult } from '@/api/types';
+import type { DrawResult, GachaDrawCount } from '@/api';
 import { Icon } from '@/components/ui/icon';
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { Pictogram, type PictogramName } from '@/components/ui/pictograms';
@@ -41,6 +41,10 @@ const bestRarity = (results: DrawResult[]): Rarity =>
       ? '희귀'
       : '일반';
 
+/** 5+1 뽑기 (#520) — 6개 뽑고 비용은 단챠 5회분. */
+const BONUS_DRAW_COUNT = 6;
+const BONUS_DRAW_COST_MULTIPLIER = 5;
+
 export type GachaScreenProps = {
   onBack?: () => void;
   /** Machines from the API (`GET /gacha`). */
@@ -50,11 +54,11 @@ export type GachaScreenProps = {
   coinBalance?: number;
   diaBalance?: number;
   /**
-   * Draw from a machine (count: 1=단챠, 10=10연); resolves the drawn results, or
+   * Draw from a machine (count: 1=단챠, 6=5+1회); resolves the drawn results, or
    * null on failure. Spending + dupe→dia conversion happen server-side; the
    * wallet is updated by the caller from the draw response.
    */
-  onDraw?: (gachaId: number, count: 1 | 10) => Promise<DrawResult[] | null>;
+  onDraw?: (gachaId: number, count: GachaDrawCount) => Promise<DrawResult[] | null>;
 };
 
 /**
@@ -92,10 +96,12 @@ export function GachaScreen({
   const furnitureMachines = gachas.filter((b) => b.kind !== 'character');
   const characterMachines = gachas.filter((b) => b.kind === 'character');
   const balanceFor = (c: 'COIN' | 'DIAMOND') => (c === 'COIN' ? coinBalance : diaBalance);
-  const canAfford = (count: 1 | 10) =>
-    box ? balanceFor(box.costCurrencyType) >= box.costAmount * count : false;
+  const drawCost = (count: GachaDrawCount) =>
+    box ? box.costAmount * (count === 1 ? 1 : BONUS_DRAW_COST_MULTIPLIER) : 0;
+  const canAfford = (count: GachaDrawCount) =>
+    box ? balanceFor(box.costCurrencyType) >= drawCost(count) : false;
 
-  const pull = async (count: 1 | 10) => {
+  const pull = async (count: GachaDrawCount) => {
     if (!box || phase !== 'idle') return;
     // The button stays tappable when unaffordable — the tap says why.
     if (!canAfford(count)) {
@@ -223,10 +229,10 @@ export function GachaScreen({
             ) : null}
 
             <View style={styles.pullRow}>
-              {([1, 10] as const).map((count) => {
+              {([1, BONUS_DRAW_COUNT] as const).map((count) => {
                 const affordable = canAfford(count);
-                const cost = box.costAmount * count;
-                const label = count === 1 ? '1회 뽑기' : '10연 뽑기';
+                const cost = drawCost(count);
+                const label = count === 1 ? '1회 뽑기' : '5+1회 뽑기';
                 return (
                   <ScalePressable
                     key={count}

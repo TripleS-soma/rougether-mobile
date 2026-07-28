@@ -61,7 +61,7 @@ describe('GachaScreen', () => {
     await waitFor(() => expect(getByText('허브 화분')).toBeTruthy(), { timeout: 8000 });
   });
 
-  it('10연은 뒷면 카드로 깔리고 탭하면 즉시 뒤집힌다 (#431)', async () => {
+  it('다연차는 뒷면 카드로 깔리고 탭하면 즉시 뒤집힌다 (#431, 5+1 라벨 #520)', async () => {
     const onDraw = jest.fn(async (): Promise<DrawResult[]> => [
       { name: '허브 화분', rarity: '희귀', converted: false },
       { name: '나무 의자', rarity: '일반', converted: false },
@@ -70,7 +70,7 @@ describe('GachaScreen', () => {
       <GachaScreen gachas={[machine]} coinBalance={5600} onDraw={onDraw} />,
     );
 
-    await fireEvent.press(getByText('10연 뽑기'));
+    await fireEvent.press(getByText('5+1회 뽑기'));
     await waitFor(() => expect(getByText('축하해요!')).toBeTruthy(), { timeout: 8000 });
 
     // 두 장 모두 뒷면 카드로 깔린다 (자동 플립 전).
@@ -82,16 +82,16 @@ describe('GachaScreen', () => {
     await waitFor(() => expect(getByLabelText('허브 화분')).toBeTruthy());
   });
 
-  it('draws ten at once with the 10연 button', async () => {
+  it('draws six for the price of five with the 5+1 button', async () => {
     const onDraw = jest.fn(async (): Promise<DrawResult[]> => []);
     const { getByText } = await render(
       <GachaScreen gachas={[machine]} coinBalance={5600} onDraw={onDraw} />,
     );
 
-    // 10-pull costs costAmount × 10 (2,500) — affordable with 5,600.
-    expect(getByText('2,500')).toBeTruthy();
-    await fireEvent.press(getByText('10연 뽑기'));
-    expect(onDraw).toHaveBeenCalledWith(1, 10);
+    // 5+1 costs costAmount × 5 (1,250) and requests six results.
+    expect(getByText('1,250')).toBeTruthy();
+    await fireEvent.press(getByText('5+1회 뽑기'));
+    expect(onDraw).toHaveBeenCalledWith(1, 6);
   });
 
   it('explains an unaffordable pull with a toast instead of drawing', async () => {

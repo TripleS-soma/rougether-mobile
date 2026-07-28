@@ -71,6 +71,7 @@ import type {
   GoalItem,
   HouseCoverImage,
   HouseDetailResponse,
+  HouseJoinRequestResponse,
   HouseMemberDayResponse,
   HouseMemberRoutineCompletionListResponse,
   HousePreviewDetailResponse,
@@ -629,6 +630,7 @@ export function toGroupHouse(
   myNickname?: string,
   missions?: HouseMission[],
   nowMs: number = Date.now(),
+  joinRequests?: HouseJoinRequestResponse[],
 ): House {
   const active = members.filter((m) => m.status !== 'LEFT');
   // Me first → my room lands on the bottom-left seat.
@@ -677,6 +679,16 @@ export function toGroupHouse(
     memberCount: detail.currentMemberCount ?? active.length,
     coverImageKey: detail.coverImageKey ?? undefined,
     growthPoints: detail.growthPoints ?? undefined,
+    joinRequests: joinRequests
+      // 처리(수락/거절)된 이력이 응답에 섞여도 대기 중만 노출한다 (#526 리뷰).
+      ?.filter(
+        (request) => request.requestId != null && (request.status ?? 'PENDING') === 'PENDING',
+      )
+      .map((request) => ({
+        requestId: request.requestId!,
+        nickname: request.nickname || `멤버 ${request.userId ?? ''}`.trim(),
+        requestedAt: request.requestedAt,
+      })),
   };
 }
 
@@ -824,6 +836,8 @@ export function toHousePreviewDetail(
     rooms: catalogue
       ? (p.memberRooms ?? []).map((m: MemberRoomSummary) => toPreviewRoom(m.room, catalogue))
       : undefined,
+    // 단체미션 미리보기 (#532) — 프리뷰 응답의 진행 중 미션.
+    missions: (p.missions ?? []).map(toHouseMission),
   };
 }
 
@@ -841,6 +855,7 @@ export function toSearchHouse(h: HouseSummary, index = 0): SearchHouse {
     // No description: the boilerplate one only ever truncated (#234); the
     // level rides the meta line instead. Server summaries carry no intro text.
     level: h.level ?? 0,
+    joinRequestStatus: h.myJoinRequestStatus,
   };
 }
 

@@ -324,10 +324,13 @@ export function AppShell({
     searchHouses,
     loading: housesLoading,
     searchLoading,
+    refreshHouses,
     previewByCode,
     previewHouse,
     joinByCode,
     joinHouse: joinSearchHouse,
+    acceptJoinRequest,
+    rejectJoinRequest,
     create: createGroupHouse,
     contributedMissionIds,
     cheerMember,
@@ -888,6 +891,16 @@ export function AppShell({
               coinBalance={wallet.coin}
               diaBalance={wallet.dia}
               raining={raining}
+              // 방장 관리 진입 시 구성원·입주 신청 목록 갱신 (#526).
+              onOpenMemberManagement={() => {
+                void refreshHouses();
+              }}
+              onAcceptJoinRequest={(houseId, requestId) => {
+                void acceptJoinRequest(houseId, requestId);
+              }}
+              onRejectJoinRequest={(houseId, requestId) => {
+                void rejectJoinRequest(houseId, requestId);
+              }}
               onKickMember={(houseId, membershipId) => {
                 void kickMember(houseId, membershipId);
               }}

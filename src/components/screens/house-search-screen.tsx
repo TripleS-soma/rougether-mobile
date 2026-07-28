@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 
 import { HousePreviewFrame } from '@/components/room/house-preview-frame';
-import type { MemberRoomPreview } from '@/components/screens/group-house-screen';
+import type { HouseMission, MemberRoomPreview } from '@/components/screens/group-house-screen';
 import type { FurnitureItem, Wallpaper } from '@/resources/furniture';
 import { Icon } from '@/components/ui/icon';
 import {
@@ -43,6 +43,8 @@ export type SearchHouse = {
   level?: number;
   /** Optional intro line — the server summary has none today (demo data only). */
   description?: string;
+  /** Current user's latest browse-join request for this house. */
+  joinRequestStatus?: 'PENDING' | 'ACCEPTED' | 'REJECTED';
 };
 
 /** Pre-join preview of the house behind an invite code (GET /houses/by-code). */
@@ -71,6 +73,8 @@ export type HousePreviewDetail = {
   isFull?: boolean;
   /** 구성원별 실제 방 (#386, 가입순) — 없으면 인원수 목업으로 폴백. */
   rooms?: MemberRoomPreview[];
+  /** 진행 중인 단체 미션 (#532) — 미리보기 시트에 진행도 표시. */
+  missions?: HouseMission[];
 };
 
 export type HouseSearchScreenProps = {
@@ -91,7 +95,7 @@ export type HouseSearchScreenProps = {
   onPreviewCode?: (code: string) => Promise<HousePreview | null>;
   /** Join a browsable house directly by its id. */
   onJoinHouse?: (houseId: string) => void;
-  /** Load the pre-join preview for a browsable house; null = load failed. */
+  /** 참여 전 미리보기 로드 (#328, 미션 진행 포함 #532); null = 실패. */
   onPreviewHouse?: (houseId: string) => Promise<HousePreviewDetail | null>;
   /** 상점 카탈로그 (#386) — 미리보기 창문의 실제 방 렌더에 필요. */
   furniture?: FurnitureItem[];
@@ -129,16 +133,11 @@ export function HouseSearchScreen({
   const [query, setQuery] = useState('');
   const [codeError, setCodeError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
+  const [previewingHouseId, setPreviewingHouseId] = useState<string | null>(null);
   // Pre-join preview card (code + house info), shown after a successful lookup.
   const [preview, setPreview] = useState<{ code: string; info: HousePreview } | null>(null);
-  // 탐색 카드 탭 → 미리보기 모달 (#328). 실패는 훅이 토스트로 알린다.
+  // 탐색 카드 탭 → 미리보기 모달 (#328, 미션 포함 #532). 실패는 훅이 토스트로.
   const [housePreview, setHousePreview] = useState<HousePreviewDetail | null>(null);
-  const openHousePreview = async (houseId: string) => {
-    if (!onPreviewHouse) return;
-    const detail = await onPreviewHouse(houseId);
-    if (detail) setHousePreview(detail);
-  };
-
   const filtered = houses.filter(
     (h) =>
       query.length === 0 ||
@@ -181,6 +180,20 @@ export function HouseSearchScreen({
     else setCodeError('입주에 실패했어요. 만석이거나 이미 참여 중일 수 있어요.');
   };
 
+  const openHousePreview = async (houseId: string) => {
+    if (!onPreviewHouse || previewingHouseId) return;
+    setPreviewingHouseId(houseId);
+    try {
+      const detail = await onPreviewHouse(houseId);
+      if (detail) setHousePreview(detail);
+      else toast('집 미리보기를 불러오지 못했어요', 'error');
+    } catch {
+      toast('집 미리보기를 불러오지 못했어요', 'error');
+    } finally {
+      setPreviewingHouseId(null);
+    }
+  };
+
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
       <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
@@ -194,7 +207,6 @@ export function HouseSearchScreen({
         <Text style={[Typography.h2, { color: t.text }]}>집 탐색</Text>
         <View style={styles.iconBtn} />
       </View>
-
       <ScrollView contentContainerStyle={styles.body}>
         {/* Invite code */}
         <View style={styles.section}>
@@ -305,14 +317,18 @@ export function HouseSearchScreen({
           ) : (
             filtered.map((h) => {
               const full = h.members >= h.capacity;
+              const pending = h.joinRequestStatus === 'PENDING';
+              const accepted = h.joinRequestStatus === 'ACCEPTED';
               return (
                 <View key={h.id} style={[styles.houseRow, { backgroundColor: t.surface }]}>
-                  {/* 카드 본문 탭 = 참여 전 미리보기 (#328); 입주 신청 버튼은 그대로. */}
+                  {/* 카드 본문 탭 = 참여 전 미리보기 (#328); 입주 신청 버튼은 그대로.
+                      로딩 중 재탭은 busy로 막는다 (#532). */}
                   <Pressable
                     onPress={() => void openHousePreview(h.id)}
-                    disabled={!onPreviewHouse}
+                    disabled={!onPreviewHouse || previewingHouseId !== null}
                     accessibilityRole="button"
                     accessibilityLabel={`${h.name} 미리보기`}
+                    accessibilityState={{ busy: previewingHouseId === h.id }}
                     style={[styles.flex, styles.houseBody]}>
                     <View
                       style={[styles.houseEmoji, { backgroundColor: h.bg, borderColor: h.border }]}>
@@ -355,24 +371,44 @@ export function HouseSearchScreen({
                         </Text>
                       </View>
                     </View>
+                    {/* 미리보기 로딩 스피너 (#532). */}
+                    {previewingHouseId === h.id ? (
+                      <ActivityIndicator color={t.primary} size="small" />
+                    ) : null}
                   </Pressable>
                   <Pressable
                     onPress={() =>
-                      full ? toast('정원이 가득 찼어요', 'error') : onJoinHouse?.(h.id)
+                      full
+                        ? toast('정원이 가득 찼어요', 'error')
+                        : pending
+                          ? toast('방장의 수락을 기다리고 있어요')
+                          : accepted
+                            ? toast('이미 입주가 완료됐어요')
+                            : onJoinHouse?.(h.id)
                     }
                     accessibilityRole="button"
-                    accessibilityState={{ disabled: full }}
+                    accessibilityState={{ disabled: full || pending || accepted }}
                     style={[
                       styles.joinBtn,
-                      { backgroundColor: full ? t.surfaceMuted : t.primary },
+                      {
+                        backgroundColor: full || pending || accepted ? t.surfaceMuted : t.primary,
+                      },
                     ]}>
                     <Text
                       style={[
                         styles.joinText,
                         emph('semibold'),
-                        { color: full ? t.textMuted : t.onPrimary },
+                        { color: full || pending || accepted ? t.textMuted : t.onPrimary },
                       ]}>
-                      {full ? '대기' : '입주 신청'}
+                      {full
+                        ? '만석'
+                        : pending
+                          ? '신청 중'
+                          : accepted
+                            ? '입주 완료'
+                            : h.joinRequestStatus === 'REJECTED'
+                              ? '다시 신청'
+                              : '입주 신청'}
                     </Text>
                   </Pressable>
                 </View>
@@ -392,7 +428,6 @@ export function HouseSearchScreen({
           </View>
         </Pressable>
       </ScrollView>
-
       {/* 참여 전 집 미리보기 모달 (#328) — isFull은 참여 비활성, isMember는 안내만. */}
       {housePreview ? (
         <View style={styles.hpOverlay}>
@@ -431,6 +466,53 @@ export function HouseSearchScreen({
                     <Text style={[styles.tagText, emph('bold'), { color: t.onTint }]}>#{g}</Text>
                   </View>
                 ))}
+              </View>
+            ) : null}
+            {/* 단체미션 미리보기 (#532) — 진행도와 함께 노출. */}
+            {housePreview.missions?.length ? (
+              <View style={styles.hpMissions}>
+                <View style={styles.previewMissionHeading}>
+                  <SparklePictogram size={14} />
+                  <Text style={[Typography.label, { color: t.text }]}>단체미션 미리보기</Text>
+                </View>
+                <ScrollView style={styles.previewMissionScroll}>
+                  <View style={styles.previewMissionList}>
+                    {housePreview.missions.map((mission) => {
+                      const progress = Math.min(1, mission.current / mission.target);
+                      return (
+                        <View
+                          key={mission.id}
+                          style={[styles.previewMission, { backgroundColor: t.surfaceMuted }]}>
+                          <Pictogram name={mission.icon} size={20} />
+                          <View style={styles.flex}>
+                            <View style={styles.previewMissionHead}>
+                              <Text
+                                style={[Typography.label, styles.flex, { color: t.text }]}
+                                numberOfLines={1}>
+                                {mission.title}
+                              </Text>
+                              <Text style={[Typography.supporting, { color: t.primaryText }]}>
+                                {mission.current}/{mission.target}
+                              </Text>
+                            </View>
+                            <View
+                              style={[styles.previewMissionTrack, { backgroundColor: t.border }]}>
+                              <View
+                                style={[
+                                  styles.previewMissionFill,
+                                  { backgroundColor: t.primary, width: `${progress * 100}%` },
+                                ]}
+                              />
+                            </View>
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
+                </ScrollView>
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                  입주 후 미션에 참여하고 보상을 받을 수 있어요
+                </Text>
               </View>
             ) : null}
             <View style={styles.hpActions}>
@@ -553,6 +635,7 @@ const styles = StyleSheet.create({
   },
   // 탭 가능한 카드 본문(커버+정보) — 입주 버튼과 분리 (#328).
   houseBody: {
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
@@ -590,6 +673,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.three,
     borderRadius: Radius.pill,
+  },
+  // 단체미션 미리보기 섹션 래퍼 (#532).
+  hpMissions: {
+    marginTop: Spacing.one,
+    gap: Spacing.one,
   },
   houseEmoji: {
     width: 56,
@@ -637,5 +725,47 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     paddingVertical: Spacing.four,
     alignItems: 'center',
+  },
+  previewMissionHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+  },
+  previewMissionScroll: {
+    flexGrow: 0,
+    maxHeight: 180,
+  },
+  previewMissionList: {
+    gap: Spacing.two,
+  },
+  previewMission: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    padding: Spacing.three,
+    borderRadius: Radius.md,
+  },
+  previewMissionHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  previewMissionTrack: {
+    height: 6,
+    borderRadius: Radius.pill,
+    overflow: 'hidden',
+    marginTop: Spacing.one,
+  },
+  previewMissionFill: {
+    height: '100%',
+    borderRadius: Radius.pill,
+  },
+  previewMissionFoot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    marginTop: Spacing.one,
+  },
+  readOnlyHint: {
+    textAlign: 'center',
   },
 });

@@ -29,6 +29,10 @@ export type HouseMembersScreenProps = {
   onBack: () => void;
   /** Kick a member via the API (owner only); shown when the house has ids. */
   onKickMember?: (houseId: number, membershipId: number) => void;
+  /** 입주 신청 수락 (#526, 방장 전용). */
+  onAcceptJoinRequest?: (houseId: number, requestId: number) => void;
+  /** 입주 신청 거절 (#526, 방장 전용). */
+  onRejectJoinRequest?: (houseId: number, requestId: number) => void;
   /** Demo fallback kick — the parent marks the seat as kicked locally. */
   onLocalKick: (name: string) => void;
   /** Hand the OWNER role to a member via the API (owner only). */
@@ -57,6 +61,8 @@ export function HouseMembersScreen({
   memberCharacterId,
   onBack,
   onKickMember,
+  onAcceptJoinRequest,
+  onRejectJoinRequest,
   onLocalKick,
   onTransferOwnership,
   onReissueInviteCode,
@@ -193,6 +199,45 @@ export function HouseMembersScreen({
               <PencilPictogram size={14} />
               <Text style={[Typography.label, { color: t.primaryText }]}>집 정보 수정</Text>
             </Pressable>
+          </View>
+        ) : null}
+
+        {isOwner && currentHouse.joinRequests?.length ? (
+          <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
+            <Text style={[Typography.label, { color: t.text }]}>
+              입주 신청 {currentHouse.joinRequests.length}건
+            </Text>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              탐색으로 찾아온 신청을 확인해 주세요.
+            </Text>
+            {currentHouse.joinRequests.map((request) => (
+              <View
+                key={request.requestId}
+                style={[styles.memberRow, { backgroundColor: t.surfaceMuted }]}>
+                <View style={styles.flex}>
+                  <Text style={[Typography.label, { color: t.text }]}>{request.nickname}</Text>
+                  <Text style={[Typography.supporting, { color: t.textMuted }]}>입주 대기 중</Text>
+                </View>
+                {onRejectJoinRequest && currentHouse.houseId ? (
+                  <Pressable
+                    onPress={() => onRejectJoinRequest(currentHouse.houseId!, request.requestId)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${request.nickname} 입주 거절`}
+                    style={[styles.kickBtn, { backgroundColor: t.dangerSoft }]}>
+                    <Text style={[Typography.supporting, { color: t.danger }]}>거절</Text>
+                  </Pressable>
+                ) : null}
+                {onAcceptJoinRequest && currentHouse.houseId ? (
+                  <Pressable
+                    onPress={() => onAcceptJoinRequest(currentHouse.houseId!, request.requestId)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${request.nickname} 입주 수락`}
+                    style={[styles.kickBtn, { backgroundColor: t.primarySoft }]}>
+                    <Text style={[Typography.supporting, { color: t.primaryText }]}>수락</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            ))}
           </View>
         ) : null}
 

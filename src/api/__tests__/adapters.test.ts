@@ -667,6 +667,24 @@ describe('API adapters', () => {
     expect(toHousePreviewDetail(wire).rooms).toBeUndefined();
   });
 
+  it('입주 신청은 PENDING만 노출한다 — 처리된 이력 혼합 응답 (#526)', () => {
+    const house = toGroupHouse(
+      { houseId: 7, name: '집', myRole: 'OWNER' },
+      [],
+      undefined,
+      undefined,
+      [],
+      0,
+      [
+        { requestId: 1, nickname: '대기', status: 'PENDING' },
+        { requestId: 2, nickname: '수락됨', status: 'ACCEPTED' },
+        { requestId: 3, nickname: '거절됨', status: 'REJECTED' },
+        { requestId: 4, nickname: '상태없음' },
+      ],
+    );
+    expect(house.joinRequests?.map((r) => r.requestId)).toEqual([1, 4]);
+  });
+
   it('maps a bug report to the history row (#496)', () => {
     expect(
       toBugReportEntry({
@@ -740,6 +758,36 @@ describe('API adapters', () => {
     expect(
       toHouseMission({ missionId: 2, title: '무기한', missionType: 'DAILY_MEMBER_RATE' }).endsOn,
     ).toBeUndefined();
+  });
+
+  it('미리보기 응답의 단체미션을 진행 모델로 매핑한다 (#532, 통합 어댑터)', () => {
+    expect(
+      toHousePreviewDetail({
+        houseId: 7,
+        name: '미리보기 집',
+        description: '함께 루틴을 지켜요',
+        currentMemberCount: 2,
+        maxMembers: 4,
+        level: 3,
+        missions: [
+          {
+            missionId: 9,
+            title: '주간 미션',
+            missionType: 'WEEKLY_MEMBER_COUNT',
+            currentValue: 4,
+            targetValue: 10,
+            status: 'ACTIVE',
+          },
+        ],
+      }),
+    ).toMatchObject({
+      id: '7',
+      name: '미리보기 집',
+      members: 2,
+      capacity: 4,
+      level: 3,
+      missions: [expect.objectContaining({ id: 9, current: 4, target: 10 })],
+    });
   });
 
   it('maps a room character code to the app character id', () => {
