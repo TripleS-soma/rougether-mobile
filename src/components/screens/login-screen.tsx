@@ -224,6 +224,7 @@ export function LoginScreen({
               bg="#FEE500"
               textColor="#191919"
               label="카카오"
+              displayLabel="카카오로 시작하기"
               logo={<Ionicons name="chatbubble" size={18} color="#191919" />}
               onPress={onKakaoLogin ? submitKakao : notReady}
             />
@@ -234,6 +235,7 @@ export function LoginScreen({
                 bg="#000000"
                 textColor="#FFFFFF"
                 label="애플"
+                displayLabel="애플로 시작하기"
                 logo={<Ionicons name="logo-apple" size={20} color="#FFFFFF" />}
                 onPress={onAppleLogin ? submitApple : notReady}
               />
@@ -242,6 +244,7 @@ export function LoginScreen({
               bg="#FFFFFF"
               textColor="#4A403A"
               label="구글"
+              displayLabel="Google로 시작하기"
               logo={<GoogleG size={18} />}
               bordered
               onPress={onGoogleLogin ? submitGoogle : notReady}
@@ -291,13 +294,24 @@ function GoogleG({ size = 18 }: { size?: number }) {
 type SocialButtonProps = {
   bg: string;
   textColor: string;
+  /** 접근성 라벨용 짧은 이름 — 기존 계약('카카오로 시작' 등) 유지. */
   label: string;
+  /** 카드에 보이는 문구 — 표기(한/영)가 라벨과 다를 수 있어 명시적으로 받는다. */
+  displayLabel: string;
   logo: ReactNode;
   bordered?: boolean;
   onPress?: () => void;
 };
 
-function SocialButton({ bg, textColor, label, logo, bordered, onPress }: SocialButtonProps) {
+function SocialButton({
+  bg,
+  textColor,
+  label,
+  displayLabel,
+  logo,
+  bordered,
+  onPress,
+}: SocialButtonProps) {
   const t = useTokens();
   const emph = useFontEmphasis();
   return (
@@ -313,7 +327,7 @@ function SocialButton({ bg, textColor, label, logo, bordered, onPress }: SocialB
       accessibilityLabel={`${label}로 시작`}>
       <View style={styles.socialLogo}>{logo}</View>
       <Text style={[styles.socialLabel, emph('semibold'), { color: textColor }]}>
-        {label === '구글' ? 'Google로 시작하기' : `${label}로 시작하기`}
+        {displayLabel}
       </Text>
     </Pressable>
   );

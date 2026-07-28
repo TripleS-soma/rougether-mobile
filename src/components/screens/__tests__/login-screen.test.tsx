@@ -59,12 +59,16 @@ describe('LoginScreen', () => {
   });
 
   it('offers 카카오·애플·구글 social login (spec lineup, no 네이버)', async () => {
-    const { getByLabelText, queryByLabelText } = await render(<LoginScreen />);
+    const { getByText, getByLabelText, queryByLabelText } = await render(<LoginScreen />);
 
     expect(getByLabelText('카카오로 시작')).toBeTruthy();
     expect(getByLabelText('애플로 시작')).toBeTruthy();
     expect(getByLabelText('구글로 시작')).toBeTruthy();
     expect(queryByLabelText('네이버로 시작')).toBeNull();
+    // 카드 문구 (#524) — 구글만 영문 표기라 회귀 방지로 문구까지 고정.
+    expect(getByText('카카오로 시작하기')).toBeTruthy();
+    expect(getByText('애플로 시작하기')).toBeTruthy();
+    expect(getByText('Google로 시작하기')).toBeTruthy();
   });
 
   it('구글 버튼이 onGoogleLogin을 부르고 성공 시 onAuthSuccess (#489)', async () => {
