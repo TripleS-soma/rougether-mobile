@@ -882,11 +882,6 @@ export function GroupHouseScreen({
               />
             </View>
           ) : null}
-          {room.isMine ? (
-            <View style={[styles.myTag, { backgroundColor: t.warning }]}>
-              <Text style={[styles.myTagText, emph('bold'), { color: t.onTint }]}>MY</Text>
-            </View>
-          ) : null}
           {empty || preview ? null : (
             <CharacterAvatar characterId={memberCharacterId(room)} size={64} />
           )}
@@ -1369,17 +1364,6 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   roomName: {},
-  myTag: {
-    position: 'absolute',
-    top: Spacing.two,
-    right: Spacing.two,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: 1,
-    borderRadius: Radius.pill,
-  },
-  myTagText: {
-    fontSize: 9,
-  },
   // --- 프레임 모드 (#287) ---
   skySection: {
     position: 'relative',
