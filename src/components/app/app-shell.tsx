@@ -15,6 +15,7 @@ import { NotificationSettingsScreen } from '@/components/screens/notification-se
 import { PasswordChangeScreen } from '@/components/screens/password-change-screen';
 import { ProfileEditScreen } from '@/components/screens/profile-edit-screen';
 import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
+import { BugReportScreen } from '@/components/screens/bug-report-screen';
 import { CategoryManageScreen } from '@/components/screens/category-manage-screen';
 import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
 import { SettingsScreen } from '@/components/screens/settings-screen';
@@ -37,6 +38,7 @@ import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { CATEGORY_COLORS, type Routine } from '@/constants/routines';
 import { screenView, track } from '@/lib/analytics';
 import { onNotificationTap } from '@/lib/push-events';
+import { pickLibraryImage } from '@/lib/pick-image';
 import { todayIso } from '@/utils/datetime';
 import { useAuth } from '@/hooks/use-auth';
 import { useGacha } from '@/hooks/use-gacha';
@@ -49,6 +51,7 @@ import { useMemberRoomPreviews, withMyCharacter } from '@/hooks/use-member-room-
 import { useRoomLayouts } from '@/hooks/use-room-layouts';
 import { useMyCharacters } from '@/hooks/use-my-characters';
 import { useMyRoomData } from '@/hooks/use-my-room-data';
+import { useBugReports } from '@/hooks/use-bug-reports';
 import { useNotificationSettings } from '@/hooks/use-notification-settings';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useShop } from '@/hooks/use-shop';
@@ -73,6 +76,7 @@ type Screen =
   | 'profileEdit'
   | 'passwordChange'
   | 'notificationList'
+  | 'bugReport'
   | 'notifications'
   | 'sound'
   | 'help';
@@ -94,6 +98,7 @@ const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   profileEdit: null,
   passwordChange: null,
   notificationList: null,
+  bugReport: null,
   notifications: null,
   sound: null,
   help: null,
@@ -126,6 +131,7 @@ const BACK_SCREEN: Record<Screen, Screen | null> = {
   profileEdit: 'settings',
   passwordChange: 'settings',
   notificationList: 'myRoom',
+  bugReport: 'settings',
   notifications: 'settings',
   sound: 'settings',
   help: 'settings',
@@ -308,6 +314,9 @@ export function AppShell({
   useEffect(() => {
     void loadNotifications();
   }, [loadNotifications]);
+
+  // 버그 제보 (#496) — 화면을 열 때 내 제보 내역을 불러온다.
+  const { entries: bugReports, load: loadBugReports, submit: submitBugReport } = useBugReports();
 
   // Group houses (내 집 목록 + 탐색 + 참여/생성/강퇴/나가기) from the API.
   const {
@@ -990,6 +999,10 @@ export function AppShell({
               }}
               onOpenSound={() => setScreen('sound')}
               onOpenHelp={() => setScreen('help')}
+              onReportBug={() => {
+                setScreen('bugReport');
+                void loadBugReports();
+              }}
               onReplayOnboarding={onReplayOnboarding}
               onLogout={() => {
                 // Clearing the session flips auth status → AppRoot redirects to /login.
@@ -1061,6 +1074,15 @@ export function AppShell({
                 setSoundSettings(next);
                 persistDeviceSettings(next);
               }}
+              onBack={() => setScreen('settings')}
+            />
+          ) : null}
+
+          {screen === 'bugReport' ? (
+            <BugReportScreen
+              entries={bugReports}
+              onSubmit={submitBugReport}
+              onPickImage={pickLibraryImage}
               onBack={() => setScreen('settings')}
             />
           ) : null}

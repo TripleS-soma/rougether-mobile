@@ -1,5 +1,6 @@
 import {
   ownedPlacement,
+  toBugReportEntry,
   toAppCategory,
   toAppRoutine,
   toAppTodo,
@@ -664,6 +665,19 @@ describe('API adapters', () => {
 
     // 카탈로그가 없으면(상점 미로드) rooms를 만들지 않아 목업으로 폴백한다.
     expect(toHousePreviewDetail(wire).rooms).toBeUndefined();
+  });
+
+  it('maps a bug report to the history row (#496)', () => {
+    expect(
+      toBugReportEntry({
+        bugReportId: 7,
+        title: '로그인이 안 돼요',
+        status: 'IN_PROGRESS',
+        createdAt: '2026-07-20T09:00:00Z',
+      }),
+    ).toEqual({ id: 7, title: '로그인이 안 돼요', status: 'IN_PROGRESS', date: '7월 20일' });
+    // 미지정 상태는 접수됨으로.
+    expect(toBugReportEntry({ bugReportId: 8 }).status).toBe('RECEIVED');
   });
 
   it('maps a house member day to the friend routine list', () => {

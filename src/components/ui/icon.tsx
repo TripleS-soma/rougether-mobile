@@ -47,6 +47,7 @@ const ICONS = {
   lock: 'lock-closed-outline',
   sound: 'volume-high-outline',
   help: 'help-circle-outline',
+  bug: 'bug-outline',
   palette: 'color-palette-outline',
   moon: 'moon-outline',
   refresh: 'refresh-outline',

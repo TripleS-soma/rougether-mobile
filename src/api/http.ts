@@ -18,7 +18,11 @@ export function buildQuery(params: Record<string, string | number | undefined | 
 export type RawRequestOptions = {
   /** Extra headers (e.g. Authorization). */
   headers?: Record<string, string>;
-  /** JSON-serialised as the request body; sets Content-Type automatically. */
+  /**
+   * Request body. Plain values are JSON-serialised (Content-Type set
+   * automatically); a FormData passes through untouched so fetch can set the
+   * multipart boundary itself (버그 제보 스크린샷 등 파일 업로드, #496).
+   */
   body?: unknown;
 };
 
@@ -41,8 +45,10 @@ export async function rawRequest<T>(
   options: RawRequestOptions = {},
 ): Promise<T> {
   const headers: Record<string, string> = { Accept: 'application/json', ...options.headers };
-  let body: string | undefined;
-  if (options.body !== undefined) {
+  let body: string | FormData | undefined;
+  if (typeof FormData !== 'undefined' && options.body instanceof FormData) {
+    body = options.body;
+  } else if (options.body !== undefined) {
     headers['Content-Type'] = 'application/json';
     body = JSON.stringify(options.body);
   }

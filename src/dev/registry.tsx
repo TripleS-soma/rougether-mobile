@@ -16,6 +16,7 @@ import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { LoginScreen } from '@/components/screens/login-screen';
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { CharacterPickerSheet } from '@/components/screens/sheets/character-picker-sheet';
+import { BugReportScreen } from '@/components/screens/bug-report-screen';
 import { NotificationListScreen } from '@/components/screens/notification-list-screen';
 import { NotificationSettingsScreen } from '@/components/screens/notification-settings-screen';
 import { OnboardingScreen } from '@/components/screens/onboarding-screen';
@@ -374,6 +375,20 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
         <NotificationListScreen />
+      </View>
+    ),
+  },
+  {
+    name: 'BugReportScreen',
+    description: '설정 → 버그 제보: 제보 폼(제목·내용·스크린샷) + 내 제보 내역.',
+    render: () => (
+      <View style={{ height: 640, alignSelf: 'stretch' }}>
+        <BugReportScreen
+          entries={[
+            { id: 2, title: '달력 원 정렬이 어긋나요', status: 'IN_PROGRESS', date: '7월 20일' },
+            { id: 1, title: '로그인이 안 돼요', status: 'RESOLVED', date: '7월 12일' },
+          ]}
+        />
       </View>
     ),
   },
