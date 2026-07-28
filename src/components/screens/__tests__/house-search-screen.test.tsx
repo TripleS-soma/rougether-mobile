@@ -122,6 +122,25 @@ describe('HouseSearchScreen', () => {
     expect(onJoinHouse).toHaveBeenCalledWith('h1');
   });
 
+  it('shows a pending join request and prevents duplicate submission', async () => {
+    const onJoinHouse = jest.fn();
+    const houses = [
+      {
+        ...RECOMMENDED_HOUSES[0],
+        joinRequestStatus: 'PENDING' as const,
+      },
+    ];
+    const { getByText } = await render(
+      <ToastProvider>
+        <HouseSearchScreen houses={houses} onJoinHouse={onJoinHouse} />
+      </ToastProvider>,
+    );
+
+    await fireEvent.press(getByText('신청 중'));
+
+    expect(onJoinHouse).not.toHaveBeenCalled();
+  });
+
   it('filters the list by query', async () => {
     const { getByPlaceholderText, queryByText } = await render(
       <HouseSearchScreen houses={RECOMMENDED_HOUSES} />,

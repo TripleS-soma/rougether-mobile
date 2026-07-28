@@ -98,3 +98,57 @@ describe('useHouses — 응원 보내기 (#329)', () => {
     expect(calls).toEqual([JSON.stringify({ type: 'support' })]);
   });
 });
+
+describe('useHouses — 입주 신청 처리', () => {
+  it('reports an already-pending browse request without joining the house', async () => {
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes('/houses/2/join-requests') && init?.method === 'POST') {
+        return {
+          ok: false,
+          status: 409,
+          text: async () =>
+            JSON.stringify({
+              code: 'HOUSE_JOIN_REQUEST_ALREADY_PENDING',
+              message: '이미 신청 중',
+            }),
+        };
+      }
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useHouses());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    let succeeded = true;
+    await act(async () => {
+      succeeded = await result.current.joinHouse('2');
+    });
+
+    expect(succeeded).toBe(false);
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/houses/2/join-requests'),
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+
+  it('calls the owner accept and reject endpoints', async () => {
+    global.fetch = jest.fn(async () => res({ items: [] })) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useHouses());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      await result.current.acceptJoinRequest(7, 21);
+      await result.current.rejectJoinRequest(7, 22);
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/houses/7/join-requests/21/accept'),
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/houses/7/join-requests/22/reject'),
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+});

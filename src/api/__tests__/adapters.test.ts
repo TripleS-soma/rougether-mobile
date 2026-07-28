@@ -667,6 +667,24 @@ describe('API adapters', () => {
     expect(toHousePreviewDetail(wire).rooms).toBeUndefined();
   });
 
+  it('입주 신청은 PENDING만 노출한다 — 처리된 이력 혼합 응답 (#526)', () => {
+    const house = toGroupHouse(
+      { houseId: 7, name: '집', myRole: 'OWNER' },
+      [],
+      undefined,
+      undefined,
+      [],
+      0,
+      [
+        { requestId: 1, nickname: '대기', status: 'PENDING' },
+        { requestId: 2, nickname: '수락됨', status: 'ACCEPTED' },
+        { requestId: 3, nickname: '거절됨', status: 'REJECTED' },
+        { requestId: 4, nickname: '상태없음' },
+      ],
+    );
+    expect(house.joinRequests?.map((r) => r.requestId)).toEqual([1, 4]);
+  });
+
   it('maps a bug report to the history row (#496)', () => {
     expect(
       toBugReportEntry({
