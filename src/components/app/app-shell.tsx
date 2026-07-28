@@ -1,16 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Animated,
-  BackHandler,
-  Easing,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Animated, BackHandler, Easing, StyleSheet, View } from 'react-native';
 
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
@@ -43,7 +34,6 @@ import {
   CoachTargetProvider,
   useCoachTargets,
 } from '@/components/ui/coach-mark';
-import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { CATEGORY_COLORS, type Routine } from '@/constants/routines';
 import { screenView, track } from '@/lib/analytics';
@@ -66,7 +56,7 @@ import { useNotificationSettings } from '@/hooks/use-notification-settings';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useShop } from '@/hooks/use-shop';
 import { useWeather } from '@/hooks/use-weather';
-import { useBrandTheme, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useBrandTheme } from '@/hooks/use-tokens';
 import { assetSource } from '@/resources/asset';
 import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furniture';
 
@@ -146,6 +136,9 @@ const BACK_SCREEN: Record<Screen, Screen | null> = {
   sound: 'settings',
   help: 'settings',
 };
+
+/** 더블 백 종료 허용 창 (#522) — 토스트 표시와 체감이 맞는 2초. */
+const EXIT_WINDOW_MS = 2000;
 
 /** 사운드 설정의 기기 보관 키 (#405) — 알림 설정은 서버로 이관됨 (#495). */
 const DEVICE_SETTINGS_KEY = 'rougether.device-settings';
@@ -238,9 +231,6 @@ export function AppShell({
   } = useBrandTheme();
   // 집 하늘 연출용 현재 비 여부 (#360) — 서울 고정, 30분 캐시.
   const { raining } = useWeather();
-  // 종료 확인 모달(#522) 등 셸 자체 UI용 토큰.
-  const t = useTokens();
-  const Typography = useTypography();
   const [screen, setScreen] = useState<Screen>('myRoom');
 
   // 코치마크 튜토리얼 (#351) — 온보딩 직후 시작, 단계마다 해당 화면으로 전환.
@@ -630,24 +620,28 @@ export function AppShell({
   };
 
   // Android hardware back navigates the shell's own screen stack; 루트(나의 방)
-  // 에서는 바로 종료하지 않고 확인 모달을 거친다 (#522).
-  const [confirmExit, setConfirmExit] = useState(false);
+  // 에서는 바로 끄지 않고 더블 백으로 종료한다 (#522) — 첫 입력은 토스트
+  // 안내, EXIT_WINDOW 안에 한 번 더 누르면 종료. (iOS는 시스템 종료
+  // 뒤로가기가 없고 코드 종료도 금지라 해당 경로 자체가 없다.)
+  const lastBackRef = useRef(0);
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (confirmExit) {
-        setConfirmExit(false);
-        return true;
-      }
       const target = screen === 'addRoutine' ? addReturnScreen : BACK_SCREEN[screen];
       if (!target) {
-        setConfirmExit(true);
+        const now = Date.now();
+        if (now - lastBackRef.current <= EXIT_WINDOW_MS) {
+          BackHandler.exitApp();
+          return true;
+        }
+        lastBackRef.current = now;
+        toast('한 번 더 뒤로가면 앱이 꺼져요');
         return true;
       }
       setScreen(target);
       return true;
     });
     return () => sub.remove();
-  }, [screen, addReturnScreen, confirmExit]);
+  }, [screen, addReturnScreen, toast]);
 
   const activeTab = TAB_FOR_SCREEN[screen];
 
@@ -1134,35 +1128,6 @@ export function AppShell({
             onSkip={() => setTutorialIdx(null)}
           />
         ) : null}
-
-        {/* 루트 뒤로가기 앱 종료 확인 (#522) — 실수 종료 방지. */}
-        <Modal
-          transparent
-          visible={confirmExit}
-          animationType="fade"
-          onRequestClose={() => setConfirmExit(false)}>
-          <Pressable style={styles.exitBackdrop} onPress={() => setConfirmExit(false)}>
-            <Pressable style={[styles.exitCard, { backgroundColor: t.screen }]}>
-              <Text style={[Typography.h3, { color: t.text }]}>앱을 종료할까요?</Text>
-              <View style={styles.exitBtns}>
-                <Pressable
-                  onPress={() => setConfirmExit(false)}
-                  accessibilityRole="button"
-                  accessibilityLabel="종료 취소"
-                  style={[styles.exitBtn, { backgroundColor: t.surfaceMuted }]}>
-                  <Text style={[Typography.label, { color: t.text }]}>취소</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => BackHandler.exitApp()}
-                  accessibilityRole="button"
-                  accessibilityLabel="앱 종료"
-                  style={[styles.exitBtn, { backgroundColor: t.primary }]}>
-                  <Text style={[Typography.label, { color: t.onPrimary }]}>종료</Text>
-                </Pressable>
-              </View>
-            </Pressable>
-          </Pressable>
-        </Modal>
       </View>
     </CoachTargetProvider>
   );
@@ -1199,32 +1164,6 @@ function TutorialLayer({
 }
 
 const styles = StyleSheet.create({
-  exitBackdrop: {
-    flex: 1,
-    backgroundColor: Overlay.dim,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: Spacing.five,
-  },
-  exitCard: {
-    alignSelf: 'stretch',
-    maxWidth: 340,
-    borderRadius: Radius.lg,
-    padding: Spacing.four,
-    gap: Spacing.three,
-    alignItems: 'center',
-  },
-  exitBtns: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-    alignSelf: 'stretch',
-  },
-  exitBtn: {
-    flex: 1,
-    paddingVertical: Spacing.three,
-    borderRadius: Radius.pill,
-    alignItems: 'center',
-  },
   root: {
     flex: 1,
   },
