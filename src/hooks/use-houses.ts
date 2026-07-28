@@ -3,7 +3,7 @@
  * mount plus the browsable list for 집 탐색, and exposes join/create/kick/leave
  * actions. Failures surface as toasts; loading/error drive the screens.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   ApiError,
@@ -67,38 +67,59 @@ export function useHouses() {
   const [searchLoading, setSearchLoading] = useState(true);
   const { show: toast } = useToast();
 
+  // 내 셀 라벨용 닉네임 캐시 — 단일 집 갱신(#534)이 fetchMe를 반복하지 않게.
+  const myNicknameRef = useRef<string | undefined>(undefined);
+
+  /**
+   * 한 집의 상세 묶음 → House 모델 (#534). 상세·멤버·미션·입주신청을 전부
+   * 병렬 요청한다 — 신청 목록은 방장이 아니면 403이라 실패를 빈 배열로
+   * 무시하는 것으로 역할 확인 직렬 홉을 없앤다.
+   */
+  const fetchHouseBundle = useCallback(async (id: number): Promise<House> => {
+    const [detail, members, missions, joinRequests] = await Promise.all([
+      fetchHouse(id),
+      fetchHouseMembers(id),
+      // Missions are additive — a failure shouldn't take the house down.
+      fetchHouseMissions(id).catch(() => []),
+      fetchHouseJoinRequests(id).catch(() => []),
+    ]);
+    return toGroupHouse(
+      detail,
+      members,
+      getSessionUserId(),
+      myNicknameRef.current,
+      missions.map(toHouseMission),
+      Date.now(),
+      joinRequests,
+    );
+  }, []);
+
   const reloadMyHouses = useCallback(async () => {
     const mine = await fetchMyHouses();
-    const myUserId = getSessionUserId();
     // My cell shows the profile nickname when the members API has none.
-    const myNickname = await fetchMe()
+    myNicknameRef.current = await fetchMe()
       .then((me) => me.nickname ?? undefined)
-      .catch(() => undefined);
-    const detailed = await Promise.all(
-      mine.map(async (h) => {
-        const id = h.houseId ?? 0;
-        const detail = await fetchHouse(id);
-        const [members, missions, joinRequests] = await Promise.all([
-          fetchHouseMembers(id),
-          // Missions are additive — a failure shouldn't take the house down.
-          fetchHouseMissions(id).catch(() => []),
-          detail.myRole === 'OWNER'
-            ? fetchHouseJoinRequests(id).catch(() => [])
-            : Promise.resolve([]),
-        ]);
-        return toGroupHouse(
-          detail,
-          members,
-          myUserId,
-          myNickname,
-          missions.map(toHouseMission),
-          Date.now(),
-          joinRequests,
-        );
-      }),
-    );
+      .catch(() => myNicknameRef.current);
+    const detailed = await Promise.all(mine.map((h) => fetchHouseBundle(h.houseId ?? 0)));
     setHouses(detailed);
-  }, []);
+  }, [fetchHouseBundle]);
+
+  /**
+   * 영향받은 집 하나만 다시 받아 목록에 끼워넣는다 (#534) — 집 안 이벤트
+   * (수락/거절·미션·강퇴 등)가 전체 리로드를 기다리며 늦게 반영되던 것을
+   * 집 수와 무관한 한 묶음 요청으로 줄인다. 실패는 전체 리로드로 폴백.
+   */
+  const reloadHouse = useCallback(
+    async (houseId: number) => {
+      try {
+        const fresh = await fetchHouseBundle(houseId);
+        setHouses((prev) => prev.map((h) => (h.houseId === houseId ? fresh : h)));
+      } catch {
+        await reloadMyHouses();
+      }
+    },
+    [fetchHouseBundle, reloadMyHouses],
+  );
 
   const reloadSearch = useCallback(async () => {
     const list = await fetchHouses(0, 30);
@@ -159,24 +180,37 @@ export function useHouses() {
     }
   };
 
+  /** 신청 행을 목록에서 즉시 뺀다 (#534 낙관적 반영) — 실패 시 재동기화가 복원. */
+  const dropJoinRequestLocally = (houseId: number, requestId: number) =>
+    setHouses((prev) =>
+      prev.map((h) =>
+        h.houseId === houseId
+          ? { ...h, joinRequests: h.joinRequests?.filter((r) => r.requestId !== requestId) }
+          : h,
+      ),
+    );
+
   const acceptJoinRequest = async (houseId: number, requestId: number) => {
+    dropJoinRequestLocally(houseId, requestId);
     try {
       await acceptHouseJoinRequest(houseId, requestId);
       toast('입주 신청을 수락했어요', 'success');
-      await reloadMyHouses();
     } catch {
       toast('입주 신청을 수락하지 못했어요. 정원을 확인해 주세요.', 'error');
     }
+    // 성공(새 멤버 반영)·실패(신청 복원) 모두 해당 집만 재동기화.
+    void reloadHouse(houseId);
   };
 
   const rejectJoinRequest = async (houseId: number, requestId: number) => {
+    dropJoinRequestLocally(houseId, requestId);
     try {
       await rejectHouseJoinRequest(houseId, requestId);
       toast('입주 신청을 거절했어요');
-      await reloadMyHouses();
     } catch {
       toast('입주 신청을 거절하지 못했어요', 'error');
     }
+    void reloadHouse(houseId);
   };
 
   /** Create a house; true on success (server issues the invite code). */
@@ -221,7 +255,7 @@ export function useHouses() {
     try {
       await kickHouseMember(houseId, membershipId);
       toast('멤버를 내보냈어요');
-      await reloadMyHouses();
+      await reloadHouse(houseId);
     } catch {
       toast('강퇴에 실패했어요', 'error');
     }
@@ -245,7 +279,7 @@ export function useHouses() {
       const res = await contributeHouseMission(houseId, missionId);
       setContributedMissionIds((prev) => new Set(prev).add(missionId));
       toast(res.achieved ? '기여 완료! 목표를 달성했어요' : '기여했어요 (+1)', 'success');
-      await reloadMyHouses();
+      await reloadHouse(houseId);
     } catch (err) {
       // The server caps contributions at one per day per member.
       const already =
@@ -260,7 +294,7 @@ export function useHouses() {
     try {
       const res = await claimHouseMission(houseId, missionId);
       toast(`보상 수령! 집 성장 포인트 +${res.grantedGrowthPoints ?? 0}`, 'success');
-      await reloadMyHouses();
+      await reloadHouse(houseId);
     } catch (err) {
       const notAchieved =
         err instanceof ApiError && err.bodyText?.includes('HOUSE_MISSION_NOT_ACHIEVED');
@@ -299,7 +333,7 @@ export function useHouses() {
     try {
       await createHouseMission(houseId, input);
       toast('새 미션을 만들었어요!', 'success');
-      await reloadMyHouses();
+      await reloadHouse(houseId);
     } catch (err) {
       // The server restricts mission creation to the OWNER (403).
       const notOwner = err instanceof ApiError && err.bodyText?.includes('HOUSE_NOT_OWNER');
@@ -312,7 +346,7 @@ export function useHouses() {
     try {
       await deleteHouseMission(houseId, missionId);
       toast('미션을 삭제했어요', 'success');
-      await reloadMyHouses();
+      await reloadHouse(houseId);
       return true;
     } catch (err) {
       // The server keeps COMPLETED missions (growth points already granted).
@@ -335,7 +369,7 @@ export function useHouses() {
     try {
       await apiUpdateHouse(houseId, input);
       toast('집 정보를 수정했어요', 'success');
-      await reloadMyHouses();
+      await reloadHouse(houseId);
     } catch {
       toast('집 정보 수정에 실패했어요', 'error');
     }
@@ -345,7 +379,7 @@ export function useHouses() {
     try {
       await transferHouseOwnership(houseId, membershipId);
       toast('방장을 위임했어요', 'success');
-      await reloadMyHouses();
+      await reloadHouse(houseId);
     } catch {
       toast('방장 위임에 실패했어요', 'error');
     }
@@ -355,7 +389,7 @@ export function useHouses() {
     try {
       await apiReissueInviteCode(houseId);
       toast('새 초대코드가 발급됐어요', 'success');
-      await reloadMyHouses();
+      await reloadHouse(houseId);
     } catch {
       toast('초대코드 재발급에 실패했어요', 'error');
     }

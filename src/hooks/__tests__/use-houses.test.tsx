@@ -152,3 +152,37 @@ describe('useHouses — 입주 신청 처리', () => {
     );
   });
 });
+
+// 집 안 이벤트는 전체 리로드 대신 해당 집만 재동기화한다 (#534).
+describe('useHouses — 단일 집 갱신 (#534)', () => {
+  it('수락은 신청을 즉시(낙관) 지우고, 그 집 번들만 다시 받는다', async () => {
+    const calls: string[] = [];
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      calls.push(`${init?.method ?? 'GET'} ${url}`);
+      if (url.endsWith('/me/houses')) return res({ items: [{ houseId: 6 }] });
+      if (url.includes('/houses/6/join-requests') && init?.method === 'POST') return res({});
+      if (url.includes('/houses/6/join-requests/9/accept')) return res({});
+      if (url.includes('/houses/6/join-requests'))
+        return res({ items: [{ requestId: 9, nickname: '대기자', status: 'PENDING' }] });
+      if (url.includes('/houses/6/members')) return res({ items: [] });
+      if (url.includes('/houses/6/missions')) return res({ items: [] });
+      if (url.includes('/houses/6')) return res({ houseId: 6, name: '집', myRole: 'OWNER' });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useHouses());
+    await waitFor(() => expect(result.current.houses.length).toBe(1));
+    expect(result.current.houses[0].joinRequests?.length).toBe(1);
+
+    calls.length = 0;
+    await act(async () => {
+      await result.current.acceptJoinRequest(6, 9);
+    });
+    // 낙관 제거 후 백그라운드 재동기화가 그 집 번들만 요청 — 전체 목록
+    // (/me/houses)·프로필(/me)은 다시 긁지 않는다.
+    await waitFor(() =>
+      expect(calls.some((c) => c.includes('/join-requests/9/accept'))).toBe(true),
+    );
+    expect(calls.some((c) => c.endsWith('/me/houses'))).toBe(false);
+  });
+});
