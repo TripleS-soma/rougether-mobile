@@ -76,25 +76,37 @@ describe('CategoryManageScreen', () => {
     expect(onReorder).not.toHaveBeenCalled();
   });
 
-  it('blocks deleting a category that still has routines (warning modal)', async () => {
+  it('점유 카테고리 삭제는 남은 항목 수와 일괄 삭제를 제안한다 (#505)', async () => {
     const onDelete = jest.fn();
+    const onDeleteCascade = jest.fn();
     const { getByLabelText, getByText, queryByText } = await render(
       <CategoryManageScreen
         categories={ROUTINE_CATEGORIES}
-        inUseCategoryIds={['일정']}
+        inUseCounts={{ 일정: { routines: 1, todos: 3 } }}
         onDelete={onDelete}
+        onDeleteCascade={onDeleteCascade}
       />,
     );
 
     await fireEvent.press(getByLabelText('일정 삭제'));
-    // Warning instead of the delete confirm — deletion never fires.
-    expect(getByText('삭제할 수 없어요')).toBeTruthy();
+    // 일반 삭제 확인 대신 남은 항목 안내 + 일괄 삭제 모달.
+    expect(getByText('남은 항목까지 삭제할까요?')).toBeTruthy();
+    expect(getByText(/루틴 1개·할 일 3개/)).toBeTruthy();
     expect(queryByText('카테고리 삭제')).toBeNull();
-    await fireEvent.press(getByLabelText('삭제 불가 확인'));
-    expect(queryByText('삭제할 수 없어요')).toBeNull();
+
+    // 취소는 아무것도 지우지 않는다.
+    await fireEvent.press(getByLabelText('카테고리 삭제 취소'));
+    expect(queryByText('남은 항목까지 삭제할까요?')).toBeNull();
+    expect(onDelete).not.toHaveBeenCalled();
+    expect(onDeleteCascade).not.toHaveBeenCalled();
+
+    // 모두 삭제는 cascade로 나간다 (일반 onDelete 아님).
+    await fireEvent.press(getByLabelText('일정 삭제'));
+    await fireEvent.press(getByLabelText('남은 항목까지 모두 삭제'));
+    expect(onDeleteCascade).toHaveBeenCalledWith('일정');
     expect(onDelete).not.toHaveBeenCalled();
 
-    // Categories without routines still delete through the normal confirm.
+    // 빈 카테고리는 기존 확인 모달 그대로.
     await fireEvent.press(getByLabelText('공부 삭제'));
     expect(getByText('카테고리 삭제')).toBeTruthy();
   });

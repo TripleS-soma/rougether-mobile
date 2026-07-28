@@ -12,10 +12,13 @@ import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 export type CategoryManageScreenProps = {
   categories?: RoutineCategoryMeta[];
   /**
-   * Categories that still have routines/todos — the server refuses to delete
-   * them, so 삭제 shows a warning modal instead of the delete confirm.
+   * 카테고리별 남은 항목 수 — 서버는 항목이 남은 카테고리 삭제를 거부한다
+   * (CATEGORY_IN_USE). 지난·완료된 할 일처럼 화면에 안 보이는 항목도
+   * 세므로(#505), 삭제 탭 시 개수를 보여주고 일괄 삭제를 제안한다.
    */
-  inUseCategoryIds?: string[];
+  inUseCounts?: Record<string, { routines: number; todos: number }>;
+  /** 남은 항목까지 모두 지우고 카테고리를 삭제 (#505 — cascade). */
+  onDeleteCascade?: (id: string) => void;
   onCreate?: (category: RoutineCategoryMeta) => void;
   onUpdate?: (id: string, category: RoutineCategoryMeta) => void;
   onDelete?: (id: string) => void;
@@ -31,7 +34,8 @@ export type CategoryManageScreenProps = {
  */
 export function CategoryManageScreen({
   categories = [],
-  inUseCategoryIds = [],
+  inUseCounts = {},
+  onDeleteCascade,
   onCreate,
   onUpdate,
   onDelete,
@@ -187,11 +191,11 @@ export function CategoryManageScreen({
                           <Icon name="edit" size={16} color={t.text} />
                         </Pressable>
                         <Pressable
-                          onPress={() =>
-                            inUseCategoryIds.includes(c.id)
-                              ? setBlockedDelete(c)
-                              : setPendingDelete(c)
-                          }
+                          onPress={() => {
+                            const used = inUseCounts[c.id];
+                            if (used && used.routines + used.todos > 0) setBlockedDelete(c);
+                            else setPendingDelete(c);
+                          }}
                           accessibilityRole="button"
                           accessibilityLabel={`${c.label} 삭제`}
                           style={[styles.rowBtn, { backgroundColor: t.dangerSoft }]}>
@@ -220,19 +224,42 @@ export function CategoryManageScreen({
         <View style={styles.confirmOverlay}>
           <Pressable style={styles.backdrop} onPress={() => setBlockedDelete(null)} />
           <View style={[styles.confirmCard, { backgroundColor: t.screen }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>삭제할 수 없어요</Text>
+            <Text style={[Typography.h3, { color: t.text }]}>남은 항목까지 삭제할까요?</Text>
             <Text style={[Typography.body, styles.confirmText, { color: t.textMuted }]}>
-              &lsquo;{blockedDelete.label}&rsquo; 카테고리에 아직 루틴이 있어요.{'\n'}안의 루틴을
-              삭제하거나 다른 카테고리로 옮긴 뒤 삭제할 수 있어요.
+              &lsquo;{blockedDelete.label}&rsquo; 카테고리에{' '}
+              {[
+                (inUseCounts[blockedDelete.id]?.routines ?? 0) > 0
+                  ? `루틴 ${inUseCounts[blockedDelete.id]?.routines}개`
+                  : null,
+                (inUseCounts[blockedDelete.id]?.todos ?? 0) > 0
+                  ? `할 일 ${inUseCounts[blockedDelete.id]?.todos}개`
+                  : null,
+              ]
+                .filter(Boolean)
+                .join('·')}
+              가 남아 있어요. 지난 날짜의 완료된 할 일처럼 화면에 안 보이는 항목도 포함돼요.
+              {'\n'}모두 삭제하면 되돌릴 수 없어요.
             </Text>
             <View style={styles.confirmBtns}>
               <Pressable
                 onPress={() => setBlockedDelete(null)}
                 accessibilityRole="button"
-                accessibilityLabel="삭제 불가 확인"
-                style={[styles.confirmBtn, { backgroundColor: t.primary }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>확인</Text>
+                accessibilityLabel="카테고리 삭제 취소"
+                style={[styles.confirmBtn, { backgroundColor: t.surfaceMuted }]}>
+                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
               </Pressable>
+              {onDeleteCascade ? (
+                <Pressable
+                  onPress={() => {
+                    onDeleteCascade(blockedDelete.id);
+                    setBlockedDelete(null);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="남은 항목까지 모두 삭제"
+                  style={[styles.confirmBtn, { backgroundColor: t.danger }]}>
+                  <Text style={[Typography.label, { color: t.onPrimary }]}>모두 삭제</Text>
+                </Pressable>
+              ) : null}
             </View>
           </View>
         </View>
