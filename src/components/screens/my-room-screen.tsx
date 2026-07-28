@@ -1257,6 +1257,10 @@ function SpringProgressFill({ progress, color }: { progress: number; color: stri
       toValue: progress,
       friction: 8,
       tension: 50,
+      // 줄어들 때(완료 해제)는 바운스 없이 목표에서 멈춘다 (#503) — 100%→0%
+      // (루틴 1개 해제)에서 오버슈트가 0 아래로 뚫려 바가 깜빡였다. 차오를
+      // 때는 기존 바운스(#440) 유지.
+      overshootClamping: progress < prev.current,
       useNativeDriver: false,
     }).start();
     if (progress >= 1 && prev.current < 1) {
@@ -1271,7 +1275,12 @@ function SpringProgressFill({ progress, color }: { progress: number; color: stri
         styles.progressFill,
         {
           backgroundColor: color,
-          width: w.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
+          // clamp: 스프링 오버슈트가 범위 밖(음수/100% 초과) width로 새지 않게 (#503).
+          width: w.interpolate({
+            inputRange: [0, 1],
+            outputRange: ['0%', '100%'],
+            extrapolate: 'clamp',
+          }),
         },
       ]}>
       <Animated.View
