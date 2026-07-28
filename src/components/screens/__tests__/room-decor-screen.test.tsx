@@ -40,10 +40,10 @@ const lastApply = (fn: jest.Mock) =>
 
 describe('RoomDecorScreen (#327 — 자유 배치)', () => {
   it('renders the title with the furniture panel open by default (#487)', async () => {
-    const { getByText, getByLabelText, queryByText, queryByLabelText } = await render(
-      <RoomDecorScreen />,
-    );
-    expect(getByText('나의 방 꾸미기')).toBeTruthy();
+    const { getByLabelText, queryByText, queryByLabelText } = await render(<RoomDecorScreen />);
+    // 헤더 제거(#510) — 제목 없이 플로팅 뒤로가기·재화만 남는다.
+    expect(queryByText('나의 방 꾸미기')).toBeNull();
+    expect(getByLabelText('뒤로가기')).toBeTruthy();
     // 전체보기 버튼/가이드 카드 없이 진입 즉시 가구·소품 탭이 열려 있다.
     expect(getByLabelText('가구 탭')).toBeTruthy();
     expect(queryByLabelText('전체보기')).toBeNull();
@@ -363,16 +363,16 @@ describe('RoomDecorScreen — 프리뷰·구매 (#501)', () => {
     expect(onBuy).toHaveBeenCalledWith('plant');
   });
 
-  it('선택 툴바의 구매 버튼도 같은 구매 확인을 연다', async () => {
-    const { getByText, getByLabelText, getByTestId } = await render(
+  it('선택 툴바에 구매 버튼은 없다 — 구매는 프리뷰 재탭으로만', async () => {
+    const { getByLabelText, getByTestId, queryByLabelText } = await render(
       <RoomDecorScreen initialItems={[]} ownedIds={['bed']} diaBalance={9999} />,
     );
     await fireEvent.press(getByLabelText('소품 탭'));
     await fireEvent.press(getByLabelText('초록 식물 미리 배치'));
     await layoutCanvas(getByTestId);
     await tapItem('plant');
-    await fireEvent.press(getByLabelText('초록 식물 구매'));
-    expect(getByText(/초록 식물.*구매해요/)).toBeTruthy();
+    expect(getByTestId('selection-ring-plant')).toBeTruthy();
+    expect(queryByLabelText('초록 식물 구매')).toBeNull();
   });
 
   it('잔액 부족이면 구매 확인 대신 토스트', async () => {
