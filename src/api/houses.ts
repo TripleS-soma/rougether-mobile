@@ -7,6 +7,7 @@ import type {
   HouseCreateResponse,
   HouseDetailResponse,
   HouseJoinResponse,
+  HouseJoinRequestResponse,
   HouseListResponse,
   HouseMemberDayResponse,
   HouseMemberRoutineCompletionListResponse,
@@ -64,9 +65,24 @@ export function joinHouseByCode(inviteCode: string) {
   return apiPost<HouseJoinResponse>('/houses/join-by-code', { inviteCode });
 }
 
-/** POST /houses/{id}/join — join a browsable house directly. */
-export function joinHouse(houseId: number) {
-  return apiPost<HouseJoinResponse>(`/houses/${houseId}/join`);
+/** POST /houses/{id}/join-requests — request admission to a browsable house. */
+export function requestHouseJoin(houseId: number) {
+  return apiPost<HouseJoinRequestResponse>(`/houses/${houseId}/join-requests`);
+}
+
+/** GET /houses/{id}/join-requests — pending requests (owner only). */
+export function fetchHouseJoinRequests(houseId: number) {
+  return apiGetList<HouseJoinRequestResponse>(`/houses/${houseId}/join-requests`);
+}
+
+/** POST /houses/{id}/join-requests/{requestId}/accept — owner accepts. */
+export function acceptHouseJoinRequest(houseId: number, requestId: number) {
+  return apiPost<HouseJoinResponse>(`/houses/${houseId}/join-requests/${requestId}/accept`);
+}
+
+/** POST /houses/{id}/join-requests/{requestId}/reject — owner rejects. */
+export function rejectHouseJoinRequest(houseId: number, requestId: number) {
+  return apiPost<void>(`/houses/${houseId}/join-requests/${requestId}/reject`);
 }
 
 /** POST /houses/{id}/invite-code — reissue the invite code (owner). */

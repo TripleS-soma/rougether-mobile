@@ -9,10 +9,12 @@ import {
   ApiError,
   apiGet,
   claimHouseMission,
+  acceptHouseJoinRequest,
   contributeHouseMission,
   createHouse as apiCreateHouse,
   createHouseMission,
   fetchHouse,
+  fetchHouseJoinRequests,
   fetchHouseMembers,
   fetchHouseMissions,
   fetchMe,
@@ -20,12 +22,13 @@ import {
   fetchHouses,
   fetchMyHouses,
   getSessionUserId,
-  joinHouse as apiJoinHouse,
   joinHouseByCode,
   kickHouseMember,
   leaveHouse as apiLeaveHouse,
   previewHouseByCode,
   reissueInviteCode as apiReissueInviteCode,
+  rejectHouseJoinRequest,
+  requestHouseJoin,
   transferHouseOwnership,
   updateHouse as apiUpdateHouse,
 } from '@/api';
@@ -58,13 +61,23 @@ export function useHouses() {
     const detailed = await Promise.all(
       mine.map(async (h) => {
         const id = h.houseId ?? 0;
-        const [detail, members, missions] = await Promise.all([
-          fetchHouse(id),
+        const detail = await fetchHouse(id);
+        const [members, missions, joinRequests] = await Promise.all([
           fetchHouseMembers(id),
           // Missions are additive — a failure shouldn't take the house down.
           fetchHouseMissions(id).catch(() => []),
+          detail.myRole === 'OWNER'
+            ? fetchHouseJoinRequests(id).catch(() => [])
+            : Promise.resolve([]),
         ]);
-        return toGroupHouse(detail, members, myUserId, myNickname, missions.map(toHouseMission));
+        return toGroupHouse(
+          detail,
+          members,
+          myUserId,
+          myNickname,
+          missions.map(toHouseMission),
+          joinRequests,
+        );
       }),
     );
     setHouses(detailed);
@@ -111,16 +124,41 @@ export function useHouses() {
     }
   };
 
-  /** Join a browsable house; true on success. */
+  /** Request admission to a browsable house; true when the request is pending. */
   const joinHouse = async (houseId: string): Promise<boolean> => {
     try {
-      await apiJoinHouse(Number(houseId));
-      toast('입주 완료!', 'success');
-      await Promise.all([reloadMyHouses(), reloadSearch()]);
+      await requestHouseJoin(Number(houseId));
+      toast('입주 신청을 보냈어요!', 'success');
+      await reloadSearch();
       return true;
-    } catch {
-      toast('입주에 실패했어요. 만석이거나 이미 참여 중일 수 있어요.', 'error');
+    } catch (error) {
+      const alreadyPending =
+        error instanceof ApiError && error.bodyText?.includes('HOUSE_JOIN_REQUEST_ALREADY_PENDING');
+      toast(
+        alreadyPending ? '이미 입주 신청 중이에요' : '입주 신청에 실패했어요. 만석일 수 있어요.',
+        'error',
+      );
       return false;
+    }
+  };
+
+  const acceptJoinRequest = async (houseId: number, requestId: number) => {
+    try {
+      await acceptHouseJoinRequest(houseId, requestId);
+      toast('입주 신청을 수락했어요', 'success');
+      await reloadMyHouses();
+    } catch {
+      toast('입주 신청을 수락하지 못했어요. 정원을 확인해 주세요.', 'error');
+    }
+  };
+
+  const rejectJoinRequest = async (houseId: number, requestId: number) => {
+    try {
+      await rejectHouseJoinRequest(houseId, requestId);
+      toast('입주 신청을 거절했어요');
+      await reloadMyHouses();
+    } catch {
+      toast('입주 신청을 거절하지 못했어요', 'error');
     }
   };
 
@@ -263,9 +301,12 @@ export function useHouses() {
     searchHouses: browsableHouses,
     loading,
     searchLoading,
+    refreshHouses: reloadMyHouses,
     previewByCode,
     joinByCode,
     joinHouse,
+    acceptJoinRequest,
+    rejectJoinRequest,
     create,
     kickMember,
     leaveHouse,

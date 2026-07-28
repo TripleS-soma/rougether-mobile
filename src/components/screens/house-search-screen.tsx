@@ -40,6 +40,8 @@ export type SearchHouse = {
   level?: number;
   /** Optional intro line — the server summary has none today (demo data only). */
   description?: string;
+  /** Current user's latest browse-join request for this house. */
+  joinRequestStatus?: 'PENDING' | 'ACCEPTED' | 'REJECTED';
 };
 
 /** Pre-join preview of the house behind an invite code (GET /houses/by-code). */
@@ -262,6 +264,8 @@ export function HouseSearchScreen({
           ) : (
             filtered.map((h) => {
               const full = h.members >= h.capacity;
+              const pending = h.joinRequestStatus === 'PENDING';
+              const accepted = h.joinRequestStatus === 'ACCEPTED';
               return (
                 <View key={h.id} style={[styles.houseRow, { backgroundColor: t.surface }]}>
                   <View
@@ -305,16 +309,36 @@ export function HouseSearchScreen({
                   </View>
                   <Pressable
                     onPress={() =>
-                      full ? toast('정원이 가득 찼어요', 'error') : onJoinHouse?.(h.id)
+                      full
+                        ? toast('정원이 가득 찼어요', 'error')
+                        : pending
+                          ? toast('방장의 수락을 기다리고 있어요')
+                          : accepted
+                            ? toast('이미 입주가 완료됐어요')
+                            : onJoinHouse?.(h.id)
                     }
                     accessibilityRole="button"
-                    accessibilityState={{ disabled: full }}
+                    accessibilityState={{ disabled: full || pending || accepted }}
                     style={[
                       styles.joinBtn,
-                      { backgroundColor: full ? t.surfaceMuted : t.primary },
+                      {
+                        backgroundColor: full || pending || accepted ? t.surfaceMuted : t.primary,
+                      },
                     ]}>
-                    <Text style={[styles.joinText, { color: full ? t.textMuted : t.onPrimary }]}>
-                      {full ? '대기' : '입주 신청'}
+                    <Text
+                      style={[
+                        styles.joinText,
+                        { color: full || pending || accepted ? t.textMuted : t.onPrimary },
+                      ]}>
+                      {full
+                        ? '만석'
+                        : pending
+                          ? '신청 중'
+                          : accepted
+                            ? '입주 완료'
+                            : h.joinRequestStatus === 'REJECTED'
+                              ? '다시 신청'
+                              : '입주 신청'}
                     </Text>
                   </Pressable>
                 </View>

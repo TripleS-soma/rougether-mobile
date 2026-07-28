@@ -73,6 +73,12 @@ export type VisitedFriend = {
 
 export type Floor = { level: string; rooms: RoomCell[] };
 
+export type HouseJoinRequest = {
+  requestId: number;
+  nickname: string;
+  requestedAt?: string;
+};
+
 export type House = {
   title: string;
   /** May be absent for non-owners (the API hides the code from members). */
@@ -93,6 +99,8 @@ export type House = {
   memberCount?: number;
   /** Current cover art key — prefill for the owner's edit form. */
   coverImageKey?: string;
+  /** Pending browse-join requests, loaded for owners only. */
+  joinRequests?: HouseJoinRequest[];
 };
 
 /** Owner's house-settings edit (PUT /houses/{id}; omitted fields are kept). */
@@ -246,6 +254,8 @@ export type GroupHouseScreenProps = {
   onVisitFriend?: (friend: VisitedFriend) => void;
   onVisitMyRoom?: () => void;
   onOpenSearch?: () => void;
+  /** Refresh members and pending requests when management opens. */
+  onOpenMemberManagement?: (houseId: number) => void;
   /** Kick a member via the API (owner only); shown when the house has ids. */
   onKickMember?: (houseId: number, membershipId: number) => void;
   /** Leave the current house via the API. */
@@ -275,6 +285,10 @@ export type GroupHouseScreenProps = {
   onTransferOwnership?: (houseId: number, membershipId: number) => void;
   /** Reissue the invite code via the API (owner only; the old code expires). */
   onReissueInviteCode?: (houseId: number) => void;
+  /** Accept a pending browse-join request (owner only). */
+  onAcceptJoinRequest?: (houseId: number, requestId: number) => void;
+  /** Reject a pending browse-join request (owner only). */
+  onRejectJoinRequest?: (houseId: number, requestId: number) => void;
   /**
    * Drag-and-drop tile swap (#278). Seat indices are display order (top-left
    * first) of the houses handed in — the shell persists and re-arranges via
@@ -299,6 +313,7 @@ export function GroupHouseScreen({
   onVisitFriend,
   onVisitMyRoom,
   onOpenSearch,
+  onOpenMemberManagement,
   onKickMember,
   onLeaveHouse,
   onAddMissionRoutine,
@@ -315,6 +330,8 @@ export function GroupHouseScreen({
   backgrounds,
   onTransferOwnership,
   onReissueInviteCode,
+  onAcceptJoinRequest,
+  onRejectJoinRequest,
   onSwapSeats,
 }: GroupHouseScreenProps) {
   const t = useTokens();
@@ -793,6 +810,47 @@ export function GroupHouseScreen({
             </View>
           ) : null}
 
+          {isOwner && currentHouse.joinRequests?.length ? (
+            <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
+              <Text style={[Typography.label, { color: t.text }]}>
+                입주 신청 {currentHouse.joinRequests.length}건
+              </Text>
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                탐색으로 찾아온 신청을 확인해 주세요.
+              </Text>
+              {currentHouse.joinRequests.map((request) => (
+                <View
+                  key={request.requestId}
+                  style={[styles.memberRow, { backgroundColor: t.surfaceMuted }]}>
+                  <View style={styles.flex}>
+                    <Text style={[Typography.label, { color: t.text }]}>{request.nickname}</Text>
+                    <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                      입주 대기 중
+                    </Text>
+                  </View>
+                  {onRejectJoinRequest && currentHouse.houseId ? (
+                    <Pressable
+                      onPress={() => onRejectJoinRequest(currentHouse.houseId!, request.requestId)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${request.nickname} 입주 거절`}
+                      style={[styles.kickBtn, { backgroundColor: `${t.danger}22` }]}>
+                      <Text style={[Typography.supporting, { color: t.danger }]}>거절</Text>
+                    </Pressable>
+                  ) : null}
+                  {onAcceptJoinRequest && currentHouse.houseId ? (
+                    <Pressable
+                      onPress={() => onAcceptJoinRequest(currentHouse.houseId!, request.requestId)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${request.nickname} 입주 수락`}
+                      style={[styles.kickBtn, { backgroundColor: `${t.primary}22` }]}>
+                      <Text style={[Typography.supporting, { color: t.primaryText }]}>수락</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              ))}
+            </View>
+          ) : null}
+
           <View style={styles.memberList}>
             {members.map((member) => {
               const kickedOut = isKicked(member.name);
@@ -1240,7 +1298,12 @@ export function GroupHouseScreen({
           <Icon name="search" size={18} color={t.text} />
         </Pressable>
         <Pressable
-          onPress={() => setShowMembers(true)}
+          onPress={() => {
+            if (currentHouse.myRole === 'OWNER' && currentHouse.houseId) {
+              onOpenMemberManagement?.(currentHouse.houseId);
+            }
+            setShowMembers(true);
+          }}
           accessibilityRole="button"
           accessibilityLabel="구성원 목록"
           style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>

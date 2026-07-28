@@ -48,6 +48,7 @@ import type {
   GoalItem,
   HouseCoverImage,
   HouseDetailResponse,
+  HouseJoinRequestResponse,
   HouseMemberDayResponse,
   HouseMemberRoutineCompletionListResponse,
   HousePreviewResponse,
@@ -563,6 +564,7 @@ export function toGroupHouse(
   myUserId?: number,
   myNickname?: string,
   missions?: HouseMission[],
+  joinRequests?: HouseJoinRequestResponse[],
 ): House {
   const active = members.filter((m) => m.status !== 'LEFT');
   // Me first → my room lands on the bottom-left seat.
@@ -610,6 +612,13 @@ export function toGroupHouse(
     memberCount: detail.currentMemberCount ?? active.length,
     coverImageKey: detail.coverImageKey ?? undefined,
     growthPoints: detail.growthPoints ?? undefined,
+    joinRequests: joinRequests
+      ?.filter((request) => request.requestId != null)
+      .map((request) => ({
+        requestId: request.requestId!,
+        nickname: request.nickname || `멤버 ${request.userId ?? ''}`.trim(),
+        requestedAt: request.requestedAt,
+      })),
   };
 }
 
@@ -705,6 +714,7 @@ export function toSearchHouse(h: HouseSummary, index = 0): SearchHouse {
     // No description: the boilerplate one only ever truncated (#234); the
     // level rides the meta line instead. Server summaries carry no intro text.
     level: h.level ?? 0,
+    joinRequestStatus: h.myJoinRequestStatus,
   };
 }
 
