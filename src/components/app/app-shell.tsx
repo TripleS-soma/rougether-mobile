@@ -819,9 +819,20 @@ export function AppShell({
           {screen === 'categoryManage' ? (
             <CategoryManageScreen
               categories={categories}
-              inUseCategoryIds={Array.from(
-                new Set(routines.map((r) => r.category).filter((c): c is string => !!c)),
+              // 지난·완료 할 일 등 안 보이는 항목까지 포함한 카테고리별 점유 수 (#505).
+              inUseCounts={routines.reduce<Record<string, { routines: number; todos: number }>>(
+                (acc, r) => {
+                  if (!r.category) return acc;
+                  const c = (acc[r.category] ??= { routines: 0, todos: 0 });
+                  if (r.kind === 'todo') c.todos += 1;
+                  else c.routines += 1;
+                  return acc;
+                },
+                {},
               )}
+              onDeleteCascade={(id) => {
+                void deleteCategoryCascade(id);
+              }}
               onCreate={createRoutineCategory}
               onUpdate={updateRoutineCategory}
               onDelete={deleteRoutineCategory}
