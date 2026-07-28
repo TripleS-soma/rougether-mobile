@@ -1,5 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 
+import { CoinIcon } from '@/components/ui/coin-icon';
 import { useTokens } from '@/hooks/use-tokens';
 
 /**
@@ -39,7 +40,7 @@ const ICONS = {
   'layer-up': 'arrow-up',
   'layer-down': 'arrow-down',
   // Currency + shop
-  coin: 'ellipse',
+  coin: 'ellipse', // 실제 렌더는 CoinIcon(#512) — IconName 타입 유지용 매핑.
   dia: 'diamond',
   shop: 'storefront-outline',
   // Settings menu rows
@@ -68,5 +69,8 @@ export type IconProps = {
 
 export function Icon({ name, size = 22, color }: IconProps) {
   const t = useTokens();
+  // 코인은 커스텀 동전 글리프 (#512) — Ionicons에 동전형이 없어 발바닥 각인
+  // 동전으로 그린다. 색 관례(t.warning 전달)는 그대로 fill로 흐른다.
+  if (name === 'coin') return <CoinIcon size={size} color={color ?? t.warning} />;
   return <Ionicons name={ICONS[name]} size={size} color={color ?? t.icon} />;
 }
