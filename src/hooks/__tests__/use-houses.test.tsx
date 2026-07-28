@@ -129,3 +129,48 @@ describe('useHouses — 입주 신청 처리', () => {
     );
   });
 });
+
+describe('useHouses — 탐색 미리보기', () => {
+  it('loads public house detail and maps its missions', async () => {
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/houses/7/preview')) {
+        return res({
+          houseId: 7,
+          name: '미리보기 집',
+          currentMemberCount: 2,
+          maxMembers: 4,
+          level: 1,
+          missions: [
+            {
+              missionId: 91,
+              title: '다같이 10번',
+              missionType: 'WEEKLY_MEMBER_COUNT',
+              currentValue: 3,
+              targetValue: 10,
+              status: 'ACTIVE',
+            },
+          ],
+        });
+      }
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useHouses());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    let preview = null;
+    await act(async () => {
+      preview = await result.current.previewHouse('7');
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/houses/7/preview'),
+      expect.any(Object),
+    );
+    expect(preview).toMatchObject({
+      houseId: 7,
+      name: '미리보기 집',
+      missions: [{ id: 91, current: 3, target: 10 }],
+    });
+  });
+});

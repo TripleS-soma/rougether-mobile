@@ -318,6 +318,21 @@ export type HousePreviewResponse = {
   inviteExpired?: boolean;
 };
 
+export type HousePreviewDetailResponse = {
+  houseId?: number;
+  name?: string;
+  description?: string;
+  coverImageKey?: string;
+  maxMembers?: number;
+  currentMemberCount?: number;
+  level?: number;
+  goals?: GoalSummary[];
+  isMember?: boolean;
+  isFull?: boolean;
+  myJoinRequestStatus?: HouseJoinRequestStatus;
+  missions?: MissionSummary[];
+};
+
 export type HouseSummary = {
   houseId?: number;
   name?: string;
@@ -433,6 +448,7 @@ export type MissionSummary = {
   status?: 'ACTIVE' | 'COMPLETED' | 'EXPIRED';
   startsAt?: string;
   endsAt?: string;
+  todayClaimed?: boolean;
   createdAt?: string;
 };
 

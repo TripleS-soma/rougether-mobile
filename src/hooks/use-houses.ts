@@ -14,6 +14,7 @@ import {
   createHouse as apiCreateHouse,
   createHouseMission,
   fetchHouse,
+  fetchHousePreview,
   fetchHouseJoinRequests,
   fetchHouseMembers,
   fetchHouseMissions,
@@ -32,14 +33,24 @@ import {
   transferHouseOwnership,
   updateHouse as apiUpdateHouse,
 } from '@/api';
-import { toGroupHouse, toHouseMission, toHousePreview, toSearchHouse } from '@/api/adapters';
+import {
+  toBrowseHousePreview,
+  toGroupHouse,
+  toHouseMission,
+  toHousePreview,
+  toSearchHouse,
+} from '@/api/adapters';
 import { useToast } from '@/components/ui/toast';
 import type {
   House,
   HouseEditInput,
   NewHouseMission,
 } from '@/components/screens/group-house-screen';
-import type { HousePreview, SearchHouse } from '@/components/screens/house-search-screen';
+import type {
+  BrowseHousePreview,
+  HousePreview,
+  SearchHouse,
+} from '@/components/screens/house-search-screen';
 
 export function useHouses() {
   const [houses, setHouses] = useState<House[]>([]);
@@ -107,6 +118,15 @@ export function useHouses() {
   const previewByCode = async (code: string): Promise<HousePreview | null> => {
     try {
       return toHousePreview(await previewHouseByCode(code));
+    } catch {
+      return null;
+    }
+  };
+
+  /** Load a browsable house's read-only detail and group-mission progress. */
+  const previewHouse = async (houseId: string): Promise<BrowseHousePreview | null> => {
+    try {
+      return toBrowseHousePreview(await fetchHousePreview(Number(houseId)));
     } catch {
       return null;
     }
@@ -303,6 +323,7 @@ export function useHouses() {
     searchLoading,
     refreshHouses: reloadMyHouses,
     previewByCode,
+    previewHouse,
     joinByCode,
     joinHouse,
     acceptJoinRequest,

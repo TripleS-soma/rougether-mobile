@@ -30,7 +30,11 @@ import type { HouseCover } from '@/components/house-cover-picker';
 import type { Floor, House, HouseMission, RoomCell } from '@/components/screens/group-house-screen';
 import type { FriendActivityDay, GuestbookEntry } from '@/components/screens/friend-room-screen';
 import { isPictogramName, type PictogramName } from '@/components/ui/pictograms';
-import type { HousePreview, SearchHouse } from '@/components/screens/house-search-screen';
+import type {
+  BrowseHousePreview,
+  HousePreview,
+  SearchHouse,
+} from '@/components/screens/house-search-screen';
 import type { CalendarDayItem } from '@/components/screens/my-room-screen';
 import type { NotificationEntry } from '@/components/screens/notification-list-screen';
 import type { OwnedCharacter } from '@/components/screens/sheets/character-picker-sheet';
@@ -51,6 +55,7 @@ import type {
   HouseJoinRequestResponse,
   HouseMemberDayResponse,
   HouseMemberRoutineCompletionListResponse,
+  HousePreviewDetailResponse,
   HousePreviewResponse,
   HouseSummary,
   ItemResponse,
@@ -662,6 +667,19 @@ export function toHouseMission(m: MissionSummary): HouseMission {
     status: m.status ?? 'ACTIVE',
     achieved: target > 0 && (m.currentValue ?? 0) >= target,
     endsOn: m.endsAt ? localDateOf(m.endsAt) : undefined,
+  };
+}
+
+/** Browse preview response → read-only house sheet model. */
+export function toBrowseHousePreview(p: HousePreviewDetailResponse): BrowseHousePreview {
+  return {
+    houseId: p.houseId ?? 0,
+    name: p.name ?? '',
+    description: p.description ?? undefined,
+    members: p.currentMemberCount ?? 0,
+    capacity: p.maxMembers ?? undefined,
+    level: p.level ?? 0,
+    missions: (p.missions ?? []).map(toHouseMission),
   };
 }
 

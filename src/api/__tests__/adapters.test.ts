@@ -13,6 +13,7 @@ import {
   toWallet,
   todayCompletions,
   toGroupHouse,
+  toBrowseHousePreview,
   toHouseMission,
   toHouseCover,
   characterIdFromCode,
@@ -614,6 +615,44 @@ describe('API adapters', () => {
     expect(
       toHouseMission({ missionId: 2, title: '무기한', missionType: 'DAILY_MEMBER_RATE' }).endsOn,
     ).toBeUndefined();
+  });
+
+  it('maps browse preview missions to the read-only house model', () => {
+    expect(
+      toBrowseHousePreview({
+        houseId: 7,
+        name: '미리보기 집',
+        description: '함께 루틴을 지켜요',
+        currentMemberCount: 2,
+        maxMembers: 4,
+        level: 3,
+        missions: [
+          {
+            missionId: 9,
+            title: '주간 미션',
+            missionType: 'WEEKLY_MEMBER_COUNT',
+            currentValue: 4,
+            targetValue: 10,
+            status: 'ACTIVE',
+          },
+        ],
+      }),
+    ).toMatchObject({
+      houseId: 7,
+      name: '미리보기 집',
+      members: 2,
+      capacity: 4,
+      level: 3,
+      missions: [
+        {
+          id: 9,
+          title: '주간 미션',
+          desc: '주간 구성원 달성 횟수',
+          current: 4,
+          target: 10,
+        },
+      ],
+    });
   });
 
   it('maps a room character code to the app character id', () => {
