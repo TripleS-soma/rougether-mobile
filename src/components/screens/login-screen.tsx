@@ -22,6 +22,7 @@ import { useFontEmphasis, useTokens } from '@/hooks/use-tokens';
 
 export type LoginScreenProps = {
   onAuthSuccess?: () => void;
+  /** 이메일 가입 잠정 제외 — 진입 링크가 주석 처리돼 현재는 미사용. */
   onGoSignup?: () => void;
   /**
    * Dev-login (개발 빌드 전용 폼): a numeric userId in the email field signs
@@ -247,6 +248,8 @@ export function LoginScreen({
             />
           </View>
 
+          {/* 이메일 가입 잠정 제외 — 소셜 로그인만 제공. 이메일 가입을
+              되살릴 때 아래 회원가입 진입 링크를 복구할 것.
           <View style={styles.footer}>
             <Text style={[styles.smallText, { color: t.textMuted }]}>아직 회원이 아니신가요? </Text>
             <Pressable onPress={onGoSignup} accessibilityRole="button">
@@ -254,7 +257,7 @@ export function LoginScreen({
                 회원가입
               </Text>
             </Pressable>
-          </View>
+          </View> */}
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
