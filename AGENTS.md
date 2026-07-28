@@ -34,7 +34,12 @@
 - **작업 시작 전 스펙 확인**: 기능 작업을 시작하기 전에 상위 폴더의 공유 계약 저장소 `../rougether-spec`를 읽으세요 — 루트의 `product.md` / `erd.md` / `api.md` / `open-questions.md`와 해당 도메인의 `domains/<도메인>/{prd,features,api}.md`(member / routine-todo / room / shop / gacha / house). 스웨거는 "지금 서버에 있는 것", 스펙은 "팀이 합의한 의도"입니다.
 - 컴포넌트를 만든 뒤에는 **`src/dev/registry.tsx`에 등록**해 Dev 탭에 노출시키고, 형제 `__tests__/*.test.tsx`를 작성하세요(React Native Testing Library; 스냅샷이 아니라 `getByText` / `getByLabelText`로 단언). `SampleButton`이 참고 패턴입니다.
 - 커밋 전: `npm run typecheck && npm run lint && npm run format:check && npm test` 실행. CI가 `main` 푸시와 모든 PR에서 이 네 가지를 돌리므로, 항상 통과 상태로 유지하세요.
-- 기능 하나당 `feat/<기능>` 브랜치, **`dev`로 PR** (2026-07-19부터 — main 직행 금지). **PR 스택 금지** — 브랜치는 항상 `dev`에서 직접 분기하세요(중간 브랜치가 먼저 머지되면 자식 PR이 표류합니다).
+- 기능 하나당 `feat/<기능>` 브랜치, **`dev`로 PR** (2026-07-19부터 — main 직행 금지, 2026-07-28부터 룰셋이 강제). **PR 스택 금지** — 브랜치는 항상 `dev`에서 직접 분기하세요(중간 브랜치가 먼저 머지되면 자식 PR이 표류합니다).
+- **머지 규칙 (GitHub 룰셋으로 강제, 2026-07-28 정립)**:
+  - **기능 PR은 squash 머지** — dev 히스토리가 PR당 1커밋이 되어 revert·OTA 롤백이 쉽습니다. squash 커밋 메시지에 **PR 제목이 그대로 쓰이므로** PR 제목을 커밋 컨벤션(`feat:`/`fix:`/`chore:`)으로 작성하세요. rebase 머지는 비활성.
+  - **dev→main 승격 PR만 merge commit** (squash하면 dev 이력이 한 커밋으로 뭉개짐). 승격 PR 제목은 `release: dev → main (YYYY-MM-DD)` 형식.
+  - **룰셋**: `dev` = PR 필수 + CI(`check`·`prebuild`) 통과 필수, 직접 push 차단, 리뷰는 비필수(단 아래 Claude 리뷰 확인은 프로세스로 유지). `main` = 추가로 **팀원 승인 1명 필수** — base를 잘못 잡아 main으로 머지하려 해도 GitHub이 막습니다. bypass 없음: 비상시엔 Settings → Rules에서 룰셋을 잠깐 비활성화(명시적·감사 가능한 경로)하고 끝나면 복구.
+  - **auto-merge(squash)** 는 CI 통과 대기 예약용으로 사용해도 됩니다. 단 native-build 몰아 머지 때는 런 취소 타이밍을 제어해야 하므로 수동 머지.
 - **`dev` 머지 = 자동 배포 트리거**: CI(`.github/workflows/eas-deploy.yml`)가 네이티브 지문을 비교해 JS-only면 preview 채널 OTA, 네이티브 변경이면 EAS 빌드(+iOS TestFlight 자동 제출)를 실행합니다. `main`은 안정 릴리스 지점 — 검증된 `dev`를 주기적으로 승격(dev→main)합니다.
 - **네이티브 빌드 PR에는 `native-build` 라벨**: 네이티브 지문이 바뀌는 PR(새 네이티브 모듈, app.json 플러그인/네이티브 설정, google-services 류 파일 등)은 PR에도 `native-build` 라벨을 붙이세요. 머지 즉시 양 플랫폼 EAS 빌드가 소모되므로(빌드 쿼터·과금) 리뷰어가 머지 타이밍을 판단할 수 있게 하고, 가능하면 네이티브 변경 PR들을 몰아서 머지해 빌드 횟수를 아낍니다.
 - **native-build PR이 2개 이상 쌓이면 빌드는 한 번만**: 각 dev 머지가 배포 워크플로를 따로 트리거하므로, 따로따로 머지하면 그 수만큼 EAS 빌드가 돕니다(실패 빌드도 쿼터를 소모). 절차 — ① 대기 중인 native-build PR들을 시간 간격 없이 연속으로 머지한다. ② 마지막 머지를 제외한 앞선 머지들의 `eas-deploy` 런은 `eas build` 단계에 들어가기 전에 즉시 취소한다(`gh run list --workflow eas-deploy.yml` → `gh run cancel <run-id>`; 워크플로 셋업에 ~1분 걸리므로 그 안에 취소하면 빌드가 시작되지 않는다). ③ 빌드는 머지 커밋 시점의 dev 스냅샷 전체를 담으므로, 마지막 런 하나로 모든 네이티브 변경이 포함된 빌드가 나온다. 단, 앞선 PR의 변경이 빌드를 깨뜨릴 수 있는지(매니페스트·플러그인 충돌 등)는 마지막 PR 리뷰에서 함께 확인할 것 — 실패하면 어차피 재빌드로 쿼터를 더 쓴다.
