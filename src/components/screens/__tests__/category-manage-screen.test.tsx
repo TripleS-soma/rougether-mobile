@@ -76,42 +76,47 @@ describe('CategoryManageScreen', () => {
     expect(onReorder).not.toHaveBeenCalled();
   });
 
-  it('점유 카테고리 삭제는 남은 항목 수와 일괄 삭제를 제안한다 (#505)', async () => {
+  it('살아있는 루틴이 있으면 삭제를 막고 안내한다 (#517)', async () => {
     const onDelete = jest.fn();
-    const onDeleteCascade = jest.fn();
     const { getByLabelText, getByText, queryByText } = await render(
       <CategoryManageScreen
         categories={ROUTINE_CATEGORIES}
-        inUseCounts={{ 일정: { routines: 1, todos: 3 } }}
+        inUseCounts={{ 일정: { routines: 2, todos: 3 } }}
         onDelete={onDelete}
-        onDeleteCascade={onDeleteCascade}
       />,
     );
 
     await fireEvent.press(getByLabelText('일정 삭제'));
-    // 일반 삭제 확인 대신 남은 항목 안내 + 일괄 삭제 모달.
-    expect(getByText('남은 항목까지 삭제할까요?')).toBeTruthy();
-    expect(getByText(/루틴 1개·할 일 3개/)).toBeTruthy();
-    expect(queryByText('카테고리 삭제')).toBeNull();
-
-    // 취소는 아무것도 지우지 않는다.
-    await fireEvent.press(getByLabelText('카테고리 삭제 취소'));
-    expect(queryByText('남은 항목까지 삭제할까요?')).toBeNull();
+    expect(getByText('루틴을 먼저 정리해주세요')).toBeTruthy();
+    expect(getByText(/루틴 2개가 있어요/)).toBeTruthy();
+    await fireEvent.press(getByLabelText('삭제 불가 확인'));
+    expect(queryByText('루틴을 먼저 정리해주세요')).toBeNull();
     expect(onDelete).not.toHaveBeenCalled();
-    expect(onDeleteCascade).not.toHaveBeenCalled();
-
-    // 모두 삭제는 cascade로 나간다 (일반 onDelete 아님).
-    await fireEvent.press(getByLabelText('일정 삭제'));
-    await fireEvent.press(getByLabelText('남은 항목까지 모두 삭제'));
-    expect(onDeleteCascade).toHaveBeenCalledWith('일정');
-    expect(onDelete).not.toHaveBeenCalled();
-
-    // 빈 카테고리는 기존 확인 모달 그대로.
-    await fireEvent.press(getByLabelText('공부 삭제'));
-    expect(getByText('카테고리 삭제')).toBeTruthy();
   });
 
-  it('deletes an existing category after confirming', async () => {
+  it('루틴이 없으면 삭제 모드를 고른다 — 미분류 전환/완전 삭제 (#517)', async () => {
+    const onDelete = jest.fn();
+    const { getByLabelText, getByText } = await render(
+      <CategoryManageScreen
+        categories={ROUTINE_CATEGORIES}
+        inUseCounts={{ 취미: { routines: 0, todos: 3 } }}
+        onDelete={onDelete}
+      />,
+    );
+
+    // 할 일만 있는 카테고리 — 차단 없이 모드 선택 모달.
+    await fireEvent.press(getByLabelText('취미 삭제'));
+    expect(getByText(/할 일 3개가 남아 있어요/)).toBeTruthy();
+    await fireEvent.press(getByLabelText('미분류로 두고 삭제'));
+    expect(onDelete).toHaveBeenCalledWith('취미', 'UNASSIGN');
+
+    // 완전 삭제 경로.
+    await fireEvent.press(getByLabelText('공부 삭제'));
+    await fireEvent.press(getByLabelText('기록까지 완전 삭제'));
+    expect(onDelete).toHaveBeenCalledWith('공부', 'PURGE');
+  });
+
+  it('deletes an existing category after choosing a mode (#517)', async () => {
     const onDelete = jest.fn();
     const { getByLabelText } = await render(
       <CategoryManageScreen categories={ROUTINE_CATEGORIES} onDelete={onDelete} />,
@@ -119,8 +124,8 @@ describe('CategoryManageScreen', () => {
 
     await fireEvent.press(getByLabelText('일정 삭제'));
     expect(onDelete).not.toHaveBeenCalled();
-    await fireEvent.press(getByLabelText('삭제'));
-    expect(onDelete).toHaveBeenCalledWith('일정');
+    await fireEvent.press(getByLabelText('미분류로 두고 삭제'));
+    expect(onDelete).toHaveBeenCalledWith('일정', 'UNASSIGN');
   });
 
   it('navigates back through the header', async () => {

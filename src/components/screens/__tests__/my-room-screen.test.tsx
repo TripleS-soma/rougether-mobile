@@ -382,9 +382,38 @@ describe('MyRoomScreen', () => {
     expect(getByText('0 / 2')).toBeTruthy();
   });
 
+  it('카테고리가 있어도 무소속 항목은 미분류 그룹으로 분리된다 — 방·달력 (#517)', async () => {
+    const routines = [
+      { id: '1', title: '물 마시기', category: '건강', kind: 'routine' as const },
+      // 카테고리 삭제(UNASSIGN) 산물 — 마지막 카테고리에 섞이면 안 된다.
+      { id: '2', title: '고아 루틴', kind: 'routine' as const },
+    ];
+    const categories = [
+      {
+        id: '건강',
+        label: '건강',
+        icon: 'dumbbell' as const,
+        color: '#7FA87F',
+        visibility: 'public' as const,
+      },
+    ];
+    const { getByText } = await render(
+      <MyRoomScreen routines={routines} categories={categories} />,
+    );
+    // 방 탭: 건강 그룹과 별개의 미분류 그룹.
+    expect(getByText('건강')).toBeTruthy();
+    expect(getByText('미분류')).toBeTruthy();
+    expect(getByText('고아 루틴')).toBeTruthy();
+
+    // 달력 탭에서도 같은 분리 규칙.
+    await fireEvent.press(getByText('달력'));
+    expect(getByText('미분류')).toBeTruthy();
+    expect(getByText('고아 루틴')).toBeTruthy();
+  });
+
   it('renders uncategorized routines even when the user has no categories', async () => {
     // API state after a fresh account adds routines without a category:
-    // categories = [], routines have no category → must show in a 기타 group,
+    // categories = [], routines have no category → must show in a 미분류 group,
     // not vanish while the counter says 0 / 2.
     const routines = [
       { id: '2', title: '아침 기상', kind: 'routine' as const },
@@ -393,7 +422,7 @@ describe('MyRoomScreen', () => {
     const { getByText } = await render(<MyRoomScreen routines={routines} categories={[]} />);
     expect(getByText('아침 기상')).toBeTruthy();
     expect(getByText('독서 30분')).toBeTruthy();
-    expect(getByText('기타')).toBeTruthy();
+    expect(getByText('미분류')).toBeTruthy();
     expect(getByText('0 / 2')).toBeTruthy();
   });
 

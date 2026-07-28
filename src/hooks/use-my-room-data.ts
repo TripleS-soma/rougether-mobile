@@ -9,6 +9,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 
+import type { CategoryDeleteMode } from '@/api/categories';
 import {
   ApiError,
   completeRoutine,
@@ -488,7 +489,8 @@ export function useMyRoomData() {
       }
     }
     try {
-      await apiDeleteCategory(Number(categoryId));
+      // 집 정리 캐스케이드는 기록을 남기는 UNASSIGN으로 마감한다 (#517).
+      await apiDeleteCategory(Number(categoryId), 'UNASSIGN');
     } catch {
       // CATEGORY_IN_USE 등 — reload가 실제 상태를 복원한다.
     }
@@ -496,20 +498,28 @@ export function useMyRoomData() {
     await reload();
   };
 
-  const deleteRoutineCategory = async (id: string) => {
-    // The server refuses to delete a category that still has routines/todos
-    // (409 CATEGORY_IN_USE) — check first so the category doesn't flicker away.
-    if (routines.some((r) => r.category === id)) {
+  const deleteRoutineCategory = async (id: string, mode: CategoryDeleteMode) => {
+    // 서버는 "살아있는 루틴"이 있을 때만 삭제를 거부한다 (#517, 409
+    // CATEGORY_IN_USE) — 투두는 mode가 처리(UNASSIGN=미분류 전환, PURGE=삭제).
+    // 깜빡임 방지를 위해 클라에서도 같은 기준으로 먼저 거른다.
+    if (routines.some((r) => r.category === id && r.kind !== 'todo')) {
       toast('카테고리에 루틴이 남아 있어 삭제할 수 없어요', 'error');
       return;
     }
-    const before = categories;
+    const before = { categories, routines };
     setCategories((prev) => prev.filter((c) => c.id !== id));
+    // 화면도 서버 결과를 선반영 — UNASSIGN은 투두를 미분류로, PURGE는 제거.
+    setRoutines((prev) =>
+      mode === 'UNASSIGN'
+        ? prev.map((r) => (r.category === id ? { ...r, category: undefined } : r))
+        : prev.filter((r) => r.category !== id),
+    );
     try {
-      await apiDeleteCategory(Number(id));
+      await apiDeleteCategory(Number(id), mode);
       await reload();
     } catch (err) {
-      setCategories(before);
+      setCategories(before.categories);
+      setRoutines(before.routines);
       const inUse = err instanceof ApiError && err.bodyText?.includes('CATEGORY_IN_USE');
       toast(
         inUse ? '카테고리에 루틴이 남아 있어 삭제할 수 없어요' : '카테고리 삭제에 실패했어요',
