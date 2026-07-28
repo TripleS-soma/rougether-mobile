@@ -30,6 +30,7 @@ import { SoundSettingsScreen } from '@/components/screens/sound-settings-screen'
 import { SignupScreen } from '@/components/screens/signup-screen';
 import { SampleButton } from '@/components/sample-button';
 import { Badge } from '@/components/ui/badge';
+import { CoinIcon } from '@/components/ui/coin-icon';
 import { BearCheck } from '@/components/ui/bear-check';
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { CATEGORY_ICON_GEOMETRY, CategoryIcon } from '@/components/ui/category-icon';
@@ -150,6 +151,20 @@ export const galleryEntries: GalleryEntry[] = [
             />
           ),
         )}
+      </View>
+    ),
+  },
+  {
+    name: 'CoinIcon · 발바닥 각인 동전',
+    description:
+      '코인 글리프 (#512, 시안 B) — 골드 동전 + 곰 발바닥 각인, 14px 미만은 발가락 단순화.',
+    render: () => (
+      <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center', alignSelf: 'center' }}>
+        <CoinIcon size={48} />
+        <CoinIcon size={22} />
+        <CoinIcon size={18} />
+        <CoinIcon size={14} />
+        <CoinIcon size={12} />
       </View>
     ),
   },
