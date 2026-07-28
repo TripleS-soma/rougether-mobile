@@ -1,4 +1,5 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { BackHandler } from 'react-native';
 
 import { AppShell } from '@/components/app/app-shell';
 import { AuthProvider } from '@/hooks/use-auth';
@@ -327,5 +328,47 @@ describe('AppShell — 연동 루틴 스윕', () => {
       expect(calls.some((c) => c.method === 'DELETE' && c.url.includes('/routines/45'))).toBe(true),
     );
     expect(calls.some((c) => c.method === 'DELETE' && c.url.includes('/routines/44'))).toBe(false);
+  });
+});
+
+describe('AppShell — 루트 뒤로가기 종료 확인 (#522)', () => {
+  it('루트에서 뒤로가기는 종료 대신 확인 모달을 띄우고, 취소하면 남는다', async () => {
+    const handlers: (() => boolean)[] = [];
+    const spy = jest
+      .spyOn(BackHandler, 'addEventListener')
+      .mockImplementation((_e: string, cb: () => boolean) => {
+        handlers.push(cb);
+        return { remove: () => handlers.splice(handlers.indexOf(cb), 1) } as never;
+      });
+    const exitSpy = jest.spyOn(BackHandler, 'exitApp').mockImplementation(() => {});
+
+    const ui = await render(
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>,
+    );
+
+    // 나중에 등록된 핸들러가 우선 — 셸 핸들러가 true를 돌려주며 모달을 연다.
+    let handled = false;
+    await act(async () => {
+      handled = handlers.some((h) => h());
+    });
+    expect(handled).toBe(true);
+    expect(ui.getByText('앱을 종료할까요?')).toBeTruthy();
+    expect(exitSpy).not.toHaveBeenCalled();
+
+    // 취소 → 모달 닫힘, 앱 유지.
+    await fireEvent.press(ui.getByLabelText('종료 취소'));
+    await waitFor(() => expect(ui.queryByText('앱을 종료할까요?')).toBeNull());
+
+    // 다시 열고 종료 → exitApp 호출.
+    await act(async () => {
+      handlers.some((h) => h());
+    });
+    await fireEvent.press(ui.getByLabelText('앱 종료'));
+    expect(exitSpy).toHaveBeenCalled();
+
+    spy.mockRestore();
+    exitSpy.mockRestore();
   });
 });

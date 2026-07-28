@@ -1,7 +1,16 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, BackHandler, Easing, StyleSheet, View } from 'react-native';
+import {
+  Animated,
+  BackHandler,
+  Easing,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
@@ -34,6 +43,7 @@ import {
   CoachTargetProvider,
   useCoachTargets,
 } from '@/components/ui/coach-mark';
+import { Radius, Spacing } from '@/constants/theme';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { CATEGORY_COLORS, type Routine } from '@/constants/routines';
 import { screenView, track } from '@/lib/analytics';
@@ -56,7 +66,7 @@ import { useNotificationSettings } from '@/hooks/use-notification-settings';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useShop } from '@/hooks/use-shop';
 import { useWeather } from '@/hooks/use-weather';
-import { useBrandTheme } from '@/hooks/use-tokens';
+import { useBrandTheme, useTokens, useTypography } from '@/hooks/use-tokens';
 import { assetSource } from '@/resources/asset';
 import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furniture';
 
@@ -228,6 +238,9 @@ export function AppShell({
   } = useBrandTheme();
   // 집 하늘 연출용 현재 비 여부 (#360) — 서울 고정, 30분 캐시.
   const { raining } = useWeather();
+  // 종료 확인 모달(#522) 등 셸 자체 UI용 토큰.
+  const t = useTokens();
+  const Typography = useTypography();
   const [screen, setScreen] = useState<Screen>('myRoom');
 
   // 코치마크 튜토리얼 (#351) — 온보딩 직후 시작, 단계마다 해당 화면으로 전환.
@@ -616,17 +629,25 @@ export function AppShell({
     setScreen('addRoutine');
   };
 
-  // Android hardware back navigates the shell's own screen stack instead of
-  // exiting the app; only myRoom falls through to the OS default.
+  // Android hardware back navigates the shell's own screen stack; 루트(나의 방)
+  // 에서는 바로 종료하지 않고 확인 모달을 거친다 (#522).
+  const [confirmExit, setConfirmExit] = useState(false);
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (confirmExit) {
+        setConfirmExit(false);
+        return true;
+      }
       const target = screen === 'addRoutine' ? addReturnScreen : BACK_SCREEN[screen];
-      if (!target) return false;
+      if (!target) {
+        setConfirmExit(true);
+        return true;
+      }
       setScreen(target);
       return true;
     });
     return () => sub.remove();
-  }, [screen, addReturnScreen]);
+  }, [screen, addReturnScreen, confirmExit]);
 
   const activeTab = TAB_FOR_SCREEN[screen];
 
@@ -1113,6 +1134,35 @@ export function AppShell({
             onSkip={() => setTutorialIdx(null)}
           />
         ) : null}
+
+        {/* 루트 뒤로가기 앱 종료 확인 (#522) — 실수 종료 방지. */}
+        <Modal
+          transparent
+          visible={confirmExit}
+          animationType="fade"
+          onRequestClose={() => setConfirmExit(false)}>
+          <Pressable style={styles.exitBackdrop} onPress={() => setConfirmExit(false)}>
+            <Pressable style={[styles.exitCard, { backgroundColor: t.screen }]}>
+              <Text style={[Typography.h3, { color: t.text }]}>앱을 종료할까요?</Text>
+              <View style={styles.exitBtns}>
+                <Pressable
+                  onPress={() => setConfirmExit(false)}
+                  accessibilityRole="button"
+                  accessibilityLabel="종료 취소"
+                  style={[styles.exitBtn, { backgroundColor: t.surfaceMuted }]}>
+                  <Text style={[Typography.label, { color: t.text }]}>취소</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => BackHandler.exitApp()}
+                  accessibilityRole="button"
+                  accessibilityLabel="앱 종료"
+                  style={[styles.exitBtn, { backgroundColor: t.primary }]}>
+                  <Text style={[Typography.label, { color: t.onPrimary }]}>종료</Text>
+                </Pressable>
+              </View>
+            </Pressable>
+          </Pressable>
+        </Modal>
       </View>
     </CoachTargetProvider>
   );
@@ -1149,6 +1199,31 @@ function TutorialLayer({
 }
 
 const styles = StyleSheet.create({
+  exitBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.five,
+  },
+  exitCard: {
+    alignSelf: 'stretch',
+    borderRadius: Radius.lg,
+    padding: Spacing.four,
+    gap: Spacing.three,
+    alignItems: 'center',
+  },
+  exitBtns: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    alignSelf: 'stretch',
+  },
+  exitBtn: {
+    flex: 1,
+    paddingVertical: Spacing.three,
+    borderRadius: Radius.pill,
+    alignItems: 'center',
+  },
   root: {
     flex: 1,
   },
