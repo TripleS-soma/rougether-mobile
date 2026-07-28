@@ -92,7 +92,7 @@ export function useMyRoomData() {
     let items = [...rts.map(toAppRoutine), ...tds.map(toAppTodo)];
 
     // Uncategorized routines must not exist: adopt any item without a (known)
-    // category into a real 기타 category, creating it server-side if needed.
+    // category into a real 미분류(구 기타) category, creating it server-side if needed.
     // (Legacy data, or the server nulling categoryId on category delete.)
     const known = new Set(appCats.map((c) => c.id));
     const isOrphan = (r: Routine) => !r.category || !known.has(r.category);
@@ -118,12 +118,12 @@ export function useMyRoomData() {
         );
         items = items.map((r) => (isOrphan(r) ? { ...r, category: target } : r));
       } catch {
-        // Non-fatal: the pseudo 기타 group still keeps them visible.
+        // Non-fatal: the pseudo 미분류 group still keeps them visible.
       }
     }
 
     setCategories(appCats);
-    // Active (incl. a just-created 기타) first, deleted ones behind for lookup.
+    // Active (incl. a just-created 미분류) first, deleted ones behind for lookup.
     setAllCategories([...appCats, ...appCatsAll.filter((c) => c.deleted)]);
     setRoutines(items);
     setCompletions(todayCompletions(today, todayIso()));
@@ -422,7 +422,7 @@ export function useMyRoomData() {
       const meta = toAppCategory(created, categories.length);
       setCategories((prev) => [...prev, meta]);
       // 달력(서버 날짜)은 allCategories로 메타를 해석하므로 같이 추가 —
-      // 안 하면 새 카테고리 항목이 과거/미래 날짜에서 '기타'로 폴백 (#481).
+      // 안 하면 새 카테고리 항목이 과거/미래 날짜에서 '미분류'로 폴백 (#481).
       setAllCategories((prev) => [...prev, meta]);
       return meta;
     } catch {

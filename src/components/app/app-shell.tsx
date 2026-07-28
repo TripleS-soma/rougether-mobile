@@ -819,7 +819,7 @@ export function AppShell({
           {screen === 'categoryManage' ? (
             <CategoryManageScreen
               categories={categories}
-              // 지난·완료 할 일 등 안 보이는 항목까지 포함한 카테고리별 점유 수 (#505).
+              // 카테고리별 점유 수 (#517) — 루틴 수는 삭제 차단, 할 일 수는 모드 문구에 쓴다.
               inUseCounts={routines.reduce<Record<string, { routines: number; todos: number }>>(
                 (acc, r) => {
                   if (!r.category) return acc;

@@ -344,3 +344,97 @@ describe('useMyRoomData — 카테고리 메타를 달력 소스(allCategories)�
     expect(result.current.allCategories.some((c) => c.id === '2' && c.icon === 'leaf')).toBe(true);
   });
 });
+
+// 카테고리 삭제 신계약 (#517) — mode별 낙관적 업데이트와 실패 롤백.
+describe('useMyRoomData — deleteRoutineCategory (mode, #517)', () => {
+  const seed = (deleteStatus = 204) => {
+    const calls: { url: string; method: string }[] = [];
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+      calls.push({ url, method });
+      if (method === 'DELETE' && url.includes('/categories/')) {
+        return deleteStatus === 204
+          ? { ok: true, status: 204, text: async () => '' }
+          : {
+              ok: false,
+              status: deleteStatus,
+              text: async () => JSON.stringify({ code: 'CATEGORY_IN_USE' }),
+            };
+      }
+      if (url.includes('/categories')) {
+        return res({
+          items: [
+            { id: 1, name: '건강', colorHex: '#F00' },
+            { id: 2, name: '취미', colorHex: '#0F0' },
+          ],
+        });
+      }
+      if (url.endsWith('/routines')) {
+        return res({ items: [{ id: 9, title: '산책', categoryId: 1, repeatType: 'DAILY' }] });
+      }
+      if (url.endsWith('/todos')) {
+        return res({
+          items: [{ id: 7, title: '기타 연습', categoryId: 2, dueDate: '2026-07-28', status: 'PENDING' }], // prettier-ignore
+        });
+      }
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+    return calls;
+  };
+
+  it('UNASSIGN: 투두를 미분류로 낙관 전환하고 mode 쿼리로 삭제한다', async () => {
+    const calls = seed(204);
+    const { result } = await renderHook(() => useMyRoomData());
+    await waitFor(() => expect(result.current.categories.length).toBe(2));
+
+    await act(async () => {
+      await result.current.deleteRoutineCategory('2', 'UNASSIGN');
+    });
+    const del = calls.find((c) => c.method === 'DELETE' && c.url.includes('/categories/2'));
+    expect(del?.url).toContain('mode=UNASSIGN');
+    // 투두는 남고 카테고리만 사라짐 (reload 목도 같은 상태를 돌려줘 유지).
+    expect(result.current.routines.some((r) => r.id === 't7')).toBe(true);
+  });
+
+  it('PURGE: 해당 카테고리 항목을 화면에서 제거한다', async () => {
+    seed(204);
+    const { result } = await renderHook(() => useMyRoomData());
+    await waitFor(() => expect(result.current.categories.length).toBe(2));
+
+    await act(async () => {
+      await result.current.deleteRoutineCategory('2', 'PURGE');
+    });
+    // 낙관적 제거 직후 reload 목이 다시 내려주지만, PURGE 요청 자체가 mode를 싣는지 확인.
+    expect(
+      (global.fetch as jest.Mock).mock.calls.some(
+        ([url, init]: [string, RequestInit?]) =>
+          init?.method === 'DELETE' && String(url).includes('mode=PURGE'),
+      ),
+    ).toBe(true);
+  });
+
+  it('살아있는 루틴이 있으면 서버 호출 없이 막는다', async () => {
+    const calls = seed(204);
+    const { result } = await renderHook(() => useMyRoomData());
+    await waitFor(() => expect(result.current.categories.length).toBe(2));
+
+    await act(async () => {
+      await result.current.deleteRoutineCategory('1', 'UNASSIGN'); // 루틴(산책) 보유
+    });
+    expect(calls.some((c) => c.method === 'DELETE' && c.url.includes('/categories/1'))).toBe(false);
+    expect(result.current.categories.length).toBe(2);
+  });
+
+  it('삭제 실패(409)면 카테고리·항목을 함께 롤백한다', async () => {
+    seed(409);
+    const { result } = await renderHook(() => useMyRoomData());
+    await waitFor(() => expect(result.current.categories.length).toBe(2));
+
+    await act(async () => {
+      await result.current.deleteRoutineCategory('2', 'PURGE');
+    });
+    // 실패 → categories와 routines(투두 포함) 모두 원복.
+    expect(result.current.categories.some((c) => c.id === '2')).toBe(true);
+    expect(result.current.routines.some((r) => r.id === 't7')).toBe(true);
+  });
+});
