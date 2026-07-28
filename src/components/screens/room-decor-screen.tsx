@@ -545,28 +545,6 @@ export function RoomDecorScreen({
             {/* 선택 툴바 (#333) — 캔버스 위 고정, 캐릭터 레이어보다도 위. */}
             {selectedId ? (
               <View style={[styles.toolbar, { backgroundColor: t.surface, borderColor: t.border }]}>
-                {/* 프리뷰 가구 구매 버튼 (#501) — 재탭과 같은 동작의 명시적 진입점. */}
-                {!owned.has(selectedId)
-                  ? (() => {
-                      const sel = furniture.find((f) => f.id === selectedId);
-                      if (!sel) return null;
-                      return (
-                        <Pressable
-                          onPress={() =>
-                            requestBuy({ id: sel.id, name: sel.name, price: sel.price })
-                          }
-                          accessibilityRole="button"
-                          accessibilityLabel={`${sel.name} 구매`}
-                          hitSlop={4}
-                          style={[styles.toolBuyBtn, { backgroundColor: t.primary }]}>
-                          <Icon name="dia" size={12} color={t.onPrimary} />
-                          <Text style={[styles.toolBuyText, { color: t.onPrimary }]}>
-                            {sel.price}
-                          </Text>
-                        </Pressable>
-                      );
-                    })()
-                  : null}
                 {(
                   [
                     ['rotate-ccw', '왼쪽 회전', () => rotateSelected(-1)],
@@ -1312,17 +1290,6 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 999,
     borderWidth: StyleSheet.hairlineWidth,
-  },
-  toolBuyBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: Spacing.two,
-    height: 32,
-    borderRadius: 8,
-  },
-  toolBuyText: {
-    fontSize: 12,
   },
   previewList: {
     alignSelf: 'stretch',

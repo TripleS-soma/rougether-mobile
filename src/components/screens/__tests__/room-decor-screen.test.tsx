@@ -363,16 +363,16 @@ describe('RoomDecorScreen — 프리뷰·구매 (#501)', () => {
     expect(onBuy).toHaveBeenCalledWith('plant');
   });
 
-  it('선택 툴바의 구매 버튼도 같은 구매 확인을 연다', async () => {
-    const { getByText, getByLabelText, getByTestId } = await render(
+  it('선택 툴바에 구매 버튼은 없다 — 구매는 프리뷰 재탭으로만', async () => {
+    const { getByLabelText, getByTestId, queryByLabelText } = await render(
       <RoomDecorScreen initialItems={[]} ownedIds={['bed']} diaBalance={9999} />,
     );
     await fireEvent.press(getByLabelText('소품 탭'));
     await fireEvent.press(getByLabelText('초록 식물 미리 배치'));
     await layoutCanvas(getByTestId);
     await tapItem('plant');
-    await fireEvent.press(getByLabelText('초록 식물 구매'));
-    expect(getByText(/초록 식물.*구매해요/)).toBeTruthy();
+    expect(getByTestId('selection-ring-plant')).toBeTruthy();
+    expect(queryByLabelText('초록 식물 구매')).toBeNull();
   });
 
   it('잔액 부족이면 구매 확인 대신 토스트', async () => {
