@@ -8,7 +8,7 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { rawRequest } from './http';
+import { ApiError, rawRequest } from './http';
 import type {
   AppleLoginRequest,
   DevLoginRequest,
@@ -164,11 +164,26 @@ export async function appleLogin(idToken: string): Promise<LoginResponse> {
   return res;
 }
 
+// 진행 중인 갱신 — 동시 401들이 이 Promise를 공유한다 (#515).
+let refreshInFlight: Promise<boolean> | null = null;
+
 /**
- * Exchange the stored refresh token for a fresh pair. Returns true on success;
- * on failure the session is cleared. Called by `client.ts` on a 401.
+ * Exchange the stored refresh token for a fresh pair. Returns true on success.
+ * Called by `client.ts` on a 401.
+ *
+ * Single-flight (#515): 리프레시 토큰은 1회용(사용 즉시 폐기·교체)이라,
+ * 앱 재개 직후처럼 여러 요청이 동시에 401을 맞아도 갱신은 한 번만 뛰고
+ * 전원이 그 결과를 기다렸다가 새 토큰으로 재시도해야 한다 — 각자 갱신하면
+ * 진 쪽이 AUTH_REFRESH_TOKEN_INVALID를 받고 세션을 지워 강제 로그아웃됐다.
  */
-export async function refreshSession(): Promise<boolean> {
+export function refreshSession(): Promise<boolean> {
+  refreshInFlight ??= doRefreshSession().finally(() => {
+    refreshInFlight = null;
+  });
+  return refreshInFlight;
+}
+
+async function doRefreshSession(): Promise<boolean> {
   const refreshToken = session?.refreshToken;
   if (!refreshToken) return false;
   try {
@@ -185,8 +200,12 @@ export async function refreshSession(): Promise<boolean> {
     }
     await clearSession();
     return false;
-  } catch {
-    await clearSession();
+  } catch (err) {
+    // 서버가 토큰을 명시적으로 거부(4xx)했을 때만 로그아웃한다 (#515) —
+    // 네트워크 오류(TypeError)는 물론, 재배포 순단·게이트웨이 타임아웃 같은
+    // 5xx도 세션을 보존한다. 보존된 세션은 다음 요청의 401 → 재갱신 경로에서
+    // 다시 기회를 얻는다.
+    if (err instanceof ApiError && err.status >= 400 && err.status < 500) await clearSession();
     return false;
   }
 }
