@@ -54,6 +54,7 @@ import type {
 import type { CalendarDayItem } from '@/components/screens/my-room-screen';
 import type { BugReportEntry } from '@/components/screens/bug-report-screen';
 import type { NotificationEntry } from '@/components/screens/notification-list-screen';
+import type { NotificationSettings } from '@/components/screens/notification-settings-screen';
 import type { OwnedCharacter } from '@/components/screens/sheets/character-picker-sheet';
 
 import type {
@@ -81,6 +82,7 @@ import type {
   MissionSummary,
   BugReportResponse,
   NotificationItem,
+  NotificationSettingResponse,
   RepeatDays,
   RoutineCreateRequest,
   RoutineResponse,
@@ -764,6 +766,14 @@ export function toBugReportEntry(b: BugReportResponse): BugReportEntry {
     status: b.status ?? 'RECEIVED',
     date: d ? `${d.getMonth() + 1}월 ${d.getDate()}일` : '',
   };
+}
+
+/**
+ * Push 알림 설정 (#495) — 서버가 안 내려준 필드는 서버 기본과 같게 켜짐(true)
+ * 으로 본다.
+ */
+export function toNotificationSettings(res: NotificationSettingResponse): NotificationSettings {
+  return { all: res.all ?? true, reminder: res.reminder ?? true, house: res.house ?? true };
 }
 
 /** Browse-list card model from the API house summary (decorations cycled). */

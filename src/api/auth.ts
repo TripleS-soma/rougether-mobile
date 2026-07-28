@@ -9,7 +9,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { rawRequest } from './http';
-import type { DevLoginRequest, LoginResponse, TokenResponse } from './types';
+import type {
+  AppleLoginRequest,
+  DevLoginRequest,
+  GoogleLoginRequest,
+  KakaoLoginRequest,
+  LoginResponse,
+  TokenResponse,
+} from './types';
 
 const ACCESS_KEY = 'rougether.auth.accessToken';
 const REFRESH_KEY = 'rougether.auth.refreshToken';
@@ -89,6 +96,63 @@ export async function clearSession(): Promise<void> {
 export async function devLogin(userId?: number): Promise<LoginResponse> {
   const res = await rawRequest<LoginResponse>('POST', '/auth/dev-login', {
     body: { userId: userId ?? null } as DevLoginRequest,
+  });
+  if (res.accessToken && res.refreshToken) {
+    await persist({
+      accessToken: res.accessToken,
+      refreshToken: res.refreshToken,
+      userId: res.userId,
+    });
+  }
+  return res;
+}
+
+/**
+ * 구글 로그인 (#489): 네이티브 SDK가 얻은 id token을 서버로 보내 토큰 쌍을
+ * 받고 세션을 시작한다. 최초 로그인이면 서버가 자동 가입(isNewUser: true).
+ * 서버는 JWK로 서명·aud를 검증한다 (aud 허용목록 fail-closed).
+ */
+export async function googleLogin(idToken: string): Promise<LoginResponse> {
+  const res = await rawRequest<LoginResponse>('POST', '/auth/google', {
+    body: { idToken } as GoogleLoginRequest,
+  });
+  if (res.accessToken && res.refreshToken) {
+    await persist({
+      accessToken: res.accessToken,
+      refreshToken: res.refreshToken,
+      userId: res.userId,
+    });
+  }
+  return res;
+}
+
+/**
+ * 카카오 로그인 (#489 소셜 2차): 네이티브 SDK가 얻은 access token을 서버로
+ * 보내 토큰 쌍을 받고 세션을 시작한다. 최초 로그인이면 자동 가입. 서버가
+ * 카카오 API로 토큰 유효성·앱 id를 검증한다.
+ */
+export async function kakaoLogin(accessToken: string): Promise<LoginResponse> {
+  const res = await rawRequest<LoginResponse>('POST', '/auth/kakao', {
+    body: { accessToken } as KakaoLoginRequest,
+  });
+  if (res.accessToken && res.refreshToken) {
+    await persist({
+      accessToken: res.accessToken,
+      refreshToken: res.refreshToken,
+      userId: res.userId,
+    });
+  }
+  return res;
+}
+
+/**
+ * 애플 로그인 (#489 소셜 3차): Sign in with Apple이 얻은 identityToken을 서버로
+ * 보내 토큰 쌍을 받고 세션을 시작한다. 최초 로그인이면 자동 가입. 서버가
+ * 서명·발급자·aud(번들 ID)·만료를 검증한다.
+ */
+export async function appleLogin(idToken: string): Promise<LoginResponse> {
+  const res = await rawRequest<LoginResponse>('POST', '/auth/apple', {
+    body: { idToken } as AppleLoginRequest,
   });
   if (res.accessToken && res.refreshToken) {
     await persist({

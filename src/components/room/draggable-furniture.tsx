@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
@@ -9,6 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
+import { Icon } from '@/components/ui/icon';
 import { ROOM_RENDER_CONTRACT } from '@/components/room/room-render-contract';
 import { useTokens } from '@/hooks/use-tokens';
 import type { FurnitureItem, PlacedFurniture } from '@/resources/furniture';
@@ -34,6 +35,10 @@ export type DraggableFurnitureProps = {
   selected?: boolean;
   /** 짧은 탭 = 선택 (#333). */
   onSelect?: (furnitureId: string) => void;
+  /** 미보유 프리뷰 (#501) — 반투명 + 가격 배지로 그린다. */
+  preview?: boolean;
+  /** 프리뷰 배지에 표시할 다이아 가격 (#501). */
+  previewPrice?: number;
   /**
    * 드래그 종료 — 정규화 중심 좌표(방 안으로 클램프됨). 호출측이 좌표를
    * 커밋한다(z 최상위 승격 포함). 빼기는 툴바 버튼으로만 (#333).
@@ -56,6 +61,8 @@ export function DraggableFurniture({
   onSelect,
   onDragEnd,
   onScaleEnd,
+  preview = false,
+  previewPrice,
 }: DraggableFurnitureProps) {
   const t = useTokens();
   const cx = useSharedValue(placement.x * roomSize.w);
@@ -167,14 +174,24 @@ export function DraggableFurniture({
       <Animated.View
         accessible
         accessibilityRole="button"
-        accessibilityLabel={`${item.name} 옮기기`}
+        accessibilityLabel={preview ? `${item.name} 프리뷰 옮기기` : `${item.name} 옮기기`}
         accessibilityHint="탭해서 선택, 끌어서 이동해요"
         accessibilityState={{ selected }}
         style={animStyle}>
         {/* 자식(이미지·이름표)이 이벤트 타깃이 되지 않게 — 제스처는 래퍼가 받는다. */}
-        <View pointerEvents="none" style={styles.fill}>
+        <View pointerEvents="none" style={[styles.fill, preview && styles.previewFill]}>
           <FurniturePlaceholder item={item} />
         </View>
+        {/* 미보유 프리뷰 배지 (#501) — 가격이 항상 보여 '탭하면 구매'를 암시. */}
+        {preview && previewPrice != null ? (
+          <View
+            pointerEvents="none"
+            style={[styles.previewBadge, { backgroundColor: t.surface, borderColor: t.border }]}
+            testID={`preview-badge-${placement.furnitureId}`}>
+            <Icon name="dia" size={9} color={t.primary} />
+            <Text style={[styles.previewBadgeText, { color: t.text }]}>{previewPrice}</Text>
+          </View>
+        ) : null}
         {selected ? (
           <>
             <View
@@ -200,6 +217,20 @@ export function DraggableFurniture({
 
 const styles = StyleSheet.create({
   fill: { width: '100%', height: '100%' },
+  previewFill: { opacity: 0.6 },
+  previewBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  previewBadgeText: { fontSize: 10 },
   ring: {
     ...StyleSheet.absoluteFillObject,
     borderWidth: 2.5,

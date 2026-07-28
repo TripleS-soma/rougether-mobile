@@ -12,7 +12,20 @@
           "package_name": "com.triples.rougether"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "437063052004-0c1hdasd52tdgcs743qr4h9sm55h9r1c.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.triples.rougether",
+            "certificate_hash": "bbc109da2c7faec0f1a957cca56beaf22476ed5f"
+          }
+        },
+        {
+          "client_id": "437063052004-99kq37m58jcj7nakm9uhottgskphob95.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDiCYKRayAc78H2xPKb07F9gtOY_NfLKq8"
@@ -20,7 +33,20 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "437063052004-99kq37m58jcj7nakm9uhottgskphob95.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "437063052004-k78kolutmicbs7p4537296ne873quev3.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.triples.rougether",
+                "app_store_id": "6793513720"
+              }
+            }
+          ]
         }
       }
     }

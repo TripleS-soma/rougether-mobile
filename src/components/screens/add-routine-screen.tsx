@@ -13,7 +13,8 @@ import { CategoryFormSheet } from '@/components/screens/sheets/category-form-she
 import { DateRangeSheet } from '@/components/screens/sheets/date-range-sheet';
 import { TimePickerSheet } from '@/components/screens/sheets/time-picker-sheet';
 import { useToast } from '@/components/ui/toast';
-import { ToggleSwitch } from '@/components/ui/toggle-switch';
+// 인증사진형 잠시 내림 (#499) — 복구 시 ToggleSwitch import를 되살릴 것.
+// import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import {
   type NewRoutine,
   type RepeatKind,
@@ -107,7 +108,8 @@ export function AddRoutineScreen({
       ? (editRoutine.repeat ?? (editRoutine.days?.length ? 'weekly' : 'daily'))
       : 'weekly',
   );
-  const [days, setDays] = useState<number[]>(editRoutine?.days ?? [1, 2, 3, 4, 5]);
+  // 새 루틴의 반복 요일은 전부 해제가 기본 — 사용자가 직접 고르게 한다.
+  const [days, setDays] = useState<number[]>(editRoutine?.days ?? []);
   // Sub-picks: 매월 → day of month (yearly reuses it), 매년 → month.
   const [monthDay, setMonthDay] = useState(editRoutine?.dayOfMonth ?? 1);
   const [yearMonth, setYearMonth] = useState(editRoutine?.month ?? 1);
@@ -115,7 +117,10 @@ export function AddRoutineScreen({
   const [time, setTime] = useState(editRoutine?.time ?? '07:00');
   const [startDate, setStartDate] = useState(editRoutine?.startDate ?? today());
   const [endDate, setEndDate] = useState<string | undefined>(editRoutine?.endDate);
-  const [photoVerify, setPhotoVerify] = useState(editRoutine?.photoVerify ?? false);
+  // 인증사진형 잠시 내림 (#499) — 토글 UI를 숨기고 편집 시 기존 값만 보존한다
+  // (저장 왕복에서 authType이 바뀌지 않게). 복구 시 setter와 아래 UI 블록을 되살릴 것.
+  // const [photoVerify, setPhotoVerify] = useState(editRoutine?.photoVerify ?? false);
+  const [photoVerify] = useState(editRoutine?.photoVerify ?? false);
   const [showDateSheet, setShowDateSheet] = useState(false);
   const [showTimeSheet, setShowTimeSheet] = useState(false);
   // 추천 루틴 accordion — closed by default (add mode only).
@@ -132,7 +137,7 @@ export function AddRoutineScreen({
     repeat: editRoutine
       ? (editRoutine.repeat ?? (editRoutine.days?.length ? 'weekly' : 'daily'))
       : 'weekly',
-    days: editRoutine?.days ?? [1, 2, 3, 4, 5],
+    days: editRoutine?.days ?? [],
     monthDay: editRoutine?.dayOfMonth ?? 1,
     yearMonth: editRoutine?.month ?? 1,
     alarmEnabled: editRoutine?.alarmEnabled ?? true,
@@ -495,7 +500,7 @@ export function AddRoutineScreen({
           </Pressable>
         </View>
 
-        {/* Photo verify */}
+        {/* 인증사진형 잠시 내림 (#499) — 복구 시 이 인증 방식 섹션을 되살릴 것.
         <View style={styles.field}>
           <Text style={[styles.label, emph('semibold'), { color: t.text }]}>인증 방식</Text>
           <View style={[styles.infoRow, { backgroundColor: t.surface }]}>
@@ -514,7 +519,7 @@ export function AddRoutineScreen({
               accessibilityLabel="인증사진형"
             />
           </View>
-        </View>
+        </View> */}
       </ScrollView>
 
       <DateRangeSheet

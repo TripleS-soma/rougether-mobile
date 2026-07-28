@@ -18,8 +18,11 @@ export {
 } from './client';
 
 export {
+  appleLogin,
   clearSession,
   devLogin,
+  googleLogin,
+  kakaoLogin,
   getAccessToken,
   getSessionUserId,
   loadSession,

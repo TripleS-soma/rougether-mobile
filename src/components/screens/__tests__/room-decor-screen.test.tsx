@@ -328,50 +328,159 @@ describe('RoomDecorScreen — 안드로이드 하드웨어 백 (#488)', () => {
   });
 });
 
-describe('RoomDecorScreen — 구매', () => {
-  it('buys a not-yet-owned item with dia after confirming', async () => {
-    const onBuy = jest.fn();
-    const { getByText, getByLabelText } = await render(
+describe('RoomDecorScreen — 프리뷰·구매 (#501)', () => {
+  it('places an unowned item as a preview instead of opening the buy modal', async () => {
+    const { getByLabelText, getByTestId, queryByText } = await render(
+      <RoomDecorScreen initialItems={[]} ownedIds={['bed']} diaBalance={9999} />,
+    );
+
+    await fireEvent.press(getByLabelText('소품 탭'));
+    await fireEvent.press(getByLabelText('초록 식물 미리 배치'));
+    expect(queryByText('구매하시겠습니까?')).toBeNull();
+
+    await layoutCanvas(getByTestId);
+    // 반투명 프리뷰 + 가격 배지로 방에 놓인다.
+    expect(getByLabelText('초록 식물 프리뷰 옮기기')).toBeTruthy();
+    expect(getByTestId('preview-badge-plant')).toBeTruthy();
+  });
+
+  it('re-tapping the selected preview opens the buy confirm and buys', async () => {
+    const onBuy = jest.fn(async () => true);
+    const { getByText, getByLabelText, getByTestId } = await render(
       <RoomDecorScreen initialItems={[]} ownedIds={['bed']} diaBalance={9999} onBuy={onBuy} />,
     );
 
     await fireEvent.press(getByLabelText('소품 탭'));
-    await fireEvent.press(getByLabelText('초록 식물 구매'));
-    expect(onBuy).not.toHaveBeenCalled();
+    await fireEvent.press(getByLabelText('초록 식물 미리 배치'));
+    await layoutCanvas(getByTestId);
+
+    await tapItem('plant'); // 첫 탭 = 선택
+    expect(getByTestId('selection-ring-plant')).toBeTruthy();
+    await tapItem('plant'); // 선택 상태에서 한 번 더 = 구매 확인
     expect(getByText(/초록 식물.*구매해요/)).toBeTruthy();
 
     await fireEvent.press(getByLabelText('구매 확인'));
     expect(onBuy).toHaveBeenCalledWith('plant');
   });
 
-  it('cancels a purchase from the confirm modal', async () => {
-    const onBuy = jest.fn();
-    const { getByLabelText, queryByText } = await render(
-      <RoomDecorScreen initialItems={[]} ownedIds={['bed']} diaBalance={9999} onBuy={onBuy} />,
+  it('선택 툴바의 구매 버튼도 같은 구매 확인을 연다', async () => {
+    const { getByText, getByLabelText, getByTestId } = await render(
+      <RoomDecorScreen initialItems={[]} ownedIds={['bed']} diaBalance={9999} />,
     );
-
     await fireEvent.press(getByLabelText('소품 탭'));
+    await fireEvent.press(getByLabelText('초록 식물 미리 배치'));
+    await layoutCanvas(getByTestId);
+    await tapItem('plant');
     await fireEvent.press(getByLabelText('초록 식물 구매'));
-    await fireEvent.press(getByLabelText('구매 취소'));
-
-    expect(onBuy).not.toHaveBeenCalled();
-    expect(queryByText('구매하시겠습니까?')).toBeNull();
+    expect(getByText(/초록 식물.*구매해요/)).toBeTruthy();
   });
 
-  it('explains an unaffordable tile with a toast instead of the buy confirm', async () => {
+  it('잔액 부족이면 구매 확인 대신 토스트', async () => {
     const onBuy = jest.fn();
-    const { getByText, getByLabelText, queryByText } = await render(
+    const { getByText, getByLabelText, getByTestId, queryByText } = await render(
       <ToastProvider>
         <RoomDecorScreen initialItems={[]} ownedIds={['bed']} diaBalance={0} onBuy={onBuy} />
       </ToastProvider>,
     );
 
     await fireEvent.press(getByLabelText('소품 탭'));
-    await fireEvent.press(getByLabelText('초록 식물 구매'));
+    await fireEvent.press(getByLabelText('초록 식물 미리 배치'));
+    await layoutCanvas(getByTestId);
+    await tapItem('plant');
+    await tapItem('plant');
 
     expect(queryByText('구매하시겠습니까?')).toBeNull();
     expect(getByText('다이아가 부족해요')).toBeTruthy();
     expect(onBuy).not.toHaveBeenCalled();
+  });
+
+  it('미보유 벽지는 프리뷰 적용 + 가격 칩, 재탭이 구매다', async () => {
+    const { getByText, getByLabelText, queryByText } = await render(
+      <RoomDecorScreen
+        initialItems={[]}
+        ownedIds={['bed', 'simple']}
+        diaBalance={9999}
+        freeLayout
+      />,
+    );
+
+    await fireEvent.press(getByLabelText('벽지 탭'));
+    await fireEvent.press(getByLabelText('발자국 패턴 미리 적용'));
+    // 즉시 적용(프리뷰) — 구매 모달 없이 방 상단에 가격 칩이 뜬다.
+    expect(queryByText('구매하시겠습니까?')).toBeNull();
+    expect(getByLabelText('벽지 프리뷰 구매')).toBeTruthy();
+
+    // 적용 중(선택 링) 타일을 한 번 더 탭 = 구매 확인.
+    await fireEvent.press(getByLabelText('발자국 패턴 구매'));
+    expect(getByText(/발자국 패턴.*구매해요/)).toBeTruthy();
+  });
+
+  it('적용하기 시 미구매 프리뷰가 있으면 일괄 확인 — 제외하고 저장', async () => {
+    const onApply = jest.fn();
+    const { getByText, getByLabelText } = await render(
+      <RoomDecorScreen
+        initialItems={items(['bed'])}
+        ownedIds={['bed', 'simple']}
+        diaBalance={9999}
+        freeLayout
+        onApply={onApply}
+      />,
+    );
+
+    await fireEvent.press(getByLabelText('소품 탭'));
+    await fireEvent.press(getByLabelText('초록 식물 미리 배치'));
+    await fireEvent.press(getByLabelText('적용하기'));
+
+    expect(getByText(/구매하지 않은 프리뷰가 1개/)).toBeTruthy();
+    await fireEvent.press(getByLabelText('제외하고 저장'));
+    await waitFor(() => expect(onApply).toHaveBeenCalled());
+    // 프리뷰(plant)는 저장에서 빠지고 보유분만 실린다.
+    expect(lastApply(onApply).map((p) => p.furnitureId)).toEqual(['bed']);
+  });
+
+  it('적용하기 일괄 확인 — 모두 구매하고 저장', async () => {
+    const onApply = jest.fn();
+    const onBuy = jest.fn(async () => true);
+    const { getByLabelText } = await render(
+      <RoomDecorScreen
+        initialItems={items(['bed'])}
+        ownedIds={['bed', 'simple']}
+        diaBalance={9999}
+        freeLayout
+        onBuy={onBuy}
+        onApply={onApply}
+      />,
+    );
+
+    await fireEvent.press(getByLabelText('소품 탭'));
+    await fireEvent.press(getByLabelText('초록 식물 미리 배치'));
+    await fireEvent.press(getByLabelText('적용하기'));
+    await fireEvent.press(getByLabelText('모두 구매하고 저장'));
+
+    await waitFor(() => expect(onApply).toHaveBeenCalled());
+    expect(onBuy).toHaveBeenCalledWith('plant');
+    // 구매 후에는 프리뷰였던 가구도 그대로 저장에 실린다.
+    expect(
+      lastApply(onApply)
+        .map((p) => p.furnitureId)
+        .sort(),
+    ).toEqual(['bed', 'plant']);
+  });
+
+  it('일괄 확인에서 합계가 잔액을 넘으면 모두 구매 버튼이 비활성', async () => {
+    const { getByLabelText } = await render(
+      <RoomDecorScreen
+        initialItems={items(['bed'])}
+        ownedIds={['bed', 'simple']}
+        diaBalance={1}
+        freeLayout
+        onBuy={jest.fn()}
+      />,
+    );
+    await fireEvent.press(getByLabelText('소품 탭'));
+    await fireEvent.press(getByLabelText('초록 식물 미리 배치'));
+    await fireEvent.press(getByLabelText('적용하기'));
+    expect(getByLabelText('모두 구매하고 저장').props.accessibilityState.disabled).toBe(true);
   });
 });
 
@@ -736,15 +845,15 @@ describe('RoomDecorScreen — 보유중 필터', () => {
 
     // 가구 탭: 보유한 침대 + (미보유) 상점 측이 함께 보인다.
     expect(getByLabelText('포근한 침대')).toBeTruthy();
-    // 소품 탭으로 — 미보유 plant는 구매 타일로 보인다.
+    // 소품 탭으로 — 미보유 plant는 프리뷰 배치 타일로 보인다 (#501).
     await fireEvent.press(getByLabelText('소품 탭'));
-    expect(getByLabelText('초록 식물 구매')).toBeTruthy();
+    expect(getByLabelText('초록 식물 미리 배치')).toBeTruthy();
 
     await fireEvent.press(getByLabelText('보유중만 보기'));
     expect(queryByLabelText('초록 식물')).toBeNull();
 
     // Toggling back restores the shop side.
     await fireEvent.press(getByLabelText('보유중만 보기'));
-    expect(queryByLabelText('초록 식물 구매')).toBeTruthy();
+    expect(queryByLabelText('초록 식물 미리 배치')).toBeTruthy();
   });
 });

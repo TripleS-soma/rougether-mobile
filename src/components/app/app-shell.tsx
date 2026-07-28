@@ -11,11 +11,7 @@ import { HelpScreen } from '@/components/screens/help-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { NotificationListScreen } from '@/components/screens/notification-list-screen';
-import {
-  DEFAULT_NOTIFICATION_SETTINGS,
-  type NotificationSettings,
-  NotificationSettingsScreen,
-} from '@/components/screens/notification-settings-screen';
+import { NotificationSettingsScreen } from '@/components/screens/notification-settings-screen';
 import { PasswordChangeScreen } from '@/components/screens/password-change-screen';
 import { ProfileEditScreen } from '@/components/screens/profile-edit-screen';
 import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
@@ -56,6 +52,7 @@ import { useRoomLayouts } from '@/hooks/use-room-layouts';
 import { useMyCharacters } from '@/hooks/use-my-characters';
 import { useMyRoomData } from '@/hooks/use-my-room-data';
 import { useBugReports } from '@/hooks/use-bug-reports';
+import { useNotificationSettings } from '@/hooks/use-notification-settings';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useShop } from '@/hooks/use-shop';
 import { useWeather } from '@/hooks/use-weather';
@@ -140,7 +137,7 @@ const BACK_SCREEN: Record<Screen, Screen | null> = {
   help: 'settings',
 };
 
-/** 알림/사운드 설정의 기기 보관 키 (#405) — 서버 설정 API가 생기면 마이그레이션. */
+/** 사운드 설정의 기기 보관 키 (#405) — 알림 설정은 서버로 이관됨 (#495). */
 const DEVICE_SETTINGS_KEY = 'rougether.device-settings';
 
 export type AppShellProps = {
@@ -569,32 +566,29 @@ export function AppShell({
   useEffect(() => {
     if (apiBio != null) setBio(apiBio);
   }, [apiBio]);
-  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(
-    DEFAULT_NOTIFICATION_SETTINGS,
-  );
+  // 알림 설정은 서버 보관으로 이관 (#495) — 열 때 GET, 토글마다 낙관적 PATCH.
+  const {
+    settings: notificationSettings,
+    load: loadNotificationSettings,
+    toggle: toggleNotificationSetting,
+  } = useNotificationSettings((message) => toast(message, 'error'));
   const [soundSettings, setSoundSettings] = useState<SoundSettings>(DEFAULT_SOUND_SETTINGS);
 
-  // 알림/사운드 설정은 서버 API가 생기기 전까지 기기(AsyncStorage)에 보관 (#405)
-  // — 화면 문구("이 기기에만 저장돼요")와 실제 동작을 일치시킨다.
+  // 사운드 설정은 서버 API가 생기기 전까지 기기(AsyncStorage)에 보관 (#405).
+  // 예전 저장값의 notifications 필드는 서버 이관(#495) 후 무시된다.
   useEffect(() => {
     void AsyncStorage.getItem(DEVICE_SETTINGS_KEY).then((raw) => {
       if (!raw) return;
       try {
-        const saved = JSON.parse(raw) as {
-          notifications?: NotificationSettings;
-          sound?: SoundSettings;
-        };
-        if (saved.notifications) setNotificationSettings((p) => ({ ...p, ...saved.notifications }));
+        const saved = JSON.parse(raw) as { sound?: SoundSettings };
         if (saved.sound) setSoundSettings((p) => ({ ...p, ...saved.sound }));
       } catch {
         // 손상된 저장값은 기본값으로 무시.
       }
     });
   }, []);
-  const persistDeviceSettings = (notifications: NotificationSettings, sound: SoundSettings) => {
-    void AsyncStorage.setItem(DEVICE_SETTINGS_KEY, JSON.stringify({ notifications, sound })).catch(
-      () => {},
-    );
+  const persistDeviceSettings = (sound: SoundSettings) => {
+    void AsyncStorage.setItem(DEVICE_SETTINGS_KEY, JSON.stringify({ sound })).catch(() => {});
   };
 
   // 푸시 탭(콜드 스타트 포함) → 알림 목록으로 (#405).
@@ -773,9 +767,8 @@ export function AppShell({
               diaBalance={wallet.dia}
               characterId={wornCharacterId}
               characterAnimations={wornCharacterAnimations}
-              onBuy={(itemId) => {
-                void purchaseFurniture(itemId);
-              }}
+              // 일괄 구매(프리뷰 저장, #501)가 결과를 기다린다 — Promise를 그대로.
+              onBuy={(itemId) => purchaseFurniture(itemId)}
               onApply={async (its, wp, fl, bg) => {
                 const result = await saveLayout(its, wp, fl, bg);
                 if (result === 'ok') {
@@ -999,7 +992,11 @@ export function AppShell({
               onOpenTheme={() => setScreen('theme')}
               onEditProfile={() => setScreen('profileEdit')}
               onChangePassword={() => setScreen('passwordChange')}
-              onOpenNotifications={() => setScreen('notifications')}
+              onOpenNotifications={() => {
+                setScreen('notifications');
+                // 화면을 열 때마다 서버값으로 최신화 (실패 시 기본값/직전값 유지).
+                void loadNotificationSettings();
+              }}
               onOpenSound={() => setScreen('sound')}
               onOpenHelp={() => setScreen('help')}
               onReportBug={() => {
@@ -1064,11 +1061,8 @@ export function AppShell({
 
           {screen === 'notifications' ? (
             <NotificationSettingsScreen
-              initialSettings={notificationSettings}
-              onChange={(next) => {
-                setNotificationSettings(next);
-                persistDeviceSettings(next, soundSettings);
-              }}
+              settings={notificationSettings}
+              onToggle={toggleNotificationSetting}
               onBack={() => setScreen('settings')}
             />
           ) : null}
@@ -1078,7 +1072,7 @@ export function AppShell({
               initialSettings={soundSettings}
               onChange={(next) => {
                 setSoundSettings(next);
-                persistDeviceSettings(notificationSettings, next);
+                persistDeviceSettings(next);
               }}
               onBack={() => setScreen('settings')}
             />
