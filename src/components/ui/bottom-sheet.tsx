@@ -22,6 +22,19 @@ export function shouldDismiss(dy: number, vy: number): boolean {
   return dy > DISMISS_DISTANCE || vy > DISMISS_VELOCITY;
 }
 
+// 끌어내리기 클레임 영역 높이 (#514) — 카드 상단(그립/헤더 리듬, 시트들의
+// head 행 높이)에 해당. 이 안에서 시작한 세로 드래그만 시트가 가져간다.
+export const DRAG_CLAIM_HEIGHT = 64;
+
+/**
+ * 터치 시작점(y0)이 카드 상단 클레임 영역 안인지 (#514). 카드 전체를
+ * 클레임하면 본문의 세로 스크롤 자식(알림 시간 휠 등)의 스와이프를 시트
+ * 내림으로 빼앗는다 — 헤더 영역 한정이 결정적인 중재다.
+ */
+export function inDragClaimZone(y0: number, cardTop: number): boolean {
+  return y0 - cardTop <= DRAG_CLAIM_HEIGHT;
+}
+
 export type BottomSheetProps = {
   visible: boolean;
   /** 백드롭 탭·퇴장 트리거. 닫힘 애니메이션은 이 컴포넌트가 재생한다. */
@@ -43,6 +56,9 @@ export function BottomSheet({ visible, onClose, cardStyle, children }: BottomShe
   const dragY = useRef(new Animated.Value(0)).current;
   const [rendered, setRendered] = useState(visible);
   const [cardH, setCardH] = useState(0);
+  // 카드 상단의 화면 y (#514) — 오버레이가 창 전체를 덮으므로 layout.y가 곧
+  // 페이지 좌표. transform(입장 슬라이드)은 layout에 안 잡혀 정지 위치 기준.
+  const cardTopRef = useRef(0);
   // PanResponder는 한 번만 만들어지므로 최신 onClose를 ref로 참조한다.
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -69,10 +85,14 @@ export function BottomSheet({ visible, onClose, cardStyle, children }: BottomShe
     });
   }, [visible, progress, dragY]);
 
-  // 아래로 끄는 팬만 가로챈다 — 수직 우세일 때만 claim해 내부 스크롤/탭과 안 부딪힘.
+  // 아래로 끄는 팬만 가로챈다 — 수직 우세 + 카드 상단(그립/헤더)에서 시작한
+  // 드래그만 claim한다 (#514). 본문에서 시작한 세로 스와이프는 자식 스크롤
+  // (알림 시간 휠 등) 몫 — 카드 전체 클레임이 휠을 시트 내림으로 빼앗았다.
+  // 본문 아무 데나 끌어내리던 동작은 사라지고, 백드롭 탭·닫기 버튼은 유지.
   const pan = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponder: (_e, g) => g.dy > 6 && g.dy > Math.abs(g.dx),
+      onMoveShouldSetPanResponder: (_e, g) =>
+        g.dy > 6 && g.dy > Math.abs(g.dx) && inDragClaimZone(g.y0, cardTopRef.current),
       onPanResponderMove: (_e, g) => {
         if (g.dy > 0) dragY.setValue(g.dy);
       },
@@ -125,8 +145,12 @@ export function BottomSheet({ visible, onClose, cardStyle, children }: BottomShe
         />
         <Animated.View
           {...pan.panHandlers}
-          onLayout={(e) => setCardH(e.nativeEvent.layout.height)}
-          style={[cardStyle, { transform: [{ translateY }] }]}>
+          onLayout={(e) => {
+            setCardH(e.nativeEvent.layout.height);
+            cardTopRef.current = e.nativeEvent.layout.y;
+          }}
+          style={[cardStyle, { transform: [{ translateY }] }]}
+          testID="bottom-sheet-card">
           {children}
         </Animated.View>
       </Animated.View>
