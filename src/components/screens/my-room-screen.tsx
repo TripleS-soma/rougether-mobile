@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -17,6 +17,9 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import ReanimatedSwipeable, {
+  type SwipeableMethods,
+} from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 import { type CharacterAnimationSet } from '@/components/character-avatar';
 import { NavMenuPopover } from '@/components/screens/nav-menu-popover';
@@ -269,6 +272,46 @@ function VisibilityMark({ visibility }: { visibility: CategoryVisibility }) {
     <View accessible accessibilityLabel={VISIBILITY_LABELS[visibility]}>
       <Pictogram name={VISIBILITY_ICONS[visibility]} size={12} color={t.textMuted} />
     </View>
+  );
+}
+
+/**
+ * 루틴/할일 행 스와이프 삭제 (#566) — 왼쪽으로 밀면 빨간 '삭제' 액션이
+ * 드러나고, **액션을 탭해야** 삭제 콜백이 나간다(파괴적 액션이라 풀스와이프
+ * 즉시 삭제는 하지 않는다 — reveal + 탭 2단계). 삭제가 배선되지 않은 행
+ * (달력 탭 서버 기반 항목 등)은 스와이프 없이 그대로 렌더.
+ */
+function SwipeDeleteRow({
+  label,
+  onDelete,
+  children,
+}: {
+  label: string;
+  onDelete?: () => void;
+  children: ReactNode;
+}) {
+  const t = useTokens();
+  const Typography = useTypography();
+  const swipeRef = useRef<SwipeableMethods>(null);
+  if (!onDelete) return children;
+  return (
+    <ReanimatedSwipeable
+      ref={swipeRef}
+      overshootRight={false}
+      renderRightActions={() => (
+        <Pressable
+          onPress={() => {
+            swipeRef.current?.close();
+            onDelete();
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={`${label} 스와이프 삭제`}
+          style={[styles.deleteAction, { backgroundColor: t.danger }]}>
+          <Text style={[Typography.label, { color: t.onPrimary }]}>삭제</Text>
+        </Pressable>
+      )}>
+      {children}
+    </ReanimatedSwipeable>
   );
 }
 
@@ -784,6 +827,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     onToggle: (e?: GestureResponderEvent) => void;
     /** 없으면(기록만 남은 삭제 항목) 행 본문이 메뉴를 열지 않는다. */
     onMenu?: () => void;
+    /** 스와이프 삭제 (#566) — 없으면(서버 기반 달력 항목 등) 스와이프 비활성. */
+    onDelete?: () => void;
   };
 
   const rowFromRoutine = (routine: Routine, date: string): RowSpec => ({
@@ -794,6 +839,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     photoVerify: routine.photoVerify,
     onToggle: (e) => handleToggle(routine, date, e),
     onMenu: () => openRowMenu(routine.id, date),
+    // 메뉴 시트의 삭제하기와 같은 경로 — 스와이프는 지름길일 뿐이다 (#566).
+    onDelete: onDeleteRoutine ? () => onDeleteRoutine(routine.id) : undefined,
   });
 
   const rowFromCalendarItem = (item: CalendarDayItem): RowSpec => ({
@@ -809,50 +856,52 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   });
 
   const renderRoutineRow = (row: RowSpec, color: string) => (
-    <View key={row.key} style={styles.routineRow}>
-      {/* The checkbox alone toggles completion; the rest of the row opens the
+    <SwipeDeleteRow key={row.key} label={row.title} onDelete={row.onDelete}>
+      <View style={styles.routineRow}>
+        {/* The checkbox alone toggles completion; the rest of the row opens the
           수정/삭제 bottom sheet. */}
-      <BearCheck
-        checked={row.done}
-        color={color}
-        onPress={(e) => row.onToggle(e)}
-        accessibilityLabel={row.title}
-      />
-      <Pressable
-        onPress={row.onMenu}
-        accessibilityRole="button"
-        accessibilityLabel={`${row.title} 메뉴`}
-        style={[styles.flex, styles.rowBody]}>
-        <Text
-          style={[
-            Typography.body,
-            row.done
-              ? { color: t.textMuted, textDecorationLine: 'line-through' }
-              : { color: t.text },
-          ]}>
-          {row.title}
-        </Text>
-        {row.time ? (
-          <View style={styles.badges}>
-            {row.time ? (
-              <View style={styles.badge}>
-                <Icon name="bell" size={12} color={t.textMuted} />
-                <Text style={[styles.badgeText, { color: t.textMuted }]}>
-                  {formatTime(row.time)}
-                </Text>
-              </View>
-            ) : null}
-            {/* 인증사진형 잠시 내림 (#499) — 복구 시 사진 인증 배지를 되살릴 것.
+        <BearCheck
+          checked={row.done}
+          color={color}
+          onPress={(e) => row.onToggle(e)}
+          accessibilityLabel={row.title}
+        />
+        <Pressable
+          onPress={row.onMenu}
+          accessibilityRole="button"
+          accessibilityLabel={`${row.title} 메뉴`}
+          style={[styles.flex, styles.rowBody]}>
+          <Text
+            style={[
+              Typography.body,
+              row.done
+                ? { color: t.textMuted, textDecorationLine: 'line-through' }
+                : { color: t.text },
+            ]}>
+            {row.title}
+          </Text>
+          {row.time ? (
+            <View style={styles.badges}>
+              {row.time ? (
+                <View style={styles.badge}>
+                  <Icon name="bell" size={12} color={t.textMuted} />
+                  <Text style={[styles.badgeText, { color: t.textMuted }]}>
+                    {formatTime(row.time)}
+                  </Text>
+                </View>
+              ) : null}
+              {/* 인증사진형 잠시 내림 (#499) — 복구 시 사진 인증 배지를 되살릴 것.
             {row.photoVerify ? (
               <View style={styles.badge}>
                 <Icon name="camera" size={12} color={t.textMuted} />
                 <Text style={[styles.badgeText, { color: t.textMuted }]}>사진 인증</Text>
               </View>
             ) : null} */}
-          </View>
-        ) : null}
-      </Pressable>
-    </View>
+            </View>
+          ) : null}
+        </Pressable>
+      </View>
+    </SwipeDeleteRow>
   );
 
   // 카테고리 그룹 = 헤더(아이콘·라벨·공개범위·카운트·＋) + 행들 + 퀵애드 입력행.
@@ -1541,6 +1590,14 @@ const styles = StyleSheet.create({
   },
   rowBody: {
     paddingVertical: Spacing.one,
+  },
+  // 스와이프 삭제 액션 (#566) — 행 오른쪽에 드러나는 빨간 버튼.
+  deleteAction: {
+    width: 64,
+    marginLeft: Spacing.two,
+    borderRadius: Radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   // Same width as catDot so checkboxes center under the category emoji and
   // row titles line up with the category label.

@@ -108,6 +108,41 @@ describe('MyRoomScreen', () => {
     }
   });
 
+  // 루틴 행 스와이프 삭제 (#566) — 액션은 항상 렌더되고 스와이프로 드러난다.
+  // 풀스와이프 즉시 삭제가 아니라 액션 탭이 삭제 경로다.
+  it('행 스와이프로 드러난 삭제 액션 탭 → onDeleteRoutine (#566)', async () => {
+    const onDeleteRoutine = jest.fn();
+    const { getByLabelText } = await render(
+      <MyRoomScreen routines={SAMPLE_ROUTINES} onDeleteRoutine={onDeleteRoutine} />,
+    );
+    await fireEvent.press(getByLabelText('아침 7시 기상 스와이프 삭제'));
+    expect(onDeleteRoutine).toHaveBeenCalledWith('1');
+  });
+
+  it('삭제 미배선 행은 스와이프 삭제가 비활성 (#566)', async () => {
+    // onDeleteRoutine 없이 → 방탭 행에 스와이프 삭제 액션이 없다.
+    const unwired = await render(<MyRoomScreen routines={SAMPLE_ROUTINES} />);
+    expect(unwired.queryByLabelText('아침 7시 기상 스와이프 삭제')).toBeNull();
+
+    // 달력 탭 서버 기반(과거 기록) 항목도 스와이프 삭제 비활성.
+    const calendarDays = {
+      [YESTERDAY]: [
+        { id: 'x9', kind: 'todo' as const, title: '지난 기록', completed: false, category: '' },
+      ],
+    };
+    const server = await render(
+      <MyRoomScreen
+        routines={[]}
+        calendarDays={calendarDays}
+        onSelectDate={jest.fn()}
+        onDeleteRoutine={jest.fn()}
+      />,
+    );
+    await pickCalendarDate(server, YESTERDAY);
+    expect(server.getByText('지난 기록')).toBeTruthy();
+    expect(server.queryByLabelText('지난 기록 스와이프 삭제')).toBeNull();
+  });
+
   it('marks each category header with its visibility scope (#285)', async () => {
     const { getByLabelText, getAllByLabelText } = await render(
       <MyRoomScreen routines={SAMPLE_ROUTINES} />,
