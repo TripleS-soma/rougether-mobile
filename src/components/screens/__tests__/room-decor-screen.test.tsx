@@ -331,7 +331,7 @@ describe('RoomDecorScreen — 안드로이드 하드웨어 백 (#488)', () => {
 describe('RoomDecorScreen — 프리뷰·구매 (#501)', () => {
   it('places an unowned item as a preview instead of opening the buy modal', async () => {
     const { getByLabelText, getByTestId, queryByText } = await render(
-      <RoomDecorScreen initialItems={[]} ownedIds={['bed']} diaBalance={9999} />,
+      <RoomDecorScreen initialItems={[]} ownedIds={['bed']} diamondBalance={9999} />,
     );
 
     await fireEvent.press(getByLabelText('소품 탭'));
@@ -347,7 +347,7 @@ describe('RoomDecorScreen — 프리뷰·구매 (#501)', () => {
   it('re-tapping the selected preview opens the buy confirm and buys', async () => {
     const onBuy = jest.fn(async () => true);
     const { getByText, getByLabelText, getByTestId } = await render(
-      <RoomDecorScreen initialItems={[]} ownedIds={['bed']} diaBalance={9999} onBuy={onBuy} />,
+      <RoomDecorScreen initialItems={[]} ownedIds={['bed']} diamondBalance={9999} onBuy={onBuy} />,
     );
 
     await fireEvent.press(getByLabelText('소품 탭'));
@@ -365,7 +365,7 @@ describe('RoomDecorScreen — 프리뷰·구매 (#501)', () => {
 
   it('선택 툴바에 구매 버튼은 없다 — 구매는 프리뷰 재탭으로만', async () => {
     const { getByLabelText, getByTestId, queryByLabelText } = await render(
-      <RoomDecorScreen initialItems={[]} ownedIds={['bed']} diaBalance={9999} />,
+      <RoomDecorScreen initialItems={[]} ownedIds={['bed']} diamondBalance={9999} />,
     );
     await fireEvent.press(getByLabelText('소품 탭'));
     await fireEvent.press(getByLabelText('초록 식물 미리 배치'));
@@ -379,7 +379,7 @@ describe('RoomDecorScreen — 프리뷰·구매 (#501)', () => {
     const onBuy = jest.fn();
     const { getByText, getByLabelText, getByTestId, queryByText } = await render(
       <ToastProvider>
-        <RoomDecorScreen initialItems={[]} ownedIds={['bed']} diaBalance={0} onBuy={onBuy} />
+        <RoomDecorScreen initialItems={[]} ownedIds={['bed']} diamondBalance={0} onBuy={onBuy} />
       </ToastProvider>,
     );
 
@@ -399,7 +399,7 @@ describe('RoomDecorScreen — 프리뷰·구매 (#501)', () => {
       <RoomDecorScreen
         initialItems={[]}
         ownedIds={['bed', 'simple']}
-        diaBalance={9999}
+        diamondBalance={9999}
         freeLayout
       />,
     );
@@ -421,7 +421,7 @@ describe('RoomDecorScreen — 프리뷰·구매 (#501)', () => {
       <RoomDecorScreen
         initialItems={items(['bed'])}
         ownedIds={['bed', 'simple']}
-        diaBalance={9999}
+        diamondBalance={9999}
         freeLayout
         onApply={onApply}
       />,
@@ -445,7 +445,7 @@ describe('RoomDecorScreen — 프리뷰·구매 (#501)', () => {
       <RoomDecorScreen
         initialItems={items(['bed'])}
         ownedIds={['bed', 'simple']}
-        diaBalance={9999}
+        diamondBalance={9999}
         freeLayout
         onBuy={onBuy}
         onApply={onApply}
@@ -472,7 +472,7 @@ describe('RoomDecorScreen — 프리뷰·구매 (#501)', () => {
       <RoomDecorScreen
         initialItems={items(['bed'])}
         ownedIds={['bed', 'simple']}
-        diaBalance={1}
+        diamondBalance={1}
         freeLayout
         onBuy={jest.fn()}
       />,
@@ -840,7 +840,7 @@ describe('RoomDecorScreen — 전체보기 탭', () => {
 describe('RoomDecorScreen — 보유중 필터', () => {
   it('hides the shop side of the picker with the 보유중 toggle', async () => {
     const { getByLabelText, queryByLabelText } = await render(
-      <RoomDecorScreen initialItems={[]} ownedIds={['bed']} diaBalance={9999} />,
+      <RoomDecorScreen initialItems={[]} ownedIds={['bed']} diamondBalance={9999} />,
     );
 
     // 가구 탭: 보유한 침대 + (미보유) 상점 측이 함께 보인다.

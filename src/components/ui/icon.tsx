@@ -41,7 +41,7 @@ const ICONS = {
   'layer-down': 'arrow-down',
   // Currency + shop
   coin: 'ellipse', // 실제 렌더는 CoinIcon(#512) — IconName 타입 유지용 매핑.
-  dia: 'diamond',
+  diamond: 'diamond',
   shop: 'storefront-outline',
   // Settings menu rows
   profile: 'person-outline',

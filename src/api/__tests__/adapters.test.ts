@@ -178,13 +178,13 @@ describe('API adapters', () => {
     expect(toServerItemId(td.id)).toBe(5);
   });
 
-  it('reads wallets into coin/dia', () => {
+  it('reads wallets into coin/diamond', () => {
     expect(
       toWallet([
         { currencyType: 'COIN', balance: 120 },
         { currencyType: 'DIAMOND', balance: 7 },
       ]),
-    ).toEqual({ coin: 120, dia: 7 });
+    ).toEqual({ coin: 120, diamond: 7 });
   });
 
   it('builds today completions from routine/todo status', () => {
@@ -229,7 +229,7 @@ describe('API adapters', () => {
   it('keeps deleted categories flagged for historical lookup', () => {
     expect(toAppCategory({ id: 9, name: '옛것', deleted: true })).toMatchObject({
       id: '9',
-      label: '옛것',
+      name: '옛것',
       deleted: true,
     });
     expect(toAppCategory({ id: 10, name: '현역' }).deleted).toBeUndefined();
@@ -320,7 +320,7 @@ describe('API adapters', () => {
       'private',
     );
 
-    const cat = { id: 'x', label: '취미', icon: 'palette', color: '#123456' } as const;
+    const cat = { id: 'x', name: '취미', icon: 'palette', color: '#123456' } as const;
     expect(toCategoryCreate({ ...cat, visibility: 'public' }).visibility).toBe('PUBLIC');
     expect(toCategoryCreate({ ...cat, visibility: 'neighbor' }).visibility).toBe('HOUSE');
     expect(toCategoryCreate({ ...cat, visibility: 'partial' }).visibility).toBe('FRIENDS');
@@ -779,7 +779,7 @@ describe('API adapters', () => {
         ],
       }),
     ).toMatchObject({
-      id: '7',
+      id: 7,
       name: '미리보기 집',
       members: 2,
       capacity: 4,

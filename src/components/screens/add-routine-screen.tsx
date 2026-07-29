@@ -286,7 +286,7 @@ export function AddRoutineScreen({
                     mono={active ? t.onPrimary : undefined}
                   />
                   <Text style={[Typography.label, { color: active ? t.onPrimary : t.textMuted }]}>
-                    {c.label}
+                    {c.name}
                   </Text>
                 </Pressable>
               );
@@ -324,7 +324,7 @@ export function AddRoutineScreen({
                       // Presets name local category labels; only switch when the
                       // user actually has a matching category.
                       const match = categories.find(
-                        (c) => c.id === p.category || c.label === p.category,
+                        (c) => c.id === p.category || c.name === p.category,
                       );
                       if (match) setCategory(match.id);
                     }}

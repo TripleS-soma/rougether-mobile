@@ -3,7 +3,7 @@ import type { SearchHouse } from '@/components/screens/house-search-screen';
 /** Sample browse-list houses for the dev gallery / screen tests. */
 export const RECOMMENDED_HOUSES: SearchHouse[] = [
   {
-    id: 'h1',
+    id: 1,
     name: '아침형 인간 모임',
     members: 3,
     capacity: 4,
@@ -14,7 +14,7 @@ export const RECOMMENDED_HOUSES: SearchHouse[] = [
     description: '오전 7시 전 기상 인증을 함께 해요',
   },
   {
-    id: 'h2',
+    id: 2,
     name: '개발자 루틴',
     members: 4,
     capacity: 4,
@@ -25,7 +25,7 @@ export const RECOMMENDED_HOUSES: SearchHouse[] = [
     description: '매일 코테 한 문제씩, 함께 성장하기',
   },
   {
-    id: 'h3',
+    id: 3,
     name: '독서 1시간',
     members: 2,
     capacity: 4,
@@ -36,7 +36,7 @@ export const RECOMMENDED_HOUSES: SearchHouse[] = [
     description: '하루 1시간 독서하고 한줄평 남기기',
   },
   {
-    id: 'h4',
+    id: 4,
     name: '홈트 챌린지',
     members: 3,
     capacity: 4,
@@ -47,7 +47,7 @@ export const RECOMMENDED_HOUSES: SearchHouse[] = [
     description: '주 3회 홈트 인증 그룹',
   },
   {
-    id: 'h5',
+    id: 5,
     name: '물 2L 클럽',
     members: 4,
     capacity: 4,

@@ -81,7 +81,7 @@ export function CategoryFormSheet({
   // 열릴 때마다 모드에 맞게 리셋 — 수정이면 프리필, 생성이면 빈 폼.
   useEffect(() => {
     if (!visible) return;
-    setName(editing?.label ?? '');
+    setName(editing?.name ?? '');
     setIcon(editing?.icon ?? ICON_CHOICES[0]);
     setColor(editing?.color ?? autoColor);
     setVisibility(editing?.visibility ?? 'public');
@@ -91,9 +91,9 @@ export function CategoryFormSheet({
   const submit = () => {
     if (!canSubmit) return;
     if (editing) {
-      onUpdate?.(editing.id, { ...editing, label: name.trim(), icon, color, visibility });
+      onUpdate?.(editing.id, { ...editing, name: name.trim(), icon, color, visibility });
     } else {
-      onCreate?.({ id: `cat-${Date.now()}`, label: name.trim(), icon, color, visibility });
+      onCreate?.({ id: `cat-${Date.now()}`, name: name.trim(), icon, color, visibility });
     }
     onClose();
   };
@@ -105,7 +105,7 @@ export function CategoryFormSheet({
       cardStyle={[styles.sheet, { backgroundColor: t.screen }]}>
       <View style={[styles.head, { borderBottomColor: t.border }]}>
         <Text style={[Typography.h3, { color: t.text }]}>
-          {editing ? `'${editing.label}' 수정하기` : '새 카테고리'}
+          {editing ? `'${editing.name}' 수정하기` : '새 카테고리'}
         </Text>
         <Pressable
           onPress={onClose}

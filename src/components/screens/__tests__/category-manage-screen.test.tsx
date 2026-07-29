@@ -28,7 +28,7 @@ describe('CategoryManageScreen', () => {
     await fireEvent.press(getByLabelText('새 카테고리 추가'));
     await fireEvent.changeText(getByPlaceholderText('예) 자기계발'), '일기');
     await fireEvent.press(getByLabelText('카테고리 추가'));
-    expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({ label: '일기' }));
+    expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({ name: '일기' }));
     // 제출 후 시트가 닫힌다 — 퇴장 애니메이션(#448)이 끝나길 기다린다.
     await waitFor(() => expect(queryByText('새 카테고리')).toBeNull());
   });
@@ -43,7 +43,7 @@ describe('CategoryManageScreen', () => {
     expect(getByText("'공부' 수정하기")).toBeTruthy();
     await fireEvent.changeText(getByDisplayValue('공부'), '심화 공부');
     await fireEvent.press(getByLabelText('카테고리 저장'));
-    expect(onUpdate).toHaveBeenCalledWith('공부', expect.objectContaining({ label: '심화 공부' }));
+    expect(onUpdate).toHaveBeenCalledWith('공부', expect.objectContaining({ name: '심화 공부' }));
   });
 
   it('reorders categories via long-press move mode', async () => {

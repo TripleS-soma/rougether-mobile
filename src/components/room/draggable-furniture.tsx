@@ -188,7 +188,7 @@ export function DraggableFurniture({
             pointerEvents="none"
             style={[styles.previewBadge, { backgroundColor: t.surface, borderColor: t.border }]}
             testID={`preview-badge-${placement.furnitureId}`}>
-            <Icon name="dia" size={9} color={t.primary} />
+            <Icon name="diamond" size={9} color={t.primary} />
             <Text style={[styles.previewBadgeText, { color: t.text }]}>{previewPrice}</Text>
           </View>
         ) : null}

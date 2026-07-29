@@ -29,7 +29,7 @@ import { assetSource, isCdnKey } from '@/resources/asset';
 
 /** Browse-card display model (decorated from the API house summary). */
 export type SearchHouse = {
-  id: string;
+  id: number;
   name: string;
   members: number;
   capacity: number;
@@ -58,7 +58,7 @@ export type HousePreview = {
 
 /** 탐색 카드 탭 → 참여 전 집 미리보기 (GET /houses/{id}/preview, #328). */
 export type HousePreviewDetail = {
-  id: string;
+  id: number;
   name: string;
   description?: string;
   coverImageKey?: string;
@@ -94,9 +94,9 @@ export type HouseSearchScreenProps = {
    */
   onPreviewCode?: (code: string) => Promise<HousePreview | null>;
   /** Join a browsable house directly by its id. */
-  onJoinHouse?: (houseId: string) => void;
+  onJoinHouse?: (houseId: number) => void;
   /** 참여 전 미리보기 로드 (#328, 미션 진행 포함 #532); null = 실패. */
-  onPreviewHouse?: (houseId: string) => Promise<HousePreviewDetail | null>;
+  onPreviewHouse?: (houseId: number) => Promise<HousePreviewDetail | null>;
   /** 상점 카탈로그 (#386) — 미리보기 창문의 실제 방 렌더에 필요. */
   furniture?: FurnitureItem[];
   wallpapers?: Wallpaper[];
@@ -133,7 +133,7 @@ export function HouseSearchScreen({
   const [query, setQuery] = useState('');
   const [codeError, setCodeError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
-  const [previewingHouseId, setPreviewingHouseId] = useState<string | null>(null);
+  const [previewingHouseId, setPreviewingHouseId] = useState<number | null>(null);
   // Pre-join preview card (code + house info), shown after a successful lookup.
   const [preview, setPreview] = useState<{ code: string; info: HousePreview } | null>(null);
   // 탐색 카드 탭 → 미리보기 모달 (#328, 미션 포함 #532). 실패는 훅이 토스트로.
@@ -184,7 +184,7 @@ export function HouseSearchScreen({
     else setCodeError('입주에 실패했어요. 만석이거나 이미 참여 중일 수 있어요.');
   };
 
-  const openHousePreview = async (houseId: string) => {
+  const openHousePreview = async (houseId: number) => {
     if (!onPreviewHouse || previewingHouseId) return;
     setPreviewingHouseId(houseId);
     try {
@@ -324,7 +324,7 @@ export function HouseSearchScreen({
               const pending = h.joinRequestStatus === 'PENDING';
               const accepted = h.joinRequestStatus === 'ACCEPTED';
               return (
-                <View key={h.id} style={[styles.houseRow, { backgroundColor: t.surface }]}>
+                <View key={String(h.id)} style={[styles.houseRow, { backgroundColor: t.surface }]}>
                   {/* 카드 본문 탭 = 참여 전 미리보기 (#328); 입주 신청 버튼은 그대로.
                       로딩 중 재탭은 busy로 막는다 (#532). */}
                   <Pressable

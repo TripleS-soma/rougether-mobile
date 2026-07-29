@@ -43,7 +43,7 @@ export const CATEGORY_COLORS = [
 
 export type RoutineCategoryMeta = {
   id: RoutineCategory;
-  label: string;
+  name: string;
   icon: PictogramName;
   color: string;
   visibility: CategoryVisibility;
@@ -58,18 +58,18 @@ export type RoutineCategoryMeta = {
  */
 export const UNCATEGORIZED_META: RoutineCategoryMeta = {
   id: '',
-  label: '미분류',
+  name: '미분류',
   icon: 'sparkle',
   color: '#B5A89C',
   visibility: 'public',
 };
 
 export const ROUTINE_CATEGORIES: RoutineCategoryMeta[] = [
-  { id: '일정', label: '일정', icon: 'calendar', color: '#E8A87C', visibility: 'public' },
-  { id: '공부', label: '공부', icon: 'book', color: '#7FA8D4', visibility: 'public' },
-  { id: '취미', label: '취미', icon: 'palette', color: '#C8869C', visibility: 'neighbor' },
-  { id: '건강', label: '건강', icon: 'dumbbell', color: '#7FA87F', visibility: 'partial' },
-  { id: '기타', label: '기타', icon: 'sparkle', color: '#B5A89C', visibility: 'public' },
+  { id: '일정', name: '일정', icon: 'calendar', color: '#E8A87C', visibility: 'public' },
+  { id: '공부', name: '공부', icon: 'book', color: '#7FA8D4', visibility: 'public' },
+  { id: '취미', name: '취미', icon: 'palette', color: '#C8869C', visibility: 'neighbor' },
+  { id: '건강', name: '건강', icon: 'dumbbell', color: '#7FA87F', visibility: 'partial' },
+  { id: '기타', name: '기타', icon: 'sparkle', color: '#B5A89C', visibility: 'public' },
 ];
 
 /**

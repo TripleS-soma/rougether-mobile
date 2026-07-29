@@ -144,7 +144,7 @@ export type MyRoomScreenProps = {
   streakDays?: number;
   /** Wallet balances shown in the header (완료 보상 피드백의 기준점). */
   coinBalance?: number;
-  diaBalance?: number;
+  diamondBalance?: number;
   // Room rendering (forwarded to <Room />).
   characterId?: CharacterId;
   /** Worn character's CDN animation keys (forwarded to <Room />). */
@@ -273,7 +273,7 @@ export function MyRoomScreen({
   userName = '준서',
   streakDays = 7,
   coinBalance = 0,
-  diaBalance = 0,
+  diamondBalance = 0,
   characterId = DEFAULT_CHARACTER_ID,
   characterAnimations,
   wallpaperId = DEFAULT_WALLPAPER_ID,
@@ -666,7 +666,7 @@ export function MyRoomScreen({
       <ScalePressable
         onPress={() => openQuickAdd(meta.id, defaultDate)}
         accessibilityRole="button"
-        accessibilityLabel={`${meta.label} 할 일 추가`}
+        accessibilityLabel={`${meta.name} 할 일 추가`}
         hitSlop={8}
         style={[styles.catAdd, { backgroundColor: meta.color }]}>
         <Icon name="add" size={14} color={t.onPrimary} />
@@ -857,7 +857,7 @@ export function MyRoomScreen({
             disabled={!meta.id || !onUpdateCategory}
             onPress={() => setEditingCategory(meta)}
             accessibilityRole="button"
-            accessibilityLabel={`${meta.label} 카테고리 수정`}>
+            accessibilityLabel={`${meta.name} 카테고리 수정`}>
             <View style={[styles.catDot, { backgroundColor: `${meta.color}33` }]}>
               <CategoryIcon name={meta.icon} color={meta.color} size={18} />
             </View>
@@ -867,7 +867,7 @@ export function MyRoomScreen({
                 styles.catLabel,
                 { color: readableTextColor(meta.color, t.surfaceMuted) },
               ]}>
-              {meta.label}
+              {meta.name}
             </Text>
           </Pressable>
           {/* 미분류(pseudo) 그룹은 실제 카테고리가 아니라 표시하지 않는다. */}
@@ -920,7 +920,7 @@ export function MyRoomScreen({
             ref={walletRef}
             onLayout={measureWallet}
             style={{ transform: [{ scale: walletPulse }] }}>
-            <WalletPills coin={coinBalance} dia={diaBalance} />
+            <WalletPills coin={coinBalance} diamond={diamondBalance} />
           </Animated.View>
           {/* 알림 lives inside this popover (#257 — a separate bell button
               crowded the header and crushed the title); unread shows as a dot

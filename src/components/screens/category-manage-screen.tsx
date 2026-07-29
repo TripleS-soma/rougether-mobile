@@ -112,7 +112,7 @@ export function CategoryManageScreen({
                   <Pressable
                     key={c.id}
                     onLongPress={onReorder ? () => setMovingId(moving ? null : c.id) : undefined}
-                    accessibilityLabel={`${c.label} 카테고리`}
+                    accessibilityLabel={`${c.name} 카테고리`}
                     accessibilityHint={onReorder ? '꾹 누르면 순서 이동 모드가 켜져요' : undefined}
                     style={[
                       styles.catRow,
@@ -123,7 +123,7 @@ export function CategoryManageScreen({
                       <CategoryIcon name={c.icon} color={c.color} size={16} />
                     </View>
                     <View style={styles.flex}>
-                      <Text style={[Typography.body, { color: t.text }]}>{c.label}</Text>
+                      <Text style={[Typography.body, { color: t.text }]}>{c.name}</Text>
                       <Text style={[Typography.supporting, { color: t.textMuted }]}>
                         {moving
                           ? '순서 이동 중 — 완료를 누르면 끝나요'
@@ -136,7 +136,7 @@ export function CategoryManageScreen({
                           onPress={() => moveCategory(c.id, -1)}
                           disabled={idx === 0}
                           accessibilityRole="button"
-                          accessibilityLabel={`${c.label} 위로 이동`}
+                          accessibilityLabel={`${c.name} 위로 이동`}
                           style={[
                             styles.rowBtn,
                             { backgroundColor: idx === 0 ? t.surfaceMuted : t.primarySoft },
@@ -154,7 +154,7 @@ export function CategoryManageScreen({
                           onPress={() => moveCategory(c.id, 1)}
                           disabled={idx === categories.length - 1}
                           accessibilityRole="button"
-                          accessibilityLabel={`${c.label} 아래로 이동`}
+                          accessibilityLabel={`${c.name} 아래로 이동`}
                           style={[
                             styles.rowBtn,
                             {
@@ -185,7 +185,7 @@ export function CategoryManageScreen({
                         <Pressable
                           onPress={() => setFormTarget(c)}
                           accessibilityRole="button"
-                          accessibilityLabel={`${c.label} 수정`}
+                          accessibilityLabel={`${c.name} 수정`}
                           style={[styles.rowBtn, { backgroundColor: t.surfaceMuted }]}>
                           <Icon name="edit" size={16} color={t.text} />
                         </Pressable>
@@ -197,7 +197,7 @@ export function CategoryManageScreen({
                             else setPendingDelete(c);
                           }}
                           accessibilityRole="button"
-                          accessibilityLabel={`${c.label} 삭제`}
+                          accessibilityLabel={`${c.name} 삭제`}
                           style={[styles.rowBtn, { backgroundColor: t.dangerSoft }]}>
                           <Icon name="trash" size={16} color={t.danger} />
                         </Pressable>
@@ -226,7 +226,7 @@ export function CategoryManageScreen({
           <View style={[styles.confirmCard, { backgroundColor: t.screen }]}>
             <Text style={[Typography.h3, { color: t.text }]}>루틴을 먼저 정리해주세요</Text>
             <Text style={[Typography.body, styles.confirmText, { color: t.textMuted }]}>
-              &lsquo;{blockedDelete.label}&rsquo; 카테고리에 루틴{' '}
+              &lsquo;{blockedDelete.name}&rsquo; 카테고리에 루틴{' '}
               {inUseCounts[blockedDelete.id]?.routines ?? 0}개가 있어요.{'\n'}루틴을 삭제하거나 다른
               카테고리로 옮긴 뒤 삭제할 수 있어요.
             </Text>
@@ -248,7 +248,7 @@ export function CategoryManageScreen({
           <Pressable style={styles.backdrop} onPress={() => setPendingDelete(null)} />
           <View style={[styles.confirmCard, { backgroundColor: t.screen }]}>
             <Text style={[Typography.h3, { color: t.text }]}>
-              &lsquo;{pendingDelete.label}&rsquo; 카테고리를 삭제할까요?
+              &lsquo;{pendingDelete.name}&rsquo; 카테고리를 삭제할까요?
             </Text>
             <Text style={[Typography.body, styles.confirmText, { color: t.textMuted }]}>
               {(inUseCounts[pendingDelete.id]?.todos ?? 0) > 0

@@ -15,8 +15,8 @@ describe('HouseSearchScreen', () => {
 
   it('renders the server cover on a browse card, pictogram tile otherwise', async () => {
     const houses = [
-      { ...RECOMMENDED_HOUSES[0], id: 'c1', coverImageKey: 'house/cloud-balloon/frame.png' },
-      { ...RECOMMENDED_HOUSES[1], id: 'c2' }, // no cover → pictogram fallback
+      { ...RECOMMENDED_HOUSES[0], id: 21, coverImageKey: 'house/cloud-balloon/frame.png' },
+      { ...RECOMMENDED_HOUSES[1], id: 22 }, // no cover → pictogram fallback
     ];
     const { queryAllByTestId } = await render(<HouseSearchScreen houses={houses} />);
     expect(queryAllByTestId('house-cover')).toHaveLength(1);
@@ -119,12 +119,12 @@ describe('HouseSearchScreen', () => {
 
     expect(getByText('아침형 인간 모임')).toBeTruthy();
     await fireEvent.press(getAllByText('입주 신청')[0]);
-    expect(onJoinHouse).toHaveBeenCalledWith('h1');
+    expect(onJoinHouse).toHaveBeenCalledWith(1);
   });
 
   it('shows group mission progress in a read-only browse preview', async () => {
     const onPreviewHouse = jest.fn(async () => ({
-      id: 'h1',
+      id: 1,
       name: '아침형 인간 모임',
       description: '같이 아침 루틴 지켜요',
       members: 3,
@@ -158,7 +158,7 @@ describe('HouseSearchScreen', () => {
     expect(getByText('오늘 다같이 루틴 지키기')).toBeTruthy();
     expect(getByText('66/70')).toBeTruthy();
     expect(getByText('입주 후 미션에 참여하고 보상을 받을 수 있어요')).toBeTruthy();
-    expect(onPreviewHouse).toHaveBeenCalledWith('h1');
+    expect(onPreviewHouse).toHaveBeenCalledWith(1);
     expect(onJoinHouse).not.toHaveBeenCalled();
   });
 
@@ -196,7 +196,7 @@ describe('HouseSearchScreen', () => {
     // description only ever truncated.
     const houses = [
       {
-        id: '9',
+        id: 9,
         name: '연동 검증 하우스',
         members: 1,
         capacity: 4,
@@ -221,7 +221,7 @@ describe('HouseSearchScreen', () => {
 
 describe('HouseSearchScreen — 참여 전 미리보기 (#328)', () => {
   const DETAIL = {
-    id: 'c1',
+    id: 21,
     name: '아침집',
     description: '아침 루틴을 함께해요',
     members: 2,
@@ -233,7 +233,7 @@ describe('HouseSearchScreen — 참여 전 미리보기 (#328)', () => {
   it('opens the preview modal from the card body and joins from it', async () => {
     const onPreviewHouse = jest.fn(async () => DETAIL);
     const onJoinHouse = jest.fn();
-    const houses = [{ ...RECOMMENDED_HOUSES[0], id: 'c1', name: '아침집' }];
+    const houses = [{ ...RECOMMENDED_HOUSES[0], id: 21, name: '아침집' }];
     const { getByLabelText, getByText } = await render(
       <HouseSearchScreen
         houses={houses}
@@ -243,16 +243,16 @@ describe('HouseSearchScreen — 참여 전 미리보기 (#328)', () => {
     );
     await fireEvent.press(getByLabelText('아침집 미리보기'));
     await waitFor(() => expect(getByText('아침 루틴을 함께해요')).toBeTruthy());
-    expect(onPreviewHouse).toHaveBeenCalledWith('c1');
+    expect(onPreviewHouse).toHaveBeenCalledWith(21);
     expect(getByText('#미라클모닝')).toBeTruthy();
     await fireEvent.press(getByLabelText('이 집에 참여하기'));
-    expect(onJoinHouse).toHaveBeenCalledWith('c1');
+    expect(onJoinHouse).toHaveBeenCalledWith(21);
   });
 
   it('blocks joining a full house with a toast, and shows 이미 참여 중', async () => {
     const onJoinHouse = jest.fn();
     const full = { ...DETAIL, isFull: true };
-    const houses = [{ ...RECOMMENDED_HOUSES[0], id: 'c1', name: '아침집' }];
+    const houses = [{ ...RECOMMENDED_HOUSES[0], id: 21, name: '아침집' }];
     const ui = await render(
       <ToastProvider>
         <HouseSearchScreen
@@ -270,7 +270,7 @@ describe('HouseSearchScreen — 참여 전 미리보기 (#328)', () => {
   });
 
   it('renders the house frame with member-count mock rooms in the windows', async () => {
-    const houses = [{ ...RECOMMENDED_HOUSES[0], id: 'c1', name: '아침집' }];
+    const houses = [{ ...RECOMMENDED_HOUSES[0], id: 21, name: '아침집' }];
     const ui = await render(
       <HouseSearchScreen houses={houses} onPreviewHouse={jest.fn(async () => DETAIL)} />,
     );
@@ -292,7 +292,7 @@ describe('HouseSearchScreen — 참여 전 미리보기 (#328)', () => {
         { placedFurnitureIds: [], placements: [] },
       ],
     };
-    const houses = [{ ...RECOMMENDED_HOUSES[0], id: 'c1', name: '아침집' }];
+    const houses = [{ ...RECOMMENDED_HOUSES[0], id: 21, name: '아침집' }];
     const ui = await render(
       <HouseSearchScreen houses={houses} onPreviewHouse={jest.fn(async () => withRooms)} />,
     );
@@ -305,7 +305,7 @@ describe('HouseSearchScreen — 참여 전 미리보기 (#328)', () => {
 
   it('shows 이미 참여 중 instead of the join button for a member', async () => {
     const member = { ...DETAIL, isMember: true };
-    const houses = [{ ...RECOMMENDED_HOUSES[0], id: 'c1', name: '아침집' }];
+    const houses = [{ ...RECOMMENDED_HOUSES[0], id: 21, name: '아침집' }];
     const ui = await render(
       <HouseSearchScreen houses={houses} onPreviewHouse={jest.fn(async () => member)} />,
     );

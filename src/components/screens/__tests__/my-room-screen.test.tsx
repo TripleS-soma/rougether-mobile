@@ -56,7 +56,7 @@ describe('MyRoomScreen', () => {
         userName="준서"
         routines={SAMPLE_ROUTINES}
         coinBalance={1200}
-        diaBalance={34}
+        diamondBalance={34}
       />,
     );
     // 아바타를 빼고 다이아를 상시 노출 — 좁은 폭 코인-only(#425)를 되돌림.
@@ -391,7 +391,7 @@ describe('MyRoomScreen', () => {
     const categories = [
       {
         id: '건강',
-        label: '건강',
+        name: '건강',
         icon: 'dumbbell' as const,
         color: '#7FA87F',
         visibility: 'public' as const,
@@ -417,7 +417,7 @@ describe('MyRoomScreen', () => {
     const categories = [
       {
         id: '건강',
-        label: '건강',
+        name: '건강',
         icon: 'dumbbell' as const,
         color: '#7FA87F',
         visibility: 'public' as const,
@@ -437,7 +437,7 @@ describe('MyRoomScreen', () => {
     await fireEvent.press(getByLabelText('카테고리 저장'));
     expect(onUpdateCategory).toHaveBeenCalledWith(
       '건강',
-      expect.objectContaining({ label: '몸 관리' }),
+      expect.objectContaining({ name: '몸 관리' }),
     );
   });
 
@@ -517,7 +517,7 @@ describe('MyRoomScreen', () => {
           onSelectDate={onSelectDate}
           onToggleCalendarItem={onToggleCalendarItem}
           allCategories={[
-            { id: '99', label: '옛것', icon: 'sparkle' as const, color: '#FF0000', visibility: 'partial', deleted: true }, // prettier-ignore
+            { id: '99', name: '옛것', icon: 'sparkle' as const, color: '#FF0000', visibility: 'partial', deleted: true }, // prettier-ignore
           ]}
         />
       </ToastProvider>,
