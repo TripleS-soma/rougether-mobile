@@ -121,7 +121,7 @@ describe('useHouses — 입주 신청 처리', () => {
 
     let succeeded = true;
     await act(async () => {
-      succeeded = await result.current.joinHouse('2');
+      succeeded = await result.current.joinHouse(2);
     });
 
     expect(succeeded).toBe(false);
@@ -217,7 +217,7 @@ describe('useHouses — 탐색 미리보기', () => {
 
     let preview = null;
     await act(async () => {
-      preview = await result.current.previewHouse('7');
+      preview = await result.current.previewHouse(7);
     });
 
     expect(global.fetch).toHaveBeenCalledWith(
@@ -225,7 +225,7 @@ describe('useHouses — 탐색 미리보기', () => {
       expect.any(Object),
     );
     expect(preview).toMatchObject({
-      id: '7',
+      id: 7,
       name: '미리보기 집',
       missions: [{ id: 91, current: 3, target: 10 }],
     });

@@ -98,7 +98,7 @@ export function useMyRoomData() {
     const isOrphan = (r: Routine) => !r.category || !known.has(r.category);
     if (items.some(isOrphan)) {
       try {
-        let uncategorized = appCats.find((c) => c.label === UNCATEGORIZED_META.label);
+        let uncategorized = appCats.find((c) => c.name === UNCATEGORIZED_META.name);
         if (!uncategorized) {
           const created = await createCategory(
             toCategoryCreate(UNCATEGORIZED_META, appCats.length),
@@ -395,7 +395,7 @@ export function useMyRoomData() {
   };
 
   /**
-   * Find a category by label — refreshing from the server first, since another
+   * Find a category by name — refreshing from the server first, since another
    * session may have created it (stale local state must not duplicate the
    * house-named category, #272) — creating it only when genuinely absent.
    */
@@ -404,11 +404,11 @@ export function useMyRoomData() {
       const cats = await fetchCategories();
       const appCats = cats.map((c, i) => toAppCategory(c, i)).filter((c) => !c.deleted);
       setCategories(appCats);
-      const existing = appCats.find((c) => c.label === cat.label);
+      const existing = appCats.find((c) => c.name === cat.name);
       if (existing) return existing;
     } catch {
       // Offline lookup fallback: trust local state below.
-      const existing = categories.find((c) => c.label === cat.label);
+      const existing = categories.find((c) => c.name === cat.name);
       if (existing) return existing;
     }
     return createRoutineCategory(cat);

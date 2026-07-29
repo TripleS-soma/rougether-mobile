@@ -153,7 +153,7 @@ function toCategoryIcon(iconKey?: string): PictogramName {
 export function toAppCategory(c: CategoryResponse, index = 0): RoutineCategoryMeta {
   return {
     id: String(c.id ?? ''),
-    label: c.name ?? '',
+    name: c.name ?? '',
     icon: toCategoryIcon(c.iconKey),
     color: c.colorHex || CATEGORY_COLORS[index % CATEGORY_COLORS.length],
     visibility: visToApp(c.visibility),
@@ -166,7 +166,7 @@ export function toCategoryCreate(
   sortOrder?: number,
 ): CategoryCreateRequest {
   return {
-    name: cat.label,
+    name: cat.name,
     colorHex: cat.color,
     iconKey: cat.icon,
     sortOrder,
@@ -392,12 +392,12 @@ type WalletLike = { currencyType?: 'COIN' | 'DIAMOND'; balance?: number };
 
 export function toWallet(list: WalletLike[]): Wallet {
   let coin = 0;
-  let dia = 0;
+  let diamond = 0;
   for (const w of list) {
     if (w.currencyType === 'COIN') coin = w.balance ?? 0;
-    else if (w.currencyType === 'DIAMOND') dia = w.balance ?? 0;
+    else if (w.currencyType === 'DIAMOND') diamond = w.balance ?? 0;
   }
-  return { coin, dia };
+  return { coin, diamond };
 }
 
 // --- gacha --------------------------------------------------------------------
@@ -823,7 +823,7 @@ export function toHousePreviewDetail(
   catalogue?: ShopCatalogue,
 ): HousePreviewDetail {
   return {
-    id: String(p.houseId ?? ''),
+    id: p.houseId ?? 0,
     name: p.name ?? '',
     description: p.description || undefined,
     coverImageKey: p.coverImageKey ?? undefined,
@@ -843,7 +843,7 @@ export function toHousePreviewDetail(
 
 export function toSearchHouse(h: HouseSummary, index = 0): SearchHouse {
   return {
-    id: String(h.houseId ?? ''),
+    id: h.houseId ?? 0,
     name: h.name ?? '',
     members: h.currentMemberCount ?? 0,
     capacity: h.maxMembers ?? 0,

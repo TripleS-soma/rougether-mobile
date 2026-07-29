@@ -53,7 +53,7 @@ describe('HouseScreen', () => {
         userName="채영"
         streakDays={4}
         coinBalance={1200}
-        diaBalance={34}
+        diamondBalance={34}
       />,
     );
     expect(queryByText('함께 크는 집')).toBeNull();
@@ -72,7 +72,12 @@ describe('HouseScreen', () => {
 
   it('헤더에 코인·다이아 필을 함께 보여준다 (프로필 아바타 제거로 확보한 자리)', async () => {
     const { getByText } = await render(
-      <HouseScreen houses={[MISSION_HOUSE]} userName="채영" coinBalance={1200} diaBalance={34} />,
+      <HouseScreen
+        houses={[MISSION_HOUSE]}
+        userName="채영"
+        coinBalance={1200}
+        diamondBalance={34}
+      />,
     );
     // 아바타를 빼고 다이아를 상시 노출 — 좁은 폭 코인-only(#425)를 되돌림.
     expect(getByText('채영')).toBeTruthy();

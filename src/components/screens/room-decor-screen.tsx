@@ -57,7 +57,7 @@ export type RoomDecorScreenProps = {
   initialWallpaperId?: string;
   initialFloorId?: string | null;
   initialBackgroundId?: string | null;
-  /** Ids the user owns; owned items are placeable, the rest are buyable with dia. */
+  /** Ids the user owns; owned items are placeable, the rest are buyable with diamond. */
   ownedIds?: string[];
   /** Item + surface catalogue (defaults to the local set; floors/backgrounds are API-only). */
   furniture?: FurnitureItem[];
@@ -70,16 +70,16 @@ export type RoomDecorScreenProps = {
   loadError?: boolean;
   /** Re-run the failed catalogue load. */
   onRetry?: () => void;
-  /** Coin + dia balances shown in the header. */
+  /** Coin + diamond balances shown in the header. */
   coinBalance?: number;
   /** Dia balance, for buying not-yet-owned items in the catalog. */
-  diaBalance?: number;
+  diamondBalance?: number;
   characterId?: CharacterId;
   /** Worn character's CDN animation keys (forwarded to the <Room /> preview). */
   characterAnimations?: CharacterAnimationSet;
   onBack?: () => void;
   /**
-   * Buy a not-yet-owned catalog item with dia. Resolve true on success —
+   * Buy a not-yet-owned catalog item with diamond. Resolve true on success —
    * 일괄 구매(프리뷰 확인 모달)가 실패 시 저장을 중단한다 (#501).
    */
   onBuy?: (itemId: string) => Promise<boolean> | void;
@@ -122,7 +122,7 @@ export function RoomDecorScreen({
   loadError = false,
   onRetry,
   coinBalance = 0,
-  diaBalance = 0,
+  diamondBalance = 0,
   characterId = DEFAULT_CHARACTER_ID,
   characterAnimations,
   onBack,
@@ -330,13 +330,13 @@ export function RoomDecorScreen({
     });
     return () => sub.remove();
   }, [picker, confirmLeave, dirty]);
-  // Purchase pending the 구매하시겠습니까? confirm — buying is irreversible dia spend.
+  // Purchase pending the 구매하시겠습니까? confirm — buying is irreversible diamond spend.
   const [pendingBuy, setPendingBuy] = useState<{ id: string; name: string; price: number } | null>(
     null,
   );
   /** 구매 진입점 공통 (#501) — 잔액 부족은 모달 대신 토스트로 끝낸다. */
   const requestBuy = (item: { id: string; name: string; price: number }) => {
-    if (diaBalance < item.price) {
+    if (diamondBalance < item.price) {
       toast('다이아가 부족해요', 'error');
       return;
     }
@@ -540,7 +540,7 @@ export function RoomDecorScreen({
                       styles.previewChip,
                       { backgroundColor: t.surface, borderColor: t.border },
                     ]}>
-                    <Icon name="dia" size={10} color={t.primary} />
+                    <Icon name="diamond" size={10} color={t.primary} />
                     <Text style={[Typography.supporting, { color: t.text }]}>
                       {SURFACE_LABEL[sp.kind]} {sp.price}
                     </Text>
@@ -712,7 +712,7 @@ export function RoomDecorScreen({
                 selectedId={wallpaperId}
                 onSelect={(id) => setWallpaperId(id)}
                 owned={owned}
-                diaBalance={diaBalance}
+                diamondBalance={diamondBalance}
                 onBuyRequest={setPendingBuy}
                 onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
                 t={t}
@@ -725,7 +725,7 @@ export function RoomDecorScreen({
                 onSelect={(id) => setFloorId((prev) => (prev === id ? null : id))}
                 onClear={floorId ? () => setFloorId(null) : undefined}
                 owned={owned}
-                diaBalance={diaBalance}
+                diamondBalance={diamondBalance}
                 onBuyRequest={setPendingBuy}
                 onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
                 t={t}
@@ -738,7 +738,7 @@ export function RoomDecorScreen({
                 onSelect={(id) => setBackgroundId((prev) => (prev === id ? null : id))}
                 onClear={backgroundId ? () => setBackgroundId(null) : undefined}
                 owned={owned}
-                diaBalance={diaBalance}
+                diamondBalance={diamondBalance}
                 onBuyRequest={setPendingBuy}
                 onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
                 t={t}
@@ -760,7 +760,7 @@ export function RoomDecorScreen({
                 selectedId={wallpaperId}
                 onSelect={(id) => setWallpaperId(id)}
                 owned={owned}
-                diaBalance={diaBalance}
+                diamondBalance={diamondBalance}
                 onBuyRequest={setPendingBuy}
                 onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
                 t={t}
@@ -773,7 +773,7 @@ export function RoomDecorScreen({
                 onSelect={(id) => setFloorId((prev) => (prev === id ? null : id))}
                 onClear={floorId ? () => setFloorId(null) : undefined}
                 owned={owned}
-                diaBalance={diaBalance}
+                diamondBalance={diamondBalance}
                 onBuyRequest={setPendingBuy}
                 onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
                 t={t}
@@ -786,7 +786,7 @@ export function RoomDecorScreen({
                 onSelect={(id) => setBackgroundId((prev) => (prev === id ? null : id))}
                 onClear={backgroundId ? () => setBackgroundId(null) : undefined}
                 owned={owned}
-                diaBalance={diaBalance}
+                diamondBalance={diamondBalance}
                 onBuyRequest={setPendingBuy}
                 onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
                 t={t}
@@ -815,11 +815,11 @@ export function RoomDecorScreen({
             styles.floatWallet,
             { backgroundColor: t.surface, borderColor: t.border },
           ]}>
-          <WalletPills coin={coinBalance} dia={diaBalance} />
+          <WalletPills coin={coinBalance} diamond={diamondBalance} />
         </View>
       </View>
 
-      {/* Buying spends dia irreversibly — confirm before calling onBuy. */}
+      {/* Buying spends diamond irreversibly — confirm before calling onBuy. */}
       <Modal
         transparent
         visible={pendingBuy !== null}
@@ -919,7 +919,7 @@ export function RoomDecorScreen({
                     {pv.name}
                   </Text>
                   <View style={styles.priceRow}>
-                    <Icon name="dia" size={11} color={t.primary} />
+                    <Icon name="diamond" size={11} color={t.primary} />
                     <Text style={[Typography.body, { color: t.text }]}>{pv.price}</Text>
                   </View>
                 </View>
@@ -927,10 +927,10 @@ export function RoomDecorScreen({
               <View
                 style={[styles.previewRow, styles.previewTotalRow, { borderTopColor: t.border }]}>
                 <Text style={[Typography.body, styles.flex, { color: t.textMuted }]}>
-                  합계 (보유 {diaBalance})
+                  합계 (보유 {diamondBalance})
                 </Text>
                 <View style={styles.priceRow}>
-                  <Icon name="dia" size={11} color={t.primary} />
+                  <Icon name="diamond" size={11} color={t.primary} />
                   <Text style={[Typography.body, { color: t.text }]}>{previewTotal}</Text>
                 </View>
               </View>
@@ -938,15 +938,19 @@ export function RoomDecorScreen({
             <View style={styles.leaveBtns}>
               <Pressable
                 onPress={() => void buyAllAndSave()}
-                disabled={bulkBuying || !onBuy || diaBalance < previewTotal}
+                disabled={bulkBuying || !onBuy || diamondBalance < previewTotal}
                 accessibilityRole="button"
                 accessibilityLabel="모두 구매하고 저장"
-                accessibilityState={{ disabled: bulkBuying || !onBuy || diaBalance < previewTotal }}
+                accessibilityState={{
+                  disabled: bulkBuying || !onBuy || diamondBalance < previewTotal,
+                }}
                 style={[
                   styles.leaveBtn,
                   {
                     backgroundColor:
-                      bulkBuying || !onBuy || diaBalance < previewTotal ? t.disabledBg : t.primary,
+                      bulkBuying || !onBuy || diamondBalance < previewTotal
+                        ? t.disabledBg
+                        : t.primary,
                   },
                 ]}>
                 <Text
@@ -954,14 +958,14 @@ export function RoomDecorScreen({
                     Typography.label,
                     {
                       color:
-                        bulkBuying || !onBuy || diaBalance < previewTotal
+                        bulkBuying || !onBuy || diamondBalance < previewTotal
                           ? t.textMuted
                           : t.onPrimary,
                     },
                   ]}>
                   {bulkBuying
                     ? '구매 중…'
-                    : diaBalance < previewTotal
+                    : diamondBalance < previewTotal
                       ? '다이아가 부족해요'
                       : '모두 구매하고 저장'}
                 </Text>
@@ -1078,7 +1082,7 @@ export function RoomDecorScreen({
 type Tokens = ReturnType<typeof useTokens>;
 type BuyProps = {
   owned: Set<string>;
-  diaBalance: number;
+  diamondBalance: number;
   /** Ask the parent to confirm buying this item (opens the 구매 modal). */
   onBuyRequest: (item: { id: string; name: string; price: number }) => void;
   /** Unaffordable tile tapped — the parent explains (다이아 부족 toast). */
@@ -1111,7 +1115,7 @@ function SwatchGrid({
   onSelect,
   onClear,
   owned,
-  diaBalance,
+  diamondBalance,
   onBuyRequest,
   onBlockedBuy,
   t,
@@ -1128,7 +1132,7 @@ function SwatchGrid({
         const isOwned = owned.has(item.id);
         // 프리뷰(#501)도 선택 링을 받는다 — 적용 중인 표면이 곧 프리뷰다.
         const active = item.id === selectedId;
-        const affordable = diaBalance >= item.price;
+        const affordable = diamondBalance >= item.price;
         return (
           <Pressable
             key={item.id}
@@ -1170,7 +1174,7 @@ function SwatchGrid({
               <Text style={[styles.tilePrice, { color: t.textMuted }]}>보유</Text>
             ) : (
               <View style={styles.priceRow}>
-                <Icon name="dia" size={10} color={t.primary} />
+                <Icon name="diamond" size={10} color={t.primary} />
                 <Text style={[styles.tilePrice, { color: t.textMuted }]}>{item.price}</Text>
               </View>
             )}
@@ -1243,7 +1247,7 @@ function FurnitureGrid({
               <Text style={[styles.tilePrice, { color: t.textMuted }]}>보유</Text>
             ) : (
               <View style={styles.priceRow}>
-                <Icon name="dia" size={10} color={t.primary} />
+                <Icon name="diamond" size={10} color={t.primary} />
                 <Text style={[styles.tilePrice, { color: t.textMuted }]}>{item.price}</Text>
               </View>
             )}

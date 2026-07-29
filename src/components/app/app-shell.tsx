@@ -284,7 +284,7 @@ export function AppShell({
     reorderCategories,
   } = useMyRoomData();
 
-  // Gacha machines + draw (spend + dupe→dia handled server-side; wallet synced
+  // Gacha machines + draw (spend + dupe→diamond handled server-side; wallet synced
   // from the draw response).
   const { gachas, loading: gachasLoading, draw: drawGachaMachine } = useGacha(setWallet);
 
@@ -363,7 +363,7 @@ export function AppShell({
   // Selectable house-cover catalog (집 생성·집 정보 수정).
   const { covers: houseCovers } = useHouseCovers();
 
-  // Shop catalogue + purchase (dia via API; wallet synced from the purchase
+  // Shop catalogue + purchase (diamond via API; wallet synced from the purchase
   // response). Server-side room placement isn't wired yet, so arrangement is
   // client-side — seeded from the owned-items placement.
   const {
@@ -419,9 +419,9 @@ export function AppShell({
   // --- 공동미션 ↔ 내 루틴 연동 (#272). Link convention: 카테고리명 == 집 이름,
   // 루틴명 == 미션명 — the server has no link field, so names carry it.
   const contributeLinkedMission = (item: Routine) => {
-    const categoryLabel = categories.find((c) => c.id === item.category)?.label;
-    if (!categoryLabel) return;
-    const house = houses.find((h) => h.name === categoryLabel);
+    const categoryName = categories.find((c) => c.id === item.category)?.name;
+    if (!categoryName) return;
+    const house = houses.find((h) => h.name === categoryName);
     const mission = house?.missions?.find((m) => m.status === 'ACTIVE' && m.title === item.title);
     if (house?.houseId && mission && !contributedMissionIds.has(mission.id))
       void contributeMission(house.houseId, mission.id);
@@ -445,7 +445,7 @@ export function AppShell({
     // Server-fresh find-or-create — stale local state must not duplicate it.
     const category = await ensureCategory({
       id: '',
-      label: house.name,
+      name: house.name,
       icon: 'house',
       color: CATEGORY_COLORS[categories.length % CATEGORY_COLORS.length],
       // 집 구성원과 공유하는 맥락이므로 이웃 공개(HOUSE).
@@ -466,12 +466,12 @@ export function AppShell({
 
   // 집 이름과 같은(=미션 연동) 카테고리들 — 나의 방 quick-add를 막는다.
   const houseCategoryIds = categories
-    .filter((c) => houses.some((h) => h.name === c.label))
+    .filter((c) => houses.some((h) => h.name === c.name))
     .map((c) => c.id);
 
   // 현재 집 카테고리에 속한 내 루틴 (미션 카드의 연동/기여함 라벨 판정 —
   // 오늘 완료 여부가 곧 '기여함'이라 앱 재시작 후에도 라벨이 유지된다).
-  const houseCategory = categories.find((c) => c.label === currentHouse?.name);
+  const houseCategory = categories.find((c) => c.name === currentHouse?.name);
   const houseLinkedRoutines = houseCategory
     ? routines
         .filter((r) => r.kind === 'routine' && r.category === houseCategory.id)
@@ -483,7 +483,7 @@ export function AppShell({
 
   /** 미션 +로 만든 연동 루틴 — 집 이름 카테고리 아래, 미션 제목과 같은 루틴. */
   const linkedRoutinesFor = (houseName: string, missionTitles: string[]) => {
-    const cat = categories.find((c) => c.label === houseName);
+    const cat = categories.find((c) => c.name === houseName);
     if (!cat) return [];
     return routines.filter(
       (r) => r.kind === 'routine' && r.category === cat.id && missionTitles.includes(r.title),
@@ -503,7 +503,7 @@ export function AppShell({
   /** 집 나가기/삭제 성공 시 집 이름 카테고리를 루틴째 통삭제 (#338). */
   const leaveHouseWithLinked = async (houseId: number) => {
     const house = houses.find((h) => h.houseId === houseId);
-    const cat = house ? categories.find((c) => c.label === house.name) : undefined;
+    const cat = house ? categories.find((c) => c.name === house.name) : undefined;
     if (!(await leaveHouse(houseId))) return;
     if (!cat) return;
     await deleteCategoryCascade(cat.id);
@@ -521,7 +521,7 @@ export function AppShell({
     const orphans = houses.flatMap((h) => {
       const missions = h.missions ?? [];
       if (missions.length === 0) return [];
-      const cat = categories.find((c) => c.label === h.name);
+      const cat = categories.find((c) => c.name === h.name);
       if (!cat) return [];
       const titles = new Set(missions.map((m) => m.title));
       return routines.filter(
@@ -541,8 +541,8 @@ export function AppShell({
     const item = routines.find((r) => r.id === id);
     const done = (completions[id] ?? []).includes(date);
     if (item && done) {
-      const label = categories.find((c) => c.id === item.category)?.label;
-      const house = label ? houses.find((h) => h.name === label) : undefined;
+      const catName = categories.find((c) => c.id === item.category)?.name;
+      const house = catName ? houses.find((h) => h.name === catName) : undefined;
       const linked = house?.missions?.some((m) => m.status === 'ACTIVE' && m.title === item.title);
       if (linked) {
         toast('미션에 기여된 루틴은 완료를 취소할 수 없어요', 'error');
@@ -709,7 +709,7 @@ export function AppShell({
               userName={nickname}
               streakDays={streak}
               coinBalance={wallet.coin}
-              diaBalance={wallet.dia}
+              diamondBalance={wallet.diamond}
               routines={routines}
               completions={completions}
               categories={categories}
@@ -783,7 +783,7 @@ export function AppShell({
               loadError={shopError}
               onRetry={retryShop}
               coinBalance={wallet.coin}
-              diaBalance={wallet.dia}
+              diamondBalance={wallet.diamond}
               characterId={wornCharacterId}
               characterAnimations={wornCharacterAnimations}
               // 일괄 구매(프리뷰 저장, #501)가 결과를 기다린다 — Promise를 그대로.
@@ -864,7 +864,7 @@ export function AppShell({
               gachas={gachas}
               loading={gachasLoading}
               coinBalance={wallet.coin}
-              diaBalance={wallet.dia}
+              diamondBalance={wallet.diamond}
               onBack={() => setScreen('myRoom')}
               onDraw={async (gachaId, count) => {
                 const results = await drawGachaMachine(gachaId, count);
@@ -905,7 +905,7 @@ export function AppShell({
               onVisitMyRoom={() => setScreen('myRoom')}
               onOpenSearch={() => setScreen('houseSearch')}
               coinBalance={wallet.coin}
-              diaBalance={wallet.dia}
+              diamondBalance={wallet.diamond}
               raining={raining}
               // 방장 관리 진입 시 구성원·입주 신청 목록 갱신 (#526).
               onOpenMemberManagement={() => {

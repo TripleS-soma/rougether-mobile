@@ -1,7 +1,7 @@
 /**
  * Gacha machines + draw, backed by the API. Loads the machine list on mount and
  * exposes `draw(gachaId)`, which spends via the API and returns the drawn
- * results. The API applies the dupe→dia conversion server-side and returns the
+ * results. The API applies the dupe→diamond conversion server-side and returns the
  * updated wallet balances, which we forward via `onWallet`.
  */
 import { useEffect, useState } from 'react';

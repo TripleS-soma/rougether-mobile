@@ -129,7 +129,7 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
     void load();
   }, [load]);
 
-  /** Buy an item with dia. Returns true on success (false on insufficient funds). */
+  /** Buy an item with diamond. Returns true on success (false on insufficient funds). */
   const purchase = async (itemId: string): Promise<boolean> => {
     try {
       const res = await purchaseItem(Number(itemId));
@@ -138,7 +138,7 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
         // Purchase returns only the spent currency — merge, don't replace.
         setWallet((prev) => ({
           ...prev,
-          [w.currencyType === 'COIN' ? 'coin' : 'dia']: w.balance as number,
+          [w.currencyType === 'COIN' ? 'coin' : 'diamond']: w.balance as number,
         }));
       }
       setOwnedIds((prev) => (prev.includes(itemId) ? prev : [...prev, itemId]));

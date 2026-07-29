@@ -43,7 +43,7 @@ describe('RoutineManageScreen', () => {
       <RoutineManageScreen
         routines={routines}
         categories={[
-          { id: '건강', label: '건강', icon: 'dumbbell', color: '#7FA8D4', visibility: 'public' },
+          { id: '건강', name: '건강', icon: 'dumbbell', color: '#7FA8D4', visibility: 'public' },
         ]}
       />,
     );

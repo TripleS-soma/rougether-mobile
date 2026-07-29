@@ -61,7 +61,7 @@ describe('CategoryFormSheet', () => {
 
     expect(onUpdate).toHaveBeenCalledWith(
       '공부',
-      expect.objectContaining({ id: '공부', label: '심화 공부', icon: 'book', color: '#6FB7B0' }),
+      expect.objectContaining({ id: '공부', name: '심화 공부', icon: 'book', color: '#6FB7B0' }),
     );
   });
 

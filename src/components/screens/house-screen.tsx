@@ -260,7 +260,7 @@ export type HouseScreenProps = {
   raining?: boolean;
   /** 헤더 지갑 필 — 나의 방 헤더와 동일 (#353). */
   coinBalance?: number;
-  diaBalance?: number;
+  diamondBalance?: number;
   /** Refresh members and pending requests when management opens. */
   onOpenMemberManagement?: (houseId: number) => void;
   /** Kick a member via the API (owner only); shown when the house has ids. */
@@ -327,7 +327,7 @@ export function HouseScreen({
   nowHour,
   raining = false,
   coinBalance = 0,
-  diaBalance = 0,
+  diamondBalance = 0,
   onOpenMemberManagement,
   onKickMember,
   onLeaveHouse,
@@ -983,7 +983,7 @@ export function HouseScreen({
             ) : null}
           </View>
         </View>
-        <WalletPills coin={coinBalance} dia={diaBalance} />
+        <WalletPills coin={coinBalance} diamond={diamondBalance} />
         <CoachTarget id="house-search">
           <Pressable
             onPress={onOpenSearch}

@@ -7,7 +7,7 @@ import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 export type WalletPillsProps = {
   coin: number;
-  dia: number;
+  diamond: number;
   /**
    * 좁은 폰 헤더용 (#425) — 코인 필 하나만 작은 활자·좁은 패딩으로 그린다.
    * 다이아는 뽑기 상점·꾸미기 진입 시 전체 필에서 보인다.
@@ -80,13 +80,13 @@ function Pill({
   );
 }
 
-/** Coin + dia balance chips, shown in currency-spending screens (가챠 / 꾸미기). */
-export function WalletPills({ coin, dia, compact = false }: WalletPillsProps) {
+/** Coin + diamond balance chips, shown in currency-spending screens (가챠 / 꾸미기). */
+export function WalletPills({ coin, diamond, compact = false }: WalletPillsProps) {
   const t = useTokens();
   return (
     <View style={styles.row}>
       <Pill icon="coin" color={t.warning} label="코인" value={coin} compact={compact} />
-      {compact ? null : <Pill icon="dia" color={t.primary} label="다이아" value={dia} />}
+      {compact ? null : <Pill icon="diamond" color={t.primary} label="다이아" value={diamond} />}
     </View>
   );
 }

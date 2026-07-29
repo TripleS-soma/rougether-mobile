@@ -138,7 +138,7 @@ export function RoutineManageScreen({
                         Typography.label,
                         { color: readableTextColor(cat.color, t.surfaceMuted) },
                       ]}>
-                      {cat.label}
+                      {cat.name}
                     </Text>
                     <Text style={[Typography.supporting, { color: t.textDisabled }]}>
                       {items.length}

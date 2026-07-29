@@ -52,10 +52,10 @@ export type GachaScreenProps = {
   /** True while the machine list is loading from the API. */
   loading?: boolean;
   coinBalance?: number;
-  diaBalance?: number;
+  diamondBalance?: number;
   /**
    * Draw from a machine (count: 1=단챠, 6=5+1회); resolves the drawn results, or
-   * null on failure. Spending + dupe→dia conversion happen server-side; the
+   * null on failure. Spending + dupe→diamond conversion happen server-side; the
    * wallet is updated by the caller from the draw response.
    */
   onDraw?: (gachaId: number, count: GachaDrawCount) => Promise<DrawResult[] | null>;
@@ -73,7 +73,7 @@ export function GachaScreen({
   gachas = [],
   loading = false,
   coinBalance = 0,
-  diaBalance = 0,
+  diamondBalance = 0,
   onDraw,
 }: GachaScreenProps) {
   const t = useTokens();
@@ -95,7 +95,7 @@ export function GachaScreen({
   // Selector rows: themed furniture machines first, the character gacha below.
   const furnitureMachines = gachas.filter((b) => b.kind !== 'character');
   const characterMachines = gachas.filter((b) => b.kind === 'character');
-  const balanceFor = (c: 'COIN' | 'DIAMOND') => (c === 'COIN' ? coinBalance : diaBalance);
+  const balanceFor = (c: 'COIN' | 'DIAMOND') => (c === 'COIN' ? coinBalance : diamondBalance);
   const drawCost = (count: GachaDrawCount) =>
     box ? box.costAmount * (count === 1 ? 1 : BONUS_DRAW_COST_MULTIPLIER) : 0;
   const canAfford = (count: GachaDrawCount) =>
@@ -150,7 +150,7 @@ export function GachaScreen({
           <Icon name="back" size={26} color={t.text} />
         </Pressable>
         <Text style={[Typography.h2, { color: t.text }]}>뽑기</Text>
-        <WalletPills coin={coinBalance} dia={diaBalance} />
+        <WalletPills coin={coinBalance} diamond={diamondBalance} />
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
@@ -255,7 +255,7 @@ export function GachaScreen({
                     </Text>
                     <View style={styles.costRow}>
                       <Icon
-                        name={box.costCurrencyType === 'COIN' ? 'coin' : 'dia'}
+                        name={box.costCurrencyType === 'COIN' ? 'coin' : 'diamond'}
                         size={12}
                         color={affordable ? t.onPrimary : t.textMuted}
                       />

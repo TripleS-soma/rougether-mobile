@@ -291,7 +291,7 @@ describe('useMyRoomData — uncategorized adoption', () => {
     expect(puts).toHaveLength(2);
     expect(JSON.parse(puts[0].body ?? '{}').categoryId).toBe(9);
 
-    expect(result.current.categories.map((c) => c.label)).toContain('기타');
+    expect(result.current.categories.map((c) => c.name)).toContain('기타');
     expect(result.current.routines.every((r) => r.category === '9')).toBe(true);
   });
 });
@@ -335,7 +335,7 @@ describe('useMyRoomData — 카테고리 메타를 달력 소스(allCategories)�
     await act(async () => {
       await result.current.createRoutineCategory({
         id: '',
-        label: '새분류',
+        name: '새분류',
         icon: 'leaf',
         color: '#0F0',
         visibility: 'public',

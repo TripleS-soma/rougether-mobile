@@ -162,9 +162,9 @@ export function useHouses() {
   };
 
   /** Request admission to a browsable house; true when the request is pending. */
-  const joinHouse = async (houseId: string): Promise<boolean> => {
+  const joinHouse = async (houseId: number): Promise<boolean> => {
     try {
-      await requestHouseJoin(Number(houseId));
+      await requestHouseJoin(houseId);
       toast('입주 신청을 보냈어요!', 'success');
       await reloadSearch();
       return true;
@@ -304,11 +304,11 @@ export function useHouses() {
   // 탐색 카드 → 참여 전 미리보기 (#328). null이면 호출측은 모달을 열지 않는다.
   // 카탈로그를 주면 memberRooms를 실제 방 렌더 모델로 변환한다 (#386).
   const previewHouse = async (
-    houseId: string,
+    houseId: number,
     catalogue?: ShopCatalogue,
   ): Promise<HousePreviewDetail | null> => {
     try {
-      return toHousePreviewDetail(await fetchHousePreviewDetail(Number(houseId)), catalogue);
+      return toHousePreviewDetail(await fetchHousePreviewDetail(houseId), catalogue);
     } catch {
       toast('집 정보를 불러오지 못했어요', 'error');
       return null;
@@ -396,7 +396,7 @@ export function useHouses() {
 
   // 집 탐색 hides houses the user already belongs to (the API has no joined
   // filter, and joining one again only 409s).
-  const joinedIds = new Set(houses.map((h) => String(h.houseId ?? '')));
+  const joinedIds = new Set(houses.map((h) => h.houseId ?? 0));
   const browsableHouses = searchHouses.filter((s) => !joinedIds.has(s.id));
 
   return {
