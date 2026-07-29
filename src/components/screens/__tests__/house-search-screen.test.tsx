@@ -217,6 +217,20 @@ describe('HouseSearchScreen', () => {
     await waitFor(() => expect(getByText(/네트워크를 확인해주세요/)).toBeTruthy());
   });
 
+  // 미리보기 조회 경로도 같은 분기를 탄다 — 리뷰 반영 (#549).
+  it('초대코드 미리보기 조회의 네트워크 오류도 네트워크 문구를 보여준다 (#549)', async () => {
+    const onPreviewCode = jest.fn(async () => 'network' as const);
+    const { getByText, getByPlaceholderText } = await render(
+      <HouseSearchScreen onPreviewCode={onPreviewCode} />,
+    );
+
+    await fireEvent.changeText(getByPlaceholderText('예: VLG-7K2X'), 'vlg7k2x');
+    await fireEvent.press(getByText('입주'));
+
+    await waitFor(() => expect(getByText(/네트워크를 확인해주세요/)).toBeTruthy());
+    expect(onPreviewCode).toHaveBeenCalledWith('VLG7K2X');
+  });
+
   it('shows the level on the meta line and skips the missing description (#234)', async () => {
     // API houses carry a level and no intro text — the old boilerplate
     // description only ever truncated.
