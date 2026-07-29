@@ -39,20 +39,25 @@ jest.mock('@/components/screens/house-screen', () => {
   };
 });
 
-// AppShell은 마운트 시 API를 부른다 — 빈 응답으로 결정적으로 만든다.
-const emptyRes = (url: string) => ({
-  ok: true,
-  status: 200,
-  text: async () =>
-    JSON.stringify(
-      url.endsWith('/today') ? { categories: [], summary: {}, streak: {} } : { items: [] },
-    ),
-});
+// AppShell은 마운트 시 API를 부른다 — 결정적 응답으로 고정한다. 집이 하나는
+// 있어야 집 탭이 HouseScreen을 렌더한다(집 없으면 탐색 직행, #571).
+const stableRes = (url: string) => {
+  const body = url.endsWith('/today')
+    ? { categories: [], summary: {}, streak: {} }
+    : url.endsWith('/me/houses')
+      ? { items: [{ houseId: 2, name: 'TripleS' }] }
+      : url.includes('/houses/2/missions') || url.includes('/houses/2/members')
+        ? { items: [] }
+        : url.includes('/houses/2')
+          ? { houseId: 2, name: 'TripleS', myRole: 'OWNER' }
+          : { items: [] };
+  return { ok: true, status: 200, text: async () => JSON.stringify(body) };
+};
 const realFetch = global.fetch;
 beforeEach(() => {
   mockMyRoomRenders.length = 0;
   mockHouseRenders.length = 0;
-  global.fetch = jest.fn(async (url: string) => emptyRes(url)) as unknown as typeof fetch;
+  global.fetch = jest.fn(async (url: string) => stableRes(url)) as unknown as typeof fetch;
 });
 afterEach(() => {
   global.fetch = realFetch;

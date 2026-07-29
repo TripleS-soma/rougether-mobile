@@ -42,6 +42,8 @@ import { IconButton } from '@/components/ui/icon-button';
 import { Pill } from '@/components/ui/pill';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { MissionBanner } from '@/components/ui/mission-banner';
+import { MissionSheet } from '@/components/screens/sheets/mission-sheet';
 import { PendingNotice } from '@/components/ui/pending-notice';
 import { RetryState } from '@/components/ui/retry-state';
 import { ToastProvider, useToast } from '@/components/ui/toast';
@@ -572,6 +574,26 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => <ConfirmDialogDemo />,
   },
   {
+    name: 'UI · MissionBanner',
+    description: '온보딩 미션 진행 배너 (#571) — 🎯 미션 N/4 + 건너뛰기(확인 다이얼로그).',
+    render: () => (
+      <View style={{ alignSelf: 'stretch', minHeight: 80 }}>
+        <MissionBanner
+          stepIndex={1}
+          totalSteps={4}
+          label="뽑기 1회 해보기"
+          onPress={() => {}}
+          onSkip={() => {}}
+        />
+      </View>
+    ),
+  },
+  {
+    name: 'MissionSheet · 완료 전환',
+    description: '미션 완료 전환 시트 (#571) — 다음 미션 안내와 하러 가기.',
+    render: () => <MissionSheetDemo />,
+  },
+  {
     name: 'UI · Toast',
     description: '하단 토스트 (info / success / error) — useToast().show(...)로 발사.',
     render: () => (
@@ -630,6 +652,38 @@ function HouseCoverPickerDemo() {
 }
 
 /** Opens the shared confirm dialog in its destructive form. */
+function MissionSheetDemo() {
+  const [visible, setVisible] = useState(false);
+  const [last, setLast] = useState(false);
+  return (
+    <View style={{ alignSelf: 'stretch', gap: 8 }}>
+      <Button
+        label="미션 1 완료 시트 열기"
+        onPress={() => {
+          setLast(false);
+          setVisible(true);
+        }}
+      />
+      <Button
+        label="마지막 미션(축하) 시트 열기"
+        variant="secondary"
+        onPress={() => {
+          setLast(true);
+          setVisible(true);
+        }}
+      />
+      <MissionSheet
+        visible={visible}
+        completedStep={last ? 4 : 1}
+        totalSteps={4}
+        nextLabel={last ? null : '뽑기 1회 해보기'}
+        onGo={() => setVisible(false)}
+        onClose={() => setVisible(false)}
+      />
+    </View>
+  );
+}
+
 function ConfirmDialogDemo() {
   const [visible, setVisible] = useState(false);
   return (
