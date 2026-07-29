@@ -411,6 +411,47 @@ describe('MyRoomScreen', () => {
     expect(getByText('고아 루틴')).toBeTruthy();
   });
 
+  it('카테고리 헤더 탭 → 프리필된 수정 시트, 저장 시 onUpdateCategory (#541)', async () => {
+    const onUpdateCategory = jest.fn();
+    const routines = [{ id: '1', title: '물 마시기', category: '건강', kind: 'routine' as const }];
+    const categories = [
+      {
+        id: '건강',
+        label: '건강',
+        icon: 'dumbbell' as const,
+        color: '#7FA87F',
+        visibility: 'public' as const,
+      },
+    ];
+    const { getByLabelText, getByDisplayValue } = await render(
+      <MyRoomScreen
+        routines={routines}
+        categories={categories}
+        onUpdateCategory={onUpdateCategory}
+      />,
+    );
+
+    await fireEvent.press(getByLabelText('건강 카테고리 수정'));
+    // 시트가 기존 이름으로 프리필된다.
+    await fireEvent.changeText(getByDisplayValue('건강'), '몸 관리');
+    await fireEvent.press(getByLabelText('카테고리 저장'));
+    expect(onUpdateCategory).toHaveBeenCalledWith(
+      '건강',
+      expect.objectContaining({ label: '몸 관리' }),
+    );
+  });
+
+  it('미분류 헤더는 수정 진입이 없다 (#541)', async () => {
+    const onUpdateCategory = jest.fn();
+    const routines = [{ id: '2', title: '고아 루틴', kind: 'routine' as const }];
+    const { getByLabelText } = await render(
+      <MyRoomScreen routines={routines} categories={[]} onUpdateCategory={onUpdateCategory} />,
+    );
+    // Pressable은 렌더되지만 disabled — 눌러도 시트가 열리지 않는다.
+    const header = getByLabelText('미분류 카테고리 수정');
+    expect(header.props.accessibilityState?.disabled).toBe(true);
+  });
+
   it('renders uncategorized routines even when the user has no categories', async () => {
     // API state after a fresh account adds routines without a category:
     // categories = [], routines have no category → must show in a 미분류 group,
