@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { BackHandler } from 'react-native';
 
@@ -49,38 +50,85 @@ describe('AppShell — 푸시 탭 라우팅 (#405)', () => {
   });
 });
 
-describe('AppShell — 코치마크 튜토리얼 (#351)', () => {
-  it('startTutorial이면 첫 단계부터 시작해 다음으로 순회하고 마지막에 닫힌다', async () => {
-    const { getByText, getByLabelText, queryByTestId } = await render(
-      <AuthProvider>
-        <AppShell startTutorial />
-      </AuthProvider>,
-    );
-    // '오늘의 루틴'은 화면 제목과 말풍선에 모두 있어 카운터로 1단계를 확인.
-    expect(getByText('곰 발바닥을 누르면 루틴 완료! 완료하면 코인이 쌓여요.')).toBeTruthy();
-    expect(getByText('1 / 9')).toBeTruthy();
-    // 8번 다음 → 마지막 단계(설정), 시작하기로 종료.
-    for (let i = 0; i < 8; i++) await fireEvent.press(getByLabelText('다음 단계'));
-    expect(getByText('9 / 9')).toBeTruthy();
-    await fireEvent.press(getByLabelText('튜토리얼 마치기'));
-    expect(queryByTestId('coach-overlay')).toBeNull();
+describe('AppShell — 온보딩 미션 체인 (#571)', () => {
+  beforeEach(async () => {
+    await AsyncStorage.clear();
   });
 
-  it('건너뛰기는 즉시 종료하고, startTutorial 없으면 오버레이가 없다', async () => {
+  // 미션 1(루틴 등록) 성공 왕복이 있는 세계 — 추천 루틴이 붙을 카테고리 포함.
+  const missionFetch = async (url: string, init?: RequestInit) => {
+    const method = init?.method ?? 'GET';
+    const body =
+      method === 'POST' && url.endsWith('/routines')
+        ? { id: 99, title: '독서 30분', categoryId: 20, repeatType: 'DAILY' }
+        : url.includes('/auth/')
+          ? { accessToken: 't', refreshToken: 'r' }
+          : url.includes('/categories')
+            ? { items: [{ id: 20, name: '취미' }] }
+            : url.endsWith('/today')
+              ? { categories: [], summary: {}, streak: {} }
+              : { items: [] };
+    return { ok: true, status: 200, text: async () => JSON.stringify(body) };
+  };
+
+  it('startMissions면 미션 1 배너가 뜨고, 배너 탭이 루틴 추가 화면으로 보낸다', async () => {
+    const { getByText, getByTestId, getByLabelText } = await render(
+      <AuthProvider>
+        <AppShell startMissions />
+      </AuthProvider>,
+    );
+    await waitFor(() => getByTestId('mission-banner'));
+    expect(getByText('미션 1/4')).toBeTruthy();
+    expect(getByText('첫 루틴 등록하기')).toBeTruthy();
+
+    await fireEvent.press(getByLabelText('미션 1 첫 루틴 등록하기'));
+    await waitFor(() => getByText('루틴 추가'));
+  });
+
+  it('루틴 등록 성공 → 완료 시트 → 하러 가기로 미션 2(뽑기)로 이어진다', async () => {
+    global.fetch = jest.fn(missionFetch) as unknown as typeof fetch;
+    const { getByText, getByTestId, getByLabelText } = await render(
+      <AuthProvider>
+        <AppShell startMissions />
+      </AuthProvider>,
+    );
+    await waitFor(() => getByTestId('mission-banner'));
+
+    // 배너 → 루틴 추가 화면에서 추천 루틴으로 등록.
+    await fireEvent.press(getByLabelText('미션 1 첫 루틴 등록하기'));
+    await fireEvent.press(getByText('추천 루틴'));
+    await fireEvent.press(getByText('독서 30분'));
+    await fireEvent.press(getByText('월'));
+    await fireEvent.press(getByText('루틴 추가하기'));
+
+    // 완료 전환 시트 — 다음 미션 안내와 하러 가기.
+    await waitFor(() => getByText('✅ 미션 1 완료!'));
+    expect(getByText('다음 미션: 뽑기 1회 해보기')).toBeTruthy();
+    await fireEvent.press(getByLabelText('다음 미션 하러 가기'));
+    await waitFor(() => getByText('미션 2/4'));
+    expect(getByText('뽑기 1회 해보기')).toBeTruthy();
+  });
+
+  it('건너뛰기는 확인을 거쳐 배너를 없애고, startMissions 없으면 배너가 없다', async () => {
     const off = await render(
       <AuthProvider>
         <AppShell />
       </AuthProvider>,
     );
-    expect(off.queryByTestId('coach-overlay')).toBeNull();
+    await act(async () => {});
+    expect(off.queryByTestId('mission-banner')).toBeNull();
 
     const on = await render(
       <AuthProvider>
-        <AppShell startTutorial />
+        <AppShell startMissions />
       </AuthProvider>,
     );
-    await fireEvent.press(on.getByLabelText('튜토리얼 건너뛰기'));
-    expect(on.queryByTestId('coach-overlay')).toBeNull();
+    await waitFor(() => on.getByTestId('mission-banner'));
+    await fireEvent.press(on.getByLabelText('미션 건너뛰기'));
+    await fireEvent.press(on.getByLabelText('미션 건너뛰기 확인'));
+    await waitFor(() => expect(on.queryByTestId('mission-banner')).toBeNull());
+    // 스킵 플래그 영속 — 다음 시작에 다시 시작하지 않는다.
+    expect(await AsyncStorage.getItem('rougether.onboarding-missions.v1')).toBe('skipped');
   });
 });
 

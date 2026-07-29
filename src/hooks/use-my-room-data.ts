@@ -273,13 +273,16 @@ export function useMyRoomData() {
     [loadCalendarDay, toast],
   );
 
+  // 성공 여부를 돌려준다 — 온보딩 미션(첫 루틴 등록, #571)이 성공 시점에 후킹.
   const addRoutine = useCallback(
     async (n: NewRoutine) => {
       try {
         const created = await createRoutine(toRoutineCreate(n));
         setRoutines((prev) => [...prev, toAppRoutine(created)]);
+        return true;
       } catch {
         toast('루틴을 만들지 못했어요', 'error');
+        return false;
       }
     },
     [toast],

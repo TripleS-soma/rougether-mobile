@@ -23,7 +23,13 @@ export type MissionBannerProps = {
  * 탭하면 현재 미션 화면으로 이동하고, 우측 건너뛰기는 확인 다이얼로그를
  * 거쳐 체인 전체를 스킵한다. 상태는 전부 prop — 다이얼로그 개폐만 로컬.
  */
-export function MissionBanner({ stepIndex, totalSteps, label, onPress, onSkip }: MissionBannerProps) {
+export function MissionBanner({
+  stepIndex,
+  totalSteps,
+  label,
+  onPress,
+  onSkip,
+}: MissionBannerProps) {
   const t = useTokens();
   const Typography = useTypography();
   const insets = useContext(SafeAreaInsetsContext);

@@ -43,12 +43,7 @@ describe('MissionBanner (#571)', () => {
   it('취소하면 onSkip 없이 다이얼로그만 닫힌다', async () => {
     const onSkip = jest.fn();
     const { getByLabelText, queryByText } = await render(
-      <MissionBanner
-        stepIndex={0}
-        totalSteps={4}
-        label="첫 루틴 등록하기"
-        onSkip={onSkip}
-      />,
+      <MissionBanner stepIndex={0} totalSteps={4} label="첫 루틴 등록하기" onSkip={onSkip} />,
     );
     await fireEvent.press(getByLabelText('미션 건너뛰기'));
     await fireEvent.press(getByLabelText('취소'));

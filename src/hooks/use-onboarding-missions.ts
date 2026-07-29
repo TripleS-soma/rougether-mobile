@@ -8,10 +8,7 @@ import { track } from '@/lib/analytics';
 const STORE_KEY = 'rougether.onboarding-missions.v1';
 
 export type OnboardingMissionStepId =
-  | 'register-routine'
-  | 'first-draw'
-  | 'place-furniture'
-  | 'browse-house';
+  'register-routine' | 'first-draw' | 'place-furniture' | 'browse-house';
 
 export type OnboardingMissionStep = { id: OnboardingMissionStepId; label: string };
 
