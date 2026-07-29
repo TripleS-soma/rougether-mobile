@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -269,7 +269,9 @@ function VisibilityMark({ visibility }: { visibility: CategoryVisibility }) {
   );
 }
 
-export function MyRoomScreen({
+// memo 경계 (#539): 셸의 무관한 상태 변화에서 이 화면(그리고 안의 방 캔버스)
+// 리렌더를 끊는다 — AppShell이 넘기는 함수/객체 prop의 참조 안정이 전제다.
+export const MyRoomScreen = memo(function MyRoomScreen({
   userName = '준서',
   streakDays = 7,
   coinBalance = 0,
@@ -1257,7 +1259,7 @@ export function MyRoomScreen({
       ))}
     </View>
   );
-}
+});
 
 /** 완료 탭 지점에서 지갑까지 포물선으로 나는 코인 (#440). */
 function FlyingCoin({

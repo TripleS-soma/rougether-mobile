@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -164,6 +164,8 @@ const DEMO_MISSIONS: HouseMission[] = [
 const VACANT_FLOOR: Wallpaper[] = [
   { id: 'vacant-floor', name: '빈방 바닥', price: 0, assetKey: 'vacant-floor', color: '#E7D9BE' },
 ];
+// Room이 memo 경계(#539)라 빈방 프리뷰의 prop도 렌더마다 새로 만들지 않는다.
+const VACANT_FURNITURE_IDS: string[] = [];
 
 // 커버 프레임 PNG(house-unified-*-frame.png, 3종 공통 567×508)의 투명 창문
 // 4칸 — 알파 채널 측정값 (#287). 좌상·우상·좌하·우하 순.
@@ -312,8 +314,11 @@ export type HouseScreenProps = {
  * management sub-view with an invite code and kick flow. The prototype's
  * absolutely-positioned windows over a house PNG are adapted to a token-based
  * floor/room grid. Spec domain: rougether-spec domains/house.
+ *
+ * memo 경계 (#539): 셸의 무관한 상태 변화에서 리렌더를 끊는다 — AppShell이
+ * 넘기는 함수/객체 prop의 참조 안정이 전제다.
  */
-export function HouseScreen({
+export const HouseScreen = memo(function HouseScreen({
   houses = DEFAULT_HOUSES,
   loading = false,
   characterId = DEFAULT_CHARACTER_ID,
@@ -909,12 +914,12 @@ export function HouseScreen({
           {empty ? (
             <View style={styles.roomPreview} pointerEvents="none" testID="vacant-room">
               <Room
-                placedFurnitureIds={[]}
+                placedFurnitureIds={VACANT_FURNITURE_IDS}
                 characterId={null}
                 floorId={VACANT_FLOOR[0].id}
                 floors={VACANT_FLOOR}
                 fill
-                style={[styles.roomPreviewFill, styles.vacantRoom]}
+                style={vacantRoomStyle}
               />
             </View>
           ) : null}
@@ -1251,7 +1256,7 @@ export function HouseScreen({
       />
     </View>
   );
-}
+});
 
 /** 접속 점 — 은은한 숨쉬기 펄스 (#450). */
 function OnlineDot({ color }: { color: string }) {
@@ -1563,3 +1568,6 @@ const styles = StyleSheet.create({
     opacity: 0.75,
   },
 });
+
+// 빈방 프리뷰의 합성 스타일 — memo된 Room에 렌더마다 새 배열을 넘기지 않는다 (#539).
+const vacantRoomStyle = [styles.roomPreviewFill, styles.vacantRoom];
