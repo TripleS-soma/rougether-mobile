@@ -132,6 +132,34 @@ describe('AppShell — 온보딩 미션 체인 (#571)', () => {
   });
 });
 
+describe('AppShell — 집 없는 유저의 집 탭 (#571)', () => {
+  it('집이 없으면 집 탭이 빈 상태 대신 집 탐색으로 직행하고, 뒤로는 나의 방', async () => {
+    const calls: string[] = [];
+    global.fetch = jest.fn(async (url: string) => {
+      calls.push(url);
+      return emptyRes(url);
+    }) as unknown as typeof fetch;
+
+    const { getByText, getByLabelText, queryByText } = await render(
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>,
+    );
+    // 집 목록 로드가 끝나(빈 목록 확정) noHouses 판정이 서고 나서 탭을 누른다.
+    await waitFor(() => expect(calls.some((u) => u.endsWith('/me/houses'))).toBe(true));
+    await act(async () => {});
+
+    await fireEvent.press(getByLabelText('집'));
+    expect(getByText('집 탐색')).toBeTruthy();
+    expect(getByText('# 초대코드로 들어가기')).toBeTruthy();
+    expect(queryByText('아직 함께하는 집이 없어요')).toBeNull();
+
+    // 탐색의 뒤로가기 — (빈) 집 화면이 아니라 나의 방으로 복귀.
+    await fireEvent.press(getByLabelText('뒤로 가기'));
+    await waitFor(() => getByText('오늘의 루틴'));
+  });
+});
+
 describe('AppShell', () => {
   it('opens on the my-room screen with the bottom nav', async () => {
     const { getByText, getByLabelText } = await render(

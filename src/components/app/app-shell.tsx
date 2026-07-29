@@ -351,6 +351,11 @@ export function AppShell({
     if (uris.length) void Image.prefetch?.(uris, { cachePolicy: 'memory-disk' });
   }, [houses]);
 
+  // 집이 없는 유저 (#571) — 집 탭은 빈 상태 대신 집 탐색으로 직행하고,
+  // 탐색의 뒤로가기도 (빈) 집 화면 대신 나의 방으로 돌아간다. 로딩/에러
+  // 중엔 판정하지 않아 집이 있는 유저가 탐색으로 튕기지 않는다.
+  const noHouses = !housesLoading && !housesError && houses.length === 0;
+
   // Selectable house-cover catalog (집 생성·집 정보 수정).
   const { covers: houseCovers } = useHouseCovers();
 
@@ -804,7 +809,13 @@ export function AppShell({
   const lastBackRef = useRef(0);
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      const target = screen === 'addRoutine' ? addReturnScreen : BACK_SCREEN[screen];
+      const target =
+        screen === 'addRoutine'
+          ? addReturnScreen
+          : screen === 'houseSearch' && noHouses
+            ? // 집 없는 유저의 탐색 직행 (#571) — 빈 집 화면으로 되돌리지 않는다.
+              'myRoom'
+            : BACK_SCREEN[screen];
       if (!target) {
         const now = Date.now();
         if (now - lastBackRef.current <= EXIT_WINDOW_MS) {
@@ -819,7 +830,7 @@ export function AppShell({
       return true;
     });
     return () => sub.remove();
-  }, [screen, addReturnScreen, toast]);
+  }, [screen, addReturnScreen, noHouses, toast]);
 
   const activeTab = TAB_FOR_SCREEN[screen];
 
@@ -1112,7 +1123,7 @@ export function AppShell({
             loading={searchLoading}
             loadError={searchError}
             onRetry={retrySearch}
-            onBack={() => setScreen('house')}
+            onBack={() => setScreen(noHouses ? 'myRoom' : 'house')}
             onJoinByCode={async (code) => {
               const ok = await joinByCode(code);
               if (ok === true) setScreen('house');
@@ -1267,7 +1278,13 @@ export function AppShell({
       </Animated.View>
 
       {activeTab ? (
-        <BottomNav active={activeTab} onChange={(tab) => setScreen(SCREEN_FOR_TAB[tab])} />
+        <BottomNav
+          active={activeTab}
+          onChange={(tab) =>
+            // 집이 없으면 집 탭은 빈 상태 대신 집 탐색으로 직행 (#571).
+            setScreen(tab === 'house' && noHouses ? 'houseSearch' : SCREEN_FOR_TAB[tab])
+          }
+        />
       ) : null}
 
       {/* 온보딩 미션 진행 배너 (#571) — 관련 화면 상단에만 얹는다. */}
