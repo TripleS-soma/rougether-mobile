@@ -48,6 +48,7 @@ import {
   toSearchHouse,
   type ShopCatalogue,
 } from '@/api/adapters';
+import type { HouseMissionContributeResponse } from '@/api/types';
 import { useToast } from '@/components/ui/toast';
 import type { House, HouseEditInput, NewHouseMission } from '@/components/screens/house-screen';
 import { track } from '@/lib/analytics';
@@ -129,7 +130,8 @@ export function useHouses() {
   );
 
   const reloadSearch = useCallback(async () => {
-    const list = await fetchHouses(0, 30);
+    // excludeJoined — 본인 ACTIVE(소유 포함) 집은 서버가 걸러 준다 (#578).
+    const list = await fetchHouses(0, 30, true);
     setSearchHouses((list.items ?? []).map((h, i) => toSearchHouse(h, i)));
   }, []);
 
@@ -348,6 +350,22 @@ export function useHouses() {
     [toast, reloadHouse],
   );
 
+  /**
+   * 완료 응답에 실려온 서버 자동 기여 결과 반영 (#578) — contributeMission 성공
+   * 처리와 동일하게 기여 마킹 + 해당 집만 재동기화(미션 currentValue 갱신).
+   */
+  const applyMissionContribution = useCallback(
+    (res: HouseMissionContributeResponse) => {
+      const missionId = res.missionId;
+      if (missionId == null) return;
+      setContributedMissionIds((prev) => new Set(prev).add(missionId));
+      toast(res.achieved ? '기여 완료! 목표를 달성했어요' : '기여했어요 (+1)', 'success');
+      const house = houses.find((h) => h.missions?.some((m) => m.id === missionId));
+      if (house?.houseId != null) void reloadHouse(house.houseId);
+    },
+    [houses, toast, reloadHouse],
+  );
+
   const claimMission = useCallback(
     async (houseId: number, missionId: number) => {
       try {
@@ -474,18 +492,12 @@ export function useHouses() {
     [toast, reloadHouse],
   );
 
-  // 집 탐색 hides houses the user already belongs to (the API has no joined
-  // filter, and joining one again only 409s).
-  const browsableHouses = useMemo(() => {
-    const joinedIds = new Set(houses.map((h) => h.houseId ?? 0));
-    return searchHouses.filter((s) => !joinedIds.has(s.id));
-  }, [houses, searchHouses]);
-
   return useMemo(
     () => ({
       houses,
       contributedMissionIds,
-      searchHouses: browsableHouses,
+      // 참여 중인 집은 서버 excludeJoined 필터가 이미 걸렀다 (#578).
+      searchHouses,
       loading,
       searchLoading,
       error,
@@ -504,6 +516,7 @@ export function useHouses() {
       kickMember,
       leaveHouse,
       contributeMission,
+      applyMissionContribution,
       cheerMember,
       claimMission,
       createMission,
@@ -515,7 +528,7 @@ export function useHouses() {
     [
       houses,
       contributedMissionIds,
-      browsableHouses,
+      searchHouses,
       loading,
       searchLoading,
       error,
@@ -533,6 +546,7 @@ export function useHouses() {
       kickMember,
       leaveHouse,
       contributeMission,
+      applyMissionContribution,
       cheerMember,
       claimMission,
       createMission,

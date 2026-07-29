@@ -219,7 +219,10 @@ export type MyRoomScreenProps = {
   onUpdateCategory?: (id: string, category: RoutineCategoryMeta) => void;
   /** Toggle a routine's completion on a specific date ("YYYY-MM-DD"). */
   /** 완료 토글 — 완료 시 서버 보상액(코인)을 resolve하면 코인 연출에 쓴다 (#444). */
-  onToggleCompletion?: (id: string, date: string) => void | Promise<number | null | undefined>;
+  onToggleCompletion?: (
+    id: string,
+    date: string,
+  ) => void | Promise<{ rewardAmount: number } | null | undefined>;
   onOpenGacha?: () => void;
   /** Quick-add a todo to a category with a due date (the + on a category header). */
   onQuickAddRoutine?: (category: string, title: string, dueDate: string) => void;
@@ -778,8 +781,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     const fire = () => {
       const res = onToggleCompletion?.(routine.id, date);
       if (flyFrom && res && typeof res.then === 'function') {
-        void res.then((reward) => {
-          if (reward) launchCoinAt(flyFrom);
+        void res.then((result) => {
+          if (result?.rewardAmount) launchCoinAt(flyFrom);
         });
       }
     };

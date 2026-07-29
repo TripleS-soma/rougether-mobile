@@ -223,7 +223,7 @@ describe('HouseScreen', () => {
       <HouseScreen
         houses={[MISSION_HOUSE]}
         onAddMissionRoutine={jest.fn()}
-        linkedRoutines={[{ title: '주간 루틴 지키기' }]}
+        linkedRoutines={[{ missionId: 11 }]}
         contributedMissionIds={[12]}
       />,
     );
@@ -240,7 +240,7 @@ describe('HouseScreen', () => {
       <HouseScreen
         houses={[MISSION_HOUSE]}
         onAddMissionRoutine={jest.fn()}
-        linkedRoutines={[{ title: '주간 루틴 지키기', completedToday: true }]}
+        linkedRoutines={[{ missionId: 11, completedToday: true }]}
       />,
     );
     await fireEvent.press(getByLabelText('공동 미션'));
@@ -385,7 +385,7 @@ describe('HouseScreen', () => {
         houses={[house]}
         userName="나"
         onAddMissionRoutine={jest.fn()}
-        linkedRoutines={[{ title: '주간 루틴 지키기', completedToday: true }]}
+        linkedRoutines={[{ missionId: 11, completedToday: true }]}
       />,
     );
     // 커버 프레임이 집 본체 — 창문 안에 좌석, 모서리에 레벨 진행도 pill.

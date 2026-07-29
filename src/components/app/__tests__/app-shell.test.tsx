@@ -176,7 +176,9 @@ describe('AppShell', () => {
   });
 });
 
-// --- 미션 ↔ 루틴 연동 통합 (#272): 이름 기반 매칭이 셸에서 실제로 이어지는지. ---
+// --- 미션 ↔ 루틴 연동 통합 (#272 → #578): 서버 링크 id 매칭이 셸에서 실제로
+// 이어지는지. 루틴 제목은 미션 제목과 다르게 두어 "이름을 바꿔도 연동 유지"를
+// 함께 단언한다.
 describe('AppShell — 공동미션 연동', () => {
   const json = (body: unknown) => ({
     ok: true,
@@ -189,15 +191,28 @@ describe('AppShell — 공동미션 연동', () => {
     const method = init?.method ?? 'GET';
     calls.push({ url, method, body: init?.body as string | undefined });
     if (url.includes('/auth/')) return json({ accessToken: 't', refreshToken: 'r' });
-    if (method === 'POST' && url.includes('/missions/6/contribute'))
-      return json({ missionId: 6, myContribution: 1, currentValue: 1, achieved: false });
     if (method === 'POST' && url.endsWith('/routines'))
-      return json({ id: 99, title: '물 마시기', categoryId: 20, repeatType: 'DAILY' });
-    if (method === 'POST' && url.includes('/routines/44/logs')) return json({ rewardAmount: 0 });
-    if (url.includes('/categories')) return json({ items: [{ id: 20, name: 'TripleS' }] });
+      return json({
+        id: 99,
+        title: '물 마시기',
+        categoryId: 20,
+        repeatType: 'DAILY',
+        houseMissionId: 7,
+      });
+    if (method === 'POST' && url.includes('/routines/44/logs'))
+      // 오늘 완료 — 서버가 연동 미션(6)에 자동 기여한 결과가 실려온다 (#578).
+      return json({
+        rewardAmount: 0,
+        houseMissionContribution: { missionId: 6, myContribution: 1, currentValue: 1, achieved: false }, // prettier-ignore
+      });
+    if (url.includes('/categories'))
+      return json({ items: [{ id: 20, name: 'TripleS', houseId: 2 }] });
     if (url.endsWith('/routines'))
       return json({
-        items: [{ id: 44, title: '아침 스트레칭', categoryId: 20, repeatType: 'DAILY' }],
+        // 제목은 미션명과 다름 — 연동은 houseMissionId가 판정한다.
+        items: [
+          { id: 44, title: '개명한 스트레칭', categoryId: 20, repeatType: 'DAILY', houseMissionId: 6 }, // prettier-ignore
+        ],
       });
     if (url.endsWith('/me/houses')) return json({ items: [{ houseId: 2, name: 'TripleS' }] });
     if (url.includes('/houses/2/missions'))
@@ -233,21 +248,30 @@ describe('AppShell — 공동미션 연동', () => {
     global.fetch = jest.fn(worldFetch) as unknown as typeof fetch;
   });
 
-  it('completing a house-category routine auto-contributes to the matching mission', async () => {
+  it('완료 시 서버 자동 기여를 반영하고 클라 수동 contribute는 쏘지 않는다 (#578)', async () => {
     const { getByLabelText } = await render(
       <AuthProvider>
         <AppShell />
       </AuthProvider>,
     );
-    // 이름 매칭에 houses가 필요 — 집 상세까지 로드된 뒤에 완료를 누른다.
     await waitFor(() => expect(calls.some((c) => c.url.includes('/houses/2/missions'))).toBe(true));
+    const missionFetchesBefore = calls.filter((c) => c.url.includes('/houses/2/missions')).length;
 
-    await fireEvent.press(getByLabelText('아침 스트레칭'));
+    // 미션명과 다른 제목의 루틴 — id 연동이라 이름이 달라도 이어진다.
+    await fireEvent.press(getByLabelText('개명한 스트레칭'));
     await waitFor(() =>
-      expect(
-        calls.some((c) => c.method === 'POST' && c.url.includes('/houses/2/missions/6/contribute')),
-      ).toBe(true),
+      expect(calls.some((c) => c.method === 'POST' && c.url.includes('/routines/44/logs'))).toBe(
+        true,
+      ),
     );
+    // 완료 응답의 기여 결과 반영 → 해당 집만 재동기화(미션 currentValue 갱신).
+    await waitFor(() =>
+      expect(calls.filter((c) => c.url.includes('/houses/2/missions')).length).toBeGreaterThan(
+        missionFetchesBefore,
+      ),
+    );
+    // 수동 기여 왕복은 없다 — 서버가 로그 시점에 이미 기여했다.
+    expect(calls.some((c) => c.method === 'POST' && c.url.includes('/contribute'))).toBe(false);
   });
 
   it('blocks un-toggling a linked routine — contributions cannot be revoked', async () => {
@@ -258,15 +282,16 @@ describe('AppShell — 공동미션 연동', () => {
     );
     await waitFor(() => expect(calls.some((c) => c.url.includes('/houses/2/missions'))).toBe(true));
 
-    // 완료(기여) 후 다시 누르면 서버 호출 없이 차단된다.
-    await fireEvent.press(getByLabelText('아침 스트레칭'));
+    // 완료(기여) 후 다시 누르면 서버 호출 없이 차단된다 — 제목이 미션명과
+    // 달라도 linkedMissionId가 지킨다.
+    await fireEvent.press(getByLabelText('개명한 스트레칭'));
     await waitFor(() =>
       expect(calls.some((c) => c.method === 'POST' && c.url.includes('/routines/44/logs'))).toBe(
         true,
       ),
     );
     const callsBefore = calls.length;
-    await fireEvent.press(getByLabelText('아침 스트레칭'));
+    await fireEvent.press(getByLabelText('개명한 스트레칭'));
     // Un-complete would be a DELETE on the log — none may fire.
     expect(calls.slice(callsBefore).some((c) => c.method === 'DELETE')).toBe(false);
   });
@@ -288,7 +313,10 @@ describe('AppShell — 공동미션 연동', () => {
 
     await waitFor(() => {
       const create = calls.find((c) => c.method === 'POST' && c.url.endsWith('/routines'));
-      expect(JSON.parse(create?.body ?? '{}').categoryId).toBe(20);
+      const body = JSON.parse(create?.body ?? '{}');
+      // houseId 매칭으로 기존 카테고리를 찾고, 생성 요청에 미션 링크 id를 싣는다.
+      expect(body.categoryId).toBe(20);
+      expect(body.houseMissionId).toBe(7);
     });
     // ensureCategory가 서버 재조회로 기존 TripleS(20)를 재사용 — 중복 생성 없음.
     expect(calls.some((c) => c.method === 'POST' && c.url.includes('/categories'))).toBe(false);
@@ -312,7 +340,7 @@ describe('AppShell — 공동미션 연동', () => {
         calls.some((c) => c.method === 'DELETE' && c.url.includes('/houses/2/missions/6')),
       ).toBe(true),
     );
-    // 미션 제목과 같은 TripleS 카테고리 루틴(44)이 함께 지워진다.
+    // 미션 6에 연동된(houseMissionId) 루틴 44가 제목과 무관하게 함께 지워진다.
     await waitFor(() =>
       expect(calls.some((c) => c.method === 'DELETE' && c.url.includes('/routines/44'))).toBe(true),
     );
@@ -364,13 +392,14 @@ describe('AppShell — 연동 루틴 스윕', () => {
       const method = init?.method ?? 'GET';
       calls.push({ url, method });
       if (url.includes('/auth/')) return json({ accessToken: 't', refreshToken: 'r' });
-      if (url.includes('/categories')) return json({ items: [{ id: 20, name: 'TripleS' }] });
+      if (url.includes('/categories'))
+        return json({ items: [{ id: 20, name: 'TripleS', houseId: 2 }] });
       if (url.endsWith('/routines'))
         return json({
           items: [
-            // 44는 살아있는 미션과 제목 일치, 45는 미션이 사라진 잔여물.
-            { id: 44, title: '아침 스트레칭', categoryId: 20, repeatType: 'DAILY' },
-            { id: 45, title: '사라진 미션', categoryId: 20, repeatType: 'DAILY' },
+            // 44는 살아있는 미션(6)에 연동, 45는 사라진 미션(99)의 잔여물.
+            { id: 44, title: '아침 스트레칭', categoryId: 20, repeatType: 'DAILY', houseMissionId: 6 }, // prettier-ignore
+            { id: 45, title: '사라진 미션', categoryId: 20, repeatType: 'DAILY', houseMissionId: 99 }, // prettier-ignore
           ],
         });
       if (url.endsWith('/me/houses')) return json({ items: [{ houseId: 2, name: 'TripleS' }] });

@@ -14,8 +14,9 @@ afterEach(() => {
   jest.clearAllMocks();
 });
 
-describe('useHouses — 집 탐색 filter', () => {
-  it('hides houses the user already belongs to from the browse list', async () => {
+describe('useHouses — 집 탐색 filter (#578)', () => {
+  it('requests the browse list with excludeJoined and keeps the server result as-is', async () => {
+    const searchUrls: string[] = [];
     global.fetch = jest.fn(async (url: string) => {
       if (url.includes('/me/houses')) return res({ items: [{ houseId: 1, name: '내집' }] });
       if (url.includes('/houses/1/members')) return res({ items: [] });
@@ -23,10 +24,11 @@ describe('useHouses — 집 탐색 filter', () => {
       if (url.includes('/houses/1')) return res({ houseId: 1, name: '내집', myRole: 'OWNER' });
       if (url.endsWith('/me')) return res({ userId: 5, nickname: '나' });
       if (url.includes('/houses?')) {
+        searchUrls.push(url);
+        // 서버가 excludeJoined로 내 집을 이미 걸렀다 — 클라 로컬 필터 없음.
         return res({
           items: [
-            { houseId: 1, name: '내집', currentMemberCount: 1, maxMembers: 4 },
-            { houseId: 2, name: '남의집', currentMemberCount: 2, maxMembers: 4 },
+            { houseId: 2, name: '남의집', currentMemberCount: 2, maxMembers: 4, myJoinRequestStatus: 'PENDING' }, // prettier-ignore
           ],
         });
       }
@@ -37,8 +39,12 @@ describe('useHouses — 집 탐색 filter', () => {
     await waitFor(() => expect(result.current.searchLoading).toBe(false));
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    // My own house (id 1) is excluded; only the joinable one remains.
+    // 탐색 요청에 excludeJoined=true가 실린다.
+    expect(searchUrls.every((u) => u.includes('excludeJoined=true'))).toBe(true);
+    expect(searchUrls.length).toBeGreaterThan(0);
+    // 목록은 서버 결과 그대로 + 신청 상태 등 파생 유지.
     expect(result.current.searchHouses.map((h) => h.name)).toEqual(['남의집']);
+    expect(result.current.searchHouses[0].joinRequestStatus).toBe('PENDING');
     expect(result.current.houses.map((h) => h.name)).toEqual(['내집']);
   });
 });
