@@ -46,6 +46,19 @@ describe('GachaScreen', () => {
     expect(onlyFurniture.queryByText('캐릭터 뽑기')).toBeNull();
   });
 
+  it('뽑기 상자 선택 상태를 accessibilityState로 전달한다 (#550)', async () => {
+    const { getByLabelText } = await render(
+      <GachaScreen gachas={[machine, characterMachine]} coinBalance={5600} />,
+    );
+    // 첫 머신이 기본 선택 — 다른 머신을 탭하면 선택이 옮겨간다.
+    expect(getByLabelText('작은 베이커리 아침 뽑기').props.accessibilityState?.selected).toBe(true);
+    await fireEvent.press(getByLabelText('캐릭터 뽑기'));
+    expect(getByLabelText('캐릭터 뽑기').props.accessibilityState?.selected).toBe(true);
+    expect(getByLabelText('작은 베이커리 아침 뽑기').props.accessibilityState?.selected).toBe(
+      false,
+    );
+  });
+
   it('draws from the API and reveals the reward', async () => {
     const onDraw = jest.fn(async (): Promise<DrawResult[]> => [
       { name: '허브 화분', rarity: '희귀', converted: false },

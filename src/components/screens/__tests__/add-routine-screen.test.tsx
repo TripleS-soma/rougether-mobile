@@ -120,6 +120,14 @@ describe('AddRoutineScreen', () => {
     expect(onAdd).not.toHaveBeenCalled();
   });
 
+  it('요일 토글은 선택 상태를 accessibilityState로 전달한다 (#550)', async () => {
+    const { getByRole } = await render(<AddRoutineScreen />);
+    const monday = getByRole('button', { name: '월' });
+    expect(monday.props.accessibilityState?.selected).toBe(false);
+    await fireEvent.press(monday);
+    expect(getByRole('button', { name: '월' }).props.accessibilityState?.selected).toBe(true);
+  });
+
   it('shows the day picker only for 매주 and submits 매일 with no days', async () => {
     const onAdd = jest.fn();
     const { getByText, getByPlaceholderText, queryByText } = await render(
