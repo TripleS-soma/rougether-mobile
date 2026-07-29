@@ -20,7 +20,10 @@ export type AnalyticsEvent =
   | 'cheer_send'
   | 'guestbook_write'
   | 'friend_room_visit'
-  | 'push_open';
+  | 'push_open'
+  | 'onboarding_mission_start'
+  | 'onboarding_mission_complete'
+  | 'onboarding_mission_skip';
 
 let client: PostHog | null = null;
 
