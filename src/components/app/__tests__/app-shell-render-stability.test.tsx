@@ -10,7 +10,6 @@ import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import { AppShell } from '@/components/app/app-shell';
 import { Room } from '@/components/room/room';
-import { HouseScreen } from '@/components/screens/house-screen';
 import { AuthProvider } from '@/hooks/use-auth';
 
 // 렌더마다 받은 props를 기록하는 MyRoomScreen 프로브.
@@ -22,6 +21,20 @@ jest.mock('@/components/screens/my-room-screen', () => {
     MyRoomScreen: (props: Record<string, unknown>) => {
       mockMyRoomRenders.push(props);
       return React.createElement(Text, null, 'my-room-probe');
+    },
+  };
+});
+
+// HouseScreen도 동일한 프로브 — 집 탭은 이탈 시 언마운트되지만, 셸의
+// useCallback prop은 리마운트를 넘어 같은 참조여야 한다.
+const mockHouseRenders: Record<string, unknown>[] = [];
+jest.mock('@/components/screens/house-screen', () => {
+  const React = jest.requireActual('react');
+  const { Text } = jest.requireActual('react-native');
+  return {
+    HouseScreen: (props: Record<string, unknown>) => {
+      mockHouseRenders.push(props);
+      return React.createElement(Text, null, 'house-probe');
     },
   };
 });
@@ -38,6 +51,7 @@ const emptyRes = (url: string) => ({
 const realFetch = global.fetch;
 beforeEach(() => {
   mockMyRoomRenders.length = 0;
+  mockHouseRenders.length = 0;
   global.fetch = jest.fn(async (url: string) => emptyRes(url)) as unknown as typeof fetch;
 });
 afterEach(() => {
@@ -49,12 +63,15 @@ describe('memo 경계 (#539)', () => {
 
   it('Room · MyRoomScreen · HouseScreen은 React.memo 컴포넌트다', () => {
     expect((Room as unknown as { $$typeof: symbol }).$$typeof).toBe(MEMO_TYPE);
-    expect((HouseScreen as unknown as { $$typeof: symbol }).$$typeof).toBe(MEMO_TYPE);
-    // 이 파일에서는 my-room-screen이 프로브로 mock돼 있어 실제 모듈로 확인한다.
-    const actual = jest.requireActual('@/components/screens/my-room-screen') as {
+    // 두 화면은 이 파일에서 프로브로 mock돼 있어 실제 모듈로 확인한다.
+    const myRoom = jest.requireActual('@/components/screens/my-room-screen') as {
       MyRoomScreen: { $$typeof: symbol };
     };
-    expect(actual.MyRoomScreen.$$typeof).toBe(MEMO_TYPE);
+    expect(myRoom.MyRoomScreen.$$typeof).toBe(MEMO_TYPE);
+    const house = jest.requireActual('@/components/screens/house-screen') as {
+      HouseScreen: { $$typeof: symbol };
+    };
+    expect(house.HouseScreen.$$typeof).toBe(MEMO_TYPE);
   });
 });
 
@@ -113,6 +130,57 @@ describe('AppShell → MyRoomScreen prop 참조 안정성 (#539)', () => {
       'wallpapers',
     ] as const;
     // 참조가 바뀐 prop 이름이 그대로 실패 메시지가 되도록 목록으로 단언한다.
+    const changed = stableProps.filter((key) => after[key] !== before[key]);
+    expect(changed).toEqual([]);
+  });
+});
+
+describe('AppShell → HouseScreen prop 참조 안정성 (#539, 리뷰 반영)', () => {
+  it('탭 이탈로 언마운트됐다 재진입해도 셸의 핸들러·파생 prop 참조가 같다', async () => {
+    const { getByLabelText } = await render(
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(mockMyRoomRenders.at(-1)?.loading).toBe(false));
+
+    // 첫 방문 — 집 탭 데이터가 정착할 때까지 기다린 스냅샷.
+    await fireEvent.press(getByLabelText('집'));
+    await waitFor(() => expect(mockHouseRenders.at(-1)?.loading).toBe(false));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const before = mockHouseRenders.at(-1)!;
+
+    // 이탈(언마운트) 후 재진입 — 리마운트를 넘어 참조가 유지돼야 한다.
+    await fireEvent.press(getByLabelText('나의 방'));
+    await fireEvent.press(getByLabelText('집'));
+    await waitFor(() => expect(mockHouseRenders.at(-1)).not.toBe(before));
+
+    const after = mockHouseRenders.at(-1)!;
+    const stableProps = [
+      'onAcceptJoinRequest',
+      'onRejectJoinRequest',
+      'onKickMember',
+      'onLeaveHouse',
+      'onVisitFriend',
+      'onVisitMyRoom',
+      'onOpenSearch',
+      'onOpenMemberManagement',
+      'onAddMissionRoutine',
+      'onClaimMission',
+      'onCreateMission',
+      'onDeleteMission',
+      'onUpdateHouse',
+      'onTransferOwnership',
+      'onReissueInviteCode',
+      'onHouseIndexChange',
+      // 파생 배열 — 렌더마다 새로 만들면 안 되는 것들.
+      'contributedMissionIds',
+      'linkedRoutines',
+      'houses',
+      'furniture',
+    ] as const;
     const changed = stableProps.filter((key) => after[key] !== before[key]);
     expect(changed).toEqual([]);
   });
