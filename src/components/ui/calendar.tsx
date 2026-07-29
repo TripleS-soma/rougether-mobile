@@ -99,18 +99,18 @@ export function Calendar({ value, min, max, onSelect, today }: CalendarProps) {
         toValue: target,
         friction: 7,
         tension: 90,
-        useNativeDriver: false,
+        useNativeDriver: true,
       }).start();
     }
     if (appearing) {
       selVisibleRef.current = true;
-      Animated.timing(selOpacity, { toValue: 1, duration: 140, useNativeDriver: false }).start();
+      Animated.timing(selOpacity, { toValue: 1, duration: 140, useNativeDriver: true }).start();
     }
   };
   useEffect(() => {
     if (!selectedInView) {
       selVisibleRef.current = false;
-      Animated.timing(selOpacity, { toValue: 0, duration: 120, useNativeDriver: false }).start();
+      Animated.timing(selOpacity, { toValue: 0, duration: 120, useNativeDriver: true }).start();
       return;
     }
     placeCircle(true);

@@ -1,4 +1,4 @@
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon, type IconName } from '@/components/ui/icon';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -82,57 +82,58 @@ export function NotificationListScreen({
         }
       />
 
-      <ScrollView contentContainerStyle={styles.body}>
-        {loading && entries.length === 0 ? (
-          <View style={styles.state}>
-            <ActivityIndicator color={t.primary} />
-          </View>
-        ) : entries.length === 0 ? (
-          <Text style={[Typography.supporting, styles.state, { color: t.textMuted }]}>
-            아직 받은 알림이 없어요.
-          </Text>
-        ) : (
-          <View style={styles.list}>
-            {entries.map((n) => (
-              <Pressable
-                key={n.id}
-                onPress={() => !n.read && onRead?.(n.id)}
-                accessibilityRole="button"
-                accessibilityLabel={n.title}
-                accessibilityState={{ selected: !n.read }}
-                style={[
-                  styles.row,
-                  { backgroundColor: n.read ? t.surfaceMuted : t.surface, borderColor: t.border },
-                ]}>
-                <View style={[styles.rowIcon, { backgroundColor: t.surfaceMuted }]}>
-                  <Icon name={TYPE_ICONS[n.type ?? ''] ?? 'bell'} size={18} color={t.text} />
-                </View>
-                <View style={styles.rowBody}>
-                  <View style={styles.rowHead}>
-                    <Text style={[Typography.label, { color: t.text }]}>{n.title}</Text>
-                    <Text style={[Typography.supporting, { color: t.textMuted }]}>{n.date}</Text>
-                  </View>
-                  <Text style={[Typography.body, { color: n.read ? t.textMuted : t.text }]}>
-                    {n.body}
-                  </Text>
-                </View>
-                {!n.read ? (
-                  <View style={[styles.unreadDot, { backgroundColor: t.primary }]} />
-                ) : null}
-              </Pressable>
-            ))}
-            {hasNext ? (
-              <Pressable
-                onPress={onLoadMore}
-                accessibilityRole="button"
-                accessibilityLabel="알림 더보기"
-                style={[styles.more, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.primaryText }]}>더보기</Text>
-              </Pressable>
-            ) : null}
-          </View>
+      <FlatList
+        data={entries}
+        keyExtractor={(n) => String(n.id)}
+        contentContainerStyle={styles.body}
+        ListEmptyComponent={
+          loading ? (
+            <View style={styles.state}>
+              <ActivityIndicator color={t.primary} />
+            </View>
+          ) : (
+            <Text style={[Typography.supporting, styles.state, { color: t.textMuted }]}>
+              아직 받은 알림이 없어요.
+            </Text>
+          )
+        }
+        ListFooterComponent={
+          hasNext && entries.length > 0 ? (
+            <Pressable
+              onPress={onLoadMore}
+              accessibilityRole="button"
+              accessibilityLabel="알림 더보기"
+              style={[styles.more, { backgroundColor: t.surfaceMuted }]}>
+              <Text style={[Typography.label, { color: t.primaryText }]}>더보기</Text>
+            </Pressable>
+          ) : null
+        }
+        renderItem={({ item: n }) => (
+          <Pressable
+            onPress={() => !n.read && onRead?.(n.id)}
+            accessibilityRole="button"
+            accessibilityLabel={n.title}
+            accessibilityState={{ selected: !n.read }}
+            style={[
+              styles.row,
+              { backgroundColor: n.read ? t.surfaceMuted : t.surface, borderColor: t.border },
+            ]}>
+            <View style={[styles.rowIcon, { backgroundColor: t.surfaceMuted }]}>
+              <Icon name={TYPE_ICONS[n.type ?? ''] ?? 'bell'} size={18} color={t.text} />
+            </View>
+            <View style={styles.rowBody}>
+              <View style={styles.rowHead}>
+                <Text style={[Typography.label, { color: t.text }]}>{n.title}</Text>
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>{n.date}</Text>
+              </View>
+              <Text style={[Typography.body, { color: n.read ? t.textMuted : t.text }]}>
+                {n.body}
+              </Text>
+            </View>
+            {!n.read ? <View style={[styles.unreadDot, { backgroundColor: t.primary }]} /> : null}
+          </Pressable>
         )}
-      </ScrollView>
+      />
     </View>
   );
 }
@@ -143,14 +144,12 @@ const styles = StyleSheet.create({
   },
   body: {
     padding: Spacing.four,
+    gap: Spacing.two,
   },
   state: {
     alignItems: 'center',
     textAlign: 'center',
     paddingVertical: Spacing.six,
-  },
-  list: {
-    gap: Spacing.two,
   },
   row: {
     flexDirection: 'row',

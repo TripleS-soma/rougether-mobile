@@ -10,7 +10,7 @@ import { CategoryManageScreen } from '@/components/screens/category-manage-scree
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
 import { GachaScreen } from '@/components/screens/gacha-screen';
-import { GroupHouseScreen } from '@/components/screens/group-house-screen';
+import { HouseScreen } from '@/components/screens/house-screen';
 import { HelpScreen } from '@/components/screens/help-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { LoginScreen } from '@/components/screens/login-screen';
@@ -276,21 +276,21 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
-    name: 'GroupHouseScreen · 비 오는 날',
+    name: 'HouseScreen · 비 오는 날',
     description: '흐린 하늘 + 빗줄기 오버레이 (#360) — raining 주입.',
     render: () => (
       <View style={{ height: 700, alignSelf: 'stretch' }}>
-        <GroupHouseScreen raining nowHour={10} />
+        <HouseScreen raining nowHour={10} />
       </View>
     ),
   },
   {
-    name: 'GroupHouseScreen',
+    name: 'HouseScreen',
     description:
-      'Ported from the prototype GroupHouseScreen (#10): house switcher, member rooms, group goals, kick flow.',
+      'Ported from the prototype HouseScreen (#10): house switcher, member rooms, group goals, kick flow.',
     render: () => (
       <View style={{ height: 900, alignSelf: 'stretch' }}>
-        <GroupHouseScreen />
+        <HouseScreen />
       </View>
     ),
   },

@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   BackHandler,
@@ -447,10 +447,24 @@ export function RoomDecorScreen({
   const furnitureTabItems = useMemo(() => furniture.filter((i) => !isDecorItem(i)), [furniture]);
   const decorTabItems = useMemo(() => furniture.filter(isDecorItem), [furniture]);
   const isSurfacePicker = picker === 'wallpaper' || picker === 'floor' || picker === 'background';
-  const byOwnedFirst = <T extends { id: string }>(arr: T[]) =>
-    (ownedOnly ? arr.filter((i) => owned.has(i.id)) : [...arr]).sort(
-      (a, b) => Number(owned.has(b.id)) - Number(owned.has(a.id)),
-    );
+  const byOwnedFirst = useCallback(
+    <T extends { id: string }>(arr: T[]) =>
+      (ownedOnly ? arr.filter((i) => owned.has(i.id)) : [...arr]).sort(
+        (a, b) => Number(owned.has(b.id)) - Number(owned.has(a.id)),
+      ),
+    [ownedOnly, owned],
+  );
+  const sortedWallpapers = useMemo(() => byOwnedFirst(wallpapers), [byOwnedFirst, wallpapers]);
+  const sortedFloors = useMemo(() => byOwnedFirst(floors), [byOwnedFirst, floors]);
+  const sortedBackgrounds = useMemo(() => byOwnedFirst(backgrounds), [byOwnedFirst, backgrounds]);
+  const sortedFurnitureTabItems = useMemo(
+    () => byOwnedFirst(furnitureTabItems),
+    [byOwnedFirst, furnitureTabItems],
+  );
+  const sortedDecorTabItems = useMemo(
+    () => byOwnedFirst(decorTabItems),
+    [byOwnedFirst, decorTabItems],
+  );
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
@@ -694,7 +708,7 @@ export function RoomDecorScreen({
 
             {picker === 'wallpaper' ? (
               <SwatchGrid
-                items={byOwnedFirst(wallpapers)}
+                items={sortedWallpapers}
                 selectedId={wallpaperId}
                 onSelect={(id) => setWallpaperId(id)}
                 owned={owned}
@@ -706,7 +720,7 @@ export function RoomDecorScreen({
             ) : null}
             {picker === 'floor' ? (
               <SwatchGrid
-                items={byOwnedFirst(floors)}
+                items={sortedFloors}
                 selectedId={floorId}
                 onSelect={(id) => setFloorId((prev) => (prev === id ? null : id))}
                 onClear={floorId ? () => setFloorId(null) : undefined}
@@ -719,7 +733,7 @@ export function RoomDecorScreen({
             ) : null}
             {picker === 'background' ? (
               <SwatchGrid
-                items={byOwnedFirst(backgrounds)}
+                items={sortedBackgrounds}
                 selectedId={backgroundId}
                 onSelect={(id) => setBackgroundId((prev) => (prev === id ? null : id))}
                 onClear={backgroundId ? () => setBackgroundId(null) : undefined}
@@ -732,7 +746,7 @@ export function RoomDecorScreen({
             ) : null}
             {picker === 'all' && (allTab === 'furniture' || allTab === 'decor') ? (
               <FurnitureGrid
-                items={byOwnedFirst(allTab === 'furniture' ? furnitureTabItems : decorTabItems)}
+                items={allTab === 'furniture' ? sortedFurnitureTabItems : sortedDecorTabItems}
                 placed={placed}
                 // 배치 안 된 가구는 방 가운데로 추가, 배치된 가구는 다시 빼기.
                 onPlace={(item) => (placed.includes(item.id) ? removeItem(item.id) : addItem(item))}
@@ -742,7 +756,7 @@ export function RoomDecorScreen({
             ) : null}
             {picker === 'all' && allTab === 'wallpaper' ? (
               <SwatchGrid
-                items={byOwnedFirst(wallpapers)}
+                items={sortedWallpapers}
                 selectedId={wallpaperId}
                 onSelect={(id) => setWallpaperId(id)}
                 owned={owned}
@@ -754,7 +768,7 @@ export function RoomDecorScreen({
             ) : null}
             {picker === 'all' && allTab === 'floor' ? (
               <SwatchGrid
-                items={byOwnedFirst(floors)}
+                items={sortedFloors}
                 selectedId={floorId}
                 onSelect={(id) => setFloorId((prev) => (prev === id ? null : id))}
                 onClear={floorId ? () => setFloorId(null) : undefined}
@@ -767,7 +781,7 @@ export function RoomDecorScreen({
             ) : null}
             {picker === 'all' && allTab === 'background' ? (
               <SwatchGrid
-                items={byOwnedFirst(backgrounds)}
+                items={sortedBackgrounds}
                 selectedId={backgroundId}
                 onSelect={(id) => setBackgroundId((prev) => (prev === id ? null : id))}
                 onClear={backgroundId ? () => setBackgroundId(null) : undefined}
@@ -1145,6 +1159,7 @@ function SwatchGrid({
                 source={assetSource(item.assetKey)}
                 style={styles.swatch}
                 contentFit="cover"
+                cachePolicy="memory-disk"
                 transition={120}
               />
             ) : (

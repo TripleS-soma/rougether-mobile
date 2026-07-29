@@ -1,4 +1,4 @@
-/** House (그룹하우스) endpoints. */
+/** House (집) endpoints. */
 import { apiDelete, apiGet, apiGetList, apiPost, apiPut } from './client';
 import { buildQuery } from './http';
 import type { RoomWithLayout } from './rooms';

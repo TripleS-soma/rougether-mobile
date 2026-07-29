@@ -120,10 +120,10 @@ export function RoutineManageScreen({
         {loading || loadError
           ? null
           : groups.map((cat) => {
-              const isUncat = cat.id === '';
+              const isUncategorized = cat.id === '';
               const items = routineItems.filter((r) => {
                 if (r.category === cat.id) return true;
-                return isUncat && (!r.category || !knownIds.includes(r.category));
+                return isUncategorized && (!r.category || !knownIds.includes(r.category));
               });
               if (items.length === 0) return null;
 

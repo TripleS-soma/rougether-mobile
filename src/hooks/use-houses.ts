@@ -37,7 +37,7 @@ import {
   updateHouse as apiUpdateHouse,
 } from '@/api';
 import {
-  toGroupHouse,
+  toHouse,
   toHouseMission,
   toHousePreview,
   toHousePreviewDetail,
@@ -45,11 +45,7 @@ import {
   type ShopCatalogue,
 } from '@/api/adapters';
 import { useToast } from '@/components/ui/toast';
-import type {
-  House,
-  HouseEditInput,
-  NewHouseMission,
-} from '@/components/screens/group-house-screen';
+import type { House, HouseEditInput, NewHouseMission } from '@/components/screens/house-screen';
 import { track } from '@/lib/analytics';
 import type {
   HousePreview,
@@ -83,7 +79,7 @@ export function useHouses() {
       fetchHouseMissions(id).catch(() => []),
       fetchHouseJoinRequests(id).catch(() => []),
     ]);
-    return toGroupHouse(
+    return toHouse(
       detail,
       members,
       getSessionUserId(),
@@ -95,11 +91,14 @@ export function useHouses() {
   }, []);
 
   const reloadMyHouses = useCallback(async () => {
-    const mine = await fetchMyHouses();
     // My cell shows the profile nickname when the members API has none.
-    myNicknameRef.current = await fetchMe()
-      .then((me) => me.nickname ?? undefined)
-      .catch(() => myNicknameRef.current);
+    const [mine, nickname] = await Promise.all([
+      fetchMyHouses(),
+      fetchMe()
+        .then((me) => me.nickname ?? undefined)
+        .catch(() => myNicknameRef.current),
+    ]);
+    myNicknameRef.current = nickname;
     const detailed = await Promise.all(mine.map((h) => fetchHouseBundle(h.houseId ?? 0)));
     setHouses(detailed);
   }, [fetchHouseBundle]);

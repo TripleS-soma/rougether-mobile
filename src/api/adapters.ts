@@ -42,7 +42,7 @@ import type {
   HouseMission,
   MemberRoomPreview,
   RoomCell,
-} from '@/components/screens/group-house-screen';
+} from '@/components/screens/house-screen';
 import type { FriendActivityDay, GuestbookEntry } from '@/components/screens/friend-room-screen';
 import { isPictogramName, type PictogramName } from '@/components/ui/pictograms';
 import type {
@@ -570,7 +570,7 @@ export function toServerCharacterId(
   return masters.find((m) => m.code === appId)?.id;
 }
 
-// --- house (그룹하우스) ---------------------------------------------------------
+// --- house (집) ------------------------------------------------------------
 
 // Room tile tints + browse-card decorations, cycled by index (no art yet).
 const HOUSE_ICONS: PictogramName[] = [
@@ -616,14 +616,14 @@ export function toPresence(
 }
 
 /**
- * Build the group-house screen model from house detail + members. The grid is
+ * Build the house screen model from house detail + members. The grid is
  * sized by the house capacity (not the headcount): rooms fill two per floor
  * from the bottom-left — my room first, then the others in join order — and
  * the yet-unfilled seats render as quiet vacant tiles on the upper floors.
  * Occupied tiles carry the member's presence (#383) derived from
  * `lastAccessedAt` at `nowMs` (injectable for tests).
  */
-export function toGroupHouse(
+export function toHouse(
   detail: HouseDetailResponse,
   members: MemberSummary[],
   myUserId?: number,
@@ -668,7 +668,7 @@ export function toGroupHouse(
   }
   return {
     houseId: detail.houseId,
-    title: detail.name ?? '',
+    name: detail.name ?? '',
     inviteCode: detail.inviteCode ?? undefined,
     myRole: detail.myRole,
     level: detail.level ?? 0,

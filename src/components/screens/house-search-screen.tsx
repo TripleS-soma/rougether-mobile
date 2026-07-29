@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 
 import { HousePreviewFrame } from '@/components/room/house-preview-frame';
-import type { HouseMission, MemberRoomPreview } from '@/components/screens/group-house-screen';
+import type { HouseMission, MemberRoomPreview } from '@/components/screens/house-screen';
 import type { FurnitureItem, Wallpaper } from '@/resources/furniture';
 import { Icon } from '@/components/ui/icon';
 import {
@@ -138,11 +138,15 @@ export function HouseSearchScreen({
   const [preview, setPreview] = useState<{ code: string; info: HousePreview } | null>(null);
   // 탐색 카드 탭 → 미리보기 모달 (#328, 미션 포함 #532). 실패는 훅이 토스트로.
   const [housePreview, setHousePreview] = useState<HousePreviewDetail | null>(null);
-  const filtered = houses.filter(
-    (h) =>
-      query.length === 0 ||
-      h.name.toLowerCase().includes(query.toLowerCase()) ||
-      h.tag.toLowerCase().includes(query.toLowerCase()),
+  const filtered = useMemo(
+    () =>
+      houses.filter(
+        (h) =>
+          query.length === 0 ||
+          h.name.toLowerCase().includes(query.toLowerCase()) ||
+          h.tag.toLowerCase().includes(query.toLowerCase()),
+      ),
+    [houses, query],
   );
 
   const joinByCode = async () => {
@@ -338,6 +342,7 @@ export function HouseSearchScreen({
                           source={assetSource(h.coverImageKey)}
                           style={styles.houseCover}
                           contentFit="cover"
+                          cachePolicy="memory-disk"
                           transition={120}
                           accessibilityLabel={`${h.name} 대표 이미지`}
                           testID="house-cover"

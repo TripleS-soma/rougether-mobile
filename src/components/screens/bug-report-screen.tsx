@@ -1,5 +1,6 @@
+import { Image } from 'expo-image';
 import { useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Field } from '@/components/ui/field';
 import { Icon } from '@/components/ui/icon';
@@ -141,7 +142,7 @@ export function BugReportScreen({
           <View style={styles.shots}>
             {images.map((img, idx) => (
               <View key={`${img.uri}-${idx}`} style={styles.shot}>
-                <Image source={{ uri: img.uri }} style={styles.shotImg} />
+                <Image source={{ uri: img.uri }} style={styles.shotImg} contentFit="cover" />
                 <Pressable
                   style={[styles.shotRemove, { backgroundColor: t.text }]}
                   onPress={() => setImages((prev) => prev.filter((_, i) => i !== idx))}

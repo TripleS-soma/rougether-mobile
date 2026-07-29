@@ -1,12 +1,12 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 
-import { GroupHouseScreen, type House } from '@/components/screens/group-house-screen';
+import { HouseScreen, type House } from '@/components/screens/house-screen';
 import { ToastProvider } from '@/components/ui/toast';
 
 const MISSION_HOUSE: House = {
   houseId: 7,
-  title: '실집',
+  name: '실집',
   myRole: 'OWNER',
   description: '아침 루틴 집',
   maxMembers: 4,
@@ -27,10 +27,10 @@ const MISSION_HOUSE: House = {
   ],
 };
 
-describe('GroupHouseScreen', () => {
+describe('HouseScreen', () => {
   it('하늘색이 시간대에 따라 바뀐다 (#358)', async () => {
     const skyOf = async (hour: number) => {
-      const ui = await render(<GroupHouseScreen houses={[MISSION_HOUSE]} nowHour={hour} />);
+      const ui = await render(<HouseScreen houses={[MISSION_HOUSE]} nowHour={hour} />);
       return StyleSheet.flatten(ui.getByTestId('sky-section').props.style).backgroundColor;
     };
     expect(await skyOf(10)).toBe('#C3E0F5'); // 낮 = 기존 sky
@@ -40,7 +40,7 @@ describe('GroupHouseScreen', () => {
   });
 
   it('비가 오면 시간대와 무관하게 흐린 하늘 + 빗줄기 (#360)', async () => {
-    const ui = await render(<GroupHouseScreen houses={[MISSION_HOUSE]} nowHour={10} raining />);
+    const ui = await render(<HouseScreen houses={[MISSION_HOUSE]} nowHour={10} raining />);
     const style = StyleSheet.flatten(ui.getByTestId('sky-section').props.style);
     expect(style.backgroundColor).toBe('#A9B3C2');
     expect(ui.getByTestId('rain-overlay')).toBeTruthy();
@@ -48,7 +48,7 @@ describe('GroupHouseScreen', () => {
 
   it('헤더에 닉네임·스트릭 프로필 블록과 코인·다이아 지갑 필이 보인다 (#420)', async () => {
     const { getByText, queryByText } = await render(
-      <GroupHouseScreen
+      <HouseScreen
         houses={[MISSION_HOUSE]}
         userName="채영"
         streakDays={4}
@@ -65,19 +65,14 @@ describe('GroupHouseScreen', () => {
 
   it('스트릭 0일이면 스트릭 라벨을 숨긴다 (#420)', async () => {
     const { queryByText } = await render(
-      <GroupHouseScreen houses={[MISSION_HOUSE]} userName="채영" streakDays={0} />,
+      <HouseScreen houses={[MISSION_HOUSE]} userName="채영" streakDays={0} />,
     );
     expect(queryByText(/0일/)).toBeNull();
   });
 
   it('헤더에 코인·다이아 필을 함께 보여준다 (프로필 아바타 제거로 확보한 자리)', async () => {
     const { getByText } = await render(
-      <GroupHouseScreen
-        houses={[MISSION_HOUSE]}
-        userName="채영"
-        coinBalance={1200}
-        diaBalance={34}
-      />,
+      <HouseScreen houses={[MISSION_HOUSE]} userName="채영" coinBalance={1200} diaBalance={34} />,
     );
     // 아바타를 빼고 다이아를 상시 노출 — 좁은 폭 코인-only(#425)를 되돌림.
     expect(getByText('채영')).toBeTruthy();
@@ -99,7 +94,7 @@ describe('GroupHouseScreen', () => {
       ],
     };
     const { getByText, getByTestId, getByLabelText } = await render(
-      <GroupHouseScreen houses={[presenceHouse]} userName="나" />,
+      <HouseScreen houses={[presenceHouse]} userName="나" />,
     );
     // 접속 중인 내 타일: 초록 점 + 접근성 라벨, 상대 시각 없음.
     expect(getByTestId('online-dot')).toBeTruthy();
@@ -111,7 +106,7 @@ describe('GroupHouseScreen', () => {
 
   it('내 타일 이름은 stale한 houses 값이 아니라 라이브 userName을 쓴다 (#479)', async () => {
     const staleHouse: House = {
-      title: '테스트 집',
+      name: '테스트 집',
       floors: [
         {
           level: '1층',
@@ -123,7 +118,7 @@ describe('GroupHouseScreen', () => {
       ],
     };
     const { getByText, queryByText } = await render(
-      <GroupHouseScreen houses={[staleHouse]} userName="새닉네임" />,
+      <HouseScreen houses={[staleHouse]} userName="새닉네임" />,
     );
     // 닉네임을 바꾸면(=userName) 집 타일도 즉시 새 이름으로 — 옛 이름은 사라진다.
     expect(getByText('새닉네임 (나)')).toBeTruthy();
@@ -133,7 +128,7 @@ describe('GroupHouseScreen', () => {
   });
 
   it('renders the current house, members, and group missions', async () => {
-    const { getByText, getByLabelText, queryByText } = await render(<GroupHouseScreen />);
+    const { getByText, getByLabelText, queryByText } = await render(<HouseScreen />);
     expect(getByText('소마파이팅')).toBeTruthy();
     // The level pill shows the house's real growth level (demo: 3).
     expect(getByText('Lv.3')).toBeTruthy();
@@ -153,7 +148,7 @@ describe('GroupHouseScreen', () => {
     // index and hands it back so the same house is shown after 뒤로가기.
     const onHouseIndexChange = jest.fn();
     const first = await render(
-      <GroupHouseScreen houseIndex={0} onHouseIndexChange={onHouseIndexChange} />,
+      <HouseScreen houseIndex={0} onHouseIndexChange={onHouseIndexChange} />,
     );
     expect(first.getByText('소마파이팅')).toBeTruthy();
     await fireEvent.press(first.getByLabelText('다음 집'));
@@ -161,7 +156,7 @@ describe('GroupHouseScreen', () => {
 
     // Fresh mount with the kept index = the friend-room round trip.
     const second = await render(
-      <GroupHouseScreen houseIndex={1} onHouseIndexChange={onHouseIndexChange} />,
+      <HouseScreen houseIndex={1} onHouseIndexChange={onHouseIndexChange} />,
     );
     expect(second.getByText('소마 2번째 집')).toBeTruthy();
   });
@@ -170,7 +165,7 @@ describe('GroupHouseScreen', () => {
     const onAddMissionRoutine = jest.fn();
     const onClaimMission = jest.fn();
     const { getByLabelText, getByText } = await render(
-      <GroupHouseScreen
+      <HouseScreen
         houses={[MISSION_HOUSE]}
         onAddMissionRoutine={onAddMissionRoutine}
         onClaimMission={onClaimMission}
@@ -193,7 +188,7 @@ describe('GroupHouseScreen', () => {
   it('deletes a mission through the confirm modal (owner, #305)', async () => {
     const onDeleteMission = jest.fn();
     const { getByLabelText, getByText, queryByLabelText, queryByText } = await render(
-      <GroupHouseScreen houses={[MISSION_HOUSE]} onDeleteMission={onDeleteMission} />,
+      <HouseScreen houses={[MISSION_HOUSE]} onDeleteMission={onDeleteMission} />,
     );
     await fireEvent.press(getByLabelText('공동 미션'));
     // COMPLETED missions are not deletable on the server (409) — no button.
@@ -212,10 +207,7 @@ describe('GroupHouseScreen', () => {
 
   it('hides mission delete from plain members', async () => {
     const { getByLabelText, queryByLabelText } = await render(
-      <GroupHouseScreen
-        houses={[{ ...MISSION_HOUSE, myRole: 'MEMBER' }]}
-        onDeleteMission={jest.fn()}
-      />,
+      <HouseScreen houses={[{ ...MISSION_HOUSE, myRole: 'MEMBER' }]} onDeleteMission={jest.fn()} />,
     );
     await fireEvent.press(getByLabelText('공동 미션'));
     expect(queryByLabelText('주간 루틴 지키기 삭제')).toBeNull();
@@ -223,7 +215,7 @@ describe('GroupHouseScreen', () => {
 
   it('shows 기여됨/루틴 연동됨 labels instead of + when applicable', async () => {
     const { queryByLabelText, getByText, getByLabelText } = await render(
-      <GroupHouseScreen
+      <HouseScreen
         houses={[MISSION_HOUSE]}
         onAddMissionRoutine={jest.fn()}
         linkedRoutines={[{ title: '주간 루틴 지키기' }]}
@@ -240,7 +232,7 @@ describe('GroupHouseScreen', () => {
 
   it('derives 기여함 from a linked routine completed today (재시작에도 유지)', async () => {
     const { getByText, getByLabelText, queryByText } = await render(
-      <GroupHouseScreen
+      <HouseScreen
         houses={[MISSION_HOUSE]}
         onAddMissionRoutine={jest.fn()}
         linkedRoutines={[{ title: '주간 루틴 지키기', completedToday: true }]}
@@ -255,7 +247,7 @@ describe('GroupHouseScreen', () => {
   it('creates a mission through the modal', async () => {
     const onCreateMission = jest.fn();
     const { getByLabelText } = await render(
-      <GroupHouseScreen houses={[MISSION_HOUSE]} onCreateMission={onCreateMission} />,
+      <HouseScreen houses={[MISSION_HOUSE]} onCreateMission={onCreateMission} />,
     );
     await fireEvent.press(getByLabelText('공동 미션'));
     await fireEvent.press(getByLabelText('미션 만들기'));
@@ -273,7 +265,7 @@ describe('GroupHouseScreen', () => {
     const onCreateMission = jest.fn();
     const { getByText, getByLabelText } = await render(
       <ToastProvider>
-        <GroupHouseScreen houses={[MISSION_HOUSE]} onCreateMission={onCreateMission} />
+        <HouseScreen houses={[MISSION_HOUSE]} onCreateMission={onCreateMission} />
       </ToastProvider>,
     );
     await fireEvent.press(getByLabelText('공동 미션'));
@@ -286,7 +278,7 @@ describe('GroupHouseScreen', () => {
 
   it('shows the empty-mission hint when the house has no missions', async () => {
     const { getByText, getByLabelText } = await render(
-      <GroupHouseScreen houses={[{ ...MISSION_HOUSE, missions: [] }]} />,
+      <HouseScreen houses={[{ ...MISSION_HOUSE, missions: [] }]} />,
     );
     await fireEvent.press(getByLabelText('공동 미션'));
     expect(getByText('아직 미션이 없어요. 첫 미션을 만들어 다 같이 도전해보세요!')).toBeTruthy();
@@ -303,7 +295,7 @@ describe('GroupHouseScreen', () => {
       },
     };
     const { queryAllByTestId, getByLabelText } = await render(
-      <GroupHouseScreen houses={[MISSION_HOUSE]} roomPreviews={roomPreviews} />,
+      <HouseScreen houses={[MISSION_HOUSE]} roomPreviews={roomPreviews} />,
     );
     // Only 멤버 42 has a preview — 43 keeps the plain tint tile.
     expect(queryAllByTestId('room-preview')).toHaveLength(1);
@@ -323,7 +315,7 @@ describe('GroupHouseScreen', () => {
       },
     };
     const { getByLabelText, getAllByLabelText } = await render(
-      <GroupHouseScreen houses={[MISSION_HOUSE]} characterId="tiger" roomPreviews={roomPreviews} />,
+      <HouseScreen houses={[MISSION_HOUSE]} characterId="tiger" roomPreviews={roomPreviews} />,
     );
     await fireEvent.press(getByLabelText('구성원 목록'));
     // 구성원 관리는 전체 화면 교체라 시트 행 아바타만 남는다: 친구(42)는
@@ -335,7 +327,7 @@ describe('GroupHouseScreen', () => {
   it('sends the mission period only when the toggle is on (KST day bounds)', async () => {
     const onCreateMission = jest.fn();
     const { getByLabelText } = await render(
-      <GroupHouseScreen houses={[MISSION_HOUSE]} onCreateMission={onCreateMission} />,
+      <HouseScreen houses={[MISSION_HOUSE]} onCreateMission={onCreateMission} />,
     );
 
     // Toggle off (default): no period fields at all.
@@ -368,7 +360,7 @@ describe('GroupHouseScreen', () => {
       ],
     };
     const { getByText, getByLabelText, queryByText } = await render(
-      <GroupHouseScreen houses={[house]} />,
+      <HouseScreen houses={[house]} />,
     );
     await fireEvent.press(getByLabelText('공동 미션'));
     expect(getByText('~07.23')).toBeTruthy();
@@ -384,7 +376,7 @@ describe('GroupHouseScreen', () => {
       coverImageKey: 'house/cloud-balloon/frame.png',
     };
     const { getByTestId, getByText, getByLabelText } = await render(
-      <GroupHouseScreen
+      <HouseScreen
         houses={[house]}
         userName="나"
         onAddMissionRoutine={jest.fn()}
@@ -408,7 +400,7 @@ describe('GroupHouseScreen', () => {
   it('frame tiles: a single tap visits after the double-tap window (#307)', async () => {
     const onVisitFriend = jest.fn();
     const { getByLabelText } = await render(
-      <GroupHouseScreen
+      <HouseScreen
         houses={[{ ...MISSION_HOUSE, coverImageKey: 'house/cloud-balloon/frame.png' }]}
         onVisitFriend={onVisitFriend}
       />,
@@ -429,7 +421,7 @@ describe('GroupHouseScreen', () => {
     try {
       const onVisitFriend = jest.fn();
       const { getByLabelText, getByTestId, queryByLabelText } = await render(
-        <GroupHouseScreen
+        <HouseScreen
           houses={[{ ...MISSION_HOUSE, coverImageKey: 'house/cloud-balloon/frame.png' }]}
           onVisitFriend={onVisitFriend}
         />,
@@ -455,7 +447,7 @@ describe('GroupHouseScreen', () => {
 
   it('falls back to a plain hero without a cover and hides nav for one house', async () => {
     const { queryByTestId, queryByLabelText, getByText } = await render(
-      <GroupHouseScreen houses={[MISSION_HOUSE]} />,
+      <HouseScreen houses={[MISSION_HOUSE]} />,
     );
     expect(queryByTestId('house-hero-cover')).toBeNull();
     expect(getByText('실집')).toBeTruthy();
@@ -466,7 +458,7 @@ describe('GroupHouseScreen', () => {
   it('lets the owner edit the house settings', async () => {
     const onUpdateHouse = jest.fn();
     const { getByLabelText } = await render(
-      <GroupHouseScreen houses={[MISSION_HOUSE]} onUpdateHouse={onUpdateHouse} />,
+      <HouseScreen houses={[MISSION_HOUSE]} onUpdateHouse={onUpdateHouse} />,
     );
     await fireEvent.press(getByLabelText('구성원 목록'));
     await fireEvent.press(getByLabelText('집 정보 수정'));
@@ -488,7 +480,7 @@ describe('GroupHouseScreen', () => {
     ];
     const onUpdateHouse = jest.fn();
     const { getByLabelText, getByText } = await render(
-      <GroupHouseScreen
+      <HouseScreen
         houses={[{ ...MISSION_HOUSE, coverImageKey: 'house/cloud-balloon/f.png' }]}
         covers={covers}
         onUpdateHouse={onUpdateHouse}
@@ -508,9 +500,7 @@ describe('GroupHouseScreen', () => {
     );
 
     // No catalog (load failed / server empty) → the section stays hidden.
-    const bare = await render(
-      <GroupHouseScreen houses={[MISSION_HOUSE]} onUpdateHouse={jest.fn()} />,
-    );
+    const bare = await render(<HouseScreen houses={[MISSION_HOUSE]} onUpdateHouse={jest.fn()} />);
     await fireEvent.press(bare.getByLabelText('구성원 목록'));
     await fireEvent.press(bare.getByLabelText('집 정보 수정'));
     expect(bare.queryByText('대표 이미지')).toBeNull();
@@ -519,7 +509,7 @@ describe('GroupHouseScreen', () => {
   it('transfers ownership to a member after confirming', async () => {
     const onTransferOwnership = jest.fn();
     const { getByLabelText, getByText } = await render(
-      <GroupHouseScreen houses={[MISSION_HOUSE]} onTransferOwnership={onTransferOwnership} />,
+      <HouseScreen houses={[MISSION_HOUSE]} onTransferOwnership={onTransferOwnership} />,
     );
     await fireEvent.press(getByLabelText('구성원 목록'));
     await fireEvent.press(getByLabelText('친구 방장 위임'));
@@ -530,7 +520,7 @@ describe('GroupHouseScreen', () => {
 
   it('hides the owner tools from plain members', async () => {
     const { getByLabelText, queryByLabelText } = await render(
-      <GroupHouseScreen
+      <HouseScreen
         houses={[{ ...MISSION_HOUSE, myRole: 'MEMBER' }]}
         onUpdateHouse={jest.fn()}
         onTransferOwnership={jest.fn()}
@@ -550,7 +540,7 @@ describe('GroupHouseScreen', () => {
   it('reissues the invite code after confirming (owner)', async () => {
     const onReissueInviteCode = jest.fn();
     const { getByText, getByLabelText } = await render(
-      <GroupHouseScreen
+      <HouseScreen
         houses={[{ ...MISSION_HOUSE, inviteCode: 'ABCD2345' }]}
         onReissueInviteCode={onReissueInviteCode}
       />,
@@ -564,7 +554,7 @@ describe('GroupHouseScreen', () => {
 
   it('hides the reissue button from plain members', async () => {
     const { getByLabelText, queryByLabelText } = await render(
-      <GroupHouseScreen
+      <HouseScreen
         houses={[{ ...MISSION_HOUSE, inviteCode: 'ABCD2345', myRole: 'MEMBER' }]}
         onReissueInviteCode={jest.fn()}
       />,
@@ -576,10 +566,7 @@ describe('GroupHouseScreen', () => {
   it('leaves the house after confirming (member)', async () => {
     const onLeaveHouse = jest.fn();
     const { getByText, getByLabelText } = await render(
-      <GroupHouseScreen
-        houses={[{ ...MISSION_HOUSE, myRole: 'MEMBER' }]}
-        onLeaveHouse={onLeaveHouse}
-      />,
+      <HouseScreen houses={[{ ...MISSION_HOUSE, myRole: 'MEMBER' }]} onLeaveHouse={onLeaveHouse} />,
     );
     await fireEvent.press(getByLabelText('구성원 목록'));
     await fireEvent.press(getByLabelText('집 나가기'));
@@ -590,7 +577,7 @@ describe('GroupHouseScreen', () => {
 
   it('guides the owner to transfer ownership instead of leaving', async () => {
     const { getByText, getByLabelText, queryByLabelText } = await render(
-      <GroupHouseScreen houses={[MISSION_HOUSE]} onLeaveHouse={jest.fn()} />,
+      <HouseScreen houses={[MISSION_HOUSE]} onLeaveHouse={jest.fn()} />,
     );
     await fireEvent.press(getByLabelText('구성원 목록'));
     expect(queryByLabelText('집 나가기')).toBeNull();
@@ -614,7 +601,7 @@ describe('GroupHouseScreen', () => {
       ],
     };
     const { getByText, getByLabelText, queryByText } = await render(
-      <GroupHouseScreen houses={[loneHouse]} onLeaveHouse={onLeaveHouse} />,
+      <HouseScreen houses={[loneHouse]} onLeaveHouse={onLeaveHouse} />,
     );
     await fireEvent.press(getByLabelText('구성원 목록'));
     // 위임 안내 대신 집 삭제 버튼.
@@ -631,7 +618,7 @@ describe('GroupHouseScreen', () => {
     const onVisitFriend = jest.fn();
     const onVisitMyRoom = jest.fn();
     const { getByLabelText, getByText } = await render(
-      <GroupHouseScreen
+      <HouseScreen
         userName="나의 방"
         onVisitFriend={onVisitFriend}
         onVisitMyRoom={onVisitMyRoom}
@@ -664,7 +651,7 @@ describe('GroupHouseScreen', () => {
       ],
     };
     const { getAllByText, getAllByLabelText, getByLabelText, queryAllByText, queryAllByTestId } =
-      await render(<GroupHouseScreen houses={[house]} onVisitFriend={onVisitFriend} />);
+      await render(<HouseScreen houses={[house]} onVisitFriend={onVisitFriend} />);
     // 정원 4 / 멤버 2 → 빈 좌석은 캐릭터 없는 빈 방으로, 텍스트 라벨 없이 (#281).
     expect(queryAllByTestId('vacant-room')).toHaveLength(2);
     expect(queryAllByText('빈방')).toHaveLength(0);
@@ -686,7 +673,7 @@ describe('GroupHouseScreen', () => {
         ...MISSION_HOUSE.floors,
       ],
     };
-    const { getAllByTestId, queryByText } = await render(<GroupHouseScreen houses={[house]} />);
+    const { getAllByTestId, queryByText } = await render(<HouseScreen houses={[house]} />);
     // 기본 프레임이 항상 켜지므로(커버 없음 → 기본 커버) 정원 3은 창문 3칸을
     // 쓰고, 정원 밖 남는 1칸은 조용한 벽 패널로 남는다.
     expect(getAllByTestId('window-filler')).toHaveLength(1);
@@ -695,9 +682,7 @@ describe('GroupHouseScreen', () => {
   });
 
   it('locks scrolling while a tile is lifted for drag (#278)', async () => {
-    const { getByLabelText, getByTestId } = await render(
-      <GroupHouseScreen houses={[MISSION_HOUSE]} />,
-    );
+    const { getByLabelText, getByTestId } = await render(<HouseScreen houses={[MISSION_HOUSE]} />);
     expect(getByTestId('house-scroll').props.scrollEnabled).toBe(true);
     // Long-press lifts the tile: the grid owns the touch, so the scroll locks.
     await fireEvent(getByLabelText('친구'), 'longPress');
@@ -706,7 +691,7 @@ describe('GroupHouseScreen', () => {
 
   it('marks the owner in the member management list', async () => {
     const { getByLabelText, getByText } = await render(
-      <GroupHouseScreen
+      <HouseScreen
         houses={[
           {
             ...MISSION_HOUSE,
@@ -730,7 +715,7 @@ describe('GroupHouseScreen', () => {
   it('shows the guided empty state when there are no houses', async () => {
     const onOpenSearch = jest.fn();
     const { getByText, getByLabelText } = await render(
-      <GroupHouseScreen houses={[]} onOpenSearch={onOpenSearch} />,
+      <HouseScreen houses={[]} onOpenSearch={onOpenSearch} />,
     );
     expect(getByText('아직 함께하는 집이 없어요')).toBeTruthy();
     await fireEvent.press(getByLabelText('집 탐색'));
@@ -742,7 +727,7 @@ describe('GroupHouseScreen', () => {
     const houses = [
       {
         houseId: 7,
-        title: '실집',
+        name: '실집',
         inviteCode: 'ABC-123',
         // Kick is owner-only — a server-backed house shows it just to the OWNER.
         myRole: 'OWNER' as const,
@@ -758,7 +743,7 @@ describe('GroupHouseScreen', () => {
       },
     ];
     const { getByLabelText, getAllByText } = await render(
-      <GroupHouseScreen houses={houses} onKickMember={onKickMember} />,
+      <HouseScreen houses={houses} onKickMember={onKickMember} />,
     );
 
     await fireEvent.press(getByLabelText('구성원 목록'));
@@ -773,7 +758,7 @@ describe('GroupHouseScreen', () => {
     const onKickMember = jest.fn();
     const houses = [
       {
-        title: '실집',
+        name: '실집',
         houseId: 7,
         myRole: 'OWNER' as const,
         floors: [
@@ -788,7 +773,7 @@ describe('GroupHouseScreen', () => {
       },
     ];
     const { getByLabelText, queryByLabelText } = await render(
-      <GroupHouseScreen houses={houses} onKickMember={onKickMember} />,
+      <HouseScreen houses={houses} onKickMember={onKickMember} />,
     );
     await fireEvent.press(getByLabelText('구성원 목록'));
     // 내 카드엔 강퇴 버튼이 아예 없다 (disabled가 아니라 미노출).
@@ -804,7 +789,7 @@ describe('GroupHouseScreen', () => {
     const onAcceptJoinRequest = jest.fn();
     const onRejectJoinRequest = jest.fn();
     const house = {
-      title: '신청 받는 집',
+      name: '신청 받는 집',
       houseId: 7,
       myRole: 'OWNER' as const,
       joinRequests: [
@@ -819,7 +804,7 @@ describe('GroupHouseScreen', () => {
       ],
     };
     const { getByLabelText, getByText } = await render(
-      <GroupHouseScreen
+      <HouseScreen
         houses={[house]}
         onAcceptJoinRequest={onAcceptJoinRequest}
         onRejectJoinRequest={onRejectJoinRequest}
@@ -836,9 +821,7 @@ describe('GroupHouseScreen', () => {
   });
 
   it('opens member management and kicks a member after confirming', async () => {
-    const { getByText, getByLabelText, getAllByText, queryByText } = await render(
-      <GroupHouseScreen />,
-    );
+    const { getByText, getByLabelText, getAllByText, queryByText } = await render(<HouseScreen />);
     await fireEvent.press(getByLabelText('구성원 목록'));
     expect(getByText('구성원 관리')).toBeTruthy();
 

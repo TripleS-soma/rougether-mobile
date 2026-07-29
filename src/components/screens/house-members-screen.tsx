@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 
 import { CharacterAvatar } from '@/components/character-avatar';
 import { type HouseCover, HouseCoverPicker } from '@/components/house-cover-picker';
-import type { House, HouseEditInput, RoomCell } from '@/components/screens/group-house-screen';
+import type { House, HouseEditInput, RoomCell } from '@/components/screens/house-screen';
 import { Icon } from '@/components/ui/icon';
 import { CrownPictogram, DoorPictogram, PencilPictogram } from '@/components/ui/pictograms';
 import { useToast } from '@/components/ui/toast';
@@ -50,7 +50,7 @@ export type HouseMembersScreenProps = {
 /**
  * Member-management sub-view of the group house screen: invite code, owner
  * tools (edit / transfer / reissue), the member list with kick, and leaving
- * the house. Extracted from group-house-screen (pure move, no behavior change).
+ * the house. Extracted from house-screen (pure move, no behavior change).
  */
 export function HouseMembersScreen({
   house: currentHouse,
@@ -92,7 +92,7 @@ export function HouseMembersScreen({
   const canKick = isOwner || !currentHouse.houseId;
 
   const openEditHouse = () => {
-    setEditName(currentHouse.title ?? '');
+    setEditName(currentHouse.name ?? '');
     setEditDesc(currentHouse.description ?? '');
     setEditMax(currentHouse.maxMembers);
     setEditCover(currentHouse.coverImageKey);
@@ -151,9 +151,7 @@ export function HouseMembersScreen({
           <Icon name="back" size={26} color={t.text} />
         </Pressable>
         <View style={styles.flex}>
-          <Text style={[Typography.supporting, { color: t.primaryText }]}>
-            {currentHouse.title}
-          </Text>
+          <Text style={[Typography.supporting, { color: t.primaryText }]}>{currentHouse.name}</Text>
           <Text style={[Typography.h3, { color: t.text }]}>구성원 관리</Text>
         </View>
       </View>
@@ -386,7 +384,7 @@ export function HouseMembersScreen({
             </Text>
             <Text style={[Typography.body, styles.modalBody, { color: t.textMuted }]}>
               {isLoneOwner
-                ? `혼자 남은 집이라 나가면 '${currentHouse?.title}' 집이 삭제되고 탐색·조회에서 사라져요.`
+                ? `혼자 남은 집이라 나가면 '${currentHouse?.name}' 집이 삭제되고 탐색·조회에서 사라져요.`
                 : '나가도 기여 기록은 유지되고, 초대를 받아 다시 참여하면 이전 기록이 복원돼요.'}
             </Text>
             <View style={styles.modalActions}>

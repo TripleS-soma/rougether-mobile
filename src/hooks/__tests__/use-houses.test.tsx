@@ -39,7 +39,7 @@ describe('useHouses — 집 탐색 filter', () => {
 
     // My own house (id 1) is excluded; only the joinable one remains.
     expect(result.current.searchHouses.map((h) => h.name)).toEqual(['남의집']);
-    expect(result.current.houses.map((h) => h.title)).toEqual(['내집']);
+    expect(result.current.houses.map((h) => h.name)).toEqual(['내집']);
   });
 });
 

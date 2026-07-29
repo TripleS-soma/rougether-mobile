@@ -86,6 +86,7 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
                 source={assetSource(coverKey)}
                 style={styles.previewCover}
                 contentFit="cover"
+                cachePolicy="memory-disk"
                 accessibilityLabel="선택한 대표 이미지"
                 testID="preview-cover"
               />

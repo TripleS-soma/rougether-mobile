@@ -14,7 +14,7 @@ import {
   toTodoUpdate,
   toWallet,
   todayCompletions,
-  toGroupHouse,
+  toHouse,
   toPresence,
   toHouseMission,
   toHouseCover,
@@ -366,13 +366,13 @@ describe('API adapters', () => {
         status: 'ACTIVE' as const,
       },
     ];
-    const house = toGroupHouse(detail, members, 6, '준서');
+    const house = toHouse(detail, members, 6, '준서');
     const rooms = house.floors.flatMap((f) => f.rooms);
     expect(rooms.find((r) => r.isMine)?.name).toBe('준서');
     expect(rooms.find((r) => !r.isMine)?.name).toBe('이웃');
 
     // Without a profile nickname it falls back to 멤버 N.
-    const anon = toGroupHouse(detail, members, 6);
+    const anon = toHouse(detail, members, 6);
     expect(anon.floors.flatMap((f) => f.rooms).find((r) => r.isMine)?.name).toBe('멤버 6');
   });
 
@@ -410,7 +410,7 @@ describe('API adapters', () => {
         lastAccessedAt: '2026-07-22T06:00:00Z',
       },
     ];
-    const rooms = toGroupHouse(detail, members, 6, undefined, undefined, now).floors.flatMap(
+    const rooms = toHouse(detail, members, 6, undefined, undefined, now).floors.flatMap(
       (f) => f.rooms,
     );
     expect(rooms.find((r) => r.isMine)?.online).toBe(true);
@@ -420,11 +420,9 @@ describe('API adapters', () => {
   });
 
   it('carries growth points through for the level-progress pill', () => {
-    expect(toGroupHouse({ houseId: 1, name: '집', growthPoints: 130 }, [], 6).growthPoints).toBe(
-      130,
-    );
-    expect(toGroupHouse({ houseId: 1, name: '집', growthPoints: 0 }, [], 6).growthPoints).toBe(0);
-    expect(toGroupHouse({ houseId: 2, name: '집' }, [], 6).growthPoints).toBeUndefined();
+    expect(toHouse({ houseId: 1, name: '집', growthPoints: 130 }, [], 6).growthPoints).toBe(130);
+    expect(toHouse({ houseId: 1, name: '집', growthPoints: 0 }, [], 6).growthPoints).toBe(0);
+    expect(toHouse({ houseId: 2, name: '집' }, [], 6).growthPoints).toBeUndefined();
   });
 
   it('pads the grid to the house capacity with vacant seats, my room bottom-left', () => {
@@ -452,7 +450,7 @@ describe('API adapters', () => {
         status: 'LEFT' as const,
       },
     ];
-    const house = toGroupHouse(detail, members, 6);
+    const house = toHouse(detail, members, 6);
     // Top floor renders first; the yet-unfilled seats pad the upper floor.
     expect(house.floors.map((f) => f.level)).toEqual(['2층', '1층']);
     expect(house.floors[0].rooms.map((r) => r.vacant)).toEqual([true, true]);
@@ -485,7 +483,7 @@ describe('API adapters', () => {
         status: 'ACTIVE' as const,
       },
     ];
-    const house = toGroupHouse({ houseId: 1, name: '섞임집', maxMembers: 6 }, members, 6);
+    const house = toHouse({ houseId: 1, name: '섞임집', maxMembers: 6 }, members, 6);
     // 정원 6 / 멤버 3 → 마지막 멤버는 가운데 행에서 빈방과 나란히 앉는다.
     expect(house.floors.map((f) => f.rooms.map((r) => (r.vacant ? '빈방' : r.name)))).toEqual([
       ['빈방', '빈방'],
@@ -504,7 +502,7 @@ describe('API adapters', () => {
         status: 'ACTIVE' as const,
       },
     ];
-    const house = toGroupHouse({ houseId: 1, name: '홀수집', maxMembers: 3 }, members, 6);
+    const house = toHouse({ houseId: 1, name: '홀수집', maxMembers: 3 }, members, 6);
     expect(house.floors.map((f) => f.rooms.length)).toEqual([1, 2]);
     expect(house.floors[1].rooms.map((r) => r.name)).toEqual(['나야', '빈방']);
   });
@@ -515,8 +513,8 @@ describe('API adapters', () => {
       name: '검증 하우스',
       coverImageKey: 'house/cloud-balloon/frame.png',
     };
-    expect(toGroupHouse(detail, [], 6).coverImageKey).toBe('house/cloud-balloon/frame.png');
-    expect(toGroupHouse({ houseId: 2, name: '무커버' }, [], 6).coverImageKey).toBeUndefined();
+    expect(toHouse(detail, [], 6).coverImageKey).toBe('house/cloud-balloon/frame.png');
+    expect(toHouse({ houseId: 2, name: '무커버' }, [], 6).coverImageKey).toBeUndefined();
   });
 
   it('maps a cover catalog entry and drops keyless ones', () => {
@@ -668,7 +666,7 @@ describe('API adapters', () => {
   });
 
   it('입주 신청은 PENDING만 노출한다 — 처리된 이력 혼합 응답 (#526)', () => {
-    const house = toGroupHouse(
+    const house = toHouse(
       { houseId: 7, name: '집', myRole: 'OWNER' },
       [],
       undefined,
