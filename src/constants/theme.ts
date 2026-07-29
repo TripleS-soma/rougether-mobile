@@ -554,11 +554,12 @@ export const DEFAULT_THEME_MODE: ThemeMode = 'system';
 export const StaticWhite = '#FFFFFF';
 
 /**
- * Animated splash overlay background — MUST match the expo-splash-screen
- * `backgroundColor` in app.json, or the native → JS splash handoff flashes.
- * 앱 아이콘의 크림 배경 실측값 (#409) — 아이콘 아트가 배경 위에 떠 보인다.
+ * Animated splash overlay backgrounds — MUST match the expo-splash-screen
+ * `backgroundColor`(light/dark) in app.json, or the native → JS splash
+ * handoff flashes (#569). 라이트는 스플래시 아트의 크림, 다크는 밤 씬 남색.
  */
-export const SplashBackground = '#FCF0D8';
+export const SplashBackground = '#FEF1D6';
+export const SplashBackgroundDark = '#243273';
 
 /** Dim scrims behind sheets/dialogs/full-screen overlays — theme-independent. */
 export const Overlay = {

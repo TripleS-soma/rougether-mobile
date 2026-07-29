@@ -4,7 +4,8 @@ import Animated, { Easing, Keyframe } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import * as SplashScreen from 'expo-splash-screen';
 
-import { SplashBackground } from '@/constants/theme';
+import { SplashBackground, SplashBackgroundDark } from '@/constants/theme';
+import { useResolvedScheme } from '@/hooks/use-tokens';
 
 const INITIAL_SCALE_FACTOR = Dimensions.get('screen').height / 90;
 const DURATION = 600;
@@ -17,6 +18,9 @@ export function AnimatedSplashOverlay() {
   // holding: 네이티브 스플래시가 아직 떠 있음(최소 노출 대기) → fading: 단색
   // 오버레이가 페이드로 앱을 드러냄 → done: 오버레이 제거.
   const [phase, setPhase] = useState<'holding' | 'fading' | 'done'>('holding');
+  // 네이티브 스플래시와 같은 색으로 이어야 한다 — 다크는 밤 씬 남색 (#570 리뷰).
+  const scheme = useResolvedScheme();
+  const bg = { backgroundColor: scheme === 'dark' ? SplashBackgroundDark : SplashBackground };
 
   useEffect(() => {
     const wait = Math.max(0, MIN_SPLASH_MS - (Date.now() - BOOT_TS));
@@ -32,7 +36,7 @@ export function AnimatedSplashOverlay() {
 
   if (phase === 'holding') {
     // 네이티브 스플래시 뒤에서 같은 색으로 대기 — 숨는 순간 이음새가 없다.
-    return <Animated.View style={styles.backgroundSolidColor} />;
+    return <Animated.View style={[styles.backgroundSolidColor, bg]} />;
   }
 
   const splashKeyframe = new Keyframe({
@@ -62,7 +66,7 @@ export function AnimatedSplashOverlay() {
           scheduleOnRN(setPhase, 'done');
         }
       })}
-      style={styles.backgroundSolidColor}
+      style={[styles.backgroundSolidColor, bg]}
     />
   );
 }
@@ -70,7 +74,6 @@ export function AnimatedSplashOverlay() {
 const styles = StyleSheet.create({
   backgroundSolidColor: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: SplashBackground,
     zIndex: 1000,
   },
 });

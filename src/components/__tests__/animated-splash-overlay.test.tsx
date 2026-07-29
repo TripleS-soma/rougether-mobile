@@ -25,6 +25,15 @@ describe('AnimatedSplashOverlay (#569)', () => {
     expect(SplashScreen.hideAsync).not.toHaveBeenCalled();
   });
 
+  it('hideAsync가 실패해도 전환이 계속된다 (catch 경로)', async () => {
+    SplashScreen.hideAsync.mockRejectedValueOnce(new Error('already hidden'));
+    await render(<AnimatedSplashOverlay />);
+    await act(async () => {
+      jest.advanceTimersByTime(1300);
+    });
+    expect(SplashScreen.hideAsync).toHaveBeenCalledTimes(1);
+  });
+
   it('최소 노출 시간이 지나면 hideAsync를 부르고 페이드로 전환한다', async () => {
     await render(<AnimatedSplashOverlay />);
     await act(async () => {
