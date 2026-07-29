@@ -236,11 +236,8 @@ export function AppShell({
     fontId,
     setFontId,
   } = useBrandTheme();
-  // 스토어 요건(#545): 도움말의 실제 앱 버전 표기 + 문의 메일 진입.
+  // 스토어 요건(#545): 도움말의 실제 앱 버전 표기.
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
-  const openSupportMail = useCallback(() => {
-    void Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('[루게더] 문의')}`);
-  }, []);
   // 집 하늘 연출용 현재 비 여부 (#360) — 서울 고정, 30분 캐시.
   const { raining } = useWeather();
   const [screen, setScreen] = useState<Screen>('myRoom');
@@ -319,6 +316,18 @@ export function AppShell({
   } = useMyCharacters();
   const wornCharacterId = selectedCharacterId ?? characterId;
   const { show: toast } = useToast();
+  // 외부 링크 — 핸들러 없는 기기(메일 앱 미설정 등)에서 reject되므로 토스트로 안내.
+  const openExternal = useCallback(
+    (url: string) => {
+      Linking.openURL(url).catch(() =>
+        toast('링크를 열 수 없어요. 잠시 후 다시 시도해 주세요.', 'error'),
+      );
+    },
+    [toast],
+  );
+  const openSupportMail = useCallback(() => {
+    openExternal(`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('[루게더] 문의')}`);
+  }, [openExternal]);
 
   // 알림 (list + read receipts); loaded on mount so the header bell can show
   // the unread dot, refreshed each time the list opens.
@@ -1186,8 +1195,8 @@ export function AppShell({
               }}
               onOpenSound={() => setScreen('sound')}
               onOpenHelp={() => setScreen('help')}
-              onOpenTerms={() => void Linking.openURL(PolicyUrls.terms)}
-              onOpenPrivacy={() => void Linking.openURL(PolicyUrls.privacy)}
+              onOpenTerms={() => openExternal(PolicyUrls.terms)}
+              onOpenPrivacy={() => openExternal(PolicyUrls.privacy)}
               onReportBug={() => {
                 setScreen('bugReport');
                 void loadBugReports();
