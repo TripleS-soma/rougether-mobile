@@ -1,6 +1,7 @@
 import Svg, { Circle, Ellipse } from 'react-native-svg';
 
 import { useTokens } from '@/hooks/use-tokens';
+import { readableTextColor } from '@/utils/color';
 
 export type CoinIconProps = {
   size?: number;
@@ -18,7 +19,9 @@ export type CoinIconProps = {
 export function CoinIcon({ size = 22, color }: CoinIconProps) {
   const t = useTokens();
   const fill = color ?? t.warning;
-  const engrave = t.warningText;
+  // 다크 팔레트는 warning == warningText라 각인이 면에 묻힌다 — 면 색과의
+  // 대비를 강제해 어느 테마에서든 발바닥이 보이게 한다.
+  const engrave = readableTextColor(t.warningText, fill, 3);
   const tiny = size < 14;
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" testID="coin-icon">
