@@ -1,0 +1,27 @@
+/**
+ * Server error codes the client branches on (#557) — the `code` field of the
+ * JSON error body, surfaced as `ApiError.code`. Catalogue only what the app
+ * actually handles; add entries as new branches appear.
+ */
+export const ErrorCode = {
+  /** 409 — 다이아 부족 (POST /gacha 구매). */
+  SHOP_INSUFFICIENT_BALANCE: 'SHOP_INSUFFICIENT_BALANCE',
+  /** 409 — 다른 기기가 먼저 저장 (PUT /rooms/me/layout, #327). */
+  ROOM_LAYOUT_REVISION_CONFLICT: 'ROOM_LAYOUT_REVISION_CONFLICT',
+  /** 409 — 이미 입주 신청 중 (POST /houses/{id}/join-requests). */
+  HOUSE_JOIN_REQUEST_ALREADY_PENDING: 'HOUSE_JOIN_REQUEST_ALREADY_PENDING',
+  /** 409 — 미션 기여는 하루 1회 (POST .../missions/{id}/contribute). */
+  HOUSE_MISSION_ALREADY_CONTRIBUTED: 'HOUSE_MISSION_ALREADY_CONTRIBUTED',
+  /** 4xx — 목표 미달성 상태에서 보상 요청 (POST .../missions/{id}/claim). */
+  HOUSE_MISSION_NOT_ACHIEVED: 'HOUSE_MISSION_NOT_ACHIEVED',
+  /** 409 — 같은 대상·같은 타입 응원은 하루(KST) 1회 (#329). */
+  HOUSE_CHEER_DUPLICATED: 'HOUSE_CHEER_DUPLICATED',
+  /** 403 — 방장 전용 동작 (미션 생성/삭제 등). */
+  HOUSE_NOT_OWNER: 'HOUSE_NOT_OWNER',
+  /** 4xx — 이미 보상을 받은(COMPLETED) 미션 삭제 시도. */
+  HOUSE_MISSION_ALREADY_CLAIMED: 'HOUSE_MISSION_ALREADY_CLAIMED',
+  /** 409 — 살아있는 루틴이 있는 카테고리 삭제 (DELETE /categories/{id}, #517). */
+  CATEGORY_IN_USE: 'CATEGORY_IN_USE',
+} as const;
+
+export type KnownErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

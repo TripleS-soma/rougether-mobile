@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { CategoryDeleteMode } from '@/api/categories';
 import {
   ApiError,
+  ErrorCode,
   completeRoutine,
   completeTodo,
   createCategory,
@@ -571,7 +572,7 @@ export function useMyRoomData() {
       } catch (err) {
         setCategories(before.categories);
         setRoutines(before.routines);
-        const inUse = err instanceof ApiError && err.bodyText?.includes('CATEGORY_IN_USE');
+        const inUse = err instanceof ApiError && err.code === ErrorCode.CATEGORY_IN_USE;
         toast(
           inUse ? '카테고리에 루틴이 남아 있어 삭제할 수 없어요' : '카테고리 삭제에 실패했어요',
           'error',

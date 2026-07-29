@@ -26,8 +26,30 @@ export type RawRequestOptions = {
   body?: unknown;
 };
 
+/** `code` field of the server's JSON error body, when it parses as such. */
+function parseErrorCode(bodyText?: string): string | undefined {
+  if (!bodyText) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(bodyText);
+    if (parsed && typeof parsed === 'object' && 'code' in parsed) {
+      const code = (parsed as { code: unknown }).code;
+      if (typeof code === 'string') return code;
+    }
+  } catch {
+    // Non-JSON body (HTML error page, plain text) — no structured code.
+  }
+  return undefined;
+}
+
 /** Error thrown for any non-2xx API response. */
 export class ApiError extends Error {
+  /**
+   * Structured server error code (예: 'HOUSE_NOT_OWNER') parsed from the JSON
+   * body — undefined when the body isn't JSON or has no string `code`. Compare
+   * against `ErrorCode` (#557) instead of substring-matching `bodyText`.
+   */
+  readonly code?: string;
+
   constructor(
     readonly status: number,
     readonly method: HttpMethod,
@@ -36,6 +58,7 @@ export class ApiError extends Error {
   ) {
     super(`API ${status}: ${method} ${path}`);
     this.name = 'ApiError';
+    this.code = parseErrorCode(bodyText);
   }
 }
 

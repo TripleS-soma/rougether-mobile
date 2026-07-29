@@ -7,6 +7,7 @@
  * `./types` (generated from the OpenAPI spec).
  */
 export { ApiError } from './http';
+export { ErrorCode, type KnownErrorCode } from './error-codes';
 export {
   apiDelete,
   apiGet,
