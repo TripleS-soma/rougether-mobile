@@ -8,3 +8,6 @@ export const PolicyUrls = {
 } as const;
 
 export type PolicyDoc = keyof typeof PolicyUrls;
+
+/** 도움말 '문의하기'가 여는 지원 메일 주소. */
+export const SUPPORT_EMAIL = 'evan7484@gmail.com';

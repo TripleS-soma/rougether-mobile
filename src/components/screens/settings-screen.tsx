@@ -51,6 +51,9 @@ export type SettingsScreenProps = {
   /** 버그 제보 화면 열기 (#496). */
   onReportBug?: () => void;
   onReplayOnboarding?: () => void;
+  /** 스토어 요건 — 인앱 약관/개인정보처리방침 링크 (#545). */
+  onOpenTerms?: () => void;
+  onOpenPrivacy?: () => void;
   onLogout?: () => void;
 };
 
@@ -74,6 +77,8 @@ export function SettingsScreen({
   onOpenSound,
   onOpenHelp,
   onReportBug,
+  onOpenTerms,
+  onOpenPrivacy,
   onReplayOnboarding,
   onLogout,
 }: SettingsScreenProps) {
@@ -107,6 +112,8 @@ export function SettingsScreen({
         { icon: 'help', label: '도움말', onPress: onOpenHelp },
         { icon: 'bug', label: '버그 제보', onPress: onReportBug },
         { icon: 'refresh', label: '튜토리얼 다시 보기', onPress: onReplayOnboarding },
+        { icon: 'list', label: '이용약관', onPress: onOpenTerms },
+        { icon: 'lock', label: '개인정보처리방침', onPress: onOpenPrivacy },
         { icon: 'leave', label: '로그아웃', onPress: () => setConfirmLogout(true) },
       ],
     },

@@ -73,6 +73,19 @@ describe('SettingsScreen', () => {
     expect(onChangeFont).toHaveBeenCalledWith('system');
   });
 
+  it('약관·개인정보처리방침 링크 행을 연다 (#545)', async () => {
+    const onOpenTerms = jest.fn();
+    const onOpenPrivacy = jest.fn();
+    const { getByText } = await render(
+      <SettingsScreen onOpenTerms={onOpenTerms} onOpenPrivacy={onOpenPrivacy} />,
+    );
+
+    await fireEvent.press(getByText('이용약관'));
+    expect(onOpenTerms).toHaveBeenCalledTimes(1);
+    await fireEvent.press(getByText('개인정보처리방침'));
+    expect(onOpenPrivacy).toHaveBeenCalledTimes(1);
+  });
+
   it('replays onboarding', async () => {
     const onReplayOnboarding = jest.fn();
     const { getByText } = await render(<SettingsScreen onReplayOnboarding={onReplayOnboarding} />);
