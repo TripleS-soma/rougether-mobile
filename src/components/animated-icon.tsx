@@ -32,11 +32,21 @@ export function AnimatedSplashOverlay() {
     return () => clearTimeout(timer);
   }, []);
 
+  // 안전망 (#579): 페이드 완료 콜백이 유실돼도 오버레이가 화면을 영원히
+  // 덮지 않게, fading 진입 후 애니메이션 길이 + 여유가 지나면 강제 제거.
+  useEffect(() => {
+    if (phase !== 'fading') return;
+    const failsafe = setTimeout(() => setPhase('done'), DURATION + 400);
+    return () => clearTimeout(failsafe);
+  }, [phase]);
+
   if (phase === 'done') return null;
 
   if (phase === 'holding') {
     // 네이티브 스플래시 뒤에서 같은 색으로 대기 — 숨는 순간 이음새가 없다.
-    return <Animated.View style={[styles.backgroundSolidColor, bg]} />;
+    // key가 달라야 fading 전환 때 재마운트되어 entering 애니메이션이 실행된다
+    // (같은 위치의 같은 타입이면 업데이트로 처리돼 entering이 스킵 — #579).
+    return <Animated.View key="holding" style={[styles.backgroundSolidColor, bg]} />;
   }
 
   const splashKeyframe = new Keyframe({
@@ -60,6 +70,7 @@ export function AnimatedSplashOverlay() {
 
   return (
     <Animated.View
+      key="fading"
       entering={splashKeyframe.duration(DURATION).withCallback((finished) => {
         'worklet';
         if (finished) {

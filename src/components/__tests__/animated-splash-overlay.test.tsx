@@ -41,4 +41,17 @@ describe('AnimatedSplashOverlay (#569)', () => {
     });
     expect(SplashScreen.hideAsync).toHaveBeenCalledTimes(1);
   });
+
+  it('페이드 완료 콜백이 유실돼도 안전망 타이머로 오버레이가 사라진다 (#579)', async () => {
+    const { queryByTestId, toJSON } = await render(<AnimatedSplashOverlay />);
+    void queryByTestId;
+    await act(async () => {
+      jest.advanceTimersByTime(1300); // holding → fading
+    });
+    expect(toJSON()).not.toBeNull();
+    await act(async () => {
+      jest.advanceTimersByTime(1100); // DURATION(600)+400 안전망 경과
+    });
+    expect(toJSON()).toBeNull(); // 오버레이 제거 — 단색 화면에 갇히지 않는다
+  });
 });
