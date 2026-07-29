@@ -824,6 +824,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     time?: string;
     /** 사진 인증 루틴 — 카메라 배지. */
     photoVerify?: boolean;
+    /** 반복 루틴 — 제목 뒤 은은한 ↻ 마커로 1회성 투두와 구분 (#576, 시안 A). */
+    repeats?: boolean;
     onToggle: (e?: GestureResponderEvent) => void;
     /** 없으면(기록만 남은 삭제 항목) 행 본문이 메뉴를 열지 않는다. */
     onMenu?: () => void;
@@ -832,6 +834,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   };
 
   const rowFromRoutine = (routine: Routine, date: string): RowSpec => ({
+    repeats: routine.kind !== 'todo',
     key: routine.id,
     title: routine.title,
     done: isDone(routine.id, date),
@@ -844,6 +847,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   });
 
   const rowFromCalendarItem = (item: CalendarDayItem): RowSpec => ({
+    repeats: item.kind === 'routine',
     key: `${item.kind}-${item.id}`,
     title: item.title,
     done: item.completed,
@@ -880,6 +884,11 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             ]}>
             {row.title}
           </Text>
+          {row.repeats ? (
+            <View testID="repeat-marker">
+              <Icon name="refresh" size={12} color={t.textDisabled} />
+            </View>
+          ) : null}
           {row.time ? (
             <View style={styles.badges}>
               {row.time ? (

@@ -514,6 +514,26 @@ describe('MyRoomScreen', () => {
     expect(header.props.accessibilityState?.disabled).toBe(true);
   });
 
+  it('반복 루틴에만 ↻ 마커가 붙는다 — 투두는 무마커 (#576)', async () => {
+    const rows = [
+      { id: 'r1', title: '반복 루틴', category: '건강', kind: 'routine' as const },
+      { id: 't1', title: '일회성 투두', category: '건강', kind: 'todo' as const, dueDate: TODAY },
+    ];
+    const categories = [
+      {
+        id: '건강',
+        name: '건강',
+        icon: 'dumbbell' as const,
+        color: '#7FA87F',
+        visibility: 'public' as const,
+      },
+    ];
+    const { getAllByTestId } = await render(
+      <MyRoomScreen routines={rows} categories={categories} />,
+    );
+    expect(getAllByTestId('repeat-marker')).toHaveLength(1);
+  });
+
   it('renders uncategorized routines even when the user has no categories', async () => {
     // API state after a fresh account adds routines without a category:
     // categories = [], routines have no category → must show in a 미분류 group,
