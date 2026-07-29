@@ -242,6 +242,10 @@ export type HouseScreenProps = {
   houses?: House[];
   /** True while my houses are loading from the API. */
   loading?: boolean;
+  /** True when the initial load failed (#549) — 빈 상태 대신 에러 + 다시 시도. */
+  loadError?: boolean;
+  /** Re-run the failed load (다시 시도 button). */
+  onRetry?: () => void;
   characterId?: CharacterId;
   /** 헤더 프로필 블록 — 나의 방 헤더와 같은 아바타·닉네임·스트릭 (#420). */
   userName?: string;
@@ -321,6 +325,8 @@ export type HouseScreenProps = {
 export const HouseScreen = memo(function HouseScreen({
   houses = DEFAULT_HOUSES,
   loading = false,
+  loadError = false,
+  onRetry,
   characterId = DEFAULT_CHARACTER_ID,
   userName = '준서',
   streakDays = 0,
@@ -766,6 +772,22 @@ export const HouseScreen = memo(function HouseScreen({
             <>
               <ActivityIndicator color={t.primary} />
               <Text style={[Typography.supporting, { color: t.textMuted }]}>불러오는 중…</Text>
+            </>
+          ) : loadError ? (
+            // 로드 실패 (#549) — 집이 있는 사용자가 '집 없음' 가입 유도를 보지
+            // 않도록 빈 상태 분기보다 먼저 처리한다.
+            <>
+              <Text style={[Typography.h3, { color: t.text }]}>집 정보를 불러오지 못했어요</Text>
+              <Text style={[Typography.body, styles.emptyBody, { color: t.textMuted }]}>
+                네트워크 상태를 확인하고 다시 시도해 주세요.
+              </Text>
+              <ScalePressable
+                onPress={onRetry}
+                accessibilityRole="button"
+                accessibilityLabel="다시 시도"
+                style={[styles.emptyCta, { backgroundColor: t.primary }]}>
+                <Text style={[Typography.label, { color: t.onPrimary }]}>다시 시도</Text>
+              </ScalePressable>
             </>
           ) : (
             <>

@@ -208,4 +208,18 @@ describe('FriendRoomScreen', () => {
     await fireEvent.press(getByLabelText('방명록 남기기'));
     expect(getByText('데모 방명록')).toBeTruthy();
   });
+
+  // 방문 실패는 빈 방으로 위장하지 않는다 (#549).
+  it('로드 실패 시 방 대신 실패 상태 + 다시 시도를 보여준다 (#549)', async () => {
+    const onRetry = jest.fn();
+    const { getByText, getByLabelText, queryByText } = await render(
+      <FriendRoomScreen friendName="민지" loadError onRetry={onRetry} />,
+    );
+
+    expect(getByText('친구 방을 불러오지 못했어요')).toBeTruthy();
+    // 방·루틴 섹션은 렌더하지 않는다.
+    expect(queryByText('민지의 루틴')).toBeNull();
+    await fireEvent.press(getByLabelText('다시 시도'));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
 });

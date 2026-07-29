@@ -77,22 +77,30 @@ export type HousePreviewDetail = {
   missions?: HouseMission[];
 };
 
+/** 네트워크/서버 오류 안내 (#549) — 잘못된 초대코드 안내와 구분한다. */
+const NETWORK_ERROR_MSG = '네트워크를 확인해주세요. 잠시 후 다시 시도해 주세요.';
+
 export type HouseSearchScreenProps = {
   /** Browsable houses from the API (`GET /houses`). */
   houses?: SearchHouse[];
   /** True while the browse list is loading. */
   loading?: boolean;
+  /** True when the browse list failed to load (#549) — 빈 결과와 구분해 표시. */
+  loadError?: boolean;
+  /** Re-run the failed browse-list load (다시 시도 button). */
+  onRetry?: () => void;
   onBack?: () => void;
   /**
    * Join with an invite code; resolves true on success (the caller navigates),
-   * false shows an inline error.
+   * false = 잘못된/만료 코드, 'network' = 네트워크·서버 오류 (#549 문구 분기).
    */
-  onJoinByCode?: (code: string) => Promise<boolean>;
+  onJoinByCode?: (code: string) => Promise<boolean | 'network'>;
   /**
-   * Preview the house behind a code before joining; null = unknown code.
+   * Preview the house behind a code before joining; null = unknown code,
+   * 'network' = 네트워크·서버 오류 (잘못된 코드와 다른 안내, #549).
    * When provided, 입주 first shows the house name/headcount for confirmation.
    */
-  onPreviewCode?: (code: string) => Promise<HousePreview | null>;
+  onPreviewCode?: (code: string) => Promise<HousePreview | null | 'network'>;
   /** Join a browsable house directly by its id. */
   onJoinHouse?: (houseId: number) => void;
   /** 참여 전 미리보기 로드 (#328, 미션 진행 포함 #532); null = 실패. */
@@ -113,6 +121,8 @@ export type HouseSearchScreenProps = {
 export function HouseSearchScreen({
   houses = [],
   loading = false,
+  loadError = false,
+  onRetry,
   onBack,
   onJoinByCode,
   onPreviewCode,
@@ -165,14 +175,17 @@ export function HouseSearchScreen({
     if (onPreviewCode) {
       const info = await onPreviewCode(trimmed);
       setJoining(false);
-      if (!info) setCodeError('초대코드를 확인해주세요. 만료되었거나 없는 코드예요.');
+      // 네트워크/서버 오류는 잘못된 코드와 구분해 안내한다 (#549).
+      if (info === 'network') setCodeError(NETWORK_ERROR_MSG);
+      else if (!info) setCodeError('초대코드를 확인해주세요. 만료되었거나 없는 코드예요.');
       else if (info.expired) setCodeError('만료된 초대코드예요. 새 코드를 받아주세요.');
       else setPreview({ code: trimmed, info });
       return;
     }
     const ok = (await onJoinByCode?.(trimmed)) ?? false;
     setJoining(false);
-    if (!ok) setCodeError('초대코드를 확인해주세요. 만료되었거나 없는 코드예요.');
+    if (ok === 'network') setCodeError(NETWORK_ERROR_MSG);
+    else if (!ok) setCodeError('초대코드를 확인해주세요. 만료되었거나 없는 코드예요.');
   };
 
   const confirmJoinPreview = async () => {
@@ -180,7 +193,8 @@ export function HouseSearchScreen({
     setJoining(true);
     const ok = (await onJoinByCode?.(preview.code)) ?? false;
     setJoining(false);
-    if (ok) setPreview(null);
+    if (ok === true) setPreview(null);
+    else if (ok === 'network') setCodeError(NETWORK_ERROR_MSG);
     else setCodeError('입주에 실패했어요. 만석이거나 이미 참여 중일 수 있어요.');
   };
 
@@ -314,6 +328,20 @@ export function HouseSearchScreen({
         <View style={styles.list}>
           {loading ? (
             <ActivityIndicator color={t.primary} style={styles.loading} />
+          ) : loadError ? (
+            // 로드 실패 (#549) — 빈 검색 결과('검색 결과가 없어요')로 위장하지 않는다.
+            <View style={styles.errorBlock}>
+              <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
+                추천 집 목록을 불러오지 못했어요.
+              </Text>
+              <Pressable
+                onPress={onRetry}
+                accessibilityRole="button"
+                accessibilityLabel="다시 시도"
+                style={[styles.retryBtn, { backgroundColor: t.primary }]}>
+                <Text style={[Typography.label, { color: t.onPrimary }]}>다시 시도</Text>
+              </Pressable>
+            </View>
           ) : filtered.length === 0 ? (
             <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
               검색 결과가 없어요
@@ -631,6 +659,16 @@ const styles = StyleSheet.create({
   },
   list: { gap: Spacing.two },
   loading: { paddingVertical: Spacing.six },
+  errorBlock: {
+    alignItems: 'center',
+    paddingVertical: Spacing.four,
+    gap: Spacing.two,
+  },
+  retryBtn: {
+    borderRadius: Radius.pill,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.five,
+  },
   houseRow: {
     flexDirection: 'row',
     alignItems: 'center',

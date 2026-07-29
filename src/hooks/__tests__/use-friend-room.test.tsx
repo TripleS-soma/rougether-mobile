@@ -140,6 +140,30 @@ describe('useFriendRoom', () => {
     expect(result.current.friendRoom.recentActivity).toBeUndefined();
   });
 
+  // 방문 실패는 빈 방으로 위장하지 않는다 (#549).
+  it('방·루틴·기록 3요청 전멸 시 error, 재시도 성공 시 해제된다 (#549)', async () => {
+    let broken = true;
+    global.fetch = jest.fn(async (url: string) => {
+      if (broken) return { ok: false, status: 500, text: async () => '{}' };
+      if (url.includes('/room')) return res({ streak: { currentCount: 2 } });
+      return res({});
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useFriendRoom());
+    await act(async () => {
+      await result.current.load(11, 42, CATALOGUE);
+    });
+    expect(result.current.friendRoom.error).toBe(true);
+    expect(result.current.friendRoom.loading).toBe(false);
+
+    broken = false;
+    await act(async () => {
+      await result.current.load(11, 42, CATALOGUE);
+    });
+    expect(result.current.friendRoom.error).toBeFalsy();
+    expect(result.current.friendRoom.streakDays).toBe(2);
+  });
+
   it('resets to the empty state when the ids are missing (demo houses)', async () => {
     global.fetch = jest.fn() as unknown as typeof fetch;
     const { result } = await renderHook(() => useFriendRoom());

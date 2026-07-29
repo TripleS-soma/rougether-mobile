@@ -45,6 +45,12 @@ export type FriendRoom = {
   /** Recent completion history (14 days); undefined while unloaded/failed. */
   recentActivity?: FriendActivityDay[];
   loading: boolean;
+  /**
+   * 방·루틴·기록 3요청이 전멸했을 때 true (#549) — 방문 실패를 빈 방으로
+   * 위장하지 않도록 화면이 실패+다시 시도를 보여준다. 부분 실패는 기존대로
+   * 성공한 데이터만 렌더한다.
+   */
+  error?: boolean;
 };
 
 const EMPTY: FriendRoom = { placement: null, streakDays: 0, routines: [], loading: false };
@@ -73,6 +79,11 @@ export function useFriendRoom() {
         fetchHouseMemberRoutineCompletions(houseId, membershipId).catch(() => null),
       ]);
       if (seq !== seqRef.current) return;
+      // 3요청 전멸 = 방문 자체가 실패 — 빈 방 대신 에러 상태로 (#549).
+      if (!room && !day && !completions) {
+        setFriendRoom({ ...EMPTY, error: true });
+        return;
+      }
       const resolved = room && catalogue ? fromFriendRoomSlots(room.slots ?? [], catalogue) : null;
       // FREE_V1 친구 방은 placements를 assetKey 기준으로 해석해 그대로 렌더 (#327).
       const friendPlacements =

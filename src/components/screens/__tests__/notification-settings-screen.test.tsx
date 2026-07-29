@@ -37,4 +37,20 @@ describe('NotificationSettingsScreen', () => {
     await fireEvent.press(getByLabelText('루틴 리마인더'));
     expect(onToggle).not.toHaveBeenCalled();
   });
+
+  // 조회 실패 시 기본값이 서버값처럼 보이지 않게 안내한다 (#549).
+  it('로드 실패 시 안내 배너 + 다시 불러오기를 보여준다 (#549)', async () => {
+    const onRetry = jest.fn();
+    const { getByText, getByLabelText, queryByText, rerender } = await render(
+      <NotificationSettingsScreen loadError onRetry={onRetry} />,
+    );
+
+    expect(getByText(/설정을 불러오지 못했어요/)).toBeTruthy();
+    await fireEvent.press(getByLabelText('다시 불러오기'));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+
+    // 재조회 성공(해제) 시 배너가 사라진다.
+    await rerender(<NotificationSettingsScreen loadError={false} onRetry={onRetry} />);
+    expect(queryByText(/설정을 불러오지 못했어요/)).toBeNull();
+  });
 });

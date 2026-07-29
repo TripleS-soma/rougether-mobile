@@ -64,6 +64,10 @@ export function useHouses() {
   const [searchHouses, setSearchHouses] = useState<SearchHouse[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchLoading, setSearchLoading] = useState(true);
+  // 초기 로드 실패 플래그 (#549) — 빈 상태('집 없음' 가입 유도)로 위장하지
+  // 않도록 화면이 에러+다시 시도를 보여준다. 재시도 성공 시 해제.
+  const [error, setError] = useState(false);
+  const [searchError, setSearchError] = useState(false);
   const { show: toast } = useToast();
 
   // 내 셀 라벨용 닉네임 캐시 — 단일 집 갱신(#534)이 fetchMe를 반복하지 않게.
@@ -128,40 +132,64 @@ export function useHouses() {
     setSearchHouses((list.items ?? []).map((h, i) => toSearchHouse(h, i)));
   }, []);
 
-  useEffect(() => {
-    let active = true;
-    reloadMyHouses()
-      .catch(() => {
-        // Non-fatal; the screen shows the empty/guide state.
-      })
-      .finally(() => active && setLoading(false));
-    reloadSearch()
-      .catch(() => {})
-      .finally(() => active && setSearchLoading(false));
-    return () => {
-      active = false;
-    };
-  }, [reloadMyHouses, reloadSearch]);
-
-  /** Look up the house behind an invite code (pre-join preview); null = unknown. */
-  const previewByCode = useCallback(async (code: string): Promise<HousePreview | null> => {
+  /** 내 집 목록 로드 사이클 (스피너 → 데이터 | 에러) — 초기 로드·재시도 공용. */
+  const loadMyHouses = useCallback(async () => {
+    setLoading(true);
+    setError(false);
     try {
-      return toHousePreview(await previewHouseByCode(code));
+      await reloadMyHouses();
     } catch {
-      return null;
+      setError(true);
+    } finally {
+      setLoading(false);
     }
-  }, []);
+  }, [reloadMyHouses]);
+
+  /** 탐색 목록 로드 사이클 — 실패는 빈 검색 결과와 구분해 표시한다 (#549). */
+  const loadSearch = useCallback(async () => {
+    setSearchLoading(true);
+    setSearchError(false);
+    try {
+      await reloadSearch();
+    } catch {
+      setSearchError(true);
+    } finally {
+      setSearchLoading(false);
+    }
+  }, [reloadSearch]);
+
+  useEffect(() => {
+    void loadMyHouses();
+    void loadSearch();
+  }, [loadMyHouses, loadSearch]);
+
+  // 초대코드 오류 구분 (#549): 잘못된/만료 코드(4xx)는 null, 그 외(네트워크
+  // 단절·서버 5xx)는 'network' — 화면 문구가 갈린다.
+  const isInvalidCodeError = (e: unknown) =>
+    e instanceof ApiError && e.status >= 400 && e.status < 500;
+
+  /** Look up the house behind an invite code (pre-join preview); null = unknown code. */
+  const previewByCode = useCallback(
+    async (code: string): Promise<HousePreview | null | 'network'> => {
+      try {
+        return toHousePreview(await previewHouseByCode(code));
+      } catch (e) {
+        return isInvalidCodeError(e) ? null : 'network';
+      }
+    },
+    [],
+  );
 
   /** Join with an invite code; true on success (my houses refreshed). */
   const joinByCode = useCallback(
-    async (code: string): Promise<boolean> => {
+    async (code: string): Promise<boolean | 'network'> => {
       try {
         await joinHouseByCode(code);
         toast('입주 완료!', 'success');
         await reloadMyHouses();
         return true;
-      } catch {
-        return false;
+      } catch (e) {
+        return isInvalidCodeError(e) ? false : 'network';
       }
     },
     [toast, reloadMyHouses],
@@ -460,6 +488,11 @@ export function useHouses() {
       searchHouses: browsableHouses,
       loading,
       searchLoading,
+      error,
+      searchError,
+      /** Re-run the failed initial load (에러 상태의 다시 시도, #549). */
+      retry: loadMyHouses,
+      retrySearch: loadSearch,
       refreshHouses: reloadMyHouses,
       previewByCode,
       previewHouse,
@@ -485,6 +518,10 @@ export function useHouses() {
       browsableHouses,
       loading,
       searchLoading,
+      error,
+      searchError,
+      loadMyHouses,
+      loadSearch,
       reloadMyHouses,
       previewByCode,
       previewHouse,

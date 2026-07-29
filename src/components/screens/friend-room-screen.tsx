@@ -101,6 +101,10 @@ export type FriendRoomScreenProps = {
   recentActivity?: FriendActivityDay[];
   /** True while the friend's room/routines are loading from the server. */
   loading?: boolean;
+  /** True when the visit load failed entirely (#549) — 빈 방 대신 실패+다시 시도. */
+  loadError?: boolean;
+  /** Re-run the failed visit load (다시 시도 button). */
+  onRetry?: () => void;
   /** Guestbook notes (newest first); defaults to a demo list when unwired. */
   guestbook?: GuestbookEntry[];
   guestbookLoading?: boolean;
@@ -135,6 +139,8 @@ export function FriendRoomScreen({
   routines,
   recentActivity,
   loading = false,
+  loadError = false,
+  onRetry,
   guestbook,
   guestbookLoading = false,
   guestbookHasNext = false,
@@ -247,8 +253,46 @@ export function FriendRoomScreen({
     return () => clearTimeout(timer);
   }, [inputFocused, keyboardPad]);
 
+  const screenStyle = useScreenStyle([]);
+
+  // 방문 실패 (#549) — 방·루틴·기록이 전부 실패하면 빈 방으로 위장하지 않고
+  // 실패 상태 + 다시 시도를 보여준다 (부분 실패는 성공한 데이터로 렌더).
+  if (loadError) {
+    return (
+      <View style={[styles.screen, screenStyle]}>
+        <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
+          <Pressable
+            onPress={onBack}
+            accessibilityRole="button"
+            accessibilityLabel="뒤로가기"
+            style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
+            <Icon name="back" size={26} color={t.text} />
+          </Pressable>
+          <View style={styles.flex}>
+            <Text style={[Typography.h3, { color: t.text }]} numberOfLines={1}>
+              {friendName}의 방
+            </Text>
+          </View>
+        </View>
+        <View style={styles.errorWrap}>
+          <Text style={[Typography.h3, { color: t.text }]}>친구 방을 불러오지 못했어요</Text>
+          <Text style={[Typography.body, styles.errorBody, { color: t.textMuted }]}>
+            네트워크 상태를 확인하고 다시 시도해 주세요.
+          </Text>
+          <Pressable
+            onPress={onRetry}
+            accessibilityRole="button"
+            accessibilityLabel="다시 시도"
+            style={[styles.retryBtn, { backgroundColor: t.primary }]}>
+            <Text style={[Typography.label, { color: t.onPrimary }]}>다시 시도</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
+
   return (
-    <View style={[styles.screen, useScreenStyle([])]}>
+    <View style={[styles.screen, screenStyle]}>
       <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
         <Pressable
           onPress={onBack}
@@ -591,6 +635,22 @@ function CheerBurst({ type, onDone }: { type: CheerType; onDone: () => void }) {
 }
 
 const styles = StyleSheet.create({
+  // 방문 실패 상태 (#549).
+  errorWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.six,
+    gap: Spacing.two,
+  },
+  errorBody: {
+    textAlign: 'center',
+  },
+  retryBtn: {
+    borderRadius: Radius.pill,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.five,
+  },
   modalOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: Overlay.dim,

@@ -840,4 +840,17 @@ describe('HouseScreen', () => {
     expect(queryByText('정말 강퇴할까요?')).toBeNull();
     expect(getByText('강퇴된 멤버')).toBeTruthy();
   });
+
+  // 로드 실패는 '집 없음' 가입 유도로 위장하지 않는다 (#549).
+  it('로드 실패 시 빈 상태 대신 에러 + 다시 시도를 보여준다 (#549)', async () => {
+    const onRetry = jest.fn();
+    const { getByText, getByLabelText, queryByText } = await render(
+      <HouseScreen houses={[]} loadError onRetry={onRetry} />,
+    );
+
+    expect(getByText('집 정보를 불러오지 못했어요')).toBeTruthy();
+    expect(queryByText('아직 함께하는 집이 없어요')).toBeNull();
+    await fireEvent.press(getByLabelText('다시 시도'));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
 });
