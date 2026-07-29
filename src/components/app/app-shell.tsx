@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 import { Image } from 'expo-image';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, BackHandler, Easing, StyleSheet, View } from 'react-native';
+import { Animated, BackHandler, Easing, Linking, StyleSheet, View } from 'react-native';
 
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
@@ -40,6 +41,7 @@ import {
   useCoachTargets,
 } from '@/components/ui/coach-mark';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
+import { PolicyUrls, SUPPORT_EMAIL } from '@/constants/policy';
 import { CATEGORY_COLORS, type Routine } from '@/constants/routines';
 import { screenView, track } from '@/lib/analytics';
 import { onNotificationTap } from '@/lib/push-events';
@@ -234,6 +236,11 @@ export function AppShell({
     fontId,
     setFontId,
   } = useBrandTheme();
+  // 스토어 요건(#545): 도움말의 실제 앱 버전 표기 + 문의 메일 진입.
+  const appVersion = Constants.expoConfig?.version ?? '1.0.0';
+  const openSupportMail = useCallback(() => {
+    void Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('[루게더] 문의')}`);
+  }, []);
   // 집 하늘 연출용 현재 비 여부 (#360) — 서울 고정, 30분 캐시.
   const { raining } = useWeather();
   const [screen, setScreen] = useState<Screen>('myRoom');
@@ -1179,6 +1186,8 @@ export function AppShell({
               }}
               onOpenSound={() => setScreen('sound')}
               onOpenHelp={() => setScreen('help')}
+              onOpenTerms={() => void Linking.openURL(PolicyUrls.terms)}
+              onOpenPrivacy={() => void Linking.openURL(PolicyUrls.privacy)}
               onReportBug={() => {
                 setScreen('bugReport');
                 void loadBugReports();
@@ -1271,7 +1280,13 @@ export function AppShell({
             />
           ) : null}
 
-          {screen === 'help' ? <HelpScreen onBack={() => setScreen('settings')} /> : null}
+          {screen === 'help' ? (
+            <HelpScreen
+              onBack={() => setScreen('settings')}
+              appVersion={appVersion}
+              onContact={openSupportMail}
+            />
+          ) : null}
         </Animated.View>
 
         {activeTab ? (
