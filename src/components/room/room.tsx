@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { Pressable, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { type CharacterAnimationSet, CharacterAvatar } from '@/components/character-avatar';
@@ -95,8 +95,11 @@ export type RoomProps = {
  * real art exists. The character is a static pose frame; when
  * `interactiveCharacter` is set, tapping it cycles the pose (나의 방), otherwise
  * static. Shared by the room cluster screens (my room, decor, friend room).
+ *
+ * memo 경계 (#539): 방 캔버스는 가장 무거운 서브트리라 부모 리렌더에서
+ * 끊는다 — 함수/객체 prop은 호출부에서 참조 안정이 전제다.
  */
-export function Room({
+export const Room = memo(function Room({
   wallpaperId = DEFAULT_WALLPAPER_ID,
   floorId,
   backgroundId,
@@ -293,7 +296,7 @@ export function Room({
       )}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   roomFill: {

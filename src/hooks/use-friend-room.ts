@@ -4,7 +4,7 @@
  * The friend's slots resolve against the shop catalogue by assetKey — their
  * userItemIds belong to their inventory, which we don't hold.
  */
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import {
   fetchHouseMemberDay,
@@ -54,47 +54,53 @@ export function useFriendRoom() {
   // Visits can be rapid (back → next friend); only the latest load may land.
   const seqRef = useRef(0);
 
-  /** Load a member's room + day. Missing ids (demo houses) reset to empty. */
-  const load = async (houseId?: number, membershipId?: number, catalogue?: ShopCatalogue) => {
-    const seq = ++seqRef.current;
-    if (houseId == null || membershipId == null) {
-      setFriendRoom(EMPTY);
-      return;
-    }
-    setFriendRoom({ ...EMPTY, loading: true });
-    // Each endpoint fails soft so one outage doesn't blank the others' data.
-    const [room, day, completions] = await Promise.all([
-      fetchHouseMemberRoom(houseId, membershipId).catch(() => null),
-      fetchHouseMemberDay(houseId, membershipId).catch(() => null),
-      fetchHouseMemberRoutineCompletions(houseId, membershipId).catch(() => null),
-    ]);
-    if (seq !== seqRef.current) return;
-    const resolved = room && catalogue ? fromFriendRoomSlots(room.slots ?? [], catalogue) : null;
-    // FREE_V1 친구 방은 placements를 assetKey 기준으로 해석해 그대로 렌더 (#327).
-    const friendPlacements =
-      room && catalogue && room.layoutFormat === 'FREE_V1' && room.placements?.length
-        ? fromRoomPlacements(room.placements, catalogue)
-        : null;
-    // Same guard as toOwnedCharacter: a code the app doesn't know renders as the
-    // default character, so its animations must not ride along (wrong pairing).
-    const friendCharacterId = characterIdFromCode(room?.character?.code);
-    setFriendRoom({
-      placement: resolved
-        ? {
-            ...resolved,
-            wallpaperId: resolved.wallpaperId ?? DEFAULT_WALLPAPER_ID,
-            placements: friendPlacements,
-          }
-        : null,
-      characterId: friendCharacterId,
-      characterAnimations: friendCharacterId ? room?.character?.animations : undefined,
-      streakDays: room?.streak?.currentCount ?? 0,
-      routines: day ? toFriendRoutines(day) : [],
-      // undefined on failure hides the section instead of faking an empty history.
-      recentActivity: completions ? toFriendActivity(completions) : undefined,
-      loading: false,
-    });
-  };
+  /**
+   * Load a member's room + day. Missing ids (demo houses) reset to empty.
+   * useCallback: 셸이 memo 화면(HouseScreen)의 콜백 안에 넣는다 (#539).
+   */
+  const load = useCallback(
+    async (houseId?: number, membershipId?: number, catalogue?: ShopCatalogue) => {
+      const seq = ++seqRef.current;
+      if (houseId == null || membershipId == null) {
+        setFriendRoom(EMPTY);
+        return;
+      }
+      setFriendRoom({ ...EMPTY, loading: true });
+      // Each endpoint fails soft so one outage doesn't blank the others' data.
+      const [room, day, completions] = await Promise.all([
+        fetchHouseMemberRoom(houseId, membershipId).catch(() => null),
+        fetchHouseMemberDay(houseId, membershipId).catch(() => null),
+        fetchHouseMemberRoutineCompletions(houseId, membershipId).catch(() => null),
+      ]);
+      if (seq !== seqRef.current) return;
+      const resolved = room && catalogue ? fromFriendRoomSlots(room.slots ?? [], catalogue) : null;
+      // FREE_V1 친구 방은 placements를 assetKey 기준으로 해석해 그대로 렌더 (#327).
+      const friendPlacements =
+        room && catalogue && room.layoutFormat === 'FREE_V1' && room.placements?.length
+          ? fromRoomPlacements(room.placements, catalogue)
+          : null;
+      // Same guard as toOwnedCharacter: a code the app doesn't know renders as the
+      // default character, so its animations must not ride along (wrong pairing).
+      const friendCharacterId = characterIdFromCode(room?.character?.code);
+      setFriendRoom({
+        placement: resolved
+          ? {
+              ...resolved,
+              wallpaperId: resolved.wallpaperId ?? DEFAULT_WALLPAPER_ID,
+              placements: friendPlacements,
+            }
+          : null,
+        characterId: friendCharacterId,
+        characterAnimations: friendCharacterId ? room?.character?.animations : undefined,
+        streakDays: room?.streak?.currentCount ?? 0,
+        routines: day ? toFriendRoutines(day) : [],
+        // undefined on failure hides the section instead of faking an empty history.
+        recentActivity: completions ? toFriendActivity(completions) : undefined,
+        loading: false,
+      });
+    },
+    [],
+  );
 
   return { friendRoom, load };
 }
