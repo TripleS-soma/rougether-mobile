@@ -34,6 +34,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { CoachTarget } from '@/components/ui/coach-mark';
 import { CategoryIcon } from '@/components/ui/category-icon';
 import { Pictogram } from '@/components/ui/pictograms';
+import { RetryState } from '@/components/ui/retry-state';
 import { useToast } from '@/components/ui/toast';
 import { WalletPills } from '@/components/ui/wallet-pills';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
@@ -1059,16 +1060,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
 
                 {!loading && loadError ? (
                   <View style={styles.stateBlock}>
-                    <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
-                      데이터를 불러오지 못했어요.
-                    </Text>
-                    <Pressable
-                      onPress={onRetry}
-                      accessibilityRole="button"
-                      accessibilityLabel="다시 시도"
-                      style={[styles.retryBtn, { backgroundColor: t.primary }]}>
-                      <Text style={[Typography.label, { color: t.onPrimary }]}>다시 시도</Text>
-                    </Pressable>
+                    <RetryState message="데이터를 불러오지 못했어요." onRetry={onRetry} />
                   </View>
                 ) : null}
 
@@ -1574,11 +1566,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.half,
-  },
-  retryBtn: {
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.five,
   },
   badges: {
     flexDirection: 'row',

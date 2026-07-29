@@ -15,6 +15,7 @@ import {
 import type { GachaMachine } from '@/api/adapters';
 import type { DrawResult, GachaDrawCount } from '@/api';
 import { Icon } from '@/components/ui/icon';
+import { RetryState } from '@/components/ui/retry-state';
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { Pictogram, type PictogramName } from '@/components/ui/pictograms';
 import { WalletPills } from '@/components/ui/wallet-pills';
@@ -33,13 +34,20 @@ type Phase = 'idle' | 'charging' | 'burst' | 'reveal';
 const MIN_CHARGE_MS = 1800;
 /** Burst transition (#431) — flash → rays/particles, then the reveal lands. */
 const BURST_MS = 650;
+/** 기본 레어도 — rarity가 없는(또는 미지의) 아이템의 뱃지·색 폴백. */
+const DEFAULT_RARITY: Rarity = '일반';
+
+/** 아이템 rarity 문자열 → 뱃지/버스트 색. 미지정·미지의 값은 기본 레어도 색. */
+const rarityColor = (rarity?: string) =>
+  RARITY_COLORS[(rarity as Rarity) ?? DEFAULT_RARITY] ?? RARITY_COLORS[DEFAULT_RARITY];
+
 /** 레어도 우선순위 — 버스트 색은 뽑은 것 중 최고 레어도를 따른다. */
 const bestRarity = (results: DrawResult[]): Rarity =>
   results.some((r) => r.rarity === '전설')
     ? '전설'
     : results.some((r) => r.rarity === '희귀')
       ? '희귀'
-      : '일반';
+      : DEFAULT_RARITY;
 
 /** 5+1 뽑기 (#520) — 6개 뽑고 비용은 단챠 5회분. */
 const BONUS_DRAW_COUNT = 6;
@@ -92,7 +100,7 @@ export function GachaScreen({
   const [phase, setPhase] = useState<Phase>('idle');
   const [pulled, setPulled] = useState<DrawResult[]>([]);
   // 버스트 연출 파라미터 (#431) — 최고 레어도의 색, 일반은 짧은 버스트.
-  const [burstColor, setBurstColor] = useState(RARITY_COLORS['일반']);
+  const [burstColor, setBurstColor] = useState(RARITY_COLORS[DEFAULT_RARITY]);
   const [burstStrong, setBurstStrong] = useState(false);
   const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => clearTimeout(revealTimer.current ?? undefined), []);
@@ -132,7 +140,7 @@ export function GachaScreen({
     // 정점 버스트 (#431) — 최고 레어도 색의 광선·파티클, 전설은 햅틱 2연타.
     const best = bestRarity(results);
     setBurstColor(RARITY_COLORS[best]);
-    setBurstStrong(best !== '일반');
+    setBurstStrong(best !== DEFAULT_RARITY);
     setPhase('burst');
     hapticSuccess();
     if (best === '전설') setTimeout(hapticSuccess, 180);
@@ -171,16 +179,7 @@ export function GachaScreen({
         {/* 로드 실패 (#549) — 빈 상태('뽑기 없음')로 위장하지 않는다. */}
         {!loading && loadError ? (
           <View style={styles.loadingBlock}>
-            <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
-              뽑기 목록을 불러오지 못했어요.
-            </Text>
-            <Pressable
-              onPress={onRetry}
-              accessibilityRole="button"
-              accessibilityLabel="다시 시도"
-              style={[styles.retryBtn, { backgroundColor: t.primary }]}>
-              <Text style={[Typography.label, { color: t.onPrimary }]}>다시 시도</Text>
-            </Pressable>
+            <RetryState message="뽑기 목록을 불러오지 못했어요." onRetry={onRetry} />
           </View>
         ) : null}
         {!loading && !loadError && gachas.length === 0 ? (
@@ -504,7 +503,7 @@ function RevealCard({ item, index, large }: { item: DrawResult; index: number; l
   const emph = useFontEmphasis();
   const p = useRef(new Animated.Value(0)).current;
   const fade = useRef(new Animated.Value(0)).current;
-  const rarityColor = RARITY_COLORS[(item.rarity as Rarity) ?? '일반'] ?? RARITY_COLORS['일반'];
+  const color = rarityColor(item.rarity);
 
   useEffect(() => {
     Animated.parallel([
@@ -535,7 +534,7 @@ function RevealCard({ item, index, large }: { item: DrawResult; index: number; l
         styles.revealCard,
         large && styles.revealCardLarge,
         style,
-        { backgroundColor: t.surface, borderColor: rarityColor },
+        { backgroundColor: t.surface, borderColor: color },
       ]}>
       {isCdnKey(item.assetKey) ? (
         <Image
@@ -545,10 +544,10 @@ function RevealCard({ item, index, large }: { item: DrawResult; index: number; l
           transition={120}
         />
       ) : (
-        <Icon name="gift" size={large ? 72 : 34} color={rarityColor} />
+        <Icon name="gift" size={large ? 72 : 34} color={color} />
       )}
-      <Text style={[styles.revealBadge, emph('bold'), { backgroundColor: rarityColor }]}>
-        {item.rarity ?? '일반'}
+      <Text style={[styles.revealBadge, emph('bold'), { backgroundColor: color }]}>
+        {item.rarity ?? DEFAULT_RARITY}
       </Text>
       <Text style={[Typography.supporting, styles.center, { color: t.text }]} numberOfLines={2}>
         {item.name}
@@ -582,7 +581,7 @@ function FlipCard({ item, index }: { item: DrawResult; index: number }) {
   const glow = useRef(new Animated.Value(0.3)).current;
   const [flipped, setFlipped] = useState(false);
   const autoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const rarityColor = RARITY_COLORS[(item.rarity as Rarity) ?? '일반'] ?? RARITY_COLORS['일반'];
+  const color = rarityColor(item.rarity);
   const legend = item.rarity === '전설';
 
   const runFlip = () => {
@@ -651,7 +650,7 @@ function FlipCard({ item, index }: { item: DrawResult; index: number }) {
   return (
     <Animated.View style={[styles.flipWrap, dealStyle]}>
       {legend && !flipped ? (
-        <Animated.View style={[styles.flipGlow, { backgroundColor: rarityColor, opacity: glow }]} />
+        <Animated.View style={[styles.flipGlow, { backgroundColor: color, opacity: glow }]} />
       ) : null}
       <Pressable
         onPress={runFlip}
@@ -663,11 +662,7 @@ function FlipCard({ item, index }: { item: DrawResult; index: number }) {
           <Pictogram name="paw" size={34} />
         </Animated.View>
         <Animated.View
-          style={[
-            styles.flipFace,
-            frontStyle,
-            { backgroundColor: t.surface, borderColor: rarityColor },
-          ]}>
+          style={[styles.flipFace, frontStyle, { backgroundColor: t.surface, borderColor: color }]}>
           {isCdnKey(item.assetKey) ? (
             <Image
               source={assetSource(item.assetKey)}
@@ -676,10 +671,10 @@ function FlipCard({ item, index }: { item: DrawResult; index: number }) {
               transition={120}
             />
           ) : (
-            <Icon name="gift" size={34} color={rarityColor} />
+            <Icon name="gift" size={34} color={color} />
           )}
-          <Text style={[styles.revealBadge, emph('bold'), { backgroundColor: rarityColor }]}>
-            {item.rarity ?? '일반'}
+          <Text style={[styles.revealBadge, emph('bold'), { backgroundColor: color }]}>
+            {item.rarity ?? DEFAULT_RARITY}
           </Text>
           <Text style={[Typography.supporting, styles.center, { color: t.text }]} numberOfLines={2}>
             {item.name}
@@ -714,11 +709,6 @@ const styles = StyleSheet.create({
   },
   body: { padding: Spacing.four, gap: Spacing.four },
   loadingBlock: { alignItems: 'center', paddingVertical: Spacing.six, gap: Spacing.two },
-  retryBtn: {
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.five,
-  },
   selector: { gap: Spacing.two },
   rowBlock: { gap: Spacing.one },
   boxRow: { gap: Spacing.two, paddingVertical: Spacing.half },

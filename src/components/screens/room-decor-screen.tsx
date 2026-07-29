@@ -21,6 +21,7 @@ import {
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { Room, type RoomRegion } from '@/components/room/room';
 import { ROOM_RENDER_CONTRACT, roomPercent } from '@/components/room/room-render-contract';
+import { RetryState } from '@/components/ui/retry-state';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Icon } from '@/components/ui/icon';
@@ -595,16 +596,7 @@ export function RoomDecorScreen({
 
         {!loading && loadError ? (
           <View style={styles.loadingBlock}>
-            <Text style={[Typography.body, { color: t.textMuted }]}>
-              카탈로그를 불러오지 못했어요.
-            </Text>
-            <Pressable
-              onPress={onRetry}
-              accessibilityRole="button"
-              accessibilityLabel="다시 시도"
-              style={[styles.retryBtn, { backgroundColor: t.primary }]}>
-              <Text style={[Typography.label, { color: t.onPrimary }]}>다시 시도</Text>
-            </Pressable>
+            <RetryState message="카탈로그를 불러오지 못했어요." onRetry={onRetry} />
           </View>
         ) : null}
 
@@ -1468,11 +1460,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.six,
     gap: Spacing.two,
-  },
-  retryBtn: {
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.five,
   },
   grid: {
     flexDirection: 'row',

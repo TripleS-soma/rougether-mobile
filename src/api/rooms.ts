@@ -18,11 +18,6 @@ export function fetchMyRoom() {
 /** One slot assignment; null userItemId clears the slot server-side. */
 export type RoomSlotSave = { slotType: string; userItemId: number | null };
 
-/** PUT /rooms/me/slots — save the full slot layout (null entries clear). */
-export function updateRoomSlots(slots: RoomSlotSave[]) {
-  return apiPut<RoomResponse>('/rooms/me/slots', { slots });
-}
-
 // 자유 배치(FREE_V1, #327) 와이어 타입 — 스웨거 PlacementItem/RoomLayoutUpdateRequest
 // (다음 gen:api-types 때 types.ts로 흡수). 좌표는 방 렌더 영역 기준 0.0~1.0 정규화.
 export type RoomPlacementSave = {

@@ -1,5 +1,5 @@
 /** Shop (items) + gacha endpoints. */
-import { apiGet, apiGetList, apiPost } from './client';
+import { apiGetList, apiPost } from './client';
 import type { GachaDrawResponse, GachaResponse, ItemResponse, PurchaseResponse } from './types';
 
 export type GachaDrawCount = 1 | 6;
@@ -17,11 +17,6 @@ export function purchaseItem(itemId: number) {
 /** GET /gacha — available gacha machines. */
 export function fetchGachas() {
   return apiGetList<GachaResponse>('/gacha');
-}
-
-/** GET /gacha/{id}. */
-export function fetchGacha(id: number) {
-  return apiGet<GachaResponse>(`/gacha/${id}`);
 }
 
 /** POST /gacha/{id}/draw — draw `count` times. */

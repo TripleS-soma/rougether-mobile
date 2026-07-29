@@ -25,7 +25,8 @@ import {
 } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
 import { CategoryIcon } from '@/components/ui/category-icon';
-import { Overlay, Radius, Spacing } from '@/constants/theme';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Radius, Spacing } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { formatDate, formatTime } from '@/utils/datetime';
@@ -587,69 +588,34 @@ export function AddRoutineScreen({
         ) : null}
       </View>
 
-      {confirmDelete && editRoutine ? (
-        <View style={styles.confirmOverlay}>
-          <Pressable style={styles.backdrop} onPress={() => setConfirmDelete(false)} />
-          <View style={[styles.confirmCard, { backgroundColor: t.screen }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>루틴 삭제</Text>
-            <Text style={[Typography.body, styles.confirmText, { color: t.textMuted }]}>
-              &lsquo;{editRoutine.title}&rsquo; 루틴을 삭제할까요?{'\n'}삭제하면 지난 수행 기록도
-              함께 사라져요.
-            </Text>
-            <View style={styles.confirmBtns}>
-              <Pressable
-                onPress={() => setConfirmDelete(false)}
-                accessibilityRole="button"
-                accessibilityLabel="취소"
-                style={[styles.confirmBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  setConfirmDelete(false);
-                  onDelete?.(editRoutine.id);
-                  onBack?.();
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="삭제"
-                style={[styles.confirmBtn, { backgroundColor: t.danger }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>삭제</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
+      {editRoutine ? (
+        <ConfirmDialog
+          visible={confirmDelete}
+          title="루틴 삭제"
+          body={`‘${editRoutine.title}’ 루틴을 삭제할까요?\n삭제하면 지난 수행 기록도 함께 사라져요.`}
+          confirmLabel="삭제"
+          destructive
+          onConfirm={() => {
+            setConfirmDelete(false);
+            onDelete?.(editRoutine.id);
+            onBack?.();
+          }}
+          onCancel={() => setConfirmDelete(false)}
+        />
       ) : null}
 
-      {confirmDiscard ? (
-        <View style={styles.confirmOverlay}>
-          <Pressable style={styles.backdrop} onPress={() => setConfirmDiscard(false)} />
-          <View style={[styles.confirmCard, { backgroundColor: t.screen }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>정말 나가시겠습니까?</Text>
-            <Text style={[Typography.body, styles.confirmText, { color: t.textMuted }]}>
-              지금 나가면 입력한 내용이 저장되지 않고 사라져요.
-            </Text>
-            <View style={styles.confirmBtns}>
-              <Pressable
-                onPress={() => setConfirmDiscard(false)}
-                accessibilityRole="button"
-                accessibilityLabel="취소"
-                style={[styles.confirmBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  setConfirmDiscard(false);
-                  onBack?.();
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="나가기"
-                style={[styles.confirmBtn, { backgroundColor: t.danger }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>나가기</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      ) : null}
+      <ConfirmDialog
+        visible={confirmDiscard}
+        title="정말 나가시겠습니까?"
+        body="지금 나가면 입력한 내용이 저장되지 않고 사라져요."
+        confirmLabel="나가기"
+        destructive
+        onConfirm={() => {
+          setConfirmDiscard(false);
+          onBack?.();
+        }}
+        onCancel={() => setConfirmDiscard(false)}
+      />
     </View>
   );
 }
@@ -783,38 +749,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     borderRadius: Radius.pill,
     borderWidth: 1,
-    alignItems: 'center',
-  },
-  confirmOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 200,
-    elevation: 200,
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: Overlay.dim,
-  },
-  confirmCard: {
-    width: '80%',
-    maxWidth: 340,
-    borderRadius: Radius.lg,
-    padding: Spacing.four,
-    gap: Spacing.three,
-  },
-  confirmText: {
-    lineHeight: 22,
-  },
-  confirmBtns: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-    marginTop: Spacing.one,
-  },
-  confirmBtn: {
-    flex: 1,
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.three,
     alignItems: 'center',
   },
 });

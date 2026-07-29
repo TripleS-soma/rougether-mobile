@@ -5,6 +5,7 @@ import { CategoryFormSheet } from '@/components/screens/sheets/category-form-she
 import type { CategoryDeleteMode } from '@/api/categories';
 import { Icon } from '@/components/ui/icon';
 import { CategoryIcon } from '@/components/ui/category-icon';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { type RoutineCategoryMeta, VISIBILITY_LABELS } from '@/constants/routines';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
@@ -221,26 +222,16 @@ export function CategoryManageScreen({
       />
 
       {blockedDelete ? (
-        <View style={styles.confirmOverlay}>
-          <Pressable style={styles.backdrop} onPress={() => setBlockedDelete(null)} />
-          <View style={[styles.confirmCard, { backgroundColor: t.screen }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>루틴을 먼저 정리해주세요</Text>
-            <Text style={[Typography.body, styles.confirmText, { color: t.textMuted }]}>
-              &lsquo;{blockedDelete.name}&rsquo; 카테고리에 루틴{' '}
-              {inUseCounts[blockedDelete.id]?.routines ?? 0}개가 있어요.{'\n'}루틴을 삭제하거나 다른
-              카테고리로 옮긴 뒤 삭제할 수 있어요.
-            </Text>
-            <View style={styles.confirmBtns}>
-              <Pressable
-                onPress={() => setBlockedDelete(null)}
-                accessibilityRole="button"
-                accessibilityLabel="삭제 불가 확인"
-                style={[styles.confirmBtn, { backgroundColor: t.primary }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>확인</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
+        <ConfirmDialog
+          visible
+          title="루틴을 먼저 정리해주세요"
+          body={`‘${blockedDelete.name}’ 카테고리에 루틴 ${inUseCounts[blockedDelete.id]?.routines ?? 0}개가 있어요.\n루틴을 삭제하거나 다른 카테고리로 옮긴 뒤 삭제할 수 있어요.`}
+          confirmLabel="확인"
+          confirmAccessibilityLabel="삭제 불가 확인"
+          cancelLabel={null}
+          onConfirm={() => setBlockedDelete(null)}
+          onCancel={() => setBlockedDelete(null)}
+        />
       ) : null}
 
       {pendingDelete ? (
@@ -384,17 +375,6 @@ const styles = StyleSheet.create({
   },
   leaveStay: {
     paddingVertical: Spacing.two,
-    alignItems: 'center',
-  },
-  confirmBtns: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-    marginTop: Spacing.one,
-  },
-  confirmBtn: {
-    flex: 1,
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.three,
     alignItems: 'center',
   },
 });
