@@ -1598,7 +1598,7 @@ const styles = StyleSheet.create({
   },
   // 스와이프 삭제 액션 (#566) — 행 오른쪽에 드러나는 빨간 버튼.
   deleteAction: {
-    width: 64,
+    width: Spacing.six,
     marginLeft: Spacing.two,
     borderRadius: Radius.md,
     alignItems: 'center',
