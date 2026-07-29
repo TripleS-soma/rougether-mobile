@@ -37,7 +37,7 @@ import {
   updateHouse as apiUpdateHouse,
 } from '@/api';
 import {
-  toGroupHouse,
+  toHouse,
   toHouseMission,
   toHousePreview,
   toHousePreviewDetail,
@@ -45,11 +45,7 @@ import {
   type ShopCatalogue,
 } from '@/api/adapters';
 import { useToast } from '@/components/ui/toast';
-import type {
-  House,
-  HouseEditInput,
-  NewHouseMission,
-} from '@/components/screens/group-house-screen';
+import type { House, HouseEditInput, NewHouseMission } from '@/components/screens/house-screen';
 import { track } from '@/lib/analytics';
 import type {
   HousePreview,
@@ -83,7 +79,7 @@ export function useHouses() {
       fetchHouseMissions(id).catch(() => []),
       fetchHouseJoinRequests(id).catch(() => []),
     ]);
-    return toGroupHouse(
+    return toHouse(
       detail,
       members,
       getSessionUserId(),

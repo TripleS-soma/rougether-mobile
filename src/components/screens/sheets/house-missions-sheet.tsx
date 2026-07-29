@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import type { House, HouseMission, NewHouseMission } from '@/components/screens/group-house-screen';
+import type { House, HouseMission, NewHouseMission } from '@/components/screens/house-screen';
 import { DateRangeSheet } from '@/components/screens/sheets/date-range-sheet';
 import {
   Pictogram,
@@ -54,7 +54,7 @@ export type HouseMissionsSheetProps = {
 /**
  * 공동 미션 시트 (#287) — mission list, the create-mission form, and the
  * delete / add-to-my-routines confirm modals. Extracted from
- * group-house-screen (pure move, no behavior change); stays mounted so the
+ * house-screen (pure move, no behavior change); stays mounted so the
  * form state survives closing the sheet, like the parent-held state did.
  */
 export function HouseMissionsSheet({
@@ -286,7 +286,7 @@ export function HouseMissionsSheet({
           <View style={[styles.modal, { backgroundColor: t.surface }]}>
             <Text style={[Typography.h3, { color: t.text }]}>내 루틴에 추가하시겠습니까?</Text>
             <Text style={[Typography.body, styles.modalBody, { color: t.textMuted }]}>
-              {`'${currentHouse.title}' 카테고리에 '${missionToAdd.title}' 루틴이 만들어져요. 루틴을 완료하면 자동으로 미션에 기여돼요.`}
+              {`'${currentHouse.name}' 카테고리에 '${missionToAdd.title}' 루틴이 만들어져요. 루틴을 완료하면 자동으로 미션에 기여돼요.`}
             </Text>
             <View style={styles.modalActions}>
               <Pressable

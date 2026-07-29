@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react-native';
 
 import type { ShopCatalogue } from '@/api/adapters';
 import { useMemberRoomPreviews, withMyCharacter } from '@/hooks/use-member-room-previews';
-import type { House, MemberRoomPreview } from '@/components/screens/group-house-screen';
+import type { House, MemberRoomPreview } from '@/components/screens/house-screen';
 
 const res = (body: unknown) => ({
   ok: true,
@@ -92,7 +92,7 @@ describe('withMyCharacter', () => {
   const HOUSES: House[] = [
     {
       houseId: 11,
-      title: '집',
+      name: '집',
       floors: [
         {
           level: '1층',

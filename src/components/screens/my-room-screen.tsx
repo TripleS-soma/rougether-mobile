@@ -404,11 +404,11 @@ export function MyRoomScreen({
           : [];
     return metas.map((cat) => {
       // 미분류 그룹(id '')이 무소속·미상 카테고리 항목을 받는다 (#517).
-      const isUncat = cat.id === '';
+      const isUncategorized = cat.id === '';
       const items = sinkDone(
         roomRoutines.filter((r) => {
           if (r.category === cat.id) return true;
-          return isUncat && (!r.category || !knownIds.includes(r.category));
+          return isUncategorized && (!r.category || !knownIds.includes(r.category));
         }),
         (r) => isDone(r.id, today),
       );
@@ -517,10 +517,11 @@ export function MyRoomScreen({
           : [];
     return calGroupsBase
       .map((cat) => {
-        const isUncat = cat.id === '';
+        const isUncategorized = cat.id === '';
         const items = dateRoutines.filter(
           (r) =>
-            r.category === cat.id || (isUncat && (!r.category || !knownIds.includes(r.category))),
+            r.category === cat.id ||
+            (isUncategorized && (!r.category || !knownIds.includes(r.category))),
         );
         return { meta: cat, items: sinkDone(items, (r) => isDone(r.id, selectedDate)) };
       })
@@ -1126,7 +1127,7 @@ export function MyRoomScreen({
                 ) : (
                   calServerGroups!.map((group, gi) =>
                     renderCategoryGroup(
-                      group.meta.id || `etc-${gi}`,
+                      group.meta.id || `uncat-${gi}`,
                       group.meta,
                       group.items.map(rowFromCalendarItem),
                       selectedDate,
@@ -1140,7 +1141,7 @@ export function MyRoomScreen({
               ) : (
                 calClientGroups.map((group, gi) =>
                   renderCategoryGroup(
-                    group.meta.id || `etc-${gi}`,
+                    group.meta.id || `uncat-${gi}`,
                     group.meta,
                     group.items.map((r) => rowFromRoutine(r, selectedDate)),
                     selectedDate,

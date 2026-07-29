@@ -2,13 +2,13 @@ import { Image } from 'expo-image';
 import { StyleSheet, View } from 'react-native';
 
 import { Room } from '@/components/room/room';
-import type { MemberRoomPreview } from '@/components/screens/group-house-screen';
+import type { MemberRoomPreview } from '@/components/screens/house-screen';
 import type { FurnitureItem, Wallpaper } from '@/resources/furniture';
 import { Radius } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
 import { assetSource, isCdnKey } from '@/resources/asset';
 
-/** 커버(프레임 PNG) 원본 비율 — 그룹하우스 화면과 동일. */
+/** 커버(프레임 PNG) 원본 비율 — 집 화면과 동일. */
 export const FRAME_ASPECT = 567 / 508;
 
 /**
@@ -27,7 +27,7 @@ export function houseCoverKey(coverImageKey?: string | null): string {
   return coverImageKey && isCdnKey(coverImageKey) ? coverImageKey : DEFAULT_HOUSE_COVER_KEY;
 }
 
-/** 프레임 PNG의 투명 창문 위치(좌상·우상·좌하·우하) — 그룹하우스 화면과 동일. */
+/** 프레임 PNG의 투명 창문 위치(좌상·우상·좌하·우하) — 집 화면과 동일. */
 export const WINDOW_RECTS = [
   { left: '12.7%', top: '25.4%', width: '35%', height: '30%' },
   { left: '51.3%', top: '25.4%', width: '35%', height: '30%' },
@@ -52,7 +52,7 @@ export type HousePreviewFrameProps = {
 };
 
 /**
- * 집 탐색 미리보기용 미니 하우스 (#328) — 그룹하우스 화면과 같은 "프레임 PNG의
+ * 집 탐색 미리보기용 미니 하우스 (#328) — 집 화면과 같은 "프레임 PNG의
  * 투명 창문 뒤로 방이 보이는" 형태. 프리뷰 응답의 memberRooms(#386)가 있으면
  * 구성원들의 실제 방을 창문에 그리고, 없으면(카탈로그 미로드·데모) 입주
  * 인원수만큼 기본 방 목업으로 폴백한다. 커버가 없는 집도 기본 프레임으로

@@ -1,13 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
-import type { House } from '@/components/screens/group-house-screen';
+import type { House } from '@/components/screens/house-screen';
 import { flatRooms } from '@/utils/room-layout';
 import { useRoomLayouts } from '@/hooks/use-room-layouts';
 
 const HOUSE: House = {
   houseId: 7,
-  title: '집',
+  name: '집',
   floors: [
     {
       level: '2층',
@@ -56,7 +56,7 @@ describe('useRoomLayouts', () => {
   });
 
   it('leaves demo houses without server ids untouched', async () => {
-    const demo: House = { title: '데모', floors: HOUSE.floors };
+    const demo: House = { name: '데모', floors: HOUSE.floors };
     const { result } = await renderHook(() => useRoomLayouts([demo]));
     expect(result.current.houses[0]).toBe(demo);
   });

@@ -98,15 +98,15 @@ export function useMyRoomData() {
     const isOrphan = (r: Routine) => !r.category || !known.has(r.category);
     if (items.some(isOrphan)) {
       try {
-        let fallback = appCats.find((c) => c.label === UNCATEGORIZED_META.label);
-        if (!fallback) {
+        let uncategorized = appCats.find((c) => c.label === UNCATEGORIZED_META.label);
+        if (!uncategorized) {
           const created = await createCategory(
             toCategoryCreate(UNCATEGORIZED_META, appCats.length),
           );
-          fallback = toAppCategory(created, appCats.length);
-          appCats = [...appCats, fallback];
+          uncategorized = toAppCategory(created, appCats.length);
+          appCats = [...appCats, uncategorized];
         }
-        const target = fallback.id;
+        const target = uncategorized.id;
         await Promise.all(
           items
             .filter(isOrphan)

@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 
 import { HousePreviewFrame } from '@/components/room/house-preview-frame';
-import type { HouseMission, MemberRoomPreview } from '@/components/screens/group-house-screen';
+import type { HouseMission, MemberRoomPreview } from '@/components/screens/house-screen';
 import type { FurnitureItem, Wallpaper } from '@/resources/furniture';
 import { Icon } from '@/components/ui/icon';
 import {

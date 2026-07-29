@@ -95,7 +95,7 @@ export type HouseJoinRequest = {
 };
 
 export type House = {
-  title: string;
+  name: string;
   /** May be absent for non-owners (the API hides the code from members). */
   inviteCode?: string;
   floors: Floor[];
@@ -180,7 +180,7 @@ const DOUBLE_TAP_MS = 260;
 // in join order, vacant capacity seats on the top floor (정원 6 / 멤버 4).
 const DEFAULT_HOUSES: House[] = [
   {
-    title: '소마파이팅',
+    name: '소마파이팅',
     inviteCode: 'SOMA-2143',
     level: 3,
     missions: DEMO_MISSIONS,
@@ -211,7 +211,7 @@ const DEFAULT_HOUSES: House[] = [
     ],
   },
   {
-    title: '소마 2번째 집',
+    name: '소마 2번째 집',
     inviteCode: 'SOMA-7788',
     level: 1,
     missions: DEMO_MISSIONS.slice(0, 1),
@@ -236,7 +236,7 @@ const DEFAULT_HOUSES: House[] = [
   },
 ];
 
-export type GroupHouseScreenProps = {
+export type HouseScreenProps = {
   houses?: House[];
   /** True while my houses are loading from the API. */
   loading?: boolean;
@@ -307,13 +307,13 @@ export type GroupHouseScreenProps = {
 };
 
 /**
- * Group house screen, ported from the prototype `GroupHouseScreen`: a house
+ * House screen, ported from the prototype: a house
  * switcher, the members' rooms (tap to visit), a group-goals card, and a member
  * management sub-view with an invite code and kick flow. The prototype's
  * absolutely-positioned windows over a house PNG are adapted to a token-based
  * floor/room grid. Spec domain: rougether-spec domains/house.
  */
-export function GroupHouseScreen({
+export function HouseScreen({
   houses = DEFAULT_HOUSES,
   loading = false,
   characterId = DEFAULT_CHARACTER_ID,
@@ -349,7 +349,7 @@ export function GroupHouseScreen({
   onAcceptJoinRequest,
   onRejectJoinRequest,
   onSwapSeats,
-}: GroupHouseScreenProps) {
+}: HouseScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
   const emph = useFontEmphasis();
@@ -1039,7 +1039,7 @@ export function GroupHouseScreen({
               ) : (
                 <HousePictogram size={14} />
               )}
-              <Text style={[Typography.h3, { color: t.text }]}>{currentHouse.title}</Text>
+              <Text style={[Typography.h3, { color: t.text }]}>{currentHouse.name}</Text>
             </View>
             {houses.length > 1 ? (
               <Pressable
@@ -1152,7 +1152,7 @@ export function GroupHouseScreen({
                         transition={120}
                         // 디스크 캐시 유지 — 앱 재실행 후에도 재요청 없이 즉시 (#463).
                         cachePolicy="memory-disk"
-                        accessibilityLabel={`${currentHouse.title} 집`}
+                        accessibilityLabel={`${currentHouse.name} 집`}
                         testID="house-frame"
                       />
                     </View>

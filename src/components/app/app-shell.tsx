@@ -6,7 +6,7 @@ import { Animated, BackHandler, Easing, StyleSheet, View } from 'react-native';
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
 import { GachaScreen } from '@/components/screens/gacha-screen';
-import { GroupHouseScreen, type VisitedFriend } from '@/components/screens/group-house-screen';
+import { HouseScreen, type VisitedFriend } from '@/components/screens/house-screen';
 import { HelpScreen } from '@/components/screens/help-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
@@ -67,7 +67,7 @@ type Screen =
   | 'addRoutine'
   | 'categoryManage'
   | 'gacha'
-  | 'groupHouse'
+  | 'house'
   | 'friendRoom'
   | 'houseSearch'
   | 'createHouse'
@@ -89,7 +89,7 @@ const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   addRoutine: null,
   categoryManage: null,
   gacha: null,
-  groupHouse: 'house',
+  house: 'house',
   friendRoom: null,
   houseSearch: null,
   createHouse: null,
@@ -106,7 +106,7 @@ const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
 
 const SCREEN_FOR_TAB: Record<NavTab, Screen> = {
   myRoom: 'myRoom',
-  house: 'groupHouse',
+  house: 'house',
   settings: 'settings',
 };
 
@@ -122,9 +122,9 @@ const BACK_SCREEN: Record<Screen, Screen | null> = {
   addRoutine: 'routineManage',
   categoryManage: 'myRoom',
   gacha: 'myRoom',
-  groupHouse: 'myRoom',
-  friendRoom: 'groupHouse',
-  houseSearch: 'groupHouse',
+  house: 'myRoom',
+  friendRoom: 'house',
+  houseSearch: 'house',
   createHouse: 'houseSearch',
   settings: 'myRoom',
   theme: 'settings',
@@ -185,25 +185,25 @@ const TUTORIAL_STEPS: (CoachStep & { screen: Screen })[] = [
     body: '모은 코인으로 가구와 캐릭터를 뽑아 방을 꾸며보세요.',
   },
   {
-    screen: 'groupHouse',
+    screen: 'house',
     target: 'house-frame',
     title: '우리 집',
     body: '창문 속이 친구들의 방이에요. 탭하면 방문하고, 두 번 탭하면 확대돼요.',
   },
   {
-    screen: 'groupHouse',
+    screen: 'house',
     target: 'house-missions',
     title: '공동 미션',
     body: '집 친구들과 함께 미션을 수행하면 집이 성장해요.',
   },
   {
-    screen: 'groupHouse',
+    screen: 'house',
     target: 'house-search',
     title: '집 탐색',
     body: '새로운 집을 찾아 입주하거나 초대코드로 들어갈 수 있어요.',
   },
   {
-    screen: 'groupHouse',
+    screen: 'house',
     target: 'nav-settings',
     title: '설정',
     body: '테마·알림 설정과 튜토리얼 다시 보기는 여기에 있어요. 이제 시작해볼까요?',
@@ -321,7 +321,7 @@ export function AppShell({
   // 버그 제보 (#496) — 화면을 열 때 내 제보 내역을 불러온다.
   const { entries: bugReports, load: loadBugReports, submit: submitBugReport } = useBugReports();
 
-  // Group houses (내 집 목록 + 탐색 + 참여/생성/강퇴/나가기) from the API.
+  // Houses (내 집 목록 + 탐색 + 참여/생성/강퇴/나가기) from the API.
   const {
     houses,
     searchHouses,
@@ -334,7 +334,7 @@ export function AppShell({
     joinHouse: joinSearchHouse,
     acceptJoinRequest,
     rejectJoinRequest,
-    create: createGroupHouse,
+    create: createHouse,
     contributedMissionIds,
     cheerMember,
     kickMember,
@@ -352,7 +352,7 @@ export function AppShell({
   // and drag-and-drop swaps persist per viewer+house on this device.
   const { houses: arrangedHouses, swapSeats } = useRoomLayouts(houses);
 
-  // 집 커버는 원격(S3)이고 groupHouse 화면은 탭 진입 때 처음 마운트돼, 그때부터
+  // 집 커버는 원격(S3)이고 house 화면은 탭 진입 때 처음 마운트돼, 그때부터
   // fetch가 시작되면 프레임이 늦게 뜬다 (#463). 항상 마운트된 셸에서 집 목록이
   // 오면 모든 커버(현재+스위처 대상)를 미리 디스크 캐시에 데워 둔다.
   useEffect(() => {
@@ -392,7 +392,7 @@ export function AppShell({
   }, [placement]);
 
   const [visitingFriend, setVisitingFriend] = useState<VisitedFriend>({ name: '친구' });
-  // Which house the 집 switcher is on — kept here because GroupHouseScreen
+  // Which house the 집 switcher is on — kept here because HouseScreen
   // unmounts while visiting a friend's room and must reopen on the same house.
   const [houseIndex, setHouseIndex] = useState(0);
   // The visited friend's live room + today's routines (loads on visit, #149).
@@ -407,7 +407,7 @@ export function AppShell({
   );
   const currentHouse = houses[houseIndex] ?? houses[0];
   useEffect(() => {
-    if (screen !== 'groupHouse' || !currentHouse?.houseId) return;
+    if (screen !== 'house' || !currentHouse?.houseId) return;
     const membershipIds = currentHouse.floors
       .flatMap((f) => f.rooms.map((r) => r.membershipId))
       .filter((id): id is number => id != null);
@@ -421,7 +421,7 @@ export function AppShell({
   const contributeLinkedMission = (item: Routine) => {
     const categoryLabel = categories.find((c) => c.id === item.category)?.label;
     if (!categoryLabel) return;
-    const house = houses.find((h) => h.title === categoryLabel);
+    const house = houses.find((h) => h.name === categoryLabel);
     const mission = house?.missions?.find((m) => m.status === 'ACTIVE' && m.title === item.title);
     if (house?.houseId && mission && !contributedMissionIds.has(mission.id))
       void contributeMission(house.houseId, mission.id);
@@ -445,7 +445,7 @@ export function AppShell({
     // Server-fresh find-or-create — stale local state must not duplicate it.
     const category = await ensureCategory({
       id: '',
-      label: house.title,
+      label: house.name,
       icon: 'house',
       color: CATEGORY_COLORS[categories.length % CATEGORY_COLORS.length],
       // 집 구성원과 공유하는 맥락이므로 이웃 공개(HOUSE).
@@ -466,12 +466,12 @@ export function AppShell({
 
   // 집 이름과 같은(=미션 연동) 카테고리들 — 나의 방 quick-add를 막는다.
   const houseCategoryIds = categories
-    .filter((c) => houses.some((h) => h.title === c.label))
+    .filter((c) => houses.some((h) => h.name === c.label))
     .map((c) => c.id);
 
   // 현재 집 카테고리에 속한 내 루틴 (미션 카드의 연동/기여함 라벨 판정 —
   // 오늘 완료 여부가 곧 '기여함'이라 앱 재시작 후에도 라벨이 유지된다).
-  const houseCategory = categories.find((c) => c.label === currentHouse?.title);
+  const houseCategory = categories.find((c) => c.label === currentHouse?.name);
   const houseLinkedRoutines = houseCategory
     ? routines
         .filter((r) => r.kind === 'routine' && r.category === houseCategory.id)
@@ -482,8 +482,8 @@ export function AppShell({
     : [];
 
   /** 미션 +로 만든 연동 루틴 — 집 이름 카테고리 아래, 미션 제목과 같은 루틴. */
-  const linkedRoutinesFor = (houseTitle: string, missionTitles: string[]) => {
-    const cat = categories.find((c) => c.label === houseTitle);
+  const linkedRoutinesFor = (houseName: string, missionTitles: string[]) => {
+    const cat = categories.find((c) => c.label === houseName);
     if (!cat) return [];
     return routines.filter(
       (r) => r.kind === 'routine' && r.category === cat.id && missionTitles.includes(r.title),
@@ -494,7 +494,7 @@ export function AppShell({
   const deleteMissionWithLinked = async (houseId: number, missionId: number) => {
     const house = houses.find((h) => h.houseId === houseId);
     const mission = house?.missions?.find((m) => m.id === missionId);
-    const linked = house && mission ? linkedRoutinesFor(house.title, [mission.title]) : [];
+    const linked = house && mission ? linkedRoutinesFor(house.name, [mission.title]) : [];
     if (!(await deleteMission(houseId, missionId))) return;
     for (const r of linked) await deleteRoutine(r.id);
     if (linked.length > 0) toast('연동된 루틴도 함께 삭제했어요');
@@ -503,7 +503,7 @@ export function AppShell({
   /** 집 나가기/삭제 성공 시 집 이름 카테고리를 루틴째 통삭제 (#338). */
   const leaveHouseWithLinked = async (houseId: number) => {
     const house = houses.find((h) => h.houseId === houseId);
-    const cat = house ? categories.find((c) => c.label === house.title) : undefined;
+    const cat = house ? categories.find((c) => c.label === house.name) : undefined;
     if (!(await leaveHouse(houseId))) return;
     if (!cat) return;
     await deleteCategoryCascade(cat.id);
@@ -521,7 +521,7 @@ export function AppShell({
     const orphans = houses.flatMap((h) => {
       const missions = h.missions ?? [];
       if (missions.length === 0) return [];
-      const cat = categories.find((c) => c.label === h.title);
+      const cat = categories.find((c) => c.label === h.name);
       if (!cat) return [];
       const titles = new Set(missions.map((m) => m.title));
       return routines.filter(
@@ -542,7 +542,7 @@ export function AppShell({
     const done = (completions[id] ?? []).includes(date);
     if (item && done) {
       const label = categories.find((c) => c.id === item.category)?.label;
-      const house = label ? houses.find((h) => h.title === label) : undefined;
+      const house = label ? houses.find((h) => h.name === label) : undefined;
       const linked = house?.missions?.some((m) => m.status === 'ACTIVE' && m.title === item.title);
       if (linked) {
         toast('미션에 기여된 루틴은 완료를 취소할 수 없어요', 'error');
@@ -878,8 +878,8 @@ export function AppShell({
             />
           ) : null}
 
-          {screen === 'groupHouse' ? (
-            <GroupHouseScreen
+          {screen === 'house' ? (
+            <HouseScreen
               houses={arrangedHouses}
               onSwapSeats={swapSeats}
               loading={housesLoading}
@@ -981,7 +981,7 @@ export function AppShell({
               routines={friendRoom.routines}
               recentActivity={friendRoom.recentActivity}
               loading={friendRoom.loading}
-              onBack={() => setScreen('groupHouse')}
+              onBack={() => setScreen('house')}
             />
           ) : null}
 
@@ -989,10 +989,10 @@ export function AppShell({
             <HouseSearchScreen
               houses={searchHouses}
               loading={searchLoading}
-              onBack={() => setScreen('groupHouse')}
+              onBack={() => setScreen('house')}
               onJoinByCode={async (code) => {
                 const ok = await joinByCode(code);
-                if (ok) setScreen('groupHouse');
+                if (ok) setScreen('house');
                 return ok;
               }}
               onPreviewCode={previewByCode}
@@ -1003,7 +1003,7 @@ export function AppShell({
               floors={catalogue.floors}
               backgrounds={catalogue.backgrounds}
               onJoinHouse={(houseId) => {
-                void joinSearchHouse(houseId).then((ok) => ok && setScreen('groupHouse'));
+                void joinSearchHouse(houseId).then((ok) => ok && setScreen('house'));
               }}
               onCreate={() => setScreen('createHouse')}
             />
@@ -1014,7 +1014,7 @@ export function AppShell({
               covers={houseCovers}
               onBack={() => setScreen('houseSearch')}
               onCreate={(input) => {
-                void createGroupHouse(input).then((ok) => ok && setScreen('groupHouse'));
+                void createHouse(input).then((ok) => ok && setScreen('house'));
               }}
             />
           ) : null}
