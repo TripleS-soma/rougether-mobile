@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/pictograms';
 import { useToast } from '@/components/ui/toast';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
-import { Radius, Spacing } from '@/constants/theme';
+import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { formatDate, todayIso, toIsoDate } from '@/utils/datetime';
 
@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: Overlay.dim,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: Spacing.four,

@@ -215,6 +215,18 @@ describe('AddRoutineScreen', () => {
     expect(onAdd).not.toHaveBeenCalled();
   });
 
+  it('exposes the category chip selection to assistive tech (#550)', async () => {
+    const { getByLabelText } = await render(<AddRoutineScreen />);
+
+    await fireEvent.press(getByLabelText('공부'));
+    expect(getByLabelText('공부').props.accessibilityState.selected).toBe(true);
+    expect(getByLabelText('취미').props.accessibilityState.selected).toBe(false);
+
+    await fireEvent.press(getByLabelText('취미'));
+    expect(getByLabelText('취미').props.accessibilityState.selected).toBe(true);
+    expect(getByLabelText('공부').props.accessibilityState.selected).toBe(false);
+  });
+
   it('shows a day-of-month picker for 매월', async () => {
     const { getByText, queryByText, getByLabelText } = await render(<AddRoutineScreen />);
     await fireEvent.press(getByText('매월'));

@@ -145,6 +145,7 @@ export function BugReportScreen({
                 <Image source={{ uri: img.uri }} style={styles.shotImg} contentFit="cover" />
                 <Pressable
                   style={[styles.shotRemove, { backgroundColor: t.text }]}
+                  hitSlop={8}
                   onPress={() => setImages((prev) => prev.filter((_, i) => i !== idx))}
                   accessibilityRole="button"
                   accessibilityLabel={`스크린샷 ${idx + 1} 삭제`}>

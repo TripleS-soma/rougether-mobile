@@ -9,7 +9,7 @@ import {
 } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 /** 화면(윈도) 좌표계의 대상 사각형. */
@@ -128,7 +128,7 @@ export function CoachMarkOverlay({
   const bubbleTop = hole ? (bubbleBelow ? hole.y + hole.h + 14 : undefined) : frameH * 0.4;
   const bubbleBottom = hole && !bubbleBelow ? frameH - hole.y + 14 : undefined;
 
-  const dim = `rgba(0,0,0,0.62)`;
+  const dim = Overlay.spotlight;
   const last = index === steps.length - 1;
 
   return (

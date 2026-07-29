@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useFontEmphasis } from '@/hooks/use-tokens';
+import { useFontEmphasis, useTokens } from '@/hooks/use-tokens';
 import { type StyleProp, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
 import { ROOM_RENDER_CONTRACT } from '@/components/room/room-render-contract';
@@ -28,6 +28,7 @@ export type FurniturePlaceholderProps = {
  */
 export function FurniturePlaceholder({ item, showName = true, style }: FurniturePlaceholderProps) {
   const emph = useFontEmphasis();
+  const t = useTokens();
   if (isCdnKey(item.assetKey)) {
     return (
       <View accessibilityLabel={item.name} style={[styles.tile, style]}>
@@ -44,8 +45,9 @@ export function FurniturePlaceholder({ item, showName = true, style }: Furniture
     <View
       accessibilityLabel={item.name}
       style={[styles.tile, { backgroundColor: CATEGORY_BG[item.category] }, style]}>
+      {/* Pastel tile background is fixed regardless of theme — onTint ink. */}
       {showName ? (
-        <Text style={[styles.name, emph('semibold')]} numberOfLines={2}>
+        <Text style={[styles.name, emph('semibold'), { color: t.onTint }]} numberOfLines={2}>
           {item.name}
         </Text>
       ) : null}
@@ -69,6 +71,5 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 13,
     textAlign: 'center',
-    color: '#5A4F45',
   },
 });

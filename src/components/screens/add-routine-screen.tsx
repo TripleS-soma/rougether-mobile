@@ -278,6 +278,9 @@ export function AddRoutineScreen({
                 <Pressable
                   key={c.id}
                   onPress={() => setCategory(c.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={c.name}
+                  accessibilityState={{ selected: active }}
                   style={[styles.chip, { backgroundColor: active ? c.color : t.surface }]}>
                   <CategoryIcon
                     name={c.icon}
@@ -387,6 +390,7 @@ export function AddRoutineScreen({
                       key={d}
                       onPress={() => toggleDay(i)}
                       accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
                       style={[styles.day, { backgroundColor: bg }]}>
                       <Text
                         style={[Typography.label, { color: active ? t.onPrimary : t.textMuted }]}>
