@@ -1,5 +1,6 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { type ReactNode } from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -16,6 +17,11 @@ import { initPushDisplay } from '@/lib/push-events';
 // 포그라운드 푸시 표시 + Android 채널 (#405) — 앱 시작 시 1회, 웹은 no-op.
 initPushDisplay();
 initAnalytics();
+
+// 스플래시 자동 숨김 중단 (#569) — JS 첫 프레임에 즉시 사라져 아트가 깜빡이던
+// 문제. AnimatedSplashOverlay가 최소 노출 뒤 hideAsync로 걷는다. 웹은 no-op.
+SplashScreen.setOptions({ duration: 250, fade: true });
+void SplashScreen.preventAutoHideAsync().catch(() => {});
 
 /**
  * Navigation chrome follows the resolved scheme (OS scheme + the 다크 모드
