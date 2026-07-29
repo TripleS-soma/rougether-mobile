@@ -24,6 +24,7 @@ import {
   CharacterPickerSheet,
   type OwnedCharacter,
 } from '@/components/screens/sheets/character-picker-sheet';
+import { CategoryFormSheet } from '@/components/screens/sheets/category-form-sheet';
 import { DateEditSheet } from '@/components/screens/sheets/date-edit-sheet';
 import { RenameDialog } from '@/components/screens/sheets/rename-dialog';
 import { RoutineMenuSheet } from '@/components/screens/sheets/routine-menu-sheet';
@@ -208,6 +209,8 @@ export type MyRoomScreenProps = {
   onSelectCharacter?: (serverId: number) => void;
   /** 햄버거 메뉴 → 카테고리 관리 화면으로 이동 (#394). */
   onManageCategories?: () => void;
+  /** 카테고리 헤더 탭 → 해당 카테고리 수정 시트 저장 (#541). 없으면 헤더 탭 비활성. */
+  onUpdateCategory?: (id: string, category: RoutineCategoryMeta) => void;
   /** Toggle a routine's completion on a specific date ("YYYY-MM-DD"). */
   /** 완료 토글 — 완료 시 서버 보상액(코인)을 resolve하면 코인 연출에 쓴다 (#444). */
   onToggleCompletion?: (id: string, date: string) => void | Promise<number | null | undefined>;
@@ -300,6 +303,7 @@ export function MyRoomScreen({
   ownedCharacters,
   onSelectCharacter,
   onManageCategories,
+  onUpdateCategory,
   onToggleCompletion,
   onOpenGacha,
   onQuickAddRoutine,
@@ -450,6 +454,8 @@ export function MyRoomScreen({
   // Kebab → 수정: rename only (the dialog holds the draft text). Kebab → 시간
   // 수정: TimePickerSheet.
   const [renameId, setRenameId] = useState<string | null>(null);
+  // 헤더 탭으로 여는 카테고리 수정 시트의 대상 (#541).
+  const [editingCategory, setEditingCategory] = useState<RoutineCategoryMeta | null>(null);
   const renameItem = routines.find((r) => r.id === renameId) ?? null;
   const [timeId, setTimeId] = useState<string | null>(null);
   const timeRoutine = routines.find((r) => r.id === timeId) ?? null;
@@ -845,17 +851,25 @@ export function MyRoomScreen({
     return (
       <View key={key} style={styles.group}>
         <View style={styles.catHeader}>
-          <View style={[styles.catDot, { backgroundColor: `${meta.color}33` }]}>
-            <CategoryIcon name={meta.icon} color={meta.color} size={18} />
-          </View>
-          <Text
-            style={[
-              Typography.label,
-              styles.catLabel,
-              { color: readableTextColor(meta.color, t.surfaceMuted) },
-            ]}>
-            {meta.label}
-          </Text>
+          {/* 미분류(pseudo) 그룹은 실제 카테고리가 아니라 수정 진입이 없다 (#541). */}
+          <Pressable
+            style={styles.catHeaderTap}
+            disabled={!meta.id || !onUpdateCategory}
+            onPress={() => setEditingCategory(meta)}
+            accessibilityRole="button"
+            accessibilityLabel={`${meta.label} 카테고리 수정`}>
+            <View style={[styles.catDot, { backgroundColor: `${meta.color}33` }]}>
+              <CategoryIcon name={meta.icon} color={meta.color} size={18} />
+            </View>
+            <Text
+              style={[
+                Typography.label,
+                styles.catLabel,
+                { color: readableTextColor(meta.color, t.surfaceMuted) },
+              ]}>
+              {meta.label}
+            </Text>
+          </Pressable>
           {/* 미분류(pseudo) 그룹은 실제 카테고리가 아니라 표시하지 않는다. */}
           {meta.id ? <VisibilityMark visibility={meta.visibility} /> : null}
           {rows.length > 0 ? (
@@ -1152,6 +1166,13 @@ export function MyRoomScreen({
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <CategoryFormSheet
+        visible={editingCategory !== null}
+        editing={editingCategory}
+        onUpdate={onUpdateCategory}
+        onClose={() => setEditingCategory(null)}
+      />
 
       <RoutineMenuSheet
         item={menuRoutine}
@@ -1473,6 +1494,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
+  },
+  catHeaderTap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    flexShrink: 1,
   },
   // 카테고리 라벨 확대 (#356) — label 토큰(14) 위에 크기만 한 단계 올린다.
   catLabel: {

@@ -754,6 +754,7 @@ export function AppShell({
                 void selectWornCharacter(serverId);
               }}
               onManageCategories={() => setScreen('categoryManage')}
+              onUpdateCategory={updateRoutineCategory}
               onOpenGacha={() => setScreen('gacha')}
               onQuickAddRoutine={quickAddTodo}
               quickAddDisabledCategoryIds={houseCategoryIds}
