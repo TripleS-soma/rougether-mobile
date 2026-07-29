@@ -1,7 +1,7 @@
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon, type IconName } from '@/components/ui/icon';
-import { Radius, Spacing } from '@/constants/theme';
+import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 export type NavMenuPopoverProps = {
@@ -47,7 +47,11 @@ export function NavMenuPopover({
 
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.popoverBackdrop} onPress={onClose}>
+      <Pressable
+        style={styles.popoverBackdrop}
+        onPress={onClose}
+        accessibilityRole="button"
+        accessibilityLabel="닫기">
         <View style={[styles.popover, { top, backgroundColor: t.screen, borderColor: t.border }]}>
           {(
             [
@@ -123,7 +127,7 @@ export function NavMenuPopover({
 const styles = StyleSheet.create({
   popoverBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.2)',
+    backgroundColor: Overlay.subtle,
   },
   popover: {
     // `top` comes from the measured hamburger position.

@@ -215,6 +215,7 @@ export function GachaScreen({
                         }}
                         accessibilityRole="button"
                         accessibilityLabel={b.name}
+                        accessibilityState={{ selected: active }}
                         style={[
                           styles.boxChip,
                           {

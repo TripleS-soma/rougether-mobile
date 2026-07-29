@@ -21,7 +21,7 @@ import {
   type PictogramName,
   SparklePictogram,
 } from '@/components/ui/pictograms';
-import { Radius, Spacing } from '@/constants/theme';
+import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
@@ -690,7 +690,7 @@ const styles = StyleSheet.create({
   },
   hpBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: Overlay.dim,
   },
   hpCard: {
     borderRadius: Radius.lg,

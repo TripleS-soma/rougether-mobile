@@ -567,8 +567,12 @@ export const SplashBackground = '#FCF0D8';
 
 /** Dim scrims behind sheets/dialogs/full-screen overlays — theme-independent. */
 export const Overlay = {
+  /** Light scrim for anchored popovers — keeps the page readable behind. */
+  subtle: 'rgba(0,0,0,0.2)',
   dim: 'rgba(0,0,0,0.4)',
   strong: 'rgba(0,0,0,0.55)',
+  /** Coach-mark spotlight — darkest scrim so the punched hole pops. */
+  spotlight: 'rgba(0,0,0,0.62)',
 } as const;
 
 /**

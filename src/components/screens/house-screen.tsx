@@ -1093,11 +1093,11 @@ export const HouseScreen = memo(function HouseScreen({
             ))}
           </View>
           {/* 레벨·멤버 pill — 프레임 여백과 정렬된 행 (모서리 절대배치는
-                화면 끝에 걸려 보였다). 고정 밝기 스크림 위라 literal 잉크. */}
+                화면 끝에 걸려 보였다). 고정 밝기 흰 스크림 위라 onTint 잉크. */}
           <View style={styles.framePillsRow}>
             <View style={[styles.skyPill, { backgroundColor: 'rgba(255,255,255,0.88)' }]}>
               <HousePictogram size={12} />
-              <Text style={[Typography.supporting, styles.heroPillText]}>
+              <Text style={[Typography.supporting, { color: t.onTint }]}>
                 Lv.{currentHouse.level ?? 0}
                 {currentHouse.growthPoints != null
                   ? ` · ${currentHouse.growthPoints % 100}/100`
@@ -1105,7 +1105,7 @@ export const HouseScreen = memo(function HouseScreen({
               </Text>
             </View>
             <View style={[styles.skyPill, { backgroundColor: 'rgba(255,255,255,0.88)' }]}>
-              <Text style={[Typography.supporting, styles.heroPillText]}>
+              <Text style={[Typography.supporting, { color: t.onTint }]}>
                 {/* Vacant seats are not members — count the real ones. */}
                 멤버 {currentHouse.memberCount ?? members.length}
                 {currentHouse.maxMembers ? ` / ${currentHouse.maxMembers}` : ''}
@@ -1549,10 +1549,6 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-  },
-  // 커버 위 고정 밝기 요소들 — 테마와 무관해 literal 잉크를 쓴다.
-  heroPillText: {
-    color: '#4A403A',
   },
   summaryRow: {
     flexDirection: 'row',

@@ -197,6 +197,7 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
                   key={n}
                   onPress={() => setCapacity(n)}
                   accessibilityRole="button"
+                  accessibilityState={{ selected }}
                   style={[
                     styles.capBtn,
                     { backgroundColor: selected ? t.primary : t.surfaceMuted },
