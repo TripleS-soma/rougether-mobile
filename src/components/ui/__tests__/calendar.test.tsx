@@ -1,5 +1,6 @@
 import { act, fireEvent, render } from '@testing-library/react-native';
-import { PanResponder } from 'react-native';
+import { State } from 'react-native-gesture-handler';
+import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { Calendar } from '@/components/ui/calendar';
 
@@ -29,33 +30,30 @@ describe('Calendar', () => {
   });
 
   // 달력 월 스와이프 (#562) — 그리드 가로 플링이 ‹ ›와 같은 월 이동을 한다.
-  // 판정은 #561과 공용 유틸(utils/gesture)의 config — PanResponder.create를
-  // 스파이해 그 판정 콜백을 직접 구동한다.
+  // #561과 공용 유틸(utils/gesture)의 RNGH pan을 jest-utils로 구동한다.
+  // (날짜 셀 탭 보존은 activeOffsetX 임계 담당 — 유틸 단위 테스트에서 검증.)
   it('그리드 가로 플링으로 이전/다음 달로 이동한다 (#562)', async () => {
-    const createSpy = jest.spyOn(PanResponder, 'create');
-    try {
-      const { getByText, getByTestId } = await render(
-        <Calendar value="2026-06-15" onSelect={() => {}} />,
+    const { getByText, getByTestId } = await render(
+      <Calendar value="2026-06-15" onSelect={() => {}} />,
+    );
+    expect(getByTestId('calendar-grid')).toBeTruthy();
+    const fling = (translationX: number) =>
+      act(async () =>
+        fireGestureHandler(getByGestureTestId('calendar-month-fling'), [
+          { state: State.BEGAN },
+          { state: State.ACTIVE },
+          { state: State.END, translationX, translationY: 0 },
+        ]),
       );
-      expect(getByTestId('calendar-grid')).toBeTruthy();
-      const config = createSpy.mock.calls[0][0];
 
-      // 왼쪽 플링 → 다음 달, 오른쪽 플링 → 이전 달.
-      await act(async () => config.onPanResponderRelease?.(null as any, { dx: -60, dy: 0 } as any));
-      expect(getByText('2026년 7월')).toBeTruthy();
-      await act(async () => config.onPanResponderRelease?.(null as any, { dx: 60, dy: 0 } as any));
-      expect(getByText('2026년 6월')).toBeTruthy();
-
-      // 날짜 셀 탭 수준의 미세 이동은 클레임하지 않는다 — 탭 유지.
-      expect(config.onMoveShouldSetPanResponder?.(null as any, { dx: 8, dy: 2 } as any)).toBe(
-        false,
-      );
-      // 임계 미달 릴리즈는 월을 바꾸지 않는다.
-      await act(async () => config.onPanResponderRelease?.(null as any, { dx: -30, dy: 0 } as any));
-      expect(getByText('2026년 6월')).toBeTruthy();
-    } finally {
-      createSpy.mockRestore();
-    }
+    // 왼쪽 플링 → 다음 달, 오른쪽 플링 → 이전 달.
+    await fling(-60);
+    expect(getByText('2026년 7월')).toBeTruthy();
+    await fling(60);
+    expect(getByText('2026년 6월')).toBeTruthy();
+    // 임계 미달 릴리즈는 월을 바꾸지 않는다.
+    await fling(-30);
+    expect(getByText('2026년 6월')).toBeTruthy();
   });
 
   it('shows the 오늘 chip while off-today and jumps back on press (#467)', async () => {

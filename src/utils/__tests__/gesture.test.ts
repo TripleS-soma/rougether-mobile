@@ -1,28 +1,12 @@
 import {
   flingDirection,
-  horizontalFlingResponderConfig,
-  isHorizontalSwipe,
+  horizontalFlingGesture,
   SWIPE_CLAIM_DX,
+  SWIPE_FAIL_DY,
   SWIPE_FLING_DX,
 } from '@/utils/gesture';
 
-describe('isHorizontalSwipe (responder claim, #561/#562)', () => {
-  it.each([
-    // [dx, dy, expected] — 가로 우세 + 최소 이동 임계.
-    [30, 0, true], // 순수 가로 드래그
-    [-30, 0, true], // 반대 방향도 동일
-    [30, 15, true], // 가로 우세 (|dx| > 1.5|dy|)
-    [30, 25, false], // 대각선 — 가로 우세 미달
-    [10, 0, false], // 최소 이동(24px) 미달 — 탭/미세 이동 보호
-    [SWIPE_CLAIM_DX, 0, false], // 경계값은 미클레임 (초과여야 함)
-    [0, 40, false], // 세로 스크롤
-    [-40, -20, true], // 음수 dy에도 절대값 비교
-  ])('dx=%d dy=%d → %s', (dx, dy, expected) => {
-    expect(isHorizontalSwipe(dx, dy)).toBe(expected);
-  });
-});
-
-describe('flingDirection (release judgment)', () => {
+describe('flingDirection (release judgment, #561/#562)', () => {
   it.each([
     [-60, 'left'],
     [60, 'right'],
@@ -36,25 +20,32 @@ describe('flingDirection (release judgment)', () => {
   });
 });
 
-describe('horizontalFlingResponderConfig', () => {
-  it('claims only horizontal-dominant drags and fires onFling per direction', () => {
+describe('horizontalFlingGesture (RNGH pan 빌더)', () => {
+  it('가로 활성/세로 실패 임계가 공용 상수로 설정된다', () => {
+    const g = horizontalFlingGesture('test-fling', jest.fn());
+    // 가로 우세만 활성: ±24px 가로 이동에 활성, 그 전에 세로 ±36px면 실패
+    // (세로 스크롤 몫). 탭은 활성 임계 미달이라 pan이 잡지 않는다.
+    expect(g.config.activeOffsetXStart).toBe(-SWIPE_CLAIM_DX);
+    expect(g.config.activeOffsetXEnd).toBe(SWIPE_CLAIM_DX);
+    expect(g.config.failOffsetYStart).toBe(-SWIPE_FAIL_DY);
+    expect(g.config.failOffsetYEnd).toBe(SWIPE_FAIL_DY);
+    // React 상태를 만지는 콜백 — JS 스레드 고정.
+    expect(g.config.runOnJS).toBe(true);
+  });
+
+  it('놓을 때 이동량으로 플링 방향을 보고한다', () => {
     const onFling = jest.fn();
-    const config = horizontalFlingResponderConfig(onFling);
+    const g = horizontalFlingGesture('test-fling', onFling);
+    const end = (translationX: number) => g.handlers.onEnd?.({ translationX } as never, true);
 
-    expect(config.onMoveShouldSetPanResponder(null, { dx: 30, dy: 5 })).toBe(true);
-    expect(config.onMoveShouldSetPanResponder(null, { dx: 10, dy: 5 })).toBe(false);
-    expect(config.onMoveShouldSetPanResponder(null, { dx: 30, dy: 30 })).toBe(false);
-    // 중첩 스크롤 등이 뺏어가면 양보한다.
-    expect(config.onPanResponderTerminationRequest()).toBe(true);
-
-    config.onPanResponderRelease(null, { dx: -60, dy: 0 });
+    end(-60);
     expect(onFling).toHaveBeenLastCalledWith('left');
-    config.onPanResponderRelease(null, { dx: 60, dy: 0 });
+    end(60);
     expect(onFling).toHaveBeenLastCalledWith('right');
 
     // 임계 미달 릴리즈는 무시.
     onFling.mockClear();
-    config.onPanResponderRelease(null, { dx: 30, dy: 0 });
+    end(30);
     expect(onFling).not.toHaveBeenCalled();
   });
 });
