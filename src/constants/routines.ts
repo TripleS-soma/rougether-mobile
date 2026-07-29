@@ -47,6 +47,8 @@ export type RoutineCategoryMeta = {
   icon: PictogramName;
   color: string;
   visibility: CategoryVisibility;
+  /** 연동된 집의 서버 id (#578) — 미션 연동 카테고리 판정은 이 id로 한다. */
+  houseId?: number;
   /** Server-deleted category, kept only to resolve past records' name/color. */
   deleted?: boolean;
 };
@@ -104,6 +106,8 @@ export type Routine = {
   time?: string;
   photoVerify?: boolean;
   kind?: 'routine' | 'todo';
+  /** 연동된 공동미션의 서버 id (#578) — 미션 연동 판정은 이름 대신 이 id로. */
+  linkedMissionId?: number;
 };
 
 /** Payload for creating/editing a routine (from the Add/Edit routine screen). */
@@ -122,6 +126,8 @@ export type NewRoutine = {
   alarmEnabled: boolean;
   time: string;
   photoVerify: boolean;
+  /** 생성 시 연동할 공동미션 id (#578) — 미션 '+ 내 루틴에' 경로가 넣는다. */
+  linkedMissionId?: number;
 };
 
 /** Sample data for previews and tests (mirrors the prototype defaults). */

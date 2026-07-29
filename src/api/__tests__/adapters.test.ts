@@ -328,6 +328,31 @@ describe('API adapters', () => {
     expect(toCategoryCreate({ ...cat, visibility: 'private' }).visibility).toBe('PRIVATE');
   });
 
+  it('round-trips the mission/house link ids (#578)', () => {
+    // Routine ↔ houseMissionId: 서버 id가 앱 linkedMissionId로 오간다.
+    const linked = toAppRoutine({ id: 12, title: '아침 스트레칭', houseMissionId: 6 });
+    expect(linked.linkedMissionId).toBe(6);
+    expect(toAppRoutine({ id: 12, title: '미연동', houseMissionId: null }).linkedMissionId).toBeUndefined(); // prettier-ignore
+    expect(
+      toRoutineCreate({
+        title: '아침 스트레칭', category: '1', days: [], startDate: '2026-07-01',
+        alarmEnabled: false, time: '', photoVerify: false, linkedMissionId: 6,
+      }).houseMissionId, // prettier-ignore
+    ).toBe(6);
+    // 이름을 바꿔도 링크 id는 그대로 실려 연동이 유지된다.
+    expect(toRoutineUpdate(linked, { title: '이름 바꿈' })).toMatchObject({ houseMissionId: 6 });
+    // 미연동 루틴 수정은 houseMissionId를 싣지 않는다 — 링크를 건드리지 않음
+    // (해제는 전용 DELETE 엔드포인트).
+    expect(toRoutineUpdate({ ...linked, linkedMissionId: undefined }).houseMissionId).toBeUndefined(); // prettier-ignore
+
+    // Category ↔ houseId.
+    expect(toAppCategory({ id: 20, name: 'TripleS', houseId: 2 }).houseId).toBe(2);
+    expect(toAppCategory({ id: 20, name: '일반', houseId: null }).houseId).toBeUndefined();
+    const cat = { id: '20', name: 'TripleS', icon: 'house', color: '#123456', visibility: 'neighbor', houseId: 2 } as const; // prettier-ignore
+    expect(toCategoryCreate(cat).houseId).toBe(2);
+    expect(toCategoryCreate({ ...cat, houseId: undefined }).houseId).toBeUndefined();
+  });
+
   it('clears alarm time and end date with explicit nulls on update', () => {
     const routine = {
       id: 'r7',

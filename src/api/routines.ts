@@ -33,6 +33,11 @@ export function deleteRoutine(id: number) {
   return apiDelete<void>(`/routines/${id}`);
 }
 
+/** DELETE /routines/{id}/house-mission-link — 공동미션 연동 해제 (멱등, #578). */
+export function unlinkRoutineHouseMission(id: number) {
+  return apiDelete<void>(`/routines/${id}/house-mission-link`);
+}
+
 /** POST /routines/{id}/logs — mark the routine completed on a date ("YYYY-MM-DD"). */
 export function completeRoutine(id: number, routineDate: string) {
   return apiPost<RoutineLogResponse>(`/routines/${id}/logs`, { routineDate });

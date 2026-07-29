@@ -23,6 +23,11 @@ export function updateCategory(id: number, body: CategoryUpdateRequest) {
   return apiPut<CategoryResponse>(`/categories/${id}`, body);
 }
 
+/** DELETE /categories/{id}/house-link — 집 연동 해제 (멱등, #578). */
+export function unlinkCategoryHouse(id: number) {
+  return apiDelete<void>(`/categories/${id}/house-link`);
+}
+
 /** 카테고리 삭제 모드 (#517) — 서버 필수 쿼리. */
 export type CategoryDeleteMode = 'UNASSIGN' | 'PURGE';
 
