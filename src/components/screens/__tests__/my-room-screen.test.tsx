@@ -1,4 +1,5 @@
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { PanResponder } from 'react-native';
 
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { ToastProvider } from '@/components/ui/toast';
@@ -74,6 +75,37 @@ describe('MyRoomScreen', () => {
     await fireEvent.press(getByLabelText('아침 7시 기상 메뉴'));
     await fireEvent.press(getByLabelText('아침 7시 기상 루틴 수정'));
     expect(onEditRoutine).toHaveBeenCalledWith(expect.objectContaining({ id: '1' }));
+  });
+
+  // 방↔달력 스와이프 전환 (#561) — 콘텐츠 영역의 가로 우세 플링으로 탭 전환.
+  // PanResponder.create를 스파이해 화면이 만든 판정 콜백을 직접 구동한다
+  // (책임 판정 자체는 utils/gesture 단위 테스트가 표로 검증).
+  it('콘텐츠 영역 가로 플링으로 방↔달력 탭이 전환된다 (#561)', async () => {
+    const createSpy = jest.spyOn(PanResponder, 'create');
+    try {
+      const ui = await render(<MyRoomScreen routines={SAMPLE_ROUTINES} />);
+      // 화면 렌더의 첫 PanResponder가 탭 스와이프 responder다.
+      const config = createSpy.mock.calls[0][0];
+      expect(config.onMoveShouldSetPanResponder?.(null as any, { dx: -30, dy: 5 } as any)).toBe(
+        true,
+      );
+      // 세로 스크롤·탭은 클레임하지 않는다.
+      expect(config.onMoveShouldSetPanResponder?.(null as any, { dx: 5, dy: 30 } as any)).toBe(
+        false,
+      );
+
+      // 왼쪽 플링 → 달력 탭.
+      await act(async () => config.onPanResponderRelease?.(null as any, { dx: -60, dy: 0 } as any));
+      expect(ui.getByText('이 날의 루틴')).toBeTruthy();
+      // 오른쪽 플링 → 방 탭 복귀.
+      await act(async () => config.onPanResponderRelease?.(null as any, { dx: 60, dy: 0 } as any));
+      expect(ui.getByText('오늘의 루틴')).toBeTruthy();
+      // 임계 미달 릴리즈는 무시.
+      await act(async () => config.onPanResponderRelease?.(null as any, { dx: -30, dy: 0 } as any));
+      expect(ui.getByText('오늘의 루틴')).toBeTruthy();
+    } finally {
+      createSpy.mockRestore();
+    }
   });
 
   it('marks each category header with its visibility scope (#285)', async () => {

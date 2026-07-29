@@ -8,6 +8,7 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   LayoutAnimation,
+  PanResponder,
   Platform,
   Pressable,
   ScrollView,
@@ -64,6 +65,7 @@ import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
 import { formatDate, formatTime, todayIso } from '@/utils/datetime';
+import { horizontalFlingResponderConfig } from '@/utils/gesture';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
 
 /** Weekday (0 = Sun) of a local "YYYY-MM-DD" date. */
@@ -473,6 +475,17 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // be completed, routines accept today-only logs server-side, and past
   // records keep their original (possibly deleted) category.
   const [tab, setTab] = useState<'room' | 'calendar'>('room');
+  // 방↔달력 스와이프 전환 (#561) — 탭 아래 콘텐츠 영역의 가로 우세 플링으로
+  // 탭 상태만 바꾼다(기존 탭 버튼·무애니메이션 전환 유지). 세로 스크롤·행
+  // 탭은 클레임 판정(가로 우세 + 24px 이동)이 걸러내고, 달력 그리드의 월
+  // 스와이프(#562)와 행 스와이프 삭제(#566)는 더 깊은 곳에서 먼저 잡는다 —
+  // 여기는 남은 영역(방 캔버스·헤더·여백)의 플링만 받는다. setTab은 참조가
+  // 안정적이라 첫 렌더 클로저로 충분하다.
+  const tabSwipePan = useRef(
+    PanResponder.create(
+      horizontalFlingResponderConfig((dir) => setTab(dir === 'left' ? 'calendar' : 'room')),
+    ),
+  ).current;
   const [selectedDate, setSelectedDate] = useState(() => todayIso());
   const dateRoutines = useMemo(
     () => routines.filter((r) => isScheduledOn(r, selectedDate)),
@@ -976,7 +989,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
 
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        {...tabSwipePan.panHandlers}>
         <ScrollView
           ref={scrollRef}
           contentContainerStyle={[
