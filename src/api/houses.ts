@@ -47,11 +47,6 @@ export function fetchHouse(houseId: number) {
   return apiGet<HouseDetailResponse>(`/houses/${houseId}`);
 }
 
-/** GET /houses/{id}/preview — public read-only house and mission summary. */
-export function fetchHousePreview(houseId: number) {
-  return apiGet<HousePreviewDetailResponse>(`/houses/${houseId}/preview`);
-}
-
 /** GET /houses/{id}/members. */
 export function fetchHouseMembers(houseId: number) {
   return apiGetList<MemberSummary>(`/houses/${houseId}/members`);
@@ -152,11 +147,6 @@ export function fetchHouseMemberRoutineCompletions(
 /** GET /houses/{id}/missions — group missions, newest first. */
 export function fetchHouseMissions(houseId: number) {
   return apiGetList<MissionSummary>(`/houses/${houseId}/missions`);
-}
-
-/** GET /houses/{id}/missions/{missionId} — detail incl. my contribution. */
-export function fetchHouseMission(houseId: number, missionId: number) {
-  return apiGet<HouseMissionResponse>(`/houses/${houseId}/missions/${missionId}`);
 }
 
 /** POST /houses/{id}/missions — create a mission (STREAK_DAYS unsupported: 400). */

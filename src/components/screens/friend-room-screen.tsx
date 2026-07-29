@@ -22,6 +22,7 @@ import { BearCheck } from '@/components/ui/bear-check';
 import { Icon } from '@/components/ui/icon';
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { PendingNotice } from '@/components/ui/pending-notice';
+import { RetryState } from '@/components/ui/retry-state';
 import { BookOpenPictogram, Pictogram, type PictogramName } from '@/components/ui/pictograms';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { type FurnitureItem, type PlacedFurniture, type Wallpaper } from '@/resources/furniture';
@@ -275,17 +276,11 @@ export function FriendRoomScreen({
           </View>
         </View>
         <View style={styles.errorWrap}>
-          <Text style={[Typography.h3, { color: t.text }]}>친구 방을 불러오지 못했어요</Text>
-          <Text style={[Typography.body, styles.errorBody, { color: t.textMuted }]}>
-            네트워크 상태를 확인하고 다시 시도해 주세요.
-          </Text>
-          <Pressable
-            onPress={onRetry}
-            accessibilityRole="button"
-            accessibilityLabel="다시 시도"
-            style={[styles.retryBtn, { backgroundColor: t.primary }]}>
-            <Text style={[Typography.label, { color: t.onPrimary }]}>다시 시도</Text>
-          </Pressable>
+          <RetryState
+            message="친구 방을 불러오지 못했어요"
+            detail="네트워크 상태를 확인하고 다시 시도해 주세요."
+            onRetry={onRetry}
+          />
         </View>
       </View>
     );
@@ -642,14 +637,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: Spacing.six,
     gap: Spacing.two,
-  },
-  errorBody: {
-    textAlign: 'center',
-  },
-  retryBtn: {
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.five,
   },
   modalOverlay: {
     ...StyleSheet.absoluteFillObject,

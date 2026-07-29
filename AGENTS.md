@@ -12,7 +12,7 @@
 
 - `src/app/` — Expo Router 라우트. `(tabs)/`는 앱 셸(Home / Explore / Dev)이고, `_layout.tsx`는 루트 Stack(MSW 부팅도 여기서 함). 인증 라우트: `login.tsx`, `signup.tsx`.
 - `src/components/screens/` — 프로토타입에서 포팅한 전체 화면. 각 화면은 **순수하고 prop 기반**인 컴포넌트(내부에 라우팅/전역 상태 없음)이며, 형제 테스트 파일이 함께 있습니다.
-- `src/components/` — 공용/리프 컴포넌트. `ui/`에는 프리미티브(`field`, `collapsible`)가 있습니다. 네이티브와 웹이 갈라지는 곳에는 `.web.tsx` 변형이 존재합니다(`app-tabs`, `animated-icon`).
+- `src/components/` — 공용/리프 컴포넌트. `ui/`에는 프리미티브(`field`)가 있습니다. 네이티브와 웹이 갈라지는 곳에는 `.web.tsx` 변형이 존재합니다(`app-tabs`, `animated-icon`).
 - `src/constants/theme.ts` — **디자인 토큰**(단일 출처): `Themes`(cozy / forest / hanok 시맨틱 컬러), `Typography`, `Spacing`, `Radius`, `FontWeight`, 폰트 선택 토큰(`FONT_OPTIONS` / `typographyFor`, #382). 그 외 `characters.ts`, `routines.ts`.
 - `src/hooks/` — `useTokens()`(활성 브랜드 테마), `useTypography()`(선택 폰트가 반영된 타입 스케일 — 컴포넌트 안에서 `const Typography = useTypography()`로 사용), `useFontEmphasis()`(임의 굵기 강조), `useTheme()`(템플릿 라이트/다크 크롬).
 - `src/resources/` — 이미지/에셋 레이어. `assetSource(key)`가 `*_key`를 `<Image>` source로 변환합니다(실제 CDN이 생기기 전까지는 더미 플레이스홀더). `furniture.ts`는 가구 카탈로그입니다.

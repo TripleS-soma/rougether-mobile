@@ -10,6 +10,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   ApiError,
+  ErrorCode,
   apiGet,
   cheerHouseMember,
   claimHouseMission,
@@ -205,8 +206,7 @@ export function useHouses() {
         return true;
       } catch (error) {
         const alreadyPending =
-          error instanceof ApiError &&
-          error.bodyText?.includes('HOUSE_JOIN_REQUEST_ALREADY_PENDING');
+          error instanceof ApiError && error.code === ErrorCode.HOUSE_JOIN_REQUEST_ALREADY_PENDING;
         toast(
           alreadyPending ? '이미 입주 신청 중이에요' : '입주 신청에 실패했어요. 만석일 수 있어요.',
           'error',
@@ -339,7 +339,7 @@ export function useHouses() {
       } catch (err) {
         // The server caps contributions at one per day per member.
         const already =
-          err instanceof ApiError && err.bodyText?.includes('HOUSE_MISSION_ALREADY_CONTRIBUTED');
+          err instanceof ApiError && err.code === ErrorCode.HOUSE_MISSION_ALREADY_CONTRIBUTED;
         // Already-today still means "contributed" — the card shows 기여됨.
         if (already) setContributedMissionIds((prev) => new Set(prev).add(missionId));
         toast(already ? '오늘은 이미 기여했어요. 내일 또 만나요!' : '기여에 실패했어요', 'error');
@@ -356,7 +356,7 @@ export function useHouses() {
         await reloadHouse(houseId);
       } catch (err) {
         const notAchieved =
-          err instanceof ApiError && err.bodyText?.includes('HOUSE_MISSION_NOT_ACHIEVED');
+          err instanceof ApiError && err.code === ErrorCode.HOUSE_MISSION_NOT_ACHIEVED;
         toast(notAchieved ? '아직 목표를 달성하지 못했어요' : '보상 받기에 실패했어요', 'error');
       }
     },
@@ -386,7 +386,7 @@ export function useHouses() {
         track('cheer_send', { type });
       } catch (err) {
         // 같은 대상·같은 타입은 하루(KST) 1회.
-        const dup = err instanceof ApiError && err.bodyText?.includes('HOUSE_CHEER_DUPLICATED');
+        const dup = err instanceof ApiError && err.code === ErrorCode.HOUSE_CHEER_DUPLICATED;
         toast(dup ? '오늘은 이미 같은 응원을 보냈어요' : '응원 보내기에 실패했어요', 'error');
       }
     },
@@ -401,7 +401,7 @@ export function useHouses() {
         await reloadHouse(houseId);
       } catch (err) {
         // The server restricts mission creation to the OWNER (403).
-        const notOwner = err instanceof ApiError && err.bodyText?.includes('HOUSE_NOT_OWNER');
+        const notOwner = err instanceof ApiError && err.code === ErrorCode.HOUSE_NOT_OWNER;
         toast(notOwner ? '방장만 미션을 만들 수 있어요' : '미션 만들기에 실패했어요', 'error');
       }
     },
@@ -419,8 +419,8 @@ export function useHouses() {
       } catch (err) {
         // The server keeps COMPLETED missions (growth points already granted).
         const claimed =
-          err instanceof ApiError && err.bodyText?.includes('HOUSE_MISSION_ALREADY_CLAIMED');
-        const notOwner = err instanceof ApiError && err.bodyText?.includes('HOUSE_NOT_OWNER');
+          err instanceof ApiError && err.code === ErrorCode.HOUSE_MISSION_ALREADY_CLAIMED;
+        const notOwner = err instanceof ApiError && err.code === ErrorCode.HOUSE_NOT_OWNER;
         toast(
           claimed
             ? '보상을 받은 미션은 삭제할 수 없어요'

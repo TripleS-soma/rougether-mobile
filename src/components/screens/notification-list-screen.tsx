@@ -1,6 +1,7 @@
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon, type IconName } from '@/components/ui/icon';
+import { RetryState } from '@/components/ui/retry-state';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
@@ -100,16 +101,7 @@ export function NotificationListScreen({
           ) : loadError ? (
             // 로드 실패 (#549) — 빈 상태('알림 없음')로 위장하지 않는다.
             <View style={styles.state}>
-              <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
-                알림을 불러오지 못했어요.
-              </Text>
-              <Pressable
-                onPress={onRetry}
-                accessibilityRole="button"
-                accessibilityLabel="다시 시도"
-                style={[styles.retryBtn, { backgroundColor: t.primary }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>다시 시도</Text>
-              </Pressable>
+              <RetryState message="알림을 불러오지 못했어요." onRetry={onRetry} />
             </View>
           ) : (
             <Text style={[Typography.supporting, styles.state, { color: t.textMuted }]}>
@@ -174,11 +166,6 @@ const styles = StyleSheet.create({
   },
   center: {
     textAlign: 'center',
-  },
-  retryBtn: {
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.five,
   },
   row: {
     flexDirection: 'row',

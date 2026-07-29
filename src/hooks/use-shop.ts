@@ -16,6 +16,7 @@ import {
 
 import {
   ApiError,
+  ErrorCode,
   fetchItems,
   fetchMyItems,
   fetchMyRoom,
@@ -152,7 +153,7 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
       const broke =
         err instanceof ApiError &&
         err.status === 409 &&
-        err.bodyText?.includes('SHOP_INSUFFICIENT_BALANCE');
+        err.code === ErrorCode.SHOP_INSUFFICIENT_BALANCE;
       toast(broke ? '다이아가 부족해요' : '구매에 실패했어요', 'error');
       return false;
     }
@@ -208,7 +209,7 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
       toast('방 배치를 저장했어요', 'success');
       return 'ok';
     } catch (err) {
-      if (err instanceof ApiError && err.bodyText?.includes('ROOM_LAYOUT_REVISION_CONFLICT')) {
+      if (err instanceof ApiError && err.code === ErrorCode.ROOM_LAYOUT_REVISION_CONFLICT) {
         return 'conflict';
       }
       toast('방 배치 저장에 실패했어요', 'error');

@@ -41,7 +41,9 @@ import { Card } from '@/components/ui/card';
 import { IconButton } from '@/components/ui/icon-button';
 import { Pill } from '@/components/ui/pill';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { PendingNotice } from '@/components/ui/pending-notice';
+import { RetryState } from '@/components/ui/retry-state';
 import { ToastProvider, useToast } from '@/components/ui/toast';
 import { WheelPicker } from '@/components/ui/wheel-picker';
 import { PolicyUrls } from '@/constants/policy';
@@ -551,6 +553,25 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => <PendingNotice text="이 기능은 서버 준비 중이에요." />,
   },
   {
+    name: 'UI · RetryState',
+    description: '로드 실패 공용 블록 (#557) — 메시지(+보조 문구)와 다시 시도 필.',
+    render: () => (
+      <View style={{ alignSelf: 'stretch', gap: 24 }}>
+        <RetryState message="데이터를 불러오지 못했어요." onRetry={() => {}} />
+        <RetryState
+          message="친구 방을 불러오지 못했어요"
+          detail="네트워크 상태를 확인하고 다시 시도해 주세요."
+          onRetry={() => {}}
+        />
+      </View>
+    ),
+  },
+  {
+    name: 'UI · ConfirmDialog',
+    description: '백드롭+카드 확인 다이얼로그 (#557) — 버튼으로 열어보기.',
+    render: () => <ConfirmDialogDemo />,
+  },
+  {
     name: 'UI · Toast',
     description: '하단 토스트 (info / success / error) — useToast().show(...)로 발사.',
     render: () => (
@@ -605,6 +626,25 @@ function HouseCoverPickerDemo() {
   );
   return (
     <HouseCoverPicker covers={SAMPLE_HOUSE_COVERS} selectedKey={selected} onSelect={setSelected} />
+  );
+}
+
+/** Opens the shared confirm dialog in its destructive form. */
+function ConfirmDialogDemo() {
+  const [visible, setVisible] = useState(false);
+  return (
+    <View style={{ alignSelf: 'stretch' }}>
+      <Button label="삭제 확인 열기" variant="danger" onPress={() => setVisible(true)} />
+      <ConfirmDialog
+        visible={visible}
+        title="루틴 삭제"
+        body={'이 루틴을 삭제할까요?\n삭제하면 지난 수행 기록도 함께 사라져요.'}
+        confirmLabel="삭제"
+        destructive
+        onConfirm={() => setVisible(false)}
+        onCancel={() => setVisible(false)}
+      />
+    </View>
   );
 }
 

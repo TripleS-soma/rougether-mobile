@@ -14,6 +14,7 @@ import { HousePreviewFrame } from '@/components/room/house-preview-frame';
 import type { HouseMission, MemberRoomPreview } from '@/components/screens/house-screen';
 import type { FurnitureItem, Wallpaper } from '@/resources/furniture';
 import { Icon } from '@/components/ui/icon';
+import { RetryState } from '@/components/ui/retry-state';
 import {
   CrownPictogram,
   HousePictogram,
@@ -331,16 +332,7 @@ export function HouseSearchScreen({
           ) : loadError ? (
             // 로드 실패 (#549) — 빈 검색 결과('검색 결과가 없어요')로 위장하지 않는다.
             <View style={styles.errorBlock}>
-              <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
-                추천 집 목록을 불러오지 못했어요.
-              </Text>
-              <Pressable
-                onPress={onRetry}
-                accessibilityRole="button"
-                accessibilityLabel="다시 시도"
-                style={[styles.retryBtn, { backgroundColor: t.primary }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>다시 시도</Text>
-              </Pressable>
+              <RetryState message="추천 집 목록을 불러오지 못했어요." onRetry={onRetry} />
             </View>
           ) : filtered.length === 0 ? (
             <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
@@ -663,11 +655,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.four,
     gap: Spacing.two,
-  },
-  retryBtn: {
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.five,
   },
   houseRow: {
     flexDirection: 'row',
