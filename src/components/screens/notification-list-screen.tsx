@@ -1,4 +1,8 @@
+import { type ReactNode, useRef } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import ReanimatedSwipeable, {
+  type SwipeableMethods,
+} from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 import { Icon, type IconName } from '@/components/ui/icon';
 import { RetryState } from '@/components/ui/retry-state';
@@ -49,6 +53,51 @@ export type NotificationListScreenProps = {
   onReadAll?: () => void;
   onLoadMore?: () => void;
 };
+
+/**
+ * 읽지 않은 행의 스와이프 읽음 처리 (#560) — 왼쪽으로 밀면 '읽음' 액션이
+ * 드러나고, 임계를 넘겨 놓거나 액션을 탭하면 onRead 후 닫힌다. 읽은 행은
+ * 스와이프 비활성. FlatList 세로 스크롤과의 중재는 ReanimatedSwipeable의
+ * 가로 activeOffset이 처리한다.
+ */
+function SwipeReadRow({
+  entry,
+  onRead,
+  children,
+}: {
+  entry: NotificationEntry;
+  onRead?: (id: number) => void;
+  children: ReactNode;
+}) {
+  const t = useTokens();
+  const Typography = useTypography();
+  const swipeRef = useRef<SwipeableMethods>(null);
+  const markRead = () => {
+    swipeRef.current?.close();
+    onRead?.(entry.id);
+  };
+  // 읽은 행(또는 콜백 미배선)은 스와이프 없이 그대로 — reveal할 액션이 없다.
+  if (entry.read || !onRead) return children;
+  return (
+    <ReanimatedSwipeable
+      ref={swipeRef}
+      testID={`notification-swipe-${entry.id}`}
+      overshootRight={false}
+      rightThreshold={48}
+      onSwipeableWillOpen={markRead}
+      renderRightActions={() => (
+        <Pressable
+          onPress={markRead}
+          accessibilityRole="button"
+          accessibilityLabel={`${entry.title} 읽음`}
+          style={[styles.readAction, { backgroundColor: t.primary }]}>
+          <Text style={[Typography.label, { color: t.onPrimary }]}>읽음</Text>
+        </Pressable>
+      )}>
+      {children}
+    </ReanimatedSwipeable>
+  );
+}
 
 /**
  * "알림" list screen (server GET /notifications): newest-first rows with an
@@ -121,29 +170,31 @@ export function NotificationListScreen({
           ) : null
         }
         renderItem={({ item: n }) => (
-          <Pressable
-            onPress={() => !n.read && onRead?.(n.id)}
-            accessibilityRole="button"
-            accessibilityLabel={n.title}
-            accessibilityState={{ selected: !n.read }}
-            style={[
-              styles.row,
-              { backgroundColor: n.read ? t.surfaceMuted : t.surface, borderColor: t.border },
-            ]}>
-            <View style={[styles.rowIcon, { backgroundColor: t.surfaceMuted }]}>
-              <Icon name={TYPE_ICONS[n.type ?? ''] ?? 'bell'} size={18} color={t.text} />
-            </View>
-            <View style={styles.rowBody}>
-              <View style={styles.rowHead}>
-                <Text style={[Typography.label, { color: t.text }]}>{n.title}</Text>
-                <Text style={[Typography.supporting, { color: t.textMuted }]}>{n.date}</Text>
+          <SwipeReadRow entry={n} onRead={onRead}>
+            <Pressable
+              onPress={() => !n.read && onRead?.(n.id)}
+              accessibilityRole="button"
+              accessibilityLabel={n.title}
+              accessibilityState={{ selected: !n.read }}
+              style={[
+                styles.row,
+                { backgroundColor: n.read ? t.surfaceMuted : t.surface, borderColor: t.border },
+              ]}>
+              <View style={[styles.rowIcon, { backgroundColor: t.surfaceMuted }]}>
+                <Icon name={TYPE_ICONS[n.type ?? ''] ?? 'bell'} size={18} color={t.text} />
               </View>
-              <Text style={[Typography.body, { color: n.read ? t.textMuted : t.text }]}>
-                {n.body}
-              </Text>
-            </View>
-            {!n.read ? <View style={[styles.unreadDot, { backgroundColor: t.primary }]} /> : null}
-          </Pressable>
+              <View style={styles.rowBody}>
+                <View style={styles.rowHead}>
+                  <Text style={[Typography.label, { color: t.text }]}>{n.title}</Text>
+                  <Text style={[Typography.supporting, { color: t.textMuted }]}>{n.date}</Text>
+                </View>
+                <Text style={[Typography.body, { color: n.read ? t.textMuted : t.text }]}>
+                  {n.body}
+                </Text>
+              </View>
+              {!n.read ? <View style={[styles.unreadDot, { backgroundColor: t.primary }]} /> : null}
+            </Pressable>
+          </SwipeReadRow>
         )}
       />
     </View>
@@ -195,6 +246,13 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
+  },
+  readAction: {
+    width: 72,
+    marginLeft: Spacing.two,
+    borderRadius: Radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   readAllBtn: {
     borderRadius: Radius.pill,

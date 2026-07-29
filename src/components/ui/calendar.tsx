@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { GestureDetector } from 'react-native-gesture-handler';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
+import { horizontalFlingGesture } from '@/utils/gesture';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -72,6 +74,15 @@ export function Calendar({ value, min, max, onSelect, today }: CalendarProps) {
       const next = m + delta;
       return { y: y + Math.floor(next / 12), m: ((next % 12) + 12) % 12 };
     });
+
+  // 달력 월 스와이프 (#562) — 그리드의 가로 우세 플링으로 ‹ ›와 같은 이전/
+  // 다음 달 이동. RNGH pan(#561과 공용 유틸) — RN 웹의 ScrollView 안에서
+  // PanResponder는 move 클레임 질의를 못 받는다. 날짜 셀 탭은 활성 임계
+  // (가로 24px) 미달이라 pan이 활성화되지 않아 그대로 살아 있다. shiftMonth는
+  // 함수형 setState만 부르므로 첫 렌더 클로저로 충분하다.
+  const monthFling = useRef(
+    horizontalFlingGesture('calendar-month-fling', (dir) => shiftMonth(dir === 'left' ? 1 : -1)),
+  ).current;
 
   // 선택 원 슬라이드 (#452) — 원이 이전 날짜에서 새 날짜로 스프링 이동.
   // 원 좌표는 계산(cellW·행 높이 가정)이 아니라 각 날짜 셀이 onLayout으로
@@ -153,71 +164,73 @@ export function Calendar({ value, min, max, onSelect, today }: CalendarProps) {
         </Pressable>
       </View>
 
-      <View style={styles.grid}>
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            styles.selCircle,
-            {
-              backgroundColor: t.primary,
-              opacity: selOpacity,
-              transform: selPos.getTranslateTransform(),
-            },
-          ]}
-        />
-        {WEEKDAYS.map((w, i) => (
-          <View key={w} style={styles.cell}>
-            <Text
-              style={[
-                styles.weekday,
-                emph('semibold'),
-                { color: i === 0 ? readableTextColor(t.danger, t.surfaceMuted) : t.textMuted },
-              ]}>
-              {w}
-            </Text>
-          </View>
-        ))}
-        {cells.map((day, i) => {
-          if (day === null) return <View key={`blank-${i}`} style={styles.cell} />;
-          const date = iso(view.y, view.m, day);
-          const disabled = (min && date < min) || (max && date > max);
-          const isSelected = date === value;
-          const isSunday = i % 7 === 0;
-          return (
-            <Pressable
-              key={date}
-              onPress={() => !disabled && onSelect(date)}
-              disabled={!!disabled}
-              accessibilityRole="button"
-              accessibilityLabel={date}
-              accessibilityState={{ selected: isSelected, disabled: !!disabled }}
-              onLayout={(e) => {
-                dayLayouts.current[date] = e.nativeEvent.layout;
-                // 월 이동으로 이 셀이 새로 측정될 때, 선택 날짜면 즉시 원을 얹는다.
-                if (date === value && selectedInView) placeCircle(false);
-              }}
-              style={styles.cell}>
-              <View style={styles.dayCircle}>
-                <Text
-                  style={[
-                    Typography.body,
-                    {
-                      color: disabled
-                        ? t.textDisabled
-                        : isSelected
-                          ? t.onPrimary
-                          : isSunday
-                            ? t.danger
-                            : t.text,
-                    },
-                  ]}>
-                  {day}
-                </Text>
-              </View>
-            </Pressable>
-          );
-        })}
-      </View>
+      <GestureDetector gesture={monthFling}>
+        <View style={styles.grid} testID="calendar-grid">
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.selCircle,
+              {
+                backgroundColor: t.primary,
+                opacity: selOpacity,
+                transform: selPos.getTranslateTransform(),
+              },
+            ]}
+          />
+          {WEEKDAYS.map((w, i) => (
+            <View key={w} style={styles.cell}>
+              <Text
+                style={[
+                  styles.weekday,
+                  emph('semibold'),
+                  { color: i === 0 ? readableTextColor(t.danger, t.surfaceMuted) : t.textMuted },
+                ]}>
+                {w}
+              </Text>
+            </View>
+          ))}
+          {cells.map((day, i) => {
+            if (day === null) return <View key={`blank-${i}`} style={styles.cell} />;
+            const date = iso(view.y, view.m, day);
+            const disabled = (min && date < min) || (max && date > max);
+            const isSelected = date === value;
+            const isSunday = i % 7 === 0;
+            return (
+              <Pressable
+                key={date}
+                onPress={() => !disabled && onSelect(date)}
+                disabled={!!disabled}
+                accessibilityRole="button"
+                accessibilityLabel={date}
+                accessibilityState={{ selected: isSelected, disabled: !!disabled }}
+                onLayout={(e) => {
+                  dayLayouts.current[date] = e.nativeEvent.layout;
+                  // 월 이동으로 이 셀이 새로 측정될 때, 선택 날짜면 즉시 원을 얹는다.
+                  if (date === value && selectedInView) placeCircle(false);
+                }}
+                style={styles.cell}>
+                <View style={styles.dayCircle}>
+                  <Text
+                    style={[
+                      Typography.body,
+                      {
+                        color: disabled
+                          ? t.textDisabled
+                          : isSelected
+                            ? t.onPrimary
+                            : isSunday
+                              ? t.danger
+                              : t.text,
+                      },
+                    ]}>
+                    {day}
+                  </Text>
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
+      </GestureDetector>
     </View>
   );
 }

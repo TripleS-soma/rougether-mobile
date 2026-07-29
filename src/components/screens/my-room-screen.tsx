@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -16,6 +16,10 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { GestureDetector } from 'react-native-gesture-handler';
+import ReanimatedSwipeable, {
+  type SwipeableMethods,
+} from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 import { type CharacterAnimationSet } from '@/components/character-avatar';
 import { NavMenuPopover } from '@/components/screens/nav-menu-popover';
@@ -64,6 +68,7 @@ import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
 import { formatDate, formatTime, todayIso } from '@/utils/datetime';
+import { horizontalFlingGesture } from '@/utils/gesture';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
 
 /** Weekday (0 = Sun) of a local "YYYY-MM-DD" date. */
@@ -270,6 +275,46 @@ function VisibilityMark({ visibility }: { visibility: CategoryVisibility }) {
   );
 }
 
+/**
+ * 루틴/할일 행 스와이프 삭제 (#566) — 왼쪽으로 밀면 빨간 '삭제' 액션이
+ * 드러나고, **액션을 탭해야** 삭제 콜백이 나간다(파괴적 액션이라 풀스와이프
+ * 즉시 삭제는 하지 않는다 — reveal + 탭 2단계). 삭제가 배선되지 않은 행
+ * (달력 탭 서버 기반 항목 등)은 스와이프 없이 그대로 렌더.
+ */
+function SwipeDeleteRow({
+  label,
+  onDelete,
+  children,
+}: {
+  label: string;
+  onDelete?: () => void;
+  children: ReactNode;
+}) {
+  const t = useTokens();
+  const Typography = useTypography();
+  const swipeRef = useRef<SwipeableMethods>(null);
+  if (!onDelete) return children;
+  return (
+    <ReanimatedSwipeable
+      ref={swipeRef}
+      overshootRight={false}
+      renderRightActions={() => (
+        <Pressable
+          onPress={() => {
+            swipeRef.current?.close();
+            onDelete();
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={`${label} 스와이프 삭제`}
+          style={[styles.deleteAction, { backgroundColor: t.danger }]}>
+          <Text style={[Typography.label, { color: t.onPrimary }]}>삭제</Text>
+        </Pressable>
+      )}>
+      {children}
+    </ReanimatedSwipeable>
+  );
+}
+
 // memo 경계 (#539): 셸의 무관한 상태 변화에서 이 화면(그리고 안의 방 캔버스)
 // 리렌더를 끊는다 — AppShell이 넘기는 함수/객체 prop의 참조 안정이 전제다.
 export const MyRoomScreen = memo(function MyRoomScreen({
@@ -473,6 +518,17 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // be completed, routines accept today-only logs server-side, and past
   // records keep their original (possibly deleted) category.
   const [tab, setTab] = useState<'room' | 'calendar'>('room');
+  // 방↔달력 스와이프 전환 (#561) — 탭 아래 콘텐츠 영역의 가로 우세 플링으로
+  // 탭 상태만 바꾼다(기존 탭 버튼·무애니메이션 전환 유지). RNGH pan — RN 웹의
+  // ScrollView 부모 트리에서 PanResponder는 move 클레임 질의를 못 받는다.
+  // 세로 스크롤은 failOffsetY(±36)로 넘겨주고, 행 스와이프(#560/#566)는 더
+  // 이른 활성 임계(±10)의 RNGH pan이라 행 위 가로 드래그를 먼저 가져간다 —
+  // 여기는 남은 영역(방 캔버스·헤더·여백)의 플링만 받는다. setTab은 참조가
+  // 안정적이라 마운트 시 1회 생성으로 충분하다(제스처 재생성은 활성 팬을
+  // 취소시킨다 — draggable-furniture 참고).
+  const tabFling = useRef(
+    horizontalFlingGesture('room-tab-fling', (dir) => setTab(dir === 'left' ? 'calendar' : 'room')),
+  ).current;
   const [selectedDate, setSelectedDate] = useState(() => todayIso());
   const dateRoutines = useMemo(
     () => routines.filter((r) => isScheduledOn(r, selectedDate)),
@@ -771,6 +827,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     onToggle: (e?: GestureResponderEvent) => void;
     /** 없으면(기록만 남은 삭제 항목) 행 본문이 메뉴를 열지 않는다. */
     onMenu?: () => void;
+    /** 스와이프 삭제 (#566) — 없으면(서버 기반 달력 항목 등) 스와이프 비활성. */
+    onDelete?: () => void;
   };
 
   const rowFromRoutine = (routine: Routine, date: string): RowSpec => ({
@@ -781,6 +839,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     photoVerify: routine.photoVerify,
     onToggle: (e) => handleToggle(routine, date, e),
     onMenu: () => openRowMenu(routine.id, date),
+    // 메뉴 시트의 삭제하기와 같은 경로 — 스와이프는 지름길일 뿐이다 (#566).
+    onDelete: onDeleteRoutine ? () => onDeleteRoutine(routine.id) : undefined,
   });
 
   const rowFromCalendarItem = (item: CalendarDayItem): RowSpec => ({
@@ -796,50 +856,52 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   });
 
   const renderRoutineRow = (row: RowSpec, color: string) => (
-    <View key={row.key} style={styles.routineRow}>
-      {/* The checkbox alone toggles completion; the rest of the row opens the
+    <SwipeDeleteRow key={row.key} label={row.title} onDelete={row.onDelete}>
+      <View style={styles.routineRow}>
+        {/* The checkbox alone toggles completion; the rest of the row opens the
           수정/삭제 bottom sheet. */}
-      <BearCheck
-        checked={row.done}
-        color={color}
-        onPress={(e) => row.onToggle(e)}
-        accessibilityLabel={row.title}
-      />
-      <Pressable
-        onPress={row.onMenu}
-        accessibilityRole="button"
-        accessibilityLabel={`${row.title} 메뉴`}
-        style={[styles.flex, styles.rowBody]}>
-        <Text
-          style={[
-            Typography.body,
-            row.done
-              ? { color: t.textMuted, textDecorationLine: 'line-through' }
-              : { color: t.text },
-          ]}>
-          {row.title}
-        </Text>
-        {row.time ? (
-          <View style={styles.badges}>
-            {row.time ? (
-              <View style={styles.badge}>
-                <Icon name="bell" size={12} color={t.textMuted} />
-                <Text style={[styles.badgeText, { color: t.textMuted }]}>
-                  {formatTime(row.time)}
-                </Text>
-              </View>
-            ) : null}
-            {/* 인증사진형 잠시 내림 (#499) — 복구 시 사진 인증 배지를 되살릴 것.
+        <BearCheck
+          checked={row.done}
+          color={color}
+          onPress={(e) => row.onToggle(e)}
+          accessibilityLabel={row.title}
+        />
+        <Pressable
+          onPress={row.onMenu}
+          accessibilityRole="button"
+          accessibilityLabel={`${row.title} 메뉴`}
+          style={[styles.flex, styles.rowBody]}>
+          <Text
+            style={[
+              Typography.body,
+              row.done
+                ? { color: t.textMuted, textDecorationLine: 'line-through' }
+                : { color: t.text },
+            ]}>
+            {row.title}
+          </Text>
+          {row.time ? (
+            <View style={styles.badges}>
+              {row.time ? (
+                <View style={styles.badge}>
+                  <Icon name="bell" size={12} color={t.textMuted} />
+                  <Text style={[styles.badgeText, { color: t.textMuted }]}>
+                    {formatTime(row.time)}
+                  </Text>
+                </View>
+              ) : null}
+              {/* 인증사진형 잠시 내림 (#499) — 복구 시 사진 인증 배지를 되살릴 것.
             {row.photoVerify ? (
               <View style={styles.badge}>
                 <Icon name="camera" size={12} color={t.textMuted} />
                 <Text style={[styles.badgeText, { color: t.textMuted }]}>사진 인증</Text>
               </View>
             ) : null} */}
-          </View>
-        ) : null}
-      </Pressable>
-    </View>
+            </View>
+          ) : null}
+        </Pressable>
+      </View>
+    </SwipeDeleteRow>
   );
 
   // 카테고리 그룹 = 헤더(아이콘·라벨·공개범위·카운트·＋) + 행들 + 퀵애드 입력행.
@@ -974,192 +1036,198 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         })}
       </View>
 
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView
-          ref={scrollRef}
-          contentContainerStyle={[
-            styles.body,
-            addingCategory && keyboardPad > 0 ? { paddingBottom: keyboardPad + 120 } : null,
-          ]}
-          onScroll={(e) => {
-            scrollYRef.current = e.nativeEvent.contentOffset.y;
-          }}
-          scrollEventThrottle={16}
-          keyboardShouldPersistTaps="handled">
-          {tab === 'room' ? (
-            <>
-              <View style={styles.roomWrap} ref={roomShotRef} collapsable={false}>
-                <Room
-                  characterId={characterId}
-                  characterAnimations={characterAnimations}
-                  wallpaperId={wallpaperId}
-                  floorId={floorId}
-                  backgroundId={backgroundId}
-                  placedFurnitureIds={placedFurnitureIds}
-                  placements={placements}
-                  furniture={furniture}
-                  wallpapers={wallpapers}
-                  floors={floors}
-                  backgrounds={backgrounds}
-                  interactiveCharacter
-                />
-                <Pressable
-                  onPress={onOpenGacha}
-                  accessibilityRole="button"
-                  accessibilityLabel="뽑기 상점"
-                  // 방 이미지 저장 중에는 숨겨 사진에서 제외한다 (#475).
-                  pointerEvents={capturing ? 'none' : 'auto'}
-                  style={[
-                    styles.gachaBtn,
-                    { backgroundColor: t.surface },
-                    capturing && styles.hidden,
-                  ]}>
-                  {/* absolute 버튼이라 래퍼 대신 내용을 측정 (#351). */}
-                  <CoachTarget id="room-gacha">
-                    <Icon name="gift" size={20} color={t.text} />
-                  </CoachTarget>
-                </Pressable>
-              </View>
+      <GestureDetector gesture={tabFling}>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <ScrollView
+            ref={scrollRef}
+            contentContainerStyle={[
+              styles.body,
+              addingCategory && keyboardPad > 0 ? { paddingBottom: keyboardPad + 120 } : null,
+            ]}
+            onScroll={(e) => {
+              scrollYRef.current = e.nativeEvent.contentOffset.y;
+            }}
+            scrollEventThrottle={16}
+            keyboardShouldPersistTaps="handled">
+            {tab === 'room' ? (
+              <>
+                <View style={styles.roomWrap} ref={roomShotRef} collapsable={false}>
+                  <Room
+                    characterId={characterId}
+                    characterAnimations={characterAnimations}
+                    wallpaperId={wallpaperId}
+                    floorId={floorId}
+                    backgroundId={backgroundId}
+                    placedFurnitureIds={placedFurnitureIds}
+                    placements={placements}
+                    furniture={furniture}
+                    wallpapers={wallpapers}
+                    floors={floors}
+                    backgrounds={backgrounds}
+                    interactiveCharacter
+                  />
+                  <Pressable
+                    onPress={onOpenGacha}
+                    accessibilityRole="button"
+                    accessibilityLabel="뽑기 상점"
+                    // 방 이미지 저장 중에는 숨겨 사진에서 제외한다 (#475).
+                    pointerEvents={capturing ? 'none' : 'auto'}
+                    style={[
+                      styles.gachaBtn,
+                      { backgroundColor: t.surface },
+                      capturing && styles.hidden,
+                    ]}>
+                    {/* absolute 버튼이라 래퍼 대신 내용을 측정 (#351). */}
+                    <CoachTarget id="room-gacha">
+                      <Icon name="gift" size={20} color={t.text} />
+                    </CoachTarget>
+                  </Pressable>
+                </View>
 
-              <View style={styles.section}>
-                <CoachTarget id="room-routines">
-                  <View style={styles.sectionHead}>
-                    <Text style={[Typography.h2, { color: t.text }]}>오늘의 루틴</Text>
-                    <View style={styles.sectionHeadRight}>
-                      {roomRoutines.length > 0 ? (
-                        <Text style={[Typography.label, { color: t.primaryText }]}>
-                          {completedCount} / {roomRoutines.length}
-                        </Text>
-                      ) : null}
-                      <CoachTarget id="room-add-routine">
-                        {/* '＋ 루틴' 라벨 필 (#483) — 카테고리의 원형 ＋(할 일 추가)와
+                <View style={styles.section}>
+                  <CoachTarget id="room-routines">
+                    <View style={styles.sectionHead}>
+                      <Text style={[Typography.h2, { color: t.text }]}>오늘의 루틴</Text>
+                      <View style={styles.sectionHeadRight}>
+                        {roomRoutines.length > 0 ? (
+                          <Text style={[Typography.label, { color: t.primaryText }]}>
+                            {completedCount} / {roomRoutines.length}
+                          </Text>
+                        ) : null}
+                        <CoachTarget id="room-add-routine">
+                          {/* '＋ 루틴' 라벨 필 (#483) — 카테고리의 원형 ＋(할 일 추가)와
                             같은 문법이라 헷갈렸다. 라벨로 용도를 말해 구분한다. */}
-                        <Pressable
-                          onPress={onAddRoutine}
-                          accessibilityRole="button"
-                          accessibilityLabel="루틴 추가"
-                          style={[styles.addPill, { backgroundColor: t.primary }]}>
-                          <Icon name="add" size={14} color={t.onPrimary} />
-                          <Text style={[Typography.label, { color: t.onPrimary }]}>루틴</Text>
-                        </Pressable>
-                      </CoachTarget>
+                          <Pressable
+                            onPress={onAddRoutine}
+                            accessibilityRole="button"
+                            accessibilityLabel="루틴 추가"
+                            style={[styles.addPill, { backgroundColor: t.primary }]}>
+                            <Icon name="add" size={14} color={t.onPrimary} />
+                            <Text style={[Typography.label, { color: t.onPrimary }]}>루틴</Text>
+                          </Pressable>
+                        </CoachTarget>
+                      </View>
                     </View>
-                  </View>
-                </CoachTarget>
+                  </CoachTarget>
 
-                {loading ? (
-                  <View style={styles.stateBlock}>
-                    <ActivityIndicator color={t.primary} />
-                    <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                      불러오는 중…
-                    </Text>
-                  </View>
-                ) : null}
-
-                {!loading && loadError ? (
-                  <View style={styles.stateBlock}>
-                    <RetryState message="데이터를 불러오지 못했어요." onRetry={onRetry} />
-                  </View>
-                ) : null}
-
-                {!loading && !loadError && roomRoutines.length > 0 ? (
-                  <View style={[styles.progressTrack, { backgroundColor: t.surfaceMuted }]}>
-                    <SpringProgressFill progress={progress} color={t.primary} />
-                  </View>
-                ) : null}
-
-                {!loading && !loadError && categories.length === 0 && roomRoutines.length === 0 ? (
-                  <View style={styles.stateBlock}>
-                    <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
-                      아직 루틴이 없어요.
-                    </Text>
-                    <View style={styles.emptyHintRow}>
-                      <Icon name="add" size={16} color={t.textMuted} />
-                      <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
-                        위의 + 버튼으로 첫 루틴을 만들어보세요.
+                  {loading ? (
+                    <View style={styles.stateBlock}>
+                      <ActivityIndicator color={t.primary} />
+                      <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                        불러오는 중…
                       </Text>
                     </View>
+                  ) : null}
+
+                  {!loading && loadError ? (
+                    <View style={styles.stateBlock}>
+                      <RetryState message="데이터를 불러오지 못했어요." onRetry={onRetry} />
+                    </View>
+                  ) : null}
+
+                  {!loading && !loadError && roomRoutines.length > 0 ? (
+                    <View style={[styles.progressTrack, { backgroundColor: t.surfaceMuted }]}>
+                      <SpringProgressFill progress={progress} color={t.primary} />
+                    </View>
+                  ) : null}
+
+                  {!loading &&
+                  !loadError &&
+                  categories.length === 0 &&
+                  roomRoutines.length === 0 ? (
+                    <View style={styles.stateBlock}>
+                      <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
+                        아직 루틴이 없어요.
+                      </Text>
+                      <View style={styles.emptyHintRow}>
+                        <Icon name="add" size={16} color={t.textMuted} />
+                        <Text
+                          style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
+                          위의 + 버튼으로 첫 루틴을 만들어보세요.
+                        </Text>
+                      </View>
+                    </View>
+                  ) : null}
+
+                  {loading || loadError
+                    ? null
+                    : roomGroups.map(({ meta: cat, items }) =>
+                        // Empty categories still render their header — the + quick-add
+                        // must stay reachable even before the first routine exists.
+                        renderCategoryGroup(
+                          cat.id,
+                          cat,
+                          items.map((r) => rowFromRoutine(r, today)),
+                          today,
+                        ),
+                      )}
+                </View>
+              </>
+            ) : (
+              <View style={styles.calendarPanel}>
+                <Calendar value={selectedDate} onSelect={pickDate} today={today} />
+                <View style={styles.calListHead}>
+                  <Text style={[Typography.h3, styles.calListTitle, { color: t.text }]}>
+                    이 날의 루틴
+                  </Text>
+                  {calDayTotal > 0 ? (
+                    <Text style={[Typography.label, { color: t.primaryText }]}>
+                      {calDayDone} / {calDayTotal}
+                    </Text>
+                  ) : null}
+                </View>
+                {calDayTotal > 0 ? (
+                  <View style={[styles.progressTrack, { backgroundColor: t.surfaceMuted }]}>
+                    <SpringProgressFill progress={calDayDone / calDayTotal} color={t.primary} />
                   </View>
                 ) : null}
-
-                {loading || loadError
-                  ? null
-                  : roomGroups.map(({ meta: cat, items }) =>
-                      // Empty categories still render their header — the + quick-add
-                      // must stay reachable even before the first routine exists.
-                      renderCategoryGroup(
-                        cat.id,
-                        cat,
-                        items.map((r) => rowFromRoutine(r, today)),
-                        today,
-                      ),
-                    )}
-              </View>
-            </>
-          ) : (
-            <View style={styles.calendarPanel}>
-              <Calendar value={selectedDate} onSelect={pickDate} today={today} />
-              <View style={styles.calListHead}>
-                <Text style={[Typography.h3, styles.calListTitle, { color: t.text }]}>
-                  이 날의 루틴
-                </Text>
-                {calDayTotal > 0 ? (
-                  <Text style={[Typography.label, { color: t.primaryText }]}>
-                    {calDayDone} / {calDayTotal}
+                {serverBackedDay ? (
+                  <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                    {selectedDate > today
+                      ? '미래 날짜는 아직 완료할 수 없어요.'
+                      : '지난 날짜도 완료 체크할 수 있어요. (코인은 당일 완료에만 지급돼요)'}
                   </Text>
                 ) : null}
-              </View>
-              {calDayTotal > 0 ? (
-                <View style={[styles.progressTrack, { backgroundColor: t.surfaceMuted }]}>
-                  <SpringProgressFill progress={calDayDone / calDayTotal} color={t.primary} />
-                </View>
-              ) : null}
-              {serverBackedDay ? (
-                <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                  {selectedDate > today
-                    ? '미래 날짜는 아직 완료할 수 없어요.'
-                    : '지난 날짜도 완료 체크할 수 있어요. (코인은 당일 완료에만 지급돼요)'}
-                </Text>
-              ) : null}
-              {loading || (serverBackedDay && !dayItems) ? (
-                <View style={styles.stateBlock}>
-                  <ActivityIndicator color={t.primary} />
-                </View>
-              ) : serverBackedDay ? (
-                calServerGroups!.length === 0 ? (
+                {loading || (serverBackedDay && !dayItems) ? (
+                  <View style={styles.stateBlock}>
+                    <ActivityIndicator color={t.primary} />
+                  </View>
+                ) : serverBackedDay ? (
+                  calServerGroups!.length === 0 ? (
+                    <Text style={[Typography.body, styles.calEmpty, { color: t.textMuted }]}>
+                      예정된 루틴이 없어요.
+                    </Text>
+                  ) : (
+                    calServerGroups!.map((group, gi) =>
+                      renderCategoryGroup(
+                        group.meta.id || `uncat-${gi}`,
+                        group.meta,
+                        group.items.map(rowFromCalendarItem),
+                        selectedDate,
+                      ),
+                    )
+                  )
+                ) : calClientGroups.length === 0 ? (
                   <Text style={[Typography.body, styles.calEmpty, { color: t.textMuted }]}>
                     예정된 루틴이 없어요.
                   </Text>
                 ) : (
-                  calServerGroups!.map((group, gi) =>
+                  calClientGroups.map((group, gi) =>
                     renderCategoryGroup(
                       group.meta.id || `uncat-${gi}`,
                       group.meta,
-                      group.items.map(rowFromCalendarItem),
+                      group.items.map((r) => rowFromRoutine(r, selectedDate)),
                       selectedDate,
                     ),
                   )
-                )
-              ) : calClientGroups.length === 0 ? (
-                <Text style={[Typography.body, styles.calEmpty, { color: t.textMuted }]}>
-                  예정된 루틴이 없어요.
-                </Text>
-              ) : (
-                calClientGroups.map((group, gi) =>
-                  renderCategoryGroup(
-                    group.meta.id || `uncat-${gi}`,
-                    group.meta,
-                    group.items.map((r) => rowFromRoutine(r, selectedDate)),
-                    selectedDate,
-                  ),
-                )
-              )}
-            </View>
-          )}
-        </ScrollView>
-      </KeyboardAvoidingView>
+                )}
+              </View>
+            )}
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </GestureDetector>
 
       <CategoryFormSheet
         visible={editingCategory !== null}
@@ -1527,6 +1595,14 @@ const styles = StyleSheet.create({
   },
   rowBody: {
     paddingVertical: Spacing.one,
+  },
+  // 스와이프 삭제 액션 (#566) — 행 오른쪽에 드러나는 빨간 버튼.
+  deleteAction: {
+    width: Spacing.six,
+    marginLeft: Spacing.two,
+    borderRadius: Radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   // Same width as catDot so checkboxes center under the category emoji and
   // row titles line up with the category label.

@@ -174,7 +174,7 @@ export function FriendRoomScreen({
     setBursts((prev) => [...prev, { id, type }]);
   };
   // 연타 윈도우 (#491) — 첫 탭부터 5초는 자유 연타(연출만) 후 딱 1회 전송.
-  // 서버 cheer는 count 없는 원탭 + 같은 타입 하루 1회(409)라 연타를 모아
+  // 서버 cheer는 count 없는 원탭 + 같은 타입 하루 5회 한도(V23, 초과 409)라 연타를 모아
   // 보낼 수 없다: 연타 = 연출, 전송 = 윈도우당 1회. 전송이 끝난 타입을
   // 다시 누르면 기존 재전송 확인 모달(#427)로 이어진다.
   const CHEER_SEND_DELAY_MS = 5000;
