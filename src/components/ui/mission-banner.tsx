@@ -40,20 +40,24 @@ export function MissionBanner({
       pointerEvents="box-none"
       style={[styles.wrap, { top: (insets?.top ?? 0) + Spacing.two }]}
       testID="mission-banner">
-      <Pressable
-        onPress={onPress}
-        accessibilityRole="button"
-        accessibilityLabel={`미션 ${stepIndex + 1} ${label}`}
-        style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
-        <Text style={styles.emoji}>🎯</Text>
-        <View style={styles.texts}>
-          <Text style={[Typography.supporting, { color: t.textMuted }]}>
-            미션 {stepIndex + 1}/{totalSteps}
-          </Text>
-          <Text style={[Typography.label, { color: t.text }]} numberOfLines={1}>
-            {label}
-          </Text>
-        </View>
+      {/* 카드 = 형제 Pressable 2개 — 버튼 안 버튼 중첩은 웹에서 hydration
+          경고를 내므로(button-in-button) 이동·건너뛰기를 나란히 둔다. */}
+      <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
+        <Pressable
+          onPress={onPress}
+          accessibilityRole="button"
+          accessibilityLabel={`미션 ${stepIndex + 1} ${label}`}
+          style={styles.goArea}>
+          <Text style={styles.emoji}>🎯</Text>
+          <View style={styles.texts}>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              미션 {stepIndex + 1}/{totalSteps}
+            </Text>
+            <Text style={[Typography.label, { color: t.text }]} numberOfLines={1}>
+              {label}
+            </Text>
+          </View>
+        </Pressable>
         <Pressable
           onPress={() => setConfirming(true)}
           accessibilityRole="button"
@@ -61,7 +65,7 @@ export function MissionBanner({
           hitSlop={8}>
           <Text style={[Typography.supporting, { color: t.textMuted }]}>건너뛰기</Text>
         </Pressable>
-      </Pressable>
+      </View>
 
       <ConfirmDialog
         visible={confirming}
@@ -86,6 +90,12 @@ const styles = StyleSheet.create({
     right: Spacing.four,
     zIndex: 50,
     elevation: 50,
+  },
+  goArea: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
   },
   card: {
     flexDirection: 'row',
