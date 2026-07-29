@@ -15,14 +15,19 @@ import {
 
 export function useNotificationSettings(onError?: (message: string) => void) {
   const [settings, setSettings] = useState<NotificationSettings>(DEFAULT_NOTIFICATION_SETTINGS);
+  // 조회 실패 (#549) — 기본값이 서버값처럼 보이지 않도록 화면이 안내 배너
+  // + 다시 불러오기를 보여준다. 재조회 성공 시 해제.
+  const [loadError, setLoadError] = useState(false);
 
   /** Refresh from the server (call when the settings screen opens). */
   const load = useCallback(async () => {
     try {
       setSettings(toNotificationSettings(await fetchNotificationSettings()));
+      setLoadError(false);
     } catch {
       // Keep defaults/last-known — the screen stays usable and a failing
-      // PATCH will surface its own error.
+      // PATCH will surface its own error; the banner says values may differ.
+      setLoadError(true);
     }
   }, []);
 
@@ -39,5 +44,5 @@ export function useNotificationSettings(onError?: (message: string) => void) {
     [onError],
   );
 
-  return { settings, load, toggle };
+  return { settings, loadError, load, toggle };
 }

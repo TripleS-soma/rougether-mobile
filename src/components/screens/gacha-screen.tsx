@@ -51,6 +51,10 @@ export type GachaScreenProps = {
   gachas?: GachaMachine[];
   /** True while the machine list is loading from the API. */
   loading?: boolean;
+  /** True when the machine-list load failed (#549) — 빈 상태와 구분해 표시. */
+  loadError?: boolean;
+  /** Re-run the failed load (다시 시도 button). */
+  onRetry?: () => void;
   coinBalance?: number;
   diamondBalance?: number;
   /**
@@ -72,6 +76,8 @@ export function GachaScreen({
   onBack,
   gachas = [],
   loading = false,
+  loadError = false,
+  onRetry,
   coinBalance = 0,
   diamondBalance = 0,
   onDraw,
@@ -162,7 +168,22 @@ export function GachaScreen({
             </Text>
           </View>
         ) : null}
-        {!loading && gachas.length === 0 ? (
+        {/* 로드 실패 (#549) — 빈 상태('뽑기 없음')로 위장하지 않는다. */}
+        {!loading && loadError ? (
+          <View style={styles.loadingBlock}>
+            <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
+              뽑기 목록을 불러오지 못했어요.
+            </Text>
+            <Pressable
+              onPress={onRetry}
+              accessibilityRole="button"
+              accessibilityLabel="다시 시도"
+              style={[styles.retryBtn, { backgroundColor: t.primary }]}>
+              <Text style={[Typography.label, { color: t.onPrimary }]}>다시 시도</Text>
+            </Pressable>
+          </View>
+        ) : null}
+        {!loading && !loadError && gachas.length === 0 ? (
           <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
             지금은 뽑을 수 있는 뽑기가 없어요.
           </Text>
@@ -692,6 +713,11 @@ const styles = StyleSheet.create({
   },
   body: { padding: Spacing.four, gap: Spacing.four },
   loadingBlock: { alignItems: 'center', paddingVertical: Spacing.six, gap: Spacing.two },
+  retryBtn: {
+    borderRadius: Radius.pill,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.five,
+  },
   selector: { gap: Spacing.two },
   rowBlock: { gap: Spacing.one },
   boxRow: { gap: Spacing.two, paddingVertical: Spacing.half },

@@ -107,4 +107,17 @@ describe('GachaScreen', () => {
     expect(getByText('잔액이 부족해요')).toBeTruthy();
     expect(onDraw).not.toHaveBeenCalled();
   });
+
+  // 로드 실패는 빈 상태('뽑기 없음')로 위장하지 않는다 (#549).
+  it('로드 실패 시 빈 상태 대신 실패 + 다시 시도를 보여준다 (#549)', async () => {
+    const onRetry = jest.fn();
+    const { getByText, getByLabelText, queryByText } = await render(
+      <GachaScreen gachas={[]} loadError onRetry={onRetry} />,
+    );
+
+    expect(getByText('뽑기 목록을 불러오지 못했어요.')).toBeTruthy();
+    expect(queryByText('지금은 뽑을 수 있는 뽑기가 없어요.')).toBeNull();
+    await fireEvent.press(getByLabelText('다시 시도'));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
 });

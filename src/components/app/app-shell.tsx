@@ -291,7 +291,13 @@ export function AppShell({
 
   // Gacha machines + draw (spend + dupe→diamond handled server-side; wallet synced
   // from the draw response).
-  const { gachas, loading: gachasLoading, draw: drawGachaMachine } = useGacha(setWallet);
+  const {
+    gachas,
+    loading: gachasLoading,
+    error: gachasError,
+    retry: retryGachas,
+    draw: drawGachaMachine,
+  } = useGacha(setWallet);
 
   const { logout } = useAuth();
 
@@ -314,6 +320,7 @@ export function AppShell({
     unreadCount,
     loading: notificationsLoading,
     hasNext: notificationsHasNext,
+    error: notificationsError,
     load: loadNotifications,
     loadMore: loadMoreNotifications,
     markRead: markNotificationRead,
@@ -332,6 +339,10 @@ export function AppShell({
     searchHouses,
     loading: housesLoading,
     searchLoading,
+    error: housesError,
+    searchError,
+    retry: retryHouses,
+    retrySearch,
     refreshHouses,
     previewByCode,
     previewHouse,
@@ -614,6 +625,7 @@ export function AppShell({
   // 알림 설정은 서버 보관으로 이관 (#495) — 열 때 GET, 토글마다 낙관적 PATCH.
   const {
     settings: notificationSettings,
+    loadError: notificationSettingsLoadError,
     load: loadNotificationSettings,
     toggle: toggleNotificationSetting,
   } = useNotificationSettings((message) => toast(message, 'error'));
@@ -724,6 +736,11 @@ export function AppShell({
     },
     [loadGuestbook, loadFriendRoom, catalogue],
   );
+  // 방문 실패 시 다시 시도 (#549) — 같은 친구의 방·방명록을 다시 불러온다.
+  const retryFriendRoomVisit = useCallback(() => {
+    void loadGuestbook(visitingFriend.userId, visitingFriend.houseId);
+    void loadFriendRoom(visitingFriend.houseId, visitingFriend.membershipId, catalogue);
+  }, [loadGuestbook, loadFriendRoom, visitingFriend, catalogue]);
   // 방장 관리 진입 시 구성원·입주 신청 목록 갱신 (#526).
   const openMemberManagement = useCallback(() => {
     void refreshHouses();
@@ -1012,6 +1029,8 @@ export function AppShell({
             <GachaScreen
               gachas={gachas}
               loading={gachasLoading}
+              loadError={gachasError}
+              onRetry={retryGachas}
               coinBalance={wallet.coin}
               diamondBalance={wallet.diamond}
               onBack={() => setScreen('myRoom')}
@@ -1033,6 +1052,8 @@ export function AppShell({
               houses={arrangedHouses}
               onSwapSeats={swapSeats}
               loading={housesLoading}
+              loadError={housesError}
+              onRetry={retryHouses}
               covers={houseCovers}
               characterId={wornCharacterId}
               userName={nickname}
@@ -1100,6 +1121,8 @@ export function AppShell({
               routines={friendRoom.routines}
               recentActivity={friendRoom.recentActivity}
               loading={friendRoom.loading}
+              loadError={friendRoom.error}
+              onRetry={retryFriendRoomVisit}
               onBack={() => setScreen('house')}
             />
           ) : null}
@@ -1108,10 +1131,12 @@ export function AppShell({
             <HouseSearchScreen
               houses={searchHouses}
               loading={searchLoading}
+              loadError={searchError}
+              onRetry={retrySearch}
               onBack={() => setScreen('house')}
               onJoinByCode={async (code) => {
                 const ok = await joinByCode(code);
-                if (ok) setScreen('house');
+                if (ok === true) setScreen('house');
                 return ok;
               }}
               onPreviewCode={previewByCode}
@@ -1193,6 +1218,8 @@ export function AppShell({
             <NotificationListScreen
               notifications={notificationEntries}
               loading={notificationsLoading}
+              loadError={notificationsError}
+              onRetry={loadNotifications}
               hasNext={notificationsHasNext}
               onBack={() => setScreen('myRoom')}
               onRead={(id) => {
@@ -1218,6 +1245,8 @@ export function AppShell({
             <NotificationSettingsScreen
               settings={notificationSettings}
               onToggle={toggleNotificationSetting}
+              loadError={notificationSettingsLoadError}
+              onRetry={loadNotificationSettings}
               onBack={() => setScreen('settings')}
             />
           ) : null}

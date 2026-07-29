@@ -191,6 +191,32 @@ describe('HouseSearchScreen', () => {
     expect(queryByText('아침형 인간 모임')).toBeNull();
   });
 
+  // 로드 실패는 '검색 결과가 없어요'로 위장하지 않는다 (#549).
+  it('로드 실패 시 빈 결과 대신 실패 상태 + 다시 시도를 보여준다 (#549)', async () => {
+    const onRetry = jest.fn();
+    const { getByText, getByLabelText, queryByText } = await render(
+      <HouseSearchScreen houses={[]} loadError onRetry={onRetry} />,
+    );
+
+    expect(getByText('추천 집 목록을 불러오지 못했어요.')).toBeTruthy();
+    expect(queryByText('검색 결과가 없어요')).toBeNull();
+    await fireEvent.press(getByLabelText('다시 시도'));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  // 네트워크·서버 오류는 잘못된 초대코드 안내와 다른 문구로 (#549).
+  it('초대코드 네트워크 오류는 잘못된 코드와 다른 문구를 보여준다 (#549)', async () => {
+    const onJoinByCode = jest.fn(async () => 'network' as const);
+    const { getByText, getByPlaceholderText } = await render(
+      <HouseSearchScreen onJoinByCode={onJoinByCode} />,
+    );
+
+    await fireEvent.changeText(getByPlaceholderText('예: VLG-7K2X'), 'vlg7k2x');
+    await fireEvent.press(getByText('입주'));
+
+    await waitFor(() => expect(getByText(/네트워크를 확인해주세요/)).toBeTruthy());
+  });
+
   it('shows the level on the meta line and skips the missing description (#234)', async () => {
     // API houses carry a level and no intro text — the old boilerplate
     // description only ever truncated.

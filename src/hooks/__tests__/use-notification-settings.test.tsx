@@ -40,6 +40,30 @@ describe('useNotificationSettings', () => {
     expect(JSON.parse(patch?.body ?? '{}')).toEqual({ reminder: false });
   });
 
+  // 조회 실패 시 기본값이 서버값처럼 보이지 않도록 loadError를 노출한다 (#549).
+  it('로드 실패 시 loadError, 재조회 성공 시 해제된다 (#549)', async () => {
+    let broken = true;
+    global.fetch = jest.fn(async () => {
+      if (broken) return res({ code: 'X' }, 500);
+      return res({ all: true, reminder: false, house: true });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useNotificationSettings());
+    await act(async () => {
+      await result.current.load();
+    });
+    expect(result.current.loadError).toBe(true);
+    // 실패 시엔 기본값 유지.
+    expect(result.current.settings).toEqual({ all: true, reminder: true, house: true });
+
+    broken = false;
+    await act(async () => {
+      await result.current.load();
+    });
+    expect(result.current.loadError).toBe(false);
+    expect(result.current.settings).toEqual({ all: true, reminder: false, house: true });
+  });
+
   it('rolls back the optimistic toggle and reports when the PATCH fails', async () => {
     const onError = jest.fn();
     global.fetch = jest.fn(async (url: string, init?: RequestInit) => {

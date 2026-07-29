@@ -35,6 +35,10 @@ export type NotificationListScreenProps = {
   /** Server notifications (newest first); omit for the demo preview list. */
   notifications?: NotificationEntry[];
   loading?: boolean;
+  /** True when the first-page load failed (#549) — 빈 상태와 구분해 표시. */
+  loadError?: boolean;
+  /** Re-run the failed load (다시 시도 button). */
+  onRetry?: () => void;
   /** More pages exist server-side (shows 더보기). */
   hasNext?: boolean;
   onBack?: () => void;
@@ -53,6 +57,8 @@ export type NotificationListScreenProps = {
 export function NotificationListScreen({
   notifications,
   loading = false,
+  loadError = false,
+  onRetry,
   hasNext = false,
   onBack,
   onRead,
@@ -90,6 +96,20 @@ export function NotificationListScreen({
           loading ? (
             <View style={styles.state}>
               <ActivityIndicator color={t.primary} />
+            </View>
+          ) : loadError ? (
+            // 로드 실패 (#549) — 빈 상태('알림 없음')로 위장하지 않는다.
+            <View style={styles.state}>
+              <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
+                알림을 불러오지 못했어요.
+              </Text>
+              <Pressable
+                onPress={onRetry}
+                accessibilityRole="button"
+                accessibilityLabel="다시 시도"
+                style={[styles.retryBtn, { backgroundColor: t.primary }]}>
+                <Text style={[Typography.label, { color: t.onPrimary }]}>다시 시도</Text>
+              </Pressable>
             </View>
           ) : (
             <Text style={[Typography.supporting, styles.state, { color: t.textMuted }]}>
@@ -150,6 +170,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     textAlign: 'center',
     paddingVertical: Spacing.six,
+    gap: Spacing.two,
+  },
+  center: {
+    textAlign: 'center',
+  },
+  retryBtn: {
+    borderRadius: Radius.pill,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.five,
   },
   row: {
     flexDirection: 'row',

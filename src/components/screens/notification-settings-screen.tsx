@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
@@ -37,6 +37,13 @@ export type NotificationSettingsScreenProps = {
    * group values under all=false, so no client-side masking is sent.
    */
   onToggle?: (key: keyof NotificationSettings, value: boolean) => void;
+  /**
+   * True when the server fetch failed (#549) — 기본값이 서버값처럼 보이지
+   * 않도록 상단 안내 배너 + 다시 불러오기를 보여준다.
+   */
+  loadError?: boolean;
+  /** Re-fetch the settings (다시 불러오기 button). */
+  onRetry?: () => void;
   onBack?: () => void;
 };
 
@@ -49,6 +56,8 @@ export type NotificationSettingsScreenProps = {
 export function NotificationSettingsScreen({
   settings = DEFAULT_NOTIFICATION_SETTINGS,
   onToggle,
+  loadError = false,
+  onRetry,
   onBack,
 }: NotificationSettingsScreenProps) {
   const t = useTokens();
@@ -59,6 +68,21 @@ export function NotificationSettingsScreen({
       <ScreenHeader title="푸시 알림" onBack={onBack} />
 
       <ScrollView contentContainerStyle={styles.body}>
+        {/* 조회 실패 안내 (#549) — 지금 보이는 값은 기본값일 수 있다. */}
+        {loadError ? (
+          <View style={[styles.card, styles.errorCard, { backgroundColor: t.surface }]}>
+            <Text style={[Typography.body, { color: t.text }]}>
+              설정을 불러오지 못했어요. 지금 보이는 값은 실제 설정과 다를 수 있어요.
+            </Text>
+            <Pressable
+              onPress={onRetry}
+              accessibilityRole="button"
+              accessibilityLabel="다시 불러오기"
+              style={[styles.retryBtn, { backgroundColor: t.primary }]}>
+              <Text style={[Typography.label, { color: t.onPrimary }]}>다시 불러오기</Text>
+            </Pressable>
+          </View>
+        ) : null}
         <View style={[styles.card, { backgroundColor: t.surface }]}>
           <View style={styles.row}>
             <View style={styles.flex}>
@@ -124,6 +148,17 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: Radius.lg,
     overflow: 'hidden',
+  },
+  // 조회 실패 배너 (#549).
+  errorCard: {
+    padding: Spacing.three,
+    gap: Spacing.two,
+    alignItems: 'flex-start',
+  },
+  retryBtn: {
+    borderRadius: Radius.pill,
+    paddingVertical: Spacing.one,
+    paddingHorizontal: Spacing.four,
   },
   row: {
     flexDirection: 'row',

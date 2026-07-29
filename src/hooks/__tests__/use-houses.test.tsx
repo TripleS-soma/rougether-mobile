@@ -187,6 +187,100 @@ describe('useHouses — 단일 집 갱신 (#534)', () => {
   });
 });
 
+// 로드 실패는 빈 상태('집 없음' 가입 유도)로 위장하지 않는다 (#549).
+describe('useHouses — 로드 실패 → error + 재시도 (#549)', () => {
+  const fail = { ok: false, status: 500, text: async () => '{}' };
+
+  it('내 집 목록 로드 실패 시 error, 재시도 성공 시 해제된다', async () => {
+    let broken = true;
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.endsWith('/me/houses')) {
+        if (broken) return fail;
+        return res({ items: [{ houseId: 1, name: '내집' }] });
+      }
+      if (url.includes('/houses/1/members')) return res({ items: [] });
+      if (url.includes('/houses/1/missions')) return res({ items: [] });
+      if (url.includes('/houses/1')) return res({ houseId: 1, name: '내집', myRole: 'OWNER' });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useHouses());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.error).toBe(true);
+    expect(result.current.houses).toEqual([]);
+
+    broken = false;
+    await act(async () => {
+      await result.current.retry();
+    });
+    expect(result.current.error).toBe(false);
+    expect(result.current.houses.map((h) => h.name)).toEqual(['내집']);
+  });
+
+  it('탐색 목록 로드 실패 시 searchError, 재시도 성공 시 해제된다', async () => {
+    let broken = true;
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/houses?')) {
+        if (broken) return fail;
+        return res({ items: [{ houseId: 2, name: '남의집', currentMemberCount: 1, maxMembers: 4 }] }); // prettier-ignore
+      }
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useHouses());
+    await waitFor(() => expect(result.current.searchLoading).toBe(false));
+    expect(result.current.searchError).toBe(true);
+
+    broken = false;
+    await act(async () => {
+      await result.current.retrySearch();
+    });
+    expect(result.current.searchError).toBe(false);
+    expect(result.current.searchHouses.map((h) => h.name)).toEqual(['남의집']);
+  });
+});
+
+// 잘못된 코드(4xx)와 네트워크·서버 오류를 구분해 화면 문구가 갈린다 (#549).
+describe('useHouses — 초대코드 오류 구분 (#549)', () => {
+  it('previewByCode: 4xx는 null(잘못된 코드), 5xx는 network', async () => {
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/houses/by-code/BAD')) {
+        return { ok: false, status: 404, text: async () => '{}' };
+      }
+      if (url.includes('/houses/by-code/NET')) {
+        return { ok: false, status: 500, text: async () => '{}' };
+      }
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useHouses());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      expect(await result.current.previewByCode('BAD')).toBeNull();
+      expect(await result.current.previewByCode('NET')).toBe('network');
+    });
+  });
+
+  it('joinByCode: 4xx는 false(잘못된 코드), 5xx는 network', async () => {
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes('/houses/join-by-code') && init?.method === 'POST') {
+        const code = JSON.parse(String(init?.body ?? '{}')).inviteCode;
+        return { ok: false, status: code === 'BAD' ? 404 : 500, text: async () => '{}' };
+      }
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useHouses());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      expect(await result.current.joinByCode('BAD')).toBe(false);
+      expect(await result.current.joinByCode('NET')).toBe('network');
+    });
+  });
+});
+
 describe('useHouses — 탐색 미리보기', () => {
   it('loads public house detail and maps its missions', async () => {
     global.fetch = jest.fn(async (url: string) => {
