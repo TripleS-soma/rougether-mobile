@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
+import { horizontalFlingResponderConfig } from '@/utils/gesture';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -72,6 +73,16 @@ export function Calendar({ value, min, max, onSelect, today }: CalendarProps) {
       const next = m + delta;
       return { y: y + Math.floor(next / 12), m: ((next % 12) + 12) % 12 };
     });
+
+  // 달력 월 스와이프 (#562) — 그리드의 가로 우세 플링으로 ‹ ›와 같은 이전/
+  // 다음 달 이동. 날짜 셀 탭은 클레임 임계(24px 가로 이동) 미달이라 그대로
+  // 살아 있다. 판정은 #561과 공용 유틸(utils/gesture); shiftMonth는 함수형
+  // setState만 부르므로 첫 렌더 클로저로 충분하다.
+  const monthSwipePan = useRef(
+    PanResponder.create(
+      horizontalFlingResponderConfig((dir) => shiftMonth(dir === 'left' ? 1 : -1)),
+    ),
+  ).current;
 
   // 선택 원 슬라이드 (#452) — 원이 이전 날짜에서 새 날짜로 스프링 이동.
   // 원 좌표는 계산(cellW·행 높이 가정)이 아니라 각 날짜 셀이 onLayout으로
@@ -153,7 +164,7 @@ export function Calendar({ value, min, max, onSelect, today }: CalendarProps) {
         </Pressable>
       </View>
 
-      <View style={styles.grid}>
+      <View style={styles.grid} testID="calendar-grid" {...monthSwipePan.panHandlers}>
         <Animated.View
           pointerEvents="none"
           style={[
