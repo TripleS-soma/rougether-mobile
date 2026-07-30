@@ -156,3 +156,89 @@ describe('AuthProvider — 소셜 로그인 매핑', () => {
     });
   });
 });
+
+// 애플 로그인 계약 변경 (#547, 서버 #235) — authorizationCode 필수.
+describe('AuthProvider — 애플 authorizationCode', () => {
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    <AuthProvider>{children}</AuthProvider>
+  );
+
+  it('요청 바디에 idToken과 authorizationCode를 함께 싣는다', async () => {
+    const fetchMock = jest.fn(async () =>
+      res(200, { userId: 1, accessToken: 'a1', refreshToken: 'r1' }),
+    );
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const { result } = await renderHook(() => useAuth(), { wrapper });
+    await act(async () => {
+      expect(await result.current.loginWithApple()).toBe('ok');
+    });
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, { body: string }];
+    expect(JSON.parse(init.body)).toMatchObject({
+      idToken: 'test-apple-identity-token',
+      authorizationCode: 'test-apple-auth-code',
+    });
+  });
+
+  it('authorizationCode가 없으면 서버 호출 없이 failed', async () => {
+    global.fetch = jest.fn() as unknown as typeof fetch;
+    (AppleAuthentication.signInAsync as jest.Mock).mockResolvedValueOnce({
+      identityToken: 'test-apple-identity-token',
+      authorizationCode: null,
+    });
+    const { result } = await renderHook(() => useAuth(), { wrapper });
+    await act(async () => {
+      expect(await result.current.loginWithApple()).toBe('failed');
+    });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+});
+
+// 회원탈퇴 (#547, 서버 #235) — DELETE /me 성공 시 로컬 정리 + guest 전환.
+describe('AuthProvider — 회원탈퇴', () => {
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    <AuthProvider>{children}</AuthProvider>
+  );
+
+  it('성공: DELETE /me 후 세션이 지워지고 guest가 된다', async () => {
+    const fetchMock = jest.fn(async (url: string, init?: { method?: string }) => {
+      if (init?.method === 'DELETE') return res(204);
+      return res(200, { userId: 1, accessToken: 'a1', refreshToken: 'r1' });
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const { result } = await renderHook(() => useAuth(), { wrapper });
+    await act(async () => {
+      await result.current.login(1);
+    });
+    expect(result.current.status).toBe('authed');
+
+    let ok = false;
+    await act(async () => {
+      ok = await result.current.withdraw();
+    });
+    expect(ok).toBe(true);
+    expect(result.current.status).toBe('guest');
+    const deleteCall = fetchMock.mock.calls.find(
+      ([, init]) => (init as { method?: string })?.method === 'DELETE',
+    );
+    expect(String(deleteCall?.[0])).toContain('/me');
+  });
+
+  it('실패: 서버 오류면 false를 돌려주고 세션을 유지한다', async () => {
+    const fetchMock = jest.fn(async (url: string, init?: { method?: string }) => {
+      if (init?.method === 'DELETE') return res(500, { message: 'boom' });
+      return res(200, { userId: 1, accessToken: 'a1', refreshToken: 'r1' });
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const { result } = await renderHook(() => useAuth(), { wrapper });
+    await act(async () => {
+      await result.current.login(1);
+    });
+
+    let ok = true;
+    await act(async () => {
+      ok = await result.current.withdraw();
+    });
+    expect(ok).toBe(false);
+    expect(result.current.status).toBe('authed');
+  });
+});

@@ -2,6 +2,8 @@ import { createContext, type ReactNode, useContext, useEffect, useMemo, useState
 
 import {
   appleLogin,
+  clearSession,
+  deleteMe,
   devLogin,
   googleLogin,
   kakaoLogin,
@@ -9,7 +11,7 @@ import {
   logout as apiLogout,
   onSessionCleared,
 } from '@/api';
-import { getAppleIdentityToken } from '@/lib/apple-auth';
+import { getAppleCredential } from '@/lib/apple-auth';
 import { getGoogleIdToken, signOutGoogle } from '@/lib/google-auth';
 import { getKakaoAccessToken, signOutKakao } from '@/lib/kakao-auth';
 import { saveLastLoginProvider } from '@/lib/last-login';
@@ -32,6 +34,12 @@ type AuthContextValue = {
   /** 애플 로그인 (#489 소셜 3차, iOS 전용): Apple 시트 → identityToken → POST /auth/apple. */
   loginWithApple: () => Promise<'ok' | 'cancelled' | 'failed'>;
   logout: () => Promise<void>;
+  /**
+   * 회원탈퇴 (#547, 서버 #235) — DELETE /me 성공 시 로컬 세션·소셜 세션을
+   * 정리하고 guest로 전환한다(AppRoot가 로그인 화면으로 보냄). 실패 시 false —
+   * 호출부가 에러 문구를 띄운다.
+   */
+  withdraw: () => Promise<boolean>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -104,9 +112,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       loginWithApple: async () => {
         try {
-          const idToken = await getAppleIdentityToken();
-          if (idToken == null) return 'cancelled';
-          await appleLogin(idToken);
+          const credential = await getAppleCredential();
+          if (credential == null) return 'cancelled';
+          await appleLogin(credential.identityToken, credential.authorizationCode);
           setStatus('authed');
           saveLastLoginProvider('apple');
           void syncPushToken();
@@ -124,6 +132,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await signOutKakao();
         await apiLogout();
         setStatus('guest');
+      },
+      withdraw: async () => {
+        try {
+          // 서버가 토큰 폐기·기기 토큰 삭제·소셜 unlink까지 한 번에 처리하므로
+          // 탈퇴 호출이 먼저다(인증 필요) — 이후는 로컬 정리만.
+          await deleteMe();
+        } catch {
+          return false;
+        }
+        resetAnalyticsUser();
+        // 서버 기기 토큰은 이미 삭제됨 — 로컬 토큰 상태만 정리(베스트 에포트).
+        await clearPushToken().catch(() => {});
+        // 기기 소셜 세션 정리 — 재로그인(=신규 가입) 때 계정 선택이 다시 뜨게.
+        await signOutGoogle();
+        await signOutKakao();
+        // apiLogout은 서버에 refresh 폐기를 요청하는데 이미 전량 폐기됨 —
+        // 로컬 세션만 지운다.
+        await clearSession();
+        setStatus('guest');
+        return true;
       },
     }),
     [status],

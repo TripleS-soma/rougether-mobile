@@ -95,3 +95,29 @@ describe('SettingsScreen', () => {
     expect(onReplayOnboarding).toHaveBeenCalledTimes(1);
   });
 });
+
+// 회원탈퇴 (#547) — 낮은 존재감 링크 + 파괴 확인 다이얼로그 뒤에만 콜백.
+describe('SettingsScreen 회원탈퇴', () => {
+  it('링크 → 확인 다이얼로그 → 탈퇴하기에서만 onWithdraw', async () => {
+    const onWithdraw = jest.fn();
+    const { getByLabelText, getByText } = await render(<SettingsScreen onWithdraw={onWithdraw} />);
+
+    await fireEvent.press(getByLabelText('회원탈퇴'));
+    expect(onWithdraw).not.toHaveBeenCalled(); // 다이얼로그만 열림
+    expect(getByText('정말 탈퇴할까요?')).toBeTruthy();
+
+    await fireEvent.press(getByLabelText('회원탈퇴 확인'));
+    expect(onWithdraw).toHaveBeenCalledTimes(1);
+  });
+
+  it('취소하면 콜백 없이 닫힌다', async () => {
+    const onWithdraw = jest.fn();
+    const { getByLabelText, getByText, queryByText } = await render(
+      <SettingsScreen onWithdraw={onWithdraw} />,
+    );
+    await fireEvent.press(getByLabelText('회원탈퇴'));
+    await fireEvent.press(getByText('취소'));
+    expect(onWithdraw).not.toHaveBeenCalled();
+    expect(queryByText('정말 탈퇴할까요?')).toBeNull();
+  });
+});

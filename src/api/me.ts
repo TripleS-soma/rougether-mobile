@@ -1,5 +1,5 @@
 /** Current user + wallet endpoints. */
-import { apiGet, apiGetList, apiPut } from './client';
+import { apiDelete, apiGet, apiGetList, apiPut } from './client';
 import type {
   CharacterSelectResponse,
   MeResponse,
@@ -35,6 +35,16 @@ export function fetchMyItems() {
 /** PUT /me — update the profile (nickname, ≤30 chars, no blanks). */
 export function updateMe(body: MemberUpdateRequest) {
   return apiPut<MeResponse>('/me', body);
+}
+
+/**
+ * DELETE /me — 회원탈퇴 (#547, 서버 #235). 서버가 한 트랜잭션에서 soft
+ * delete + 토큰 전량 폐기 + 소셜 연동 삭제 + 개인정보 즉시 파기를 수행하고,
+ * 커밋 후 카카오 unlink·애플 revoke를 best-effort로 호출한다. 204 응답.
+ * 재로그인은 새 계정 신규 가입이 된다(기존 데이터 미복원).
+ */
+export function deleteMe() {
+  return apiDelete<void>('/me');
 }
 
 /**

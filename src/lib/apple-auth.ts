@@ -7,13 +7,19 @@
  */
 import * as AppleAuthentication from 'expo-apple-authentication';
 
+export type AppleCredential = {
+  identityToken: string;
+  /** 회원탈퇴 revoke용 (#547, 서버 #235) — 서버가 refresh token으로 교환·보관. */
+  authorizationCode: string;
+};
+
 /**
- * 애플 로그인 시트를 띄우고 identityToken을 반환한다.
+ * 애플 로그인 시트를 띄우고 identityToken + authorizationCode를 반환한다.
  * - 사용자가 취소하면 null (에러 아님 — 조용히 로그인 화면 유지).
  * - 그 외 실패는 throw — 호출부가 실패 문구를 띄운다.
- * 이름/이메일 스코프는 최초 1회만 내려오지만 서버는 idToken만 쓰므로 무시해도 된다.
+ * 이름/이메일 스코프는 최초 1회만 내려오지만 서버는 토큰만 쓰므로 무시해도 된다.
  */
-export async function getAppleIdentityToken(): Promise<string | null> {
+export async function getAppleCredential(): Promise<AppleCredential | null> {
   try {
     const credential = await AppleAuthentication.signInAsync({
       requestedScopes: [
@@ -22,7 +28,13 @@ export async function getAppleIdentityToken(): Promise<string | null> {
       ],
     });
     if (!credential.identityToken) throw new Error('no identityToken in Apple credential');
-    return credential.identityToken;
+    // 서버 계약(#235)이 탈퇴 revoke 준비를 위해 코드를 필수로 받는다 — 없이
+    // 보내면 어차피 400이라 여기서 실패시켜 실패 문구 경로로 보낸다.
+    if (!credential.authorizationCode) throw new Error('no authorizationCode in Apple credential');
+    return {
+      identityToken: credential.identityToken,
+      authorizationCode: credential.authorizationCode,
+    };
   } catch (err) {
     if ((err as { code?: string }).code === 'ERR_REQUEST_CANCELED') return null;
     throw err;
