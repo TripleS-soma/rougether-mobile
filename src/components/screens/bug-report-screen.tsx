@@ -179,7 +179,7 @@ export function BugReportScreen({
             ]}>
             <Text
               style={[
-                styles.submitText,
+                Typography.body,
                 emph('semibold'),
                 { color: canSubmit ? t.onPrimary : t.textMuted },
               ]}>
@@ -297,9 +297,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     borderRadius: Radius.pill,
     alignItems: 'center',
-  },
-  submitText: {
-    fontSize: 16,
   },
   sectionTitle: {
     marginTop: Spacing.two,

@@ -143,7 +143,13 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
         {/* Cover image (server catalog) — hidden while the catalog is empty */}
         {covers.length > 0 ? (
           <View style={[styles.card, { backgroundColor: t.surface }]}>
-            <Text style={[styles.sectionLabel, emph('semibold'), { color: t.textMuted }]}>
+            <Text
+              style={[
+                Typography.supporting,
+                emph('semibold'),
+                styles.sectionLabel,
+                { color: t.textMuted },
+              ]}>
               대표 이미지
             </Text>
             <HouseCoverPicker covers={covers} selectedKey={coverKey} onSelect={setCoverKey} />
@@ -152,7 +158,13 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
 
         {/* Theme */}
         <View style={[styles.card, { backgroundColor: t.surface }]}>
-          <Text style={[styles.sectionLabel, emph('semibold'), { color: t.textMuted }]}>
+          <Text
+            style={[
+              Typography.supporting,
+              emph('semibold'),
+              styles.sectionLabel,
+              { color: t.textMuted },
+            ]}>
             테마 선택
           </Text>
           <View style={styles.themeGrid}>
@@ -172,7 +184,7 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
                     },
                   ]}>
                   <Pictogram name={x.icon} size={22} />
-                  <Text style={[styles.themeLabel, emph('semibold'), { color: t.text }]}>
+                  <Text style={[Typography.supporting, emph('semibold'), { color: t.text }]}>
                     {x.label}
                   </Text>
                 </Pressable>
@@ -184,7 +196,13 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
         {/* Capacity */}
         <View style={[styles.card, { backgroundColor: t.surface }]}>
           <View style={styles.capacityHead}>
-            <Text style={[styles.sectionLabel, emph('semibold'), { color: t.textMuted }]}>
+            <Text
+              style={[
+                Typography.supporting,
+                emph('semibold'),
+                styles.sectionLabel,
+                { color: t.textMuted },
+              ]}>
               정원
             </Text>
             <Text style={[Typography.label, { color: t.primaryText }]}>{capacity}명</Text>
@@ -213,7 +231,13 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
 
         {/* Privacy */}
         <View style={[styles.card, { backgroundColor: t.surface }]}>
-          <Text style={[styles.sectionLabel, emph('semibold'), { color: t.textMuted }]}>
+          <Text
+            style={[
+              Typography.supporting,
+              emph('semibold'),
+              styles.sectionLabel,
+              { color: t.textMuted },
+            ]}>
             공개 설정
           </Text>
           <View style={styles.privacyRow}>
@@ -238,7 +262,13 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
 
         {/* Invite code: issued by the server on creation */}
         <View style={[styles.card, { backgroundColor: t.surface }]}>
-          <Text style={[styles.sectionLabel, emph('semibold'), { color: t.textMuted }]}>
+          <Text
+            style={[
+              Typography.supporting,
+              emph('semibold'),
+              styles.sectionLabel,
+              { color: t.textMuted },
+            ]}>
             초대코드
           </Text>
           <Text style={[styles.hint, { color: t.textMuted }]}>
@@ -284,9 +314,18 @@ function Labeled({
   children: React.ReactNode;
 }) {
   const emph = useFontEmphasis();
+  const Typography = useTypography();
   return (
     <View style={styles.labeled}>
-      <Text style={[styles.fieldLabel, emph('semibold'), { color: t.textMuted }]}>{label}</Text>
+      <Text
+        style={[
+          Typography.supporting,
+          emph('semibold'),
+          styles.fieldLabel,
+          { color: t.textMuted },
+        ]}>
+        {label}
+      </Text>
       {children}
     </View>
   );
@@ -363,8 +402,8 @@ const styles = StyleSheet.create({
   },
   meta: { fontSize: 11, marginTop: 2 },
   labeled: { gap: Spacing.one },
-  fieldLabel: { fontSize: 12, marginLeft: Spacing.one },
-  sectionLabel: { fontSize: 12, marginLeft: Spacing.one },
+  fieldLabel: { marginLeft: Spacing.one },
+  sectionLabel: { marginLeft: Spacing.one },
   inputBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -384,7 +423,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.half,
   },
-  themeLabel: { fontSize: 12 },
   capacityHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   capRow: { flexDirection: 'row', gap: Spacing.two },
   capBtn: {
@@ -410,14 +448,12 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     justifyContent: 'center',
   },
-  codeText: { fontSize: 14, letterSpacing: 2 },
   codeBtn: {
     paddingHorizontal: Spacing.three,
     borderRadius: Radius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  codeBtnText: { fontSize: 13 },
   hint: { fontSize: 11, marginLeft: Spacing.one },
   submit: {
     marginTop: Spacing.two,
