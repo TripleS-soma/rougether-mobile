@@ -285,7 +285,10 @@ export function useHouses() {
         );
         let goalIds = (onboarding?.goals ?? [])
           .map((g) => g.goalId)
-          .filter((id): id is number => id != null);
+          .filter((id): id is number => id != null)
+          // 서버 제약: goalIds 최대 3개(size must be between 0 and 3) — 온보딩
+          // 목표를 4개 이상 고른 계정이 그대로 보내면 400으로 생성이 막힌다.
+          .slice(0, 3);
         if (goalIds.length === 0) {
           const goals = await fetchGoals();
           goalIds = goals
