@@ -191,7 +191,7 @@ export function Calendar({ value, min, max, onSelect, today, monthSwipe = true }
             <View key={w} style={styles.cell}>
               <Text
                 style={[
-                  styles.weekday,
+                  Typography.supporting,
                   emph('semibold'),
                   { color: i === 0 ? readableTextColor(t.danger, t.surfaceMuted) : t.textMuted },
                 ]}>
@@ -285,9 +285,6 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  weekday: {
-    fontSize: 12,
   },
   selCircle: {
     position: 'absolute',

@@ -273,7 +273,11 @@ export function HouseSearchScreen({
                 </Text>
               </Pressable>
             </View>
-            {codeError ? <Text style={[styles.msg, { color: t.danger }]}>{codeError}</Text> : null}
+            {codeError ? (
+              <Text style={[Typography.supporting, styles.msg, { color: t.danger }]}>
+                {codeError}
+              </Text>
+            ) : null}
 
             {preview ? (
               <View style={[styles.previewCard, { backgroundColor: t.surfaceMuted }]}>
@@ -421,7 +425,7 @@ export function HouseSearchScreen({
                     ]}>
                     <Text
                       style={[
-                        styles.joinText,
+                        Typography.supporting,
                         emph('semibold'),
                         { color: full || pending || accepted ? t.textMuted : t.onPrimary },
                       ]}>
@@ -630,8 +634,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
   },
-  icon: { fontSize: 16 },
-  msg: { fontSize: 12, marginLeft: Spacing.one },
+  msg: { marginLeft: Spacing.one },
   previewCard: {
     marginTop: Spacing.two,
     borderRadius: Radius.md,
@@ -748,7 +751,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     borderRadius: Radius.pill,
   },
-  joinText: { fontSize: 12 },
   createBtn: {
     borderWidth: 2,
     borderStyle: 'dashed',

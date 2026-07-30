@@ -8,7 +8,7 @@ import { PawPictogram } from '@/components/ui/pictograms';
 import { Radius, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
-import { useFontEmphasis, useTokens } from '@/hooks/use-tokens';
+import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
 export type SignupScreenProps = {
   onBack?: () => void;
@@ -26,6 +26,7 @@ export type SignupScreenProps = {
 export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
   const t = useTokens();
   const emph = useFontEmphasis();
+  const Typography = useTypography();
   const headerInset = useHeaderInsetStyle();
   const { show: toast } = useToast();
 
@@ -118,15 +119,13 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
           style={[styles.backBtn, { backgroundColor: t.surfaceMuted }]}>
           <Icon name="back" size={26} color={t.text} />
         </Pressable>
-        <Text style={[styles.headerTitle, emph('bold'), { color: t.text }]}>회원가입</Text>
+        <Text style={[Typography.body, emph('bold'), { color: t.text }]}>회원가입</Text>
         <View style={styles.backBtn} />
       </View>
 
       <View style={styles.intro}>
         <View style={styles.introTitleRow}>
-          <Text style={[styles.introTitle, emph('bold'), { color: t.text }]}>
-            마을의 새 친구를 환영해요
-          </Text>
+          <Text style={[Typography.h2, { color: t.text }]}>마을의 새 친구를 환영해요</Text>
           <PawPictogram size={18} />
         </View>
         <Text style={[styles.introSub, { color: t.textMuted }]}>
@@ -137,7 +136,7 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
       {/* The backend has no signup endpoint yet — be honest instead of a fake
           flow that bounces back to login. */}
       <View style={[styles.notice, { backgroundColor: t.warningSoft, borderColor: t.warning }]}>
-        <Text style={[styles.noticeText, { color: t.text }]}>
+        <Text style={[Typography.supporting, styles.noticeText, { color: t.text }]}>
           이메일 가입은 준비 중이에요. 지금은 로그인 화면에서 이메일 칸을 비우고 로그인하면 새
           계정이 만들어져요.
         </Text>
@@ -154,7 +153,10 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
 
         {/* Email + verification request (custom inline row) */}
         <View style={styles.fieldWrap}>
-          <Text style={[styles.label, emph('semibold'), { color: t.textMuted }]}>이메일</Text>
+          <Text
+            style={[Typography.supporting, emph('semibold'), styles.label, { color: t.textMuted }]}>
+            이메일
+          </Text>
           <View style={styles.inlineRow}>
             <View
               style={[
@@ -190,28 +192,35 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
                 styles.sideBtn,
                 { backgroundColor: sendDisabled ? t.disabledBg : t.primary },
               ]}>
-              <Text
-                style={[
-                  styles.sideBtnText,
-                  emph('semibold'),
-                  { color: sendDisabled ? t.textMuted : t.onPrimary },
-                ]}>
+              <Text style={[Typography.label, { color: sendDisabled ? t.textMuted : t.onPrimary }]}>
                 {emailVerified ? '인증완료' : codeSent ? '재발송' : '인증요청'}
               </Text>
             </Pressable>
           </View>
           {email.length > 0 && !emailValid ? (
-            <Text style={[styles.msg, { color: t.danger }]}>이메일 형식이 올바르지 않아요</Text>
+            <Text style={[Typography.supporting, styles.msg, { color: t.danger }]}>
+              이메일 형식이 올바르지 않아요
+            </Text>
           ) : null}
           {emailVerified ? (
-            <Text style={[styles.msg, { color: t.primaryText }]}>이메일 인증이 완료되었어요</Text>
+            <Text style={[Typography.supporting, styles.msg, { color: t.primaryText }]}>
+              이메일 인증이 완료되었어요
+            </Text>
           ) : null}
         </View>
 
         {/* Verification code (custom inline row) */}
         {codeSent && !emailVerified ? (
           <View style={styles.fieldWrap}>
-            <Text style={[styles.label, emph('semibold'), { color: t.textMuted }]}>인증번호</Text>
+            <Text
+              style={[
+                Typography.supporting,
+                emph('semibold'),
+                styles.label,
+                { color: t.textMuted },
+              ]}>
+              인증번호
+            </Text>
             <View style={styles.inlineRow}>
               <View
                 style={[
@@ -229,7 +238,7 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
                   maxLength={6}
                 />
                 {secondsLeft > 0 ? (
-                  <Text style={[styles.timer, emph('semibold'), { color: t.warningText }]}>
+                  <Text style={[Typography.supporting, emph('semibold'), { color: t.warningText }]}>
                     {formatTime(secondsLeft)}
                   </Text>
                 ) : null}
@@ -244,14 +253,19 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
                 ]}>
                 <Text
                   style={[
-                    styles.sideBtnText,
+                    Typography.label,
                     { color: verificationCode.length !== 6 ? t.textMuted : t.onPrimary },
                   ]}>
                   확인
                 </Text>
               </Pressable>
             </View>
-            <Text style={[styles.msg, { color: codeError ? t.danger : t.textMuted }]}>
+            <Text
+              style={[
+                Typography.supporting,
+                styles.msg,
+                { color: codeError ? t.danger : t.textMuted },
+              ]}>
               {codeError ?? '메일함을 확인하고 6자리 인증번호를 입력해주세요'}
             </Text>
           </View>
@@ -266,7 +280,7 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
           error={password.length > 0 && !passwordValid ? '비밀번호는 8자 이상이에요' : undefined}
           trailing={
             <Pressable onPress={() => setShowPw((v) => !v)} accessibilityRole="button">
-              <Text style={[styles.toggle, emph('semibold'), { color: t.textMuted }]}>
+              <Text style={[Typography.supporting, emph('semibold'), { color: t.textMuted }]}>
                 {showPw ? '숨김' : '보기'}
               </Text>
             </Pressable>
@@ -334,15 +348,17 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
         accessibilityRole="button"
         accessibilityState={{ disabled: true }}
         style={[styles.submit, { backgroundColor: t.disabledBg }]}>
-        <Text style={[styles.submitText, emph('semibold'), { color: t.textMuted }]}>
+        <Text style={[Typography.body, emph('semibold'), { color: t.textMuted }]}>
           가입 준비 중
         </Text>
       </Pressable>
 
       <View style={styles.footer}>
-        <Text style={[styles.msg, { color: t.textMuted }]}>이미 계정이 있으신가요? </Text>
+        <Text style={[Typography.supporting, styles.msg, { color: t.textMuted }]}>
+          이미 계정이 있으신가요?{' '}
+        </Text>
         <Pressable onPress={onBack} accessibilityRole="button">
-          <Text style={[styles.footerLink, emph('semibold'), { color: t.primaryText }]}>
+          <Text style={[Typography.supporting, emph('semibold'), { color: t.primaryText }]}>
             로그인
           </Text>
         </Pressable>
@@ -377,6 +393,7 @@ type AgreementItemProps = {
 
 function AgreementItem({ checked, label, required, onChange, onView }: AgreementItemProps) {
   const t = useTokens();
+  const Typography = useTypography();
   return (
     <View style={styles.agreeItem}>
       <Pressable
@@ -394,7 +411,7 @@ function AgreementItem({ checked, label, required, onChange, onView }: Agreement
       </Pressable>
       {onView ? (
         <Pressable onPress={onView} accessibilityRole="button" accessibilityLabel={`${label} 보기`}>
-          <Text style={[styles.viewLink, { color: t.textMuted }]}>보기</Text>
+          <Text style={[Typography.supporting, styles.viewLink, { color: t.textMuted }]}>보기</Text>
         </Pressable>
       ) : null}
     </View>
@@ -420,9 +437,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: {
-    fontSize: 16,
-  },
   intro: {
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.four,
@@ -437,7 +451,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
   },
   noticeText: {
-    fontSize: 12,
     lineHeight: 18,
   },
   introTitleRow: {
@@ -445,9 +458,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.one,
-  },
-  introTitle: {
-    fontSize: 20,
   },
   introSub: {
     fontSize: 14,
@@ -468,7 +478,6 @@ const styles = StyleSheet.create({
     gap: Spacing.half,
   },
   label: {
-    fontSize: 12,
     marginLeft: Spacing.one,
   },
   inlineRow: {
@@ -493,24 +502,14 @@ const styles = StyleSheet.create({
   code: {
     letterSpacing: 4,
   },
-  timer: {
-    fontSize: 12,
-  },
   sideBtn: {
     paddingHorizontal: Spacing.three,
     borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sideBtnText: {
-    fontSize: 14,
-  },
   msg: {
-    fontSize: 12,
     marginLeft: Spacing.one,
-  },
-  toggle: {
-    fontSize: 12,
   },
   agreeAll: {
     flexDirection: 'row',
@@ -537,7 +536,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   viewLink: {
-    fontSize: 12,
     textDecorationLine: 'underline',
   },
   checkbox: {
@@ -555,16 +553,10 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     alignItems: 'center',
   },
-  submitText: {
-    fontSize: 16,
-  },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: Spacing.four,
-  },
-  footerLink: {
-    fontSize: 12,
   },
 });

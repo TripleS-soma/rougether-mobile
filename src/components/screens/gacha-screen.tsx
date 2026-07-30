@@ -291,7 +291,7 @@ export function GachaScreen({
                       />
                       <Text
                         style={[
-                          styles.cost,
+                          Typography.supporting,
                           emph('semibold'),
                           { color: affordable ? t.onPrimary : t.textMuted },
                         ]}>
@@ -753,7 +753,6 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   costRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.half },
-  cost: { fontSize: 12 },
 
   // Pull animation overlay (rendered inside a full-screen Modal)
   overlay: {

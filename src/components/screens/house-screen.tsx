@@ -1228,19 +1228,19 @@ export const HouseScreen = memo(function HouseScreen({
         {/* 요약 스탯 — 스크롤 없이 집의 오늘이 보인다 (B안). */}
         <View style={styles.summaryRow}>
           <View style={[styles.stat, { backgroundColor: t.surface, borderColor: t.border }]}>
-            <Text style={[styles.statV, emph('bold'), { color: t.primaryText }]}>
+            <Text style={[Typography.h3, emph('bold'), { color: t.primaryText }]}>
               {activeMissions.length}
             </Text>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>진행 중 미션</Text>
           </View>
           <View style={[styles.stat, { backgroundColor: t.surface, borderColor: t.border }]}>
-            <Text style={[styles.statV, emph('bold'), { color: t.primaryText }]}>
+            <Text style={[Typography.h3, emph('bold'), { color: t.primaryText }]}>
               {contributedToday}/{activeMissions.length}
             </Text>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>오늘 나의 기여</Text>
           </View>
           <View style={[styles.stat, { backgroundColor: t.surface, borderColor: t.border }]}>
-            <Text style={[styles.statV, emph('bold'), { color: t.primaryText }]}>
+            <Text style={[Typography.h3, emph('bold'), { color: t.primaryText }]}>
               {toNextLevel ?? '—'}
             </Text>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>다음 레벨까지</Text>
@@ -1379,9 +1379,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  iconGlyph: {
-    fontSize: 18,
   },
   body: {
     paddingBottom: Spacing.six,
@@ -1587,9 +1584,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.two,
     paddingVertical: Spacing.two,
     gap: 2,
-  },
-  statV: {
-    fontSize: 18,
   },
   roomNameRow: {
     flexDirection: 'row',

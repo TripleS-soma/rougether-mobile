@@ -18,7 +18,7 @@ import { Icon } from '@/components/ui/icon';
 import { useToast } from '@/components/ui/toast';
 import { Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
-import { useFontEmphasis, useTokens } from '@/hooks/use-tokens';
+import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
 export type LoginScreenProps = {
   onAuthSuccess?: () => void;
@@ -65,6 +65,7 @@ export function LoginScreen({
 }: LoginScreenProps) {
   const t = useTokens();
   const emph = useFontEmphasis();
+  const Typography = useTypography();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
@@ -136,7 +137,7 @@ export function LoginScreen({
                 accessibilityLabel="루게더 앱 아이콘"
               />
             </View>
-            <Text style={[styles.title, emph('bold'), { color: t.text }]}>루게더</Text>
+            <Text style={[Typography.h1, { color: t.text }]}>루게더</Text>
             <Text style={[styles.subtitle, { color: t.textMuted }]}>
               매일의 루틴으로 나만의 방과 집을 함께 키워요.
             </Text>
@@ -160,7 +161,8 @@ export function LoginScreen({
                   secureTextEntry={!showPw}
                   trailing={
                     <Pressable onPress={() => setShowPw((v) => !v)} accessibilityRole="button">
-                      <Text style={[styles.smallLink, emph('semibold'), { color: t.textMuted }]}>
+                      <Text
+                        style={[Typography.supporting, emph('semibold'), { color: t.textMuted }]}>
                         {showPw ? '숨김' : '보기'}
                       </Text>
                     </Pressable>
@@ -181,10 +183,11 @@ export function LoginScreen({
                       ]}>
                       {keepLogin ? <Icon name="check" size={12} color={t.onPrimary} /> : null}
                     </View>
-                    <Text style={[styles.smallText, { color: t.textMuted }]}>로그인 유지</Text>
+                    <Text style={[Typography.supporting, { color: t.textMuted }]}>로그인 유지</Text>
                   </Pressable>
                   <Pressable accessibilityRole="button" onPress={notReady}>
-                    <Text style={[styles.smallLink, emph('semibold'), { color: t.primaryText }]}>
+                    <Text
+                      style={[Typography.supporting, emph('semibold'), { color: t.primaryText }]}>
                       비밀번호 찾기
                     </Text>
                   </Pressable>
@@ -203,7 +206,7 @@ export function LoginScreen({
                 ]}>
                 <Text
                   style={[
-                    styles.submitText,
+                    Typography.body,
                     emph('semibold'),
                     { color: canSubmit ? t.onPrimary : t.textMuted },
                   ]}>
@@ -219,7 +222,7 @@ export function LoginScreen({
           ) : null}
           <View style={styles.divider}>
             <View style={[styles.line, { backgroundColor: t.border }]} />
-            <Text style={[styles.smallText, { color: t.textMuted }]}>간편 로그인</Text>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>간편 로그인</Text>
             <View style={[styles.line, { backgroundColor: t.border }]} />
           </View>
 
@@ -260,9 +263,9 @@ export function LoginScreen({
           {/* 이메일 가입 잠정 제외 — 소셜 로그인만 제공. 이메일 가입을
               되살릴 때 아래 회원가입 진입 링크를 복구할 것.
           <View style={styles.footer}>
-            <Text style={[styles.smallText, { color: t.textMuted }]}>아직 회원이 아니신가요? </Text>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>아직 회원이 아니신가요? </Text>
             <Pressable onPress={onGoSignup} accessibilityRole="button">
-              <Text style={[styles.smallLink, emph('semibold'), { color: t.primaryText }]}>
+              <Text style={[Typography.supporting, emph('semibold'), { color: t.primaryText }]}>
                 회원가입
               </Text>
             </Pressable>
@@ -381,9 +384,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  title: {
-    fontSize: 24,
-  },
   subtitle: {
     fontSize: 14,
     textAlign: 'center',
@@ -420,9 +420,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     borderRadius: Radius.pill,
     alignItems: 'center',
-  },
-  submitText: {
-    fontSize: 16,
   },
   errorText: {
     fontSize: 13,
@@ -474,11 +471,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: Spacing.four,
-  },
-  smallText: {
-    fontSize: 12,
-  },
-  smallLink: {
-    fontSize: 12,
   },
 });

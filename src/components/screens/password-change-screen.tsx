@@ -38,7 +38,7 @@ export function PasswordChangeScreen({ onBack }: PasswordChangeScreenProps) {
         {/* The dev API has no password auth yet — be honest instead of a fake
             success that just navigates back. */}
         <View style={[styles.notice, { backgroundColor: t.warningSoft, borderColor: t.warning }]}>
-          <Text style={[styles.noticeText, { color: t.text }]}>
+          <Text style={[Typography.supporting, styles.noticeText, { color: t.text }]}>
             비밀번호 변경은 준비 중이에요. 지금 계정은 개발 로그인이라 비밀번호가 없어요.
           </Text>
         </View>
@@ -107,7 +107,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
   },
   noticeText: {
-    fontSize: 12,
     lineHeight: 18,
   },
   footer: {

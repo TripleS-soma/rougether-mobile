@@ -765,7 +765,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         accessibilityLabel="할 일 날짜 선택"
         style={[styles.dateChip, { backgroundColor: t.surfaceMuted }]}>
         <Icon name="calendar" size={13} color={t.textMuted} />
-        <Text style={[styles.dateChipText, { color: t.textMuted }]}>
+        <Text style={[Typography.supporting, { color: t.textMuted }]}>
           {newTodoDate === today ? '오늘' : formatDate(newTodoDate)}
         </Text>
       </Pressable>
@@ -1664,9 +1664,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     paddingHorizontal: Spacing.two,
     paddingVertical: Spacing.one,
-  },
-  dateChipText: {
-    fontSize: 12,
   },
   center: {
     textAlign: 'center',
