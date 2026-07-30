@@ -1,4 +1,3 @@
-import * as Haptics from 'expo-haptics';
 import { useEffect, useRef, useState } from 'react';
 import {
   type NativeScrollEvent,
@@ -12,6 +11,7 @@ import {
 } from 'react-native';
 
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { hapticSelection } from '@/utils/haptics';
 
 /** Row height — the selection band and snap interval both derive from this. */
 export const WHEEL_ITEM_HEIGHT = 44;
@@ -91,8 +91,9 @@ export function WheelPicker<T extends string | number>({
     if (i !== focusedRef.current) {
       focusedRef.current = i;
       setFocused(i);
-      // Row tick while the wheel turns — silently unavailable on web.
-      if (interacting.current) void Haptics.selectionAsync().catch(() => {});
+      // Row tick while the wheel turns — silently unavailable on web. 게이트
+      // (#586)를 지나므로 설정의 '햅틱 진동' 토글을 존중한다.
+      if (interacting.current) hapticSelection();
     }
     if (Platform.OS === 'web') {
       if (webSettle.current) clearTimeout(webSettle.current);
