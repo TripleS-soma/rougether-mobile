@@ -55,6 +55,11 @@ export type SettingsScreenProps = {
   onOpenTerms?: () => void;
   onOpenPrivacy?: () => void;
   onLogout?: () => void;
+  /**
+   * 회원탈퇴 (#547) — 확인 다이얼로그를 통과했을 때만 호출된다. 성공/실패
+   * 처리(토스트·화면 전환)는 셸 몫.
+   */
+  onWithdraw?: () => void;
 };
 
 /**
@@ -81,6 +86,7 @@ export function SettingsScreen({
   onOpenPrivacy,
   onReplayOnboarding,
   onLogout,
+  onWithdraw,
 }: SettingsScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
@@ -90,6 +96,8 @@ export function SettingsScreen({
   const sectionTitleStyle = [Typography.supporting, emph('semibold'), styles.sectionTitle];
   // Logging out drops the session immediately, so gate it behind a confirm.
   const [confirmLogout, setConfirmLogout] = useState(false);
+  // 회원탈퇴는 복구 불가 — 파괴 확인 다이얼로그 뒤에만 (#547).
+  const [confirmWithdraw, setConfirmWithdraw] = useState(false);
 
   const sections: { title: string; rows: Row[] }[] = [
     {
@@ -244,7 +252,31 @@ export function SettingsScreen({
             </View>
           </View>
         ))}
+
+        {/* 회원탈퇴 (#547) — 행이 아니라 목록 밖 하단의 낮은 존재감 링크.
+            실수로 닿기 어려운 자리 + 파괴 확인 다이얼로그의 2중 방어. */}
+        <Pressable
+          onPress={() => setConfirmWithdraw(true)}
+          accessibilityRole="button"
+          accessibilityLabel="회원탈퇴"
+          style={styles.withdrawLink}>
+          <Text style={[Typography.supporting, { color: t.textDisabled }]}>회원탈퇴</Text>
+        </Pressable>
       </ScrollView>
+
+      <ConfirmDialog
+        visible={confirmWithdraw}
+        title="정말 탈퇴할까요?"
+        body="모든 루틴·기록·프로필이 삭제되고 복구할 수 없어요. 같은 계정으로 다시 로그인해도 새 계정으로 시작하게 돼요."
+        confirmLabel="탈퇴하기"
+        confirmAccessibilityLabel="회원탈퇴 확인"
+        destructive
+        onConfirm={() => {
+          setConfirmWithdraw(false);
+          onWithdraw?.();
+        }}
+        onCancel={() => setConfirmWithdraw(false)}
+      />
 
       <ConfirmDialog
         visible={confirmLogout}
@@ -289,6 +321,12 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: Radius.lg,
     overflow: 'hidden',
+  },
+  // 회원탈퇴 링크 (#547) — 목록 아래 중앙, 낮은 존재감.
+  withdrawLink: {
+    alignSelf: 'center',
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.four,
   },
   designHead: {
     flexDirection: 'row',

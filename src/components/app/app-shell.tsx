@@ -270,7 +270,7 @@ export function AppShell({
     draw: drawGachaMachine,
   } = useGacha(setWallet);
 
-  const { logout } = useAuth();
+  const { logout, withdraw } = useAuth();
 
   // Owned characters + worn one (GET /me/characters). Once loaded, the worn
   // character overrides the onboarding pick everywhere but friend rooms.
@@ -1069,6 +1069,13 @@ export function AppShell({
               onLogout={() => {
                 // Clearing the session flips auth status → AppRoot redirects to /login.
                 void logout();
+              }}
+              onWithdraw={() => {
+                // 성공 시 status가 guest로 바뀌어 AppRoot가 로그인으로 보낸다 (#547).
+                void withdraw().then((ok) => {
+                  if (ok) toast('탈퇴가 완료됐어요');
+                  else toast('탈퇴에 실패했어요. 잠시 후 다시 시도해 주세요', 'error');
+                });
               }}
             />
           </TabPager>

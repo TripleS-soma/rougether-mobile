@@ -5,6 +5,9 @@
 
 export type AppleLoginRequest = {
   idToken: string;
+  // Manual patch (#547, 서버 #235): 애플 시트가 identityToken과 함께 주는
+  // authorizationCode — 서버가 refresh token으로 교환해 탈퇴 revoke에 쓴다.
+  authorizationCode: string;
 };
 
 export type BugReportListResponse = {
