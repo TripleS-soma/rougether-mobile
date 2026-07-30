@@ -14,7 +14,7 @@ describe('MissionBanner (#571)', () => {
         onSkip={jest.fn()}
       />,
     );
-    expect(getByText('미션 2/4')).toBeTruthy();
+    expect(getByText(/미션 2\/4/)).toBeTruthy();
     expect(getByText('뽑기 1회 해보기')).toBeTruthy();
 
     await fireEvent.press(getByLabelText('미션 2 뽑기 1회 해보기'));
@@ -49,5 +49,12 @@ describe('MissionBanner (#571)', () => {
     await fireEvent.press(getByLabelText('취소'));
     expect(onSkip).not.toHaveBeenCalled();
     expect(queryByText('미션을 건너뛸까요?')).toBeNull();
+  });
+
+  it('탭 어포던스 문구를 보여준다 (#571 후속)', async () => {
+    const { getByText } = await render(
+      <MissionBanner stepIndex={0} totalSteps={4} label="첫 루틴 등록하기" />,
+    );
+    expect(getByText(/눌러서 바로 시작해요/)).toBeTruthy();
   });
 });

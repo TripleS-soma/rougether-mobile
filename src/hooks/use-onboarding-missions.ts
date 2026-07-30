@@ -10,14 +10,27 @@ const STORE_KEY = 'rougether.onboarding-missions.v1';
 export type OnboardingMissionStepId =
   'register-routine' | 'first-draw' | 'place-furniture' | 'browse-house';
 
-export type OnboardingMissionStep = { id: OnboardingMissionStepId; label: string };
+export type OnboardingMissionStep = {
+  id: OnboardingMissionStepId;
+  label: string;
+  /** 어디서·어떻게 하는지 한 줄 — 완료 시트의 다음 미션 안내에 붙는다. */
+  hint: string;
+};
 
 /** 온보딩 미션 체인 4단계 (#571) — 순서대로만 진행된다. */
 export const ONBOARDING_MISSION_STEPS: OnboardingMissionStep[] = [
-  { id: 'register-routine', label: '첫 루틴 등록하기' },
-  { id: 'first-draw', label: '뽑기 1회 해보기' },
-  { id: 'place-furniture', label: '방 꾸미기 저장하기' },
-  { id: 'browse-house', label: '다른 집 둘러보기' },
+  {
+    id: 'register-routine',
+    label: '첫 루틴 등록하기',
+    hint: '추천 루틴에서 골라 담으면 바로 끝나요',
+  },
+  { id: 'first-draw', label: '뽑기 1회 해보기', hint: '뽑기에서 코인으로 한 번 뽑아요' },
+  {
+    id: 'place-furniture',
+    label: '방 꾸미기 저장하기',
+    hint: '방 꾸미기에서 가구를 놓고 저장해요',
+  },
+  { id: 'browse-house', label: '다른 집 둘러보기', hint: '집 탐색에서 다른 집을 구경하고 나와요' },
 ];
 
 /** '튜토리얼 다시 보기' 재시작용 — 플래그를 지우면 온보딩 완주 직후의

@@ -50,8 +50,11 @@ export function MissionBanner({
           style={styles.goArea}>
           <Text style={styles.emoji}>🎯</Text>
           <View style={styles.texts}>
+            {/* 탭 어포던스 (#571 후속) — 배너가 실행 화면으로 데려다주는
+                다리인데 눌러도 된다는 표시가 없었다. 기존 줄에 병합해
+                배너 높이는 그대로. */}
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              미션 {stepIndex + 1}/{totalSteps}
+              미션 {stepIndex + 1}/{totalSteps} · 눌러서 바로 시작해요
             </Text>
             <Text style={[Typography.label, { color: t.text }]} numberOfLines={1}>
               {label}

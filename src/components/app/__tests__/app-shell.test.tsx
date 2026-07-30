@@ -78,7 +78,7 @@ describe('AppShell — 온보딩 미션 체인 (#571)', () => {
       </AuthProvider>,
     );
     await waitFor(() => getByTestId('mission-banner'));
-    expect(getByText('미션 1/4')).toBeTruthy();
+    expect(getByText(/미션 1\/4/)).toBeTruthy();
     expect(getByText('첫 루틴 등록하기')).toBeTruthy();
 
     await fireEvent.press(getByLabelText('미션 1 첫 루틴 등록하기'));
@@ -103,9 +103,9 @@ describe('AppShell — 온보딩 미션 체인 (#571)', () => {
 
     // 완료 전환 시트 — 다음 미션 안내와 하러 가기.
     await waitFor(() => getByText('✅ 미션 1 완료!'));
-    expect(getByText('다음 미션: 뽑기 1회 해보기')).toBeTruthy();
+    expect(getByText(/다음 미션: 뽑기 1회 해보기/)).toBeTruthy();
     await fireEvent.press(getByLabelText('다음 미션 하러 가기'));
-    await waitFor(() => getByText('미션 2/4'));
+    await waitFor(() => getByText(/미션 2\/4/));
     expect(getByText('뽑기 1회 해보기')).toBeTruthy();
   });
 

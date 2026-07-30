@@ -11,6 +11,8 @@ export type MissionSheetProps = {
   totalSteps: number;
   /** 다음 미션 라벨 — null이면 마지막 미션 완료(축하 변형). */
   nextLabel?: string | null;
+  /** 다음 미션을 어디서·어떻게 하는지 한 줄 (#571 후속). */
+  nextHint?: string | null;
   /** '하러 가기' — 다음 미션 화면으로 이동. 부모가 시트도 닫는다. */
   onGo?: () => void;
   /** 백드롭 탭·나중에·확인 닫기. */
@@ -26,6 +28,7 @@ export function MissionSheet({
   completedStep,
   totalSteps,
   nextLabel,
+  nextHint,
   onGo,
   onClose,
 }: MissionSheetProps) {
@@ -50,6 +53,8 @@ export function MissionSheet({
       ) : (
         <Text style={[Typography.body, styles.body, { color: t.textMuted }]}>
           다음 미션: {nextLabel}
+          {/* 어디서·어떻게 한 줄 (#571 후속) — 방법을 몰라 막히는 이탈 방지. */}
+          {nextHint ? `\n${nextHint}` : ''}
         </Text>
       )}
       <View style={styles.btns}>

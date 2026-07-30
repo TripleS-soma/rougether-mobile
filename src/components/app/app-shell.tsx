@@ -1432,6 +1432,7 @@ export function AppShell({
         completedStep={(missions.completedIndex ?? 0) + 1}
         totalSteps={missions.totalSteps}
         nextLabel={missions.step?.label ?? null}
+        nextHint={missions.step?.hint ?? null}
         onGo={() => {
           const id = missions.step?.id;
           missions.dismissCompleted();

@@ -44,4 +44,17 @@ describe('MissionSheet (#571)', () => {
     );
     expect(queryByText('✅ 미션 1 완료!')).toBeNull();
   });
+
+  it('다음 미션의 방법 한 줄(nextHint)을 함께 보여준다 (#571 후속)', async () => {
+    const { getByText } = await render(
+      <MissionSheet
+        visible
+        completedStep={1}
+        totalSteps={4}
+        nextLabel="뽑기 1회 해보기"
+        nextHint="뽑기에서 코인으로 한 번 뽑아요"
+      />,
+    );
+    expect(getByText(/뽑기에서 코인으로 한 번 뽑아요/)).toBeTruthy();
+  });
 });
