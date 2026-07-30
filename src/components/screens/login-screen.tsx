@@ -40,6 +40,11 @@ export type LoginScreenProps = {
   onKakaoLogin?: () => Promise<'ok' | 'cancelled' | 'failed'>;
   /** 애플 로그인 (#489 소셜 3차) — iOS 전용 버튼(다른 플랫폼에선 숨김). */
   onAppleLogin?: () => Promise<'ok' | 'cancelled' | 'failed'>;
+  /**
+   * 마지막으로 성공한 소셜 로그인 (#489 후속) — 해당 버튼에 "최근 로그인"
+   * 배지를 붙여 재로그인 때 어느 계정으로 들어왔었는지 알려준다.
+   */
+  lastLoginProvider?: 'kakao' | 'apple' | 'google' | null;
 };
 
 /**
@@ -56,6 +61,7 @@ export function LoginScreen({
   onGoogleLogin,
   onKakaoLogin,
   onAppleLogin,
+  lastLoginProvider,
 }: LoginScreenProps) {
   const t = useTokens();
   const emph = useFontEmphasis();
@@ -226,6 +232,7 @@ export function LoginScreen({
               label="카카오"
               logo={<Ionicons name="chatbubble" size={18} color="#191919" />}
               onPress={onKakaoLogin ? submitKakao : notReady}
+              recent={lastLoginProvider === 'kakao'}
             />
             {/* Sign in with Apple은 iOS 전용(expo-apple-authentication) — 다른
                 플랫폼에선 동작할 수 없는 버튼을 보여주지 않는다 (#489 소셜 3차). */}
@@ -236,6 +243,7 @@ export function LoginScreen({
                 label="애플"
                 logo={<Ionicons name="logo-apple" size={20} color="#FFFFFF" />}
                 onPress={onAppleLogin ? submitApple : notReady}
+                recent={lastLoginProvider === 'apple'}
               />
             ) : null}
             <SocialButton
@@ -245,6 +253,7 @@ export function LoginScreen({
               logo={<GoogleG size={18} />}
               bordered
               onPress={onGoogleLogin ? submitGoogle : notReady}
+              recent={lastLoginProvider === 'google'}
             />
           </View>
 
@@ -295,9 +304,19 @@ type SocialButtonProps = {
   logo: ReactNode;
   bordered?: boolean;
   onPress?: () => void;
+  /** 마지막으로 로그인한 방법 — 우측에 "최근 로그인" 배지를 붙인다. */
+  recent?: boolean;
 };
 
-function SocialButton({ bg, textColor, label, logo, bordered, onPress }: SocialButtonProps) {
+function SocialButton({
+  bg,
+  textColor,
+  label,
+  logo,
+  bordered,
+  onPress,
+  recent,
+}: SocialButtonProps) {
   const t = useTokens();
   const emph = useFontEmphasis();
   return (
@@ -310,11 +329,20 @@ function SocialButton({ bg, textColor, label, logo, bordered, onPress }: SocialB
       ]}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${label}로 시작`}>
+      accessibilityLabel={recent ? `${label}로 시작, 최근 로그인` : `${label}로 시작`}>
       <View style={styles.socialLogo}>{logo}</View>
       <Text style={[styles.socialLabel, emph('semibold'), { color: textColor }]}>
         {label === '구글' ? 'Google로 시작하기' : `${label}로 시작하기`}
       </Text>
+      {/* 브랜드색 버튼(노랑/검정/흰색) 위 어디서든 읽히도록 배지는 버튼의
+          textColor에서 파생 — 배경은 10% 틴트, 글자는 본문색 그대로. */}
+      {recent ? (
+        <View style={[styles.recentBadge, { backgroundColor: `${textColor}1A` }]}>
+          <Text style={[styles.recentBadgeText, emph('semibold'), { color: textColor }]}>
+            최근 로그인
+          </Text>
+        </View>
+      ) : null}
     </Pressable>
   );
 }
@@ -430,6 +458,16 @@ const styles = StyleSheet.create({
   },
   socialLabel: {
     fontSize: 15,
+  },
+  recentBadge: {
+    position: 'absolute',
+    right: Spacing.three,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 3,
+    borderRadius: Radius.pill,
+  },
+  recentBadgeText: {
+    fontSize: 11,
   },
   footer: {
     flexDirection: 'row',

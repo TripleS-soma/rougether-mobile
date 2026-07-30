@@ -12,6 +12,7 @@ import {
 import { getAppleIdentityToken } from '@/lib/apple-auth';
 import { getGoogleIdToken, signOutGoogle } from '@/lib/google-auth';
 import { getKakaoAccessToken, signOutKakao } from '@/lib/kakao-auth';
+import { saveLastLoginProvider } from '@/lib/last-login';
 import { clearPushToken, syncPushToken } from '@/lib/push-token';
 import { resetAnalyticsUser } from '@/lib/analytics';
 
@@ -80,6 +81,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (idToken == null) return 'cancelled';
           await googleLogin(idToken);
           setStatus('authed');
+          // 최근 로그인 배지(#489 후속) — 다음 로그인 화면이 이 버튼을 표시.
+          saveLastLoginProvider('google');
           void syncPushToken();
           return 'ok';
         } catch {
@@ -92,6 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (accessToken == null) return 'cancelled';
           await kakaoLogin(accessToken);
           setStatus('authed');
+          saveLastLoginProvider('kakao');
           void syncPushToken();
           return 'ok';
         } catch {
@@ -104,6 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (idToken == null) return 'cancelled';
           await appleLogin(idToken);
           setStatus('authed');
+          saveLastLoginProvider('apple');
           void syncPushToken();
           return 'ok';
         } catch {

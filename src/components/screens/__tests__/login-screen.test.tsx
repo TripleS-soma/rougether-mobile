@@ -148,3 +148,24 @@ describe('LoginScreen', () => {
     expect(queryByText(/아직 회원이 아니신가요/)).toBeNull();
   });
 });
+
+// 최근 로그인 배지 (#489 후속) — 마지막으로 성공한 소셜 로그인 버튼에 붙는다.
+describe('LoginScreen 최근 로그인 배지', () => {
+  it('lastLoginProvider와 일치하는 버튼에만 배지가 붙는다', async () => {
+    const { getByText, getByLabelText } = await render(<LoginScreen lastLoginProvider="kakao" />);
+    expect(getByText('최근 로그인')).toBeTruthy();
+    // 접근성 라벨에도 최근 로그인이 실린다 — 스크린리더 사용자도 같은 정보.
+    expect(getByLabelText('카카오로 시작, 최근 로그인')).toBeTruthy();
+    expect(getByLabelText('구글로 시작')).toBeTruthy();
+  });
+
+  it('프로바이더가 없으면 배지가 없다', async () => {
+    const { queryByText } = await render(<LoginScreen />);
+    expect(queryByText('최근 로그인')).toBeNull();
+  });
+
+  it('애플 프로바이더면 애플 버튼에 배지가 붙는다 (jest는 iOS)', async () => {
+    const { getByLabelText } = await render(<LoginScreen lastLoginProvider="apple" />);
+    expect(getByLabelText('애플로 시작, 최근 로그인')).toBeTruthy();
+  });
+});
