@@ -37,6 +37,12 @@ export type CalendarProps = {
    * (date-picker sheets) to hide the chip entirely.
    */
   today?: string;
+  /**
+   * 그리드 가로 플링의 월 이동 (#562). 나의 방 달력 탭은 false — 거기선
+   * 가로 스와이프가 방↔달력 탭 순환(#563 후속)이라 월 이동과 충돌한다.
+   * 날짜 선택 시트들은 기본값(true) 그대로.
+   */
+  monthSwipe?: boolean;
 };
 
 /**
@@ -44,7 +50,7 @@ export type CalendarProps = {
  * EAS Update. ISO date strings sort lexicographically, so min/max comparisons
  * are plain string compares.
  */
-export function Calendar({ value, min, max, onSelect, today }: CalendarProps) {
+export function Calendar({ value, min, max, onSelect, today, monthSwipe = true }: CalendarProps) {
   const t = useTokens();
   const Typography = useTypography();
   const emph = useFontEmphasis();
@@ -79,9 +85,13 @@ export function Calendar({ value, min, max, onSelect, today }: CalendarProps) {
   // 다음 달 이동. RNGH pan(#561과 공용 유틸) — RN 웹의 ScrollView 안에서
   // PanResponder는 move 클레임 질의를 못 받는다. 날짜 셀 탭은 활성 임계
   // (가로 24px) 미달이라 pan이 활성화되지 않아 그대로 살아 있다. shiftMonth는
-  // 함수형 setState만 부르므로 첫 렌더 클로저로 충분하다.
+  // 함수형 setState만 부르므로 첫 렌더 클로저로 충분하다. monthSwipe=false면
+  // 비활성 — 플링이 부모 디텍터(방↔달력 순환)로 흘러간다. 사용처별 상수라
+  // 마운트 시 1회 반영이면 충분하다.
   const monthFling = useRef(
-    horizontalFlingGesture('calendar-month-fling', (dir) => shiftMonth(dir === 'left' ? 1 : -1)),
+    horizontalFlingGesture('calendar-month-fling', (dir) =>
+      shiftMonth(dir === 'left' ? 1 : -1),
+    ).enabled(monthSwipe),
   ).current;
 
   // 선택 원 슬라이드 (#452) — 원이 이전 날짜에서 새 날짜로 스프링 이동.

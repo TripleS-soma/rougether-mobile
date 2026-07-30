@@ -103,13 +103,10 @@ describe('MyRoomScreen', () => {
     expect(ui.getByText('오늘의 루틴')).toBeTruthy();
   });
 
-  // 서브탭 끝 체이닝 (#563) — 달력에서 한 번 더 좌플링하면 셸이 다음 하단
-  // 탭(집)으로 페이지를 넘기도록 onFlingPastEnd를 부른다.
-  it('달력 탭에서 좌플링은 onFlingPastEnd("left")로 셸에 넘긴다 (#563)', async () => {
-    const onFlingPastEnd = jest.fn();
-    const ui = await render(
-      <MyRoomScreen routines={SAMPLE_ROUTINES} onFlingPastEnd={onFlingPastEnd} />,
-    );
+  // 방↔달력 스와이프 순환 — 방향과 무관하게 플링이 두 서브탭을 오간다.
+  // 달력에서 좌플링해도 (월 이동·집 이동이 아니라) 방으로 되돌아온다.
+  it('플링은 방향과 무관하게 방↔달력을 순환한다', async () => {
+    const ui = await render(<MyRoomScreen routines={SAMPLE_ROUTINES} />);
     const fling = (translationX: number) =>
       act(async () =>
         fireGestureHandler(getByGestureTestId('room-tab-fling'), [
@@ -119,18 +116,14 @@ describe('MyRoomScreen', () => {
         ]),
       );
 
-    // 방 탭에서 좌플링 → 내부 전환(달력), 셸 콜백은 아직 아니다.
+    // 방에서 좌플링 → 달력, 달력에서 한 번 더 좌플링 → 방(순환).
     await fling(-60);
     expect(ui.getByText('이 날의 루틴')).toBeTruthy();
-    expect(onFlingPastEnd).not.toHaveBeenCalled();
-    // 달력에서 한 번 더 좌플링 → 체이닝.
     await fling(-60);
-    expect(onFlingPastEnd).toHaveBeenCalledWith('left');
-    // 방 탭에서 우플링(첫 페이지 방향)도 셸로 넘긴다 — 셸이 무시할 몫.
-    await fling(60); // 달력 → 방 (내부 복귀)
-    onFlingPastEnd.mockClear();
+    expect(ui.getByText('오늘의 루틴')).toBeTruthy();
+    // 방에서 우플링도 달력으로(순환) — 어느 방향이든 오간다.
     await fling(60);
-    expect(onFlingPastEnd).toHaveBeenCalledWith('right');
+    expect(ui.getByText('이 날의 루틴')).toBeTruthy();
   });
 
   // 루틴 행 스와이프 삭제 (#566) — 액션은 항상 렌더되고 스와이프로 드러난다.

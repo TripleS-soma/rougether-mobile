@@ -56,6 +56,22 @@ describe('Calendar', () => {
     expect(getByText('2026년 6월')).toBeTruthy();
   });
 
+  // 나의 방 달력 탭은 가로 스와이프가 방↔달력 순환이라 월 이동을 끈다 —
+  // 플링이 부모 디텍터로 흘러가고 월은 ‹ › 버튼으로만 움직인다.
+  it('monthSwipe=false면 그리드 플링이 월을 바꾸지 않는다', async () => {
+    const { getByText } = await render(
+      <Calendar value="2026-06-15" onSelect={() => {}} monthSwipe={false} />,
+    );
+    await act(async () =>
+      fireGestureHandler(getByGestureTestId('calendar-month-fling'), [
+        { state: State.BEGAN },
+        { state: State.ACTIVE },
+        { state: State.END, translationX: -60, translationY: 0 },
+      ]),
+    );
+    expect(getByText('2026년 6월')).toBeTruthy();
+  });
+
   it('shows the 오늘 chip while off-today and jumps back on press (#467)', async () => {
     const onSelect = jest.fn();
     const { getByLabelText } = await render(

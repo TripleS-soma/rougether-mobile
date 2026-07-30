@@ -904,14 +904,6 @@ export function AppShell({
     },
     [noHouses],
   );
-  // 방↔달력 서브탭 끝(달력)에서 한 번 더 좌플링 → 집으로 체이닝 (#563).
-  const handleMyRoomFlingPastEnd = useCallback(
-    (dir: 'left' | 'right') => {
-      if (dir !== 'left') return; // 나의 방이 첫 페이지 — 오른쪽 끝은 없다.
-      setScreen(noHouses ? 'houseSearch' : 'house');
-    },
-    [noHouses],
-  );
 
   // 화면 전환 손맛 (#446) — 들어오는 화면이 이동 방향에서 밀려 들어온다.
   // 진입(서브화면)은 우측에서, 복귀(뒤로)는 좌측에서. 탭 간 전환은 이제
@@ -1006,7 +998,6 @@ export function AppShell({
               onUpdateTodoDueDate={updateTodoDueDate}
               onMoveRoutineOccurrence={moveRoutineOccurrence}
               onDeleteRoutine={deleteRoutine}
-              onFlingPastEnd={handleMyRoomFlingPastEnd}
             />
             <HouseScreen
               houses={arrangedHouses}
