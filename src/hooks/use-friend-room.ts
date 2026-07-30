@@ -17,12 +17,13 @@ import {
   fromRoomPlacements,
   type ShopCatalogue,
   toFriendActivity,
+  toFriendCategories,
   toFriendRoutines,
 } from '@/api/adapters';
 import type { CharacterAnimationSet } from '@/components/character-avatar';
 import type { FriendActivityDay } from '@/components/screens/friend-room-screen';
 import type { CharacterId } from '@/constants/characters';
-import type { Routine } from '@/constants/routines';
+import type { Routine, RoutineCategoryMeta } from '@/constants/routines';
 import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furniture';
 
 /** 친구 방 배치 — FREE_V1이면 placements, 아니면 슬롯 id 목록으로 렌더 (#327). */
@@ -42,6 +43,8 @@ export type FriendRoom = {
   characterAnimations?: CharacterAnimationSet;
   streakDays: number;
   routines: Routine[];
+  /** 그날 루틴·투두의 공개 카테고리 메타 (#528) — 그룹 헤더용. */
+  categories: RoutineCategoryMeta[];
   /** Recent completion history (14 days); undefined while unloaded/failed. */
   recentActivity?: FriendActivityDay[];
   loading: boolean;
@@ -53,7 +56,13 @@ export type FriendRoom = {
   error?: boolean;
 };
 
-const EMPTY: FriendRoom = { placement: null, streakDays: 0, routines: [], loading: false };
+const EMPTY: FriendRoom = {
+  placement: null,
+  streakDays: 0,
+  routines: [],
+  categories: [],
+  loading: false,
+};
 
 export function useFriendRoom() {
   const [friendRoom, setFriendRoom] = useState<FriendRoom>(EMPTY);
@@ -105,6 +114,7 @@ export function useFriendRoom() {
         characterAnimations: friendCharacterId ? room?.character?.animations : undefined,
         streakDays: room?.streak?.currentCount ?? 0,
         routines: day ? toFriendRoutines(day) : [],
+        categories: day ? toFriendCategories(day) : [],
         // undefined on failure hides the section instead of faking an empty history.
         recentActivity: completions ? toFriendActivity(completions) : undefined,
         loading: false,

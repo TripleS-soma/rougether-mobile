@@ -222,4 +222,36 @@ describe('FriendRoomScreen', () => {
     await fireEvent.press(getByLabelText('다시 시도'));
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
+
+  // 카테고리 그룹핑 (#528, 서버 #237) — 메타가 있으면 본인 화면처럼 그룹으로,
+  // 메타에 없는 항목은 미분류로.
+  it('카테고리 메타가 있으면 루틴을 그룹 헤더 아래 묶는다', async () => {
+    const { getByText, queryByText } = await render(
+      <FriendRoomScreen
+        friendName="민지"
+        routines={[
+          { id: '1', title: '아침 기상', kind: 'routine', completed: true, category: '3' },
+          { id: '2', title: '비밀 루틴', kind: 'routine', completed: false, category: '99' },
+        ]}
+        categories={[
+          { id: '3', name: '건강', icon: 'dumbbell', color: '#FF8800', visibility: 'neighbor' },
+        ]}
+      />,
+    );
+    expect(getByText('건강')).toBeTruthy();
+    expect(getByText('1/1')).toBeTruthy(); // 건강 그룹 완료 카운트
+    expect(getByText('미분류')).toBeTruthy(); // 메타 없는 categoryId 99
+    expect(queryByText('없어요')).toBeNull();
+  });
+
+  it('카테고리 메타가 없으면 기존 플랫 목록 그대로다', async () => {
+    const { getByText, queryByText } = await render(
+      <FriendRoomScreen
+        friendName="민지"
+        routines={[{ id: '1', title: '아침 기상', kind: 'routine', completed: false }]}
+      />,
+    );
+    expect(getByText('아침 기상')).toBeTruthy();
+    expect(queryByText('미분류')).toBeNull();
+  });
 });

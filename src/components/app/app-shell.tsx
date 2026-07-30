@@ -1246,6 +1246,7 @@ export function AppShell({
             characterAnimations={friendRoom.characterAnimations}
             streakDays={friendRoom.streakDays}
             routines={friendRoom.routines}
+            categories={friendRoom.categories}
             recentActivity={friendRoom.recentActivity}
             loading={friendRoom.loading}
             loadError={friendRoom.error}
