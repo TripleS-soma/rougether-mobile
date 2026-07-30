@@ -437,6 +437,85 @@ describe('AppShell — 연동 루틴 스윕', () => {
   });
 });
 
+// --- 이름 매칭 연동분 1회성 승격 (#578) — 서버 백필이 없어 클라가 심는다. ---
+describe('AppShell — 링크 id 승격 마이그레이션', () => {
+  const json = (body: unknown) => ({
+    ok: true,
+    status: 200,
+    text: async () => JSON.stringify(body),
+  });
+  let calls: { url: string; method: string; body?: string }[] = [];
+
+  beforeEach(() => {
+    calls = [];
+    // 구식 세계: 이름은 맞물리는데(카테고리명 == 집 이름, 루틴명 == 미션명)
+    // 링크 id가 없다 — 부팅 승격이 PUT으로 id를 심어야 한다.
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+      calls.push({ url, method, body: init?.body as string | undefined });
+      if (url.includes('/auth/')) return json({ accessToken: 't', refreshToken: 'r' });
+      if (method === 'PUT' && url.includes('/categories/20'))
+        return json({ id: 20, name: 'TripleS', houseId: 2 });
+      if (method === 'PUT' && url.includes('/routines/44'))
+        return json({ id: 44, title: '아침 스트레칭', categoryId: 20, repeatType: 'DAILY', houseMissionId: 6 }); // prettier-ignore
+      if (url.includes('/categories')) return json({ items: [{ id: 20, name: 'TripleS' }] });
+      if (url.endsWith('/routines'))
+        return json({
+          items: [{ id: 44, title: '아침 스트레칭', categoryId: 20, repeatType: 'DAILY' }],
+        });
+      if (url.endsWith('/me/houses')) return json({ items: [{ houseId: 2, name: 'TripleS' }] });
+      if (url.includes('/houses/2/missions'))
+        return json({
+          items: [
+            {
+              missionId: 6,
+              title: '아침 스트레칭',
+              missionType: 'WEEKLY_MEMBER_COUNT',
+              targetValue: 5,
+              currentValue: 0,
+              status: 'ACTIVE',
+            },
+            // 만료 미션은 승격 대상이 아니다.
+            {
+              missionId: 8,
+              title: '아침 스트레칭',
+              missionType: 'WEEKLY_MEMBER_COUNT',
+              targetValue: 5,
+              currentValue: 0,
+              status: 'EXPIRED',
+            },
+          ],
+        });
+      if (url.includes('/houses/2/members')) return json({ items: [] });
+      if (url.includes('/houses/2')) return json({ houseId: 2, name: 'TripleS', myRole: 'OWNER' });
+      if (url.endsWith('/today')) return json({ categories: [], summary: {}, streak: {} });
+      if (url.endsWith('/me')) return json({ userId: 4, nickname: '준서' });
+      return json({ items: [] });
+    }) as unknown as typeof fetch;
+  });
+
+  it('이름 일치·id 없음 카테고리와 루틴에 링크 id를 PUT으로 심는다', async () => {
+    await render(
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>,
+    );
+
+    // 카테고리 승격 — houseId가 실린 PUT.
+    await waitFor(() => {
+      const put = calls.find((c) => c.method === 'PUT' && c.url.includes('/categories/20'));
+      expect(JSON.parse(put?.body ?? '{}').houseId).toBe(2);
+    });
+    // 루틴 승격 — ACTIVE 미션(6)의 id가 실린 PUT (EXPIRED 8은 제외).
+    await waitFor(() => {
+      const put = calls.find((c) => c.method === 'PUT' && c.url.includes('/routines/44'));
+      expect(JSON.parse(put?.body ?? '{}').houseMissionId).toBe(6);
+    });
+    // 승격은 삭제(스윕 오발)를 유발하지 않는다.
+    expect(calls.some((c) => c.method === 'DELETE')).toBe(false);
+  });
+});
+
 describe('AppShell — 루트 뒤로가기 더블 백 종료 (#522)', () => {
   it('첫 뒤로가기는 토스트 안내, 2초 안에 한 번 더 누르면 종료한다', async () => {
     const handlers: (() => boolean)[] = [];
