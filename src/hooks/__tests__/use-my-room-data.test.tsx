@@ -62,18 +62,24 @@ describe('useMyRoomData — completion routing on id collision', () => {
   });
 });
 
-describe('useMyRoomData — completion callback (미션 연동, #272)', () => {
-  it('fires onCompleted only for a successful completion, not an un-complete', async () => {
+describe('useMyRoomData — 완료 응답의 서버 자동 미션 기여 (#578)', () => {
+  it('surfaces houseMissionContribution on a completion, null result on un-complete', async () => {
     const now = new Date();
     const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
-      if (url.includes('/categories')) return res({ items: [{ id: 1, name: '집카테고리' }] });
+      if (url.includes('/categories'))
+        return res({ items: [{ id: 1, name: '집카테고리', houseId: 2 }] });
       if (url.endsWith('/routines'))
         return res({
-          items: [{ id: 9, title: '아침 스트레칭', categoryId: 1, repeatType: 'DAILY' }],
+          items: [
+            { id: 9, title: '아침 스트레칭', categoryId: 1, repeatType: 'DAILY', houseMissionId: 6 }, // prettier-ignore
+          ],
         });
       if ((init?.method ?? 'GET') === 'POST' && url.includes('/routines/9/logs'))
-        return res({ rewardAmount: 0 });
+        return res({
+          rewardAmount: 0,
+          houseMissionContribution: { missionId: 6, myContribution: 1, currentValue: 3, achieved: false }, // prettier-ignore
+        });
       if ((init?.method ?? 'GET') === 'DELETE') return res({});
       if (url.endsWith('/today')) return res({ categories: [], summary: {}, streak: {} });
       if (url.endsWith('/me')) return res({ userId: 1 });
@@ -83,19 +89,24 @@ describe('useMyRoomData — completion callback (미션 연동, #272)', () => {
     const { result } = await renderHook(() => useMyRoomData());
     await waitFor(() => expect(result.current.loading).toBe(false));
     const routine = result.current.routines[0];
-    const onCompleted = jest.fn();
+    // 링크 id가 앱 모델까지 내려온다.
+    expect(routine.linkedMissionId).toBe(6);
 
+    let returned: Awaited<ReturnType<typeof result.current.toggleCompletion>> = null;
     await act(async () => {
-      await result.current.toggleCompletion(routine.id, todayIso, onCompleted);
+      returned = await result.current.toggleCompletion(routine.id, todayIso);
     });
-    expect(onCompleted).toHaveBeenCalledWith(expect.objectContaining({ title: '아침 스트레칭' }));
+    // 완료 응답의 자동 기여 결과가 그대로 실려 나온다 — 셸이 집 상태에 반영.
+    expect(returned).toMatchObject({
+      rewardAmount: 0,
+      houseMissionContribution: { missionId: 6, currentValue: 3 },
+    });
 
-    onCompleted.mockClear();
-    // Now completed → the same call un-completes; the callback must stay quiet.
+    // 해제는 기여와 무관 — null (기여 회수 없음).
     await act(async () => {
-      await result.current.toggleCompletion(routine.id, todayIso, onCompleted);
+      returned = await result.current.toggleCompletion(routine.id, todayIso);
     });
-    expect(onCompleted).not.toHaveBeenCalled();
+    expect(returned).toBeNull();
   });
 });
 
@@ -121,11 +132,11 @@ describe('useMyRoomData — 코인 상한 피드백 (#444)', () => {
     const routine = result.current.routines[0];
 
     // 보상 있는 완료 → 보상액 반환 (화면은 이 값으로 코인을 발사한다).
-    let returned: number | null | undefined;
+    let returned: Awaited<ReturnType<typeof result.current.toggleCompletion>> = null;
     await act(async () => {
       returned = await result.current.toggleCompletion(routine.id, todayIso);
     });
-    expect(returned).toBe(10);
+    expect(returned).toMatchObject({ rewardAmount: 10 });
 
     // 해제 → null (코인 없음).
     await act(async () => {
@@ -138,7 +149,7 @@ describe('useMyRoomData — 코인 상한 피드백 (#444)', () => {
     await act(async () => {
       returned = await result.current.toggleCompletion(routine.id, todayIso);
     });
-    expect(returned).toBe(0);
+    expect(returned).toMatchObject({ rewardAmount: 0 });
   });
 });
 

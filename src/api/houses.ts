@@ -37,9 +37,14 @@ export function fetchHouseCoverImages() {
   return apiGetList<HouseCoverImage>('/houses/cover-images');
 }
 
-/** GET /houses — browse/search houses (paginated). */
-export function fetchHouses(page = 0, size = 20) {
-  return apiGet<HouseListResponse>(`/houses${buildQuery({ page, size })}`);
+/**
+ * GET /houses — browse/search houses (paginated). excludeJoined=true면 본인이
+ * ACTIVE(소유 포함)인 집을 서버가 걸러서 내려준다 (#578).
+ */
+export function fetchHouses(page = 0, size = 20, excludeJoined = false) {
+  return apiGet<HouseListResponse>(
+    `/houses${buildQuery({ page, size, excludeJoined: excludeJoined ? 'true' : undefined })}`,
+  );
 }
 
 /** GET /houses/{id} — detail (includes inviteCode for members). */

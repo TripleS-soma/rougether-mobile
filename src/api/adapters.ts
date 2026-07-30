@@ -157,6 +157,7 @@ export function toAppCategory(c: CategoryResponse, index = 0): RoutineCategoryMe
     icon: toCategoryIcon(c.iconKey),
     color: c.colorHex || CATEGORY_COLORS[index % CATEGORY_COLORS.length],
     visibility: visToApp(c.visibility),
+    houseId: c.houseId ?? undefined,
     deleted: c.deleted || undefined,
   };
 }
@@ -171,6 +172,9 @@ export function toCategoryCreate(
     iconKey: cat.icon,
     sortOrder,
     visibility: visToApi(cat.visibility),
+    // 집 연동 id (#578) — 없으면 생략(수정 시 null/생략은 기존 유지, 해제는
+    // DELETE /categories/{id}/house-link).
+    houseId: cat.houseId,
   };
 }
 
@@ -252,6 +256,7 @@ export function toAppRoutine(r: RoutineResponse): Routine {
     alarmEnabled: !!r.scheduledTime,
     time: r.scheduledTime ? fromApiTime(r.scheduledTime) : undefined,
     kind: 'routine',
+    linkedMissionId: r.houseMissionId ?? undefined,
   };
 }
 
@@ -266,6 +271,7 @@ export function toRoutineCreate(n: NewRoutine): RoutineCreateRequest {
     scheduledTime: n.alarmEnabled && n.time ? toApiTime(n.time) : undefined,
     startsOn: n.startDate,
     endsOn: n.endDate,
+    houseMissionId: n.linkedMissionId,
   };
 }
 
@@ -291,6 +297,9 @@ export function toRoutineUpdate(
     scheduledTime: merged.alarmEnabled && merged.time ? toApiTime(merged.time) : null,
     startsOn: merged.startDate,
     endsOn: merged.endDate ?? null,
+    // 연동 미션 id (#578) — null/생략은 기존 유지라(endsOn 등과 다른 규칙) 값이
+    // 있을 때만 실어도 링크가 풀리지 않는다. 해제는 전용 DELETE 엔드포인트.
+    houseMissionId: merged.linkedMissionId,
   };
 }
 

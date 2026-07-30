@@ -32,6 +32,9 @@ export type CategoryCreateRequest = {
   iconKey?: string;
   sortOrder?: number;
   visibility?: 'PRIVATE' | 'FRIENDS' | 'HOUSE' | 'PUBLIC';
+  // Manual patch (#578): 연동 집 id — 해제는 DELETE /categories/{id}/house-link.
+  // Restore after `npm run gen:api-types`.
+  houseId?: number | null;
 };
 
 export type CategoryListResponse = {
@@ -46,6 +49,8 @@ export type CategoryResponse = {
   sortOrder?: number;
   visibility?: 'PRIVATE' | 'FRIENDS' | 'HOUSE' | 'PUBLIC';
   deleted?: boolean;
+  // Manual patch (#578): 연동 집 id. Restore after `npm run gen:api-types`.
+  houseId?: number | null;
 };
 
 export type CategoryUpdateRequest = {
@@ -54,6 +59,9 @@ export type CategoryUpdateRequest = {
   iconKey?: string;
   sortOrder?: number;
   visibility?: 'PRIVATE' | 'FRIENDS' | 'HOUSE' | 'PUBLIC';
+  // Manual patch (#578): 연동 집 id — null은 기존 유지, 해제는
+  // DELETE /categories/{id}/house-link. Restore after `npm run gen:api-types`.
+  houseId?: number | null;
 };
 
 export type CharacterAnimations = {
@@ -749,6 +757,8 @@ export type RoutineCreateRequest = {
   scheduledTime?: string;
   startsOn?: string;
   endsOn?: string;
+  // Manual patch (#578): 연동 공동미션 id. Restore after `npm run gen:api-types`.
+  houseMissionId?: number | null;
 };
 
 export type RoutineListResponse = {
@@ -767,6 +777,9 @@ export type RoutineLogResponse = {
   rewardCurrencyType?: 'COIN' | 'DIAMOND';
   rewardAmount?: number;
   streak?: StreakSummaryResponse;
+  // Manual patch (#578): 오늘(KST) 완료 시 서버가 연동 미션에 자동 기여한 결과.
+  // null이면 미연동/스킵(이미 기여·비활성·과거 등). Restore after `npm run gen:api-types`.
+  houseMissionContribution?: HouseMissionContributeResponse | null;
 };
 
 export type RoutineResponse = {
@@ -781,6 +794,8 @@ export type RoutineResponse = {
   startsOn?: string;
   endsOn?: string;
   originRoutineId?: number;
+  // Manual patch (#578): 연동 공동미션 id. Restore after `npm run gen:api-types`.
+  houseMissionId?: number | null;
 };
 
 export type RoutineUpdateRequest = {
@@ -794,6 +809,10 @@ export type RoutineUpdateRequest = {
   scheduledTime?: string | null;
   startsOn?: string;
   endsOn?: string | null;
+  // Manual patch (#578): 연동 공동미션 id — null은 기존 유지(categoryId의
+  // null=해제와 다른 규칙). 해제는 DELETE /routines/{id}/house-mission-link.
+  // Restore after `npm run gen:api-types`.
+  houseMissionId?: number | null;
 };
 
 export type SlotAssignment = {

@@ -275,8 +275,8 @@ export type HouseScreenProps = {
   onLeaveHouse?: (houseId: number) => void;
   /** File a mission as a daily routine under the house-named category. */
   onAddMissionRoutine?: (houseId: number, mission: HouseMission) => void;
-  /** My routines in this house's category — 연동/기여함 라벨 판정. */
-  linkedRoutines?: { title: string; completedToday?: boolean }[];
+  /** 현재 집 미션에 연동된 내 루틴 (#578) — 연동/기여함 라벨 판정. */
+  linkedRoutines?: { missionId: number; completedToday?: boolean }[];
   /** Mission ids contributed this session (기여 직후 즉시 반영용 보조 신호). */
   contributedMissionIds?: number[];
   /** Claim the reward of an achieved mission. */
@@ -433,7 +433,7 @@ export const HouseScreen = memo(function HouseScreen({
   /** 오늘 기여 완료 판정 — 세션 추적 또는 연동 루틴의 오늘 완료에서 파생. */
   const isContributed = (mission: HouseMission) =>
     contributedMissionIds.includes(mission.id) ||
-    linkedRoutines.some((r) => r.title === mission.title && r.completedToday);
+    linkedRoutines.some((r) => r.missionId === mission.id && r.completedToday);
   const contributedToday = activeMissions.filter(isContributed).length;
   const toNextLevel =
     currentHouse?.growthPoints != null ? 100 - (currentHouse.growthPoints % 100) : undefined;

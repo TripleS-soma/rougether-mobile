@@ -61,8 +61,17 @@ import {
   UNCATEGORIZED_META,
 } from '@/constants/routines';
 import type { CalendarDayItem } from '@/components/screens/my-room-screen';
+import type { HouseMissionContributeResponse } from '@/api/types';
 import { todayIso } from '@/utils/datetime';
 import { identifyUser, track } from '@/lib/analytics';
+
+/** 완료 토글 결과 — 코인 보상액과 서버 자동 미션 기여 결과 (#578). */
+export type CompletionToggleResult = {
+  /** 지급된 코인 (0 = 일일 상한 도달). */
+  rewardAmount: number;
+  /** 서버가 연동 미션에 자동 기여한 결과 — null/생략이면 미연동·스킵. */
+  houseMissionContribution?: HouseMissionContributeResponse | null;
+};
 
 export function useMyRoomData() {
   const [routines, setRoutines] = useState<Routine[]>([]);
@@ -188,11 +197,12 @@ export function useMyRoomData() {
   }, [calendarDays, loadCalendarDay]);
 
   /**
-   * `onCompleted` fires only after a successful completion (not an
-   * un-complete) — the shell uses it to auto-contribute linked house missions.
+   * Toggle a completion. Resolves null on an un-complete (or failure); on a
+   * completion it resolves the reward plus the server's auto mission
+   * contribution (#578) — the shell mirrors that into the house state.
    */
   const toggleCompletion = useCallback(
-    async (id: string, date: string, onCompleted?: (item: Routine) => void) => {
+    async (id: string, date: string): Promise<CompletionToggleResult | null> => {
       const item = findItem(id);
       const wasDone = (completions[id] ?? []).includes(date);
       // Optimistic update; revert on failure.
@@ -203,12 +213,18 @@ export function useMyRoomData() {
       try {
         const numId = toServerItemId(id);
         let rewardAmount: number | undefined;
+        let contribution: HouseMissionContributeResponse | null | undefined;
         if (item?.kind === 'todo') {
           if (wasDone) await uncompleteTodo(numId);
           else rewardAmount = (await completeTodo(numId)).rewardAmount;
         } else {
           if (wasDone) await uncompleteRoutine(numId, date);
-          else rewardAmount = (await completeRoutine(numId, date)).rewardAmount;
+          else {
+            const log = await completeRoutine(numId, date);
+            rewardAmount = log.rewardAmount;
+            // 오늘(KST) 완료면 서버가 연동 미션에 자동 기여한 결과가 실려온다.
+            contribution = log.houseMissionContribution;
+          }
         }
         // Completion pays out server-side — surface the actual amount. 일일
         // 상한을 다 받은 오늘 완료(보상 0)는 코인 대신 상한 안내 (#444);
@@ -217,8 +233,9 @@ export function useMyRoomData() {
         else if (!wasDone && date === todayIso()) toast('오늘 받을 수 있는 코인을 다 모았어요');
         if (!wasDone) track('routine_complete', { kind: item?.kind ?? 'routine' });
         await refreshWallet();
-        if (!wasDone && item) onCompleted?.(item);
-        return wasDone ? null : (rewardAmount ?? 0);
+        return wasDone
+          ? null
+          : { rewardAmount: rewardAmount ?? 0, houseMissionContribution: contribution };
       } catch {
         setCompletions((prev) => {
           const dates = prev[id] ?? [];
@@ -452,26 +469,74 @@ export function useMyRoomData() {
   );
 
   /**
-   * Find a category by name — refreshing from the server first, since another
-   * session may have created it (stale local state must not duplicate the
-   * house-named category, #272) — creating it only when genuinely absent.
+   * Find the linked house category — refreshing from the server first, since
+   * another session may have created it (stale local state must not duplicate
+   * it, #272) — creating it only when genuinely absent. Matches by the server
+   * link id (houseId, #578) first; falls back to the name for not-yet-promoted
+   * legacy categories.
    */
   const ensureCategory = useCallback(
     async (cat: RoutineCategoryMeta): Promise<RoutineCategoryMeta | null> => {
+      const match = (list: RoutineCategoryMeta[]) =>
+        (cat.houseId != null ? list.find((c) => c.houseId === cat.houseId) : undefined) ??
+        list.find((c) => c.name === cat.name);
       try {
         const cats = await fetchCategories();
         const appCats = cats.map((c, i) => toAppCategory(c, i)).filter((c) => !c.deleted);
         setCategories(appCats);
-        const existing = appCats.find((c) => c.name === cat.name);
+        const existing = match(appCats);
         if (existing) return existing;
       } catch {
         // Offline lookup fallback: trust local state below.
-        const existing = categories.find((c) => c.name === cat.name);
+        const existing = match(categories);
         if (existing) return existing;
       }
       return createRoutineCategory(cat);
     },
     [categories, createRoutineCategory],
+  );
+
+  /**
+   * 이름 매칭 연동분 1회성 승격 (#578) — 서버에 링크 id를 심고 로컬 상태에도
+   * 반영한다. 실패는 조용히 건너뛴다(조건 기반이라 다음 부팅에 재시도).
+   */
+  const linkRoutineMission = useCallback(
+    async (id: string, missionId: number) => {
+      const item = findItem(id);
+      if (!item || item.kind === 'todo') return;
+      try {
+        await apiUpdateRoutine(
+          toServerItemId(id),
+          toRoutineUpdate(item, { linkedMissionId: missionId }),
+        );
+        setRoutines((prev) =>
+          prev.map((r) => (r.id === id ? { ...r, linkedMissionId: missionId } : r)),
+        );
+      } catch {
+        // Silent — 승격 실패는 이번 부팅에선 이름 매칭 없이 미연동으로 남는다.
+      }
+    },
+    [findItem],
+  );
+
+  /** linkRoutineMission의 카테고리판 — houseId를 심는다 (#578). */
+  const linkCategoryHouse = useCallback(
+    async (id: string, houseId: number) => {
+      const cat = categories.find((c) => c.id === id);
+      if (!cat) return;
+      try {
+        const sortOrder = categories.findIndex((c) => c.id === id);
+        await apiUpdateCategory(
+          Number(id),
+          toCategoryCreate({ ...cat, houseId }, sortOrder >= 0 ? sortOrder : undefined),
+        );
+        setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, houseId } : c)));
+        setAllCategories((prev) => prev.map((c) => (c.id === id ? { ...c, houseId } : c)));
+      } catch {
+        // Silent — 다음 부팅에 재시도.
+      }
+    },
+    [categories],
   );
 
   const updateRoutineCategory = useCallback(
@@ -615,6 +680,8 @@ export function useMyRoomData() {
       deleteRoutine,
       createRoutineCategory,
       ensureCategory,
+      linkRoutineMission,
+      linkCategoryHouse,
       updateRoutineCategory,
       deleteRoutineCategory,
       deleteCategoryCascade,
@@ -647,6 +714,8 @@ export function useMyRoomData() {
       deleteRoutine,
       createRoutineCategory,
       ensureCategory,
+      linkRoutineMission,
+      linkCategoryHouse,
       updateRoutineCategory,
       deleteRoutineCategory,
       deleteCategoryCascade,
