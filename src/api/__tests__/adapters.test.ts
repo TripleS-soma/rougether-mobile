@@ -802,6 +802,15 @@ describe('API adapters', () => {
             targetValue: 10,
             status: 'ACTIVE',
           },
+          {
+            // 완료 미션은 진행값이 리셋돼 내려온다 — 미리보기에서 제외 (#233).
+            missionId: 10,
+            title: '끝난 미션',
+            missionType: 'DAILY_MEMBER_RATE',
+            currentValue: 0,
+            targetValue: 3,
+            status: 'COMPLETED',
+          },
         ],
       }),
     ).toMatchObject({

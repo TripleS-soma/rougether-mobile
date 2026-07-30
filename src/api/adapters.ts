@@ -860,8 +860,10 @@ export function toHousePreviewDetail(
     rooms: catalogue
       ? (p.memberRooms ?? []).map((m: MemberRoomSummary) => toPreviewRoom(m.room, catalogue))
       : undefined,
-    // 단체미션 미리보기 (#532) — 프리뷰 응답의 진행 중 미션.
-    missions: (p.missions ?? []).map(toHouseMission),
+    // 단체미션 미리보기 (#532) — 서버(#233)는 완료분까지 최신 생성순으로
+    // 보내지만, 미리보기는 유인 목적이라 진행 중(ACTIVE)만 노출한다.
+    // 완료 미션은 진행값이 리셋돼(0/3) 고장처럼 읽힌다.
+    missions: (p.missions ?? []).map(toHouseMission).filter((m) => m.status === 'ACTIVE'),
   };
 }
 
