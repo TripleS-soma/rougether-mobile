@@ -1,5 +1,5 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
-import { BackHandler } from 'react-native';
+import { BackHandler, StyleSheet } from 'react-native';
 import { State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
@@ -794,6 +794,51 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
     expect(lastApply(onApply)[0]).toEqual(
       expect.objectContaining({ furnitureId: 'plant', x: 0.72 }),
     );
+  });
+});
+
+describe('RoomDecorScreen — 선택 툴바 위치 회피 (#608)', () => {
+  const placedAt = (id: string, y: number): PlacedFurniture[] => [
+    { furnitureId: id, x: 0.5, y, z: 1 },
+  ];
+  const toolbarStyle = (getByTestId: (id: string) => { props: Record<string, unknown> }) =>
+    StyleSheet.flatten(getByTestId('selection-toolbar').props.style as never) as {
+      top?: number;
+      bottom?: number;
+    };
+
+  it('벽 쪽(상반부) 가구를 선택하면 툴바가 캔버스 하단으로 회피한다', async () => {
+    const { getByTestId } = await render(
+      <RoomDecorScreen initialItems={placedAt('plant', 0.3)} freeLayout />,
+    );
+    await layoutCanvas(getByTestId);
+    await tapItem('plant');
+
+    const style = toolbarStyle(getByTestId);
+    expect(style.bottom).toBeDefined();
+    expect(style.top).toBeUndefined();
+  });
+
+  it('하반부 가구는 상단 자리를 유지하고, 드래그로 벽 쪽에 놓으면 하단으로 옮겨간다', async () => {
+    const { getByTestId } = await render(
+      <RoomDecorScreen initialItems={placedAt('plant', 0.7)} freeLayout />,
+    );
+    await layoutCanvas(getByTestId);
+    await tapItem('plant');
+    expect(toolbarStyle(getByTestId).top).toBeDefined();
+    expect(toolbarStyle(getByTestId).bottom).toBeUndefined();
+
+    // 중심 0.7×320=224px에서 위로 160px → 64px = y 0.2 (상반부)로 드롭.
+    await act(() =>
+      fireGestureHandler(getByGestureTestId('item-pan-plant'), [
+        { state: State.BEGAN },
+        { state: State.ACTIVE },
+        { state: State.ACTIVE, translationX: 0, translationY: -160 },
+        { state: State.END, translationX: 0, translationY: -160 },
+      ]),
+    );
+    expect(toolbarStyle(getByTestId).bottom).toBeDefined();
+    expect(toolbarStyle(getByTestId).top).toBeUndefined();
   });
 });
 

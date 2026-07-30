@@ -11,6 +11,8 @@ import {
   View,
 } from 'react-native';
 
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+
 import { type CharacterAnimationSet, CharacterAvatar } from '@/components/character-avatar';
 import {
   DraggableFurniture,
@@ -356,6 +358,16 @@ export function RoomDecorScreen({
   const [roomSize, setRoomSize] = useState({ w: 0, h: 0 });
   // 선택된 가구 — 링 + 툴바(회전/반전/앞뒤/빼기) + 크기 핸들 대상 (#333).
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // 드래그 중 여부 (#608) — 팬 워클릿이 UI 스레드에서 쓰는 미러. React 상태로
+  // 받으면 리렌더가 활성 팬을 취소하므로(draggable-furniture 참고) 툴바 숨김은
+  // Animated 스타일로만 반응한다. jest의 useSharedValue는 렌더마다 새 객체라
+  // useRef로 앵커 (#539 계약).
+  const dragActive = useRef(useSharedValue(false)).current;
+  const toolbarDragStyle = useAnimatedStyle(() => ({
+    opacity: withTiming(dragActive.value ? 0 : 1, { duration: 120 }),
+    // 숨은 툴바의 유령 터치 차단 — 두 번째 손가락이 빼기를 누르는 사고 방지.
+    pointerEvents: dragActive.value ? ('none' as const) : ('auto' as const),
+  }));
   // 프리뷰 가구는 "선택된 상태에서 한 번 더 탭"이 구매다 (#501).
   const handleFurnitureSelect = (id: string) => {
     if (selectedId === id && !owned.has(id)) {
@@ -522,6 +534,7 @@ export function RoomDecorScreen({
                         onSelect={handleFurnitureSelect}
                         onDragEnd={commitDrag}
                         onScaleEnd={commitScale}
+                        dragActiveSV={dragActive}
                         preview={!owned.has(p.furnitureId)}
                         previewPrice={item.price}
                       />
@@ -557,9 +570,20 @@ export function RoomDecorScreen({
                 style={styles.characterFigure}
               />
             </View>
-            {/* 선택 툴바 (#333) — 캔버스 위 고정, 캐릭터 레이어보다도 위. */}
+            {/* 선택 툴바 (#333) — 캔버스 위 플로팅, 캐릭터 레이어보다도 위.
+                벽 쪽(상반부) 가구를 가리지 않게 하단으로 회피하고(#608), 점프가
+                거슬리지 않게 드래그 중에는 숨겼다가 드롭 시점에 재배치된다. */}
             {selectedId ? (
-              <View style={[styles.toolbar, { backgroundColor: t.surface, borderColor: t.border }]}>
+              <Animated.View
+                testID="selection-toolbar"
+                style={[
+                  styles.toolbar,
+                  (items.find((p) => p.furnitureId === selectedId)?.y ?? 1) < 0.5
+                    ? styles.toolbarBottom
+                    : styles.toolbarTop,
+                  toolbarDragStyle,
+                  { backgroundColor: t.surface, borderColor: t.border },
+                ]}>
                 {(
                   [
                     ['rotate-ccw', '왼쪽 회전', () => rotateSelected(-1)],
@@ -580,7 +604,7 @@ export function RoomDecorScreen({
                     <Icon name={icon} size={18} color={icon === 'trash' ? t.danger : t.text} />
                   </Pressable>
                 ))}
-              </View>
+              </Animated.View>
             ) : null}
           </View>
         </View>
@@ -1347,11 +1371,9 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     zIndex: 10000,
   },
-  // 선택 툴바 (#333) — 캔버스 상단 중앙, 모든 레이어 위.
+  // 선택 툴바 (#333) — 캔버스 중앙 상/하단 플로팅, 모든 레이어 위.
   toolbar: {
     position: 'absolute',
-    // 플로팅 재화 필(#510)과 겹치지 않게 버튼 줄 아래에서 시작.
-    top: Spacing.two + 48,
     alignSelf: 'center',
     flexDirection: 'row',
     gap: Spacing.one,
@@ -1359,6 +1381,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: Spacing.one,
     zIndex: 10001,
+  },
+  // 하반부 가구 선택 — 기본 자리. 플로팅 재화 필(#510) 줄 아래에서 시작.
+  toolbarTop: {
+    top: Spacing.two + 48,
+  },
+  // 상반부(벽 쪽) 가구 선택 — 가리지 않게 하단으로 회피 (#608).
+  toolbarBottom: {
+    bottom: Spacing.two,
   },
   toolBtn: {
     width: 36,
