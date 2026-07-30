@@ -238,8 +238,15 @@ export function useHouses() {
       try {
         await acceptHouseJoinRequest(houseId, requestId);
         toast('입주 신청을 수락했어요', 'success');
-      } catch {
-        toast('입주 신청을 수락하지 못했어요. 정원을 확인해 주세요.', 'error');
+      } catch (err) {
+        // 신청자가 이미 탈퇴 (서버 #240) — 서버가 신청을 거절 처리해 뒀으므로
+        // 목록에서 지운 채로 두고 이유만 알린다(재동기화가 정리분을 반영).
+        if (
+          err instanceof ApiError &&
+          err.code === ErrorCode.HOUSE_JOIN_REQUEST_APPLICANT_WITHDRAWN
+        )
+          toast('탈퇴한 회원의 신청이라 자동으로 정리했어요');
+        else toast('입주 신청을 수락하지 못했어요. 정원을 확인해 주세요.', 'error');
       }
       // 성공(새 멤버 반영)·실패(신청 복원) 모두 해당 집만 재동기화.
       void reloadHouse(houseId);

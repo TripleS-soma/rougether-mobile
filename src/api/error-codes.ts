@@ -22,6 +22,11 @@ export const ErrorCode = {
   HOUSE_MISSION_ALREADY_CLAIMED: 'HOUSE_MISSION_ALREADY_CLAIMED',
   /** 409 — 살아있는 루틴이 있는 카테고리 삭제 (DELETE /categories/{id}, #517). */
   CATEGORY_IN_USE: 'CATEGORY_IN_USE',
+  /**
+   * 409 — 승인하려는 신청자가 이미 탈퇴함 (POST …/join-requests/{id}/accept,
+   * 서버 #240). 서버가 신청을 거절 처리해 두므로 클라는 안내만 하면 된다.
+   */
+  HOUSE_JOIN_REQUEST_APPLICANT_WITHDRAWN: 'HOUSE_JOIN_REQUEST_APPLICANT_WITHDRAWN',
 } as const;
 
 export type KnownErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
