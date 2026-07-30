@@ -2,7 +2,7 @@ import { type ReactNode } from 'react';
 import { StyleSheet, Text, TextInput, type TextInputProps, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
-import { useFontEmphasis, useTokens } from '@/hooks/use-tokens';
+import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
 export type FieldProps = {
   value: string;
@@ -35,12 +35,16 @@ export function Field({
 }: FieldProps) {
   const t = useTokens();
   const emph = useFontEmphasis();
+  const Typography = useTypography();
   const borderColor = error ? t.danger : success ? t.primary : 'transparent';
 
   return (
     <View style={styles.wrap}>
       {label ? (
-        <Text style={[styles.label, emph('semibold'), { color: t.textMuted }]}>{label}</Text>
+        <Text
+          style={[Typography.supporting, emph('semibold'), styles.label, { color: t.textMuted }]}>
+          {label}
+        </Text>
       ) : null}
       <View style={[styles.box, { backgroundColor: t.surfaceMuted, borderColor }]}>
         <TextInput
@@ -53,9 +57,11 @@ export function Field({
         />
         {trailing}
       </View>
-      {error ? <Text style={[styles.msg, { color: t.danger }]}>{error}</Text> : null}
+      {error ? (
+        <Text style={[Typography.supporting, styles.msg, { color: t.danger }]}>{error}</Text>
+      ) : null}
       {!error && success ? (
-        <Text style={[styles.msg, { color: t.primaryText }]}>{success}</Text>
+        <Text style={[Typography.supporting, styles.msg, { color: t.primaryText }]}>{success}</Text>
       ) : null}
     </View>
   );
@@ -66,7 +72,6 @@ const styles = StyleSheet.create({
     gap: Spacing.half,
   },
   label: {
-    fontSize: 12,
     marginLeft: Spacing.one,
   },
   box: {
@@ -84,7 +89,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.half,
   },
   msg: {
-    fontSize: 12,
     marginLeft: Spacing.one,
   },
 });
