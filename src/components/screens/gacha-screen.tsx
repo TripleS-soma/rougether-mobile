@@ -71,6 +71,12 @@ export type GachaScreenProps = {
    * wallet is updated by the caller from the draw response.
    */
   onDraw?: (gachaId: number, count: GachaDrawCount) => Promise<DrawResult[] | null>;
+  /**
+   * 결과 화면의 확인(닫기)을 눌러 뽑기 한 판이 끝난 순간 (#571 후속) —
+   * 온보딩 미션 완료 시트가 뽑기 연출을 덮지 않도록, 셸은 여기서 미션을
+   * 완료시킨다.
+   */
+  onResultsConfirmed?: () => void;
 };
 
 /**
@@ -89,6 +95,7 @@ export function GachaScreen({
   coinBalance = 0,
   diamondBalance = 0,
   onDraw,
+  onResultsConfirmed,
 }: GachaScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
@@ -149,6 +156,8 @@ export function GachaScreen({
 
   const close = () => {
     clearTimeout(revealTimer.current ?? undefined);
+    // 결과를 보고 닫는 경우에만 — 실패/취소 닫기에는 결과가 없다.
+    if (pulled.length > 0) onResultsConfirmed?.();
     setPhase('idle');
     setPulled([]);
   };

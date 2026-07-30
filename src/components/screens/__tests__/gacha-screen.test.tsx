@@ -133,4 +133,30 @@ describe('GachaScreen', () => {
     await fireEvent.press(getByLabelText('다시 시도'));
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
+
+  // 온보딩 미션 완료 타이밍 (#571 후속) — 뽑기 연출이 끝나고 확인을 누른
+  // 순간에만 셸에 알린다. 뽑기 직후 완료시키면 미션 시트가 연출을 덮는다.
+  it('결과 확인을 누른 순간에만 onResultsConfirmed가 불린다', async () => {
+    const onDraw = jest.fn(async (): Promise<DrawResult[]> => [
+      { name: '허브 화분', rarity: '희귀', converted: false },
+    ]);
+    const onResultsConfirmed = jest.fn();
+    const { getByText, getByLabelText } = await render(
+      <GachaScreen
+        gachas={[machine]}
+        coinBalance={5600}
+        onDraw={onDraw}
+        onResultsConfirmed={onResultsConfirmed}
+      />,
+    );
+
+    await fireEvent.press(getByText('1회 뽑기'));
+    // 연출이 도는 동안(리빌 전)에는 아직 아니다.
+    expect(onResultsConfirmed).not.toHaveBeenCalled();
+    await waitFor(() => expect(getByText('허브 화분')).toBeTruthy(), { timeout: 8000 });
+    expect(onResultsConfirmed).not.toHaveBeenCalled();
+
+    await fireEvent.press(getByLabelText('확인'));
+    expect(onResultsConfirmed).toHaveBeenCalledTimes(1);
+  });
 });
