@@ -6,6 +6,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  type SharedValue,
 } from 'react-native-reanimated';
 
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
@@ -46,6 +47,12 @@ export type DraggableFurnitureProps = {
   onDragEnd: (furnitureId: string, x: number, y: number) => void;
   /** 핀치/핸들 종료 — 스케일 커밋 (호출측이 SCALE_MIN~MAX로 클램프). */
   onScaleEnd?: (furnitureId: string, scale: number) => void;
+  /**
+   * 부모 소유의 "드래그 중" 미러 (#608) — 팬 워클릿이 UI 스레드에서만 쓴다.
+   * 선택 툴바 숨김처럼 드래그에 반응해야 하는 오버레이가 Animated 스타일로
+   * 구독한다. React 상태로 올리면 리렌더가 활성 팬을 취소하므로 SV 전용.
+   */
+  dragActiveSV?: SharedValue<boolean>;
 };
 
 /**
@@ -61,6 +68,7 @@ export function DraggableFurniture({
   onSelect,
   onDragEnd,
   onScaleEnd,
+  dragActiveSV,
   preview = false,
   previewPrice,
 }: DraggableFurnitureProps) {
@@ -90,6 +98,7 @@ export function DraggableFurniture({
     .withTestId(`item-pan-${placement.furnitureId}`)
     .onStart(() => {
       dragging.value = true;
+      if (dragActiveSV) dragActiveSV.value = true;
       start.value = { x: cx.value, y: cy.value };
     })
     .onUpdate((e) => {
@@ -109,7 +118,9 @@ export function DraggableFurniture({
       runOnJS(onDragEnd)(placement.furnitureId, cx.value / roomSize.w, cy.value / roomSize.h);
     })
     .onFinalize(() => {
+      // 취소·중단 경로 포함 항상 해제 — 툴바가 숨은 채 남지 않게.
       dragging.value = false;
+      if (dragActiveSV) dragActiveSV.value = false;
     });
 
   // 짧은 탭 = 선택 (#333). 팬이 활성화되면(=진짜 드래그) 탭은 무산된다.
