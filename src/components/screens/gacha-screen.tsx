@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 
 import type { GachaMachine } from '@/api/adapters';
-import type { DrawResult, GachaDrawCount } from '@/api';
+import type { DrawResult, GachaDrawCount, GachaRewardPreview } from '@/api';
 import { Icon } from '@/components/ui/icon';
 import { Pictogram, type PictogramName } from '@/components/ui/pictograms';
 import { WalletPills } from '@/components/ui/wallet-pills';
@@ -32,6 +32,12 @@ type Phase = 'idle' | 'charging' | 'reveal';
 const MIN_CHARGE_MS = 1800;
 const BONUS_DRAW_COUNT = 6;
 const BONUS_DRAW_COST_MULTIPLIER = 5;
+const CHARACTER_SLOT_LABELS: Record<string, string> = {
+  headwear: '머리 장식',
+  eyewear: '눈 장식',
+  neckwear: '목 장식',
+  facewear: '얼굴 장식',
+};
 
 export type GachaScreenProps = {
   onBack?: () => void;
@@ -39,6 +45,10 @@ export type GachaScreenProps = {
   gachas?: GachaMachine[];
   /** True while the machine list is loading from the API. */
   loading?: boolean;
+  /** Active reward previews keyed by gacha ID (`GET /gacha/{id}/rewards`). */
+  rewardsByGachaId?: Record<number, GachaRewardPreview[]>;
+  /** True while reward previews are loading from the API. */
+  rewardsLoading?: boolean;
   coinBalance?: number;
   diaBalance?: number;
   /**
@@ -60,6 +70,8 @@ export function GachaScreen({
   onBack,
   gachas = [],
   loading = false,
+  rewardsByGachaId = {},
+  rewardsLoading = false,
   coinBalance = 0,
   diaBalance = 0,
   onDraw,
@@ -73,8 +85,9 @@ export function GachaScreen({
   const [pulled, setPulled] = useState<DrawResult[]>([]);
 
   const box = gachas.find((b) => b.id === selectedId) ?? gachas[0];
-  // Selector rows: themed furniture machines first, the character gacha below.
-  const furnitureMachines = gachas.filter((b) => b.kind !== 'character');
+  const rewards = box ? (rewardsByGachaId[box.id] ?? []) : [];
+  // Selector rows: themed item machines first, the character gacha below.
+  const itemMachines = gachas.filter((b) => b.kind !== 'character');
   const characterMachines = gachas.filter((b) => b.kind === 'character');
   const balanceFor = (c: 'COIN' | 'DIAMOND') => (c === 'COIN' ? coinBalance : diaBalance);
   const drawCost = (count: GachaDrawCount) =>
@@ -146,7 +159,7 @@ export function GachaScreen({
         <View style={styles.selector}>
           {(
             [
-              ['가구 뽑기', furnitureMachines],
+              ['꾸미기 뽑기', itemMachines],
               ['캐릭터 뽑기', characterMachines],
             ] as const
           ).map(([label, machines]) =>
@@ -195,6 +208,34 @@ export function GachaScreen({
             <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
               1회 뽑기에 {box.drawCount}개 획득
             </Text>
+
+            <View style={styles.rewardSection}>
+              <Text style={[Typography.label, { color: t.text }]}>뽑을 수 있는 보상</Text>
+              {rewardsLoading ? (
+                <View style={styles.rewardLoading}>
+                  <ActivityIndicator color={t.primary} size="small" />
+                  <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                    보상 목록 불러오는 중…
+                  </Text>
+                </View>
+              ) : rewards.length === 0 ? (
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                  공개된 보상이 아직 없어요.
+                </Text>
+              ) : (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.rewardRow}>
+                  {rewards.map((reward) => (
+                    <RewardPreviewCard
+                      key={`${reward.rewardType}-${reward.itemId ?? reward.characterId}`}
+                      reward={reward}
+                    />
+                  ))}
+                </ScrollView>
+              )}
+            </View>
 
             {error ? (
               <Text style={[Typography.supporting, styles.center, { color: t.danger }]}>
@@ -280,6 +321,47 @@ export function GachaScreen({
           )}
         </View>
       </Modal>
+    </View>
+  );
+}
+
+function RewardPreviewCard({ reward }: { reward: GachaRewardPreview }) {
+  const t = useTokens();
+  const rarityColor = RARITY_COLORS[(reward.rarity as Rarity) ?? '일반'] ?? RARITY_COLORS['일반'];
+  const kindLabel =
+    reward.rewardType === 'CHARACTER'
+      ? '캐릭터'
+      : reward.placementType === 'character'
+        ? (CHARACTER_SLOT_LABELS[reward.characterSlotType ?? ''] ?? '캐릭터 장식')
+        : '방 꾸미기';
+
+  return (
+    <View style={[styles.rewardCard, { backgroundColor: t.surfaceMuted }]}>
+      {isCdnKey(reward.assetKey) ? (
+        <Image
+          source={assetSource(reward.assetKey)}
+          style={styles.rewardArt}
+          contentFit="contain"
+          transition={120}
+          accessibilityLabel={reward.name}
+        />
+      ) : (
+        <Icon name="gift" size={42} color={rarityColor} />
+      )}
+      <Text style={[styles.rewardKind, { color: t.textMuted }]}>{kindLabel}</Text>
+      <Text style={[Typography.supporting, styles.center, { color: t.text }]} numberOfLines={2}>
+        {reward.name}
+      </Text>
+      <View style={styles.rewardBadges}>
+        {reward.rarity ? (
+          <Text style={[styles.rewardBadge, { backgroundColor: rarityColor }]}>
+            {reward.rarity}
+          </Text>
+        ) : null}
+        {reward.owned ? (
+          <Text style={[styles.rewardBadge, { backgroundColor: t.primary }]}>보유중</Text>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -435,6 +517,29 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  rewardSection: { gap: Spacing.two },
+  rewardLoading: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  rewardRow: { gap: Spacing.two, paddingVertical: Spacing.half },
+  rewardCard: {
+    width: 112,
+    minHeight: 154,
+    borderRadius: Radius.md,
+    padding: Spacing.two,
+    alignItems: 'center',
+    gap: Spacing.one,
+  },
+  rewardArt: { width: 80, height: 72 },
+  rewardKind: { fontSize: 10, fontWeight: '600' },
+  rewardBadges: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 2 },
+  rewardBadge: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '700',
+    overflow: 'hidden',
+    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.one,
+    paddingVertical: 1,
   },
   pullRow: {
     flexDirection: 'row',

@@ -4,6 +4,21 @@ import type { GachaDrawResponse, GachaResponse, ItemResponse, PurchaseResponse }
 
 export type GachaDrawCount = 1 | 6;
 
+/** Reader model for one `GET /gacha/{id}/rewards` item. */
+export type GachaRewardPreview = {
+  rewardType: 'ITEM' | 'CHARACTER';
+  itemId?: number;
+  characterId?: number;
+  name: string;
+  assetKey: string;
+  rarity?: string;
+  owned: boolean;
+  categoryCode?: string;
+  placementType?: string;
+  surfaceSlotType?: string;
+  characterSlotType?: string;
+};
+
 /** GET /items — shop catalogue with ownership + price. */
 export function fetchItems() {
   return apiGetList<ItemResponse>('/items');
@@ -22,6 +37,11 @@ export function fetchGachas() {
 /** GET /gacha/{id}. */
 export function fetchGacha(id: number) {
   return apiGet<GachaResponse>(`/gacha/${id}`);
+}
+
+/** GET /gacha/{id}/rewards — active rewards without weight or probability. */
+export function fetchGachaRewards(id: number) {
+  return apiGetList<GachaRewardPreview>(`/gacha/${id}/rewards`);
 }
 
 /** POST /gacha/{id}/draw — draw `count` times. */

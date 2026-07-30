@@ -6,7 +6,13 @@
  */
 import { useEffect, useState } from 'react';
 
-import { drawGacha, fetchGachas, type GachaDrawCount } from '@/api';
+import {
+  drawGacha,
+  fetchGachaRewards,
+  fetchGachas,
+  type GachaDrawCount,
+  type GachaRewardPreview,
+} from '@/api';
 import { type GachaMachine, toGachaMachine, toWallet } from '@/api/adapters';
 import type { DrawResult } from '@/api/types';
 import type { Wallet } from '@/constants/currency';
@@ -14,15 +20,49 @@ import type { Wallet } from '@/constants/currency';
 export function useGacha(onWallet: (wallet: Wallet) => void) {
   const [gachas, setGachas] = useState<GachaMachine[]>([]);
   const [loading, setLoading] = useState(true);
+  const [rewardsByGachaId, setRewardsByGachaId] = useState<Record<number, GachaRewardPreview[]>>(
+    {},
+  );
+  const [rewardsLoading, setRewardsLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
     fetchGachas()
-      .then((list) => active && setGachas(list.map((g, i) => toGachaMachine(g, i))))
+      .then(async (list) => {
+        if (!active) return;
+        setGachas(list.map((g, i) => toGachaMachine(g, i)));
+        setLoading(false);
+
+        const rewards = await Promise.all(
+          list.map(async (g) => {
+            const gachaId = g.gachaId;
+            if (gachaId == null) return null;
+            try {
+              return [gachaId, await fetchGachaRewards(gachaId)] as const;
+            } catch {
+              // A single unavailable preview must not hide the other machines.
+              return [gachaId, []] as const;
+            }
+          }),
+        );
+        if (active) {
+          setRewardsByGachaId(
+            Object.fromEntries(rewards.filter((entry) => entry != null)) as Record<
+              number,
+              GachaRewardPreview[]
+            >,
+          );
+        }
+      })
       .catch(() => {
         // Non-fatal; the screen shows an empty state.
       })
-      .finally(() => active && setLoading(false));
+      .finally(() => {
+        if (active) {
+          setLoading(false);
+          setRewardsLoading(false);
+        }
+      });
     return () => {
       active = false;
     };
@@ -39,5 +79,5 @@ export function useGacha(onWallet: (wallet: Wallet) => void) {
     }
   };
 
-  return { gachas, loading, draw };
+  return { gachas, loading, rewardsByGachaId, rewardsLoading, draw };
 }

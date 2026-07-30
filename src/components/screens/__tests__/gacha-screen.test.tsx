@@ -1,5 +1,6 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
+import type { GachaRewardPreview } from '@/api';
 import type { GachaMachine } from '@/api/adapters';
 import type { DrawResult } from '@/api/types';
 import { GachaScreen } from '@/components/screens/gacha-screen';
@@ -13,7 +14,7 @@ const machine: GachaMachine = {
   drawCount: 1,
   icon: 'croissant' as const,
   accent: '#F7E6C8',
-  kind: 'furniture',
+  kind: 'item',
 };
 
 const characterMachine: GachaMachine = {
@@ -34,16 +35,54 @@ describe('GachaScreen', () => {
     expect(getByText('5,600')).toBeTruthy();
   });
 
-  it('splits the selector into furniture and character rows', async () => {
+  it('splits the selector into item and character rows', async () => {
     const both = await render(
       <GachaScreen gachas={[machine, characterMachine]} coinBalance={5600} />,
     );
-    expect(both.getByText('가구 뽑기')).toBeTruthy();
+    expect(both.getByText('꾸미기 뽑기')).toBeTruthy();
     expect(both.getByText('캐릭터 뽑기')).toBeTruthy();
 
     // Without a character machine the character row disappears entirely.
     const onlyFurniture = await render(<GachaScreen gachas={[machine]} coinBalance={5600} />);
     expect(onlyFurniture.queryByText('캐릭터 뽑기')).toBeNull();
+  });
+
+  it('shows the selected machine rewards without probabilities', async () => {
+    const sunglasses: GachaRewardPreview = {
+      rewardType: 'ITEM',
+      itemId: 100,
+      name: '분홍 하트 선글라스',
+      assetKey: 'items/character-accessories/eyewear/cat-pink-heart-sunglasses/thumbnail.png',
+      rarity: '희귀',
+      owned: true,
+      categoryCode: 'character_accessory',
+      placementType: 'character',
+      characterSlotType: 'eyewear',
+    };
+    const cat: GachaRewardPreview = {
+      rewardType: 'CHARACTER',
+      characterId: 5,
+      name: '고양이',
+      assetKey: 'characters/cat/thumbnail.png',
+      owned: false,
+    };
+    const screen = await render(
+      <GachaScreen
+        gachas={[machine, characterMachine]}
+        rewardsByGachaId={{ 1: [sunglasses], 12: [cat] }}
+        coinBalance={5600}
+      />,
+    );
+
+    expect(screen.getByText('뽑을 수 있는 보상')).toBeTruthy();
+    expect(screen.getByText('분홍 하트 선글라스')).toBeTruthy();
+    expect(screen.getByText('눈 장식')).toBeTruthy();
+    expect(screen.getByText('보유중')).toBeTruthy();
+    expect(screen.queryByText(/확률/)).toBeNull();
+
+    await fireEvent.press(screen.getByLabelText('캐릭터 뽑기'));
+    expect(screen.getByText('고양이')).toBeTruthy();
+    expect(screen.queryByText('분홍 하트 선글라스')).toBeNull();
   });
 
   it('draws from the API and reveals the reward', async () => {

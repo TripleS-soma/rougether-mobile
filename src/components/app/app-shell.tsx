@@ -169,7 +169,13 @@ export function AppShell({
 
   // Gacha machines + draw (spend + dupe→dia handled server-side; wallet synced
   // from the draw response).
-  const { gachas, loading: gachasLoading, draw: drawGachaMachine } = useGacha(setWallet);
+  const {
+    gachas,
+    loading: gachasLoading,
+    rewardsByGachaId,
+    rewardsLoading,
+    draw: drawGachaMachine,
+  } = useGacha(setWallet);
 
   const { logout } = useAuth();
 
@@ -548,6 +554,8 @@ export function AppShell({
           <GachaScreen
             gachas={gachas}
             loading={gachasLoading}
+            rewardsByGachaId={rewardsByGachaId}
+            rewardsLoading={rewardsLoading}
             coinBalance={wallet.coin}
             diaBalance={wallet.dia}
             onBack={() => setScreen('myRoom')}

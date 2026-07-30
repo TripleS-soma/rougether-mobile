@@ -595,10 +595,8 @@ describe('API adapters', () => {
     ]);
   });
 
-  it('groups gacha machines by theme: themed → furniture, unthemed → character', () => {
-    expect(toGachaMachine({ gachaId: 1, name: '숲속 세이지 뽑기', themeId: 1 }).kind).toBe(
-      'furniture',
-    );
+  it('groups gacha machines by theme: themed → item, unthemed → character', () => {
+    expect(toGachaMachine({ gachaId: 1, name: '숲속 세이지 뽑기', themeId: 1 }).kind).toBe('item');
     expect(toGachaMachine({ gachaId: 12, name: '캐릭터 뽑기' }).kind).toBe('character');
   });
 
