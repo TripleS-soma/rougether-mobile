@@ -141,6 +141,8 @@ export const Room = memo(function Room({
             contentFit="cover"
             cachePolicy="memory-disk"
             transition={120}
+            // fill(집 창문·미리보기)은 카메라 줌 대상 — 원본 해상도 유지.
+            allowDownscaling={!fill}
             accessibilityLabel={background.name}
           />
         ) : (
@@ -158,6 +160,7 @@ export const Room = memo(function Room({
           contentFit="cover"
           cachePolicy="memory-disk"
           transition={120}
+          allowDownscaling={!fill}
           accessibilityLabel={wallpaper.name}
         />
       ) : background && wallpaper ? (
@@ -171,6 +174,7 @@ export const Room = memo(function Room({
             contentFit="cover"
             cachePolicy="memory-disk"
             transition={120}
+            allowDownscaling={!fill}
             accessibilityLabel={floor.name}
           />
         ) : (
@@ -224,7 +228,7 @@ export const Room = memo(function Room({
                     },
                     transforms.length > 0 && { transform: transforms },
                   ]}>
-                  <FurniturePlaceholder item={item} />
+                  <FurniturePlaceholder item={item} sharp={fill} />
                 </View>
               );
             })
@@ -243,11 +247,11 @@ export const Room = memo(function Room({
                   SLOT_STYLE[item.slot],
                   activeRegion === item.slot && [styles.activeSlot, { borderColor: t.primary }],
                 ]}>
-                <FurniturePlaceholder item={item} />
+                <FurniturePlaceholder item={item} sharp={fill} />
               </Pressable>
             ) : (
               <View key={item.id} style={[styles.furniture, SLOT_STYLE[item.slot]]}>
-                <FurniturePlaceholder item={item} />
+                <FurniturePlaceholder item={item} sharp={fill} />
               </View>
             ),
           )}
@@ -285,6 +289,7 @@ export const Room = memo(function Room({
             animations={characterAnimations}
             pose={pose}
             style={styles.characterFill}
+            sharp={fill}
           />
         </Pressable>
       ) : (
@@ -292,6 +297,7 @@ export const Room = memo(function Room({
           characterId={characterId}
           animations={characterAnimations}
           style={styles.character}
+          sharp={fill}
         />
       )}
     </View>

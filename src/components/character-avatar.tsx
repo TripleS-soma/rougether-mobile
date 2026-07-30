@@ -78,6 +78,8 @@ export type CharacterAvatarProps = {
   pose?: number;
   size?: number;
   style?: StyleProp<ImageStyle>;
+  /** 원본 해상도 디코딩 — 카메라 줌 대상(집 창문)용. */
+  sharp?: boolean;
 };
 
 /**
@@ -93,6 +95,7 @@ export function CharacterAvatar({
   pose = 0,
   size = 96,
   style,
+  sharp = false,
 }: CharacterAvatarProps) {
   const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
 
@@ -120,6 +123,8 @@ export function CharacterAvatar({
         style={[{ width: size, height: size }, style]}
         contentFit="contain"
         cachePolicy="memory-disk"
+        // 줌 대상에서는 원본 해상도로 — 다운스케일 디코딩은 확대 시 흐려진다.
+        allowDownscaling={!sharp}
         accessibilityLabel={character.name}
         testID="cdn-animation"
       />
@@ -145,6 +150,7 @@ export function CharacterAvatar({
       source={source}
       style={[{ width: size, height: size }, style]}
       contentFit="contain"
+      allowDownscaling={!sharp}
       accessibilityLabel={character.name}
     />
   );

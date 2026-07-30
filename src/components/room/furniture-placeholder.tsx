@@ -19,6 +19,8 @@ export type FurniturePlaceholderProps = {
   /** Show the Korean name inside the tile (off when a caption sits below it). */
   showName?: boolean;
   style?: StyleProp<ViewStyle>;
+  /** 원본 해상도 디코딩 — 카메라 줌 대상(집 창문)용. */
+  sharp?: boolean;
 };
 
 /**
@@ -26,7 +28,12 @@ export type FurniturePlaceholderProps = {
  * the asset bucket (API items), otherwise falls back to the in-app placeholder
  * (colored box + Korean name) for legacy local-catalog items without art.
  */
-export function FurniturePlaceholder({ item, showName = true, style }: FurniturePlaceholderProps) {
+export function FurniturePlaceholder({
+  item,
+  showName = true,
+  style,
+  sharp = false,
+}: FurniturePlaceholderProps) {
   const emph = useFontEmphasis();
   const t = useTokens();
   if (isCdnKey(item.assetKey)) {
@@ -37,6 +44,9 @@ export function FurniturePlaceholder({ item, showName = true, style }: Furniture
           style={styles.art}
           contentFit="contain"
           transition={120}
+          // 확대 대상(집 창문 등)은 원본 해상도로 디코딩 (#307 후속) — 기본
+          // 다운스케일 디코딩은 레이아웃 크기에 맞춰져 카메라 줌에서 흐려진다.
+          allowDownscaling={!sharp}
         />
       </View>
     );
