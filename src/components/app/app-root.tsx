@@ -1,5 +1,5 @@
 import { Redirect } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
   fetchCharacters,
@@ -75,6 +75,15 @@ export function AppRoot() {
   // 캐릭터별 CDN 애니메이션 키 (#589) — 온보딩 캐러셀 활성 카드의 wave.
   const characterAnimations = useMemo(() => toCharacterAnimationMap(characters), [characters]);
 
+  // 참조 고정 — 셸을 거쳐 memo된 SettingsScreen까지 흘러가는 콜백이라
+  // AppRoot 리렌더가 설정 화면 memo를 뚫지 않게 한다 (#539 결).
+  const replayOnboarding = useCallback(() => {
+    void resetOnboarding();
+    // 미션 완료/스킵 플래그도 지운다 — 슬라이드 후 체인이 다시 시작 (#571).
+    void resetOnboardingMissions();
+    setOnboarded(false);
+  }, []);
+
   // Wait for the session check; the splash overlay covers this brief gap.
   if (status === 'loading') return null;
 
@@ -114,12 +123,7 @@ export function AppRoot() {
     <AppShell
       characterId={characterId}
       startMissions={justOnboarded}
-      onReplayOnboarding={() => {
-        void resetOnboarding();
-        // 미션 완료/스킵 플래그도 지운다 — 슬라이드 후 체인이 다시 시작 (#571).
-        void resetOnboardingMissions();
-        setOnboarded(false);
-      }}
+      onReplayOnboarding={replayOnboarding}
     />
   );
 }
