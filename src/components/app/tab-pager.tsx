@@ -21,7 +21,13 @@ const SETTLE_MS = 260;
 /** 끝 페이지 밖으로 끌 때의 저항 배율. */
 const EDGE_RESISTANCE = 0.25;
 
-/** 놓는 순간의 이동·속도로 목표 페이지를 판정한다 (0-base, 클램프됨). */
+/**
+ * 놓는 순간의 이동·속도로 목표 페이지를 판정한다 (0-base, 클램프됨).
+ * 'worklet' 필수 — 팬 onEnd(UI 스레드)에서 호출된다. 지시자가 없으면
+ * 웹/jest(전부 JS 스레드)에선 멀쩡하다가 네이티브에서만 스와이프를 놓는
+ * 순간 Reanimated 치명 오류로 앱이 종료된다(안드로이드 실기기에서 재현,
+ * dragClampBounds와 같은 규칙).
+ */
 export function settleTarget(
   index: number,
   translationX: number,
@@ -29,6 +35,7 @@ export function settleTarget(
   width: number,
   count: number,
 ): number {
+  'worklet';
   let target = index;
   if (translationX <= -width * PAGE_SNAP_RATIO || velocityX <= -PAGE_FLING_VELOCITY) target += 1;
   else if (translationX >= width * PAGE_SNAP_RATIO || velocityX >= PAGE_FLING_VELOCITY) target -= 1;
