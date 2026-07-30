@@ -248,11 +248,6 @@ export type MyRoomScreenProps = {
   onMoveRoutineOccurrence?: (id: string, dueDate: string) => void;
   /** Delete a routine (kebab → 삭제). */
   onDeleteRoutine?: (id: string) => void;
-  /**
-   * 방↔달력 스와이프가 서브탭 끝에서 한 번 더 밀렸을 때 (#563) — 달력에서
-   * 좌플링이면 'left'. 셸이 다음 하단 탭(집)으로 페이지를 넘기는 데 쓴다.
-   */
-  onFlingPastEnd?: (dir: 'left' | 'right') => void;
   // 인증사진형 잠시 내림 (#499) — 복구 시 아래 prop을 되살릴 것.
   // /**
   //  * Capture a verification photo when completing a 인증사진형 routine; resolves to
@@ -370,7 +365,6 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   onUpdateTodoDueDate,
   onMoveRoutineOccurrence,
   onDeleteRoutine,
-  onFlingPastEnd,
   // onRequestPhoto = captureVerificationPhoto, // 인증사진형 잠시 내림 (#499)
 }: MyRoomScreenProps) {
   const t = useTokens();
@@ -527,27 +521,18 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // be completed, routines accept today-only logs server-side, and past
   // records keep their original (possibly deleted) category.
   const [tab, setTab] = useState<'room' | 'calendar'>('room');
-  // 방↔달력 스와이프 전환 (#561) — 탭 아래 콘텐츠 영역의 가로 우세 플링으로
-  // 탭 상태만 바꾼다(기존 탭 버튼·무애니메이션 전환 유지). RNGH pan — RN 웹의
+  // 방↔달력 스와이프 순환 (#561 → 순환) — 탭 아래 콘텐츠 영역의 가로 우세
+  // 플링이 방향과 무관하게 두 서브탭을 오간다. 달력 그리드도 monthSwipe=false
+  // 라 월 이동 대신 여기로 흘러온다(월 이동은 ‹ › 버튼). RNGH pan — RN 웹의
   // ScrollView 부모 트리에서 PanResponder는 move 클레임 질의를 못 받는다.
   // 세로 스크롤은 failOffsetY(±36)로 넘겨주고, 행 스와이프(#560/#566)는 더
-  // 이른 활성 임계(±10)의 RNGH pan이라 행 위 가로 드래그를 먼저 가져간다 —
-  // 여기는 남은 영역(방 캔버스·헤더·여백)의 플링만 받는다. 서브탭 끝에서
-  // 한 번 더 밀면 셸로 넘겨 다음 하단 탭으로 이어진다 (#563 체이닝).
+  // 이른 활성 임계(±10)의 RNGH pan이라 행 위 가로 드래그를 먼저 가져간다.
   // 제스처는 마운트 시 1회 생성(재생성은 활성 팬을 취소시킨다 —
-  // draggable-furniture 참고), 최신 tab/prop은 핸들러 ref로 읽는다.
-  const flingHandlerRef = useRef<(dir: 'left' | 'right') => void>(() => {});
-  flingHandlerRef.current = (dir) => {
-    if (dir === 'left') {
-      if (tab === 'room') setTab('calendar');
-      else onFlingPastEnd?.('left');
-    } else {
-      if (tab === 'calendar') setTab('room');
-      else onFlingPastEnd?.('right');
-    }
-  };
+  // draggable-furniture 참고), 최신 tab은 핸들러 ref로 읽는다.
+  const flingHandlerRef = useRef<() => void>(() => {});
+  flingHandlerRef.current = () => setTab(tab === 'room' ? 'calendar' : 'room');
   const tabFling = useRef(
-    horizontalFlingGesture('room-tab-fling', (dir) => flingHandlerRef.current(dir)),
+    horizontalFlingGesture('room-tab-fling', () => flingHandlerRef.current()),
   ).current;
   const [selectedDate, setSelectedDate] = useState(() => todayIso());
   const dateRoutines = useMemo(
@@ -1196,7 +1181,12 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               </>
             ) : (
               <View style={styles.calendarPanel}>
-                <Calendar value={selectedDate} onSelect={pickDate} today={today} />
+                <Calendar
+                  value={selectedDate}
+                  onSelect={pickDate}
+                  today={today}
+                  monthSwipe={false}
+                />
                 <View style={styles.calListHead}>
                   <Text style={[Typography.h3, styles.calListTitle, { color: t.text }]}>
                     이 날의 루틴
