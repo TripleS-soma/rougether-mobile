@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -58,14 +58,25 @@ export type TabPagerProps = {
 export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps) {
   const count = children.length;
   const [width, setWidth] = useState(0);
-  const tx = useSharedValue(0);
-  const start = useSharedValue(0);
+  // 공유값은 첫 렌더 인스턴스에 앵커링(useRef) — 프로덕션 useSharedValue는
+  // 원래 참조가 안정적이지만, jest 환경은 렌더마다 새 객체를 돌려줘(실측)
+  // 1회 생성한 제스처의 클로저와 최신 쓰기가 서로 다른 객체를 보게 된다.
+  const tx = useRef(useSharedValue(0)).current;
+  const start = useRef(useSharedValue(0)).current;
   // 드래그·정착 중에만 이웃 페이지를 보인다 — 평시엔 display:none으로 숨겨
   // 오프스크린 페이지가 그려지지 않고, 테스트 쿼리에도 잡히지 않는다.
-  const revealAll = useSharedValue(false);
+  const revealAll = useRef(useSharedValue(false)).current;
   // 제스처 정착으로 이미 tx가 목표에 가 있는 인덱스 — prop 반영 시 중복
   // 애니메이션을 건너뛴다.
   const settledRef = useRef(index);
+  // 제스처는 마운트 시 1회만 만든다 — 셸이 배경 데이터 갱신 등으로 드래그
+  // 도중 리렌더돼도 활성 팬이 살아남고(draggable-furniture 참고), 렌더마다
+  // 팬 객체를 새로 붙이는 비용도 없앤다. 워클릿이 읽어야 하는 최신 값
+  // (index·width)은 공유값 미러로, JS 콜백은 ref로 넘긴다.
+  const indexSV = useRef(useSharedValue(index)).current;
+  const widthSV = useRef(useSharedValue(0)).current;
+  indexSV.value = index;
+  const commitRef = useRef<(target: number) => void>(() => {});
 
   // 외부 인덱스 변경(탭 버튼·체이닝)은 같은 결로 슬라이드해 따라간다.
   // 제스처가 이미 정착시킨 인덱스면 건드리지 않는다 — 진행 중인 정착
@@ -90,56 +101,68 @@ export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps
     );
   }, [index, width, tx, revealAll]);
 
-  const commit = (target: number) => {
+  commitRef.current = (target: number) => {
     settledRef.current = target;
     if (target !== index) onIndexChange(target);
   };
+  const commit = useCallback((target: number) => commitRef.current(target), []);
 
-  const pan = Gesture.Pan()
-    .withTestId('tab-pager-pan')
-    .maxPointers(1)
-    .activeOffsetX([-SWIPE_CLAIM_DX, SWIPE_CLAIM_DX])
-    .failOffsetY([-SWIPE_FAIL_DY, SWIPE_FAIL_DY])
-    .onTouchesDown((_e, mgr) => {
-      'worklet';
-      if (lock?.value) mgr.fail();
-    })
-    // 잠금은 터치 도중에도 걸린다 — 자리 드래그(롱프레스 후)처럼 같은 터치
-    // 안에서 페이지 콘텐츠가 전권을 가져가는 경우.
-    .onTouchesMove((_e, mgr) => {
-      'worklet';
-      if (lock?.value) mgr.fail();
-    })
-    .onStart(() => {
-      'worklet';
-      start.value = tx.value;
-      revealAll.value = true;
-    })
-    .onUpdate((e) => {
-      'worklet';
-      const raw = start.value + e.translationX;
-      const min = -(count - 1) * width;
-      // 끝 페이지 밖은 저항을 걸어 살짝만 끌린다.
-      tx.value =
-        raw > 0 ? raw * EDGE_RESISTANCE : raw < min ? min + (raw - min) * EDGE_RESISTANCE : raw;
-    })
-    .onEnd((e) => {
-      'worklet';
-      const target = settleTarget(index, e.translationX, e.velocityX, width, count);
-      tx.value = withTiming(
-        -target * width,
-        { duration: SETTLE_MS, easing: Easing.out(Easing.cubic) },
-        (finished) => {
-          if (finished) revealAll.value = false;
-        },
-      );
-      runOnJS(commit)(target);
-    })
-    .onFinalize((_e, success) => {
-      'worklet';
-      // 활성화 없이 무산된 터치 — 정착 콜백이 없으니 여기서 정리한다.
-      if (!success) revealAll.value = false;
-    });
+  const pan = useMemo(
+    () =>
+      Gesture.Pan()
+        .withTestId('tab-pager-pan')
+        .maxPointers(1)
+        .activeOffsetX([-SWIPE_CLAIM_DX, SWIPE_CLAIM_DX])
+        .failOffsetY([-SWIPE_FAIL_DY, SWIPE_FAIL_DY])
+        .onTouchesDown((_e, mgr) => {
+          'worklet';
+          if (lock?.value) mgr.fail();
+        })
+        // 잠금은 터치 도중에도 걸린다 — 자리 드래그(롱프레스 후)처럼 같은 터치
+        // 안에서 페이지 콘텐츠가 전권을 가져가는 경우.
+        .onTouchesMove((_e, mgr) => {
+          'worklet';
+          if (lock?.value) mgr.fail();
+        })
+        .onStart(() => {
+          'worklet';
+          start.value = tx.value;
+          revealAll.value = true;
+        })
+        .onUpdate((e) => {
+          'worklet';
+          const raw = start.value + e.translationX;
+          const min = -(count - 1) * widthSV.value;
+          // 끝 페이지 밖은 저항을 걸어 살짝만 끌린다.
+          tx.value =
+            raw > 0 ? raw * EDGE_RESISTANCE : raw < min ? min + (raw - min) * EDGE_RESISTANCE : raw;
+        })
+        .onEnd((e) => {
+          'worklet';
+          const target = settleTarget(
+            indexSV.value,
+            e.translationX,
+            e.velocityX,
+            widthSV.value,
+            count,
+          );
+          tx.value = withTiming(
+            -target * widthSV.value,
+            { duration: SETTLE_MS, easing: Easing.out(Easing.cubic) },
+            (finished) => {
+              if (finished) revealAll.value = false;
+            },
+          );
+          runOnJS(commit)(target);
+        })
+        .onFinalize((_e, success) => {
+          'worklet';
+          // 활성화 없이 무산된 터치 — 정착 콜백이 없으니 여기서 정리한다.
+          if (!success) revealAll.value = false;
+        }),
+    // count는 페이지 수(고정), 공유값·commit은 참조 안정 — 사실상 1회 생성.
+    [lock, count, commit, indexSV, widthSV, start, tx, revealAll],
+  );
 
   const rowStyle = useAnimatedStyle(() => ({ transform: [{ translateX: tx.value }] }));
 
@@ -148,7 +171,10 @@ export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps
       <View
         style={styles.viewport}
         testID="tab-pager"
-        onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+        onLayout={(e) => {
+          widthSV.value = e.nativeEvent.layout.width;
+          setWidth(e.nativeEvent.layout.width);
+        }}>
         <Animated.View style={[styles.row, { width: width * count || undefined }, rowStyle]}>
           {children.map((child, i) => (
             <Page key={i} index={i} width={width} active={i === index} revealAll={revealAll}>

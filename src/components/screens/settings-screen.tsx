@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -69,8 +69,12 @@ export type SettingsScreenProps = {
  * prop. The mode picker is prop-driven (onChangeThemeMode); the app shell wires
  * it to the global BrandThemeProvider. (The 포근/숲/한옥 brand picker was
  * removed with dark mode's arrival — cozy is the single brand theme now.)
+ *
+ * memo (#539 후속): 탭 페이저(#563)로 세 탭 화면이 상주하게 되면서 셸의 모든
+ * 상태 변화(지갑·토스트·루틴 등)가 이 화면까지 리렌더시켰다 — 나의 방/집과
+ * 같은 memo 경계로 막는다. 셸이 주는 콜백 prop은 전부 참조 고정 필수.
  */
-export function SettingsScreen({
+export const SettingsScreen = memo(function SettingsScreen({
   themeMode = DEFAULT_THEME_MODE,
   onChangeThemeMode,
   fontId = DEFAULT_FONT_ID,
@@ -293,7 +297,7 @@ export function SettingsScreen({
       />
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   screen: {
