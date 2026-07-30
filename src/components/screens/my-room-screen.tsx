@@ -880,20 +880,27 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           accessibilityRole="button"
           accessibilityLabel={`${row.title} 메뉴`}
           style={[styles.flex, styles.rowBody]}>
-          <Text
-            style={[
-              Typography.body,
-              row.done
-                ? { color: t.textMuted, textDecorationLine: 'line-through' }
-                : { color: t.text },
-            ]}>
-            {row.title}
-          </Text>
-          {row.repeats ? (
-            <View testID="repeat-marker">
-              <Icon name="refresh" size={12} color={t.textDisabled} />
-            </View>
-          ) : null}
+          {/* 반복 마커(#576)는 제목과 같은 줄 — 아랫줄(알림 배지)에 두면
+              시간까지 겹쳐 부제 줄이 길어진다. 긴 제목은 마커가 밀리지 않게
+              한 줄로 잘라낸다. */}
+          <View style={styles.titleRow}>
+            <Text
+              numberOfLines={1}
+              style={[
+                Typography.body,
+                styles.titleText,
+                row.done
+                  ? { color: t.textMuted, textDecorationLine: 'line-through' }
+                  : { color: t.text },
+              ]}>
+              {row.title}
+            </Text>
+            {row.repeats ? (
+              <View testID="repeat-marker">
+                <Icon name="refresh" size={12} color={t.textDisabled} />
+              </View>
+            ) : null}
+          </View>
           {row.time ? (
             <View style={styles.badges}>
               {row.time ? (
@@ -1614,6 +1621,15 @@ const styles = StyleSheet.create({
   },
   rowBody: {
     paddingVertical: Spacing.one,
+  },
+  // 제목 + 반복 마커 한 줄 (#576) — 마커는 제목 바로 옆, 제목이 길면 잘린다.
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+  },
+  titleText: {
+    flexShrink: 1,
   },
   // 스와이프 삭제 액션 (#566) — 행 오른쪽에 드러나는 빨간 버튼.
   deleteAction: {
