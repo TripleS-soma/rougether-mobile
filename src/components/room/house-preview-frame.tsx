@@ -27,12 +27,18 @@ export function houseCoverKey(coverImageKey?: string | null): string {
   return coverImageKey && isCdnKey(coverImageKey) ? coverImageKey : DEFAULT_HOUSE_COVER_KEY;
 }
 
-/** 프레임 PNG의 투명 창문 위치(좌상·우상·좌하·우하) — 집 화면과 동일. */
+/**
+ * 프레임 PNG의 투명 창문 위치(좌상·우상·좌하·우하) — 집 화면과 동일.
+ * 실측 구멍보다 사방 1~1.5% 크게(블리드) 잡는다: 방은 프레임 뒤에 그려져
+ * 넘친 부분은 아트에 가려지고, 구멍이 rect보다 살짝 큰 커버에서 방 위로
+ * 뒤 배경(하늘)이 띠처럼 새어 보이던 문제를 8종 커버 공통으로 막는다.
+ * 대칭 블리드라 rect 중심은 그대로 — 더블탭 줌 좌표(#307) 불변.
+ */
 export const WINDOW_RECTS = [
-  { left: '12.7%', top: '25.4%', width: '35%', height: '30%' },
-  { left: '51.3%', top: '25.4%', width: '35%', height: '30%' },
-  { left: '12.7%', top: '59.1%', width: '35%', height: '30%' },
-  { left: '51.3%', top: '59.1%', width: '35%', height: '30%' },
+  { left: '11.7%', top: '23.9%', width: '37%', height: '33%' },
+  { left: '50.3%', top: '23.9%', width: '37%', height: '33%' },
+  { left: '11.7%', top: '57.6%', width: '37%', height: '33%' },
+  { left: '50.3%', top: '57.6%', width: '37%', height: '33%' },
 ] as const;
 
 export type HousePreviewFrameProps = {
