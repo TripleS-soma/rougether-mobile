@@ -911,6 +911,36 @@ export function AppShell({
     [noHouses],
   );
 
+  // 설정 화면 콜백 — SettingsScreen이 memo라(탭 페이저로 상주, #539 후속)
+  // 인라인 람다면 셸 리렌더마다 memo가 뚫린다. 전부 참조 고정.
+  const openTheme = useCallback(() => setScreen('theme'), []);
+  const openProfileEdit = useCallback(() => setScreen('profileEdit'), []);
+  const openPasswordChange = useCallback(() => setScreen('passwordChange'), []);
+  const openNotificationSettings = useCallback(() => {
+    setScreen('notifications');
+    // 화면을 열 때마다 서버값으로 최신화 (실패 시 기본값/직전값 유지).
+    void loadNotificationSettings();
+  }, [loadNotificationSettings]);
+  const openSound = useCallback(() => setScreen('sound'), []);
+  const openHelp = useCallback(() => setScreen('help'), []);
+  const openTerms = useCallback(() => openExternal(PolicyUrls.terms), [openExternal]);
+  const openPrivacy = useCallback(() => openExternal(PolicyUrls.privacy), [openExternal]);
+  const openBugReport = useCallback(() => {
+    setScreen('bugReport');
+    void loadBugReports();
+  }, [loadBugReports]);
+  const handleLogout = useCallback(() => {
+    // Clearing the session flips auth status → AppRoot redirects to /login.
+    void logout();
+  }, [logout]);
+  const handleWithdraw = useCallback(() => {
+    // 성공 시 status가 guest로 바뀌어 AppRoot가 로그인으로 보낸다 (#547).
+    void withdraw().then((ok) => {
+      if (ok) toast('탈퇴가 완료됐어요');
+      else toast('탈퇴에 실패했어요. 잠시 후 다시 시도해 주세요', 'error');
+    });
+  }, [withdraw, toast]);
+
   // 화면 전환 손맛 (#446) — 들어오는 화면이 이동 방향에서 밀려 들어온다.
   // 진입(서브화면)은 우측에서, 복귀(뒤로)는 좌측에서. 탭 간 전환은 이제
   // 페이저(#563)가 손가락 추종/슬라이드로 직접 그리므로 여기선 건너뛴다.
@@ -1049,34 +1079,18 @@ export function AppShell({
               onChangeThemeMode={setThemeMode}
               fontId={fontId}
               onChangeFont={setFontId}
-              onOpenTheme={() => setScreen('theme')}
-              onEditProfile={() => setScreen('profileEdit')}
-              onChangePassword={() => setScreen('passwordChange')}
-              onOpenNotifications={() => {
-                setScreen('notifications');
-                // 화면을 열 때마다 서버값으로 최신화 (실패 시 기본값/직전값 유지).
-                void loadNotificationSettings();
-              }}
-              onOpenSound={() => setScreen('sound')}
-              onOpenHelp={() => setScreen('help')}
-              onOpenTerms={() => openExternal(PolicyUrls.terms)}
-              onOpenPrivacy={() => openExternal(PolicyUrls.privacy)}
-              onReportBug={() => {
-                setScreen('bugReport');
-                void loadBugReports();
-              }}
+              onOpenTheme={openTheme}
+              onEditProfile={openProfileEdit}
+              onChangePassword={openPasswordChange}
+              onOpenNotifications={openNotificationSettings}
+              onOpenSound={openSound}
+              onOpenHelp={openHelp}
+              onOpenTerms={openTerms}
+              onOpenPrivacy={openPrivacy}
+              onReportBug={openBugReport}
               onReplayOnboarding={onReplayOnboarding}
-              onLogout={() => {
-                // Clearing the session flips auth status → AppRoot redirects to /login.
-                void logout();
-              }}
-              onWithdraw={() => {
-                // 성공 시 status가 guest로 바뀌어 AppRoot가 로그인으로 보낸다 (#547).
-                void withdraw().then((ok) => {
-                  if (ok) toast('탈퇴가 완료됐어요');
-                  else toast('탈퇴에 실패했어요. 잠시 후 다시 시도해 주세요', 'error');
-                });
-              }}
+              onLogout={handleLogout}
+              onWithdraw={handleWithdraw}
             />
           </TabPager>
         ) : null}

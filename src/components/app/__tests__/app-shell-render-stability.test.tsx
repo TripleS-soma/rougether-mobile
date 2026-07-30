@@ -39,6 +39,20 @@ jest.mock('@/components/screens/house-screen', () => {
   };
 });
 
+// SettingsScreen 프로브 (#563 후속) — 탭 페이저로 상주하게 되면서 memo가
+// 없으면 셸의 모든 상태 변화에 함께 리렌더된다.
+const mockSettingsRenders: Record<string, unknown>[] = [];
+jest.mock('@/components/screens/settings-screen', () => {
+  const React = jest.requireActual('react');
+  const { Text } = jest.requireActual('react-native');
+  return {
+    SettingsScreen: (props: Record<string, unknown>) => {
+      mockSettingsRenders.push(props);
+      return React.createElement(Text, null, 'settings-probe');
+    },
+  };
+});
+
 // AppShell은 마운트 시 API를 부른다 — 결정적 응답으로 고정한다. 집이 하나는
 // 있어야 집 탭이 HouseScreen을 렌더한다(집 없으면 탐색 직행, #571).
 const stableRes = (url: string) => {
@@ -57,6 +71,7 @@ const realFetch = global.fetch;
 beforeEach(() => {
   mockMyRoomRenders.length = 0;
   mockHouseRenders.length = 0;
+  mockSettingsRenders.length = 0;
   global.fetch = jest.fn(async (url: string) => stableRes(url)) as unknown as typeof fetch;
 });
 afterEach(() => {
@@ -77,6 +92,10 @@ describe('memo 경계 (#539)', () => {
       HouseScreen: { $$typeof: symbol };
     };
     expect(house.HouseScreen.$$typeof).toBe(MEMO_TYPE);
+    const settings = jest.requireActual('@/components/screens/settings-screen') as {
+      SettingsScreen: { $$typeof: symbol };
+    };
+    expect(settings.SettingsScreen.$$typeof).toBe(MEMO_TYPE);
   });
 });
 
@@ -186,6 +205,46 @@ describe('AppShell → HouseScreen prop 참조 안정성 (#539, 리뷰 반영)',
       'linkedRoutines',
       'houses',
       'furniture',
+    ] as const;
+    const changed = stableProps.filter((key) => after[key] !== before[key]);
+    expect(changed).toEqual([]);
+  });
+});
+
+describe('AppShell → SettingsScreen prop 참조 안정성 (#563 후속)', () => {
+  it('무관한 상태 변화(집 탭 왕복) 전후로 셸 콜백 prop의 참조가 같다', async () => {
+    const { getByLabelText } = await render(
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(mockMyRoomRenders.at(-1)?.loading).toBe(false));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    const before = mockSettingsRenders.at(-1)!;
+    await fireEvent.press(getByLabelText('집'));
+    await fireEvent.press(getByLabelText('나의 방'));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    const after = mockSettingsRenders.at(-1)!;
+    const stableProps = [
+      'onChangeThemeMode',
+      'onChangeFont',
+      'onOpenTheme',
+      'onEditProfile',
+      'onChangePassword',
+      'onOpenNotifications',
+      'onOpenSound',
+      'onOpenHelp',
+      'onOpenTerms',
+      'onOpenPrivacy',
+      'onReportBug',
+      'onLogout',
+      'onWithdraw',
     ] as const;
     const changed = stableProps.filter((key) => after[key] !== before[key]);
     expect(changed).toEqual([]);
