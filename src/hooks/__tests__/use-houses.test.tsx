@@ -2,6 +2,12 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useHouses } from '@/hooks/use-houses';
 
+// 토스트 캡처 — 탈퇴 신청자 승인 가드(#240) 문구 단언용.
+const mockToast = jest.fn();
+jest.mock('@/components/ui/toast', () => ({
+  useToast: () => ({ show: mockToast }),
+}));
+
 const res = (body: unknown) => ({
   ok: true,
   status: 200,
@@ -9,6 +15,7 @@ const res = (body: unknown) => ({
 });
 
 const realFetch = global.fetch;
+beforeEach(() => mockToast.mockClear());
 afterEach(() => {
   global.fetch = realFetch;
   jest.clearAllMocks();
@@ -196,6 +203,28 @@ describe('useHouses — 입주 신청 처리', () => {
       expect.stringContaining('/houses/7/join-requests/22/reject'),
       expect.objectContaining({ method: 'POST' }),
     );
+  });
+});
+
+// 탈퇴한 신청자 승인 (서버 #240) — 서버가 신청을 거절 처리하고 409를 준다.
+describe('useHouses — 탈퇴 신청자 승인 가드 (#240)', () => {
+  it('APPLICANT_WITHDRAWN 409는 에러 대신 정리 안내 토스트를 띄운다', async () => {
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes('/join-requests/9/accept') && init?.method === 'POST')
+        return {
+          ok: false,
+          status: 409,
+          text: async () => JSON.stringify({ code: 'HOUSE_JOIN_REQUEST_APPLICANT_WITHDRAWN' }),
+        };
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useHouses());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => {
+      await result.current.acceptJoinRequest(6, 9);
+    });
+    expect(mockToast).toHaveBeenCalledWith('탈퇴한 회원의 신청이라 자동으로 정리했어요');
   });
 });
 
