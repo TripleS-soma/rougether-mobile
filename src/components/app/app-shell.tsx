@@ -3,7 +3,9 @@ import Constants from 'expo-constants';
 import { Image } from 'expo-image';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, BackHandler, Easing, Linking, StyleSheet, View } from 'react-native';
+import { useSharedValue } from 'react-native-reanimated';
 
+import { TabPager } from '@/components/app/tab-pager';
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
 import { GachaScreen } from '@/components/screens/gacha-screen';
@@ -116,6 +118,9 @@ const SCREEN_FOR_TAB: Record<NavTab, Screen> = {
   house: 'house',
   settings: 'settings',
 };
+
+/** 하단 탭의 페이지 순서 (#563) — 페이저 인덱스 ↔ 탭 매핑. */
+const NAV_ORDER: NavTab[] = ['myRoom', 'house', 'settings'];
 
 /**
  * Where the Android hardware back button lands from each screen. `null` on
@@ -868,9 +873,49 @@ export function AppShell({
 
   const activeTab = TAB_FOR_SCREEN[screen];
 
+  // --- 하단 탭 수평 페이저 (#563) ---
+  // 집 화면이 확대·자리 드래그로 제스처 전권을 가져간 동안 페이저를 잠근다.
+  // 단 집 "페이지가 활성일 때만" — 확대를 남겨둔 채 탭 버튼으로 떠났을 때
+  // 다른 페이지의 스와이프까지 막으면 안 된다.
+  const pagerLock = useSharedValue(false);
+  // 공유값을 ref로 감싸 콜백을 무의존으로 — 프로덕션의 useSharedValue는 참조가
+  // 안정적이지만, 의존성에 직접 넣으면 memo 화면으로 가는 콜백의 안정성이
+  // reanimated 구현 디테일에 묶인다(렌더 안정성 프로브 #539 계약).
+  const pagerLockRef = useRef(pagerLock);
+  pagerLockRef.current = pagerLock;
+  const housePagerLockRef = useRef(false);
+  const screenRef = useRef(screen);
+  screenRef.current = screen;
+  const handleHousePagerLock = useCallback((locked: boolean) => {
+    housePagerLockRef.current = locked;
+    pagerLockRef.current.value = locked && TAB_FOR_SCREEN[screenRef.current] === 'house';
+  }, []);
+  useEffect(() => {
+    pagerLockRef.current.value = housePagerLockRef.current && activeTab === 'house';
+  }, [activeTab]);
+
+  // 페이저 스와이프 정착 → 탭 전환. 집이 없으면 집 페이지 대신 집 탐색으로
+  // 직행 — 하단 탭 버튼(#571)과 같은 규칙.
+  const handlePageChange = useCallback(
+    (idx: number) => {
+      const tab = NAV_ORDER[idx];
+      if (!tab) return;
+      setScreen(tab === 'house' && noHouses ? 'houseSearch' : SCREEN_FOR_TAB[tab]);
+    },
+    [noHouses],
+  );
+  // 방↔달력 서브탭 끝(달력)에서 한 번 더 좌플링 → 집으로 체이닝 (#563).
+  const handleMyRoomFlingPastEnd = useCallback(
+    (dir: 'left' | 'right') => {
+      if (dir !== 'left') return; // 나의 방이 첫 페이지 — 오른쪽 끝은 없다.
+      setScreen(noHouses ? 'houseSearch' : 'house');
+    },
+    [noHouses],
+  );
+
   // 화면 전환 손맛 (#446) — 들어오는 화면이 이동 방향에서 밀려 들어온다.
-  // 진입(서브화면)은 우측에서, 복귀(뒤로)는 좌측에서, 탭 간 전환은 탭 순서
-  // 방향에서. 페이드만 쓰면 깜빡임으로 읽혀서 항상 슬라이드를 동반한다.
+  // 진입(서브화면)은 우측에서, 복귀(뒤로)는 좌측에서. 탭 간 전환은 이제
+  // 페이저(#563)가 손가락 추종/슬라이드로 직접 그리므로 여기선 건너뛴다.
   const transOpacity = useRef(new Animated.Value(1)).current;
   const transX = useRef(new Animated.Value(0)).current;
   const prevScreenRef = useRef<Screen>(screen);
@@ -878,15 +923,11 @@ export function AppShell({
     const prev = prevScreenRef.current;
     if (prev === screen) return;
     prevScreenRef.current = screen;
-    const TAB_ORDER: Record<NavTab, number> = { myRoom: 0, house: 1, settings: 2 };
     const prevTab = TAB_FOR_SCREEN[prev];
     const nextTab = TAB_FOR_SCREEN[screen];
-    const tabToTab = prevTab != null && nextTab != null;
+    if (prevTab != null && nextTab != null) return; // 탭 간 — 페이저가 그린다.
     let slide = 28; // 기본: 서브화면 진입(우측에서)
-    if (tabToTab) {
-      // 탭 간 전환 — 이동 방향에서 들어온다.
-      slide = TAB_ORDER[nextTab!] > TAB_ORDER[prevTab!] ? 32 : -32;
-    } else if (
+    if (
       BACK_SCREEN[prev] === screen ||
       (prev === 'addRoutine' && screen === addReturnScreen) ||
       nextTab != null
@@ -894,9 +935,8 @@ export function AppShell({
       // 뒤로 복귀(백맵 목적지·서브→탭) — 좌측에서 되돌아온다.
       slide = -28;
     }
-    // 페이드가 짧으면 깜빡임으로 읽힌다 — 서브화면은 바닥 0.08에서 넉넉히,
-    // 무거운 탭 화면은 페이드 자체가 깜빡임이라 슬라이드만 쓴다.
-    transOpacity.setValue(tabToTab ? 1 : 0.08);
+    // 페이드가 짧으면 깜빡임으로 읽힌다 — 서브화면은 바닥 0.08에서 넉넉히.
+    transOpacity.setValue(0.08);
     transX.setValue(slide);
     Animated.parallel([
       Animated.timing(transOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
@@ -913,53 +953,128 @@ export function AppShell({
     <View style={styles.root}>
       <Animated.View
         style={[styles.content, { opacity: transOpacity, transform: [{ translateX: transX }] }]}>
-        {screen === 'myRoom' ? (
-          <MyRoomScreen
-            userName={nickname}
-            streakDays={streak}
-            coinBalance={wallet.coin}
-            diamondBalance={wallet.diamond}
-            routines={routines}
-            completions={completions}
-            categories={categories}
-            allCategories={allCategories}
-            calendarDays={calendarDays}
-            onSelectDate={handleSelectDate}
-            onToggleCalendarItem={handleToggleCalendarItem}
-            loading={myRoomLoading}
-            loadError={!!myRoomError}
-            onRetry={retryMyRoom}
-            placedFurnitureIds={placedFurnitureIds}
-            placements={placement.freeLayout ? placedItems : null}
-            wallpaperId={wallpaperId}
-            floorId={floorId}
-            backgroundId={backgroundId}
-            furniture={catalogue.furniture}
-            wallpapers={catalogue.wallpapers}
-            floors={catalogue.floors}
-            backgrounds={catalogue.backgrounds}
-            characterId={wornCharacterId}
-            characterAnimations={wornCharacterAnimations}
-            onToggleCompletion={toggleWithMissionGuard}
-            onEdit={openDecor}
-            onAddRoutine={addRoutineFromMyRoom}
-            onManageRoutines={openRoutineManage}
-            onOpenNotifications={openNotificationList}
-            unreadNotificationCount={unreadCount}
-            ownedCharacters={ownedCharacters}
-            onSelectCharacter={wearCharacter}
-            onManageCategories={openCategoryManage}
-            onUpdateCategory={updateRoutineCategory}
-            onOpenGacha={openGacha}
-            onQuickAddRoutine={quickAddTodo}
-            quickAddDisabledCategoryIds={houseCategoryIds}
-            onRenameRoutine={renameRoutine}
-            onEditRoutine={editRoutineFromMyRoom}
-            onUpdateRoutineTime={updateRoutineTime}
-            onUpdateTodoDueDate={updateTodoDueDate}
-            onMoveRoutineOccurrence={moveRoutineOccurrence}
-            onDeleteRoutine={deleteRoutine}
-          />
+        {/* 하단 탭 3서피스는 수평 페이저에 상주한다 (#563) — 스와이프 중
+            이웃 화면이 손가락을 따라 끝까지 보인다. 비활성 페이지는 페이저가
+            드래그/정착 중에만 그린다. 서브화면들은 기존처럼 단독 렌더. */}
+        {activeTab ? (
+          <TabPager
+            index={NAV_ORDER.indexOf(activeTab)}
+            onIndexChange={handlePageChange}
+            lock={pagerLock}>
+            <MyRoomScreen
+              userName={nickname}
+              streakDays={streak}
+              coinBalance={wallet.coin}
+              diamondBalance={wallet.diamond}
+              routines={routines}
+              completions={completions}
+              categories={categories}
+              allCategories={allCategories}
+              calendarDays={calendarDays}
+              onSelectDate={handleSelectDate}
+              onToggleCalendarItem={handleToggleCalendarItem}
+              loading={myRoomLoading}
+              loadError={!!myRoomError}
+              onRetry={retryMyRoom}
+              placedFurnitureIds={placedFurnitureIds}
+              placements={placement.freeLayout ? placedItems : null}
+              wallpaperId={wallpaperId}
+              floorId={floorId}
+              backgroundId={backgroundId}
+              furniture={catalogue.furniture}
+              wallpapers={catalogue.wallpapers}
+              floors={catalogue.floors}
+              backgrounds={catalogue.backgrounds}
+              characterId={wornCharacterId}
+              characterAnimations={wornCharacterAnimations}
+              onToggleCompletion={toggleWithMissionGuard}
+              onEdit={openDecor}
+              onAddRoutine={addRoutineFromMyRoom}
+              onManageRoutines={openRoutineManage}
+              onOpenNotifications={openNotificationList}
+              unreadNotificationCount={unreadCount}
+              ownedCharacters={ownedCharacters}
+              onSelectCharacter={wearCharacter}
+              onManageCategories={openCategoryManage}
+              onUpdateCategory={updateRoutineCategory}
+              onOpenGacha={openGacha}
+              onQuickAddRoutine={quickAddTodo}
+              quickAddDisabledCategoryIds={houseCategoryIds}
+              onRenameRoutine={renameRoutine}
+              onEditRoutine={editRoutineFromMyRoom}
+              onUpdateRoutineTime={updateRoutineTime}
+              onUpdateTodoDueDate={updateTodoDueDate}
+              onMoveRoutineOccurrence={moveRoutineOccurrence}
+              onDeleteRoutine={deleteRoutine}
+              onFlingPastEnd={handleMyRoomFlingPastEnd}
+            />
+            <HouseScreen
+              houses={arrangedHouses}
+              onSwapSeats={swapSeats}
+              loading={housesLoading}
+              loadError={housesError}
+              onRetry={retryHouses}
+              covers={houseCovers}
+              characterId={wornCharacterId}
+              userName={nickname}
+              streakDays={streak}
+              roomPreviews={roomPreviews}
+              furniture={catalogue.furniture}
+              wallpapers={catalogue.wallpapers}
+              floors={catalogue.floors}
+              backgrounds={catalogue.backgrounds}
+              houseIndex={houseIndex}
+              onHouseIndexChange={setHouseIndex}
+              onVisitFriend={visitFriend}
+              onVisitMyRoom={openMyRoom}
+              onOpenSearch={openHouseSearch}
+              coinBalance={wallet.coin}
+              diamondBalance={wallet.diamond}
+              raining={raining}
+              onOpenMemberManagement={openMemberManagement}
+              onAcceptJoinRequest={handleAcceptJoinRequest}
+              onRejectJoinRequest={handleRejectJoinRequest}
+              onKickMember={handleKickMember}
+              onLeaveHouse={handleLeaveHouse}
+              linkedRoutines={houseLinkedRoutines}
+              contributedMissionIds={contributedMissionIdList}
+              onAddMissionRoutine={handleAddMissionRoutine}
+              onClaimMission={handleClaimMission}
+              onCreateMission={handleCreateMission}
+              onDeleteMission={handleDeleteMission}
+              onUpdateHouse={handleUpdateHouse}
+              onTransferOwnership={handleTransferOwnership}
+              onReissueInviteCode={handleReissueInviteCode}
+              onPagerLockChange={handleHousePagerLock}
+            />
+            <SettingsScreen
+              themeMode={themeMode}
+              onChangeThemeMode={setThemeMode}
+              fontId={fontId}
+              onChangeFont={setFontId}
+              onOpenTheme={() => setScreen('theme')}
+              onEditProfile={() => setScreen('profileEdit')}
+              onChangePassword={() => setScreen('passwordChange')}
+              onOpenNotifications={() => {
+                setScreen('notifications');
+                // 화면을 열 때마다 서버값으로 최신화 (실패 시 기본값/직전값 유지).
+                void loadNotificationSettings();
+              }}
+              onOpenSound={() => setScreen('sound')}
+              onOpenHelp={() => setScreen('help')}
+              onOpenTerms={() => openExternal(PolicyUrls.terms)}
+              onOpenPrivacy={() => openExternal(PolicyUrls.privacy)}
+              onReportBug={() => {
+                setScreen('bugReport');
+                void loadBugReports();
+              }}
+              onReplayOnboarding={onReplayOnboarding}
+              onLogout={() => {
+                // Clearing the session flips auth status → AppRoot redirects to /login.
+                void logout();
+              }}
+            />
+          </TabPager>
         ) : null}
 
         {screen === 'decor' ? (
@@ -1071,47 +1186,6 @@ export function AppShell({
           />
         ) : null}
 
-        {screen === 'house' ? (
-          <HouseScreen
-            houses={arrangedHouses}
-            onSwapSeats={swapSeats}
-            loading={housesLoading}
-            loadError={housesError}
-            onRetry={retryHouses}
-            covers={houseCovers}
-            characterId={wornCharacterId}
-            userName={nickname}
-            streakDays={streak}
-            roomPreviews={roomPreviews}
-            furniture={catalogue.furniture}
-            wallpapers={catalogue.wallpapers}
-            floors={catalogue.floors}
-            backgrounds={catalogue.backgrounds}
-            houseIndex={houseIndex}
-            onHouseIndexChange={setHouseIndex}
-            onVisitFriend={visitFriend}
-            onVisitMyRoom={openMyRoom}
-            onOpenSearch={openHouseSearch}
-            coinBalance={wallet.coin}
-            diamondBalance={wallet.diamond}
-            raining={raining}
-            onOpenMemberManagement={openMemberManagement}
-            onAcceptJoinRequest={handleAcceptJoinRequest}
-            onRejectJoinRequest={handleRejectJoinRequest}
-            onKickMember={handleKickMember}
-            onLeaveHouse={handleLeaveHouse}
-            linkedRoutines={houseLinkedRoutines}
-            contributedMissionIds={contributedMissionIdList}
-            onAddMissionRoutine={handleAddMissionRoutine}
-            onClaimMission={handleClaimMission}
-            onCreateMission={handleCreateMission}
-            onDeleteMission={handleDeleteMission}
-            onUpdateHouse={handleUpdateHouse}
-            onTransferOwnership={handleTransferOwnership}
-            onReissueInviteCode={handleReissueInviteCode}
-          />
-        ) : null}
-
         {screen === 'friendRoom' ? (
           <FriendRoomScreen
             friendName={visitingFriend.name}
@@ -1188,36 +1262,6 @@ export function AppShell({
             onBack={() => setScreen('houseSearch')}
             onCreate={(input) => {
               void createHouse(input).then((ok) => ok && setScreen('house'));
-            }}
-          />
-        ) : null}
-
-        {screen === 'settings' ? (
-          <SettingsScreen
-            themeMode={themeMode}
-            onChangeThemeMode={setThemeMode}
-            fontId={fontId}
-            onChangeFont={setFontId}
-            onOpenTheme={() => setScreen('theme')}
-            onEditProfile={() => setScreen('profileEdit')}
-            onChangePassword={() => setScreen('passwordChange')}
-            onOpenNotifications={() => {
-              setScreen('notifications');
-              // 화면을 열 때마다 서버값으로 최신화 (실패 시 기본값/직전값 유지).
-              void loadNotificationSettings();
-            }}
-            onOpenSound={() => setScreen('sound')}
-            onOpenHelp={() => setScreen('help')}
-            onOpenTerms={() => openExternal(PolicyUrls.terms)}
-            onOpenPrivacy={() => openExternal(PolicyUrls.privacy)}
-            onReportBug={() => {
-              setScreen('bugReport');
-              void loadBugReports();
-            }}
-            onReplayOnboarding={onReplayOnboarding}
-            onLogout={() => {
-              // Clearing the session flips auth status → AppRoot redirects to /login.
-              void logout();
             }}
           />
         ) : null}

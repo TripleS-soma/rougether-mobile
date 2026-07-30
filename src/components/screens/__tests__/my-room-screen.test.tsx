@@ -103,6 +103,36 @@ describe('MyRoomScreen', () => {
     expect(ui.getByText('오늘의 루틴')).toBeTruthy();
   });
 
+  // 서브탭 끝 체이닝 (#563) — 달력에서 한 번 더 좌플링하면 셸이 다음 하단
+  // 탭(집)으로 페이지를 넘기도록 onFlingPastEnd를 부른다.
+  it('달력 탭에서 좌플링은 onFlingPastEnd("left")로 셸에 넘긴다 (#563)', async () => {
+    const onFlingPastEnd = jest.fn();
+    const ui = await render(
+      <MyRoomScreen routines={SAMPLE_ROUTINES} onFlingPastEnd={onFlingPastEnd} />,
+    );
+    const fling = (translationX: number) =>
+      act(async () =>
+        fireGestureHandler(getByGestureTestId('room-tab-fling'), [
+          { state: State.BEGAN },
+          { state: State.ACTIVE },
+          { state: State.END, translationX, translationY: 0 },
+        ]),
+      );
+
+    // 방 탭에서 좌플링 → 내부 전환(달력), 셸 콜백은 아직 아니다.
+    await fling(-60);
+    expect(ui.getByText('이 날의 루틴')).toBeTruthy();
+    expect(onFlingPastEnd).not.toHaveBeenCalled();
+    // 달력에서 한 번 더 좌플링 → 체이닝.
+    await fling(-60);
+    expect(onFlingPastEnd).toHaveBeenCalledWith('left');
+    // 방 탭에서 우플링(첫 페이지 방향)도 셸로 넘긴다 — 셸이 무시할 몫.
+    await fling(60); // 달력 → 방 (내부 복귀)
+    onFlingPastEnd.mockClear();
+    await fling(60);
+    expect(onFlingPastEnd).toHaveBeenCalledWith('right');
+  });
+
   // 루틴 행 스와이프 삭제 (#566) — 액션은 항상 렌더되고 스와이프로 드러난다.
   // 풀스와이프 즉시 삭제가 아니라 액션 탭이 삭제 경로다.
   it('행 스와이프로 드러난 삭제 액션 탭 → onDeleteRoutine (#566)', async () => {

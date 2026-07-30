@@ -1,5 +1,7 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
+import { State } from 'react-native-gesture-handler';
+import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { HouseScreen, type House } from '@/components/screens/house-screen';
 import { ToastProvider } from '@/components/ui/toast';
@@ -164,6 +166,33 @@ describe('HouseScreen', () => {
       <HouseScreen houseIndex={1} onHouseIndexChange={onHouseIndexChange} />,
     );
     expect(second.getByText('소마 2번째 집')).toBeTruthy();
+  });
+
+  // 집 캐러셀 스와이프 (#297 → #563에서 RNGH 전환) — 하늘 영역 가로 플링으로
+  // 이전/다음 집. 탭 페이저와의 중재(동률 자식 우선)를 위해 PanResponder에서
+  // RNGH pan으로 옮겼다 — 동작 계약은 그대로다.
+  it('하늘 영역 가로 플링으로 이전/다음 집 (#297/#563)', async () => {
+    const onHouseIndexChange = jest.fn();
+    await render(<HouseScreen houseIndex={0} onHouseIndexChange={onHouseIndexChange} />);
+    const fling = (translationX: number) =>
+      act(async () =>
+        fireGestureHandler(getByGestureTestId('house-carousel-fling'), [
+          { state: State.BEGAN },
+          { state: State.ACTIVE },
+          { state: State.END, translationX, translationY: 0 },
+        ]),
+      );
+
+    // 좌플링 → 다음 집.
+    await fling(-60);
+    expect(onHouseIndexChange).toHaveBeenLastCalledWith(1);
+    // 우플링 → 이전 집(랩어라운드 규칙은 화면 내부 소관 — 콜백만 단언).
+    await fling(60);
+    expect(onHouseIndexChange).toHaveBeenCalledTimes(2);
+    // 임계 미달 릴리즈는 무시.
+    onHouseIndexChange.mockClear();
+    await fling(-30);
+    expect(onHouseIndexChange).not.toHaveBeenCalled();
   });
 
   it('adds a mission to my routines through the confirm modal, and claims', async () => {
