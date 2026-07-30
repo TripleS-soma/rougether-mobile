@@ -206,6 +206,32 @@ describe('useHouses — 입주 신청 처리', () => {
   });
 });
 
+// 집 생성 goalIds 상한 (서버 제약 max 3) — 온보딩 목표를 4개 이상 고른
+// 계정도 생성이 막히면 안 된다.
+describe('useHouses — 집 생성 goalIds 클램프', () => {
+  it('온보딩 목표가 4개여도 앞 3개만 실어 보낸다', async () => {
+    let sentBody: { goalIds?: number[] } | null = null;
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      if (url.endsWith('/onboarding'))
+        return res({ goals: [{ goalId: 1 }, { goalId: 8 }, { goalId: 9 }, { goalId: 10 }] });
+      if (url.endsWith('/houses') && init?.method === 'POST') {
+        sentBody = JSON.parse(String(init.body));
+        return res({ houseId: 99 });
+      }
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useHouses());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    let ok = false;
+    await act(async () => {
+      ok = await result.current.create({ name: '새 집', maxMembers: 4 });
+    });
+    expect(ok).toBe(true);
+    expect(sentBody!.goalIds).toEqual([1, 8, 9]);
+  });
+});
+
 // 탈퇴한 신청자 승인 (서버 #240) — 서버가 신청을 거절 처리하고 409를 준다.
 describe('useHouses — 탈퇴 신청자 승인 가드 (#240)', () => {
   it('APPLICANT_WITHDRAWN 409는 에러 대신 정리 안내 토스트를 띄운다', async () => {
