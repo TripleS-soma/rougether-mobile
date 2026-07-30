@@ -579,6 +579,21 @@ export function toServerCharacterId(
   return masters.find((m) => m.code === appId)?.id;
 }
 
+/**
+ * 마스터 /characters → 캐릭터별 CDN 애니메이션 키 맵 (#589) — 온보딩 캐러셀의
+ * 활성 카드 wave 재생용. 애니메이션이 없는 캐릭터는 빠진다(정적 포즈 폴백).
+ */
+export function toCharacterAnimationMap(
+  masters: CharacterItem[],
+): Partial<Record<CharacterId, NonNullable<CharacterItem['animations']>>> {
+  const map: Partial<Record<CharacterId, NonNullable<CharacterItem['animations']>>> = {};
+  for (const m of masters) {
+    const opt = CHARACTER_OPTIONS.find((o) => o.id === m.code);
+    if (opt && m.animations) map[opt.id] = m.animations;
+  }
+  return map;
+}
+
 // --- house (집) ------------------------------------------------------------
 
 // Room tile tints + browse-card decorations, cycled by index (no art yet).

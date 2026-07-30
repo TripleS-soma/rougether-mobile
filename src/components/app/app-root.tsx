@@ -1,5 +1,5 @@
 import { Redirect } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import {
   fetchCharacters,
@@ -8,7 +8,12 @@ import {
   saveOnboardingCharacter,
   saveOnboardingGoals,
 } from '@/api';
-import { toAppCharacterId, toOnboardingGoal, toServerCharacterId } from '@/api/adapters';
+import {
+  toAppCharacterId,
+  toCharacterAnimationMap,
+  toOnboardingGoal,
+  toServerCharacterId,
+} from '@/api/adapters';
 import type { CharacterItem, GoalItem } from '@/api/types';
 import { AppShell } from '@/components/app/app-shell';
 import { OnboardingScreen, type OnboardingGoal } from '@/components/screens/onboarding-screen';
@@ -67,6 +72,9 @@ export function AppRoot() {
     };
   }, [status]);
 
+  // 캐릭터별 CDN 애니메이션 키 (#589) — 온보딩 캐러셀 활성 카드의 wave.
+  const characterAnimations = useMemo(() => toCharacterAnimationMap(characters), [characters]);
+
   // Wait for the session check; the splash overlay covers this brief gap.
   if (status === 'loading') return null;
 
@@ -81,6 +89,7 @@ export function AppRoot() {
         goals={serverGoals.length > 0 ? serverGoals : undefined}
         initialGoals={selectedGoalIds}
         initialCharacterId={characterId}
+        characterAnimations={characterAnimations}
         onDone={(goals, chosen) => {
           setCharacterId(chosen);
           setSelectedGoalIds(goals);
