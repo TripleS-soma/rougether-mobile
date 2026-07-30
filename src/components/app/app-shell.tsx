@@ -45,6 +45,7 @@ import { screenView, track } from '@/lib/analytics';
 import { onNotificationTap } from '@/lib/push-events';
 import { pickLibraryImage } from '@/lib/pick-image';
 import { todayIso } from '@/utils/datetime';
+import { setHapticsEnabled } from '@/utils/haptics';
 import { useAuth } from '@/hooks/use-auth';
 import { useGacha } from '@/hooks/use-gacha';
 import {
@@ -666,6 +667,11 @@ export function AppShell({
   const persistDeviceSettings = (sound: SoundSettings) => {
     void AsyncStorage.setItem(DEVICE_SETTINGS_KEY, JSON.stringify({ sound })).catch(() => {});
   };
+  // '햅틱 진동' 토글을 전역 게이트에 주입 (#586) — 이 이펙트가 없으면 토글이
+  // 저장만 되고 아무것도 제어하지 않는다(휠 틱·완료 햅틱 등 전부 무조건 발사).
+  useEffect(() => {
+    setHapticsEnabled(soundSettings.haptics);
+  }, [soundSettings.haptics]);
 
   // 푸시 탭(콜드 스타트 포함) → 알림 목록으로 (#405).
   useEffect(
