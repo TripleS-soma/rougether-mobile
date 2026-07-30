@@ -300,10 +300,11 @@ export const galleryEntries: GalleryEntry[] = [
   },
   {
     name: 'LoginScreen',
-    description: 'Ported from the prototype AuthScreen (#2). Preview at fixed height.',
+    description:
+      'Ported from the prototype AuthScreen (#2). Preview at fixed height, 최근 로그인 배지는 카카오에.',
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
-        <LoginScreen />
+        <LoginScreen lastLoginProvider="kakao" />
       </View>
     ),
   },
