@@ -1,6 +1,6 @@
 {
   "name": "rougether-mobile",
-  "main": "expo-router/entry",
+  "main": "index.js",
   "version": "1.0.0",
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -38,6 +38,7 @@
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-native": "0.83.6",
+    "react-native-android-widget": "^0.21.0",
     "react-native-gesture-handler": "~2.30.0",
     "react-native-reanimated": "4.2.1",
     "react-native-safe-area-context": "~5.6.2",
@@ -66,8 +67,8 @@
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
     "build:characters": "node ./scripts/build-character-sprites.js",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
@@ -96,7 +97,8 @@
       "^expo-apple-authentication$": "<rootDir>/jest/expo-apple-authentication-mock.js",
       "^@react-native-kakao/user$": "<rootDir>/jest/kakao-user-mock.js",
       "^@/assets/(.*)$": "<rootDir>/assets/$1",
-      "^@/(.*)$": "<rootDir>/src/$1"
+      "^@/(.*)$": "<rootDir>/src/$1",
+      "^react-native-android-widget$": "<rootDir>/jest/react-native-android-widget-mock.js"
     },
     "transformIgnorePatterns": [
       "node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg))"

@@ -58,6 +58,9 @@ import { Radius, Spacing, StaticWhite } from '@/constants/theme';
 // 인증사진형 잠시 내림 (#499) — 복구 시 카메라 캡처 import를 되살릴 것.
 // import { captureVerificationPhoto } from '@/lib/photo-verify';
 import { saveRoomImage } from '@/lib/room-capture';
+import { captureRef } from 'react-native-view-shot';
+import { refreshWidgets } from '@/widgets/rougether-widgets';
+import { saveWidgetRoomImage } from '@/widgets/widget-data';
 import {
   DEFAULT_WALLPAPER_ID,
   type FurnitureItem,
@@ -105,7 +108,7 @@ const inBiweeklyWeek = (dateIso: string, startIso: string) => {
  * yearly — same rules the server applies to /today and /calendar). Shared by
  * the 방 tab (today) and the 달력 tab (selected date) so both always agree.
  */
-const isScheduledOn = (r: Routine, dateIso: string) => {
+export const isScheduledOn = (r: Routine, dateIso: string) => {
   if (r.kind === 'todo') return r.dueDate === dateIso;
   if (r.startDate && dateIso < r.startDate) return false;
   if (r.endDate && dateIso > r.endDate) return false;
@@ -637,6 +640,49 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     else if (result === 'unsupported') toast('웹에서는 이미지 저장을 지원하지 않아요', 'error');
     else toast('이미지 저장에 실패했어요', 'error');
   };
+
+  // 홈 위젯용 무음 방 캡처 (#604, 안드로이드 전용) — 방 구성이 바뀌었을 때만
+  // 잠깐 뽑기 버튼을 숨기고(기존 #475 플래그 재사용) data URI로 찍어 위젯
+  // 저장소에 넘긴다. 시그니처 비교로 같은 방은 다시 찍지 않는다.
+  const widgetShotSigRef = useRef('');
+  const roomSignature = JSON.stringify({
+    wallpaperId,
+    floorId,
+    backgroundId,
+    placedFurnitureIds,
+    placements,
+    characterId,
+  });
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    if (widgetShotSigRef.current === roomSignature) return;
+    // 로딩 중이거나 다른 캡처가 진행 중이면 다음 변화 때 다시 시도된다.
+    if (loading || capturing) return;
+    const timer = setTimeout(async () => {
+      widgetShotSigRef.current = roomSignature;
+      setCapturing(true);
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      );
+      try {
+        const dataUri = await captureRef(roomShotRef, {
+          format: 'png',
+          quality: 0.9,
+          result: 'data-uri',
+          width: 512,
+          height: 512,
+        });
+        await saveWidgetRoomImage(dataUri);
+        refreshWidgets();
+      } catch {
+        // 위젯은 부가 표면 — 실패 시 다음 방 변화 때 다시 찍는다.
+        widgetShotSigRef.current = '';
+      } finally {
+        setCapturing(false);
+      }
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [roomSignature, loading, capturing]);
 
   // Scroll the tapped category's quick-add input into view (above the keyboard).
   const scrollRef = useRef<ScrollView>(null);
