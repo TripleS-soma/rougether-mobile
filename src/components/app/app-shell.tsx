@@ -716,7 +716,14 @@ export function AppShell({
   const openCategoryManage = useCallback(() => setScreen('categoryManage'), []);
   const openGacha = useCallback(() => setScreen('gacha'), []);
   const openMyRoom = useCallback(() => setScreen('myRoom'), []);
-  const openHouseSearch = useCallback(() => setScreen('houseSearch'), []);
+  // 집 탐색 미션(#571 후속)은 "둘러보고 나갈 때" 완료 — 미리보기 성공 시
+  // 표시만 해두고, 탐색 화면을 떠나는 순간(뒤로/가입) 완료 시트를 띄운다.
+  // 탐색 중에 시트가 화면을 덮지 않게 하기 위함.
+  const browsedHouseRef = useRef(false);
+  const openHouseSearch = useCallback(() => {
+    browsedHouseRef.current = false;
+    setScreen('houseSearch');
+  }, []);
   const openNotificationList = useCallback(() => {
     void loadNotifications();
     setScreen('notificationList');
@@ -871,11 +878,14 @@ export function AppShell({
         toast('한 번 더 뒤로가면 앱이 꺼져요');
         return true;
       }
+      // 하드웨어 백으로 탐색을 떠나는 경로도 화면의 뒤로 버튼과 같은 규칙 —
+      // 둘러봤다면 미션 4 완료 (#571 후속).
+      if (screen === 'houseSearch' && browsedHouseRef.current) completeMission('browse-house');
       setScreen(target);
       return true;
     });
     return () => sub.remove();
-  }, [screen, addReturnScreen, noHouses, toast]);
+  }, [screen, addReturnScreen, noHouses, toast, completeMission]);
 
   const activeTab = TAB_FOR_SCREEN[screen];
 
@@ -1191,8 +1201,6 @@ export function AppShell({
             onBack={() => setScreen('myRoom')}
             onDraw={async (gachaId, count) => {
               const results = await drawGachaMachine(gachaId, count);
-              // 뽑기 성공 = 미션 2 완료 (#571).
-              if (results) completeMission('first-draw');
               // Drawn items land in the inventory — re-sync so 방 꾸미기 shows
               // them as 보유중 and placement saves know their userItemId.
               if (results?.some((r) => r.itemId != null && !r.converted)) void refreshOwned();
@@ -1201,6 +1209,9 @@ export function AppShell({
                 void reloadMyCharacters();
               return results;
             }}
+            // 뽑기 성공 = 미션 2 완료 (#571) — 연출이 끝나고 확인을 누른
+            // 순간에. 뽑기 직후 완료시키면 미션 시트가 연출을 덮는다.
+            onResultsConfirmed={() => completeMission('first-draw')}
           />
         ) : null}
 
@@ -1249,18 +1260,32 @@ export function AppShell({
             loading={searchLoading}
             loadError={searchError}
             onRetry={retrySearch}
-            onBack={() => setScreen(noHouses ? 'myRoom' : 'house')}
+            onBack={() => {
+              // 둘러보고 나가는 순간에 미션 4 완료 (#571 후속) — 탐색 중에
+              // 완료 시트가 화면을 덮지 않게 한다.
+              if (browsedHouseRef.current) completeMission('browse-house');
+              setScreen(noHouses ? 'myRoom' : 'house');
+            }}
             onJoinByCode={async (code) => {
               const ok = await joinByCode(code);
-              if (ok === true) setScreen('house');
+              if (ok === true) {
+                // 가입 성공 = 탐색의 성공적 종료 — 둘러보기 미션도 완료.
+                completeMission('browse-house');
+                setScreen('house');
+              }
               return ok;
             }}
-            onPreviewCode={previewByCode}
+            onPreviewCode={async (code) => {
+              const detail = await previewByCode(code);
+              // 'network'는 실패 신호 — 열람 성공만 둘러봤음으로 친다.
+              if (detail && detail !== 'network') browsedHouseRef.current = true;
+              return detail;
+            }}
             // 카탈로그를 얹어 미리보기 창문에 실제 방을 그린다 (#386).
             onPreviewHouse={async (houseId) => {
               const detail = await previewHouse(houseId, catalogue);
-              // 집 미리보기 열람 성공 = 미션 4 완료 (#571).
-              if (detail) completeMission('browse-house');
+              // 미리보기 열람 = 둘러봤음 표시 — 완료는 나갈 때 (#571 후속).
+              if (detail) browsedHouseRef.current = true;
               return detail;
             }}
             furniture={catalogue.furniture}
@@ -1268,7 +1293,11 @@ export function AppShell({
             floors={catalogue.floors}
             backgrounds={catalogue.backgrounds}
             onJoinHouse={(houseId) => {
-              void joinSearchHouse(houseId).then((ok) => ok && setScreen('house'));
+              void joinSearchHouse(houseId).then((ok) => {
+                if (!ok) return;
+                completeMission('browse-house');
+                setScreen('house');
+              });
             }}
             onCreate={() => setScreen('createHouse')}
           />
