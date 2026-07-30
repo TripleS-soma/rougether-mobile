@@ -55,6 +55,9 @@ const SLIDES: Slide[] = [
 
 export type OnboardingGoal = { id: string; label: string };
 
+/** 목표 선택 상한 — 집 생성의 서버 제약(goalIds ≤ 3)과 맞춘다 (#598 후속). */
+export const MAX_GOALS = 3;
+
 const GOALS: OnboardingGoal[] = [
   { id: 'exercise', label: '운동' },
   { id: 'study', label: '공부' },
@@ -127,7 +130,7 @@ export function OnboardingScreen({
   // over); ids that no longer exist in the option list are dropped so a stale
   // id can't hold the 시작하기 button open with nothing visibly checked.
   const [selectedGoals, setSelectedGoals] = useState<string[]>(() =>
-    (initialGoals ?? []).filter((id) => goalOptions.some((g) => g.id === id)),
+    (initialGoals ?? []).filter((id) => goalOptions.some((g) => g.id === id)).slice(0, MAX_GOALS),
   );
   const [selectedCharacter, setSelectedCharacter] = useState<CharacterId>(
     initialCharacterId ?? DEFAULT_CHARACTER_ID,
@@ -136,8 +139,17 @@ export function OnboardingScreen({
   const isLast = index === SLIDES.length - 1;
   const slide = SLIDES[index];
 
+  const { show: toast } = useToast();
   const toggleGoal = (id: string) =>
-    setSelectedGoals((prev) => (prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]));
+    setSelectedGoals((prev) => {
+      if (prev.includes(id)) return prev.filter((g) => g !== id);
+      // 상한 도달 시 차단하고 이유를 말한다 — 집 생성 서버 제약과 동일.
+      if (prev.length >= MAX_GOALS) {
+        toast(`목표는 ${MAX_GOALS}개까지 고를 수 있어요`);
+        return prev;
+      }
+      return [...prev, id];
+    });
 
   // 카드 지오메트리 — 폭의 78% 카드 + 좌우 피크. 훅/이펙트에서도 쓰므로
   // 분기 밖에서 계산한다.
@@ -286,7 +298,8 @@ export function OnboardingScreen({
         <View style={styles.intro}>
           <Text style={[Typography.h1, { color: t.text }]}>관심 있는 목표를 골라주세요</Text>
           <Text style={[Typography.supporting, styles.introBody, { color: t.textMuted }]}>
-            선택한 목표를 기반으로 루틴 제안과 미션을 더 잘 맞출 수 있어요.
+            선택한 목표를 기반으로 루틴 제안과 미션을 더 잘 맞출 수 있어요. 최대 3개까지 고를 수
+            있어요.
           </Text>
         </View>
         <ScrollView contentContainerStyle={styles.grid}>
