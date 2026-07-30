@@ -12,6 +12,8 @@ import {
   View,
 } from 'react-native';
 
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+
 import { CharacterAvatar } from '@/components/character-avatar';
 import { type HouseCover } from '@/components/house-cover-picker';
 import { FRAME_ASPECT, houseCoverKey, WINDOW_RECTS } from '@/components/room/house-preview-frame';
@@ -42,6 +44,7 @@ import {
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useFontEmphasis, useResolvedScheme, useTokens, useTypography } from '@/hooks/use-tokens';
 import { assetSource } from '@/resources/asset';
+import { flingDirection, SWIPE_CLAIM_DX, SWIPE_FAIL_DY } from '@/utils/gesture';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
 import type { FurnitureItem, PlacedFurniture, Wallpaper } from '@/resources/furniture';
 
@@ -300,6 +303,11 @@ export type HouseScreenProps = {
   onTransferOwnership?: (houseId: number, membershipId: number) => void;
   /** Reissue the invite code via the API (owner only; the old code expires). */
   onReissueInviteCode?: (houseId: number) => void;
+  /**
+   * 확대 카메라·자리 드래그처럼 이 화면이 제스처 전권을 가져야 하는 동안
+   * true — 셸이 탭 페이저(#563)를 잠그는 데 쓴다.
+   */
+  onPagerLockChange?: (locked: boolean) => void;
   /** Accept a pending browse-join request (owner only). */
   onAcceptJoinRequest?: (houseId: number, requestId: number) => void;
   /** Reject a pending browse-join request (owner only). */
@@ -360,6 +368,7 @@ export const HouseScreen = memo(function HouseScreen({
   onAcceptJoinRequest,
   onRejectJoinRequest,
   onSwapSeats,
+  onPagerLockChange,
 }: HouseScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
@@ -727,25 +736,36 @@ export const HouseScreen = memo(function HouseScreen({
     }),
   ).current;
 
-  // --- 집 스와이프 전환 (#297) — 가로 우세 플링이면 이전/다음 집. ---
-  // 확대 중(카메라 팬)·드래그 중에는 양보하고, 버블 단계라 자식 제스처가 우선.
+  // --- 집 스와이프 전환 (#297 → #563에서 RNGH로) — 가로 우세 플링이면
+  // 이전/다음 집. PanResponder였을 때는 셸의 탭 페이저(RNGH)가 네이티브에서
+  // 터치를 먼저 가져가 죽었다 — 같은 RNGH면 동률에서 더 깊은 이쪽이 이긴다.
+  // 확대(카메라 팬)·자리 드래그 중에는 터치 시작/도중 모두 물러난다.
   const switchRef = useRef({ prev: () => {}, next: () => {} });
   switchRef.current = { prev: prevHouse, next: nextHouse };
-  const swipeResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (evt, g) =>
-        dragSeatRef.current == null &&
-        !zoomedRef.current &&
-        evt.nativeEvent.touches.length === 1 &&
-        Math.abs(g.dx) > 24 &&
-        Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
-      onPanResponderRelease: (_evt, g) => {
-        if (g.dx <= -40) switchRef.current.next();
-        else if (g.dx >= 40) switchRef.current.prev();
-      },
-      onPanResponderTerminationRequest: () => true,
-    }),
+  const carouselFling = useRef(
+    Gesture.Pan()
+      .withTestId('house-carousel-fling')
+      .runOnJS(true)
+      .maxPointers(1)
+      .activeOffsetX([-SWIPE_CLAIM_DX, SWIPE_CLAIM_DX])
+      .failOffsetY([-SWIPE_FAIL_DY, SWIPE_FAIL_DY])
+      .onTouchesDown((_e, mgr) => {
+        if (dragSeatRef.current != null || zoomedRef.current) mgr.fail();
+      })
+      .onTouchesMove((_e, mgr) => {
+        if (dragSeatRef.current != null || zoomedRef.current) mgr.fail();
+      })
+      .onEnd((e) => {
+        const dir = flingDirection(e.translationX);
+        if (dir === 'left') switchRef.current.next();
+        else if (dir === 'right') switchRef.current.prev();
+      }),
   ).current;
+
+  // 확대·자리 드래그 동안 셸의 탭 페이저를 잠근다 (#563).
+  useEffect(() => {
+    onPagerLockChange?.(zoomed || dragSeat != null);
+  }, [zoomed, dragSeat, onPagerLockChange]);
 
   // Owner tools need the OWNER role and a server house id.
   const isOwner = currentHouse?.myRole === 'OWNER' && !!currentHouse?.houseId;
@@ -1042,166 +1062,169 @@ export const HouseScreen = memo(function HouseScreen({
         testID="house-scroll">
         {/* 프레임 모드(#287) — 하늘 위에 스위처·집 프레임, 방은 창문 안에.
             커버가 없어도 기본 프레임으로 통일(#328)이라 유일한 경로다. */}
-        <View
-          style={[styles.skySection, { backgroundColor: skyColor }]}
-          testID="sky-section"
-          {...swipeResponder.panHandlers}>
-          {/* 마당 잔디 — 프레임 하단이 밟고 서는 밴드. */}
-          <View style={[styles.grassBand, { backgroundColor: t.grass }]} />
-          {raining ? <RainOverlay /> : null}
-          <View style={styles.switcher}>
-            {houses.length > 1 ? (
-              <Pressable
-                onPress={prevHouse}
-                accessibilityRole="button"
-                accessibilityLabel="이전 집"
-                hitSlop={8}
-                style={[styles.iconBtn, { backgroundColor: t.surface }]}>
-                <Icon name="back" size={18} color={t.text} />
-              </Pressable>
-            ) : null}
-            <View style={[styles.titleBadge, { backgroundColor: t.surface }]}>
-              {currentHouse.myRole === 'OWNER' ? (
-                <CrownPictogram size={14} />
-              ) : (
-                <HousePictogram size={14} />
-              )}
-              <Text style={[Typography.h3, { color: t.text }]}>{currentHouse.name}</Text>
-            </View>
-            {houses.length > 1 ? (
-              <Pressable
-                onPress={nextHouse}
-                accessibilityRole="button"
-                accessibilityLabel="다음 집"
-                hitSlop={8}
-                style={[styles.iconBtn, { backgroundColor: t.surface }]}>
-                <Icon name="forward" size={18} color={t.text} />
-              </Pressable>
-            ) : null}
-          </View>
-          <View style={styles.dots}>
-            {houses.map((house, i) => (
-              <View
-                key={house.houseId ?? `demo-${i}`}
-                style={[
-                  styles.dot,
-                  i === houseIndex
-                    ? { width: 20, backgroundColor: t.primary }
-                    : { width: 6, backgroundColor: t.surface },
-                ]}
-              />
-            ))}
-          </View>
-          {/* 레벨·멤버 pill — 프레임 여백과 정렬된 행 (모서리 절대배치는
-                화면 끝에 걸려 보였다). 고정 밝기 흰 스크림 위라 onTint 잉크. */}
-          <View style={styles.framePillsRow}>
-            <View style={[styles.skyPill, { backgroundColor: 'rgba(255,255,255,0.88)' }]}>
-              <HousePictogram size={12} />
-              <Text style={[Typography.supporting, { color: t.onTint }]}>
-                Lv.{currentHouse.level ?? 0}
-                {currentHouse.growthPoints != null
-                  ? ` · ${currentHouse.growthPoints % 100}/100`
-                  : ''}
-              </Text>
-            </View>
-            <View style={[styles.skyPill, { backgroundColor: 'rgba(255,255,255,0.88)' }]}>
-              <Text style={[Typography.supporting, { color: t.onTint }]}>
-                {/* Vacant seats are not members — count the real ones. */}
-                멤버 {currentHouse.memberCount ?? members.length}
-                {currentHouse.maxMembers ? ` / ${currentHouse.maxMembers}` : ''}
-              </Text>
-            </View>
-          </View>
-          <CoachTarget id="house-frame">
-            <Animated.View
-              style={[
-                styles.cameraViewportOuter,
-                { opacity: switchFade, transform: [{ translateX: switchX }] },
-              ]}>
-              <View style={styles.cameraViewport} {...cameraResponder.panHandlers}>
-                <Animated.View
-                  style={{
-                    transform: [{ translateX: camTx }, { translateY: camTy }, { scale: camScale }],
-                  }}>
-                  <View style={styles.frameWrap} {...gridPanResponder.panHandlers}>
-                    {/* 프레임 측정용 — 반응자 프롭이 있는 부모에는 테스트에서
-                      layout 이벤트가 닿지 않아 absolute-fill 형제로 잰다. */}
-                    <View
-                      testID="frame-camera"
-                      pointerEvents="none"
-                      style={StyleSheet.absoluteFill}
-                      onLayout={(e) => {
-                        const first = frameSize.current.w === 0;
-                        frameSize.current = {
-                          w: e.nativeEvent.layout.width,
-                          h: e.nativeEvent.layout.height,
-                        };
-                        // 첫 레이아웃에 기본 카메라(방 4칸 클로즈업)를 즉시 적용 (#307).
-                        if (first) {
-                          const d = camDefault();
-                          cam.current = d;
-                          camScale.setValue(d.scale);
-                          camTx.setValue(d.tx);
-                          camTy.setValue(d.ty);
-                        }
-                      }}
-                    />
-                    {/* 창문 뒤 좌석 — 프레임 PNG의 투명 창문으로 방이 보인다. */}
-                    {WINDOW_RECTS.map((rect, w) => {
-                      const seatIdx = windowSlots[w];
-                      return (
-                        <View
-                          key={`window-${w}`}
-                          style={[
-                            styles.windowSlot,
-                            rect,
-                            seatIdx != null && dragSeat === seatIdx && styles.dragRow,
-                          ]}>
-                          {seatIdx != null ? (
-                            renderSeatTile(displayCells[seatIdx], seatIdx, true)
-                          ) : (
-                            /* 정원 밖 창문 — 조용한 벽 패널. */
-                            <View
-                              style={[styles.windowFiller, { backgroundColor: t.surfaceMuted }]}
-                              testID="window-filler"
-                            />
-                          )}
-                        </View>
-                      );
-                    })}
-                    {/* Android는 Image 계열이 pointerEvents prop을 무시하고 터치를
-                      삼킨다(#401) — ViewGroup 래퍼가 확실하게 투과시킨다. */}
-                    <View style={StyleSheet.absoluteFill} pointerEvents="none">
-                      <Image
-                        source={assetSource(coverKey)}
-                        style={StyleSheet.absoluteFill}
-                        contentFit="contain"
-                        transition={120}
-                        // 디스크 캐시 유지 — 앱 재실행 후에도 재요청 없이 즉시 (#463).
-                        cachePolicy="memory-disk"
-                        accessibilityLabel={`${currentHouse.name} 집`}
-                        testID="house-frame"
-                      />
-                    </View>
-                  </View>
-                </Animated.View>
+        <GestureDetector gesture={carouselFling}>
+          <View style={[styles.skySection, { backgroundColor: skyColor }]} testID="sky-section">
+            {/* 마당 잔디 — 프레임 하단이 밟고 서는 밴드. */}
+            <View style={[styles.grassBand, { backgroundColor: t.grass }]} />
+            {raining ? <RainOverlay /> : null}
+            <View style={styles.switcher}>
+              {houses.length > 1 ? (
+                <Pressable
+                  onPress={prevHouse}
+                  accessibilityRole="button"
+                  accessibilityLabel="이전 집"
+                  hitSlop={8}
+                  style={[styles.iconBtn, { backgroundColor: t.surface }]}>
+                  <Icon name="back" size={18} color={t.text} />
+                </Pressable>
+              ) : null}
+              <View style={[styles.titleBadge, { backgroundColor: t.surface }]}>
+                {currentHouse.myRole === 'OWNER' ? (
+                  <CrownPictogram size={14} />
+                ) : (
+                  <HousePictogram size={14} />
+                )}
+                <Text style={[Typography.h3, { color: t.text }]}>{currentHouse.name}</Text>
               </View>
-              {/* ⟲ 리셋 버튼은 cameraResponder(팬 responder)를 가진 cameraViewport
+              {houses.length > 1 ? (
+                <Pressable
+                  onPress={nextHouse}
+                  accessibilityRole="button"
+                  accessibilityLabel="다음 집"
+                  hitSlop={8}
+                  style={[styles.iconBtn, { backgroundColor: t.surface }]}>
+                  <Icon name="forward" size={18} color={t.text} />
+                </Pressable>
+              ) : null}
+            </View>
+            <View style={styles.dots}>
+              {houses.map((house, i) => (
+                <View
+                  key={house.houseId ?? `demo-${i}`}
+                  style={[
+                    styles.dot,
+                    i === houseIndex
+                      ? { width: 20, backgroundColor: t.primary }
+                      : { width: 6, backgroundColor: t.surface },
+                  ]}
+                />
+              ))}
+            </View>
+            {/* 레벨·멤버 pill — 프레임 여백과 정렬된 행 (모서리 절대배치는
+                화면 끝에 걸려 보였다). 고정 밝기 흰 스크림 위라 onTint 잉크. */}
+            <View style={styles.framePillsRow}>
+              <View style={[styles.skyPill, { backgroundColor: 'rgba(255,255,255,0.88)' }]}>
+                <HousePictogram size={12} />
+                <Text style={[Typography.supporting, { color: t.onTint }]}>
+                  Lv.{currentHouse.level ?? 0}
+                  {currentHouse.growthPoints != null
+                    ? ` · ${currentHouse.growthPoints % 100}/100`
+                    : ''}
+                </Text>
+              </View>
+              <View style={[styles.skyPill, { backgroundColor: 'rgba(255,255,255,0.88)' }]}>
+                <Text style={[Typography.supporting, { color: t.onTint }]}>
+                  {/* Vacant seats are not members — count the real ones. */}
+                  멤버 {currentHouse.memberCount ?? members.length}
+                  {currentHouse.maxMembers ? ` / ${currentHouse.maxMembers}` : ''}
+                </Text>
+              </View>
+            </View>
+            <CoachTarget id="house-frame">
+              <Animated.View
+                style={[
+                  styles.cameraViewportOuter,
+                  { opacity: switchFade, transform: [{ translateX: switchX }] },
+                ]}>
+                <View style={styles.cameraViewport} {...cameraResponder.panHandlers}>
+                  <Animated.View
+                    style={{
+                      transform: [
+                        { translateX: camTx },
+                        { translateY: camTy },
+                        { scale: camScale },
+                      ],
+                    }}>
+                    <View style={styles.frameWrap} {...gridPanResponder.panHandlers}>
+                      {/* 프레임 측정용 — 반응자 프롭이 있는 부모에는 테스트에서
+                      layout 이벤트가 닿지 않아 absolute-fill 형제로 잰다. */}
+                      <View
+                        testID="frame-camera"
+                        pointerEvents="none"
+                        style={StyleSheet.absoluteFill}
+                        onLayout={(e) => {
+                          const first = frameSize.current.w === 0;
+                          frameSize.current = {
+                            w: e.nativeEvent.layout.width,
+                            h: e.nativeEvent.layout.height,
+                          };
+                          // 첫 레이아웃에 기본 카메라(방 4칸 클로즈업)를 즉시 적용 (#307).
+                          if (first) {
+                            const d = camDefault();
+                            cam.current = d;
+                            camScale.setValue(d.scale);
+                            camTx.setValue(d.tx);
+                            camTy.setValue(d.ty);
+                          }
+                        }}
+                      />
+                      {/* 창문 뒤 좌석 — 프레임 PNG의 투명 창문으로 방이 보인다. */}
+                      {WINDOW_RECTS.map((rect, w) => {
+                        const seatIdx = windowSlots[w];
+                        return (
+                          <View
+                            key={`window-${w}`}
+                            style={[
+                              styles.windowSlot,
+                              rect,
+                              seatIdx != null && dragSeat === seatIdx && styles.dragRow,
+                            ]}>
+                            {seatIdx != null ? (
+                              renderSeatTile(displayCells[seatIdx], seatIdx, true)
+                            ) : (
+                              /* 정원 밖 창문 — 조용한 벽 패널. */
+                              <View
+                                style={[styles.windowFiller, { backgroundColor: t.surfaceMuted }]}
+                                testID="window-filler"
+                              />
+                            )}
+                          </View>
+                        );
+                      })}
+                      {/* Android는 Image 계열이 pointerEvents prop을 무시하고 터치를
+                      삼킨다(#401) — ViewGroup 래퍼가 확실하게 투과시킨다. */}
+                      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+                        <Image
+                          source={assetSource(coverKey)}
+                          style={StyleSheet.absoluteFill}
+                          contentFit="contain"
+                          transition={120}
+                          // 디스크 캐시 유지 — 앱 재실행 후에도 재요청 없이 즉시 (#463).
+                          cachePolicy="memory-disk"
+                          accessibilityLabel={`${currentHouse.name} 집`}
+                          testID="house-frame"
+                        />
+                      </View>
+                    </View>
+                  </Animated.View>
+                </View>
+                {/* ⟲ 리셋 버튼은 cameraResponder(팬 responder)를 가진 cameraViewport
                   바깥, 그 형제로 둔다 — zoomed 동안 부모의 capture move 핸들러가
                   버튼 위 탭의 미세한 손가락 이동마저 가로채 onPress가 취소됐다
                   (실기기, #307 후속). cameraViewportOuter가 절대배치 기준. */}
-              {zoomed ? (
-                <Pressable
-                  onPress={resetCam}
-                  accessibilityRole="button"
-                  accessibilityLabel="확대 종료"
-                  style={[styles.camReset, { backgroundColor: t.surface }]}>
-                  <Icon name="refresh" size={16} color={t.text} />
-                </Pressable>
-              ) : null}
-            </Animated.View>
-          </CoachTarget>
-        </View>
+                {zoomed ? (
+                  <Pressable
+                    onPress={resetCam}
+                    accessibilityRole="button"
+                    accessibilityLabel="확대 종료"
+                    style={[styles.camReset, { backgroundColor: t.surface }]}>
+                    <Icon name="refresh" size={16} color={t.text} />
+                  </Pressable>
+                ) : null}
+              </Animated.View>
+            </CoachTarget>
+          </View>
+        </GestureDetector>
         {/* 요약 스탯 — 스크롤 없이 집의 오늘이 보인다 (B안). */}
         <View style={styles.summaryRow}>
           <View style={[styles.stat, { backgroundColor: t.surface, borderColor: t.border }]}>
