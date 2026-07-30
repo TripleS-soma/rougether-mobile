@@ -1,6 +1,6 @@
 import { fireEvent, render } from '@testing-library/react-native';
 
-import { OnboardingScreen } from '@/components/screens/onboarding-screen';
+import { OnboardingScreen, withRang } from '@/components/screens/onboarding-screen';
 import { ToastProvider } from '@/components/ui/toast';
 
 describe('OnboardingScreen', () => {
@@ -56,7 +56,7 @@ describe('OnboardingScreen', () => {
     await fireEvent.press(getByText('건너뛰기'));
     await fireEvent.press(getByText('운동'));
     await fireEvent.press(getByText('시작하기'));
-    await fireEvent.press(getByText('캐릭터 선택하기'));
+    await fireEvent.press(getByText('고양이랑 함께하기'));
 
     expect(onDone).toHaveBeenCalledWith(['exercise'], 'cat');
   });
@@ -76,7 +76,7 @@ describe('OnboardingScreen', () => {
     // final onDone payload carrying '10' untouched proves it was pre-checked.
     await fireEvent.press(getByText('아침형 인간'));
     await fireEvent.press(getByText('시작하기'));
-    await fireEvent.press(getByText('캐릭터 선택하기'));
+    await fireEvent.press(getByText('고양이랑 함께하기'));
 
     expect(onDone).toHaveBeenCalledWith(['10', '11'], 'cat');
   });
@@ -105,7 +105,8 @@ describe('OnboardingScreen', () => {
 
     await fireEvent.press(getByText('건너뛰기'));
     await fireEvent.press(getByText('시작하기'));
-    await fireEvent.press(getByText('캐릭터 선택하기'));
+    // 이전 선택(곰)이 활성 카드 — CTA 라벨에 받침 조사('이랑')까지 반영.
+    await fireEvent.press(getByText('곰이랑 함께하기'));
 
     expect(onDone).toHaveBeenCalledWith(['exercise'], 'bear');
   });
@@ -124,8 +125,66 @@ describe('OnboardingScreen', () => {
     expect(queryByText('운동')).toBeNull(); // local list replaced
     await fireEvent.press(getByText('갓생 살기'));
     await fireEvent.press(getByText('시작하기'));
-    await fireEvent.press(getByText('캐릭터 선택하기'));
+    await fireEvent.press(getByText('고양이랑 함께하기'));
 
     expect(onDone).toHaveBeenCalledWith(['10'], 'cat');
+  });
+});
+
+// 캐릭터 카드 캐러셀 (#589) — 스와이프 정착·탭 포커스가 선택을 바꾸고,
+// 활성 카드만 wave 애니메이션(CDN webp)을 그린다.
+describe('OnboardingScreen 캐릭터 캐러셀', () => {
+  const openCarousel = async () => {
+    const utils = await render(
+      <OnboardingScreen
+        initialGoals={['exercise']}
+        characterAnimations={{
+          cat: { wave: 'characters/cat/animations/wave.webp' },
+          otter: { wave: 'characters/otter/animations/wave.webp' },
+        }}
+        onDone={jest.fn()}
+      />,
+    );
+    await fireEvent.press(utils.getByText('건너뛰기'));
+    await fireEvent.press(utils.getByText('시작하기'));
+    return utils;
+  };
+
+  it('8장 카드와 도트를 그리고, 활성 카드만 wave를 재생한다', async () => {
+    const { getAllByRole, getAllByTestId, getByLabelText } = await openCarousel();
+    expect(getAllByRole('radio')).toHaveLength(8);
+    expect(getByLabelText('수달 카드로 이동')).toBeTruthy();
+    // wave 키를 가진 카드 중 활성(고양이)만 CDN webp를 그린다 — 수달은
+    // 키가 있어도 비활성이라 정적 포즈.
+    const cdn = getAllByTestId('cdn-animation');
+    expect(cdn).toHaveLength(1);
+    expect(cdn[0].props.source[0].uri).toContain('characters/cat/animations/wave.webp');
+  });
+
+  it('스와이프 정착이 활성 캐릭터·CTA 라벨·wave 재생 카드를 바꾼다', async () => {
+    const { getByTestId, getByText, getAllByTestId } = await openCarousel();
+    // 오프셋을 크게 줘 마지막 카드로 클램프 — 폭과 무관하게 결정적이다.
+    await fireEvent(getByTestId('character-carousel'), 'momentumScrollEnd', {
+      nativeEvent: { contentOffset: { x: 99999, y: 0 } },
+    });
+    expect(getByText('수달이랑 함께하기')).toBeTruthy();
+    const cdn = getAllByTestId('cdn-animation');
+    expect(cdn).toHaveLength(1);
+    expect(cdn[0].props.source[0].uri).toContain('characters/otter/animations/wave.webp');
+  });
+
+  it('피크 카드를 탭하면 그 캐릭터가 활성이 된다', async () => {
+    const { getByLabelText, getByText } = await openCarousel();
+    await fireEvent.press(getByLabelText(/판다 — /));
+    expect(getByText('판다랑 함께하기')).toBeTruthy();
+  });
+});
+
+describe('withRang — 이랑/랑 조사', () => {
+  it('받침 유무를 판별한다', () => {
+    expect(withRang('고양이')).toBe('고양이랑');
+    expect(withRang('곰')).toBe('곰이랑');
+    expect(withRang('수달')).toBe('수달이랑');
+    expect(withRang('판다')).toBe('판다랑');
   });
 });

@@ -1,8 +1,17 @@
 import { Image } from 'expo-image';
-import { useState } from 'react';
-import { PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useRef, useState } from 'react';
+import {
+  PanResponder,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 
-import { CharacterAvatar } from '@/components/character-avatar';
+import { CharacterAvatar, type CharacterAnimationSet } from '@/components/character-avatar';
 import { Icon } from '@/components/ui/icon';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Radius, Spacing } from '@/constants/theme';
@@ -64,7 +73,19 @@ export type OnboardingScreenProps = {
   initialGoals?: string[];
   /** Previously chosen character — preselected on replay. */
   initialCharacterId?: CharacterId;
+  /**
+   * 캐릭터별 서버 CDN 애니메이션 키 (#589, 마스터 /characters). 활성 카드가
+   * wave를 재생하는 데 쓴다 — 없으면(오프라인 등) 번들 정적 포즈로 폴백.
+   */
+  characterAnimations?: Partial<Record<CharacterId, CharacterAnimationSet>>;
 };
+
+/** 받침 유무에 따른 '이랑/랑' — CTA "OO(이)랑 함께하기" (#589). */
+export function withRang(name: string): string {
+  const code = name.charCodeAt(name.length - 1);
+  const hasFinal = code >= 0xac00 && code <= 0xd7a3 && (code - 0xac00) % 28 > 0;
+  return `${name}${hasFinal ? '이랑' : '랑'}`;
+}
 
 /**
  * Onboarding flow, ported from the prototype `OnboardingScreen`: intro slides →
@@ -76,9 +97,25 @@ export function OnboardingScreen({
   goals,
   initialGoals,
   initialCharacterId,
+  characterAnimations,
 }: OnboardingScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
+  const { width: windowW } = useWindowDimensions();
+  const characterScrollRef = useRef<ScrollView>(null);
+  // RN-web은 momentum-end를 쏘지 않는다 — 스크롤 유휴로 정착시킨다
+  // (wheel-picker와 같은 패턴).
+  const characterWebSettle = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 이전 선택(다시 보기)이 첫 카드가 되도록 회전 배치 — 스크롤 위치 복원은
+  // 플랫폼별로 신뢰할 수 없어(iOS 전용 contentOffset, RN-web scrollTo 불능
+  // 실측) 순서를 데이터에서 해결한다. 시각과 선택 상태가 항상 일치.
+  const [characterOrder] = useState(() => {
+    const first = initialCharacterId ?? DEFAULT_CHARACTER_ID;
+    const i = CHARACTER_OPTIONS.findIndex((c) => c.id === first);
+    return i <= 0
+      ? CHARACTER_OPTIONS
+      : [...CHARACTER_OPTIONS.slice(i), ...CHARACTER_OPTIONS.slice(0, i)];
+  });
   // Pinned bottom action buttons → pad both edges so the notch / home indicator
   // don't clip the top title or the bottom buttons.
   const screenStyle = useScreenStyle(['top', 'bottom']);
@@ -102,46 +139,137 @@ export function OnboardingScreen({
   const toggleGoal = (id: string) =>
     setSelectedGoals((prev) => (prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]));
 
-  // --- Character select ---
+  // 카드 지오메트리 — 폭의 78% 카드 + 좌우 피크. 훅/이펙트에서도 쓰므로
+  // 분기 밖에서 계산한다.
+  const cardW = Math.round(windowW * 0.78);
+  const cardGap = Spacing.three;
+  const sidePad = Math.max(0, (windowW - cardW) / 2);
+  const snap = cardW + cardGap;
+
+  // RN-web의 ScrollView.scrollTo는 이 트리에서 동작하지 않는다(실측) —
+  // 웹은 DOM 노드 scrollLeft 직접 대입으로 우회하고, 네이티브는 scrollTo.
+  const jumpTo = (x: number, animated: boolean) => {
+    const sv = characterScrollRef.current;
+    if (!sv) return;
+    if (Platform.OS === 'web') {
+      const node = (
+        sv as unknown as { getScrollableNode?: () => { scrollLeft: number } }
+      ).getScrollableNode?.();
+      if (node) {
+        node.scrollLeft = x;
+        return;
+      }
+    }
+    sv.scrollTo({ x, animated });
+  };
+
+  // --- Character select (#589) --- 풀스크린 카드 캐러셀: 카드 하나당 캐릭터
+  // 하나, 다음 카드가 살짝 보이는 피크 + 도트로 스와이프를 암시한다. 활성
+  // 카드만 wave(CDN webp)를 재생 — "초점을 주면 인사한다"가 애착 연출이고,
+  // 로딩 지연도 정적 포즈 폴백 뒤에 숨는다.
   if (showCharacterSelect) {
+    const activeIndex = Math.max(
+      0,
+      characterOrder.findIndex((c) => c.id === selectedCharacter),
+    );
+    const active = characterOrder[activeIndex];
+    const settleAt = (x: number) => {
+      const i = Math.min(characterOrder.length - 1, Math.max(0, Math.round(x / snap)));
+      const opt = characterOrder[i];
+      if (opt) setSelectedCharacter(opt.id);
+    };
+    const focusCharacter = (i: number) => {
+      const opt = characterOrder[i];
+      if (!opt) return;
+      setSelectedCharacter(opt.id);
+      jumpTo(i * snap, true);
+    };
     return (
       <View style={[styles.screen, screenStyle]}>
         <View style={styles.intro}>
           <Text style={[Typography.h1, { color: t.text }]}>함께할 캐릭터를 골라주세요</Text>
           <Text style={[Typography.supporting, styles.introBody, { color: t.textMuted }]}>
-            선택한 친구가 나의 방에 나타나고, 루틴을 함께 키워가요.
+            옆으로 넘기며 마음에 드는 친구를 만나보세요.
           </Text>
         </View>
-        <ScrollView contentContainerStyle={styles.list}>
-          {CHARACTER_OPTIONS.map((c) => {
-            const selected = selectedCharacter === c.id;
+        <ScrollView
+          ref={characterScrollRef}
+          horizontal
+          style={styles.flex}
+          showsHorizontalScrollIndicator={false}
+          snapToInterval={snap}
+          decelerationRate="fast"
+          contentContainerStyle={[
+            styles.characterRail,
+            { paddingHorizontal: sidePad, gap: cardGap },
+          ]}
+          onMomentumScrollEnd={(e) => settleAt(e.nativeEvent.contentOffset.x)}
+          scrollEventThrottle={16}
+          onScroll={
+            Platform.OS === 'web'
+              ? (e) => {
+                  const x = e.nativeEvent.contentOffset.x;
+                  if (characterWebSettle.current) clearTimeout(characterWebSettle.current);
+                  characterWebSettle.current = setTimeout(() => settleAt(x), 160);
+                }
+              : undefined
+          }
+          testID="character-carousel">
+          {characterOrder.map((c, i) => {
+            const isActive = selectedCharacter === c.id;
+            const wave = characterAnimations?.[c.id]?.wave;
             return (
               <Pressable
                 key={c.id}
-                onPress={() => setSelectedCharacter(c.id)}
+                onPress={() => focusCharacter(i)}
                 accessibilityRole="radio"
-                accessibilityState={{ selected }}
+                accessibilityLabel={`${c.name} — ${c.description}`}
+                accessibilityState={{ selected: isActive }}
                 style={[
-                  styles.characterCard,
-                  { backgroundColor: t.surface, borderColor: selected ? t.primary : 'transparent' },
+                  styles.characterSlide,
+                  { width: cardW, backgroundColor: t.surface },
+                  { borderColor: isActive ? t.primary : t.border },
                 ]}>
-                <View style={[styles.characterAvatar, { backgroundColor: c.bg }]}>
-                  <CharacterAvatar characterId={c.id} size={48} />
+                <View style={[styles.characterStage, { backgroundColor: c.bg }]}>
+                  <CharacterAvatar
+                    characterId={c.id}
+                    size={Math.min(Math.round(cardW * 0.55), 220)}
+                    // 활성 카드만 wave 키를 넘긴다 — CharacterAvatar는 유효한
+                    // CDN 키가 있으면 그 webp를, 없으면 번들 정적 포즈를 그린다.
+                    animations={isActive && wave ? { wave } : undefined}
+                  />
                 </View>
-                <View style={styles.flex}>
-                  <Text style={[Typography.label, { color: t.text }]}>{c.name}</Text>
-                  <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                <View style={styles.characterMeta}>
+                  <Text style={[Typography.h2, { color: t.text }]}>{c.name}</Text>
+                  <Text
+                    style={[Typography.body, styles.center, { color: t.textMuted }]}
+                    numberOfLines={2}>
                     {c.description}
                   </Text>
                 </View>
-                {selected ? <Check tint={t.primary} on={t.onPrimary} /> : null}
               </Pressable>
             );
           })}
         </ScrollView>
+        <View style={styles.dots}>
+          {characterOrder.map((c, i) => (
+            <Pressable
+              key={c.id}
+              onPress={() => focusCharacter(i)}
+              accessibilityRole="button"
+              accessibilityLabel={`${c.name} 카드로 이동`}
+              style={[
+                styles.dot,
+                i === activeIndex
+                  ? { width: 24, backgroundColor: t.primary }
+                  : { width: 8, backgroundColor: t.border },
+              ]}
+            />
+          ))}
+        </View>
         <View style={styles.actions}>
           <PrimaryButton
-            label="캐릭터 선택하기"
+            label={`${withRang(active.name)} 함께하기`}
             onPress={() => onDone?.(selectedGoals, selectedCharacter)}
           />
           <TextButton label="이전" onPress={() => setShowCharacterSelect(false)} />
@@ -343,11 +471,6 @@ const styles = StyleSheet.create({
   introBody: {
     marginTop: Spacing.half,
   },
-  list: {
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.three,
-    paddingBottom: Spacing.three,
-  },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -355,20 +478,27 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     paddingBottom: Spacing.three,
   },
-  characterCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-    padding: Spacing.three,
+  // 캐릭터 카드 캐러셀 (#589) — 카드가 세로 공간을 꽉 채우고, 이웃 카드는
+  // 좌우 피크로 살짝 보인다.
+  characterRail: {
+    alignItems: 'stretch',
+    paddingBottom: Spacing.two,
+  },
+  characterSlide: {
     borderRadius: Radius.lg,
     borderWidth: 2,
+    overflow: 'hidden',
   },
-  characterAvatar: {
-    width: 64,
-    height: 64,
-    borderRadius: Radius.lg,
+  characterStage: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  characterMeta: {
+    alignItems: 'center',
+    gap: Spacing.one,
+    paddingVertical: Spacing.four,
+    paddingHorizontal: Spacing.three,
   },
   goalCard: {
     width: '47%',
