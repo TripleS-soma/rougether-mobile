@@ -24,6 +24,7 @@ import {
   toGachaMachine,
   fromFriendRoomSlots,
   fromRoomSlots,
+  toFriendCategories,
   toFriendRoutines,
   toOwnedCharacter,
   toSlotSaves,
@@ -720,6 +721,33 @@ describe('API adapters', () => {
     ).toEqual({ id: 7, title: '로그인이 안 돼요', status: 'IN_PROGRESS', date: '7월 20일' });
     // 미지정 상태는 접수됨으로.
     expect(toBugReportEntry({ bugReportId: 8 }).status).toBe('RECEIVED');
+  });
+
+  it('멤버 day의 categoryId·카테고리 메타를 그룹핑 모델로 매핑한다 (#528, 서버 #237)', () => {
+    const day = {
+      date: '2026-07-30',
+      routines: [
+        { id: 1, originRoutineId: 1, title: '아침 기상', categoryId: 3, completed: false },
+      ],
+      todos: [{ id: 9, title: '장보기', status: 'PENDING' as const, categoryId: 3 }],
+      categories: [{ id: 3, name: '건강', colorHex: '#FF8800', iconKey: 'dumbbell' }],
+    };
+    const routines = toFriendRoutines(day);
+    expect(routines[0].category).toBe('3');
+    expect(routines[1].category).toBe('3');
+    expect(toFriendCategories(day)).toEqual([
+      {
+        id: '3',
+        name: '건강',
+        icon: 'dumbbell',
+        color: '#FF8800',
+        visibility: 'neighbor',
+      },
+    ]);
+    // 비공개라 메타가 안 내려온 categoryId는 그대로 남아 미분류로 흘러간다.
+    expect(
+      toFriendRoutines({ routines: [{ id: 2, title: '비밀 루틴', categoryId: 99 }] })[0].category,
+    ).toBe('99');
   });
 
   it('maps a house member day to the friend routine list', () => {

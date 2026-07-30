@@ -1071,14 +1071,33 @@ export function toFriendRoutines(day: HouseMemberDayResponse): Routine[] {
     time: r.scheduledTime ? r.scheduledTime.slice(0, 5) : undefined,
     alarmEnabled: !!r.scheduledTime,
     photoVerify: r.authType === 'PHOTO',
+    // 카테고리 그룹핑 (#528, 서버 #237) — day.categories와 매칭용.
+    category: r.categoryId != null ? String(r.categoryId) : undefined,
   }));
   const todos = (day.todos ?? []).map((t): Routine => ({
     id: `todo-${t.id ?? ''}`,
     title: t.title ?? '할 일',
     kind: 'todo',
     completed: t.status === 'COMPLETED',
+    category: t.categoryId != null ? String(t.categoryId) : undefined,
   }));
   return [...routines, ...todos];
+}
+
+/**
+ * 멤버 그날 현황의 카테고리 메타 (#528, 서버 #237) — 친구 방 루틴 목록을
+ * 본인 화면처럼 카테고리 그룹으로 보여주기 위한 이름·색·아이콘. 비공개
+ * 카테고리는 응답에 없으므로 매칭 안 되는 항목은 미분류로 흘러간다.
+ */
+export function toFriendCategories(day: HouseMemberDayResponse): RoutineCategoryMeta[] {
+  return (day.categories ?? []).map((c, i) => ({
+    id: String(c.id ?? ''),
+    name: c.name ?? '',
+    icon: toCategoryIcon(c.iconKey),
+    color: c.colorHex || CATEGORY_COLORS[i % CATEGORY_COLORS.length],
+    // 응답에 실리는 건 공개(HOUSE/PUBLIC) 카테고리뿐 — 표시용 기본값.
+    visibility: 'neighbor',
+  }));
 }
 
 /**

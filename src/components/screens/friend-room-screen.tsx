@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
@@ -17,8 +17,9 @@ import {
 import { CharacterAvatar, type CharacterAnimationSet } from '@/components/character-avatar';
 import { Room } from '@/components/room/room';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
-import { type Routine } from '@/constants/routines';
+import { type Routine, type RoutineCategoryMeta, UNCATEGORIZED_META } from '@/constants/routines';
 import { BearCheck } from '@/components/ui/bear-check';
+import { CategoryIcon } from '@/components/ui/category-icon';
 import { Icon } from '@/components/ui/icon';
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { PendingNotice } from '@/components/ui/pending-notice';
@@ -95,6 +96,12 @@ export type FriendRoomScreenProps = {
   /** Friend's routines+todos for today; omit for the demo preview list. */
   routines?: Routine[];
   /**
+   * 그날 루틴·투두의 공개 카테고리 메타 (#528, 서버 #237) — 있으면 루틴
+   * 목록을 본인 화면처럼 카테고리 그룹으로 보여준다. 비공개 카테고리 항목은
+   * 미분류 묶음으로 흘러간다.
+   */
+  categories?: RoutineCategoryMeta[];
+  /**
    * Recent completion history (last 14 days, HOUSE/PUBLIC categories), date
    * desc. Omit to hide the 최근 활동 section (unwired/demo); [] shows an
    * empty-state line.
@@ -138,6 +145,7 @@ export function FriendRoomScreen({
   floors,
   backgrounds,
   routines,
+  categories,
   recentActivity,
   loading = false,
   loadError = false,
@@ -157,6 +165,19 @@ export function FriendRoomScreen({
   // No routines prop = unwired demo preview (dev gallery); the notice says so.
   const preview = routines === undefined;
   const routineList = routines ?? DEFAULT_ROUTINES;
+  // 카테고리 그룹 (#528) — 서버가 준 공개 카테고리 순서대로 묶고, 매칭 안
+  // 되는 항목(비공개·미분류)은 마지막 미분류 묶음으로. 카테고리 정보가 없으면
+  // (데모 미리보기·구서버) 기존 플랫 목록 그대로.
+  const categoryGroups = useMemo(() => {
+    if (!categories || categories.length === 0) return null;
+    const groups = categories
+      .map((meta) => ({ meta, items: routineList.filter((r) => r.category === meta.id) }))
+      .filter((g) => g.items.length > 0);
+    const known = new Set(categories.map((c) => c.id));
+    const rest = routineList.filter((r) => !r.category || !known.has(r.category));
+    if (rest.length > 0) groups.push({ meta: UNCATEGORIZED_META, items: rest });
+    return groups.length > 0 ? groups : null;
+  }, [categories, routineList]);
   const completedCount = routineList.filter((r) => r.completed).length;
   const progress = routineList.length > 0 ? completedCount / routineList.length : 0;
 
@@ -382,8 +403,8 @@ export function FriendRoomScreen({
               </Text>
             ) : null}
 
-            <View style={styles.rows}>
-              {routineList.map((routine) => (
+            {(() => {
+              const renderRow = (routine: Routine) => (
                 <View key={routine.id} style={styles.row}>
                   <BearCheck checked={!!routine.completed} size={22} />
                   <View style={styles.flex}>
@@ -419,8 +440,33 @@ export function FriendRoomScreen({
                     ) : null}
                   </View>
                 </View>
-              ))}
-            </View>
+              );
+              // 카테고리 메타가 있으면 본인 화면처럼 그룹으로 (#528).
+              return categoryGroups ? (
+                <View style={styles.groups}>
+                  {categoryGroups.map((g) => (
+                    <View key={g.meta.id || 'uncat'} style={styles.group}>
+                      <View style={styles.catHeader}>
+                        <View style={[styles.catDot, { backgroundColor: `${g.meta.color}33` }]}>
+                          <CategoryIcon name={g.meta.icon} color={g.meta.color} size={16} />
+                        </View>
+                        <Text
+                          style={[Typography.label, styles.flex, { color: t.text }]}
+                          numberOfLines={1}>
+                          {g.meta.name}
+                        </Text>
+                        <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                          {g.items.filter((r) => r.completed).length}/{g.items.length}
+                        </Text>
+                      </View>
+                      <View style={styles.rows}>{g.items.map(renderRow)}</View>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <View style={styles.rows}>{routineList.map(renderRow)}</View>
+              );
+            })()}
 
             <View style={styles.cheers}>
               {bursts.map((b) => (
@@ -783,6 +829,24 @@ const styles = StyleSheet.create({
   progressFill: {
     height: '100%',
     borderRadius: Radius.pill,
+  },
+  groups: {
+    gap: Spacing.three,
+  },
+  group: {
+    gap: Spacing.one,
+  },
+  catHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  catDot: {
+    width: 26,
+    height: 26,
+    borderRadius: Radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   rows: {
     gap: 0,

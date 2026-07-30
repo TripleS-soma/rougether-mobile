@@ -297,6 +297,17 @@ export type HouseMemberDayResponse = {
   date?: string;
   routines?: MemberRoutineItem[];
   todos?: MemberTodoItem[];
+  // Manual patch (#528, 서버 #237): 그날 루틴·투두가 참조하는 공개(HOUSE/
+  // PUBLIC) 카테고리 메타 — sortOrder 오름차순, 비공개는 내려오지 않는다.
+  categories?: MemberCategoryItem[];
+};
+
+// Manual patch (#528, 서버 #237) — 집 멤버 그날 현황의 카테고리 메타.
+export type MemberCategoryItem = {
+  id?: number;
+  name?: string;
+  colorHex?: string;
+  iconKey?: string;
 };
 
 export type HouseMemberListResponse = {
