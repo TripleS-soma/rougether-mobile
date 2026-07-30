@@ -131,6 +131,40 @@ describe('OnboardingScreen', () => {
   });
 });
 
+// 목표 선택 상한 (#598 후속) — 집 생성의 서버 제약(goalIds ≤ 3)과 맞춘다.
+describe('OnboardingScreen 목표 상한', () => {
+  it('4번째 목표 선택은 차단되고 안내 토스트가 뜬다', async () => {
+    const { getByText } = await render(
+      <ToastProvider>
+        <OnboardingScreen />
+      </ToastProvider>,
+    );
+    await fireEvent.press(getByText('건너뛰기'));
+    await fireEvent.press(getByText('운동'));
+    await fireEvent.press(getByText('공부'));
+    await fireEvent.press(getByText('수면'));
+    await fireEvent.press(getByText('독서')); // 4번째 — 차단
+    expect(getByText('목표는 3개까지 고를 수 있어요')).toBeTruthy();
+  });
+
+  it('이전 선택이 4개 이상이어도 앞 3개만 시드된다', async () => {
+    const onDone = jest.fn();
+    const goals = [
+      { id: '1', label: 'ㄱ' },
+      { id: '2', label: 'ㄴ' },
+      { id: '3', label: 'ㄷ' },
+      { id: '4', label: 'ㄹ' },
+    ];
+    const { getByText } = await render(
+      <OnboardingScreen onDone={onDone} goals={goals} initialGoals={['1', '2', '3', '4']} />,
+    );
+    await fireEvent.press(getByText('건너뛰기'));
+    await fireEvent.press(getByText('시작하기'));
+    await fireEvent.press(getByText('고양이랑 함께하기'));
+    expect(onDone).toHaveBeenCalledWith(['1', '2', '3'], 'cat');
+  });
+});
+
 // 캐릭터 카드 캐러셀 (#589) — 스와이프 정착·탭 포커스가 선택을 바꾸고,
 // 활성 카드만 wave 애니메이션(CDN webp)을 그린다.
 describe('OnboardingScreen 캐릭터 캐러셀', () => {
