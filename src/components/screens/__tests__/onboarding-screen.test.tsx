@@ -56,7 +56,7 @@ describe('OnboardingScreen', () => {
     await fireEvent.press(getByText('건너뛰기'));
     await fireEvent.press(getByText('운동'));
     await fireEvent.press(getByText('시작하기'));
-    await fireEvent.press(getByText('고양이랑 함께하기'));
+    // MVP 고양이 단일 (#637): 목표 시작하기 → 캐러셀 없이 닉네임으로 직행.
     // 닉네임 단계 (#635) — 필수 입력 후 시작(트림 검증 포함).
     expect(onDone).not.toHaveBeenCalled();
     await fireEvent.changeText(getByLabelText('닉네임 입력'), ' 준서 ');
@@ -80,7 +80,6 @@ describe('OnboardingScreen', () => {
     // final onDone payload carrying '10' untouched proves it was pre-checked.
     await fireEvent.press(getByText('아침형 인간'));
     await fireEvent.press(getByText('시작하기'));
-    await fireEvent.press(getByText('고양이랑 함께하기'));
     await fireEvent.changeText(getByLabelText('닉네임 입력'), '준서');
     await fireEvent.press(getByText('시작하기'));
 
@@ -103,10 +102,15 @@ describe('OnboardingScreen', () => {
     expect(onDone).not.toHaveBeenCalled();
   });
 
-  it('preselects the previously chosen character', async () => {
+  it('preselects the previously chosen character (characterSelectEnabled)', async () => {
     const onDone = jest.fn();
     const { getByText, getByLabelText } = await render(
-      <OnboardingScreen onDone={onDone} initialGoals={['exercise']} initialCharacterId="bear" />,
+      <OnboardingScreen
+        onDone={onDone}
+        initialGoals={['exercise']}
+        initialCharacterId="bear"
+        characterSelectEnabled
+      />,
     );
 
     await fireEvent.press(getByText('건너뛰기'));
@@ -133,7 +137,6 @@ describe('OnboardingScreen', () => {
     expect(queryByText('운동')).toBeNull(); // local list replaced
     await fireEvent.press(getByText('갓생 살기'));
     await fireEvent.press(getByText('시작하기'));
-    await fireEvent.press(getByText('고양이랑 함께하기'));
     await fireEvent.changeText(getByLabelText('닉네임 입력'), '준서');
     await fireEvent.press(getByText('시작하기'));
 
@@ -170,7 +173,6 @@ describe('OnboardingScreen 목표 상한', () => {
     );
     await fireEvent.press(getByText('건너뛰기'));
     await fireEvent.press(getByText('시작하기'));
-    await fireEvent.press(getByText('고양이랑 함께하기'));
     await fireEvent.changeText(getByLabelText('닉네임 입력'), '준서');
     await fireEvent.press(getByText('시작하기'));
     expect(onDone).toHaveBeenCalledWith(['1', '2', '3'], 'cat', '준서');
@@ -184,6 +186,7 @@ describe('OnboardingScreen 캐릭터 캐러셀', () => {
     const utils = await render(
       <OnboardingScreen
         initialGoals={['exercise']}
+        characterSelectEnabled
         characterAnimations={{
           cat: { wave: 'characters/cat/animations/wave.webp' },
           otter: { wave: 'characters/otter/animations/wave.webp' },

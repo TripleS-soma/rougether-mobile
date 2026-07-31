@@ -353,10 +353,11 @@ export const galleryEntries: GalleryEntry[] = [
   },
   {
     name: 'OnboardingScreen',
-    description: 'Ported from the prototype OnboardingScreen (#4): slides → goals → character.',
+    description:
+      'Ported from the prototype OnboardingScreen (#4): slides → goals → (캐러셀은 MVP 오프 #637 — 갤러리는 열어 보존 UI 확인) → nickname.',
     render: () => (
       <View style={{ height: 720, alignSelf: 'stretch' }}>
-        <OnboardingScreen />
+        <OnboardingScreen characterSelectEnabled />
       </View>
     ),
   },

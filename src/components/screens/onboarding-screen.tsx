@@ -14,7 +14,12 @@ import {
 
 import { CharacterAvatar, type CharacterAnimationSet } from '@/components/character-avatar';
 import { Icon } from '@/components/ui/icon';
-import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
+import {
+  CHARACTER_OPTIONS,
+  CHARACTER_SELECTION_ENABLED,
+  type CharacterId,
+  DEFAULT_CHARACTER_ID,
+} from '@/constants/characters';
 import { Radius, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useScreenStyle } from '@/hooks/use-screen-style';
@@ -80,6 +85,11 @@ export type OnboardingScreenProps = {
   initialGoals?: string[];
   /** 다시 보기 때 기존 닉네임 프리필 (#635) — 없으면 빈 입력. */
   initialNickname?: string;
+  /**
+   * 캐릭터 선택 캐러셀 노출 — MVP는 고양이 단일이라 기본 꺼짐(#637). 갤러리·
+   * 테스트가 보존된 UI를 계속 돌릴 수 있게 prop으로 열어둔다.
+   */
+  characterSelectEnabled?: boolean;
   /** Previously chosen character — preselected on replay. */
   initialCharacterId?: CharacterId;
   /**
@@ -104,6 +114,7 @@ export function withRang(name: string): string {
 export function OnboardingScreen({
   onDone,
   initialNickname,
+  characterSelectEnabled = CHARACTER_SELECTION_ENABLED,
   goals,
   initialGoals,
   initialCharacterId,
@@ -390,7 +401,11 @@ export function OnboardingScreen({
             label="시작하기"
             disabled={!canStart}
             blockedMessage="목표를 하나 이상 선택해주세요"
-            onPress={() => canStart && setShowCharacterSelect(true)}
+            onPress={() =>
+              canStart &&
+              // MVP 고양이 단일 (#637) — 캐러셀을 건너뛰고 닉네임으로 직행.
+              (characterSelectEnabled ? setShowCharacterSelect(true) : setShowNicknameStep(true))
+            }
           />
           <TextButton label="이전" onPress={() => setShowGoalSurvey(false)} />
         </View>

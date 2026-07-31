@@ -43,7 +43,11 @@ import { houseCoverKey } from '@/components/room/house-preview-frame';
 import { MissionSheet } from '@/components/screens/sheets/mission-sheet';
 import { BottomNav, type NavTab } from '@/components/ui/bottom-nav';
 import { MissionBanner } from '@/components/ui/mission-banner';
-import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
+import {
+  CHARACTER_SELECTION_ENABLED,
+  DEFAULT_CHARACTER_ID,
+  type CharacterId,
+} from '@/constants/characters';
 import { PolicyUrls, SUPPORT_EMAIL } from '@/constants/policy';
 import { CATEGORY_COLORS, type Routine } from '@/constants/routines';
 import { screenView, track } from '@/lib/analytics';
@@ -1126,8 +1130,10 @@ export function AppShell({
               onManageRoutines={openRoutineManage}
               onOpenNotifications={openNotificationList}
               unreadNotificationCount={unreadCount}
-              ownedCharacters={ownedCharacters}
-              onSelectCharacter={wearCharacter}
+              // MVP 고양이 단일 (#637) — 미배선이면 캐릭터 교체 항목이 숨는
+              // 기존 계약(#260)을 그대로 쓴다. 시트·훅 코드는 재사용 대기.
+              ownedCharacters={CHARACTER_SELECTION_ENABLED ? ownedCharacters : undefined}
+              onSelectCharacter={CHARACTER_SELECTION_ENABLED ? wearCharacter : undefined}
               onManageCategories={openCategoryManage}
               onUpdateCategory={updateRoutineCategory}
               onOpenGacha={openGacha}
