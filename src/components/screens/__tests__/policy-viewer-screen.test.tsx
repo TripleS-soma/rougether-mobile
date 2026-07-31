@@ -29,8 +29,16 @@ describe('PolicyViewerScreen (#652)', () => {
     const { getByText, getByTestId, queryByTestId } = await render(
       <PolicyViewerScreen title="개인정보처리방침" url={URL} />,
     );
+    // 서브 리소스 오류(다른 URL)는 무시된다 — 리뷰 반영: 메인 문서만 실패 처리.
     await act(async () => {
-      getByTestId('policy-webview').props.onError();
+      getByTestId('policy-webview').props.onHttpError({
+        nativeEvent: { url: 'https://triples-soma.github.io/favicon.ico' },
+      });
+    });
+    expect(queryByTestId('policy-webview')).toBeTruthy();
+
+    await act(async () => {
+      getByTestId('policy-webview').props.onError({ nativeEvent: { url: URL } });
     });
     expect(getByText('문서를 불러오지 못했어요.')).toBeTruthy();
     expect(queryByTestId('policy-webview')).toBeNull();

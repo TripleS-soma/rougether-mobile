@@ -50,8 +50,13 @@ export function PolicyViewerScreen({ title, url, onBack }: PolicyViewerScreenPro
           source={{ uri: url }}
           style={{ backgroundColor: t.screen }}
           onLoadEnd={() => setLoading(false)}
-          onError={() => setFailed(true)}
-          onHttpError={() => setFailed(true)}
+          // 서브 리소스(파비콘 등) 오류로 오탐하지 않게 메인 문서 요청만 실패 처리.
+          onError={(e) => {
+            if (!e.nativeEvent.url || e.nativeEvent.url === url) setFailed(true);
+          }}
+          onHttpError={(e) => {
+            if (e.nativeEvent.url === url) setFailed(true);
+          }}
         />
       )}
       {loading && !failed ? (
