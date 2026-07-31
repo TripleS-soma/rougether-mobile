@@ -69,8 +69,14 @@ import { useNotifications } from '@/hooks/use-notifications';
 import { useShop } from '@/hooks/use-shop';
 import { useWeather } from '@/hooks/use-weather';
 import { useBrandTheme } from '@/hooks/use-tokens';
+import type { DrawResult } from '@/api';
 import { assetSource } from '@/resources/asset';
-import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furniture';
+import {
+  DEFAULT_WALLPAPER_ID,
+  type FurnitureItem,
+  newFreePlacement,
+  type PlacedFurniture,
+} from '@/resources/furniture';
 
 type Screen =
   | 'myRoom'
@@ -426,6 +432,48 @@ export function AppShell({
     setFloorId(placement.floorId);
     setBackgroundId(placement.backgroundId);
   }, [placement]);
+
+  // 뽑기 결과 원탭 배치 (#622) — 신규 획득 가구를 기본 위치에 놓고 즉시 저장.
+  // 여러 장(전부 놓기)도 저장은 한 번. userItemId는 refreshOwned로 확보한 뒤
+  // 저장한다(onDraw의 fire-and-forget 리싱크와의 경합 방지).
+  const placeableFurnitureIds = useMemo(
+    () => catalogue.furniture.map((f) => f.id),
+    [catalogue.furniture],
+  );
+  const placeDrawnItems = useCallback(
+    async (results: DrawResult[]): Promise<boolean> => {
+      const targets = results
+        .map((r) => catalogue.furniture.find((f) => f.id === String(r.itemId)))
+        .filter((f): f is FurnitureItem => !!f);
+      if (targets.length === 0) return false;
+      await refreshOwned();
+      let next = placedItems;
+      for (const item of targets) {
+        if (next.some((pl) => pl.furnitureId === item.id)) continue;
+        next = [...next, newFreePlacement(item, next)];
+      }
+      if (next === placedItems) return true;
+      const result = await saveLayout(next, wallpaperId, floorId, backgroundId);
+      if (result === 'ok') {
+        setPlacedItems(next);
+        setPlacedFurnitureIds(next.map((pl) => pl.furnitureId));
+        return true;
+      }
+      // 충돌(다른 기기 선저장)은 최신 레이아웃을 다시 받아 재시도 가능하게.
+      if (result === 'conflict') void retryShop();
+      return false;
+    },
+    [
+      catalogue.furniture,
+      refreshOwned,
+      placedItems,
+      saveLayout,
+      wallpaperId,
+      floorId,
+      backgroundId,
+      retryShop,
+    ],
+  );
 
   const [visitingFriend, setVisitingFriend] = useState<VisitedFriend>({ name: '친구' });
   // Which house the 집 switcher is on — kept here because HouseScreen
@@ -1249,6 +1297,8 @@ export function AppShell({
                 void reloadMyCharacters();
               return results;
             }}
+            placeableItemIds={placeableFurnitureIds}
+            onPlaceInRoom={placeDrawnItems}
             // 뽑기 성공 = 미션 2 완료 (#571) — 연출이 끝나고 확인을 누른
             // 순간에. 뽑기 직후 완료시키면 미션 시트가 연출을 덮는다.
             onResultsConfirmed={() => completeMission('first-draw')}

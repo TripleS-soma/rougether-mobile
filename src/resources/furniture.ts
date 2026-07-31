@@ -1,4 +1,4 @@
-import { roomSlotCenter } from '@/components/room/room-render-contract';
+import { ROOM_RENDER_CONTRACT, roomSlotCenter } from '@/components/room/room-render-contract';
 
 /**
  * Furniture & wallpaper resource catalog (ported/simplified from the prototype
@@ -86,6 +86,29 @@ export function slotIdsToPlacements(
       return { furnitureId: id, x: c.x, y: c.y, z: i + 1 };
     })
     .filter((p): p is PlacedFurniture => p !== null);
+}
+
+/**
+ * 새 자유 배치 한 건 (#622) — 아이템 기본 위치(없으면 계약의 공용 중심)에
+ * 최상위 z로 놓는다. 꾸미기 addItem과 뽑기 '방에 놓기'가 같은 로직을 쓴다.
+ * 클램프 수식은 draggable-furniture.dragClampBounds(워클릿판)와 동일 —
+ * 상수는 렌더 계약이 단일 출처라 함께 움직인다.
+ */
+export function newFreePlacement(item: FurnitureItem, items: PlacedFurniture[]): PlacedFurniture {
+  const { baseWidth, editorScale, newPlacementCenter } = ROOM_RENDER_CONTRACT.furniture;
+  const maxZ = items.reduce((m, p) => Math.max(m, p.z), 0);
+  const scale = Math.min(editorScale.max, Math.max(editorScale.min, item.defaultScale ?? 1));
+  const half = (baseWidth * scale) / 2;
+  const clamp = (v: number) => Math.min(1 - half, Math.max(half, v));
+  const hasItemDefault =
+    typeof item.defaultPositionX === 'number' && typeof item.defaultPositionY === 'number';
+  return {
+    furnitureId: item.id,
+    x: clamp(hasItemDefault ? item.defaultPositionX! : newPlacementCenter.x),
+    y: clamp(hasItemDefault ? item.defaultPositionY! : newPlacementCenter.y),
+    z: maxZ + 1,
+    scale,
+  };
 }
 
 /** Catalog tab a furniture item belongs to (decor screen filter). */

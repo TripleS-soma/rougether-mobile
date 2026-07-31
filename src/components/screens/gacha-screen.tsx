@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -77,6 +77,13 @@ export type GachaScreenProps = {
    * 완료시킨다.
    */
   onResultsConfirmed?: () => void;
+  /** 방에 놓을 수 있는 카탈로그 가구 id 목록 (#622) — DrawResult.itemId의 문자열. */
+  placeableItemIds?: string[];
+  /**
+   * 원탭 '방에 놓기' (#622) — 결과(들)를 기본 위치에 배치하고 레이아웃을 한 번에
+   * 저장한다. 성공 여부를 resolve — 실패 안내는 화면이 토스트로.
+   */
+  onPlaceInRoom?: (results: DrawResult[]) => Promise<boolean>;
 };
 
 /**
@@ -96,6 +103,8 @@ export function GachaScreen({
   diamondBalance = 0,
   onDraw,
   onResultsConfirmed,
+  placeableItemIds,
+  onPlaceInRoom,
 }: GachaScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
@@ -111,6 +120,41 @@ export function GachaScreen({
   const [burstStrong, setBurstStrong] = useState(false);
   const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => clearTimeout(revealTimer.current ?? undefined), []);
+  // 원탭 배치 상태 (#622) — 이번 판에서 방에 놓인 itemId들.
+  const [placedIds, setPlacedIds] = useState<Set<number>>(new Set());
+  const [placing, setPlacing] = useState(false);
+  const placeableSet = useMemo(() => new Set(placeableItemIds ?? []), [placeableItemIds]);
+  const isPlaceable = (r: DrawResult) =>
+    !!onPlaceInRoom && !r.converted && r.itemId != null && placeableSet.has(String(r.itemId));
+  const placeResults = async (targets: DrawResult[]) => {
+    const rest = targets.filter((r) => isPlaceable(r) && !placedIds.has(r.itemId!));
+    if (rest.length === 0 || placing) return;
+    setPlacing(true);
+    try {
+      const ok = await onPlaceInRoom!(rest);
+      if (ok) {
+        setPlacedIds((prev) => {
+          const next = new Set(prev);
+          for (const r of rest) next.add(r.itemId!);
+          return next;
+        });
+      } else {
+        toast('방에 놓지 못했어요 — 꾸미기에서 다시 시도해주세요', 'error');
+      }
+    } finally {
+      setPlacing(false);
+    }
+  };
+  /** 카드의 배치 버튼 상태 — 대상 아님(null) / 놓기 가능 / 배치됨. */
+  const placeStateFor = (r: DrawResult): PlaceState =>
+    !isPlaceable(r)
+      ? null
+      : placedIds.has(r.itemId!)
+        ? 'placed'
+        : placing
+          ? 'placing'
+          : 'placeable';
+  const remainingPlaceable = pulled.filter((r) => isPlaceable(r) && !placedIds.has(r.itemId!));
 
   const box = gachas.find((b) => b.id === selectedId) ?? gachas[0];
   // Selector rows: themed furniture machines first, the character gacha below.
@@ -144,6 +188,7 @@ export function GachaScreen({
     const remain = MIN_CHARGE_MS - (Date.now() - started);
     if (remain > 0) await new Promise((r) => setTimeout(r, remain));
     setPulled(results);
+    setPlacedIds(new Set());
     // 정점 버스트 (#431) — 최고 레어도 색의 광선·파티클, 전설은 햅틱 2연타.
     const best = bestRarity(results);
     setBurstColor(RARITY_COLORS[best]);
@@ -322,14 +367,38 @@ export function GachaScreen({
               <Text style={[Typography.h3, styles.overlayText]}>축하해요!</Text>
               <ScrollView style={styles.revealScroll} contentContainerStyle={styles.revealGrid}>
                 {pulled.length === 1 ? (
-                  <RevealCard item={pulled[0]} index={0} large />
+                  <RevealCard
+                    item={pulled[0]}
+                    index={0}
+                    large
+                    placeState={placeStateFor(pulled[0])}
+                    onPlace={() => void placeResults([pulled[0]])}
+                  />
                 ) : (
                   // 10연은 뒷면 카드가 깔린 뒤 순차 플립 — 탭하면 즉시 (#431).
                   pulled.map((it, idx) => (
-                    <FlipCard key={`${it.name ?? 'item'}-${idx}`} item={it} index={idx} />
+                    <FlipCard
+                      key={`${it.name ?? 'item'}-${idx}`}
+                      item={it}
+                      index={idx}
+                      placeState={placeStateFor(it)}
+                      onPlace={() => void placeResults([it])}
+                    />
                   ))
                 )}
               </ScrollView>
+              {remainingPlaceable.length >= 2 ? (
+                <ScalePressable
+                  onPress={() => void placeResults(pulled)}
+                  accessibilityRole="button"
+                  accessibilityLabel="전부 놓기"
+                  accessibilityState={{ disabled: placing }}
+                  style={[styles.placeAllBtn, { borderColor: t.onPrimary }]}>
+                  <Text style={[Typography.label, styles.overlayText]}>
+                    {placing ? '놓는 중…' : `전부 놓기 (${remainingPlaceable.length})`}
+                  </Text>
+                </ScalePressable>
+              ) : null}
               <ScalePressable
                 onPress={close}
                 accessibilityRole="button"
@@ -504,9 +573,46 @@ function BurstOverlay({ color, strong }: { color: string; strong: boolean }) {
   );
 }
 
+/** 원탭 배치 버튼 상태 (#622) — null이면 배치 대상이 아니라 버튼을 그리지 않는다. */
+type PlaceState = null | 'placeable' | 'placing' | 'placed';
+
+/** 카드 하단의 '방에 놓기' 버튼 (#622) — 성공하면 '배치됨 ✓'로 변신. */
+function PlaceButton({ state, onPlace }: { state: PlaceState; onPlace?: () => void }) {
+  const t = useTokens();
+  const Typography = useTypography();
+  if (!state) return null;
+  const placed = state === 'placed';
+  return (
+    <ScalePressable
+      onPress={onPlace}
+      disabled={state !== 'placeable'}
+      accessibilityRole="button"
+      accessibilityLabel={placed ? '방에 배치됨' : '방에 놓기'}
+      accessibilityState={{ disabled: state !== 'placeable' }}
+      style={[styles.placeBtn, { backgroundColor: placed ? t.surfaceMuted : t.primary }]}>
+      {placed ? <Icon name="check" size={12} color={t.primaryText} /> : null}
+      <Text style={[Typography.supporting, { color: placed ? t.primaryText : t.onPrimary }]}>
+        {placed ? '배치됨' : state === 'placing' ? '놓는 중…' : '방에 놓기'}
+      </Text>
+    </ScalePressable>
+  );
+}
+
 /** Single-pull hero card (#431): slams down from above with a bounce — the
  * burst's momentum carries straight into the reward landing. */
-function RevealCard({ item, index, large }: { item: DrawResult; index: number; large?: boolean }) {
+function RevealCard({
+  item,
+  index,
+  large,
+  placeState = null,
+  onPlace,
+}: {
+  item: DrawResult;
+  index: number;
+  large?: boolean;
+  placeState?: PlaceState;
+  onPlace?: () => void;
+}) {
   const t = useTokens();
   const Typography = useTypography();
   const emph = useFontEmphasis();
@@ -566,6 +672,7 @@ function RevealCard({ item, index, large }: { item: DrawResult; index: number; l
           중복 · 다이아 +{item.refundAmount ?? 0}
         </Text>
       ) : null}
+      <PlaceButton state={placeState} onPlace={onPlace} />
     </Animated.View>
   );
 }
@@ -581,7 +688,17 @@ const FLIP_AUTO_STEP_MS = 110;
  * on its own (staggered) or immediately on tap. 전설 cards leak a gold glow
  * before flipping so the good pull announces itself.
  */
-function FlipCard({ item, index }: { item: DrawResult; index: number }) {
+function FlipCard({
+  item,
+  index,
+  placeState = null,
+  onPlace,
+}: {
+  item: DrawResult;
+  index: number;
+  placeState?: PlaceState;
+  onPlace?: () => void;
+}) {
   const t = useTokens();
   const Typography = useTypography();
   const emph = useFontEmphasis();
@@ -693,6 +810,7 @@ function FlipCard({ item, index }: { item: DrawResult; index: number }) {
               중복 · 다이아 +{item.refundAmount ?? 0}
             </Text>
           ) : null}
+          {flipped ? <PlaceButton state={placeState} onPlace={onPlace} /> : null}
         </Animated.View>
       </Pressable>
     </Animated.View>
@@ -860,5 +978,24 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     paddingHorizontal: Spacing.six,
     alignItems: 'center',
+  },
+  // 원탭 배치 (#622) — 카드 하단 소형 필, 배치됨은 낮은 존재감으로.
+  placeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one,
+    marginTop: Spacing.one,
+  },
+  // 전부 놓기 (#622) — 확인 위의 보조 버튼(윤곽선만, 오버레이 위).
+  placeAllBtn: {
+    borderWidth: 1,
+    borderRadius: Radius.pill,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.five,
+    alignItems: 'center',
+    marginBottom: Spacing.two,
   },
 });
