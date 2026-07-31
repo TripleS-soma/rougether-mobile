@@ -7,6 +7,7 @@ import {
   fetchOnboarding,
   saveOnboardingCharacter,
   saveOnboardingGoals,
+  updateMe,
 } from '@/api';
 import {
   toAppCharacterId,
@@ -99,7 +100,7 @@ export function AppRoot() {
         initialGoals={selectedGoalIds}
         initialCharacterId={characterId}
         characterAnimations={characterAnimations}
-        onDone={(goals, chosen) => {
+        onDone={(goals, chosen, nickname) => {
           setCharacterId(chosen);
           setSelectedGoalIds(goals);
           setOnboarded(true);
@@ -114,6 +115,9 @@ export function AppRoot() {
           const serverCharacterId = toServerCharacterId(chosen, characters);
           if (serverCharacterId != null)
             void saveOnboardingCharacter(serverCharacterId).catch(() => {});
+          // 닉네임 저장 (#635) — 신규 계정의 빈 닉네임이 데모 기본값으로
+          // 노출되던 문제. best-effort — 실패해도 온보딩은 계속.
+          if (nickname) void updateMe({ nickname }).catch(() => {});
         }}
       />
     );
