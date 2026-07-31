@@ -95,85 +95,58 @@ describe('GachaScreen', () => {
     await waitFor(() => expect(getByLabelText('허브 화분')).toBeTruthy());
   });
 
-  it("신규 획득 가구 카드에 '방에 놓기'가 뜨고 탭하면 배치됨으로 바뀐다 (#622)", async () => {
+  it("배치 가능한 신규 가구가 있으면 '가구 배치하러 가기'가 뜨고, 탭하면 결과와 함께 넘긴다 (#630)", async () => {
     const onDraw = jest.fn(async (): Promise<DrawResult[]> => [
       { itemId: 7, name: '허브 화분', rarity: '희귀', converted: false },
+      { itemId: 9, name: '중복 의자', rarity: '일반', converted: true, refundAmount: 3 },
     ]);
-    const onPlaceInRoom = jest.fn(async () => true);
-    const { getByText, getByLabelText, queryByLabelText } = await render(
-      <ToastProvider>
-        <GachaScreen
-          gachas={[machine]}
-          coinBalance={5600}
-          onDraw={onDraw}
-          placeableItemIds={['7']}
-          onPlaceInRoom={onPlaceInRoom}
-        />
-      </ToastProvider>,
+    const onGoPlace = jest.fn();
+    const onResultsConfirmed = jest.fn();
+    const { getByText, getByLabelText, queryByText } = await render(
+      <GachaScreen
+        gachas={[machine]}
+        coinBalance={5600}
+        onDraw={onDraw}
+        placeableItemIds={['7', '9']}
+        onGoPlace={onGoPlace}
+        onResultsConfirmed={onResultsConfirmed}
+      />,
     );
 
     await fireEvent.press(getByText('1회 뽑기'));
-    await waitFor(() => expect(getByLabelText('방에 놓기')).toBeTruthy(), { timeout: 8000 });
-    // 단챠 1장에는 전부 놓기가 없다.
-    expect(queryByLabelText('전부 놓기')).toBeNull();
+    await waitFor(() => expect(getByLabelText('가구 배치하러 가기')).toBeTruthy(), {
+      timeout: 8000,
+    });
 
-    await fireEvent.press(getByLabelText('방에 놓기'));
-    expect(onPlaceInRoom).toHaveBeenCalledWith([
+    await fireEvent.press(getByLabelText('가구 배치하러 가기'));
+    // 배치 대상은 신규 획득만 — 중복(전환)은 걸러진다.
+    expect(onGoPlace).toHaveBeenCalledWith([
       expect.objectContaining({ itemId: 7, name: '허브 화분' }),
     ]);
-    await waitFor(() => expect(getByLabelText('방에 배치됨')).toBeTruthy());
+    // 배치하러 가기도 결과 확인으로 친다 (#571 미션 타이밍).
+    expect(onResultsConfirmed).toHaveBeenCalledTimes(1);
+    // 리빌은 닫힌다.
+    expect(queryByText('축하해요!')).toBeNull();
   });
 
-  it('중복(전환)·비가구 카드에는 배치 버튼이 없다 (#622)', async () => {
+  it('배치 가능한 가구가 없으면(캐릭터·전부 중복) 배치하러 가기가 없다 (#630)', async () => {
     const onDraw = jest.fn(async (): Promise<DrawResult[]> => [
       { itemId: 7, name: '중복 화분', rarity: '희귀', converted: true, refundAmount: 3 },
       { characterId: 2, name: '판다', rarity: '전설', converted: false },
     ]);
-    const { getByText, getByLabelText, queryByLabelText } = await render(
+    const { getByText, queryByLabelText } = await render(
       <GachaScreen
         gachas={[machine]}
         coinBalance={5600}
         onDraw={onDraw}
         placeableItemIds={['7']}
-        onPlaceInRoom={jest.fn(async () => true)}
+        onGoPlace={jest.fn()}
       />,
     );
 
     await fireEvent.press(getByText('5+1회 뽑기'));
     await waitFor(() => expect(getByText('축하해요!')).toBeTruthy(), { timeout: 8000 });
-    await fireEvent.press(getByLabelText('1번째 카드 뒤집기'));
-    await fireEvent.press(getByLabelText('2번째 카드 뒤집기'));
-    await waitFor(() => expect(getByLabelText('판다')).toBeTruthy());
-    expect(queryByLabelText('방에 놓기')).toBeNull();
-    expect(queryByLabelText('전부 놓기')).toBeNull();
-  });
-
-  it("배치 가능 카드가 2장 이상이면 '전부 놓기'가 한 번의 호출로 다 놓는다 (#622)", async () => {
-    const onDraw = jest.fn(async (): Promise<DrawResult[]> => [
-      { itemId: 7, name: '허브 화분', rarity: '희귀', converted: false },
-      { itemId: 8, name: '나무 의자', rarity: '일반', converted: false },
-    ]);
-    const onPlaceInRoom = jest.fn(async () => true);
-    const { getByText, getByLabelText, queryByLabelText } = await render(
-      <GachaScreen
-        gachas={[machine]}
-        coinBalance={5600}
-        onDraw={onDraw}
-        placeableItemIds={['7', '8']}
-        onPlaceInRoom={onPlaceInRoom}
-      />,
-    );
-
-    await fireEvent.press(getByText('5+1회 뽑기'));
-    await waitFor(() => expect(getByLabelText('전부 놓기')).toBeTruthy(), { timeout: 8000 });
-    await fireEvent.press(getByLabelText('전부 놓기'));
-    expect(onPlaceInRoom).toHaveBeenCalledTimes(1);
-    expect(onPlaceInRoom).toHaveBeenCalledWith([
-      expect.objectContaining({ itemId: 7 }),
-      expect.objectContaining({ itemId: 8 }),
-    ]);
-    // 전부 배치되면 버튼이 사라진다.
-    await waitFor(() => expect(queryByLabelText('전부 놓기')).toBeNull());
+    expect(queryByLabelText('가구 배치하러 가기')).toBeNull();
   });
 
   it('draws six for the price of five with the 5+1 button', async () => {

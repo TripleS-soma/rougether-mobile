@@ -880,6 +880,19 @@ describe('RoomDecorScreen — 선택 툴바 위치 회피 (#608)', () => {
   });
 });
 
+describe('RoomDecorScreen — 뽑기에서 온 NEW 강조 (#630)', () => {
+  it('highlightItemIds 아이템이 카탈로그 맨 앞 + NEW 배지로 뜬다', async () => {
+    const { getByTestId, queryByTestId, getByLabelText } = await render(
+      <RoomDecorScreen initialItems={[]} freeLayout highlightItemIds={['plant']} />,
+    );
+    // plant는 소품 탭 — NEW 배지가 붙는다.
+    await fireEvent.press(getByLabelText('소품 탭'));
+    expect(getByTestId('new-badge-plant')).toBeTruthy();
+    // 강조 없는 아이템에는 배지가 없다.
+    expect(queryByTestId('new-badge-rug')).toBeNull();
+  });
+});
+
 describe('RoomDecorScreen — 전체보기 탭', () => {
   it('splits the full catalog into tabs: 가구 default, 소품·벽지 on switch (#488)', async () => {
     const onApply = jest.fn();
