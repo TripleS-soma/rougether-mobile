@@ -731,7 +731,7 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
     expect(firstArgIds(onApply)).toEqual([]);
   });
 
-  it('pinch scale commits clamped to 0.5–2.0', async () => {
+  it('pinch scale commits clamped to 0.5–3.5', async () => {
     const onApply = jest.fn();
     const { getByTestId, getByText } = await render(
       <RoomDecorScreen initialItems={items(['plant'])} freeLayout onApply={onApply} />,
@@ -748,8 +748,10 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
     );
     await fireEvent.press(getByText('적용하기'));
     await waitFor(() => expect(onApply).toHaveBeenCalled());
-    // scale 2에서 실제 폭이 0.56이 되므로 기존 x=0.20도 최소 중심 0.28로 재클램프된다.
-    expect(lastApply(onApply)[0]).toEqual(expect.objectContaining({ scale: 2, x: 0.28 }));
+    // scale 3.5(#654 상한)에서 실제 폭이 0.98이 되므로 기존 x=0.20도 최소 중심
+    // 0.49로 재클램프된다 (부동소수 오차 → closeTo).
+    expect(lastApply(onApply)[0].scale).toBe(3.5);
+    expect(lastApply(onApply)[0].x).toBeCloseTo(0.49, 5);
 
     await act(() =>
       fireGestureHandler(getByGestureTestId('item-pinch-plant'), [

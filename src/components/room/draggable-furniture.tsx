@@ -137,7 +137,9 @@ export function DraggableFurniture({
       baseScale.value = scaleSV.value;
     })
     .onUpdate((e) => {
-      scaleSV.value = baseScale.value * e.scale;
+      // 라이브 클램프 (#654) — 상한·하한에서 즉시 멈춰, 손을 뗄 때
+      // commitScale이 되돌리는 스냅백이 보이지 않게 한다.
+      scaleSV.value = Math.min(SCALE_MAX, Math.max(SCALE_MIN, baseScale.value * e.scale));
     })
     .onEnd(() => {
       runOnJS(commitScale)(scaleSV.value);
@@ -155,7 +157,11 @@ export function DraggableFurniture({
       baseScale.value = scaleSV.value;
     })
     .onUpdate((e) => {
-      scaleSV.value = baseScale.value + (e.translationX + e.translationY) / itemW;
+      // 핸들도 핀치와 같은 라이브 클램프 (#654).
+      scaleSV.value = Math.min(
+        SCALE_MAX,
+        Math.max(SCALE_MIN, baseScale.value + (e.translationX + e.translationY) / itemW),
+      );
     })
     .onEnd(() => {
       runOnJS(commitScale)(scaleSV.value);

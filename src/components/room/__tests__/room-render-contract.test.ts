@@ -24,7 +24,9 @@ describe('ROOM_RENDER_CONTRACT', () => {
       furniture: {
         baseWidth: 0.28,
         imagePaddingPx: 4,
-        editorScale: { min: 0.5, max: 2, step: 0.01 },
+        // max 3.5 (#654) — baseWidth 0.28 × 3.5 = 방 폭 98%; '방 안에 온전히'
+        // 클램프(dragClampBounds)가 유효한 한계(1/0.28 ≈ 3.57) 안이어야 한다.
+        editorScale: { min: 0.5, max: 3.5, step: 0.01 },
       },
       character: { centerX: 0.5, bottom: 0.16, width: 0.42, height: 0.42 },
     });
