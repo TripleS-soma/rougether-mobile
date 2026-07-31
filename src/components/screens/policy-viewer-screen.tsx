@@ -1,0 +1,79 @@
+import { useState } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { WebView } from 'react-native-webview';
+
+import { RetryState } from '@/components/ui/retry-state';
+import { ScreenHeader } from '@/components/ui/screen-header';
+import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useTokens } from '@/hooks/use-tokens';
+
+export type PolicyViewerScreenProps = {
+  /** Header title (이용약관 / 개인정보처리방침). */
+  title: string;
+  /** Document URL rendered inside the in-app web view. */
+  url: string;
+  onBack?: () => void;
+};
+
+/**
+ * In-app viewer for the policy documents — replaces the external-browser hop
+ * so 약관/처리방침 open without leaving the app. Native renders a WebView; the
+ * `.web.tsx` variant uses an iframe. Pure/prop-driven.
+ */
+export function PolicyViewerScreen({ title, url, onBack }: PolicyViewerScreenProps) {
+  const t = useTokens();
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  // Remounting with a fresh key is the retry path — the failed WebView is
+  // unmounted while RetryState shows, so there is no instance to reload().
+  const [attempt, setAttempt] = useState(0);
+
+  return (
+    <View style={[styles.screen, useScreenStyle([])]}>
+      <ScreenHeader title={title} onBack={onBack} />
+      {failed ? (
+        <View style={styles.center}>
+          <RetryState
+            message="문서를 불러오지 못했어요."
+            detail="네트워크 연결을 확인해 주세요."
+            onRetry={() => {
+              setFailed(false);
+              setLoading(true);
+              setAttempt((n) => n + 1);
+            }}
+          />
+        </View>
+      ) : (
+        <WebView
+          key={attempt}
+          testID="policy-webview"
+          source={{ uri: url }}
+          style={{ backgroundColor: t.screen }}
+          onLoadEnd={() => setLoading(false)}
+          onError={() => setFailed(true)}
+          onHttpError={() => setFailed(true)}
+        />
+      )}
+      {loading && !failed ? (
+        <View style={styles.loading} pointerEvents="none">
+          <ActivityIndicator size="large" color={t.primary} />
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  loading: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

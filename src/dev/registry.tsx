@@ -22,6 +22,7 @@ import { NotificationListScreen } from '@/components/screens/notification-list-s
 import { NotificationSettingsScreen } from '@/components/screens/notification-settings-screen';
 import { OnboardingScreen } from '@/components/screens/onboarding-screen';
 import { PasswordChangeScreen } from '@/components/screens/password-change-screen';
+import { PolicyViewerScreen } from '@/components/screens/policy-viewer-screen';
 import { ProfileEditScreen } from '@/components/screens/profile-edit-screen';
 import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
 import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
@@ -470,6 +471,18 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
         <HelpScreen />
+      </View>
+    ),
+  },
+  {
+    name: 'PolicyViewerScreen',
+    description: '설정/가입 → 약관·처리방침 인앱 웹뷰 (#652). 웹은 iframe 변형.',
+    render: () => (
+      <View style={{ height: 640, alignSelf: 'stretch' }}>
+        <PolicyViewerScreen
+          title="이용약관"
+          url="https://triples-soma.github.io/policy/terms.html"
+        />
       </View>
     ),
   },
