@@ -130,6 +130,34 @@
             "handleKakaoOpenUrl": true
           }
         }
+      ],
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "RougetherToday",
+              "label": "루게더 오늘의 루틴",
+              "description": "오늘 진행도와 남은 루틴을 한눈에",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2,
+              "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "RougetherRoom",
+              "label": "루게더 내 방",
+              "description": "꾸민 방과 오늘 진행도",
+              "minWidth": "110dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 2,
+              "targetCellHeight": 2,
+              "resizeMode": "horizontal|vertical",
+              "updatePeriodMillis": 1800000
+            }
+          ]
+        }
       ]
     ],
     "experiments": {

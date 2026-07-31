@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { Image } from 'expo-image';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, BackHandler, Easing, Linking, StyleSheet, View } from 'react-native';
+import { Animated, BackHandler, Easing, Linking, Platform, StyleSheet, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 
 import { TabPager } from '@/components/app/tab-pager';
@@ -18,7 +18,11 @@ import {
 import { HelpScreen } from '@/components/screens/help-screen';
 import { InviteFriendsScreen } from '@/components/screens/invite-friends-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
-import { type CalendarDayItem, MyRoomScreen } from '@/components/screens/my-room-screen';
+import {
+  type CalendarDayItem,
+  isScheduledOn,
+  MyRoomScreen,
+} from '@/components/screens/my-room-screen';
 import { NotificationListScreen } from '@/components/screens/notification-list-screen';
 import { NotificationSettingsScreen } from '@/components/screens/notification-settings-screen';
 import { PasswordChangeScreen } from '@/components/screens/password-change-screen';
@@ -47,6 +51,8 @@ import { onNotificationTap } from '@/lib/push-events';
 import { pickLibraryImage } from '@/lib/pick-image';
 import { todayIso } from '@/utils/datetime';
 import { setHapticsEnabled } from '@/utils/haptics';
+import { refreshWidgets } from '@/widgets/rougether-widgets';
+import { buildWidgetSummary, saveWidgetSummary } from '@/widgets/widget-data';
 import { useAuth } from '@/hooks/use-auth';
 import { useGacha } from '@/hooks/use-gacha';
 import {
@@ -732,6 +738,24 @@ export function AppShell({
   const persistDeviceSettings = (sound: SoundSettings) => {
     void AsyncStorage.setItem(DEVICE_SETTINGS_KEY, JSON.stringify({ sound })).catch(() => {});
   };
+  // 홈 위젯 오늘 요약 동기화 (#604, 안드로이드 전용) — 완료 토글·루틴
+  // 변경·스트릭 갱신이 위젯에 바로 반영되게 요약을 기록하고 재렌더를 민다.
+  const widgetSummarySigRef = useRef('');
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const today = todayIso();
+    const summary = buildWidgetSummary(
+      routines.filter((r) => isScheduledOn(r, today)),
+      completions,
+      streak,
+      today,
+    );
+    const sig = JSON.stringify(summary);
+    if (sig === widgetSummarySigRef.current) return;
+    widgetSummarySigRef.current = sig;
+    void saveWidgetSummary(summary).then(refreshWidgets);
+  }, [routines, completions, streak]);
+
   // '햅틱 진동' 토글을 전역 게이트에 주입 (#586) — 이 이펙트가 없으면 토글이
   // 저장만 되고 아무것도 제어하지 않는다(휠 틱·완료 햅틱 등 전부 무조건 발사).
   useEffect(() => {
