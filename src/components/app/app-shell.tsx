@@ -464,11 +464,9 @@ export function AppShell({
       }),
     [],
   );
-  // 탐색을 떠나면(가입 성공·뒤로가기 등 모든 경로) 소비 완료 — 다음 방문에서
-  // 자동 미리보기가 재발화하지 않게 비운다.
-  useEffect(() => {
-    if (screen !== 'houseSearch') setPendingJoinCode(null);
-  }, [screen]);
+  // 소비는 화면(자동 미리보기 발화 시점)이 알려온다 — 마운트 직후 screen이
+  // 아직 'myRoom'인 채로 도는 클리어 이펙트가 코드를 지우던 콜드 스타트
+  // 레이스(#624 후속)의 수정. 화면 감시 클리어는 두지 않는다.
 
   const [visitingFriend, setVisitingFriend] = useState<VisitedFriend>({ name: '친구' });
   // Which house the 집 switcher is on — kept here because HouseScreen
@@ -1365,6 +1363,7 @@ export function AppShell({
         {screen === 'houseSearch' ? (
           <HouseSearchScreen
             initialCode={pendingJoinCode ?? undefined}
+            onInitialCodeConsumed={() => setPendingJoinCode(null)}
             houses={searchHouses}
             loading={searchLoading}
             loadError={searchError}

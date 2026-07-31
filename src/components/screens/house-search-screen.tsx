@@ -96,6 +96,8 @@ export type HouseSearchScreenProps = {
    * 실행해 "링크 탭 → 이 집에 참여할까요?"로 바로 잇는다.
    */
   initialCode?: string;
+  /** 자동 미리보기 발화 직후 호출 — 부모가 코드를 비워 재방문 재발화를 막는다. */
+  onInitialCodeConsumed?: () => void;
   /**
    * Join with an invite code; resolves true on success (the caller navigates),
    * false = 잘못된/만료 코드, 'network' = 네트워크·서버 오류 (#549 문구 분기).
@@ -131,6 +133,7 @@ export function HouseSearchScreen({
   onRetry,
   onBack,
   initialCode,
+  onInitialCodeConsumed,
   onJoinByCode,
   onPreviewCode,
   onJoinHouse,
@@ -201,6 +204,7 @@ export function HouseSearchScreen({
   useEffect(() => {
     if (!initialCode || autoPreviewRan.current) return;
     autoPreviewRan.current = true;
+    onInitialCodeConsumed?.();
     void joinByCode();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 마운트 시 1회
   }, []);
