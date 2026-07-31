@@ -1214,16 +1214,6 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                   </View>
                 ) : null}
 
-                {/* 빈 계정 안내 (#626) — 미분류 그룹과 공존하는 한 줄. */}
-                {!loading && !loadError && categories.length === 0 && roomRoutines.length === 0 ? (
-                  <View style={styles.emptyHintRow}>
-                    <Icon name="add" size={16} color={t.textMuted} />
-                    <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
-                      아직 루틴이 없어요 — 아래 미분류의 ＋로 루틴을 만들어보세요.
-                    </Text>
-                  </View>
-                ) : null}
-
                 {loading || loadError
                   ? null
                   : roomGroups.map(({ meta: cat, items }) =>
@@ -1724,11 +1714,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.five,
     gap: Spacing.two,
-  },
-  emptyHintRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.half,
   },
   badges: {
     flexDirection: 'row',

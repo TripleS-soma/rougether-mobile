@@ -848,12 +848,11 @@ describe('MyRoomScreen', () => {
     await fireEvent.press(failed.getByLabelText('다시 시도'));
     expect(onRetry).toHaveBeenCalledTimes(1);
 
-    // Brand-new user (#626): 안내 한 줄 + 미분류 그룹이 떠서 바로 추가를 시작한다.
+    // Brand-new user (#626): 안내 문구 없이 미분류 그룹이 떠서 바로 추가를 시작한다.
     const onQuickAddRoutine = jest.fn();
     const empty = await render(
       <MyRoomScreen routines={[]} categories={[]} onQuickAddRoutine={onQuickAddRoutine} />,
     );
-    expect(empty.getByText(/아직 루틴이 없어요/)).toBeTruthy();
     expect(empty.getByText('미분류')).toBeTruthy();
     // 미분류 퀵애드가 열리고(빈 계정 예외), categoryId 없이 제출된다.
     await fireEvent.press(empty.getByLabelText('미분류 할 일 추가'));
