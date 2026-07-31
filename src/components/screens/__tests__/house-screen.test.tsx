@@ -883,4 +883,13 @@ describe('HouseScreen', () => {
     await fireEvent.press(getByLabelText('다시 시도'));
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
+
+  // 확대 = 방 구경 모드 (#665) — 이름/접속 라벨은 카메라 배율에 묶인
+  // 페이드 오파시티를 가진다(jest의 Animated는 현재값으로 평탄화되므로
+  // 기본 배율 1에서 완전 표시임을 단언; 배율 추종은 보간 정의가 담당).
+  it('자리 라벨에 카메라 페이드 오파시티가 걸려 있다 (#665)', async () => {
+    const { getByTestId } = await render(<HouseScreen houses={[MISSION_HOUSE]} />);
+    const style = StyleSheet.flatten(getByTestId('seat-meta-0').props.style);
+    expect(style.opacity).toBe(1);
+  });
 });

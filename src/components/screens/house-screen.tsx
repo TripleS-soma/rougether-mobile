@@ -607,6 +607,11 @@ export const HouseScreen = memo(function HouseScreen({
   const camScale = useRef(new Animated.Value(1)).current;
   const camTx = useRef(new Animated.Value(0)).current;
   const camTy = useRef(new Animated.Value(0)).current;
+  // 확대 = '방 구경 모드' (#665) — 이름/접속 라벨은 카메라와 함께 스케일돼
+  // 방을 덮으므로, 배율 1→1.15 구간에서 핀치에 연속 추종하며 사라진다.
+  const seatMetaOpacity = useRef(
+    camScale.interpolate({ inputRange: [1, 1.15], outputRange: [1, 0], extrapolate: 'clamp' }),
+  ).current;
   const cam = useRef({ scale: 1, tx: 0, ty: 0 });
   const frameSize = useRef({ w: 0, h: 0 });
   const pinchAnchor = useRef({ dist: 0, cx: 0, cy: 0, scale: 1, tx: 0, ty: 0 });
@@ -976,7 +981,13 @@ export const HouseScreen = memo(function HouseScreen({
               to a bottom scrim for contrast. 빈 좌석은 라벨 없이 빈 방
               비주얼만 — 접근성 라벨은 Pressable이 유지한다. */}
           {empty ? null : (
-            <View style={[styles.roomMeta, preview && styles.roomNameOverlay]}>
+            <Animated.View
+              testID={`seat-meta-${seatIdx}`}
+              style={[
+                styles.roomMeta,
+                preview && styles.roomNameOverlay,
+                { opacity: seatMetaOpacity },
+              ]}>
               <View style={styles.roomNameRow}>
                 {room.isOwner ? <CrownPictogram size={12} /> : null}
                 {room.online ? (
@@ -1002,7 +1013,7 @@ export const HouseScreen = memo(function HouseScreen({
                   {room.lastSeenLabel}
                 </Text>
               ) : null}
-            </View>
+            </Animated.View>
           )}
         </Pressable>
       </Animated.View>
