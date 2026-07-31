@@ -48,6 +48,8 @@ export type SettingsScreenProps = {
   onOpenNotifications?: () => void;
   onOpenSound?: () => void;
   onOpenHelp?: () => void;
+  /** 친구 초대 (#518) — 내 초대코드·코드 사용 화면. */
+  onInviteFriends?: () => void;
   /** 버그 제보 화면 열기 (#496). */
   onReportBug?: () => void;
   onReplayOnboarding?: () => void;
@@ -85,6 +87,7 @@ export const SettingsScreen = memo(function SettingsScreen({
   onOpenNotifications,
   onOpenSound,
   onOpenHelp,
+  onInviteFriends,
   onReportBug,
   onOpenTerms,
   onOpenPrivacy,
@@ -109,6 +112,7 @@ export const SettingsScreen = memo(function SettingsScreen({
       rows: [
         { icon: 'profile', label: '프로필 편집', onPress: onEditProfile },
         { icon: 'lock', label: '비밀번호 변경', onPress: onChangePassword },
+        { icon: 'gift', label: '친구 초대', onPress: onInviteFriends },
       ],
     },
     {
