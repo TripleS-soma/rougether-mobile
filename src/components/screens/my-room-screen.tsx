@@ -448,9 +448,10 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // Routines with a missing/unknown category land in the last group; with no
   // categories at all, render a single pseudo-group so they stay visible
   // (routines can exist without any category, e.g. after a category delete).
-  // A truly empty account shows just the guided empty state instead.
   // 미분류(카테고리 삭제 UNASSIGN 산물, #517)는 마지막 카테고리에 섞지 않고
-  // 전용 '미분류' 그룹으로 맨 뒤에 붙인다.
+  // 전용 '미분류' 그룹으로 맨 뒤에 붙인다. 완전 빈 계정도 미분류 그룹을
+  // 세운다 (#626) — 첫 가입자가 카테고리 개념 없이도 그 자리에서 바로
+  // 추가를 시작한다(퀵애드는 categoryId 없이 생성 → 고아 입양이 수렴).
   const roomGroups = useMemo(() => {
     const hasUncategorizedRoom = roomRoutines.some(
       (r) => !r.category || !knownIds.includes(r.category),
@@ -458,9 +459,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     const metas =
       categories.length > 0
         ? [...categories, ...(hasUncategorizedRoom ? [UNCATEGORIZED_META] : [])]
-        : roomRoutines.length > 0
-          ? [UNCATEGORIZED_META]
-          : [];
+        : [UNCATEGORIZED_META];
     return metas.map((cat) => {
       // 미분류 그룹(id '')이 무소속·미상 카테고리 항목을 받는다 (#517).
       const isUncategorized = cat.id === '';
@@ -569,11 +568,15 @@ export const MyRoomScreen = memo(function MyRoomScreen({
 
   // Quick-add is limited to real (non-deleted) categories; 미분류(pseudo)와
   // 미션 연동 카테고리는 임의 추가를 막는다 — 방탭·달력탭 공통 규칙 (#323).
+  // 예외 (#626): 완전 빈 계정의 미분류(id '')는 첫 추가의 출발점이라 연다 —
+  // categoryId 없이 생성되고, 다음 로드의 고아 입양이 실제 미분류로 수렴한다.
   const canQuickAdd = useCallback(
     (categoryId?: string) =>
-      !!categoryId &&
-      categories.some((c) => c.id === categoryId) &&
-      !quickAddDisabledCategoryIds.includes(categoryId),
+      categoryId === ''
+        ? categories.length === 0
+        : !!categoryId &&
+          categories.some((c) => c.id === categoryId) &&
+          !quickAddDisabledCategoryIds.includes(categoryId),
     [categories, quickAddDisabledCategoryIds],
   );
 
@@ -1071,7 +1074,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           refreshTestID="my-room-refresh"
           contentContainerStyle={[
             styles.body,
-            addingCategory && keyboardPad > 0 ? { paddingBottom: keyboardPad + 120 } : null,
+            addingCategory != null && keyboardPad > 0 ? { paddingBottom: keyboardPad + 120 } : null,
           ]}
           onScroll={(e) => {
             scrollYRef.current = e.nativeEvent.contentOffset.y;
@@ -1164,17 +1167,13 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                   </View>
                 ) : null}
 
+                {/* 빈 계정 안내 (#626) — 미분류 그룹과 공존하는 한 줄. */}
                 {!loading && !loadError && categories.length === 0 && roomRoutines.length === 0 ? (
-                  <View style={styles.stateBlock}>
-                    <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
-                      아직 루틴이 없어요.
+                  <View style={styles.emptyHintRow}>
+                    <Icon name="add" size={16} color={t.textMuted} />
+                    <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
+                      아직 루틴이 없어요 — 아래 미분류의 ＋로 바로 시작해보세요.
                     </Text>
-                    <View style={styles.emptyHintRow}>
-                      <Icon name="add" size={16} color={t.textMuted} />
-                      <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
-                        위의 + 버튼으로 첫 루틴을 만들어보세요.
-                      </Text>
-                    </View>
                   </View>
                 ) : null}
 
