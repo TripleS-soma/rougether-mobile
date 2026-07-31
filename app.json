@@ -20,9 +20,7 @@
         }
       },
       "entitlements": {
-        "com.apple.security.application-groups": [
-          "group.com.triples.rougether"
-        ]
+        "com.apple.security.application-groups": ["group.com.triples.rougether"]
       }
     },
     "android": {
@@ -118,9 +116,7 @@
         {
           "android": {
             "usesCleartextTraffic": true,
-            "extraMavenRepos": [
-              "https://devrepo.kakao.com/nexus/content/groups/public/"
-            ]
+            "extraMavenRepos": ["https://devrepo.kakao.com/nexus/content/groups/public/"]
           },
           "ios": {
             "useFrameworks": "static"

@@ -29,7 +29,6 @@ import { SettingsScreen } from '@/components/screens/settings-screen';
 import { ThemeScreen } from '@/components/screens/theme-screen';
 import { SoundSettingsScreen } from '@/components/screens/sound-settings-screen';
 import { SignupScreen } from '@/components/screens/signup-screen';
-import { SampleButton } from '@/components/sample-button';
 import { Badge } from '@/components/ui/badge';
 import { CoinIcon } from '@/components/ui/coin-icon';
 import { BearCheck } from '@/components/ui/bear-check';
@@ -637,19 +636,6 @@ export const galleryEntries: GalleryEntry[] = [
         <ToastDemo />
       </ToastProvider>
     ),
-  },
-  {
-    name: 'SampleButton · primary',
-    description: 'Reference pattern for harness components — theme-aware, testable.',
-    render: () => <SampleButton label="Primary" variant="primary" />,
-  },
-  {
-    name: 'SampleButton · secondary',
-    render: () => <SampleButton label="Secondary" variant="secondary" />,
-  },
-  {
-    name: 'SampleButton · disabled',
-    render: () => <SampleButton label="Disabled" disabled />,
   },
 ];
 

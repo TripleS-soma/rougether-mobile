@@ -68,7 +68,6 @@
   },
   "scripts": {
     "start": "expo start",
-    "reset-project": "node ./scripts/reset-project.js",
     "build:characters": "node ./scripts/build-character-sprites.js",
     "android": "expo run:android",
     "ios": "expo run:ios",

@@ -1,22 +1,22 @@
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
-import { useTokens } from '@/hooks/use-tokens';
+import { useTheme } from '@/hooks/use-theme';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 /** Dev-only preview: renders the active brand tokens as labelled swatches. */
 export function TokenSwatches() {
   const tokens = useTokens();
+  const theme = useTheme();
+  const Typography = useTypography();
 
   return (
     <View style={styles.grid}>
       {Object.entries(tokens).map(([name, value]) => (
         <View key={name} style={styles.item}>
           <View style={[styles.swatch, { backgroundColor: value }]} />
-          <ThemedText type="small">{name}</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            {value}
-          </ThemedText>
+          <Text style={[Typography.supporting, { color: theme.text }]}>{name}</Text>
+          <Text style={[Typography.supporting, { color: theme.textSecondary }]}>{value}</Text>
         </View>
       ))}
     </View>

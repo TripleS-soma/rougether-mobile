@@ -1,10 +1,10 @@
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { galleryEntries } from '@/dev/registry';
+import { useTheme } from '@/hooks/use-theme';
+import { useFontEmphasis, useTypography } from '@/hooks/use-tokens';
 
 /**
  * Component gallery — the visual half of the dev/test harness. Lists every
@@ -13,33 +13,38 @@ import { galleryEntries } from '@/dev/registry';
  * it together with the registry; the /dev route lazy-requires it behind __DEV__.
  */
 export function DevGallery() {
+  const theme = useTheme();
+  const Typography = useTypography();
+  const emph = useFontEmphasis();
   return (
-    <ThemedView style={styles.flex}>
+    <View style={[styles.flex, { backgroundColor: theme.background }]}>
       <SafeAreaView style={styles.flex} edges={['top']}>
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.header}>
-            <ThemedText type="subtitle">Component gallery</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
+            <Text style={[Typography.h2, { color: theme.text }]}>Component gallery</Text>
+            <Text style={[Typography.supporting, { color: theme.textSecondary }]}>
               {galleryEntries.length} entries · edit src/dev/registry.tsx to add more
-            </ThemedText>
+            </Text>
           </View>
 
           {galleryEntries.map((entry) => (
             <View key={entry.name} style={styles.entry}>
-              <ThemedText type="smallBold">{entry.name}</ThemedText>
+              <Text style={[Typography.supporting, emph('bold'), { color: theme.text }]}>
+                {entry.name}
+              </Text>
               {entry.description ? (
-                <ThemedText type="small" themeColor="textSecondary">
+                <Text style={[Typography.supporting, { color: theme.textSecondary }]}>
                   {entry.description}
-                </ThemedText>
+                </Text>
               ) : null}
-              <ThemedView type="backgroundElement" style={styles.preview}>
+              <View style={[styles.preview, { backgroundColor: theme.backgroundElement }]}>
                 {entry.render()}
-              </ThemedView>
+              </View>
             </View>
           ))}
         </ScrollView>
       </SafeAreaView>
-    </ThemedView>
+    </View>
   );
 }
 
