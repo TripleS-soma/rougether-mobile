@@ -1,0 +1,8 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "루게더"
+  },
+  "android": {
+    "app_name": "루게더"
+  }
+}

@@ -17,7 +17,8 @@
         "ITSAppUsesNonExemptEncryption": false,
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
-        }
+        },
+        "CFBundleAllowMixedLocalizations": true
       },
       "entitlements": {
         "com.apple.security.application-groups": ["group.com.triples.rougether"]
@@ -194,6 +195,9 @@
     "owner": "evan7484",
     "updates": {
       "url": "https://u.expo.dev/430c1f3b-4035-47c8-9864-8e07687d628c"
+    },
+    "locales": {
+      "ko": "./locales/ko.json"
     }
   }
 }
