@@ -97,10 +97,10 @@ describe('MyRoomScreen', () => {
     expect(ui.getByText('이 날의 루틴')).toBeTruthy();
     // 오른쪽 플링 → 방 탭 복귀.
     await fling(60);
-    expect(ui.getByText('오늘의 루틴')).toBeTruthy();
+    expect(ui.getByText('오늘의 할 일')).toBeTruthy();
     // 임계 미달 릴리즈는 무시.
     await fling(-30);
-    expect(ui.getByText('오늘의 루틴')).toBeTruthy();
+    expect(ui.getByText('오늘의 할 일')).toBeTruthy();
   });
 
   // 방↔달력 스와이프 순환 — 방향과 무관하게 플링이 두 서브탭을 오간다.
@@ -120,7 +120,7 @@ describe('MyRoomScreen', () => {
     await fling(-60);
     expect(ui.getByText('이 날의 루틴')).toBeTruthy();
     await fling(-60);
-    expect(ui.getByText('오늘의 루틴')).toBeTruthy();
+    expect(ui.getByText('오늘의 할 일')).toBeTruthy();
     // 방에서 우플링도 달력으로(순환) — 어느 방향이든 오간다.
     await fling(60);
     expect(ui.getByText('이 날의 루틴')).toBeTruthy();
