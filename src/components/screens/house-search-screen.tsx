@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -92,6 +92,11 @@ export type HouseSearchScreenProps = {
   onRetry?: () => void;
   onBack?: () => void;
   /**
+   * 초대 링크로 받은 코드 (#624) — 입력을 시드하고 마운트 시 미리보기를 자동
+   * 실행해 "링크 탭 → 이 집에 참여할까요?"로 바로 잇는다.
+   */
+  initialCode?: string;
+  /**
    * Join with an invite code; resolves true on success (the caller navigates),
    * false = 잘못된/만료 코드, 'network' = 네트워크·서버 오류 (#549 문구 분기).
    */
@@ -125,6 +130,7 @@ export function HouseSearchScreen({
   loadError = false,
   onRetry,
   onBack,
+  initialCode,
   onJoinByCode,
   onPreviewCode,
   onJoinHouse,
@@ -139,7 +145,7 @@ export function HouseSearchScreen({
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const headerInset = useHeaderInsetStyle();
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(initialCode ?? '');
   const { show: toast } = useToast();
   const [query, setQuery] = useState('');
   const [codeError, setCodeError] = useState<string | null>(null);
@@ -188,6 +194,16 @@ export function HouseSearchScreen({
     if (ok === 'network') setCodeError(NETWORK_ERROR_MSG);
     else if (!ok) setCodeError('초대코드를 확인해주세요. 만료되었거나 없는 코드예요.');
   };
+
+  // 초대 링크 진입 (#624) — 마운트 1회, 시드된 코드로 미리보기를 자동 실행해
+  // 확인 시트("이 집에 참여할까요?")까지 바로 잇는다.
+  const autoPreviewRan = useRef(false);
+  useEffect(() => {
+    if (!initialCode || autoPreviewRan.current) return;
+    autoPreviewRan.current = true;
+    void joinByCode();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 마운트 시 1회
+  }, []);
 
   const confirmJoinPreview = async () => {
     if (!preview) return;

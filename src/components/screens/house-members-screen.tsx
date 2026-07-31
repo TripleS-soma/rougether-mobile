@@ -1,5 +1,6 @@
+import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { CharacterAvatar } from '@/components/character-avatar';
 import { type HouseCover, HouseCoverPicker } from '@/components/house-cover-picker';
@@ -8,6 +9,7 @@ import { Icon } from '@/components/ui/icon';
 import { CrownPictogram, DoorPictogram, PencilPictogram } from '@/components/ui/pictograms';
 import { useToast } from '@/components/ui/toast';
 import type { CharacterId } from '@/constants/characters';
+import { houseInviteLink } from '@/constants/links';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
@@ -74,6 +76,27 @@ export function HouseMembersScreen({
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const { show: toast } = useToast();
+  // 초대코드 복사·링크 공유 (#624/#621) — 링크는 랜딩 경유 https(메신저에서
+  // 눌린다), 랜딩이 rougether:// 딥링크로 앱을 연다.
+  const copyInviteCode = async () => {
+    if (!currentHouse.inviteCode) return;
+    try {
+      await Clipboard.setStringAsync(currentHouse.inviteCode);
+      toast('초대코드를 복사했어요');
+    } catch {
+      // 클립보드 실패 — 코드는 화면에 그대로 보인다.
+    }
+  };
+  const shareInviteLink = async () => {
+    if (!currentHouse.inviteCode) return;
+    try {
+      await Share.share({
+        message: `루게더 '${currentHouse.name}' 집에 초대해요!\n${houseInviteLink(currentHouse.inviteCode)}`,
+      });
+    } catch {
+      // 공유 시트 취소/실패 — 조용히.
+    }
+  };
   const headerInset = useHeaderInsetStyle();
   const screenStyle = useScreenStyle([]);
 
@@ -179,6 +202,24 @@ export function HouseMembersScreen({
               <Text style={[Typography.h3, styles.code, { color: t.text }]}>
                 {currentHouse.inviteCode}
               </Text>
+            </View>
+            <View style={styles.inviteActions}>
+              <Pressable
+                onPress={() => void copyInviteCode()}
+                accessibilityRole="button"
+                accessibilityLabel="초대코드 복사"
+                style={[styles.inviteActionBtn, { backgroundColor: t.surfaceMuted }]}>
+                <Icon name="copy" size={14} color={t.text} />
+                <Text style={[Typography.supporting, { color: t.text }]}>코드 복사</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => void shareInviteLink()}
+                accessibilityRole="button"
+                accessibilityLabel="초대 링크 공유"
+                style={[styles.inviteActionBtn, { backgroundColor: t.primary }]}>
+                <Icon name="gift" size={14} color={t.onPrimary} />
+                <Text style={[Typography.supporting, { color: t.onPrimary }]}>링크 공유</Text>
+              </Pressable>
             </View>
           </View>
         ) : null}
@@ -619,6 +660,21 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     paddingVertical: Spacing.three,
     alignItems: 'center',
+  },
+  // 코드 복사·링크 공유 (#624) — 코드 박스 아래 나란히.
+  inviteActions: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    marginTop: Spacing.two,
+  },
+  inviteActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.one,
+    borderRadius: Radius.pill,
+    paddingVertical: Spacing.two,
   },
   code: {
     letterSpacing: 4,

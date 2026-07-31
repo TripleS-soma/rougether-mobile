@@ -73,6 +73,24 @@ describe('HouseSearchScreen', () => {
     expect(onJoinByCode).not.toHaveBeenCalled();
   });
 
+  it('초대 링크 진입(initialCode)이면 미리보기가 자동 실행된다 (#624)', async () => {
+    const onPreviewCode = jest.fn(async () => ({
+      name: '아침 루틴 하우스',
+      members: 3,
+      capacity: 4,
+    }));
+    const { getByText } = await render(
+      <HouseSearchScreen
+        initialCode="VLG7K2X"
+        onPreviewCode={onPreviewCode}
+        onJoinByCode={jest.fn(async () => true)}
+      />,
+    );
+    // 입력 시드 + 자동 미리보기 → 확인 시트까지 바로.
+    await waitFor(() => expect(getByText('아침 루틴 하우스')).toBeTruthy());
+    expect(onPreviewCode).toHaveBeenCalledWith('VLG7K2X');
+  });
+
   it('previews the house behind a code before joining', async () => {
     const onPreviewCode = jest.fn(async () => ({
       name: '아침 루틴 하우스',
