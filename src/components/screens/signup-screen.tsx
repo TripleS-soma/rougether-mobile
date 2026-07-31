@@ -229,7 +229,12 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
                   { borderColor: codeError ? t.danger : 'transparent' },
                 ]}>
                 <TextInput
-                  style={[styles.input, styles.code, { color: t.text }]}
+                  // iOS placeholder 자간 이슈 — 값 있을 때만 자간.
+                  style={[
+                    styles.input,
+                    verificationCode.length > 0 && styles.code,
+                    { color: t.text },
+                  ]}
                   value={verificationCode}
                   onChangeText={(v) => setVerificationCode(v.replace(/\D/g, '').slice(0, 6))}
                   placeholder="6자리 인증번호"

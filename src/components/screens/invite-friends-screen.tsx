@@ -157,7 +157,12 @@ export function InviteFriendsScreen({
                     autoCapitalize="characters"
                     autoCorrect={false}
                     accessibilityLabel="초대코드 입력"
-                    style={[styles.input, { backgroundColor: t.surfaceMuted, color: t.text }]}
+                    style={[
+                      styles.input,
+                      // iOS placeholder 자간 이슈 — 값 있을 때만 자간.
+                      code.length > 0 && styles.inputSpacing,
+                      { backgroundColor: t.surfaceMuted, color: t.text },
+                    ]}
                   />
                   <ScalePressable
                     onPress={() => void submitRedeem()}
@@ -232,6 +237,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     textAlign: 'center',
+  },
+  // iOS placeholder 자간 이슈 — 값이 있을 때만 입력에 얹는다.
+  inputSpacing: {
     letterSpacing: 2,
   },
   redeemBtn: {
