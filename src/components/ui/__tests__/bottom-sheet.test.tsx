@@ -3,6 +3,7 @@ import { PanResponder, Text } from 'react-native';
 
 import {
   BottomSheet,
+  claimsDrag,
   DRAG_CLAIM_HEIGHT,
   inDragClaimZone,
   shouldDismiss,
@@ -26,6 +27,18 @@ describe('inDragClaimZone (#514)', () => {
     expect(inDragClaimZone(500 + DRAG_CLAIM_HEIGHT, 500)).toBe(true); // 경계 포함
     expect(inDragClaimZone(500 + DRAG_CLAIM_HEIGHT + 1, 500)).toBe(false); // 본문
     expect(inDragClaimZone(700, 500)).toBe(false); // 휠 등 깊은 본문
+  });
+});
+
+describe('claimsDrag (#657)', () => {
+  it("기본 'header'는 #514 클레임 존 판정을 그대로 따른다", () => {
+    expect(claimsDrag('header', 500, 500)).toBe(true);
+    expect(claimsDrag('header', 700, 500)).toBe(false);
+  });
+
+  it("'card'는 본문 깊숙이에서 시작한 드래그도 시트 몫", () => {
+    expect(claimsDrag('card', 700, 500)).toBe(true);
+    expect(claimsDrag('card', 500 + DRAG_CLAIM_HEIGHT + 1, 500)).toBe(true);
   });
 });
 
@@ -79,6 +92,34 @@ describe('BottomSheet', () => {
       // 헤더 영역이라도 수직 우세가 아니면 클레임하지 않는다 (기존 규칙 유지).
       expect(
         config.onMoveShouldSetPanResponder?.(null as any, { dy: 10, dx: 30, y0: 540 } as any),
+      ).toBe(false);
+    } finally {
+      createSpy.mockRestore();
+    }
+  });
+
+  // 스크롤 자식이 없는 시트(#657) — dragScope="card"면 본문 어디서든 내린다.
+  it("dragScope='card'면 본문에서 시작한 세로 드래그도 시트가 클레임한다 (#657)", async () => {
+    const createSpy = jest.spyOn(PanResponder, 'create');
+    try {
+      const ui = await render(
+        <BottomSheet visible dragScope="card">
+          <Text>시트 내용</Text>
+        </BottomSheet>,
+      );
+      const config = createSpy.mock.calls[0][0];
+      const card = ui.getByTestId('bottom-sheet-card');
+      await act(async () =>
+        card.props.onLayout({ nativeEvent: { layout: { y: 500, height: 400 } } }),
+      );
+
+      // 본문 깊숙이(그립/헤더 밖)에서 시작해도 시트 몫.
+      expect(
+        config.onMoveShouldSetPanResponder?.(null as any, { dy: 20, dx: 0, y0: 700 } as any),
+      ).toBe(true);
+      // 수직 우세가 아니면 여전히 클레임하지 않는다.
+      expect(
+        config.onMoveShouldSetPanResponder?.(null as any, { dy: 10, dx: 30, y0: 700 } as any),
       ).toBe(false);
     } finally {
       createSpy.mockRestore();
