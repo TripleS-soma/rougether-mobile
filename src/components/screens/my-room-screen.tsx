@@ -1172,7 +1172,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                   <View style={styles.emptyHintRow}>
                     <Icon name="add" size={16} color={t.textMuted} />
                     <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
-                      아직 루틴이 없어요 — 아래 미분류의 ＋로 바로 시작해보세요.
+                      아직 루틴이 없어요 — 아래 미분류의 ＋로 루틴을 만들어보세요.
                     </Text>
                   </View>
                 ) : null}
