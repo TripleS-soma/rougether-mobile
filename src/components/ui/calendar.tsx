@@ -223,6 +223,7 @@ export function Calendar({ value, min, max, onSelect, today, monthSwipe = true }
                   <Text
                     style={[
                       Typography.body,
+                      styles.dayText,
                       {
                         color: disabled
                           ? t.textDisabled
@@ -298,5 +299,15 @@ const styles = StyleSheet.create({
     borderRadius: SEL_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // 날짜 숫자를 원 정중앙에 (#452 후속, iOS) — 커스텀 폰트의 비대칭
+  // ascent/descent 때문에 타입 스케일 lineHeight 박스 안에서 iOS 글리프가
+  // 아래로 쏠려 원과 어긋나 보였다. 라인박스를 원 높이로 맞추고(iOS는
+  // 라인박스 중앙 배치), 안드로이드는 폰트 패딩을 제거해 동일 규칙으로.
+  dayText: {
+    lineHeight: SEL_SIZE,
+    textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });
