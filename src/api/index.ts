@@ -40,6 +40,7 @@ export * from './onboarding';
 export * from './me';
 export * from './notifications';
 export * from './rooms';
+export * from './invites';
 export * from './routines';
 export * from './shop';
 export * from './today';

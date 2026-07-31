@@ -23,6 +23,7 @@ const ICONS = {
   gift: 'gift',
   trash: 'trash-outline',
   check: 'checkmark',
+  copy: 'copy-outline',
   'checkbox-off': 'square-outline',
   bell: 'notifications-outline',
   'bell-off': 'notifications-off-outline',

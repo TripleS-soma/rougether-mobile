@@ -13,6 +13,7 @@ import { GachaScreen } from '@/components/screens/gacha-screen';
 import { HouseScreen } from '@/components/screens/house-screen';
 import { HelpScreen } from '@/components/screens/help-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
+import { InviteFriendsScreen } from '@/components/screens/invite-friends-screen';
 import { LoginScreen } from '@/components/screens/login-screen';
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { CharacterPickerSheet } from '@/components/screens/sheets/character-picker-sheet';
@@ -271,6 +272,22 @@ export const galleryEntries: GalleryEntry[] = [
           placedFurnitureIds={['bed', 'window', 'plant', 'rug']}
         />
       </View>
+    ),
+  },
+  {
+    name: 'InviteFriendsScreen',
+    description: '친구 초대 (#518): 내 초대코드 복사 + 보상 현황 + 받은 코드 사용.',
+    render: () => (
+      <InviteFriendsScreen
+        info={{
+          code: 'ROUGE123',
+          rewardedCount: 2,
+          maxRewardedCount: 10,
+          inviterRewardCoin: 50,
+          inviteeRewardCoin: 30,
+        }}
+        onRedeem={async () => ({ rewardCoin: 30 })}
+      />
     ),
   },
   {

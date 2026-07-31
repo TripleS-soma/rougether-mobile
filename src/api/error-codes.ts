@@ -27,6 +27,10 @@ export const ErrorCode = {
    * 서버 #240). 서버가 신청을 거절 처리해 두므로 클라는 안내만 하면 된다.
    */
   HOUSE_JOIN_REQUEST_APPLICANT_WITHDRAWN: 'HOUSE_JOIN_REQUEST_APPLICANT_WITHDRAWN',
+  /** 409 — 초대코드는 계정당 평생 1회 (POST /invites/redeem, #518). */
+  INVITE_ALREADY_REDEEMED: 'INVITE_ALREADY_REDEEMED',
+  /** 4xx — 자기 초대코드는 사용 불가 (POST /invites/redeem, #518). */
+  INVITE_SELF_NOT_ALLOWED: 'INVITE_SELF_NOT_ALLOWED',
 } as const;
 
 export type KnownErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

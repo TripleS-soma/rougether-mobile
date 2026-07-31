@@ -16,6 +16,7 @@ import {
   type VisitedFriend,
 } from '@/components/screens/house-screen';
 import { HelpScreen } from '@/components/screens/help-screen';
+import { InviteFriendsScreen } from '@/components/screens/invite-friends-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { type CalendarDayItem, MyRoomScreen } from '@/components/screens/my-room-screen';
 import { NotificationListScreen } from '@/components/screens/notification-list-screen';
@@ -57,6 +58,7 @@ import { useGuestbook } from '@/hooks/use-guestbook';
 import { useToast } from '@/components/ui/toast';
 import { useHouseCovers } from '@/hooks/use-house-covers';
 import { useHouses } from '@/hooks/use-houses';
+import { useInvites } from '@/hooks/use-invites';
 import { useMemberRoomPreviews, withMyCharacter } from '@/hooks/use-member-room-previews';
 import { useRoomLayouts } from '@/hooks/use-room-layouts';
 import { useMyCharacters } from '@/hooks/use-my-characters';
@@ -89,7 +91,8 @@ type Screen =
   | 'bugReport'
   | 'notifications'
   | 'sound'
-  | 'help';
+  | 'help'
+  | 'inviteFriends';
 
 /** Which bottom-nav tab is active for each screen, or null to hide the nav. */
 const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
@@ -112,6 +115,7 @@ const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   notifications: null,
   sound: null,
   help: null,
+  inviteFriends: null,
 };
 
 const SCREEN_FOR_TAB: Record<NavTab, Screen> = {
@@ -148,6 +152,7 @@ const BACK_SCREEN: Record<Screen, Screen | null> = {
   notifications: 'settings',
   sound: 'settings',
   help: 'settings',
+  inviteFriends: 'settings',
 };
 
 /** 더블 백 종료 허용 창 (#522) — 토스트 표시와 체감이 맞는 2초. */
@@ -364,6 +369,15 @@ export function AppShell({
       // 유지.
     }
   }, [refreshHouses]);
+
+  // 친구 초대 리워드 (#518) — 설정 → 친구 초대 화면의 데이터·액션.
+  const {
+    info: inviteInfo,
+    loading: invitesLoading,
+    loadError: invitesLoadError,
+    load: loadInvites,
+    redeem: redeemInviteCode,
+  } = useInvites();
 
   // Locally saved tile arrangements (#278) — the 집 화면 shows arranged houses
   // and drag-and-drop swaps persist per viewer+house on this device.
@@ -951,6 +965,11 @@ export function AppShell({
   }, [loadNotificationSettings]);
   const openSound = useCallback(() => setScreen('sound'), []);
   const openHelp = useCallback(() => setScreen('help'), []);
+  // 친구 초대 (#518) — 진입 시점에 내 코드를 로드(없으면 서버가 발급).
+  const openInviteFriends = useCallback(() => {
+    setScreen('inviteFriends');
+    void loadInvites();
+  }, [loadInvites]);
   const openTerms = useCallback(() => openExternal(PolicyUrls.terms), [openExternal]);
   const openPrivacy = useCallback(() => openExternal(PolicyUrls.privacy), [openExternal]);
   const openBugReport = useCallback(() => {
@@ -1115,6 +1134,7 @@ export function AppShell({
               onOpenNotifications={openNotificationSettings}
               onOpenSound={openSound}
               onOpenHelp={openHelp}
+              onInviteFriends={openInviteFriends}
               onOpenTerms={openTerms}
               onOpenPrivacy={openPrivacy}
               onReportBug={openBugReport}
@@ -1419,6 +1439,17 @@ export function AppShell({
             onBack={() => setScreen('settings')}
             appVersion={appVersion}
             onContact={openSupportMail}
+          />
+        ) : null}
+
+        {screen === 'inviteFriends' ? (
+          <InviteFriendsScreen
+            info={inviteInfo}
+            loading={invitesLoading}
+            loadError={invitesLoadError}
+            onRetry={loadInvites}
+            onRedeem={redeemInviteCode}
+            onBack={() => setScreen('settings')}
           />
         ) : null}
       </Animated.View>
