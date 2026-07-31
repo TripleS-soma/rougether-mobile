@@ -5,3 +5,6 @@ android/**/*
 # pod install이 각 라이브러리에 생성하는 autolinking patch — @expo/fingerprint 0.19+의
 # 기본 제외 규칙을 SDK 55(0.16.x)에 백포트 (expo/expo#34005 계열 mismatch 수정).
 **/node_modules/**/*.podspec.json
+# eas.json 변경이 런타임 지문을 바꿔 기존 설치의 OTA 수신을 끊던 사고(#554→#575) 방지 (#546).
+# 빌드 파이프라인 설정은 앱 바이너리 내용과 무관하므로 지문에서 제외한다.
+eas.json
