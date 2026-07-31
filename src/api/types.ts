@@ -3,10 +3,22 @@
  * (http://3.35.167.122:8080/v3/api-docs). Regenerate with `npm run gen:api-types`. Do not edit by hand.
  */
 
+export type AccessoryRenderProfileResponse = {
+  renderState?: string;
+  assetKey?: string;
+  canvasWidth?: number;
+  canvasHeight?: number;
+  assetWidth?: number;
+  assetHeight?: number;
+  positionX?: number;
+  positionY?: number;
+  widthRatio?: number;
+  rotationDeg?: number;
+  zIndex?: number;
+};
+
 export type AppleLoginRequest = {
   idToken: string;
-  // Manual patch (#547, 서버 #235): 애플 시트가 identityToken과 함께 주는
-  // authorizationCode — 서버가 refresh token으로 교환해 탈퇴 revoke에 쓴다.
   authorizationCode: string;
 };
 
@@ -35,9 +47,7 @@ export type CategoryCreateRequest = {
   iconKey?: string;
   sortOrder?: number;
   visibility?: 'PRIVATE' | 'FRIENDS' | 'HOUSE' | 'PUBLIC';
-  // Manual patch (#578): 연동 집 id — 해제는 DELETE /categories/{id}/house-link.
-  // Restore after `npm run gen:api-types`.
-  houseId?: number | null;
+  houseId?: number;
 };
 
 export type CategoryListResponse = {
@@ -52,7 +62,7 @@ export type CategoryResponse = {
   sortOrder?: number;
   visibility?: 'PRIVATE' | 'FRIENDS' | 'HOUSE' | 'PUBLIC';
   deleted?: boolean;
-  // Manual patch (#578): 연동 집 id. Restore after `npm run gen:api-types`.
+  // Manual patch (#578): 미연동은 null (스펙 nullable 미표기). Restore after gen.
   houseId?: number | null;
 };
 
@@ -62,9 +72,16 @@ export type CategoryUpdateRequest = {
   iconKey?: string;
   sortOrder?: number;
   visibility?: 'PRIVATE' | 'FRIENDS' | 'HOUSE' | 'PUBLIC';
-  // Manual patch (#578): 연동 집 id — null은 기존 유지, 해제는
-  // DELETE /categories/{id}/house-link. Restore after `npm run gen:api-types`.
-  houseId?: number | null;
+  houseId?: number;
+};
+
+export type CharacterAccessoriesResponse = {
+  userCharacterId?: number;
+  items?: EquippedAccessoryResponse[];
+};
+
+export type CharacterAccessoryEquipRequest = {
+  userItemId: number;
 };
 
 export type CharacterAnimations = {
@@ -124,6 +141,16 @@ export type DrawResult = {
   refundAmount?: number;
 };
 
+export type EquippedAccessoryResponse = {
+  userItemId?: number;
+  itemId?: number;
+  name?: string;
+  assetKey?: string;
+  characterSlotType?: string;
+  renderProfiles?: AccessoryRenderProfileResponse[];
+  equippedAt?: string;
+};
+
 export type GachaDrawRequest = {
   count: number;
 };
@@ -146,6 +173,24 @@ export type GachaResponse = {
   costAmount?: number;
   drawCount?: number;
   active?: boolean;
+};
+
+export type GachaRewardListResponse = {
+  items?: GachaRewardResponse[];
+};
+
+export type GachaRewardResponse = {
+  rewardType?: string;
+  itemId?: number;
+  characterId?: number;
+  name?: string;
+  assetKey?: string;
+  rarity?: string;
+  owned?: boolean;
+  categoryCode?: string;
+  placementType?: string;
+  surfaceSlotType?: string;
+  characterSlotType?: string;
 };
 
 export type GoalItem = {
@@ -260,17 +305,6 @@ export type HouseJoinByCodeRequest = {
   inviteCode: string;
 };
 
-export type HouseJoinRequestStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED';
-
-export type HouseJoinRequestResponse = {
-  requestId?: number;
-  houseId?: number;
-  userId?: number;
-  nickname?: string;
-  status?: HouseJoinRequestStatus;
-  requestedAt?: string;
-};
-
 export type HouseJoinDetailResponse = {
   membershipId?: number;
   houseId?: number;
@@ -278,6 +312,19 @@ export type HouseJoinDetailResponse = {
   role?: 'OWNER' | 'MEMBER';
   status?: 'ACTIVE' | 'LEFT' | 'KICKED';
   joinedAt?: string;
+};
+
+export type HouseJoinRequestListResponse = {
+  items?: HouseJoinRequestResponse[];
+};
+
+export type HouseJoinRequestResponse = {
+  requestId?: number;
+  houseId?: number;
+  userId?: number;
+  nickname?: string;
+  status?: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  requestedAt?: string;
 };
 
 export type HouseJoinResponse = {
@@ -297,17 +344,7 @@ export type HouseMemberDayResponse = {
   date?: string;
   routines?: MemberRoutineItem[];
   todos?: MemberTodoItem[];
-  // Manual patch (#528, 서버 #237): 그날 루틴·투두가 참조하는 공개(HOUSE/
-  // PUBLIC) 카테고리 메타 — sortOrder 오름차순, 비공개는 내려오지 않는다.
   categories?: MemberCategoryItem[];
-};
-
-// Manual patch (#528, 서버 #237) — 집 멤버 그날 현황의 카테고리 메타.
-export type MemberCategoryItem = {
-  id?: number;
-  name?: string;
-  colorHex?: string;
-  iconKey?: string;
 };
 
 export type HouseMemberListResponse = {
@@ -362,15 +399,6 @@ export type HouseMissionResponse = {
   createdAt?: string;
 };
 
-export type HousePreviewResponse = {
-  houseId?: number;
-  name?: string;
-  coverImageKey?: string;
-  currentMemberCount?: number;
-  maxMembers?: number;
-  inviteExpired?: boolean;
-};
-
 export type HousePreviewDetailResponse = {
   houseId?: number;
   name?: string;
@@ -382,9 +410,18 @@ export type HousePreviewDetailResponse = {
   goals?: GoalSummary[];
   isMember?: boolean;
   isFull?: boolean;
-  myJoinRequestStatus?: HouseJoinRequestStatus;
+  myJoinRequestStatus?: 'PENDING' | 'ACCEPTED' | 'REJECTED';
   missions?: MissionSummary[];
   memberRooms?: MemberRoomSummary[];
+};
+
+export type HousePreviewResponse = {
+  houseId?: number;
+  name?: string;
+  coverImageKey?: string;
+  currentMemberCount?: number;
+  maxMembers?: number;
+  inviteExpired?: boolean;
 };
 
 export type HouseSummary = {
@@ -395,7 +432,7 @@ export type HouseSummary = {
   maxMembers?: number;
   level?: number;
   goals?: GoalSummary[];
-  myJoinRequestStatus?: HouseJoinRequestStatus;
+  myJoinRequestStatus?: 'PENDING' | 'ACCEPTED' | 'REJECTED';
 };
 
 export type HouseUpdateRequest = {
@@ -475,11 +512,18 @@ export type MeResponse = {
   onboarding?: OnboardingSummary;
 };
 
+export type MemberCategoryItem = {
+  id?: number;
+  name?: string;
+  colorHex?: string;
+  iconKey?: string;
+};
+
 export type MemberRoomSummary = {
   membershipId?: number;
   nickname?: string;
   // Manual patch: 방을 아직 만들지 않은 구성원은 null — 기본 빈 방으로 렌더.
-  // Restore after `npm run gen:api-types`.
+  // 스펙 nullable 미표기. Restore after gen.
   room?: RoomRenderResponse | null;
 };
 
@@ -537,6 +581,7 @@ export type MyCharacterItem = {
   baseAssetKey?: string;
   animations?: CharacterAnimations;
   selected?: boolean;
+  accessories?: EquippedAccessoryResponse[];
   acquiredAt?: string;
 };
 
@@ -597,7 +642,9 @@ export type NotificationItem = {
     | 'FRIEND_CHEER'
     | 'HOUSE_MISSION_ACHIEVED'
     | 'HOUSE_MEMBER_JOINED'
-    | 'HOUSE_MEMBER_LEFT';
+    | 'HOUSE_MEMBER_LEFT'
+    | 'HOUSE_JOIN_REQUEST_REJECTED'
+    | 'HOUSE_JOIN_REQUEST_ACCEPTED';
   title?: string;
   body?: string;
   isRead?: boolean;
@@ -678,6 +725,23 @@ export type RefreshRequest = {
   refreshToken: string;
 };
 
+export type RenderAccessory = {
+  itemId?: number;
+  name?: string;
+  assetKey?: string;
+  characterSlotType?: string;
+  renderProfiles?: AccessoryRenderProfileResponse[];
+};
+
+export type RenderCharacter = {
+  characterId?: number;
+  code?: string;
+  name?: string;
+  assetKey?: string;
+  animations?: CharacterAnimations;
+  accessories?: RenderAccessory[];
+};
+
 export type RenderPlacement = {
   assetKey?: string;
   positionX?: number;
@@ -706,6 +770,7 @@ export type RoomCharacterResponse = {
   name?: string;
   assetKey?: string;
   animations?: CharacterAnimations;
+  accessories?: EquippedAccessoryResponse[];
 };
 
 export type RoomLayoutUpdateRequest = {
@@ -729,7 +794,7 @@ export type RoomPlacementResponse = {
 export type RoomRenderResponse = {
   growthLevel?: number;
   layoutFormat?: 'SLOT_V1' | 'FREE_V1';
-  character?: RoomCharacterResponse;
+  character?: RenderCharacter;
   slots?: RenderSlot[];
   placements?: RenderPlacement[];
 };
@@ -771,8 +836,7 @@ export type RoutineCreateRequest = {
   scheduledTime?: string;
   startsOn?: string;
   endsOn?: string;
-  // Manual patch (#578): 연동 공동미션 id. Restore after `npm run gen:api-types`.
-  houseMissionId?: number | null;
+  houseMissionId?: number;
 };
 
 export type RoutineListResponse = {
@@ -791,8 +855,8 @@ export type RoutineLogResponse = {
   rewardCurrencyType?: 'COIN' | 'DIAMOND';
   rewardAmount?: number;
   streak?: StreakSummaryResponse;
-  // Manual patch (#578): 오늘(KST) 완료 시 서버가 연동 미션에 자동 기여한 결과.
-  // null이면 미연동/스킵(이미 기여·비활성·과거 등). Restore after `npm run gen:api-types`.
+  // Manual patch (#578): null이면 미연동/스킵(이미 기여·비활성·과거 등),
+  // 스펙 nullable 미표기. Restore after gen.
   houseMissionContribution?: HouseMissionContributeResponse | null;
 };
 
@@ -808,7 +872,7 @@ export type RoutineResponse = {
   startsOn?: string;
   endsOn?: string;
   originRoutineId?: number;
-  // Manual patch (#578): 연동 공동미션 id. Restore after `npm run gen:api-types`.
+  // Manual patch: 미연동 루틴은 null로 온다 (스펙 nullable 미표기). Restore after gen.
   houseMissionId?: number | null;
 };
 
@@ -817,16 +881,13 @@ export type RoutineUpdateRequest = {
   categoryId?: number;
   authType?: 'CHECK' | 'PHOTO';
   repeatType?: string;
-  // Manual patch: PUT replaces the resource — explicit null unsets an optional
-  // (alarm off / 종료일 제거). Restore after `npm run gen:api-types`.
+  // Manual patch: 스펙에 nullable 미표기 — null은 "지우기"(WEEKLY→DAILY의
+  // repeatDays, 알람 해제의 scheduledTime, 종료일 해제). Restore after gen.
   repeatDays?: RepeatDays | null;
   scheduledTime?: string | null;
   startsOn?: string;
   endsOn?: string | null;
-  // Manual patch (#578): 연동 공동미션 id — null은 기존 유지(categoryId의
-  // null=해제와 다른 규칙). 해제는 DELETE /routines/{id}/house-mission-link.
-  // Restore after `npm run gen:api-types`.
-  houseMissionId?: number | null;
+  houseMissionId?: number;
 };
 
 export type SlotAssignment = {
@@ -871,6 +932,8 @@ export type TodayRoutineItem = {
   scheduledTime?: string;
   authType?: 'CHECK' | 'PHOTO';
   completed?: boolean;
+  // Manual patch: 미연동은 null (스펙 nullable 미표기). Restore after gen.
+  houseMissionId?: number | null;
 };
 
 export type TodayStreak = {

@@ -31,9 +31,16 @@ const DEFAULT_NOTIFICATIONS: NotificationEntry[] = [
 /** Row icon by server notification type. */
 const TYPE_ICONS: Record<string, IconName> = {
   ROUTINE_REMINDER: 'bell',
+  TODO_REMINDER: 'bell',
   HOUSE_KICK: 'house',
   // 친구 응원 알림 (#330 응원 보내기의 수신측) — 스웨거 enum 추가분.
   FRIEND_CHEER: 'heart',
+  HOUSE_MISSION_ACHIEVED: 'flame',
+  HOUSE_MEMBER_JOINED: 'members',
+  HOUSE_MEMBER_LEFT: 'leave',
+  // 입주 신청 결과 (#595, 서버 #241) — 수락은 집, 거절도 같은 맥락의 집 알림.
+  HOUSE_JOIN_REQUEST_ACCEPTED: 'house',
+  HOUSE_JOIN_REQUEST_REJECTED: 'house',
 };
 
 export type NotificationListScreenProps = {
