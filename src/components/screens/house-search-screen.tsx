@@ -276,7 +276,9 @@ export function HouseSearchScreen({
                   },
                 ]}>
                 <TextInput
-                  style={[styles.input, styles.codeInput, { color: t.text }]}
+                  // iOS는 letterSpacing이 placeholder에도 걸린다(안드는 미적용) — 값이
+                  // 있을 때만 자간을 줘 placeholder 렌더를 플랫폼 동일하게 한다.
+                  style={[styles.input, code.length > 0 && styles.codeInput, { color: t.text }]}
                   value={code}
                   onChangeText={(v) => {
                     setCode(v.toUpperCase().slice(0, 8));
