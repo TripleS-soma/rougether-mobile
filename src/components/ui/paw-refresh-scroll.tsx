@@ -104,6 +104,11 @@ export function PawRefreshScroll({
   const pan = useMemo(() => {
     const base = Gesture.Pan()
       .withTestId(`${refreshTestID}-pan`)
+      // 세로 전용 (#454 후속) — 제약 없는 팬이 가로 스와이프까지 가로채
+      // 셸 탭 페이저(#582)가 죽던 버그. 가로 우세 제스처는 즉시 실패시켜
+      // 페이저·캐러셀 플링에 양보한다.
+      .activeOffsetY([-12, 12])
+      .failOffsetX([-12, 12])
       .onBegin(() => {
         'worklet';
         engaged.value = false;
