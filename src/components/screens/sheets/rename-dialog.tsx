@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   dialogInput: {
-    fontSize: 16,
+    fontSize: 18,
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.three,

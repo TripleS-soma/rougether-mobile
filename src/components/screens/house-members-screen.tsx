@@ -745,10 +745,10 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
   },
   ownerBadgeText: {
-    fontSize: 9,
+    fontSize: 11,
   },
   myBadge: {
-    fontSize: 9,
+    fontSize: 11,
     overflow: 'hidden',
     borderRadius: Radius.pill,
     paddingHorizontal: Spacing.two,
@@ -815,7 +815,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
-    fontSize: 14,
+    fontSize: 16,
   },
   missionTypeRow: {
     flexDirection: 'row',

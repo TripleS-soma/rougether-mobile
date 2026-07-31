@@ -563,7 +563,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
-    fontSize: 14,
+    fontSize: 16,
   },
   missionTypeRow: {
     flexDirection: 'row',

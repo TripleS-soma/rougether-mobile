@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
   },
   emoji: {
-    fontSize: 20,
+    fontSize: 22,
   },
   texts: {
     flex: 1,

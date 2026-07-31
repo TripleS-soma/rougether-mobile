@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.one,
   },
   body: {
-    lineHeight: 22,
+    lineHeight: 24,
   },
   btns: {
     flexDirection: 'row',

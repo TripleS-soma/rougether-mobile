@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   closeGlyph: {
-    fontSize: 16,
+    fontSize: 18,
   },
   body: {
     padding: Spacing.four,

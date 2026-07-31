@@ -274,8 +274,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   navGlyph: {
-    fontSize: 20,
-    lineHeight: 22,
+    fontSize: 22,
+    lineHeight: 24,
   },
   grid: {
     flexDirection: 'row',

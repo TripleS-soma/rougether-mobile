@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  moveGlyph: { fontSize: 14 },
+  moveGlyph: { fontSize: 16 },
   rowBtn: {
     width: 36,
     height: 36,
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   confirmText: {
-    lineHeight: 22,
+    lineHeight: 24,
   },
   leaveBtns: {
     alignSelf: 'stretch',

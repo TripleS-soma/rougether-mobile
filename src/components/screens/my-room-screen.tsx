@@ -1634,10 +1634,10 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     flexShrink: 1,
   },
-  // 카테고리 라벨 확대 (#356) — label 토큰(14) 위에 크기만 한 단계 올린다.
+  // 카테고리 라벨 확대 (#356) — label 토큰(16) 위에 크기만 한 단계 올린다.
   catLabel: {
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 18,
+    lineHeight: 24,
   },
   catDot: {
     width: 32,
@@ -1696,7 +1696,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.half,
   },
   todoInput: {
-    fontSize: 16,
+    fontSize: 18,
     paddingVertical: Spacing.three,
   },
   dateChip: {
@@ -1727,6 +1727,6 @@ const styles = StyleSheet.create({
     gap: Spacing.half,
   },
   badgeText: {
-    fontSize: 11,
+    fontSize: 13,
   },
 });

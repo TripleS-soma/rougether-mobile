@@ -265,9 +265,9 @@ const styles = StyleSheet.create({
     gap: Spacing.half,
   },
   badgeText: {
-    fontSize: 11,
+    fontSize: 13,
   },
   chevron: {
-    fontSize: 20,
+    fontSize: 22,
   },
 });

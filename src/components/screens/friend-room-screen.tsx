@@ -781,7 +781,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
-    fontSize: 14,
+    fontSize: 16,
   },
   gbSendBtn: {
     borderRadius: Radius.pill,
@@ -894,7 +894,7 @@ const styles = StyleSheet.create({
     gap: Spacing.one,
   },
   badgeText: {
-    fontSize: 11,
+    fontSize: 13,
   },
   cheers: {
     gap: Spacing.two,

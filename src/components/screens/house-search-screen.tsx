@@ -657,7 +657,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     borderWidth: 1,
   },
-  input: { flex: 1, fontSize: 14, paddingVertical: Spacing.half },
+  input: { flex: 1, fontSize: 16, paddingVertical: Spacing.half },
   codeInput: { letterSpacing: 2 },
   sideBtn: {
     paddingHorizontal: Spacing.four,
@@ -782,9 +782,9 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
     borderRadius: Radius.pill,
   },
-  tagText: { fontSize: 10 },
+  tagText: { fontSize: 12 },
   // flexShrink를 주면 줄바꿈 대신 계속 줄어들며 잘린다 — 온전한 너비로 개행.
-  meta: { fontSize: 11 },
+  meta: { fontSize: 13 },
   joinBtn: {
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
