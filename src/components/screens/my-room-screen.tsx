@@ -661,7 +661,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     characterId,
   });
   useEffect(() => {
-    if (Platform.OS !== 'android') return;
+    // 홈 위젯이 있는 플랫폼만 (#604 안드, #606 iOS) — 웹은 캡처 제외.
+    if (Platform.OS !== 'android' && Platform.OS !== 'ios') return;
     if (widgetShotSigRef.current === roomSignature) return;
     // 로딩 중이거나 다른 캡처가 진행 중이면 다음 변화 때 다시 시도된다.
     if (loading || capturing) return;
