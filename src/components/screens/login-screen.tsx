@@ -232,7 +232,7 @@ export function LoginScreen({
             <SocialButton
               bg="#FEE500"
               textColor="#191919"
-              label="카카오"
+              label="Kakao"
               logo={<Ionicons name="chatbubble" size={18} color="#191919" />}
               onPress={onKakaoLogin ? submitKakao : notReady}
               recent={lastLoginProvider === 'kakao'}
@@ -243,7 +243,7 @@ export function LoginScreen({
               <SocialButton
                 bg="#000000"
                 textColor="#FFFFFF"
-                label="애플"
+                label="Apple"
                 logo={<Ionicons name="logo-apple" size={20} color="#FFFFFF" />}
                 onPress={onAppleLogin ? submitApple : notReady}
                 recent={lastLoginProvider === 'apple'}
@@ -252,7 +252,7 @@ export function LoginScreen({
             <SocialButton
               bg="#FFFFFF"
               textColor="#4A403A"
-              label="구글"
+              label="Google"
               logo={<GoogleG size={18} />}
               bordered
               onPress={onGoogleLogin ? submitGoogle : notReady}
@@ -335,7 +335,7 @@ function SocialButton({
       accessibilityLabel={recent ? `${label}로 시작, 최근 로그인` : `${label}로 시작`}>
       <View style={styles.socialLogo}>{logo}</View>
       <Text style={[styles.socialLabel, emph('semibold'), { color: textColor }]}>
-        {label === '구글' ? 'Google로 시작하기' : `${label}로 시작하기`}
+        {`${label}로 시작하기`}
       </Text>
       {/* 브랜드색 버튼(노랑/검정/흰색) 위 어디서든 읽히도록 배지는 버튼의
           textColor에서 파생 — 배경은 10% 틴트, 글자는 본문색 그대로. */}

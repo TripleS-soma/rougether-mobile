@@ -61,9 +61,9 @@ describe('LoginScreen', () => {
   it('offers 카카오·애플·구글 social login (spec lineup, no 네이버)', async () => {
     const { getByLabelText, queryByLabelText } = await render(<LoginScreen />);
 
-    expect(getByLabelText('카카오로 시작')).toBeTruthy();
-    expect(getByLabelText('애플로 시작')).toBeTruthy();
-    expect(getByLabelText('구글로 시작')).toBeTruthy();
+    expect(getByLabelText('Kakao로 시작')).toBeTruthy();
+    expect(getByLabelText('Apple로 시작')).toBeTruthy();
+    expect(getByLabelText('Google로 시작')).toBeTruthy();
     expect(queryByLabelText('네이버로 시작')).toBeNull();
   });
 
@@ -73,7 +73,7 @@ describe('LoginScreen', () => {
     const { getByLabelText } = await render(
       <LoginScreen onGoogleLogin={onGoogleLogin} onAuthSuccess={onAuthSuccess} />,
     );
-    await fireEvent.press(getByLabelText('구글로 시작'));
+    await fireEvent.press(getByLabelText('Google로 시작'));
     expect(onGoogleLogin).toHaveBeenCalledTimes(1);
     expect(onAuthSuccess).toHaveBeenCalledTimes(1);
   });
@@ -83,14 +83,14 @@ describe('LoginScreen', () => {
     const cancelled = await render(
       <LoginScreen onGoogleLogin={async () => 'cancelled'} onAuthSuccess={onAuthSuccess} />,
     );
-    await fireEvent.press(cancelled.getByLabelText('구글로 시작'));
+    await fireEvent.press(cancelled.getByLabelText('Google로 시작'));
     expect(onAuthSuccess).not.toHaveBeenCalled();
     expect(cancelled.queryByText(/구글 로그인에 실패했어요/)).toBeNull();
 
     const failed = await render(
       <LoginScreen onGoogleLogin={async () => 'failed'} onAuthSuccess={onAuthSuccess} />,
     );
-    await fireEvent.press(failed.getByLabelText('구글로 시작'));
+    await fireEvent.press(failed.getByLabelText('Google로 시작'));
     expect(onAuthSuccess).not.toHaveBeenCalled();
     expect(failed.getByText(/구글 로그인에 실패했어요/)).toBeTruthy();
   });
@@ -101,18 +101,18 @@ describe('LoginScreen', () => {
     const { getByLabelText } = await render(
       <LoginScreen onKakaoLogin={onKakaoLogin} onAuthSuccess={onAuthSuccess} />,
     );
-    await fireEvent.press(getByLabelText('카카오로 시작'));
+    await fireEvent.press(getByLabelText('Kakao로 시작'));
     expect(onKakaoLogin).toHaveBeenCalledTimes(1);
     expect(onAuthSuccess).toHaveBeenCalledTimes(1);
   });
 
   it('카카오 실패는 에러 문구, 취소는 조용히 (#489)', async () => {
     const failed = await render(<LoginScreen onKakaoLogin={async () => 'failed'} />);
-    await fireEvent.press(failed.getByLabelText('카카오로 시작'));
+    await fireEvent.press(failed.getByLabelText('Kakao로 시작'));
     expect(failed.getByText(/카카오 로그인에 실패했어요/)).toBeTruthy();
 
     const cancelled = await render(<LoginScreen onKakaoLogin={async () => 'cancelled'} />);
-    await fireEvent.press(cancelled.getByLabelText('카카오로 시작'));
+    await fireEvent.press(cancelled.getByLabelText('Kakao로 시작'));
     expect(cancelled.queryByText(/카카오 로그인에 실패했어요/)).toBeNull();
   });
 
@@ -122,18 +122,18 @@ describe('LoginScreen', () => {
     const { getByLabelText } = await render(
       <LoginScreen onAppleLogin={onAppleLogin} onAuthSuccess={onAuthSuccess} />,
     );
-    await fireEvent.press(getByLabelText('애플로 시작'));
+    await fireEvent.press(getByLabelText('Apple로 시작'));
     expect(onAppleLogin).toHaveBeenCalledTimes(1);
     expect(onAuthSuccess).toHaveBeenCalledTimes(1);
   });
 
   it('애플 실패는 에러 문구, 취소는 조용히 (#489)', async () => {
     const failed = await render(<LoginScreen onAppleLogin={async () => 'failed'} />);
-    await fireEvent.press(failed.getByLabelText('애플로 시작'));
+    await fireEvent.press(failed.getByLabelText('Apple로 시작'));
     expect(failed.getByText(/애플 로그인에 실패했어요/)).toBeTruthy();
 
     const cancelled = await render(<LoginScreen onAppleLogin={async () => 'cancelled'} />);
-    await fireEvent.press(cancelled.getByLabelText('애플로 시작'));
+    await fireEvent.press(cancelled.getByLabelText('Apple로 시작'));
     expect(cancelled.queryByText(/애플 로그인에 실패했어요/)).toBeNull();
   });
 
@@ -155,8 +155,8 @@ describe('LoginScreen 최근 로그인 배지', () => {
     const { getByText, getByLabelText } = await render(<LoginScreen lastLoginProvider="kakao" />);
     expect(getByText('최근 로그인')).toBeTruthy();
     // 접근성 라벨에도 최근 로그인이 실린다 — 스크린리더 사용자도 같은 정보.
-    expect(getByLabelText('카카오로 시작, 최근 로그인')).toBeTruthy();
-    expect(getByLabelText('구글로 시작')).toBeTruthy();
+    expect(getByLabelText('Kakao로 시작, 최근 로그인')).toBeTruthy();
+    expect(getByLabelText('Google로 시작')).toBeTruthy();
   });
 
   it('프로바이더가 없으면 배지가 없다', async () => {
@@ -166,6 +166,6 @@ describe('LoginScreen 최근 로그인 배지', () => {
 
   it('애플 프로바이더면 애플 버튼에 배지가 붙는다 (jest는 iOS)', async () => {
     const { getByLabelText } = await render(<LoginScreen lastLoginProvider="apple" />);
-    expect(getByLabelText('애플로 시작, 최근 로그인')).toBeTruthy();
+    expect(getByLabelText('Apple로 시작, 최근 로그인')).toBeTruthy();
   });
 });
