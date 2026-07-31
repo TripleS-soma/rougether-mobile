@@ -94,10 +94,10 @@ function ToastView({
   const t = useTokens();
   const Typography = useTypography();
   const insets = useContext(SafeAreaInsetsContext);
-  const bg = toast.type === 'error' ? t.danger : toast.type === 'success' ? t.success : t.text;
-  // 기본(무타입) 토스트는 중립 반전 배경(t.text) — onPrimary(짙은 잉크)를 쓰면
-  // 라이트 모드에서 어두운 배경 위 어두운 글자가 된다. 반전 잉크는 surface.
-  const ink = toast.type === 'error' || toast.type === 'success' ? t.onPrimary : t.surface;
+  // 기본(무타입) 토스트는 브랜드 primary — 테마를 바꾸면 토스트도 따라
+  // 바뀐다(테마 연결 요청). error/success는 시맨틱 유지.
+  const bg = toast.type === 'error' ? t.danger : toast.type === 'success' ? t.success : t.primary;
+  const ink = t.onPrimary;
 
   return (
     <Animated.View
