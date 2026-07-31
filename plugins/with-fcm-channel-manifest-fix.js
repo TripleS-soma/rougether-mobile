@@ -39,6 +39,9 @@ module.exports = function withFcmChannelManifestFix(config) {
         app['meta-data'].push(m);
       }
       m.$[attr] = value;
+      // 라이브러리 매니페스트가 같은 meta-data를 다른 값(@color/white)으로
+      // 선언해 병합이 깨진다 — 채널 meta-data와 같은 처방.
+      m.$['tools:replace'] = 'android:resource';
     }
     return config;
   });
