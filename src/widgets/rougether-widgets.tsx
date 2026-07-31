@@ -1,3 +1,8 @@
+'use no memo';
+// React Compiler 제외 (#604 후속) — 위젯 트리는 React 렌더러 없이
+// 라이브러리가 함수 호출로 평가한다. 컴파일러가 주입하는 useMemoCache가
+// 널 디스패처에서 터져 위젯이 투명하게 비던 버그의 수정.
+
 /**
  * 안드로이드 홈 위젯 2종 (#604, 시안 B·D) — RemoteViews 위에서 도는
  * react-native-android-widget 트리라 앱 컴포넌트·훅을 쓸 수 없다.
