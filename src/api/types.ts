@@ -331,6 +331,10 @@ export type HouseJoinResponse = {
   membershipId?: number;
   houseId?: number;
   status?: 'ACTIVE' | 'LEFT' | 'KICKED';
+  // Manual patch (#646): 부원 개인 코드로 참여하면 즉시 가입 대신 방장 승인
+  // 대기 — true면 joinRequestId가 함께 온다. Restore after gen.
+  pendingApproval?: boolean;
+  joinRequestId?: number;
 };
 
 export type HouseListResponse = {

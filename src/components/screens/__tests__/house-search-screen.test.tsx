@@ -91,6 +91,27 @@ describe('HouseSearchScreen', () => {
     expect(onPreviewCode).toHaveBeenCalledWith('VLG7K2X');
   });
 
+  it("부원 개인 코드는 입주 대신 '승인 대기' 안내 (#646)", async () => {
+    const onPreviewCode = jest.fn(async () => ({
+      name: '아침 루틴 하우스',
+      members: 3,
+      capacity: 4,
+    }));
+    const onJoinByCode = jest.fn(async () => 'pending' as const);
+    const { getByText, getByLabelText, getByPlaceholderText, queryByText } = await render(
+      <HouseSearchScreen onPreviewCode={onPreviewCode} onJoinByCode={onJoinByCode} />,
+    );
+    await fireEvent.changeText(getByPlaceholderText('예: VLG-7K2X'), 'member01');
+    await fireEvent.press(getByText('입주'));
+    await waitFor(() => expect(getByText('아침 루틴 하우스')).toBeTruthy());
+    await fireEvent.press(getByLabelText('이 집에 입주'));
+    await waitFor(() =>
+      expect(getByText('입주 신청을 보냈어요 — 방장이 승인하면 집에 들어가요.')).toBeTruthy(),
+    );
+    // 미리보기는 닫히고 에러 문구는 없다.
+    expect(queryByText(/입주에 실패했어요/)).toBeNull();
+  });
+
   it('previews the house behind a code before joining', async () => {
     const onPreviewCode = jest.fn(async () => ({
       name: '아침 루틴 하우스',

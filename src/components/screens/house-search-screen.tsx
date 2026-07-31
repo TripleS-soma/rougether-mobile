@@ -100,9 +100,10 @@ export type HouseSearchScreenProps = {
   onInitialCodeConsumed?: () => void;
   /**
    * Join with an invite code; resolves true on success (the caller navigates),
-   * false = 잘못된/만료 코드, 'network' = 네트워크·서버 오류 (#549 문구 분기).
+   * 'pending' = 부원 개인 코드라 방장 승인 대기 (#646), false = 잘못된/만료
+   * 코드, 'network' = 네트워크·서버 오류 (#549 문구 분기).
    */
-  onJoinByCode?: (code: string) => Promise<boolean | 'network'>;
+  onJoinByCode?: (code: string) => Promise<boolean | 'pending' | 'network'>;
   /**
    * Preview the house behind a code before joining; null = unknown code,
    * 'network' = 네트워크·서버 오류 (잘못된 코드와 다른 안내, #549).
@@ -152,6 +153,8 @@ export function HouseSearchScreen({
   const { show: toast } = useToast();
   const [query, setQuery] = useState('');
   const [codeError, setCodeError] = useState<string | null>(null);
+  // 승인 대기 안내 (#646) — 부원 개인 코드로 신청한 경우의 긍정 안내.
+  const [pendingNotice, setPendingNotice] = useState(false);
   const [joining, setJoining] = useState(false);
   const [previewingHouseId, setPreviewingHouseId] = useState<number | null>(null);
   // Pre-join preview card (code + house info), shown after a successful lookup.
@@ -178,6 +181,7 @@ export function HouseSearchScreen({
       return;
     }
     setCodeError(null);
+    setPendingNotice(false);
     setPreview(null);
     setJoining(true);
     // With a preview handler, look the code up first and ask for confirmation;
@@ -194,7 +198,10 @@ export function HouseSearchScreen({
     }
     const ok = (await onJoinByCode?.(trimmed)) ?? false;
     setJoining(false);
-    if (ok === 'network') setCodeError(NETWORK_ERROR_MSG);
+    if (ok === 'pending') {
+      setCode('');
+      setPendingNotice(true);
+    } else if (ok === 'network') setCodeError(NETWORK_ERROR_MSG);
     else if (!ok) setCodeError('초대코드를 확인해주세요. 만료되었거나 없는 코드예요.');
   };
 
@@ -215,7 +222,12 @@ export function HouseSearchScreen({
     const ok = (await onJoinByCode?.(preview.code)) ?? false;
     setJoining(false);
     if (ok === true) setPreview(null);
-    else if (ok === 'network') setCodeError(NETWORK_ERROR_MSG);
+    else if (ok === 'pending') {
+      // 부원 개인 코드 (#646) — 입주 확정 대신 신청이 생성됐다.
+      setPreview(null);
+      setCode('');
+      setPendingNotice(true);
+    } else if (ok === 'network') setCodeError(NETWORK_ERROR_MSG);
     else setCodeError('입주에 실패했어요. 만석이거나 이미 참여 중일 수 있어요.');
   };
 
@@ -296,6 +308,11 @@ export function HouseSearchScreen({
             {codeError ? (
               <Text style={[Typography.supporting, styles.msg, { color: t.danger }]}>
                 {codeError}
+              </Text>
+            ) : null}
+            {pendingNotice ? (
+              <Text style={[Typography.supporting, styles.msg, { color: t.primaryText }]}>
+                입주 신청을 보냈어요 — 방장이 승인하면 집에 들어가요.
               </Text>
             ) : null}
 

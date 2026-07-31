@@ -970,9 +970,7 @@ export function AppShell({
     [transferOwnership],
   );
   const handleReissueInviteCode = useCallback(
-    (houseId: number) => {
-      void reissueInviteCode(houseId);
-    },
+    (houseId: number) => reissueInviteCode(houseId),
     [reissueInviteCode],
   );
 

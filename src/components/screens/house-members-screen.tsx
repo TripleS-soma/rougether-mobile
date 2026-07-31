@@ -40,7 +40,7 @@ export type HouseMembersScreenProps = {
   /** Hand the OWNER role to a member via the API (owner only). */
   onTransferOwnership?: (houseId: number, membershipId: number) => void;
   /** Reissue the invite code via the API (owner only; the old code expires). */
-  onReissueInviteCode?: (houseId: number) => void;
+  onReissueInviteCode?: (houseId: number) => Promise<string | null> | void;
   /** Edit the house settings via the API (owner only). */
   onUpdateHouse?: (houseId: number, input: HouseEditInput) => void;
   /** Leave the current house via the API. */
@@ -76,22 +76,31 @@ export function HouseMembersScreen({
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const { show: toast } = useToast();
+  // 부원 개인 초대코드 (#646) — 집 상세에는 없어(소유자 전용) 발급 응답을
+  // 화면이 보관한다. 소유자는 상세의 공용 코드를 그대로 쓴다.
+  const [issuedCode, setIssuedCode] = useState<string | null>(null);
+  const displayCode = currentHouse.inviteCode ?? issuedCode ?? null;
+  const requestIssue = async () => {
+    if (!currentHouse.houseId) return;
+    const code = await onReissueInviteCode?.(currentHouse.houseId);
+    if (typeof code === 'string') setIssuedCode(code);
+  };
   // 초대코드 복사·링크 공유 (#624/#621) — 링크는 랜딩 경유 https(메신저에서
   // 눌린다), 랜딩이 rougether:// 딥링크로 앱을 연다.
   const copyInviteCode = async () => {
-    if (!currentHouse.inviteCode) return;
+    if (!displayCode) return;
     try {
-      await Clipboard.setStringAsync(currentHouse.inviteCode);
+      await Clipboard.setStringAsync(displayCode);
       toast('초대코드를 복사했어요');
     } catch {
       // 클립보드 실패 — 코드는 화면에 그대로 보인다.
     }
   };
   const shareInviteLink = async () => {
-    if (!currentHouse.inviteCode) return;
+    if (!displayCode) return;
     try {
       await Share.share({
-        message: `루게더 '${currentHouse.name}' 집에 초대해요!\n${houseInviteLink(currentHouse.inviteCode)}`,
+        message: `루게더 '${currentHouse.name}' 집에 초대해요!\n${houseInviteLink(displayCode)}`,
       });
     } catch {
       // 공유 시트 취소/실패 — 조용히.
@@ -180,11 +189,11 @@ export function HouseMembersScreen({
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
-        {currentHouse.inviteCode ? (
+        {onReissueInviteCode || displayCode ? (
           <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
             <View style={styles.codeHead}>
               <Text style={[Typography.label, styles.flex, { color: t.text }]}>초대코드</Text>
-              {isOwner && onReissueInviteCode ? (
+              {onReissueInviteCode && displayCode ? (
                 <Pressable
                   onPress={() => setShowReissueConfirm(true)}
                   accessibilityRole="button"
@@ -195,32 +204,50 @@ export function HouseMembersScreen({
               ) : null}
             </View>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              친구에게 코드를 공유해 집에 초대하세요.
+              {isOwner
+                ? '친구에게 코드를 공유해 집에 초대하세요.'
+                : '내 개인 초대코드로 친구를 초대해요 — 참여는 방장 승인 후 확정돼요.'}
             </Text>
-            <View
-              style={[styles.codeBox, { borderColor: t.border, backgroundColor: t.surfaceMuted }]}>
-              <Text style={[Typography.h3, styles.code, { color: t.text }]}>
-                {currentHouse.inviteCode}
-              </Text>
-            </View>
-            <View style={styles.inviteActions}>
+            {displayCode ? (
+              <View
+                style={[
+                  styles.codeBox,
+                  { borderColor: t.border, backgroundColor: t.surfaceMuted },
+                ]}>
+                <Text style={[Typography.h3, styles.code, { color: t.text }]}>{displayCode}</Text>
+              </View>
+            ) : (
               <Pressable
-                onPress={() => void copyInviteCode()}
+                onPress={() => void requestIssue()}
                 accessibilityRole="button"
-                accessibilityLabel="초대코드 복사"
-                style={[styles.inviteActionBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Icon name="copy" size={14} color={t.text} />
-                <Text style={[Typography.supporting, { color: t.text }]}>코드 복사</Text>
+                accessibilityLabel="초대코드 발급받기"
+                style={[
+                  styles.codeBox,
+                  { borderColor: t.border, backgroundColor: t.surfaceMuted },
+                ]}>
+                <Text style={[Typography.label, { color: t.primaryText }]}>초대코드 발급받기</Text>
               </Pressable>
-              <Pressable
-                onPress={() => void shareInviteLink()}
-                accessibilityRole="button"
-                accessibilityLabel="초대 링크 공유"
-                style={[styles.inviteActionBtn, { backgroundColor: t.primary }]}>
-                <Icon name="gift" size={14} color={t.onPrimary} />
-                <Text style={[Typography.supporting, { color: t.onPrimary }]}>링크 공유</Text>
-              </Pressable>
-            </View>
+            )}
+            {displayCode ? (
+              <View style={styles.inviteActions}>
+                <Pressable
+                  onPress={() => void copyInviteCode()}
+                  accessibilityRole="button"
+                  accessibilityLabel="초대코드 복사"
+                  style={[styles.inviteActionBtn, { backgroundColor: t.surfaceMuted }]}>
+                  <Icon name="copy" size={14} color={t.text} />
+                  <Text style={[Typography.supporting, { color: t.text }]}>코드 복사</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => void shareInviteLink()}
+                  accessibilityRole="button"
+                  accessibilityLabel="초대 링크 공유"
+                  style={[styles.inviteActionBtn, { backgroundColor: t.primary }]}>
+                  <Icon name="gift" size={14} color={t.onPrimary} />
+                  <Text style={[Typography.supporting, { color: t.onPrimary }]}>링크 공유</Text>
+                </Pressable>
+              </View>
+            ) : null}
           </View>
         ) : null}
 
@@ -404,7 +431,7 @@ export function HouseMembersScreen({
               </Pressable>
               <Pressable
                 onPress={() => {
-                  if (currentHouse.houseId) onReissueInviteCode?.(currentHouse.houseId);
+                  void requestIssue();
                   setShowReissueConfirm(false);
                 }}
                 accessibilityRole="button"

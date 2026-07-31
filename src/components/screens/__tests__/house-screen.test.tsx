@@ -586,15 +586,16 @@ describe('HouseScreen', () => {
     expect(onReissueInviteCode).toHaveBeenCalledWith(7);
   });
 
-  it('hides the reissue button from plain members', async () => {
-    const { getByLabelText, queryByLabelText } = await render(
+  it('부원에게도 재발급이 열린다 — 개인 초대코드 신계약 (#646)', async () => {
+    const { getByLabelText } = await render(
       <HouseScreen
         houses={[{ ...MISSION_HOUSE, inviteCode: 'ABCD2345', myRole: 'MEMBER' }]}
         onReissueInviteCode={jest.fn()}
       />,
     );
     await fireEvent.press(getByLabelText('구성원 목록'));
-    expect(queryByLabelText('초대코드 재발급')).toBeNull();
+    // 서버가 전 구성원 재발급을 허용(소유자=공용, 부원=개인 코드) — 버튼 노출.
+    expect(getByLabelText('초대코드 재발급')).toBeTruthy();
   });
 
   it('leaves the house after confirming (member)', async () => {
