@@ -35,12 +35,26 @@ export function inDragClaimZone(y0: number, cardTop: number): boolean {
   return y0 - cardTop <= DRAG_CLAIM_HEIGHT;
 }
 
+/**
+ * 끌어내리기 클레임 범위 (#657) — 'header'(기본)는 #514의 상단 64px 한정,
+ * 'card'는 카드 전체. 세로 스크롤 자식(휠·달력·ScrollView)이 없는 시트만
+ * 'card'를 켤 것 — 있으면 그 자식의 스와이프를 시트 내림으로 빼앗는다.
+ */
+export type BottomSheetDragScope = 'header' | 'card';
+
+/** 시작점 기준으로 이 드래그를 시트가 가져갈지 (#514·#657). */
+export function claimsDrag(scope: BottomSheetDragScope, y0: number, cardTop: number): boolean {
+  return scope === 'card' || inDragClaimZone(y0, cardTop);
+}
+
 export type BottomSheetProps = {
   visible: boolean;
   /** 백드롭 탭·퇴장 트리거. 닫힘 애니메이션은 이 컴포넌트가 재생한다. */
   onClose?: () => void;
   /** 시트 카드 스타일 — 각 시트의 기존 styles.sheet를 그대로 넘긴다. */
   cardStyle?: StyleProp<ViewStyle>;
+  /** 끌어내리기 클레임 범위 — 기본 'header' (#514). */
+  dragScope?: BottomSheetDragScope;
   children: ReactNode;
 };
 
@@ -49,7 +63,13 @@ export type BottomSheetProps = {
  * 닫힐 때도 같은 결로 미끄러져 내려간 뒤에야 언마운트된다(visible=false
  * 이후 퇴장 재생용 내부 rendered 상태). 백드롭은 함께 페이드.
  */
-export function BottomSheet({ visible, onClose, cardStyle, children }: BottomSheetProps) {
+export function BottomSheet({
+  visible,
+  onClose,
+  cardStyle,
+  dragScope = 'header',
+  children,
+}: BottomSheetProps) {
   const { height: windowH } = useWindowDimensions();
   const progress = useRef(new Animated.Value(0)).current;
   // 손가락으로 끌어내린 추가 오프셋(아래로만). 놓으면 0으로 튕겨 돌아가거나 닫힘.
@@ -59,9 +79,11 @@ export function BottomSheet({ visible, onClose, cardStyle, children }: BottomShe
   // 카드 상단의 화면 y (#514) — 오버레이가 창 전체를 덮으므로 layout.y가 곧
   // 페이지 좌표. transform(입장 슬라이드)은 layout에 안 잡혀 정지 위치 기준.
   const cardTopRef = useRef(0);
-  // PanResponder는 한 번만 만들어지므로 최신 onClose를 ref로 참조한다.
+  // PanResponder는 한 번만 만들어지므로 최신 onClose·dragScope를 ref로 참조한다.
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  const dragScopeRef = useRef(dragScope);
+  dragScopeRef.current = dragScope;
 
   useEffect(() => {
     if (visible) {
@@ -85,14 +107,16 @@ export function BottomSheet({ visible, onClose, cardStyle, children }: BottomShe
     });
   }, [visible, progress, dragY]);
 
-  // 아래로 끄는 팬만 가로챈다 — 수직 우세 + 카드 상단(그립/헤더)에서 시작한
-  // 드래그만 claim한다 (#514). 본문에서 시작한 세로 스와이프는 자식 스크롤
-  // (알림 시간 휠 등) 몫 — 카드 전체 클레임이 휠을 시트 내림으로 빼앗았다.
-  // 본문 아무 데나 끌어내리던 동작은 사라지고, 백드롭 탭·닫기 버튼은 유지.
+  // 아래로 끄는 팬만 가로챈다 — 수직 우세 + 클레임 범위(dragScope) 안에서
+  // 시작한 드래그만 claim한다. 기본 'header'는 카드 상단(그립/헤더) 한정
+  // (#514 — 카드 전체 클레임이 알림 시간 휠의 스와이프를 빼앗았다),
+  // 스크롤 자식이 없는 시트는 'card'로 본문 어디서든 내릴 수 있다 (#657).
   const pan = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_e, g) =>
-        g.dy > 6 && g.dy > Math.abs(g.dx) && inDragClaimZone(g.y0, cardTopRef.current),
+        g.dy > 6 &&
+        g.dy > Math.abs(g.dx) &&
+        claimsDrag(dragScopeRef.current, g.y0, cardTopRef.current),
       onPanResponderMove: (_e, g) => {
         if (g.dy > 0) dragY.setValue(g.dy);
       },
