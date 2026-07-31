@@ -14,6 +14,8 @@ import {
   View,
 } from 'react-native';
 
+import { GestureDetector } from 'react-native-gesture-handler';
+
 import { CharacterAvatar, type CharacterAnimationSet } from '@/components/character-avatar';
 import { Room } from '@/components/room/room';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
@@ -22,6 +24,7 @@ import { BearCheck } from '@/components/ui/bear-check';
 import { CategoryIcon } from '@/components/ui/category-icon';
 import { Icon } from '@/components/ui/icon';
 import { ScalePressable } from '@/components/ui/scale-pressable';
+import { horizontalFlingGesture } from '@/utils/gesture';
 import { PendingNotice } from '@/components/ui/pending-notice';
 import { RetryState } from '@/components/ui/retry-state';
 import { BookOpenPictogram, Pictogram, type PictogramName } from '@/components/ui/pictograms';
@@ -79,6 +82,11 @@ const GUESTBOOK_MAX = 500;
 
 export type FriendRoomScreenProps = {
   friendName?: string;
+  /**
+   * 방 캔버스 좌우 플링 (#644) — 같은 집의 다른 멤버 방으로 순회. 'left'
+   * 플링 = 다음 멤버. 방문 가능한 친구가 1명뿐이면 부모가 생략한다.
+   */
+  onSwipeFriend?: (dir: 'left' | 'right') => void;
   streakDays?: number;
   characterId?: CharacterId;
   /** Friend's CDN animation keys (forwarded to <Room />). */
@@ -132,6 +140,7 @@ export type FriendRoomScreenProps = {
  */
 export function FriendRoomScreen({
   friendName = '친구',
+  onSwipeFriend,
   streakDays = 7,
   characterId = DEFAULT_CHARACTER_ID,
   characterAnimations,
@@ -256,6 +265,13 @@ export function FriendRoomScreen({
   // its height as bottom padding while the input is focused and keep the input
   // in view — the same fix as the 투두 quick-add (#113).
   const scrollRef = useRef<ScrollView>(null);
+  // 멤버 순회 플링 (#644) — 최신 핸들러는 ref로 읽어 제스처를 재생성하지
+  // 않는다(#539 계약). 방 캔버스에만 부착해 세로 스크롤·다른 탭을 살린다.
+  const swipeFriendRef = useRef<(dir: 'left' | 'right') => void>(() => {});
+  swipeFriendRef.current = (dir) => onSwipeFriend?.(dir);
+  const friendFling = useRef(
+    horizontalFlingGesture('friend-room-fling', (dir) => swipeFriendRef.current(dir)),
+  ).current;
   const [inputFocused, setInputFocused] = useState(false);
   const [keyboardPad, setKeyboardPad] = useState(0);
   useEffect(() => {
@@ -351,21 +367,23 @@ export function FriendRoomScreen({
             inputFocused && keyboardPad > 0 ? { paddingBottom: keyboardPad + 120 } : null,
           ]}
           keyboardShouldPersistTaps="handled">
-          <View style={styles.roomWrap}>
-            <Room
-              characterId={characterId}
-              characterAnimations={characterAnimations}
-              wallpaperId={wallpaperId}
-              floorId={floorId}
-              backgroundId={backgroundId}
-              placedFurnitureIds={placedFurnitureIds}
-              placements={placements}
-              furniture={furniture}
-              wallpapers={wallpapers}
-              floors={floors}
-              backgrounds={backgrounds}
-            />
-          </View>
+          <GestureDetector gesture={friendFling}>
+            <View style={styles.roomWrap} collapsable={false}>
+              <Room
+                characterId={characterId}
+                characterAnimations={characterAnimations}
+                wallpaperId={wallpaperId}
+                floorId={floorId}
+                backgroundId={backgroundId}
+                placedFurnitureIds={placedFurnitureIds}
+                placements={placements}
+                furniture={furniture}
+                wallpapers={wallpapers}
+                floors={floors}
+                backgrounds={backgrounds}
+              />
+            </View>
+          </GestureDetector>
 
           {preview ? (
             <PendingNotice

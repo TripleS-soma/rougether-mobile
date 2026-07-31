@@ -1,5 +1,8 @@
 import { act, fireEvent, render } from '@testing-library/react-native';
 
+import { State } from 'react-native-gesture-handler';
+import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
+
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
 import { ToastProvider } from '@/components/ui/toast';
 
@@ -253,5 +256,28 @@ describe('FriendRoomScreen', () => {
     );
     expect(getByText('아침 기상')).toBeTruthy();
     expect(queryByText('미분류')).toBeNull();
+  });
+});
+
+describe('FriendRoomScreen — 멤버 순회 플링 (#644)', () => {
+  const fling = (translationX: number) =>
+    fireGestureHandler(getByGestureTestId('friend-room-fling'), [
+      { state: State.BEGAN },
+      { state: State.ACTIVE, translationX: 0 },
+      { state: State.ACTIVE, translationX },
+      { state: State.END, translationX },
+    ]);
+
+  it('방 캔버스 좌우 플링이 방향과 함께 onSwipeFriend를 부른다', async () => {
+    const onSwipeFriend = jest.fn();
+    await render(<FriendRoomScreen friendName="철수" onSwipeFriend={onSwipeFriend} />);
+    fling(-80);
+    expect(onSwipeFriend).toHaveBeenCalledWith('left');
+    fling(80);
+    expect(onSwipeFriend).toHaveBeenCalledWith('right');
+    // 임계 미만은 무시.
+    onSwipeFriend.mockClear();
+    fling(-20);
+    expect(onSwipeFriend).not.toHaveBeenCalled();
   });
 });
