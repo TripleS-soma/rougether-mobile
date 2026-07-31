@@ -156,7 +156,7 @@ describe('AppShell — 집 없는 유저의 집 탭 (#571)', () => {
 
     // 탐색의 뒤로가기 — (빈) 집 화면이 아니라 나의 방으로 복귀.
     await fireEvent.press(getByLabelText('뒤로 가기'));
-    await waitFor(() => getByText('오늘의 루틴'));
+    await waitFor(() => getByText('오늘의 할 일'));
   });
 });
 
@@ -168,7 +168,7 @@ describe('AppShell', () => {
       </AuthProvider>,
     );
     expect(getByText('준서의 방')).toBeTruthy(); // MyRoomScreen default
-    expect(getByText('오늘의 루틴')).toBeTruthy();
+    expect(getByText('오늘의 할 일')).toBeTruthy();
     // Bottom nav tabs present.
     expect(getByLabelText('나의 방')).toBeTruthy();
     expect(getByLabelText('집')).toBeTruthy();

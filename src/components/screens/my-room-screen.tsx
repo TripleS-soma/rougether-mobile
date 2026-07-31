@@ -1123,7 +1123,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               <View style={styles.section}>
                 <CoachTarget id="room-routines">
                   <View style={styles.sectionHead}>
-                    <Text style={[Typography.h2, { color: t.text }]}>오늘의 루틴</Text>
+                    <Text style={[Typography.h2, { color: t.text }]}>오늘의 할 일</Text>
                     <View style={styles.sectionHeadRight}>
                       {roomRoutines.length > 0 ? (
                         <Text style={[Typography.label, { color: t.primaryText }]}>
