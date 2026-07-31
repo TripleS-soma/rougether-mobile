@@ -870,6 +870,36 @@ export function AppShell({
     },
     [loadGuestbook, loadFriendRoom, catalogue],
   );
+  // 친구 방 좌우 스와이프 순회 (#644) — 현재 집의 자리 배치 순서로, 빈자리·
+  // 내 방은 건너뛰고 순환한다. 방문 가능한 친구가 1명뿐이면 스와이프 없음.
+  const visitableFriends = useMemo<VisitedFriend[]>(() => {
+    const house = arrangedHouses[houseIndex] ?? arrangedHouses[0];
+    if (!house) return [];
+    return house.floors
+      .flatMap((f) => f.rooms)
+      .filter((r) => !r.vacant && !r.isMine && r.membershipId != null)
+      .map((r) => ({
+        name: r.name,
+        userId: r.userId,
+        houseId: house.houseId,
+        membershipId: r.membershipId,
+      }));
+  }, [arrangedHouses, houseIndex]);
+  const swipeFriend = useCallback(
+    (dir: 'left' | 'right') => {
+      const list = visitableFriends;
+      if (list.length < 2) return;
+      const i = Math.max(
+        0,
+        list.findIndex((f) => f.membershipId === visitingFriend.membershipId),
+      );
+      // 왼쪽 플링 = 다음 멤버 (페이저 문법과 동일 방향감).
+      const next = list[(i + (dir === 'left' ? 1 : list.length - 1)) % list.length];
+      visitFriend(next);
+    },
+    [visitableFriends, visitingFriend.membershipId, visitFriend],
+  );
+
   // 방문 실패 시 다시 시도 (#549) — 같은 친구의 방·방명록을 다시 불러온다.
   const retryFriendRoomVisit = useCallback(() => {
     void loadGuestbook(visitingFriend.userId, visitingFriend.houseId);
@@ -1323,6 +1353,7 @@ export function AppShell({
         {screen === 'friendRoom' ? (
           <FriendRoomScreen
             friendName={visitingFriend.name}
+            onSwipeFriend={visitableFriends.length >= 2 ? swipeFriend : undefined}
             guestbook={guestbookEntries}
             guestbookLoading={guestbookLoading}
             guestbookHasNext={guestbookHasNext}
