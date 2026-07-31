@@ -41,6 +41,7 @@ import {
   FURNITURE_ITEMS,
   type FurnitureItem,
   type PlacedFurniture,
+  newFreePlacement,
   slotIdsToPlacements,
   type Wallpaper,
   WALLPAPERS,
@@ -419,24 +420,14 @@ export function RoomDecorScreen({
     setSelectedId(id);
   };
 
-  /** 아이템별 FREE 기본 위치에 새 가구를 놓는다 — 같은 가구는 방에 1개만. */
+  /** 아이템별 FREE 기본 위치에 새 가구를 놓는다 — 같은 가구는 방에 1개만.
+   * 위치 로직은 뽑기 '방에 놓기'(#622)와 공유(newFreePlacement). */
   const addItem = (item: FurnitureItem) => {
     if (items.some((p) => p.furnitureId === item.id)) {
       toast('이미 배치된 가구예요', 'error');
       return;
     }
-    const maxZ = items.reduce((m, p) => Math.max(m, p.z), 0);
-    const scale = Math.min(SCALE_MAX, Math.max(SCALE_MIN, item.defaultScale ?? 1));
-    const center = ROOM_RENDER_CONTRACT.furniture.newPlacementCenter;
-    const hasItemDefault =
-      typeof item.defaultPositionX === 'number' && typeof item.defaultPositionY === 'number';
-    const preferredX = hasItemDefault ? item.defaultPositionX! : center.x;
-    const preferredY = hasItemDefault ? item.defaultPositionY! : center.y;
-    const bounds = dragClampBounds(scale);
-    const clamp = (value: number) => Math.min(bounds.max, Math.max(bounds.min, value));
-    const x = clamp(preferredX);
-    const y = clamp(preferredY);
-    setItems((prev) => [...prev, { furnitureId: item.id, x, y, z: maxZ + 1, scale }]);
+    setItems((prev) => [...prev, newFreePlacement(item, prev)]);
   };
   const removeItem = (id: string) => {
     setItems((prev) => prev.filter((p) => p.furnitureId !== id));
