@@ -5,7 +5,7 @@ import { ToastProvider } from '@/components/ui/toast';
 
 describe('OnboardingScreen', () => {
   it('renders the first welcome slide', async () => {
-    const { getByText } = await render(<OnboardingScreen />);
+    const { getByText, getByLabelText } = await render(<OnboardingScreen />);
     expect(getByText('루게더에 오신 걸 환영해요')).toBeTruthy();
   });
 
@@ -27,7 +27,7 @@ describe('OnboardingScreen', () => {
   });
 
   it('skips straight to the goal survey', async () => {
-    const { getByText } = await render(<OnboardingScreen />);
+    const { getByText, getByLabelText } = await render(<OnboardingScreen />);
 
     await fireEvent.press(getByText('건너뛰기'));
 
@@ -36,7 +36,7 @@ describe('OnboardingScreen', () => {
 
   it('explains a missing goal pick with a toast on 시작하기', async () => {
     const onDone = jest.fn();
-    const { getByText } = await render(
+    const { getByText, getByLabelText } = await render(
       <ToastProvider>
         <OnboardingScreen onDone={onDone} />
       </ToastProvider>,
@@ -51,14 +51,18 @@ describe('OnboardingScreen', () => {
 
   it('completes the flow and reports goals + character', async () => {
     const onDone = jest.fn();
-    const { getByText } = await render(<OnboardingScreen onDone={onDone} />);
+    const { getByText, getByLabelText } = await render(<OnboardingScreen onDone={onDone} />);
 
     await fireEvent.press(getByText('건너뛰기'));
     await fireEvent.press(getByText('운동'));
     await fireEvent.press(getByText('시작하기'));
     await fireEvent.press(getByText('고양이랑 함께하기'));
+    // 닉네임 단계 (#635) — 필수 입력 후 시작(트림 검증 포함).
+    expect(onDone).not.toHaveBeenCalled();
+    await fireEvent.changeText(getByLabelText('닉네임 입력'), ' 준서 ');
+    await fireEvent.press(getByText('시작하기'));
 
-    expect(onDone).toHaveBeenCalledWith(['exercise'], 'cat');
+    expect(onDone).toHaveBeenCalledWith(['exercise'], 'cat', '준서');
   });
 
   it('starts the goal survey pre-filled with the previous selections (replay = edit)', async () => {
@@ -67,7 +71,7 @@ describe('OnboardingScreen', () => {
       { id: '10', label: '갓생 살기' },
       { id: '11', label: '아침형 인간' },
     ];
-    const { getByText } = await render(
+    const { getByText, getByLabelText } = await render(
       <OnboardingScreen onDone={onDone} goals={goals} initialGoals={['10']} />,
     );
 
@@ -77,14 +81,16 @@ describe('OnboardingScreen', () => {
     await fireEvent.press(getByText('아침형 인간'));
     await fireEvent.press(getByText('시작하기'));
     await fireEvent.press(getByText('고양이랑 함께하기'));
+    await fireEvent.changeText(getByLabelText('닉네임 입력'), '준서');
+    await fireEvent.press(getByText('시작하기'));
 
-    expect(onDone).toHaveBeenCalledWith(['10', '11'], 'cat');
+    expect(onDone).toHaveBeenCalledWith(['10', '11'], 'cat', '준서');
   });
 
   it('drops previous goal ids that no longer exist in the option list', async () => {
     const onDone = jest.fn();
     const goals = [{ id: '10', label: '갓생 살기' }];
-    const { getByText } = await render(
+    const { getByText, getByLabelText } = await render(
       <ToastProvider>
         <OnboardingScreen onDone={onDone} goals={goals} initialGoals={['999']} />
       </ToastProvider>,
@@ -99,7 +105,7 @@ describe('OnboardingScreen', () => {
 
   it('preselects the previously chosen character', async () => {
     const onDone = jest.fn();
-    const { getByText } = await render(
+    const { getByText, getByLabelText } = await render(
       <OnboardingScreen onDone={onDone} initialGoals={['exercise']} initialCharacterId="bear" />,
     );
 
@@ -107,8 +113,10 @@ describe('OnboardingScreen', () => {
     await fireEvent.press(getByText('시작하기'));
     // 이전 선택(곰)이 활성 카드 — CTA 라벨에 받침 조사('이랑')까지 반영.
     await fireEvent.press(getByText('곰이랑 함께하기'));
+    await fireEvent.changeText(getByLabelText('닉네임 입력'), '준서');
+    await fireEvent.press(getByText('시작하기'));
 
-    expect(onDone).toHaveBeenCalledWith(['exercise'], 'bear');
+    expect(onDone).toHaveBeenCalledWith(['exercise'], 'bear', '준서');
   });
 
   it('uses server goal options when provided', async () => {
@@ -117,7 +125,7 @@ describe('OnboardingScreen', () => {
       { id: '10', label: '갓생 살기' },
       { id: '11', label: '아침형 인간' },
     ];
-    const { getByText, queryByText } = await render(
+    const { getByText, queryByText, getByLabelText } = await render(
       <OnboardingScreen onDone={onDone} goals={goals} />,
     );
 
@@ -126,15 +134,17 @@ describe('OnboardingScreen', () => {
     await fireEvent.press(getByText('갓생 살기'));
     await fireEvent.press(getByText('시작하기'));
     await fireEvent.press(getByText('고양이랑 함께하기'));
+    await fireEvent.changeText(getByLabelText('닉네임 입력'), '준서');
+    await fireEvent.press(getByText('시작하기'));
 
-    expect(onDone).toHaveBeenCalledWith(['10'], 'cat');
+    expect(onDone).toHaveBeenCalledWith(['10'], 'cat', '준서');
   });
 });
 
 // 목표 선택 상한 (#598 후속) — 집 생성의 서버 제약(goalIds ≤ 3)과 맞춘다.
 describe('OnboardingScreen 목표 상한', () => {
   it('4번째 목표 선택은 차단되고 안내 토스트가 뜬다', async () => {
-    const { getByText } = await render(
+    const { getByText, getByLabelText } = await render(
       <ToastProvider>
         <OnboardingScreen />
       </ToastProvider>,
@@ -155,13 +165,15 @@ describe('OnboardingScreen 목표 상한', () => {
       { id: '3', label: 'ㄷ' },
       { id: '4', label: 'ㄹ' },
     ];
-    const { getByText } = await render(
+    const { getByText, getByLabelText } = await render(
       <OnboardingScreen onDone={onDone} goals={goals} initialGoals={['1', '2', '3', '4']} />,
     );
     await fireEvent.press(getByText('건너뛰기'));
     await fireEvent.press(getByText('시작하기'));
     await fireEvent.press(getByText('고양이랑 함께하기'));
-    expect(onDone).toHaveBeenCalledWith(['1', '2', '3'], 'cat');
+    await fireEvent.changeText(getByLabelText('닉네임 입력'), '준서');
+    await fireEvent.press(getByText('시작하기'));
+    expect(onDone).toHaveBeenCalledWith(['1', '2', '3'], 'cat', '준서');
   });
 });
 

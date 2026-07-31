@@ -7,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -58,6 +59,9 @@ export type OnboardingGoal = { id: string; label: string };
 /** 목표 선택 상한 — 집 생성의 서버 제약(goalIds ≤ 3)과 맞춘다 (#598 후속). */
 export const MAX_GOALS = 3;
 
+/** 닉네임 길이 상한 (#635) — 헤더·타일 등 표시 공간과 합의된 값. */
+export const NICKNAME_MAX = 12;
+
 const GOALS: OnboardingGoal[] = [
   { id: 'exercise', label: '운동' },
   { id: 'study', label: '공부' },
@@ -69,11 +73,13 @@ const GOALS: OnboardingGoal[] = [
 ];
 
 export type OnboardingScreenProps = {
-  onDone?: (goals: string[], characterId: CharacterId) => void;
+  onDone?: (goals: string[], characterId: CharacterId, nickname: string) => void;
   /** Goal options from the server master; falls back to the local list while empty. */
   goals?: OnboardingGoal[];
   /** Previously selected goal ids — a replay starts as an edit of these. */
   initialGoals?: string[];
+  /** 다시 보기 때 기존 닉네임 프리필 (#635) — 없으면 빈 입력. */
+  initialNickname?: string;
   /** Previously chosen character — preselected on replay. */
   initialCharacterId?: CharacterId;
   /**
@@ -97,6 +103,7 @@ export function withRang(name: string): string {
  */
 export function OnboardingScreen({
   onDone,
+  initialNickname,
   goals,
   initialGoals,
   initialCharacterId,
@@ -126,6 +133,10 @@ export function OnboardingScreen({
   const [index, setIndex] = useState(0);
   const [showGoalSurvey, setShowGoalSurvey] = useState(false);
   const [showCharacterSelect, setShowCharacterSelect] = useState(false);
+  // 닉네임 단계 (#635) — 캐릭터 다음, 시작 직전. 신규 계정의 서버 닉네임이
+  // 비어 화면 데모 기본값이 노출되던 문제의 근본 해결.
+  const [showNicknameStep, setShowNicknameStep] = useState(false);
+  const [nickname, setNickname] = useState(initialNickname ?? '');
   // Seed from the previous selections (온보딩 다시 보기 edits rather than starts
   // over); ids that no longer exist in the option list are dropped so a stale
   // id can't hold the 시작하기 button open with nothing visibly checked.
@@ -179,6 +190,55 @@ export function OnboardingScreen({
   // 하나, 다음 카드가 살짝 보이는 피크 + 도트로 스와이프를 암시한다. 활성
   // 카드만 wave(CDN webp)를 재생 — "초점을 주면 인사한다"가 애착 연출이고,
   // 로딩 지연도 정적 포즈 폴백 뒤에 숨는다.
+  // --- Nickname (#635) --- 캐릭터 다음, 시작 직전. 서버 닉네임이 비어
+  // 데모 기본값('준서')이 노출되던 신규 계정 문제의 근본 해결 — 필수 입력.
+  if (showNicknameStep) {
+    const active = characterOrder.find((c) => c.id === selectedCharacter) ?? characterOrder[0];
+    const trimmed = nickname.trim();
+    const canStart = trimmed.length > 0;
+    return (
+      <View style={[styles.screen, screenStyle]}>
+        <View style={styles.intro}>
+          <Text style={[Typography.h1, { color: t.text }]}>어떻게 불러드릴까요?</Text>
+          <Text style={[Typography.supporting, styles.introBody, { color: t.textMuted }]}>
+            {active.name}가 부를 내 이름을 정해주세요.
+          </Text>
+        </View>
+        <View style={styles.nicknameBody}>
+          <CharacterAvatar
+            characterId={selectedCharacter}
+            animations={characterAnimations?.[selectedCharacter]}
+            size={120}
+          />
+          <TextInput
+            value={nickname}
+            onChangeText={(v) => setNickname(v.slice(0, NICKNAME_MAX))}
+            placeholder="닉네임 (12자까지)"
+            placeholderTextColor={t.textDisabled}
+            autoFocus
+            autoCorrect={false}
+            maxLength={NICKNAME_MAX}
+            accessibilityLabel="닉네임 입력"
+            style={[
+              styles.nicknameInput,
+              Typography.h3,
+              { backgroundColor: t.surface, color: t.text, borderColor: t.border },
+            ]}
+          />
+        </View>
+        <View style={styles.actions}>
+          <PrimaryButton
+            label="시작하기"
+            disabled={!canStart}
+            blockedMessage="닉네임을 입력해주세요"
+            onPress={() => onDone?.(selectedGoals, selectedCharacter, trimmed)}
+          />
+          <TextButton label="이전" onPress={() => setShowNicknameStep(false)} />
+        </View>
+      </View>
+    );
+  }
+
   if (showCharacterSelect) {
     const activeIndex = Math.max(
       0,
@@ -282,7 +342,7 @@ export function OnboardingScreen({
         <View style={styles.actions}>
           <PrimaryButton
             label={`${withRang(active.name)} 함께하기`}
-            onPress={() => onDone?.(selectedGoals, selectedCharacter)}
+            onPress={() => setShowNicknameStep(true)}
           />
           <TextButton label="이전" onPress={() => setShowCharacterSelect(false)} />
         </View>
@@ -579,6 +639,22 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.two,
     paddingBottom: Spacing.three,
     gap: Spacing.two,
+  },
+  // 닉네임 단계 (#635).
+  nicknameBody: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.four,
+    paddingHorizontal: Spacing.five,
+  },
+  nicknameInput: {
+    alignSelf: 'stretch',
+    textAlign: 'center',
+    borderWidth: 1,
+    borderRadius: Radius.lg,
+    paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.four,
   },
   primaryBtn: {
     paddingVertical: Spacing.three,

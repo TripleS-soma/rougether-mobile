@@ -57,3 +57,8 @@ example
 
 # ASC API key — CI가 시크릿(ASC_API_KEY_P8)에서 복원; 로컬 제출 시 ~/credentials에서 복사
 asc-api-key.p8
+
+# 로컬 EAS 빌드 산출물
+*.apk
+*.aab
+*.ipa
