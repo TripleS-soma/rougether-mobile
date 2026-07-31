@@ -742,7 +742,8 @@ export function AppShell({
   // 변경·스트릭 갱신이 위젯에 바로 반영되게 요약을 기록하고 재렌더를 민다.
   const widgetSummarySigRef = useRef('');
   useEffect(() => {
-    if (Platform.OS !== 'android') return;
+    // 홈 위젯이 있는 플랫폼만 (#604 안드, #606 iOS) — 웹은 제외.
+    if (Platform.OS !== 'android' && Platform.OS !== 'ios') return;
     const today = todayIso();
     const summary = buildWidgetSummary(
       routines.filter((r) => isScheduledOn(r, today)),

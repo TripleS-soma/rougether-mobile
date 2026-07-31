@@ -3,6 +3,7 @@
   "main": "index.js",
   "version": "1.0.0",
   "dependencies": {
+    "@bacons/apple-targets": "^5.0.0",
     "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-firebase/analytics": "^25.1.0",
@@ -100,6 +101,7 @@
       "^@react-native-kakao/user$": "<rootDir>/jest/kakao-user-mock.js",
       "^@react-native-firebase/analytics$": "<rootDir>/jest/rn-firebase-analytics-mock.js",
       "^@react-native-firebase/crashlytics$": "<rootDir>/jest/rn-firebase-crashlytics-mock.js",
+      "^@bacons/apple-targets$": "<rootDir>/jest/apple-targets-mock.js",
       "^@/assets/(.*)$": "<rootDir>/assets/$1",
       "^@/(.*)$": "<rootDir>/src/$1",
       "^react-native-android-widget$": "<rootDir>/jest/react-native-android-widget-mock.js"

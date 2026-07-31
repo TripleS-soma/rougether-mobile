@@ -18,6 +18,9 @@
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
         }
+      },
+      "entitlements": {
+        "com.apple.security.application-groups": ["group.com.triples.rougether"]
       }
     },
     "android": {
@@ -170,6 +173,12 @@
               "updatePeriodMillis": 1800000
             }
           ]
+        }
+      ],
+      [
+        "@bacons/apple-targets",
+        {
+          "appleTeamId": "2CAPC352DD"
         }
       ]
     ],
