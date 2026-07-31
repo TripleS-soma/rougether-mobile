@@ -304,7 +304,7 @@ export type HouseScreenProps = {
   /** Hand the OWNER role to a member via the API (owner only). */
   onTransferOwnership?: (houseId: number, membershipId: number) => void;
   /** Reissue the invite code via the API (owner only; the old code expires). */
-  onReissueInviteCode?: (houseId: number) => void;
+  onReissueInviteCode?: (houseId: number) => Promise<string | null> | void;
   /**
    * 확대 카메라·자리 드래그처럼 이 화면이 제스처 전권을 가져야 하는 동안
    * true — 셸이 탭 페이저(#563)를 잠그는 데 쓴다.

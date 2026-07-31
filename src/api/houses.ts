@@ -9,6 +9,7 @@ import type {
   HouseCreateResponse,
   HouseDetailResponse,
   HouseJoinResponse,
+  InviteCodeResponse,
   HouseJoinRequestResponse,
   HouseListResponse,
   HouseMemberDayResponse,
@@ -94,7 +95,8 @@ export function rejectHouseJoinRequest(houseId: number, requestId: number) {
 
 /** POST /houses/{id}/invite-code — reissue the invite code (owner). */
 export function reissueInviteCode(houseId: number) {
-  return apiPost<HouseCreateResponse>(`/houses/${houseId}/invite-code`);
+  // 소유자=집 공용 코드(즉시가입), 부원=본인 개인 코드(승인 대기형) (#646).
+  return apiPost<InviteCodeResponse>(`/houses/${houseId}/invite-code`);
 }
 
 /** PUT /houses/{id} — edit name/description/maxMembers (owner; omitted fields keep). */

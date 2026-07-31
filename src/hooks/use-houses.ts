@@ -183,11 +183,13 @@ export function useHouses() {
     [],
   );
 
-  /** Join with an invite code; true on success (my houses refreshed). */
+  /** Join with an invite code; true=즉시 입주, 'pending'=방장 승인 대기 (#646). */
   const joinByCode = useCallback(
-    async (code: string): Promise<boolean | 'network'> => {
+    async (code: string): Promise<boolean | 'pending' | 'network'> => {
       try {
-        await joinHouseByCode(code);
+        const res = await joinHouseByCode(code);
+        // 부원 개인 코드 — 신청만 생성되고 방장 승인 후 입주가 확정된다.
+        if (res.pendingApproval) return 'pending';
         toast('입주 완료!', 'success');
         await reloadMyHouses();
         return true;
@@ -489,14 +491,19 @@ export function useHouses() {
     [toast, reloadHouse],
   );
 
+  /** 초대코드 발급/재발급 — 발급된 코드를 돌려준다(부원 개인 코드 표시용 #646). */
   const reissueInviteCode = useCallback(
-    async (houseId: number) => {
+    async (houseId: number): Promise<string | null> => {
       try {
-        await apiReissueInviteCode(houseId);
+        const res = await apiReissueInviteCode(houseId);
         toast('새 초대코드가 발급됐어요', 'success');
+        // 소유자 공용 코드는 집 상세에 실려 온다 — 목록 갱신. 부원 개인
+        // 코드는 상세에 없으므로 호출측이 반환값을 표시한다.
         await reloadHouse(houseId);
+        return res.inviteCode ?? null;
       } catch {
         toast('초대코드 재발급에 실패했어요', 'error');
+        return null;
       }
     },
     [toast, reloadHouse],

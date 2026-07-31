@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { Share } from 'react-native';
 
 import { HouseMembersScreen } from '@/components/screens/house-members-screen';
@@ -45,17 +45,24 @@ describe('HouseMembersScreen — 초대코드 복사·링크 공유 (#624)', () 
     shareSpy.mockRestore();
   });
 
-  it('초대코드가 없으면(부원 — 서버 #249 대기) 카드와 버튼이 없다', async () => {
-    const { queryByLabelText, queryByText } = await render(
+  it('부원은 발급받기로 개인 코드를 받아 복사·공유가 열린다 (#646)', async () => {
+    const onReissueInviteCode = jest.fn(async () => 'MYCODE99');
+    const { getByLabelText, getByText, queryByLabelText } = await render(
       <ToastProvider>
         <HouseMembersScreen
           {...baseProps}
           isOwner={false}
           house={{ ...HOUSE, inviteCode: undefined, myRole: 'MEMBER' }}
+          onReissueInviteCode={onReissueInviteCode}
         />
       </ToastProvider>,
     );
-    expect(queryByText('초대코드')).toBeNull();
+    // 코드가 없으면 공유 버튼 대신 발급 진입점만.
     expect(queryByLabelText('초대 링크 공유')).toBeNull();
+    await fireEvent.press(getByLabelText('초대코드 발급받기'));
+    expect(onReissueInviteCode).toHaveBeenCalledWith(1);
+    await waitFor(() => expect(getByText('MYCODE99')).toBeTruthy());
+    expect(getByLabelText('초대 링크 공유')).toBeTruthy();
+    expect(getByText(/방장 승인 후 확정/)).toBeTruthy();
   });
 });
