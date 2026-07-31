@@ -32,7 +32,7 @@
 ## 작업 흐름
 
 - **작업 시작 전 스펙 확인**: 기능 작업을 시작하기 전에 상위 폴더의 공유 계약 저장소 `../rougether-spec`를 읽으세요 — 루트의 `product.md` / `erd.md` / `api.md` / `open-questions.md`와 해당 도메인의 `domains/<도메인>/{prd,features,api}.md`(member / routine-todo / room / shop / gacha / house). 스웨거는 "지금 서버에 있는 것", 스펙은 "팀이 합의한 의도"입니다.
-- 컴포넌트를 만든 뒤에는 **`src/dev/registry.tsx`에 등록**해 Dev 탭에 노출시키고, 형제 `__tests__/*.test.tsx`를 작성하세요(React Native Testing Library; 스냅샷이 아니라 `getByText` / `getByLabelText`로 단언). `SampleButton`이 참고 패턴입니다.
+- 컴포넌트를 만든 뒤에는 **`src/dev/registry.tsx`에 등록**해 Dev 탭에 노출시키고, 형제 `__tests__/*.test.tsx`를 작성하세요(React Native Testing Library; 스냅샷이 아니라 `getByText` / `getByLabelText`로 단언). `ui/bear-check.tsx`(+ 형제 테스트)가 참고 패턴입니다.
 - 커밋 전: `npm run typecheck && npm run lint && npm run format:check && npm test` 실행. CI가 `main` 푸시와 모든 PR에서 이 네 가지를 돌리므로, 항상 통과 상태로 유지하세요.
 - 기능 하나당 `feat/<기능>` 브랜치, **`dev`로 PR** (2026-07-19부터 — main 직행 금지, 2026-07-28부터 룰셋이 강제). **PR 스택 금지** — 브랜치는 항상 `dev`에서 직접 분기하세요(중간 브랜치가 먼저 머지되면 자식 PR이 표류합니다).
 - **머지 규칙 (GitHub 룰셋으로 강제, 2026-07-28 정립)**:
