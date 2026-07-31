@@ -11,7 +11,13 @@ import {
   View,
 } from 'react-native';
 
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+  ZoomIn,
+} from 'react-native-reanimated';
 
 import { type CharacterAnimationSet, CharacterAvatar } from '@/components/character-avatar';
 import {
@@ -337,13 +343,48 @@ export function RoomDecorScreen({
   const [pendingBuy, setPendingBuy] = useState<{ id: string; name: string; price: number } | null>(
     null,
   );
+  // 구매 버튼 마이크로 전환 (#453) — 눌림(buying) → 체크 변신(done) 후 모달이
+  // 닫힌다. 성공이 확인된 뒤에만 체크를 보여준다(실패에 체크는 거짓말).
+  const [buyPhase, setBuyPhase] = useState<'idle' | 'buying' | 'done'>('idle');
+  const buyCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (buyCloseTimer.current) clearTimeout(buyCloseTimer.current);
+    },
+    [],
+  );
   /** 구매 진입점 공통 (#501) — 잔액 부족은 모달 대신 토스트로 끝낸다. */
   const requestBuy = (item: { id: string; name: string; price: number }) => {
     if (diamondBalance < item.price) {
       toast('다이아가 부족해요', 'error');
       return;
     }
+    setBuyPhase('idle');
     setPendingBuy(item);
+  };
+  const confirmPendingBuy = async () => {
+    const p = pendingBuy;
+    if (!p || buyPhase !== 'idle') return;
+    setBuyPhase('buying');
+    try {
+      // onBuy가 void를 반환하면(스토리·데모) 성공으로 간주한다.
+      const result = await Promise.resolve(onBuy?.(p.id));
+      const ok = result !== false;
+      if (!ok) {
+        // 실패 토스트는 구매 훅이 띄운다 — 모달만 닫는다.
+        setBuyPhase('idle');
+        setPendingBuy(null);
+        return;
+      }
+      setBuyPhase('done');
+      buyCloseTimer.current = setTimeout(() => {
+        setPendingBuy(null);
+        setBuyPhase('idle');
+      }, 700);
+    } catch {
+      setBuyPhase('idle');
+      setPendingBuy(null);
+    }
   };
 
   // 자유 배치 모드에선 방의 벽/바닥 밴드만 픽커 진입점이다 (가구는 트레이·전체보기).
@@ -840,8 +881,12 @@ export function RoomDecorScreen({
         transparent
         visible={pendingBuy !== null}
         animationType="fade"
-        onRequestClose={() => setPendingBuy(null)}>
-        <Pressable style={styles.confirmBackdrop} onPress={() => setPendingBuy(null)}>
+        // 결제 진행·체크 연출 중에는 닫기를 막는다 (#453) — 지출이 날아가는
+        // 중이라 취소가 성립하지 않는다.
+        onRequestClose={() => buyPhase === 'idle' && setPendingBuy(null)}>
+        <Pressable
+          style={styles.confirmBackdrop}
+          onPress={() => buyPhase === 'idle' && setPendingBuy(null)}>
           <Pressable style={[styles.confirmCard, { backgroundColor: t.screen }]}>
             <Text style={[Typography.h3, { color: t.text }]}>구매하시겠습니까?</Text>
             <Text style={[Typography.body, styles.confirmText, { color: t.textMuted }]}>
@@ -851,21 +896,34 @@ export function RoomDecorScreen({
             <View style={styles.confirmBtns}>
               <Pressable
                 onPress={() => setPendingBuy(null)}
+                disabled={buyPhase !== 'idle'}
                 accessibilityRole="button"
                 accessibilityLabel="구매 취소"
-                style={[styles.confirmBtn, { backgroundColor: t.surfaceMuted }]}>
+                style={[
+                  styles.confirmBtn,
+                  { backgroundColor: t.surfaceMuted, opacity: buyPhase === 'idle' ? 1 : 0.4 },
+                ]}>
                 <Text style={[Typography.label, { color: t.text }]}>취소</Text>
               </Pressable>
               <Pressable
-                onPress={() => {
-                  const p = pendingBuy;
-                  setPendingBuy(null);
-                  if (p) onBuy?.(p.id);
-                }}
+                onPress={() => void confirmPendingBuy()}
+                disabled={buyPhase !== 'idle'}
                 accessibilityRole="button"
                 accessibilityLabel="구매 확인"
-                style={[styles.confirmBtn, { backgroundColor: t.primary }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>구매</Text>
+                accessibilityState={{ disabled: buyPhase !== 'idle' }}
+                style={[
+                  styles.confirmBtn,
+                  { backgroundColor: t.primary },
+                  buyPhase === 'buying' && styles.confirmBtnPressed,
+                ]}>
+                {buyPhase === 'done' ? (
+                  // 성공 확인 후에만 체크 팝 (#453) — 눌림에서 튀어오르는 변신.
+                  <Animated.View entering={ZoomIn.springify().damping(11)} testID="buy-done-check">
+                    <Icon name="check" size={18} color={t.onPrimary} />
+                  </Animated.View>
+                ) : (
+                  <Text style={[Typography.label, { color: t.onPrimary }]}>구매</Text>
+                )}
               </Pressable>
             </View>
           </Pressable>
@@ -1106,6 +1164,26 @@ type BuyProps = {
   t: Tokens;
 };
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+/**
+ * 방금 보유로 바뀐 타일의 팝 (#453) — false→true 전환에서만 눌렸다 튀어오른다.
+ * 구매 확인 모달이 닫히며 카탈로그의 해당 카드가 "내 것이 됐다"고 답한다.
+ */
+function useOwnedPopStyle(isOwned: boolean) {
+  // jest의 useSharedValue는 렌더마다 새 객체 — useRef로 앵커 (#539 계약).
+  const scale = useRef(useSharedValue(1)).current;
+  const prev = useRef(isOwned);
+  useEffect(() => {
+    if (isOwned && !prev.current) {
+      scale.value = 0.8;
+      scale.value = withSpring(1, { damping: 7, stiffness: 260 });
+    }
+    prev.current = isOwned;
+  }, [isOwned, scale]);
+  return useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+}
+
 /** 비우기 tile shared by the grids — clears the slot/surface being picked. */
 function ClearTile({ onClear, t }: { onClear?: () => void; t: Tokens }) {
   const emph = useFontEmphasis();
@@ -1144,60 +1222,91 @@ function SwatchGrid({
   return (
     <View style={styles.grid}>
       <ClearTile onClear={onClear} t={t} />
-      {items.map((item) => {
-        const isOwned = owned.has(item.id);
-        // 프리뷰(#501)도 선택 링을 받는다 — 적용 중인 표면이 곧 프리뷰다.
-        const active = item.id === selectedId;
-        const affordable = diamondBalance >= item.price;
-        return (
-          <Pressable
-            key={item.id}
-            onPress={() =>
-              isOwned
-                ? onSelect(item.id)
-                : active
-                  ? // 프리뷰 적용 중 재탭 = 구매 (#501). 잔액 부족은 토스트.
-                    affordable
-                    ? onBuyRequest({ id: item.id, name: item.name, price: item.price })
-                    : onBlockedBuy()
-                  : onSelect(item.id)
-            }
-            accessibilityRole="button"
-            accessibilityState={{ selected: active }}
-            accessibilityLabel={
-              isOwned ? item.name : active ? `${item.name} 구매` : `${item.name} 미리 적용`
-            }
-            style={[
-              styles.tile,
-              {
-                backgroundColor: t.surfaceMuted,
-                borderColor: active ? t.primary : 'transparent',
-              },
-            ]}>
-            {isCdnKey(item.assetKey) ? (
-              <Image
-                source={assetSource(item.assetKey)}
-                style={styles.swatch}
-                contentFit="cover"
-                cachePolicy="memory-disk"
-                transition={120}
-              />
-            ) : (
-              <View style={[styles.swatch, { backgroundColor: item.color }]} />
-            )}
-            {/* 이름은 표시하지 않는다 (#487) — 이미지가 곧 정보. 접근성 라벨은 유지. */}
-            {isOwned ? (
-              <Text style={[styles.tilePrice, { color: t.textMuted }]}>보유</Text>
-            ) : (
-              <View style={styles.priceRow}>
-                <Icon name="diamond" size={10} color={t.primary} />
-                <Text style={[styles.tilePrice, { color: t.textMuted }]}>{item.price}</Text>
-              </View>
-            )}
-          </Pressable>
-        );
-      })}
+      {items.map((item) => (
+        <SwatchTile
+          key={item.id}
+          item={item}
+          isOwned={owned.has(item.id)}
+          // 프리뷰(#501)도 선택 링을 받는다 — 적용 중인 표면이 곧 프리뷰다.
+          active={item.id === selectedId}
+          affordable={diamondBalance >= item.price}
+          onSelect={onSelect}
+          onBuyRequest={onBuyRequest}
+          onBlockedBuy={onBlockedBuy}
+          t={t}
+        />
+      ))}
     </View>
+  );
+}
+
+/** 표면류 스와치 한 장 — 구매로 보유가 되는 순간 팝 (#453). */
+function SwatchTile({
+  item,
+  isOwned,
+  active,
+  affordable,
+  onSelect,
+  onBuyRequest,
+  onBlockedBuy,
+  t,
+}: {
+  item: Wallpaper;
+  isOwned: boolean;
+  active: boolean;
+  affordable: boolean;
+  onSelect: (id: string) => void;
+  onBuyRequest: (item: { id: string; name: string; price: number }) => void;
+  onBlockedBuy: () => void;
+  t: Tokens;
+}) {
+  const popStyle = useOwnedPopStyle(isOwned);
+  return (
+    <AnimatedPressable
+      onPress={() =>
+        isOwned
+          ? onSelect(item.id)
+          : active
+            ? // 프리뷰 적용 중 재탭 = 구매 (#501). 잔액 부족은 토스트.
+              affordable
+              ? onBuyRequest({ id: item.id, name: item.name, price: item.price })
+              : onBlockedBuy()
+            : onSelect(item.id)
+      }
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={
+        isOwned ? item.name : active ? `${item.name} 구매` : `${item.name} 미리 적용`
+      }
+      style={[
+        styles.tile,
+        popStyle,
+        {
+          backgroundColor: t.surfaceMuted,
+          borderColor: active ? t.primary : 'transparent',
+        },
+      ]}>
+      {isCdnKey(item.assetKey) ? (
+        <Image
+          source={assetSource(item.assetKey)}
+          style={styles.swatch}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={120}
+        />
+      ) : (
+        <View style={[styles.swatch, { backgroundColor: item.color }]} />
+      )}
+      {/* 이름은 표시하지 않는다 (#487) — 이미지가 곧 정보. 접근성 라벨은 유지. */}
+      {isOwned ? (
+        <Text style={[styles.tilePrice, { color: t.textMuted }]}>보유</Text>
+      ) : (
+        <View style={styles.priceRow}>
+          <Icon name="diamond" size={10} color={t.primary} />
+          <Text style={[styles.tilePrice, { color: t.textMuted }]}>{item.price}</Text>
+        </View>
+      )}
+    </AnimatedPressable>
   );
 }
 
@@ -1232,45 +1341,68 @@ function FurnitureGrid({
   return (
     <View style={styles.grid}>
       <ClearTile onClear={onClear} t={t} />
-      {items.map((item) => {
-        const isOwned = owned.has(item.id);
-        // 프리뷰(#501)도 배치 상태 링을 받는다.
-        const active = placed.includes(item.id);
-        return (
-          <Pressable
-            key={item.id}
-            // 미보유도 일단 배치(프리뷰) — 구매는 방의 프리뷰를 다시 탭 (#501).
-            onPress={() => onPlace(item)}
-            accessibilityRole="button"
-            accessibilityState={{ selected: active }}
-            accessibilityLabel={isOwned ? item.name : `${item.name} 미리 배치`}
-            style={[
-              styles.tile,
-              {
-                backgroundColor: t.surfaceMuted,
-                borderColor: active ? t.primary : 'transparent',
-              },
-            ]}>
-            {/* 미리보기는 접근성에서 숨긴다 — 타일 Pressable 라벨과 이중 안내 방지. */}
-            <View
-              style={styles.thumbWrap}
-              accessibilityElementsHidden
-              importantForAccessibility="no-hide-descendants">
-              <FurniturePlaceholder item={item} showName={false} />
-            </View>
-            {/* 이름은 표시하지 않는다 (#487) — 접근성 라벨은 유지. */}
-            {isOwned ? (
-              <Text style={[styles.tilePrice, { color: t.textMuted }]}>보유</Text>
-            ) : (
-              <View style={styles.priceRow}>
-                <Icon name="diamond" size={10} color={t.primary} />
-                <Text style={[styles.tilePrice, { color: t.textMuted }]}>{item.price}</Text>
-              </View>
-            )}
-          </Pressable>
-        );
-      })}
+      {items.map((item) => (
+        <FurnitureTile
+          key={item.id}
+          item={item}
+          isOwned={owned.has(item.id)}
+          // 프리뷰(#501)도 배치 상태 링을 받는다.
+          active={placed.includes(item.id)}
+          onPlace={onPlace}
+          t={t}
+        />
+      ))}
     </View>
+  );
+}
+
+/** 가구 타일 한 장 — 구매로 보유가 되는 순간 팝 (#453). */
+function FurnitureTile({
+  item,
+  isOwned,
+  active,
+  onPlace,
+  t,
+}: {
+  item: FurnitureItem;
+  isOwned: boolean;
+  active: boolean;
+  onPlace: (item: FurnitureItem) => void;
+  t: Tokens;
+}) {
+  const popStyle = useOwnedPopStyle(isOwned);
+  return (
+    <AnimatedPressable
+      // 미보유도 일단 배치(프리뷰) — 구매는 방의 프리뷰를 다시 탭 (#501).
+      onPress={() => onPlace(item)}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={isOwned ? item.name : `${item.name} 미리 배치`}
+      style={[
+        styles.tile,
+        popStyle,
+        {
+          backgroundColor: t.surfaceMuted,
+          borderColor: active ? t.primary : 'transparent',
+        },
+      ]}>
+      {/* 미리보기는 접근성에서 숨긴다 — 타일 Pressable 라벨과 이중 안내 방지. */}
+      <View
+        style={styles.thumbWrap}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants">
+        <FurniturePlaceholder item={item} showName={false} />
+      </View>
+      {/* 이름은 표시하지 않는다 (#487) — 접근성 라벨은 유지. */}
+      {isOwned ? (
+        <Text style={[styles.tilePrice, { color: t.textMuted }]}>보유</Text>
+      ) : (
+        <View style={styles.priceRow}>
+          <Icon name="diamond" size={10} color={t.primary} />
+          <Text style={[styles.tilePrice, { color: t.textMuted }]}>{item.price}</Text>
+        </View>
+      )}
+    </AnimatedPressable>
   );
 }
 
@@ -1472,6 +1604,10 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     paddingVertical: Spacing.three,
     alignItems: 'center',
+  },
+  // 결제 진행 중 꾹 눌린 상태 (#453) — 체크 팝 직전의 '눌림'.
+  confirmBtnPressed: {
+    transform: [{ scale: 0.94 }],
   },
   leaveBtns: {
     gap: Spacing.two,

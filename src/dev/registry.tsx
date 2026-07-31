@@ -32,6 +32,7 @@ import { SampleButton } from '@/components/sample-button';
 import { Badge } from '@/components/ui/badge';
 import { CoinIcon } from '@/components/ui/coin-icon';
 import { BearCheck } from '@/components/ui/bear-check';
+import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { CATEGORY_ICON_GEOMETRY, CategoryIcon } from '@/components/ui/category-icon';
 import { Button } from '@/components/ui/button';
@@ -130,6 +131,22 @@ export const galleryEntries: GalleryEntry[] = [
         <BearCheck checked color="#7FA8D4" />
         <BearCheck checked color="#C8869C" />
         <BearCheck checked color="#7FA87F" />
+      </View>
+    ),
+  },
+  {
+    name: 'PawRefreshScroll · 곰 발바닥 당겨서 새로고침',
+    description:
+      '나의 방·집 스크롤의 커스텀 pull-to-refresh (#454) — 맨 위에서 당기면 발바닥이 자라나고, 놓으면 새로고침 동안 두근거린다. (네이티브 전용 — 웹은 일반 스크롤)',
+    render: () => (
+      <View style={{ height: 360, alignSelf: 'stretch' }}>
+        <PawRefreshScroll
+          onRefresh={() => new Promise((resolve) => setTimeout(resolve, 1600))}
+          contentContainerStyle={{ padding: 16, gap: 12 }}>
+          {Array.from({ length: 12 }, (_, i) => (
+            <View key={i} style={{ height: 48, borderRadius: 12, backgroundColor: '#8888883A' }} />
+          ))}
+        </PawRefreshScroll>
       </View>
     ),
   },
