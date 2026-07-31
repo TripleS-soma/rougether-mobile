@@ -848,9 +848,18 @@ describe('MyRoomScreen', () => {
     await fireEvent.press(failed.getByLabelText('다시 시도'));
     expect(onRetry).toHaveBeenCalledTimes(1);
 
-    // Brand-new user: no categories, no routines → guided empty state.
-    const empty = await render(<MyRoomScreen routines={[]} categories={[]} />);
-    expect(empty.getByText('아직 루틴이 없어요.')).toBeTruthy();
+    // Brand-new user (#626): 안내 한 줄 + 미분류 그룹이 떠서 바로 추가를 시작한다.
+    const onQuickAddRoutine = jest.fn();
+    const empty = await render(
+      <MyRoomScreen routines={[]} categories={[]} onQuickAddRoutine={onQuickAddRoutine} />,
+    );
+    expect(empty.getByText(/아직 루틴이 없어요/)).toBeTruthy();
+    expect(empty.getByText('미분류')).toBeTruthy();
+    // 미분류 퀵애드가 열리고(빈 계정 예외), categoryId 없이 제출된다.
+    await fireEvent.press(empty.getByLabelText('미분류 할 일 추가'));
+    await fireEvent.changeText(empty.getByPlaceholderText('할 일 입력 후 완료'), '물 마시기');
+    await fireEvent(empty.getByPlaceholderText('할 일 입력 후 완료'), 'blur');
+    expect(onQuickAddRoutine).toHaveBeenCalledWith('', '물 마시기', expect.any(String));
   });
 
   // 인증사진형 잠시 내림 (#499) — PHOTO 루틴도 카메라 없이 일반 체크로 완료된다.
