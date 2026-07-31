@@ -28,8 +28,8 @@ function mirrorToIosWidgets(key: string, value: string) {
   if (Platform.OS !== 'ios') return;
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { ExtensionStorage } =
-      require('@bacons/apple-targets') as typeof import('@bacons/apple-targets');
+    const targets = require('@bacons/apple-targets') as typeof import('@bacons/apple-targets');
+    const { ExtensionStorage } = targets;
     new ExtensionStorage(IOS_APP_GROUP).set(key, value);
     ExtensionStorage.reloadWidget();
   } catch {
