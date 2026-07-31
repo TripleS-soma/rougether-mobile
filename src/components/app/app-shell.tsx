@@ -70,6 +70,7 @@ import { useShop } from '@/hooks/use-shop';
 import { useWeather } from '@/hooks/use-weather';
 import { useBrandTheme } from '@/hooks/use-tokens';
 import type { DrawResult } from '@/api';
+import { subscribePendingInviteCode } from '@/lib/pending-invite';
 import { assetSource } from '@/resources/asset';
 import {
   DEFAULT_WALLPAPER_ID,
@@ -474,6 +475,22 @@ export function AppShell({
       retryShop,
     ],
   );
+
+  // 초대 링크로 받은 코드 (#624) — 집 탐색을 열고 코드 미리보기를 자동 실행.
+  const [pendingJoinCode, setPendingJoinCode] = useState<string | null>(null);
+  useEffect(
+    () =>
+      subscribePendingInviteCode((code) => {
+        setPendingJoinCode(code);
+        setScreen('houseSearch');
+      }),
+    [],
+  );
+  // 탐색을 떠나면(가입 성공·뒤로가기 등 모든 경로) 소비 완료 — 다음 방문에서
+  // 자동 미리보기가 재발화하지 않게 비운다.
+  useEffect(() => {
+    if (screen !== 'houseSearch') setPendingJoinCode(null);
+  }, [screen]);
 
   const [visitingFriend, setVisitingFriend] = useState<VisitedFriend>({ name: '친구' });
   // Which house the 집 switcher is on — kept here because HouseScreen
@@ -1347,6 +1364,7 @@ export function AppShell({
 
         {screen === 'houseSearch' ? (
           <HouseSearchScreen
+            initialCode={pendingJoinCode ?? undefined}
             houses={searchHouses}
             loading={searchLoading}
             loadError={searchError}
