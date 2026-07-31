@@ -144,6 +144,7 @@ export const FURNITURE_ITEMS: FurnitureItem[] = [
     category: '가구',
     price: 800,
     assetKey: fk('bed'),
+    defaultScale: 1.7,
   },
   {
     id: 'shelf',
@@ -152,9 +153,10 @@ export const FURNITURE_ITEMS: FurnitureItem[] = [
     category: '가구',
     price: 450,
     assetKey: fk('shelf'),
+    defaultScale: 1.2,
   },
-  { id: 'window', name: '햇살 창문', slot: 'topCenter', category: '장식', price: 400, assetKey: fk('window') }, // prettier-ignore
-  { id: 'drawer', name: '민트 서랍', slot: 'topRight', category: '가구', price: 500, assetKey: fk('drawer') }, // prettier-ignore
+  { id: 'window', name: '햇살 창문', slot: 'topCenter', category: '장식', price: 400, defaultScale: 1.3, assetKey: fk('window') }, // prettier-ignore
+  { id: 'drawer', name: '민트 서랍', slot: 'topRight', category: '가구', price: 500, defaultScale: 1.2, assetKey: fk('drawer') }, // prettier-ignore
   {
     id: 'sofa',
     name: '구름 소파',
@@ -162,8 +164,9 @@ export const FURNITURE_ITEMS: FurnitureItem[] = [
     category: '가구',
     price: 700,
     assetKey: fk('sofa'),
+    defaultScale: 1.6,
   },
-  { id: 'plant', name: '초록 식물', slot: 'midLeft', category: '장식', price: 250, assetKey: fk('plant') }, // prettier-ignore
+  { id: 'plant', name: '초록 식물', slot: 'midLeft', category: '장식', price: 250, defaultScale: 0.9, assetKey: fk('plant') }, // prettier-ignore
   {
     id: 'rug',
     name: '체크 러그',
@@ -171,6 +174,7 @@ export const FURNITURE_ITEMS: FurnitureItem[] = [
     category: '러그',
     price: 380,
     assetKey: fk('rug'),
+    defaultScale: 1.8,
   },
   {
     id: 'clock',
@@ -179,6 +183,7 @@ export const FURNITURE_ITEMS: FurnitureItem[] = [
     category: '장식',
     price: 300,
     assetKey: fk('clock'),
+    defaultScale: 0.7,
   },
   // 고즈넉 한옥 테마 (가챠 보상) — 카테고리 '한옥', 상점가 0 (뽑기로만 획득)
   {
@@ -188,6 +193,7 @@ export const FURNITURE_ITEMS: FurnitureItem[] = [
     category: '한옥',
     price: 0,
     assetKey: fk('hanok-bed'),
+    defaultScale: 1.7,
     theme: 'hanok',
     rarity: '전설',
   },
@@ -198,6 +204,7 @@ export const FURNITURE_ITEMS: FurnitureItem[] = [
     category: '한옥',
     price: 0,
     assetKey: fk('hanok-shelf'),
+    defaultScale: 1.2,
     theme: 'hanok',
     rarity: '희귀',
   },
@@ -208,6 +215,7 @@ export const FURNITURE_ITEMS: FurnitureItem[] = [
     category: '한옥',
     price: 0,
     assetKey: fk('hanok-window'),
+    defaultScale: 1.3,
     theme: 'hanok',
     rarity: '희귀',
   },
@@ -218,6 +226,7 @@ export const FURNITURE_ITEMS: FurnitureItem[] = [
     category: '한옥',
     price: 0,
     assetKey: fk('hanok-rug'),
+    defaultScale: 1.8,
     theme: 'hanok',
     rarity: '일반',
   },
@@ -228,6 +237,7 @@ export const FURNITURE_ITEMS: FurnitureItem[] = [
     category: '한옥',
     price: 0,
     assetKey: fk('hanok-plant'),
+    defaultScale: 0.9,
     theme: 'hanok',
     rarity: '일반',
   },
@@ -238,6 +248,7 @@ export const FURNITURE_ITEMS: FurnitureItem[] = [
     category: '한옥',
     price: 0,
     assetKey: fk('hanok-teatable'),
+    defaultScale: 1.1,
     theme: 'hanok',
     rarity: '희귀',
   },

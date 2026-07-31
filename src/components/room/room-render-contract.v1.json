@@ -22,7 +22,7 @@
     "borderRadiusPx": 12,
     "newPlacementCenter": { "x": 0.5, "y": 0.55 },
     "previewCenter": { "x": 0.8, "y": 0.52 },
-    "editorScale": { "min": 0.5, "max": 2, "step": 0.01 },
+    "editorScale": { "min": 0.5, "max": 3.5, "step": 0.01 },
     "slots": {
       "topLeft": { "top": 0.08, "left": 0.05, "width": 0.28 },
       "topCenter": { "top": 0.08, "left": 0.36, "width": 0.28 },
