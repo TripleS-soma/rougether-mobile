@@ -22,8 +22,10 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#FEF1D6",
-        "foregroundImage": "./assets/images/icon.png"
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png",
+        "backgroundColor": "#FEF1D6"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.triples.rougether",
@@ -78,7 +80,8 @@
         "expo-image-picker",
         {
           "cameraPermission": "루틴 인증 사진을 촬영하기 위해 카메라를 사용합니다.",
-          "photosPermission": "루틴 인증 사진을 앨범에서 선택하기 위해 사진 접근 권한을 사용합니다."
+          "photosPermission": "루틴 인증 사진을 앨범에서 선택하기 위해 사진 접근 권한을 사용합니다.",
+          "microphonePermission": false
         }
       ],
       "expo-asset",
@@ -95,7 +98,16 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "루틴 인증 사진을 촬영하기 위해 카메라를 사용합니다."
+          "cameraPermission": "루틴 인증 사진을 촬영하기 위해 카메라를 사용합니다.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "방 사진을 앨범에서 불러오기 위해 사진 접근 권한을 사용합니다.",
+          "savePhotosPermission": "방 사진을 앨범에 저장하기 위해 사진 추가 권한을 사용합니다."
         }
       ],
       [
@@ -103,7 +115,9 @@
         {
           "android": {
             "usesCleartextTraffic": true,
-            "extraMavenRepos": ["https://devrepo.kakao.com/nexus/content/groups/public/"]
+            "extraMavenRepos": [
+              "https://devrepo.kakao.com/nexus/content/groups/public/"
+            ]
           },
           "ios": {
             "useFrameworks": "static"
