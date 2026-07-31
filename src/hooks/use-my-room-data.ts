@@ -667,6 +667,8 @@ export function useMyRoomData() {
       error,
       /** Re-run the full load cycle (used by the error state's 다시 시도). */
       retry: load,
+      /** 조용한 전체 리페치 (#454 당겨서 새로고침) — 로딩 화면 없이 갱신. */
+      reload,
       toggleCompletion,
       toggleCalendarItem,
       saveProfile,
@@ -701,6 +703,7 @@ export function useMyRoomData() {
       loading,
       error,
       load,
+      reload,
       toggleCompletion,
       toggleCalendarItem,
       saveProfile,

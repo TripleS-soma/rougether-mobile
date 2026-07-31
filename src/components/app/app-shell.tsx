@@ -229,6 +229,7 @@ export function AppShell({
     loading: myRoomLoading,
     error: myRoomError,
     retry: retryMyRoom,
+    reload: reloadMyRoom,
     toggleCompletion,
     toggleCalendarItem,
     saveProfile,
@@ -346,6 +347,23 @@ export function AppShell({
     transferOwnership,
     reissueInviteCode,
   } = useHouses();
+
+  // 당겨서 새로고침 (#454) — 실패해도 조용히 접는다(각 훅이 상태를 유지하고,
+  // 인디케이터는 어차피 되돌아간다). 나의 방은 전체 리페치, 집은 목록 리로드.
+  const refreshMyRoom = useCallback(async () => {
+    try {
+      await reloadMyRoom();
+    } catch {
+      // 유지 — 기존 데이터가 그대로 남는다.
+    }
+  }, [reloadMyRoom]);
+  const refreshHousePull = useCallback(async () => {
+    try {
+      await refreshHouses();
+    } catch {
+      // 유지.
+    }
+  }, [refreshHouses]);
 
   // Locally saved tile arrangements (#278) — the 집 화면 shows arranged houses
   // and drag-and-drop swaps persist per viewer+house on this device.
@@ -1036,6 +1054,7 @@ export function AppShell({
               onManageCategories={openCategoryManage}
               onUpdateCategory={updateRoutineCategory}
               onOpenGacha={openGacha}
+              onRefresh={refreshMyRoom}
               onQuickAddRoutine={quickAddTodo}
               quickAddDisabledCategoryIds={houseCategoryIds}
               onRenameRoutine={renameRoutine}
@@ -1051,6 +1070,7 @@ export function AppShell({
               loading={housesLoading}
               loadError={housesError}
               onRetry={retryHouses}
+              onRefresh={refreshHousePull}
               covers={houseCovers}
               characterId={wornCharacterId}
               userName={nickname}

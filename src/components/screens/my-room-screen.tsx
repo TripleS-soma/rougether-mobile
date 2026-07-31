@@ -37,6 +37,7 @@ import { TodoDateDialog } from '@/components/screens/sheets/todo-date-dialog';
 import { Calendar } from '@/components/ui/calendar';
 import { CoachTarget } from '@/components/ui/coach-mark';
 import { CategoryIcon } from '@/components/ui/category-icon';
+import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
 import { Pictogram } from '@/components/ui/pictograms';
 import { RetryState } from '@/components/ui/retry-state';
 import { useToast } from '@/components/ui/toast';
@@ -224,6 +225,8 @@ export type MyRoomScreenProps = {
     date: string,
   ) => void | Promise<{ rewardAmount: number } | null | undefined>;
   onOpenGacha?: () => void;
+  /** 당겨서 새로고침 (#454) — 서버 데이터 전체 리로드. resolve까지 발바닥이 두근거린다. */
+  onRefresh?: () => Promise<void> | void;
   /** Quick-add a todo to a category with a due date (the + on a category header). */
   onQuickAddRoutine?: (category: string, title: string, dueDate: string) => void;
   /**
@@ -357,6 +360,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   onUpdateCategory,
   onToggleCompletion,
   onOpenGacha,
+  onRefresh,
   onQuickAddRoutine,
   quickAddDisabledCategoryIds = [],
   onRenameRoutine,
@@ -1061,8 +1065,10 @@ export const MyRoomScreen = memo(function MyRoomScreen({
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView
-          ref={scrollRef}
+        <PawRefreshScroll
+          scrollRef={scrollRef}
+          onRefresh={onRefresh}
+          refreshTestID="my-room-refresh"
           contentContainerStyle={[
             styles.body,
             addingCategory && keyboardPad > 0 ? { paddingBottom: keyboardPad + 120 } : null,
@@ -1255,7 +1261,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               )}
             </View>
           )}
-        </ScrollView>
+        </PawRefreshScroll>
       </KeyboardAvoidingView>
 
       <CategoryFormSheet

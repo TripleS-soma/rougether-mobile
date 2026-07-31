@@ -363,6 +363,44 @@ describe('RoomDecorScreen — 프리뷰·구매 (#501)', () => {
     expect(onBuy).toHaveBeenCalledWith('plant');
   });
 
+  it('구매 성공 시 버튼이 체크로 변신하고 모달이 닫힌다 (#453)', async () => {
+    const onBuy = jest.fn(async () => true);
+    const { getByText, getByLabelText, getByTestId, queryByText } = await render(
+      <RoomDecorScreen initialItems={[]} ownedIds={['bed']} diamondBalance={9999} onBuy={onBuy} />,
+    );
+
+    await fireEvent.press(getByLabelText('소품 탭'));
+    await fireEvent.press(getByLabelText('초록 식물 미리 배치'));
+    await layoutCanvas(getByTestId);
+    await tapItem('plant');
+    await tapItem('plant');
+    expect(getByText(/초록 식물.*구매해요/)).toBeTruthy();
+
+    await fireEvent.press(getByLabelText('구매 확인'));
+    // 성공 확인 후 체크가 팝 — 연출 동안 모달은 아직 열려 있고 닫기는 잠긴다.
+    await waitFor(() => expect(getByTestId('buy-done-check')).toBeTruthy());
+    expect(getByText('구매하시겠습니까?')).toBeTruthy();
+    // 연출(700ms)이 끝나면 저절로 닫힌다.
+    await waitFor(() => expect(queryByText('구매하시겠습니까?')).toBeNull(), { timeout: 1500 });
+  });
+
+  it('구매 실패면 체크 없이 모달만 닫힌다 (#453)', async () => {
+    const onBuy = jest.fn(async () => false);
+    const { getByLabelText, getByTestId, queryByTestId, queryByText } = await render(
+      <RoomDecorScreen initialItems={[]} ownedIds={['bed']} diamondBalance={9999} onBuy={onBuy} />,
+    );
+
+    await fireEvent.press(getByLabelText('소품 탭'));
+    await fireEvent.press(getByLabelText('초록 식물 미리 배치'));
+    await layoutCanvas(getByTestId);
+    await tapItem('plant');
+    await tapItem('plant');
+
+    await fireEvent.press(getByLabelText('구매 확인'));
+    await waitFor(() => expect(queryByText('구매하시겠습니까?')).toBeNull());
+    expect(queryByTestId('buy-done-check')).toBeNull();
+  });
+
   it('선택 툴바에 구매 버튼은 없다 — 구매는 프리뷰 재탭으로만', async () => {
     const { getByLabelText, getByTestId, queryByLabelText } = await render(
       <RoomDecorScreen initialItems={[]} ownedIds={['bed']} diamondBalance={9999} />,

@@ -6,7 +6,6 @@ import {
   Easing,
   PanResponder,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -22,6 +21,7 @@ import { Room } from '@/components/room/room';
 import { HouseMembersScreen } from '@/components/screens/house-members-screen';
 import { HouseMissionsSheet } from '@/components/screens/sheets/house-missions-sheet';
 import { Icon } from '@/components/ui/icon';
+import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
 import {
   CrownPictogram,
   HousePictogram,
@@ -249,6 +249,8 @@ export type HouseScreenProps = {
   loadError?: boolean;
   /** Re-run the failed load (다시 시도 button). */
   onRetry?: () => void;
+  /** 당겨서 새로고침 (#454) — 내 집 목록 조용한 리로드. */
+  onRefresh?: () => Promise<void> | void;
   characterId?: CharacterId;
   /** 헤더 프로필 블록 — 나의 방 헤더와 같은 아바타·닉네임·스트릭 (#420). */
   userName?: string;
@@ -335,6 +337,7 @@ export const HouseScreen = memo(function HouseScreen({
   loading = false,
   loadError = false,
   onRetry,
+  onRefresh,
   characterId = DEFAULT_CHARACTER_ID,
   userName = '준서',
   streakDays = 0,
@@ -1056,7 +1059,11 @@ export const HouseScreen = memo(function HouseScreen({
       </View>
 
       {/* 타일 드래그 중에는 스크롤이 제스처를 뺏지 않게 잠근다 (#278). */}
-      <ScrollView
+      <PawRefreshScroll
+        onRefresh={onRefresh}
+        // 자리 드래그 중 당김 잠금 — 놓는 순간 새로고침이 배치를 끊지 않게.
+        refreshDisabled={dragSeat != null}
+        refreshTestID="house-refresh"
         contentContainerStyle={styles.body}
         scrollEnabled={dragSeat == null}
         testID="house-scroll">
@@ -1269,7 +1276,7 @@ export const HouseScreen = memo(function HouseScreen({
             );
           })}
         </View>
-      </ScrollView>
+      </PawRefreshScroll>
 
       {/* 공동 미션 플로팅 버튼 (#287) — 보상 수령 가능하면 점 표시. */}
       <ScalePressable
