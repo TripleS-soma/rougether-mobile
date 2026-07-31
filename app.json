@@ -112,6 +112,7 @@
       ],
       "@react-native-firebase/app",
       "@react-native-firebase/messaging",
+      "@react-native-firebase/crashlytics",
       "./plugins/with-fcm-channel-manifest-fix.js",
       [
         "@react-native-google-signin/google-signin",

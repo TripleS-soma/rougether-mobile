@@ -5,7 +5,9 @@
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-firebase/analytics": "^25.1.0",
     "@react-native-firebase/app": "^25.1.0",
+    "@react-native-firebase/crashlytics": "^25.1.0",
     "@react-native-firebase/messaging": "^25.1.0",
     "@react-native-google-signin/google-signin": "^16.1.2",
     "@react-native-kakao/core": "^2.4.6",
@@ -96,6 +98,8 @@
       "^@react-native-kakao/core$": "<rootDir>/jest/kakao-core-mock.js",
       "^expo-apple-authentication$": "<rootDir>/jest/expo-apple-authentication-mock.js",
       "^@react-native-kakao/user$": "<rootDir>/jest/kakao-user-mock.js",
+      "^@react-native-firebase/analytics$": "<rootDir>/jest/rn-firebase-analytics-mock.js",
+      "^@react-native-firebase/crashlytics$": "<rootDir>/jest/rn-firebase-crashlytics-mock.js",
       "^@/assets/(.*)$": "<rootDir>/assets/$1",
       "^@/(.*)$": "<rootDir>/src/$1",
       "^react-native-android-widget$": "<rootDir>/jest/react-native-android-widget-mock.js"
