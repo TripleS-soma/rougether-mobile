@@ -72,12 +72,7 @@ import { useBrandTheme } from '@/hooks/use-tokens';
 import type { DrawResult } from '@/api';
 import { subscribePendingInviteCode } from '@/lib/pending-invite';
 import { assetSource } from '@/resources/asset';
-import {
-  DEFAULT_WALLPAPER_ID,
-  type FurnitureItem,
-  newFreePlacement,
-  type PlacedFurniture,
-} from '@/resources/furniture';
+import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furniture';
 
 type Screen =
   | 'myRoom'
@@ -434,47 +429,20 @@ export function AppShell({
     setBackgroundId(placement.backgroundId);
   }, [placement]);
 
-  // 뽑기 결과 원탭 배치 (#622) — 신규 획득 가구를 기본 위치에 놓고 즉시 저장.
-  // 여러 장(전부 놓기)도 저장은 한 번. userItemId는 refreshOwned로 확보한 뒤
-  // 저장한다(onDraw의 fire-and-forget 리싱크와의 경합 방지).
+  // 뽑기 → 가구 배치하러 가기 (#630, #622 개편) — 방금 뽑은 아이템을 꾸미기
+  // 카탈로그에서 NEW로 강조한다. 꾸미기를 떠나면 강조를 비워 일반 진입과 구분.
   const placeableFurnitureIds = useMemo(
     () => catalogue.furniture.map((f) => f.id),
     [catalogue.furniture],
   );
-  const placeDrawnItems = useCallback(
-    async (results: DrawResult[]): Promise<boolean> => {
-      const targets = results
-        .map((r) => catalogue.furniture.find((f) => f.id === String(r.itemId)))
-        .filter((f): f is FurnitureItem => !!f);
-      if (targets.length === 0) return false;
-      await refreshOwned();
-      let next = placedItems;
-      for (const item of targets) {
-        if (next.some((pl) => pl.furnitureId === item.id)) continue;
-        next = [...next, newFreePlacement(item, next)];
-      }
-      if (next === placedItems) return true;
-      const result = await saveLayout(next, wallpaperId, floorId, backgroundId);
-      if (result === 'ok') {
-        setPlacedItems(next);
-        setPlacedFurnitureIds(next.map((pl) => pl.furnitureId));
-        return true;
-      }
-      // 충돌(다른 기기 선저장)은 최신 레이아웃을 다시 받아 재시도 가능하게.
-      if (result === 'conflict') void retryShop();
-      return false;
-    },
-    [
-      catalogue.furniture,
-      refreshOwned,
-      placedItems,
-      saveLayout,
-      wallpaperId,
-      floorId,
-      backgroundId,
-      retryShop,
-    ],
-  );
+  const [newDecorItemIds, setNewDecorItemIds] = useState<string[]>([]);
+  const goPlaceDrawn = useCallback((results: DrawResult[]) => {
+    setNewDecorItemIds(results.map((r) => String(r.itemId)).filter(Boolean));
+    setScreen('decor');
+  }, []);
+  useEffect(() => {
+    if (screen !== 'decor') setNewDecorItemIds([]);
+  }, [screen]);
 
   // 초대 링크로 받은 코드 (#624) — 집 탐색을 열고 코드 미리보기를 자동 실행.
   const [pendingJoinCode, setPendingJoinCode] = useState<string | null>(null);
@@ -1213,6 +1181,7 @@ export function AppShell({
         {screen === 'decor' ? (
           <RoomDecorScreen
             initialItems={placedItems}
+            highlightItemIds={newDecorItemIds}
             freeLayout={placement.freeLayout}
             initialWallpaperId={wallpaperId}
             initialFloorId={floorId}
@@ -1315,7 +1284,7 @@ export function AppShell({
               return results;
             }}
             placeableItemIds={placeableFurnitureIds}
-            onPlaceInRoom={placeDrawnItems}
+            onGoPlace={goPlaceDrawn}
             // 뽑기 성공 = 미션 2 완료 (#571) — 연출이 끝나고 확인을 누른
             // 순간에. 뽑기 직후 완료시키면 미션 시트가 연출을 덮는다.
             onResultsConfirmed={() => completeMission('first-draw')}

@@ -105,6 +105,8 @@ export type RoomDecorScreenProps = {
   ) => Promise<'ok' | 'conflict' | 'fail'> | void;
   /** 리비전 충돌 모달의 '새로 불러오기' — 서버 상태로 재로드 후 화면을 나간다. */
   onConflictReload?: () => void;
+  /** 방금 뽑은 아이템 id (#630) — 카탈로그 맨 앞 정렬 + NEW 배지로 강조. */
+  highlightItemIds?: string[];
 };
 
 /**
@@ -120,6 +122,7 @@ export function RoomDecorScreen({
   initialItems,
   freeLayout = false,
   onConflictReload,
+  highlightItemIds,
   initialWallpaperId = DEFAULT_WALLPAPER_ID,
   initialFloorId = null,
   initialBackgroundId = null,
@@ -492,12 +495,17 @@ export function RoomDecorScreen({
   const furnitureTabItems = useMemo(() => furniture.filter((i) => !isDecorItem(i)), [furniture]);
   const decorTabItems = useMemo(() => furniture.filter(isDecorItem), [furniture]);
   const isSurfacePicker = picker === 'wallpaper' || picker === 'floor' || picker === 'background';
+  // 방금 뽑은 아이템(#630)이 맨 앞, 그다음 보유 순 — 뽑기에서 넘어온 사용자가
+  // 찾을 필요 없게 한다.
+  const highlightSet = useMemo(() => new Set(highlightItemIds ?? []), [highlightItemIds]);
   const byOwnedFirst = useCallback(
     <T extends { id: string }>(arr: T[]) =>
       (ownedOnly ? arr.filter((i) => owned.has(i.id)) : [...arr]).sort(
-        (a, b) => Number(owned.has(b.id)) - Number(owned.has(a.id)),
+        (a, b) =>
+          Number(highlightSet.has(b.id)) - Number(highlightSet.has(a.id)) ||
+          Number(owned.has(b.id)) - Number(owned.has(a.id)),
       ),
-    [ownedOnly, owned],
+    [ownedOnly, owned, highlightSet],
   );
   const sortedWallpapers = useMemo(() => byOwnedFirst(wallpapers), [byOwnedFirst, wallpapers]);
   const sortedFloors = useMemo(() => byOwnedFirst(floors), [byOwnedFirst, floors]);
@@ -799,6 +807,7 @@ export function RoomDecorScreen({
                 // 배치 안 된 가구는 방 가운데로 추가, 배치된 가구는 다시 빼기.
                 onPlace={(item) => (placed.includes(item.id) ? removeItem(item.id) : addItem(item))}
                 owned={owned}
+                highlighted={highlightSet}
                 t={t}
               />
             ) : null}
@@ -1312,6 +1321,7 @@ function FurnitureGrid({
   onPlace,
   onClear,
   owned,
+  highlighted,
   t,
 }: {
   items: FurnitureItem[];
@@ -1319,6 +1329,8 @@ function FurnitureGrid({
   onPlace: (item: FurnitureItem) => void;
   onClear?: () => void;
   owned: Set<string>;
+  /** 방금 뽑은 아이템 (#630) — NEW 배지. */
+  highlighted?: Set<string>;
   t: Tokens;
 }) {
   const Typography = useTypography();
@@ -1339,6 +1351,7 @@ function FurnitureGrid({
           isOwned={owned.has(item.id)}
           // 프리뷰(#501)도 배치 상태 링을 받는다.
           active={placed.includes(item.id)}
+          isNew={highlighted?.has(item.id)}
           onPlace={onPlace}
           t={t}
         />
@@ -1347,17 +1360,19 @@ function FurnitureGrid({
   );
 }
 
-/** 가구 타일 한 장 — 구매로 보유가 되는 순간 팝 (#453). */
+/** 가구 타일 한 장 — 구매로 보유가 되는 순간 팝 (#453), 방금 뽑은 건 NEW (#630). */
 function FurnitureTile({
   item,
   isOwned,
   active,
+  isNew = false,
   onPlace,
   t,
 }: {
   item: FurnitureItem;
   isOwned: boolean;
   active: boolean;
+  isNew?: boolean;
   onPlace: (item: FurnitureItem) => void;
   t: Tokens;
 }) {
@@ -1384,6 +1399,13 @@ function FurnitureTile({
         importantForAccessibility="no-hide-descendants">
         <FurniturePlaceholder item={item} showName={false} />
       </View>
+      {isNew ? (
+        <View
+          style={[styles.newBadge, { backgroundColor: t.warning }]}
+          testID={`new-badge-${item.id}`}>
+          <Text style={[styles.newBadgeText, { color: t.onPrimary }]}>NEW</Text>
+        </View>
+      ) : null}
       {/* 이름은 표시하지 않는다 (#487) — 접근성 라벨은 유지. */}
       {isOwned ? (
         <Text style={[styles.tilePrice, { color: t.textMuted }]}>보유</Text>
@@ -1599,6 +1621,18 @@ const styles = StyleSheet.create({
   // 결제 진행 중 꾹 눌린 상태 (#453) — 체크 팝 직전의 '눌림'.
   confirmBtnPressed: {
     transform: [{ scale: 0.94 }],
+  },
+  // 방금 뽑은 아이템 (#630) — 타일 좌상단 NEW 배지.
+  newBadge: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    borderRadius: 999,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+  newBadgeText: {
+    fontSize: 9,
   },
   leaveBtns: {
     gap: Spacing.two,
