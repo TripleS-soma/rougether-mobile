@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { Image } from 'expo-image';
+import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, BackHandler, Easing, Linking, Platform, StyleSheet, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
@@ -48,7 +49,7 @@ import {
   DEFAULT_CHARACTER_ID,
   type CharacterId,
 } from '@/constants/characters';
-import { PolicyUrls, SUPPORT_EMAIL } from '@/constants/policy';
+import { SUPPORT_EMAIL } from '@/constants/policy';
 import { CATEGORY_COLORS, type Routine } from '@/constants/routines';
 import { screenView, track } from '@/lib/analytics';
 import { onNotificationTap } from '@/lib/push-events';
@@ -1058,8 +1059,15 @@ export function AppShell({
     setScreen('inviteFriends');
     void loadInvites();
   }, [loadInvites]);
-  const openTerms = useCallback(() => openExternal(PolicyUrls.terms), [openExternal]);
-  const openPrivacy = useCallback(() => openExternal(PolicyUrls.privacy), [openExternal]);
+  // 약관/처리방침은 외부 브라우저 대신 인앱 웹뷰 라우트로 (#652).
+  const openTerms = useCallback(
+    () => router.push({ pathname: '/policy', params: { doc: 'terms' } }),
+    [],
+  );
+  const openPrivacy = useCallback(
+    () => router.push({ pathname: '/policy', params: { doc: 'privacy' } }),
+    [],
+  );
   const openBugReport = useCallback(() => {
     setScreen('bugReport');
     void loadBugReports();
