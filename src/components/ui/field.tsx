@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 16,
     paddingVertical: Spacing.half,
   },
   msg: {

@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
   },
   noticeText: {
-    lineHeight: 18,
+    lineHeight: 20,
   },
   introTitleRow: {
     flexDirection: 'row',
@@ -465,7 +465,7 @@ const styles = StyleSheet.create({
     gap: Spacing.one,
   },
   introSub: {
-    fontSize: 14,
+    fontSize: 16,
   },
   card: {
     marginHorizontal: Spacing.four,
@@ -501,7 +501,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 16,
     paddingVertical: Spacing.half,
   },
   code: {
@@ -524,7 +524,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   agreeAllText: {
-    fontSize: 15,
+    fontSize: 17,
   },
   agreeItem: {
     flexDirection: 'row',
@@ -538,7 +538,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   agreeLabel: {
-    fontSize: 14,
+    fontSize: 16,
   },
   viewLink: {
     textDecorationLine: 'underline',

@@ -1605,7 +1605,7 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   confirmText: {
-    lineHeight: 22,
+    lineHeight: 24,
   },
   confirmBtns: {
     flexDirection: 'row',
@@ -1632,7 +1632,7 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
   },
   newBadgeText: {
-    fontSize: 9,
+    fontSize: 11,
   },
   leaveBtns: {
     gap: Spacing.two,
@@ -1685,12 +1685,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   tileName: {
-    fontSize: 11,
-    lineHeight: 14,
+    fontSize: 13,
+    lineHeight: 16,
     minHeight: 28,
   },
   tilePrice: {
-    fontSize: 10,
+    fontSize: 12,
   },
   applyBar: {
     paddingHorizontal: Spacing.four,

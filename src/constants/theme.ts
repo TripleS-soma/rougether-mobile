@@ -655,18 +655,19 @@ export type TypeStyle = {
  * Type scale, following the Astryx standard: named roles built on a modular
  * scale (base ≈ 16, ratio ≈ 1.2; nudged to clean values for mobile). Pair with
  * a color via tokens, e.g. `<Text style={[Typography.body, { color: t.text }]}>`.
+ * 전 롤 +2px 상향 (#659) — "전체적으로 작다" 피드백; fontSize·lineHeight 세트.
  */
 export const Typography: Record<TypeRole, TypeStyle> = {
-  display1: { fontSize: 34, lineHeight: 40, fontWeight: FontWeight.bold },
-  display2: { fontSize: 28, lineHeight: 34, fontWeight: FontWeight.bold },
-  h1: { fontSize: 24, lineHeight: 30, fontWeight: FontWeight.bold },
-  h2: { fontSize: 20, lineHeight: 26, fontWeight: FontWeight.bold },
-  h3: { fontSize: 18, lineHeight: 24, fontWeight: FontWeight.semibold },
-  large: { fontSize: 18, lineHeight: 26, fontWeight: FontWeight.medium },
-  body: { fontSize: 16, lineHeight: 24, fontWeight: FontWeight.normal },
-  label: { fontSize: 14, lineHeight: 20, fontWeight: FontWeight.semibold },
-  supporting: { fontSize: 12, lineHeight: 16, fontWeight: FontWeight.normal },
-  code: { fontSize: 13, lineHeight: 18, fontWeight: FontWeight.medium },
+  display1: { fontSize: 36, lineHeight: 42, fontWeight: FontWeight.bold },
+  display2: { fontSize: 30, lineHeight: 36, fontWeight: FontWeight.bold },
+  h1: { fontSize: 26, lineHeight: 32, fontWeight: FontWeight.bold },
+  h2: { fontSize: 22, lineHeight: 28, fontWeight: FontWeight.bold },
+  h3: { fontSize: 20, lineHeight: 26, fontWeight: FontWeight.semibold },
+  large: { fontSize: 20, lineHeight: 28, fontWeight: FontWeight.medium },
+  body: { fontSize: 18, lineHeight: 26, fontWeight: FontWeight.normal },
+  label: { fontSize: 16, lineHeight: 22, fontWeight: FontWeight.semibold },
+  supporting: { fontSize: 14, lineHeight: 18, fontWeight: FontWeight.normal },
+  code: { fontSize: 15, lineHeight: 20, fontWeight: FontWeight.medium },
 };
 
 // ---------- 앱 폰트 선택 (#382) ----------

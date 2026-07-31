@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarGlyph: {
-    fontSize: 18,
+    fontSize: 20,
   },
   coinPill: {
     marginLeft: 'auto',
@@ -164,8 +164,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   addGlyph: {
-    fontSize: 22,
-    lineHeight: 24,
+    fontSize: 24,
+    lineHeight: 26,
   },
   cta: {
     borderRadius: Radius.md,

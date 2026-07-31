@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
   },
   noticeText: {
-    lineHeight: 18,
+    lineHeight: 20,
   },
   footer: {
     padding: Spacing.four,

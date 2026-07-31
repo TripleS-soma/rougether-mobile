@@ -28,7 +28,7 @@ export function Badge({ label, background, color }: BadgeProps) {
 
 const styles = StyleSheet.create({
   badge: {
-    fontSize: 10,
+    fontSize: 12,
     overflow: 'hidden',
     borderRadius: Radius.pill,
     paddingHorizontal: Spacing.two,

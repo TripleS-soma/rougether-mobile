@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  previewBadgeText: { fontSize: 10 },
+  previewBadgeText: { fontSize: 12 },
   ring: {
     ...StyleSheet.absoluteFillObject,
     borderWidth: 2.5,

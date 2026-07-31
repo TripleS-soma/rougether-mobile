@@ -78,8 +78,8 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   name: {
-    fontSize: 10,
-    lineHeight: 13,
+    fontSize: 12,
+    lineHeight: 15,
     textAlign: 'center',
   },
 });

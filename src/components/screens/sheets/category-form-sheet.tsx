@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.three,
   },
-  nameInput: { fontSize: 16, paddingVertical: Spacing.three },
+  nameInput: { fontSize: 18, paddingVertical: Spacing.three },
   emojiGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 16,
     textAlign: 'center',
   },
   card: {
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   errorText: {
-    fontSize: 13,
+    fontSize: 15,
     textAlign: 'center',
     marginTop: Spacing.two,
   },
@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
     left: Spacing.four,
   },
   socialLabel: {
-    fontSize: 15,
+    fontSize: 17,
   },
   recentBadge: {
     position: 'absolute',
@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
   },
   recentBadgeText: {
-    fontSize: 11,
+    fontSize: 13,
   },
   footer: {
     flexDirection: 'row',

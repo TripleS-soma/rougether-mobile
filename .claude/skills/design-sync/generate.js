@@ -159,16 +159,16 @@ const DARK = {
   },
 };
 const TYPE = {
-  display1: [34, 40, 700],
-  display2: [28, 34, 700],
-  h1: [24, 30, 700],
-  h2: [20, 26, 700],
-  h3: [18, 24, 600],
-  large: [18, 26, 500],
-  body: [16, 24, 400],
-  label: [14, 20, 600],
-  supporting: [12, 16, 400],
-  code: [13, 18, 500],
+  display1: [36, 42, 700],
+  display2: [30, 36, 700],
+  h1: [26, 32, 700],
+  h2: [22, 28, 700],
+  h3: [20, 26, 600],
+  large: [20, 28, 500],
+  body: [18, 26, 400],
+  label: [16, 22, 600],
+  supporting: [14, 18, 400],
+  code: [15, 20, 500],
 };
 const SPACING = { half: 2, one: 4, two: 8, three: 16, four: 24, five: 32, six: 64 };
 const RADIUS = { sm: 8, md: 12, lg: 16, pill: 999 };

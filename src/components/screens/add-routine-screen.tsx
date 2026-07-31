@@ -649,7 +649,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     padding: Spacing.two,
   },
-  titleInput: { flex: 1, fontSize: 16, paddingVertical: Spacing.one },
+  titleInput: { flex: 1, fontSize: 18, paddingVertical: Spacing.one },
   chips: { gap: Spacing.two, paddingVertical: Spacing.half },
   chip: {
     flexDirection: 'row',
@@ -722,7 +722,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  chevron: { fontSize: 20 },
+  chevron: { fontSize: 22 },
   footer: {
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.three,

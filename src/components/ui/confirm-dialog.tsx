@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   body: {
-    lineHeight: 22,
+    lineHeight: 24,
   },
   btns: {
     flexDirection: 'row',

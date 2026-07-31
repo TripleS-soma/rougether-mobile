@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.one,
   },
-  meta: { fontSize: 11, marginTop: 2 },
+  meta: { fontSize: 13, marginTop: 2 },
   labeled: { gap: Spacing.one },
   fieldLabel: { marginLeft: Spacing.one },
   sectionLabel: { marginLeft: Spacing.one },
@@ -412,8 +412,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
   },
-  input: { flex: 1, fontSize: 14, paddingVertical: Spacing.half },
-  counter: { fontSize: 10 },
+  input: { flex: 1, fontSize: 16, paddingVertical: Spacing.half },
+  counter: { fontSize: 12 },
   themeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   themeCell: {
     width: '31%',
@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     gap: Spacing.half,
   },
-  privacySub: { fontSize: 11 },
+  privacySub: { fontSize: 13 },
   codeRow: { flexDirection: 'row', gap: Spacing.two },
   codeBox: {
     flex: 1,
@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  hint: { fontSize: 11, marginLeft: Spacing.one },
+  hint: { fontSize: 13, marginLeft: Spacing.one },
   submit: {
     marginTop: Spacing.two,
     paddingVertical: Spacing.three,

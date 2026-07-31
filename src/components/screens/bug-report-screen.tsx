@@ -251,14 +251,14 @@ const styles = StyleSheet.create({
     gap: Spacing.one,
   },
   contentLabel: {
-    fontSize: 13,
+    fontSize: 15,
   },
   contentInput: {
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     minHeight: 120,
-    fontSize: 15,
+    fontSize: 17,
   },
   shots: {
     flexDirection: 'row',

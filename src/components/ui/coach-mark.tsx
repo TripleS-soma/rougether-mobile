@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   bubbleBody: {
-    lineHeight: 22,
+    lineHeight: 24,
   },
   bubbleRow: {
     flexDirection: 'row',

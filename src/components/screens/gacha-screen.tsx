@@ -841,13 +841,13 @@ const styles = StyleSheet.create({
   },
   revealBadge: {
     color: StaticWhite,
-    fontSize: 10,
+    fontSize: 12,
     overflow: 'hidden',
     borderRadius: Radius.pill,
     paddingHorizontal: Spacing.two,
     paddingVertical: 1,
   },
-  convertNote: { fontSize: 10, textAlign: 'center' },
+  convertNote: { fontSize: 12, textAlign: 'center' },
 
   // Burst (#431)
   burstWrap: { width: 200, height: 200, alignItems: 'center', justifyContent: 'center' },
