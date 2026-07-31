@@ -51,15 +51,29 @@ jobs:
           ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
       # iOS: 네이티브 변경 시 testflight 빌드 + TestFlight 자동 제출 (ad-hoc 미사용).
       - name: iOS — OTA or TestFlight build
+        id: ios
+        continue-on-error: true
         uses: expo/expo-github-action/continuous-deploy-fingerprint@main
         with:
           profile: testflight
           branch: preview
           platform: ios
           auto-submit-builds: true
-      # Android 실패를 잡 결과로 재표면화 — iOS까지 돌린 뒤에 빨간불을 켠다.
-      - name: Surface Android failure
-        if: steps.android.outcome == 'failure'
+      # iOS도 빌드 생성 실패(쿼터 소진 등) 시 OTA만이라도 발행 — Android
+      # 폴백(#435)과 대칭. 7/31 쿼터 소진 때 iOS OTA만 조용히 누락됐던 구멍.
+      - name: iOS — OTA fallback
+        if: steps.ios.outcome == 'failure'
+        run: eas update --branch preview --platform ios --non-interactive --auto
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      # 플랫폼 실패를 잡 결과로 재표면화 — 양쪽 다 돌린 뒤에 빨간불을 켠다.
+      - name: Surface platform failures
+        if: steps.android.outcome == 'failure' || steps.ios.outcome == 'failure'
         run: |
-          echo "::error::Android 배포 실패 — 위 'Android — OTA or preview build' 로그 확인 (쿼터 소진이면 8/1 리셋 또는 플랜 업그레이드)"
+          if [ "${{ steps.android.outcome }}" = "failure" ]; then
+            echo "::error::Android 배포 실패 — 위 'Android — OTA or preview build' 로그 확인 (쿼터 소진이면 리셋 대기 또는 플랜 업그레이드)"
+          fi
+          if [ "${{ steps.ios.outcome }}" = "failure" ]; then
+            echo "::error::iOS 배포 실패 — 위 'iOS — OTA or TestFlight build' 로그 확인 (쿼터 소진이면 리셋 대기 또는 플랜 업그레이드)"
+          fi
           exit 1
