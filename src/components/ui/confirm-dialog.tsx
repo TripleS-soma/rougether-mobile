@@ -13,6 +13,8 @@ export type ConfirmDialogProps = {
   confirmAccessibilityLabel?: string;
   /** Caption of the cancel (left) button; pass `null` for a confirm-only 안내형. */
   cancelLabel?: string | null;
+  /** a11y label of the cancel button when it differs from the caption (예: '재발급 취소'). */
+  cancelAccessibilityLabel?: string;
   /** Confirm button takes the danger fill (삭제·로그아웃·나가기). */
   destructive?: boolean;
   onConfirm: () => void;
@@ -31,6 +33,7 @@ export function ConfirmDialog({
   confirmLabel,
   confirmAccessibilityLabel,
   cancelLabel = '취소',
+  cancelAccessibilityLabel,
   destructive,
   onConfirm,
   onCancel,
@@ -49,7 +52,7 @@ export function ConfirmDialog({
               <Pressable
                 onPress={onCancel}
                 accessibilityRole="button"
-                accessibilityLabel={cancelLabel}
+                accessibilityLabel={cancelAccessibilityLabel ?? cancelLabel}
                 style={[styles.btn, { backgroundColor: t.surfaceMuted }]}>
                 <Text style={[Typography.label, { color: t.text }]}>{cancelLabel}</Text>
               </Pressable>

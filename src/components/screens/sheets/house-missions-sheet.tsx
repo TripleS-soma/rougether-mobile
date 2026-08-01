@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 
 import type { House, HouseMission, NewHouseMission } from '@/components/screens/house-screen';
 import { DateRangeSheet } from '@/components/screens/sheets/date-range-sheet';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   Pictogram,
   type PictogramName,
@@ -287,65 +288,44 @@ export function HouseMissionsSheet({
         </View>
       ) : null}
 
-      {missionToAdd && currentHouse.houseId ? (
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modal, { backgroundColor: t.surface }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>내 루틴에 추가하시겠습니까?</Text>
-            <Text style={[Typography.body, styles.modalBody, { color: t.textMuted }]}>
-              {`'${currentHouse.name}' 카테고리에 '${missionToAdd.title}' 루틴이 만들어져요. 루틴을 완료하면 자동으로 미션에 기여돼요.`}
-            </Text>
-            <View style={styles.modalActions}>
-              <Pressable
-                onPress={() => setMissionToAdd(null)}
-                accessibilityRole="button"
-                accessibilityLabel="루틴 추가 취소"
-                style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>아니요</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  onAddMissionRoutine?.(currentHouse.houseId!, missionToAdd);
-                  setMissionToAdd(null);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="루틴 추가 확인"
-                style={[styles.modalBtn, { backgroundColor: t.primary }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>네</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      ) : null}
+      {/* 단순 [취소|확정] 확인은 공용 ConfirmDialog (#674). */}
+      <ConfirmDialog
+        visible={!!(missionToAdd && currentHouse.houseId)}
+        title="내 루틴에 추가하시겠습니까?"
+        body={
+          missionToAdd
+            ? `'${currentHouse.name}' 카테고리에 '${missionToAdd.title}' 루틴이 만들어져요. 루틴을 완료하면 자동으로 미션에 기여돼요.`
+            : ''
+        }
+        confirmLabel="네"
+        confirmAccessibilityLabel="루틴 추가 확인"
+        cancelLabel="아니요"
+        cancelAccessibilityLabel="루틴 추가 취소"
+        onConfirm={() => {
+          if (missionToAdd) onAddMissionRoutine?.(currentHouse.houseId!, missionToAdd);
+          setMissionToAdd(null);
+        }}
+        onCancel={() => setMissionToAdd(null)}
+      />
 
-      {missionToDelete && currentHouse.houseId ? (
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modal, { backgroundColor: t.surface }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>미션 삭제</Text>
-            <Text style={[Typography.body, styles.modalBody, { color: t.textMuted }]}>
-              {`'${missionToDelete.title}' 미션을 삭제할까요?\n지금까지의 기여 기록은 남지만 미션은 목록에서 사라져요. 멤버들이 만든 연동 루틴은 삭제되지 않아요.`}
-            </Text>
-            <View style={styles.modalActions}>
-              <Pressable
-                onPress={() => setMissionToDelete(null)}
-                accessibilityRole="button"
-                accessibilityLabel="미션 삭제 취소"
-                style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  onDeleteMission?.(currentHouse.houseId!, missionToDelete.id);
-                  setMissionToDelete(null);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="미션 삭제 확인"
-                style={[styles.modalBtn, { backgroundColor: t.danger }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>삭제</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      ) : null}
+      <ConfirmDialog
+        visible={!!(missionToDelete && currentHouse.houseId)}
+        title="미션 삭제"
+        body={
+          missionToDelete
+            ? `'${missionToDelete.title}' 미션을 삭제할까요?\n지금까지의 기여 기록은 남지만 미션은 목록에서 사라져요. 멤버들이 만든 연동 루틴은 삭제되지 않아요.`
+            : ''
+        }
+        confirmLabel="삭제"
+        confirmAccessibilityLabel="미션 삭제 확인"
+        cancelAccessibilityLabel="미션 삭제 취소"
+        destructive
+        onConfirm={() => {
+          if (missionToDelete) onDeleteMission?.(currentHouse.houseId!, missionToDelete.id);
+          setMissionToDelete(null);
+        }}
+        onCancel={() => setMissionToDelete(null)}
+      />
 
       {showCreateMission ? (
         <View style={styles.modalOverlay}>
@@ -491,9 +471,6 @@ const styles = StyleSheet.create({
   // The mission list scrolls when it grows taller than small screens.
   editScroll: {
     flexGrow: 0,
-  },
-  modalBody: {
-    marginTop: Spacing.two,
   },
   modalActions: {
     flexDirection: 'row',
