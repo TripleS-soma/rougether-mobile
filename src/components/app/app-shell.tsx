@@ -81,6 +81,7 @@ import { useShop } from '@/hooks/use-shop';
 import { useWeather } from '@/hooks/use-weather';
 import { useBrandTheme } from '@/hooks/use-tokens';
 import type { DrawResult } from '@/api';
+import { fetchGachaRewards } from '@/api';
 import { subscribePendingFriendInviteCode, subscribePendingInviteCode } from '@/lib/pending-invite';
 import { assetSource } from '@/resources/asset';
 import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furniture';
@@ -1363,6 +1364,8 @@ export function AppShell({
               return results;
             }}
             placeableItemIds={placeableFurnitureIds}
+            // 보상 목록 (#620) — 시트가 자체 재시도를 가지므로 실패는 null로.
+            onLoadRewards={(gachaId) => fetchGachaRewards(gachaId).catch(() => null)}
             onGoPlace={goPlaceDrawn}
             // 뽑기 성공 = 미션 2 완료 (#571) — 연출이 끝나고 확인을 누른
             // 순간에. 뽑기 직후 완료시키면 미션 시트가 연출을 덮는다.

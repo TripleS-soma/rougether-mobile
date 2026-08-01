@@ -213,4 +213,38 @@ describe('GachaScreen', () => {
     await fireEvent.press(getByLabelText('확인'));
     expect(onResultsConfirmed).toHaveBeenCalledTimes(1);
   });
+
+  // 나올 수 있는 보상 시트 (#620) — 등급 그룹 + 보유 배지, 실패 시 재시도.
+  it('보상 목록 시트를 열면 등급 그룹과 보유 배지를 보여준다 (#620)', async () => {
+    const onLoadRewards = jest.fn().mockResolvedValue([
+      { rewardType: 'ITEM', itemId: 7, name: '구름 소파', rarity: '일반', owned: true },
+      { rewardType: 'ITEM', itemId: 8, name: '한옥 자개 침대', rarity: '전설', owned: false },
+      { rewardType: 'CHARACTER', characterId: 3, name: '호랑이', rarity: '희귀', owned: false },
+    ]);
+    const { getByLabelText, getByText, findByText } = await render(
+      <GachaScreen gachas={[machine]} coinBalance={5600} onLoadRewards={onLoadRewards} />,
+    );
+    await fireEvent.press(getByLabelText('나올 수 있는 보상 보기'));
+    expect(onLoadRewards).toHaveBeenCalledWith(1);
+    // 희소한 등급부터: 전설 → 희귀 → 일반, 보유 아이템엔 '보유' 배지.
+    expect(await findByText('한옥 자개 침대')).toBeTruthy();
+    expect(getByText('전설')).toBeTruthy();
+    expect(getByText('호랑이')).toBeTruthy();
+    expect(getByText('캐릭터')).toBeTruthy();
+    expect(getByText('보유')).toBeTruthy();
+  });
+
+  it('보상 목록 로드 실패면 시트 안에서 다시 시도를 보여준다 (#620)', async () => {
+    const onLoadRewards = jest
+      .fn()
+      .mockResolvedValueOnce(null)
+      .mockResolvedValue([{ rewardType: 'ITEM', itemId: 7, name: '구름 소파', rarity: '일반' }]);
+    const { getByLabelText, getByText, findByText } = await render(
+      <GachaScreen gachas={[machine]} coinBalance={5600} onLoadRewards={onLoadRewards} />,
+    );
+    await fireEvent.press(getByLabelText('나올 수 있는 보상 보기'));
+    expect(await findByText('보상 목록을 불러오지 못했어요.')).toBeTruthy();
+    await fireEvent.press(getByText('다시 시도'));
+    expect(await findByText('구름 소파')).toBeTruthy();
+  });
 });
