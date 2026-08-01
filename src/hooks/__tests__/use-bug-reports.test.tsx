@@ -16,9 +16,9 @@ afterEach(() => {
 
 describe('useBugReports', () => {
   it('loads my reports and auto-attaches appVersion/deviceInfo on submit', async () => {
-    const calls: { url: string; method?: string }[] = [];
+    const calls: { url: string; method?: string; body?: unknown }[] = [];
     global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
-      calls.push({ url, method: init?.method });
+      calls.push({ url, method: init?.method, body: init?.body });
       if (init?.method === 'POST') return res({ bugReportId: 9 }, 201);
       return res({
         items: [{ bugReportId: 1, title: '버그', status: 'RECEIVED', createdAt: '2026-07-20T09:00:00Z' }], // prettier-ignore
@@ -38,8 +38,16 @@ describe('useBugReports', () => {
     });
     expect(ok).toBe(true);
     const post = calls.find((c) => c.method === 'POST');
-    // 재현 정보를 자동 첨부한다 (#496) — 값은 환경마다 달라 파라미터 존재만 확인.
-    expect(post?.url).toContain('deviceInfo=');
+    // 텍스트는 쿼리가 아니라 multipart 폼 필드로 (#567) — URL은 깨끗해야 한다.
+    expect(post?.url).not.toContain('?');
+    // 재현 정보를 자동 첨부한다 (#496) — 값은 환경마다 달라 필드 존재만 확인.
+    // jest는 node FormData(keys), 런타임 RN은 getParts — 둘 다 지원.
+    const fd = post?.body as unknown as {
+      keys?: () => IterableIterator<string>;
+      getParts?: () => { fieldName: string }[];
+    };
+    const fields = fd.keys ? [...fd.keys()] : (fd.getParts?.() ?? []).map((p) => p.fieldName);
+    expect(fields).toEqual(expect.arrayContaining(['title', 'content', 'deviceInfo']));
     // 제출 성공 후 목록을 다시 불러온다.
     await waitFor(() => expect(calls.filter((c) => c.method !== 'POST').length).toBeGreaterThan(1));
   });
