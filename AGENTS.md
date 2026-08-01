@@ -56,7 +56,7 @@
 업무는 GitHub Issues + 조직 프로젝트 보드(**TripleS-soma 프로젝트 #2**)로 관리합니다.
 
 - **이슈 먼저**: 기능/버그 작업은 이슈를 만들고 시작합니다. 라벨: `api`(서버 연동) / `ux` / `backend-blocked`(서버 엔드포인트 대기) / `native-build`(OTA 불가, 네이티브 빌드 필요) / `on-hold`(기획 보류 — 착수 금지). 담당자는 GitHub Actions가 자동으로 `evan7484`를 지정합니다(`.github/workflows/auto-assign-issues.yml`).
-- **도메인 라벨 필수(2026-08-01 전수 백필 완료)**: 모든 이슈에 `domain:*` 라벨을 정확히 1개 붙입니다 — `room`(꾸미기·가구·위젯 방) / `routine-todo`(루틴·투두·달력) / `house`(집·미션·초대·응원) / `member`(계정·프로필·온보딩·캐릭터·설정) / `shop-gacha` / `notification`(푸시·알림) / `design`(토큰·폰트·UI 공통·제스처 손맛) / `infra`(CI·EAS·OTA·수평 리팩터). 닫힌 이슈 포함 전체가 분류돼 있어 `is:issue label:domain:room` 식으로 과거 작업을 회고할 수 있습니다. 보드에도 같은 값의 `Domain` 단일선택 필드를 지정합니다.
+- **도메인 라벨 필수(2026-08-01 전수 백필 완료)**: 모든 이슈에 `domain:*` 라벨을 정확히 1개 붙입니다 — `room`(꾸미기·가구·위젯 방) / `routine-todo`(루틴·투두·달력) / `house`(집·미션·초대·응원) / `member`(계정·프로필·온보딩·캐릭터·설정) / `shop-gacha` / `notification`(푸시·알림) / `design`(토큰·폰트·UI 공통·제스처 손맛) / `infra`(CI·EAS·OTA·수평 리팩터). 닫힌 이슈 포함 전체가 분류돼 있어 `is:issue label:domain:room` 식으로 과거 작업을 회고할 수 있습니다. 보드에도 같은 값의 `Domain` 단일선택 필드를 지정합니다. **이슈 제목도 같은 도메인 접두**를 붙입니다(2026-08-01 전수 리네이밍 완료) — `room: 가구 스케일 상한 3.5`처럼 `<도메인>: <제목>` 형식. 라벨과 중복이지만 목록·검색·알림에서 한눈에 스캔하기 위한 것.
 - **보드 등록**: 새 이슈는 프로젝트 #2에 추가하고 Status(`Todo → In Progress → Done`)와 Priority(`P0 지금 / P1 다음 / P2 대기`)를 지정합니다.
   ```sh
   gh project item-add 2 --owner TripleS-soma --url <이슈 URL>
