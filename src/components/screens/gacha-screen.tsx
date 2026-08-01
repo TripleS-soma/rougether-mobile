@@ -165,6 +165,10 @@ export function GachaScreen({
     });
   };
 
+  // 등급 그룹은 rewards가 바뀔 때만 재계산 (#678) — 시트가 열린 동안의
+  // 무관한 리렌더(뽑기 연출 등)마다 다시 묶지 않는다.
+  const rewardGroups = useMemo(() => (rewards ? groupRewardsByRarity(rewards) : []), [rewards]);
+
   // 배치 가능한 신규 가구 (#630) — 있으면 리빌에 '가구 배치하러 가기'가 뜬다.
   const placeableSet = useMemo(() => new Set(placeableItemIds ?? []), [placeableItemIds]);
   const isPlaceable = (r: DrawResult) =>
@@ -457,7 +461,7 @@ export function GachaScreen({
           </View>
         ) : (
           <ScrollView style={styles.rewardsList} contentContainerStyle={styles.rewardsListBody}>
-            {groupRewardsByRarity(rewards).map((group) => (
+            {rewardGroups.map((group) => (
               <View key={group.rarity} style={styles.rewardsGroup}>
                 <View style={styles.rewardsGroupHead}>
                   <View
