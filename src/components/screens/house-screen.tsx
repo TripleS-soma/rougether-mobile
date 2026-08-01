@@ -43,6 +43,7 @@ import {
 } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useFontEmphasis, useResolvedScheme, useTokens, useTypography } from '@/hooks/use-tokens';
+import type { MissionStatus } from '@/lib/mission-cta';
 import { assetSource } from '@/resources/asset';
 import { flingDirection, SWIPE_CLAIM_DX, SWIPE_FAIL_DY } from '@/utils/gesture';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
@@ -139,7 +140,7 @@ export type HouseMission = {
   icon: PictogramName;
   current: number;
   target: number;
-  status: 'ACTIVE' | 'COMPLETED' | 'EXPIRED';
+  status: MissionStatus;
   /** Target reached — the reward is claimable while ACTIVE. */
   achieved?: boolean;
   /** Mission end date (device-local "YYYY-MM-DD"); absent = 무기한. */

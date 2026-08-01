@@ -13,6 +13,7 @@ import { useToast } from '@/components/ui/toast';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { missionCtaState } from '@/lib/mission-cta';
 import { formatDate, todayIso, toIsoDate } from '@/utils/datetime';
 
 /** "YYYY-MM-DD" + n days → "YYYY-MM-DD" (device-local; noon avoids DST edges). */
@@ -169,7 +170,15 @@ export function HouseMissionsSheet({
                 <View style={styles.goals}>
                   {missions.map((mission) => {
                     const pct = Math.min(1, mission.current / mission.target);
-                    const claimable = mission.status === 'ACTIVE' && mission.achieved;
+                    // CTA 결정은 순수 함수(#559) — 렌더는 kind 매핑만.
+                    const cta = missionCtaState({
+                      status: mission.status,
+                      achieved: mission.achieved,
+                      contributed: isContributed(mission),
+                      linked: linkedRoutines.some((r) => r.missionId === mission.id),
+                      canClaim: !!(currentHouse.houseId && onClaimMission),
+                      canAddRoutine: !!(currentHouse.houseId && onAddMissionRoutine),
+                    });
                     return (
                       <View
                         key={mission.id}
@@ -217,17 +226,17 @@ export function HouseMissionsSheet({
                                 ~{mission.endsOn.slice(5).replace('-', '.')}
                               </Text>
                             ) : null}
-                            {mission.status === 'COMPLETED' ? (
+                            {cta.kind === 'completed' ? (
                               <Text style={[Typography.supporting, { color: t.textMuted }]}>
                                 완료
                               </Text>
-                            ) : mission.status === 'EXPIRED' ? (
+                            ) : cta.kind === 'expired' ? (
                               <Text style={[Typography.supporting, { color: t.textDisabled }]}>
                                 기간 만료
                               </Text>
-                            ) : claimable && currentHouse.houseId && onClaimMission ? (
+                            ) : cta.kind === 'claim' ? (
                               <Pressable
-                                onPress={() => onClaimMission(currentHouse.houseId!, mission.id)}
+                                onPress={() => onClaimMission!(currentHouse.houseId!, mission.id)}
                                 accessibilityRole="button"
                                 accessibilityLabel={`${mission.title} 보상 받기`}
                                 style={[styles.missionBtn, { backgroundColor: t.warning }]}>
@@ -235,21 +244,18 @@ export function HouseMissionsSheet({
                                   보상 받기
                                 </Text>
                               </Pressable>
-                            ) : mission.status === 'ACTIVE' && isContributed(mission) ? (
+                            ) : cta.kind === 'contributed' ? (
                               // 오늘 기여 완료 — 연동 루틴의 오늘 완료 여부로도 파생되어
                               // 앱을 다시 켜도 라벨이 유지된다.
                               <Text style={[Typography.supporting, { color: t.primaryText }]}>
                                 기여함
                               </Text>
-                            ) : mission.status === 'ACTIVE' &&
-                              linkedRoutines.some((r) => r.missionId === mission.id) ? (
+                            ) : cta.kind === 'linked' ? (
                               // Filed as my routine — completing it contributes.
                               <Text style={[Typography.supporting, { color: t.textMuted }]}>
                                 루틴 연동됨
                               </Text>
-                            ) : mission.status === 'ACTIVE' &&
-                              currentHouse.houseId &&
-                              onAddMissionRoutine ? (
+                            ) : cta.kind === 'addRoutine' ? (
                               <Pressable
                                 onPress={() => setMissionToAdd(mission)}
                                 accessibilityRole="button"
