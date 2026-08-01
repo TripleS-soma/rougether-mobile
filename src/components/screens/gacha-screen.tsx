@@ -13,7 +13,8 @@ import {
 } from 'react-native';
 
 import type { GachaMachine } from '@/api/adapters';
-import type { DrawResult, GachaDrawCount } from '@/api';
+import type { DrawResult, GachaDrawCount, GachaRewardResponse } from '@/api';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Icon } from '@/components/ui/icon';
 import { RetryState } from '@/components/ui/retry-state';
 import { ScalePressable } from '@/components/ui/scale-pressable';
@@ -84,7 +85,31 @@ export type GachaScreenProps = {
    * 연다. 셸은 전달받은 결과의 아이템을 카탈로그에서 NEW로 강조한다.
    */
   onGoPlace?: (results: DrawResult[]) => void;
+  /**
+   * 보상 목록 로드 (#620) — `GET /gacha/{id}/rewards`. 실패는 null(시트가
+   * 다시 시도를 보여준다). 없으면 '나올 수 있는 보상' 진입점을 숨긴다.
+   */
+  onLoadRewards?: (gachaId: number) => Promise<GachaRewardResponse[] | null>;
 };
+
+/** 보상 시트의 등급 그룹 순서 (#620) — 미지의 등급은 맨 뒤 '기타'. */
+export const REWARD_RARITY_ORDER: readonly string[] = ['전설', '희귀', '일반'];
+
+/** 등급 → 그룹 정렬 키; 목록은 희소한 것부터 보여준다. */
+export function groupRewardsByRarity(
+  rewards: GachaRewardResponse[],
+): { rarity: string; items: GachaRewardResponse[] }[] {
+  const buckets = new Map<string, GachaRewardResponse[]>();
+  for (const r of rewards) {
+    const key = REWARD_RARITY_ORDER.includes(r.rarity ?? '') ? (r.rarity as string) : '기타';
+    const list = buckets.get(key) ?? [];
+    list.push(r);
+    buckets.set(key, list);
+  }
+  return [...REWARD_RARITY_ORDER, '기타']
+    .filter((rarity) => buckets.has(rarity))
+    .map((rarity) => ({ rarity, items: buckets.get(rarity)! }));
+}
 
 /**
  * Gacha screen, ported from the prototype `GachaScreen` + `GachaAnimation`, now
@@ -105,6 +130,7 @@ export function GachaScreen({
   onResultsConfirmed,
   placeableItemIds,
   onGoPlace,
+  onLoadRewards,
 }: GachaScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
@@ -120,6 +146,25 @@ export function GachaScreen({
   const [burstStrong, setBurstStrong] = useState(false);
   const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => clearTimeout(revealTimer.current ?? undefined), []);
+  // 보상 목록 시트 (#620) — 머신별 lazy 로드, 같은 머신 재열람은 캐시.
+  const [rewardsOpen, setRewardsOpen] = useState(false);
+  const [rewardsLoading, setRewardsLoading] = useState(false);
+  const [rewards, setRewards] = useState<GachaRewardResponse[] | null>(null);
+  const rewardsForRef = useRef<number | null>(null);
+  const openRewards = (gachaId: number) => {
+    setRewardsOpen(true);
+    if (rewardsForRef.current === gachaId && rewards) return;
+    rewardsForRef.current = gachaId;
+    setRewards(null);
+    setRewardsLoading(true);
+    void onLoadRewards?.(gachaId).then((res) => {
+      // 다른 머신으로 갈아탄 뒤 도착한 응답은 버린다.
+      if (rewardsForRef.current !== gachaId) return;
+      setRewards(res);
+      setRewardsLoading(false);
+    });
+  };
+
   // 배치 가능한 신규 가구 (#630) — 있으면 리빌에 '가구 배치하러 가기'가 뜬다.
   const placeableSet = useMemo(() => new Set(placeableItemIds ?? []), [placeableItemIds]);
   const isPlaceable = (r: DrawResult) =>
@@ -273,6 +318,19 @@ export function GachaScreen({
             <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
               1회 뽑기에 {box.drawCount}개 획득
             </Text>
+            {/* 나올 수 있는 보상 (#620) — 뽑기 전 기대 관리. */}
+            {onLoadRewards ? (
+              <Pressable
+                onPress={() => openRewards(box.id)}
+                accessibilityRole="button"
+                accessibilityLabel="나올 수 있는 보상 보기"
+                style={styles.rewardsLink}>
+                <Text style={[Typography.supporting, emph('semibold'), { color: t.primaryText }]}>
+                  나올 수 있는 보상 보기
+                </Text>
+                <Icon name="forward" size={12} color={t.primaryText} />
+              </Pressable>
+            ) : null}
 
             {error ? (
               <Text style={[Typography.supporting, styles.center, { color: t.danger }]}>
@@ -372,6 +430,68 @@ export function GachaScreen({
           )}
         </View>
       </Modal>
+
+      {/* 나올 수 있는 보상 시트 (#620) — 등급 그룹 + 보유 배지, 확률 비노출. */}
+      <BottomSheet
+        visible={rewardsOpen}
+        onClose={() => setRewardsOpen(false)}
+        cardStyle={[styles.rewardsSheet, { backgroundColor: t.screen }]}>
+        <View style={[styles.sheetHandle, { backgroundColor: t.border }]} />
+        <Text style={[Typography.h3, styles.center, { color: t.text }]}>나올 수 있는 보상</Text>
+        <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
+          이미 가진 아이템이 나오면 다이아로 바뀌어요.
+        </Text>
+        {rewardsLoading ? (
+          <View style={styles.rewardsBlock}>
+            <ActivityIndicator color={t.primary} />
+          </View>
+        ) : rewards == null ? (
+          <View style={styles.rewardsBlock}>
+            <RetryState
+              message="보상 목록을 불러오지 못했어요."
+              onRetry={() => {
+                rewardsForRef.current = null;
+                if (box) openRewards(box.id);
+              }}
+            />
+          </View>
+        ) : (
+          <ScrollView style={styles.rewardsList} contentContainerStyle={styles.rewardsListBody}>
+            {groupRewardsByRarity(rewards).map((group) => (
+              <View key={group.rarity} style={styles.rewardsGroup}>
+                <View style={styles.rewardsGroupHead}>
+                  <View
+                    style={[styles.rarityDot, { backgroundColor: rarityColor(group.rarity) }]}
+                  />
+                  <Text style={[Typography.supporting, emph('semibold'), { color: t.textMuted }]}>
+                    {group.rarity}
+                  </Text>
+                </View>
+                {group.items.map((r, i) => (
+                  <View
+                    key={`${r.rewardType}-${r.itemId ?? r.characterId ?? i}`}
+                    style={[styles.rewardRow, { backgroundColor: t.surface }]}
+                    testID={`reward-row-${r.itemId ?? r.characterId ?? i}`}>
+                    <Text
+                      numberOfLines={1}
+                      style={[Typography.body, styles.rewardName, { color: t.text }]}>
+                      {r.name ?? '이름 없는 보상'}
+                    </Text>
+                    {r.rewardType === 'CHARACTER' || r.characterId != null ? (
+                      <Text style={[Typography.supporting, { color: t.textMuted }]}>캐릭터</Text>
+                    ) : null}
+                    {r.owned ? (
+                      <View style={[styles.ownedPill, { backgroundColor: t.surfaceMuted }]}>
+                        <Text style={[Typography.supporting, { color: t.textMuted }]}>보유</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                ))}
+              </View>
+            ))}
+          </ScrollView>
+        )}
+      </BottomSheet>
     </View>
   );
 }
@@ -731,6 +851,70 @@ function FlipCard({ item, index }: { item: DrawResult; index: number }) {
 }
 
 const styles = StyleSheet.create({
+  // --- 보상 목록 시트 (#620) ---
+  rewardsLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.half,
+    paddingVertical: Spacing.one,
+  },
+  rewardsSheet: {
+    borderTopLeftRadius: Radius.lg,
+    borderTopRightRadius: Radius.lg,
+    paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.two,
+    paddingBottom: Spacing.six,
+    gap: Spacing.two,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: Spacing.one,
+  },
+  rewardsBlock: {
+    paddingVertical: Spacing.five,
+    alignItems: 'center',
+  },
+  rewardsList: {
+    maxHeight: 420,
+  },
+  rewardsListBody: {
+    gap: Spacing.three,
+    paddingBottom: Spacing.two,
+  },
+  rewardsGroup: {
+    gap: Spacing.one,
+  },
+  rewardsGroupHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+    marginBottom: Spacing.half,
+  },
+  rarityDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  rewardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+  },
+  rewardName: {
+    flex: 1,
+  },
+  ownedPill: {
+    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 2,
+  },
   screen: { flex: 1 },
   center: { textAlign: 'center' },
   header: {
