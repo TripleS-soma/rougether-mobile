@@ -1,6 +1,6 @@
 import { act, render } from '@testing-library/react-native';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { AnimatedSplashOverlay } from '@/components/app/animated-splash-overlay';
 
 jest.mock('expo-splash-screen', () => ({
   hideAsync: jest.fn(async () => {}),

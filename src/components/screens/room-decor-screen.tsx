@@ -19,7 +19,7 @@ import Animated, {
   ZoomIn,
 } from 'react-native-reanimated';
 
-import { type CharacterAnimationSet, CharacterAvatar } from '@/components/character-avatar';
+import { type CharacterAnimationSet, CharacterAvatar } from '@/components/room/character-avatar';
 import {
   DraggableFurniture,
   dragClampBounds,

@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { CharacterAvatar, type CharacterAnimationSet } from '@/components/character-avatar';
+import { CharacterAvatar, type CharacterAnimationSet } from '@/components/room/character-avatar';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Icon } from '@/components/ui/icon';
 import { CHARACTER_OPTIONS, type CharacterId } from '@/constants/characters';

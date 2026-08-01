@@ -2,7 +2,7 @@ import { openBrowserAsync } from 'expo-web-browser';
 import { type ReactNode, useState } from 'react';
 import { Text, View } from 'react-native';
 
-import { type HouseCover, HouseCoverPicker } from '@/components/house-cover-picker';
+import { type HouseCover, HouseCoverPicker } from '@/components/room/house-cover-picker';
 import { HousePreviewFrame } from '@/components/room/house-preview-frame';
 import { Room } from '@/components/room/room';
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';

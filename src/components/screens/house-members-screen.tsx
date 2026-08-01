@@ -2,8 +2,8 @@ import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
 import { Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { CharacterAvatar } from '@/components/character-avatar';
-import { type HouseCover, HouseCoverPicker } from '@/components/house-cover-picker';
+import { CharacterAvatar } from '@/components/room/character-avatar';
+import { type HouseCover, HouseCoverPicker } from '@/components/room/house-cover-picker';
 import type { House, HouseEditInput, RoomCell } from '@/components/screens/house-screen';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Icon } from '@/components/ui/icon';

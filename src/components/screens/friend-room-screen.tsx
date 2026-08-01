@@ -16,7 +16,7 @@ import {
 
 import { GestureDetector } from 'react-native-gesture-handler';
 
-import { CharacterAvatar, type CharacterAnimationSet } from '@/components/character-avatar';
+import { CharacterAvatar, type CharacterAnimationSet } from '@/components/room/character-avatar';
 import { Room } from '@/components/room/room';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { type Routine, type RoutineCategoryMeta, UNCATEGORIZED_META } from '@/constants/routines';

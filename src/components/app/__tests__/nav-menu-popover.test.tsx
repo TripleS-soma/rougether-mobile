@@ -1,6 +1,6 @@
 import { fireEvent, render } from '@testing-library/react-native';
 
-import { NavMenuPopover } from '@/components/screens/nav-menu-popover';
+import { NavMenuPopover } from '@/components/app/nav-menu-popover';
 
 const baseProps = {
   visible: true,
