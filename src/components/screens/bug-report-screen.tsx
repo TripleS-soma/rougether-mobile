@@ -14,13 +14,10 @@ import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 export const MAX_BUG_REPORT_IMAGES = 3;
 
 /**
- * 내용 최대 길이. 서버 계약은 2000자지만 title/content가 쿼리 파라미터로
- * 전송되는 구조라 URL 길이 한도에 걸린다 — 실서버 실측(2026-07-27) 결과
- * 한글(percent-encoding 9배) 기준 ~850자부터 Tomcat 400. 한글 제목 100자를
- * 더해도 안전한 600자로 클램프한다. 서버가 content를 multipart 파트로 받게
- * 되면 2000으로 되돌릴 것.
+ * 내용 최대 길이 — 서버 계약 2000자. 쿼리 파라미터 전송 시절의 600자
+ * 클램프(Tomcat URL 한도)는 #567에서 multipart 폼 필드 전환으로 해제.
  */
-export const MAX_BUG_REPORT_CONTENT = 600;
+export const MAX_BUG_REPORT_CONTENT = 2000;
 
 export type BugReportStatus = 'RECEIVED' | 'IN_PROGRESS' | 'RESOLVED';
 
