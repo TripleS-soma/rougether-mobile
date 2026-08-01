@@ -55,7 +55,8 @@
 
 업무는 GitHub Issues + 조직 프로젝트 보드(**TripleS-soma 프로젝트 #2**)로 관리합니다.
 
-- **이슈 먼저**: 기능/버그 작업은 이슈를 만들고 시작합니다. 라벨: `api`(서버 연동) / `ux` / `backend-blocked`(서버 엔드포인트 대기) / `native-build`(OTA 불가, 네이티브 빌드 필요). 담당자는 GitHub Actions가 자동으로 `evan7484`를 지정합니다(`.github/workflows/auto-assign-issues.yml`).
+- **이슈 먼저**: 기능/버그 작업은 이슈를 만들고 시작합니다. 라벨: `api`(서버 연동) / `ux` / `backend-blocked`(서버 엔드포인트 대기) / `native-build`(OTA 불가, 네이티브 빌드 필요) / `on-hold`(기획 보류 — 착수 금지). 담당자는 GitHub Actions가 자동으로 `evan7484`를 지정합니다(`.github/workflows/auto-assign-issues.yml`).
+- **도메인 라벨 필수(2026-08-01 전수 백필 완료)**: 모든 이슈에 `domain:*` 라벨을 정확히 1개 붙입니다 — `room`(꾸미기·가구·위젯 방) / `routine-todo`(루틴·투두·달력) / `house`(집·미션·초대·응원) / `member`(계정·프로필·온보딩·캐릭터·설정) / `shop-gacha` / `notification`(푸시·알림) / `design`(토큰·폰트·UI 공통·제스처 손맛) / `infra`(CI·EAS·OTA·수평 리팩터). 닫힌 이슈 포함 전체가 분류돼 있어 `is:issue label:domain:room` 식으로 과거 작업을 회고할 수 있습니다. 보드에도 같은 값의 `Domain` 단일선택 필드를 지정합니다.
 - **보드 등록**: 새 이슈는 프로젝트 #2에 추가하고 Status(`Todo → In Progress → Done`)와 Priority(`P0 지금 / P1 다음 / P2 대기`)를 지정합니다.
   ```sh
   gh project item-add 2 --owner TripleS-soma --url <이슈 URL>
@@ -63,6 +64,8 @@
     --field-id <field-id> --single-select-option-id <option-id>
   # Status 필드: PVTSSF_lADOEMVke84BcZqAzhXCx0s (Todo f75ad846 / In Progress 47fc9ee4 / Done 98236657)
   # Priority 필드: PVTSSF_lADOEMVke84BcZqAzhXIviY (P0 6711a274 / P1 267d66c3 / P2 473596d8)
+  # Domain 필드: PVTSSF_lADOEMVke84BcZqAzhZaPNM (room db8b218f / routine-todo 4c9688ca / house f4a3fe41
+  #   / member 7f6cd448 / shop-gacha d757997c / notification d1f73111 / design cb4e8679 / infra 29ed7431)
   ```
 - **PR 연결**: PR 본문에 `Closes #N`을 넣어 머지 시 이슈가 자동으로 닫히고 보드가 Done으로 이동하게 합니다.
 - **코드 리뷰**: 모든 PR에 Claude 자동 리뷰가 달립니다(`.github/workflows/claude-code-review.yml`). 머지 전에 리뷰 지적 사항을 확인하고 반영하거나 근거를 남기세요.
