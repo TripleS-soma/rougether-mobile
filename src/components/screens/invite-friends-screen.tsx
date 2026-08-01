@@ -1,11 +1,20 @@
 import * as Clipboard from 'expo-clipboard';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
 import { RetryState } from '@/components/ui/retry-state';
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { friendInviteLink } from '@/constants/links';
 import { Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
@@ -29,6 +38,10 @@ export type InviteFriendsScreenProps = {
   onRetry?: () => void;
   /** 받은 코드 사용 — 성공 시 보상 코인 액수를 resolve, 실패는 null(토스트는 훅 몫). */
   onRedeem?: (code: string) => Promise<{ rewardCoin: number } | null>;
+  /** 초대 링크로 진입 (#667) — 받은 코드 입력란에 프리필된다. */
+  initialRedeemCode?: string;
+  /** 프리필을 반영했을 때 1회 — 부모가 pending 상태를 클리어한다 (#642 패턴). */
+  onInitialRedeemCodeConsumed?: () => void;
   onBack?: () => void;
 };
 
@@ -42,6 +55,8 @@ export function InviteFriendsScreen({
   loadError = false,
   onRetry,
   onRedeem,
+  initialRedeemCode,
+  onInitialRedeemCodeConsumed,
   onBack,
 }: InviteFriendsScreenProps) {
   const t = useTokens();
@@ -59,6 +74,13 @@ export function InviteFriendsScreen({
     [],
   );
 
+  // 초대 링크 진입 (#667) — 받은 코드 입력란에 프리필하고 부모 pending을 비운다.
+  useEffect(() => {
+    if (!initialRedeemCode) return;
+    setCode(initialRedeemCode);
+    onInitialRedeemCodeConsumed?.();
+  }, [initialRedeemCode, onInitialRedeemCodeConsumed]);
+
   const copyCode = async () => {
     if (!info?.code) return;
     try {
@@ -68,6 +90,18 @@ export function InviteFriendsScreen({
       copyTimer.current = setTimeout(() => setCopied(false), 1500);
     } catch {
       // 클립보드 실패는 조용히 — 코드는 화면에 그대로 보인다.
+    }
+  };
+
+  // 링크 공유 (#667) — 집 초대(#624)와 같은 결: 랜딩 경유 https라 메신저에서 눌린다.
+  const shareLink = async () => {
+    if (!info?.code) return;
+    try {
+      await Share.share({
+        message: `루게더에서 함께 루틴 지켜요! 내 초대코드: ${info.code}\n${friendInviteLink(info.code)}`,
+      });
+    } catch {
+      // 공유 시트 취소/실패 — 조용히.
     }
   };
 
@@ -113,20 +147,34 @@ export function InviteFriendsScreen({
               <Text style={[Typography.h1, styles.code, { color: t.text }]}>
                 {info?.code ?? '—'}
               </Text>
-              <ScalePressable
-                onPress={copyCode}
-                accessibilityRole="button"
-                accessibilityLabel="초대코드 복사"
-                style={[styles.copyBtn, { backgroundColor: copied ? t.surfaceMuted : t.primary }]}>
-                <Icon
-                  name={copied ? 'check' : 'copy'}
-                  size={14}
-                  color={copied ? t.text : t.onPrimary}
-                />
-                <Text style={[Typography.label, { color: copied ? t.text : t.onPrimary }]}>
-                  {copied ? '복사됨' : '복사하기'}
-                </Text>
-              </ScalePressable>
+              <View style={styles.codeActions}>
+                <ScalePressable
+                  onPress={copyCode}
+                  accessibilityRole="button"
+                  accessibilityLabel="초대코드 복사"
+                  style={[
+                    styles.copyBtn,
+                    { backgroundColor: copied ? t.surfaceMuted : t.primary },
+                  ]}>
+                  <Icon
+                    name={copied ? 'check' : 'copy'}
+                    size={14}
+                    color={copied ? t.text : t.onPrimary}
+                  />
+                  <Text style={[Typography.label, { color: copied ? t.text : t.onPrimary }]}>
+                    {copied ? '복사됨' : '복사하기'}
+                  </Text>
+                </ScalePressable>
+                {/* 링크 공유 (#667) — 메신저에서 눌리는 랜딩 경유 링크. */}
+                <ScalePressable
+                  onPress={() => void shareLink()}
+                  accessibilityRole="button"
+                  accessibilityLabel="초대 링크 공유"
+                  style={[styles.copyBtn, { backgroundColor: t.primary }]}>
+                  <Icon name="gift" size={14} color={t.onPrimary} />
+                  <Text style={[Typography.label, { color: t.onPrimary }]}>링크 공유</Text>
+                </ScalePressable>
+              </View>
               <Text style={[Typography.supporting, styles.rewardHint, { color: t.textMuted }]}>
                 친구가 이 코드를 입력하면 나는 코인 {info?.inviterRewardCoin ?? 0}개, 친구는 코인{' '}
                 {info?.inviteeRewardCoin ?? 0}개를 받아요.
@@ -218,6 +266,10 @@ const styles = StyleSheet.create({
   },
   code: {
     letterSpacing: 4,
+  },
+  codeActions: {
+    flexDirection: 'row',
+    gap: Spacing.two,
   },
   copyBtn: {
     flexDirection: 'row',

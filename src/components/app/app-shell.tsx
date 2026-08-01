@@ -81,7 +81,7 @@ import { useShop } from '@/hooks/use-shop';
 import { useWeather } from '@/hooks/use-weather';
 import { useBrandTheme } from '@/hooks/use-tokens';
 import type { DrawResult } from '@/api';
-import { subscribePendingInviteCode } from '@/lib/pending-invite';
+import { subscribePendingFriendInviteCode, subscribePendingInviteCode } from '@/lib/pending-invite';
 import { assetSource } from '@/resources/asset';
 import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furniture';
 
@@ -468,6 +468,20 @@ export function AppShell({
   // 소비는 화면(자동 미리보기 발화 시점)이 알려온다 — 마운트 직후 screen이
   // 아직 'myRoom'인 채로 도는 클리어 이펙트가 코드를 지우던 콜드 스타트
   // 레이스(#624 후속)의 수정. 화면 감시 클리어는 두지 않는다.
+
+  // 친구 초대 링크 (#667) — 친구 초대 화면을 열고 받은 코드 입력을 프리필.
+  const [pendingFriendCode, setPendingFriendCode] = useState<string | null>(null);
+  useEffect(
+    () =>
+      subscribePendingFriendInviteCode((code) => {
+        setPendingFriendCode(code);
+        setScreen('inviteFriends');
+        void loadInvites();
+      }),
+    // loadInvites는 훅에서 안정 참조 — 마운트 1회 구독.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
   const [visitingFriend, setVisitingFriend] = useState<VisitedFriend>({ name: '친구' });
   // Which house the 집 switcher is on — kept here because HouseScreen
@@ -1553,6 +1567,8 @@ export function AppShell({
             loadError={invitesLoadError}
             onRetry={loadInvites}
             onRedeem={redeemInviteCode}
+            initialRedeemCode={pendingFriendCode ?? undefined}
+            onInitialRedeemCodeConsumed={() => setPendingFriendCode(null)}
             onBack={() => setScreen('settings')}
           />
         ) : null}

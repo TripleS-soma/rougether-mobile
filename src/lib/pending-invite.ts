@@ -28,3 +28,28 @@ export function subscribePendingInviteCode(onCode: (code: string) => void): () =
     if (listener === onCode) listener = null;
   };
 }
+
+// --- 친구 초대 채널 (#667) — 같은 핸드오프 계약, 목적지만 친구 초대 화면. ---
+
+let pendingFriend: string | null = null;
+let friendListener: ((code: string) => void) | null = null;
+
+export function setPendingFriendInviteCode(code: string) {
+  const clean = code.trim().toUpperCase();
+  if (!clean) return;
+  if (friendListener) friendListener(clean);
+  else pendingFriend = clean;
+}
+
+/** 셸이 마운트에서 1회 구독 — 해제 함수를 돌려준다. */
+export function subscribePendingFriendInviteCode(onCode: (code: string) => void): () => void {
+  friendListener = onCode;
+  if (pendingFriend) {
+    const code = pendingFriend;
+    pendingFriend = null;
+    onCode(code);
+  }
+  return () => {
+    if (friendListener === onCode) friendListener = null;
+  };
+}
