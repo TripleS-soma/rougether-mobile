@@ -25,6 +25,7 @@ import type {
   MemberSummary,
   MissionSummary,
   MyHouseSummary,
+  MyJoinRequestSummary,
   TransferOwnershipResponse,
 } from './types';
 
@@ -71,6 +72,16 @@ export function previewHouseByCode(inviteCode: string) {
 /** POST /houses/join-by-code. */
 export function joinHouseByCode(inviteCode: string) {
   return apiPost<HouseJoinResponse>('/houses/join-by-code', { inviteCode });
+}
+
+/** GET /me/join-requests — 내가 보낸 입주 신청 목록 (서버 #255, #648). */
+export function fetchMyJoinRequests() {
+  return apiGetList<MyJoinRequestSummary>('/me/join-requests');
+}
+
+/** DELETE /me/join-requests/{requestId} — 입주 신청 철회 (#648). */
+export function cancelMyJoinRequest(requestId: number) {
+  return apiDelete<void>(`/me/join-requests/${requestId}`);
 }
 
 /** POST /houses/{id}/join-requests — request admission to a browsable house. */

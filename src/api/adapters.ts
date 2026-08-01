@@ -766,6 +766,8 @@ export function toHousePreview(p: HousePreviewResponse): HousePreview {
     members: p.currentMemberCount ?? 0,
     capacity: p.maxMembers ?? undefined,
     expired: p.inviteExpired ?? false,
+    // 부원 개인 코드 (#646/#648) — 입주 대신 신청이 생성되는 코드임을 미리 안내.
+    requiresApproval: p.requiresApproval ?? false,
   };
 }
 

@@ -27,10 +27,13 @@ import {
   fetchHousePreviewDetail,
   fetchMe,
   fetchGoals,
+  cancelMyJoinRequest,
   fetchHouses,
   fetchMyHouses,
+  fetchMyJoinRequests,
   getSessionUserId,
   joinHouseByCode,
+  type MyJoinRequestSummary,
   kickHouseMember,
   leaveHouse as apiLeaveHouse,
   previewHouseByCode,
@@ -99,18 +102,38 @@ export function useHouses() {
     );
   }, []);
 
+  // 승인 대기 중인 내 입주 신청 (#648, 서버 #255) — 집 스위처의 잠금 카드.
+  const [pendingJoinRequests, setPendingJoinRequests] = useState<MyJoinRequestSummary[]>([]);
+
   const reloadMyHouses = useCallback(async () => {
     // My cell shows the profile nickname when the members API has none.
-    const [mine, nickname] = await Promise.all([
+    const [mine, nickname, requests] = await Promise.all([
       fetchMyHouses(),
       fetchMe()
         .then((me) => me.nickname ?? undefined)
         .catch(() => myNicknameRef.current),
+      // 신청 목록 실패는 조용히 — 집 목록까지 죽이지 않는다.
+      fetchMyJoinRequests().catch(() => null),
     ]);
     myNicknameRef.current = nickname;
+    if (requests) setPendingJoinRequests(requests.filter((r) => r.status === 'PENDING'));
     const detailed = await Promise.all(mine.map((h) => fetchHouseBundle(h.houseId ?? 0)));
     setHouses(detailed);
   }, [fetchHouseBundle]);
+
+  /** 입주 신청 철회 (#648) — 성공 시 목록에서 즉시 제거. */
+  const cancelJoinRequest = useCallback(
+    async (requestId: number) => {
+      try {
+        await cancelMyJoinRequest(requestId);
+        setPendingJoinRequests((prev) => prev.filter((r) => r.requestId !== requestId));
+        toast('입주 신청을 취소했어요');
+      } catch {
+        toast('신청 취소에 실패했어요. 잠시 후 다시 시도해 주세요.', 'error');
+      }
+    },
+    [toast],
+  );
 
   /**
    * 영향받은 집 하나만 다시 받아 목록에 끼워넣는다 (#534) — 집 안 이벤트
@@ -189,7 +212,13 @@ export function useHouses() {
       try {
         const res = await joinHouseByCode(code);
         // 부원 개인 코드 — 신청만 생성되고 방장 승인 후 입주가 확정된다.
-        if (res.pendingApproval) return 'pending';
+        // 집 탭 잠금 카드(#648)에 바로 보이도록 신청 목록을 갱신한다.
+        if (res.pendingApproval) {
+          void fetchMyJoinRequests()
+            .then((rs) => setPendingJoinRequests(rs.filter((r) => r.status === 'PENDING')))
+            .catch(() => {});
+          return 'pending';
+        }
         toast('입주 완료!', 'success');
         await reloadMyHouses();
         return true;
@@ -523,6 +552,8 @@ export function useHouses() {
       retry: loadMyHouses,
       retrySearch: loadSearch,
       refreshHouses: reloadMyHouses,
+      pendingJoinRequests,
+      cancelJoinRequest,
       previewByCode,
       previewHouse,
       joinByCode,
@@ -553,6 +584,8 @@ export function useHouses() {
       loadMyHouses,
       loadSearch,
       reloadMyHouses,
+      pendingJoinRequests,
+      cancelJoinRequest,
       previewByCode,
       previewHouse,
       joinByCode,

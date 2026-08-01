@@ -20,6 +20,7 @@ import { CoachTarget } from '@/components/ui/coach-mark';
 import { Room } from '@/components/room/room';
 import { HouseMembersScreen } from '@/components/screens/house-members-screen';
 import { HouseMissionsSheet } from '@/components/screens/sheets/house-missions-sheet';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Icon } from '@/components/ui/icon';
 import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
 import {
@@ -95,6 +96,14 @@ export type Floor = { level: string; rooms: RoomCell[] };
 export type HouseJoinRequest = {
   requestId: number;
   nickname: string;
+  requestedAt?: string;
+};
+
+/** 승인 대기 중인 내 입주 신청 카드 (#648) — GET /me/join-requests에서. */
+export type PendingJoinHouse = {
+  requestId: number;
+  name: string;
+  /** ISO — 신청 시각. 없으면 라벨 생략. */
   requestedAt?: string;
 };
 
@@ -282,6 +291,13 @@ export type HouseScreenProps = {
    */
   houseIndex?: number;
   onHouseIndexChange?: (index: number) => void;
+  /**
+   * 승인 대기 중인 내 입주 신청 (#648, 서버 #255) — 스위처의 마지막
+   * 페이지들에 잠금형 카드로 보인다. 스와이프/화살표로 오갈 수 있다.
+   */
+  pendingHouses?: PendingJoinHouse[];
+  /** 입주 신청 철회 (#648) — 확인 다이얼로그 뒤에만 불린다. */
+  onCancelJoinRequest?: (requestId: number) => void;
   onVisitFriend?: (friend: VisitedFriend) => void;
   onVisitMyRoom?: () => void;
   onOpenSearch?: () => void;
@@ -363,6 +379,8 @@ export const HouseScreen = memo(function HouseScreen({
   streakDays = 0,
   houseIndex: houseIndexProp,
   onHouseIndexChange,
+  pendingHouses,
+  onCancelJoinRequest,
   onVisitFriend,
   onVisitMyRoom,
   onOpenSearch,
@@ -415,6 +433,13 @@ export const HouseScreen = memo(function HouseScreen({
     if (prev === houseIndex) return;
     const dir = houseIndex > prev ? 1 : -1;
     prevHouseIndex.current = houseIndex;
+    // 대기 페이지(#648)가 낀 전환은 프레임이 언마운트/마운트되는 경우라
+    // 슬라이드 없이 정지 상태로만 둔다 — 언마운트된 노드에 애니메이션 금지.
+    if (houseIndex >= houses.length || prev >= houses.length) {
+      switchX.setValue(0);
+      switchFade.setValue(1);
+      return;
+    }
     switchX.setValue(36 * dir);
     switchFade.setValue(0.4);
     Animated.parallel([
@@ -426,7 +451,7 @@ export const HouseScreen = memo(function HouseScreen({
       }),
       Animated.timing(switchFade, { toValue: 1, duration: 200, useNativeDriver: true }),
     ]).start();
-  }, [houseIndex, switchX, switchFade]);
+  }, [houseIndex, houses.length, switchX, switchFade]);
   const setHouseIndex = (next: number) => {
     setInternalHouseIndex(next);
     onHouseIndexChange?.(next);
@@ -457,8 +482,17 @@ export const HouseScreen = memo(function HouseScreen({
     (member.membershipId != null ? roomPreviews?.[member.membershipId]?.characterId : undefined) ??
     (member.isMine ? characterId : DEFAULT_CHARACTER_ID);
 
-  const prevHouse = () => setHouseIndex((houseIndex - 1 + houses.length) % houses.length);
-  const nextHouse = () => setHouseIndex((houseIndex + 1) % houses.length);
+  // 승인 대기 신청 (#648) — 집 페이지들 뒤에 잠금 카드 페이지로 이어 붙는다.
+  const pendingList = pendingHouses ?? [];
+  const totalPages = houses.length + pendingList.length;
+  const pendingHouse =
+    houseIndex >= houses.length && pendingList.length > 0
+      ? pendingList[Math.min(houseIndex - houses.length, pendingList.length - 1)]
+      : undefined;
+  const [pendingToCancel, setPendingToCancel] = useState<PendingJoinHouse | null>(null);
+
+  const prevHouse = () => setHouseIndex((houseIndex - 1 + totalPages) % totalPages);
+  const nextHouse = () => setHouseIndex((houseIndex + 1) % totalPages);
 
   const missions = currentHouse?.missions ?? [];
   const activeMissions = missions.filter((m) => m.status === 'ACTIVE');
@@ -819,6 +853,104 @@ export const HouseScreen = memo(function HouseScreen({
     [],
   );
 
+  // 승인 대기 페이지 (#648) — 잠금형 카드. 메인 프레임 트리와 독립 렌더라
+  // 카메라·좌석 로직과 얽히지 않고, 스위처 산술(totalPages)만 공유한다.
+  if (pendingHouse) {
+    return (
+      <View style={[styles.screen, screenStyle]} testID="pending-house-page">
+        <GestureDetector gesture={carouselFling}>
+          <View style={styles.emptyWrap}>
+            <View style={styles.switcher}>
+              {totalPages > 1 ? (
+                <Pressable
+                  onPress={prevHouse}
+                  accessibilityRole="button"
+                  accessibilityLabel="이전 집"
+                  hitSlop={8}
+                  style={[styles.iconBtn, { backgroundColor: t.surface }]}>
+                  <Icon name="back" size={18} color={t.text} />
+                </Pressable>
+              ) : null}
+              <View style={[styles.titleBadge, { backgroundColor: t.surface }]}>
+                <Icon name="lock" size={14} color={t.textMuted} />
+                <Text style={[Typography.h3, { color: t.text }]}>{pendingHouse.name}</Text>
+              </View>
+              {totalPages > 1 ? (
+                <Pressable
+                  onPress={nextHouse}
+                  accessibilityRole="button"
+                  accessibilityLabel="다음 집"
+                  hitSlop={8}
+                  style={[styles.iconBtn, { backgroundColor: t.surface }]}>
+                  <Icon name="forward" size={18} color={t.text} />
+                </Pressable>
+              ) : null}
+            </View>
+            <View style={[styles.pendingCard, { backgroundColor: t.surface }]}>
+              <Icon name="lock" size={40} color={t.textDisabled} />
+              <Text style={[Typography.h3, styles.pendingTitle, { color: t.text }]}>
+                방장 승인을 기다리고 있어요
+              </Text>
+              <Text style={[Typography.body, styles.emptyBody, { color: t.textMuted }]}>
+                승인되면 이 자리에 집이 열려요. 조금만 기다려 주세요!
+              </Text>
+              {pendingHouse.requestedAt ? (
+                <Text style={[Typography.supporting, { color: t.textDisabled }]}>
+                  {pendingHouse.requestedAt.slice(0, 10).replace(/-/g, '.')} 신청
+                </Text>
+              ) : null}
+              {onCancelJoinRequest ? (
+                <ScalePressable
+                  onPress={() => setPendingToCancel(pendingHouse)}
+                  accessibilityRole="button"
+                  accessibilityLabel="입주 신청 취소"
+                  style={[styles.pendingCancelBtn, { borderColor: t.border }]}>
+                  <Text style={[Typography.label, { color: t.textMuted }]}>신청 취소</Text>
+                </ScalePressable>
+              ) : null}
+            </View>
+            <View style={styles.dots}>
+              {Array.from({ length: totalPages }, (_, i) => (
+                <View
+                  key={`page-${i}`}
+                  style={[
+                    styles.dot,
+                    i === houseIndex
+                      ? { width: 20, backgroundColor: t.primary }
+                      : { width: 6, backgroundColor: t.border },
+                  ]}
+                />
+              ))}
+            </View>
+          </View>
+        </GestureDetector>
+
+        <ConfirmDialog
+          visible={pendingToCancel != null}
+          title="입주 신청을 취소할까요?"
+          body={
+            pendingToCancel
+              ? `'${pendingToCancel.name}' 집에 보낸 신청이 철회돼요. 초대코드가 있으면 다시 신청할 수 있어요.`
+              : ''
+          }
+          confirmLabel="신청 취소"
+          confirmAccessibilityLabel="신청 취소 확인"
+          cancelLabel="유지"
+          destructive
+          onConfirm={() => {
+            if (pendingToCancel) {
+              onCancelJoinRequest?.(pendingToCancel.requestId);
+              // 마지막 대기 카드였다면 유효한 집 페이지로 복귀.
+              if (pendingList.length <= 1) setHouseIndex(Math.max(0, houses.length - 1));
+            }
+            setPendingToCancel(null);
+          }}
+          onCancel={() => setPendingToCancel(null)}
+        />
+      </View>
+    );
+  }
+
   if (!currentHouse) {
     return (
       <View style={[styles.screen, screenStyle]}>
@@ -1113,7 +1245,7 @@ export const HouseScreen = memo(function HouseScreen({
             <View style={[styles.grassBand, { backgroundColor: t.grass }]} />
             {raining ? <RainOverlay /> : null}
             <View style={styles.switcher}>
-              {houses.length > 1 ? (
+              {totalPages > 1 ? (
                 <Pressable
                   onPress={prevHouse}
                   accessibilityRole="button"
@@ -1131,7 +1263,7 @@ export const HouseScreen = memo(function HouseScreen({
                 )}
                 <Text style={[Typography.h3, { color: t.text }]}>{currentHouse.name}</Text>
               </View>
-              {houses.length > 1 ? (
+              {totalPages > 1 ? (
                 <Pressable
                   onPress={nextHouse}
                   accessibilityRole="button"
@@ -1143,9 +1275,10 @@ export const HouseScreen = memo(function HouseScreen({
               ) : null}
             </View>
             <View style={styles.dots}>
-              {houses.map((house, i) => (
+              {/* 대기 카드 페이지(#648)까지 포함한 전체 페이지 도트. */}
+              {Array.from({ length: totalPages }, (_, i) => (
                 <View
-                  key={house.houseId ?? `demo-${i}`}
+                  key={houses[i]?.houseId ?? `page-${i}`}
                   style={[
                     styles.dot,
                     i === houseIndex
@@ -1386,6 +1519,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: Spacing.five,
     gap: Spacing.two,
+  },
+  // --- 승인 대기 페이지 (#648) ---
+  pendingCard: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderRadius: Radius.lg,
+    paddingVertical: Spacing.six,
+    paddingHorizontal: Spacing.four,
+    marginTop: Spacing.three,
+  },
+  pendingTitle: {
+    textAlign: 'center',
+  },
+  pendingCancelBtn: {
+    marginTop: Spacing.two,
+    borderWidth: 1,
+    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.two,
   },
   emptyBody: {
     textAlign: 'center',
