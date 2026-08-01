@@ -29,6 +29,7 @@ import {
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { Room, type RoomRegion } from '@/components/room/room';
 import { ROOM_RENDER_CONTRACT, roomPercent } from '@/components/room/room-render-contract';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { RetryState } from '@/components/ui/retry-state';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
@@ -1064,80 +1065,41 @@ export function RoomDecorScreen({
         </Pressable>
       </Modal>
 
-      {/* 첫 자유 배치 저장 — SLOT_V1→FREE_V1 비가역 전환 확인 (#327). */}
-      <Modal
-        transparent
+      {/* 첫 자유 배치 저장 — SLOT_V1→FREE_V1 비가역 전환 확인 (#327, #674 공용화). */}
+      <ConfirmDialog
         visible={confirmMigrate}
-        animationType="fade"
-        onRequestClose={() => setConfirmMigrate(false)}>
-        <Pressable style={styles.confirmBackdrop} onPress={() => setConfirmMigrate(false)}>
-          <Pressable style={[styles.confirmCard, { backgroundColor: t.screen }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>새 꾸미기 방식으로 전환할까요?</Text>
-            <Text style={[Typography.body, styles.confirmText, { color: t.textMuted }]}>
-              자유 배치로 저장하면 가구를 어디든 옮길 수 있어요.{'\n'}전환한 뒤에는 이전 방식으로
-              되돌릴 수 없어요.
-            </Text>
-            <View style={styles.confirmBtns}>
-              <Pressable
-                onPress={() => setConfirmMigrate(false)}
-                accessibilityRole="button"
-                accessibilityLabel="전환 취소"
-                style={[styles.confirmBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  migrateOkRef.current = true;
-                  setConfirmMigrate(false);
-                  void doApply(pendingBackRef.current, pendingApplyRef.current ?? undefined);
-                  pendingApplyRef.current = null;
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="전환하고 저장"
-                style={[styles.confirmBtn, { backgroundColor: t.primary }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>전환하고 저장</Text>
-              </Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+        title="새 꾸미기 방식으로 전환할까요?"
+        body={
+          '자유 배치로 저장하면 가구를 어디든 옮길 수 있어요.\n전환한 뒤에는 이전 방식으로 되돌릴 수 없어요.'
+        }
+        confirmLabel="전환하고 저장"
+        cancelAccessibilityLabel="전환 취소"
+        onConfirm={() => {
+          migrateOkRef.current = true;
+          setConfirmMigrate(false);
+          void doApply(pendingBackRef.current, pendingApplyRef.current ?? undefined);
+          pendingApplyRef.current = null;
+        }}
+        onCancel={() => setConfirmMigrate(false)}
+      />
 
-      {/* 다른 기기가 먼저 저장한 경우(409) — 서버 상태로 다시 시작해야 한다. */}
-      <Modal
-        transparent
+      {/* 다른 기기가 먼저 저장한 경우(409) — 서버 상태로 다시 시작해야 한다 (#674 공용화). */}
+      <ConfirmDialog
         visible={conflictOpen}
-        animationType="fade"
-        onRequestClose={() => setConflictOpen(false)}>
-        <Pressable style={styles.confirmBackdrop} onPress={() => setConflictOpen(false)}>
-          <Pressable style={[styles.confirmCard, { backgroundColor: t.screen }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>다른 기기에서 먼저 저장했어요</Text>
-            <Text style={[Typography.body, styles.confirmText, { color: t.textMuted }]}>
-              방 배치가 다른 곳에서 바뀌어 지금 편집을 저장할 수 없어요.{'\n'}새로 불러오면 지금
-              편집한 내용은 사라져요.
-            </Text>
-            <View style={styles.confirmBtns}>
-              <Pressable
-                onPress={() => setConflictOpen(false)}
-                accessibilityRole="button"
-                accessibilityLabel="충돌 모달 닫기"
-                style={[styles.confirmBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>계속 보기</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  setConflictOpen(false);
-                  onConflictReload?.();
-                  onBack?.();
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="새로 불러오기"
-                style={[styles.confirmBtn, { backgroundColor: t.primary }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>새로 불러오기</Text>
-              </Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+        title="다른 기기에서 먼저 저장했어요"
+        body={
+          '방 배치가 다른 곳에서 바뀌어 지금 편집을 저장할 수 없어요.\n새로 불러오면 지금 편집한 내용은 사라져요.'
+        }
+        confirmLabel="새로 불러오기"
+        cancelLabel="계속 보기"
+        cancelAccessibilityLabel="충돌 모달 닫기"
+        onConfirm={() => {
+          setConflictOpen(false);
+          onConflictReload?.();
+          onBack?.();
+        }}
+        onCancel={() => setConflictOpen(false)}
+      />
 
       <View style={[styles.applyBar, { backgroundColor: t.screen, borderTopColor: t.border }]}>
         <Pressable

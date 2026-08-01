@@ -5,6 +5,7 @@ import { Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 
 import { CharacterAvatar } from '@/components/character-avatar';
 import { type HouseCover, HouseCoverPicker } from '@/components/house-cover-picker';
 import type { House, HouseEditInput, RoomCell } from '@/components/screens/house-screen';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Icon } from '@/components/ui/icon';
 import { CrownPictogram, DoorPictogram, PencilPictogram } from '@/components/ui/pictograms';
 import { useToast } from '@/components/ui/toast';
@@ -414,123 +415,64 @@ export function HouseMembersScreen({
         ) : null}
       </ScrollView>
 
-      {showReissueConfirm ? (
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modal, { backgroundColor: t.surface }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>초대코드를 재발급할까요?</Text>
-            <Text style={[Typography.body, styles.modalBody, { color: t.textMuted }]}>
-              기존 코드는 즉시 만료돼요. 이미 공유한 코드로는 더 이상 입주할 수 없어요.
-            </Text>
-            <View style={styles.modalActions}>
-              <Pressable
-                onPress={() => setShowReissueConfirm(false)}
-                accessibilityRole="button"
-                accessibilityLabel="재발급 취소"
-                style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  void requestIssue();
-                  setShowReissueConfirm(false);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="재발급 확인"
-                style={[styles.modalBtn, { backgroundColor: t.primary }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>재발급</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      ) : null}
+      {/* 단순 [취소|확정] 확인은 공용 ConfirmDialog (#674). */}
+      <ConfirmDialog
+        visible={showReissueConfirm}
+        title="초대코드를 재발급할까요?"
+        body="기존 코드는 즉시 만료돼요. 이미 공유한 코드로는 더 이상 입주할 수 없어요."
+        confirmLabel="재발급"
+        confirmAccessibilityLabel="재발급 확인"
+        cancelAccessibilityLabel="재발급 취소"
+        onConfirm={() => {
+          void requestIssue();
+          setShowReissueConfirm(false);
+        }}
+        onCancel={() => setShowReissueConfirm(false)}
+      />
 
-      {showLeaveConfirm ? (
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modal, { backgroundColor: t.surface }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>
-              {isLoneOwner ? '집을 삭제할까요?' : '집에서 나갈까요?'}
-            </Text>
-            <Text style={[Typography.body, styles.modalBody, { color: t.textMuted }]}>
-              {isLoneOwner
-                ? `혼자 남은 집이라 나가면 '${currentHouse?.name}' 집이 삭제되고 탐색·조회에서 사라져요.`
-                : '나가도 기여 기록은 유지되고, 초대를 받아 다시 참여하면 이전 기록이 복원돼요.'}
-            </Text>
-            <View style={styles.modalActions}>
-              <Pressable
-                onPress={() => setShowLeaveConfirm(false)}
-                accessibilityRole="button"
-                accessibilityLabel="나가기 취소"
-                style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
-              </Pressable>
-              <Pressable
-                onPress={confirmLeave}
-                accessibilityRole="button"
-                accessibilityLabel={isLoneOwner ? '집 삭제 확인' : '나가기 확인'}
-                style={[styles.modalBtn, { backgroundColor: t.danger }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>
-                  {isLoneOwner ? '삭제' : '나가기'}
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      ) : null}
+      <ConfirmDialog
+        visible={showLeaveConfirm}
+        title={isLoneOwner ? '집을 삭제할까요?' : '집에서 나갈까요?'}
+        body={
+          isLoneOwner
+            ? `혼자 남은 집이라 나가면 '${currentHouse?.name}' 집이 삭제되고 탐색·조회에서 사라져요.`
+            : '나가도 기여 기록은 유지되고, 초대를 받아 다시 참여하면 이전 기록이 복원돼요.'
+        }
+        confirmLabel={isLoneOwner ? '삭제' : '나가기'}
+        confirmAccessibilityLabel={isLoneOwner ? '집 삭제 확인' : '나가기 확인'}
+        cancelAccessibilityLabel="나가기 취소"
+        destructive
+        onConfirm={confirmLeave}
+        onCancel={() => setShowLeaveConfirm(false)}
+      />
 
-      {memberToKick ? (
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modal, { backgroundColor: t.surface }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>정말 강퇴할까요?</Text>
-            <Text style={[Typography.body, styles.modalBody, { color: t.textMuted }]}>
-              {memberToKick.name}님을 강퇴하면 집 화면에서 빈방으로 표시됩니다.
-            </Text>
-            <View style={styles.modalActions}>
-              <Pressable
-                onPress={() => setMemberToKick(null)}
-                accessibilityRole="button"
-                accessibilityLabel="취소"
-                style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
-              </Pressable>
-              <Pressable
-                onPress={confirmKick}
-                accessibilityRole="button"
-                accessibilityLabel="강퇴 확인"
-                style={[styles.modalBtn, { backgroundColor: t.danger }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>강퇴</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      ) : null}
+      <ConfirmDialog
+        visible={memberToKick != null}
+        title="정말 강퇴할까요?"
+        body={
+          memberToKick ? `${memberToKick.name}님을 강퇴하면 집 화면에서 빈방으로 표시됩니다.` : ''
+        }
+        confirmLabel="강퇴"
+        confirmAccessibilityLabel="강퇴 확인"
+        destructive
+        onConfirm={confirmKick}
+        onCancel={() => setMemberToKick(null)}
+      />
 
-      {transferTarget ? (
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modal, { backgroundColor: t.surface }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>방장을 위임할까요?</Text>
-            <Text style={[Typography.body, styles.modalBody, { color: t.textMuted }]}>
-              {transferTarget.name}님에게 방장을 넘기면 집 관리 권한(정보 수정·강퇴·초대코드)이
-              이동하고 되돌릴 수 없어요.
-            </Text>
-            <View style={styles.modalActions}>
-              <Pressable
-                onPress={() => setTransferTarget(null)}
-                accessibilityRole="button"
-                accessibilityLabel="위임 취소"
-                style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
-              </Pressable>
-              <Pressable
-                onPress={confirmTransfer}
-                accessibilityRole="button"
-                accessibilityLabel="위임 확인"
-                style={[styles.modalBtn, { backgroundColor: t.primary }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>위임</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      ) : null}
+      <ConfirmDialog
+        visible={transferTarget != null}
+        title="방장을 위임할까요?"
+        body={
+          transferTarget
+            ? `${transferTarget.name}님에게 방장을 넘기면 집 관리 권한(정보 수정·강퇴·초대코드)이 이동하고 되돌릴 수 없어요.`
+            : ''
+        }
+        confirmLabel="위임"
+        confirmAccessibilityLabel="위임 확인"
+        cancelAccessibilityLabel="위임 취소"
+        onConfirm={confirmTransfer}
+        onCancel={() => setTransferTarget(null)}
+      />
 
       {showEditHouse ? (
         <View style={styles.modalOverlay}>
@@ -792,9 +734,6 @@ const styles = StyleSheet.create({
   // The edit form scrolls (cover grid makes it taller than small screens).
   editScroll: {
     flexGrow: 0,
-  },
-  modalBody: {
-    marginTop: Spacing.two,
   },
   modalActions: {
     flexDirection: 'row',
