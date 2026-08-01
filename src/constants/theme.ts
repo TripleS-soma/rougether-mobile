@@ -731,8 +731,22 @@ const WEIGHT_KEY_BY_VALUE = Object.fromEntries(
  * with each role's weight mapped to the matching font file. 'system' returns
  * `Typography` itself. Jua is display-only (single weight) — body roles fall
  * back to Pretendard. Use via `useTypography()`, not directly.
+ *
+ * 폰트별 모듈 캐시 (#678) — useTypography의 useMemo는 컴포넌트 단위라 마운트마다
+ * 스케일 객체를 다시 만들었다. 폰트는 5종뿐이니 1회 계산·전역 공유가 맞고,
+ * 스타일 참조 동일성이 앱 전역에서 유지된다(입력이 모두 모듈 상수라 안전).
  */
+const typographyCache = new Map<BrandFontId, Record<TypeRole, TypeStyle>>();
+
 export function typographyFor(fontId: BrandFontId): Record<TypeRole, TypeStyle> {
+  const hit = typographyCache.get(fontId);
+  if (hit) return hit;
+  const built = buildTypography(fontId);
+  typographyCache.set(fontId, built);
+  return built;
+}
+
+function buildTypography(fontId: BrandFontId): Record<TypeRole, TypeStyle> {
   if (fontId === 'system') return Typography;
   const out = {} as Record<TypeRole, TypeStyle>;
   for (const [role, style] of Object.entries(Typography) as [TypeRole, TypeStyle][]) {

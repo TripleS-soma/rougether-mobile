@@ -99,6 +99,17 @@ describe('memo 경계 (#539)', () => {
   });
 });
 
+/**
+ * 전 prop 참조 비교 (#678) — 명시 목록 대신 기록된 모든 prop을 비교한다.
+ * 원시값은 값 비교로 자연 통과하고, 함수·배열·객체는 참조가 바뀌는 순간
+ * prop 이름이 실패 메시지에 그대로 뜬다. allow는 정당하게 바뀌는 prop.
+ */
+const changedRefs = (
+  before: Record<string, unknown>,
+  after: Record<string, unknown>,
+  allow: string[] = [],
+) => Object.keys(after).filter((k) => !allow.includes(k) && after[k] !== before[k]);
+
 describe('AppShell → MyRoomScreen prop 참조 안정성 (#539)', () => {
   it('무관한 상태 변화(집 탭 전환 후 복귀) 전후로 대표 prop의 참조가 같다', async () => {
     const { getByLabelText } = await render(
@@ -127,34 +138,7 @@ describe('AppShell → MyRoomScreen prop 참조 안정성 (#539)', () => {
     await waitFor(() => expect(mockMyRoomRenders.length).toBeGreaterThan(renderCount));
 
     const after = mockMyRoomRenders.at(-1)!;
-    const stableProps = [
-      // 콜백 — 하나라도 새 참조면 memo가 매번 뚫린다.
-      'onToggleCompletion',
-      'onAddRoutine',
-      'onSelectDate',
-      'onToggleCalendarItem',
-      'onEditRoutine',
-      'onOpenNotifications',
-      'onSelectCharacter',
-      'onOpenGacha',
-      'onEdit',
-      'onManageRoutines',
-      'onManageCategories',
-      'onRetry',
-      'onQuickAddRoutine',
-      'onDeleteRoutine',
-      // 객체/배열 — 렌더마다 새로 만들면 안 되는 파생 prop.
-      'placements',
-      'quickAddDisabledCategoryIds',
-      'routines',
-      'completions',
-      'categories',
-      'placedFurnitureIds',
-      'furniture',
-      'wallpapers',
-    ] as const;
-    // 참조가 바뀐 prop 이름이 그대로 실패 메시지가 되도록 목록으로 단언한다.
-    const changed = stableProps.filter((key) => after[key] !== before[key]);
+    const changed = changedRefs(before, after);
     expect(changed).toEqual([]);
   });
 });
@@ -182,31 +166,7 @@ describe('AppShell → HouseScreen prop 참조 안정성 (#539, 리뷰 반영)',
     await waitFor(() => expect(mockHouseRenders.at(-1)).not.toBe(before));
 
     const after = mockHouseRenders.at(-1)!;
-    const stableProps = [
-      'onAcceptJoinRequest',
-      'onRejectJoinRequest',
-      'onKickMember',
-      'onLeaveHouse',
-      'onVisitFriend',
-      'onVisitMyRoom',
-      'onOpenSearch',
-      'onOpenMemberManagement',
-      'onAddMissionRoutine',
-      'onClaimMission',
-      'onCreateMission',
-      'onDeleteMission',
-      'onUpdateHouse',
-      'onTransferOwnership',
-      'onReissueInviteCode',
-      'onHouseIndexChange',
-      'onPagerLockChange',
-      // 파생 배열 — 렌더마다 새로 만들면 안 되는 것들.
-      'contributedMissionIds',
-      'linkedRoutines',
-      'houses',
-      'furniture',
-    ] as const;
-    const changed = stableProps.filter((key) => after[key] !== before[key]);
+    const changed = changedRefs(before, after);
     expect(changed).toEqual([]);
   });
 });
@@ -231,22 +191,7 @@ describe('AppShell → SettingsScreen prop 참조 안정성 (#563 후속)', () =
     });
 
     const after = mockSettingsRenders.at(-1)!;
-    const stableProps = [
-      'onChangeThemeMode',
-      'onChangeFont',
-      'onOpenTheme',
-      'onEditProfile',
-      'onChangePassword',
-      'onOpenNotifications',
-      'onOpenSound',
-      'onOpenHelp',
-      'onOpenTerms',
-      'onOpenPrivacy',
-      'onReportBug',
-      'onLogout',
-      'onWithdraw',
-    ] as const;
-    const changed = stableProps.filter((key) => after[key] !== before[key]);
+    const changed = changedRefs(before, after);
     expect(changed).toEqual([]);
   });
 });
