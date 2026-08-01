@@ -347,6 +347,8 @@ export function AppShell({
     retry: retryHouses,
     retrySearch,
     refreshHouses,
+    pendingJoinRequests,
+    cancelJoinRequest,
     previewByCode,
     previewHouse,
     joinByCode,
@@ -396,6 +398,20 @@ export function AppShell({
   // Locally saved tile arrangements (#278) — the 집 화면 shows arranged houses
   // and drag-and-drop swaps persist per viewer+house on this device.
   const { houses: arrangedHouses, swapSeats } = useRoomLayouts(houses);
+
+  // 승인 대기 신청 → 잠금 카드 뷰모델 (#648). memo 화면으로 가는 파생 배열이라
+  // 참조 안정화(useMemo) 필수 (#539 계약).
+  const pendingHouseCards = useMemo(
+    () =>
+      pendingJoinRequests
+        .filter((r) => r.requestId != null)
+        .map((r) => ({
+          requestId: r.requestId!,
+          name: r.houseName ?? '이름 없는 집',
+          requestedAt: r.requestedAt,
+        })),
+    [pendingJoinRequests],
+  );
 
   // 집 커버는 원격(S3)이고 house 화면은 탭 진입 때 처음 마운트돼, 그때부터
   // fetch가 시작되면 프레임이 늦게 뜬다 (#463). 항상 마운트된 셸에서 집 목록이
@@ -1198,6 +1214,8 @@ export function AppShell({
             />
             <HouseScreen
               houses={arrangedHouses}
+              pendingHouses={pendingHouseCards}
+              onCancelJoinRequest={cancelJoinRequest}
               onSwapSeats={swapSeats}
               loading={housesLoading}
               loadError={housesError}

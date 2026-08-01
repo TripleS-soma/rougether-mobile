@@ -55,6 +55,8 @@ export type HousePreview = {
   capacity?: number;
   /** The code exists but is expired — joining would fail. */
   expired?: boolean;
+  /** 방장 승인 후 입장하는 코드 (#648) — 입주 대신 신청이 생성됨을 미리 안내. */
+  requiresApproval?: boolean;
 };
 
 /** 탐색 카드 탭 → 참여 전 집 미리보기 (GET /houses/{id}/preview, #328). */
@@ -328,6 +330,12 @@ export function HouseSearchScreen({
                   멤버 {preview.info.members}
                   {preview.info.capacity ? ` / ${preview.info.capacity}` : ''}명이 함께 살고 있어요
                 </Text>
+                {preview.info.requiresApproval ? (
+                  // 승인형 코드 (#648) — '입주' 탭 후 pending 안내와 기대를 맞춘다.
+                  <Text style={[Typography.supporting, { color: t.warningText }]}>
+                    방장 승인 후 입장하는 집이에요 — 신청을 보내고 기다리게 돼요.
+                  </Text>
+                ) : null}
                 <View style={styles.previewActions}>
                   <Pressable
                     onPress={() => setPreview(null)}
