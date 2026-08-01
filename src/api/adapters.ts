@@ -35,7 +35,7 @@ import { type OnboardingGoal } from '@/components/screens/onboarding-screen';
 import { toIsoDate, relativeTimeLabel } from '@/utils/datetime';
 import { type RoomPlacementSave, type RoomPlacementWire, type RoomSlotSave } from './rooms';
 
-import type { HouseCover } from '@/components/house-cover-picker';
+import type { HouseCover } from '@/components/room/house-cover-picker';
 import type {
   Floor,
   House,

@@ -1,4 +1,4 @@
-import { missionCtaState } from '@/lib/mission-cta';
+import { missionCtaState } from '@/utils/mission-cta';
 
 const base = { contributed: false, linked: false, canClaim: true, canAddRoutine: true };
 

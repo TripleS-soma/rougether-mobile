@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 
 import { fetchHouseCoverImages } from '@/api';
 import { toHouseCover } from '@/api/adapters';
-import type { HouseCover } from '@/components/house-cover-picker';
+import type { HouseCover } from '@/components/room/house-cover-picker';
 
 export function useHouseCovers() {
   const [covers, setCovers] = useState<HouseCover[]>([]);

@@ -12,7 +12,7 @@ import {
   View,
 } from 'react-native';
 
-import { CharacterAvatar, type CharacterAnimationSet } from '@/components/character-avatar';
+import { CharacterAvatar, type CharacterAnimationSet } from '@/components/room/character-avatar';
 import { Icon } from '@/components/ui/icon';
 import {
   CHARACTER_OPTIONS,

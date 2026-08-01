@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { type HouseCover, HouseCoverPicker } from '@/components/house-cover-picker';
+import { type HouseCover, HouseCoverPicker } from '@/components/room/house-cover-picker';
 import { Icon } from '@/components/ui/icon';
 import { CrownPictogram, Pictogram, type PictogramName } from '@/components/ui/pictograms';
 import { Radius, Spacing } from '@/constants/theme';

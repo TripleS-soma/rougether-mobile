@@ -13,8 +13,8 @@ import {
 
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
-import { CharacterAvatar } from '@/components/character-avatar';
-import { type HouseCover } from '@/components/house-cover-picker';
+import { CharacterAvatar } from '@/components/room/character-avatar';
+import { type HouseCover } from '@/components/room/house-cover-picker';
 import { FRAME_ASPECT, houseCoverKey, WINDOW_RECTS } from '@/components/room/house-preview-frame';
 import { CoachTarget } from '@/components/ui/coach-mark';
 import { Room } from '@/components/room/room';
@@ -31,7 +31,7 @@ import {
 import { WalletPills } from '@/components/ui/wallet-pills';
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
-import { RainOverlay } from '@/components/rain-overlay';
+import { RainOverlay } from '@/components/room/rain-overlay';
 import {
   Overlay,
   Radius,
@@ -43,7 +43,7 @@ import {
 } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useFontEmphasis, useResolvedScheme, useTokens, useTypography } from '@/hooks/use-tokens';
-import type { MissionStatus } from '@/lib/mission-cta';
+import type { MissionStatus } from '@/utils/mission-cta';
 import { assetSource } from '@/resources/asset';
 import { flingDirection, SWIPE_CLAIM_DX, SWIPE_FAIL_DY } from '@/utils/gesture';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';

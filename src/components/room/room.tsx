@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { memo, useState } from 'react';
 import { Pressable, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 
-import { type CharacterAnimationSet, CharacterAvatar } from '@/components/character-avatar';
+import { type CharacterAnimationSet, CharacterAvatar } from '@/components/room/character-avatar';
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { ROOM_RENDER_CONTRACT, roomPercent } from '@/components/room/room-render-contract';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';

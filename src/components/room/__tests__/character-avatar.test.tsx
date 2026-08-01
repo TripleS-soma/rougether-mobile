@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react-native';
 import { Image } from 'expo-image';
 
-import { CharacterAvatar } from '@/components/character-avatar';
+import { CharacterAvatar } from '@/components/room/character-avatar';
 
 const ANIMATIONS = {
   idle: 'characters/panda/animations/idle.webp',

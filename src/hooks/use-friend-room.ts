@@ -20,7 +20,7 @@ import {
   toFriendCategories,
   toFriendRoutines,
 } from '@/api/adapters';
-import type { CharacterAnimationSet } from '@/components/character-avatar';
+import type { CharacterAnimationSet } from '@/components/room/character-avatar';
 import type { FriendActivityDay } from '@/components/screens/friend-room-screen';
 import type { CharacterId } from '@/constants/characters';
 import type { Routine, RoutineCategoryMeta } from '@/constants/routines';

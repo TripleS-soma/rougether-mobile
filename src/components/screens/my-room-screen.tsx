@@ -21,8 +21,8 @@ import ReanimatedSwipeable, {
   type SwipeableMethods,
 } from 'react-native-gesture-handler/ReanimatedSwipeable';
 
-import { type CharacterAnimationSet } from '@/components/character-avatar';
-import { NavMenuPopover } from '@/components/screens/nav-menu-popover';
+import { type CharacterAnimationSet } from '@/components/room/character-avatar';
+import { NavMenuPopover } from '@/components/app/nav-menu-popover';
 import { Room } from '@/components/room/room';
 import {
   CharacterPickerSheet,

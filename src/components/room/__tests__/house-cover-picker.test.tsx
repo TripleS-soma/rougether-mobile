@@ -1,6 +1,6 @@
 import { fireEvent, render } from '@testing-library/react-native';
 
-import { type HouseCover, HouseCoverPicker } from '@/components/house-cover-picker';
+import { type HouseCover, HouseCoverPicker } from '@/components/room/house-cover-picker';
 
 const COVERS: HouseCover[] = [
   {
