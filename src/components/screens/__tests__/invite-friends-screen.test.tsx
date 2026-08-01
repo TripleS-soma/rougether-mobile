@@ -53,4 +53,33 @@ describe('InviteFriendsScreen (#518 — 친구 초대 리워드)', () => {
     await fireEvent.press(getByText('다시 시도'));
     expect(onRetry).toHaveBeenCalled();
   });
+
+  // 링크 공유 (#667) — 랜딩 경유 https 링크를 Share 시트로.
+  it('링크 공유를 누르면 초대 링크가 담긴 공유 시트를 연다', async () => {
+    const { Share } = jest.requireActual('react-native');
+    const shareSpy = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
+    try {
+      const { getByLabelText } = await render(<InviteFriendsScreen info={INFO} />);
+      await fireEvent.press(getByLabelText('초대 링크 공유'));
+      expect(shareSpy).toHaveBeenCalledWith({
+        message: expect.stringContaining('invite.html?code=ROUGE123'),
+      });
+    } finally {
+      shareSpy.mockRestore();
+    }
+  });
+
+  // 초대 링크 딥링크 진입 (#667) — 받은 코드 입력란 프리필 + 소비 통지.
+  it('initialRedeemCode가 입력란에 프리필되고 소비 콜백이 1회 불린다', async () => {
+    const onConsumed = jest.fn();
+    const { getByLabelText } = await render(
+      <InviteFriendsScreen
+        info={INFO}
+        initialRedeemCode="FRIEND42"
+        onInitialRedeemCodeConsumed={onConsumed}
+      />,
+    );
+    await waitFor(() => expect(getByLabelText('초대코드 입력').props.value).toBe('FRIEND42'));
+    expect(onConsumed).toHaveBeenCalledTimes(1);
+  });
 });

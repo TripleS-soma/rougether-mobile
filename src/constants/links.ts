@@ -11,3 +11,11 @@ export const LANDING_BASE_URL = 'https://triples-soma.github.io/rougether-landin
 export function houseInviteLink(code: string): string {
   return `${LANDING_BASE_URL}/join.html?code=${encodeURIComponent(code)}`;
 }
+
+/**
+ * 친구 초대 링크 (#667) — 랜딩 invite 페이지가 `rougether://invite?code=…`
+ * 딥링크로 앱을 열어 설정 → 친구 초대의 코드 입력으로 잇는다.
+ */
+export function friendInviteLink(code: string): string {
+  return `${LANDING_BASE_URL}/invite.html?code=${encodeURIComponent(code)}`;
+}
