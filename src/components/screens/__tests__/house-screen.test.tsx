@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 import { State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
-import { HouseScreen, type House } from '@/components/screens/house-screen';
+import { cameraClaimsMove, HouseScreen, type House } from '@/components/screens/house-screen';
 import { ToastProvider } from '@/components/ui/toast';
 
 const MISSION_HOUSE: House = {
@@ -882,6 +882,16 @@ describe('HouseScreen', () => {
     expect(queryByText('아직 함께하는 집이 없어요')).toBeNull();
     await fireEvent.press(getByLabelText('다시 시도'));
     expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  // 확대 중 탭 방문 (#669) — 탭 지터(슬롭 이내)는 카메라가 가져가지 않아야
+  // Pressable의 방 탭(방문)이 산다. 실제 팬(슬롭 초과)·핀치는 카메라 몫.
+  it('cameraClaimsMove: 탭 지터는 통과, 실제 팬·핀치만 캡처한다 (#669)', () => {
+    expect(cameraClaimsMove(1, true, false, 2, 2)).toBe(false); // 확대 중 탭 지터
+    expect(cameraClaimsMove(1, true, false, 0, 20)).toBe(true); // 확대 중 실제 팬
+    expect(cameraClaimsMove(1, false, false, 0, 20)).toBe(false); // 원배율 한 손가락
+    expect(cameraClaimsMove(2, false, false, 0, 0)).toBe(true); // 핀치는 즉시
+    expect(cameraClaimsMove(2, true, true, 0, 20)).toBe(false); // 자리 드래그 중 양보
   });
 
   // 확대 = 방 구경 모드 (#665) — 이름/접속 라벨은 카메라 배율에 묶인

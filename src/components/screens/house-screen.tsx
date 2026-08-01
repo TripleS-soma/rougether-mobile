@@ -180,6 +180,25 @@ const CAM_MAX_SCALE = 3;
 const CAM_ROOM_SCALE = 2.9;
 // 이 간격 안의 두 번째 탭 = 더블탭(줌). 한 번 탭(방문)은 이만큼 기다렸다 실행.
 const DOUBLE_TAP_MS = 260;
+// 확대 중 한 손가락 팬 캡처 전 허용 이동량 (#669) — 실기기 탭은 1~2px
+// 지터가 있어, 이동량 조건 없이 캡처하면 방 탭(방문)이 전부 취소된다.
+const CAM_PAN_SLOP = 8;
+
+/**
+ * 카메라가 이 move에서 터치를 가져갈지 (#669) — 두 손가락(핀치)은 즉시,
+ * 확대 중 한 손가락은 탭 지터를 넘는 실제 팬일 때만. 자리 드래그 중엔 양보.
+ */
+export function cameraClaimsMove(
+  touchCount: number,
+  zoomed: boolean,
+  draggingSeat: boolean,
+  dx: number,
+  dy: number,
+): boolean {
+  if (draggingSeat) return false;
+  if (touchCount >= 2) return true;
+  return zoomed && Math.hypot(dx, dy) > CAM_PAN_SLOP;
+}
 
 // Demo layout mirrors the adapter's default fill: my room bottom-left, others
 // in join order, vacant capacity seats on the top floor (정원 6 / 멤버 4).
@@ -708,10 +727,17 @@ export const HouseScreen = memo(function HouseScreen({
   };
   const cameraResponder = useRef(
     PanResponder.create({
-      // 두 손가락은 즉시, 한 손가락은 확대 상태에서만 (드래그 중엔 양보).
+      // 두 손가락은 즉시, 한 손가락은 확대 상태에서 슬롭을 넘겼을 때만
+      // (드래그 중엔 양보) — 탭 지터 캡처가 방 탭 방문을 죽였다 (#669).
       onStartShouldSetPanResponderCapture: (evt) => evt.nativeEvent.touches.length >= 2,
-      onMoveShouldSetPanResponderCapture: (evt) =>
-        dragSeatRef.current == null && (evt.nativeEvent.touches.length >= 2 || zoomedRef.current),
+      onMoveShouldSetPanResponderCapture: (evt, g) =>
+        cameraClaimsMove(
+          evt.nativeEvent.touches.length,
+          zoomedRef.current,
+          dragSeatRef.current != null,
+          g.dx,
+          g.dy,
+        ),
       onPanResponderGrant: (evt) => anchorCamera(evt),
       onPanResponderMove: (evt) => {
         const ts = evt.nativeEvent.touches;
@@ -1470,7 +1496,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.two,
     paddingVertical: 2,
   },
-  roomName: {},
+  // 타일 라벨은 전역 +2(#660)에서 제외 (#669) — supporting 14가 방 위에선
+  // 캐릭터를 가릴 만큼 커서, 이 두 라벨만 이전 크기(12)로 고정한다.
+  roomName: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
   // --- 프레임 모드 (#287) ---
   skySection: {
     position: 'relative',
@@ -1619,6 +1650,9 @@ const styles = StyleSheet.create({
   },
   lastSeen: {
     opacity: 0.75,
+    // roomName과 같은 이유로 이전 크기 고정 (#669).
+    fontSize: 12,
+    lineHeight: 16,
   },
 });
 
