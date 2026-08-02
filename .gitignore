@@ -64,3 +64,6 @@ asc-api-key.p8
 *.ipa
 rougether-preview.apk.zip
 *.apk.zip
+
+# Play 제출 서비스 계정 키 (콘솔에서 발급, 커밋 금지)
+play-service-account.json
