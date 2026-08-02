@@ -1,6 +1,6 @@
 /**
  * TypeScript types generated from the Rougether User API v1 OpenAPI spec
- * (http://3.35.167.122:8080/v3/api-docs). Regenerate with `npm run gen:api-types`. Do not edit by hand.
+ * (https://d12w5t2ftuhgj8.cloudfront.net/v3/api-docs). Regenerate with `npm run gen:api-types`. Do not edit by hand.
  */
 
 export type AccessoryRenderProfileResponse = {
