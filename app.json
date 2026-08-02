@@ -2,7 +2,7 @@
   "expo": {
     "name": "Rougether",
     "slug": "rougether-mobile",
-    "version": "1.2.0",
+    "version": "1.0.0",
     "runtimeVersion": {
       "policy": "fingerprint"
     },
@@ -15,9 +15,6 @@
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSAppTransportSecurity": {
-          "NSAllowsArbitraryLoads": true
-        },
         "CFBundleAllowMixedLocalizations": true
       },
       "entitlements": {
@@ -117,7 +114,6 @@
         "expo-build-properties",
         {
           "android": {
-            "usesCleartextTraffic": true,
             "extraMavenRepos": ["https://devrepo.kakao.com/nexus/content/groups/public/"]
           },
           "ios": {
@@ -129,7 +125,7 @@
       "@react-native-firebase/app",
       "@react-native-firebase/messaging",
       "@react-native-firebase/crashlytics",
-      "./plugins/with-fcm-channel-manifest-fix.js",
+      "./plugins/with-fcm-manifest.js",
       [
         "@react-native-google-signin/google-signin",
         {
