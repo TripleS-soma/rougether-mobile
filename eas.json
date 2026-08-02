@@ -41,7 +41,7 @@
       },
       "android": {
         "serviceAccountKeyPath": "./play-service-account.json",
-        "track": "internal"
+        "track": "alpha"
       }
     },
     "testflight": {
