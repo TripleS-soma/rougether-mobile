@@ -4,6 +4,7 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, BackHandler, Easing, Linking, Platform, StyleSheet, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useSharedValue } from 'react-native-reanimated';
 
 import { TabPager } from '@/components/app/tab-pager';
@@ -86,7 +87,7 @@ import { subscribePendingFriendInviteCode, subscribePendingInviteCode } from '@/
 import { assetSource } from '@/resources/asset';
 import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furniture';
 
-type Screen =
+export type Screen =
   | 'myRoom'
   | 'decor'
   | 'routineManage'
@@ -171,6 +172,27 @@ const BACK_SCREEN: Record<Screen, Screen | null> = {
 
 /** 더블 백 종료 허용 창 (#522) — 토스트 표시와 체감이 맞는 2초. */
 const EXIT_WINDOW_MS = 2000;
+
+/**
+ * 지금 화면의 뒤로 목적지 (#522 하드웨어 백 · #564 엣지 백 공용). null이면
+ * 루트(뒤로 갈 곳 없음). addRoutine은 연 곳으로, 집 없는 유저의 탐색 직행은
+ * 빈 집 화면으로 되돌리지 않는다 (#571).
+ */
+export function backTargetFor(
+  screen: Screen,
+  addReturnScreen: Screen,
+  noHouses: boolean,
+): Screen | null {
+  if (screen === 'addRoutine') return addReturnScreen;
+  if (screen === 'houseSearch' && noHouses) return 'myRoom';
+  return BACK_SCREEN[screen];
+}
+
+// iOS 엣지 스와이프 백 (#564) — 왼쪽 이 폭 안에서 시작한 우향 팬만.
+const EDGE_BACK_WIDTH = 28;
+// 이만큼 끌었거나(거리) 이 속도를 넘긴 릴리즈면 뒤로 간다.
+const EDGE_BACK_DISTANCE = 64;
+const EDGE_BACK_VELOCITY = 700;
 
 /** 사운드 설정의 기기 보관 키 (#405) — 알림 설정은 서버로 이관됨 (#495). */
 const DEVICE_SETTINGS_KEY = 'rougether.device-settings';
@@ -1011,33 +1033,56 @@ export function AppShell({
   // 안내, EXIT_WINDOW 안에 한 번 더 누르면 종료. (iOS는 시스템 종료
   // 뒤로가기가 없고 코드 종료도 금지라 해당 경로 자체가 없다.)
   const lastBackRef = useRef(0);
+  // 하드웨어 백(#522)과 엣지 백(#564)이 공유하는 뒤로가기 — 목적지가 없으면
+  // false(루트). 탐색을 떠나는 경로도 화면의 뒤로 버튼과 같은 규칙 —
+  // 둘러봤다면 미션 4 완료 (#571 후속).
+  const goBack = useCallback(() => {
+    const target = backTargetFor(screen, addReturnScreen, noHouses);
+    if (!target) return false;
+    if (screen === 'houseSearch' && browsedHouseRef.current) completeMission('browse-house');
+    setScreen(target);
+    return true;
+  }, [screen, addReturnScreen, noHouses, completeMission]);
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      const target =
-        screen === 'addRoutine'
-          ? addReturnScreen
-          : screen === 'houseSearch' && noHouses
-            ? // 집 없는 유저의 탐색 직행 (#571) — 빈 집 화면으로 되돌리지 않는다.
-              'myRoom'
-            : BACK_SCREEN[screen];
-      if (!target) {
-        const now = Date.now();
-        if (now - lastBackRef.current <= EXIT_WINDOW_MS) {
-          BackHandler.exitApp();
-          return true;
-        }
-        lastBackRef.current = now;
-        toast('한 번 더 뒤로가면 앱이 꺼져요');
+      if (goBack()) return true;
+      const now = Date.now();
+      if (now - lastBackRef.current <= EXIT_WINDOW_MS) {
+        BackHandler.exitApp();
         return true;
       }
-      // 하드웨어 백으로 탐색을 떠나는 경로도 화면의 뒤로 버튼과 같은 규칙 —
-      // 둘러봤다면 미션 4 완료 (#571 후속).
-      if (screen === 'houseSearch' && browsedHouseRef.current) completeMission('browse-house');
-      setScreen(target);
+      lastBackRef.current = now;
+      toast('한 번 더 뒤로가면 앱이 꺼져요');
       return true;
     });
     return () => sub.remove();
-  }, [screen, addReturnScreen, noHouses, toast, completeMission]);
+  }, [goBack, toast]);
+
+  // iOS 엣지 스와이프 백 (#564) — 서브화면(탭 루트 제외)에서 왼쪽 엣지의
+  // 우향 팬. 탭 루트의 가로 스와이프는 페이저(#563) 몫이라 서브화면 한정.
+  // Android는 시스템 백 제스처/버튼이 있어 끈다. 제스처는 관찰만 하고
+  // 콘텐츠 터치를 막지 않는다 — 엣지 밖 시작은 즉시 물러난다.
+  const edgeBackEnabledRef = useRef(false);
+  edgeBackEnabledRef.current = Platform.OS === 'ios' && TAB_FOR_SCREEN[screen] == null;
+  const goBackRef = useRef(goBack);
+  goBackRef.current = goBack;
+  const edgeBackPan = useRef(
+    Gesture.Pan()
+      .withTestId('edge-back-pan')
+      .enabled(Platform.OS === 'ios')
+      .runOnJS(true)
+      .maxPointers(1)
+      .activeOffsetX(16)
+      .failOffsetY([-24, 24])
+      .onTouchesDown((e, mgr) => {
+        const x = e.allTouches[0]?.x ?? Number.MAX_VALUE;
+        if (!edgeBackEnabledRef.current || x > EDGE_BACK_WIDTH) mgr.fail();
+      })
+      .onEnd((e) => {
+        if (e.translationX > EDGE_BACK_DISTANCE || e.velocityX > EDGE_BACK_VELOCITY)
+          goBackRef.current();
+      }),
+  ).current;
 
   const activeTab = TAB_FOR_SCREEN[screen];
 
@@ -1153,447 +1198,450 @@ export function AppShell({
 
   return (
     <View style={styles.root}>
-      <Animated.View
-        style={[styles.content, { opacity: transOpacity, transform: [{ translateX: transX }] }]}>
-        {/* 하단 탭 3서피스는 수평 페이저에 상주한다 (#563) — 스와이프 중
+      {/* 엣지 백 (#564) — 콘텐츠 전체를 감싸되 관찰만 한다(차단 없음). */}
+      <GestureDetector gesture={edgeBackPan}>
+        <Animated.View
+          style={[styles.content, { opacity: transOpacity, transform: [{ translateX: transX }] }]}>
+          {/* 하단 탭 3서피스는 수평 페이저에 상주한다 (#563) — 스와이프 중
             이웃 화면이 손가락을 따라 끝까지 보인다. 비활성 페이지는 페이저가
             드래그/정착 중에만 그린다. 서브화면들은 기존처럼 단독 렌더. */}
-        {activeTab ? (
-          <TabPager
-            index={NAV_ORDER.indexOf(activeTab)}
-            onIndexChange={handlePageChange}
-            lock={pagerLock}>
-            <MyRoomScreen
-              userName={nickname}
-              streakDays={streak}
+          {activeTab ? (
+            <TabPager
+              index={NAV_ORDER.indexOf(activeTab)}
+              onIndexChange={handlePageChange}
+              lock={pagerLock}>
+              <MyRoomScreen
+                userName={nickname}
+                streakDays={streak}
+                coinBalance={wallet.coin}
+                diamondBalance={wallet.diamond}
+                routines={routines}
+                completions={completions}
+                categories={categories}
+                allCategories={allCategories}
+                calendarDays={calendarDays}
+                onSelectDate={handleSelectDate}
+                onToggleCalendarItem={handleToggleCalendarItem}
+                loading={myRoomLoading}
+                loadError={!!myRoomError}
+                onRetry={retryMyRoom}
+                placedFurnitureIds={placedFurnitureIds}
+                placements={placement.freeLayout ? placedItems : null}
+                wallpaperId={wallpaperId}
+                floorId={floorId}
+                backgroundId={backgroundId}
+                furniture={catalogue.furniture}
+                wallpapers={catalogue.wallpapers}
+                floors={catalogue.floors}
+                backgrounds={catalogue.backgrounds}
+                characterId={wornCharacterId}
+                characterAnimations={wornCharacterAnimations}
+                onToggleCompletion={toggleWithMissionGuard}
+                onEdit={openDecor}
+                onAddRoutine={addRoutineFromMyRoom}
+                onManageRoutines={openRoutineManage}
+                onOpenNotifications={openNotificationList}
+                unreadNotificationCount={unreadCount}
+                // MVP 고양이 단일 (#637) — 미배선이면 캐릭터 교체 항목이 숨는
+                // 기존 계약(#260)을 그대로 쓴다. 시트·훅 코드는 재사용 대기.
+                ownedCharacters={CHARACTER_SELECTION_ENABLED ? ownedCharacters : undefined}
+                onSelectCharacter={CHARACTER_SELECTION_ENABLED ? wearCharacter : undefined}
+                onManageCategories={openCategoryManage}
+                onUpdateCategory={updateRoutineCategory}
+                onOpenGacha={openGacha}
+                onRefresh={refreshMyRoom}
+                onQuickAddRoutine={quickAddTodo}
+                quickAddDisabledCategoryIds={houseCategoryIds}
+                onRenameRoutine={renameRoutine}
+                onEditRoutine={editRoutineFromMyRoom}
+                onUpdateRoutineTime={updateRoutineTime}
+                onUpdateTodoDueDate={updateTodoDueDate}
+                onMoveRoutineOccurrence={moveRoutineOccurrence}
+                onDeleteRoutine={deleteRoutine}
+              />
+              <HouseScreen
+                houses={arrangedHouses}
+                pendingHouses={pendingHouseCards}
+                onCancelJoinRequest={cancelJoinRequest}
+                onSwapSeats={swapSeats}
+                loading={housesLoading}
+                loadError={housesError}
+                onRetry={retryHouses}
+                onRefresh={refreshHousePull}
+                covers={houseCovers}
+                characterId={wornCharacterId}
+                userName={nickname}
+                streakDays={streak}
+                roomPreviews={roomPreviews}
+                furniture={catalogue.furniture}
+                wallpapers={catalogue.wallpapers}
+                floors={catalogue.floors}
+                backgrounds={catalogue.backgrounds}
+                houseIndex={houseIndex}
+                onHouseIndexChange={setHouseIndex}
+                onVisitFriend={visitFriend}
+                onVisitMyRoom={openMyRoom}
+                onOpenSearch={openHouseSearch}
+                coinBalance={wallet.coin}
+                diamondBalance={wallet.diamond}
+                raining={raining}
+                onOpenMemberManagement={openMemberManagement}
+                onAcceptJoinRequest={handleAcceptJoinRequest}
+                onRejectJoinRequest={handleRejectJoinRequest}
+                onKickMember={handleKickMember}
+                onLeaveHouse={handleLeaveHouse}
+                linkedRoutines={houseLinkedRoutines}
+                contributedMissionIds={contributedMissionIdList}
+                onAddMissionRoutine={handleAddMissionRoutine}
+                onClaimMission={handleClaimMission}
+                onCreateMission={handleCreateMission}
+                onDeleteMission={handleDeleteMission}
+                onUpdateHouse={handleUpdateHouse}
+                onTransferOwnership={handleTransferOwnership}
+                onReissueInviteCode={handleReissueInviteCode}
+                onPagerLockChange={handleHousePagerLock}
+              />
+              <SettingsScreen
+                themeMode={themeMode}
+                onChangeThemeMode={setThemeMode}
+                fontId={fontId}
+                onChangeFont={setFontId}
+                onOpenTheme={openTheme}
+                onEditProfile={openProfileEdit}
+                onChangePassword={openPasswordChange}
+                onOpenNotifications={openNotificationSettings}
+                onOpenSound={openSound}
+                onOpenHelp={openHelp}
+                onInviteFriends={openInviteFriends}
+                onOpenTerms={openTerms}
+                onOpenPrivacy={openPrivacy}
+                onReportBug={openBugReport}
+                onReplayOnboarding={onReplayOnboarding}
+                onLogout={handleLogout}
+                onWithdraw={handleWithdraw}
+              />
+            </TabPager>
+          ) : null}
+
+          {screen === 'decor' ? (
+            <RoomDecorScreen
+              initialItems={placedItems}
+              highlightItemIds={newDecorItemIds}
+              freeLayout={placement.freeLayout}
+              initialWallpaperId={wallpaperId}
+              initialFloorId={floorId}
+              initialBackgroundId={backgroundId}
+              ownedIds={ownedIds}
+              furniture={catalogue.furniture}
+              wallpapers={catalogue.wallpapers}
+              floors={catalogue.floors}
+              backgrounds={catalogue.backgrounds}
+              loading={shopLoading}
+              loadError={shopError}
+              onRetry={retryShop}
               coinBalance={wallet.coin}
               diamondBalance={wallet.diamond}
+              characterId={wornCharacterId}
+              characterAnimations={wornCharacterAnimations}
+              // 일괄 구매(프리뷰 저장, #501)가 결과를 기다린다 — Promise를 그대로.
+              onBuy={(itemId) => purchaseFurniture(itemId)}
+              onApply={async (its, wp, fl, bg) => {
+                const result = await saveLayout(its, wp, fl, bg);
+                if (result === 'ok') {
+                  setPlacedItems(its);
+                  setPlacedFurnitureIds(its.map((p) => p.furnitureId));
+                  setWallpaperId(wp);
+                  setFloorId(fl);
+                  setBackgroundId(bg);
+                  // 꾸미기 저장 성공 = 미션 3 완료 (#571) — 새 아이템 포함
+                  // 여부는 따지지 않는다(사양 단순화).
+                  completeMission('place-furniture');
+                }
+                return result;
+              }}
+              onConflictReload={() => {
+                void retryShop();
+              }}
+              onBack={() => setScreen('myRoom')}
+            />
+          ) : null}
+
+          {screen === 'routineManage' ? (
+            <RoutineManageScreen
               routines={routines}
-              completions={completions}
               categories={categories}
-              allCategories={allCategories}
-              calendarDays={calendarDays}
-              onSelectDate={handleSelectDate}
-              onToggleCalendarItem={handleToggleCalendarItem}
               loading={myRoomLoading}
               loadError={!!myRoomError}
               onRetry={retryMyRoom}
-              placedFurnitureIds={placedFurnitureIds}
-              placements={placement.freeLayout ? placedItems : null}
-              wallpaperId={wallpaperId}
-              floorId={floorId}
-              backgroundId={backgroundId}
-              furniture={catalogue.furniture}
-              wallpapers={catalogue.wallpapers}
-              floors={catalogue.floors}
-              backgrounds={catalogue.backgrounds}
-              characterId={wornCharacterId}
-              characterAnimations={wornCharacterAnimations}
-              onToggleCompletion={toggleWithMissionGuard}
-              onEdit={openDecor}
-              onAddRoutine={addRoutineFromMyRoom}
-              onManageRoutines={openRoutineManage}
-              onOpenNotifications={openNotificationList}
-              unreadNotificationCount={unreadCount}
-              // MVP 고양이 단일 (#637) — 미배선이면 캐릭터 교체 항목이 숨는
-              // 기존 계약(#260)을 그대로 쓴다. 시트·훅 코드는 재사용 대기.
-              ownedCharacters={CHARACTER_SELECTION_ENABLED ? ownedCharacters : undefined}
-              onSelectCharacter={CHARACTER_SELECTION_ENABLED ? wearCharacter : undefined}
-              onManageCategories={openCategoryManage}
-              onUpdateCategory={updateRoutineCategory}
-              onOpenGacha={openGacha}
-              onRefresh={refreshMyRoom}
-              onQuickAddRoutine={quickAddTodo}
-              quickAddDisabledCategoryIds={houseCategoryIds}
-              onRenameRoutine={renameRoutine}
-              onEditRoutine={editRoutineFromMyRoom}
-              onUpdateRoutineTime={updateRoutineTime}
-              onUpdateTodoDueDate={updateTodoDueDate}
-              onMoveRoutineOccurrence={moveRoutineOccurrence}
-              onDeleteRoutine={deleteRoutine}
+              onBack={() => setScreen('myRoom')}
+              onAdd={() => {
+                setEditingRoutine(null);
+                setAddReturnScreen('routineManage');
+                setScreen('addRoutine');
+              }}
+              onEdit={(r) => openEditRoutine(r, 'routineManage')}
             />
-            <HouseScreen
-              houses={arrangedHouses}
-              pendingHouses={pendingHouseCards}
-              onCancelJoinRequest={cancelJoinRequest}
-              onSwapSeats={swapSeats}
-              loading={housesLoading}
-              loadError={housesError}
-              onRetry={retryHouses}
-              onRefresh={refreshHousePull}
-              covers={houseCovers}
-              characterId={wornCharacterId}
-              userName={nickname}
-              streakDays={streak}
-              roomPreviews={roomPreviews}
-              furniture={catalogue.furniture}
-              wallpapers={catalogue.wallpapers}
-              floors={catalogue.floors}
-              backgrounds={catalogue.backgrounds}
-              houseIndex={houseIndex}
-              onHouseIndexChange={setHouseIndex}
-              onVisitFriend={visitFriend}
-              onVisitMyRoom={openMyRoom}
-              onOpenSearch={openHouseSearch}
+          ) : null}
+
+          {screen === 'addRoutine' ? (
+            <AddRoutineScreen
+              categories={categories}
+              editRoutine={editingRoutine}
+              onAdd={addRoutineWithMission}
+              onUpdate={updateRoutine}
+              onDelete={deleteRoutine}
+              onCreateCategory={createRoutineCategory}
+              onBack={() => setScreen(addReturnScreen)}
+            />
+          ) : null}
+
+          {screen === 'categoryManage' ? (
+            <CategoryManageScreen
+              categories={categories}
+              inUseCounts={categoryInUseCounts}
+              onCreate={createRoutineCategory}
+              onUpdate={updateRoutineCategory}
+              onDelete={deleteRoutineCategory}
+              onReorder={(orderedIds) => {
+                void reorderCategories(orderedIds);
+              }}
+              onBack={() => setScreen('myRoom')}
+            />
+          ) : null}
+
+          {screen === 'gacha' ? (
+            <GachaScreen
+              gachas={gachas}
+              loading={gachasLoading}
+              loadError={gachasError}
+              onRetry={retryGachas}
               coinBalance={wallet.coin}
               diamondBalance={wallet.diamond}
-              raining={raining}
-              onOpenMemberManagement={openMemberManagement}
-              onAcceptJoinRequest={handleAcceptJoinRequest}
-              onRejectJoinRequest={handleRejectJoinRequest}
-              onKickMember={handleKickMember}
-              onLeaveHouse={handleLeaveHouse}
-              linkedRoutines={houseLinkedRoutines}
-              contributedMissionIds={contributedMissionIdList}
-              onAddMissionRoutine={handleAddMissionRoutine}
-              onClaimMission={handleClaimMission}
-              onCreateMission={handleCreateMission}
-              onDeleteMission={handleDeleteMission}
-              onUpdateHouse={handleUpdateHouse}
-              onTransferOwnership={handleTransferOwnership}
-              onReissueInviteCode={handleReissueInviteCode}
-              onPagerLockChange={handleHousePagerLock}
+              onBack={() => setScreen('myRoom')}
+              onDraw={async (gachaId, count) => {
+                const results = await drawGachaMachine(gachaId, count);
+                // Drawn items land in the inventory — re-sync so 방 꾸미기 shows
+                // them as 보유중 and placement saves know their userItemId.
+                if (results?.some((r) => r.itemId != null && !r.converted)) void refreshOwned();
+                // A drawn character must show up in the 캐릭터 교체 picker too.
+                if (results?.some((r) => r.characterId != null && !r.converted))
+                  void reloadMyCharacters();
+                return results;
+              }}
+              placeableItemIds={placeableFurnitureIds}
+              // 보상 목록 (#620) — 시트가 자체 재시도를 가지므로 실패는 null로.
+              onLoadRewards={(gachaId) => fetchGachaRewards(gachaId).catch(() => null)}
+              onGoPlace={goPlaceDrawn}
+              // 뽑기 성공 = 미션 2 완료 (#571) — 연출이 끝나고 확인을 누른
+              // 순간에. 뽑기 직후 완료시키면 미션 시트가 연출을 덮는다.
+              onResultsConfirmed={() => completeMission('first-draw')}
             />
-            <SettingsScreen
-              themeMode={themeMode}
-              onChangeThemeMode={setThemeMode}
-              fontId={fontId}
-              onChangeFont={setFontId}
-              onOpenTheme={openTheme}
-              onEditProfile={openProfileEdit}
-              onChangePassword={openPasswordChange}
-              onOpenNotifications={openNotificationSettings}
-              onOpenSound={openSound}
-              onOpenHelp={openHelp}
-              onInviteFriends={openInviteFriends}
-              onOpenTerms={openTerms}
-              onOpenPrivacy={openPrivacy}
-              onReportBug={openBugReport}
-              onReplayOnboarding={onReplayOnboarding}
-              onLogout={handleLogout}
-              onWithdraw={handleWithdraw}
+          ) : null}
+
+          {screen === 'friendRoom' ? (
+            <FriendRoomScreen
+              friendName={visitingFriend.name}
+              onSwipeFriend={visitableFriends.length >= 2 ? swipeFriend : undefined}
+              guestbook={guestbookEntries}
+              guestbookLoading={guestbookLoading}
+              guestbookHasNext={guestbookHasNext}
+              onWriteGuestbook={(content) => {
+                void writeGuestbook(content);
+              }}
+              onCheer={(type) => {
+                // 응원은 같은 집 활성 멤버 사이에서만 — 서버 집 문맥이 있을 때만 배선.
+                const { houseId, membershipId } = visitingFriend;
+                if (houseId && membershipId) void cheerMember(houseId, membershipId, type);
+                else toast('이 방에서는 응원을 보낼 수 없어요', 'error');
+              }}
+              onLoadMoreGuestbook={() => {
+                void loadMoreGuestbook();
+              }}
+              placedFurnitureIds={friendRoom.placement?.placedFurnitureIds ?? []}
+              placements={friendRoom.placement?.placements ?? null}
+              wallpaperId={friendRoom.placement?.wallpaperId}
+              floorId={friendRoom.placement?.floorId ?? null}
+              backgroundId={friendRoom.placement?.backgroundId ?? null}
+              furniture={catalogue.furniture}
+              wallpapers={catalogue.wallpapers}
+              floors={catalogue.floors}
+              backgrounds={catalogue.backgrounds}
+              characterId={friendRoom.characterId}
+              characterAnimations={friendRoom.characterAnimations}
+              streakDays={friendRoom.streakDays}
+              routines={friendRoom.routines}
+              categories={friendRoom.categories}
+              recentActivity={friendRoom.recentActivity}
+              loading={friendRoom.loading}
+              loadError={friendRoom.error}
+              onRetry={retryFriendRoomVisit}
+              onBack={() => setScreen('house')}
             />
-          </TabPager>
-        ) : null}
+          ) : null}
 
-        {screen === 'decor' ? (
-          <RoomDecorScreen
-            initialItems={placedItems}
-            highlightItemIds={newDecorItemIds}
-            freeLayout={placement.freeLayout}
-            initialWallpaperId={wallpaperId}
-            initialFloorId={floorId}
-            initialBackgroundId={backgroundId}
-            ownedIds={ownedIds}
-            furniture={catalogue.furniture}
-            wallpapers={catalogue.wallpapers}
-            floors={catalogue.floors}
-            backgrounds={catalogue.backgrounds}
-            loading={shopLoading}
-            loadError={shopError}
-            onRetry={retryShop}
-            coinBalance={wallet.coin}
-            diamondBalance={wallet.diamond}
-            characterId={wornCharacterId}
-            characterAnimations={wornCharacterAnimations}
-            // 일괄 구매(프리뷰 저장, #501)가 결과를 기다린다 — Promise를 그대로.
-            onBuy={(itemId) => purchaseFurniture(itemId)}
-            onApply={async (its, wp, fl, bg) => {
-              const result = await saveLayout(its, wp, fl, bg);
-              if (result === 'ok') {
-                setPlacedItems(its);
-                setPlacedFurnitureIds(its.map((p) => p.furnitureId));
-                setWallpaperId(wp);
-                setFloorId(fl);
-                setBackgroundId(bg);
-                // 꾸미기 저장 성공 = 미션 3 완료 (#571) — 새 아이템 포함
-                // 여부는 따지지 않는다(사양 단순화).
-                completeMission('place-furniture');
-              }
-              return result;
-            }}
-            onConflictReload={() => {
-              void retryShop();
-            }}
-            onBack={() => setScreen('myRoom')}
-          />
-        ) : null}
+          {screen === 'houseSearch' ? (
+            <HouseSearchScreen
+              initialCode={pendingJoinCode ?? undefined}
+              onInitialCodeConsumed={() => setPendingJoinCode(null)}
+              houses={searchHouses}
+              loading={searchLoading}
+              loadError={searchError}
+              onRetry={retrySearch}
+              onBack={() => {
+                // 둘러보고 나가는 순간에 미션 4 완료 (#571 후속) — 탐색 중에
+                // 완료 시트가 화면을 덮지 않게 한다.
+                if (browsedHouseRef.current) completeMission('browse-house');
+                setScreen(noHouses ? 'myRoom' : 'house');
+              }}
+              onJoinByCode={async (code) => {
+                const ok = await joinByCode(code);
+                if (ok === true) {
+                  // 가입 성공 = 탐색의 성공적 종료 — 둘러보기 미션도 완료.
+                  completeMission('browse-house');
+                  setScreen('house');
+                }
+                return ok;
+              }}
+              onPreviewCode={async (code) => {
+                const detail = await previewByCode(code);
+                // 'network'는 실패 신호 — 열람 성공만 둘러봤음으로 친다.
+                if (detail && detail !== 'network') browsedHouseRef.current = true;
+                return detail;
+              }}
+              // 카탈로그를 얹어 미리보기 창문에 실제 방을 그린다 (#386).
+              onPreviewHouse={async (houseId) => {
+                const detail = await previewHouse(houseId, catalogue);
+                // 미리보기 열람 = 둘러봤음 표시 — 완료는 나갈 때 (#571 후속).
+                if (detail) browsedHouseRef.current = true;
+                return detail;
+              }}
+              furniture={catalogue.furniture}
+              wallpapers={catalogue.wallpapers}
+              floors={catalogue.floors}
+              backgrounds={catalogue.backgrounds}
+              onJoinHouse={(houseId) => {
+                void joinSearchHouse(houseId).then((ok) => {
+                  if (!ok) return;
+                  completeMission('browse-house');
+                  setScreen('house');
+                });
+              }}
+              onCreate={() => setScreen('createHouse')}
+            />
+          ) : null}
 
-        {screen === 'routineManage' ? (
-          <RoutineManageScreen
-            routines={routines}
-            categories={categories}
-            loading={myRoomLoading}
-            loadError={!!myRoomError}
-            onRetry={retryMyRoom}
-            onBack={() => setScreen('myRoom')}
-            onAdd={() => {
-              setEditingRoutine(null);
-              setAddReturnScreen('routineManage');
-              setScreen('addRoutine');
-            }}
-            onEdit={(r) => openEditRoutine(r, 'routineManage')}
-          />
-        ) : null}
+          {screen === 'createHouse' ? (
+            <CreateHouseScreen
+              covers={houseCovers}
+              onBack={() => setScreen('houseSearch')}
+              onCreate={(input) => {
+                void createHouse(input).then((ok) => ok && setScreen('house'));
+              }}
+            />
+          ) : null}
 
-        {screen === 'addRoutine' ? (
-          <AddRoutineScreen
-            categories={categories}
-            editRoutine={editingRoutine}
-            onAdd={addRoutineWithMission}
-            onUpdate={updateRoutine}
-            onDelete={deleteRoutine}
-            onCreateCategory={createRoutineCategory}
-            onBack={() => setScreen(addReturnScreen)}
-          />
-        ) : null}
+          {screen === 'theme' ? (
+            <ThemeScreen
+              themeId={themeId}
+              onChangeThemeId={setThemeId}
+              onBack={() => setScreen('settings')}
+            />
+          ) : null}
 
-        {screen === 'categoryManage' ? (
-          <CategoryManageScreen
-            categories={categories}
-            inUseCounts={categoryInUseCounts}
-            onCreate={createRoutineCategory}
-            onUpdate={updateRoutineCategory}
-            onDelete={deleteRoutineCategory}
-            onReorder={(orderedIds) => {
-              void reorderCategories(orderedIds);
-            }}
-            onBack={() => setScreen('myRoom')}
-          />
-        ) : null}
+          {screen === 'profileEdit' ? (
+            <ProfileEditScreen
+              initialNickname={nickname}
+              initialBio={bio}
+              characterId={wornCharacterId}
+              onSave={(nick, b) => {
+                setNickname(nick);
+                setBio(b);
+                void saveProfile(nick, b);
+                setScreen('settings');
+              }}
+              onBack={() => setScreen('settings')}
+            />
+          ) : null}
 
-        {screen === 'gacha' ? (
-          <GachaScreen
-            gachas={gachas}
-            loading={gachasLoading}
-            loadError={gachasError}
-            onRetry={retryGachas}
-            coinBalance={wallet.coin}
-            diamondBalance={wallet.diamond}
-            onBack={() => setScreen('myRoom')}
-            onDraw={async (gachaId, count) => {
-              const results = await drawGachaMachine(gachaId, count);
-              // Drawn items land in the inventory — re-sync so 방 꾸미기 shows
-              // them as 보유중 and placement saves know their userItemId.
-              if (results?.some((r) => r.itemId != null && !r.converted)) void refreshOwned();
-              // A drawn character must show up in the 캐릭터 교체 picker too.
-              if (results?.some((r) => r.characterId != null && !r.converted))
-                void reloadMyCharacters();
-              return results;
-            }}
-            placeableItemIds={placeableFurnitureIds}
-            // 보상 목록 (#620) — 시트가 자체 재시도를 가지므로 실패는 null로.
-            onLoadRewards={(gachaId) => fetchGachaRewards(gachaId).catch(() => null)}
-            onGoPlace={goPlaceDrawn}
-            // 뽑기 성공 = 미션 2 완료 (#571) — 연출이 끝나고 확인을 누른
-            // 순간에. 뽑기 직후 완료시키면 미션 시트가 연출을 덮는다.
-            onResultsConfirmed={() => completeMission('first-draw')}
-          />
-        ) : null}
+          {screen === 'notificationList' ? (
+            <NotificationListScreen
+              notifications={notificationEntries}
+              loading={notificationsLoading}
+              loadError={notificationsError}
+              onRetry={loadNotifications}
+              hasNext={notificationsHasNext}
+              onBack={() => setScreen('myRoom')}
+              onRead={(id) => {
+                void markNotificationRead(id);
+              }}
+              onReadAll={() => {
+                void markAllNotificationsRead();
+              }}
+              onLoadMore={() => {
+                void loadMoreNotifications();
+              }}
+            />
+          ) : null}
 
-        {screen === 'friendRoom' ? (
-          <FriendRoomScreen
-            friendName={visitingFriend.name}
-            onSwipeFriend={visitableFriends.length >= 2 ? swipeFriend : undefined}
-            guestbook={guestbookEntries}
-            guestbookLoading={guestbookLoading}
-            guestbookHasNext={guestbookHasNext}
-            onWriteGuestbook={(content) => {
-              void writeGuestbook(content);
-            }}
-            onCheer={(type) => {
-              // 응원은 같은 집 활성 멤버 사이에서만 — 서버 집 문맥이 있을 때만 배선.
-              const { houseId, membershipId } = visitingFriend;
-              if (houseId && membershipId) void cheerMember(houseId, membershipId, type);
-              else toast('이 방에서는 응원을 보낼 수 없어요', 'error');
-            }}
-            onLoadMoreGuestbook={() => {
-              void loadMoreGuestbook();
-            }}
-            placedFurnitureIds={friendRoom.placement?.placedFurnitureIds ?? []}
-            placements={friendRoom.placement?.placements ?? null}
-            wallpaperId={friendRoom.placement?.wallpaperId}
-            floorId={friendRoom.placement?.floorId ?? null}
-            backgroundId={friendRoom.placement?.backgroundId ?? null}
-            furniture={catalogue.furniture}
-            wallpapers={catalogue.wallpapers}
-            floors={catalogue.floors}
-            backgrounds={catalogue.backgrounds}
-            characterId={friendRoom.characterId}
-            characterAnimations={friendRoom.characterAnimations}
-            streakDays={friendRoom.streakDays}
-            routines={friendRoom.routines}
-            categories={friendRoom.categories}
-            recentActivity={friendRoom.recentActivity}
-            loading={friendRoom.loading}
-            loadError={friendRoom.error}
-            onRetry={retryFriendRoomVisit}
-            onBack={() => setScreen('house')}
-          />
-        ) : null}
+          {screen === 'passwordChange' ? (
+            <PasswordChangeScreen
+              onSubmit={() => setScreen('settings')}
+              onBack={() => setScreen('settings')}
+            />
+          ) : null}
 
-        {screen === 'houseSearch' ? (
-          <HouseSearchScreen
-            initialCode={pendingJoinCode ?? undefined}
-            onInitialCodeConsumed={() => setPendingJoinCode(null)}
-            houses={searchHouses}
-            loading={searchLoading}
-            loadError={searchError}
-            onRetry={retrySearch}
-            onBack={() => {
-              // 둘러보고 나가는 순간에 미션 4 완료 (#571 후속) — 탐색 중에
-              // 완료 시트가 화면을 덮지 않게 한다.
-              if (browsedHouseRef.current) completeMission('browse-house');
-              setScreen(noHouses ? 'myRoom' : 'house');
-            }}
-            onJoinByCode={async (code) => {
-              const ok = await joinByCode(code);
-              if (ok === true) {
-                // 가입 성공 = 탐색의 성공적 종료 — 둘러보기 미션도 완료.
-                completeMission('browse-house');
-                setScreen('house');
-              }
-              return ok;
-            }}
-            onPreviewCode={async (code) => {
-              const detail = await previewByCode(code);
-              // 'network'는 실패 신호 — 열람 성공만 둘러봤음으로 친다.
-              if (detail && detail !== 'network') browsedHouseRef.current = true;
-              return detail;
-            }}
-            // 카탈로그를 얹어 미리보기 창문에 실제 방을 그린다 (#386).
-            onPreviewHouse={async (houseId) => {
-              const detail = await previewHouse(houseId, catalogue);
-              // 미리보기 열람 = 둘러봤음 표시 — 완료는 나갈 때 (#571 후속).
-              if (detail) browsedHouseRef.current = true;
-              return detail;
-            }}
-            furniture={catalogue.furniture}
-            wallpapers={catalogue.wallpapers}
-            floors={catalogue.floors}
-            backgrounds={catalogue.backgrounds}
-            onJoinHouse={(houseId) => {
-              void joinSearchHouse(houseId).then((ok) => {
-                if (!ok) return;
-                completeMission('browse-house');
-                setScreen('house');
-              });
-            }}
-            onCreate={() => setScreen('createHouse')}
-          />
-        ) : null}
+          {screen === 'notifications' ? (
+            <NotificationSettingsScreen
+              settings={notificationSettings}
+              onToggle={toggleNotificationSetting}
+              loadError={notificationSettingsLoadError}
+              onRetry={loadNotificationSettings}
+              onBack={() => setScreen('settings')}
+            />
+          ) : null}
 
-        {screen === 'createHouse' ? (
-          <CreateHouseScreen
-            covers={houseCovers}
-            onBack={() => setScreen('houseSearch')}
-            onCreate={(input) => {
-              void createHouse(input).then((ok) => ok && setScreen('house'));
-            }}
-          />
-        ) : null}
+          {screen === 'sound' ? (
+            <SoundSettingsScreen
+              initialSettings={soundSettings}
+              onChange={(next) => {
+                setSoundSettings(next);
+                persistDeviceSettings(next);
+              }}
+              onBack={() => setScreen('settings')}
+            />
+          ) : null}
 
-        {screen === 'theme' ? (
-          <ThemeScreen
-            themeId={themeId}
-            onChangeThemeId={setThemeId}
-            onBack={() => setScreen('settings')}
-          />
-        ) : null}
+          {screen === 'bugReport' ? (
+            <BugReportScreen
+              entries={bugReports}
+              onSubmit={submitBugReport}
+              onPickImage={pickLibraryImage}
+              onBack={() => setScreen('settings')}
+            />
+          ) : null}
 
-        {screen === 'profileEdit' ? (
-          <ProfileEditScreen
-            initialNickname={nickname}
-            initialBio={bio}
-            characterId={wornCharacterId}
-            onSave={(nick, b) => {
-              setNickname(nick);
-              setBio(b);
-              void saveProfile(nick, b);
-              setScreen('settings');
-            }}
-            onBack={() => setScreen('settings')}
-          />
-        ) : null}
+          {screen === 'help' ? (
+            <HelpScreen
+              onBack={() => setScreen('settings')}
+              appVersion={appVersion}
+              onContact={openSupportMail}
+            />
+          ) : null}
 
-        {screen === 'notificationList' ? (
-          <NotificationListScreen
-            notifications={notificationEntries}
-            loading={notificationsLoading}
-            loadError={notificationsError}
-            onRetry={loadNotifications}
-            hasNext={notificationsHasNext}
-            onBack={() => setScreen('myRoom')}
-            onRead={(id) => {
-              void markNotificationRead(id);
-            }}
-            onReadAll={() => {
-              void markAllNotificationsRead();
-            }}
-            onLoadMore={() => {
-              void loadMoreNotifications();
-            }}
-          />
-        ) : null}
-
-        {screen === 'passwordChange' ? (
-          <PasswordChangeScreen
-            onSubmit={() => setScreen('settings')}
-            onBack={() => setScreen('settings')}
-          />
-        ) : null}
-
-        {screen === 'notifications' ? (
-          <NotificationSettingsScreen
-            settings={notificationSettings}
-            onToggle={toggleNotificationSetting}
-            loadError={notificationSettingsLoadError}
-            onRetry={loadNotificationSettings}
-            onBack={() => setScreen('settings')}
-          />
-        ) : null}
-
-        {screen === 'sound' ? (
-          <SoundSettingsScreen
-            initialSettings={soundSettings}
-            onChange={(next) => {
-              setSoundSettings(next);
-              persistDeviceSettings(next);
-            }}
-            onBack={() => setScreen('settings')}
-          />
-        ) : null}
-
-        {screen === 'bugReport' ? (
-          <BugReportScreen
-            entries={bugReports}
-            onSubmit={submitBugReport}
-            onPickImage={pickLibraryImage}
-            onBack={() => setScreen('settings')}
-          />
-        ) : null}
-
-        {screen === 'help' ? (
-          <HelpScreen
-            onBack={() => setScreen('settings')}
-            appVersion={appVersion}
-            onContact={openSupportMail}
-          />
-        ) : null}
-
-        {screen === 'inviteFriends' ? (
-          <InviteFriendsScreen
-            info={inviteInfo}
-            loading={invitesLoading}
-            loadError={invitesLoadError}
-            onRetry={loadInvites}
-            onRedeem={redeemInviteCode}
-            initialRedeemCode={pendingFriendCode ?? undefined}
-            onInitialRedeemCodeConsumed={() => setPendingFriendCode(null)}
-            onBack={() => setScreen('settings')}
-          />
-        ) : null}
-      </Animated.View>
+          {screen === 'inviteFriends' ? (
+            <InviteFriendsScreen
+              info={inviteInfo}
+              loading={invitesLoading}
+              loadError={invitesLoadError}
+              onRetry={loadInvites}
+              onRedeem={redeemInviteCode}
+              initialRedeemCode={pendingFriendCode ?? undefined}
+              onInitialRedeemCodeConsumed={() => setPendingFriendCode(null)}
+              onBack={() => setScreen('settings')}
+            />
+          ) : null}
+        </Animated.View>
+      </GestureDetector>
 
       {activeTab ? (
         <BottomNav
