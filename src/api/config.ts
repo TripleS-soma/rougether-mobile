@@ -4,7 +4,7 @@
  * fallback keeps env-less runs (Jest) on the shared dev server. Includes the
  * `/api/v1` prefix so callers pass bare paths like `/routines`.
  */
-const FALLBACK_DEV_API_URL = 'http://3.35.167.122:8080/api/v1';
+const FALLBACK_DEV_API_URL = 'https://d12w5t2ftuhgj8.cloudfront.net/api/v1';
 
 export const API_BASE = (process.env.EXPO_PUBLIC_API_URL ?? FALLBACK_DEV_API_URL).replace(
   /\/+$/,

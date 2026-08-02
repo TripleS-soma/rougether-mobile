@@ -43,7 +43,7 @@ const isoShift = (days) => {
     netFailures.push(`${req.method()} ${req.url().slice(0, 120)} → ${req.failure()?.errorText}`);
   });
   page.on('response', (res) => {
-    if (res.status() >= 400 && res.url().includes('43.203'))
+    if (res.status() >= 400 && res.url().includes('cloudfront.net'))
       netFailures.push(
         `${res.request().method()} ${res.url().slice(0, 120)} → HTTP ${res.status()}`,
       );
