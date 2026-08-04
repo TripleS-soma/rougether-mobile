@@ -16,8 +16,8 @@ import {
 
 import { GestureDetector } from 'react-native-gesture-handler';
 
-import { CharacterAvatar, type CharacterAnimationSet } from '@/components/room/character-avatar';
-import { Room } from '@/components/room/room';
+import { CharacterAvatar } from '@/components/room/character-avatar';
+import { Room, type RoomSceneProps } from '@/components/room/room';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { type Routine, type RoutineCategoryMeta, UNCATEGORIZED_META } from '@/constants/routines';
 import { BearCheck } from '@/components/ui/bear-check';
@@ -29,7 +29,6 @@ import { PendingNotice } from '@/components/ui/pending-notice';
 import { RetryState } from '@/components/ui/retry-state';
 import { BookOpenPictogram, Pictogram, type PictogramName } from '@/components/ui/pictograms';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
-import { type FurnitureItem, type PlacedFurniture, type Wallpaper } from '@/resources/furniture';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
@@ -80,7 +79,9 @@ const DEFAULT_GUESTBOOK: GuestbookEntry[] = [
 /** 1~500 chars (server GuestbookCreateRequest). */
 const GUESTBOOK_MAX = 500;
 
-export type FriendRoomScreenProps = {
+// RoomSceneProps: 친구 <Room />에 스프레드로 전달되는 씬 번들 (#691) —
+// 방문한 방엔 주인이 항상 있으므로 characterId만 null 불가로 좁힌다.
+export type FriendRoomScreenProps = Omit<RoomSceneProps, 'characterId'> & {
   friendName?: string;
   /**
    * 방 캔버스 좌우 플링 (#644) — 같은 집의 다른 멤버 방으로 순회. 'left'
@@ -89,18 +90,6 @@ export type FriendRoomScreenProps = {
   onSwipeFriend?: (dir: 'left' | 'right') => void;
   streakDays?: number;
   characterId?: CharacterId;
-  /** Friend's CDN animation keys (forwarded to <Room />). */
-  characterAnimations?: CharacterAnimationSet;
-  wallpaperId?: string;
-  floorId?: string | null;
-  backgroundId?: string | null;
-  placedFurnitureIds?: string[];
-  /** 자유 배치(FREE_V1, #327) — 주어지면 슬롯 대신 정규화 좌표로 렌더. */
-  placements?: PlacedFurniture[] | null;
-  furniture?: FurnitureItem[];
-  wallpapers?: Wallpaper[];
-  floors?: Wallpaper[];
-  backgrounds?: Wallpaper[];
   /** Friend's routines+todos for today; omit for the demo preview list. */
   routines?: Routine[];
   /**
@@ -171,6 +160,20 @@ export function FriendRoomScreen({
   const Typography = useTypography();
   const headerInset = useHeaderInsetStyle();
   const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
+  // <Room />에 스프레드로 넘기는 씬 번들 (#691).
+  const roomScene: RoomSceneProps = {
+    characterId,
+    characterAnimations,
+    wallpaperId,
+    floorId,
+    backgroundId,
+    placedFurnitureIds,
+    placements,
+    furniture,
+    wallpapers,
+    floors,
+    backgrounds,
+  };
   // No routines prop = unwired demo preview (dev gallery); the notice says so.
   const preview = routines === undefined;
   const routineList = routines ?? DEFAULT_ROUTINES;
@@ -369,19 +372,7 @@ export function FriendRoomScreen({
           keyboardShouldPersistTaps="handled">
           <GestureDetector gesture={friendFling}>
             <View style={styles.roomWrap} collapsable={false}>
-              <Room
-                characterId={characterId}
-                characterAnimations={characterAnimations}
-                wallpaperId={wallpaperId}
-                floorId={floorId}
-                backgroundId={backgroundId}
-                placedFurnitureIds={placedFurnitureIds}
-                placements={placements}
-                furniture={furniture}
-                wallpapers={wallpapers}
-                floors={floors}
-                backgrounds={backgrounds}
-              />
+              <Room {...roomScene} />
             </View>
           </GestureDetector>
 

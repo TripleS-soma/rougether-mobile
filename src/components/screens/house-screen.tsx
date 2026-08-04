@@ -17,7 +17,12 @@ import { CharacterAvatar } from '@/components/room/character-avatar';
 import { type HouseCover } from '@/components/room/house-cover-picker';
 import { FRAME_ASPECT, houseCoverKey, WINDOW_RECTS } from '@/components/room/house-preview-frame';
 import { CoachTarget } from '@/components/ui/coach-mark';
-import { Room } from '@/components/room/room';
+import {
+  type MemberRoomPreview,
+  memberRoomScene,
+  Room,
+  type RoomCatalogProps,
+} from '@/components/room/room';
 import { HouseMembersScreen } from '@/components/screens/house-members-screen';
 import { HouseMissionsSheet } from '@/components/screens/sheets/house-missions-sheet';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -48,21 +53,10 @@ import type { MissionStatus } from '@/utils/mission-cta';
 import { assetSource } from '@/resources/asset';
 import { flingDirection, SWIPE_CLAIM_DX, SWIPE_FAIL_DY } from '@/utils/gesture';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
-import type { FurnitureItem, PlacedFurniture, Wallpaper } from '@/resources/furniture';
+import type { Wallpaper } from '@/resources/furniture';
 
-/**
- * A member's live room resolved for the tile preview (their placement + worn
- * character). Absent entry = not loaded / fetch failed → plain tile fallback.
- */
-export type MemberRoomPreview = {
-  placedFurnitureIds: string[];
-  /** FREE_V1 방의 자유 배치 (#327) — null이면 슬롯 렌더. */
-  placements?: PlacedFurniture[] | null;
-  wallpaperId?: string;
-  floorId?: string | null;
-  backgroundId?: string | null;
-  characterId?: CharacterId;
-};
+// 방 렌더 데이터라 room.tsx로 이동 (#691) — 기존 임포터를 위한 재수출.
+export type { MemberRoomPreview } from '@/components/room/room';
 
 export type RoomCell = {
   name: string;
@@ -270,7 +264,8 @@ const DEFAULT_HOUSES: House[] = [
   },
 ];
 
-export type HouseScreenProps = {
+// RoomCatalogProps: 좌석 타일 미리보기가 해석할 카탈로그 4종 (#691).
+export type HouseScreenProps = RoomCatalogProps & {
   houses?: House[];
   /** True while my houses are loading from the API. */
   loading?: boolean;
@@ -332,11 +327,6 @@ export type HouseScreenProps = {
   covers?: HouseCover[];
   /** Live room previews by membershipId — tiles render the member's actual room. */
   roomPreviews?: Record<number, MemberRoomPreview>;
-  // Catalogue the previews resolve against (server shop items; local defaults otherwise).
-  furniture?: FurnitureItem[];
-  wallpapers?: Wallpaper[];
-  floors?: Wallpaper[];
-  backgrounds?: Wallpaper[];
   /** Hand the OWNER role to a member via the API (owner only). */
   onTransferOwnership?: (houseId: number, membershipId: number) => void;
   /** Reissue the invite code via the API (owner only; the old code expires). */
@@ -1103,16 +1093,14 @@ export const HouseScreen = memo(function HouseScreen({
           {preview ? (
             <View style={styles.roomPreview} pointerEvents="none" testID="room-preview">
               <Room
-                placedFurnitureIds={preview.placedFurnitureIds}
-                placements={preview.placements ?? null}
-                wallpaperId={preview.wallpaperId}
-                floorId={preview.floorId}
-                backgroundId={preview.backgroundId}
+                {...memberRoomScene(preview, {
+                  furniture,
+                  wallpapers,
+                  floors: floorSurfaces,
+                  backgrounds,
+                })}
+                // 재실 좌석은 캐릭터 미지정 시 빈 방이 아니라 기본 캐릭터로.
                 characterId={preview.characterId}
-                furniture={furniture}
-                wallpapers={wallpapers}
-                floors={floorSurfaces}
-                backgrounds={backgrounds}
                 fill
                 style={styles.roomPreviewFill}
               />

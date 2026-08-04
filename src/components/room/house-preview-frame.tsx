@@ -1,9 +1,12 @@
 import { Image } from 'expo-image';
 import { StyleSheet, View } from 'react-native';
 
-import { Room } from '@/components/room/room';
-import type { MemberRoomPreview } from '@/components/screens/house-screen';
-import type { FurnitureItem, Wallpaper } from '@/resources/furniture';
+import {
+  type MemberRoomPreview,
+  memberRoomScene,
+  Room,
+  type RoomCatalogProps,
+} from '@/components/room/room';
 import { Radius } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
 import { assetSource, isCdnKey } from '@/resources/asset';
@@ -41,18 +44,14 @@ export const WINDOW_RECTS = [
   { left: '50.3%', top: '57.6%', width: '37%', height: '33%' },
 ] as const;
 
-export type HousePreviewFrameProps = {
+/** RoomCatalogProps: 실제 방의 assetKey 아이템 해석용 카탈로그 (없으면 로컬 기본). */
+export type HousePreviewFrameProps = RoomCatalogProps & {
   /** 커버(프레임 PNG) 키 — 없거나 CDN 키가 아니면 기본 프레임 PNG로 렌더. */
   coverImageKey?: string;
   /** 입주 인원 — rooms가 없을 때 이만큼의 창문에 기본 방 목업이 들어간다. */
   memberCount?: number;
   /** 구성원별 실제 방 (#386, 가입순) — 있으면 목업 대신 이걸 그린다. */
   rooms?: MemberRoomPreview[];
-  /** 상점 카탈로그 — 실제 방의 assetKey 아이템 해석용 (없으면 로컬 기본). */
-  furniture?: FurnitureItem[];
-  wallpapers?: Wallpaper[];
-  floors?: Wallpaper[];
-  backgrounds?: Wallpaper[];
   /** 접근성 라벨용 집 이름. */
   name?: string;
 };
@@ -99,16 +98,7 @@ export function HousePreviewFrame({
             {occupied ? (
               <View style={StyleSheet.absoluteFill} pointerEvents="none" testID="preview-room">
                 <Room
-                  characterId={room?.characterId ?? null}
-                  placedFurnitureIds={room?.placedFurnitureIds ?? []}
-                  placements={room ? (room.placements ?? null) : []}
-                  wallpaperId={room?.wallpaperId}
-                  floorId={room?.floorId}
-                  backgroundId={room?.backgroundId}
-                  furniture={furniture}
-                  wallpapers={wallpapers}
-                  floors={floors}
-                  backgrounds={backgrounds}
+                  {...memberRoomScene(room, { furniture, wallpapers, floors, backgrounds })}
                   fill
                 />
               </View>

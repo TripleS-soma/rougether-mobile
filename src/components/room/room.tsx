@@ -90,6 +90,63 @@ export type RoomProps = {
   style?: StyleProp<ViewStyle>;
 };
 
+/** 카탈로그 4종 — 방을 그리는 화면들의 Props와 Room 전달에 공용 (#691). */
+export type RoomCatalogProps = Pick<
+  RoomProps,
+  'furniture' | 'wallpapers' | 'floors' | 'backgrounds'
+>;
+
+/**
+ * Room에 그대로 전달되는 씬 prop 번들 (#691) — 방을 그리는 화면은 이 타입을
+ * Props에 합류(&)하고 `<Room {...scene} />` 스프레드로 전달한다. 화면마다
+ * 11개 prop 선언·전달을 나열하던 복붙을 대체한다.
+ */
+export type RoomSceneProps = RoomCatalogProps &
+  Pick<
+    RoomProps,
+    | 'characterId'
+    | 'characterAnimations'
+    | 'wallpaperId'
+    | 'floorId'
+    | 'backgroundId'
+    | 'placedFurnitureIds'
+    | 'placements'
+  >;
+
+/**
+ * A member's live room resolved for a tile/window preview (their placement +
+ * worn character). Absent entry = not loaded / fetch failed → mock fallback.
+ */
+export type MemberRoomPreview = {
+  placedFurnitureIds: string[];
+  /** FREE_V1 방의 자유 배치 (#327) — null이면 슬롯 렌더. */
+  placements?: PlacedFurniture[] | null;
+  wallpaperId?: string;
+  floorId?: string | null;
+  backgroundId?: string | null;
+  characterId?: CharacterId;
+};
+
+/**
+ * MemberRoomPreview(집 좌석 타일·탐색 창문)를 Room 씬 번들로 변환 (#691).
+ * 기본값 규약을 한 곳에 고정한다: room이 없으면 캐릭터 없는 빈 방
+ * (placements [] = 빈 자유배치), 있으면 placements null이 슬롯 렌더 폴백.
+ */
+export function memberRoomScene(
+  room: MemberRoomPreview | undefined,
+  catalogs: RoomCatalogProps,
+): RoomSceneProps {
+  return {
+    ...catalogs,
+    characterId: room?.characterId ?? null,
+    placedFurnitureIds: room?.placedFurnitureIds ?? [],
+    placements: room ? (room.placements ?? null) : [],
+    wallpaperId: room?.wallpaperId,
+    floorId: room?.floorId,
+    backgroundId: room?.backgroundId,
+  };
+}
+
 /**
  * character. Furniture uses in-app placeholders (FurniturePlaceholder) until
  * real art exists. The character is a static pose frame; when

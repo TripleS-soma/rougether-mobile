@@ -21,9 +21,8 @@ import ReanimatedSwipeable, {
   type SwipeableMethods,
 } from 'react-native-gesture-handler/ReanimatedSwipeable';
 
-import { type CharacterAnimationSet } from '@/components/room/character-avatar';
 import { NavMenuPopover } from '@/components/app/nav-menu-popover';
-import { Room } from '@/components/room/room';
+import { Room, type RoomSceneProps } from '@/components/room/room';
 import {
   CharacterPickerSheet,
   type OwnedCharacter,
@@ -62,12 +61,7 @@ import { saveRoomImage } from '@/lib/room-capture';
 import { captureRef } from 'react-native-view-shot';
 import { refreshWidgets } from '@/widgets/rougether-widgets';
 import { saveWidgetRoomImage } from '@/widgets/widget-data';
-import {
-  DEFAULT_WALLPAPER_ID,
-  type FurnitureItem,
-  type PlacedFurniture,
-  type Wallpaper,
-} from '@/resources/furniture';
+import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
@@ -147,7 +141,9 @@ export type CalendarDayItem = {
   category?: string;
 };
 
-export type MyRoomScreenProps = {
+// RoomSceneProps: <Room />에 스프레드로 전달되는 씬 번들 (#691) — 내 방은
+// 캐릭터가 항상 있으므로 characterId만 null 불가로 좁힌다.
+export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> & {
   /** Room occupant's display name (header title becomes "{userName}의 방"). */
   userName?: string;
   /** Consecutive-day streak shown in the header. */
@@ -155,20 +151,7 @@ export type MyRoomScreenProps = {
   /** Wallet balances shown in the header (완료 보상 피드백의 기준점). */
   coinBalance?: number;
   diamondBalance?: number;
-  // Room rendering (forwarded to <Room />).
   characterId?: CharacterId;
-  /** Worn character's CDN animation keys (forwarded to <Room />). */
-  characterAnimations?: CharacterAnimationSet;
-  wallpaperId?: string;
-  floorId?: string | null;
-  backgroundId?: string | null;
-  placedFurnitureIds?: string[];
-  /** 자유 배치(FREE_V1, #327) — 주어지면 슬롯 대신 정규화 좌표로 렌더. */
-  placements?: PlacedFurniture[] | null;
-  furniture?: FurnitureItem[];
-  wallpapers?: Wallpaper[];
-  floors?: Wallpaper[];
-  backgrounds?: Wallpaper[];
   // Routine list.
   routines?: Routine[];
   /**
@@ -646,6 +629,21 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     else if (result === 'denied') toast('사진 접근 권한을 허용해주세요', 'error');
     else if (result === 'unsupported') toast('웹에서는 이미지 저장을 지원하지 않아요', 'error');
     else toast('이미지 저장에 실패했어요', 'error');
+  };
+
+  // <Room />에 스프레드로 넘기는 씬 번들 (#691).
+  const roomScene: RoomSceneProps = {
+    characterId,
+    characterAnimations,
+    wallpaperId,
+    floorId,
+    backgroundId,
+    placedFurnitureIds,
+    placements,
+    furniture,
+    wallpapers,
+    floors,
+    backgrounds,
   };
 
   // 홈 위젯용 무음 방 캡처 (#604, 안드로이드 전용) — 방 구성이 바뀌었을 때만
@@ -1134,20 +1132,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                     리스트 영역의 가로 스와이프는 셸 탭 페이저(집 이동) 몫. */}
               <GestureDetector gesture={tabFling}>
                 <View style={styles.roomWrap} ref={roomShotRef} collapsable={false}>
-                  <Room
-                    characterId={characterId}
-                    characterAnimations={characterAnimations}
-                    wallpaperId={wallpaperId}
-                    floorId={floorId}
-                    backgroundId={backgroundId}
-                    placedFurnitureIds={placedFurnitureIds}
-                    placements={placements}
-                    furniture={furniture}
-                    wallpapers={wallpapers}
-                    floors={floors}
-                    backgrounds={backgrounds}
-                    interactiveCharacter
-                  />
+                  <Room {...roomScene} interactiveCharacter />
                   <Pressable
                     onPress={onOpenGacha}
                     accessibilityRole="button"
