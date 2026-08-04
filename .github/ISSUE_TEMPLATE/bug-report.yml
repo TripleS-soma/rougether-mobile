@@ -40,10 +40,10 @@ body:
     id: environment
     attributes:
       label: 환경
-      description: 실기기 버그면 기기·OS·앱 버전(빌드 번호)·OTA 수신 여부까지. 웹/시뮬레이터면 그렇게 적어주세요.
+      description: 실기기 버그면 기기·OS·앱 버전·OTA 수신 여부까지. 버전은 설정 → 도움말 하단에, 빌드 번호는 TestFlight/스토어 목록에 있습니다. 웹/시뮬레이터면 그렇게 적어주세요.
       placeholder: |
         - 기기: iPhone 15 Pro / iOS 18.5
-        - 앱: 1.2.0 (build 9), OTA 수신 후
+        - 앱: 1.0.0 (build 17), OTA 수신 후
     validations:
       required: true
   - type: textarea
