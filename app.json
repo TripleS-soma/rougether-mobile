@@ -152,11 +152,12 @@
               "name": "RougetherToday",
               "label": "루게더 오늘의 루틴",
               "description": "오늘 진행도와 남은 루틴을 한눈에",
-              "minWidth": "250dp",
+              "minWidth": "110dp",
               "minHeight": "110dp",
-              "targetCellWidth": 4,
+              "targetCellWidth": 2,
               "targetCellHeight": 2,
-              "updatePeriodMillis": 1800000
+              "updatePeriodMillis": 1800000,
+              "resizeMode": "horizontal|vertical"
             },
             {
               "name": "RougetherRoom",

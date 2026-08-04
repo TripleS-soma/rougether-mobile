@@ -28,7 +28,11 @@ type Palette = (typeof Themes)['cozy'];
 
 const palette = (dark: boolean): Palette => (dark ? DarkThemes.cozy : Themes.cozy);
 
-/** 시안 B — 오늘 리스트 (4×2): 진행 바 + 남은 루틴 제목. */
+/**
+ * 시안 B — 오늘 리스트 (2×2, #688): 진행 바 + 남은 루틴 제목. 좁은 셀에
+ * 맞춘 컴팩트 헤더(라벨 생략)이고, 제목은 flex:1 폭 제약 위에서 truncate가
+ * 실제로 동작한다(제약 없이는 긴 제목이 레이아웃을 밀어냈다).
+ */
 export function TodayListWidget({ summary, dark }: { summary: WidgetSummary; dark: boolean }) {
   const t = palette(dark);
   const progress = summary.total > 0 ? summary.done / summary.total : 0;
@@ -40,19 +44,15 @@ export function TodayListWidget({ summary, dark }: { summary: WidgetSummary; dar
         width: 'match_parent',
         backgroundColor: t.surface as `#${string}`,
         borderRadius: 20,
-        padding: 14,
+        padding: 11,
         flexDirection: 'column',
       }}>
       <FlexWidget style={{ flexDirection: 'row', alignItems: 'center', width: 'match_parent' }}>
         <TextWidget text="🐾" style={{ fontSize: 12 }} />
-        <TextWidget
-          text=" 오늘의 루틴"
-          style={{ fontSize: 12, fontWeight: '700', color: t.textMuted as `#${string}` }}
-        />
         <FlexWidget style={{ flex: 1 }} />
         {summary.streak > 0 ? (
           <TextWidget
-            text={`🔥 ${summary.streak}일  `}
+            text={`🔥${summary.streak}  `}
             style={{ fontSize: 11, fontWeight: '700', color: t.warningText as `#${string}` }}
           />
         ) : null}
@@ -61,59 +61,70 @@ export function TodayListWidget({ summary, dark }: { summary: WidgetSummary; dar
           style={{ fontSize: 13, fontWeight: '700', color: t.primaryText as `#${string}` }}
         />
       </FlexWidget>
-      <FlexWidget style={{ height: 8 }} />
+      <FlexWidget style={{ height: 6 }} />
       {/* 진행 바 — flex 비율로 채운다(퍼센트 폭 미지원). */}
       <FlexWidget
         style={{
           flexDirection: 'row',
           width: 'match_parent',
-          height: 7,
+          height: 6,
           backgroundColor: t.surfaceMuted as `#${string}`,
           borderRadius: 99,
         }}>
         <FlexWidget
           style={{
             flex: Math.round(progress * 100),
-            height: 7,
+            height: 6,
             backgroundColor: t.primary as `#${string}`,
             borderRadius: 99,
           }}
         />
-        <FlexWidget style={{ flex: Math.round((1 - progress) * 100), height: 7 }} />
+        <FlexWidget style={{ flex: Math.round((1 - progress) * 100), height: 6 }} />
       </FlexWidget>
-      <FlexWidget style={{ height: 6 }} />
+      <FlexWidget style={{ height: 4 }} />
       {summary.total === 0 ? (
         <TextWidget
           text="오늘 예정된 루틴이 없어요"
-          style={{ fontSize: 13, color: t.textMuted as `#${string}` }}
+          truncate="END"
+          maxLines={2}
+          style={{ fontSize: 12, color: t.textMuted as `#${string}` }}
         />
       ) : summary.remaining.length === 0 ? (
         <TextWidget
-          text="오늘 루틴을 모두 완료했어요! 🎉"
-          style={{ fontSize: 13, fontWeight: '700', color: t.primaryText as `#${string}` }}
+          text="모두 완료했어요! 🎉"
+          truncate="END"
+          maxLines={2}
+          style={{ fontSize: 12, fontWeight: '700', color: t.primaryText as `#${string}` }}
         />
       ) : (
         <FlexWidget style={{ flexDirection: 'column', width: 'match_parent' }}>
           {summary.remaining.map((title, i) => (
             <FlexWidget
               key={`r-${i}`}
-              style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 3 }}>
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingVertical: 2,
+                width: 'match_parent',
+              }}>
               <TextWidget
                 text="○ "
-                style={{ fontSize: 13, color: t.textDisabled as `#${string}` }}
+                style={{ fontSize: 12, color: t.textDisabled as `#${string}` }}
               />
-              <TextWidget
-                text={title}
-                truncate="END"
-                maxLines={1}
-                style={{ fontSize: 13, color: t.text as `#${string}` }}
-              />
+              <FlexWidget style={{ flex: 1 }}>
+                <TextWidget
+                  text={title}
+                  truncate="END"
+                  maxLines={1}
+                  style={{ fontSize: 12, color: t.text as `#${string}`, width: 'match_parent' }}
+                />
+              </FlexWidget>
             </FlexWidget>
           ))}
           {summary.total - summary.done > summary.remaining.length ? (
             <TextWidget
-              text={`+ ${summary.total - summary.done - summary.remaining.length}개 더 · 눌러서 앱에서 완료해요`}
-              style={{ fontSize: 11, color: t.textMuted as `#${string}`, paddingTop: 3 }}
+              text={`+${summary.total - summary.done - summary.remaining.length}개 더`}
+              style={{ fontSize: 11, color: t.textMuted as `#${string}`, paddingTop: 2 }}
             />
           ) : null}
         </FlexWidget>
