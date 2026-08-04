@@ -27,7 +27,7 @@ import {
   SCALE_MIN,
 } from '@/components/room/draggable-furniture';
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
-import { Room, type RoomRegion } from '@/components/room/room';
+import { Room, type RoomCatalogProps, type RoomRegion } from '@/components/room/room';
 import { ROOM_RENDER_CONTRACT, roomPercent } from '@/components/room/room-render-contract';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { RetryState } from '@/components/ui/retry-state';
@@ -60,7 +60,8 @@ import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
  */
 type PickerTarget = 'wallpaper' | 'floor' | 'background' | 'all';
 
-export type RoomDecorScreenProps = {
+// RoomCatalogProps: 아이템·표면 카탈로그 (로컬 기본; floors/backgrounds는 API 전용, #691).
+export type RoomDecorScreenProps = RoomCatalogProps & {
   /** 자유 배치 초기 상태 (#327); 없으면 데모 프리필. */
   initialItems?: PlacedFurniture[];
   /** 방이 이미 FREE_V1로 전환됐는지 — 첫 저장 전환 확인 모달 판단. */
@@ -70,11 +71,6 @@ export type RoomDecorScreenProps = {
   initialBackgroundId?: string | null;
   /** Ids the user owns; owned items are placeable, the rest are buyable with diamond. */
   ownedIds?: string[];
-  /** Item + surface catalogue (defaults to the local set; floors/backgrounds are API-only). */
-  furniture?: FurnitureItem[];
-  wallpapers?: Wallpaper[];
-  floors?: Wallpaper[];
-  backgrounds?: Wallpaper[];
   /** True while the catalogue is loading from the API. */
   loading?: boolean;
   /** True when the catalogue failed to load (shows an error + 다시 시도). */

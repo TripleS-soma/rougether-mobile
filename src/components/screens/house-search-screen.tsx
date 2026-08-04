@@ -12,8 +12,8 @@ import {
 } from 'react-native';
 
 import { HousePreviewFrame } from '@/components/room/house-preview-frame';
+import type { RoomCatalogProps } from '@/components/room/room';
 import type { HouseMission, MemberRoomPreview } from '@/components/screens/house-screen';
-import type { FurnitureItem, Wallpaper } from '@/resources/furniture';
 import { Icon } from '@/components/ui/icon';
 import { RetryState } from '@/components/ui/retry-state';
 import {
@@ -92,7 +92,8 @@ function ListGap() {
   return <View style={styles.listGap} />;
 }
 
-export type HouseSearchScreenProps = {
+// RoomCatalogProps: 상점 카탈로그 (#386, #691) — 미리보기 창문의 실제 방 렌더에 필요.
+export type HouseSearchScreenProps = RoomCatalogProps & {
   /** Browsable houses from the API (`GET /houses`). */
   houses?: SearchHouse[];
   /** True while the browse list is loading. */
@@ -125,11 +126,6 @@ export type HouseSearchScreenProps = {
   onJoinHouse?: (houseId: number) => void;
   /** 참여 전 미리보기 로드 (#328, 미션 진행 포함 #532); null = 실패. */
   onPreviewHouse?: (houseId: number) => Promise<HousePreviewDetail | null>;
-  /** 상점 카탈로그 (#386) — 미리보기 창문의 실제 방 렌더에 필요. */
-  furniture?: FurnitureItem[];
-  wallpapers?: Wallpaper[];
-  floors?: Wallpaper[];
-  backgrounds?: Wallpaper[];
   onCreate?: () => void;
 };
 
