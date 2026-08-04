@@ -18,7 +18,11 @@ export type WalletPillsProps = {
 /** Balances above four digits render capped ("9999+"); a tap reveals the truth. */
 const CAP = 9999;
 
-/** 잔액 변동을 550ms 카운트 롤링으로 보여준다 (#452). */
+/**
+ * 잔액 변동을 550ms 카운트 롤링으로 보여준다 (#452). 리스너는 매 프레임
+ * 불리지만 setState는 표시값이 실제로 바뀔 때 + ~80ms 간격으로만 — 리렌더
+ * 수를 프레임 수(~33회)에서 스텝 수(≤7회)로 줄인다 (#690).
+ */
 function useRollingNumber(value: number) {
   const [display, setDisplay] = useState(value);
   const anim = useRef(new Animated.Value(0)).current;
@@ -28,9 +32,17 @@ function useRollingNumber(value: number) {
     if (from === value) return;
     fromRef.current = value;
     anim.setValue(0);
-    const id = anim.addListener(({ value: p }) =>
-      setDisplay(Math.round(from + (value - from) * p)),
-    );
+    let shown = from;
+    let shownAt = 0;
+    const id = anim.addListener(({ value: p }) => {
+      const now = Date.now();
+      if (now - shownAt < 80) return;
+      const next = Math.round(from + (value - from) * p);
+      if (next === shown) return;
+      shown = next;
+      shownAt = now;
+      setDisplay(next);
+    });
     Animated.timing(anim, {
       toValue: 1,
       duration: 550,

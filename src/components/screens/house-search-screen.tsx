@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  FlatList,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -82,6 +83,14 @@ export type HousePreviewDetail = {
 
 /** 네트워크/서버 오류 안내 (#549) — 잘못된 초대코드 안내와 구분한다. */
 const NETWORK_ERROR_MSG = '네트워크를 확인해주세요. 잠시 후 다시 시도해 주세요.';
+
+/** 로딩·오류 중에는 리스트 데이터를 비운다 — 상태 표시는 ListEmptyComponent 몫 (#690). */
+const NO_HOUSES: SearchHouse[] = [];
+
+/** 카드 사이 간격 — FlatList 셀에는 컨테이너 gap이 적용되지 않는다. */
+function ListGap() {
+  return <View style={styles.listGap} />;
+}
 
 export type HouseSearchScreenProps = {
   /** Browsable houses from the API (`GET /houses`). */
@@ -260,250 +269,255 @@ export function HouseSearchScreen({
         <Text style={[Typography.h2, { color: t.text }]}>집 탐색</Text>
         <View style={styles.iconBtn} />
       </View>
-      <ScrollView contentContainerStyle={styles.body}>
-        {/* Invite code */}
-        <View style={styles.section}>
-          <Text style={[Typography.label, { color: t.text }]}># 초대코드로 들어가기</Text>
-          <Text style={[Typography.supporting, { color: t.textMuted }]}>
-            친구에게 받은 초대코드를 입력하면 바로 그 집에 입주할 수 있어요.
-          </Text>
-          <View style={[styles.card, { backgroundColor: t.surface }]}>
-            <View style={styles.inlineRow}>
-              <View
-                style={[
-                  styles.inputBox,
-                  {
-                    backgroundColor: t.surfaceMuted,
-                    borderColor: codeError ? t.danger : 'transparent',
-                  },
-                ]}>
-                <TextInput
-                  // iOS는 letterSpacing이 placeholder에도 걸린다(안드는 미적용) — 값이
-                  // 있을 때만 자간을 줘 placeholder 렌더를 플랫폼 동일하게 한다.
-                  style={[styles.input, code.length > 0 && styles.codeInput, { color: t.text }]}
-                  value={code}
-                  onChangeText={(v) => {
-                    setCode(v.toUpperCase().slice(0, 8));
-                    setCodeError(null);
-                  }}
-                  placeholder="예: VLG-7K2X"
-                  placeholderTextColor={t.textMuted}
-                  autoCapitalize="characters"
-                />
-              </View>
-              <Pressable
-                onPress={joinByCode}
-                disabled={joining}
-                accessibilityRole="button"
-                accessibilityState={{ disabled: code.trim().length === 0 }}
-                style={[
-                  styles.sideBtn,
-                  { backgroundColor: code.trim().length === 0 ? t.disabledBg : t.primary },
-                ]}>
-                <Text
-                  style={[
-                    Typography.label,
-                    { color: code.trim().length === 0 ? t.textMuted : t.onPrimary },
-                  ]}>
-                  입주
-                </Text>
-              </Pressable>
-            </View>
-            {codeError ? (
-              <Text style={[Typography.supporting, styles.msg, { color: t.danger }]}>
-                {codeError}
+      {/* 추천 목록이 서버 구동이라 가상화 리스트로 그린다 (#690) — 초대코드·검색은
+          헤더, 새 집 만들기는 푸터로. */}
+      <FlatList
+        data={loading || loadError ? NO_HOUSES : filtered}
+        keyExtractor={(h) => String(h.id)}
+        contentContainerStyle={styles.body}
+        ItemSeparatorComponent={ListGap}
+        ListHeaderComponent={
+          <View style={styles.headerBlock}>
+            {/* Invite code */}
+            <View style={styles.section}>
+              <Text style={[Typography.label, { color: t.text }]}># 초대코드로 들어가기</Text>
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                친구에게 받은 초대코드를 입력하면 바로 그 집에 입주할 수 있어요.
               </Text>
-            ) : null}
-            {pendingNotice ? (
-              <Text style={[Typography.supporting, styles.msg, { color: t.primaryText }]}>
-                입주 신청을 보냈어요 — 방장이 승인하면 집에 들어가요.
-              </Text>
-            ) : null}
-
-            {preview ? (
-              <View style={[styles.previewCard, { backgroundColor: t.surfaceMuted }]}>
-                <View style={styles.iconLabelRow}>
-                  <HousePictogram size={14} />
-                  <Text style={[Typography.label, { color: t.text }]}>{preview.info.name}</Text>
-                </View>
-                <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                  멤버 {preview.info.members}
-                  {preview.info.capacity ? ` / ${preview.info.capacity}` : ''}명이 함께 살고 있어요
-                </Text>
-                {preview.info.requiresApproval ? (
-                  // 승인형 코드 (#648) — '입주' 탭 후 pending 안내와 기대를 맞춘다.
-                  <Text style={[Typography.supporting, { color: t.warningText }]}>
-                    방장 승인 후 입장하는 집이에요 — 신청을 보내고 기다리게 돼요.
-                  </Text>
-                ) : null}
-                <View style={styles.previewActions}>
+              <View style={[styles.card, { backgroundColor: t.surface }]}>
+                <View style={styles.inlineRow}>
+                  <View
+                    style={[
+                      styles.inputBox,
+                      {
+                        backgroundColor: t.surfaceMuted,
+                        borderColor: codeError ? t.danger : 'transparent',
+                      },
+                    ]}>
+                    <TextInput
+                      // iOS는 letterSpacing이 placeholder에도 걸린다(안드는 미적용) — 값이
+                      // 있을 때만 자간을 줘 placeholder 렌더를 플랫폼 동일하게 한다.
+                      style={[styles.input, code.length > 0 && styles.codeInput, { color: t.text }]}
+                      value={code}
+                      onChangeText={(v) => {
+                        setCode(v.toUpperCase().slice(0, 8));
+                        setCodeError(null);
+                      }}
+                      placeholder="예: VLG-7K2X"
+                      placeholderTextColor={t.textMuted}
+                      autoCapitalize="characters"
+                    />
+                  </View>
                   <Pressable
-                    onPress={() => setPreview(null)}
-                    accessibilityRole="button"
-                    accessibilityLabel="입주 취소"
-                    style={[styles.previewBtn, { backgroundColor: t.surface }]}>
-                    <Text style={[Typography.label, { color: t.text }]}>취소</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={confirmJoinPreview}
+                    onPress={joinByCode}
                     disabled={joining}
                     accessibilityRole="button"
-                    accessibilityLabel="이 집에 입주"
-                    style={[styles.previewBtn, { backgroundColor: t.primary }]}>
-                    <Text style={[Typography.label, { color: t.onPrimary }]}>이 집에 입주</Text>
+                    accessibilityState={{ disabled: code.trim().length === 0 }}
+                    style={[
+                      styles.sideBtn,
+                      { backgroundColor: code.trim().length === 0 ? t.disabledBg : t.primary },
+                    ]}>
+                    <Text
+                      style={[
+                        Typography.label,
+                        { color: code.trim().length === 0 ? t.textMuted : t.onPrimary },
+                      ]}>
+                      입주
+                    </Text>
                   </Pressable>
                 </View>
+                {codeError ? (
+                  <Text style={[Typography.supporting, styles.msg, { color: t.danger }]}>
+                    {codeError}
+                  </Text>
+                ) : null}
+                {pendingNotice ? (
+                  <Text style={[Typography.supporting, styles.msg, { color: t.primaryText }]}>
+                    입주 신청을 보냈어요 — 방장이 승인하면 집에 들어가요.
+                  </Text>
+                ) : null}
+
+                {preview ? (
+                  <View style={[styles.previewCard, { backgroundColor: t.surfaceMuted }]}>
+                    <View style={styles.iconLabelRow}>
+                      <HousePictogram size={14} />
+                      <Text style={[Typography.label, { color: t.text }]}>{preview.info.name}</Text>
+                    </View>
+                    <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                      멤버 {preview.info.members}
+                      {preview.info.capacity ? ` / ${preview.info.capacity}` : ''}명이 함께 살고
+                      있어요
+                    </Text>
+                    {preview.info.requiresApproval ? (
+                      // 승인형 코드 (#648) — '입주' 탭 후 pending 안내와 기대를 맞춘다.
+                      <Text style={[Typography.supporting, { color: t.warningText }]}>
+                        방장 승인 후 입장하는 집이에요 — 신청을 보내고 기다리게 돼요.
+                      </Text>
+                    ) : null}
+                    <View style={styles.previewActions}>
+                      <Pressable
+                        onPress={() => setPreview(null)}
+                        accessibilityRole="button"
+                        accessibilityLabel="입주 취소"
+                        style={[styles.previewBtn, { backgroundColor: t.surface }]}>
+                        <Text style={[Typography.label, { color: t.text }]}>취소</Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={confirmJoinPreview}
+                        disabled={joining}
+                        accessibilityRole="button"
+                        accessibilityLabel="이 집에 입주"
+                        style={[styles.previewBtn, { backgroundColor: t.primary }]}>
+                        <Text style={[Typography.label, { color: t.onPrimary }]}>이 집에 입주</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                ) : null}
               </View>
-            ) : null}
-          </View>
-        </View>
+            </View>
 
-        {/* Search */}
-        <View style={styles.section}>
-          <View style={styles.iconLabelRow}>
-            <SparklePictogram size={14} />
-            <Text style={[Typography.label, { color: t.text }]}>추천 집 둘러보기</Text>
+            {/* Search */}
+            <View style={styles.section}>
+              <View style={styles.iconLabelRow}>
+                <SparklePictogram size={14} />
+                <Text style={[Typography.label, { color: t.text }]}>추천 집 둘러보기</Text>
+              </View>
+              <View style={[styles.searchBox, { backgroundColor: t.surface }]}>
+                <Icon name="search" size={16} color={t.text} />
+                <TextInput
+                  style={[styles.input, { color: t.text }]}
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder="집 이름, 태그로 검색"
+                  placeholderTextColor={t.textMuted}
+                />
+              </View>
+            </View>
           </View>
-          <View style={[styles.searchBox, { backgroundColor: t.surface }]}>
-            <Icon name="search" size={16} color={t.text} />
-            <TextInput
-              style={[styles.input, { color: t.text }]}
-              value={query}
-              onChangeText={setQuery}
-              placeholder="집 이름, 태그로 검색"
-              placeholderTextColor={t.textMuted}
-            />
-          </View>
-        </View>
-
-        {/* Recommended list */}
-        <View style={styles.list}>
-          {loading ? (
+        }
+        ListEmptyComponent={
+          loading ? (
             <ActivityIndicator color={t.primary} style={styles.loading} />
           ) : loadError ? (
             // 로드 실패 (#549) — 빈 검색 결과('검색 결과가 없어요')로 위장하지 않는다.
             <View style={styles.errorBlock}>
               <RetryState message="추천 집 목록을 불러오지 못했어요." onRetry={onRetry} />
             </View>
-          ) : filtered.length === 0 ? (
+          ) : (
             <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
               검색 결과가 없어요
             </Text>
-          ) : (
-            filtered.map((h) => {
-              const full = h.members >= h.capacity;
-              const pending = h.joinRequestStatus === 'PENDING';
-              const accepted = h.joinRequestStatus === 'ACCEPTED';
-              return (
-                <View key={String(h.id)} style={[styles.houseRow, { backgroundColor: t.surface }]}>
-                  {/* 카드 본문 탭 = 참여 전 미리보기 (#328); 입주 신청 버튼은 그대로.
+          )
+        }
+        renderItem={({ item: h }) => {
+          const full = h.members >= h.capacity;
+          const pending = h.joinRequestStatus === 'PENDING';
+          const accepted = h.joinRequestStatus === 'ACCEPTED';
+          return (
+            <View key={String(h.id)} style={[styles.houseRow, { backgroundColor: t.surface }]}>
+              {/* 카드 본문 탭 = 참여 전 미리보기 (#328); 입주 신청 버튼은 그대로.
                       로딩 중 재탭은 busy로 막는다 (#532). */}
-                  <Pressable
-                    onPress={() => void openHousePreview(h.id)}
-                    disabled={!onPreviewHouse || previewingHouseId !== null}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${h.name} 미리보기`}
-                    accessibilityState={{ busy: previewingHouseId === h.id }}
-                    style={[styles.flex, styles.houseBody]}>
-                    <View
-                      style={[styles.houseEmoji, { backgroundColor: h.bg, borderColor: h.border }]}>
-                      {/* Server cover art first; the pictogram tile is the fallback. */}
-                      {isCdnKey(h.coverImageKey) ? (
-                        <Image
-                          source={assetSource(h.coverImageKey)}
-                          style={styles.houseCover}
-                          contentFit="cover"
-                          cachePolicy="memory-disk"
-                          transition={120}
-                          accessibilityLabel={`${h.name} 대표 이미지`}
-                          testID="house-cover"
-                        />
-                      ) : (
-                        <Pictogram name={h.icon} size={28} />
-                      )}
-                    </View>
-                    <View style={styles.flex}>
-                      {/* The name owns its row — a same-row tag chip squeezed it
-                        into truncating even short names (#234). */}
-                      <Text style={[Typography.label, { color: t.text }]} numberOfLines={1}>
-                        {h.name}
-                      </Text>
-                      {h.description ? (
-                        <Text
-                          style={[Typography.supporting, { color: t.textMuted }]}
-                          numberOfLines={1}>
-                          {h.description}
-                        </Text>
-                      ) : null}
-                      <View style={styles.houseMetaRow}>
-                        <View style={[styles.tag, { backgroundColor: h.bg }]}>
-                          <Text style={[styles.tagText, emph('bold'), { color: t.onTint }]}>
-                            #{h.tag}
-                          </Text>
-                        </View>
-                        <Text style={[styles.meta, { color: t.textMuted }]} numberOfLines={1}>
-                          {h.level != null ? `Lv.${h.level} · ` : ''}멤버 {h.members} / {h.capacity}
-                          {full ? <Text style={{ color: t.danger }}> · 만석</Text> : null}
-                        </Text>
-                      </View>
-                    </View>
-                    {/* 미리보기 로딩 스피너 (#532). */}
-                    {previewingHouseId === h.id ? (
-                      <ActivityIndicator color={t.primary} size="small" />
-                    ) : null}
-                  </Pressable>
-                  <Pressable
-                    onPress={() =>
-                      full
-                        ? toast('정원이 가득 찼어요', 'error')
-                        : pending
-                          ? toast('방장의 수락을 기다리고 있어요')
-                          : accepted
-                            ? toast('이미 입주가 완료됐어요')
-                            : onJoinHouse?.(h.id)
-                    }
-                    accessibilityRole="button"
-                    accessibilityState={{ disabled: full || pending || accepted }}
-                    style={[
-                      styles.joinBtn,
-                      {
-                        backgroundColor: full || pending || accepted ? t.surfaceMuted : t.primary,
-                      },
-                    ]}>
-                    <Text
-                      style={[
-                        Typography.supporting,
-                        emph('semibold'),
-                        { color: full || pending || accepted ? t.textMuted : t.onPrimary },
-                      ]}>
-                      {full
-                        ? '만석'
-                        : pending
-                          ? '신청 중'
-                          : accepted
-                            ? '입주 완료'
-                            : h.joinRequestStatus === 'REJECTED'
-                              ? '다시 신청'
-                              : '입주 신청'}
-                    </Text>
-                  </Pressable>
+              <Pressable
+                onPress={() => void openHousePreview(h.id)}
+                disabled={!onPreviewHouse || previewingHouseId !== null}
+                accessibilityRole="button"
+                accessibilityLabel={`${h.name} 미리보기`}
+                accessibilityState={{ busy: previewingHouseId === h.id }}
+                style={[styles.flex, styles.houseBody]}>
+                <View style={[styles.houseEmoji, { backgroundColor: h.bg, borderColor: h.border }]}>
+                  {/* Server cover art first; the pictogram tile is the fallback. */}
+                  {isCdnKey(h.coverImageKey) ? (
+                    <Image
+                      source={assetSource(h.coverImageKey)}
+                      style={styles.houseCover}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                      transition={120}
+                      accessibilityLabel={`${h.name} 대표 이미지`}
+                      testID="house-cover"
+                    />
+                  ) : (
+                    <Pictogram name={h.icon} size={28} />
+                  )}
                 </View>
-              );
-            })
-          )}
-        </View>
-
-        {/* Create */}
-        <Pressable
-          onPress={onCreate}
-          accessibilityRole="button"
-          style={[styles.createBtn, { borderColor: t.disabledBg }]}>
-          <View style={styles.iconLabelRow}>
-            <CrownPictogram size={14} />
-            <Text style={[Typography.label, { color: t.textMuted }]}>새 집 만들기</Text>
-          </View>
-        </Pressable>
-      </ScrollView>
+                <View style={styles.flex}>
+                  {/* The name owns its row — a same-row tag chip squeezed it
+                        into truncating even short names (#234). */}
+                  <Text style={[Typography.label, { color: t.text }]} numberOfLines={1}>
+                    {h.name}
+                  </Text>
+                  {h.description ? (
+                    <Text style={[Typography.supporting, { color: t.textMuted }]} numberOfLines={1}>
+                      {h.description}
+                    </Text>
+                  ) : null}
+                  <View style={styles.houseMetaRow}>
+                    <View style={[styles.tag, { backgroundColor: h.bg }]}>
+                      <Text style={[styles.tagText, emph('bold'), { color: t.onTint }]}>
+                        #{h.tag}
+                      </Text>
+                    </View>
+                    <Text style={[styles.meta, { color: t.textMuted }]} numberOfLines={1}>
+                      {h.level != null ? `Lv.${h.level} · ` : ''}멤버 {h.members} / {h.capacity}
+                      {full ? <Text style={{ color: t.danger }}> · 만석</Text> : null}
+                    </Text>
+                  </View>
+                </View>
+                {/* 미리보기 로딩 스피너 (#532). */}
+                {previewingHouseId === h.id ? (
+                  <ActivityIndicator color={t.primary} size="small" />
+                ) : null}
+              </Pressable>
+              <Pressable
+                onPress={() =>
+                  full
+                    ? toast('정원이 가득 찼어요', 'error')
+                    : pending
+                      ? toast('방장의 수락을 기다리고 있어요')
+                      : accepted
+                        ? toast('이미 입주가 완료됐어요')
+                        : onJoinHouse?.(h.id)
+                }
+                accessibilityRole="button"
+                accessibilityState={{ disabled: full || pending || accepted }}
+                style={[
+                  styles.joinBtn,
+                  {
+                    backgroundColor: full || pending || accepted ? t.surfaceMuted : t.primary,
+                  },
+                ]}>
+                <Text
+                  style={[
+                    Typography.supporting,
+                    emph('semibold'),
+                    { color: full || pending || accepted ? t.textMuted : t.onPrimary },
+                  ]}>
+                  {full
+                    ? '만석'
+                    : pending
+                      ? '신청 중'
+                      : accepted
+                        ? '입주 완료'
+                        : h.joinRequestStatus === 'REJECTED'
+                          ? '다시 신청'
+                          : '입주 신청'}
+                </Text>
+              </Pressable>
+            </View>
+          );
+        }}
+        ListFooterComponent={
+          <Pressable
+            onPress={onCreate}
+            accessibilityRole="button"
+            style={[styles.createBtn, { borderColor: t.disabledBg }]}>
+            <View style={styles.iconLabelRow}>
+              <CrownPictogram size={14} />
+              <Text style={[Typography.label, { color: t.textMuted }]}>새 집 만들기</Text>
+            </View>
+          </Pressable>
+        }
+      />
       {/* 참여 전 집 미리보기 모달 (#328) — isFull은 참여 비활성, isMember는 안내만. */}
       {housePreview ? (
         <View style={styles.hpOverlay}>
@@ -652,7 +666,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  body: { padding: Spacing.four, gap: Spacing.four },
+  body: { padding: Spacing.four },
+  headerBlock: { gap: Spacing.four, marginBottom: Spacing.four },
   section: { gap: Spacing.two },
   card: { borderRadius: Radius.lg, padding: Spacing.three, gap: Spacing.two },
   inlineRow: { flexDirection: 'row', gap: Spacing.two },
@@ -699,7 +714,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     alignItems: 'center',
   },
-  list: { gap: Spacing.two },
+  listGap: { height: Spacing.two },
   loading: { paddingVertical: Spacing.six },
   errorBlock: {
     alignItems: 'center',
@@ -799,6 +814,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
   },
   createBtn: {
+    marginTop: Spacing.four,
     borderWidth: 2,
     borderStyle: 'dashed',
     borderRadius: Radius.lg,
