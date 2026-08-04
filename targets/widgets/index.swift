@@ -96,16 +96,22 @@ struct TodayWidgetView: View {
   var entry: SummaryEntry
   @Environment(\.colorScheme) private var scheme
 
+  // 2×2 컴팩트 (#688) — 안드로이드 TodayListWidget과 같은 구성:
+  // 🐾 + 🔥스트릭 + N/M 헤더, 진행 바, 말줄임 제목 최대 3행 + "+N개 더".
   var body: some View {
     let t = CozyPalette(scheme: scheme)
     let s = entry.summary
-    VStack(alignment: .leading, spacing: 6) {
-      HStack {
-        Text("오늘의 할 일")
-          .font(.system(size: 14, weight: .bold))
-          .foregroundColor(t.text)
+    let extra = s.total - s.done - s.remaining.count
+    VStack(alignment: .leading, spacing: 5) {
+      HStack(spacing: 4) {
+        Text("🐾").font(.system(size: 12))
         Spacer()
-        Text("\(s.done) / \(s.total)")
+        if s.streak > 0 {
+          Text("🔥\(s.streak)")
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundColor(t.warning)
+        }
+        Text("\(s.done)/\(s.total)")
           .font(.system(size: 13, weight: .semibold))
           .foregroundColor(t.primary)
       }
@@ -128,27 +134,28 @@ struct TodayWidgetView: View {
           .foregroundColor(t.textMuted)
           .padding(.top, 2)
       } else if s.remaining.isEmpty {
-        Text("오늘 할 일을 모두 마쳤어요!")
+        Text("모두 완료했어요! 🎉")
           .font(.system(size: 12, weight: .semibold))
           .foregroundColor(t.primary)
           .padding(.top, 2)
       } else {
         ForEach(s.remaining.prefix(3), id: \.self) { title in
-          HStack(spacing: 6) {
-            Circle().strokeBorder(t.textMuted, lineWidth: 1.5).frame(width: 10, height: 10)
+          HStack(spacing: 5) {
+            Circle().strokeBorder(t.textMuted, lineWidth: 1.5).frame(width: 9, height: 9)
             Text(title)
               .font(.system(size: 12))
               .foregroundColor(t.text)
               .lineLimit(1)
+              .truncationMode(.tail)
           }
+        }
+        if extra > 0 {
+          Text("+\(extra)개 더")
+            .font(.system(size: 11))
+            .foregroundColor(t.textMuted)
         }
       }
       Spacer(minLength: 0)
-      if s.streak > 0 {
-        Text("🔥 \(s.streak)일 연속")
-          .font(.system(size: 11, weight: .semibold))
-          .foregroundColor(t.warning)
-      }
     }
     .containerBackground(t.surface, for: .widget)
   }
@@ -161,7 +168,8 @@ struct TodayWidget: Widget {
     }
     .configurationDisplayName("오늘의 할 일")
     .description("오늘 진행도와 남은 루틴을 보여줘요.")
-    .supportedFamilies([.systemMedium])
+    // 2×2 통일 (#688) — 안드 위젯과 같은 소형 규격.
+    .supportedFamilies([.systemSmall])
   }
 }
 
