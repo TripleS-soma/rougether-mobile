@@ -89,7 +89,7 @@ export function RoutineMenuSheet({
       </View>
 
       {/* 루틴 수정 — 전체 편집 화면으로. 이름 변경(위)과 별개로 카테고리·반복·
-          알람·인증사진까지 바꾼다 (#465). 투두는 숨김. */}
+          알람 설정까지 바꾼다 (#465). 투두는 숨김. */}
       {canFullEdit ? (
         <Pressable
           onPress={() => {

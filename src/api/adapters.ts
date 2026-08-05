@@ -265,7 +265,8 @@ export function toRoutineCreate(n: NewRoutine): RoutineCreateRequest {
   return {
     title: n.title,
     categoryId: toCategoryId(n.category),
-    authType: n.photoVerify ? 'PHOTO' : 'CHECK',
+    // 사진 인증 생성 경로 제거 (#695) — 신규 루틴은 항상 CHECK. 재도입은 #158.
+    authType: 'CHECK',
     repeatType,
     repeatDays,
     scheduledTime: n.alarmEnabled && n.time ? toApiTime(n.time) : undefined,

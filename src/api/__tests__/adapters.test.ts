@@ -67,7 +67,6 @@ describe('API adapters', () => {
       startDate: '2026-07-02',
       alarmEnabled: true,
       time: '21:00',
-      photoVerify: false,
     };
     expect(toRoutineCreate(weekly)).toMatchObject({
       title: '독서',
@@ -99,7 +98,7 @@ describe('API adapters', () => {
     expect(
       toRoutineCreate({
         title: '분리수거', category: '1', repeat: 'biweekly', days: [2],
-        startDate: '2026-07-07', alarmEnabled: false, time: '', photoVerify: false,
+        startDate: '2026-07-07', alarmEnabled: false, time: '',
       }), // prettier-ignore
     ).toMatchObject({ repeatType: 'BIWEEKLY', repeatDays: { daysOfWeek: ['TUE'] } });
 
@@ -114,7 +113,7 @@ describe('API adapters', () => {
     expect(
       toRoutineCreate({
         title: '월말 결산', category: '1', repeat: 'monthly', days: [], dayOfMonth: 31,
-        startDate: '2026-07-01', alarmEnabled: false, time: '', photoVerify: false,
+        startDate: '2026-07-01', alarmEnabled: false, time: '',
       }), // prettier-ignore
     ).toMatchObject({ repeatType: 'MONTHLY', repeatDays: { dayOfMonth: 31 } });
 
@@ -129,7 +128,7 @@ describe('API adapters', () => {
     expect(
       toRoutineCreate({
         title: '건강검진', category: '1', repeat: 'yearly', days: [], dayOfMonth: 12, month: 7,
-        startDate: '2026-07-01', alarmEnabled: false, time: '', photoVerify: false,
+        startDate: '2026-07-01', alarmEnabled: false, time: '',
       }), // prettier-ignore
     ).toMatchObject({ repeatType: 'YEARLY', repeatDays: { month: 7, day: 12 } });
 
@@ -337,7 +336,7 @@ describe('API adapters', () => {
     expect(
       toRoutineCreate({
         title: '아침 스트레칭', category: '1', days: [], startDate: '2026-07-01',
-        alarmEnabled: false, time: '', photoVerify: false, linkedMissionId: 6,
+        alarmEnabled: false, time: '', linkedMissionId: 6,
       }).houseMissionId, // prettier-ignore
     ).toBe(6);
     // 이름을 바꿔도 링크 id는 그대로 실려 연동이 유지된다.

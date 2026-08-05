@@ -52,7 +52,6 @@ export function useMissionLinks({
     startDate: string;
     alarmEnabled: boolean;
     time: string;
-    photoVerify: boolean;
     linkedMissionId: number;
   }) => Promise<boolean>;
   linkCategoryHouse: (categoryId: string, houseId: number) => Promise<unknown>;
@@ -91,7 +90,6 @@ export function useMissionLinks({
         startDate: todayIso(),
         alarmEnabled: false,
         time: '',
-        photoVerify: false,
         linkedMissionId: mission.id,
       });
     },

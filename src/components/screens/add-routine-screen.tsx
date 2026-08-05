@@ -13,8 +13,6 @@ import { CategoryFormSheet } from '@/components/screens/sheets/category-form-she
 import { DateRangeSheet } from '@/components/screens/sheets/date-range-sheet';
 import { TimePickerSheet } from '@/components/screens/sheets/time-picker-sheet';
 import { useToast } from '@/components/ui/toast';
-// 인증사진형 잠시 내림 (#499) — 복구 시 ToggleSwitch import를 되살릴 것.
-// import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import {
   type NewRoutine,
   type RepeatKind,
@@ -117,10 +115,6 @@ export function AddRoutineScreen({
   const [time, setTime] = useState(editRoutine?.time ?? '07:00');
   const [startDate, setStartDate] = useState(editRoutine?.startDate ?? today());
   const [endDate, setEndDate] = useState<string | undefined>(editRoutine?.endDate);
-  // 인증사진형 잠시 내림 (#499) — 토글 UI를 숨기고 편집 시 기존 값만 보존한다
-  // (저장 왕복에서 authType이 바뀌지 않게). 복구 시 setter와 아래 UI 블록을 되살릴 것.
-  // const [photoVerify, setPhotoVerify] = useState(editRoutine?.photoVerify ?? false);
-  const [photoVerify] = useState(editRoutine?.photoVerify ?? false);
   const [showDateSheet, setShowDateSheet] = useState(false);
   const [showTimeSheet, setShowTimeSheet] = useState(false);
   // 추천 루틴 accordion — closed by default (add mode only).
@@ -144,7 +138,6 @@ export function AddRoutineScreen({
     time: editRoutine?.time ?? '07:00',
     startDate: editRoutine?.startDate ?? today(),
     endDate: editRoutine?.endDate,
-    photoVerify: editRoutine?.photoVerify ?? false,
   }).current;
   const initialCategory = editRoutine?.category ?? categories[0]?.id ?? '';
   const dirty =
@@ -157,8 +150,7 @@ export function AddRoutineScreen({
     alarmEnabled !== initial.alarmEnabled ||
     time !== initial.time ||
     startDate !== initial.startDate ||
-    endDate !== initial.endDate ||
-    photoVerify !== initial.photoVerify;
+    endDate !== initial.endDate;
 
   // 헤더 백: 변경이 있으면 확인 모달, 없으면 바로 나간다.
   const requestBack = () => {
@@ -219,7 +211,6 @@ export function AddRoutineScreen({
       endDate,
       alarmEnabled,
       time,
-      photoVerify,
     };
     if (editRoutine) onUpdate?.(editRoutine.id, payload);
     else onAdd?.(payload);
@@ -497,27 +488,6 @@ export function AddRoutineScreen({
             <Text style={[styles.chevron, { color: t.textDisabled }]}>›</Text>
           </Pressable>
         </View>
-
-        {/* 인증사진형 잠시 내림 (#499) — 복구 시 이 인증 방식 섹션을 되살릴 것.
-        <View style={styles.field}>
-          <Text style={[Typography.label, { color: t.text }]}>인증 방식</Text>
-          <View style={[styles.infoRow, { backgroundColor: t.surface }]}>
-            <View style={[styles.infoIcon, { backgroundColor: t.surfaceMuted }]}>
-              <Icon name="camera" size={16} color={t.icon} />
-            </View>
-            <View style={styles.flex}>
-              <Text style={[Typography.body, { color: t.text }]}>인증사진형</Text>
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                완료할 때 사진을 찍어 인증해요
-              </Text>
-            </View>
-            <ToggleSwitch
-              value={photoVerify}
-              onToggle={() => setPhotoVerify((v) => !v)}
-              accessibilityLabel="인증사진형"
-            />
-          </View>
-        </View> */}
       </ScrollView>
 
       <DateRangeSheet
