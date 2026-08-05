@@ -14,6 +14,7 @@ import { TabPager } from '@/components/app/tab-pager';
 import { useAppNavigation } from '@/components/app/use-app-navigation';
 import { useFriendVisit } from '@/components/app/use-friend-visit';
 import { useMissionLinks } from '@/components/app/use-mission-links';
+import { useMyRoomPages } from '@/components/app/use-my-room-pages';
 import { useSettingsSurface } from '@/components/app/use-settings-surface';
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { GachaScreen } from '@/components/screens/gacha-screen';
@@ -23,29 +24,15 @@ import {
   type NewHouseMission,
 } from '@/components/screens/house-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
-import {
-  type CalendarDayItem,
-  isScheduledOn,
-  MyRoomScreen,
-} from '@/components/screens/my-room-screen';
-import { NotificationListScreen } from '@/components/screens/notification-list-screen';
+import { isScheduledOn, MyRoomScreen } from '@/components/screens/my-room-screen';
 import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
-import { CategoryManageScreen } from '@/components/screens/category-manage-screen';
-import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
 import { SettingsScreen } from '@/components/screens/settings-screen';
-import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
 import { houseCoverKey } from '@/components/room/house-preview-frame';
 import { MissionSheet } from '@/components/screens/sheets/mission-sheet';
 import { BottomNav } from '@/components/ui/bottom-nav';
 import { MissionBanner } from '@/components/ui/mission-banner';
-import {
-  CHARACTER_SELECTION_ENABLED,
-  DEFAULT_CHARACTER_ID,
-  type CharacterId,
-} from '@/constants/characters';
-import { type Routine } from '@/constants/routines';
-import { screenView, track } from '@/lib/analytics';
-import { onNotificationTap } from '@/lib/push-events';
+import { DEFAULT_CHARACTER_ID, type CharacterId } from '@/constants/characters';
+import { screenView } from '@/lib/analytics';
 import { todayIso } from '@/utils/datetime';
 import { refreshWidgets } from '@/widgets/rougether-widgets';
 import { buildWidgetSummary, saveWidgetSummary } from '@/widgets/widget-data';
@@ -60,7 +47,6 @@ import { useMemberRoomPreviews, withMyCharacter } from '@/hooks/use-member-room-
 import { useRoomLayouts } from '@/hooks/use-room-layouts';
 import { useMyCharacters } from '@/hooks/use-my-characters';
 import { useMyRoomData } from '@/hooks/use-my-room-data';
-import { useNotifications } from '@/hooks/use-notifications';
 import { useShop } from '@/hooks/use-shop';
 import { useWeather } from '@/hooks/use-weather';
 import type { DrawResult } from '@/api';
@@ -124,42 +110,29 @@ export function AppShell({
   const completeMission = missions.complete;
 
   // Routines / todos / categories / completion / wallet come from the API.
+  // 전체 객체는 use-my-room-pages(나의 방 탭·서브화면 배선, #692 5단계)로
+  // 흘러가고, 셸은 교차 도메인 소비자(위젯 요약·미션 연동·프로필·상점 지갑)
+  // 가 쓰는 조각만 여기서 푼다.
+  const myRoomData = useMyRoomData();
   const {
     routines,
     completions,
     categories,
-    allCategories,
-    calendarDays,
-    loadCalendarDay,
     wallet,
     setWallet,
     nickname: apiNickname,
     bio: apiBio,
     streak,
     loading: myRoomLoading,
-    error: myRoomError,
-    retry: retryMyRoom,
-    reload: reloadMyRoom,
     toggleCompletion,
-    toggleCalendarItem,
     saveProfile,
-    quickAddTodo,
     addRoutine,
-    updateRoutine,
-    renameRoutine,
-    updateRoutineTime,
-    updateTodoDueDate,
-    moveRoutineOccurrence,
     deleteRoutine,
-    createRoutineCategory,
     ensureCategory,
     linkRoutineMission,
     linkCategoryHouse,
-    updateRoutineCategory,
-    deleteRoutineCategory,
     deleteCategoryCascade,
-    reorderCategories,
-  } = useMyRoomData();
+  } = myRoomData;
 
   // 루틴 등록 성공 = 미션 1 완료 (#571) — 추가 화면과 공동미션 연동 추가 공용.
   const addRoutineWithMission = useCallback(
@@ -191,22 +164,12 @@ export function AppShell({
     reload: reloadMyCharacters,
   } = useMyCharacters();
   const wornCharacterId = selectedCharacterId ?? characterId;
-  // 알림 (list + read receipts); loaded on mount so the header bell can show
-  // the unread dot, refreshed each time the list opens.
-  const {
-    entries: notificationEntries,
-    unreadCount,
-    loading: notificationsLoading,
-    hasNext: notificationsHasNext,
-    error: notificationsError,
-    load: loadNotifications,
-    loadMore: loadMoreNotifications,
-    markRead: markNotificationRead,
-    markAllRead: markAllNotificationsRead,
-  } = useNotifications();
-  useEffect(() => {
-    void loadNotifications();
-  }, [loadNotifications]);
+  const wearCharacter = useCallback(
+    (serverId: number) => {
+      void selectWornCharacter(serverId);
+    },
+    [selectWornCharacter],
+  );
 
   // Houses (내 집 목록 + 탐색 + 참여/생성/강퇴/나가기) from the API.
   const {
@@ -242,14 +205,7 @@ export function AppShell({
   } = useHouses();
 
   // 당겨서 새로고침 (#454) — 실패해도 조용히 접는다(각 훅이 상태를 유지하고,
-  // 인디케이터는 어차피 되돌아간다). 나의 방은 전체 리페치, 집은 목록 리로드.
-  const refreshMyRoom = useCallback(async () => {
-    try {
-      await reloadMyRoom();
-    } catch {
-      // 유지 — 기존 데이터가 그대로 남는다.
-    }
-  }, [reloadMyRoom]);
+  // 인디케이터는 어차피 되돌아간다). 집은 목록 리로드 (나의 방은 use-my-room-pages).
   const refreshHousePull = useCallback(async () => {
     try {
       await refreshHouses();
@@ -417,7 +373,6 @@ export function AppShell({
     deleteMission,
     applyMissionContribution,
   });
-  const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
 
   // Profile + settings. Nickname/bio seed from the API (/me) and persist via
   // PUT /me (saveProfile); local state keeps edits visible immediately.
@@ -444,6 +399,23 @@ export function AppShell({
     onReplayOnboarding,
     profile: { nickname, bio, characterId: wornCharacterId, onSave: handleProfileSave },
   });
+  // 나의 방 페이지 배선 (#692 5단계) — 나의 방 탭 페이지와 서브화면 4종
+  // (루틴 관리·추가·카테고리 관리·알림 목록)의 훅·콜백·JSX 소유.
+  const myRoomPages = useMyRoomPages({
+    nav: { screen, setScreen, addReturnScreen, setAddReturnScreen },
+    data: myRoomData,
+    nickname,
+    missionLinks: { toggleWithMissionGuard, houseCategoryIds, addRoutineWithMission },
+    character: { wornCharacterId, wornCharacterAnimations, ownedCharacters, wearCharacter },
+    room: {
+      placedFurnitureIds,
+      placements: placement.freeLayout ? placedItems : null,
+      wallpaperId,
+      floorId,
+      backgroundId,
+      catalogue,
+    },
+  });
   // 홈 위젯 오늘 요약 동기화 (#604, 안드로이드 전용) — 완료 토글·루틴
   // 변경·스트릭 갱신이 위젯에 바로 반영되게 요약을 기록하고 재렌더를 민다.
   const widgetSummarySigRef = useRef('');
@@ -463,94 +435,33 @@ export function AppShell({
     void saveWidgetSummary(summary).then(refreshWidgets);
   }, [routines, completions, streak]);
 
-  // 푸시 탭(콜드 스타트 포함) → 알림 목록으로 (#405).
-  useEffect(
-    () =>
-      onNotificationTap(() => {
-        track('push_open');
-        void loadNotifications();
-        setScreen('notificationList');
-      }),
-    [loadNotifications],
-  );
-
   // 화면 전환 추적 (#437) — 셸의 screen 상태가 곧 내비게이션 단위.
   useEffect(() => {
     screenView(screen);
   }, [screen]);
 
-  const openEditRoutine = useCallback((routine: Routine, from: Screen) => {
-    setEditingRoutine(routine);
-    setAddReturnScreen(from);
-    setScreen('addRoutine');
-  }, []);
-
   /** 미션 배너 탭·완료 시트 '하러 가기' — 해당 미션의 진입 화면으로 (#571). */
-  const openMissionScreen = useCallback((id: OnboardingMissionStepId) => {
-    if (id === 'register-routine') {
-      // 루틴 추가 화면(추천 루틴 아코디언)으로 — 뒤로 가면 나의 방 복귀.
-      setEditingRoutine(null);
-      setAddReturnScreen('myRoom');
-    }
-    setScreen(MISSION_TARGET_SCREEN[id]);
-  }, []);
+  const { addRoutineFromMyRoom } = myRoomPages;
+  const openMissionScreen = useCallback(
+    (id: OnboardingMissionStepId) => {
+      if (id === 'register-routine') {
+        // 루틴 추가 화면(추천 루틴 아코디언)으로 — 뒤로 가면 나의 방 복귀.
+        // (편집 중 루틴 초기화 포함 — use-my-room-pages의 + 버튼 경로와 동일.)
+        addRoutineFromMyRoom();
+        return;
+      }
+      setScreen(MISSION_TARGET_SCREEN[id]);
+    },
+    [addRoutineFromMyRoom],
+  );
 
-  // --- memo 화면(MyRoomScreen·HouseScreen)으로 가는 콜백/파생 prop (#539) ---
+  // --- memo 화면(HouseScreen)으로 가는 콜백/파생 prop (#539) ---
   // 인라인 화살표·렌더마다 새로 만드는 객체는 memo 경계를 무효화한다. 매 렌더
   // 마운트되지 않는 다른 화면들(RoomDecorScreen 등)은 인라인을 유지한다.
-  const openDecor = useCallback(() => setScreen('decor'), []);
-  const openRoutineManage = useCallback(() => setScreen('routineManage'), []);
-  const openCategoryManage = useCallback(() => setScreen('categoryManage'), []);
-  const openGacha = useCallback(() => setScreen('gacha'), []);
-  const openMyRoom = useCallback(() => setScreen('myRoom'), []);
   const openHouseSearch = useCallback(() => {
     browsedHouseRef.current = false;
     setScreen('houseSearch');
   }, []);
-  const openNotificationList = useCallback(() => {
-    void loadNotifications();
-    setScreen('notificationList');
-  }, [loadNotifications]);
-  // + 버튼은 바로 추가 화면으로 — 뒤로 가면 나의 방으로 복귀 (#335).
-  const addRoutineFromMyRoom = useCallback(() => {
-    setEditingRoutine(null);
-    setAddReturnScreen('myRoom');
-    setScreen('addRoutine');
-  }, []);
-  const editRoutineFromMyRoom = useCallback(
-    (r: Routine) => openEditRoutine(r, 'myRoom'),
-    [openEditRoutine],
-  );
-  const handleSelectDate = useCallback(
-    (date: string) => {
-      void loadCalendarDay(date);
-    },
-    [loadCalendarDay],
-  );
-  const handleToggleCalendarItem = useCallback(
-    (item: CalendarDayItem, date: string) => {
-      void toggleCalendarItem(item, date);
-    },
-    [toggleCalendarItem],
-  );
-  const wearCharacter = useCallback(
-    (serverId: number) => {
-      void selectWornCharacter(serverId);
-    },
-    [selectWornCharacter],
-  );
-  // 지난·완료 할 일 등 안 보이는 항목까지 포함한 카테고리별 점유 수 (#505).
-  const categoryInUseCounts = useMemo(
-    () =>
-      routines.reduce<Record<string, { routines: number; todos: number }>>((acc, r) => {
-        if (!r.category) return acc;
-        const c = (acc[r.category] ??= { routines: 0, todos: 0 });
-        if (r.kind === 'todo') c.todos += 1;
-        else c.routines += 1;
-        return acc;
-      }, {}),
-    [routines],
-  );
   // 친구 방문 클러스터 (#149·#644) — use-friend-visit.tsx로 이관 (#692 4단계).
   const { visitFriend, subScreen: friendRoomSubScreen } = useFriendVisit({
     setScreen,
@@ -668,55 +579,7 @@ export function AppShell({
               index={NAV_ORDER.indexOf(activeTab)}
               onIndexChange={handlePageChange}
               lock={pagerLock}>
-              <MyRoomScreen
-                userName={nickname}
-                streakDays={streak}
-                coinBalance={wallet.coin}
-                diamondBalance={wallet.diamond}
-                routines={routines}
-                completions={completions}
-                categories={categories}
-                allCategories={allCategories}
-                calendarDays={calendarDays}
-                onSelectDate={handleSelectDate}
-                onToggleCalendarItem={handleToggleCalendarItem}
-                loading={myRoomLoading}
-                loadError={!!myRoomError}
-                onRetry={retryMyRoom}
-                placedFurnitureIds={placedFurnitureIds}
-                placements={placement.freeLayout ? placedItems : null}
-                wallpaperId={wallpaperId}
-                floorId={floorId}
-                backgroundId={backgroundId}
-                furniture={catalogue.furniture}
-                wallpapers={catalogue.wallpapers}
-                floors={catalogue.floors}
-                backgrounds={catalogue.backgrounds}
-                characterId={wornCharacterId}
-                characterAnimations={wornCharacterAnimations}
-                onToggleCompletion={toggleWithMissionGuard}
-                onEdit={openDecor}
-                onAddRoutine={addRoutineFromMyRoom}
-                onManageRoutines={openRoutineManage}
-                onOpenNotifications={openNotificationList}
-                unreadNotificationCount={unreadCount}
-                // MVP 고양이 단일 (#637) — 미배선이면 캐릭터 교체 항목이 숨는
-                // 기존 계약(#260)을 그대로 쓴다. 시트·훅 코드는 재사용 대기.
-                ownedCharacters={CHARACTER_SELECTION_ENABLED ? ownedCharacters : undefined}
-                onSelectCharacter={CHARACTER_SELECTION_ENABLED ? wearCharacter : undefined}
-                onManageCategories={openCategoryManage}
-                onUpdateCategory={updateRoutineCategory}
-                onOpenGacha={openGacha}
-                onRefresh={refreshMyRoom}
-                onQuickAddRoutine={quickAddTodo}
-                quickAddDisabledCategoryIds={houseCategoryIds}
-                onRenameRoutine={renameRoutine}
-                onEditRoutine={editRoutineFromMyRoom}
-                onUpdateRoutineTime={updateRoutineTime}
-                onUpdateTodoDueDate={updateTodoDueDate}
-                onMoveRoutineOccurrence={moveRoutineOccurrence}
-                onDeleteRoutine={deleteRoutine}
-              />
+              <MyRoomScreen {...myRoomPages.tabProps} />
               <HouseScreen
                 houses={arrangedHouses}
                 pendingHouses={pendingHouseCards}
@@ -738,7 +601,7 @@ export function AppShell({
                 houseIndex={houseIndex}
                 onHouseIndexChange={setHouseIndex}
                 onVisitFriend={visitFriend}
-                onVisitMyRoom={openMyRoom}
+                onVisitMyRoom={myRoomPages.openMyRoom}
                 onOpenSearch={openHouseSearch}
                 coinBalance={wallet.coin}
                 diamondBalance={wallet.diamond}
@@ -806,48 +669,8 @@ export function AppShell({
             />
           ) : null}
 
-          {screen === 'routineManage' ? (
-            <RoutineManageScreen
-              routines={routines}
-              categories={categories}
-              loading={myRoomLoading}
-              loadError={!!myRoomError}
-              onRetry={retryMyRoom}
-              onBack={() => setScreen('myRoom')}
-              onAdd={() => {
-                setEditingRoutine(null);
-                setAddReturnScreen('routineManage');
-                setScreen('addRoutine');
-              }}
-              onEdit={(r) => openEditRoutine(r, 'routineManage')}
-            />
-          ) : null}
-
-          {screen === 'addRoutine' ? (
-            <AddRoutineScreen
-              categories={categories}
-              editRoutine={editingRoutine}
-              onAdd={addRoutineWithMission}
-              onUpdate={updateRoutine}
-              onDelete={deleteRoutine}
-              onCreateCategory={createRoutineCategory}
-              onBack={() => setScreen(addReturnScreen)}
-            />
-          ) : null}
-
-          {screen === 'categoryManage' ? (
-            <CategoryManageScreen
-              categories={categories}
-              inUseCounts={categoryInUseCounts}
-              onCreate={createRoutineCategory}
-              onUpdate={updateRoutineCategory}
-              onDelete={deleteRoutineCategory}
-              onReorder={(orderedIds) => {
-                void reorderCategories(orderedIds);
-              }}
-              onBack={() => setScreen('myRoom')}
-            />
-          ) : null}
+          {/* 나의 방 서브화면 4종 (#692 5단계) — use-my-room-pages가 그린다. */}
+          {myRoomPages.subScreen}
 
           {screen === 'gacha' ? (
             <GachaScreen
@@ -944,26 +767,6 @@ export function AppShell({
 
           {/* 설정 서브화면 8종 (#692) — use-settings-surface가 그린다. */}
           {settingsSurface.subScreen}
-
-          {screen === 'notificationList' ? (
-            <NotificationListScreen
-              notifications={notificationEntries}
-              loading={notificationsLoading}
-              loadError={notificationsError}
-              onRetry={loadNotifications}
-              hasNext={notificationsHasNext}
-              onBack={() => setScreen('myRoom')}
-              onRead={(id) => {
-                void markNotificationRead(id);
-              }}
-              onReadAll={() => {
-                void markAllNotificationsRead();
-              }}
-              onLoadMore={() => {
-                void loadMoreNotifications();
-              }}
-            />
-          ) : null}
         </Animated.View>
       </GestureDetector>
 
