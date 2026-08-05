@@ -11,6 +11,17 @@ export function formatDate(d: string) {
   return d.replaceAll('-', '.');
 }
 
+/** Local Date at midnight from "YYYY-MM-DD" — `new Date(iso)`의 UTC 해석을 피한다. */
+export function localDate(dateIso: string) {
+  const [y, m, d] = dateIso.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+/** Weekday (0 = Sun) of a local "YYYY-MM-DD" date. */
+export function weekdayOf(dateIso: string) {
+  return localDate(dateIso).getDay();
+}
+
 /** Local date → "YYYY-MM-DD" (KST-agnostic; uses the device's local day). */
 export function toIsoDate(dt: Date) {
   return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(

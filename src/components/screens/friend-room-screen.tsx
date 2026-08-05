@@ -27,6 +27,7 @@ import { ScalePressable } from '@/components/ui/scale-pressable';
 import { horizontalFlingGesture } from '@/utils/gesture';
 import { PendingNotice } from '@/components/ui/pending-notice';
 import { RetryState } from '@/components/ui/retry-state';
+import { SpringProgressBar } from '@/components/ui/spring-progress';
 import { BookOpenPictogram, Pictogram, type PictogramName } from '@/components/ui/pictograms';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
@@ -393,14 +394,7 @@ export function FriendRoomScreen({
               )}
             </View>
 
-            <View style={[styles.progressTrack, { backgroundColor: t.surfaceMuted }]}>
-              <View
-                style={[
-                  styles.progressFill,
-                  { backgroundColor: t.primary, width: `${progress * 100}%` },
-                ]}
-              />
-            </View>
+            <SpringProgressBar progress={progress} color={t.primary} trackColor={t.surfaceMuted} />
 
             {loading ? (
               <View style={styles.listState}>
@@ -829,15 +823,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  progressTrack: {
-    height: 10,
-    borderRadius: Radius.pill,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: Radius.pill,
   },
   groups: {
     gap: Spacing.three,

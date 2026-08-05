@@ -43,6 +43,7 @@ import { Card } from '@/components/ui/card';
 import { IconButton } from '@/components/ui/icon-button';
 import { Pill } from '@/components/ui/pill';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { SpringProgressBar } from '@/components/ui/spring-progress';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { MissionBanner } from '@/components/ui/mission-banner';
 import { MissionSheet } from '@/components/screens/sheets/mission-sheet';
@@ -72,6 +73,22 @@ export type GalleryEntry = {
  * real screen first. Add an entry whenever you build a new component.
  */
 /** 휠 데모 (#390) — 시 휠 하나로 스와이프/탭 선택을 확인한다. */
+function SpringProgressDemo() {
+  const [progress, setProgress] = useState(0.4);
+  return (
+    <View style={{ alignSelf: 'stretch', gap: 12 }}>
+      <SpringProgressBar progress={progress} color="#7FA87F" trackColor="#8888883A" />
+      <SpringProgressBar progress={progress} color="#7FA87F" trackColor="#8888883A" height={6} />
+      <ScalePressable
+        accessibilityRole="button"
+        onPress={() => setProgress((p) => (p >= 1 ? 0 : Math.min(1, p + 0.3)))}
+        style={{ alignSelf: 'center', padding: 8 }}>
+        <Text>진행 +30% (100%에서 플래시 · 다시 누르면 0%)</Text>
+      </ScalePressable>
+    </View>
+  );
+}
+
 function WheelPickerDemo() {
   const [hour, setHour] = useState(7);
   return (
@@ -189,6 +206,12 @@ export const galleryEntries: GalleryEntry[] = [
         <CoinIcon size={12} />
       </View>
     ),
+  },
+  {
+    name: 'SpringProgressBar · 스프링 진행 바',
+    description:
+      '공용 진행 바 (#440·#503, #696 승격) — 차오를 때 바운스, 줄어들 때 클램프, 100% 흰 플래시.',
+    render: () => <SpringProgressDemo />,
   },
   {
     name: 'CoachMarkOverlay · 스포트라이트',

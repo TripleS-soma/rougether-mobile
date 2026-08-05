@@ -48,10 +48,6 @@ export function CoachTargetProvider({ children }: { children: ReactNode }) {
   return <CoachTargetContext.Provider value={value}>{children}</CoachTargetContext.Provider>;
 }
 
-export function useCoachTargets(): Record<string, TargetRect> {
-  return useContext(CoachTargetContext)?.rects ?? {};
-}
-
 /**
  * 스포트라이트 대상 래퍼 — 레이아웃 때마다 윈도 좌표를 측정해 등록한다.
  * 표시에는 관여하지 않는 투명 래퍼라 화면 순수성(prop 기반)을 해치지 않는다.
@@ -84,7 +80,7 @@ export type CoachMarkOverlayProps = {
   index: number;
   onNext: () => void;
   onSkip: () => void;
-  /** 대상 좌표 맵 — useCoachTargets(). */
+  /** 대상 좌표 맵 (CoachTargetProvider가 수집한 rects). */
   targets: Record<string, TargetRect>;
   /** 오버레이가 덮는 화면 크기 (onLayout으로 셸이 넘긴다). */
   frame: { w: number; h: number };
