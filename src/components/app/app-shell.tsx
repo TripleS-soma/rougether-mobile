@@ -3,11 +3,18 @@ import Constants from 'expo-constants';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, BackHandler, Easing, Linking, Platform, StyleSheet, View } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Animated, Linking, Platform, StyleSheet, View } from 'react-native';
+import { GestureDetector } from 'react-native-gesture-handler';
 import { useSharedValue } from 'react-native-reanimated';
 
+import {
+  NAV_ORDER,
+  SCREEN_FOR_TAB,
+  type Screen,
+  TAB_FOR_SCREEN,
+} from '@/components/app/navigation';
 import { TabPager } from '@/components/app/tab-pager';
+import { useAppNavigation } from '@/components/app/use-app-navigation';
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
 import { GachaScreen } from '@/components/screens/gacha-screen';
@@ -43,7 +50,7 @@ import {
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
 import { houseCoverKey } from '@/components/room/house-preview-frame';
 import { MissionSheet } from '@/components/screens/sheets/mission-sheet';
-import { BottomNav, type NavTab } from '@/components/ui/bottom-nav';
+import { BottomNav } from '@/components/ui/bottom-nav';
 import { MissionBanner } from '@/components/ui/mission-banner';
 import {
   CHARACTER_SELECTION_ENABLED,
@@ -87,112 +94,9 @@ import { subscribePendingFriendInviteCode, subscribePendingInviteCode } from '@/
 import { assetSource } from '@/resources/asset';
 import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furniture';
 
-export type Screen =
-  | 'myRoom'
-  | 'decor'
-  | 'routineManage'
-  | 'addRoutine'
-  | 'categoryManage'
-  | 'gacha'
-  | 'house'
-  | 'friendRoom'
-  | 'houseSearch'
-  | 'createHouse'
-  | 'settings'
-  | 'theme'
-  | 'profileEdit'
-  | 'passwordChange'
-  | 'notificationList'
-  | 'bugReport'
-  | 'notifications'
-  | 'sound'
-  | 'help'
-  | 'inviteFriends';
-
-/** Which bottom-nav tab is active for each screen, or null to hide the nav. */
-const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
-  myRoom: 'myRoom',
-  decor: null,
-  routineManage: null,
-  addRoutine: null,
-  categoryManage: null,
-  gacha: null,
-  house: 'house',
-  friendRoom: null,
-  houseSearch: null,
-  createHouse: null,
-  settings: 'settings',
-  theme: null,
-  profileEdit: null,
-  passwordChange: null,
-  notificationList: null,
-  bugReport: null,
-  notifications: null,
-  sound: null,
-  help: null,
-  inviteFriends: null,
-};
-
-const SCREEN_FOR_TAB: Record<NavTab, Screen> = {
-  myRoom: 'myRoom',
-  house: 'house',
-  settings: 'settings',
-};
-
-/** 하단 탭의 페이지 순서 (#563) — 페이저 인덱스 ↔ 탭 매핑. */
-const NAV_ORDER: NavTab[] = ['myRoom', 'house', 'settings'];
-
-/**
- * Where the Android hardware back button lands from each screen. `null` on
- * myRoom = fall through to the OS default (exit the app). addRoutine is dynamic
- * (returns to wherever it was opened from) and handled separately.
- */
-const BACK_SCREEN: Record<Screen, Screen | null> = {
-  myRoom: null,
-  decor: 'myRoom',
-  routineManage: 'myRoom',
-  addRoutine: 'routineManage',
-  categoryManage: 'myRoom',
-  gacha: 'myRoom',
-  house: 'myRoom',
-  friendRoom: 'house',
-  houseSearch: 'house',
-  createHouse: 'houseSearch',
-  settings: 'myRoom',
-  theme: 'settings',
-  profileEdit: 'settings',
-  passwordChange: 'settings',
-  notificationList: 'myRoom',
-  bugReport: 'settings',
-  notifications: 'settings',
-  sound: 'settings',
-  help: 'settings',
-  inviteFriends: 'settings',
-};
-
-/** 더블 백 종료 허용 창 (#522) — 토스트 표시와 체감이 맞는 2초. */
-const EXIT_WINDOW_MS = 2000;
-
-/**
- * 지금 화면의 뒤로 목적지 (#522 하드웨어 백 · #564 엣지 백 공용). null이면
- * 루트(뒤로 갈 곳 없음). addRoutine은 연 곳으로, 집 없는 유저의 탐색 직행은
- * 빈 집 화면으로 되돌리지 않는다 (#571).
- */
-export function backTargetFor(
-  screen: Screen,
-  addReturnScreen: Screen,
-  noHouses: boolean,
-): Screen | null {
-  if (screen === 'addRoutine') return addReturnScreen;
-  if (screen === 'houseSearch' && noHouses) return 'myRoom';
-  return BACK_SCREEN[screen];
-}
-
-// iOS 엣지 스와이프 백 (#564) — 왼쪽 이 폭 안에서 시작한 우향 팬만.
-const EDGE_BACK_WIDTH = 28;
-// 이만큼 끌었거나(거리) 이 속도를 넘긴 릴리즈면 뒤로 간다.
-const EDGE_BACK_DISTANCE = 64;
-const EDGE_BACK_VELOCITY = 700;
+// 내비게이션 상수·backTargetFor는 navigation.ts로 이동 (#692) — 기존
+// 임포터(테스트 등)를 위한 재수출.
+export { backTargetFor, type Screen } from '@/components/app/navigation';
 
 /** 사운드 설정의 기기 보관 키 (#405) — 알림 설정은 서버로 이관됨 (#495). */
 const DEVICE_SETTINGS_KEY = 'rougether.device-settings';
@@ -248,6 +152,9 @@ export function AppShell({
   // 집 하늘 연출용 현재 비 여부 (#360) — 서울 고정, 30분 캐시.
   const { raining } = useWeather();
   const [screen, setScreen] = useState<Screen>('myRoom');
+  // Remember where the add/edit-routine screen was opened from, so its back
+  // button returns to the right place (my-room or routine manage).
+  const [addReturnScreen, setAddReturnScreen] = useState<Screen>('routineManage');
 
   // 온보딩 미션 체인 (#571) — 온보딩 완주 직후 시작, 완료/스킵 플래그가
   // 있으면 시작하지 않는다. 단계 완료는 아래 액션 지점들이 complete로 쏜다.
@@ -447,6 +354,23 @@ export function AppShell({
   // 탐색의 뒤로가기도 (빈) 집 화면 대신 나의 방으로 돌아간다. 로딩/에러
   // 중엔 판정하지 않아 집이 있는 유저가 탐색으로 튕기지 않는다.
   const noHouses = !housesLoading && !housesError && houses.length === 0;
+
+  // 집 탐색 미션(#571 후속)은 "둘러보고 나갈 때" 완료 — 미리보기 성공 시
+  // 표시만 해두고, 탐색 화면을 떠나는 순간(뒤로/가입) 완료 시트를 띄운다.
+  // 탐색 중에 시트가 화면을 덮지 않게 하기 위함. 판정 ref는 셸 소유 (#692).
+  const browsedHouseRef = useRef(false);
+  const onLeaveHouseSearch = useCallback(() => {
+    if (browsedHouseRef.current) completeMission('browse-house');
+  }, [completeMission]);
+
+  // 내비게이션 컨트롤러 (#692) — 뒤로가기·엣지 백·전환 손맛·페이저 정착.
+  const { edgeBackPan, activeTab, handlePageChange, transOpacity, transX } = useAppNavigation({
+    screen,
+    setScreen,
+    addReturnScreen,
+    noHouses,
+    onLeaveHouseSearch,
+  });
 
   // Selectable house-cover catalog (집 생성·집 정보 수정).
   const { covers: houseCovers } = useHouseCovers();
@@ -835,9 +759,6 @@ export function AppShell({
     screenView(screen);
   }, [screen]);
 
-  // Remember where the add/edit-routine screen was opened from, so its back
-  // button returns to the right place (my-room or routine manage).
-  const [addReturnScreen, setAddReturnScreen] = useState<Screen>('routineManage');
   const openEditRoutine = useCallback((routine: Routine, from: Screen) => {
     setEditingRoutine(routine);
     setAddReturnScreen(from);
@@ -862,10 +783,6 @@ export function AppShell({
   const openCategoryManage = useCallback(() => setScreen('categoryManage'), []);
   const openGacha = useCallback(() => setScreen('gacha'), []);
   const openMyRoom = useCallback(() => setScreen('myRoom'), []);
-  // 집 탐색 미션(#571 후속)은 "둘러보고 나갈 때" 완료 — 미리보기 성공 시
-  // 표시만 해두고, 탐색 화면을 떠나는 순간(뒤로/가입) 완료 시트를 띄운다.
-  // 탐색 중에 시트가 화면을 덮지 않게 하기 위함.
-  const browsedHouseRef = useRef(false);
   const openHouseSearch = useCallback(() => {
     browsedHouseRef.current = false;
     setScreen('houseSearch');
@@ -1032,60 +949,6 @@ export function AppShell({
   // 에서는 바로 끄지 않고 더블 백으로 종료한다 (#522) — 첫 입력은 토스트
   // 안내, EXIT_WINDOW 안에 한 번 더 누르면 종료. (iOS는 시스템 종료
   // 뒤로가기가 없고 코드 종료도 금지라 해당 경로 자체가 없다.)
-  const lastBackRef = useRef(0);
-  // 하드웨어 백(#522)과 엣지 백(#564)이 공유하는 뒤로가기 — 목적지가 없으면
-  // false(루트). 탐색을 떠나는 경로도 화면의 뒤로 버튼과 같은 규칙 —
-  // 둘러봤다면 미션 4 완료 (#571 후속).
-  const goBack = useCallback(() => {
-    const target = backTargetFor(screen, addReturnScreen, noHouses);
-    if (!target) return false;
-    if (screen === 'houseSearch' && browsedHouseRef.current) completeMission('browse-house');
-    setScreen(target);
-    return true;
-  }, [screen, addReturnScreen, noHouses, completeMission]);
-  useEffect(() => {
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (goBack()) return true;
-      const now = Date.now();
-      if (now - lastBackRef.current <= EXIT_WINDOW_MS) {
-        BackHandler.exitApp();
-        return true;
-      }
-      lastBackRef.current = now;
-      toast('한 번 더 뒤로가면 앱이 꺼져요');
-      return true;
-    });
-    return () => sub.remove();
-  }, [goBack, toast]);
-
-  // iOS 엣지 스와이프 백 (#564) — 서브화면(탭 루트 제외)에서 왼쪽 엣지의
-  // 우향 팬. 탭 루트의 가로 스와이프는 페이저(#563) 몫이라 서브화면 한정.
-  // Android는 시스템 백 제스처/버튼이 있어 끈다. 제스처는 관찰만 하고
-  // 콘텐츠 터치를 막지 않는다 — 엣지 밖 시작은 즉시 물러난다.
-  const edgeBackEnabledRef = useRef(false);
-  edgeBackEnabledRef.current = Platform.OS === 'ios' && TAB_FOR_SCREEN[screen] == null;
-  const goBackRef = useRef(goBack);
-  goBackRef.current = goBack;
-  const edgeBackPan = useRef(
-    Gesture.Pan()
-      .withTestId('edge-back-pan')
-      .enabled(Platform.OS === 'ios')
-      .runOnJS(true)
-      .maxPointers(1)
-      .activeOffsetX(16)
-      .failOffsetY([-24, 24])
-      .onTouchesDown((e, mgr) => {
-        const x = e.allTouches[0]?.x ?? Number.MAX_VALUE;
-        if (!edgeBackEnabledRef.current || x > EDGE_BACK_WIDTH) mgr.fail();
-      })
-      .onEnd((e) => {
-        if (e.translationX > EDGE_BACK_DISTANCE || e.velocityX > EDGE_BACK_VELOCITY)
-          goBackRef.current();
-      }),
-  ).current;
-
-  const activeTab = TAB_FOR_SCREEN[screen];
-
   // --- 하단 탭 수평 페이저 (#563) ---
   // 집 화면이 확대·자리 드래그로 제스처 전권을 가져간 동안 페이저를 잠근다.
   // 단 집 "페이지가 활성일 때만" — 확대를 남겨둔 채 탭 버튼으로 떠났을 때
@@ -1106,17 +969,6 @@ export function AppShell({
   useEffect(() => {
     pagerLockRef.current.value = housePagerLockRef.current && activeTab === 'house';
   }, [activeTab]);
-
-  // 페이저 스와이프 정착 → 탭 전환. 집이 없으면 집 페이지 대신 집 탐색으로
-  // 직행 — 하단 탭 버튼(#571)과 같은 규칙.
-  const handlePageChange = useCallback(
-    (idx: number) => {
-      const tab = NAV_ORDER[idx];
-      if (!tab) return;
-      setScreen(tab === 'house' && noHouses ? 'houseSearch' : SCREEN_FOR_TAB[tab]);
-    },
-    [noHouses],
-  );
 
   // 설정 화면 콜백 — SettingsScreen이 memo라(탭 페이저로 상주, #539 후속)
   // 인라인 람다면 셸 리렌더마다 memo가 뚫린다. 전부 참조 고정.
@@ -1159,42 +1011,6 @@ export function AppShell({
       else toast('탈퇴에 실패했어요. 잠시 후 다시 시도해 주세요', 'error');
     });
   }, [withdraw, toast]);
-
-  // 화면 전환 손맛 (#446) — 들어오는 화면이 이동 방향에서 밀려 들어온다.
-  // 진입(서브화면)은 우측에서, 복귀(뒤로)는 좌측에서. 탭 간 전환은 이제
-  // 페이저(#563)가 손가락 추종/슬라이드로 직접 그리므로 여기선 건너뛴다.
-  const transOpacity = useRef(new Animated.Value(1)).current;
-  const transX = useRef(new Animated.Value(0)).current;
-  const prevScreenRef = useRef<Screen>(screen);
-  useEffect(() => {
-    const prev = prevScreenRef.current;
-    if (prev === screen) return;
-    prevScreenRef.current = screen;
-    const prevTab = TAB_FOR_SCREEN[prev];
-    const nextTab = TAB_FOR_SCREEN[screen];
-    if (prevTab != null && nextTab != null) return; // 탭 간 — 페이저가 그린다.
-    let slide = 28; // 기본: 서브화면 진입(우측에서)
-    if (
-      BACK_SCREEN[prev] === screen ||
-      (prev === 'addRoutine' && screen === addReturnScreen) ||
-      nextTab != null
-    ) {
-      // 뒤로 복귀(백맵 목적지·서브→탭) — 좌측에서 되돌아온다.
-      slide = -28;
-    }
-    // 페이드가 짧으면 깜빡임으로 읽힌다 — 서브화면은 바닥 0.08에서 넉넉히.
-    transOpacity.setValue(0.08);
-    transX.setValue(slide);
-    Animated.parallel([
-      Animated.timing(transOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
-      Animated.timing(transX, {
-        toValue: 0,
-        duration: 340,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [screen, addReturnScreen, transOpacity, transX]);
 
   return (
     <View style={styles.root}>
