@@ -39,6 +39,7 @@ import { CategoryIcon } from '@/components/ui/category-icon';
 import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
 import { Pictogram } from '@/components/ui/pictograms';
 import { RetryState } from '@/components/ui/retry-state';
+import { SpringProgressBar } from '@/components/ui/spring-progress';
 import { useToast } from '@/components/ui/toast';
 import { WalletPills } from '@/components/ui/wallet-pills';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
@@ -54,7 +55,7 @@ import {
 import { BearCheck } from '@/components/ui/bear-check';
 import { Icon } from '@/components/ui/icon';
 import { ScalePressable } from '@/components/ui/scale-pressable';
-import { Radius, Spacing, StaticWhite } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 // 인증사진형 잠시 내림 (#499) — 복구 시 카메라 캡처 import를 되살릴 것.
 // import { captureVerificationPhoto } from '@/lib/photo-verify';
 import { saveRoomImage } from '@/lib/room-capture';
@@ -65,21 +66,9 @@ import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
-import { formatDate, formatTime, todayIso } from '@/utils/datetime';
+import { formatDate, formatTime, localDate, todayIso, weekdayOf } from '@/utils/datetime';
 import { horizontalFlingGesture } from '@/utils/gesture';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
-
-/** Weekday (0 = Sun) of a local "YYYY-MM-DD" date. */
-const weekdayOf = (dateIso: string) => {
-  const [y, m, d] = dateIso.split('-').map(Number);
-  return new Date(y, m - 1, d).getDay();
-};
-
-/** Local Date at midnight from "YYYY-MM-DD". */
-const localDate = (dateIso: string) => {
-  const [y, m, d] = dateIso.split('-').map(Number);
-  return new Date(y, m - 1, d);
-};
 
 /**
  * Biweekly parity: scheduled on even week-distances from the startDate's week
@@ -1194,9 +1183,11 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                 ) : null}
 
                 {!loading && !loadError && roomRoutines.length > 0 ? (
-                  <View style={[styles.progressTrack, { backgroundColor: t.surfaceMuted }]}>
-                    <SpringProgressFill progress={progress} color={t.primary} />
-                  </View>
+                  <SpringProgressBar
+                    progress={progress}
+                    color={t.primary}
+                    trackColor={t.surfaceMuted}
+                  />
                 ) : null}
 
                 {loading || loadError
@@ -1236,9 +1227,11 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                 ) : null}
               </View>
               {calDayTotal > 0 ? (
-                <View style={[styles.progressTrack, { backgroundColor: t.surfaceMuted }]}>
-                  <SpringProgressFill progress={calDayDone / calDayTotal} color={t.primary} />
-                </View>
+                <SpringProgressBar
+                  progress={calDayDone / calDayTotal}
+                  color={t.primary}
+                  trackColor={t.surfaceMuted}
+                />
               ) : null}
               {serverBackedDay ? (
                 <Text style={[Typography.supporting, { color: t.textMuted }]}>
@@ -1425,49 +1418,6 @@ function FlyingCoin({
   );
 }
 
-/** 스프링으로 차오르는 진행바 채움 — 100% 도달 순간 흰 플래시 (#440). */
-function SpringProgressFill({ progress, color }: { progress: number; color: string }) {
-  const w = useRef(new Animated.Value(progress)).current;
-  const flash = useRef(new Animated.Value(0)).current;
-  const prev = useRef(progress);
-  useEffect(() => {
-    Animated.spring(w, {
-      toValue: progress,
-      friction: 8,
-      tension: 50,
-      // 줄어들 때(완료 해제)는 바운스 없이 목표에서 멈춘다 (#503) — 100%→0%
-      // (루틴 1개 해제)에서 오버슈트가 0 아래로 뚫려 바가 깜빡였다. 차오를
-      // 때는 기존 바운스(#440) 유지.
-      overshootClamping: progress < prev.current,
-      useNativeDriver: false,
-    }).start();
-    if (progress >= 1 && prev.current < 1) {
-      flash.setValue(0.85);
-      Animated.timing(flash, { toValue: 0, duration: 650, useNativeDriver: false }).start();
-    }
-    prev.current = progress;
-  }, [progress, w, flash]);
-  return (
-    <Animated.View
-      style={[
-        styles.progressFill,
-        {
-          backgroundColor: color,
-          // clamp: 스프링 오버슈트가 범위 밖(음수/100% 초과) width로 새지 않게 (#503).
-          width: w.interpolate({
-            inputRange: [0, 1],
-            outputRange: ['0%', '100%'],
-            extrapolate: 'clamp',
-          }),
-        },
-      ]}>
-      <Animated.View
-        style={[StyleSheet.absoluteFillObject, { backgroundColor: StaticWhite, opacity: flash }]}
-      />
-    </Animated.View>
-  );
-}
-
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
@@ -1590,20 +1540,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     borderRadius: Radius.pill,
   },
-  progressTrack: {
-    height: 10,
-    borderRadius: Radius.pill,
-    overflow: 'hidden',
-  },
   flyCoin: {
     position: 'absolute',
     left: -9,
     top: -9,
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: Radius.pill,
-    overflow: 'hidden',
   },
   group: {
     gap: Spacing.half,

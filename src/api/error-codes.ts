@@ -32,5 +32,3 @@ export const ErrorCode = {
   /** 4xx — 자기 초대코드는 사용 불가 (POST /invites/redeem, #518). */
   INVITE_SELF_NOT_ALLOWED: 'INVITE_SELF_NOT_ALLOWED',
 } as const;
-
-export type KnownErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

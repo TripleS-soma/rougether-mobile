@@ -48,7 +48,10 @@ function useRollingNumber(value: number) {
       duration: 550,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: false,
-    }).start(() => {
+    }).start(({ finished }) => {
+      // 550ms 내 재변동으로 중단되면 새 이펙트가 이어받는다 — 이전 목표값을
+      // 강제 표시하지 않는다 (#696). 리스너는 이펙트 클린업이 해제한다.
+      if (!finished) return;
       anim.removeListener(id);
       setDisplay(value);
     });

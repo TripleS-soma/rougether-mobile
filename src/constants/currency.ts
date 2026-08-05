@@ -5,8 +5,6 @@
  * Balances and reward/duplicate amounts come from the API (`/me/wallets`,
  * completion/draw responses) — the server is the source of truth.
  */
-export type CurrencyType = 'coin' | 'diamond';
-
 export type Wallet = { coin: number; diamond: number };
 
 /** Placeholder shown until `/me/wallets` loads. */

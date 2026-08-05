@@ -16,6 +16,7 @@ import type { RoomCatalogProps } from '@/components/room/room';
 import type { HouseMission, MemberRoomPreview } from '@/components/screens/house-screen';
 import { Icon } from '@/components/ui/icon';
 import { RetryState } from '@/components/ui/retry-state';
+import { SpringProgressBar } from '@/components/ui/spring-progress';
 import {
   CrownPictogram,
   HousePictogram,
@@ -581,15 +582,13 @@ export function HouseSearchScreen({
                                 {mission.current}/{mission.target}
                               </Text>
                             </View>
-                            <View
-                              style={[styles.previewMissionTrack, { backgroundColor: t.border }]}>
-                              <View
-                                style={[
-                                  styles.previewMissionFill,
-                                  { backgroundColor: t.primary, width: `${progress * 100}%` },
-                                ]}
-                              />
-                            </View>
+                            <SpringProgressBar
+                              progress={progress}
+                              color={t.primary}
+                              trackColor={t.border}
+                              height={6}
+                              style={styles.previewMissionTrack}
+                            />
                           </View>
                         </View>
                       );
@@ -841,14 +840,7 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   previewMissionTrack: {
-    height: 6,
-    borderRadius: Radius.pill,
-    overflow: 'hidden',
     marginTop: Spacing.one,
-  },
-  previewMissionFill: {
-    height: '100%',
-    borderRadius: Radius.pill,
   },
   previewMissionFoot: {
     flexDirection: 'row',
