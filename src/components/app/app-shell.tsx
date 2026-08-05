@@ -1,9 +1,6 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import Constants from 'expo-constants';
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Linking, Platform, StyleSheet, View } from 'react-native';
+import { Animated, Platform, StyleSheet, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 import { useSharedValue } from 'react-native-reanimated';
 
@@ -15,6 +12,7 @@ import {
 } from '@/components/app/navigation';
 import { TabPager } from '@/components/app/tab-pager';
 import { useAppNavigation } from '@/components/app/use-app-navigation';
+import { useSettingsSurface } from '@/components/app/use-settings-surface';
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
 import { GachaScreen } from '@/components/screens/gacha-screen';
@@ -24,8 +22,6 @@ import {
   type NewHouseMission,
   type VisitedFriend,
 } from '@/components/screens/house-screen';
-import { HelpScreen } from '@/components/screens/help-screen';
-import { InviteFriendsScreen } from '@/components/screens/invite-friends-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import {
   type CalendarDayItem,
@@ -33,20 +29,10 @@ import {
   MyRoomScreen,
 } from '@/components/screens/my-room-screen';
 import { NotificationListScreen } from '@/components/screens/notification-list-screen';
-import { NotificationSettingsScreen } from '@/components/screens/notification-settings-screen';
-import { PasswordChangeScreen } from '@/components/screens/password-change-screen';
-import { ProfileEditScreen } from '@/components/screens/profile-edit-screen';
 import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
-import { BugReportScreen } from '@/components/screens/bug-report-screen';
 import { CategoryManageScreen } from '@/components/screens/category-manage-screen';
 import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
 import { SettingsScreen } from '@/components/screens/settings-screen';
-import { ThemeScreen } from '@/components/screens/theme-screen';
-import {
-  DEFAULT_SOUND_SETTINGS,
-  type SoundSettings,
-  SoundSettingsScreen,
-} from '@/components/screens/sound-settings-screen';
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
 import { houseCoverKey } from '@/components/room/house-preview-frame';
 import { MissionSheet } from '@/components/screens/sheets/mission-sheet';
@@ -57,16 +43,12 @@ import {
   DEFAULT_CHARACTER_ID,
   type CharacterId,
 } from '@/constants/characters';
-import { SUPPORT_EMAIL } from '@/constants/policy';
 import { CATEGORY_COLORS, type Routine } from '@/constants/routines';
 import { screenView, track } from '@/lib/analytics';
 import { onNotificationTap } from '@/lib/push-events';
-import { pickLibraryImage } from '@/lib/pick-image';
 import { todayIso } from '@/utils/datetime';
-import { setHapticsEnabled } from '@/utils/haptics';
 import { refreshWidgets } from '@/widgets/rougether-widgets';
 import { buildWidgetSummary, saveWidgetSummary } from '@/widgets/widget-data';
-import { useAuth } from '@/hooks/use-auth';
 import { useGacha } from '@/hooks/use-gacha';
 import {
   type OnboardingMissionStepId,
@@ -77,29 +59,22 @@ import { useGuestbook } from '@/hooks/use-guestbook';
 import { useToast } from '@/components/ui/toast';
 import { useHouseCovers } from '@/hooks/use-house-covers';
 import { useHouses } from '@/hooks/use-houses';
-import { useInvites } from '@/hooks/use-invites';
 import { useMemberRoomPreviews, withMyCharacter } from '@/hooks/use-member-room-previews';
 import { useRoomLayouts } from '@/hooks/use-room-layouts';
 import { useMyCharacters } from '@/hooks/use-my-characters';
 import { useMyRoomData } from '@/hooks/use-my-room-data';
-import { useBugReports } from '@/hooks/use-bug-reports';
-import { useNotificationSettings } from '@/hooks/use-notification-settings';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useShop } from '@/hooks/use-shop';
 import { useWeather } from '@/hooks/use-weather';
-import { useBrandTheme } from '@/hooks/use-tokens';
 import type { DrawResult } from '@/api';
 import { fetchGachaRewards } from '@/api';
-import { subscribePendingFriendInviteCode, subscribePendingInviteCode } from '@/lib/pending-invite';
+import { subscribePendingInviteCode } from '@/lib/pending-invite';
 import { assetSource } from '@/resources/asset';
 import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furniture';
 
 // 내비게이션 상수·backTargetFor는 navigation.ts로 이동 (#692) — 기존
 // 임포터(테스트 등)를 위한 재수출.
 export { backTargetFor, type Screen } from '@/components/app/navigation';
-
-/** 사운드 설정의 기기 보관 키 (#405) — 알림 설정은 서버로 이관됨 (#495). */
-const DEVICE_SETTINGS_KEY = 'rougether.device-settings';
 
 export type AppShellProps = {
   /** Character chosen at onboarding; defaults to the sample character. */
@@ -139,16 +114,6 @@ export function AppShell({
   onReplayOnboarding,
   startMissions = false,
 }: AppShellProps) {
-  const {
-    themeId,
-    setThemeId,
-    mode: themeMode,
-    setMode: setThemeMode,
-    fontId,
-    setFontId,
-  } = useBrandTheme();
-  // 스토어 요건(#545): 도움말의 실제 앱 버전 표기.
-  const appVersion = Constants.expoConfig?.version ?? '1.0.0';
   // 집 하늘 연출용 현재 비 여부 (#360) — 서울 고정, 30분 캐시.
   const { raining } = useWeather();
   const [screen, setScreen] = useState<Screen>('myRoom');
@@ -219,8 +184,6 @@ export function AppShell({
     draw: drawGachaMachine,
   } = useGacha(setWallet);
 
-  const { logout, withdraw } = useAuth();
-
   // Owned characters + worn one (GET /me/characters). Once loaded, the worn
   // character overrides the onboarding pick everywhere but friend rooms.
   const {
@@ -232,19 +195,6 @@ export function AppShell({
   } = useMyCharacters();
   const wornCharacterId = selectedCharacterId ?? characterId;
   const { show: toast } = useToast();
-  // 외부 링크 — 핸들러 없는 기기(메일 앱 미설정 등)에서 reject되므로 토스트로 안내.
-  const openExternal = useCallback(
-    (url: string) => {
-      Linking.openURL(url).catch(() =>
-        toast('링크를 열 수 없어요. 잠시 후 다시 시도해 주세요.', 'error'),
-      );
-    },
-    [toast],
-  );
-  const openSupportMail = useCallback(() => {
-    openExternal(`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('[루게더] 문의')}`);
-  }, [openExternal]);
-
   // 알림 (list + read receipts); loaded on mount so the header bell can show
   // the unread dot, refreshed each time the list opens.
   const {
@@ -261,9 +211,6 @@ export function AppShell({
   useEffect(() => {
     void loadNotifications();
   }, [loadNotifications]);
-
-  // 버그 제보 (#496) — 화면을 열 때 내 제보 내역을 불러온다.
-  const { entries: bugReports, load: loadBugReports, submit: submitBugReport } = useBugReports();
 
   // Houses (내 집 목록 + 탐색 + 참여/생성/강퇴/나가기) from the API.
   const {
@@ -314,15 +261,6 @@ export function AppShell({
       // 유지.
     }
   }, [refreshHouses]);
-
-  // 친구 초대 리워드 (#518) — 설정 → 친구 초대 화면의 데이터·액션.
-  const {
-    info: inviteInfo,
-    loading: invitesLoading,
-    loadError: invitesLoadError,
-    load: loadInvites,
-    redeem: redeemInviteCode,
-  } = useInvites();
 
   // Locally saved tile arrangements (#278) — the 집 화면 shows arranged houses
   // and drag-and-drop swaps persist per viewer+house on this device.
@@ -431,20 +369,6 @@ export function AppShell({
   // 소비는 화면(자동 미리보기 발화 시점)이 알려온다 — 마운트 직후 screen이
   // 아직 'myRoom'인 채로 도는 클리어 이펙트가 코드를 지우던 콜드 스타트
   // 레이스(#624 후속)의 수정. 화면 감시 클리어는 두지 않는다.
-
-  // 친구 초대 링크 (#667) — 친구 초대 화면을 열고 받은 코드 입력을 프리필.
-  const [pendingFriendCode, setPendingFriendCode] = useState<string | null>(null);
-  useEffect(
-    () =>
-      subscribePendingFriendInviteCode((code) => {
-        setPendingFriendCode(code);
-        setScreen('inviteFriends');
-        void loadInvites();
-      }),
-    // loadInvites는 훅에서 안정 참조 — 마운트 1회 구독.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  );
 
   const [visitingFriend, setVisitingFriend] = useState<VisitedFriend>({ name: '친구' });
   // Which house the 집 switcher is on — kept here because HouseScreen
@@ -693,31 +617,21 @@ export function AppShell({
   useEffect(() => {
     if (apiBio != null) setBio(apiBio);
   }, [apiBio]);
-  // 알림 설정은 서버 보관으로 이관 (#495) — 열 때 GET, 토글마다 낙관적 PATCH.
-  const {
-    settings: notificationSettings,
-    loadError: notificationSettingsLoadError,
-    load: loadNotificationSettings,
-    toggle: toggleNotificationSetting,
-  } = useNotificationSettings((message) => toast(message, 'error'));
-  const [soundSettings, setSoundSettings] = useState<SoundSettings>(DEFAULT_SOUND_SETTINGS);
-
-  // 사운드 설정은 서버 API가 생기기 전까지 기기(AsyncStorage)에 보관 (#405).
-  // 예전 저장값의 notifications 필드는 서버 이관(#495) 후 무시된다.
-  useEffect(() => {
-    void AsyncStorage.getItem(DEVICE_SETTINGS_KEY).then((raw) => {
-      if (!raw) return;
-      try {
-        const saved = JSON.parse(raw) as { sound?: SoundSettings };
-        if (saved.sound) setSoundSettings((p) => ({ ...p, ...saved.sound }));
-      } catch {
-        // 손상된 저장값은 기본값으로 무시.
-      }
-    });
-  }, []);
-  const persistDeviceSettings = (sound: SoundSettings) => {
-    void AsyncStorage.setItem(DEVICE_SETTINGS_KEY, JSON.stringify({ sound })).catch(() => {});
-  };
+  // 설정 서피스 (#692 2단계) — 설정 탭·서브화면 8종의 훅·콜백·JSX 소유.
+  const handleProfileSave = useCallback(
+    (nick: string, b: string) => {
+      setNickname(nick);
+      setBio(b);
+      void saveProfile(nick, b);
+    },
+    [saveProfile],
+  );
+  const settingsSurface = useSettingsSurface({
+    screen,
+    setScreen,
+    onReplayOnboarding,
+    profile: { nickname, bio, characterId: wornCharacterId, onSave: handleProfileSave },
+  });
   // 홈 위젯 오늘 요약 동기화 (#604, 안드로이드 전용) — 완료 토글·루틴
   // 변경·스트릭 갱신이 위젯에 바로 반영되게 요약을 기록하고 재렌더를 민다.
   const widgetSummarySigRef = useRef('');
@@ -736,12 +650,6 @@ export function AppShell({
     widgetSummarySigRef.current = sig;
     void saveWidgetSummary(summary).then(refreshWidgets);
   }, [routines, completions, streak]);
-
-  // '햅틱 진동' 토글을 전역 게이트에 주입 (#586) — 이 이펙트가 없으면 토글이
-  // 저장만 되고 아무것도 제어하지 않는다(휠 틱·완료 햅틱 등 전부 무조건 발사).
-  useEffect(() => {
-    setHapticsEnabled(soundSettings.haptics);
-  }, [soundSettings.haptics]);
 
   // 푸시 탭(콜드 스타트 포함) → 알림 목록으로 (#405).
   useEffect(
@@ -970,48 +878,6 @@ export function AppShell({
     pagerLockRef.current.value = housePagerLockRef.current && activeTab === 'house';
   }, [activeTab]);
 
-  // 설정 화면 콜백 — SettingsScreen이 memo라(탭 페이저로 상주, #539 후속)
-  // 인라인 람다면 셸 리렌더마다 memo가 뚫린다. 전부 참조 고정.
-  const openTheme = useCallback(() => setScreen('theme'), []);
-  const openProfileEdit = useCallback(() => setScreen('profileEdit'), []);
-  const openPasswordChange = useCallback(() => setScreen('passwordChange'), []);
-  const openNotificationSettings = useCallback(() => {
-    setScreen('notifications');
-    // 화면을 열 때마다 서버값으로 최신화 (실패 시 기본값/직전값 유지).
-    void loadNotificationSettings();
-  }, [loadNotificationSettings]);
-  const openSound = useCallback(() => setScreen('sound'), []);
-  const openHelp = useCallback(() => setScreen('help'), []);
-  // 친구 초대 (#518) — 진입 시점에 내 코드를 로드(없으면 서버가 발급).
-  const openInviteFriends = useCallback(() => {
-    setScreen('inviteFriends');
-    void loadInvites();
-  }, [loadInvites]);
-  // 약관/처리방침은 외부 브라우저 대신 인앱 웹뷰 라우트로 (#652).
-  const openTerms = useCallback(
-    () => router.push({ pathname: '/policy', params: { doc: 'terms' } }),
-    [],
-  );
-  const openPrivacy = useCallback(
-    () => router.push({ pathname: '/policy', params: { doc: 'privacy' } }),
-    [],
-  );
-  const openBugReport = useCallback(() => {
-    setScreen('bugReport');
-    void loadBugReports();
-  }, [loadBugReports]);
-  const handleLogout = useCallback(() => {
-    // Clearing the session flips auth status → AppRoot redirects to /login.
-    void logout();
-  }, [logout]);
-  const handleWithdraw = useCallback(() => {
-    // 성공 시 status가 guest로 바뀌어 AppRoot가 로그인으로 보낸다 (#547).
-    void withdraw().then((ok) => {
-      if (ok) toast('탈퇴가 완료됐어요');
-      else toast('탈퇴에 실패했어요. 잠시 후 다시 시도해 주세요', 'error');
-    });
-  }, [withdraw, toast]);
-
   return (
     <View style={styles.root}>
       {/* 엣지 백 (#564) — 콘텐츠 전체를 감싸되 관찰만 한다(차단 없음). */}
@@ -1117,25 +983,7 @@ export function AppShell({
                 onReissueInviteCode={handleReissueInviteCode}
                 onPagerLockChange={handleHousePagerLock}
               />
-              <SettingsScreen
-                themeMode={themeMode}
-                onChangeThemeMode={setThemeMode}
-                fontId={fontId}
-                onChangeFont={setFontId}
-                onOpenTheme={openTheme}
-                onEditProfile={openProfileEdit}
-                onChangePassword={openPasswordChange}
-                onOpenNotifications={openNotificationSettings}
-                onOpenSound={openSound}
-                onOpenHelp={openHelp}
-                onInviteFriends={openInviteFriends}
-                onOpenTerms={openTerms}
-                onOpenPrivacy={openPrivacy}
-                onReportBug={openBugReport}
-                onReplayOnboarding={onReplayOnboarding}
-                onLogout={handleLogout}
-                onWithdraw={handleWithdraw}
-              />
+              <SettingsScreen {...settingsSurface.tabProps} />
             </TabPager>
           ) : null}
 
@@ -1356,28 +1204,8 @@ export function AppShell({
             />
           ) : null}
 
-          {screen === 'theme' ? (
-            <ThemeScreen
-              themeId={themeId}
-              onChangeThemeId={setThemeId}
-              onBack={() => setScreen('settings')}
-            />
-          ) : null}
-
-          {screen === 'profileEdit' ? (
-            <ProfileEditScreen
-              initialNickname={nickname}
-              initialBio={bio}
-              characterId={wornCharacterId}
-              onSave={(nick, b) => {
-                setNickname(nick);
-                setBio(b);
-                void saveProfile(nick, b);
-                setScreen('settings');
-              }}
-              onBack={() => setScreen('settings')}
-            />
-          ) : null}
+          {/* 설정 서브화면 8종 (#692) — use-settings-surface가 그린다. */}
+          {settingsSurface.subScreen}
 
           {screen === 'notificationList' ? (
             <NotificationListScreen
@@ -1396,64 +1224,6 @@ export function AppShell({
               onLoadMore={() => {
                 void loadMoreNotifications();
               }}
-            />
-          ) : null}
-
-          {screen === 'passwordChange' ? (
-            <PasswordChangeScreen
-              onSubmit={() => setScreen('settings')}
-              onBack={() => setScreen('settings')}
-            />
-          ) : null}
-
-          {screen === 'notifications' ? (
-            <NotificationSettingsScreen
-              settings={notificationSettings}
-              onToggle={toggleNotificationSetting}
-              loadError={notificationSettingsLoadError}
-              onRetry={loadNotificationSettings}
-              onBack={() => setScreen('settings')}
-            />
-          ) : null}
-
-          {screen === 'sound' ? (
-            <SoundSettingsScreen
-              initialSettings={soundSettings}
-              onChange={(next) => {
-                setSoundSettings(next);
-                persistDeviceSettings(next);
-              }}
-              onBack={() => setScreen('settings')}
-            />
-          ) : null}
-
-          {screen === 'bugReport' ? (
-            <BugReportScreen
-              entries={bugReports}
-              onSubmit={submitBugReport}
-              onPickImage={pickLibraryImage}
-              onBack={() => setScreen('settings')}
-            />
-          ) : null}
-
-          {screen === 'help' ? (
-            <HelpScreen
-              onBack={() => setScreen('settings')}
-              appVersion={appVersion}
-              onContact={openSupportMail}
-            />
-          ) : null}
-
-          {screen === 'inviteFriends' ? (
-            <InviteFriendsScreen
-              info={inviteInfo}
-              loading={invitesLoading}
-              loadError={invitesLoadError}
-              onRetry={loadInvites}
-              onRedeem={redeemInviteCode}
-              initialRedeemCode={pendingFriendCode ?? undefined}
-              onInitialRedeemCodeConsumed={() => setPendingFriendCode(null)}
-              onBack={() => setScreen('settings')}
             />
           ) : null}
         </Animated.View>
