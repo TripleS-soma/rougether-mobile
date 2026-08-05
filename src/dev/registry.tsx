@@ -72,7 +72,7 @@ export type GalleryEntry = {
  * component in isolation on device / simulator / web without wiring it into a
  * real screen first. Add an entry whenever you build a new component.
  */
-/** 휠 데모 (#390) — 시 휠 하나로 스와이프/탭 선택을 확인한다. */
+/** 진행 바 데모 (#696) — 버튼으로 진행률을 올려 스프링·플래시를 확인한다. */
 function SpringProgressDemo() {
   const [progress, setProgress] = useState(0.4);
   return (
@@ -89,6 +89,7 @@ function SpringProgressDemo() {
   );
 }
 
+/** 휠 데모 (#390) — 시 휠 하나로 스와이프/탭 선택을 확인한다. */
 function WheelPickerDemo() {
   const [hour, setHour] = useState(7);
   return (
