@@ -15,11 +15,18 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { GestureDetector } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import { NavMenuPopover } from '@/components/app/nav-menu-popover';
 import { FlyingCoin } from '@/components/screens/my-room/flying-coin';
 import { isScheduledOn } from '@/components/screens/my-room/schedule';
+import {
+  type DragSlot,
+  type DropTarget,
+  reorderedIds,
+  resolveDrop,
+} from '@/components/screens/my-room/routine-drag';
+import { applyRoutineOrder } from '@/hooks/use-routine-order';
 import { SwipeDeleteRow } from '@/components/screens/my-room/swipe-delete-row';
 import { useWidgetRoomCapture } from '@/components/screens/my-room/use-widget-room-capture';
 import { Room, type RoomSceneProps } from '@/components/room/room';
@@ -178,6 +185,15 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> & {
   onMoveRoutineOccurrence?: (id: string, dueDate: string) => void;
   /** Delete a routine (kebab → 삭제). */
   onDeleteRoutine?: (id: string) => void;
+  /**
+   * 수동 순서 맵 (#716) — `{ [categoryId]: [routineId...] }`. 방 '오늘' 리스트의
+   * 미완료 항목을 이 순서로 정렬한다(완료는 기존대로 하단). 기기 로컬 보관.
+   */
+  routineOrder?: Record<string, string[]>;
+  /** 롱프레스 재정렬 확정 — 해당 카테고리의 새 루틴 id 순서(미완료 기준). */
+  onReorderRoutines?: (categoryId: string, orderedRoutineIds: string[]) => void;
+  /** 다른 카테고리로 드롭 = 영구 이동 (#716) — 서버 categoryId 변경. */
+  onMoveRoutineCategory?: (id: string, toCategoryId: string) => void;
 };
 
 /**
@@ -249,6 +265,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   onUpdateTodoDueDate,
   onMoveRoutineOccurrence,
   onDeleteRoutine,
+  routineOrder,
+  onReorderRoutines,
+  onMoveRoutineCategory,
 }: MyRoomScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
@@ -342,16 +361,18 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     return metas.map((cat) => {
       // 미분류 그룹(id '')이 무소속·미상 카테고리 항목을 받는다 (#517).
       const isUncategorized = cat.id === '';
-      const items = sinkDone(
-        roomRoutines.filter((r) => {
-          if (r.category === cat.id) return true;
-          return isUncategorized && (!r.category || !knownIds.includes(r.category));
-        }),
-        (r) => isDone(r.id, today),
+      const inCat = roomRoutines.filter((r) => {
+        if (r.category === cat.id) return true;
+        return isUncategorized && (!r.category || !knownIds.includes(r.category));
+      });
+      // 수동 순서(#716)를 미완료 항목에 적용한 뒤 완료를 하단으로 가라앉힌다 —
+      // 순서는 "내가 정한 미완료 배치"가 진실이고, 완료는 자동으로 밀린다.
+      const items = sinkDone(applyRoutineOrder(inCat, routineOrder?.[cat.id]), (r) =>
+        isDone(r.id, today),
       );
       return { meta: cat, items };
     });
-  }, [categories, roomRoutines, knownIds, sinkDone, isDone, today]);
+  }, [categories, roomRoutines, knownIds, sinkDone, isDone, today, routineOrder]);
 
   // Header hamburger popover (방 꾸미기 / 카테고리 관리 / 루틴 관리) + the
   // category manager sheet it opens. The popover anchors under the measured
@@ -769,59 +790,183 @@ export const MyRoomScreen = memo(function MyRoomScreen({
       : undefined,
   });
 
-  const renderRoutineRow = (row: RowSpec, color: string) => (
-    <SwipeDeleteRow key={row.key} label={row.title} onDelete={row.onDelete}>
-      <View style={styles.routineRow}>
-        {/* The checkbox alone toggles completion; the rest of the row opens the
+  // --- 루틴/투두 롱프레스 재정렬 (#716) ---
+  // 방 '오늘' 리스트의 미완료 행만 대상. 롱프레스로 들어 손가락을 따라가고,
+  // 놓으면 같은 카테고리면 순서 변경(로컬), 다른 카테고리 그룹 위면 영구
+  // 이동(서버). 완료 행은 하단으로 가라앉은 상태라 드래그에서 제외한다.
+  const reorderEnabled = !!onReorderRoutines && tab === 'room';
+  const [dragId, setDragId] = useState<string | null>(null);
+  const dragTY = useRef(new Animated.Value(0)).current;
+  const rowRefs = useRef(new Map<string, View>());
+  const dragSlotsRef = useRef<DragSlot[]>([]);
+  const dropRef = useRef<DropTarget | null>(null);
+  // 드래그 시작 시점의 카테고리별 미완료 id 순서 스냅샷 — 드롭 계산의 기준.
+  const baseOrderRef = useRef<Map<string, string[]>>(new Map());
+
+  const beginDrag = useCallback(
+    (routineId: string) => {
+      hapticSelection();
+      setDragId(routineId);
+      const base = new Map<string, string[]>();
+      for (const g of roomGroups) {
+        base.set(
+          g.meta.id,
+          g.items.filter((r) => !isDone(r.id, today)).map((r) => r.id),
+        );
+      }
+      baseOrderRef.current = base;
+      const catOf = (id: string) =>
+        [...base.entries()].find(([, ids]) => ids.includes(id))?.[0] ?? '';
+      // window 좌표 측정은 비동기 — 다음 프레임 안에 채워져 onUpdate가 쓴다
+      // (집 좌석 드래그 #278와 같은 리프트 시점 측정).
+      dragSlotsRef.current = [];
+      rowRefs.current.forEach((node, id) => {
+        node.measureInWindow((x, y, w, h) => {
+          dragSlotsRef.current.push({
+            routineId: id,
+            categoryId: catOf(id),
+            top: y,
+            bottom: y + h,
+          });
+        });
+      });
+    },
+    [roomGroups, isDone, today],
+  );
+
+  const updateDrop = useCallback((draggedId: string, absoluteY: number) => {
+    dropRef.current = resolveDrop(dragSlotsRef.current, absoluteY, draggedId);
+  }, []);
+
+  const endDrag = useCallback(
+    (draggedId: string, fromCategoryId: string) => {
+      const target = dropRef.current;
+      dropRef.current = null;
+      setDragId(null);
+      dragTY.setValue(0);
+      if (!target) return;
+      const destBase = baseOrderRef.current.get(target.categoryId) ?? [];
+      if (target.categoryId === fromCategoryId) {
+        const next = reorderedIds(destBase, draggedId, target.index);
+        if (next.join(' ') !== destBase.join(' ')) {
+          hapticSuccess();
+          onReorderRoutines?.(fromCategoryId, next);
+        }
+        return;
+      }
+      // 다른 카테고리 = 영구 이동(서버) + 양쪽 로컬 순서 갱신.
+      hapticSuccess();
+      onMoveRoutineCategory?.(draggedId, target.categoryId);
+      onReorderRoutines?.(target.categoryId, reorderedIds(destBase, draggedId, target.index));
+      const fromNext = (baseOrderRef.current.get(fromCategoryId) ?? []).filter(
+        (id) => id !== draggedId,
+      );
+      onReorderRoutines?.(fromCategoryId, fromNext);
+    },
+    [dragTY, onReorderRoutines, onMoveRoutineCategory],
+  );
+
+  const registerRowRef = useCallback((routineId: string, node: View | null) => {
+    if (node) rowRefs.current.set(routineId, node);
+    else rowRefs.current.delete(routineId);
+  }, []);
+
+  const renderRoutineRow = (row: RowSpec, color: string, categoryId?: string) => {
+    const draggable = reorderEnabled && !row.done && categoryId !== undefined;
+    const active = dragId === row.key;
+    const body = (
+      <SwipeDeleteRow key={row.key} label={row.title} onDelete={row.onDelete}>
+        <View style={styles.routineRow}>
+          {/* The checkbox alone toggles completion; the rest of the row opens the
           수정/삭제 bottom sheet. */}
-        <BearCheck
-          checked={row.done}
-          color={color}
-          onPress={(e) => row.onToggle(e)}
-          accessibilityLabel={row.title}
-        />
-        <Pressable
-          onPress={row.onMenu}
-          accessibilityRole="button"
-          accessibilityLabel={`${row.title} 메뉴`}
-          style={[styles.flex, styles.rowBody]}>
-          {/* 반복 마커(#576)는 제목과 같은 줄 — 아랫줄(알림 배지)에 두면
+          <BearCheck
+            checked={row.done}
+            color={color}
+            onPress={(e) => row.onToggle(e)}
+            accessibilityLabel={row.title}
+          />
+          <Pressable
+            onPress={row.onMenu}
+            accessibilityRole="button"
+            accessibilityLabel={`${row.title} 메뉴`}
+            style={[styles.flex, styles.rowBody]}>
+            {/* 반복 마커(#576)는 제목과 같은 줄 — 아랫줄(알림 배지)에 두면
               시간까지 겹쳐 부제 줄이 길어진다. 긴 제목은 마커가 밀리지 않게
               한 줄로 잘라낸다. */}
-          <View style={styles.titleRow}>
-            <Text
-              numberOfLines={1}
-              style={[
-                Typography.body,
-                styles.titleText,
-                row.done
-                  ? { color: t.textMuted, textDecorationLine: 'line-through' }
-                  : { color: t.text },
-              ]}>
-              {row.title}
-            </Text>
-            {row.repeats ? (
-              <View testID="repeat-marker">
-                <Icon name="refresh" size={12} color={t.textDisabled} />
-              </View>
-            ) : null}
-          </View>
-          {row.time ? (
-            <View style={styles.badges}>
-              {row.time ? (
-                <View style={styles.badge}>
-                  <Icon name="bell" size={12} color={t.textMuted} />
-                  <Text style={[styles.badgeText, { color: t.textMuted }]}>
-                    {formatTime(row.time)}
-                  </Text>
+            <View style={styles.titleRow}>
+              <Text
+                numberOfLines={1}
+                style={[
+                  Typography.body,
+                  styles.titleText,
+                  row.done
+                    ? { color: t.textMuted, textDecorationLine: 'line-through' }
+                    : { color: t.text },
+                ]}>
+                {row.title}
+              </Text>
+              {row.repeats ? (
+                <View testID="repeat-marker">
+                  <Icon name="refresh" size={12} color={t.textDisabled} />
                 </View>
               ) : null}
             </View>
-          ) : null}
-        </Pressable>
-      </View>
-    </SwipeDeleteRow>
-  );
+            {row.time ? (
+              <View style={styles.badges}>
+                {row.time ? (
+                  <View style={styles.badge}>
+                    <Icon name="bell" size={12} color={t.textMuted} />
+                    <Text style={[styles.badgeText, { color: t.textMuted }]}>
+                      {formatTime(row.time)}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
+          </Pressable>
+        </View>
+      </SwipeDeleteRow>
+    );
+
+    if (!draggable) return body;
+
+    // 롱프레스로 활성(#716) — 그 전 세로 스크롤은 ScrollView가 갖는다. 활성
+    // 후엔 손가락 세로 이동을 따라가고 놓을 때 드롭을 확정. runOnJS로 JS
+    // 스레드에서 돌려(리스트가 짧아 부담 없음) 측정·Animated를 그대로 쓴다.
+    const gesture = Gesture.Pan()
+      .activateAfterLongPress(220)
+      .runOnJS(true)
+      .onStart(() => beginDrag(row.key))
+      .onUpdate((e) => {
+        dragTY.setValue(e.translationY);
+        updateDrop(row.key, e.absoluteY);
+      })
+      .onEnd(() => endDrag(row.key, categoryId!))
+      .onFinalize(() => {
+        if (dragId === row.key) {
+          setDragId(null);
+          dragTY.setValue(0);
+        }
+      });
+    return (
+      <GestureDetector key={row.key} gesture={gesture}>
+        <Animated.View
+          ref={(node) => registerRowRef(row.key, node as unknown as View | null)}
+          style={
+            active
+              ? {
+                  transform: [{ translateY: dragTY }],
+                  zIndex: 20,
+                  elevation: 8,
+                  opacity: 0.96,
+                }
+              : undefined
+          }>
+          {body}
+        </Animated.View>
+      </GestureDetector>
+    );
+  };
 
   // 카테고리 그룹 = 헤더(아이콘·라벨·공개범위·카운트·＋) + 행들 + 퀵애드 입력행.
   // 빈 그룹도 헤더는 그린다 — ＋가 항상 닿아야 한다 (#323).
@@ -865,7 +1010,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           {renderQuickAddButton(meta, date)}
         </View>
         <View style={styles.rows}>
-          {rows.map((row) => renderRoutineRow(row, meta.color))}
+          {/* categoryId를 넘겨 방 탭에서만 드래그 활성 — 달력 탭은
+              reorderEnabled(tab==='room')가 false라 categoryId를 받아도 무효. */}
+          {rows.map((row) => renderRoutineRow(row, meta.color, meta.id))}
           {addingCategory === meta.id ? renderQuickAddRow(meta.id) : null}
         </View>
       </View>
@@ -962,6 +1109,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           scrollRef={scrollRef}
           onRefresh={onRefresh}
           refreshTestID="my-room-refresh"
+          // 재정렬 드래그 중엔 세로 스크롤을 잠근다 (#716).
+          scrollEnabled={dragId === null}
           contentContainerStyle={[
             styles.body,
             addingCategory != null && keyboardPad > 0 ? { paddingBottom: keyboardPad + 120 } : null,
