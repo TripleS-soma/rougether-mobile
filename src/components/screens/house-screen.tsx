@@ -53,6 +53,7 @@ import type { MissionStatus } from '@/utils/mission-cta';
 import { assetSource } from '@/resources/asset';
 import { flingDirection, SWIPE_CLAIM_DX, SWIPE_FAIL_DY } from '@/utils/gesture';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
+import { DEFAULT_HOUSES } from '@/mocks/fixtures';
 import type { Wallpaper } from '@/resources/furniture';
 
 // 방 렌더 데이터라 room.tsx로 이동 (#691) — 기존 임포터를 위한 재수출.
@@ -160,12 +161,6 @@ export type NewHouseMission = {
   endsAt?: string;
 };
 
-const DEMO_MISSIONS: HouseMission[] = [
-  { id: 1, title: '이번 주 다같이 루틴 지키기', desc: '주간 구성원 달성 횟수', icon: 'calendar', current: 12, target: 20, status: 'ACTIVE' }, // prettier-ignore
-  { id: 2, title: '아침 기상 인증 모으기', desc: '일일 구성원 달성률', icon: 'sun', current: 8, target: 8, status: 'ACTIVE', achieved: true }, // prettier-ignore
-  { id: 3, title: '지난주 스트레칭 미션', desc: '주간 구성원 달성 횟수', icon: 'calendar', current: 20, target: 20, status: 'COMPLETED' }, // prettier-ignore
-];
-
 // 빈방 타일의 바닥 밴드 — 일반 빈 방(#281)이라 서버 카탈로그와 무관한 고정
 // 파스텔(방 타일 팔레트와 같은 결)로 그린다.
 const VACANT_FLOOR: Wallpaper[] = [
@@ -203,66 +198,6 @@ export function cameraClaimsMove(
   if (touchCount >= 2) return true;
   return zoomed && Math.hypot(dx, dy) > CAM_PAN_SLOP;
 }
-
-// Demo layout mirrors the adapter's default fill: my room bottom-left, others
-// in join order, vacant capacity seats on the top floor (정원 6 / 멤버 4).
-const DEFAULT_HOUSES: House[] = [
-  {
-    name: '소마파이팅',
-    inviteCode: 'SOMA-2143',
-    level: 3,
-    missions: DEMO_MISSIONS,
-    maxMembers: 6,
-    memberCount: 4,
-    floors: [
-      {
-        level: '3층',
-        rooms: [
-          { name: '빈방', color: 'transparent', vacant: true },
-          { name: '빈방', color: 'transparent', vacant: true },
-        ],
-      },
-      {
-        level: '2층',
-        rooms: [
-          { name: '장진형', color: '#D9E8D4', online: true },
-          { name: '임채영', color: '#F5E8C8', lastSeenLabel: '3시간 전' },
-        ],
-      },
-      {
-        level: '1층',
-        rooms: [
-          { name: '나의 방', color: '#E8E0D0', isMine: true, online: true },
-          { name: '최준서', color: '#F5E1D8', isOwner: true, lastSeenLabel: '2일 전' },
-        ],
-      },
-    ],
-  },
-  {
-    name: '소마 2번째 집',
-    inviteCode: 'SOMA-7788',
-    level: 1,
-    missions: DEMO_MISSIONS.slice(0, 1),
-    maxMembers: 4,
-    memberCount: 4,
-    floors: [
-      {
-        level: '2층',
-        rooms: [
-          { name: '박서연', color: '#FBE0D8' },
-          { name: '이지우', color: '#D8E8F0' },
-        ],
-      },
-      {
-        level: '1층',
-        rooms: [
-          { name: '나의 방', color: '#E8E0D0', isMine: true },
-          { name: '김도현', color: '#E4DCF0', isOwner: true },
-        ],
-      },
-    ],
-  },
-];
 
 // RoomCatalogProps: 좌석 타일 미리보기가 해석할 카탈로그 4종 (#691).
 export type HouseScreenProps = RoomCatalogProps & {

@@ -35,6 +35,7 @@ import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { formatTime } from '@/utils/datetime';
 import { hapticSuccess } from '@/utils/haptics';
+import { DEMO_GUESTBOOK, FRIEND_DEMO_ROUTINES } from '@/mocks/fixtures';
 
 /** Cheer reactions a visitor can leave on a friend's room. */
 export type CheerType = 'great' | 'support' | 'best';
@@ -43,14 +44,6 @@ const CHEERS: { type: CheerType; icon: PictogramName; label: string }[] = [
   { type: 'great', icon: 'thumb-up', label: '잘하고 있어!' },
   { type: 'support', icon: 'heart', label: '응원하기' },
   { type: 'best', icon: 'sparkle', label: '오늘도 최고!' },
-];
-
-const DEFAULT_ROUTINES: Routine[] = [
-  { id: 'friend-1', title: '아침 기상', completed: true, alarmEnabled: true, time: '07:00' },
-  { id: 'friend-2', title: '독서 30분', completed: true, photoVerify: true },
-  { id: 'friend-3', title: '운동 인증', completed: true, photoVerify: true },
-  { id: 'friend-4', title: '영어 공부', completed: true, alarmEnabled: true, time: '20:00' },
-  { id: 'friend-5', title: '하루 회고', completed: false, alarmEnabled: true, time: '23:00' },
 ];
 
 /** One day of a friend's completion history (server GET …/routine-completions). */
@@ -71,11 +64,6 @@ export type GuestbookEntry = {
   /** Display date, e.g. "7월 7일". */
   date: string;
 };
-
-const DEFAULT_GUESTBOOK: GuestbookEntry[] = [
-  { id: 'g1', author: '임채영', content: '방 예쁘다! 오늘도 루틴 화이팅', date: '7월 6일' },
-  { id: 'g2', author: '장진형', content: '기상 인증 대단해요', date: '7월 5일' },
-];
 
 /** 1~500 chars (server GuestbookCreateRequest). */
 const GUESTBOOK_MAX = 500;
@@ -177,7 +165,7 @@ export function FriendRoomScreen({
   };
   // No routines prop = unwired demo preview (dev gallery); the notice says so.
   const preview = routines === undefined;
-  const routineList = routines ?? DEFAULT_ROUTINES;
+  const routineList = routines ?? FRIEND_DEMO_ROUTINES;
   // 카테고리 그룹 (#528) — 서버가 준 공개 카테고리 순서대로 묶고, 매칭 안
   // 되는 항목(비공개·미분류)은 마지막 미분류 묶음으로. 카테고리 정보가 없으면
   // (데모 미리보기·구서버) 기존 플랫 목록 그대로.
@@ -250,7 +238,7 @@ export function FriendRoomScreen({
   );
 
   // Guestbook: server list when wired; a local demo list otherwise.
-  const [localNotes, setLocalNotes] = useState<GuestbookEntry[]>(DEFAULT_GUESTBOOK);
+  const [localNotes, setLocalNotes] = useState<GuestbookEntry[]>(DEMO_GUESTBOOK);
   const [draft, setDraft] = useState('');
   const notes = guestbook ?? localNotes;
   const { show: toast } = useToast();
