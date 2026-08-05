@@ -12,16 +12,15 @@ import {
 } from '@/components/app/navigation';
 import { TabPager } from '@/components/app/tab-pager';
 import { useAppNavigation } from '@/components/app/use-app-navigation';
+import { useFriendVisit } from '@/components/app/use-friend-visit';
 import { useMissionLinks } from '@/components/app/use-mission-links';
 import { useSettingsSurface } from '@/components/app/use-settings-surface';
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
-import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
 import { GachaScreen } from '@/components/screens/gacha-screen';
 import {
   type HouseEditInput,
   HouseScreen,
   type NewHouseMission,
-  type VisitedFriend,
 } from '@/components/screens/house-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import {
@@ -55,9 +54,6 @@ import {
   type OnboardingMissionStepId,
   useOnboardingMissions,
 } from '@/hooks/use-onboarding-missions';
-import { useFriendRoom } from '@/hooks/use-friend-room';
-import { useGuestbook } from '@/hooks/use-guestbook';
-import { useToast } from '@/components/ui/toast';
 import { useHouseCovers } from '@/hooks/use-house-covers';
 import { useHouses } from '@/hooks/use-houses';
 import { useMemberRoomPreviews, withMyCharacter } from '@/hooks/use-member-room-previews';
@@ -195,7 +191,6 @@ export function AppShell({
     reload: reloadMyCharacters,
   } = useMyCharacters();
   const wornCharacterId = selectedCharacterId ?? characterId;
-  const { show: toast } = useToast();
   // 알림 (list + read receipts); loaded on mount so the header bell can show
   // the unread dot, refreshed each time the list opens.
   const {
@@ -371,12 +366,9 @@ export function AppShell({
   // 아직 'myRoom'인 채로 도는 클리어 이펙트가 코드를 지우던 콜드 스타트
   // 레이스(#624 후속)의 수정. 화면 감시 클리어는 두지 않는다.
 
-  const [visitingFriend, setVisitingFriend] = useState<VisitedFriend>({ name: '친구' });
   // Which house the 집 switcher is on — kept here because HouseScreen
   // unmounts while visiting a friend's room and must reopen on the same house.
   const [houseIndex, setHouseIndex] = useState(0);
-  // The visited friend's live room + today's routines (loads on visit, #149).
-  const { friendRoom, load: loadFriendRoom } = useFriendRoom();
   // Mini room previews for the current house's member tiles (#268).
   const { previews: memberRoomPreviews, load: loadRoomPreviews } = useMemberRoomPreviews();
   // 캐릭터 교체가 집 화면 내 타일에 즉시 반영되도록(#282), 캐시된 프리뷰 위에
@@ -425,15 +417,6 @@ export function AppShell({
     deleteMission,
     applyMissionContribution,
   });
-  // Guestbook for the friend room being visited (loads on visit).
-  const {
-    entries: guestbookEntries,
-    loading: guestbookLoading,
-    hasNext: guestbookHasNext,
-    load: loadGuestbook,
-    loadMore: loadMoreGuestbook,
-    write: writeGuestbook,
-  } = useGuestbook();
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
 
   // Profile + settings. Nickname/bio seed from the API (/me) and persist via
@@ -568,51 +551,15 @@ export function AppShell({
       }, {}),
     [routines],
   );
-  const visitFriend = useCallback(
-    (friend: VisitedFriend) => {
-      track('friend_room_visit');
-      setVisitingFriend(friend);
-      void loadGuestbook(friend.userId, friend.houseId);
-      void loadFriendRoom(friend.houseId, friend.membershipId, catalogue);
-      setScreen('friendRoom');
-    },
-    [loadGuestbook, loadFriendRoom, catalogue],
-  );
-  // 친구 방 좌우 스와이프 순회 (#644) — 현재 집의 자리 배치 순서로, 빈자리·
-  // 내 방은 건너뛰고 순환한다. 방문 가능한 친구가 1명뿐이면 스와이프 없음.
-  const visitableFriends = useMemo<VisitedFriend[]>(() => {
-    const house = arrangedHouses[houseIndex] ?? arrangedHouses[0];
-    if (!house) return [];
-    return house.floors
-      .flatMap((f) => f.rooms)
-      .filter((r) => !r.vacant && !r.isMine && r.membershipId != null)
-      .map((r) => ({
-        name: r.name,
-        userId: r.userId,
-        houseId: house.houseId,
-        membershipId: r.membershipId,
-      }));
-  }, [arrangedHouses, houseIndex]);
-  const swipeFriend = useCallback(
-    (dir: 'left' | 'right') => {
-      const list = visitableFriends;
-      if (list.length < 2) return;
-      const i = Math.max(
-        0,
-        list.findIndex((f) => f.membershipId === visitingFriend.membershipId),
-      );
-      // 왼쪽 플링 = 다음 멤버 (페이저 문법과 동일 방향감).
-      const next = list[(i + (dir === 'left' ? 1 : list.length - 1)) % list.length];
-      visitFriend(next);
-    },
-    [visitableFriends, visitingFriend.membershipId, visitFriend],
-  );
-
-  // 방문 실패 시 다시 시도 (#549) — 같은 친구의 방·방명록을 다시 불러온다.
-  const retryFriendRoomVisit = useCallback(() => {
-    void loadGuestbook(visitingFriend.userId, visitingFriend.houseId);
-    void loadFriendRoom(visitingFriend.houseId, visitingFriend.membershipId, catalogue);
-  }, [loadGuestbook, loadFriendRoom, visitingFriend, catalogue]);
+  // 친구 방문 클러스터 (#149·#644) — use-friend-visit.tsx로 이관 (#692 4단계).
+  const { visitFriend, subScreen: friendRoomSubScreen } = useFriendVisit({
+    setScreen,
+    catalogue,
+    arrangedHouses,
+    houseIndex,
+    screen,
+    cheerMember,
+  });
   // 방장 관리 진입 시 구성원·입주 신청 목록 갱신 (#526).
   const openMemberManagement = useCallback(() => {
     void refreshHouses();
@@ -931,46 +878,8 @@ export function AppShell({
             />
           ) : null}
 
-          {screen === 'friendRoom' ? (
-            <FriendRoomScreen
-              friendName={visitingFriend.name}
-              onSwipeFriend={visitableFriends.length >= 2 ? swipeFriend : undefined}
-              guestbook={guestbookEntries}
-              guestbookLoading={guestbookLoading}
-              guestbookHasNext={guestbookHasNext}
-              onWriteGuestbook={(content) => {
-                void writeGuestbook(content);
-              }}
-              onCheer={(type) => {
-                // 응원은 같은 집 활성 멤버 사이에서만 — 서버 집 문맥이 있을 때만 배선.
-                const { houseId, membershipId } = visitingFriend;
-                if (houseId && membershipId) void cheerMember(houseId, membershipId, type);
-                else toast('이 방에서는 응원을 보낼 수 없어요', 'error');
-              }}
-              onLoadMoreGuestbook={() => {
-                void loadMoreGuestbook();
-              }}
-              placedFurnitureIds={friendRoom.placement?.placedFurnitureIds ?? []}
-              placements={friendRoom.placement?.placements ?? null}
-              wallpaperId={friendRoom.placement?.wallpaperId}
-              floorId={friendRoom.placement?.floorId ?? null}
-              backgroundId={friendRoom.placement?.backgroundId ?? null}
-              furniture={catalogue.furniture}
-              wallpapers={catalogue.wallpapers}
-              floors={catalogue.floors}
-              backgrounds={catalogue.backgrounds}
-              characterId={friendRoom.characterId}
-              characterAnimations={friendRoom.characterAnimations}
-              streakDays={friendRoom.streakDays}
-              routines={friendRoom.routines}
-              categories={friendRoom.categories}
-              recentActivity={friendRoom.recentActivity}
-              loading={friendRoom.loading}
-              loadError={friendRoom.error}
-              onRetry={retryFriendRoomVisit}
-              onBack={() => setScreen('house')}
-            />
-          ) : null}
+          {/* 친구 방 (#149) — use-friend-visit이 그린다 (#692 4단계). */}
+          {friendRoomSubScreen}
 
           {screen === 'houseSearch' ? (
             <HouseSearchScreen
