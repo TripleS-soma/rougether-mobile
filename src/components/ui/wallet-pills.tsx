@@ -19,6 +19,13 @@ export type WalletPillsProps = {
 const CAP = 9999;
 
 /**
+ * JS의 -0을 0으로 (#714) — `Math.round(-0.2)`도, JSON "-0" 파싱값도 -0이고
+ * `(-0).toLocaleString()`은 "-0"으로 찍힌다. 잔액이 음수에서 0으로 돌아오는
+ * 롤링·prop 유입 어느 경로든 표시 전에 여기서 눌러 편다.
+ */
+const noNegativeZero = (n: number) => (n === 0 ? 0 : n);
+
+/**
  * 잔액 변동을 550ms 카운트 롤링으로 보여준다 (#452). 리스너는 매 프레임
  * 불리지만 setState는 표시값이 실제로 바뀔 때 + ~80ms 간격으로만 — 리렌더
  * 수를 프레임 수(~33회)에서 스텝 수(≤7회)로 줄인다 (#690).
@@ -37,7 +44,7 @@ function useRollingNumber(value: number) {
     const id = anim.addListener(({ value: p }) => {
       const now = Date.now();
       if (now - shownAt < 80) return;
-      const next = Math.round(from + (value - from) * p);
+      const next = noNegativeZero(Math.round(from + (value - from) * p));
       if (next === shown) return;
       shown = next;
       shownAt = now;
@@ -76,7 +83,9 @@ function Pill({
   const t = useTokens();
   const Typography = useTypography();
   const [revealed, setRevealed] = useState(false);
-  const rolled = useRollingNumber(value);
+  // prop 자체가 -0으로 오면 롤링이 아예 안 돌아(-0 === 0) 영구 표기된다 (#714).
+  const safeValue = noNegativeZero(value);
+  const rolled = useRollingNumber(safeValue);
   const overCap = rolled > CAP;
   const shown = overCap && !revealed ? `${CAP}+` : rolled.toLocaleString();
   return (
@@ -85,7 +94,7 @@ function Pill({
       disabled={!overCap}
       accessibilityRole="button"
       // Screen readers always get the real balance — the cap is visual only.
-      accessibilityLabel={`${label} ${value}`}
+      accessibilityLabel={`${label} ${safeValue}`}
       style={[styles.pill, compact && styles.pillCompact, { backgroundColor: t.surfaceMuted }]}>
       <Icon name={icon} size={compact ? 12 : 14} color={color} />
       <Text style={[compact ? Typography.supporting : Typography.label, { color: t.text }]}>
