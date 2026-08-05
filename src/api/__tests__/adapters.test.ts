@@ -374,6 +374,25 @@ describe('API adapters', () => {
     expect(req.repeatType).toBe('DAILY');
   });
 
+  it('기존 사진 인증 루틴은 수정해도 authType PHOTO를 유지한다 (#695)', () => {
+    // UI는 제거됐지만(PR #712) PUT이 전체 교체라, 다른 필드만 고친 수정이
+    // 서버의 PHOTO를 CHECK로 조용히 바꾸면 안 된다 — photoVerify 왕복이 근거.
+    const routine = {
+      id: 'r8',
+      title: '운동 인증',
+      category: '5',
+      days: [],
+      startDate: '2026-07-02',
+      alarmEnabled: false,
+      time: '',
+      kind: 'routine' as const,
+      photoVerify: true,
+    };
+    expect(toRoutineUpdate(routine, { title: '이름 변경' }).authType).toBe('PHOTO');
+    // photoVerify 없는 일반 루틴은 그대로 CHECK.
+    expect(toRoutineUpdate({ ...routine, photoVerify: undefined }, {}).authType).toBe('CHECK');
+  });
+
   it('names my house room by profile nickname when the members API has none', () => {
     const detail = { houseId: 1, name: '검증 하우스' };
     const members = [
