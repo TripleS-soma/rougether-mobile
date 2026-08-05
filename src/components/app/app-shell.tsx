@@ -1,4 +1,3 @@
-import { Image } from 'expo-image';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Platform, StyleSheet, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
@@ -13,21 +12,15 @@ import {
 import { TabPager } from '@/components/app/tab-pager';
 import { useAppNavigation } from '@/components/app/use-app-navigation';
 import { useFriendVisit } from '@/components/app/use-friend-visit';
+import { useHousePages } from '@/components/app/use-house-pages';
 import { useMissionLinks } from '@/components/app/use-mission-links';
 import { useMyRoomPages } from '@/components/app/use-my-room-pages';
 import { useSettingsSurface } from '@/components/app/use-settings-surface';
-import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { GachaScreen } from '@/components/screens/gacha-screen';
-import {
-  type HouseEditInput,
-  HouseScreen,
-  type NewHouseMission,
-} from '@/components/screens/house-screen';
-import { HouseSearchScreen } from '@/components/screens/house-search-screen';
+import { HouseScreen } from '@/components/screens/house-screen';
 import { isScheduledOn, MyRoomScreen } from '@/components/screens/my-room-screen';
 import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
 import { SettingsScreen } from '@/components/screens/settings-screen';
-import { houseCoverKey } from '@/components/room/house-preview-frame';
 import { MissionSheet } from '@/components/screens/sheets/mission-sheet';
 import { BottomNav } from '@/components/ui/bottom-nav';
 import { MissionBanner } from '@/components/ui/mission-banner';
@@ -41,9 +34,7 @@ import {
   type OnboardingMissionStepId,
   useOnboardingMissions,
 } from '@/hooks/use-onboarding-missions';
-import { useHouseCovers } from '@/hooks/use-house-covers';
 import { useHouses } from '@/hooks/use-houses';
-import { useMemberRoomPreviews, withMyCharacter } from '@/hooks/use-member-room-previews';
 import { useRoomLayouts } from '@/hooks/use-room-layouts';
 import { useMyCharacters } from '@/hooks/use-my-characters';
 import { useMyRoomData } from '@/hooks/use-my-room-data';
@@ -51,8 +42,6 @@ import { useShop } from '@/hooks/use-shop';
 import { useWeather } from '@/hooks/use-weather';
 import type { DrawResult } from '@/api';
 import { fetchGachaRewards } from '@/api';
-import { subscribePendingInviteCode } from '@/lib/pending-invite';
-import { assetSource } from '@/resources/asset';
 import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furniture';
 
 // 내비게이션 상수·backTargetFor는 navigation.ts로 이동 (#692) — 기존
@@ -172,98 +161,30 @@ export function AppShell({
   );
 
   // Houses (내 집 목록 + 탐색 + 참여/생성/강퇴/나가기) from the API.
+  // 전체 객체는 use-house-pages(집 탭·서브화면 배선, #692 6단계)로 흘러가고,
+  // 셸은 교차 도메인 소비자(자리 배치·미션 연동·친구 방문)가 쓰는 조각만
+  // 여기서 푼다.
+  const housesData = useHouses();
   const {
     houses,
-    searchHouses,
     loading: housesLoading,
-    searchLoading,
-    error: housesError,
-    searchError,
-    retry: retryHouses,
-    retrySearch,
-    refreshHouses,
-    pendingJoinRequests,
-    cancelJoinRequest,
-    previewByCode,
-    previewHouse,
-    joinByCode,
-    joinHouse: joinSearchHouse,
-    acceptJoinRequest,
-    rejectJoinRequest,
-    create: createHouse,
     contributedMissionIds,
     cheerMember,
-    kickMember,
     leaveHouse,
     applyMissionContribution,
-    claimMission,
-    createMission,
     deleteMission,
-    updateHouse,
-    transferOwnership,
-    reissueInviteCode,
-  } = useHouses();
-
-  // 당겨서 새로고침 (#454) — 실패해도 조용히 접는다(각 훅이 상태를 유지하고,
-  // 인디케이터는 어차피 되돌아간다). 집은 목록 리로드 (나의 방은 use-my-room-pages).
-  const refreshHousePull = useCallback(async () => {
-    try {
-      await refreshHouses();
-    } catch {
-      // 유지.
-    }
-  }, [refreshHouses]);
+  } = housesData;
 
   // Locally saved tile arrangements (#278) — the 집 화면 shows arranged houses
   // and drag-and-drop swaps persist per viewer+house on this device.
   const { houses: arrangedHouses, swapSeats } = useRoomLayouts(houses);
 
-  // 승인 대기 신청 → 잠금 카드 뷰모델 (#648). memo 화면으로 가는 파생 배열이라
-  // 참조 안정화(useMemo) 필수 (#539 계약).
-  const pendingHouseCards = useMemo(
-    () =>
-      pendingJoinRequests
-        .filter((r) => r.requestId != null)
-        .map((r) => ({
-          requestId: r.requestId!,
-          name: r.houseName ?? '이름 없는 집',
-          requestedAt: r.requestedAt,
-        })),
-    [pendingJoinRequests],
-  );
-
-  // 집 커버는 원격(S3)이고 house 화면은 탭 진입 때 처음 마운트돼, 그때부터
-  // fetch가 시작되면 프레임이 늦게 뜬다 (#463). 항상 마운트된 셸에서 집 목록이
-  // 오면 모든 커버(현재+스위처 대상)를 미리 디스크 캐시에 데워 둔다.
-  useEffect(() => {
-    const uris = houses.map((h) => assetSource(houseCoverKey(h.coverImageKey)).uri);
-    if (uris.length) void Image.prefetch?.(uris, { cachePolicy: 'memory-disk' });
-  }, [houses]);
-
-  // 집이 없는 유저 (#571) — 집 탭은 빈 상태 대신 집 탐색으로 직행하고,
-  // 탐색의 뒤로가기도 (빈) 집 화면 대신 나의 방으로 돌아간다. 로딩/에러
-  // 중엔 판정하지 않아 집이 있는 유저가 탐색으로 튕기지 않는다.
-  const noHouses = !housesLoading && !housesError && houses.length === 0;
-
-  // 집 탐색 미션(#571 후속)은 "둘러보고 나갈 때" 완료 — 미리보기 성공 시
-  // 표시만 해두고, 탐색 화면을 떠나는 순간(뒤로/가입) 완료 시트를 띄운다.
-  // 탐색 중에 시트가 화면을 덮지 않게 하기 위함. 판정 ref는 셸 소유 (#692).
-  const browsedHouseRef = useRef(false);
-  const onLeaveHouseSearch = useCallback(() => {
-    if (browsedHouseRef.current) completeMission('browse-house');
-  }, [completeMission]);
-
-  // 내비게이션 컨트롤러 (#692) — 뒤로가기·엣지 백·전환 손맛·페이저 정착.
-  const { edgeBackPan, activeTab, handlePageChange, transOpacity, transX } = useAppNavigation({
-    screen,
-    setScreen,
-    addReturnScreen,
-    noHouses,
-    onLeaveHouseSearch,
-  });
-
-  // Selectable house-cover catalog (집 생성·집 정보 수정).
-  const { covers: houseCovers } = useHouseCovers();
+  // Which house the 집 switcher is on — kept here because HouseScreen
+  // unmounts while visiting a friend's room and must reopen on the same house.
+  // 상태는 셸 소유 (#692 6단계) — 미션 연동(현재 집)·친구 방문(스와이프 순회)
+  // 이 use-house-pages보다 먼저 서서 소비하므로 훅으로 못 내린다.
+  const [houseIndex, setHouseIndex] = useState(0);
+  const currentHouse = houses[houseIndex] ?? houses[0];
 
   // Shop catalogue + purchase (diamond via API; wallet synced from the purchase
   // response). Server-side room placement isn't wired yet, so arrangement is
@@ -307,42 +228,6 @@ export function AppShell({
   useEffect(() => {
     if (screen !== 'decor') setNewDecorItemIds([]);
   }, [screen]);
-
-  // 초대 링크로 받은 코드 (#624) — 집 탐색을 열고 코드 미리보기를 자동 실행.
-  const [pendingJoinCode, setPendingJoinCode] = useState<string | null>(null);
-  useEffect(
-    () =>
-      subscribePendingInviteCode((code) => {
-        setPendingJoinCode(code);
-        setScreen('houseSearch');
-      }),
-    [],
-  );
-  // 소비는 화면(자동 미리보기 발화 시점)이 알려온다 — 마운트 직후 screen이
-  // 아직 'myRoom'인 채로 도는 클리어 이펙트가 코드를 지우던 콜드 스타트
-  // 레이스(#624 후속)의 수정. 화면 감시 클리어는 두지 않는다.
-
-  // Which house the 집 switcher is on — kept here because HouseScreen
-  // unmounts while visiting a friend's room and must reopen on the same house.
-  const [houseIndex, setHouseIndex] = useState(0);
-  // Mini room previews for the current house's member tiles (#268).
-  const { previews: memberRoomPreviews, load: loadRoomPreviews } = useMemberRoomPreviews();
-  // 캐릭터 교체가 집 화면 내 타일에 즉시 반영되도록(#282), 캐시된 프리뷰 위에
-  // 내 좌석의 캐릭터만 착용 캐릭터로 파생한다 (서버 재조회 없음).
-  const roomPreviews = useMemo(
-    () => withMyCharacter(memberRoomPreviews, houses, selectedCharacterId),
-    [memberRoomPreviews, houses, selectedCharacterId],
-  );
-  const currentHouse = houses[houseIndex] ?? houses[0];
-  useEffect(() => {
-    if (screen !== 'house' || !currentHouse?.houseId) return;
-    const membershipIds = currentHouse.floors
-      .flatMap((f) => f.rooms.map((r) => r.membershipId))
-      .filter((id): id is number => id != null);
-    // catalogueReady=!shopLoading: an EMPTY pre-load catalogue must not fill
-    // the per-house cache with blank rooms (the effect re-fires when it lands).
-    void loadRoomPreviews(currentHouse.houseId, membershipIds, catalogue, !shopLoading);
-  }, [screen, currentHouse, catalogue, shopLoading, loadRoomPreviews]);
 
   // 공동미션 ↔ 내 루틴 연동 (#272 → #578) — use-mission-links.ts로 이관 (#692 3단계).
   const {
@@ -455,13 +340,6 @@ export function AppShell({
     [addRoutineFromMyRoom],
   );
 
-  // --- memo 화면(HouseScreen)으로 가는 콜백/파생 prop (#539) ---
-  // 인라인 화살표·렌더마다 새로 만드는 객체는 memo 경계를 무효화한다. 매 렌더
-  // 마운트되지 않는 다른 화면들(RoomDecorScreen 등)은 인라인을 유지한다.
-  const openHouseSearch = useCallback(() => {
-    browsedHouseRef.current = false;
-    setScreen('houseSearch');
-  }, []);
   // 친구 방문 클러스터 (#149·#644) — use-friend-visit.tsx로 이관 (#692 4단계).
   const { visitFriend, subScreen: friendRoomSubScreen } = useFriendVisit({
     setScreen,
@@ -471,74 +349,6 @@ export function AppShell({
     screen,
     cheerMember,
   });
-  // 방장 관리 진입 시 구성원·입주 신청 목록 갱신 (#526).
-  const openMemberManagement = useCallback(() => {
-    void refreshHouses();
-  }, [refreshHouses]);
-  const handleAcceptJoinRequest = useCallback(
-    (houseId: number, requestId: number) => {
-      void acceptJoinRequest(houseId, requestId);
-    },
-    [acceptJoinRequest],
-  );
-  const handleRejectJoinRequest = useCallback(
-    (houseId: number, requestId: number) => {
-      void rejectJoinRequest(houseId, requestId);
-    },
-    [rejectJoinRequest],
-  );
-  const handleKickMember = useCallback(
-    (houseId: number, membershipId: number) => {
-      void kickMember(houseId, membershipId);
-    },
-    [kickMember],
-  );
-  const handleLeaveHouse = useCallback(
-    (houseId: number) => {
-      void leaveHouseWithLinked(houseId);
-    },
-    [leaveHouseWithLinked],
-  );
-  const handleAddMissionRoutine = useCallback(
-    (houseId: number, mission: { id: number; title: string }) => {
-      void addMissionRoutine(houseId, mission);
-    },
-    [addMissionRoutine],
-  );
-  const handleClaimMission = useCallback(
-    (houseId: number, missionId: number) => {
-      void claimMission(houseId, missionId);
-    },
-    [claimMission],
-  );
-  const handleCreateMission = useCallback(
-    (houseId: number, input: NewHouseMission) => {
-      void createMission(houseId, input);
-    },
-    [createMission],
-  );
-  const handleDeleteMission = useCallback(
-    (houseId: number, missionId: number) => {
-      void deleteMissionWithLinked(houseId, missionId);
-    },
-    [deleteMissionWithLinked],
-  );
-  const handleUpdateHouse = useCallback(
-    (houseId: number, input: HouseEditInput) => {
-      void updateHouse(houseId, input);
-    },
-    [updateHouse],
-  );
-  const handleTransferOwnership = useCallback(
-    (houseId: number, membershipId: number) => {
-      void transferOwnership(houseId, membershipId);
-    },
-    [transferOwnership],
-  );
-  const handleReissueInviteCode = useCallback(
-    (houseId: number) => reissueInviteCode(houseId),
-    [reissueInviteCode],
-  );
 
   // Android hardware back navigates the shell's own screen stack; 루트(나의 방)
   // 에서는 바로 끄지 않고 더블 백으로 종료한다 (#522) — 첫 입력은 토스트
@@ -547,7 +357,8 @@ export function AppShell({
   // --- 하단 탭 수평 페이저 (#563) ---
   // 집 화면이 확대·자리 드래그로 제스처 전권을 가져간 동안 페이저를 잠근다.
   // 단 집 "페이지가 활성일 때만" — 확대를 남겨둔 채 탭 버튼으로 떠났을 때
-  // 다른 페이지의 스와이프까지 막으면 안 된다.
+  // 다른 페이지의 스와이프까지 막으면 안 된다. TabPager·내비와 결합된 셸
+  // 잔류 클러스터 (#692 6단계) — 잠금 콜백만 집 페이지 prop으로 내려간다.
   const pagerLock = useSharedValue(false);
   // 공유값을 ref로 감싸 콜백을 무의존으로 — 프로덕션의 useSharedValue는 참조가
   // 안정적이지만, 의존성에 직접 넣으면 memo 화면으로 가는 콜백의 안정성이
@@ -561,6 +372,47 @@ export function AppShell({
     housePagerLockRef.current = locked;
     pagerLockRef.current.value = locked && TAB_FOR_SCREEN[screenRef.current] === 'house';
   }, []);
+
+  // 집 페이지 배선 (#692 6단계) — 집 탭 페이지와 서브화면 2종(집 탐색·집
+  // 생성)의 훅·콜백·JSX 소유. noHouses 판정·탐색 이탈 미션 판정을 반환해
+  // 아래 내비 훅·BottomNav로 흘린다.
+  const housePages = useHousePages({
+    nav: { screen, setScreen },
+    data: housesData,
+    houseIndex,
+    setHouseIndex,
+    currentHouse,
+    arranged: { arrangedHouses, swapSeats },
+    missionLinks: {
+      leaveHouseWithLinked,
+      deleteMissionWithLinked,
+      addMissionRoutine,
+      houseLinkedRoutines,
+      contributedMissionIdList,
+    },
+    visitFriend,
+    openMyRoom: myRoomPages.openMyRoom,
+    completeMission,
+    catalogue,
+    shopLoading,
+    wallet,
+    raining,
+    nickname,
+    streak,
+    selectedCharacterId,
+    wornCharacterId,
+    onPagerLockChange: handleHousePagerLock,
+  });
+
+  // 내비게이션 컨트롤러 (#692) — 뒤로가기·엣지 백·전환 손맛·페이저 정착.
+  // noHouses·탐색 이탈 판정이 use-house-pages 반환값이라 훅 호출이 그 뒤에 선다.
+  const { edgeBackPan, activeTab, handlePageChange, transOpacity, transX } = useAppNavigation({
+    screen,
+    setScreen,
+    addReturnScreen,
+    noHouses: housePages.noHouses,
+    onLeaveHouseSearch: housePages.onLeaveHouseSearch,
+  });
   useEffect(() => {
     pagerLockRef.current.value = housePagerLockRef.current && activeTab === 'house';
   }, [activeTab]);
@@ -580,48 +432,7 @@ export function AppShell({
               onIndexChange={handlePageChange}
               lock={pagerLock}>
               <MyRoomScreen {...myRoomPages.tabProps} />
-              <HouseScreen
-                houses={arrangedHouses}
-                pendingHouses={pendingHouseCards}
-                onCancelJoinRequest={cancelJoinRequest}
-                onSwapSeats={swapSeats}
-                loading={housesLoading}
-                loadError={housesError}
-                onRetry={retryHouses}
-                onRefresh={refreshHousePull}
-                covers={houseCovers}
-                characterId={wornCharacterId}
-                userName={nickname}
-                streakDays={streak}
-                roomPreviews={roomPreviews}
-                furniture={catalogue.furniture}
-                wallpapers={catalogue.wallpapers}
-                floors={catalogue.floors}
-                backgrounds={catalogue.backgrounds}
-                houseIndex={houseIndex}
-                onHouseIndexChange={setHouseIndex}
-                onVisitFriend={visitFriend}
-                onVisitMyRoom={myRoomPages.openMyRoom}
-                onOpenSearch={openHouseSearch}
-                coinBalance={wallet.coin}
-                diamondBalance={wallet.diamond}
-                raining={raining}
-                onOpenMemberManagement={openMemberManagement}
-                onAcceptJoinRequest={handleAcceptJoinRequest}
-                onRejectJoinRequest={handleRejectJoinRequest}
-                onKickMember={handleKickMember}
-                onLeaveHouse={handleLeaveHouse}
-                linkedRoutines={houseLinkedRoutines}
-                contributedMissionIds={contributedMissionIdList}
-                onAddMissionRoutine={handleAddMissionRoutine}
-                onClaimMission={handleClaimMission}
-                onCreateMission={handleCreateMission}
-                onDeleteMission={handleDeleteMission}
-                onUpdateHouse={handleUpdateHouse}
-                onTransferOwnership={handleTransferOwnership}
-                onReissueInviteCode={handleReissueInviteCode}
-                onPagerLockChange={handleHousePagerLock}
-              />
+              <HouseScreen {...housePages.tabProps} />
               <SettingsScreen {...settingsSurface.tabProps} />
             </TabPager>
           ) : null}
@@ -704,66 +515,8 @@ export function AppShell({
           {/* 친구 방 (#149) — use-friend-visit이 그린다 (#692 4단계). */}
           {friendRoomSubScreen}
 
-          {screen === 'houseSearch' ? (
-            <HouseSearchScreen
-              initialCode={pendingJoinCode ?? undefined}
-              onInitialCodeConsumed={() => setPendingJoinCode(null)}
-              houses={searchHouses}
-              loading={searchLoading}
-              loadError={searchError}
-              onRetry={retrySearch}
-              onBack={() => {
-                // 둘러보고 나가는 순간에 미션 4 완료 (#571 후속) — 탐색 중에
-                // 완료 시트가 화면을 덮지 않게 한다.
-                if (browsedHouseRef.current) completeMission('browse-house');
-                setScreen(noHouses ? 'myRoom' : 'house');
-              }}
-              onJoinByCode={async (code) => {
-                const ok = await joinByCode(code);
-                if (ok === true) {
-                  // 가입 성공 = 탐색의 성공적 종료 — 둘러보기 미션도 완료.
-                  completeMission('browse-house');
-                  setScreen('house');
-                }
-                return ok;
-              }}
-              onPreviewCode={async (code) => {
-                const detail = await previewByCode(code);
-                // 'network'는 실패 신호 — 열람 성공만 둘러봤음으로 친다.
-                if (detail && detail !== 'network') browsedHouseRef.current = true;
-                return detail;
-              }}
-              // 카탈로그를 얹어 미리보기 창문에 실제 방을 그린다 (#386).
-              onPreviewHouse={async (houseId) => {
-                const detail = await previewHouse(houseId, catalogue);
-                // 미리보기 열람 = 둘러봤음 표시 — 완료는 나갈 때 (#571 후속).
-                if (detail) browsedHouseRef.current = true;
-                return detail;
-              }}
-              furniture={catalogue.furniture}
-              wallpapers={catalogue.wallpapers}
-              floors={catalogue.floors}
-              backgrounds={catalogue.backgrounds}
-              onJoinHouse={(houseId) => {
-                void joinSearchHouse(houseId).then((ok) => {
-                  if (!ok) return;
-                  completeMission('browse-house');
-                  setScreen('house');
-                });
-              }}
-              onCreate={() => setScreen('createHouse')}
-            />
-          ) : null}
-
-          {screen === 'createHouse' ? (
-            <CreateHouseScreen
-              covers={houseCovers}
-              onBack={() => setScreen('houseSearch')}
-              onCreate={(input) => {
-                void createHouse(input).then((ok) => ok && setScreen('house'));
-              }}
-            />
-          ) : null}
+          {/* 집 서브화면 2종 (#692 6단계) — use-house-pages가 그린다. */}
+          {housePages.subScreen}
 
           {/* 설정 서브화면 8종 (#692) — use-settings-surface가 그린다. */}
           {settingsSurface.subScreen}
@@ -775,7 +528,7 @@ export function AppShell({
           active={activeTab}
           onChange={(tab) =>
             // 집이 없으면 집 탭은 빈 상태 대신 집 탐색으로 직행 (#571).
-            setScreen(tab === 'house' && noHouses ? 'houseSearch' : SCREEN_FOR_TAB[tab])
+            setScreen(tab === 'house' && housePages.noHouses ? 'houseSearch' : SCREEN_FOR_TAB[tab])
           }
         />
       ) : null}
