@@ -3,8 +3,7 @@
  * #496). Returns the picked image (upload-ready fields), or null when the
  * permission was denied or the user cancelled.
  *
- * `expo-image-picker` is a native module, so it's imported lazily — same
- * pattern as `photo-verify.ts`.
+ * `expo-image-picker` is a native module, so it's imported lazily.
  */
 export type PickedImage = { uri: string; name: string; type: string };
 

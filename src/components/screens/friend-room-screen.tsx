@@ -418,15 +418,6 @@ export function FriendRoomScreen({
                             </Text>
                           </View>
                         ) : null}
-                        {/* 인증사진형 잠시 내림 (#499) — 복구 시 사진 인증 배지를 되살릴 것.
-                        {routine.photoVerify ? (
-                          <View style={styles.badge}>
-                            <Icon name="camera" size={11} color={t.textMuted} />
-                            <Text style={[styles.badgeText, { color: t.textMuted }]}>
-                              사진 인증
-                            </Text>
-                          </View>
-                        ) : null} */}
                       </View>
                     ) : null}
                   </View>

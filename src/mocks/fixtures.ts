@@ -133,8 +133,8 @@ export const DEFAULT_HOUSES: House[] = [
 /** 친구 방 프리뷰 fallback 루틴 (#694 이관). */
 export const FRIEND_DEMO_ROUTINES: Routine[] = [
   { id: 'friend-1', title: '아침 기상', completed: true, alarmEnabled: true, time: '07:00' },
-  { id: 'friend-2', title: '독서 30분', completed: true, photoVerify: true },
-  { id: 'friend-3', title: '운동 인증', completed: true, photoVerify: true },
+  { id: 'friend-2', title: '독서 30분', completed: true },
+  { id: 'friend-3', title: '운동 인증', completed: true },
   { id: 'friend-4', title: '영어 공부', completed: true, alarmEnabled: true, time: '20:00' },
   { id: 'friend-5', title: '하루 회고', completed: false, alarmEnabled: true, time: '23:00' },
 ];

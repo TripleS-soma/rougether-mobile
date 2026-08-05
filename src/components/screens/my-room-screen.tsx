@@ -56,8 +56,6 @@ import { BearCheck } from '@/components/ui/bear-check';
 import { Icon } from '@/components/ui/icon';
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { Radius, Spacing } from '@/constants/theme';
-// 인증사진형 잠시 내림 (#499) — 복구 시 카메라 캡처 import를 되살릴 것.
-// import { captureVerificationPhoto } from '@/lib/photo-verify';
 import { saveRoomImage } from '@/lib/room-capture';
 import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
@@ -180,13 +178,6 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> & {
   onMoveRoutineOccurrence?: (id: string, dueDate: string) => void;
   /** Delete a routine (kebab → 삭제). */
   onDeleteRoutine?: (id: string) => void;
-  // 인증사진형 잠시 내림 (#499) — 복구 시 아래 prop을 되살릴 것.
-  // /**
-  //  * Capture a verification photo when completing a 인증사진형 routine; resolves to
-  //  * the photo URI, or null to cancel the completion. Defaults to the device
-  //  * camera (expo-image-picker); inject a stub in tests.
-  //  */
-  // onRequestPhoto?: () => Promise<string | null>;
 };
 
 /**
@@ -258,7 +249,6 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   onUpdateTodoDueDate,
   onMoveRoutineOccurrence,
   onDeleteRoutine,
-  // onRequestPhoto = captureVerificationPhoto, // 인증사진형 잠시 내림 (#499)
 }: MyRoomScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
@@ -702,7 +692,6 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   );
 
   // Completion is toggled for a specific date (오늘 in 방, 선택한 날짜 in 달력).
-  // (인증사진형 카메라 게이트는 잠시 내림 — #499, 아래 주석 블록.)
   const handleToggle = (routine: Routine, date: string, e?: GestureResponderEvent) => {
     const done = isDone(routine.id, date);
     // 코인 플라이는 서버가 실제 보상을 준 완료에만 (#444) — 탭 좌표는 지금
@@ -718,17 +707,6 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         });
       }
     };
-    // 인증사진형 잠시 내림 (#499) — PHOTO 루틴도 일반 체크로 완료된다.
-    // 복구 시 이 카메라 게이트를 되살릴 것 (사진은 서버 전송 없는 로컬 게이트).
-    // if (routine.photoVerify && !done) {
-    //   void onRequestPhoto().then((uri) => {
-    //     if (uri) {
-    //       hapticSuccess();
-    //       fire();
-    //     }
-    //   });
-    //   return;
-    // }
     if (done) hapticSelection();
     else hapticSuccess();
     fire();
@@ -757,8 +735,6 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     done: boolean;
     /** 알림/마감 시각 — 있으면 종 배지. */
     time?: string;
-    /** 사진 인증 루틴 — 카메라 배지. */
-    photoVerify?: boolean;
     /** 반복 루틴 — 제목 뒤 은은한 ↻ 마커로 1회성 투두와 구분 (#576, 시안 A). */
     repeats?: boolean;
     onToggle: (e?: GestureResponderEvent) => void;
@@ -774,7 +750,6 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     title: routine.title,
     done: isDone(routine.id, date),
     time: routine.alarmEnabled && routine.time ? routine.time : undefined,
-    photoVerify: routine.photoVerify,
     onToggle: (e) => handleToggle(routine, date, e),
     onMenu: () => openRowMenu(routine.id, date),
     // 메뉴 시트의 삭제하기와 같은 경로 — 스와이프는 지름길일 뿐이다 (#566).
@@ -841,13 +816,6 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                   </Text>
                 </View>
               ) : null}
-              {/* 인증사진형 잠시 내림 (#499) — 복구 시 사진 인증 배지를 되살릴 것.
-            {row.photoVerify ? (
-              <View style={styles.badge}>
-                <Icon name="camera" size={12} color={t.textMuted} />
-                <Text style={[styles.badgeText, { color: t.textMuted }]}>사진 인증</Text>
-              </View>
-            ) : null} */}
             </View>
           ) : null}
         </Pressable>
