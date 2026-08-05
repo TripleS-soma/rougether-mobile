@@ -1,9 +1,8 @@
-import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
   Dimensions,
-  Easing,
   type GestureResponderEvent,
   Keyboard,
   KeyboardAvoidingView,
@@ -17,11 +16,12 @@ import {
   View,
 } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
-import ReanimatedSwipeable, {
-  type SwipeableMethods,
-} from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 import { NavMenuPopover } from '@/components/app/nav-menu-popover';
+import { FlyingCoin } from '@/components/screens/my-room/flying-coin';
+import { isScheduledOn } from '@/components/screens/my-room/schedule';
+import { SwipeDeleteRow } from '@/components/screens/my-room/swipe-delete-row';
+import { useWidgetRoomCapture } from '@/components/screens/my-room/use-widget-room-capture';
 import { Room, type RoomSceneProps } from '@/components/room/room';
 import {
   CharacterPickerSheet,
@@ -59,62 +59,16 @@ import { Radius, Spacing } from '@/constants/theme';
 // 인증사진형 잠시 내림 (#499) — 복구 시 카메라 캡처 import를 되살릴 것.
 // import { captureVerificationPhoto } from '@/lib/photo-verify';
 import { saveRoomImage } from '@/lib/room-capture';
-import { captureRef } from 'react-native-view-shot';
-import { refreshWidgets } from '@/widgets/rougether-widgets';
-import { saveWidgetRoomImage } from '@/widgets/widget-data';
 import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
-import { formatDate, formatTime, localDate, todayIso, weekdayOf } from '@/utils/datetime';
+import { formatDate, formatTime, todayIso } from '@/utils/datetime';
 import { horizontalFlingGesture } from '@/utils/gesture';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
 
-/**
- * Biweekly parity: scheduled on even week-distances from the startDate's week
- * (the server counts the startsOn week as week 1 and repeats every 2 weeks;
- * weeks anchor on Monday, matching KST server behavior).
- */
-const inBiweeklyWeek = (dateIso: string, startIso: string) => {
-  const mondayOf = (d: Date) => {
-    const shifted = new Date(d);
-    shifted.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-    return shifted;
-  };
-  const weekMs = 7 * 24 * 60 * 60 * 1000;
-  const diff = mondayOf(localDate(dateIso)).getTime() - mondayOf(localDate(startIso)).getTime();
-  return Math.round(diff / weekMs) % 2 === 0;
-};
-
-/**
- * Whether an item is scheduled on a date: todos by dueDate; routines by their
- * start/end range and repeat cadence (daily / weekly / biweekly / monthly /
- * yearly — same rules the server applies to /today and /calendar). Shared by
- * the 방 tab (today) and the 달력 tab (selected date) so both always agree.
- */
-export const isScheduledOn = (r: Routine, dateIso: string) => {
-  if (r.kind === 'todo') return r.dueDate === dateIso;
-  if (r.startDate && dateIso < r.startDate) return false;
-  if (r.endDate && dateIso > r.endDate) return false;
-  const repeat = r.repeat ?? (r.days && r.days.length ? 'weekly' : 'daily');
-  const [, month, day] = dateIso.split('-').map(Number);
-  switch (repeat) {
-    case 'weekly':
-      return !r.days?.length || r.days.includes(weekdayOf(dateIso));
-    case 'biweekly':
-      return (
-        (!r.days?.length || r.days.includes(weekdayOf(dateIso))) &&
-        (!r.startDate || inBiweeklyWeek(dateIso, r.startDate))
-      );
-    case 'monthly':
-      // A month without that date (31st + Feb) simply skips — no clamping.
-      return r.dayOfMonth === day;
-    case 'yearly':
-      return r.month === month && r.dayOfMonth === day;
-    default:
-      return true;
-  }
-};
+// 스케줄 판정은 my-room/schedule로 이동 (#693) — 기존 임포트 경로 유지용 재수출.
+export { isScheduledOn };
 
 /**
  * One routine/todo on a calendar date (server GET /calendar). Non-today dates
@@ -253,46 +207,6 @@ function VisibilityMark({ visibility }: { visibility: CategoryVisibility }) {
     <View accessible accessibilityLabel={VISIBILITY_LABELS[visibility]}>
       <Pictogram name={VISIBILITY_ICONS[visibility]} size={12} color={t.textMuted} />
     </View>
-  );
-}
-
-/**
- * 루틴/할일 행 스와이프 삭제 (#566) — 왼쪽으로 밀면 빨간 '삭제' 액션이
- * 드러나고, **액션을 탭해야** 삭제 콜백이 나간다(파괴적 액션이라 풀스와이프
- * 즉시 삭제는 하지 않는다 — reveal + 탭 2단계). 삭제가 배선되지 않은 행
- * (달력 탭 서버 기반 항목 등)은 스와이프 없이 그대로 렌더.
- */
-function SwipeDeleteRow({
-  label,
-  onDelete,
-  children,
-}: {
-  label: string;
-  onDelete?: () => void;
-  children: ReactNode;
-}) {
-  const t = useTokens();
-  const Typography = useTypography();
-  const swipeRef = useRef<SwipeableMethods>(null);
-  if (!onDelete) return children;
-  return (
-    <ReanimatedSwipeable
-      ref={swipeRef}
-      overshootRight={false}
-      renderRightActions={() => (
-        <Pressable
-          onPress={() => {
-            swipeRef.current?.close();
-            onDelete();
-          }}
-          accessibilityRole="button"
-          accessibilityLabel={`${label} 스와이프 삭제`}
-          style={[styles.deleteAction, { backgroundColor: t.danger }]}>
-          <Text style={[Typography.label, { color: t.onPrimary }]}>삭제</Text>
-        </Pressable>
-      )}>
-      {children}
-    </ReanimatedSwipeable>
   );
 }
 
@@ -635,10 +549,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     backgrounds,
   };
 
-  // 홈 위젯용 무음 방 캡처 (#604, 안드로이드 전용) — 방 구성이 바뀌었을 때만
-  // 잠깐 뽑기 버튼을 숨기고(기존 #475 플래그 재사용) data URI로 찍어 위젯
-  // 저장소에 넘긴다. 시그니처 비교로 같은 방은 다시 찍지 않는다.
-  const widgetShotSigRef = useRef('');
+  // 홈 위젯용 무음 방 캡처 (#604) — 로직은 my-room/use-widget-room-capture로
+  // 이동 (#693). 시그니처가 바뀐 방만 다시 찍는다.
   const roomSignature = JSON.stringify({
     wallpaperId,
     floorId,
@@ -647,37 +559,13 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     placements,
     characterId,
   });
-  useEffect(() => {
-    // 홈 위젯이 있는 플랫폼만 (#604 안드, #606 iOS) — 웹은 캡처 제외.
-    if (Platform.OS !== 'android' && Platform.OS !== 'ios') return;
-    if (widgetShotSigRef.current === roomSignature) return;
-    // 로딩 중이거나 다른 캡처가 진행 중이면 다음 변화 때 다시 시도된다.
-    if (loading || capturing) return;
-    const timer = setTimeout(async () => {
-      widgetShotSigRef.current = roomSignature;
-      setCapturing(true);
-      await new Promise<void>((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-      );
-      try {
-        const dataUri = await captureRef(roomShotRef, {
-          format: 'png',
-          quality: 0.9,
-          result: 'data-uri',
-          width: 512,
-          height: 512,
-        });
-        await saveWidgetRoomImage(dataUri);
-        refreshWidgets();
-      } catch {
-        // 위젯은 부가 표면 — 실패 시 다음 방 변화 때 다시 찍는다.
-        widgetShotSigRef.current = '';
-      } finally {
-        setCapturing(false);
-      }
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, [roomSignature, loading, capturing]);
+  useWidgetRoomCapture({
+    shotRef: roomShotRef,
+    signature: roomSignature,
+    loading,
+    capturing,
+    setCapturing,
+  });
 
   // Scroll the tapped category's quick-add input into view (above the keyboard).
   const scrollRef = useRef<ScrollView>(null);
@@ -1370,54 +1258,6 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   );
 });
 
-/** 완료 탭 지점에서 지갑까지 포물선으로 나는 코인 (#440). */
-function FlyingCoin({
-  x,
-  y,
-  tx,
-  ty,
-  onDone,
-}: {
-  x: number;
-  y: number;
-  tx: number;
-  ty: number;
-  onDone: () => void;
-}) {
-  const t = useTokens();
-  const p = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.timing(p, {
-      toValue: 1,
-      duration: 550,
-      easing: Easing.in(Easing.quad),
-      useNativeDriver: true,
-    }).start(({ finished }) => finished && onDone());
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 마운트 시 1회 발사
-  }, []);
-  // 정점은 출발·도착 중 높은 쪽보다 70px 위 — 포물선 궤적.
-  const apexY = Math.min(y, ty) - 70;
-  return (
-    <Animated.View
-      pointerEvents="none"
-      style={[
-        styles.flyCoin,
-        {
-          opacity: p.interpolate({ inputRange: [0, 0.85, 1], outputRange: [1, 1, 0] }),
-          transform: [
-            { translateX: p.interpolate({ inputRange: [0, 1], outputRange: [x, tx] }) },
-            {
-              translateY: p.interpolate({ inputRange: [0, 0.45, 1], outputRange: [y, apexY, ty] }),
-            },
-            { scale: p.interpolate({ inputRange: [0, 1], outputRange: [1, 0.55] }) },
-          ],
-        },
-      ]}>
-      <Icon name="coin" size={18} color={t.warning} />
-    </Animated.View>
-  );
-}
-
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
@@ -1540,11 +1380,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     borderRadius: Radius.pill,
   },
-  flyCoin: {
-    position: 'absolute',
-    left: -9,
-    top: -9,
-  },
   group: {
     gap: Spacing.half,
   },
@@ -1600,14 +1435,6 @@ const styles = StyleSheet.create({
   },
   titleText: {
     flexShrink: 1,
-  },
-  // 스와이프 삭제 액션 (#566) — 행 오른쪽에 드러나는 빨간 버튼.
-  deleteAction: {
-    width: Spacing.six,
-    marginLeft: Spacing.two,
-    borderRadius: Radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   // Same width as catDot so checkboxes center under the category emoji and
   // row titles line up with the category label.
