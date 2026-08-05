@@ -10,6 +10,7 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import { Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { DEMO_NOTIFICATIONS } from '@/mocks/fixtures';
 
 /** One notification row (server GET /notifications). */
 export type NotificationEntry = {
@@ -22,11 +23,6 @@ export type NotificationEntry = {
   /** Display date, e.g. "7월 8일". */
   date: string;
 };
-
-const DEFAULT_NOTIFICATIONS: NotificationEntry[] = [
-  { id: 1, type: 'ROUTINE_REMINDER', title: '루틴 리마인드', body: '물 마시기 할 시간이에요', read: false, date: '오늘' }, // prettier-ignore
-  { id: 2, type: 'HOUSE_KICK', title: '집 알림', body: '아침 기상단에서 내보내졌어요', read: true, date: '7월 5일' }, // prettier-ignore
-];
 
 /** Row icon by server notification type. */
 const TYPE_ICONS: Record<string, IconName> = {
@@ -124,7 +120,7 @@ export function NotificationListScreen({
 }: NotificationListScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
-  const entries = notifications ?? DEFAULT_NOTIFICATIONS;
+  const entries = notifications ?? DEMO_NOTIFICATIONS;
   const hasUnread = entries.some((n) => !n.read);
 
   return (
