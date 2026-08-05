@@ -23,6 +23,16 @@ import {
   Room,
   type RoomCatalogProps,
 } from '@/components/room/room';
+import {
+  CAM_ROOM_SCALE,
+  camDefault,
+  cameraClaimsMove,
+  clampCam,
+  DOUBLE_TAP_MS,
+  isCamAway,
+} from '@/components/screens/house/camera';
+import { OnlineDot } from '@/components/screens/house/online-dot';
+import { type SeatRect, seatAtPoint } from '@/components/screens/house/seat-drag';
 import { HouseMembersScreen } from '@/components/screens/house-members-screen';
 import { HouseMissionsSheet } from '@/components/screens/sheets/house-missions-sheet';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -58,6 +68,8 @@ import type { Wallpaper } from '@/resources/furniture';
 
 // 방 렌더 데이터라 room.tsx로 이동 (#691) — 기존 임포터를 위한 재수출.
 export type { MemberRoomPreview } from '@/components/room/room';
+// 카메라 순수 로직은 house/camera.ts로 이동 (#693) — 기존 임포터(테스트)를 위한 재수출.
+export { cameraClaimsMove } from '@/components/screens/house/camera';
 
 export type RoomCell = {
   name: string;
@@ -173,31 +185,6 @@ const VACANT_FURNITURE_IDS: string[] = [];
 // 4칸 — 알파 채널 측정값 (#287). 좌상·우상·좌하·우하 순.
 // FRAME_ASPECT / WINDOW_RECTS는 집 탐색 미리보기(#328)와 공유 —
 // house-preview-frame.tsx가 단일 출처.
-
-const CAM_MAX_SCALE = 3;
-// 방 더블탭 줌 — 창문(폭 35%)이 카메라 뷰포트를 거의 가득 채우는 배율.
-const CAM_ROOM_SCALE = 2.9;
-// 이 간격 안의 두 번째 탭 = 더블탭(줌). 한 번 탭(방문)은 이만큼 기다렸다 실행.
-const DOUBLE_TAP_MS = 260;
-// 확대 중 한 손가락 팬 캡처 전 허용 이동량 (#669) — 실기기 탭은 1~2px
-// 지터가 있어, 이동량 조건 없이 캡처하면 방 탭(방문)이 전부 취소된다.
-const CAM_PAN_SLOP = 8;
-
-/**
- * 카메라가 이 move에서 터치를 가져갈지 (#669) — 두 손가락(핀치)은 즉시,
- * 확대 중 한 손가락은 탭 지터를 넘는 실제 팬일 때만. 자리 드래그 중엔 양보.
- */
-export function cameraClaimsMove(
-  touchCount: number,
-  zoomed: boolean,
-  draggingSeat: boolean,
-  dx: number,
-  dy: number,
-): boolean {
-  if (draggingSeat) return false;
-  if (touchCount >= 2) return true;
-  return zoomed && Math.hypot(dx, dy) > CAM_PAN_SLOP;
-}
 
 // RoomCatalogProps: 좌석 타일 미리보기가 해석할 카탈로그 4종 (#691).
 export type HouseScreenProps = RoomCatalogProps & {
@@ -497,7 +484,7 @@ export const HouseScreen = memo(function HouseScreen({
   const dragGranted = useRef(false);
   const dragPan = useRef(new Animated.ValueXY()).current;
   const tileRefs = useRef(new Map<number, View>());
-  const tileRects = useRef(new Map<number, { x: number; y: number; w: number; h: number }>());
+  const tileRects = useRef(new Map<number, SeatRect>());
 
   // 픽업 순간 스프링으로 살짝 떠오르는 리프트 (#450).
   const liftScale = useRef(new Animated.Value(1)).current;
@@ -527,10 +514,7 @@ export const HouseScreen = memo(function HouseScreen({
   const dropAt = (x: number, y: number) => {
     const from = dragSeatRef.current;
     if (from != null) {
-      let to: number | null = null;
-      tileRects.current.forEach((r, idx) => {
-        if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) to = idx;
-      });
+      const to = seatAtPoint(tileRects.current, x, y);
       if (to != null && to !== from) {
         hapticSuccess();
         if (onSwapSeats && currentHouse?.houseId != null) {
@@ -597,28 +581,7 @@ export const HouseScreen = memo(function HouseScreen({
   const panAnchor = useRef({ x: 0, y: 0, tx: 0, ty: 0 });
   const camTouchCount = useRef(0);
 
-  // 기본 카메라 = 집 전체(원배율) — 확대(1.3)는 프레임을 좌우로 잘라내서
-  // 기본에서는 쓰지 않는다. 방 클로즈업은 더블탭/핀치로만 진입한다.
-  const camDefault = () => ({ scale: 1, tx: 0, ty: 0 });
-  const clampCam = (scale: number, tx: number, ty: number) => {
-    const { w, h } = frameSize.current;
-    const s = Math.min(CAM_MAX_SCALE, Math.max(1, scale));
-    // 팬은 프레임 경계까지 — translate는 스케일 바깥(화면 px) 기준.
-    const maxTx = ((s - 1) * w) / 2;
-    const maxTy = ((s - 1) * h) / 2;
-    return {
-      scale: s,
-      tx: Math.min(maxTx, Math.max(-maxTx, tx)),
-      ty: Math.min(maxTy, Math.max(-maxTy, ty)),
-    };
-  };
-  // ⟲ 리셋·팬·드래그 게이트는 "기본 프리셋에서 벗어났는가"로 판단한다.
-  const isCamAway = (c: { scale: number; tx: number; ty: number }) => {
-    const d = camDefault();
-    return (
-      Math.abs(c.scale - d.scale) > 0.04 || Math.abs(c.tx - d.tx) > 6 || Math.abs(c.ty - d.ty) > 6
-    );
-  };
+  // 카메라 상수·판정·클램프 수학은 house/camera.ts로 이동 (#693).
   const syncZoomed = () => {
     const away = isCamAway(cam.current);
     if (away !== zoomedRef.current) {
@@ -627,7 +590,7 @@ export const HouseScreen = memo(function HouseScreen({
     }
   };
   const setCam = (scale: number, tx: number, ty: number) => {
-    const c = clampCam(scale, tx, ty);
+    const c = clampCam(frameSize.current, scale, tx, ty);
     cam.current = c;
     camScale.setValue(c.scale);
     camTx.setValue(c.tx);
@@ -635,7 +598,7 @@ export const HouseScreen = memo(function HouseScreen({
     syncZoomed();
   };
   const animateCamTo = (scale: number, tx: number, ty: number) => {
-    const c = clampCam(scale, tx, ty);
+    const c = clampCam(frameSize.current, scale, tx, ty);
     cam.current = c;
     syncZoomed();
     Animated.parallel([
@@ -1404,34 +1367,6 @@ export const HouseScreen = memo(function HouseScreen({
   );
 });
 
-/** 접속 점 — 은은한 숨쉬기 펄스 (#450). */
-function OnlineDot({ color }: { color: string }) {
-  const pulse = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 0, duration: 900, useNativeDriver: true }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [pulse]);
-  return (
-    <Animated.View
-      testID="online-dot"
-      style={[
-        styles.onlineDot,
-        {
-          backgroundColor: color,
-          opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] }),
-          transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.25] }) }],
-        },
-      ]}
-    />
-  );
-}
-
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
@@ -1719,11 +1654,6 @@ const styles = StyleSheet.create({
   // Name row + optional last-seen line (#383), centered as one block.
   roomMeta: {
     alignItems: 'center',
-  },
-  onlineDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
   },
   lastSeen: {
     opacity: 0.75,
