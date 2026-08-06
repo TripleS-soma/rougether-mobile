@@ -23,6 +23,7 @@ import { isScheduledOn } from '@/components/screens/my-room/schedule';
 import {
   type DragSlot,
   type DropTarget,
+  isRejectedDrop,
   reorderedIds,
   resolveDrop,
 } from '@/components/screens/my-room/routine-drag';
@@ -845,6 +846,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
       setDragId(null);
       dragTY.setValue(0);
       if (!target) return;
+      // 실제 카테고리가 있을 때 '미분류'로의 이동은 서버 반영이 안 돼(#718
+      // 리뷰) 스냅백 — 미분류 내 순서 변경은 아래 same-category 분기로 허용.
+      if (isRejectedDrop(target, fromCategoryId, categories.length > 0)) return;
       const destBase = baseOrderRef.current.get(target.categoryId) ?? [];
       if (target.categoryId === fromCategoryId) {
         const next = reorderedIds(destBase, draggedId, target.index);
@@ -863,7 +867,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
       );
       onReorderRoutines?.(fromCategoryId, fromNext);
     },
-    [dragTY, onReorderRoutines, onMoveRoutineCategory],
+    [dragTY, onReorderRoutines, onMoveRoutineCategory, categories.length],
   );
 
   const registerRowRef = useCallback((routineId: string, node: View | null) => {

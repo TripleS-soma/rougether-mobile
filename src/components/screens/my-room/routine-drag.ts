@@ -44,6 +44,21 @@ export function resolveDrop(slots: DragSlot[], fingerY: number, draggedId: strin
 }
 
 /**
+ * 이 드롭을 거절해야 하나 (#716, PR #718 리뷰). 실제 카테고리가 있는데
+ * '미분류'(id '')로의 **타 카테고리 이동**은 막는다 — 서버 categoryId를 빈
+ * 값으로 unset할 수 없어(PUT에서 필드가 빠짐) 화면만 옮겨지고 reload 시
+ * 되돌아간다. 퀵애드가 미분류를 막는 것(canQuickAdd)과 같은 제약. 미분류
+ * 안에서의 순서 변경(from도 '')은 로컬 전용이라 허용.
+ */
+export function isRejectedDrop(
+  target: DropTarget,
+  fromCategoryId: string,
+  hasRealCategories: boolean,
+): boolean {
+  return hasRealCategories && target.categoryId === '' && fromCategoryId !== '';
+}
+
+/**
  * 재정렬 후 카테고리의 새 id 순서 (#716) — 미완료 id 배열에서 draggedId를
  * 빼고 index 위치에 다시 끼운다. 같은 카테고리 내 이동·타 카테고리 진입 공용
  * (진입 시 baseIds에 draggedId가 없으면 그냥 index에 삽입).

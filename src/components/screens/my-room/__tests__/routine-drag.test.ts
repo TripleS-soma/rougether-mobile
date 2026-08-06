@@ -1,5 +1,6 @@
 import {
   type DragSlot,
+  isRejectedDrop,
   reorderedIds,
   resolveDrop,
 } from '@/components/screens/my-room/routine-drag';
@@ -57,5 +58,23 @@ describe('reorderedIds (#716)', () => {
 
   it('index가 범위를 벗어나도 clamp된다', () => {
     expect(reorderedIds(['a', 'b'], 'c', 99)).toEqual(['a', 'b', 'c']);
+  });
+});
+
+describe('isRejectedDrop (#716, PR #718 리뷰)', () => {
+  it('실제 카테고리가 있을 때 미분류로의 타 카테고리 이동은 거절', () => {
+    expect(isRejectedDrop({ categoryId: '', index: 0 }, 'ex', true)).toBe(true);
+  });
+
+  it('미분류 안에서의 순서 변경(from도 미분류)은 허용', () => {
+    expect(isRejectedDrop({ categoryId: '', index: 0 }, '', true)).toBe(false);
+  });
+
+  it('실제 카테고리가 없으면(빈 계정) 미분류만 있으니 거절하지 않는다', () => {
+    expect(isRejectedDrop({ categoryId: '', index: 0 }, 'ex', false)).toBe(false);
+  });
+
+  it('실제 카테고리로의 이동은 항상 허용', () => {
+    expect(isRejectedDrop({ categoryId: 'st', index: 1 }, 'ex', true)).toBe(false);
   });
 });
