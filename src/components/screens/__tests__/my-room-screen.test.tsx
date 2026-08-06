@@ -873,4 +873,32 @@ describe('MyRoomScreen', () => {
     fireEvent.press(getByLabelText('영어 공부'));
     expect(onToggleCompletion).toHaveBeenCalledWith('4', TODAY);
   });
+
+  it('방 탭 미완료 루틴을 routineOrder 순서로 그린다 (#716)', async () => {
+    const routines = [
+      { id: 'a', title: '작업 에이', category: '건강', kind: 'routine' as const },
+      { id: 'b', title: '작업 비', category: '건강', kind: 'routine' as const },
+    ];
+    const categories = [
+      {
+        id: '건강',
+        name: '건강',
+        icon: 'dumbbell' as const,
+        color: '#7FA87F',
+        visibility: 'public' as const,
+      },
+    ];
+    const { getAllByText } = await render(
+      <MyRoomScreen
+        routines={routines}
+        categories={categories}
+        routineOrder={{ 건강: ['b', 'a'] }}
+        onReorderRoutines={jest.fn()}
+        onMoveRoutineCategory={jest.fn()}
+      />,
+    );
+    // 저장된 순서(b→a)대로 렌더 — '작업 비'가 '작업 에이'보다 먼저.
+    const titles = getAllByText(/작업 (에이|비)/).map((n) => n.props.children);
+    expect(titles).toEqual(['작업 비', '작업 에이']);
+  });
 });

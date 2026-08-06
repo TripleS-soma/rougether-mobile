@@ -342,6 +342,31 @@ export function useMyRoomData() {
     [findItem, refreshCachedCalendarDays, toast],
   );
 
+  /** 카테고리 이동 (#716, 롱프레스 드래그) — categoryId만 바꾸는 부분 수정. */
+  const moveRoutineToCategory = useCallback(
+    async (id: string, categoryId: string) => {
+      // 빈 목적지(미분류)는 PUT에서 categoryId가 빠져 서버 unset이 안 된다
+      // (#718 리뷰) — 화면 가드와 별개의 방어. 무카테고리화 경로는 없다.
+      if (categoryId === '') return;
+      const item = findItem(id);
+      if (!item || item.category === categoryId) return;
+      const prevCategory = item.category;
+      setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, category: categoryId } : r)));
+      try {
+        if (item.kind === 'todo')
+          await updateTodo(toServerItemId(id), toTodoUpdate(item, { category: categoryId }));
+        else await apiUpdateRoutine(toServerItemId(id), toRoutineUpdate(item, { category: categoryId })); // prettier-ignore
+        refreshCachedCalendarDays();
+      } catch {
+        setRoutines((prev) =>
+          prev.map((r) => (r.id === id ? { ...r, category: prevCategory } : r)),
+        );
+        toast('카테고리 이동에 실패했어요', 'error');
+      }
+    },
+    [findItem, refreshCachedCalendarDays, toast],
+  );
+
   const updateRoutineTime = useCallback(
     async (id: string, alarmEnabled: boolean, time: string) => {
       const item = findItem(id);
@@ -676,6 +701,7 @@ export function useMyRoomData() {
       addRoutine,
       updateRoutine,
       renameRoutine,
+      moveRoutineToCategory,
       updateRoutineTime,
       updateTodoDueDate,
       moveRoutineOccurrence,
@@ -711,6 +737,7 @@ export function useMyRoomData() {
       addRoutine,
       updateRoutine,
       renameRoutine,
+      moveRoutineToCategory,
       updateRoutineTime,
       updateTodoDueDate,
       moveRoutineOccurrence,

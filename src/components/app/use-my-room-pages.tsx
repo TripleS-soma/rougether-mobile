@@ -18,6 +18,7 @@ import { CHARACTER_SELECTION_ENABLED, type CharacterId } from '@/constants/chara
 import { type Routine } from '@/constants/routines';
 import type { useMyRoomData } from '@/hooks/use-my-room-data';
 import { useNotifications } from '@/hooks/use-notifications';
+import { useRoutineOrder } from '@/hooks/use-routine-order';
 import { track } from '@/lib/analytics';
 import { onNotificationTap } from '@/lib/push-events';
 import type { ShopCatalogue } from '@/api/adapters';
@@ -69,6 +70,7 @@ export function useMyRoomPages({
     | 'quickAddTodo'
     | 'updateRoutine'
     | 'renameRoutine'
+    | 'moveRoutineToCategory'
     | 'updateRoutineTime'
     | 'updateTodoDueDate'
     | 'moveRoutineOccurrence'
@@ -122,6 +124,7 @@ export function useMyRoomPages({
     quickAddTodo,
     updateRoutine,
     renameRoutine,
+    moveRoutineToCategory,
     updateRoutineTime,
     updateTodoDueDate,
     moveRoutineOccurrence,
@@ -132,6 +135,16 @@ export function useMyRoomPages({
     reorderCategories,
   } = data;
   const { toggleWithMissionGuard, houseCategoryIds, addRoutineWithMission } = missionLinks;
+
+  // 루틴 수동 순서 (#716) — 기기 로컬 보관, 방 '오늘' 리스트에 적용.
+  const { order: routineOrder, reorder: reorderRoutines } = useRoutineOrder();
+  // 드래그로 다른 카테고리에 드롭 = 영구 이동(서버 categoryId 변경).
+  const moveRoutineCategory = useCallback(
+    (id: string, toCategoryId: string) => {
+      void moveRoutineToCategory(id, toCategoryId);
+    },
+    [moveRoutineToCategory],
+  );
 
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
 
@@ -277,6 +290,9 @@ export function useMyRoomPages({
     onUpdateTodoDueDate: updateTodoDueDate,
     onMoveRoutineOccurrence: moveRoutineOccurrence,
     onDeleteRoutine: deleteRoutine,
+    routineOrder,
+    onReorderRoutines: reorderRoutines,
+    onMoveRoutineCategory: moveRoutineCategory,
   };
 
   /** 현재 화면이 나의 방 서브화면 4종이면 그 JSX, 아니면 null — 셸이 그대로 렌더. */
