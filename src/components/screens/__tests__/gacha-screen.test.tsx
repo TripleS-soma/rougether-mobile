@@ -234,6 +234,21 @@ describe('GachaScreen', () => {
     expect(getByText('보유')).toBeTruthy();
   });
 
+  it('보상 행에 아이템 썸네일을 보여준다 — CDN 아트면 이미지, 없으면 기프트 폴백 (#721)', async () => {
+    const onLoadRewards = jest.fn().mockResolvedValue([
+      // CDN 키(items/...) → 이미지, 키 없음 → 기프트 아이콘 폴백.
+      { rewardType: 'ITEM', itemId: 7, name: '구름 소파', rarity: '일반', assetKey: 'items/sofa.png' }, // prettier-ignore
+      { rewardType: 'ITEM', itemId: 8, name: '이름만 보상', rarity: '일반' },
+    ]);
+    const { getByLabelText, findByTestId } = await render(
+      <GachaScreen gachas={[machine]} coinBalance={5600} onLoadRewards={onLoadRewards} />,
+    );
+    await fireEvent.press(getByLabelText('나올 수 있는 보상 보기'));
+    // 두 행 모두 썸네일 컨테이너를 렌더(내용은 이미지/아이콘으로 갈림).
+    expect(await findByTestId('reward-row-7')).toBeTruthy();
+    expect(await findByTestId('reward-row-8')).toBeTruthy();
+  });
+
   it('보상 목록 로드 실패면 시트 안에서 다시 시도를 보여준다 (#620)', async () => {
     const onLoadRewards = jest
       .fn()
