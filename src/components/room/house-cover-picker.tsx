@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { FRAME_ASPECT } from '@/components/room/house-preview-frame';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { assetSource } from '@/resources/asset';
@@ -49,10 +50,13 @@ export function HouseCoverPicker({ covers, selectedKey, onSelect }: HouseCoverPi
                 borderColor: selected ? t.primary : 'transparent',
               },
             ]}>
+            {/* 프레임 전체가 보이게 contain — cover는 위(지붕)·아래(받침)를
+                잘라 프레임이 잘린 것처럼 보였다 (#723). 셀 비율도 프레임
+                원본(FRAME_ASPECT)에 맞춰 레터박스를 최소화. */}
             <Image
               source={assetSource(c.coverImageKey)}
               style={styles.art}
-              contentFit="cover"
+              contentFit="contain"
               cachePolicy="memory-disk"
               transition={120}
               accessibilityLabel={c.name}
@@ -88,7 +92,7 @@ const styles = StyleSheet.create({
   },
   art: {
     width: '100%',
-    aspectRatio: 1.4,
+    aspectRatio: FRAME_ASPECT,
     borderRadius: Radius.sm,
   },
 });
