@@ -9,7 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const SPEC_URL = process.argv[2] || 'https://d12w5t2ftuhgj8.cloudfront.net/v3/api-docs';
+const SPEC_URL = process.argv[2] || 'https://dkfiwkal2ezg9.cloudfront.net/v3/api-docs';
 const OUT = process.argv[3]
   ? path.resolve(process.argv[3])
   : path.join(__dirname, '..', 'src', 'api', 'types.ts');
