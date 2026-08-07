@@ -24,11 +24,9 @@ import {
   type RoomCatalogProps,
 } from '@/components/room/room';
 import {
-  CAM_ROOM_SCALE,
   camDefault,
   cameraClaimsMove,
   clampCam,
-  DOUBLE_TAP_MS,
   isCamAway,
 } from '@/components/screens/house/camera';
 import { OnlineDot } from '@/components/screens/house/online-dot';
@@ -612,19 +610,6 @@ export const HouseScreen = memo(function HouseScreen({
     animateCamTo(d.scale, d.tx, d.ty);
   };
   // 더블탭 줌 — 그 방의 창문이 카메라 뷰포트를 거의 가득 채우게 (#307).
-  const zoomToSeat = (seatIdx: number) => {
-    const slot = windowSlots.indexOf(seatIdx);
-    const { w, h } = frameSize.current;
-    if (slot < 0 || !w) return;
-    const rect = WINDOW_RECTS[slot];
-    const cx = (parseFloat(rect.left) + parseFloat(rect.width) / 2) / 100;
-    const cy = (parseFloat(rect.top) + parseFloat(rect.height) / 2) / 100;
-    animateCamTo(
-      CAM_ROOM_SCALE,
-      -CAM_ROOM_SCALE * (cx - 0.5) * w,
-      -CAM_ROOM_SCALE * (cy - 0.5) * h,
-    );
-  };
   const anchorCamera = (evt: { nativeEvent: { touches: { pageX: number; pageY: number }[] } }) => {
     const ts = evt.nativeEvent.touches;
     camTouchCount.current = ts.length;
@@ -731,15 +716,6 @@ export const HouseScreen = memo(function HouseScreen({
   // an empty switcher.
   // 창문 타일 탭 판정 (#307): 한 번 탭 = 방문(더블탭 간격만큼 지연 실행),
   // 더블탭 = 그 방으로 카메라 줌인. 그리드 타일(프레임 밖)은 기존 즉시 방문.
-  // (훅이라 조건부 return들보다 앞에 있어야 한다.)
-  const pendingVisit = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastSeatTap = useRef({ seatIdx: -1, at: 0 });
-  useEffect(
-    () => () => {
-      if (pendingVisit.current) clearTimeout(pendingVisit.current);
-    },
-    [],
-  );
 
   // 승인 대기 페이지 (#648) — 잠금형 카드. 메인 프레임 트리와 독립 렌더라
   // 카메라·좌석 로직과 얽히지 않고, 스위처 산술(totalPages)만 공유한다.
@@ -918,22 +894,8 @@ export const HouseScreen = memo(function HouseScreen({
       membershipId: room.membershipId,
     });
   };
-  const onSeatPress = (room: RoomCell, seatIdx: number, inWindow: boolean) => {
-    if (!inWindow) return visitSeat(room);
-    const now = Date.now();
-    const isDouble =
-      lastSeatTap.current.seatIdx === seatIdx && now - lastSeatTap.current.at < DOUBLE_TAP_MS;
-    lastSeatTap.current = { seatIdx: isDouble ? -1 : seatIdx, at: now };
-    if (pendingVisit.current) {
-      clearTimeout(pendingVisit.current);
-      pendingVisit.current = null;
-    }
-    if (isDouble) return zoomToSeat(seatIdx);
-    pendingVisit.current = setTimeout(() => {
-      pendingVisit.current = null;
-      visitSeat(room);
-    }, DOUBLE_TAP_MS);
-  };
+  // 더블탭 줌 제거 (#727) — 판정 대기(260ms) 때문에 방문 탭 반응이 늦었다.
+  // 줌은 핀치 전용으로 남고, 탭은 즉시 방문한다.
 
   const renderSeatTile = (room: RoomCell, seatIdx: number, fill = false) => {
     const dragging = dragSeat === seatIdx;
@@ -960,7 +922,7 @@ export const HouseScreen = memo(function HouseScreen({
           },
         ]}>
         <Pressable
-          onPress={empty ? undefined : () => onSeatPress(room, seatIdx, fill)}
+          onPress={empty ? undefined : () => visitSeat(room)}
           onLongPress={empty || zoomed ? undefined : () => startDrag(seatIdx)}
           delayLongPress={220}
           onPressOut={onTilePressOut}

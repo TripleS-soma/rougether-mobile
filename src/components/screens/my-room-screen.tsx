@@ -1057,9 +1057,20 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             style={{ transform: [{ scale: walletPulse }] }}>
             <WalletPills coin={coinBalance} diamond={diamondBalance} />
           </Animated.View>
-          {/* 알림 lives inside this popover (#257 — a separate bell button
-              crowded the header and crushed the title); unread shows as a dot
-              on the menu button. */}
+          {/* 알림 벨 복원 (#727) — #257에서 메뉴로 합쳤던 것을 1탭으로 승격.
+              제목은 축소·중간 말줄임 로직이 있어 좁은 폭도 견딘다. */}
+          {onOpenNotifications ? (
+            <ScalePressable
+              onPress={onOpenNotifications}
+              accessibilityRole="button"
+              accessibilityLabel="알림"
+              style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
+              <Icon name="bell" size={20} color={t.text} />
+              {unreadNotificationCount > 0 ? (
+                <View style={[styles.menuDot, { backgroundColor: t.danger }]} />
+              ) : null}
+            </ScalePressable>
+          ) : null}
           <CoachTarget id="room-menu">
             <ScalePressable
               ref={menuBtnRef}
@@ -1068,9 +1079,6 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               accessibilityLabel="메뉴"
               style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
               <Icon name="menu" size={20} color={t.text} />
-              {onOpenNotifications && unreadNotificationCount > 0 ? (
-                <View style={[styles.menuDot, { backgroundColor: t.danger }]} />
-              ) : null}
             </ScalePressable>
           </CoachTarget>
         </View>
@@ -1147,6 +1155,22 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                       <Icon name="gift" size={20} color={t.text} />
                     </CoachTarget>
                   </Pressable>
+                  {/* 방 꾸미기 1탭 승격 (#727) — 메뉴(2탭) 뒤에 있던 보상 루프의
+                      종착지를 뽑기 버튼 위에 나란히. 메뉴 항목은 습관 경로로 유지. */}
+                  {onEdit ? (
+                    <Pressable
+                      onPress={onEdit}
+                      accessibilityRole="button"
+                      accessibilityLabel="방 꾸미기"
+                      pointerEvents={capturing ? 'none' : 'auto'}
+                      style={[
+                        styles.decorBtn,
+                        { backgroundColor: t.surface },
+                        capturing && styles.hidden,
+                      ]}>
+                      <Icon name="edit" size={20} color={t.text} />
+                    </Pressable>
+                  ) : null}
                 </View>
               </GestureDetector>
 
@@ -1342,8 +1366,6 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         visible={navMenuOpen}
         top={navMenuTop}
         onClose={() => setNavMenuOpen(false)}
-        onOpenNotifications={onOpenNotifications}
-        notificationDot={unreadNotificationCount > 0}
         onOpenCharacterPicker={
           ownedCharacters && onSelectCharacter ? () => setCharacterSheetOpen(true) : undefined
         }
@@ -1461,6 +1483,17 @@ const styles = StyleSheet.create({
   roomWrap: {
     paddingHorizontal: Spacing.three,
     paddingTop: Spacing.four,
+  },
+  // 꾸미기 버튼 (#727) — 뽑기 버튼 바로 위, 같은 크기.
+  decorBtn: {
+    position: 'absolute',
+    right: Spacing.four,
+    bottom: Spacing.three + 44 + Spacing.two,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   gachaBtn: {
     position: 'absolute',

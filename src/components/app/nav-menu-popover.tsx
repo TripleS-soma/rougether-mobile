@@ -9,10 +9,6 @@ export type NavMenuPopoverProps = {
   /** Measured top offset — anchors the popover under the hamburger button. */
   top: number;
   onClose: () => void;
-  /** 알림 항목 — 미배선이면 숨김 (#257). */
-  onOpenNotifications?: () => void;
-  /** 알림 항목의 읽지 않음 점. */
-  notificationDot?: boolean;
   /** 캐릭터 교체 항목 — 미배선이면 숨김 (#260). */
   onOpenCharacterPicker?: () => void;
   /** 방 꾸미기. */
@@ -34,8 +30,6 @@ export function NavMenuPopover({
   visible,
   top,
   onClose,
-  onOpenNotifications,
-  notificationDot = false,
   onOpenCharacterPicker,
   onEditRoom,
   onSaveRoomImage,
@@ -55,16 +49,6 @@ export function NavMenuPopover({
         <View style={[styles.popover, { top, backgroundColor: t.screen, borderColor: t.border }]}>
           {(
             [
-              ...(onOpenNotifications
-                ? [
-                    {
-                      icon: 'bell' as const,
-                      label: '알림',
-                      dot: notificationDot,
-                      onPress: () => onOpenNotifications(),
-                    },
-                  ]
-                : []),
               ...(onOpenCharacterPicker
                 ? [
                     {
@@ -94,7 +78,7 @@ export function NavMenuPopover({
                 label: '루틴 관리',
                 onPress: () => onManageRoutines?.(),
               },
-            ] as { icon: IconName; label: string; dot?: boolean; onPress: () => void }[]
+            ] as { icon: IconName; label: string; onPress: () => void }[]
           ).map((item, idx, arr) => (
             <Pressable
               key={item.label}
@@ -113,9 +97,6 @@ export function NavMenuPopover({
               ]}>
               <Icon name={item.icon} size={18} color={t.text} />
               <Text style={[Typography.body, { color: t.text }]}>{item.label}</Text>
-              {item.dot ? (
-                <View style={[styles.popoverDot, { backgroundColor: t.danger }]} />
-              ) : null}
             </Pressable>
           ))}
         </View>
@@ -149,11 +130,5 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.three,
-  },
-  popoverDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginLeft: 'auto',
   },
 });

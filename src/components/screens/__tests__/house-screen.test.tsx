@@ -1,4 +1,4 @@
-import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 import { State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
@@ -440,43 +440,25 @@ describe('HouseScreen', () => {
       />,
     );
     await fireEvent.press(getByLabelText('친구'));
-    // 방문은 더블탭 판정 간격(260ms)만큼 미뤄 실행된다.
-    expect(onVisitFriend).not.toHaveBeenCalled();
-    await waitFor(() =>
-      expect(onVisitFriend).toHaveBeenCalledWith(
-        expect.objectContaining({ name: '친구', membershipId: 42 }),
-      ),
+    // 탭 즉시 방문 (#727) — 더블탭 줌 제거로 판정 대기(260ms)가 사라졌다.
+    expect(onVisitFriend).toHaveBeenCalledWith(
+      expect.objectContaining({ name: '친구', membershipId: 42 }),
     );
   });
 
-  it('frame tiles: a double tap zooms the camera instead of visiting (#307)', async () => {
-    // 두 탭이 같은 타임스탬프 = 확실한 더블탭 (fake timer는 렌더러와 충돌).
-    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1_000_000);
-    try {
-      const onVisitFriend = jest.fn();
-      const { getByLabelText, getByTestId, queryByLabelText } = await render(
-        <HouseScreen
-          houses={[{ ...MISSION_HOUSE, coverImageKey: 'house/cloud-balloon/frame.png' }]}
-          onVisitFriend={onVisitFriend}
-        />,
-      );
-      // 줌 좌표 계산에 프레임 크기가 필요하다 — 레이아웃 이벤트 주입.
-      await fireEvent(getByTestId('frame-camera'), 'layout', {
-        nativeEvent: { layout: { width: 358, height: 321 } },
-      });
-      expect(queryByLabelText('확대 종료')).toBeNull();
-      await fireEvent.press(getByLabelText('친구'));
-      await fireEvent.press(getByLabelText('친구'));
-      // 더블탭 = 방 줌인 — 리셋 칩이 뜨고 방문 예약은 취소된다.
-      expect(getByLabelText('확대 종료')).toBeTruthy();
-      await act(() => new Promise((resolve) => setTimeout(resolve, 320)));
-      expect(onVisitFriend).not.toHaveBeenCalled();
-      // ⟲ = 기본(방 4칸) 뷰 복귀.
-      await fireEvent.press(getByLabelText('확대 종료'));
-      expect(queryByLabelText('확대 종료')).toBeNull();
-    } finally {
-      nowSpy.mockRestore();
-    }
+  it('frame tiles: rapid taps just visit — double-tap zoom removed (#727)', async () => {
+    const onVisitFriend = jest.fn();
+    const { getByLabelText, queryByLabelText } = await render(
+      <HouseScreen
+        houses={[{ ...MISSION_HOUSE, coverImageKey: 'house/cloud-balloon/frame.png' }]}
+        onVisitFriend={onVisitFriend}
+      />,
+    );
+    await fireEvent.press(getByLabelText('친구'));
+    await fireEvent.press(getByLabelText('친구'));
+    // 연속 탭은 방문 2회 — 줌(리셋 칩)은 더 이상 뜨지 않는다(핀치 전용).
+    expect(onVisitFriend).toHaveBeenCalledTimes(2);
+    expect(queryByLabelText('확대 종료')).toBeNull();
   });
 
   it('falls back to a plain hero without a cover and hides nav for one house', async () => {
@@ -661,13 +643,11 @@ describe('HouseScreen', () => {
     );
     // Tiles are addressed by accessibility label — the crown decorates the
     // text and presence (#383) appends ", N일 전 접속" so match the prefix.
-    // 창문 좌석의 한 번 탭 방문은 더블탭 판별 시간(260ms)만큼 늦게 실행된다.
+    // 창문 좌석도 탭 즉시 방문 (#727).
     await fireEvent.press(getByLabelText(/^최준서/));
-    await waitFor(() =>
-      expect(onVisitFriend).toHaveBeenCalledWith(expect.objectContaining({ name: '최준서' })),
-    );
+    expect(onVisitFriend).toHaveBeenCalledWith(expect.objectContaining({ name: '최준서' }));
     await fireEvent.press(getByText('나의 방 (나)'));
-    await waitFor(() => expect(onVisitMyRoom).toHaveBeenCalled());
+    expect(onVisitMyRoom).toHaveBeenCalled();
   });
 
   it('shows vacant capacity seats as quiet tiles, excluded from member management', async () => {
