@@ -67,6 +67,13 @@ export const MAX_GOALS = 3;
 /** 닉네임 길이 상한 (#635) — 헤더·타일 등 표시 공간과 합의된 값. */
 export const NICKNAME_MAX = 12;
 
+/**
+ * 태블릿·큰 화면 콘텐츠 중앙 고정폭 (#725) — 온보딩 요소가 넓은 폭에서
+ * 끝까지 늘어나지 않게 폰 너비 근처로 묶는다. 폰에서는 width:'100%'가
+ * 우세라 영향 없음.
+ */
+const CONTENT_MAX_W = 480;
+
 const GOALS: OnboardingGoal[] = [
   { id: 'exercise', label: '운동' },
   { id: 'study', label: '공부' },
@@ -440,22 +447,32 @@ export function OnboardingScreen({
         ) : null}
       </View>
 
-      <View style={styles.slideBody} {...slidePan.panHandlers}>
-        <Text style={[Typography.h2, styles.center, { color: t.text }]}>{slide.title}</Text>
-        <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
-          {slide.description}
-        </Text>
-        {/* 실제 앱 화면 캡처 — 폰 프레임 카드 (#412). 390:844 비율 유지. */}
-        <View style={[styles.captureFrame, { borderColor: t.border, backgroundColor: t.surface }]}>
-          <Image
-            source={slide.image}
-            style={styles.captureImage}
-            contentFit="cover"
-            transition={150}
-            accessibilityLabel={slide.title.replace('\n', ' ')}
-          />
+      {/* 태블릿·짧은 캔버스(iPad 호환 모드) 대응 (#725): 세로가 부족하면
+          가운데 정렬 대신 스크롤로 흘려 제목이 위로 잘리지 않게 하고, 넓은
+          폭에서는 중앙 고정폭 컬럼으로 묶어 요소가 끝까지 늘어나지 않게 한다. */}
+      <ScrollView
+        style={styles.slideScroll}
+        contentContainerStyle={styles.slideBody}
+        showsVerticalScrollIndicator={false}
+        {...slidePan.panHandlers}>
+        <View style={styles.slideContent}>
+          <Text style={[Typography.h2, styles.center, { color: t.text }]}>{slide.title}</Text>
+          <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
+            {slide.description}
+          </Text>
+          {/* 실제 앱 화면 캡처 — 폰 프레임 카드 (#412). 390:844 비율 유지. */}
+          <View
+            style={[styles.captureFrame, { borderColor: t.border, backgroundColor: t.surface }]}>
+            <Image
+              source={slide.image}
+              style={styles.captureImage}
+              contentFit="cover"
+              transition={150}
+              accessibilityLabel={slide.title.replace('\n', ' ')}
+            />
+          </View>
         </View>
-      </View>
+      </ScrollView>
 
       <View style={styles.dots}>
         {SLIDES.map((_, i) => (
@@ -607,15 +624,29 @@ const styles = StyleSheet.create({
   },
   skipRow: {
     height: 44,
+    width: '100%',
+    maxWidth: CONTENT_MAX_W,
+    alignSelf: 'center',
     paddingHorizontal: Spacing.four,
     alignItems: 'flex-end',
     justifyContent: 'center',
   },
-  slideBody: {
+  slideScroll: {
     flex: 1,
+  },
+  // contentContainer — 내용이 짧으면 가운데(flexGrow+center), 넘치면 스크롤.
+  slideBody: {
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: Spacing.five,
+    paddingVertical: Spacing.three,
+  },
+  // 넓은 화면(태블릿) 중앙 고정폭 컬럼 (#725).
+  slideContent: {
+    width: '100%',
+    maxWidth: CONTENT_MAX_W,
+    alignItems: 'center',
     gap: Spacing.three,
   },
   captureFrame: {
@@ -644,6 +675,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
     paddingVertical: Spacing.four,
+    width: '100%',
+    maxWidth: CONTENT_MAX_W,
+    alignSelf: 'center',
   },
   dot: {
     height: 8,
@@ -654,6 +688,9 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.two,
     paddingBottom: Spacing.three,
     gap: Spacing.two,
+    width: '100%',
+    maxWidth: CONTENT_MAX_W,
+    alignSelf: 'center',
   },
   // 닉네임 단계 (#635).
   nicknameBody: {
