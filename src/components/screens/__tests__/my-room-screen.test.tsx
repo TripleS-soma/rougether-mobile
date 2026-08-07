@@ -325,7 +325,7 @@ describe('MyRoomScreen', () => {
     const onAddRoutine = jest.fn();
     const onManageRoutines = jest.fn();
     const onManageCategories = jest.fn();
-    const { getByLabelText, getByText } = await render(
+    const { getByLabelText, getByText, getAllByLabelText } = await render(
       <MyRoomScreen
         routines={SAMPLE_ROUTINES}
         onEdit={onEdit}
@@ -336,8 +336,10 @@ describe('MyRoomScreen', () => {
     );
 
     await fireEvent.press(getByLabelText('메뉴'));
-    // getByLabelText: the bottom 방 꾸미기 button uses a distinct label (열기).
-    await fireEvent.press(getByLabelText('방 꾸미기'));
+    // '방 꾸미기'는 플로팅 버튼(#727)과 메뉴 항목 둘 다 존재 — 메뉴(모달,
+    // 트리상 뒤)의 항목을 집어 메뉴 경로가 살아 있음을 검증한다.
+    const decorItems = getAllByLabelText('방 꾸미기');
+    await fireEvent.press(decorItems[decorItems.length - 1]);
     expect(onEdit).toHaveBeenCalledTimes(1);
 
     // 메뉴의 루틴 관리는 onManageRoutines로 — +의 바로 추가와 분리 (#335).
@@ -381,28 +383,30 @@ describe('MyRoomScreen', () => {
     expect(onAddRoutine).toHaveBeenCalledTimes(1);
   });
 
-  it('puts 알림 inside the hamburger menu, not the header (#257)', async () => {
+  it('알림 벨이 헤더에 1탭으로 노출된다 (#727 — #257 메뉴 합체를 복원)', async () => {
     const onOpenNotifications = jest.fn();
-    const { getByLabelText, queryByLabelText } = await render(
+    const { getByLabelText } = await render(
       <MyRoomScreen
         routines={[]}
         onOpenNotifications={onOpenNotifications}
         unreadNotificationCount={2}
       />,
     );
-
-    // No standalone bell button crowding the header — 알림 appears only after
-    // opening the menu popover.
-    expect(queryByLabelText('알림')).toBeNull();
-    await fireEvent.press(getByLabelText('메뉴'));
+    // 메뉴를 거치지 않고 헤더 벨 바로 — depth 1탭.
     await fireEvent.press(getByLabelText('알림'));
     expect(onOpenNotifications).toHaveBeenCalledTimes(1);
   });
 
-  it('hides the 알림 menu item when unwired', async () => {
-    const { getByLabelText, queryByLabelText } = await render(<MyRoomScreen routines={[]} />);
-    await fireEvent.press(getByLabelText('메뉴'));
+  it('알림 미배선이면 헤더 벨을 숨긴다', async () => {
+    const { queryByLabelText } = await render(<MyRoomScreen routines={[]} />);
     expect(queryByLabelText('알림')).toBeNull();
+  });
+
+  it('방 꾸미기 플로팅 버튼 — 방 위에서 1탭 진입 (#727)', async () => {
+    const onEdit = jest.fn();
+    const { getByLabelText } = await render(<MyRoomScreen routines={[]} onEdit={onEdit} />);
+    await fireEvent.press(getByLabelText('방 꾸미기'));
+    expect(onEdit).toHaveBeenCalledTimes(1);
   });
 
   it('opens the character picker from the hamburger menu and wears a pick (#260)', async () => {

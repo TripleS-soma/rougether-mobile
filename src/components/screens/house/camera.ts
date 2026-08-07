@@ -2,10 +2,6 @@
 // 분리 (#693). 애니메이션·responder 배선은 화면이 갖고, 상수·판정·수학만 둔다.
 
 export const CAM_MAX_SCALE = 3;
-// 방 더블탭 줌 — 창문(폭 35%)이 카메라 뷰포트를 거의 가득 채우는 배율.
-export const CAM_ROOM_SCALE = 2.9;
-// 이 간격 안의 두 번째 탭 = 더블탭(줌). 한 번 탭(방문)은 이만큼 기다렸다 실행.
-export const DOUBLE_TAP_MS = 260;
 // 확대 중 한 손가락 팬 캡처 전 허용 이동량 (#669) — 실기기 탭은 1~2px
 // 지터가 있어, 이동량 조건 없이 캡처하면 방 탭(방문)이 전부 취소된다.
 export const CAM_PAN_SLOP = 8;
