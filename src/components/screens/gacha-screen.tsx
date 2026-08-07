@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -23,6 +24,7 @@ import {
 } from '@/components/screens/gacha/draw-animation';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Icon } from '@/components/ui/icon';
+import { assetSource, isCdnKey } from '@/resources/asset';
 import { RetryState } from '@/components/ui/retry-state';
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { Pictogram } from '@/components/ui/pictograms';
@@ -470,6 +472,21 @@ export function GachaScreen({
                     key={`${r.rewardType}-${r.itemId ?? r.characterId ?? i}`}
                     style={[styles.rewardRow, { backgroundColor: t.surface }]}
                     testID={`reward-row-${r.itemId ?? r.characterId ?? i}`}>
+                    {/* 아이템 썸네일 (#721) — 결과 공개 카드와 같은 패턴: CDN
+                        실아트가 있으면 이미지, 없으면 기프트 폴백. */}
+                    <View style={[styles.rewardThumb, { backgroundColor: t.surfaceMuted }]}>
+                      {isCdnKey(r.assetKey) ? (
+                        <Image
+                          source={assetSource(r.assetKey)}
+                          style={styles.rewardThumbImg}
+                          contentFit="contain"
+                          cachePolicy="memory-disk"
+                          transition={120}
+                        />
+                      ) : (
+                        <Icon name="gift" size={18} color={rarityColor(r.rarity)} />
+                      )}
+                    </View>
                     <Text
                       numberOfLines={1}
                       style={[Typography.body, styles.rewardName, { color: t.text }]}>
@@ -550,6 +567,18 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
+  },
+  rewardThumb: {
+    width: 32,
+    height: 32,
+    borderRadius: Radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  rewardThumbImg: {
+    width: '100%',
+    height: '100%',
   },
   rewardName: {
     flex: 1,
