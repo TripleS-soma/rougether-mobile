@@ -1,10 +1,10 @@
-# main 승격(dev→main 릴리스 PR 머지) 시 스토어 사용자용 production 채널에
-# OTA를 발행한다. 스토어 빌드는 channel=production이라 preview 채널(dev용,
-# eas-deploy.yml)의 업데이트를 받지 않는다 — 이 워크플로가 그 짝이다.
+# main 승격(dev→main 릴리스 PR 머지) 시 실제 배포된 스토어 빌드 채널에 OTA를
+# 발행한다. 현재 iOS 스토어 빌드는 testflight profile의 channel=preview로
+# 생성되었으므로, 새 production 빌드로 교체하기 전까지 이 채널을 사용한다.
 #
 # 의도적으로 OTA 전용: main의 스토어 빌드는 runtimeVersion=appVersion이므로
-# 네이티브 지문이 기준 빌드와 다르면 업데이트를 발행하지 않는다. 기준 지문은
-# 새 production 스토어 빌드를 배포할 때만 갱신한다.
+# 네이티브 지문이 기준 빌드와 다르면 업데이트를 발행하지 않는다. Android는
+# 확인된 스토어 빌드가 없어 이번 OTA 대상에서 제외한다.
 name: eas-release
 on:
   push:
@@ -35,7 +35,9 @@ jobs:
         run: eas env:exec production "node scripts/check-production-ota-safety.js" --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-      - name: Publish production OTA (both platforms)
-        run: eas update --channel production --environment production --non-interactive --auto
+      - name: Publish production OTA to the deployed iOS build channel
+        run: |
+          ota_channel=$(node -p "require('./.eas/production-fingerprints.json').deployedBuilds.ios.channel")
+          eas update --channel "$ota_channel" --platform ios --environment production --non-interactive --auto
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}

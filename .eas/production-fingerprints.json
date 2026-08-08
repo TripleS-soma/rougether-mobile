@@ -1,8 +1,16 @@
 {
-  "sourceCommit": "1f810b92fd8d2dbd0ec96cd3e94f193201fe8a5c",
   "runtimeVersion": "1.2.0",
   "fingerprints": {
     "android": "262cf664ce49d5b2022a99f0a457467dad612810",
     "ios": "adec3844c503ed7f1787017df81e168ba84ff9f3"
+  },
+  "deployedBuilds": {
+    "ios": {
+      "id": "5419bede-93ba-4957-a71d-5703718db1bc",
+      "sourceCommit": "876fa2ff187310044d5d70ac314486c57702a176",
+      "buildProfile": "testflight",
+      "channel": "preview",
+      "createdAt": "2026-07-19T06:51:09.772Z"
+    }
   }
 }

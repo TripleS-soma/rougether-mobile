@@ -45,15 +45,22 @@ function generateFingerprint(platform) {
 }
 
 function validateFingerprints() {
-  for (const platform of ['android', 'ios']) {
+  const deployedPlatforms = Object.keys(baseline.deployedBuilds ?? {});
+  if (deployedPlatforms.length === 0) {
+    throw new Error('No deployed store builds are recorded in the production baseline.');
+  }
+  for (const platform of deployedPlatforms) {
     const expected = baseline.fingerprints[platform];
+    if (!expected) {
+      throw new Error(`No ${platform} fingerprint exists in the production baseline.`);
+    }
     const actual = generateFingerprint(platform);
     console.log(`${platform} fingerprint: ${actual}`);
     if (actual !== expected) {
       throw new Error(
         `${platform} native fingerprint differs from production runtime ${baseline.runtimeVersion} ` +
-          `(source ${baseline.sourceCommit}). Publish a new store build and update the baseline ` +
-          'instead of sending this commit by OTA.',
+          `and deployed build ${baseline.deployedBuilds[platform].id}. Publish a new store build ` +
+          'and update the baseline instead of sending this commit by OTA.',
       );
     }
   }

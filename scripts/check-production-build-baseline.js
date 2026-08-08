@@ -2,73 +2,77 @@
 const { spawnSync } = require('child_process');
 const baseline = require('../.eas/production-fingerprints.json');
 
-function listProductionBuilds(platform) {
+function getBuild(buildId) {
   const command = process.platform === 'win32' ? 'eas.cmd' : 'eas';
-  const result = spawnSync(
-    command,
-    [
-      'build:list',
-      '--platform',
-      platform,
-      '--status',
-      'finished',
-      '--distribution',
-      'store',
-      '--app-version',
-      baseline.runtimeVersion,
-      '--limit',
-      '50',
-      '--json',
-      '--non-interactive',
-    ],
-    { encoding: 'utf8', env: process.env },
-  );
+  const result = spawnSync(command, ['build:view', buildId, '--json'], {
+    encoding: 'utf8',
+    env: process.env,
+  });
 
   if (result.status !== 0) {
-    throw new Error(`Failed to list ${platform} production builds:\n${result.stderr}`);
+    throw new Error(`Failed to read deployed build ${buildId}:\n${result.stderr}`);
   }
 
   return JSON.parse(result.stdout);
 }
 
-function verifyPlatformBuild(platform) {
+function verifyPlatformBuild(platform, expectedBuild) {
   const expectedFingerprint = baseline.fingerprints[platform];
-  const builds = listProductionBuilds(platform);
-  const matchingBuild = builds.find(
-    (build) =>
-      build.fingerprint?.hash === expectedFingerprint &&
-      build.runtimeVersion === baseline.runtimeVersion &&
-      build.gitCommitHash === baseline.sourceCommit &&
-      build.channel === 'production',
-  );
+  if (!expectedFingerprint) {
+    throw new Error(`No ${platform} fingerprint exists in the production baseline.`);
+  }
 
-  if (!matchingBuild) {
-    const available = builds.map((build) => ({
-      id: build.id,
-      fingerprint: build.fingerprint?.hash ?? null,
-      runtimeVersion: build.runtimeVersion,
-      gitCommitHash: build.gitCommitHash,
-      buildProfile: build.buildProfile,
-      channel: build.channel,
-      createdAt: build.createdAt,
-    }));
+  const build = getBuild(expectedBuild.id);
+  const actual = {
+    id: build.id,
+    platform: build.platform?.toLowerCase(),
+    status: build.status?.toLowerCase(),
+    distribution: build.distribution?.toLowerCase(),
+    appVersion: build.appVersion,
+    runtimeVersion: build.runtimeVersion,
+    fingerprint: build.fingerprint?.hash ?? null,
+    sourceCommit: build.gitCommitHash,
+    buildProfile: build.buildProfile,
+    channel: build.channel,
+    createdAt: build.createdAt,
+  };
+  const expected = {
+    id: expectedBuild.id,
+    platform,
+    status: 'finished',
+    distribution: 'store',
+    appVersion: baseline.runtimeVersion,
+    runtimeVersion: baseline.runtimeVersion,
+    fingerprint: expectedFingerprint,
+    sourceCommit: expectedBuild.sourceCommit,
+    buildProfile: expectedBuild.buildProfile,
+    channel: expectedBuild.channel,
+    createdAt: expectedBuild.createdAt,
+  };
+
+  const mismatches = Object.keys(expected).filter((field) => actual[field] !== expected[field]);
+  if (mismatches.length > 0) {
     throw new Error(
-      `No finished ${platform} production build matches source ${baseline.sourceCommit}, ` +
-        `runtime ${baseline.runtimeVersion}, and fingerprint ${expectedFingerprint}. ` +
-        `Available builds: ${JSON.stringify(available)}`,
+      `${platform} deployed build ${expectedBuild.id} differs from its checked-in baseline ` +
+        `(${mismatches.join(', ')}). Expected ${JSON.stringify(expected)}; ` +
+        `received ${JSON.stringify(actual)}.`,
     );
   }
 
   console.log(
-    `${platform} production build ${matchingBuild.id} confirms fingerprint ${expectedFingerprint}.`,
+    `${platform} deployed build ${build.id} confirms source, channel, runtime, and fingerprint.`,
   );
 }
 
 try {
   const failures = [];
-  for (const platform of ['android', 'ios']) {
+  const deployedBuilds = Object.entries(baseline.deployedBuilds ?? {});
+  if (deployedBuilds.length === 0) {
+    throw new Error('No deployed store builds are recorded in the production baseline.');
+  }
+  for (const [platform, expectedBuild] of deployedBuilds) {
     try {
-      verifyPlatformBuild(platform);
+      verifyPlatformBuild(platform, expectedBuild);
     } catch (error) {
       failures.push(error instanceof Error ? error.message : String(error));
     }
