@@ -14,8 +14,6 @@ function listProductionBuilds(platform) {
       'finished',
       '--distribution',
       'store',
-      '--build-profile',
-      'production',
       '--app-version',
       baseline.runtimeVersion,
       '--limit',
@@ -40,7 +38,8 @@ function verifyPlatformBuild(platform) {
     (build) =>
       build.fingerprint?.hash === expectedFingerprint &&
       build.runtimeVersion === baseline.runtimeVersion &&
-      build.gitCommitHash === baseline.sourceCommit,
+      build.gitCommitHash === baseline.sourceCommit &&
+      build.channel === 'production',
   );
 
   if (!matchingBuild) {
@@ -49,6 +48,8 @@ function verifyPlatformBuild(platform) {
       fingerprint: build.fingerprint?.hash ?? null,
       runtimeVersion: build.runtimeVersion,
       gitCommitHash: build.gitCommitHash,
+      buildProfile: build.buildProfile,
+      channel: build.channel,
       createdAt: build.createdAt,
     }));
     throw new Error(
@@ -64,8 +65,16 @@ function verifyPlatformBuild(platform) {
 }
 
 try {
+  const failures = [];
   for (const platform of ['android', 'ios']) {
-    verifyPlatformBuild(platform);
+    try {
+      verifyPlatformBuild(platform);
+    } catch (error) {
+      failures.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+  if (failures.length > 0) {
+    throw new Error(failures.join('\n'));
   }
   console.log(`Production build baseline is confirmed for runtime ${baseline.runtimeVersion}.`);
 } catch (error) {
