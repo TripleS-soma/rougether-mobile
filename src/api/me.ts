@@ -6,6 +6,7 @@ import type {
   MemberUpdateRequest,
   MyCharacterItem,
   MyItemSummary,
+  WalletHistoryListResponse,
   WalletResponse,
 } from './types';
 
@@ -25,6 +26,14 @@ export function fetchMe() {
 /** GET /me/wallets — the user's currency balances (coin / diamond). */
 export function fetchWallets() {
   return apiGetList<WalletResponse>('/me/wallets');
+}
+
+/**
+ * GET /me/wallets/histories — 재화 증감 이력, 최신순 페이지 (#734).
+ * 완료 취소 시 해당 적립 이력은 서버에서 삭제되어 목록에서 사라진다.
+ */
+export function fetchWalletHistories(page: number, size = 20) {
+  return apiGet<WalletHistoryListResponse>(`/me/wallets/histories?page=${page}&size=${size}`);
 }
 
 /** GET /me/items — owned-item inventory (userItemId ↔ itemId, for room placement). */

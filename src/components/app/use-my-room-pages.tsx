@@ -19,6 +19,7 @@ import { type Routine } from '@/constants/routines';
 import type { useMyRoomData } from '@/hooks/use-my-room-data';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useRoutineOrder } from '@/hooks/use-routine-order';
+import { useWalletHistory } from '@/hooks/use-wallet-history';
 import { track } from '@/lib/analytics';
 import { onNotificationTap } from '@/lib/push-events';
 import type { ShopCatalogue } from '@/api/adapters';
@@ -135,6 +136,9 @@ export function useMyRoomPages({
     reorderCategories,
   } = data;
   const { toggleWithMissionGuard, houseCategoryIds, addRoutineWithMission } = missionLinks;
+
+  // 재화 증감 이력 (#734) — 지갑 필 탭 시트. 시트가 열릴 때 load.
+  const walletHistory = useWalletHistory();
 
   // 루틴 수동 순서 (#716) — 기기 로컬 보관, 방 '오늘' 리스트에 적용.
   const { order: routineOrder, reorder: reorderRoutines } = useRoutineOrder();
@@ -293,6 +297,12 @@ export function useMyRoomPages({
     routineOrder,
     onReorderRoutines: reorderRoutines,
     onMoveRoutineCategory: moveRoutineCategory,
+    walletHistory: walletHistory.entries,
+    walletHistoryLoading: walletHistory.loading,
+    walletHistoryError: walletHistory.error,
+    walletHistoryHasNext: walletHistory.hasNext,
+    onLoadWalletHistory: walletHistory.load,
+    onLoadMoreWalletHistory: walletHistory.loadMore,
   };
 
   /** 현재 화면이 나의 방 서브화면 4종이면 그 JSX, 아니면 null — 셸이 그대로 렌더. */

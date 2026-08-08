@@ -92,6 +92,7 @@ import type {
   TodoCreateRequest,
   TodoResponse,
   TodoUpdateRequest,
+  WalletHistoryResponse,
 } from './types';
 
 // Weekday code by app day number (0 = Sunday … 6 = Saturday).
@@ -399,6 +400,43 @@ export function todayCompletions(today: TodayResponse, date: string): Record<str
 // Accepts both WalletResponse (from /me/wallets) and WalletSummary (embedded in
 // purchase/draw responses) — they share this shape.
 type WalletLike = { currencyType?: 'COIN' | 'DIAMOND'; balance?: number };
+
+/** 재화 이력 사유 → 표시 라벨 (#734, 스웨거 enum 7종). */
+const WALLET_REASON_LABELS: Record<string, string> = {
+  ROUTINE_COMPLETE: '루틴 완료',
+  TODO_COMPLETE: '할 일 완료',
+  SIGNUP_BONUS: '가입 보너스',
+  GACHA_DUPLICATE_CONVERT: '뽑기 중복 전환',
+  INVITE_REWARD: '친구 초대 보상',
+  GACHA_DRAW: '뽑기',
+  SHOP_PURCHASE: '상점 구매',
+};
+
+/** 지갑 내역 행 표시 모델 (#734). */
+export type WalletHistoryEntry = {
+  id: number;
+  currency: 'coin' | 'diamond';
+  /** 적립 양수 / 사용 음수 — 서버 부호 그대로. */
+  amount: number;
+  /** 사유 한국어 라벨 (미지의 enum은 원문 폴백). */
+  reason: string;
+  /** 증감 직후 잔액. */
+  balanceAfter: number;
+  /** ISO 시각 — 표시 포맷은 화면 몫. */
+  createdAt?: string;
+};
+
+export function toWalletHistoryEntry(h: WalletHistoryResponse): WalletHistoryEntry | null {
+  if (h.id == null || h.amount == null) return null;
+  return {
+    id: h.id,
+    currency: h.currencyType === 'DIAMOND' ? 'diamond' : 'coin',
+    amount: h.amount,
+    reason: (h.reason && WALLET_REASON_LABELS[h.reason]) || h.reason || '기타',
+    balanceAfter: h.balanceAfter ?? 0,
+    createdAt: h.createdAt,
+  };
+}
 
 export function toWallet(list: WalletLike[]): Wallet {
   let coin = 0;

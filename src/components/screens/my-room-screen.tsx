@@ -28,7 +28,9 @@ import {
   resolveDrop,
 } from '@/components/screens/my-room/routine-drag';
 import { applyRoutineOrder } from '@/hooks/use-routine-order';
+import type { WalletHistoryEntry } from '@/api/adapters';
 import { SwipeDeleteRow } from '@/components/screens/my-room/swipe-delete-row';
+import { WalletHistorySheet } from '@/components/screens/sheets/wallet-history-sheet';
 import { useWidgetRoomCapture } from '@/components/screens/my-room/use-widget-room-capture';
 import { Room, type RoomSceneProps } from '@/components/room/room';
 import {
@@ -195,6 +197,13 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> & {
   onReorderRoutines?: (categoryId: string, orderedRoutineIds: string[]) => void;
   /** 다른 카테고리로 드롭 = 영구 이동 (#716) — 서버 categoryId 변경. */
   onMoveRoutineCategory?: (id: string, toCategoryId: string) => void;
+  /** 재화 내역 (#734) — 지갑 필 탭 → 시트. 열 때마다 onLoadWalletHistory로 재로드. */
+  walletHistory?: WalletHistoryEntry[];
+  walletHistoryLoading?: boolean;
+  walletHistoryError?: boolean;
+  walletHistoryHasNext?: boolean;
+  onLoadWalletHistory?: () => void;
+  onLoadMoreWalletHistory?: () => void;
 };
 
 /**
@@ -269,6 +278,12 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   routineOrder,
   onReorderRoutines,
   onMoveRoutineCategory,
+  walletHistory,
+  walletHistoryLoading = false,
+  walletHistoryError = false,
+  walletHistoryHasNext = false,
+  onLoadWalletHistory,
+  onLoadMoreWalletHistory,
 }: MyRoomScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
@@ -382,6 +397,14 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   const [navMenuTop, setNavMenuTop] = useState(104);
   const menuBtnRef = useRef<View>(null);
   const [characterSheetOpen, setCharacterSheetOpen] = useState(false);
+  // 재화 내역 시트 (#734) — 열 때마다 1페이지 재로드(완료 취소로 이력이 지워질 수 있음).
+  const [walletHistoryOpen, setWalletHistoryOpen] = useState(false);
+  const openWalletHistory = onLoadWalletHistory
+    ? () => {
+        setWalletHistoryOpen(true);
+        onLoadWalletHistory();
+      }
+    : undefined;
 
   const openNavMenu = () => {
     setNavMenuOpen(true);
@@ -1055,7 +1078,11 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             ref={walletRef}
             onLayout={measureWallet}
             style={{ transform: [{ scale: walletPulse }] }}>
-            <WalletPills coin={coinBalance} diamond={diamondBalance} />
+            <WalletPills
+              coin={coinBalance}
+              diamond={diamondBalance}
+              onOpenHistory={openWalletHistory}
+            />
           </Animated.View>
           {/* 알림 벨 복원 (#727) — #257에서 메뉴로 합쳤던 것을 1탭으로 승격.
               제목은 축소·중간 말줄임 로직이 있어 좁은 폭도 견딘다. */}
@@ -1381,6 +1408,17 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         characters={ownedCharacters ?? []}
         onSelect={(serverId) => onSelectCharacter?.(serverId)}
         onClose={() => setCharacterSheetOpen(false)}
+      />
+
+      <WalletHistorySheet
+        visible={walletHistoryOpen}
+        onClose={() => setWalletHistoryOpen(false)}
+        entries={walletHistory ?? []}
+        loading={walletHistoryLoading}
+        loadError={walletHistoryError}
+        onRetry={onLoadWalletHistory}
+        hasNext={walletHistoryHasNext}
+        onLoadMore={onLoadMoreWalletHistory}
       />
 
       <TimePickerSheet

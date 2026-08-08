@@ -13,6 +13,11 @@ export type WalletPillsProps = {
    * 다이아는 뽑기 상점·꾸미기 진입 시 전체 필에서 보인다.
    */
   compact?: boolean;
+  /**
+   * 재화 내역 열기 (#734) — 배선되면 필 탭이 내역 시트를 연다. 내역엔 정확한
+   * 잔액이 그대로 보이므로 기존 9999+ 캡 공개 탭은 이 경로로 흡수된다.
+   */
+  onOpenHistory?: () => void;
 };
 
 /** Balances above four digits render capped ("9999+"); a tap reveals the truth. */
@@ -73,12 +78,14 @@ function Pill({
   label,
   value,
   compact,
+  onOpenHistory,
 }: {
   icon: IconName;
   color: string;
   label: string;
   value: number;
   compact?: boolean;
+  onOpenHistory?: () => void;
 }) {
   const t = useTokens();
   const Typography = useTypography();
@@ -90,8 +97,8 @@ function Pill({
   const shown = overCap && !revealed ? `${CAP}+` : rolled.toLocaleString();
   return (
     <Pressable
-      onPress={() => setRevealed((v) => !v)}
-      disabled={!overCap}
+      onPress={onOpenHistory ?? (() => setRevealed((v) => !v))}
+      disabled={!onOpenHistory && !overCap}
       accessibilityRole="button"
       // Screen readers always get the real balance — the cap is visual only.
       accessibilityLabel={`${label} ${safeValue}`}
@@ -105,12 +112,27 @@ function Pill({
 }
 
 /** Coin + diamond balance chips, shown in currency-spending screens (가챠 / 꾸미기). */
-export function WalletPills({ coin, diamond, compact = false }: WalletPillsProps) {
+export function WalletPills({ coin, diamond, compact = false, onOpenHistory }: WalletPillsProps) {
   const t = useTokens();
   return (
     <View style={styles.row}>
-      <Pill icon="coin" color={t.warning} label="코인" value={coin} compact={compact} />
-      {compact ? null : <Pill icon="diamond" color={t.primary} label="다이아" value={diamond} />}
+      <Pill
+        icon="coin"
+        color={t.warning}
+        label="코인"
+        value={coin}
+        compact={compact}
+        onOpenHistory={onOpenHistory}
+      />
+      {compact ? null : (
+        <Pill
+          icon="diamond"
+          color={t.primary}
+          label="다이아"
+          value={diamond}
+          onOpenHistory={onOpenHistory}
+        />
+      )}
     </View>
   );
 }
