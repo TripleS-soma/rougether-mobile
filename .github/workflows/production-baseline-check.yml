@@ -7,6 +7,7 @@ on:
       - .github/workflows/production-baseline-check.yml
       - scripts/check-production-build-baseline.js
       - scripts/check-production-ota-safety.js
+      - scripts/list-production-ota-targets.js
       - src/config/shared-endpoints.json
       - app.json
       - eas.json

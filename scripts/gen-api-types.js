@@ -24,14 +24,17 @@ function tsType(v, includeNull = true) {
       [...(v.oneOf || []), ...(v.anyOf || [])].some((part) => part.type === 'null'));
   const variants = [...(v.oneOf || []), ...(v.anyOf || [])].filter((part) => part.type !== 'null');
   const value = variants.length === 1 ? variants[0] : v;
-  const type = Array.isArray(value.type)
-    ? value.type.find((entry) => entry !== 'null')
-    : value.type;
+  const types = Array.isArray(value.type) ? value.type.filter((entry) => entry !== 'null') : null;
+  const type = types ? types[0] : value.type;
 
   let result;
   if (value.$ref) result = value.$ref.split('/').pop();
   else if (value.allOf && value.allOf.length) result = tsType(value.allOf[0], false);
   else if (value.enum) result = value.enum.map((e) => JSON.stringify(e)).join(' | ');
+  else if (types && types.length > 1)
+    result = [...new Set(types.map((entry) => tsType({ ...value, type: entry }, false)))].join(
+      ' | ',
+    );
   else
     switch (type) {
       case 'string':

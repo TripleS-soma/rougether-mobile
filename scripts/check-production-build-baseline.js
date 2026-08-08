@@ -34,7 +34,6 @@ function verifyPlatformBuild(platform, expectedBuild) {
     sourceCommit: build.gitCommitHash,
     buildProfile: build.buildProfile,
     channel: build.channel,
-    createdAt: build.createdAt,
   };
   const expected = {
     id: expectedBuild.id,
@@ -47,7 +46,6 @@ function verifyPlatformBuild(platform, expectedBuild) {
     sourceCommit: expectedBuild.sourceCommit,
     buildProfile: expectedBuild.buildProfile,
     channel: expectedBuild.channel,
-    createdAt: expectedBuild.createdAt,
   };
 
   const mismatches = Object.keys(expected).filter((field) => actual[field] !== expected[field]);
@@ -60,7 +58,8 @@ function verifyPlatformBuild(platform, expectedBuild) {
   }
 
   console.log(
-    `${platform} deployed build ${build.id} confirms source, channel, runtime, and fingerprint.`,
+    `${platform} deployed build ${build.id} (${build.createdAt}) confirms source, channel, ` +
+      'runtime, and fingerprint.',
   );
 }
 

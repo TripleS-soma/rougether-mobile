@@ -35,9 +35,12 @@ jobs:
         run: eas env:exec production "node scripts/check-production-ota-safety.js" --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-      - name: Publish production OTA to the deployed iOS build channel
+      - name: Publish production OTA to each deployed build channel
         run: |
-          ota_channel=$(node -p "require('./.eas/production-fingerprints.json').deployedBuilds.ios.channel")
-          eas update --channel "$ota_channel" --platform ios --environment production --non-interactive --auto
+          set -o pipefail
+          node scripts/list-production-ota-targets.js |
+            while IFS=$'\t' read -r ota_platform ota_channel; do
+              eas update --channel "$ota_channel" --platform "$ota_platform" --environment production --non-interactive --auto
+            done
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
