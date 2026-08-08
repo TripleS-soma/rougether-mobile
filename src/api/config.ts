@@ -1,12 +1,15 @@
+import sharedEndpoints from '@/config/shared-endpoints.json';
+
 /**
  * API base URL. Source of truth is the `EXPO_PUBLIC_API_URL` env var (.env for
- * dev/preview, EAS environment for store builds), inlined at bundle time. The
- * fallback keeps env-less runs (Jest) on the shared dev server. Includes the
- * `/api/v1` prefix so callers pass bare paths like `/routines`.
+ * dev/preview, EAS environment for store builds), inlined at bundle time. 전용
+ * production 인프라가 생기기 전까지는 dev/preview/production이 같은 AWS 공용
+ * 환경을 쓴다 — 폴백은 그 공용 주소의 단일 출처(shared-endpoints.json, #738).
+ * Includes the `/api/v1` prefix so callers pass bare paths like `/routines`.
  */
-const FALLBACK_DEV_API_URL = 'https://dkfiwkal2ezg9.cloudfront.net/api/v1';
+const FALLBACK_SHARED_API_URL = sharedEndpoints.apiBase;
 
-export const API_BASE = (process.env.EXPO_PUBLIC_API_URL ?? FALLBACK_DEV_API_URL).replace(
+export const API_BASE = (process.env.EXPO_PUBLIC_API_URL ?? FALLBACK_SHARED_API_URL).replace(
   /\/+$/,
   '',
 );
