@@ -16,7 +16,7 @@ function normalizeUrl(value) {
 function validateEndpointEnvironment() {
   for (const [name, expected] of Object.entries(expectedEndpoints)) {
     const configured = process.env[name];
-    if (!configured) {
+    if (configured === undefined) {
       console.log(`${name} is not configured; the verified shared fallback will be used.`);
       continue;
     }
