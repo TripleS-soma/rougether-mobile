@@ -402,6 +402,24 @@ describe('MyRoomScreen', () => {
     expect(queryByLabelText('알림')).toBeNull();
   });
 
+  it('지갑 필 탭 → 재화 내역 시트 + 1페이지 로드 (#734)', async () => {
+    const onLoadWalletHistory = jest.fn();
+    const { getByLabelText, getByText } = await render(
+      <MyRoomScreen
+        routines={[]}
+        coinBalance={120}
+        onLoadWalletHistory={onLoadWalletHistory}
+        walletHistory={[
+          { id: 1, currency: 'coin', amount: 10, reason: '루틴 완료', balanceAfter: 130 },
+        ]}
+      />,
+    );
+    await fireEvent.press(getByLabelText('코인 120'));
+    expect(onLoadWalletHistory).toHaveBeenCalledTimes(1);
+    expect(getByText('재화 내역')).toBeTruthy();
+    expect(getByText('루틴 완료')).toBeTruthy();
+  });
+
   it('방 꾸미기 플로팅 버튼 — 방 위에서 1탭 진입 (#727)', async () => {
     const onEdit = jest.fn();
     const { getByLabelText } = await render(<MyRoomScreen routines={[]} onEdit={onEdit} />);

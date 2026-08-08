@@ -43,6 +43,7 @@ import { Card } from '@/components/ui/card';
 import { IconButton } from '@/components/ui/icon-button';
 import { Pill } from '@/components/ui/pill';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { WalletHistorySheet } from '@/components/screens/sheets/wallet-history-sheet';
 import { SpringProgressBar } from '@/components/ui/spring-progress';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { MissionBanner } from '@/components/ui/mission-banner';
@@ -72,6 +73,31 @@ export type GalleryEntry = {
  * component in isolation on device / simulator / web without wiring it into a
  * real screen first. Add an entry whenever you build a new component.
  */
+/** 재화 내역 시트 데모 (#734). */
+function WalletHistorySheetDemo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <View>
+      <ScalePressable
+        accessibilityRole="button"
+        onPress={() => setOpen(true)}
+        style={{ alignSelf: 'center', padding: 8 }}>
+        <Text>재화 내역 열기</Text>
+      </ScalePressable>
+      <WalletHistorySheet
+        visible={open}
+        onClose={() => setOpen(false)}
+        entries={[
+          { id: 1, currency: 'coin', amount: 10, reason: '루틴 완료', balanceAfter: 130, createdAt: new Date().toISOString() }, // prettier-ignore
+          { id: 2, currency: 'coin', amount: -100, reason: '뽑기', balanceAfter: 120, createdAt: new Date(Date.now() - 3600e3).toISOString() }, // prettier-ignore
+          { id: 3, currency: 'diamond', amount: 5, reason: '뽑기 중복 전환', balanceAfter: 25, createdAt: new Date(Date.now() - 86400e3).toISOString() }, // prettier-ignore
+        ]}
+        hasNext
+      />
+    </View>
+  );
+}
+
 /** 진행 바 데모 (#696) — 버튼으로 진행률을 올려 스프링·플래시를 확인한다. */
 function SpringProgressDemo() {
   const [progress, setProgress] = useState(0.4);
@@ -207,6 +233,11 @@ export const galleryEntries: GalleryEntry[] = [
         <CoinIcon size={12} />
       </View>
     ),
+  },
+  {
+    name: 'WalletHistorySheet · 재화 내역',
+    description: '지갑 필 탭 → 재화 증감 이력 시트 (#734) — 적립 +/사용 −, 직후 잔액, 더보기.',
+    render: () => <WalletHistorySheetDemo />,
   },
   {
     name: 'SpringProgressBar · 스프링 진행 바',

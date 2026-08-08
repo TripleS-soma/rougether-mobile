@@ -1,6 +1,6 @@
 /**
  * TypeScript types generated from the Rougether User API v1 OpenAPI spec
- * (https://dkfiwkal2ezg9.cloudfront.net/v3/api-docs). Regenerate with `npm run gen:api-types`. Do not edit by hand.
+ * (https://d12w5t2ftuhgj8.cloudfront.net/v3/api-docs). Regenerate with `npm run gen:api-types`. Do not edit by hand.
  */
 
 export type AccessoryRenderProfileResponse = {
@@ -96,11 +96,19 @@ export type CharacterItem = {
   name?: string;
   baseAssetKey?: string;
   animations?: CharacterAnimations;
+  poses?: CharacterPoseResponse[];
   sortOrder?: number;
 };
 
 export type CharacterListResponse = {
   items?: CharacterItem[];
+};
+
+export type CharacterPoseResponse = {
+  id?: number;
+  code?: string;
+  assetKey?: string;
+  sortOrder?: number;
 };
 
 export type CharacterSelectRequest = {
@@ -583,6 +591,7 @@ export type MyCharacterItem = {
   name?: string;
   baseAssetKey?: string;
   animations?: CharacterAnimations;
+  poses?: CharacterPoseResponse[];
   selected?: boolean;
   accessories?: EquippedAccessoryResponse[];
   acquiredAt?: string;
@@ -904,7 +913,8 @@ export type RoutineUpdateRequest = {
   scheduledTime?: string | null;
   startsOn?: string;
   endsOn?: string | null;
-  houseMissionId?: number;
+  // Manual patch: 미연동은 null (스펙 nullable 미표기). Restore after gen.
+  houseMissionId?: number | null;
 };
 
 export type SlotAssignment = {
@@ -949,8 +959,7 @@ export type TodayRoutineItem = {
   scheduledTime?: string;
   authType?: 'CHECK' | 'PHOTO';
   completed?: boolean;
-  // Manual patch: 미연동은 null (스펙 nullable 미표기). Restore after gen.
-  houseMissionId?: number | null;
+  houseMissionId?: number;
 };
 
 export type TodayStreak = {
@@ -1026,6 +1035,29 @@ export type TransferOwnershipResponse = {
   houseId?: number;
   newOwnerMembershipId?: number;
   newOwnerUserId?: number;
+};
+
+export type WalletHistoryListResponse = {
+  items?: WalletHistoryResponse[];
+  page?: number;
+  size?: number;
+  totalElements?: number;
+};
+
+export type WalletHistoryResponse = {
+  id?: number;
+  currencyType?: 'COIN' | 'DIAMOND';
+  amount?: number;
+  reason?:
+    | 'ROUTINE_COMPLETE'
+    | 'TODO_COMPLETE'
+    | 'SIGNUP_BONUS'
+    | 'GACHA_DUPLICATE_CONVERT'
+    | 'INVITE_REWARD'
+    | 'GACHA_DRAW'
+    | 'SHOP_PURCHASE';
+  balanceAfter?: number;
+  createdAt?: string;
 };
 
 export type WalletListResponse = {
