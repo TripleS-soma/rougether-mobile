@@ -1,0 +1,38 @@
+name: production-baseline-check
+on:
+  pull_request:
+    paths:
+      - .eas/**
+      - .github/workflows/eas-release.yml
+      - .github/workflows/production-baseline-check.yml
+      - scripts/check-production-build-baseline.js
+      - scripts/check-production-ota-safety.js
+      - src/config/shared-endpoints.json
+      - app.json
+      - eas.json
+      - package.json
+      - package-lock.json
+  workflow_dispatch:
+
+jobs:
+  production-baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: production-baseline-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Verify baseline against finished production builds
+        run: node scripts/check-production-build-baseline.js
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}

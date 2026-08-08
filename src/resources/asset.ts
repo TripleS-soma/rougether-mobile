@@ -1,3 +1,5 @@
+import sharedEndpoints from '@/config/shared-endpoints.json';
+
 /**
  * Resource (image) layer. Item/character art lives in private S3 and is served by
  * CloudFront. The API stores only object keys such as
@@ -9,7 +11,7 @@
  * (`furniture/bed` 등) have no CDN art — check with isCdnKey() before rendering
  * an <Image> and fall back to the in-app placeholder.
  */
-const FALLBACK_SHARED_ASSET_URL = 'https://d1eazfl0tw7r0v.cloudfront.net';
+const FALLBACK_SHARED_ASSET_URL = sharedEndpoints.assetBase;
 
 /** Overridable per environment (`EXPO_PUBLIC_ASSET_URL`, inlined at bundle time). */
 export const RESOURCE_BASE = (

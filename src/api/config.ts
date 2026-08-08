@@ -1,3 +1,5 @@
+import sharedEndpoints from '@/config/shared-endpoints.json';
+
 /**
  * API base URL. Source of truth is the `EXPO_PUBLIC_API_URL` env var (EAS
  * environment for store updates), inlined at bundle time. Until production has
@@ -5,7 +7,7 @@
  * dev/preview and production. Includes `/api/v1` so callers pass bare paths
  * such as `/routines`.
  */
-const FALLBACK_SHARED_API_URL = 'https://dkfiwkal2ezg9.cloudfront.net/api/v1';
+const FALLBACK_SHARED_API_URL = sharedEndpoints.apiBase;
 
 export const API_BASE = (process.env.EXPO_PUBLIC_API_URL ?? FALLBACK_SHARED_API_URL).replace(
   /\/+$/,

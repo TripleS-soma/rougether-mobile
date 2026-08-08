@@ -27,8 +27,12 @@ jobs:
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
+      - name: Verify baseline against finished production builds
+        run: node scripts/check-production-build-baseline.js
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       - name: Verify production OTA fingerprint and endpoint environment
-        run: eas env:exec production "node scripts/check-production-ota-safety.js"
+        run: eas env:exec production "node scripts/check-production-ota-safety.js" --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       - name: Publish production OTA (both platforms)

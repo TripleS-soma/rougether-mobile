@@ -1,10 +1,12 @@
 /* eslint-disable */
 const { spawnSync } = require('child_process');
+const app = require('../app.json');
 const baseline = require('../.eas/production-fingerprints.json');
+const sharedEndpoints = require('../src/config/shared-endpoints.json');
 
 const expectedEndpoints = {
-  EXPO_PUBLIC_API_URL: 'https://dkfiwkal2ezg9.cloudfront.net/api/v1',
-  EXPO_PUBLIC_ASSET_URL: 'https://d1eazfl0tw7r0v.cloudfront.net',
+  EXPO_PUBLIC_API_URL: sharedEndpoints.apiBase,
+  EXPO_PUBLIC_ASSET_URL: sharedEndpoints.assetBase,
 };
 
 function normalizeUrl(value) {
@@ -57,10 +59,29 @@ function validateFingerprints() {
   }
 }
 
+function validateRuntimeVersion() {
+  const policy = app.expo.runtimeVersion?.policy;
+  if (policy !== 'appVersion') {
+    throw new Error(
+      `Expected runtimeVersion.policy to be appVersion, but found ${policy ?? 'no policy'}. ` +
+        'Update the production OTA safety model before publishing.',
+    );
+  }
+
+  if (app.expo.version !== baseline.runtimeVersion) {
+    throw new Error(
+      `app.json version ${app.expo.version} differs from the production baseline runtime ` +
+        `${baseline.runtimeVersion}. Publish a new store build and regenerate ` +
+        '.eas/production-fingerprints.json before sending an OTA.',
+    );
+  }
+}
+
 try {
+  validateRuntimeVersion();
   validateEndpointEnvironment();
   validateFingerprints();
-  console.log(`Production OTA safety check passed for runtime ${baseline.runtimeVersion}.`);
+  console.log(`Production OTA safety check passed for runtime ${app.expo.version}.`);
 } catch (error) {
   console.error(error instanceof Error ? error.message : error);
   process.exit(1);
