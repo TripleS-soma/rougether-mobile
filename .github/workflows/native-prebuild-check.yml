@@ -13,6 +13,9 @@ jobs:
     if: contains(github.event.pull_request.labels.*.name, 'native-build')
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    concurrency:
+      group: prebuild-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

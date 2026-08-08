@@ -2,9 +2,9 @@
 # OTA를 발행한다. 스토어 빌드는 channel=production이라 preview 채널(dev용,
 # eas-deploy.yml)의 업데이트를 받지 않는다 — 이 워크플로가 그 짝이다.
 #
-# 의도적으로 OTA 전용: 네이티브 변경의 production 빌드는 수동 릴리스 절차로
-# 돌린다(스토어 제출 타이밍·쿼터를 사람이 제어). 지문이 바뀐 커밋이면
-# eas update가 새 런타임 레인에 발행될 뿐 기존 설치엔 무해하다.
+# 의도적으로 OTA 전용: main의 스토어 빌드는 runtimeVersion=appVersion이므로
+# 네이티브 지문이 기준 빌드와 다르면 업데이트를 발행하지 않는다. 기준 지문은
+# 새 production 스토어 빌드를 배포할 때만 갱신한다.
 name: eas-release
 on:
   push:
@@ -27,7 +27,11 @@ jobs:
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
+      - name: Verify production OTA fingerprint and endpoint environment
+        run: eas env:exec production "node scripts/check-production-ota-safety.js"
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       - name: Publish production OTA (both platforms)
-        run: eas update --branch production --non-interactive --auto
+        run: eas update --channel production --environment production --non-interactive --auto
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
