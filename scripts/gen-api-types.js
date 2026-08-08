@@ -9,7 +9,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const SPEC_URL = process.argv[2] || 'https://dkfiwkal2ezg9.cloudfront.net/v3/api-docs';
+// 스펙 주소도 공용 환경 단일 출처를 따른다 (#738).
+const SPEC_URL = process.argv[2] || require('../src/config/shared-endpoints.json').openApiSpec;
 const OUT = process.argv[3]
   ? path.resolve(process.argv[3])
   : path.join(__dirname, '..', 'src', 'api', 'types.ts');
