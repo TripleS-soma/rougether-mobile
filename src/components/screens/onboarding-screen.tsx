@@ -28,8 +28,9 @@ import { useTokens, useTypography } from '@/hooks/use-tokens';
 type Slide = { image: number; title: string; description: string };
 
 /**
- * 인트로 5장 (#412, design-sync A안): 비주얼은 계정 4로 촬영한 실제 앱 화면
- * 캡처(라이트, 390×844 → 560px 최적화). UI가 크게 바뀌면 재촬영해 교체한다.
+ * 인트로 5장 (#412, design-sync A안): 비주얼은 실제 앱 화면 캡처(라이트,
+ * 1080×2192 → 표시 3배수인 689px로 축소·팔레트 압축, #746). UI가 크게 바뀌면
+ * 재촬영해 교체한다 — 캡처 비율이 바뀌면 styles.captureFrame도 함께.
  */
 const SLIDES: Slide[] = [
   {
@@ -40,7 +41,7 @@ const SLIDES: Slide[] = [
   {
     image: require('@/assets/images/onboarding/routines.png'),
     title: '오늘의 루틴을\n곰 체크로 완료해요',
-    description: '카테고리로 모아 보고, 알림·사진 인증까지',
+    description: '카테고리로 모아 보고, 알림·반복 설정까지',
   },
   {
     image: require('@/assets/images/onboarding/decor.png'),
@@ -650,9 +651,11 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   captureFrame: {
-    // 캡처 원본(390×844) 비율의 폰 프레임 카드 — 세로 공간에 맞춰 줄어든다.
+    // 캡처 원본(1080×2192) 비율의 폰 프레임 카드 — 세로 공간에 맞춰 줄어든다.
+    // 비율이 어긋나면 contentFit="cover"가 화면 가장자리를 잘라내므로 원본과
+    // 같은 값을 쓴다 (#746).
     width: 210,
-    aspectRatio: 390 / 844,
+    aspectRatio: 1080 / 2192,
     maxHeight: 460,
     borderRadius: Radius.lg,
     borderWidth: 1,
