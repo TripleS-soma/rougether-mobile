@@ -73,6 +73,12 @@ export function useAppNavigation({
   edgeBackEnabledRef.current = Platform.OS === 'ios' && TAB_FOR_SCREEN[screen] == null;
   const goBackRef = useRef(goBack);
   goBackRef.current = goBack;
+  // 이 터치가 엣지 백 자격을 갖췄는지 (#740) — onTouchesDown의 mgr.fail()은
+  // runOnJS라 UI 스레드 활성화와 경쟁한다(JS가 바쁘면 늦게 도착). fail이 져도
+  // 백이 나가지 않도록, 자격을 ref에 기록해 커밋 시점(onEnd)에 다시 본다.
+  // 이 가드가 없을 때: 설정 탭에서 우향 스와이프 → 페이저(집)가 아니라
+  // backTargetFor('settings')='myRoom'으로 튀어 집을 건너뛰었다.
+  const edgeStartOkRef = useRef(false);
   const edgeBackPan = useRef(
     Gesture.Pan()
       .withTestId('edge-back-pan')
@@ -83,11 +89,18 @@ export function useAppNavigation({
       .failOffsetY([-24, 24])
       .onTouchesDown((e, mgr) => {
         const x = e.allTouches[0]?.x ?? Number.MAX_VALUE;
-        if (!edgeBackEnabledRef.current || x > EDGE_BACK_WIDTH) mgr.fail();
+        const ok = edgeBackEnabledRef.current && x <= EDGE_BACK_WIDTH;
+        edgeStartOkRef.current = ok;
+        if (!ok) mgr.fail();
       })
       .onEnd((e) => {
+        // 자격 재확인 — 탭 루트(방·집·설정)에서는 절대 백이 나가지 않는다.
+        if (!edgeStartOkRef.current || !edgeBackEnabledRef.current) return;
         if (e.translationX > EDGE_BACK_DISTANCE || e.velocityX > EDGE_BACK_VELOCITY)
           goBackRef.current();
+      })
+      .onFinalize(() => {
+        edgeStartOkRef.current = false;
       }),
   ).current;
 
