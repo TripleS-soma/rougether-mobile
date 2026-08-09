@@ -364,10 +364,19 @@ export function GachaScreen({
                       {label}
                     </Text>
                     <View style={styles.costRow}>
+                      {/* 코인은 지갑 필과 같은 골드로 고정 (#742) — 활성/비활성
+                          공통. 화폐 정체성은 색이 절반이라 버튼 틴트를 따르지
+                          않는다. 다이아는 primary 버튼 배경과 겹쳐 보류. */}
                       <Icon
                         name={box.costCurrencyType === 'COIN' ? 'coin' : 'diamond'}
                         size={12}
-                        color={affordable ? t.onPrimary : t.textMuted}
+                        color={
+                          box.costCurrencyType === 'COIN'
+                            ? t.warning
+                            : affordable
+                              ? t.onPrimary
+                              : t.textMuted
+                        }
                       />
                       <Text
                         style={[
