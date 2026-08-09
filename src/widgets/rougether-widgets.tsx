@@ -20,9 +20,22 @@ import {
 } from 'react-native-android-widget';
 
 import { DarkThemes, Themes } from '@/constants/theme';
-import { loadWidgetRoomImage, loadWidgetSummary, type WidgetSummary } from '@/widgets/widget-data';
+import {
+  loadWidgetRoomImage,
+  loadWidgetSummary,
+  loadWidgetTheme,
+  type WidgetSummary,
+} from '@/widgets/widget-data';
 
 const EMPTY_SUMMARY: WidgetSummary = { done: 0, total: 0, streak: 0, remaining: [] };
+
+/**
+ * 위젯 껍데기 모서리 반경 (#746). 방 캡처는 껍데기에 딱 붙어(패딩 0) 그려지므로
+ * **같은 값**을 써야 둥근 느낌이 어긋나지 않는다 — 껍데기가 RemoteViews라
+ * 자식을 클립하지 않아, 이미지가 스스로 같은 반경으로 깎여야 한다.
+ * iOS는 시스템 반경을 따르는 ContainerRelativeShape로 같은 결과를 낸다.
+ */
+const WIDGET_RADIUS = 20;
 
 type Palette = (typeof Themes)['cozy'];
 
@@ -43,7 +56,7 @@ export function TodayListWidget({ summary, dark }: { summary: WidgetSummary; dar
         height: 'match_parent',
         width: 'match_parent',
         backgroundColor: t.surface as `#${string}`,
-        borderRadius: 20,
+        borderRadius: WIDGET_RADIUS,
         padding: 11,
         flexDirection: 'column',
       }}>
@@ -151,7 +164,7 @@ export function MyRoomWidget({
         height: 'match_parent',
         width: 'match_parent',
         backgroundColor: t.surface as `#${string}`,
-        borderRadius: 20,
+        borderRadius: WIDGET_RADIUS,
         flexDirection: 'column',
       }}>
       {roomImage ? (
@@ -167,7 +180,7 @@ export function MyRoomWidget({
             imageWidth={512}
             imageHeight={512}
             style={{ width: 'match_parent', height: 'match_parent' }}
-            radius={20}
+            radius={WIDGET_RADIUS}
           />
         </FlexWidget>
       ) : (
@@ -178,7 +191,7 @@ export function MyRoomWidget({
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: t.surfaceMuted as `#${string}`,
-            borderRadius: 20,
+            borderRadius: WIDGET_RADIUS,
           }}>
           <TextWidget text="🐾" style={{ fontSize: 28 }} />
           <TextWidget
@@ -213,7 +226,10 @@ export function MyRoomWidget({
 
 /** 이름별 위젯 트리 — 태스크 핸들러와 즉시 갱신이 공유한다. */
 async function buildWidget(widgetName: string): Promise<React.JSX.Element> {
-  const dark = Appearance.getColorScheme() === 'dark';
+  // 앱의 테마 모드 설정이 반영된 실효 스킴을 우선한다 (#746) — 저장값이 없는
+  // 구버전 상태에서만 시스템 스킴으로 폴백.
+  const saved = await loadWidgetTheme();
+  const dark = saved ? saved === 'dark' : Appearance.getColorScheme() === 'dark';
   const summary = (await loadWidgetSummary()) ?? EMPTY_SUMMARY;
   if (widgetName === 'RougetherRoom') {
     const roomImage = await loadWidgetRoomImage();

@@ -2,8 +2,10 @@ import {
   buildWidgetSummary,
   loadWidgetRoomImage,
   loadWidgetSummary,
+  loadWidgetTheme,
   saveWidgetRoomImage,
   saveWidgetSummary,
+  saveWidgetTheme,
 } from '@/widgets/widget-data';
 import type { Routine } from '@/constants/routines';
 
@@ -42,5 +44,17 @@ describe('widget-data (#604)', () => {
 
     await saveWidgetRoomImage('data:image/png;base64,QUJD');
     expect(await loadWidgetRoomImage()).toBe('data:image/png;base64,QUJD');
+  });
+
+  // 위젯 다크모드 (#746) — 앱의 테마 모드가 적용된 실효 스킴을 위젯이 읽는다.
+  // 저장값이 없으면 null이라 위젯이 시스템 스킴으로 폴백한다.
+  it('실효 테마 저장/로드 왕복 — 미저장은 null(시스템 폴백)', async () => {
+    expect(await loadWidgetTheme()).toBeNull();
+
+    await saveWidgetTheme(true);
+    expect(await loadWidgetTheme()).toBe('dark');
+
+    await saveWidgetTheme(false);
+    expect(await loadWidgetTheme()).toBe('light');
   });
 });

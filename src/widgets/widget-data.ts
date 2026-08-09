@@ -11,12 +11,15 @@ import type { Routine } from '@/constants/routines';
 
 const SUMMARY_KEY = 'rougether.widget.summary.v1';
 const ROOM_IMAGE_KEY = 'rougether.widget.room-image.v1';
+/** 실효 라이트/다크 (#746) — 앱의 테마 모드 설정이 반영된 최종 값. */
+const THEME_KEY = 'rougether.widget.theme.v1';
 
 /** iOS 위젯 App Group (#606) — SwiftUI 위젯이 이 suite의 UserDefaults를 읽는다. */
 const IOS_APP_GROUP = 'group.com.triples.rougether';
 /** App Group UserDefaults 키 — targets/widgets/index.swift와 계약. */
 const IOS_SUMMARY_KEY = 'summary';
 const IOS_ROOM_IMAGE_KEY = 'roomImage';
+const IOS_THEME_KEY = 'theme';
 
 /**
  * iOS 미러 기록 (#606) — 저장은 AsyncStorage(안드 태스크 핸들러·테스트의 단일
@@ -94,6 +97,31 @@ export async function saveWidgetRoomImage(dataUri: string): Promise<void> {
     // ignore — 위젯은 캡처 전 폴백(빈 방 문구)을 그린다.
   }
   mirrorToIosWidgets(IOS_ROOM_IMAGE_KEY, dataUri);
+}
+
+/**
+ * 실효 테마 기록 (#746) — 앱의 테마 모드('system'|'light'|'dark')가 적용된
+ * 최종 스킴. 위젯은 시스템 설정만 볼 수 있어, 앱에서 다크로 바꿔도 위젯이
+ * 라이트로 남던 불일치를 없앤다. 값이 없으면 위젯은 시스템 스킴으로 폴백.
+ */
+export async function saveWidgetTheme(dark: boolean): Promise<void> {
+  const value = dark ? 'dark' : 'light';
+  try {
+    await AsyncStorage.setItem(THEME_KEY, value);
+  } catch {
+    // ignore — 위젯이 시스템 스킴으로 폴백한다.
+  }
+  mirrorToIosWidgets(IOS_THEME_KEY, value);
+}
+
+/** 저장된 실효 테마 — 없으면 null(위젯이 시스템 스킴으로 폴백). */
+export async function loadWidgetTheme(): Promise<'light' | 'dark' | null> {
+  try {
+    const raw = await AsyncStorage.getItem(THEME_KEY);
+    return raw === 'dark' || raw === 'light' ? raw : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function loadWidgetRoomImage(): Promise<string | null> {

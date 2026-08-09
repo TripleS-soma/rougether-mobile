@@ -7,6 +7,7 @@ import WidgetKit
 private let appGroup = "group.com.triples.rougether"
 private let summaryKey = "summary"
 private let roomImageKey = "roomImage"
+private let themeKey = "theme"
 
 // MARK: - 데이터
 
@@ -53,10 +54,22 @@ func loadRoomImage() -> UIImage? {
   return UIImage(cgImage: thumbnail)
 }
 
+/// 앱의 테마 모드('system'|'light'|'dark')가 적용된 실효 스킴 (#746).
+/// 값이 없으면 nil — 위젯이 시스템 스킴으로 폴백한다.
+func loadTheme() -> ColorScheme? {
+  switch UserDefaults(suiteName: appGroup)?.string(forKey: themeKey) {
+  case "dark": return .dark
+  case "light": return .light
+  default: return nil
+  }
+}
+
 struct SummaryEntry: TimelineEntry {
   let date: Date
   let summary: WidgetSummary
   let roomImage: UIImage?
+  /// 앱이 기록한 실효 스킴 — nil이면 시스템 설정을 따른다 (#746).
+  let theme: ColorScheme?
 }
 
 struct SummaryProvider: TimelineProvider {
@@ -64,16 +77,20 @@ struct SummaryProvider: TimelineProvider {
     SummaryEntry(
       date: Date(),
       summary: WidgetSummary(done: 2, total: 5, streak: 7, remaining: ["아침 스트레칭", "물 마시기", "독서"]),
-      roomImage: nil
+      roomImage: nil,
+      theme: nil
     )
   }
 
   func getSnapshot(in context: Context, completion: @escaping (SummaryEntry) -> Void) {
-    completion(SummaryEntry(date: Date(), summary: loadSummary(), roomImage: loadRoomImage()))
+    completion(
+      SummaryEntry(
+        date: Date(), summary: loadSummary(), roomImage: loadRoomImage(), theme: loadTheme()))
   }
 
   func getTimeline(in context: Context, completion: @escaping (Timeline<SummaryEntry>) -> Void) {
-    let entry = SummaryEntry(date: Date(), summary: loadSummary(), roomImage: loadRoomImage())
+    let entry = SummaryEntry(
+      date: Date(), summary: loadSummary(), roomImage: loadRoomImage(), theme: loadTheme())
     // 앱이 기록할 때마다 reloadTimelines로 즉시 갱신 — 여기서는 자정에 하루가
     // 넘어가며 어제 요약이 남는 것만 방어한다.
     let midnight = Calendar.current.startOfDay(
@@ -110,7 +127,9 @@ private struct CozyPalette {
 
 struct TodayWidgetView: View {
   var entry: SummaryEntry
-  @Environment(\.colorScheme) private var scheme
+  @Environment(\.colorScheme) private var systemScheme
+  /// 앱이 기록한 실효 스킴 우선, 없으면 시스템 (#746).
+  private var scheme: ColorScheme { entry.theme ?? systemScheme }
 
   // 2×2 컴팩트 (#688) — 안드로이드 TodayListWidget과 같은 구성:
   // 🐾 + 🔥스트릭 + N/M 헤더, 진행 바, 말줄임 제목 최대 3행 + "+N개 더".
@@ -193,16 +212,24 @@ struct TodayWidget: Widget {
 
 struct RoomWidgetView: View {
   var entry: SummaryEntry
-  @Environment(\.colorScheme) private var scheme
+  @Environment(\.colorScheme) private var systemScheme
+  /// 앱이 기록한 실효 스킴 우선, 없으면 시스템 (#746).
+  private var scheme: ColorScheme { entry.theme ?? systemScheme }
 
   var body: some View {
     let t = CozyPalette(scheme: scheme)
     let s = entry.summary
     ZStack(alignment: .bottom) {
       if let image = entry.roomImage {
+        // 위젯 껍데기와 같은 곡률로 깎는다 (#746) — ContainerRelativeShape은
+        // 시스템이 정한 위젯 모서리 반경을 그대로 따라가므로, 기기·OS마다
+        // 다른 반경에서도 이미지와 껍데기의 둥근 느낌이 어긋나지 않는다.
+        // (고정 cornerRadius로는 기기마다 미묘하게 달라진다.)
         Image(uiImage: image)
           .resizable()
           .scaledToFill()
+          .clipped()
+          .clipShape(ContainerRelativeShape())
       } else {
         VStack(spacing: 4) {
           Text("🏡").font(.system(size: 34))
