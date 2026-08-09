@@ -40,9 +40,12 @@ export function useWidgetRoomCapture({
         requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
       );
       try {
+        // JPEG 고정 (#744) — PNG는 3x 기기에서 1536px·수 MB base64가 되어
+        // iOS 위젯 프로세스(메모리 상한 ~30MB)를 죽이고 영구 스켈레톤을
+        // 남겼다. 방은 불투명이라 손실 압축으로 충분하다.
         const dataUri = await captureRef(shotRef, {
-          format: 'png',
-          quality: 0.9,
+          format: 'jpg',
+          quality: 0.8,
           result: 'data-uri',
           width: 512,
           height: 512,

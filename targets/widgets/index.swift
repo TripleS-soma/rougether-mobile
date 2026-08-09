@@ -1,4 +1,6 @@
+import ImageIO
 import SwiftUI
+import UIKit
 import WidgetKit
 
 // 앱(JS)이 기록하는 App Group 계약 — src/widgets/widget-data.ts와 동일 키.
@@ -27,14 +29,28 @@ func loadSummary() -> WidgetSummary {
   return parsed
 }
 
-/// 방 캡처 — 앱이 저장한 data URI PNG(base64)를 디코드한다.
+/// 방 캡처 — 앱이 저장한 data URI(base64)를 디코드한다. 위젯 프로세스는
+/// 메모리 상한(~30MB)이 빡빡해 전체 비트맵 디코드 대신 ImageIO 썸네일
+/// 다운샘플로 읽는다 (#744) — 구버전 앱이 남긴 1536px PNG 값에도 안전하고,
+/// 위젯 표시 크기(최대 4×4)에는 800px이면 충분하다.
 func loadRoomImage() -> UIImage? {
   guard let raw = UserDefaults(suiteName: appGroup)?.string(forKey: roomImageKey) else {
     return nil
   }
   let base64 = raw.contains(",") ? String(raw.split(separator: ",", maxSplits: 1)[1]) : raw
-  guard let data = Data(base64Encoded: base64) else { return nil }
-  return UIImage(data: data)
+  guard let data = Data(base64Encoded: base64, options: .ignoreUnknownCharacters) else {
+    return nil
+  }
+  let options: [CFString: Any] = [
+    kCGImageSourceCreateThumbnailFromImageAlways: true,
+    kCGImageSourceCreateThumbnailWithTransform: true,
+    kCGImageSourceThumbnailMaxPixelSize: 800,
+  ]
+  guard
+    let source = CGImageSourceCreateWithData(data as CFData, nil),
+    let thumbnail = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
+  else { return nil }
+  return UIImage(cgImage: thumbnail)
 }
 
 struct SummaryEntry: TimelineEntry {
