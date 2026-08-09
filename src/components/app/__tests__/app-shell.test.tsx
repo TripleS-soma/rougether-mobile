@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { BackHandler } from 'react-native';
+import { State } from 'react-native-gesture-handler';
+import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { AppShell } from '@/components/app/app-shell';
 import { ToastProvider } from '@/components/ui/toast';
@@ -173,6 +175,33 @@ describe('AppShell', () => {
     expect(getByLabelText('나의 방')).toBeTruthy();
     expect(getByLabelText('집')).toBeTruthy();
     expect(getByLabelText('설정')).toBeTruthy();
+  });
+
+  // 엣지 백 오발화 회귀 (#740) — onTouchesDown의 mgr.fail()은 runOnJS라
+  // UI 스레드 활성화와 경쟁한다. fail이 늦게 도착한 상황(= jest처럼
+  // onTouchesDown 없이 팬이 끝나는 경우)을 재현해, 탭 루트에서는 커밋
+  // 시점 가드가 백을 막는지 본다. 막지 못하면 설정 → (집 건너뜀) → 방.
+  it('탭 루트에서는 엣지 백이 발화해도 화면이 바뀌지 않는다 (#740)', async () => {
+    const { getByText, getByLabelText, queryByText } = await render(
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>,
+    );
+    await fireEvent.press(getByLabelText('설정'));
+    // '설정'은 탭 라벨과 헤더 양쪽에 있어 화면 고유 문구로 단언한다.
+    expect(getByText('프로필 편집')).toBeTruthy();
+
+    await act(async () =>
+      fireGestureHandler(getByGestureTestId('edge-back-pan'), [
+        { state: State.BEGAN },
+        { state: State.ACTIVE },
+        { state: State.END, translationX: 200, velocityX: 1200 },
+      ]),
+    );
+
+    // 설정 탭 유지 — 방(나의 방)으로 튀지 않는다.
+    expect(getByText('프로필 편집')).toBeTruthy();
+    expect(queryByText('오늘의 할 일')).toBeNull();
   });
 });
 
