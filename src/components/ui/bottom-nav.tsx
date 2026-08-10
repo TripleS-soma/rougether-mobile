@@ -12,6 +12,7 @@ import SettingsInactive from '@/assets/images/common/settings-icon.svg';
 import { CoachTarget } from '@/components/ui/coach-mark';
 import { Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useAnimatedValue } from '@/hooks/use-stable-value';
 
 export type NavTab = 'myRoom' | 'house' | 'settings';
 
@@ -36,7 +37,7 @@ function TabIcon({
   Icon: FC<SvgProps>;
   color: string;
 }) {
-  const bounce = useRef(new Animated.Value(1)).current;
+  const bounce = useAnimatedValue(1);
   const wasActive = useRef(isActive);
   useEffect(() => {
     if (isActive && !wasActive.current) {

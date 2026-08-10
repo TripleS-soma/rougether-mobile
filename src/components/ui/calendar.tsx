@@ -6,6 +6,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
 import { horizontalFlingGesture } from '@/utils/gesture';
+import { useAnimatedValue, useAnimatedValueXY } from '@/hooks/use-stable-value';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -99,8 +100,8 @@ export function Calendar({ value, min, max, onSelect, today, monthSwipe = true }
   // 보고한 실측 위치를 쓴다 — aspectRatio 셀 높이가 기기마다 gridW/7과
   // 정확히 일치하지 않아 세로가 한 행씩 어긋났다(#452 후속). 다른 달로
   // 넘어가면 원을 숨긴다.
-  const selPos = useRef(new Animated.ValueXY({ x: -999, y: -999 })).current;
-  const selOpacity = useRef(new Animated.Value(0)).current;
+  const selPos = useAnimatedValueXY({ x: -999, y: -999 });
+  const selOpacity = useAnimatedValue(0);
   const selVisibleRef = useRef(false);
   const dayLayouts = useRef<
     Record<string, { x: number; y: number; width: number; height: number }>

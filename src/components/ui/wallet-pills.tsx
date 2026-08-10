@@ -4,6 +4,7 @@ import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-nativ
 import { Icon, type IconName } from '@/components/ui/icon';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useAnimatedValue } from '@/hooks/use-stable-value';
 
 export type WalletPillsProps = {
   coin: number;
@@ -37,7 +38,7 @@ const noNegativeZero = (n: number) => (n === 0 ? 0 : n);
  */
 function useRollingNumber(value: number) {
   const [display, setDisplay] = useState(value);
-  const anim = useRef(new Animated.Value(0)).current;
+  const anim = useAnimatedValue(0);
   const fromRef = useRef(value);
   useEffect(() => {
     const from = fromRef.current;

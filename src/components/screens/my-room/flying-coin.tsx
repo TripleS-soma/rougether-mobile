@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { Animated, Easing, StyleSheet } from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
 import { useTokens } from '@/hooks/use-tokens';
+import { useAnimatedValue } from '@/hooks/use-stable-value';
 
 /** 완료 탭 지점에서 지갑까지 포물선으로 나는 코인 (#440). */
 export function FlyingCoin({
@@ -19,7 +20,7 @@ export function FlyingCoin({
   onDone: () => void;
 }) {
   const t = useTokens();
-  const p = useRef(new Animated.Value(0)).current;
+  const p = useAnimatedValue(0);
   useEffect(() => {
     Animated.timing(p, {
       toValue: 1,

@@ -63,6 +63,12 @@ import { flingDirection, SWIPE_CLAIM_DX, SWIPE_FAIL_DY } from '@/utils/gesture';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
 import { DEFAULT_HOUSES } from '@/mocks/fixtures';
 import type { Wallpaper } from '@/resources/furniture';
+import {
+  useAnimatedValue,
+  useAnimatedValueXY,
+  useConstant,
+  useLatestRef,
+} from '@/hooks/use-stable-value';
 
 // 방 렌더 데이터라 room.tsx로 이동 (#691) — 기존 임포터를 위한 재수출.
 export type { MemberRoomPreview } from '@/components/room/room';
@@ -335,8 +341,8 @@ export const HouseScreen = memo(function HouseScreen({
   const [internalHouseIndex, setInternalHouseIndex] = useState(0);
   const houseIndex = houseIndexProp ?? internalHouseIndex;
   // 집 전환 넛지 (#450) — 이동 방향에서 프레임이 살짝 밀려 들어온다.
-  const switchX = useRef(new Animated.Value(0)).current;
-  const switchFade = useRef(new Animated.Value(1)).current;
+  const switchX = useAnimatedValue(0);
+  const switchFade = useAnimatedValue(1);
   const prevHouseIndex = useRef(houseIndex);
   useEffect(() => {
     const prev = prevHouseIndex.current;
@@ -480,12 +486,12 @@ export const HouseScreen = memo(function HouseScreen({
   const [dragSeat, setDragSeat] = useState<number | null>(null);
   const dragSeatRef = useRef<number | null>(null);
   const dragGranted = useRef(false);
-  const dragPan = useRef(new Animated.ValueXY()).current;
+  const dragPan = useAnimatedValueXY();
   const tileRefs = useRef(new Map<number, View>());
   const tileRects = useRef(new Map<number, SeatRect>());
 
   // 픽업 순간 스프링으로 살짝 떠오르는 리프트 (#450).
-  const liftScale = useRef(new Animated.Value(1)).current;
+  const liftScale = useAnimatedValue(1);
   const startDrag = (seat: number) => {
     hapticSelection();
     liftScale.setValue(1);
@@ -534,9 +540,8 @@ export const HouseScreen = memo(function HouseScreen({
   };
   // The responder is created once — route through a ref so the release sees
   // the current house/permutation, not the mount-time closure.
-  const dropAtRef = useRef(dropAt);
-  dropAtRef.current = dropAt;
-  const gridPanResponder = useRef(
+  const dropAtRef = useLatestRef(dropAt);
+  const gridPanResponder = useConstant(() =>
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       // Claim the ongoing touch only once a long-press lifted a tile.
@@ -550,7 +555,7 @@ export const HouseScreen = memo(function HouseScreen({
       onPanResponderRelease: (_evt, g) => dropAtRef.current(g.moveX, g.moveY),
       onPanResponderTerminate: () => endDrag(),
     }),
-  ).current;
+  );
   // A lift with no movement never grants the responder — the tile's pressOut
   // is then the only release signal, so it clears the stuck lift.
   const onTilePressOut = () => {
@@ -565,14 +570,14 @@ export const HouseScreen = memo(function HouseScreen({
   // 자리 교환 드래그를 끄고(좌표계 어긋남 방지) 탭 방문만 유지한다.
   const [zoomed, setZoomed] = useState(false);
   const zoomedRef = useRef(false);
-  const camScale = useRef(new Animated.Value(1)).current;
-  const camTx = useRef(new Animated.Value(0)).current;
-  const camTy = useRef(new Animated.Value(0)).current;
+  const camScale = useAnimatedValue(1);
+  const camTx = useAnimatedValue(0);
+  const camTy = useAnimatedValue(0);
   // 확대 = '방 구경 모드' (#665) — 이름/접속 라벨은 카메라와 함께 스케일돼
   // 방을 덮으므로, 배율 1→1.15 구간에서 핀치에 연속 추종하며 사라진다.
-  const seatMetaOpacity = useRef(
+  const seatMetaOpacity = useConstant(() =>
     camScale.interpolate({ inputRange: [1, 1.15], outputRange: [1, 0], extrapolate: 'clamp' }),
-  ).current;
+  );
   const cam = useRef({ scale: 1, tx: 0, ty: 0 });
   const frameSize = useRef({ w: 0, h: 0 });
   const pinchAnchor = useRef({ dist: 0, cx: 0, cy: 0, scale: 1, tx: 0, ty: 0 });
@@ -633,7 +638,7 @@ export const HouseScreen = memo(function HouseScreen({
       };
     }
   };
-  const cameraResponder = useRef(
+  const cameraResponder = useConstant(() =>
     PanResponder.create({
       // 두 손가락은 즉시, 한 손가락은 확대 상태에서 슬롭을 넘겼을 때만
       // (드래그 중엔 양보) — 탭 지터 캡처가 방 탭 방문을 죽였다 (#669).
@@ -676,15 +681,14 @@ export const HouseScreen = memo(function HouseScreen({
         camTouchCount.current = 0;
       },
     }),
-  ).current;
+  );
 
   // --- 집 스와이프 전환 (#297 → #563에서 RNGH로) — 가로 우세 플링이면
   // 이전/다음 집. PanResponder였을 때는 셸의 탭 페이저(RNGH)가 네이티브에서
   // 터치를 먼저 가져가 죽었다 — 같은 RNGH면 동률에서 더 깊은 이쪽이 이긴다.
   // 확대(카메라 팬)·자리 드래그 중에는 터치 시작/도중 모두 물러난다.
-  const switchRef = useRef({ prev: () => {}, next: () => {} });
-  switchRef.current = { prev: prevHouse, next: nextHouse };
-  const carouselFling = useRef(
+  const switchRef = useLatestRef({ prev: prevHouse, next: nextHouse });
+  const carouselFling = useConstant(() =>
     Gesture.Pan()
       .withTestId('house-carousel-fling')
       .runOnJS(true)
@@ -702,7 +706,7 @@ export const HouseScreen = memo(function HouseScreen({
         if (dir === 'left') switchRef.current.next();
         else if (dir === 'right') switchRef.current.prev();
       }),
-  ).current;
+  );
 
   // 확대·자리 드래그 동안 셸의 탭 페이저를 잠근다 (#563).
   useEffect(() => {

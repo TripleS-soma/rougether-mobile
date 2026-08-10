@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { Animated, StyleSheet } from 'react-native';
+import { useAnimatedValue } from '@/hooks/use-stable-value';
 
 /** 접속 점 — 은은한 숨쉬기 펄스 (#450). house-screen.tsx에서 분리 (#693). */
 export function OnlineDot({ color }: { color: string }) {
-  const pulse = useRef(new Animated.Value(0)).current;
+  const pulse = useAnimatedValue(0);
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([

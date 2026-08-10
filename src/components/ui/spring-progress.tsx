@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Animated, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
+import { useAnimatedValue } from '@/hooks/use-stable-value';
 
 import { Radius, StaticWhite } from '@/constants/theme';
 
@@ -28,8 +29,8 @@ export function SpringProgressBar({
   height = 10,
   style,
 }: SpringProgressBarProps) {
-  const w = useRef(new Animated.Value(progress)).current;
-  const flash = useRef(new Animated.Value(0)).current;
+  const w = useAnimatedValue(progress);
+  const flash = useAnimatedValue(0);
   const prev = useRef(progress);
   useEffect(() => {
     Animated.spring(w, {

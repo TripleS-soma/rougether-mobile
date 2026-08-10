@@ -13,6 +13,7 @@ import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useAnimatedValue } from '@/hooks/use-stable-value';
 
 export type ToastType = 'info' | 'success' | 'error';
 
@@ -40,7 +41,7 @@ type ToastState = { message: string; type: ToastType; key: number };
  */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<ToastState | null>(null);
-  const opacity = useRef(new Animated.Value(0)).current;
+  const opacity = useAnimatedValue(0);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const hide = useCallback(() => {

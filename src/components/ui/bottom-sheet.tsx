@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 
 import { Overlay } from '@/constants/theme';
+import { useAnimatedValue, useConstant, useLatestRef } from '@/hooks/use-stable-value';
 
 // 스와이프-다운 닫기 (#469) — 이만큼 끌어내리거나(플링) 이 속도를 넘기면 닫는다.
 const DISMISS_DISTANCE = 96;
@@ -71,19 +72,17 @@ export function BottomSheet({
   children,
 }: BottomSheetProps) {
   const { height: windowH } = useWindowDimensions();
-  const progress = useRef(new Animated.Value(0)).current;
+  const progress = useAnimatedValue(0);
   // 손가락으로 끌어내린 추가 오프셋(아래로만). 놓으면 0으로 튕겨 돌아가거나 닫힘.
-  const dragY = useRef(new Animated.Value(0)).current;
+  const dragY = useAnimatedValue(0);
   const [rendered, setRendered] = useState(visible);
   const [cardH, setCardH] = useState(0);
   // 카드 상단의 화면 y (#514) — 오버레이가 창 전체를 덮으므로 layout.y가 곧
   // 페이지 좌표. transform(입장 슬라이드)은 layout에 안 잡혀 정지 위치 기준.
   const cardTopRef = useRef(0);
   // PanResponder는 한 번만 만들어지므로 최신 onClose·dragScope를 ref로 참조한다.
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
-  const dragScopeRef = useRef(dragScope);
-  dragScopeRef.current = dragScope;
+  const onCloseRef = useLatestRef(onClose);
+  const dragScopeRef = useLatestRef(dragScope);
 
   useEffect(() => {
     if (visible) {
@@ -111,7 +110,7 @@ export function BottomSheet({
   // 시작한 드래그만 claim한다. 기본 'header'는 카드 상단(그립/헤더) 한정
   // (#514 — 카드 전체 클레임이 알림 시간 휠의 스와이프를 빼앗았다),
   // 스크롤 자식이 없는 시트는 'card'로 본문 어디서든 내릴 수 있다 (#657).
-  const pan = useRef(
+  const pan = useConstant(() =>
     PanResponder.create({
       onMoveShouldSetPanResponder: (_e, g) =>
         g.dy > 6 &&
@@ -141,7 +140,7 @@ export function BottomSheet({
         }).start();
       },
     }),
-  ).current;
+  );
 
   if (!rendered) return null;
 
