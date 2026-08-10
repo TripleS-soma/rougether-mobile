@@ -27,7 +27,9 @@ describe('스펙 미표기 nullable 오버라이드 (#733)', () => {
 
   it.each(cases)('%s.%s 은 생성물에서 nullable이다', (typeName, field) => {
     const block = blockOf(typeName);
-    const line = block.split('\n').find((l) => l.trim().startsWith(`${field}?:`));
+    // `field?:`(optional)와 `field:`(required) 둘 다 잡는다 — 지금 8개는 전부
+    // optional이지만, required 필드에 override가 붙으면 못 찾아 헛발 실패한다.
+    const line = block.split('\n').find((l) => new RegExp(`^${field}\\??:`).test(l.trim()));
     expect(line).toBeDefined();
     expect(line).toMatch(/\| null;$/);
   });
