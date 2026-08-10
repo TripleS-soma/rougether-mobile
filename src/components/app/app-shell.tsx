@@ -38,6 +38,7 @@ import type { DrawResult } from '@/api';
 import { fetchGachaRewards } from '@/api';
 import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furniture';
 import { usePagerLock } from '@/components/app/use-pager-lock';
+import { useTabScroll } from '@/components/app/use-tab-scroll';
 
 // 내비게이션 상수·backTargetFor는 navigation.ts로 이동 (#692) — 기존
 // 임포터(테스트 등)를 위한 재수출.
@@ -355,6 +356,8 @@ export function AppShell({
   // 다른 페이지의 스와이프까지 막으면 안 된다. TabPager·내비와 결합된 셸
   // 잔류 클러스터 (#692 6단계) — 잠금 콜백만 집 페이지 prop으로 내려간다.
   const { lock: pagerLock, setHouseLocked: handleHousePagerLock } = usePagerLock(screen);
+  // 탭별 스크롤 위치 (#763) — 서브화면에서 페이저가 언마운트돼도 셸이 기억한다.
+  const tabScroll = useTabScroll();
 
   // 집 페이지 배선 (#692 6단계) — 집 탭 페이지와 서브화면 2종(집 탐색·집
   // 생성)의 훅·콜백·JSX 소유. noHouses 판정·탐색 이탈 미션 판정을 반환해
@@ -411,9 +414,9 @@ export function AppShell({
               index={NAV_ORDER.indexOf(activeTab)}
               onIndexChange={handlePageChange}
               lock={pagerLock}>
-              <MyRoomScreen {...myRoomPages.tabProps} />
-              <HouseScreen {...housePages.tabProps} />
-              <SettingsScreen {...settingsSurface.tabProps} />
+              <MyRoomScreen {...myRoomPages.tabProps} {...tabScroll.myRoom} />
+              <HouseScreen {...housePages.tabProps} {...tabScroll.house} />
+              <SettingsScreen {...settingsSurface.tabProps} {...tabScroll.settings} />
             </TabPager>
           ) : null}
 

@@ -6,6 +6,7 @@ import {
   Easing,
   PanResponder,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -55,6 +56,7 @@ import {
   StaticWhite,
 } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useResolvedScheme, useTokens, useTypography } from '@/hooks/use-tokens';
 import type { MissionStatus } from '@/utils/mission-cta';
 import { assetSource } from '@/resources/asset';
@@ -189,90 +191,91 @@ const VACANT_FURNITURE_IDS: string[] = [];
 // house-preview-frame.tsx가 단일 출처.
 
 // RoomCatalogProps: 좌석 타일 미리보기가 해석할 카탈로그 4종 (#691).
-export type HouseScreenProps = RoomCatalogProps & {
-  houses?: House[];
-  /** True while my houses are loading from the API. */
-  loading?: boolean;
-  /** True when the initial load failed (#549) — 빈 상태 대신 에러 + 다시 시도. */
-  loadError?: boolean;
-  /** Re-run the failed load (다시 시도 button). */
-  onRetry?: () => void;
-  /** 당겨서 새로고침 (#454) — 내 집 목록 조용한 리로드. */
-  onRefresh?: () => Promise<void> | void;
-  characterId?: CharacterId;
-  /** 헤더 프로필 블록 — 나의 방 헤더와 같은 아바타·닉네임·스트릭 (#420). */
-  userName?: string;
-  streakDays?: number;
-  /**
-   * Controlled house-switcher index. The screen unmounts while visiting a
-   * friend's room, so the shell keeps this to restore the house being viewed
-   * (#241). Omit for internal state (dev gallery).
-   */
-  houseIndex?: number;
-  onHouseIndexChange?: (index: number) => void;
-  /**
-   * 승인 대기 중인 내 입주 신청 (#648, 서버 #255) — 스위처의 마지막
-   * 페이지들에 잠금형 카드로 보인다. 스와이프/화살표로 오갈 수 있다.
-   */
-  pendingHouses?: PendingJoinHouse[];
-  /** 입주 신청 철회 (#648) — 확인 다이얼로그 뒤에만 불린다. */
-  onCancelJoinRequest?: (requestId: number) => void;
-  onVisitFriend?: (friend: VisitedFriend) => void;
-  onVisitMyRoom?: () => void;
-  onOpenSearch?: () => void;
-  /** 하늘색 시간대 판정용 현재 시(0~23) — 테스트 주입용, 기본은 기기 시각 (#358). */
-  nowHour?: number;
-  /** 지금 비가 오는지 — 셸이 use-weather로 주입, 하늘을 흐린 톤 + 빗줄기로 (#360). */
-  raining?: boolean;
-  /** 헤더 지갑 필 — 나의 방 헤더와 동일 (#353). */
-  coinBalance?: number;
-  diamondBalance?: number;
-  /** 구성원 관리 화면 열기 (#753) — 셸 화면('houseMembers')으로 승격됐다. */
-  onOpenMembers?: () => void;
-  /** 강퇴 낙관 반영 (#753 승격 후 셸 소유) — 참이면 좌석을 빈 타일로 그린다. */
-  isKickedMember?: (name: string) => boolean;
-  /** Kick a member via the API (owner only); shown when the house has ids. */
-  onKickMember?: (houseId: number, membershipId: number) => void;
-  /** Leave the current house via the API. */
-  onLeaveHouse?: (houseId: number) => void;
-  /** File a mission as a daily routine under the house-named category. */
-  onAddMissionRoutine?: (houseId: number, mission: HouseMission) => void;
-  /** 현재 집 미션에 연동된 내 루틴 (#578) — 연동/기여함 라벨 판정. */
-  linkedRoutines?: { missionId: number; completedToday?: boolean }[];
-  /** Mission ids contributed this session (기여 직후 즉시 반영용 보조 신호). */
-  contributedMissionIds?: number[];
-  /** Claim the reward of an achieved mission. */
-  onClaimMission?: (houseId: number, missionId: number) => void;
-  /** Create a new group mission. */
-  onCreateMission?: (houseId: number, input: NewHouseMission) => void;
-  /** Delete a mission (server: OWNER only, COMPLETED not deletable). */
-  onDeleteMission?: (houseId: number, missionId: number) => void;
-  /** Edit the house settings via the API (owner only). */
-  onUpdateHouse?: (houseId: number, input: HouseEditInput) => void;
-  /** Cover catalog (GET /houses/cover-images); empty hides the edit section. */
-  covers?: HouseCover[];
-  /** Live room previews by membershipId — tiles render the member's actual room. */
-  roomPreviews?: Record<number, MemberRoomPreview>;
-  /** Hand the OWNER role to a member via the API (owner only). */
-  onTransferOwnership?: (houseId: number, membershipId: number) => void;
-  /** Reissue the invite code via the API (owner only; the old code expires). */
-  onReissueInviteCode?: (houseId: number) => Promise<string | null> | void;
-  /**
-   * 확대 카메라·자리 드래그처럼 이 화면이 제스처 전권을 가져야 하는 동안
-   * true — 셸이 탭 페이저(#563)를 잠그는 데 쓴다.
-   */
-  onPagerLockChange?: (locked: boolean) => void;
-  /** Accept a pending browse-join request (owner only). */
-  onAcceptJoinRequest?: (houseId: number, requestId: number) => void;
-  /** Reject a pending browse-join request (owner only). */
-  onRejectJoinRequest?: (houseId: number, requestId: number) => void;
-  /**
-   * Drag-and-drop tile swap (#278). Seat indices are display order (top-left
-   * first) of the houses handed in — the shell persists and re-arranges via
-   * useRoomLayouts. Omitted (demo gallery) falls back to a local swap.
-   */
-  onSwapSeats?: (houseId: number, seatA: number, seatB: number) => void;
-};
+export type HouseScreenProps = RoomCatalogProps &
+  ScrollRestoreProps & {
+    houses?: House[];
+    /** True while my houses are loading from the API. */
+    loading?: boolean;
+    /** True when the initial load failed (#549) — 빈 상태 대신 에러 + 다시 시도. */
+    loadError?: boolean;
+    /** Re-run the failed load (다시 시도 button). */
+    onRetry?: () => void;
+    /** 당겨서 새로고침 (#454) — 내 집 목록 조용한 리로드. */
+    onRefresh?: () => Promise<void> | void;
+    characterId?: CharacterId;
+    /** 헤더 프로필 블록 — 나의 방 헤더와 같은 아바타·닉네임·스트릭 (#420). */
+    userName?: string;
+    streakDays?: number;
+    /**
+     * Controlled house-switcher index. The screen unmounts while visiting a
+     * friend's room, so the shell keeps this to restore the house being viewed
+     * (#241). Omit for internal state (dev gallery).
+     */
+    houseIndex?: number;
+    onHouseIndexChange?: (index: number) => void;
+    /**
+     * 승인 대기 중인 내 입주 신청 (#648, 서버 #255) — 스위처의 마지막
+     * 페이지들에 잠금형 카드로 보인다. 스와이프/화살표로 오갈 수 있다.
+     */
+    pendingHouses?: PendingJoinHouse[];
+    /** 입주 신청 철회 (#648) — 확인 다이얼로그 뒤에만 불린다. */
+    onCancelJoinRequest?: (requestId: number) => void;
+    onVisitFriend?: (friend: VisitedFriend) => void;
+    onVisitMyRoom?: () => void;
+    onOpenSearch?: () => void;
+    /** 하늘색 시간대 판정용 현재 시(0~23) — 테스트 주입용, 기본은 기기 시각 (#358). */
+    nowHour?: number;
+    /** 지금 비가 오는지 — 셸이 use-weather로 주입, 하늘을 흐린 톤 + 빗줄기로 (#360). */
+    raining?: boolean;
+    /** 헤더 지갑 필 — 나의 방 헤더와 동일 (#353). */
+    coinBalance?: number;
+    diamondBalance?: number;
+    /** 구성원 관리 화면 열기 (#753) — 셸 화면('houseMembers')으로 승격됐다. */
+    onOpenMembers?: () => void;
+    /** 강퇴 낙관 반영 (#753 승격 후 셸 소유) — 참이면 좌석을 빈 타일로 그린다. */
+    isKickedMember?: (name: string) => boolean;
+    /** Kick a member via the API (owner only); shown when the house has ids. */
+    onKickMember?: (houseId: number, membershipId: number) => void;
+    /** Leave the current house via the API. */
+    onLeaveHouse?: (houseId: number) => void;
+    /** File a mission as a daily routine under the house-named category. */
+    onAddMissionRoutine?: (houseId: number, mission: HouseMission) => void;
+    /** 현재 집 미션에 연동된 내 루틴 (#578) — 연동/기여함 라벨 판정. */
+    linkedRoutines?: { missionId: number; completedToday?: boolean }[];
+    /** Mission ids contributed this session (기여 직후 즉시 반영용 보조 신호). */
+    contributedMissionIds?: number[];
+    /** Claim the reward of an achieved mission. */
+    onClaimMission?: (houseId: number, missionId: number) => void;
+    /** Create a new group mission. */
+    onCreateMission?: (houseId: number, input: NewHouseMission) => void;
+    /** Delete a mission (server: OWNER only, COMPLETED not deletable). */
+    onDeleteMission?: (houseId: number, missionId: number) => void;
+    /** Edit the house settings via the API (owner only). */
+    onUpdateHouse?: (houseId: number, input: HouseEditInput) => void;
+    /** Cover catalog (GET /houses/cover-images); empty hides the edit section. */
+    covers?: HouseCover[];
+    /** Live room previews by membershipId — tiles render the member's actual room. */
+    roomPreviews?: Record<number, MemberRoomPreview>;
+    /** Hand the OWNER role to a member via the API (owner only). */
+    onTransferOwnership?: (houseId: number, membershipId: number) => void;
+    /** Reissue the invite code via the API (owner only; the old code expires). */
+    onReissueInviteCode?: (houseId: number) => Promise<string | null> | void;
+    /**
+     * 확대 카메라·자리 드래그처럼 이 화면이 제스처 전권을 가져야 하는 동안
+     * true — 셸이 탭 페이저(#563)를 잠그는 데 쓴다.
+     */
+    onPagerLockChange?: (locked: boolean) => void;
+    /** Accept a pending browse-join request (owner only). */
+    onAcceptJoinRequest?: (houseId: number, requestId: number) => void;
+    /** Reject a pending browse-join request (owner only). */
+    onRejectJoinRequest?: (houseId: number, requestId: number) => void;
+    /**
+     * Drag-and-drop tile swap (#278). Seat indices are display order (top-left
+     * first) of the houses handed in — the shell persists and re-arranges via
+     * useRoomLayouts. Omitted (demo gallery) falls back to a local swap.
+     */
+    onSwapSeats?: (houseId: number, seatA: number, seatB: number) => void;
+  };
 
 /**
  * House screen, ported from the prototype: a house
@@ -327,6 +330,8 @@ export const HouseScreen = memo(function HouseScreen({
   onRejectJoinRequest,
   onSwapSeats,
   onPagerLockChange,
+  getInitialScrollY,
+  onScrollY,
 }: HouseScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
@@ -376,6 +381,9 @@ export const HouseScreen = memo(function HouseScreen({
   const [showMissions, setShowMissions] = useState(false);
 
   const currentHouse: House | undefined = houses[Math.min(houseIndex, houses.length - 1)];
+  // 서브화면(구성원 관리·집 탐색 …)에 다녀와도 보던 자리로 (#763).
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollRestore = useScrollRestore(scrollRef, { getInitialScrollY, onScrollY });
 
   // 승인 대기 신청 (#648) — 집 페이지들 뒤에 잠금 카드 페이지로 이어 붙는다.
   const pendingList = pendingHouses ?? [];
@@ -1006,6 +1014,8 @@ export const HouseScreen = memo(function HouseScreen({
 
       {/* 타일 드래그 중에는 스크롤이 제스처를 뺏지 않게 잠근다 (#278). */}
       <PawRefreshScroll
+        scrollRef={scrollRef}
+        {...scrollRestore}
         onRefresh={onRefresh}
         // 자리 드래그 중 당김 잠금 — 놓는 순간 새로고침이 배치를 끊지 않게.
         refreshDisabled={dragSeat != null}

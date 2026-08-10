@@ -1,4 +1,4 @@
-import { memo, useState } from 'react';
+import { memo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -15,6 +15,7 @@ import {
   typographyFor,
 } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
 const MODE_OPTIONS: { id: ThemeMode; name: string }[] = [
@@ -34,7 +35,7 @@ function fontPreviewStyle(id: BrandFontId) {
 
 type Row = { icon: IconName; label: string; onPress?: () => void };
 
-export type SettingsScreenProps = {
+export type SettingsScreenProps = ScrollRestoreProps & {
   /** Light/dark preference ('system' follows the OS). */
   themeMode?: ThemeMode;
   onChangeThemeMode?: (mode: ThemeMode) => void;
@@ -95,6 +96,8 @@ export const SettingsScreen = memo(function SettingsScreen({
   onReplayOnboarding,
   onLogout,
   onWithdraw,
+  getInitialScrollY,
+  onScrollY,
 }: SettingsScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
@@ -107,6 +110,9 @@ export const SettingsScreen = memo(function SettingsScreen({
   // 회원탈퇴는 복구 불가 — 파괴 확인 다이얼로그 뒤에만 (#547).
   const [confirmWithdraw, setConfirmWithdraw] = useState(false);
   const currentFontName = FONT_OPTIONS.find((o) => o.id === fontId)?.name ?? '';
+  // 서브화면(도움말·버그 제보 …)에 다녀와도 보던 자리로 (#763).
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollRestore = useScrollRestore(scrollRef, { getInitialScrollY, onScrollY });
 
   const sections: { title: string; rows: Row[] }[] = [
     {
@@ -143,7 +149,7 @@ export const SettingsScreen = memo(function SettingsScreen({
         <Text style={[Typography.h2, { color: t.text }]}>설정</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.body} {...scrollRestore}>
         <View style={styles.section}>
           <Text style={[...sectionTitleStyle, { color: t.textMuted }]}>디자인</Text>
           <View style={[styles.card, { backgroundColor: t.surface }]}>

@@ -195,3 +195,42 @@ describe('AppShell → SettingsScreen prop 참조 안정성 (#563 후속)', () =
     expect(changed).toEqual([]);
   });
 });
+
+/**
+ * 탭 스크롤 기억 (#763) — 서브화면으로 가면 페이저가 언마운트되므로 위치는
+ * 셸이 들고 있어야 살아남는다. 여기선 셸이 내려주는 게터/보고 쌍의 계약을
+ * 단언한다(복원 동작 자체는 use-scroll-restore 단위 테스트가 덮는다).
+ */
+describe('탭 스크롤 위치 보존 (#763)', () => {
+  it('탭별로 위치를 기억하고, 게터·보고 콜백은 참조가 고정이다', async () => {
+    const { getByLabelText } = await render(
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>,
+    );
+    // 세 탭 화면은 페이저에 함께 마운트된다 — 두 프로브 모두 기록이 있다.
+    await waitFor(() => expect(mockSettingsRenders.length).toBeGreaterThan(0));
+    const settings = mockSettingsRenders[mockSettingsRenders.length - 1];
+    const myRoom = mockMyRoomRenders[mockMyRoomRenders.length - 1];
+    const readSettings = settings.getInitialScrollY as () => number;
+
+    // 처음엔 맨 위. 보고하면 셸이 들고 있다가 게터로 돌려준다.
+    expect(readSettings()).toBe(0);
+    act(() => (settings.onScrollY as (y: number) => void)(420));
+    expect(readSettings()).toBe(420);
+
+    // 탭끼리 섞이지 않는다.
+    expect((myRoom.getInitialScrollY as () => number)()).toBe(0);
+    act(() => (myRoom.onScrollY as (y: number) => void)(80));
+    expect(readSettings()).toBe(420);
+
+    // 탭 왕복(=셸 리렌더) 후에도 참조가 같다 — memo 화면(#539)을 깨지 않는다.
+    await fireEvent.press(getByLabelText('집'));
+    await fireEvent.press(getByLabelText('설정'));
+    const after = mockSettingsRenders[mockSettingsRenders.length - 1];
+    expect(after.getInitialScrollY).toBe(settings.getInitialScrollY);
+    expect(after.onScrollY).toBe(settings.onScrollY);
+    // 기억한 위치도 그대로.
+    expect((after.getInitialScrollY as () => number)()).toBe(420);
+  });
+});
