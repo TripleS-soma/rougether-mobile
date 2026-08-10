@@ -62,7 +62,7 @@ export type CategoryResponse = {
   sortOrder?: number;
   visibility?: 'PRIVATE' | 'FRIENDS' | 'HOUSE' | 'PUBLIC';
   deleted?: boolean;
-  // Manual patch (#578): 미연동은 null (스펙 nullable 미표기). Restore after gen.
+  // 스펙 미표기 nullable (#733): 미연동은 null (#578).
   houseId?: number | null;
 };
 
@@ -533,8 +533,7 @@ export type MemberCategoryItem = {
 export type MemberRoomSummary = {
   membershipId?: number;
   nickname?: string;
-  // Manual patch: 방을 아직 만들지 않은 구성원은 null — 기본 빈 방으로 렌더.
-  // 스펙 nullable 미표기. Restore after gen.
+  // 스펙 미표기 nullable (#733): 방을 아직 만들지 않은 구성원은 null — 기본 빈 방으로 렌더.
   room?: RoomRenderResponse | null;
 };
 
@@ -881,8 +880,7 @@ export type RoutineLogResponse = {
   rewardCurrencyType?: 'COIN' | 'DIAMOND';
   rewardAmount?: number;
   streak?: StreakSummaryResponse;
-  // Manual patch (#578): null이면 미연동/스킵(이미 기여·비활성·과거 등),
-  // 스펙 nullable 미표기. Restore after gen.
+  // 스펙 미표기 nullable (#733): null이면 미연동/스킵(이미 기여·비활성·과거 등) (#578).
   houseMissionContribution?: HouseMissionContributeResponse | null;
 };
 
@@ -898,7 +896,7 @@ export type RoutineResponse = {
   startsOn?: string;
   endsOn?: string;
   originRoutineId?: number;
-  // Manual patch: 미연동 루틴은 null로 온다 (스펙 nullable 미표기). Restore after gen.
+  // 스펙 미표기 nullable (#733): 미연동 루틴은 null로 온다.
   houseMissionId?: number | null;
 };
 
@@ -907,13 +905,14 @@ export type RoutineUpdateRequest = {
   categoryId?: number;
   authType?: 'CHECK' | 'PHOTO';
   repeatType?: string;
-  // Manual patch: 스펙에 nullable 미표기 — null은 "지우기"(WEEKLY→DAILY의
-  // repeatDays, 알람 해제의 scheduledTime, 종료일 해제). Restore after gen.
+  // 스펙 미표기 nullable (#733): null은 "지우기" — WEEKLY→DAILY 전환.
   repeatDays?: RepeatDays | null;
+  // 스펙 미표기 nullable (#733): null은 "지우기" — 알람 해제.
   scheduledTime?: string | null;
   startsOn?: string;
+  // 스펙 미표기 nullable (#733): null은 "지우기" — 종료일 해제.
   endsOn?: string | null;
-  // Manual patch: 미연동은 null (스펙 nullable 미표기). Restore after gen.
+  // 스펙 미표기 nullable (#733): 미연동은 null.
   houseMissionId?: number | null;
 };
 
