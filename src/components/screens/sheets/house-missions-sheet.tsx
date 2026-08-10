@@ -95,6 +95,9 @@ export function HouseMissionsSheet({
   const isContributed = (mission: HouseMission) =>
     contributedMissionIds.includes(mission.id) ||
     linkedRoutines.some((r) => r.missionId === mission.id && r.completedToday);
+  // 요약 줄용 파생 (#761) — 집 화면 스탯 필이 여기로 옮겨왔다.
+  const activeMissions = missions.filter((m) => m.status === 'ACTIVE');
+  const contributedToday = activeMissions.filter(isContributed).length;
 
   // Mission creation is owner-only on the server (403 HOUSE_NOT_OWNER).
   const canCreateMission = !!(onCreateMission && isOwner);
@@ -152,6 +155,8 @@ export function HouseMissionsSheet({
                 <TargetPictogram size={18} />
                 <Text style={[Typography.h3, { color: t.text }]}>우리 집의 목표</Text>
               </View>
+              {/* 요약 (#761) — 집 화면 스탯 필이 여기로. 진행 중 수와 오늘 나의
+                  기여를 목록 위 한 줄로. */}
               {canCreateMission ? (
                 <Pressable
                   onPress={() => setShowCreateMission(true)}
@@ -162,6 +167,12 @@ export function HouseMissionsSheet({
                 </Pressable>
               ) : null}
             </View>
+            {activeMissions.length > 0 ? (
+              <Text style={[Typography.supporting, styles.missionSummary, { color: t.textMuted }]}>
+                진행 중 {activeMissions.length}개 · 오늘 나의 기여 {contributedToday}/
+                {activeMissions.length}
+              </Text>
+            ) : null}
             <ScrollView style={styles.editScroll}>
               {missions.length === 0 ? (
                 <Text style={[Typography.supporting, { color: t.textMuted }]}>
@@ -467,6 +478,10 @@ const styles = StyleSheet.create({
     maxHeight: '85%',
     borderRadius: Radius.lg,
     padding: Spacing.four,
+  },
+  missionSummary: {
+    paddingHorizontal: Spacing.four,
+    paddingBottom: Spacing.two,
   },
   // The mission list scrolls when it grows taller than small screens.
   editScroll: {
