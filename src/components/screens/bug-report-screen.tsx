@@ -108,7 +108,7 @@ export function BugReportScreen({
   };
 
   return (
-    <View style={[styles.screen, useScreenStyle()]}>
+    <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader title="버그 제보" onBack={onBack} />
 
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
