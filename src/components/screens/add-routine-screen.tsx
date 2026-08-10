@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   BackHandler,
+  Keyboard,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -190,6 +191,7 @@ export function AddRoutineScreen({
     if (!canSubmit) {
       if (!categoryValid) {
         setFormError('카테고리가 필요해요 — 먼저 하나 만들어주세요.');
+        Keyboard.dismiss();
         setShowCategoryManager(true);
       } else if (title.trim().length === 0) {
         setFormError('루틴 이름을 입력해주세요.');
@@ -230,7 +232,9 @@ export function AddRoutineScreen({
         <Text style={[Typography.h2, { color: t.text }]}>{isEdit ? '루틴 수정' : '루틴 추가'}</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.body}>
+      {/* handled (#759): 제목 입력으로 키보드가 뜬 채 시트 버튼을 탭하면
+          기본값('never')은 첫 탭을 키보드 닫기에 소모해 시트가 안 열렸다. */}
+      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         {/* Title */}
         <View style={styles.field}>
           <Text style={[Typography.label, { color: t.text }]}>루틴 이름</Text>
@@ -250,7 +254,10 @@ export function AddRoutineScreen({
           <View style={styles.fieldHead}>
             <Text style={[Typography.label, { color: t.text }]}>카테고리</Text>
             <Pressable
-              onPress={() => setShowCategoryManager(true)}
+              onPress={() => {
+                Keyboard.dismiss();
+                setShowCategoryManager(true);
+              }}
               accessibilityRole="button"
               accessibilityLabel="새 카테고리"
               hitSlop={8}
@@ -451,7 +458,10 @@ export function AddRoutineScreen({
         <View style={styles.field}>
           <Text style={[Typography.label, { color: t.text }]}>지속 기간</Text>
           <Pressable
-            onPress={() => setShowDateSheet(true)}
+            onPress={() => {
+              Keyboard.dismiss();
+              setShowDateSheet(true);
+            }}
             accessibilityRole="button"
             accessibilityLabel="지속 기간 선택"
             style={[styles.infoRow, { backgroundColor: t.surface }]}>
@@ -472,7 +482,10 @@ export function AddRoutineScreen({
         <View style={styles.field}>
           <Text style={[Typography.label, { color: t.text }]}>알림 시간</Text>
           <Pressable
-            onPress={() => setShowTimeSheet(true)}
+            onPress={() => {
+              Keyboard.dismiss();
+              setShowTimeSheet(true);
+            }}
             accessibilityRole="button"
             accessibilityLabel="알림 시간 선택"
             style={[styles.infoRow, { backgroundColor: t.surface }]}>
