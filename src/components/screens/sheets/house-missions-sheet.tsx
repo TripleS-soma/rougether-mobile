@@ -479,11 +479,11 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     padding: Spacing.four,
   },
-  // The mission list scrolls when it grows taller than small screens.
   missionSummary: {
     paddingHorizontal: Spacing.four,
     paddingBottom: Spacing.two,
   },
+  // The mission list scrolls when it grows taller than small screens.
   editScroll: {
     flexGrow: 0,
   },
