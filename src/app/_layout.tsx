@@ -1,5 +1,6 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { type ReactNode } from 'react';
 import { StyleSheet } from 'react-native';
@@ -26,11 +27,19 @@ void SplashScreen.preventAutoHideAsync().catch(() => {});
 /**
  * Navigation chrome follows the resolved scheme (OS scheme + the 다크 모드
  * override from settings) — must sit below BrandThemeProvider to read it.
+ *
+ * StatusBar (#755): OS 상태바는 기본으로 **시스템 테마만** 따른다 — 시스템
+ * 다크 + 앱 라이트 강제면 밝은 크림 배경 위에 흰 시간·배터리가 얹혀 안
+ * 보였다 (Android edge-to-edge 기본 흰 아이콘도 동일 뿌리). 앱의 resolved
+ * scheme으로 명시해 라이트=검은 글자, 다크=흰 글자로 고정한다.
  */
 function NavigationTheme({ children }: { children: ReactNode }) {
   const scheme = useResolvedScheme();
   return (
-    <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>{children}</ThemeProvider>
+    <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+      {children}
+    </ThemeProvider>
   );
 }
 
