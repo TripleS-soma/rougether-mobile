@@ -19,12 +19,17 @@ import {
   type HouseEditInput,
   type NewHouseMission,
 } from '@/components/screens/house-screen';
+import { HouseMembersScreen, manageableMembers } from '@/components/screens/house-members-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { type CharacterId } from '@/constants/characters';
 import { type Wallet } from '@/constants/currency';
 import { useHouseCovers } from '@/hooks/use-house-covers';
 import type { useHouses } from '@/hooks/use-houses';
-import { useMemberRoomPreviews, withMyCharacter } from '@/hooks/use-member-room-previews';
+import {
+  characterIdForMember,
+  useMemberRoomPreviews,
+  withMyCharacter,
+} from '@/hooks/use-member-room-previews';
 import type { OnboardingMissionStepId } from '@/hooks/use-onboarding-missions';
 import type { useRoomLayouts } from '@/hooks/use-room-layouts';
 import { subscribePendingInviteCode } from '@/lib/pending-invite';
@@ -260,10 +265,29 @@ export function useHousePages({
     browsedHouseRef.current = false;
     setScreen('houseSearch');
   }, [setScreen]);
-  // 방장 관리 진입 시 구성원·입주 신청 목록 갱신 (#526).
-  const openMemberManagement = useCallback(() => {
-    void refreshHouses();
-  }, [refreshHouses]);
+  // --- 구성원 관리 (#753) — HouseScreen 내부 뷰에서 셸 화면으로 승격 ---
+  // 강퇴 낙관 반영: 서버 목록이 갱신되기 전에도 좌석 타일이 즉시 빈다.
+  // 키는 `${houseIndex}-${name}` — 집을 오가도 다른 집 좌석에 새지 않는다.
+  const [kicked, setKicked] = useState<string[]>([]);
+  const isKickedMember = useCallback(
+    (name: string) => kicked.includes(`${houseIndex}-${name}`),
+    [kicked, houseIndex],
+  );
+  const localKick = useCallback(
+    (name: string) => setKicked((prev) => [...prev, `${houseIndex}-${name}`]),
+    [houseIndex],
+  );
+  const openMembers = useCallback(() => {
+    // 방장 진입 시 구성원·입주 신청 목록 갱신 (#526).
+    if (currentHouse?.myRole === 'OWNER' && currentHouse.houseId) void refreshHouses();
+    setScreen('houseMembers');
+  }, [currentHouse, refreshHouses, setScreen]);
+  const closeMembers = useCallback(() => setScreen('house'), [setScreen]);
+  // 관리 중 집이 사라지면(마지막 집 나가기·삭제, 갱신으로 강퇴 확인 등) 집
+  // 탭으로 돌린다 — currentHouse 없는 구성원 화면은 그릴 것이 없다.
+  useEffect(() => {
+    if (screen === 'houseMembers' && !currentHouse) setScreen('house');
+  }, [screen, currentHouse, setScreen]);
   const handleAcceptJoinRequest = useCallback(
     (houseId: number, requestId: number) => {
       void acceptJoinRequest(houseId, requestId);
@@ -356,7 +380,8 @@ export function useHousePages({
     coinBalance: wallet.coin,
     diamondBalance: wallet.diamond,
     raining,
-    onOpenMemberManagement: openMemberManagement,
+    onOpenMembers: openMembers,
+    isKickedMember,
     onAcceptJoinRequest: handleAcceptJoinRequest,
     onRejectJoinRequest: handleRejectJoinRequest,
     onKickMember: handleKickMember,
@@ -373,9 +398,28 @@ export function useHousePages({
     onPagerLockChange,
   };
 
-  /** 현재 화면이 집 서브화면 2종이면 그 JSX, 아니면 null — 셸이 그대로 렌더. */
+  /** 현재 화면이 집 서브화면 3종이면 그 JSX, 아니면 null — 셸이 그대로 렌더. */
   const subScreen =
-    screen === 'houseSearch' ? (
+    screen === 'houseMembers' && currentHouse ? (
+      <HouseMembersScreen
+        house={currentHouse}
+        members={manageableMembers(currentHouse)}
+        isOwner={currentHouse.myRole === 'OWNER' && !!currentHouse.houseId}
+        covers={houseCovers}
+        isKicked={isKickedMember}
+        memberCharacterId={(m) => characterIdForMember(m, roomPreviews, wornCharacterId)}
+        onBack={closeMembers}
+        onKickMember={handleKickMember}
+        onAcceptJoinRequest={handleAcceptJoinRequest}
+        onRejectJoinRequest={handleRejectJoinRequest}
+        onLocalKick={localKick}
+        onTransferOwnership={handleTransferOwnership}
+        onReissueInviteCode={handleReissueInviteCode}
+        onUpdateHouse={handleUpdateHouse}
+        onLeaveHouse={handleLeaveHouse}
+        onLeaveDone={closeMembers}
+      />
+    ) : screen === 'houseSearch' ? (
       <HouseSearchScreen
         initialCode={pendingJoinCode ?? undefined}
         onInitialCodeConsumed={() => setPendingJoinCode(null)}

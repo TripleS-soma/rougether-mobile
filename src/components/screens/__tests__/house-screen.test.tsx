@@ -338,26 +338,6 @@ describe('HouseScreen', () => {
     expect(getByLabelText('수달')).toBeTruthy();
   });
 
-  it('구성원 관리 아바타는 각자 캐릭터 — 프리뷰 없으면 내 것만 내 캐릭터 (#342)', async () => {
-    const roomPreviews = {
-      42: {
-        placedFurnitureIds: [],
-        wallpaperId: 'cream',
-        floorId: null,
-        backgroundId: null,
-        characterId: 'otter' as const,
-      },
-    };
-    const { getByLabelText, getAllByLabelText } = await render(
-      <HouseScreen houses={[MISSION_HOUSE]} characterId="tiger" roomPreviews={roomPreviews} />,
-    );
-    await fireEvent.press(getByLabelText('구성원 목록'));
-    // 구성원 관리는 전체 화면 교체라 시트 행 아바타만 남는다: 친구(42)는
-    // 프리뷰의 수달, 나(43)는 내 호랑이 — 수정 전엔 둘 다 호랑이(2/0)였다.
-    expect(getAllByLabelText('수달')).toHaveLength(1);
-    expect(getAllByLabelText('호랑이')).toHaveLength(1);
-  });
-
   it('sends the mission period only when the toggle is on (KST day bounds)', async () => {
     const onCreateMission = jest.fn();
     const { getByLabelText } = await render(
@@ -471,71 +451,8 @@ describe('HouseScreen', () => {
     expect(queryByLabelText('이전 집')).toBeNull();
   });
 
-  it('lets the owner edit the house settings', async () => {
-    const onUpdateHouse = jest.fn();
-    const { getByLabelText } = await render(
-      <HouseScreen houses={[MISSION_HOUSE]} onUpdateHouse={onUpdateHouse} />,
-    );
-    await fireEvent.press(getByLabelText('구성원 목록'));
-    await fireEvent.press(getByLabelText('집 정보 수정'));
-    await fireEvent.changeText(getByLabelText('집 이름'), '저녁 루틴 하우스');
-    await fireEvent.changeText(getByLabelText('집 소개'), '저녁 루틴으로 바꿨어요');
-    await fireEvent.press(getByLabelText('정원 6명'));
-    await fireEvent.press(getByLabelText('집 정보 저장'));
-    expect(onUpdateHouse).toHaveBeenCalledWith(7, {
-      name: '저녁 루틴 하우스',
-      description: '저녁 루틴으로 바꿨어요',
-      maxMembers: 6,
-    });
-  });
-
-  it('prefills the current cover, sends the new pick, and hides the section without a catalog', async () => {
-    const covers = [
-      { code: 'cloud', name: '구름 풍선 집', coverImageKey: 'house/cloud-balloon/f.png' },
-      { code: 'coral', name: '산호 수족관 집', coverImageKey: 'house/coral-aquarium/f.png' },
-    ];
-    const onUpdateHouse = jest.fn();
-    const { getByLabelText, getByText } = await render(
-      <HouseScreen
-        houses={[{ ...MISSION_HOUSE, coverImageKey: 'house/cloud-balloon/f.png' }]}
-        covers={covers}
-        onUpdateHouse={onUpdateHouse}
-      />,
-    );
-    await fireEvent.press(getByLabelText('구성원 목록'));
-    await fireEvent.press(getByLabelText('집 정보 수정'));
-    expect(getByText('대표 이미지')).toBeTruthy();
-    // The house's current cover arrives pre-selected.
-    expect(getByLabelText('구름 풍선 집 커버').props.accessibilityState.selected).toBe(true);
-
-    await fireEvent.press(getByLabelText('산호 수족관 집 커버'));
-    await fireEvent.press(getByLabelText('집 정보 저장'));
-    expect(onUpdateHouse).toHaveBeenCalledWith(
-      7,
-      expect.objectContaining({ coverImageKey: 'house/coral-aquarium/f.png' }),
-    );
-
-    // No catalog (load failed / server empty) → the section stays hidden.
-    const bare = await render(<HouseScreen houses={[MISSION_HOUSE]} onUpdateHouse={jest.fn()} />);
-    await fireEvent.press(bare.getByLabelText('구성원 목록'));
-    await fireEvent.press(bare.getByLabelText('집 정보 수정'));
-    expect(bare.queryByText('대표 이미지')).toBeNull();
-  });
-
-  it('transfers ownership to a member after confirming', async () => {
-    const onTransferOwnership = jest.fn();
-    const { getByLabelText, getByText } = await render(
-      <HouseScreen houses={[MISSION_HOUSE]} onTransferOwnership={onTransferOwnership} />,
-    );
-    await fireEvent.press(getByLabelText('구성원 목록'));
-    await fireEvent.press(getByLabelText('친구 방장 위임'));
-    expect(getByText('방장을 위임할까요?')).toBeTruthy();
-    await fireEvent.press(getByLabelText('위임 확인'));
-    expect(onTransferOwnership).toHaveBeenCalledWith(7, 42);
-  });
-
   it('hides the owner tools from plain members', async () => {
-    const { getByLabelText, queryByLabelText } = await render(
+    const { queryByLabelText } = await render(
       <HouseScreen
         houses={[{ ...MISSION_HOUSE, myRole: 'MEMBER' }]}
         onUpdateHouse={jest.fn()}
@@ -546,89 +463,6 @@ describe('HouseScreen', () => {
     );
     // Mission creation is owner-only on the server (403 HOUSE_NOT_OWNER).
     expect(queryByLabelText('미션 만들기')).toBeNull();
-    await fireEvent.press(getByLabelText('구성원 목록'));
-    expect(queryByLabelText('집 정보 수정')).toBeNull();
-    expect(queryByLabelText('친구 방장 위임')).toBeNull();
-    // Kick is owner-only too.
-    expect(queryByLabelText('친구 강퇴')).toBeNull();
-  });
-
-  it('reissues the invite code after confirming (owner)', async () => {
-    const onReissueInviteCode = jest.fn();
-    const { getByText, getByLabelText } = await render(
-      <HouseScreen
-        houses={[{ ...MISSION_HOUSE, inviteCode: 'ABCD2345' }]}
-        onReissueInviteCode={onReissueInviteCode}
-      />,
-    );
-    await fireEvent.press(getByLabelText('구성원 목록'));
-    await fireEvent.press(getByLabelText('초대코드 재발급'));
-    expect(getByText('초대코드를 재발급할까요?')).toBeTruthy();
-    await fireEvent.press(getByLabelText('재발급 확인'));
-    expect(onReissueInviteCode).toHaveBeenCalledWith(7);
-  });
-
-  it('부원에게도 재발급이 열린다 — 개인 초대코드 신계약 (#646)', async () => {
-    const { getByLabelText } = await render(
-      <HouseScreen
-        houses={[{ ...MISSION_HOUSE, inviteCode: 'ABCD2345', myRole: 'MEMBER' }]}
-        onReissueInviteCode={jest.fn()}
-      />,
-    );
-    await fireEvent.press(getByLabelText('구성원 목록'));
-    // 서버가 전 구성원 재발급을 허용(소유자=공용, 부원=개인 코드) — 버튼 노출.
-    expect(getByLabelText('초대코드 재발급')).toBeTruthy();
-  });
-
-  it('leaves the house after confirming (member)', async () => {
-    const onLeaveHouse = jest.fn();
-    const { getByText, getByLabelText } = await render(
-      <HouseScreen houses={[{ ...MISSION_HOUSE, myRole: 'MEMBER' }]} onLeaveHouse={onLeaveHouse} />,
-    );
-    await fireEvent.press(getByLabelText('구성원 목록'));
-    await fireEvent.press(getByLabelText('집 나가기'));
-    expect(getByText('집에서 나갈까요?')).toBeTruthy();
-    await fireEvent.press(getByLabelText('나가기 확인'));
-    expect(onLeaveHouse).toHaveBeenCalledWith(7);
-  });
-
-  it('guides the owner to transfer ownership instead of leaving', async () => {
-    const { getByText, getByLabelText, queryByLabelText } = await render(
-      <HouseScreen houses={[MISSION_HOUSE]} onLeaveHouse={jest.fn()} />,
-    );
-    await fireEvent.press(getByLabelText('구성원 목록'));
-    expect(queryByLabelText('집 나가기')).toBeNull();
-    expect(getByText('방장은 다른 멤버에게 방장을 위임한 뒤 나갈 수 있어요.')).toBeTruthy();
-  });
-
-  it('lets a lone owner delete the house through leave (#309)', async () => {
-    const onLeaveHouse = jest.fn();
-    // 활성 멤버가 나뿐인 집 — 위임 상대가 없다.
-    const loneHouse: House = {
-      ...MISSION_HOUSE,
-      memberCount: 1,
-      floors: [
-        {
-          level: '1층',
-          rooms: [
-            { name: '나', color: '#E8E0D0', isMine: true, membershipId: 43 },
-            { name: '빈방', color: 'transparent', vacant: true },
-          ],
-        },
-      ],
-    };
-    const { getByText, getByLabelText, queryByText } = await render(
-      <HouseScreen houses={[loneHouse]} onLeaveHouse={onLeaveHouse} />,
-    );
-    await fireEvent.press(getByLabelText('구성원 목록'));
-    // 위임 안내 대신 집 삭제 버튼.
-    expect(queryByText('방장은 다른 멤버에게 방장을 위임한 뒤 나갈 수 있어요.')).toBeNull();
-    await fireEvent.press(getByLabelText('집 삭제'));
-    // 삭제 경고 문구 — 집이 정리되어 탐색·조회에서 사라진다.
-    expect(getByText('집을 삭제할까요?')).toBeTruthy();
-    expect(getByText(/삭제되고 탐색·조회에서 사라져요/)).toBeTruthy();
-    await fireEvent.press(getByLabelText('집 삭제 확인'));
-    expect(onLeaveHouse).toHaveBeenCalledWith(7);
   });
 
   it('visits a friend room and my room on tap', async () => {
@@ -665,18 +499,16 @@ describe('HouseScreen', () => {
         ...MISSION_HOUSE.floors,
       ],
     };
-    const { getAllByText, getAllByLabelText, getByLabelText, queryAllByText, queryAllByTestId } =
-      await render(<HouseScreen houses={[house]} onVisitFriend={onVisitFriend} />);
+    const { getAllByLabelText, queryAllByText, queryAllByTestId } = await render(
+      <HouseScreen houses={[house]} onVisitFriend={onVisitFriend} />,
+    );
     // 정원 4 / 멤버 2 → 빈 좌석은 캐릭터 없는 빈 방으로, 텍스트 라벨 없이 (#281).
     expect(queryAllByTestId('vacant-room')).toHaveLength(2);
     expect(queryAllByText('빈방')).toHaveLength(0);
     // 접근성 라벨은 유지 — 탭은 불가.
     await fireEvent.press(getAllByLabelText('빈방')[0]);
     expect(onVisitFriend).not.toHaveBeenCalled();
-    // Vacant seats are tiles only — 구성원 관리 lists real members.
-    await fireEvent.press(getByLabelText('구성원 목록'));
-    expect(queryAllByText('빈방')).toHaveLength(0);
-    expect(getAllByText('친구')).toBeTruthy();
+    // (구성원 관리의 빈 좌석 제외는 manageableMembers 파생 — members 테스트에서 단언.)
   });
 
   it('odd capacity fills the windows and leaves the extra window as a quiet panel', async () => {
@@ -704,29 +536,6 @@ describe('HouseScreen', () => {
     expect(getByTestId('house-scroll').props.scrollEnabled).toBe(false);
   });
 
-  it('marks the owner in the member management list', async () => {
-    const { getByLabelText, getByText } = await render(
-      <HouseScreen
-        houses={[
-          {
-            ...MISSION_HOUSE,
-            floors: [
-              {
-                level: '1층',
-                rooms: [
-                  { name: '친구', color: '#F5E1D8', membershipId: 42, isOwner: true },
-                  { name: '나', color: '#E8E0D0', isMine: true, membershipId: 43 },
-                ],
-              },
-            ],
-          },
-        ]}
-      />,
-    );
-    await fireEvent.press(getByLabelText('구성원 목록'));
-    expect(getByText('방장')).toBeTruthy();
-  });
-
   it('shows the guided empty state when there are no houses', async () => {
     const onOpenSearch = jest.fn();
     const { getByText, getByLabelText } = await render(
@@ -735,120 +544,6 @@ describe('HouseScreen', () => {
     expect(getByText('아직 함께하는 집이 없어요')).toBeTruthy();
     await fireEvent.press(getByLabelText('집 탐색'));
     expect(onOpenSearch).toHaveBeenCalledTimes(1);
-  });
-
-  it('kicks via the API callback when the house carries server ids', async () => {
-    const onKickMember = jest.fn();
-    const houses = [
-      {
-        houseId: 7,
-        name: '실집',
-        inviteCode: 'ABC-123',
-        // Kick is owner-only — a server-backed house shows it just to the OWNER.
-        myRole: 'OWNER' as const,
-        floors: [
-          {
-            level: '1층',
-            rooms: [
-              { name: '친구', color: '#F5E1D8', membershipId: 42 },
-              { name: '나', color: '#E8E0D0', isMine: true, membershipId: 43 },
-            ],
-          },
-        ],
-      },
-    ];
-    const { getByLabelText, getAllByText } = await render(
-      <HouseScreen houses={houses} onKickMember={onKickMember} />,
-    );
-
-    await fireEvent.press(getByLabelText('구성원 목록'));
-    await fireEvent.press(getAllByText('강퇴')[0]);
-    const kicks = getAllByText('강퇴');
-    await fireEvent.press(kicks[kicks.length - 1]);
-
-    expect(onKickMember).toHaveBeenCalledWith(7, 42);
-  });
-
-  it('hides the kick button on my own card and uses a back button header', async () => {
-    const onKickMember = jest.fn();
-    const houses = [
-      {
-        name: '실집',
-        houseId: 7,
-        myRole: 'OWNER' as const,
-        floors: [
-          {
-            level: '1층',
-            rooms: [
-              { name: '친구', color: '#F5E1D8', membershipId: 42 },
-              { name: '나', color: '#E8E0D0', isMine: true, membershipId: 43 },
-            ],
-          },
-        ],
-      },
-    ];
-    const { getByLabelText, queryByLabelText } = await render(
-      <HouseScreen houses={houses} onKickMember={onKickMember} />,
-    );
-    await fireEvent.press(getByLabelText('구성원 목록'));
-    // 내 카드엔 강퇴 버튼이 아예 없다 (disabled가 아니라 미노출).
-    expect(getByLabelText('친구 강퇴')).toBeTruthy();
-    expect(queryByLabelText('나 강퇴')).toBeNull();
-    // 헤더는 X 대신 다른 화면과 같은 왼쪽 뒤로가기.
-    expect(queryByLabelText('닫기')).toBeNull();
-    await fireEvent.press(getByLabelText('뒤로 가기'));
-    expect(getByLabelText('공동 미션')).toBeTruthy();
-  });
-
-  it('lets the owner accept or reject pending join requests', async () => {
-    const onAcceptJoinRequest = jest.fn();
-    const onRejectJoinRequest = jest.fn();
-    const house = {
-      name: '신청 받는 집',
-      houseId: 7,
-      myRole: 'OWNER' as const,
-      joinRequests: [
-        { requestId: 21, nickname: '신청자 A' },
-        { requestId: 22, nickname: '신청자 B' },
-      ],
-      floors: [
-        {
-          level: '1층',
-          rooms: [{ name: '나', color: '#E8E0D0', isMine: true, isOwner: true }],
-        },
-      ],
-    };
-    const { getByLabelText, getByText } = await render(
-      <HouseScreen
-        houses={[house]}
-        onAcceptJoinRequest={onAcceptJoinRequest}
-        onRejectJoinRequest={onRejectJoinRequest}
-      />,
-    );
-
-    await fireEvent.press(getByLabelText('구성원 목록'));
-    expect(getByText('입주 신청 2건')).toBeTruthy();
-    await fireEvent.press(getByLabelText('신청자 A 입주 수락'));
-    await fireEvent.press(getByLabelText('신청자 B 입주 거절'));
-
-    expect(onAcceptJoinRequest).toHaveBeenCalledWith(7, 21);
-    expect(onRejectJoinRequest).toHaveBeenCalledWith(7, 22);
-  });
-
-  it('opens member management and kicks a member after confirming', async () => {
-    const { getByText, getByLabelText, getAllByText, queryByText } = await render(<HouseScreen />);
-    await fireEvent.press(getByLabelText('구성원 목록'));
-    expect(getByText('구성원 관리')).toBeTruthy();
-
-    // First member's "강퇴" button opens the confirm modal.
-    await fireEvent.press(getAllByText('강퇴')[0]);
-    expect(getByText('정말 강퇴할까요?')).toBeTruthy();
-
-    // The modal's "강퇴" (confirm) is the last occurrence in the tree.
-    const kicks = getAllByText('강퇴');
-    await fireEvent.press(kicks[kicks.length - 1]);
-    expect(queryByText('정말 강퇴할까요?')).toBeNull();
-    expect(getByText('강퇴된 멤버')).toBeTruthy();
   });
 
   // 로드 실패는 '집 없음' 가입 유도로 위장하지 않는다 (#549).
@@ -916,5 +611,29 @@ describe('HouseScreen', () => {
     const { getByTestId } = await render(<HouseScreen houses={[MISSION_HOUSE]} />);
     const style = StyleSheet.flatten(getByTestId('seat-meta-0').props.style);
     expect(style.opacity).toBe(1);
+  });
+
+  it('구성원 목록 버튼은 셸 화면을 연다 — onOpenMembers 콜백 (#753)', async () => {
+    const onOpenMembers = jest.fn();
+    const { getByLabelText } = await render(
+      <HouseScreen houses={[MISSION_HOUSE]} onOpenMembers={onOpenMembers} />,
+    );
+    await fireEvent.press(getByLabelText('구성원 목록'));
+    expect(onOpenMembers).toHaveBeenCalledTimes(1);
+  });
+
+  it('강퇴 낙관 반영 — isKickedMember가 참인 좌석은 빈 타일 (#753)', async () => {
+    const onVisitFriend = jest.fn();
+    const { getAllByTestId, getByLabelText } = await render(
+      <HouseScreen
+        houses={[MISSION_HOUSE]}
+        onVisitFriend={onVisitFriend}
+        isKickedMember={(name) => name === '친구'}
+      />,
+    );
+    // MISSION_HOUSE floors엔 빈 좌석이 없어, 빈 방 비주얼 = 강퇴된 친구 좌석뿐.
+    expect(getAllByTestId('vacant-room')).toHaveLength(1);
+    await fireEvent.press(getByLabelText('친구'));
+    expect(onVisitFriend).not.toHaveBeenCalled();
   });
 });

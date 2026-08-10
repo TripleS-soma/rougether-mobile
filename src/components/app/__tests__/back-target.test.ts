@@ -14,6 +14,8 @@ describe('backTargetFor (#564)', () => {
   });
 
   it('집 없는 유저의 탐색은 빈 집 화면 대신 나의 방으로 (#571)', () => {
+    // 구성원 관리 — 셸 화면 승격(#753) 후 백은 집 탭으로.
+    expect(backTargetFor('houseMembers', 'routineManage', false)).toBe('house');
     expect(backTargetFor('houseSearch', 'routineManage', true)).toBe('myRoom');
     expect(backTargetFor('houseSearch', 'routineManage', false)).toBe('house');
   });
