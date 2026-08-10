@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Animated, type GestureResponderEvent, Pressable, StyleSheet, View } from 'react-native';
+import { useAnimatedValue } from '@/hooks/use-stable-value';
 
 import { Icon } from '@/components/ui/icon';
 import { StaticWhite } from '@/constants/theme';
@@ -38,7 +39,7 @@ export function BearCheck({
   const earSize = size * 0.42;
 
   // 완료 전환(false→true)에서만 팝 — 마운트 시 이미 완료면 조용히.
-  const pop = useRef(new Animated.Value(1)).current;
+  const pop = useAnimatedValue(1);
   const prevChecked = useRef(checked);
   useEffect(() => {
     if (checked && !prevChecked.current) {

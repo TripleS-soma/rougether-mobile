@@ -36,6 +36,7 @@ import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { formatTime } from '@/utils/datetime';
 import { hapticSuccess } from '@/utils/haptics';
 import { DEMO_GUESTBOOK, FRIEND_DEMO_ROUTINES } from '@/mocks/fixtures';
+import { useAnimatedValue } from '@/hooks/use-stable-value';
 
 /** Cheer reactions a visitor can leave on a friend's room. */
 export type CheerType = 'great' | 'support' | 'best';
@@ -620,7 +621,7 @@ export function FriendRoomScreen({
 
 /** 전송된 응원이 버튼 줄 위로 떠올라 사라지는 버스트 (#450). */
 function CheerBurst({ type, onDone }: { type: CheerType; onDone: () => void }) {
-  const p = useRef(new Animated.Value(0)).current;
+  const p = useAnimatedValue(0);
   const icon = CHEERS.find((c) => c.type === type)?.icon ?? 'heart';
   const idx = Math.max(
     CHEERS.findIndex((c) => c.type === type),

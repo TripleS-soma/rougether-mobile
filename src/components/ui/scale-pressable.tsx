@@ -1,4 +1,4 @@
-import { type Ref, useRef } from 'react';
+import { type Ref } from 'react';
 import {
   Animated,
   Pressable,
@@ -7,6 +7,7 @@ import {
   type View,
   type ViewStyle,
 } from 'react-native';
+import { useAnimatedValue } from '@/hooks/use-stable-value';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -25,7 +26,7 @@ export type ScalePressableProps = Omit<PressableProps, 'style'> & {
  * 이름만 바꿔 대체할 수 있다 (함수형 style만 정적 스타일로 바꿀 것).
  */
 export function ScalePressable({ pressScale = 0.96, style, ...rest }: ScalePressableProps) {
-  const scale = useRef(new Animated.Value(1)).current;
+  const scale = useAnimatedValue(1);
   const to = (v: number) =>
     Animated.spring(scale, {
       toValue: v,

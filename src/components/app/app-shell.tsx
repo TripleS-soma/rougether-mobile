@@ -1,14 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Platform, StyleSheet, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
-import { useSharedValue } from 'react-native-reanimated';
 
-import {
-  NAV_ORDER,
-  SCREEN_FOR_TAB,
-  type Screen,
-  TAB_FOR_SCREEN,
-} from '@/components/app/navigation';
+import { NAV_ORDER, SCREEN_FOR_TAB, type Screen } from '@/components/app/navigation';
 import { TabPager } from '@/components/app/tab-pager';
 import { useAppNavigation } from '@/components/app/use-app-navigation';
 import { useFriendVisit } from '@/components/app/use-friend-visit';
@@ -43,6 +37,7 @@ import { useWeather } from '@/hooks/use-weather';
 import type { DrawResult } from '@/api';
 import { fetchGachaRewards } from '@/api';
 import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furniture';
+import { usePagerLock } from '@/components/app/use-pager-lock';
 
 // 내비게이션 상수·backTargetFor는 navigation.ts로 이동 (#692) — 기존
 // 임포터(테스트 등)를 위한 재수출.
@@ -359,19 +354,7 @@ export function AppShell({
   // 단 집 "페이지가 활성일 때만" — 확대를 남겨둔 채 탭 버튼으로 떠났을 때
   // 다른 페이지의 스와이프까지 막으면 안 된다. TabPager·내비와 결합된 셸
   // 잔류 클러스터 (#692 6단계) — 잠금 콜백만 집 페이지 prop으로 내려간다.
-  const pagerLock = useSharedValue(false);
-  // 공유값을 ref로 감싸 콜백을 무의존으로 — 프로덕션의 useSharedValue는 참조가
-  // 안정적이지만, 의존성에 직접 넣으면 memo 화면으로 가는 콜백의 안정성이
-  // reanimated 구현 디테일에 묶인다(렌더 안정성 프로브 #539 계약).
-  const pagerLockRef = useRef(pagerLock);
-  pagerLockRef.current = pagerLock;
-  const housePagerLockRef = useRef(false);
-  const screenRef = useRef(screen);
-  screenRef.current = screen;
-  const handleHousePagerLock = useCallback((locked: boolean) => {
-    housePagerLockRef.current = locked;
-    pagerLockRef.current.value = locked && TAB_FOR_SCREEN[screenRef.current] === 'house';
-  }, []);
+  const { lock: pagerLock, setHouseLocked: handleHousePagerLock } = usePagerLock(screen);
 
   // 집 페이지 배선 (#692 6단계) — 집 탭 페이지와 서브화면 2종(집 탐색·집
   // 생성)의 훅·콜백·JSX 소유. noHouses 판정·탐색 이탈 미션 판정을 반환해
@@ -413,9 +396,6 @@ export function AppShell({
     noHouses: housePages.noHouses,
     onLeaveHouseSearch: housePages.onLeaveHouseSearch,
   });
-  useEffect(() => {
-    pagerLockRef.current.value = housePagerLockRef.current && activeTab === 'house';
-  }, [activeTab]);
 
   return (
     <View style={styles.root}>

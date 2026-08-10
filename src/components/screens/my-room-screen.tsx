@@ -28,6 +28,7 @@ import {
   resolveDrop,
 } from '@/components/screens/my-room/routine-drag';
 import { applyRoutineOrder } from '@/hooks/use-routine-order';
+import { useAnimatedValue, useConstant, useLatestRef } from '@/hooks/use-stable-value';
 import type { WalletHistoryEntry } from '@/api/adapters';
 import { SwipeDeleteRow } from '@/components/screens/my-room/swipe-delete-row';
 import { WalletHistorySheet } from '@/components/screens/sheets/wallet-history-sheet';
@@ -295,7 +296,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   const rootRef = useRef<View>(null);
   const walletRef = useRef<View>(null);
   const flyTarget = useRef({ x: 0, y: 0 });
-  const walletPulse = useRef(new Animated.Value(1)).current;
+  const walletPulse = useAnimatedValue(1);
   const coinSeq = useRef(0);
   const [flyingCoins, setFlyingCoins] = useState<
     { id: number; x: number; y: number; tx: number; ty: number }[]
@@ -323,7 +324,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   };
 
   // 스트릭 펄스 (#440) — 수치가 오르는 순간 🔥가 한 번 크게 일렁.
-  const streakPulse = useRef(new Animated.Value(1)).current;
+  const streakPulse = useAnimatedValue(1);
   const prevStreak = useRef(streakDays);
   useEffect(() => {
     if (streakDays > prevStreak.current) {
@@ -457,11 +458,13 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // 가져간다. 제스처는 마운트 시 1회 생성(재생성은 활성 팬을 취소시킨다 —
   // draggable-furniture 참고), 최신 tab은 핸들러 ref로 읽는다. 두 탭 분기가
   // 상호배타라 같은 제스처 객체를 양쪽 디텍터에 써도 동시 부착은 없다.
-  const flingHandlerRef = useRef<() => void>(() => {});
-  flingHandlerRef.current = () => setTab(tab === 'room' ? 'calendar' : 'room');
-  const tabFling = useRef(
+  // 최신 핸들러를 무의존 제스처에 넘긴다 (#539) — 렌더 중 ref 쓰기는
+  // useLatestRef가 흡수해 이 컴포넌트가 컴파일러 바일아웃을 피한다 (#748).
+  const flingHandlerRef = useLatestRef(() => setTab(tab === 'room' ? 'calendar' : 'room'));
+
+  const tabFling = useConstant(() =>
     horizontalFlingGesture('room-tab-fling', () => flingHandlerRef.current()),
-  ).current;
+  );
   const [selectedDate, setSelectedDate] = useState(() => todayIso());
   const dateRoutines = useMemo(
     () => routines.filter((r) => isScheduledOn(r, selectedDate)),
@@ -820,7 +823,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // 이동(서버). 완료 행은 하단으로 가라앉은 상태라 드래그에서 제외한다.
   const reorderEnabled = !!onReorderRoutines && tab === 'room';
   const [dragId, setDragId] = useState<string | null>(null);
-  const dragTY = useRef(new Animated.Value(0)).current;
+  const dragTY = useAnimatedValue(0);
   const rowRefs = useRef(new Map<string, View>());
   const dragSlotsRef = useRef<DragSlot[]>([]);
   const dropRef = useRef<DropTarget | null>(null);

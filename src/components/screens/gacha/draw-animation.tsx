@@ -9,6 +9,7 @@ import { Radius, Spacing, StaticWhite } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { assetSource, isCdnKey } from '@/resources/asset';
 import { RARITY_COLORS, type Rarity } from '@/resources/furniture';
+import { useAnimatedValue } from '@/hooks/use-stable-value';
 
 /** Minimum charge-phase duration — keeps the build-up on screen even when the
  * draw API answers in a few hundred ms. */
@@ -30,9 +31,9 @@ export const rarityColor = (rarity?: string) =>
  */
 export function ChargingBox({ icon, accent }: { icon: PictogramName; accent: string }) {
   const t = useTokens();
-  const grow = useRef(new Animated.Value(0)).current;
-  const shake = useRef(new Animated.Value(0)).current;
-  const glow = useRef(new Animated.Value(0)).current;
+  const grow = useAnimatedValue(0);
+  const shake = useAnimatedValue(0);
+  const glow = useAnimatedValue(0);
 
   useEffect(() => {
     // 진폭↑·주기↓ 에스컬레이션 (~1760ms) 후 최고 강도 루프 유지.
@@ -117,7 +118,7 @@ const BURST_PARTICLES = [
  */
 export function BurstOverlay({ color, strong }: { color: string; strong: boolean }) {
   const t = useTokens();
-  const p = useRef(new Animated.Value(0)).current;
+  const p = useAnimatedValue(0);
 
   useEffect(() => {
     Animated.timing(p, {
@@ -195,8 +196,8 @@ export function RevealCard({
   const t = useTokens();
   const Typography = useTypography();
   const emph = useFontEmphasis();
-  const p = useRef(new Animated.Value(0)).current;
-  const fade = useRef(new Animated.Value(0)).current;
+  const p = useAnimatedValue(0);
+  const fade = useAnimatedValue(0);
   const color = rarityColor(item.rarity);
 
   useEffect(() => {
@@ -270,9 +271,9 @@ export function FlipCard({ item, index }: { item: DrawResult; index: number }) {
   const t = useTokens();
   const Typography = useTypography();
   const emph = useFontEmphasis();
-  const deal = useRef(new Animated.Value(0)).current;
-  const flip = useRef(new Animated.Value(0)).current;
-  const glow = useRef(new Animated.Value(0.3)).current;
+  const deal = useAnimatedValue(0);
+  const flip = useAnimatedValue(0);
+  const glow = useAnimatedValue(0.3);
   const [flipped, setFlipped] = useState(false);
   const autoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const color = rarityColor(item.rarity);

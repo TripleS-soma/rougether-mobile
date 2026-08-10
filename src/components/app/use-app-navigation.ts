@@ -15,6 +15,7 @@ import {
   type Screen,
 } from '@/components/app/navigation';
 import { useToast } from '@/components/ui/toast';
+import { useAnimatedValue } from '@/hooks/use-stable-value';
 
 /**
  * 셸 내비게이션 컨트롤러 (#692) — 뒤로가기(하드웨어 백 #522 · iOS 엣지 백
@@ -120,8 +121,8 @@ export function useAppNavigation({
   // 화면 전환 손맛 (#446) — 들어오는 화면이 이동 방향에서 밀려 들어온다.
   // 진입(서브화면)은 우측에서, 복귀(뒤로)는 좌측에서. 탭 간 전환은 이제
   // 페이저(#563)가 손가락 추종/슬라이드로 직접 그리므로 여기선 건너뛴다.
-  const transOpacity = useRef(new Animated.Value(1)).current;
-  const transX = useRef(new Animated.Value(0)).current;
+  const transOpacity = useAnimatedValue(1);
+  const transX = useAnimatedValue(0);
   const prevScreenRef = useRef<Screen>(screen);
   useEffect(() => {
     const prev = prevScreenRef.current;
