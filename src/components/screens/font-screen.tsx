@@ -1,31 +1,20 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppearancePreview } from '@/components/screens/settings/appearance-preview';
-import { Icon } from '@/components/ui/icon';
+import { PickerRow, pickerStyles } from '@/components/screens/settings/picker-row';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import {
   type BrandFontId,
   DEFAULT_FONT_ID,
+  displayFaceFor,
   FONT_OPTIONS,
   Radius,
-  Spacing,
-  typographyFor,
 } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
-import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useTokens } from '@/hooks/use-tokens';
 
 /** 글자 스와치에 쓸 견본 — 받침·둥근 획이 다 들어가 얼굴 차이가 잘 드러난다. */
 const SWATCH_GLYPH = '가';
-
-/**
- * 글자 스와치 스타일 (#382) — 각 폰트의 제목 얼굴로 크게 렌더한다. 주아 혼합은
- * 제목 롤만 Jua이고 본문은 Pretendard라, display1 롤을 그대로 쓰면 의도대로
- * Jua가 나온다(색 스와치가 그 테마의 대표색 하나를 보여주는 것과 같은 이치).
- */
-function swatchStyle(id: BrandFontId) {
-  const { fontFamily, fontWeight } = typographyFor(id).display1;
-  return { fontFamily, fontWeight };
-}
 
 export type FontScreenProps = {
   /** Active app font; drives the selected marker + live preview. */
@@ -42,54 +31,36 @@ export type FontScreenProps = {
  */
 export function FontScreen({ fontId = DEFAULT_FONT_ID, onChangeFont, onBack }: FontScreenProps) {
   const t = useTokens();
-  const Typography = useTypography();
-  const emph = useFontEmphasis();
 
   return (
-    <View style={[styles.screen, useScreenStyle([])]}>
+    <View style={[pickerStyles.screen, useScreenStyle([])]}>
       <ScreenHeader title="폰트" onBack={onBack} />
 
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView contentContainerStyle={pickerStyles.body}>
         <AppearancePreview />
 
-        <View style={styles.list}>
-          {FONT_OPTIONS.map((opt) => {
-            const selected = opt.id === fontId;
-            return (
-              <Pressable
-                key={opt.id}
-                onPress={() => onChangeFont?.(opt.id)}
-                accessibilityRole="radio"
-                accessibilityState={{ selected }}
-                accessibilityLabel={`${opt.name} 폰트`}
-                style={[
-                  styles.optRow,
-                  { backgroundColor: t.surface, borderColor: selected ? t.primary : t.border },
-                  selected && styles.optRowSelected,
-                ]}>
+        <View style={pickerStyles.list}>
+          {FONT_OPTIONS.map((opt) => (
+            <PickerRow
+              key={opt.id}
+              name={opt.name}
+              selected={opt.id === fontId}
+              accessibilityLabel={`${opt.name} 폰트`}
+              onPress={() => onChangeFont?.(opt.id)}
+              swatch={
                 <View
                   style={[
                     styles.swatch,
                     { backgroundColor: t.surfaceMuted, borderColor: t.border },
                   ]}>
                   {/* 이 글자만 해당 폰트로 — 이름은 활성 폰트라 목록 정렬이 흔들리지 않는다. */}
-                  <Text style={[styles.swatchGlyph, swatchStyle(opt.id), { color: t.text }]}>
+                  <Text style={[styles.swatchGlyph, displayFaceFor(opt.id), { color: t.text }]}>
                     {SWATCH_GLYPH}
                   </Text>
                 </View>
-                <Text
-                  style={[
-                    Typography.body,
-                    emph(selected ? 'bold' : 'normal'),
-                    styles.optName,
-                    { color: t.text },
-                  ]}>
-                  {opt.name}
-                </Text>
-                {selected ? <Icon name="check" size={20} color={t.primaryText} /> : null}
-              </Pressable>
-            );
-          })}
+              }
+            />
+          ))}
         </View>
       </ScrollView>
     </View>
@@ -97,28 +68,8 @@ export function FontScreen({ fontId = DEFAULT_FONT_ID, onChangeFont, onBack }: F
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-  },
-  body: {
-    padding: Spacing.three,
-    gap: Spacing.four,
-  },
-  list: {
-    gap: Spacing.two,
-  },
-  optRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-    padding: Spacing.three,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-  },
-  optRowSelected: {
-    borderWidth: 2,
-  },
   swatch: {
+    // 색 스와치는 원, 글자 스와치는 둥근 사각 — 글자가 원 안에서 답답해 보인다.
     width: 36,
     height: 36,
     borderRadius: Radius.md,
@@ -130,8 +81,5 @@ const styles = StyleSheet.create({
     fontSize: 20,
     // 폰트별 기본 행간 차이로 글자가 위아래로 밀리지 않게 고정한다.
     lineHeight: 24,
-  },
-  optName: {
-    flex: 1,
   },
 });

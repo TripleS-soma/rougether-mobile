@@ -7,6 +7,7 @@ import {
   type BrandFontId,
   DEFAULT_FONT_ID,
   DEFAULT_THEME_MODE,
+  displayFaceFor,
   FONT_OPTIONS,
   Radius,
   Spacing,
@@ -23,13 +24,12 @@ const MODE_OPTIONS: { id: ThemeMode; name: string }[] = [
 ];
 
 /**
- * 설정 행 오른쪽의 현재 폰트 이름을 그 폰트로 그리는 스타일 (#382). 주아
- * 혼합은 제목만 Jua이고 본문은 Pretendard라, label 롤을 그대로 쓰면 무엇이
- * 다른지 안 보인다 — 그래서 Jua 얼굴로 덮어쓴다.
+ * 설정 행 오른쪽의 현재 폰트 이름을 그 폰트로 그리는 스타일 (#382). 크기는
+ * label 롤에서, 얼굴은 displayFaceFor에서 — 주아 혼합은 제목만 Jua라 label
+ * 롤의 얼굴만으로는 무엇이 다른지 안 보인다 (#750).
  */
 function fontPreviewStyle(id: BrandFontId) {
-  const label = typographyFor(id).label;
-  return id === 'jua' ? { ...label, fontFamily: 'Jua-Regular' } : label;
+  return { ...typographyFor(id).label, ...displayFaceFor(id) };
 }
 
 type Row = { icon: IconName; label: string; onPress?: () => void };
@@ -182,7 +182,8 @@ export const SettingsScreen = memo(function SettingsScreen({
           {/*
             테마 색상·폰트 — 선택지가 많고 실제로 적용해 봐야 아는 것들이라
             인라인 칩 대신 미리보기가 있는 별도 화면으로 (#459 → 폰트도 #750).
-            현재 값을 행 오른쪽에 적어 들어가지 않고도 확인할 수 있게 한다.
+            폰트는 현재 이름을 행 오른쪽에 그 얼굴로 적어 들어가지 않고도
+            확인되게 했다. 테마 색상은 화면 전체가 이미 그 색이라 생략.
           */}
           <View style={[styles.card, { backgroundColor: t.surface }]}>
             <Pressable
@@ -343,7 +344,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     borderRadius: Radius.pill,
   },
-  // 긴 라벨(나눔스퀘어라운드)이 두 줄로 감길 때도 가운데 정렬 (#423).
   iconCircle: {
     width: 32,
     height: 32,
