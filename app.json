@@ -22,6 +22,8 @@
       }
     },
     "android": {
+      "_comment_blockedPermissions": "카메라·마이크는 어느 기능도 쓰지 않는다 (#752). expo-image-picker는 앨범 선택만, expo-audio는 재생만 쓰는데 두 라이브러리가 자기 매니페스트에 CAMERA·RECORD_AUDIO를 선언해 스토어 목록에 '카메라'·'마이크'로 노출된다 — 병합 단계에서 제거한다.",
+      "blockedPermissions": ["android.permission.CAMERA", "android.permission.RECORD_AUDIO"],
       "adaptiveIcon": {
         "backgroundColor": "#FEF1D6",
         "foregroundImage": "./assets/images/icon.png"
@@ -78,8 +80,8 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "루틴 인증 사진을 촬영하기 위해 카메라를 사용합니다.",
-          "photosPermission": "루틴 인증 사진을 앨범에서 선택하기 위해 사진 접근 권한을 사용합니다.",
+          "photosPermission": "버그 제보에 첨부할 스크린샷을 앨범에서 선택하기 위해 사진 접근 권한을 사용합니다.",
+          "cameraPermission": false,
           "microphonePermission": false
         }
       ],
@@ -100,14 +102,6 @@
       ],
       "expo-apple-authentication",
       "expo-secure-store",
-      [
-        "expo-camera",
-        {
-          "cameraPermission": "루틴 인증 사진을 촬영하기 위해 카메라를 사용합니다.",
-          "microphonePermission": false,
-          "recordAudioAndroid": false
-        }
-      ],
       [
         "expo-media-library",
         {
