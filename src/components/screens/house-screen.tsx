@@ -11,8 +11,6 @@ import {
   View,
 } from 'react-native';
 
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-
 import { CharacterAvatar } from '@/components/room/character-avatar';
 import { type HouseCover } from '@/components/room/house-cover-picker';
 import { FRAME_ASPECT, houseCoverKey, WINDOW_RECTS } from '@/components/room/house-preview-frame';
@@ -57,10 +55,9 @@ import {
   StaticWhite,
 } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
-import { useFontEmphasis, useResolvedScheme, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useResolvedScheme, useTokens, useTypography } from '@/hooks/use-tokens';
 import type { MissionStatus } from '@/utils/mission-cta';
 import { assetSource } from '@/resources/asset';
-import { flingDirection, SWIPE_CLAIM_DX, SWIPE_FAIL_DY } from '@/utils/gesture';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
 import { DEFAULT_HOUSES } from '@/mocks/fixtures';
 import type { Wallpaper } from '@/resources/furniture';
@@ -333,7 +330,6 @@ export const HouseScreen = memo(function HouseScreen({
 }: HouseScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
-  const emph = useFontEmphasis();
   // 시간대별 하늘 (#358) — 새벽/낮/노을/밤. 낮은 기존 sky 토큰과 동일.
   const scheme = useResolvedScheme();
   const skyColor = raining
@@ -394,14 +390,6 @@ export const HouseScreen = memo(function HouseScreen({
   const nextHouse = () => setHouseIndex((houseIndex + 1) % totalPages);
 
   const missions = currentHouse?.missions ?? [];
-  const activeMissions = missions.filter((m) => m.status === 'ACTIVE');
-  /** 오늘 기여 완료 판정 — 세션 추적 또는 연동 루틴의 오늘 완료에서 파생. */
-  const isContributed = (mission: HouseMission) =>
-    contributedMissionIds.includes(mission.id) ||
-    linkedRoutines.some((r) => r.missionId === mission.id && r.completedToday);
-  const contributedToday = activeMissions.filter(isContributed).length;
-  const toNextLevel =
-    currentHouse?.growthPoints != null ? 100 - (currentHouse.growthPoints % 100) : undefined;
   // 층 라벨 없이 한 그리드로 — 행은 어댑터의 층 구성을 그대로 쓴다. 홀수 정원의
   // 반쪽 행이 위층에 있어서, 평탄화 후 2개씩 다시 끊으면 행이 밀린다.
   const rowShapes = useMemo(
@@ -666,30 +654,11 @@ export const HouseScreen = memo(function HouseScreen({
     }),
   );
 
-  // --- 집 스와이프 전환 (#297 → #563에서 RNGH로) — 가로 우세 플링이면
-  // 이전/다음 집. PanResponder였을 때는 셸의 탭 페이저(RNGH)가 네이티브에서
-  // 터치를 먼저 가져가 죽었다 — 같은 RNGH면 동률에서 더 깊은 이쪽이 이긴다.
-  // 확대(카메라 팬)·자리 드래그 중에는 터치 시작/도중 모두 물러난다.
-  const switchRef = useLatestRef({ prev: prevHouse, next: nextHouse });
-  const carouselFling = useConstant(() =>
-    Gesture.Pan()
-      .withTestId('house-carousel-fling')
-      .runOnJS(true)
-      .maxPointers(1)
-      .activeOffsetX([-SWIPE_CLAIM_DX, SWIPE_CLAIM_DX])
-      .failOffsetY([-SWIPE_FAIL_DY, SWIPE_FAIL_DY])
-      .onTouchesDown((_e, mgr) => {
-        if (dragSeatRef.current != null || zoomedRef.current) mgr.fail();
-      })
-      .onTouchesMove((_e, mgr) => {
-        if (dragSeatRef.current != null || zoomedRef.current) mgr.fail();
-      })
-      .onEnd((e) => {
-        const dir = flingDirection(e.translationX);
-        if (dir === 'left') switchRef.current.next();
-        else if (dir === 'right') switchRef.current.prev();
-      }),
-  );
+  // 집 전환 가로 플링은 폐지 (#761) — 셸 탭 페이저(#563)와 같은 축을 다퉈
+  // "어디선 탭이 넘어가고 어디선 집이 넘어가는" 불예측성이 남았다. 가로
+  // 스와이프는 항상 탭 전환이고, 집 순회는 상단 ‹ › 화살표·점 인디케이터로만.
+  // cameraClaimsMove가 한 손가락·비확대에서 false라 프레임 위 스와이프도
+  // 그대로 페이저로 흐른다 (확대·드래그 중엔 아래 잠금이 페이저를 막는다).
 
   // 확대·자리 드래그 동안 셸의 탭 페이저를 잠근다 (#563).
   useEffect(() => {
@@ -709,72 +678,70 @@ export const HouseScreen = memo(function HouseScreen({
   if (pendingHouse) {
     return (
       <View style={[styles.screen, screenStyle]} testID="pending-house-page">
-        <GestureDetector gesture={carouselFling}>
-          <View style={styles.emptyWrap}>
-            <View style={styles.switcher}>
-              {totalPages > 1 ? (
-                <Pressable
-                  onPress={prevHouse}
-                  accessibilityRole="button"
-                  accessibilityLabel="이전 집"
-                  hitSlop={8}
-                  style={[styles.iconBtn, { backgroundColor: t.surface }]}>
-                  <Icon name="back" size={18} color={t.text} />
-                </Pressable>
-              ) : null}
-              <View style={[styles.titleBadge, { backgroundColor: t.surface }]}>
-                <Icon name="lock" size={14} color={t.textMuted} />
-                <Text style={[Typography.h3, { color: t.text }]}>{pendingHouse.name}</Text>
-              </View>
-              {totalPages > 1 ? (
-                <Pressable
-                  onPress={nextHouse}
-                  accessibilityRole="button"
-                  accessibilityLabel="다음 집"
-                  hitSlop={8}
-                  style={[styles.iconBtn, { backgroundColor: t.surface }]}>
-                  <Icon name="forward" size={18} color={t.text} />
-                </Pressable>
-              ) : null}
+        <View style={styles.emptyWrap}>
+          <View style={styles.switcher}>
+            {totalPages > 1 ? (
+              <Pressable
+                onPress={prevHouse}
+                accessibilityRole="button"
+                accessibilityLabel="이전 집"
+                hitSlop={8}
+                style={[styles.iconBtn, { backgroundColor: t.surface }]}>
+                <Icon name="back" size={18} color={t.text} />
+              </Pressable>
+            ) : null}
+            <View style={[styles.titleBadge, { backgroundColor: t.surface }]}>
+              <Icon name="lock" size={14} color={t.textMuted} />
+              <Text style={[Typography.h3, { color: t.text }]}>{pendingHouse.name}</Text>
             </View>
-            <View style={[styles.pendingCard, { backgroundColor: t.surface }]}>
-              <Icon name="lock" size={40} color={t.textDisabled} />
-              <Text style={[Typography.h3, styles.pendingTitle, { color: t.text }]}>
-                방장 승인을 기다리고 있어요
-              </Text>
-              <Text style={[Typography.body, styles.emptyBody, { color: t.textMuted }]}>
-                승인되면 이 자리에 집이 열려요. 조금만 기다려 주세요!
-              </Text>
-              {pendingHouse.requestedAt ? (
-                <Text style={[Typography.supporting, { color: t.textDisabled }]}>
-                  {pendingHouse.requestedAt.slice(0, 10).replace(/-/g, '.')} 신청
-                </Text>
-              ) : null}
-              {onCancelJoinRequest ? (
-                <ScalePressable
-                  onPress={() => setPendingToCancel(pendingHouse)}
-                  accessibilityRole="button"
-                  accessibilityLabel="입주 신청 취소"
-                  style={[styles.pendingCancelBtn, { borderColor: t.border }]}>
-                  <Text style={[Typography.label, { color: t.textMuted }]}>신청 취소</Text>
-                </ScalePressable>
-              ) : null}
-            </View>
-            <View style={styles.dots}>
-              {Array.from({ length: totalPages }, (_, i) => (
-                <View
-                  key={`page-${i}`}
-                  style={[
-                    styles.dot,
-                    i === houseIndex
-                      ? { width: 20, backgroundColor: t.primary }
-                      : { width: 6, backgroundColor: t.border },
-                  ]}
-                />
-              ))}
-            </View>
+            {totalPages > 1 ? (
+              <Pressable
+                onPress={nextHouse}
+                accessibilityRole="button"
+                accessibilityLabel="다음 집"
+                hitSlop={8}
+                style={[styles.iconBtn, { backgroundColor: t.surface }]}>
+                <Icon name="forward" size={18} color={t.text} />
+              </Pressable>
+            ) : null}
           </View>
-        </GestureDetector>
+          <View style={[styles.pendingCard, { backgroundColor: t.surface }]}>
+            <Icon name="lock" size={40} color={t.textDisabled} />
+            <Text style={[Typography.h3, styles.pendingTitle, { color: t.text }]}>
+              방장 승인을 기다리고 있어요
+            </Text>
+            <Text style={[Typography.body, styles.emptyBody, { color: t.textMuted }]}>
+              승인되면 이 자리에 집이 열려요. 조금만 기다려 주세요!
+            </Text>
+            {pendingHouse.requestedAt ? (
+              <Text style={[Typography.supporting, { color: t.textDisabled }]}>
+                {pendingHouse.requestedAt.slice(0, 10).replace(/-/g, '.')} 신청
+              </Text>
+            ) : null}
+            {onCancelJoinRequest ? (
+              <ScalePressable
+                onPress={() => setPendingToCancel(pendingHouse)}
+                accessibilityRole="button"
+                accessibilityLabel="입주 신청 취소"
+                style={[styles.pendingCancelBtn, { borderColor: t.border }]}>
+                <Text style={[Typography.label, { color: t.textMuted }]}>신청 취소</Text>
+              </ScalePressable>
+            ) : null}
+          </View>
+          <View style={styles.dots}>
+            {Array.from({ length: totalPages }, (_, i) => (
+              <View
+                key={`page-${i}`}
+                style={[
+                  styles.dot,
+                  i === houseIndex
+                    ? { width: 20, backgroundColor: t.primary }
+                    : { width: 6, backgroundColor: t.border },
+                ]}
+              />
+            ))}
+          </View>
+        </View>
 
         <ConfirmDialog
           visible={pendingToCancel != null}
@@ -1048,190 +1015,163 @@ export const HouseScreen = memo(function HouseScreen({
         testID="house-scroll">
         {/* 프레임 모드(#287) — 하늘 위에 스위처·집 프레임, 방은 창문 안에.
             커버가 없어도 기본 프레임으로 통일(#328)이라 유일한 경로다. */}
-        <GestureDetector gesture={carouselFling}>
-          <View style={[styles.skySection, { backgroundColor: skyColor }]} testID="sky-section">
-            {/* 마당 잔디 — 프레임 하단이 밟고 서는 밴드. */}
-            <View style={[styles.grassBand, { backgroundColor: t.grass }]} />
-            {raining ? <RainOverlay /> : null}
-            <View style={styles.switcher}>
-              {totalPages > 1 ? (
-                <Pressable
-                  onPress={prevHouse}
-                  accessibilityRole="button"
-                  accessibilityLabel="이전 집"
-                  hitSlop={8}
-                  style={[styles.iconBtn, { backgroundColor: t.surface }]}>
-                  <Icon name="back" size={18} color={t.text} />
-                </Pressable>
-              ) : null}
-              <View style={[styles.titleBadge, { backgroundColor: t.surface }]}>
-                {currentHouse.myRole === 'OWNER' ? (
-                  <CrownPictogram size={14} />
-                ) : (
-                  <HousePictogram size={14} />
-                )}
-                <Text style={[Typography.h3, { color: t.text }]}>{currentHouse.name}</Text>
-              </View>
-              {totalPages > 1 ? (
-                <Pressable
-                  onPress={nextHouse}
-                  accessibilityRole="button"
-                  accessibilityLabel="다음 집"
-                  hitSlop={8}
-                  style={[styles.iconBtn, { backgroundColor: t.surface }]}>
-                  <Icon name="forward" size={18} color={t.text} />
-                </Pressable>
-              ) : null}
+        <View style={[styles.skySection, { backgroundColor: skyColor }]} testID="sky-section">
+          {/* 마당 잔디 — 프레임 하단이 밟고 서는 밴드. */}
+          <View style={[styles.grassBand, { backgroundColor: t.grass }]} />
+          {raining ? <RainOverlay /> : null}
+          <View style={styles.switcher}>
+            {totalPages > 1 ? (
+              <Pressable
+                onPress={prevHouse}
+                accessibilityRole="button"
+                accessibilityLabel="이전 집"
+                hitSlop={8}
+                style={[styles.iconBtn, { backgroundColor: t.surface }]}>
+                <Icon name="back" size={18} color={t.text} />
+              </Pressable>
+            ) : null}
+            <View style={[styles.titleBadge, { backgroundColor: t.surface }]}>
+              {currentHouse.myRole === 'OWNER' ? (
+                <CrownPictogram size={14} />
+              ) : (
+                <HousePictogram size={14} />
+              )}
+              <Text style={[Typography.h3, { color: t.text }]}>{currentHouse.name}</Text>
             </View>
-            <View style={styles.dots}>
-              {/* 대기 카드 페이지(#648)까지 포함한 전체 페이지 도트. */}
-              {Array.from({ length: totalPages }, (_, i) => (
-                <View
-                  key={houses[i]?.houseId ?? `page-${i}`}
-                  style={[
-                    styles.dot,
-                    i === houseIndex
-                      ? { width: 20, backgroundColor: t.primary }
-                      : { width: 6, backgroundColor: t.surface },
-                  ]}
-                />
-              ))}
-            </View>
-            {/* 레벨·멤버 pill — 프레임 여백과 정렬된 행 (모서리 절대배치는
-                화면 끝에 걸려 보였다). 고정 밝기 흰 스크림 위라 onTint 잉크. */}
-            <View style={styles.framePillsRow}>
-              <View style={[styles.skyPill, { backgroundColor: 'rgba(255,255,255,0.88)' }]}>
-                <HousePictogram size={12} />
-                <Text style={[Typography.supporting, { color: t.onTint }]}>
-                  Lv.{currentHouse.level ?? 0}
-                  {currentHouse.growthPoints != null
-                    ? ` · ${currentHouse.growthPoints % 100}/100`
-                    : ''}
-                </Text>
-              </View>
-              <View style={[styles.skyPill, { backgroundColor: 'rgba(255,255,255,0.88)' }]}>
-                <Text style={[Typography.supporting, { color: t.onTint }]}>
-                  {/* Vacant seats are not members — count the real ones. */}
-                  멤버 {currentHouse.memberCount ?? manageableMembers(currentHouse).length}
-                  {currentHouse.maxMembers ? ` / ${currentHouse.maxMembers}` : ''}
-                </Text>
-              </View>
-            </View>
-            <CoachTarget id="house-frame">
-              <Animated.View
+            {totalPages > 1 ? (
+              <Pressable
+                onPress={nextHouse}
+                accessibilityRole="button"
+                accessibilityLabel="다음 집"
+                hitSlop={8}
+                style={[styles.iconBtn, { backgroundColor: t.surface }]}>
+                <Icon name="forward" size={18} color={t.text} />
+              </Pressable>
+            ) : null}
+          </View>
+          <View style={styles.dots}>
+            {/* 대기 카드 페이지(#648)까지 포함한 전체 페이지 도트. */}
+            {Array.from({ length: totalPages }, (_, i) => (
+              <View
+                key={houses[i]?.houseId ?? `page-${i}`}
                 style={[
-                  styles.cameraViewportOuter,
-                  { opacity: switchFade, transform: [{ translateX: switchX }] },
-                ]}>
-                <View style={styles.cameraViewport} {...cameraResponder.panHandlers}>
-                  <Animated.View
-                    style={{
-                      transform: [
-                        { translateX: camTx },
-                        { translateY: camTy },
-                        { scale: camScale },
-                      ],
-                    }}>
-                    <View style={styles.frameWrap} {...gridPanResponder.panHandlers}>
-                      {/* 프레임 측정용 — 반응자 프롭이 있는 부모에는 테스트에서
+                  styles.dot,
+                  i === houseIndex
+                    ? { width: 20, backgroundColor: t.primary }
+                    : { width: 6, backgroundColor: t.surface },
+                ]}
+              />
+            ))}
+          </View>
+          {/* 레벨·멤버 pill — 프레임 여백과 정렬된 행 (모서리 절대배치는
+                화면 끝에 걸려 보였다). 고정 밝기 흰 스크림 위라 onTint 잉크. */}
+          <View style={styles.framePillsRow}>
+            <View style={[styles.skyPill, { backgroundColor: 'rgba(255,255,255,0.88)' }]}>
+              <HousePictogram size={12} />
+              <Text style={[Typography.supporting, { color: t.onTint }]}>
+                Lv.{currentHouse.level ?? 0}
+                {currentHouse.growthPoints != null
+                  ? ` · ${currentHouse.growthPoints % 100}/100`
+                  : ''}
+              </Text>
+            </View>
+            <View style={[styles.skyPill, { backgroundColor: 'rgba(255,255,255,0.88)' }]}>
+              <Text style={[Typography.supporting, { color: t.onTint }]}>
+                {/* Vacant seats are not members — count the real ones. */}
+                멤버 {currentHouse.memberCount ?? manageableMembers(currentHouse).length}
+                {currentHouse.maxMembers ? ` / ${currentHouse.maxMembers}` : ''}
+              </Text>
+            </View>
+          </View>
+          <CoachTarget id="house-frame">
+            <Animated.View
+              style={[
+                styles.cameraViewportOuter,
+                { opacity: switchFade, transform: [{ translateX: switchX }] },
+              ]}>
+              <View style={styles.cameraViewport} {...cameraResponder.panHandlers}>
+                <Animated.View
+                  style={{
+                    transform: [{ translateX: camTx }, { translateY: camTy }, { scale: camScale }],
+                  }}>
+                  <View style={styles.frameWrap} {...gridPanResponder.panHandlers}>
+                    {/* 프레임 측정용 — 반응자 프롭이 있는 부모에는 테스트에서
                       layout 이벤트가 닿지 않아 absolute-fill 형제로 잰다. */}
-                      <View
-                        testID="frame-camera"
-                        pointerEvents="none"
-                        style={StyleSheet.absoluteFill}
-                        onLayout={(e) => {
-                          const first = frameSize.current.w === 0;
-                          frameSize.current = {
-                            w: e.nativeEvent.layout.width,
-                            h: e.nativeEvent.layout.height,
-                          };
-                          // 첫 레이아웃에 기본 카메라(방 4칸 클로즈업)를 즉시 적용 (#307).
-                          if (first) {
-                            const d = camDefault();
-                            cam.current = d;
-                            camScale.setValue(d.scale);
-                            camTx.setValue(d.tx);
-                            camTy.setValue(d.ty);
-                          }
-                        }}
-                      />
-                      {/* 창문 뒤 좌석 — 프레임 PNG의 투명 창문으로 방이 보인다. */}
-                      {WINDOW_RECTS.map((rect, w) => {
-                        const seatIdx = windowSlots[w];
-                        return (
-                          <View
-                            key={`window-${w}`}
-                            style={[
-                              styles.windowSlot,
-                              rect,
-                              seatIdx != null && dragSeat === seatIdx && styles.dragRow,
-                            ]}>
-                            {seatIdx != null ? (
-                              renderSeatTile(displayCells[seatIdx], seatIdx, true)
-                            ) : (
-                              /* 정원 밖 창문 — 조용한 벽 패널. */
-                              <View
-                                style={[styles.windowFiller, { backgroundColor: t.surfaceMuted }]}
-                                testID="window-filler"
-                              />
-                            )}
-                          </View>
-                        );
-                      })}
-                      {/* Android는 Image 계열이 pointerEvents prop을 무시하고 터치를
+                    <View
+                      testID="frame-camera"
+                      pointerEvents="none"
+                      style={StyleSheet.absoluteFill}
+                      onLayout={(e) => {
+                        const first = frameSize.current.w === 0;
+                        frameSize.current = {
+                          w: e.nativeEvent.layout.width,
+                          h: e.nativeEvent.layout.height,
+                        };
+                        // 첫 레이아웃에 기본 카메라(방 4칸 클로즈업)를 즉시 적용 (#307).
+                        if (first) {
+                          const d = camDefault();
+                          cam.current = d;
+                          camScale.setValue(d.scale);
+                          camTx.setValue(d.tx);
+                          camTy.setValue(d.ty);
+                        }
+                      }}
+                    />
+                    {/* 창문 뒤 좌석 — 프레임 PNG의 투명 창문으로 방이 보인다. */}
+                    {WINDOW_RECTS.map((rect, w) => {
+                      const seatIdx = windowSlots[w];
+                      return (
+                        <View
+                          key={`window-${w}`}
+                          style={[
+                            styles.windowSlot,
+                            rect,
+                            seatIdx != null && dragSeat === seatIdx && styles.dragRow,
+                          ]}>
+                          {seatIdx != null ? (
+                            renderSeatTile(displayCells[seatIdx], seatIdx, true)
+                          ) : (
+                            /* 정원 밖 창문 — 조용한 벽 패널. */
+                            <View
+                              style={[styles.windowFiller, { backgroundColor: t.surfaceMuted }]}
+                              testID="window-filler"
+                            />
+                          )}
+                        </View>
+                      );
+                    })}
+                    {/* Android는 Image 계열이 pointerEvents prop을 무시하고 터치를
                       삼킨다(#401) — ViewGroup 래퍼가 확실하게 투과시킨다. */}
-                      <View style={StyleSheet.absoluteFill} pointerEvents="none">
-                        <Image
-                          source={assetSource(coverKey)}
-                          style={StyleSheet.absoluteFill}
-                          contentFit="contain"
-                          transition={120}
-                          // 디스크 캐시 유지 — 앱 재실행 후에도 재요청 없이 즉시 (#463).
-                          cachePolicy="memory-disk"
-                          accessibilityLabel={`${currentHouse.name} 집`}
-                          testID="house-frame"
-                        />
-                      </View>
+                    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+                      <Image
+                        source={assetSource(coverKey)}
+                        style={StyleSheet.absoluteFill}
+                        contentFit="contain"
+                        transition={120}
+                        // 디스크 캐시 유지 — 앱 재실행 후에도 재요청 없이 즉시 (#463).
+                        cachePolicy="memory-disk"
+                        accessibilityLabel={`${currentHouse.name} 집`}
+                        testID="house-frame"
+                      />
                     </View>
-                  </Animated.View>
-                </View>
-                {/* ⟲ 리셋 버튼은 cameraResponder(팬 responder)를 가진 cameraViewport
+                  </View>
+                </Animated.View>
+              </View>
+              {/* ⟲ 리셋 버튼은 cameraResponder(팬 responder)를 가진 cameraViewport
                   바깥, 그 형제로 둔다 — zoomed 동안 부모의 capture move 핸들러가
                   버튼 위 탭의 미세한 손가락 이동마저 가로채 onPress가 취소됐다
                   (실기기, #307 후속). cameraViewportOuter가 절대배치 기준. */}
-                {zoomed ? (
-                  <Pressable
-                    onPress={resetCam}
-                    accessibilityRole="button"
-                    accessibilityLabel="확대 종료"
-                    style={[styles.camReset, { backgroundColor: t.surface }]}>
-                    <Icon name="refresh" size={16} color={t.text} />
-                  </Pressable>
-                ) : null}
-              </Animated.View>
-            </CoachTarget>
-          </View>
-        </GestureDetector>
-        {/* 요약 스탯 — 스크롤 없이 집의 오늘이 보인다 (B안). */}
-        <View style={styles.summaryRow}>
-          <View style={[styles.stat, { backgroundColor: t.surface, borderColor: t.border }]}>
-            <Text style={[Typography.h3, emph('bold'), { color: t.primaryText }]}>
-              {activeMissions.length}
-            </Text>
-            <Text style={[Typography.supporting, { color: t.textMuted }]}>진행 중 미션</Text>
-          </View>
-          <View style={[styles.stat, { backgroundColor: t.surface, borderColor: t.border }]}>
-            <Text style={[Typography.h3, emph('bold'), { color: t.primaryText }]}>
-              {contributedToday}/{activeMissions.length}
-            </Text>
-            <Text style={[Typography.supporting, { color: t.textMuted }]}>오늘 나의 기여</Text>
-          </View>
-          <View style={[styles.stat, { backgroundColor: t.surface, borderColor: t.border }]}>
-            <Text style={[Typography.h3, emph('bold'), { color: t.primaryText }]}>
-              {toNextLevel ?? '—'}
-            </Text>
-            <Text style={[Typography.supporting, { color: t.textMuted }]}>다음 레벨까지</Text>
-          </View>
+              {zoomed ? (
+                <Pressable
+                  onPress={resetCam}
+                  accessibilityRole="button"
+                  accessibilityLabel="확대 종료"
+                  style={[styles.camReset, { backgroundColor: t.surface }]}>
+                  <Icon name="refresh" size={16} color={t.text} />
+                </Pressable>
+              ) : null}
+            </Animated.View>
+          </CoachTarget>
         </View>
         <View style={styles.floors} {...gridPanResponder.panHandlers}>
           {roomPairs.map((pair, pairIdx) => {
@@ -1553,21 +1493,6 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-    // 스탯 카드가 화면 선에 붙지 않게 — pill 행·미션 카드와 같은 여백.
-    paddingHorizontal: Spacing.four,
-    marginTop: Spacing.three,
-  },
-  stat: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: Spacing.two,
-    gap: 2,
   },
   roomNameRow: {
     flexDirection: 'row',

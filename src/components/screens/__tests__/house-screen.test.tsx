@@ -1,7 +1,6 @@
-import { act, fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
-import { State } from 'react-native-gesture-handler';
-import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
+import { getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { cameraClaimsMove, HouseScreen, type House } from '@/components/screens/house-screen';
 import { ToastProvider } from '@/components/ui/toast';
@@ -168,31 +167,22 @@ describe('HouseScreen', () => {
     expect(second.getByText('소마 2번째 집')).toBeTruthy();
   });
 
-  // 집 캐러셀 스와이프 (#297 → #563에서 RNGH 전환) — 하늘 영역 가로 플링으로
-  // 이전/다음 집. 탭 페이저와의 중재(동률 자식 우선)를 위해 PanResponder에서
-  // RNGH pan으로 옮겼다 — 동작 계약은 그대로다.
-  it('하늘 영역 가로 플링으로 이전/다음 집 (#297/#563)', async () => {
+  // 집 전환 가로 플링 폐지 (#761) — 셸 탭 페이저(#563)와 같은 축을 다퉈
+  // 불예측했다. 가로 스와이프는 항상 탭 전환이고, 집 순회는 ‹ › 화살표뿐.
+  it('가로 플링으로는 집이 넘어가지 않는다 — 화살표만 (#761)', async () => {
     const onHouseIndexChange = jest.fn();
-    await render(<HouseScreen houseIndex={0} onHouseIndexChange={onHouseIndexChange} />);
-    const fling = (translationX: number) =>
-      act(async () =>
-        fireGestureHandler(getByGestureTestId('house-carousel-fling'), [
-          { state: State.BEGAN },
-          { state: State.ACTIVE },
-          { state: State.END, translationX, translationY: 0 },
-        ]),
-      );
-
-    // 좌플링 → 다음 집.
-    await fling(-60);
+    const { getByLabelText } = await render(
+      <HouseScreen
+        houses={[MISSION_HOUSE, { ...MISSION_HOUSE, houseId: 8, name: '둘째집' }]}
+        houseIndex={0}
+        onHouseIndexChange={onHouseIndexChange}
+      />,
+    );
+    // 플링 핸들러 자체가 사라졌다 — 등록된 제스처가 없다.
+    expect(() => getByGestureTestId('house-carousel-fling')).toThrow();
+    // 순회는 화살표로만.
+    await fireEvent.press(getByLabelText('다음 집'));
     expect(onHouseIndexChange).toHaveBeenLastCalledWith(1);
-    // 우플링 → 이전 집(랩어라운드 규칙은 화면 내부 소관 — 콜백만 단언).
-    await fling(60);
-    expect(onHouseIndexChange).toHaveBeenCalledTimes(2);
-    // 임계 미달 릴리즈는 무시.
-    onHouseIndexChange.mockClear();
-    await fling(-30);
-    expect(onHouseIndexChange).not.toHaveBeenCalled();
   });
 
   it('adds a mission to my routines through the confirm modal, and claims', async () => {
@@ -382,7 +372,7 @@ describe('HouseScreen', () => {
     expect(queryByText('~07.01')).toBeNull();
   });
 
-  it('renders the house frame with level progress and summary stats (#287)', async () => {
+  it('renders the house frame with level progress (#287)', async () => {
     const house = {
       ...MISSION_HOUSE,
       level: 1,
@@ -399,16 +389,16 @@ describe('HouseScreen', () => {
     );
     // 커버 프레임이 집 본체 — 창문 안에 좌석, 모서리에 레벨 진행도 pill.
     expect(getByTestId('house-frame')).toBeTruthy();
+    // '다음 레벨까지 70'은 스탯 필과 함께 제거 (#761) — Lv 필의 30/100이 같은 정보.
     expect(getByText('Lv.1 · 30/100')).toBeTruthy();
-    expect(getByText('70')).toBeTruthy();
-    // 진행 중 미션 2(ACTIVE 11·12), 오늘 나의 기여 1/2 (11이 연동 완료).
-    expect(getByText('2')).toBeTruthy();
-    expect(getByText('1/2')).toBeTruthy();
+    // 요약 스탯은 미션 시트로 이동 (#761) — 아래 시트 열기에서 단언.
     // 방 타일은 창문 안에서도 그대로 (정원 4 → 좌석 2 + 빈방 2).
     expect(getByText('나 (나)')).toBeTruthy();
     // + 버튼은 시트 안에서 텍스트로 목적을 말한다.
     await fireEvent.press(getByLabelText('공동 미션'));
     expect(getByText('＋ 내 루틴에')).toBeTruthy();
+    // 진행 중 2(ACTIVE 11·12), 오늘 나의 기여 1/2 (11이 연동 완료) — 시트 요약.
+    expect(getByText(/진행 중 2개 · 오늘 나의 기여 1\/2/)).toBeTruthy();
   });
 
   it('frame tiles: a single tap visits after the double-tap window (#307)', async () => {
