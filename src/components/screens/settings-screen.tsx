@@ -23,9 +23,9 @@ const MODE_OPTIONS: { id: ThemeMode; name: string }[] = [
 ];
 
 /**
- * Chip label style previewing each font with its own faces (#382): label-sized,
- * but 주아 혼합 shows the Jua display face — its body half is Pretendard, so the
- * label role alone wouldn't show what makes it different.
+ * 설정 행 오른쪽의 현재 폰트 이름을 그 폰트로 그리는 스타일 (#382). 주아
+ * 혼합은 제목만 Jua이고 본문은 Pretendard라, label 롤을 그대로 쓰면 무엇이
+ * 다른지 안 보인다 — 그래서 Jua 얼굴로 덮어쓴다.
  */
 function fontPreviewStyle(id: BrandFontId) {
   const label = typographyFor(id).label;
@@ -38,9 +38,10 @@ export type SettingsScreenProps = {
   /** Light/dark preference ('system' follows the OS). */
   themeMode?: ThemeMode;
   onChangeThemeMode?: (mode: ThemeMode) => void;
-  /** App font choice (#382). */
+  /** App font choice (#382) — 행 오른쪽 현재값 표시용. */
   fontId?: BrandFontId;
-  onChangeFont?: (id: BrandFontId) => void;
+  /** Opens the 폰트 picker screen (#750). */
+  onOpenFont?: () => void;
   /** Opens the 테마 색상 picker screen (#459). */
   onOpenTheme?: () => void;
   onEditProfile?: () => void;
@@ -80,7 +81,7 @@ export const SettingsScreen = memo(function SettingsScreen({
   themeMode = DEFAULT_THEME_MODE,
   onChangeThemeMode,
   fontId = DEFAULT_FONT_ID,
-  onChangeFont,
+  onOpenFont,
   onOpenTheme,
   onEditProfile,
   onChangePassword,
@@ -105,6 +106,7 @@ export const SettingsScreen = memo(function SettingsScreen({
   const [confirmLogout, setConfirmLogout] = useState(false);
   // 회원탈퇴는 복구 불가 — 파괴 확인 다이얼로그 뒤에만 (#547).
   const [confirmWithdraw, setConfirmWithdraw] = useState(false);
+  const currentFontName = FONT_OPTIONS.find((o) => o.id === fontId)?.name ?? '';
 
   const sections: { title: string; rows: Row[] }[] = [
     {
@@ -177,56 +179,43 @@ export const SettingsScreen = memo(function SettingsScreen({
             </View>
           </View>
 
-          <View style={[styles.card, { backgroundColor: t.surface }]}>
-            <View style={styles.designHead}>
-              <View style={[styles.iconCircle, { backgroundColor: t.surfaceMuted }]}>
-                <Icon name="edit" size={20} color={t.text} />
-              </View>
-              <View style={styles.flex}>
-                <Text style={[Typography.label, { color: t.text }]}>폰트</Text>
-              </View>
-            </View>
-            <View style={styles.fontGrid}>
-              {FONT_OPTIONS.map((opt) => {
-                const selected = opt.id === fontId;
-                return (
-                  <Pressable
-                    key={opt.id}
-                    onPress={() => onChangeFont?.(opt.id)}
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected }}
-                    accessibilityLabel={`${opt.name} 폰트`}
-                    style={[
-                      styles.fontChip,
-                      { backgroundColor: selected ? t.primary : t.surfaceMuted },
-                    ]}>
-                    <Text
-                      style={[
-                        fontPreviewStyle(opt.id),
-                        styles.fontChipLabel,
-                        { color: selected ? t.onPrimary : t.textMuted },
-                      ]}>
-                      {opt.name}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* 테마 색상 — 색이 많은 선택지라 인라인 칩 대신 별도 화면으로 (#459). */}
+          {/*
+            테마 색상·폰트 — 선택지가 많고 실제로 적용해 봐야 아는 것들이라
+            인라인 칩 대신 미리보기가 있는 별도 화면으로 (#459 → 폰트도 #750).
+            현재 값을 행 오른쪽에 적어 들어가지 않고도 확인할 수 있게 한다.
+          */}
           <View style={[styles.card, { backgroundColor: t.surface }]}>
             <Pressable
               onPress={onOpenTheme}
               accessibilityRole="button"
               accessibilityLabel="테마 색상"
-              style={styles.row}>
+              style={[
+                styles.row,
+                { borderBottomColor: t.border, borderBottomWidth: StyleSheet.hairlineWidth },
+              ]}>
               <View style={styles.rowLeft}>
                 <View style={[styles.iconCircle, { backgroundColor: t.surfaceMuted }]}>
                   <Icon name="palette" size={20} color={t.text} />
                 </View>
                 <Text style={[Typography.body, { color: t.text }]}>테마 색상</Text>
               </View>
+              <Icon name="forward" size={16} color={t.textDisabled} />
+            </Pressable>
+            <Pressable
+              onPress={onOpenFont}
+              accessibilityRole="button"
+              accessibilityLabel="폰트"
+              style={styles.row}>
+              <View style={styles.rowLeft}>
+                <View style={[styles.iconCircle, { backgroundColor: t.surfaceMuted }]}>
+                  <Icon name="edit" size={20} color={t.text} />
+                </View>
+                <Text style={[Typography.body, { color: t.text }]}>폰트</Text>
+              </View>
+              {/* 현재 폰트 이름은 그 폰트의 얼굴로 — 행 자체가 작은 견본이 된다. */}
+              <Text style={[fontPreviewStyle(fontId), styles.rowValue, { color: t.textMuted }]}>
+                {currentFontName}
+              </Text>
               <Icon name="forward" size={16} color={t.textDisabled} />
             </Pressable>
           </View>
@@ -354,28 +343,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     borderRadius: Radius.pill,
   },
-  fontGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingBottom: Spacing.three,
-  },
-  fontChip: {
-    flexGrow: 1,
-    flexBasis: '30%',
-    alignItems: 'center',
-    // 두 줄 칩과 같은 행의 한 줄 칩(프리텐다드 등)이 행 높이만큼 늘어날 때
-    // 라벨을 세로로도 가운데 (#423).
-    justifyContent: 'center',
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.two,
-    borderRadius: Radius.pill,
-  },
   // 긴 라벨(나눔스퀘어라운드)이 두 줄로 감길 때도 가운데 정렬 (#423).
-  fontChipLabel: {
-    textAlign: 'center',
-  },
   iconCircle: {
     width: 32,
     height: 32,
@@ -394,5 +362,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
+  },
+  rowValue: {
+    // 이름이 길어도 라벨을 밀지 않고 자기 자리에서 줄어든다.
+    flexShrink: 1,
+    marginRight: Spacing.one,
   },
 });

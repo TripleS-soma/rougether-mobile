@@ -17,6 +17,7 @@ export type Screen =
   | 'createHouse'
   | 'settings'
   | 'theme'
+  | 'font'
   | 'profileEdit'
   | 'passwordChange'
   | 'notificationList'
@@ -40,6 +41,7 @@ export const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   createHouse: null,
   settings: 'settings',
   theme: null,
+  font: null,
   profileEdit: null,
   passwordChange: null,
   notificationList: null,
@@ -77,6 +79,7 @@ export const BACK_SCREEN: Record<Screen, Screen | null> = {
   createHouse: 'houseSearch',
   settings: 'myRoom',
   theme: 'settings',
+  font: 'settings',
   profileEdit: 'settings',
   passwordChange: 'settings',
   notificationList: 'myRoom',

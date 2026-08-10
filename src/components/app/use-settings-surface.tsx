@@ -16,6 +16,7 @@ import {
   type SoundSettings,
   SoundSettingsScreen,
 } from '@/components/screens/sound-settings-screen';
+import { FontScreen } from '@/components/screens/font-screen';
 import { ThemeScreen } from '@/components/screens/theme-screen';
 import { useToast } from '@/components/ui/toast';
 import type { CharacterId } from '@/constants/characters';
@@ -141,6 +142,7 @@ export function useSettingsSurface({
   // 설정 화면 콜백 — SettingsScreen이 memo라(탭 페이저로 상주, #539 후속)
   // 인라인 람다면 셸 리렌더마다 memo가 뚫린다. 전부 참조 고정.
   const openTheme = useCallback(() => setScreen('theme'), [setScreen]);
+  const openFont = useCallback(() => setScreen('font'), [setScreen]);
   const openProfileEdit = useCallback(() => setScreen('profileEdit'), [setScreen]);
   const openPasswordChange = useCallback(() => setScreen('passwordChange'), [setScreen]);
   const openNotificationSettings = useCallback(() => {
@@ -174,7 +176,7 @@ export function useSettingsSurface({
     themeMode,
     onChangeThemeMode: setThemeMode,
     fontId,
-    onChangeFont: setFontId,
+    onOpenFont: openFont,
     onOpenTheme: openTheme,
     onEditProfile: openProfileEdit,
     onChangePassword: openPasswordChange,
@@ -196,6 +198,8 @@ export function useSettingsSurface({
   const subScreen =
     screen === 'theme' ? (
       <ThemeScreen themeId={themeId} onChangeThemeId={setThemeId} onBack={backToSettings} />
+    ) : screen === 'font' ? (
+      <FontScreen fontId={fontId} onChangeFont={setFontId} onBack={backToSettings} />
     ) : screen === 'profileEdit' ? (
       <ProfileEditScreen
         initialNickname={profile.nickname}
