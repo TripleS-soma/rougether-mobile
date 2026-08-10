@@ -27,6 +27,8 @@ import { ProfileEditScreen } from '@/components/screens/profile-edit-screen';
 import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
 import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
 import { SettingsScreen } from '@/components/screens/settings-screen';
+import { FontScreen } from '@/components/screens/font-screen';
+import { AppearancePreview } from '@/components/screens/settings/appearance-preview';
 import { ThemeScreen } from '@/components/screens/theme-screen';
 import { SoundSettingsScreen } from '@/components/screens/sound-settings-screen';
 import { SignupScreen } from '@/components/screens/signup-screen';
@@ -440,6 +442,20 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
         <ThemeScreen />
+      </View>
+    ),
+  },
+  {
+    name: 'AppearancePreview',
+    description: '테마 색상·폰트 피커 공용 미리보기 카드 (#750): 활성 토큰·타입 스케일 그대로.',
+    render: () => <AppearancePreview />,
+  },
+  {
+    name: 'FontScreen',
+    description: '설정 → 폰트 (#750): 라이브 미리보기 + 글자 스와치로 폰트 5종 선택.',
+    render: () => (
+      <View style={{ height: 640, alignSelf: 'stretch' }}>
+        <FontScreen />
       </View>
     ),
   },

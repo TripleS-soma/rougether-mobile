@@ -717,6 +717,17 @@ export function typographyFor(fontId: BrandFontId): Record<TypeRole, TypeStyle> 
   return built;
 }
 
+/**
+ * 폰트의 **제목 얼굴**만 뽑아온다 (#750) — 설정 행의 현재값, 폰트 피커의 글자
+ * 스와치처럼 제목 롤 밖에서 그 폰트를 대표해 보여줄 때 쓴다. 주아 혼합은 제목만
+ * Jua라 display1에서 가져와야 정체가 드러나고, 이렇게 하면 'Jua-Regular'
+ * 리터럴이 JUA_HEADING_ROLES 한 곳에만 남는다.
+ */
+export function displayFaceFor(fontId: BrandFontId): Pick<TypeStyle, 'fontFamily' | 'fontWeight'> {
+  const { fontFamily, fontWeight } = typographyFor(fontId).display1;
+  return { fontFamily, fontWeight };
+}
+
 function buildTypography(fontId: BrandFontId): Record<TypeRole, TypeStyle> {
   if (fontId === 'system') return Typography;
   const out = {} as Record<TypeRole, TypeStyle>;

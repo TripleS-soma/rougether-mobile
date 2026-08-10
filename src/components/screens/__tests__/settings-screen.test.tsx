@@ -49,28 +49,28 @@ describe('SettingsScreen', () => {
     expect(onLogout).not.toHaveBeenCalled();
   });
 
-  it('renders the font picker with all five options (#382)', async () => {
-    const { getByText, getByLabelText } = await render(<SettingsScreen />);
-    expect(getByText('폰트')).toBeTruthy();
-    for (const name of ['나눔스퀘어라운드', '프리텐다드', '주아 혼합', 'SUIT', '시스템 기본']) {
-      expect(getByLabelText(`${name} 폰트`)).toBeTruthy();
-    }
+  it('폰트는 인라인 칩이 아니라 현재값을 단 행이다 (#750)', async () => {
+    const { getByLabelText, queryByLabelText } = await render(<SettingsScreen fontId="suit" />);
+    // 인라인 라디오 칩(#382)은 사라지고 별도 화면으로 갔다.
+    expect(queryByLabelText('SUIT 폰트')).toBeNull();
+    expect(getByLabelText('폰트')).toBeTruthy();
+    // 들어가지 않고도 현재 폰트를 알 수 있다.
+    expect(getByLabelText('폰트')).toHaveTextContent(/SUIT/);
   });
 
-  it('changes the app font and marks the active one selected', async () => {
-    const onChangeFont = jest.fn();
+  it('테마 색상·폰트 행이 각자의 화면을 연다 (#459, #750)', async () => {
+    const onOpenTheme = jest.fn();
+    const onOpenFont = jest.fn();
     const { getByLabelText } = await render(
-      <SettingsScreen fontId="nanum" onChangeFont={onChangeFont} />,
+      <SettingsScreen onOpenTheme={onOpenTheme} onOpenFont={onOpenFont} />,
     );
 
-    expect(getByLabelText('나눔스퀘어라운드 폰트').props.accessibilityState.selected).toBe(true);
-    expect(getByLabelText('SUIT 폰트').props.accessibilityState.selected).toBe(false);
+    await fireEvent.press(getByLabelText('테마 색상'));
+    expect(onOpenTheme).toHaveBeenCalledTimes(1);
+    expect(onOpenFont).not.toHaveBeenCalled();
 
-    await fireEvent.press(getByLabelText('프리텐다드 폰트'));
-    expect(onChangeFont).toHaveBeenCalledWith('pretendard');
-
-    await fireEvent.press(getByLabelText('시스템 기본 폰트'));
-    expect(onChangeFont).toHaveBeenCalledWith('system');
+    await fireEvent.press(getByLabelText('폰트'));
+    expect(onOpenFont).toHaveBeenCalledTimes(1);
   });
 
   it('약관·개인정보처리방침 링크 행을 연다 (#545)', async () => {
