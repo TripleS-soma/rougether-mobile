@@ -70,6 +70,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { saveRoomImage } from '@/lib/room-capture';
 import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
 import { formatDate, formatTime, todayIso } from '@/utils/datetime';
@@ -95,117 +96,118 @@ export type CalendarDayItem = {
 
 // RoomSceneProps: <Room />에 스프레드로 전달되는 씬 번들 (#691) — 내 방은
 // 캐릭터가 항상 있으므로 characterId만 null 불가로 좁힌다.
-export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> & {
-  /** Room occupant's display name (header title becomes "{userName}의 방"). */
-  userName?: string;
-  /** Consecutive-day streak shown in the header. */
-  streakDays?: number;
-  /** Wallet balances shown in the header (완료 보상 피드백의 기준점). */
-  coinBalance?: number;
-  diamondBalance?: number;
-  characterId?: CharacterId;
-  // Routine list.
-  routines?: Routine[];
-  /**
-   * All categories including server-deleted ones — resolves the original
-   * name/color of past records in the 달력 tab. Defaults to `categories`.
-   */
-  allCategories?: RoutineCategoryMeta[];
-  /**
-   * Server-backed 달력 data per date (from GET /calendar). When wired together
-   * with onSelectDate, non-today dates render this read-only list; a missing
-   * date means "loading".
-   */
-  calendarDays?: Record<string, CalendarDayItem[]>;
-  /** Load a date's calendar data (fired when the user picks a date). */
-  onSelectDate?: (date: string) => void;
-  /**
-   * Toggle a server-backed 달력 item's completion on a past date. Only fired
-   * for past todos — the screen blocks future dates and past routines (the
-   * server accepts routine logs for today only) with a toast.
-   */
-  onToggleCalendarItem?: (item: CalendarDayItem, date: string) => void;
-  /**
-   * Per-routine completion log: routine id → completed dates ("YYYY-MM-DD").
-   * Mirrors the spec's routine_logs; a routine is "done" on a date when that
-   * date is present here.
-   */
-  completions?: Record<string, string[]>;
-  categories?: RoutineCategoryMeta[];
-  /** True while the routine/category data is loading (shows a spinner). */
-  loading?: boolean;
-  /** True when the initial load failed (shows an error + 다시 시도). */
-  loadError?: boolean;
-  /** Re-run the failed load (다시 시도 button). */
-  onRetry?: () => void;
-  // Callbacks (wired separately).
-  onEdit?: () => void;
-  /** 오늘의 루틴 + 버튼 — 바로 루틴 추가 화면으로 (#335). */
-  onAddRoutine?: () => void;
-  /** 햄버거 메뉴의 루틴 관리 항목 (없으면 onAddRoutine으로 폴백). */
-  onManageRoutines?: () => void;
-  /** Open the 알림 list (햄버거 메뉴 항목; hidden when unwired). */
-  onOpenNotifications?: () => void;
-  /** Unread notification count — >0 shows a dot on the menu button + item. */
-  unreadNotificationCount?: number;
-  /** Owned characters (햄버거 메뉴 → 캐릭터 교체 sheet; hidden when unwired). */
-  ownedCharacters?: OwnedCharacter[];
-  /** Wear the picked character (PUT /me/characters/select). */
-  onSelectCharacter?: (serverId: number) => void;
-  /** 햄버거 메뉴 → 카테고리 관리 화면으로 이동 (#394). */
-  onManageCategories?: () => void;
-  /** 카테고리 헤더 탭 → 해당 카테고리 수정 시트 저장 (#541). 없으면 헤더 탭 비활성. */
-  onUpdateCategory?: (id: string, category: RoutineCategoryMeta) => void;
-  /** Toggle a routine's completion on a specific date ("YYYY-MM-DD"). */
-  /** 완료 토글 — 완료 시 서버 보상액(코인)을 resolve하면 코인 연출에 쓴다 (#444). */
-  onToggleCompletion?: (
-    id: string,
-    date: string,
-  ) => void | Promise<{ rewardAmount: number } | null | undefined>;
-  onOpenGacha?: () => void;
-  /** 당겨서 새로고침 (#454) — 서버 데이터 전체 리로드. resolve까지 발바닥이 두근거린다. */
-  onRefresh?: () => Promise<void> | void;
-  /** Quick-add a todo to a category with a due date (the + on a category header). */
-  onQuickAddRoutine?: (category: string, title: string, dueDate: string) => void;
-  /**
-   * Categories whose quick-add(+) is hidden — 공동미션 연동 카테고리는 미션의
-   * + 버튼으로만 항목이 생겨야 하므로 임의 투두 추가를 막는다 (#272).
-   */
-  quickAddDisabledCategoryIds?: string[];
-  /** Rename a routine (메뉴 시트 → 이름 변경: name only). */
-  onRenameRoutine?: (id: string, title: string) => void;
-  /** Full-edit a routine (메뉴 시트 → 루틴 수정): opens the routine editor (#465). */
-  onEditRoutine?: (routine: Routine) => void;
-  /** Update a routine's alarm time (kebab → 시간 수정, reuses TimePickerSheet). */
-  onUpdateRoutineTime?: (id: string, alarmEnabled: boolean, time: string) => void;
-  /** Change a todo's due date (메뉴 시트 → 날짜 바꾸기, calendar sheet). */
-  onUpdateTodoDueDate?: (id: string, dueDate: string) => void;
-  /**
-   * 날짜 바꾸기 on a routine: move that day's occurrence only. The repeat
-   * schedule stays; a one-off todo with the routine's title is created on the
-   * picked date (no server per-occurrence skip yet, so the original day's
-   * instance still shows — the sheet says so).
-   */
-  onMoveRoutineOccurrence?: (id: string, dueDate: string) => void;
-  /** Delete a routine (kebab → 삭제). */
-  onDeleteRoutine?: (id: string) => void;
-  /**
-   * 수동 순서 맵 (#716) — `{ [categoryId]: [routineId...] }`. 방 '오늘' 리스트의
-   * 미완료 항목을 이 순서로 정렬한다(완료는 기존대로 하단). 기기 로컬 보관.
-   */
-  routineOrder?: Record<string, string[]>;
-  /** 롱프레스 재정렬 확정 — 해당 카테고리의 새 루틴 id 순서(미완료 기준). */
-  onReorderRoutines?: (categoryId: string, orderedRoutineIds: string[]) => void;
-  /** 다른 카테고리로 드롭 = 영구 이동 (#716) — 서버 categoryId 변경. */
-  onMoveRoutineCategory?: (id: string, toCategoryId: string) => void;
-  /** 재화 내역 (#734) — 지갑 필 탭 → 시트. 열 때마다 onLoadWalletHistory로 재로드. */
-  walletHistory?: WalletHistoryEntry[];
-  walletHistoryLoading?: boolean;
-  walletHistoryError?: boolean;
-  walletHistoryHasNext?: boolean;
-  onLoadWalletHistory?: () => void;
-  onLoadMoreWalletHistory?: () => void;
-};
+export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
+  ScrollRestoreProps & {
+    /** Room occupant's display name (header title becomes "{userName}의 방"). */
+    userName?: string;
+    /** Consecutive-day streak shown in the header. */
+    streakDays?: number;
+    /** Wallet balances shown in the header (완료 보상 피드백의 기준점). */
+    coinBalance?: number;
+    diamondBalance?: number;
+    characterId?: CharacterId;
+    // Routine list.
+    routines?: Routine[];
+    /**
+     * All categories including server-deleted ones — resolves the original
+     * name/color of past records in the 달력 tab. Defaults to `categories`.
+     */
+    allCategories?: RoutineCategoryMeta[];
+    /**
+     * Server-backed 달력 data per date (from GET /calendar). When wired together
+     * with onSelectDate, non-today dates render this read-only list; a missing
+     * date means "loading".
+     */
+    calendarDays?: Record<string, CalendarDayItem[]>;
+    /** Load a date's calendar data (fired when the user picks a date). */
+    onSelectDate?: (date: string) => void;
+    /**
+     * Toggle a server-backed 달력 item's completion on a past date. Only fired
+     * for past todos — the screen blocks future dates and past routines (the
+     * server accepts routine logs for today only) with a toast.
+     */
+    onToggleCalendarItem?: (item: CalendarDayItem, date: string) => void;
+    /**
+     * Per-routine completion log: routine id → completed dates ("YYYY-MM-DD").
+     * Mirrors the spec's routine_logs; a routine is "done" on a date when that
+     * date is present here.
+     */
+    completions?: Record<string, string[]>;
+    categories?: RoutineCategoryMeta[];
+    /** True while the routine/category data is loading (shows a spinner). */
+    loading?: boolean;
+    /** True when the initial load failed (shows an error + 다시 시도). */
+    loadError?: boolean;
+    /** Re-run the failed load (다시 시도 button). */
+    onRetry?: () => void;
+    // Callbacks (wired separately).
+    onEdit?: () => void;
+    /** 오늘의 루틴 + 버튼 — 바로 루틴 추가 화면으로 (#335). */
+    onAddRoutine?: () => void;
+    /** 햄버거 메뉴의 루틴 관리 항목 (없으면 onAddRoutine으로 폴백). */
+    onManageRoutines?: () => void;
+    /** Open the 알림 list (햄버거 메뉴 항목; hidden when unwired). */
+    onOpenNotifications?: () => void;
+    /** Unread notification count — >0 shows a dot on the menu button + item. */
+    unreadNotificationCount?: number;
+    /** Owned characters (햄버거 메뉴 → 캐릭터 교체 sheet; hidden when unwired). */
+    ownedCharacters?: OwnedCharacter[];
+    /** Wear the picked character (PUT /me/characters/select). */
+    onSelectCharacter?: (serverId: number) => void;
+    /** 햄버거 메뉴 → 카테고리 관리 화면으로 이동 (#394). */
+    onManageCategories?: () => void;
+    /** 카테고리 헤더 탭 → 해당 카테고리 수정 시트 저장 (#541). 없으면 헤더 탭 비활성. */
+    onUpdateCategory?: (id: string, category: RoutineCategoryMeta) => void;
+    /** Toggle a routine's completion on a specific date ("YYYY-MM-DD"). */
+    /** 완료 토글 — 완료 시 서버 보상액(코인)을 resolve하면 코인 연출에 쓴다 (#444). */
+    onToggleCompletion?: (
+      id: string,
+      date: string,
+    ) => void | Promise<{ rewardAmount: number } | null | undefined>;
+    onOpenGacha?: () => void;
+    /** 당겨서 새로고침 (#454) — 서버 데이터 전체 리로드. resolve까지 발바닥이 두근거린다. */
+    onRefresh?: () => Promise<void> | void;
+    /** Quick-add a todo to a category with a due date (the + on a category header). */
+    onQuickAddRoutine?: (category: string, title: string, dueDate: string) => void;
+    /**
+     * Categories whose quick-add(+) is hidden — 공동미션 연동 카테고리는 미션의
+     * + 버튼으로만 항목이 생겨야 하므로 임의 투두 추가를 막는다 (#272).
+     */
+    quickAddDisabledCategoryIds?: string[];
+    /** Rename a routine (메뉴 시트 → 이름 변경: name only). */
+    onRenameRoutine?: (id: string, title: string) => void;
+    /** Full-edit a routine (메뉴 시트 → 루틴 수정): opens the routine editor (#465). */
+    onEditRoutine?: (routine: Routine) => void;
+    /** Update a routine's alarm time (kebab → 시간 수정, reuses TimePickerSheet). */
+    onUpdateRoutineTime?: (id: string, alarmEnabled: boolean, time: string) => void;
+    /** Change a todo's due date (메뉴 시트 → 날짜 바꾸기, calendar sheet). */
+    onUpdateTodoDueDate?: (id: string, dueDate: string) => void;
+    /**
+     * 날짜 바꾸기 on a routine: move that day's occurrence only. The repeat
+     * schedule stays; a one-off todo with the routine's title is created on the
+     * picked date (no server per-occurrence skip yet, so the original day's
+     * instance still shows — the sheet says so).
+     */
+    onMoveRoutineOccurrence?: (id: string, dueDate: string) => void;
+    /** Delete a routine (kebab → 삭제). */
+    onDeleteRoutine?: (id: string) => void;
+    /**
+     * 수동 순서 맵 (#716) — `{ [categoryId]: [routineId...] }`. 방 '오늘' 리스트의
+     * 미완료 항목을 이 순서로 정렬한다(완료는 기존대로 하단). 기기 로컬 보관.
+     */
+    routineOrder?: Record<string, string[]>;
+    /** 롱프레스 재정렬 확정 — 해당 카테고리의 새 루틴 id 순서(미완료 기준). */
+    onReorderRoutines?: (categoryId: string, orderedRoutineIds: string[]) => void;
+    /** 다른 카테고리로 드롭 = 영구 이동 (#716) — 서버 categoryId 변경. */
+    onMoveRoutineCategory?: (id: string, toCategoryId: string) => void;
+    /** 재화 내역 (#734) — 지갑 필 탭 → 시트. 열 때마다 onLoadWalletHistory로 재로드. */
+    walletHistory?: WalletHistoryEntry[];
+    walletHistoryLoading?: boolean;
+    walletHistoryError?: boolean;
+    walletHistoryHasNext?: boolean;
+    onLoadWalletHistory?: () => void;
+    onLoadMoreWalletHistory?: () => void;
+  };
 
 /**
  * "My room" (zoomed) screen, ported from the prototype `MyRoomZoomScreen`:
@@ -285,6 +287,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   walletHistoryHasNext = false,
   onLoadWalletHistory,
   onLoadMoreWalletHistory,
+  getInitialScrollY,
+  onScrollY,
 }: MyRoomScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
@@ -607,6 +611,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
 
   // Scroll the tapped category's quick-add input into view (above the keyboard).
   const scrollRef = useRef<ScrollView>(null);
+  // 서브화면(꾸미기·루틴 관리 …)에 다녀와도 보던 자리로 (#763).
+  const scrollRestore = useScrollRestore(scrollRef, { getInitialScrollY, onScrollY });
   const addRowRef = useRef<View>(null);
   const todoInputRef = useRef<TextInput>(null);
   // Set while opening the date picker so the input's blur doesn't commit/close.
@@ -1157,10 +1163,12 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             styles.body,
             addingCategory != null && keyboardPad > 0 ? { paddingBottom: keyboardPad + 120 } : null,
           ]}
+          {...scrollRestore}
           onScroll={(e) => {
+            // 빠른 추가 입력 스크롤인(#…)용 로컬 추적 + 셸의 탭별 기억(#763).
             scrollYRef.current = e.nativeEvent.contentOffset.y;
+            scrollRestore.onScroll?.(e);
           }}
-          scrollEventThrottle={16}
           keyboardShouldPersistTaps="handled">
           {tab === 'room' ? (
             <>
