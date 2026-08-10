@@ -26,6 +26,10 @@ const REQUIRED_ROLES: (keyof SemanticColors)[] = [
   'success',
   'warning',
   'danger',
+  // DarkNeutrals 공통 블록(#755)에 실린 값들 — 키 누락이 전 테마로 퍼지므로 필수 검증.
+  'disabledBg',
+  'sky',
+  'grass',
 ];
 
 describe('brand themes', () => {

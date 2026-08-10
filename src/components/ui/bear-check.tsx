@@ -3,7 +3,6 @@ import { Animated, type GestureResponderEvent, Pressable, StyleSheet, View } fro
 import { useAnimatedValue } from '@/hooks/use-stable-value';
 
 import { Icon } from '@/components/ui/icon';
-import { StaticWhite } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
 
 export type BearCheckProps = {
@@ -98,7 +97,7 @@ export function BearCheck({
         ]}>
         {checked ? (
           <View testID="bear-check-tick">
-            <Icon name="check" size={size * 0.5} color={StaticWhite} />
+            <Icon name="check" size={size * 0.5} color={t.onPrimary} />
           </View>
         ) : null}
       </View>

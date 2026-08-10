@@ -42,7 +42,7 @@ fs.mkdirSync(OUT, { recursive: true });
   await see('적용하기', 20000);
   await shot('02-room-decor');
   await page
-    .getByLabel('뒤로 가기', { exact: false })
+    .getByLabel(/뒤로 ?가기/, { exact: false })
     .first()
     .click()
     .catch(() => {});
@@ -72,7 +72,7 @@ fs.mkdirSync(OUT, { recursive: true });
 
   // 달력
   await page
-    .getByLabel('뒤로 가기', { exact: false })
+    .getByLabel(/뒤로 ?가기/, { exact: false })
     .first()
     .click()
     .catch(() => {});
