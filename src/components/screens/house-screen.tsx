@@ -29,9 +29,9 @@ import {
   clampCam,
   isCamAway,
 } from '@/components/screens/house/camera';
+import { manageableMembers } from '@/components/screens/house-members-screen';
 import { OnlineDot } from '@/components/screens/house/online-dot';
 import { type SeatRect, seatAtPoint } from '@/components/screens/house/seat-drag';
-import { HouseMembersScreen } from '@/components/screens/house-members-screen';
 import { HouseMissionsSheet } from '@/components/screens/sheets/house-missions-sheet';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Icon } from '@/components/ui/icon';
@@ -45,6 +45,7 @@ import {
 import { WalletPills } from '@/components/ui/wallet-pills';
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
+import { characterIdForMember } from '@/hooks/use-member-room-previews';
 import { RainOverlay } from '@/components/room/rain-overlay';
 import {
   Overlay,
@@ -229,8 +230,10 @@ export type HouseScreenProps = RoomCatalogProps & {
   /** 헤더 지갑 필 — 나의 방 헤더와 동일 (#353). */
   coinBalance?: number;
   diamondBalance?: number;
-  /** Refresh members and pending requests when management opens. */
-  onOpenMemberManagement?: (houseId: number) => void;
+  /** 구성원 관리 화면 열기 (#753) — 셸 화면('houseMembers')으로 승격됐다. */
+  onOpenMembers?: () => void;
+  /** 강퇴 낙관 반영 (#753 승격 후 셸 소유) — 참이면 좌석을 빈 타일로 그린다. */
+  isKickedMember?: (name: string) => boolean;
   /** Kick a member via the API (owner only); shown when the house has ids. */
   onKickMember?: (houseId: number, membershipId: number) => void;
   /** Leave the current house via the API. */
@@ -304,7 +307,8 @@ export const HouseScreen = memo(function HouseScreen({
   raining = false,
   coinBalance = 0,
   diamondBalance = 0,
-  onOpenMemberManagement,
+  onOpenMembers,
+  isKickedMember,
   onKickMember,
   onLeaveHouse,
   onAddMissionRoutine,
@@ -372,31 +376,10 @@ export const HouseScreen = memo(function HouseScreen({
     setInternalHouseIndex(next);
     onHouseIndexChange?.(next);
   };
-  const [showMembers, setShowMembers] = useState(false);
-  const [kicked, setKicked] = useState<string[]>([]);
   // 공동 미션 시트 (#287) — 하단 카드 대신 플로팅 버튼으로 연다.
   const [showMissions, setShowMissions] = useState(false);
 
   const currentHouse: House | undefined = houses[Math.min(houseIndex, houses.length - 1)];
-  const members = useMemo(
-    () =>
-      (currentHouse?.floors ?? []).flatMap((f) =>
-        // Vacant capacity seats are tiles only — they are not members to manage.
-        f.rooms.filter((r) => !r.vacant).map((r) => ({ ...r, level: f.level })),
-      ),
-    [currentHouse],
-  );
-  const keyFor = (name: string) => `${houseIndex}-${name}`;
-  const isKicked = (name: string) => kicked.includes(keyFor(name));
-
-  /**
-   * 그 멤버 자신의 캐릭터 (#342) — 방 프리뷰에서 온다. 서버 멤버 목록에는
-   * 캐릭터가 없어, 프리뷰가 아직 없으면 내 행만 내 캐릭터고 남은 기본 캐릭터.
-   * (구성원 관리가 조기 return이라 여기서 선언해야 양쪽에서 보인다.)
-   */
-  const memberCharacterId = (member: RoomCell) =>
-    (member.membershipId != null ? roomPreviews?.[member.membershipId]?.characterId : undefined) ??
-    (member.isMine ? characterId : DEFAULT_CHARACTER_ID);
 
   // 승인 대기 신청 (#648) — 집 페이지들 뒤에 잠금 카드 페이지로 이어 붙는다.
   const pendingList = pendingHouses ?? [];
@@ -864,29 +847,6 @@ export const HouseScreen = memo(function HouseScreen({
     );
   }
 
-  if (showMembers) {
-    return (
-      <HouseMembersScreen
-        house={currentHouse}
-        members={members}
-        isOwner={isOwner}
-        covers={covers}
-        isKicked={isKicked}
-        memberCharacterId={memberCharacterId}
-        onBack={() => setShowMembers(false)}
-        onKickMember={onKickMember}
-        onAcceptJoinRequest={onAcceptJoinRequest}
-        onRejectJoinRequest={onRejectJoinRequest}
-        onLocalKick={(name) => setKicked((prev) => [...prev, keyFor(name)])}
-        onTransferOwnership={onTransferOwnership}
-        onReissueInviteCode={onReissueInviteCode}
-        onUpdateHouse={onUpdateHouse}
-        onLeaveHouse={onLeaveHouse}
-        onLeaveDone={() => setShowMembers(false)}
-      />
-    );
-  }
-
   // 좌석 타일 — 프레임 창문(#287)과 평면 그리드가 같은 타일을 공유한다.
   // fill=true(창문)면 슬롯을 가득 채우고, 아니면 반칸 정사각형.
   const visitSeat = (room: RoomCell) => {
@@ -903,7 +863,7 @@ export const HouseScreen = memo(function HouseScreen({
 
   const renderSeatTile = (room: RoomCell, seatIdx: number, fill = false) => {
     const dragging = dragSeat === seatIdx;
-    const empty = room.vacant || isKicked(room.name);
+    const empty = room.vacant || !!isKickedMember?.(room.name);
     // 내 타일 이름은 라이브 userName(=현재 닉네임)으로 — houses는 프로필 저장 시
     // 재요청되지 않아 room.name이 stale하다. 헤더가 이미 userName을 쓰므로 타일도
     // 맞춘다(캐릭터를 withMyCharacter로 즉시 주입하는 것과 같은 결, #479).
@@ -985,7 +945,10 @@ export const HouseScreen = memo(function HouseScreen({
             </View>
           ) : null}
           {empty || preview ? null : (
-            <CharacterAvatar characterId={memberCharacterId(room)} size={64} />
+            <CharacterAvatar
+              characterId={characterIdForMember(room, roomPreviews, characterId)}
+              size={64}
+            />
           )}
           {/* Tiles keep their fixed pastel bg in dark mode — the name needs
               onTint ink, not the (light) theme text. Over a preview it drops
@@ -1066,13 +1029,7 @@ export const HouseScreen = memo(function HouseScreen({
           </Pressable>
         </CoachTarget>
         <ScalePressable
-          onPress={() => {
-            // 방장 진입 시 구성원·입주 신청 목록 갱신 (#526).
-            if (currentHouse.myRole === 'OWNER' && currentHouse.houseId) {
-              onOpenMemberManagement?.(currentHouse.houseId);
-            }
-            setShowMembers(true);
-          }}
+          onPress={onOpenMembers}
           accessibilityRole="button"
           accessibilityLabel="구성원 목록"
           style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
@@ -1155,7 +1112,7 @@ export const HouseScreen = memo(function HouseScreen({
               <View style={[styles.skyPill, { backgroundColor: 'rgba(255,255,255,0.88)' }]}>
                 <Text style={[Typography.supporting, { color: t.onTint }]}>
                   {/* Vacant seats are not members — count the real ones. */}
-                  멤버 {currentHouse.memberCount ?? members.length}
+                  멤버 {currentHouse.memberCount ?? manageableMembers(currentHouse).length}
                   {currentHouse.maxMembers ? ` / ${currentHouse.maxMembers}` : ''}
                 </Text>
               </View>

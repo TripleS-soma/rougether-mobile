@@ -12,6 +12,7 @@ export type Screen =
   | 'categoryManage'
   | 'gacha'
   | 'house'
+  | 'houseMembers'
   | 'friendRoom'
   | 'houseSearch'
   | 'createHouse'
@@ -36,6 +37,7 @@ export const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   categoryManage: null,
   gacha: null,
   house: 'house',
+  houseMembers: null,
   friendRoom: null,
   houseSearch: null,
   createHouse: null,
@@ -74,6 +76,7 @@ export const BACK_SCREEN: Record<Screen, Screen | null> = {
   categoryManage: 'myRoom',
   gacha: 'myRoom',
   house: 'myRoom',
+  houseMembers: 'house',
   friendRoom: 'house',
   houseSearch: 'house',
   createHouse: 'houseSearch',

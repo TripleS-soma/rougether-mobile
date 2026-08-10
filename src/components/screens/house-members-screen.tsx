@@ -18,6 +18,16 @@ import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 /** Capacity choices for the edit form (server allows 1~10). */
 const CAPACITY_OPTIONS = [2, 3, 4, 6, 8, 10];
 
+/**
+ * 관리 대상 구성원 (#753) — 정원 채움용 빈 좌석은 타일일 뿐 구성원이 아니다.
+ * 층 라벨을 얹어 members prop 형태로 만든다 (구 house-screen 내부 파생의 이동).
+ */
+export function manageableMembers(house: House | undefined): (RoomCell & { level: string })[] {
+  return (house?.floors ?? []).flatMap((f) =>
+    f.rooms.filter((r) => !r.vacant).map((r) => ({ ...r, level: f.level })),
+  );
+}
+
 export type HouseMembersScreenProps = {
   house: House;
   /** Managed members (vacant seats excluded), with their floor label. */

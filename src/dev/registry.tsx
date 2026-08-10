@@ -10,7 +10,8 @@ import { CategoryManageScreen } from '@/components/screens/category-manage-scree
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
 import { GachaScreen } from '@/components/screens/gacha-screen';
-import { HouseScreen } from '@/components/screens/house-screen';
+import { HouseScreen, type House } from '@/components/screens/house-screen';
+import { HouseMembersScreen, manageableMembers } from '@/components/screens/house-members-screen';
 import { HelpScreen } from '@/components/screens/help-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { InviteFriendsScreen } from '@/components/screens/invite-friends-screen';
@@ -382,12 +383,47 @@ export const galleryEntries: GalleryEntry[] = [
   {
     name: 'HouseScreen',
     description:
-      'Ported from the prototype HouseScreen (#10): house switcher, member rooms, group goals, kick flow.',
+      'Ported from the prototype HouseScreen (#10): house switcher, member rooms, group goals. 구성원 관리는 셸 화면으로 승격(#753) — 아래 HouseMembersScreen 항목에서 미리보기.',
     render: () => (
       <View style={{ height: 900, alignSelf: 'stretch' }}>
         <HouseScreen />
       </View>
     ),
+  },
+  {
+    name: 'HouseMembersScreen',
+    description:
+      '집 → 구성원 관리 (#753에서 셸 화면으로 승격): 초대코드, 방장 도구, 강퇴(더미 집이라 로컬 강퇴 플로우).',
+    render: () => {
+      const demoHouse: House = {
+        name: '데모 하우스',
+        myRole: 'OWNER',
+        maxMembers: 4,
+        floors: [
+          {
+            level: '1층',
+            rooms: [
+              { name: '친구', color: '#F5E1D8', membershipId: 42 },
+              { name: '나', color: '#E8E0D0', isMine: true, isOwner: true, membershipId: 43 },
+            ],
+          },
+        ],
+      };
+      return (
+        <View style={{ height: 900, alignSelf: 'stretch' }}>
+          <HouseMembersScreen
+            house={demoHouse}
+            members={manageableMembers(demoHouse)}
+            isOwner
+            isKicked={() => false}
+            memberCharacterId={(m) => (m.isMine ? 'tiger' : 'cat')}
+            onBack={() => {}}
+            onLocalKick={() => {}}
+            onLeaveDone={() => {}}
+          />
+        </View>
+      );
+    },
   },
   {
     name: 'LoginScreen',
