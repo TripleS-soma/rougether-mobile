@@ -1132,7 +1132,10 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               {/* 방↔달력 플링은 방 캔버스에서만 (#563 후속) — 아래 루틴
                     리스트 영역의 가로 스와이프는 셸 탭 페이저(집 이동) 몫. */}
               <GestureDetector gesture={tabFling}>
-                <View style={styles.roomWrap}>
+                {/* collapsable={false}: 패딩만 있는 View는 안드로이드 뷰 평탄화
+                    대상이라, 사라지면 제스처가 붙을 대상이 없어진다. 달력 탭·
+                    친구 방의 같은 tabFling도 직계 자식에 이걸 둔다. */}
+                <View style={styles.roomWrap} collapsable={false}>
                   {/*
                     캡처 대상은 방 자체만 (#778) — 예전엔 ref가 패딩 있는
                     roomWrap에 붙어 있어 그 **투명 여백까지 찍혔고**, #744에서
