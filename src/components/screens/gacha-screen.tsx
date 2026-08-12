@@ -1,10 +1,10 @@
-import { Image } from 'expo-image';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
   Pressable,
   ScrollView,
+  SectionList,
   StyleSheet,
   Text,
   View,
@@ -24,7 +24,7 @@ import {
 } from '@/components/screens/gacha/draw-animation';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Icon } from '@/components/ui/icon';
-import { assetSource, isCdnKey } from '@/resources/asset';
+import { RewardRow } from '@/components/screens/gacha/reward-row';
 import { RetryState } from '@/components/ui/retry-state';
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { Pictogram } from '@/components/ui/pictograms';
@@ -114,6 +114,11 @@ export function groupRewardsByRarity(
  * reward reveal). Uses the built-in Animated API (no worklets) so it runs in
  * tests.
  */
+/** 같은 등급 안 행 사이 간격 (#773) — 모듈 스코프라 참조가 고정된다. */
+function RewardGap() {
+  return <View style={styles.rewardGap} />;
+}
+
 export function GachaScreen({
   onBack,
   gachas = [],
@@ -164,6 +169,39 @@ export function GachaScreen({
   // 등급 그룹은 rewards가 바뀔 때만 재계산 (#678) — 시트가 열린 동안의
   // 무관한 리렌더(뽑기 연출 등)마다 다시 묶지 않는다.
   const rewardGroups = useMemo(() => (rewards ? groupRewardsByRarity(rewards) : []), [rewards]);
+  // 등급 그룹 = 섹션 (#773) — 가상화를 위해 SectionList 형태로 옮긴다.
+  const rewardSections = useMemo(
+    () => rewardGroups.map((g, i) => ({ rarity: g.rarity, first: i === 0, data: g.items })),
+    [rewardGroups],
+  );
+  const rewardKey = useCallback(
+    (r: GachaRewardResponse, i: number) => `${r.rewardType}-${r.itemId ?? r.characterId ?? i}`,
+    [],
+  );
+  const renderRaritySection = useCallback(
+    ({ section }: { section: { rarity: string; first: boolean } }) => (
+      <View style={[styles.rewardsGroupHead, section.first ? null : styles.rewardsGroupGap]}>
+        <View style={[styles.rarityDot, { backgroundColor: rarityColor(section.rarity) }]} />
+        <Text style={[Typography.supporting, emph('semibold'), { color: t.textMuted }]}>
+          {section.rarity}
+        </Text>
+      </View>
+    ),
+    [Typography, emph, t.textMuted],
+  );
+  const renderRewardRow = useCallback(
+    ({ item: r, index }: { item: GachaRewardResponse; index: number }) => (
+      <RewardRow
+        rowId={r.itemId ?? r.characterId ?? index}
+        name={r.name}
+        rarityColor={rarityColor(r.rarity)}
+        assetKey={r.assetKey}
+        isCharacter={r.rewardType === 'CHARACTER' || r.characterId != null}
+        owned={r.owned}
+      />
+    ),
+    [],
+  );
 
   // 배치 가능한 신규 가구 (#630) — 있으면 리빌에 '가구 배치하러 가기'가 뜬다.
   const placeableSet = useMemo(() => new Set(placeableItemIds ?? []), [placeableItemIds]);
@@ -465,55 +503,26 @@ export function GachaScreen({
             />
           </View>
         ) : (
-          <ScrollView style={styles.rewardsList} contentContainerStyle={styles.rewardsListBody}>
-            {rewardGroups.map((group) => (
-              <View key={group.rarity} style={styles.rewardsGroup}>
-                <View style={styles.rewardsGroupHead}>
-                  <View
-                    style={[styles.rarityDot, { backgroundColor: rarityColor(group.rarity) }]}
-                  />
-                  <Text style={[Typography.supporting, emph('semibold'), { color: t.textMuted }]}>
-                    {group.rarity}
-                  </Text>
-                </View>
-                {group.items.map((r, i) => (
-                  <View
-                    key={`${r.rewardType}-${r.itemId ?? r.characterId ?? i}`}
-                    style={[styles.rewardRow, { backgroundColor: t.surface }]}
-                    testID={`reward-row-${r.itemId ?? r.characterId ?? i}`}>
-                    {/* 아이템 썸네일 (#721) — 결과 공개 카드와 같은 패턴: CDN
-                        실아트가 있으면 이미지, 없으면 기프트 폴백. */}
-                    <View style={[styles.rewardThumb, { backgroundColor: t.surfaceMuted }]}>
-                      {isCdnKey(r.assetKey) ? (
-                        <Image
-                          source={assetSource(r.assetKey)}
-                          style={styles.rewardThumbImg}
-                          contentFit="contain"
-                          cachePolicy="memory-disk"
-                          transition={120}
-                        />
-                      ) : (
-                        <Icon name="gift" size={18} color={rarityColor(r.rarity)} />
-                      )}
-                    </View>
-                    <Text
-                      numberOfLines={1}
-                      style={[Typography.body, styles.rewardName, { color: t.text }]}>
-                      {r.name ?? '이름 없는 보상'}
-                    </Text>
-                    {r.rewardType === 'CHARACTER' || r.characterId != null ? (
-                      <Text style={[Typography.supporting, { color: t.textMuted }]}>캐릭터</Text>
-                    ) : null}
-                    {r.owned ? (
-                      <View style={[styles.ownedPill, { backgroundColor: t.surfaceMuted }]}>
-                        <Text style={[Typography.supporting, { color: t.textMuted }]}>보유</Text>
-                      </View>
-                    ) : null}
-                  </View>
-                ))}
-              </View>
-            ))}
-          </ScrollView>
+          <SectionList
+            style={styles.rewardsList}
+            contentContainerStyle={styles.rewardsListBody}
+            sections={rewardSections}
+            keyExtractor={rewardKey}
+            renderSectionHeader={renderRaritySection}
+            renderItem={renderRewardRow}
+            // 등급 안은 촘촘히, 등급 사이는 넓게 — 예전 2단 간격 구조를 유지한다
+            // (#773). SectionList는 헤더·아이템을 형제로 평탄화하므로 컨테이너
+            // gap 하나만 두면 그룹 경계가 사라진다.
+            ItemSeparatorComponent={RewardGap}
+            // iOS 기본값이 true라 그냥 두면 등급 헤더가 상단에 붙는 동작이
+            // 이 플랫폼에만 새로 생긴다 — 기존 ScrollView엔 없던 동작.
+            stickySectionHeadersEnabled={false}
+            // 보상 풀은 머신당 수십~수백 — 시트를 여는 프레임에 전부 마운트하면
+            // 원격 썸네일까지 한꺼번에 요청된다 (#773).
+            initialNumToRender={12}
+            windowSize={7}
+            removeClippedSubviews
+          />
         )}
       </BottomSheet>
     </View>
@@ -552,11 +561,11 @@ const styles = StyleSheet.create({
     maxHeight: 420,
   },
   rewardsListBody: {
-    gap: Spacing.three,
     paddingBottom: Spacing.two,
   },
-  rewardsGroup: {
-    gap: Spacing.one,
+  /** 같은 등급 안 행 사이 (구 rewardsGroup의 gap). */
+  rewardGap: {
+    height: Spacing.one,
   },
   rewardsGroupHead: {
     flexDirection: 'row',
@@ -564,38 +573,14 @@ const styles = StyleSheet.create({
     gap: Spacing.one,
     marginBottom: Spacing.half,
   },
+  /** 등급 사이 (구 rewardsListBody의 gap) — 첫 그룹 위에는 두지 않는다. */
+  rewardsGroupGap: {
+    marginTop: Spacing.three,
+  },
   rarityDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-  },
-  rewardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-  },
-  rewardThumb: {
-    width: 32,
-    height: 32,
-    borderRadius: Radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  rewardThumbImg: {
-    width: '100%',
-    height: '100%',
-  },
-  rewardName: {
-    flex: 1,
-  },
-  ownedPill: {
-    borderRadius: Radius.pill,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: 2,
   },
   screen: { flex: 1 },
   center: { textAlign: 'center' },
