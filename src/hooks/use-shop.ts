@@ -16,6 +16,7 @@ import {
 
 import {
   ApiError,
+  cleanMyRoomCobweb,
   ErrorCode,
   fetchItems,
   fetchMyItems,
@@ -23,6 +24,7 @@ import {
   purchaseItem,
   updateRoomLayout,
 } from '@/api';
+import type { RoomCobwebResponse } from '@/api';
 import {
   fromRoomPlacements,
   fromRoomSlots,
@@ -67,6 +69,8 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
   const [ownedIds, setOwnedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [cobweb, setCobweb] = useState<RoomCobwebResponse | undefined>();
+  const [cobwebCleaning, setCobwebCleaning] = useState(false);
   const [placement, setPlacement] = useState<RoomPlacement>({
     items: [],
     placedFurnitureIds: [],
@@ -91,6 +95,7 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
         fetchMyRoom().catch(() => null),
       ]);
       const cat = toShopCatalogue(items);
+      setCobweb(room?.cobweb);
       userItemMapRef.current = toUserItemMap(myItems);
       catalogueRef.current = cat;
       setCatalogue(cat);
@@ -175,6 +180,25 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
     }
   }, []);
 
+  const cleanCobweb = useCallback(async () => {
+    if (!cobweb || cobwebCleaning) return null;
+    setCobwebCleaning(true);
+    try {
+      const reward = await cleanMyRoomCobweb();
+      setCobweb(undefined);
+      if (reward.rewardCurrencyType === 'COIN' && reward.balance != null) {
+        setWallet((prev) => ({ ...prev, coin: reward.balance as number }));
+      }
+      toast(`거미줄을 치우고 코인 ${reward.rewardAmount ?? 3}개를 받았어요`, 'success');
+      return reward;
+    } catch {
+      toast('거미줄 청소에 실패했어요', 'error');
+      return null;
+    } finally {
+      setCobwebCleaning(false);
+    }
+  }, [cobweb, cobwebCleaning, setWallet, toast]);
+
   /**
    * 자유 배치 저장 (PUT /rooms/me/layout, #327). 'conflict'는 다른 기기가 먼저
    * 저장한 경우(409 REVISION_CONFLICT) — 화면이 재로드 모달을 띄운다.
@@ -221,11 +245,14 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
     catalogue,
     ownedIds,
     placement,
+    cobweb,
+    cobwebCleaning,
     loading,
     error,
     retry: load,
     purchase,
     refreshOwned,
+    cleanCobweb,
     saveLayout,
   };
 }

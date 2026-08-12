@@ -8,6 +8,7 @@ import { useFriendRoom } from '@/hooks/use-friend-room';
 import { useGuestbook } from '@/hooks/use-guestbook';
 import type { ShopCatalogue } from '@/api/adapters';
 import { track } from '@/lib/analytics';
+import type { Wallet } from '@/constants/currency';
 
 /**
  * 친구 방문 클러스터 (#149·#644, #692 4단계) — 방문 중인 친구 상태와
@@ -22,6 +23,8 @@ export function useFriendVisit({
   houseIndex,
   screen,
   cheerMember,
+  setWallet,
+  onCobwebClean,
 }: {
   setScreen: Dispatch<SetStateAction<Screen>>;
   /** 상점 카탈로그 — 친구 방 슬롯의 assetKey 해석 (#149). */
@@ -32,11 +35,13 @@ export function useFriendVisit({
   screen: Screen;
   /** 같은 집 활성 멤버 응원 (#330). */
   cheerMember: (houseId: number, membershipId: number, type: CheerType) => Promise<unknown>;
+  setWallet: Dispatch<SetStateAction<Wallet>>;
+  onCobwebClean?: (membershipId: number) => void;
 }) {
   const { show: toast } = useToast();
   const [visitingFriend, setVisitingFriend] = useState<VisitedFriend>({ name: '친구' });
   // The visited friend's live room + today's routines (loads on visit, #149).
-  const { friendRoom, load: loadFriendRoom } = useFriendRoom();
+  const { friendRoom, load: loadFriendRoom, cleanCobweb } = useFriendRoom();
   // Guestbook for the friend room being visited (loads on visit).
   const {
     entries: guestbookEntries,
@@ -130,6 +135,21 @@ export function useFriendVisit({
         categories={friendRoom.categories}
         recentActivity={friendRoom.recentActivity}
         loading={friendRoom.loading}
+        cobweb={friendRoom.cobweb}
+        cobwebCleaning={friendRoom.cobwebCleaning}
+        onCleanCobweb={() => {
+          void cleanCobweb().then((reward) => {
+            if (!reward) {
+              toast('거미줄 청소에 실패했어요', 'error');
+              return;
+            }
+            if (reward.rewardCurrencyType === 'COIN' && reward.balance != null) {
+              setWallet((prev) => ({ ...prev, coin: reward.balance as number }));
+            }
+            if (visitingFriend.membershipId != null) onCobwebClean?.(visitingFriend.membershipId);
+            toast(`거미줄을 치우고 코인 ${reward.rewardAmount ?? 3}개를 받았어요`, 'success');
+          });
+        }}
         loadError={friendRoom.error}
         onRetry={retryFriendRoomVisit}
         onBack={() => setScreen('house')}

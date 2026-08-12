@@ -2,6 +2,8 @@ import { Image } from 'expo-image';
 import { memo, useState } from 'react';
 import { Pressable, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 
+import cobwebAsset from '@/assets/images/room/room-corner-cobweb.png';
+import type { RoomCobwebResponse } from '@/api';
 import { type CharacterAnimationSet, CharacterAvatar } from '@/components/room/character-avatar';
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { ROOM_RENDER_CONTRACT, roomPercent } from '@/components/room/room-render-contract';
@@ -81,6 +83,10 @@ export type RoomProps = {
   onRegionPress?: (region: RoomRegion) => void;
   /** Region whose picker is open — ring-highlighted. */
   activeRegion?: RoomRegion | null;
+  /** 서버가 내려준 장기 미접속 거미줄. 전체 방 화면에서만 청소 콜백을 전달한다. */
+  cobweb?: RoomCobwebResponse | null;
+  onCleanCobweb?: () => void;
+  cobwebCleaning?: boolean;
   /**
    * 부모 크기를 그대로 채운다 — 정사각형(aspectRatio 1) 강제 해제. 프레임
    * 창문처럼 정사각형이 아닌 칸에 쓴다. 네이티브 Yoga는 width/height보다
@@ -111,6 +117,9 @@ export type RoomSceneProps = RoomCatalogProps &
     | 'backgroundId'
     | 'placedFurnitureIds'
     | 'placements'
+    | 'cobweb'
+    | 'onCleanCobweb'
+    | 'cobwebCleaning'
   >;
 
 /**
@@ -125,6 +134,7 @@ export type MemberRoomPreview = {
   floorId?: string | null;
   backgroundId?: string | null;
   characterId?: CharacterId;
+  cobweb?: RoomCobwebResponse;
 };
 
 /**
@@ -144,6 +154,7 @@ export function memberRoomScene(
     wallpaperId: room?.wallpaperId,
     floorId: room?.floorId,
     backgroundId: room?.backgroundId,
+    cobweb: room?.cobweb,
   };
 }
 
@@ -172,6 +183,9 @@ export const Room = memo(function Room({
   editable = false,
   onRegionPress,
   activeRegion = null,
+  cobweb,
+  onCleanCobweb,
+  cobwebCleaning = false,
   fill = false,
   style,
 }: RoomProps) {
@@ -357,6 +371,24 @@ export const Room = memo(function Room({
           sharp={fill}
         />
       )}
+      {cobweb ? (
+        onCleanCobweb ? (
+          <Pressable
+            onPress={onCleanCobweb}
+            disabled={cobwebCleaning || !cobweb.cleanable}
+            accessibilityRole="button"
+            accessibilityLabel="거미줄 청소하기"
+            accessibilityState={{ disabled: cobwebCleaning || !cobweb.cleanable }}
+            style={styles.cobweb}
+            testID="room-cobweb">
+            <Image source={cobwebAsset} style={styles.cobwebImage} contentFit="contain" />
+          </Pressable>
+        ) : (
+          <View style={styles.cobweb} pointerEvents="none" testID="room-cobweb">
+            <Image source={cobwebAsset} style={styles.cobwebImage} contentFit="contain" />
+          </View>
+        )
+      ) : null}
     </View>
   );
 });
@@ -427,6 +459,18 @@ const styles = StyleSheet.create({
     width: 3,
     height: 18,
     borderRadius: 2,
+  },
+  cobweb: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '48%',
+    aspectRatio: 1,
+    zIndex: 100,
+  },
+  cobwebImage: {
+    width: '100%',
+    height: '100%',
   },
   character: {
     position: 'absolute',

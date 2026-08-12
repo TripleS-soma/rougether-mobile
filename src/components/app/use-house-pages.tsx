@@ -238,7 +238,11 @@ export function useHousePages({
   // 레이스(#624 후속)의 수정. 화면 감시 클리어는 두지 않는다.
 
   // Mini room previews for the current house's member tiles (#268).
-  const { previews: memberRoomPreviews, load: loadRoomPreviews } = useMemberRoomPreviews();
+  const {
+    previews: memberRoomPreviews,
+    load: loadRoomPreviews,
+    clearCobwebs: clearMemberCobwebs,
+  } = useMemberRoomPreviews();
   // 캐릭터 교체가 집 화면 내 타일에 즉시 반영되도록(#282), 캐시된 프리뷰 위에
   // 내 좌석의 캐릭터만 착용 캐릭터로 파생한다 (서버 재조회 없음).
   const roomPreviews = useMemo(
@@ -485,5 +489,6 @@ export function useHousePages({
     noHouses,
     /** 탐색을 뒤로 떠나는 순간의 미션 판정 — 셸이 useAppNavigation에 넘긴다. */
     onLeaveHouseSearch,
+    clearMemberCobweb: (membershipId: number) => clearMemberCobwebs([membershipId]),
   };
 }

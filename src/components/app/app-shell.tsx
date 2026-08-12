@@ -184,6 +184,7 @@ export function AppShell({
   // 이 use-house-pages보다 먼저 서서 소비하므로 훅으로 못 내린다.
   const [houseIndex, setHouseIndex] = useState(0);
   const currentHouse = houses[houseIndex] ?? houses[0];
+  const clearMemberCobwebRef = useRef<(membershipId: number) => void>(() => undefined);
 
   // Shop catalogue + purchase (diamond via API; wallet synced from the purchase
   // response). Server-side room placement isn't wired yet, so arrangement is
@@ -198,6 +199,9 @@ export function AppShell({
     purchase: purchaseFurniture,
     refreshOwned,
     saveLayout,
+    cobweb,
+    cobwebCleaning,
+    cleanCobweb,
   } = useShop(setWallet);
 
   const [placedItems, setPlacedItems] = useState<PlacedFurniture[]>([]);
@@ -212,6 +216,9 @@ export function AppShell({
     setFloorId(placement.floorId);
     setBackgroundId(placement.backgroundId);
   }, [placement]);
+  const handleCleanMyCobweb = useCallback(() => {
+    void cleanCobweb();
+  }, [cleanCobweb]);
 
   // 뽑기 → 가구 배치하러 가기 (#630, #622 개편) — 방금 뽑은 아이템을 꾸미기
   // 카탈로그에서 NEW로 강조한다. 꾸미기를 떠나면 강조를 비워 일반 진입과 구분.
@@ -298,6 +305,9 @@ export function AppShell({
       floorId,
       backgroundId,
       catalogue,
+      cobweb,
+      cobwebCleaning,
+      onCleanCobweb: handleCleanMyCobweb,
     },
   });
   // 홈 위젯 오늘 요약 동기화 (#604, 안드로이드 전용) — 완료 토글·루틴
@@ -355,6 +365,8 @@ export function AppShell({
     houseIndex,
     screen,
     cheerMember,
+    setWallet,
+    onCobwebClean: (membershipId) => clearMemberCobwebRef.current(membershipId),
   });
 
   // Android hardware back navigates the shell's own screen stack; 루트(나의 방)
@@ -400,6 +412,7 @@ export function AppShell({
     wornCharacterId,
     onPagerLockChange: handleHousePagerLock,
   });
+  clearMemberCobwebRef.current = housePages.clearMemberCobweb;
 
   // 내비게이션 컨트롤러 (#692) — 뒤로가기·엣지 백·전환 손맛·페이저 정착.
   // noHouses·탐색 이탈 판정이 use-house-pages 반환값이라 훅 호출이 그 뒤에 선다.

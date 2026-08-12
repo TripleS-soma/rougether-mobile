@@ -94,6 +94,7 @@ export function useMemberRoomPreviews() {
               floorId: placement.floorId,
               backgroundId: placement.backgroundId,
               characterId: characterIdFromCode(room.character?.code),
+              cobweb: room.cobweb,
             };
             return [membershipId, preview] as const;
           } catch {
@@ -109,5 +110,18 @@ export function useMemberRoomPreviews() {
     [],
   );
 
-  return { previews, load };
+  const clearCobwebs = useCallback((membershipIds: number[]) => {
+    if (membershipIds.length === 0) return;
+    const targets = new Set(membershipIds);
+    setPreviews((current) =>
+      Object.fromEntries(
+        Object.entries(current).map(([id, preview]) => [
+          id,
+          targets.has(Number(id)) ? { ...preview, cobweb: undefined } : preview,
+        ]),
+      ),
+    );
+  }, []);
+
+  return { previews, load, clearCobwebs };
 }

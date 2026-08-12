@@ -7,10 +7,12 @@
 import { useCallback, useRef, useState } from 'react';
 
 import {
+  cleanHouseMemberRoomCobweb,
   fetchHouseMemberDay,
   fetchHouseMemberRoom,
   fetchHouseMemberRoutineCompletions,
 } from '@/api';
+import type { RoomCobwebResponse } from '@/api';
 import {
   characterIdFromCode,
   fromFriendRoomSlots,
@@ -47,6 +49,8 @@ export type FriendRoom = {
   categories: RoutineCategoryMeta[];
   /** Recent completion history (14 days); undefined while unloaded/failed. */
   recentActivity?: FriendActivityDay[];
+  cobweb?: RoomCobwebResponse;
+  cobwebCleaning?: boolean;
   loading: boolean;
   /**
    * 방·루틴·기록 3요청이 전멸했을 때 true (#549) — 방문 실패를 빈 방으로
@@ -68,6 +72,7 @@ export function useFriendRoom() {
   const [friendRoom, setFriendRoom] = useState<FriendRoom>(EMPTY);
   // Visits can be rapid (back → next friend); only the latest load may land.
   const seqRef = useRef(0);
+  const targetRef = useRef<{ houseId: number; membershipId: number } | null>(null);
 
   /**
    * Load a member's room + day. Missing ids (demo houses) reset to empty.
@@ -77,9 +82,12 @@ export function useFriendRoom() {
     async (houseId?: number, membershipId?: number, catalogue?: ShopCatalogue) => {
       const seq = ++seqRef.current;
       if (houseId == null || membershipId == null) {
+        targetRef.current = null;
         setFriendRoom(EMPTY);
         return;
       }
+      const target = { houseId, membershipId };
+      targetRef.current = target;
       setFriendRoom({ ...EMPTY, loading: true });
       // Each endpoint fails soft so one outage doesn't blank the others' data.
       const [room, day, completions] = await Promise.all([
@@ -117,11 +125,38 @@ export function useFriendRoom() {
         categories: day ? toFriendCategories(day) : [],
         // undefined on failure hides the section instead of faking an empty history.
         recentActivity: completions ? toFriendActivity(completions) : undefined,
+        cobweb: room?.cobweb,
         loading: false,
       });
     },
     [],
   );
 
-  return { friendRoom, load };
+  const cleanCobweb = useCallback(async () => {
+    const target = targetRef.current;
+    if (!target || !friendRoom.cobweb || friendRoom.cobwebCleaning) return null;
+    setFriendRoom((current) => ({ ...current, cobwebCleaning: true }));
+    try {
+      const reward = await cleanHouseMemberRoomCobweb(target.houseId, target.membershipId);
+      const currentTarget = targetRef.current;
+      if (
+        currentTarget?.houseId === target.houseId &&
+        currentTarget.membershipId === target.membershipId
+      ) {
+        setFriendRoom((current) => ({ ...current, cobweb: undefined, cobwebCleaning: false }));
+      }
+      return reward;
+    } catch {
+      const currentTarget = targetRef.current;
+      if (
+        currentTarget?.houseId === target.houseId &&
+        currentTarget.membershipId === target.membershipId
+      ) {
+        setFriendRoom((current) => ({ ...current, cobwebCleaning: false }));
+      }
+      return null;
+    }
+  }, [friendRoom.cobweb, friendRoom.cobwebCleaning]);
+
+  return { friendRoom, load, cleanCobweb };
 }

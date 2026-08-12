@@ -98,4 +98,36 @@ describe('Room', () => {
     expect(queryByTestId('cdn-animation')).toBeNull();
     expect(getByLabelText('판다')).toBeTruthy();
   });
+
+  it('renders a tappable corner cobweb and delegates cleaning', async () => {
+    const onCleanCobweb = jest.fn();
+    const { getByLabelText } = await render(
+      <Room
+        cobweb={{
+          assetKey: 'items/common/decor/room-corner-cobweb.png',
+          appearedAt: '2026-08-12T03:30:00Z',
+          cleanable: true,
+        }}
+        onCleanCobweb={onCleanCobweb}
+      />,
+    );
+
+    fireEvent.press(getByLabelText('거미줄 청소하기'));
+    expect(onCleanCobweb).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows a house tile cobweb without exposing a nested cleaning action', async () => {
+    const { queryByLabelText, getByTestId } = await render(
+      <Room
+        cobweb={{
+          assetKey: 'items/common/decor/room-corner-cobweb.png',
+          appearedAt: '2026-08-12T03:30:00Z',
+          cleanable: true,
+        }}
+      />,
+    );
+
+    expect(getByTestId('room-cobweb')).toBeTruthy();
+    expect(queryByLabelText('거미줄 청소하기')).toBeNull();
+  });
 });

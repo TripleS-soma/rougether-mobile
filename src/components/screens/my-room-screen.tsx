@@ -253,6 +253,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   wallpapers,
   floors,
   backgrounds,
+  cobweb,
+  cobwebCleaning = false,
+  onCleanCobweb,
   routines = [],
   allCategories,
   calendarDays,
@@ -596,6 +599,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     wallpapers,
     floors,
     backgrounds,
+    cobweb,
+    cobwebCleaning,
+    onCleanCobweb,
   };
 
   // 홈 위젯용 무음 방 캡처 (#604) — 로직은 my-room/use-widget-room-capture로

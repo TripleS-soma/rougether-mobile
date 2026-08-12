@@ -1,7 +1,12 @@
 /** Room (my room) + furniture-slot + guestbook endpoints. */
 import { apiGet, apiPost, apiPut } from './client';
 import { buildQuery } from './http';
-import type { GuestbookCreateResponse, GuestbookListResponse, RoomResponse } from './types';
+import type {
+  GuestbookCreateResponse,
+  GuestbookListResponse,
+  RoomCobwebCleanResponse,
+  RoomResponse,
+} from './types';
 
 /** RoomResponse + 자유 배치 필드(#327) — 다음 gen:api-types 때 types.ts로 흡수. */
 export type RoomWithLayout = RoomResponse & {
@@ -13,6 +18,11 @@ export type RoomWithLayout = RoomResponse & {
 /** GET /rooms/me — the user's room: character, placed slots/placements, streak. */
 export function fetchMyRoom() {
   return apiGet<RoomWithLayout>('/rooms/me');
+}
+
+/** POST /rooms/me/cobweb/clean — clean my active cobweb and receive the small reward. */
+export function cleanMyRoomCobweb() {
+  return apiPost<RoomCobwebCleanResponse>('/rooms/me/cobweb/clean');
 }
 
 /** One slot assignment; null userItemId clears the slot server-side. */

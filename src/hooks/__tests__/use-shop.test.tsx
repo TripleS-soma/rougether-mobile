@@ -78,4 +78,39 @@ describe('useShop — refreshOwned (가챠 획득 동기화)', () => {
     expect(result.current.placement.items).toEqual([]);
     expect(result.current.placement.placedFurnitureIds).toEqual([]);
   });
+
+  it('cleans my room cobweb once and applies the returned coin balance', async () => {
+    const setWallet = jest.fn();
+    const urls: string[] = [];
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      urls.push(`${init?.method ?? 'GET'} ${url}`);
+      if (url.includes('/rooms/me/cobweb/clean')) {
+        return res({ rewardCurrencyType: 'COIN', rewardAmount: 3, balance: 103 });
+      }
+      if (url.includes('/rooms/me')) {
+        return res({
+          slots: [],
+          cobweb: {
+            assetKey: 'items/common/decor/room-corner-cobweb.png',
+            appearedAt: '2026-08-12T03:30:00Z',
+            cleanable: true,
+          },
+        });
+      }
+      if (url.includes('/items')) return res(ITEMS);
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useShop(setWallet));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.cobweb?.cleanable).toBe(true);
+
+    await act(async () => {
+      await result.current.cleanCobweb();
+    });
+
+    expect(urls.some((url) => url.includes('POST') && url.endsWith('/rooms/me/cobweb/clean'))).toBe(true); // prettier-ignore
+    expect(result.current.cobweb).toBeUndefined();
+    expect(setWallet).toHaveBeenCalled();
+  });
 });

@@ -833,7 +833,22 @@ export type RoomResponse = {
   slots?: RoomSlotResponse[];
   placements?: RoomPlacementResponse[];
   streak?: RoomStreakResponse;
+  cobweb?: RoomCobwebResponse;
   updatedAt?: string;
+};
+
+export type RoomCobwebResponse = {
+  assetKey?: string;
+  appearedAt?: string;
+  cleanable?: boolean;
+};
+
+export type RoomCobwebCleanResponse = {
+  roomUserId?: number;
+  cleanedAt?: string;
+  rewardCurrencyType?: 'COIN' | 'DIAMOND';
+  rewardAmount?: number;
+  balance?: number;
 };
 
 export type RoomSlotResponse = {

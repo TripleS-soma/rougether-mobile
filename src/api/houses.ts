@@ -26,6 +26,7 @@ import type {
   MissionSummary,
   MyHouseSummary,
   MyJoinRequestSummary,
+  RoomCobwebCleanResponse,
   TransferOwnershipResponse,
 } from './types';
 
@@ -135,6 +136,13 @@ export function kickHouseMember(houseId: number, membershipId: number) {
 /** GET /houses/{id}/members/{membershipId}/room — a housemate's room (same shape as /rooms/me). */
 export function fetchHouseMemberRoom(houseId: number, membershipId: number) {
   return apiGet<RoomWithLayout>(`/houses/${houseId}/members/${membershipId}/room`);
+}
+
+/** POST /houses/{id}/members/{membershipId}/room/cobweb/clean — 집 구성원 방의 거미줄 청소. */
+export function cleanHouseMemberRoomCobweb(houseId: number, membershipId: number) {
+  return apiPost<RoomCobwebCleanResponse>(
+    `/houses/${houseId}/members/${membershipId}/room/cobweb/clean`,
+  );
 }
 
 /** GET /houses/{id}/members/{membershipId}/day — that member's routines+todos on a date (default today, KST). */

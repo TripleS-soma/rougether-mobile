@@ -105,6 +105,9 @@ export function useMyRoomPages({
     floorId: string | null;
     backgroundId: string | null;
     catalogue: ShopCatalogue;
+    cobweb: MyRoomScreenProps['cobweb'];
+    cobwebCleaning: boolean;
+    onCleanCobweb: () => void;
   };
 }) {
   const { screen, setScreen, addReturnScreen, setAddReturnScreen } = nav;
@@ -270,6 +273,9 @@ export function useMyRoomPages({
     wallpapers: room.catalogue.wallpapers,
     floors: room.catalogue.floors,
     backgrounds: room.catalogue.backgrounds,
+    cobweb: room.cobweb,
+    cobwebCleaning: room.cobwebCleaning,
+    onCleanCobweb: room.onCleanCobweb,
     characterId: character.wornCharacterId,
     characterAnimations: character.wornCharacterAnimations,
     onToggleCompletion: toggleWithMissionGuard,

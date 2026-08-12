@@ -38,6 +38,11 @@ describe('useFriendRoom', () => {
             animations: { idle: 'characters/otter/animations/idle.webp' },
           },
           streak: { currentCount: 5 },
+          cobweb: {
+            assetKey: 'items/common/decor/room-corner-cobweb.png',
+            appearedAt: '2026-08-12T03:30:00Z',
+            cleanable: true,
+          },
           slots: [
             { slotType: 'bottomLeft', userItemId: 777, assetKey: 'items/a/bed.png' },
             { slotType: 'wallpaper', userItemId: 778, assetKey: 'items/a/wp.png' },
@@ -79,6 +84,7 @@ describe('useFriendRoom', () => {
       idle: 'characters/otter/animations/idle.webp',
     });
     expect(friendRoom.streakDays).toBe(5);
+    expect(friendRoom.cobweb?.cleanable).toBe(true);
     expect(friendRoom.placement).toEqual({
       placedFurnitureIds: ['2'],
       wallpaperId: '9',
@@ -95,6 +101,38 @@ describe('useFriendRoom', () => {
       { date: '2026-07-08', label: '7월 8일', titles: ['아침 기상'] },
       { date: '2026-07-07', label: '7월 7일', titles: ['아침 기상', '독서 30분'] },
     ]);
+  });
+
+  it('cleans the loaded member cobweb and removes it after the server succeeds', async () => {
+    const urls: string[] = [];
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      urls.push(`${init?.method ?? 'GET'} ${url}`);
+      if (url.includes('/room/cobweb/clean')) {
+        return res({ rewardCurrencyType: 'COIN', rewardAmount: 3, balance: 103 });
+      }
+      if (url.includes('/room')) {
+        return res({
+          cobweb: {
+            assetKey: 'items/common/decor/room-corner-cobweb.png',
+            appearedAt: '2026-08-12T03:30:00Z',
+            cleanable: true,
+          },
+        });
+      }
+      return res({});
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useFriendRoom());
+    await act(async () => {
+      await result.current.load(11, 42, CATALOGUE);
+    });
+    await act(async () => {
+      const reward = await result.current.cleanCobweb();
+      expect(reward?.balance).toBe(103);
+    });
+
+    expect(urls.some((url) => url.includes('POST') && url.endsWith('/houses/11/members/42/room/cobweb/clean'))).toBe(true); // prettier-ignore
+    expect(result.current.friendRoom.cobweb).toBeUndefined();
   });
 
   it('drops the animations when the character code has no app-side match', async () => {

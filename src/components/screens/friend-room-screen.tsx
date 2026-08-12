@@ -132,6 +132,9 @@ export function FriendRoomScreen({
   wallpapers,
   floors,
   backgrounds,
+  cobweb,
+  cobwebCleaning = false,
+  onCleanCobweb,
   routines,
   categories,
   recentActivity,
@@ -163,6 +166,9 @@ export function FriendRoomScreen({
     wallpapers,
     floors,
     backgrounds,
+    cobweb,
+    cobwebCleaning,
+    onCleanCobweb,
   };
   // No routines prop = unwired demo preview (dev gallery); the notice says so.
   const preview = routines === undefined;
