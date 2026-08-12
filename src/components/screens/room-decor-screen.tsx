@@ -170,7 +170,13 @@ export function RoomDecorScreen({
   if (initialSnapRef.current === null) {
     initialSnapRef.current = snap(items, wallpaperId, floorId, backgroundId);
   }
-  const dirty = snap(items, wallpaperId, floorId, backgroundId) !== initialSnapRef.current;
+  // 가구를 놓을 때마다·툴바를 누를 때마다 배치 전량을 직렬화하던 자리 (#771).
+  // dirty는 BackHandler 이펙트의 의존성이라, 매 렌더 새로 계산되면 리스너까지
+  // 매번 갈아끼워졌다.
+  const dirty = useMemo(
+    () => snap(items, wallpaperId, floorId, backgroundId) !== initialSnapRef.current,
+    [items, wallpaperId, floorId, backgroundId],
+  );
   const [confirmLeave, setConfirmLeave] = useState(false);
 
   // --- 프리뷰 (#501): 미보유인데 배치/적용돼 있는 아이템. 별도 상태 없이

@@ -44,6 +44,12 @@ export function FurniturePlaceholder({
           style={styles.art}
           contentFit="contain"
           transition={120}
+          // 앱에서 가장 많이 반복되는 이미지 (#771) — 방 캔버스·집 좌석 8~12칸·
+          // 꾸미기 카탈로그 전 셀이 같은 아트를 다시 그린다. 기본값 'disk'는
+          // 메모리 캐시가 없어 스크롤마다 디코딩을 반복한다.
+          cachePolicy="memory-disk"
+          // 리스트 셀 재활용 시 이전 아트가 잠깐 남는 것 방지.
+          recyclingKey={item.id}
           // 확대 대상(집 창문 등)은 원본 해상도로 디코딩 (#307 후속) — 기본
           // 다운스케일 디코딩은 레이아웃 크기에 맞춰져 카메라 줌에서 흐려진다.
           allowDownscaling={!sharp}

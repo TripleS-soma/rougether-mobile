@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 
@@ -51,7 +51,7 @@ export type CalendarProps = {
  * EAS Update. ISO date strings sort lexicographically, so min/max comparisons
  * are plain string compares.
  */
-export function Calendar({ value, min, max, onSelect, today, monthSwipe = true }: CalendarProps) {
+function CalendarBase({ value, min, max, onSelect, today, monthSwipe = true }: CalendarProps) {
   const t = useTokens();
   const Typography = useTypography();
   const emph = useFontEmphasis();
@@ -69,12 +69,16 @@ export function Calendar({ value, min, max, onSelect, today, monthSwipe = true }
     onSelect(today);
   };
 
-  const firstWeekday = new Date(view.y, view.m, 1).getDay();
-  const daysInMonth = new Date(view.y, view.m + 1, 0).getDate();
-  const cells: (number | null)[] = [
-    ...Array.from({ length: firstWeekday }, () => null),
-    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
-  ];
+  // 42칸 배열 + Date 2개를 매 렌더 다시 만들던 자리 (#771) — 보이는 달이
+  // 바뀔 때만 계산한다.
+  const cells = useMemo<(number | null)[]>(() => {
+    const firstWeekday = new Date(view.y, view.m, 1).getDay();
+    const daysInMonth = new Date(view.y, view.m + 1, 0).getDate();
+    return [
+      ...Array.from({ length: firstWeekday }, () => null),
+      ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+    ];
+  }, [view.y, view.m]);
 
   const shiftMonth = (delta: number) =>
     setView(({ y, m }) => {
@@ -246,6 +250,11 @@ export function Calendar({ value, min, max, onSelect, today, monthSwipe = true }
     </View>
   );
 }
+/**
+ * memo (#771) — 42칸 + onLayout 클로저를 매번 다시 만들지 않게. 부모가
+ * `onSelect`를 참조 고정으로 줘야 실제로 건너뛴다.
+ */
+export const Calendar = memo(CalendarBase);
 
 const styles = StyleSheet.create({
   wrap: {

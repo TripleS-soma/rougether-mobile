@@ -480,10 +480,11 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     () => routines.filter((r) => isScheduledOn(r, selectedDate)),
     [routines, selectedDate],
   );
-  const pickDate = (date: string) => {
+  // 참조 고정 (#771) — Calendar가 memo라, 매 렌더 새 함수면 42칸이 매번 다시 그려진다.
+  const pickDate = useStableCallback((date: string) => {
     setSelectedDate(date);
     if (date !== today) onSelectDate?.(date);
-  };
+  });
   const catMeta = allCategories ?? categories;
   const serverBackedDay = !!onSelectDate && selectedDate !== today;
   const dayItems = serverBackedDay ? calendarDays?.[selectedDate] : undefined;
@@ -599,14 +600,20 @@ export const MyRoomScreen = memo(function MyRoomScreen({
 
   // 홈 위젯용 무음 방 캡처 (#604) — 로직은 my-room/use-widget-room-capture로
   // 이동 (#693). 시그니처가 바뀐 방만 다시 찍는다.
-  const roomSignature = JSON.stringify({
-    wallpaperId,
-    floorId,
-    backgroundId,
-    placedFurnitureIds,
-    placements,
-    characterId,
-  });
+  // 위젯 캡처 트리거용 서명 — placements(가구 배치 전량)까지 직렬화하므로
+  // 렌더마다 돌면 비싸다 (#771). 입력이 바뀔 때만 계산한다.
+  const roomSignature = useMemo(
+    () =>
+      JSON.stringify({
+        wallpaperId,
+        floorId,
+        backgroundId,
+        placedFurnitureIds,
+        placements,
+        characterId,
+      }),
+    [wallpaperId, floorId, backgroundId, placedFurnitureIds, placements, characterId],
+  );
   useWidgetRoomCapture({
     shotRef: roomShotRef,
     signature: roomSignature,

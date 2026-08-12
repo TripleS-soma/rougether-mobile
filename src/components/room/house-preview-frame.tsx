@@ -119,6 +119,11 @@ export function HousePreviewFrame({
             style={StyleSheet.absoluteFill}
             contentFit="contain"
             transition={120}
+            // 셸이 집 목록을 받자마자 memory-disk로 프리페치하는데(#463,
+            // use-house-pages) 렌더가 기본 'disk'면 메모리 히트를 못 써
+            // 프리페치 효과가 절반만 난다 (#771).
+            cachePolicy="memory-disk"
+            recyclingKey={coverKey}
             accessibilityLabel={name ? `${name} 집 미리보기` : '집 미리보기'}
           />
         </View>
