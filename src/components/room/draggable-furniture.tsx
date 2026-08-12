@@ -20,6 +20,24 @@ export const SCALE_MIN = ROOM_RENDER_CONTRACT.furniture.editorScale.min;
 export const SCALE_MAX = ROOM_RENDER_CONTRACT.furniture.editorScale.max;
 /** 드래그 중심 좌표 클램프의 기본값(스케일 1) (#333). */
 const FREE_ITEM_WIDTH = ROOM_RENDER_CONTRACT.furniture.baseWidth;
+
+/**
+ * 터치 영역 비율 (#768) — 가구 박스는 정사각형인데 아트는 대개 그 안을 다
+ * 채우지 않는다. 박스 전체가 터치를 먹으면 위에 놓인 가구의 **투명한 모서리**가
+ * 아래 가구를 가려, 눈에 보이는 것과 다른 물건이 잡힌다. 안쪽 78%만 받는다.
+ */
+const HITBOX_RATIO = 0.78;
+/**
+ * 수축 후에도 이만큼(px)은 남긴다. 최소 축척(0.5)에서 78%면 40px 아래로
+ * 떨어져 작은 소품을 아예 못 집게 되기 때문 — 44pt 권장치를 지킨다.
+ */
+const MIN_HIT_SIZE = 44;
+
+/** 박스 한 변(px)에 대해 각 변에서 깎아낼 양 — 음수 hitSlop으로 쓴다. */
+export function hitSlopInset(boxSize: number): number {
+  const target = Math.max(MIN_HIT_SIZE, boxSize * HITBOX_RATIO);
+  return Math.max(0, (boxSize - target) / 2);
+}
 export const dragClampBounds = (scale = 1) => {
   'worklet';
   const clampedScale = Math.min(SCALE_MAX, Math.max(SCALE_MIN, scale));
@@ -92,10 +110,20 @@ export function DraggableFurniture({
   const commitScale = (value: number) => onScaleEnd?.(placement.furnitureId, value);
   const select = () => onSelect?.(placement.furnitureId);
 
+  const itemW = roomSize.w * FREE_ITEM_WIDTH;
+  // 음수 hitSlop = 터치 영역 수축 (#768). 변환(scale) 이전 좌표계라 확대·축소
+  // 어디서든 같은 비율로 줄어든다.
+  const shrink = -hitSlopInset(itemW);
+
   // 주의: 드래그 중에는 React 상태를 건드리지 않는다 — 리렌더가 제스처를
   // 재생성해 활성 팬을 취소시킨다. z 승격·선택은 제스처 종료에서 처리.
   const pan = Gesture.Pan()
     .withTestId(`item-pan-${placement.furnitureId}`)
+    // 선택된 것만 움직인다 (#768) — 예전엔 모든 가구가 팬을 갖고 있어, 고른
+    // 것과 무관하게 손가락 아래 z가 높은 가구가 끌려갔다. 선택 안 된 가구는
+    // 탭(선택)만 받는다.
+    .enabled(selected)
+    .hitSlop(shrink)
     .onStart(() => {
       dragging.value = true;
       if (dragActiveSV) dragActiveSV.value = true;
@@ -126,6 +154,7 @@ export function DraggableFurniture({
   // 짧은 탭 = 선택 (#333). 팬이 활성화되면(=진짜 드래그) 탭은 무산된다.
   const tap = Gesture.Tap()
     .withTestId(`item-tap-${placement.furnitureId}`)
+    .hitSlop(shrink)
     .onEnd((_e, success) => {
       if (success) runOnJS(select)();
     });
@@ -133,6 +162,10 @@ export function DraggableFurniture({
   // 핀치 크기 조절 (#333) — 어디서든 두 손가락으로.
   const pinch = Gesture.Pinch()
     .withTestId(`item-pinch-${placement.furnitureId}`)
+    // 크기 조절도 선택된 것만 (#768) — 드래그와 같은 이유로, 겹친 이웃이
+    // 의도치 않게 커지지 않게 한다.
+    .enabled(selected)
+    .hitSlop(shrink)
     .onStart(() => {
       baseScale.value = scaleSV.value;
     })
@@ -150,7 +183,6 @@ export function DraggableFurniture({
   const gesture = Gesture.Simultaneous(Gesture.Exclusive(pan, tap), pinch);
 
   // 크기 핸들(우하단) 드래그 — 대각선 이동량을 스케일로 환산 (#333).
-  const itemW = roomSize.w * FREE_ITEM_WIDTH;
   const handlePan = Gesture.Pan()
     .withTestId(`item-handle-${placement.furnitureId}`)
     .onStart(() => {

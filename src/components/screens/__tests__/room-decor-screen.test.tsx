@@ -737,6 +737,8 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
       <RoomDecorScreen initialItems={items(['plant'])} freeLayout onApply={onApply} />,
     );
     await layoutCanvas(getByTestId);
+    // 선택된 가구만 이동·크기 조절을 받는다 (#768).
+    await tapItem('plant');
 
     await act(() =>
       fireGestureHandler(getByGestureTestId('item-pinch-plant'), [
@@ -794,6 +796,8 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
       <RoomDecorScreen initialItems={items(['plant'])} freeLayout onApply={onApply} />,
     );
     await layoutCanvas(getByTestId);
+    // 선택된 가구만 이동·크기 조절을 받는다 (#768).
+    await tapItem('plant');
 
     // 캔버스 폭(320px)만큼 오른쪽으로 끌어도 UI 스레드 클램프에 걸려
     // scale 1 기준 중심 0.86에서 멈춘다 — 가구는 빠지지 않는다.
@@ -819,6 +823,8 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
       <RoomDecorScreen initialItems={scaled} freeLayout onApply={onApply} />,
     );
     await layoutCanvas(getByTestId);
+    // 선택된 가구만 이동·크기 조절을 받는다 (#768).
+    await tapItem('plant');
 
     await act(() =>
       fireGestureHandler(getByGestureTestId('item-pan-plant'), [
