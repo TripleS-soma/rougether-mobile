@@ -249,6 +249,27 @@ describe('GachaScreen', () => {
     expect(await findByTestId('reward-row-8')).toBeTruthy();
   });
 
+  it('보상이 많아도 처음엔 일부만 마운트한다 — 가상화 (#773)', async () => {
+    // 머신 하나의 보상 풀은 수십~수백. 예전엔 ScrollView + map이라 시트를 여는
+    // 프레임에 전부 마운트되고 원격 썸네일도 한꺼번에 요청됐다.
+    const many = Array.from({ length: 60 }, (_, i) => ({
+      rewardType: 'ITEM' as const,
+      itemId: i + 1,
+      name: `보상 ${i + 1}`,
+      rarity: '일반',
+      assetKey: `items/r${i + 1}.png`,
+    }));
+    const { getByLabelText, findByTestId, queryByTestId } = await render(
+      <GachaScreen gachas={[machine]} coinBalance={5600} onLoadRewards={async () => many} />,
+    );
+    await fireEvent.press(getByLabelText('나올 수 있는 보상 보기'));
+
+    // 앞쪽은 바로 보이고,
+    expect(await findByTestId('reward-row-1')).toBeTruthy();
+    // 60번째는 아직 창 밖이라 마운트되지 않는다.
+    expect(queryByTestId('reward-row-60')).toBeNull();
+  });
+
   it('보상 목록 로드 실패면 시트 안에서 다시 시도를 보여준다 (#620)', async () => {
     const onLoadRewards = jest
       .fn()
