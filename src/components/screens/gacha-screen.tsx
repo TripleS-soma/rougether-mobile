@@ -114,6 +114,11 @@ export function groupRewardsByRarity(
  * reward reveal). Uses the built-in Animated API (no worklets) so it runs in
  * tests.
  */
+/** 같은 등급 안 행 사이 간격 (#773) — 모듈 스코프라 참조가 고정된다. */
+function RewardGap() {
+  return <View style={styles.rewardGap} />;
+}
+
 export function GachaScreen({
   onBack,
   gachas = [],
@@ -166,7 +171,7 @@ export function GachaScreen({
   const rewardGroups = useMemo(() => (rewards ? groupRewardsByRarity(rewards) : []), [rewards]);
   // 등급 그룹 = 섹션 (#773) — 가상화를 위해 SectionList 형태로 옮긴다.
   const rewardSections = useMemo(
-    () => rewardGroups.map((g) => ({ rarity: g.rarity, data: g.items })),
+    () => rewardGroups.map((g, i) => ({ rarity: g.rarity, first: i === 0, data: g.items })),
     [rewardGroups],
   );
   const rewardKey = useCallback(
@@ -174,8 +179,8 @@ export function GachaScreen({
     [],
   );
   const renderRaritySection = useCallback(
-    ({ section }: { section: { rarity: string } }) => (
-      <View style={styles.rewardsGroupHead}>
+    ({ section }: { section: { rarity: string; first: boolean } }) => (
+      <View style={[styles.rewardsGroupHead, section.first ? null : styles.rewardsGroupGap]}>
         <View style={[styles.rarityDot, { backgroundColor: rarityColor(section.rarity) }]} />
         <Text style={[Typography.supporting, emph('semibold'), { color: t.textMuted }]}>
           {section.rarity}
@@ -505,6 +510,13 @@ export function GachaScreen({
             keyExtractor={rewardKey}
             renderSectionHeader={renderRaritySection}
             renderItem={renderRewardRow}
+            // 등급 안은 촘촘히, 등급 사이는 넓게 — 예전 2단 간격 구조를 유지한다
+            // (#773). SectionList는 헤더·아이템을 형제로 평탄화하므로 컨테이너
+            // gap 하나만 두면 그룹 경계가 사라진다.
+            ItemSeparatorComponent={RewardGap}
+            // iOS 기본값이 true라 그냥 두면 등급 헤더가 상단에 붙는 동작이
+            // 이 플랫폼에만 새로 생긴다 — 기존 ScrollView엔 없던 동작.
+            stickySectionHeadersEnabled={false}
             // 보상 풀은 머신당 수십~수백 — 시트를 여는 프레임에 전부 마운트하면
             // 원격 썸네일까지 한꺼번에 요청된다 (#773).
             initialNumToRender={12}
@@ -549,14 +561,21 @@ const styles = StyleSheet.create({
     maxHeight: 420,
   },
   rewardsListBody: {
-    gap: Spacing.three,
     paddingBottom: Spacing.two,
+  },
+  /** 같은 등급 안 행 사이 (구 rewardsGroup의 gap). */
+  rewardGap: {
+    height: Spacing.one,
   },
   rewardsGroupHead: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.one,
     marginBottom: Spacing.half,
+  },
+  /** 등급 사이 (구 rewardsListBody의 gap) — 첫 그룹 위에는 두지 않는다. */
+  rewardsGroupGap: {
+    marginTop: Spacing.three,
   },
   rarityDot: {
     width: 8,
