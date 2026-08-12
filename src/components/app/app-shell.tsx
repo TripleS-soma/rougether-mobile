@@ -22,7 +22,7 @@ import { DEFAULT_CHARACTER_ID, type CharacterId } from '@/constants/characters';
 import { screenView } from '@/lib/analytics';
 import { todayIso } from '@/utils/datetime';
 import { refreshWidgets } from '@/widgets/rougether-widgets';
-import { buildWidgetSummary, saveWidgetSummary } from '@/widgets/widget-data';
+import { buildWidgetSummary, saveWidgetSummary, saveWidgetTheme } from '@/widgets/widget-data';
 import { useGacha } from '@/hooks/use-gacha';
 import {
   type OnboardingMissionStepId,
@@ -34,6 +34,7 @@ import { useMyCharacters } from '@/hooks/use-my-characters';
 import { useMyRoomData } from '@/hooks/use-my-room-data';
 import { useShop } from '@/hooks/use-shop';
 import { useWeather } from '@/hooks/use-weather';
+import { useResolvedScheme } from '@/hooks/use-tokens';
 import type { DrawResult } from '@/api';
 import { fetchGachaRewards } from '@/api';
 import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furniture';
@@ -84,6 +85,8 @@ export function AppShell({
 }: AppShellProps) {
   // 집 하늘 연출용 현재 비 여부 (#360) — 서울 고정, 30분 캐시.
   const { raining } = useWeather();
+  // 위젯에 넘길 실효 라이트/다크 (#746) — 앱 테마 모드 설정이 적용된 값.
+  const resolvedScheme = useResolvedScheme();
   const [screen, setScreen] = useState<Screen>('myRoom');
   // Remember where the add/edit-routine screen was opened from, so its back
   // button returns to the right place (my-room or routine manage).
@@ -299,6 +302,14 @@ export function AppShell({
   });
   // 홈 위젯 오늘 요약 동기화 (#604, 안드로이드 전용) — 완료 토글·루틴
   // 변경·스트릭 갱신이 위젯에 바로 반영되게 요약을 기록하고 재렌더를 민다.
+  // 위젯 다크모드 동기화 (#746) — 앱의 테마 모드('system'|'light'|'dark')가
+  // 적용된 실효 스킴을 위젯 저장소에 기록한다. 위젯은 시스템 설정만 볼 수
+  // 있어, 앱에서 다크로 바꿔도 위젯이 라이트로 남던 불일치를 없앤다.
+  useEffect(() => {
+    if (Platform.OS !== 'android' && Platform.OS !== 'ios') return;
+    void saveWidgetTheme(resolvedScheme === 'dark').then(refreshWidgets);
+  }, [resolvedScheme]);
+
   const widgetSummarySigRef = useRef('');
   useEffect(() => {
     // 홈 위젯이 있는 플랫폼만 (#604 안드, #606 iOS) — 웹은 제외.
