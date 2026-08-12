@@ -15,11 +15,7 @@ import {
 import { type HouseCover } from '@/components/room/house-cover-picker';
 import { FRAME_ASPECT, houseCoverKey, WINDOW_RECTS } from '@/components/room/house-preview-frame';
 import { CoachTarget } from '@/components/ui/coach-mark';
-import {
-  type MemberRoomPreview,
-  memberRoomScene,
-  type RoomCatalogProps,
-} from '@/components/room/room';
+import { type MemberRoomPreview, type RoomCatalogProps } from '@/components/room/room';
 import {
   camDefault,
   cameraClaimsMove,
@@ -872,11 +868,7 @@ export const HouseScreen = memo(function HouseScreen({
         fill={fill}
         dragging={dragSeat === seatIdx}
         zoomed={zoomed}
-        preview={
-          preview
-            ? { ...memberRoomScene(preview, seatCatalogs), characterId: preview.characterId }
-            : undefined
-        }
+        preview={preview}
         avatarCharacterId={characterIdForMember(room, roomPreviews, characterId)}
         catalogs={seatCatalogs}
         vacantFloor={VACANT_FLOOR}

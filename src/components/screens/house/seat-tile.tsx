@@ -1,22 +1,19 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CharacterAvatar } from '@/components/room/character-avatar';
-import { Room } from '@/components/room/room';
+import {
+  memberRoomScene,
+  type MemberRoomPreview,
+  type RoomCatalogProps,
+  Room,
+} from '@/components/room/room';
 import { OnlineDot } from '@/components/screens/house/online-dot';
 import { CrownPictogram } from '@/components/ui/pictograms';
 import { type CharacterId } from '@/constants/characters';
 import { Overlay, Radius, Spacing, StaticWhite } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import type { Wallpaper } from '@/resources/furniture';
-
-/** 좌석 타일이 <Room>에 그대로 넘기는 카탈로그 묶음 — 참조 고정 계약. */
-export type SeatCatalogs = {
-  furniture: React.ComponentProps<typeof Room>['furniture'];
-  wallpapers: React.ComponentProps<typeof Room>['wallpapers'];
-  floors: React.ComponentProps<typeof Room>['floors'];
-  backgrounds: React.ComponentProps<typeof Room>['backgrounds'];
-};
 
 /** 빈 좌석에 그리는 기본 빈 방 (#281) — 모듈 상수라 참조가 고정된다. */
 const VACANT_FURNITURE_IDS: string[] = [];
@@ -39,11 +36,15 @@ export type SeatTileProps = {
   dragging: boolean;
   /** 확대 중 — 롱프레스 드래그를 막는다(카메라 팬과 충돌). */
   zoomed: boolean;
-  /** 그 멤버의 실제 방 (없으면 아바타 폴백). */
-  preview?: React.ComponentProps<typeof Room> & { characterId?: CharacterId | null };
+  /**
+   * 그 멤버의 실제 방 (없으면 아바타 폴백). **원본 프리뷰를 그대로** 받는다 —
+   * 부모에서 `memberRoomScene`으로 조합해 넘기면 매 렌더 새 객체라 memo가
+   * 통째로 무효가 된다 (#775 리뷰). 조합은 아래에서 memo로 한다.
+   */
+  preview?: MemberRoomPreview;
   /** 프리뷰가 없을 때 세울 캐릭터. */
   avatarCharacterId: CharacterId;
-  catalogs: SeatCatalogs;
+  catalogs: RoomCatalogProps;
   vacantFloor: Wallpaper[];
   vacantRoomStyle: React.ComponentProps<typeof Room>['style'];
 
@@ -95,6 +96,11 @@ function SeatTileBase({
 }: SeatTileProps) {
   const t = useTokens();
   const Typography = useTypography();
+  // 원본 프리뷰·카탈로그가 그대로일 때 씬 객체도 그대로 — <Room>의 memo까지 산다.
+  const scene = useMemo(
+    () => (preview ? memberRoomScene(preview, catalogs) : null),
+    [preview, catalogs],
+  );
 
   const setRef = useCallback((el: View | null) => registerRef(seatIdx, el), [registerRef, seatIdx]);
   const visit = useCallback(() => onVisit(seatIdx), [onVisit, seatIdx]);
@@ -136,13 +142,12 @@ function SeatTileBase({
         ]}>
         {/* 그 멤버의 실제 방이 타일을 채운다(방문 미리보기); 로드 전엔
             단색 틴트 + 아바타가 자리를 지킨다. */}
-        {preview ? (
+        {scene ? (
           <View style={styles.roomPreview} pointerEvents="none" testID="room-preview">
             <Room
-              {...preview}
-              {...catalogs}
+              {...scene}
               // 재실 좌석은 캐릭터 미지정 시 빈 방이 아니라 기본 캐릭터로.
-              characterId={preview.characterId}
+              characterId={preview?.characterId}
               fill
               style={styles.roomPreviewFill}
             />
