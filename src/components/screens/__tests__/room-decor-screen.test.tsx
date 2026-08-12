@@ -737,6 +737,8 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
       <RoomDecorScreen initialItems={items(['plant'])} freeLayout onApply={onApply} />,
     );
     await layoutCanvas(getByTestId);
+    // 선택된 가구만 이동·크기 조절을 받는다 (#768).
+    await tapItem('plant');
 
     await act(() =>
       fireGestureHandler(getByGestureTestId('item-pinch-plant'), [
@@ -794,6 +796,8 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
       <RoomDecorScreen initialItems={items(['plant'])} freeLayout onApply={onApply} />,
     );
     await layoutCanvas(getByTestId);
+    // 선택된 가구만 이동·크기 조절을 받는다 (#768).
+    await tapItem('plant');
 
     // 캔버스 폭(320px)만큼 오른쪽으로 끌어도 UI 스레드 클램프에 걸려
     // scale 1 기준 중심 0.86에서 멈춘다 — 가구는 빠지지 않는다.
@@ -812,6 +816,42 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
     );
   });
 
+  // #767의 회귀 방지 — 이 PR의 핵심 계약이라 반대 케이스를 직접 못박는다.
+  it('선택 안 된 가구는 팬·핀치를 받지 않는다 (#768)', async () => {
+    const onApply = jest.fn();
+    const before = items(['plant']);
+    const { getByTestId, getByText } = await render(
+      <RoomDecorScreen initialItems={before} freeLayout onApply={onApply} />,
+    );
+    await layoutCanvas(getByTestId);
+
+    // 선택하지 않은 채로 끌어 보고, 크기도 바꿔 본다.
+    await act(() =>
+      fireGestureHandler(getByGestureTestId('item-pan-plant'), [
+        { state: State.BEGAN },
+        { state: State.ACTIVE },
+        { state: State.ACTIVE, translationX: 120, translationY: 80 },
+        { state: State.END, translationX: 120, translationY: 80 },
+      ]),
+    );
+    await act(() =>
+      fireGestureHandler(getByGestureTestId('item-pinch-plant'), [
+        { state: State.BEGAN },
+        { state: State.ACTIVE },
+        { state: State.ACTIVE, scale: 2 },
+        { state: State.END, scale: 2 },
+      ]),
+    );
+
+    await fireEvent.press(getByText('적용하기'));
+    await waitFor(() => expect(onApply).toHaveBeenCalled());
+    // 좌표·스케일 모두 처음 그대로 — 포커스 아닌 가구는 꿈쩍도 하지 않는다.
+    expect(lastApply(onApply)[0]).toEqual(
+      expect.objectContaining({ furnitureId: 'plant', x: before[0].x, y: before[0].y }),
+    );
+    expect(lastApply(onApply)[0].scale ?? 1).toBe(before[0].scale ?? 1);
+  });
+
   it('scaled furniture drag clamp uses its rendered width', async () => {
     const onApply = jest.fn();
     const scaled = items(['plant']).map((item) => ({ ...item, scale: 2 }));
@@ -819,6 +859,8 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
       <RoomDecorScreen initialItems={scaled} freeLayout onApply={onApply} />,
     );
     await layoutCanvas(getByTestId);
+    // 선택된 가구만 이동·크기 조절을 받는다 (#768).
+    await tapItem('plant');
 
     await act(() =>
       fireGestureHandler(getByGestureTestId('item-pan-plant'), [
