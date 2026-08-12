@@ -15,7 +15,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { GestureDetector } from 'react-native-gesture-handler';
 
 import { NavMenuPopover } from '@/components/app/nav-menu-popover';
 import { FlyingCoin } from '@/components/screens/my-room/flying-coin';
@@ -28,9 +28,15 @@ import {
   resolveDrop,
 } from '@/components/screens/my-room/routine-drag';
 import { applyRoutineOrder } from '@/hooks/use-routine-order';
-import { useAnimatedValue, useConstant, useLatestRef } from '@/hooks/use-stable-value';
+import {
+  useAnimatedValue,
+  useConstant,
+  useLatestRef,
+  useStableCallback,
+} from '@/hooks/use-stable-value';
 import type { WalletHistoryEntry } from '@/api/adapters';
-import { SwipeDeleteRow } from '@/components/screens/my-room/swipe-delete-row';
+import { QuickAddRow } from '@/components/screens/my-room/quick-add-row';
+import { RoutineRow } from '@/components/screens/my-room/routine-row';
 import { WalletHistorySheet } from '@/components/screens/sheets/wallet-history-sheet';
 import { useWidgetRoomCapture } from '@/components/screens/my-room/use-widget-room-capture';
 import { Room, type RoomSceneProps } from '@/components/room/room';
@@ -63,7 +69,6 @@ import {
   VISIBILITY_ICONS,
   VISIBILITY_LABELS,
 } from '@/constants/routines';
-import { BearCheck } from '@/components/ui/bear-check';
 import { Icon } from '@/components/ui/icon';
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { Radius, Spacing } from '@/constants/theme';
@@ -73,7 +78,7 @@ import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
-import { formatDate, formatTime, todayIso } from '@/utils/datetime';
+import { formatDate, todayIso } from '@/utils/datetime';
 import { horizontalFlingGesture } from '@/utils/gesture';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
 
@@ -422,7 +427,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // Which category's quick-add input is open, the in-progress todo text + due
   // date, and which routine's kebab menu is open.
   const [addingCategory, setAddingCategory] = useState<string | null>(null);
-  const [newTodo, setNewTodo] = useState('');
+  // 입력 중인 제목은 QuickAddRow가 소유한다 (#769) — 여기 두면 한 글자마다
+  // 화면 전체가 리렌더돼 전 행의 스와이프 트리·제스처까지 재조정된다.
   const [newTodoDate, setNewTodoDate] = useState(today);
   const [todoDateOpen, setTodoDateOpen] = useState(false);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
@@ -673,7 +679,6 @@ export const MyRoomScreen = memo(function MyRoomScreen({
 
   // 방탭은 오늘, 달력탭은 선택한 날짜를 기본 마감일로 연다 (#323).
   const openQuickAdd = (categoryId: string, defaultDate = today) => {
-    setNewTodo('');
     setNewTodoDate(defaultDate);
     const opening = addingCategory !== categoryId;
     setAddingCategory(opening ? categoryId : null);
@@ -684,17 +689,17 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     }
   };
 
-  const commitTodo = (categoryId: string) => {
+  const commitTodo = (categoryId: string, raw: string) => {
     // Blur fired only to open the date picker → keep the input open.
     if (skipBlurCommit.current) {
       skipBlurCommit.current = false;
       return;
     }
-    const title = newTodo.trim();
+    const title = raw.trim();
     // 새 행이 뚝 나타나는 대신 부드럽게 삽입되고 기존 행이 밀려난다 (#452).
     if (title) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     if (title) onQuickAddRoutine?.(categoryId, title, newTodoDate);
-    setNewTodo('');
+    // 행이 닫히며 언마운트되므로 입력 상태는 자연히 사라진다.
     setAddingCategory(null);
   };
 
@@ -713,36 +718,18 @@ export const MyRoomScreen = memo(function MyRoomScreen({
 
   // 퀵애드 입력행 — 제목 입력 + 마감일 칩, blur가 커밋. 방탭·달력탭 공용 (#323).
   const renderQuickAddRow = (categoryId: string) => (
-    <View ref={addRowRef} style={[styles.addRow, { backgroundColor: t.surface }]}>
-      <BearCheck checked={false} size={22} />
-      <TextInput
-        ref={todoInputRef}
-        autoFocus
-        value={newTodo}
-        onChangeText={setNewTodo}
-        // Commit on blur — pressing 완료 (single-line blurs on submit) or
-        // tapping elsewhere both save the todo.
-        onBlur={() => commitTodo(categoryId)}
-        placeholder="할 일 입력 후 완료"
-        placeholderTextColor={t.textMuted}
-        style={[styles.flex, styles.todoInput, { color: t.text }]}
-      />
-      <Pressable
-        // onPressIn (fires before the input's blur) flags the blur as
-        // picker-driven so the row stays open.
-        onPressIn={() => {
-          skipBlurCommit.current = true;
-        }}
-        onPress={() => setTodoDateOpen(true)}
-        accessibilityRole="button"
-        accessibilityLabel="할 일 날짜 선택"
-        style={[styles.dateChip, { backgroundColor: t.surfaceMuted }]}>
-        <Icon name="calendar" size={13} color={t.textMuted} />
-        <Text style={[Typography.supporting, { color: t.textMuted }]}>
-          {newTodoDate === today ? '오늘' : formatDate(newTodoDate)}
-        </Text>
-      </Pressable>
-    </View>
+    <QuickAddRow
+      ref={addRowRef}
+      inputRef={todoInputRef}
+      dateLabel={newTodoDate === today ? '오늘' : formatDate(newTodoDate)}
+      onCommit={(title) => commitTodo(categoryId, title)}
+      onOpenDatePicker={() => setTodoDateOpen(true)}
+      // press-in은 입력의 blur보다 먼저 발화한다 — 이 blur는 피커 때문임을
+      // 표시해 행이 닫히지 않게 한다.
+      onDatePickerPressIn={() => {
+        skipBlurCommit.current = true;
+      }}
+    />
   );
 
   // Completion is toggled for a specific date (오늘 in 방, 선택한 날짜 in 달력).
@@ -907,102 +894,36 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     else rowRefs.current.delete(routineId);
   }, []);
 
-  const renderRoutineRow = (row: RowSpec, color: string, categoryId?: string) => {
-    const draggable = reorderEnabled && !row.done && categoryId !== undefined;
-    const active = dragId === row.key;
-    const body = (
-      <SwipeDeleteRow key={row.key} label={row.title} onDelete={row.onDelete}>
-        <View style={styles.routineRow}>
-          {/* The checkbox alone toggles completion; the rest of the row opens the
-          수정/삭제 bottom sheet. */}
-          <BearCheck
-            checked={row.done}
-            color={color}
-            onPress={(e) => row.onToggle(e)}
-            accessibilityLabel={row.title}
-          />
-          <Pressable
-            onPress={row.onMenu}
-            accessibilityRole="button"
-            accessibilityLabel={`${row.title} 메뉴`}
-            style={[styles.flex, styles.rowBody]}>
-            {/* 반복 마커(#576)는 제목과 같은 줄 — 아랫줄(알림 배지)에 두면
-              시간까지 겹쳐 부제 줄이 길어진다. 긴 제목은 마커가 밀리지 않게
-              한 줄로 잘라낸다. */}
-            <View style={styles.titleRow}>
-              <Text
-                numberOfLines={1}
-                style={[
-                  Typography.body,
-                  styles.titleText,
-                  row.done
-                    ? { color: t.textMuted, textDecorationLine: 'line-through' }
-                    : { color: t.text },
-                ]}>
-                {row.title}
-              </Text>
-              {row.repeats ? (
-                <View testID="repeat-marker">
-                  <Icon name="refresh" size={12} color={t.textDisabled} />
-                </View>
-              ) : null}
-            </View>
-            {row.time ? (
-              <View style={styles.badges}>
-                {row.time ? (
-                  <View style={styles.badge}>
-                    <Icon name="bell" size={12} color={t.textMuted} />
-                    <Text style={[styles.badgeText, { color: t.textMuted }]}>
-                      {formatTime(row.time)}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-            ) : null}
-          </Pressable>
-        </View>
-      </SwipeDeleteRow>
-    );
-
-    if (!draggable) return body;
-
-    // 롱프레스로 활성(#716) — 그 전 세로 스크롤은 ScrollView가 갖는다. 활성
-    // 후엔 손가락 세로 이동을 따라가고 놓을 때 드롭을 확정. runOnJS로 JS
-    // 스레드에서 돌려(리스트가 짧아 부담 없음) 측정·Animated를 그대로 쓴다.
-    const gesture = Gesture.Pan()
-      .activateAfterLongPress(220)
-      .runOnJS(true)
-      .onStart(() => beginDrag(row.key))
-      .onUpdate((e) => {
-        dragTY.setValue(e.translationY);
-        updateDrop(row.key, e.absoluteY);
-      })
-      .onEnd(() => endDrag(row.key, categoryId!))
-      .onFinalize(() => {
-        if (dragId === row.key) {
-          setDragId(null);
-          dragTY.setValue(0);
-        }
-      });
-    return (
-      <GestureDetector key={row.key} gesture={gesture}>
-        <Animated.View
-          ref={(node) => registerRowRef(row.key, node as unknown as View | null)}
-          style={
-            active
-              ? {
-                  transform: [{ translateY: dragTY }],
-                  zIndex: 20,
-                  elevation: 8,
-                  opacity: 0.96,
-                }
-              : undefined
-          }>
-          {body}
-        </Animated.View>
-      </GestureDetector>
-    );
-  };
+  /**
+   * 행 핸들러 레지스트리 (#769) — RowSpec의 콜백은 매 렌더 새 클로저라 그대로
+   * 넘기면 memo가 무효다. 렌더마다 이 맵만 갈아끼우고, 행에는 아래 참조 고정
+   * 디스패처를 넘긴다. 행이 memo로 리렌더를 건너뛰어도 맵은 최신이라 낡은
+   * 클로저를 잡지 않는다.
+   */
+  const rowHandlers = useConstant(() => new Map<string, { spec: RowSpec; categoryId?: string }>());
+  const dragIdRef = useLatestRef(dragId);
+  const dispatchToggle = useStableCallback((rowKey: string, e?: GestureResponderEvent) =>
+    rowHandlers.get(rowKey)?.spec.onToggle(e),
+  );
+  const dispatchMenu = useStableCallback((rowKey: string) =>
+    rowHandlers.get(rowKey)?.spec.onMenu?.(),
+  );
+  const dispatchDelete = useStableCallback((rowKey: string) =>
+    rowHandlers.get(rowKey)?.spec.onDelete?.(),
+  );
+  const dispatchDragStart = useStableCallback((rowKey: string) => beginDrag(rowKey));
+  const dispatchDragUpdate = useStableCallback((rowKey: string, absoluteY: number) =>
+    updateDrop(rowKey, absoluteY),
+  );
+  const dispatchDragEnd = useStableCallback((rowKey: string) => {
+    const categoryId = rowHandlers.get(rowKey)?.categoryId;
+    if (categoryId !== undefined) endDrag(rowKey, categoryId);
+  });
+  const dispatchDragFinalize = useStableCallback((rowKey: string) => {
+    if (dragIdRef.current !== rowKey) return;
+    setDragId(null);
+    dragTY.setValue(0);
+  });
 
   // 카테고리 그룹 = 헤더(아이콘·라벨·공개범위·카운트·＋) + 행들 + 퀵애드 입력행.
   // 빈 그룹도 헤더는 그린다 — ＋가 항상 닿아야 한다 (#323).
@@ -1013,6 +934,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     date: string,
   ) => {
     const doneCount = rows.filter((r) => r.done).length;
+    // 이번 렌더의 콜백으로 레지스트리를 갱신한다 (#769) — 행이 memo로
+    // 리렌더를 건너뛰어도 디스패처는 항상 최신 클로저를 부른다.
+    for (const row of rows) rowHandlers.set(row.key, { spec: row, categoryId: meta.id });
     return (
       <View key={key} style={styles.group}>
         <View style={styles.catHeader}>
@@ -1048,7 +972,33 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         <View style={styles.rows}>
           {/* categoryId를 넘겨 방 탭에서만 드래그 활성 — 달력 탭은
               reorderEnabled(tab==='room')가 false라 categoryId를 받아도 무효. */}
-          {rows.map((row) => renderRoutineRow(row, meta.color, meta.id))}
+          {rows.map((row) => {
+            const draggable = reorderEnabled && !row.done && meta.id !== undefined;
+            return (
+              <RoutineRow
+                key={row.key}
+                rowKey={row.key}
+                title={row.title}
+                done={row.done}
+                time={row.time}
+                repeats={row.repeats}
+                color={meta.color}
+                draggable={draggable}
+                active={dragId === row.key}
+                dragTY={dragTY}
+                menuEnabled={!!row.onMenu}
+                deleteEnabled={!!row.onDelete}
+                onToggle={dispatchToggle}
+                onMenu={dispatchMenu}
+                onDelete={dispatchDelete}
+                onDragStart={dispatchDragStart}
+                onDragUpdate={dispatchDragUpdate}
+                onDragEnd={dispatchDragEnd}
+                onDragFinalize={dispatchDragFinalize}
+                registerRef={registerRowRef}
+              />
+            );
+          })}
           {addingCategory === meta.id ? renderQuickAddRow(meta.id) : null}
         </View>
       </View>
@@ -1619,49 +1569,9 @@ const styles = StyleSheet.create({
   rows: {
     gap: 0,
   },
-  routineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    // 부제 줄(사진 인증·알림) 있는 행 높이(≈48)에 맞춘 고정 리듬 (#392) —
-    // 부제 없는 행에서 곰 체크(귀 포함 ~30px)가 행을 꽉 채우지 않게 한다.
-    minHeight: 48,
-  },
-  rowBody: {
-    paddingVertical: Spacing.one,
-  },
   // 제목 + 반복 마커 한 줄 (#576) — 마커는 제목 바로 옆, 제목이 길면 잘린다.
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.one,
-  },
-  titleText: {
-    flexShrink: 1,
-  },
   // Same width as catDot so checkboxes center under the category emoji and
   // row titles line up with the category label.
-  addRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: Spacing.one,
-    marginTop: Spacing.half,
-  },
-  todoInput: {
-    fontSize: 18,
-    paddingVertical: Spacing.three,
-  },
-  dateChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.half,
-    borderRadius: Radius.pill,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: Spacing.one,
-  },
   center: {
     textAlign: 'center',
   },
@@ -1669,19 +1579,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.five,
     gap: Spacing.two,
-  },
-  badges: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.two,
-    marginTop: 2,
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.half,
-  },
-  badgeText: {
-    fontSize: 13,
   },
 });
