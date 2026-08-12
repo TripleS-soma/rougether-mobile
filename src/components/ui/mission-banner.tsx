@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 export type MissionBannerProps = {
@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     // 화면 위에 뜨는 카드 — 토스트와 같은 그림자 결.
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: ShadowColor,
     shadowOpacity: 0.15,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
@@ -120,6 +120,6 @@ const styles = StyleSheet.create({
   },
   texts: {
     flex: 1,
-    gap: 2,
+    gap: Spacing.half,
   },
 });

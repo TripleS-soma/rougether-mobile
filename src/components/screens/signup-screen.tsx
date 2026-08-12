@@ -5,7 +5,7 @@ import { Field } from '@/components/ui/field';
 import { type PolicyDoc } from '@/constants/policy';
 import { Icon } from '@/components/ui/icon';
 import { PawPictogram } from '@/components/ui/pictograms';
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     padding: Spacing.four,
     gap: Spacing.three,
-    shadowColor: '#000',
+    shadowColor: ShadowColor,
     shadowOpacity: 0.08,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },

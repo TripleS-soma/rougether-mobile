@@ -1562,14 +1562,14 @@ const styles = StyleSheet.create({
   catDot: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   catAdd: {
     width: 24,
     height: 24,
-    borderRadius: 12,
+    borderRadius: Radius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },

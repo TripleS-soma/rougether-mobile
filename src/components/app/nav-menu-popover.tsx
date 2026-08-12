@@ -1,7 +1,7 @@
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon, type IconName } from '@/components/ui/icon';
-import { Overlay, Radius, Spacing } from '@/constants/theme';
+import { Overlay, Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 export type NavMenuPopoverProps = {
@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
     elevation: 6,
-    shadowColor: '#000',
+    shadowColor: ShadowColor,
     shadowOpacity: 0.15,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },

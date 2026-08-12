@@ -4,13 +4,13 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Icon, type IconName } from '@/components/ui/icon';
 import {
-  type BrandFontId,
   DEFAULT_FONT_ID,
   DEFAULT_THEME_MODE,
-  displayFaceFor,
   FONT_OPTIONS,
   Radius,
   Spacing,
+  displayFaceFor,
+  type BrandFontId,
   type ThemeMode,
   typographyFor,
 } from '@/constants/theme';
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
   iconCircle: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },

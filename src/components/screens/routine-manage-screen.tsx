@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.two,
-    marginTop: 2,
+    marginTop: Spacing.half,
   },
   badge: {
     flexDirection: 'row',

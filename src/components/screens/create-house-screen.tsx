@@ -4,24 +4,14 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 
 import { type HouseCover, HouseCoverPicker } from '@/components/room/house-cover-picker';
 import { Icon } from '@/components/ui/icon';
-import { CrownPictogram, Pictogram, type PictogramName } from '@/components/ui/pictograms';
+import { CrownPictogram, Pictogram } from '@/components/ui/pictograms';
 import { Radius, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { HOUSE_PRIVATE_ACCENT, HOUSE_THEME_PRESETS } from '@/constants/house-themes';
 import { assetSource } from '@/resources/asset';
 
-const PRIVATE_ACCENT = '#D4A574';
-
-type Theme = { id: string; label: string; icon: PictogramName; bg: string; border: string };
-const THEMES: Theme[] = [
-  { id: 'morning', label: '기상', icon: 'sunrise', bg: '#FFEFD8', border: '#F0C88A' },
-  { id: 'study', label: '공부', icon: 'book', bg: '#E4DCF0', border: '#B8A8D8' },
-  { id: 'code', label: '코딩', icon: 'laptop', bg: '#E4F0DC', border: '#A8C898' },
-  { id: 'fitness', label: '운동', icon: 'dumbbell', bg: '#FBE0E0', border: '#E8B0A0' },
-  { id: 'health', label: '건강', icon: 'water', bg: '#D8E8F0', border: '#A8C4D8' },
-  { id: 'hobby', label: '취미', icon: 'palette', bg: '#F5E1D8', border: '#E8B8A8' },
-];
 const CAPACITIES = [2, 3, 4, 6, 8];
 
 export type CreateHouseInput = {
@@ -58,7 +48,7 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
   const [capacity, setCapacity] = useState(4);
   const [isPrivate, setIsPrivate] = useState(false);
 
-  const theme = THEMES.find((x) => x.id === themeId) ?? THEMES[0];
+  const theme = HOUSE_THEME_PRESETS.find((x) => x.id === themeId) ?? HOUSE_THEME_PRESETS[0];
   const canSubmit = name.trim().length >= 2;
   const { show: toast } = useToast();
 
@@ -168,7 +158,7 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
             테마 선택
           </Text>
           <View style={styles.themeGrid}>
-            {THEMES.map((x) => {
+            {HOUSE_THEME_PRESETS.map((x) => {
               const selected = x.id === themeId;
               return (
                 <Pressable
@@ -251,7 +241,7 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
             />
             <PrivacyCard
               selected={isPrivate}
-              accent={PRIVATE_ACCENT}
+              accent={HOUSE_PRIVATE_ACCENT}
               title="비공개"
               subtitle="초대코드로만 입장 가능"
               onPress={() => setIsPrivate(true)}
@@ -400,7 +390,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.one,
   },
-  meta: { fontSize: 13, marginTop: 2 },
+  meta: { fontSize: 13, marginTop: Spacing.half },
   labeled: { gap: Spacing.one },
   fieldLabel: { marginLeft: Spacing.one },
   sectionLabel: { marginLeft: Spacing.one },

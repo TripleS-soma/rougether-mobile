@@ -35,7 +35,7 @@ import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Icon } from '@/components/ui/icon';
 import { WalletPills } from '@/components/ui/wallet-pills';
-import { Overlay, Radius, Spacing } from '@/constants/theme';
+import { Overlay, Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { assetSource, isCdnKey } from '@/resources/asset';
 import {
   DEFAULT_WALLPAPER_ID,
@@ -1404,7 +1404,7 @@ const styles = StyleSheet.create({
   floatBtn: {
     borderWidth: StyleSheet.hairlineWidth,
     // 그리드 위에 떠도 가독되게 살짝 띄운 카드 느낌.
-    shadowColor: '#000',
+    shadowColor: ShadowColor,
     shadowOpacity: 0.12,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
@@ -1413,7 +1413,7 @@ const styles = StyleSheet.create({
   floatWallet: {
     borderRadius: Radius.pill,
     paddingHorizontal: Spacing.one,
-    paddingVertical: 2,
+    paddingVertical: Spacing.half,
   },
   flex: {
     flex: 1,
@@ -1434,7 +1434,7 @@ const styles = StyleSheet.create({
     gap: 3,
     paddingHorizontal: Spacing.two,
     paddingVertical: 3,
-    borderRadius: 999,
+    borderRadius: Radius.pill,
     borderWidth: StyleSheet.hairlineWidth,
   },
   previewList: {
@@ -1593,7 +1593,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 4,
     left: 4,
-    borderRadius: 999,
+    borderRadius: Radius.pill,
     paddingHorizontal: 6,
     paddingVertical: 1,
   },

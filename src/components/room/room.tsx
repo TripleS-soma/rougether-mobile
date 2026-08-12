@@ -6,20 +6,21 @@ import { type CharacterAnimationSet, CharacterAvatar } from '@/components/room/c
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { ROOM_RENDER_CONTRACT, roomPercent } from '@/components/room/room-render-contract';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
-import { Radius } from '@/constants/theme';
+import { FixedOverlay, Radius } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
 import { assetSource, isCdnKey } from '@/resources/asset';
 import {
   DEFAULT_PLACED_FURNITURE_IDS,
+  DEFAULT_WALLPAPER_COLOR,
   DEFAULT_WALLPAPER_ID,
   FURNITURE_ITEMS,
+  SLOT_LABELS,
+  SLOT_ORDER,
+  WALLPAPERS,
   type FurnitureItem,
   type FurnitureSlot,
   type PlacedFurniture,
-  SLOT_LABELS,
-  SLOT_ORDER,
   type Wallpaper,
-  WALLPAPERS,
 } from '@/resources/furniture';
 
 /** 자유 배치 아이템의 기본 폭 — 방 폭 대비 비율 (슬롯 기본 28%와 동일). */
@@ -187,7 +188,7 @@ export const Room = memo(function Room({
     <View
       style={[
         fill ? styles.roomFill : styles.room,
-        { backgroundColor: wallpaper?.color ?? '#F3E9D6' },
+        { backgroundColor: wallpaper?.color ?? DEFAULT_WALLPAPER_COLOR },
         style,
       ]}>
       {background ? (
@@ -327,8 +328,8 @@ export const Room = memo(function Room({
                 activeRegion === slot && { borderColor: t.primary, borderStyle: 'solid' },
               ]}>
               <View style={styles.emptyPlus}>
-                <View style={[styles.plusH, { backgroundColor: 'rgba(80,66,55,0.55)' }]} />
-                <View style={[styles.plusV, { backgroundColor: 'rgba(80,66,55,0.55)' }]} />
+                <View style={[styles.plusH, { backgroundColor: FixedOverlay.gridLine }]} />
+                <View style={[styles.plusV, { backgroundColor: FixedOverlay.gridLine }]} />
               </View>
             </Pressable>
           ))
@@ -404,9 +405,9 @@ const styles = StyleSheet.create({
   emptySlot: {
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderColor: 'rgba(80,66,55,0.35)',
+    borderColor: FixedOverlay.gridCell,
     borderRadius: Radius.md,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: FixedOverlay.gridFill,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
     backgroundColor: Overlay.strong,
     borderRadius: Radius.pill,
     paddingHorizontal: Spacing.two,
-    paddingVertical: 2,
+    paddingVertical: Spacing.half,
   },
   roomNameRow: {
     flexDirection: 'row',

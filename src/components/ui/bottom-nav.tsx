@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
   },
   tab: {
     alignItems: 'center',
-    gap: 2,
+    gap: Spacing.half,
     paddingHorizontal: Spacing.three,
   },
 });

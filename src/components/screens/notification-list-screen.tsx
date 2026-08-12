@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
   },
   rowBody: {
     flex: 1,
-    gap: 2,
+    gap: Spacing.half,
   },
   rowHead: {
     flexDirection: 'row',

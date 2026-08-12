@@ -40,7 +40,15 @@ import { ScalePressable } from '@/components/ui/scale-pressable';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { characterIdForMember } from '@/hooks/use-member-room-previews';
 import { RainOverlay } from '@/components/room/rain-overlay';
-import { Radius, RAIN_SKY, SKY_BY_PHASE, skyPhaseForHour, Spacing } from '@/constants/theme';
+import {
+  FixedOverlay,
+  RAIN_SKY,
+  Radius,
+  SKY_BY_PHASE,
+  ShadowColor,
+  Spacing,
+  skyPhaseForHour,
+} from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useResolvedScheme, useTokens, useTypography } from '@/hooks/use-tokens';
@@ -991,7 +999,7 @@ export const HouseScreen = memo(function HouseScreen({
           {/* 레벨·멤버 pill — 프레임 여백과 정렬된 행 (모서리 절대배치는
                 화면 끝에 걸려 보였다). 고정 밝기 흰 스크림 위라 onTint 잉크. */}
           <View style={styles.framePillsRow}>
-            <View style={[styles.skyPill, { backgroundColor: 'rgba(255,255,255,0.88)' }]}>
+            <View style={[styles.skyPill, { backgroundColor: FixedOverlay.skyPill }]}>
               <HousePictogram size={12} />
               <Text style={[Typography.supporting, { color: t.onTint }]}>
                 Lv.{currentHouse.level ?? 0}
@@ -1000,7 +1008,7 @@ export const HouseScreen = memo(function HouseScreen({
                   : ''}
               </Text>
             </View>
-            <View style={[styles.skyPill, { backgroundColor: 'rgba(255,255,255,0.88)' }]}>
+            <View style={[styles.skyPill, { backgroundColor: FixedOverlay.skyPill }]}>
               <Text style={[Typography.supporting, { color: t.onTint }]}>
                 {/* Vacant seats are not members — count the real ones. */}
                 멤버 {currentHouse.memberCount ?? manageableMembers(currentHouse).length}
@@ -1323,7 +1331,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: ShadowColor,
     shadowOpacity: 0.15,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
@@ -1363,7 +1371,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 6,
-    shadowColor: '#000',
+    shadowColor: ShadowColor,
     shadowOpacity: 0.2,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },

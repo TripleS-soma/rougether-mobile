@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
   closeBtn: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
   },
   rowBody: {
     flex: 1,
-    gap: 2,
+    gap: Spacing.half,
   },
   amount: {
     fontVariant: ['tabular-nums'],
