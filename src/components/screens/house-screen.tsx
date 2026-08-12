@@ -12,16 +12,10 @@ import {
   View,
 } from 'react-native';
 
-import { CharacterAvatar } from '@/components/room/character-avatar';
 import { type HouseCover } from '@/components/room/house-cover-picker';
 import { FRAME_ASPECT, houseCoverKey, WINDOW_RECTS } from '@/components/room/house-preview-frame';
 import { CoachTarget } from '@/components/ui/coach-mark';
-import {
-  type MemberRoomPreview,
-  memberRoomScene,
-  Room,
-  type RoomCatalogProps,
-} from '@/components/room/room';
+import { type MemberRoomPreview, type RoomCatalogProps } from '@/components/room/room';
 import {
   camDefault,
   cameraClaimsMove,
@@ -29,7 +23,7 @@ import {
   isCamAway,
 } from '@/components/screens/house/camera';
 import { manageableMembers } from '@/components/screens/house-members-screen';
-import { OnlineDot } from '@/components/screens/house/online-dot';
+import { SeatTile } from '@/components/screens/house/seat-tile';
 import { type SeatRect, seatAtPoint } from '@/components/screens/house/seat-drag';
 import { HouseMissionsSheet } from '@/components/screens/sheets/house-missions-sheet';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -46,15 +40,7 @@ import { ScalePressable } from '@/components/ui/scale-pressable';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { characterIdForMember } from '@/hooks/use-member-room-previews';
 import { RainOverlay } from '@/components/room/rain-overlay';
-import {
-  Overlay,
-  Radius,
-  RAIN_SKY,
-  SKY_BY_PHASE,
-  skyPhaseForHour,
-  Spacing,
-  StaticWhite,
-} from '@/constants/theme';
+import { Radius, RAIN_SKY, SKY_BY_PHASE, skyPhaseForHour, Spacing } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useResolvedScheme, useTokens, useTypography } from '@/hooks/use-tokens';
@@ -68,6 +54,7 @@ import {
   useAnimatedValueXY,
   useConstant,
   useLatestRef,
+  useStableCallback,
 } from '@/hooks/use-stable-value';
 
 // 방 렌더 데이터라 room.tsx로 이동 (#691) — 기존 임포터를 위한 재수출.
@@ -183,7 +170,6 @@ const VACANT_FLOOR: Wallpaper[] = [
   { id: 'vacant-floor', name: '빈방 바닥', price: 0, assetKey: 'vacant-floor', color: '#E7D9BE' },
 ];
 // Room이 memo 경계(#539)라 빈방 프리뷰의 prop도 렌더마다 새로 만들지 않는다.
-const VACANT_FURNITURE_IDS: string[] = [];
 
 // 커버 프레임 PNG(house-unified-*-frame.png, 3종 공통 567×508)의 투명 창문
 // 4칸 — 알파 채널 측정값 (#287). 좌상·우상·좌하·우하 순.
@@ -557,6 +543,38 @@ export const HouseScreen = memo(function HouseScreen({
   const seatMetaOpacity = useConstant(() =>
     camScale.interpolate({ inputRange: [1, 1.15], outputRange: [1, 0], extrapolate: 'clamp' }),
   );
+  const visitSeat = (room: RoomCell) => {
+    if (room.isMine) return onVisitMyRoom?.();
+    onVisitFriend?.({
+      name: room.name,
+      userId: room.userId,
+      houseId: currentHouse?.houseId,
+      membershipId: room.membershipId,
+    });
+  };
+  // 좌석 카탈로그 묶음 — memo 타일로 내려가는 prop이라 참조 고정 필수 (#775).
+  const seatCatalogs = useMemo(
+    () => ({ furniture, wallpapers, floors: floorSurfaces, backgrounds }),
+    [furniture, wallpapers, floorSurfaces, backgrounds],
+  );
+  const registerTileRef = useStableCallback((seatIdx: number, el: View | null) => {
+    if (el) tileRefs.current.set(seatIdx, el);
+    else tileRefs.current.delete(seatIdx);
+  });
+  /**
+   * 좌석 → 방 레지스트리 (#775) — 콜백 참조를 고정하려면 seatIdx만 받아야
+   * 하는데, `displayCells[seatIdx]`로 되찾는 건 그리드 행의 좌석 번호가
+   * 연속이라는 가정에 기댄다(창문 슬롯과 평면 그리드가 서로 다른 산식을
+   * 쓴다). 렌더한 방을 그대로 기억해 두면 그 가정이 필요 없다.
+   */
+  const seatRooms = useConstant(() => new Map<number, RoomCell>());
+  const handleSeatVisit = useStableCallback((seatIdx: number) => {
+    const room = seatRooms.get(seatIdx);
+    if (room) visitSeat(room);
+  });
+  const handleSeatLongPress = useStableCallback((seatIdx: number) => startDrag(seatIdx));
+  const handleTilePressOut = useStableCallback(() => onTilePressOut());
+
   const cam = useRef({ scale: 1, tx: 0, ty: 0 });
   const frameSize = useRef({ w: 0, h: 0 });
   const pinchAnchor = useRef({ dist: 0, cx: 0, cy: 0, scale: 1, tx: 0, ty: 0 });
@@ -824,148 +842,45 @@ export const HouseScreen = memo(function HouseScreen({
 
   // 좌석 타일 — 프레임 창문(#287)과 평면 그리드가 같은 타일을 공유한다.
   // fill=true(창문)면 슬롯을 가득 채우고, 아니면 반칸 정사각형.
-  const visitSeat = (room: RoomCell) => {
-    if (room.isMine) return onVisitMyRoom?.();
-    onVisitFriend?.({
-      name: room.name,
-      userId: room.userId,
-      houseId: currentHouse?.houseId,
-      membershipId: room.membershipId,
-    });
-  };
   // 더블탭 줌 제거 (#727) — 판정 대기(260ms) 때문에 방문 탭 반응이 늦었다.
   // 줌은 핀치 전용으로 남고, 탭은 즉시 방문한다.
 
   const renderSeatTile = (room: RoomCell, seatIdx: number, fill = false) => {
-    const dragging = dragSeat === seatIdx;
+    seatRooms.set(seatIdx, room);
     const empty = room.vacant || !!isKickedMember?.(room.name);
     // 내 타일 이름은 라이브 userName(=현재 닉네임)으로 — houses는 프로필 저장 시
-    // 재요청되지 않아 room.name이 stale하다. 헤더가 이미 userName을 쓰므로 타일도
-    // 맞춘다(캐릭터를 withMyCharacter로 즉시 주입하는 것과 같은 결, #479).
+    // 재요청되지 않아 room.name이 stale하다 (#479).
     const displayName = room.isMine ? userName : room.name;
     const preview =
       !empty && room.membershipId != null ? roomPreviews?.[room.membershipId] : undefined;
     return (
-      <Animated.View
+      <SeatTile
         // Vacant seats all read '빈방' — the seat index keys them.
         key={`seat-${seatIdx}-${room.name}`}
-        ref={(el: View | null) => {
-          if (el) tileRefs.current.set(seatIdx, el);
-          else tileRefs.current.delete(seatIdx);
-        }}
-        style={[
-          styles.roomCellWrap,
-          dragging && {
-            transform: [...dragPan.getTranslateTransform(), { scale: liftScale }],
-            ...styles.roomCellLifted,
-          },
-        ]}>
-        <Pressable
-          onPress={empty ? undefined : () => visitSeat(room)}
-          onLongPress={empty || zoomed ? undefined : () => startDrag(seatIdx)}
-          delayLongPress={220}
-          onPressOut={onTilePressOut}
-          disabled={empty}
-          accessibilityRole="button"
-          accessibilityLabel={[
-            room.isMine ? `${displayName} (나)` : displayName,
-            room.online ? '접속 중' : room.lastSeenLabel && `${room.lastSeenLabel} 접속`,
-          ]
-            .filter(Boolean)
-            .join(', ')}
-          accessibilityHint={
-            empty
-              ? undefined
-              : fill
-                ? '두 번 탭해 확대, 길게 눌러 자리 옮기기'
-                : '길게 눌러 자리 옮기기'
-          }
-          style={[
-            fill ? styles.roomCellFill : styles.roomCell,
-            {
-              backgroundColor: empty ? t.surfaceMuted : room.color,
-              borderColor: t.border,
-            },
-          ]}>
-          {/* The member's live room fills the tile (visit preview);
-              plain tint + avatar stand in until it loads. */}
-          {preview ? (
-            <View style={styles.roomPreview} pointerEvents="none" testID="room-preview">
-              <Room
-                {...memberRoomScene(preview, {
-                  furniture,
-                  wallpapers,
-                  floors: floorSurfaces,
-                  backgrounds,
-                })}
-                // 재실 좌석은 캐릭터 미지정 시 빈 방이 아니라 기본 캐릭터로.
-                characterId={preview.characterId}
-                fill
-                style={styles.roomPreviewFill}
-              />
-            </View>
-          ) : null}
-          {/* 빈 좌석은 캐릭터 없는 기본 빈 방을 낮춘 톤으로 —
-              "방은 준비돼 있고 주인만 없다" (#281, 시안 A). */}
-          {empty ? (
-            <View style={styles.roomPreview} pointerEvents="none" testID="vacant-room">
-              <Room
-                placedFurnitureIds={VACANT_FURNITURE_IDS}
-                characterId={null}
-                floorId={VACANT_FLOOR[0].id}
-                floors={VACANT_FLOOR}
-                fill
-                style={vacantRoomStyle}
-              />
-            </View>
-          ) : null}
-          {empty || preview ? null : (
-            <CharacterAvatar
-              characterId={characterIdForMember(room, roomPreviews, characterId)}
-              size={64}
-            />
-          )}
-          {/* Tiles keep their fixed pastel bg in dark mode — the name needs
-              onTint ink, not the (light) theme text. Over a preview it drops
-              to a bottom scrim for contrast. 빈 좌석은 라벨 없이 빈 방
-              비주얼만 — 접근성 라벨은 Pressable이 유지한다. */}
-          {empty ? null : (
-            <Animated.View
-              testID={`seat-meta-${seatIdx}`}
-              style={[
-                styles.roomMeta,
-                preview && styles.roomNameOverlay,
-                { opacity: seatMetaOpacity },
-              ]}>
-              <View style={styles.roomNameRow}>
-                {room.isOwner ? <CrownPictogram size={12} /> : null}
-                {room.online ? (
-                  // 최근 접속(#383) — 초록 점. 은은한 펄스로 "지금 있음" (#450).
-                  <OnlineDot color={t.success} />
-                ) : null}
-                <Text
-                  style={[
-                    Typography.supporting,
-                    styles.roomName,
-                    { color: preview ? StaticWhite : t.onTint },
-                  ]}>
-                  {room.isMine ? `${displayName} (나)` : displayName}
-                </Text>
-              </View>
-              {!room.online && room.lastSeenLabel ? (
-                <Text
-                  style={[
-                    Typography.supporting,
-                    styles.lastSeen,
-                    { color: preview ? StaticWhite : t.onTint },
-                  ]}>
-                  {room.lastSeenLabel}
-                </Text>
-              ) : null}
-            </Animated.View>
-          )}
-        </Pressable>
-      </Animated.View>
+        seatIdx={seatIdx}
+        displayName={displayName}
+        empty={empty}
+        isMine={!!room.isMine}
+        isOwner={!!room.isOwner}
+        online={!!room.online}
+        lastSeenLabel={room.lastSeenLabel}
+        color={room.color}
+        fill={fill}
+        dragging={dragSeat === seatIdx}
+        zoomed={zoomed}
+        preview={preview}
+        avatarCharacterId={characterIdForMember(room, roomPreviews, characterId)}
+        catalogs={seatCatalogs}
+        vacantFloor={VACANT_FLOOR}
+        vacantRoomStyle={vacantRoomStyle}
+        dragPan={dragPan}
+        liftScale={liftScale}
+        seatMetaOpacity={seatMetaOpacity}
+        onVisit={handleSeatVisit}
+        onLongPress={handleSeatLongPress}
+        onPressOut={handleTilePressOut}
+        registerRef={registerTileRef}
+      />
     );
   };
 
@@ -1337,31 +1252,11 @@ const styles = StyleSheet.create({
   roomSpacer: {
     flex: 1,
   },
-  roomCellWrap: {
-    flex: 1,
-  },
   // Lifted (dragging) tile floats above its row; the row itself gets dragRow
   // so it also floats above sibling rows.
-  roomCellLifted: {
-    zIndex: 10,
-    elevation: 8,
-  },
   dragRow: {
     zIndex: 10,
     elevation: 8,
-  },
-  roomCell: {
-    width: '100%',
-    aspectRatio: 1,
-    borderRadius: Radius.sm,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.one,
-    overflow: 'hidden',
-  },
-  roomPreview: {
-    ...StyleSheet.absoluteFillObject,
   },
   // 빈 좌석의 빈 방은 톤을 낮춰 멤버 방과 확실히 구분한다 (시안 A).
   vacantRoom: {
@@ -1372,21 +1267,8 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   // Over a room preview the name drops to the bottom edge on a dark scrim.
-  roomNameOverlay: {
-    position: 'absolute',
-    bottom: Spacing.one,
-    // 0.4는 밝은 방 프리뷰 위에서 흰 글자가 4.5:1 아래로 떨어졌다(UX 감사).
-    backgroundColor: Overlay.strong,
-    borderRadius: Radius.pill,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: 2,
-  },
   // 타일 라벨은 전역 +2(#660)에서 제외 (#669) — supporting 14가 방 위에선
   // 캐릭터를 가릴 만큼 커서, 이 두 라벨만 이전 크기(12)로 고정한다.
-  roomName: {
-    fontSize: 12,
-    lineHeight: 16,
-  },
   // --- 프레임 모드 (#287) ---
   skySection: {
     position: 'relative',
@@ -1456,16 +1338,6 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   // 창문용 타일 — 슬롯을 가득 채운다 (정사각형 비율 대신).
-  roomCellFill: {
-    width: '100%',
-    height: '100%',
-    borderRadius: Radius.sm,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.one,
-    overflow: 'hidden',
-  },
   framePillsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1504,21 +1376,7 @@ const styles = StyleSheet.create({
     height: 12,
     borderRadius: 6,
   },
-  roomNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.one,
-  },
   // Name row + optional last-seen line (#383), centered as one block.
-  roomMeta: {
-    alignItems: 'center',
-  },
-  lastSeen: {
-    opacity: 0.75,
-    // roomName과 같은 이유로 이전 크기 고정 (#669).
-    fontSize: 12,
-    lineHeight: 16,
-  },
 });
 
 // 빈방 프리뷰의 합성 스타일 — memo된 Room에 렌더마다 새 배열을 넘기지 않는다 (#539).
