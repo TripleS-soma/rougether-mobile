@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
   colorCell: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },

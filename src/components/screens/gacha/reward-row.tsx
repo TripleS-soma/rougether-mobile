@@ -90,6 +90,6 @@ const styles = StyleSheet.create({
   ownedPill: {
     borderRadius: Radius.pill,
     paddingHorizontal: Spacing.two,
-    paddingVertical: 2,
+    paddingVertical: Spacing.half,
   },
 });

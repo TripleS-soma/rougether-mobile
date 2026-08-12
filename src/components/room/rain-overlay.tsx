@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { StaticWhite } from '@/constants/theme';
 import Animated, {
   Easing,
   type SharedValue,
@@ -97,6 +98,6 @@ const styles = StyleSheet.create({
     top: 0,
     width: 2,
     borderRadius: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: StaticWhite,
   },
 });

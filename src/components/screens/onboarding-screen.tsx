@@ -20,7 +20,7 @@ import {
   type CharacterId,
   DEFAULT_CHARACTER_ID,
 } from '@/constants/characters';
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
@@ -663,7 +663,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginTop: Spacing.two,
     elevation: 3,
-    shadowColor: '#4A403A',
+    shadowColor: ShadowColor,
     shadowOpacity: 0.12,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },

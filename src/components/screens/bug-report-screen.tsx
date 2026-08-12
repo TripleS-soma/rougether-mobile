@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
+    gap: Spacing.half,
   },
   submit: {
     paddingVertical: Spacing.three,

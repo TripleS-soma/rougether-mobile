@@ -632,7 +632,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     borderRadius: Radius.pill,
     alignItems: 'center',
-    gap: 2,
+    gap: Spacing.half,
   },
   costRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.half },
 

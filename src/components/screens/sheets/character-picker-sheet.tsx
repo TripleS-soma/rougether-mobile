@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
     gap: Spacing.half,
     borderRadius: Radius.pill,
     paddingHorizontal: Spacing.two,
-    paddingVertical: 2,
+    paddingVertical: Spacing.half,
   },
   badgeText: {
     fontSize: 13,

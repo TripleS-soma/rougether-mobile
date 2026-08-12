@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
-    gap: 2,
+    gap: Spacing.half,
   },
   endRow: {
     flexDirection: 'row',

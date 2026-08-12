@@ -793,7 +793,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: Spacing.one,
-    marginTop: 2,
+    marginTop: Spacing.half,
   },
   tag: {
     paddingHorizontal: Spacing.one,

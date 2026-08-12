@@ -16,7 +16,7 @@ import appIcon from '@/assets/images/icon.png';
 import { Field } from '@/components/ui/field';
 import { Icon } from '@/components/ui/icon';
 import { useToast } from '@/components/ui/toast';
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
@@ -146,7 +146,7 @@ export function LoginScreen({
           {/* dev-login 폼(#489) — 개발 빌드 전용. 배포 빌드는 소셜 로그인만. */}
           {__DEV__ ? (
             <>
-              <View style={[styles.card, { backgroundColor: t.surface, shadowColor: '#000' }]}>
+              <View style={[styles.card, { backgroundColor: t.surface, shadowColor: ShadowColor }]}>
                 <Field
                   placeholder="이메일"
                   value={email}

@@ -12,6 +12,7 @@ import Animated, {
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { Icon } from '@/components/ui/icon';
 import { ROOM_RENDER_CONTRACT } from '@/components/room/room-render-contract';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
 import type { FurnitureItem, PlacedFurniture } from '@/resources/furniture';
 
@@ -273,10 +274,10 @@ const styles = StyleSheet.create({
     right: -6,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: Spacing.half,
     paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 999,
+    paddingVertical: Spacing.half,
+    borderRadius: Radius.pill,
     borderWidth: StyleSheet.hairlineWidth,
   },
   previewBadgeText: { fontSize: 12 },
@@ -291,7 +292,7 @@ const styles = StyleSheet.create({
     bottom: -7,
     width: 16,
     height: 16,
-    borderRadius: 8,
+    borderRadius: Radius.sm,
     borderWidth: 2.5,
   },
 });

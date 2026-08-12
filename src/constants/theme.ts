@@ -470,6 +470,27 @@ export const DEFAULT_THEME_MODE: ThemeMode = 'system';
 export const StaticWhite = '#FFFFFF';
 
 /**
+ * 고정 아트 위에 얹는 반투명 색 — 테마 독립 (#781). 방 격자 가이드는 나무
+ * 바닥 위, 하늘 필은 고정 하늘 아트 위라 테마 토큰을 쓰면 대비가 무너진다.
+ */
+export const FixedOverlay = {
+  /** 꾸미기 격자 가이드 선 (#327). */
+  gridLine: 'rgba(80,66,55,0.55)',
+  /** 격자 셀 테두리 — 선보다 옅게. */
+  gridCell: 'rgba(80,66,55,0.35)',
+  /** 격자 셀 채움 — 바닥이 비쳐야 해서 아주 옅게. */
+  gridFill: 'rgba(255,255,255,0.18)',
+  /** 하늘 위 정보 필(Lv·멤버 수) 배경 (#287). */
+  skyPill: 'rgba(255,255,255,0.88)',
+} as const;
+
+/**
+ * 그림자 색 — 테마 독립. 다크에서도 검정을 쓴다(밝은 색 그림자는 광원이
+ * 반대라는 뜻이 되어 어색하다). 화면마다 '#000'을 박던 것을 한 곳으로 (#781).
+ */
+export const ShadowColor = '#000000';
+
+/**
  * Animated splash overlay backgrounds — MUST match the expo-splash-screen
  * `backgroundColor`(light/dark) in app.json, or the native → JS splash
  * handoff flashes (#569). 라이트는 스플래시 아트의 크림, 다크는 밤 씬 남색.

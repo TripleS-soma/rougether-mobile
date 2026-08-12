@@ -274,6 +274,9 @@ export const WALLPAPERS: Wallpaper[] = [
   { id: 'hanok-simple', name: '한옥 벽지', price: 600, assetKey: 'wallpaper/hanok-simple', color: '#F2E8D7' }, // prettier-ignore
 ];
 
+/** 벽지 정보가 없을 때 방 바탕색 (#781) — 크림 벽지와 같은 톤. */
+export const DEFAULT_WALLPAPER_COLOR = '#F3E9D6';
+
 export const DEFAULT_WALLPAPER_ID = 'simple';
 
 /** A pleasant default room (one item per slot). */
