@@ -174,6 +174,10 @@ export function MyRoomWidget({
             width: 'match_parent',
             alignItems: 'center',
             justifyContent: 'center',
+            // 캡처가 칸 비율과 안 맞아 레터박스가 생겨도 하단 바와 같은 색이
+            // 되게 (#778) — 배경을 비워 두면 그 자리가 검게 보인다.
+            backgroundColor: t.surface as `#${string}`,
+            borderRadius: WIDGET_RADIUS,
           }}>
           <ImageWidget
             image={roomImage as `data:image${string}`}
