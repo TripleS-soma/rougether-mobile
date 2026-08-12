@@ -170,7 +170,15 @@ export function RoomDecorScreen({
   if (initialSnapRef.current === null) {
     initialSnapRef.current = snap(items, wallpaperId, floorId, backgroundId);
   }
-  const dirty = snap(items, wallpaperId, floorId, backgroundId) !== initialSnapRef.current;
+  // 가구를 놓을 때마다·툴바를 누를 때마다 배치 전량을 직렬화하던 자리 (#771).
+  // **비싼 직렬화만** memo하고 비교는 매 렌더 한다 — `initialSnapRef`는 저장
+  // 성공 때 doApply가 갱신하는 ref라, dirty 전체를 memo하면 저장 후에도
+  // 낡은 true가 캐시돼 "변경사항을 저장할까요?"가 잘못 다시 뜬다.
+  const currentSnap = useMemo(
+    () => snap(items, wallpaperId, floorId, backgroundId),
+    [items, wallpaperId, floorId, backgroundId],
+  );
+  const dirty = currentSnap !== initialSnapRef.current;
   const [confirmLeave, setConfirmLeave] = useState(false);
 
   // --- 프리뷰 (#501): 미보유인데 배치/적용돼 있는 아이템. 별도 상태 없이
