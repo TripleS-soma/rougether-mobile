@@ -18,7 +18,9 @@ const dropStyles = (tree: Node | null) => {
   };
   const overlay = find(tree);
   expect(overlay).not.toBeNull();
-  return (overlay?.children ?? []).map((c) => StyleSheet.flatten(c.props?.style as never));
+  return (overlay?.children ?? []).map(
+    (c) => StyleSheet.flatten(c.props?.style as never) as Record<string, unknown>,
+  );
 };
 
 describe('RainOverlay (#360, #771)', () => {
