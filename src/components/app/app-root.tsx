@@ -20,8 +20,8 @@ import { AppShell } from '@/components/app/app-shell';
 import { OnboardingScreen, type OnboardingGoal } from '@/components/screens/onboarding-screen';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { useAuth } from '@/hooks/use-auth';
-import { track } from '@/lib/analytics';
 import { resetOnboardingMissions } from '@/hooks/use-onboarding-missions';
+import { track } from '@/lib/analytics';
 import { loadOnboarding, resetOnboarding, saveOnboarding } from '@/lib/onboarding-store';
 
 /**

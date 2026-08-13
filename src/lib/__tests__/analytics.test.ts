@@ -59,13 +59,15 @@ describe('analytics', () => {
   it('이탈 원인 이벤트도 같은 창구로 나간다 (#799)', () => {
     initAnalytics();
     // 에러로 터지지 않고 조용히 포기하는 순간 — Sentry가 아니라 여기서만 보인다.
-    track('login_failed', { provider: 'apple' });
-    track('purchase_blocked', { currency: 'coin', count: 6 });
-    track('api_error', { endpoint: 'GET /houses/{id}/members/{id}/room', status: 500 });
-    expect(gaMock.logEvent).toHaveBeenCalledWith(expect.anything(), 'purchase_blocked', {
-      currency: 'coin',
-      count: 6,
-    });
+    const failures: [string, Record<string, string | number>][] = [
+      ['login_failed', { provider: 'apple' }],
+      ['purchase_blocked', { currency: 'coin', count: 6 }],
+      ['api_error', { endpoint: 'GET /houses/{id}/members/{id}/room', status: 500 }],
+    ];
+    for (const [name, props] of failures) {
+      track(name as Parameters<typeof track>[0], props);
+      expect(gaMock.logEvent).toHaveBeenCalledWith(expect.anything(), name, props);
+    }
   });
 
   it('처리되지 않은 JS 에러가 Crashlytics recordError로 남는다 (#438)', () => {
