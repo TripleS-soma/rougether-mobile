@@ -182,7 +182,7 @@
         "@sentry/react-native/expo",
         {
           "url": "https://sentry.io/",
-          "organization": "konkuk-univ",
+          "organization": "triples",
           "project": "rougether-mobile"
         }
       ]
