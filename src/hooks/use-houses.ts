@@ -217,9 +217,12 @@ export function useHouses() {
           void fetchMyJoinRequests()
             .then((rs) => setPendingJoinRequests(rs.filter((r) => r.status === 'PENDING')))
             .catch(() => {});
+          track('house_join_request', { via: 'code' });
           return 'pending';
         }
         toast('입주 완료!', 'success');
+        // 소셜 진입 완료 — 리텐션 분석의 핵심 분기 (#803).
+        track('house_joined', { via: 'code' });
         await reloadMyHouses();
         return true;
       } catch (e) {
@@ -234,6 +237,7 @@ export function useHouses() {
     async (houseId: number): Promise<boolean> => {
       try {
         await requestHouseJoin(houseId);
+        track('house_join_request', { via: 'browse' });
         toast('입주 신청을 보냈어요!', 'success');
         await reloadSearch();
         return true;
@@ -332,6 +336,7 @@ export function useHouses() {
           return false;
         }
         await apiCreateHouse({ ...input, goalIds });
+        track('house_create');
         toast('새 집이 만들어졌어요!', 'success');
         await reloadMyHouses();
         return true;
@@ -427,7 +432,10 @@ export function useHouses() {
   const previewHouse = useCallback(
     async (houseId: number, catalogue?: ShopCatalogue): Promise<HousePreviewDetail | null> => {
       try {
-        return toHousePreviewDetail(await fetchHousePreviewDetail(houseId), catalogue);
+        const detail = toHousePreviewDetail(await fetchHousePreviewDetail(houseId), catalogue);
+        // 소셜 퍼널 (#803) — 탐색에서 카드를 눌러 안을 들여다본 지점.
+        track('house_preview');
+        return detail;
       } catch {
         toast('집 정보를 불러오지 못했어요', 'error');
         return null;
@@ -525,6 +533,8 @@ export function useHouses() {
     async (houseId: number): Promise<string | null> => {
       try {
         const res = await apiReissueInviteCode(houseId);
+        // 확산 신호 (#803) — 코드를 새로 뽑았다는 건 누군가에게 줄 참이라는 뜻.
+        track('invite_code_copy', { kind: 'house' });
         toast('새 초대코드가 발급됐어요', 'success');
         // 소유자 공용 코드는 집 상세에 실려 온다 — 목록 갱신. 부원 개인
         // 코드는 상세에 없으므로 호출측이 반환값을 표시한다.

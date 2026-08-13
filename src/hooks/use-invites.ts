@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 
 import { ApiError, ErrorCode, fetchMyInvite, redeemInvite } from '@/api';
+import { track } from '@/lib/analytics';
 import type { MyInviteCodeResponse } from '@/api/types';
 import { useToast } from '@/components/ui/toast';
 
@@ -34,6 +35,8 @@ export function useInvites() {
     async (code: string): Promise<RedeemResult | null> => {
       try {
         const res = await redeemInvite(code.trim());
+        // 확산의 반대편 (#803) — 초대를 받고 실제로 쓴 사람.
+        track('invite_redeem');
         return { rewardCoin: res.rewardCoin ?? 0 };
       } catch (e) {
         if (e instanceof ApiError && e.code === ErrorCode.INVITE_ALREADY_REDEEMED) {

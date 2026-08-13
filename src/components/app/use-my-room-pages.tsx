@@ -20,7 +20,7 @@ import type { useMyRoomData } from '@/hooks/use-my-room-data';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useRoutineOrder } from '@/hooks/use-routine-order';
 import { useWalletHistory } from '@/hooks/use-wallet-history';
-import { track } from '@/lib/analytics';
+import { reportAppOpen } from '@/lib/app-open';
 import { onNotificationTap } from '@/lib/push-events';
 import type { ShopCatalogue } from '@/api/adapters';
 
@@ -173,7 +173,7 @@ export function useMyRoomPages({
   useEffect(
     () =>
       onNotificationTap(() => {
-        track('push_open');
+        reportAppOpen('push');
         void loadNotifications();
         setScreen('notificationList');
       }),
