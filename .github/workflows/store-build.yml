@@ -19,9 +19,11 @@ on:
         options: [ios, android, all]
         default: ios
       submit:
+        # 기본 false — 옵션을 안 건드리고 "일단 돌려보는" 첫 실행이 실제 스토어
+        # 제출이 되면 안 된다. 제출은 명시적으로 체크할 때만.
         description: iOS 빌드 완료 후 App Store Connect에 자동 제출
         type: boolean
-        default: true
+        default: false
 
 jobs:
   build:
@@ -58,11 +60,18 @@ jobs:
 
       - name: iOS — App Store 빌드 (+제출)
         if: inputs.platform == 'ios' || inputs.platform == 'all'
-        run: |
-          eas build --platform ios --profile production --non-interactive --no-wait \
-            ${{ inputs.submit && '--auto-submit-with-profile production' || '' }}
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ "${{ inputs.submit }}" = "true" ]; then
+            # 자동 제출은 빌드 완료를 기다려야 성립한다 — --no-wait면 큐에 넣고
+            # CLI가 종료돼 제출이 일어나지 않는다. 대신 러너가 빌드 내내(20~40분)
+            # 살아 있어야 한다.
+            eas build --platform ios --profile production --non-interactive \
+              --auto-submit-with-profile production
+          else
+            eas build --platform ios --profile production --non-interactive --no-wait
+          fi
 
       # Play 제출은 서비스 계정 JSON이 리포에 없어 수동이다 — 아티팩트를 받아
       # 콘솔에 올리거나, 키가 준비되면 --auto-submit-with-profile production 추가.
