@@ -46,6 +46,7 @@ import { Card } from '@/components/ui/card';
 import { IconButton } from '@/components/ui/icon-button';
 import { Pill } from '@/components/ui/pill';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { CurrencyGuide } from '@/components/ui/currency-guide';
 import { WalletHistorySheet } from '@/components/screens/sheets/wallet-history-sheet';
 import { SpringProgressBar } from '@/components/ui/spring-progress';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -241,6 +242,11 @@ export const galleryEntries: GalleryEntry[] = [
     name: 'WalletHistorySheet · 재화 내역',
     description: '지갑 필 탭 → 재화 증감 이력 시트 (#734) — 적립 +/사용 −, 직후 잔액, 더보기.',
     render: () => <WalletHistorySheetDemo />,
+  },
+  {
+    name: 'CurrencyGuide · 재화 안내',
+    description: '재화 내역 시트 상단 접이식 안내 (#789) — 코인·다이아의 수급처·사용처.',
+    render: () => <CurrencyGuide initialOpen />,
   },
   {
     name: 'SpringProgressBar · 스프링 진행 바',
