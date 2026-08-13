@@ -177,6 +177,14 @@
         {
           "appleTeamId": "2CAPC352DD"
         }
+      ],
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "organization": "konkuk-univ",
+          "project": "rougether-mobile"
+        }
       ]
     ],
     "experiments": {
