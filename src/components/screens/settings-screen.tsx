@@ -46,6 +46,12 @@ export type SettingsScreenProps = ScrollRestoreProps & {
   /** Opens the 테마 색상 picker screen (#459). */
   onOpenTheme?: () => void;
   onEditProfile?: () => void;
+  /**
+   * 비밀번호 변경 (#787) — 서버 인증이 소셜·dev 로그인뿐이라 비밀번호 계정이
+   * 없다. 행을 내렸고 셸도 넘기지 않는다. 서버가 비밀번호 인증을 붙이면 계정
+   * 섹션에 `{ icon: 'lock', label: '비밀번호 변경', onPress: onChangePassword }`를
+   * 되살릴 것 (화면·Dev 갤러리 엔트리는 그대로 남아 있다).
+   */
   onChangePassword?: () => void;
   onOpenNotifications?: () => void;
   onOpenSound?: () => void;
@@ -85,7 +91,6 @@ export const SettingsScreen = memo(function SettingsScreen({
   onOpenFont,
   onOpenTheme,
   onEditProfile,
-  onChangePassword,
   onOpenNotifications,
   onOpenSound,
   onOpenHelp,
@@ -119,7 +124,6 @@ export const SettingsScreen = memo(function SettingsScreen({
       title: '계정',
       rows: [
         { icon: 'profile', label: '프로필 편집', onPress: onEditProfile },
-        { icon: 'lock', label: '비밀번호 변경', onPress: onChangePassword },
         { icon: 'gift', label: '친구 초대', onPress: onInviteFriends },
       ],
     },

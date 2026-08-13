@@ -16,9 +16,11 @@ export type PasswordChangeScreenProps = {
 };
 
 /**
- * "비밀번호 변경" screen reached from 설정 → 비밀번호 변경. Validates the new
- * password length and match locally; the actual change request is delegated to
- * onSubmit by the app shell.
+ * "비밀번호 변경" screen. 지금은 **앱에서 도달할 수 없다** (#787) — 서버 인증이
+ * 소셜·dev 로그인뿐이라 비밀번호 계정이 없어 설정 진입점을 내렸다. 서버가
+ * 비밀번호 인증을 붙이면 설정 행과 셸 배선만 되살리면 되도록 화면·테스트·Dev
+ * 갤러리 엔트리는 남겨 둔다. 새 비밀번호의 길이·일치는 로컬에서 검증하고,
+ * 실제 변경 요청은 셸이 onSubmit으로 처리한다.
  */
 export function PasswordChangeScreen({ onBack }: PasswordChangeScreenProps) {
   const t = useTokens();

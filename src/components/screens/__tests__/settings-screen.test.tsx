@@ -12,6 +12,14 @@ describe('SettingsScreen', () => {
     expect(queryByText('숲')).toBeNull();
   });
 
+  it('계정 섹션에 비밀번호 변경 행이 없다 (#787)', async () => {
+    // 서버 인증이 소셜·dev 로그인뿐이라 비밀번호 계정이 없다 — 막다른 화면으로
+    // 가는 행이 다시 새어 나오면 여기서 잡는다.
+    const { getByText, queryByText } = await render(<SettingsScreen />);
+    expect(getByText('프로필 편집')).toBeTruthy();
+    expect(queryByText('비밀번호 변경')).toBeNull();
+  });
+
   it('changes the dark mode preference', async () => {
     const onChangeThemeMode = jest.fn();
     const { getByText, getByLabelText } = await render(

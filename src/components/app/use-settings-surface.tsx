@@ -9,7 +9,6 @@ import { BugReportScreen } from '@/components/screens/bug-report-screen';
 import { HelpScreen } from '@/components/screens/help-screen';
 import { InviteFriendsScreen } from '@/components/screens/invite-friends-screen';
 import { NotificationSettingsScreen } from '@/components/screens/notification-settings-screen';
-import { PasswordChangeScreen } from '@/components/screens/password-change-screen';
 import { ProfileEditScreen } from '@/components/screens/profile-edit-screen';
 import {
   DEFAULT_SOUND_SETTINGS,
@@ -34,8 +33,8 @@ import { setHapticsEnabled } from '@/utils/haptics';
 const DEVICE_SETTINGS_KEY = 'rougether.device-settings';
 
 /**
- * 설정 서피스 배선 (#692 2단계) — 설정 탭과 그 서브화면 8종(테마·프로필·
- * 비밀번호·알림·사운드·버그 제보·도움말·친구 초대)의 도메인 훅·콜백·JSX를
+ * 설정 서피스 배선 (#692 2단계) — 설정 탭과 그 서브화면 8종(테마·폰트·프로필·
+ * 알림·사운드·버그 제보·도움말·친구 초대)의 도메인 훅·콜백·JSX를
  * 소유한다. 서브화면에 있는 동안 탭 페이저가 언마운트되므로 상태는 컴포넌트가
  * 아니라 항상 마운트된 셸에서 이 훅으로 산다. 셸은 `tabProps`를
  * `<SettingsScreen {...tabProps} />`로 스프레드하고 `subScreen`을 렌더만 한다.
@@ -144,7 +143,6 @@ export function useSettingsSurface({
   const openTheme = useCallback(() => setScreen('theme'), [setScreen]);
   const openFont = useCallback(() => setScreen('font'), [setScreen]);
   const openProfileEdit = useCallback(() => setScreen('profileEdit'), [setScreen]);
-  const openPasswordChange = useCallback(() => setScreen('passwordChange'), [setScreen]);
   const openNotificationSettings = useCallback(() => {
     setScreen('notifications');
     // 화면을 열 때마다 서버값으로 최신화 (실패 시 기본값/직전값 유지).
@@ -179,7 +177,6 @@ export function useSettingsSurface({
     onOpenFont: openFont,
     onOpenTheme: openTheme,
     onEditProfile: openProfileEdit,
-    onChangePassword: openPasswordChange,
     onOpenNotifications: openNotificationSettings,
     onOpenSound: openSound,
     onOpenHelp: openHelp,
@@ -211,8 +208,6 @@ export function useSettingsSurface({
         }}
         onBack={backToSettings}
       />
-    ) : screen === 'passwordChange' ? (
-      <PasswordChangeScreen onSubmit={backToSettings} onBack={backToSettings} />
     ) : screen === 'notifications' ? (
       <NotificationSettingsScreen
         settings={notificationSettings}
