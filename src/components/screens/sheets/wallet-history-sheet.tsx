@@ -2,6 +2,7 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from '
 
 import type { WalletHistoryEntry } from '@/api/adapters';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { CurrencyGuide } from '@/components/ui/currency-guide';
 import { Icon } from '@/components/ui/icon';
 import { RetryState } from '@/components/ui/retry-state';
 import { Radius, Spacing } from '@/constants/theme';
@@ -25,6 +26,8 @@ export type WalletHistorySheetProps = {
 /**
  * 재화 내역 바텀시트 (#734) — 지갑 필 탭으로 열린다. 적립은 +초록, 사용은
  * −빨강으로 부호를 그대로 보여주고, 각 행에 증감 직후 잔액을 함께 적는다.
+ * 맨 위의 접이식 안내(#789)가 "어디서 모으고 어디에 쓰는지"를 답한다 — 내역은
+ * 지나간 일만 말하고, 앞으로 뭘 하면 되는지는 어디에도 없었다.
  */
 export function WalletHistorySheet({
   visible,
@@ -53,6 +56,12 @@ export function WalletHistorySheet({
           style={[styles.closeBtn, { backgroundColor: t.surfaceMuted }]}>
           <Icon name="close" size={16} color={t.text} />
         </Pressable>
+      </View>
+
+      {/* 안내는 상태와 무관하게 늘 맨 위 — 내역이 비었을 때(신규 계정)가 오히려
+          가장 필요한 순간이다 (#789). 기본 접힘이라 내역을 가리지 않는다. */}
+      <View style={styles.guide}>
+        <CurrencyGuide />
       </View>
 
       {loadError ? (
@@ -146,6 +155,10 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  guide: {
+    paddingHorizontal: Spacing.four,
+    paddingBottom: Spacing.two,
   },
   stateBlock: {
     paddingVertical: Spacing.six,

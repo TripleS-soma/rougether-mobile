@@ -19,6 +19,15 @@ describe('WalletHistorySheet (#734)', () => {
     expect(getByText(/잔액 130/)).toBeTruthy();
   });
 
+  it('재화 안내는 내역이 비어도 맨 위에 남는다 (#789)', async () => {
+    // 신규 계정(내역 0건)이 "어디서 모으지?"를 가장 궁금해하는 순간이다.
+    const { getByLabelText, getByText } = await render(
+      <WalletHistorySheet visible onClose={jest.fn()} entries={[]} />,
+    );
+    expect(getByText('아직 재화 내역이 없어요')).toBeTruthy();
+    expect(getByLabelText('코인·다이아는 어떻게 모으나요?')).toBeTruthy();
+  });
+
   it('더보기 버튼은 hasNext일 때만 — 탭 시 onLoadMore', async () => {
     const onLoadMore = jest.fn();
     const withNext = await render(
