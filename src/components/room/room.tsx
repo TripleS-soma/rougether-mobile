@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { memo, useState } from 'react';
 import { Pressable, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 
-import { type CharacterAnimationSet, CharacterAvatar } from '@/components/room/character-avatar';
+import { CharacterAvatar } from '@/components/room/character-avatar';
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { ROOM_RENDER_CONTRACT, roomPercent } from '@/components/room/room-render-contract';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
@@ -58,8 +58,8 @@ export type RoomProps = {
   placedFurnitureIds?: string[];
   /** `null` renders an unoccupied room — no character (빈방 타일, #281). */
   characterId?: CharacterId | null;
-  /** Server CDN animation keys for the occupant; local sprite fallback when absent. */
-  characterAnimations?: CharacterAnimationSet;
+  /** 서버가 등록한 포즈 프레임(CDN 키, 등록 순서) — 없으면 번들 스프라이트 (#735). */
+  characterFrames?: string[];
   /** Item + wallpaper catalogue to resolve ids against (defaults to the local set). */
   furniture?: FurnitureItem[];
   wallpapers?: Wallpaper[];
@@ -106,7 +106,7 @@ export type RoomSceneProps = RoomCatalogProps &
   Pick<
     RoomProps,
     | 'characterId'
-    | 'characterAnimations'
+    | 'characterFrames'
     | 'wallpaperId'
     | 'floorId'
     | 'backgroundId'
@@ -163,7 +163,7 @@ export const Room = memo(function Room({
   backgroundId,
   placedFurnitureIds = DEFAULT_PLACED_FURNITURE_IDS,
   characterId = DEFAULT_CHARACTER_ID,
-  characterAnimations,
+  characterFrames,
   furniture = FURNITURE_ITEMS,
   wallpapers = WALLPAPERS,
   floors = [],
@@ -344,7 +344,7 @@ export const Room = memo(function Room({
           style={styles.character}>
           <CharacterAvatar
             characterId={characterId}
-            animations={characterAnimations}
+            frames={characterFrames}
             pose={pose}
             style={styles.characterFill}
             sharp={fill}
@@ -353,7 +353,7 @@ export const Room = memo(function Room({
       ) : (
         <CharacterAvatar
           characterId={characterId}
-          animations={characterAnimations}
+          frames={characterFrames}
           style={styles.character}
           sharp={fill}
         />

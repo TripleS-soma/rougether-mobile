@@ -283,17 +283,18 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
-    name: 'Room · CDN character animations',
-    description: 'Server animations(idle/poseCycle/wave) art — tap the character to cycle (#263).',
+    name: 'Room · CDN character poses',
+    description:
+      'Server poses[] art in registration order — tap the character to cycle (#263, #735).',
     render: () => (
       <View style={{ width: 280, alignSelf: 'center' }}>
         <Room
           characterId="panda"
-          characterAnimations={{
-            idle: 'characters/panda/animations/idle.webp',
-            poseCycle: 'characters/panda/animations/pose-cycle.webp',
-            wave: 'characters/panda/animations/wave.webp',
-          }}
+          characterFrames={[
+            'characters/panda/animations/idle.webp',
+            'characters/panda/animations/pose-cycle.webp',
+            'characters/panda/animations/wave.webp',
+          ]}
           interactiveCharacter
         />
       </View>

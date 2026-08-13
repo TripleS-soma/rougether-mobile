@@ -8,16 +8,16 @@ const res = (body: unknown) => ({
   text: async () => JSON.stringify(body),
 });
 
-const PANDA_ANIMATIONS = {
-  idle: 'characters/panda/animations/idle.webp',
-  poseCycle: 'characters/panda/animations/pose-cycle.webp',
-  wave: 'characters/panda/animations/wave.webp',
-};
+// 서버 등록 포즈 — 정렬 전 순서를 일부러 섞어 둔다 (#735).
+const PANDA_POSES = [
+  { id: 2, code: 'wiggle', assetKey: 'characters/panda/poses/wiggle.webp', sortOrder: 20 },
+  { id: 1, code: 'idle', assetKey: 'characters/panda/poses/idle.webp', sortOrder: 10 },
+];
 
 const OWNED = {
   items: [
     { userCharacterId: 11, characterId: 1, code: 'cat', name: '고양이', baseAssetKey: 'characters/cat_sitting.png', selected: false }, // prettier-ignore
-    { userCharacterId: 12, characterId: 4, code: 'panda', name: '판다', baseAssetKey: 'characters/panda_sitting.png', animations: PANDA_ANIMATIONS, selected: true }, // prettier-ignore
+    { userCharacterId: 12, characterId: 4, code: 'panda', name: '판다', baseAssetKey: 'characters/panda_sitting.png', poses: PANDA_POSES, selected: true }, // prettier-ignore
     // Unknown code (no local sprite art) — must drop out of the picker.
     { userCharacterId: 13, characterId: 9, code: 'dragon', name: '용', selected: false },
   ],
@@ -40,8 +40,12 @@ describe('useMyCharacters', () => {
     // The server's CDN art key rides along for the picker to render.
     expect(result.current.characters?.[0].assetKey).toBe('characters/cat_sitting.png');
     expect(result.current.selectedCharacterId).toBe('panda');
-    // The worn character's animation keys ride along for the room (#263).
-    expect(result.current.selectedCharacterAnimations).toEqual(PANDA_ANIMATIONS);
+    // The worn character's pose frames ride along for the room, sorted by
+    // sortOrder (#263, #735).
+    expect(result.current.selectedCharacterFrames).toEqual([
+      'characters/panda/poses/idle.webp',
+      'characters/panda/poses/wiggle.webp',
+    ]);
   });
 
   it('selects optimistically and PUTs the server id', async () => {

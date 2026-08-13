@@ -93,7 +93,7 @@ export function useMyRoomPages({
   /** 착용 캐릭터 — 뽑기 후 리로드 등 다른 소비자가 있어 셸 소유. */
   character: {
     wornCharacterId: CharacterId;
-    wornCharacterAnimations: MyRoomScreenProps['characterAnimations'];
+    wornCharacterFrames: MyRoomScreenProps['characterFrames'];
     ownedCharacters: MyRoomScreenProps['ownedCharacters'];
     wearCharacter: (serverId: number) => void;
   };
@@ -271,7 +271,7 @@ export function useMyRoomPages({
     floors: room.catalogue.floors,
     backgrounds: room.catalogue.backgrounds,
     characterId: character.wornCharacterId,
-    characterAnimations: character.wornCharacterAnimations,
+    characterFrames: character.wornCharacterFrames,
     onToggleCompletion: toggleWithMissionGuard,
     onEdit: openDecor,
     onAddRoutine: addRoutineFromMyRoom,

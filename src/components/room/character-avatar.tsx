@@ -40,7 +40,7 @@ import tiger3 from '@/assets/images/characters/tiger-3.webp';
 import tiger4 from '@/assets/images/characters/tiger-4.webp';
 
 /** Static pose frames per character (index 0–3). */
-const FRAMES: Record<CharacterId, number[]> = {
+const SPRITES: Record<CharacterId, number[]> = {
   bear: [bear1, bear2, bear3, bear4],
   cat: [cat1, cat2, cat3, cat4],
   dog: [dog1, dog2, dog3, dog4],
@@ -54,13 +54,6 @@ const FRAMES: Record<CharacterId, number[]> = {
 /** Number of poses available per character. */
 const POSE_COUNT = 4;
 
-/** Server CDN animation keys (animated webp) — GET /me/characters `animations`. */
-export type CharacterAnimationSet = {
-  idle?: string;
-  poseCycle?: string;
-  wave?: string;
-};
-
 /** `pose` wraps over however many frames the avatar actually has. */
 function wrapPose(pose: number, count: number) {
   return ((pose % count) + count) % count;
@@ -69,11 +62,11 @@ function wrapPose(pose: number, count: number) {
 export type CharacterAvatarProps = {
   characterId: CharacterId;
   /**
-   * Server CDN animation keys. When any is a valid CDN key the avatar renders
-   * the animated webp (idle first; `pose` cycles idle → poseCycle → wave)
-   * instead of the bundled sprite.
+   * 서버가 등록한 포즈 프레임(CDN 키) — 등록 순서 그대로. 유효한 키가 하나라도
+   * 있으면 번들 스프라이트 대신 이 애니메이션 webp를 그리고, `pose`가 이 목록을
+   * 순환한다 (#735).
    */
-  animations?: CharacterAnimationSet;
+  frames?: string[];
   /** Which pose frame to show; wraps over the available frames. Defaults to 0. */
   pose?: number;
   size?: number;
@@ -83,15 +76,15 @@ export type CharacterAvatarProps = {
 };
 
 /**
- * Renders a character via `expo-image`: the server's CDN animation (animated
- * webp) when `animations` carries a valid key, else the bundled static pose
- * frame. `pose` selects the frame (the room in 나의 방 cycles it on tap;
- * elsewhere it stays at 0). Falls back to the paw mark if no art exists.
- * Shared by the room and any single-character display.
+ * Renders a character via `expo-image`: the server's CDN pose frames (animated
+ * webp) when `frames` carries a valid key, else the bundled static pose frame.
+ * `pose` selects the frame (the room in 나의 방 cycles it on tap; elsewhere it
+ * stays at 0). Falls back to the paw mark if no art exists. Shared by the room
+ * and any single-character display.
  */
 export function CharacterAvatar({
   characterId,
-  animations,
+  frames,
   pose = 0,
   size = 96,
   style,
@@ -99,8 +92,8 @@ export function CharacterAvatar({
 }: CharacterAvatarProps) {
   const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
 
-  // Tap-cycle order: idle → poseCycle → wave (only the keys the server sent).
-  const cdnFrames = [animations?.idle, animations?.poseCycle, animations?.wave].filter(isCdnKey);
+  // 탭 순환 순서 = 서버 등록 순서. 유효하지 않은 키는 조용히 버린다.
+  const cdnFrames = (frames ?? []).filter(isCdnKey);
   const cdnFrameList = cdnFrames.join('|');
 
   // Warm every frame up front so the first tap swaps without a blank flash
@@ -131,8 +124,8 @@ export function CharacterAvatar({
     );
   }
 
-  const frames = FRAMES[characterId];
-  const source = frames?.[wrapPose(pose, POSE_COUNT)];
+  const sprites = SPRITES[characterId];
+  const source = sprites?.[wrapPose(pose, POSE_COUNT)];
 
   if (!source) {
     // No frame art for this character yet — a neutral paw mark stands in.

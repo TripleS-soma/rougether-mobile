@@ -180,16 +180,16 @@ describe('OnboardingScreen 목표 상한', () => {
 });
 
 // 캐릭터 카드 캐러셀 (#589) — 스와이프 정착·탭 포커스가 선택을 바꾸고,
-// 활성 카드만 wave 애니메이션(CDN webp)을 그린다.
+// 활성 카드만 서버 포즈 프레임(CDN webp)을 그린다 (#735).
 describe('OnboardingScreen 캐릭터 캐러셀', () => {
   const openCarousel = async () => {
     const utils = await render(
       <OnboardingScreen
         initialGoals={['exercise']}
         characterSelectEnabled
-        characterAnimations={{
-          cat: { wave: 'characters/cat/animations/wave.webp' },
-          otter: { wave: 'characters/otter/animations/wave.webp' },
+        characterFrames={{
+          cat: ['characters/cat/animations/wave.webp'],
+          otter: ['characters/otter/animations/wave.webp'],
         }}
         onDone={jest.fn()}
       />,
@@ -199,18 +199,18 @@ describe('OnboardingScreen 캐릭터 캐러셀', () => {
     return utils;
   };
 
-  it('8장 카드와 도트를 그리고, 활성 카드만 wave를 재생한다', async () => {
+  it('8장 카드와 도트를 그리고, 활성 카드만 서버 프레임을 재생한다', async () => {
     const { getAllByRole, getAllByTestId, getByLabelText } = await openCarousel();
     expect(getAllByRole('radio')).toHaveLength(8);
     expect(getByLabelText('수달 카드로 이동')).toBeTruthy();
-    // wave 키를 가진 카드 중 활성(고양이)만 CDN webp를 그린다 — 수달은
-    // 키가 있어도 비활성이라 정적 포즈.
+    // 프레임을 가진 카드 중 활성(고양이)만 CDN webp를 그린다 — 수달은
+    // 프레임이 있어도 비활성이라 정적 포즈.
     const cdn = getAllByTestId('cdn-animation');
     expect(cdn).toHaveLength(1);
     expect(cdn[0].props.source[0].uri).toContain('characters/cat/animations/wave.webp');
   });
 
-  it('스와이프 정착이 활성 캐릭터·CTA 라벨·wave 재생 카드를 바꾼다', async () => {
+  it('스와이프 정착이 활성 캐릭터·CTA 라벨·프레임 재생 카드를 바꾼다', async () => {
     const { getByTestId, getByText, getAllByTestId } = await openCarousel();
     // 오프셋을 크게 줘 마지막 카드로 클램프 — 폭과 무관하게 결정적이다.
     await fireEvent(getByTestId('character-carousel'), 'momentumScrollEnd', {

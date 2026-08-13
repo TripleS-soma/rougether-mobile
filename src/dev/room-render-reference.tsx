@@ -50,7 +50,11 @@ export function RoomRenderReference() {
         furniture={[furniture]}
         placements={[placement]}
         characterId={fixture.character.id}
-        characterAnimations={fixture.character.animations}
+        characterFrames={[
+          fixture.character.animations.idle,
+          fixture.character.animations.poseCycle,
+          fixture.character.animations.wave,
+        ]}
       />
     </View>
   );
