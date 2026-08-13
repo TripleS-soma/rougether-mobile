@@ -33,8 +33,8 @@ import { setHapticsEnabled } from '@/utils/haptics';
 const DEVICE_SETTINGS_KEY = 'rougether.device-settings';
 
 /**
- * 설정 서피스 배선 (#692 2단계) — 설정 탭과 그 서브화면 8종(테마·프로필·
- * 비밀번호·알림·사운드·버그 제보·도움말·친구 초대)의 도메인 훅·콜백·JSX를
+ * 설정 서피스 배선 (#692 2단계) — 설정 탭과 그 서브화면 8종(테마·폰트·프로필·
+ * 알림·사운드·버그 제보·도움말·친구 초대)의 도메인 훅·콜백·JSX를
  * 소유한다. 서브화면에 있는 동안 탭 페이저가 언마운트되므로 상태는 컴포넌트가
  * 아니라 항상 마운트된 셸에서 이 훅으로 산다. 셸은 `tabProps`를
  * `<SettingsScreen {...tabProps} />`로 스프레드하고 `subScreen`을 렌더만 한다.
