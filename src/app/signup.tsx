@@ -7,6 +7,7 @@ export default function Signup() {
     <SignupScreen
       onBack={() => (router.canGoBack() ? router.back() : router.replace('/login'))}
       onSignupSuccess={() => router.replace('/')}
+      onViewPolicy={(doc) => router.push({ pathname: '/policy', params: { doc } })}
     />
   );
 }

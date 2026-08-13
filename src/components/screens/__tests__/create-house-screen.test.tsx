@@ -11,6 +11,13 @@ describe('CreateHouseScreen', () => {
     expect(getByText(/초대코드가 자동으로 발급돼요/)).toBeTruthy();
   });
 
+  it('정원 선택은 선택 상태를 accessibilityState로 전달한다 (#550)', async () => {
+    const { getByRole } = await render(<CreateHouseScreen />);
+    await fireEvent.press(getByRole('button', { name: '3' }));
+    expect(getByRole('button', { name: '3' }).props.accessibilityState?.selected).toBe(true);
+    expect(getByRole('button', { name: '2' }).props.accessibilityState?.selected).toBe(false);
+  });
+
   it('creates a house with name/description/capacity', async () => {
     const onCreate = jest.fn();
     const { getByText, getByPlaceholderText } = await render(

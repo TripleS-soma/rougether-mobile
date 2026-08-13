@@ -23,7 +23,14 @@ export function updateCategory(id: number, body: CategoryUpdateRequest) {
   return apiPut<CategoryResponse>(`/categories/${id}`, body);
 }
 
-/** DELETE /categories/{id}. */
-export function deleteCategory(id: number) {
-  return apiDelete<void>(`/categories/${id}`);
+/** 카테고리 삭제 모드 (#517) — 서버 필수 쿼리. */
+export type CategoryDeleteMode = 'UNASSIGN' | 'PURGE';
+
+/**
+ * DELETE /categories/{id}?mode=… — 살아있는 루틴이 있으면 409 CATEGORY_IN_USE.
+ * UNASSIGN: 참조하던 옛 루틴·살아있는 투두를 미분류(categoryId null)로 전환.
+ * PURGE: 과거 수행 기록·사진 인증을 지우고 살아있는 투두도 삭제.
+ */
+export function deleteCategory(id: number, mode: CategoryDeleteMode) {
+  return apiDelete<void>(`/categories/${id}?mode=${mode}`);
 }

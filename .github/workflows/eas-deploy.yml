@@ -1,6 +1,7 @@
 # dev 브랜치 CI/CD: 머지될 때마다 네이티브 지문을 비교해
 # 변화 없으면 OTA(preview 채널), 변했으면 EAS 네이티브 빌드를 자동 실행.
-# 필요 시크릿: EXPO_TOKEN (expo.dev → Access tokens → repo Settings/Secrets에 등록)
+# Android는 preview APK, iOS는 testflight 빌드 + App Store Connect 자동 제출.
+# 필요 시크릿: EXPO_TOKEN (expo.dev → Access tokens), ASC_API_KEY_P8 (ASC API 키 .p8 원문)
 name: eas-deploy
 on:
   push:
@@ -23,9 +24,56 @@ jobs:
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
-      # 지문 비교 → 동일하면 eas update(OTA), 다르면 eas build --auto-submit 없이 빌드
-      - uses: expo/expo-github-action/continuous-deploy-fingerprint@v8
+      # 지문 비교 → 동일하면 eas update(OTA), 다르면 새 빌드.
+      # Android: preview APK (internal 배포).
+      # continue-on-error: Android 실패(쿼터 소진 등)가 iOS 배포까지 죽이지
+      # 않게 한다 (#429) — 실패는 말미 스텝이 다시 표면화해 잡은 빨간색 유지.
+      - name: Android — OTA or preview build
+        id: android
+        continue-on-error: true
+        uses: expo/expo-github-action/continuous-deploy-fingerprint@main
         with:
           profile: preview
           branch: preview
-          platform: all
+          platform: android
+      # Android 빌드 생성 실패(쿼터 소진 등) 시 OTA만이라도 발행 (#435) —
+      # 같은 지문의 로컬 빌드 APK가 JS 변경을 계속 받는다. 빌드가 성공하는
+      # 평시에는 액션이 스스로 업데이트를 발행하므로 이 스텝은 건너뛴다.
+      - name: Android — OTA fallback
+        if: steps.android.outcome == 'failure'
+        run: eas update --branch preview --platform android --non-interactive --auto
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      # iOS 제출용 ASC API 키 복원 — eas.json의 ascApiKeyPath(./asc-api-key.p8)가 읽는다.
+      - name: Restore ASC API key
+        run: printf '%s' "$ASC_API_KEY_P8" > asc-api-key.p8
+        env:
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+      # iOS: 네이티브 변경 시 testflight 빌드 + TestFlight 자동 제출 (ad-hoc 미사용).
+      - name: iOS — OTA or TestFlight build
+        id: ios
+        continue-on-error: true
+        uses: expo/expo-github-action/continuous-deploy-fingerprint@main
+        with:
+          profile: testflight
+          branch: preview
+          platform: ios
+          auto-submit-builds: true
+      # iOS도 빌드 생성 실패(쿼터 소진 등) 시 OTA만이라도 발행 — Android
+      # 폴백(#435)과 대칭. 7/31 쿼터 소진 때 iOS OTA만 조용히 누락됐던 구멍.
+      - name: iOS — OTA fallback
+        if: steps.ios.outcome == 'failure'
+        run: eas update --branch preview --platform ios --non-interactive --auto
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      # 플랫폼 실패를 잡 결과로 재표면화 — 양쪽 다 돌린 뒤에 빨간불을 켠다.
+      - name: Surface platform failures
+        if: steps.android.outcome == 'failure' || steps.ios.outcome == 'failure'
+        run: |
+          if [ "${{ steps.android.outcome }}" = "failure" ]; then
+            echo "::error::Android 배포 실패 — 위 'Android — OTA or preview build' 로그 확인 (쿼터 소진이면 리셋 대기 또는 플랜 업그레이드)"
+          fi
+          if [ "${{ steps.ios.outcome }}" = "failure" ]; then
+            echo "::error::iOS 배포 실패 — 위 'iOS — OTA or TestFlight build' 로그 확인 (쿼터 소진이면 리셋 대기 또는 플랜 업그레이드)"
+          fi
+          exit 1

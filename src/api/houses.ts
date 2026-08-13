@@ -1,12 +1,15 @@
-/** House (그룹하우스) endpoints. */
+/** House (집) endpoints. */
 import { apiDelete, apiGet, apiGetList, apiPost, apiPut } from './client';
 import { buildQuery } from './http';
+import type { RoomWithLayout } from './rooms';
 import type {
+  HouseCheerResponse,
   HouseCoverImage,
   HouseCreateRequest,
   HouseCreateResponse,
   HouseDetailResponse,
   HouseJoinResponse,
+  InviteCodeResponse,
   HouseJoinRequestResponse,
   HouseListResponse,
   HouseMemberDayResponse,
@@ -22,7 +25,7 @@ import type {
   MemberSummary,
   MissionSummary,
   MyHouseSummary,
-  RoomResponse,
+  MyJoinRequestSummary,
   TransferOwnershipResponse,
 } from './types';
 
@@ -36,19 +39,19 @@ export function fetchHouseCoverImages() {
   return apiGetList<HouseCoverImage>('/houses/cover-images');
 }
 
-/** GET /houses — browse/search houses (paginated). */
-export function fetchHouses(page = 0, size = 20) {
-  return apiGet<HouseListResponse>(`/houses${buildQuery({ page, size })}`);
+/**
+ * GET /houses — browse/search houses (paginated). excludeJoined=true면 본인이
+ * ACTIVE(소유 포함)인 집을 서버가 걸러서 내려준다 (#578).
+ */
+export function fetchHouses(page = 0, size = 20, excludeJoined = false) {
+  return apiGet<HouseListResponse>(
+    `/houses${buildQuery({ page, size, excludeJoined: excludeJoined ? 'true' : undefined })}`,
+  );
 }
 
 /** GET /houses/{id} — detail (includes inviteCode for members). */
 export function fetchHouse(houseId: number) {
   return apiGet<HouseDetailResponse>(`/houses/${houseId}`);
-}
-
-/** GET /houses/{id}/preview — public read-only house and mission summary. */
-export function fetchHousePreview(houseId: number) {
-  return apiGet<HousePreviewDetailResponse>(`/houses/${houseId}/preview`);
 }
 
 /** GET /houses/{id}/members. */
@@ -69,6 +72,16 @@ export function previewHouseByCode(inviteCode: string) {
 /** POST /houses/join-by-code. */
 export function joinHouseByCode(inviteCode: string) {
   return apiPost<HouseJoinResponse>('/houses/join-by-code', { inviteCode });
+}
+
+/** GET /me/join-requests — 내가 보낸 입주 신청 목록 (서버 #255, #648). */
+export function fetchMyJoinRequests() {
+  return apiGetList<MyJoinRequestSummary>('/me/join-requests');
+}
+
+/** DELETE /me/join-requests/{requestId} — 입주 신청 철회 (#648). */
+export function cancelMyJoinRequest(requestId: number) {
+  return apiDelete<void>(`/me/join-requests/${requestId}`);
 }
 
 /** POST /houses/{id}/join-requests — request admission to a browsable house. */
@@ -93,7 +106,8 @@ export function rejectHouseJoinRequest(houseId: number, requestId: number) {
 
 /** POST /houses/{id}/invite-code — reissue the invite code (owner). */
 export function reissueInviteCode(houseId: number) {
-  return apiPost<HouseCreateResponse>(`/houses/${houseId}/invite-code`);
+  // 소유자=집 공용 코드(즉시가입), 부원=본인 개인 코드(승인 대기형) (#646).
+  return apiPost<InviteCodeResponse>(`/houses/${houseId}/invite-code`);
 }
 
 /** PUT /houses/{id} — edit name/description/maxMembers (owner; omitted fields keep). */
@@ -120,7 +134,7 @@ export function kickHouseMember(houseId: number, membershipId: number) {
 
 /** GET /houses/{id}/members/{membershipId}/room — a housemate's room (same shape as /rooms/me). */
 export function fetchHouseMemberRoom(houseId: number, membershipId: number) {
-  return apiGet<RoomResponse>(`/houses/${houseId}/members/${membershipId}/room`);
+  return apiGet<RoomWithLayout>(`/houses/${houseId}/members/${membershipId}/room`);
 }
 
 /** GET /houses/{id}/members/{membershipId}/day — that member's routines+todos on a date (default today, KST). */
@@ -153,11 +167,6 @@ export function fetchHouseMissions(houseId: number) {
   return apiGetList<MissionSummary>(`/houses/${houseId}/missions`);
 }
 
-/** GET /houses/{id}/missions/{missionId} — detail incl. my contribution. */
-export function fetchHouseMission(houseId: number, missionId: number) {
-  return apiGet<HouseMissionResponse>(`/houses/${houseId}/missions/${missionId}`);
-}
-
 /** POST /houses/{id}/missions — create a mission (STREAK_DAYS unsupported: 400). */
 export function createHouseMission(houseId: number, body: HouseMissionCreateRequest) {
   return apiPost<HouseMissionResponse>(`/houses/${houseId}/missions`, body);
@@ -173,4 +182,22 @@ export function contributeHouseMission(houseId: number, missionId: number) {
 /** POST /houses/{id}/missions/{missionId}/claim — claim the group reward (achieved only). */
 export function claimHouseMission(houseId: number, missionId: number) {
   return apiPost<HouseMissionClaimResponse>(`/houses/${houseId}/missions/${missionId}/claim`);
+}
+
+/** GET /houses/{id}/preview — 참여 전 미리보기 (비구성원·강퇴 이력자 포함 조회 가능). */
+export function fetchHousePreviewDetail(houseId: number) {
+  return apiGet<HousePreviewDetailResponse>(`/houses/${houseId}/preview`);
+}
+
+/** 응원 3종 — 서버는 소문자 문자열로 받는다. */
+export type HouseCheerType = 'great' | 'support' | 'best';
+
+/** POST /houses/{id}/members/{membershipId}/cheer — 원탭 응원 (같은 타입 하루 1회: 409). */
+export function cheerHouseMember(houseId: number, membershipId: number, type: HouseCheerType) {
+  return apiPost<HouseCheerResponse>(`/houses/${houseId}/members/${membershipId}/cheer`, { type });
+}
+
+/** DELETE /houses/{id}/missions/{missionId} — OWNER only; COMPLETED missions 409. */
+export function deleteHouseMission(houseId: number, missionId: number) {
+  return apiDelete<void>(`/houses/${houseId}/missions/${missionId}`);
 }

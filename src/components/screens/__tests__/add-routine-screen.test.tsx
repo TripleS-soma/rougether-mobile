@@ -31,11 +31,47 @@ describe('AddRoutineScreen', () => {
 
     await fireEvent.press(getByText('추천 루틴')); // unfold the accordion
     await fireEvent.press(getByText('독서 30분'));
+    await fireEvent.press(getByText('월')); // 요일은 전부 해제가 기본 — 하나 골라야 저장된다.
     await fireEvent.press(getByText('루틴 추가하기'));
 
     expect(onAdd).toHaveBeenCalledWith(
       expect.objectContaining({ title: '독서 30분', category: '취미' }),
     );
+  });
+
+  it('변경이 있으면 뒤로가기 시 나가기 확인 모달을 띄운다 (#473)', async () => {
+    const onBack = jest.fn();
+    const { getByPlaceholderText, getByLabelText, getByText } = await render(
+      <AddRoutineScreen onBack={onBack} />,
+    );
+    await fireEvent.changeText(getByPlaceholderText('예) 매일 30분 산책'), '물 마시기');
+    await fireEvent.press(getByLabelText('뒤로가기'));
+    // 아직 안 나가고 확인부터 — '나가기'를 눌러야 onBack.
+    expect(getByText('정말 나가시겠습니까?')).toBeTruthy();
+    expect(onBack).not.toHaveBeenCalled();
+
+    await fireEvent.press(getByLabelText('나가기'));
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('변경이 없으면 뒤로가기 시 바로 나간다 (확인 없음)', async () => {
+    const onBack = jest.fn();
+    const { getByLabelText, queryByText } = await render(<AddRoutineScreen onBack={onBack} />);
+    await fireEvent.press(getByLabelText('뒤로가기'));
+    expect(onBack).toHaveBeenCalledTimes(1);
+    expect(queryByText('정말 나가시겠습니까?')).toBeNull();
+  });
+
+  it('나가기 확인에서 취소하면 그대로 머문다', async () => {
+    const onBack = jest.fn();
+    const { getByPlaceholderText, getByLabelText, queryByText } = await render(
+      <AddRoutineScreen onBack={onBack} />,
+    );
+    await fireEvent.changeText(getByPlaceholderText('예) 매일 30분 산책'), '물 마시기');
+    await fireEvent.press(getByLabelText('뒤로가기'));
+    await fireEvent.press(getByLabelText('취소'));
+    expect(onBack).not.toHaveBeenCalled();
+    expect(queryByText('정말 나가시겠습니까?')).toBeNull();
   });
 
   it('does not submit without a title', async () => {
@@ -69,9 +105,10 @@ describe('AddRoutineScreen', () => {
     await fireEvent.changeText(getByPlaceholderText('예) 매일 30분 산책'), '산책');
     await fireEvent.press(getByText('루틴 추가하기'));
 
-    // The dead-button mystery is gone: the tap says why and opens the manager.
+    // The dead-button mystery is gone: the tap says why and opens the
+    // quick-create sheet (#394 — 전체 관리는 카테고리 관리 화면으로 분리됨).
     expect(getByText('카테고리가 필요해요 — 먼저 하나 만들어주세요.')).toBeTruthy();
-    expect(queryByText('새 카테고리 만들기')).toBeTruthy();
+    expect(queryByText('새 카테고리')).toBeTruthy();
     expect(onAdd).not.toHaveBeenCalled();
   });
 
@@ -81,6 +118,14 @@ describe('AddRoutineScreen', () => {
     await fireEvent.press(getByText('루틴 추가하기'));
     expect(getByText('루틴 이름을 입력해주세요.')).toBeTruthy();
     expect(onAdd).not.toHaveBeenCalled();
+  });
+
+  it('요일 토글은 선택 상태를 accessibilityState로 전달한다 (#550)', async () => {
+    const { getByRole } = await render(<AddRoutineScreen />);
+    const monday = getByRole('button', { name: '월' });
+    expect(monday.props.accessibilityState?.selected).toBe(false);
+    await fireEvent.press(monday);
+    expect(getByRole('button', { name: '월' }).props.accessibilityState?.selected).toBe(true);
   });
 
   it('shows the day picker only for 매주 and submits 매일 with no days', async () => {
@@ -109,10 +154,13 @@ describe('AddRoutineScreen', () => {
     await fireEvent.press(getByText('격주'));
     expect(queryByText('반복 요일')).toBeTruthy();
 
+    // 요일은 전부 해제가 기본 — 직접 고른 요일만 실린다.
+    await fireEvent.press(getByText('월'));
+    await fireEvent.press(getByText('목'));
     await fireEvent.changeText(getByPlaceholderText('예) 매일 30분 산책'), '산책');
     await fireEvent.press(getByText('루틴 추가하기'));
     expect(onAdd).toHaveBeenCalledWith(
-      expect.objectContaining({ repeat: 'biweekly', days: [1, 2, 3, 4, 5] }),
+      expect.objectContaining({ repeat: 'biweekly', days: [1, 4] }),
     );
   });
 
@@ -148,8 +196,7 @@ describe('AddRoutineScreen', () => {
       </ToastProvider>,
     );
 
-    // Weekly default preselects 월~금 — deselect them all.
-    for (const d of ['월', '화', '수', '목', '금']) await fireEvent.press(getByText(d));
+    // 요일은 전부 해제가 기본 — 그대로 저장하려 하면 막힌다.
     await fireEvent.changeText(getByPlaceholderText('예) 매일 30분 산책'), '산책');
     await fireEvent.press(getByText('루틴 추가하기'));
 
@@ -166,7 +213,6 @@ describe('AddRoutineScreen', () => {
     );
 
     await fireEvent.press(getByText('격주'));
-    for (const d of ['월', '화', '수', '목', '금']) await fireEvent.press(getByText(d));
     await fireEvent.changeText(getByPlaceholderText('예) 매일 30분 산책'), '산책');
     await fireEvent.press(getByText('루틴 추가하기'));
 
@@ -175,6 +221,18 @@ describe('AddRoutineScreen', () => {
     expect(getByText('반복 요일을 하나 선택해주세요')).toBeTruthy();
     expect(queryByText('이 반복 주기는 서버 준비가 끝나면 저장할 수 있어요.')).toBeNull();
     expect(onAdd).not.toHaveBeenCalled();
+  });
+
+  it('exposes the category chip selection to assistive tech (#550)', async () => {
+    const { getByLabelText } = await render(<AddRoutineScreen />);
+
+    await fireEvent.press(getByLabelText('공부'));
+    expect(getByLabelText('공부').props.accessibilityState.selected).toBe(true);
+    expect(getByLabelText('취미').props.accessibilityState.selected).toBe(false);
+
+    await fireEvent.press(getByLabelText('취미'));
+    expect(getByLabelText('취미').props.accessibilityState.selected).toBe(true);
+    expect(getByLabelText('공부').props.accessibilityState.selected).toBe(false);
   });
 
   it('shows a day-of-month picker for 매월', async () => {

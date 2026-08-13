@@ -7,10 +7,11 @@ import {
   UNCATEGORIZED_META,
 } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
-import { Pictogram } from '@/components/ui/pictograms';
-import { Radius, Spacing, Typography } from '@/constants/theme';
+import { CategoryIcon } from '@/components/ui/category-icon';
+import { RetryState } from '@/components/ui/retry-state';
+import { Spacing } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
-import { useTokens } from '@/hooks/use-tokens';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
 import { formatTime } from '@/utils/datetime';
 
@@ -43,12 +44,18 @@ export function RoutineManageScreen({
   onEdit,
 }: RoutineManageScreenProps) {
   const t = useTokens();
+  const Typography = useTypography();
   const headerInset = useHeaderInsetStyle();
   // The routines prop carries the merged routine+todo list; this screen manages routines only.
   const routineItems = routines.filter((r) => r.kind !== 'todo');
   const knownIds = categories.map((c) => c.id);
-  // With no categories, uncategorized routines still need a group to render in.
-  const groups = categories.length > 0 ? categories : [UNCATEGORIZED_META];
+  // 미분류(카테고리 삭제 UNASSIGN 산물, #517)·미상 카테고리 항목은 마지막
+  // 카테고리에 섞지 않고 전용 '미분류' 그룹으로 맨 뒤에 붙는다.
+  const hasUncategorized = routineItems.some((r) => !r.category || !knownIds.includes(r.category));
+  const groups =
+    categories.length > 0
+      ? [...categories, ...(hasUncategorized ? [UNCATEGORIZED_META] : [])]
+      : [UNCATEGORIZED_META];
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
@@ -84,16 +91,7 @@ export function RoutineManageScreen({
 
         {!loading && loadError ? (
           <View style={styles.empty}>
-            <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
-              데이터를 불러오지 못했어요.
-            </Text>
-            <Pressable
-              onPress={onRetry}
-              accessibilityRole="button"
-              accessibilityLabel="다시 시도"
-              style={[styles.retryBtn, { backgroundColor: t.primary }]}>
-              <Text style={[Typography.label, { color: t.onPrimary }]}>다시 시도</Text>
-            </Pressable>
+            <RetryState message="데이터를 불러오지 못했어요." onRetry={onRetry} />
           </View>
         ) : null}
 
@@ -113,11 +111,11 @@ export function RoutineManageScreen({
 
         {loading || loadError
           ? null
-          : groups.map((cat, idx) => {
-              const isFallback = idx === groups.length - 1;
+          : groups.map((cat) => {
+              const isUncategorized = cat.id === '';
               const items = routineItems.filter((r) => {
                 if (r.category === cat.id) return true;
-                return isFallback && (!r.category || !knownIds.includes(r.category));
+                return isUncategorized && (!r.category || !knownIds.includes(r.category));
               });
               if (items.length === 0) return null;
 
@@ -125,14 +123,14 @@ export function RoutineManageScreen({
                 <View key={cat.id} style={styles.group}>
                   <View style={styles.catHeader}>
                     <View style={[styles.catDot, { backgroundColor: `${cat.color}33` }]}>
-                      <Pictogram name={cat.icon} size={14} />
+                      <CategoryIcon name={cat.icon} color={cat.color} size={14} />
                     </View>
                     <Text
                       style={[
                         Typography.label,
                         { color: readableTextColor(cat.color, t.surfaceMuted) },
                       ]}>
-                      {cat.label}
+                      {cat.name}
                     </Text>
                     <Text style={[Typography.supporting, { color: t.textDisabled }]}>
                       {items.length}
@@ -148,21 +146,13 @@ export function RoutineManageScreen({
                         style={[styles.row, { borderLeftColor: cat.color }]}>
                         <View style={styles.flex}>
                           <Text style={[Typography.body, { color: t.text }]}>{routine.title}</Text>
-                          {(routine.alarmEnabled && routine.time) || routine.photoVerify ? (
+                          {routine.alarmEnabled && routine.time ? (
                             <View style={styles.badges}>
                               {routine.alarmEnabled && routine.time ? (
                                 <View style={styles.badge}>
                                   <Icon name="bell" size={11} color={t.textMuted} />
                                   <Text style={[styles.badgeText, { color: t.textMuted }]}>
                                     {formatTime(routine.time)}
-                                  </Text>
-                                </View>
-                              ) : null}
-                              {routine.photoVerify ? (
-                                <View style={styles.badge}>
-                                  <Icon name="camera" size={11} color={t.textMuted} />
-                                  <Text style={[styles.badgeText, { color: t.textMuted }]}>
-                                    사진 인증
                                   </Text>
                                 </View>
                               ) : null}
@@ -220,11 +210,6 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.six,
     gap: Spacing.two,
   },
-  retryBtn: {
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.five,
-  },
   emptyHint: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -256,12 +241,14 @@ const styles = StyleSheet.create({
     borderLeftWidth: 2,
     paddingLeft: Spacing.two,
     paddingVertical: Spacing.one,
+    // 부제 줄 유무와 무관한 고정 행 리듬 (#392) — 나의 방 리스트와 동일.
+    minHeight: 48,
   },
   badges: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.two,
-    marginTop: 2,
+    marginTop: Spacing.half,
   },
   badge: {
     flexDirection: 'row',
@@ -269,9 +256,9 @@ const styles = StyleSheet.create({
     gap: Spacing.half,
   },
   badgeText: {
-    fontSize: 11,
+    fontSize: 13,
   },
   chevron: {
-    fontSize: 20,
+    fontSize: 22,
   },
 });

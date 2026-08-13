@@ -1,5 +1,5 @@
 /** Todo + todo-completion endpoints. */
-import { apiDelete, apiGet, apiGetList, apiPost, apiPut } from './client';
+import { apiDelete, apiGetList, apiPost, apiPut } from './client';
 import { buildQuery } from './http';
 import type {
   TodoCompleteResponse,
@@ -18,11 +18,6 @@ export type TodoFilter = {
 /** GET /todos — the user's todos, optionally filtered by date/category/status. */
 export function fetchTodos(filter: TodoFilter = {}) {
   return apiGetList<TodoResponse>(`/todos${buildQuery(filter)}`);
-}
-
-/** GET /todos/{id}. */
-export function fetchTodo(id: number) {
-  return apiGet<TodoResponse>(`/todos/${id}`);
 }
 
 /** POST /todos. */

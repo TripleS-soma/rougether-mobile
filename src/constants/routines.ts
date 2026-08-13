@@ -43,10 +43,12 @@ export const CATEGORY_COLORS = [
 
 export type RoutineCategoryMeta = {
   id: RoutineCategory;
-  label: string;
+  name: string;
   icon: PictogramName;
   color: string;
   visibility: CategoryVisibility;
+  /** 연동된 집의 서버 id (#578) — 미션 연동 카테고리 판정은 이 id로 한다. */
+  houseId?: number;
   /** Server-deleted category, kept only to resolve past records' name/color. */
   deleted?: boolean;
 };
@@ -58,18 +60,18 @@ export type RoutineCategoryMeta = {
  */
 export const UNCATEGORIZED_META: RoutineCategoryMeta = {
   id: '',
-  label: '기타',
+  name: '미분류',
   icon: 'sparkle',
   color: '#B5A89C',
   visibility: 'public',
 };
 
 export const ROUTINE_CATEGORIES: RoutineCategoryMeta[] = [
-  { id: '일정', label: '일정', icon: 'calendar', color: '#E8A87C', visibility: 'public' },
-  { id: '공부', label: '공부', icon: 'book', color: '#7FA8D4', visibility: 'public' },
-  { id: '취미', label: '취미', icon: 'palette', color: '#C8869C', visibility: 'neighbor' },
-  { id: '건강', label: '건강', icon: 'dumbbell', color: '#7FA87F', visibility: 'partial' },
-  { id: '기타', label: '기타', icon: 'sparkle', color: '#B5A89C', visibility: 'public' },
+  { id: '일정', name: '일정', icon: 'calendar', color: '#E8A87C', visibility: 'public' },
+  { id: '공부', name: '공부', icon: 'book', color: '#7FA8D4', visibility: 'public' },
+  { id: '취미', name: '취미', icon: 'palette', color: '#C8869C', visibility: 'neighbor' },
+  { id: '건강', name: '건강', icon: 'dumbbell', color: '#7FA87F', visibility: 'partial' },
+  { id: '기타', name: '기타', icon: 'sparkle', color: '#B5A89C', visibility: 'public' },
 ];
 
 /**
@@ -102,8 +104,14 @@ export type Routine = {
   alarmEnabled?: boolean;
   /** "HH:MM" 24h */
   time?: string;
+  /**
+   * 서버 authType='PHOTO' 왕복 보존용 (#695 — UI는 제거됨). 수정 PUT이 전체
+   * 교체 계약이라 기존 사진 인증 루틴의 값이 바뀌지 않게만 쓰인다. 재도입은 #158.
+   */
   photoVerify?: boolean;
   kind?: 'routine' | 'todo';
+  /** 연동된 공동미션의 서버 id (#578) — 미션 연동 판정은 이름 대신 이 id로. */
+  linkedMissionId?: number;
 };
 
 /** Payload for creating/editing a routine (from the Add/Edit routine screen). */
@@ -121,7 +129,8 @@ export type NewRoutine = {
   endDate?: string;
   alarmEnabled: boolean;
   time: string;
-  photoVerify: boolean;
+  /** 생성 시 연동할 공동미션 id (#578) — 미션 '+ 내 루틴에' 경로가 넣는다. */
+  linkedMissionId?: number;
 };
 
 /** Sample data for previews and tests (mirrors the prototype defaults). */
@@ -141,7 +150,6 @@ export const SAMPLE_ROUTINES: Routine[] = [
     category: '취미',
     alarmEnabled: true,
     time: '21:30',
-    photoVerify: true,
   },
   {
     id: '3',
@@ -158,7 +166,6 @@ export const SAMPLE_ROUTINES: Routine[] = [
     category: '공부',
     alarmEnabled: true,
     time: '20:00',
-    photoVerify: true,
   },
   {
     id: '5',

@@ -1,5 +1,5 @@
 /** Routine + routine-log (per-date completion) endpoints. */
-import { apiDelete, apiGet, apiGetList, apiPost, apiPut } from './client';
+import { apiDelete, apiGetList, apiPost, apiPut } from './client';
 import { buildQuery } from './http';
 import type {
   RoutineCreateRequest,
@@ -16,11 +16,6 @@ export type RoutineFilter = {
 /** GET /routines — the user's routines, optionally filtered. */
 export function fetchRoutines(filter: RoutineFilter = {}) {
   return apiGetList<RoutineResponse>(`/routines${buildQuery(filter)}`);
-}
-
-/** GET /routines/{id}. */
-export function fetchRoutine(id: number) {
-  return apiGet<RoutineResponse>(`/routines/${id}`);
 }
 
 /** POST /routines. */

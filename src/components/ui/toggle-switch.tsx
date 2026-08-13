@@ -1,9 +1,8 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { Spacing, StaticWhite } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
 import { hapticSelection } from '@/utils/haptics';
-
-const OFF = '#D4C4B0';
 
 export type ToggleSwitchProps = {
   value: boolean;
@@ -23,7 +22,7 @@ export function ToggleSwitch({ value, onToggle, accessibilityLabel }: ToggleSwit
       accessibilityRole="switch"
       accessibilityState={{ checked: value }}
       accessibilityLabel={accessibilityLabel}
-      style={[styles.track, { backgroundColor: value ? t.primary : OFF }]}>
+      style={[styles.track, { backgroundColor: value ? t.primary : t.disabledBg }]}>
       <View style={[styles.thumb, value && styles.thumbOn]} />
     </Pressable>
   );
@@ -34,14 +33,14 @@ const styles = StyleSheet.create({
     width: 44,
     height: 26,
     borderRadius: 13,
-    padding: 2,
+    padding: Spacing.half,
     justifyContent: 'center',
   },
   thumb: {
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: StaticWhite,
   },
   thumbOn: {
     transform: [{ translateX: 18 }],

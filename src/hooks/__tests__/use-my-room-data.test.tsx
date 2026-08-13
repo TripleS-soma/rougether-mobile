@@ -62,18 +62,24 @@ describe('useMyRoomData — completion routing on id collision', () => {
   });
 });
 
-describe('useMyRoomData — completion callback (미션 연동, #272)', () => {
-  it('fires onCompleted only for a successful completion, not an un-complete', async () => {
+describe('useMyRoomData — 완료 응답의 서버 자동 미션 기여 (#578)', () => {
+  it('surfaces houseMissionContribution on a completion, null result on un-complete', async () => {
     const now = new Date();
     const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
-      if (url.includes('/categories')) return res({ items: [{ id: 1, name: '집카테고리' }] });
+      if (url.includes('/categories'))
+        return res({ items: [{ id: 1, name: '집카테고리', houseId: 2 }] });
       if (url.endsWith('/routines'))
         return res({
-          items: [{ id: 9, title: '아침 스트레칭', categoryId: 1, repeatType: 'DAILY' }],
+          items: [
+            { id: 9, title: '아침 스트레칭', categoryId: 1, repeatType: 'DAILY', houseMissionId: 6 }, // prettier-ignore
+          ],
         });
       if ((init?.method ?? 'GET') === 'POST' && url.includes('/routines/9/logs'))
-        return res({ rewardAmount: 0 });
+        return res({
+          rewardAmount: 0,
+          houseMissionContribution: { missionId: 6, myContribution: 1, currentValue: 3, achieved: false }, // prettier-ignore
+        });
       if ((init?.method ?? 'GET') === 'DELETE') return res({});
       if (url.endsWith('/today')) return res({ categories: [], summary: {}, streak: {} });
       if (url.endsWith('/me')) return res({ userId: 1 });
@@ -83,19 +89,67 @@ describe('useMyRoomData — completion callback (미션 연동, #272)', () => {
     const { result } = await renderHook(() => useMyRoomData());
     await waitFor(() => expect(result.current.loading).toBe(false));
     const routine = result.current.routines[0];
-    const onCompleted = jest.fn();
+    // 링크 id가 앱 모델까지 내려온다.
+    expect(routine.linkedMissionId).toBe(6);
 
+    let returned: Awaited<ReturnType<typeof result.current.toggleCompletion>> = null;
     await act(async () => {
-      await result.current.toggleCompletion(routine.id, todayIso, onCompleted);
+      returned = await result.current.toggleCompletion(routine.id, todayIso);
     });
-    expect(onCompleted).toHaveBeenCalledWith(expect.objectContaining({ title: '아침 스트레칭' }));
+    // 완료 응답의 자동 기여 결과가 그대로 실려 나온다 — 셸이 집 상태에 반영.
+    expect(returned).toMatchObject({
+      rewardAmount: 0,
+      houseMissionContribution: { missionId: 6, currentValue: 3 },
+    });
 
-    onCompleted.mockClear();
-    // Now completed → the same call un-completes; the callback must stay quiet.
+    // 해제는 기여와 무관 — null (기여 회수 없음).
     await act(async () => {
-      await result.current.toggleCompletion(routine.id, todayIso, onCompleted);
+      returned = await result.current.toggleCompletion(routine.id, todayIso);
     });
-    expect(onCompleted).not.toHaveBeenCalled();
+    expect(returned).toBeNull();
+  });
+});
+
+describe('useMyRoomData — 코인 상한 피드백 (#444)', () => {
+  it('보상이 있으면 보상액을 반환하고, 상한 도달(보상 0)이면 0 반환 + 상한 토스트', async () => {
+    const now = new Date();
+    const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    let reward = 10;
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes('/categories')) return res({ items: [{ id: 1, name: '건강' }] });
+      if (url.endsWith('/routines'))
+        return res({ items: [{ id: 9, title: '운동', categoryId: 1, repeatType: 'DAILY' }] });
+      if ((init?.method ?? 'GET') === 'POST' && url.includes('/routines/9/logs'))
+        return res({ rewardAmount: reward });
+      if ((init?.method ?? 'GET') === 'DELETE') return res({});
+      if (url.endsWith('/today')) return res({ categories: [], summary: {}, streak: {} });
+      if (url.endsWith('/me')) return res({ userId: 1 });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useMyRoomData());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    const routine = result.current.routines[0];
+
+    // 보상 있는 완료 → 보상액 반환 (화면은 이 값으로 코인을 발사한다).
+    let returned: Awaited<ReturnType<typeof result.current.toggleCompletion>> = null;
+    await act(async () => {
+      returned = await result.current.toggleCompletion(routine.id, todayIso);
+    });
+    expect(returned).toMatchObject({ rewardAmount: 10 });
+
+    // 해제 → null (코인 없음).
+    await act(async () => {
+      returned = await result.current.toggleCompletion(routine.id, todayIso);
+    });
+    expect(returned).toBeNull();
+
+    // 상한 도달(보상 0) 완료 → 0 반환 (코인 억제).
+    reward = 0;
+    await act(async () => {
+      returned = await result.current.toggleCompletion(routine.id, todayIso);
+    });
+    expect(returned).toMatchObject({ rewardAmount: 0 });
   });
 });
 
@@ -248,7 +302,56 @@ describe('useMyRoomData — uncategorized adoption', () => {
     expect(puts).toHaveLength(2);
     expect(JSON.parse(puts[0].body ?? '{}').categoryId).toBe(9);
 
-    expect(result.current.categories.map((c) => c.label)).toContain('기타');
+    expect(result.current.categories.map((c) => c.name)).toContain('기타');
     expect(result.current.routines.every((r) => r.category === '9')).toBe(true);
+  });
+});
+
+describe('useMyRoomData — 카테고리 메타를 달력 소스(allCategories)에도 동기화 (#481)', () => {
+  // 달력 서버 날짜 그룹은 allCategories로 아이콘/이름/색을 해석하므로,
+  // 카테고리 수정·생성이 categories에만 반영되면 달력만 stale해진다.
+  const catFetch = () =>
+    jest.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+      if (url.includes('/categories') && method === 'GET')
+        return res({ items: [{ id: 1, name: '건강', colorHex: '#F00', iconKey: 'dumbbell' }] });
+      if (url.includes('/categories') && method === 'POST')
+        return res({ id: 2, name: '새분류', colorHex: '#0F0', iconKey: 'leaf' });
+      if (url.includes('/categories') && method === 'PUT') return res({ id: 1 });
+      if (url.endsWith('/today')) return res({ categories: [], summary: {}, streak: {} });
+      if (url.endsWith('/me')) return res({ userId: 1 });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+  it('카테고리 수정(아이콘 등)이 allCategories에도 반영된다', async () => {
+    global.fetch = catFetch();
+    const { result } = await renderHook(() => useMyRoomData());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    const cat = result.current.categories[0];
+    expect(result.current.allCategories.find((c) => c.id === cat.id)?.icon).toBe('dumbbell');
+
+    await act(async () => {
+      await result.current.updateRoutineCategory(cat.id, { ...cat, icon: 'leaf' });
+    });
+    expect(result.current.categories.find((c) => c.id === cat.id)?.icon).toBe('leaf');
+    expect(result.current.allCategories.find((c) => c.id === cat.id)?.icon).toBe('leaf');
+  });
+
+  it('새 카테고리가 allCategories에도 추가된다', async () => {
+    global.fetch = catFetch();
+    const { result } = await renderHook(() => useMyRoomData());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      await result.current.createRoutineCategory({
+        id: '',
+        name: '새분류',
+        icon: 'leaf',
+        color: '#0F0',
+        visibility: 'public',
+      });
+    });
+    expect(result.current.allCategories.some((c) => c.id === '2' && c.icon === 'leaf')).toBe(true);
   });
 });

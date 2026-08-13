@@ -94,6 +94,29 @@ describe('useNotifications', () => {
     await waitFor(() => expect(result.current.unreadCount).toBe(1));
   });
 
+  // 로드 실패는 빈 상태('알림 없음')로 위장하지 않는다 (#549).
+  it('첫 페이지 로드 실패 시 error, 재시도 성공 시 해제된다 (#549)', async () => {
+    let broken = true;
+    global.fetch = jest.fn(async () => {
+      if (broken) return { ok: false, status: 500, text: async () => '{}' };
+      return res(PAGE_1);
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useNotifications());
+    await act(async () => {
+      await result.current.load();
+    });
+    expect(result.current.error).toBe(true);
+    expect(result.current.entries).toEqual([]);
+
+    broken = false;
+    await act(async () => {
+      await result.current.load();
+    });
+    expect(result.current.error).toBe(false);
+    expect(result.current.entries).toHaveLength(2);
+  });
+
   it('marks everything read via read-all', async () => {
     const calls: { url: string; method: string }[] = [];
     global.fetch = jest.fn(async (url: string, init?: RequestInit) => {

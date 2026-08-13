@@ -1,0 +1,27 @@
+# native-build 라벨 PR은 머지 즉시 EAS 빌드를 트리거하므로(쿼터·과금)
+# auto-merge를 금지한다 — 켜지면 즉시 해제하고 이유를 코멘트로 남긴다.
+# 라벨이 나중에 붙는 경우도 잡기 위해 labeled 이벤트에도 걸어둔다.
+name: native-build-guard
+
+on:
+  pull_request:
+    types: [labeled, auto_merge_enabled]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  disable-auto-merge:
+    if: >-
+      github.event.pull_request.auto_merge != null &&
+      contains(github.event.pull_request.labels.*.name, 'native-build')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Disable auto-merge and leave a comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          gh pr merge --disable-auto "$PR_URL"
+          gh pr comment "$PR_URL" --body "🚫 \`native-build\` 라벨 PR은 auto-merge를 쓸 수 없어 자동 해제했습니다. 머지 즉시 EAS 빌드가 트리거되므로(빌드 쿼터·과금), AGENTS.md의 몰아 머지 절차에 따라 타이밍을 정해 **수동으로 머지**하세요."

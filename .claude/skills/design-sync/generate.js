@@ -84,91 +84,71 @@ const THEMES = {
     grass: '#B5D89A',
   },
 };
+// 다크 중립은 #755에서 cozy 바탕으로 전 테마 통일 — theme.ts DarkNeutrals의 수동 사본.
+const DARK_NEUTRALS = {
+  appShell: '#171310',
+  screen: '#211C16',
+  surface: '#2B251E',
+  card: '#2B251E',
+  surfaceMuted: '#362F26',
+  border: '#453C31',
+  text: '#EFE7DA',
+  textMuted: '#B5A99A',
+  textDisabled: '#7C7264',
+  icon: '#B5A99A',
+  disabledBg: '#3D362C',
+  sky: '#2A3448',
+  grass: '#33422E',
+};
 const DARK = {
   cozy: {
-    appShell: '#171310',
-    screen: '#211C16',
-    surface: '#2B251E',
-    card: '#2B251E',
-    surfaceMuted: '#362F26',
-    border: '#453C31',
-    text: '#EFE7DA',
-    textMuted: '#B5A99A',
-    textDisabled: '#7C7264',
-    icon: '#B5A99A',
+    ...DARK_NEUTRALS,
+    onTint: '#4A403A',
     primary: '#93BE93',
     primaryActive: '#7FA87F',
     onPrimary: '#1E2A1E',
     primaryText: '#93BE93',
-    onTint: '#4A403A',
     success: '#7CB98A',
     warning: '#EDB061',
     warningText: '#EDB061',
     danger: '#E08D8D',
-    disabledBg: '#3D362C',
-    sky: '#2A3448',
-    grass: '#33422E',
   },
   forest: {
-    appShell: '#101711',
-    screen: '#18211A',
-    surface: '#212D23',
-    card: '#212D23',
-    surfaceMuted: '#2A382C',
-    border: '#3A473B',
-    text: '#E2EBE1',
-    textMuted: '#A3B2A0',
-    textDisabled: '#6E7D6B',
-    icon: '#A3B2A0',
+    ...DARK_NEUTRALS,
+    onTint: '#334236',
     primary: '#7FBC8B',
     primaryActive: '#6BAA78',
     onPrimary: '#14251A',
     primaryText: '#7FBC8B',
-    onTint: '#334236',
     success: '#7CB98A',
     warning: '#EDB061',
     warningText: '#EDB061',
     danger: '#E08D8D',
-    disabledBg: '#32402F',
-    sky: '#2A3448',
-    grass: '#33422E',
   },
   hanok: {
-    appShell: '#1A150D',
-    screen: '#241E13',
-    surface: '#2F271A',
-    card: '#2F271A',
-    surfaceMuted: '#3A3122',
-    border: '#4E4230',
-    text: '#F0E7D7',
-    textMuted: '#BCAD97',
-    textDisabled: '#83765F',
-    icon: '#BCAD97',
+    ...DARK_NEUTRALS,
+    onTint: '#493B2E',
     primary: '#C4A16F',
     primaryActive: '#B08D5B',
     onPrimary: '#2A2113',
     primaryText: '#C4A16F',
-    onTint: '#493B2E',
     success: '#96B37F',
     warning: '#DCA855',
     warningText: '#DCA855',
     danger: '#DA9384',
-    disabledBg: '#453A28',
-    sky: '#2A3448',
-    grass: '#33422E',
   },
 };
 const TYPE = {
-  display1: [34, 40, 700],
-  display2: [28, 34, 700],
-  h1: [24, 30, 700],
-  h2: [20, 26, 700],
-  h3: [18, 24, 600],
-  large: [18, 26, 500],
-  body: [16, 24, 400],
-  label: [14, 20, 600],
-  supporting: [12, 16, 400],
-  code: [13, 18, 500],
+  display1: [36, 42, 700],
+  display2: [30, 36, 700],
+  h1: [26, 32, 700],
+  h2: [22, 28, 700],
+  h3: [20, 26, 600],
+  large: [20, 28, 500],
+  body: [18, 26, 400],
+  label: [16, 22, 600],
+  supporting: [14, 18, 400],
+  code: [15, 20, 500],
 };
 const SPACING = { half: 2, one: 4, two: 8, three: 16, four: 24, five: 32, six: 64 };
 const RADIUS = { sm: 8, md: 12, lg: 16, pill: 999 };
@@ -256,6 +236,24 @@ ${['cozy', 'forest', 'hanok'].map((id) => block(`${id} · light`, THEMES[id]) + 
   .meta { display: flex; flex-direction: column; font-size: 10px; }
   .meta b { font-size: 11px; font-weight: 600; }`;
   out('foundations/colors.html', page('Foundations', 'Colors — semantic roles', body, css));
+  // 시간대별 하늘 (#358) — theme.ts SKY_BY_PHASE 수동 사본
+  const SKY_BY_PHASE = {
+    light: { dawn: '#DCD6EC', day: '#C3E0F5', sunset: '#F6CDAB', night: '#3E4A6B' },
+    dark: { dawn: '#33324A', day: '#2A3448', sunset: '#463527', night: '#1E2536' },
+  };
+  const skyRow = (label, set) => `
+    <div class="tname">${label}</div>
+    <div class="grid">${Object.entries(set)
+      .map(
+        ([k, v]) => `
+      <div class="sw"><div class="chip" style="background:${v}"></div>
+      <div class="meta"><b>${k}</b><span>${v}</span></div></div>`,
+      )
+      .join('')}</div>`;
+  const skyBody = `
+<div class="sub">집 화면 하늘 — 기기 시각 기준 새벽(05–08)/낮(08–17)/노을(17–20)/밤 (#358)</div>
+${skyRow('light', SKY_BY_PHASE.light)}${skyRow('dark', SKY_BY_PHASE.dark)}`;
+  out('foundations/sky-by-phase.html', page('Foundations', 'Sky · 시간대', skyBody, css));
 }
 
 /* ---------- foundations/typography ---------- */
@@ -373,6 +371,35 @@ ${['cozy', 'forest', 'hanok'].map((id) => block(`${id} · light`, THEMES[id]) + 
   .thumb { width: 22px; height: 22px; border-radius: 11px; background: #fff; }
   .thumb.on { transform: translateX(18px); }`;
   out('components/chips-toggle.html', page('Components', 'Chips · Badges · Toggle', body, css));
+}
+
+/* ---------- components/bear-check ---------- */
+{
+  // ui/bear-check (#344, design-sync 시안 A 채택) — 곰 헤드 루틴 체크 토글.
+  const CAT = ['#E8A87C', '#7FA8D4', '#C8869C', '#7FA87F'];
+  const bear = (fill, line, checked) => `
+  <span class="bc">
+    <i class="ear l" style="background:${fill};border-color:${line}"></i>
+    <i class="ear r" style="background:${fill};border-color:${line}"></i>
+    <i class="head" style="background:${fill};border-color:${line}">${checked ? '<svg viewBox="0 0 100 100" class="tick"><path d="M20 55 L42 74 L80 30"/></svg>' : ''}</i>
+  </span>`;
+  const body = `
+<div class="sub">ui/bear-check — 루틴 완료 토글 (#344). 미완료 = 윤곽선, 완료 = 카테고리 색 + 흰 체크.</div>
+<div class="section">States</div>
+<div class="rowset">${bear(t.surface, t.textDisabled, false)}${bear(CAT[0], CAT[0], true)}</div>
+<div class="section">Category colors</div>
+<div class="rowset">${CAT.map((c) => bear(c, c, true)).join('')}</div>`;
+  const css = `
+  .rowset { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+  .bc { position: relative; display: inline-block; width: 30px; height: 34px; }
+  .bc .ear { position: absolute; top: 0; width: 13px; height: 13px; border-radius: 50%; border: 2.5px solid; }
+  .bc .ear.l { left: 0; transform: rotate(-14deg); }
+  .bc .ear.r { right: 0; transform: rotate(14deg); }
+  .bc .head { position: absolute; left: 1px; right: 1px; top: 5px; bottom: 0; border-radius: 46%;
+    border: 2.5px solid; display: flex; align-items: center; justify-content: center; }
+  .bc .tick { width: 14px; height: 14px; }
+  .bc .tick path { stroke: #fff; stroke-width: 14; stroke-linecap: round; stroke-linejoin: round; fill: none; }`;
+  out('components/bear-check.html', page('Components', 'BearCheck · 루틴 체크 토글', body, css));
 }
 
 /* ---------- patterns/mission-card ---------- */

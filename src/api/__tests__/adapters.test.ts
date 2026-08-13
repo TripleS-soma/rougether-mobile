@@ -1,5 +1,6 @@
 import {
   ownedPlacement,
+  toBugReportEntry,
   toAppCategory,
   toAppRoutine,
   toAppTodo,
@@ -10,17 +11,23 @@ import {
   toServerItemId,
   toShopCatalogue,
   toTodoCreate,
+  toTodoUpdate,
   toWallet,
   todayCompletions,
-  toGroupHouse,
-  toBrowseHousePreview,
+  toHouse,
+  toSearchHouse,
+  toPresence,
   toHouseMission,
   toHouseCover,
+  toHousePreviewDetail,
   characterIdFromCode,
   toGachaMachine,
   fromFriendRoomSlots,
   fromRoomSlots,
+  toFriendCategories,
   toFriendRoutines,
+  toCharacterFrames,
+  toCharacterFramesMap,
   toOwnedCharacter,
   toSlotSaves,
   toUserItemMap,
@@ -62,7 +69,6 @@ describe('API adapters', () => {
       startDate: '2026-07-02',
       alarmEnabled: true,
       time: '21:00',
-      photoVerify: false,
     };
     expect(toRoutineCreate(weekly)).toMatchObject({
       title: '독서',
@@ -94,7 +100,7 @@ describe('API adapters', () => {
     expect(
       toRoutineCreate({
         title: '분리수거', category: '1', repeat: 'biweekly', days: [2],
-        startDate: '2026-07-07', alarmEnabled: false, time: '', photoVerify: false,
+        startDate: '2026-07-07', alarmEnabled: false, time: '',
       }), // prettier-ignore
     ).toMatchObject({ repeatType: 'BIWEEKLY', repeatDays: { daysOfWeek: ['TUE'] } });
 
@@ -109,7 +115,7 @@ describe('API adapters', () => {
     expect(
       toRoutineCreate({
         title: '월말 결산', category: '1', repeat: 'monthly', days: [], dayOfMonth: 31,
-        startDate: '2026-07-01', alarmEnabled: false, time: '', photoVerify: false,
+        startDate: '2026-07-01', alarmEnabled: false, time: '',
       }), // prettier-ignore
     ).toMatchObject({ repeatType: 'MONTHLY', repeatDays: { dayOfMonth: 31 } });
 
@@ -124,7 +130,7 @@ describe('API adapters', () => {
     expect(
       toRoutineCreate({
         title: '건강검진', category: '1', repeat: 'yearly', days: [], dayOfMonth: 12, month: 7,
-        startDate: '2026-07-01', alarmEnabled: false, time: '', photoVerify: false,
+        startDate: '2026-07-01', alarmEnabled: false, time: '',
       }), // prettier-ignore
     ).toMatchObject({ repeatType: 'YEARLY', repeatDays: { month: 7, day: 12 } });
 
@@ -156,6 +162,16 @@ describe('API adapters', () => {
     });
   });
 
+  it('maps todo dueTime to the shared time slot and back (#325)', () => {
+    // dueTime 있는 투두 → time/alarmEnabled, 없으면 알람 없음.
+    const timed = toAppTodo({ id: 9, title: '장보기', dueDate: '2026-07-03', dueTime: '18:00:00' });
+    expect(timed).toMatchObject({ time: '18:00', alarmEnabled: true });
+    expect(toAppTodo({ id: 9, title: '장보기' })).toMatchObject({ alarmEnabled: false });
+    // 업데이트: 시간이 켜져 있을 때만 dueTime 전송(HH:mm:ss) — 해제는 서버 미지원.
+    expect(toTodoUpdate(timed, { alarmEnabled: true, time: '09:05' }).dueTime).toBe('09:05:00');
+    expect(toTodoUpdate(toAppTodo({ id: 9, title: '장보기' })).dueTime).toBeUndefined();
+  });
+
   it('keeps routine/todo app ids distinct when server ids collide', () => {
     // Routine and todo ids are separate server sequences — both can be 5.
     const r = toAppRoutine({ id: 5, title: '루틴' });
@@ -165,13 +181,13 @@ describe('API adapters', () => {
     expect(toServerItemId(td.id)).toBe(5);
   });
 
-  it('reads wallets into coin/dia', () => {
+  it('reads wallets into coin/diamond', () => {
     expect(
       toWallet([
         { currencyType: 'COIN', balance: 120 },
         { currencyType: 'DIAMOND', balance: 7 },
       ]),
-    ).toEqual({ coin: 120, dia: 7 });
+    ).toEqual({ coin: 120, diamond: 7 });
   });
 
   it('builds today completions from routine/todo status', () => {
@@ -216,7 +232,7 @@ describe('API adapters', () => {
   it('keeps deleted categories flagged for historical lookup', () => {
     expect(toAppCategory({ id: 9, name: '옛것', deleted: true })).toMatchObject({
       id: '9',
-      label: '옛것',
+      name: '옛것',
       deleted: true,
     });
     expect(toAppCategory({ id: 10, name: '현역' }).deleted).toBeUndefined();
@@ -229,6 +245,9 @@ describe('API adapters', () => {
         name: 'Forest Sage Set - Arched Window',
         placementType: 'positioned',
         defaultSlot: 'topLeft',
+        defaultScale: 1.24,
+        defaultPositionX: 0.35,
+        defaultPositionY: 0.65,
         categoryCode: 'decor',
         priceAmount: 100,
         assetKey: 'items/window.png',
@@ -240,6 +259,8 @@ describe('API adapters', () => {
         name: '침대',
         placementType: 'positioned',
         defaultSlot: 'bottomLeft',
+        defaultPositionX: null,
+        defaultPositionY: null,
         categoryCode: 'furniture',
         priceAmount: 100,
         owned: false,
@@ -270,7 +291,14 @@ describe('API adapters', () => {
       slot: 'topLeft',
       category: '장식',
       price: 100,
+      defaultScale: 1.24,
+      defaultPositionX: 0.35,
+      defaultPositionY: 0.65,
       theme: '숲속 세이지',
+    });
+    expect(cat.furniture[1]).toMatchObject({
+      defaultPositionX: undefined,
+      defaultPositionY: undefined,
     });
     expect(cat.wallpapers.map((w) => w.id)).toEqual(['3']);
     expect(cat.floors.map((f) => f.id)).toEqual(['4']);
@@ -295,11 +323,36 @@ describe('API adapters', () => {
       'private',
     );
 
-    const cat = { id: 'x', label: '취미', icon: 'palette', color: '#123456' } as const;
+    const cat = { id: 'x', name: '취미', icon: 'palette', color: '#123456' } as const;
     expect(toCategoryCreate({ ...cat, visibility: 'public' }).visibility).toBe('PUBLIC');
     expect(toCategoryCreate({ ...cat, visibility: 'neighbor' }).visibility).toBe('HOUSE');
     expect(toCategoryCreate({ ...cat, visibility: 'partial' }).visibility).toBe('FRIENDS');
     expect(toCategoryCreate({ ...cat, visibility: 'private' }).visibility).toBe('PRIVATE');
+  });
+
+  it('round-trips the mission/house link ids (#578)', () => {
+    // Routine ↔ houseMissionId: 서버 id가 앱 linkedMissionId로 오간다.
+    const linked = toAppRoutine({ id: 12, title: '아침 스트레칭', houseMissionId: 6 });
+    expect(linked.linkedMissionId).toBe(6);
+    expect(toAppRoutine({ id: 12, title: '미연동', houseMissionId: null }).linkedMissionId).toBeUndefined(); // prettier-ignore
+    expect(
+      toRoutineCreate({
+        title: '아침 스트레칭', category: '1', days: [], startDate: '2026-07-01',
+        alarmEnabled: false, time: '', linkedMissionId: 6,
+      }).houseMissionId, // prettier-ignore
+    ).toBe(6);
+    // 이름을 바꿔도 링크 id는 그대로 실려 연동이 유지된다.
+    expect(toRoutineUpdate(linked, { title: '이름 바꿈' })).toMatchObject({ houseMissionId: 6 });
+    // 미연동 루틴 수정은 houseMissionId를 싣지 않는다 — 링크를 건드리지 않음
+    // (해제는 전용 DELETE 엔드포인트).
+    expect(toRoutineUpdate({ ...linked, linkedMissionId: undefined }).houseMissionId).toBeUndefined(); // prettier-ignore
+
+    // Category ↔ houseId.
+    expect(toAppCategory({ id: 20, name: 'TripleS', houseId: 2 }).houseId).toBe(2);
+    expect(toAppCategory({ id: 20, name: '일반', houseId: null }).houseId).toBeUndefined();
+    const cat = { id: '20', name: 'TripleS', icon: 'house', color: '#123456', visibility: 'neighbor', houseId: 2 } as const; // prettier-ignore
+    expect(toCategoryCreate(cat).houseId).toBe(2);
+    expect(toCategoryCreate({ ...cat, houseId: undefined }).houseId).toBeUndefined();
   });
 
   it('clears alarm time and end date with explicit nulls on update', () => {
@@ -323,6 +376,25 @@ describe('API adapters', () => {
     expect(req.repeatType).toBe('DAILY');
   });
 
+  it('기존 사진 인증 루틴은 수정해도 authType PHOTO를 유지한다 (#695)', () => {
+    // UI는 제거됐지만(PR #712) PUT이 전체 교체라, 다른 필드만 고친 수정이
+    // 서버의 PHOTO를 CHECK로 조용히 바꾸면 안 된다 — photoVerify 왕복이 근거.
+    const routine = {
+      id: 'r8',
+      title: '운동 인증',
+      category: '5',
+      days: [],
+      startDate: '2026-07-02',
+      alarmEnabled: false,
+      time: '',
+      kind: 'routine' as const,
+      photoVerify: true,
+    };
+    expect(toRoutineUpdate(routine, { title: '이름 변경' }).authType).toBe('PHOTO');
+    // photoVerify 없는 일반 루틴은 그대로 CHECK.
+    expect(toRoutineUpdate({ ...routine, photoVerify: undefined }, {}).authType).toBe('CHECK');
+  });
+
   it('names my house room by profile nickname when the members API has none', () => {
     const detail = { houseId: 1, name: '검증 하우스' };
     const members = [
@@ -341,22 +413,63 @@ describe('API adapters', () => {
         status: 'ACTIVE' as const,
       },
     ];
-    const house = toGroupHouse(detail, members, 6, '준서');
+    const house = toHouse(detail, members, 6, '준서');
     const rooms = house.floors.flatMap((f) => f.rooms);
     expect(rooms.find((r) => r.isMine)?.name).toBe('준서');
     expect(rooms.find((r) => !r.isMine)?.name).toBe('이웃');
 
     // Without a profile nickname it falls back to 멤버 N.
-    const anon = toGroupHouse(detail, members, 6);
+    const anon = toHouse(detail, members, 6);
     expect(anon.floors.flatMap((f) => f.rooms).find((r) => r.isMine)?.name).toBe('멤버 6');
   });
 
-  it('carries growth points through for the level-progress pill', () => {
-    expect(toGroupHouse({ houseId: 1, name: '집', growthPoints: 130 }, [], 6).growthPoints).toBe(
-      130,
+  it('derives tile presence from lastAccessedAt (#383)', () => {
+    const now = Date.parse('2026-07-22T12:00:00Z');
+    // 40분 창 안 → 접속 중, 라벨 없음.
+    expect(toPresence('2026-07-22T11:30:00Z', now)).toEqual({ online: true });
+    // 창 밖 → 상대 시각 라벨.
+    expect(toPresence('2026-07-22T11:10:00Z', now)).toEqual({ lastSeenLabel: '50분 전' });
+    expect(toPresence('2026-07-22T09:00:00Z', now)).toEqual({ lastSeenLabel: '3시간 전' });
+    expect(toPresence('2026-07-20T12:00:00Z', now)).toEqual({ lastSeenLabel: '2일 전' });
+    expect(toPresence('2025-07-22T12:00:00Z', now)).toEqual({ lastSeenLabel: '오래 전' });
+    // 존 표기가 빠진 UTC(서버 계약)도 로컬로 오독하지 않는다.
+    expect(toPresence('2026-07-22T11:30:00', now)).toEqual({ online: true });
+    // 이력 없음/깨진 값 → 아무것도 표시하지 않음.
+    expect(toPresence(undefined, now)).toEqual({});
+    expect(toPresence('not-a-date', now)).toEqual({});
+
+    const detail = { houseId: 1, name: '집' };
+    const members = [
+      {
+        membershipId: 1,
+        userId: 6,
+        role: 'OWNER' as const,
+        status: 'ACTIVE' as const,
+        nickname: '나',
+        lastAccessedAt: '2026-07-22T11:50:00Z',
+      },
+      {
+        membershipId: 2,
+        userId: 4,
+        role: 'MEMBER' as const,
+        status: 'ACTIVE' as const,
+        nickname: '이웃',
+        lastAccessedAt: '2026-07-22T06:00:00Z',
+      },
+    ];
+    const rooms = toHouse(detail, members, 6, undefined, undefined, now).floors.flatMap(
+      (f) => f.rooms,
     );
-    expect(toGroupHouse({ houseId: 1, name: '집', growthPoints: 0 }, [], 6).growthPoints).toBe(0);
-    expect(toGroupHouse({ houseId: 2, name: '집' }, [], 6).growthPoints).toBeUndefined();
+    expect(rooms.find((r) => r.isMine)?.online).toBe(true);
+    const neighbor = rooms.find((r) => !r.isMine);
+    expect(neighbor?.online).toBeUndefined();
+    expect(neighbor?.lastSeenLabel).toBe('6시간 전');
+  });
+
+  it('carries growth points through for the level-progress pill', () => {
+    expect(toHouse({ houseId: 1, name: '집', growthPoints: 130 }, [], 6).growthPoints).toBe(130);
+    expect(toHouse({ houseId: 1, name: '집', growthPoints: 0 }, [], 6).growthPoints).toBe(0);
+    expect(toHouse({ houseId: 2, name: '집' }, [], 6).growthPoints).toBeUndefined();
   });
 
   it('pads the grid to the house capacity with vacant seats, my room bottom-left', () => {
@@ -384,7 +497,7 @@ describe('API adapters', () => {
         status: 'LEFT' as const,
       },
     ];
-    const house = toGroupHouse(detail, members, 6);
+    const house = toHouse(detail, members, 6);
     // Top floor renders first; the yet-unfilled seats pad the upper floor.
     expect(house.floors.map((f) => f.level)).toEqual(['2층', '1층']);
     expect(house.floors[0].rooms.map((r) => r.vacant)).toEqual([true, true]);
@@ -417,7 +530,7 @@ describe('API adapters', () => {
         status: 'ACTIVE' as const,
       },
     ];
-    const house = toGroupHouse({ houseId: 1, name: '섞임집', maxMembers: 6 }, members, 6);
+    const house = toHouse({ houseId: 1, name: '섞임집', maxMembers: 6 }, members, 6);
     // 정원 6 / 멤버 3 → 마지막 멤버는 가운데 행에서 빈방과 나란히 앉는다.
     expect(house.floors.map((f) => f.rooms.map((r) => (r.vacant ? '빈방' : r.name)))).toEqual([
       ['빈방', '빈방'],
@@ -436,7 +549,7 @@ describe('API adapters', () => {
         status: 'ACTIVE' as const,
       },
     ];
-    const house = toGroupHouse({ houseId: 1, name: '홀수집', maxMembers: 3 }, members, 6);
+    const house = toHouse({ houseId: 1, name: '홀수집', maxMembers: 3 }, members, 6);
     expect(house.floors.map((f) => f.rooms.length)).toEqual([1, 2]);
     expect(house.floors[1].rooms.map((r) => r.name)).toEqual(['나야', '빈방']);
   });
@@ -447,8 +560,8 @@ describe('API adapters', () => {
       name: '검증 하우스',
       coverImageKey: 'house/cloud-balloon/frame.png',
     };
-    expect(toGroupHouse(detail, [], 6).coverImageKey).toBe('house/cloud-balloon/frame.png');
-    expect(toGroupHouse({ houseId: 2, name: '무커버' }, [], 6).coverImageKey).toBeUndefined();
+    expect(toHouse(detail, [], 6).coverImageKey).toBe('house/cloud-balloon/frame.png');
+    expect(toHouse({ houseId: 2, name: '무커버' }, [], 6).coverImageKey).toBeUndefined();
   });
 
   it('maps a cover catalog entry and drops keyless ones', () => {
@@ -555,6 +668,108 @@ describe('API adapters', () => {
     });
   });
 
+  it('converts preview memberRooms into window room models with the catalogue (#386)', () => {
+    const cat = {
+      furniture: [
+        { id: '2', name: '침대', slot: 'bottomLeft' as const, category: '가구' as const, price: 0, assetKey: 'items/a/bed.png' }, // prettier-ignore
+      ],
+      wallpapers: [{ id: '9', name: '벽지', price: 0, assetKey: 'items/a/wp.png', color: '#FFF' }],
+      floors: [],
+      backgrounds: [],
+      ownedIds: [],
+    };
+    const wire = {
+      houseId: 3,
+      name: '미리보기집',
+      currentMemberCount: 2,
+      memberRooms: [
+        {
+          membershipId: 1,
+          room: {
+            layoutFormat: 'SLOT_V1' as const,
+            character: { code: 'cat' },
+            slots: [
+              { slotType: 'bottomLeft', assetKey: 'items/a/bed.png' },
+              { slotType: 'wallpaper', assetKey: 'items/a/wp.png' },
+            ],
+          },
+        },
+        // 방 미생성 구성원 → 기본 빈 방.
+        { membershipId: 2, room: null },
+      ],
+    };
+    const detail = toHousePreviewDetail(wire, cat);
+    expect(detail.rooms).toHaveLength(2);
+    expect(detail.rooms![0]).toMatchObject({
+      placedFurnitureIds: ['2'],
+      wallpaperId: '9',
+      placements: null,
+      characterId: 'cat',
+    });
+    expect(detail.rooms![1]).toEqual({ placedFurnitureIds: [], placements: [] });
+
+    // 카탈로그가 없으면(상점 미로드) rooms를 만들지 않아 목업으로 폴백한다.
+    expect(toHousePreviewDetail(wire).rooms).toBeUndefined();
+  });
+
+  it('입주 신청은 PENDING만 노출한다 — 처리된 이력 혼합 응답 (#526)', () => {
+    const house = toHouse(
+      { houseId: 7, name: '집', myRole: 'OWNER' },
+      [],
+      undefined,
+      undefined,
+      [],
+      0,
+      [
+        { requestId: 1, nickname: '대기', status: 'PENDING' },
+        { requestId: 2, nickname: '수락됨', status: 'ACCEPTED' },
+        { requestId: 3, nickname: '거절됨', status: 'REJECTED' },
+        { requestId: 4, nickname: '상태없음' },
+      ],
+    );
+    expect(house.joinRequests?.map((r) => r.requestId)).toEqual([1, 4]);
+  });
+
+  it('maps a bug report to the history row (#496)', () => {
+    expect(
+      toBugReportEntry({
+        bugReportId: 7,
+        title: '로그인이 안 돼요',
+        status: 'IN_PROGRESS',
+        createdAt: '2026-07-20T09:00:00Z',
+      }),
+    ).toEqual({ id: 7, title: '로그인이 안 돼요', status: 'IN_PROGRESS', date: '7월 20일' });
+    // 미지정 상태는 접수됨으로.
+    expect(toBugReportEntry({ bugReportId: 8 }).status).toBe('RECEIVED');
+  });
+
+  it('멤버 day의 categoryId·카테고리 메타를 그룹핑 모델로 매핑한다 (#528, 서버 #237)', () => {
+    const day = {
+      date: '2026-07-30',
+      routines: [
+        { id: 1, originRoutineId: 1, title: '아침 기상', categoryId: 3, completed: false },
+      ],
+      todos: [{ id: 9, title: '장보기', status: 'PENDING' as const, categoryId: 3 }],
+      categories: [{ id: 3, name: '건강', colorHex: '#FF8800', iconKey: 'dumbbell' }],
+    };
+    const routines = toFriendRoutines(day);
+    expect(routines[0].category).toBe('3');
+    expect(routines[1].category).toBe('3');
+    expect(toFriendCategories(day)).toEqual([
+      {
+        id: '3',
+        name: '건강',
+        icon: 'dumbbell',
+        color: '#FF8800',
+        visibility: 'neighbor',
+      },
+    ]);
+    // 비공개라 메타가 안 내려온 categoryId는 그대로 남아 미분류로 흘러간다.
+    expect(
+      toFriendRoutines({ routines: [{ id: 2, title: '비밀 루틴', categoryId: 99 }] })[0].category,
+    ).toBe('99');
+  });
+
   it('maps a house member day to the friend routine list', () => {
     const routines = toFriendRoutines({
       date: '2026-07-08',
@@ -617,9 +832,9 @@ describe('API adapters', () => {
     ).toBeUndefined();
   });
 
-  it('maps browse preview missions to the read-only house model', () => {
+  it('미리보기 응답의 단체미션을 진행 모델로 매핑한다 (#532, 통합 어댑터)', () => {
     expect(
-      toBrowseHousePreview({
+      toHousePreviewDetail({
         houseId: 7,
         name: '미리보기 집',
         description: '함께 루틴을 지켜요',
@@ -635,23 +850,24 @@ describe('API adapters', () => {
             targetValue: 10,
             status: 'ACTIVE',
           },
+          {
+            // 완료 미션은 진행값이 리셋돼 내려온다 — 미리보기에서 제외 (#233).
+            missionId: 10,
+            title: '끝난 미션',
+            missionType: 'DAILY_MEMBER_RATE',
+            currentValue: 0,
+            targetValue: 3,
+            status: 'COMPLETED',
+          },
         ],
       }),
     ).toMatchObject({
-      houseId: 7,
+      id: 7,
       name: '미리보기 집',
       members: 2,
       capacity: 4,
       level: 3,
-      missions: [
-        {
-          id: 9,
-          title: '주간 미션',
-          desc: '주간 구성원 달성 횟수',
-          current: 4,
-          target: 10,
-        },
-      ],
+      missions: [expect.objectContaining({ id: 9, current: 4, target: 10 })],
     });
   });
 
@@ -661,7 +877,7 @@ describe('API adapters', () => {
     expect(characterIdFromCode(undefined)).toBeUndefined();
   });
 
-  it('maps an owned character with its CDN art and animation keys', () => {
+  it('maps an owned character with its CDN art and pose frames', () => {
     expect(
       toOwnedCharacter({
         userCharacterId: 5,
@@ -669,11 +885,10 @@ describe('API adapters', () => {
         code: 'panda',
         name: '판다',
         baseAssetKey: 'characters/panda_sitting.png',
-        animations: {
-          idle: 'characters/panda/animations/idle.webp',
-          poseCycle: 'characters/panda/animations/pose-cycle.webp',
-          wave: 'characters/panda/animations/wave.webp',
-        },
+        poses: [
+          { id: 2, assetKey: 'characters/panda/poses/wiggle.webp', sortOrder: 20 },
+          { id: 1, assetKey: 'characters/panda/poses/idle.webp', sortOrder: 10 },
+        ],
         selected: true,
       }),
     ).toEqual({
@@ -681,12 +896,58 @@ describe('API adapters', () => {
       id: 'panda',
       name: '판다',
       assetKey: 'characters/panda_sitting.png',
-      animations: {
-        idle: 'characters/panda/animations/idle.webp',
-        poseCycle: 'characters/panda/animations/pose-cycle.webp',
-        wave: 'characters/panda/animations/wave.webp',
-      },
+      frames: ['characters/panda/poses/idle.webp', 'characters/panda/poses/wiggle.webp'],
       selected: true,
+    });
+  });
+
+  it('poses[] wins over the legacy animation set, and non-CDN keys drop (#735)', () => {
+    const legacy = {
+      idle: 'characters/cat/animations/idle.webp',
+      poseCycle: 'characters/cat/animations/pose-cycle.webp',
+      wave: 'characters/cat/animations/wave.gif',
+    };
+
+    // 등록된 포즈가 있으면 그 순서가 유일한 진실 — 레거시 3칸은 무시된다.
+    expect(
+      toCharacterFrames(
+        [
+          { id: 3, assetKey: 'characters/cat/poses/wink.webp', sortOrder: 30 },
+          { id: 1, assetKey: 'characters/cat/poses/head.webp', sortOrder: 10 },
+          // CDN 키가 아니면 그리지 못하므로 조용히 버린다.
+          { id: 4, assetKey: 'legacy/cat.webp', sortOrder: 40 },
+          { id: 2, assetKey: 'characters/cat/poses/ear.webp', sortOrder: 20 },
+        ],
+        legacy,
+      ),
+    ).toEqual([
+      'characters/cat/poses/head.webp',
+      'characters/cat/poses/ear.webp',
+      'characters/cat/poses/wink.webp',
+    ]);
+
+    // 포즈 미등록 캐릭터는 레거시 idle → poseCycle → wave 순서로 폴백.
+    expect(toCharacterFrames(undefined, legacy)).toEqual([
+      'characters/cat/animations/idle.webp',
+      'characters/cat/animations/pose-cycle.webp',
+      'characters/cat/animations/wave.gif',
+    ]);
+    expect(toCharacterFrames([], undefined)).toEqual([]);
+  });
+
+  it('builds the master frames map, skipping characters with no art (#735)', () => {
+    expect(
+      toCharacterFramesMap([
+        { id: 1, code: 'cat', poses: [{ id: 1, assetKey: 'characters/cat/poses/idle.webp' }] },
+        { id: 2, code: 'otter', animations: { wave: 'characters/otter/animations/wave.webp' } },
+        // 프레임이 하나도 없으면 맵에서 빠진다 — 번들 정적 포즈로 폴백.
+        { id: 3, code: 'panda' },
+        // 앱이 모르는 코드는 캐릭터 id로 접힐 수 없다.
+        { id: 4, code: 'dragon', poses: [{ id: 9, assetKey: 'characters/dragon/idle.webp' }] },
+      ]),
+    ).toEqual({
+      cat: ['characters/cat/poses/idle.webp'],
+      otter: ['characters/otter/animations/wave.webp'],
     });
   });
 
@@ -703,8 +964,16 @@ describe('API adapters', () => {
       id: 'cat',
       name: '고양이',
       assetKey: undefined,
-      animations: undefined,
+      frames: [],
       selected: false,
     });
+  });
+
+  it('toSearchHouse falls back to id 0 when the summary lacks houseId (#544)', () => {
+    // houseId number 전환 후의 결측 폴백 안전망 — 서버 스키마가 전부 옵셔널이라
+    // 결측 시에도 리스트 렌더가 깨지지 않아야 한다.
+    const house = toSearchHouse({ name: '이름뿐인 집' });
+    expect(house.id).toBe(0);
+    expect(house.name).toBe('이름뿐인 집');
   });
 });

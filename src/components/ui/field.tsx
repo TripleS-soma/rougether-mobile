@@ -2,7 +2,7 @@ import { type ReactNode } from 'react';
 import { StyleSheet, Text, TextInput, type TextInputProps, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
-import { useTokens } from '@/hooks/use-tokens';
+import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
 export type FieldProps = {
   value: string;
@@ -34,11 +34,18 @@ export function Field({
   ...input
 }: FieldProps) {
   const t = useTokens();
-  const borderColor = error ? '#E89A9A' : success ? t.primary : 'transparent';
+  const emph = useFontEmphasis();
+  const Typography = useTypography();
+  const borderColor = error ? t.danger : success ? t.primary : 'transparent';
 
   return (
     <View style={styles.wrap}>
-      {label ? <Text style={[styles.label, { color: t.textMuted }]}>{label}</Text> : null}
+      {label ? (
+        <Text
+          style={[Typography.supporting, emph('semibold'), styles.label, { color: t.textMuted }]}>
+          {label}
+        </Text>
+      ) : null}
       <View style={[styles.box, { backgroundColor: t.surfaceMuted, borderColor }]}>
         <TextInput
           style={[styles.input, { color: t.text }]}
@@ -50,9 +57,11 @@ export function Field({
         />
         {trailing}
       </View>
-      {error ? <Text style={[styles.msg, { color: '#D67878' }]}>{error}</Text> : null}
+      {error ? (
+        <Text style={[Typography.supporting, styles.msg, { color: t.danger }]}>{error}</Text>
+      ) : null}
       {!error && success ? (
-        <Text style={[styles.msg, { color: t.primaryText }]}>{success}</Text>
+        <Text style={[Typography.supporting, styles.msg, { color: t.primaryText }]}>{success}</Text>
       ) : null}
     </View>
   );
@@ -63,8 +72,6 @@ const styles = StyleSheet.create({
     gap: Spacing.half,
   },
   label: {
-    fontSize: 12,
-    fontWeight: '600',
     marginLeft: Spacing.one,
   },
   box: {
@@ -78,11 +85,10 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 16,
     paddingVertical: Spacing.half,
   },
   msg: {
-    fontSize: 12,
     marginLeft: Spacing.one,
   },
 });

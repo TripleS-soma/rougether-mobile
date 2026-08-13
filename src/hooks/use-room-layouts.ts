@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { getSessionUserId } from '@/api/auth';
 import { loadRoomLayout, saveRoomLayout } from '@/lib/room-layout-store';
-import type { House } from '@/components/screens/group-house-screen';
+import type { House } from '@/components/screens/house-screen';
 import {
   applyRoomLayout,
   layoutFromHouse,

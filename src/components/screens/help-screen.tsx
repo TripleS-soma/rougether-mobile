@@ -3,9 +3,9 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
 import { ScreenHeader } from '@/components/ui/screen-header';
-import { Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
-import { useTokens } from '@/hooks/use-tokens';
+import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
 const FAQS: { q: string; a: string }[] = [
   {
@@ -38,14 +38,24 @@ export type HelpScreenProps = {
  */
 export function HelpScreen({ appVersion = '1.0.0', onContact, onBack }: HelpScreenProps) {
   const t = useTokens();
+  const Typography = useTypography();
+  const emph = useFontEmphasis();
   const [openIdx, setOpenIdx] = useState<number | null>(null);
 
   return (
-    <View style={[styles.screen, useScreenStyle()]}>
+    <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader title="도움말" onBack={onBack} />
 
       <ScrollView contentContainerStyle={styles.body}>
-        <Text style={[styles.sectionTitle, { color: t.textMuted }]}>자주 묻는 질문</Text>
+        <Text
+          style={[
+            Typography.supporting,
+            emph('semibold'),
+            styles.sectionTitle,
+            { color: t.textMuted },
+          ]}>
+          자주 묻는 질문
+        </Text>
         <View style={[styles.card, { backgroundColor: t.surface }]}>
           {FAQS.map((faq, idx) => {
             const open = openIdx === idx;
@@ -79,7 +89,15 @@ export function HelpScreen({ appVersion = '1.0.0', onContact, onBack }: HelpScre
           })}
         </View>
 
-        <Text style={[styles.sectionTitle, { color: t.textMuted }]}>지원</Text>
+        <Text
+          style={[
+            Typography.supporting,
+            emph('semibold'),
+            styles.sectionTitle,
+            { color: t.textMuted },
+          ]}>
+          지원
+        </Text>
         <View style={[styles.card, { backgroundColor: t.surface }]}>
           <Pressable
             onPress={onContact}
@@ -91,7 +109,9 @@ export function HelpScreen({ appVersion = '1.0.0', onContact, onBack }: HelpScre
           </Pressable>
         </View>
 
-        <Text style={[styles.version, { color: t.textMuted }]}>버전 {appVersion}</Text>
+        <Text style={[Typography.supporting, styles.version, { color: t.textMuted }]}>
+          버전 {appVersion}
+        </Text>
       </ScrollView>
     </View>
   );
@@ -109,8 +129,6 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   sectionTitle: {
-    fontSize: 12,
-    fontWeight: '600',
     paddingHorizontal: Spacing.two,
     marginTop: Spacing.two,
   },
@@ -141,7 +159,6 @@ const styles = StyleSheet.create({
   },
   version: {
     textAlign: 'center',
-    fontSize: 12,
     marginTop: Spacing.three,
   },
 });

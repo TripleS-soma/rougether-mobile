@@ -1,4 +1,7 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
+
+import { State } from 'react-native-gesture-handler';
+import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
 import { ToastProvider } from '@/components/ui/toast';
@@ -42,11 +45,86 @@ describe('FriendRoomScreen', () => {
     expect(unwired.queryByText('최근 활동')).toBeNull();
   });
 
-  it('fires onCheer with the chosen reaction', async () => {
+  it('첫 탭 후 5초 연타 윈도우 — 연타는 전송 0, 5초 지점에 1회만 (#491)', async () => {
+    jest.useFakeTimers();
     const onCheer = jest.fn();
     const { getByText } = await render(<FriendRoomScreen onCheer={onCheer} />);
+
+    // 윈도우 안의 연타는 연출만 — 요청이 나가지 않는다.
     await fireEvent.press(getByText('응원하기'));
+    await fireEvent.press(getByText('응원하기'));
+    await fireEvent.press(getByText('응원하기'));
+    expect(onCheer).not.toHaveBeenCalled();
+
+    await act(async () => {
+      jest.advanceTimersByTime(5000);
+    });
+    expect(onCheer).toHaveBeenCalledTimes(1);
     expect(onCheer).toHaveBeenCalledWith('support');
+    jest.useRealTimers();
+  });
+
+  it('윈도우가 끝나기 전에 나가면 미전송 응원을 flush한다 (#491)', async () => {
+    jest.useFakeTimers();
+    const onCheer = jest.fn();
+    const ui = await render(<FriendRoomScreen onCheer={onCheer} />);
+    await fireEvent.press(ui.getByText('응원하기'));
+    expect(onCheer).not.toHaveBeenCalled();
+
+    await act(async () => {
+      ui.unmount(); // 5초 전 이탈 — 나가면서 전송.
+    });
+    expect(onCheer).toHaveBeenCalledTimes(1);
+    expect(onCheer).toHaveBeenCalledWith('support');
+    jest.useRealTimers();
+  });
+
+  it('같은 타입 재요청은 확인 모달을 거친다 — 취소는 미전송, 보내기는 전송 (#427)', async () => {
+    jest.useFakeTimers();
+    const onCheer = jest.fn();
+    const { getByText, getByLabelText, queryByText } = await render(
+      <FriendRoomScreen onCheer={onCheer} />,
+    );
+
+    // 첫 요청은 모달 없이 — 5초 윈도우가 끝나면 전송 (#491).
+    await fireEvent.press(getByText('응원하기'));
+    await act(async () => {
+      jest.advanceTimersByTime(5000);
+    });
+    expect(onCheer).toHaveBeenCalledTimes(1);
+
+    // 전송이 끝난 같은 타입 재탭 → 전송 대신 확인 모달.
+    await fireEvent.press(getByText('응원하기'));
+    expect(onCheer).toHaveBeenCalledTimes(1);
+    expect(getByText('오늘은 이미 보낸 응원이에요. 그래도 보낼까요?')).toBeTruthy();
+
+    // 취소 → 닫히고 미전송.
+    await fireEvent.press(getByLabelText('응원 다시 보내기 취소'));
+    expect(queryByText('응원 다시 보내기')).toBeNull();
+    expect(onCheer).toHaveBeenCalledTimes(1);
+
+    // 재탭 → 보내기 확인 → 전송 시도.
+    await fireEvent.press(getByText('응원하기'));
+    await fireEvent.press(getByLabelText('응원 다시 보내기 확인'));
+    expect(onCheer).toHaveBeenCalledTimes(2);
+    expect(onCheer).toHaveBeenLastCalledWith('support');
+    jest.useRealTimers();
+  });
+
+  it('다른 타입 응원은 각자 윈도우로 모달 없이 전송된다 (#427/#491)', async () => {
+    jest.useFakeTimers();
+    const onCheer = jest.fn();
+    const { getByText, queryByText } = await render(<FriendRoomScreen onCheer={onCheer} />);
+    await fireEvent.press(getByText('응원하기'));
+    await fireEvent.press(getByText('잘하고 있어!'));
+    expect(queryByText('오늘은 이미 보낸 응원이에요. 그래도 보낼까요?')).toBeNull();
+    await act(async () => {
+      jest.advanceTimersByTime(5000);
+    });
+    expect(onCheer).toHaveBeenCalledTimes(2);
+    expect(onCheer).toHaveBeenCalledWith('support');
+    expect(onCheer).toHaveBeenCalledWith('great');
+    jest.useRealTimers();
   });
 
   it('renders the server guestbook and writes through the API callback', async () => {
@@ -132,5 +210,74 @@ describe('FriendRoomScreen', () => {
     await fireEvent.changeText(getByLabelText('방명록 입력'), '데모 방명록');
     await fireEvent.press(getByLabelText('방명록 남기기'));
     expect(getByText('데모 방명록')).toBeTruthy();
+  });
+
+  // 방문 실패는 빈 방으로 위장하지 않는다 (#549).
+  it('로드 실패 시 방 대신 실패 상태 + 다시 시도를 보여준다 (#549)', async () => {
+    const onRetry = jest.fn();
+    const { getByText, getByLabelText, queryByText } = await render(
+      <FriendRoomScreen friendName="민지" loadError onRetry={onRetry} />,
+    );
+
+    expect(getByText('친구 방을 불러오지 못했어요')).toBeTruthy();
+    // 방·루틴 섹션은 렌더하지 않는다.
+    expect(queryByText('민지의 루틴')).toBeNull();
+    await fireEvent.press(getByLabelText('다시 시도'));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  // 카테고리 그룹핑 (#528, 서버 #237) — 메타가 있으면 본인 화면처럼 그룹으로,
+  // 메타에 없는 항목은 미분류로.
+  it('카테고리 메타가 있으면 루틴을 그룹 헤더 아래 묶는다', async () => {
+    const { getByText, queryByText } = await render(
+      <FriendRoomScreen
+        friendName="민지"
+        routines={[
+          { id: '1', title: '아침 기상', kind: 'routine', completed: true, category: '3' },
+          { id: '2', title: '비밀 루틴', kind: 'routine', completed: false, category: '99' },
+        ]}
+        categories={[
+          { id: '3', name: '건강', icon: 'dumbbell', color: '#FF8800', visibility: 'neighbor' },
+        ]}
+      />,
+    );
+    expect(getByText('건강')).toBeTruthy();
+    expect(getByText('1/1')).toBeTruthy(); // 건강 그룹 완료 카운트
+    expect(getByText('미분류')).toBeTruthy(); // 메타 없는 categoryId 99
+    expect(queryByText('없어요')).toBeNull();
+  });
+
+  it('카테고리 메타가 없으면 기존 플랫 목록 그대로다', async () => {
+    const { getByText, queryByText } = await render(
+      <FriendRoomScreen
+        friendName="민지"
+        routines={[{ id: '1', title: '아침 기상', kind: 'routine', completed: false }]}
+      />,
+    );
+    expect(getByText('아침 기상')).toBeTruthy();
+    expect(queryByText('미분류')).toBeNull();
+  });
+});
+
+describe('FriendRoomScreen — 멤버 순회 플링 (#644)', () => {
+  const fling = (translationX: number) =>
+    fireGestureHandler(getByGestureTestId('friend-room-fling'), [
+      { state: State.BEGAN },
+      { state: State.ACTIVE, translationX: 0 },
+      { state: State.ACTIVE, translationX },
+      { state: State.END, translationX },
+    ]);
+
+  it('방 캔버스 좌우 플링이 방향과 함께 onSwipeFriend를 부른다', async () => {
+    const onSwipeFriend = jest.fn();
+    await render(<FriendRoomScreen friendName="철수" onSwipeFriend={onSwipeFriend} />);
+    fling(-80);
+    expect(onSwipeFriend).toHaveBeenCalledWith('left');
+    fling(80);
+    expect(onSwipeFriend).toHaveBeenCalledWith('right');
+    // 임계 미만은 무시.
+    onSwipeFriend.mockClear();
+    fling(-20);
+    expect(onSwipeFriend).not.toHaveBeenCalled();
   });
 });

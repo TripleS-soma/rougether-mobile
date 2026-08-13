@@ -14,6 +14,9 @@ export function useNotifications() {
   const [entries, setEntries] = useState<NotificationEntry[] | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [hasNext, setHasNext] = useState(false);
+  // 첫 페이지 로드 실패 (#549) — 화면이 빈 상태('알림 없음')와 구분해
+  // 실패+다시 시도를 보여준다. 재시도 성공 시 해제.
+  const [error, setError] = useState(false);
   const { show: toast } = useToast();
   const cursorRef = useRef<number | undefined>(undefined);
 
@@ -22,15 +25,17 @@ export function useNotifications() {
   /** (Re)load the first page. */
   const load = useCallback(async () => {
     setLoading(true);
+    setError(false);
     try {
       const page = await fetchNotifications();
       cursorRef.current = page.nextCursor ?? undefined;
       setEntries((page.items ?? []).map(toNotificationEntry));
       setHasNext(!!page.hasNext);
     } catch {
-      // Keep whatever was on screen; a fresh open just shows the empty state.
+      // Keep whatever was on screen; a fresh open shows the error state (#549).
       setEntries((prev) => prev ?? []);
       setHasNext(false);
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -74,5 +79,5 @@ export function useNotifications() {
     }
   }, [entries, toast]);
 
-  return { entries, unreadCount, loading, hasNext, load, loadMore, markRead, markAllRead };
+  return { entries, unreadCount, loading, hasNext, error, load, loadMore, markRead, markAllRead };
 }

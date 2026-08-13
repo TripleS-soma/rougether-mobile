@@ -1,63 +1,14 @@
-import { ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
-import { galleryEntries } from '@/dev/registry';
+import { Redirect } from 'expo-router';
 
 /**
- * Component gallery — the visual half of the dev/test harness. Lists every
- * entry from `src/dev/registry.tsx` so components can be previewed in isolation.
+ * /dev — component gallery route. Dev/test harness only: production builds
+ * redirect home (the route stays reachable via deep link otherwise), and the
+ * inline require lets Metro drop the gallery + registry from the prod bundle
+ * (__DEV__ is inlined at build time, so the branch below is dead code there).
  */
-export default function DevGalleryScreen() {
-  return (
-    <ThemedView style={styles.flex}>
-      <SafeAreaView style={styles.flex} edges={['top']}>
-        <ScrollView contentContainerStyle={styles.content}>
-          <View style={styles.header}>
-            <ThemedText type="subtitle">Component gallery</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              {galleryEntries.length} entries · edit src/dev/registry.tsx to add more
-            </ThemedText>
-          </View>
-
-          {galleryEntries.map((entry) => (
-            <View key={entry.name} style={styles.entry}>
-              <ThemedText type="smallBold">{entry.name}</ThemedText>
-              {entry.description ? (
-                <ThemedText type="small" themeColor="textSecondary">
-                  {entry.description}
-                </ThemedText>
-              ) : null}
-              <ThemedView type="backgroundElement" style={styles.preview}>
-                {entry.render()}
-              </ThemedView>
-            </View>
-          ))}
-        </ScrollView>
-      </SafeAreaView>
-    </ThemedView>
-  );
+export default function DevGalleryRoute() {
+  if (!__DEV__) return <Redirect href="/" />;
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { DevGallery } = require('@/dev/gallery') as typeof import('@/dev/gallery');
+  return <DevGallery />;
 }
-
-const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-  content: {
-    padding: Spacing.three,
-    gap: Spacing.four,
-  },
-  header: {
-    gap: Spacing.one,
-  },
-  entry: {
-    gap: Spacing.two,
-  },
-  preview: {
-    padding: Spacing.three,
-    borderRadius: Spacing.three,
-    alignItems: 'flex-start',
-  },
-});

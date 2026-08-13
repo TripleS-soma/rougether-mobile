@@ -2,26 +2,16 @@ import { Image } from 'expo-image';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { type HouseCover, HouseCoverPicker } from '@/components/house-cover-picker';
+import { type HouseCover, HouseCoverPicker } from '@/components/room/house-cover-picker';
 import { Icon } from '@/components/ui/icon';
-import { CrownPictogram, Pictogram, type PictogramName } from '@/components/ui/pictograms';
-import { Radius, Spacing, Typography } from '@/constants/theme';
+import { CrownPictogram, Pictogram } from '@/components/ui/pictograms';
+import { Radius, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
-import { useTokens } from '@/hooks/use-tokens';
+import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { HOUSE_PRIVATE_ACCENT, HOUSE_THEME_PRESETS } from '@/constants/house-themes';
 import { assetSource } from '@/resources/asset';
 
-const PRIVATE_ACCENT = '#D4A574';
-
-type Theme = { id: string; label: string; icon: PictogramName; bg: string; border: string };
-const THEMES: Theme[] = [
-  { id: 'morning', label: '기상', icon: 'sunrise', bg: '#FFEFD8', border: '#F0C88A' },
-  { id: 'study', label: '공부', icon: 'book', bg: '#E4DCF0', border: '#B8A8D8' },
-  { id: 'code', label: '코딩', icon: 'laptop', bg: '#E4F0DC', border: '#A8C898' },
-  { id: 'fitness', label: '운동', icon: 'dumbbell', bg: '#FBE0E0', border: '#E8B0A0' },
-  { id: 'health', label: '건강', icon: 'water', bg: '#D8E8F0', border: '#A8C4D8' },
-  { id: 'hobby', label: '취미', icon: 'palette', bg: '#F5E1D8', border: '#E8B8A8' },
-];
 const CAPACITIES = [2, 3, 4, 6, 8];
 
 export type CreateHouseInput = {
@@ -48,6 +38,8 @@ export type CreateHouseScreenProps = {
  */
 export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouseScreenProps) {
   const t = useTokens();
+  const Typography = useTypography();
+  const emph = useFontEmphasis();
   const headerInset = useHeaderInsetStyle();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -56,7 +48,7 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
   const [capacity, setCapacity] = useState(4);
   const [isPrivate, setIsPrivate] = useState(false);
 
-  const theme = THEMES.find((x) => x.id === themeId) ?? THEMES[0];
+  const theme = HOUSE_THEME_PRESETS.find((x) => x.id === themeId) ?? HOUSE_THEME_PRESETS[0];
   const canSubmit = name.trim().length >= 2;
   const { show: toast } = useToast();
 
@@ -84,6 +76,7 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
                 source={assetSource(coverKey)}
                 style={styles.previewCover}
                 contentFit="cover"
+                cachePolicy="memory-disk"
                 accessibilityLabel="선택한 대표 이미지"
                 testID="preview-cover"
               />
@@ -140,16 +133,32 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
         {/* Cover image (server catalog) — hidden while the catalog is empty */}
         {covers.length > 0 ? (
           <View style={[styles.card, { backgroundColor: t.surface }]}>
-            <Text style={[styles.sectionLabel, { color: t.textMuted }]}>대표 이미지</Text>
+            <Text
+              style={[
+                Typography.supporting,
+                emph('semibold'),
+                styles.sectionLabel,
+                { color: t.textMuted },
+              ]}>
+              대표 이미지
+            </Text>
             <HouseCoverPicker covers={covers} selectedKey={coverKey} onSelect={setCoverKey} />
           </View>
         ) : null}
 
         {/* Theme */}
         <View style={[styles.card, { backgroundColor: t.surface }]}>
-          <Text style={[styles.sectionLabel, { color: t.textMuted }]}>테마 선택</Text>
+          <Text
+            style={[
+              Typography.supporting,
+              emph('semibold'),
+              styles.sectionLabel,
+              { color: t.textMuted },
+            ]}>
+            테마 선택
+          </Text>
           <View style={styles.themeGrid}>
-            {THEMES.map((x) => {
+            {HOUSE_THEME_PRESETS.map((x) => {
               const selected = x.id === themeId;
               return (
                 <Pressable
@@ -165,7 +174,9 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
                     },
                   ]}>
                   <Pictogram name={x.icon} size={22} />
-                  <Text style={[styles.themeLabel, { color: t.text }]}>{x.label}</Text>
+                  <Text style={[Typography.supporting, emph('semibold'), { color: t.text }]}>
+                    {x.label}
+                  </Text>
                 </Pressable>
               );
             })}
@@ -175,7 +186,15 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
         {/* Capacity */}
         <View style={[styles.card, { backgroundColor: t.surface }]}>
           <View style={styles.capacityHead}>
-            <Text style={[styles.sectionLabel, { color: t.textMuted }]}>정원</Text>
+            <Text
+              style={[
+                Typography.supporting,
+                emph('semibold'),
+                styles.sectionLabel,
+                { color: t.textMuted },
+              ]}>
+              정원
+            </Text>
             <Text style={[Typography.label, { color: t.primaryText }]}>{capacity}명</Text>
           </View>
           <View style={styles.capRow}>
@@ -186,6 +205,7 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
                   key={n}
                   onPress={() => setCapacity(n)}
                   accessibilityRole="button"
+                  accessibilityState={{ selected }}
                   style={[
                     styles.capBtn,
                     { backgroundColor: selected ? t.primary : t.surfaceMuted },
@@ -201,7 +221,15 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
 
         {/* Privacy */}
         <View style={[styles.card, { backgroundColor: t.surface }]}>
-          <Text style={[styles.sectionLabel, { color: t.textMuted }]}>공개 설정</Text>
+          <Text
+            style={[
+              Typography.supporting,
+              emph('semibold'),
+              styles.sectionLabel,
+              { color: t.textMuted },
+            ]}>
+            공개 설정
+          </Text>
           <View style={styles.privacyRow}>
             <PrivacyCard
               selected={!isPrivate}
@@ -213,7 +241,7 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
             />
             <PrivacyCard
               selected={isPrivate}
-              accent={PRIVATE_ACCENT}
+              accent={HOUSE_PRIVATE_ACCENT}
               title="비공개"
               subtitle="초대코드로만 입장 가능"
               onPress={() => setIsPrivate(true)}
@@ -224,7 +252,15 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
 
         {/* Invite code: issued by the server on creation */}
         <View style={[styles.card, { backgroundColor: t.surface }]}>
-          <Text style={[styles.sectionLabel, { color: t.textMuted }]}>초대코드</Text>
+          <Text
+            style={[
+              Typography.supporting,
+              emph('semibold'),
+              styles.sectionLabel,
+              { color: t.textMuted },
+            ]}>
+            초대코드
+          </Text>
           <Text style={[styles.hint, { color: t.textMuted }]}>
             집을 만들면 초대코드가 자동으로 발급돼요. 집 화면의 구성원 관리에서 확인하고 친구에게
             공유할 수 있어요.
@@ -267,9 +303,19 @@ function Labeled({
   t: ReturnType<typeof useTokens>;
   children: React.ReactNode;
 }) {
+  const emph = useFontEmphasis();
+  const Typography = useTypography();
   return (
     <View style={styles.labeled}>
-      <Text style={[styles.fieldLabel, { color: t.textMuted }]}>{label}</Text>
+      <Text
+        style={[
+          Typography.supporting,
+          emph('semibold'),
+          styles.fieldLabel,
+          { color: t.textMuted },
+        ]}>
+        {label}
+      </Text>
       {children}
     </View>
   );
@@ -290,6 +336,7 @@ function PrivacyCard({
   onPress: () => void;
   t: ReturnType<typeof useTokens>;
 }) {
+  const Typography = useTypography();
   return (
     <Pressable
       onPress={onPress}
@@ -343,10 +390,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.one,
   },
-  meta: { fontSize: 11, marginTop: 2 },
+  meta: { fontSize: 13, marginTop: Spacing.half },
   labeled: { gap: Spacing.one },
-  fieldLabel: { fontSize: 12, fontWeight: '600', marginLeft: Spacing.one },
-  sectionLabel: { fontSize: 12, fontWeight: '600', marginLeft: Spacing.one },
+  fieldLabel: { marginLeft: Spacing.one },
+  sectionLabel: { marginLeft: Spacing.one },
   inputBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -355,8 +402,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
   },
-  input: { flex: 1, fontSize: 14, paddingVertical: Spacing.half },
-  counter: { fontSize: 10 },
+  input: { flex: 1, fontSize: 16, paddingVertical: Spacing.half },
+  counter: { fontSize: 12 },
   themeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   themeCell: {
     width: '31%',
@@ -366,7 +413,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.half,
   },
-  themeLabel: { fontSize: 12, fontWeight: '600' },
   capacityHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   capRow: { flexDirection: 'row', gap: Spacing.two },
   capBtn: {
@@ -383,7 +429,7 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     gap: Spacing.half,
   },
-  privacySub: { fontSize: 11 },
+  privacySub: { fontSize: 13 },
   codeRow: { flexDirection: 'row', gap: Spacing.two },
   codeBox: {
     flex: 1,
@@ -392,15 +438,13 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     justifyContent: 'center',
   },
-  codeText: { fontSize: 14, fontWeight: '700', letterSpacing: 2 },
   codeBtn: {
     paddingHorizontal: Spacing.three,
     borderRadius: Radius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  codeBtnText: { fontSize: 13, fontWeight: '600' },
-  hint: { fontSize: 11, marginLeft: Spacing.one },
+  hint: { fontSize: 13, marginLeft: Spacing.one },
   submit: {
     marginTop: Spacing.two,
     paddingVertical: Spacing.three,

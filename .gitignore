@@ -24,6 +24,9 @@ expo-env.d.ts
 # Metro
 .metro-health-check*
 
+# Watchman
+.watchman-cookie-*
+
 # debug
 npm-debug.*
 yarn-debug.*
@@ -51,3 +54,16 @@ example
 *.jks
 *.keystore
 *.mobileprovision
+
+# ASC API key — CI가 시크릿(ASC_API_KEY_P8)에서 복원; 로컬 제출 시 ~/credentials에서 복사
+asc-api-key.p8
+
+# 로컬 EAS 빌드 산출물
+*.apk
+*.aab
+*.ipa
+rougether-preview.apk.zip
+*.apk.zip
+
+# Play 제출 서비스 계정 키 (콘솔에서 발급, 커밋 금지)
+play-service-account.json

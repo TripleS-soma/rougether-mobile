@@ -4,9 +4,9 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { PendingNotice } from '@/components/ui/pending-notice';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
-import { Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
-import { useTokens } from '@/hooks/use-tokens';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 export type SoundSettings = {
   effects: boolean;
@@ -43,6 +43,7 @@ export function SoundSettingsScreen({
   onBack,
 }: SoundSettingsScreenProps) {
   const t = useTokens();
+  const Typography = useTypography();
   const [settings, setSettings] = useState(initialSettings);
 
   const toggle = (key: keyof SoundSettings) => {
@@ -52,7 +53,7 @@ export function SoundSettingsScreen({
   };
 
   return (
-    <View style={[styles.screen, useScreenStyle()]}>
+    <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader title="효과음" onBack={onBack} />
 
       <ScrollView contentContainerStyle={styles.body}>

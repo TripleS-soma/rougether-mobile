@@ -18,7 +18,7 @@ npm start        # Expo dev server — press i / a / w for iOS / Android / web
 
 - **Component gallery** — the `Dev` tab (`/dev` route) renders every component registered in
   [`src/dev/registry.tsx`](src/dev/registry.tsx) in isolation, on device / simulator / web.
-  Add an entry when you build a new component. [`SampleButton`](src/components/sample-button.tsx)
+  Add an entry when you build a new component. [`BearCheck`](src/components/ui/bear-check.tsx)
   is the reference pattern (pure RN, theme-aware, testable).
 - **Routing** — file-based via Expo Router. Routes live in [`src/app`](src/app); tabs are wired
   in [`src/components/app-tabs.tsx`](src/components/app-tabs.tsx) (native) and `app-tabs.web.tsx` (web).

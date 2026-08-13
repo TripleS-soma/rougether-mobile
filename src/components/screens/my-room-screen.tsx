@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   Dimensions,
+  type GestureResponderEvent,
   Keyboard,
   KeyboardAvoidingView,
-  Modal,
+  LayoutAnimation,
   Platform,
   Pressable,
   ScrollView,
@@ -13,20 +15,51 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { GestureDetector } from 'react-native-gesture-handler';
 
-import { CharacterAvatar, type CharacterAnimationSet } from '@/components/character-avatar';
-import { Room } from '@/components/room/room';
-import { CategoryManagerSheet } from '@/components/screens/sheets/category-manager-sheet';
+import { NavMenuPopover } from '@/components/app/nav-menu-popover';
+import { FlyingCoin } from '@/components/screens/my-room/flying-coin';
+import { isScheduledOn } from '@/components/screens/my-room/schedule';
+import {
+  type DragSlot,
+  type DropTarget,
+  isRejectedDrop,
+  reorderedIds,
+  resolveDrop,
+} from '@/components/screens/my-room/routine-drag';
+import { applyRoutineOrder } from '@/hooks/use-routine-order';
+import {
+  useAnimatedValue,
+  useConstant,
+  useLatestRef,
+  useStableCallback,
+} from '@/hooks/use-stable-value';
+import type { WalletHistoryEntry } from '@/api/adapters';
+import { QuickAddRow } from '@/components/screens/my-room/quick-add-row';
+import { RoutineRow } from '@/components/screens/my-room/routine-row';
+import { WalletHistorySheet } from '@/components/screens/sheets/wallet-history-sheet';
+import { useWidgetRoomCapture } from '@/components/screens/my-room/use-widget-room-capture';
+import { Room, type RoomSceneProps } from '@/components/room/room';
 import {
   CharacterPickerSheet,
   type OwnedCharacter,
 } from '@/components/screens/sheets/character-picker-sheet';
+import { CategoryFormSheet } from '@/components/screens/sheets/category-form-sheet';
+import { DateEditSheet } from '@/components/screens/sheets/date-edit-sheet';
+import { RenameDialog } from '@/components/screens/sheets/rename-dialog';
+import { RoutineMenuSheet } from '@/components/screens/sheets/routine-menu-sheet';
 import { TimePickerSheet } from '@/components/screens/sheets/time-picker-sheet';
+import { TodoDateDialog } from '@/components/screens/sheets/todo-date-dialog';
 import { Calendar } from '@/components/ui/calendar';
+import { CoachTarget } from '@/components/ui/coach-mark';
+import { CategoryIcon } from '@/components/ui/category-icon';
+import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
 import { Pictogram } from '@/components/ui/pictograms';
+import { RetryState } from '@/components/ui/retry-state';
+import { SpringProgressBar } from '@/components/ui/spring-progress';
 import { useToast } from '@/components/ui/toast';
 import { WalletPills } from '@/components/ui/wallet-pills';
-import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
+import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import {
   type CategoryVisibility,
   ROUTINE_CATEGORIES,
@@ -36,74 +69,21 @@ import {
   VISIBILITY_ICONS,
   VISIBILITY_LABELS,
 } from '@/constants/routines';
-import { Icon, type IconName } from '@/components/ui/icon';
-import { Radius, Spacing, Typography } from '@/constants/theme';
-import { captureVerificationPhoto } from '@/lib/photo-verify';
+import { Icon } from '@/components/ui/icon';
+import { ScalePressable } from '@/components/ui/scale-pressable';
+import { Radius, Spacing } from '@/constants/theme';
 import { saveRoomImage } from '@/lib/room-capture';
-import { DEFAULT_WALLPAPER_ID, type FurnitureItem, type Wallpaper } from '@/resources/furniture';
+import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
-import { useTokens } from '@/hooks/use-tokens';
+import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
-import { formatDate, formatTime, todayIso } from '@/utils/datetime';
+import { formatDate, todayIso } from '@/utils/datetime';
+import { horizontalFlingGesture } from '@/utils/gesture';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
 
-/** Weekday (0 = Sun) of a local "YYYY-MM-DD" date. */
-const weekdayOf = (dateIso: string) => {
-  const [y, m, d] = dateIso.split('-').map(Number);
-  return new Date(y, m - 1, d).getDay();
-};
-
-/** Local Date at midnight from "YYYY-MM-DD". */
-const localDate = (dateIso: string) => {
-  const [y, m, d] = dateIso.split('-').map(Number);
-  return new Date(y, m - 1, d);
-};
-
-/**
- * Biweekly parity: scheduled on even week-distances from the startDate's week
- * (the server counts the startsOn week as week 1 and repeats every 2 weeks;
- * weeks anchor on Monday, matching KST server behavior).
- */
-const inBiweeklyWeek = (dateIso: string, startIso: string) => {
-  const mondayOf = (d: Date) => {
-    const shifted = new Date(d);
-    shifted.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-    return shifted;
-  };
-  const weekMs = 7 * 24 * 60 * 60 * 1000;
-  const diff = mondayOf(localDate(dateIso)).getTime() - mondayOf(localDate(startIso)).getTime();
-  return Math.round(diff / weekMs) % 2 === 0;
-};
-
-/**
- * Whether an item is scheduled on a date: todos by dueDate; routines by their
- * start/end range and repeat cadence (daily / weekly / biweekly / monthly /
- * yearly — same rules the server applies to /today and /calendar). Shared by
- * the 방 tab (today) and the 달력 tab (selected date) so both always agree.
- */
-const isScheduledOn = (r: Routine, dateIso: string) => {
-  if (r.kind === 'todo') return r.dueDate === dateIso;
-  if (r.startDate && dateIso < r.startDate) return false;
-  if (r.endDate && dateIso > r.endDate) return false;
-  const repeat = r.repeat ?? (r.days && r.days.length ? 'weekly' : 'daily');
-  const [, month, day] = dateIso.split('-').map(Number);
-  switch (repeat) {
-    case 'weekly':
-      return !r.days?.length || r.days.includes(weekdayOf(dateIso));
-    case 'biweekly':
-      return (
-        (!r.days?.length || r.days.includes(weekdayOf(dateIso))) &&
-        (!r.startDate || inBiweeklyWeek(dateIso, r.startDate))
-      );
-    case 'monthly':
-      // A month without that date (31st + Feb) simply skips — no clamping.
-      return r.dayOfMonth === day;
-    case 'yearly':
-      return r.month === month && r.dayOfMonth === day;
-    default:
-      return true;
-  }
-};
+// 스케줄 판정은 my-room/schedule로 이동 (#693) — 기존 임포트 경로 유지용 재수출.
+export { isScheduledOn };
 
 /**
  * One routine/todo on a calendar date (server GET /calendar). Non-today dates
@@ -119,110 +99,120 @@ export type CalendarDayItem = {
   category?: string;
 };
 
-export type MyRoomScreenProps = {
-  /** Room occupant's display name (header title becomes "{userName}의 방"). */
-  userName?: string;
-  /** Consecutive-day streak shown in the header. */
-  streakDays?: number;
-  /** Wallet balances shown in the header (완료 보상 피드백의 기준점). */
-  coinBalance?: number;
-  diaBalance?: number;
-  // Room rendering (forwarded to <Room />).
-  characterId?: CharacterId;
-  /** Worn character's CDN animation keys (forwarded to <Room />). */
-  characterAnimations?: CharacterAnimationSet;
-  wallpaperId?: string;
-  floorId?: string | null;
-  backgroundId?: string | null;
-  placedFurnitureIds?: string[];
-  furniture?: FurnitureItem[];
-  wallpapers?: Wallpaper[];
-  floors?: Wallpaper[];
-  backgrounds?: Wallpaper[];
-  // Routine list.
-  routines?: Routine[];
-  /**
-   * All categories including server-deleted ones — resolves the original
-   * name/color of past records in the 달력 tab. Defaults to `categories`.
-   */
-  allCategories?: RoutineCategoryMeta[];
-  /**
-   * Server-backed 달력 data per date (from GET /calendar). When wired together
-   * with onSelectDate, non-today dates render this read-only list; a missing
-   * date means "loading".
-   */
-  calendarDays?: Record<string, CalendarDayItem[]>;
-  /** Load a date's calendar data (fired when the user picks a date). */
-  onSelectDate?: (date: string) => void;
-  /**
-   * Toggle a server-backed 달력 item's completion on a past date. Only fired
-   * for past todos — the screen blocks future dates and past routines (the
-   * server accepts routine logs for today only) with a toast.
-   */
-  onToggleCalendarItem?: (item: CalendarDayItem, date: string) => void;
-  /**
-   * Per-routine completion log: routine id → completed dates ("YYYY-MM-DD").
-   * Mirrors the spec's routine_logs; a routine is "done" on a date when that
-   * date is present here.
-   */
-  completions?: Record<string, string[]>;
-  categories?: RoutineCategoryMeta[];
-  /** True while the routine/category data is loading (shows a spinner). */
-  loading?: boolean;
-  /** True when the initial load failed (shows an error + 다시 시도). */
-  loadError?: boolean;
-  /** Re-run the failed load (다시 시도 button). */
-  onRetry?: () => void;
-  // Callbacks (wired separately).
-  onEdit?: () => void;
-  onAddRoutine?: () => void;
-  /** Open the 알림 list (햄버거 메뉴 항목; hidden when unwired). */
-  onOpenNotifications?: () => void;
-  /** Unread notification count — >0 shows a dot on the menu button + item. */
-  unreadNotificationCount?: number;
-  /** Owned characters (햄버거 메뉴 → 캐릭터 교체 sheet; hidden when unwired). */
-  ownedCharacters?: OwnedCharacter[];
-  /** Wear the picked character (PUT /me/characters/select). */
-  onSelectCharacter?: (serverId: number) => void;
-  /** Create a category (햄버거 메뉴 → 카테고리 관리 sheet). */
-  onCreateCategory?: (category: RoutineCategoryMeta) => void;
-  onUpdateCategory?: (id: string, category: RoutineCategoryMeta) => void;
-  /** Delete a category (카테고리 관리 sheet). */
-  onDeleteCategory?: (id: string) => void;
-  /** Persist a new category order (카테고리 관리 sheet, long-press to move). */
-  onReorderCategories?: (orderedIds: string[]) => void;
-  /** Toggle a routine's completion on a specific date ("YYYY-MM-DD"). */
-  onToggleCompletion?: (id: string, date: string) => void;
-  onOpenGacha?: () => void;
-  /** Quick-add a todo to a category with a due date (the + on a category header). */
-  onQuickAddRoutine?: (category: string, title: string, dueDate: string) => void;
-  /**
-   * Categories whose quick-add(+) is hidden — 공동미션 연동 카테고리는 미션의
-   * + 버튼으로만 항목이 생겨야 하므로 임의 투두 추가를 막는다 (#272).
-   */
-  quickAddDisabledCategoryIds?: string[];
-  /** Rename a routine (kebab → 수정: name only; full edit lives in 루틴 관리). */
-  onRenameRoutine?: (id: string, title: string) => void;
-  /** Update a routine's alarm time (kebab → 시간 수정, reuses TimePickerSheet). */
-  onUpdateRoutineTime?: (id: string, alarmEnabled: boolean, time: string) => void;
-  /** Change a todo's due date (메뉴 시트 → 날짜 바꾸기, calendar sheet). */
-  onUpdateTodoDueDate?: (id: string, dueDate: string) => void;
-  /**
-   * 날짜 바꾸기 on a routine: move that day's occurrence only. The repeat
-   * schedule stays; a one-off todo with the routine's title is created on the
-   * picked date (no server per-occurrence skip yet, so the original day's
-   * instance still shows — the sheet says so).
-   */
-  onMoveRoutineOccurrence?: (id: string, dueDate: string) => void;
-  /** Delete a routine (kebab → 삭제). */
-  onDeleteRoutine?: (id: string) => void;
-  /**
-   * Capture a verification photo when completing a 인증사진형 routine; resolves to
-   * the photo URI, or null to cancel the completion. Defaults to the device
-   * camera (expo-image-picker); inject a stub in tests.
-   */
-  onRequestPhoto?: () => Promise<string | null>;
-};
+// RoomSceneProps: <Room />에 스프레드로 전달되는 씬 번들 (#691) — 내 방은
+// 캐릭터가 항상 있으므로 characterId만 null 불가로 좁힌다.
+export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
+  ScrollRestoreProps & {
+    /** Room occupant's display name (header title becomes "{userName}의 방"). */
+    userName?: string;
+    /** Consecutive-day streak shown in the header. */
+    streakDays?: number;
+    /** Wallet balances shown in the header (완료 보상 피드백의 기준점). */
+    coinBalance?: number;
+    diamondBalance?: number;
+    characterId?: CharacterId;
+    // Routine list.
+    routines?: Routine[];
+    /**
+     * All categories including server-deleted ones — resolves the original
+     * name/color of past records in the 달력 tab. Defaults to `categories`.
+     */
+    allCategories?: RoutineCategoryMeta[];
+    /**
+     * Server-backed 달력 data per date (from GET /calendar). When wired together
+     * with onSelectDate, non-today dates render this read-only list; a missing
+     * date means "loading".
+     */
+    calendarDays?: Record<string, CalendarDayItem[]>;
+    /** Load a date's calendar data (fired when the user picks a date). */
+    onSelectDate?: (date: string) => void;
+    /**
+     * Toggle a server-backed 달력 item's completion on a past date. Only fired
+     * for past todos — the screen blocks future dates and past routines (the
+     * server accepts routine logs for today only) with a toast.
+     */
+    onToggleCalendarItem?: (item: CalendarDayItem, date: string) => void;
+    /**
+     * Per-routine completion log: routine id → completed dates ("YYYY-MM-DD").
+     * Mirrors the spec's routine_logs; a routine is "done" on a date when that
+     * date is present here.
+     */
+    completions?: Record<string, string[]>;
+    categories?: RoutineCategoryMeta[];
+    /** True while the routine/category data is loading (shows a spinner). */
+    loading?: boolean;
+    /** True when the initial load failed (shows an error + 다시 시도). */
+    loadError?: boolean;
+    /** Re-run the failed load (다시 시도 button). */
+    onRetry?: () => void;
+    // Callbacks (wired separately).
+    onEdit?: () => void;
+    /** 오늘의 루틴 + 버튼 — 바로 루틴 추가 화면으로 (#335). */
+    onAddRoutine?: () => void;
+    /** 햄버거 메뉴의 루틴 관리 항목 (없으면 onAddRoutine으로 폴백). */
+    onManageRoutines?: () => void;
+    /** Open the 알림 list (햄버거 메뉴 항목; hidden when unwired). */
+    onOpenNotifications?: () => void;
+    /** Unread notification count — >0 shows a dot on the menu button + item. */
+    unreadNotificationCount?: number;
+    /** Owned characters (햄버거 메뉴 → 캐릭터 교체 sheet; hidden when unwired). */
+    ownedCharacters?: OwnedCharacter[];
+    /** Wear the picked character (PUT /me/characters/select). */
+    onSelectCharacter?: (serverId: number) => void;
+    /** 햄버거 메뉴 → 카테고리 관리 화면으로 이동 (#394). */
+    onManageCategories?: () => void;
+    /** 카테고리 헤더 탭 → 해당 카테고리 수정 시트 저장 (#541). 없으면 헤더 탭 비활성. */
+    onUpdateCategory?: (id: string, category: RoutineCategoryMeta) => void;
+    /** Toggle a routine's completion on a specific date ("YYYY-MM-DD"). */
+    /** 완료 토글 — 완료 시 서버 보상액(코인)을 resolve하면 코인 연출에 쓴다 (#444). */
+    onToggleCompletion?: (
+      id: string,
+      date: string,
+    ) => void | Promise<{ rewardAmount: number } | null | undefined>;
+    onOpenGacha?: () => void;
+    /** 당겨서 새로고침 (#454) — 서버 데이터 전체 리로드. resolve까지 발바닥이 두근거린다. */
+    onRefresh?: () => Promise<void> | void;
+    /** Quick-add a todo to a category with a due date (the + on a category header). */
+    onQuickAddRoutine?: (category: string, title: string, dueDate: string) => void;
+    /**
+     * Categories whose quick-add(+) is hidden — 공동미션 연동 카테고리는 미션의
+     * + 버튼으로만 항목이 생겨야 하므로 임의 투두 추가를 막는다 (#272).
+     */
+    quickAddDisabledCategoryIds?: string[];
+    /** Rename a routine (메뉴 시트 → 이름 변경: name only). */
+    onRenameRoutine?: (id: string, title: string) => void;
+    /** Full-edit a routine (메뉴 시트 → 루틴 수정): opens the routine editor (#465). */
+    onEditRoutine?: (routine: Routine) => void;
+    /** Update a routine's alarm time (kebab → 시간 수정, reuses TimePickerSheet). */
+    onUpdateRoutineTime?: (id: string, alarmEnabled: boolean, time: string) => void;
+    /** Change a todo's due date (메뉴 시트 → 날짜 바꾸기, calendar sheet). */
+    onUpdateTodoDueDate?: (id: string, dueDate: string) => void;
+    /**
+     * 날짜 바꾸기 on a routine: move that day's occurrence only. The repeat
+     * schedule stays; a one-off todo with the routine's title is created on the
+     * picked date (no server per-occurrence skip yet, so the original day's
+     * instance still shows — the sheet says so).
+     */
+    onMoveRoutineOccurrence?: (id: string, dueDate: string) => void;
+    /** Delete a routine (kebab → 삭제). */
+    onDeleteRoutine?: (id: string) => void;
+    /**
+     * 수동 순서 맵 (#716) — `{ [categoryId]: [routineId...] }`. 방 '오늘' 리스트의
+     * 미완료 항목을 이 순서로 정렬한다(완료는 기존대로 하단). 기기 로컬 보관.
+     */
+    routineOrder?: Record<string, string[]>;
+    /** 롱프레스 재정렬 확정 — 해당 카테고리의 새 루틴 id 순서(미완료 기준). */
+    onReorderRoutines?: (categoryId: string, orderedRoutineIds: string[]) => void;
+    /** 다른 카테고리로 드롭 = 영구 이동 (#716) — 서버 categoryId 변경. */
+    onMoveRoutineCategory?: (id: string, toCategoryId: string) => void;
+    /** 재화 내역 (#734) — 지갑 필 탭 → 시트. 열 때마다 onLoadWalletHistory로 재로드. */
+    walletHistory?: WalletHistoryEntry[];
+    walletHistoryLoading?: boolean;
+    walletHistoryError?: boolean;
+    walletHistoryHasNext?: boolean;
+    onLoadWalletHistory?: () => void;
+    onLoadMoreWalletHistory?: () => void;
+  };
 
 /**
  * "My room" (zoomed) screen, ported from the prototype `MyRoomZoomScreen`:
@@ -245,17 +235,20 @@ function VisibilityMark({ visibility }: { visibility: CategoryVisibility }) {
   );
 }
 
-export function MyRoomScreen({
+// memo 경계 (#539): 셸의 무관한 상태 변화에서 이 화면(그리고 안의 방 캔버스)
+// 리렌더를 끊는다 — AppShell이 넘기는 함수/객체 prop의 참조 안정이 전제다.
+export const MyRoomScreen = memo(function MyRoomScreen({
   userName = '준서',
   streakDays = 7,
   coinBalance = 0,
-  diaBalance = 0,
+  diamondBalance = 0,
   characterId = DEFAULT_CHARACTER_ID,
-  characterAnimations,
+  characterFrames,
   wallpaperId = DEFAULT_WALLPAPER_ID,
   floorId,
   backgroundId,
   placedFurnitureIds,
+  placements = null,
   furniture,
   wallpapers,
   floors,
@@ -272,58 +265,140 @@ export function MyRoomScreen({
   onRetry,
   onEdit,
   onAddRoutine,
+  onManageRoutines,
   onOpenNotifications,
   unreadNotificationCount = 0,
   ownedCharacters,
   onSelectCharacter,
-  onCreateCategory,
+  onManageCategories,
   onUpdateCategory,
-  onDeleteCategory,
-  onReorderCategories,
   onToggleCompletion,
   onOpenGacha,
+  onRefresh,
   onQuickAddRoutine,
   quickAddDisabledCategoryIds = [],
   onRenameRoutine,
+  onEditRoutine,
   onUpdateRoutineTime,
   onUpdateTodoDueDate,
   onMoveRoutineOccurrence,
   onDeleteRoutine,
-  onRequestPhoto = captureVerificationPhoto,
+  routineOrder,
+  onReorderRoutines,
+  onMoveRoutineCategory,
+  walletHistory,
+  walletHistoryLoading = false,
+  walletHistoryError = false,
+  walletHistoryHasNext = false,
+  onLoadWalletHistory,
+  onLoadMoreWalletHistory,
+  getInitialScrollY,
+  onScrollY,
 }: MyRoomScreenProps) {
   const t = useTokens();
+  const Typography = useTypography();
   const headerInset = useHeaderInsetStyle();
+  // 좁은 폰은 콤팩트 지갑 필(코인만) (#425) — 닉네임 열이 필 2개에 밀려
+  // 뭉개지는 것 방지. 다이아는 뽑기 상점·꾸미기에서 보인다.
+
+  // 코인 플라이 (#440) — 완료 탭 지점에서 헤더 지갑 필로 포물선 비행.
+  const rootRef = useRef<View>(null);
+  const walletRef = useRef<View>(null);
+  const flyTarget = useRef({ x: 0, y: 0 });
+  const walletPulse = useAnimatedValue(1);
+  const coinSeq = useRef(0);
+  const [flyingCoins, setFlyingCoins] = useState<
+    { id: number; x: number; y: number; tx: number; ty: number }[]
+  >([]);
+  const measureWallet = () => {
+    walletRef.current?.measureInWindow((x, y, w, h) => {
+      flyTarget.current = { x: x + w / 2, y: y + h / 2 };
+    });
+  };
+  const launchCoinAt = ({ x: pageX, y: pageY }: { x: number; y: number }) => {
+    rootRef.current?.measureInWindow((rx, ry) => {
+      const target = flyTarget.current;
+      if (!target.x && !target.y) return;
+      const id = coinSeq.current++;
+      setFlyingCoins((prev) => [
+        ...prev,
+        { id, x: pageX - rx, y: pageY - ry, tx: target.x - rx, ty: target.y - ry },
+      ]);
+    });
+  };
+  const onCoinArrive = (id: number) => {
+    setFlyingCoins((prev) => prev.filter((c) => c.id !== id));
+    walletPulse.setValue(1.18);
+    Animated.spring(walletPulse, { toValue: 1, friction: 3.5, useNativeDriver: true }).start();
+  };
+
+  // 스트릭 펄스 (#440) — 수치가 오르는 순간 🔥가 한 번 크게 일렁.
+  const streakPulse = useAnimatedValue(1);
+  const prevStreak = useRef(streakDays);
+  useEffect(() => {
+    if (streakDays > prevStreak.current) {
+      streakPulse.setValue(1.5);
+      Animated.spring(streakPulse, { toValue: 1, friction: 3, useNativeDriver: true }).start();
+    }
+    prevStreak.current = streakDays;
+  }, [streakDays, streakPulse]);
   const { show: toast } = useToast();
-  const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
-  const knownIds = categories.map((c) => c.id);
+  const knownIds = useMemo(() => categories.map((c) => c.id), [categories]);
 
   const today = todayIso();
-  const isDone = (id: string, date: string) => (completions[id] ?? []).includes(date);
+  const isDone = useCallback(
+    (id: string, date: string) => (completions[id] ?? []).includes(date),
+    [completions],
+  );
   // Checked items sink below unchecked ones within their category (stable in
   // each half), keeping the remaining work on top of every list.
-  const sinkDone = <T,>(items: T[], done: (item: T) => boolean): T[] => [
-    ...items.filter((i) => !done(i)),
-    ...items.filter(done),
-  ];
-  // Categories that still hold routines/todos — the manager sheet blocks their
-  // deletion with a warning (the server refuses it anyway).
-  const inUseCategoryIds = Array.from(
-    new Set(routines.map((r) => r.category).filter((c): c is string => !!c)),
+  const sinkDone = useCallback(
+    <T,>(items: T[], done: (item: T) => boolean): T[] => [
+      ...items.filter((i) => !done(i)),
+      ...items.filter(done),
+    ],
+    [],
   );
-
   // The 방 tab lists only what's scheduled *today* (repeat days + start/end
   // range) — the same rule the 달력 tab applies to its selected date. Without
   // this, editing a routine's days never changed the today list.
-  const roomRoutines = routines.filter((r) => isScheduledOn(r, today));
+  const roomRoutines = useMemo(
+    () => routines.filter((r) => isScheduledOn(r, today)),
+    [routines, today],
+  );
   const completedCount = roomRoutines.filter((r) => isDone(r.id, today)).length;
   const progress = roomRoutines.length > 0 ? completedCount / roomRoutines.length : 0;
 
   // Routines with a missing/unknown category land in the last group; with no
   // categories at all, render a single pseudo-group so they stay visible
   // (routines can exist without any category, e.g. after a category delete).
-  // A truly empty account shows just the guided empty state instead.
-  const groups =
-    categories.length > 0 ? categories : roomRoutines.length > 0 ? [UNCATEGORIZED_META] : [];
+  // 미분류(카테고리 삭제 UNASSIGN 산물, #517)는 마지막 카테고리에 섞지 않고
+  // 전용 '미분류' 그룹으로 맨 뒤에 붙인다. 완전 빈 계정도 미분류 그룹을
+  // 세운다 (#626) — 첫 가입자가 카테고리 개념 없이도 그 자리에서 바로
+  // 추가를 시작한다(퀵애드는 categoryId 없이 생성 → 고아 입양이 수렴).
+  const roomGroups = useMemo(() => {
+    const hasUncategorizedRoom = roomRoutines.some(
+      (r) => !r.category || !knownIds.includes(r.category),
+    );
+    const metas =
+      categories.length > 0
+        ? [...categories, ...(hasUncategorizedRoom ? [UNCATEGORIZED_META] : [])]
+        : [UNCATEGORIZED_META];
+    return metas.map((cat) => {
+      // 미분류 그룹(id '')이 무소속·미상 카테고리 항목을 받는다 (#517).
+      const isUncategorized = cat.id === '';
+      const inCat = roomRoutines.filter((r) => {
+        if (r.category === cat.id) return true;
+        return isUncategorized && (!r.category || !knownIds.includes(r.category));
+      });
+      // 수동 순서(#716)를 미완료 항목에 적용한 뒤 완료를 하단으로 가라앉힌다 —
+      // 순서는 "내가 정한 미완료 배치"가 진실이고, 완료는 자동으로 밀린다.
+      const items = sinkDone(applyRoutineOrder(inCat, routineOrder?.[cat.id]), (r) =>
+        isDone(r.id, today),
+      );
+      return { meta: cat, items };
+    });
+  }, [categories, roomRoutines, knownIds, sinkDone, isDone, today, routineOrder]);
 
   // Header hamburger popover (방 꾸미기 / 카테고리 관리 / 루틴 관리) + the
   // category manager sheet it opens. The popover anchors under the measured
@@ -331,8 +406,15 @@ export function MyRoomScreen({
   const [navMenuOpen, setNavMenuOpen] = useState(false);
   const [navMenuTop, setNavMenuTop] = useState(104);
   const menuBtnRef = useRef<View>(null);
-  const [categorySheetOpen, setCategorySheetOpen] = useState(false);
   const [characterSheetOpen, setCharacterSheetOpen] = useState(false);
+  // 재화 내역 시트 (#734) — 열 때마다 1페이지 재로드(완료 취소로 이력이 지워질 수 있음).
+  const [walletHistoryOpen, setWalletHistoryOpen] = useState(false);
+  const openWalletHistory = onLoadWalletHistory
+    ? () => {
+        setWalletHistoryOpen(true);
+        onLoadWalletHistory();
+      }
+    : undefined;
 
   const openNavMenu = () => {
     setNavMenuOpen(true);
@@ -345,23 +427,31 @@ export function MyRoomScreen({
   // Which category's quick-add input is open, the in-progress todo text + due
   // date, and which routine's kebab menu is open.
   const [addingCategory, setAddingCategory] = useState<string | null>(null);
-  const [newTodo, setNewTodo] = useState('');
+  // 입력 중인 제목은 QuickAddRow가 소유한다 (#769) — 여기 두면 한 글자마다
+  // 화면 전체가 리렌더돼 전 행의 스와이프 트리·제스처까지 재조정된다.
   const [newTodoDate, setNewTodoDate] = useState(today);
   const [todoDateOpen, setTodoDateOpen] = useState(false);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  // 메뉴 시트의 날짜 문맥 — 방탭은 오늘, 달력탭은 선택한 날짜로 연다 (#323).
+  const [menuDate, setMenuDate] = useState(today);
   const menuRoutine = routines.find((r) => r.id === menuOpenId) ?? null;
-  const menuDone = menuRoutine ? isDone(menuRoutine.id, today) : false;
+  const openRowMenu = (id: string, date = today) => {
+    setMenuDate(date);
+    setMenuOpenId(id);
+  };
 
-  // Kebab → 수정: rename only (id + draft text). Kebab → 시간 수정: TimePickerSheet.
+  // Kebab → 수정: rename only (the dialog holds the draft text). Kebab → 시간
+  // 수정: TimePickerSheet.
   const [renameId, setRenameId] = useState<string | null>(null);
-  const [renameText, setRenameText] = useState('');
+  // 헤더 탭으로 여는 카테고리 수정 시트의 대상 (#541).
+  const [editingCategory, setEditingCategory] = useState<RoutineCategoryMeta | null>(null);
+  const renameItem = routines.find((r) => r.id === renameId) ?? null;
   const [timeId, setTimeId] = useState<string | null>(null);
   const timeRoutine = routines.find((r) => r.id === timeId) ?? null;
   // 메뉴 → 날짜 바꾸기: calendar sheet. Todos move their dueDate; routines move
-  // that day's occurrence only (repeat stays). The pick is a draft until 확인.
+  // that day's occurrence only (repeat stays). The draft date lives in the sheet.
   const [dateEditId, setDateEditId] = useState<string | null>(null);
   const dateEditItem = routines.find((r) => r.id === dateEditId) ?? null;
-  const [dateDraft, setDateDraft] = useState(today);
 
   // 방 / 달력 tab. The calendar lists routines + todos on the selected date.
   // Today renders from live client state (toggleable); other dates render the
@@ -369,59 +459,173 @@ export function MyRoomScreen({
   // be completed, routines accept today-only logs server-side, and past
   // records keep their original (possibly deleted) category.
   const [tab, setTab] = useState<'room' | 'calendar'>('room');
+  // 방↔달력 스와이프 순환 (#561 → 순환) — 방 캔버스(방 탭)·달력 영역
+  // (달력 탭)의 가로 우세 플링만 두 서브탭을 오간다. '오늘의 루틴' 아래
+  // 리스트 영역은 디텍터 밖이라 셸 탭 페이저(나의 방↔집)가 받는다 (#563
+  // 후속). 달력 그리드는 monthSwipe=false라 월 이동 대신 여기로 흘러온다
+  // (월 이동은 ‹ › 버튼). 세로 스크롤은 failOffsetY(±36)로 넘겨주고, 행
+  // 스와이프(#560/#566)는 더 이른 활성 임계(±10)라 행 위 드래그를 먼저
+  // 가져간다. 제스처는 마운트 시 1회 생성(재생성은 활성 팬을 취소시킨다 —
+  // draggable-furniture 참고), 최신 tab은 핸들러 ref로 읽는다. 두 탭 분기가
+  // 상호배타라 같은 제스처 객체를 양쪽 디텍터에 써도 동시 부착은 없다.
+  // 최신 핸들러를 무의존 제스처에 넘긴다 (#539) — 렌더 중 ref 쓰기는
+  // useLatestRef가 흡수해 이 컴포넌트가 컴파일러 바일아웃을 피한다 (#748).
+  const flingHandlerRef = useLatestRef(() => setTab(tab === 'room' ? 'calendar' : 'room'));
+
+  const tabFling = useConstant(() =>
+    horizontalFlingGesture('room-tab-fling', () => flingHandlerRef.current()),
+  );
   const [selectedDate, setSelectedDate] = useState(() => todayIso());
-  const dateRoutines = routines.filter((r) => isScheduledOn(r, selectedDate));
-  const pickDate = (date: string) => {
+  const dateRoutines = useMemo(
+    () => routines.filter((r) => isScheduledOn(r, selectedDate)),
+    [routines, selectedDate],
+  );
+  // 참조 고정 (#771) — Calendar가 memo라, 매 렌더 새 함수면 42칸이 매번 다시 그려진다.
+  const pickDate = useStableCallback((date: string) => {
     setSelectedDate(date);
     if (date !== today) onSelectDate?.(date);
-  };
+  });
   const catMeta = allCategories ?? categories;
   const serverBackedDay = !!onSelectDate && selectedDate !== today;
   const dayItems = serverBackedDay ? calendarDays?.[selectedDate] : undefined;
+  // 선택한 날짜의 전체 완료/총 개수 (#346) — 방탭의 2/4 + 진행 바와 같은 표시.
+  const calDayTotal = serverBackedDay ? (dayItems?.length ?? 0) : dateRoutines.length;
+  const calDayDone = serverBackedDay
+    ? (dayItems?.filter((i) => i.completed).length ?? 0)
+    : dateRoutines.filter((r) => isDone(r.id, selectedDate)).length;
+
+  // 달력 서버 날짜에서 연 메뉴 — 완료 라벨/토글은 그 날의 기록과 달력 규칙
+  // (미래 차단, 과거 허용)을 따른다 (#323).
+  const menuCalItem =
+    menuOpenId && serverBackedDay ? dayItems?.find((i) => i.id === menuOpenId) : undefined;
+  const menuDone = menuCalItem
+    ? menuCalItem.completed
+    : menuRoutine
+      ? isDone(menuRoutine.id, menuDate)
+      : false;
+
+  // Quick-add is limited to real (non-deleted) categories; 미분류(pseudo)와
+  // 미션 연동 카테고리는 임의 추가를 막는다 — 방탭·달력탭 공통 규칙 (#323).
+  // 예외 (#626): 완전 빈 계정의 미분류(id '')는 첫 추가의 출발점이라 연다 —
+  // categoryId 없이 생성되고, 다음 로드의 고아 입양이 실제 미분류로 수렴한다.
+  const canQuickAdd = useCallback(
+    (categoryId?: string) =>
+      categoryId === ''
+        ? categories.length === 0
+        : !!categoryId &&
+          categories.some((c) => c.id === categoryId) &&
+          !quickAddDisabledCategoryIds.includes(categoryId),
+    [categories, quickAddDisabledCategoryIds],
+  );
 
   // 달력 lists mirror the room tab's category sections (emoji + colored label
-  // + done count); only non-empty groups render — the calendar has no
-  // quick-add, so empty headers would add nothing.
-  const calGroupsBase =
-    categories.length > 0 ? categories : dateRoutines.length > 0 ? [UNCATEGORIZED_META] : [];
-  const calClientGroups = calGroupsBase
-    .map((cat, idx) => {
-      const isFallback = idx === calGroupsBase.length - 1;
-      const items = dateRoutines.filter(
-        (r) =>
-          r.category === cat.id || (isFallback && (!r.category || !knownIds.includes(r.category))),
-      );
-      return { meta: cat, items: sinkDone(items, (r) => isDone(r.id, selectedDate)) };
-    })
-    .filter((g) => g.items.length > 0);
+  // + done count). Empty groups still render when they can quick-add — the +
+  // must stay reachable on any date, like the room tab (#323).
+  const calClientGroups = useMemo(() => {
+    const hasUncategorizedCal = dateRoutines.some(
+      (r) => !r.category || !knownIds.includes(r.category),
+    );
+    const calGroupsBase =
+      categories.length > 0
+        ? [...categories, ...(hasUncategorizedCal ? [UNCATEGORIZED_META] : [])]
+        : dateRoutines.length > 0
+          ? [UNCATEGORIZED_META]
+          : [];
+    return calGroupsBase
+      .map((cat) => {
+        const isUncategorized = cat.id === '';
+        const items = dateRoutines.filter(
+          (r) =>
+            r.category === cat.id ||
+            (isUncategorized && (!r.category || !knownIds.includes(r.category))),
+        );
+        return { meta: cat, items: sinkDone(items, (r) => isDone(r.id, selectedDate)) };
+      })
+      .filter((g) => g.items.length > 0 || canQuickAdd(g.meta.id));
+  }, [categories, dateRoutines, knownIds, sinkDone, isDone, selectedDate, canQuickAdd]);
   // Server days group by the record-time categoryId (kept in server order:
   // categoryId asc, 미분류 last); deleted categories resolve via catMeta.
-  const calServerGroups = dayItems
-    ? (() => {
-        const byCat = new Map<string, CalendarDayItem[]>();
-        for (const item of dayItems) {
-          const key = item.category ?? '';
-          byCat.set(key, [...(byCat.get(key) ?? []), item]);
-        }
-        return Array.from(byCat, ([key, items]) => ({
-          meta: catMeta.find((c) => c.id === key) ?? UNCATEGORIZED_META,
-          items: sinkDone(items, (i) => i.completed),
-        }));
-      })()
-    : undefined;
+  const calServerGroups = useMemo(() => {
+    if (!dayItems) return undefined;
+    const byCat = new Map<string, CalendarDayItem[]>();
+    for (const item of dayItems) {
+      const key = item.category ?? '';
+      byCat.set(key, [...(byCat.get(key) ?? []), item]);
+    }
+    const groups = Array.from(byCat, ([key, items]) => ({
+      meta: catMeta.find((c) => c.id === key) ?? UNCATEGORIZED_META,
+      items: sinkDone(items, (i) => i.completed),
+    }));
+    // 그 날 항목이 없는 현재 카테고리도 헤더를 렌더 — +로 할 일 추가 (#323).
+    for (const cat of categories) {
+      if (canQuickAdd(cat.id) && !groups.some((g) => g.meta.id === cat.id)) {
+        groups.push({ meta: cat, items: [] });
+      }
+    }
+    return groups;
+  }, [dayItems, catMeta, categories, canQuickAdd, sinkDone]);
 
   // 방 뷰 캡처 대상 (#245) — 갤러리 저장은 네이티브 전용.
   const roomShotRef = useRef<View>(null);
+  // 캡처 동안 뽑기 버튼을 숨긴다 (#475) — view-shot이 보이는 트리를 찍으므로,
+  // 이 플래그로 버튼을 잠깐 감췄다가 저장 후 되돌린다.
+  const [capturing, setCapturing] = useState(false);
   const onSaveRoomImage = async () => {
-    const result = await saveRoomImage(roomShotRef);
+    setCapturing(true);
+    // 상태 반영(버튼 숨김)이 네이티브에 커밋된 뒤 찍히도록 두 프레임 양보.
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
+    const result = await saveRoomImage(roomShotRef).finally(() => setCapturing(false));
     if (result === 'saved') toast('방 이미지를 갤러리에 저장했어요', 'success');
     else if (result === 'denied') toast('사진 접근 권한을 허용해주세요', 'error');
     else if (result === 'unsupported') toast('웹에서는 이미지 저장을 지원하지 않아요', 'error');
     else toast('이미지 저장에 실패했어요', 'error');
   };
 
+  // <Room />에 스프레드로 넘기는 씬 번들 (#691).
+  const roomScene: RoomSceneProps = {
+    characterId,
+    characterFrames,
+    wallpaperId,
+    floorId,
+    backgroundId,
+    placedFurnitureIds,
+    placements,
+    furniture,
+    wallpapers,
+    floors,
+    backgrounds,
+  };
+
+  // 홈 위젯용 무음 방 캡처 (#604) — 로직은 my-room/use-widget-room-capture로
+  // 이동 (#693). 시그니처가 바뀐 방만 다시 찍는다.
+  // 위젯 캡처 트리거용 서명 — placements(가구 배치 전량)까지 직렬화하므로
+  // 렌더마다 돌면 비싸다 (#771). 입력이 바뀔 때만 계산한다.
+  const roomSignature = useMemo(
+    () =>
+      JSON.stringify({
+        wallpaperId,
+        floorId,
+        backgroundId,
+        placedFurnitureIds,
+        placements,
+        characterId,
+      }),
+    [wallpaperId, floorId, backgroundId, placedFurnitureIds, placements, characterId],
+  );
+  useWidgetRoomCapture({
+    shotRef: roomShotRef,
+    signature: roomSignature,
+    loading,
+    capturing,
+    setCapturing,
+  });
+
   // Scroll the tapped category's quick-add input into view (above the keyboard).
   const scrollRef = useRef<ScrollView>(null);
+  // 서브화면(꾸미기·루틴 관리 …)에 다녀와도 보던 자리로 (#763).
+  const scrollRestore = useScrollRestore(scrollRef, { getInitialScrollY, onScrollY });
   const addRowRef = useRef<View>(null);
   const todoInputRef = useRef<TextInput>(null);
   // Set while opening the date picker so the input's blur doesn't commit/close.
@@ -480,9 +684,9 @@ export function MyRoomScreen({
     return () => clearTimeout(timer);
   }, [addingCategory, keyboardPad, scrollToQuickAdd]);
 
-  const openQuickAdd = (categoryId: string) => {
-    setNewTodo('');
-    setNewTodoDate(today);
+  // 방탭은 오늘, 달력탭은 선택한 날짜를 기본 마감일로 연다 (#323).
+  const openQuickAdd = (categoryId: string, defaultDate = today) => {
+    setNewTodoDate(defaultDate);
     const opening = addingCategory !== categoryId;
     setAddingCategory(opening ? categoryId : null);
     if (opening) {
@@ -492,36 +696,68 @@ export function MyRoomScreen({
     }
   };
 
-  const commitTodo = (categoryId: string) => {
+  const commitTodo = (categoryId: string, raw: string) => {
     // Blur fired only to open the date picker → keep the input open.
     if (skipBlurCommit.current) {
       skipBlurCommit.current = false;
       return;
     }
-    const title = newTodo.trim();
+    const title = raw.trim();
+    // 새 행이 뚝 나타나는 대신 부드럽게 삽입되고 기존 행이 밀려난다 (#452).
+    if (title) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     if (title) onQuickAddRoutine?.(categoryId, title, newTodoDate);
-    setNewTodo('');
+    // 행이 닫히며 언마운트되므로 입력 상태는 자연히 사라진다.
     setAddingCategory(null);
   };
 
-  // Completing a 인증사진형 routine first requires a camera photo; if none is
-  // captured (cancelled / denied), the completion is aborted. Kept sync on the
-  // common (non-photo) path; only the photo path awaits the camera. Completion
-  // is toggled for a specific date (오늘 in 방, 선택한 날짜 in 달력).
-  const handleToggle = (routine: Routine, date: string) => {
+  // 카테고리 헤더의 + 버튼 — 방탭·달력탭 공용 (#323).
+  const renderQuickAddButton = (meta: RoutineCategoryMeta, defaultDate: string) =>
+    canQuickAdd(meta.id) ? (
+      <ScalePressable
+        onPress={() => openQuickAdd(meta.id, defaultDate)}
+        accessibilityRole="button"
+        accessibilityLabel={`${meta.name} 할 일 추가`}
+        hitSlop={8}
+        style={[styles.catAdd, { backgroundColor: meta.color }]}>
+        <Icon name="add" size={14} color={t.onPrimary} />
+      </ScalePressable>
+    ) : null;
+
+  // 퀵애드 입력행 — 제목 입력 + 마감일 칩, blur가 커밋. 방탭·달력탭 공용 (#323).
+  const renderQuickAddRow = (categoryId: string) => (
+    <QuickAddRow
+      ref={addRowRef}
+      inputRef={todoInputRef}
+      dateLabel={newTodoDate === today ? '오늘' : formatDate(newTodoDate)}
+      onCommit={(title) => commitTodo(categoryId, title)}
+      onOpenDatePicker={() => setTodoDateOpen(true)}
+      // press-in은 입력의 blur보다 먼저 발화한다 — 이 blur는 피커 때문임을
+      // 표시해 행이 닫히지 않게 한다.
+      onDatePickerPressIn={() => {
+        skipBlurCommit.current = true;
+      }}
+    />
+  );
+
+  // Completion is toggled for a specific date (오늘 in 방, 선택한 날짜 in 달력).
+  const handleToggle = (routine: Routine, date: string, e?: GestureResponderEvent) => {
     const done = isDone(routine.id, date);
-    if (routine.photoVerify && !done) {
-      void onRequestPhoto().then((uri) => {
-        if (uri) {
-          hapticSuccess();
-          onToggleCompletion?.(routine.id, date);
-        }
-      });
-      return;
-    }
+    // 코인 플라이는 서버가 실제 보상을 준 완료에만 (#444) — 탭 좌표는 지금
+    // 읽어두고, 발사는 보상액이 확인된 뒤에 한다. 상한 도달(보상 0)은 훅이
+    // 상한 토스트를 띄우고 여기선 침묵.
+    const flyFrom =
+      !done && date === today && e ? { x: e.nativeEvent.pageX, y: e.nativeEvent.pageY } : null;
+    const fire = () => {
+      const res = onToggleCompletion?.(routine.id, date);
+      if (flyFrom && res && typeof res.then === 'function') {
+        void res.then((result) => {
+          if (result?.rewardAmount) launchCoinAt(flyFrom);
+        });
+      }
+    };
     if (done) hapticSelection();
     else hapticSuccess();
-    onToggleCompletion?.(routine.id, date);
+    fire();
   };
 
   // Server-backed (non-today) 달력 rows: future dates are blocked outright;
@@ -537,13 +773,249 @@ export function MyRoomScreen({
     onToggleCalendarItem?.(item, selectedDate);
   };
 
+  // ---------- 방탭·달력탭 공용 카테고리 그룹 렌더 (#482 후속) ----------
+  // 같은 그룹(헤더+행)이 3벌 복붙돼 아이콘 색·배지 유무가 탭마다 어긋났다.
+  // 행 데이터를 RowSpec으로 정규화해 Routine(방탭·달력 클라이언트)과 서버
+  // CalendarDayItem이 같은 코드로 그려진다.
+  type RowSpec = {
+    key: string;
+    title: string;
+    done: boolean;
+    /** 알림/마감 시각 — 있으면 종 배지. */
+    time?: string;
+    /** 반복 루틴 — 제목 뒤 은은한 ↻ 마커로 1회성 투두와 구분 (#576, 시안 A). */
+    repeats?: boolean;
+    onToggle: (e?: GestureResponderEvent) => void;
+    /** 없으면(기록만 남은 삭제 항목) 행 본문이 메뉴를 열지 않는다. */
+    onMenu?: () => void;
+    /** 스와이프 삭제 (#566) — 없으면(서버 기반 달력 항목 등) 스와이프 비활성. */
+    onDelete?: () => void;
+  };
+
+  const rowFromRoutine = (routine: Routine, date: string): RowSpec => ({
+    repeats: routine.kind !== 'todo',
+    key: routine.id,
+    title: routine.title,
+    done: isDone(routine.id, date),
+    time: routine.alarmEnabled && routine.time ? routine.time : undefined,
+    onToggle: (e) => handleToggle(routine, date, e),
+    onMenu: () => openRowMenu(routine.id, date),
+    // 메뉴 시트의 삭제하기와 같은 경로 — 스와이프는 지름길일 뿐이다 (#566).
+    onDelete: onDeleteRoutine ? () => onDeleteRoutine(routine.id) : undefined,
+  });
+
+  const rowFromCalendarItem = (item: CalendarDayItem): RowSpec => ({
+    repeats: item.kind === 'routine',
+    key: `${item.kind}-${item.id}`,
+    title: item.title,
+    done: item.completed,
+    time: item.time,
+    onToggle: () => handleCalendarItemPress(item),
+    // 기록만 남은(삭제된) 항목은 메뉴를 열 수 없다 — 그대로 표시만.
+    onMenu: routines.some((r) => r.id === item.id)
+      ? () => openRowMenu(item.id, selectedDate)
+      : undefined,
+  });
+
+  // --- 루틴/투두 롱프레스 재정렬 (#716) ---
+  // 방 '오늘' 리스트의 미완료 행만 대상. 롱프레스로 들어 손가락을 따라가고,
+  // 놓으면 같은 카테고리면 순서 변경(로컬), 다른 카테고리 그룹 위면 영구
+  // 이동(서버). 완료 행은 하단으로 가라앉은 상태라 드래그에서 제외한다.
+  const reorderEnabled = !!onReorderRoutines && tab === 'room';
+  const [dragId, setDragId] = useState<string | null>(null);
+  const dragTY = useAnimatedValue(0);
+  const rowRefs = useRef(new Map<string, View>());
+  const dragSlotsRef = useRef<DragSlot[]>([]);
+  const dropRef = useRef<DropTarget | null>(null);
+  // 드래그 시작 시점의 카테고리별 미완료 id 순서 스냅샷 — 드롭 계산의 기준.
+  const baseOrderRef = useRef<Map<string, string[]>>(new Map());
+
+  const beginDrag = useCallback(
+    (routineId: string) => {
+      hapticSelection();
+      setDragId(routineId);
+      const base = new Map<string, string[]>();
+      for (const g of roomGroups) {
+        base.set(
+          g.meta.id,
+          g.items.filter((r) => !isDone(r.id, today)).map((r) => r.id),
+        );
+      }
+      baseOrderRef.current = base;
+      const catOf = (id: string) =>
+        [...base.entries()].find(([, ids]) => ids.includes(id))?.[0] ?? '';
+      // window 좌표 측정은 비동기 — 다음 프레임 안에 채워져 onUpdate가 쓴다
+      // (집 좌석 드래그 #278와 같은 리프트 시점 측정).
+      dragSlotsRef.current = [];
+      rowRefs.current.forEach((node, id) => {
+        node.measureInWindow((x, y, w, h) => {
+          dragSlotsRef.current.push({
+            routineId: id,
+            categoryId: catOf(id),
+            top: y,
+            bottom: y + h,
+          });
+        });
+      });
+    },
+    [roomGroups, isDone, today],
+  );
+
+  const updateDrop = useCallback((draggedId: string, absoluteY: number) => {
+    dropRef.current = resolveDrop(dragSlotsRef.current, absoluteY, draggedId);
+  }, []);
+
+  const endDrag = useCallback(
+    (draggedId: string, fromCategoryId: string) => {
+      const target = dropRef.current;
+      dropRef.current = null;
+      setDragId(null);
+      dragTY.setValue(0);
+      if (!target) return;
+      // 실제 카테고리가 있을 때 '미분류'로의 이동은 서버 반영이 안 돼(#718
+      // 리뷰) 스냅백 — 미분류 내 순서 변경은 아래 same-category 분기로 허용.
+      if (isRejectedDrop(target, fromCategoryId, categories.length > 0)) return;
+      const destBase = baseOrderRef.current.get(target.categoryId) ?? [];
+      if (target.categoryId === fromCategoryId) {
+        const next = reorderedIds(destBase, draggedId, target.index);
+        if (next.join(' ') !== destBase.join(' ')) {
+          hapticSuccess();
+          onReorderRoutines?.(fromCategoryId, next);
+        }
+        return;
+      }
+      // 다른 카테고리 = 영구 이동(서버) + 양쪽 로컬 순서 갱신.
+      hapticSuccess();
+      onMoveRoutineCategory?.(draggedId, target.categoryId);
+      onReorderRoutines?.(target.categoryId, reorderedIds(destBase, draggedId, target.index));
+      const fromNext = (baseOrderRef.current.get(fromCategoryId) ?? []).filter(
+        (id) => id !== draggedId,
+      );
+      onReorderRoutines?.(fromCategoryId, fromNext);
+    },
+    [dragTY, onReorderRoutines, onMoveRoutineCategory, categories.length],
+  );
+
+  const registerRowRef = useCallback((routineId: string, node: View | null) => {
+    if (node) rowRefs.current.set(routineId, node);
+    else rowRefs.current.delete(routineId);
+  }, []);
+
+  /**
+   * 행 핸들러 레지스트리 (#769) — RowSpec의 콜백은 매 렌더 새 클로저라 그대로
+   * 넘기면 memo가 무효다. 렌더마다 이 맵만 갈아끼우고, 행에는 아래 참조 고정
+   * 디스패처를 넘긴다. 행이 memo로 리렌더를 건너뛰어도 맵은 최신이라 낡은
+   * 클로저를 잡지 않는다.
+   */
+  const rowHandlers = useConstant(() => new Map<string, { spec: RowSpec; categoryId?: string }>());
+  const dragIdRef = useLatestRef(dragId);
+  const dispatchToggle = useStableCallback((rowKey: string, e?: GestureResponderEvent) =>
+    rowHandlers.get(rowKey)?.spec.onToggle(e),
+  );
+  const dispatchMenu = useStableCallback((rowKey: string) =>
+    rowHandlers.get(rowKey)?.spec.onMenu?.(),
+  );
+  const dispatchDelete = useStableCallback((rowKey: string) =>
+    rowHandlers.get(rowKey)?.spec.onDelete?.(),
+  );
+  const dispatchDragStart = useStableCallback((rowKey: string) => beginDrag(rowKey));
+  const dispatchDragUpdate = useStableCallback((rowKey: string, absoluteY: number) =>
+    updateDrop(rowKey, absoluteY),
+  );
+  const dispatchDragEnd = useStableCallback((rowKey: string) => {
+    const categoryId = rowHandlers.get(rowKey)?.categoryId;
+    if (categoryId !== undefined) endDrag(rowKey, categoryId);
+  });
+  const dispatchDragFinalize = useStableCallback((rowKey: string) => {
+    if (dragIdRef.current !== rowKey) return;
+    setDragId(null);
+    dragTY.setValue(0);
+  });
+
+  // 카테고리 그룹 = 헤더(아이콘·라벨·공개범위·카운트·＋) + 행들 + 퀵애드 입력행.
+  // 빈 그룹도 헤더는 그린다 — ＋가 항상 닿아야 한다 (#323).
+  const renderCategoryGroup = (
+    key: string,
+    meta: RoutineCategoryMeta,
+    rows: RowSpec[],
+    date: string,
+  ) => {
+    const doneCount = rows.filter((r) => r.done).length;
+    // 이번 렌더의 콜백으로 레지스트리를 갱신한다 (#769) — 행이 memo로
+    // 리렌더를 건너뛰어도 디스패처는 항상 최신 클로저를 부른다.
+    for (const row of rows) rowHandlers.set(row.key, { spec: row, categoryId: meta.id });
+    return (
+      <View key={key} style={styles.group}>
+        <View style={styles.catHeader}>
+          {/* 미분류(pseudo) 그룹은 실제 카테고리가 아니라 수정 진입이 없다 (#541). */}
+          <Pressable
+            style={styles.catHeaderTap}
+            disabled={!meta.id || !onUpdateCategory}
+            onPress={() => setEditingCategory(meta)}
+            accessibilityRole="button"
+            accessibilityLabel={`${meta.name} 카테고리 수정`}>
+            <View style={[styles.catDot, { backgroundColor: `${meta.color}33` }]}>
+              <CategoryIcon name={meta.icon} color={meta.color} size={18} />
+            </View>
+            <Text
+              style={[
+                Typography.label,
+                styles.catLabel,
+                { color: readableTextColor(meta.color, t.surfaceMuted) },
+              ]}>
+              {meta.name}
+            </Text>
+          </Pressable>
+          {/* 미분류(pseudo) 그룹은 실제 카테고리가 아니라 표시하지 않는다. */}
+          {meta.id ? <VisibilityMark visibility={meta.visibility} /> : null}
+          {rows.length > 0 ? (
+            <Text style={[Typography.supporting, { color: t.textDisabled }]}>
+              {doneCount}/{rows.length}
+            </Text>
+          ) : null}
+          <View style={styles.flex} />
+          {renderQuickAddButton(meta, date)}
+        </View>
+        <View style={styles.rows}>
+          {/* categoryId를 넘겨 방 탭에서만 드래그 활성 — 달력 탭은
+              reorderEnabled(tab==='room')가 false라 categoryId를 받아도 무효. */}
+          {rows.map((row) => {
+            const draggable = reorderEnabled && !row.done && meta.id !== undefined;
+            return (
+              <RoutineRow
+                key={row.key}
+                rowKey={row.key}
+                title={row.title}
+                done={row.done}
+                time={row.time}
+                repeats={row.repeats}
+                color={meta.color}
+                draggable={draggable}
+                active={dragId === row.key}
+                dragTY={dragTY}
+                menuEnabled={!!row.onMenu}
+                deleteEnabled={!!row.onDelete}
+                onToggle={dispatchToggle}
+                onMenu={dispatchMenu}
+                onDelete={dispatchDelete}
+                onDragStart={dispatchDragStart}
+                onDragUpdate={dispatchDragUpdate}
+                onDragEnd={dispatchDragEnd}
+                onDragFinalize={dispatchDragFinalize}
+                registerRef={registerRowRef}
+              />
+            );
+          })}
+          {addingCategory === meta.id ? renderQuickAddRow(meta.id) : null}
+        </View>
+      </View>
+    );
+  };
+
   return (
-    <View style={[styles.screen, useScreenStyle([])]}>
+    <View ref={rootRef} style={[styles.screen, useScreenStyle([])]}>
       <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
         <View style={styles.headerLeft}>
-          <View style={[styles.avatar, { backgroundColor: character.bg }]}>
-            <CharacterAvatar characterId={characterId} size={36} />
-          </View>
           <View style={styles.headerName}>
             {/* Narrow phones: shrink the font (≥75%) first; if the title still
                 overflows, middle-ellipsize so the 의 방 suffix stays visible. */}
@@ -558,31 +1030,50 @@ export function MyRoomScreen({
             {/* A 0-day streak is nothing to celebrate — show the flame only
                 once a streak exists. */}
             {streakDays > 0 ? (
-              <View style={styles.streak}>
+              <Animated.View style={[styles.streak, { transform: [{ scale: streakPulse }] }]}>
                 <Icon name="flame" size={14} color={t.warningText} />
                 <Text style={[Typography.supporting, { color: t.warningText }]}>
                   {streakDays}일
                 </Text>
-              </View>
+              </Animated.View>
             ) : null}
           </View>
         </View>
         <View style={styles.headerRight}>
-          <WalletPills coin={coinBalance} dia={diaBalance} />
-          {/* 알림 lives inside this popover (#257 — a separate bell button
-              crowded the header and crushed the title); unread shows as a dot
-              on the menu button. */}
-          <Pressable
-            ref={menuBtnRef}
-            onPress={openNavMenu}
-            accessibilityRole="button"
-            accessibilityLabel="메뉴"
-            style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-            <Icon name="menu" size={20} color={t.text} />
-            {onOpenNotifications && unreadNotificationCount > 0 ? (
-              <View style={[styles.menuDot, { backgroundColor: t.danger }]} />
-            ) : null}
-          </Pressable>
+          <Animated.View
+            ref={walletRef}
+            onLayout={measureWallet}
+            style={{ transform: [{ scale: walletPulse }] }}>
+            <WalletPills
+              coin={coinBalance}
+              diamond={diamondBalance}
+              onOpenHistory={openWalletHistory}
+            />
+          </Animated.View>
+          {/* 알림 벨 복원 (#727) — #257에서 메뉴로 합쳤던 것을 1탭으로 승격.
+              제목은 축소·중간 말줄임 로직이 있어 좁은 폭도 견딘다. */}
+          {onOpenNotifications ? (
+            <ScalePressable
+              onPress={onOpenNotifications}
+              accessibilityRole="button"
+              accessibilityLabel="알림"
+              style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
+              <Icon name="bell" size={20} color={t.text} />
+              {unreadNotificationCount > 0 ? (
+                <View style={[styles.menuDot, { backgroundColor: t.danger }]} />
+              ) : null}
+            </ScalePressable>
+          ) : null}
+          <CoachTarget id="room-menu">
+            <ScalePressable
+              ref={menuBtnRef}
+              onPress={openNavMenu}
+              accessibilityRole="button"
+              accessibilityLabel="메뉴"
+              style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
+              <Icon name="menu" size={20} color={t.text} />
+            </ScalePressable>
+          </CoachTarget>
         </View>
       </View>
 
@@ -594,9 +1085,8 @@ export function MyRoomScreen({
           ] as const
         ).map(([key, label]) => {
           const active = tab === key;
-          return (
+          const btn = (
             <Pressable
-              key={key}
               onPress={() => setTab(key)}
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
@@ -606,66 +1096,116 @@ export function MyRoomScreen({
               </Text>
             </Pressable>
           );
+          // 달력 탭은 코치마크 대상 (#351).
+          return key === 'calendar' ? (
+            <CoachTarget key={key} id="room-tab-calendar">
+              {btn}
+            </CoachTarget>
+          ) : (
+            <View key={key}>{btn}</View>
+          );
         })}
       </View>
 
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView
-          ref={scrollRef}
+        <PawRefreshScroll
+          scrollRef={scrollRef}
+          onRefresh={onRefresh}
+          refreshTestID="my-room-refresh"
+          // 재정렬 드래그 중엔 세로 스크롤을 잠근다 (#716).
+          scrollEnabled={dragId === null}
           contentContainerStyle={[
             styles.body,
-            addingCategory && keyboardPad > 0 ? { paddingBottom: keyboardPad + 120 } : null,
+            addingCategory != null && keyboardPad > 0 ? { paddingBottom: keyboardPad + 120 } : null,
           ]}
+          {...scrollRestore}
           onScroll={(e) => {
+            // 빠른 추가 입력 스크롤인(#…)용 로컬 추적 + 셸의 탭별 기억(#763).
             scrollYRef.current = e.nativeEvent.contentOffset.y;
+            scrollRestore.onScroll?.(e);
           }}
-          scrollEventThrottle={16}
           keyboardShouldPersistTaps="handled">
           {tab === 'room' ? (
             <>
-              <View style={styles.roomWrap} ref={roomShotRef} collapsable={false}>
-                <Room
-                  characterId={characterId}
-                  characterAnimations={characterAnimations}
-                  wallpaperId={wallpaperId}
-                  floorId={floorId}
-                  backgroundId={backgroundId}
-                  placedFurnitureIds={placedFurnitureIds}
-                  furniture={furniture}
-                  wallpapers={wallpapers}
-                  floors={floors}
-                  backgrounds={backgrounds}
-                  interactiveCharacter
-                />
-                <Pressable
-                  onPress={onOpenGacha}
-                  accessibilityRole="button"
-                  accessibilityLabel="뽑기 상점"
-                  style={[styles.gachaBtn, { backgroundColor: t.surface }]}>
-                  <Icon name="gift" size={20} color={t.text} />
-                </Pressable>
-              </View>
+              {/* 방↔달력 플링은 방 캔버스에서만 (#563 후속) — 아래 루틴
+                    리스트 영역의 가로 스와이프는 셸 탭 페이저(집 이동) 몫. */}
+              <GestureDetector gesture={tabFling}>
+                {/* collapsable={false}: 패딩만 있는 View는 안드로이드 뷰 평탄화
+                    대상이라, 사라지면 제스처가 붙을 대상이 없어진다. 달력 탭·
+                    친구 방의 같은 tabFling도 직계 자식에 이걸 둔다. */}
+                <View style={styles.roomWrap} collapsable={false}>
+                  {/*
+                    캡처 대상은 방 자체만 (#778) — 예전엔 ref가 패딩 있는
+                    roomWrap에 붙어 있어 그 **투명 여백까지 찍혔고**, #744에서
+                    캡처를 JPEG(알파 없음)로 바꾸면서 여백이 검정으로 눌러붙어
+                    위젯에 검은 띠가 생겼다. 플로팅 버튼들은 roomWrap 기준
+                    absolute라 바깥에 남겨도 위치가 그대로다.
+                  */}
+                  <View ref={roomShotRef} collapsable={false}>
+                    <Room {...roomScene} interactiveCharacter />
+                  </View>
+                  <Pressable
+                    onPress={onOpenGacha}
+                    accessibilityRole="button"
+                    accessibilityLabel="뽑기 상점"
+                    // 방 이미지 저장 중에는 숨겨 사진에서 제외한다 (#475).
+                    pointerEvents={capturing ? 'none' : 'auto'}
+                    style={[
+                      styles.gachaBtn,
+                      { backgroundColor: t.surface },
+                      capturing && styles.hidden,
+                    ]}>
+                    {/* absolute 버튼이라 래퍼 대신 내용을 측정 (#351). */}
+                    <CoachTarget id="room-gacha">
+                      <Icon name="gift" size={20} color={t.text} />
+                    </CoachTarget>
+                  </Pressable>
+                  {/* 방 꾸미기 1탭 승격 (#727) — 메뉴(2탭) 뒤에 있던 보상 루프의
+                      종착지를 뽑기 버튼 위에 나란히. 메뉴 항목은 습관 경로로 유지. */}
+                  {onEdit ? (
+                    <Pressable
+                      onPress={onEdit}
+                      accessibilityRole="button"
+                      accessibilityLabel="방 꾸미기"
+                      pointerEvents={capturing ? 'none' : 'auto'}
+                      style={[
+                        styles.decorBtn,
+                        { backgroundColor: t.surface },
+                        capturing && styles.hidden,
+                      ]}>
+                      <Icon name="edit" size={20} color={t.text} />
+                    </Pressable>
+                  ) : null}
+                </View>
+              </GestureDetector>
 
               <View style={styles.section}>
-                <View style={styles.sectionHead}>
-                  <Text style={[Typography.h2, { color: t.text }]}>오늘의 루틴</Text>
-                  <View style={styles.sectionHeadRight}>
-                    {roomRoutines.length > 0 ? (
-                      <Text style={[Typography.label, { color: t.primaryText }]}>
-                        {completedCount} / {roomRoutines.length}
-                      </Text>
-                    ) : null}
-                    <Pressable
-                      onPress={onAddRoutine}
-                      accessibilityRole="button"
-                      accessibilityLabel="루틴 추가"
-                      style={[styles.addBtn, { backgroundColor: t.primary }]}>
-                      <Icon name="add" size={18} color={t.onPrimary} />
-                    </Pressable>
+                <CoachTarget id="room-routines">
+                  <View style={styles.sectionHead}>
+                    <Text style={[Typography.h2, { color: t.text }]}>오늘의 할 일</Text>
+                    <View style={styles.sectionHeadRight}>
+                      {roomRoutines.length > 0 ? (
+                        <Text style={[Typography.label, { color: t.primaryText }]}>
+                          {completedCount} / {roomRoutines.length}
+                        </Text>
+                      ) : null}
+                      <CoachTarget id="room-add-routine">
+                        {/* '＋ 루틴' 라벨 필 (#483) — 카테고리의 원형 ＋(할 일 추가)와
+                            같은 문법이라 헷갈렸다. 라벨로 용도를 말해 구분한다. */}
+                        <Pressable
+                          onPress={onAddRoutine}
+                          accessibilityRole="button"
+                          accessibilityLabel="루틴 추가"
+                          style={[styles.addPill, { backgroundColor: t.primary }]}>
+                          <Icon name="add" size={14} color={t.onPrimary} />
+                          <Text style={[Typography.label, { color: t.onPrimary }]}>루틴</Text>
+                        </Pressable>
+                      </CoachTarget>
+                    </View>
                   </View>
-                </View>
+                </CoachTarget>
 
                 {loading ? (
                   <View style={styles.stateBlock}>
@@ -678,218 +1218,61 @@ export function MyRoomScreen({
 
                 {!loading && loadError ? (
                   <View style={styles.stateBlock}>
-                    <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
-                      데이터를 불러오지 못했어요.
-                    </Text>
-                    <Pressable
-                      onPress={onRetry}
-                      accessibilityRole="button"
-                      accessibilityLabel="다시 시도"
-                      style={[styles.retryBtn, { backgroundColor: t.primary }]}>
-                      <Text style={[Typography.label, { color: t.onPrimary }]}>다시 시도</Text>
-                    </Pressable>
+                    <RetryState message="데이터를 불러오지 못했어요." onRetry={onRetry} />
                   </View>
                 ) : null}
 
                 {!loading && !loadError && roomRoutines.length > 0 ? (
-                  <View style={[styles.progressTrack, { backgroundColor: t.surfaceMuted }]}>
-                    <View
-                      style={[
-                        styles.progressFill,
-                        { backgroundColor: t.primary, width: `${progress * 100}%` },
-                      ]}
-                    />
-                  </View>
-                ) : null}
-
-                {!loading && !loadError && categories.length === 0 && roomRoutines.length === 0 ? (
-                  <View style={styles.stateBlock}>
-                    <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
-                      아직 루틴이 없어요.
-                    </Text>
-                    <View style={styles.emptyHintRow}>
-                      <Icon name="add" size={16} color={t.textMuted} />
-                      <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
-                        위의 + 버튼으로 첫 루틴을 만들어보세요.
-                      </Text>
-                    </View>
-                  </View>
+                  <SpringProgressBar
+                    progress={progress}
+                    color={t.primary}
+                    trackColor={t.surfaceMuted}
+                  />
                 ) : null}
 
                 {loading || loadError
                   ? null
-                  : groups.map((cat, idx) => {
-                      const isFallback = idx === groups.length - 1;
-                      const items = sinkDone(
-                        roomRoutines.filter((r) => {
-                          if (r.category === cat.id) return true;
-                          return isFallback && (!r.category || !knownIds.includes(r.category));
-                        }),
-                        (r) => isDone(r.id, today),
-                      );
+                  : roomGroups.map(({ meta: cat, items }) =>
                       // Empty categories still render their header — the + quick-add
                       // must stay reachable even before the first routine exists.
-                      const doneInCat = items.filter((r) => isDone(r.id, today)).length;
-
-                      return (
-                        <View key={cat.id} style={styles.group}>
-                          <View style={styles.catHeader}>
-                            <View style={[styles.catDot, { backgroundColor: `${cat.color}33` }]}>
-                              <Pictogram name={cat.icon} size={14} />
-                            </View>
-                            <Text
-                              style={[
-                                Typography.label,
-                                { color: readableTextColor(cat.color, t.surfaceMuted) },
-                              ]}>
-                              {cat.label}
-                            </Text>
-                            {/* 미분류(pseudo) 그룹은 실제 카테고리가 아니라 표시하지 않는다. */}
-                            {cat.id ? <VisibilityMark visibility={cat.visibility} /> : null}
-                            {items.length > 0 ? (
-                              <Text style={[Typography.supporting, { color: t.textDisabled }]}>
-                                {doneInCat}/{items.length}
-                              </Text>
-                            ) : null}
-                            <View style={styles.flex} />
-                            {/* The pseudo 기타 group (empty id) can't quick-add —
-                                uncategorized routines must not be creatable.
-                                미션 연동 카테고리도 임의 추가를 막는다. */}
-                            {cat.id && !quickAddDisabledCategoryIds.includes(cat.id) ? (
-                              <Pressable
-                                onPress={() => openQuickAdd(cat.id)}
-                                accessibilityRole="button"
-                                accessibilityLabel={`${cat.label} 할 일 추가`}
-                                hitSlop={8}
-                                style={[styles.catAdd, { backgroundColor: cat.color }]}>
-                                <Icon name="add" size={14} color={t.onPrimary} />
-                              </Pressable>
-                            ) : null}
-                          </View>
-
-                          <View style={styles.rows}>
-                            {/* The checkbox alone toggles completion; the rest
-                                of the row opens the 수정/삭제 bottom sheet (the
-                                old kebab's menu — the kebab itself is gone). */}
-                            {items.map((routine) => {
-                              const done = isDone(routine.id, today);
-                              return (
-                                <View key={routine.id}>
-                                  <View style={styles.routineRow}>
-                                    <Pressable
-                                      onPress={() => handleToggle(routine, today)}
-                                      accessibilityRole="checkbox"
-                                      accessibilityState={{ checked: done }}
-                                      accessibilityLabel={routine.title}
-                                      hitSlop={8}
-                                      style={[styles.leadIcon, styles.checkbox]}>
-                                      <Icon
-                                        name={done ? 'checkbox-on' : 'checkbox-off'}
-                                        size={22}
-                                        color={done ? cat.color : t.textDisabled}
-                                      />
-                                    </Pressable>
-                                    <Pressable
-                                      onPress={() => setMenuOpenId(routine.id)}
-                                      accessibilityRole="button"
-                                      accessibilityLabel={`${routine.title} 메뉴`}
-                                      style={[styles.flex, styles.rowBody]}>
-                                      <Text
-                                        style={[
-                                          Typography.body,
-                                          done
-                                            ? {
-                                                color: t.textMuted,
-                                                textDecorationLine: 'line-through',
-                                              }
-                                            : { color: t.text },
-                                        ]}>
-                                        {routine.title}
-                                      </Text>
-                                      {(routine.alarmEnabled && routine.time) ||
-                                      routine.photoVerify ? (
-                                        <View style={styles.badges}>
-                                          {routine.alarmEnabled && routine.time ? (
-                                            <View style={styles.badge}>
-                                              <Icon name="bell" size={12} color={t.textMuted} />
-                                              <Text
-                                                style={[styles.badgeText, { color: t.textMuted }]}>
-                                                {formatTime(routine.time)}
-                                              </Text>
-                                            </View>
-                                          ) : null}
-                                          {routine.photoVerify ? (
-                                            <View style={styles.badge}>
-                                              <Icon name="camera" size={12} color={t.textMuted} />
-                                              <Text
-                                                style={[styles.badgeText, { color: t.textMuted }]}>
-                                                사진 인증
-                                              </Text>
-                                            </View>
-                                          ) : null}
-                                        </View>
-                                      ) : null}
-                                    </Pressable>
-                                  </View>
-                                </View>
-                              );
-                            })}
-
-                            {addingCategory === cat.id ? (
-                              <View
-                                ref={addRowRef}
-                                style={[styles.addRow, { backgroundColor: t.surface }]}>
-                                <Icon name="checkbox-off" size={22} color={t.textDisabled} />
-                                <TextInput
-                                  ref={todoInputRef}
-                                  autoFocus
-                                  value={newTodo}
-                                  onChangeText={setNewTodo}
-                                  // Commit on blur — pressing 완료 (single-line blurs on
-                                  // submit) or tapping elsewhere both save the todo.
-                                  onBlur={() => commitTodo(cat.id)}
-                                  placeholder="할 일 입력 후 완료"
-                                  placeholderTextColor={t.textMuted}
-                                  style={[styles.flex, styles.todoInput, { color: t.text }]}
-                                />
-                                <Pressable
-                                  // onPressIn (fires before the input's blur) flags the
-                                  // blur as picker-driven so the row stays open.
-                                  onPressIn={() => {
-                                    skipBlurCommit.current = true;
-                                  }}
-                                  onPress={() => setTodoDateOpen(true)}
-                                  accessibilityRole="button"
-                                  accessibilityLabel="할 일 날짜 선택"
-                                  style={[styles.dateChip, { backgroundColor: t.surfaceMuted }]}>
-                                  <Icon name="calendar" size={13} color={t.textMuted} />
-                                  <Text style={[styles.dateChipText, { color: t.textMuted }]}>
-                                    {newTodoDate === today ? '오늘' : formatDate(newTodoDate)}
-                                  </Text>
-                                </Pressable>
-                              </View>
-                            ) : null}
-                          </View>
-                        </View>
-                      );
-                    })}
-
-                <Pressable
-                  onPress={onEdit}
-                  accessibilityRole="button"
-                  accessibilityLabel="방 꾸미기 열기"
-                  style={[styles.editBtn, { backgroundColor: t.surface, borderColor: t.border }]}>
-                  <Icon name="edit" size={16} color={t.text} />
-                  <Text style={[Typography.label, { color: t.text }]}>방 꾸미기</Text>
-                </Pressable>
+                      renderCategoryGroup(
+                        cat.id,
+                        cat,
+                        items.map((r) => rowFromRoutine(r, today)),
+                        today,
+                      ),
+                    )}
               </View>
             </>
           ) : (
             <View style={styles.calendarPanel}>
-              <Calendar value={selectedDate} onSelect={pickDate} />
-              <Text style={[Typography.h3, styles.calListTitle, { color: t.text }]}>
-                이 날의 루틴
-              </Text>
+              <GestureDetector gesture={tabFling}>
+                <View collapsable={false}>
+                  <Calendar
+                    value={selectedDate}
+                    onSelect={pickDate}
+                    today={today}
+                    monthSwipe={false}
+                  />
+                </View>
+              </GestureDetector>
+              <View style={styles.calListHead}>
+                <Text style={[Typography.h3, styles.calListTitle, { color: t.text }]}>
+                  이 날의 루틴
+                </Text>
+                {calDayTotal > 0 ? (
+                  <Text style={[Typography.label, { color: t.primaryText }]}>
+                    {calDayDone} / {calDayTotal}
+                  </Text>
+                ) : null}
+              </View>
+              {calDayTotal > 0 ? (
+                <SpringProgressBar
+                  progress={calDayDone / calDayTotal}
+                  color={t.primary}
+                  trackColor={t.surfaceMuted}
+                />
+              ) : null}
               {serverBackedDay ? (
                 <Text style={[Typography.supporting, { color: t.textMuted }]}>
                   {selectedDate > today
@@ -907,432 +1290,98 @@ export function MyRoomScreen({
                     예정된 루틴이 없어요.
                   </Text>
                 ) : (
-                  calServerGroups!.map((group, gi) => (
-                    <View key={group.meta.id || `etc-${gi}`} style={styles.group}>
-                      <View style={styles.catHeader}>
-                        <View style={[styles.catDot, { backgroundColor: `${group.meta.color}33` }]}>
-                          <Pictogram name={group.meta.icon} size={14} />
-                        </View>
-                        <Text
-                          style={[
-                            Typography.label,
-                            { color: readableTextColor(group.meta.color, t.surfaceMuted) },
-                          ]}>
-                          {group.meta.label}
-                        </Text>
-                        {group.meta.id ? (
-                          <VisibilityMark visibility={group.meta.visibility} />
-                        ) : null}
-                        <Text style={[Typography.supporting, { color: t.textDisabled }]}>
-                          {group.items.filter((i) => i.completed).length}/{group.items.length}
-                        </Text>
-                      </View>
-                      {group.items.map((item) => (
-                        <View key={`${item.kind}-${item.id}`} style={styles.routineRow}>
-                          <Pressable
-                            onPress={() => handleCalendarItemPress(item)}
-                            accessibilityRole="checkbox"
-                            accessibilityState={{ checked: item.completed }}
-                            accessibilityLabel={item.title}
-                            hitSlop={8}
-                            style={[styles.leadIcon, styles.checkbox]}>
-                            <Icon
-                              name={item.completed ? 'checkbox-on' : 'checkbox-off'}
-                              size={22}
-                              color={item.completed ? group.meta.color : t.textDisabled}
-                            />
-                          </Pressable>
-                          <View style={[styles.flex, styles.rowBody]}>
-                            <Text
-                              style={[
-                                Typography.body,
-                                item.completed
-                                  ? { color: t.textMuted, textDecorationLine: 'line-through' }
-                                  : { color: t.text },
-                              ]}>
-                              {item.title}
-                            </Text>
-                            {item.time ? (
-                              <View style={styles.badge}>
-                                <Icon name="bell" size={12} color={t.textMuted} />
-                                <Text style={[styles.badgeText, { color: t.textMuted }]}>
-                                  {formatTime(item.time)}
-                                </Text>
-                              </View>
-                            ) : null}
-                          </View>
-                        </View>
-                      ))}
-                    </View>
-                  ))
+                  calServerGroups!.map((group, gi) =>
+                    renderCategoryGroup(
+                      group.meta.id || `uncat-${gi}`,
+                      group.meta,
+                      group.items.map(rowFromCalendarItem),
+                      selectedDate,
+                    ),
+                  )
                 )
               ) : calClientGroups.length === 0 ? (
                 <Text style={[Typography.body, styles.calEmpty, { color: t.textMuted }]}>
                   예정된 루틴이 없어요.
                 </Text>
               ) : (
-                calClientGroups.map((group, gi) => (
-                  <View key={group.meta.id || `etc-${gi}`} style={styles.group}>
-                    <View style={styles.catHeader}>
-                      <View style={[styles.catDot, { backgroundColor: `${group.meta.color}33` }]}>
-                        <Pictogram name={group.meta.icon} size={14} />
-                      </View>
-                      <Text
-                        style={[
-                          Typography.label,
-                          { color: readableTextColor(group.meta.color, t.surfaceMuted) },
-                        ]}>
-                        {group.meta.label}
-                      </Text>
-                      {group.meta.id ? <VisibilityMark visibility={group.meta.visibility} /> : null}
-                      <Text style={[Typography.supporting, { color: t.textDisabled }]}>
-                        {group.items.filter((r) => isDone(r.id, selectedDate)).length}/
-                        {group.items.length}
-                      </Text>
-                    </View>
-                    {group.items.map((routine) => {
-                      const done = isDone(routine.id, selectedDate);
-                      return (
-                        <View key={routine.id} style={styles.routineRow}>
-                          <Pressable
-                            onPress={() => handleToggle(routine, selectedDate)}
-                            accessibilityRole="checkbox"
-                            accessibilityState={{ checked: done }}
-                            accessibilityLabel={routine.title}
-                            hitSlop={8}
-                            style={[styles.leadIcon, styles.checkbox]}>
-                            <Icon
-                              name={done ? 'checkbox-on' : 'checkbox-off'}
-                              size={22}
-                              color={done ? group.meta.color : t.textDisabled}
-                            />
-                          </Pressable>
-                          <View style={[styles.flex, styles.rowBody]}>
-                            <Text
-                              style={[
-                                Typography.body,
-                                done
-                                  ? { color: t.textMuted, textDecorationLine: 'line-through' }
-                                  : { color: t.text },
-                              ]}>
-                              {routine.title}
-                            </Text>
-                            {routine.alarmEnabled && routine.time ? (
-                              <View style={styles.badge}>
-                                <Icon name="bell" size={12} color={t.textMuted} />
-                                <Text style={[styles.badgeText, { color: t.textMuted }]}>
-                                  {formatTime(routine.time)}
-                                </Text>
-                              </View>
-                            ) : null}
-                          </View>
-                        </View>
-                      );
-                    })}
-                  </View>
-                ))
+                calClientGroups.map((group, gi) =>
+                  renderCategoryGroup(
+                    group.meta.id || `uncat-${gi}`,
+                    group.meta,
+                    group.items.map((r) => rowFromRoutine(r, selectedDate)),
+                    selectedDate,
+                  ),
+                )
               )}
             </View>
           )}
-        </ScrollView>
+        </PawRefreshScroll>
       </KeyboardAvoidingView>
 
-      <Modal
-        transparent
-        visible={menuRoutine !== null}
-        animationType="slide"
-        onRequestClose={() => setMenuOpenId(null)}>
-        <Pressable style={styles.sheetBackdrop} onPress={() => setMenuOpenId(null)}>
-          <Pressable style={[styles.sheet, { backgroundColor: t.screen }]}>
-            <View style={[styles.sheetHandle, { backgroundColor: t.border }]} />
-            <Text style={[Typography.h3, styles.sheetTitle, { color: t.text }]} numberOfLines={1}>
-              {menuRoutine?.title}
-            </Text>
+      <CategoryFormSheet
+        visible={editingCategory !== null}
+        editing={editingCategory}
+        onUpdate={onUpdateCategory}
+        onClose={() => setEditingCategory(null)}
+      />
 
-            <View style={styles.sheetActions}>
-              <Pressable
-                onPress={() => {
-                  const r = menuRoutine;
-                  setMenuOpenId(null);
-                  if (r) {
-                    setRenameText(r.title);
-                    setRenameId(r.id);
-                  }
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`${menuRoutine?.title ?? ''} 수정`}
-                style={[styles.sheetAction, { backgroundColor: t.surface }]}>
-                <Icon name="edit" size={22} color={t.text} />
-                <Text style={[Typography.label, { color: t.text }]}>수정하기</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  const r = menuRoutine;
-                  setMenuOpenId(null);
-                  if (r) onDeleteRoutine?.(r.id);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`${menuRoutine?.title ?? ''} 삭제`}
-                style={[styles.sheetAction, { backgroundColor: t.surface }]}>
-                <Icon name="trash" size={22} color={t.danger} />
-                <Text style={[Typography.label, { color: t.danger }]}>삭제하기</Text>
-              </Pressable>
-            </View>
-
-            <Pressable
-              onPress={() => {
-                const r = menuRoutine;
-                setMenuOpenId(null);
-                if (r) handleToggle(r, today);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={`${menuRoutine?.title ?? ''} ${menuDone ? '완료 취소' : '완료'}`}
-              style={styles.sheetItem}>
-              <View style={[styles.sheetItemIcon, { backgroundColor: t.primary }]}>
-                <Icon name={menuDone ? 'checkbox-off' : 'check'} size={18} color={t.onPrimary} />
-              </View>
-              <Text style={[Typography.body, { color: t.text }]}>
-                {menuDone ? '완료 취소' : '완료하기'}
-              </Text>
-            </Pressable>
-
-            {/* Todos have no alarm time — hide the dead menu item for them. */}
-            {menuRoutine?.kind !== 'todo' ? (
-              <Pressable
-                onPress={() => {
-                  const r = menuRoutine;
-                  setMenuOpenId(null);
-                  if (r) setTimeId(r.id);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`${menuRoutine?.title ?? ''} 시간 수정`}
-                style={styles.sheetItem}>
-                <View style={[styles.sheetItemIcon, { backgroundColor: t.warning }]}>
-                  <Icon name="bell" size={18} color={t.onPrimary} />
-                </View>
-                <Text style={[Typography.body, { color: t.text }]}>시간 수정</Text>
-              </Pressable>
-            ) : null}
-
-            {/* Todos move their dueDate; a routine moves that day's occurrence
-                only — the repeat stays (the calendar sheet explains). */}
-            <Pressable
-              onPress={() => {
-                const r = menuRoutine;
-                setMenuOpenId(null);
-                if (r) {
-                  setDateDraft(r.dueDate ?? today);
-                  setDateEditId(r.id);
-                }
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={`${menuRoutine?.title ?? ''} 날짜 바꾸기`}
-              style={styles.sheetItem}>
-              <View style={[styles.sheetItemIcon, { backgroundColor: t.success }]}>
-                <Icon name="calendar" size={18} color={t.onPrimary} />
-              </View>
-              <Text style={[Typography.body, { color: t.text }]}>날짜 바꾸기</Text>
-            </Pressable>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <RoutineMenuSheet
+        item={menuRoutine}
+        done={menuDone}
+        onClose={() => setMenuOpenId(null)}
+        onRename={(r) => setRenameId(r.id)}
+        onEdit={(r) => onEditRoutine?.(r)}
+        onDelete={(r) => onDeleteRoutine?.(r.id)}
+        onToggleComplete={(r) => {
+          // 서버 백업 날짜에서 연 메뉴는 달력 체크박스와 같은 규칙으로
+          // 토글한다 (미래 차단 토스트, 과거 실토글) (#323).
+          if (menuCalItem) handleCalendarItemPress(menuCalItem);
+          else handleToggle(r, menuDate);
+        }}
+        onEditTime={(r) => setTimeId(r.id)}
+        onChangeDate={(r) => setDateEditId(r.id)}
+      />
 
       {/* 날짜 바꾸기: calendar bottom sheet — the pick stays a draft until 확인. */}
-      <Modal
-        transparent
-        visible={dateEditItem !== null}
-        animationType="slide"
-        onRequestClose={() => setDateEditId(null)}>
-        <Pressable style={styles.sheetBackdrop} onPress={() => setDateEditId(null)}>
-          <Pressable style={[styles.sheet, { backgroundColor: t.screen }]}>
-            <View style={[styles.sheetHandle, { backgroundColor: t.border }]} />
-            <Text style={[Typography.h3, styles.sheetTitle, { color: t.text }]} numberOfLines={1}>
-              날짜 바꾸기
-            </Text>
-            {dateEditItem?.kind !== 'todo' ? (
-              <Text style={[Typography.supporting, styles.sheetNote, { color: t.textMuted }]}>
-                루틴 반복은 그대로 두고, 선택한 날짜에 이 날 몫이 할 일로 추가돼요.{'\n'}(원래
-                날짜에서 숨기는 건 서버 준비 중이에요)
-              </Text>
-            ) : null}
-            <Calendar value={dateDraft} onSelect={setDateDraft} />
-            <View style={styles.dialogBtns}>
-              <Pressable
-                onPress={() => setDateEditId(null)}
-                accessibilityRole="button"
-                accessibilityLabel="취소"
-                style={[styles.dialogBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  const r = dateEditItem;
-                  setDateEditId(null);
-                  if (!r) return;
-                  if (r.kind === 'todo') onUpdateTodoDueDate?.(r.id, dateDraft);
-                  else onMoveRoutineOccurrence?.(r.id, dateDraft);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="확인"
-                style={[styles.dialogBtn, { backgroundColor: t.primary }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>확인</Text>
-              </Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <DateEditSheet
+        item={dateEditItem}
+        onClose={() => setDateEditId(null)}
+        onUpdateTodoDueDate={onUpdateTodoDueDate}
+        onMoveRoutineOccurrence={onMoveRoutineOccurrence}
+      />
 
-      <Modal
-        transparent
-        visible={renameId !== null}
-        animationType="fade"
-        onRequestClose={() => setRenameId(null)}>
-        <Pressable style={styles.dialogBackdrop} onPress={() => setRenameId(null)}>
-          <Pressable style={[styles.dialogCard, { backgroundColor: t.screen }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>이름 수정</Text>
-            <TextInput
-              autoFocus
-              value={renameText}
-              onChangeText={setRenameText}
-              placeholder="루틴 이름"
-              placeholderTextColor={t.textMuted}
-              style={[styles.dialogInput, { color: t.text, backgroundColor: t.surfaceMuted }]}
-            />
-            <View style={styles.dialogBtns}>
-              <Pressable
-                onPress={() => setRenameId(null)}
-                accessibilityRole="button"
-                accessibilityLabel="취소"
-                style={[styles.dialogBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  const title = renameText.trim();
-                  if (renameId && title) onRenameRoutine?.(renameId, title);
-                  setRenameId(null);
-                }}
-                disabled={!renameText.trim()}
-                accessibilityRole="button"
-                accessibilityLabel="저장"
-                style={[
-                  styles.dialogBtn,
-                  { backgroundColor: renameText.trim() ? t.primary : t.surfaceMuted },
-                ]}>
-                <Text
-                  style={[
-                    Typography.label,
-                    { color: renameText.trim() ? t.onPrimary : t.textMuted },
-                  ]}>
-                  저장
-                </Text>
-              </Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <RenameDialog
+        item={renameItem}
+        onClose={() => setRenameId(null)}
+        onRename={onRenameRoutine}
+      />
 
-      <Modal
-        transparent
+      <TodoDateDialog
         visible={todoDateOpen}
-        animationType="fade"
-        onRequestClose={() => setTodoDateOpen(false)}>
-        <Pressable style={styles.dialogBackdrop} onPress={() => setTodoDateOpen(false)}>
-          <Pressable style={[styles.dialogCard, { backgroundColor: t.screen }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>할 일 날짜</Text>
-            <Calendar
-              value={newTodoDate}
-              onSelect={(date) => {
-                setNewTodoDate(date);
-                setTodoDateOpen(false);
-                // Re-focus the title input so blur-to-commit still works.
-                setTimeout(() => todoInputRef.current?.focus(), 60);
-              }}
-            />
-          </Pressable>
-        </Pressable>
-      </Modal>
+        value={newTodoDate}
+        onSelect={(date) => {
+          setNewTodoDate(date);
+          setTodoDateOpen(false);
+          // Re-focus the title input so blur-to-commit still works.
+          setTimeout(() => todoInputRef.current?.focus(), 60);
+        }}
+        onClose={() => setTodoDateOpen(false)}
+      />
 
       {/* Header hamburger popover: quick links to the management screens. */}
-      <Modal
-        transparent
+      <NavMenuPopover
         visible={navMenuOpen}
-        animationType="fade"
-        onRequestClose={() => setNavMenuOpen(false)}>
-        <Pressable style={styles.popoverBackdrop} onPress={() => setNavMenuOpen(false)}>
-          <View
-            style={[
-              styles.popover,
-              { top: navMenuTop, backgroundColor: t.screen, borderColor: t.border },
-            ]}>
-            {(
-              [
-                ...(onOpenNotifications
-                  ? [
-                      {
-                        icon: 'bell' as const,
-                        label: '알림',
-                        dot: unreadNotificationCount > 0,
-                        onPress: () => onOpenNotifications(),
-                      },
-                    ]
-                  : []),
-                ...(ownedCharacters && onSelectCharacter
-                  ? [
-                      {
-                        icon: 'profile' as const,
-                        label: '캐릭터 교체',
-                        onPress: () => setCharacterSheetOpen(true),
-                      },
-                    ]
-                  : []),
-                {
-                  icon: 'edit' as const,
-                  label: '방 꾸미기',
-                  onPress: () => onEdit?.(),
-                },
-                {
-                  icon: 'camera' as const,
-                  label: '방 이미지 저장',
-                  onPress: () => void onSaveRoomImage(),
-                },
-                {
-                  icon: 'folder' as const,
-                  label: '카테고리 관리',
-                  onPress: () => setCategorySheetOpen(true),
-                },
-                {
-                  icon: 'list' as const,
-                  label: '루틴 관리',
-                  onPress: () => onAddRoutine?.(),
-                },
-              ] as { icon: IconName; label: string; dot?: boolean; onPress: () => void }[]
-            ).map((item, idx, arr) => (
-              <Pressable
-                key={item.label}
-                onPress={() => {
-                  setNavMenuOpen(false);
-                  item.onPress();
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={item.label}
-                style={[
-                  styles.popoverItem,
-                  idx !== arr.length - 1 && {
-                    borderBottomColor: t.border,
-                    borderBottomWidth: StyleSheet.hairlineWidth,
-                  },
-                ]}>
-                <Icon name={item.icon} size={18} color={t.text} />
-                <Text style={[Typography.body, { color: t.text }]}>{item.label}</Text>
-                {item.dot ? (
-                  <View style={[styles.popoverDot, { backgroundColor: t.danger }]} />
-                ) : null}
-              </Pressable>
-            ))}
-          </View>
-        </Pressable>
-      </Modal>
+        top={navMenuTop}
+        onClose={() => setNavMenuOpen(false)}
+        onOpenCharacterPicker={
+          ownedCharacters && onSelectCharacter ? () => setCharacterSheetOpen(true) : undefined
+        }
+        onEditRoom={onEdit}
+        onSaveRoomImage={() => void onSaveRoomImage()}
+        onOpenCategoryManager={() => onManageCategories?.()}
+        // + 버튼(onAddRoutine)은 바로 추가로 가고, 관리는 여기서만 (#335).
+        onManageRoutines={onManageRoutines ?? onAddRoutine}
+      />
 
       <CharacterPickerSheet
         visible={characterSheetOpen}
@@ -1341,15 +1390,15 @@ export function MyRoomScreen({
         onClose={() => setCharacterSheetOpen(false)}
       />
 
-      <CategoryManagerSheet
-        visible={categorySheetOpen}
-        categories={categories}
-        onCreate={(cat) => onCreateCategory?.(cat)}
-        onUpdate={(id, cat) => onUpdateCategory?.(id, cat)}
-        onDelete={(id) => onDeleteCategory?.(id)}
-        onReorder={onReorderCategories}
-        inUseCategoryIds={inUseCategoryIds}
-        onClose={() => setCategorySheetOpen(false)}
+      <WalletHistorySheet
+        visible={walletHistoryOpen}
+        onClose={() => setWalletHistoryOpen(false)}
+        entries={walletHistory ?? []}
+        loading={walletHistoryLoading}
+        loadError={walletHistoryError}
+        onRetry={onLoadWalletHistory}
+        hasNext={walletHistoryHasNext}
+        onLoadMore={onLoadMoreWalletHistory}
       />
 
       <TimePickerSheet
@@ -1361,9 +1410,14 @@ export function MyRoomScreen({
         }}
         onClose={() => setTimeId(null)}
       />
+
+      {/* 완료 보상 코인 플라이 오버레이 (#440) — 탭 지점 → 지갑 필. */}
+      {flyingCoins.map((c) => (
+        <FlyingCoin key={c.id} {...c} onDone={() => onCoinArrive(c.id)} />
+      ))}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   screen: {
@@ -1396,6 +1450,13 @@ const styles = StyleSheet.create({
   calListTitle: {
     marginTop: Spacing.three,
   },
+  // 이 날의 루틴 제목 + 완료/총 카운트 행 (#346) — 방탭 sectionHead와 같은 결.
+  calListHead: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: Spacing.two,
+  },
   calEmpty: {
     paddingVertical: Spacing.three,
   },
@@ -1419,13 +1480,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.half,
   },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   iconBtn: {
     width: 40,
     height: 40,
@@ -1441,21 +1495,23 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
   },
-  popoverDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginLeft: 'auto',
-  },
-  iconGlyph: {
-    fontSize: 18,
-  },
   body: {
     paddingBottom: Spacing.six,
   },
   roomWrap: {
     paddingHorizontal: Spacing.three,
     paddingTop: Spacing.four,
+  },
+  // 꾸미기 버튼 (#727) — 뽑기 버튼 바로 위, 같은 크기.
+  decorBtn: {
+    position: 'absolute',
+    right: Spacing.four,
+    bottom: Spacing.three + 44 + Spacing.two,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   gachaBtn: {
     position: 'absolute',
@@ -1467,8 +1523,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  gachaGlyph: {
-    fontSize: 20,
+  // 방 이미지 저장 캡처 중 뽑기 버튼을 투명 처리해 사진에서 제외 (#475).
+  hidden: {
+    opacity: 0,
   },
   section: {
     paddingHorizontal: Spacing.four,
@@ -1485,20 +1542,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.three,
   },
-  addBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  // '＋ 루틴' 라벨 필 (#483) — 높이는 기존 32px 원과 동일하게 유지.
+  addPill: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  progressTrack: {
-    height: 10,
-    borderRadius: Radius.pill,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
+    gap: Spacing.half,
+    height: 32,
+    paddingHorizontal: Spacing.three,
     borderRadius: Radius.pill,
   },
   group: {
@@ -1509,144 +1560,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
   },
+  catHeaderTap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    flexShrink: 1,
+  },
+  // 카테고리 라벨 확대 (#356) — label 토큰(16) 위에 크기만 한 단계 올린다.
+  catLabel: {
+    fontSize: 18,
+    lineHeight: 24,
+  },
   catDot: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 32,
+    height: 32,
+    borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   catAdd: {
     width: 24,
     height: 24,
-    borderRadius: 12,
+    borderRadius: Radius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   rows: {
     gap: 0,
   },
-  routineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-  },
-  checkbox: {
-    justifyContent: 'center',
-  },
-  rowBody: {
-    paddingVertical: Spacing.one,
-  },
+  // 제목 + 반복 마커 한 줄 (#576) — 마커는 제목 바로 옆, 제목이 길면 잘린다.
   // Same width as catDot so checkboxes center under the category emoji and
   // row titles line up with the category label.
-  leadIcon: {
-    width: 28,
-    alignItems: 'center',
-  },
-  addRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: Spacing.one,
-    marginTop: Spacing.half,
-  },
-  sheetBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    borderTopLeftRadius: Radius.lg,
-    borderTopRightRadius: Radius.lg,
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.two,
-    paddingBottom: Spacing.six,
-    gap: Spacing.three,
-  },
-  sheetHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: Spacing.one,
-  },
-  sheetTitle: {
-    textAlign: 'center',
-  },
-  sheetNote: {
-    textAlign: 'center',
-  },
-  sheetActions: {
-    flexDirection: 'row',
-    gap: Spacing.three,
-  },
-  sheetAction: {
-    flex: 1,
-    borderRadius: Radius.lg,
-    paddingVertical: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.two,
-  },
-  sheetItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingVertical: Spacing.two,
-  },
-  sheetItemIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dialogBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: Spacing.four,
-  },
-  dialogCard: {
-    width: '100%',
-    maxWidth: 340,
-    borderRadius: Radius.lg,
-    padding: Spacing.four,
-    gap: Spacing.three,
-  },
-  dialogInput: {
-    fontSize: 16,
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.three,
-  },
-  dialogBtns: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-  },
-  dialogBtn: {
-    flex: 1,
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.three,
-    alignItems: 'center',
-  },
-  todoInput: {
-    fontSize: 16,
-    paddingVertical: Spacing.three,
-  },
-  dateChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.half,
-    borderRadius: Radius.pill,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: Spacing.one,
-  },
-  dateChipText: {
-    fontSize: 12,
-  },
   center: {
     textAlign: 'center',
   },
@@ -1654,63 +1598,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.five,
     gap: Spacing.two,
-  },
-  emptyHintRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.half,
-  },
-  retryBtn: {
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.five,
-  },
-  popoverBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-  },
-  popover: {
-    // `top` comes from the measured hamburger position (navMenuTop).
-    position: 'absolute',
-    right: Spacing.four,
-    minWidth: 176,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    overflow: 'hidden',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-  },
-  popoverItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.three,
-  },
-  badges: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.two,
-    marginTop: 2,
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.half,
-  },
-  badgeText: {
-    fontSize: 11,
-  },
-  editBtn: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.three,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
   },
 });

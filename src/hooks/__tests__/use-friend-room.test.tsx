@@ -74,16 +74,17 @@ describe('useFriendRoom', () => {
 
     const { friendRoom } = result.current;
     expect(friendRoom.characterId).toBe('otter');
-    // A matched code carries its CDN animation keys to the room (#263).
-    expect(friendRoom.characterAnimations).toEqual({
-      idle: 'characters/otter/animations/idle.webp',
-    });
+    // A matched code carries its CDN keys to the room as ordered frames
+    // (#263) — friend rooms have no poses[], so the legacy set is flattened.
+    expect(friendRoom.characterFrames).toEqual(['characters/otter/animations/idle.webp']);
     expect(friendRoom.streakDays).toBe(5);
     expect(friendRoom.placement).toEqual({
       placedFurnitureIds: ['2'],
       wallpaperId: '9',
       floorId: null,
       backgroundId: null,
+      // 슬롯 방(SLOT_V1)은 자유 배치 없음 (#327).
+      placements: null,
     });
     expect(friendRoom.routines).toHaveLength(2);
     expect(friendRoom.routines[0]).toMatchObject({ id: '3', completed: true });
@@ -95,7 +96,7 @@ describe('useFriendRoom', () => {
     ]);
   });
 
-  it('drops the animations when the character code has no app-side match', async () => {
+  it('drops the frames when the character code has no app-side match', async () => {
     global.fetch = jest.fn(async (url: string) => {
       if (url.includes('/room')) {
         return res({
@@ -118,7 +119,7 @@ describe('useFriendRoom', () => {
     await waitFor(() => expect(result.current.friendRoom.loading).toBe(false));
 
     expect(result.current.friendRoom.characterId).toBeUndefined();
-    expect(result.current.friendRoom.characterAnimations).toBeUndefined();
+    expect(result.current.friendRoom.characterFrames).toBeUndefined();
   });
 
   it('hides the activity section (undefined) when the history endpoint fails', async () => {
@@ -136,6 +137,30 @@ describe('useFriendRoom', () => {
     await waitFor(() => expect(result.current.friendRoom.loading).toBe(false));
 
     expect(result.current.friendRoom.recentActivity).toBeUndefined();
+  });
+
+  // 방문 실패는 빈 방으로 위장하지 않는다 (#549).
+  it('방·루틴·기록 3요청 전멸 시 error, 재시도 성공 시 해제된다 (#549)', async () => {
+    let broken = true;
+    global.fetch = jest.fn(async (url: string) => {
+      if (broken) return { ok: false, status: 500, text: async () => '{}' };
+      if (url.includes('/room')) return res({ streak: { currentCount: 2 } });
+      return res({});
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useFriendRoom());
+    await act(async () => {
+      await result.current.load(11, 42, CATALOGUE);
+    });
+    expect(result.current.friendRoom.error).toBe(true);
+    expect(result.current.friendRoom.loading).toBe(false);
+
+    broken = false;
+    await act(async () => {
+      await result.current.load(11, 42, CATALOGUE);
+    });
+    expect(result.current.friendRoom.error).toBeFalsy();
+    expect(result.current.friendRoom.streakDays).toBe(2);
   });
 
   it('resets to the empty state when the ids are missing (demo houses)', async () => {

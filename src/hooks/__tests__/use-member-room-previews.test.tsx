@@ -1,8 +1,12 @@
 import { act, renderHook } from '@testing-library/react-native';
 
 import type { ShopCatalogue } from '@/api/adapters';
-import { useMemberRoomPreviews, withMyCharacter } from '@/hooks/use-member-room-previews';
-import type { House, MemberRoomPreview } from '@/components/screens/group-house-screen';
+import {
+  characterIdForMember,
+  useMemberRoomPreviews,
+  withMyCharacter,
+} from '@/hooks/use-member-room-previews';
+import type { House, MemberRoomPreview } from '@/components/screens/house-screen';
 
 const res = (body: unknown) => ({
   ok: true,
@@ -92,7 +96,7 @@ describe('withMyCharacter', () => {
   const HOUSES: House[] = [
     {
       houseId: 11,
-      title: '집',
+      name: '집',
       floors: [
         {
           level: '1층',
@@ -120,5 +124,33 @@ describe('withMyCharacter', () => {
     expect(withMyCharacter(previews, HOUSES, undefined)).toBe(previews);
     // 이미 일치하면 같은 참조를 돌려줘 불필요한 리렌더가 없다.
     expect(withMyCharacter(previews, HOUSES, 'otter')).toBe(previews);
+  });
+});
+
+describe('characterIdForMember (#342, #753에서 공용 헬퍼로)', () => {
+  const previews = {
+    42: {
+      placedFurnitureIds: [],
+      wallpaperId: 'cream',
+      floorId: null,
+      backgroundId: null,
+      characterId: 'otter' as const,
+    },
+  };
+
+  it('프리뷰가 있으면 그 멤버의 캐릭터, 없으면 내 좌석만 내 캐릭터', () => {
+    const friend = { name: '친구', color: '#F5E1D8', membershipId: 42 };
+    const me = { name: '나', color: '#E8E0D0', isMine: true, membershipId: 43 };
+    const stranger = { name: '남', color: '#EEE', membershipId: 44 };
+    expect(characterIdForMember(friend, previews, 'tiger')).toBe('otter');
+    expect(characterIdForMember(me, previews, 'tiger')).toBe('tiger');
+    // 프리뷰 없는 남의 좌석은 기본 캐릭터.
+    expect(characterIdForMember(stranger, previews, 'tiger')).not.toBe('tiger');
+  });
+
+  it('membershipId 없는 좌석은 프리뷰 조회 없이 폴백', () => {
+    expect(characterIdForMember({ name: '나', color: '#EEE', isMine: true }, previews, 'cat')).toBe(
+      'cat',
+    );
   });
 });

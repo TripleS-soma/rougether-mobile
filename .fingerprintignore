@@ -1,0 +1,15 @@
+# CNG(managed) — ios/android는 prebuild 산출물이라 지문에서 제외.
+# EAS 워커가 prebuild 후 지문을 재계산할 때 로컬(디렉토리 없음)과 어긋나는 문제 방지.
+ios/**/*
+android/**/*
+# pod install이 각 라이브러리에 생성하는 autolinking patch — @expo/fingerprint 0.19+의
+# 기본 제외 규칙을 SDK 55(0.16.x)에 백포트 (expo/expo#34005 계열 mismatch 수정).
+**/node_modules/**/*.podspec.json
+# eas.json 변경이 런타임 지문을 바꿔 기존 설치의 OTA 수신을 끊던 사고(#554→#575) 방지 (#546).
+# 빌드 파이프라인 설정은 앱 바이너리 내용과 무관하므로 지문에서 제외한다.
+eas.json
+# 로컬 빌드 산출물 — 루트에 있으면 지문을 오염시켜 OTA 매칭이 깨진다.
+*.apk
+*.aab
+*.ipa
+*.zip
