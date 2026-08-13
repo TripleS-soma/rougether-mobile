@@ -37,7 +37,6 @@
     "expo-system-ui": "~55.0.19",
     "expo-updates": "~55.0.25",
     "expo-web-browser": "~55.0.17",
-    "posthog-react-native": "^4.59.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-native": "0.83.6",

@@ -4,6 +4,8 @@
  * Conventions (spec / OpenAPI): `/api/v1` prefix (baked into `API_BASE`), list
  * responses wrapped in `{ items: [...] }`, JWT bearer auth.
  */
+import { track } from '@/lib/analytics';
+
 import { getAccessToken, refreshSession } from './auth';
 import { ApiError, type HttpMethod, rawRequest } from './http';
 
@@ -39,6 +41,13 @@ async function request<T>(
       // 세션 정리는 refreshSession이 서버 거부일 때만 스스로 수행한다 (#515)
       // — 네트워크 오류로 갱신에 실패한 경우 세션은 살아 있어야 한다.
     }
+    // 이탈 원인 계측 (#799) — 화면마다 토스트로 흩어져 있던 실패를 한곳에서
+    // 센다. 경로는 **id를 지운 형태**로만 남긴다: `/houses/11/members/42/room`
+    // 같은 원본을 그대로 보내면 GA4 카디널리티가 터지고 식별정보가 섞인다.
+    track('api_error', {
+      endpoint: `${method} ${path.split('?')[0].replace(/\/\d+/g, '/{id}')}`,
+      status: err instanceof ApiError ? err.status : 0,
+    });
     throw err;
   }
 }

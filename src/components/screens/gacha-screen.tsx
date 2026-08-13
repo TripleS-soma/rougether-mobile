@@ -32,6 +32,7 @@ import { WalletPills } from '@/components/ui/wallet-pills';
 import { Overlay, Radius, Spacing, StaticWhite } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { track } from '@/lib/analytics';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { RARITY_COLORS, type Rarity } from '@/resources/furniture';
 import { hapticImpact, hapticSuccess } from '@/utils/haptics';
@@ -223,6 +224,11 @@ export function GachaScreen({
     if (!box || phase !== 'idle') return;
     // The button stays tappable when unaffordable — the tap says why.
     if (!canAfford(count)) {
+      // 뽑기 앞에서 코인이 모자라 돌아서는 지점 (#799) — 퍼널의 흔한 막힘.
+      track('purchase_blocked', {
+        currency: box.costCurrencyType === 'DIAMOND' ? 'diamond' : 'coin',
+        count,
+      });
       toast('잔액이 부족해요', 'error');
       return;
     }

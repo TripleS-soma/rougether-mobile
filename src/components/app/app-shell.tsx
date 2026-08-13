@@ -19,7 +19,7 @@ import { MissionSheet } from '@/components/screens/sheets/mission-sheet';
 import { BottomNav } from '@/components/ui/bottom-nav';
 import { MissionBanner } from '@/components/ui/mission-banner';
 import { DEFAULT_CHARACTER_ID, type CharacterId } from '@/constants/characters';
-import { screenView } from '@/lib/analytics';
+import { screenView, track } from '@/lib/analytics';
 import { todayIso } from '@/utils/datetime';
 import { refreshWidgets } from '@/widgets/rougether-widgets';
 import { buildWidgetSummary, saveWidgetSummary, saveWidgetTheme } from '@/widgets/widget-data';
@@ -463,6 +463,9 @@ export function AppShell({
                   setBackgroundId(bg);
                   // 꾸미기 저장 성공 = 미션 3 완료 (#571) — 새 아이템 포함
                   // 여부는 따지지 않는다(사양 단순화).
+                  // 퍼널 마지막 칸 (#799) — 루틴→코인→뽑기→꾸미기 한 바퀴가
+                  // 닫힌 지점. 미션은 스킵 가능하므로 저장 자체를 센다.
+                  track('room_save', { items: its.length });
                   completeMission('place-furniture');
                 }
                 return result;
