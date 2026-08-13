@@ -54,14 +54,14 @@ export function useMyCharacters() {
     [toast],
   );
 
-  // The worn character, once the server list has loaded. Its CDN animation
-  // keys ride along so the room can render the server art (#263).
+  // The worn character, once the server list has loaded. Its registered pose
+  // frames ride along so the room can render the server art (#263, #735).
   const selectedCharacter = characters?.find((c) => c.selected);
 
   return {
     characters,
     selectedCharacterId: selectedCharacter?.id,
-    selectedCharacterAnimations: selectedCharacter?.animations,
+    selectedCharacterFrames: selectedCharacter?.frames,
     reload: load,
     select,
   };

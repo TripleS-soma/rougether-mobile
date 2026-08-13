@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { CharacterAvatar, type CharacterAnimationSet } from '@/components/room/character-avatar';
+import { CharacterAvatar } from '@/components/room/character-avatar';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Icon } from '@/components/ui/icon';
 import { CHARACTER_OPTIONS, type CharacterId } from '@/constants/characters';
@@ -17,8 +17,8 @@ export type OwnedCharacter = {
   name: string;
   /** CDN art key (baseAssetKey); local sprite fallback when absent/invalid. */
   assetKey?: string;
-  /** CDN animation keys — the room renders the worn character with these (#263). */
-  animations?: CharacterAnimationSet;
+  /** 탭 순환 프레임 (#735) — 서버 poses[] 순서, 없으면 레거시 animations에서. */
+  frames?: string[];
   /** Currently worn (exactly one per account). */
   selected: boolean;
 };

@@ -11,7 +11,7 @@ import {
 } from '@/api';
 import {
   toAppCharacterId,
-  toCharacterAnimationMap,
+  toCharacterFramesMap,
   toOnboardingGoal,
   toServerCharacterId,
 } from '@/api/adapters';
@@ -73,8 +73,8 @@ export function AppRoot() {
     };
   }, [status]);
 
-  // 캐릭터별 CDN 애니메이션 키 (#589) — 온보딩 캐러셀 활성 카드의 wave.
-  const characterAnimations = useMemo(() => toCharacterAnimationMap(characters), [characters]);
+  // 캐릭터별 서버 포즈 프레임 (#589·#735) — 온보딩 캐러셀 활성 카드 재생용.
+  const characterFrames = useMemo(() => toCharacterFramesMap(characters), [characters]);
 
   // 참조 고정 — 셸을 거쳐 memo된 SettingsScreen까지 흘러가는 콜백이라
   // AppRoot 리렌더가 설정 화면 memo를 뚫지 않게 한다 (#539 결).
@@ -99,7 +99,7 @@ export function AppRoot() {
         goals={serverGoals.length > 0 ? serverGoals : undefined}
         initialGoals={selectedGoalIds}
         initialCharacterId={characterId}
-        characterAnimations={characterAnimations}
+        characterFrames={characterFrames}
         onDone={(goals, chosen, nickname) => {
           setCharacterId(chosen);
           setSelectedGoalIds(goals);

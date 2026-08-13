@@ -74,10 +74,9 @@ describe('useFriendRoom', () => {
 
     const { friendRoom } = result.current;
     expect(friendRoom.characterId).toBe('otter');
-    // A matched code carries its CDN animation keys to the room (#263).
-    expect(friendRoom.characterAnimations).toEqual({
-      idle: 'characters/otter/animations/idle.webp',
-    });
+    // A matched code carries its CDN keys to the room as ordered frames
+    // (#263) — friend rooms have no poses[], so the legacy set is flattened.
+    expect(friendRoom.characterFrames).toEqual(['characters/otter/animations/idle.webp']);
     expect(friendRoom.streakDays).toBe(5);
     expect(friendRoom.placement).toEqual({
       placedFurnitureIds: ['2'],
@@ -97,7 +96,7 @@ describe('useFriendRoom', () => {
     ]);
   });
 
-  it('drops the animations when the character code has no app-side match', async () => {
+  it('drops the frames when the character code has no app-side match', async () => {
     global.fetch = jest.fn(async (url: string) => {
       if (url.includes('/room')) {
         return res({
@@ -120,7 +119,7 @@ describe('useFriendRoom', () => {
     await waitFor(() => expect(result.current.friendRoom.loading).toBe(false));
 
     expect(result.current.friendRoom.characterId).toBeUndefined();
-    expect(result.current.friendRoom.characterAnimations).toBeUndefined();
+    expect(result.current.friendRoom.characterFrames).toBeUndefined();
   });
 
   it('hides the activity section (undefined) when the history endpoint fails', async () => {

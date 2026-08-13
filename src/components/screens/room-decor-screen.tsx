@@ -19,7 +19,7 @@ import Animated, {
   ZoomIn,
 } from 'react-native-reanimated';
 
-import { type CharacterAnimationSet, CharacterAvatar } from '@/components/room/character-avatar';
+import { CharacterAvatar } from '@/components/room/character-avatar';
 import {
   DraggableFurniture,
   dragClampBounds,
@@ -83,7 +83,7 @@ export type RoomDecorScreenProps = RoomCatalogProps & {
   diamondBalance?: number;
   characterId?: CharacterId;
   /** Worn character's CDN animation keys (forwarded to the <Room /> preview). */
-  characterAnimations?: CharacterAnimationSet;
+  characterFrames?: string[];
   onBack?: () => void;
   /**
    * Buy a not-yet-owned catalog item with diamond. Resolve true on success —
@@ -134,7 +134,7 @@ export function RoomDecorScreen({
   coinBalance = 0,
   diamondBalance = 0,
   characterId = DEFAULT_CHARACTER_ID,
-  characterAnimations,
+  characterFrames,
   onBack,
   onBuy,
   onApply,
@@ -611,7 +611,7 @@ export function RoomDecorScreen({
             <View pointerEvents="none" style={styles.characterLayer}>
               <CharacterAvatar
                 characterId={characterId}
-                animations={characterAnimations}
+                frames={characterFrames}
                 style={styles.characterFigure}
               />
             </View>

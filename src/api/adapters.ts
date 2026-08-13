@@ -4,6 +4,7 @@
  * (the API's numeric id stringified), 0–6 weekday numbers (0 = Sun), and
  * "HH:MM" times; the API uses numeric ids, MON–SUN day codes, and "HH:mm:ss".
  */
+import { isCdnKey } from '@/resources/asset';
 import { CHARACTER_OPTIONS, type CharacterId } from '@/constants/characters';
 import { type Wallet } from '@/constants/currency';
 import {
@@ -66,6 +67,8 @@ import type {
   RoomResponse,
   RoomSlotResponse,
   CharacterItem,
+  CharacterAnimations,
+  CharacterPoseResponse,
   CategoryResponse,
   GachaResponse,
   GoalItem,
@@ -619,16 +622,43 @@ export function toServerCharacterId(
 }
 
 /**
- * 마스터 /characters → 캐릭터별 CDN 애니메이션 키 맵 (#589) — 온보딩 캐러셀의
- * 활성 카드 wave 재생용. 애니메이션이 없는 캐릭터는 빠진다(정적 포즈 폴백).
+ * 캐릭터 프레임 (#735) — 탭 순환 순서대로의 CDN 키 목록. 앱은 프레임을 **이 한
+ * 가지 모양으로만** 다룬다: 포즈가 몇 개든, 어느 엔드포인트에서 왔든.
+ *
+ * 두 출처가 있다. `/characters`·`/me/characters`는 admin에 등록한 `poses[]`를
+ * 주고(개수 자유, `sortOrder` 순), 방 렌더 계열(`RenderCharacter`)은 아직
+ * 레거시 3칸(`idle`/`poseCycle`/`wave`)만 준다. poses가 있으면 그쪽이 이기고,
+ * 없으면 레거시로 떨어진다 — 서버가 렌더 응답에도 poses를 실어주면 이 함수만
+ * 남기고 레거시 갈래를 지우면 된다.
  */
-export function toCharacterAnimationMap(
+export function toCharacterFrames(
+  poses?: CharacterPoseResponse[],
+  animations?: CharacterAnimations,
+): string[] {
+  if (poses?.length) {
+    return (
+      [...poses]
+        // sortOrder가 같으면 id로 — 동률에서 순서가 흔들리지 않게.
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || (a.id ?? 0) - (b.id ?? 0))
+        .map((p) => p.assetKey)
+        .filter(isCdnKey)
+    );
+  }
+  return [animations?.idle, animations?.poseCycle, animations?.wave].filter(isCdnKey);
+}
+
+/**
+ * 마스터 /characters → 캐릭터별 프레임 맵 (#589 → #735) — 온보딩 캐러셀의 활성
+ * 카드 재생용. 프레임이 없는 캐릭터는 빠진다(번들 정적 포즈로 폴백).
+ */
+export function toCharacterFramesMap(
   masters: CharacterItem[],
-): Partial<Record<CharacterId, NonNullable<CharacterItem['animations']>>> {
-  const map: Partial<Record<CharacterId, NonNullable<CharacterItem['animations']>>> = {};
+): Partial<Record<CharacterId, string[]>> {
+  const map: Partial<Record<CharacterId, string[]>> = {};
   for (const m of masters) {
     const opt = CHARACTER_OPTIONS.find((o) => o.id === m.code);
-    if (opt && m.animations) map[opt.id] = m.animations;
+    const frames = toCharacterFrames(m.poses, m.animations);
+    if (opt && frames.length) map[opt.id] = frames;
   }
   return map;
 }
@@ -1092,7 +1122,7 @@ export function toOwnedCharacter(c: MyCharacterItem): OwnedCharacter | null {
     id,
     name: c.name || meta?.name || '',
     assetKey: c.baseAssetKey,
-    animations: c.animations,
+    frames: toCharacterFrames(c.poses, c.animations),
     selected: c.selected === true,
   };
 }

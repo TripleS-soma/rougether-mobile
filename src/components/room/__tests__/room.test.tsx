@@ -63,24 +63,25 @@ describe('Room', () => {
     expect(getByLabelText('고양이, 눌러서 포즈 바꾸기')).toBeTruthy();
   });
 
-  const PANDA_ANIMATIONS = {
-    idle: 'characters/panda/animations/idle.webp',
-    poseCycle: 'characters/panda/animations/pose-cycle.webp',
-    wave: 'characters/panda/animations/wave.webp',
-  };
+  // 서버 등록 포즈 프레임 — 순서 그대로 순환한다 (#735).
+  const PANDA_FRAMES = [
+    'characters/panda/animations/idle.webp',
+    'characters/panda/animations/pose-cycle.webp',
+    'characters/panda/animations/wave.webp',
+  ];
 
-  it('renders the CDN idle animation when the server sent animation keys', async () => {
+  it('renders the first CDN frame when the server sent pose keys', async () => {
     const { getByTestId } = await render(
-      <Room characterId="panda" characterAnimations={PANDA_ANIMATIONS} />,
+      <Room characterId="panda" characterFrames={PANDA_FRAMES} />,
     );
     expect(getByTestId('cdn-animation').props.source[0].uri).toContain(
       'characters/panda/animations/idle.webp',
     );
   });
 
-  it('cycles CDN animations idle → poseCycle → wave → idle on tap', async () => {
+  it('cycles the CDN frames in registration order on tap, wrapping around', async () => {
     const { getByLabelText, getByTestId } = await render(
-      <Room characterId="panda" characterAnimations={PANDA_ANIMATIONS} interactiveCharacter />,
+      <Room characterId="panda" characterFrames={PANDA_FRAMES} interactiveCharacter />,
     );
     const character = getByLabelText('판다, 눌러서 포즈 바꾸기');
     await fireEvent.press(character);
@@ -91,9 +92,9 @@ describe('Room', () => {
     expect(getByTestId('cdn-animation').props.source[0].uri).toContain('idle.webp');
   });
 
-  it('falls back to the bundled sprite when the animation keys are not CDN keys', async () => {
+  it('falls back to the bundled sprite when the frame keys are not CDN keys', async () => {
     const { queryByTestId, getByLabelText } = await render(
-      <Room characterId="panda" characterAnimations={{ idle: 'legacy/panda.webp' }} />,
+      <Room characterId="panda" characterFrames={['legacy/panda.webp']} />,
     );
     expect(queryByTestId('cdn-animation')).toBeNull();
     expect(getByLabelText('판다')).toBeTruthy();

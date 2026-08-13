@@ -122,7 +122,7 @@ export function FriendRoomScreen({
   onSwipeFriend,
   streakDays = 7,
   characterId = DEFAULT_CHARACTER_ID,
-  characterAnimations,
+  characterFrames,
   wallpaperId,
   floorId,
   backgroundId,
@@ -153,7 +153,7 @@ export function FriendRoomScreen({
   // <Room />에 스프레드로 넘기는 씬 번들 (#691).
   const roomScene: RoomSceneProps = {
     characterId,
-    characterAnimations,
+    characterFrames,
     wallpaperId,
     floorId,
     backgroundId,

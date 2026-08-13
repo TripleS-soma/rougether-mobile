@@ -15,12 +15,12 @@ import {
   characterIdFromCode,
   fromFriendRoomSlots,
   fromRoomPlacements,
+  toCharacterFrames,
   type ShopCatalogue,
   toFriendActivity,
   toFriendCategories,
   toFriendRoutines,
 } from '@/api/adapters';
-import type { CharacterAnimationSet } from '@/components/room/character-avatar';
 import type { FriendActivityDay } from '@/components/screens/friend-room-screen';
 import type { CharacterId } from '@/constants/characters';
 import type { Routine, RoutineCategoryMeta } from '@/constants/routines';
@@ -40,7 +40,7 @@ export type FriendRoom = {
   placement: FriendRoomPlacement | null;
   characterId?: CharacterId;
   /** The friend's CDN animation keys (room response); local sprite fallback. */
-  characterAnimations?: CharacterAnimationSet;
+  characterFrames?: string[];
   streakDays: number;
   routines: Routine[];
   /** 그날 루틴·투두의 공개 카테고리 메타 (#528) — 그룹 헤더용. */
@@ -100,7 +100,8 @@ export function useFriendRoom() {
           ? fromRoomPlacements(room.placements, catalogue)
           : null;
       // Same guard as toOwnedCharacter: a code the app doesn't know renders as the
-      // default character, so its animations must not ride along (wrong pairing).
+      // default character, so its frames must not ride along (wrong pairing).
+      // 친구 방 응답에는 poses[]가 없다 — 레거시 animations만 프레임으로 편다 (#735).
       const friendCharacterId = characterIdFromCode(room?.character?.code);
       setFriendRoom({
         placement: resolved
@@ -111,7 +112,9 @@ export function useFriendRoom() {
             }
           : null,
         characterId: friendCharacterId,
-        characterAnimations: friendCharacterId ? room?.character?.animations : undefined,
+        characterFrames: friendCharacterId
+          ? toCharacterFrames(undefined, room?.character?.animations)
+          : undefined,
         streakDays: room?.streak?.currentCount ?? 0,
         routines: day ? toFriendRoutines(day) : [],
         categories: day ? toFriendCategories(day) : [],

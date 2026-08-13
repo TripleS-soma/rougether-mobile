@@ -124,7 +124,7 @@ export function useFriendVisit({
         floors={catalogue.floors}
         backgrounds={catalogue.backgrounds}
         characterId={friendRoom.characterId}
-        characterAnimations={friendRoom.characterAnimations}
+        characterFrames={friendRoom.characterFrames}
         streakDays={friendRoom.streakDays}
         routines={friendRoom.routines}
         categories={friendRoom.categories}

@@ -147,7 +147,7 @@ export function AppShell({
   const {
     characters: ownedCharacters,
     selectedCharacterId,
-    selectedCharacterAnimations: wornCharacterAnimations,
+    selectedCharacterFrames: wornCharacterFrames,
     select: selectWornCharacter,
     reload: reloadMyCharacters,
   } = useMyCharacters();
@@ -290,7 +290,7 @@ export function AppShell({
     data: myRoomData,
     nickname,
     missionLinks: { toggleWithMissionGuard, houseCategoryIds, addRoutineWithMission },
-    character: { wornCharacterId, wornCharacterAnimations, ownedCharacters, wearCharacter },
+    character: { wornCharacterId, wornCharacterFrames, ownedCharacters, wearCharacter },
     room: {
       placedFurnitureIds,
       placements: placement.freeLayout ? placedItems : null,
@@ -450,7 +450,7 @@ export function AppShell({
               coinBalance={wallet.coin}
               diamondBalance={wallet.diamond}
               characterId={wornCharacterId}
-              characterAnimations={wornCharacterAnimations}
+              characterFrames={wornCharacterFrames}
               // 일괄 구매(프리뷰 저장, #501)가 결과를 기다린다 — Promise를 그대로.
               onBuy={(itemId) => purchaseFurniture(itemId)}
               onApply={async (its, wp, fl, bg) => {

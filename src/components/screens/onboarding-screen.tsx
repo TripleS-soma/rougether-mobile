@@ -12,7 +12,7 @@ import {
   View,
 } from 'react-native';
 
-import { CharacterAvatar, type CharacterAnimationSet } from '@/components/room/character-avatar';
+import { CharacterAvatar } from '@/components/room/character-avatar';
 import { Icon } from '@/components/ui/icon';
 import {
   CHARACTER_OPTIONS,
@@ -101,10 +101,10 @@ export type OnboardingScreenProps = {
   /** Previously chosen character — preselected on replay. */
   initialCharacterId?: CharacterId;
   /**
-   * 캐릭터별 서버 CDN 애니메이션 키 (#589, 마스터 /characters). 활성 카드가
-   * wave를 재생하는 데 쓴다 — 없으면(오프라인 등) 번들 정적 포즈로 폴백.
+   * 캐릭터별 서버 등록 포즈 프레임 (#589·#735, 마스터 /characters). 활성 카드가
+   * 첫 포즈를 재생하는 데 쓴다 — 없으면(오프라인 등) 번들 정적 포즈로 폴백.
    */
-  characterAnimations?: Partial<Record<CharacterId, CharacterAnimationSet>>;
+  characterFrames?: Partial<Record<CharacterId, string[]>>;
 };
 
 /** 받침 유무에 따른 '이랑/랑' — CTA "OO(이)랑 함께하기" (#589). */
@@ -126,7 +126,7 @@ export function OnboardingScreen({
   goals,
   initialGoals,
   initialCharacterId,
-  characterAnimations,
+  characterFrames,
 }: OnboardingScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
@@ -226,7 +226,7 @@ export function OnboardingScreen({
         <View style={styles.nicknameBody}>
           <CharacterAvatar
             characterId={selectedCharacter}
-            animations={characterAnimations?.[selectedCharacter]}
+            frames={characterFrames?.[selectedCharacter]}
             size={120}
           />
           <TextInput
@@ -308,7 +308,7 @@ export function OnboardingScreen({
           testID="character-carousel">
           {characterOrder.map((c, i) => {
             const isActive = selectedCharacter === c.id;
-            const wave = characterAnimations?.[c.id]?.wave;
+            const frames = characterFrames?.[c.id];
             return (
               <Pressable
                 key={c.id}
@@ -325,9 +325,9 @@ export function OnboardingScreen({
                   <CharacterAvatar
                     characterId={c.id}
                     size={Math.min(Math.round(cardW * 0.55), 220)}
-                    // 활성 카드만 wave 키를 넘긴다 — CharacterAvatar는 유효한
+                    // 활성 카드만 서버 프레임을 넘긴다 — CharacterAvatar는 유효한
                     // CDN 키가 있으면 그 webp를, 없으면 번들 정적 포즈를 그린다.
-                    animations={isActive && wave ? { wave } : undefined}
+                    frames={isActive ? frames : undefined}
                   />
                 </View>
                 <View style={styles.characterMeta}>
