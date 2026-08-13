@@ -50,6 +50,7 @@ import {
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useStableCallback } from '@/hooks/use-stable-value';
+import { track } from '@/lib/analytics';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
 /**
@@ -525,7 +526,12 @@ export function RoomDecorScreen({
   );
   const clearFloor = useStableCallback(() => setFloorId(null));
   const clearBackground = useStableCallback(() => setBackgroundId(null));
-  const blockedBuy = useStableCallback(() => toast('다이아가 부족해요', 'error'));
+  // 에러가 아니라 '못 사고 돌아선' 순간 — Sentry에는 안 잡히고 이벤트로만
+  // 남는다 (#799). 가격 장벽이 이탈 원인인지 여기서만 보인다.
+  const blockedBuy = useStableCallback(() => {
+    track('purchase_blocked', { currency: 'diamond' });
+    toast('다이아가 부족해요', 'error');
+  });
   // 배치 안 된 가구는 방 가운데로 추가, 배치된 가구는 다시 빼기.
   const togglePlace = useStableCallback((item: FurnitureItem) =>
     placedSet.has(item.id) ? removeItem(item.id) : addItem(item),

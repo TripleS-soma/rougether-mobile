@@ -21,6 +21,7 @@ import { OnboardingScreen, type OnboardingGoal } from '@/components/screens/onbo
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { useAuth } from '@/hooks/use-auth';
 import { resetOnboardingMissions } from '@/hooks/use-onboarding-missions';
+import { track } from '@/lib/analytics';
 import { loadOnboarding, resetOnboarding, saveOnboarding } from '@/lib/onboarding-store';
 
 /**
@@ -106,6 +107,13 @@ export function AppRoot() {
           setOnboarded(true);
           // 온보딩을 방금 마침 — 셸이 온보딩 미션 체인을 시작한다 (#571).
           setJustOnboarded(true);
+          // 퍼널 (#799) — 목표·캐릭터·닉네임까지 마친 지점. 닉네임은 값이
+          // 아니라 입력 여부만 남긴다(개인정보를 분석 도구로 흘리지 않는다).
+          track('onboarding_complete', {
+            character: chosen,
+            goals: goals.length,
+            nickname: nickname ? 'set' : 'skipped',
+          });
           void saveOnboarding({ characterId: chosen, goals });
           // Push the selections to the server, best-effort: goal ids are
           // numeric only when the server master supplied them, and the

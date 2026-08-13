@@ -280,6 +280,7 @@ export function useMyRoomData() {
       try {
         const created = await createTodo(toTodoCreate(category, title, dueDate));
         setRoutines((prev) => [...prev, toAppTodo(created)]);
+        track('routine_create', { kind: 'todo' });
         // 달력의 서버 백업 날짜(오늘 외)에 추가한 경우 그 날짜 기록을 재조회해
         // 목록에 즉시 반영한다 (#323).
         if (dueDate !== todayIso()) void loadCalendarDay(dueDate);
@@ -296,6 +297,9 @@ export function useMyRoomData() {
       try {
         const created = await createRoutine(toRoutineCreate(n));
         setRoutines((prev) => [...prev, toAppRoutine(created)]);
+        // 퍼널 (#799) — 온보딩 미션은 스킵할 수 있어 미션 이벤트만으로는
+        // 등록한 사람을 다 세지 못한다. 생성 자체를 여기서 센다.
+        track('routine_create', { kind: 'routine' });
         return true;
       } catch {
         toast('루틴을 만들지 못했어요', 'error');

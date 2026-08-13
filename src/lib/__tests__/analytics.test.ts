@@ -44,6 +44,32 @@ describe('analytics', () => {
     expect(gaMock.setUserId).toHaveBeenCalledWith(expect.anything(), null);
   });
 
+  it('퍼널 이벤트가 GA4로 나간다 — 도구는 GA4 하나 (#799)', () => {
+    initAnalytics();
+    // 설치 → 로그인 → 온보딩 → 루틴 등록 → 완료 → 뽑기 → 방 저장.
+    track('login_success', { provider: 'kakao' });
+    track('onboarding_complete', { character: 'cat', goals: 2, nickname: 'set' });
+    track('routine_create', { kind: 'routine' });
+    track('room_save', { items: 5 });
+    for (const name of ['login_success', 'onboarding_complete', 'routine_create', 'room_save']) {
+      expect(gaMock.logEvent).toHaveBeenCalledWith(expect.anything(), name, expect.anything());
+    }
+  });
+
+  it('이탈 원인 이벤트도 같은 창구로 나간다 (#799)', () => {
+    initAnalytics();
+    // 에러로 터지지 않고 조용히 포기하는 순간 — Sentry가 아니라 여기서만 보인다.
+    const failures: [string, Record<string, string | number>][] = [
+      ['login_failed', { provider: 'apple' }],
+      ['purchase_blocked', { currency: 'coin', count: 6 }],
+      ['api_error', { endpoint: 'GET /houses/{id}/members/{id}/room', status: 500 }],
+    ];
+    for (const [name, props] of failures) {
+      track(name as Parameters<typeof track>[0], props);
+      expect(gaMock.logEvent).toHaveBeenCalledWith(expect.anything(), name, props);
+    }
+  });
+
   it('처리되지 않은 JS 에러가 Crashlytics recordError로 남는다 (#438)', () => {
     initAnalytics();
     const errorUtils = (
