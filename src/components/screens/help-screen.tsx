@@ -7,6 +7,12 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
+/**
+ * 도움말 FAQ — **앱에 실제로 있는 것만** 적는다. "인증 사진형 루틴" 항목이
+ * 있었지만 루틴 만들기에 사진 인증 토글이 없고(서버 루틴도 verificationType이
+ * 전부 null) 카메라는 버그 제보 스크린샷에서만 쓴다 — 없는 기능을 하라고
+ * 안내하던 셈이라 지웠다 (#797). 서버·UI가 생기면 그때 되살릴 것.
+ */
 const FAQS: { q: string; a: string }[] = [
   {
     q: '루틴은 어떻게 추가하나요?',
@@ -15,10 +21,6 @@ const FAQS: { q: string; a: string }[] = [
   {
     q: '코인과 다이아는 어떻게 모으나요?',
     a: '매일 루틴을 완료하면 코인을 받아요. 코인으로 뽑기를 하고, 뽑기에서 이미 가진 아이템이 나오면 다이아로 바뀌어요. 다이아로는 방 꾸미기에서 가구를 살 수 있어요.',
-  },
-  {
-    q: '인증 사진형 루틴이 뭔가요?',
-    a: '완료할 때 카메라로 사진을 찍어 인증하는 루틴이에요. 루틴을 만들 때 사진 인증을 켜면 돼요.',
   },
   {
     q: '친구와 함께하려면 어떻게 하나요?',
