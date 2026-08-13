@@ -4,12 +4,8 @@
  * Conventions (spec / OpenAPI): `/api/v1` prefix (baked into `API_BASE`), list
  * responses wrapped in `{ items: [...] }`, JWT bearer auth.
  */
-import { clearSession, getAccessToken, refreshSession } from './auth';
+import { getAccessToken, refreshSession } from './auth';
 import { ApiError, type HttpMethod, rawRequest } from './http';
-
-// Re-exported for MSW handlers (which key mocks off the base) and diagnostics.
-export { API_BASE } from './config';
-export { ApiError } from './http';
 
 export type RequestOptions = {
   /** Attach the bearer token (default true). Set false for public endpoints. */
@@ -40,7 +36,8 @@ async function request<T>(
       if (refreshed) {
         return rawRequest<T>(method, path, { headers: authHeaders(), body });
       }
-      await clearSession();
+      // 세션 정리는 refreshSession이 서버 거부일 때만 스스로 수행한다 (#515)
+      // — 네트워크 오류로 갱신에 실패한 경우 세션은 살아 있어야 한다.
     }
     throw err;
   }

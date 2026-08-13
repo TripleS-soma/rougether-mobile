@@ -1,0 +1,251 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
+import { router } from 'expo-router';
+import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from 'react';
+import { Linking } from 'react-native';
+
+import { type Screen } from '@/components/app/navigation';
+import { BugReportScreen } from '@/components/screens/bug-report-screen';
+import { HelpScreen } from '@/components/screens/help-screen';
+import { InviteFriendsScreen } from '@/components/screens/invite-friends-screen';
+import { NotificationSettingsScreen } from '@/components/screens/notification-settings-screen';
+import { ProfileEditScreen } from '@/components/screens/profile-edit-screen';
+import {
+  DEFAULT_SOUND_SETTINGS,
+  type SoundSettings,
+  SoundSettingsScreen,
+} from '@/components/screens/sound-settings-screen';
+import { FontScreen } from '@/components/screens/font-screen';
+import { ThemeScreen } from '@/components/screens/theme-screen';
+import { useToast } from '@/components/ui/toast';
+import type { CharacterId } from '@/constants/characters';
+import { SUPPORT_EMAIL } from '@/constants/policy';
+import { useAuth } from '@/hooks/use-auth';
+import { useBugReports } from '@/hooks/use-bug-reports';
+import { useInvites } from '@/hooks/use-invites';
+import { useNotificationSettings } from '@/hooks/use-notification-settings';
+import { useBrandTheme } from '@/hooks/use-tokens';
+import { subscribePendingFriendInviteCode } from '@/lib/pending-invite';
+import { pickLibraryImage } from '@/lib/pick-image';
+import { setHapticsEnabled } from '@/utils/haptics';
+
+/** 사운드 설정의 기기 보관 키 (#405) — 알림 설정은 서버로 이관됨 (#495). */
+const DEVICE_SETTINGS_KEY = 'rougether.device-settings';
+
+/**
+ * 설정 서피스 배선 (#692 2단계) — 설정 탭과 그 서브화면 8종(테마·폰트·프로필·
+ * 알림·사운드·버그 제보·도움말·친구 초대)의 도메인 훅·콜백·JSX를
+ * 소유한다. 서브화면에 있는 동안 탭 페이저가 언마운트되므로 상태는 컴포넌트가
+ * 아니라 항상 마운트된 셸에서 이 훅으로 산다. 셸은 `tabProps`를
+ * `<SettingsScreen {...tabProps} />`로 스프레드하고 `subScreen`을 렌더만 한다.
+ */
+export function useSettingsSurface({
+  screen,
+  setScreen,
+  onReplayOnboarding,
+  profile,
+}: {
+  screen: Screen;
+  setScreen: Dispatch<SetStateAction<Screen>>;
+  /** 설정 → 튜토리얼 다시 보기 (셸 prop 통과). */
+  onReplayOnboarding?: () => void;
+  /** 프로필 편집 배선 — 닉네임·소개는 나의 방 헤더와 공유라 셸 소유. */
+  profile: {
+    nickname: string;
+    bio: string;
+    characterId: CharacterId;
+    onSave: (nickname: string, bio: string) => void;
+  };
+}) {
+  const { themeId, setThemeId, mode: themeMode, setMode: setThemeMode, fontId, setFontId } = useBrandTheme(); // prettier-ignore
+  const { show: toast } = useToast();
+  // 스토어 요건(#545): 도움말의 실제 앱 버전 표기.
+  const appVersion = Constants.expoConfig?.version ?? '1.0.0';
+
+  const { logout, withdraw } = useAuth();
+  const handleLogout = useCallback(() => {
+    // Clearing the session flips auth status → AppRoot redirects to /login.
+    void logout();
+  }, [logout]);
+  const handleWithdraw = useCallback(() => {
+    // 성공 시 status가 guest로 바뀌어 AppRoot가 로그인으로 보낸다 (#547).
+    void withdraw().then((ok) => {
+      if (ok) toast('탈퇴가 완료됐어요');
+      else toast('탈퇴에 실패했어요. 잠시 후 다시 시도해 주세요', 'error');
+    });
+  }, [withdraw, toast]);
+
+  // 외부 링크 — 핸들러 없는 기기(메일 앱 미설정 등)에서 reject되므로 토스트로 안내.
+  const openSupportMail = useCallback(() => {
+    Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('[루게더] 문의')}`).catch(
+      () => toast('링크를 열 수 없어요. 잠시 후 다시 시도해 주세요.', 'error'),
+    );
+  }, [toast]);
+
+  // 버그 제보 (#496) — 화면을 열 때 내 제보 내역을 불러온다.
+  const { entries: bugReports, load: loadBugReports, submit: submitBugReport } = useBugReports();
+
+  // 친구 초대 리워드 (#518) — 설정 → 친구 초대 화면의 데이터·액션.
+  const {
+    info: inviteInfo,
+    loading: invitesLoading,
+    loadError: invitesLoadError,
+    load: loadInvites,
+    redeem: redeemInviteCode,
+  } = useInvites();
+  // 친구 초대 링크 (#667) — 친구 초대 화면을 열고 받은 코드 입력을 프리필.
+  const [pendingFriendCode, setPendingFriendCode] = useState<string | null>(null);
+  useEffect(
+    () =>
+      subscribePendingFriendInviteCode((code) => {
+        setPendingFriendCode(code);
+        setScreen('inviteFriends');
+        void loadInvites();
+      }),
+    // loadInvites·setScreen은 안정 참조 — 마운트 1회 구독.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  // 알림 설정은 서버 보관으로 이관 (#495) — 열 때 GET, 토글마다 낙관적 PATCH.
+  const {
+    settings: notificationSettings,
+    loadError: notificationSettingsLoadError,
+    load: loadNotificationSettings,
+    toggle: toggleNotificationSetting,
+  } = useNotificationSettings((message) => toast(message, 'error'));
+
+  // 사운드 설정은 서버 API가 생기기 전까지 기기(AsyncStorage)에 보관 (#405).
+  // 예전 저장값의 notifications 필드는 서버 이관(#495) 후 무시된다.
+  const [soundSettings, setSoundSettings] = useState<SoundSettings>(DEFAULT_SOUND_SETTINGS);
+  useEffect(() => {
+    void AsyncStorage.getItem(DEVICE_SETTINGS_KEY).then((raw) => {
+      if (!raw) return;
+      try {
+        const saved = JSON.parse(raw) as { sound?: SoundSettings };
+        if (saved.sound) setSoundSettings((p) => ({ ...p, ...saved.sound }));
+      } catch {
+        // 손상된 저장값은 기본값으로 무시.
+      }
+    });
+  }, []);
+  const persistDeviceSettings = (sound: SoundSettings) => {
+    void AsyncStorage.setItem(DEVICE_SETTINGS_KEY, JSON.stringify({ sound })).catch(() => {});
+  };
+  // '햅틱 진동' 토글을 전역 게이트에 주입 (#586) — 이 이펙트가 없으면 토글이
+  // 저장만 되고 아무것도 제어하지 않는다(휠 틱·완료 햅틱 등 전부 무조건 발사).
+  useEffect(() => {
+    setHapticsEnabled(soundSettings.haptics);
+  }, [soundSettings.haptics]);
+
+  // 설정 화면 콜백 — SettingsScreen이 memo라(탭 페이저로 상주, #539 후속)
+  // 인라인 람다면 셸 리렌더마다 memo가 뚫린다. 전부 참조 고정.
+  const openTheme = useCallback(() => setScreen('theme'), [setScreen]);
+  const openFont = useCallback(() => setScreen('font'), [setScreen]);
+  const openProfileEdit = useCallback(() => setScreen('profileEdit'), [setScreen]);
+  const openNotificationSettings = useCallback(() => {
+    setScreen('notifications');
+    // 화면을 열 때마다 서버값으로 최신화 (실패 시 기본값/직전값 유지).
+    void loadNotificationSettings();
+  }, [setScreen, loadNotificationSettings]);
+  const openSound = useCallback(() => setScreen('sound'), [setScreen]);
+  const openHelp = useCallback(() => setScreen('help'), [setScreen]);
+  // 친구 초대 (#518) — 진입 시점에 내 코드를 로드(없으면 서버가 발급).
+  const openInviteFriends = useCallback(() => {
+    setScreen('inviteFriends');
+    void loadInvites();
+  }, [setScreen, loadInvites]);
+  // 약관/처리방침은 외부 브라우저 대신 인앱 웹뷰 라우트로 (#652).
+  const openTerms = useCallback(
+    () => router.push({ pathname: '/policy', params: { doc: 'terms' } }),
+    [],
+  );
+  const openPrivacy = useCallback(
+    () => router.push({ pathname: '/policy', params: { doc: 'privacy' } }),
+    [],
+  );
+  const openBugReport = useCallback(() => {
+    setScreen('bugReport');
+    void loadBugReports();
+  }, [setScreen, loadBugReports]);
+
+  /** 탭 페이저의 설정 페이지 prop — `<SettingsScreen {...tabProps} />`. */
+  const tabProps = {
+    themeMode,
+    onChangeThemeMode: setThemeMode,
+    fontId,
+    onOpenFont: openFont,
+    onOpenTheme: openTheme,
+    onEditProfile: openProfileEdit,
+    onOpenNotifications: openNotificationSettings,
+    onOpenSound: openSound,
+    onOpenHelp: openHelp,
+    onInviteFriends: openInviteFriends,
+    onOpenTerms: openTerms,
+    onOpenPrivacy: openPrivacy,
+    onReportBug: openBugReport,
+    onReplayOnboarding,
+    onLogout: handleLogout,
+    onWithdraw: handleWithdraw,
+  };
+
+  const backToSettings = useCallback(() => setScreen('settings'), [setScreen]);
+
+  /** 현재 화면이 설정 서브화면이면 그 JSX, 아니면 null — 셸이 그대로 렌더. */
+  const subScreen =
+    screen === 'theme' ? (
+      <ThemeScreen themeId={themeId} onChangeThemeId={setThemeId} onBack={backToSettings} />
+    ) : screen === 'font' ? (
+      <FontScreen fontId={fontId} onChangeFont={setFontId} onBack={backToSettings} />
+    ) : screen === 'profileEdit' ? (
+      <ProfileEditScreen
+        initialNickname={profile.nickname}
+        initialBio={profile.bio}
+        characterId={profile.characterId}
+        onSave={(nick, b) => {
+          profile.onSave(nick, b);
+          setScreen('settings');
+        }}
+        onBack={backToSettings}
+      />
+    ) : screen === 'notifications' ? (
+      <NotificationSettingsScreen
+        settings={notificationSettings}
+        onToggle={toggleNotificationSetting}
+        loadError={notificationSettingsLoadError}
+        onRetry={loadNotificationSettings}
+        onBack={backToSettings}
+      />
+    ) : screen === 'sound' ? (
+      <SoundSettingsScreen
+        initialSettings={soundSettings}
+        onChange={(next) => {
+          setSoundSettings(next);
+          persistDeviceSettings(next);
+        }}
+        onBack={backToSettings}
+      />
+    ) : screen === 'bugReport' ? (
+      <BugReportScreen
+        entries={bugReports}
+        onSubmit={submitBugReport}
+        onPickImage={pickLibraryImage}
+        onBack={backToSettings}
+      />
+    ) : screen === 'help' ? (
+      <HelpScreen onBack={backToSettings} appVersion={appVersion} onContact={openSupportMail} />
+    ) : screen === 'inviteFriends' ? (
+      <InviteFriendsScreen
+        info={inviteInfo}
+        loading={invitesLoading}
+        loadError={invitesLoadError}
+        onRetry={loadInvites}
+        onRedeem={redeemInviteCode}
+        initialRedeemCode={pendingFriendCode ?? undefined}
+        onInitialRedeemCodeConsumed={() => setPendingFriendCode(null)}
+        onBack={backToSettings}
+      />
+    ) : null;
+
+  return { tabProps, subScreen };
+}

@@ -1,7 +1,39 @@
 /**
  * TypeScript types generated from the Rougether User API v1 OpenAPI spec
- * (http://3.35.167.122:8080/v3/api-docs). Regenerate with `npm run gen:api-types`. Do not edit by hand.
+ * (https://dkfiwkal2ezg9.cloudfront.net/v3/api-docs). Regenerate with `npm run gen:api-types`. Do not edit by hand.
  */
+
+export type AccessoryRenderProfileResponse = {
+  renderState?: string;
+  assetKey?: string;
+  canvasWidth?: number;
+  canvasHeight?: number;
+  assetWidth?: number;
+  assetHeight?: number;
+  positionX?: number;
+  positionY?: number;
+  widthRatio?: number;
+  rotationDeg?: number;
+  zIndex?: number;
+};
+
+export type AppleLoginRequest = {
+  idToken: string;
+  authorizationCode: string;
+};
+
+export type BugReportListResponse = {
+  items?: BugReportResponse[];
+};
+
+export type BugReportResponse = {
+  bugReportId?: number;
+  title?: string;
+  content?: string;
+  status?: 'RECEIVED' | 'IN_PROGRESS' | 'RESOLVED';
+  screenshotKeys?: string[];
+  createdAt?: string;
+};
 
 export type CalendarDayResponse = {
   date?: string;
@@ -15,6 +47,7 @@ export type CategoryCreateRequest = {
   iconKey?: string;
   sortOrder?: number;
   visibility?: 'PRIVATE' | 'FRIENDS' | 'HOUSE' | 'PUBLIC';
+  houseId?: number;
 };
 
 export type CategoryListResponse = {
@@ -29,6 +62,8 @@ export type CategoryResponse = {
   sortOrder?: number;
   visibility?: 'PRIVATE' | 'FRIENDS' | 'HOUSE' | 'PUBLIC';
   deleted?: boolean;
+  // 스펙 미표기 nullable (#733): 미연동은 null (#578).
+  houseId?: number | null;
 };
 
 export type CategoryUpdateRequest = {
@@ -37,6 +72,16 @@ export type CategoryUpdateRequest = {
   iconKey?: string;
   sortOrder?: number;
   visibility?: 'PRIVATE' | 'FRIENDS' | 'HOUSE' | 'PUBLIC';
+  houseId?: number;
+};
+
+export type CharacterAccessoriesResponse = {
+  userCharacterId?: number;
+  items?: EquippedAccessoryResponse[];
+};
+
+export type CharacterAccessoryEquipRequest = {
+  userItemId: number;
 };
 
 export type CharacterAnimations = {
@@ -51,11 +96,19 @@ export type CharacterItem = {
   name?: string;
   baseAssetKey?: string;
   animations?: CharacterAnimations;
+  poses?: CharacterPoseResponse[];
   sortOrder?: number;
 };
 
 export type CharacterListResponse = {
   items?: CharacterItem[];
+};
+
+export type CharacterPoseResponse = {
+  id?: number;
+  code?: string;
+  assetKey?: string;
+  sortOrder?: number;
 };
 
 export type CharacterSelectRequest = {
@@ -96,6 +149,16 @@ export type DrawResult = {
   refundAmount?: number;
 };
 
+export type EquippedAccessoryResponse = {
+  userItemId?: number;
+  itemId?: number;
+  name?: string;
+  assetKey?: string;
+  characterSlotType?: string;
+  renderProfiles?: AccessoryRenderProfileResponse[];
+  equippedAt?: string;
+};
+
 export type GachaDrawRequest = {
   count: number;
 };
@@ -118,6 +181,24 @@ export type GachaResponse = {
   costAmount?: number;
   drawCount?: number;
   active?: boolean;
+};
+
+export type GachaRewardListResponse = {
+  items?: GachaRewardResponse[];
+};
+
+export type GachaRewardResponse = {
+  rewardType?: string;
+  itemId?: number;
+  characterId?: number;
+  name?: string;
+  assetKey?: string;
+  rarity?: string;
+  owned?: boolean;
+  categoryCode?: string;
+  placementType?: string;
+  surfaceSlotType?: string;
+  characterSlotType?: string;
 };
 
 export type GoalItem = {
@@ -175,6 +256,19 @@ export type GuestbookListResponse = {
   hasNext?: boolean;
 };
 
+export type HouseCheerRequest = {
+  type: string;
+};
+
+export type HouseCheerResponse = {
+  cheerId?: number;
+  houseId?: number;
+  targetMembershipId?: number;
+  targetUserId?: number;
+  type?: string;
+  cheerDate?: string;
+};
+
 export type HouseCoverImage = {
   code?: string;
   name?: string;
@@ -219,17 +313,6 @@ export type HouseJoinByCodeRequest = {
   inviteCode: string;
 };
 
-export type HouseJoinRequestStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED';
-
-export type HouseJoinRequestResponse = {
-  requestId?: number;
-  houseId?: number;
-  userId?: number;
-  nickname?: string;
-  status?: HouseJoinRequestStatus;
-  requestedAt?: string;
-};
-
 export type HouseJoinDetailResponse = {
   membershipId?: number;
   houseId?: number;
@@ -239,10 +322,25 @@ export type HouseJoinDetailResponse = {
   joinedAt?: string;
 };
 
+export type HouseJoinRequestListResponse = {
+  items?: HouseJoinRequestResponse[];
+};
+
+export type HouseJoinRequestResponse = {
+  requestId?: number;
+  houseId?: number;
+  userId?: number;
+  nickname?: string;
+  status?: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  requestedAt?: string;
+};
+
 export type HouseJoinResponse = {
   membershipId?: number;
   houseId?: number;
   status?: 'ACTIVE' | 'LEFT' | 'KICKED';
+  pendingApproval?: boolean;
+  joinRequestId?: number;
 };
 
 export type HouseListResponse = {
@@ -256,6 +354,7 @@ export type HouseMemberDayResponse = {
   date?: string;
   routines?: MemberRoutineItem[];
   todos?: MemberTodoItem[];
+  categories?: MemberCategoryItem[];
 };
 
 export type HouseMemberListResponse = {
@@ -306,16 +405,8 @@ export type HouseMissionResponse = {
   endsAt?: string;
   myContribution?: number;
   achieved?: boolean;
+  todayClaimed?: boolean;
   createdAt?: string;
-};
-
-export type HousePreviewResponse = {
-  houseId?: number;
-  name?: string;
-  coverImageKey?: string;
-  currentMemberCount?: number;
-  maxMembers?: number;
-  inviteExpired?: boolean;
 };
 
 export type HousePreviewDetailResponse = {
@@ -329,8 +420,19 @@ export type HousePreviewDetailResponse = {
   goals?: GoalSummary[];
   isMember?: boolean;
   isFull?: boolean;
-  myJoinRequestStatus?: HouseJoinRequestStatus;
+  myJoinRequestStatus?: 'PENDING' | 'ACCEPTED' | 'REJECTED';
   missions?: MissionSummary[];
+  memberRooms?: MemberRoomSummary[];
+};
+
+export type HousePreviewResponse = {
+  houseId?: number;
+  name?: string;
+  coverImageKey?: string;
+  currentMemberCount?: number;
+  maxMembers?: number;
+  inviteExpired?: boolean;
+  requiresApproval?: boolean;
 };
 
 export type HouseSummary = {
@@ -341,7 +443,7 @@ export type HouseSummary = {
   maxMembers?: number;
   level?: number;
   goals?: GoalSummary[];
-  myJoinRequestStatus?: HouseJoinRequestStatus;
+  myJoinRequestStatus?: 'PENDING' | 'ACCEPTED' | 'REJECTED';
 };
 
 export type HouseUpdateRequest = {
@@ -364,6 +466,16 @@ export type InviteCodeResponse = {
   inviteExpiresAt?: string;
 };
 
+export type InviteRedeemRequest = {
+  code: string;
+};
+
+export type InviteRedeemResponse = {
+  rewardCoin?: number;
+  coinBalance?: number;
+  inviterRewarded?: boolean;
+};
+
 export type ItemListResponse = {
   items?: ItemResponse[];
 };
@@ -376,6 +488,9 @@ export type ItemResponse = {
   surfaceSlotType?: string;
   characterSlotType?: string;
   defaultSlot?: string;
+  defaultScale?: number;
+  defaultPositionX?: number | null;
+  defaultPositionY?: number | null;
   categoryCode?: string;
   purchaseCurrencyType?: string;
   priceAmount?: number;
@@ -403,8 +518,23 @@ export type MeResponse = {
   userId?: number;
   nickname?: string;
   bio?: string;
-  lastLoginAt?: string;
+  profileImageKey?: string;
+  lastAccessedAt?: string;
   onboarding?: OnboardingSummary;
+};
+
+export type MemberCategoryItem = {
+  id?: number;
+  name?: string;
+  colorHex?: string;
+  iconKey?: string;
+};
+
+export type MemberRoomSummary = {
+  membershipId?: number;
+  nickname?: string;
+  // 스펙 미표기 nullable (#733): 방을 아직 만들지 않은 구성원은 null — 기본 빈 방으로 렌더.
+  room?: RoomRenderResponse | null;
 };
 
 export type MemberRoutineItem = {
@@ -424,6 +554,7 @@ export type MemberSummary = {
   role?: 'OWNER' | 'MEMBER';
   status?: 'ACTIVE' | 'LEFT' | 'KICKED';
   joinedAt?: string;
+  lastAccessedAt?: string;
 };
 
 export type MemberTodoItem = {
@@ -459,7 +590,9 @@ export type MyCharacterItem = {
   name?: string;
   baseAssetKey?: string;
   animations?: CharacterAnimations;
+  poses?: CharacterPoseResponse[];
   selected?: boolean;
+  accessories?: EquippedAccessoryResponse[];
   acquiredAt?: string;
 };
 
@@ -482,6 +615,14 @@ export type MyHouseSummary = {
   joinedAt?: string;
 };
 
+export type MyInviteCodeResponse = {
+  code?: string;
+  rewardedCount?: number;
+  inviterRewardCoin?: number;
+  inviteeRewardCoin?: number;
+  maxRewardedCount?: number;
+};
+
 export type MyItemListResponse = {
   items?: MyItemSummary[];
 };
@@ -496,13 +637,39 @@ export type MyItemSummary = {
   surfaceSlotType?: string;
   characterSlotType?: string;
   defaultSlot?: string;
+  defaultScale?: number;
+  defaultPositionX?: number | null;
+  defaultPositionY?: number | null;
   theme?: ThemeSummary;
   acquiredAt?: string;
 };
 
+export type MyJoinRequestListResponse = {
+  items?: MyJoinRequestSummary[];
+};
+
+export type MyJoinRequestSummary = {
+  requestId?: number;
+  houseId?: number;
+  houseName?: string;
+  coverImageKey?: string;
+  goals?: GoalSummary[];
+  status?: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  requestedAt?: string;
+};
+
 export type NotificationItem = {
   notificationId?: number;
-  type?: 'HOUSE_KICK' | 'ROUTINE_REMINDER';
+  type?:
+    | 'HOUSE_KICK'
+    | 'ROUTINE_REMINDER'
+    | 'TODO_REMINDER'
+    | 'FRIEND_CHEER'
+    | 'HOUSE_MISSION_ACHIEVED'
+    | 'HOUSE_MEMBER_JOINED'
+    | 'HOUSE_MEMBER_LEFT'
+    | 'HOUSE_JOIN_REQUEST_REJECTED'
+    | 'HOUSE_JOIN_REQUEST_ACCEPTED';
   title?: string;
   body?: string;
   isRead?: boolean;
@@ -513,6 +680,18 @@ export type NotificationListResponse = {
   items?: NotificationItem[];
   nextCursor?: number;
   hasNext?: boolean;
+};
+
+export type NotificationSettingResponse = {
+  all?: boolean;
+  reminder?: boolean;
+  house?: boolean;
+};
+
+export type NotificationSettingUpdateRequest = {
+  all?: boolean;
+  reminder?: boolean;
+  house?: boolean;
 };
 
 export type OnboardingCharacterRequest = {
@@ -546,6 +725,20 @@ export type OnboardingSummary = {
   selectedCharacterId?: number;
 };
 
+export type PlacementItem = {
+  userItemId: number;
+  positionX: number;
+  positionY: number;
+  zIndex?: number;
+  scale?: number;
+  rotationDeg?: number;
+  flipped?: boolean;
+};
+
+export type ProfileImageResponse = {
+  profileImageKey?: string;
+};
+
 export type PurchaseResponse = {
   userItemId?: number;
   itemId?: number;
@@ -555,6 +748,38 @@ export type PurchaseResponse = {
 
 export type RefreshRequest = {
   refreshToken: string;
+};
+
+export type RenderAccessory = {
+  itemId?: number;
+  name?: string;
+  assetKey?: string;
+  characterSlotType?: string;
+  renderProfiles?: AccessoryRenderProfileResponse[];
+};
+
+export type RenderCharacter = {
+  characterId?: number;
+  code?: string;
+  name?: string;
+  assetKey?: string;
+  animations?: CharacterAnimations;
+  accessories?: RenderAccessory[];
+};
+
+export type RenderPlacement = {
+  assetKey?: string;
+  positionX?: number;
+  positionY?: number;
+  zIndex?: number;
+  scale?: number;
+  rotationDeg?: number;
+  flipped?: boolean;
+};
+
+export type RenderSlot = {
+  slotType?: string;
+  assetKey?: string;
 };
 
 export type RepeatDays = {
@@ -570,13 +795,43 @@ export type RoomCharacterResponse = {
   name?: string;
   assetKey?: string;
   animations?: CharacterAnimations;
+  accessories?: EquippedAccessoryResponse[];
+};
+
+export type RoomLayoutUpdateRequest = {
+  baseRevision: number;
+  surfaceSlots: SurfaceSlotAssignment[];
+  placements: PlacementItem[];
+};
+
+export type RoomPlacementResponse = {
+  userItemId?: number;
+  assetKey?: string;
+  positionX?: number;
+  positionY?: number;
+  zIndex?: number;
+  scale?: number;
+  rotationDeg?: number;
+  flipped?: boolean;
+  updatedAt?: string;
+};
+
+export type RoomRenderResponse = {
+  growthLevel?: number;
+  layoutFormat?: 'SLOT_V1' | 'FREE_V1';
+  character?: RenderCharacter;
+  slots?: RenderSlot[];
+  placements?: RenderPlacement[];
 };
 
 export type RoomResponse = {
   roomUserId?: number;
   growthLevel?: number;
+  layoutFormat?: 'SLOT_V1' | 'FREE_V1';
+  layoutRevision?: number;
   character?: RoomCharacterResponse;
   slots?: RoomSlotResponse[];
+  placements?: RoomPlacementResponse[];
   streak?: RoomStreakResponse;
   updatedAt?: string;
 };
@@ -606,6 +861,7 @@ export type RoutineCreateRequest = {
   scheduledTime?: string;
   startsOn?: string;
   endsOn?: string;
+  houseMissionId?: number;
 };
 
 export type RoutineListResponse = {
@@ -619,11 +875,13 @@ export type RoutineLogCreateRequest = {
 export type RoutineLogResponse = {
   id?: number;
   routineDate?: string;
-  status?: 'PENDING' | 'COMPLETED' | 'MISSED';
+  status?: 'PENDING' | 'COMPLETED' | 'FAILED';
   completedAt?: string;
   rewardCurrencyType?: 'COIN' | 'DIAMOND';
   rewardAmount?: number;
   streak?: StreakSummaryResponse;
+  // 스펙 미표기 nullable (#733): null이면 미연동/스킵(이미 기여·비활성·과거 등) (#578).
+  houseMissionContribution?: HouseMissionContributeResponse | null;
 };
 
 export type RoutineResponse = {
@@ -638,6 +896,8 @@ export type RoutineResponse = {
   startsOn?: string;
   endsOn?: string;
   originRoutineId?: number;
+  // 스펙 미표기 nullable (#733): 미연동 루틴은 null로 온다.
+  houseMissionId?: number | null;
 };
 
 export type RoutineUpdateRequest = {
@@ -645,12 +905,15 @@ export type RoutineUpdateRequest = {
   categoryId?: number;
   authType?: 'CHECK' | 'PHOTO';
   repeatType?: string;
-  // Manual patch: PUT replaces the resource — explicit null unsets an optional
-  // (alarm off / 종료일 제거). Restore after `npm run gen:api-types`.
+  // 스펙 미표기 nullable (#733): null은 "지우기" — WEEKLY→DAILY 전환.
   repeatDays?: RepeatDays | null;
+  // 스펙 미표기 nullable (#733): null은 "지우기" — 알람 해제.
   scheduledTime?: string | null;
   startsOn?: string;
+  // 스펙 미표기 nullable (#733): null은 "지우기" — 종료일 해제.
   endsOn?: string | null;
+  // 스펙 미표기 nullable (#733): 미연동은 null.
+  houseMissionId?: number | null;
 };
 
 export type SlotAssignment = {
@@ -662,6 +925,11 @@ export type StreakSummaryResponse = {
   currentCount?: number;
   longestCount?: number;
   lastSuccessDate?: string;
+};
+
+export type SurfaceSlotAssignment = {
+  slotType: string;
+  userItemId?: number;
 };
 
 export type ThemeSummary = {
@@ -690,6 +958,7 @@ export type TodayRoutineItem = {
   scheduledTime?: string;
   authType?: 'CHECK' | 'PHOTO';
   completed?: boolean;
+  houseMissionId?: number;
 };
 
 export type TodayStreak = {
@@ -708,6 +977,7 @@ export type TodayTodoItem = {
   id?: number;
   title?: string;
   dueDate?: string;
+  dueTime?: string;
   status?: 'PENDING' | 'COMPLETED';
   completedAt?: string;
 };
@@ -725,6 +995,7 @@ export type TodoCreateRequest = {
   description?: string;
   categoryId?: number;
   dueDate?: string;
+  dueTime?: string;
 };
 
 export type TodoListResponse = {
@@ -737,6 +1008,7 @@ export type TodoResponse = {
   description?: string;
   categoryId?: number;
   dueDate?: string;
+  dueTime?: string;
   status?: 'PENDING' | 'COMPLETED';
   completedAt?: string;
 };
@@ -746,6 +1018,7 @@ export type TodoUpdateRequest = {
   description?: string;
   categoryId?: number;
   dueDate?: string;
+  dueTime?: string;
 };
 
 export type TokenResponse = {
@@ -761,6 +1034,29 @@ export type TransferOwnershipResponse = {
   houseId?: number;
   newOwnerMembershipId?: number;
   newOwnerUserId?: number;
+};
+
+export type WalletHistoryListResponse = {
+  items?: WalletHistoryResponse[];
+  page?: number;
+  size?: number;
+  totalElements?: number;
+};
+
+export type WalletHistoryResponse = {
+  id?: number;
+  currencyType?: 'COIN' | 'DIAMOND';
+  amount?: number;
+  reason?:
+    | 'ROUTINE_COMPLETE'
+    | 'TODO_COMPLETE'
+    | 'SIGNUP_BONUS'
+    | 'GACHA_DUPLICATE_CONVERT'
+    | 'INVITE_REWARD'
+    | 'GACHA_DRAW'
+    | 'SHOP_PURCHASE';
+  balanceAfter?: number;
+  createdAt?: string;
 };
 
 export type WalletListResponse = {

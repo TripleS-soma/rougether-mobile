@@ -1,7 +1,23 @@
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { BackHandler } from 'react-native';
+import { State } from 'react-native-gesture-handler';
+import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { AppShell } from '@/components/app/app-shell';
+import { ToastProvider } from '@/components/ui/toast';
 import { AuthProvider } from '@/hooks/use-auth';
+
+// 푸시 탭 콜백을 붙잡아 테스트에서 직접 발화한다 (#405).
+let notificationTapCb: (() => void) | null = null;
+jest.mock('@/lib/push-events', () => ({
+  onNotificationTap: (cb: () => void) => {
+    notificationTapCb = cb;
+    return () => {
+      notificationTapCb = null;
+    };
+  },
+}));
 
 // AppShell loads my-room data from the API on mount; return empty payloads so
 // the render is deterministic and hits no network.
@@ -21,6 +37,131 @@ afterEach(() => {
   global.fetch = realFetch;
 });
 
+describe('AppShell — 푸시 탭 라우팅 (#405)', () => {
+  it('알림 탭 콜백이 발화하면 알림 목록 화면으로 이동한다', async () => {
+    const { getByText } = await render(
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>,
+    );
+    expect(notificationTapCb).toBeTruthy();
+
+    await act(async () => notificationTapCb?.());
+
+    await waitFor(() => getByText('알림'));
+  });
+});
+
+describe('AppShell — 온보딩 미션 체인 (#571)', () => {
+  beforeEach(async () => {
+    await AsyncStorage.clear();
+  });
+
+  // 미션 1(루틴 등록) 성공 왕복이 있는 세계 — 추천 루틴이 붙을 카테고리 포함.
+  const missionFetch = async (url: string, init?: RequestInit) => {
+    const method = init?.method ?? 'GET';
+    const body =
+      method === 'POST' && url.endsWith('/routines')
+        ? { id: 99, title: '독서 30분', categoryId: 20, repeatType: 'DAILY' }
+        : url.includes('/auth/')
+          ? { accessToken: 't', refreshToken: 'r' }
+          : url.includes('/categories')
+            ? { items: [{ id: 20, name: '취미' }] }
+            : url.endsWith('/today')
+              ? { categories: [], summary: {}, streak: {} }
+              : { items: [] };
+    return { ok: true, status: 200, text: async () => JSON.stringify(body) };
+  };
+
+  it('startMissions면 미션 1 배너가 뜨고, 배너 탭이 루틴 추가 화면으로 보낸다', async () => {
+    const { getByText, getByTestId, getByLabelText } = await render(
+      <AuthProvider>
+        <AppShell startMissions />
+      </AuthProvider>,
+    );
+    await waitFor(() => getByTestId('mission-banner'));
+    expect(getByText(/미션 1\/4/)).toBeTruthy();
+    expect(getByText('첫 루틴 등록하기')).toBeTruthy();
+
+    await fireEvent.press(getByLabelText('미션 1 첫 루틴 등록하기'));
+    await waitFor(() => getByText('루틴 추가'));
+  });
+
+  it('루틴 등록 성공 → 완료 시트 → 하러 가기로 미션 2(뽑기)로 이어진다', async () => {
+    global.fetch = jest.fn(missionFetch) as unknown as typeof fetch;
+    const { getByText, getByTestId, getByLabelText } = await render(
+      <AuthProvider>
+        <AppShell startMissions />
+      </AuthProvider>,
+    );
+    await waitFor(() => getByTestId('mission-banner'));
+
+    // 배너 → 루틴 추가 화면에서 추천 루틴으로 등록.
+    await fireEvent.press(getByLabelText('미션 1 첫 루틴 등록하기'));
+    await fireEvent.press(getByText('추천 루틴'));
+    await fireEvent.press(getByText('독서 30분'));
+    await fireEvent.press(getByText('월'));
+    await fireEvent.press(getByText('루틴 추가하기'));
+
+    // 완료 전환 시트 — 다음 미션 안내와 하러 가기.
+    await waitFor(() => getByText('✅ 미션 1 완료!'));
+    expect(getByText(/다음 미션: 뽑기 1회 해보기/)).toBeTruthy();
+    await fireEvent.press(getByLabelText('다음 미션 하러 가기'));
+    await waitFor(() => getByText(/미션 2\/4/));
+    expect(getByText('뽑기 1회 해보기')).toBeTruthy();
+  });
+
+  it('건너뛰기는 확인을 거쳐 배너를 없애고, startMissions 없으면 배너가 없다', async () => {
+    const off = await render(
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>,
+    );
+    await act(async () => {});
+    expect(off.queryByTestId('mission-banner')).toBeNull();
+
+    const on = await render(
+      <AuthProvider>
+        <AppShell startMissions />
+      </AuthProvider>,
+    );
+    await waitFor(() => on.getByTestId('mission-banner'));
+    await fireEvent.press(on.getByLabelText('미션 건너뛰기'));
+    await fireEvent.press(on.getByLabelText('미션 건너뛰기 확인'));
+    await waitFor(() => expect(on.queryByTestId('mission-banner')).toBeNull());
+    // 스킵 플래그 영속 — 다음 시작에 다시 시작하지 않는다.
+    expect(await AsyncStorage.getItem('rougether.onboarding-missions.v1')).toBe('skipped');
+  });
+});
+
+describe('AppShell — 집 없는 유저의 집 탭 (#571)', () => {
+  it('집이 없으면 집 탭이 빈 상태 대신 집 탐색으로 직행하고, 뒤로는 나의 방', async () => {
+    const calls: string[] = [];
+    global.fetch = jest.fn(async (url: string) => {
+      calls.push(url);
+      return emptyRes(url);
+    }) as unknown as typeof fetch;
+
+    const { getByText, getByLabelText, queryByText } = await render(
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>,
+    );
+    // 집 목록 로드가 끝나(빈 목록 확정) noHouses 판정이 서고 나서 탭을 누른다.
+    await waitFor(() => expect(calls.some((u) => u.endsWith('/me/houses'))).toBe(true));
+    await act(async () => {});
+
+    await fireEvent.press(getByLabelText('집'));
+    expect(getByText('집 탐색')).toBeTruthy();
+    expect(getByText('# 초대코드로 들어가기')).toBeTruthy();
+    expect(queryByText('아직 함께하는 집이 없어요')).toBeNull();
+
+    // 탐색의 뒤로가기 — (빈) 집 화면이 아니라 나의 방으로 복귀.
+    await fireEvent.press(getByLabelText('뒤로 가기'));
+    await waitFor(() => getByText('오늘의 할 일'));
+  });
+});
+
 describe('AppShell', () => {
   it('opens on the my-room screen with the bottom nav', async () => {
     const { getByText, getByLabelText } = await render(
@@ -29,15 +170,44 @@ describe('AppShell', () => {
       </AuthProvider>,
     );
     expect(getByText('준서의 방')).toBeTruthy(); // MyRoomScreen default
-    expect(getByText('오늘의 루틴')).toBeTruthy();
+    expect(getByText('오늘의 할 일')).toBeTruthy();
     // Bottom nav tabs present.
     expect(getByLabelText('나의 방')).toBeTruthy();
     expect(getByLabelText('집')).toBeTruthy();
     expect(getByLabelText('설정')).toBeTruthy();
   });
+
+  // 엣지 백 오발화 회귀 (#740) — onTouchesDown의 mgr.fail()은 runOnJS라
+  // UI 스레드 활성화와 경쟁한다. fail이 늦게 도착한 상황(= jest처럼
+  // onTouchesDown 없이 팬이 끝나는 경우)을 재현해, 탭 루트에서는 커밋
+  // 시점 가드가 백을 막는지 본다. 막지 못하면 설정 → (집 건너뜀) → 방.
+  it('탭 루트에서는 엣지 백이 발화해도 화면이 바뀌지 않는다 (#740)', async () => {
+    const { getByText, getByLabelText, queryByText } = await render(
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>,
+    );
+    await fireEvent.press(getByLabelText('설정'));
+    // '설정'은 탭 라벨과 헤더 양쪽에 있어 화면 고유 문구로 단언한다.
+    expect(getByText('프로필 편집')).toBeTruthy();
+
+    await act(async () =>
+      fireGestureHandler(getByGestureTestId('edge-back-pan'), [
+        { state: State.BEGAN },
+        { state: State.ACTIVE },
+        { state: State.END, translationX: 200, velocityX: 1200 },
+      ]),
+    );
+
+    // 설정 탭 유지 — 방(나의 방)으로 튀지 않는다.
+    expect(getByText('프로필 편집')).toBeTruthy();
+    expect(queryByText('오늘의 할 일')).toBeNull();
+  });
 });
 
-// --- 미션 ↔ 루틴 연동 통합 (#272): 이름 기반 매칭이 셸에서 실제로 이어지는지. ---
+// --- 미션 ↔ 루틴 연동 통합 (#272 → #578): 서버 링크 id 매칭이 셸에서 실제로
+// 이어지는지. 루틴 제목은 미션 제목과 다르게 두어 "이름을 바꿔도 연동 유지"를
+// 함께 단언한다.
 describe('AppShell — 공동미션 연동', () => {
   const json = (body: unknown) => ({
     ok: true,
@@ -50,15 +220,28 @@ describe('AppShell — 공동미션 연동', () => {
     const method = init?.method ?? 'GET';
     calls.push({ url, method, body: init?.body as string | undefined });
     if (url.includes('/auth/')) return json({ accessToken: 't', refreshToken: 'r' });
-    if (method === 'POST' && url.includes('/missions/6/contribute'))
-      return json({ missionId: 6, myContribution: 1, currentValue: 1, achieved: false });
     if (method === 'POST' && url.endsWith('/routines'))
-      return json({ id: 99, title: '물 마시기', categoryId: 20, repeatType: 'DAILY' });
-    if (method === 'POST' && url.includes('/routines/44/logs')) return json({ rewardAmount: 0 });
-    if (url.includes('/categories')) return json({ items: [{ id: 20, name: 'TripleS' }] });
+      return json({
+        id: 99,
+        title: '물 마시기',
+        categoryId: 20,
+        repeatType: 'DAILY',
+        houseMissionId: 7,
+      });
+    if (method === 'POST' && url.includes('/routines/44/logs'))
+      // 오늘 완료 — 서버가 연동 미션(6)에 자동 기여한 결과가 실려온다 (#578).
+      return json({
+        rewardAmount: 0,
+        houseMissionContribution: { missionId: 6, myContribution: 1, currentValue: 1, achieved: false }, // prettier-ignore
+      });
+    if (url.includes('/categories'))
+      return json({ items: [{ id: 20, name: 'TripleS', houseId: 2 }] });
     if (url.endsWith('/routines'))
       return json({
-        items: [{ id: 44, title: '아침 스트레칭', categoryId: 20, repeatType: 'DAILY' }],
+        // 제목은 미션명과 다름 — 연동은 houseMissionId가 판정한다.
+        items: [
+          { id: 44, title: '개명한 스트레칭', categoryId: 20, repeatType: 'DAILY', houseMissionId: 6 }, // prettier-ignore
+        ],
       });
     if (url.endsWith('/me/houses')) return json({ items: [{ houseId: 2, name: 'TripleS' }] });
     if (url.includes('/houses/2/missions'))
@@ -94,21 +277,30 @@ describe('AppShell — 공동미션 연동', () => {
     global.fetch = jest.fn(worldFetch) as unknown as typeof fetch;
   });
 
-  it('completing a house-category routine auto-contributes to the matching mission', async () => {
+  it('완료 시 서버 자동 기여를 반영하고 클라 수동 contribute는 쏘지 않는다 (#578)', async () => {
     const { getByLabelText } = await render(
       <AuthProvider>
         <AppShell />
       </AuthProvider>,
     );
-    // 이름 매칭에 houses가 필요 — 집 상세까지 로드된 뒤에 완료를 누른다.
     await waitFor(() => expect(calls.some((c) => c.url.includes('/houses/2/missions'))).toBe(true));
+    const missionFetchesBefore = calls.filter((c) => c.url.includes('/houses/2/missions')).length;
 
-    await fireEvent.press(getByLabelText('아침 스트레칭'));
+    // 미션명과 다른 제목의 루틴 — id 연동이라 이름이 달라도 이어진다.
+    await fireEvent.press(getByLabelText('개명한 스트레칭'));
     await waitFor(() =>
-      expect(
-        calls.some((c) => c.method === 'POST' && c.url.includes('/houses/2/missions/6/contribute')),
-      ).toBe(true),
+      expect(calls.some((c) => c.method === 'POST' && c.url.includes('/routines/44/logs'))).toBe(
+        true,
+      ),
     );
+    // 완료 응답의 기여 결과 반영 → 해당 집만 재동기화(미션 currentValue 갱신).
+    await waitFor(() =>
+      expect(calls.filter((c) => c.url.includes('/houses/2/missions')).length).toBeGreaterThan(
+        missionFetchesBefore,
+      ),
+    );
+    // 수동 기여 왕복은 없다 — 서버가 로그 시점에 이미 기여했다.
+    expect(calls.some((c) => c.method === 'POST' && c.url.includes('/contribute'))).toBe(false);
   });
 
   it('blocks un-toggling a linked routine — contributions cannot be revoked', async () => {
@@ -119,15 +311,16 @@ describe('AppShell — 공동미션 연동', () => {
     );
     await waitFor(() => expect(calls.some((c) => c.url.includes('/houses/2/missions'))).toBe(true));
 
-    // 완료(기여) 후 다시 누르면 서버 호출 없이 차단된다.
-    await fireEvent.press(getByLabelText('아침 스트레칭'));
+    // 완료(기여) 후 다시 누르면 서버 호출 없이 차단된다 — 제목이 미션명과
+    // 달라도 linkedMissionId가 지킨다.
+    await fireEvent.press(getByLabelText('개명한 스트레칭'));
     await waitFor(() =>
       expect(calls.some((c) => c.method === 'POST' && c.url.includes('/routines/44/logs'))).toBe(
         true,
       ),
     );
     const callsBefore = calls.length;
-    await fireEvent.press(getByLabelText('아침 스트레칭'));
+    await fireEvent.press(getByLabelText('개명한 스트레칭'));
     // Un-complete would be a DELETE on the log — none may fire.
     expect(calls.slice(callsBefore).some((c) => c.method === 'DELETE')).toBe(false);
   });
@@ -149,9 +342,278 @@ describe('AppShell — 공동미션 연동', () => {
 
     await waitFor(() => {
       const create = calls.find((c) => c.method === 'POST' && c.url.endsWith('/routines'));
-      expect(JSON.parse(create?.body ?? '{}').categoryId).toBe(20);
+      const body = JSON.parse(create?.body ?? '{}');
+      // houseId 매칭으로 기존 카테고리를 찾고, 생성 요청에 미션 링크 id를 싣는다.
+      expect(body.categoryId).toBe(20);
+      expect(body.houseMissionId).toBe(7);
     });
     // ensureCategory가 서버 재조회로 기존 TripleS(20)를 재사용 — 중복 생성 없음.
     expect(calls.some((c) => c.method === 'POST' && c.url.includes('/categories'))).toBe(false);
+  });
+
+  it('미션 삭제 시 연동 루틴도 함께 삭제된다 (#338)', async () => {
+    const { getByLabelText } = await render(
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(calls.some((c) => c.url.includes('/houses/2/missions'))).toBe(true));
+
+    await fireEvent.press(getByLabelText('집'));
+    await fireEvent.press(getByLabelText('공동 미션'));
+    await fireEvent.press(getByLabelText('아침 스트레칭 삭제'));
+    await fireEvent.press(getByLabelText('미션 삭제 확인'));
+
+    await waitFor(() =>
+      expect(
+        calls.some((c) => c.method === 'DELETE' && c.url.includes('/houses/2/missions/6')),
+      ).toBe(true),
+    );
+    // 미션 6에 연동된(houseMissionId) 루틴 44가 제목과 무관하게 함께 지워진다.
+    await waitFor(() =>
+      expect(calls.some((c) => c.method === 'DELETE' && c.url.includes('/routines/44'))).toBe(true),
+    );
+  });
+
+  it('집 나가기/삭제 시 그 집 미션들의 연동 루틴도 정리된다 (#338)', async () => {
+    const { getByLabelText } = await render(
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(calls.some((c) => c.url.includes('/houses/2/missions'))).toBe(true));
+
+    await fireEvent.press(getByLabelText('집'));
+    await fireEvent.press(getByLabelText('구성원 목록'));
+    // 구성원 0명 세계라 1인 방장 = '집 삭제' 라벨.
+    await fireEvent.press(getByLabelText(/집 삭제|집 나가기/));
+    await fireEvent.press(getByLabelText(/집 삭제 확인|나가기 확인/));
+
+    await waitFor(() =>
+      expect(
+        calls.some((c) => c.method === 'DELETE' && c.url.includes('/houses/2/members/me')),
+      ).toBe(true),
+    );
+    // 카테고리 통삭제 — 안의 루틴을 지우고 카테고리 자체도 지운다 (#338).
+    await waitFor(() =>
+      expect(calls.some((c) => c.method === 'DELETE' && c.url.includes('/routines/44'))).toBe(true),
+    );
+    await waitFor(() =>
+      expect(calls.some((c) => c.method === 'DELETE' && c.url.includes('/categories/20'))).toBe(
+        true,
+      ),
+    );
+  });
+});
+
+// --- 미션 목록과 어긋난 잔여 연동 루틴 자동 정리 (#338). ---
+describe('AppShell — 연동 루틴 스윕', () => {
+  const json = (body: unknown) => ({
+    ok: true,
+    status: 200,
+    text: async () => JSON.stringify(body),
+  });
+  let calls: { url: string; method: string }[] = [];
+
+  beforeEach(() => {
+    calls = [];
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+      calls.push({ url, method });
+      if (url.includes('/auth/')) return json({ accessToken: 't', refreshToken: 'r' });
+      if (url.includes('/categories'))
+        return json({ items: [{ id: 20, name: 'TripleS', houseId: 2 }] });
+      if (url.endsWith('/routines'))
+        return json({
+          items: [
+            // 44는 살아있는 미션(6)에 연동, 45는 사라진 미션(99)의 잔여물.
+            { id: 44, title: '아침 스트레칭', categoryId: 20, repeatType: 'DAILY', houseMissionId: 6 }, // prettier-ignore
+            { id: 45, title: '사라진 미션', categoryId: 20, repeatType: 'DAILY', houseMissionId: 99 }, // prettier-ignore
+          ],
+        });
+      if (url.endsWith('/me/houses')) return json({ items: [{ houseId: 2, name: 'TripleS' }] });
+      if (url.includes('/houses/2/missions'))
+        return json({
+          items: [
+            {
+              missionId: 6,
+              title: '아침 스트레칭',
+              missionType: 'WEEKLY_MEMBER_COUNT',
+              targetValue: 5,
+              currentValue: 0,
+              status: 'ACTIVE',
+            },
+          ],
+        });
+      if (url.includes('/houses/2/members')) return json({ items: [] });
+      if (url.includes('/houses/2')) return json({ houseId: 2, name: 'TripleS', myRole: 'OWNER' });
+      if (url.endsWith('/today')) return json({ categories: [], summary: {}, streak: {} });
+      if (url.endsWith('/me')) return json({ userId: 4, nickname: '준서' });
+      return json({ items: [] });
+    }) as unknown as typeof fetch;
+  });
+
+  it('미션이 사라진 연동 루틴은 로드 후 자동 삭제되고, 일치하는 루틴은 남는다', async () => {
+    await render(
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>,
+    );
+    await waitFor(() =>
+      expect(calls.some((c) => c.method === 'DELETE' && c.url.includes('/routines/45'))).toBe(true),
+    );
+    expect(calls.some((c) => c.method === 'DELETE' && c.url.includes('/routines/44'))).toBe(false);
+  });
+});
+
+// --- 이름 매칭 연동분 1회성 승격 (#578) — 서버 백필이 없어 클라가 심는다. ---
+describe('AppShell — 링크 id 승격 마이그레이션', () => {
+  const json = (body: unknown) => ({
+    ok: true,
+    status: 200,
+    text: async () => JSON.stringify(body),
+  });
+  let calls: { url: string; method: string; body?: string }[] = [];
+
+  beforeEach(() => {
+    calls = [];
+    // 구식 세계: 이름은 맞물리는데(카테고리명 == 집 이름, 루틴명 == 미션명)
+    // 링크 id가 없다 — 부팅 승격이 PUT으로 id를 심어야 한다.
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+      calls.push({ url, method, body: init?.body as string | undefined });
+      if (url.includes('/auth/')) return json({ accessToken: 't', refreshToken: 'r' });
+      if (method === 'PUT' && url.includes('/categories/20'))
+        return json({ id: 20, name: 'TripleS', houseId: 2 });
+      if (method === 'PUT' && url.includes('/routines/44'))
+        return json({ id: 44, title: '아침 스트레칭', categoryId: 20, repeatType: 'DAILY', houseMissionId: 6 }); // prettier-ignore
+      if (url.includes('/categories')) return json({ items: [{ id: 20, name: 'TripleS' }] });
+      if (url.endsWith('/routines'))
+        return json({
+          items: [{ id: 44, title: '아침 스트레칭', categoryId: 20, repeatType: 'DAILY' }],
+        });
+      if (url.endsWith('/me/houses')) return json({ items: [{ houseId: 2, name: 'TripleS' }] });
+      if (url.includes('/houses/2/missions'))
+        return json({
+          items: [
+            {
+              missionId: 6,
+              title: '아침 스트레칭',
+              missionType: 'WEEKLY_MEMBER_COUNT',
+              targetValue: 5,
+              currentValue: 0,
+              status: 'ACTIVE',
+            },
+            // 만료 미션은 승격 대상이 아니다.
+            {
+              missionId: 8,
+              title: '아침 스트레칭',
+              missionType: 'WEEKLY_MEMBER_COUNT',
+              targetValue: 5,
+              currentValue: 0,
+              status: 'EXPIRED',
+            },
+          ],
+        });
+      if (url.includes('/houses/2/members')) return json({ items: [] });
+      if (url.includes('/houses/2')) return json({ houseId: 2, name: 'TripleS', myRole: 'OWNER' });
+      if (url.endsWith('/today')) return json({ categories: [], summary: {}, streak: {} });
+      if (url.endsWith('/me')) return json({ userId: 4, nickname: '준서' });
+      return json({ items: [] });
+    }) as unknown as typeof fetch;
+  });
+
+  it('이름 일치·id 없음 카테고리와 루틴에 링크 id를 PUT으로 심는다', async () => {
+    await render(
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>,
+    );
+
+    // 카테고리 승격 — houseId가 실린 PUT.
+    await waitFor(() => {
+      const put = calls.find((c) => c.method === 'PUT' && c.url.includes('/categories/20'));
+      expect(JSON.parse(put?.body ?? '{}').houseId).toBe(2);
+    });
+    // 루틴 승격 — ACTIVE 미션(6)의 id가 실린 PUT (EXPIRED 8은 제외).
+    await waitFor(() => {
+      const put = calls.find((c) => c.method === 'PUT' && c.url.includes('/routines/44'));
+      expect(JSON.parse(put?.body ?? '{}').houseMissionId).toBe(6);
+    });
+    // 승격은 삭제(스윕 오발)를 유발하지 않는다.
+    expect(calls.some((c) => c.method === 'DELETE')).toBe(false);
+  });
+});
+
+describe('AppShell — 루트 뒤로가기 더블 백 종료 (#522)', () => {
+  it('첫 뒤로가기는 토스트 안내, 2초 안에 한 번 더 누르면 종료한다', async () => {
+    const handlers: (() => boolean)[] = [];
+    const spy = jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_e, cb) => {
+      const handler = () => cb() === true;
+      handlers.push(handler);
+      return { remove: () => handlers.splice(handlers.indexOf(handler), 1) } as never;
+    });
+    const exitSpy = jest.spyOn(BackHandler, 'exitApp').mockImplementation(() => {});
+
+    const ui = await render(
+      <ToastProvider>
+        <AuthProvider>
+          <AppShell />
+        </AuthProvider>
+      </ToastProvider>,
+    );
+
+    // 첫 입력 — 종료하지 않고 안내 토스트.
+    let handled = false;
+    await act(async () => {
+      handled = handlers.some((h) => h());
+    });
+    expect(handled).toBe(true);
+    expect(ui.getByText('한 번 더 뒤로가면 앱이 꺼져요')).toBeTruthy();
+    expect(exitSpy).not.toHaveBeenCalled();
+
+    // 허용 창(2초) 안의 두 번째 입력 — 종료.
+    await act(async () => {
+      handlers.some((h) => h());
+    });
+    expect(exitSpy).toHaveBeenCalled();
+
+    spy.mockRestore();
+    exitSpy.mockRestore();
+  });
+
+  it('허용 창이 지나면 다시 안내부터 시작한다', async () => {
+    const handlers: (() => boolean)[] = [];
+    const spy = jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_e, cb) => {
+      const handler = () => cb() === true;
+      handlers.push(handler);
+      return { remove: () => handlers.splice(handlers.indexOf(handler), 1) } as never;
+    });
+    const exitSpy = jest.spyOn(BackHandler, 'exitApp').mockImplementation(() => {});
+    const nowSpy = jest.spyOn(Date, 'now');
+
+    const ui = await render(
+      <ToastProvider>
+        <AuthProvider>
+          <AppShell />
+        </AuthProvider>
+      </ToastProvider>,
+    );
+
+    nowSpy.mockReturnValue(1_000_000);
+    await act(async () => {
+      handlers.some((h) => h());
+    });
+    // 2초 창을 지나서 누르면 종료 대신 다시 안내.
+    nowSpy.mockReturnValue(1_003_500);
+    await act(async () => {
+      handlers.some((h) => h());
+    });
+    expect(exitSpy).not.toHaveBeenCalled();
+    expect(ui.getByText('한 번 더 뒤로가면 앱이 꺼져요')).toBeTruthy();
+
+    nowSpy.mockRestore();
+    spy.mockRestore();
+    exitSpy.mockRestore();
   });
 });

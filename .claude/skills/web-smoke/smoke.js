@@ -1,11 +1,12 @@
 /* Full-UI smoke drive of the Expo web build against the live dev API.
  *
  * Signs in as the fixed dev account (userId 4 — email field "4", any
- * password), then walks every main surface: my room → calendar → routine
- * toggle (cycled back to leave the account unchanged) → group house →
- * house search → settings → room decor → gacha. Handles both fresh and
- * already-onboarded accounts. Each step screenshots; failures don't stop
- * the run. Screenshots land in ./shots.
+ * password), then walks every main surface: my room → calendar (today +
+ * past date) → routine toggle (cycled back so the account is unchanged) →
+ * group house → friend room visit → house search → settings → profile
+ * edit → onboarding replay (asserts goal prefill) → room decor (asserts
+ * the unsaved-change guard) → gacha. Handles both fresh and onboarded
+ * accounts. Each step screenshots; failures don't stop the run.
  *
  * Usage: node smoke.js   (expects `npx expo start --web` on :8081)
  */
@@ -22,6 +23,15 @@ const results = [];
 const consoleErrors = [];
 const netFailures = [];
 
+/** Local "YYYY-MM-DD" shifted by n days. */
+const isoShift = (days) => {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+    d.getDate(),
+  ).padStart(2, '0')}`;
+};
+
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
@@ -33,7 +43,7 @@ const netFailures = [];
     netFailures.push(`${req.method()} ${req.url().slice(0, 120)} → ${req.failure()?.errorText}`);
   });
   page.on('response', (res) => {
-    if (res.status() >= 400 && res.url().includes('43.203'))
+    if (res.status() >= 400 && res.url().includes('cloudfront.net'))
       netFailures.push(
         `${res.request().method()} ${res.url().slice(0, 120)} → HTTP ${res.status()}`,
       );
@@ -96,10 +106,14 @@ const netFailures = [];
     await see('의 방', 20000);
   });
 
-  await step('myroom-tabs', async () => {
+  await step('calendar-past-date', async () => {
     await page.getByText('달력', { exact: true }).first().click();
-    await page.waitForTimeout(800);
-    await page.screenshot({ path: path.join(SHOTS, 'extra-calendar.png') });
+    const yesterday = isoShift(-1);
+    // Yesterday can sit in the previous month's view.
+    if (yesterday.slice(0, 7) !== isoShift(0).slice(0, 7)) await tapLabel('이전 달');
+    await page.getByLabel(yesterday).first().click();
+    // Server-backed day: either records render or the empty hint does.
+    await Promise.race([see('지난 날짜는'), see('예정된 루틴이 없어요')]);
     await page.getByText('방', { exact: true }).first().click();
   });
 
@@ -126,25 +140,87 @@ const netFailures = [];
     await Promise.race([see('아직 함께하는 집이 없어요'), see('진행 중 미션')]);
   });
 
+  await step('friend-room-visit', async () => {
+    // Account 4's house has member 루티니1 — visiting renders their LIVE room
+    // (PR #223): real placement/routines/guestbook, no "미리보기" notice.
+    const friendTile = page.getByLabel('루티니1', { exact: true });
+    if (!(await friendTile.isVisible().catch(() => false))) {
+      results.push('INFO no friend tile found — house membership changed?');
+      return;
+    }
+    await friendTile.click();
+    await see('루티니1의 방', 20000);
+    await see('루티니1의 루틴');
+    await see('방명록');
+    if (
+      await page
+        .getByText('미리보기로 보여드려요')
+        .isVisible()
+        .catch(() => false)
+    )
+      throw new Error('friend room still shows the preview notice (#223 regression)');
+    await page.screenshot({ path: path.join(SHOTS, 'extra-friend-room.png') });
+    await tapLabel('뒤로가기');
+    // #287 이후 집 화면 앵커는 스탯 행('진행 중 미션').
+    await Promise.race([see('진행 중 미션'), see('아직 함께하는 집이 없어요')]);
+  });
+
   await step('house-search', async () => {
     await tapLabel('집 탐색');
     await see('초대코드로 들어가기');
     await tapLabel('뒤로 가기');
   });
 
-  await step('settings-tab', async () => {
+  await step('settings-profile-edit', async () => {
     await tapLabel('설정');
-    await see('온보딩 다시 보기');
+    await tap('프로필 편집');
+    await see('닉네임');
+    await tapLabel('뒤로 가기');
+    await see('튜토리얼 다시 보기');
   });
 
-  await step('decor-screen', async () => {
-    await tapLabel('나의 방');
-    await see('의 방');
+  await step('onboarding-replay-prefilled', async () => {
+    // 튜토리얼 다시 보기 must open as an EDIT of the previous picks (PR #220):
+    // at least one goal arrives pre-checked. Completing it re-saves the same
+    // selections, so account 4 is left unchanged.
+    await tap('튜토리얼 다시 보기');
+    await see('루게더에 오신 걸 환영해요');
+    await tap('건너뛰기');
+    await see('관심 있는 목표를 골라주세요');
+    // RN-web maps neither accessibilityState.checked → aria-checked nor the
+    // check icon to an <svg> (Ionicons render as font glyphs). Detect the
+    // selection visually: picked cards get a colored border, unpicked ones
+    // stay transparent.
+    const checked = await page.evaluate(
+      () =>
+        Array.from(document.querySelectorAll('[role="checkbox"]')).filter((el) => {
+          const s = getComputedStyle(el);
+          return s.borderTopWidth !== '0px' && s.borderTopColor !== 'rgba(0, 0, 0, 0)';
+        }).length,
+    );
+    results.push(`INFO replay prefilled goals: ${checked}`);
+    // Finish the flow FIRST so a failed assertion doesn't strand later steps.
+    await tap('시작하기');
+    await tap('캐릭터 선택하기');
+    await see('의 방', 20000);
+    if (checked === 0) throw new Error('no goal pre-checked on replay (#220 regression)');
+  });
+
+  await step('decor-unsaved-guard', async () => {
     await tapLabel('메뉴');
     await page.getByLabel('방 꾸미기', { exact: true }).first().click();
     await see('적용하기', 15000);
-    await see('벽지');
+    // Preview-select a non-default wallpaper, then leave without applying —
+    // the unsaved-change guard (PR #216) should intercept.
+    await tap('숲 포인트').catch(() => {});
     await tapLabel('뒤로가기');
+    const guard = page.getByText('저장하지 않고 나가기');
+    if (await guard.isVisible().catch(() => false)) {
+      results.push('INFO unsaved-change guard shown');
+      await guard.click();
+    } else {
+      results.push('INFO no unsaved guard (selection may have been a no-op)');
+    }
     await see('의 방');
   });
 

@@ -1,0 +1,33 @@
+# main 승격(dev→main 릴리스 PR 머지) 시 스토어 사용자용 production 채널에
+# OTA를 발행한다. 스토어 빌드는 channel=production이라 preview 채널(dev용,
+# eas-deploy.yml)의 업데이트를 받지 않는다 — 이 워크플로가 그 짝이다.
+#
+# 의도적으로 OTA 전용: 네이티브 변경의 production 빌드는 수동 릴리스 절차로
+# 돌린다(스토어 제출 타이밍·쿼터를 사람이 제어). 지문이 바뀐 커밋이면
+# eas update가 새 런타임 레인에 발행될 뿐 기존 설치엔 무해하다.
+name: eas-release
+on:
+  push:
+    branches: [main]
+
+jobs:
+  ota:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: eas-release-main
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Publish production OTA (both platforms)
+        run: eas update --branch production --non-interactive --auto
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}

@@ -18,12 +18,38 @@ export function buildQuery(params: Record<string, string | number | undefined | 
 export type RawRequestOptions = {
   /** Extra headers (e.g. Authorization). */
   headers?: Record<string, string>;
-  /** JSON-serialised as the request body; sets Content-Type automatically. */
+  /**
+   * Request body. Plain values are JSON-serialised (Content-Type set
+   * automatically); a FormData passes through untouched so fetch can set the
+   * multipart boundary itself (버그 제보 스크린샷 등 파일 업로드, #496).
+   */
   body?: unknown;
 };
 
+/** `code` field of the server's JSON error body, when it parses as such. */
+function parseErrorCode(bodyText?: string): string | undefined {
+  if (!bodyText) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(bodyText);
+    if (parsed && typeof parsed === 'object' && 'code' in parsed) {
+      const code = (parsed as { code: unknown }).code;
+      if (typeof code === 'string') return code;
+    }
+  } catch {
+    // Non-JSON body (HTML error page, plain text) — no structured code.
+  }
+  return undefined;
+}
+
 /** Error thrown for any non-2xx API response. */
 export class ApiError extends Error {
+  /**
+   * Structured server error code (예: 'HOUSE_NOT_OWNER') parsed from the JSON
+   * body — undefined when the body isn't JSON or has no string `code`. Compare
+   * against `ErrorCode` (#557) instead of substring-matching `bodyText`.
+   */
+  readonly code?: string;
+
   constructor(
     readonly status: number,
     readonly method: HttpMethod,
@@ -32,6 +58,7 @@ export class ApiError extends Error {
   ) {
     super(`API ${status}: ${method} ${path}`);
     this.name = 'ApiError';
+    this.code = parseErrorCode(bodyText);
   }
 }
 
@@ -41,8 +68,10 @@ export async function rawRequest<T>(
   options: RawRequestOptions = {},
 ): Promise<T> {
   const headers: Record<string, string> = { Accept: 'application/json', ...options.headers };
-  let body: string | undefined;
-  if (options.body !== undefined) {
+  let body: string | FormData | undefined;
+  if (typeof FormData !== 'undefined' && options.body instanceof FormData) {
+    body = options.body;
+  } else if (options.body !== undefined) {
     headers['Content-Type'] = 'application/json';
     body = JSON.stringify(options.body);
   }

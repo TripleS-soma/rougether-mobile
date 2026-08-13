@@ -1,4 +1,4 @@
-import type { Floor, House, RoomCell } from '@/components/screens/group-house-screen';
+import type { Floor, House, RoomCell } from '@/components/screens/house-screen';
 
 /**
  * A house's seat arrangement in display order (top-left seat first):

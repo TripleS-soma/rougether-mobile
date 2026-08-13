@@ -1,40 +1,65 @@
+import { openBrowserAsync } from 'expo-web-browser';
 import { type ReactNode, useState } from 'react';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 
-import { type HouseCover, HouseCoverPicker } from '@/components/house-cover-picker';
+import { type HouseCover, HouseCoverPicker } from '@/components/room/house-cover-picker';
+import { HousePreviewFrame } from '@/components/room/house-preview-frame';
 import { Room } from '@/components/room/room';
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
+import { CategoryManageScreen } from '@/components/screens/category-manage-screen';
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
 import { GachaScreen } from '@/components/screens/gacha-screen';
-import { GroupHouseScreen } from '@/components/screens/group-house-screen';
+import { HouseScreen, type House } from '@/components/screens/house-screen';
+import { HouseMembersScreen, manageableMembers } from '@/components/screens/house-members-screen';
 import { HelpScreen } from '@/components/screens/help-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
+import { InviteFriendsScreen } from '@/components/screens/invite-friends-screen';
 import { LoginScreen } from '@/components/screens/login-screen';
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { CharacterPickerSheet } from '@/components/screens/sheets/character-picker-sheet';
+import { BugReportScreen } from '@/components/screens/bug-report-screen';
 import { NotificationListScreen } from '@/components/screens/notification-list-screen';
 import { NotificationSettingsScreen } from '@/components/screens/notification-settings-screen';
 import { OnboardingScreen } from '@/components/screens/onboarding-screen';
 import { PasswordChangeScreen } from '@/components/screens/password-change-screen';
+import { PolicyViewerScreen } from '@/components/screens/policy-viewer-screen';
 import { ProfileEditScreen } from '@/components/screens/profile-edit-screen';
 import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
 import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
 import { SettingsScreen } from '@/components/screens/settings-screen';
+import { FontScreen } from '@/components/screens/font-screen';
+import { AppearancePreview } from '@/components/screens/settings/appearance-preview';
+import { ThemeScreen } from '@/components/screens/theme-screen';
 import { SoundSettingsScreen } from '@/components/screens/sound-settings-screen';
 import { SignupScreen } from '@/components/screens/signup-screen';
-import { SampleButton } from '@/components/sample-button';
 import { Badge } from '@/components/ui/badge';
+import { CoinIcon } from '@/components/ui/coin-icon';
+import { BearCheck } from '@/components/ui/bear-check';
+import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
+import { ScalePressable } from '@/components/ui/scale-pressable';
+import { CATEGORY_ICON_GEOMETRY, CategoryIcon } from '@/components/ui/category-icon';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
+import { CoachMarkOverlay } from '@/components/ui/coach-mark';
 import { Card } from '@/components/ui/card';
 import { IconButton } from '@/components/ui/icon-button';
 import { Pill } from '@/components/ui/pill';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { CurrencyGuide } from '@/components/ui/currency-guide';
+import { WalletHistorySheet } from '@/components/screens/sheets/wallet-history-sheet';
+import { SpringProgressBar } from '@/components/ui/spring-progress';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { MissionBanner } from '@/components/ui/mission-banner';
+import { MissionSheet } from '@/components/screens/sheets/mission-sheet';
 import { PendingNotice } from '@/components/ui/pending-notice';
+import { RetryState } from '@/components/ui/retry-state';
 import { ToastProvider, useToast } from '@/components/ui/toast';
+import { WheelPicker } from '@/components/ui/wheel-picker';
+import { PolicyUrls } from '@/constants/policy';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
 import { RECOMMENDED_HOUSES } from '@/mocks/fixtures';
+import { RoomRenderReference } from '@/dev/room-render-reference';
 import { TokenSwatches } from '@/dev/token-swatches';
 import { TypeScalePreview } from '@/dev/type-scale-preview';
 
@@ -52,7 +77,70 @@ export type GalleryEntry = {
  * component in isolation on device / simulator / web without wiring it into a
  * real screen first. Add an entry whenever you build a new component.
  */
+/** 재화 내역 시트 데모 (#734). */
+function WalletHistorySheetDemo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <View>
+      <ScalePressable
+        accessibilityRole="button"
+        onPress={() => setOpen(true)}
+        style={{ alignSelf: 'center', padding: 8 }}>
+        <Text>재화 내역 열기</Text>
+      </ScalePressable>
+      <WalletHistorySheet
+        visible={open}
+        onClose={() => setOpen(false)}
+        entries={[
+          { id: 1, currency: 'coin', amount: 10, reason: '루틴 완료', balanceAfter: 130, createdAt: new Date().toISOString() }, // prettier-ignore
+          { id: 2, currency: 'coin', amount: -100, reason: '뽑기', balanceAfter: 120, createdAt: new Date(Date.now() - 3600e3).toISOString() }, // prettier-ignore
+          { id: 3, currency: 'diamond', amount: 5, reason: '뽑기 중복 전환', balanceAfter: 25, createdAt: new Date(Date.now() - 86400e3).toISOString() }, // prettier-ignore
+        ]}
+        hasNext
+      />
+    </View>
+  );
+}
+
+/** 진행 바 데모 (#696) — 버튼으로 진행률을 올려 스프링·플래시를 확인한다. */
+function SpringProgressDemo() {
+  const [progress, setProgress] = useState(0.4);
+  return (
+    <View style={{ alignSelf: 'stretch', gap: 12 }}>
+      <SpringProgressBar progress={progress} color="#7FA87F" trackColor="#8888883A" />
+      <SpringProgressBar progress={progress} color="#7FA87F" trackColor="#8888883A" height={6} />
+      <ScalePressable
+        accessibilityRole="button"
+        onPress={() => setProgress((p) => (p >= 1 ? 0 : Math.min(1, p + 0.3)))}
+        style={{ alignSelf: 'center', padding: 8 }}>
+        <Text>진행 +30% (100%에서 플래시 · 다시 누르면 0%)</Text>
+      </ScalePressable>
+    </View>
+  );
+}
+
+/** 휠 데모 (#390) — 시 휠 하나로 스와이프/탭 선택을 확인한다. */
+function WheelPickerDemo() {
+  const [hour, setHour] = useState(7);
+  return (
+    <View style={{ width: 120, alignSelf: 'center' }}>
+      <WheelPicker
+        items={Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: `${i + 1}시` }))}
+        value={hour}
+        onChange={setHour}
+        accessibilityLabel="시 선택"
+      />
+    </View>
+  );
+}
+
 export const galleryEntries: GalleryEntry[] = [
+  {
+    name: 'Room · renderer contract v1 reference',
+    description:
+      '관리자 크기 스튜디오와 동일한 geometry JSON·여름 바다 CDN fixture·캐릭터 애니메이션.',
+    render: () => <RoomRenderReference />,
+  },
   {
     name: 'Design tokens · active theme',
     description: 'Brand semantic colors, Astryx-aligned naming (default: cozy).',
@@ -64,6 +152,125 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => <TypeScalePreview />,
   },
   {
+    name: 'ScalePressable · 프레스 스케일',
+    description: '누르는 동안 0.96으로 눌리는 공용 Pressable (#442) — 버튼 기본 손맛.',
+    render: () => (
+      <ScalePressable
+        accessibilityRole="button"
+        accessibilityLabel="눌러보기"
+        style={{
+          alignSelf: 'center',
+          backgroundColor: '#7FA87F',
+          borderRadius: 999,
+          paddingHorizontal: 24,
+          paddingVertical: 12,
+        }}>
+        <Text style={{ color: '#FFFFFF' }}>눌러보기</Text>
+      </ScalePressable>
+    ),
+  },
+  {
+    name: 'BearCheck · 곰 헤드 체크 토글',
+    description:
+      '루틴 완료 토글 (#344, design-sync 시안 A) — 미완료 윤곽 / 완료 = 카테고리 색 + 흰 체크.',
+    render: () => (
+      <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center', alignSelf: 'center' }}>
+        <BearCheck checked={false} />
+        <BearCheck checked color="#E8A87C" />
+        <BearCheck checked color="#7FA8D4" />
+        <BearCheck checked color="#C8869C" />
+        <BearCheck checked color="#7FA87F" />
+      </View>
+    ),
+  },
+  {
+    name: 'PawRefreshScroll · 곰 발바닥 당겨서 새로고침',
+    description:
+      '나의 방·집 스크롤의 커스텀 pull-to-refresh (#454) — 맨 위에서 당기면 발바닥이 자라나고, 놓으면 새로고침 동안 두근거린다. (네이티브 전용 — 웹은 일반 스크롤)',
+    render: () => (
+      <View style={{ height: 360, alignSelf: 'stretch' }}>
+        <PawRefreshScroll
+          onRefresh={() => new Promise((resolve) => setTimeout(resolve, 1600))}
+          contentContainerStyle={{ padding: 16, gap: 12 }}>
+          {Array.from({ length: 12 }, (_, i) => (
+            <View key={i} style={{ height: 48, borderRadius: 12, backgroundColor: '#8888883A' }} />
+          ))}
+        </PawRefreshScroll>
+      </View>
+    ),
+  },
+  {
+    name: 'WheelPicker · 스와이프 휠',
+    description:
+      '알림 시간 시트의 시간 선택 휠 (#390, design-sync Time wheel picker 채택) — 스냅 스와이프 + 행 탭 선택.',
+    render: () => <WheelPickerDemo />,
+  },
+  {
+    name: 'CategoryIcon · 스티커 팝',
+    description:
+      '카테고리 아이콘 16종 (#398, design-sync A안) — 카테고리 색 하나에서 파스텔·액센트·포인트 톤 파생.',
+    render: () => (
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
+        {(Object.keys(CATEGORY_ICON_GEOMETRY) as (keyof typeof CATEGORY_ICON_GEOMETRY)[]).map(
+          (n, i) => (
+            <CategoryIcon
+              key={n}
+              name={n}
+              color={['#E8A87C', '#7FA8D4', '#C8869C', '#96B39A'][i % 4]}
+              size={32}
+            />
+          ),
+        )}
+      </View>
+    ),
+  },
+  {
+    name: 'CoinIcon · 발바닥 각인 동전',
+    description:
+      '코인 글리프 (#512, 시안 B) — 골드 동전 + 곰 발바닥 각인, 14px 미만은 발가락 단순화.',
+    render: () => (
+      <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center', alignSelf: 'center' }}>
+        <CoinIcon size={48} />
+        <CoinIcon size={22} />
+        <CoinIcon size={18} />
+        <CoinIcon size={14} />
+        <CoinIcon size={12} />
+      </View>
+    ),
+  },
+  {
+    name: 'WalletHistorySheet · 재화 내역',
+    description: '지갑 필 탭 → 재화 증감 이력 시트 (#734) — 적립 +/사용 −, 직후 잔액, 더보기.',
+    render: () => <WalletHistorySheetDemo />,
+  },
+  {
+    name: 'CurrencyGuide · 재화 안내',
+    description: '재화 내역 시트 상단 접이식 안내 (#789) — 코인·다이아의 수급처·사용처.',
+    render: () => <CurrencyGuide initialOpen />,
+  },
+  {
+    name: 'SpringProgressBar · 스프링 진행 바',
+    description:
+      '공용 진행 바 (#440·#503, #696 승격) — 차오를 때 바운스, 줄어들 때 클램프, 100% 흰 플래시.',
+    render: () => <SpringProgressDemo />,
+  },
+  {
+    name: 'CoachMarkOverlay · 스포트라이트',
+    description: '코치마크 튜토리얼 오버레이 (#351) — 구멍 뚫린 딤 + 말풍선.',
+    render: () => (
+      <View style={{ height: 420, alignSelf: 'stretch' }}>
+        <CoachMarkOverlay
+          steps={[{ target: 'demo', title: '오늘의 루틴', body: '곰 발바닥을 누르면 루틴 완료!' }]}
+          index={0}
+          targets={{ demo: { x: 40, y: 60, w: 220, h: 48 } }}
+          frame={{ w: 340, h: 420 }}
+          onNext={() => {}}
+          onSkip={() => {}}
+        />
+      </View>
+    ),
+  },
+  {
     name: 'Room · default',
     description: 'Room renderer — wallpaper + slot-placed furniture (dummy resources) + character.',
     render: () => (
@@ -73,17 +280,27 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
-    name: 'Room · CDN character animations',
-    description: 'Server animations(idle/poseCycle/wave) art — tap the character to cycle (#263).',
+    name: 'HousePreviewFrame · 기본 프레임 (커버 없음)',
+    description: '집 탐색 미리보기 (#328) — 커버 없는 집은 기본 프레임 PNG로 폴백, 멤버 2/4.',
+    render: () => (
+      <View style={{ width: 280, alignSelf: 'center' }}>
+        <HousePreviewFrame memberCount={2} name="데모 집" />
+      </View>
+    ),
+  },
+  {
+    name: 'Room · CDN character poses',
+    description:
+      'Server poses[] art in registration order — tap the character to cycle (#263, #735).',
     render: () => (
       <View style={{ width: 280, alignSelf: 'center' }}>
         <Room
           characterId="panda"
-          characterAnimations={{
-            idle: 'characters/panda/animations/idle.webp',
-            poseCycle: 'characters/panda/animations/pose-cycle.webp',
-            wave: 'characters/panda/animations/wave.webp',
-          }}
+          characterFrames={[
+            'characters/panda/animations/idle.webp',
+            'characters/panda/animations/pose-cycle.webp',
+            'characters/panda/animations/wave.webp',
+          ]}
           interactiveCharacter
         />
       </View>
@@ -123,6 +340,22 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
+    name: 'InviteFriendsScreen',
+    description: '친구 초대 (#518): 내 초대코드 복사 + 보상 현황 + 받은 코드 사용.',
+    render: () => (
+      <InviteFriendsScreen
+        info={{
+          code: 'ROUGE123',
+          rewardedCount: 2,
+          maxRewardedCount: 10,
+          inviterRewardCoin: 50,
+          inviteeRewardCoin: 30,
+        }}
+        onRedeem={async () => ({ rewardCoin: 30 })}
+      />
+    ),
+  },
+  {
     name: 'RoomDecorScreen',
     description:
       'Ported from the prototype RoomDecorScreen (#8): live room preview + wallpaper/furniture catalog.',
@@ -146,21 +379,66 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
-    name: 'GroupHouseScreen',
-    description:
-      'Ported from the prototype GroupHouseScreen (#10): house switcher, member rooms, group goals, kick flow.',
+    name: 'HouseScreen · 비 오는 날',
+    description: '흐린 하늘 + 빗줄기 오버레이 (#360) — raining 주입.',
     render: () => (
-      <View style={{ height: 900, alignSelf: 'stretch' }}>
-        <GroupHouseScreen />
+      <View style={{ height: 700, alignSelf: 'stretch' }}>
+        <HouseScreen raining nowHour={10} />
       </View>
     ),
   },
   {
+    name: 'HouseScreen',
+    description:
+      'Ported from the prototype HouseScreen (#10): house switcher, member rooms, group goals. 구성원 관리는 셸 화면으로 승격(#753) — 아래 HouseMembersScreen 항목에서 미리보기.',
+    render: () => (
+      <View style={{ height: 900, alignSelf: 'stretch' }}>
+        <HouseScreen />
+      </View>
+    ),
+  },
+  {
+    name: 'HouseMembersScreen',
+    description:
+      '집 → 구성원 관리 (#753에서 셸 화면으로 승격): 초대코드, 방장 도구, 강퇴(더미 집이라 로컬 강퇴 플로우).',
+    render: () => {
+      const demoHouse: House = {
+        name: '데모 하우스',
+        myRole: 'OWNER',
+        maxMembers: 4,
+        floors: [
+          {
+            level: '1층',
+            rooms: [
+              { name: '친구', color: '#F5E1D8', membershipId: 42 },
+              { name: '나', color: '#E8E0D0', isMine: true, isOwner: true, membershipId: 43 },
+            ],
+          },
+        ],
+      };
+      return (
+        <View style={{ height: 900, alignSelf: 'stretch' }}>
+          <HouseMembersScreen
+            house={demoHouse}
+            members={manageableMembers(demoHouse)}
+            isOwner
+            isKicked={() => false}
+            memberCharacterId={(m) => (m.isMine ? 'tiger' : 'cat')}
+            onBack={() => {}}
+            onLocalKick={() => {}}
+            onLeaveDone={() => {}}
+          />
+        </View>
+      );
+    },
+  },
+  {
     name: 'LoginScreen',
-    description: 'Ported from the prototype AuthScreen (#2). Preview at fixed height.',
+    description:
+      'Ported from the prototype AuthScreen (#2). Preview at fixed height, 최근 로그인 배지는 카카오에.',
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
-        <LoginScreen />
+        <LoginScreen lastLoginProvider="kakao" />
       </View>
     ),
   },
@@ -169,16 +447,17 @@ export const galleryEntries: GalleryEntry[] = [
     description: 'Ported from the prototype SignupScreen (#3). Preview at fixed height.',
     render: () => (
       <View style={{ height: 900, alignSelf: 'stretch' }}>
-        <SignupScreen />
+        <SignupScreen onViewPolicy={(doc) => openBrowserAsync(PolicyUrls[doc])} />
       </View>
     ),
   },
   {
     name: 'OnboardingScreen',
-    description: 'Ported from the prototype OnboardingScreen (#4): slides → goals → character.',
+    description:
+      'Ported from the prototype OnboardingScreen (#4): slides → goals → (캐러셀은 MVP 오프 #637 — 갤러리는 열어 보존 UI 확인) → nickname.',
     render: () => (
       <View style={{ height: 720, alignSelf: 'stretch' }}>
-        <OnboardingScreen />
+        <OnboardingScreen characterSelectEnabled />
       </View>
     ),
   },
@@ -197,6 +476,29 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
         <SettingsScreen />
+      </View>
+    ),
+  },
+  {
+    name: 'ThemeScreen',
+    description: '설정 → 테마 색상 (#459): 라이브 미리보기 + 테마 5종 선택.',
+    render: () => (
+      <View style={{ height: 640, alignSelf: 'stretch' }}>
+        <ThemeScreen />
+      </View>
+    ),
+  },
+  {
+    name: 'AppearancePreview',
+    description: '테마 색상·폰트 피커 공용 미리보기 카드 (#750): 활성 토큰·타입 스케일 그대로.',
+    render: () => <AppearancePreview />,
+  },
+  {
+    name: 'FontScreen',
+    description: '설정 → 폰트 (#750): 라이브 미리보기 + 글자 스와치로 폰트 5종 선택.',
+    render: () => (
+      <View style={{ height: 640, alignSelf: 'stretch' }}>
+        <FontScreen />
       </View>
     ),
   },
@@ -246,6 +548,20 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
+    name: 'BugReportScreen',
+    description: '설정 → 버그 제보: 제보 폼(제목·내용·스크린샷) + 내 제보 내역.',
+    render: () => (
+      <View style={{ height: 640, alignSelf: 'stretch' }}>
+        <BugReportScreen
+          entries={[
+            { id: 2, title: '달력 원 정렬이 어긋나요', status: 'IN_PROGRESS', date: '7월 20일' },
+            { id: 1, title: '로그인이 안 돼요', status: 'RESOLVED', date: '7월 12일' },
+          ]}
+        />
+      </View>
+    ),
+  },
+  {
     name: 'NotificationSettingsScreen',
     description: '설정 → 푸시 알림: 전체 스위치 + 카테고리별 토글.',
     render: () => (
@@ -273,11 +589,32 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
+    name: 'PolicyViewerScreen',
+    description: '설정/가입 → 약관·처리방침 인앱 웹뷰 (#652). 웹은 iframe 변형.',
+    render: () => (
+      <View style={{ height: 640, alignSelf: 'stretch' }}>
+        <PolicyViewerScreen
+          title="이용약관"
+          url="https://triples-soma.github.io/policy/terms.html"
+        />
+      </View>
+    ),
+  },
+  {
     name: 'AddRoutineScreen',
     description: 'Ported from the prototype AddRoutineScreen (#5, add mode; sheets deferred).',
     render: () => (
       <View style={{ height: 760, alignSelf: 'stretch' }}>
         <AddRoutineScreen />
+      </View>
+    ),
+  },
+  {
+    name: 'CategoryManageScreen',
+    description: '카테고리 관리 독립 화면 (#394) — 목록(순서·수정·삭제) + 헤더 +로 생성 시트.',
+    render: () => (
+      <View style={{ height: 640, alignSelf: 'stretch' }}>
+        <CategoryManageScreen onReorder={() => {}} />
       </View>
     ),
   },
@@ -380,6 +717,45 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => <PendingNotice text="이 기능은 서버 준비 중이에요." />,
   },
   {
+    name: 'UI · RetryState',
+    description: '로드 실패 공용 블록 (#557) — 메시지(+보조 문구)와 다시 시도 필.',
+    render: () => (
+      <View style={{ alignSelf: 'stretch', gap: 24 }}>
+        <RetryState message="데이터를 불러오지 못했어요." onRetry={() => {}} />
+        <RetryState
+          message="친구 방을 불러오지 못했어요"
+          detail="네트워크 상태를 확인하고 다시 시도해 주세요."
+          onRetry={() => {}}
+        />
+      </View>
+    ),
+  },
+  {
+    name: 'UI · ConfirmDialog',
+    description: '백드롭+카드 확인 다이얼로그 (#557) — 버튼으로 열어보기.',
+    render: () => <ConfirmDialogDemo />,
+  },
+  {
+    name: 'UI · MissionBanner',
+    description: '온보딩 미션 진행 배너 (#571) — 🎯 미션 N/4 + 건너뛰기(확인 다이얼로그).',
+    render: () => (
+      <View style={{ alignSelf: 'stretch', minHeight: 80 }}>
+        <MissionBanner
+          stepIndex={1}
+          totalSteps={4}
+          label="뽑기 1회 해보기"
+          onPress={() => {}}
+          onSkip={() => {}}
+        />
+      </View>
+    ),
+  },
+  {
+    name: 'MissionSheet · 완료 전환',
+    description: '미션 완료 전환 시트 (#571) — 다음 미션 안내와 하러 가기.',
+    render: () => <MissionSheetDemo />,
+  },
+  {
     name: 'UI · Toast',
     description: '하단 토스트 (info / success / error) — useToast().show(...)로 발사.',
     render: () => (
@@ -387,19 +763,6 @@ export const galleryEntries: GalleryEntry[] = [
         <ToastDemo />
       </ToastProvider>
     ),
-  },
-  {
-    name: 'SampleButton · primary',
-    description: 'Reference pattern for harness components — theme-aware, testable.',
-    render: () => <SampleButton label="Primary" variant="primary" />,
-  },
-  {
-    name: 'SampleButton · secondary',
-    render: () => <SampleButton label="Secondary" variant="secondary" />,
-  },
-  {
-    name: 'SampleButton · disabled',
-    render: () => <SampleButton label="Disabled" disabled />,
   },
 ];
 
@@ -434,6 +797,57 @@ function HouseCoverPickerDemo() {
   );
   return (
     <HouseCoverPicker covers={SAMPLE_HOUSE_COVERS} selectedKey={selected} onSelect={setSelected} />
+  );
+}
+
+/** Opens the shared confirm dialog in its destructive form. */
+function MissionSheetDemo() {
+  const [visible, setVisible] = useState(false);
+  const [last, setLast] = useState(false);
+  return (
+    <View style={{ alignSelf: 'stretch', gap: 8 }}>
+      <Button
+        label="미션 1 완료 시트 열기"
+        onPress={() => {
+          setLast(false);
+          setVisible(true);
+        }}
+      />
+      <Button
+        label="마지막 미션(축하) 시트 열기"
+        variant="secondary"
+        onPress={() => {
+          setLast(true);
+          setVisible(true);
+        }}
+      />
+      <MissionSheet
+        visible={visible}
+        completedStep={last ? 4 : 1}
+        totalSteps={4}
+        nextLabel={last ? null : '뽑기 1회 해보기'}
+        onGo={() => setVisible(false)}
+        onClose={() => setVisible(false)}
+      />
+    </View>
+  );
+}
+
+function ConfirmDialogDemo() {
+  const [visible, setVisible] = useState(false);
+  return (
+    <View style={{ alignSelf: 'stretch' }}>
+      <Button label="삭제 확인 열기" variant="danger" onPress={() => setVisible(true)} />
+      <ConfirmDialog
+        visible={visible}
+        title="루틴 삭제"
+        body={'이 루틴을 삭제할까요?\n삭제하면 지난 수행 기록도 함께 사라져요.'}
+        confirmLabel="삭제"
+        destructive
+        onConfirm={() => setVisible(false)}
+        onCancel={() => setVisible(false)}
+      />
+    </View>
   );
 }
 

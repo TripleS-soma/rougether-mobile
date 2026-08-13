@@ -1,26 +1,31 @@
 {
   "name": "rougether-mobile",
-  "main": "expo-router/entry",
+  "main": "index.js",
   "version": "1.0.0",
   "dependencies": {
-    "@expo/ui": "~55.0.17",
+    "@bacons/apple-targets": "^5.0.0",
     "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-firebase/analytics": "^25.1.0",
+    "@react-native-firebase/app": "^25.1.0",
+    "@react-native-firebase/crashlytics": "^25.1.0",
+    "@react-native-firebase/messaging": "^25.1.0",
+    "@react-native-google-signin/google-signin": "^16.1.2",
+    "@react-native-kakao/core": "^2.4.6",
+    "@react-native-kakao/user": "^2.4.6",
+    "@react-navigation/native": "7.3.4",
     "expo": "~55.0.27",
+    "expo-apple-authentication": "~55.0.15",
     "expo-asset": "~55.0.17",
     "expo-audio": "~55.0.15",
-    "expo-blur": "~55.0.15",
     "expo-build-properties": "~55.0.15",
-    "expo-camera": "~55.0.20",
     "expo-clipboard": "~55.0.14",
     "expo-constants": "~55.0.16",
     "expo-device": "~55.0.19",
     "expo-font": "~55.0.8",
-    "expo-glass-effect": "~55.0.11",
     "expo-haptics": "~55.0.15",
     "expo-image": "~55.0.11",
     "expo-image-picker": "~55.0.21",
-    "expo-linear-gradient": "~55.0.15",
     "expo-linking": "~55.0.16",
     "expo-media-library": "~55.0.19",
     "expo-notifications": "~55.0.25",
@@ -32,9 +37,11 @@
     "expo-system-ui": "~55.0.19",
     "expo-updates": "~55.0.25",
     "expo-web-browser": "~55.0.17",
+    "posthog-react-native": "^4.59.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-native": "0.83.6",
+    "react-native-android-widget": "^0.21.0",
     "react-native-gesture-handler": "~2.30.0",
     "react-native-reanimated": "4.2.1",
     "react-native-safe-area-context": "~5.6.2",
@@ -42,6 +49,7 @@
     "react-native-svg": "15.15.3",
     "react-native-view-shot": "4.0.3",
     "react-native-web": "~0.21.0",
+    "react-native-webview": "13.16.0",
     "react-native-worklets": "0.7.4"
   },
   "devDependencies": {
@@ -61,10 +69,9 @@
   },
   "scripts": {
     "start": "expo start",
-    "reset-project": "node ./scripts/reset-project.js",
     "build:characters": "node ./scripts/build-character-sprites.js",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
@@ -78,6 +85,8 @@
     "preset": "jest-expo",
     "testTimeout": 30000,
     "moduleNameMapper": {
+      "^react-native-worklets(/.*)?$": "<rootDir>/jest/worklets-mock.js",
+      "^react-native-reanimated$": "react-native-reanimated/mock",
       "\\.(css)$": "<rootDir>/jest/style-mock.js",
       "\\.svg$": "<rootDir>/jest/svg-mock.js",
       "^expo-haptics$": "<rootDir>/jest/expo-haptics-mock.js",
@@ -86,11 +95,25 @@
       "^expo-device$": "<rootDir>/jest/expo-device-mock.js",
       "^expo-media-library$": "<rootDir>/jest/expo-media-library-mock.js",
       "^react-native-view-shot$": "<rootDir>/jest/view-shot-mock.js",
+      "^@react-native-google-signin/google-signin$": "<rootDir>/jest/google-signin-mock.js",
+      "^@react-native-kakao/core$": "<rootDir>/jest/kakao-core-mock.js",
+      "^expo-apple-authentication$": "<rootDir>/jest/expo-apple-authentication-mock.js",
+      "^@react-native-kakao/user$": "<rootDir>/jest/kakao-user-mock.js",
+      "^@react-native-firebase/analytics$": "<rootDir>/jest/rn-firebase-analytics-mock.js",
+      "^@react-native-firebase/crashlytics$": "<rootDir>/jest/rn-firebase-crashlytics-mock.js",
+      "^@bacons/apple-targets$": "<rootDir>/jest/apple-targets-mock.js",
       "^@/assets/(.*)$": "<rootDir>/assets/$1",
-      "^@/(.*)$": "<rootDir>/src/$1"
+      "^@/(.*)$": "<rootDir>/src/$1",
+      "^react-native-android-widget$": "<rootDir>/jest/react-native-android-widget-mock.js"
     },
     "transformIgnorePatterns": [
       "node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg))"
+    ],
+    "setupFiles": [
+      "react-native-gesture-handler/jestSetup.js"
+    ],
+    "setupFilesAfterEnv": [
+      "<rootDir>/jest/setup-after-env.js"
     ]
   },
   "private": true

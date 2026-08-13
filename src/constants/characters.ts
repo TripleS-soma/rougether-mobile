@@ -52,3 +52,10 @@ export const CHARACTER_OPTIONS: CharacterOption[] = [
 ];
 
 export const DEFAULT_CHARACTER_ID: CharacterId = 'cat';
+
+/**
+ * MVP 캐릭터 단일화 — 지금은 고양이만 제공한다. 선택 캐러셀(온보딩)과
+ * 캐릭터 교체 진입점을 막는 스위치로, UI 코드는 재사용 예정이라 유지한다.
+ * 이미 다른 캐릭터를 쓰는 계정은 그대로 둔다(강제 되돌림 없음).
+ */
+export const CHARACTER_SELECTION_ENABLED = false;

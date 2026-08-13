@@ -1,4 +1,6 @@
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { State } from 'react-native-gesture-handler';
+import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { ToastProvider } from '@/components/ui/toast';
@@ -48,6 +50,115 @@ describe('MyRoomScreen', () => {
     expect(getByText('7일')).toBeTruthy();
     // 3 of 5 routines completed today.
     expect(getByText('3 / 5')).toBeTruthy();
+  });
+
+  it('헤더에 코인·다이아 필을 함께 보여준다 (프로필 아바타 제거로 확보한 자리)', async () => {
+    const { getByText } = await render(
+      <MyRoomScreen
+        userName="준서"
+        routines={SAMPLE_ROUTINES}
+        coinBalance={1200}
+        diamondBalance={34}
+      />,
+    );
+    // 아바타를 빼고 다이아를 상시 노출 — 좁은 폭 코인-only(#425)를 되돌림.
+    expect(getByText('준서의 방')).toBeTruthy();
+    expect(getByText('1,200')).toBeTruthy();
+    expect(getByText('34')).toBeTruthy();
+  });
+
+  it('행 메뉴 → 루틴 수정을 누르면 그 루틴으로 onEditRoutine을 부른다 (#465)', async () => {
+    const onEditRoutine = jest.fn();
+    const { getByLabelText } = await render(
+      <MyRoomScreen routines={SAMPLE_ROUTINES} onEditRoutine={onEditRoutine} />,
+    );
+    // 행 본문 탭 → 메뉴 시트, 거기서 '루틴 수정' → 편집 진입 콜백.
+    await fireEvent.press(getByLabelText('아침 7시 기상 메뉴'));
+    await fireEvent.press(getByLabelText('아침 7시 기상 루틴 수정'));
+    expect(onEditRoutine).toHaveBeenCalledWith(expect.objectContaining({ id: '1' }));
+  });
+
+  // 방↔달력 스와이프 전환 (#561) — 콘텐츠 영역의 가로 우세 플링으로 탭 전환.
+  // RNGH pan을 jest-utils로 구동한다 (활성/실패 임계·플링 판정 자체는
+  // utils/gesture 단위 테스트가 검증).
+  it('콘텐츠 영역 가로 플링으로 방↔달력 탭이 전환된다 (#561)', async () => {
+    const ui = await render(<MyRoomScreen routines={SAMPLE_ROUTINES} />);
+    const fling = (translationX: number) =>
+      act(async () =>
+        fireGestureHandler(getByGestureTestId('room-tab-fling'), [
+          { state: State.BEGAN },
+          { state: State.ACTIVE },
+          { state: State.END, translationX, translationY: 0 },
+        ]),
+      );
+
+    // 왼쪽 플링 → 달력 탭.
+    await fling(-60);
+    expect(ui.getByText('이 날의 루틴')).toBeTruthy();
+    // 오른쪽 플링 → 방 탭 복귀.
+    await fling(60);
+    expect(ui.getByText('오늘의 할 일')).toBeTruthy();
+    // 임계 미달 릴리즈는 무시.
+    await fling(-30);
+    expect(ui.getByText('오늘의 할 일')).toBeTruthy();
+  });
+
+  // 방↔달력 스와이프 순환 — 방향과 무관하게 플링이 두 서브탭을 오간다.
+  // 달력에서 좌플링해도 (월 이동·집 이동이 아니라) 방으로 되돌아온다.
+  it('플링은 방향과 무관하게 방↔달력을 순환한다', async () => {
+    const ui = await render(<MyRoomScreen routines={SAMPLE_ROUTINES} />);
+    const fling = (translationX: number) =>
+      act(async () =>
+        fireGestureHandler(getByGestureTestId('room-tab-fling'), [
+          { state: State.BEGAN },
+          { state: State.ACTIVE },
+          { state: State.END, translationX, translationY: 0 },
+        ]),
+      );
+
+    // 방에서 좌플링 → 달력, 달력에서 한 번 더 좌플링 → 방(순환).
+    await fling(-60);
+    expect(ui.getByText('이 날의 루틴')).toBeTruthy();
+    await fling(-60);
+    expect(ui.getByText('오늘의 할 일')).toBeTruthy();
+    // 방에서 우플링도 달력으로(순환) — 어느 방향이든 오간다.
+    await fling(60);
+    expect(ui.getByText('이 날의 루틴')).toBeTruthy();
+  });
+
+  // 루틴 행 스와이프 삭제 (#566) — 액션은 항상 렌더되고 스와이프로 드러난다.
+  // 풀스와이프 즉시 삭제가 아니라 액션 탭이 삭제 경로다.
+  it('행 스와이프로 드러난 삭제 액션 탭 → onDeleteRoutine (#566)', async () => {
+    const onDeleteRoutine = jest.fn();
+    const { getByLabelText } = await render(
+      <MyRoomScreen routines={SAMPLE_ROUTINES} onDeleteRoutine={onDeleteRoutine} />,
+    );
+    await fireEvent.press(getByLabelText('아침 7시 기상 스와이프 삭제'));
+    expect(onDeleteRoutine).toHaveBeenCalledWith('1');
+  });
+
+  it('삭제 미배선 행은 스와이프 삭제가 비활성 (#566)', async () => {
+    // onDeleteRoutine 없이 → 방탭 행에 스와이프 삭제 액션이 없다.
+    const unwired = await render(<MyRoomScreen routines={SAMPLE_ROUTINES} />);
+    expect(unwired.queryByLabelText('아침 7시 기상 스와이프 삭제')).toBeNull();
+
+    // 달력 탭 서버 기반(과거 기록) 항목도 스와이프 삭제 비활성.
+    const calendarDays = {
+      [YESTERDAY]: [
+        { id: 'x9', kind: 'todo' as const, title: '지난 기록', completed: false, category: '' },
+      ],
+    };
+    const server = await render(
+      <MyRoomScreen
+        routines={[]}
+        calendarDays={calendarDays}
+        onSelectDate={jest.fn()}
+        onDeleteRoutine={jest.fn()}
+      />,
+    );
+    await pickCalendarDate(server, YESTERDAY);
+    expect(server.getByText('지난 기록')).toBeTruthy();
+    expect(server.queryByLabelText('지난 기록 스와이프 삭제')).toBeNull();
   });
 
   it('marks each category header with its visibility scope (#285)', async () => {
@@ -100,7 +211,7 @@ describe('MyRoomScreen', () => {
 
     // The row body (title text) opens the bottom-sheet menu, no extra toggle.
     await fireEvent.press(getByText('하루 회고'));
-    expect(getByText('수정하기')).toBeTruthy();
+    expect(getByText('이름 변경')).toBeTruthy();
     expect(getByText('삭제하기')).toBeTruthy();
     expect(onToggleCompletion).toHaveBeenCalledTimes(1);
   });
@@ -115,7 +226,7 @@ describe('MyRoomScreen', () => {
     );
 
     await fireEvent.press(getByText('장보기')); // row body → menu sheet
-    expect(queryByText('시간 수정')).toBeNull(); // todos have no alarm item
+    expect(queryByText('시간 수정')).toBeNull(); // 시간 없는 항목은 '시간 추가' (#325)
 
     await fireEvent.press(getByText('날짜 바꾸기')); // → calendar bottom sheet
     await fireEvent.press(getByLabelText(OTHER_DAY)); // draft only — not saved yet
@@ -123,6 +234,38 @@ describe('MyRoomScreen', () => {
 
     await fireEvent.press(getByLabelText('확인'));
     expect(onUpdateTodoDueDate).toHaveBeenCalledWith('t9', OTHER_DAY);
+  });
+
+  it('투두에도 시간 항목 — 없으면 시간 추가, 저장 시 dueTime 콜백 (#325)', async () => {
+    const onUpdateRoutineTime = jest.fn();
+    const todos = [
+      { id: 't9', title: '장보기', kind: 'todo' as const, dueDate: TODAY, category: '건강' },
+    ];
+    const { getByText, getByLabelText } = await render(
+      <MyRoomScreen routines={todos} onUpdateRoutineTime={onUpdateRoutineTime} />,
+    );
+    await fireEvent.press(getByText('장보기'));
+    // 알림 시간 시트 재사용 — 토글 켜고 저장하면 기본 07:00으로 콜백.
+    await fireEvent.press(getByText('시간 추가'));
+    await fireEvent.press(getByLabelText('알림 받기'));
+    await fireEvent.press(getByLabelText('알림 저장'));
+    expect(onUpdateRoutineTime).toHaveBeenCalledWith('t9', true, '07:00');
+  });
+
+  it('시간 라벨 분기 — 시간 있는 루틴은 시간 수정, 없는 루틴은 시간 추가 (#325)', async () => {
+    const { getByText, queryByText, getByLabelText } = await render(
+      <MyRoomScreen routines={SAMPLE_ROUTINES} />,
+    );
+    // '하루 회고'는 23:00 알림 보유 → 시간 수정.
+    await fireEvent.press(getByText('하루 회고'));
+    expect(getByText('시간 수정')).toBeTruthy();
+    // 시간 수정 → 알림 시트 열림(메뉴 닫힘) → 닫기.
+    await fireEvent.press(getByText('시간 수정'));
+    await fireEvent.press(getByLabelText('닫기'));
+    // '물 2L 마시기'는 alarmEnabled: false → 시간 추가.
+    await fireEvent.press(getByText('물 2L 마시기'));
+    expect(queryByText('시간 수정')).toBeNull();
+    expect(getByText('시간 추가')).toBeTruthy();
   });
 
   it('cancels a date change without saving', async () => {
@@ -180,47 +323,108 @@ describe('MyRoomScreen', () => {
   it('opens the hamburger menu and routes each item', async () => {
     const onEdit = jest.fn();
     const onAddRoutine = jest.fn();
-    const { getByLabelText, getByText, queryByText } = await render(
-      <MyRoomScreen routines={SAMPLE_ROUTINES} onEdit={onEdit} onAddRoutine={onAddRoutine} />,
+    const onManageRoutines = jest.fn();
+    const onManageCategories = jest.fn();
+    const { getByLabelText, getByText, getAllByLabelText } = await render(
+      <MyRoomScreen
+        routines={SAMPLE_ROUTINES}
+        onEdit={onEdit}
+        onAddRoutine={onAddRoutine}
+        onManageRoutines={onManageRoutines}
+        onManageCategories={onManageCategories}
+      />,
     );
 
     await fireEvent.press(getByLabelText('메뉴'));
-    // getByLabelText: the bottom 방 꾸미기 button uses a distinct label (열기).
-    await fireEvent.press(getByLabelText('방 꾸미기'));
+    // '방 꾸미기'는 플로팅 버튼(#727)과 메뉴 항목 둘 다 존재 — 메뉴(모달,
+    // 트리상 뒤)의 항목을 집어 메뉴 경로가 살아 있음을 검증한다.
+    const decorItems = getAllByLabelText('방 꾸미기');
+    await fireEvent.press(decorItems[decorItems.length - 1]);
     expect(onEdit).toHaveBeenCalledTimes(1);
+
+    // 메뉴의 루틴 관리는 onManageRoutines로 — +의 바로 추가와 분리 (#335).
+    await fireEvent.press(getByLabelText('메뉴'));
+    await fireEvent.press(getByText('루틴 관리'));
+    expect(onManageRoutines).toHaveBeenCalledTimes(1);
+    expect(onAddRoutine).not.toHaveBeenCalled();
+
+    // 카테고리 관리 routes to the dedicated screen (#394).
+    await fireEvent.press(getByLabelText('메뉴'));
+    await fireEvent.press(getByText('카테고리 관리'));
+    expect(onManageCategories).toHaveBeenCalledTimes(1);
+  });
+
+  it('오늘의 루틴 + 버튼은 바로 루틴 추가 콜백을 부른다 (#335)', async () => {
+    const onAddRoutine = jest.fn();
+    const onManageRoutines = jest.fn();
+    const { getByLabelText, getByText } = await render(
+      <MyRoomScreen
+        routines={SAMPLE_ROUTINES}
+        onAddRoutine={onAddRoutine}
+        onManageRoutines={onManageRoutines}
+      />,
+    );
+
+    // '＋ 루틴' 라벨 필 (#483) — 카테고리 ＋(할 일 추가)와 구분되는 가시 라벨.
+    expect(getByText('루틴')).toBeTruthy();
+    await fireEvent.press(getByLabelText('루틴 추가'));
+    expect(onAddRoutine).toHaveBeenCalledTimes(1);
+    expect(onManageRoutines).not.toHaveBeenCalled();
+  });
+
+  it('onManageRoutines 미배선이면 메뉴의 루틴 관리는 onAddRoutine으로 폴백', async () => {
+    const onAddRoutine = jest.fn();
+    const { getByLabelText, getByText } = await render(
+      <MyRoomScreen routines={SAMPLE_ROUTINES} onAddRoutine={onAddRoutine} />,
+    );
 
     await fireEvent.press(getByLabelText('메뉴'));
     await fireEvent.press(getByText('루틴 관리'));
     expect(onAddRoutine).toHaveBeenCalledTimes(1);
-
-    // 카테고리 관리 opens the manager sheet in-place.
-    await fireEvent.press(getByLabelText('메뉴'));
-    await fireEvent.press(getByText('카테고리 관리'));
-    expect(queryByText('새 카테고리 만들기')).toBeTruthy();
   });
 
-  it('puts 알림 inside the hamburger menu, not the header (#257)', async () => {
+  it('알림 벨이 헤더에 1탭으로 노출된다 (#727 — #257 메뉴 합체를 복원)', async () => {
     const onOpenNotifications = jest.fn();
-    const { getByLabelText, queryByLabelText } = await render(
+    const { getByLabelText } = await render(
       <MyRoomScreen
         routines={[]}
         onOpenNotifications={onOpenNotifications}
         unreadNotificationCount={2}
       />,
     );
-
-    // No standalone bell button crowding the header — 알림 appears only after
-    // opening the menu popover.
-    expect(queryByLabelText('알림')).toBeNull();
-    await fireEvent.press(getByLabelText('메뉴'));
+    // 메뉴를 거치지 않고 헤더 벨 바로 — depth 1탭.
     await fireEvent.press(getByLabelText('알림'));
     expect(onOpenNotifications).toHaveBeenCalledTimes(1);
   });
 
-  it('hides the 알림 menu item when unwired', async () => {
-    const { getByLabelText, queryByLabelText } = await render(<MyRoomScreen routines={[]} />);
-    await fireEvent.press(getByLabelText('메뉴'));
+  it('알림 미배선이면 헤더 벨을 숨긴다', async () => {
+    const { queryByLabelText } = await render(<MyRoomScreen routines={[]} />);
     expect(queryByLabelText('알림')).toBeNull();
+  });
+
+  it('지갑 필 탭 → 재화 내역 시트 + 1페이지 로드 (#734)', async () => {
+    const onLoadWalletHistory = jest.fn();
+    const { getByLabelText, getByText } = await render(
+      <MyRoomScreen
+        routines={[]}
+        coinBalance={120}
+        onLoadWalletHistory={onLoadWalletHistory}
+        walletHistory={[
+          { id: 1, currency: 'coin', amount: 10, reason: '루틴 완료', balanceAfter: 130 },
+        ]}
+      />,
+    );
+    await fireEvent.press(getByLabelText('코인 120'));
+    expect(onLoadWalletHistory).toHaveBeenCalledTimes(1);
+    expect(getByText('재화 내역')).toBeTruthy();
+    expect(getByText('루틴 완료')).toBeTruthy();
+  });
+
+  it('방 꾸미기 플로팅 버튼 — 방 위에서 1탭 진입 (#727)', async () => {
+    const onEdit = jest.fn();
+    const { getByLabelText } = await render(<MyRoomScreen routines={[]} onEdit={onEdit} />);
+    await fireEvent.press(getByLabelText('방 꾸미기'));
+    expect(onEdit).toHaveBeenCalledTimes(1);
   });
 
   it('opens the character picker from the hamburger menu and wears a pick (#260)', async () => {
@@ -239,8 +443,8 @@ describe('MyRoomScreen', () => {
 
     await fireEvent.press(getByLabelText('판다 착용'));
     expect(onSelectCharacter).toHaveBeenCalledWith(4);
-    // The sheet closes after picking.
-    expect(queryByText('착용 중')).toBeNull();
+    // The sheet closes after picking — 퇴장 애니메이션(#448)이 끝나길 기다린다.
+    await waitFor(() => expect(queryByText('착용 중')).toBeNull());
   });
 
   it('schedules 격주/매월/매년 routines by their cadence (#255)', async () => {
@@ -285,9 +489,99 @@ describe('MyRoomScreen', () => {
     expect(getByText('0 / 2')).toBeTruthy();
   });
 
+  it('카테고리가 있어도 무소속 항목은 미분류 그룹으로 분리된다 — 방·달력 (#517)', async () => {
+    const routines = [
+      { id: '1', title: '물 마시기', category: '건강', kind: 'routine' as const },
+      // 카테고리 삭제(UNASSIGN) 산물 — 마지막 카테고리에 섞이면 안 된다.
+      { id: '2', title: '고아 루틴', kind: 'routine' as const },
+    ];
+    const categories = [
+      {
+        id: '건강',
+        name: '건강',
+        icon: 'dumbbell' as const,
+        color: '#7FA87F',
+        visibility: 'public' as const,
+      },
+    ];
+    const { getByText } = await render(
+      <MyRoomScreen routines={routines} categories={categories} />,
+    );
+    // 방 탭: 건강 그룹과 별개의 미분류 그룹.
+    expect(getByText('건강')).toBeTruthy();
+    expect(getByText('미분류')).toBeTruthy();
+    expect(getByText('고아 루틴')).toBeTruthy();
+
+    // 달력 탭에서도 같은 분리 규칙.
+    await fireEvent.press(getByText('달력'));
+    expect(getByText('미분류')).toBeTruthy();
+    expect(getByText('고아 루틴')).toBeTruthy();
+  });
+
+  it('카테고리 헤더 탭 → 프리필된 수정 시트, 저장 시 onUpdateCategory (#541)', async () => {
+    const onUpdateCategory = jest.fn();
+    const routines = [{ id: '1', title: '물 마시기', category: '건강', kind: 'routine' as const }];
+    const categories = [
+      {
+        id: '건강',
+        name: '건강',
+        icon: 'dumbbell' as const,
+        color: '#7FA87F',
+        visibility: 'public' as const,
+      },
+    ];
+    const { getByLabelText, getByDisplayValue } = await render(
+      <MyRoomScreen
+        routines={routines}
+        categories={categories}
+        onUpdateCategory={onUpdateCategory}
+      />,
+    );
+
+    await fireEvent.press(getByLabelText('건강 카테고리 수정'));
+    // 시트가 기존 이름으로 프리필된다.
+    await fireEvent.changeText(getByDisplayValue('건강'), '몸 관리');
+    await fireEvent.press(getByLabelText('카테고리 저장'));
+    expect(onUpdateCategory).toHaveBeenCalledWith(
+      '건강',
+      expect.objectContaining({ name: '몸 관리' }),
+    );
+  });
+
+  it('미분류 헤더는 수정 진입이 없다 (#541)', async () => {
+    const onUpdateCategory = jest.fn();
+    const routines = [{ id: '2', title: '고아 루틴', kind: 'routine' as const }];
+    const { getByLabelText } = await render(
+      <MyRoomScreen routines={routines} categories={[]} onUpdateCategory={onUpdateCategory} />,
+    );
+    // Pressable은 렌더되지만 disabled — 눌러도 시트가 열리지 않는다.
+    const header = getByLabelText('미분류 카테고리 수정');
+    expect(header.props.accessibilityState?.disabled).toBe(true);
+  });
+
+  it('반복 루틴에만 ↻ 마커가 붙는다 — 투두는 무마커 (#576)', async () => {
+    const rows = [
+      { id: 'r1', title: '반복 루틴', category: '건강', kind: 'routine' as const },
+      { id: 't1', title: '일회성 투두', category: '건강', kind: 'todo' as const, dueDate: TODAY },
+    ];
+    const categories = [
+      {
+        id: '건강',
+        name: '건강',
+        icon: 'dumbbell' as const,
+        color: '#7FA87F',
+        visibility: 'public' as const,
+      },
+    ];
+    const { getAllByTestId } = await render(
+      <MyRoomScreen routines={rows} categories={categories} />,
+    );
+    expect(getAllByTestId('repeat-marker')).toHaveLength(1);
+  });
+
   it('renders uncategorized routines even when the user has no categories', async () => {
     // API state after a fresh account adds routines without a category:
-    // categories = [], routines have no category → must show in a 기타 group,
+    // categories = [], routines have no category → must show in a 미분류 group,
     // not vanish while the counter says 0 / 2.
     const routines = [
       { id: '2', title: '아침 기상', kind: 'routine' as const },
@@ -296,8 +590,42 @@ describe('MyRoomScreen', () => {
     const { getByText } = await render(<MyRoomScreen routines={routines} categories={[]} />);
     expect(getByText('아침 기상')).toBeTruthy();
     expect(getByText('독서 30분')).toBeTruthy();
-    expect(getByText('기타')).toBeTruthy();
+    expect(getByText('미분류')).toBeTruthy();
     expect(getByText('0 / 2')).toBeTruthy();
+  });
+
+  it('달력탭에 선택 날짜의 전체 완료/총 개수와 진행 바가 보인다 (#346)', async () => {
+    // 오늘(로컬 날짜): 5개 중 3개 완료 — 방탭과 같은 집계가 달력탭에도 표시.
+    const completions = { '1': [TODAY], '2': [TODAY], '3': [TODAY] };
+    const local = await render(
+      <MyRoomScreen routines={SAMPLE_ROUTINES} completions={completions} />,
+    );
+    await fireEvent.press(local.getByText('달력'));
+    expect(local.getByText('이 날의 루틴')).toBeTruthy();
+    expect(local.getByText('3 / 5')).toBeTruthy();
+
+    // 서버 날짜(어제): completed 플래그로 집계 — 1/2.
+    const calendarDays = {
+      [YESTERDAY]: [
+        {
+          id: '1',
+          kind: 'routine' as const,
+          title: '지난 루틴',
+          completed: true,
+          category: '건강',
+        },
+        { id: '2', kind: 'todo' as const, title: '지난 할 일', completed: false, category: '건강' },
+      ],
+    };
+    const server = await render(
+      <MyRoomScreen
+        routines={SAMPLE_ROUTINES}
+        calendarDays={calendarDays}
+        onSelectDate={jest.fn()}
+      />,
+    );
+    await pickCalendarDate(server, YESTERDAY);
+    expect(server.getByText('1 / 2')).toBeTruthy();
   });
 
   it('renders the server list for non-today dates and toggles past routines', async () => {
@@ -316,7 +644,7 @@ describe('MyRoomScreen', () => {
           onSelectDate={onSelectDate}
           onToggleCalendarItem={onToggleCalendarItem}
           allCategories={[
-            { id: '99', label: '옛것', icon: 'sparkle' as const, color: '#FF0000', visibility: 'partial', deleted: true }, // prettier-ignore
+            { id: '99', name: '옛것', icon: 'sparkle' as const, color: '#FF0000', visibility: 'partial', deleted: true }, // prettier-ignore
           ]}
         />
       </ToastProvider>,
@@ -364,6 +692,97 @@ describe('MyRoomScreen', () => {
     await fireEvent.press(ui.getByLabelText('지난 할 일'));
     expect(onToggleCalendarItem).toHaveBeenCalledWith(
       expect.objectContaining({ id: 't1', kind: 'todo' }),
+      YESTERDAY,
+    );
+  });
+
+  it('달력 탭에서 +로 할 일 추가 — 서버 백업 날짜, 기본 마감일은 선택 날짜 (#323)', async () => {
+    const onQuickAddRoutine = jest.fn();
+    // 어제엔 기록이 없어도 현재 카테고리 헤더가 렌더돼 +가 접근 가능해야 한다.
+    const calendarDays = { [YESTERDAY]: [] };
+    const ui = await render(
+      <MyRoomScreen
+        routines={SAMPLE_ROUTINES}
+        calendarDays={calendarDays}
+        onSelectDate={jest.fn()}
+        onQuickAddRoutine={onQuickAddRoutine}
+        quickAddDisabledCategoryIds={['일정']}
+      />,
+    );
+    await pickCalendarDate(ui, YESTERDAY);
+    // 미션 연동 카테고리는 달력에서도 + 미노출 (방탭과 같은 규칙).
+    expect(ui.queryByLabelText('일정 할 일 추가')).toBeNull();
+    await fireEvent.press(ui.getByLabelText('건강 할 일 추가'));
+    // 날짜 칩이 선택한 날짜(어제)로 프리필된다.
+    expect(ui.getByText(YESTERDAY.replaceAll('-', '.'))).toBeTruthy();
+    const input = ui.getByPlaceholderText('할 일 입력 후 완료');
+    await fireEvent.changeText(input, '어제 밀린 일');
+    await fireEvent(input, 'blur');
+    expect(onQuickAddRoutine).toHaveBeenCalledWith('건강', '어제 밀린 일', YESTERDAY);
+  });
+
+  it('달력 탭 오늘 날짜에서도 +로 할 일 추가 (#323)', async () => {
+    const onQuickAddRoutine = jest.fn();
+    const ui = await render(
+      <MyRoomScreen routines={SAMPLE_ROUTINES} onQuickAddRoutine={onQuickAddRoutine} />,
+    );
+    await pickCalendarDate(ui, TODAY);
+    await fireEvent.press(ui.getByLabelText('건강 할 일 추가'));
+    // 오늘이면 날짜 칩은 '오늘'.
+    expect(ui.getByText('오늘')).toBeTruthy();
+    const input = ui.getByPlaceholderText('할 일 입력 후 완료');
+    await fireEvent.changeText(input, '오늘 할 일');
+    await fireEvent(input, 'blur');
+    expect(onQuickAddRoutine).toHaveBeenCalledWith('건강', '오늘 할 일', TODAY);
+  });
+
+  it('달력 탭 행 본문 탭 → 방탭과 같은 메뉴 시트 (오늘, #323)', async () => {
+    const onToggleCompletion = jest.fn();
+    const ui = await render(
+      <MyRoomScreen routines={SAMPLE_ROUTINES} onToggleCompletion={onToggleCompletion} />,
+    );
+    await pickCalendarDate(ui, TODAY);
+    // 카테고리 헤더 아이콘은 방탭과 같은 CategoryIcon(카테고리색 틴트) —
+    // 원시 Pictogram이면 탭 간 아이콘 색이 달랐다 (#482 후속).
+    expect(ui.getAllByTestId(/^category-icon-/).length).toBeGreaterThan(0);
+    await fireEvent.press(ui.getByLabelText('하루 회고 메뉴'));
+    expect(ui.getByText('이름 변경')).toBeTruthy();
+    expect(ui.getByText('삭제하기')).toBeTruthy();
+    // 완료하기는 메뉴를 연 날짜(오늘) 기준으로 토글.
+    await fireEvent.press(ui.getByLabelText('하루 회고 완료'));
+    expect(onToggleCompletion).toHaveBeenCalledWith('5', TODAY);
+  });
+
+  it('달력 서버 날짜의 행도 메뉴 시트 — 완료는 달력 규칙으로 토글 (#323)', async () => {
+    const onToggleCalendarItem = jest.fn();
+    const todos = [
+      {
+        id: 't9',
+        title: '지난 할 일',
+        kind: 'todo' as const,
+        dueDate: YESTERDAY,
+        category: '건강',
+      },
+    ];
+    const calendarDays = {
+      [YESTERDAY]: [
+        { id: 't9', kind: 'todo' as const, title: '지난 할 일', completed: false, category: '' },
+      ],
+    };
+    const ui = await render(
+      <MyRoomScreen
+        routines={todos}
+        calendarDays={calendarDays}
+        onSelectDate={jest.fn()}
+        onToggleCalendarItem={onToggleCalendarItem}
+      />,
+    );
+    await pickCalendarDate(ui, YESTERDAY);
+    await fireEvent.press(ui.getByLabelText('지난 할 일 메뉴'));
+    expect(ui.getByText('이름 변경')).toBeTruthy();
+    await fireEvent.press(ui.getByLabelText('지난 할 일 완료'));
+    expect(onToggleCalendarItem).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 't9', kind: 'todo' }),
       YESTERDAY,
     );
   });
@@ -451,31 +870,57 @@ describe('MyRoomScreen', () => {
     await fireEvent.press(failed.getByLabelText('다시 시도'));
     expect(onRetry).toHaveBeenCalledTimes(1);
 
-    // Brand-new user: no categories, no routines → guided empty state.
-    const empty = await render(<MyRoomScreen routines={[]} categories={[]} />);
-    expect(empty.getByText('아직 루틴이 없어요.')).toBeTruthy();
+    // Brand-new user (#626): 안내 문구 없이 미분류 그룹이 떠서 바로 추가를 시작한다.
+    const onQuickAddRoutine = jest.fn();
+    const empty = await render(
+      <MyRoomScreen routines={[]} categories={[]} onQuickAddRoutine={onQuickAddRoutine} />,
+    );
+    expect(empty.getByText('미분류')).toBeTruthy();
+    // 미분류 퀵애드가 열리고(빈 계정 예외), categoryId 없이 제출된다.
+    await fireEvent.press(empty.getByLabelText('미분류 할 일 추가'));
+    await fireEvent.changeText(empty.getByPlaceholderText('할 일 입력 후 완료'), '물 마시기');
+    await fireEvent(empty.getByPlaceholderText('할 일 입력 후 완료'), 'blur');
+    expect(onQuickAddRoutine).toHaveBeenCalledWith('', '물 마시기', expect.any(String));
   });
 
-  // Camera test last: its photo path leaves a resolved promise that can disrupt
-  // a following test's render in this harness.
-  it('requires a camera photo to complete a 인증사진형 routine', async () => {
+  // 인증사진형 잠시 내림 (#499) — PHOTO 루틴도 카메라 없이 일반 체크로 완료된다.
+  // 복구 시 아래 주석의 카메라 게이트 테스트를 되살릴 것.
+  it('completes a 인증사진형 routine without the camera while shelved (#499)', async () => {
     const onToggleCompletion = jest.fn();
-    const onRequestPhoto = jest.fn().mockResolvedValue('file://verify.jpg');
     const { getByLabelText } = await render(
-      <MyRoomScreen
-        routines={SAMPLE_ROUTINES}
-        onToggleCompletion={onToggleCompletion}
-        onRequestPhoto={onRequestPhoto}
-      />,
+      <MyRoomScreen routines={SAMPLE_ROUTINES} onToggleCompletion={onToggleCompletion} />,
     );
 
-    // '하루 회고' (id 5): no photoVerify → the checkbox toggles today immediately.
-    fireEvent.press(getByLabelText('하루 회고'));
-    expect(onToggleCompletion).toHaveBeenCalledWith('5', TODAY);
-
-    // '영어 공부' (id 4): photoVerify → camera, then toggle today.
+    // '영어 공부' (id 4): 예전 사진 인증형(#695 제거)도 즉시 완료 토글.
     fireEvent.press(getByLabelText('영어 공부'));
-    await waitFor(() => expect(onToggleCompletion).toHaveBeenCalledWith('4', TODAY));
-    expect(onRequestPhoto).toHaveBeenCalled();
+    expect(onToggleCompletion).toHaveBeenCalledWith('4', TODAY);
+  });
+
+  it('방 탭 미완료 루틴을 routineOrder 순서로 그린다 (#716)', async () => {
+    const routines = [
+      { id: 'a', title: '작업 에이', category: '건강', kind: 'routine' as const },
+      { id: 'b', title: '작업 비', category: '건강', kind: 'routine' as const },
+    ];
+    const categories = [
+      {
+        id: '건강',
+        name: '건강',
+        icon: 'dumbbell' as const,
+        color: '#7FA87F',
+        visibility: 'public' as const,
+      },
+    ];
+    const { getAllByText } = await render(
+      <MyRoomScreen
+        routines={routines}
+        categories={categories}
+        routineOrder={{ 건강: ['b', 'a'] }}
+        onReorderRoutines={jest.fn()}
+        onMoveRoutineCategory={jest.fn()}
+      />,
+    );
+    // 저장된 순서(b→a)대로 렌더 — '작업 비'가 '작업 에이'보다 먼저.
+    const titles = getAllByText(/작업 (에이|비)/).map((n) => n.props.children);
+    expect(titles).toEqual(['작업 비', '작업 에이']);
   });
 });

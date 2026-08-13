@@ -11,8 +11,9 @@ import {
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
-import { Radius, Spacing, Typography } from '@/constants/theme';
-import { useTokens } from '@/hooks/use-tokens';
+import { Radius, ShadowColor, Spacing } from '@/constants/theme';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useAnimatedValue } from '@/hooks/use-stable-value';
 
 export type ToastType = 'info' | 'success' | 'error';
 
@@ -40,7 +41,7 @@ type ToastState = { message: string; type: ToastType; key: number };
  */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<ToastState | null>(null);
-  const opacity = useRef(new Animated.Value(0)).current;
+  const opacity = useAnimatedValue(0);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const hide = useCallback(() => {
@@ -92,11 +93,12 @@ function ToastView({
   onPress: () => void;
 }) {
   const t = useTokens();
+  const Typography = useTypography();
   const insets = useContext(SafeAreaInsetsContext);
-  const bg = toast.type === 'error' ? t.danger : toast.type === 'success' ? t.success : t.text;
-  // 기본(무타입) 토스트는 중립 반전 배경(t.text) — onPrimary(짙은 잉크)를 쓰면
-  // 라이트 모드에서 어두운 배경 위 어두운 글자가 된다. 반전 잉크는 surface.
-  const ink = toast.type === 'error' || toast.type === 'success' ? t.onPrimary : t.surface;
+  // 기본(무타입) 토스트는 브랜드 primary — 테마를 바꾸면 토스트도 따라
+  // 바뀐다(테마 연결 요청). error/success는 시맨틱 유지.
+  const bg = toast.type === 'error' ? t.danger : toast.type === 'success' ? t.success : t.primary;
+  const ink = t.onPrimary;
 
   return (
     <Animated.View
@@ -135,7 +137,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     alignItems: 'center',
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: ShadowColor,
     shadowOpacity: 0.15,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },

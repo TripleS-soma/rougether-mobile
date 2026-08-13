@@ -6,3 +6,5 @@ ios/
 package-lock.json
 *.png
 .claude/skills/design-sync/out/
+# Firebase-generated client config (재다운로드 시 diff 소음 방지)
+google-services.json

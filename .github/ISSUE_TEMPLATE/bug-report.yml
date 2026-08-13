@@ -1,0 +1,53 @@
+name: 버그 제보
+description: 재현 가능한 문제를 보고합니다 (재현 절차·실제/기대 동작·환경 포함)
+title: '[증상 요약] — [원인 추정 또는 발생 위치]'
+labels: ['bug']
+body:
+  - type: textarea
+    id: symptom
+    attributes:
+      label: 현상
+      description: 무엇이 잘못됐는지 한두 문장으로. 관련 이슈/PR이 있으면 링크하세요.
+      placeholder: 알림 시간 휠을 스와이프하면 휠 대신 바텀시트가 내려가 닫힌다. (#390 이후 확인)
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: 재현 절차
+      description: 처음 보는 사람이 그대로 따라 할 수 있게 번호로.
+      placeholder: |
+        1. 루틴 추가 화면을 연다.
+        2. 알림 시간 영역을 눌러 바텀시트를 연다.
+        3. 시/분 휠을 스와이프한다.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 실제 동작
+      placeholder: 휠이 스크롤되지 않고 바텀시트가 함께 내려가 닫힌다.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 기대 동작
+      placeholder: 휠만 스크롤되고 바텀시트는 유지된다.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 환경
+      description: 실기기 버그면 기기·OS·앱 버전(빌드 번호)·OTA 수신 여부까지. 웹/시뮬레이터면 그렇게 적어주세요.
+      placeholder: |
+        - 기기: iPhone 15 Pro / iOS 18.5
+        - 앱: 1.2.0 (build 9), OTA 수신 후
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: 추가 정보 (선택)
+      description: 스크린샷, 로그, 원인 추정 등.

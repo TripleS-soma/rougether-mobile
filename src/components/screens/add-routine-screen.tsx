@@ -1,11 +1,19 @@
-import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import {
+  BackHandler,
+  Keyboard,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
-import { CategoryManagerSheet } from '@/components/screens/sheets/category-manager-sheet';
+import { CategoryFormSheet } from '@/components/screens/sheets/category-form-sheet';
 import { DateRangeSheet } from '@/components/screens/sheets/date-range-sheet';
 import { TimePickerSheet } from '@/components/screens/sheets/time-picker-sheet';
 import { useToast } from '@/components/ui/toast';
-import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import {
   type NewRoutine,
   type RepeatKind,
@@ -15,10 +23,11 @@ import {
   type RoutineCategoryMeta,
 } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
-import { Pictogram } from '@/components/ui/pictograms';
-import { Radius, Spacing, Typography } from '@/constants/theme';
+import { CategoryIcon } from '@/components/ui/category-icon';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Radius, Spacing } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
-import { useTokens } from '@/hooks/use-tokens';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { formatDate, formatTime } from '@/utils/datetime';
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -52,13 +61,8 @@ export type AddRoutineScreenProps = {
   onUpdate?: (id: string, routine: NewRoutine) => void;
   onDelete?: (id: string) => void;
   categories?: RoutineCategoryMeta[];
+  /** 카테고리 빠른 생성 (#394) — 폼을 벗어나지 않는 CategoryFormSheet 경유. */
   onCreateCategory?: (category: RoutineCategoryMeta) => void;
-  onUpdateCategory?: (id: string, category: RoutineCategoryMeta) => void;
-  onDeleteCategory?: (id: string) => void;
-  /** Persist a new category order (카테고리 관리 sheet, long-press to move). */
-  onReorderCategories?: (orderedIds: string[]) => void;
-  /** Categories with routines — deletion is blocked with a warning modal. */
-  inUseCategoryIds?: string[];
 };
 
 function today() {
@@ -79,12 +83,9 @@ export function AddRoutineScreen({
   onDelete,
   categories = ROUTINE_CATEGORIES,
   onCreateCategory,
-  onUpdateCategory,
-  onDeleteCategory,
-  onReorderCategories,
-  inUseCategoryIds,
 }: AddRoutineScreenProps) {
   const t = useTokens();
+  const Typography = useTypography();
   const headerInset = useHeaderInsetStyle();
   const { show: toast } = useToast();
   const isEdit = Boolean(editRoutine);
@@ -106,7 +107,8 @@ export function AddRoutineScreen({
       ? (editRoutine.repeat ?? (editRoutine.days?.length ? 'weekly' : 'daily'))
       : 'weekly',
   );
-  const [days, setDays] = useState<number[]>(editRoutine?.days ?? [1, 2, 3, 4, 5]);
+  // 새 루틴의 반복 요일은 전부 해제가 기본 — 사용자가 직접 고르게 한다.
+  const [days, setDays] = useState<number[]>(editRoutine?.days ?? []);
   // Sub-picks: 매월 → day of month (yearly reuses it), 매년 → month.
   const [monthDay, setMonthDay] = useState(editRoutine?.dayOfMonth ?? 1);
   const [yearMonth, setYearMonth] = useState(editRoutine?.month ?? 1);
@@ -114,13 +116,64 @@ export function AddRoutineScreen({
   const [time, setTime] = useState(editRoutine?.time ?? '07:00');
   const [startDate, setStartDate] = useState(editRoutine?.startDate ?? today());
   const [endDate, setEndDate] = useState<string | undefined>(editRoutine?.endDate);
-  const [photoVerify, setPhotoVerify] = useState(editRoutine?.photoVerify ?? false);
   const [showDateSheet, setShowDateSheet] = useState(false);
   const [showTimeSheet, setShowTimeSheet] = useState(false);
   // 추천 루틴 accordion — closed by default (add mode only).
   const [presetsOpen, setPresetsOpen] = useState(false);
   // 삭제하기 tapped — deletion only proceeds through the confirm modal.
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // 뒤로가기 시 "변경사항 폐기" 확인 (#473) — 추가·수정 모두.
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+
+  // 폼이 초기값에서 바뀌었는가(dirty). 마운트 시 스냅샷 대비 비교 — category는
+  // 카테고리 async 도착에 맞춰 재시드되므로 동적 기준값과 비교한다.
+  const initial = useRef({
+    title: editRoutine?.title ?? '',
+    repeat: editRoutine
+      ? (editRoutine.repeat ?? (editRoutine.days?.length ? 'weekly' : 'daily'))
+      : 'weekly',
+    days: editRoutine?.days ?? [],
+    monthDay: editRoutine?.dayOfMonth ?? 1,
+    yearMonth: editRoutine?.month ?? 1,
+    alarmEnabled: editRoutine?.alarmEnabled ?? true,
+    time: editRoutine?.time ?? '07:00',
+    startDate: editRoutine?.startDate ?? today(),
+    endDate: editRoutine?.endDate,
+  }).current;
+  const initialCategory = editRoutine?.category ?? categories[0]?.id ?? '';
+  const dirty =
+    title !== initial.title ||
+    category !== initialCategory ||
+    repeat !== initial.repeat ||
+    days.join(',') !== initial.days.join(',') ||
+    monthDay !== initial.monthDay ||
+    yearMonth !== initial.yearMonth ||
+    alarmEnabled !== initial.alarmEnabled ||
+    time !== initial.time ||
+    startDate !== initial.startDate ||
+    endDate !== initial.endDate;
+
+  // 헤더 백: 변경이 있으면 확인 모달, 없으면 바로 나간다.
+  const requestBack = () => {
+    if (dirty) setConfirmDiscard(true);
+    else onBack?.();
+  };
+  // 안드로이드 하드웨어 백: 헤더와 같은 가드. 여기서 false를 반환하면 app-shell의
+  // BackHandler가 기본 뒤로가기를 처리한다(변경 없을 때). 모달이 열려 있으면 닫는다.
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (confirmDiscard) {
+        setConfirmDiscard(false);
+        return true;
+      }
+      if (dirty) {
+        setConfirmDiscard(true);
+        return true;
+      }
+      return false;
+    });
+    return () => sub.remove();
+  }, [dirty, confirmDiscard]);
 
   const toggleDay = (d: number) =>
     setDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort()));
@@ -138,6 +191,7 @@ export function AddRoutineScreen({
     if (!canSubmit) {
       if (!categoryValid) {
         setFormError('카테고리가 필요해요 — 먼저 하나 만들어주세요.');
+        Keyboard.dismiss();
         setShowCategoryManager(true);
       } else if (title.trim().length === 0) {
         setFormError('루틴 이름을 입력해주세요.');
@@ -159,7 +213,6 @@ export function AddRoutineScreen({
       endDate,
       alarmEnabled,
       time,
-      photoVerify,
     };
     if (editRoutine) onUpdate?.(editRoutine.id, payload);
     else onAdd?.(payload);
@@ -170,7 +223,7 @@ export function AddRoutineScreen({
     <View style={[styles.screen, useScreenStyle([])]}>
       <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
         <Pressable
-          onPress={onBack}
+          onPress={requestBack}
           accessibilityRole="button"
           accessibilityLabel="뒤로가기"
           style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
@@ -179,10 +232,12 @@ export function AddRoutineScreen({
         <Text style={[Typography.h2, { color: t.text }]}>{isEdit ? '루틴 수정' : '루틴 추가'}</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.body}>
+      {/* handled (#759): 제목 입력으로 키보드가 뜬 채 시트 버튼을 탭하면
+          기본값('never')은 첫 탭을 키보드 닫기에 소모해 시트가 안 열렸다. */}
+      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         {/* Title */}
         <View style={styles.field}>
-          <Text style={[styles.label, { color: t.text }]}>루틴 이름</Text>
+          <Text style={[Typography.label, { color: t.text }]}>루틴 이름</Text>
           <View style={[styles.titleRow, { backgroundColor: t.surface }]}>
             <TextInput
               style={[styles.titleInput, { color: t.text }]}
@@ -197,15 +252,18 @@ export function AddRoutineScreen({
         {/* Category */}
         <View style={styles.field}>
           <View style={styles.fieldHead}>
-            <Text style={[styles.label, { color: t.text }]}>카테고리</Text>
+            <Text style={[Typography.label, { color: t.text }]}>카테고리</Text>
             <Pressable
-              onPress={() => setShowCategoryManager(true)}
+              onPress={() => {
+                Keyboard.dismiss();
+                setShowCategoryManager(true);
+              }}
               accessibilityRole="button"
-              accessibilityLabel="카테고리 관리"
+              accessibilityLabel="새 카테고리"
               hitSlop={8}
               style={styles.manageBtn}>
               <Icon name="add" size={16} color={t.primaryText} />
-              <Text style={[Typography.label, { color: t.primaryText }]}>관리</Text>
+              <Text style={[Typography.label, { color: t.primaryText }]}>추가</Text>
             </Pressable>
           </View>
           <ScrollView
@@ -218,10 +276,18 @@ export function AddRoutineScreen({
                 <Pressable
                   key={c.id}
                   onPress={() => setCategory(c.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={c.name}
+                  accessibilityState={{ selected: active }}
                   style={[styles.chip, { backgroundColor: active ? c.color : t.surface }]}>
-                  <Pictogram name={c.icon} size={14} color={active ? t.onPrimary : undefined} />
+                  <CategoryIcon
+                    name={c.icon}
+                    color={c.color}
+                    size={14}
+                    mono={active ? t.onPrimary : undefined}
+                  />
                   <Text style={[Typography.label, { color: active ? t.onPrimary : t.textMuted }]}>
-                    {c.label}
+                    {c.name}
                   </Text>
                 </Pressable>
               );
@@ -244,7 +310,7 @@ export function AddRoutineScreen({
               accessibilityLabel="추천 루틴"
               accessibilityState={{ expanded: presetsOpen }}
               style={styles.presetHead}>
-              <Text style={[styles.label, { color: t.text }]}>추천 루틴</Text>
+              <Text style={[Typography.label, { color: t.text }]}>추천 루틴</Text>
               <View style={presetsOpen ? styles.chevronOpen : styles.chevronClosed}>
                 <Icon name="forward" size={16} color={t.textMuted} />
               </View>
@@ -259,7 +325,7 @@ export function AddRoutineScreen({
                       // Presets name local category labels; only switch when the
                       // user actually has a matching category.
                       const match = categories.find(
-                        (c) => c.id === p.category || c.label === p.category,
+                        (c) => c.id === p.category || c.name === p.category,
                       );
                       if (match) setCategory(match.id);
                     }}
@@ -284,7 +350,7 @@ export function AddRoutineScreen({
 
         {/* Repeat cadence + days */}
         <View style={styles.field}>
-          <Text style={[styles.label, { color: t.text }]}>반복</Text>
+          <Text style={[Typography.label, { color: t.text }]}>반복</Text>
           <View style={styles.repeatRow}>
             {REPEAT_OPTIONS.map((opt) => {
               const active = repeat === opt.id;
@@ -310,7 +376,7 @@ export function AddRoutineScreen({
           ) : null}
           {needsDays ? (
             <>
-              <Text style={[styles.label, styles.dayLabel, { color: t.text }]}>반복 요일</Text>
+              <Text style={[Typography.label, styles.dayLabel, { color: t.text }]}>반복 요일</Text>
               <View style={styles.dayRow}>
                 {DAYS.map((d, i) => {
                   const active = days.includes(i);
@@ -320,6 +386,7 @@ export function AddRoutineScreen({
                       key={d}
                       onPress={() => toggleDay(i)}
                       accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
                       style={[styles.day, { backgroundColor: bg }]}>
                       <Text
                         style={[Typography.label, { color: active ? t.onPrimary : t.textMuted }]}>
@@ -333,7 +400,7 @@ export function AddRoutineScreen({
           ) : null}
           {repeat === 'yearly' ? (
             <>
-              <Text style={[styles.label, styles.dayLabel, { color: t.text }]}>반복 월</Text>
+              <Text style={[Typography.label, styles.dayLabel, { color: t.text }]}>반복 월</Text>
               <View style={styles.dateGrid}>
                 {MONTHS.map((m) => {
                   const active = yearMonth === m;
@@ -360,7 +427,7 @@ export function AddRoutineScreen({
           ) : null}
           {repeat === 'monthly' || repeat === 'yearly' ? (
             <>
-              <Text style={[styles.label, styles.dayLabel, { color: t.text }]}>반복 일자</Text>
+              <Text style={[Typography.label, styles.dayLabel, { color: t.text }]}>반복 일자</Text>
               <View style={styles.dateGrid}>
                 {MONTH_DAYS.map((d) => {
                   const active = monthDay === d;
@@ -389,9 +456,12 @@ export function AddRoutineScreen({
 
         {/* Duration */}
         <View style={styles.field}>
-          <Text style={[styles.label, { color: t.text }]}>지속 기간</Text>
+          <Text style={[Typography.label, { color: t.text }]}>지속 기간</Text>
           <Pressable
-            onPress={() => setShowDateSheet(true)}
+            onPress={() => {
+              Keyboard.dismiss();
+              setShowDateSheet(true);
+            }}
             accessibilityRole="button"
             accessibilityLabel="지속 기간 선택"
             style={[styles.infoRow, { backgroundColor: t.surface }]}>
@@ -410,9 +480,12 @@ export function AddRoutineScreen({
 
         {/* Alarm */}
         <View style={styles.field}>
-          <Text style={[styles.label, { color: t.text }]}>알림 시간</Text>
+          <Text style={[Typography.label, { color: t.text }]}>알림 시간</Text>
           <Pressable
-            onPress={() => setShowTimeSheet(true)}
+            onPress={() => {
+              Keyboard.dismiss();
+              setShowTimeSheet(true);
+            }}
             accessibilityRole="button"
             accessibilityLabel="알림 시간 선택"
             style={[styles.infoRow, { backgroundColor: t.surface }]}>
@@ -427,27 +500,6 @@ export function AddRoutineScreen({
             </View>
             <Text style={[styles.chevron, { color: t.textDisabled }]}>›</Text>
           </Pressable>
-        </View>
-
-        {/* Photo verify */}
-        <View style={styles.field}>
-          <Text style={[styles.label, { color: t.text }]}>인증 방식</Text>
-          <View style={[styles.infoRow, { backgroundColor: t.surface }]}>
-            <View style={[styles.infoIcon, { backgroundColor: t.surfaceMuted }]}>
-              <Icon name="camera" size={16} color={t.icon} />
-            </View>
-            <View style={styles.flex}>
-              <Text style={[Typography.body, { color: t.text }]}>인증사진형</Text>
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                완료할 때 사진을 찍어 인증해요
-              </Text>
-            </View>
-            <ToggleSwitch
-              value={photoVerify}
-              onToggle={() => setPhotoVerify((v) => !v)}
-              accessibilityLabel="인증사진형"
-            />
-          </View>
         </View>
       </ScrollView>
 
@@ -471,14 +523,12 @@ export function AddRoutineScreen({
         }}
         onClose={() => setShowTimeSheet(false)}
       />
-      <CategoryManagerSheet
+      {/* 루틴 작성 흐름을 벗어나지 않는 카테고리 빠른 생성 (#394) —
+          전체 관리(순서·삭제)는 나의 방 햄버거 → 카테고리 관리 화면에서. */}
+      <CategoryFormSheet
         visible={showCategoryManager}
-        categories={categories}
+        categoryCount={categories.length}
         onCreate={(c) => onCreateCategory?.(c)}
-        onUpdate={(id, c) => onUpdateCategory?.(id, c)}
-        onDelete={(id) => onDeleteCategory?.(id)}
-        onReorder={onReorderCategories}
-        inUseCategoryIds={inUseCategoryIds}
         onClose={() => setShowCategoryManager(false)}
       />
 
@@ -514,38 +564,34 @@ export function AddRoutineScreen({
         ) : null}
       </View>
 
-      {confirmDelete && editRoutine ? (
-        <View style={styles.confirmOverlay}>
-          <Pressable style={styles.backdrop} onPress={() => setConfirmDelete(false)} />
-          <View style={[styles.confirmCard, { backgroundColor: t.screen }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>루틴 삭제</Text>
-            <Text style={[Typography.body, styles.confirmText, { color: t.textMuted }]}>
-              &lsquo;{editRoutine.title}&rsquo; 루틴을 삭제할까요?{'\n'}삭제하면 지난 수행 기록도
-              함께 사라져요.
-            </Text>
-            <View style={styles.confirmBtns}>
-              <Pressable
-                onPress={() => setConfirmDelete(false)}
-                accessibilityRole="button"
-                accessibilityLabel="취소"
-                style={[styles.confirmBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  setConfirmDelete(false);
-                  onDelete?.(editRoutine.id);
-                  onBack?.();
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="삭제"
-                style={[styles.confirmBtn, { backgroundColor: t.danger }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>삭제</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
+      {editRoutine ? (
+        <ConfirmDialog
+          visible={confirmDelete}
+          title="루틴 삭제"
+          body={`‘${editRoutine.title}’ 루틴을 삭제할까요?\n삭제하면 지난 수행 기록도 함께 사라져요.`}
+          confirmLabel="삭제"
+          destructive
+          onConfirm={() => {
+            setConfirmDelete(false);
+            onDelete?.(editRoutine.id);
+            onBack?.();
+          }}
+          onCancel={() => setConfirmDelete(false)}
+        />
       ) : null}
+
+      <ConfirmDialog
+        visible={confirmDiscard}
+        title="정말 나가시겠습니까?"
+        body="지금 나가면 입력한 내용이 저장되지 않고 사라져요."
+        confirmLabel="나가기"
+        destructive
+        onConfirm={() => {
+          setConfirmDiscard(false);
+          onBack?.();
+        }}
+        onCancel={() => setConfirmDiscard(false)}
+      />
     </View>
   );
 }
@@ -579,7 +625,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.half,
   },
-  label: { fontSize: 14, fontWeight: '600' },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -587,7 +632,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     padding: Spacing.two,
   },
-  titleInput: { flex: 1, fontSize: 16, paddingVertical: Spacing.one },
+  titleInput: { flex: 1, fontSize: 18, paddingVertical: Spacing.one },
   chips: { gap: Spacing.two, paddingVertical: Spacing.half },
   chip: {
     flexDirection: 'row',
@@ -660,7 +705,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  chevron: { fontSize: 20 },
+  chevron: { fontSize: 22 },
   footer: {
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.three,
@@ -679,38 +724,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     borderRadius: Radius.pill,
     borderWidth: 1,
-    alignItems: 'center',
-  },
-  confirmOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 200,
-    elevation: 200,
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
-  confirmCard: {
-    width: '80%',
-    maxWidth: 340,
-    borderRadius: Radius.lg,
-    padding: Spacing.four,
-    gap: Spacing.three,
-  },
-  confirmText: {
-    lineHeight: 22,
-  },
-  confirmBtns: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-    marginTop: Spacing.one,
-  },
-  confirmBtn: {
-    flex: 1,
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.three,
     alignItems: 'center',
   },
 });

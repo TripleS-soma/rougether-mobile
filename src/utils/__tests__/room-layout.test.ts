@@ -1,10 +1,10 @@
-import type { House } from '@/components/screens/group-house-screen';
+import type { House } from '@/components/screens/house-screen';
 import { applyRoomLayout, flatRooms, layoutFromHouse, swapSeats } from '@/utils/room-layout';
 
 /** 정원 4 / 멤버 3 — display order: [빈방], [나(1), 이웃(2)] bottom row. */
 const HOUSE: House = {
   houseId: 7,
-  title: '집',
+  name: '집',
   floors: [
     {
       level: '2층',
@@ -62,7 +62,7 @@ describe('room layout', () => {
   });
 
   it('returns demo houses (no server ids) unchanged', () => {
-    const demo: House = { title: '데모', floors: HOUSE.floors };
+    const demo: House = { name: '데모', floors: HOUSE.floors };
     expect(applyRoomLayout(demo, [1, 2, 3, null])).toBe(demo);
     expect(applyRoomLayout(HOUSE, null)).toBe(HOUSE);
   });

@@ -6,8 +6,8 @@
  * → client (authed apiGet/apiPost/…) → per-domain modules below. Types live in
  * `./types` (generated from the OpenAPI spec).
  */
-export { API_BASE } from './config';
 export { ApiError } from './http';
+export { ErrorCode } from './error-codes';
 export {
   apiDelete,
   apiGet,
@@ -19,8 +19,11 @@ export {
 } from './client';
 
 export {
+  appleLogin,
   clearSession,
   devLogin,
+  googleLogin,
+  kakaoLogin,
   getAccessToken,
   getSessionUserId,
   loadSession,
@@ -29,6 +32,7 @@ export {
   refreshSession,
 } from './auth';
 
+export * from './bug-reports';
 export * from './categories';
 export * from './houses';
 export * from './masters';
@@ -36,6 +40,7 @@ export * from './onboarding';
 export * from './me';
 export * from './notifications';
 export * from './rooms';
+export * from './invites';
 export * from './routines';
 export * from './shop';
 export * from './today';

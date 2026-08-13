@@ -7,9 +7,14 @@
 import { useCallback, useRef, useState } from 'react';
 
 import { fetchHouseMemberRoom } from '@/api';
-import { characterIdFromCode, fromFriendRoomSlots, type ShopCatalogue } from '@/api/adapters';
-import type { House, MemberRoomPreview } from '@/components/screens/group-house-screen';
-import type { CharacterId } from '@/constants/characters';
+import {
+  characterIdFromCode,
+  fromFriendRoomSlots,
+  fromRoomPlacements,
+  type ShopCatalogue,
+} from '@/api/adapters';
+import type { House, MemberRoomPreview, RoomCell } from '@/components/screens/house-screen';
+import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
 
 /**
@@ -39,6 +44,22 @@ export function withMyCharacter(
   return next;
 }
 
+/**
+ * 그 멤버 자신의 캐릭터 (#342) — 방 프리뷰에서 온다. 서버 멤버 목록에는
+ * 캐릭터가 없어, 프리뷰가 아직 없으면 내 좌석만 내 캐릭터고 남은 기본 캐릭터.
+ * 집 화면 좌석 타일과 구성원 관리 화면(#753에서 셸 화면으로 승격)이 공유한다.
+ */
+export function characterIdForMember(
+  member: RoomCell,
+  previews: Record<number, MemberRoomPreview> | undefined,
+  myCharacterId: CharacterId,
+): CharacterId {
+  return (
+    (member.membershipId != null ? previews?.[member.membershipId]?.characterId : undefined) ??
+    (member.isMine ? myCharacterId : DEFAULT_CHARACTER_ID)
+  );
+}
+
 export function useMemberRoomPreviews() {
   const [previews, setPreviews] = useState<Record<number, MemberRoomPreview>>({});
   // One load per house — house switches replace the cache wholesale.
@@ -64,6 +85,11 @@ export function useMemberRoomPreviews() {
             const placement = fromFriendRoomSlots(room.slots ?? [], catalogue);
             const preview: MemberRoomPreview = {
               placedFurnitureIds: placement.placedFurnitureIds,
+              // FREE_V1 멤버 방은 자유 좌표 그대로 타일에 렌더 (#327).
+              placements:
+                room.layoutFormat === 'FREE_V1' && room.placements?.length
+                  ? fromRoomPlacements(room.placements, catalogue)
+                  : null,
               wallpaperId: placement.wallpaperId ?? DEFAULT_WALLPAPER_ID,
               floorId: placement.floorId,
               backgroundId: placement.backgroundId,

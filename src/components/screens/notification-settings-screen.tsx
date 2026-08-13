@@ -1,67 +1,88 @@
-import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { PendingNotice } from '@/components/ui/pending-notice';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
-import { Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
-import { useTokens } from '@/hooks/use-tokens';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 
+/**
+ * App model of GET/PATCH /users/me/notification-settings (#495) — 서버와 같은
+ * 3항목. 설정을 꺼도 알림함에는 쌓이고 push 발송만 중단된다.
+ */
 export type NotificationSettings = {
   all: boolean;
-  routineReminder: boolean;
-  friendCheer: boolean;
-  groupActivity: boolean;
-  marketing: boolean;
+  reminder: boolean;
+  house: boolean;
 };
 
+/** 서버 기본과 동일 — 한 번도 끈 적 없는 항목은 켜짐. */
 export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
   all: true,
-  routineReminder: true,
-  friendCheer: true,
-  groupActivity: true,
-  marketing: false,
+  reminder: true,
+  house: true,
 };
 
 type RowKey = Exclude<keyof NotificationSettings, 'all'>;
 const ROWS: { key: RowKey; label: string; desc: string }[] = [
-  { key: 'routineReminder', label: '루틴 리마인더', desc: '설정한 시간에 루틴을 알려드려요' },
-  { key: 'friendCheer', label: '친구 응원 알림', desc: '친구가 응원을 보내면 알려드려요' },
-  { key: 'groupActivity', label: '그룹 활동 알림', desc: '우리 집 소식을 알려드려요' },
-  { key: 'marketing', label: '마케팅 정보 수신', desc: '이벤트와 혜택 소식을 받아요' },
+  { key: 'reminder', label: '루틴 리마인더', desc: '설정한 시간에 루틴을 알려드려요' },
+  { key: 'house', label: '집 알림', desc: '응원과 우리 집 소식을 알려드려요' },
 ];
 
 export type NotificationSettingsScreenProps = {
-  initialSettings?: NotificationSettings;
-  onChange?: (settings: NotificationSettings) => void;
+  /** Server-backed settings — controlled by the shell (fetch + optimistic PATCH). */
+  settings?: NotificationSettings;
+  /**
+   * One toggle flipped. The parent PATCHes only this key — the server keeps
+   * group values under all=false, so no client-side masking is sent.
+   */
+  onToggle?: (key: keyof NotificationSettings, value: boolean) => void;
+  /**
+   * True when the server fetch failed (#549) — 기본값이 서버값처럼 보이지
+   * 않도록 상단 안내 배너 + 다시 불러오기를 보여준다.
+   */
+  loadError?: boolean;
+  /** Re-fetch the settings (다시 불러오기 button). */
+  onRetry?: () => void;
   onBack?: () => void;
 };
 
 /**
  * "푸시 알림" settings reached from 설정 → 푸시 알림. A master switch plus
- * per-category toggles (disabled while the master is off). Pure/prop-driven;
- * the app shell persists via onChange.
+ * per-category toggles (shown off & disabled while the master is off — the
+ * server preserves their values). Pure/prop-driven; the app shell owns the
+ * server sync.
  */
 export function NotificationSettingsScreen({
-  initialSettings = DEFAULT_NOTIFICATION_SETTINGS,
-  onChange,
+  settings = DEFAULT_NOTIFICATION_SETTINGS,
+  onToggle,
+  loadError = false,
+  onRetry,
   onBack,
 }: NotificationSettingsScreenProps) {
   const t = useTokens();
-  const [settings, setSettings] = useState(initialSettings);
-
-  const update = (next: NotificationSettings) => {
-    setSettings(next);
-    onChange?.(next);
-  };
+  const Typography = useTypography();
 
   return (
-    <View style={[styles.screen, useScreenStyle()]}>
+    <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader title="푸시 알림" onBack={onBack} />
 
       <ScrollView contentContainerStyle={styles.body}>
-        <PendingNotice text="알림 설정은 서버 준비 중이라 아직 이 기기에만 저장돼요." />
+        {/* 조회 실패 안내 (#549) — 지금 보이는 값은 기본값일 수 있다. */}
+        {loadError ? (
+          <View style={[styles.card, styles.errorCard, { backgroundColor: t.surface }]}>
+            <Text style={[Typography.body, { color: t.text }]}>
+              설정을 불러오지 못했어요. 지금 보이는 값은 실제 설정과 다를 수 있어요.
+            </Text>
+            <Pressable
+              onPress={onRetry}
+              accessibilityRole="button"
+              accessibilityLabel="다시 불러오기"
+              style={[styles.retryBtn, { backgroundColor: t.primary }]}>
+              <Text style={[Typography.label, { color: t.onPrimary }]}>다시 불러오기</Text>
+            </Pressable>
+          </View>
+        ) : null}
         <View style={[styles.card, { backgroundColor: t.surface }]}>
           <View style={styles.row}>
             <View style={styles.flex}>
@@ -72,7 +93,7 @@ export function NotificationSettingsScreen({
             </View>
             <ToggleSwitch
               value={settings.all}
-              onToggle={() => update({ ...settings, all: !settings.all })}
+              onToggle={() => onToggle?.('all', !settings.all)}
               accessibilityLabel="전체 알림"
             />
           </View>
@@ -100,9 +121,7 @@ export function NotificationSettingsScreen({
                 </View>
                 <ToggleSwitch
                   value={value}
-                  onToggle={() =>
-                    settings.all && update({ ...settings, [r.key]: !settings[r.key] })
-                  }
+                  onToggle={() => settings.all && onToggle?.(r.key, !settings[r.key])}
                   accessibilityLabel={r.label}
                 />
               </View>
@@ -129,6 +148,17 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: Radius.lg,
     overflow: 'hidden',
+  },
+  // 조회 실패 배너 (#549).
+  errorCard: {
+    padding: Spacing.three,
+    gap: Spacing.two,
+    alignItems: 'flex-start',
+  },
+  retryBtn: {
+    borderRadius: Radius.pill,
+    paddingVertical: Spacing.one,
+    paddingHorizontal: Spacing.four,
   },
   row: {
     flexDirection: 'row',

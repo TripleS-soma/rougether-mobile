@@ -1,7 +1,7 @@
 import { StyleSheet, Text } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
-import { useTokens } from '@/hooks/use-tokens';
+import { useFontEmphasis, useTokens } from '@/hooks/use-tokens';
 
 export type BadgeProps = {
   label: string;
@@ -13,10 +13,12 @@ export type BadgeProps = {
 /** Tiny label pill (e.g. rarity, MY, 투두). */
 export function Badge({ label, background, color }: BadgeProps) {
   const t = useTokens();
+  const emph = useFontEmphasis();
   return (
     <Text
       style={[
         styles.badge,
+        emph('bold'),
         { backgroundColor: background ?? t.primary, color: color ?? t.onPrimary },
       ]}>
       {label}
@@ -26,8 +28,7 @@ export function Badge({ label, background, color }: BadgeProps) {
 
 const styles = StyleSheet.create({
   badge: {
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 12,
     overflow: 'hidden',
     borderRadius: Radius.pill,
     paddingHorizontal: Spacing.two,

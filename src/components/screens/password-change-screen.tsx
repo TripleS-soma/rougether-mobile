@@ -3,9 +3,9 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Field } from '@/components/ui/field';
 import { ScreenHeader } from '@/components/ui/screen-header';
-import { Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
-import { useTokens } from '@/hooks/use-tokens';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 const MIN_LENGTH = 8;
 
@@ -16,12 +16,15 @@ export type PasswordChangeScreenProps = {
 };
 
 /**
- * "비밀번호 변경" screen reached from 설정 → 비밀번호 변경. Validates the new
- * password length and match locally; the actual change request is delegated to
- * onSubmit by the app shell.
+ * "비밀번호 변경" screen. 지금은 **앱에서 도달할 수 없다** (#787) — 서버 인증이
+ * 소셜·dev 로그인뿐이라 비밀번호 계정이 없어 설정 진입점을 내렸다. 서버가
+ * 비밀번호 인증을 붙이면 설정 행과 셸 배선만 되살리면 되도록 화면·테스트·Dev
+ * 갤러리 엔트리는 남겨 둔다. 새 비밀번호의 길이·일치는 로컬에서 검증하고,
+ * 실제 변경 요청은 셸이 onSubmit으로 처리한다.
  */
 export function PasswordChangeScreen({ onBack }: PasswordChangeScreenProps) {
   const t = useTokens();
+  const Typography = useTypography();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -30,15 +33,14 @@ export function PasswordChangeScreen({ onBack }: PasswordChangeScreenProps) {
   const mismatch = confirm.length > 0 && confirm !== next;
 
   return (
-    <View style={[styles.screen, useScreenStyle()]}>
+    <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader title="비밀번호 변경" onBack={onBack} />
 
       <ScrollView contentContainerStyle={styles.body}>
         {/* The dev API has no password auth yet — be honest instead of a fake
             success that just navigates back. */}
-        <View
-          style={[styles.notice, { backgroundColor: `${t.warning}22`, borderColor: t.warning }]}>
-          <Text style={[styles.noticeText, { color: t.text }]}>
+        <View style={[styles.notice, { backgroundColor: t.warningSoft, borderColor: t.warning }]}>
+          <Text style={[Typography.supporting, styles.noticeText, { color: t.text }]}>
             비밀번호 변경은 준비 중이에요. 지금 계정은 개발 로그인이라 비밀번호가 없어요.
           </Text>
         </View>
@@ -107,8 +109,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
   },
   noticeText: {
-    fontSize: 12,
-    lineHeight: 18,
+    lineHeight: 20,
   },
   footer: {
     padding: Spacing.four,

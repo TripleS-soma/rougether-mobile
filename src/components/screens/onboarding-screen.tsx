@@ -1,46 +1,79 @@
-import { useState } from 'react';
-import { PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
+import { useRef, useState } from 'react';
+import {
+  PanResponder,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 
-import { CharacterAvatar } from '@/components/character-avatar';
+import { CharacterAvatar } from '@/components/room/character-avatar';
 import { Icon } from '@/components/ui/icon';
-import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
-import { Radius, Spacing, Typography } from '@/constants/theme';
-import { Pictogram, type PictogramName } from '@/components/ui/pictograms';
+import {
+  CHARACTER_OPTIONS,
+  CHARACTER_SELECTION_ENABLED,
+  type CharacterId,
+  DEFAULT_CHARACTER_ID,
+} from '@/constants/characters';
+import { Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useScreenStyle } from '@/hooks/use-screen-style';
-import { useTokens } from '@/hooks/use-tokens';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 
-type Slide = { icon: PictogramName; bg: string; title: string; description: string };
+type Slide = { image: number; title: string; description: string };
 
+/**
+ * 인트로 5장 (#412, design-sync A안): 비주얼은 실제 앱 화면 캡처(라이트,
+ * 1080×2192 → 표시 3배수인 689px로 축소·팔레트 압축, #746). UI가 크게 바뀌면
+ * 재촬영해 교체한다 — 캡처 비율이 바뀌면 styles.captureFrame도 함께.
+ */
 const SLIDES: Slide[] = [
   {
-    icon: 'sprout',
-    bg: '#F1E7D6',
-    title: '루게더에 오신 걸 환영해요',
-    description:
-      '매일의 작은 루틴이 모여 나만의 마을을 만들어가요.\n캐릭터 친구와 함께 시작해볼까요?',
+    image: require('@/assets/images/onboarding/my-room.png'),
+    title: '매일의 루틴이\n포근한 방이 되는 곳',
+    description: '루게더에 오신 걸 환영해요',
   },
   {
-    icon: 'checklist',
-    bg: '#E4F0DC',
-    title: '오늘의 루틴을 완료해요',
-    description: '기상, 독서, 운동 같은 루틴을 만들고\n매일 체크하며 보상을 받아보세요.',
+    image: require('@/assets/images/onboarding/routines.png'),
+    title: '오늘의 루틴을\n곰 체크로 완료해요',
+    description: '카테고리로 모아 보고, 알림·반복 설정까지',
   },
   {
-    icon: 'house',
-    bg: '#F5D8C8',
-    title: '방을 꾸미고 캐릭터를 키워요',
-    description: '루틴을 완료할수록 캐릭터가 성장하고\n보상으로 방을 더 따뜻하게 채워가요.',
+    image: require('@/assets/images/onboarding/decor.png'),
+    title: '모은 보상으로\n내 방을 꾸며요',
+    description: '가구·벽지·바닥을 원하는 자리에 자유 배치',
   },
   {
-    icon: 'friends',
-    bg: '#D8E4F0',
-    title: '친구들과 함께 집을 만들어요',
-    description: '친구의 방을 구경하고 그룹 미션을 함께\n성공하며 마을을 더 생기있게 만들어보세요.',
+    image: require('@/assets/images/onboarding/house.png'),
+    title: '친구들과 한 집에서\n함께 자라요',
+    description: '방 구경 · 응원 보내기 · 공동 미션으로 집 레벨 업',
+  },
+  {
+    image: require('@/assets/images/onboarding/calendar.png'),
+    title: '기록은 달력으로,\n보상은 뽑기로',
+    description: '지난 완료를 돌아보고 캐릭터·가구를 모아요',
   },
 ];
 
 export type OnboardingGoal = { id: string; label: string };
+
+/** 목표 선택 상한 — 집 생성의 서버 제약(goalIds ≤ 3)과 맞춘다 (#598 후속). */
+export const MAX_GOALS = 3;
+
+/** 닉네임 길이 상한 (#635) — 헤더·타일 등 표시 공간과 합의된 값. */
+export const NICKNAME_MAX = 12;
+
+/**
+ * 태블릿·큰 화면 콘텐츠 중앙 고정폭 (#725) — 온보딩 요소가 넓은 폭에서
+ * 끝까지 늘어나지 않게 폰 너비 근처로 묶는다. 폰에서는 width:'100%'가
+ * 우세라 영향 없음.
+ */
+const CONTENT_MAX_W = 480;
 
 const GOALS: OnboardingGoal[] = [
   { id: 'exercise', label: '운동' },
@@ -53,14 +86,33 @@ const GOALS: OnboardingGoal[] = [
 ];
 
 export type OnboardingScreenProps = {
-  onDone?: (goals: string[], characterId: CharacterId) => void;
+  onDone?: (goals: string[], characterId: CharacterId, nickname: string) => void;
   /** Goal options from the server master; falls back to the local list while empty. */
   goals?: OnboardingGoal[];
   /** Previously selected goal ids — a replay starts as an edit of these. */
   initialGoals?: string[];
+  /** 다시 보기 때 기존 닉네임 프리필 (#635) — 없으면 빈 입력. */
+  initialNickname?: string;
+  /**
+   * 캐릭터 선택 캐러셀 노출 — MVP는 고양이 단일이라 기본 꺼짐(#637). 갤러리·
+   * 테스트가 보존된 UI를 계속 돌릴 수 있게 prop으로 열어둔다.
+   */
+  characterSelectEnabled?: boolean;
   /** Previously chosen character — preselected on replay. */
   initialCharacterId?: CharacterId;
+  /**
+   * 캐릭터별 서버 등록 포즈 프레임 (#589·#735, 마스터 /characters). 활성 카드가
+   * 첫 포즈를 재생하는 데 쓴다 — 없으면(오프라인 등) 번들 정적 포즈로 폴백.
+   */
+  characterFrames?: Partial<Record<CharacterId, string[]>>;
 };
+
+/** 받침 유무에 따른 '이랑/랑' — CTA "OO(이)랑 함께하기" (#589). */
+export function withRang(name: string): string {
+  const code = name.charCodeAt(name.length - 1);
+  const hasFinal = code >= 0xac00 && code <= 0xd7a3 && (code - 0xac00) % 28 > 0;
+  return `${name}${hasFinal ? '이랑' : '랑'}`;
+}
 
 /**
  * Onboarding flow, ported from the prototype `OnboardingScreen`: intro slides →
@@ -69,11 +121,30 @@ export type OnboardingScreenProps = {
  */
 export function OnboardingScreen({
   onDone,
+  initialNickname,
+  characterSelectEnabled = CHARACTER_SELECTION_ENABLED,
   goals,
   initialGoals,
   initialCharacterId,
+  characterFrames,
 }: OnboardingScreenProps) {
   const t = useTokens();
+  const Typography = useTypography();
+  const { width: windowW } = useWindowDimensions();
+  const characterScrollRef = useRef<ScrollView>(null);
+  // RN-web은 momentum-end를 쏘지 않는다 — 스크롤 유휴로 정착시킨다
+  // (wheel-picker와 같은 패턴).
+  const characterWebSettle = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 이전 선택(다시 보기)이 첫 카드가 되도록 회전 배치 — 스크롤 위치 복원은
+  // 플랫폼별로 신뢰할 수 없어(iOS 전용 contentOffset, RN-web scrollTo 불능
+  // 실측) 순서를 데이터에서 해결한다. 시각과 선택 상태가 항상 일치.
+  const [characterOrder] = useState(() => {
+    const first = initialCharacterId ?? DEFAULT_CHARACTER_ID;
+    const i = CHARACTER_OPTIONS.findIndex((c) => c.id === first);
+    return i <= 0
+      ? CHARACTER_OPTIONS
+      : [...CHARACTER_OPTIONS.slice(i), ...CHARACTER_OPTIONS.slice(0, i)];
+  });
   // Pinned bottom action buttons → pad both edges so the notch / home indicator
   // don't clip the top title or the bottom buttons.
   const screenStyle = useScreenStyle(['top', 'bottom']);
@@ -81,11 +152,15 @@ export function OnboardingScreen({
   const [index, setIndex] = useState(0);
   const [showGoalSurvey, setShowGoalSurvey] = useState(false);
   const [showCharacterSelect, setShowCharacterSelect] = useState(false);
+  // 닉네임 단계 (#635) — 캐릭터 다음, 시작 직전. 신규 계정의 서버 닉네임이
+  // 비어 화면 데모 기본값이 노출되던 문제의 근본 해결.
+  const [showNicknameStep, setShowNicknameStep] = useState(false);
+  const [nickname, setNickname] = useState(initialNickname ?? '');
   // Seed from the previous selections (온보딩 다시 보기 edits rather than starts
   // over); ids that no longer exist in the option list are dropped so a stale
   // id can't hold the 시작하기 button open with nothing visibly checked.
   const [selectedGoals, setSelectedGoals] = useState<string[]>(() =>
-    (initialGoals ?? []).filter((id) => goalOptions.some((g) => g.id === id)),
+    (initialGoals ?? []).filter((id) => goalOptions.some((g) => g.id === id)).slice(0, MAX_GOALS),
   );
   const [selectedCharacter, setSelectedCharacter] = useState<CharacterId>(
     initialCharacterId ?? DEFAULT_CHARACTER_ID,
@@ -94,50 +169,199 @@ export function OnboardingScreen({
   const isLast = index === SLIDES.length - 1;
   const slide = SLIDES[index];
 
+  const { show: toast } = useToast();
   const toggleGoal = (id: string) =>
-    setSelectedGoals((prev) => (prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]));
+    setSelectedGoals((prev) => {
+      if (prev.includes(id)) return prev.filter((g) => g !== id);
+      // 상한 도달 시 차단하고 이유를 말한다 — 집 생성 서버 제약과 동일.
+      if (prev.length >= MAX_GOALS) {
+        toast(`목표는 ${MAX_GOALS}개까지 고를 수 있어요`);
+        return prev;
+      }
+      return [...prev, id];
+    });
 
-  // --- Character select ---
+  // 카드 지오메트리 — 폭의 78% 카드 + 좌우 피크. 훅/이펙트에서도 쓰므로
+  // 분기 밖에서 계산한다.
+  const cardW = Math.round(windowW * 0.78);
+  const cardGap = Spacing.three;
+  const sidePad = Math.max(0, (windowW - cardW) / 2);
+  const snap = cardW + cardGap;
+
+  // RN-web의 ScrollView.scrollTo는 이 트리에서 동작하지 않는다(실측) —
+  // 웹은 DOM 노드 scrollLeft 직접 대입으로 우회하고, 네이티브는 scrollTo.
+  const jumpTo = (x: number, animated: boolean) => {
+    const sv = characterScrollRef.current;
+    if (!sv) return;
+    if (Platform.OS === 'web') {
+      const node = (
+        sv as unknown as { getScrollableNode?: () => { scrollLeft: number } }
+      ).getScrollableNode?.();
+      if (node) {
+        node.scrollLeft = x;
+        return;
+      }
+    }
+    sv.scrollTo({ x, animated });
+  };
+
+  // --- Character select (#589) --- 풀스크린 카드 캐러셀: 카드 하나당 캐릭터
+  // 하나, 다음 카드가 살짝 보이는 피크 + 도트로 스와이프를 암시한다. 활성
+  // 카드만 wave(CDN webp)를 재생 — "초점을 주면 인사한다"가 애착 연출이고,
+  // 로딩 지연도 정적 포즈 폴백 뒤에 숨는다.
+  // --- Nickname (#635) --- 캐릭터 다음, 시작 직전. 서버 닉네임이 비어
+  // 데모 기본값('준서')이 노출되던 신규 계정 문제의 근본 해결 — 필수 입력.
+  if (showNicknameStep) {
+    const active = characterOrder.find((c) => c.id === selectedCharacter) ?? characterOrder[0];
+    const trimmed = nickname.trim();
+    const canStart = trimmed.length > 0;
+    return (
+      <View style={[styles.screen, screenStyle]}>
+        <View style={styles.intro}>
+          <Text style={[Typography.h1, { color: t.text }]}>어떻게 불러드릴까요?</Text>
+          <Text style={[Typography.supporting, styles.introBody, { color: t.textMuted }]}>
+            {active.name}가 부를 내 이름을 정해주세요.
+          </Text>
+        </View>
+        <View style={styles.nicknameBody}>
+          <CharacterAvatar
+            characterId={selectedCharacter}
+            frames={characterFrames?.[selectedCharacter]}
+            size={120}
+          />
+          <TextInput
+            value={nickname}
+            onChangeText={(v) => setNickname(v.slice(0, NICKNAME_MAX))}
+            placeholder="닉네임 (12자까지)"
+            placeholderTextColor={t.textDisabled}
+            autoFocus
+            autoCorrect={false}
+            maxLength={NICKNAME_MAX}
+            accessibilityLabel="닉네임 입력"
+            style={[
+              styles.nicknameInput,
+              Typography.h3,
+              { backgroundColor: t.surface, color: t.text, borderColor: t.border },
+            ]}
+          />
+        </View>
+        <View style={styles.actions}>
+          <PrimaryButton
+            label="시작하기"
+            disabled={!canStart}
+            blockedMessage="닉네임을 입력해주세요"
+            onPress={() => onDone?.(selectedGoals, selectedCharacter, trimmed)}
+          />
+          <TextButton label="이전" onPress={() => setShowNicknameStep(false)} />
+        </View>
+      </View>
+    );
+  }
+
   if (showCharacterSelect) {
+    const activeIndex = Math.max(
+      0,
+      characterOrder.findIndex((c) => c.id === selectedCharacter),
+    );
+    const active = characterOrder[activeIndex];
+    const settleAt = (x: number) => {
+      const i = Math.min(characterOrder.length - 1, Math.max(0, Math.round(x / snap)));
+      const opt = characterOrder[i];
+      if (opt) setSelectedCharacter(opt.id);
+    };
+    const focusCharacter = (i: number) => {
+      const opt = characterOrder[i];
+      if (!opt) return;
+      setSelectedCharacter(opt.id);
+      jumpTo(i * snap, true);
+    };
     return (
       <View style={[styles.screen, screenStyle]}>
         <View style={styles.intro}>
           <Text style={[Typography.h1, { color: t.text }]}>함께할 캐릭터를 골라주세요</Text>
           <Text style={[Typography.supporting, styles.introBody, { color: t.textMuted }]}>
-            선택한 친구가 나의 방에 나타나고, 루틴을 함께 키워가요.
+            옆으로 넘기며 마음에 드는 친구를 만나보세요.
           </Text>
         </View>
-        <ScrollView contentContainerStyle={styles.list}>
-          {CHARACTER_OPTIONS.map((c) => {
-            const selected = selectedCharacter === c.id;
+        <ScrollView
+          ref={characterScrollRef}
+          horizontal
+          style={styles.flex}
+          showsHorizontalScrollIndicator={false}
+          snapToInterval={snap}
+          decelerationRate="fast"
+          contentContainerStyle={[
+            styles.characterRail,
+            { paddingHorizontal: sidePad, gap: cardGap },
+          ]}
+          onMomentumScrollEnd={(e) => settleAt(e.nativeEvent.contentOffset.x)}
+          scrollEventThrottle={16}
+          onScroll={
+            Platform.OS === 'web'
+              ? (e) => {
+                  const x = e.nativeEvent.contentOffset.x;
+                  if (characterWebSettle.current) clearTimeout(characterWebSettle.current);
+                  characterWebSettle.current = setTimeout(() => settleAt(x), 160);
+                }
+              : undefined
+          }
+          testID="character-carousel">
+          {characterOrder.map((c, i) => {
+            const isActive = selectedCharacter === c.id;
+            const frames = characterFrames?.[c.id];
             return (
               <Pressable
                 key={c.id}
-                onPress={() => setSelectedCharacter(c.id)}
+                onPress={() => focusCharacter(i)}
                 accessibilityRole="radio"
-                accessibilityState={{ selected }}
+                accessibilityLabel={`${c.name} — ${c.description}`}
+                accessibilityState={{ selected: isActive }}
                 style={[
-                  styles.characterCard,
-                  { backgroundColor: t.surface, borderColor: selected ? t.primary : 'transparent' },
+                  styles.characterSlide,
+                  { width: cardW, backgroundColor: t.surface },
+                  { borderColor: isActive ? t.primary : t.border },
                 ]}>
-                <View style={[styles.characterAvatar, { backgroundColor: c.bg }]}>
-                  <CharacterAvatar characterId={c.id} size={48} />
+                <View style={[styles.characterStage, { backgroundColor: c.bg }]}>
+                  <CharacterAvatar
+                    characterId={c.id}
+                    size={Math.min(Math.round(cardW * 0.55), 220)}
+                    // 활성 카드만 서버 프레임을 넘긴다 — CharacterAvatar는 유효한
+                    // CDN 키가 있으면 그 webp를, 없으면 번들 정적 포즈를 그린다.
+                    frames={isActive ? frames : undefined}
+                  />
                 </View>
-                <View style={styles.flex}>
-                  <Text style={[Typography.label, { color: t.text }]}>{c.name}</Text>
-                  <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                <View style={styles.characterMeta}>
+                  <Text style={[Typography.h2, { color: t.text }]}>{c.name}</Text>
+                  <Text
+                    style={[Typography.body, styles.center, { color: t.textMuted }]}
+                    numberOfLines={2}>
                     {c.description}
                   </Text>
                 </View>
-                {selected ? <Check tint={t.primary} on={t.onPrimary} /> : null}
               </Pressable>
             );
           })}
         </ScrollView>
+        <View style={styles.dots}>
+          {characterOrder.map((c, i) => (
+            <Pressable
+              key={c.id}
+              onPress={() => focusCharacter(i)}
+              accessibilityRole="button"
+              accessibilityLabel={`${c.name} 카드로 이동`}
+              style={[
+                styles.dot,
+                i === activeIndex
+                  ? { width: 24, backgroundColor: t.primary }
+                  : { width: 8, backgroundColor: t.border },
+              ]}
+            />
+          ))}
+        </View>
         <View style={styles.actions}>
           <PrimaryButton
-            label="캐릭터 선택하기"
-            onPress={() => onDone?.(selectedGoals, selectedCharacter)}
+            label={`${withRang(active.name)} 함께하기`}
+            onPress={() => setShowNicknameStep(true)}
           />
           <TextButton label="이전" onPress={() => setShowCharacterSelect(false)} />
         </View>
@@ -153,7 +377,8 @@ export function OnboardingScreen({
         <View style={styles.intro}>
           <Text style={[Typography.h1, { color: t.text }]}>관심 있는 목표를 골라주세요</Text>
           <Text style={[Typography.supporting, styles.introBody, { color: t.textMuted }]}>
-            선택한 목표를 기반으로 루틴 제안과 미션을 더 잘 맞출 수 있어요.
+            선택한 목표를 기반으로 루틴 제안과 미션을 더 잘 맞출 수 있어요. 최대 3개까지 고를 수
+            있어요.
           </Text>
         </View>
         <ScrollView contentContainerStyle={styles.grid}>
@@ -184,7 +409,11 @@ export function OnboardingScreen({
             label="시작하기"
             disabled={!canStart}
             blockedMessage="목표를 하나 이상 선택해주세요"
-            onPress={() => canStart && setShowCharacterSelect(true)}
+            onPress={() =>
+              canStart &&
+              // MVP 고양이 단일 (#637) — 캐러셀을 건너뛰고 닉네임으로 직행.
+              (characterSelectEnabled ? setShowCharacterSelect(true) : setShowNicknameStep(true))
+            }
           />
           <TextButton label="이전" onPress={() => setShowGoalSurvey(false)} />
         </View>
@@ -219,15 +448,32 @@ export function OnboardingScreen({
         ) : null}
       </View>
 
-      <View style={styles.slideBody} {...slidePan.panHandlers}>
-        <View style={[styles.slideCircle, { backgroundColor: slide.bg }]}>
-          <Pictogram name={slide.icon} size={96} />
+      {/* 태블릿·짧은 캔버스(iPad 호환 모드) 대응 (#725): 세로가 부족하면
+          가운데 정렬 대신 스크롤로 흘려 제목이 위로 잘리지 않게 하고, 넓은
+          폭에서는 중앙 고정폭 컬럼으로 묶어 요소가 끝까지 늘어나지 않게 한다. */}
+      <ScrollView
+        style={styles.slideScroll}
+        contentContainerStyle={styles.slideBody}
+        showsVerticalScrollIndicator={false}
+        {...slidePan.panHandlers}>
+        <View style={styles.slideContent}>
+          <Text style={[Typography.h2, styles.center, { color: t.text }]}>{slide.title}</Text>
+          <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
+            {slide.description}
+          </Text>
+          {/* 실제 앱 화면 캡처 — 폰 프레임 카드 (#412). 390:844 비율 유지. */}
+          <View
+            style={[styles.captureFrame, { borderColor: t.border, backgroundColor: t.surface }]}>
+            <Image
+              source={slide.image}
+              style={styles.captureImage}
+              contentFit="cover"
+              transition={150}
+              accessibilityLabel={slide.title.replace('\n', ' ')}
+            />
+          </View>
         </View>
-        <Text style={[Typography.h2, styles.center, { color: t.text }]}>{slide.title}</Text>
-        <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
-          {slide.description}
-        </Text>
-      </View>
+      </ScrollView>
 
       <View style={styles.dots}>
         {SLIDES.map((_, i) => (
@@ -269,6 +515,7 @@ function PrimaryButton({
   blockedMessage?: string;
 }) {
   const t = useTokens();
+  const Typography = useTypography();
   const { show: toast } = useToast();
   return (
     <Pressable
@@ -290,6 +537,7 @@ function PrimaryButton({
 
 function TextButton({ label, onPress }: { label: string; onPress: () => void }) {
   const t = useTokens();
+  const Typography = useTypography();
   return (
     <Pressable onPress={onPress} accessibilityRole="button" style={styles.textBtn}>
       <Text style={[Typography.supporting, { color: t.textMuted }]}>{label}</Text>
@@ -329,11 +577,6 @@ const styles = StyleSheet.create({
   introBody: {
     marginTop: Spacing.half,
   },
-  list: {
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.three,
-    paddingBottom: Spacing.three,
-  },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -341,20 +584,27 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     paddingBottom: Spacing.three,
   },
-  characterCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-    padding: Spacing.three,
+  // 캐릭터 카드 캐러셀 (#589) — 카드가 세로 공간을 꽉 채우고, 이웃 카드는
+  // 좌우 피크로 살짝 보인다.
+  characterRail: {
+    alignItems: 'stretch',
+    paddingBottom: Spacing.two,
+  },
+  characterSlide: {
     borderRadius: Radius.lg,
     borderWidth: 2,
+    overflow: 'hidden',
   },
-  characterAvatar: {
-    width: 64,
-    height: 64,
-    borderRadius: Radius.lg,
+  characterStage: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  characterMeta: {
+    alignItems: 'center',
+    gap: Spacing.one,
+    paddingVertical: Spacing.four,
+    paddingHorizontal: Spacing.three,
   },
   goalCard: {
     width: '47%',
@@ -375,24 +625,52 @@ const styles = StyleSheet.create({
   },
   skipRow: {
     height: 44,
+    width: '100%',
+    maxWidth: CONTENT_MAX_W,
+    alignSelf: 'center',
     paddingHorizontal: Spacing.four,
     alignItems: 'flex-end',
     justifyContent: 'center',
   },
-  slideBody: {
+  slideScroll: {
     flex: 1,
+  },
+  // contentContainer — 내용이 짧으면 가운데(flexGrow+center), 넘치면 스크롤.
+  slideBody: {
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: Spacing.five,
+    paddingVertical: Spacing.three,
+  },
+  // 넓은 화면(태블릿) 중앙 고정폭 컬럼 (#725).
+  slideContent: {
+    width: '100%',
+    maxWidth: CONTENT_MAX_W,
+    alignItems: 'center',
     gap: Spacing.three,
   },
-  slideCircle: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.four,
+  captureFrame: {
+    // 캡처 원본(1080×2192) 비율의 폰 프레임 카드 — 세로 공간에 맞춰 줄어든다.
+    // 비율이 어긋나면 contentFit="cover"가 화면 가장자리를 잘라내므로 원본과
+    // 같은 값을 쓴다 (#746).
+    width: 210,
+    aspectRatio: 1080 / 2192,
+    maxHeight: 460,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    overflow: 'hidden',
+    alignSelf: 'center',
+    marginTop: Spacing.two,
+    elevation: 3,
+    shadowColor: ShadowColor,
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  captureImage: {
+    width: '100%',
+    height: '100%',
   },
   dots: {
     flexDirection: 'row',
@@ -400,6 +678,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
     paddingVertical: Spacing.four,
+    width: '100%',
+    maxWidth: CONTENT_MAX_W,
+    alignSelf: 'center',
   },
   dot: {
     height: 8,
@@ -410,6 +691,25 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.two,
     paddingBottom: Spacing.three,
     gap: Spacing.two,
+    width: '100%',
+    maxWidth: CONTENT_MAX_W,
+    alignSelf: 'center',
+  },
+  // 닉네임 단계 (#635).
+  nicknameBody: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.four,
+    paddingHorizontal: Spacing.five,
+  },
+  nicknameInput: {
+    alignSelf: 'stretch',
+    textAlign: 'center',
+    borderWidth: 1,
+    borderRadius: Radius.lg,
+    paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.four,
   },
   primaryBtn: {
     paddingVertical: Spacing.three,

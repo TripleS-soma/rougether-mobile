@@ -1,7 +1,7 @@
 import { type StyleProp, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
-import { Radius, Spacing, Typography } from '@/constants/theme';
-import { useTokens } from '@/hooks/use-tokens';
+import { Radius, Spacing } from '@/constants/theme';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 export type PendingNoticeProps = {
   /** Honest one-liner about what is still server-side pending. */
@@ -15,9 +15,10 @@ export type PendingNoticeProps = {
  */
 export function PendingNotice({ text, style }: PendingNoticeProps) {
   const t = useTokens();
+  const Typography = useTypography();
   return (
     <View
-      style={[styles.notice, { backgroundColor: `${t.warning}22`, borderColor: t.warning }, style]}>
+      style={[styles.notice, { backgroundColor: t.warningSoft, borderColor: t.warning }, style]}>
       <Text style={[Typography.supporting, { color: t.text }]}>{text}</Text>
     </View>
   );

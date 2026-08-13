@@ -1,6 +1,12 @@
 /** Shop (items) + gacha endpoints. */
-import { apiGet, apiGetList, apiPost } from './client';
-import type { GachaDrawResponse, GachaResponse, ItemResponse, PurchaseResponse } from './types';
+import { apiGetList, apiPost } from './client';
+import type {
+  GachaDrawResponse,
+  GachaResponse,
+  GachaRewardResponse,
+  ItemResponse,
+  PurchaseResponse,
+} from './types';
 
 export type GachaDrawCount = 1 | 6;
 
@@ -19,12 +25,12 @@ export function fetchGachas() {
   return apiGetList<GachaResponse>('/gacha');
 }
 
-/** GET /gacha/{id}. */
-export function fetchGacha(id: number) {
-  return apiGet<GachaResponse>(`/gacha/${id}`);
-}
-
 /** POST /gacha/{id}/draw — draw `count` times. */
 export function drawGacha(id: number, count: GachaDrawCount) {
   return apiPost<GachaDrawResponse>(`/gacha/${id}/draw`, { count });
+}
+
+/** GET /gacha/{id}/rewards — 활성 풀의 보상 목록(이름·등급·보유, 확률 비노출) (#620). */
+export function fetchGachaRewards(id: number) {
+  return apiGetList<GachaRewardResponse>(`/gacha/${id}/rewards`);
 }

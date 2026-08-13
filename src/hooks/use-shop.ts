@@ -16,23 +16,30 @@ import {
 
 import {
   ApiError,
+  ErrorCode,
   fetchItems,
   fetchMyItems,
   fetchMyRoom,
   purchaseItem,
-  updateRoomSlots,
+  updateRoomLayout,
 } from '@/api';
 import {
+  fromRoomPlacements,
   fromRoomSlots,
   ownedPlacement,
   type ShopCatalogue,
+  toLayoutPlacements,
   toShopCatalogue,
-  toSlotSaves,
   toUserItemMap,
 } from '@/api/adapters';
 import { useToast } from '@/components/ui/toast';
 import { type Wallet } from '@/constants/currency';
-import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
+import { track } from '@/lib/analytics';
+import {
+  DEFAULT_WALLPAPER_ID,
+  type PlacedFurniture,
+  slotIdsToPlacements,
+} from '@/resources/furniture';
 
 const EMPTY: ShopCatalogue = {
   furniture: [],
@@ -43,10 +50,16 @@ const EMPTY: ShopCatalogue = {
 };
 
 export type RoomPlacement = {
+  /** 자유 배치 항목(#327) — placedFurnitureIds는 여기서 파생된 호환 뷰. */
+  items: PlacedFurniture[];
   placedFurnitureIds: string[];
   wallpaperId: string;
   floorId: string | null;
   backgroundId: string | null;
+  /** 낙관적 잠금 리비전 — 저장 시 baseRevision으로 그대로 보낸다. */
+  layoutRevision: number;
+  /** 이미 FREE_V1로 전환된 방인지 — 첫 저장 확인 모달 판단. */
+  freeLayout: boolean;
 };
 
 export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
@@ -55,10 +68,13 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [placement, setPlacement] = useState<RoomPlacement>({
+    items: [],
     placedFurnitureIds: [],
     wallpaperId: DEFAULT_WALLPAPER_ID,
     floorId: null,
     backgroundId: null,
+    layoutRevision: 0,
+    freeLayout: false,
   });
   const { show: toast } = useToast();
   // itemId(string) → userItemId, needed to save placements.
@@ -85,16 +101,24 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
         ? fromRoomSlots(room.slots, cat, userItemMapRef.current)
         : null;
       const fallback = ownedPlacement(cat);
-      setPlacement(
-        saved
-          ? {
-              placedFurnitureIds: saved.placedFurnitureIds,
-              wallpaperId: saved.wallpaperId ?? fallback.wallpaperId,
-              floorId: saved.floorId,
-              backgroundId: saved.backgroundId,
-            }
-          : fallback,
-      );
+      const freeLayout = room?.layoutFormat === 'FREE_V1';
+      // FREE_V1 방은 서버 placements 그대로, 슬롯 방은 앵커 좌표로 프리필해
+      // 같은 모습에서 이어서 편집한다 (#327).
+      const placedItems = freeLayout
+        ? fromRoomPlacements(room?.placements ?? [], cat, userItemMapRef.current)
+        : slotIdsToPlacements(
+            saved?.placedFurnitureIds ?? fallback.placedFurnitureIds,
+            cat.furniture,
+          );
+      setPlacement({
+        items: placedItems,
+        placedFurnitureIds: placedItems.map((p) => p.furnitureId),
+        wallpaperId: saved?.wallpaperId ?? fallback.wallpaperId,
+        floorId: saved ? saved.floorId : fallback.floorId,
+        backgroundId: saved ? saved.backgroundId : fallback.backgroundId,
+        layoutRevision: room?.layoutRevision ?? 0,
+        freeLayout,
+      });
     } catch {
       setError(true);
     } finally {
@@ -106,7 +130,7 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
     void load();
   }, [load]);
 
-  /** Buy an item with dia. Returns true on success (false on insufficient funds). */
+  /** Buy an item with diamond. Returns true on success (false on insufficient funds). */
   const purchase = async (itemId: string): Promise<boolean> => {
     try {
       const res = await purchaseItem(Number(itemId));
@@ -115,10 +139,11 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
         // Purchase returns only the spent currency — merge, don't replace.
         setWallet((prev) => ({
           ...prev,
-          [w.currencyType === 'COIN' ? 'coin' : 'dia']: w.balance as number,
+          [w.currencyType === 'COIN' ? 'coin' : 'diamond']: w.balance as number,
         }));
       }
       setOwnedIds((prev) => (prev.includes(itemId) ? prev : [...prev, itemId]));
+      track('shop_purchase', { itemId });
       // Track the new userItemId so the item can be placed + saved right away.
       if (res.itemId != null && res.userItemId != null)
         userItemMapRef.current.set(String(res.itemId), res.userItemId);
@@ -128,7 +153,7 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
       const broke =
         err instanceof ApiError &&
         err.status === 409 &&
-        err.bodyText?.includes('SHOP_INSUFFICIENT_BALANCE');
+        err.code === ErrorCode.SHOP_INSUFFICIENT_BALANCE;
       toast(broke ? '다이아가 부족해요' : '구매에 실패했어요', 'error');
       return false;
     }
@@ -150,30 +175,45 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
     }
   }, []);
 
-  /** Persist the room layout (PUT /rooms/me/slots). Returns false on failure. */
-  const savePlacement = async (
-    placedIds: string[],
+  /**
+   * 자유 배치 저장 (PUT /rooms/me/layout, #327). 'conflict'는 다른 기기가 먼저
+   * 저장한 경우(409 REVISION_CONFLICT) — 화면이 재로드 모달을 띄운다.
+   */
+  const saveLayout = async (
+    items: PlacedFurniture[],
     wallpaperId: string,
     floorId: string | null = null,
     backgroundId: string | null = null,
-  ): Promise<boolean> => {
-    setPlacement({ placedFurnitureIds: placedIds, wallpaperId, floorId, backgroundId });
+  ): Promise<'ok' | 'conflict' | 'fail'> => {
+    const map = userItemMapRef.current;
+    const surfaceUid = (id: string | null) => (id ? (map.get(id) ?? null) : null);
     try {
-      await updateRoomSlots(
-        toSlotSaves(
-          placedIds,
-          wallpaperId,
-          catalogueRef.current,
-          userItemMapRef.current,
-          floorId,
-          backgroundId,
-        ),
-      );
+      const res = await updateRoomLayout({
+        baseRevision: placement.layoutRevision,
+        surfaceSlots: [
+          { slotType: 'wallpaper', userItemId: surfaceUid(wallpaperId) },
+          { slotType: 'floor', userItemId: surfaceUid(floorId) },
+          { slotType: 'background', userItemId: surfaceUid(backgroundId) },
+        ],
+        placements: toLayoutPlacements(items, map),
+      });
+      setPlacement({
+        items,
+        placedFurnitureIds: items.map((p) => p.furnitureId),
+        wallpaperId,
+        floorId,
+        backgroundId,
+        layoutRevision: res.layoutRevision ?? placement.layoutRevision + 1,
+        freeLayout: true,
+      });
       toast('방 배치를 저장했어요', 'success');
-      return true;
-    } catch {
+      return 'ok';
+    } catch (err) {
+      if (err instanceof ApiError && err.code === ErrorCode.ROOM_LAYOUT_REVISION_CONFLICT) {
+        return 'conflict';
+      }
       toast('방 배치 저장에 실패했어요', 'error');
-      return false;
+      return 'fail';
     }
   };
 
@@ -186,6 +226,6 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
     retry: load,
     purchase,
     refreshOwned,
-    savePlacement,
+    saveLayout,
   };
 }
