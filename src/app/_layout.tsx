@@ -13,11 +13,15 @@ import { AuthProvider } from '@/hooks/use-auth';
 import { BrandThemeProvider, useResolvedScheme } from '@/hooks/use-tokens';
 import { useWebFonts } from '@/hooks/use-web-fonts';
 import { initAnalytics } from '@/lib/analytics';
+import { detectAppOpenSource } from '@/lib/app-open';
 import { initPushDisplay } from '@/lib/push-events';
 
 // 포그라운드 푸시 표시 + Android 채널 (#405) — 앱 시작 시 1회, 웹은 no-op.
 initPushDisplay();
 initAnalytics();
+// 재방문 계기 (#803) — 푸시 탭은 알림 핸들러가 먼저 보고하고, 여기서는 위젯
+// 딥링크와 직접 실행을 가른다. 실행당 1회만 기록된다.
+void detectAppOpenSource();
 
 // 스플래시 자동 숨김 중단 (#569) — JS 첫 프레임에 즉시 사라져 아트가 깜빡이던
 // 문제. AnimatedSplashOverlay가 최소 노출 뒤 hideAsync로 걷는다. 웹은 no-op.

@@ -8,6 +8,7 @@ import {
   screenView,
   track,
 } from '@/lib/analytics';
+import { reportAppOpen } from '@/lib/app-open';
 
 describe('analytics', () => {
   it('초기화가 불가능한 환경에서도 전 함수가 조용히 무동작한다 (#437)', () => {
@@ -53,6 +54,32 @@ describe('analytics', () => {
     track('room_save', { items: 5 });
     for (const name of ['login_success', 'onboarding_complete', 'routine_create', 'room_save']) {
       expect(gaMock.logEvent).toHaveBeenCalledWith(expect.anything(), name, expect.anything());
+    }
+  });
+
+  it('재방문 계기를 셋으로 가른다 — 실행당 1회 (#803)', () => {
+    initAnalytics();
+    // 푸시로 열렸는데 뒤이어 콜드스타트 판정이 또 찍히면 계기가 두 번 센다.
+    reportAppOpen('push');
+    reportAppOpen('direct');
+    const opens = (gaMock.logEvent as jest.Mock).mock.calls.filter((c) => c[1] === 'app_open');
+    expect(opens).toHaveLength(1);
+    expect(opens[0][2]).toEqual({ source: 'push' });
+  });
+
+  it('소셜·확산 이벤트가 GA4로 나간다 (#803)', () => {
+    initAnalytics();
+    // 집에 들어간 사람이 더 오래 남는지 보려면 진입 경로가 갈려 있어야 한다.
+    for (const [name, props] of [
+      ['house_preview', undefined],
+      ['house_join_request', { via: 'browse' }],
+      ['house_joined', { via: 'code' }],
+      ['house_create', undefined],
+      ['invite_code_copy', { kind: 'friend', how: 'share' }],
+      ['invite_redeem', undefined],
+    ] as const) {
+      track(name, props as never);
+      expect(gaMock.logEvent).toHaveBeenCalledWith(expect.anything(), name, props);
     }
   });
 

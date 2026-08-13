@@ -20,6 +20,7 @@ import {
 } from 'react-native-android-widget';
 
 import { DarkThemes, Themes } from '@/constants/theme';
+import { WIDGET_OPEN_URL } from '@/lib/app-open';
 import {
   loadWidgetRoomImage,
   loadWidgetSummary,
@@ -51,7 +52,8 @@ export function TodayListWidget({ summary, dark }: { summary: WidgetSummary; dar
   const progress = summary.total > 0 ? summary.done / summary.total : 0;
   return (
     <FlexWidget
-      clickAction="OPEN_APP"
+      clickAction="OPEN_URI"
+      clickActionData={{ uri: WIDGET_OPEN_URL }}
       style={{
         height: 'match_parent',
         width: 'match_parent',
@@ -159,7 +161,8 @@ export function MyRoomWidget({
   const t = palette(dark);
   return (
     <FlexWidget
-      clickAction="OPEN_APP"
+      clickAction="OPEN_URI"
+      clickActionData={{ uri: WIDGET_OPEN_URL }}
       style={{
         height: 'match_parent',
         width: 'match_parent',

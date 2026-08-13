@@ -32,12 +32,22 @@ export type AnalyticsEvent =
   | 'routine_complete'
   | 'gacha_draw'
   | 'room_save'
+  // 재방문 계기 (#803) — 앱을 다시 연 이유를 셋으로 가른다: 푸시/위젯/직접.
+  // push_open을 이 이벤트로 흡수했다 — 계기가 세 갈래인데 이벤트가 하나만
+  // 있으면 "푸시로 온 사람 수"는 알아도 "그냥 연 사람 수"를 못 센다.
+  | 'app_open'
+  // 소셜 — 집에 들어간 사람이 더 오래 남는가 (#803)
+  | 'house_preview'
+  | 'house_create'
+  | 'house_join_request'
+  | 'house_joined'
+  | 'invite_code_copy'
+  | 'invite_redeem'
   // 그 밖의 핵심 행동
   | 'shop_purchase'
   | 'cheer_send'
   | 'guestbook_write'
   | 'friend_room_visit'
-  | 'push_open'
   | 'onboarding_mission_start'
   | 'onboarding_mission_complete'
   | 'onboarding_mission_skip'

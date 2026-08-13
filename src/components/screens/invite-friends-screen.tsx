@@ -16,6 +16,7 @@ import { ScalePressable } from '@/components/ui/scale-pressable';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { friendInviteLink } from '@/constants/links';
 import { Radius, Spacing } from '@/constants/theme';
+import { track } from '@/lib/analytics';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
@@ -85,6 +86,8 @@ export function InviteFriendsScreen({
     if (!info?.code) return;
     try {
       await Clipboard.setStringAsync(info.code);
+      // 확산 신호 (#803) — 코드를 손에 쥔 순간. 실제 사용은 invite_redeem이 센다.
+      track('invite_code_copy', { kind: 'friend', how: 'clipboard' });
       setCopied(true);
       if (copyTimer.current) clearTimeout(copyTimer.current);
       copyTimer.current = setTimeout(() => setCopied(false), 1500);
@@ -97,6 +100,7 @@ export function InviteFriendsScreen({
   const shareLink = async () => {
     if (!info?.code) return;
     try {
+      track('invite_code_copy', { kind: 'friend', how: 'share' });
       await Share.share({
         message: `루게더에서 함께 루틴 지켜요! 내 초대코드: ${info.code}\n${friendInviteLink(info.code)}`,
       });
