@@ -64,11 +64,19 @@ describe('RoomDecorScreen 카탈로그 렌더 비용 (#794)', () => {
     expect(afterSelect).toBeLessThanOrEqual(ROOM_ITEMS);
   });
 
-  it('배치 여부 판정은 Set이라 카탈로그가 커져도 선형이다', () => {
-    // placed.includes를 타일마다 돌면 카탈로그 크기의 제곱이 된다.
-    const placed = new Set(items(['bed', 'plant']).map((p) => p.furnitureId));
-    expect(placed.has('bed')).toBe(true);
-    expect(placed.has('plant')).toBe(true);
-    expect(placed.has('shelf')).toBe(false);
+  it('카탈로그 타일의 배치 상태가 방과 맞물린다 — placedSet 배선 확인', async () => {
+    // Set 자체가 아니라 **화면의 배선**을 확인한다: 방에 있는 가구는 타일이
+    // selected로 뜨고, 그 타일을 누르면 방에서 빠진다(togglePlace가 placedSet을
+    // 읽는 경로). placed.includes로 되돌아가도 이 테스트는 통과하지만, 그때는
+    // 위의 렌더 횟수 테스트가 잡는다 — 둘이 한 쌍이다.
+    const { getByLabelText } = await render(
+      <RoomDecorScreen initialItems={items(['bed'])} freeLayout />,
+    );
+
+    const tile = getByLabelText('포근한 침대');
+    expect(tile.props.accessibilityState.selected).toBe(true);
+
+    await fireEvent.press(tile);
+    expect(getByLabelText('포근한 침대').props.accessibilityState.selected).toBe(false);
   });
 });

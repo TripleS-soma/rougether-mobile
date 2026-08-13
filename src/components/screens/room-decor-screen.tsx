@@ -116,6 +116,13 @@ export type RoomDecorScreenProps = RoomCatalogProps & {
  * bought with 다이아 first. Selection is local until `onApply` commits it.
  * Spec domain: rougether-spec domains/room + shop.
  */
+/**
+ * 표면류 기본값 — **모듈 상수여야 한다**. 기본 파라미터에 `[]` 리터럴을 두면
+ * prop을 안 넘긴 호출자에게 매 렌더 새 배열이 생겨 `owned`·`sorted*` memo가
+ * 통째로 무효화되고, 그리드 memo 경계가 조용히 무력해진다 (#794 리뷰).
+ */
+const NO_SURFACES: Wallpaper[] = [];
+
 export function RoomDecorScreen({
   initialItems,
   freeLayout = false,
@@ -127,8 +134,8 @@ export function RoomDecorScreen({
   ownedIds,
   furniture = FURNITURE_ITEMS,
   wallpapers = WALLPAPERS,
-  floors = [],
-  backgrounds = [],
+  floors = NO_SURFACES,
+  backgrounds = NO_SURFACES,
   loading = false,
   loadError = false,
   onRetry,
@@ -159,10 +166,9 @@ export function RoomDecorScreen({
   const demoItems = () =>
     slotIdsToPlacements(['hanok-bed', 'hanok-shelf', 'hanok-window', 'hanok-rug'], furniture);
   const [items, setItems] = useState<PlacedFurniture[]>(() => initialItems ?? demoItems());
-  const placed = useMemo(() => items.map((p) => p.furnitureId), [items]);
   // 타일마다 placed.includes를 돌면 카탈로그 크기의 제곱이 된다 (실서버 가구
   // 122종) — 조회는 Set으로 O(1) (#794).
-  const placedSet = useMemo(() => new Set(placed), [placed]);
+  const placedSet = useMemo(() => new Set(items.map((p) => p.furnitureId)), [items]);
   const [wallpaperId, setWallpaperId] = useState(initialWallpaperId);
   const [floorId, setFloorId] = useState<string | null>(initialFloorId);
   const [backgroundId, setBackgroundId] = useState<string | null>(initialBackgroundId);
