@@ -20,7 +20,6 @@ export type Screen =
   | 'theme'
   | 'font'
   | 'profileEdit'
-  | 'passwordChange'
   | 'notificationList'
   | 'bugReport'
   | 'notifications'
@@ -45,7 +44,6 @@ export const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   theme: null,
   font: null,
   profileEdit: null,
-  passwordChange: null,
   notificationList: null,
   bugReport: null,
   notifications: null,
@@ -84,7 +82,6 @@ export const BACK_SCREEN: Record<Screen, Screen | null> = {
   theme: 'settings',
   font: 'settings',
   profileEdit: 'settings',
-  passwordChange: 'settings',
   notificationList: 'myRoom',
   bugReport: 'settings',
   notifications: 'settings',

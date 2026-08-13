@@ -9,7 +9,6 @@ import { BugReportScreen } from '@/components/screens/bug-report-screen';
 import { HelpScreen } from '@/components/screens/help-screen';
 import { InviteFriendsScreen } from '@/components/screens/invite-friends-screen';
 import { NotificationSettingsScreen } from '@/components/screens/notification-settings-screen';
-import { PasswordChangeScreen } from '@/components/screens/password-change-screen';
 import { ProfileEditScreen } from '@/components/screens/profile-edit-screen';
 import {
   DEFAULT_SOUND_SETTINGS,
@@ -144,7 +143,6 @@ export function useSettingsSurface({
   const openTheme = useCallback(() => setScreen('theme'), [setScreen]);
   const openFont = useCallback(() => setScreen('font'), [setScreen]);
   const openProfileEdit = useCallback(() => setScreen('profileEdit'), [setScreen]);
-  const openPasswordChange = useCallback(() => setScreen('passwordChange'), [setScreen]);
   const openNotificationSettings = useCallback(() => {
     setScreen('notifications');
     // 화면을 열 때마다 서버값으로 최신화 (실패 시 기본값/직전값 유지).
@@ -179,7 +177,6 @@ export function useSettingsSurface({
     onOpenFont: openFont,
     onOpenTheme: openTheme,
     onEditProfile: openProfileEdit,
-    onChangePassword: openPasswordChange,
     onOpenNotifications: openNotificationSettings,
     onOpenSound: openSound,
     onOpenHelp: openHelp,
@@ -211,8 +208,6 @@ export function useSettingsSurface({
         }}
         onBack={backToSettings}
       />
-    ) : screen === 'passwordChange' ? (
-      <PasswordChangeScreen onSubmit={backToSettings} onBack={backToSettings} />
     ) : screen === 'notifications' ? (
       <NotificationSettingsScreen
         settings={notificationSettings}
