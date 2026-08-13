@@ -1,0 +1,73 @@
+# 스토어 제출용 빌드 — **main에서만**, 수동 트리거로만 돈다.
+#
+# 왜 수동인가: EAS 무료 쿼터(월 30회)를 사람이 통제해야 하고(AGENTS.md 빌드
+# 절약 규칙), 스토어 제출 타이밍은 심사·메타데이터 준비와 묶여 있다.
+#
+# 왜 main인가: production 프로필 빌드는 channel=production이라 main 승격이
+# 발행하는 OTA(eas-release.yml)만 받는다. dev 머지 OTA(preview 채널)가 스토어
+# 사용자에게 검증 없이 흘러가던 경로를 이 조합이 끊는다.
+#
+# 필요 시크릿: EXPO_TOKEN. iOS 제출은 EAS에 저장된 ASC 키를 쓴다(로컬 .p8 불필요).
+# Android 제출은 ./play-service-account.json이 있어야 해서 여기서는 빌드만 한다.
+name: store-build
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 빌드할 플랫폼
+        type: choice
+        options: [ios, android, all]
+        default: ios
+      submit:
+        description: iOS 빌드 완료 후 App Store Connect에 자동 제출
+        type: boolean
+        default: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: store-build
+      cancel-in-progress: false
+    steps:
+      # main 외 브랜치에서 실행하면 스토어에 dev 스냅샷이 올라간다 — 막는다.
+      - name: main 브랜치인지 확인
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::스토어 빌드는 main에서만 돌립니다 (현재: ${{ github.ref }})."
+          exit 1
+
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      # 어떤 런타임으로 나가는지 로그에 남긴다 — 이 지문이 곧 이 빌드가 받을
+      # OTA 레인이고, production 채널 업데이트와 맞아야 사용자에게 도달한다.
+      - name: 런타임 지문 기록
+        continue-on-error: true
+        run: |
+          echo "iOS     $(npx expo-updates fingerprint:generate --platform ios)"
+          echo "Android $(npx expo-updates fingerprint:generate --platform android)"
+
+      - name: iOS — App Store 빌드 (+제출)
+        if: inputs.platform == 'ios' || inputs.platform == 'all'
+        run: |
+          eas build --platform ios --profile production --non-interactive --no-wait \
+            ${{ inputs.submit && '--auto-submit-with-profile production' || '' }}
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      # Play 제출은 서비스 계정 JSON이 리포에 없어 수동이다 — 아티팩트를 받아
+      # 콘솔에 올리거나, 키가 준비되면 --auto-submit-with-profile production 추가.
+      - name: Android — Play 번들 빌드
+        if: inputs.platform == 'android' || inputs.platform == 'all'
+        run: eas build --platform android --profile production --non-interactive --no-wait
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
