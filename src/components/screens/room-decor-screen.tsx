@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   BackHandler,
@@ -49,6 +49,7 @@ import {
 } from '@/resources/furniture';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useStableCallback } from '@/hooks/use-stable-value';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
 /**
@@ -159,6 +160,9 @@ export function RoomDecorScreen({
     slotIdsToPlacements(['hanok-bed', 'hanok-shelf', 'hanok-window', 'hanok-rug'], furniture);
   const [items, setItems] = useState<PlacedFurniture[]>(() => initialItems ?? demoItems());
   const placed = useMemo(() => items.map((p) => p.furnitureId), [items]);
+  // 타일마다 placed.includes를 돌면 카탈로그 크기의 제곱이 된다 (실서버 가구
+  // 122종) — 조회는 Set으로 O(1) (#794).
+  const placedSet = useMemo(() => new Set(placed), [placed]);
   const [wallpaperId, setWallpaperId] = useState(initialWallpaperId);
   const [floorId, setFloorId] = useState<string | null>(initialFloorId);
   const [backgroundId, setBackgroundId] = useState<string | null>(initialBackgroundId);
@@ -503,6 +507,23 @@ export function RoomDecorScreen({
   // 방금 뽑은 아이템(#630)이 맨 앞, 그다음 보유 순 — 뽑기에서 넘어온 사용자가
   // 찾을 필요 없게 한다.
   const highlightSet = useMemo(() => new Set(highlightItemIds ?? []), [highlightItemIds]);
+
+  // 카탈로그 그리드에 내려가는 콜백은 전부 참조 고정 (#794) — 인라인 람다면
+  // 방을 한 번 건드릴 때마다 새 함수가 내려가 memo가 통째로 뚫린다.
+  const selectWallpaper = useStableCallback((id: string) => setWallpaperId(id));
+  const selectFloor = useStableCallback((id: string) =>
+    setFloorId((prev) => (prev === id ? null : id)),
+  );
+  const selectBackground = useStableCallback((id: string) =>
+    setBackgroundId((prev) => (prev === id ? null : id)),
+  );
+  const clearFloor = useStableCallback(() => setFloorId(null));
+  const clearBackground = useStableCallback(() => setBackgroundId(null));
+  const blockedBuy = useStableCallback(() => toast('다이아가 부족해요', 'error'));
+  // 배치 안 된 가구는 방 가운데로 추가, 배치된 가구는 다시 빼기.
+  const togglePlace = useStableCallback((item: FurnitureItem) =>
+    placedSet.has(item.id) ? removeItem(item.id) : addItem(item),
+  );
   const byOwnedFirst = useCallback(
     <T extends { id: string }>(arr: T[]) =>
       (ownedOnly ? arr.filter((i) => owned.has(i.id)) : [...arr]).sort(
@@ -771,11 +792,11 @@ export function RoomDecorScreen({
               <SwatchGrid
                 items={sortedWallpapers}
                 selectedId={wallpaperId}
-                onSelect={(id) => setWallpaperId(id)}
+                onSelect={selectWallpaper}
                 owned={owned}
                 diamondBalance={diamondBalance}
                 onBuyRequest={setPendingBuy}
-                onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
+                onBlockedBuy={blockedBuy}
                 t={t}
               />
             ) : null}
@@ -783,12 +804,12 @@ export function RoomDecorScreen({
               <SwatchGrid
                 items={sortedFloors}
                 selectedId={floorId}
-                onSelect={(id) => setFloorId((prev) => (prev === id ? null : id))}
-                onClear={floorId ? () => setFloorId(null) : undefined}
+                onSelect={selectFloor}
+                onClear={floorId ? clearFloor : undefined}
                 owned={owned}
                 diamondBalance={diamondBalance}
                 onBuyRequest={setPendingBuy}
-                onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
+                onBlockedBuy={blockedBuy}
                 t={t}
               />
             ) : null}
@@ -796,21 +817,20 @@ export function RoomDecorScreen({
               <SwatchGrid
                 items={sortedBackgrounds}
                 selectedId={backgroundId}
-                onSelect={(id) => setBackgroundId((prev) => (prev === id ? null : id))}
-                onClear={backgroundId ? () => setBackgroundId(null) : undefined}
+                onSelect={selectBackground}
+                onClear={backgroundId ? clearBackground : undefined}
                 owned={owned}
                 diamondBalance={diamondBalance}
                 onBuyRequest={setPendingBuy}
-                onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
+                onBlockedBuy={blockedBuy}
                 t={t}
               />
             ) : null}
             {picker === 'all' && (allTab === 'furniture' || allTab === 'decor') ? (
               <FurnitureGrid
                 items={allTab === 'furniture' ? sortedFurnitureTabItems : sortedDecorTabItems}
-                placed={placed}
-                // 배치 안 된 가구는 방 가운데로 추가, 배치된 가구는 다시 빼기.
-                onPlace={(item) => (placed.includes(item.id) ? removeItem(item.id) : addItem(item))}
+                placed={placedSet}
+                onPlace={togglePlace}
                 owned={owned}
                 highlighted={highlightSet}
                 t={t}
@@ -820,11 +840,11 @@ export function RoomDecorScreen({
               <SwatchGrid
                 items={sortedWallpapers}
                 selectedId={wallpaperId}
-                onSelect={(id) => setWallpaperId(id)}
+                onSelect={selectWallpaper}
                 owned={owned}
                 diamondBalance={diamondBalance}
                 onBuyRequest={setPendingBuy}
-                onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
+                onBlockedBuy={blockedBuy}
                 t={t}
               />
             ) : null}
@@ -832,12 +852,12 @@ export function RoomDecorScreen({
               <SwatchGrid
                 items={sortedFloors}
                 selectedId={floorId}
-                onSelect={(id) => setFloorId((prev) => (prev === id ? null : id))}
-                onClear={floorId ? () => setFloorId(null) : undefined}
+                onSelect={selectFloor}
+                onClear={floorId ? clearFloor : undefined}
                 owned={owned}
                 diamondBalance={diamondBalance}
                 onBuyRequest={setPendingBuy}
-                onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
+                onBlockedBuy={blockedBuy}
                 t={t}
               />
             ) : null}
@@ -845,12 +865,12 @@ export function RoomDecorScreen({
               <SwatchGrid
                 items={sortedBackgrounds}
                 selectedId={backgroundId}
-                onSelect={(id) => setBackgroundId((prev) => (prev === id ? null : id))}
-                onClear={backgroundId ? () => setBackgroundId(null) : undefined}
+                onSelect={selectBackground}
+                onClear={backgroundId ? clearBackground : undefined}
                 owned={owned}
                 diamondBalance={diamondBalance}
                 onBuyRequest={setPendingBuy}
-                onBlockedBuy={() => toast('다이아가 부족해요', 'error')}
+                onBlockedBuy={blockedBuy}
                 t={t}
               />
             ) : null}
@@ -1151,7 +1171,7 @@ function useOwnedPopStyle(isOwned: boolean) {
 }
 
 /** 비우기 tile shared by the grids — clears the slot/surface being picked. */
-function ClearTile({ onClear, t }: { onClear?: () => void; t: Tokens }) {
+const ClearTile = memo(function ClearTile({ onClear, t }: { onClear?: () => void; t: Tokens }) {
   const emph = useFontEmphasis();
   if (!onClear) return null;
   return (
@@ -1166,10 +1186,10 @@ function ClearTile({ onClear, t }: { onClear?: () => void; t: Tokens }) {
       <Text style={[styles.tileName, emph('medium'), { color: t.textMuted }]}>비우기</Text>
     </Pressable>
   );
-}
+});
 
 /** Surface picker grid (벽지/바닥/배경): single-select swatch/art tiles. */
-function SwatchGrid({
+const SwatchGrid = memo(function SwatchGrid({
   items,
   selectedId,
   onSelect,
@@ -1204,10 +1224,10 @@ function SwatchGrid({
       ))}
     </View>
   );
-}
+});
 
 /** 표면류 스와치 한 장 — 구매로 보유가 되는 순간 팝 (#453). */
-function SwatchTile({
+const SwatchTile = memo(function SwatchTile({
   item,
   isOwned,
   active,
@@ -1274,14 +1294,14 @@ function SwatchTile({
       )}
     </AnimatedPressable>
   );
-}
+});
 
 /**
  * Furniture picker grid for one slot: tap places (replacing the slot).
  * 미보유도 프리뷰로 배치되므로(#501) 구매 관련 prop이 없다 — 구매는 방의
  * 프리뷰 재탭/툴바에서.
  */
-function FurnitureGrid({
+const FurnitureGrid = memo(function FurnitureGrid({
   items,
   placed,
   onPlace,
@@ -1291,7 +1311,7 @@ function FurnitureGrid({
   t,
 }: {
   items: FurnitureItem[];
-  placed: string[];
+  placed: Set<string>;
   onPlace: (item: FurnitureItem) => void;
   onClear?: () => void;
   owned: Set<string>;
@@ -1316,7 +1336,7 @@ function FurnitureGrid({
           item={item}
           isOwned={owned.has(item.id)}
           // 프리뷰(#501)도 배치 상태 링을 받는다.
-          active={placed.includes(item.id)}
+          active={placed.has(item.id)}
           isNew={highlighted?.has(item.id)}
           onPlace={onPlace}
           t={t}
@@ -1324,10 +1344,10 @@ function FurnitureGrid({
       ))}
     </View>
   );
-}
+});
 
 /** 가구 타일 한 장 — 구매로 보유가 되는 순간 팝 (#453), 방금 뽑은 건 NEW (#630). */
-function FurnitureTile({
+const FurnitureTile = memo(function FurnitureTile({
   item,
   isOwned,
   active,
@@ -1383,7 +1403,7 @@ function FurnitureTile({
       )}
     </AnimatedPressable>
   );
-}
+});
 
 const GRID_GAP = Spacing.two;
 
