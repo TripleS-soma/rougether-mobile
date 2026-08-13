@@ -1,5 +1,4 @@
 import * as gaMock from '@react-native-firebase/analytics';
-import * as crashMock from '@react-native-firebase/crashlytics';
 
 import {
   identifyUser,
@@ -39,7 +38,6 @@ describe('analytics', () => {
 
     identifyUser(4);
     expect(gaMock.setUserId).toHaveBeenCalledWith(expect.anything(), '4');
-    expect(crashMock.setUserId).toHaveBeenCalledWith(expect.anything(), '4');
 
     resetAnalyticsUser();
     expect(gaMock.setUserId).toHaveBeenCalledWith(expect.anything(), null);
@@ -95,25 +93,5 @@ describe('analytics', () => {
       track(name as Parameters<typeof track>[0], props);
       expect(gaMock.logEvent).toHaveBeenCalledWith(expect.anything(), name, props);
     }
-  });
-
-  it('처리되지 않은 JS 에러가 Crashlytics recordError로 남는다 (#438)', () => {
-    initAnalytics();
-    const errorUtils = (
-      globalThis as unknown as {
-        ErrorUtils: { getGlobalHandler: () => (e: unknown, fatal?: boolean) => void };
-      }
-    ).ErrorUtils;
-    const handler = errorUtils.getGlobalHandler();
-    try {
-      handler(new Error('boom'), false);
-    } catch {
-      // RN 기본 핸들러가 rethrow해도 무방 — 기록 여부만 검증한다.
-    }
-    expect(crashMock.recordError).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.any(Error),
-      'JsError',
-    );
   });
 });

@@ -123,7 +123,6 @@
       ],
       "@react-native-firebase/app",
       "@react-native-firebase/messaging",
-      "@react-native-firebase/crashlytics",
       "./plugins/with-fcm-manifest.js",
       [
         "@react-native-google-signin/google-signin",
