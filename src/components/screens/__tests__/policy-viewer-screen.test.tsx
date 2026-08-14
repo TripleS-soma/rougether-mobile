@@ -11,7 +11,7 @@ jest.mock('react-native-webview', () => {
   return { WebView: (props: object) => React.createElement(View, props) };
 });
 
-const URL = 'https://triples-soma.github.io/policy/terms.html';
+const URL = 'https://rougether.com/terms.html';
 
 describe('PolicyViewerScreen (#652)', () => {
   it('renders the title, back button, and the document WebView', async () => {
@@ -32,7 +32,7 @@ describe('PolicyViewerScreen (#652)', () => {
     // 서브 리소스 오류(다른 URL)는 무시된다 — 리뷰 반영: 메인 문서만 실패 처리.
     await act(async () => {
       getByTestId('policy-webview').props.onHttpError({
-        nativeEvent: { url: 'https://triples-soma.github.io/favicon.ico' },
+        nativeEvent: { url: 'https://rougether.com/favicon.ico' },
       });
     });
     expect(queryByTestId('policy-webview')).toBeTruthy();

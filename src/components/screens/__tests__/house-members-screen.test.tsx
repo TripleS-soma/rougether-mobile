@@ -41,7 +41,7 @@ describe('HouseMembersScreen — 초대코드 복사·링크 공유 (#624)', () 
     expect(shareSpy).toHaveBeenCalledTimes(1);
     const message = shareSpy.mock.calls[0][0].message ?? '';
     expect(message).toContain('아침 루틴 하우스');
-    expect(message).toContain('rougether-landing/join.html?code=VLG7K2X');
+    expect(message).toContain('https://rougether.com/join.html?code=VLG7K2X');
     shareSpy.mockRestore();
   });
 
