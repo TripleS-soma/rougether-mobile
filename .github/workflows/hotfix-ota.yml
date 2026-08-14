@@ -1,0 +1,99 @@
+# 이미 나가 있는 설치본에 JS 핫픽스를 조준 발행한다 (#815).
+#
+# OTA는 **채널 + 런타임 지문**이 둘 다 맞아야 도달한다. 정규 경로(eas-release)는
+# "main의 현재 지문 → production 채널"만 쏘므로, 그 조합에서 벗어난 설치본
+# (예: 구 스토어 빌드, TestFlight에 남은 구 런타임)에는 닿지 않는다.
+#
+# 이 워크플로는 그 조준을 사람이 지정하게 하고, **지문이 어긋나면 발행 전에
+# 실패**시킨다. 지문 확인을 건너뛰면 업데이트는 아무도 듣지 않는 레인에 쌓이고
+# 로그는 초록불로 끝난다 — 그게 이 파일이 존재하는 이유다.
+#
+# 쓰는 법:
+#   1. 목표 설치본이 빌드된 **그 커밋**에서 브랜치를 딴다
+#        git checkout -b hotfix/x <커밋>
+#   2. **JS만** 고친다 (app.json·package.json·plugins·targets·.gitignore 금지 —
+#      하나라도 건드리면 지문이 바뀌어 도달하지 않는다)
+#   3. 푸시하고, Actions에서 이 워크플로를 **그 브랜치로** 실행한다
+#   4. 같은 수정을 dev에도 정식 PR로 반영한다 (안 하면 다음 릴리스에서 되살아남)
+name: hotfix-ota
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: 발행할 채널 (목표 설치본이 듣는 채널)
+        type: choice
+        options: [preview, production]
+        required: true
+      platform:
+        description: 플랫폼
+        type: choice
+        options: [ios, android, all]
+        default: all
+      expected_runtime:
+        # 안전장치의 핵심 — 목표 설치본의 runtimeVersion을 그대로 적는다.
+        # `eas build:list` 의 runtimeVersion 컬럼 값.
+        description: 도달시킬 런타임 지문 (불일치하면 발행하지 않고 실패)
+        required: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: hotfix-ota
+      cancel-in-progress: false
+    env:
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      # 발행 전 검문소. 여기서 막히면 그 브랜치에 네이티브 입력이 섞인 것이고,
+      # 필요한 건 OTA가 아니라 새 빌드다.
+      - name: 지문 대조
+        run: |
+          expected="${{ inputs.expected_runtime }}"
+          fail=0
+          for platform in ios android; do
+            [ "${{ inputs.platform }}" = "all" ] || [ "${{ inputs.platform }}" = "$platform" ] || continue
+            current=$(npx expo-updates fingerprint:generate --platform "$platform" | node -e \
+              'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).hash)}catch{console.log(s.trim())}})')
+            if [ "$current" != "$expected" ]; then
+              echo "::error::$platform 지문 불일치 — 이 브랜치 $current ≠ 목표 $expected. 이대로 발행하면 아무에게도 도달하지 않습니다. 네이티브 입력(app.json·package.json·plugins·targets·.gitignore)이 섞였는지 확인하세요."
+              fail=1
+            else
+              echo "- ✅ **$platform**: 지문 일치 (\`$current\`)" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+          exit $fail
+
+      - name: 핫픽스 OTA 발행
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          eas update --branch "${{ inputs.channel }}" --platform "${{ inputs.platform }}" \
+            --message "hotfix from ${{ github.ref_name }} (${{ github.sha }})" --non-interactive
+
+      - name: Sentry 소스맵 업로드
+        if: env.SENTRY_AUTH_TOKEN != ''
+        continue-on-error: true
+        run: npx @sentry/expo-upload-sourcemaps dist
+
+      - name: 요약
+        if: always()
+        run: |
+          {
+            echo "### 핫픽스 OTA"
+            echo "- 브랜치: \`${{ github.ref_name }}\`"
+            echo "- 채널: \`${{ inputs.channel }}\` · 플랫폼: \`${{ inputs.platform }}\`"
+            echo "- 목표 런타임: \`${{ inputs.expected_runtime }}\`"
+            echo ""
+            echo "같은 수정을 **dev에도 정식 PR로 반영**했는지 확인하세요 — 안 하면 다음 릴리스에서 되살아납니다."
+          } >> "$GITHUB_STEP_SUMMARY"
