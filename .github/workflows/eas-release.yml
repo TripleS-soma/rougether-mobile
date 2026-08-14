@@ -16,6 +16,9 @@ jobs:
     concurrency:
       group: eas-release-main
       cancel-in-progress: false
+    env:
+      # 토큰이 없는 저장소(포크 등)에서도 배포는 계속되게 — 아래 스텝이 스스로 빠진다.
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -31,3 +34,37 @@ jobs:
         run: eas update --branch production --non-interactive --auto
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      # OTA로 나간 JS는 네이티브 빌드와 다른 번들이다 — 여기서 소스맵을 안
+      # 올리면 이 업데이트에서 난 에러의 스택이 압축된 채로 남아 못 읽는다
+      # (#801). org/project는 app.json의 Sentry 플러그인 설정에서 읽는다.
+      - name: Sentry 소스맵 업로드 (OTA)
+        if: env.SENTRY_AUTH_TOKEN != ''
+        continue-on-error: true
+        run: npx @sentry/expo-upload-sourcemaps dist
+
+      # 발행은 항상 성공한다 — 문제는 "그 업데이트를 받을 설치본이 있는가"다.
+      # 런타임 지문이 스토어에 나가 있는 production 빌드와 다르면 업데이트는
+      # 아무도 듣지 않는 레인에 쌓이고 워크플로는 초록색으로 끝난다. 그 침묵을
+      # 깨는 게 이 스텝의 전부다 — 배포를 막지는 않는다(실패시키지 않음).
+      - name: OTA 도달 여부 점검 (지문 대조)
+        continue-on-error: true
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          for platform in ios android; do
+            current=$(npx expo-updates fingerprint:generate --platform "$platform" | node -e \
+              'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).hash)}catch{console.log(s.trim())}})')
+            shipped=$(eas build:list --platform "$platform" --build-profile production --limit 1 \
+              --status finished --json --non-interactive | node -e \
+              'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const b=JSON.parse(s)[0];console.log(b?b.runtimeVersion:"")})')
+            if [ -z "$shipped" ]; then
+              echo "::notice::$platform — 스토어(production 프로필) 빌드가 아직 없습니다. 이 OTA를 받을 설치본이 없습니다."
+              echo "- **$platform**: production 빌드 없음 — 이 OTA를 받을 설치본이 없습니다." >> "$GITHUB_STEP_SUMMARY"
+            elif [ "$current" != "$shipped" ]; then
+              echo "::warning::$platform — 런타임 지문이 스토어 빌드와 다릅니다 (이번 $current ≠ 스토어 $shipped). 이 OTA는 기존 설치본에 도달하지 않습니다 — store-build 워크플로로 새 빌드를 내야 합니다."
+              echo "- ⚠️ **$platform**: 지문 불일치 (\`$current\` ≠ 스토어 \`$shipped\`) — **OTA 도달 안 함**. store-build 필요." >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "- ✅ **$platform**: 지문 일치 (\`$current\`) — 기존 설치본이 이 OTA를 받습니다." >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done

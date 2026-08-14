@@ -1,5 +1,4 @@
 import * as gaMock from '@react-native-firebase/analytics';
-import * as crashMock from '@react-native-firebase/crashlytics';
 
 import {
   identifyUser,
@@ -8,6 +7,7 @@ import {
   screenView,
   track,
 } from '@/lib/analytics';
+import { reportAppOpen } from '@/lib/app-open';
 
 describe('analytics', () => {
   it('초기화가 불가능한 환경에서도 전 함수가 조용히 무동작한다 (#437)', () => {
@@ -38,29 +38,60 @@ describe('analytics', () => {
 
     identifyUser(4);
     expect(gaMock.setUserId).toHaveBeenCalledWith(expect.anything(), '4');
-    expect(crashMock.setUserId).toHaveBeenCalledWith(expect.anything(), '4');
 
     resetAnalyticsUser();
     expect(gaMock.setUserId).toHaveBeenCalledWith(expect.anything(), null);
   });
 
-  it('처리되지 않은 JS 에러가 Crashlytics recordError로 남는다 (#438)', () => {
+  it('퍼널 이벤트가 GA4로 나간다 — 도구는 GA4 하나 (#799)', () => {
     initAnalytics();
-    const errorUtils = (
-      globalThis as unknown as {
-        ErrorUtils: { getGlobalHandler: () => (e: unknown, fatal?: boolean) => void };
-      }
-    ).ErrorUtils;
-    const handler = errorUtils.getGlobalHandler();
-    try {
-      handler(new Error('boom'), false);
-    } catch {
-      // RN 기본 핸들러가 rethrow해도 무방 — 기록 여부만 검증한다.
+    // 설치 → 로그인 → 온보딩 → 루틴 등록 → 완료 → 뽑기 → 방 저장.
+    track('login_success', { provider: 'kakao' });
+    track('onboarding_complete', { character: 'cat', goals: 2, nickname: 'set' });
+    track('routine_create', { kind: 'routine' });
+    track('room_save', { items: 5 });
+    for (const name of ['login_success', 'onboarding_complete', 'routine_create', 'room_save']) {
+      expect(gaMock.logEvent).toHaveBeenCalledWith(expect.anything(), name, expect.anything());
     }
-    expect(crashMock.recordError).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.any(Error),
-      'JsError',
-    );
+  });
+
+  it('재방문 계기를 셋으로 가른다 — 실행당 1회 (#803)', () => {
+    initAnalytics();
+    // 푸시로 열렸는데 뒤이어 콜드스타트 판정이 또 찍히면 계기가 두 번 센다.
+    reportAppOpen('push');
+    reportAppOpen('direct');
+    const opens = (gaMock.logEvent as jest.Mock).mock.calls.filter((c) => c[1] === 'app_open');
+    expect(opens).toHaveLength(1);
+    expect(opens[0][2]).toEqual({ source: 'push' });
+  });
+
+  it('소셜·확산 이벤트가 GA4로 나간다 (#803)', () => {
+    initAnalytics();
+    // 집에 들어간 사람이 더 오래 남는지 보려면 진입 경로가 갈려 있어야 한다.
+    for (const [name, props] of [
+      ['house_preview', undefined],
+      ['house_join_request', { via: 'browse' }],
+      ['house_joined', { via: 'code' }],
+      ['house_create', undefined],
+      ['invite_code_copy', { kind: 'friend', how: 'share' }],
+      ['invite_redeem', undefined],
+    ] as const) {
+      track(name, props as never);
+      expect(gaMock.logEvent).toHaveBeenCalledWith(expect.anything(), name, props);
+    }
+  });
+
+  it('이탈 원인 이벤트도 같은 창구로 나간다 (#799)', () => {
+    initAnalytics();
+    // 에러로 터지지 않고 조용히 포기하는 순간 — Sentry가 아니라 여기서만 보인다.
+    const failures: [string, Record<string, string | number>][] = [
+      ['login_failed', { provider: 'apple' }],
+      ['purchase_blocked', { currency: 'coin', count: 6 }],
+      ['api_error', { endpoint: 'GET /houses/{id}/members/{id}/room', status: 500 }],
+    ];
+    for (const [name, props] of failures) {
+      track(name as Parameters<typeof track>[0], props);
+      expect(gaMock.logEvent).toHaveBeenCalledWith(expect.anything(), name, props);
+    }
   });
 });

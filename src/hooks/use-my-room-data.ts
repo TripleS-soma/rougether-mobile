@@ -64,6 +64,7 @@ import type { CalendarDayItem } from '@/components/screens/my-room-screen';
 import type { HouseMissionContributeResponse } from '@/api/types';
 import { todayIso } from '@/utils/datetime';
 import { identifyUser, track } from '@/lib/analytics';
+import { setErrorUser } from '@/lib/error-reporting';
 
 /** 완료 토글 결과 — 코인 보상액과 서버 자동 미션 기여 결과 (#578). */
 export type CompletionToggleResult = {
@@ -144,7 +145,11 @@ export function useMyRoomData() {
     setStreak(today.streak?.currentCount ?? 0);
     if (me.nickname) setNickname(me.nickname);
     if (me.bio != null) setBio(me.bio);
-    if (me.userId != null) identifyUser(me.userId);
+    if (me.userId != null) {
+      identifyUser(me.userId);
+      // 에러도 같은 사용자로 묶는다 (#801) — 가명 식별자(서버 회원 id)만.
+      setErrorUser(me.userId);
+    }
   }, []);
 
   // Initial load + retry share the same load cycle (spinner → data | error).
@@ -280,6 +285,7 @@ export function useMyRoomData() {
       try {
         const created = await createTodo(toTodoCreate(category, title, dueDate));
         setRoutines((prev) => [...prev, toAppTodo(created)]);
+        track('routine_create', { kind: 'todo' });
         // 달력의 서버 백업 날짜(오늘 외)에 추가한 경우 그 날짜 기록을 재조회해
         // 목록에 즉시 반영한다 (#323).
         if (dueDate !== todayIso()) void loadCalendarDay(dueDate);
@@ -296,6 +302,9 @@ export function useMyRoomData() {
       try {
         const created = await createRoutine(toRoutineCreate(n));
         setRoutines((prev) => [...prev, toAppRoutine(created)]);
+        // 퍼널 (#799) — 온보딩 미션은 스킵할 수 있어 미션 이벤트만으로는
+        // 등록한 사람을 다 세지 못한다. 생성 자체를 여기서 센다.
+        track('routine_create', { kind: 'routine' });
         return true;
       } catch {
         toast('루틴을 만들지 못했어요', 'error');

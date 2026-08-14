@@ -16,7 +16,8 @@ import { getGoogleIdToken, signOutGoogle } from '@/lib/google-auth';
 import { getKakaoAccessToken, signOutKakao } from '@/lib/kakao-auth';
 import { saveLastLoginProvider } from '@/lib/last-login';
 import { clearPushToken, syncPushToken } from '@/lib/push-token';
-import { resetAnalyticsUser } from '@/lib/analytics';
+import { resetAnalyticsUser, track } from '@/lib/analytics';
+import { clearErrorUser } from '@/lib/error-reporting';
 
 type AuthStatus = 'loading' | 'authed' | 'guest';
 
@@ -91,9 +92,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setStatus('authed');
           // 최근 로그인 배지(#489 후속) — 다음 로그인 화면이 이 버튼을 표시.
           saveLastLoginProvider('google');
+          // 퍼널 첫 칸 (#799). 취소('cancelled')는 사용자가 스스로 물러난
+          // 것이라 실패로 세지 않는다 — 실패율이 부풀면 신호가 죽는다.
+          track('login_success', { provider: 'google' });
           void syncPushToken();
           return 'ok';
         } catch {
+          track('login_failed', { provider: 'google' });
           return 'failed';
         }
       },
@@ -104,9 +109,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await kakaoLogin(accessToken);
           setStatus('authed');
           saveLastLoginProvider('kakao');
+          // 퍼널 첫 칸 (#799). 취소('cancelled')는 사용자가 스스로 물러난
+          // 것이라 실패로 세지 않는다 — 실패율이 부풀면 신호가 죽는다.
+          track('login_success', { provider: 'kakao' });
           void syncPushToken();
           return 'ok';
         } catch {
+          track('login_failed', { provider: 'kakao' });
           return 'failed';
         }
       },
@@ -117,14 +126,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await appleLogin(credential.identityToken, credential.authorizationCode);
           setStatus('authed');
           saveLastLoginProvider('apple');
+          // 퍼널 첫 칸 (#799). 취소('cancelled')는 사용자가 스스로 물러난
+          // 것이라 실패로 세지 않는다 — 실패율이 부풀면 신호가 죽는다.
+          track('login_success', { provider: 'apple' });
           void syncPushToken();
           return 'ok';
         } catch {
+          track('login_failed', { provider: 'apple' });
           return 'failed';
         }
       },
       logout: async () => {
         resetAnalyticsUser();
+        clearErrorUser();
         // 이 기기로 오는 푸시를 먼저 끊고 세션을 정리한다 (#250).
         await clearPushToken();
         // 소셜 세션도 정리 — 다음 로그인 때 계정 선택이 다시 뜨게 (best-effort).
@@ -142,6 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return false;
         }
         resetAnalyticsUser();
+        clearErrorUser();
         // 서버 기기 토큰은 이미 삭제됨 — 로컬 토큰 상태만 정리(베스트 에포트).
         await clearPushToken().catch(() => {});
         // 기기 소셜 세션 정리 — 재로그인(=신규 가입) 때 계정 선택이 다시 뜨게.
