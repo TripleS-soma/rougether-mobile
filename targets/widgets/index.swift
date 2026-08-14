@@ -196,10 +196,17 @@ struct TodayWidgetView: View {
   }
 }
 
+/// 위젯 탭으로 앱이 열렸음을 앱에 알리는 딥링크 (#805).
+/// 앱은 이 URL을 보고 재방문 계기를 `widget`으로 기록한다 — 없으면 아이콘으로
+/// 직접 연 것과 구분되지 않아 위젯이 재방문을 만드는지 알 수 없다.
+/// 값은 JS의 `WIDGET_OPEN_URL`(src/lib/app-open.ts)과 같아야 한다.
+private let widgetOpenURL = URL(string: "rougether://widget")!
+
 struct TodayWidget: Widget {
   var body: some WidgetConfiguration {
     StaticConfiguration(kind: "RougetherToday", provider: SummaryProvider()) { entry in
       TodayWidgetView(entry: entry)
+        .widgetURL(widgetOpenURL)
     }
     .configurationDisplayName("오늘의 할 일")
     .description("오늘 진행도와 남은 루틴을 보여줘요.")
@@ -263,6 +270,7 @@ struct RoomWidget: Widget {
   var body: some WidgetConfiguration {
     StaticConfiguration(kind: "RougetherRoom", provider: SummaryProvider()) { entry in
       RoomWidgetView(entry: entry)
+        .widgetURL(widgetOpenURL)
     }
     .configurationDisplayName("내 방")
     .description("루틴으로 키운 내 방을 홈 화면에서 봐요.")
