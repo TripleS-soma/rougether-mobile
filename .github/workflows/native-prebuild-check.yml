@@ -13,6 +13,11 @@ jobs:
     if: contains(github.event.pull_request.labels.*.name, 'native-build')
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      # 이 워크플로는 매니페스트 병합만 검증한다 — 산출물을 쓰지 않으므로
+      # Sentry 소스맵 업로드는 끈다. 켜두면 토큰이 없어 빌드가 통째로 실패한다
+      # (#801에서 실제로 실패했다: "Auth token is required for this request").
+      SENTRY_DISABLE_AUTO_UPLOAD: 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

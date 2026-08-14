@@ -64,6 +64,7 @@ import type { CalendarDayItem } from '@/components/screens/my-room-screen';
 import type { HouseMissionContributeResponse } from '@/api/types';
 import { todayIso } from '@/utils/datetime';
 import { identifyUser, track } from '@/lib/analytics';
+import { setErrorUser } from '@/lib/error-reporting';
 
 /** 완료 토글 결과 — 코인 보상액과 서버 자동 미션 기여 결과 (#578). */
 export type CompletionToggleResult = {
@@ -144,7 +145,11 @@ export function useMyRoomData() {
     setStreak(today.streak?.currentCount ?? 0);
     if (me.nickname) setNickname(me.nickname);
     if (me.bio != null) setBio(me.bio);
-    if (me.userId != null) identifyUser(me.userId);
+    if (me.userId != null) {
+      identifyUser(me.userId);
+      // 에러도 같은 사용자로 묶는다 (#801) — 가명 식별자(서버 회원 id)만.
+      setErrorUser(me.userId);
+    }
   }, []);
 
   // Initial load + retry share the same load cycle (spinner → data | error).

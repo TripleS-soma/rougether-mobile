@@ -14,6 +14,7 @@ import { BrandThemeProvider, useResolvedScheme } from '@/hooks/use-tokens';
 import { useWebFonts } from '@/hooks/use-web-fonts';
 import { initAnalytics } from '@/lib/analytics';
 import { initAppOpenTracking } from '@/lib/app-open';
+import { initErrorReporting } from '@/lib/error-reporting';
 import { initPushDisplay } from '@/lib/push-events';
 
 // 포그라운드 푸시 표시 + Android 채널 (#405) — 앱 시작 시 1회, 웹은 no-op.
@@ -22,6 +23,8 @@ initAnalytics();
 // 재방문 계기 (#803) — 콜드 스타트 판정 + 포그라운드 복귀·딥링크 감시.
 // 푸시 탭은 알림 핸들러가 먼저 보고한다. 한 포그라운드당 1건.
 initAppOpenTracking();
+// 에러 리포팅 (#801) — 분석과 별개 창구. 초기화가 실패해도 무동작으로 끝난다.
+initErrorReporting();
 
 // 스플래시 자동 숨김 중단 (#569) — JS 첫 프레임에 즉시 사라져 아트가 깜빡이던
 // 문제. AnimatedSplashOverlay가 최소 노출 뒤 hideAsync로 걷는다. 웹은 no-op.
