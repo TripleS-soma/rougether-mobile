@@ -593,10 +593,7 @@ export const galleryEntries: GalleryEntry[] = [
     description: '설정/가입 → 약관·처리방침 인앱 웹뷰 (#652). 웹은 iframe 변형.',
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
-        <PolicyViewerScreen
-          title="이용약관"
-          url="https://triples-soma.github.io/policy/terms.html"
-        />
+        <PolicyViewerScreen title="이용약관" url="https://rougether.com/terms.html" />
       </View>
     ),
   },
