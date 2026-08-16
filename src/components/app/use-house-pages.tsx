@@ -70,6 +70,7 @@ export function useHousePages({
   selectedCharacterId,
   wornCharacterId,
   onPagerLockChange,
+  roomPreviewStore,
 }: {
   /** 셸 내비 상태 — screen 상태는 셸 소유(useState setter 계약, #692). */
   nav: { screen: Screen; setScreen: Dispatch<SetStateAction<Screen>> };
@@ -141,6 +142,12 @@ export function useHousePages({
   wornCharacterId: CharacterId;
   /** 집 확대·자리 드래그 중 탭 페이저 잠금 — 페이저와 결합된 셸 잔류 콜백. */
   onPagerLockChange: (locked: boolean) => void;
+  /**
+   * 멤버 방 프리뷰 저장소 — 셸이 소유한다 (#831). 친구 방에서 거미줄을
+   * 치우면 좌석 타일의 거미줄도 걷어야 하는데, 여기서 훅을 호출하면
+   * 그보다 먼저 서는 use-friend-visit이 같은 인스턴스에 닿지 못한다.
+   */
+  roomPreviewStore: ReturnType<typeof useMemberRoomPreviews>;
 }) {
   const { screen, setScreen } = nav;
   const {
@@ -240,7 +247,7 @@ export function useHousePages({
   // 레이스(#624 후속)의 수정. 화면 감시 클리어는 두지 않는다.
 
   // Mini room previews for the current house's member tiles (#268).
-  const { previews: memberRoomPreviews, load: loadRoomPreviews } = useMemberRoomPreviews();
+  const { previews: memberRoomPreviews, load: loadRoomPreviews } = roomPreviewStore;
   // 캐릭터 교체가 집 화면 내 타일에 즉시 반영되도록(#282), 캐시된 프리뷰 위에
   // 내 좌석의 캐릭터만 착용 캐릭터로 파생한다 (서버 재조회 없음).
   const roomPreviews = useMemo(

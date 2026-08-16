@@ -25,6 +25,7 @@ import type {
   HouseUpdateResponse,
   MemberSummary,
   MissionSummary,
+  RoomCobwebCleanResponse,
   MyHouseListResponse,
   MyHouseSummary,
   MyJoinRequestSummary,
@@ -151,6 +152,17 @@ export function kickHouseMember(houseId: number, membershipId: number) {
 /** GET /houses/{id}/members/{membershipId}/room — a housemate's room (same shape as /rooms/me). */
 export function fetchHouseMemberRoom(houseId: number, membershipId: number) {
   return apiGet<RoomWithLayout>(`/houses/${houseId}/members/${membershipId}/room`);
+}
+
+/**
+ * POST /houses/{id}/members/{membershipId}/room/cobweb/clean — 같은 집 구성원의
+ * 방에 낀 거미줄을 대신 치워주고 **청소자가** 코인 보상을 받는다 (#831, 서버 #277).
+ * 방 주인에게는 `ROOM_COBWEB_CLEANED` 알림이 간다(자기 방 청소는 알림 없음).
+ */
+export function cleanHouseMemberCobweb(houseId: number, membershipId: number) {
+  return apiPost<RoomCobwebCleanResponse>(
+    `/houses/${houseId}/members/${membershipId}/room/cobweb/clean`,
+  );
 }
 
 /** GET /houses/{id}/members/{membershipId}/day — that member's routines+todos on a date (default today, KST). */

@@ -178,3 +178,60 @@ describe('useFriendRoom', () => {
     });
   });
 });
+
+describe('useFriendRoom — 구성원 방 거미줄 청소 (#831)', () => {
+  const setUp = (clean: { ok: boolean; status: number; body: unknown }) => {
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/cobweb/clean')) {
+        return { ok: clean.ok, status: clean.status, text: async () => JSON.stringify(clean.body) };
+      }
+      if (url.includes('/room'))
+        return res({ slots: [], cobweb: { assetKey: 'items/cobweb.png', cleanable: true } });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+  };
+
+  const loaded = async () => {
+    const { result } = await renderHook(() => useFriendRoom());
+    await act(async () => {
+      await result.current.load(1, 2, CATALOGUE);
+    });
+    await waitFor(() => expect(result.current.friendRoom.cobweb).not.toBeNull());
+    return result;
+  };
+
+  it('청소 성공 → 받은 코인 수를 돌려주고 거미줄을 걷는다', async () => {
+    setUp({ ok: true, status: 200, body: { rewardCurrencyType: 'COIN', rewardAmount: 3 } });
+    const result = await loaded();
+
+    let reward: number | null = null;
+    await act(async () => {
+      reward = await result.current.cleanCobweb(1, 2);
+    });
+
+    expect(reward).toBe(3);
+    expect(result.current.friendRoom.cobweb).toBeNull();
+  });
+
+  /** 보상은 최초 1인에게만 — null이어야 화면이 코인 연출을 안 쏜다 (#830과 같은 계약). */
+  it('409(이미 청소됨) → null, 거미줄만 걷는다', async () => {
+    setUp({ ok: false, status: 409, body: { code: 'ROOM_COBWEB_NOT_ACTIVE' } });
+    const result = await loaded();
+
+    let reward: number | null = 999;
+    await act(async () => {
+      reward = await result.current.cleanCobweb(1, 2);
+    });
+
+    expect(reward).toBeNull();
+    expect(result.current.friendRoom.cobweb).toBeNull();
+  });
+
+  it('그 밖의 실패는 throw — 호출부가 실패 문구를 띄운다', async () => {
+    setUp({ ok: false, status: 500, body: {} });
+    const result = await loaded();
+
+    await expect(result.current.cleanCobweb(1, 2)).rejects.toBeTruthy();
+    expect(result.current.friendRoom.cobweb).not.toBeNull();
+  });
+});

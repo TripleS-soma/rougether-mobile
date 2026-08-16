@@ -37,6 +37,8 @@ const TYPE_ICONS: Record<string, IconName> = {
   // 입주 신청 결과 (#595, 서버 #241) — 수락은 집, 거절도 같은 맥락의 집 알림.
   HOUSE_JOIN_REQUEST_ACCEPTED: 'house',
   HOUSE_JOIN_REQUEST_REJECTED: 'house',
+  // 남이 내 방 거미줄을 치워줬을 때 (#831, 서버 #277) — 방으로 돌아오라는 신호.
+  ROOM_COBWEB_CLEANED: 'house',
 };
 
 export type NotificationListScreenProps = {
