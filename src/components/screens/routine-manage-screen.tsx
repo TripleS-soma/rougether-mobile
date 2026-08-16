@@ -1,4 +1,4 @@
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import {
   ROUTINE_CATEGORIES,
@@ -6,6 +6,7 @@ import {
   type RoutineCategoryMeta,
   UNCATEGORIZED_META,
 } from '@/constants/routines';
+import { Loading } from '@/components/ui/loading';
 import { Icon } from '@/components/ui/icon';
 import { CategoryIcon } from '@/components/ui/category-icon';
 import { RetryState } from '@/components/ui/retry-state';
@@ -83,7 +84,7 @@ export function RoutineManageScreen({
       <ScrollView contentContainerStyle={styles.body}>
         {loading ? (
           <View style={styles.empty}>
-            <ActivityIndicator color={t.primary} />
+            <Loading />
             <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
               불러오는 중…
             </Text>

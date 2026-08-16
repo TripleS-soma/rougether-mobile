@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
-  ActivityIndicator,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -20,6 +19,7 @@ import { CharacterAvatar } from '@/components/room/character-avatar';
 import { Room, type RoomSceneProps } from '@/components/room/room';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { type Routine, type RoutineCategoryMeta, UNCATEGORIZED_META } from '@/constants/routines';
+import { Loading } from '@/components/ui/loading';
 import { BearCheck } from '@/components/ui/bear-check';
 import { CategoryIcon } from '@/components/ui/category-icon';
 import { Icon } from '@/components/ui/icon';
@@ -390,7 +390,7 @@ export function FriendRoomScreen({
 
             {loading ? (
               <View style={styles.listState}>
-                <ActivityIndicator color={t.primary} />
+                <Loading />
               </View>
             ) : routineList.length === 0 ? (
               <Text style={[Typography.supporting, styles.listState, { color: t.textMuted }]}>
@@ -556,7 +556,7 @@ export function FriendRoomScreen({
 
             {guestbookLoading && notes.length === 0 ? (
               <View style={styles.gbState}>
-                <ActivityIndicator color={t.primary} />
+                <Loading />
               </View>
             ) : notes.length === 0 ? (
               <Text style={[Typography.supporting, styles.gbState, { color: t.textMuted }]}>

@@ -1,6 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Animated,
   Dimensions,
   type GestureResponderEvent,
@@ -49,6 +48,7 @@ import { RenameDialog } from '@/components/screens/sheets/rename-dialog';
 import { RoutineMenuSheet } from '@/components/screens/sheets/routine-menu-sheet';
 import { TimePickerSheet } from '@/components/screens/sheets/time-picker-sheet';
 import { TodoDateDialog } from '@/components/screens/sheets/todo-date-dialog';
+import { Loading } from '@/components/ui/loading';
 import { Calendar } from '@/components/ui/calendar';
 import { CoachTarget } from '@/components/ui/coach-mark';
 import { CategoryIcon } from '@/components/ui/category-icon';
@@ -1212,7 +1212,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
 
                 {loading ? (
                   <View style={styles.stateBlock}>
-                    <ActivityIndicator color={t.primary} />
+                    <Loading />
                     <Text style={[Typography.supporting, { color: t.textMuted }]}>
                       불러오는 중…
                     </Text>
@@ -1286,7 +1286,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               ) : null}
               {loading || (serverBackedDay && !dayItems) ? (
                 <View style={styles.stateBlock}>
-                  <ActivityIndicator color={t.primary} />
+                  <Loading />
                 </View>
               ) : serverBackedDay ? (
                 calServerGroups!.length === 0 ? (

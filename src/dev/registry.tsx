@@ -47,6 +47,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { CoachMarkOverlay } from '@/components/ui/coach-mark';
 import { Card } from '@/components/ui/card';
 import { IconButton } from '@/components/ui/icon-button';
+import { Loading } from '@/components/ui/loading';
 import { Pill } from '@/components/ui/pill';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { CurrencyGuide } from '@/components/ui/currency-guide';
@@ -635,6 +636,18 @@ export const galleryEntries: GalleryEntry[] = [
           onReorder={(ids) => console.log('reorder', ids)}
         />
         <Text>↑ 꾹 눌러 좌우로 끌어보세요 (대기 페이지 도트 1개 포함)</Text>
+      </View>
+    ),
+  },
+  {
+    name: 'Loading · 공용 로딩 표시',
+    description:
+      '지연 표시(기본 250ms) — 빨리 끝나는 로딩은 아무것도 안 보인다 (#849). 아래는 지연을 꺼서 바로 보이게 한 것.',
+    render: () => (
+      <View style={{ alignSelf: 'stretch', alignItems: 'center', gap: 16 }}>
+        <Loading delayMs={0} />
+        <Loading delayMs={0} size="large" />
+        <Text>↑ 기본(small) · large. 실제 화면에서는 250ms 안에 끝나면 안 보인다.</Text>
       </View>
     ),
   },

@@ -1,15 +1,8 @@
 import * as Clipboard from 'expo-clipboard';
 import { useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  ScrollView,
-  Share,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { Loading } from '@/components/ui/loading';
 import { Icon } from '@/components/ui/icon';
 import { RetryState } from '@/components/ui/retry-state';
 import { ScalePressable } from '@/components/ui/scale-pressable';
@@ -138,7 +131,7 @@ export function InviteFriendsScreen({
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         {loading ? (
           <View style={styles.loadingBlock}>
-            <ActivityIndicator color={t.primary} />
+            <Loading />
           </View>
         ) : loadError ? (
           <View style={styles.loadingBlock}>

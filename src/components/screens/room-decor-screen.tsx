@@ -1,15 +1,6 @@
 import { Image } from 'expo-image';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  BackHandler,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { BackHandler, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import Animated, {
   useAnimatedStyle,
@@ -29,6 +20,7 @@ import {
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { Room, type RoomCatalogProps, type RoomRegion } from '@/components/room/room';
 import { ROOM_RENDER_CONTRACT, roomPercent } from '@/components/room/room-render-contract';
+import { Loading } from '@/components/ui/loading';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { RetryState } from '@/components/ui/retry-state';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
@@ -689,7 +681,7 @@ export function RoomDecorScreen({
 
         {loading ? (
           <View style={styles.loadingBlock}>
-            <ActivityIndicator color={t.primary} />
+            <Loading />
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
               카탈로그 불러오는 중…
             </Text>
