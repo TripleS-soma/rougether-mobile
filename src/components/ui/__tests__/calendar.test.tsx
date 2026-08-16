@@ -10,6 +10,33 @@ describe('Calendar', () => {
    * 한다. 접근성 라벨로 단언하는 이유는 점이 색만 있는 View라 텍스트로
    * 잡히지 않기 때문이다.
    */
+  /**
+   * 맥에서 요일 '토'가 다음 줄로 밀리던 버그 (#845) — 요일 7칸과 날짜 42칸이
+   * 한 flexWrap 컨테이너에 있고 칸 폭이 `100/7`%(무한소수)라, 물리 픽셀
+   * 반올림 합이 컨테이너를 조금만 넘어도 7번째가 줄바꿈됐다.
+   *
+   * 줄바꿈 자체는 jest에서 못 재므로 **되돌아올 수 없는 구조**를 단언한다:
+   * 주 단위로 줄이 나뉘고(7칸씩), 칸은 퍼센트가 아니라 flex를 쓴다.
+   */
+  it('요일·날짜가 주 단위 줄로 나뉘고 칸 폭에 퍼센트를 쓰지 않는다 (#845)', async () => {
+    const { getByLabelText, getByTestId } = await render(
+      <Calendar value="2026-08-16" today="2026-08-16" onSelect={() => {}} />,
+    );
+
+    const flatten = (style: unknown): Record<string, unknown> =>
+      Object.assign({}, ...[style].flat(Infinity).filter(Boolean));
+
+    // 날짜 칸은 flex:1 — 퍼센트 폭이면 반올림 줄바꿈이 되돌아온다.
+    const cell = flatten(getByLabelText('2026-08-16').props.style);
+    expect(cell.flex).toBe(1);
+    expect(typeof cell.width).not.toBe('string');
+
+    // grid는 가로 wrap이 아니라 세로 스택이어야 한다.
+    const grid = flatten(getByTestId('calendar-grid').props.style);
+    expect(grid.flexWrap).toBeUndefined();
+    expect(grid.flexDirection).toBe('column');
+  });
+
   it('markedDates에 든 날짜만 할 일 있음으로 표시한다', async () => {
     const { getByLabelText, queryByLabelText } = await render(
       <Calendar
