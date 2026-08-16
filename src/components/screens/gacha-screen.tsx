@@ -1,15 +1,6 @@
 import { Image } from 'expo-image';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  ScrollView,
-  SectionList,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Modal, Pressable, ScrollView, SectionList, StyleSheet, Text, View } from 'react-native';
 
 import type { GachaMachine } from '@/api/adapters';
 import type { DrawResult, GachaDrawCount, GachaRewardResponse } from '@/api';
@@ -23,6 +14,7 @@ import {
   RevealCard,
   rarityColor,
 } from '@/components/screens/gacha/draw-animation';
+import { Loading } from '@/components/ui/loading';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Icon } from '@/components/ui/icon';
 import { RewardRow } from '@/components/screens/gacha/reward-row';
@@ -316,7 +308,7 @@ export function GachaScreen({
       <ScrollView contentContainerStyle={styles.body}>
         {loading ? (
           <View style={styles.loadingBlock}>
-            <ActivityIndicator color={t.primary} />
+            <Loading />
             <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
               뽑기 목록 불러오는 중…
             </Text>
@@ -522,7 +514,7 @@ export function GachaScreen({
         </Text>
         {rewardsLoading ? (
           <View style={styles.rewardsBlock}>
-            <ActivityIndicator color={t.primary} />
+            <Loading />
           </View>
         ) : rewards == null ? (
           <View style={styles.rewardsBlock}>

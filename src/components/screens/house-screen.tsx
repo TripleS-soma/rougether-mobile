@@ -1,7 +1,6 @@
 import { Image } from 'expo-image';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Animated,
   Easing,
   PanResponder,
@@ -15,6 +14,7 @@ import {
 import { type HouseCover } from '@/components/room/house-cover-picker';
 import { HouseOrderDots } from '@/components/room/house-order-dots';
 import { FRAME_ASPECT, houseCoverKey, WINDOW_RECTS } from '@/components/room/house-preview-frame';
+import { Loading } from '@/components/ui/loading';
 import { CoachTarget } from '@/components/ui/coach-mark';
 import { type MemberRoomPreview, type RoomCatalogProps } from '@/components/room/room';
 import {
@@ -817,7 +817,7 @@ export const HouseScreen = memo(function HouseScreen({
         <View style={styles.emptyWrap}>
           {loading ? (
             <>
-              <ActivityIndicator color={t.primary} />
+              <Loading />
               <Text style={[Typography.supporting, { color: t.textMuted }]}>불러오는 중…</Text>
             </>
           ) : loadError ? (

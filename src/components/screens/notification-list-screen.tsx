@@ -1,9 +1,10 @@
 import { type ReactNode, useRef } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import ReanimatedSwipeable, {
   type SwipeableMethods,
 } from 'react-native-gesture-handler/ReanimatedSwipeable';
 
+import { Loading } from '@/components/ui/loading';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { RetryState } from '@/components/ui/retry-state';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -150,7 +151,7 @@ export function NotificationListScreen({
         ListEmptyComponent={
           loading ? (
             <View style={styles.state}>
-              <ActivityIndicator color={t.primary} />
+              <Loading />
             </View>
           ) : loadError ? (
             // 로드 실패 (#549) — 빈 상태('알림 없음')로 위장하지 않는다.

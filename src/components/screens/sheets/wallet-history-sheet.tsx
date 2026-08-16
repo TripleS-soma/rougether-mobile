@@ -1,6 +1,7 @@
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { WalletHistoryEntry } from '@/api/adapters';
+import { Loading } from '@/components/ui/loading';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { CurrencyGuide } from '@/components/ui/currency-guide';
 import { Icon } from '@/components/ui/icon';
@@ -70,7 +71,7 @@ export function WalletHistorySheet({
         </View>
       ) : loading && entries.length === 0 ? (
         <View style={styles.stateBlock}>
-          <ActivityIndicator color={t.primary} />
+          <Loading />
         </View>
       ) : entries.length === 0 ? (
         <Text style={[Typography.body, styles.empty, { color: t.textMuted }]}>
@@ -122,7 +123,7 @@ export function WalletHistorySheet({
                 accessibilityLabel="재화 내역 더보기"
                 style={[styles.moreBtn, { backgroundColor: t.surfaceMuted }]}>
                 {loading ? (
-                  <ActivityIndicator color={t.primary} size="small" />
+                  <Loading size="small" />
                 ) : (
                   <Text style={[Typography.label, { color: t.text }]}>더보기</Text>
                 )}

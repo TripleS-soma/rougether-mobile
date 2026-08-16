@@ -1,19 +1,11 @@
 import { Image } from 'expo-image';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { HousePreviewFrame } from '@/components/room/house-preview-frame';
 import type { RoomCatalogProps } from '@/components/room/room';
 import type { HouseMission, MemberRoomPreview } from '@/components/screens/house-screen';
+import { Loading } from '@/components/ui/loading';
 import { Icon } from '@/components/ui/icon';
 import { RetryState } from '@/components/ui/retry-state';
 import { SpringProgressBar } from '@/components/ui/spring-progress';
@@ -394,7 +386,7 @@ export function HouseSearchScreen({
         }
         ListEmptyComponent={
           loading ? (
-            <ActivityIndicator color={t.primary} style={styles.loading} />
+            <Loading style={styles.loading} />
           ) : loadError ? (
             // 로드 실패 (#549) — 빈 검색 결과('검색 결과가 없어요')로 위장하지 않는다.
             <View style={styles.errorBlock}>
@@ -463,9 +455,7 @@ export function HouseSearchScreen({
                   </View>
                 </View>
                 {/* 미리보기 로딩 스피너 (#532). */}
-                {previewingHouseId === h.id ? (
-                  <ActivityIndicator color={t.primary} size="small" />
-                ) : null}
+                {previewingHouseId === h.id ? <Loading size="small" /> : null}
               </Pressable>
               <Pressable
                 onPress={() =>

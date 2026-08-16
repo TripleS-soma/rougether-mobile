@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
+import { Loading } from '@/components/ui/loading';
 import { RetryState } from '@/components/ui/retry-state';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { useScreenStyle } from '@/hooks/use-screen-style';
@@ -61,7 +62,7 @@ export function PolicyViewerScreen({ title, url, onBack }: PolicyViewerScreenPro
       )}
       {loading && !failed ? (
         <View style={styles.loading} pointerEvents="none">
-          <ActivityIndicator size="large" color={t.primary} />
+          <Loading size="large" />
         </View>
       ) : null}
     </View>
