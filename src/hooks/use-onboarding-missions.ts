@@ -8,7 +8,7 @@ import { track } from '@/lib/analytics';
 const STORE_KEY = 'rougether.onboarding-missions.v1';
 
 export type OnboardingMissionStepId =
-  'register-routine' | 'first-draw' | 'place-furniture' | 'browse-house';
+  'register-routine' | 'first-draw' | 'place-furniture' | 'invite-house';
 
 export type OnboardingMissionStep = {
   id: OnboardingMissionStepId;
@@ -30,7 +30,14 @@ export const ONBOARDING_MISSION_STEPS: OnboardingMissionStep[] = [
     label: '방 꾸미기 저장하기',
     hint: '방 꾸미기에서 가구를 놓고 저장해요',
   },
-  { id: 'browse-house', label: '다른 집 둘러보기', hint: '집 탐색에서 다른 집을 구경하고 나와요' },
+  // 4단계는 '다른 집 둘러보기'였다 (#571). 서버가 온보딩에서 기본 집을
+  // 자동 생성하면서(서버 #288) 전제가 바뀌었다 — 이제 내 집이 이미 있고,
+  // 혼자인 4인집을 채우는 게 다음 행동이다 (#841).
+  {
+    id: 'invite-house',
+    label: '집에 친구 초대하기',
+    hint: '집 구성원 목록에서 초대코드를 복사해 친구에게 보내요',
+  },
 ];
 
 /** '튜토리얼 다시 보기' 재시작용 — 플래그를 지우면 온보딩 완주 직후의

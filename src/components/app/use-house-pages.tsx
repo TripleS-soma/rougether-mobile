@@ -3,7 +3,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type Dispatch,
   type SetStateAction,
@@ -126,7 +125,7 @@ export function useHousePages({
   visitFriend: FriendVisit['visitFriend'];
   /** 집 화면 '내 방으로' — use-my-room-pages 반환값. */
   openMyRoom: () => void;
-  /** 온보딩 미션 완료 (#571) — 집 탐색(browse-house) 판정에 쓴다. */
+  /** 온보딩 미션 완료 (#571) — 셸이 넘겨 미션 체인을 진행시킨다. */
   completeMission: (id: OnboardingMissionStepId) => void;
   /** 상점 카탈로그 — 방 미리보기·집 미리보기의 assetKey 해석. */
   catalogue: ShopCatalogue;
@@ -223,14 +222,6 @@ export function useHousePages({
   // 중엔 판정하지 않아 집이 있는 유저가 탐색으로 튕기지 않는다.
   const noHouses = !housesLoading && !housesError && houses.length === 0;
 
-  // 집 탐색 미션(#571 후속)은 "둘러보고 나갈 때" 완료 — 미리보기 성공 시
-  // 표시만 해두고, 탐색 화면을 떠나는 순간(뒤로/가입) 완료 시트를 띄운다.
-  // 탐색 중에 시트가 화면을 덮지 않게 하기 위함.
-  const browsedHouseRef = useRef(false);
-  const onLeaveHouseSearch = useCallback(() => {
-    if (browsedHouseRef.current) completeMission('browse-house');
-  }, [completeMission]);
-
   // 초대 링크로 받은 코드 (#624) — 집 탐색을 열고 코드 미리보기를 자동 실행.
   const [pendingJoinCode, setPendingJoinCode] = useState<string | null>(null);
   useEffect(
@@ -270,10 +261,9 @@ export function useHousePages({
   // --- memo 화면(HouseScreen)으로 가는 콜백/파생 prop (#539) ---
   // 인라인 화살표·렌더마다 새로 만드는 객체는 memo 경계를 무효화한다. 매 렌더
   // 마운트되지 않는 서브화면 2종은 인라인을 유지한다.
-  const openHouseSearch = useCallback(() => {
-    browsedHouseRef.current = false;
-    setScreen('houseSearch');
-  }, [setScreen]);
+  const openHouseSearch = useCallback(() => setScreen('houseSearch'), [setScreen]);
+  // 온보딩 미션 '집에 친구 초대하기' (#841) — 코드를 복사·공유한 순간 완료.
+  const handleInviteShared = useCallback(() => completeMission('invite-house'), [completeMission]);
   // --- 구성원 관리 (#753) — HouseScreen 내부 뷰에서 셸 화면으로 승격 ---
   // 강퇴 낙관 반영: 서버 목록이 갱신되기 전에도 좌석 타일이 즉시 빈다.
   // 키는 `${houseIndex}-${name}` — 집을 오가도 다른 집 좌석에 새지 않는다.
@@ -419,6 +409,7 @@ export function useHousePages({
         isKicked={isKickedMember}
         memberCharacterId={(m) => characterIdForMember(m, roomPreviews, wornCharacterId)}
         onBack={closeMembers}
+        onInviteShared={handleInviteShared}
         onKickMember={handleKickMember}
         onAcceptJoinRequest={handleAcceptJoinRequest}
         onRejectJoinRequest={handleRejectJoinRequest}
@@ -437,43 +428,22 @@ export function useHousePages({
         loading={searchLoading}
         loadError={searchError}
         onRetry={retrySearch}
-        onBack={() => {
-          // 둘러보고 나가는 순간에 미션 4 완료 (#571 후속) — 탐색 중에
-          // 완료 시트가 화면을 덮지 않게 한다.
-          if (browsedHouseRef.current) completeMission('browse-house');
-          setScreen(noHouses ? 'myRoom' : 'house');
-        }}
+        onBack={() => setScreen(noHouses ? 'myRoom' : 'house')}
         onJoinByCode={async (code) => {
           const ok = await joinByCode(code);
-          if (ok === true) {
-            // 가입 성공 = 탐색의 성공적 종료 — 둘러보기 미션도 완료.
-            completeMission('browse-house');
-            setScreen('house');
-          }
+          if (ok === true) setScreen('house');
           return ok;
         }}
-        onPreviewCode={async (code) => {
-          const detail = await previewByCode(code);
-          // 'network'는 실패 신호 — 열람 성공만 둘러봤음으로 친다.
-          if (detail && detail !== 'network') browsedHouseRef.current = true;
-          return detail;
-        }}
+        onPreviewCode={(code) => previewByCode(code)}
         // 카탈로그를 얹어 미리보기 창문에 실제 방을 그린다 (#386).
-        onPreviewHouse={async (houseId) => {
-          const detail = await previewHouse(houseId, catalogue);
-          // 미리보기 열람 = 둘러봤음 표시 — 완료는 나갈 때 (#571 후속).
-          if (detail) browsedHouseRef.current = true;
-          return detail;
-        }}
+        onPreviewHouse={(houseId) => previewHouse(houseId, catalogue)}
         furniture={catalogue.furniture}
         wallpapers={catalogue.wallpapers}
         floors={catalogue.floors}
         backgrounds={catalogue.backgrounds}
         onJoinHouse={(houseId) => {
           void joinSearchHouse(houseId).then((ok) => {
-            if (!ok) return;
-            completeMission('browse-house');
-            setScreen('house');
+            if (ok) setScreen('house');
           });
         }}
         onCreate={() => setScreen('createHouse')}
@@ -494,6 +464,5 @@ export function useHousePages({
     /** 집 없는 유저 판정 (#571) — 셸의 내비(useAppNavigation)·BottomNav가 쓴다. */
     noHouses,
     /** 탐색을 뒤로 떠나는 순간의 미션 판정 — 셸이 useAppNavigation에 넘긴다. */
-    onLeaveHouseSearch,
   };
 }
