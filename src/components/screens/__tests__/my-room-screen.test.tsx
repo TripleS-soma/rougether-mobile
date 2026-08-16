@@ -1,6 +1,5 @@
-import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
-import { State } from 'react-native-gesture-handler';
-import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { ToastProvider } from '@/components/ui/toast';
@@ -78,52 +77,19 @@ describe('MyRoomScreen', () => {
     expect(onEditRoutine).toHaveBeenCalledWith(expect.objectContaining({ id: '1' }));
   });
 
-  // 방↔달력 스와이프 전환 (#561) — 콘텐츠 영역의 가로 우세 플링으로 탭 전환.
-  // RNGH pan을 jest-utils로 구동한다 (활성/실패 임계·플링 판정 자체는
-  // utils/gesture 단위 테스트가 검증).
-  it('콘텐츠 영역 가로 플링으로 방↔달력 탭이 전환된다 (#561)', async () => {
+  // 방↔달력 스와이프 제거 (#825) — 가로 스와이프는 하단 탭 이동 하나로
+  // 통일했다. 예전엔 방 캔버스·달력 위 플링이 서브탭을 순환시켜서(#561),
+  // 그 아래 루틴 리스트의 같은 손동작(셸 탭 페이저)과 뜻이 갈렸다.
+  it('방 캔버스 가로 플링이 더 이상 탭을 바꾸지 않는다 (#825)', async () => {
     const ui = await render(<MyRoomScreen routines={SAMPLE_ROUTINES} />);
-    const fling = (translationX: number) =>
-      act(async () =>
-        fireGestureHandler(getByGestureTestId('room-tab-fling'), [
-          { state: State.BEGAN },
-          { state: State.ACTIVE },
-          { state: State.END, translationX, translationY: 0 },
-        ]),
-      );
-
-    // 왼쪽 플링 → 달력 탭.
-    await fling(-60);
-    expect(ui.getByText('이 날의 루틴')).toBeTruthy();
-    // 오른쪽 플링 → 방 탭 복귀.
-    await fling(60);
+    // 제스처 자체가 사라졌다 — 있으면 아래 단언이 무의미해지므로 먼저 확인.
+    expect(() => getByGestureTestId('room-tab-fling')).toThrow();
+    // 탭 버튼은 그대로 동작한다.
     expect(ui.getByText('오늘의 할 일')).toBeTruthy();
-    // 임계 미달 릴리즈는 무시.
-    await fling(-30);
-    expect(ui.getByText('오늘의 할 일')).toBeTruthy();
-  });
-
-  // 방↔달력 스와이프 순환 — 방향과 무관하게 플링이 두 서브탭을 오간다.
-  // 달력에서 좌플링해도 (월 이동·집 이동이 아니라) 방으로 되돌아온다.
-  it('플링은 방향과 무관하게 방↔달력을 순환한다', async () => {
-    const ui = await render(<MyRoomScreen routines={SAMPLE_ROUTINES} />);
-    const fling = (translationX: number) =>
-      act(async () =>
-        fireGestureHandler(getByGestureTestId('room-tab-fling'), [
-          { state: State.BEGAN },
-          { state: State.ACTIVE },
-          { state: State.END, translationX, translationY: 0 },
-        ]),
-      );
-
-    // 방에서 좌플링 → 달력, 달력에서 한 번 더 좌플링 → 방(순환).
-    await fling(-60);
+    await fireEvent.press(ui.getByText('달력'));
     expect(ui.getByText('이 날의 루틴')).toBeTruthy();
-    await fling(-60);
+    await fireEvent.press(ui.getByText('방'));
     expect(ui.getByText('오늘의 할 일')).toBeTruthy();
-    // 방에서 우플링도 달력으로(순환) — 어느 방향이든 오간다.
-    await fling(60);
-    expect(ui.getByText('이 날의 루틴')).toBeTruthy();
   });
 
   // 루틴 행 스와이프 삭제 (#566) — 액션은 항상 렌더되고 스와이프로 드러난다.

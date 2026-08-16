@@ -15,7 +15,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { GestureDetector } from 'react-native-gesture-handler';
 
 import { NavMenuPopover } from '@/components/app/nav-menu-popover';
 import { FlyingCoin } from '@/components/screens/my-room/flying-coin';
@@ -79,7 +78,6 @@ import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-re
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
 import { formatDate, todayIso } from '@/utils/datetime';
-import { horizontalFlingGesture } from '@/utils/gesture';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
 
 // 스케줄 판정은 my-room/schedule로 이동 (#693) — 기존 임포트 경로 유지용 재수출.
@@ -458,23 +456,13 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // server /calendar list, where only past todos toggle — future dates can't
   // be completed, routines accept today-only logs server-side, and past
   // records keep their original (possibly deleted) category.
+  // 방↔달력은 상단 탭 버튼으로만 오간다 (#825). 예전엔 방 캔버스·달력
+  // 그리드 위 가로 플링이 두 서브탭을 순환시켰는데(#561), 그 아래 루틴
+  // 리스트에서는 같은 손동작이 셸 탭 페이저(나의 방↔집)를 움직여서 —
+  // 손가락 위치 몇십 px 차이로 결과가 갈렸다. 이제 이 화면의 가로
+  // 스와이프는 전부 셸 탭 페이저 몫이고, 달력도 monthSwipe=false를
+  // 유지해 가로 제스처를 만들지 않는다(월 이동은 ‹ › 버튼).
   const [tab, setTab] = useState<'room' | 'calendar'>('room');
-  // 방↔달력 스와이프 순환 (#561 → 순환) — 방 캔버스(방 탭)·달력 영역
-  // (달력 탭)의 가로 우세 플링만 두 서브탭을 오간다. '오늘의 루틴' 아래
-  // 리스트 영역은 디텍터 밖이라 셸 탭 페이저(나의 방↔집)가 받는다 (#563
-  // 후속). 달력 그리드는 monthSwipe=false라 월 이동 대신 여기로 흘러온다
-  // (월 이동은 ‹ › 버튼). 세로 스크롤은 failOffsetY(±36)로 넘겨주고, 행
-  // 스와이프(#560/#566)는 더 이른 활성 임계(±10)라 행 위 드래그를 먼저
-  // 가져간다. 제스처는 마운트 시 1회 생성(재생성은 활성 팬을 취소시킨다 —
-  // draggable-furniture 참고), 최신 tab은 핸들러 ref로 읽는다. 두 탭 분기가
-  // 상호배타라 같은 제스처 객체를 양쪽 디텍터에 써도 동시 부착은 없다.
-  // 최신 핸들러를 무의존 제스처에 넘긴다 (#539) — 렌더 중 ref 쓰기는
-  // useLatestRef가 흡수해 이 컴포넌트가 컴파일러 바일아웃을 피한다 (#748).
-  const flingHandlerRef = useLatestRef(() => setTab(tab === 'room' ? 'calendar' : 'room'));
-
-  const tabFling = useConstant(() =>
-    horizontalFlingGesture('room-tab-fling', () => flingHandlerRef.current()),
-  );
   const [selectedDate, setSelectedDate] = useState(() => todayIso());
   const dateRoutines = useMemo(
     () => routines.filter((r) => isScheduledOn(r, selectedDate)),
@@ -1129,57 +1117,50 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           keyboardShouldPersistTaps="handled">
           {tab === 'room' ? (
             <>
-              {/* 방↔달력 플링은 방 캔버스에서만 (#563 후속) — 아래 루틴
-                    리스트 영역의 가로 스와이프는 셸 탭 페이저(집 이동) 몫. */}
-              <GestureDetector gesture={tabFling}>
-                {/* collapsable={false}: 패딩만 있는 View는 안드로이드 뷰 평탄화
-                    대상이라, 사라지면 제스처가 붙을 대상이 없어진다. 달력 탭·
-                    친구 방의 같은 tabFling도 직계 자식에 이걸 둔다. */}
-                <View style={styles.roomWrap} collapsable={false}>
-                  {/*
+              <View style={styles.roomWrap}>
+                {/*
                     캡처 대상은 방 자체만 (#778) — 예전엔 ref가 패딩 있는
                     roomWrap에 붙어 있어 그 **투명 여백까지 찍혔고**, #744에서
                     캡처를 JPEG(알파 없음)로 바꾸면서 여백이 검정으로 눌러붙어
                     위젯에 검은 띠가 생겼다. 플로팅 버튼들은 roomWrap 기준
                     absolute라 바깥에 남겨도 위치가 그대로다.
                   */}
-                  <View ref={roomShotRef} collapsable={false}>
-                    <Room {...roomScene} interactiveCharacter />
-                  </View>
+                <View ref={roomShotRef} collapsable={false}>
+                  <Room {...roomScene} interactiveCharacter />
+                </View>
+                <Pressable
+                  onPress={onOpenGacha}
+                  accessibilityRole="button"
+                  accessibilityLabel="뽑기 상점"
+                  // 방 이미지 저장 중에는 숨겨 사진에서 제외한다 (#475).
+                  pointerEvents={capturing ? 'none' : 'auto'}
+                  style={[
+                    styles.gachaBtn,
+                    { backgroundColor: t.surface },
+                    capturing && styles.hidden,
+                  ]}>
+                  {/* absolute 버튼이라 래퍼 대신 내용을 측정 (#351). */}
+                  <CoachTarget id="room-gacha">
+                    <Icon name="gift" size={20} color={t.text} />
+                  </CoachTarget>
+                </Pressable>
+                {/* 방 꾸미기 1탭 승격 (#727) — 메뉴(2탭) 뒤에 있던 보상 루프의
+                      종착지를 뽑기 버튼 위에 나란히. 메뉴 항목은 습관 경로로 유지. */}
+                {onEdit ? (
                   <Pressable
-                    onPress={onOpenGacha}
+                    onPress={onEdit}
                     accessibilityRole="button"
-                    accessibilityLabel="뽑기 상점"
-                    // 방 이미지 저장 중에는 숨겨 사진에서 제외한다 (#475).
+                    accessibilityLabel="방 꾸미기"
                     pointerEvents={capturing ? 'none' : 'auto'}
                     style={[
-                      styles.gachaBtn,
+                      styles.decorBtn,
                       { backgroundColor: t.surface },
                       capturing && styles.hidden,
                     ]}>
-                    {/* absolute 버튼이라 래퍼 대신 내용을 측정 (#351). */}
-                    <CoachTarget id="room-gacha">
-                      <Icon name="gift" size={20} color={t.text} />
-                    </CoachTarget>
+                    <Icon name="edit" size={20} color={t.text} />
                   </Pressable>
-                  {/* 방 꾸미기 1탭 승격 (#727) — 메뉴(2탭) 뒤에 있던 보상 루프의
-                      종착지를 뽑기 버튼 위에 나란히. 메뉴 항목은 습관 경로로 유지. */}
-                  {onEdit ? (
-                    <Pressable
-                      onPress={onEdit}
-                      accessibilityRole="button"
-                      accessibilityLabel="방 꾸미기"
-                      pointerEvents={capturing ? 'none' : 'auto'}
-                      style={[
-                        styles.decorBtn,
-                        { backgroundColor: t.surface },
-                        capturing && styles.hidden,
-                      ]}>
-                      <Icon name="edit" size={20} color={t.text} />
-                    </Pressable>
-                  ) : null}
-                </View>
-              </GestureDetector>
+                ) : null}
+              </View>
 
               <View style={styles.section}>
                 <CoachTarget id="room-routines">
@@ -1246,16 +1227,10 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             </>
           ) : (
             <View style={styles.calendarPanel}>
-              <GestureDetector gesture={tabFling}>
-                <View collapsable={false}>
-                  <Calendar
-                    value={selectedDate}
-                    onSelect={pickDate}
-                    today={today}
-                    monthSwipe={false}
-                  />
-                </View>
-              </GestureDetector>
+              {/* monthSwipe=false 유지 (#825) — 달력 위 가로 스와이프가 월
+                  이동이라는 또 다른 뜻을 갖게 되면 "가로 스와이프 = 하단 탭
+                  이동" 규칙이 다시 깨진다. 월 이동은 ‹ › 버튼. */}
+              <Calendar value={selectedDate} onSelect={pickDate} today={today} monthSwipe={false} />
               <View style={styles.calListHead}>
                 <Text style={[Typography.h3, styles.calListTitle, { color: t.text }]}>
                   이 날의 루틴
