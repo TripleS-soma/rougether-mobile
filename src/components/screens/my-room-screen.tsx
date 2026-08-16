@@ -37,6 +37,7 @@ import { QuickAddRow } from '@/components/screens/my-room/quick-add-row';
 import { RoutineRow } from '@/components/screens/my-room/routine-row';
 import { WalletHistorySheet } from '@/components/screens/sheets/wallet-history-sheet';
 import { useWidgetRoomCapture } from '@/components/screens/my-room/use-widget-room-capture';
+import { WeeklyReportCard } from '@/components/screens/my-room/weekly-report-card';
 import { Room, type RoomSceneProps } from '@/components/room/room';
 import {
   CharacterPickerSheet,
@@ -110,6 +111,19 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
     markedTodoDates?: ReadonlySet<string>;
     /** 달력에서 보이는 달이 바뀔 때 (#838) — 부모가 그 달 개수를 받아온다. */
     onCalendarMonthChange?: (yearMonth: string) => void;
+    /**
+     * 지난주 회고 요약 (#852) — 달력 탭 상단 카드. 회고가 아직 없으면
+     * undefined로 두면 카드 자체가 그려지지 않는다.
+     */
+    weeklyReport?: {
+      weekStartDate?: string;
+      weekEndDate?: string;
+      completionRate?: number;
+      completedCount?: number;
+      scheduledCount?: number;
+    };
+    /** 주간 회고 카드를 눌렀을 때 — 셸이 상세 화면을 연다. */
+    onOpenWeeklyReport?: () => void;
 
     /** Room occupant's display name (header title becomes "{userName}의 방"). */
     userName?: string;
@@ -259,6 +273,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   onCleanCobweb,
   markedTodoDates,
   onCalendarMonthChange,
+  weeklyReport,
+  onOpenWeeklyReport,
   placedFurnitureIds,
   placements = null,
   furniture,
@@ -888,7 +904,10 @@ export const MyRoomScreen = memo(function MyRoomScreen({
       const destBase = baseOrderRef.current.get(target.categoryId) ?? [];
       if (target.categoryId === fromCategoryId) {
         const next = reorderedIds(destBase, draggedId, target.index);
-        if (next.join(' ') !== destBase.join(' ')) {
+        // 구분자는 반드시 이스케이프 `\0`로 — 예전엔 리터럴 NUL 문자를 그대로
+        // 박아 넣어서, grep·ripgrep이 이 파일을 바이너리로 보고 **1600줄 전체가
+        // 검색에서 사라졌다**. 동작은 같지만 도구에 보이는지가 다르다.
+        if (next.join('\0') !== destBase.join('\0')) {
           hapticSuccess();
           onReorderRoutines?.(fromCategoryId, next);
         }
@@ -1249,6 +1268,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             </>
           ) : (
             <View style={styles.calendarPanel}>
+              {weeklyReport ? (
+                <WeeklyReportCard {...weeklyReport} onPress={onOpenWeeklyReport} />
+              ) : null}
               {/* monthSwipe=false 유지 (#825) — 달력 위 가로 스와이프가 월
                   이동이라는 또 다른 뜻을 갖게 되면 "가로 스와이프 = 하단 탭
                   이동" 규칙이 다시 깨진다. 월 이동은 ‹ › 버튼. */}

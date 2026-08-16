@@ -22,6 +22,29 @@ export type AppleLoginRequest = {
   authorizationCode: string;
 };
 
+export type AttendanceCheckInResponse = {
+  newCheckIn?: boolean;
+  coinRewardAmount?: number;
+  coinBalance?: number;
+  rewardGrantedNow?: boolean;
+  status?: AttendanceEventStatusResponse;
+};
+
+export type AttendanceEventStatusResponse = {
+  eventId?: number;
+  code?: string;
+  title?: string;
+  startsOn?: string;
+  endsOn?: string;
+  targetDays?: number;
+  currentStreak?: number;
+  checkedInToday?: boolean;
+  completed?: boolean;
+  checkInDates?: string[];
+  dailyRewards?: DailyReward[];
+  reward?: Reward;
+};
+
 export type BugReportListResponse = {
   items?: BugReportResponse[];
 };
@@ -35,10 +58,21 @@ export type BugReportResponse = {
   createdAt?: string;
 };
 
+export type CalendarDayCount = {
+  date?: string;
+  routineCount?: number;
+  todoCount?: number;
+};
+
 export type CalendarDayResponse = {
   date?: string;
   categories?: TodayCategoryGroup[];
   summary?: TodaySummary;
+};
+
+export type CalendarMonthResponse = {
+  yearMonth?: string;
+  days?: CalendarDayCount[];
 };
 
 export type CategoryCreateRequest = {
@@ -126,6 +160,13 @@ export type CompletionSummary = {
   originRoutineId?: number;
   title?: string;
   categoryId?: number;
+};
+
+export type DailyReward = {
+  day?: number;
+  coinAmount?: number;
+  furnitureReward?: boolean;
+  claimed?: boolean;
 };
 
 export type DevLoginRequest = {
@@ -795,6 +836,14 @@ export type RepeatDays = {
   day?: number;
 };
 
+export type Reward = {
+  itemId?: number;
+  name?: string;
+  assetKey?: string;
+  userItemId?: number;
+  received?: boolean;
+};
+
 export type RoomCharacterResponse = {
   characterId?: number;
   code?: string;
@@ -922,6 +971,14 @@ export type RoutineResponse = {
   houseMissionId?: number | null;
 };
 
+export type RoutineStatResponse = {
+  lineageId?: number;
+  title?: string;
+  categoryName?: string;
+  completed?: number;
+  failed?: number;
+};
+
 export type RoutineUpdateRequest = {
   title?: string;
   categoryId?: number;
@@ -941,6 +998,11 @@ export type RoutineUpdateRequest = {
 export type SlotAssignment = {
   slotType: string;
   userItemId?: number;
+};
+
+export type StreakResponse = {
+  currentCount?: number;
+  longestCount?: number;
 };
 
 export type StreakSummaryResponse = {
@@ -1076,6 +1138,7 @@ export type WalletHistoryResponse = {
     | 'GACHA_DUPLICATE_CONVERT'
     | 'INVITE_REWARD'
     | 'COBWEB_CLEAN'
+    | 'ATTENDANCE_REWARD'
     | 'GACHA_DRAW'
     | 'SHOP_PURCHASE';
   balanceAfter?: number;
@@ -1094,4 +1157,52 @@ export type WalletResponse = {
 export type WalletSummary = {
   currencyType?: 'COIN' | 'DIAMOND';
   balance?: number;
+};
+
+export type WeekdayStatResponse = {
+  dayOfWeek?: 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
+  completed?: number;
+  failed?: number;
+};
+
+export type WeeklyReportDetailResponse = {
+  reportId?: number;
+  weekStartDate?: string;
+  weekEndDate?: string;
+  status?: 'GENERATED' | 'FALLBACK';
+  completionRate?: number;
+  completedCount?: number;
+  scheduledCount?: number;
+  summary?: string;
+  generatedAt?: string;
+  stats?: WeeklyStatsResponse;
+  highlights?: string[];
+  failurePatterns?: string[];
+  suggestions?: string[];
+};
+
+export type WeeklyReportListResponse = {
+  items?: WeeklyReportSummaryItem[];
+};
+
+export type WeeklyReportSummaryItem = {
+  reportId?: number;
+  weekStartDate?: string;
+  weekEndDate?: string;
+  status?: 'GENERATED' | 'FALLBACK';
+  completionRate?: number;
+  completedCount?: number;
+  scheduledCount?: number;
+  summary?: string;
+  generatedAt?: string;
+};
+
+export type WeeklyStatsResponse = {
+  scheduledCount?: number;
+  completedCount?: number;
+  failedCount?: number;
+  completionRate?: number;
+  byWeekday?: WeekdayStatResponse[];
+  byRoutine?: RoutineStatResponse[];
+  streak?: StreakResponse;
 };

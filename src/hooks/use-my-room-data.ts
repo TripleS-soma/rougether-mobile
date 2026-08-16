@@ -203,7 +203,9 @@ export function useMyRoomData() {
   const loadCalendarMonth = useCallback(async (yearMonth: string) => {
     try {
       const res = await fetchCalendarMonth(yearMonth);
-      const marked = (res.days ?? []).filter((d) => (d.todoCount ?? 0) > 0).map((d) => d.date);
+      const marked = (res.days ?? []).flatMap((d) =>
+        (d.todoCount ?? 0) > 0 && d.date ? [d.date] : [],
+      );
       setTodoDatesByMonth((prev) => ({ ...prev, [yearMonth]: marked }));
     } catch {
       // 점은 보조 정보다 — 실패해도 달력 자체는 쓸 수 있으니 조용히 넘어간다.

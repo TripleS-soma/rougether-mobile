@@ -12,6 +12,8 @@ import type { useMissionLinks } from '@/components/app/use-mission-links';
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
 import { CategoryManageScreen } from '@/components/screens/category-manage-screen';
 import { type CalendarDayItem, type MyRoomScreenProps } from '@/components/screens/my-room-screen';
+import { WeeklyReportScreen } from '@/components/screens/weekly-report-screen';
+import { useWeeklyReport } from '@/hooks/use-weekly-report';
 import { NotificationListScreen } from '@/components/screens/notification-list-screen';
 import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
 import { CHARACTER_SELECTION_ENABLED, type CharacterId } from '@/constants/characters';
@@ -252,6 +254,13 @@ export function useMyRoomPages({
     [routines],
   );
 
+  // 주간 회고 (#852) — 목록은 마운트 때 1건만, 본문은 카드를 눌러야 받는다.
+  const weeklyReport = useWeeklyReport();
+  const openWeeklyReport = useCallback(() => {
+    void weeklyReport.loadDetail();
+    setScreen('weeklyReport');
+  }, [weeklyReport, setScreen]);
+
   /** 탭 페이저의 나의 방 페이지 prop — `<MyRoomScreen {...tabProps} />`. */
   const tabProps = {
     userName: nickname,
@@ -277,6 +286,8 @@ export function useMyRoomPages({
     onCleanCobweb: room.onCleanCobweb,
     markedTodoDates: room.markedTodoDates,
     onCalendarMonthChange: room.onCalendarMonthChange,
+    weeklyReport: weeklyReport.latest ?? undefined,
+    onOpenWeeklyReport: openWeeklyReport,
     furniture: room.catalogue.furniture,
     wallpapers: room.catalogue.wallpapers,
     floors: room.catalogue.floors,
@@ -372,6 +383,12 @@ export function useMyRoomPages({
         onLoadMore={() => {
           void loadMoreNotifications();
         }}
+      />
+    ) : screen === 'weeklyReport' ? (
+      <WeeklyReportScreen
+        report={weeklyReport.detail}
+        loading={weeklyReport.loading}
+        onBack={() => setScreen('myRoom')}
       />
     ) : null;
 
