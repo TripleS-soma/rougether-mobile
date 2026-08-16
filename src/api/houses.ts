@@ -12,6 +12,7 @@ import type {
   InviteCodeResponse,
   HouseJoinRequestResponse,
   HouseListResponse,
+  HouseOrderUpdateRequest,
   HouseMemberDayResponse,
   HouseMemberRoutineCompletionListResponse,
   HouseMissionClaimResponse,
@@ -24,6 +25,7 @@ import type {
   HouseUpdateResponse,
   MemberSummary,
   MissionSummary,
+  MyHouseListResponse,
   MyHouseSummary,
   MyJoinRequestSummary,
   TransferOwnershipResponse,
@@ -32,6 +34,20 @@ import type {
 /** GET /me/houses — houses the user belongs to. */
 export function fetchMyHouses() {
   return apiGetList<MyHouseSummary>('/me/houses');
+}
+
+/**
+ * PUT /me/houses/order — 집 탭에서 내 집이 보이는 순서를 저장한다 (#820).
+ * 멤버십에 저장하는 개인 설정이라 같은 집의 다른 구성원에게는 영향이 없다.
+ *
+ * **전량 전송 계약**: 내가 active 구성원인 집 전체를 원하는 순서로 넘긴다.
+ * 부분 목록을 보내면 서버가 빠진 집을 임의 위치에 끼워 넣어야 하므로 거부한다
+ * — 중복·남의 집은 `HOUSE_ORDER_INVALID`(400), 내 집 집합과 어긋나면
+ * `HOUSE_ORDER_STALE`(409)이라 재조회 후 다시 시도해야 한다.
+ * 응답은 `GET /me/houses`와 같은 형태·같은 순서다.
+ */
+export function updateHouseOrder(houseIds: number[]) {
+  return apiPut<MyHouseListResponse>('/me/houses/order', { houseIds } as HouseOrderUpdateRequest);
 }
 
 /** GET /houses/cover-images — selectable cover catalog (집 생성·설정). */
