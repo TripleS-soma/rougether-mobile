@@ -4,6 +4,25 @@ import { LoginScreen } from '@/components/screens/login-screen';
 import { ToastProvider } from '@/components/ui/toast';
 
 describe('LoginScreen', () => {
+  /**
+   * 배지가 라벨을 덮던 버그 (#835) — 로고와 배지가 둘 다 position:absolute라
+   * 라벨이 버튼 전체 폭 기준으로 가운데 정렬됐고, 라벨이 길면 배지 밑으로
+   * 들어갔다. 겹침 자체는 jest에서 못 재므로, **겹칠 수 없는 구조**인지를
+   * 단언한다: 배지는 흐름에 있고(absolute 아님) 라벨은 남은 폭을 차지한다.
+   */
+  it('최근 로그인 배지는 절대 배치가 아니고 라벨이 남은 폭을 차지한다 (#835)', async () => {
+    const { getByText } = await render(<LoginScreen lastLoginProvider="kakao" />);
+
+    const flatten = (style: unknown): Record<string, unknown> =>
+      Object.assign({}, ...[style].flat(Infinity).filter(Boolean));
+
+    const badge = flatten(getByText('최근 로그인').props.style);
+    const label = flatten(getByText('Kakao로 시작하기').props.style);
+
+    expect(badge.position).toBeUndefined();
+    expect(label.flex).toBe(1);
+  });
+
   it('renders the brand title', async () => {
     const { getByText } = await render(<LoginScreen />);
     expect(getByText('루게더')).toBeTruthy();

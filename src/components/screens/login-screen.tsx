@@ -352,6 +352,12 @@ function SocialButton({
   );
 }
 
+/**
+ * 소셜 버튼 좌우 여백 (#835) — 절대 배치된 로고(left: Spacing.four)를 비켜갈
+ * 만큼. 양쪽을 같은 값으로 둬야 배지 없는 버튼의 라벨이 가운데 온다.
+ */
+const SOCIAL_SIDE_PAD = Spacing.four + 28;
+
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
@@ -444,8 +450,11 @@ const styles = StyleSheet.create({
   socialCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     paddingVertical: Spacing.three,
+    // 로고가 절대 배치라 왼쪽은 그만큼 비워 둔다. 오른쪽도 같은 값이어야
+    // 배지 없는 버튼(구글)의 라벨이 정확히 가운데 온다.
+    paddingHorizontal: SOCIAL_SIDE_PAD,
+    gap: Spacing.two,
     borderRadius: Radius.md,
   },
   socialCardPressed: {
@@ -456,11 +465,14 @@ const styles = StyleSheet.create({
     left: Spacing.four,
   },
   socialLabel: {
+    // 남은 폭을 전부 차지한다 — 배지가 레이아웃에 있으므로 라벨은 그만큼
+    // 줄어들 뿐 절대 침범하지 못한다 (#835).
+    flex: 1,
     fontSize: 17,
+    textAlign: 'center',
   },
   recentBadge: {
-    position: 'absolute',
-    right: Spacing.three,
+    // 절대 배치 금지 (#835) — 흐름에 있어야 라벨이 배지 폭을 알고 줄어든다.
     paddingHorizontal: Spacing.two,
     paddingVertical: 3,
     borderRadius: Radius.pill,
