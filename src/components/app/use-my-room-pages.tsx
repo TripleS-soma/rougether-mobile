@@ -109,6 +109,9 @@ export function useMyRoomPages({
     cobweb: MyRoomScreenProps['cobweb'];
     /** 거미줄 청소 (#830) — 성공 시 받은 코인 수. */
     onCleanCobweb: MyRoomScreenProps['onCleanCobweb'];
+    /** 달력 점 (#838) — 할 일 있는 날 집합 + 보이는 달 변경 알림. */
+    markedTodoDates: MyRoomScreenProps['markedTodoDates'];
+    onCalendarMonthChange: MyRoomScreenProps['onCalendarMonthChange'];
   };
 }) {
   const { screen, setScreen, addReturnScreen, setAddReturnScreen } = nav;
@@ -272,6 +275,8 @@ export function useMyRoomPages({
     backgroundId: room.backgroundId,
     cobweb: room.cobweb,
     onCleanCobweb: room.onCleanCobweb,
+    markedTodoDates: room.markedTodoDates,
+    onCalendarMonthChange: room.onCalendarMonthChange,
     furniture: room.catalogue.furniture,
     wallpapers: room.catalogue.wallpapers,
     floors: room.catalogue.floors,
