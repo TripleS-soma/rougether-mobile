@@ -5,6 +5,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import * as SplashScreen from 'expo-splash-screen';
 
 import { SplashBackground, SplashBackgroundDark } from '@/constants/theme';
+import { isAppReady, onAppReady } from '@/lib/app-ready';
 import { useResolvedScheme } from '@/hooks/use-tokens';
 
 const INITIAL_SCALE_FACTOR = Dimensions.get('screen').height / 90;
@@ -13,6 +14,12 @@ const DURATION = 600;
 const MIN_SPLASH_MS = 1200;
 /** JS 부팅 시각 — 이미 오래 걸린 콜드 스타트에선 추가 대기를 줄인다. */
 const BOOT_TS = Date.now();
+/**
+ * 준비를 기다리는 상한 (#847) — 넘으면 준비 여부와 무관하게 걷는다. 저장소
+ * 오류 등으로 준비 신호가 영영 안 와도 스플래시에 갇히지 않게. #579 안전망과
+ * 같은 생각이다.
+ */
+const MAX_SPLASH_MS = 4000;
 
 export function AnimatedSplashOverlay() {
   // holding: 네이티브 스플래시가 아직 떠 있음(최소 노출 대기) → fading: 단색
@@ -23,13 +30,42 @@ export function AnimatedSplashOverlay() {
   const bg = { backgroundColor: scheme === 'dark' ? SplashBackgroundDark : SplashBackground };
 
   useEffect(() => {
-    const wait = Math.max(0, MIN_SPLASH_MS - (Date.now() - BOOT_TS));
-    const timer = setTimeout(() => {
+    let cancelled = false;
+    let minTimer: ReturnType<typeof setTimeout> | undefined;
+    let capTimer: ReturnType<typeof setTimeout> | undefined;
+    let unsubscribe: (() => void) | undefined;
+
+    const lift = () => {
+      if (cancelled) return;
+      cancelled = true;
       // hideAsync 실패(이미 숨음 등)에도 전환은 계속돼야 한다.
       void SplashScreen.hideAsync().catch(() => {});
       setPhase('fading');
-    }, wait);
-    return () => clearTimeout(timer);
+    };
+
+    // 최소 노출과 "그릴 준비"를 **둘 다** 만족해야 걷는다 (#847). 예전엔
+    // 최소 노출만 봤는데, AppRoot의 두 관문(세션 복원 → 온보딩 플래그)이
+    // 직렬 AsyncStorage 읽기라 느린 기기에서 1200ms를 넘으면 오버레이가
+    // 먼저 걷혀 빈 화면(AppRoot의 return null)이 드러났다.
+    const liftWhenBothDone = () => {
+      if (!isAppReady()) return;
+      const wait = Math.max(0, MIN_SPLASH_MS - (Date.now() - BOOT_TS));
+      minTimer = setTimeout(lift, wait);
+    };
+
+    unsubscribe = onAppReady(liftWhenBothDone);
+    liftWhenBothDone(); // 구독 전에 이미 준비됐을 수 있다.
+
+    // 준비가 영영 안 와도(저장소 오류 등) 스플래시에 갇히지 않는다 — 상한을
+    // 넘으면 걷고, AppRoot가 그 자리에 로딩 표시를 그린다.
+    capTimer = setTimeout(lift, MAX_SPLASH_MS);
+
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+      if (minTimer) clearTimeout(minTimer);
+      if (capTimer) clearTimeout(capTimer);
+    };
   }, []);
 
   // 안전망 (#579): 페이드 완료 콜백이 유실돼도 오버레이가 화면을 영원히
