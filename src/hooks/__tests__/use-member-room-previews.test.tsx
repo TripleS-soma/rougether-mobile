@@ -154,3 +154,28 @@ describe('characterIdForMember (#342, #753에서 공용 헬퍼로)', () => {
     );
   });
 });
+
+describe('useMemberRoomPreviews — clearCobweb (#831)', () => {
+  it('해당 멤버 타일의 거미줄만 걷는다', async () => {
+    global.fetch = jest.fn(async (url: string) => {
+      const membershipId = Number(url.match(/members\/(\d+)/)?.[1]);
+      return res({
+        slots: [],
+        cobweb: { assetKey: `items/cobweb-${membershipId}.png`, cleanable: true },
+      });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useMemberRoomPreviews());
+    await act(async () => {
+      await result.current.load(1, [2, 3], CATALOGUE);
+    });
+    expect(result.current.previews[2]?.cobweb).toBeTruthy();
+    expect(result.current.previews[3]?.cobweb).toBeTruthy();
+
+    await act(async () => result.current.clearCobweb(2));
+
+    expect(result.current.previews[2]?.cobweb).toBeNull();
+    // 다른 멤버는 그대로 — 친구 방 하나 치웠다고 집 전체가 깨끗해지면 안 된다.
+    expect(result.current.previews[3]?.cobweb).toBeTruthy();
+  });
+});

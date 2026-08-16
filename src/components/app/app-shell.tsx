@@ -32,6 +32,7 @@ import { useHouses } from '@/hooks/use-houses';
 import { useRoomLayouts } from '@/hooks/use-room-layouts';
 import { useMyCharacters } from '@/hooks/use-my-characters';
 import { useMyRoomData } from '@/hooks/use-my-room-data';
+import { useMemberRoomPreviews } from '@/hooks/use-member-room-previews';
 import { useShop } from '@/hooks/use-shop';
 import { useWeather } from '@/hooks/use-weather';
 import { useResolvedScheme } from '@/hooks/use-tokens';
@@ -350,6 +351,11 @@ export function AppShell({
     [addRoutineFromMyRoom],
   );
 
+  // 멤버 방 프리뷰 (#775) — 집 좌석 타일과 친구 방문이 함께 쓴다. 훅 호출이
+  // use-house-pages 안에 있으면 그보다 먼저 서는 use-friend-visit이 거미줄
+  // 청소 후 타일을 갱신할 방법이 없어(#831) 셸로 끌어올렸다.
+  const memberRoomPreviews = useMemberRoomPreviews();
+
   // 친구 방문 클러스터 (#149·#644) — use-friend-visit.tsx로 이관 (#692 4단계).
   const { visitFriend, subScreen: friendRoomSubScreen } = useFriendVisit({
     setScreen,
@@ -358,6 +364,7 @@ export function AppShell({
     houseIndex,
     screen,
     cheerMember,
+    clearPreviewCobweb: memberRoomPreviews.clearCobweb,
   });
 
   // Android hardware back navigates the shell's own screen stack; 루트(나의 방)
@@ -402,6 +409,7 @@ export function AppShell({
     selectedCharacterId,
     wornCharacterId,
     onPagerLockChange: handleHousePagerLock,
+    roomPreviewStore: memberRoomPreviews,
   });
 
   // 내비게이션 컨트롤러 (#692) — 뒤로가기·엣지 백·전환 손맛·페이저 정착.
