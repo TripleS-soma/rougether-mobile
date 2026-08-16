@@ -5,6 +5,50 @@ import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-han
 import { Calendar } from '@/components/ui/calendar';
 
 describe('Calendar', () => {
+  /**
+   * 할 일 있는 날 점 (#838) — 컴포넌트는 이게 무슨 뜻인지 모르고 표시만
+   * 한다. 접근성 라벨로 단언하는 이유는 점이 색만 있는 View라 텍스트로
+   * 잡히지 않기 때문이다.
+   */
+  it('markedDates에 든 날짜만 할 일 있음으로 표시한다', async () => {
+    const { getByLabelText, queryByLabelText } = await render(
+      <Calendar
+        value="2026-08-16"
+        today="2026-08-16"
+        onSelect={() => {}}
+        markedDates={new Set(['2026-08-20'])}
+      />,
+    );
+    expect(getByLabelText('2026-08-20, 할 일 있음')).toBeTruthy();
+    // 표시 안 된 날은 라벨이 날짜만 — 점 없는 상태.
+    expect(getByLabelText('2026-08-21')).toBeTruthy();
+    expect(queryByLabelText('2026-08-21, 할 일 있음')).toBeNull();
+  });
+
+  it('markedDates가 없으면 종전 그대로 — 날짜 선택 시트에 영향 없다', async () => {
+    const { getByLabelText, queryByLabelText } = await render(
+      <Calendar value="2026-08-16" today="2026-08-16" onSelect={() => {}} />,
+    );
+    expect(getByLabelText('2026-08-20')).toBeTruthy();
+    expect(queryByLabelText(/할 일 있음/)).toBeNull();
+  });
+
+  it('보이는 달이 바뀌면 onVisibleMonthChange를 부른다 — 마운트 시 1회 포함', async () => {
+    const onVisibleMonthChange = jest.fn();
+    const { getByLabelText } = await render(
+      <Calendar
+        value="2026-08-16"
+        today="2026-08-16"
+        onSelect={() => {}}
+        onVisibleMonthChange={onVisibleMonthChange}
+      />,
+    );
+    expect(onVisibleMonthChange).toHaveBeenCalledWith('2026-08');
+
+    await fireEvent.press(getByLabelText('이전 달'));
+    expect(onVisibleMonthChange).toHaveBeenCalledWith('2026-07');
+  });
+
   it('renders the month of the selected date and selects a day', async () => {
     const onSelect = jest.fn();
     const { getByText } = await render(<Calendar value="2026-06-15" onSelect={onSelect} />);

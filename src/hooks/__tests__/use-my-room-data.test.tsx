@@ -355,3 +355,67 @@ describe('useMyRoomData — 카테고리 메타를 달력 소스(allCategories)�
     expect(result.current.allCategories.some((c) => c.id === '2' && c.icon === 'leaf')).toBe(true);
   });
 });
+
+describe('useMyRoomData — 달력 월 점 (#838)', () => {
+  /**
+   * 서버(#295)는 routineCount와 todoCount를 둘 다 주지만 **투두만** 점이 된다.
+   * 루틴은 대부분의 날에 반복되므로 점을 찍으면 거의 모든 날에 찍혀 아무것도
+   * 구분하지 못한다 — 이 규칙이 이 기능의 전부다.
+   */
+  it('투두가 있는 날만 표시하고 루틴만 있는 날은 뺀다', async () => {
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/calendar/month')) {
+        return res({
+          yearMonth: '2026-08',
+          days: [
+            { date: '2026-08-01', routineCount: 3, todoCount: 0 }, // 루틴만 → 점 없음
+            { date: '2026-08-02', routineCount: 3, todoCount: 1 }, // 투두 있음 → 점
+            { date: '2026-08-03', routineCount: 0, todoCount: 2 }, // 투두만 → 점
+            { date: '2026-08-04', routineCount: 0, todoCount: 0 }, // 아무것도 없음
+          ],
+        });
+      }
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useMyRoomData());
+    await act(async () => {
+      await result.current.loadCalendarMonth('2026-08');
+    });
+
+    expect([...result.current.markedTodoDates].sort()).toEqual(['2026-08-02', '2026-08-03']);
+  });
+
+  it('여러 달을 오가도 받은 달이 누적된다', async () => {
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/calendar/month')) {
+        const ym = url.includes('2026-07') ? '2026-07' : '2026-08';
+        return res({ yearMonth: ym, days: [{ date: `${ym}-05`, routineCount: 0, todoCount: 1 }] });
+      }
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useMyRoomData());
+    await act(async () => {
+      await result.current.loadCalendarMonth('2026-08');
+      await result.current.loadCalendarMonth('2026-07');
+    });
+
+    expect([...result.current.markedTodoDates].sort()).toEqual(['2026-07-05', '2026-08-05']);
+  });
+
+  it('월 조회 실패는 조용히 넘어간다 — 점은 보조 정보다', async () => {
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/calendar/month'))
+        return { ok: false, status: 500, text: async () => '{}' };
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useMyRoomData());
+    await act(async () => {
+      await result.current.loadCalendarMonth('2026-08');
+    });
+
+    expect(result.current.markedTodoDates.size).toBe(0);
+  });
+});

@@ -106,6 +106,10 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
      * 화면은 그 값으로만 코인 연출을 쏜다(중복 청소에 보상 연출이 뜨면 거짓말).
      */
     onCleanCobweb?: () => Promise<number | null>;
+    /** 할 일 있는 날 (#838) — 달력 점 표시. 없으면 점 없이 그린다. */
+    markedTodoDates?: ReadonlySet<string>;
+    /** 달력에서 보이는 달이 바뀔 때 (#838) — 부모가 그 달 개수를 받아온다. */
+    onCalendarMonthChange?: (yearMonth: string) => void;
 
     /** Room occupant's display name (header title becomes "{userName}의 방"). */
     userName?: string;
@@ -253,6 +257,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   backgroundId,
   cobweb,
   onCleanCobweb,
+  markedTodoDates,
+  onCalendarMonthChange,
   placedFurnitureIds,
   placements = null,
   furniture,
@@ -1246,7 +1252,14 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               {/* monthSwipe=false 유지 (#825) — 달력 위 가로 스와이프가 월
                   이동이라는 또 다른 뜻을 갖게 되면 "가로 스와이프 = 하단 탭
                   이동" 규칙이 다시 깨진다. 월 이동은 ‹ › 버튼. */}
-              <Calendar value={selectedDate} onSelect={pickDate} today={today} monthSwipe={false} />
+              <Calendar
+                value={selectedDate}
+                onSelect={pickDate}
+                today={today}
+                monthSwipe={false}
+                markedDates={markedTodoDates}
+                onVisibleMonthChange={onCalendarMonthChange}
+              />
               <View style={styles.calListHead}>
                 <Text style={[Typography.h3, styles.calListTitle, { color: t.text }]}>
                   이 날의 할 일

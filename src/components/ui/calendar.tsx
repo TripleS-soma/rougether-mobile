@@ -6,7 +6,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
 import { horizontalFlingGesture } from '@/utils/gesture';
-import { useAnimatedValue, useAnimatedValueXY } from '@/hooks/use-stable-value';
+import { useAnimatedValue, useAnimatedValueXY, useLatestRef } from '@/hooks/use-stable-value';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -44,6 +44,18 @@ export type CalendarProps = {
    * 날짜 선택 시트들은 기본값(true) 그대로.
    */
   monthSwipe?: boolean;
+  /**
+   * 점을 찍을 날짜들 (#838) — "YYYY-MM-DD" 집합. 컴포넌트는 이게 무슨
+   * 뜻인지 모르고 표시만 한다(호출부가 투두 있는 날만 넣는다). 없으면
+   * 종전 그대로 — 날짜 선택 시트들은 점 없이 동작한다.
+   */
+  markedDates?: ReadonlySet<string>;
+  /**
+   * 보이는 달이 바뀔 때 "YYYY-MM" (#838) — 마운트 시 1회도 부른다. 부모가
+   * 그 달 데이터를 받아 `markedDates`를 채우는 신호다. 달력이 스스로
+   * 패칭하지 않는 건 순수 컴포넌트 규칙(AGENTS) 때문이다.
+   */
+  onVisibleMonthChange?: (yearMonth: string) => void;
 };
 
 /**
@@ -51,12 +63,28 @@ export type CalendarProps = {
  * EAS Update. ISO date strings sort lexicographically, so min/max comparisons
  * are plain string compares.
  */
-function CalendarBase({ value, min, max, onSelect, today, monthSwipe = true }: CalendarProps) {
+function CalendarBase({
+  value,
+  min,
+  max,
+  onSelect,
+  today,
+  monthSwipe = true,
+  markedDates,
+  onVisibleMonthChange,
+}: CalendarProps) {
   const t = useTokens();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const selected = parse(value);
   const [view, setView] = useState({ y: selected.y, m: selected.m });
+
+  // 보이는 달 알림 (#838) — 최신 콜백을 ref로 읽어, 부모가 인라인 함수를
+  // 넘겨도 매 렌더 다시 부르지 않는다.
+  const monthCbRef = useLatestRef(onVisibleMonthChange);
+  useEffect(() => {
+    monthCbRef.current?.(`${view.y}-${String(view.m + 1).padStart(2, '0')}`);
+  }, [view.y, view.m, monthCbRef]);
 
   // "오늘" 칩 (#467) — 오늘이 아닐 때(선택이 오늘이 아니거나, 뷰가 오늘 달을
   // 벗어났을 때)만 노출. 누르면 뷰와 선택을 오늘로 되돌린다.
@@ -216,7 +244,7 @@ function CalendarBase({ value, min, max, onSelect, today, monthSwipe = true }: C
                 onPress={() => !disabled && onSelect(date)}
                 disabled={!!disabled}
                 accessibilityRole="button"
-                accessibilityLabel={date}
+                accessibilityLabel={markedDates?.has(date) ? `${date}, 할 일 있음` : date}
                 accessibilityState={{ selected: isSelected, disabled: !!disabled }}
                 onLayout={(e) => {
                   dayLayouts.current[date] = e.nativeEvent.layout;
@@ -242,6 +270,15 @@ function CalendarBase({ value, min, max, onSelect, today, monthSwipe = true }: C
                     {day}
                   </Text>
                 </View>
+                {/* 할 일 있는 날 표시 (#838) — 선택된 날은 원이 이미 강조라
+                    점을 생략하면 원 안에서 잉크가 겹쳐 지저분해진다. */}
+                {markedDates?.has(date) && !isSelected ? (
+                  <View
+                    style={[styles.dot, { backgroundColor: disabled ? t.textDisabled : t.primary }]}
+                  />
+                ) : (
+                  <View style={styles.dot} />
+                )}
               </Pressable>
             );
           })}
@@ -257,6 +294,13 @@ function CalendarBase({ value, min, max, onSelect, today, monthSwipe = true }: C
 export const Calendar = memo(CalendarBase);
 
 const styles = StyleSheet.create({
+  /** 날짜 아래 점 — 없을 때도 같은 크기의 자리를 잡아 줄 높이가 흔들리지 않게. */
+  dot: {
+    width: 4,
+    height: 4,
+    borderRadius: Radius.pill,
+    marginTop: Spacing.half,
+  },
   wrap: {
     gap: Spacing.two,
   },
