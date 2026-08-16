@@ -2,9 +2,11 @@ import { openBrowserAsync } from 'expo-web-browser';
 import { type ReactNode, useState } from 'react';
 import { Text, View } from 'react-native';
 
+import type { GachaMachine } from '@/api/adapters';
 import { type HouseCover, HouseCoverPicker } from '@/components/room/house-cover-picker';
 import { HousePreviewFrame } from '@/components/room/house-preview-frame';
 import { Room } from '@/components/room/room';
+import { GachaAccents } from '@/constants/theme';
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
 import { CategoryManageScreen } from '@/components/screens/category-manage-screen';
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
@@ -620,7 +622,7 @@ export const galleryEntries: GalleryEntry[] = [
     description: 'Ported from the prototype GachaScreen (#13): box select + pull animation.',
     render: () => (
       <View style={{ height: 700, alignSelf: 'stretch' }}>
-        <GachaScreen coinBalance={5600} />
+        <GachaScreen gachas={GACHA_SAMPLES} coinBalance={5600} />
       </View>
     ),
   },
@@ -760,6 +762,36 @@ export const galleryEntries: GalleryEntry[] = [
         <ToastDemo />
       </ToastProvider>
     ),
+  },
+];
+
+/**
+ * 뽑기 머신 샘플 — 갤러리에서 선물상자 아트(서버 #276)를 눈으로 확인하려고 둔다.
+ * `giftBoxKey`는 실서버 `GET /gacha`가 주는 공용 상자 키의 스냅샷(2026-08-16)이고,
+ * 아트가 교체되면 화면이 픽토그램으로 폴백하므로 깨지지는 않는다. 두 번째 머신은
+ * 키를 비워 **폴백 경로도 같이** 보이게 했다.
+ */
+const GACHA_SAMPLES: GachaMachine[] = [
+  {
+    id: 1,
+    name: '작은 베이커리 아침 뽑기',
+    costCurrencyType: 'COIN',
+    costAmount: 25,
+    drawCount: 1,
+    icon: 'croissant',
+    accent: GachaAccents[0],
+    giftBoxKey: 'items/0c213078-69ce-4a77-a729-9144905dfc22.png',
+    kind: 'furniture',
+  },
+  {
+    id: 12,
+    name: '캐릭터 뽑기',
+    costCurrencyType: 'COIN',
+    costAmount: 500,
+    drawCount: 1,
+    icon: 'paw',
+    accent: GachaAccents[1],
+    kind: 'character',
   },
 ];
 

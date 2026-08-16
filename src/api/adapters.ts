@@ -452,8 +452,9 @@ export function toWallet(list: WalletLike[]): Wallet {
 }
 
 // --- gacha --------------------------------------------------------------------
-// The API gacha carries no preview art, so decorate machines with a rotating
-// icon + accent by index (placeholder until themed art exists).
+// 선물상자 아트는 서버가 준다(`giftBoxAssetKey`, 서버 #276). 아이콘·accent는
+// 키가 없거나 CDN 키가 아닐 때의 폴백으로 남는다 — 지금은 14개 머신이 같은
+// 상자 한 장을 쓰므로 accent가 머신 구분을 계속 맡는다.
 const GACHA_ICONS: PictogramName[] = [
   'gift',
   'pagoda',
@@ -473,6 +474,12 @@ export type GachaMachine = {
   drawCount: number;
   icon: PictogramName;
   accent: string;
+  /**
+   * 서버가 준 선물상자 아트 키 (서버 #276). CDN 키가 아니거나 비어 있으면
+   * 화면이 `icon` 픽토그램으로 폴백한다 — `isCdnKey`로 판정할 수 있게
+   * 가공하지 않고 그대로 싣는다.
+   */
+  giftBoxKey?: string;
   /** Selector row grouping — themed machines drop furniture, the rest characters. */
   kind: 'furniture' | 'character';
 };
@@ -486,6 +493,7 @@ export function toGachaMachine(g: GachaResponse, index = 0): GachaMachine {
     drawCount: g.drawCount ?? 1,
     icon: GACHA_ICONS[index % GACHA_ICONS.length],
     accent: GachaAccents[index % GachaAccents.length],
+    giftBoxKey: g.giftBoxAssetKey,
     // Furniture gachas draw from a room theme; the character gacha has none.
     kind: g.themeId == null ? 'character' : 'furniture',
   };

@@ -177,6 +177,7 @@ export type GachaResponse = {
   code?: string;
   name?: string;
   themeId?: number;
+  giftBoxAssetKey?: string;
   costCurrencyType?: 'COIN' | 'DIAMOND';
   costAmount?: number;
   drawCount?: number;
@@ -407,6 +408,10 @@ export type HouseMissionResponse = {
   achieved?: boolean;
   todayClaimed?: boolean;
   createdAt?: string;
+};
+
+export type HouseOrderUpdateRequest = {
+  houseIds: number[];
 };
 
 export type HousePreviewDetailResponse = {
@@ -669,7 +674,8 @@ export type NotificationItem = {
     | 'HOUSE_MEMBER_JOINED'
     | 'HOUSE_MEMBER_LEFT'
     | 'HOUSE_JOIN_REQUEST_REJECTED'
-    | 'HOUSE_JOIN_REQUEST_ACCEPTED';
+    | 'HOUSE_JOIN_REQUEST_ACCEPTED'
+    | 'ROOM_COBWEB_CLEANED';
   title?: string;
   body?: string;
   isRead?: boolean;
@@ -798,6 +804,20 @@ export type RoomCharacterResponse = {
   accessories?: EquippedAccessoryResponse[];
 };
 
+export type RoomCobwebCleanResponse = {
+  roomUserId?: number;
+  cleanedAt?: string;
+  rewardCurrencyType?: 'COIN' | 'DIAMOND';
+  rewardAmount?: number;
+  balance?: number;
+};
+
+export type RoomCobwebResponse = {
+  assetKey?: string;
+  appearedAt?: string;
+  cleanable?: boolean;
+};
+
 export type RoomLayoutUpdateRequest = {
   baseRevision: number;
   surfaceSlots: SurfaceSlotAssignment[];
@@ -822,6 +842,7 @@ export type RoomRenderResponse = {
   character?: RenderCharacter;
   slots?: RenderSlot[];
   placements?: RenderPlacement[];
+  cobweb?: RoomCobwebResponse;
 };
 
 export type RoomResponse = {
@@ -833,6 +854,7 @@ export type RoomResponse = {
   slots?: RoomSlotResponse[];
   placements?: RoomPlacementResponse[];
   streak?: RoomStreakResponse;
+  cobweb?: RoomCobwebResponse;
   updatedAt?: string;
 };
 
@@ -1053,6 +1075,7 @@ export type WalletHistoryResponse = {
     | 'SIGNUP_BONUS'
     | 'GACHA_DUPLICATE_CONVERT'
     | 'INVITE_REWARD'
+    | 'COBWEB_CLEAN'
     | 'GACHA_DRAW'
     | 'SHOP_PURCHASE';
   balanceAfter?: number;
