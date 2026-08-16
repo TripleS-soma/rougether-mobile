@@ -159,7 +159,12 @@ export function useHouses() {
       try {
         await updateHouseOrder(houseIds);
       } catch (err) {
-        if (err instanceof ApiError && err.status === 409) {
+        // HOUSE_ORDER_INVALID(400)는 "요청이 틀렸다"가 아니라 "내가 아는
+        // 목록이 낡았다"는 뜻이다 (2026-08-16 실서버 확인) — 우리는 항상
+        // 전량을 보내므로 부분·중복·남의 집을 보낼 방법이 없고, 서버가
+        // 거부했다면 다른 기기에서 가입·탈퇴가 끼어든 것이다. 되돌리기만
+        // 하면 낡은 목록이 그대로 남아 다시 시도해도 계속 실패한다.
+        if (err instanceof ApiError && err.code === ErrorCode.HOUSE_ORDER_INVALID) {
           toast('집 목록이 바뀌었어요. 다시 불러올게요.');
           await reloadMyHouses().catch(() => setHouses(before));
           return;

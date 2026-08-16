@@ -426,3 +426,82 @@ describe('useHouses — 탐색 미리보기', () => {
     });
   });
 });
+
+describe('useHouses — 집 순서 변경 (#820)', () => {
+  /**
+   * 실서버 계약 (2026-08-16 확인): 성공은 **204 No Content**, 부분 목록·중복·
+   * 남의 집은 전부 **400 HOUSE_ORDER_INVALID**. 스펙 초안의 409 STALE은
+   * 구현되지 않았다.
+   */
+  const setUp = (order: { status: number; body?: unknown }) => {
+    const calls: { url: string; body?: string }[] = [];
+    let myHouses = [
+      { houseId: 1, name: '가' },
+      { houseId: 2, name: '나' },
+    ];
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      calls.push({ url, body: init?.body as string | undefined });
+      if (url.includes('/me/houses/order')) {
+        if (order.status === 204) return { ok: true, status: 204, text: async () => '' };
+        return {
+          ok: false,
+          status: order.status,
+          text: async () => JSON.stringify(order.body),
+        };
+      }
+      if (url.includes('/me/houses')) return res({ items: myHouses });
+      if (url.includes('/me/join-requests')) return res({ items: [] });
+      // 집 상세 — houseId가 여기서 채워져야 순서 전량 전송 가드를 통과한다.
+      const detail = url.match(/\/houses\/(\d+)(?:\?|$)/);
+      if (detail) return res({ houseId: Number(detail[1]), name: `집${detail[1]}` });
+      if (url.includes('/houses/')) return res({ items: [] });
+      if (url.endsWith('/me')) return res({ nickname: '나' });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+    return calls;
+  };
+
+  it('204를 성공으로 처리한다 — 본문이 없어도 터지지 않는다', async () => {
+    const calls = setUp({ status: 204 });
+    const { result } = await renderHook(() => useHouses());
+    await waitFor(() => expect(result.current.houses.length).toBe(2));
+
+    await act(async () => {
+      await result.current.reorderHouses([2, 1]);
+    });
+
+    const put = calls.find((c) => c.url.includes('/me/houses/order'));
+    expect(put?.body).toBe(JSON.stringify({ houseIds: [2, 1] }));
+    // 낙관적 반영 — 응답 본문이 없으므로 화면 순서는 우리가 쥔다.
+    expect(result.current.houses.map((h) => h.houseId)).toEqual([2, 1]);
+  });
+
+  it('400 HOUSE_ORDER_INVALID면 되돌리지 않고 다시 불러온다', async () => {
+    setUp({ status: 400, body: { code: 'HOUSE_ORDER_INVALID' } });
+    const { result } = await renderHook(() => useHouses());
+    await waitFor(() => expect(result.current.houses.length).toBe(2));
+
+    await act(async () => {
+      await result.current.reorderHouses([2, 1]);
+    });
+
+    expect(mockToast).toHaveBeenCalledWith('집 목록이 바뀌었어요. 다시 불러올게요.');
+  });
+
+  it('그 밖의 실패는 이전 순서로 되돌린다', async () => {
+    setUp({ status: 500, body: {} });
+    const { result } = await renderHook(() => useHouses());
+    await waitFor(() => expect(result.current.houses.length).toBe(2));
+    const before = result.current.houses.map((h) => h.houseId);
+
+    await act(async () => {
+      await result.current.reorderHouses([2, 1]);
+    });
+
+    expect(result.current.houses.map((h) => h.houseId)).toEqual(before);
+    expect(mockToast).toHaveBeenCalledWith(
+      '집 순서를 저장하지 못했어요. 잠시 후 다시 시도해 주세요.',
+      'error',
+    );
+  });
+});
