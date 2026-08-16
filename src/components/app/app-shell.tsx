@@ -196,6 +196,7 @@ export function AppShell({
     error: shopError,
     retry: retryShop,
     purchase: purchaseFurniture,
+    cleanCobweb,
     refreshOwned,
     saveLayout,
   } = useShop(setWallet);
@@ -299,6 +300,7 @@ export function AppShell({
       backgroundId,
       catalogue,
       cobweb: placement.cobweb,
+      onCleanCobweb: cleanCobweb,
     },
   });
   // 홈 위젯 오늘 요약 동기화 (#604, 안드로이드 전용) — 완료 토글·루틴

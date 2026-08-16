@@ -101,6 +101,12 @@ export type CalendarDayItem = {
 // 캐릭터가 항상 있으므로 characterId만 null 불가로 좁힌다.
 export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
   ScrollRestoreProps & {
+    /**
+     * 거미줄 청소 (#830) — 성공하면 받은 코인 수, 실패·중복이면 null.
+     * 화면은 그 값으로만 코인 연출을 쏜다(중복 청소에 보상 연출이 뜨면 거짓말).
+     */
+    onCleanCobweb?: () => Promise<number | null>;
+
     /** Room occupant's display name (header title becomes "{userName}의 방"). */
     userName?: string;
     /** Consecutive-day streak shown in the header. */
@@ -246,6 +252,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   floorId,
   backgroundId,
   cobweb,
+  onCleanCobweb,
   placedFurnitureIds,
   placements = null,
   furniture,
@@ -325,6 +332,12 @@ export const MyRoomScreen = memo(function MyRoomScreen({
       ]);
     });
   };
+  // 거미줄 청소 (#830) — 보상이 실제로 지급됐을 때만 코인이 난다.
+  const handleCleanCobweb = async (at: { x: number; y: number }) => {
+    const reward = await onCleanCobweb?.();
+    if (reward && reward > 0) launchCoinAt(at);
+  };
+
   const onCoinArrive = (id: number) => {
     setFlyingCoins((prev) => prev.filter((c) => c.id !== id));
     walletPulse.setValue(1.18);
@@ -577,6 +590,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     characterId,
     characterFrames,
     cobweb,
+    onCleanCobweb: onCleanCobweb ? handleCleanCobweb : undefined,
     wallpaperId,
     floorId,
     backgroundId,
