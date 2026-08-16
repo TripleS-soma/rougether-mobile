@@ -6,6 +6,8 @@
 export const ErrorCode = {
   /** 409 — 다이아 부족 (POST /gacha 구매). */
   SHOP_INSUFFICIENT_BALANCE: 'SHOP_INSUFFICIENT_BALANCE',
+  /** 409 — 이미 청소된 거미줄 (POST /rooms/me/cobweb/clean, #830). */
+  ROOM_COBWEB_NOT_ACTIVE: 'ROOM_COBWEB_NOT_ACTIVE',
   /** 409 — 다른 기기가 먼저 저장 (PUT /rooms/me/layout, #327). */
   ROOM_LAYOUT_REVISION_CONFLICT: 'ROOM_LAYOUT_REVISION_CONFLICT',
   /** 409 — 이미 입주 신청 중 (POST /houses/{id}/join-requests). */

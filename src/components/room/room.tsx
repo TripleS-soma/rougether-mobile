@@ -81,6 +81,11 @@ export type RoomProps = {
    * 청소(탭)는 다음 단계(#830·#831)라 지금은 표시만 한다.
    */
   cobweb?: RoomCobweb | null;
+  /**
+   * 거미줄 탭 (#830) — `cobweb.cleanable`이 true이고 이 콜백이 있을 때만
+   * 눌린다. 코인 연출을 탭 지점에서 쏘려고 window 좌표를 함께 넘긴다.
+   */
+  onCleanCobweb?: (at: { x: number; y: number }) => void;
   /** When true, tapping the character cycles through its poses (나의 방). */
   interactiveCharacter?: boolean;
   /**
@@ -123,6 +128,7 @@ export type RoomSceneProps = RoomCatalogProps &
     | 'placedFurnitureIds'
     | 'placements'
     | 'cobweb'
+    | 'onCleanCobweb'
   >;
 
 /**
@@ -184,6 +190,7 @@ export const Room = memo(function Room({
   backgrounds = [],
   placements = null,
   cobweb = null,
+  onCleanCobweb,
   interactiveCharacter = false,
   editable = false,
   onRegionPress,
@@ -376,14 +383,30 @@ export const Room = memo(function Room({
       {/* 장기 미접속 거미줄 (#829) — 캐릭터·가구 위, 왼쪽 위 모서리.
           청소 탭은 다음 단계(#830·#831)라 지금은 표시 전용이다. */}
       {isCdnKey(cobweb?.assetKey) ? (
-        <Image
-          source={assetSource(cobweb.assetKey)}
-          style={styles.cobweb}
-          contentFit="contain"
-          cachePolicy="memory-disk"
-          transition={120}
-          accessibilityLabel="거미줄이 꼈어요"
-        />
+        cobweb.cleanable && onCleanCobweb ? (
+          <Pressable
+            onPress={(e) => onCleanCobweb({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY })}
+            accessibilityRole="button"
+            accessibilityLabel="거미줄 치우기"
+            style={styles.cobweb}>
+            <Image
+              source={assetSource(cobweb.assetKey)}
+              style={StyleSheet.absoluteFill}
+              contentFit="contain"
+              cachePolicy="memory-disk"
+              transition={120}
+            />
+          </Pressable>
+        ) : (
+          <Image
+            source={assetSource(cobweb.assetKey)}
+            style={styles.cobweb}
+            contentFit="contain"
+            cachePolicy="memory-disk"
+            transition={120}
+            accessibilityLabel="거미줄이 꼈어요"
+          />
+        )
       ) : null}
     </View>
   );

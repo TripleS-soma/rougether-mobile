@@ -89,6 +89,34 @@ describe('MyRoomScreen', () => {
     expect(ui.getByLabelText('거미줄이 꼈어요')).toBeTruthy();
   });
 
+  // 거미줄 청소 (#830) — cleanable일 때만 눌리고, 보상이 실제로 지급된
+  // 경우에만 코인이 난다.
+  it('청소 가능한 거미줄을 누르면 onCleanCobweb을 부른다', async () => {
+    const onCleanCobweb = jest.fn().mockResolvedValue(3);
+    const ui = await render(
+      <MyRoomScreen
+        routines={SAMPLE_ROUTINES}
+        cobweb={{ assetKey: 'items/cobweb.png', cleanable: true }}
+        onCleanCobweb={onCleanCobweb}
+      />,
+    );
+    await fireEvent.press(ui.getByLabelText('거미줄 치우기'));
+    expect(onCleanCobweb).toHaveBeenCalled();
+  });
+
+  it('cleanable이 아니면 눌리지 않는다 — 표시만', async () => {
+    const onCleanCobweb = jest.fn();
+    const ui = await render(
+      <MyRoomScreen
+        routines={SAMPLE_ROUTINES}
+        cobweb={{ assetKey: 'items/cobweb.png', cleanable: false }}
+        onCleanCobweb={onCleanCobweb}
+      />,
+    );
+    expect(ui.queryByLabelText('거미줄 치우기')).toBeNull();
+    expect(ui.getByLabelText('거미줄이 꼈어요')).toBeTruthy();
+  });
+
   // 방↔달력 스와이프 제거 (#825) — 가로 스와이프는 하단 탭 이동 하나로
   // 통일했다. 예전엔 방 캔버스·달력 위 플링이 서브탭을 순환시켜서(#561),
   // 그 아래 루틴 리스트의 같은 손동작(셸 탭 페이저)과 뜻이 갈렸다.
