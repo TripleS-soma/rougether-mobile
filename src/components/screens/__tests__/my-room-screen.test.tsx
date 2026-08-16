@@ -127,7 +127,7 @@ describe('MyRoomScreen', () => {
     // 탭 버튼은 그대로 동작한다.
     expect(ui.getByText('오늘의 할 일')).toBeTruthy();
     await fireEvent.press(ui.getByText('달력'));
-    expect(ui.getByText('이 날의 루틴')).toBeTruthy();
+    expect(ui.getByText('이 날의 할 일')).toBeTruthy();
     await fireEvent.press(ui.getByText('방'));
     expect(ui.getByText('오늘의 할 일')).toBeTruthy();
   });
@@ -607,7 +607,7 @@ describe('MyRoomScreen', () => {
       <MyRoomScreen routines={SAMPLE_ROUTINES} completions={completions} />,
     );
     await fireEvent.press(local.getByText('달력'));
-    expect(local.getByText('이 날의 루틴')).toBeTruthy();
+    expect(local.getByText('이 날의 할 일')).toBeTruthy();
     expect(local.getByText('3 / 5')).toBeTruthy();
 
     // 서버 날짜(어제): completed 플래그로 집계 — 1/2.

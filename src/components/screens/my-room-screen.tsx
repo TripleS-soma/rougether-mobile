@@ -1249,7 +1249,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               <Calendar value={selectedDate} onSelect={pickDate} today={today} monthSwipe={false} />
               <View style={styles.calListHead}>
                 <Text style={[Typography.h3, styles.calListTitle, { color: t.text }]}>
-                  이 날의 루틴
+                  이 날의 할 일
                 </Text>
                 {calDayTotal > 0 ? (
                   <Text style={[Typography.label, { color: t.primaryText }]}>
@@ -1441,7 +1441,7 @@ const styles = StyleSheet.create({
   calListTitle: {
     marginTop: Spacing.three,
   },
-  // 이 날의 루틴 제목 + 완료/총 카운트 행 (#346) — 방탭 sectionHead와 같은 결.
+  // 이 날의 할 일 제목 + 완료/총 카운트 행 (#346) — 방탭 sectionHead와 같은 결.
   calListHead: {
     flexDirection: 'row',
     alignItems: 'baseline',
