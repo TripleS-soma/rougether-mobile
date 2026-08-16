@@ -40,6 +40,12 @@ export type HouseMembersScreenProps = {
   /** Each member's own character (room preview) — parent-resolved (#342). */
   memberCharacterId: (member: RoomCell) => CharacterId;
   onBack: () => void;
+  /**
+   * 초대코드를 손에 쥔 순간 (#841) — 복사·링크 공유 둘 다. 온보딩 미션
+   * '집에 친구 초대하기' 완료 판정에 쓴다. 실제 가입까지 기다리면 상대의
+   * 행동에 걸려 미션이 영영 안 끝난다.
+   */
+  onInviteShared?: () => void;
   /** Kick a member via the API (owner only); shown when the house has ids. */
   onKickMember?: (houseId: number, membershipId: number) => void;
   /** 입주 신청 수락 (#526, 방장 전용). */
@@ -73,6 +79,7 @@ export function HouseMembersScreen({
   isKicked,
   memberCharacterId,
   onBack,
+  onInviteShared,
   onKickMember,
   onAcceptJoinRequest,
   onRejectJoinRequest,
@@ -103,6 +110,7 @@ export function HouseMembersScreen({
     try {
       await Clipboard.setStringAsync(displayCode);
       toast('초대코드를 복사했어요');
+      onInviteShared?.();
     } catch {
       // 클립보드 실패 — 코드는 화면에 그대로 보인다.
     }
@@ -113,6 +121,7 @@ export function HouseMembersScreen({
       await Share.share({
         message: `루게더 '${currentHouse.name}' 집에 초대해요!\n${houseInviteLink(displayCode)}`,
       });
+      onInviteShared?.();
     } catch {
       // 공유 시트 취소/실패 — 조용히.
     }

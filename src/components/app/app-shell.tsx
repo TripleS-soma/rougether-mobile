@@ -60,7 +60,7 @@ const MISSION_TARGET_SCREEN: Record<OnboardingMissionStepId, Screen> = {
   'register-routine': 'addRoutine',
   'first-draw': 'gacha',
   'place-furniture': 'decor',
-  'browse-house': 'houseSearch',
+  'invite-house': 'houseMembers',
 };
 
 /** 미션 진행 배너를 얹는 화면들 — 미션과 관련된 탭·서브화면 상단. */
@@ -419,7 +419,6 @@ export function AppShell({
     setScreen,
     addReturnScreen,
     noHouses: housePages.noHouses,
-    onLeaveHouseSearch: housePages.onLeaveHouseSearch,
   });
 
   return (

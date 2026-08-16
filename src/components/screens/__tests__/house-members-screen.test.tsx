@@ -26,6 +26,24 @@ const baseProps = {
 };
 
 describe('HouseMembersScreen — 초대코드 복사·링크 공유 (#624)', () => {
+  /**
+   * 온보딩 미션 '집에 친구 초대하기' 완료 판정 (#841) — 코드를 손에 쥔
+   * 순간이다. 실제 가입까지 기다리면 상대의 행동에 걸려 미션이 영영 안
+   * 끝난다.
+   */
+  it('초대코드 복사·링크 공유가 onInviteShared를 부른다 (#841)', async () => {
+    const onInviteShared = jest.fn();
+    jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' } as never);
+    const { getByLabelText } = await render(
+      <ToastProvider>
+        <HouseMembersScreen {...baseProps} onInviteShared={onInviteShared} />
+      </ToastProvider>,
+    );
+
+    await fireEvent.press(getByLabelText('초대코드 복사'));
+    await waitFor(() => expect(onInviteShared).toHaveBeenCalledTimes(1));
+  });
+
   it('코드 카드에 복사·링크 공유 버튼이 뜨고, 공유는 랜딩 링크를 싣는다', async () => {
     const shareSpy = jest
       .spyOn(Share, 'share')
