@@ -88,6 +88,7 @@ export function useHousePages({
     | 'refreshHouses'
     | 'pendingJoinRequests'
     | 'cancelJoinRequest'
+    | 'reorderHouses'
     | 'previewByCode'
     | 'previewHouse'
     | 'joinByCode'
@@ -154,6 +155,7 @@ export function useHousePages({
     refreshHouses,
     pendingJoinRequests,
     cancelJoinRequest,
+    reorderHouses,
     previewByCode,
     previewHouse,
     joinByCode,
@@ -358,6 +360,7 @@ export function useHousePages({
     houses: arrangedHouses,
     pendingHouses: pendingHouseCards,
     onCancelJoinRequest: cancelJoinRequest,
+    onReorderHouses: reorderHouses,
     onSwapSeats: swapSeats,
     loading: housesLoading,
     loadError: housesError,

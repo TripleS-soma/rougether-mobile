@@ -30,6 +30,7 @@ import {
   cancelMyJoinRequest,
   fetchHouses,
   fetchMyHouses,
+  updateHouseOrder,
   fetchMyJoinRequests,
   getSessionUserId,
   joinHouseByCode,
@@ -133,6 +134,41 @@ export function useHouses() {
       }
     },
     [toast],
+  );
+
+  /**
+   * 집 순서 변경 (#820) — 인디케이터에서 끌어 놓은 결과를 서버에 저장한다.
+   *
+   * 낙관적으로 먼저 그린다: 손을 뗀 자리에 집이 남아 있어야 조작이 먹혔다고
+   * 느낀다. 실패하면 이전 순서로 되돌리고 이유를 말한다.
+   *
+   * 409(HOUSE_ORDER_STALE)는 "네가 본 목록이 낡았다"는 뜻이라 되돌리는 대신
+   * 전체를 다시 받는다 — 다른 기기에서 가입·탈퇴가 끼어든 경우다.
+   */
+  const reorderHouses = useCallback(
+    async (houseIds: number[]) => {
+      const before = houses;
+      const byId = new Map(houses.map((h) => [h.houseId, h] as const));
+      const next = houseIds.flatMap((id) => {
+        const hit = byId.get(id);
+        return hit ? [hit] : [];
+      });
+      // 서버 계약이 전량 전송이라, 우리가 가진 집을 다 못 채우면 보내지 않는다.
+      if (next.length !== houses.length) return;
+      setHouses(next);
+      try {
+        await updateHouseOrder(houseIds);
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 409) {
+          toast('집 목록이 바뀌었어요. 다시 불러올게요.');
+          await reloadMyHouses().catch(() => setHouses(before));
+          return;
+        }
+        setHouses(before);
+        toast('집 순서를 저장하지 못했어요. 잠시 후 다시 시도해 주세요.', 'error');
+      }
+    },
+    [houses, reloadMyHouses, toast],
   );
 
   /**
@@ -564,6 +600,7 @@ export function useHouses() {
       refreshHouses: reloadMyHouses,
       pendingJoinRequests,
       cancelJoinRequest,
+      reorderHouses,
       previewByCode,
       previewHouse,
       joinByCode,
@@ -596,6 +633,7 @@ export function useHouses() {
       reloadMyHouses,
       pendingJoinRequests,
       cancelJoinRequest,
+      reorderHouses,
       previewByCode,
       previewHouse,
       joinByCode,

@@ -4,6 +4,7 @@ import { Text, View } from 'react-native';
 
 import type { GachaMachine } from '@/api/adapters';
 import { type HouseCover, HouseCoverPicker } from '@/components/room/house-cover-picker';
+import { HouseOrderDots } from '@/components/room/house-order-dots';
 import { HousePreviewFrame } from '@/components/room/house-preview-frame';
 import { Room } from '@/components/room/room';
 import { GachaAccents } from '@/constants/theme';
@@ -614,6 +615,26 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
         <CategoryManageScreen onReorder={() => {}} />
+      </View>
+    ),
+  },
+  {
+    name: 'HouseOrderDots · 집 순서 인디케이터',
+    description:
+      '꾹 누르면 도트가 이름표 줄로 펼쳐지고 좌우로 끌어 순서를 바꾼다 (#820). 마지막 도트는 승인 대기 페이지라 정렬에서 빠진다.',
+    render: () => (
+      <View style={{ alignSelf: 'stretch', alignItems: 'center', gap: 12 }}>
+        <HouseOrderDots
+          houses={[
+            { houseId: 1, name: 'TripleS' },
+            { houseId: 2, name: '우리집' },
+            { houseId: 3, name: '스터디방' },
+          ]}
+          pendingCount={1}
+          index={0}
+          onReorder={(ids) => console.log('reorder', ids)}
+        />
+        <Text>↑ 꾹 눌러 좌우로 끌어보세요 (대기 페이지 도트 1개 포함)</Text>
       </View>
     ),
   },
