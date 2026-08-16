@@ -56,9 +56,7 @@ describe('Calendar', () => {
 
     const marked = getByLabelText('2026-08-20, 할 일 있음');
     const children = marked.children as unknown as { props?: { style?: unknown } }[];
-    const dot = children
-      .map((c) => flatten(c?.props?.style))
-      .find((style) => style.bottom != null);
+    const dot = children.map((c) => flatten(c?.props?.style)).find((style) => style.bottom != null);
 
     expect(dot).toBeTruthy();
     expect(dot?.position).toBe('absolute');
