@@ -121,6 +121,7 @@ export function FriendRoomScreen({
   friendName = '친구',
   onSwipeFriend,
   streakDays = 7,
+  cobweb,
   characterId = DEFAULT_CHARACTER_ID,
   characterFrames,
   wallpaperId,
@@ -155,6 +156,7 @@ export function FriendRoomScreen({
   const roomScene: RoomSceneProps = {
     characterId,
     characterFrames,
+    cobweb,
     wallpaperId,
     floorId,
     backgroundId,

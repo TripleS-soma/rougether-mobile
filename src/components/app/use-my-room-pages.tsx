@@ -105,6 +105,8 @@ export function useMyRoomPages({
     floorId: string | null;
     backgroundId: string | null;
     catalogue: ShopCatalogue;
+    /** 내 방 거미줄 (#829) — 서버가 방 응답으로 준다. */
+    cobweb: MyRoomScreenProps['cobweb'];
   };
 }) {
   const { screen, setScreen, addReturnScreen, setAddReturnScreen } = nav;
@@ -266,6 +268,7 @@ export function useMyRoomPages({
     wallpaperId: room.wallpaperId,
     floorId: room.floorId,
     backgroundId: room.backgroundId,
+    cobweb: room.cobweb,
     furniture: room.catalogue.furniture,
     wallpapers: room.catalogue.wallpapers,
     floors: room.catalogue.floors,

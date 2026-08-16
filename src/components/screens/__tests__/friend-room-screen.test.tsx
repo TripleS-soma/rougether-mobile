@@ -7,6 +7,14 @@ import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
 import { ToastProvider } from '@/components/ui/toast';
 
 describe('FriendRoomScreen', () => {
+  // 거미줄 (#829) — 친구 방 씬 번들도 명시 조립이라 도달 여부를 직접 본다.
+  it('거미줄 prop이 친구 방 캔버스까지 전달된다 (#829)', async () => {
+    const { getByLabelText } = await render(
+      <FriendRoomScreen cobweb={{ assetKey: 'items/cobweb.png' }} />,
+    );
+    expect(getByLabelText('거미줄이 꼈어요')).toBeTruthy();
+  });
+
   it('renders the friend name, routine progress, and cheer buttons', async () => {
     const { getByText } = await render(<FriendRoomScreen friendName="민지" />);
     expect(getByText('민지의 방')).toBeTruthy();

@@ -50,6 +50,9 @@ const SLOT_STYLE = Object.fromEntries(
   }),
 ) as Record<FurnitureSlot, ViewStyle>;
 
+/** 방에 낀 거미줄 (서버 #277). `cleanable`은 청소 단계(#830·#831)에서 쓴다. */
+export type RoomCobweb = { assetKey?: string; cleanable?: boolean };
+
 export type RoomProps = {
   wallpaperId?: string;
   /** Selected floor/background surface item ids (optional room layers). */
@@ -71,6 +74,13 @@ export type RoomProps = {
    * 오버레이가 담당). 빈 배열 = 가구 없는 방.
    */
   placements?: PlacedFurniture[] | null;
+  /**
+   * 장기 미접속 거미줄 (#829, 서버 #277) — 서버가 방 응답의 nullable
+   * `cobweb`으로 준다. 왼쪽 위 모서리에 얹는다. `assetKey`가 CDN 키가
+   * 아니거나 없으면 아무것도 그리지 않는다(구버전 서버·목 데이터 대비).
+   * 청소(탭)는 다음 단계(#830·#831)라 지금은 표시만 한다.
+   */
+  cobweb?: RoomCobweb | null;
   /** When true, tapping the character cycles through its poses (나의 방). */
   interactiveCharacter?: boolean;
   /**
@@ -112,6 +122,7 @@ export type RoomSceneProps = RoomCatalogProps &
     | 'backgroundId'
     | 'placedFurnitureIds'
     | 'placements'
+    | 'cobweb'
   >;
 
 /**
@@ -126,6 +137,8 @@ export type MemberRoomPreview = {
   floorId?: string | null;
   backgroundId?: string | null;
   characterId?: CharacterId;
+  /** 그 방에 낀 거미줄 (#829) — 없으면 깨끗한 방. */
+  cobweb?: RoomCobweb | null;
 };
 
 /**
@@ -145,6 +158,7 @@ export function memberRoomScene(
     wallpaperId: room?.wallpaperId,
     floorId: room?.floorId,
     backgroundId: room?.backgroundId,
+    cobweb: room?.cobweb ?? null,
   };
 }
 
@@ -169,6 +183,7 @@ export const Room = memo(function Room({
   floors = [],
   backgrounds = [],
   placements = null,
+  cobweb = null,
   interactiveCharacter = false,
   editable = false,
   onRegionPress,
@@ -358,11 +373,31 @@ export const Room = memo(function Room({
           sharp={fill}
         />
       )}
+      {/* 장기 미접속 거미줄 (#829) — 캐릭터·가구 위, 왼쪽 위 모서리.
+          청소 탭은 다음 단계(#830·#831)라 지금은 표시 전용이다. */}
+      {isCdnKey(cobweb?.assetKey) ? (
+        <Image
+          source={assetSource(cobweb.assetKey)}
+          style={styles.cobweb}
+          contentFit="contain"
+          cachePolicy="memory-disk"
+          transition={120}
+          accessibilityLabel="거미줄이 꼈어요"
+        />
+      ) : null}
     </View>
   );
 });
 
 const styles = StyleSheet.create({
+  /** 왼쪽 위 모서리 — 방 크기에 비례하도록 %로 둔다(타일·전체 화면 공용). */
+  cobweb: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '26%',
+    height: '26%',
+  },
   roomFill: {
     width: '100%',
     height: '100%',

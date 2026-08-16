@@ -126,6 +126,7 @@ export function useFriendVisit({
         characterId={friendRoom.characterId}
         characterFrames={friendRoom.characterFrames}
         streakDays={friendRoom.streakDays}
+        cobweb={friendRoom.cobweb}
         routines={friendRoom.routines}
         categories={friendRoom.categories}
         recentActivity={friendRoom.recentActivity}

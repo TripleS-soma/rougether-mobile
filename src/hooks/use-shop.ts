@@ -35,6 +35,7 @@ import {
 import { useToast } from '@/components/ui/toast';
 import { type Wallet } from '@/constants/currency';
 import { track } from '@/lib/analytics';
+import type { RoomCobweb } from '@/components/room/room';
 import {
   DEFAULT_WALLPAPER_ID,
   type PlacedFurniture,
@@ -60,6 +61,8 @@ export type RoomPlacement = {
   layoutRevision: number;
   /** 이미 FREE_V1로 전환된 방인지 — 첫 저장 확인 모달 판단. */
   freeLayout: boolean;
+  /** 내 방에 낀 거미줄 (#829) — 없으면 null. */
+  cobweb: RoomCobweb | null;
 };
 
 export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
@@ -75,6 +78,7 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
     backgroundId: null,
     layoutRevision: 0,
     freeLayout: false,
+    cobweb: null,
   });
   const { show: toast } = useToast();
   // itemId(string) → userItemId, needed to save placements.
@@ -118,6 +122,8 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
         backgroundId: saved ? saved.backgroundId : fallback.backgroundId,
         layoutRevision: room?.layoutRevision ?? 0,
         freeLayout,
+        // 서버가 안 주면 깨끗한 방 (#829).
+        cobweb: room?.cobweb ?? null,
       });
     } catch {
       setError(true);
@@ -205,6 +211,8 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
         backgroundId,
         layoutRevision: res.layoutRevision ?? placement.layoutRevision + 1,
         freeLayout: true,
+        // 배치 저장은 거미줄과 무관 — 현재 상태를 그대로 들고 간다 (#829).
+        cobweb: placement.cobweb,
       });
       toast('방 배치를 저장했어요', 'success');
       return 'ok';
