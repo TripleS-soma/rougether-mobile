@@ -25,6 +25,7 @@ import type { FriendActivityDay } from '@/components/screens/friend-room-screen'
 import type { CharacterId } from '@/constants/characters';
 import type { Routine, RoutineCategoryMeta } from '@/constants/routines';
 import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furniture';
+import type { RoomCobweb } from '@/components/room/room';
 
 /** 친구 방 배치 — FREE_V1이면 placements, 아니면 슬롯 id 목록으로 렌더 (#327). */
 export type FriendRoomPlacement = {
@@ -42,6 +43,8 @@ export type FriendRoom = {
   /** The friend's CDN animation keys (room response); local sprite fallback. */
   characterFrames?: string[];
   streakDays: number;
+  /** 친구 방에 낀 거미줄 (#829). */
+  cobweb: RoomCobweb | null;
   routines: Routine[];
   /** 그날 루틴·투두의 공개 카테고리 메타 (#528) — 그룹 헤더용. */
   categories: RoutineCategoryMeta[];
@@ -58,6 +61,7 @@ export type FriendRoom = {
 
 const EMPTY: FriendRoom = {
   placement: null,
+  cobweb: null,
   streakDays: 0,
   routines: [],
   categories: [],
@@ -116,6 +120,7 @@ export function useFriendRoom() {
           ? toCharacterFrames(undefined, room?.character?.animations)
           : undefined,
         streakDays: room?.streak?.currentCount ?? 0,
+        cobweb: room?.cobweb ?? null,
         routines: day ? toFriendRoutines(day) : [],
         categories: day ? toFriendCategories(day) : [],
         // undefined on failure hides the section instead of faking an empty history.

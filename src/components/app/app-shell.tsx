@@ -298,6 +298,7 @@ export function AppShell({
       floorId,
       backgroundId,
       catalogue,
+      cobweb: placement.cobweb,
     },
   });
   // 홈 위젯 오늘 요약 동기화 (#604, 안드로이드 전용) — 완료 토글·루틴

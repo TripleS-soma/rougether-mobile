@@ -3,6 +3,23 @@ import { fireEvent, render } from '@testing-library/react-native';
 import { Room } from '@/components/room/room';
 
 describe('Room', () => {
+  // 장기 미접속 거미줄 (#829, 서버 #277) — 방 응답의 nullable cobweb.
+  it('CDN 키가 있으면 거미줄을 그린다', async () => {
+    const { getByLabelText } = await render(
+      <Room cobweb={{ assetKey: 'items/cobweb.png', cleanable: true }} />,
+    );
+    expect(getByLabelText('거미줄이 꼈어요')).toBeTruthy();
+  });
+
+  it('거미줄이 없거나 CDN 키가 아니면 그리지 않는다', async () => {
+    const clean = await render(<Room />);
+    expect(clean.queryByLabelText('거미줄이 꼈어요')).toBeNull();
+
+    // 로컬 카탈로그 키는 CDN에 아트가 없다 — 구버전 서버·목 데이터 대비.
+    const legacy = await render(<Room cobweb={{ assetKey: 'furniture/bed' }} />);
+    expect(legacy.queryByLabelText('거미줄이 꼈어요')).toBeNull();
+  });
+
   it('renders default furniture and the character', async () => {
     const { getByLabelText } = await render(<Room />);
     expect(getByLabelText('포근한 침대')).toBeTruthy();

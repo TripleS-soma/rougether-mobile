@@ -245,6 +245,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   wallpaperId = DEFAULT_WALLPAPER_ID,
   floorId,
   backgroundId,
+  cobweb,
   placedFurnitureIds,
   placements = null,
   furniture,
@@ -575,6 +576,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   const roomScene: RoomSceneProps = {
     characterId,
     characterFrames,
+    cobweb,
     wallpaperId,
     floorId,
     backgroundId,

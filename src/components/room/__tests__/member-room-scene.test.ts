@@ -32,4 +32,15 @@ describe('memberRoomScene (#691)', () => {
     expect(scene.furniture).toBe(CATALOGS.furniture);
     expect(scene.wallpapers).toBe(CATALOGS.wallpapers);
   });
+
+  // 거미줄은 집 좌석 타일에도 그대로 실려야 한다 (#829).
+  it('preview의 거미줄을 씬으로 옮긴다 — 없으면 null', () => {
+    const withWeb = memberRoomScene(
+      { placedFurnitureIds: [], cobweb: { assetKey: 'items/cobweb.png' } },
+      CATALOGS,
+    );
+    expect(withWeb.cobweb).toEqual({ assetKey: 'items/cobweb.png' });
+    expect(memberRoomScene({ placedFurnitureIds: [] }, CATALOGS).cobweb).toBeNull();
+    expect(memberRoomScene(undefined, CATALOGS).cobweb).toBeNull();
+  });
 });

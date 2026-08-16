@@ -77,6 +77,18 @@ describe('MyRoomScreen', () => {
     expect(onEditRoutine).toHaveBeenCalledWith(expect.objectContaining({ id: '1' }));
   });
 
+  // 거미줄 (#829) — prop이 <Room />까지 실제로 닿는지. 씬 번들이 명시
+  // 조립이라 타입만으로는 누락이 안 잡힌다(실제로 한 번 빠뜨렸다).
+  it('거미줄 prop이 방 캔버스까지 전달된다 (#829)', async () => {
+    const ui = await render(
+      <MyRoomScreen
+        routines={SAMPLE_ROUTINES}
+        cobweb={{ assetKey: 'items/cobweb.png', cleanable: true }}
+      />,
+    );
+    expect(ui.getByLabelText('거미줄이 꼈어요')).toBeTruthy();
+  });
+
   // 방↔달력 스와이프 제거 (#825) — 가로 스와이프는 하단 탭 이동 하나로
   // 통일했다. 예전엔 방 캔버스·달력 위 플링이 서브탭을 순환시켜서(#561),
   // 그 아래 루틴 리스트의 같은 손동작(셸 탭 페이저)과 뜻이 갈렸다.

@@ -94,6 +94,8 @@ export function useMemberRoomPreviews() {
               floorId: placement.floorId,
               backgroundId: placement.backgroundId,
               characterId: characterIdFromCode(room.character?.code),
+              // 같은 집 구성원 방의 거미줄 (#829) — 타일에서도 보인다.
+              cobweb: room.cobweb ?? null,
             };
             return [membershipId, preview] as const;
           } catch {
