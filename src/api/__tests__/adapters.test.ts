@@ -817,6 +817,15 @@ describe('API adapters', () => {
     expect(toGachaMachine({ gachaId: 12, name: '캐릭터 뽑기' }).kind).toBe('character');
   });
 
+  it('선물상자 아트 키를 그대로 싣는다 — 없으면 undefined (서버 #276)', () => {
+    // 가공하지 않는다: 화면이 isCdnKey로 판정해 픽토그램 폴백을 고른다.
+    expect(
+      toGachaMachine({ gachaId: 1, name: '숲속 세이지 뽑기', giftBoxAssetKey: 'items/box.png' })
+        .giftBoxKey,
+    ).toBe('items/box.png');
+    expect(toGachaMachine({ gachaId: 1, name: '숲속 세이지 뽑기' }).giftBoxKey).toBeUndefined();
+  });
+
   it('maps a mission end time to a local end date for the card', () => {
     expect(
       toHouseMission({
