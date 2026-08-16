@@ -107,6 +107,13 @@ function CalendarBase({
       ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
     ];
   }, [view.y, view.m]);
+  /** 7칸씩 주 단위로 자른다 (#845) — 한 줄에 몰아넣고 wrap 시키면 퍼센트 폭
+   * 반올림으로 7번째가 다음 줄로 밀린다(맥에서 재현). 줄마다 flex:1이면
+   * 남는 픽셀을 flex가 분배해 반올림이 개입할 여지가 없다. */
+  const weeks = useMemo(
+    () => Array.from({ length: cells.length / 7 }, (_, i) => cells.slice(i * 7, i * 7 + 7)),
+    [cells],
+  );
 
   const shiftMonth = (delta: number) =>
     setView(({ y, m }) => {
@@ -136,15 +143,23 @@ function CalendarBase({
   const selOpacity = useAnimatedValue(0);
   const selVisibleRef = useRef(false);
   const dayLayouts = useRef<
-    Record<string, { x: number; y: number; width: number; height: number }>
+    Record<string, { x: number; y: number; width: number; height: number; row: number }>
   >({});
+  /** 주 줄의 grid 기준 y (#845) — 셀 onLayout이 줄 기준이라 여기에 더한다. */
+  const rowTops = useRef<Record<number, number>>({});
   const selectedInView = selected.y === view.y && selected.m === view.m;
   // 실측 셀 위치로 원을 놓는다. appearing(첫 등장·월 이동 복귀)이면 점프+페이드,
   // 같은 달 내 재선택이면 스프링. 셀이 아직 측정 전이면 no-op(onLayout이 뒤이어 호출).
   const placeCircle = (animate: boolean) => {
     const l = dayLayouts.current[value];
     if (!l) return;
-    const target = { x: l.x + (l.width - SEL_SIZE) / 2, y: l.y + (l.height - SEL_SIZE) / 2 };
+    const rowTop = rowTops.current[l.row];
+    // 줄이 아직 측정 전이면 원을 놓지 않는다 — 줄 onLayout이 뒤이어 다시 부른다.
+    if (rowTop == null) return;
+    const target = {
+      x: l.x + (l.width - SEL_SIZE) / 2,
+      y: rowTop + l.y + (l.height - SEL_SIZE) / 2,
+    };
     const appearing = !selVisibleRef.current;
     if (appearing || !animate) {
       selPos.setValue(target);
@@ -220,68 +235,85 @@ function CalendarBase({
               },
             ]}
           />
-          {WEEKDAYS.map((w, i) => (
-            <View key={w} style={styles.cell}>
-              <Text
-                style={[
-                  Typography.supporting,
-                  emph('semibold'),
-                  { color: i === 0 ? readableTextColor(t.danger, t.surfaceMuted) : t.textMuted },
-                ]}>
-                {w}
-              </Text>
+          <View style={styles.week}>
+            {WEEKDAYS.map((w, i) => (
+              <View key={w} style={styles.cell}>
+                <Text
+                  style={[
+                    Typography.supporting,
+                    emph('semibold'),
+                    { color: i === 0 ? readableTextColor(t.danger, t.surfaceMuted) : t.textMuted },
+                  ]}>
+                  {w}
+                </Text>
+              </View>
+            ))}
+          </View>
+          {weeks.map((week, wi) => (
+            <View
+              key={`week-${wi}`}
+              style={styles.week}
+              // 셀 onLayout은 이 줄 기준 좌표라, 선택 원을 grid 좌표에 얹으려면
+              // 줄의 y를 더해야 한다 (#845). 줄이 다시 측정되면 원도 다시 놓는다.
+              onLayout={(e) => {
+                rowTops.current[wi] = e.nativeEvent.layout.y;
+                if (selectedInView) placeCircle(false);
+              }}>
+              {week.map((day, di) => {
+                const i = wi * 7 + di;
+                if (day === null) return <View key={`blank-${i}`} style={styles.cell} />;
+                const date = iso(view.y, view.m, day);
+                const disabled = (min && date < min) || (max && date > max);
+                const isSelected = date === value;
+                const isSunday = di === 0;
+                return (
+                  <Pressable
+                    key={date}
+                    onPress={() => !disabled && onSelect(date)}
+                    disabled={!!disabled}
+                    accessibilityRole="button"
+                    accessibilityLabel={markedDates?.has(date) ? `${date}, 할 일 있음` : date}
+                    accessibilityState={{ selected: isSelected, disabled: !!disabled }}
+                    onLayout={(e) => {
+                      dayLayouts.current[date] = { ...e.nativeEvent.layout, row: wi };
+                      // 월 이동으로 이 셀이 새로 측정될 때, 선택 날짜면 즉시 원을 얹는다.
+                      if (date === value && selectedInView) placeCircle(false);
+                    }}
+                    style={styles.cell}>
+                    <View style={styles.dayCircle}>
+                      <Text
+                        style={[
+                          Typography.body,
+                          styles.dayText,
+                          {
+                            color: disabled
+                              ? t.textDisabled
+                              : isSelected
+                                ? t.onPrimary
+                                : isSunday
+                                  ? t.danger
+                                  : t.text,
+                          },
+                        ]}>
+                        {day}
+                      </Text>
+                    </View>
+                    {/* 할 일 있는 날 표시 (#838) — 선택된 날은 원이 이미 강조라
+                        점을 생략한다(원 안에서 잉크가 겹친다). 절대 배치라
+                        없을 때 자리를 채워둘 필요가 없다 (#845 후속). */}
+                    {markedDates?.has(date) && !isSelected ? (
+                      <View
+                        style={[
+                          styles.dot,
+                          { backgroundColor: disabled ? t.textDisabled : t.primary },
+                        ]}
+                      />
+                    ) : null}
+                  </Pressable>
+                );
+              })}
             </View>
           ))}
-          {cells.map((day, i) => {
-            if (day === null) return <View key={`blank-${i}`} style={styles.cell} />;
-            const date = iso(view.y, view.m, day);
-            const disabled = (min && date < min) || (max && date > max);
-            const isSelected = date === value;
-            const isSunday = i % 7 === 0;
-            return (
-              <Pressable
-                key={date}
-                onPress={() => !disabled && onSelect(date)}
-                disabled={!!disabled}
-                accessibilityRole="button"
-                accessibilityLabel={markedDates?.has(date) ? `${date}, 할 일 있음` : date}
-                accessibilityState={{ selected: isSelected, disabled: !!disabled }}
-                onLayout={(e) => {
-                  dayLayouts.current[date] = e.nativeEvent.layout;
-                  // 월 이동으로 이 셀이 새로 측정될 때, 선택 날짜면 즉시 원을 얹는다.
-                  if (date === value && selectedInView) placeCircle(false);
-                }}
-                style={styles.cell}>
-                <View style={styles.dayCircle}>
-                  <Text
-                    style={[
-                      Typography.body,
-                      styles.dayText,
-                      {
-                        color: disabled
-                          ? t.textDisabled
-                          : isSelected
-                            ? t.onPrimary
-                            : isSunday
-                              ? t.danger
-                              : t.text,
-                      },
-                    ]}>
-                    {day}
-                  </Text>
-                </View>
-                {/* 할 일 있는 날 표시 (#838) — 선택된 날은 원이 이미 강조라
-                    점을 생략하면 원 안에서 잉크가 겹쳐 지저분해진다. */}
-                {markedDates?.has(date) && !isSelected ? (
-                  <View
-                    style={[styles.dot, { backgroundColor: disabled ? t.textDisabled : t.primary }]}
-                  />
-                ) : (
-                  <View style={styles.dot} />
-                )}
-              </Pressable>
-            );
-          })}
         </View>
       </GestureDetector>
     </View>
@@ -294,12 +326,18 @@ function CalendarBase({
 export const Calendar = memo(CalendarBase);
 
 const styles = StyleSheet.create({
-  /** 날짜 아래 점 — 없을 때도 같은 크기의 자리를 잡아 줄 높이가 흔들리지 않게. */
+  /**
+   * 날짜 아래 점 (#838) — **절대 배치여야 한다** (#845 후속). 흐름에 두면
+   * 셀이 [숫자 + 점]을 통째로 세로 중앙에 놓아 숫자가 셀 중앙보다 위로
+   * 올라가는데, 선택 원은 셀 실측 중앙에 얹히므로 둘이 어긋난다.
+   * 점을 흐름 밖으로 빼면 숫자는 셀 정중앙을 지키고 원과 맞는다.
+   */
   dot: {
+    position: 'absolute',
+    bottom: Spacing.half,
     width: 4,
     height: 4,
     borderRadius: Radius.pill,
-    marginTop: Spacing.half,
   },
   wrap: {
     gap: Spacing.two,
@@ -332,11 +370,16 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   grid: {
+    // 주 줄을 세로로 쌓는다 — 가로 wrap을 쓰지 않는 게 #845 수정의 핵심.
+    flexDirection: 'column',
+  },
+  /** 한 주 = 7칸 한 줄 (#845). grid의 flexWrap에 기대지 않는다. */
+  week: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
   },
   cell: {
-    width: `${100 / 7}%`,
+    // 퍼센트(100/7 = 무한소수) 대신 flex — 반올림으로 7번째가 밀리지 않는다.
+    flex: 1,
     aspectRatio: 1,
     alignItems: 'center',
     justifyContent: 'center',
