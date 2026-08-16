@@ -138,7 +138,7 @@ export function LoginScreen({
               />
             </View>
             <Text style={[Typography.h1, { color: t.text }]}>루게더</Text>
-            <Text style={[styles.subtitle, { color: t.textMuted }]}>
+            <Text style={[styles.subtitle, emph('normal'), { color: t.textMuted }]}>
               매일의 루틴으로 나만의 방과 집을 함께 키워요.
             </Text>
           </View>
@@ -216,7 +216,9 @@ export function LoginScreen({
             </>
           ) : null}
           {error ? (
-            <Text style={[styles.errorText, { color: t.danger }]} accessibilityRole="alert">
+            <Text
+              style={[styles.errorText, emph('normal'), { color: t.danger }]}
+              accessibilityRole="alert">
               {error}
             </Text>
           ) : null}

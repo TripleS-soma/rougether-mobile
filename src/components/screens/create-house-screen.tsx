@@ -94,7 +94,7 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
             <Text style={[Typography.supporting, { color: t.textMuted }]} numberOfLines={1}>
               {description.trim() || '한 줄 설명이 여기에 표시돼요'}
             </Text>
-            <Text style={[styles.meta, { color: t.textMuted }]}>
+            <Text style={[styles.meta, emph('normal'), { color: t.textMuted }]}>
               0 / {capacity}명 · {isPrivate ? '비공개' : '공개'}
             </Text>
           </View>
@@ -111,7 +111,9 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
                 placeholder="우리 집 이름을 정해주세요"
                 placeholderTextColor={t.textMuted}
               />
-              <Text style={[styles.counter, { color: t.textDisabled }]}>{name.length}/16</Text>
+              <Text style={[styles.counter, emph('normal'), { color: t.textDisabled }]}>
+                {name.length}/16
+              </Text>
             </View>
           </Labeled>
           <Labeled label="한 줄 설명" t={t}>
@@ -123,7 +125,7 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
                 placeholder="어떤 루틴을 함께 할까요?"
                 placeholderTextColor={t.textMuted}
               />
-              <Text style={[styles.counter, { color: t.textDisabled }]}>
+              <Text style={[styles.counter, emph('normal'), { color: t.textDisabled }]}>
                 {description.length}/40
               </Text>
             </View>
@@ -261,7 +263,7 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
             ]}>
             초대코드
           </Text>
-          <Text style={[styles.hint, { color: t.textMuted }]}>
+          <Text style={[styles.hint, emph('normal'), { color: t.textMuted }]}>
             집을 만들면 초대코드가 자동으로 발급돼요. 집 화면의 구성원 관리에서 확인하고 친구에게
             공유할 수 있어요.
           </Text>
@@ -337,6 +339,7 @@ function PrivacyCard({
   t: ReturnType<typeof useTokens>;
 }) {
   const Typography = useTypography();
+  const emph = useFontEmphasis();
   return (
     <Pressable
       onPress={onPress}
@@ -347,7 +350,7 @@ function PrivacyCard({
         { backgroundColor: t.surfaceMuted, borderColor: selected ? accent : 'transparent' },
       ]}>
       <Text style={[Typography.label, { color: t.text }]}>{title}</Text>
-      <Text style={[styles.privacySub, { color: t.textMuted }]}>{subtitle}</Text>
+      <Text style={[styles.privacySub, emph('normal'), { color: t.textMuted }]}>{subtitle}</Text>
     </Pressable>
   );
 }

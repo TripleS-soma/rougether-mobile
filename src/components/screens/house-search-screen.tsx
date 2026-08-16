@@ -454,7 +454,9 @@ export function HouseSearchScreen({
                         #{h.tag}
                       </Text>
                     </View>
-                    <Text style={[styles.meta, { color: t.textMuted }]} numberOfLines={1}>
+                    <Text
+                      style={[styles.meta, emph('normal'), { color: t.textMuted }]}
+                      numberOfLines={1}>
                       {h.level != null ? `Lv.${h.level} · ` : ''}멤버 {h.members} / {h.capacity}
                       {full ? <Text style={{ color: t.danger }}> · 만석</Text> : null}
                     </Text>

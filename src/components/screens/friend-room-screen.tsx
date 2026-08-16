@@ -32,7 +32,7 @@ import { BookOpenPictogram, Pictogram, type PictogramName } from '@/components/u
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
-import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { formatTime } from '@/utils/datetime';
 import { hapticSuccess } from '@/utils/haptics';
 import { DEMO_GUESTBOOK, FRIEND_DEMO_ROUTINES } from '@/mocks/fixtures';
@@ -148,6 +148,7 @@ export function FriendRoomScreen({
 }: FriendRoomScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
+  const emph = useFontEmphasis();
   const headerInset = useHeaderInsetStyle();
   const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
   // <Room />에 스프레드로 넘기는 씬 번들 (#691).
@@ -414,7 +415,8 @@ export function FriendRoomScreen({
                         {routine.alarmEnabled && routine.time ? (
                           <View style={styles.badge}>
                             <Icon name="bell" size={11} color={t.textMuted} />
-                            <Text style={[styles.badgeText, { color: t.textMuted }]}>
+                            <Text
+                              style={[styles.badgeText, emph('normal'), { color: t.textMuted }]}>
                               {formatTime(routine.time)}
                             </Text>
                           </View>

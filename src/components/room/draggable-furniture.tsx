@@ -13,7 +13,7 @@ import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { Icon } from '@/components/ui/icon';
 import { ROOM_RENDER_CONTRACT } from '@/components/room/room-render-contract';
 import { Radius, Spacing } from '@/constants/theme';
-import { useTokens } from '@/hooks/use-tokens';
+import { useFontEmphasis, useTokens } from '@/hooks/use-tokens';
 import type { FurnitureItem, PlacedFurniture } from '@/resources/furniture';
 
 /** 크기 조절 클램프 (#333) — 서버 제약은 없지만 방을 벗어나지 않는 선. */
@@ -92,6 +92,7 @@ export function DraggableFurniture({
   previewPrice,
 }: DraggableFurnitureProps) {
   const t = useTokens();
+  const emph = useFontEmphasis();
   const cx = useSharedValue(placement.x * roomSize.w);
   const cy = useSharedValue(placement.y * roomSize.h);
   const scaleSV = useSharedValue(placement.scale ?? 1);
@@ -239,7 +240,9 @@ export function DraggableFurniture({
             style={[styles.previewBadge, { backgroundColor: t.surface, borderColor: t.border }]}
             testID={`preview-badge-${placement.furnitureId}`}>
             <Icon name="diamond" size={9} color={t.primary} />
-            <Text style={[styles.previewBadgeText, { color: t.text }]}>{previewPrice}</Text>
+            <Text style={[styles.previewBadgeText, emph('normal'), { color: t.text }]}>
+              {previewPrice}
+            </Text>
           </View>
         ) : null}
         {selected ? (
