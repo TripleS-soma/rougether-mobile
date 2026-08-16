@@ -299,7 +299,8 @@ function CalendarBase({
                       </Text>
                     </View>
                     {/* 할 일 있는 날 표시 (#838) — 선택된 날은 원이 이미 강조라
-                        점을 생략하면 원 안에서 잉크가 겹쳐 지저분해진다. */}
+                        점을 생략한다(원 안에서 잉크가 겹친다). 절대 배치라
+                        없을 때 자리를 채워둘 필요가 없다 (#845 후속). */}
                     {markedDates?.has(date) && !isSelected ? (
                       <View
                         style={[
@@ -307,9 +308,7 @@ function CalendarBase({
                           { backgroundColor: disabled ? t.textDisabled : t.primary },
                         ]}
                       />
-                    ) : (
-                      <View style={styles.dot} />
-                    )}
+                    ) : null}
                   </Pressable>
                 );
               })}
@@ -327,12 +326,18 @@ function CalendarBase({
 export const Calendar = memo(CalendarBase);
 
 const styles = StyleSheet.create({
-  /** 날짜 아래 점 — 없을 때도 같은 크기의 자리를 잡아 줄 높이가 흔들리지 않게. */
+  /**
+   * 날짜 아래 점 (#838) — **절대 배치여야 한다** (#845 후속). 흐름에 두면
+   * 셀이 [숫자 + 점]을 통째로 세로 중앙에 놓아 숫자가 셀 중앙보다 위로
+   * 올라가는데, 선택 원은 셀 실측 중앙에 얹히므로 둘이 어긋난다.
+   * 점을 흐름 밖으로 빼면 숫자는 셀 정중앙을 지키고 원과 맞는다.
+   */
   dot: {
+    position: 'absolute',
+    bottom: Spacing.half,
     width: 4,
     height: 4,
     borderRadius: Radius.pill,
-    marginTop: Spacing.half,
   },
   wrap: {
     gap: Spacing.two,

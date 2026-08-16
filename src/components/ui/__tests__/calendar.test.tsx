@@ -37,6 +37,33 @@ describe('Calendar', () => {
     expect(grid.flexDirection).toBe('column');
   });
 
+  /**
+   * 점이 흐름에 있으면 셀이 [숫자 + 점]을 통째로 중앙 정렬해 **숫자가 셀
+   * 중앙보다 위로 올라가고**, 선택 원(셀 실측 중앙)과 어긋난다 — 맥에서
+   * 실제로 그렇게 보였다 (#845 후속). 절대 배치를 고정한다.
+   */
+  it('할 일 점은 절대 배치라 날짜 숫자 위치를 밀지 않는다 (#845)', async () => {
+    const { getByLabelText } = await render(
+      <Calendar
+        value="2026-08-16"
+        today="2026-08-16"
+        onSelect={() => {}}
+        markedDates={new Set(['2026-08-20'])}
+      />,
+    );
+    const flatten = (style: unknown): Record<string, unknown> =>
+      Object.assign({}, ...[style].flat(Infinity).filter(Boolean));
+
+    const marked = getByLabelText('2026-08-20, 할 일 있음');
+    const children = marked.children as unknown as { props?: { style?: unknown } }[];
+    const dot = children
+      .map((c) => flatten(c?.props?.style))
+      .find((style) => style.bottom != null);
+
+    expect(dot).toBeTruthy();
+    expect(dot?.position).toBe('absolute');
+  });
+
   it('markedDates에 든 날짜만 할 일 있음으로 표시한다', async () => {
     const { getByLabelText, queryByLabelText } = await render(
       <Calendar
