@@ -1258,6 +1258,7 @@ const SwatchTile = memo(function SwatchTile({
   onBlockedBuy: () => void;
   t: Tokens;
 }) {
+  const emph = useFontEmphasis();
   const popStyle = useOwnedPopStyle(isOwned);
   return (
     <AnimatedPressable
@@ -1297,11 +1298,13 @@ const SwatchTile = memo(function SwatchTile({
       )}
       {/* 이름은 표시하지 않는다 (#487) — 이미지가 곧 정보. 접근성 라벨은 유지. */}
       {isOwned ? (
-        <Text style={[styles.tilePrice, { color: t.textMuted }]}>보유</Text>
+        <Text style={[styles.tilePrice, emph('normal'), { color: t.textMuted }]}>보유</Text>
       ) : (
         <View style={styles.priceRow}>
           <Icon name="diamond" size={10} color={t.primary} />
-          <Text style={[styles.tilePrice, { color: t.textMuted }]}>{item.price}</Text>
+          <Text style={[styles.tilePrice, emph('normal'), { color: t.textMuted }]}>
+            {item.price}
+          </Text>
         </View>
       )}
     </AnimatedPressable>
@@ -1374,6 +1377,7 @@ const FurnitureTile = memo(function FurnitureTile({
   onPlace: (item: FurnitureItem) => void;
   t: Tokens;
 }) {
+  const emph = useFontEmphasis();
   const popStyle = useOwnedPopStyle(isOwned);
   return (
     <AnimatedPressable
@@ -1401,16 +1405,18 @@ const FurnitureTile = memo(function FurnitureTile({
         <View
           style={[styles.newBadge, { backgroundColor: t.warning }]}
           testID={`new-badge-${item.id}`}>
-          <Text style={[styles.newBadgeText, { color: t.onPrimary }]}>NEW</Text>
+          <Text style={[styles.newBadgeText, emph('normal'), { color: t.onPrimary }]}>NEW</Text>
         </View>
       ) : null}
       {/* 이름은 표시하지 않는다 (#487) — 접근성 라벨은 유지. */}
       {isOwned ? (
-        <Text style={[styles.tilePrice, { color: t.textMuted }]}>보유</Text>
+        <Text style={[styles.tilePrice, emph('normal'), { color: t.textMuted }]}>보유</Text>
       ) : (
         <View style={styles.priceRow}>
           <Icon name="diamond" size={10} color={t.primary} />
-          <Text style={[styles.tilePrice, { color: t.textMuted }]}>{item.price}</Text>
+          <Text style={[styles.tilePrice, emph('normal'), { color: t.textMuted }]}>
+            {item.price}
+          </Text>
         </View>
       )}
     </AnimatedPressable>

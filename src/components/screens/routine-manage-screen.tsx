@@ -11,7 +11,7 @@ import { CategoryIcon } from '@/components/ui/category-icon';
 import { RetryState } from '@/components/ui/retry-state';
 import { Spacing } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
-import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
 import { formatTime } from '@/utils/datetime';
 
@@ -45,6 +45,7 @@ export function RoutineManageScreen({
 }: RoutineManageScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
+  const emph = useFontEmphasis();
   const headerInset = useHeaderInsetStyle();
   // The routines prop carries the merged routine+todo list; this screen manages routines only.
   const routineItems = routines.filter((r) => r.kind !== 'todo');
@@ -151,7 +152,12 @@ export function RoutineManageScreen({
                               {routine.alarmEnabled && routine.time ? (
                                 <View style={styles.badge}>
                                   <Icon name="bell" size={11} color={t.textMuted} />
-                                  <Text style={[styles.badgeText, { color: t.textMuted }]}>
+                                  <Text
+                                    style={[
+                                      styles.badgeText,
+                                      emph('normal'),
+                                      { color: t.textMuted },
+                                    ]}>
                                     {formatTime(routine.time)}
                                   </Text>
                                 </View>

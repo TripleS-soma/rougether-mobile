@@ -14,7 +14,7 @@ import { BearCheck } from '@/components/ui/bear-check';
 import { Icon } from '@/components/ui/icon';
 import { Spacing } from '@/constants/theme';
 import { useConstant, useLatestRef } from '@/hooks/use-stable-value';
-import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { formatTime } from '@/utils/datetime';
 
 /** 롱프레스 후 드래그 활성까지 (#716) — 그 전 세로 스크롤은 ScrollView 몫. */
@@ -90,6 +90,7 @@ function RoutineRowBase({
 }: RoutineRowProps) {
   const t = useTokens();
   const Typography = useTypography();
+  const emph = useFontEmphasis();
 
   // 제스처는 1회 생성이라 콜백을 클로저로 굳히면 안 된다 — 최신값을 ref로 읽는다.
   const handlers = useLatestRef({ onDragStart, onDragUpdate, onDragEnd, onDragFinalize });
@@ -154,7 +155,9 @@ function RoutineRowBase({
             <View style={styles.badges}>
               <View style={styles.badge}>
                 <Icon name="bell" size={12} color={t.textMuted} />
-                <Text style={[styles.badgeText, { color: t.textMuted }]}>{formatTime(time)}</Text>
+                <Text style={[styles.badgeText, emph('normal'), { color: t.textMuted }]}>
+                  {formatTime(time)}
+                </Text>
               </View>
             </View>
           ) : null}
