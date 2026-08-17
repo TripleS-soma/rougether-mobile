@@ -2,6 +2,7 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 
+import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
@@ -202,13 +203,20 @@ function CalendarBase({
             {view.y}년 {view.m + 1}월
           </Text>
           {showToday ? (
+            /* 되돌아가는 버튼이지 "여기가 오늘"이라는 배지가 아니다 (#864).
+               예전엔 글자가 "오늘" 하나뿐이라 배지로 읽혔다 — 이 앱에서 알약
+               모양 + 연한 틴트는 ui/pill·badge가 쓰는 **상태** 옷이다. 게다가
+               #862로 오늘 칸에 링이 생기면서 같은 단어를 말하는 게 둘이 됐다.
+               문구를 동작형으로 바꾸고 되돌리기 화살표를 붙여 역할을 가른다:
+               링 = 여기가 오늘(상태), 이 버튼 = 거기로 가기(액션). */
             <Pressable
               onPress={goToday}
               accessibilityRole="button"
               accessibilityLabel="오늘로"
               style={[styles.todayChip, { backgroundColor: t.primarySoft }]}>
+              <Icon name="rotate-ccw" size={12} color={t.primaryText} />
               <Text style={[Typography.supporting, emph('semibold'), { color: t.primaryText }]}>
-                오늘
+                오늘로
               </Text>
             </Pressable>
           ) : null}
@@ -377,6 +385,9 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   todayChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.half,
     paddingHorizontal: Spacing.two,
     paddingVertical: Spacing.half,
     borderRadius: Radius.pill,
