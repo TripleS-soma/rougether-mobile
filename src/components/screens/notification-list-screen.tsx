@@ -1,9 +1,10 @@
 import { type ReactNode, useRef } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import ReanimatedSwipeable, {
   type SwipeableMethods,
 } from 'react-native-gesture-handler/ReanimatedSwipeable';
 
+import { Loading } from '@/components/ui/loading';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { RetryState } from '@/components/ui/retry-state';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -37,6 +38,8 @@ const TYPE_ICONS: Record<string, IconName> = {
   // 입주 신청 결과 (#595, 서버 #241) — 수락은 집, 거절도 같은 맥락의 집 알림.
   HOUSE_JOIN_REQUEST_ACCEPTED: 'house',
   HOUSE_JOIN_REQUEST_REJECTED: 'house',
+  // 남이 내 방 거미줄을 치워줬을 때 (#831, 서버 #277) — 방으로 돌아오라는 신호.
+  ROOM_COBWEB_CLEANED: 'house',
 };
 
 export type NotificationListScreenProps = {
@@ -148,7 +151,7 @@ export function NotificationListScreen({
         ListEmptyComponent={
           loading ? (
             <View style={styles.state}>
-              <ActivityIndicator color={t.primary} />
+              <Loading />
             </View>
           ) : loadError ? (
             // 로드 실패 (#549) — 빈 상태('알림 없음')로 위장하지 않는다.

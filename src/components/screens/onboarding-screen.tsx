@@ -1,7 +1,6 @@
 import { Image } from 'expo-image';
 import { useRef, useState } from 'react';
 import {
-  PanResponder,
   Platform,
   Pressable,
   ScrollView,
@@ -11,6 +10,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { GestureDetector } from 'react-native-gesture-handler';
 
 import { CharacterAvatar } from '@/components/room/character-avatar';
 import { Icon } from '@/components/ui/icon';
@@ -23,7 +23,9 @@ import {
 import { Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useConstant, useLatestRef } from '@/hooks/use-stable-value';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { horizontalFlingGesture } from '@/utils/gesture';
 
 type Slide = { image: number; title: string; description: string };
 
@@ -168,6 +170,29 @@ export function OnboardingScreen({
 
   const isLast = index === SLIDES.length - 1;
   const slide = SLIDES[index];
+
+  /**
+   * 인트로 슬라이드 좌우 스와이프 (#825). 예전엔 `PanResponder`였는데 앱의
+   * 나머지 제스처가 전부 RNGH라 두 시스템이 섞여 실기기에서 잡히지 않았다
+   * — 게다가 `ScrollView`에 panHandlers를 스프레드해 네이티브 스크롤뷰와도
+   * 경합했다. 다른 화면(친구 방 순회·달력 월)과 같은 유틸로 통일한다:
+   * 활성 ±24, 세로 실패 ±36이라 세로 스크롤을 뺏지 않는다.
+   *
+   * 최신 핸들러는 ref로 읽어 제스처를 재생성하지 않는다 (#539 계약) —
+   * 재생성은 진행 중인 팬을 취소시킨다. 훅이므로 조기 return(닉네임·캐릭터·
+   * 목표 단계)보다 위에 있어야 한다.
+   */
+  const slideFlingRef = useLatestRef((dir: 'left' | 'right') => {
+    if (dir === 'left') {
+      if (isLast) setShowGoalSurvey(true);
+      else setIndex((i) => i + 1);
+      return;
+    }
+    setIndex((i) => Math.max(0, i - 1));
+  });
+  const slideFling = useConstant(() =>
+    horizontalFlingGesture('onboarding-slide-fling', (dir) => slideFlingRef.current(dir)),
+  );
 
   const { show: toast } = useToast();
   const toggleGoal = (id: string) =>
@@ -422,22 +447,8 @@ export function OnboardingScreen({
   }
 
   // --- Intro slides ---
-  // Advance / go back by swiping the slide horizontally (in addition to the
-  // 다음 button and the dots). Left = next (or on to the goal survey on the
-  // last slide), right = previous.
-  const goNext = () => (isLast ? setShowGoalSurvey(true) : setIndex((i) => i + 1));
-  const goPrev = () => setIndex((i) => Math.max(0, i - 1));
-  const SWIPE_THRESHOLD = 48;
-  const slidePan = PanResponder.create({
-    // Claim the gesture only for a deliberate horizontal drag, so taps and
-    // vertical scrolls still work.
-    onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 16 && Math.abs(g.dx) > Math.abs(g.dy),
-    onPanResponderRelease: (_, g) => {
-      if (g.dx <= -SWIPE_THRESHOLD) goNext();
-      else if (g.dx >= SWIPE_THRESHOLD) goPrev();
-    },
-  });
-
+  // 좌우 스와이프(slideFling, 위에서 생성) · 도트 · '다음' 버튼 세 경로로
+  // 넘긴다. 왼쪽으로 밀면 다음(마지막 장에서는 목표 선택), 오른쪽은 이전.
   return (
     <View style={[styles.screen, screenStyle]}>
       <View style={styles.skipRow}>
@@ -454,25 +465,28 @@ export function OnboardingScreen({
       <ScrollView
         style={styles.slideScroll}
         contentContainerStyle={styles.slideBody}
-        showsVerticalScrollIndicator={false}
-        {...slidePan.panHandlers}>
-        <View style={styles.slideContent}>
-          <Text style={[Typography.h2, styles.center, { color: t.text }]}>{slide.title}</Text>
-          <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
-            {slide.description}
-          </Text>
-          {/* 실제 앱 화면 캡처 — 폰 프레임 카드 (#412). 390:844 비율 유지. */}
-          <View
-            style={[styles.captureFrame, { borderColor: t.border, backgroundColor: t.surface }]}>
-            <Image
-              source={slide.image}
-              style={styles.captureImage}
-              contentFit="cover"
-              transition={150}
-              accessibilityLabel={slide.title.replace('\n', ' ')}
-            />
+        showsVerticalScrollIndicator={false}>
+        {/* collapsable={false}: 안드로이드 뷰 평탄화로 사라지면 제스처가
+            붙을 대상이 없어진다 (친구 방 플링과 같은 규칙). */}
+        <GestureDetector gesture={slideFling}>
+          <View style={styles.slideContent} collapsable={false}>
+            <Text style={[Typography.h2, styles.center, { color: t.text }]}>{slide.title}</Text>
+            <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
+              {slide.description}
+            </Text>
+            {/* 실제 앱 화면 캡처 — 폰 프레임 카드 (#412). 390:844 비율 유지. */}
+            <View
+              style={[styles.captureFrame, { borderColor: t.border, backgroundColor: t.surface }]}>
+              <Image
+                source={slide.image}
+                style={styles.captureImage}
+                contentFit="cover"
+                transition={150}
+                accessibilityLabel={slide.title.replace('\n', ' ')}
+              />
+            </View>
           </View>
-        </View>
+        </GestureDetector>
       </ScrollView>
 
       <View style={styles.dots}>

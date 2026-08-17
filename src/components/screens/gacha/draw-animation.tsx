@@ -248,7 +248,7 @@ export function RevealCard({
         {item.name}
       </Text>
       {item.converted ? (
-        <Text style={[styles.convertNote, { color: t.textMuted }]}>
+        <Text style={[styles.convertNote, emph('normal'), { color: t.textMuted }]}>
           중복 · 다이아 +{item.refundAmount ?? 0}
         </Text>
       ) : null}
@@ -375,7 +375,7 @@ export function FlipCard({ item, index }: { item: DrawResult; index: number }) {
             {item.name}
           </Text>
           {item.converted ? (
-            <Text style={[styles.convertNote, { color: t.textMuted }]}>
+            <Text style={[styles.convertNote, emph('normal'), { color: t.textMuted }]}>
               중복 · 다이아 +{item.refundAmount ?? 0}
             </Text>
           ) : null}

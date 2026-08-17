@@ -1,6 +1,5 @@
-import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
-import { State } from 'react-native-gesture-handler';
-import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { ToastProvider } from '@/components/ui/toast';
@@ -78,52 +77,59 @@ describe('MyRoomScreen', () => {
     expect(onEditRoutine).toHaveBeenCalledWith(expect.objectContaining({ id: '1' }));
   });
 
-  // 방↔달력 스와이프 전환 (#561) — 콘텐츠 영역의 가로 우세 플링으로 탭 전환.
-  // RNGH pan을 jest-utils로 구동한다 (활성/실패 임계·플링 판정 자체는
-  // utils/gesture 단위 테스트가 검증).
-  it('콘텐츠 영역 가로 플링으로 방↔달력 탭이 전환된다 (#561)', async () => {
-    const ui = await render(<MyRoomScreen routines={SAMPLE_ROUTINES} />);
-    const fling = (translationX: number) =>
-      act(async () =>
-        fireGestureHandler(getByGestureTestId('room-tab-fling'), [
-          { state: State.BEGAN },
-          { state: State.ACTIVE },
-          { state: State.END, translationX, translationY: 0 },
-        ]),
-      );
-
-    // 왼쪽 플링 → 달력 탭.
-    await fling(-60);
-    expect(ui.getByText('이 날의 루틴')).toBeTruthy();
-    // 오른쪽 플링 → 방 탭 복귀.
-    await fling(60);
-    expect(ui.getByText('오늘의 할 일')).toBeTruthy();
-    // 임계 미달 릴리즈는 무시.
-    await fling(-30);
-    expect(ui.getByText('오늘의 할 일')).toBeTruthy();
+  // 거미줄 (#829) — prop이 <Room />까지 실제로 닿는지. 씬 번들이 명시
+  // 조립이라 타입만으로는 누락이 안 잡힌다(실제로 한 번 빠뜨렸다).
+  it('거미줄 prop이 방 캔버스까지 전달된다 (#829)', async () => {
+    const ui = await render(
+      <MyRoomScreen
+        routines={SAMPLE_ROUTINES}
+        cobweb={{ assetKey: 'items/cobweb.png', cleanable: true }}
+      />,
+    );
+    expect(ui.getByLabelText('거미줄이 꼈어요')).toBeTruthy();
   });
 
-  // 방↔달력 스와이프 순환 — 방향과 무관하게 플링이 두 서브탭을 오간다.
-  // 달력에서 좌플링해도 (월 이동·집 이동이 아니라) 방으로 되돌아온다.
-  it('플링은 방향과 무관하게 방↔달력을 순환한다', async () => {
-    const ui = await render(<MyRoomScreen routines={SAMPLE_ROUTINES} />);
-    const fling = (translationX: number) =>
-      act(async () =>
-        fireGestureHandler(getByGestureTestId('room-tab-fling'), [
-          { state: State.BEGAN },
-          { state: State.ACTIVE },
-          { state: State.END, translationX, translationY: 0 },
-        ]),
-      );
+  // 거미줄 청소 (#830) — cleanable일 때만 눌리고, 보상이 실제로 지급된
+  // 경우에만 코인이 난다.
+  it('청소 가능한 거미줄을 누르면 onCleanCobweb을 부른다', async () => {
+    const onCleanCobweb = jest.fn().mockResolvedValue(3);
+    const ui = await render(
+      <MyRoomScreen
+        routines={SAMPLE_ROUTINES}
+        cobweb={{ assetKey: 'items/cobweb.png', cleanable: true }}
+        onCleanCobweb={onCleanCobweb}
+      />,
+    );
+    await fireEvent.press(ui.getByLabelText('거미줄 치우기'));
+    expect(onCleanCobweb).toHaveBeenCalled();
+  });
 
-    // 방에서 좌플링 → 달력, 달력에서 한 번 더 좌플링 → 방(순환).
-    await fling(-60);
-    expect(ui.getByText('이 날의 루틴')).toBeTruthy();
-    await fling(-60);
+  it('cleanable이 아니면 눌리지 않는다 — 표시만', async () => {
+    const onCleanCobweb = jest.fn();
+    const ui = await render(
+      <MyRoomScreen
+        routines={SAMPLE_ROUTINES}
+        cobweb={{ assetKey: 'items/cobweb.png', cleanable: false }}
+        onCleanCobweb={onCleanCobweb}
+      />,
+    );
+    expect(ui.queryByLabelText('거미줄 치우기')).toBeNull();
+    expect(ui.getByLabelText('거미줄이 꼈어요')).toBeTruthy();
+  });
+
+  // 방↔달력 스와이프 제거 (#825) — 가로 스와이프는 하단 탭 이동 하나로
+  // 통일했다. 예전엔 방 캔버스·달력 위 플링이 서브탭을 순환시켜서(#561),
+  // 그 아래 루틴 리스트의 같은 손동작(셸 탭 페이저)과 뜻이 갈렸다.
+  it('방 캔버스 가로 플링이 더 이상 탭을 바꾸지 않는다 (#825)', async () => {
+    const ui = await render(<MyRoomScreen routines={SAMPLE_ROUTINES} />);
+    // 제스처 자체가 사라졌다 — 있으면 아래 단언이 무의미해지므로 먼저 확인.
+    expect(() => getByGestureTestId('room-tab-fling')).toThrow();
+    // 탭 버튼은 그대로 동작한다.
     expect(ui.getByText('오늘의 할 일')).toBeTruthy();
-    // 방에서 우플링도 달력으로(순환) — 어느 방향이든 오간다.
-    await fling(60);
-    expect(ui.getByText('이 날의 루틴')).toBeTruthy();
+    await fireEvent.press(ui.getByText('달력'));
+    expect(ui.getByText('이 날의 할 일')).toBeTruthy();
+    await fireEvent.press(ui.getByText('방'));
+    expect(ui.getByText('오늘의 할 일')).toBeTruthy();
   });
 
   // 루틴 행 스와이프 삭제 (#566) — 액션은 항상 렌더되고 스와이프로 드러난다.
@@ -601,7 +607,7 @@ describe('MyRoomScreen', () => {
       <MyRoomScreen routines={SAMPLE_ROUTINES} completions={completions} />,
     );
     await fireEvent.press(local.getByText('달력'));
-    expect(local.getByText('이 날의 루틴')).toBeTruthy();
+    expect(local.getByText('이 날의 할 일')).toBeTruthy();
     expect(local.getByText('3 / 5')).toBeTruthy();
 
     // 서버 날짜(어제): completed 플래그로 집계 — 1/2.
@@ -922,5 +928,126 @@ describe('MyRoomScreen', () => {
     // 저장된 순서(b→a)대로 렌더 — '작업 비'가 '작업 에이'보다 먼저.
     const titles = getAllByText(/작업 (에이|비)/).map((n) => n.props.children);
     expect(titles).toEqual(['작업 비', '작업 에이']);
+  });
+
+  /**
+   * 출석 이벤트 (#851) — 이벤트가 없으면 헤더 아이콘 자체가 없어야 한다.
+   * 비활성으로 남겨두면 "눌러도 아무 일 없는 버튼"이 상시 자리를 차지한다.
+   */
+  it('출석 이벤트가 없으면 헤더에 출석 아이콘을 그리지 않는다 (#851)', async () => {
+    const { queryByLabelText } = await render(
+      <ToastProvider>
+        <MyRoomScreen userName="준서" routines={[]} />
+      </ToastProvider>,
+    );
+    expect(queryByLabelText(/출석 이벤트/)).toBeNull();
+  });
+
+  it('오늘 미출석이면 출석 아이콘에 미출석 라벨을 붙이고 탭을 전달한다 (#851)', async () => {
+    const onOpenAttendance = jest.fn();
+    const { getByLabelText } = await render(
+      <ToastProvider>
+        <MyRoomScreen
+          userName="준서"
+          routines={[]}
+          attendance={{ pending: true }}
+          onOpenAttendance={onOpenAttendance}
+        />
+      </ToastProvider>,
+    );
+    const btn = getByLabelText('출석 이벤트, 오늘 미출석');
+    fireEvent.press(btn);
+    expect(onOpenAttendance).toHaveBeenCalled();
+  });
+
+  it('오늘 출석했으면 미출석 표시 없이 그린다 (#851)', async () => {
+    const { getByLabelText, queryByLabelText } = await render(
+      <ToastProvider>
+        <MyRoomScreen
+          userName="준서"
+          routines={[]}
+          attendance={{ pending: false }}
+          onOpenAttendance={() => {}}
+        />
+      </ToastProvider>,
+    );
+    expect(getByLabelText('출석 이벤트')).toBeTruthy();
+    expect(queryByLabelText('출석 이벤트, 오늘 미출석')).toBeNull();
+  });
+
+  /**
+   * 주간회고 탭 (#856) — 회고가 없으면 탭 자체가 없어야 한다. 가입 첫 주에
+   * "아직 회고가 없어요"만 나오는 빈 탭을 내주지 않기로 했다.
+   */
+  it('회고가 없으면 주간회고 탭을 그리지 않는다 (#856)', async () => {
+    const { getByText, queryByText } = await render(
+      <ToastProvider>
+        <MyRoomScreen userName="준서" routines={[]} />
+      </ToastProvider>,
+    );
+    expect(getByText('방')).toBeTruthy();
+    expect(getByText('달력')).toBeTruthy();
+    expect(queryByText('주간회고')).toBeNull();
+  });
+
+  it('회고가 있으면 탭을 그리고 열면 본문을 보여준다 (#856)', async () => {
+    const onOpenWeeklyReport = jest.fn();
+    const { getByText } = await render(
+      <ToastProvider>
+        <MyRoomScreen
+          userName="준서"
+          routines={[]}
+          weeklyReport={{
+            report: {
+              reportId: 2,
+              weekStartDate: '2026-08-09',
+              weekEndDate: '2026-08-15',
+              status: 'GENERATED',
+              completionRate: 0.36,
+              completedCount: 14,
+              scheduledCount: 39,
+              stats: { streak: { currentCount: 3, longestCount: 6 } },
+            },
+          }}
+          onOpenWeeklyReport={onOpenWeeklyReport}
+        />
+      </ToastProvider>,
+    );
+    await fireEvent.press(getByText('주간회고'));
+    // 탭을 열면 셸이 본문을 받아오고 읽음 처리한다.
+    expect(onOpenWeeklyReport).toHaveBeenCalled();
+    expect(getByText('36%')).toBeTruthy();
+    expect(getByText('요일별')).toBeTruthy();
+  });
+
+  it('안 읽은 새 회고가 있으면 탭에 새 회고 표시를 붙인다 (#856)', async () => {
+    const { getByLabelText } = await render(
+      <ToastProvider>
+        <MyRoomScreen
+          userName="준서"
+          routines={[]}
+          weeklyReport={{ report: null, unread: true }}
+          onOpenWeeklyReport={() => {}}
+        />
+      </ToastProvider>,
+    );
+    expect(getByLabelText('주간회고, 새 회고')).toBeTruthy();
+  });
+
+  /** 탭을 열면 그 자리에서 점이 사라져야 한다 — 읽었는데 점이 남으면 거짓말. */
+  it('주간회고 탭을 열면 새 회고 표시가 사라진다 (#856)', async () => {
+    const { getByLabelText, queryByLabelText, getByText } = await render(
+      <ToastProvider>
+        <MyRoomScreen
+          userName="준서"
+          routines={[]}
+          weeklyReport={{ report: null, unread: true }}
+          onOpenWeeklyReport={() => {}}
+        />
+      </ToastProvider>,
+    );
+    await fireEvent.press(getByLabelText('주간회고, 새 회고'));
+    expect(queryByLabelText('주간회고, 새 회고')).toBeNull();
+    expect(getByText('주간회고')).toBeTruthy();
   });
 });

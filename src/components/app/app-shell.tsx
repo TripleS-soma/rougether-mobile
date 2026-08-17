@@ -15,6 +15,7 @@ import { HouseScreen } from '@/components/screens/house-screen';
 import { isScheduledOn, MyRoomScreen } from '@/components/screens/my-room-screen';
 import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
 import { SettingsScreen } from '@/components/screens/settings-screen';
+import { AttendanceSheet } from '@/components/screens/sheets/attendance-sheet';
 import { MissionSheet } from '@/components/screens/sheets/mission-sheet';
 import { BottomNav } from '@/components/ui/bottom-nav';
 import { MissionBanner } from '@/components/ui/mission-banner';
@@ -23,6 +24,7 @@ import { screenView, track } from '@/lib/analytics';
 import { todayIso } from '@/utils/datetime';
 import { refreshWidgets } from '@/widgets/rougether-widgets';
 import { buildWidgetSummary, saveWidgetSummary, saveWidgetTheme } from '@/widgets/widget-data';
+import { useAttendance } from '@/hooks/use-attendance';
 import { useGacha } from '@/hooks/use-gacha';
 import {
   type OnboardingMissionStepId,
@@ -32,6 +34,7 @@ import { useHouses } from '@/hooks/use-houses';
 import { useRoomLayouts } from '@/hooks/use-room-layouts';
 import { useMyCharacters } from '@/hooks/use-my-characters';
 import { useMyRoomData } from '@/hooks/use-my-room-data';
+import { useMemberRoomPreviews } from '@/hooks/use-member-room-previews';
 import { useShop } from '@/hooks/use-shop';
 import { useWeather } from '@/hooks/use-weather';
 import { useResolvedScheme } from '@/hooks/use-tokens';
@@ -59,7 +62,7 @@ const MISSION_TARGET_SCREEN: Record<OnboardingMissionStepId, Screen> = {
   'register-routine': 'addRoutine',
   'first-draw': 'gacha',
   'place-furniture': 'decor',
-  'browse-house': 'houseSearch',
+  'invite-house': 'houseMembers',
 };
 
 /** 미션 진행 배너를 얹는 화면들 — 미션과 관련된 탭·서브화면 상단. */
@@ -132,6 +135,14 @@ export function AppShell({
     [addRoutine, completeMission],
   );
 
+  // 연속 출석 이벤트 (#851) — 진행 중인 이벤트가 없으면 status가 null이라
+  // 헤더 아이콘도 시트도 그려지지 않는다. 출석 코인은 응답의 잔액으로 지갑을
+  // 맞춘다(뽑기·상점과 같은 결).
+  const [attendanceOpen, setAttendanceOpen] = useState(false);
+  const syncCoin = useCallback((coin: number) => setWallet((w) => ({ ...w, coin })), [setWallet]);
+  const attendance = useAttendance({ onCoinBalance: syncCoin });
+  const openAttendance = useCallback(() => setAttendanceOpen(true), []);
+
   // Gacha machines + draw (spend + dupe→diamond handled server-side; wallet synced
   // from the draw response).
   const {
@@ -196,6 +207,7 @@ export function AppShell({
     error: shopError,
     retry: retryShop,
     purchase: purchaseFurniture,
+    cleanCobweb,
     refreshOwned,
     saveLayout,
   } = useShop(setWallet);
@@ -298,6 +310,14 @@ export function AppShell({
       floorId,
       backgroundId,
       catalogue,
+      cobweb: placement.cobweb,
+      onCleanCobweb: cleanCobweb,
+      markedTodoDates: myRoomData.markedTodoDates,
+      onCalendarMonthChange: myRoomData.loadCalendarMonth,
+    },
+    attendance: {
+      attendance: attendance.status ? { pending: !attendance.status.checkedInToday } : undefined,
+      onOpenAttendance: attendance.status ? openAttendance : undefined,
     },
   });
   // 홈 위젯 오늘 요약 동기화 (#604, 안드로이드 전용) — 완료 토글·루틴
@@ -347,6 +367,11 @@ export function AppShell({
     [addRoutineFromMyRoom],
   );
 
+  // 멤버 방 프리뷰 (#775) — 집 좌석 타일과 친구 방문이 함께 쓴다. 훅 호출이
+  // use-house-pages 안에 있으면 그보다 먼저 서는 use-friend-visit이 거미줄
+  // 청소 후 타일을 갱신할 방법이 없어(#831) 셸로 끌어올렸다.
+  const memberRoomPreviews = useMemberRoomPreviews();
+
   // 친구 방문 클러스터 (#149·#644) — use-friend-visit.tsx로 이관 (#692 4단계).
   const { visitFriend, subScreen: friendRoomSubScreen } = useFriendVisit({
     setScreen,
@@ -355,6 +380,7 @@ export function AppShell({
     houseIndex,
     screen,
     cheerMember,
+    clearPreviewCobweb: memberRoomPreviews.clearCobweb,
   });
 
   // Android hardware back navigates the shell's own screen stack; 루트(나의 방)
@@ -399,6 +425,7 @@ export function AppShell({
     selectedCharacterId,
     wornCharacterId,
     onPagerLockChange: handleHousePagerLock,
+    roomPreviewStore: memberRoomPreviews,
   });
 
   // 내비게이션 컨트롤러 (#692) — 뒤로가기·엣지 백·전환 손맛·페이저 정착.
@@ -408,7 +435,6 @@ export function AppShell({
     setScreen,
     addReturnScreen,
     noHouses: housePages.noHouses,
-    onLeaveHouseSearch: housePages.onLeaveHouseSearch,
   });
 
   return (
@@ -558,6 +584,21 @@ export function AppShell({
         }}
         onClose={missions.dismissCompleted}
       />
+
+      {/* 연속 출석 시트 (#851) — 이벤트가 있을 때만 존재한다. */}
+      {attendance.status ? (
+        <AttendanceSheet
+          visible={attendanceOpen}
+          status={attendance.status}
+          checkingIn={attendance.checkingIn}
+          onCheckIn={attendance.checkIn}
+          onGoToRoom={() => {
+            setAttendanceOpen(false);
+            setScreen('decor');
+          }}
+          onClose={() => setAttendanceOpen(false)}
+        />
+      ) : null}
     </View>
   );
 }

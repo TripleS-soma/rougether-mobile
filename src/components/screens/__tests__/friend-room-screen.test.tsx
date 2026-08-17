@@ -4,9 +4,18 @@ import { State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
+import { shiftIso as isoShift, todayIso } from '@/utils/datetime';
 import { ToastProvider } from '@/components/ui/toast';
 
 describe('FriendRoomScreen', () => {
+  // 거미줄 (#829) — 친구 방 씬 번들도 명시 조립이라 도달 여부를 직접 본다.
+  it('거미줄 prop이 친구 방 캔버스까지 전달된다 (#829)', async () => {
+    const { getByLabelText } = await render(
+      <FriendRoomScreen cobweb={{ assetKey: 'items/cobweb.png' }} />,
+    );
+    expect(getByLabelText('거미줄이 꼈어요')).toBeTruthy();
+  });
+
   it('renders the friend name, routine progress, and cheer buttons', async () => {
     const { getByText } = await render(<FriendRoomScreen friendName="민지" />);
     expect(getByText('민지의 방')).toBeTruthy();
@@ -25,24 +34,55 @@ describe('FriendRoomScreen', () => {
     expect(title.props.numberOfLines).toBe(1);
   });
 
-  it('renders the recent-activity history when wired', async () => {
+  /**
+   * 최근 활동은 카드 섹션이 아니라 한 줄 스트립이다 (#860) — 접힌 상태에선
+   * 요약만 보이고, 탭해야 날짜별 상세가 펼쳐진다.
+   */
+  it('접힌 상태에선 요약만, 탭하면 날짜별 상세를 펼친다 (#860)', async () => {
+    const today = todayIso();
     const recentActivity = [
-      { date: '2026-07-08', label: '7월 8일', titles: ['아침 기상'] },
-      { date: '2026-07-07', label: '7월 7일', titles: ['아침 기상', '독서 30분'] },
+      { date: today, label: '오늘', titles: ['아침 기상'] },
+      { date: isoShift(today, -1), label: '어제', titles: ['아침 기상', '독서 30분'] },
     ];
-    const { getByText } = await render(<FriendRoomScreen recentActivity={recentActivity} />);
-    expect(getByText('최근 활동')).toBeTruthy();
-    expect(getByText('7월 8일')).toBeTruthy();
-    expect(getByText('2개 완료')).toBeTruthy();
+    const { getByText, queryByText, getByLabelText } = await render(
+      <FriendRoomScreen recentActivity={recentActivity} />,
+    );
+    // 14일 중 2일 완료 — 숫자로도 읽힌다(점만으로는 못 센다).
+    expect(getByText('최근 2주')).toBeTruthy();
+    expect(getByText('2/14일')).toBeTruthy();
+    // 접힌 상태에선 상세가 없다 — 이게 방명록을 위로 올린 핵심이다.
+    expect(queryByText('아침 기상 · 독서 30분')).toBeNull();
+
+    await fireEvent.press(getByLabelText(/최근 14일 중 2일 완료/));
     expect(getByText('아침 기상 · 독서 30분')).toBeTruthy();
+    expect(getByText('어제')).toBeTruthy();
   });
 
-  it('shows an empty-state line for an empty history and hides the section when unwired', async () => {
-    const empty = await render(<FriendRoomScreen recentActivity={[]} />);
-    expect(empty.getByText('최근 2주간 완료한 공개 루틴이 없어요.')).toBeTruthy();
+  /**
+   * 서버는 **완료가 있는 날만** 보낸다. 배열 길이를 그대로 세면 쉰 날이
+   * 사라져 추이가 실제보다 좋아 보인다 — 오늘 기준 14일 축으로 세야 한다.
+   */
+  it('완료가 없는 날도 축에 세어 14일 기준으로 센다 (#860)', async () => {
+    const today = todayIso();
+    const recentActivity = [
+      // 20일 전은 14일 축 밖 — 세면 안 된다.
+      { date: isoShift(today, -20), label: '옛날', titles: ['아침 기상'] },
+      { date: isoShift(today, -3), label: '3일 전', titles: ['아침 기상'] },
+    ];
+    const { getByText } = await render(<FriendRoomScreen recentActivity={recentActivity} />);
+    expect(getByText('1/14일')).toBeTruthy();
+  });
 
-    const unwired = await render(<FriendRoomScreen />);
-    expect(unwired.queryByText('최근 활동')).toBeNull();
+  it('기록이 없으면 0/14일, 펼치면 빈 상태 문구 (#860)', async () => {
+    const { getByText, getByLabelText } = await render(<FriendRoomScreen recentActivity={[]} />);
+    expect(getByText('0/14일')).toBeTruthy();
+    await fireEvent.press(getByLabelText(/최근 14일 중 0일 완료/));
+    expect(getByText('최근 2주간 완료한 공개 루틴이 없어요.')).toBeTruthy();
+  });
+
+  it('미배선이면 스트립 자체를 그리지 않는다', async () => {
+    const { queryByText } = await render(<FriendRoomScreen />);
+    expect(queryByText('최근 2주')).toBeNull();
   });
 
   it('첫 탭 후 5초 연타 윈도우 — 연타는 전송 0, 5초 지점에 1회만 (#491)', async () => {

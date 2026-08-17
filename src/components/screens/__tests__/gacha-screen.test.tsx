@@ -28,6 +28,25 @@ const characterMachine: GachaMachine = {
 };
 
 describe('GachaScreen', () => {
+  // 선물상자 아트 (서버 #276) — 서버가 giftBoxAssetKey를 주면 그 이미지를,
+  // 아니면 기존 픽토그램을 그린다. 칩·헤로 두 자리에 같은 머신이 나오므로
+  // 아트가 붙은 머신은 testID가 2개 잡힌다.
+  it('선물상자 아트 키가 있으면 이미지로 그린다', async () => {
+    const withArt: GachaMachine = { ...machine, giftBoxKey: 'items/gift-box.png' };
+    const { getAllByTestId } = await render(<GachaScreen gachas={[withArt]} coinBalance={5600} />);
+    expect(getAllByTestId('gift-box-1').length).toBeGreaterThan(0);
+  });
+
+  it('아트 키가 없거나 CDN 키가 아니면 이미지를 그리지 않는다 — 픽토그램 폴백', async () => {
+    // 구버전 서버·로컬 카탈로그 키는 CDN에 아트가 없다(isCdnKey=false).
+    const legacy: GachaMachine = { ...machine, giftBoxKey: 'furniture/bed' };
+    const noKey = await render(<GachaScreen gachas={[machine]} coinBalance={5600} />);
+    expect(noKey.queryByTestId('gift-box-1')).toBeNull();
+
+    const legacyKey = await render(<GachaScreen gachas={[legacy]} coinBalance={5600} />);
+    expect(legacyKey.queryByTestId('gift-box-1')).toBeNull();
+  });
+
   it('renders the title and balance', async () => {
     const { getByText } = await render(<GachaScreen coinBalance={5600} />);
     expect(getByText('뽑기')).toBeTruthy();

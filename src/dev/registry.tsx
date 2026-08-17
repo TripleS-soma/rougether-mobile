@@ -2,9 +2,12 @@ import { openBrowserAsync } from 'expo-web-browser';
 import { type ReactNode, useState } from 'react';
 import { Text, View } from 'react-native';
 
+import type { GachaMachine } from '@/api/adapters';
 import { type HouseCover, HouseCoverPicker } from '@/components/room/house-cover-picker';
+import { HouseOrderDots } from '@/components/room/house-order-dots';
 import { HousePreviewFrame } from '@/components/room/house-preview-frame';
 import { Room } from '@/components/room/room';
+import { GachaAccents } from '@/constants/theme';
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
 import { CategoryManageScreen } from '@/components/screens/category-manage-screen';
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
@@ -40,10 +43,15 @@ import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { CATEGORY_ICON_GEOMETRY, CategoryIcon } from '@/components/ui/category-icon';
 import { Button } from '@/components/ui/button';
+import { AttendanceSheet } from '@/components/screens/sheets/attendance-sheet';
+import { ActivityStrip } from '@/components/screens/house/activity-strip';
+import { shiftIso, todayIso } from '@/utils/datetime';
 import { Calendar } from '@/components/ui/calendar';
+import { WeeklyReportPanel } from '@/components/screens/my-room/weekly-report-panel';
 import { CoachMarkOverlay } from '@/components/ui/coach-mark';
 import { Card } from '@/components/ui/card';
 import { IconButton } from '@/components/ui/icon-button';
+import { Loading } from '@/components/ui/loading';
 import { Pill } from '@/components/ui/pill';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { CurrencyGuide } from '@/components/ui/currency-guide';
@@ -97,6 +105,120 @@ function WalletHistorySheetDemo() {
           { id: 3, currency: 'diamond', amount: 5, reason: '뽑기 중복 전환', balanceAfter: 25, createdAt: new Date(Date.now() - 86400e3).toISOString() }, // prettier-ignore
         ]}
         hasNext
+      />
+    </View>
+  );
+}
+
+/**
+ * 출석 시트 데모 (#851) — 실제로 출석이 되게 해서 도장·코인·카운트업 연출을
+ * 갤러리에서 확인할 수 있다. 10일차를 채우면 트로피 리빌까지 이어진다.
+ */
+function AttendanceSheetDemo() {
+  const [open, setOpen] = useState(false);
+  const [streak, setStreak] = useState(3);
+  // 갤러리에서는 오늘 출석 잠금을 걸지 않는다 — 연속으로 눌러 10일차까지
+  // 걸어가며 보너스 링·트로피 리빌까지 확인하기 위해서다. 실제 시트는
+  // checkedInToday가 true가 되면 버튼이 잠긴다.
+  const today = false;
+  const status = {
+    eventId: 7,
+    code: 'ATTENDANCE_10D_2026',
+    title: '10일 연속 출석',
+    startsOn: '2026-08-16',
+    endsOn: '2026-09-14',
+    targetDays: 10,
+    currentStreak: streak,
+    checkedInToday: today,
+    completed: streak >= 10,
+    checkInDates: [],
+    dailyRewards: Array.from({ length: 10 }, (_, i) => ({
+      day: i + 1,
+      coinAmount: i + 1 === 5 ? 50 : 30,
+      furnitureReward: i + 1 === 10,
+      claimed: i + 1 <= streak,
+    })),
+    reward: {
+      itemId: 42,
+      name: '10일 출석 기념 트로피',
+      assetKey: 'items/events/attendance-10-day-trophy.png',
+      userItemId: null,
+      received: false,
+    },
+  };
+  return (
+    <View style={{ alignSelf: 'stretch', gap: 8 }}>
+      <ScalePressable
+        accessibilityRole="button"
+        onPress={() => {
+          setStreak(3);
+          setOpen(true);
+        }}
+        style={{ alignSelf: 'center', padding: 8 }}>
+        <Text>출석 시트 열기 (3일차부터)</Text>
+      </ScalePressable>
+      <AttendanceSheet
+        visible={open}
+        onClose={() => setOpen(false)}
+        status={status}
+        onCheckIn={async () => {
+          const next = Math.min(streak + 1, 10);
+          setStreak(next);
+          return {
+            newCheckIn: true,
+            coinRewardAmount: next === 5 ? 50 : 30,
+            coinBalance: 190,
+            rewardGrantedNow: next >= 10,
+            status: { ...status, currentStreak: next, checkedInToday: true },
+          };
+        }}
+      />
+    </View>
+  );
+}
+
+/** 캐릭터 교체 시트 데모 (#854) — 열기 버튼 뒤에 둔다. 아래 참고. */
+function CharacterPickerSheetDemo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <View>
+      <ScalePressable
+        accessibilityRole="button"
+        onPress={() => setOpen(true)}
+        style={{ alignSelf: 'center', padding: 8 }}>
+        <Text>캐릭터 교체 열기</Text>
+      </ScalePressable>
+      <CharacterPickerSheet
+        visible={open}
+        characters={[
+          { serverId: 1, id: 'cat', name: '고양이', selected: true },
+          { serverId: 4, id: 'panda', name: '판다', selected: false },
+          { serverId: 8, id: 'otter', name: '수달', selected: false },
+        ]}
+        onSelect={() => {}}
+        onClose={() => setOpen(false)}
+      />
+    </View>
+  );
+}
+
+/** 최근 활동 스트립 데모 (#860) — 탭해서 상세 펼침을 확인한다. */
+function ActivityStripDemo() {
+  const [open, setOpen] = useState(false);
+  const today = todayIso();
+  return (
+    <View style={{ alignSelf: 'stretch' }}>
+      <ActivityStrip
+        today={today}
+        expanded={open}
+        onToggle={() => setOpen((v) => !v)}
+        days={[
+          { date: today, label: '오늘', titles: ['아침 기상', '물 1L 마시기'] },
+          { date: shiftIso(today, -1), label: '어제', titles: ['독서 30분'] },
+          { date: shiftIso(today, -2), label: '이틀 전', titles: ['아침 기상'] },
+          { date: shiftIso(today, -5), label: '닷새 전', titles: ['영양제 챙겨먹기'] },
+          { date: shiftIso(today, -9), label: '9일 전', titles: ['아침 기상', '독서 30분'] },
+        ]}
       />
     </View>
   );
@@ -523,20 +645,7 @@ export const galleryEntries: GalleryEntry[] = [
   {
     name: 'CharacterPickerSheet',
     description: '나의 방 햄버거 → 캐릭터 교체: 보유 캐릭터 그리드 + 착용 중 배지.',
-    render: () => (
-      <View style={{ height: 560, alignSelf: 'stretch' }}>
-        <CharacterPickerSheet
-          visible
-          characters={[
-            { serverId: 1, id: 'cat', name: '고양이', selected: true },
-            { serverId: 4, id: 'panda', name: '판다', selected: false },
-            { serverId: 8, id: 'otter', name: '수달', selected: false },
-          ]}
-          onSelect={() => {}}
-          onClose={() => {}}
-        />
-      </View>
-    ),
+    render: () => <CharacterPickerSheetDemo />,
   },
   {
     name: 'NotificationListScreen',
@@ -616,11 +725,43 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
+    name: 'HouseOrderDots · 집 순서 인디케이터',
+    description:
+      '꾹 누르면 도트가 이름표 줄로 펼쳐지고 좌우로 끌어 순서를 바꾼다 (#820). 마지막 도트는 승인 대기 페이지라 정렬에서 빠진다.',
+    render: () => (
+      <View style={{ alignSelf: 'stretch', alignItems: 'center', gap: 12 }}>
+        <HouseOrderDots
+          houses={[
+            { houseId: 1, name: 'TripleS' },
+            { houseId: 2, name: '우리집' },
+            { houseId: 3, name: '스터디방' },
+          ]}
+          pendingCount={1}
+          index={0}
+          onReorder={(ids) => console.log('reorder', ids)}
+        />
+        <Text>↑ 꾹 눌러 좌우로 끌어보세요 (대기 페이지 도트 1개 포함)</Text>
+      </View>
+    ),
+  },
+  {
+    name: 'Loading · 공용 로딩 표시',
+    description:
+      '지연 표시(기본 250ms) — 빨리 끝나는 로딩은 아무것도 안 보인다 (#849). 아래는 지연을 꺼서 바로 보이게 한 것.',
+    render: () => (
+      <View style={{ alignSelf: 'stretch', alignItems: 'center', gap: 16 }}>
+        <Loading delayMs={0} />
+        <Loading delayMs={0} size="large" />
+        <Text>↑ 기본(small) · large. 실제 화면에서는 250ms 안에 끝나면 안 보인다.</Text>
+      </View>
+    ),
+  },
+  {
     name: 'GachaScreen',
     description: 'Ported from the prototype GachaScreen (#13): box select + pull animation.',
     render: () => (
       <View style={{ height: 700, alignSelf: 'stretch' }}>
-        <GachaScreen coinBalance={5600} />
+        <GachaScreen gachas={GACHA_SAMPLES} coinBalance={5600} />
       </View>
     ),
   },
@@ -649,6 +790,79 @@ export const galleryEntries: GalleryEntry[] = [
     description:
       '집 대표 이미지 선택 그리드 — 서버 커버 카탈로그(GET /houses/cover-images) (#261).',
     render: () => <HouseCoverPickerDemo />,
+  },
+  {
+    name: 'ActivityStrip',
+    description: '친구 방 최근 활동 — 14칸 점 스트립, 탭하면 날짜별 상세 (#860).',
+    render: () => <ActivityStripDemo />,
+  },
+  {
+    name: 'AttendanceSheet',
+    description:
+      '연속 출석 시트 (#851) — 눌러서 도장·코인·카운트업 연출 확인. 10일차엔 트로피 리빌.',
+    render: () => <AttendanceSheetDemo />,
+  },
+  {
+    name: 'WeeklyReportPanel',
+    description:
+      '나의 방 주간회고 탭 본문 — 완료율 + 요일별·루틴별 비율 막대 + LLM 본문 (#852·#856).',
+    render: () => (
+      <View style={{ alignSelf: 'stretch', height: 640 }}>
+        <WeeklyReportPanel
+          report={{
+            reportId: 1,
+            weekStartDate: '2026-08-09',
+            weekEndDate: '2026-08-15',
+            status: 'GENERATED',
+            completionRate: 0.36,
+            completedCount: 14,
+            scheduledCount: 39,
+            summary: '이번 주는 주중 아침 루틴이 잘 붙었고, 주말에 흐름이 끊겼어요.',
+            highlights: [
+              '월~수 아침 스트레칭을 3일 연속 지켰어요.',
+              '독서는 목표의 80%를 채웠어요.',
+            ],
+            failurePatterns: ['주말(토·일)에 예정된 루틴을 대부분 놓쳤어요.'],
+            suggestions: ['주말 루틴 개수를 절반으로 줄여보는 건 어때요?'],
+            stats: {
+              byWeekday: [
+                { dayOfWeek: 'SUNDAY', completed: 0, failed: 7 },
+                { dayOfWeek: 'MONDAY', completed: 4, failed: 1 },
+                { dayOfWeek: 'TUESDAY', completed: 3, failed: 2 },
+                { dayOfWeek: 'WEDNESDAY', completed: 4, failed: 1 },
+                { dayOfWeek: 'THURSDAY', completed: 2, failed: 3 },
+                { dayOfWeek: 'FRIDAY', completed: 1, failed: 4 },
+                { dayOfWeek: 'SATURDAY', completed: 0, failed: 7 },
+              ],
+              byRoutine: [
+                {
+                  lineageId: 1,
+                  title: '아침 스트레칭',
+                  categoryName: '건강',
+                  completed: 5,
+                  failed: 2,
+                },
+                {
+                  lineageId: 2,
+                  title: '독서 30분',
+                  categoryName: '자기계발',
+                  completed: 4,
+                  failed: 3,
+                },
+                {
+                  lineageId: 3,
+                  title: '물 2L 마시기',
+                  categoryName: '건강',
+                  completed: 5,
+                  failed: 2,
+                },
+              ],
+              streak: { currentCount: 3, longestCount: 6 },
+            },
+          }}
+        />
+      </View>
+    ),
   },
   {
     name: 'Calendar',
@@ -760,6 +974,36 @@ export const galleryEntries: GalleryEntry[] = [
         <ToastDemo />
       </ToastProvider>
     ),
+  },
+];
+
+/**
+ * 뽑기 머신 샘플 — 갤러리에서 선물상자 아트(서버 #276)를 눈으로 확인하려고 둔다.
+ * `giftBoxKey`는 실서버 `GET /gacha`가 주는 공용 상자 키의 스냅샷(2026-08-16)이고,
+ * 아트가 교체되면 화면이 픽토그램으로 폴백하므로 깨지지는 않는다. 두 번째 머신은
+ * 키를 비워 **폴백 경로도 같이** 보이게 했다.
+ */
+const GACHA_SAMPLES: GachaMachine[] = [
+  {
+    id: 1,
+    name: '작은 베이커리 아침 뽑기',
+    costCurrencyType: 'COIN',
+    costAmount: 25,
+    drawCount: 1,
+    icon: 'croissant',
+    accent: GachaAccents[0],
+    giftBoxKey: 'items/0c213078-69ce-4a77-a729-9144905dfc22.png',
+    kind: 'furniture',
+  },
+  {
+    id: 12,
+    name: '캐릭터 뽑기',
+    costCurrencyType: 'COIN',
+    costAmount: 500,
+    drawCount: 1,
+    icon: 'paw',
+    accent: GachaAccents[1],
+    kind: 'character',
   },
 ];
 

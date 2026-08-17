@@ -29,6 +29,18 @@ export function toIsoDate(dt: Date) {
   ).padStart(2, '0')}`;
 }
 
+/**
+ * "YYYY-MM-DD"를 n일 이동한 같은 형식 (#860). 음수면 과거.
+ *
+ * `localDate`로 로컬 자정 Date를 만들고 날짜만 더한다 — 월말·연말·DST를
+ * Date가 알아서 넘긴다(`new Date(iso)`의 UTC 해석 함정은 localDate가 막는다).
+ */
+export function shiftIso(dateIso: string, days: number) {
+  const dt = localDate(dateIso);
+  dt.setDate(dt.getDate() + days);
+  return toIsoDate(dt);
+}
+
 /** Today as "YYYY-MM-DD" in the device's local time. */
 export function todayIso() {
   return toIsoDate(new Date());

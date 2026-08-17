@@ -128,7 +128,7 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
           <Text style={[Typography.h2, { color: t.text }]}>마을의 새 친구를 환영해요</Text>
           <PawPictogram size={18} />
         </View>
-        <Text style={[styles.introSub, { color: t.textMuted }]}>
+        <Text style={[styles.introSub, emph('normal'), { color: t.textMuted }]}>
           정보를 입력하고 나만의 루게더를 시작하세요
         </Text>
       </View>
@@ -399,6 +399,7 @@ type AgreementItemProps = {
 function AgreementItem({ checked, label, required, onChange, onView }: AgreementItemProps) {
   const t = useTokens();
   const Typography = useTypography();
+  const emph = useFontEmphasis();
   return (
     <View style={styles.agreeItem}>
       <Pressable
@@ -407,7 +408,7 @@ function AgreementItem({ checked, label, required, onChange, onView }: Agreement
         accessibilityState={{ checked }}
         style={styles.agreeItemMain}>
         <CheckBox checked={checked} />
-        <Text style={[styles.agreeLabel, { color: t.text }]}>
+        <Text style={[styles.agreeLabel, emph('normal'), { color: t.text }]}>
           {label}{' '}
           <Text style={{ color: required ? t.danger : t.textMuted }}>
             ({required ? '필수' : '선택'})

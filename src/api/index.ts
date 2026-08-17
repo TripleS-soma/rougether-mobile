@@ -34,11 +34,13 @@ export {
 
 export * from './bug-reports';
 export * from './categories';
+export * from './events';
 export * from './houses';
 export * from './masters';
 export * from './onboarding';
 export * from './me';
 export * from './notifications';
+export * from './reports';
 export * from './rooms';
 export * from './invites';
 export * from './routines';

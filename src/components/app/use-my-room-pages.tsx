@@ -12,6 +12,7 @@ import type { useMissionLinks } from '@/components/app/use-mission-links';
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
 import { CategoryManageScreen } from '@/components/screens/category-manage-screen';
 import { type CalendarDayItem, type MyRoomScreenProps } from '@/components/screens/my-room-screen';
+import { useWeeklyReport } from '@/hooks/use-weekly-report';
 import { NotificationListScreen } from '@/components/screens/notification-list-screen';
 import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
 import { CHARACTER_SELECTION_ENABLED, type CharacterId } from '@/constants/characters';
@@ -43,6 +44,7 @@ export function useMyRoomPages({
   missionLinks,
   character,
   room,
+  attendance,
 }: {
   /** 셸 내비 상태 — 추가/수정 화면의 복귀 목적지 포함. */
   nav: {
@@ -105,6 +107,18 @@ export function useMyRoomPages({
     floorId: string | null;
     backgroundId: string | null;
     catalogue: ShopCatalogue;
+    /** 내 방 거미줄 (#829) — 서버가 방 응답으로 준다. */
+    cobweb: MyRoomScreenProps['cobweb'];
+    /** 거미줄 청소 (#830) — 성공 시 받은 코인 수. */
+    onCleanCobweb: MyRoomScreenProps['onCleanCobweb'];
+    /** 달력 점 (#838) — 할 일 있는 날 집합 + 보이는 달 변경 알림. */
+    markedTodoDates: MyRoomScreenProps['markedTodoDates'];
+    onCalendarMonthChange: MyRoomScreenProps['onCalendarMonthChange'];
+  };
+  /** 연속 출석 이벤트 (#851) — 이벤트가 없으면 둘 다 undefined. */
+  attendance: {
+    attendance: MyRoomScreenProps['attendance'];
+    onOpenAttendance: MyRoomScreenProps['onOpenAttendance'];
   };
 }) {
   const { screen, setScreen, addReturnScreen, setAddReturnScreen } = nav;
@@ -245,6 +259,15 @@ export function useMyRoomPages({
     [routines],
   );
 
+  // 주간 회고 (#852) — 목록은 마운트 때 1건만, 본문은 카드를 눌러야 받는다.
+  const weeklyReport = useWeeklyReport();
+  // 주간회고 탭을 열었다 (#856) — 본문을 지연 로드하고 읽음으로 표시한다.
+  // 화면 전환이 아니라 탭 안이라 setScreen을 부르지 않는다.
+  const openWeeklyReport = useCallback(() => {
+    void weeklyReport.loadDetail();
+    weeklyReport.markRead();
+  }, [weeklyReport]);
+
   /** 탭 페이저의 나의 방 페이지 prop — `<MyRoomScreen {...tabProps} />`. */
   const tabProps = {
     userName: nickname,
@@ -266,6 +289,20 @@ export function useMyRoomPages({
     wallpaperId: room.wallpaperId,
     floorId: room.floorId,
     backgroundId: room.backgroundId,
+    cobweb: room.cobweb,
+    onCleanCobweb: room.onCleanCobweb,
+    markedTodoDates: room.markedTodoDates,
+    onCalendarMonthChange: room.onCalendarMonthChange,
+    weeklyReport: weeklyReport.latest
+      ? {
+          report: weeklyReport.detail,
+          loading: weeklyReport.loading,
+          unread: weeklyReport.unread,
+        }
+      : undefined,
+    onOpenWeeklyReport: openWeeklyReport,
+    attendance: attendance.attendance,
+    onOpenAttendance: attendance.onOpenAttendance,
     furniture: room.catalogue.furniture,
     wallpapers: room.catalogue.wallpapers,
     floors: room.catalogue.floors,

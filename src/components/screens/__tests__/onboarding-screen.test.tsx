@@ -1,4 +1,6 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
+import { State } from 'react-native-gesture-handler';
+import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { OnboardingScreen, withRang } from '@/components/screens/onboarding-screen';
 import { ToastProvider } from '@/components/ui/toast';
@@ -24,6 +26,47 @@ describe('OnboardingScreen', () => {
     // 마지막 장 CTA는 목표 선택으로 이어진다.
     await fireEvent.press(getByText('목표 선택하기'));
     expect(getByText('관심 있는 목표를 골라주세요')).toBeTruthy();
+  });
+
+  // 인트로 슬라이드 좌우 스와이프 (#825) — 예전 PanResponder는 RNGH와 섞여
+  // 실기기에서 잡히지 않았다. 다른 화면과 같은 horizontalFlingGesture로 통일.
+  it('좌우 스와이프로 인트로 슬라이드를 넘긴다 (#825)', async () => {
+    const ui = await render(<OnboardingScreen />);
+    const fling = (translationX: number) =>
+      act(async () =>
+        fireGestureHandler(getByGestureTestId('onboarding-slide-fling'), [
+          { state: State.BEGAN },
+          { state: State.ACTIVE },
+          { state: State.END, translationX, translationY: 0 },
+        ]),
+      );
+
+    // 왼쪽으로 밀면 다음 장.
+    await fling(-60);
+    expect(ui.getByText(/곰 체크로 완료해요/)).toBeTruthy();
+    // 오른쪽으로 밀면 이전 장.
+    await fling(60);
+    expect(ui.getByText('루게더에 오신 걸 환영해요')).toBeTruthy();
+    // 첫 장에서 더 뒤로는 안 간다.
+    await fling(60);
+    expect(ui.getByText('루게더에 오신 걸 환영해요')).toBeTruthy();
+    // 임계 미달(±40)은 무시.
+    await fling(-30);
+    expect(ui.getByText('루게더에 오신 걸 환영해요')).toBeTruthy();
+  });
+
+  it('마지막 장에서 왼쪽 스와이프하면 목표 선택으로 넘어간다 (#825)', async () => {
+    const ui = await render(<OnboardingScreen />);
+    for (let i = 0; i < 4; i += 1) await fireEvent.press(ui.getByText('다음'));
+    expect(ui.getByText(/기록은 달력으로/)).toBeTruthy();
+    await act(async () =>
+      fireGestureHandler(getByGestureTestId('onboarding-slide-fling'), [
+        { state: State.BEGAN },
+        { state: State.ACTIVE },
+        { state: State.END, translationX: -60, translationY: 0 },
+      ]),
+    );
+    expect(ui.getByText('관심 있는 목표를 골라주세요')).toBeTruthy();
   });
 
   it('skips straight to the goal survey', async () => {

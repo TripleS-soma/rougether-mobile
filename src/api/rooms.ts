@@ -1,7 +1,12 @@
 /** Room (my room) + furniture-slot + guestbook endpoints. */
 import { apiGet, apiPost, apiPut } from './client';
 import { buildQuery } from './http';
-import type { GuestbookCreateResponse, GuestbookListResponse, RoomResponse } from './types';
+import type {
+  GuestbookCreateResponse,
+  GuestbookListResponse,
+  RoomCobwebCleanResponse,
+  RoomResponse,
+} from './types';
 
 /** RoomResponse + 자유 배치 필드(#327) — 다음 gen:api-types 때 types.ts로 흡수. */
 export type RoomWithLayout = RoomResponse & {
@@ -13,6 +18,16 @@ export type RoomWithLayout = RoomResponse & {
 /** GET /rooms/me — the user's room: character, placed slots/placements, streak. */
 export function fetchMyRoom() {
   return apiGet<RoomWithLayout>('/rooms/me');
+}
+
+/**
+ * POST /rooms/me/cobweb/clean — 내 방의 활성 거미줄을 치우고 코인 보상을 받는다
+ * (#830, 서버 #277). 서버가 행·지갑을 잠가 최초 한 요청만 성공·지급한다.
+ * 예외: 이미 치워짐 `ROOM_COBWEB_NOT_ACTIVE`(409), 지갑 없음
+ * `ROOM_COBWEB_REWARD_WALLET_NOT_FOUND`(404).
+ */
+export function cleanMyCobweb() {
+  return apiPost<RoomCobwebCleanResponse>('/rooms/me/cobweb/clean');
 }
 
 /** One slot assignment; null userItemId clears the slot server-side. */

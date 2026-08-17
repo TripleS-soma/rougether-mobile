@@ -26,6 +26,33 @@ describe('useOnboardingMissions (#571)', () => {
     expect(track).toHaveBeenCalledWith('onboarding_mission_start', { step: 'register-routine' });
   });
 
+  /**
+   * 서버가 온보딩에서 기본 집을 자동 생성하면서(서버 #288) 4단계 전제가
+   * 바뀌었다 — 집이 이미 있으니 '다른 집 둘러보기'가 아니라 '내 집 채우기'다
+   * (#841). 체인이 4단계이고 마지막이 초대인 것을 고정한다.
+   */
+  it('마지막 단계는 집에 친구 초대하기다 (#841)', () => {
+    expect(ONBOARDING_MISSION_STEPS).toHaveLength(4);
+    expect(ONBOARDING_MISSION_STEPS.map((s) => s.id)).toEqual([
+      'register-routine',
+      'first-draw',
+      'place-furniture',
+      'invite-house',
+    ]);
+  });
+
+  it('4단계까지 순서대로 완료하면 체인이 끝난다 (#841)', async () => {
+    const { result } = await renderHook(() => useOnboardingMissions(true));
+    await waitFor(() => expect(result.current.active).toBe(true));
+
+    for (const id of ONBOARDING_MISSION_STEPS.map((s) => s.id)) {
+      await act(async () => result.current.complete(id));
+    }
+
+    await waitFor(() => expect(result.current.active).toBe(false));
+    expect(track).toHaveBeenCalledWith('onboarding_mission_complete', { step: 'invite-house' });
+  });
+
   it('autoStart가 아니면 시작하지 않는다', async () => {
     const { result } = await renderHook(() => useOnboardingMissions(false));
     await act(async () => {});

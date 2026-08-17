@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
-  ActivityIndicator,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -20,6 +19,7 @@ import { CharacterAvatar } from '@/components/room/character-avatar';
 import { Room, type RoomSceneProps } from '@/components/room/room';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { type Routine, type RoutineCategoryMeta, UNCATEGORIZED_META } from '@/constants/routines';
+import { Loading } from '@/components/ui/loading';
 import { BearCheck } from '@/components/ui/bear-check';
 import { CategoryIcon } from '@/components/ui/category-icon';
 import { Icon } from '@/components/ui/icon';
@@ -27,13 +27,14 @@ import { ScalePressable } from '@/components/ui/scale-pressable';
 import { horizontalFlingGesture } from '@/utils/gesture';
 import { PendingNotice } from '@/components/ui/pending-notice';
 import { RetryState } from '@/components/ui/retry-state';
+import { ActivityStrip, type ActivityStripDay } from '@/components/screens/house/activity-strip';
 import { SpringProgressBar } from '@/components/ui/spring-progress';
 import { BookOpenPictogram, Pictogram, type PictogramName } from '@/components/ui/pictograms';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
-import { useTokens, useTypography } from '@/hooks/use-tokens';
-import { formatTime } from '@/utils/datetime';
+import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { formatTime, todayIso } from '@/utils/datetime';
 import { hapticSuccess } from '@/utils/haptics';
 import { DEMO_GUESTBOOK, FRIEND_DEMO_ROUTINES } from '@/mocks/fixtures';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
@@ -48,14 +49,12 @@ const CHEERS: { type: CheerType; icon: PictogramName; label: string }[] = [
 ];
 
 /** One day of a friend's completion history (server GET …/routine-completions). */
-export type FriendActivityDay = {
-  /** "YYYY-MM-DD" — list key. */
-  date: string;
-  /** Display date, e.g. "7월 8일". */
-  label: string;
-  /** Completed routine titles on that day (server order). */
-  titles: string[];
-};
+/**
+ * 최근 활동 하루치 — 정의는 ActivityStrip이 갖는다 (#860). adapters·훅이
+ * 이 이름으로 임포트하고 있어 공개 이름은 여기 유지한다. 두 군데 각자
+ * 정의하면 한쪽만 바뀌어도 조용히 어긋난다(리뷰 지적).
+ */
+export type FriendActivityDay = ActivityStripDay;
 
 /** One guestbook note on this room (server GET /rooms/{id}/guestbooks). */
 export type GuestbookEntry = {
@@ -121,6 +120,7 @@ export function FriendRoomScreen({
   friendName = '친구',
   onSwipeFriend,
   streakDays = 7,
+  cobweb,
   characterId = DEFAULT_CHARACTER_ID,
   characterFrames,
   wallpaperId,
@@ -148,12 +148,14 @@ export function FriendRoomScreen({
 }: FriendRoomScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
+  const emph = useFontEmphasis();
   const headerInset = useHeaderInsetStyle();
   const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
   // <Room />에 스프레드로 넘기는 씬 번들 (#691).
   const roomScene: RoomSceneProps = {
     characterId,
     characterFrames,
+    cobweb,
     wallpaperId,
     floorId,
     backgroundId,
@@ -188,6 +190,8 @@ export function FriendRoomScreen({
   // 앱 재시작 후 중복은 기존 서버 409 토스트가 방어한다.
   const [cheeredTypes, setCheeredTypes] = useState<CheerType[]>([]);
   const [confirmCheer, setConfirmCheer] = useState<CheerType | null>(null);
+  // 최근 활동 상세 펼침 (#860) — 기본은 접힌 한 줄.
+  const [activityOpen, setActivityOpen] = useState(false);
   // 응원 발사 (#450) — 탭마다 해당 이모지가 버튼에서 떠올라 사라진다.
   const burstSeq = useRef(0);
   const [bursts, setBursts] = useState<{ id: number; type: CheerType }[]>([]);
@@ -385,9 +389,21 @@ export function FriendRoomScreen({
 
             <SpringProgressBar progress={progress} color={t.primary} trackColor={t.surfaceMuted} />
 
+            {/* 최근 활동 (#860) — 카드 14장 섹션을 한 줄로 접었다. 그 섹션이
+                방명록을 아래로 밀어냈고, 정작 궁금한 "요즘 꾸준한가"는 카드를
+                훑어야 알 수 있었다. 탭하면 날짜별 상세가 펼쳐진다. */}
+            {recentActivity ? (
+              <ActivityStrip
+                days={recentActivity}
+                today={todayIso()}
+                expanded={activityOpen}
+                onToggle={() => setActivityOpen((v) => !v)}
+              />
+            ) : null}
+
             {loading ? (
               <View style={styles.listState}>
-                <ActivityIndicator color={t.primary} />
+                <Loading />
               </View>
             ) : routineList.length === 0 ? (
               <Text style={[Typography.supporting, styles.listState, { color: t.textMuted }]}>
@@ -414,7 +430,8 @@ export function FriendRoomScreen({
                         {routine.alarmEnabled && routine.time ? (
                           <View style={styles.badge}>
                             <Icon name="bell" size={11} color={t.textMuted} />
-                            <Text style={[styles.badgeText, { color: t.textMuted }]}>
+                            <Text
+                              style={[styles.badgeText, emph('normal'), { color: t.textMuted }]}>
                               {formatTime(routine.time)}
                             </Text>
                           </View>
@@ -483,42 +500,6 @@ export function FriendRoomScreen({
             </View>
           </View>
 
-          {recentActivity ? (
-            <View style={styles.section}>
-              <View style={styles.sectionHead}>
-                <Text style={[Typography.h2, { color: t.text }]}>최근 활동</Text>
-                <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                  최근 14일 · 공개 루틴 기준
-                </Text>
-              </View>
-              {recentActivity.length === 0 ? (
-                <Text style={[Typography.supporting, styles.listState, { color: t.textMuted }]}>
-                  최근 2주간 완료한 공개 루틴이 없어요.
-                </Text>
-              ) : (
-                <View style={styles.activityList}>
-                  {recentActivity.map((day) => (
-                    <View
-                      key={day.date}
-                      style={[styles.activityRow, { backgroundColor: t.surfaceMuted }]}>
-                      <View style={styles.activityRowHead}>
-                        <Text style={[Typography.label, { color: t.text }]}>{day.label}</Text>
-                        <Text style={[Typography.supporting, { color: t.primaryText }]}>
-                          {day.titles.length}개 완료
-                        </Text>
-                      </View>
-                      <Text
-                        style={[Typography.supporting, { color: t.textMuted }]}
-                        numberOfLines={2}>
-                        {day.titles.join(' · ')}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          ) : null}
-
           <View style={styles.section}>
             <View style={styles.sectionHead}>
               <View style={styles.gbTitleRow}>
@@ -552,7 +533,7 @@ export function FriendRoomScreen({
 
             {guestbookLoading && notes.length === 0 ? (
               <View style={styles.gbState}>
-                <ActivityIndicator color={t.primary} />
+                <Loading />
               </View>
             ) : notes.length === 0 ? (
               <Text style={[Typography.supporting, styles.gbState, { color: t.textMuted }]}>
@@ -767,19 +748,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
-  },
-  activityList: {
-    gap: Spacing.two,
-  },
-  activityRow: {
-    borderRadius: Radius.md,
-    padding: Spacing.three,
-    gap: Spacing.one,
-  },
-  activityRowHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
   },
   gbList: {
     gap: Spacing.two,

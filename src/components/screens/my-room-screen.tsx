@@ -1,6 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Animated,
   Dimensions,
   type GestureResponderEvent,
@@ -15,10 +14,9 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { GestureDetector } from 'react-native-gesture-handler';
 
 import { NavMenuPopover } from '@/components/app/nav-menu-popover';
-import { FlyingCoin } from '@/components/screens/my-room/flying-coin';
+import { FlyingCoin } from '@/components/ui/flying-coin';
 import { isScheduledOn } from '@/components/screens/my-room/schedule';
 import {
   type DragSlot,
@@ -39,6 +37,7 @@ import { QuickAddRow } from '@/components/screens/my-room/quick-add-row';
 import { RoutineRow } from '@/components/screens/my-room/routine-row';
 import { WalletHistorySheet } from '@/components/screens/sheets/wallet-history-sheet';
 import { useWidgetRoomCapture } from '@/components/screens/my-room/use-widget-room-capture';
+import { WeeklyReportPanel } from '@/components/screens/my-room/weekly-report-panel';
 import { Room, type RoomSceneProps } from '@/components/room/room';
 import {
   CharacterPickerSheet,
@@ -50,6 +49,7 @@ import { RenameDialog } from '@/components/screens/sheets/rename-dialog';
 import { RoutineMenuSheet } from '@/components/screens/sheets/routine-menu-sheet';
 import { TimePickerSheet } from '@/components/screens/sheets/time-picker-sheet';
 import { TodoDateDialog } from '@/components/screens/sheets/todo-date-dialog';
+import { Loading } from '@/components/ui/loading';
 import { Calendar } from '@/components/ui/calendar';
 import { CoachTarget } from '@/components/ui/coach-mark';
 import { CategoryIcon } from '@/components/ui/category-icon';
@@ -59,6 +59,7 @@ import { RetryState } from '@/components/ui/retry-state';
 import { SpringProgressBar } from '@/components/ui/spring-progress';
 import { useToast } from '@/components/ui/toast';
 import { WalletPills } from '@/components/ui/wallet-pills';
+import type { WeeklyReportDetailResponse } from '@/api/types';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import {
   type CategoryVisibility,
@@ -79,7 +80,6 @@ import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-re
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
 import { formatDate, todayIso } from '@/utils/datetime';
-import { horizontalFlingGesture } from '@/utils/gesture';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
 
 // 스케줄 판정은 my-room/schedule로 이동 (#693) — 기존 임포트 경로 유지용 재수출.
@@ -103,6 +103,38 @@ export type CalendarDayItem = {
 // 캐릭터가 항상 있으므로 characterId만 null 불가로 좁힌다.
 export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
   ScrollRestoreProps & {
+    /**
+     * 거미줄 청소 (#830) — 성공하면 받은 코인 수, 실패·중복이면 null.
+     * 화면은 그 값으로만 코인 연출을 쏜다(중복 청소에 보상 연출이 뜨면 거짓말).
+     */
+    onCleanCobweb?: () => Promise<number | null>;
+    /** 할 일 있는 날 (#838) — 달력 점 표시. 없으면 점 없이 그린다. */
+    markedTodoDates?: ReadonlySet<string>;
+    /** 달력에서 보이는 달이 바뀔 때 (#838) — 부모가 그 달 개수를 받아온다. */
+    onCalendarMonthChange?: (yearMonth: string) => void;
+    /**
+     * 주간 회고 탭 (#852 → #856) — 회고가 아직 없으면 undefined로 두면
+     * **탭 자체가 그려지지 않는다**. 가입 첫 주에 빈 탭을 내주지 않는다.
+     */
+    weeklyReport?: {
+      report?: WeeklyReportDetailResponse | null;
+      loading?: boolean;
+      /** 아직 안 열어본 새 회고가 있는지 — 탭 라벨에 점. */
+      unread?: boolean;
+    };
+    /** 주간회고 탭을 열었을 때 — 셸이 본문을 받아오고 읽음 처리한다. */
+    onOpenWeeklyReport?: () => void;
+    /**
+     * 연속 출석 이벤트 (#851) — 진행 중인 이벤트가 없으면 undefined로 두면
+     * 헤더 아이콘 자체가 그려지지 않는다.
+     */
+    attendance?: {
+      /** 오늘 아직 출석 안 했는지 — 아이콘에 빨간 점. */
+      pending: boolean;
+    };
+    /** 출석 아이콘 탭 — 셸이 출석 시트를 연다. */
+    onOpenAttendance?: () => void;
+
     /** Room occupant's display name (header title becomes "{userName}의 방"). */
     userName?: string;
     /** Consecutive-day streak shown in the header. */
@@ -247,6 +279,14 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   wallpaperId = DEFAULT_WALLPAPER_ID,
   floorId,
   backgroundId,
+  cobweb,
+  onCleanCobweb,
+  markedTodoDates,
+  onCalendarMonthChange,
+  weeklyReport,
+  onOpenWeeklyReport,
+  attendance,
+  onOpenAttendance,
   placedFurnitureIds,
   placements = null,
   furniture,
@@ -326,6 +366,12 @@ export const MyRoomScreen = memo(function MyRoomScreen({
       ]);
     });
   };
+  // 거미줄 청소 (#830) — 보상이 실제로 지급됐을 때만 코인이 난다.
+  const handleCleanCobweb = async (at: { x: number; y: number }) => {
+    const reward = await onCleanCobweb?.();
+    if (reward && reward > 0) launchCoinAt(at);
+  };
+
   const onCoinArrive = (id: number) => {
     setFlyingCoins((prev) => prev.filter((c) => c.id !== id));
     walletPulse.setValue(1.18);
@@ -458,23 +504,13 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // server /calendar list, where only past todos toggle — future dates can't
   // be completed, routines accept today-only logs server-side, and past
   // records keep their original (possibly deleted) category.
-  const [tab, setTab] = useState<'room' | 'calendar'>('room');
-  // 방↔달력 스와이프 순환 (#561 → 순환) — 방 캔버스(방 탭)·달력 영역
-  // (달력 탭)의 가로 우세 플링만 두 서브탭을 오간다. '오늘의 루틴' 아래
-  // 리스트 영역은 디텍터 밖이라 셸 탭 페이저(나의 방↔집)가 받는다 (#563
-  // 후속). 달력 그리드는 monthSwipe=false라 월 이동 대신 여기로 흘러온다
-  // (월 이동은 ‹ › 버튼). 세로 스크롤은 failOffsetY(±36)로 넘겨주고, 행
-  // 스와이프(#560/#566)는 더 이른 활성 임계(±10)라 행 위 드래그를 먼저
-  // 가져간다. 제스처는 마운트 시 1회 생성(재생성은 활성 팬을 취소시킨다 —
-  // draggable-furniture 참고), 최신 tab은 핸들러 ref로 읽는다. 두 탭 분기가
-  // 상호배타라 같은 제스처 객체를 양쪽 디텍터에 써도 동시 부착은 없다.
-  // 최신 핸들러를 무의존 제스처에 넘긴다 (#539) — 렌더 중 ref 쓰기는
-  // useLatestRef가 흡수해 이 컴포넌트가 컴파일러 바일아웃을 피한다 (#748).
-  const flingHandlerRef = useLatestRef(() => setTab(tab === 'room' ? 'calendar' : 'room'));
-
-  const tabFling = useConstant(() =>
-    horizontalFlingGesture('room-tab-fling', () => flingHandlerRef.current()),
-  );
+  // 방↔달력은 상단 탭 버튼으로만 오간다 (#825). 예전엔 방 캔버스·달력
+  // 그리드 위 가로 플링이 두 서브탭을 순환시켰는데(#561), 그 아래 루틴
+  // 리스트에서는 같은 손동작이 셸 탭 페이저(나의 방↔집)를 움직여서 —
+  // 손가락 위치 몇십 px 차이로 결과가 갈렸다. 이제 이 화면의 가로
+  // 스와이프는 전부 셸 탭 페이저 몫이고, 달력도 monthSwipe=false를
+  // 유지해 가로 제스처를 만들지 않는다(월 이동은 ‹ › 버튼).
+  const [tab, setTab] = useState<'room' | 'calendar' | 'report'>('room');
   const [selectedDate, setSelectedDate] = useState(() => todayIso());
   const dateRoutines = useMemo(
     () => routines.filter((r) => isScheduledOn(r, selectedDate)),
@@ -587,6 +623,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   const roomScene: RoomSceneProps = {
     characterId,
     characterFrames,
+    cobweb,
+    onCleanCobweb: onCleanCobweb ? handleCleanCobweb : undefined,
     wallpaperId,
     floorId,
     backgroundId,
@@ -878,7 +916,10 @@ export const MyRoomScreen = memo(function MyRoomScreen({
       const destBase = baseOrderRef.current.get(target.categoryId) ?? [];
       if (target.categoryId === fromCategoryId) {
         const next = reorderedIds(destBase, draggedId, target.index);
-        if (next.join(' ') !== destBase.join(' ')) {
+        // 구분자는 반드시 이스케이프 `\0`로 — 예전엔 리터럴 NUL 문자를 그대로
+        // 박아 넣어서, grep·ripgrep이 이 파일을 바이너리로 보고 **1600줄 전체가
+        // 검색에서 사라졌다**. 동작은 같지만 도구에 보이는지가 다르다.
+        if (next.join('\0') !== destBase.join('\0')) {
           hapticSuccess();
           onReorderRoutines?.(fromCategoryId, next);
         }
@@ -1050,6 +1091,20 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               onOpenHistory={openWalletHistory}
             />
           </Animated.View>
+          {/* 출석 이벤트 (#851) — 이벤트가 있을 때만. 미출석이면 빨간 점으로
+              "오늘 할 게 남았다"를 알린다(알림 벨의 안읽음 점과 같은 결). */}
+          {attendance && onOpenAttendance ? (
+            <ScalePressable
+              onPress={onOpenAttendance}
+              accessibilityRole="button"
+              accessibilityLabel={attendance.pending ? '출석 이벤트, 오늘 미출석' : '출석 이벤트'}
+              style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
+              <Icon name="calendar" size={20} color={t.text} />
+              {attendance.pending ? (
+                <View style={[styles.menuDot, { backgroundColor: t.danger }]} />
+              ) : null}
+            </ScalePressable>
+          ) : null}
           {/* 알림 벨 복원 (#727) — #257에서 메뉴로 합쳤던 것을 1탭으로 승격.
               제목은 축소·중간 말줄임 로직이 있어 좁은 폭도 견딘다. */}
           {onOpenNotifications ? (
@@ -1082,18 +1137,26 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           [
             ['room', '방'],
             ['calendar', '달력'],
+            // 회고가 없으면(=weeklyReport 미배선) 탭을 아예 빼서 2탭으로 둔다.
+            ...(weeklyReport ? ([['report', '주간회고']] as const) : []),
           ] as const
         ).map(([key, label]) => {
           const active = tab === key;
+          const dot = key === 'report' && !!weeklyReport?.unread && !active;
           const btn = (
             <Pressable
-              onPress={() => setTab(key)}
+              onPress={() => {
+                setTab(key);
+                if (key === 'report') onOpenWeeklyReport?.();
+              }}
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
+              accessibilityLabel={dot ? `${label}, 새 회고` : label}
               style={[styles.tab, active && { borderBottomColor: t.primary }]}>
               <Text style={[Typography.label, { color: active ? t.primaryText : t.textMuted }]}>
                 {label}
               </Text>
+              {dot ? <View style={[styles.tabDot, { backgroundColor: t.danger }]} /> : null}
             </Pressable>
           );
           // 달력 탭은 코치마크 대상 (#351).
@@ -1129,57 +1192,50 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           keyboardShouldPersistTaps="handled">
           {tab === 'room' ? (
             <>
-              {/* 방↔달력 플링은 방 캔버스에서만 (#563 후속) — 아래 루틴
-                    리스트 영역의 가로 스와이프는 셸 탭 페이저(집 이동) 몫. */}
-              <GestureDetector gesture={tabFling}>
-                {/* collapsable={false}: 패딩만 있는 View는 안드로이드 뷰 평탄화
-                    대상이라, 사라지면 제스처가 붙을 대상이 없어진다. 달력 탭·
-                    친구 방의 같은 tabFling도 직계 자식에 이걸 둔다. */}
-                <View style={styles.roomWrap} collapsable={false}>
-                  {/*
+              <View style={styles.roomWrap}>
+                {/*
                     캡처 대상은 방 자체만 (#778) — 예전엔 ref가 패딩 있는
                     roomWrap에 붙어 있어 그 **투명 여백까지 찍혔고**, #744에서
                     캡처를 JPEG(알파 없음)로 바꾸면서 여백이 검정으로 눌러붙어
                     위젯에 검은 띠가 생겼다. 플로팅 버튼들은 roomWrap 기준
                     absolute라 바깥에 남겨도 위치가 그대로다.
                   */}
-                  <View ref={roomShotRef} collapsable={false}>
-                    <Room {...roomScene} interactiveCharacter />
-                  </View>
+                <View ref={roomShotRef} collapsable={false}>
+                  <Room {...roomScene} interactiveCharacter />
+                </View>
+                <Pressable
+                  onPress={onOpenGacha}
+                  accessibilityRole="button"
+                  accessibilityLabel="뽑기 상점"
+                  // 방 이미지 저장 중에는 숨겨 사진에서 제외한다 (#475).
+                  pointerEvents={capturing ? 'none' : 'auto'}
+                  style={[
+                    styles.gachaBtn,
+                    { backgroundColor: t.surface },
+                    capturing && styles.hidden,
+                  ]}>
+                  {/* absolute 버튼이라 래퍼 대신 내용을 측정 (#351). */}
+                  <CoachTarget id="room-gacha">
+                    <Icon name="gift" size={20} color={t.text} />
+                  </CoachTarget>
+                </Pressable>
+                {/* 방 꾸미기 1탭 승격 (#727) — 메뉴(2탭) 뒤에 있던 보상 루프의
+                      종착지를 뽑기 버튼 위에 나란히. 메뉴 항목은 습관 경로로 유지. */}
+                {onEdit ? (
                   <Pressable
-                    onPress={onOpenGacha}
+                    onPress={onEdit}
                     accessibilityRole="button"
-                    accessibilityLabel="뽑기 상점"
-                    // 방 이미지 저장 중에는 숨겨 사진에서 제외한다 (#475).
+                    accessibilityLabel="방 꾸미기"
                     pointerEvents={capturing ? 'none' : 'auto'}
                     style={[
-                      styles.gachaBtn,
+                      styles.decorBtn,
                       { backgroundColor: t.surface },
                       capturing && styles.hidden,
                     ]}>
-                    {/* absolute 버튼이라 래퍼 대신 내용을 측정 (#351). */}
-                    <CoachTarget id="room-gacha">
-                      <Icon name="gift" size={20} color={t.text} />
-                    </CoachTarget>
+                    <Icon name="edit" size={20} color={t.text} />
                   </Pressable>
-                  {/* 방 꾸미기 1탭 승격 (#727) — 메뉴(2탭) 뒤에 있던 보상 루프의
-                      종착지를 뽑기 버튼 위에 나란히. 메뉴 항목은 습관 경로로 유지. */}
-                  {onEdit ? (
-                    <Pressable
-                      onPress={onEdit}
-                      accessibilityRole="button"
-                      accessibilityLabel="방 꾸미기"
-                      pointerEvents={capturing ? 'none' : 'auto'}
-                      style={[
-                        styles.decorBtn,
-                        { backgroundColor: t.surface },
-                        capturing && styles.hidden,
-                      ]}>
-                      <Icon name="edit" size={20} color={t.text} />
-                    </Pressable>
-                  ) : null}
-                </View>
-              </GestureDetector>
+                ) : null}
+              </View>
 
               <View style={styles.section}>
                 <CoachTarget id="room-routines">
@@ -1209,7 +1265,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
 
                 {loading ? (
                   <View style={styles.stateBlock}>
-                    <ActivityIndicator color={t.primary} />
+                    <Loading />
                     <Text style={[Typography.supporting, { color: t.textMuted }]}>
                       불러오는 중…
                     </Text>
@@ -1244,21 +1300,24 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                     )}
               </View>
             </>
+          ) : tab === 'report' ? (
+            <WeeklyReportPanel report={weeklyReport?.report} loading={weeklyReport?.loading} />
           ) : (
             <View style={styles.calendarPanel}>
-              <GestureDetector gesture={tabFling}>
-                <View collapsable={false}>
-                  <Calendar
-                    value={selectedDate}
-                    onSelect={pickDate}
-                    today={today}
-                    monthSwipe={false}
-                  />
-                </View>
-              </GestureDetector>
+              {/* monthSwipe=false 유지 (#825) — 달력 위 가로 스와이프가 월
+                  이동이라는 또 다른 뜻을 갖게 되면 "가로 스와이프 = 하단 탭
+                  이동" 규칙이 다시 깨진다. 월 이동은 ‹ › 버튼. */}
+              <Calendar
+                value={selectedDate}
+                onSelect={pickDate}
+                today={today}
+                monthSwipe={false}
+                markedDates={markedTodoDates}
+                onVisibleMonthChange={onCalendarMonthChange}
+              />
               <View style={styles.calListHead}>
                 <Text style={[Typography.h3, styles.calListTitle, { color: t.text }]}>
-                  이 날의 루틴
+                  이 날의 할 일
                 </Text>
                 {calDayTotal > 0 ? (
                   <Text style={[Typography.label, { color: t.primaryText }]}>
@@ -1282,7 +1341,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               ) : null}
               {loading || (serverBackedDay && !dayItems) ? (
                 <View style={styles.stateBlock}>
-                  <ActivityIndicator color={t.primary} />
+                  <Loading />
                 </View>
               ) : serverBackedDay ? (
                 calServerGroups!.length === 0 ? (
@@ -1443,6 +1502,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },
+  // 라벨 오른쪽 위 점 — 헤더 아이콘의 안읽음 점(menuDot)과 같은 결.
+  tabDot: {
+    position: 'absolute',
+    top: Spacing.one,
+    right: Spacing.two,
+    width: 6,
+    height: 6,
+    borderRadius: Radius.pill,
+  },
   calendarPanel: {
     padding: Spacing.four,
     gap: Spacing.two,
@@ -1450,7 +1518,7 @@ const styles = StyleSheet.create({
   calListTitle: {
     marginTop: Spacing.three,
   },
-  // 이 날의 루틴 제목 + 완료/총 카운트 행 (#346) — 방탭 sectionHead와 같은 결.
+  // 이 날의 할 일 제목 + 완료/총 카운트 행 (#346) — 방탭 sectionHead와 같은 결.
   calListHead: {
     flexDirection: 'row',
     alignItems: 'baseline',

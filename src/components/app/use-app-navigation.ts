@@ -28,7 +28,6 @@ export function useAppNavigation({
   setScreen,
   addReturnScreen,
   noHouses,
-  onLeaveHouseSearch,
 }: {
   screen: Screen;
   setScreen: Dispatch<SetStateAction<Screen>>;
@@ -37,7 +36,6 @@ export function useAppNavigation({
   /** 집 없는 유저 (#571) — 집 탭/뒤로가기의 목적지 분기. */
   noHouses: boolean;
   /** 탐색을 뒤로 떠나는 순간 호출 (#571 후속) — 미션 판정은 셸 몫. */
-  onLeaveHouseSearch?: () => void;
 }) {
   const { show: toast } = useToast();
 
@@ -47,10 +45,9 @@ export function useAppNavigation({
   const goBack = useCallback(() => {
     const target = backTargetFor(screen, addReturnScreen, noHouses);
     if (!target) return false;
-    if (screen === 'houseSearch') onLeaveHouseSearch?.();
     setScreen(target);
     return true;
-  }, [screen, addReturnScreen, noHouses, onLeaveHouseSearch, setScreen]);
+  }, [screen, addReturnScreen, noHouses, setScreen]);
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       if (goBack()) return true;

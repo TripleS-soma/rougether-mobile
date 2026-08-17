@@ -12,6 +12,7 @@ import type {
   InviteCodeResponse,
   HouseJoinRequestResponse,
   HouseListResponse,
+  HouseOrderUpdateRequest,
   HouseMemberDayResponse,
   HouseMemberRoutineCompletionListResponse,
   HouseMissionClaimResponse,
@@ -24,6 +25,7 @@ import type {
   HouseUpdateResponse,
   MemberSummary,
   MissionSummary,
+  RoomCobwebCleanResponse,
   MyHouseSummary,
   MyJoinRequestSummary,
   TransferOwnershipResponse,
@@ -32,6 +34,22 @@ import type {
 /** GET /me/houses — houses the user belongs to. */
 export function fetchMyHouses() {
   return apiGetList<MyHouseSummary>('/me/houses');
+}
+
+/**
+ * PUT /me/houses/order — 집 탭에서 내 집이 보이는 순서를 저장한다 (#820).
+ * 멤버십에 저장하는 개인 설정이라 같은 집의 다른 구성원에게는 영향이 없다.
+ *
+ * **성공은 204 No Content** (2026-08-16 실서버 확인) — 갱신된 목록을 돌려주지
+ * 않으므로 호출부가 자기 상태를 직접 반영해야 한다.
+ *
+ * **전량 전송 계약**: 내가 active 구성원인 집 전체를 원하는 순서로 넘긴다.
+ * 부분 목록·중복·남의 집 id는 전부 `HOUSE_ORDER_INVALID`(400)다 — 우리는
+ * 항상 아는 목록 전부를 보내므로, 이 400은 사실상 "네가 아는 목록이 낡았다"는
+ * 뜻이고 호출부는 재조회로 회복한다.
+ */
+export function updateHouseOrder(houseIds: number[]) {
+  return apiPut<void>('/me/houses/order', { houseIds } as HouseOrderUpdateRequest);
 }
 
 /** GET /houses/cover-images — selectable cover catalog (집 생성·설정). */
@@ -135,6 +153,17 @@ export function kickHouseMember(houseId: number, membershipId: number) {
 /** GET /houses/{id}/members/{membershipId}/room — a housemate's room (same shape as /rooms/me). */
 export function fetchHouseMemberRoom(houseId: number, membershipId: number) {
   return apiGet<RoomWithLayout>(`/houses/${houseId}/members/${membershipId}/room`);
+}
+
+/**
+ * POST /houses/{id}/members/{membershipId}/room/cobweb/clean — 같은 집 구성원의
+ * 방에 낀 거미줄을 대신 치워주고 **청소자가** 코인 보상을 받는다 (#831, 서버 #277).
+ * 방 주인에게는 `ROOM_COBWEB_CLEANED` 알림이 간다(자기 방 청소는 알림 없음).
+ */
+export function cleanHouseMemberCobweb(houseId: number, membershipId: number) {
+  return apiPost<RoomCobwebCleanResponse>(
+    `/houses/${houseId}/members/${membershipId}/room/cobweb/clean`,
+  );
 }
 
 /** GET /houses/{id}/members/{membershipId}/day — that member's routines+todos on a date (default today, KST). */

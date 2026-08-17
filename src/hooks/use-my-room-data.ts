@@ -25,6 +25,7 @@ import {
   deleteRoutine as apiDeleteRoutine,
   deleteTodo,
   fetchCalendarDay,
+  fetchCalendarMonth,
   fetchCategories,
   fetchMe,
   fetchRoutines,
@@ -191,6 +192,29 @@ export function useMyRoomData() {
       }
     },
     [toast],
+  );
+
+  /**
+   * 월 캘린더 점 (#838, 서버 #295) — 그 달에 **투두가 있는 날**의 집합.
+   * 루틴은 세지 않는다: 대부분의 날에 반복되므로 점을 찍으면 거의 모든
+   * 날에 찍혀 아무것도 구분하지 못한다. 서버는 routineCount도 주지만 버린다.
+   */
+  const [todoDatesByMonth, setTodoDatesByMonth] = useState<Record<string, string[]>>({});
+  const loadCalendarMonth = useCallback(async (yearMonth: string) => {
+    try {
+      const res = await fetchCalendarMonth(yearMonth);
+      const marked = (res.days ?? []).flatMap((d) =>
+        (d.todoCount ?? 0) > 0 && d.date ? [d.date] : [],
+      );
+      setTodoDatesByMonth((prev) => ({ ...prev, [yearMonth]: marked }));
+    } catch {
+      // 점은 보조 정보다 — 실패해도 달력 자체는 쓸 수 있으니 조용히 넘어간다.
+    }
+  }, []);
+  /** 방문한 달을 합친 표시용 집합 — 이미 받은 달은 다시 부르지 않는다. */
+  const markedTodoDates = useMemo(
+    () => new Set(Object.values(todoDatesByMonth).flat()),
+    [todoDatesByMonth],
   );
 
   const findItem = useCallback((id: string) => routines.find((r) => r.id === id), [routines]);
@@ -692,6 +716,8 @@ export function useMyRoomData() {
       allCategories,
       calendarDays,
       loadCalendarDay,
+      loadCalendarMonth,
+      markedTodoDates,
       wallet,
       setWallet,
       nickname,
@@ -731,6 +757,8 @@ export function useMyRoomData() {
       allCategories,
       calendarDays,
       loadCalendarDay,
+      loadCalendarMonth,
+      markedTodoDates,
       wallet,
       nickname,
       bio,

@@ -19,6 +19,7 @@ import {
   ErrorCode,
   fetchItems,
   fetchMyItems,
+  cleanMyCobweb,
   fetchMyRoom,
   purchaseItem,
   updateRoomLayout,
@@ -35,6 +36,7 @@ import {
 import { useToast } from '@/components/ui/toast';
 import { type Wallet } from '@/constants/currency';
 import { track } from '@/lib/analytics';
+import type { RoomCobweb } from '@/components/room/room';
 import {
   DEFAULT_WALLPAPER_ID,
   type PlacedFurniture,
@@ -60,6 +62,8 @@ export type RoomPlacement = {
   layoutRevision: number;
   /** 이미 FREE_V1로 전환된 방인지 — 첫 저장 확인 모달 판단. */
   freeLayout: boolean;
+  /** 내 방에 낀 거미줄 (#829) — 없으면 null. */
+  cobweb: RoomCobweb | null;
 };
 
 export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
@@ -75,6 +79,7 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
     backgroundId: null,
     layoutRevision: 0,
     freeLayout: false,
+    cobweb: null,
   });
   const { show: toast } = useToast();
   // itemId(string) → userItemId, needed to save placements.
@@ -118,6 +123,8 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
         backgroundId: saved ? saved.backgroundId : fallback.backgroundId,
         layoutRevision: room?.layoutRevision ?? 0,
         freeLayout,
+        // 서버가 안 주면 깨끗한 방 (#829).
+        cobweb: room?.cobweb ?? null,
       });
     } catch {
       setError(true);
@@ -129,6 +136,35 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  /**
+   * 내 방 거미줄 청소 (#830, 서버 #277) — 성공하면 받은 코인 수를 돌려준다.
+   * 화면이 그 값으로 코인 연출을 쏘므로, 실패·중복은 null이어야 한다.
+   *
+   * 409(ROOM_COBWEB_NOT_ACTIVE)는 실패가 아니다 — 같은 집 구성원이 먼저
+   * 치운 것이라, 에러 문구 대신 거미줄만 걷고 그 사실을 알려준다. 보상은
+   * 최초 1인에게만 가므로 코인 연출은 쏘지 않는다.
+   */
+  const cleanCobweb = useCallback(async (): Promise<number | null> => {
+    try {
+      const res = await cleanMyCobweb();
+      setPlacement((prev) => ({ ...prev, cobweb: null }));
+      if (res.rewardCurrencyType === 'COIN' && res.balance != null) {
+        setWallet((prev) => ({ ...prev, coin: res.balance as number }));
+      }
+      return res.rewardAmount ?? 0;
+    } catch (err) {
+      if (err instanceof ApiError && err.code === ErrorCode.ROOM_COBWEB_NOT_ACTIVE) {
+        setPlacement((prev) => ({ ...prev, cobweb: null }));
+        toast('누가 먼저 치워줬어요');
+        return null;
+      }
+      toast('거미줄을 치우지 못했어요. 잠시 후 다시 시도해 주세요.', 'error');
+      return null;
+    }
+    // 참조 안정 필수 (#539) — MyRoomScreen memo 경계를 넘는 prop이라, 매
+    // 렌더 새 함수면 방 캔버스 서브트리가 통째로 다시 그려진다.
+  }, [setWallet, toast]);
 
   /** Buy an item with diamond. Returns true on success (false on insufficient funds). */
   const purchase = async (itemId: string): Promise<boolean> => {
@@ -205,6 +241,8 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
         backgroundId,
         layoutRevision: res.layoutRevision ?? placement.layoutRevision + 1,
         freeLayout: true,
+        // 배치 저장은 거미줄과 무관 — 현재 상태를 그대로 들고 간다 (#829).
+        cobweb: placement.cobweb,
       });
       toast('방 배치를 저장했어요', 'success');
       return 'ok';
@@ -225,6 +263,7 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
     error,
     retry: load,
     purchase,
+    cleanCobweb,
     refreshOwned,
     saveLayout,
   };

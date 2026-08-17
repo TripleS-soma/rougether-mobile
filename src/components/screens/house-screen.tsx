@@ -1,7 +1,6 @@
 import { Image } from 'expo-image';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Animated,
   Easing,
   PanResponder,
@@ -13,7 +12,9 @@ import {
 } from 'react-native';
 
 import { type HouseCover } from '@/components/room/house-cover-picker';
+import { HouseOrderDots } from '@/components/room/house-order-dots';
 import { FRAME_ASPECT, houseCoverKey, WINDOW_RECTS } from '@/components/room/house-preview-frame';
+import { Loading } from '@/components/ui/loading';
 import { CoachTarget } from '@/components/ui/coach-mark';
 import { type MemberRoomPreview, type RoomCatalogProps } from '@/components/room/room';
 import {
@@ -206,6 +207,12 @@ export type HouseScreenProps = RoomCatalogProps &
      * (#241). Omit for internal state (dev gallery).
      */
     houseIndex?: number;
+    /**
+     * 집 순서 확정 (#820) — 원하는 순서의 houseId 배열을 전량 넘긴다
+     * (`PUT /me/houses/order` 계약). 없으면 인디케이터가 정렬 제스처 없이
+     * 도트로만 동작한다.
+     */
+    onReorderHouses?: (houseIds: number[]) => void;
     onHouseIndexChange?: (index: number) => void;
     /**
      * 승인 대기 중인 내 입주 신청 (#648, 서버 #255) — 스위처의 마지막
@@ -291,6 +298,7 @@ export const HouseScreen = memo(function HouseScreen({
   userName = '준서',
   streakDays = 0,
   houseIndex: houseIndexProp,
+  onReorderHouses,
   onHouseIndexChange,
   pendingHouses,
   onCancelJoinRequest,
@@ -382,6 +390,12 @@ export const HouseScreen = memo(function HouseScreen({
   // 승인 대기 신청 (#648) — 집 페이지들 뒤에 잠금 카드 페이지로 이어 붙는다.
   const pendingList = pendingHouses ?? [];
   const totalPages = houses.length + pendingList.length;
+  // 인디케이터 정렬 대상 — houseId가 있는 내 집만. 서버 계약이 id 배열이라
+  // id 없는 로컬/데모 집은 순서를 보낼 수 없어 제외한다.
+  const orderableHouses = useMemo(
+    () => houses.flatMap((h) => (h.houseId != null ? [{ houseId: h.houseId, name: h.name }] : [])),
+    [houses],
+  );
   const pendingHouse =
     houseIndex >= houses.length && pendingList.length > 0
       ? pendingList[Math.min(houseIndex - houses.length, pendingList.length - 1)]
@@ -762,19 +776,13 @@ export const HouseScreen = memo(function HouseScreen({
               </ScalePressable>
             ) : null}
           </View>
-          <View style={styles.dots}>
-            {Array.from({ length: totalPages }, (_, i) => (
-              <View
-                key={`page-${i}`}
-                style={[
-                  styles.dot,
-                  i === houseIndex
-                    ? { width: 20, backgroundColor: t.primary }
-                    : { width: 6, backgroundColor: t.border },
-                ]}
-              />
-            ))}
-          </View>
+          {/* 대기 카드 페이지(#648)는 내 집이 아니라 정렬 대상에서 빠진다. */}
+          <HouseOrderDots
+            houses={orderableHouses}
+            pendingCount={pendingList.length}
+            index={houseIndex}
+            onReorder={onReorderHouses}
+          />
         </View>
 
         <ConfirmDialog
@@ -809,7 +817,7 @@ export const HouseScreen = memo(function HouseScreen({
         <View style={styles.emptyWrap}>
           {loading ? (
             <>
-              <ActivityIndicator color={t.primary} />
+              <Loading />
               <Text style={[Typography.supporting, { color: t.textMuted }]}>불러오는 중…</Text>
             </>
           ) : loadError ? (
@@ -982,20 +990,13 @@ export const HouseScreen = memo(function HouseScreen({
               </Pressable>
             ) : null}
           </View>
-          <View style={styles.dots}>
-            {/* 대기 카드 페이지(#648)까지 포함한 전체 페이지 도트. */}
-            {Array.from({ length: totalPages }, (_, i) => (
-              <View
-                key={houses[i]?.houseId ?? `page-${i}`}
-                style={[
-                  styles.dot,
-                  i === houseIndex
-                    ? { width: 20, backgroundColor: t.primary }
-                    : { width: 6, backgroundColor: t.surface },
-                ]}
-              />
-            ))}
-          </View>
+          {/* 대기 카드 페이지(#648)는 내 집이 아니라 정렬 대상에서 빠진다. */}
+          <HouseOrderDots
+            houses={orderableHouses}
+            pendingCount={pendingList.length}
+            index={houseIndex}
+            onReorder={onReorderHouses}
+          />
           {/* 레벨·멤버 pill — 프레임 여백과 정렬된 행 (모서리 절대배치는
                 화면 끝에 걸려 보였다). 고정 밝기 흰 스크림 위라 onTint 잉크. */}
           <View style={styles.framePillsRow}>

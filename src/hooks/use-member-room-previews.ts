@@ -94,6 +94,8 @@ export function useMemberRoomPreviews() {
               floorId: placement.floorId,
               backgroundId: placement.backgroundId,
               characterId: characterIdFromCode(room.character?.code),
+              // 같은 집 구성원 방의 거미줄 (#829) — 타일에서도 보인다.
+              cobweb: room.cobweb ?? null,
             };
             return [membershipId, preview] as const;
           } catch {
@@ -109,5 +111,18 @@ export function useMemberRoomPreviews() {
     [],
   );
 
-  return { previews, load };
+  /**
+   * 한 멤버 타일의 거미줄만 지운다 (#831) — 친구 방에서 치우고 돌아왔을 때
+   * 타일에 그대로 껴 있으면 청소가 안 먹힌 것처럼 보인다. 전체 재조회는
+   * 집 인원수만큼 요청이 나가므로 이 한 칸만 손본다.
+   */
+  const clearCobweb = useCallback((membershipId: number) => {
+    setPreviews((prev) =>
+      prev[membershipId]
+        ? { ...prev, [membershipId]: { ...prev[membershipId], cobweb: null } }
+        : prev,
+    );
+  }, []);
+
+  return { previews, load, clearCobweb };
 }

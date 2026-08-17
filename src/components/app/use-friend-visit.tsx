@@ -22,6 +22,7 @@ export function useFriendVisit({
   houseIndex,
   screen,
   cheerMember,
+  clearPreviewCobweb,
 }: {
   setScreen: Dispatch<SetStateAction<Screen>>;
   /** 상점 카탈로그 — 친구 방 슬롯의 assetKey 해석 (#149). */
@@ -32,11 +33,13 @@ export function useFriendVisit({
   screen: Screen;
   /** 같은 집 활성 멤버 응원 (#330). */
   cheerMember: (houseId: number, membershipId: number, type: CheerType) => Promise<unknown>;
+  /** 그 멤버 타일의 거미줄만 걷는다 (#831). */
+  clearPreviewCobweb: (membershipId: number) => void;
 }) {
   const { show: toast } = useToast();
   const [visitingFriend, setVisitingFriend] = useState<VisitedFriend>({ name: '친구' });
   // The visited friend's live room + today's routines (loads on visit, #149).
-  const { friendRoom, load: loadFriendRoom } = useFriendRoom();
+  const { friendRoom, load: loadFriendRoom, cleanCobweb } = useFriendRoom();
   // Guestbook for the friend room being visited (loads on visit).
   const {
     entries: guestbookEntries,
@@ -126,6 +129,23 @@ export function useFriendVisit({
         characterId={friendRoom.characterId}
         characterFrames={friendRoom.characterFrames}
         streakDays={friendRoom.streakDays}
+        cobweb={friendRoom.cobweb}
+        onCleanCobweb={async () => {
+          // 응원과 같은 조건 — 서버 집 문맥이 있을 때만 청소가 성립한다.
+          const { houseId, membershipId } = visitingFriend;
+          if (!houseId || !membershipId) return null;
+          try {
+            const reward = await cleanCobweb(houseId, membershipId);
+            if (reward == null) toast('누가 먼저 치워줬어요');
+            // 타일에 남은 거미줄도 같이 걷는다 — 돌아갔을 때 이미 치운 게
+            // 그대로 껴 있으면 청소가 안 먹힌 것처럼 보인다.
+            else clearPreviewCobweb(membershipId);
+            return reward;
+          } catch {
+            toast('거미줄을 치우지 못했어요. 잠시 후 다시 시도해 주세요.', 'error');
+            return null;
+          }
+        }}
         routines={friendRoom.routines}
         categories={friendRoom.categories}
         recentActivity={friendRoom.recentActivity}

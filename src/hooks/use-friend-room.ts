@@ -10,6 +10,8 @@ import {
   fetchHouseMemberDay,
   fetchHouseMemberRoom,
   fetchHouseMemberRoutineCompletions,
+  cleanHouseMemberCobweb,
+  ApiError,
 } from '@/api';
 import {
   characterIdFromCode,
@@ -25,6 +27,8 @@ import type { FriendActivityDay } from '@/components/screens/friend-room-screen'
 import type { CharacterId } from '@/constants/characters';
 import type { Routine, RoutineCategoryMeta } from '@/constants/routines';
 import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furniture';
+import { ErrorCode } from '@/api/error-codes';
+import type { RoomCobweb } from '@/components/room/room';
 
 /** 친구 방 배치 — FREE_V1이면 placements, 아니면 슬롯 id 목록으로 렌더 (#327). */
 export type FriendRoomPlacement = {
@@ -42,6 +46,8 @@ export type FriendRoom = {
   /** The friend's CDN animation keys (room response); local sprite fallback. */
   characterFrames?: string[];
   streakDays: number;
+  /** 친구 방에 낀 거미줄 (#829). */
+  cobweb: RoomCobweb | null;
   routines: Routine[];
   /** 그날 루틴·투두의 공개 카테고리 메타 (#528) — 그룹 헤더용. */
   categories: RoutineCategoryMeta[];
@@ -58,6 +64,7 @@ export type FriendRoom = {
 
 const EMPTY: FriendRoom = {
   placement: null,
+  cobweb: null,
   streakDays: 0,
   routines: [],
   categories: [],
@@ -116,6 +123,7 @@ export function useFriendRoom() {
           ? toCharacterFrames(undefined, room?.character?.animations)
           : undefined,
         streakDays: room?.streak?.currentCount ?? 0,
+        cobweb: room?.cobweb ?? null,
         routines: day ? toFriendRoutines(day) : [],
         categories: day ? toFriendCategories(day) : [],
         // undefined on failure hides the section instead of faking an empty history.
@@ -126,5 +134,34 @@ export function useFriendRoom() {
     [],
   );
 
-  return { friendRoom, load };
+  /**
+   * 같은 집 구성원 방의 거미줄을 대신 치운다 (#831) — 성공하면 청소자가
+   * 받은 코인 수를 돌려준다. 화면이 그 값으로만 코인 연출을 쏘므로
+   * 실패·중복은 null이어야 한다 (내 방 청소 #830과 같은 계약).
+   *
+   * 참조 안정 필수 (#539) — 셸이 memo 화면의 콜백에 넣는다.
+   */
+  const cleanCobweb = useCallback(
+    async (houseId: number, membershipId: number): Promise<number | null> => {
+      try {
+        const res = await cleanHouseMemberCobweb(houseId, membershipId);
+        setFriendRoom((prev) => ({ ...prev, cobweb: null }));
+        return res.rewardAmount ?? 0;
+      } catch (err) {
+        // 남이 먼저 치웠다 — 실패가 아니라 이미 깨끗해진 것. 보상은 없다.
+        if (err instanceof ApiError && err.code === ErrorCode.ROOM_COBWEB_NOT_ACTIVE) {
+          setFriendRoom((prev) => ({ ...prev, cobweb: null }));
+          return null;
+        }
+        throw err;
+      }
+    },
+    [],
+  );
+
+  return {
+    cleanCobweb,
+    friendRoom,
+    load,
+  };
 }

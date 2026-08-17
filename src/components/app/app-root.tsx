@@ -1,5 +1,6 @@
 import { Redirect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import {
   fetchCharacters,
@@ -16,6 +17,8 @@ import {
   toServerCharacterId,
 } from '@/api/adapters';
 import type { CharacterItem, GoalItem } from '@/api/types';
+import { useResolvedScheme, useTokens } from '@/hooks/use-tokens';
+import { SplashBackground, SplashBackgroundDark } from '@/constants/theme';
 import { AppShell } from '@/components/app/app-shell';
 import { OnboardingScreen, type OnboardingGoal } from '@/components/screens/onboarding-screen';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
@@ -23,6 +26,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { resetOnboardingMissions } from '@/hooks/use-onboarding-missions';
 import { track } from '@/lib/analytics';
 import { loadOnboarding, resetOnboarding, saveOnboarding } from '@/lib/onboarding-store';
+import { markAppReady } from '@/lib/app-ready';
 
 /**
  * App entry gate: on first launch shows the onboarding flow (intro → goals →
@@ -86,13 +90,19 @@ export function AppRoot() {
     setOnboarded(false);
   }, []);
 
-  // Wait for the session check; the splash overlay covers this brief gap.
-  if (status === 'loading') return null;
+  // 두 관문(세션 복원 → 온보딩 플래그)이 끝나야 그릴 수 있다. 둘 다 통과하면
+  // 스플래시에 알린다 (#847) — 오버레이가 시간이 아니라 이 신호를 기다린다.
+  const booting = status === 'loading' || (status === 'authed' && onboarded === null);
+  if (!booting) markAppReady();
+
+  // 평소엔 스플래시 오버레이가 이 구간을 덮는다. 상한(4초)을 넘겨 오버레이가
+  // 먼저 걷힌 경우에만 이 로딩 표시가 드러난다 — 빈 화면 대신.
+  if (status === 'loading') return <BootFallback />;
 
   // Not signed in → send to the login route.
   if (status === 'guest') return <Redirect href="/login" />;
 
-  if (onboarded === null) return null;
+  if (onboarded === null) return <BootFallback />;
 
   if (!onboarded) {
     return (
@@ -139,3 +149,30 @@ export function AppRoot() {
     />
   );
 }
+
+/**
+ * 부팅 중 자리 (#847) — 예전엔 `return null`이라 스플래시가 먼저 걷히면 빈
+ * 화면이 드러났다. 스플래시와 같은 배경색이라 오버레이가 정상적으로 덮는
+ * 동안에는 보이지 않고, 상한을 넘겨 걷힌 경우에만 로딩 표시로 나타난다.
+ */
+function BootFallback() {
+  const scheme = useResolvedScheme();
+  const t = useTokens();
+  return (
+    <View
+      style={[
+        bootStyles.fill,
+        { backgroundColor: scheme === 'dark' ? SplashBackgroundDark : SplashBackground },
+      ]}>
+      <ActivityIndicator color={t.primary} />
+    </View>
+  );
+}
+
+const bootStyles = StyleSheet.create({
+  fill: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

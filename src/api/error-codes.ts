@@ -6,6 +6,14 @@
 export const ErrorCode = {
   /** 409 — 다이아 부족 (POST /gacha 구매). */
   SHOP_INSUFFICIENT_BALANCE: 'SHOP_INSUFFICIENT_BALANCE',
+  /**
+   * 400 — 집 순서 요청이 내 active 집 집합과 다름 (PUT /me/houses/order, #820).
+   * 부분 목록·중복·남의 집 id가 모두 이 코드다. 클라이언트는 항상 전량을
+   * 보내므로 실질적으로 "내가 아는 목록이 낡았다"는 신호다.
+   */
+  HOUSE_ORDER_INVALID: 'HOUSE_ORDER_INVALID',
+  /** 409 — 이미 청소된 거미줄 (POST /rooms/me/cobweb/clean, #830). */
+  ROOM_COBWEB_NOT_ACTIVE: 'ROOM_COBWEB_NOT_ACTIVE',
   /** 409 — 다른 기기가 먼저 저장 (PUT /rooms/me/layout, #327). */
   ROOM_LAYOUT_REVISION_CONFLICT: 'ROOM_LAYOUT_REVISION_CONFLICT',
   /** 409 — 이미 입주 신청 중 (POST /houses/{id}/join-requests). */
@@ -31,4 +39,6 @@ export const ErrorCode = {
   INVITE_ALREADY_REDEEMED: 'INVITE_ALREADY_REDEEMED',
   /** 4xx — 자기 초대코드는 사용 불가 (POST /invites/redeem, #518). */
   INVITE_SELF_NOT_ALLOWED: 'INVITE_SELF_NOT_ALLOWED',
+  /** 404 — KST 오늘 진행 중인 출석 이벤트 없음 (#851). 에러가 아니라 "없음". */
+  ATTENDANCE_EVENT_NOT_FOUND: 'ATTENDANCE_EVENT_NOT_FOUND',
 } as const;
