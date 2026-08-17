@@ -2,10 +2,15 @@
 import { apiGet, apiPost } from './client';
 
 /**
- * 연속 출석 타입 — 스웨거가 응답하지 않아(2026-08-17) `gen:api-types`로 받지
- * 못했다. 스펙(`../rougether-spec/domains/attendance/api.md`)을 그대로 옮겨
- * 손으로 둔다. **다음 재생성 때 types.ts로 흡수하고 여기서 지울 것** —
- * CalendarMonthResponse가 같은 경로를 밟았다(#838 → #852에서 정리).
+ * 연속 출석 도메인 타입 (#851).
+ *
+ * `types.ts`에 생성 타입(AttendanceEventStatusResponse 등)이 이미 있지만,
+ * **스웨거가 required를 하나도 표시하지 않아 생성 타입은 전부 optional**이다.
+ * 그대로 쓰면 서버가 늘 보내는 값까지 `?? 0`으로 감싸야 해서 실제 계약이
+ * 코드에서 사라진다(전환해보니 19곳). 그래서 여기서 실제 계약대로 적는다.
+ *
+ * 2026-08-17 실 스웨거와 필드 단위로 대조해 이름·타입이 일치함을 확인했다.
+ * 서버 스키마가 바뀌면 여기도 같이 고쳐야 한다 — 자동으로 안 따라온다.
  */
 export type AttendanceDailyReward = {
   day: number;
