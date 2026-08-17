@@ -18,6 +18,16 @@ describe('CreateHouseScreen', () => {
     expect(getByRole('button', { name: '2' }).props.accessibilityState?.selected).toBe(false);
   });
 
+  /**
+   * 집 이미지가 담는 창문 수가 한계라 정원을 4로 제한했다 (#869). 서버는
+   * 1~10을 여전히 허용하므로 막히는 건 고를 수 있는 폭뿐이다.
+   */
+  it('정원 선택지는 4명까지만 보여준다 (#869)', async () => {
+    const { getByRole, queryByRole } = await render(<CreateHouseScreen />);
+    for (const n of ['2', '3', '4']) expect(getByRole('button', { name: n })).toBeTruthy();
+    for (const n of ['6', '8', '10']) expect(queryByRole('button', { name: n })).toBeNull();
+  });
+
   it('creates a house with name/description/capacity', async () => {
     const onCreate = jest.fn();
     const { getByText, getByPlaceholderText } = await render(

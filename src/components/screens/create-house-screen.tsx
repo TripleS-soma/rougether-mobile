@@ -9,10 +9,12 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
-import { HOUSE_PRIVATE_ACCENT, HOUSE_THEME_PRESETS } from '@/constants/house-themes';
+import {
+  HOUSE_PRIVATE_ACCENT,
+  HOUSE_THEME_PRESETS,
+  HOUSE_CAPACITY_OPTIONS,
+} from '@/constants/house-themes';
 import { assetSource } from '@/resources/asset';
-
-const CAPACITIES = [2, 3, 4, 6, 8];
 
 export type CreateHouseInput = {
   name: string;
@@ -200,7 +202,7 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
             <Text style={[Typography.label, { color: t.primaryText }]}>{capacity}명</Text>
           </View>
           <View style={styles.capRow}>
-            {CAPACITIES.map((n) => {
+            {HOUSE_CAPACITY_OPTIONS.map((n) => {
               const selected = n === capacity;
               return (
                 <Pressable
