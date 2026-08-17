@@ -168,6 +168,21 @@ describe('Calendar', () => {
     expect(getByText('2026년 6월')).toBeTruthy();
   });
 
+  /**
+   * 되돌아가는 버튼이지 "여기가 오늘"이라는 배지가 아니다 (#864). 보이는
+   * 글자가 명사 "오늘"이면 배지로 읽힌다 — 실제로 그렇게 읽혔고, #862로
+   * 오늘 칸에 링이 생기면서 같은 단어를 말하는 게 둘이 돼 더 헷갈렸다.
+   * 접근성 라벨은 예전부터 "오늘로"였으니 보이는 글자만 거짓말이었던 셈.
+   */
+  it('오늘로 가는 버튼은 동작형 문구를 보여준다 — 배지처럼 읽히지 않게 (#864)', async () => {
+    const { getByText, queryByText } = await render(
+      <Calendar value="2026-06-15" today="2026-07-24" onSelect={() => {}} />,
+    );
+    expect(getByText('오늘로')).toBeTruthy();
+    // 명사 단독이면 상태 배지로 읽힌다.
+    expect(queryByText('오늘')).toBeNull();
+  });
+
   it('shows the 오늘 chip while off-today and jumps back on press (#467)', async () => {
     const onSelect = jest.fn();
     const { getByLabelText } = await render(
