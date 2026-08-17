@@ -27,13 +27,14 @@ import { ScalePressable } from '@/components/ui/scale-pressable';
 import { horizontalFlingGesture } from '@/utils/gesture';
 import { PendingNotice } from '@/components/ui/pending-notice';
 import { RetryState } from '@/components/ui/retry-state';
+import { ActivityStrip } from '@/components/screens/house/activity-strip';
 import { SpringProgressBar } from '@/components/ui/spring-progress';
 import { BookOpenPictogram, Pictogram, type PictogramName } from '@/components/ui/pictograms';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
-import { formatTime } from '@/utils/datetime';
+import { formatTime, todayIso } from '@/utils/datetime';
 import { hapticSuccess } from '@/utils/haptics';
 import { DEMO_GUESTBOOK, FRIEND_DEMO_ROUTINES } from '@/mocks/fixtures';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
@@ -191,6 +192,8 @@ export function FriendRoomScreen({
   // 앱 재시작 후 중복은 기존 서버 409 토스트가 방어한다.
   const [cheeredTypes, setCheeredTypes] = useState<CheerType[]>([]);
   const [confirmCheer, setConfirmCheer] = useState<CheerType | null>(null);
+  // 최근 활동 상세 펼침 (#860) — 기본은 접힌 한 줄.
+  const [activityOpen, setActivityOpen] = useState(false);
   // 응원 발사 (#450) — 탭마다 해당 이모지가 버튼에서 떠올라 사라진다.
   const burstSeq = useRef(0);
   const [bursts, setBursts] = useState<{ id: number; type: CheerType }[]>([]);
@@ -388,6 +391,18 @@ export function FriendRoomScreen({
 
             <SpringProgressBar progress={progress} color={t.primary} trackColor={t.surfaceMuted} />
 
+            {/* 최근 활동 (#860) — 카드 14장 섹션을 한 줄로 접었다. 그 섹션이
+                방명록을 아래로 밀어냈고, 정작 궁금한 "요즘 꾸준한가"는 카드를
+                훑어야 알 수 있었다. 탭하면 날짜별 상세가 펼쳐진다. */}
+            {recentActivity ? (
+              <ActivityStrip
+                days={recentActivity}
+                today={todayIso()}
+                expanded={activityOpen}
+                onToggle={() => setActivityOpen((v) => !v)}
+              />
+            ) : null}
+
             {loading ? (
               <View style={styles.listState}>
                 <Loading />
@@ -486,42 +501,6 @@ export function FriendRoomScreen({
               ))}
             </View>
           </View>
-
-          {recentActivity ? (
-            <View style={styles.section}>
-              <View style={styles.sectionHead}>
-                <Text style={[Typography.h2, { color: t.text }]}>최근 활동</Text>
-                <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                  최근 14일 · 공개 루틴 기준
-                </Text>
-              </View>
-              {recentActivity.length === 0 ? (
-                <Text style={[Typography.supporting, styles.listState, { color: t.textMuted }]}>
-                  최근 2주간 완료한 공개 루틴이 없어요.
-                </Text>
-              ) : (
-                <View style={styles.activityList}>
-                  {recentActivity.map((day) => (
-                    <View
-                      key={day.date}
-                      style={[styles.activityRow, { backgroundColor: t.surfaceMuted }]}>
-                      <View style={styles.activityRowHead}>
-                        <Text style={[Typography.label, { color: t.text }]}>{day.label}</Text>
-                        <Text style={[Typography.supporting, { color: t.primaryText }]}>
-                          {day.titles.length}개 완료
-                        </Text>
-                      </View>
-                      <Text
-                        style={[Typography.supporting, { color: t.textMuted }]}
-                        numberOfLines={2}>
-                        {day.titles.join(' · ')}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          ) : null}
 
           <View style={styles.section}>
             <View style={styles.sectionHead}>
