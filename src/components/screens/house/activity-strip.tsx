@@ -14,13 +14,18 @@ export type ActivityStripDay = {
   titles: string[];
 };
 
+/**
+ * 축 길이는 **서버 계약에 묶여 있다** — `/routine-completions`가 최근 14일만
+ * 준다. prop으로 열어두면 "최근 2주" 문구와 `N일` 카운터가 서로 다른 값을
+ * 말할 수 있어(리뷰 지적) 조절 가능한 척하지 않는다.
+ */
+const SPAN_DAYS = 14;
+
 export type ActivityStripProps = {
   /** 완료 기록이 있는 날들 (없는 날은 아예 안 온다). */
   days: ActivityStripDay[];
   /** 오늘 날짜 "YYYY-MM-DD" — 14칸 축의 오른쪽 끝. */
   today: string;
-  /** 칸 수 (기본 14 = 서버가 주는 범위). */
-  span?: number;
   /** 펼침 상태 — 부모가 소유한다(순수 컴포넌트). */
   expanded?: boolean;
   onToggle?: () => void;
@@ -37,7 +42,7 @@ export type ActivityStripProps = {
  * 거꾸로 14일 축을 직접 세우고 있는 날짜만 채운다 — 서버 배열 길이를 그대로
  * 쓰면 "쉰 날"이 사라져 추이가 실제보다 좋아 보인다.
  */
-export function ActivityStrip({ days, today, span = 14, expanded, onToggle }: ActivityStripProps) {
+export function ActivityStrip({ days, today, expanded, onToggle }: ActivityStripProps) {
   const t = useTokens();
   const Typography = useTypography();
   const emph = useFontEmphasis();
@@ -46,11 +51,11 @@ export function ActivityStrip({ days, today, span = 14, expanded, onToggle }: Ac
   // 오래된 날 → 오늘 순. 오른쪽 끝이 오늘이라야 "최근"이 눈에 맞는다.
   const axis = useMemo(
     () =>
-      Array.from({ length: span }, (_, i) => {
-        const date = shiftIso(today, -(span - 1 - i));
+      Array.from({ length: SPAN_DAYS }, (_, i) => {
+        const date = shiftIso(today, -(SPAN_DAYS - 1 - i));
         return { date, day: byDate.get(date) };
       }),
-    [byDate, today, span],
+    [byDate, today],
   );
   const doneCount = axis.filter((a) => a.day && a.day.titles.length > 0).length;
   // 펼쳤을 때는 실제 기록이 있는 날만, 최신순으로 보여준다.
@@ -65,7 +70,7 @@ export function ActivityStrip({ days, today, span = 14, expanded, onToggle }: Ac
         onPress={onToggle}
         accessibilityRole="button"
         accessibilityState={{ expanded: !!expanded }}
-        accessibilityLabel={`최근 ${span}일 중 ${doneCount}일 완료, 눌러서 자세히 보기`}
+        accessibilityLabel={`최근 ${SPAN_DAYS}일 중 ${doneCount}일 완료, 눌러서 자세히 보기`}
         style={styles.row}>
         <Text style={[Typography.supporting, { color: t.textMuted }]}>최근 2주</Text>
         <View style={styles.dots}>
@@ -87,7 +92,7 @@ export function ActivityStrip({ days, today, span = 14, expanded, onToggle }: Ac
         </View>
         {/* 점만으로는 값을 셀 수 없다 — 숫자를 함께 둔다. */}
         <Text style={[Typography.supporting, emph('semibold'), { color: t.textMuted }]}>
-          {doneCount}/{span}일
+          {doneCount}/{SPAN_DAYS}일
         </Text>
       </Pressable>
 
@@ -124,7 +129,7 @@ const styles = StyleSheet.create({
   wrap: { gap: Spacing.two },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   dots: { flex: 1, flexDirection: 'row', gap: Spacing.half, alignItems: 'center' },
-  dot: { flex: 1, height: 8, borderRadius: Radius.pill },
+  dot: { flex: 1, height: Spacing.two, borderRadius: Radius.pill },
   empty: { paddingVertical: Spacing.one },
   detail: { gap: Spacing.one, paddingTop: Spacing.one },
   detailRow: { flexDirection: 'row', gap: Spacing.two },

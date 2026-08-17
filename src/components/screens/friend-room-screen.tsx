@@ -27,7 +27,7 @@ import { ScalePressable } from '@/components/ui/scale-pressable';
 import { horizontalFlingGesture } from '@/utils/gesture';
 import { PendingNotice } from '@/components/ui/pending-notice';
 import { RetryState } from '@/components/ui/retry-state';
-import { ActivityStrip } from '@/components/screens/house/activity-strip';
+import { ActivityStrip, type ActivityStripDay } from '@/components/screens/house/activity-strip';
 import { SpringProgressBar } from '@/components/ui/spring-progress';
 import { BookOpenPictogram, Pictogram, type PictogramName } from '@/components/ui/pictograms';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
@@ -49,14 +49,12 @@ const CHEERS: { type: CheerType; icon: PictogramName; label: string }[] = [
 ];
 
 /** One day of a friend's completion history (server GET …/routine-completions). */
-export type FriendActivityDay = {
-  /** "YYYY-MM-DD" — list key. */
-  date: string;
-  /** Display date, e.g. "7월 8일". */
-  label: string;
-  /** Completed routine titles on that day (server order). */
-  titles: string[];
-};
+/**
+ * 최근 활동 하루치 — 정의는 ActivityStrip이 갖는다 (#860). adapters·훅이
+ * 이 이름으로 임포트하고 있어 공개 이름은 여기 유지한다. 두 군데 각자
+ * 정의하면 한쪽만 바뀌어도 조용히 어긋난다(리뷰 지적).
+ */
+export type FriendActivityDay = ActivityStripDay;
 
 /** One guestbook note on this room (server GET /rooms/{id}/guestbooks). */
 export type GuestbookEntry = {
@@ -750,19 +748,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
-  },
-  activityList: {
-    gap: Spacing.two,
-  },
-  activityRow: {
-    borderRadius: Radius.md,
-    padding: Spacing.three,
-    gap: Spacing.one,
-  },
-  activityRowHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
   },
   gbList: {
     gap: Spacing.two,
