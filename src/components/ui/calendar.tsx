@@ -265,6 +265,9 @@ function CalendarBase({
                 const date = iso(view.y, view.m, day);
                 const disabled = (min && date < min) || (max && date > max);
                 const isSelected = date === value;
+                // 오늘 표시 (#862) — 다른 날짜를 보고 있어도 오늘이 어디인지
+                // 알 수 있게. 선택된 날은 이미 꽉 찬 원이라 겹쳐 그리지 않는다.
+                const isToday = !!today && date === today && !isSelected;
                 const isSunday = di === 0;
                 return (
                   <Pressable
@@ -272,7 +275,13 @@ function CalendarBase({
                     onPress={() => !disabled && onSelect(date)}
                     disabled={!!disabled}
                     accessibilityRole="button"
-                    accessibilityLabel={markedDates?.has(date) ? `${date}, 할 일 있음` : date}
+                    accessibilityLabel={[
+                      date,
+                      isToday ? '오늘' : null,
+                      markedDates?.has(date) ? '할 일 있음' : null,
+                    ]
+                      .filter(Boolean)
+                      .join(', ')}
                     accessibilityState={{ selected: isSelected, disabled: !!disabled }}
                     onLayout={(e) => {
                       dayLayouts.current[date] = { ...e.nativeEvent.layout, row: wi };
@@ -281,6 +290,20 @@ function CalendarBase({
                     }}
                     style={styles.cell}>
                     <View style={styles.dayCircle}>
+                      {/* 채움이 아니라 테두리다 — primarySoft(알파 0x22) 채움은
+                          배경과 ΔE 3~7이라 사실상 안 보인다(#860 스트립에서 같은
+                          함정을 겪었다). 빈 원 = 오늘, 꽉 찬 원 = 선택으로 뜻도
+                          갈린다. 절대 배치라 숫자 위치를 밀지 않는다 (#845). */}
+                      {isToday ? (
+                        <View
+                          pointerEvents="none"
+                          style={[
+                            StyleSheet.absoluteFill,
+                            styles.todayRing,
+                            { borderColor: disabled ? t.textDisabled : t.primary },
+                          ]}
+                        />
+                      ) : null}
                       <Text
                         style={[
                           Typography.body,
@@ -389,6 +412,10 @@ const styles = StyleSheet.create({
     width: SEL_SIZE,
     height: SEL_SIZE,
     borderRadius: SEL_SIZE / 2,
+  },
+  todayRing: {
+    borderRadius: SEL_SIZE / 2,
+    borderWidth: 2,
   },
   dayCircle: {
     width: SEL_SIZE,

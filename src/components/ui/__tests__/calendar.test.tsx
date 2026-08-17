@@ -188,4 +188,53 @@ describe('Calendar', () => {
     const { queryByLabelText } = await render(<Calendar value="2026-06-15" onSelect={() => {}} />);
     expect(queryByLabelText('오늘로')).toBeNull();
   });
+
+  /**
+   * 오늘 표시 (#862) — 다른 날짜로 이동해도 오늘이 어디인지 보여야 한다.
+   * 채움이 아니라 **테두리**다: primarySoft 채움은 배경과 ΔE 3~7이라 사실상
+   * 안 보이고, 빈 원/꽉 찬 원으로 오늘과 선택의 뜻도 갈린다.
+   */
+  it('오늘이 아닌 날을 선택하면 오늘 칸에 테두리 원이 생긴다 (#862)', async () => {
+    const { getByLabelText } = await render(
+      <Calendar value="2026-08-20" today="2026-08-16" onSelect={() => {}} />,
+    );
+    const flatten = (style: unknown): Record<string, unknown> =>
+      Object.assign({}, ...[style].flat(Infinity).filter(Boolean));
+
+    const todayCell = getByLabelText('2026-08-16, 오늘');
+    const ring = (todayCell.children as unknown as { children?: unknown[] }[])
+      .flatMap((c) => (c?.children ?? []) as { props?: { style?: unknown } }[])
+      .map((c) => flatten(c?.props?.style))
+      .find((st) => st.borderWidth != null);
+
+    expect(ring).toBeTruthy();
+    // 절대 배치라 날짜 숫자를 밀지 않는다 (#845에서 점으로 겪은 회귀).
+    expect(ring?.position).toBe('absolute');
+  });
+
+  it('오늘을 선택 중이면 테두리를 겹쳐 그리지 않는다 (#862)', async () => {
+    const { getByLabelText, queryByLabelText } = await render(
+      <Calendar value="2026-08-16" today="2026-08-16" onSelect={() => {}} />,
+    );
+    // 선택 = 꽉 찬 원이므로 라벨에 '오늘'이 붙지 않는다.
+    expect(queryByLabelText('2026-08-16, 오늘')).toBeNull();
+    expect(getByLabelText('2026-08-16')).toBeTruthy();
+  });
+
+  it('today를 안 주면 어떤 칸에도 오늘 표시가 없다 (날짜 선택 시트)', async () => {
+    const { queryByLabelText } = await render(<Calendar value="2026-08-20" onSelect={() => {}} />);
+    expect(queryByLabelText(/오늘$/)).toBeNull();
+  });
+
+  it('오늘이면서 할 일도 있으면 둘 다 라벨에 담는다 (#862)', async () => {
+    const { getByLabelText } = await render(
+      <Calendar
+        value="2026-08-20"
+        today="2026-08-16"
+        onSelect={() => {}}
+        markedDates={new Set(['2026-08-16'])}
+      />,
+    );
+    expect(getByLabelText('2026-08-16, 오늘, 할 일 있음')).toBeTruthy();
+  });
 });
