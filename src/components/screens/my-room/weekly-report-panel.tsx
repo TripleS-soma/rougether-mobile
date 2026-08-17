@@ -1,11 +1,9 @@
 import { useMemo, type ReactNode } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { Loading } from '@/components/ui/loading';
-import { ScreenHeader } from '@/components/ui/screen-header';
 import { SpringProgressBar } from '@/components/ui/spring-progress';
 import { Radius, Spacing } from '@/constants/theme';
-import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import type { WeeklyReportDetailResponse } from '@/api/types';
 
@@ -29,15 +27,17 @@ function shortDate(iso?: string) {
   return m && d ? `${Number(m)}월 ${Number(d)}일` : '';
 }
 
-export type WeeklyReportScreenProps = {
+export type WeeklyReportPanelProps = {
   report?: WeeklyReportDetailResponse | null;
   loading?: boolean;
-  onBack?: () => void;
 };
 
 /**
- * 주간 회고 상세 (#852) — 서버가 주 단위로 만들어 두는 회고. 위에서부터
- * 완료율(숫자 하나) → 요일별·루틴별 비율 막대 → LLM 본문 순.
+ * 주간 회고 패널 (#852, #856에서 나의 방 탭으로 편입) — 위에서부터 완료율
+ * (숫자 하나) → 요일별·루틴별 비율 막대 → LLM 본문 순.
+ *
+ * 자체 ScrollView·헤더가 없다 — 나의 방의 탭 패널로 들어가서 그 화면의
+ * 헤더와 스크롤을 함께 쓴다(스크롤 중첩 금지).
  *
  * 막대를 완료/실패 두 색으로 쌓지 않는 이유: 서버 데이터가 항상
  * `completed + failed = scheduled`라 **한 계열의 비율**이지 두 계열의 경쟁이
@@ -47,7 +47,7 @@ export type WeeklyReportScreenProps = {
  *
  * 순수/prop 기반 — 데이터 로딩은 useWeeklyReport가 한다.
  */
-export function WeeklyReportScreen({ report, loading, onBack }: WeeklyReportScreenProps) {
+export function WeeklyReportPanel({ report, loading }: WeeklyReportPanelProps) {
   const t = useTokens();
   const Typography = useTypography();
   const emph = useFontEmphasis();
@@ -85,60 +85,65 @@ export function WeeklyReportScreen({ report, loading, onBack }: WeeklyReportScre
   // 늘어놓는 대신 접고 이유를 밝힌다.
   const hasText = report?.status !== 'FALLBACK';
 
+  if (loading || !report) {
+    return (
+      <View style={styles.stateBlock}>
+        {loading ? (
+          <Loading />
+        ) : (
+          <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
+            아직 회고가 없어요.
+          </Text>
+        )}
+      </View>
+    );
+  }
+
   return (
-    <View style={[styles.screen, useScreenStyle([])]}>
-      <ScreenHeader title="주간 회고" onBack={onBack} />
-      {loading || !report ? (
-        <View style={styles.stateBlock}>{loading ? <Loading /> : null}</View>
+    <View style={styles.body}>
+      <Text style={[Typography.supporting, { color: t.textMuted }]}>{period}</Text>
+
+      {/* 헤드라인은 차트가 아니라 숫자 하나 — 이 주를 한 마디로 말하는 값. */}
+      <View style={[styles.hero, { backgroundColor: t.surfaceMuted }]}>
+        <Text style={[Typography.display1, emph('bold'), { color: t.primaryText }]}>{rate}%</Text>
+        <Text style={[Typography.body, { color: t.textMuted }]}>
+          예정 {scheduled}개 중 {completed}개 완료
+        </Text>
+        {stats?.streak ? (
+          <Text style={[Typography.supporting, { color: t.textMuted }]}>
+            연속 {stats.streak.currentCount ?? 0}일 · 최장 {stats.streak.longestCount ?? 0}일
+          </Text>
+        ) : null}
+      </View>
+
+      {report.summary ? (
+        <Text style={[Typography.body, { color: t.text }]}>{report.summary}</Text>
+      ) : null}
+
+      <ReportSection title="요일별">
+        {byWeekday.map((d) => (
+          <WeekdayRow key={d.label} label={d.label} done={d.done} total={d.total} />
+        ))}
+      </ReportSection>
+
+      {byRoutine.length > 0 ? (
+        <ReportSection title="루틴별">
+          {byRoutine.map(({ key, ...r }) => (
+            <RoutineRow key={key} {...r} />
+          ))}
+        </ReportSection>
+      ) : null}
+
+      {hasText ? (
+        <>
+          <TextSection title="잘한 점" items={report.highlights} />
+          <TextSection title="아쉬운 점" items={report.failurePatterns} />
+          <TextSection title="다음 주 제안" items={report.suggestions} />
+        </>
       ) : (
-        <ScrollView contentContainerStyle={styles.body}>
-          <Text style={[Typography.supporting, { color: t.textMuted }]}>{period}</Text>
-
-          {/* 헤드라인은 차트가 아니라 숫자 하나 — 이 주를 한 마디로 말하는 값. */}
-          <View style={[styles.hero, { backgroundColor: t.surfaceMuted }]}>
-            <Text style={[Typography.display1, emph('bold'), { color: t.primaryText }]}>
-              {rate}%
-            </Text>
-            <Text style={[Typography.body, { color: t.textMuted }]}>
-              예정 {scheduled}개 중 {completed}개 완료
-            </Text>
-            {stats?.streak ? (
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                연속 {stats.streak.currentCount ?? 0}일 · 최장 {stats.streak.longestCount ?? 0}일
-              </Text>
-            ) : null}
-          </View>
-
-          {report.summary ? (
-            <Text style={[Typography.body, { color: t.text }]}>{report.summary}</Text>
-          ) : null}
-
-          <ReportSection title="요일별">
-            {byWeekday.map((d) => (
-              <WeekdayRow key={d.label} label={d.label} done={d.done} total={d.total} />
-            ))}
-          </ReportSection>
-
-          {byRoutine.length > 0 ? (
-            <ReportSection title="루틴별">
-              {byRoutine.map(({ key, ...r }) => (
-                <RoutineRow key={key} {...r} />
-              ))}
-            </ReportSection>
-          ) : null}
-
-          {hasText ? (
-            <>
-              <TextSection title="잘한 점" items={report.highlights} />
-              <TextSection title="아쉬운 점" items={report.failurePatterns} />
-              <TextSection title="다음 주 제안" items={report.suggestions} />
-            </>
-          ) : (
-            <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              이번 주는 회고 문구를 만들지 못해 통계만 보여드려요.
-            </Text>
-          )}
-        </ScrollView>
+        <Text style={[Typography.supporting, { color: t.textMuted }]}>
+          이번 주는 회고 문구를 만들지 못해 통계만 보여드려요.
+        </Text>
       )}
     </View>
   );
@@ -232,9 +237,9 @@ function RoutineRow({
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
   body: { padding: Spacing.three, gap: Spacing.three, paddingBottom: Spacing.five },
   stateBlock: { paddingVertical: Spacing.five, alignItems: 'center' },
+  center: { textAlign: 'center' },
   hero: {
     borderRadius: Radius.lg,
     padding: Spacing.three,

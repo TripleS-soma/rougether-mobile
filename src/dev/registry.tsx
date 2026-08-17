@@ -45,8 +45,7 @@ import { CATEGORY_ICON_GEOMETRY, CategoryIcon } from '@/components/ui/category-i
 import { Button } from '@/components/ui/button';
 import { AttendanceSheet } from '@/components/screens/sheets/attendance-sheet';
 import { Calendar } from '@/components/ui/calendar';
-import { WeeklyReportCard } from '@/components/screens/my-room/weekly-report-card';
-import { WeeklyReportScreen } from '@/components/screens/weekly-report-screen';
+import { WeeklyReportPanel } from '@/components/screens/my-room/weekly-report-panel';
 import { CoachMarkOverlay } from '@/components/ui/coach-mark';
 import { Card } from '@/components/ui/card';
 import { IconButton } from '@/components/ui/icon-button';
@@ -758,26 +757,12 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => <AttendanceSheetDemo />,
   },
   {
-    name: 'WeeklyReportCard',
-    description: '달력 탭 상단의 주간 회고 진입 카드 (#852).',
-    render: () => (
-      <View style={{ alignSelf: 'stretch' }}>
-        <WeeklyReportCard
-          weekStartDate="2026-08-09"
-          weekEndDate="2026-08-15"
-          completionRate={0.36}
-          completedCount={14}
-          scheduledCount={39}
-        />
-      </View>
-    ),
-  },
-  {
-    name: 'WeeklyReportScreen',
-    description: '주간 회고 상세 — 완료율 + 요일별·루틴별 비율 막대 + LLM 본문 (#852).',
+    name: 'WeeklyReportPanel',
+    description:
+      '나의 방 주간회고 탭 본문 — 완료율 + 요일별·루틴별 비율 막대 + LLM 본문 (#852·#856).',
     render: () => (
       <View style={{ alignSelf: 'stretch', height: 640 }}>
-        <WeeklyReportScreen
+        <WeeklyReportPanel
           report={{
             reportId: 1,
             weekStartDate: '2026-08-09',

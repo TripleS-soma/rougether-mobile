@@ -37,7 +37,7 @@ import { QuickAddRow } from '@/components/screens/my-room/quick-add-row';
 import { RoutineRow } from '@/components/screens/my-room/routine-row';
 import { WalletHistorySheet } from '@/components/screens/sheets/wallet-history-sheet';
 import { useWidgetRoomCapture } from '@/components/screens/my-room/use-widget-room-capture';
-import { WeeklyReportCard } from '@/components/screens/my-room/weekly-report-card';
+import { WeeklyReportPanel } from '@/components/screens/my-room/weekly-report-panel';
 import { Room, type RoomSceneProps } from '@/components/room/room';
 import {
   CharacterPickerSheet,
@@ -59,6 +59,7 @@ import { RetryState } from '@/components/ui/retry-state';
 import { SpringProgressBar } from '@/components/ui/spring-progress';
 import { useToast } from '@/components/ui/toast';
 import { WalletPills } from '@/components/ui/wallet-pills';
+import type { WeeklyReportDetailResponse } from '@/api/types';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import {
   type CategoryVisibility,
@@ -112,17 +113,16 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
     /** 달력에서 보이는 달이 바뀔 때 (#838) — 부모가 그 달 개수를 받아온다. */
     onCalendarMonthChange?: (yearMonth: string) => void;
     /**
-     * 지난주 회고 요약 (#852) — 달력 탭 상단 카드. 회고가 아직 없으면
-     * undefined로 두면 카드 자체가 그려지지 않는다.
+     * 주간 회고 탭 (#852 → #856) — 회고가 아직 없으면 undefined로 두면
+     * **탭 자체가 그려지지 않는다**. 가입 첫 주에 빈 탭을 내주지 않는다.
      */
     weeklyReport?: {
-      weekStartDate?: string;
-      weekEndDate?: string;
-      completionRate?: number;
-      completedCount?: number;
-      scheduledCount?: number;
+      report?: WeeklyReportDetailResponse | null;
+      loading?: boolean;
+      /** 아직 안 열어본 새 회고가 있는지 — 탭 라벨에 점. */
+      unread?: boolean;
     };
-    /** 주간 회고 카드를 눌렀을 때 — 셸이 상세 화면을 연다. */
+    /** 주간회고 탭을 열었을 때 — 셸이 본문을 받아오고 읽음 처리한다. */
     onOpenWeeklyReport?: () => void;
     /**
      * 연속 출석 이벤트 (#851) — 진행 중인 이벤트가 없으면 undefined로 두면
@@ -510,7 +510,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // 손가락 위치 몇십 px 차이로 결과가 갈렸다. 이제 이 화면의 가로
   // 스와이프는 전부 셸 탭 페이저 몫이고, 달력도 monthSwipe=false를
   // 유지해 가로 제스처를 만들지 않는다(월 이동은 ‹ › 버튼).
-  const [tab, setTab] = useState<'room' | 'calendar'>('room');
+  const [tab, setTab] = useState<'room' | 'calendar' | 'report'>('room');
   const [selectedDate, setSelectedDate] = useState(() => todayIso());
   const dateRoutines = useMemo(
     () => routines.filter((r) => isScheduledOn(r, selectedDate)),
@@ -1137,18 +1137,26 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           [
             ['room', '방'],
             ['calendar', '달력'],
+            // 회고가 없으면(=weeklyReport 미배선) 탭을 아예 빼서 2탭으로 둔다.
+            ...(weeklyReport ? ([['report', '주간회고']] as const) : []),
           ] as const
         ).map(([key, label]) => {
           const active = tab === key;
+          const dot = key === 'report' && !!weeklyReport?.unread && !active;
           const btn = (
             <Pressable
-              onPress={() => setTab(key)}
+              onPress={() => {
+                setTab(key);
+                if (key === 'report') onOpenWeeklyReport?.();
+              }}
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
+              accessibilityLabel={dot ? `${label}, 새 회고` : label}
               style={[styles.tab, active && { borderBottomColor: t.primary }]}>
               <Text style={[Typography.label, { color: active ? t.primaryText : t.textMuted }]}>
                 {label}
               </Text>
+              {dot ? <View style={[styles.tabDot, { backgroundColor: t.danger }]} /> : null}
             </Pressable>
           );
           // 달력 탭은 코치마크 대상 (#351).
@@ -1292,11 +1300,10 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                     )}
               </View>
             </>
+          ) : tab === 'report' ? (
+            <WeeklyReportPanel report={weeklyReport?.report} loading={weeklyReport?.loading} />
           ) : (
             <View style={styles.calendarPanel}>
-              {weeklyReport ? (
-                <WeeklyReportCard {...weeklyReport} onPress={onOpenWeeklyReport} />
-              ) : null}
               {/* monthSwipe=false 유지 (#825) — 달력 위 가로 스와이프가 월
                   이동이라는 또 다른 뜻을 갖게 되면 "가로 스와이프 = 하단 탭
                   이동" 규칙이 다시 깨진다. 월 이동은 ‹ › 버튼. */}
@@ -1494,6 +1501,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
+  },
+  // 라벨 오른쪽 위 점 — 헤더 아이콘의 안읽음 점(menuDot)과 같은 결.
+  tabDot: {
+    position: 'absolute',
+    top: Spacing.one,
+    right: Spacing.two,
+    width: 6,
+    height: 6,
+    borderRadius: Radius.pill,
   },
   calendarPanel: {
     padding: Spacing.four,

@@ -12,7 +12,6 @@ import type { useMissionLinks } from '@/components/app/use-mission-links';
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
 import { CategoryManageScreen } from '@/components/screens/category-manage-screen';
 import { type CalendarDayItem, type MyRoomScreenProps } from '@/components/screens/my-room-screen';
-import { WeeklyReportScreen } from '@/components/screens/weekly-report-screen';
 import { useWeeklyReport } from '@/hooks/use-weekly-report';
 import { NotificationListScreen } from '@/components/screens/notification-list-screen';
 import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
@@ -262,10 +261,12 @@ export function useMyRoomPages({
 
   // 주간 회고 (#852) — 목록은 마운트 때 1건만, 본문은 카드를 눌러야 받는다.
   const weeklyReport = useWeeklyReport();
+  // 주간회고 탭을 열었다 (#856) — 본문을 지연 로드하고 읽음으로 표시한다.
+  // 화면 전환이 아니라 탭 안이라 setScreen을 부르지 않는다.
   const openWeeklyReport = useCallback(() => {
     void weeklyReport.loadDetail();
-    setScreen('weeklyReport');
-  }, [weeklyReport, setScreen]);
+    weeklyReport.markRead();
+  }, [weeklyReport]);
 
   /** 탭 페이저의 나의 방 페이지 prop — `<MyRoomScreen {...tabProps} />`. */
   const tabProps = {
@@ -292,7 +293,13 @@ export function useMyRoomPages({
     onCleanCobweb: room.onCleanCobweb,
     markedTodoDates: room.markedTodoDates,
     onCalendarMonthChange: room.onCalendarMonthChange,
-    weeklyReport: weeklyReport.latest ?? undefined,
+    weeklyReport: weeklyReport.latest
+      ? {
+          report: weeklyReport.detail,
+          loading: weeklyReport.loading,
+          unread: weeklyReport.unread,
+        }
+      : undefined,
     onOpenWeeklyReport: openWeeklyReport,
     attendance: attendance.attendance,
     onOpenAttendance: attendance.onOpenAttendance,
@@ -391,12 +398,6 @@ export function useMyRoomPages({
         onLoadMore={() => {
           void loadMoreNotifications();
         }}
-      />
-    ) : screen === 'weeklyReport' ? (
-      <WeeklyReportScreen
-        report={weeklyReport.detail}
-        loading={weeklyReport.loading}
-        onBack={() => setScreen('myRoom')}
       />
     ) : null;
 

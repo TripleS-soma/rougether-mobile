@@ -974,4 +974,80 @@ describe('MyRoomScreen', () => {
     expect(getByLabelText('출석 이벤트')).toBeTruthy();
     expect(queryByLabelText('출석 이벤트, 오늘 미출석')).toBeNull();
   });
+
+  /**
+   * 주간회고 탭 (#856) — 회고가 없으면 탭 자체가 없어야 한다. 가입 첫 주에
+   * "아직 회고가 없어요"만 나오는 빈 탭을 내주지 않기로 했다.
+   */
+  it('회고가 없으면 주간회고 탭을 그리지 않는다 (#856)', async () => {
+    const { getByText, queryByText } = await render(
+      <ToastProvider>
+        <MyRoomScreen userName="준서" routines={[]} />
+      </ToastProvider>,
+    );
+    expect(getByText('방')).toBeTruthy();
+    expect(getByText('달력')).toBeTruthy();
+    expect(queryByText('주간회고')).toBeNull();
+  });
+
+  it('회고가 있으면 탭을 그리고 열면 본문을 보여준다 (#856)', async () => {
+    const onOpenWeeklyReport = jest.fn();
+    const { getByText } = await render(
+      <ToastProvider>
+        <MyRoomScreen
+          userName="준서"
+          routines={[]}
+          weeklyReport={{
+            report: {
+              reportId: 2,
+              weekStartDate: '2026-08-09',
+              weekEndDate: '2026-08-15',
+              status: 'GENERATED',
+              completionRate: 0.36,
+              completedCount: 14,
+              scheduledCount: 39,
+              stats: { streak: { currentCount: 3, longestCount: 6 } },
+            },
+          }}
+          onOpenWeeklyReport={onOpenWeeklyReport}
+        />
+      </ToastProvider>,
+    );
+    await fireEvent.press(getByText('주간회고'));
+    // 탭을 열면 셸이 본문을 받아오고 읽음 처리한다.
+    expect(onOpenWeeklyReport).toHaveBeenCalled();
+    expect(getByText('36%')).toBeTruthy();
+    expect(getByText('요일별')).toBeTruthy();
+  });
+
+  it('안 읽은 새 회고가 있으면 탭에 새 회고 표시를 붙인다 (#856)', async () => {
+    const { getByLabelText } = await render(
+      <ToastProvider>
+        <MyRoomScreen
+          userName="준서"
+          routines={[]}
+          weeklyReport={{ report: null, unread: true }}
+          onOpenWeeklyReport={() => {}}
+        />
+      </ToastProvider>,
+    );
+    expect(getByLabelText('주간회고, 새 회고')).toBeTruthy();
+  });
+
+  /** 탭을 열면 그 자리에서 점이 사라져야 한다 — 읽었는데 점이 남으면 거짓말. */
+  it('주간회고 탭을 열면 새 회고 표시가 사라진다 (#856)', async () => {
+    const { getByLabelText, queryByLabelText, getByText } = await render(
+      <ToastProvider>
+        <MyRoomScreen
+          userName="준서"
+          routines={[]}
+          weeklyReport={{ report: null, unread: true }}
+          onOpenWeeklyReport={() => {}}
+        />
+      </ToastProvider>,
+    );
+    await fireEvent.press(getByLabelText('주간회고, 새 회고'));
+    expect(queryByLabelText('주간회고, 새 회고')).toBeNull();
+    expect(getByText('주간회고')).toBeTruthy();
+  });
 });

@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { fetchWeeklyReport, fetchWeeklyReports } from '@/api';
 import type { WeeklyReportDetailResponse, WeeklyReportSummaryItem } from '@/api/types';
+import { loadLastReadReportId, saveLastReadReportId } from '@/lib/weekly-report-read';
 
 export function useWeeklyReport(enabled = true) {
   const [latest, setLatest] = useState<WeeklyReportSummaryItem | null>(null);
@@ -20,6 +21,20 @@ export function useWeeklyReport(enabled = true) {
   // 이게 없으면 신규 사용자에게 빈 카드가 깜빡였다.
   const [loaded, setLoaded] = useState(false);
   const detailFor = useRef<number | null>(null);
+  // 마지막으로 열어본 회고 id — 새 회고가 왔는지(탭 점) 판단한다. undefined는
+  // "아직 저장소를 안 읽음"이라 그동안은 점을 찍지 않는다(깜빡임 방지).
+  const [lastReadId, setLastReadId] = useState<number | null | undefined>(undefined);
+
+  useEffect(() => {
+    if (!enabled) return;
+    let active = true;
+    void loadLastReadReportId().then((id) => {
+      if (active) setLastReadId(id);
+    });
+    return () => {
+      active = false;
+    };
+  }, [enabled]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -57,8 +72,21 @@ export function useWeeklyReport(enabled = true) {
     }
   }, [latest?.reportId]);
 
+  /** 주간회고 탭을 열었다 — 지금 회고를 읽음으로 표시해 탭 점을 끈다. */
+  const markRead = useCallback(() => {
+    const reportId = latest?.reportId;
+    if (reportId == null || lastReadId === reportId) return;
+    setLastReadId(reportId);
+    void saveLastReadReportId(reportId);
+  }, [latest?.reportId, lastReadId]);
+
+  // 저장소를 읽기 전(undefined)에는 점을 찍지 않는다 — 켤 때마다 잠깐 점이
+  // 떴다 사라지는 게 "새 회고"라는 신호를 값싸게 만든다.
+  const unread =
+    lastReadId !== undefined && latest?.reportId != null && lastReadId !== latest.reportId;
+
   return useMemo(
-    () => ({ latest, detail, loading, loaded, loadDetail }),
-    [latest, detail, loading, loaded, loadDetail],
+    () => ({ latest, detail, loading, loaded, unread, loadDetail, markRead }),
+    [latest, detail, loading, loaded, unread, loadDetail, markRead],
   );
 }

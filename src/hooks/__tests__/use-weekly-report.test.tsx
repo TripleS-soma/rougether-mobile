@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useWeeklyReport } from '@/hooks/use-weekly-report';
@@ -85,5 +86,47 @@ describe('useWeeklyReport', () => {
     const { result } = await renderHook(() => useWeeklyReport(false));
     expect(calls).toHaveLength(0);
     expect(result.current.loaded).toBe(false);
+  });
+
+  /** 새 회고가 도착했는지 = 마지막으로 열어본 id와 다른지. */
+  it('한 번도 안 열어봤으면 새 회고로 본다', async () => {
+    await AsyncStorage.removeItem('rougether.weeklyReport.lastRead.v1');
+    mockServer();
+    const { result } = await renderHook(() => useWeeklyReport());
+    await waitFor(() => expect(result.current.unread).toBe(true));
+  });
+
+  it('markRead 후에는 새 회고 표시가 꺼지고 저장된다', async () => {
+    await AsyncStorage.removeItem('rougether.weeklyReport.lastRead.v1');
+    mockServer();
+    const { result } = await renderHook(() => useWeeklyReport());
+    await waitFor(() => expect(result.current.unread).toBe(true));
+    await act(async () => {
+      result.current.markRead();
+    });
+    expect(result.current.unread).toBe(false);
+    await waitFor(async () =>
+      expect(await AsyncStorage.getItem('rougether.weeklyReport.lastRead.v1')).toBe('9'),
+    );
+  });
+
+  it('이미 읽은 회고면 처음부터 표시하지 않는다', async () => {
+    await AsyncStorage.setItem('rougether.weeklyReport.lastRead.v1', '9');
+    mockServer();
+    const { result } = await renderHook(() => useWeeklyReport());
+    await waitFor(() => expect(result.current.loaded).toBe(true));
+    expect(result.current.unread).toBe(false);
+  });
+
+  /**
+   * 다음 주 회고(다른 id)가 오면 다시 새 회고다 — 읽음 id를 "본 적 있음"
+   * 플래그로 뭉개면 그 다음 주부터 영영 점이 안 뜬다.
+   */
+  it('다음 주 회고가 오면 다시 새 회고로 본다', async () => {
+    await AsyncStorage.setItem('rougether.weeklyReport.lastRead.v1', '3');
+    mockServer();
+    const { result } = await renderHook(() => useWeeklyReport());
+    await waitFor(() => expect(result.current.loaded).toBe(true));
+    expect(result.current.unread).toBe(true);
   });
 });
