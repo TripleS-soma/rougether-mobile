@@ -15,6 +15,7 @@ import { HouseScreen } from '@/components/screens/house-screen';
 import { isScheduledOn, MyRoomScreen } from '@/components/screens/my-room-screen';
 import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
 import { SettingsScreen } from '@/components/screens/settings-screen';
+import { AttendanceSheet } from '@/components/screens/sheets/attendance-sheet';
 import { MissionSheet } from '@/components/screens/sheets/mission-sheet';
 import { BottomNav } from '@/components/ui/bottom-nav';
 import { MissionBanner } from '@/components/ui/mission-banner';
@@ -23,6 +24,7 @@ import { screenView, track } from '@/lib/analytics';
 import { todayIso } from '@/utils/datetime';
 import { refreshWidgets } from '@/widgets/rougether-widgets';
 import { buildWidgetSummary, saveWidgetSummary, saveWidgetTheme } from '@/widgets/widget-data';
+import { useAttendance } from '@/hooks/use-attendance';
 import { useGacha } from '@/hooks/use-gacha';
 import {
   type OnboardingMissionStepId,
@@ -132,6 +134,14 @@ export function AppShell({
     },
     [addRoutine, completeMission],
   );
+
+  // 연속 출석 이벤트 (#851) — 진행 중인 이벤트가 없으면 status가 null이라
+  // 헤더 아이콘도 시트도 그려지지 않는다. 출석 코인은 응답의 잔액으로 지갑을
+  // 맞춘다(뽑기·상점과 같은 결).
+  const [attendanceOpen, setAttendanceOpen] = useState(false);
+  const syncCoin = useCallback((coin: number) => setWallet((w) => ({ ...w, coin })), [setWallet]);
+  const attendance = useAttendance({ onCoinBalance: syncCoin });
+  const openAttendance = useCallback(() => setAttendanceOpen(true), []);
 
   // Gacha machines + draw (spend + dupe→diamond handled server-side; wallet synced
   // from the draw response).
@@ -304,6 +314,10 @@ export function AppShell({
       onCleanCobweb: cleanCobweb,
       markedTodoDates: myRoomData.markedTodoDates,
       onCalendarMonthChange: myRoomData.loadCalendarMonth,
+    },
+    attendance: {
+      attendance: attendance.status ? { pending: !attendance.status.checkedInToday } : undefined,
+      onOpenAttendance: attendance.status ? openAttendance : undefined,
     },
   });
   // 홈 위젯 오늘 요약 동기화 (#604, 안드로이드 전용) — 완료 토글·루틴
@@ -570,6 +584,21 @@ export function AppShell({
         }}
         onClose={missions.dismissCompleted}
       />
+
+      {/* 연속 출석 시트 (#851) — 이벤트가 있을 때만 존재한다. */}
+      {attendance.status ? (
+        <AttendanceSheet
+          visible={attendanceOpen}
+          status={attendance.status}
+          checkingIn={attendance.checkingIn}
+          onCheckIn={attendance.checkIn}
+          onGoToRoom={() => {
+            setAttendanceOpen(false);
+            setScreen('decor');
+          }}
+          onClose={() => setAttendanceOpen(false)}
+        />
+      ) : null}
     </View>
   );
 }

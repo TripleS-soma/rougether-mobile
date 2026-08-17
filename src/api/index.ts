@@ -34,6 +34,7 @@ export {
 
 export * from './bug-reports';
 export * from './categories';
+export * from './events';
 export * from './houses';
 export * from './masters';
 export * from './onboarding';

@@ -45,6 +45,7 @@ export function useMyRoomPages({
   missionLinks,
   character,
   room,
+  attendance,
 }: {
   /** 셸 내비 상태 — 추가/수정 화면의 복귀 목적지 포함. */
   nav: {
@@ -114,6 +115,11 @@ export function useMyRoomPages({
     /** 달력 점 (#838) — 할 일 있는 날 집합 + 보이는 달 변경 알림. */
     markedTodoDates: MyRoomScreenProps['markedTodoDates'];
     onCalendarMonthChange: MyRoomScreenProps['onCalendarMonthChange'];
+  };
+  /** 연속 출석 이벤트 (#851) — 이벤트가 없으면 둘 다 undefined. */
+  attendance: {
+    attendance: MyRoomScreenProps['attendance'];
+    onOpenAttendance: MyRoomScreenProps['onOpenAttendance'];
   };
 }) {
   const { screen, setScreen, addReturnScreen, setAddReturnScreen } = nav;
@@ -288,6 +294,8 @@ export function useMyRoomPages({
     onCalendarMonthChange: room.onCalendarMonthChange,
     weeklyReport: weeklyReport.latest ?? undefined,
     onOpenWeeklyReport: openWeeklyReport,
+    attendance: attendance.attendance,
+    onOpenAttendance: attendance.onOpenAttendance,
     furniture: room.catalogue.furniture,
     wallpapers: room.catalogue.wallpapers,
     floors: room.catalogue.floors,
