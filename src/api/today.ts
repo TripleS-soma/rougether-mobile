@@ -1,14 +1,7 @@
 /** Today dashboard + calendar endpoints — routines/todos grouped by category. */
 import { apiGet } from './client';
 import { buildQuery } from './http';
-import type { CalendarDayResponse, TodayResponse } from './types';
-
-/**
- * 월 캘린더 개수 (서버 #295) — 아직 `gen:api-types` 대상 스웨거에 반영되기
- * 전이라 여기 손으로 둔다. 다음 재생성 때 types.ts로 흡수한다.
- */
-export type CalendarDayCount = { date: string; routineCount: number; todoCount: number };
-export type CalendarMonthResponse = { yearMonth: string; days: CalendarDayCount[] };
+import type { CalendarDayResponse, CalendarMonthResponse, TodayResponse } from './types';
 
 /** GET /today. */
 export function fetchToday() {

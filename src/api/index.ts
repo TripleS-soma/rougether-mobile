@@ -39,6 +39,7 @@ export * from './masters';
 export * from './onboarding';
 export * from './me';
 export * from './notifications';
+export * from './reports';
 export * from './rooms';
 export * from './invites';
 export * from './routines';

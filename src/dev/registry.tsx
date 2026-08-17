@@ -44,6 +44,8 @@ import { ScalePressable } from '@/components/ui/scale-pressable';
 import { CATEGORY_ICON_GEOMETRY, CategoryIcon } from '@/components/ui/category-icon';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
+import { WeeklyReportCard } from '@/components/screens/my-room/weekly-report-card';
+import { WeeklyReportScreen } from '@/components/screens/weekly-report-screen';
 import { CoachMarkOverlay } from '@/components/ui/coach-mark';
 import { Card } from '@/components/ui/card';
 import { IconButton } from '@/components/ui/icon-button';
@@ -685,6 +687,82 @@ export const galleryEntries: GalleryEntry[] = [
     description:
       '집 대표 이미지 선택 그리드 — 서버 커버 카탈로그(GET /houses/cover-images) (#261).',
     render: () => <HouseCoverPickerDemo />,
+  },
+  {
+    name: 'WeeklyReportCard',
+    description: '달력 탭 상단의 주간 회고 진입 카드 (#852).',
+    render: () => (
+      <View style={{ alignSelf: 'stretch' }}>
+        <WeeklyReportCard
+          weekStartDate="2026-08-09"
+          weekEndDate="2026-08-15"
+          completionRate={0.36}
+          completedCount={14}
+          scheduledCount={39}
+        />
+      </View>
+    ),
+  },
+  {
+    name: 'WeeklyReportScreen',
+    description: '주간 회고 상세 — 완료율 + 요일별·루틴별 비율 막대 + LLM 본문 (#852).',
+    render: () => (
+      <View style={{ alignSelf: 'stretch', height: 640 }}>
+        <WeeklyReportScreen
+          report={{
+            reportId: 1,
+            weekStartDate: '2026-08-09',
+            weekEndDate: '2026-08-15',
+            status: 'GENERATED',
+            completionRate: 0.36,
+            completedCount: 14,
+            scheduledCount: 39,
+            summary: '이번 주는 주중 아침 루틴이 잘 붙었고, 주말에 흐름이 끊겼어요.',
+            highlights: [
+              '월~수 아침 스트레칭을 3일 연속 지켰어요.',
+              '독서는 목표의 80%를 채웠어요.',
+            ],
+            failurePatterns: ['주말(토·일)에 예정된 루틴을 대부분 놓쳤어요.'],
+            suggestions: ['주말 루틴 개수를 절반으로 줄여보는 건 어때요?'],
+            stats: {
+              byWeekday: [
+                { dayOfWeek: 'SUNDAY', completed: 0, failed: 7 },
+                { dayOfWeek: 'MONDAY', completed: 4, failed: 1 },
+                { dayOfWeek: 'TUESDAY', completed: 3, failed: 2 },
+                { dayOfWeek: 'WEDNESDAY', completed: 4, failed: 1 },
+                { dayOfWeek: 'THURSDAY', completed: 2, failed: 3 },
+                { dayOfWeek: 'FRIDAY', completed: 1, failed: 4 },
+                { dayOfWeek: 'SATURDAY', completed: 0, failed: 7 },
+              ],
+              byRoutine: [
+                {
+                  lineageId: 1,
+                  title: '아침 스트레칭',
+                  categoryName: '건강',
+                  completed: 5,
+                  failed: 2,
+                },
+                {
+                  lineageId: 2,
+                  title: '독서 30분',
+                  categoryName: '자기계발',
+                  completed: 4,
+                  failed: 3,
+                },
+                {
+                  lineageId: 3,
+                  title: '물 2L 마시기',
+                  categoryName: '건강',
+                  completed: 5,
+                  failed: 2,
+                },
+              ],
+              streak: { currentCount: 3, longestCount: 6 },
+            },
+          }}
+        />
+      </View>
+    ),
   },
   {
     name: 'Calendar',
