@@ -929,4 +929,49 @@ describe('MyRoomScreen', () => {
     const titles = getAllByText(/작업 (에이|비)/).map((n) => n.props.children);
     expect(titles).toEqual(['작업 비', '작업 에이']);
   });
+
+  /**
+   * 출석 이벤트 (#851) — 이벤트가 없으면 헤더 아이콘 자체가 없어야 한다.
+   * 비활성으로 남겨두면 "눌러도 아무 일 없는 버튼"이 상시 자리를 차지한다.
+   */
+  it('출석 이벤트가 없으면 헤더에 출석 아이콘을 그리지 않는다 (#851)', async () => {
+    const { queryByLabelText } = await render(
+      <ToastProvider>
+        <MyRoomScreen userName="준서" routines={[]} />
+      </ToastProvider>,
+    );
+    expect(queryByLabelText(/출석 이벤트/)).toBeNull();
+  });
+
+  it('오늘 미출석이면 출석 아이콘에 미출석 라벨을 붙이고 탭을 전달한다 (#851)', async () => {
+    const onOpenAttendance = jest.fn();
+    const { getByLabelText } = await render(
+      <ToastProvider>
+        <MyRoomScreen
+          userName="준서"
+          routines={[]}
+          attendance={{ pending: true }}
+          onOpenAttendance={onOpenAttendance}
+        />
+      </ToastProvider>,
+    );
+    const btn = getByLabelText('출석 이벤트, 오늘 미출석');
+    fireEvent.press(btn);
+    expect(onOpenAttendance).toHaveBeenCalled();
+  });
+
+  it('오늘 출석했으면 미출석 표시 없이 그린다 (#851)', async () => {
+    const { getByLabelText, queryByLabelText } = await render(
+      <ToastProvider>
+        <MyRoomScreen
+          userName="준서"
+          routines={[]}
+          attendance={{ pending: false }}
+          onOpenAttendance={() => {}}
+        />
+      </ToastProvider>,
+    );
+    expect(getByLabelText('출석 이벤트')).toBeTruthy();
+    expect(queryByLabelText('출석 이벤트, 오늘 미출석')).toBeNull();
+  });
 });

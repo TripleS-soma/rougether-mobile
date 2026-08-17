@@ -39,4 +39,6 @@ export const ErrorCode = {
   INVITE_ALREADY_REDEEMED: 'INVITE_ALREADY_REDEEMED',
   /** 4xx — 자기 초대코드는 사용 불가 (POST /invites/redeem, #518). */
   INVITE_SELF_NOT_ALLOWED: 'INVITE_SELF_NOT_ALLOWED',
+  /** 404 — KST 오늘 진행 중인 출석 이벤트 없음 (#851). 에러가 아니라 "없음". */
+  ATTENDANCE_EVENT_NOT_FOUND: 'ATTENDANCE_EVENT_NOT_FOUND',
 } as const;

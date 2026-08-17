@@ -43,6 +43,7 @@ import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { CATEGORY_ICON_GEOMETRY, CategoryIcon } from '@/components/ui/category-icon';
 import { Button } from '@/components/ui/button';
+import { AttendanceSheet } from '@/components/screens/sheets/attendance-sheet';
 import { Calendar } from '@/components/ui/calendar';
 import { WeeklyReportCard } from '@/components/screens/my-room/weekly-report-card';
 import { WeeklyReportScreen } from '@/components/screens/weekly-report-screen';
@@ -103,6 +104,68 @@ function WalletHistorySheetDemo() {
           { id: 3, currency: 'diamond', amount: 5, reason: '뽑기 중복 전환', balanceAfter: 25, createdAt: new Date(Date.now() - 86400e3).toISOString() }, // prettier-ignore
         ]}
         hasNext
+      />
+    </View>
+  );
+}
+
+/**
+ * 출석 시트 데모 (#851) — 실제로 출석이 되게 해서 도장·코인·카운트업 연출을
+ * 갤러리에서 확인할 수 있다. 10일차를 채우면 트로피 리빌까지 이어진다.
+ */
+function AttendanceSheetDemo() {
+  const [streak, setStreak] = useState(3);
+  // 갤러리에서는 오늘 출석 잠금을 걸지 않는다 — 연속으로 눌러 10일차까지
+  // 걸어가며 보너스 링·트로피 리빌까지 확인하기 위해서다. 실제 시트는
+  // checkedInToday가 true가 되면 버튼이 잠긴다.
+  const today = false;
+  const status = {
+    eventId: 7,
+    code: 'ATTENDANCE_10D_2026',
+    title: '10일 연속 출석',
+    startsOn: '2026-08-16',
+    endsOn: '2026-09-14',
+    targetDays: 10,
+    currentStreak: streak,
+    checkedInToday: today,
+    completed: streak >= 10,
+    checkInDates: [],
+    dailyRewards: Array.from({ length: 10 }, (_, i) => ({
+      day: i + 1,
+      coinAmount: i + 1 === 5 ? 50 : 30,
+      furnitureReward: i + 1 === 10,
+      claimed: i + 1 <= streak,
+    })),
+    reward: {
+      itemId: 42,
+      name: '10일 출석 기념 트로피',
+      assetKey: 'items/events/attendance-10-day-trophy.png',
+      userItemId: null,
+      received: false,
+    },
+  };
+  return (
+    <View style={{ alignSelf: 'stretch', gap: 8 }}>
+      <ScalePressable
+        accessibilityRole="button"
+        onPress={() => setStreak(3)}
+        style={{ alignSelf: 'center', padding: 8 }}>
+        <Text>3일차로 되감기</Text>
+      </ScalePressable>
+      <AttendanceSheet
+        visible
+        status={status}
+        onCheckIn={async () => {
+          const next = Math.min(streak + 1, 10);
+          setStreak(next);
+          return {
+            newCheckIn: true,
+            coinRewardAmount: next === 5 ? 50 : 30,
+            coinBalance: 190,
+            rewardGrantedNow: next >= 10,
+            status: { ...status, currentStreak: next, checkedInToday: true },
+          };
+        }}
       />
     </View>
   );
@@ -687,6 +750,12 @@ export const galleryEntries: GalleryEntry[] = [
     description:
       '집 대표 이미지 선택 그리드 — 서버 커버 카탈로그(GET /houses/cover-images) (#261).',
     render: () => <HouseCoverPickerDemo />,
+  },
+  {
+    name: 'AttendanceSheet',
+    description:
+      '연속 출석 시트 (#851) — 눌러서 도장·코인·카운트업 연출 확인. 10일차엔 트로피 리빌.',
+    render: () => <AttendanceSheetDemo />,
   },
   {
     name: 'WeeklyReportCard',

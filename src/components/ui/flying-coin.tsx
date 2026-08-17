@@ -5,7 +5,11 @@ import { Icon } from '@/components/ui/icon';
 import { useTokens } from '@/hooks/use-tokens';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
 
-/** 완료 탭 지점에서 지갑까지 포물선으로 나는 코인 (#440). */
+/**
+ * 탭 지점에서 지갑까지 포물선으로 나는 코인 (#440, #851에서 ui로 승격).
+ * 좌표는 **부모 컨테이너 기준**이라 쓰는 쪽이 position:relative 컨테이너를
+ * 두고 출발·도착을 측정한다. 나의 방 루틴 완료 / 출석 체크 공용.
+ */
 export function FlyingCoin({
   x,
   y,

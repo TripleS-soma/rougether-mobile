@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 
 import { NavMenuPopover } from '@/components/app/nav-menu-popover';
-import { FlyingCoin } from '@/components/screens/my-room/flying-coin';
+import { FlyingCoin } from '@/components/ui/flying-coin';
 import { isScheduledOn } from '@/components/screens/my-room/schedule';
 import {
   type DragSlot,
@@ -124,6 +124,16 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
     };
     /** 주간 회고 카드를 눌렀을 때 — 셸이 상세 화면을 연다. */
     onOpenWeeklyReport?: () => void;
+    /**
+     * 연속 출석 이벤트 (#851) — 진행 중인 이벤트가 없으면 undefined로 두면
+     * 헤더 아이콘 자체가 그려지지 않는다.
+     */
+    attendance?: {
+      /** 오늘 아직 출석 안 했는지 — 아이콘에 빨간 점. */
+      pending: boolean;
+    };
+    /** 출석 아이콘 탭 — 셸이 출석 시트를 연다. */
+    onOpenAttendance?: () => void;
 
     /** Room occupant's display name (header title becomes "{userName}의 방"). */
     userName?: string;
@@ -275,6 +285,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   onCalendarMonthChange,
   weeklyReport,
   onOpenWeeklyReport,
+  attendance,
+  onOpenAttendance,
   placedFurnitureIds,
   placements = null,
   furniture,
@@ -1079,6 +1091,20 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               onOpenHistory={openWalletHistory}
             />
           </Animated.View>
+          {/* 출석 이벤트 (#851) — 이벤트가 있을 때만. 미출석이면 빨간 점으로
+              "오늘 할 게 남았다"를 알린다(알림 벨의 안읽음 점과 같은 결). */}
+          {attendance && onOpenAttendance ? (
+            <ScalePressable
+              onPress={onOpenAttendance}
+              accessibilityRole="button"
+              accessibilityLabel={attendance.pending ? '출석 이벤트, 오늘 미출석' : '출석 이벤트'}
+              style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
+              <Icon name="calendar" size={20} color={t.text} />
+              {attendance.pending ? (
+                <View style={[styles.menuDot, { backgroundColor: t.danger }]} />
+              ) : null}
+            </ScalePressable>
+          ) : null}
           {/* 알림 벨 복원 (#727) — #257에서 메뉴로 합쳤던 것을 1탭으로 승격.
               제목은 축소·중간 말줄임 로직이 있어 좁은 폭도 견딘다. */}
           {onOpenNotifications ? (
