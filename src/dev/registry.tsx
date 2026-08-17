@@ -44,6 +44,8 @@ import { ScalePressable } from '@/components/ui/scale-pressable';
 import { CATEGORY_ICON_GEOMETRY, CategoryIcon } from '@/components/ui/category-icon';
 import { Button } from '@/components/ui/button';
 import { AttendanceSheet } from '@/components/screens/sheets/attendance-sheet';
+import { ActivityStrip } from '@/components/screens/house/activity-strip';
+import { shiftIso, todayIso } from '@/utils/datetime';
 import { Calendar } from '@/components/ui/calendar';
 import { WeeklyReportPanel } from '@/components/screens/my-room/weekly-report-panel';
 import { CoachMarkOverlay } from '@/components/ui/coach-mark';
@@ -195,6 +197,28 @@ function CharacterPickerSheetDemo() {
         ]}
         onSelect={() => {}}
         onClose={() => setOpen(false)}
+      />
+    </View>
+  );
+}
+
+/** 최근 활동 스트립 데모 (#860) — 탭해서 상세 펼침을 확인한다. */
+function ActivityStripDemo() {
+  const [open, setOpen] = useState(false);
+  const today = todayIso();
+  return (
+    <View style={{ alignSelf: 'stretch' }}>
+      <ActivityStrip
+        today={today}
+        expanded={open}
+        onToggle={() => setOpen((v) => !v)}
+        days={[
+          { date: today, label: '오늘', titles: ['아침 기상', '물 1L 마시기'] },
+          { date: shiftIso(today, -1), label: '어제', titles: ['독서 30분'] },
+          { date: shiftIso(today, -2), label: '이틀 전', titles: ['아침 기상'] },
+          { date: shiftIso(today, -5), label: '닷새 전', titles: ['영양제 챙겨먹기'] },
+          { date: shiftIso(today, -9), label: '9일 전', titles: ['아침 기상', '독서 30분'] },
+        ]}
       />
     </View>
   );
@@ -766,6 +790,11 @@ export const galleryEntries: GalleryEntry[] = [
     description:
       '집 대표 이미지 선택 그리드 — 서버 커버 카탈로그(GET /houses/cover-images) (#261).',
     render: () => <HouseCoverPickerDemo />,
+  },
+  {
+    name: 'ActivityStrip',
+    description: '친구 방 최근 활동 — 14칸 점 스트립, 탭하면 날짜별 상세 (#860).',
+    render: () => <ActivityStripDemo />,
   },
   {
     name: 'AttendanceSheet',
