@@ -113,6 +113,7 @@ function WalletHistorySheetDemo() {
  * 갤러리에서 확인할 수 있다. 10일차를 채우면 트로피 리빌까지 이어진다.
  */
 function AttendanceSheetDemo() {
+  const [open, setOpen] = useState(false);
   const [streak, setStreak] = useState(3);
   // 갤러리에서는 오늘 출석 잠금을 걸지 않는다 — 연속으로 눌러 10일차까지
   // 걸어가며 보너스 링·트로피 리빌까지 확인하기 위해서다. 실제 시트는
@@ -147,12 +148,16 @@ function AttendanceSheetDemo() {
     <View style={{ alignSelf: 'stretch', gap: 8 }}>
       <ScalePressable
         accessibilityRole="button"
-        onPress={() => setStreak(3)}
+        onPress={() => {
+          setStreak(3);
+          setOpen(true);
+        }}
         style={{ alignSelf: 'center', padding: 8 }}>
-        <Text>3일차로 되감기</Text>
+        <Text>출석 시트 열기 (3일차부터)</Text>
       </ScalePressable>
       <AttendanceSheet
-        visible
+        visible={open}
+        onClose={() => setOpen(false)}
         status={status}
         onCheckIn={async () => {
           const next = Math.min(streak + 1, 10);
@@ -165,6 +170,31 @@ function AttendanceSheetDemo() {
             status: { ...status, currentStreak: next, checkedInToday: true },
           };
         }}
+      />
+    </View>
+  );
+}
+
+/** 캐릭터 교체 시트 데모 (#854) — 열기 버튼 뒤에 둔다. 아래 참고. */
+function CharacterPickerSheetDemo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <View>
+      <ScalePressable
+        accessibilityRole="button"
+        onPress={() => setOpen(true)}
+        style={{ alignSelf: 'center', padding: 8 }}>
+        <Text>캐릭터 교체 열기</Text>
+      </ScalePressable>
+      <CharacterPickerSheet
+        visible={open}
+        characters={[
+          { serverId: 1, id: 'cat', name: '고양이', selected: true },
+          { serverId: 4, id: 'panda', name: '판다', selected: false },
+          { serverId: 8, id: 'otter', name: '수달', selected: false },
+        ]}
+        onSelect={() => {}}
+        onClose={() => setOpen(false)}
       />
     </View>
   );
@@ -591,20 +621,7 @@ export const galleryEntries: GalleryEntry[] = [
   {
     name: 'CharacterPickerSheet',
     description: '나의 방 햄버거 → 캐릭터 교체: 보유 캐릭터 그리드 + 착용 중 배지.',
-    render: () => (
-      <View style={{ height: 560, alignSelf: 'stretch' }}>
-        <CharacterPickerSheet
-          visible
-          characters={[
-            { serverId: 1, id: 'cat', name: '고양이', selected: true },
-            { serverId: 4, id: 'panda', name: '판다', selected: false },
-            { serverId: 8, id: 'otter', name: '수달', selected: false },
-          ]}
-          onSelect={() => {}}
-          onClose={() => {}}
-        />
-      </View>
-    ),
+    render: () => <CharacterPickerSheetDemo />,
   },
   {
     name: 'NotificationListScreen',
