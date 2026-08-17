@@ -127,4 +127,38 @@ describe('AttendanceSheet', () => {
     });
     expect(queryByTestId('attendance-trophy-reveal')).toBeNull();
   });
+
+  /**
+   * 재진입 회귀 (#851 리뷰) — '방에 배치하러 가기'가 trophy 상태를 안 지워서,
+   * 시트를 닫았다 다시 열면 **출석하지도 않았는데** 트로피 리빌이 또 떴다.
+   * AttendanceSheet는 셸에 계속 마운트돼 있어(visible만 토글) 로컬 상태가 산다.
+   */
+  it('보상 화면에서 방으로 간 뒤 다시 열면 리빌이 다시 뜨지 않는다', async () => {
+    const onCheckIn = jest.fn(async () => result({ rewardGrantedNow: true }));
+    const onGoToRoom = jest.fn();
+    const ui = await render(
+      <AttendanceSheet visible status={STATUS} onCheckIn={onCheckIn} onGoToRoom={onGoToRoom} />,
+    );
+    await act(async () => {
+      fireEvent.press(ui.getByText('오늘 출석하기'));
+    });
+    expect(ui.getByTestId('attendance-trophy-reveal')).toBeTruthy();
+
+    // 방에 배치하러 가기 → 셸이 시트를 닫는다.
+    fireEvent.press(ui.getByText('방에 배치하러 가기'));
+    expect(onGoToRoom).toHaveBeenCalled();
+    await ui.rerender(
+      <AttendanceSheet
+        visible={false}
+        status={STATUS}
+        onCheckIn={onCheckIn}
+        onGoToRoom={onGoToRoom}
+      />,
+    );
+    // 다시 열기 — 새로 출석한 게 없으니 리빌이 없어야 한다.
+    await ui.rerender(
+      <AttendanceSheet visible status={STATUS} onCheckIn={onCheckIn} onGoToRoom={onGoToRoom} />,
+    );
+    expect(ui.queryByTestId('attendance-trophy-reveal')).toBeNull();
+  });
 });

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 
 import { AttendanceDayCell } from '@/components/screens/sheets/attendance-day-cell';
@@ -57,14 +57,43 @@ export function AttendanceSheet({
   const [coin, setCoin] = useState<{ id: number; x: number; y: number } | null>(null);
   const [trophy, setTrophy] = useState<{ name: string; assetKey?: string } | null>(null);
   const coinSeq = useRef(0);
-  // 코인 출발·도착 좌표 — 시트 컨테이너 기준으로 잰다 (FlyingCoin 계약).
+  /**
+   * 코인 출발·도착 좌표 (#851 리뷰) — FlyingCoin은 시트 카드에 얹히므로 두 점
+   * 다 **카드 기준**이어야 한다. 그런데 onLayout의 x·y는 직계 부모 기준이라,
+   * 지갑은 head 기준·칸은 grid 기준으로 나와 서로 다른 좌표계였다(그 사이에
+   * 제목·기간·연속일수가 쌓여 100px 넘게 어긋난다).
+   *
+   * head와 grid는 둘 다 카드의 직계 자식이므로, 각 컨테이너의 원점을 함께
+   * 재서 안쪽 좌표에 더하면 같은 좌표계로 맞춰진다.
+   */
   const cellPos = useRef<Record<number, { x: number; y: number }>>({});
   const walletPos = useRef({ x: 0, y: 0 });
+  const headOrigin = useRef({ x: 0, y: 0 });
+  const gridOrigin = useRef({ x: 0, y: 0 });
 
+  const measureOrigin = useCallback(
+    (into: { current: { x: number; y: number } }) => (e: LayoutChangeEvent) => {
+      const { x, y } = e.nativeEvent.layout;
+      into.current = { x, y };
+    },
+    [],
+  );
   const measureWallet = useCallback((e: LayoutChangeEvent) => {
     const { x, y, width, height } = e.nativeEvent.layout;
     walletPos.current = { x: x + width / 2, y: y + height / 2 };
   }, []);
+
+  /**
+   * 시트가 닫히면 연출 상태를 지운다 (#851 리뷰). 이게 없으면 '방에 배치하러
+   * 가기'로 나간 뒤 다시 열었을 때, **출석하지도 않았는데** 트로피 리빌이 또
+   * 뜬다 — AttendanceSheet는 셸에 계속 마운트돼 있어서 로컬 상태가 살아남는다.
+   */
+  useEffect(() => {
+    if (visible) return;
+    setStampedDay(null);
+    setCoin(null);
+    setTrophy(null);
+  }, [visible]);
 
   const press = useCallback(async () => {
     const result = await onCheckIn?.();
@@ -73,10 +102,14 @@ export function AttendanceSheet({
     const day = result.status.currentStreak;
     setStampedDay(day);
     if (result.coinRewardAmount > 0) {
-      const from = cellPos.current[day];
-      if (from) {
+      const cell = cellPos.current[day];
+      if (cell) {
         coinSeq.current += 1;
-        setCoin({ id: coinSeq.current, ...from });
+        setCoin({
+          id: coinSeq.current,
+          x: gridOrigin.current.x + cell.x,
+          y: gridOrigin.current.y + cell.y,
+        });
       }
     }
     // 이번 호출에서 **새로** 지급된 가구만 리빌한다. 이미 갖고 있던 가구로
@@ -101,7 +134,7 @@ export function AttendanceSheet({
 
   return (
     <BottomSheet visible={visible} onClose={onClose} cardStyle={styles.sheet}>
-      <View style={styles.head}>
+      <View style={styles.head} onLayout={measureOrigin(headOrigin)}>
         <Text style={[Typography.h3, styles.title, { color: t.text }]}>{status.title}</Text>
         <View
           onLayout={measureWallet}
@@ -122,14 +155,13 @@ export function AttendanceSheet({
         </Text>
       </View>
 
-      <View style={styles.grid}>
+      <View style={styles.grid} onLayout={measureOrigin(gridOrigin)}>
         {days.map((d) => (
           <View
             key={d.day}
             onLayout={(e: LayoutChangeEvent) => {
               const { x, y, width, height } = e.nativeEvent.layout;
-              // 그리드가 wrap된 행 안의 좌표라 행 오프셋을 더해야 정확하지만,
-              // 코인은 장식이라 근사로 충분하다(정확도보다 방향이 중요).
+              // grid 기준 좌표 — 쏠 때 gridOrigin을 더해 카드 기준으로 바꾼다.
               cellPos.current[d.day] = { x: x + width / 2, y: y + height / 2 };
             }}>
             <AttendanceDayCell
@@ -155,8 +187,8 @@ export function AttendanceSheet({
           key={coin.id}
           x={coin.x}
           y={coin.y}
-          tx={walletPos.current.x}
-          ty={walletPos.current.y}
+          tx={headOrigin.current.x + walletPos.current.x}
+          ty={headOrigin.current.y + walletPos.current.y}
           onDone={() => setCoin(null)}
         />
       ) : null}
