@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react-native';
 
-import { WeeklyReportScreen } from '@/components/screens/weekly-report-screen';
+import { WeeklyReportPanel } from '@/components/screens/my-room/weekly-report-panel';
 import type { WeeklyReportDetailResponse } from '@/api/types';
 
 const REPORT: WeeklyReportDetailResponse = {
@@ -31,9 +31,9 @@ const REPORT: WeeklyReportDetailResponse = {
   },
 };
 
-describe('WeeklyReportScreen', () => {
+describe('WeeklyReportPanel', () => {
   it('완료율을 퍼센트 한 줄로 앞세우고 기간·연속일수를 함께 보여준다', async () => {
-    const { getByText } = await render(<WeeklyReportScreen report={REPORT} />);
+    const { getByText } = await render(<WeeklyReportPanel report={REPORT} />);
     expect(getByText('36%')).toBeTruthy();
     expect(getByText('8월 9일 ~ 8월 15일')).toBeTruthy();
     expect(getByText(/예정 39개 중 14개 완료/)).toBeTruthy();
@@ -46,7 +46,7 @@ describe('WeeklyReportScreen', () => {
    */
   it('요일 막대마다 완료/전체 숫자를 눈에 보이게 붙인다', async () => {
     const { getByText, getAllByText, getByLabelText } = await render(
-      <WeeklyReportScreen report={REPORT} />,
+      <WeeklyReportPanel report={REPORT} />,
     );
     // 눈에 보이는 숫자 — 이게 없으면 값은 색으로만 남는다(대비 3:1 미만).
     expect(getByText('0/7')).toBeTruthy();
@@ -60,21 +60,21 @@ describe('WeeklyReportScreen', () => {
   });
 
   it('요일을 서버 배열 순서가 아니라 일~토 순으로 세운다', async () => {
-    const { getAllByText } = await render(<WeeklyReportScreen report={REPORT} />);
+    const { getAllByText } = await render(<WeeklyReportPanel report={REPORT} />);
     // 서버는 수·일·월 3개만 섞어서 줬다 — 화면은 7칸을 일~토로 세워야 한다.
     const rendered = getAllByText(/^[일월화수목금토]$/).map((n) => n.children[0]);
     expect(rendered).toEqual(['일', '월', '화', '수', '목', '금', '토']);
   });
 
   it('루틴은 완료 많은 순으로 정렬한다', async () => {
-    const { getByText, getAllByText } = await render(<WeeklyReportScreen report={REPORT} />);
+    const { getByText, getAllByText } = await render(<WeeklyReportPanel report={REPORT} />);
     expect(getByText('아침 스트레칭')).toBeTruthy();
     expect(getByText('독서 30분')).toBeTruthy();
     expect(getAllByText('6/7')).toBeTruthy();
   });
 
   it('GENERATED면 LLM 본문 세 섹션을 보여준다', async () => {
-    const { getByText } = await render(<WeeklyReportScreen report={REPORT} />);
+    const { getByText } = await render(<WeeklyReportPanel report={REPORT} />);
     expect(getByText('잘한 점')).toBeTruthy();
     expect(getByText('아쉬운 점')).toBeTruthy();
     expect(getByText('다음 주 제안')).toBeTruthy();
@@ -87,7 +87,7 @@ describe('WeeklyReportScreen', () => {
    */
   it('FALLBACK이면 본문 섹션을 접고 이유를 알린다', async () => {
     const { queryByText, getByText } = await render(
-      <WeeklyReportScreen
+      <WeeklyReportPanel
         report={{ ...REPORT, status: 'FALLBACK', highlights: [], failurePatterns: [] }}
       />,
     );
@@ -98,8 +98,9 @@ describe('WeeklyReportScreen', () => {
     expect(getByText('36%')).toBeTruthy();
   });
 
-  it('아직 회고가 없으면 통계 자리를 비워둔다', async () => {
-    const { queryByText } = await render(<WeeklyReportScreen report={null} />);
+  it('아직 회고가 없으면 통계 대신 빈 상태 문구를 보여준다', async () => {
+    const { queryByText, getByText } = await render(<WeeklyReportPanel report={null} />);
     expect(queryByText('요일별')).toBeNull();
+    expect(getByText('아직 회고가 없어요.')).toBeTruthy();
   });
 });
