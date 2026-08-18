@@ -20,6 +20,7 @@ import {
   type CharacterId,
   DEFAULT_CHARACTER_ID,
 } from '@/constants/characters';
+import { NICKNAME_MAX } from '@/constants/profile';
 import { Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useScreenStyle } from '@/hooks/use-screen-style';
@@ -68,7 +69,6 @@ export type OnboardingGoal = { id: string; label: string };
 export const MAX_GOALS = 3;
 
 /** 닉네임 길이 상한 (#635) — 헤더·타일 등 표시 공간과 합의된 값. */
-export const NICKNAME_MAX = 12;
 
 /**
  * 태블릿·큰 화면 콘텐츠 중앙 고정폭 (#725) — 온보딩 요소가 넓은 폭에서
