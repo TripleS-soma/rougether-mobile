@@ -36,22 +36,31 @@ import { hapticImpact, hapticSuccess } from '@/utils/haptics';
  * 키가 없거나 CDN 키가 아니면 기존 픽토그램으로 폴백한다: 구버전 서버·
  * 로컬 목·아트 미등록 머신에서 칸이 비지 않게 한다.
  *
- * accent 배경은 그대로 둔다 — 지금은 14개 머신이 **같은 상자 한 장**을
- * 공유해서(서버가 공용 플레이스홀더를 준다) 배경색이 유일한 머신 구분
- * 단서다. 머신별 아트가 생기면 그때 덜어내도 된다.
+ * accent 배경은 그대로 둔다. 예전엔 14개가 **같은 상자 한 장**을 공유해서
+ * 배경색이 유일한 구분 단서였는데, 2026-08-18 확인 결과 서버가 이제 12종을
+ * 따로 준다 — 배경이 없어도 구분은 되지만 칩 줄의 리듬을 만드는 요소라 유지.
  */
 function GiftBoxArt({ machine, size }: { machine: GachaMachine; size: number }) {
   if (!isCdnKey(machine.giftBoxKey)) return <Pictogram name={machine.icon} size={size} />;
   return (
-    <Image
-      testID={`gift-box-${machine.id}`}
-      source={assetSource(machine.giftBoxKey)}
-      style={{ width: size, height: size }}
-      contentFit="contain"
-      transition={120}
-      // 칩 줄이 가로 스크롤이라 셀이 재활용된다 — furniture-placeholder(#771)와 같은 이유.
-      cachePolicy="memory-disk"
-    />
+    // 아트가 도착할 때까지 픽토그램이 자리를 지킨다 (#877). 서버 아트가
+    // 1254×1254 PNG(장당 ~2MB)라 44px 칩에 뜨기까지 눈에 띄게 걸리는데,
+    // 예전엔 그동안 **칸이 비어 있었다.** 바이트를 줄이는 건 서버 몫이고
+    // (CDN이 리사이즈·webp 협상을 안 한다), 여기서는 빈 자리를 없앤다.
+    <View style={{ width: size, height: size }}>
+      <View testID={`gift-box-fallback-${machine.id}`} style={StyleSheet.absoluteFill}>
+        <Pictogram name={machine.icon} size={size} />
+      </View>
+      <Image
+        testID={`gift-box-${machine.id}`}
+        source={assetSource(machine.giftBoxKey)}
+        style={{ width: size, height: size }}
+        contentFit="contain"
+        transition={120}
+        // 칩 줄이 가로 스크롤이라 셀이 재활용된다 — furniture-placeholder(#771)와 같은 이유.
+        cachePolicy="memory-disk"
+      />
+    </View>
   );
 }
 
