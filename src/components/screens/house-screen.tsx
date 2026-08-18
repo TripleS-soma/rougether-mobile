@@ -1181,6 +1181,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
     marginHorizontal: Spacing.four,
+    // 헤더 바로 아래라 위쪽 여백이 필요하다 — 없으면 헤더에 붙어 읽힌다.
+    marginTop: Spacing.three,
     marginBottom: Spacing.two,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
