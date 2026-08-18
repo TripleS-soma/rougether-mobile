@@ -37,6 +37,20 @@ describe('GachaScreen', () => {
     expect(getAllByTestId('gift-box-1').length).toBeGreaterThan(0);
   });
 
+  /**
+   * 서버 아트가 1254×1254 PNG(장당 ~2MB)라 44px 칩에 뜨기까지 눈에 띄게
+   * 걸린다 (#877). 그동안 칸이 비어 있으면 "늦게 뜬다"로 읽히므로, 아트
+   * 뒤에 픽토그램이 자리를 지킨다 — 도착하면 그 위로 덮인다.
+   */
+  it('아트가 도착하기 전에도 픽토그램이 자리를 지킨다 (#877)', async () => {
+    const withArt: GachaMachine = { ...machine, giftBoxKey: 'items/gift-box.png' };
+    const { getAllByTestId } = await render(<GachaScreen gachas={[withArt]} coinBalance={5600} />);
+    // 아트는 그려지고,
+    expect(getAllByTestId('gift-box-1').length).toBeGreaterThan(0);
+    // 그 뒤에 폴백 픽토그램도 함께 있다(빈 칸이 생기지 않게).
+    expect(getAllByTestId('gift-box-fallback-1').length).toBeGreaterThan(0);
+  });
+
   it('아트 키가 없거나 CDN 키가 아니면 이미지를 그리지 않는다 — 픽토그램 폴백', async () => {
     // 구버전 서버·로컬 카탈로그 키는 CDN에 아트가 없다(isCdnKey=false).
     const legacy: GachaMachine = { ...machine, giftBoxKey: 'furniture/bed' };
