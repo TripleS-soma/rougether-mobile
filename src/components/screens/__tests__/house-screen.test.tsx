@@ -3,7 +3,6 @@ import { StyleSheet } from 'react-native';
 import { getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { cameraClaimsMove, HouseScreen, type House } from '@/components/screens/house-screen';
-import { ToastProvider } from '@/components/ui/toast';
 
 const MISSION_HOUSE: House = {
   houseId: 7,
@@ -134,7 +133,7 @@ describe('HouseScreen', () => {
   });
 
   it('renders the current house, members, and group missions', async () => {
-    const { getByText, getByLabelText, queryByText } = await render(<HouseScreen />);
+    const { getByText, queryByText } = await render(<HouseScreen onOpenMissions={jest.fn()} />);
     expect(getByText('소마파이팅')).toBeTruthy();
     // The level pill shows the house's real growth level (demo: 3).
     expect(getByText('Lv.3')).toBeTruthy();
@@ -142,11 +141,46 @@ describe('HouseScreen', () => {
     expect(queryByText('5,600')).toBeNull();
     // The demo owner's tile carries the 방장 crown.
     expect(getByText('최준서')).toBeTruthy();
-    // 공동 미션은 플로팅 버튼 → 시트로 (#287).
-    expect(queryByText('우리 집의 목표')).toBeNull();
-    await fireEvent.press(getByLabelText('공동 미션'));
+    // 공동 미션은 요약 줄로 화면에 드러난다 (#875) — 예전엔 FAB 뒤에 숨어
+    // 누르기 전엔 우리 집이 뭘 하는지 보이지 않았다.
     expect(getByText('우리 집의 목표')).toBeTruthy();
-    expect(getByText('이번 주 다같이 루틴 지키기')).toBeTruthy();
+  });
+
+  /**
+   * 공동 미션 요약 줄 (#875) — 예전엔 우하단 FAB 뒤에 통째로 숨어서, 집에
+   * 들어와도 우리 집이 뭘 하는지 **누르기 전엔** 보이지 않았다. FAB은 없앴다:
+   * 요약 줄이 진입점이라 진입점을 둘로 두지 않는다(#856과 같은 결).
+   */
+  it('요약 줄이 진행 상황을 보여주고 탭하면 미션 화면을 연다 (#875)', async () => {
+    const onOpenMissions = jest.fn();
+    const { getByText, getByLabelText, queryByLabelText } = await render(
+      <HouseScreen
+        houses={[MISSION_HOUSE]}
+        linkedRoutines={[{ missionId: 11, completedToday: true }]}
+        onOpenMissions={onOpenMissions}
+      />,
+    );
+    expect(getByText('우리 집의 목표')).toBeTruthy();
+    // ACTIVE 2개 중 11이 오늘 완료 → 1/2.
+    expect(getByText('오늘 1/2')).toBeTruthy();
+    // 눈에 보이는 진행 상황과 받을 보상이 모두 라벨에 담긴다 — 명시 라벨을
+    // 주면 자식 Text가 스크린리더로 안 흘러가므로.
+    await fireEvent.press(getByLabelText('우리 집의 목표, 오늘 1/2 기여, 받을 보상 1개'));
+    expect(onOpenMissions).toHaveBeenCalled();
+    // FAB은 사라졌다 — 진입점은 하나다.
+    expect(queryByLabelText('공동 미션')).toBeNull();
+  });
+
+  it('미션이 없으면 요약 줄이 진행 중 없음으로 말한다 (#875)', async () => {
+    const { getByText } = await render(
+      <HouseScreen houses={[{ ...MISSION_HOUSE, missions: [] }]} onOpenMissions={jest.fn()} />,
+    );
+    expect(getByText('진행 중 없음')).toBeTruthy();
+  });
+
+  it('onOpenMissions가 없으면 요약 줄을 그리지 않는다', async () => {
+    const { queryByText } = await render(<HouseScreen houses={[MISSION_HOUSE]} />);
+    expect(queryByText('우리 집의 목표')).toBeNull();
   });
 
   it('keeps the visited house via the controlled index (#241)', async () => {
@@ -185,186 +219,6 @@ describe('HouseScreen', () => {
     expect(onHouseIndexChange).toHaveBeenLastCalledWith(1);
   });
 
-  it('adds a mission to my routines through the confirm modal, and claims', async () => {
-    const onAddMissionRoutine = jest.fn();
-    const onClaimMission = jest.fn();
-    const { getByLabelText, getByText } = await render(
-      <HouseScreen
-        houses={[MISSION_HOUSE]}
-        onAddMissionRoutine={onAddMissionRoutine}
-        onClaimMission={onClaimMission}
-      />,
-    );
-    // 기여 버튼 대신 + → 확인 모달 → 네 = 집 카테고리 아래 루틴 생성 요청.
-    await fireEvent.press(getByLabelText('공동 미션'));
-    await fireEvent.press(getByLabelText('주간 루틴 지키기 내 루틴에 추가'));
-    expect(getByText('내 루틴에 추가하시겠습니까?')).toBeTruthy();
-    await fireEvent.press(getByLabelText('루틴 추가 확인'));
-    expect(onAddMissionRoutine).toHaveBeenCalledWith(
-      7,
-      expect.objectContaining({ id: 11, title: '주간 루틴 지키기' }),
-    );
-    await fireEvent.press(getByLabelText('기상 인증 모으기 보상 받기'));
-    expect(onClaimMission).toHaveBeenCalledWith(7, 12);
-    expect(getByText('완료')).toBeTruthy();
-  });
-
-  it('deletes a mission through the confirm modal (owner, #305)', async () => {
-    const onDeleteMission = jest.fn();
-    const { getByLabelText, getByText, queryByLabelText, queryByText } = await render(
-      <HouseScreen houses={[MISSION_HOUSE]} onDeleteMission={onDeleteMission} />,
-    );
-    await fireEvent.press(getByLabelText('공동 미션'));
-    // COMPLETED missions are not deletable on the server (409) — no button.
-    expect(queryByLabelText('지난 미션 삭제')).toBeNull();
-    // 취소 closes without calling.
-    await fireEvent.press(getByLabelText('주간 루틴 지키기 삭제'));
-    expect(getByText('미션 삭제')).toBeTruthy();
-    await fireEvent.press(getByLabelText('미션 삭제 취소'));
-    expect(queryByText('미션 삭제')).toBeNull();
-    expect(onDeleteMission).not.toHaveBeenCalled();
-    // 삭제 confirms.
-    await fireEvent.press(getByLabelText('주간 루틴 지키기 삭제'));
-    await fireEvent.press(getByLabelText('미션 삭제 확인'));
-    expect(onDeleteMission).toHaveBeenCalledWith(7, 11);
-  });
-
-  it('hides mission delete from plain members', async () => {
-    const { getByLabelText, queryByLabelText } = await render(
-      <HouseScreen houses={[{ ...MISSION_HOUSE, myRole: 'MEMBER' }]} onDeleteMission={jest.fn()} />,
-    );
-    await fireEvent.press(getByLabelText('공동 미션'));
-    expect(queryByLabelText('주간 루틴 지키기 삭제')).toBeNull();
-  });
-
-  it('shows 기여됨/루틴 연동됨 labels instead of + when applicable', async () => {
-    const { queryByLabelText, getByText, getByLabelText } = await render(
-      <HouseScreen
-        houses={[MISSION_HOUSE]}
-        onAddMissionRoutine={jest.fn()}
-        linkedRoutines={[{ missionId: 11 }]}
-        contributedMissionIds={[12]}
-      />,
-    );
-    await fireEvent.press(getByLabelText('공동 미션'));
-    // Linked mission: no + button, 연동 라벨.
-    expect(queryByLabelText('주간 루틴 지키기 내 루틴에 추가')).toBeNull();
-    expect(getByText('루틴 연동됨')).toBeTruthy();
-    // Contributed-today mission (no claim handler → falls through to 기여함).
-    expect(getByText('기여함')).toBeTruthy();
-  });
-
-  it('derives 기여함 from a linked routine completed today (재시작에도 유지)', async () => {
-    const { getByText, getByLabelText, queryByText } = await render(
-      <HouseScreen
-        houses={[MISSION_HOUSE]}
-        onAddMissionRoutine={jest.fn()}
-        linkedRoutines={[{ missionId: 11, completedToday: true }]}
-      />,
-    );
-    await fireEvent.press(getByLabelText('공동 미션'));
-    // 세션 추적(contributedMissionIds) 없이도 오늘 완료 = 기여함.
-    expect(getByText('기여함')).toBeTruthy();
-    expect(queryByText('루틴 연동됨')).toBeNull();
-  });
-
-  it('creates a mission through the modal', async () => {
-    const onCreateMission = jest.fn();
-    const { getByLabelText } = await render(
-      <HouseScreen houses={[MISSION_HOUSE]} onCreateMission={onCreateMission} />,
-    );
-    await fireEvent.press(getByLabelText('공동 미션'));
-    await fireEvent.press(getByLabelText('미션 만들기'));
-    await fireEvent.changeText(getByLabelText('미션 제목'), '새 미션');
-    await fireEvent.changeText(getByLabelText('목표 수치'), '15');
-    await fireEvent.press(getByLabelText('미션 만들기 확인'));
-    expect(onCreateMission).toHaveBeenCalledWith(7, {
-      title: '새 미션',
-      missionType: 'WEEKLY_MEMBER_COUNT',
-      targetValue: 15,
-    });
-  });
-
-  /**
-   * 목표 수치는 유형마다 뜻과 상한이 다르다 (#872, 서버 계약). 달성률은 %라
-   * 1~100이고 넘기면 서버가 400 HOUSE_MISSION_TARGET_INVALID를 준다. 예전엔
-   * 클라이언트가 유형 무관 1~1000만 봐서 500%도 통과시켜 400을 맞았다.
-   */
-  it('일일 달성률 목표가 100을 넘으면 보내지 않고 알려준다 (#872)', async () => {
-    const onCreateMission = jest.fn();
-    const { getByText, getByLabelText } = await render(
-      <ToastProvider>
-        <HouseScreen houses={[MISSION_HOUSE]} onCreateMission={onCreateMission} />
-      </ToastProvider>,
-    );
-    await fireEvent.press(getByLabelText('공동 미션'));
-    await fireEvent.press(getByLabelText('미션 만들기'));
-    await fireEvent.press(getByText('일일 달성률'));
-    await fireEvent.changeText(getByLabelText('미션 제목'), '달성률 미션');
-    await fireEvent.changeText(getByLabelText('목표 수치'), '500');
-    await fireEvent.press(getByLabelText('미션 만들기 확인'));
-    expect(onCreateMission).not.toHaveBeenCalled();
-    expect(getByText(/1~100% 사이/)).toBeTruthy();
-  });
-
-  /** 같은 500이 주간 달성 횟수에서는 유효하다 — 상한이 1000이다. */
-  it('주간 달성 횟수는 같은 값도 통과시킨다 — 상한이 다르다 (#872)', async () => {
-    const onCreateMission = jest.fn();
-    const { getByLabelText } = await render(
-      <ToastProvider>
-        <HouseScreen houses={[MISSION_HOUSE]} onCreateMission={onCreateMission} />
-      </ToastProvider>,
-    );
-    await fireEvent.press(getByLabelText('공동 미션'));
-    await fireEvent.press(getByLabelText('미션 만들기'));
-    await fireEvent.changeText(getByLabelText('미션 제목'), '횟수 미션');
-    await fireEvent.changeText(getByLabelText('목표 수치'), '500');
-    await fireEvent.press(getByLabelText('미션 만들기 확인'));
-    expect(onCreateMission).toHaveBeenCalledWith(
-      7,
-      expect.objectContaining({ missionType: 'WEEKLY_MEMBER_COUNT', targetValue: 500 }),
-    );
-  });
-
-  /** 값이 %인지 횟수인지 화면에 드러나야 한다 — 예전엔 어디에도 없었다. */
-  it('선택한 유형에 따라 단위와 허용 범위를 보여준다 (#872)', async () => {
-    const { getByText, getByLabelText } = await render(
-      <ToastProvider>
-        <HouseScreen houses={[MISSION_HOUSE]} onCreateMission={jest.fn()} />
-      </ToastProvider>,
-    );
-    await fireEvent.press(getByLabelText('공동 미션'));
-    await fireEvent.press(getByLabelText('미션 만들기'));
-    // 기본값은 주간 달성 횟수 — 1~1000회.
-    expect(getByText('목표 수치 (1~1000회)')).toBeTruthy();
-
-    await fireEvent.press(getByText('일일 달성률'));
-    expect(getByText('목표 수치 (1~100%)')).toBeTruthy();
-  });
-
-  it('explains a missing mission title with a toast instead of creating', async () => {
-    const onCreateMission = jest.fn();
-    const { getByText, getByLabelText } = await render(
-      <ToastProvider>
-        <HouseScreen houses={[MISSION_HOUSE]} onCreateMission={onCreateMission} />
-      </ToastProvider>,
-    );
-    await fireEvent.press(getByLabelText('공동 미션'));
-    await fireEvent.press(getByLabelText('미션 만들기'));
-    await fireEvent.press(getByLabelText('미션 만들기 확인'));
-
-    expect(getByText('미션 이름을 입력해주세요')).toBeTruthy();
-    expect(onCreateMission).not.toHaveBeenCalled();
-  });
-
-  it('shows the empty-mission hint when the house has no missions', async () => {
-    const { getByText, getByLabelText } = await render(
-      <HouseScreen houses={[{ ...MISSION_HOUSE, missions: [] }]} />,
-    );
-    await fireEvent.press(getByLabelText('공동 미션'));
-    expect(getByText('아직 미션이 없어요. 첫 미션을 만들어 다 같이 도전해보세요!')).toBeTruthy();
-  });
-
   it('renders a live room preview on tiles that have one, plain tile otherwise', async () => {
     const roomPreviews = {
       42: {
@@ -385,50 +239,6 @@ describe('HouseScreen', () => {
     expect(getByLabelText('수달')).toBeTruthy();
   });
 
-  it('sends the mission period only when the toggle is on (KST day bounds)', async () => {
-    const onCreateMission = jest.fn();
-    const { getByLabelText } = await render(
-      <HouseScreen houses={[MISSION_HOUSE]} onCreateMission={onCreateMission} />,
-    );
-
-    // Toggle off (default): no period fields at all.
-    await fireEvent.press(getByLabelText('공동 미션'));
-    await fireEvent.press(getByLabelText('미션 만들기'));
-    await fireEvent.changeText(getByLabelText('미션 제목'), '기간 없는 미션');
-    await fireEvent.press(getByLabelText('미션 만들기 확인'));
-    expect(onCreateMission).toHaveBeenLastCalledWith(
-      7,
-      expect.not.objectContaining({ startsAt: expect.anything() }),
-    );
-
-    // Toggle on: defaults to 오늘 ~ +7일, sent as KST day bounds.
-    await fireEvent.press(getByLabelText('미션 만들기'));
-    await fireEvent.changeText(getByLabelText('미션 제목'), '기간 있는 미션');
-    await fireEvent.press(getByLabelText('기간 설정'));
-    await fireEvent.press(getByLabelText('미션 만들기 확인'));
-    const input = onCreateMission.mock.calls.at(-1)[1];
-    expect(input.startsAt).toMatch(/^\d{4}-\d{2}-\d{2}T00:00:00\+09:00$/);
-    expect(input.endsAt).toMatch(/^\d{4}-\d{2}-\d{2}T23:59:59\+09:00$/);
-    expect(input.endsAt > input.startsAt).toBe(true);
-  });
-
-  it('shows the end date on active missions with a period', async () => {
-    const house = {
-      ...MISSION_HOUSE,
-      missions: [
-        { id: 21, title: '기간 미션', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 0, target: 5, status: 'ACTIVE' as const, endsOn: '2026-07-23' }, // prettier-ignore
-        { id: 22, title: '끝난 기간 미션', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 5, target: 5, status: 'COMPLETED' as const, endsOn: '2026-07-01' }, // prettier-ignore
-      ],
-    };
-    const { getByText, getByLabelText, queryByText } = await render(
-      <HouseScreen houses={[house]} />,
-    );
-    await fireEvent.press(getByLabelText('공동 미션'));
-    expect(getByText('~07.23')).toBeTruthy();
-    // Finished missions show their status, not a stale end date.
-    expect(queryByText('~07.01')).toBeNull();
-  });
-
   it('renders the house frame with level progress (#287)', async () => {
     const house = {
       ...MISSION_HOUSE,
@@ -436,11 +246,11 @@ describe('HouseScreen', () => {
       growthPoints: 130,
       coverImageKey: 'house/cloud-balloon/frame.png',
     };
-    const { getByTestId, getByText, getByLabelText } = await render(
+    const { getByTestId, getByText } = await render(
       <HouseScreen
         houses={[house]}
         userName="나"
-        onAddMissionRoutine={jest.fn()}
+        onOpenMissions={jest.fn()}
         linkedRoutines={[{ missionId: 11, completedToday: true }]}
       />,
     );
@@ -451,11 +261,9 @@ describe('HouseScreen', () => {
     // 요약 스탯은 미션 시트로 이동 (#761) — 아래 시트 열기에서 단언.
     // 방 타일은 창문 안에서도 그대로 (정원 4 → 좌석 2 + 빈방 2).
     expect(getByText('나 (나)')).toBeTruthy();
-    // + 버튼은 시트 안에서 텍스트로 목적을 말한다.
-    await fireEvent.press(getByLabelText('공동 미션'));
-    expect(getByText('＋ 내 루틴에')).toBeTruthy();
-    // 진행 중 2(ACTIVE 11·12), 오늘 나의 기여 1/2 (11이 연동 완료) — 시트 요약.
-    expect(getByText(/진행 중 2개 · 오늘 나의 기여 1\/2/)).toBeTruthy();
+    // 미션 상세는 별도 화면으로 옮겼다 (#875) — 여기선 요약 줄만 단언한다.
+    // ACTIVE 2개(11·12) 중 11이 연동 완료라 오늘 기여 1/2.
+    expect(getByText('오늘 1/2')).toBeTruthy();
   });
 
   it('frame tiles: a single tap visits after the double-tap window (#307)', async () => {
@@ -498,19 +306,9 @@ describe('HouseScreen', () => {
     expect(queryByLabelText('이전 집')).toBeNull();
   });
 
-  it('hides the owner tools from plain members', async () => {
-    const { queryByLabelText } = await render(
-      <HouseScreen
-        houses={[{ ...MISSION_HOUSE, myRole: 'MEMBER' }]}
-        onUpdateHouse={jest.fn()}
-        onTransferOwnership={jest.fn()}
-        onKickMember={jest.fn()}
-        onCreateMission={jest.fn()}
-      />,
-    );
-    // Mission creation is owner-only on the server (403 HOUSE_NOT_OWNER).
-    expect(queryByLabelText('미션 만들기')).toBeNull();
-  });
+  // 'hides the owner tools from plain members'는 삭제했다 (#875) — 이 화면엔
+  // 방장 전용 UI가 더 이상 없다. 집 정보 수정은 #753에서 구성원 화면으로,
+  // 미션 만들기는 #875에서 미션 화면으로 갔고 권한 단언도 각 화면 테스트에 있다.
 
   it('visits a friend room and my room on tap', async () => {
     const onVisitFriend = jest.fn();

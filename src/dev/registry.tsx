@@ -14,6 +14,7 @@ import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
 import { GachaScreen } from '@/components/screens/gacha-screen';
 import { HouseScreen, type House } from '@/components/screens/house-screen';
+import { HouseMissionsScreen } from '@/components/screens/house-missions-screen';
 import { HouseMembersScreen, manageableMembers } from '@/components/screens/house-members-screen';
 import { HelpScreen } from '@/components/screens/help-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
@@ -512,12 +513,47 @@ export const galleryEntries: GalleryEntry[] = [
   {
     name: 'HouseScreen',
     description:
-      'Ported from the prototype HouseScreen (#10): house switcher, member rooms, group goals. 구성원 관리는 셸 화면으로 승격(#753) — 아래 HouseMembersScreen 항목에서 미리보기.',
+      'Ported from the prototype HouseScreen (#10): house switcher, member rooms, 공동 미션 요약 줄. 구성원 관리·공동 미션은 셸 화면으로 승격(#753·#875) — 아래 항목에서 미리보기.',
     render: () => (
       <View style={{ height: 900, alignSelf: 'stretch' }}>
-        <HouseScreen />
+        {/* onOpenMissions를 배선해야 요약 줄이 그려진다 (#875). */}
+        <HouseScreen onOpenMissions={() => {}} />
       </View>
     ),
+  },
+  {
+    name: 'HouseMissionsScreen',
+    description:
+      '집 → 공동 미션 (#875에서 모달 → 셸 화면으로 승격): 미션 목록·진행률, 보상 수령, 만들기 폼(유형별 목표 상한·단위 #872).',
+    render: () => {
+      const demoHouse: House = {
+        houseId: 7,
+        name: '데모 하우스',
+        myRole: 'OWNER',
+        maxMembers: 4,
+        memberCount: 2,
+        floors: [],
+        missions: [
+          { id: 11, title: '주간 루틴 지키기', desc: '주간 구성원 달성 횟수', icon: 'calendar', current: 3, target: 10, status: 'ACTIVE' }, // prettier-ignore
+          { id: 12, title: '기상 인증 모으기', desc: '일일 구성원 달성률', icon: 'sun', current: 80, target: 80, status: 'ACTIVE', achieved: true }, // prettier-ignore
+          { id: 13, title: '지난 미션', desc: '주간 구성원 달성 횟수', icon: 'calendar', current: 5, target: 5, status: 'COMPLETED' }, // prettier-ignore
+        ],
+      };
+      return (
+        <View style={{ height: 900, alignSelf: 'stretch' }}>
+          <HouseMissionsScreen
+            house={demoHouse}
+            missions={demoHouse.missions ?? []}
+            isOwner
+            onBack={() => {}}
+            onCreateMission={() => {}}
+            onDeleteMission={() => {}}
+            onClaimMission={() => {}}
+            onAddMissionRoutine={() => {}}
+          />
+        </View>
+      );
+    },
   },
   {
     name: 'HouseMembersScreen',
