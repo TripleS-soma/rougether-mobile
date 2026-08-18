@@ -26,7 +26,6 @@ import {
 import { manageableMembers } from '@/components/screens/house-members-screen';
 import { SeatTile } from '@/components/screens/house/seat-tile';
 import { type SeatRect, seatAtPoint } from '@/components/screens/house/seat-drag';
-import { HouseMissionsSheet } from '@/components/screens/sheets/house-missions-sheet';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Icon } from '@/components/ui/icon';
 import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
@@ -239,6 +238,8 @@ export type HouseScreenProps = RoomCatalogProps &
     onKickMember?: (houseId: number, membershipId: number) => void;
     /** Leave the current house via the API. */
     onLeaveHouse?: (houseId: number) => void;
+    /** 공동 미션 화면 열기 (#875) — 요약 줄 탭. 없으면 요약 줄을 그리지 않는다. */
+    onOpenMissions?: () => void;
     /** File a mission as a daily routine under the house-named category. */
     onAddMissionRoutine?: (houseId: number, mission: HouseMission) => void;
     /** 현재 집 미션에 연동된 내 루틴 (#578) — 연동/기여함 라벨 판정. */
@@ -314,6 +315,7 @@ export const HouseScreen = memo(function HouseScreen({
   onKickMember,
   onLeaveHouse,
   onAddMissionRoutine,
+  onOpenMissions,
   linkedRoutines = [],
   contributedMissionIds = [],
   onClaimMission,
@@ -380,7 +382,6 @@ export const HouseScreen = memo(function HouseScreen({
     onHouseIndexChange?.(next);
   };
   // 공동 미션 시트 (#287) — 하단 카드 대신 플로팅 버튼으로 연다.
-  const [showMissions, setShowMissions] = useState(false);
 
   const currentHouse: House | undefined = houses[Math.min(houseIndex, houses.length - 1)];
   // 서브화면(구성원 관리·집 탐색 …)에 다녀와도 보던 자리로 (#763).
@@ -713,9 +714,6 @@ export const HouseScreen = memo(function HouseScreen({
     onPagerLockChange?.(zoomed || dragSeat != null);
   }, [zoomed, dragSeat, onPagerLockChange]);
 
-  // Owner tools need the OWNER role and a server house id.
-  const isOwner = currentHouse?.myRole === 'OWNER' && !!currentHouse?.houseId;
-
   // No houses yet (fresh account) → guide to 집 탐색 instead of crashing on
   // an empty switcher.
   // 창문 타일 탭 판정 (#307): 한 번 탭 = 방문(더블탭 간격만큼 지연 실행),
@@ -900,6 +898,16 @@ export const HouseScreen = memo(function HouseScreen({
     );
   };
 
+  // 요약 줄 파생 (#875) — 시트가 목록 위에 그리던 것과 같은 값.
+  const activeMissions = missions.filter((m) => m.status === 'ACTIVE');
+  const activeMissionCount = activeMissions.length;
+  const claimableCount = activeMissions.filter((m) => m.achieved).length;
+  const contributedTodayCount = activeMissions.filter(
+    (m) =>
+      contributedMissionIds.includes(m.id) ||
+      linkedRoutines.some((r) => r.missionId === m.id && r.completedToday),
+  ).length;
+
   return (
     <View style={[styles.screen, screenStyle]}>
       <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
@@ -942,6 +950,41 @@ export const HouseScreen = memo(function HouseScreen({
           <Icon name="members" size={18} color={t.text} />
         </ScalePressable>
       </View>
+
+      {/* 공동 미션 요약 줄 (#875) — 예전엔 우하단 FAB 뒤에 통째로 숨어서, 집에
+          들어와도 우리 집이 뭘 하는지 **누르기 전엔 보이지 않았다.** 집 화면은
+          핀치·팬 캔버스라 목록을 상시로 얹으면 제스처가 싸운다 — 한 줄이면
+          캔버스와 안 싸우면서 "지금 뭐가 진행 중이고 내가 오늘 기여했나"를
+          답한다. 탭하면 미션 화면으로. */}
+      {onOpenMissions ? (
+        <CoachTarget id="house-missions">
+          <ScalePressable
+            onPress={onOpenMissions}
+            accessibilityRole="button"
+            accessibilityLabel={
+              claimableCount > 0
+                ? `우리 집의 목표, 받을 보상 ${claimableCount}개`
+                : '우리 집의 목표'
+            }
+            style={[styles.missionRow, { backgroundColor: t.surfaceMuted }]}>
+            <TargetPictogram size={16} />
+            <Text style={[Typography.label, styles.missionRowTitle, { color: t.text }]}>
+              우리 집의 목표
+            </Text>
+            {activeMissionCount > 0 ? (
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                오늘 {contributedTodayCount}/{activeMissionCount}
+              </Text>
+            ) : (
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>진행 중 없음</Text>
+            )}
+            {claimableCount > 0 ? (
+              <View style={[styles.missionRowDot, { backgroundColor: t.warning }]} />
+            ) : null}
+            <Icon name="forward" size={14} color={t.textDisabled} />
+          </ScalePressable>
+        </CoachTarget>
+      ) : null}
 
       {/* 타일 드래그 중에는 스크롤이 제스처를 뺏지 않게 잠근다 (#278). */}
       <PawRefreshScroll
@@ -1131,35 +1174,6 @@ export const HouseScreen = memo(function HouseScreen({
           })}
         </View>
       </PawRefreshScroll>
-
-      {/* 공동 미션 플로팅 버튼 (#287) — 보상 수령 가능하면 점 표시. */}
-      <ScalePressable
-        onPress={() => setShowMissions(true)}
-        accessibilityRole="button"
-        accessibilityLabel="공동 미션"
-        style={[styles.missionFab, { backgroundColor: t.primary }]}>
-        {/* absolute FAB이라 래퍼 대신 내용을 측정 (#351). */}
-        <CoachTarget id="house-missions">
-          <TargetPictogram size={24} color={t.onPrimary} />
-        </CoachTarget>
-        {missions.some((m) => m.status === 'ACTIVE' && m.achieved) ? (
-          <View style={[styles.fabDot, { backgroundColor: t.warning }]} />
-        ) : null}
-      </ScalePressable>
-
-      <HouseMissionsSheet
-        visible={showMissions}
-        house={currentHouse}
-        missions={missions}
-        isOwner={isOwner}
-        linkedRoutines={linkedRoutines}
-        contributedMissionIds={contributedMissionIds}
-        onClose={() => setShowMissions(false)}
-        onCreateMission={onCreateMission}
-        onDeleteMission={onDeleteMission}
-        onClaimMission={onClaimMission}
-        onAddMissionRoutine={onAddMissionRoutine}
-      />
     </View>
   );
 });
@@ -1168,6 +1182,18 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
   },
+  missionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    marginHorizontal: Spacing.four,
+    marginBottom: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderRadius: Radius.md,
+  },
+  missionRowTitle: { flex: 1 },
+  missionRowDot: { width: 6, height: 6, borderRadius: Radius.pill },
   emptyWrap: {
     flex: 1,
     alignItems: 'center',
@@ -1361,29 +1387,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.one,
-  },
-  missionFab: {
-    position: 'absolute',
-    right: Spacing.four,
-    bottom: Spacing.five,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 6,
-    shadowColor: ShadowColor,
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-  },
-  fabDot: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
   },
   // Name row + optional last-seen line (#383), centered as one block.
 });

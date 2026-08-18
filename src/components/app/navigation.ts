@@ -13,6 +13,7 @@ export type Screen =
   | 'gacha'
   | 'house'
   | 'houseMembers'
+  | 'houseMissions'
   | 'friendRoom'
   | 'houseSearch'
   | 'createHouse'
@@ -37,6 +38,7 @@ export const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   gacha: null,
   house: 'house',
   houseMembers: null,
+  houseMissions: null,
   friendRoom: null,
   houseSearch: null,
   createHouse: null,
@@ -75,6 +77,7 @@ export const BACK_SCREEN: Record<Screen, Screen | null> = {
   gacha: 'myRoom',
   house: 'myRoom',
   houseMembers: 'house',
+  houseMissions: 'house',
   friendRoom: 'house',
   houseSearch: 'house',
   createHouse: 'houseSearch',
