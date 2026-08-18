@@ -163,8 +163,9 @@ describe('HouseScreen', () => {
     expect(getByText('우리 집의 목표')).toBeTruthy();
     // ACTIVE 2개 중 11이 오늘 완료 → 1/2.
     expect(getByText('오늘 1/2')).toBeTruthy();
-    // 12가 achieved라 받을 보상이 있다 — 라벨로도 알린다.
-    await fireEvent.press(getByLabelText(/우리 집의 목표, 받을 보상 1개/));
+    // 눈에 보이는 진행 상황과 받을 보상이 모두 라벨에 담긴다 — 명시 라벨을
+    // 주면 자식 Text가 스크린리더로 안 흘러가므로.
+    await fireEvent.press(getByLabelText('우리 집의 목표, 오늘 1/2 기여, 받을 보상 1개'));
     expect(onOpenMissions).toHaveBeenCalled();
     // FAB은 사라졌다 — 진입점은 하나다.
     expect(queryByLabelText('공동 미션')).toBeNull();
@@ -249,7 +250,6 @@ describe('HouseScreen', () => {
       <HouseScreen
         houses={[house]}
         userName="나"
-        onAddMissionRoutine={jest.fn()}
         onOpenMissions={jest.fn()}
         linkedRoutines={[{ missionId: 11, completedToday: true }]}
       />,
@@ -306,19 +306,9 @@ describe('HouseScreen', () => {
     expect(queryByLabelText('이전 집')).toBeNull();
   });
 
-  it('hides the owner tools from plain members', async () => {
-    const { queryByLabelText } = await render(
-      <HouseScreen
-        houses={[{ ...MISSION_HOUSE, myRole: 'MEMBER' }]}
-        onUpdateHouse={jest.fn()}
-        onTransferOwnership={jest.fn()}
-        onKickMember={jest.fn()}
-        onCreateMission={jest.fn()}
-      />,
-    );
-    // Mission creation is owner-only on the server (403 HOUSE_NOT_OWNER).
-    expect(queryByLabelText('미션 만들기')).toBeNull();
-  });
+  // 'hides the owner tools from plain members'는 삭제했다 (#875) — 이 화면엔
+  // 방장 전용 UI가 더 이상 없다. 집 정보 수정은 #753에서 구성원 화면으로,
+  // 미션 만들기는 #875에서 미션 화면으로 갔고 권한 단언도 각 화면 테스트에 있다.
 
   it('visits a friend room and my room on tap', async () => {
     const onVisitFriend = jest.fn();

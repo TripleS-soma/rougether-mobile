@@ -89,6 +89,19 @@ describe('HouseMissionsScreen', () => {
     expect(queryByLabelText('주간 루틴 지키기 삭제')).toBeNull();
   });
 
+  /** 미션 생성은 서버에서 방장 전용(403 HOUSE_NOT_OWNER) — 버튼도 숨는다. */
+  it('일반 구성원에게는 미션 만들기 버튼을 숨긴다', async () => {
+    const { queryByLabelText } = await render(
+      <HouseMissionsScreen
+        house={MEMBER_HOUSE}
+        missions={MEMBER_HOUSE.missions ?? []}
+        isOwner={false}
+        onCreateMission={jest.fn()}
+      />,
+    );
+    expect(queryByLabelText('미션 만들기')).toBeNull();
+  });
+
   it('shows 기여됨/루틴 연동됨 labels instead of + when applicable', async () => {
     const { queryByLabelText, getByText } = await render(
       <HouseMissionsScreen

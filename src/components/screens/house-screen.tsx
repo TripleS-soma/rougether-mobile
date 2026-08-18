@@ -240,18 +240,10 @@ export type HouseScreenProps = RoomCatalogProps &
     onLeaveHouse?: (houseId: number) => void;
     /** 공동 미션 화면 열기 (#875) — 요약 줄 탭. 없으면 요약 줄을 그리지 않는다. */
     onOpenMissions?: () => void;
-    /** File a mission as a daily routine under the house-named category. */
-    onAddMissionRoutine?: (houseId: number, mission: HouseMission) => void;
     /** 현재 집 미션에 연동된 내 루틴 (#578) — 연동/기여함 라벨 판정. */
     linkedRoutines?: { missionId: number; completedToday?: boolean }[];
     /** Mission ids contributed this session (기여 직후 즉시 반영용 보조 신호). */
     contributedMissionIds?: number[];
-    /** Claim the reward of an achieved mission. */
-    onClaimMission?: (houseId: number, missionId: number) => void;
-    /** Create a new group mission. */
-    onCreateMission?: (houseId: number, input: NewHouseMission) => void;
-    /** Delete a mission (server: OWNER only, COMPLETED not deletable). */
-    onDeleteMission?: (houseId: number, missionId: number) => void;
     /** Edit the house settings via the API (owner only). */
     onUpdateHouse?: (houseId: number, input: HouseEditInput) => void;
     /** Cover catalog (GET /houses/cover-images); empty hides the edit section. */
@@ -314,13 +306,9 @@ export const HouseScreen = memo(function HouseScreen({
   isKickedMember,
   onKickMember,
   onLeaveHouse,
-  onAddMissionRoutine,
   onOpenMissions,
   linkedRoutines = [],
   contributedMissionIds = [],
-  onClaimMission,
-  onCreateMission,
-  onDeleteMission,
   onUpdateHouse,
   covers = [],
   roomPreviews,
@@ -961,11 +949,17 @@ export const HouseScreen = memo(function HouseScreen({
           <ScalePressable
             onPress={onOpenMissions}
             accessibilityRole="button"
-            accessibilityLabel={
-              claimableCount > 0
-                ? `우리 집의 목표, 받을 보상 ${claimableCount}개`
-                : '우리 집의 목표'
-            }
+            /* 명시 라벨을 주면 자식 Text가 스크린리더로 안 흘러간다 —
+               눈에 보이는 진행 상황을 라벨에도 담는다 (리뷰 반영). */
+            accessibilityLabel={[
+              '우리 집의 목표',
+              activeMissionCount > 0
+                ? `오늘 ${contributedTodayCount}/${activeMissionCount} 기여`
+                : '진행 중 없음',
+              claimableCount > 0 ? `받을 보상 ${claimableCount}개` : null,
+            ]
+              .filter(Boolean)
+              .join(', ')}
             style={[styles.missionRow, { backgroundColor: t.surfaceMuted }]}>
             <TargetPictogram size={16} />
             <Text style={[Typography.label, styles.missionRowTitle, { color: t.text }]}>
