@@ -18,7 +18,9 @@ import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { formatTime } from '@/utils/datetime';
 
 /** 롱프레스 후 드래그 활성까지 (#716) — 그 전 세로 스크롤은 ScrollView 몫. */
-const LONG_PRESS_MS = 220;
+/** 루틴 행 드래그를 여는 꾹 누름. 집 순서(350ms)보다 짧다 — 행은 탭 동작이
+ *  체크뿐이라 빨리 잡혀도 오작동이 적다. */
+const ROUTINE_DRAG_LONG_PRESS_MS = 220;
 
 export type RoutineRowProps = {
   /** 행 식별자 — 부모의 핸들러 디스패치 키이자 드래그 대상 키. */
@@ -97,7 +99,7 @@ function RoutineRowBase({
   const keyRef = useLatestRef(rowKey);
   const gesture = useConstant(() =>
     Gesture.Pan()
-      .activateAfterLongPress(LONG_PRESS_MS)
+      .activateAfterLongPress(ROUTINE_DRAG_LONG_PRESS_MS)
       // runOnJS: 측정(measureInWindow)·Animated를 그대로 쓰기 위해 (#716).
       .runOnJS(true)
       .onStart(() => handlers.current.onDragStart(keyRef.current))

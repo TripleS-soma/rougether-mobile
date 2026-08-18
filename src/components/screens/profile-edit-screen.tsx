@@ -5,12 +5,10 @@ import { CharacterAvatar } from '@/components/room/character-avatar';
 import { Field } from '@/components/ui/field';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
+import { BIO_MAX, NICKNAME_MAX } from '@/constants/profile';
 import { Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
-
-const NICKNAME_MAX = 12;
-const BIO_MAX = 40;
 
 export type ProfileEditScreenProps = {
   initialNickname?: string;
