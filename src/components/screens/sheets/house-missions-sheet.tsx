@@ -33,6 +33,24 @@ const MISSION_TYPE_OPTIONS: {
   { type: 'WEEKLY_MEMBER_COUNT', icon: 'calendar', label: '주간 달성 횟수' },
 ];
 
+/**
+ * 목표 수치는 **미션 유형마다 뜻과 상한이 다르다** (#872, 서버 계약).
+ * - DAILY_MEMBER_RATE: 오늘 기여한 멤버 **비율 %** → 1~100. 넘기면 서버가
+ *   400 `HOUSE_MISSION_TARGET_INVALID`을 준다.
+ * - WEEKLY_MEMBER_COUNT: 기여 **누적 합** → 1~1000.
+ *
+ * 예전엔 클라이언트가 유형과 무관하게 1~1000만 봐서, 달성률에 500을 넣어도
+ * 통과시키고 서버에서 400을 맞았다. 단위를 화면에 붙여 뜻도 함께 드러낸다.
+ *
+ * STREAK_DAYS는 MVP 미지원이라 `NewHouseMission['missionType']`에 아예 없다 —
+ * Record가 전수라 유형이 늘면 여기서 컴파일이 막힌다.
+ */
+const MISSION_TARGET_RULES: Record<NewHouseMission['missionType'], { max: number; unit: string }> =
+  {
+    DAILY_MEMBER_RATE: { max: 100, unit: '%' },
+    WEEKLY_MEMBER_COUNT: { max: 1000, unit: '회' },
+  };
+
 export type HouseMissionsSheetProps = {
   visible: boolean;
   house: House;
@@ -104,16 +122,20 @@ export function HouseMissionsSheet({
   // Mission deletion too; COMPLETED rows hide the button (server 409s them).
   const canDeleteMission = !!(onDeleteMission && isOwner);
   const missionTargetNum = Number(missionTarget);
-  const canSubmitMission =
-    missionTitle.trim().length > 0 &&
+  const targetRule = MISSION_TARGET_RULES[missionType];
+  const targetValid =
     Number.isInteger(missionTargetNum) &&
     missionTargetNum >= 1 &&
-    missionTargetNum <= 1000;
+    missionTargetNum <= targetRule.max;
+  const canSubmitMission = missionTitle.trim().length > 0 && targetValid;
   const submitMission = () => {
     // Blocked taps explain themselves, first unmet condition first.
     if (missionTitle.trim().length === 0) return toast('미션 이름을 입력해주세요', 'error');
-    if (!Number.isInteger(missionTargetNum) || missionTargetNum < 1 || missionTargetNum > 1000)
-      return toast('목표값은 1~1000 사이 숫자로 입력해주세요', 'error');
+    if (!targetValid)
+      return toast(
+        `목표값은 1~${targetRule.max}${targetRule.unit} 사이 숫자로 입력해주세요`,
+        'error',
+      );
     if (!currentHouse.houseId) return;
     onCreateMission?.(currentHouse.houseId, {
       title: missionTitle.trim(),
@@ -383,15 +405,23 @@ export function HouseMissionsSheet({
                 })}
               </View>
               <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                목표 수치 (1~1000)
+                목표 수치 (1~{targetRule.max}
+                {targetRule.unit})
               </Text>
-              <TextInput
-                value={missionTarget}
-                onChangeText={setMissionTarget}
-                keyboardType="number-pad"
-                accessibilityLabel="목표 수치"
-                style={[styles.missionInput, { backgroundColor: t.surfaceMuted, color: t.text }]}
-              />
+              {/* 단위를 입력칸 안에 붙인다 — 달성률에 500을 적어도 통과하던
+                  시절엔 이 값이 %인지 횟수인지 화면 어디에도 없었다. */}
+              <View style={[styles.missionInputRow, { backgroundColor: t.surfaceMuted }]}>
+                <TextInput
+                  value={missionTarget}
+                  onChangeText={setMissionTarget}
+                  keyboardType="number-pad"
+                  accessibilityLabel="목표 수치"
+                  style={[styles.missionInput, styles.missionInputField, { color: t.text }]}
+                />
+                <Text style={[Typography.label, styles.missionUnit, { color: t.textMuted }]}>
+                  {targetRule.unit}
+                </Text>
+              </View>
               <View style={styles.periodRow}>
                 <Text style={[Typography.supporting, { color: t.textMuted }]}>기간 설정</Text>
                 <ToggleSwitch
@@ -563,6 +593,13 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     fontSize: 16,
   },
+  missionInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: Radius.md,
+  },
+  missionInputField: { flex: 1 },
+  missionUnit: { paddingRight: Spacing.three },
   missionTypeRow: {
     flexDirection: 'row',
     gap: Spacing.two,

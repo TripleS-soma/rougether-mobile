@@ -285,6 +285,63 @@ describe('HouseScreen', () => {
     });
   });
 
+  /**
+   * 목표 수치는 유형마다 뜻과 상한이 다르다 (#872, 서버 계약). 달성률은 %라
+   * 1~100이고 넘기면 서버가 400 HOUSE_MISSION_TARGET_INVALID를 준다. 예전엔
+   * 클라이언트가 유형 무관 1~1000만 봐서 500%도 통과시켜 400을 맞았다.
+   */
+  it('일일 달성률 목표가 100을 넘으면 보내지 않고 알려준다 (#872)', async () => {
+    const onCreateMission = jest.fn();
+    const { getByText, getByLabelText } = await render(
+      <ToastProvider>
+        <HouseScreen houses={[MISSION_HOUSE]} onCreateMission={onCreateMission} />
+      </ToastProvider>,
+    );
+    await fireEvent.press(getByLabelText('공동 미션'));
+    await fireEvent.press(getByLabelText('미션 만들기'));
+    await fireEvent.press(getByText('일일 달성률'));
+    await fireEvent.changeText(getByLabelText('미션 제목'), '달성률 미션');
+    await fireEvent.changeText(getByLabelText('목표 수치'), '500');
+    await fireEvent.press(getByLabelText('미션 만들기 확인'));
+    expect(onCreateMission).not.toHaveBeenCalled();
+    expect(getByText(/1~100% 사이/)).toBeTruthy();
+  });
+
+  /** 같은 500이 주간 달성 횟수에서는 유효하다 — 상한이 1000이다. */
+  it('주간 달성 횟수는 같은 값도 통과시킨다 — 상한이 다르다 (#872)', async () => {
+    const onCreateMission = jest.fn();
+    const { getByLabelText } = await render(
+      <ToastProvider>
+        <HouseScreen houses={[MISSION_HOUSE]} onCreateMission={onCreateMission} />
+      </ToastProvider>,
+    );
+    await fireEvent.press(getByLabelText('공동 미션'));
+    await fireEvent.press(getByLabelText('미션 만들기'));
+    await fireEvent.changeText(getByLabelText('미션 제목'), '횟수 미션');
+    await fireEvent.changeText(getByLabelText('목표 수치'), '500');
+    await fireEvent.press(getByLabelText('미션 만들기 확인'));
+    expect(onCreateMission).toHaveBeenCalledWith(
+      7,
+      expect.objectContaining({ missionType: 'WEEKLY_MEMBER_COUNT', targetValue: 500 }),
+    );
+  });
+
+  /** 값이 %인지 횟수인지 화면에 드러나야 한다 — 예전엔 어디에도 없었다. */
+  it('선택한 유형에 따라 단위와 허용 범위를 보여준다 (#872)', async () => {
+    const { getByText, getByLabelText } = await render(
+      <ToastProvider>
+        <HouseScreen houses={[MISSION_HOUSE]} onCreateMission={jest.fn()} />
+      </ToastProvider>,
+    );
+    await fireEvent.press(getByLabelText('공동 미션'));
+    await fireEvent.press(getByLabelText('미션 만들기'));
+    // 기본값은 주간 달성 횟수 — 1~1000회.
+    expect(getByText('목표 수치 (1~1000회)')).toBeTruthy();
+
+    await fireEvent.press(getByText('일일 달성률'));
+    expect(getByText('목표 수치 (1~100%)')).toBeTruthy();
+  });
+
   it('explains a missing mission title with a toast instead of creating', async () => {
     const onCreateMission = jest.fn();
     const { getByText, getByLabelText } = await render(
