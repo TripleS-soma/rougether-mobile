@@ -34,14 +34,3 @@ export type CategoryDeleteMode = 'UNASSIGN' | 'PURGE';
 export function deleteCategory(id: number, mode: CategoryDeleteMode) {
   return apiDelete<void>(`/categories/${id}?mode=${mode}`);
 }
-
-/**
- * DELETE /categories/{id}/house-link — 집 연동 해제 (#907).
- * **카테고리와 소속 루틴·투두는 그대로 남는다** — `deleteCategory`와 다르다.
- * 이미 연동이 없어도 성공(멱등).
- *
- * `updateCategory`의 `houseId: null`로는 안 된다 — 그건 "기존 유지"다.
- */
-export function unlinkCategoryHouse(id: number) {
-  return apiDelete<void>(`/categories/${id}/house-link`);
-}
