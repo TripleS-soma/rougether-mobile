@@ -419,3 +419,65 @@ describe('useMyRoomData — 달력 월 점 (#838)', () => {
     expect(result.current.markedTodoDates.size).toBe(0);
   });
 });
+
+/**
+ * 루틴을 완료해도 헤더의 🔥 일수가 그 자리에서 안 바뀌고, 새로고침을 해야
+ * 반영되던 문제 (#895).
+ *
+ * 원인은 계산이 아니라 **버림**이었다 — 서버가 완료·취소 응답에 갱신된 스트릭을
+ * 실어주는데(`RoutineLogResponse.streak`, `DELETE .../logs`의
+ * `StreakSummaryResponse`) 앱이 보상·미션 기여만 꺼내 쓰고 스트릭은 무시했다.
+ */
+describe('useMyRoomData — 스트릭 즉시 반영 (#895)', () => {
+  const today = () => {
+    const n = new Date();
+    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+  };
+
+  const harness = (onLog: (method: string) => unknown) => {
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+      if (url.includes('/categories')) return res({ items: [{ id: 1, name: '기본' }] });
+      if (url.endsWith('/routines'))
+        return res({ items: [{ id: 9, title: '스트레칭', categoryId: 1, repeatType: 'DAILY' }] });
+      if (url.includes('/routines/9/logs')) return res(onLog(method));
+      // 최초 로드 스트릭은 3일.
+      if (url.endsWith('/today'))
+        return res({ categories: [], summary: {}, streak: { currentCount: 3 } });
+      if (url.endsWith('/me')) return res({ userId: 1, nickname: '테스터' });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+  };
+
+  it('완료 응답의 스트릭을 즉시 반영한다', async () => {
+    harness(() => ({ rewardAmount: 10, streak: { currentCount: 4 } }));
+    const { result } = await renderHook(() => useMyRoomData());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.streak).toBe(3);
+
+    await act(async () => {
+      await result.current.toggleCompletion('r9', today());
+    });
+    // /today를 다시 부르지 않고도 헤더 값이 바뀐다.
+    await waitFor(() => expect(result.current.streak).toBe(4));
+  });
+
+  /** 오늘 완료를 취소하면 서버가 currentCount를 되돌린다 — 그것도 반영해야 한다. */
+  it('완료 취소 응답의 스트릭도 반영한다', async () => {
+    harness((method) =>
+      method === 'DELETE' ? { currentCount: 2 } : { rewardAmount: 10, streak: { currentCount: 4 } },
+    );
+    const { result } = await renderHook(() => useMyRoomData());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      await result.current.toggleCompletion('r9', today());
+    });
+    await waitFor(() => expect(result.current.streak).toBe(4));
+
+    await act(async () => {
+      await result.current.toggleCompletion('r9', today());
+    });
+    await waitFor(() => expect(result.current.streak).toBe(2));
+  });
+});
