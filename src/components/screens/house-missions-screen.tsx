@@ -11,6 +11,7 @@ import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { MISSION_TYPE_RULES } from '@/constants/missions';
 import { missionCtaState } from '@/utils/mission-cta';
 import { formatDate, todayIso, toIsoDate } from '@/utils/datetime';
 
@@ -21,32 +22,21 @@ function addDaysIso(iso: string, days: number) {
   return toIsoDate(d);
 }
 
+/** 생성 가능한 유형만 — 표시값은 constants/missions의 단일 출처에서 (#887). */
+const CREATABLE_TYPES: NewHouseMission['missionType'][] = [
+  'DAILY_MEMBER_RATE',
+  'WEEKLY_MEMBER_COUNT',
+];
+
 const MISSION_TYPE_OPTIONS: {
   type: NewHouseMission['missionType'];
   icon: PictogramName;
   label: string;
-}[] = [
-  { type: 'DAILY_MEMBER_RATE', icon: 'sun', label: '일일 달성률' },
-  { type: 'WEEKLY_MEMBER_COUNT', icon: 'calendar', label: '주간 달성 횟수' },
-];
-
-/**
- * 목표 수치는 **미션 유형마다 뜻과 상한이 다르다** (#872, 서버 계약).
- * - DAILY_MEMBER_RATE: 오늘 기여한 멤버 **비율 %** → 1~100. 넘기면 서버가
- *   400 `HOUSE_MISSION_TARGET_INVALID`을 준다.
- * - WEEKLY_MEMBER_COUNT: 기여 **누적 합** → 1~1000.
- *
- * 예전엔 클라이언트가 유형과 무관하게 1~1000만 봐서, 달성률에 500을 넣어도
- * 통과시키고 서버에서 400을 맞았다. 단위를 화면에 붙여 뜻도 함께 드러낸다.
- *
- * STREAK_DAYS는 MVP 미지원이라 `NewHouseMission['missionType']`에 아예 없다 —
- * Record가 전수라 유형이 늘면 여기서 컴파일이 막힌다.
- */
-const MISSION_TARGET_RULES: Record<NewHouseMission['missionType'], { max: number; unit: string }> =
-  {
-    DAILY_MEMBER_RATE: { max: 100, unit: '%' },
-    WEEKLY_MEMBER_COUNT: { max: 1000, unit: '회' },
-  };
+}[] = CREATABLE_TYPES.map((type) => ({
+  type,
+  icon: MISSION_TYPE_RULES[type].icon,
+  label: MISSION_TYPE_RULES[type].shortLabel,
+}));
 
 export type HouseMissionsScreenProps = {
   house: House;
@@ -118,7 +108,7 @@ export function HouseMissionsScreen({
   // Mission deletion too; COMPLETED rows hide the button (server 409s them).
   const canDeleteMission = !!(onDeleteMission && isOwner);
   const missionTargetNum = Number(missionTarget);
-  const targetRule = MISSION_TARGET_RULES[missionType];
+  const targetRule = MISSION_TYPE_RULES[missionType];
   const targetValid =
     Number.isInteger(missionTargetNum) &&
     missionTargetNum >= 1 &&
@@ -218,6 +208,7 @@ export function HouseMissionsScreen({
                         </Text>
                         <Text style={[Typography.supporting, { color: t.primaryText }]}>
                           {mission.current}/{mission.target}
+                          {mission.unit}
                         </Text>
                         {canDeleteMission && mission.status !== 'COMPLETED' ? (
                           <Pressable

@@ -152,6 +152,11 @@ export type HouseMission = {
   title: string;
   /** Mission-type description shown under the progress bar. */
   desc: string;
+  /**
+   * 진행 수치의 단위 (`%` / `회`). 유형마다 뜻이 달라서, 없으면 `25/100`이
+   * 비율인지 횟수인지 카드에서 알 수 없다 (#887). 서버가 모르는 유형이면 빈 문자열.
+   */
+  unit?: string;
   icon: PictogramName;
   current: number;
   target: number;

@@ -28,6 +28,25 @@ const MEMBER_HOUSE: House = { ...MISSION_HOUSE, myRole: 'MEMBER' };
 const EMPTY_MISSION_HOUSE: House = { ...MISSION_HOUSE, missions: [] };
 
 describe('HouseMissionsScreen', () => {
+  /**
+   * 유형마다 숫자의 뜻이 다른데 목록엔 단위가 없었다 (#887) — 만들 때는
+   * "1~100%"라고 물어놓고 카드에선 `25/100`으로만 보여줬다.
+   */
+  it('진행 수치에 유형별 단위를 붙인다 (#887)', async () => {
+    const withUnits: House = {
+      ...MISSION_HOUSE,
+      missions: [
+        { id: 21, title: '영양제 먹기', desc: '일일 구성원 달성률', icon: 'sun' as const, current: 25, target: 100, status: 'ACTIVE', unit: '%' }, // prettier-ignore
+        { id: 22, title: '루게더 개발', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 10, target: 10, status: 'ACTIVE', unit: '회' }, // prettier-ignore
+      ],
+    };
+    const { getByText } = await render(
+      <HouseMissionsScreen house={withUnits} missions={withUnits.missions ?? []} isOwner={false} />,
+    );
+    expect(getByText('25/100%')).toBeTruthy();
+    expect(getByText('10/10회')).toBeTruthy();
+  });
+
   it('adds a mission to my routines through the confirm modal, and claims', async () => {
     const onAddMissionRoutine = jest.fn();
     const onClaimMission = jest.fn();
