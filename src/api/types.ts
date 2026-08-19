@@ -991,7 +991,10 @@ export type RoutineUpdateRequest = {
   startsOn?: string;
   // 스펙 미표기 nullable (#733): null은 "지우기" — 종료일 해제.
   endsOn?: string | null;
-  // 스펙 미표기 nullable (#733): 미연동은 null.
+  // 스펙 미표기 nullable (#733): 응답·요청 모두 null이 올 수 있어 타입만 넓힌다.
+  // **null은 "해제"가 아니라 "기존 유지"다** (2026-08-19 스웨거 확인, #907) —
+  // 연동 해제는 DELETE /routines/{id}/house-mission-link 로만 된다.
+  // 카테고리의 houseId도 같은 규칙(어댑터 주석 참고).
   houseMissionId?: number | null;
 };
 
