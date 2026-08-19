@@ -366,9 +366,9 @@ describe('HouseSearchScreen — 참여 전 미리보기 (#328)', () => {
       members: 3,
       rooms: [
         // 실제 방(가구+캐릭터), FREE_V1 방, 방 미생성(기본 빈 방) — 3칸 모두 실렌더.
-        { placedFurnitureIds: ['hanok-bed'], placements: null, wallpaperId: 'wp-1', characterId: 'cat' as const }, // prettier-ignore
-        { placedFurnitureIds: ['hanok-rug'], placements: [{ furnitureId: 'hanok-rug', x: 0.5, y: 0.8, z: 1 }] }, // prettier-ignore
-        { placedFurnitureIds: [], placements: [] },
+        { placements: [], wallpaperId: 'wp-1', characterId: 'cat' as const },
+        { placements: [{ furnitureId: 'hanok-rug', x: 0.5, y: 0.8, z: 1 }] },
+        { placements: [] },
       ],
     };
     const houses = [{ ...RECOMMENDED_HOUSES[0], id: 21, name: '아침집' }];

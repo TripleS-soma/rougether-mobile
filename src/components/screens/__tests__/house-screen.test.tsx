@@ -223,6 +223,7 @@ describe('HouseScreen', () => {
     const roomPreviews = {
       42: {
         placedFurnitureIds: ['bed'],
+        placements: [{ furnitureId: 'bed', x: 0.3, y: 0.7, z: 1 }],
         wallpaperId: 'cream',
         floorId: null,
         backgroundId: null,

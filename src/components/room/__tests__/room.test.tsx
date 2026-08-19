@@ -20,24 +20,43 @@ describe('Room', () => {
     expect(legacy.queryByLabelText('거미줄이 꼈어요')).toBeNull();
   });
 
-  it('renders default furniture and the character', async () => {
-    const { getByLabelText } = await render(<Room />);
+  it('placements에 실린 가구와 캐릭터를 그린다', async () => {
+    const { getByLabelText } = await render(
+      <Room
+        placements={[
+          { furnitureId: 'bed', x: 0.3, y: 0.7, z: 1 },
+          { furnitureId: 'window', x: 0.7, y: 0.3, z: 2 },
+        ]}
+      />,
+    );
     expect(getByLabelText('포근한 침대')).toBeTruthy();
     expect(getByLabelText('햇살 창문')).toBeTruthy();
     expect(getByLabelText('고양이')).toBeTruthy(); // default character (cat), pose 0
   });
 
-  it('renders only the placed furniture and the chosen character', async () => {
+  it('placements에 없는 가구는 그리지 않는다', async () => {
     const { getByLabelText, queryByLabelText } = await render(
-      <Room placedFurnitureIds={['hanok-bed']} characterId="tiger" />,
+      <Room
+        placements={[{ furnitureId: 'hanok-bed', x: 0.5, y: 0.5, z: 1 }]}
+        characterId="tiger"
+      />,
     );
     expect(getByLabelText('한옥 자개 침대')).toBeTruthy();
     expect(queryByLabelText('포근한 침대')).toBeNull();
     expect(getByLabelText('호랑이')).toBeTruthy();
   });
 
+  it('placements가 없으면 가구 없는 방이다 — 슬롯으로 되돌아가지 않는다 (#925)', async () => {
+    // 예전엔 placedFurnitureIds가 기본 가구를 슬롯에 그렸다(prop 자체가 사라졌다).
+    // 이제 가구는 placements가 정본이라, 안 주면 아무것도 안 나온다.
+    const { queryByLabelText, getByLabelText } = await render(<Room />);
+    expect(queryByLabelText('포근한 침대')).toBeNull();
+    expect(queryByLabelText('햇살 창문')).toBeNull();
+    expect(getByLabelText('고양이')).toBeTruthy(); // 캐릭터는 그대로.
+  });
+
   it('renders an unoccupied room without any character when characterId is null', async () => {
-    const { queryByLabelText } = await render(<Room placedFurnitureIds={[]} characterId={null} />);
+    const { queryByLabelText } = await render(<Room characterId={null} />);
     // 빈방 타일(#281): 방만 있고 캐릭터·가구가 없다.
     expect(queryByLabelText('고양이')).toBeNull();
     expect(queryByLabelText('포근한 침대')).toBeNull();
@@ -57,13 +76,7 @@ describe('Room', () => {
       { id: 'b1', name: '해변 배경', price: 100, assetKey: 'items/a/bg.png', color: '#DDD' },
     ];
     const { getByLabelText } = await render(
-      <Room
-        placedFurnitureIds={[]}
-        wallpaperId="w1"
-        wallpapers={wallpapers}
-        backgroundId="b1"
-        backgrounds={backgrounds}
-      />,
+      <Room wallpaperId="w1" wallpapers={wallpapers} backgroundId="b1" backgrounds={backgrounds} />,
     );
     // The wall band renders above the full-bleed background, so an applied
     // wallpaper is always visible.

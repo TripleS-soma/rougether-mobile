@@ -101,7 +101,6 @@ export function useMyRoomPages({
   };
   /** 방 렌더 prop — 배치 상태·카탈로그는 꾸미기(셸 잔류)와 공유라 셸 소유. */
   room: {
-    placedFurnitureIds: string[];
     placements: MyRoomScreenProps['placements'];
     wallpaperId: string;
     floorId: string | null;
@@ -284,7 +283,6 @@ export function useMyRoomPages({
     loading: myRoomLoading,
     loadError: !!myRoomError,
     onRetry: retryMyRoom,
-    placedFurnitureIds: room.placedFurnitureIds,
     placements: room.placements,
     wallpaperId: room.wallpaperId,
     floorId: room.floorId,

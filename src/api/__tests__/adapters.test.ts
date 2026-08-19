@@ -29,7 +29,6 @@ import {
   toCharacterFrames,
   toCharacterFramesMap,
   toOwnedCharacter,
-  toSlotSaves,
   toUserItemMap,
 } from '@/api/adapters';
 import type { ItemResponse, MissionSummary, RoutineResponse, TodayResponse } from '@/api/types';
@@ -305,8 +304,8 @@ describe('API adapters', () => {
     expect(cat.backgrounds.map((b) => b.id)).toEqual(['5']);
     expect(cat.ownedIds.sort()).toEqual(['1', '3', '4']);
 
+    // 표면만 고른다 — 가구 자동 배치는 없다 (#925).
     const placed = ownedPlacement(cat);
-    expect(placed.placedFurnitureIds).toEqual(['1']); // only owned furniture
     expect(placed.wallpaperId).toBe('3'); // owned wallpaper
     expect(placed.floorId).toBe('4'); // owned floor
     expect(placed.backgroundId).toBeNull(); // background not owned
@@ -654,27 +653,12 @@ describe('API adapters', () => {
       cat,
       inv,
     );
+    // 표면만 읽는다 — positioned 슬롯(bottomLeft 등)은 무시된다 (#925).
     expect(placement).toEqual({
-      placedFurnitureIds: ['2'],
       wallpaperId: '9',
       floorId: '11',
       backgroundId: '12',
     });
-
-    const saves = toSlotSaves(['2', '5'], '9', cat, inv, '11', '12');
-    expect(saves).toContainEqual({ slotType: 'bottomLeft', userItemId: 21 });
-    expect(saves).toContainEqual({ slotType: 'topLeft', userItemId: 22 });
-    expect(saves).toContainEqual({ slotType: 'wallpaper', userItemId: 23 });
-    expect(saves).toContainEqual({ slotType: 'floor', userItemId: 24 });
-    expect(saves).toContainEqual({ slotType: 'background', userItemId: 25 });
-    // Every other positioned slot is cleared explicitly.
-    expect(saves).toContainEqual({ slotType: 'midLeft', userItemId: null });
-    expect(saves).toHaveLength(11);
-
-    // Cleared surfaces save explicit nulls.
-    const cleared = toSlotSaves(['2'], '9', cat, inv, null, null);
-    expect(cleared).toContainEqual({ slotType: 'floor', userItemId: null });
-    expect(cleared).toContainEqual({ slotType: 'background', userItemId: null });
 
     // A friend's slots carry their (unknown) userItemIds — resolution goes by
     // assetKey instead; keys missing from the catalogue are skipped.
@@ -689,7 +673,6 @@ describe('API adapters', () => {
       cat,
     );
     expect(friend).toEqual({
-      placedFurnitureIds: ['2'],
       wallpaperId: '9',
       floorId: '11',
       backgroundId: null,
@@ -728,13 +711,35 @@ describe('API adapters', () => {
     };
     const detail = toHousePreviewDetail(wire, cat);
     expect(detail.rooms).toHaveLength(2);
+    // 아직 SLOT_V1인 방 — **가구는 비고 표면(벽지)은 살아 있다** (#925).
+    // 예전엔 슬롯의 침대를 placedFurnitureIds로 되살려 앵커 좌표에 그렸다.
     expect(detail.rooms![0]).toMatchObject({
-      placedFurnitureIds: ['2'],
       wallpaperId: '9',
-      placements: null,
+      placements: [],
       characterId: 'cat',
     });
-    expect(detail.rooms![1]).toEqual({ placedFurnitureIds: [], placements: [] });
+    expect(detail.rooms![1]).toEqual({ placements: [] });
+
+    // FREE_V1 방의 가구는 그대로 실린다 — 폴백만 없앤 것이지 렌더를 끊은 게 아니다.
+    const freeWire = {
+      ...wire,
+      memberRooms: [
+        {
+          membershipId: 1,
+          room: {
+            layoutFormat: 'FREE_V1' as const,
+            character: { code: 'cat' },
+            slots: [{ slotType: 'wallpaper', assetKey: 'items/a/wp.png' }],
+            placements: [
+              { assetKey: 'items/a/bed.png', positionX: 0.4, positionY: 0.6, zIndex: 1 },
+            ],
+          },
+        },
+      ],
+    };
+    const freeDetail = toHousePreviewDetail(freeWire, cat);
+    expect(freeDetail.rooms![0].placements).toHaveLength(1);
+    expect(freeDetail.rooms![0].placements![0]).toMatchObject({ furnitureId: '2' });
 
     // 카탈로그가 없으면(상점 미로드) rooms를 만들지 않아 목업으로 폴백한다.
     expect(toHousePreviewDetail(wire).rooms).toBeUndefined();

@@ -435,18 +435,7 @@ export const galleryEntries: GalleryEntry[] = [
     description: 'Same renderer, hanok furniture + tiger character.',
     render: () => (
       <View style={{ width: 280, alignSelf: 'center' }}>
-        <Room
-          wallpaperId="hanok-simple"
-          characterId="tiger"
-          placedFurnitureIds={[
-            'hanok-bed',
-            'hanok-shelf',
-            'hanok-window',
-            'hanok-rug',
-            'hanok-plant',
-            'hanok-teatable',
-          ]}
-        />
+        <Room wallpaperId="hanok-simple" characterId="tiger" />
       </View>
     ),
   },
@@ -456,10 +445,7 @@ export const galleryEntries: GalleryEntry[] = [
       'Ported from the prototype MyRoomZoomScreen (#7): room view + today’s routines + reward.',
     render: () => (
       <View style={{ height: 900, alignSelf: 'stretch' }}>
-        <MyRoomScreen
-          routines={SAMPLE_ROUTINES}
-          placedFurnitureIds={['bed', 'window', 'plant', 'rug']}
-        />
+        <MyRoomScreen routines={SAMPLE_ROUTINES} />
       </View>
     ),
   },
@@ -495,10 +481,7 @@ export const galleryEntries: GalleryEntry[] = [
       'Ported from the prototype FriendRoomScreen (#9): read-only room + routines + cheers.',
     render: () => (
       <View style={{ height: 860, alignSelf: 'stretch' }}>
-        <FriendRoomScreen
-          friendName="민지"
-          placedFurnitureIds={['bed', 'window', 'plant', 'rug']}
-        />
+        <FriendRoomScreen friendName="민지" />
       </View>
     ),
   },

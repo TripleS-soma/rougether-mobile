@@ -1,4 +1,4 @@
-import { ROOM_RENDER_CONTRACT, roomSlotCenter } from '@/components/room/room-render-contract';
+import { ROOM_RENDER_CONTRACT } from '@/components/room/room-render-contract';
 
 /**
  * Furniture & wallpaper resource catalog (ported/simplified from the prototype
@@ -29,30 +29,6 @@ export type FurnitureSlot =
   | 'bottomCenter'
   | 'bottomRight';
 
-/** Canonical slot order (room layout: top row → mid sides → bottom row). */
-export const SLOT_ORDER: FurnitureSlot[] = [
-  'topLeft',
-  'topCenter',
-  'topRight',
-  'midLeft',
-  'midRight',
-  'bottomLeft',
-  'bottomCenter',
-  'bottomRight',
-];
-
-/** User-facing label per placement slot (decor screen filter tabs). */
-export const SLOT_LABELS: Record<FurnitureSlot, string> = {
-  topLeft: '위 왼쪽',
-  topCenter: '위 가운데',
-  topRight: '위 오른쪽',
-  midLeft: '중간 왼쪽',
-  midRight: '중간 오른쪽',
-  bottomLeft: '아래 왼쪽',
-  bottomCenter: '아래 가운데',
-  bottomRight: '아래 오른쪽',
-};
-
 /**
  * 자유 배치 한 점 (FREE_V1, #327) — 좌표는 방 렌더 영역 기준 0.0~1.0 정규화,
  * 가구의 **중심점**. z는 쌓임 순서(클수록 위). scale/rotation/flip은 2차에서
@@ -67,26 +43,6 @@ export type PlacedFurniture = {
   rotationDeg?: number;
   flipped?: boolean;
 };
-
-/**
- * 기존 슬롯 배치의 자유 배치 프리필 좌표 (#327) — Room의 SLOT_STYLE 앵커
- * (기본 폭 28%, 아래 코너 24%, 정사각 방)에서 계산한 중심점. 첫 자유 배치
- * 진입 시 SLOT_V1 방을 같은 모습으로 이어서 편집하게 한다.
- */
-/** 슬롯 배치 id 목록 → 자유 배치 프리필 (z는 슬롯 순서). */
-export function slotIdsToPlacements(
-  placedIds: string[],
-  furniture: FurnitureItem[],
-): PlacedFurniture[] {
-  return placedIds
-    .map((id, i) => {
-      const item = furniture.find((f) => f.id === id);
-      if (!item) return null;
-      const c = roomSlotCenter(item.slot);
-      return { furnitureId: id, x: c.x, y: c.y, z: i + 1 };
-    })
-    .filter((p): p is PlacedFurniture => p !== null);
-}
 
 /**
  * 새 자유 배치 한 건 (#622) — 아이템 기본 위치(없으면 계약의 공용 중심)에
@@ -278,15 +234,3 @@ export const WALLPAPERS: Wallpaper[] = [
 export const DEFAULT_WALLPAPER_COLOR = '#F3E9D6';
 
 export const DEFAULT_WALLPAPER_ID = 'simple';
-
-/** A pleasant default room (one item per slot). */
-export const DEFAULT_PLACED_FURNITURE_IDS = [
-  'bed',
-  'shelf',
-  'window',
-  'drawer',
-  'sofa',
-  'plant',
-  'rug',
-  'clock',
-];

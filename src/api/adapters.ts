@@ -35,7 +35,7 @@ import {
 
 import { type OnboardingGoal } from '@/components/screens/onboarding-screen';
 import { toIsoDate, relativeTimeLabel } from '@/utils/datetime';
-import { type RoomPlacementSave, type RoomPlacementWire, type RoomSlotSave } from './rooms';
+import { type RoomPlacementSave, type RoomPlacementWire } from './rooms';
 
 import type { HouseCover } from '@/components/room/house-cover-picker';
 import type {
@@ -579,21 +579,20 @@ export function toShopCatalogue(items: ItemResponse[]): ShopCatalogue {
 }
 
 /**
- * A starting room built from owned items: one owned item per slot plus an owned
- * wallpaper. Avoids an empty room while server-side placement isn't wired.
+ * 저장 전 방의 **표면 기본값** — 소유한 벽지·바닥·배경에서 고른다.
+ *
+ * 예전엔 슬롯마다 소유 가구를 하나씩 채워 "빈 방을 피하는" 역할도 했는데,
+ * 가구를 놓을 앵커가 사라져(#925) 표면만 남았다. 가구는 사용자가 놓은
+ * 자리(placements)에만 나온다.
  */
 export function ownedPlacement(cat: ShopCatalogue): {
-  placedFurnitureIds: string[];
   wallpaperId: string;
   floorId: string | null;
   backgroundId: string | null;
 } {
   const owned = new Set(cat.ownedIds);
-  const bySlot: Partial<Record<FurnitureSlot, string>> = {};
-  for (const f of cat.furniture) if (owned.has(f.id) && !bySlot[f.slot]) bySlot[f.slot] = f.id;
   const wp = cat.wallpapers.find((w) => owned.has(w.id));
   return {
-    placedFurnitureIds: Object.values(bySlot),
     wallpaperId: wp?.id ?? cat.wallpapers[0]?.id ?? DEFAULT_WALLPAPER_ID,
     floorId: cat.floors.find((f) => owned.has(f.id))?.id ?? null,
     backgroundId: cat.backgrounds.find((b) => owned.has(b.id))?.id ?? null,
@@ -900,17 +899,15 @@ function toPreviewRoom(
   room: RoomResponse | null | undefined,
   cat: ShopCatalogue,
 ): MemberRoomPreview {
-  if (!room) return { placedFurnitureIds: [], placements: [] };
-  const placement = fromFriendRoomSlots(room.slots ?? [], cat);
+  if (!room) return { placements: [] };
+  // 표면(벽지·바닥·배경)만 슬롯에서 읽는다 — 서버가 거기 저장한다 (서버 #162).
+  const surfaces = fromFriendRoomSlots(room.slots ?? [], cat);
   return {
-    placedFurnitureIds: placement.placedFurnitureIds,
-    placements:
-      room.layoutFormat === 'FREE_V1' && room.placements?.length
-        ? fromRoomPlacements(room.placements, cat)
-        : null,
-    wallpaperId: placement.wallpaperId ?? DEFAULT_WALLPAPER_ID,
-    floorId: placement.floorId,
-    backgroundId: placement.backgroundId,
+    // 가구는 자유 좌표가 정본 (#925) — layoutFormat 분기 없음.
+    placements: fromRoomPlacements(room.placements ?? [], cat),
+    wallpaperId: surfaces.wallpaperId ?? DEFAULT_WALLPAPER_ID,
+    floorId: surfaces.floorId,
+    backgroundId: surfaces.backgroundId,
     characterId: characterIdFromCode(room.character?.code),
   };
 }
@@ -965,17 +962,6 @@ export function toSearchHouse(h: HouseSummary, index = 0): SearchHouse {
 
 // --- room placement (배치 저장) --------------------------------------------------
 
-const POSITIONED_SLOTS: FurnitureSlot[] = [
-  'topLeft',
-  'topCenter',
-  'topRight',
-  'midLeft',
-  'midRight',
-  'bottomLeft',
-  'bottomCenter',
-  'bottomRight',
-];
-
 /** Inventory → itemId(string) → userItemId map (placement saves need userItemId). */
 export function toUserItemMap(items: MyItemSummary[]): Map<string, number> {
   const map = new Map<string, number>();
@@ -984,20 +970,24 @@ export function toUserItemMap(items: MyItemSummary[]): Map<string, number> {
   return map;
 }
 
-/** Server room slots → app placement. Unknown/unowned entries are skipped. */
+/**
+ * 내 방 슬롯 → 표면(벽지·바닥·배경) (#925).
+ *
+ * 가구는 더 이상 슬롯에서 읽지 않는다 — 정본은 placements다. 표면은 서버가
+ * 계속 `room_surface_slots`에 저장하고 이 배열로 돌려주므로(서버 #162) 이
+ * 경로는 남는다. 소유하지 않은 항목은 건너뛴다.
+ */
 export function fromRoomSlots(
   slots: RoomSlotResponse[],
   cat: ShopCatalogue,
   userItemMap: Map<string, number>,
 ): {
-  placedFurnitureIds: string[];
   wallpaperId: string | null;
   floorId: string | null;
   backgroundId: string | null;
 } {
   const itemByUserItem = new Map<number, string>();
   for (const [itemId, uid] of userItemMap) itemByUserItem.set(uid, itemId);
-  const placed: string[] = [];
   let wallpaperId: string | null = null;
   let floorId: string | null = null;
   let backgroundId: string | null = null;
@@ -1011,11 +1001,9 @@ export function fromRoomSlots(
       if (cat.floors.some((f) => f.id === itemId)) floorId = itemId;
     } else if (s.slotType === 'background') {
       if (cat.backgrounds.some((b) => b.id === itemId)) backgroundId = itemId;
-    } else if ((POSITIONED_SLOTS as string[]).includes(s.slotType)) {
-      if (cat.furniture.some((f) => f.id === itemId)) placed.push(itemId);
     }
   }
-  return { placedFurnitureIds: placed, wallpaperId, floorId, backgroundId };
+  return { wallpaperId, floorId, backgroundId };
 }
 
 /**
@@ -1083,14 +1071,12 @@ export function fromFriendRoomSlots(
   slots: RoomSlotResponse[],
   cat: ShopCatalogue,
 ): {
-  placedFurnitureIds: string[];
   wallpaperId: string | null;
   floorId: string | null;
   backgroundId: string | null;
 } {
   const byAsset = (list: { id: string; assetKey?: string }[], key: string) =>
     list.find((i) => i.assetKey && i.assetKey === key)?.id ?? null;
-  const placed: string[] = [];
   let wallpaperId: string | null = null;
   let floorId: string | null = null;
   let backgroundId: string | null = null;
@@ -1102,12 +1088,9 @@ export function fromFriendRoomSlots(
       floorId = byAsset(cat.floors, s.assetKey) ?? floorId;
     } else if (s.slotType === 'background') {
       backgroundId = byAsset(cat.backgrounds, s.assetKey) ?? backgroundId;
-    } else if ((POSITIONED_SLOTS as string[]).includes(s.slotType)) {
-      const id = byAsset(cat.furniture, s.assetKey);
-      if (id) placed.push(id);
     }
   }
-  return { placedFurnitureIds: placed, wallpaperId, floorId, backgroundId };
+  return { wallpaperId, floorId, backgroundId };
 }
 
 /** Room character code (e.g. "cat") → app CharacterId, when the code exists app-side. */
@@ -1199,36 +1182,4 @@ export function toFriendActivity(
     day.titles.push(c.title ?? '루틴');
   }
   return days;
-}
-
-/**
- * App placement → the full slot layout for PUT /rooms/me/slots. Every
- * positioned slot (+ wallpaper) is sent each save — null clears — so the
- * server always mirrors the client exactly.
- */
-export function toSlotSaves(
-  placedIds: string[],
-  wallpaperId: string,
-  cat: ShopCatalogue,
-  userItemMap: Map<string, number>,
-  floorId?: string | null,
-  backgroundId?: string | null,
-): RoomSlotSave[] {
-  const bySlot: Partial<Record<FurnitureSlot, number>> = {};
-  for (const id of placedIds) {
-    const item = cat.furniture.find((f) => f.id === id);
-    const uid = userItemMap.get(id);
-    if (item && uid != null && bySlot[item.slot] == null) bySlot[item.slot] = uid;
-  }
-  const saves: RoomSlotSave[] = POSITIONED_SLOTS.map((s) => ({
-    slotType: s,
-    userItemId: bySlot[s] ?? null,
-  }));
-  saves.push({ slotType: 'wallpaper', userItemId: userItemMap.get(wallpaperId) ?? null });
-  saves.push({ slotType: 'floor', userItemId: (floorId && userItemMap.get(floorId)) || null });
-  saves.push({
-    slotType: 'background',
-    userItemId: (backgroundId && userItemMap.get(backgroundId)) || null,
-  });
-  return saves;
 }

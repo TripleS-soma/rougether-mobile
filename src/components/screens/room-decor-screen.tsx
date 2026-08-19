@@ -35,7 +35,6 @@ import {
   type FurnitureItem,
   type PlacedFurniture,
   newFreePlacement,
-  slotIdsToPlacements,
   type Wallpaper,
   WALLPAPERS,
 } from '@/resources/furniture';
@@ -59,7 +58,6 @@ export type RoomDecorScreenProps = RoomCatalogProps & {
   /** 자유 배치 초기 상태 (#327); 없으면 데모 프리필. */
   initialItems?: PlacedFurniture[];
   /** 방이 이미 FREE_V1로 전환됐는지 — 첫 저장 전환 확인 모달 판단. */
-  freeLayout?: boolean;
   initialWallpaperId?: string;
   initialFloorId?: string | null;
   initialBackgroundId?: string | null;
@@ -118,7 +116,6 @@ const NO_SURFACES: Wallpaper[] = [];
 
 export function RoomDecorScreen({
   initialItems,
-  freeLayout = false,
   onConflictReload,
   highlightItemIds,
   initialWallpaperId = DEFAULT_WALLPAPER_ID,
@@ -155,9 +152,19 @@ export function RoomDecorScreen({
     [ownedIds, furniture, wallpapers, floors, backgrounds],
   );
 
-  // 자유 배치 상태 (#327). 데모(스토리) 프리필은 기존 한옥 세트를 슬롯 앵커로.
-  const demoItems = () =>
-    slotIdsToPlacements(['hanok-bed', 'hanok-shelf', 'hanok-window', 'hanok-rug'], furniture);
+  // 자유 배치 상태 (#327). dev 갤러리용 데모 프리필 — 슬롯 앵커가 사라져
+  // (#925) 좌표를 직접 적는다. 실사용 경로는 항상 initialItems를 받는다.
+  const demoItems = (): PlacedFurniture[] =>
+    (
+      [
+        ['hanok-bed', 0.3, 0.72],
+        ['hanok-shelf', 0.28, 0.3],
+        ['hanok-window', 0.72, 0.3],
+        ['hanok-rug', 0.7, 0.72],
+      ] as const
+    )
+      .filter(([id]) => furniture.some((f) => f.id === id))
+      .map(([id, x, y], i) => ({ furnitureId: id, x, y, z: i + 1 }));
   const [items, setItems] = useState<PlacedFurniture[]>(() => initialItems ?? demoItems());
   // 타일마다 placed.includes를 돌면 카탈로그 크기의 제곱이 된다 (실서버 가구
   // 122종) — 조회는 Set으로 O(1) (#794).
@@ -247,9 +254,6 @@ export function RoomDecorScreen({
   // 진입 즉시 가구 패널이 열려 있다 (#487) — 전체보기 버튼/가이드 카드 없이
   // 'all'이 기본 상태. 서브픽커(벽지/바닥)를 닫으면 'all'로 복귀한다.
   const [picker, setPicker] = useState<PickerTarget>('all');
-  // 첫 자유 배치 저장은 SLOT_V1→FREE_V1 비가역 전환 — 한 번 확인받는다 (#327).
-  const [confirmMigrate, setConfirmMigrate] = useState(false);
-  const migrateOkRef = useRef(freeLayout);
   const pendingBackRef = useRef(true);
   // 409 리비전 충돌(다른 기기 선저장) — 재로드 안내 모달.
   const [conflictOpen, setConflictOpen] = useState(false);
@@ -262,7 +266,6 @@ export function RoomDecorScreen({
   };
   const currentValues = (): ApplyValues => ({ items, wallpaperId, floorId, backgroundId });
   // 제외하고 저장 등에서 넘어온 값 — 마이그레이션 확인을 건너뛴 뒤에도 유지.
-  const pendingApplyRef = useRef<ApplyValues | null>(null);
   const doApply = async (thenBack: boolean, v: ApplyValues = currentValues()) => {
     const result = await onApply?.(v.items, v.wallpaperId, v.floorId, v.backgroundId);
     if (result === 'conflict') return setConflictOpen(true);
@@ -270,14 +273,8 @@ export function RoomDecorScreen({
     initialSnapRef.current = snap(v.items, v.wallpaperId, v.floorId, v.backgroundId);
     if (thenBack) onBack?.();
   };
-  /** 프리뷰 정리가 끝난 값으로 저장을 이어간다 — 마이그레이션 게이트 포함. */
+  /** 프리뷰 정리가 끝난 값으로 저장을 이어간다. */
   const proceedApply = (thenBack: boolean, v: ApplyValues) => {
-    if (!migrateOkRef.current) {
-      pendingBackRef.current = thenBack;
-      pendingApplyRef.current = v;
-      setConfirmMigrate(true);
-      return;
-    }
     void doApply(thenBack, v);
   };
   const apply = (thenBack = true) => {
@@ -1092,24 +1089,6 @@ export function RoomDecorScreen({
           </Pressable>
         </Pressable>
       </Modal>
-
-      {/* 첫 자유 배치 저장 — SLOT_V1→FREE_V1 비가역 전환 확인 (#327, #674 공용화). */}
-      <ConfirmDialog
-        visible={confirmMigrate}
-        title="새 꾸미기 방식으로 전환할까요?"
-        body={
-          '자유 배치로 저장하면 가구를 어디든 옮길 수 있어요.\n전환한 뒤에는 이전 방식으로 되돌릴 수 없어요.'
-        }
-        confirmLabel="전환하고 저장"
-        cancelAccessibilityLabel="전환 취소"
-        onConfirm={() => {
-          migrateOkRef.current = true;
-          setConfirmMigrate(false);
-          void doApply(pendingBackRef.current, pendingApplyRef.current ?? undefined);
-          pendingApplyRef.current = null;
-        }}
-        onCancel={() => setConfirmMigrate(false)}
-      />
 
       {/* 다른 기기가 먼저 저장한 경우(409) — 서버 상태로 다시 시작해야 한다 (#674 공용화). */}
       <ConfirmDialog

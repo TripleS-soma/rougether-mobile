@@ -82,17 +82,15 @@ export function useMemberRoomPreviews() {
         membershipIds.map(async (membershipId) => {
           try {
             const room = await fetchHouseMemberRoom(houseId, membershipId);
-            const placement = fromFriendRoomSlots(room.slots ?? [], catalogue);
+            // 표면(벽지·바닥·배경)만 슬롯에서 읽는다 — 서버가 거기 저장한다.
+            const surfaces = fromFriendRoomSlots(room.slots ?? [], catalogue);
             const preview: MemberRoomPreview = {
-              placedFurnitureIds: placement.placedFurnitureIds,
-              // FREE_V1 멤버 방은 자유 좌표 그대로 타일에 렌더 (#327).
-              placements:
-                room.layoutFormat === 'FREE_V1' && room.placements?.length
-                  ? fromRoomPlacements(room.placements, catalogue)
-                  : null,
-              wallpaperId: placement.wallpaperId ?? DEFAULT_WALLPAPER_ID,
-              floorId: placement.floorId,
-              backgroundId: placement.backgroundId,
+              // 가구는 자유 좌표가 정본이다 (#925) — layoutFormat 분기 없이 항상
+              // placements. 아직 SLOT_V1인 방은 가구가 비어 있다.
+              placements: fromRoomPlacements(room.placements ?? [], catalogue),
+              wallpaperId: surfaces.wallpaperId ?? DEFAULT_WALLPAPER_ID,
+              floorId: surfaces.floorId,
+              backgroundId: surfaces.backgroundId,
               characterId: characterIdFromCode(room.character?.code),
               // 같은 집 구성원 방의 거미줄 (#829) — 타일에서도 보인다.
               cobweb: room.cobweb ?? null,

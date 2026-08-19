@@ -16,8 +16,6 @@ import { useTokens, useTypography } from '@/hooks/use-tokens';
 import type { Wallpaper } from '@/resources/furniture';
 
 /** 빈 좌석에 그리는 기본 빈 방 (#281) — 모듈 상수라 참조가 고정된다. */
-const VACANT_FURNITURE_IDS: string[] = [];
-
 export type SeatTileProps = {
   seatIdx: number;
   /** 화면에 보일 이름 (내 좌석은 라이브 닉네임, #479). */
@@ -158,7 +156,6 @@ function SeatTileBase({
         {empty ? (
           <View style={styles.roomPreview} pointerEvents="none" testID="vacant-room">
             <Room
-              placedFurnitureIds={VACANT_FURNITURE_IDS}
               characterId={null}
               floorId={vacantFloor[0].id}
               floors={vacantFloor}
