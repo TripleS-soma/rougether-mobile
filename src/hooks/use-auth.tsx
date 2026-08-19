@@ -18,6 +18,7 @@ import { saveLastLoginProvider } from '@/lib/last-login';
 import { clearPushToken, syncPushToken } from '@/lib/push-token';
 import { resetAnalyticsUser, track } from '@/lib/analytics';
 import { clearErrorUser } from '@/lib/error-reporting';
+import { wipeLocalAppData } from '@/lib/local-wipe';
 
 type AuthStatus = 'loading' | 'authed' | 'guest';
 
@@ -165,6 +166,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // apiLogout은 서버에 refresh 폐기를 요청하는데 이미 전량 폐기됨 —
         // 로컬 세션만 지운다.
         await clearSession();
+        // 계정 파생 로컬 데이터 전량 삭제 (#922) — 이게 없으면 재가입해도
+        // 온보딩이 안 뜨고, 홈 화면 위젯에 이전 계정의 방이 남는다.
+        await wipeLocalAppData();
         setStatus('guest');
         return true;
       },
