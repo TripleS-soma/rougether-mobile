@@ -32,7 +32,7 @@ import {
 } from '@/hooks/use-member-room-previews';
 import type { OnboardingMissionStepId } from '@/hooks/use-onboarding-missions';
 import type { useRoomLayouts } from '@/hooks/use-room-layouts';
-import { subscribePendingInviteCode } from '@/lib/pending-invite';
+import { clearPendingInviteCode, subscribePendingInviteCode } from '@/lib/pending-invite';
 import { assetSource } from '@/resources/asset';
 import type { ShopCatalogue } from '@/api/adapters';
 
@@ -452,7 +452,12 @@ export function useHousePages({
     ) : screen === 'houseSearch' ? (
       <HouseSearchScreen
         initialCode={pendingJoinCode ?? undefined}
-        onInitialCodeConsumed={() => setPendingJoinCode(null)}
+        onInitialCodeConsumed={() => {
+          setPendingJoinCode(null);
+          // 모듈 보관분도 여기서 비운다 — 그 전까지는 셸이 다시 구독해도
+          // 코드가 살아남아 유실을 복구한다 (#896).
+          clearPendingInviteCode();
+        }}
         houses={searchHouses}
         loading={searchLoading}
         loadError={searchError}

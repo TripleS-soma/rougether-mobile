@@ -27,7 +27,10 @@ import { useBugReports } from '@/hooks/use-bug-reports';
 import { useInvites } from '@/hooks/use-invites';
 import { useNotificationSettings } from '@/hooks/use-notification-settings';
 import { useBrandTheme } from '@/hooks/use-tokens';
-import { subscribePendingFriendInviteCode } from '@/lib/pending-invite';
+import {
+  clearPendingFriendInviteCode,
+  subscribePendingFriendInviteCode,
+} from '@/lib/pending-invite';
 import { pickLibraryImage } from '@/lib/pick-image';
 import { setHapticsEnabled } from '@/utils/haptics';
 
@@ -271,7 +274,10 @@ export function useSettingsSurface({
         onRetry={loadInvites}
         onRedeem={redeemInviteCode}
         initialRedeemCode={pendingFriendCode ?? undefined}
-        onInitialRedeemCodeConsumed={() => setPendingFriendCode(null)}
+        onInitialRedeemCodeConsumed={() => {
+          setPendingFriendCode(null);
+          clearPendingFriendInviteCode();
+        }}
         onBack={backToSettings}
       />
     ) : null;
