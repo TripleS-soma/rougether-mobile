@@ -1182,7 +1182,9 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     marginHorizontal: Spacing.four,
     // 헤더 바로 아래라 위쪽 여백이 필요하다 — 없으면 헤더에 붙어 읽힌다.
-    marginTop: Spacing.three,
+    // 16으로는 여전히 붙어 보였다(#879 후속): 헤더가 흰 면이고 이 줄은 크림
+    // 배경 위라, 색이 바뀌는 경계가 곧 구분선처럼 읽혀 여백을 잡아먹는다.
+    marginTop: Spacing.four,
     marginBottom: Spacing.two,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
