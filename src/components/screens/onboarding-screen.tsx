@@ -1,6 +1,8 @@
 import { Image } from 'expo-image';
 import { useRef, useState } from 'react';
 import {
+  Keyboard,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
@@ -242,43 +244,54 @@ export function OnboardingScreen({
     const canStart = trimmed.length > 0;
     return (
       <View style={[styles.screen, screenStyle]}>
-        <View style={styles.intro}>
-          <Text style={[Typography.h1, { color: t.text }]}>어떻게 불러드릴까요?</Text>
-          <Text style={[Typography.supporting, styles.introBody, { color: t.textMuted }]}>
-            {active.name}가 부를 내 이름을 정해주세요.
-          </Text>
-        </View>
-        <View style={styles.nicknameBody}>
-          <CharacterAvatar
-            characterId={selectedCharacter}
-            frames={characterFrames?.[selectedCharacter]}
-            size={120}
-          />
-          <TextInput
-            value={nickname}
-            onChangeText={(v) => setNickname(v.slice(0, NICKNAME_MAX))}
-            placeholder="닉네임 (12자까지)"
-            placeholderTextColor={t.textDisabled}
-            autoFocus
-            autoCorrect={false}
-            maxLength={NICKNAME_MAX}
-            accessibilityLabel="닉네임 입력"
-            style={[
-              styles.nicknameInput,
-              Typography.h3,
-              { backgroundColor: t.surface, color: t.text, borderColor: t.border },
-            ]}
-          />
-        </View>
-        <View style={styles.actions}>
-          <PrimaryButton
-            label="시작하기"
-            disabled={!canStart}
-            blockedMessage="닉네임을 입력해주세요"
-            onPress={() => onDone?.(selectedGoals, selectedCharacter, trimmed)}
-          />
-          <TextButton label="이전" onPress={() => setShowNicknameStep(false)} />
-        </View>
+        {/* 이 단계만 ScrollView가 아니라 고정 레이아웃이라, 다른 입력 화면이
+            쓰는 keyboardShouldPersistTaps가 통하지 않는다 (#923). 키보드를
+            내리는 배경 탭은 Pressable로 직접 걸고, autoFocus로 곧장 올라온
+            키보드가 '시작하기'를 덮지 않게 KeyboardAvoidingView로 감싼다. */}
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={styles.intro}>
+            <Text style={[Typography.h1, { color: t.text }]}>어떻게 불러드릴까요?</Text>
+            <Text style={[Typography.supporting, styles.introBody, { color: t.textMuted }]}>
+              {active.name}가 부를 내 이름을 정해주세요.
+            </Text>
+          </View>
+          {/* accessible={false} — 배경을 스크린리더 대상으로 만들지 않는다. */}
+          <Pressable style={styles.nicknameBody} onPress={Keyboard.dismiss} accessible={false}>
+            <CharacterAvatar
+              characterId={selectedCharacter}
+              frames={characterFrames?.[selectedCharacter]}
+              size={120}
+            />
+            <TextInput
+              value={nickname}
+              onChangeText={(v) => setNickname(v.slice(0, NICKNAME_MAX))}
+              placeholder="닉네임 (12자까지)"
+              placeholderTextColor={t.textDisabled}
+              autoFocus
+              autoCorrect={false}
+              maxLength={NICKNAME_MAX}
+              accessibilityLabel="닉네임 입력"
+              returnKeyType="done"
+              onSubmitEditing={Keyboard.dismiss}
+              style={[
+                styles.nicknameInput,
+                Typography.h3,
+                { backgroundColor: t.surface, color: t.text, borderColor: t.border },
+              ]}
+            />
+          </Pressable>
+          <View style={styles.actions}>
+            <PrimaryButton
+              label="시작하기"
+              disabled={!canStart}
+              blockedMessage="닉네임을 입력해주세요"
+              onPress={() => onDone?.(selectedGoals, selectedCharacter, trimmed)}
+            />
+            <TextButton label="이전" onPress={() => setShowNicknameStep(false)} />
+          </View>
+        </KeyboardAvoidingView>
       </View>
     );
   }
