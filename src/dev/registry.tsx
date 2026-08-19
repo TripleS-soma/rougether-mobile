@@ -10,6 +10,7 @@ import { Room } from '@/components/room/room';
 import { GachaAccents } from '@/constants/theme';
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
 import { CategoryManageScreen } from '@/components/screens/category-manage-screen';
+import { CalendarImportScreen } from '@/components/screens/calendar-import-screen';
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
 import { GachaScreen } from '@/components/screens/gacha-screen';
@@ -518,6 +519,38 @@ export const galleryEntries: GalleryEntry[] = [
       <View style={{ height: 900, alignSelf: 'stretch' }}>
         {/* onOpenMissions를 배선해야 요약 줄이 그려진다 (#875). */}
         <HouseScreen onOpenMissions={() => {}} />
+      </View>
+    ),
+  },
+  {
+    name: 'CalendarImportScreen',
+    description:
+      '설정 → 캘린더 연동 (#844): 캘린더 선택 → 미리보기 → 선택 임포트. 비슷한 루틴이 있는 항목은 기본 해제.',
+    render: () => (
+      <View style={{ alignSelf: 'stretch', height: 720 }}>
+        <CalendarImportScreen
+          calendars={[
+            { id: 'c1', title: '개인', source: 'Google' },
+            { id: 'c2', title: '대한민국 공휴일', source: 'Holidays' },
+          ]}
+          candidates={[
+            { id: 'e1', title: '치과 예약', date: '2026-08-20', allDay: false, similar: [] },
+            {
+              id: 'e2',
+              title: '영양제 먹기',
+              date: '2026-08-21',
+              allDay: false,
+              similar: [
+                { kind: 'ROUTINE', id: 21, title: '영양제 챙겨먹기', score: 0.86, matchType: 'EMBEDDING' }, // prettier-ignore
+              ],
+            },
+            { id: 'e3', title: '팀 회식', date: '2026-08-22', allDay: false, similar: [] },
+          ]}
+          onBack={() => {}}
+          onConnect={() => {}}
+          onPreview={() => {}}
+          onImport={() => {}}
+        />
       </View>
     ),
   },

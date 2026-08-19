@@ -22,6 +22,7 @@ export type Screen =
   | 'font'
   | 'profileEdit'
   | 'notificationList'
+  | 'calendarImport'
   | 'bugReport'
   | 'notifications'
   | 'sound'
@@ -47,6 +48,7 @@ export const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   font: null,
   profileEdit: null,
   notificationList: null,
+  calendarImport: null,
   bugReport: null,
   notifications: null,
   sound: null,
@@ -86,6 +88,7 @@ export const BACK_SCREEN: Record<Screen, Screen | null> = {
   font: 'settings',
   profileEdit: 'settings',
   notificationList: 'myRoom',
+  calendarImport: 'settings',
   bugReport: 'settings',
   notifications: 'settings',
   sound: 'settings',

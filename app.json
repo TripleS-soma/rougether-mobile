@@ -110,6 +110,24 @@
         }
       ],
       [
+        "./plugins/with-calendar-readonly.js",
+        {
+          "mode": "ios"
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "기기 캘린더의 일정을 루게더 할 일로 가져오기 위해 캘린더를 읽습니다. 캘린더에 쓰지는 않습니다."
+        }
+      ],
+      [
+        "./plugins/with-calendar-readonly.js",
+        {
+          "mode": "android"
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "android": {
