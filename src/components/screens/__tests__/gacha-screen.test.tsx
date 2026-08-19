@@ -51,6 +51,27 @@ describe('GachaScreen', () => {
     expect(getAllByTestId('gift-box-fallback-1').length).toBeGreaterThan(0);
   });
 
+  /**
+   * 뽑기 버튼을 누른 순간 오버레이가 픽토그램으로 갈아타면, 방금 고른 **그
+   * 상자**를 여는 것으로 안 읽힌다. 충전 중에도 같은 아트를 보여준다.
+   */
+  it('뽑는 중 오버레이도 같은 선물상자 아트를 보여준다', async () => {
+    const withArt: GachaMachine = { ...machine, giftBoxKey: 'items/gift-box.png' };
+    const onDraw = jest.fn(async (): Promise<DrawResult[]> => [
+      { name: '허브 화분', rarity: '희귀', converted: false },
+    ]);
+    const { getByText, getByTestId } = await render(
+      <GachaScreen gachas={[withArt]} coinBalance={5600} onDraw={onDraw} />,
+    );
+
+    await fireEvent.press(getByText('1회 뽑기'));
+    expect(getByText('뽑는 중…')).toBeTruthy();
+    expect(getByTestId('charging-gift-box-1')).toBeTruthy();
+
+    // 애니메이션 타이머를 흘려보내 리빌까지 마무리 (#431).
+    await waitFor(() => expect(getByText('허브 화분')).toBeTruthy(), { timeout: 8000 });
+  });
+
   it('아트 키가 없거나 CDN 키가 아니면 이미지를 그리지 않는다 — 픽토그램 폴백', async () => {
     // 구버전 서버·로컬 카탈로그 키는 CDN에 아트가 없다(isCdnKey=false).
     const legacy: GachaMachine = { ...machine, giftBoxKey: 'furniture/bed' };
