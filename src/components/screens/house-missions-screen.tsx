@@ -286,6 +286,11 @@ export function HouseMissionsScreen({
                         ) : null}
                         {cta.kind === 'completed' ? (
                           <Text style={[Typography.supporting, { color: t.textMuted }]}>완료</Text>
+                        ) : cta.kind === 'ended' ? (
+                          // 목표 미달인데 COMPLETED — 서버 쪽 문제지만 화면은 사실만 (#888).
+                          <Text style={[Typography.supporting, { color: t.textDisabled }]}>
+                            종료
+                          </Text>
                         ) : cta.kind === 'expired' ? (
                           <Text style={[Typography.supporting, { color: t.textDisabled }]}>
                             기간 만료
