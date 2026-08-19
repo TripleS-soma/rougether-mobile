@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, render, renderHook, waitFor } from '@testing-library/react-native';
 import { Text } from 'react-native';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
@@ -221,6 +222,51 @@ describe('AuthProvider — 회원탈퇴', () => {
       ([, init]) => (init as { method?: string })?.method === 'DELETE',
     );
     expect(String(deleteCall?.[0])).toContain('/me');
+  });
+
+  it('성공: 계정 파생 로컬 데이터를 남김없이 지운다 (#922)', async () => {
+    await AsyncStorage.multiSet([
+      ['rougether.onboarding.v1', 'done'],
+      ['rougether.widget.room-image.v1', 'data:image/png;base64,AAAA'],
+      ['rougether.roomLayout.v1.1.11', '[]'],
+      ['rougether.theme', 'cozy'],
+    ]);
+    const fetchMock = jest.fn(async (url: string, init?: { method?: string }) => {
+      if (init?.method === 'DELETE') return res(204);
+      return res(200, { userId: 1, accessToken: 'a1', refreshToken: 'r1' });
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const { result } = await renderHook(() => useAuth(), { wrapper });
+    await act(async () => {
+      await result.current.login(1);
+    });
+
+    await act(async () => {
+      await result.current.withdraw();
+    });
+
+    // 온보딩 플래그가 남으면 재가입해도 온보딩이 안 뜬다 — 이 제보의 본체.
+    expect(await AsyncStorage.getAllKeys()).toEqual([]);
+  });
+
+  it('실패: 탈퇴가 실패하면 로컬 데이터를 지우지 않는다', async () => {
+    await AsyncStorage.setItem('rougether.onboarding.v1', 'done');
+    const fetchMock = jest.fn(async (url: string, init?: { method?: string }) => {
+      if (init?.method === 'DELETE') return res(500, { message: 'boom' });
+      return res(200, { userId: 1, accessToken: 'a1', refreshToken: 'r1' });
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const { result } = await renderHook(() => useAuth(), { wrapper });
+    await act(async () => {
+      await result.current.login(1);
+    });
+
+    await act(async () => {
+      await result.current.withdraw();
+    });
+
+    // 계정이 살아 있는데 로컬만 날리면 멀쩡한 계정이 초기화된 앱을 만난다.
+    expect(await AsyncStorage.getItem('rougether.onboarding.v1')).toBe('done');
   });
 
   it('실패: 서버 오류면 false를 돌려주고 세션을 유지한다', async () => {

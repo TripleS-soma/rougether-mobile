@@ -40,6 +40,42 @@ function mirrorToIosWidgets(key: string, value: string) {
   }
 }
 
+/**
+ * iOS App Group에서 값 자체를 제거한다 (#922) — mirrorToIosWidgets의 반대편.
+ * 빈 문자열로 덮어도 위젯은 플레이스홀더로 떨어지지만, 남의 계정 데이터를
+ * 지우는 자리에서 "빈 값으로 덮기"와 "지우기"는 같지 않다.
+ */
+function removeFromIosWidgets(key: string) {
+  if (Platform.OS !== 'ios') return;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const targets = require('@bacons/apple-targets') as typeof import('@bacons/apple-targets');
+    const { ExtensionStorage } = targets;
+    new ExtensionStorage(IOS_APP_GROUP).remove(key);
+    ExtensionStorage.reloadWidget();
+  } catch {
+    // 위젯은 부가 표면 — 미빌드 기기·웹은 조용히 no-op.
+  }
+}
+
+/**
+ * 탈퇴 시 위젯 표면을 비운다 (#922).
+ *
+ * AsyncStorage만 지우면 **iOS 홈 화면 위젯에는 이전 계정의 방 이미지가 그대로
+ * 남는다** — SwiftUI 위젯이 읽는 곳은 App Group UserDefaults이지 AsyncStorage가
+ * 아니기 때문이다(mirrorToIosWidgets 참조). 두 곳을 같이 비워야 실제로 사라진다.
+ */
+export async function clearWidgetData(): Promise<void> {
+  try {
+    await AsyncStorage.multiRemove([SUMMARY_KEY, ROOM_IMAGE_KEY, THEME_KEY]);
+  } catch {
+    // App Group 정리는 그대로 시도한다 — 눈에 보이는 쪽이 그쪽이다.
+  }
+  removeFromIosWidgets(IOS_SUMMARY_KEY);
+  removeFromIosWidgets(IOS_ROOM_IMAGE_KEY);
+  removeFromIosWidgets(IOS_THEME_KEY);
+}
+
 export type WidgetSummary = {
   done: number;
   total: number;

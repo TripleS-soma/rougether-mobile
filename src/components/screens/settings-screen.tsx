@@ -266,13 +266,17 @@ export const SettingsScreen = memo(function SettingsScreen({
         ))}
 
         {/* 회원탈퇴 (#547) — 행이 아니라 목록 밖 하단의 낮은 존재감 링크.
-            실수로 닿기 어려운 자리 + 파괴 확인 다이얼로그의 2중 방어. */}
+            실수로 닿기 어려운 자리 + 파괴 확인 다이얼로그의 2중 방어.
+            색만 파괴 토큰으로 (#900): 크기·위치는 그대로 둬 #547의 "낮은
+            존재감" 의도와 충돌하지 않게 하고, 색으로 위험만 표시한다.
+            직전의 textDisabled는 대비 2.3:1인 데다 "비활성"으로도 읽혀서
+            눌리는 링크인데 못 누르는 것처럼 보였다. */}
         <Pressable
           onPress={() => setConfirmWithdraw(true)}
           accessibilityRole="button"
           accessibilityLabel="회원탈퇴"
           style={styles.withdrawLink}>
-          <Text style={[Typography.supporting, { color: t.textDisabled }]}>회원탈퇴</Text>
+          <Text style={[Typography.supporting, { color: t.dangerText }]}>회원탈퇴</Text>
         </Pressable>
       </ScrollView>
 
