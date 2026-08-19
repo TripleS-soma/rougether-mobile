@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import type { House, HouseMission, NewHouseMission } from '@/components/screens/house-screen';
 import { DateRangeSheet } from '@/components/screens/sheets/date-range-sheet';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Icon } from '@/components/ui/icon';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Pictogram, type PictogramName, TrashPictogram } from '@/components/ui/pictograms';
 import { useToast } from '@/components/ui/toast';
@@ -11,6 +12,7 @@ import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { MISSION_TYPE_RULES } from '@/constants/missions';
 import { missionCtaState } from '@/utils/mission-cta';
 import { formatDate, todayIso, toIsoDate } from '@/utils/datetime';
 
@@ -21,32 +23,21 @@ function addDaysIso(iso: string, days: number) {
   return toIsoDate(d);
 }
 
+/** 생성 가능한 유형만 — 표시값은 constants/missions의 단일 출처에서 (#887). */
+const CREATABLE_TYPES: NewHouseMission['missionType'][] = [
+  'DAILY_MEMBER_RATE',
+  'WEEKLY_MEMBER_COUNT',
+];
+
 const MISSION_TYPE_OPTIONS: {
   type: NewHouseMission['missionType'];
   icon: PictogramName;
   label: string;
-}[] = [
-  { type: 'DAILY_MEMBER_RATE', icon: 'sun', label: '일일 달성률' },
-  { type: 'WEEKLY_MEMBER_COUNT', icon: 'calendar', label: '주간 달성 횟수' },
-];
-
-/**
- * 목표 수치는 **미션 유형마다 뜻과 상한이 다르다** (#872, 서버 계약).
- * - DAILY_MEMBER_RATE: 오늘 기여한 멤버 **비율 %** → 1~100. 넘기면 서버가
- *   400 `HOUSE_MISSION_TARGET_INVALID`을 준다.
- * - WEEKLY_MEMBER_COUNT: 기여 **누적 합** → 1~1000.
- *
- * 예전엔 클라이언트가 유형과 무관하게 1~1000만 봐서, 달성률에 500을 넣어도
- * 통과시키고 서버에서 400을 맞았다. 단위를 화면에 붙여 뜻도 함께 드러낸다.
- *
- * STREAK_DAYS는 MVP 미지원이라 `NewHouseMission['missionType']`에 아예 없다 —
- * Record가 전수라 유형이 늘면 여기서 컴파일이 막힌다.
- */
-const MISSION_TARGET_RULES: Record<NewHouseMission['missionType'], { max: number; unit: string }> =
-  {
-    DAILY_MEMBER_RATE: { max: 100, unit: '%' },
-    WEEKLY_MEMBER_COUNT: { max: 1000, unit: '회' },
-  };
+}[] = CREATABLE_TYPES.map((type) => ({
+  type,
+  icon: MISSION_TYPE_RULES[type].icon,
+  label: MISSION_TYPE_RULES[type].shortLabel,
+}));
 
 export type HouseMissionsScreenProps = {
   house: House;
@@ -66,7 +57,42 @@ export type HouseMissionsScreenProps = {
   onClaimMission?: (houseId: number, missionId: number) => void;
   /** File a mission as a daily routine under the house-named category. */
   onAddMissionRoutine?: (houseId: number, mission: HouseMission) => void;
+  /**
+   * 내 연동 루틴 정리 (#890). 미션 삭제는 방장만 가능해서, 구성원에게는
+   * 자기가 만든 연동 루틴을 되돌릴 길이 이 화면에 없었다.
+   */
+  onRemoveMissionRoutine?: (mission: HouseMission) => void;
 };
+
+/**
+ * 눌러서 정리할 수 있는 연동 배지 (#890). 방장의 휴지통과 **결과가 다르므로**
+ * 같은 아이콘을 쓰지 않는다 — 휴지통은 미션이 사라지고, 이건 내 루틴만 없앤다.
+ * 실제로 무슨 일이 벌어지는지는 확인 다이얼로그가 말한다.
+ */
+function LinkedBadge({
+  label,
+  color,
+  mission,
+  onPress,
+}: {
+  label: string;
+  color: string;
+  mission: HouseMission;
+  onPress: (m: HouseMission) => void;
+}) {
+  const Typography = useTypography();
+  return (
+    <Pressable
+      onPress={() => onPress(mission)}
+      accessibilityRole="button"
+      accessibilityLabel={`${mission.title} 연동 루틴 정리`}
+      hitSlop={8}
+      style={styles.linkedBadge}>
+      <Text style={[Typography.supporting, { color }]}>{label}</Text>
+      <Icon name="close" size={12} color={color} />
+    </Pressable>
+  );
+}
 
 /**
  * 공동 미션 시트 (#287) — mission list, the create-mission form, and the
@@ -85,6 +111,7 @@ export function HouseMissionsScreen({
   onDeleteMission,
   onClaimMission,
   onAddMissionRoutine,
+  onRemoveMissionRoutine,
 }: HouseMissionsScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
@@ -104,6 +131,7 @@ export function HouseMissionsScreen({
   const [missionToAdd, setMissionToAdd] = useState<HouseMission | null>(null);
   // 미션 삭제 확인 모달의 대상 (#305).
   const [missionToDelete, setMissionToDelete] = useState<HouseMission | null>(null);
+  const [missionToUnlink, setMissionToUnlink] = useState<HouseMission | null>(null);
 
   /** 오늘 기여 완료 판정 — 세션 추적 또는 연동 루틴의 오늘 완료에서 파생. */
   const isContributed = (mission: HouseMission) =>
@@ -118,7 +146,7 @@ export function HouseMissionsScreen({
   // Mission deletion too; COMPLETED rows hide the button (server 409s them).
   const canDeleteMission = !!(onDeleteMission && isOwner);
   const missionTargetNum = Number(missionTarget);
-  const targetRule = MISSION_TARGET_RULES[missionType];
+  const targetRule = MISSION_TYPE_RULES[missionType];
   const targetValid =
     Number.isInteger(missionTargetNum) &&
     missionTargetNum >= 1 &&
@@ -196,11 +224,15 @@ export function HouseMissionsScreen({
               {missions.map((mission) => {
                 const pct = Math.min(1, mission.current / mission.target);
                 // CTA 결정은 순수 함수(#559) — 렌더는 kind 매핑만.
+                const hasLinked = linkedRoutines.some((r) => r.missionId === mission.id);
+                // 배지를 눌러 정리할 수 있는 건 **내 연동 루틴이 실제로 있을 때**뿐이다.
+                // '기여함'은 직접 수행 체크로도 켜지므로 kind만 보면 안 된다 (#890).
+                const canUnlink = hasLinked && !!onRemoveMissionRoutine;
                 const cta = missionCtaState({
                   status: mission.status,
                   achieved: mission.achieved,
                   contributed: isContributed(mission),
-                  linked: linkedRoutines.some((r) => r.missionId === mission.id),
+                  linked: hasLinked,
                   canClaim: !!(currentHouse.houseId && onClaimMission),
                   canAddRoutine: !!(currentHouse.houseId && onAddMissionRoutine),
                 });
@@ -218,6 +250,7 @@ export function HouseMissionsScreen({
                         </Text>
                         <Text style={[Typography.supporting, { color: t.primaryText }]}>
                           {mission.current}/{mission.target}
+                          {mission.unit}
                         </Text>
                         {canDeleteMission && mission.status !== 'COMPLETED' ? (
                           <Pressable
@@ -270,14 +303,32 @@ export function HouseMissionsScreen({
                         ) : cta.kind === 'contributed' ? (
                           // 오늘 기여 완료 — 연동 루틴의 오늘 완료 여부로도 파생되어
                           // 앱을 다시 켜도 라벨이 유지된다.
-                          <Text style={[Typography.supporting, { color: t.primaryText }]}>
-                            기여함
-                          </Text>
+                          canUnlink ? (
+                            <LinkedBadge
+                              label="기여함"
+                              color={t.primaryText}
+                              mission={mission}
+                              onPress={setMissionToUnlink}
+                            />
+                          ) : (
+                            <Text style={[Typography.supporting, { color: t.primaryText }]}>
+                              기여함
+                            </Text>
+                          )
                         ) : cta.kind === 'linked' ? (
                           // Filed as my routine — completing it contributes.
-                          <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                            루틴 연동됨
-                          </Text>
+                          canUnlink ? (
+                            <LinkedBadge
+                              label="루틴 연동됨"
+                              color={t.textMuted}
+                              mission={mission}
+                              onPress={setMissionToUnlink}
+                            />
+                          ) : (
+                            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                              루틴 연동됨
+                            </Text>
+                          )
                         ) : cta.kind === 'addRoutine' ? (
                           <Pressable
                             onPress={() => setMissionToAdd(mission)}
@@ -324,7 +375,7 @@ export function HouseMissionsScreen({
         title="미션 삭제"
         body={
           missionToDelete
-            ? `'${missionToDelete.title}' 미션을 삭제할까요?\n지금까지의 기여 기록은 남지만 미션은 목록에서 사라져요. 멤버들이 만든 연동 루틴은 삭제되지 않아요.`
+            ? `'${missionToDelete.title}' 미션을 삭제할까요?\n지금까지의 기여 기록은 남지만 미션은 목록에서 사라져요. 내 연동 루틴도 함께 삭제되고, 다른 멤버의 루틴은 연동만 끊겨요.`
             : ''
         }
         confirmLabel="삭제"
@@ -336,6 +387,26 @@ export function HouseMissionsScreen({
           setMissionToDelete(null);
         }}
         onCancel={() => setMissionToDelete(null)}
+      />
+
+      {/* 배지는 '연동됨'인데 결과는 삭제다 — 문구가 그 차이를 메운다 (#890). */}
+      <ConfirmDialog
+        visible={!!missionToUnlink}
+        title="연동 루틴 삭제"
+        body={
+          missionToUnlink
+            ? `'${missionToUnlink.title}' 루틴을 내 루틴에서 삭제할까요?\n지금까지의 기여 기록은 남아요. 미션 자체는 그대로예요.`
+            : ''
+        }
+        confirmLabel="삭제"
+        confirmAccessibilityLabel="연동 루틴 삭제 확인"
+        cancelAccessibilityLabel="연동 루틴 삭제 취소"
+        destructive
+        onConfirm={() => {
+          if (missionToUnlink) onRemoveMissionRoutine?.(missionToUnlink);
+          setMissionToUnlink(null);
+        }}
+        onCancel={() => setMissionToUnlink(null)}
       />
 
       {showCreateMission ? (
@@ -559,6 +630,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.one,
   },
+  linkedBadge: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
   missionDeleteBtn: {
     marginLeft: Spacing.one,
   },

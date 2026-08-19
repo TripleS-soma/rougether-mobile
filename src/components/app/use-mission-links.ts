@@ -163,6 +163,20 @@ export function useMissionLinks({
     [linkedRoutinesFor, deleteMission, deleteRoutine, toast],
   );
 
+  /**
+   * 내 연동 루틴만 정리 (#890) — 미션은 그대로 둔다. 미션 삭제는 방장 전용이라
+   * 구성원에겐 자기가 만든 연동 루틴을 되돌릴 길이 미션 화면에 없었다.
+   */
+  const removeMissionRoutine = useCallback(
+    async (missionId: number) => {
+      const linked = linkedRoutinesFor([missionId]);
+      if (linked.length === 0) return;
+      for (const r of linked) await deleteRoutine(r.id);
+      toast('연동 루틴을 삭제했어요');
+    },
+    [linkedRoutinesFor, deleteRoutine, toast],
+  );
+
   /** 집 나가기/삭제 성공 시 연동 카테고리를 루틴째 통삭제 (#338). */
   const leaveHouseWithLinked = useCallback(
     async (houseId: number) => {
@@ -267,6 +281,7 @@ export function useMissionLinks({
     houseLinkedRoutines,
     contributedMissionIdList,
     deleteMissionWithLinked,
+    removeMissionRoutine,
     leaveHouseWithLinked,
     toggleWithMissionGuard,
   };

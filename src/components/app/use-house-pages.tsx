@@ -118,6 +118,7 @@ export function useHousePages({
   missionLinks: {
     leaveHouseWithLinked: MissionLinks['leaveHouseWithLinked'];
     deleteMissionWithLinked: MissionLinks['deleteMissionWithLinked'];
+    removeMissionRoutine: MissionLinks['removeMissionRoutine'];
     addMissionRoutine: MissionLinks['addMissionRoutine'];
     houseLinkedRoutines: MissionLinks['houseLinkedRoutines'];
     contributedMissionIdList: MissionLinks['contributedMissionIdList'];
@@ -181,6 +182,7 @@ export function useHousePages({
   const {
     leaveHouseWithLinked,
     deleteMissionWithLinked,
+    removeMissionRoutine,
     addMissionRoutine,
     houseLinkedRoutines,
     contributedMissionIdList,
@@ -340,6 +342,12 @@ export function useHousePages({
     },
     [deleteMissionWithLinked],
   );
+  const handleRemoveMissionRoutine = useCallback(
+    (mission: { id: number }) => {
+      void removeMissionRoutine(mission.id);
+    },
+    [removeMissionRoutine],
+  );
   const handleUpdateHouse = useCallback(
     (houseId: number, input: HouseEditInput) => {
       void updateHouse(houseId, input);
@@ -394,6 +402,7 @@ export function useHousePages({
     linkedRoutines: houseLinkedRoutines,
     contributedMissionIds: contributedMissionIdList,
     onAddMissionRoutine: handleAddMissionRoutine,
+    onRemoveMissionRoutine: handleRemoveMissionRoutine,
     onClaimMission: handleClaimMission,
     onCreateMission: handleCreateMission,
     onDeleteMission: handleDeleteMission,
@@ -418,6 +427,7 @@ export function useHousePages({
         onDeleteMission={handleDeleteMission}
         onClaimMission={handleClaimMission}
         onAddMissionRoutine={handleAddMissionRoutine}
+        onRemoveMissionRoutine={handleRemoveMissionRoutine}
       />
     ) : screen === 'houseMembers' && currentHouse ? (
       <HouseMembersScreen

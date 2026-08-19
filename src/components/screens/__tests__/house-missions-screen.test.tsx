@@ -28,6 +28,81 @@ const MEMBER_HOUSE: House = { ...MISSION_HOUSE, myRole: 'MEMBER' };
 const EMPTY_MISSION_HOUSE: House = { ...MISSION_HOUSE, missions: [] };
 
 describe('HouseMissionsScreen', () => {
+  /**
+   * 미션 삭제는 방장 전용이라, 구성원에겐 자기가 만든 연동 루틴을 되돌릴 길이
+   * 이 화면에 없었다 (#890). 방장의 휴지통과 결과가 다르므로 아이콘도 다르다 —
+   * 휴지통은 미션이 사라지고, 배지는 내 루틴만 없앤다.
+   */
+  it('연동 루틴이 있으면 배지를 눌러 내 루틴만 정리한다 (#890)', async () => {
+    const onRemoveMissionRoutine = jest.fn();
+    const { getByLabelText, getByText } = await render(
+      <HouseMissionsScreen
+        house={MEMBER_HOUSE}
+        missions={MEMBER_HOUSE.missions ?? []}
+        isOwner={false}
+        linkedRoutines={[{ missionId: 11, completedToday: false }]}
+        onRemoveMissionRoutine={onRemoveMissionRoutine}
+      />,
+    );
+    await fireEvent.press(getByLabelText('주간 루틴 지키기 연동 루틴 정리'));
+    // 배지는 '연동됨'인데 결과는 삭제 — 문구가 그 차이를 메운다.
+    expect(getByText(/루틴을 내 루틴에서 삭제할까요\?/)).toBeTruthy();
+    expect(getByText(/미션 자체는 그대로예요/)).toBeTruthy();
+    await fireEvent.press(getByLabelText('연동 루틴 삭제 확인'));
+    expect(onRemoveMissionRoutine).toHaveBeenCalledWith(expect.objectContaining({ id: 11 }));
+  });
+
+  /** 연동 루틴이 없으면 정리할 것도 없다 — 배지는 그냥 라벨이다. */
+  it('연동 루틴이 없으면 배지가 눌리지 않는다 (#890)', async () => {
+    const { queryByLabelText } = await render(
+      <HouseMissionsScreen
+        house={MEMBER_HOUSE}
+        missions={MEMBER_HOUSE.missions ?? []}
+        isOwner={false}
+        linkedRoutines={[]}
+        onRemoveMissionRoutine={jest.fn()}
+      />,
+    );
+    expect(queryByLabelText('주간 루틴 지키기 연동 루틴 정리')).toBeNull();
+  });
+
+  /**
+   * 다이얼로그가 "연동 루틴은 삭제되지 않아요"라고 해놓고 삭제 후 토스트는
+   * "함께 삭제했어요"를 띄우던 자기모순 (#890).
+   */
+  it('미션 삭제 안내가 내 연동 루틴도 지워진다고 말한다 (#890)', async () => {
+    const { getByLabelText, getByText } = await render(
+      <HouseMissionsScreen
+        house={MISSION_HOUSE}
+        missions={MISSION_HOUSE.missions ?? []}
+        isOwner
+        onDeleteMission={jest.fn()}
+      />,
+    );
+    await fireEvent.press(getByLabelText('주간 루틴 지키기 삭제'));
+    expect(getByText(/내 연동 루틴도 함께 삭제되고/)).toBeTruthy();
+    expect(getByText(/다른 멤버의 루틴은 연동만 끊겨요/)).toBeTruthy();
+  });
+
+  /**
+   * 유형마다 숫자의 뜻이 다른데 목록엔 단위가 없었다 (#887) — 만들 때는
+   * "1~100%"라고 물어놓고 카드에선 `25/100`으로만 보여줬다.
+   */
+  it('진행 수치에 유형별 단위를 붙인다 (#887)', async () => {
+    const withUnits: House = {
+      ...MISSION_HOUSE,
+      missions: [
+        { id: 21, title: '영양제 먹기', desc: '일일 구성원 달성률', icon: 'sun' as const, current: 25, target: 100, status: 'ACTIVE', unit: '%' }, // prettier-ignore
+        { id: 22, title: '루게더 개발', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 10, target: 10, status: 'ACTIVE', unit: '회' }, // prettier-ignore
+      ],
+    };
+    const { getByText } = await render(
+      <HouseMissionsScreen house={withUnits} missions={withUnits.missions ?? []} isOwner={false} />,
+    );
+    expect(getByText('25/100%')).toBeTruthy();
+    expect(getByText('10/10회')).toBeTruthy();
+  });
+
   it('adds a mission to my routines through the confirm modal, and claims', async () => {
     const onAddMissionRoutine = jest.fn();
     const onClaimMission = jest.fn();
