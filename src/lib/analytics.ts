@@ -89,7 +89,7 @@ export function initAnalytics() {
 /** 로그인 후 사용자 식별 — 서버 회원 id 기준(이벤트가 사용자로 묶인다). */
 export function identifyUser(userId: number | string) {
   try {
-    if (ga && gaMod) void gaMod.setUserId(ga, String(userId));
+    if (ga && gaMod) void gaMod.setUserId(ga, String(userId)).catch(() => {});
   } catch {
     // no-op
   }
@@ -98,25 +98,52 @@ export function identifyUser(userId: number | string) {
 /** 로그아웃 — 익명 사용자로 리셋. */
 export function resetAnalyticsUser() {
   try {
-    if (ga && gaMod) void gaMod.setUserId(ga, null);
+    if (ga && gaMod) void gaMod.setUserId(ga, null).catch(() => {});
   } catch {
     // no-op
   }
 }
 
+/**
+ * GA4가 **구조를 정해둔 예약 파라미터** — 이름만 같아도 네이티브가 그 타입으로
+ * 캐스팅한다. `items`에 숫자를 넘겼다가 양 플랫폼에서 터졌다 (#912):
+ *   iOS      `-[__NSCFNumber enumerateObjectsUsingBlock:]: unrecognized selector`
+ *   Android  `java.lang.Double cannot be cast to ReadableArray`
+ * 이벤트 하나 때문에 앱이 죽으면 안 되므로, 보내기 전에 막고 이름을 바꾼다.
+ */
+const RESERVED_PARAMS = new Set(['items', 'extend_session']);
+
 export function track(event: AnalyticsEvent, props?: Record<string, string | number | boolean>) {
   try {
     // GA4 이벤트 이름 규칙(영소문자+언더스코어)은 AnalyticsEvent 유니온이 보장.
-    if (ga && gaMod) void gaMod.logEvent(ga, event, props);
+    if (!ga || !gaMod) return;
+    const safe = props && sanitize(props);
+    // logEvent는 Promise를 준다 — `void`로 버리면 **거부가 try/catch를 빠져나가**
+    // unhandled rejection이 된다. 실제로 그렇게 새어나갔다 (#912).
+    void gaMod.logEvent(ga, event, safe).catch(() => {});
   } catch {
     // no-op
   }
+}
+
+/** 예약 파라미터는 접두를 붙여 피한다 — 버리면 계측이 조용히 비고, 그대로 두면 죽는다. */
+function sanitize(props: Record<string, string | number | boolean>) {
+  let hit = false;
+  const out: Record<string, string | number | boolean> = {};
+  for (const [k, v] of Object.entries(props)) {
+    if (RESERVED_PARAMS.has(k)) {
+      hit = true;
+      out[`app_${k}`] = v;
+    } else out[k] = v;
+  }
+  return hit ? out : props;
 }
 
 /** 셸 화면 전환 추적 (탭·서브화면 공통). */
 export function screenView(name: string) {
   try {
-    if (ga && gaMod) void gaMod.logScreenView(ga, { screen_name: name, screen_class: name });
+    if (ga && gaMod)
+      void gaMod.logScreenView(ga, { screen_name: name, screen_class: name }).catch(() => {});
   } catch {
     // no-op
   }
