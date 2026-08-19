@@ -7,6 +7,7 @@
 import { isCdnKey } from '@/resources/asset';
 import { CHARACTER_OPTIONS, type CharacterId } from '@/constants/characters';
 import { type Wallet } from '@/constants/currency';
+import { MISSION_TYPE_FALLBACK, MISSION_TYPE_RULES } from '@/constants/missions';
 import {
   GachaAccents,
   HouseBgs,
@@ -806,13 +807,6 @@ export function toHouseCover(c: HouseCoverImage): HouseCover | null {
   };
 }
 
-// Mission-type presentation: emoji + the label shown under the progress bar.
-const MISSION_TYPE_META: Record<string, { icon: PictogramName; label: string }> = {
-  DAILY_MEMBER_RATE: { icon: 'sun', label: '일일 구성원 달성률' },
-  WEEKLY_MEMBER_COUNT: { icon: 'calendar', label: '주간 구성원 달성 횟수' },
-  STREAK_DAYS: { icon: 'sparkle', label: '연속 달성' },
-};
-
 /** House-mission card model from the API mission summary. */
 /** Server date-time → device-local "YYYY-MM-DD" (mission period display). */
 function localDateOf(dateTime: string): string | undefined {
@@ -821,13 +815,17 @@ function localDateOf(dateTime: string): string | undefined {
 }
 
 export function toHouseMission(m: MissionSummary): HouseMission {
-  const meta = MISSION_TYPE_META[m.missionType ?? ''] ?? { icon: 'target', label: '단체 미션' };
+  // 아이콘·라벨·단위는 constants/missions의 단일 출처에서 (#887).
+  const meta =
+    MISSION_TYPE_RULES[m.missionType as keyof typeof MISSION_TYPE_RULES] ?? MISSION_TYPE_FALLBACK;
   const target = m.targetValue ?? 0;
   return {
     id: m.missionId ?? 0,
     title: m.title ?? '',
     desc: meta.label,
     icon: meta.icon,
+    /** `25/100`이 %인지 횟수인지 카드에서 드러나게 (#887). */
+    unit: meta.unit,
     current: m.currentValue ?? 0,
     target: Math.max(1, target),
     status: m.status ?? 'ACTIVE',

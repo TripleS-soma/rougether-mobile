@@ -152,6 +152,11 @@ export type HouseMission = {
   title: string;
   /** Mission-type description shown under the progress bar. */
   desc: string;
+  /**
+   * 진행 수치의 단위 (`%` / `회`). 유형마다 뜻이 달라서, 없으면 `25/100`이
+   * 비율인지 횟수인지 카드에서 알 수 없다 (#887). 서버가 모르는 유형이면 빈 문자열.
+   */
+  unit?: string;
   icon: PictogramName;
   current: number;
   target: number;
@@ -1182,7 +1187,9 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     marginHorizontal: Spacing.four,
     // 헤더 바로 아래라 위쪽 여백이 필요하다 — 없으면 헤더에 붙어 읽힌다.
-    marginTop: Spacing.three,
+    // 16으로는 여전히 붙어 보였다(#879 후속): 헤더가 흰 면이고 이 줄은 크림
+    // 배경 위라, 색이 바뀌는 경계가 곧 구분선처럼 읽혀 여백을 잡아먹는다.
+    marginTop: Spacing.four,
     marginBottom: Spacing.two,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,

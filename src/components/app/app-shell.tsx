@@ -247,6 +247,7 @@ export function AppShell({
     houseLinkedRoutines,
     contributedMissionIdList,
     deleteMissionWithLinked,
+    removeMissionRoutine,
     leaveHouseWithLinked,
     toggleWithMissionGuard,
   } = useMissionLinks({
@@ -409,6 +410,7 @@ export function AppShell({
     missionLinks: {
       leaveHouseWithLinked,
       deleteMissionWithLinked,
+      removeMissionRoutine,
       addMissionRoutine,
       houseLinkedRoutines,
       contributedMissionIdList,
