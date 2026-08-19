@@ -696,8 +696,9 @@ export const galleryEntries: GalleryEntry[] = [
   },
   {
     name: 'AppearancePreview',
-    description: '테마 색상·폰트 피커 공용 미리보기 카드 (#750): 활성 토큰·타입 스케일 그대로.',
-    render: () => <AppearancePreview />,
+    description:
+      '테마 색상·폰트 피커 공용 미리보기 카드 (#750): 활성 토큰·타입 스케일 그대로. 닉네임·캐릭터는 내 것 (#899).',
+    render: () => <AppearancePreview userName="루티" characterId="otter" />,
   },
   {
     name: 'FontScreen',

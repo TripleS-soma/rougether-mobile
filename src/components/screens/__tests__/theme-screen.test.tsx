@@ -34,4 +34,12 @@ describe('ThemeScreen', () => {
     await fireEvent.press(getByLabelText('뒤로 가기'));
     expect(onBack).toHaveBeenCalled();
   });
+
+  it('미리보기 카드에 내 닉네임·캐릭터를 넘긴다 (#899)', async () => {
+    const { getByText, getByLabelText } = await render(
+      <ThemeScreen userName="루티" characterId="otter" />,
+    );
+    expect(getByText('루티의 방')).toBeTruthy();
+    expect(getByLabelText('수달')).toBeTruthy();
+  });
 });

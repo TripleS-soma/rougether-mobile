@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AppearancePreview } from '@/components/screens/settings/appearance-preview';
 import { PickerRow, pickerStyles } from '@/components/screens/settings/picker-row';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import type { CharacterId } from '@/constants/characters';
 import {
   type BrandFontId,
   DEFAULT_FONT_ID,
@@ -17,6 +18,9 @@ import { useTokens } from '@/hooks/use-tokens';
 const SWATCH_GLYPH = '가';
 
 export type FontScreenProps = {
+  /** 미리보기 카드에 그릴 내 정체성 (#899). */
+  userName?: string;
+  characterId?: CharacterId;
   /** Active app font; drives the selected marker + live preview. */
   fontId?: BrandFontId;
   onChangeFont?: (id: BrandFontId) => void;
@@ -29,7 +33,13 @@ export type FontScreenProps = {
  * 미리보기 카드와 이 화면의 글자가 통째로 바뀐다. 순수/prop 기반이고 영속화는
  * 셸(BrandThemeProvider)이 맡는다.
  */
-export function FontScreen({ fontId = DEFAULT_FONT_ID, onChangeFont, onBack }: FontScreenProps) {
+export function FontScreen({
+  userName,
+  characterId,
+  fontId = DEFAULT_FONT_ID,
+  onChangeFont,
+  onBack,
+}: FontScreenProps) {
   const t = useTokens();
 
   return (
@@ -37,7 +47,7 @@ export function FontScreen({ fontId = DEFAULT_FONT_ID, onChangeFont, onBack }: F
       <ScreenHeader title="폰트" onBack={onBack} />
 
       <ScrollView contentContainerStyle={pickerStyles.body}>
-        <AppearancePreview />
+        <AppearancePreview userName={userName} characterId={characterId} />
 
         <View style={pickerStyles.list}>
           {FONT_OPTIONS.map((opt) => (
