@@ -103,6 +103,36 @@ export function useHouses() {
     );
   }, []);
 
+  /**
+   * 프로필 닉네임 변경을 내 좌석에 즉시 반영한다 (#924).
+   *
+   * 서버 멤버 목록은 다음 집 재조회까지 옛 닉네임을 들고 있다. 이름 하나
+   * 때문에 집 전체를 다시 부르는 대신 내 좌석만 파생해 덮는다 —
+   * `withMyCharacter`(use-member-room-previews)가 캐릭터에 쓰는 것과 같은 결.
+   * ref도 같이 갱신해야 이후의 단건 갱신(#534)이 옛 이름으로 되돌리지 않는다.
+   */
+  const applyMyNickname = useCallback((nickname: string) => {
+    const next = nickname || undefined;
+    if (myNicknameRef.current === next) return;
+    myNicknameRef.current = next;
+    if (!next) return;
+    setHouses((prev) => {
+      let changed = false;
+      const patched = prev.map((h) => ({
+        ...h,
+        floors: h.floors.map((f) => ({
+          ...f,
+          rooms: f.rooms.map((r) => {
+            if (!r.isMine || r.name === next) return r;
+            changed = true;
+            return { ...r, name: next };
+          }),
+        })),
+      }));
+      return changed ? patched : prev;
+    });
+  }, []);
+
   // 승인 대기 중인 내 입주 신청 (#648, 서버 #255) — 집 스위처의 잠금 카드.
   const [pendingJoinRequests, setPendingJoinRequests] = useState<MyJoinRequestSummary[]>([]);
 
@@ -603,6 +633,7 @@ export function useHouses() {
       retry: loadMyHouses,
       retrySearch: loadSearch,
       refreshHouses: reloadMyHouses,
+      applyMyNickname,
       pendingJoinRequests,
       cancelJoinRequest,
       reorderHouses,
@@ -636,6 +667,7 @@ export function useHouses() {
       loadMyHouses,
       loadSearch,
       reloadMyHouses,
+      applyMyNickname,
       pendingJoinRequests,
       cancelJoinRequest,
       reorderHouses,

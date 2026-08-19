@@ -293,7 +293,7 @@ export const HouseScreen = memo(function HouseScreen({
   onRetry,
   onRefresh,
   characterId = DEFAULT_CHARACTER_ID,
-  userName = '준서',
+  userName = '',
   streakDays = 0,
   houseIndex: houseIndexProp,
   onReorderHouses,

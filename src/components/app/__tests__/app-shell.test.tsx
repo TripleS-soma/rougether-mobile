@@ -169,7 +169,8 @@ describe('AppShell', () => {
         <AppShell />
       </AuthProvider>,
     );
-    expect(getByText('준서의 방')).toBeTruthy(); // MyRoomScreen default
+    // 닉네임을 아직 모를 때의 폴백 — 데모 이름('준서')을 흘리지 않는다 (#924).
+    expect(getByText('내 방')).toBeTruthy();
     expect(getByText('오늘의 할 일')).toBeTruthy();
     // Bottom nav tabs present.
     expect(getByLabelText('나의 방')).toBeTruthy();

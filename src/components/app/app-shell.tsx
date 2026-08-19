@@ -271,24 +271,27 @@ export function AppShell({
     applyMissionContribution,
   });
 
-  // Profile + settings. Nickname/bio seed from the API (/me) and persist via
-  // PUT /me (saveProfile); local state keeps edits visible immediately.
-  const [nickname, setNickname] = useState('준서');
-  const [bio, setBio] = useState('');
-  useEffect(() => {
-    if (apiNickname) setNickname(apiNickname);
-  }, [apiNickname]);
-  useEffect(() => {
-    if (apiBio != null) setBio(apiBio);
-  }, [apiBio]);
+  /**
+   * Profile + settings — **사본을 두지 않는다** (#924).
+   *
+   * 예전엔 셸이 `useState('준서')`로 별도 사본을 들고 API 값으로 seed했다.
+   * 같은 값이 두 군데 살면서 화면마다 다른 걸 보게 됐고, 하드코딩된 남의
+   * 이름이 로딩 구간에 노출됐다(온보딩에서 한 번 데었던 그 문제 —
+   * onboarding-screen의 주석 참고). `saveProfile`이 이미 낙관적으로
+   * 갱신하므로 사본 없이 그대로 파생하면 된다.
+   */
+  const nickname = apiNickname ?? '';
+  const bio = apiBio ?? '';
   // 설정 서피스 (#692 2단계) — 설정 탭·서브화면 8종의 훅·콜백·JSX 소유.
   const handleProfileSave = useCallback(
+    // saveProfile이 낙관적으로 상태를 바꾸고 실패 시 되돌린다 — 여기서 또
+    // 손대면 되돌리기가 어긋난다 (#924). 집 좌석 라벨만은 별도 캐시(서버
+    // 멤버 목록)에 살아서 재조회 없이 따로 파생해줘야 한다.
     (nick: string, b: string) => {
-      setNickname(nick);
-      setBio(b);
       void saveProfile(nick, b);
+      housesData.applyMyNickname(nick);
     },
-    [saveProfile],
+    [saveProfile, housesData],
   );
   const settingsSurface = useSettingsSurface({
     screen,

@@ -270,7 +270,7 @@ function VisibilityMark({ visibility }: { visibility: CategoryVisibility }) {
 // memo 경계 (#539): 셸의 무관한 상태 변화에서 이 화면(그리고 안의 방 캔버스)
 // 리렌더를 끊는다 — AppShell이 넘기는 함수/객체 prop의 참조 안정이 전제다.
 export const MyRoomScreen = memo(function MyRoomScreen({
-  userName = '준서',
+  userName = '',
   streakDays = 7,
   coinBalance = 0,
   diamondBalance = 0,
@@ -1066,7 +1066,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               ellipsizeMode="middle"
               adjustsFontSizeToFit
               minimumFontScale={0.75}>
-              {userName}의 방
+              {userName ? `${userName}의 방` : '내 방'}
             </Text>
             {/* A 0-day streak is nothing to celebrate — show the flame only
                 once a streak exists. */}

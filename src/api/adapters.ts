@@ -741,11 +741,12 @@ export function toHouse(
     ...active.filter((m) => m.userId !== myUserId),
   ];
   const cells: RoomCell[] = ordered.map((m, i) => ({
-    // The members API may not carry my nickname (server nickname unset) — fall
-    // back to the profile nickname so my room reads by name, not '멤버 N'.
+    // 내 좌석 이름은 **프로필이 우선**이다 (#924). 멤버 API의 nickname은 집을
+    // 다시 불러올 때까지 옛 값을 들고 있어서, 프로필을 고쳐도 타일만 예전
+    // 이름으로 남았다. 프로필 쪽이 같은 값의 출처이므로 항상 그쪽을 믿는다.
+    // (멤버 API에 이름이 아예 없는 경우의 폴백도 겸한다.)
     name:
-      m.nickname ||
-      (m.userId === myUserId && myNickname ? myNickname : `멤버 ${m.userId ?? i + 1}`),
+      (m.userId === myUserId ? myNickname : undefined) || m.nickname || `멤버 ${m.userId ?? i + 1}`,
     color: m.userId === myUserId ? MyRoomTint : RoomTints[i % RoomTints.length],
     isMine: m.userId === myUserId,
     isOwner: m.role === 'OWNER',

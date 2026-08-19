@@ -423,6 +423,34 @@ describe('API adapters', () => {
     expect(anon.floors.flatMap((f) => f.rooms).find((r) => r.isMine)?.name).toBe('멤버 6');
   });
 
+  it('prefers the live profile nickname over the stale members-API one (#924)', () => {
+    // 프로필에서 이름을 바꿔도 집을 다시 부르기 전까지 멤버 API는 옛 이름을
+    // 들고 있다. 좌석 타일은 뷰에서 라이브 이름으로 덮지만(#479), 멤버 목록
+    // (house-members-screen)은 room.name을 그대로 그려서 내 행만 옛 이름으로
+    // 남았다. 같은 값의 출처는 프로필이므로 그쪽이 이긴다.
+    const detail = { houseId: 1, name: '검증 하우스' };
+    const members = [
+      {
+        membershipId: 1,
+        userId: 6,
+        nickname: '옛이름',
+        role: 'OWNER' as const,
+        status: 'ACTIVE' as const,
+      },
+      {
+        membershipId: 2,
+        userId: 4,
+        nickname: '이웃',
+        role: 'MEMBER' as const,
+        status: 'ACTIVE' as const,
+      },
+    ];
+    const rooms = toHouse(detail, members, 6, '새이름').floors.flatMap((f) => f.rooms);
+    expect(rooms.find((r) => r.isMine)?.name).toBe('새이름');
+    // 남의 이름까지 덮으면 안 된다.
+    expect(rooms.find((r) => !r.isMine)?.name).toBe('이웃');
+  });
+
   it('derives tile presence from lastAccessedAt (#383)', () => {
     const now = Date.parse('2026-07-22T12:00:00Z');
     // 40분 창 안 → 접속 중, 라벨 없음.
