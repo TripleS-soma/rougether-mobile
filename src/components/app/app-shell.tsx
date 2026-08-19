@@ -496,7 +496,7 @@ export function AppShell({
                   // 여부는 따지지 않는다(사양 단순화).
                   // 퍼널 마지막 칸 (#799) — 루틴→코인→뽑기→꾸미기 한 바퀴가
                   // 닫힌 지점. 미션은 스킵 가능하므로 저장 자체를 센다.
-                  track('room_save', { items: its.length });
+                  track('room_save', { item_count: its.length });
                   completeMission('place-furniture');
                 }
                 return result;
