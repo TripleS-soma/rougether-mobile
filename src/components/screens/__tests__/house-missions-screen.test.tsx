@@ -20,7 +20,7 @@ const MISSION_HOUSE: House = {
   missions: [
     { id: 11, title: '주간 루틴 지키기', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 3, target: 10, status: 'ACTIVE' }, // prettier-ignore
     { id: 12, title: '기상 인증 모으기', desc: '일일 구성원 달성률', icon: 'sun' as const, current: 8, target: 8, status: 'ACTIVE', achieved: true }, // prettier-ignore
-    { id: 13, title: '지난 미션', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 5, target: 5, status: 'COMPLETED' }, // prettier-ignore
+    { id: 13, title: '지난 미션', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 5, target: 5, status: 'COMPLETED', achieved: true }, // prettier-ignore
   ],
 };
 
@@ -28,6 +28,25 @@ const MEMBER_HOUSE: House = { ...MISSION_HOUSE, myRole: 'MEMBER' };
 const EMPTY_MISSION_HOUSE: House = { ...MISSION_HOUSE, missions: [] };
 
 describe('HouseMissionsScreen', () => {
+  /**
+   * 목표를 못 채운 COMPLETED를 '완료'라고 하면 바로 위의 진짜 달성 카드와
+   * 같은 뜻으로 읽힌다 (#888). 실서버에 `0/3% COMPLETED`인 DAILY 미션이 있다.
+   */
+  it('목표를 못 채운 COMPLETED는 완료가 아니라 종료로 표시한다 (#888)', async () => {
+    const mixed: House = {
+      ...MISSION_HOUSE,
+      missions: [
+        { id: 31, title: '루게더 개발', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 10, target: 10, status: 'COMPLETED', achieved: true, unit: '회' }, // prettier-ignore
+        { id: 32, title: '8시 기상', desc: '일일 구성원 달성률', icon: 'sun' as const, current: 0, target: 3, status: 'COMPLETED', achieved: false, unit: '%' }, // prettier-ignore
+      ],
+    };
+    const { getByText } = await render(
+      <HouseMissionsScreen house={mixed} missions={mixed.missions ?? []} isOwner={false} />,
+    );
+    expect(getByText('완료')).toBeTruthy();
+    expect(getByText('종료')).toBeTruthy();
+  });
+
   /**
    * 미션 삭제는 방장 전용이라, 구성원에겐 자기가 만든 연동 루틴을 되돌릴 길이
    * 이 화면에 없었다 (#890). 방장의 휴지통과 결과가 다르므로 아이콘도 다르다 —
@@ -362,7 +381,7 @@ describe('HouseMissionsScreen', () => {
       ...MISSION_HOUSE,
       missions: [
         { id: 21, title: '기간 미션', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 0, target: 5, status: 'ACTIVE' as const, endsOn: '2026-07-23' }, // prettier-ignore
-        { id: 22, title: '끝난 기간 미션', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 5, target: 5, status: 'COMPLETED' as const, endsOn: '2026-07-01' }, // prettier-ignore
+        { id: 22, title: '끝난 기간 미션', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 5, target: 5, status: 'COMPLETED' as const, achieved: true, endsOn: '2026-07-01' }, // prettier-ignore
       ],
     };
     const { getByText, queryByText } = await render(
