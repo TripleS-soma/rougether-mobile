@@ -1,55 +1,79 @@
 /**
- * 초대 링크 딥링크 핸드오프 (#624) — `rougether://join?code=…`로 열린 join
- * 라우트가 코드를 맡기고, 앱 셸이 구독해 집 탐색의 코드 입장 플로우로 잇는다.
- * 콜드 스타트(셸이 나중에 마운트)와 웜 스타트(셸이 이미 떠 있음) 모두:
- * 구독 시점에 보관분을 즉시 전달하고, 이후 도착분은 리스너로 바로 흐른다.
- * 로그인 전에 열린 링크는 보관됐다가 로그인 후 셸 마운트 때 소비된다.
+ * 초대 링크 딥링크 핸드오프 (#624·#667) — `rougether://join?code=…` /
+ * `rougether://invite?code=…`로 열린 라우트가 코드를 맡기고, 앱 셸이 구독해
+ * 각각 집 탐색·친구 초대 화면으로 잇는다.
+ *
+ * ## 보관을 먼저, 전달은 그 다음 (#896)
+ *
+ * 예전엔 리스너가 있으면 **전달만 하고 보관하지 않았다**. 그래서 앱이 이미
+ * 떠 있는 상태(웜 스타트)에서 링크를 열면 코드가 리스너로 흘러들어가고,
+ * 그 전달이 실패하면 **복구할 방법이 없었다** — 콜드 스타트만 되고 웜은 안
+ * 되던 원인이다.
+ *
+ * 지금은 **항상 보관**하고, 목적지 화면이 "반영했다"고 알려올 때만 비운다
+ * (`clearPending*`). 그래서 셸이 리마운트되거나 전달이 유실돼도 다음 구독에서
+ * 다시 흘러간다. 소비 신호는 이미 양쪽 화면에 있다:
+ *   집 탐색   `onInitialCodeConsumed`
+ *   친구 초대 `onInitialRedeemCodeConsumed`
  */
 
-let pending: string | null = null;
-let listener: ((code: string) => void) | null = null;
+type Listener = (code: string) => void;
+
+function channel() {
+  let pending: string | null = null;
+  let listener: Listener | null = null;
+
+  return {
+    set(code: string) {
+      const clean = code.trim().toUpperCase();
+      if (!clean) return;
+      // 보관이 먼저다 — 리스너 전달이 유실돼도 다음 구독이 살린다.
+      pending = clean;
+      listener?.(clean);
+    },
+    subscribe(onCode: Listener) {
+      listener = onCode;
+      // 보관분은 지우지 않고 전달만 한다 — 소비는 화면이 알려온다.
+      if (pending) onCode(pending);
+      return () => {
+        if (listener === onCode) listener = null;
+      };
+    },
+    clear() {
+      pending = null;
+    },
+  };
+}
+
+const house = channel();
+const friend = channel();
 
 export function setPendingInviteCode(code: string) {
-  const clean = code.trim().toUpperCase();
-  if (!clean) return;
-  if (listener) listener(clean);
-  else pending = clean;
+  house.set(code);
 }
 
 /** 셸이 마운트에서 1회 구독 — 해제 함수를 돌려준다. */
-export function subscribePendingInviteCode(onCode: (code: string) => void): () => void {
-  listener = onCode;
-  if (pending) {
-    const code = pending;
-    pending = null;
-    onCode(code);
-  }
-  return () => {
-    if (listener === onCode) listener = null;
-  };
+export function subscribePendingInviteCode(onCode: Listener): () => void {
+  return house.subscribe(onCode);
 }
 
-// --- 친구 초대 채널 (#667) — 같은 핸드오프 계약, 목적지만 친구 초대 화면. ---
+/** 집 탐색이 코드 미리보기를 실제로 띄웠을 때. */
+export function clearPendingInviteCode() {
+  house.clear();
+}
 
-let pendingFriend: string | null = null;
-let friendListener: ((code: string) => void) | null = null;
+// --- 친구 초대 채널 (#667) — 같은 계약, 목적지만 친구 초대 화면. ---
 
 export function setPendingFriendInviteCode(code: string) {
-  const clean = code.trim().toUpperCase();
-  if (!clean) return;
-  if (friendListener) friendListener(clean);
-  else pendingFriend = clean;
+  friend.set(code);
 }
 
 /** 셸이 마운트에서 1회 구독 — 해제 함수를 돌려준다. */
-export function subscribePendingFriendInviteCode(onCode: (code: string) => void): () => void {
-  friendListener = onCode;
-  if (pendingFriend) {
-    const code = pendingFriend;
-    pendingFriend = null;
-    onCode(code);
-  }
-  return () => {
-    if (friendListener === onCode) friendListener = null;
-  };
+export function subscribePendingFriendInviteCode(onCode: Listener): () => void {
+  return friend.subscribe(onCode);
+}
+
+/** 친구 초대 화면이 코드 프리필을 반영했을 때. */
+export function clearPendingFriendInviteCode() {
+  friend.clear();
 }
