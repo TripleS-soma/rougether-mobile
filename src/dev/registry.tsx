@@ -10,10 +10,12 @@ import { Room } from '@/components/room/room';
 import { GachaAccents } from '@/constants/theme';
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
 import { CategoryManageScreen } from '@/components/screens/category-manage-screen';
+import { CalendarImportScreen } from '@/components/screens/calendar-import-screen';
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
 import { GachaScreen } from '@/components/screens/gacha-screen';
 import { HouseScreen, type House } from '@/components/screens/house-screen';
+import { HouseMissionsScreen } from '@/components/screens/house-missions-screen';
 import { HouseMembersScreen, manageableMembers } from '@/components/screens/house-members-screen';
 import { HelpScreen } from '@/components/screens/help-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
@@ -512,12 +514,94 @@ export const galleryEntries: GalleryEntry[] = [
   {
     name: 'HouseScreen',
     description:
-      'Ported from the prototype HouseScreen (#10): house switcher, member rooms, group goals. 구성원 관리는 셸 화면으로 승격(#753) — 아래 HouseMembersScreen 항목에서 미리보기.',
+      'Ported from the prototype HouseScreen (#10): house switcher, member rooms, 공동 미션 요약 줄. 구성원 관리·공동 미션은 셸 화면으로 승격(#753·#875) — 아래 항목에서 미리보기.',
     render: () => (
       <View style={{ height: 900, alignSelf: 'stretch' }}>
-        <HouseScreen />
+        {/* onOpenMissions를 배선해야 요약 줄이 그려진다 (#875). */}
+        <HouseScreen onOpenMissions={() => {}} />
       </View>
     ),
+  },
+  {
+    name: 'CalendarImportScreen',
+    description:
+      '설정 → 캘린더 연동 (#844): 캘린더 선택 → 미리보기 → 선택 임포트. 비슷한 루틴이 있는 항목은 기본 해제.',
+    render: () => (
+      <View style={{ alignSelf: 'stretch', height: 720 }}>
+        <CalendarImportScreen
+          calendars={[
+            { id: 'c1', title: '개인', source: 'Google' },
+            { id: 'c2', title: '대한민국 공휴일', source: 'Holidays' },
+          ]}
+          candidates={[
+            {
+              seriesId: 'e1',
+              occurrenceId: 'e1:2026-08-20',
+              title: '치과 예약',
+              date: '2026-08-20',
+              allDay: false,
+              similar: [],
+            },
+            {
+              seriesId: 'e2',
+              occurrenceId: 'e2:2026-08-21',
+              title: '영양제 먹기',
+              date: '2026-08-21',
+              allDay: false,
+              similar: [
+                { kind: 'ROUTINE', id: 21, title: '영양제 챙겨먹기', score: 0.86, matchType: 'EMBEDDING' }, // prettier-ignore
+              ],
+            },
+            {
+              seriesId: 'e3',
+              occurrenceId: 'e3:2026-08-22',
+              title: '팀 회식',
+              date: '2026-08-22',
+              allDay: false,
+              similar: [],
+            },
+          ]}
+          onBack={() => {}}
+          onConnect={() => {}}
+          onPreview={() => {}}
+          onImport={() => {}}
+        />
+      </View>
+    ),
+  },
+  {
+    name: 'HouseMissionsScreen',
+    description:
+      '집 → 공동 미션 (#875에서 모달 → 셸 화면으로 승격): 미션 목록·진행률, 보상 수령, 만들기 폼(유형별 목표 상한·단위 #872).',
+    render: () => {
+      const demoHouse: House = {
+        houseId: 7,
+        name: '데모 하우스',
+        myRole: 'OWNER',
+        maxMembers: 4,
+        memberCount: 2,
+        floors: [],
+        missions: [
+          { id: 11, title: '주간 루틴 지키기', desc: '주간 구성원 달성 횟수', icon: 'calendar', current: 3, target: 10, status: 'ACTIVE' }, // prettier-ignore
+          { id: 12, title: '기상 인증 모으기', desc: '일일 구성원 달성률', icon: 'sun', current: 80, target: 80, status: 'ACTIVE', achieved: true }, // prettier-ignore
+          { id: 13, title: '지난 미션', desc: '주간 구성원 달성 횟수', icon: 'calendar', current: 5, target: 5, status: 'COMPLETED', achieved: true }, // prettier-ignore
+        ],
+      };
+      return (
+        <View style={{ height: 900, alignSelf: 'stretch' }}>
+          <HouseMissionsScreen
+            house={demoHouse}
+            missions={demoHouse.missions ?? []}
+            isOwner
+            onBack={() => {}}
+            onCreateMission={() => {}}
+            onDeleteMission={() => {}}
+            onClaimMission={() => {}}
+            onAddMissionRoutine={() => {}}
+          />
+        </View>
+      );
+    },
   },
   {
     name: 'HouseMembersScreen',

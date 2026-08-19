@@ -13,6 +13,7 @@ export type Screen =
   | 'gacha'
   | 'house'
   | 'houseMembers'
+  | 'houseMissions'
   | 'friendRoom'
   | 'houseSearch'
   | 'createHouse'
@@ -21,6 +22,7 @@ export type Screen =
   | 'font'
   | 'profileEdit'
   | 'notificationList'
+  | 'calendarImport'
   | 'bugReport'
   | 'notifications'
   | 'sound'
@@ -37,6 +39,7 @@ export const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   gacha: null,
   house: 'house',
   houseMembers: null,
+  houseMissions: null,
   friendRoom: null,
   houseSearch: null,
   createHouse: null,
@@ -45,6 +48,7 @@ export const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   font: null,
   profileEdit: null,
   notificationList: null,
+  calendarImport: null,
   bugReport: null,
   notifications: null,
   sound: null,
@@ -75,6 +79,7 @@ export const BACK_SCREEN: Record<Screen, Screen | null> = {
   gacha: 'myRoom',
   house: 'myRoom',
   houseMembers: 'house',
+  houseMissions: 'house',
   friendRoom: 'house',
   houseSearch: 'house',
   createHouse: 'houseSearch',
@@ -83,6 +88,7 @@ export const BACK_SCREEN: Record<Screen, Screen | null> = {
   font: 'settings',
   profileEdit: 'settings',
   notificationList: 'myRoom',
+  calendarImport: 'settings',
   bugReport: 'settings',
   notifications: 'settings',
   sound: 'settings',

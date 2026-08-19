@@ -2,7 +2,7 @@
   "expo": {
     "name": "Rougether",
     "slug": "rougether-mobile",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "runtimeVersion": {
       "policy": "fingerprint"
     },
@@ -107,6 +107,24 @@
         {
           "photosPermission": "방 사진을 앨범에서 불러오기 위해 사진 접근 권한을 사용합니다.",
           "savePhotosPermission": "방 사진을 앨범에 저장하기 위해 사진 추가 권한을 사용합니다."
+        }
+      ],
+      [
+        "./plugins/with-calendar-readonly.js",
+        {
+          "mode": "ios"
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "기기 캘린더의 일정을 루게더 할 일로 가져오기 위해 캘린더를 읽습니다. 캘린더에 쓰지는 않습니다."
+        }
+      ],
+      [
+        "./plugins/with-calendar-readonly.js",
+        {
+          "mode": "android"
         }
       ],
       [

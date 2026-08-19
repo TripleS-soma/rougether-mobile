@@ -10,13 +10,13 @@ import { Icon } from '@/components/ui/icon';
 import { CrownPictogram, DoorPictogram, PencilPictogram } from '@/components/ui/pictograms';
 import { useToast } from '@/components/ui/toast';
 import type { CharacterId } from '@/constants/characters';
+import { houseCapacityOptions } from '@/constants/house-themes';
 import { houseInviteLink } from '@/constants/links';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
 /** Capacity choices for the edit form (server allows 1~10). */
-const CAPACITY_OPTIONS = [2, 3, 4, 6, 8, 10];
 
 /**
  * 관리 대상 구성원 (#753) — 정원 채움용 빈 좌석은 타일일 뿐 구성원이 아니다.
@@ -520,7 +520,7 @@ export function HouseMembersScreen({
                 정원{currentHouse.memberCount ? ` (현재 ${currentHouse.memberCount}명)` : ''}
               </Text>
               <View style={styles.missionTypeRow}>
-                {CAPACITY_OPTIONS.map((n) => {
+                {houseCapacityOptions(currentHouse.maxMembers).map((n) => {
                   const selected = n === editMax;
                   // The server rejects a capacity below the current headcount.
                   const tooSmall = !!currentHouse.memberCount && n < currentHouse.memberCount;

@@ -572,6 +572,7 @@ export function HouseSearchScreen({
                               </Text>
                               <Text style={[Typography.supporting, { color: t.primaryText }]}>
                                 {mission.current}/{mission.target}
+                                {mission.unit}
                               </Text>
                             </View>
                             <SpringProgressBar

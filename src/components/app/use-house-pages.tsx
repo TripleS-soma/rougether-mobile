@@ -18,6 +18,7 @@ import {
   type HouseEditInput,
   type NewHouseMission,
 } from '@/components/screens/house-screen';
+import { HouseMissionsScreen } from '@/components/screens/house-missions-screen';
 import { HouseMembersScreen, manageableMembers } from '@/components/screens/house-members-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { type CharacterId } from '@/constants/characters';
@@ -117,6 +118,7 @@ export function useHousePages({
   missionLinks: {
     leaveHouseWithLinked: MissionLinks['leaveHouseWithLinked'];
     deleteMissionWithLinked: MissionLinks['deleteMissionWithLinked'];
+    removeMissionRoutine: MissionLinks['removeMissionRoutine'];
     addMissionRoutine: MissionLinks['addMissionRoutine'];
     houseLinkedRoutines: MissionLinks['houseLinkedRoutines'];
     contributedMissionIdList: MissionLinks['contributedMissionIdList'];
@@ -180,6 +182,7 @@ export function useHousePages({
   const {
     leaveHouseWithLinked,
     deleteMissionWithLinked,
+    removeMissionRoutine,
     addMissionRoutine,
     houseLinkedRoutines,
     contributedMissionIdList,
@@ -282,10 +285,14 @@ export function useHousePages({
     setScreen('houseMembers');
   }, [currentHouse, refreshHouses, setScreen]);
   const closeMembers = useCallback(() => setScreen('house'), [setScreen]);
+  // 공동 미션 화면 (#875) — 예전엔 집 화면 위 모달이었다.
+  const openMissions = useCallback(() => setScreen('houseMissions'), [setScreen]);
+  const closeMissions = useCallback(() => setScreen('house'), [setScreen]);
   // 관리 중 집이 사라지면(마지막 집 나가기·삭제, 갱신으로 강퇴 확인 등) 집
   // 탭으로 돌린다 — currentHouse 없는 구성원 화면은 그릴 것이 없다.
   useEffect(() => {
-    if (screen === 'houseMembers' && !currentHouse) setScreen('house');
+    if ((screen === 'houseMembers' || screen === 'houseMissions') && !currentHouse)
+      setScreen('house');
   }, [screen, currentHouse, setScreen]);
   const handleAcceptJoinRequest = useCallback(
     (houseId: number, requestId: number) => {
@@ -334,6 +341,12 @@ export function useHousePages({
       void deleteMissionWithLinked(houseId, missionId);
     },
     [deleteMissionWithLinked],
+  );
+  const handleRemoveMissionRoutine = useCallback(
+    (mission: { id: number }) => {
+      void removeMissionRoutine(mission.id);
+    },
+    [removeMissionRoutine],
   );
   const handleUpdateHouse = useCallback(
     (houseId: number, input: HouseEditInput) => {
@@ -389,9 +402,11 @@ export function useHousePages({
     linkedRoutines: houseLinkedRoutines,
     contributedMissionIds: contributedMissionIdList,
     onAddMissionRoutine: handleAddMissionRoutine,
+    onRemoveMissionRoutine: handleRemoveMissionRoutine,
     onClaimMission: handleClaimMission,
     onCreateMission: handleCreateMission,
     onDeleteMission: handleDeleteMission,
+    onOpenMissions: openMissions,
     onUpdateHouse: handleUpdateHouse,
     onTransferOwnership: handleTransferOwnership,
     onReissueInviteCode: handleReissueInviteCode,
@@ -400,7 +415,21 @@ export function useHousePages({
 
   /** 현재 화면이 집 서브화면 3종이면 그 JSX, 아니면 null — 셸이 그대로 렌더. */
   const subScreen =
-    screen === 'houseMembers' && currentHouse ? (
+    screen === 'houseMissions' && currentHouse ? (
+      <HouseMissionsScreen
+        house={currentHouse}
+        missions={currentHouse.missions ?? []}
+        isOwner={currentHouse.myRole === 'OWNER' && !!currentHouse.houseId}
+        linkedRoutines={houseLinkedRoutines}
+        contributedMissionIds={contributedMissionIdList}
+        onBack={closeMissions}
+        onCreateMission={handleCreateMission}
+        onDeleteMission={handleDeleteMission}
+        onClaimMission={handleClaimMission}
+        onAddMissionRoutine={handleAddMissionRoutine}
+        onRemoveMissionRoutine={handleRemoveMissionRoutine}
+      />
+    ) : screen === 'houseMembers' && currentHouse ? (
       <HouseMembersScreen
         house={currentHouse}
         members={manageableMembers(currentHouse)}

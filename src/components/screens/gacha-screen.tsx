@@ -1,4 +1,3 @@
-import { Image } from 'expo-image';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, SectionList, StyleSheet, Text, View } from 'react-native';
 
@@ -17,10 +16,10 @@ import {
 import { Loading } from '@/components/ui/loading';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Icon } from '@/components/ui/icon';
+import { GiftBoxArt } from '@/components/screens/gacha/gift-box-art';
 import { RewardRow } from '@/components/screens/gacha/reward-row';
 import { RetryState } from '@/components/ui/retry-state';
 import { ScalePressable } from '@/components/ui/scale-pressable';
-import { Pictogram } from '@/components/ui/pictograms';
 import { WalletPills } from '@/components/ui/wallet-pills';
 import { Overlay, Radius, Spacing, StaticWhite } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
@@ -28,32 +27,7 @@ import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { track } from '@/lib/analytics';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { RARITY_COLORS, type Rarity } from '@/resources/furniture';
-import { assetSource, isCdnKey } from '@/resources/asset';
 import { hapticImpact, hapticSuccess } from '@/utils/haptics';
-
-/**
- * 머신의 선물상자 아트 (서버 #276) — 서버가 `giftBoxAssetKey`를 준다.
- * 키가 없거나 CDN 키가 아니면 기존 픽토그램으로 폴백한다: 구버전 서버·
- * 로컬 목·아트 미등록 머신에서 칸이 비지 않게 한다.
- *
- * accent 배경은 그대로 둔다 — 지금은 14개 머신이 **같은 상자 한 장**을
- * 공유해서(서버가 공용 플레이스홀더를 준다) 배경색이 유일한 머신 구분
- * 단서다. 머신별 아트가 생기면 그때 덜어내도 된다.
- */
-function GiftBoxArt({ machine, size }: { machine: GachaMachine; size: number }) {
-  if (!isCdnKey(machine.giftBoxKey)) return <Pictogram name={machine.icon} size={size} />;
-  return (
-    <Image
-      testID={`gift-box-${machine.id}`}
-      source={assetSource(machine.giftBoxKey)}
-      style={{ width: size, height: size }}
-      contentFit="contain"
-      transition={120}
-      // 칩 줄이 가로 스크롤이라 셀이 재활용된다 — furniture-placeholder(#771)와 같은 이유.
-      cachePolicy="memory-disk"
-    />
-  );
-}
 
 type Phase = 'idle' | 'charging' | 'burst' | 'reveal';
 
@@ -463,7 +437,7 @@ export function GachaScreen({
         <View style={styles.overlay}>
           {phase === 'charging' ? (
             <>
-              <ChargingBox icon={box?.icon ?? 'gift'} accent={box?.accent ?? '#E8DCC8'} />
+              <ChargingBox machine={box} />
               <Text style={[Typography.label, styles.overlayText]}>뽑는 중…</Text>
             </>
           ) : phase === 'burst' ? (

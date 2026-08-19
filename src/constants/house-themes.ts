@@ -30,3 +30,23 @@ export const HOUSE_THEME_PRESETS: HouseThemePreset[] = [
 
 /** 비공개 집 배지·자물쇠의 강조색 — 위 프리셋과 같은 고정 팔레트 계열. */
 export const HOUSE_PRIVATE_ACCENT = '#D4A574';
+
+/**
+ * 집 정원 상한 (#869) — **집 이미지가 담는 창문 수가 한계다.** 서버는 1~10을
+ * 허용하지만(기본 4) 그 이상을 고르면 구성원 그리드가 배경 이미지와 안 맞는다.
+ * 서버 계약은 그대로 두고 고를 수 있는 폭만 좁힌다.
+ */
+export const HOUSE_CAPACITY_MAX = 4;
+
+/** 만들기·수정 화면이 함께 쓰는 정원 선택지. */
+export const HOUSE_CAPACITY_OPTIONS = [2, 3, 4] as const;
+
+/**
+ * 상한이 내려가기 전에 만들어진 집은 정원이 4를 넘을 수 있다. 그 값을 선택지에
+ * 남겨 **현재 상태가 표현되게** 한다 — 없애면 아무것도 안 고른 것처럼 보인다.
+ * 방장은 내릴 수는 있고 올릴 수는 없다.
+ */
+export function houseCapacityOptions(current?: number): number[] {
+  const base = [...HOUSE_CAPACITY_OPTIONS];
+  return current != null && current > HOUSE_CAPACITY_MAX ? [...base, current] : base;
+}

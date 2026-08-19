@@ -6,7 +6,8 @@
 export type MissionStatus = 'ACTIVE' | 'COMPLETED' | 'EXPIRED';
 
 export type MissionCtaState =
-  | { kind: 'completed' } // '완료' 라벨
+  | { kind: 'completed' } // '완료' 라벨 — 목표를 채운 COMPLETED
+  | { kind: 'ended' } // '종료' 라벨 — 목표 미달인데 COMPLETED (#888)
   | { kind: 'expired' } // '기간 만료' 라벨
   | { kind: 'claim' } // '보상 받기' 버튼
   | { kind: 'contributed' } // '기여함' 라벨
@@ -35,7 +36,11 @@ export type MissionCtaInput = {
 export function missionCtaState(input: MissionCtaInput): MissionCtaState {
   switch (input.status) {
     case 'COMPLETED':
-      return { kind: 'completed' };
+      // 목표를 못 채웠는데 '완료'라고 하면 바로 위 카드(10/10 완료)와 같은 뜻으로
+      // 읽힌다. 실서버에 `0/3% COMPLETED`인 DAILY 미션이 있다 (#888) — 스웨거는
+      // "COMPLETED는 WEEKLY 전용"이라고 적혀 있어 서버 쪽이 근본 원인이지만,
+      // 그게 고쳐질 때까지도 화면은 사실만 말해야 한다.
+      return input.achieved ? { kind: 'completed' } : { kind: 'ended' };
     case 'EXPIRED':
       return { kind: 'expired' };
     case 'ACTIVE':

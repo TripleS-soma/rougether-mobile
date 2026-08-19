@@ -17,6 +17,10 @@ jobs:
       # 이 워크플로는 매니페스트 병합만 검증한다 — 산출물을 쓰지 않으므로
       # Sentry 소스맵 업로드는 끈다. 켜두면 토큰이 없어 빌드가 통째로 실패한다
       # (#801에서 실제로 실패했다: "Auth token is required for this request").
+      #
+      # #807에서 EAS env에 SENTRY_AUTH_TOKEN을 넣었지만 **여기는 EAS가 아니다**
+      # — GitHub 러너라 EAS env를 못 본다. 게다가 버리는 산출물의 소스맵을
+      # 올릴 이유도 없다. 그래서 이 잡만은 계속 끈 채로 둔다.
       SENTRY_DISABLE_AUTO_UPLOAD: 'true'
     steps:
       - uses: actions/checkout@v4

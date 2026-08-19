@@ -33,6 +33,7 @@ export {
 } from './auth';
 
 export * from './bug-reports';
+export * from './calendar-import';
 export * from './categories';
 export * from './events';
 export * from './houses';

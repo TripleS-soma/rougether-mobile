@@ -32,7 +32,7 @@ import {
   toSlotSaves,
   toUserItemMap,
 } from '@/api/adapters';
-import type { ItemResponse, RoutineResponse, TodayResponse } from '@/api/types';
+import type { ItemResponse, MissionSummary, RoutineResponse, TodayResponse } from '@/api/types';
 import type { NewRoutine } from '@/constants/routines';
 
 describe('API adapters', () => {
@@ -824,6 +824,29 @@ describe('API adapters', () => {
         .giftBoxKey,
     ).toBe('items/box.png');
     expect(toGachaMachine({ gachaId: 1, name: '숲속 세이지 뽑기' }).giftBoxKey).toBeUndefined();
+  });
+
+  /**
+   * `25/100`만 보여주면 그 숫자가 비율인지 횟수인지 카드에서 알 수 없다 —
+   * 만들 때는 "1~100%"라고 물어놓고 목록에선 단위가 사라졌었다 (#887).
+   */
+  it('미션 유형에 맞는 단위를 싣는다 (#887)', () => {
+    expect(
+      toHouseMission({ missionId: 1, title: '영양제 먹기', missionType: 'DAILY_MEMBER_RATE' }).unit,
+    ).toBe('%');
+    expect(
+      toHouseMission({ missionId: 2, title: '루게더 개발', missionType: 'WEEKLY_MEMBER_COUNT' })
+        .unit,
+    ).toBe('회');
+    // 서버가 모르는 유형을 보내와도 카드가 깨지지 않게 — 단위만 비운다.
+    // 생성 타입에는 없지만 서버가 나중에 새 유형을 붙일 수 있다 — 런타임 폴백.
+    expect(
+      toHouseMission({
+        missionId: 3,
+        title: '???',
+        missionType: 'UNKNOWN_TYPE' as MissionSummary['missionType'],
+      }).unit,
+    ).toBe('');
   });
 
   it('maps a mission end time to a local end date for the card', () => {

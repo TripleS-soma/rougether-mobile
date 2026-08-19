@@ -67,12 +67,19 @@ jobs:
           for platform in ios android; do
             current=$(npx expo-updates fingerprint:generate --platform "$platform" | node -e \
               'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).hash)}catch{console.log(s.trim())}})')
+            # 필드는 `runtime.version`이다 (fallback: `fingerprint.hash`).
+            # 예전엔 `b.runtimeVersion`을 읽었는데 그런 키가 없어서 undefined가
+            # 나왔고, `console.log(undefined)`가 **문자열 "undefined"** 를 찍어
+            # 아래 -z 분기를 그냥 지나쳐 매번 "지문 불일치"로 경고했다. 조용한
+            # 실패를 잡는 스텝이 거꾸로 매번 늑대야를 외치던 셈 (2026-08-17).
             shipped=$(eas build:list --platform "$platform" --build-profile production --limit 1 \
               --status finished --json --non-interactive | node -e \
-              'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const b=JSON.parse(s)[0];console.log(b?b.runtimeVersion:"")})')
-            if [ -z "$shipped" ]; then
-              echo "::notice::$platform — 스토어(production 프로필) 빌드가 아직 없습니다. 이 OTA를 받을 설치본이 없습니다."
-              echo "- **$platform**: production 빌드 없음 — 이 OTA를 받을 설치본이 없습니다." >> "$GITHUB_STEP_SUMMARY"
+              'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const b=JSON.parse(s)[0]||{};const v=(b.runtime&&b.runtime.version)||(b.fingerprint&&b.fingerprint.hash)||"";console.log(v)}catch{console.log("")}})')
+            # 조회 실패("")와 빌드 없음을 구분할 수 없으니 둘 다 notice로 흘린다
+            # — 확실하지 않은 걸 경고로 올리면 진짜 경고의 신호가 죽는다.
+            if [ -z "$shipped" ] || [ "$shipped" = "undefined" ]; then
+              echo "::notice::$platform — 스토어(production 프로필) 빌드의 런타임을 확인하지 못했습니다(빌드 없음 또는 조회 실패). 도달 여부를 판정하지 않았습니다."
+              echo "- **$platform**: 스토어 빌드 런타임 확인 불가(빌드 없음 또는 조회 실패) — 도달 여부 미판정." >> "$GITHUB_STEP_SUMMARY"
             elif [ "$current" != "$shipped" ]; then
               echo "::warning::$platform — 런타임 지문이 스토어 빌드와 다릅니다 (이번 $current ≠ 스토어 $shipped). 이 OTA는 기존 설치본에 도달하지 않습니다 — store-build 워크플로로 새 빌드를 내야 합니다."
               echo "- ⚠️ **$platform**: 지문 불일치 (\`$current\` ≠ 스토어 \`$shipped\`) — **OTA 도달 안 함**. store-build 필요." >> "$GITHUB_STEP_SUMMARY"

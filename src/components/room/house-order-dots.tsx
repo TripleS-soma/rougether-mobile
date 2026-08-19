@@ -26,8 +26,15 @@ export type HouseOrderDotsProps = {
   onReorder?: (houseIds: number[]) => void;
 };
 
-/** 꾹 누르기 판정(ms) — 페이저 가로 스와이프를 뺏지 않을 만큼은 길게. */
-const LONG_PRESS_MS = 350;
+/**
+ * 집 순서 드래그를 여는 꾹 누르기 판정(ms, #820) — 페이저 가로 스와이프를
+ * 뺏지 않을 만큼은 길게. 루틴 행 드래그(220ms)보다 긴 이유도 같다: 인디케이터는
+ * 탭으로 집을 넘기는 곳이라 짧으면 넘기려다 드래그가 걸린다.
+ *
+ * 이름에 용도를 담는다 — 예전엔 두 파일이 똑같이 `LONG_PRESS_MS`였고 값이
+ * 달랐다(350 vs 220). 같은 이름이면 같은 값인 줄 알기 쉽다.
+ */
+const HOUSE_REORDER_LONG_PRESS_MS = 350;
 /** 펼친 칩 하나의 폭 — 드래그 거리를 칸 수로 환산하는 기준. */
 const CHIP_W = 96;
 
@@ -81,7 +88,7 @@ export function HouseOrderDots({
     Gesture.Pan()
       .withTestId('house-order-drag')
       .runOnJS(true)
-      .activateAfterLongPress(LONG_PRESS_MS)
+      .activateAfterLongPress(HOUSE_REORDER_LONG_PRESS_MS)
       .onStart(() => {
         const { houses: list, index: at } = stateRef.current;
         if (list.length < 2) return;

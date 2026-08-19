@@ -4,16 +4,15 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import type { House, HouseMission, NewHouseMission } from '@/components/screens/house-screen';
 import { DateRangeSheet } from '@/components/screens/sheets/date-range-sheet';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import {
-  Pictogram,
-  type PictogramName,
-  TargetPictogram,
-  TrashPictogram,
-} from '@/components/ui/pictograms';
+import { Icon } from '@/components/ui/icon';
+import { ScreenHeader } from '@/components/ui/screen-header';
+import { Pictogram, type PictogramName, TrashPictogram } from '@/components/ui/pictograms';
 import { useToast } from '@/components/ui/toast';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
+import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { MISSION_TYPE_RULES } from '@/constants/missions';
 import { missionCtaState } from '@/utils/mission-cta';
 import { formatDate, todayIso, toIsoDate } from '@/utils/datetime';
 
@@ -24,17 +23,23 @@ function addDaysIso(iso: string, days: number) {
   return toIsoDate(d);
 }
 
+/** 생성 가능한 유형만 — 표시값은 constants/missions의 단일 출처에서 (#887). */
+const CREATABLE_TYPES: NewHouseMission['missionType'][] = [
+  'DAILY_MEMBER_RATE',
+  'WEEKLY_MEMBER_COUNT',
+];
+
 const MISSION_TYPE_OPTIONS: {
   type: NewHouseMission['missionType'];
   icon: PictogramName;
   label: string;
-}[] = [
-  { type: 'DAILY_MEMBER_RATE', icon: 'sun', label: '일일 달성률' },
-  { type: 'WEEKLY_MEMBER_COUNT', icon: 'calendar', label: '주간 달성 횟수' },
-];
+}[] = CREATABLE_TYPES.map((type) => ({
+  type,
+  icon: MISSION_TYPE_RULES[type].icon,
+  label: MISSION_TYPE_RULES[type].shortLabel,
+}));
 
-export type HouseMissionsSheetProps = {
-  visible: boolean;
+export type HouseMissionsScreenProps = {
   house: House;
   missions: HouseMission[];
   isOwner: boolean;
@@ -42,7 +47,8 @@ export type HouseMissionsSheetProps = {
   linkedRoutines?: { missionId: number; completedToday?: boolean }[];
   /** Mission ids contributed this session (기여 직후 즉시 반영용 보조 신호). */
   contributedMissionIds?: number[];
-  onClose: () => void;
+  /** 헤더 뒤로가기 — 셸이 집 화면으로 돌린다. */
+  onBack?: () => void;
   /** Create a new group mission. */
   onCreateMission?: (houseId: number, input: NewHouseMission) => void;
   /** Delete a mission (server: OWNER only, COMPLETED not deletable). */
@@ -51,7 +57,42 @@ export type HouseMissionsSheetProps = {
   onClaimMission?: (houseId: number, missionId: number) => void;
   /** File a mission as a daily routine under the house-named category. */
   onAddMissionRoutine?: (houseId: number, mission: HouseMission) => void;
+  /**
+   * 내 연동 루틴 정리 (#890). 미션 삭제는 방장만 가능해서, 구성원에게는
+   * 자기가 만든 연동 루틴을 되돌릴 길이 이 화면에 없었다.
+   */
+  onRemoveMissionRoutine?: (mission: HouseMission) => void;
 };
+
+/**
+ * 눌러서 정리할 수 있는 연동 배지 (#890). 방장의 휴지통과 **결과가 다르므로**
+ * 같은 아이콘을 쓰지 않는다 — 휴지통은 미션이 사라지고, 이건 내 루틴만 없앤다.
+ * 실제로 무슨 일이 벌어지는지는 확인 다이얼로그가 말한다.
+ */
+function LinkedBadge({
+  label,
+  color,
+  mission,
+  onPress,
+}: {
+  label: string;
+  color: string;
+  mission: HouseMission;
+  onPress: (m: HouseMission) => void;
+}) {
+  const Typography = useTypography();
+  return (
+    <Pressable
+      onPress={() => onPress(mission)}
+      accessibilityRole="button"
+      accessibilityLabel={`${mission.title} 연동 루틴 정리`}
+      hitSlop={8}
+      style={styles.linkedBadge}>
+      <Text style={[Typography.supporting, { color }]}>{label}</Text>
+      <Icon name="close" size={12} color={color} />
+    </Pressable>
+  );
+}
 
 /**
  * 공동 미션 시트 (#287) — mission list, the create-mission form, and the
@@ -59,19 +100,19 @@ export type HouseMissionsSheetProps = {
  * house-screen (pure move, no behavior change); stays mounted so the
  * form state survives closing the sheet, like the parent-held state did.
  */
-export function HouseMissionsSheet({
-  visible,
+export function HouseMissionsScreen({
   house: currentHouse,
   missions,
   isOwner,
   linkedRoutines = [],
   contributedMissionIds = [],
-  onClose,
+  onBack,
   onCreateMission,
   onDeleteMission,
   onClaimMission,
   onAddMissionRoutine,
-}: HouseMissionsSheetProps) {
+  onRemoveMissionRoutine,
+}: HouseMissionsScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
   const { show: toast } = useToast();
@@ -90,6 +131,7 @@ export function HouseMissionsSheet({
   const [missionToAdd, setMissionToAdd] = useState<HouseMission | null>(null);
   // 미션 삭제 확인 모달의 대상 (#305).
   const [missionToDelete, setMissionToDelete] = useState<HouseMission | null>(null);
+  const [missionToUnlink, setMissionToUnlink] = useState<HouseMission | null>(null);
 
   /** 오늘 기여 완료 판정 — 세션 추적 또는 연동 루틴의 오늘 완료에서 파생. */
   const isContributed = (mission: HouseMission) =>
@@ -104,16 +146,20 @@ export function HouseMissionsSheet({
   // Mission deletion too; COMPLETED rows hide the button (server 409s them).
   const canDeleteMission = !!(onDeleteMission && isOwner);
   const missionTargetNum = Number(missionTarget);
-  const canSubmitMission =
-    missionTitle.trim().length > 0 &&
+  const targetRule = MISSION_TYPE_RULES[missionType];
+  const targetValid =
     Number.isInteger(missionTargetNum) &&
     missionTargetNum >= 1 &&
-    missionTargetNum <= 1000;
+    missionTargetNum <= targetRule.max;
+  const canSubmitMission = missionTitle.trim().length > 0 && targetValid;
   const submitMission = () => {
     // Blocked taps explain themselves, first unmet condition first.
     if (missionTitle.trim().length === 0) return toast('미션 이름을 입력해주세요', 'error');
-    if (!Number.isInteger(missionTargetNum) || missionTargetNum < 1 || missionTargetNum > 1000)
-      return toast('목표값은 1~1000 사이 숫자로 입력해주세요', 'error');
+    if (!targetValid)
+      return toast(
+        `목표값은 1~${targetRule.max}${targetRule.unit} 사이 숫자로 입력해주세요`,
+        'error',
+      );
     if (!currentHouse.houseId) return;
     onCreateMission?.(currentHouse.houseId, {
       title: missionTitle.trim(),
@@ -146,158 +192,168 @@ export function HouseMissionsSheet({
   };
 
   return (
-    <>
-      {visible ? (
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modal, { backgroundColor: t.surface }]}>
-            <View style={styles.missionHead}>
-              <View style={[styles.flex, styles.missionTitleRow]}>
-                <TargetPictogram size={18} />
-                <Text style={[Typography.h3, { color: t.text }]}>우리 집의 목표</Text>
-              </View>
-              {/* 요약 (#761) — 집 화면 스탯 필이 여기로. 진행 중 수와 오늘 나의
-                  기여를 목록 위 한 줄로. */}
-              {canCreateMission ? (
-                <Pressable
-                  onPress={() => setShowCreateMission(true)}
-                  accessibilityRole="button"
-                  accessibilityLabel="미션 만들기"
-                  style={[styles.missionAddBtn, { backgroundColor: t.surfaceMuted }]}>
-                  <Text style={[Typography.supporting, { color: t.primaryText }]}>＋ 만들기</Text>
-                </Pressable>
-              ) : null}
-            </View>
-            {activeMissions.length > 0 ? (
-              <Text style={[Typography.supporting, styles.missionSummary, { color: t.textMuted }]}>
-                진행 중 {activeMissions.length}개 · 오늘 나의 기여 {contributedToday}/
-                {activeMissions.length}
-              </Text>
-            ) : null}
-            <ScrollView style={styles.editScroll}>
-              {missions.length === 0 ? (
-                <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                  아직 미션이 없어요. 첫 미션을 만들어 다 같이 도전해보세요!
-                </Text>
-              ) : (
-                <View style={styles.goals}>
-                  {missions.map((mission) => {
-                    const pct = Math.min(1, mission.current / mission.target);
-                    // CTA 결정은 순수 함수(#559) — 렌더는 kind 매핑만.
-                    const cta = missionCtaState({
-                      status: mission.status,
-                      achieved: mission.achieved,
-                      contributed: isContributed(mission),
-                      linked: linkedRoutines.some((r) => r.missionId === mission.id),
-                      canClaim: !!(currentHouse.houseId && onClaimMission),
-                      canAddRoutine: !!(currentHouse.houseId && onAddMissionRoutine),
-                    });
-                    return (
-                      <View
-                        key={mission.id}
-                        style={[styles.goalRow, { backgroundColor: t.surfaceMuted }]}>
-                        <Pictogram name={mission.icon} size={22} />
-                        <View style={styles.flex}>
-                          <View style={styles.goalHead}>
-                            <Text
-                              style={[Typography.label, styles.flex, { color: t.text }]}
-                              numberOfLines={1}>
-                              {mission.title}
-                            </Text>
-                            <Text style={[Typography.supporting, { color: t.primaryText }]}>
-                              {mission.current}/{mission.target}
-                            </Text>
-                            {canDeleteMission && mission.status !== 'COMPLETED' ? (
-                              <Pressable
-                                onPress={() => setMissionToDelete(mission)}
-                                accessibilityRole="button"
-                                accessibilityLabel={`${mission.title} 삭제`}
-                                hitSlop={8}
-                                style={styles.missionDeleteBtn}>
-                                <TrashPictogram size={14} color={t.textMuted} />
-                              </Pressable>
-                            ) : null}
-                          </View>
-                          <View style={[styles.goalTrack, { backgroundColor: t.border }]}>
-                            <View
-                              style={[
-                                styles.goalFill,
-                                { backgroundColor: t.primary, width: `${pct * 100}%` },
-                              ]}
-                            />
-                          </View>
-                          <View style={styles.missionFoot}>
-                            <Text
-                              style={[Typography.supporting, styles.flex, { color: t.textMuted }]}
-                              numberOfLines={1}>
-                              {mission.desc}
-                            </Text>
-                            {/* Own node (not a desc suffix) so the long type label
-                            truncates instead of the date. */}
-                            {mission.endsOn && mission.status === 'ACTIVE' ? (
-                              <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                                ~{mission.endsOn.slice(5).replace('-', '.')}
-                              </Text>
-                            ) : null}
-                            {cta.kind === 'completed' ? (
-                              <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                                완료
-                              </Text>
-                            ) : cta.kind === 'expired' ? (
-                              <Text style={[Typography.supporting, { color: t.textDisabled }]}>
-                                기간 만료
-                              </Text>
-                            ) : cta.kind === 'claim' ? (
-                              <Pressable
-                                onPress={() => onClaimMission!(currentHouse.houseId!, mission.id)}
-                                accessibilityRole="button"
-                                accessibilityLabel={`${mission.title} 보상 받기`}
-                                style={[styles.missionBtn, { backgroundColor: t.warning }]}>
-                                <Text style={[Typography.supporting, { color: t.text }]}>
-                                  보상 받기
-                                </Text>
-                              </Pressable>
-                            ) : cta.kind === 'contributed' ? (
-                              // 오늘 기여 완료 — 연동 루틴의 오늘 완료 여부로도 파생되어
-                              // 앱을 다시 켜도 라벨이 유지된다.
-                              <Text style={[Typography.supporting, { color: t.primaryText }]}>
-                                기여함
-                              </Text>
-                            ) : cta.kind === 'linked' ? (
-                              // Filed as my routine — completing it contributes.
-                              <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                                루틴 연동됨
-                              </Text>
-                            ) : cta.kind === 'addRoutine' ? (
-                              <Pressable
-                                onPress={() => setMissionToAdd(mission)}
-                                accessibilityRole="button"
-                                accessibilityLabel={`${mission.title} 내 루틴에 추가`}
-                                style={[styles.missionBtn, { backgroundColor: t.primary }]}>
-                                <Text style={[Typography.supporting, { color: t.onPrimary }]}>
-                                  ＋ 내 루틴에
-                                </Text>
-                              </Pressable>
-                            ) : null}
-                          </View>
-                        </View>
-                      </View>
-                    );
-                  })}
-                </View>
-              )}
-            </ScrollView>
-            <View style={styles.modalActions}>
-              <Pressable
-                onPress={onClose}
-                accessibilityRole="button"
-                accessibilityLabel="공동 미션 닫기"
-                style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>닫기</Text>
-              </Pressable>
-            </View>
-          </View>
+    <View style={[styles.screen, useScreenStyle([])]}>
+      <ScreenHeader title="우리 집의 목표" onBack={onBack} />
+      <View style={styles.body}>
+        {/* 제목은 ScreenHeader가 갖는다 (#875). 요약(#761)은 만들기 버튼과 **같은
+            줄** 왼쪽에 둔다 — 제목을 헤더로 옮기면서 이 줄이 비어 버튼만 오른쪽에
+            혼자 떠 있었다. */}
+        <View style={styles.missionHead}>
+          <Text style={[Typography.supporting, styles.flex, { color: t.textMuted }]}>
+            {activeMissions.length > 0
+              ? `진행 중 ${activeMissions.length}개 · 오늘 나의 기여 ${contributedToday}/${activeMissions.length}`
+              : ''}
+          </Text>
+          {canCreateMission ? (
+            <Pressable
+              onPress={() => setShowCreateMission(true)}
+              accessibilityRole="button"
+              accessibilityLabel="미션 만들기"
+              style={[styles.missionAddBtn, { backgroundColor: t.surfaceMuted }]}>
+              <Text style={[Typography.supporting, { color: t.primaryText }]}>＋ 만들기</Text>
+            </Pressable>
+          ) : null}
         </View>
-      ) : null}
+        <ScrollView style={styles.editScroll}>
+          {missions.length === 0 ? (
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              아직 미션이 없어요. 첫 미션을 만들어 다 같이 도전해보세요!
+            </Text>
+          ) : (
+            <View style={styles.goals}>
+              {missions.map((mission) => {
+                const pct = Math.min(1, mission.current / mission.target);
+                // CTA 결정은 순수 함수(#559) — 렌더는 kind 매핑만.
+                const hasLinked = linkedRoutines.some((r) => r.missionId === mission.id);
+                // 배지를 눌러 정리할 수 있는 건 **내 연동 루틴이 실제로 있을 때**뿐이다.
+                // '기여함'은 직접 수행 체크로도 켜지므로 kind만 보면 안 된다 (#890).
+                const canUnlink = hasLinked && !!onRemoveMissionRoutine;
+                const cta = missionCtaState({
+                  status: mission.status,
+                  achieved: mission.achieved,
+                  contributed: isContributed(mission),
+                  linked: hasLinked,
+                  canClaim: !!(currentHouse.houseId && onClaimMission),
+                  canAddRoutine: !!(currentHouse.houseId && onAddMissionRoutine),
+                });
+                return (
+                  <View
+                    key={mission.id}
+                    style={[styles.goalRow, { backgroundColor: t.surfaceMuted }]}>
+                    <Pictogram name={mission.icon} size={22} />
+                    <View style={styles.flex}>
+                      <View style={styles.goalHead}>
+                        <Text
+                          style={[Typography.label, styles.flex, { color: t.text }]}
+                          numberOfLines={1}>
+                          {mission.title}
+                        </Text>
+                        <Text style={[Typography.supporting, { color: t.primaryText }]}>
+                          {mission.current}/{mission.target}
+                          {mission.unit}
+                        </Text>
+                        {canDeleteMission && mission.status !== 'COMPLETED' ? (
+                          <Pressable
+                            onPress={() => setMissionToDelete(mission)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`${mission.title} 삭제`}
+                            hitSlop={8}
+                            style={styles.missionDeleteBtn}>
+                            <TrashPictogram size={14} color={t.textMuted} />
+                          </Pressable>
+                        ) : null}
+                      </View>
+                      <View style={[styles.goalTrack, { backgroundColor: t.border }]}>
+                        <View
+                          style={[
+                            styles.goalFill,
+                            { backgroundColor: t.primary, width: `${pct * 100}%` },
+                          ]}
+                        />
+                      </View>
+                      <View style={styles.missionFoot}>
+                        <Text
+                          style={[Typography.supporting, styles.flex, { color: t.textMuted }]}
+                          numberOfLines={1}>
+                          {mission.desc}
+                        </Text>
+                        {/* Own node (not a desc suffix) so the long type label
+                            truncates instead of the date. */}
+                        {mission.endsOn && mission.status === 'ACTIVE' ? (
+                          <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                            ~{mission.endsOn.slice(5).replace('-', '.')}
+                          </Text>
+                        ) : null}
+                        {cta.kind === 'completed' ? (
+                          <Text style={[Typography.supporting, { color: t.textMuted }]}>완료</Text>
+                        ) : cta.kind === 'ended' ? (
+                          // 목표 미달인데 COMPLETED — 서버 쪽 문제지만 화면은 사실만 (#888).
+                          <Text style={[Typography.supporting, { color: t.textDisabled }]}>
+                            종료
+                          </Text>
+                        ) : cta.kind === 'expired' ? (
+                          <Text style={[Typography.supporting, { color: t.textDisabled }]}>
+                            기간 만료
+                          </Text>
+                        ) : cta.kind === 'claim' ? (
+                          <Pressable
+                            onPress={() => onClaimMission!(currentHouse.houseId!, mission.id)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`${mission.title} 보상 받기`}
+                            style={[styles.missionBtn, { backgroundColor: t.warning }]}>
+                            <Text style={[Typography.supporting, { color: t.text }]}>
+                              보상 받기
+                            </Text>
+                          </Pressable>
+                        ) : cta.kind === 'contributed' ? (
+                          // 오늘 기여 완료 — 연동 루틴의 오늘 완료 여부로도 파생되어
+                          // 앱을 다시 켜도 라벨이 유지된다.
+                          canUnlink ? (
+                            <LinkedBadge
+                              label="기여함"
+                              color={t.primaryText}
+                              mission={mission}
+                              onPress={setMissionToUnlink}
+                            />
+                          ) : (
+                            <Text style={[Typography.supporting, { color: t.primaryText }]}>
+                              기여함
+                            </Text>
+                          )
+                        ) : cta.kind === 'linked' ? (
+                          // Filed as my routine — completing it contributes.
+                          canUnlink ? (
+                            <LinkedBadge
+                              label="루틴 연동됨"
+                              color={t.textMuted}
+                              mission={mission}
+                              onPress={setMissionToUnlink}
+                            />
+                          ) : (
+                            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                              루틴 연동됨
+                            </Text>
+                          )
+                        ) : cta.kind === 'addRoutine' ? (
+                          <Pressable
+                            onPress={() => setMissionToAdd(mission)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`${mission.title} 내 루틴에 추가`}
+                            style={[styles.missionBtn, { backgroundColor: t.primary }]}>
+                            <Text style={[Typography.supporting, { color: t.onPrimary }]}>
+                              ＋ 내 루틴에
+                            </Text>
+                          </Pressable>
+                        ) : null}
+                      </View>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </ScrollView>
+      </View>
 
       {/* 단순 [취소|확정] 확인은 공용 ConfirmDialog (#674). */}
       <ConfirmDialog
@@ -324,7 +380,7 @@ export function HouseMissionsSheet({
         title="미션 삭제"
         body={
           missionToDelete
-            ? `'${missionToDelete.title}' 미션을 삭제할까요?\n지금까지의 기여 기록은 남지만 미션은 목록에서 사라져요. 멤버들이 만든 연동 루틴은 삭제되지 않아요.`
+            ? `'${missionToDelete.title}' 미션을 삭제할까요?\n지금까지의 기여 기록은 남지만 미션은 목록에서 사라져요. 내 연동 루틴도 함께 삭제되고, 다른 멤버의 루틴은 연동만 끊겨요.`
             : ''
         }
         confirmLabel="삭제"
@@ -336,6 +392,26 @@ export function HouseMissionsSheet({
           setMissionToDelete(null);
         }}
         onCancel={() => setMissionToDelete(null)}
+      />
+
+      {/* 배지는 '연동됨'인데 결과는 삭제다 — 문구가 그 차이를 메운다 (#890). */}
+      <ConfirmDialog
+        visible={!!missionToUnlink}
+        title="연동 루틴 삭제"
+        body={
+          missionToUnlink
+            ? `'${missionToUnlink.title}' 루틴을 내 루틴에서 삭제할까요?\n지금까지의 기여 기록은 남아요. 미션 자체는 그대로예요.`
+            : ''
+        }
+        confirmLabel="삭제"
+        confirmAccessibilityLabel="연동 루틴 삭제 확인"
+        cancelAccessibilityLabel="연동 루틴 삭제 취소"
+        destructive
+        onConfirm={() => {
+          if (missionToUnlink) onRemoveMissionRoutine?.(missionToUnlink);
+          setMissionToUnlink(null);
+        }}
+        onCancel={() => setMissionToUnlink(null)}
       />
 
       {showCreateMission ? (
@@ -383,15 +459,23 @@ export function HouseMissionsSheet({
                 })}
               </View>
               <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                목표 수치 (1~1000)
+                목표 수치 (1~{targetRule.max}
+                {targetRule.unit})
               </Text>
-              <TextInput
-                value={missionTarget}
-                onChangeText={setMissionTarget}
-                keyboardType="number-pad"
-                accessibilityLabel="목표 수치"
-                style={[styles.missionInput, { backgroundColor: t.surfaceMuted, color: t.text }]}
-              />
+              {/* 단위를 입력칸 안에 붙인다 — 달성률에 500을 적어도 통과하던
+                  시절엔 이 값이 %인지 횟수인지 화면 어디에도 없었다. */}
+              <View style={[styles.missionInputRow, { backgroundColor: t.surfaceMuted }]}>
+                <TextInput
+                  value={missionTarget}
+                  onChangeText={setMissionTarget}
+                  keyboardType="number-pad"
+                  accessibilityLabel="목표 수치"
+                  style={[styles.missionInput, styles.missionInputField, { color: t.text }]}
+                />
+                <Text style={[Typography.label, styles.missionUnit, { color: t.textMuted }]}>
+                  {targetRule.unit}
+                </Text>
+              </View>
               <View style={styles.periodRow}>
                 <Text style={[Typography.supporting, { color: t.textMuted }]}>기간 설정</Text>
                 <ToggleSwitch
@@ -453,14 +537,15 @@ export function HouseMissionsSheet({
         }}
         onClose={() => setShowPeriodSheet(false)}
       />
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
+  screen: { flex: 1 },
+  body: { flex: 1, paddingHorizontal: Spacing.four, paddingTop: Spacing.three, gap: Spacing.two },
+  // 아래 넷은 **미션 만들기 폼**의 모달용이다 (#875에서 목록은 화면이 됐지만
+  // 폼은 화면 위 모달로 남는다 — 화면 위 모달은 겹이 하나라 정상이다).
   modalOverlay: {
     position: 'absolute',
     top: 0,
@@ -470,7 +555,7 @@ const styles = StyleSheet.create({
     backgroundColor: Overlay.dim,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: Spacing.four,
+    padding: Spacing.four,
   },
   modal: {
     width: '100%',
@@ -479,24 +564,24 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     padding: Spacing.four,
   },
-  missionSummary: {
-    paddingHorizontal: Spacing.four,
-    paddingBottom: Spacing.two,
-  },
-  // The mission list scrolls when it grows taller than small screens.
-  editScroll: {
-    flexGrow: 0,
-  },
   modalActions: {
     flexDirection: 'row',
     gap: Spacing.two,
-    marginTop: Spacing.four,
+    marginTop: Spacing.three,
   },
   modalBtn: {
     flex: 1,
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.three,
     alignItems: 'center',
+    paddingVertical: Spacing.two,
+    borderRadius: Radius.md,
+  },
+  flex: {
+    flex: 1,
+  },
+  // 모달 시절엔 목록을 박스 안에 가두느라 flexGrow: 0이었다 (#875) — 화면에선
+  // 남는 높이를 다 쓴다.
+  editScroll: {
+    flex: 1,
   },
   missionHead: {
     flexDirection: 'row',
@@ -550,6 +635,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.one,
   },
+  linkedBadge: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
   missionDeleteBtn: {
     marginLeft: Spacing.one,
   },
@@ -563,6 +649,13 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     fontSize: 16,
   },
+  missionInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: Radius.md,
+  },
+  missionInputField: { flex: 1 },
+  missionUnit: { paddingRight: Spacing.three },
   missionTypeRow: {
     flexDirection: 'row',
     gap: Spacing.two,
