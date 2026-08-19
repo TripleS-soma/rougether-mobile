@@ -47,6 +47,7 @@
   - **릴리스 리듬**: dev 개발 → 릴리스 후보 확정(dev→main 승격) → `store-build`(main)로 심사 제출 → **심사 통과·출시 후** `eas-release` 실행. 출시 뒤의 JS 핫픽스는 dev→main 승격 후 같은 워크플로를 다시 누릅니다.
   - **지문이 다르면 아무에게도 안 갑니다** — `eas-release`의 마지막 스텝이 현재 지문과 스토어 빌드의 런타임을 대조해 경고를 남깁니다. 그 경우 필요한 건 OTA가 아니라 새 빌드입니다.
 - **`app.json` 변경은 네이티브 지문을 바꾼다**: runtimeVersion이 fingerprint 정책이라, JS만 바꿨어도 app config를 건드리면 지문이 바뀌어 **기존 설치 기기들의 OTA 수신이 그 시점부터 끊긴다**(새 빌드를 배포할 때까지). 이런 변경은 native-build 윈도우(재빌드 직전)에 몰아서 할 것.
+  - **`.gitignore`는 지문 입력이 맞다 (2026-08-19 실측)**: `.sentryclirc` 한 줄을 더했더니 Android `1970fdf3…`→`20ac7a9b…`, iOS `cc9a0cdd…`→`4a18fcbc…`로 바뀌었다. 핫픽스 OTA 브랜치에서 건드리면 안 되는 이유가 이것이다.
   - **`eas.json`은 지문 입력이 아니다 (2026-08-13 실측)**: `build.*.env`·`submit.*` 를 바꿔도 iOS(`d91c40b…`)·Android(`cf2c0ef…`) 지문이 그대로였다(`npx expo-updates fingerprint:generate`로 변경 전후 대조). 종전 문서는 #554를 근거로 eas.json도 지문을 바꾼다고 적었지만 그건 사실이 아니다 — 그때의 OTA 단절은 다른 원인이었다. **제출·빌드 프로필 배선은 언제든 고쳐도 된다.**
 - **스토어 제출은 `main`에서, `production` 프로필로** (2026-08-13 정립): Actions → **store-build** 워크플로를 **main 브랜치에서 수동 실행**한다(`platform` 선택, iOS는 `submit` 체크 시 ASC 자동 제출). main 외 브랜치에서 돌리면 워크플로가 스스로 거부한다.
   - **왜 main인가**: `production` 프로필 빌드는 `channel=production`이라 **main 승격이 발행하는 OTA(`eas-release.yml`)만** 받는다. dev 머지 OTA는 `preview` 채널이라 닿지 않는다 — 검증 안 된 dev 코드가 스토어 사용자에게 흘러가던 경로(빌드 38이 8/9~8/11 그렇게 받았다)를 이 조합이 끊는다.
