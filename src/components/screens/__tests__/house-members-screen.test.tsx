@@ -230,6 +230,20 @@ describe('HouseMembersScreen — 구성원 관리 (구 house-screen 흐름, #753
     expect(getByLabelText('초대코드 재발급')).toBeTruthy();
   });
 
+  /**
+   * 나가기는 연동 카테고리를 루틴·할 일째 지운다(#338, #908에서 유지 결정).
+   * 예전 문구는 그걸 빼놓고 "이전 기록이 복원돼요"라고만 해서, 되돌릴 수 없는
+   * 삭제를 되돌릴 수 있는 것처럼 읽혔다.
+   */
+  it('나가기 확인이 루틴·할 일도 삭제된다고 말한다 (#908)', async () => {
+    const { getByText, getByLabelText } = await render(
+      screenFor({ ...MISSION_HOUSE, myRole: 'MEMBER' }, { onLeaveHouse: jest.fn() }),
+    );
+    await fireEvent.press(getByLabelText('집 나가기'));
+    expect(getByText(/루틴·할 일이 함께 삭제돼요/)).toBeTruthy();
+    expect(getByText(/다시 참여해도 되돌아오지 않아요/)).toBeTruthy();
+  });
+
   it('leaves the house after confirming (member)', async () => {
     const onLeaveHouse = jest.fn();
     const { getByText, getByLabelText } = await render(
