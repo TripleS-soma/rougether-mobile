@@ -204,9 +204,21 @@ export function useSettingsSurface({
   /** 현재 화면이 설정 서브화면이면 그 JSX, 아니면 null — 셸이 그대로 렌더. */
   const subScreen =
     screen === 'theme' ? (
-      <ThemeScreen themeId={themeId} onChangeThemeId={setThemeId} onBack={backToSettings} />
+      <ThemeScreen
+        themeId={themeId}
+        onChangeThemeId={setThemeId}
+        userName={profile.nickname}
+        characterId={profile.characterId}
+        onBack={backToSettings}
+      />
     ) : screen === 'font' ? (
-      <FontScreen fontId={fontId} onChangeFont={setFontId} onBack={backToSettings} />
+      <FontScreen
+        fontId={fontId}
+        onChangeFont={setFontId}
+        userName={profile.nickname}
+        characterId={profile.characterId}
+        onBack={backToSettings}
+      />
     ) : screen === 'profileEdit' ? (
       <ProfileEditScreen
         initialNickname={profile.nickname}
