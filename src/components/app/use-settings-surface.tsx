@@ -8,6 +8,7 @@ import { type Screen } from '@/components/app/navigation';
 import { BugReportScreen } from '@/components/screens/bug-report-screen';
 import { HelpScreen } from '@/components/screens/help-screen';
 import { InviteFriendsScreen } from '@/components/screens/invite-friends-screen';
+import { CalendarImportScreen } from '@/components/screens/calendar-import-screen';
 import { NotificationSettingsScreen } from '@/components/screens/notification-settings-screen';
 import { ProfileEditScreen } from '@/components/screens/profile-edit-screen';
 import {
@@ -18,6 +19,7 @@ import {
 import { FontScreen } from '@/components/screens/font-screen';
 import { ThemeScreen } from '@/components/screens/theme-screen';
 import { useToast } from '@/components/ui/toast';
+import { useCalendarImport } from '@/hooks/use-calendar-import';
 import type { CharacterId } from '@/constants/characters';
 import { SUPPORT_EMAIL } from '@/constants/policy';
 import { useAuth } from '@/hooks/use-auth';
@@ -59,6 +61,8 @@ export function useSettingsSurface({
 }) {
   const { themeId, setThemeId, mode: themeMode, setMode: setThemeMode, fontId, setFontId } = useBrandTheme(); // prettier-ignore
   const { show: toast } = useToast();
+  // 캘린더 임포트 상태 (#844) — 권한·조회·임포트를 훅이 쥔다.
+  const calendarImport = useCalendarImport();
   // 스토어 요건(#545): 도움말의 실제 앱 버전 표기.
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
 
@@ -149,6 +153,8 @@ export function useSettingsSurface({
     void loadNotificationSettings();
   }, [setScreen, loadNotificationSettings]);
   const openSound = useCallback(() => setScreen('sound'), [setScreen]);
+  // 캘린더 연동 (#844) — 화면에서 권한을 요청하므로 여는 것만 한다.
+  const openCalendarImport = useCallback(() => setScreen('calendarImport'), [setScreen]);
   const openHelp = useCallback(() => setScreen('help'), [setScreen]);
   // 친구 초대 (#518) — 진입 시점에 내 코드를 로드(없으면 서버가 발급).
   const openInviteFriends = useCallback(() => {
@@ -179,6 +185,7 @@ export function useSettingsSurface({
     onEditProfile: openProfileEdit,
     onOpenNotifications: openNotificationSettings,
     onOpenSound: openSound,
+    onOpenCalendarImport: openCalendarImport,
     onOpenHelp: openHelp,
     onInviteFriends: openInviteFriends,
     onOpenTerms: openTerms,
@@ -214,6 +221,28 @@ export function useSettingsSurface({
         onToggle={toggleNotificationSetting}
         loadError={notificationSettingsLoadError}
         onRetry={loadNotificationSettings}
+        onBack={backToSettings}
+      />
+    ) : screen === 'calendarImport' ? (
+      <CalendarImportScreen
+        calendars={calendarImport.calendars}
+        candidates={calendarImport.candidates}
+        busy={calendarImport.busy}
+        denied={calendarImport.denied}
+        embeddingApplied={calendarImport.embeddingApplied}
+        onConnect={() => void calendarImport.connect()}
+        onPreview={(ids) => void calendarImport.preview(ids)}
+        onImport={async (selected) => {
+          const out = await calendarImport.importSelected(selected);
+          toast(
+            out.failed > 0
+              ? `${out.imported}개를 가져왔어요. ${out.failed}개는 실패했어요.`
+              : out.skipped > 0
+                ? `${out.imported}개를 가져왔어요. ${out.skipped}개는 이미 가져온 일정이에요.`
+                : `${out.imported}개를 가져왔어요.`,
+          );
+          return out;
+        }}
         onBack={backToSettings}
       />
     ) : screen === 'sound' ? (

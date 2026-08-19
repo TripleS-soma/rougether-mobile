@@ -41,4 +41,6 @@ export const ErrorCode = {
   INVITE_SELF_NOT_ALLOWED: 'INVITE_SELF_NOT_ALLOWED',
   /** 404 — KST 오늘 진행 중인 출석 이벤트 없음 (#851). 에러가 아니라 "없음". */
   ATTENDANCE_EVENT_NOT_FOUND: 'ATTENDANCE_EVENT_NOT_FOUND',
+  /** 409 — 이미 가져온 캘린더 일정 (#844). 지운 조합도 재등록되지 않는다. */
+  TODO_EXTERNAL_DUPLICATE: 'TODO_EXTERNAL_DUPLICATE',
 } as const;

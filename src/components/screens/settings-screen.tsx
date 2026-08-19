@@ -55,6 +55,8 @@ export type SettingsScreenProps = ScrollRestoreProps & {
   onChangePassword?: () => void;
   onOpenNotifications?: () => void;
   onOpenSound?: () => void;
+  /** 캘린더 연동 (#844) — 미배선이면 항목이 숨는다(네이티브 모듈 필요). */
+  onOpenCalendarImport?: () => void;
   onOpenHelp?: () => void;
   /** 친구 초대 (#518) — 내 초대코드·코드 사용 화면. */
   onInviteFriends?: () => void;
@@ -93,6 +95,7 @@ export const SettingsScreen = memo(function SettingsScreen({
   onEditProfile,
   onOpenNotifications,
   onOpenSound,
+  onOpenCalendarImport,
   onOpenHelp,
   onInviteFriends,
   onReportBug,
@@ -132,6 +135,7 @@ export const SettingsScreen = memo(function SettingsScreen({
       rows: [
         { icon: 'bell', label: '푸시 알림', onPress: onOpenNotifications },
         { icon: 'sound', label: '효과음', onPress: onOpenSound },
+        { icon: 'calendar', label: '캘린더 연동', onPress: onOpenCalendarImport },
       ],
     },
     {
