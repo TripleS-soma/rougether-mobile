@@ -46,7 +46,7 @@ describe('AppRoot', () => {
 
     const { getByText } = await renderApp();
 
-    await waitFor(() => expect(getByText('준서의 방')).toBeTruthy()); // MyRoom title
+    await waitFor(() => expect(getByText('내 방')).toBeTruthy()); // MyRoom title
   });
 
   it('skips onboarding when the server says completed (no local cache)', async () => {
@@ -74,6 +74,6 @@ describe('AppRoot', () => {
 
     const { getByText } = await renderApp();
 
-    await waitFor(() => expect(getByText('준서의 방')).toBeTruthy());
+    await waitFor(() => expect(getByText('내 방')).toBeTruthy());
   });
 });

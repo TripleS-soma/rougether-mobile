@@ -27,7 +27,9 @@ export function AppearancePreview() {
           방 이름은 제목 롤로 — 실제 나의 방 헤더가 그렇기도 하고, 주아 혼합처럼
           제목 얼굴만 다른 폰트는 이 한 줄이 없으면 카드 안에서 차이가 안 보인다.
         */}
-        <Text style={[Typography.h2, { color: t.text }]}>준서의 방</Text>
+        {/* 남의 이름을 내 설정 화면에 띄우지 않는다 (#924). 실제 닉네임을
+            흘려 넣는 건 #899에서 — 여기선 폰트 얼굴만 보이면 된다. */}
+        <Text style={[Typography.h2, { color: t.text }]}>내 방</Text>
         <View style={[styles.coinPill, { backgroundColor: t.surfaceMuted }]}>
           <Text style={[Typography.supporting, emph('bold'), { color: t.text }]}>9999+</Text>
         </View>

@@ -24,7 +24,7 @@ export type ProfileEditScreenProps = {
  * by the app shell via onSave.
  */
 export function ProfileEditScreen({
-  initialNickname = '준서',
+  initialNickname = '',
   initialBio = '',
   characterId = DEFAULT_CHARACTER_ID,
   onSave,

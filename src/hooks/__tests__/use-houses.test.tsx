@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
+import * as auth from '@/api/auth';
 import { useHouses } from '@/hooks/use-houses';
 
 // 토스트 캡처 — 탈퇴 신청자 승인 가드(#240) 문구 단언용.
@@ -503,5 +504,49 @@ describe('useHouses — 집 순서 변경 (#820)', () => {
       '집 순서를 저장하지 못했어요. 잠시 후 다시 시도해 주세요.',
       'error',
     );
+  });
+});
+
+describe('useHouses — 프로필 닉네임 반영 (#924)', () => {
+  it('내 좌석 이름만 재조회 없이 새 닉네임으로 덮는다', async () => {
+    // isMine 판정이 세션 userId에 걸려 있다 — 테스트엔 세션이 없으므로 세운다.
+    const whoAmI = jest.spyOn(auth, 'getSessionUserId').mockReturnValue(5);
+    let houseCalls = 0;
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/me/houses')) return res({ items: [{ houseId: 1, name: '내집' }] });
+      if (url.includes('/houses/1/members'))
+        return res({
+          items: [
+            { membershipId: 1, userId: 5, nickname: '옛이름', role: 'OWNER', status: 'ACTIVE' },
+            { membershipId: 2, userId: 9, nickname: '이웃', role: 'MEMBER', status: 'ACTIVE' },
+          ],
+        });
+      if (url.includes('/houses/1/missions')) return res({ items: [] });
+      if (url.includes('/houses/1')) {
+        houseCalls += 1;
+        return res({ houseId: 1, name: '내집', myRole: 'OWNER', maxMembers: 2 });
+      }
+      if (url.endsWith('/me')) return res({ userId: 5, nickname: '옛이름' });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useHouses());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    const names = () => result.current.houses[0].floors.flatMap((f) => f.rooms).map((r) => r.name);
+    expect(names()).toContain('옛이름');
+    const callsBefore = houseCalls;
+
+    await act(async () => {
+      result.current.applyMyNickname('새이름');
+    });
+
+    // 내 좌석만 바뀌고, 이웃은 그대로다.
+    expect(names()).toContain('새이름');
+    expect(names()).not.toContain('옛이름');
+    expect(names()).toContain('이웃');
+    // 이름 하나 때문에 집을 다시 부르지 않는다 — 파생으로 끝낸다.
+    expect(houseCalls).toBe(callsBefore);
+    whoAmI.mockRestore();
   });
 });
