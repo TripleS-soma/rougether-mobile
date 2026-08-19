@@ -167,12 +167,15 @@ export function HouseMissionsScreen({
     <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader title="우리 집의 목표" onBack={onBack} />
       <View style={styles.body}>
+        {/* 제목은 ScreenHeader가 갖는다 (#875). 요약(#761)은 만들기 버튼과 **같은
+            줄** 왼쪽에 둔다 — 제목을 헤더로 옮기면서 이 줄이 비어 버튼만 오른쪽에
+            혼자 떠 있었다. */}
         <View style={styles.missionHead}>
-          {/* 제목은 ScreenHeader가 갖는다 (#875) — 여기 있던 과녁+제목은
-              모달 시절의 자체 헤더였다. 자리만 차지하지 않게 뺐다. */}
-          <View style={styles.flex} />
-          {/* 요약 (#761) — 집 화면 스탯 필이 여기로. 진행 중 수와 오늘 나의
-                  기여를 목록 위 한 줄로. */}
+          <Text style={[Typography.supporting, styles.flex, { color: t.textMuted }]}>
+            {activeMissions.length > 0
+              ? `진행 중 ${activeMissions.length}개 · 오늘 나의 기여 ${contributedToday}/${activeMissions.length}`
+              : ''}
+          </Text>
           {canCreateMission ? (
             <Pressable
               onPress={() => setShowCreateMission(true)}
@@ -183,12 +186,6 @@ export function HouseMissionsScreen({
             </Pressable>
           ) : null}
         </View>
-        {activeMissions.length > 0 ? (
-          <Text style={[Typography.supporting, styles.missionSummary, { color: t.textMuted }]}>
-            진행 중 {activeMissions.length}개 · 오늘 나의 기여 {contributedToday}/
-            {activeMissions.length}
-          </Text>
-        ) : null}
         <ScrollView style={styles.editScroll}>
           {missions.length === 0 ? (
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
@@ -470,7 +467,7 @@ export function HouseMissionsScreen({
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  body: { flex: 1, paddingHorizontal: Spacing.four, gap: Spacing.two },
+  body: { flex: 1, paddingHorizontal: Spacing.four, paddingTop: Spacing.three, gap: Spacing.two },
   // 아래 넷은 **미션 만들기 폼**의 모달용이다 (#875에서 목록은 화면이 됐지만
   // 폼은 화면 위 모달로 남는다 — 화면 위 모달은 겹이 하나라 정상이다).
   modalOverlay: {
@@ -505,13 +502,10 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
-  missionSummary: {
-    paddingHorizontal: Spacing.four,
-    paddingBottom: Spacing.two,
-  },
-  // The mission list scrolls when it grows taller than small screens.
+  // 모달 시절엔 목록을 박스 안에 가두느라 flexGrow: 0이었다 (#875) — 화면에선
+  // 남는 높이를 다 쓴다.
   editScroll: {
-    flexGrow: 0,
+    flex: 1,
   },
   missionHead: {
     flexDirection: 'row',
