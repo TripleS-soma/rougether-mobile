@@ -22,14 +22,31 @@ export type DeviceCalendar = {
 };
 
 export type DeviceEvent = {
-  /** 시리즈 id (반복이면 회차마다 같다). */
-  id: string;
+  /**
+   * **시리즈 id — 반복 일정이면 회차마다 같다.** 고유 키로 쓰면 안 된다.
+   * 목록 key·선택 토글·externalId에는 아래 `occurrenceId`를 쓸 것.
+   */
+  seriesId: string;
+  /**
+   * 회차 하나를 가리키는 고유 키 (`시리즈 id:날짜`). 투두는 회차 단위로
+   * 들어가므로 이게 `externalId`가 된다 — spec#81에 적은 규칙 그대로다.
+   *
+   * seriesId를 그대로 쓰면 매주 회의 4회차 중 **첫 회차만 들어가고 나머지는
+   * 409로 영구히 건너뛰어진다**(서버는 지운 조합도 재등록해주지 않는다).
+   * 사용자가 지운 것도 아닌데 조용히 사라지므로 눈치채기 어렵다.
+   */
+  occurrenceId: string;
   title: string;
   /** 그 회차의 날짜 "YYYY-MM-DD" (로컬). */
   date: string;
   /** 종일 일정인지 — 시각을 마감 시간으로 옮길지 판단에 쓴다. */
   allDay: boolean;
 };
+
+/** 회차 키 — 시리즈와 날짜를 합친다. 서버 externalId 상한 255자에 여유가 있다. */
+export function occurrenceKey(seriesId: string, date: string) {
+  return `${seriesId}:${date}`;
+}
 
 /** 권한 요청. 거부면 false — 화면이 안내를 띄운다. */
 export async function requestCalendarAccess(): Promise<boolean> {
@@ -65,12 +82,17 @@ export async function readUpcomingEvents(calendarIds: string[]): Promise<DeviceE
     endOfLocalDay(to),
   );
   return events
-    .map((e) => ({
-      id: String(e.id),
-      title: (e.title ?? '').trim(),
-      date: localDateOf(e.startDate),
-      allDay: !!e.allDay,
-    }))
+    .map((e) => {
+      const seriesId = String(e.id);
+      const date = localDateOf(e.startDate);
+      return {
+        seriesId,
+        occurrenceId: occurrenceKey(seriesId, date),
+        title: (e.title ?? '').trim(),
+        date,
+        allDay: !!e.allDay,
+      };
+    })
     .filter((e) => e.title.length > 0 && e.date >= from);
 }
 

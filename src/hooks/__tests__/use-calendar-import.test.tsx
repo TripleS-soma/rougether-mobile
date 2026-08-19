@@ -38,7 +38,13 @@ describe('useCalendarImport', () => {
   /** 힌트는 거들 뿐 — 실패해도 후보는 그대로 보여야 임포트를 막지 않는다. */
   it('유사 힌트 조회가 실패해도 후보를 그대로 돌려준다', async () => {
     dc.readUpcomingEvents.mockResolvedValue([
-      { id: 'e1', title: '치과 예약', date: '2026-08-20', allDay: false },
+      {
+        seriesId: 'e1',
+        occurrenceId: 'e1:2026-08-20',
+        title: '치과 예약',
+        date: '2026-08-20',
+        allDay: false,
+      },
     ]);
     global.fetch = jest.fn(async () => {
       throw new Error('down');
@@ -54,8 +60,20 @@ describe('useCalendarImport', () => {
 
   it('유사 힌트를 후보에 순서대로 붙인다', async () => {
     dc.readUpcomingEvents.mockResolvedValue([
-      { id: 'e1', title: '치과 예약', date: '2026-08-20', allDay: false },
-      { id: 'e2', title: '영양제 먹기', date: '2026-08-21', allDay: false },
+      {
+        seriesId: 'e1',
+        occurrenceId: 'e1:2026-08-20',
+        title: '치과 예약',
+        date: '2026-08-20',
+        allDay: false,
+      },
+      {
+        seriesId: 'e2',
+        occurrenceId: 'e2:2026-08-21',
+        title: '영양제 먹기',
+        date: '2026-08-21',
+        allDay: false,
+      },
     ]);
     global.fetch = jest.fn(async () =>
       res({
@@ -91,7 +109,13 @@ describe('useCalendarImport', () => {
   /** 임베딩이 죽어도 임포트는 계속돼야 한다 — 화면이 그 사실만 밝힌다. */
   it('embeddingApplied=false를 그대로 노출한다', async () => {
     dc.readUpcomingEvents.mockResolvedValue([
-      { id: 'e1', title: '치과 예약', date: '2026-08-20', allDay: false },
+      {
+        seriesId: 'e1',
+        occurrenceId: 'e1:2026-08-20',
+        title: '치과 예약',
+        date: '2026-08-20',
+        allDay: false,
+      },
     ]);
     global.fetch = jest.fn(async () =>
       res({
@@ -105,6 +129,31 @@ describe('useCalendarImport', () => {
     });
     expect(result.current.embeddingApplied).toBe(false);
     expect(result.current.candidates).toHaveLength(1);
+  });
+
+  /**
+   * 반복 일정 회귀 (#844 리뷰) — 매주 회의처럼 한 시리즈가 창 안에 여러 회차로
+   * 오면 `seriesId`는 모두 같다. 그걸 externalId로 쓰면 **첫 회차만 들어가고
+   * 나머지는 409로 영구히 사라진다**(서버는 지운 조합도 재등록해주지 않는다).
+   * 회차 키(`시리즈:날짜`)로 보내야 한다 — spec#81에 적은 규칙이다.
+   */
+  it('같은 시리즈의 회차들을 서로 다른 externalId로 보낸다 (#844)', async () => {
+    const sent: string[] = [];
+    global.fetch = jest.fn(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body ?? '{}'));
+      if (body.externalId) sent.push(body.externalId);
+      return res({ id: sent.length }, 201);
+    }) as unknown as typeof global.fetch;
+
+    const { result } = await renderHook(() => useCalendarImport());
+    await act(async () => {
+      await result.current.importSelected([
+        { seriesId: 'weekly-1', occurrenceId: 'weekly-1:2026-08-20', title: '주간 회의', date: '2026-08-20', allDay: false, similar: [] }, // prettier-ignore
+        { seriesId: 'weekly-1', occurrenceId: 'weekly-1:2026-08-27', title: '주간 회의', date: '2026-08-27', allDay: false, similar: [] }, // prettier-ignore
+      ]);
+    });
+    expect(sent).toEqual(['weekly-1:2026-08-20', 'weekly-1:2026-08-27']);
+    expect(new Set(sent).size).toBe(2);
   });
 
   /**
@@ -125,9 +174,30 @@ describe('useCalendarImport', () => {
     let out;
     await act(async () => {
       out = await result.current.importSelected([
-        { id: 'a', title: 'A', date: '2026-08-20', allDay: false, similar: [] },
-        { id: 'b', title: 'B', date: '2026-08-20', allDay: false, similar: [] },
-        { id: 'c', title: 'C', date: '2026-08-20', allDay: false, similar: [] },
+        {
+          seriesId: 'a',
+          occurrenceId: 'a:2026-08-20',
+          title: 'A',
+          date: '2026-08-20',
+          allDay: false,
+          similar: [],
+        },
+        {
+          seriesId: 'b',
+          occurrenceId: 'b:2026-08-20',
+          title: 'B',
+          date: '2026-08-20',
+          allDay: false,
+          similar: [],
+        },
+        {
+          seriesId: 'c',
+          occurrenceId: 'c:2026-08-20',
+          title: 'C',
+          date: '2026-08-20',
+          allDay: false,
+          similar: [],
+        },
       ]);
     });
     expect(out).toEqual({ imported: 1, skipped: 1, failed: 1 });

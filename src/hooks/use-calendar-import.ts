@@ -102,7 +102,7 @@ export function useCalendarImport() {
               title: e.title,
               dueDate: e.date,
               externalSource: EXTERNAL_SOURCE,
-              externalId: e.id,
+              externalId: e.occurrenceId,
               categoryId,
             });
             out.imported += 1;

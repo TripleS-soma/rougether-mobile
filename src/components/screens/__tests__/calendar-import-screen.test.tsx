@@ -9,9 +9,17 @@ const CALS = [
 ];
 
 const CANDIDATES: ImportCandidate[] = [
-  { id: 'e1', title: '치과 예약', date: '2026-08-20', allDay: false, similar: [] },
   {
-    id: 'e2',
+    seriesId: 'e1',
+    occurrenceId: 'e1:2026-08-20',
+    title: '치과 예약',
+    date: '2026-08-20',
+    allDay: false,
+    similar: [],
+  },
+  {
+    seriesId: 'e2',
+    occurrenceId: 'e2:2026-08-21',
     title: '영양제 먹기',
     date: '2026-08-21',
     allDay: false,
@@ -64,7 +72,7 @@ describe('CalendarImportScreen', () => {
     expect(getByLabelText('영양제 먹기, 8월 21일, 비슷한 항목 있음')).toBeTruthy();
 
     await fireEvent.press(getByText('1개 가져오기'));
-    expect(onImport).toHaveBeenCalledWith([expect.objectContaining({ id: 'e1' })]);
+    expect(onImport).toHaveBeenCalledWith([expect.objectContaining({ seriesId: 'e1' })]);
   });
 
   it('기본 해제된 항목도 눌러서 포함할 수 있다', async () => {
@@ -76,6 +84,29 @@ describe('CalendarImportScreen', () => {
     expect(getByText('가져올 일정 (2/2)')).toBeTruthy();
     await fireEvent.press(getByText('2개 가져오기'));
     expect(onImport.mock.calls[0][0]).toHaveLength(2);
+  });
+
+  /**
+   * 반복 일정 회귀 (#844 리뷰) — 같은 시리즈의 회차들은 seriesId가 같다.
+   * 토글 키를 seriesId로 잡으면 8/20 회차만 끄려 해도 8/27까지 함께 꺼진다.
+   */
+  it('같은 시리즈의 다른 회차는 따로 토글된다 (#844)', async () => {
+    const onImport = jest.fn();
+    const recurring: ImportCandidate[] = [
+      { seriesId: 'w1', occurrenceId: 'w1:2026-08-20', title: '주간 회의', date: '2026-08-20', allDay: false, similar: [] }, // prettier-ignore
+      { seriesId: 'w1', occurrenceId: 'w1:2026-08-27', title: '주간 회의', date: '2026-08-27', allDay: false, similar: [] }, // prettier-ignore
+    ];
+    const { getByText, getAllByLabelText } = await render(
+      <CalendarImportScreen calendars={CALS} candidates={recurring} onImport={onImport} />,
+    );
+    expect(getByText('가져올 일정 (2/2)')).toBeTruthy();
+    // 첫 회차만 해제 — 둘째는 그대로여야 한다.
+    await fireEvent.press(getAllByLabelText(/주간 회의, 8월 20일/)[0]);
+    expect(getByText('가져올 일정 (1/2)')).toBeTruthy();
+    await fireEvent.press(getByText('1개 가져오기'));
+    expect(onImport).toHaveBeenCalledWith([
+      expect.objectContaining({ occurrenceId: 'w1:2026-08-27' }),
+    ]);
   });
 
   it('가져올 일정이 없으면 그렇게 말한다', async () => {

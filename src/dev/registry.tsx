@@ -534,9 +534,17 @@ export const galleryEntries: GalleryEntry[] = [
             { id: 'c2', title: '대한민국 공휴일', source: 'Holidays' },
           ]}
           candidates={[
-            { id: 'e1', title: '치과 예약', date: '2026-08-20', allDay: false, similar: [] },
             {
-              id: 'e2',
+              seriesId: 'e1',
+              occurrenceId: 'e1:2026-08-20',
+              title: '치과 예약',
+              date: '2026-08-20',
+              allDay: false,
+              similar: [],
+            },
+            {
+              seriesId: 'e2',
+              occurrenceId: 'e2:2026-08-21',
               title: '영양제 먹기',
               date: '2026-08-21',
               allDay: false,
@@ -544,7 +552,14 @@ export const galleryEntries: GalleryEntry[] = [
                 { kind: 'ROUTINE', id: 21, title: '영양제 챙겨먹기', score: 0.86, matchType: 'EMBEDDING' }, // prettier-ignore
               ],
             },
-            { id: 'e3', title: '팀 회식', date: '2026-08-22', allDay: false, similar: [] },
+            {
+              seriesId: 'e3',
+              occurrenceId: 'e3:2026-08-22',
+              title: '팀 회식',
+              date: '2026-08-22',
+              allDay: false,
+              similar: [],
+            },
           ]}
           onBack={() => {}}
           onConnect={() => {}}

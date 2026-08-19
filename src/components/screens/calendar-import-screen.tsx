@@ -66,12 +66,12 @@ export function CalendarImportScreen({
   const [flipped, setFlipped] = useState<Set<string>>(new Set());
 
   const defaultOn = (c: ImportCandidate) => c.similar.length === 0;
-  const isOn = (c: ImportCandidate) => (flipped.has(c.id) ? !defaultOn(c) : defaultOn(c));
+  const isOn = (c: ImportCandidate) => (flipped.has(c.occurrenceId) ? !defaultOn(c) : defaultOn(c));
   const toggle = (c: ImportCandidate) =>
     setFlipped((prev) => {
       const next = new Set(prev);
-      if (next.has(c.id)) next.delete(c.id);
-      else next.add(c.id);
+      if (next.has(c.occurrenceId)) next.delete(c.occurrenceId);
+      else next.add(c.occurrenceId);
       return next;
     });
   const selected = (candidates ?? []).filter(isOn);
@@ -151,7 +151,7 @@ export function CalendarImportScreen({
               ) : null}
               {candidates.map((c) => (
                 <Pressable
-                  key={c.id}
+                  key={c.occurrenceId}
                   onPress={() => toggle(c)}
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: isOn(c) }}
