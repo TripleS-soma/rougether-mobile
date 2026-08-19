@@ -247,12 +247,19 @@ export function useMyRoomData() {
           if (wasDone) await uncompleteTodo(numId);
           else rewardAmount = (await completeTodo(numId)).rewardAmount;
         } else {
-          if (wasDone) await uncompleteRoutine(numId, date);
-          else {
+          // 루틴 완료·취소는 **스트릭을 바꾼다.** 서버가 갱신된 값을 응답에
+          // 실어주므로 클라이언트가 다시 셀 필요가 없다 — 예전엔 그 값을 버려서
+          // /today를 다시 부를 때까지 헤더의 🔥 일수가 옛 값이었다 (#895).
+          // 투두는 스트릭에 안 들어간다(성공일 판정은 루틴 완료만 본다).
+          if (wasDone) {
+            const streakAfter = await uncompleteRoutine(numId, date);
+            if (typeof streakAfter?.currentCount === 'number') setStreak(streakAfter.currentCount);
+          } else {
             const log = await completeRoutine(numId, date);
             rewardAmount = log.rewardAmount;
             // 오늘(KST) 완료면 서버가 연동 미션에 자동 기여한 결과가 실려온다.
             contribution = log.houseMissionContribution;
+            if (typeof log.streak?.currentCount === 'number') setStreak(log.streak.currentCount);
           }
         }
         // Completion pays out server-side — surface the actual amount. 일일

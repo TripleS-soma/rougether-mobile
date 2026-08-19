@@ -6,6 +6,7 @@ import type {
   RoutineLogResponse,
   RoutineResponse,
   RoutineUpdateRequest,
+  StreakSummaryResponse,
 } from './types';
 
 export type RoutineFilter = {
@@ -38,7 +39,13 @@ export function completeRoutine(id: number, routineDate: string) {
   return apiPost<RoutineLogResponse>(`/routines/${id}/logs`, { routineDate });
 }
 
-/** DELETE /routines/{id}/logs?date=… — undo completion for a date. */
+/**
+ * DELETE /routines/{id}/logs?date=… — undo completion for a date.
+ *
+ * **스트릭을 돌려준다** (#895) — 오늘 완료를 취소해 그날 완료한 루틴이 하나도
+ * 남지 않으면 서버가 currentCount를 1 줄인다. 예전엔 `void`로 버려서 헤더의
+ * 🔥 일수가 새로고침 전까지 옛 값을 들고 있었다.
+ */
 export function uncompleteRoutine(id: number, date: string) {
-  return apiDelete<void>(`/routines/${id}/logs${buildQuery({ date })}`);
+  return apiDelete<StreakSummaryResponse>(`/routines/${id}/logs${buildQuery({ date })}`);
 }
