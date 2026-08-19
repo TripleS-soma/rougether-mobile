@@ -3,8 +3,10 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { DrawResult } from '@/api';
+import type { GachaMachine } from '@/api/adapters';
+import { GiftBoxArt } from '@/components/screens/gacha/gift-box-art';
 import { Icon } from '@/components/ui/icon';
-import { Pictogram, type PictogramName } from '@/components/ui/pictograms';
+import { Pictogram } from '@/components/ui/pictograms';
 import { Radius, Spacing, StaticWhite } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { assetSource, isCdnKey } from '@/resources/asset';
@@ -29,7 +31,7 @@ export const rarityColor = (rarity?: string) =>
  * intense loop until the burst. The growing tension makes the same 1.8s read
  * far more dramatic than the old uniform wobble.
  */
-export function ChargingBox({ icon, accent }: { icon: PictogramName; accent: string }) {
+export function ChargingBox({ machine }: { machine?: GachaMachine }) {
   const t = useTokens();
   const grow = useAnimatedValue(0);
   const shake = useAnimatedValue(0);
@@ -94,8 +96,19 @@ export function ChargingBox({ icon, accent }: { icon: PictogramName; accent: str
   return (
     <View style={styles.chargeWrap}>
       <Animated.View style={[styles.glowRing, glowStyle, { backgroundColor: t.primary }]} />
-      <Animated.View style={[styles.chargeBox, boxStyle, { backgroundColor: accent }]}>
-        <Pictogram name={icon} size={56} />
+      <Animated.View
+        style={[
+          styles.chargeBox,
+          boxStyle,
+          { backgroundColor: machine?.accent ?? t.surfaceMuted },
+        ]}>
+        {machine ? (
+          // 선택 카드(boxHero 120 안에 96)와 **같은 비율·같은 아트**. 여기서
+          // 픽토그램으로 바뀌면 방금 고른 그 상자를 여는 것으로 안 읽힌다.
+          <GiftBoxArt machine={machine} size={96} testIDPrefix="charging-gift-box" />
+        ) : (
+          <Pictogram name="gift" size={56} />
+        )}
       </Animated.View>
     </View>
   );
