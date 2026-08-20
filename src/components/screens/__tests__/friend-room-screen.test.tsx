@@ -320,4 +320,20 @@ describe('FriendRoomScreen — 멤버 순회 플링 (#644)', () => {
     fling(-20);
     expect(onSwipeFriend).not.toHaveBeenCalled();
   });
+
+  /** 방명록은 동거 봇 스케줄러(서버 #310)가 실제로 글을 쓴다. */
+  it('봇이 쓴 방명록에만 봇 배지를 붙인다 (#947)', async () => {
+    const { getByTestId, queryByTestId, getByText } = await render(
+      <FriendRoomScreen
+        guestbook={[
+          { id: '1', author: '루티', content: '오늘도 화이팅', date: '8월 20일', authorBot: true },
+          { id: '2', author: '이웃준서', content: '방 예쁘다!', date: '8월 19일' },
+        ]}
+      />,
+    );
+    expect(getByText('오늘도 화이팅')).toBeTruthy();
+    expect(getByTestId('guestbook-bot-1')).toBeTruthy();
+    // 사람이 남긴 말에는 안 붙는다.
+    expect(queryByTestId('guestbook-bot-2')).toBeNull();
+  });
 });

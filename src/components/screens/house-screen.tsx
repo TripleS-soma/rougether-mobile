@@ -87,6 +87,12 @@ export type RoomCell = {
   membershipId?: number;
   /** API user id — the friend's room owner id (guestbook, room visit). */
   userId?: number;
+  /**
+   * 동거 봇 (서버 #307~#310). 온보딩 기본 집에 자동 입주하고 사람이 오면
+   * 자리를 비켜준다. 사람인 줄 알고 응원을 보내거나 방장을 넘기지 않도록
+   * 구성원 화면에서 배지로 구분한다.
+   */
+  bot?: boolean;
 };
 
 /** Context handed to onVisitFriend — ids enable server features (방명록, 방/루틴 조회). */

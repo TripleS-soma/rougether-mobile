@@ -37,7 +37,13 @@ const NULLABLE_OVERRIDES = {
     repeatDays: 'null은 "지우기" — WEEKLY→DAILY 전환.',
     scheduledTime: 'null은 "지우기" — 알람 해제.',
     endsOn: 'null은 "지우기" — 종료일 해제.',
-    houseMissionId: '미연동은 null.',
+    // 같은 필드인데 위 셋과 뜻이 반대다 — 재생성 때 이 설명이 지워지지 않게
+    // 손으로 types.ts를 고치지 말고 반드시 여기에 둘 것 (2026-08-20에 한 번
+    // 잃었다: types.ts에 직접 적혀 있어 gen:api-types가 덮어썼다).
+    houseMissionId:
+      '요청·응답 모두 null이 올 수 있어 타입만 넓힌다. **null은 "해제"가 아니라 "기존 유지"** ' +
+      '(2026-08-19 스웨거 확인, #907) — 연동 해제는 DELETE /routines/{id}/house-mission-link 로만 된다. ' +
+      '카테고리의 houseId도 같은 규칙.',
   },
 };
 

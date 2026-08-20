@@ -30,6 +30,7 @@ import {
   toCharacterFramesMap,
   toOwnedCharacter,
   toUserItemMap,
+  toGuestbookEntry,
 } from '@/api/adapters';
 import type { ItemResponse, MissionSummary, RoutineResponse, TodayResponse } from '@/api/types';
 import type { NewRoutine } from '@/constants/routines';
@@ -1040,5 +1041,38 @@ describe('API adapters', () => {
     const house = toSearchHouse({ name: '이름뿐인 집' });
     expect(house.id).toBe(0);
     expect(house.name).toBe('이름뿐인 집');
+  });
+
+  /** 동거 봇 (서버 #309·#310) — 화면이 배지를 그릴 수 있게 그대로 흘려보낸다. */
+  describe('동거 봇 필드 (#947)', () => {
+    it('toHouse가 MemberSummary.bot을 좌석에 흘린다', () => {
+      const house = toHouse(
+        { houseId: 1, name: '나의 집', maxMembers: 4 },
+        [
+          { membershipId: 10, userId: 100, nickname: '나', role: 'OWNER', status: 'ACTIVE' },
+          { membershipId: 11, userId: 101, nickname: '루티', status: 'ACTIVE', bot: true },
+        ],
+        100,
+      );
+      const cells = house.floors.flatMap((f) => f.rooms);
+      expect(cells.find((c) => c.name === '루티')?.bot).toBe(true);
+      // 사람 좌석에는 붙지 않는다 — 배지가 잘못 뜨면 안 된다.
+      expect(cells.find((c) => c.name === '나')?.bot).toBeUndefined();
+    });
+
+    it('toGuestbookEntry가 authorBot을 넘긴다', () => {
+      expect(
+        toGuestbookEntry({
+          guestbookId: 1,
+          authorNickname: '루티',
+          content: '안녕',
+          authorBot: true,
+        }).authorBot,
+      ).toBe(true);
+      // 사람 글은 값이 없거나 false — 배지가 붙으면 안 된다.
+      expect(
+        toGuestbookEntry({ guestbookId: 2, authorNickname: '친구', content: '하이' }).authorBot,
+      ).toBeUndefined();
+    });
   });
 });

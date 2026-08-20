@@ -63,6 +63,8 @@ export type GuestbookEntry = {
   content: string;
   /** Display date, e.g. "7월 7일". */
   date: string;
+  /** 동거 봇이 쓴 글 (서버 #310) — 사람 글과 구분해 배지를 붙인다. */
+  authorBot?: boolean;
 };
 
 /** 1~500 chars (server GuestbookCreateRequest). */
@@ -543,6 +545,16 @@ export function FriendRoomScreen({
                   <View key={note.id} style={[styles.gbRow, { backgroundColor: t.surfaceMuted }]}>
                     <View style={styles.gbRowHead}>
                       <Text style={[Typography.label, { color: t.text }]}>{note.author}</Text>
+                      {/* 방명록은 동거 봇 스케줄러(서버 #310)가 실제로 글을 쓴다 —
+                          사람이 남긴 말과 구분되어야 한다. */}
+                      {note.authorBot ? (
+                        <View
+                          testID={`guestbook-bot-${note.id}`}
+                          style={[styles.gbBotBadge, { backgroundColor: t.surface }]}>
+                          <Text style={[Typography.supporting, { color: t.textMuted }]}>봇</Text>
+                        </View>
+                      ) : null}
+                      <View style={styles.flex} />
                       <Text style={[Typography.supporting, { color: t.textMuted }]}>
                         {note.date}
                       </Text>
@@ -758,7 +770,14 @@ const styles = StyleSheet.create({
   gbRowHead: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    // 이름 — [봇] — (여백) — 날짜. 스페이서 View가 가운데를 밀어내므로
+    // space-between이 아니라 gap으로 붙인다.
+    gap: Spacing.one,
+  },
+  gbBotBadge: {
+    paddingHorizontal: Spacing.one,
+    paddingVertical: Spacing.half,
+    borderRadius: Radius.sm,
   },
   gbMore: {
     borderRadius: Radius.pill,

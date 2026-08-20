@@ -290,6 +290,7 @@ export type GuestbookItem = {
   authorNickname?: string;
   content?: string;
   createdAt?: string;
+  authorBot?: boolean;
 };
 
 export type GuestbookListResponse = {
@@ -522,6 +523,11 @@ export type InviteRedeemResponse = {
   inviterRewarded?: boolean;
 };
 
+export type Item = {
+  date: string;
+  title: string;
+};
+
 export type ItemListResponse = {
   items?: ItemResponse[];
 };
@@ -601,6 +607,7 @@ export type MemberSummary = {
   status?: 'ACTIVE' | 'LEFT' | 'KICKED';
   joinedAt?: string;
   lastAccessedAt?: string;
+  bot?: boolean;
 };
 
 export type MemberTodoItem = {
@@ -933,6 +940,8 @@ export type RoutineCreateRequest = {
   startsOn?: string;
   endsOn?: string;
   houseMissionId?: number;
+  externalSource?: string;
+  externalId?: string;
 };
 
 export type RoutineListResponse = {
@@ -969,6 +978,8 @@ export type RoutineResponse = {
   originRoutineId?: number;
   // 스펙 미표기 nullable (#733): 미연동 루틴은 null로 온다.
   houseMissionId?: number | null;
+  externalSource?: string;
+  externalId?: string;
 };
 
 export type RoutineStatResponse = {
@@ -991,11 +1002,17 @@ export type RoutineUpdateRequest = {
   startsOn?: string;
   // 스펙 미표기 nullable (#733): null은 "지우기" — 종료일 해제.
   endsOn?: string | null;
-  // 스펙 미표기 nullable (#733): 응답·요청 모두 null이 올 수 있어 타입만 넓힌다.
-  // **null은 "해제"가 아니라 "기존 유지"다** (2026-08-19 스웨거 확인, #907) —
-  // 연동 해제는 DELETE /routines/{id}/house-mission-link 로만 된다.
-  // 카테고리의 houseId도 같은 규칙(어댑터 주석 참고).
+  // 스펙 미표기 nullable (#733): 요청·응답 모두 null이 올 수 있어 타입만 넓힌다. **null은 "해제"가 아니라 "기존 유지"** (2026-08-19 스웨거 확인, #907) — 연동 해제는 DELETE /routines/{id}/house-mission-link 로만 된다. 카테고리의 houseId도 같은 규칙.
   houseMissionId?: number | null;
+};
+
+export type SimilarityRequest = {
+  items: Item[];
+};
+
+export type SimilarityResponse = {
+  embeddingApplied?: boolean;
+  items?: Item[];
 };
 
 export type SlotAssignment = {
@@ -1083,6 +1100,8 @@ export type TodoCreateRequest = {
   categoryId?: number;
   dueDate?: string;
   dueTime?: string;
+  externalSource?: string;
+  externalId?: string;
 };
 
 export type TodoListResponse = {
@@ -1098,6 +1117,8 @@ export type TodoResponse = {
   dueTime?: string;
   status?: 'PENDING' | 'COMPLETED';
   completedAt?: string;
+  externalSource?: string;
+  externalId?: string;
 };
 
 export type TodoUpdateRequest = {
