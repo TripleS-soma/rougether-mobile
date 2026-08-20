@@ -218,7 +218,10 @@ const isoShift = (days) => {
 
   await step('decor-unsaved-guard', async () => {
     await tapLabel('메뉴');
-    await page.getByLabel('방 꾸미기', { exact: true }).first().click();
+    // 캔버스의 연필 버튼(#727)이 팝오버 항목과 같은 aria-label을 쓴다. first()는
+    // 모달 뒤에 깔린 캔버스 쪽을 집어 클릭이 막힌다 — 팝오버는 Modal 포탈이라
+    // 항상 DOM 뒤쪽이므로 last()가 메뉴 항목이다.
+    await page.getByLabel('방 꾸미기', { exact: true }).last().click();
     await see('적용하기', 15000);
     // Preview-select a non-default wallpaper, then leave without applying —
     // the unsaved-change guard (PR #216) should intercept.
