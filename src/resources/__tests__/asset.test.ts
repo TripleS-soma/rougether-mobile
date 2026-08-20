@@ -10,6 +10,18 @@ describe('assetSource', () => {
     const { uri } = assetSource('/characters/bear.png');
     expect(uri).toBe(`${RESOURCE_BASE}/characters/bear.png`);
   });
+
+  // 같은 키면 같은 객체를 돌려줘야 <Image source>의 참조가 렌더 간 유지된다.
+  // 매번 새 {uri}였을 땐 방 캔버스(집 좌석 12칸 x 이미지 N장)가 커밋마다
+  // source prop을 통째로 native에 다시 보냈다.
+  it('hands back the same source object for the same key', () => {
+    const a = assetSource('items/forest-sage/furniture/forest-sage-bed.png');
+    const b = assetSource('items/forest-sage/furniture/forest-sage-bed.png');
+    expect(a).toBe(b);
+    // 앞의 슬래시 정규화 뒤 같은 경로면 같은 객체.
+    expect(assetSource('/characters/bear.png')).toBe(assetSource('characters/bear.png'));
+    expect(assetSource('characters/cat.png')).not.toBe(assetSource('characters/bear.png'));
+  });
 });
 
 describe('isCdnKey', () => {
