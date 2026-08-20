@@ -776,7 +776,7 @@ const styles = StyleSheet.create({
   },
   gbBotBadge: {
     paddingHorizontal: Spacing.one,
-    paddingVertical: 1,
+    paddingVertical: Spacing.half,
     borderRadius: Radius.sm,
   },
   gbMore: {
