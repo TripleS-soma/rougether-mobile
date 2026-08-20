@@ -6,7 +6,7 @@ import { CharacterAvatar } from '@/components/room/character-avatar';
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { ROOM_RENDER_CONTRACT, roomPercent } from '@/components/room/room-render-contract';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
-import { FixedOverlay, Radius } from '@/constants/theme';
+import { Radius } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
 import { assetSource, isCdnKey } from '@/resources/asset';
 import {
@@ -115,7 +115,7 @@ export type RoomSceneProps = RoomCatalogProps &
  */
 export type MemberRoomPreview = {
   /** 자유 배치 가구 (#327) — 없으면 가구 없는 방 (#925).*/
-  placements?: PlacedFurniture[] | null;
+  placements?: PlacedFurniture[];
   wallpaperId?: string;
   floorId?: string | null;
   backgroundId?: string | null;
@@ -386,37 +386,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: roomPercent(ROOM_RENDER_CONTRACT.furniture.baseWidth),
     aspectRatio: ROOM_RENDER_CONTRACT.furniture.aspectRatio,
-  },
-  activeSlot: {
-    borderWidth: 2.5,
-    borderRadius: Radius.md,
-  },
-  emptySlot: {
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: FixedOverlay.gridCell,
-    borderRadius: Radius.md,
-    backgroundColor: FixedOverlay.gridFill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyPlus: {
-    width: 22,
-    height: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  plusH: {
-    position: 'absolute',
-    width: 18,
-    height: 3,
-    borderRadius: 2,
-  },
-  plusV: {
-    position: 'absolute',
-    width: 3,
-    height: 18,
-    borderRadius: 2,
   },
   character: {
     position: 'absolute',

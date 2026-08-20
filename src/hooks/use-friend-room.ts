@@ -30,12 +30,12 @@ import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furnitur
 import { ErrorCode } from '@/api/error-codes';
 import type { RoomCobweb } from '@/components/room/room';
 
-/** 친구 방 배치 — FREE_V1이면 placements, 아니면 슬롯 id 목록으로 렌더 (#327). */
+/** 자유 배치 가구 — 가구의 유일한 정본 (#925). */
 export type FriendRoomPlacement = {
   wallpaperId: string;
   floorId: string | null;
   backgroundId: string | null;
-  placements: PlacedFurniture[] | null;
+  placements: PlacedFurniture[];
 };
 
 export type FriendRoom = {

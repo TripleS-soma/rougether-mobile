@@ -222,7 +222,6 @@ describe('HouseScreen', () => {
   it('renders a live room preview on tiles that have one, plain tile otherwise', async () => {
     const roomPreviews = {
       42: {
-        placedFurnitureIds: ['bed'],
         placements: [{ furnitureId: 'bed', x: 0.3, y: 0.7, z: 1 }],
         wallpaperId: 'cream',
         floorId: null,
