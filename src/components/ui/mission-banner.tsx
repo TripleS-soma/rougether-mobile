@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { MissionFlagPictogram } from '@/components/ui/pictograms';
 import { Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 
@@ -48,7 +49,7 @@ export function MissionBanner({
           accessibilityRole="button"
           accessibilityLabel={`미션 ${stepIndex + 1} ${label}`}
           style={styles.goArea}>
-          <Text style={styles.emoji}>🎯</Text>
+          <MissionFlagPictogram size={26} />
           <View style={styles.texts}>
             {/* 탭 어포던스 (#571 후속) — 배너가 실행 화면으로 데려다주는
                 다리인데 눌러도 된다는 표시가 없었다. 기존 줄에 병합해
@@ -114,9 +115,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
-  },
-  emoji: {
-    fontSize: 22,
   },
   texts: {
     flex: 1,
