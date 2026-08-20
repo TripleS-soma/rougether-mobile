@@ -25,7 +25,7 @@ export function useFriendVisit({
   clearPreviewCobweb,
 }: {
   setScreen: Dispatch<SetStateAction<Screen>>;
-  /** 상점 카탈로그 — 친구 방 슬롯의 assetKey 해석 (#149). */
+  /** 상점 카탈로그 — 친구 방 가구·표면의 assetKey 해석 (#149). */
   catalogue: ShopCatalogue;
   /** 자리 배치 반영된 집 목록 (#278) — 스와이프 순회 순서의 근거. */
   arrangedHouses: House[];
@@ -117,8 +117,7 @@ export function useFriendVisit({
         onLoadMoreGuestbook={() => {
           void loadMoreGuestbook();
         }}
-        placedFurnitureIds={friendRoom.placement?.placedFurnitureIds ?? []}
-        placements={friendRoom.placement?.placements ?? null}
+        placements={friendRoom.placement?.placements ?? []}
         wallpaperId={friendRoom.placement?.wallpaperId}
         floorId={friendRoom.placement?.floorId ?? null}
         backgroundId={friendRoom.placement?.backgroundId ?? null}

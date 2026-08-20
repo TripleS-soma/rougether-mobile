@@ -37,11 +37,7 @@ import { useToast } from '@/components/ui/toast';
 import { type Wallet } from '@/constants/currency';
 import { track } from '@/lib/analytics';
 import type { RoomCobweb } from '@/components/room/room';
-import {
-  DEFAULT_WALLPAPER_ID,
-  type PlacedFurniture,
-  slotIdsToPlacements,
-} from '@/resources/furniture';
+import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furniture';
 
 const EMPTY: ShopCatalogue = {
   furniture: [],
@@ -52,16 +48,14 @@ const EMPTY: ShopCatalogue = {
 };
 
 export type RoomPlacement = {
-  /** 자유 배치 항목(#327) — placedFurnitureIds는 여기서 파생된 호환 뷰. */
+  /** 자유 배치 항목 (#327) — 가구의 유일한 정본 (#925). */
   items: PlacedFurniture[];
-  placedFurnitureIds: string[];
   wallpaperId: string;
   floorId: string | null;
   backgroundId: string | null;
   /** 낙관적 잠금 리비전 — 저장 시 baseRevision으로 그대로 보낸다. */
   layoutRevision: number;
   /** 이미 FREE_V1로 전환된 방인지 — 첫 저장 확인 모달 판단. */
-  freeLayout: boolean;
   /** 내 방에 낀 거미줄 (#829) — 없으면 null. */
   cobweb: RoomCobweb | null;
 };
@@ -73,12 +67,10 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
   const [error, setError] = useState(false);
   const [placement, setPlacement] = useState<RoomPlacement>({
     items: [],
-    placedFurnitureIds: [],
     wallpaperId: DEFAULT_WALLPAPER_ID,
     floorId: null,
     backgroundId: null,
     layoutRevision: 0,
-    freeLayout: false,
     cobweb: null,
   });
   const { show: toast } = useToast();
@@ -100,29 +92,22 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
       catalogueRef.current = cat;
       setCatalogue(cat);
       setOwnedIds(cat.ownedIds);
-      // Prefer the layout saved on the server; fall back to seeding from owned
-      // items until the first save.
+      // 표면(벽지·바닥·배경)은 여전히 슬롯에 산다 — 서버가 room_surface_slots에
+      // 저장하고 `slots`로 돌려준다 (서버 #162). 저장 전이면 소유분에서 고른다.
       const saved = room?.slots?.length
         ? fromRoomSlots(room.slots, cat, userItemMapRef.current)
         : null;
       const fallback = ownedPlacement(cat);
-      const freeLayout = room?.layoutFormat === 'FREE_V1';
-      // FREE_V1 방은 서버 placements 그대로, 슬롯 방은 앵커 좌표로 프리필해
-      // 같은 모습에서 이어서 편집한다 (#327).
-      const placedItems = freeLayout
-        ? fromRoomPlacements(room?.placements ?? [], cat, userItemMapRef.current)
-        : slotIdsToPlacements(
-            saved?.placedFurnitureIds ?? fallback.placedFurnitureIds,
-            cat.furniture,
-          );
+      // 가구는 전부 자유배치다 (#925) — 슬롯 앵커 프리필을 없앴다. 서버가
+      // placements를 정본으로 주고, 아직 SLOT_V1인 방은 가구가 비어 있다
+      // (스토어 빌드는 슬롯에 쓴 적이 없다 — v1.0.0이 슬롯 쓰기 제거 이후).
+      const placedItems = fromRoomPlacements(room?.placements ?? [], cat, userItemMapRef.current);
       setPlacement({
         items: placedItems,
-        placedFurnitureIds: placedItems.map((p) => p.furnitureId),
         wallpaperId: saved?.wallpaperId ?? fallback.wallpaperId,
         floorId: saved ? saved.floorId : fallback.floorId,
         backgroundId: saved ? saved.backgroundId : fallback.backgroundId,
         layoutRevision: room?.layoutRevision ?? 0,
-        freeLayout,
         // 서버가 안 주면 깨끗한 방 (#829).
         cobweb: room?.cobweb ?? null,
       });
@@ -235,12 +220,10 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
       });
       setPlacement({
         items,
-        placedFurnitureIds: items.map((p) => p.furnitureId),
         wallpaperId,
         floorId,
         backgroundId,
         layoutRevision: res.layoutRevision ?? placement.layoutRevision + 1,
-        freeLayout: true,
         // 배치 저장은 거미줄과 무관 — 현재 상태를 그대로 들고 간다 (#829).
         cobweb: placement.cobweb,
       });

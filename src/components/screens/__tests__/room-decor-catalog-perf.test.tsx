@@ -3,7 +3,6 @@ import { State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
-import { FURNITURE_ITEMS, slotIdsToPlacements } from '@/resources/furniture';
 
 /**
  * 카탈로그 타일이 몇 번 그려지는지 세는 스파이 (#794). 실서버 가구는 122종이라
@@ -21,7 +20,8 @@ jest.mock('@/components/room/furniture-placeholder', () => {
   };
 });
 
-const items = (ids: string[]) => slotIdsToPlacements(ids, FURNITURE_ITEMS);
+const items = (ids: string[]) =>
+  ids.map((id, i) => ({ furnitureId: id, x: 0.25 + (i % 2) * 0.4, y: 0.3 + Math.floor(i / 2) * 0.4, z: i + 1 })); // prettier-ignore
 
 /** 테스트가 방에 배치하는 가구 수 — 선택 시 허용되는 재렌더 상한. */
 const ROOM_ITEMS = 2;
@@ -43,7 +43,7 @@ describe('RoomDecorScreen 카탈로그 렌더 비용 (#794)', () => {
 
   it('방 안 가구를 선택해도 카탈로그 그리드를 다시 그리지 않는다', async () => {
     const { getByTestId } = await render(
-      <RoomDecorScreen initialItems={items(['bed', 'plant'])} freeLayout />,
+      <RoomDecorScreen initialItems={items(['bed', 'plant'])} />,
     );
     // 드래그 오버레이는 캔버스 onLayout 이후에만 그려진다.
     await fireEvent(getByTestId('decor-canvas'), 'layout', {
@@ -69,9 +69,7 @@ describe('RoomDecorScreen 카탈로그 렌더 비용 (#794)', () => {
     // selected로 뜨고, 그 타일을 누르면 방에서 빠진다(togglePlace가 placedSet을
     // 읽는 경로). placed.includes로 되돌아가도 이 테스트는 통과하지만, 그때는
     // 위의 렌더 횟수 테스트가 잡는다 — 둘이 한 쌍이다.
-    const { getByLabelText } = await render(
-      <RoomDecorScreen initialItems={items(['bed'])} freeLayout />,
-    );
+    const { getByLabelText } = await render(<RoomDecorScreen initialItems={items(['bed'])} />);
 
     const tile = getByLabelText('포근한 침대');
     expect(tile.props.accessibilityState.selected).toBe(true);

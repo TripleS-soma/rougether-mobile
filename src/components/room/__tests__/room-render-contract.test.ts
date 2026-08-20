@@ -1,9 +1,15 @@
 import { ROOM_RENDER_CONTRACT, roomSlotCenter } from '@/components/room/room-render-contract';
-import { SLOT_ORDER } from '@/resources/furniture';
+import type { FurnitureSlot } from '@/resources/furniture';
+
+// 앱은 더 이상 슬롯 앵커로 렌더하지 않지만(#925), 이 JSON은 **관리자 도구가
+// vendoring하는 v1 계약**이라 기하 정보를 그대로 유지한다. 계약이 깨지지
+// 않는지만 여기서 지킨다.
+const SLOT_KEYS = Object.keys(ROOM_RENDER_CONTRACT.furniture.slots) as FurnitureSlot[];
 
 describe('ROOM_RENDER_CONTRACT', () => {
   it('keeps every slot inside the normalized square and derives its center', () => {
-    for (const slot of SLOT_ORDER) {
+    expect(SLOT_KEYS.length).toBeGreaterThan(0);
+    for (const slot of SLOT_KEYS) {
       const rect = ROOM_RENDER_CONTRACT.furniture.slots[slot];
       expect(rect.left).toBeGreaterThanOrEqual(0);
       expect(rect.top).toBeGreaterThanOrEqual(0);

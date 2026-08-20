@@ -74,9 +74,31 @@ describe('useShop — refreshOwned (가챠 획득 동기화)', () => {
     const { result } = await renderHook(() => useShop(jest.fn()));
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    expect(result.current.placement.freeLayout).toBe(true);
     expect(result.current.placement.items).toEqual([]);
-    expect(result.current.placement.placedFurnitureIds).toEqual([]);
+  });
+
+  it('아직 SLOT_V1인 방도 슬롯으로 되돌아가지 않는다 (#925)', async () => {
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/me/items')) {
+        return res({ items: [{ itemId: 1, userItemId: 11 }] });
+      }
+      if (url.includes('/rooms/me')) {
+        // 전환 전 방 — 서버가 남겨둔 positioned 슬롯이 그대로 실려 온다.
+        return res({
+          layoutFormat: 'SLOT_V1',
+          placements: [],
+          slots: [{ slotType: 'bottomLeft', userItemId: 11 }],
+        });
+      }
+      if (url.includes('/items')) return res(ITEMS);
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useShop(jest.fn()));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    // 예전엔 여기서 슬롯을 앵커 좌표로 프리필했다. 이제 가구는 placements가 정본이다.
+    expect(result.current.placement.items).toEqual([]);
   });
 });
 

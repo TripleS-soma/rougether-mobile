@@ -213,13 +213,11 @@ export function AppShell({
   } = useShop(setWallet);
 
   const [placedItems, setPlacedItems] = useState<PlacedFurniture[]>([]);
-  const [placedFurnitureIds, setPlacedFurnitureIds] = useState<string[]>([]);
   const [wallpaperId, setWallpaperId] = useState(DEFAULT_WALLPAPER_ID);
   const [floorId, setFloorId] = useState<string | null>(null);
   const [backgroundId, setBackgroundId] = useState<string | null>(null);
   useEffect(() => {
     setPlacedItems(placement.items);
-    setPlacedFurnitureIds(placement.placedFurnitureIds);
     setWallpaperId(placement.wallpaperId);
     setFloorId(placement.floorId);
     setBackgroundId(placement.backgroundId);
@@ -308,8 +306,7 @@ export function AppShell({
     missionLinks: { toggleWithMissionGuard, houseCategoryIds, addRoutineWithMission },
     character: { wornCharacterId, wornCharacterFrames, ownedCharacters, wearCharacter },
     room: {
-      placedFurnitureIds,
-      placements: placement.freeLayout ? placedItems : null,
+      placements: placedItems,
       wallpaperId,
       floorId,
       backgroundId,
@@ -466,7 +463,6 @@ export function AppShell({
             <RoomDecorScreen
               initialItems={placedItems}
               highlightItemIds={newDecorItemIds}
-              freeLayout={placement.freeLayout}
               initialWallpaperId={wallpaperId}
               initialFloorId={floorId}
               initialBackgroundId={backgroundId}
@@ -488,7 +484,6 @@ export function AppShell({
                 const result = await saveLayout(its, wp, fl, bg);
                 if (result === 'ok') {
                   setPlacedItems(its);
-                  setPlacedFurnitureIds(its.map((p) => p.furnitureId));
                   setWallpaperId(wp);
                   setFloorId(fl);
                   setBackgroundId(bg);

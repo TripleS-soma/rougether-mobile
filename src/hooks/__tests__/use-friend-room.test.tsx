@@ -78,13 +78,12 @@ describe('useFriendRoom', () => {
     // (#263) — friend rooms have no poses[], so the legacy set is flattened.
     expect(friendRoom.characterFrames).toEqual(['characters/otter/animations/idle.webp']);
     expect(friendRoom.streakDays).toBe(5);
+    // 표면은 슬롯에서, 가구는 placements에서 (#925) — 응답의 positioned 슬롯은 무시된다.
     expect(friendRoom.placement).toEqual({
-      placedFurnitureIds: ['2'],
       wallpaperId: '9',
       floorId: null,
       backgroundId: null,
-      // 슬롯 방(SLOT_V1)은 자유 배치 없음 (#327).
-      placements: null,
+      placements: [],
     });
     expect(friendRoom.routines).toHaveLength(2);
     expect(friendRoom.routines[0]).toMatchObject({ id: '3', completed: true });

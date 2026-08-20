@@ -52,7 +52,6 @@ describe('useMemberRoomPreviews', () => {
 
     expect(Object.keys(result.current.previews)).toEqual(['42']);
     expect(result.current.previews[42]).toMatchObject({
-      placedFurnitureIds: ['2'],
       wallpaperId: '9',
       characterId: 'otter',
     });
@@ -109,8 +108,8 @@ describe('withMyCharacter', () => {
     },
   ];
   const previews: Record<number, MemberRoomPreview> = {
-    42: { placedFurnitureIds: [], characterId: 'otter' },
-    43: { placedFurnitureIds: [], characterId: 'otter' },
+    42: { placements: [], characterId: 'otter' },
+    43: { placements: [], characterId: 'otter' },
   };
 
   it('re-wears only my seats with the worn character (#282)', () => {
@@ -130,7 +129,6 @@ describe('withMyCharacter', () => {
 describe('characterIdForMember (#342, #753에서 공용 헬퍼로)', () => {
   const previews = {
     42: {
-      placedFurnitureIds: [],
       wallpaperId: 'cream',
       floorId: null,
       backgroundId: null,
