@@ -1,5 +1,6 @@
 import { type ReactNode, type Ref, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
+  type LayoutChangeEvent,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   Platform,
@@ -58,11 +59,33 @@ export function PawRefreshScroll({
   refreshTestID = 'paw-refresh',
   refreshDisabled = false,
   onScroll,
+  onContentSizeChange,
+  onLayout,
+  contentOffset,
   ...scrollProps
 }: PawRefreshScrollProps) {
   // jest의 useSharedValue는 렌더마다 새 객체 — useRef로 앵커 (#539 계약).
   const pull = useRef(useSharedValue(0)).current;
-  const scrollY = useRef(useSharedValue(0)).current;
+  /**
+   * 캐시된 스크롤 오프셋 (#898). `onScroll`로만 갱신되는데, **오프셋이 바뀌어도
+   * `onScroll`이 안 오는 구간이 둘** 있어 이 값이 실제와 어긋난다:
+   *
+   * 1. `contentOffset` prop으로 시작 위치를 준 경우(useScrollRestore) — 마운트
+   *    시점부터 어긋난다. 그래서 초기값을 그 prop에서 받는다.
+   * 2. 콘텐츠가 줄어 네이티브가 오프셋을 **조용히 클램프**한 경우(탭 전환,
+   *    새로고침으로 짧아진 목록) — 실제로는 맨 위인데 캐시는 높은 값을 들고
+   *    있어 당김이 전부 "중간 스크롤"로 버려졌다. 아래 두 핸들러가 같은 식으로
+   *    다시 클램프한다.
+   */
+  const scrollY = useRef(useSharedValue(contentOffset?.y ?? 0)).current;
+  /**
+   * 클램프 계산용 — 뷰포트/콘텐츠 높이. **-1 = 아직 안 재봤음**이다.
+   * 0으로 두면 안 된다: `onLayout`이 `onContentSizeChange`보다 먼저 오는
+   * 순서에서 `콘텐츠(0) - 뷰포트(800)`이 음수가 되어 상한이 0으로 잡히고,
+   * 복원된 오프셋(contentOffset)을 맨 위로 잘못 눌러버린다 (#898 리뷰).
+   */
+  const viewportH = useRef(useSharedValue(-1)).current;
+  const contentH = useRef(useSharedValue(-1)).current;
   const baseY = useRef(useSharedValue(0)).current;
   const engaged = useRef(useSharedValue(false)).current;
   const refreshingSV = useRef(useSharedValue(false)).current;
@@ -96,6 +119,33 @@ export function PawRefreshScroll({
       onScroll?.(e);
     },
     [onScroll, scrollY],
+  );
+
+  /** 네이티브가 오프셋에 거는 것과 같은 상한. 둘 다 재본 뒤에만 건드린다. */
+  const clampScrollY = useCallback(() => {
+    if (contentH.value < 0 || viewportH.value < 0) return;
+    const max = Math.max(0, contentH.value - viewportH.value);
+    if (scrollY.value > max) scrollY.value = max;
+  }, [scrollY, contentH, viewportH]);
+
+  // 호출부의 콜백을 삼키면 안 된다 — useScrollRestore가 onContentSizeChange로
+  // 복원 스크롤을 건다 (`use-scroll-restore.ts`).
+  const handleContentSizeChange = useCallback(
+    (w: number, h: number) => {
+      contentH.value = h;
+      clampScrollY();
+      onContentSizeChange?.(w, h);
+    },
+    [contentH, clampScrollY, onContentSizeChange],
+  );
+
+  const handleLayout = useCallback(
+    (e: LayoutChangeEvent) => {
+      viewportH.value = e.nativeEvent.layout.height;
+      clampScrollY();
+      onLayout?.(e);
+    },
+    [viewportH, clampScrollY, onLayout],
   );
 
   // ScrollView의 네이티브 제스처와 동시 인식으로 묶는다 — 팬이 스크롤을
@@ -187,7 +237,13 @@ export function PawRefreshScroll({
   // 새로고침이 있다), RNGH Native 제스처의 웹 지원 한계로 팬 인식이 깨진다.
   if (!onRefresh || Platform.OS === 'web') {
     return (
-      <ScrollView ref={scrollRef} onScroll={onScroll} {...scrollProps}>
+      <ScrollView
+        ref={scrollRef}
+        onScroll={onScroll}
+        onContentSizeChange={onContentSizeChange}
+        onLayout={onLayout}
+        contentOffset={contentOffset}
+        {...scrollProps}>
         {children}
       </ScrollView>
     );
@@ -207,6 +263,9 @@ export function PawRefreshScroll({
           <ScrollView
             ref={scrollRef}
             onScroll={handleScroll}
+            onContentSizeChange={handleContentSizeChange}
+            onLayout={handleLayout}
+            contentOffset={contentOffset}
             scrollEventThrottle={16}
             // iOS 바운스는 커스텀 당김과 이중 동작 — 당김 헤더가 대신한다.
             bounces={false}
