@@ -22,7 +22,10 @@ export function initPushDisplay(): void {
   if (Platform.OS === 'web') return;
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
-      shouldShowBanner: true,
+      // 포그라운드 배너는 **앱이 전담해 그린다** (#902, ui/notification-banner).
+      // 여기를 true로 두면 같은 알림이 시스템 배너와 인앱 배너로 두 번 뜬다.
+      shouldShowBanner: false,
+      // 트레이(알림 목록)에는 그대로 남는다 — 못 보고 지나쳐도 되찾을 수 있어야 한다.
       shouldShowList: true,
       shouldPlaySound: true,
       shouldSetBadge: false,
@@ -49,5 +52,29 @@ export function onNotificationTap(cb: () => void): () => void {
       if (resp) cb();
     })
     .catch(() => {});
+  return () => sub.remove();
+}
+
+/**
+ * 앱이 켜져 있는 동안 도착한 알림 구독 (#902). RNFirebase `onMessage`가 아니라
+ * expo-notifications를 쓰는 이유: 표시 규칙(`setNotificationHandler`)이 이미
+ * 여기를 지나가고, 한 API로 iOS·Android가 함께 덮인다.
+ *
+ * 탭이 아니라 **수신** 시점이다 — 탭은 `onNotificationTap`이 따로 본다.
+ * 반환값은 구독 해제.
+ */
+export function onNotificationReceived(
+  cb: (n: { type?: string; title: string; body: string }) => void,
+): () => void {
+  if (Platform.OS === 'web') return () => {};
+  const sub = Notifications.addNotificationReceivedListener((event) => {
+    const content = event.request.content;
+    const data = (content.data ?? {}) as { type?: unknown };
+    const title = content.title ?? '';
+    const body = content.body ?? '';
+    // 제목·본문이 모두 비면 그릴 게 없다 (data-only 메시지 등) — 조용히 넘긴다.
+    if (!title && !body) return;
+    cb({ type: typeof data.type === 'string' ? data.type : undefined, title, body });
+  });
   return () => sub.remove();
 }
