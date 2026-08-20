@@ -327,7 +327,11 @@ export function HouseMissionsScreen({
                         </Text>
                         {/* Own node (not a desc suffix) so the long type label
                             truncates instead of the date. */}
-                        {mission.endsOn && mission.status === 'ACTIVE' ? (
+                        {/* EXPIRED도 날짜를 보여준다 (#901 리뷰) — '지난 미션'
+                            탭에서 "언제 끝났나"가 곧 그 카드를 보는 이유다.
+                            COMPLETED는 제외한다: 이미 달성해 받은 미션에
+                            기간 종료일은 뜻이 없다. */}
+                        {mission.endsOn && mission.status !== 'COMPLETED' ? (
                           <Text style={[Typography.supporting, { color: t.textMuted }]}>
                             ~{mission.endsOn.slice(5).replace('-', '.')}
                           </Text>

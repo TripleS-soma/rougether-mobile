@@ -209,6 +209,23 @@ describe('HouseMissionsScreen', () => {
       expect(queryByText(/진행 중 2개/)).toBeNull();
     });
 
+    it('기간 만료 미션은 언제 끝났는지도 보여준다 (COMPLETED는 제외)', async () => {
+      const ended: House = {
+        ...MISSION_HOUSE,
+        missions: [
+          { id: 61, title: '놓친 미션', desc: '일일 구성원 달성률', icon: 'sun' as const, current: 1, target: 5, status: 'EXPIRED', endsOn: '2026-08-14' }, // prettier-ignore
+          { id: 62, title: '받은 미션', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 5, target: 5, status: 'COMPLETED', achieved: true, endsOn: '2026-08-15' }, // prettier-ignore
+        ],
+      };
+      const { getByText, queryByText, getByLabelText } = await render(
+        <HouseMissionsScreen house={ended} missions={ended.missions ?? []} isOwner={false} />,
+      );
+      await fireEvent.press(getByLabelText('지난 미션 탭'));
+      expect(getByText('~08.14')).toBeTruthy();
+      // 달성해서 받은 미션에 기간 종료일은 뜻이 없다.
+      expect(queryByText('~08.15')).toBeNull();
+    });
+
     it('빈 탭은 그 탭에 맞는 문구를 보여준다', async () => {
       const onlyActive: House = {
         ...MISSION_HOUSE,
