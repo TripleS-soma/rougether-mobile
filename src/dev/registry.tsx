@@ -1016,7 +1016,7 @@ export const galleryEntries: GalleryEntry[] = [
   },
   {
     name: 'UI · MissionBanner',
-    description: '온보딩 미션 진행 배너 (#571) — 🎯 미션 N/4 + 건너뛰기(확인 다이얼로그).',
+    description: '온보딩 미션 진행 배너 (#571) — 깃발 표식 + 미션 N/4 + 건너뛰기(확인 다이얼로그).',
     render: () => (
       <View style={{ alignSelf: 'stretch', minHeight: 80 }}>
         <MissionBanner
