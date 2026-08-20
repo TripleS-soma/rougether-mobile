@@ -112,6 +112,22 @@ describe('PawRefreshScroll (#454 — 곰 발바닥 pull-to-refresh)', () => {
       expect(onRefresh).not.toHaveBeenCalled();
     });
 
+    it('레이아웃만 재고 콘텐츠 높이를 모를 땐 복원된 위치를 건드리지 않는다', async () => {
+      // onLayout이 onContentSizeChange보다 먼저 오는 순서 (#898 리뷰). 이때
+      // 콘텐츠 높이를 0으로 치면 상한이 0이 되어 복원 위치가 맨 위로 눌린다.
+      const onRefresh = jest.fn(() => Promise.resolve());
+      const { getByTestId } = await render(
+        <PawRefreshScroll onRefresh={onRefresh} testID="scroll" contentOffset={{ x: 0, y: 300 }}>
+          <Text>콘텐츠</Text>
+        </PawRefreshScroll>,
+      );
+      getByTestId('scroll').props.onLayout({ nativeEvent: { layout: { height: 800 } } });
+
+      // 여전히 리스트 중간이므로 당김이 먹으면 안 된다.
+      pullAndRelease(200);
+      expect(onRefresh).not.toHaveBeenCalled();
+    });
+
     it('호출부의 onContentSizeChange를 삼키지 않는다', async () => {
       // useScrollRestore가 이 콜백으로 복원 스크롤을 건다 — 가로채면 복원이 죽는다.
       const onContentSizeChange = jest.fn();

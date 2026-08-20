@@ -78,9 +78,14 @@ export function PawRefreshScroll({
    *    다시 클램프한다.
    */
   const scrollY = useRef(useSharedValue(contentOffset?.y ?? 0)).current;
-  /** 클램프 계산용 — 뷰포트/콘텐츠 높이. */
-  const viewportH = useRef(useSharedValue(0)).current;
-  const contentH = useRef(useSharedValue(0)).current;
+  /**
+   * 클램프 계산용 — 뷰포트/콘텐츠 높이. **-1 = 아직 안 재봤음**이다.
+   * 0으로 두면 안 된다: `onLayout`이 `onContentSizeChange`보다 먼저 오는
+   * 순서에서 `콘텐츠(0) - 뷰포트(800)`이 음수가 되어 상한이 0으로 잡히고,
+   * 복원된 오프셋(contentOffset)을 맨 위로 잘못 눌러버린다 (#898 리뷰).
+   */
+  const viewportH = useRef(useSharedValue(-1)).current;
+  const contentH = useRef(useSharedValue(-1)).current;
   const baseY = useRef(useSharedValue(0)).current;
   const engaged = useRef(useSharedValue(false)).current;
   const refreshingSV = useRef(useSharedValue(false)).current;
@@ -116,8 +121,9 @@ export function PawRefreshScroll({
     [onScroll, scrollY],
   );
 
-  /** 네이티브가 오프셋에 거는 것과 같은 상한. */
+  /** 네이티브가 오프셋에 거는 것과 같은 상한. 둘 다 재본 뒤에만 건드린다. */
   const clampScrollY = useCallback(() => {
+    if (contentH.value < 0 || viewportH.value < 0) return;
     const max = Math.max(0, contentH.value - viewportH.value);
     if (scrollY.value > max) scrollY.value = max;
   }, [scrollY, contentH, viewportH]);
