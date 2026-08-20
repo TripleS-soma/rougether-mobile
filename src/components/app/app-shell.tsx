@@ -18,6 +18,7 @@ import {
   dominantDecorTab,
   RoomDecorScreen,
 } from '@/components/screens/room-decor-screen';
+import { useStableCallback } from '@/hooks/use-stable-value';
 import { SettingsScreen } from '@/components/screens/settings-screen';
 import { AttendanceSheet } from '@/components/screens/sheets/attendance-sheet';
 import { MissionSheet } from '@/components/screens/sheets/mission-sheet';
@@ -242,15 +243,15 @@ export function AppShell({
    * 벽지를 뽑았는데 가구 탭이 열려 있으면 표시가 안 보이는 탭에 있다.
    * 뽑은 게 가장 많은 종류의 탭을 함께 열어준다.
    */
-  const goPlaceDrawn = useCallback(
-    (results: DrawResult[]) => {
-      const ids = results.map((r) => String(r.itemId)).filter(Boolean);
-      setNewDecorItemIds(ids);
-      setDecorInitialTab(dominantDecorTab(ids, catalogue));
-      setScreen('decor');
-    },
-    [catalogue],
-  );
+  // 참조 고정 (#794 결) — catalogue를 deps에 넣으면 상점 구매 때마다 이
+  // 콜백이 재생성된다. useStableCallback은 최신 catalogue를 읽으면서 참조는
+  // 유지한다.
+  const goPlaceDrawn = useStableCallback((results: DrawResult[]) => {
+    const ids = results.map((r) => String(r.itemId)).filter(Boolean);
+    setNewDecorItemIds(ids);
+    setDecorInitialTab(dominantDecorTab(ids, catalogue));
+    setScreen('decor');
+  });
   useEffect(() => {
     if (screen !== 'decor') {
       setNewDecorItemIds([]);
