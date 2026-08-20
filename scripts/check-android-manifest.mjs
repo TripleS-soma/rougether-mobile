@@ -73,7 +73,8 @@ const REQUIRED_MERGED = [
 /** `<uses-permission …/>` 를 이름 → 태그 원문으로. 이름은 접두사를 뗀다. */
 function readPermissions(xml) {
   const found = new Map();
-  for (const m of xml.matchAll(/<uses-permission\b[^>]*>/g)) {
+  // `[\s>]`로 끊는다 — `\b`는 '-' 앞도 경계라 `<uses-permission-sdk-23`까지 잡힌다.
+  for (const m of xml.matchAll(/<uses-permission[\s>][^>]*>/g)) {
     const tag = m[0];
     const name = tag.match(/android:name="android\.permission\.([A-Z_]+)"/)?.[1];
     if (name) found.set(name, tag);
@@ -94,7 +95,12 @@ function findMergedManifest(dir = INTERMEDIATES) {
     }
   };
   walk(dir);
-  // 같은 릴리스 산출물이 여러 벌이면 경로가 가장 짧은(가장 상위) 것을 쓴다.
+  if (hits.length > 1) {
+    // flavor가 여러 개거나 AGP가 경로를 바꾸면 엉뚱한 파일을 볼 수 있다.
+    // 조용히 하나를 고르지 말고 후보를 전부 드러낸 뒤 가장 상위(짧은) 것을 쓴다.
+    console.warn(`⚠ 병합 매니페스트 후보가 ${hits.length}개입니다 — 가장 상위 경로를 씁니다:`);
+    for (const h of hits) console.warn(`    ${h}`);
+  }
   return hits.sort((a, b) => a.length - b.length)[0] ?? null;
 }
 
