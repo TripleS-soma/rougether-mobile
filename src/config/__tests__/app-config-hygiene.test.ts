@@ -17,6 +17,10 @@
  * - **Android**: `checkPermissions()`가 `READ_CALENDAR`와 `WRITE_CALENDAR`를
  *   **둘 다** 요구한다. WRITE를 빼면 권한이 영영 안 떨어져 기능이 죽는다.
  *
+ * **이 파일은 입력(app.json)만 본다.** 산출물(Info.plist)은
+ * `scripts/check-ios-plist.mjs`가 본다 (#915) — config plugin이 prebuild 때
+ * 키를 지우는 경우는 여기서 못 잡기 때문이다. 둘 다 있어야 그물이 닫힌다.
+ *
  * 그래서 이 키들은 "안 써도 선언해야 하는" 것이다. 실제로 쓰지 않는다는 사실은
  * 권한 문구·스토어 설명·개인정보처리방침이 말한다(코드가 아니라 문서의 몫).
  */

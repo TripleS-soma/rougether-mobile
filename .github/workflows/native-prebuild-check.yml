@@ -8,6 +8,27 @@ on:
     types: [opened, synchronize, reopened, labeled]
 
 jobs:
+  # iOS Info.plist 산출물 검증 (#915) — **라벨 없이 모든 PR에서** 돌린다.
+  # 1.2.0 빌드 47을 죽인 #913의 PR(#914)은 native-build 라벨이 없어 아래
+  # prebuild 잡을 건너뛰었다. 그 구멍이 이번 사고의 한 축이라, 이 잡만은
+  # 라벨과 무관하게 항상 돈다(prebuild --no-install이라 몇십 초면 끝난다).
+  ios-plist:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SENTRY_DISABLE_AUTO_UPLOAD: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Expo prebuild (ios)
+        run: npx expo prebuild --platform ios --clean --no-install
+      - name: Info.plist 필수 권한 키 검증
+        run: node scripts/check-ios-plist.mjs
+
   prebuild:
     # 라벨이 native-build인 PR에서만.
     if: contains(github.event.pull_request.labels.*.name, 'native-build')
