@@ -751,6 +751,8 @@ export function toHouse(
     isOwner: m.role === 'OWNER',
     membershipId: m.membershipId,
     userId: m.userId,
+    // 동거 봇 (서버 #309) — 구성원 화면이 배지로 구분한다.
+    bot: m.bot,
     ...toPresence(m.lastAccessedAt, nowMs),
   }));
   // Pad to the capacity so the house always shows 정원 seats; the server keeps
@@ -854,6 +856,8 @@ export function toGuestbookEntry(g: GuestbookItem): GuestbookEntry {
     author: g.authorNickname || `멤버 ${g.authorId ?? ''}`,
     content: g.content ?? '',
     date: d ? `${d.getMonth() + 1}월 ${d.getDate()}일` : '',
+    // 방명록은 봇 스케줄러(서버 #310)가 실제로 글을 쓴다 — 누가 썼는지 밝힌다.
+    authorBot: g.authorBot,
   };
 }
 

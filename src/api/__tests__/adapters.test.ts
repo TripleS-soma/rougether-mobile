@@ -30,6 +30,7 @@ import {
   toCharacterFramesMap,
   toOwnedCharacter,
   toUserItemMap,
+  toGuestbookEntry,
 } from '@/api/adapters';
 import type { ItemResponse, MissionSummary, RoutineResponse, TodayResponse } from '@/api/types';
 import type { NewRoutine } from '@/constants/routines';
@@ -1040,5 +1041,23 @@ describe('API adapters', () => {
     const house = toSearchHouse({ name: '이름뿐인 집' });
     expect(house.id).toBe(0);
     expect(house.name).toBe('이름뿐인 집');
+  });
+
+  /** 동거 봇 (서버 #309·#310) — 화면이 배지를 그릴 수 있게 그대로 흘려보낸다. */
+  describe('동거 봇 필드 (#947)', () => {
+    it('toGuestbookEntry가 authorBot을 넘긴다', () => {
+      expect(
+        toGuestbookEntry({
+          guestbookId: 1,
+          authorNickname: '루티',
+          content: '안녕',
+          authorBot: true,
+        }).authorBot,
+      ).toBe(true);
+      // 사람 글은 값이 없거나 false — 배지가 붙으면 안 된다.
+      expect(
+        toGuestbookEntry({ guestbookId: 2, authorNickname: '친구', content: '하이' }).authorBot,
+      ).toBeUndefined();
+    });
   });
 });
