@@ -10,6 +10,7 @@ import { HelpScreen } from '@/components/screens/help-screen';
 import { InviteFriendsScreen } from '@/components/screens/invite-friends-screen';
 import { CalendarImportScreen } from '@/components/screens/calendar-import-screen';
 import { NotificationSettingsScreen } from '@/components/screens/notification-settings-screen';
+import { getPushDiagnostic } from '@/lib/push-token';
 import { ProfileEditScreen } from '@/components/screens/profile-edit-screen';
 import {
   DEFAULT_SOUND_SETTINGS,
@@ -236,6 +237,8 @@ export function useSettingsSurface({
         onToggle={toggleNotificationSetting}
         loadError={notificationSettingsLoadError}
         onRetry={loadNotificationSettings}
+        // 화면을 열 때의 등록 상태 (#903) — 로그인 시 syncPushToken이 남긴다.
+        pushStep={getPushDiagnostic().step}
         onBack={backToSettings}
       />
     ) : screen === 'calendarImport' ? (
