@@ -185,6 +185,54 @@ describe('useHouses — 입주 신청 처리', () => {
     );
   });
 
+  /**
+   * 앱이 정원 수로 미리 막지 않게 되면서(#948) "진짜 만석"을 아는 건 서버뿐이다 —
+   * 그 답이 사용자에게 그대로 전해져야 한다.
+   */
+  it('서버가 HOUSE_FULL을 주면 만석이라고 정확히 말한다 (#948)', async () => {
+    mockToast.mockClear();
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes('/join-requests') && init?.method === 'POST') {
+        return {
+          ok: false,
+          status: 409,
+          text: async () => JSON.stringify({ code: 'HOUSE_FULL', message: '정원 초과' }),
+        };
+      }
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useHouses());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => {
+      await result.current.joinHouse(2);
+    });
+
+    expect(mockToast).toHaveBeenCalledWith('정원이 가득 찼어요', 'error');
+  });
+
+  it('그 밖의 실패는 만석이라고 단정하지 않는다 (#948)', async () => {
+    // 종전 문구가 "만석일 수 있어요"라 네트워크 오류까지 만석으로 읽혔다.
+    mockToast.mockClear();
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes('/join-requests') && init?.method === 'POST') {
+        return { ok: false, status: 500, text: async () => '{}' };
+      }
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useHouses());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => {
+      await result.current.joinHouse(2);
+    });
+
+    expect(mockToast).toHaveBeenCalledWith(
+      '입주 신청에 실패했어요. 잠시 후 다시 시도해주세요.',
+      'error',
+    );
+  });
+
   it('calls the owner accept and reject endpoints', async () => {
     global.fetch = jest.fn(async () => res({ items: [] })) as unknown as typeof fetch;
 
