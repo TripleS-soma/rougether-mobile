@@ -40,9 +40,11 @@ describe('HouseMissionsScreen', () => {
         { id: 32, title: '8시 기상', desc: '일일 구성원 달성률', icon: 'sun' as const, current: 0, target: 3, status: 'COMPLETED', achieved: false, unit: '%' }, // prettier-ignore
       ],
     };
-    const { getByText } = await render(
+    const { getByText, getByLabelText } = await render(
       <HouseMissionsScreen house={mixed} missions={mixed.missions ?? []} isOwner={false} />,
     );
+    // 둘 다 COMPLETED — 완료/종료 배지는 '지난 미션' 탭에서 구분된다 (#901).
+    await fireEvent.press(getByLabelText('지난 미션 탭'));
     expect(getByText('완료')).toBeTruthy();
     expect(getByText('종료')).toBeTruthy();
   });
@@ -142,9 +144,105 @@ describe('HouseMissionsScreen', () => {
       7,
       expect.objectContaining({ id: 11, title: '주간 루틴 지키기' }),
     );
+    // 목표를 채웠어도 보상 미수령이면 ACTIVE — 보상 받기 CTA는 진행 중 탭에 남는다 (#901).
     await fireEvent.press(getByLabelText('기상 인증 모으기 보상 받기'));
     expect(onClaimMission).toHaveBeenCalledWith(7, 12);
+    // 이미 수령한 COMPLETED('지난 미션')의 완료 배지는 지난 미션 탭에 있다.
+    await fireEvent.press(getByLabelText('지난 미션 탭'));
     expect(getByText('완료')).toBeTruthy();
+  });
+
+  /**
+   * 완료 미션은 서버가 삭제를 막아(409) 계속 쌓이는데, "지금 뭘 하고 있는지"
+   * 보러 온 화면에서 그게 자리를 차지했다. 삭제로 풀려던 #892를 탭 분리로
+   * 대체한 것이 #901.
+   */
+  describe('진행 중 / 지난 미션 탭 (#901)', () => {
+    it('기본은 진행 중 탭 — COMPLETED·EXPIRED는 지난 미션 탭에만 있다', async () => {
+      const mixed: House = {
+        ...MISSION_HOUSE,
+        missions: [
+          { id: 41, title: '달리는 중', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 3, target: 10, status: 'ACTIVE' }, // prettier-ignore
+          { id: 42, title: '받은 미션', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 5, target: 5, status: 'COMPLETED', achieved: true }, // prettier-ignore
+          { id: 43, title: '놓친 미션', desc: '일일 구성원 달성률', icon: 'sun' as const, current: 1, target: 5, status: 'EXPIRED' }, // prettier-ignore
+        ],
+      };
+      const { getByText, queryByText, getByLabelText } = await render(
+        <HouseMissionsScreen house={mixed} missions={mixed.missions ?? []} isOwner={false} />,
+      );
+      expect(getByText('달리는 중')).toBeTruthy();
+      expect(queryByText('받은 미션')).toBeNull();
+      expect(queryByText('놓친 미션')).toBeNull();
+
+      await fireEvent.press(getByLabelText('지난 미션 탭'));
+      // COMPLETED와 EXPIRED가 함께 온다 — 그래서 탭 이름이 '완료'가 아니다.
+      expect(getByText('받은 미션')).toBeTruthy();
+      expect(getByText('놓친 미션')).toBeTruthy();
+      expect(queryByText('달리는 중')).toBeNull();
+    });
+
+    it('목표를 채웠어도 보상 미수령(ACTIVE)이면 진행 중에 남는다', async () => {
+      // 지난 미션으로 넘기면 보상 받기 CTA에 닿을 길이 없어진다.
+      const { getByLabelText, queryByLabelText } = await render(
+        <HouseMissionsScreen
+          house={MISSION_HOUSE}
+          missions={MISSION_HOUSE.missions ?? []}
+          isOwner={false}
+          onClaimMission={jest.fn()}
+        />,
+      );
+      expect(getByLabelText('기상 인증 모으기 보상 받기')).toBeTruthy();
+      await fireEvent.press(getByLabelText('지난 미션 탭'));
+      expect(queryByLabelText('기상 인증 모으기 보상 받기')).toBeNull();
+    });
+
+    it('요약 줄은 진행 중 탭에서만 — 지난 미션을 보는 중엔 어긋난 말이다', async () => {
+      const { getByText, queryByText, getByLabelText } = await render(
+        <HouseMissionsScreen
+          house={MISSION_HOUSE}
+          missions={MISSION_HOUSE.missions ?? []}
+          isOwner={false}
+        />,
+      );
+      expect(getByText(/진행 중 2개/)).toBeTruthy();
+      await fireEvent.press(getByLabelText('지난 미션 탭'));
+      expect(queryByText(/진행 중 2개/)).toBeNull();
+    });
+
+    it('기간 만료 미션은 언제 끝났는지도 보여준다 (COMPLETED는 제외)', async () => {
+      const ended: House = {
+        ...MISSION_HOUSE,
+        missions: [
+          { id: 61, title: '놓친 미션', desc: '일일 구성원 달성률', icon: 'sun' as const, current: 1, target: 5, status: 'EXPIRED', endsOn: '2026-08-14' }, // prettier-ignore
+          { id: 62, title: '받은 미션', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 5, target: 5, status: 'COMPLETED', achieved: true, endsOn: '2026-08-15' }, // prettier-ignore
+        ],
+      };
+      const { getByText, queryByText, getByLabelText } = await render(
+        <HouseMissionsScreen house={ended} missions={ended.missions ?? []} isOwner={false} />,
+      );
+      await fireEvent.press(getByLabelText('지난 미션 탭'));
+      expect(getByText('~08.14')).toBeTruthy();
+      // 달성해서 받은 미션에 기간 종료일은 뜻이 없다.
+      expect(queryByText('~08.15')).toBeNull();
+    });
+
+    it('빈 탭은 그 탭에 맞는 문구를 보여준다', async () => {
+      const onlyActive: House = {
+        ...MISSION_HOUSE,
+        missions: [
+          { id: 51, title: '달리는 중', desc: '주간 구성원 달성 횟수', icon: 'calendar' as const, current: 3, target: 10, status: 'ACTIVE' }, // prettier-ignore
+        ],
+      };
+      const { getByText, getByLabelText } = await render(
+        <HouseMissionsScreen
+          house={onlyActive}
+          missions={onlyActive.missions ?? []}
+          isOwner={false}
+        />,
+      );
+      await fireEvent.press(getByLabelText('지난 미션 탭'));
+      expect(getByText(/아직 지난 미션이 없어요/)).toBeTruthy();
+    });
   });
 
   it('deletes a mission through the confirm modal (owner, #305)', async () => {
@@ -158,7 +256,11 @@ describe('HouseMissionsScreen', () => {
       />,
     );
     // COMPLETED missions are not deletable on the server (409) — no button.
+    // 탭 도입(#901) 후에는 **지난 미션 탭에서** 봐야 이 단언이 뜻을 갖는다 —
+    // 진행 중 탭에서는 애초에 렌더되지 않아 버튼이 없는 게 당연하다.
+    await fireEvent.press(getByLabelText('지난 미션 탭'));
     expect(queryByLabelText('지난 미션 삭제')).toBeNull();
+    await fireEvent.press(getByLabelText('진행 중 탭'));
     // 취소 closes without calling.
     await fireEvent.press(getByLabelText('주간 루틴 지키기 삭제'));
     expect(getByText('미션 삭제')).toBeTruthy();
