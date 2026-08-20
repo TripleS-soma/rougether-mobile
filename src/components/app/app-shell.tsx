@@ -13,7 +13,11 @@ import { useSettingsSurface } from '@/components/app/use-settings-surface';
 import { GachaScreen } from '@/components/screens/gacha-screen';
 import { HouseScreen } from '@/components/screens/house-screen';
 import { isScheduledOn, MyRoomScreen } from '@/components/screens/my-room-screen';
-import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
+import {
+  type DecorTab,
+  dominantDecorTab,
+  RoomDecorScreen,
+} from '@/components/screens/room-decor-screen';
 import { SettingsScreen } from '@/components/screens/settings-screen';
 import { AttendanceSheet } from '@/components/screens/sheets/attendance-sheet';
 import { MissionSheet } from '@/components/screens/sheets/mission-sheet';
@@ -231,12 +235,28 @@ export function AppShell({
     [catalogue.furniture],
   );
   const [newDecorItemIds, setNewDecorItemIds] = useState<string[]>([]);
-  const goPlaceDrawn = useCallback((results: DrawResult[]) => {
-    setNewDecorItemIds(results.map((r) => String(r.itemId)).filter(Boolean));
-    setScreen('decor');
-  }, []);
+  /** 뽑기에서 넘어올 때 열 종류 탭 (#897) — 그 외 경로는 기본 탭. */
+  const [decorInitialTab, setDecorInitialTab] = useState<DecorTab | undefined>(undefined);
+  /**
+   * 뽑기 → '가구 배치하러 가기' (#630). 하이라이트만으로는 부족하다 (#897):
+   * 벽지를 뽑았는데 가구 탭이 열려 있으면 표시가 안 보이는 탭에 있다.
+   * 뽑은 게 가장 많은 종류의 탭을 함께 열어준다.
+   */
+  const goPlaceDrawn = useCallback(
+    (results: DrawResult[]) => {
+      const ids = results.map((r) => String(r.itemId)).filter(Boolean);
+      setNewDecorItemIds(ids);
+      setDecorInitialTab(dominantDecorTab(ids, catalogue));
+      setScreen('decor');
+    },
+    [catalogue],
+  );
   useEffect(() => {
-    if (screen !== 'decor') setNewDecorItemIds([]);
+    if (screen !== 'decor') {
+      setNewDecorItemIds([]);
+      // 다음에 꾸미기를 직접 열면 기본 탭이어야 한다 — 뽑기에서 온 게 아니다.
+      setDecorInitialTab(undefined);
+    }
   }, [screen]);
 
   // 공동미션 ↔ 내 루틴 연동 (#272 → #578) — use-mission-links.ts로 이관 (#692 3단계).
@@ -464,6 +484,7 @@ export function AppShell({
             <RoomDecorScreen
               initialItems={placedItems}
               highlightItemIds={newDecorItemIds}
+              initialTab={decorInitialTab}
               initialWallpaperId={wallpaperId}
               initialFloorId={floorId}
               initialBackgroundId={backgroundId}

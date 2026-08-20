@@ -3,7 +3,11 @@ import { BackHandler, StyleSheet } from 'react-native';
 import { State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
-import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
+import {
+  decorTabForItem,
+  dominantDecorTab,
+  RoomDecorScreen,
+} from '@/components/screens/room-decor-screen';
 import { ToastProvider } from '@/components/ui/toast';
 import { FURNITURE_ITEMS, type PlacedFurniture, type Wallpaper } from '@/resources/furniture';
 
@@ -947,5 +951,77 @@ describe('RoomDecorScreen — 보유중 필터', () => {
     // Toggling back restores the shop side.
     await fireEvent.press(getByLabelText('보유중만 보기'));
     expect(queryByLabelText('초록 식물 미리 배치')).toBeTruthy();
+  });
+
+  /**
+   * 뽑기에서 넘어오면 하이라이트만으론 부족하다 (#897) — 뽑은 게 안 보이는
+   * 탭에 있으면 찾아야 한다.
+   */
+  describe('뽑은 종류의 탭을 연다 (#897)', () => {
+    const CATALOGS = {
+      furniture: [
+        {
+          id: 'bed',
+          name: '침대',
+          slot: 'bottomLeft' as const,
+          category: '가구' as const,
+          price: 0,
+          assetKey: 'items/a/bed.png',
+        },
+        {
+          id: 'rug',
+          name: '러그',
+          slot: 'bottomCenter' as const,
+          category: '러그' as const,
+          price: 0,
+          assetKey: 'items/a/rug.png',
+        },
+      ],
+      wallpapers: [
+        { id: 'wp1', name: '벽지', price: 0, color: '#fff', assetKey: 'items/a/wp.png' },
+      ],
+      floors: [{ id: 'fl1', name: '바닥', price: 0, color: '#eee', assetKey: 'items/a/fl.png' }],
+      backgrounds: [
+        { id: 'bg1', name: '배경', price: 0, color: '#ddd', assetKey: 'items/a/bg.png' },
+      ],
+    };
+
+    it('아이템 id를 카탈로그로 되짚어 탭을 고른다', () => {
+      expect(decorTabForItem('wp1', CATALOGS)).toBe('wallpaper');
+      expect(decorTabForItem('fl1', CATALOGS)).toBe('floor');
+      expect(decorTabForItem('bg1', CATALOGS)).toBe('background');
+      expect(decorTabForItem('bed', CATALOGS)).toBe('furniture');
+      // 러그는 '소품' 탭이다 (서버 categoryCode 'floor').
+      expect(decorTabForItem('rug', CATALOGS)).toBe('decor');
+      // 캐릭터 보상 등 카탈로그에 없는 것.
+      expect(decorTabForItem('unknown', CATALOGS)).toBeUndefined();
+    });
+
+    it('벽지 2개 + 가구 1개를 뽑으면 벽지 탭', () => {
+      expect(dominantDecorTab(['wp1', 'wp1', 'bed'], CATALOGS)).toBe('wallpaper');
+    });
+
+    it('동률이면 결과에 먼저 나온 종류가 이긴다', () => {
+      expect(dominantDecorTab(['bed', 'wp1'], CATALOGS)).toBe('furniture');
+      expect(dominantDecorTab(['wp1', 'bed'], CATALOGS)).toBe('wallpaper');
+    });
+
+    it('알아볼 수 있는 게 없으면 탭을 건드리지 않는다', () => {
+      expect(dominantDecorTab(['unknown', ''], CATALOGS)).toBeUndefined();
+      expect(dominantDecorTab([], CATALOGS)).toBeUndefined();
+    });
+
+    it('initialTab을 주면 그 탭이 열린 채로 시작한다', async () => {
+      const { getByLabelText } = await render(
+        <RoomDecorScreen initialItems={[]} initialTab="wallpaper" {...CATALOGS} />,
+      );
+      expect(getByLabelText('벽지 탭').props.accessibilityState.selected).toBe(true);
+      expect(getByLabelText('가구 탭').props.accessibilityState.selected).toBe(false);
+    });
+
+    it('initialTab이 없으면 가구 탭 — 꾸미기를 직접 열었을 때', async () => {
+      const { getByLabelText } = await render(<RoomDecorScreen initialItems={[]} {...CATALOGS} />);
+      expect(getByLabelText('가구 탭').props.accessibilityState.selected).toBe(true);
+    });
   });
 });

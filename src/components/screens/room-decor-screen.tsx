@@ -54,6 +54,62 @@ import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 type PickerTarget = 'wallpaper' | 'floor' | 'background' | 'all';
 
 // RoomCatalogProps: 아이템·표면 카탈로그 (로컬 기본; floors/backgrounds는 API 전용, #691).
+/** 카탈로그 그리드의 종류 탭 — 한 번에 한 그리드만 보여준다 (#488). */
+export type DecorTab = 'furniture' | 'decor' | 'wallpaper' | 'floor' | 'background';
+
+/**
+ * 소품 = 서버 categoryCode 'decor'(장식)와 'floor'(러그); 가구 = 나머지
+ * (서버 'furniture', 데모 '한옥' 세트 포함).
+ */
+const isDecorItem = (i: FurnitureItem) => i.category === '장식' || i.category === '러그';
+
+/**
+ * 뽑은 아이템 id가 어느 탭에 있는지 (#897). 뽑기 결과(`DrawResult`)에는
+ * 종류가 없어서 카탈로그로 되짚는 수밖에 없다. 어디에도 없으면 undefined —
+ * 캐릭터 보상이거나 카탈로그가 아직 안 실린 경우다.
+ */
+export function decorTabForItem(
+  itemId: string,
+  catalogs: {
+    furniture?: FurnitureItem[];
+    wallpapers?: Wallpaper[];
+    floors?: Wallpaper[];
+    backgrounds?: Wallpaper[];
+  },
+): DecorTab | undefined {
+  if (catalogs.wallpapers?.some((w) => w.id === itemId)) return 'wallpaper';
+  if (catalogs.floors?.some((f) => f.id === itemId)) return 'floor';
+  if (catalogs.backgrounds?.some((b) => b.id === itemId)) return 'background';
+  const item = catalogs.furniture?.find((f) => f.id === itemId);
+  if (!item) return undefined;
+  return isDecorItem(item) ? 'decor' : 'furniture';
+}
+
+/**
+ * 여러 개를 뽑았을 때 열 탭 (#897) — **가장 많이 나온 종류**. 동률이면 결과에
+ * 먼저 나온 쪽이 이긴다. 하나도 못 알아보면 undefined(탭을 건드리지 않는다).
+ */
+export function dominantDecorTab(
+  itemIds: string[],
+  catalogs: Parameters<typeof decorTabForItem>[1],
+): DecorTab | undefined {
+  const counts = new Map<DecorTab, number>();
+  for (const id of itemIds) {
+    const tab = decorTabForItem(id, catalogs);
+    if (tab) counts.set(tab, (counts.get(tab) ?? 0) + 1);
+  }
+  let best: DecorTab | undefined;
+  let bestCount = 0;
+  // Map은 삽입 순서를 지키므로 먼저 들어온 종류가 동률에서 이긴다.
+  for (const [tab, n] of counts) {
+    if (n > bestCount) {
+      best = tab;
+      bestCount = n;
+    }
+  }
+  return best;
+}
+
 export type RoomDecorScreenProps = RoomCatalogProps & {
   /** 자유 배치 초기 상태 (#327); 없으면 데모 프리필. */
   initialItems?: PlacedFurniture[];
@@ -96,6 +152,12 @@ export type RoomDecorScreenProps = RoomCatalogProps & {
   onConflictReload?: () => void;
   /** 방금 뽑은 아이템 id (#630) — 카탈로그 맨 앞 정렬 + NEW 배지로 강조. */
   highlightItemIds?: string[];
+  /**
+   * 처음 열릴 때 펼칠 종류 탭 (#897). 뽑기에서 넘어오면 뽑은 게 있는 탭을
+   * 연다 — 하이라이트가 안 보이는 탭에 있으면 소용이 없다. 화면이 열릴 때만
+   * 쓰는 씨앗값이라, 이후 사용자가 탭을 바꾸면 그 선택이 이긴다.
+   */
+  initialTab?: DecorTab;
 };
 
 /**
@@ -118,6 +180,7 @@ export function RoomDecorScreen({
   initialItems,
   onConflictReload,
   highlightItemIds,
+  initialTab = 'furniture',
   initialWallpaperId = DEFAULT_WALLPAPER_ID,
   initialFloorId = null,
   initialBackgroundId = null,
@@ -491,12 +554,7 @@ export function RoomDecorScreen({
   // 전체보기 탭 — 표면류(surfaceSlotType: 벽지/바닥/배경)에 더해, positioned
   // 아이템은 categoryCode(가구/소품)로 한 번 더 나눈다 (#488). 한 번에 한
   // 그리드만 — 통짜 세로 나열은 스크롤이 너무 길다.
-  const [allTab, setAllTab] = useState<
-    'furniture' | 'decor' | 'wallpaper' | 'floor' | 'background'
-  >('furniture');
-  // 소품 = 서버 categoryCode 'decor'(장식)와 'floor'(러그); 가구 = 나머지
-  // (서버 'furniture', 데모 '한옥' 세트 포함).
-  const isDecorItem = (i: FurnitureItem) => i.category === '장식' || i.category === '러그';
+  const [allTab, setAllTab] = useState<DecorTab>(initialTab);
   const furnitureTabItems = useMemo(() => furniture.filter((i) => !isDecorItem(i)), [furniture]);
   const decorTabItems = useMemo(() => furniture.filter(isDecorItem), [furniture]);
   const isSurfacePicker = picker === 'wallpaper' || picker === 'floor' || picker === 'background';
