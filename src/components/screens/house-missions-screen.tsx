@@ -132,6 +132,13 @@ export function HouseMissionsScreen({
   // 미션 삭제 확인 모달의 대상 (#305).
   const [missionToDelete, setMissionToDelete] = useState<HouseMission | null>(null);
   const [missionToUnlink, setMissionToUnlink] = useState<HouseMission | null>(null);
+  /**
+   * 진행 중 / 지난 미션 탭 (#901). 완료 미션은 서버가 삭제를 막아(409) 계속
+   * 쌓이기만 하는데, "지금 뭘 하고 있는지" 보러 온 화면에서 그게 자리를
+   * 차지했다. 탭으로 나눠 이력은 남기되 기본 화면에서 비켜 둔다 — 삭제로
+   * 풀려던 #892를 이 방식으로 대체한다.
+   */
+  const [tab, setTab] = useState<'active' | 'past'>('active');
 
   /** 오늘 기여 완료 판정 — 세션 추적 또는 연동 루틴의 오늘 완료에서 파생. */
   const isContributed = (mission: HouseMission) =>
@@ -140,6 +147,17 @@ export function HouseMissionsScreen({
   // 요약 줄용 파생 (#761) — 집 화면 스탯 필이 여기로 옮겨왔다.
   const activeMissions = missions.filter((m) => m.status === 'ACTIVE');
   const contributedToday = activeMissions.filter(isContributed).length;
+  /**
+   * '지난 미션' = COMPLETED + EXPIRED. 둘을 묶고 '완료'라 부르지 않는 이유는
+   * EXPIRED가 **기간 안에 못 채우고 끝난** 것이기 때문이다 (#888처럼 목표
+   * 미달인데 COMPLETED인 서버 건도 섞인다). 완료/만료 구분은 카드 안의 상태
+   * 배지가 계속 한다.
+   *
+   * `achieved && ACTIVE`(목표는 채웠고 보상 미수령)는 보상 받기 CTA가 달린
+   * 상태라 진행 중에 남는다 — 지난 미션으로 넘기면 보상을 못 받는다.
+   */
+  const pastMissions = missions.filter((m) => m.status !== 'ACTIVE');
+  const shownMissions = tab === 'active' ? activeMissions : pastMissions;
 
   // Mission creation is owner-only on the server (403 HOUSE_NOT_OWNER).
   const canCreateMission = !!(onCreateMission && isOwner);
@@ -194,13 +212,39 @@ export function HouseMissionsScreen({
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader title="우리 집의 목표" onBack={onBack} />
+      {/* 나의 방(방/달력/주간회고)과 같은 언더라인 탭 — 화면 전체 목록이
+          바뀌므로 '필터 칩'이 아니라 '탭'이 맞는 뜻이다. 미션이 하나도 없어도
+          같이 그린다: 첫 미션을 만든 순간 탭 줄이 생겨 레이아웃이 튀지 않게. */}
+      <View style={styles.tabBar}>
+        {(
+          [
+            ['active', '진행 중'],
+            ['past', '지난 미션'],
+          ] as const
+        ).map(([key, label]) => {
+          const active = tab === key;
+          return (
+            <Pressable
+              key={key}
+              onPress={() => setTab(key)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              accessibilityLabel={`${label} 탭`}
+              style={[styles.tab, active && { borderBottomColor: t.primary }]}>
+              <Text style={[Typography.label, { color: active ? t.primaryText : t.textMuted }]}>
+                {label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
       <View style={styles.body}>
         {/* 제목은 ScreenHeader가 갖는다 (#875). 요약(#761)은 만들기 버튼과 **같은
             줄** 왼쪽에 둔다 — 제목을 헤더로 옮기면서 이 줄이 비어 버튼만 오른쪽에
             혼자 떠 있었다. */}
         <View style={styles.missionHead}>
           <Text style={[Typography.supporting, styles.flex, { color: t.textMuted }]}>
-            {activeMissions.length > 0
+            {tab === 'active' && activeMissions.length > 0
               ? `진행 중 ${activeMissions.length}개 · 오늘 나의 기여 ${contributedToday}/${activeMissions.length}`
               : ''}
           </Text>
@@ -215,13 +259,17 @@ export function HouseMissionsScreen({
           ) : null}
         </View>
         <ScrollView style={styles.editScroll}>
-          {missions.length === 0 ? (
+          {shownMissions.length === 0 ? (
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              아직 미션이 없어요. 첫 미션을 만들어 다 같이 도전해보세요!
+              {tab === 'past'
+                ? '아직 지난 미션이 없어요. 완료했거나 기간이 끝난 미션이 여기에 모여요.'
+                : missions.length === 0
+                  ? '아직 미션이 없어요. 첫 미션을 만들어 다 같이 도전해보세요!'
+                  : '진행 중인 미션이 없어요. 새 미션을 만들어 다 같이 도전해보세요!'}
             </Text>
           ) : (
             <View style={styles.goals}>
-              {missions.map((mission) => {
+              {shownMissions.map((mission) => {
                 const pct = Math.min(1, mission.current / mission.target);
                 // CTA 결정은 순수 함수(#559) — 렌더는 kind 매핑만.
                 const hasLinked = linkedRoutines.some((r) => r.missionId === mission.id);
@@ -582,6 +630,17 @@ const styles = StyleSheet.create({
   // 남는 높이를 다 쓴다.
   editScroll: {
     flex: 1,
+  },
+  // 나의 방 탭(#825)과 같은 값 — 두 화면의 탭 줄이 같은 높이·같은 밑줄로 읽힌다.
+  tabBar: {
+    flexDirection: 'row',
+    paddingHorizontal: Spacing.four,
+  },
+  tab: {
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
   },
   missionHead: {
     flexDirection: 'row',
