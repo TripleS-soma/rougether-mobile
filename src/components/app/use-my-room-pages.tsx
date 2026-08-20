@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type Dispatch,
   type SetStateAction,
@@ -209,12 +210,16 @@ export function useMyRoomPages({
     title: string;
     body: string;
   } | null>(null);
+  // key는 단조 증가 카운터다 — Date.now()면 같은 밀리초에 두 알림이 오는
+  // 배치 전달에서 key가 안 바뀌어 배너가 다시 마운트되지 않는다(#902 리뷰).
+  const pushBannerSeq = useRef(0);
   useEffect(
     () =>
       onNotificationReceived((n) => {
         // 배너가 떠 있는 동안 도착한 알림도 알림함에는 즉시 반영한다.
         void loadNotifications();
-        setPushBanner({ key: Date.now(), ...n });
+        pushBannerSeq.current += 1;
+        setPushBanner({ key: pushBannerSeq.current, ...n });
       }),
     [loadNotifications],
   );
