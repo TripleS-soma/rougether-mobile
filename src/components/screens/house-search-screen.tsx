@@ -399,7 +399,15 @@ export function HouseSearchScreen({
           )
         }
         renderItem={({ item: h }) => {
-          const full = h.members >= h.capacity;
+          /**
+           * 정원이 다 찼는지 (#948). **이것으로 신청을 막지 않는다** — 동거
+           * 봇(서버 #309)이 차지한 자리는 사람이 신청하면 비켜주므로, 4/4인
+           * 집도 서버는 받아준다. 목록 응답(`HouseSummary`)에는 서버가
+           * 계산한 `isFull`이 없어 앱이 봇 수를 알 방법이 없다. 그래서 수치는
+           * 정보로만 보여주고, 진짜 만석은 서버의 `HOUSE_FULL`로 안내한다.
+           * (온보딩 기본 집이 사람 1 + 봇 2라 드문 경우가 아니다.)
+           */
+          const atCapacity = h.members >= h.capacity;
           const pending = h.joinRequestStatus === 'PENDING';
           const accepted = h.joinRequestStatus === 'ACCEPTED';
           return (
@@ -450,46 +458,44 @@ export function HouseSearchScreen({
                       style={[styles.meta, emph('normal'), { color: t.textMuted }]}
                       numberOfLines={1}>
                       {h.level != null ? `Lv.${h.level} · ` : ''}멤버 {h.members} / {h.capacity}
-                      {full ? <Text style={{ color: t.danger }}> · 만석</Text> : null}
+                      {atCapacity ? <Text style={{ color: t.danger }}> · 만석</Text> : null}
                     </Text>
                   </View>
                 </View>
                 {/* 미리보기 로딩 스피너 (#532). */}
                 {previewingHouseId === h.id ? <Loading size="small" /> : null}
               </Pressable>
+              {/* 정원이 다 찼어도 눌린다 — 봇이 비켜줄 수 있는지는 서버만 안다.
+                  이미 신청 중·입주 완료는 앱이 아는 사실이라 그대로 막는다. */}
               <Pressable
                 onPress={() =>
-                  full
-                    ? toast('정원이 가득 찼어요', 'error')
-                    : pending
-                      ? toast('방장의 수락을 기다리고 있어요')
-                      : accepted
-                        ? toast('이미 입주가 완료됐어요')
-                        : onJoinHouse?.(h.id)
+                  pending
+                    ? toast('방장의 수락을 기다리고 있어요')
+                    : accepted
+                      ? toast('이미 입주가 완료됐어요')
+                      : onJoinHouse?.(h.id)
                 }
                 accessibilityRole="button"
-                accessibilityState={{ disabled: full || pending || accepted }}
+                accessibilityState={{ disabled: pending || accepted }}
                 style={[
                   styles.joinBtn,
                   {
-                    backgroundColor: full || pending || accepted ? t.surfaceMuted : t.primary,
+                    backgroundColor: pending || accepted ? t.surfaceMuted : t.primary,
                   },
                 ]}>
                 <Text
                   style={[
                     Typography.supporting,
                     emph('semibold'),
-                    { color: full || pending || accepted ? t.textMuted : t.onPrimary },
+                    { color: pending || accepted ? t.textMuted : t.onPrimary },
                   ]}>
-                  {full
-                    ? '만석'
-                    : pending
-                      ? '신청 중'
-                      : accepted
-                        ? '입주 완료'
-                        : h.joinRequestStatus === 'REJECTED'
-                          ? '다시 신청'
-                          : '입주 신청'}
+                  {pending
+                    ? '신청 중'
+                    : accepted
+                      ? '입주 완료'
+                      : h.joinRequestStatus === 'REJECTED'
+                        ? '다시 신청'
+                        : '입주 신청'}
                 </Text>
               </Pressable>
             </View>

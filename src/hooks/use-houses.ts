@@ -313,10 +313,16 @@ export function useHouses() {
         await reloadSearch();
         return true;
       } catch (error) {
-        const alreadyPending =
-          error instanceof ApiError && error.code === ErrorCode.HOUSE_JOIN_REQUEST_ALREADY_PENDING;
+        // 앱은 정원 수로 미리 막지 않는다 (#948) — 봇이 비켜줄 수 있어서
+        // 서버만이 "사람이 들어갈 수 있는지"를 안다. 그래서 만석은 추측이
+        // 아니라 서버가 준 코드로 말한다.
+        const code = error instanceof ApiError ? error.code : undefined;
         toast(
-          alreadyPending ? '이미 입주 신청 중이에요' : '입주 신청에 실패했어요. 만석일 수 있어요.',
+          code === ErrorCode.HOUSE_JOIN_REQUEST_ALREADY_PENDING
+            ? '이미 입주 신청 중이에요'
+            : code === ErrorCode.HOUSE_FULL
+              ? '정원이 가득 찼어요'
+              : '입주 신청에 실패했어요. 잠시 후 다시 시도해주세요.',
           'error',
         );
         return false;

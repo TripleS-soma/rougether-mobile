@@ -18,6 +18,14 @@ export const ErrorCode = {
   ROOM_LAYOUT_REVISION_CONFLICT: 'ROOM_LAYOUT_REVISION_CONFLICT',
   /** 409 — 이미 입주 신청 중 (POST /houses/{id}/join-requests). */
   HOUSE_JOIN_REQUEST_ALREADY_PENDING: 'HOUSE_JOIN_REQUEST_ALREADY_PENDING',
+  /**
+   * 409 — 사람이 더 들어갈 수 없는 집 (POST /houses/{id}/join-requests).
+   *
+   * 동거 봇(서버 #309) 이후 "정원 초과"의 뜻이 좁아졌다: **봇이 차지한 자리는
+   * 만석이 아니다** — 사람이 신청하면 봇이 비켜준다. 그래서 앱은 정원 수로
+   * 미리 막지 않고 신청을 보낸 뒤 이 코드로 진짜 만석을 구분한다 (#948).
+   */
+  HOUSE_FULL: 'HOUSE_FULL',
   /** 409 — 미션 기여는 하루 1회 (POST .../missions/{id}/contribute). */
   HOUSE_MISSION_ALREADY_CONTRIBUTED: 'HOUSE_MISSION_ALREADY_CONTRIBUTED',
   /** 4xx — 목표 미달성 상태에서 보상 요청 (POST .../missions/{id}/claim). */

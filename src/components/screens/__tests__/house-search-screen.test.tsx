@@ -328,6 +328,53 @@ describe('HouseSearchScreen — 참여 전 미리보기 (#328)', () => {
     expect(onJoinHouse).toHaveBeenCalledWith(21);
   });
 
+  /**
+   * 동거 봇(서버 #309) 이후 정원이 다 찼다고 사람이 못 들어가는 게 아니다 —
+   * 봇이 비켜준다. 목록 응답에는 서버가 계산한 isFull이 없어 앱이 봇 수를
+   * 알 수 없으므로, 수치로 미리 막지 않는다 (#948).
+   */
+  describe('정원이 다 찬 집도 신청은 보낸다 (#948)', () => {
+    const atCapacity = {
+      ...RECOMMENDED_HOUSES[0],
+      id: 31,
+      name: '가득집',
+      members: 4,
+      capacity: 4,
+    };
+
+    it('4/4 집이어도 입주 신청 버튼이 눌리고 onJoinHouse가 불린다', async () => {
+      const onJoinHouse = jest.fn();
+      const { getByText } = await render(
+        <ToastProvider>
+          <HouseSearchScreen houses={[atCapacity]} onJoinHouse={onJoinHouse} />
+        </ToastProvider>,
+      );
+      // 라벨이 '만석'으로 바뀌어 막히지 않는다.
+      await fireEvent.press(getByText('입주 신청'));
+      expect(onJoinHouse).toHaveBeenCalledWith(31);
+    });
+
+    it('정원이 찼다는 사실 자체는 메타 줄에 그대로 보여준다', async () => {
+      const { getByText } = await render(<HouseSearchScreen houses={[atCapacity]} />);
+      expect(getByText(/만석/)).toBeTruthy();
+    });
+
+    it('이미 신청 중·입주 완료는 그대로 막는다 — 앱이 아는 사실이다', async () => {
+      const onJoinHouse = jest.fn();
+      const { getByText } = await render(
+        <ToastProvider>
+          <HouseSearchScreen
+            houses={[{ ...atCapacity, joinRequestStatus: 'PENDING' }]}
+            onJoinHouse={onJoinHouse}
+          />
+        </ToastProvider>,
+      );
+      await fireEvent.press(getByText('신청 중'));
+      expect(onJoinHouse).not.toHaveBeenCalled();
+      expect(getByText('방장의 수락을 기다리고 있어요')).toBeTruthy();
+    });
+  });
+
   it('blocks joining a full house with a toast, and shows 이미 참여 중', async () => {
     const onJoinHouse = jest.fn();
     const full = { ...DETAIL, isFull: true };
