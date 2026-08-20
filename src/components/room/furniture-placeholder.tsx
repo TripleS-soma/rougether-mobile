@@ -1,4 +1,6 @@
 import { Image } from 'expo-image';
+import { memo } from 'react';
+
 import { useFontEmphasis, useTokens } from '@/hooks/use-tokens';
 import { type StyleProp, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
@@ -27,8 +29,12 @@ export type FurniturePlaceholderProps = {
  * Furniture tile: renders the real CDN art when the item's assetKey points at
  * the asset bucket (API items), otherwise falls back to the in-app placeholder
  * (colored box + Korean name) for legacy local-catalog items without art.
+ *
+ * memo 경계: 앱에서 가장 많이 반복되는 리프다 — 방 하나에 가구 N장, 집 화면은
+ * 그 방이 8~12칸. `item`은 카탈로그의 안정 참조라 부모(Room)가 다시 그려도
+ * 여기서 멈춘다.
  */
-export function FurniturePlaceholder({
+export const FurniturePlaceholder = memo(function FurniturePlaceholder({
   item,
   showName = true,
   style,
@@ -69,7 +75,7 @@ export function FurniturePlaceholder({
       ) : null}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   tile: {

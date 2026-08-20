@@ -78,7 +78,7 @@ export function useMemberRoomPreviews() {
       if (loadedHouseRef.current === houseId) return;
       loadedHouseRef.current = houseId;
       setPreviews({});
-      const entries = await Promise.all(
+      await Promise.all(
         membershipIds.map(async (membershipId) => {
           try {
             const room = await fetchHouseMemberRoom(houseId, membershipId);
@@ -95,16 +95,18 @@ export function useMemberRoomPreviews() {
               // 같은 집 구성원 방의 거미줄 (#829) — 타일에서도 보인다.
               cobweb: room.cobweb ?? null,
             };
-            return [membershipId, preview] as const;
+            // 도착하는 대로 그 칸만 채운다. 예전엔 Promise.all이 끝난 뒤
+            // 한 번에 넣어서, 정원 12명 집이면 **가장 느린 한 요청이 끝날
+            // 때까지 좌석 전체가 빈 타일**이었다. 한 칸씩 켜지는 편이 총
+            // 소요가 같아도 체감이 크게 다르다.
+            // 집을 갈아탄 뒤 도착한 응답은 버린다(순서 역전 방지).
+            if (loadedHouseRef.current !== houseId) return;
+            setPreviews((prev) => ({ ...prev, [membershipId]: preview }));
           } catch {
             // Soft-fail: this member's tile stays plain.
-            return null;
           }
         }),
       );
-      // A house switch mid-flight discards this batch.
-      if (loadedHouseRef.current !== houseId) return;
-      setPreviews(Object.fromEntries(entries.filter((e): e is NonNullable<typeof e> => !!e)));
     },
     [],
   );

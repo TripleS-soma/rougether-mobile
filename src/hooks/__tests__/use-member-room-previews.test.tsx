@@ -74,6 +74,34 @@ describe('useMemberRoomPreviews', () => {
     expect(result.current.previews[42]).toBeTruthy();
   });
 
+  // 정원 12명 집이면 예전엔 Promise.all이 끝날 때까지 좌석 전체가 빈 타일이었다.
+  it('fills each seat as its room arrives, not after the slowest one', async () => {
+    let releaseSlow: (() => void) | undefined;
+    const slow = new Promise<void>((resolve) => {
+      releaseSlow = resolve;
+    });
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.endsWith('/members/43/room')) await slow;
+      return res({ slots: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useMemberRoomPreviews());
+    let loading: Promise<void> | undefined;
+    await act(async () => {
+      loading = result.current.load(11, [42, 43], CATALOGUE);
+      // 42는 이미 돌아왔지만 43은 아직 대기 중.
+      await Promise.resolve();
+    });
+    expect(result.current.previews[42]).toBeTruthy();
+    expect(result.current.previews[43]).toBeUndefined();
+
+    await act(async () => {
+      releaseSlow!();
+      await loading;
+    });
+    expect(result.current.previews[43]).toBeTruthy();
+  });
+
   it('loads a house once and refetches only when the house changes', async () => {
     global.fetch = jest.fn(async () => res({ slots: [] })) as unknown as typeof fetch;
 

@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { memo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { Pressable, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { CharacterAvatar } from '@/components/room/character-avatar';
@@ -174,11 +174,62 @@ export const Room = memo(function Room({
   style,
 }: RoomProps) {
   const t = useTokens();
-  const wallpaper = wallpapers.find((w) => w.id === wallpaperId) ?? wallpapers[0];
-  const floor = floorId ? floors.find((f) => f.id === floorId) : undefined;
-  const background = backgroundId ? backgrounds.find((b) => b.id === backgroundId) : undefined;
-  const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
   const [pose, setPose] = useState(0);
+
+  // 카탈로그 조회·배치 정렬은 방 하나만 보면 싸지만, 집 화면은 좌석 8~12칸이
+  // 동시에 살아 있고 핀치 줌·좌석 드래그가 매 프레임 전 좌석을 다시 그린다.
+  // (#775가 좌석에 memo 경계를 세운 뒤 Room 내부에 남아 있던 비용.)
+  const wallpaper = useMemo(
+    () => wallpapers.find((w) => w.id === wallpaperId) ?? wallpapers[0],
+    [wallpapers, wallpaperId],
+  );
+  const floor = useMemo(
+    () => (floorId ? floors.find((f) => f.id === floorId) : undefined),
+    [floors, floorId],
+  );
+  const background = useMemo(
+    () => (backgroundId ? backgrounds.find((b) => b.id === backgroundId) : undefined),
+    [backgrounds, backgroundId],
+  );
+  const character = useMemo(
+    () => CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0],
+    [characterId],
+  );
+
+  /**
+   * 그릴 가구 목록 — z 오름차순 + 아이템 해석 + 좌표/변형 스타일까지 한 번에.
+   * 예전엔 렌더마다 배열을 복사해 정렬하고, 배치 하나마다 카탈로그를 선형
+   * 탐색하고(O(배치 x 카탈로그)), 스타일 객체를 새로 만들었다.
+   */
+  const freeItems = useMemo(() => {
+    if (!placements) return null;
+    const byId = new Map(furniture.map((f) => [f.id, f]));
+    return [...placements]
+      .sort((a, b) => a.z - b.z)
+      .flatMap((p) => {
+        const item = byId.get(p.furnitureId);
+        if (!item) return [];
+        const transforms = [
+          ...(p.scale != null && p.scale !== 1 ? [{ scale: p.scale }] : []),
+          ...(p.rotationDeg ? [{ rotate: `${p.rotationDeg}deg` }] : []),
+          ...(p.flipped ? [{ scaleX: -1 }] : []),
+        ];
+        return [
+          {
+            key: p.furnitureId,
+            item,
+            style: [
+              styles.furniture,
+              {
+                left: `${(p.x - FREE_ITEM_WIDTH / 2) * 100}%`,
+                top: `${(p.y - FREE_ITEM_WIDTH / 2) * 100}%`,
+              },
+              transforms.length > 0 && { transform: transforms },
+            ] as StyleProp<ViewStyle>,
+          },
+        ];
+      });
+  }, [placements, furniture]);
 
   return (
     <View
@@ -259,33 +310,12 @@ export const Room = memo(function Room({
         </>
       ) : null}
       {/* 자유 배치 경로 (#327) — z 오름차순, 중심점 앵커(폭 28%의 절반 보정). */}
-      {placements
-        ? [...placements]
-            .sort((a, b) => a.z - b.z)
-            .map((p) => {
-              const item = furniture.find((f) => f.id === p.furnitureId);
-              if (!item) return null;
-              const transforms = [
-                ...(p.scale != null && p.scale !== 1 ? [{ scale: p.scale }] : []),
-                ...(p.rotationDeg ? [{ rotate: `${p.rotationDeg}deg` }] : []),
-                ...(p.flipped ? [{ scaleX: -1 }] : []),
-              ];
-              return (
-                <View
-                  key={p.furnitureId}
-                  pointerEvents="none"
-                  style={[
-                    styles.furniture,
-                    {
-                      left: `${(p.x - FREE_ITEM_WIDTH / 2) * 100}%`,
-                      top: `${(p.y - FREE_ITEM_WIDTH / 2) * 100}%`,
-                    },
-                    transforms.length > 0 && { transform: transforms },
-                  ]}>
-                  <FurniturePlaceholder item={item} sharp={fill} />
-                </View>
-              );
-            })
+      {freeItems
+        ? freeItems.map(({ key, item, style: itemStyle }) => (
+            <View key={key} pointerEvents="none" style={itemStyle}>
+              <FurniturePlaceholder item={item} sharp={fill} />
+            </View>
+          ))
         : null}
       {characterId === null ? null : interactiveCharacter ? (
         <Pressable
