@@ -10,11 +10,21 @@ import { AuthProvider } from '@/hooks/use-auth';
 
 // 푸시 탭 콜백을 붙잡아 테스트에서 직접 발화한다 (#405).
 let notificationTapCb: (() => void) | null = null;
+let notificationReceivedCb: ((n: { type?: string; title: string; body: string }) => void) | null =
+  null;
+
 jest.mock('@/lib/push-events', () => ({
   onNotificationTap: (cb: () => void) => {
     notificationTapCb = cb;
     return () => {
       notificationTapCb = null;
+    };
+  },
+  // 인앱 푸시 배너 수신 구독 (#902) — 테스트가 직접 알림을 흘려보낼 수 있게 잡아둔다.
+  onNotificationReceived: (cb: (n: { type?: string; title: string; body: string }) => void) => {
+    notificationReceivedCb = cb;
+    return () => {
+      notificationReceivedCb = null;
     };
   },
 }));
@@ -48,6 +58,33 @@ describe('AppShell — 푸시 탭 라우팅 (#405)', () => {
 
     await act(async () => notificationTapCb?.());
 
+    await waitFor(() => getByText('알림'));
+  });
+});
+
+describe('AppShell — 인앱 푸시 배너 (#902)', () => {
+  it('앱이 켜져 있을 때 도착한 알림을 상단 배너로 띄우고, 탭하면 알림함으로 간다', async () => {
+    const { getByText, getByLabelText, queryByTestId } = await render(
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>,
+    );
+    expect(notificationReceivedCb).toBeTruthy();
+    // 아무것도 안 왔으면 배너도 없다.
+    expect(queryByTestId('notification-banner')).toBeNull();
+
+    await act(async () =>
+      notificationReceivedCb?.({
+        type: 'FRIEND_CHEER',
+        title: '응원이 도착했어요',
+        body: '오늘도 화이팅!',
+      }),
+    );
+    await waitFor(() => getByText('응원이 도착했어요'));
+
+    await act(async () => {
+      await fireEvent.press(getByLabelText('응원이 도착했어요. 오늘도 화이팅!'));
+    });
     await waitFor(() => getByText('알림'));
   });
 });

@@ -19,6 +19,7 @@ import { AttendanceSheet } from '@/components/screens/sheets/attendance-sheet';
 import { MissionSheet } from '@/components/screens/sheets/mission-sheet';
 import { BottomNav } from '@/components/ui/bottom-nav';
 import { MissionBanner } from '@/components/ui/mission-banner';
+import { NotificationBanner } from '@/components/ui/notification-banner';
 import { DEFAULT_CHARACTER_ID, type CharacterId } from '@/constants/characters';
 import { screenView, track } from '@/lib/analytics';
 import { todayIso } from '@/utils/datetime';
@@ -553,6 +554,20 @@ export function AppShell({
             // 집이 없으면 집 탭은 빈 상태 대신 집 탐색으로 직행 (#571).
             setScreen(tab === 'house' && housePages.noHouses ? 'houseSearch' : SCREEN_FOR_TAB[tab])
           }
+        />
+      ) : null}
+
+      {/* 인앱 푸시 배너 (#902) — 앱이 켜져 있을 때 도착한 알림. 미션 배너와
+          같은 상단 슬롯이지만 zIndex가 높아 잠깐 덮었다 5초 뒤 사라진다.
+          key로 다시 마운트해야 연속 수신 때 애니메이션·타이머가 새로 돈다. */}
+      {myRoomPages.pushBanner ? (
+        <NotificationBanner
+          key={myRoomPages.pushBanner.key}
+          type={myRoomPages.pushBanner.type}
+          title={myRoomPages.pushBanner.title}
+          body={myRoomPages.pushBanner.body}
+          onPress={myRoomPages.openNotifications}
+          onDismiss={myRoomPages.dismissPushBanner}
         />
       ) : null}
 

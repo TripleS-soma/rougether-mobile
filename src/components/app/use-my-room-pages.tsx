@@ -22,7 +22,7 @@ import { useNotifications } from '@/hooks/use-notifications';
 import { useRoutineOrder } from '@/hooks/use-routine-order';
 import { useWalletHistory } from '@/hooks/use-wallet-history';
 import { reportAppOpen } from '@/lib/app-open';
-import { onNotificationTap } from '@/lib/push-events';
+import { onNotificationReceived, onNotificationTap } from '@/lib/push-events';
 import type { ShopCatalogue } from '@/api/adapters';
 
 type MyRoomData = ReturnType<typeof useMyRoomData>;
@@ -182,16 +182,43 @@ export function useMyRoomPages({
     void loadNotifications();
   }, [loadNotifications]);
 
+  /** 알림함으로 — 푸시 탭과 인앱 배너 탭이 같은 목적지를 쓴다 (#902). */
+  const openNotifications = useCallback(() => {
+    void loadNotifications();
+    setScreen('notificationList');
+  }, [loadNotifications, setScreen]);
+
   // 푸시 탭(콜드 스타트 포함) → 알림 목록으로 (#405).
   useEffect(
     () =>
       onNotificationTap(() => {
         reportAppOpen('push');
-        void loadNotifications();
-        setScreen('notificationList');
+        openNotifications();
       }),
-    [loadNotifications, setScreen],
+    [openNotifications],
   );
+
+  /**
+   * 앱이 켜져 있는 동안 도착한 알림 (#902) — 셸이 상단 배너로 그린다.
+   * 시스템 배너는 `push-events.ts`가 껐으므로 이게 유일한 포그라운드 표시다.
+   * 연달아 오면 마지막 것만 남긴다(배너를 쌓지 않는다) — 못 본 것은 알림함에 있다.
+   */
+  const [pushBanner, setPushBanner] = useState<{
+    key: number;
+    type?: string;
+    title: string;
+    body: string;
+  } | null>(null);
+  useEffect(
+    () =>
+      onNotificationReceived((n) => {
+        // 배너가 떠 있는 동안 도착한 알림도 알림함에는 즉시 반영한다.
+        void loadNotifications();
+        setPushBanner({ key: Date.now(), ...n });
+      }),
+    [loadNotifications],
+  );
+  const dismissPushBanner = useCallback(() => setPushBanner(null), []);
 
   const openEditRoutine = useCallback(
     (routine: Routine, from: Screen) => {
@@ -402,6 +429,10 @@ export function useMyRoomPages({
   return {
     tabProps,
     subScreen,
+    /** 인앱 푸시 배너 (#902) — 셸이 상단에 그린다. */
+    pushBanner,
+    dismissPushBanner,
+    openNotifications,
     /** 집 화면 '내 방으로' — 셸의 HouseScreen prop으로 흘러간다. */
     openMyRoom,
     /** 미션 배너 '루틴 등록하러 가기' — 셸의 openMissionScreen이 쓴다. */

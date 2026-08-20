@@ -61,6 +61,7 @@ import { WalletHistorySheet } from '@/components/screens/sheets/wallet-history-s
 import { SpringProgressBar } from '@/components/ui/spring-progress';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { MissionBanner } from '@/components/ui/mission-banner';
+import { NotificationBanner } from '@/components/ui/notification-banner';
 import { MissionSheet } from '@/components/screens/sheets/mission-sheet';
 import { PendingNotice } from '@/components/ui/pending-notice';
 import { RetryState } from '@/components/ui/retry-state';
@@ -1013,6 +1014,22 @@ export const galleryEntries: GalleryEntry[] = [
     name: 'UI · ConfirmDialog',
     description: '백드롭+카드 확인 다이얼로그 (#557) — 버튼으로 열어보기.',
     render: () => <ConfirmDialogDemo />,
+  },
+  {
+    name: 'UI · NotificationBanner',
+    description:
+      '앱이 켜져 있을 때 뜨는 인앱 푸시 배너 (#902) — 종류별 아이콘 + 제목/본문, 탭하면 알림함. 갤러리에서는 자동으로 안 닫힌다.',
+    render: () => (
+      <View style={{ alignSelf: 'stretch', minHeight: 96 }}>
+        <NotificationBanner
+          type="FRIEND_CHEER"
+          title="루티니1님이 응원을 보냈어요"
+          body="오늘도 루틴 지키는 중! 화이팅 🐾"
+          visibleMs={0}
+          onPress={() => {}}
+        />
+      </View>
+    ),
   },
   {
     name: 'UI · MissionBanner',
