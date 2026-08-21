@@ -12,16 +12,19 @@ import { initAnalytics, track } from '@/lib/analytics';
 
 // jest.mock 팩토리는 `mock` 접두 변수만 참조할 수 있다.
 const mockLogEvent = jest.fn((..._a: unknown[]) => Promise.resolve());
+const mockSetCollection = jest.fn((..._a: unknown[]) => Promise.resolve());
 
 jest.mock('@react-native-firebase/analytics', () => ({
   getAnalytics: () => ({}),
   logEvent: (...a: unknown[]) => mockLogEvent(...a),
   setUserId: () => Promise.resolve(),
   logScreenView: () => Promise.resolve(),
+  setAnalyticsCollectionEnabled: (...a: unknown[]) => mockSetCollection(...a),
 }));
 
 describe('analytics (#912)', () => {
-  beforeAll(() => initAnalytics());
+  // jest는 __DEV__가 true라, 수집 켜짐 경로를 보려면 명시해야 한다 (#954).
+  beforeAll(() => initAnalytics({ collect: true }));
   beforeEach(() => jest.clearAllMocks());
 
   it('예약 파라미터 items를 그대로 보내지 않는다', () => {
