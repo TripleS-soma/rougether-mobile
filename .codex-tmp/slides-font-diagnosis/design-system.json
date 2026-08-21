@@ -963,9 +963,7 @@
         }
       },
       "protectedRegions": [],
-      "attentionReasons": [
-        "MEDIA_OR_EVIDENCE"
-      ]
+      "attentionReasons": ["MEDIA_OR_EVIDENCE"]
     },
     {
       "slideId": "p2",
@@ -1539,11 +1537,7 @@
           "p2_i15",
           "p2_i16"
         ],
-        "slideLocalDecorationObjectIds": [
-          "p2_i4",
-          "p2_i8",
-          "p2_i12"
-        ]
+        "slideLocalDecorationObjectIds": ["p2_i4", "p2_i8", "p2_i12"]
       },
       "mediaSignature": {
         "mediaObjectCount": 0,
@@ -2209,12 +2203,7 @@
           "p4_i18",
           "p4_i19"
         ],
-        "slideLocalDecorationObjectIds": [
-          "p4_i4",
-          "p4_i8",
-          "p4_i12",
-          "p4_i16"
-        ]
+        "slideLocalDecorationObjectIds": ["p4_i4", "p4_i8", "p4_i12", "p4_i16"]
       },
       "mediaSignature": {
         "mediaObjectCount": 0,
@@ -2874,14 +2863,7 @@
           "p3_i18",
           "p3_i19"
         ],
-        "slideLocalDecorationObjectIds": [
-          "p3_i4",
-          "p3_i5",
-          "p3_i9",
-          "p3_i10",
-          "p3_i14",
-          "p3_i15"
-        ]
+        "slideLocalDecorationObjectIds": ["p3_i4", "p3_i5", "p3_i9", "p3_i10", "p3_i14", "p3_i15"]
       },
       "mediaSignature": {
         "mediaObjectCount": 0,
@@ -3042,11 +3024,7 @@
       },
       "placeholderLineage": [],
       "effectiveContent": {
-        "directContentObjectIds": [
-          "p5_i2",
-          "p5_i3",
-          "g3fab992b83f_3_1"
-        ],
+        "directContentObjectIds": ["p5_i2", "p5_i3", "g3fab992b83f_3_1"],
         "inheritedVisualObjectIds": [],
         "hasDirectContent": true,
         "hasInheritedVisual": false
@@ -3156,16 +3134,8 @@
             "mediaIdentity": null
           }
         ],
-        "contentBearingObjectIds": [
-          "p5_i2",
-          "p5_i3",
-          "g3fab992b83f_3_1"
-        ],
-        "slideLocalContentObjectIds": [
-          "p5_i2",
-          "p5_i3",
-          "g3fab992b83f_3_1"
-        ],
+        "contentBearingObjectIds": ["p5_i2", "p5_i3", "g3fab992b83f_3_1"],
+        "slideLocalContentObjectIds": ["p5_i2", "p5_i3", "g3fab992b83f_3_1"],
         "slideLocalDecorationObjectIds": []
       },
       "mediaSignature": {
@@ -3182,9 +3152,7 @@
         }
       },
       "protectedRegions": [],
-      "attentionReasons": [
-        "MEDIA_OR_EVIDENCE"
-      ]
+      "attentionReasons": ["MEDIA_OR_EVIDENCE"]
     },
     {
       "slideId": "p6",
@@ -3676,10 +3644,7 @@
           "p6_i11",
           "p6_i14"
         ],
-        "slideLocalDecorationObjectIds": [
-          "p6_i12",
-          "p6_i13"
-        ]
+        "slideLocalDecorationObjectIds": ["p6_i12", "p6_i13"]
       },
       "mediaSignature": {
         "mediaObjectCount": 1,
@@ -3695,9 +3660,7 @@
         }
       },
       "protectedRegions": [],
-      "attentionReasons": [
-        "MEDIA_OR_EVIDENCE"
-      ]
+      "attentionReasons": ["MEDIA_OR_EVIDENCE"]
     },
     {
       "slideId": "p7",
@@ -4245,10 +4208,7 @@
           "p7_i11",
           "p7_i14"
         ],
-        "slideLocalDecorationObjectIds": [
-          "p7_i12",
-          "p7_i13"
-        ]
+        "slideLocalDecorationObjectIds": ["p7_i12", "p7_i13"]
       },
       "mediaSignature": {
         "mediaObjectCount": 1,
@@ -4264,9 +4224,7 @@
         }
       },
       "protectedRegions": [],
-      "attentionReasons": [
-        "MEDIA_OR_EVIDENCE"
-      ]
+      "attentionReasons": ["MEDIA_OR_EVIDENCE"]
     },
     {
       "slideId": "p8",
@@ -4814,10 +4772,7 @@
           "p8_i11",
           "p8_i14"
         ],
-        "slideLocalDecorationObjectIds": [
-          "p8_i12",
-          "p8_i13"
-        ]
+        "slideLocalDecorationObjectIds": ["p8_i12", "p8_i13"]
       },
       "mediaSignature": {
         "mediaObjectCount": 1,
@@ -4833,9 +4788,7 @@
         }
       },
       "protectedRegions": [],
-      "attentionReasons": [
-        "MEDIA_OR_EVIDENCE"
-      ]
+      "attentionReasons": ["MEDIA_OR_EVIDENCE"]
     },
     {
       "slideId": "g3fab992b83f_4_65",
@@ -5383,10 +5336,7 @@
           "g3fab992b83f_4_75",
           "g3fab992b83f_4_78"
         ],
-        "slideLocalDecorationObjectIds": [
-          "g3fab992b83f_4_76",
-          "g3fab992b83f_4_77"
-        ]
+        "slideLocalDecorationObjectIds": ["g3fab992b83f_4_76", "g3fab992b83f_4_77"]
       },
       "mediaSignature": {
         "mediaObjectCount": 1,
@@ -5402,9 +5352,7 @@
         }
       },
       "protectedRegions": [],
-      "attentionReasons": [
-        "MEDIA_OR_EVIDENCE"
-      ]
+      "attentionReasons": ["MEDIA_OR_EVIDENCE"]
     },
     {
       "slideId": "p9",
@@ -6210,9 +6158,7 @@
         }
       },
       "protectedRegions": [],
-      "attentionReasons": [
-        "MEDIA_OR_EVIDENCE"
-      ]
+      "attentionReasons": ["MEDIA_OR_EVIDENCE"]
     },
     {
       "slideId": "p10",
@@ -6939,9 +6885,7 @@
         }
       },
       "protectedRegions": [],
-      "attentionReasons": [
-        "MEDIA_OR_EVIDENCE"
-      ]
+      "attentionReasons": ["MEDIA_OR_EVIDENCE"]
     },
     {
       "slideId": "p11",
@@ -7568,12 +7512,7 @@
           "p11_i19",
           "g3fab992b83f_4_55"
         ],
-        "slideLocalDecorationObjectIds": [
-          "p11_i6",
-          "p11_i11",
-          "p11_i16",
-          "p11_i20"
-        ]
+        "slideLocalDecorationObjectIds": ["p11_i6", "p11_i11", "p11_i16", "p11_i20"]
       },
       "mediaSignature": {
         "mediaObjectCount": 0,
@@ -7734,10 +7673,7 @@
       },
       "placeholderLineage": [],
       "effectiveContent": {
-        "directContentObjectIds": [
-          "g3fab20131ba_12_1",
-          "g3fab992b83f_4_0"
-        ],
+        "directContentObjectIds": ["g3fab20131ba_12_1", "g3fab992b83f_4_0"],
         "inheritedVisualObjectIds": [],
         "hasDirectContent": true,
         "hasInheritedVisual": false
@@ -7847,17 +7783,9 @@
             "mediaIdentity": null
           }
         ],
-        "contentBearingObjectIds": [
-          "g3fab20131ba_12_1",
-          "g3fab992b83f_4_0"
-        ],
-        "slideLocalContentObjectIds": [
-          "g3fab20131ba_12_1",
-          "g3fab992b83f_4_0"
-        ],
-        "slideLocalDecorationObjectIds": [
-          "g3fab20131ba_12_16"
-        ]
+        "contentBearingObjectIds": ["g3fab20131ba_12_1", "g3fab992b83f_4_0"],
+        "slideLocalContentObjectIds": ["g3fab20131ba_12_1", "g3fab992b83f_4_0"],
+        "slideLocalDecorationObjectIds": ["g3fab20131ba_12_16"]
       },
       "mediaSignature": {
         "mediaObjectCount": 1,
@@ -7873,9 +7801,7 @@
         }
       },
       "protectedRegions": [],
-      "attentionReasons": [
-        "MEDIA_OR_EVIDENCE"
-      ]
+      "attentionReasons": ["MEDIA_OR_EVIDENCE"]
     },
     {
       "slideId": "g3fab992b83f_4_1",
@@ -8025,10 +7951,7 @@
       },
       "placeholderLineage": [],
       "effectiveContent": {
-        "directContentObjectIds": [
-          "g3fab992b83f_4_2",
-          "g3fab992b83f_4_43"
-        ],
+        "directContentObjectIds": ["g3fab992b83f_4_2", "g3fab992b83f_4_43"],
         "inheritedVisualObjectIds": [],
         "hasDirectContent": true,
         "hasInheritedVisual": false
@@ -8138,17 +8061,9 @@
             "mediaIdentity": null
           }
         ],
-        "contentBearingObjectIds": [
-          "g3fab992b83f_4_2",
-          "g3fab992b83f_4_43"
-        ],
-        "slideLocalContentObjectIds": [
-          "g3fab992b83f_4_2",
-          "g3fab992b83f_4_43"
-        ],
-        "slideLocalDecorationObjectIds": [
-          "g3fab992b83f_4_3"
-        ]
+        "contentBearingObjectIds": ["g3fab992b83f_4_2", "g3fab992b83f_4_43"],
+        "slideLocalContentObjectIds": ["g3fab992b83f_4_2", "g3fab992b83f_4_43"],
+        "slideLocalDecorationObjectIds": ["g3fab992b83f_4_3"]
       },
       "mediaSignature": {
         "mediaObjectCount": 1,
@@ -8164,9 +8079,7 @@
         }
       },
       "protectedRegions": [],
-      "attentionReasons": [
-        "MEDIA_OR_EVIDENCE"
-      ]
+      "attentionReasons": ["MEDIA_OR_EVIDENCE"]
     },
     {
       "slideId": "g3fab992b83f_4_8",
@@ -8316,10 +8229,7 @@
       },
       "placeholderLineage": [],
       "effectiveContent": {
-        "directContentObjectIds": [
-          "g3fab992b83f_4_9",
-          "g3fab992b83f_4_44"
-        ],
+        "directContentObjectIds": ["g3fab992b83f_4_9", "g3fab992b83f_4_44"],
         "inheritedVisualObjectIds": [],
         "hasDirectContent": true,
         "hasInheritedVisual": false
@@ -8429,17 +8339,9 @@
             "mediaIdentity": null
           }
         ],
-        "contentBearingObjectIds": [
-          "g3fab992b83f_4_9",
-          "g3fab992b83f_4_44"
-        ],
-        "slideLocalContentObjectIds": [
-          "g3fab992b83f_4_9",
-          "g3fab992b83f_4_44"
-        ],
-        "slideLocalDecorationObjectIds": [
-          "g3fab992b83f_4_10"
-        ]
+        "contentBearingObjectIds": ["g3fab992b83f_4_9", "g3fab992b83f_4_44"],
+        "slideLocalContentObjectIds": ["g3fab992b83f_4_9", "g3fab992b83f_4_44"],
+        "slideLocalDecorationObjectIds": ["g3fab992b83f_4_10"]
       },
       "mediaSignature": {
         "mediaObjectCount": 1,
@@ -8455,9 +8357,7 @@
         }
       },
       "protectedRegions": [],
-      "attentionReasons": [
-        "MEDIA_OR_EVIDENCE"
-      ]
+      "attentionReasons": ["MEDIA_OR_EVIDENCE"]
     },
     {
       "slideId": "g3fab992b83f_4_15",
@@ -8607,10 +8507,7 @@
       },
       "placeholderLineage": [],
       "effectiveContent": {
-        "directContentObjectIds": [
-          "g3fab992b83f_4_16",
-          "g3fab992b83f_4_45"
-        ],
+        "directContentObjectIds": ["g3fab992b83f_4_16", "g3fab992b83f_4_45"],
         "inheritedVisualObjectIds": [],
         "hasDirectContent": true,
         "hasInheritedVisual": false
@@ -8695,14 +8592,8 @@
             "mediaIdentity": null
           }
         ],
-        "contentBearingObjectIds": [
-          "g3fab992b83f_4_16",
-          "g3fab992b83f_4_45"
-        ],
-        "slideLocalContentObjectIds": [
-          "g3fab992b83f_4_16",
-          "g3fab992b83f_4_45"
-        ],
+        "contentBearingObjectIds": ["g3fab992b83f_4_16", "g3fab992b83f_4_45"],
+        "slideLocalContentObjectIds": ["g3fab992b83f_4_16", "g3fab992b83f_4_45"],
         "slideLocalDecorationObjectIds": []
       },
       "mediaSignature": {
@@ -8719,9 +8610,7 @@
         }
       },
       "protectedRegions": [],
-      "attentionReasons": [
-        "MEDIA_OR_EVIDENCE"
-      ]
+      "attentionReasons": ["MEDIA_OR_EVIDENCE"]
     },
     {
       "slideId": "g3fab992b83f_4_22",
@@ -8871,11 +8760,7 @@
       },
       "placeholderLineage": [],
       "effectiveContent": {
-        "directContentObjectIds": [
-          "g3fab992b83f_4_23",
-          "g3fab992b83f_4_24",
-          "g3fab992b83f_4_46"
-        ],
+        "directContentObjectIds": ["g3fab992b83f_4_23", "g3fab992b83f_4_24", "g3fab992b83f_4_46"],
         "inheritedVisualObjectIds": [],
         "hasDirectContent": true,
         "hasInheritedVisual": false
@@ -8985,11 +8870,7 @@
             "mediaIdentity": null
           }
         ],
-        "contentBearingObjectIds": [
-          "g3fab992b83f_4_23",
-          "g3fab992b83f_4_24",
-          "g3fab992b83f_4_46"
-        ],
+        "contentBearingObjectIds": ["g3fab992b83f_4_23", "g3fab992b83f_4_24", "g3fab992b83f_4_46"],
         "slideLocalContentObjectIds": [
           "g3fab992b83f_4_23",
           "g3fab992b83f_4_24",
@@ -9011,9 +8892,7 @@
         }
       },
       "protectedRegions": [],
-      "attentionReasons": [
-        "MEDIA_OR_EVIDENCE"
-      ]
+      "attentionReasons": ["MEDIA_OR_EVIDENCE"]
     },
     {
       "slideId": "g3fab992b83f_4_29",
@@ -9163,11 +9042,7 @@
       },
       "placeholderLineage": [],
       "effectiveContent": {
-        "directContentObjectIds": [
-          "g3fab992b83f_4_30",
-          "g3fab992b83f_4_31",
-          "g3fab992b83f_4_47"
-        ],
+        "directContentObjectIds": ["g3fab992b83f_4_30", "g3fab992b83f_4_31", "g3fab992b83f_4_47"],
         "inheritedVisualObjectIds": [],
         "hasDirectContent": true,
         "hasInheritedVisual": false
@@ -9277,11 +9152,7 @@
             "mediaIdentity": null
           }
         ],
-        "contentBearingObjectIds": [
-          "g3fab992b83f_4_30",
-          "g3fab992b83f_4_31",
-          "g3fab992b83f_4_47"
-        ],
+        "contentBearingObjectIds": ["g3fab992b83f_4_30", "g3fab992b83f_4_31", "g3fab992b83f_4_47"],
         "slideLocalContentObjectIds": [
           "g3fab992b83f_4_30",
           "g3fab992b83f_4_31",
@@ -9303,9 +9174,7 @@
         }
       },
       "protectedRegions": [],
-      "attentionReasons": [
-        "MEDIA_OR_EVIDENCE"
-      ]
+      "attentionReasons": ["MEDIA_OR_EVIDENCE"]
     },
     {
       "slideId": "g3fab992b83f_4_36",
@@ -9455,11 +9324,7 @@
       },
       "placeholderLineage": [],
       "effectiveContent": {
-        "directContentObjectIds": [
-          "g3fab992b83f_4_37",
-          "g3fab992b83f_4_38",
-          "g3fab992b83f_4_48"
-        ],
+        "directContentObjectIds": ["g3fab992b83f_4_37", "g3fab992b83f_4_38", "g3fab992b83f_4_48"],
         "inheritedVisualObjectIds": [],
         "hasDirectContent": true,
         "hasInheritedVisual": false
@@ -9569,11 +9434,7 @@
             "mediaIdentity": null
           }
         ],
-        "contentBearingObjectIds": [
-          "g3fab992b83f_4_37",
-          "g3fab992b83f_4_38",
-          "g3fab992b83f_4_48"
-        ],
+        "contentBearingObjectIds": ["g3fab992b83f_4_37", "g3fab992b83f_4_38", "g3fab992b83f_4_48"],
         "slideLocalContentObjectIds": [
           "g3fab992b83f_4_37",
           "g3fab992b83f_4_38",
@@ -9595,9 +9456,7 @@
         }
       },
       "protectedRegions": [],
-      "attentionReasons": [
-        "MEDIA_OR_EVIDENCE"
-      ]
+      "attentionReasons": ["MEDIA_OR_EVIDENCE"]
     },
     {
       "slideId": "p12",
@@ -9747,10 +9606,7 @@
       },
       "placeholderLineage": [],
       "effectiveContent": {
-        "directContentObjectIds": [
-          "p12_i2",
-          "g3fab992b83f_2_0"
-        ],
+        "directContentObjectIds": ["p12_i2", "g3fab992b83f_2_0"],
         "inheritedVisualObjectIds": [],
         "hasDirectContent": true,
         "hasInheritedVisual": false
@@ -9860,17 +9716,9 @@
             "mediaIdentity": null
           }
         ],
-        "contentBearingObjectIds": [
-          "p12_i2",
-          "g3fab992b83f_2_0"
-        ],
-        "slideLocalContentObjectIds": [
-          "p12_i2",
-          "g3fab992b83f_2_0"
-        ],
-        "slideLocalDecorationObjectIds": [
-          "p12_i3"
-        ]
+        "contentBearingObjectIds": ["p12_i2", "g3fab992b83f_2_0"],
+        "slideLocalContentObjectIds": ["p12_i2", "g3fab992b83f_2_0"],
+        "slideLocalDecorationObjectIds": ["p12_i3"]
       },
       "mediaSignature": {
         "mediaObjectCount": 1,
@@ -9886,9 +9734,7 @@
         }
       },
       "protectedRegions": [],
-      "attentionReasons": [
-        "MEDIA_OR_EVIDENCE"
-      ]
+      "attentionReasons": ["MEDIA_OR_EVIDENCE"]
     },
     {
       "slideId": "p17",
@@ -10038,11 +9884,7 @@
       },
       "placeholderLineage": [],
       "effectiveContent": {
-        "directContentObjectIds": [
-          "p17_i2",
-          "p17_i3",
-          "g3fab992b83f_4_49"
-        ],
+        "directContentObjectIds": ["p17_i2", "p17_i3", "g3fab992b83f_4_49"],
         "inheritedVisualObjectIds": [],
         "hasDirectContent": true,
         "hasInheritedVisual": false
@@ -10177,19 +10019,9 @@
             "mediaIdentity": null
           }
         ],
-        "contentBearingObjectIds": [
-          "p17_i2",
-          "p17_i3",
-          "g3fab992b83f_4_49"
-        ],
-        "slideLocalContentObjectIds": [
-          "p17_i2",
-          "p17_i3",
-          "g3fab992b83f_4_49"
-        ],
-        "slideLocalDecorationObjectIds": [
-          "p17_i13"
-        ]
+        "contentBearingObjectIds": ["p17_i2", "p17_i3", "g3fab992b83f_4_49"],
+        "slideLocalContentObjectIds": ["p17_i2", "p17_i3", "g3fab992b83f_4_49"],
+        "slideLocalDecorationObjectIds": ["p17_i13"]
       },
       "mediaSignature": {
         "mediaObjectCount": 1,
@@ -10205,9 +10037,7 @@
         }
       },
       "protectedRegions": [],
-      "attentionReasons": [
-        "MEDIA_OR_EVIDENCE"
-      ]
+      "attentionReasons": ["MEDIA_OR_EVIDENCE"]
     },
     {
       "slideId": "g3fab992b83f_4_56",
@@ -10357,11 +10187,7 @@
       },
       "placeholderLineage": [],
       "effectiveContent": {
-        "directContentObjectIds": [
-          "g3fab992b83f_4_57",
-          "g3fab992b83f_4_58",
-          "g3fab992b83f_4_64"
-        ],
+        "directContentObjectIds": ["g3fab992b83f_4_57", "g3fab992b83f_4_58", "g3fab992b83f_4_64"],
         "inheritedVisualObjectIds": [],
         "hasDirectContent": true,
         "hasInheritedVisual": false
@@ -10471,11 +10297,7 @@
             "mediaIdentity": null
           }
         ],
-        "contentBearingObjectIds": [
-          "g3fab992b83f_4_57",
-          "g3fab992b83f_4_58",
-          "g3fab992b83f_4_64"
-        ],
+        "contentBearingObjectIds": ["g3fab992b83f_4_57", "g3fab992b83f_4_58", "g3fab992b83f_4_64"],
         "slideLocalContentObjectIds": [
           "g3fab992b83f_4_57",
           "g3fab992b83f_4_58",
@@ -10497,9 +10319,7 @@
         }
       },
       "protectedRegions": [],
-      "attentionReasons": [
-        "MEDIA_OR_EVIDENCE"
-      ]
+      "attentionReasons": ["MEDIA_OR_EVIDENCE"]
     },
     {
       "slideId": "g3f9acbe1d68_3_0",
@@ -10649,10 +10469,7 @@
       },
       "placeholderLineage": [],
       "effectiveContent": {
-        "directContentObjectIds": [
-          "g3f9acbe1d68_3_1",
-          "g3fab992b83f_4_51"
-        ],
+        "directContentObjectIds": ["g3f9acbe1d68_3_1", "g3fab992b83f_4_51"],
         "inheritedVisualObjectIds": [],
         "hasDirectContent": true,
         "hasInheritedVisual": false
@@ -10762,17 +10579,9 @@
             "mediaIdentity": null
           }
         ],
-        "contentBearingObjectIds": [
-          "g3f9acbe1d68_3_1",
-          "g3fab992b83f_4_51"
-        ],
-        "slideLocalContentObjectIds": [
-          "g3f9acbe1d68_3_1",
-          "g3fab992b83f_4_51"
-        ],
-        "slideLocalDecorationObjectIds": [
-          "g3f9acbe1d68_3_2"
-        ]
+        "contentBearingObjectIds": ["g3f9acbe1d68_3_1", "g3fab992b83f_4_51"],
+        "slideLocalContentObjectIds": ["g3f9acbe1d68_3_1", "g3fab992b83f_4_51"],
+        "slideLocalDecorationObjectIds": ["g3f9acbe1d68_3_2"]
       },
       "mediaSignature": {
         "mediaObjectCount": 1,
@@ -10788,9 +10597,7 @@
         }
       },
       "protectedRegions": [],
-      "attentionReasons": [
-        "MEDIA_OR_EVIDENCE"
-      ]
+      "attentionReasons": ["MEDIA_OR_EVIDENCE"]
     },
     {
       "slideId": "p18",
@@ -10940,11 +10747,7 @@
       },
       "placeholderLineage": [],
       "effectiveContent": {
-        "directContentObjectIds": [
-          "p18_i2",
-          "p18_i3",
-          "g3fab992b83f_4_50"
-        ],
+        "directContentObjectIds": ["p18_i2", "p18_i3", "g3fab992b83f_4_50"],
         "inheritedVisualObjectIds": [],
         "hasDirectContent": true,
         "hasInheritedVisual": false
@@ -11054,16 +10857,8 @@
             "mediaIdentity": null
           }
         ],
-        "contentBearingObjectIds": [
-          "p18_i2",
-          "p18_i3",
-          "g3fab992b83f_4_50"
-        ],
-        "slideLocalContentObjectIds": [
-          "p18_i2",
-          "p18_i3",
-          "g3fab992b83f_4_50"
-        ],
+        "contentBearingObjectIds": ["p18_i2", "p18_i3", "g3fab992b83f_4_50"],
+        "slideLocalContentObjectIds": ["p18_i2", "p18_i3", "g3fab992b83f_4_50"],
         "slideLocalDecorationObjectIds": []
       },
       "mediaSignature": {
@@ -11080,9 +10875,7 @@
         }
       },
       "protectedRegions": [],
-      "attentionReasons": [
-        "MEDIA_OR_EVIDENCE"
-      ]
+      "attentionReasons": ["MEDIA_OR_EVIDENCE"]
     },
     {
       "slideId": "p19",
@@ -11232,12 +11025,7 @@
       },
       "placeholderLineage": [],
       "effectiveContent": {
-        "directContentObjectIds": [
-          "p19_i2",
-          "p19_i3",
-          "p19_i4",
-          "p19_i5"
-        ],
+        "directContentObjectIds": ["p19_i2", "p19_i3", "p19_i4", "p19_i5"],
         "inheritedVisualObjectIds": [],
         "hasDirectContent": true,
         "hasInheritedVisual": false
@@ -11372,18 +11160,8 @@
             "mediaIdentity": null
           }
         ],
-        "contentBearingObjectIds": [
-          "p19_i2",
-          "p19_i3",
-          "p19_i4",
-          "p19_i5"
-        ],
-        "slideLocalContentObjectIds": [
-          "p19_i2",
-          "p19_i3",
-          "p19_i4",
-          "p19_i5"
-        ],
+        "contentBearingObjectIds": ["p19_i2", "p19_i3", "p19_i4", "p19_i5"],
+        "slideLocalContentObjectIds": ["p19_i2", "p19_i3", "p19_i4", "p19_i5"],
         "slideLocalDecorationObjectIds": []
       },
       "mediaSignature": {
@@ -11400,9 +11178,7 @@
         }
       },
       "protectedRegions": [],
-      "attentionReasons": [
-        "MEDIA_OR_EVIDENCE"
-      ]
+      "attentionReasons": ["MEDIA_OR_EVIDENCE"]
     },
     {
       "slideId": "p20",
@@ -11552,10 +11328,7 @@
       },
       "placeholderLineage": [],
       "effectiveContent": {
-        "directContentObjectIds": [
-          "p20_i2",
-          "p20_i3"
-        ],
+        "directContentObjectIds": ["p20_i2", "p20_i3"],
         "inheritedVisualObjectIds": [],
         "hasDirectContent": true,
         "hasInheritedVisual": false
@@ -11638,17 +11411,9 @@
             "mediaIdentity": null
           }
         ],
-        "contentBearingObjectIds": [
-          "p20_i2",
-          "p20_i3"
-        ],
-        "slideLocalContentObjectIds": [
-          "p20_i2",
-          "p20_i3"
-        ],
-        "slideLocalDecorationObjectIds": [
-          "p20_i4"
-        ]
+        "contentBearingObjectIds": ["p20_i2", "p20_i3"],
+        "slideLocalContentObjectIds": ["p20_i2", "p20_i3"],
+        "slideLocalDecorationObjectIds": ["p20_i4"]
       },
       "mediaSignature": {
         "mediaObjectCount": 0,
@@ -12068,10 +11833,7 @@
           "p21_i9",
           "p21_i10"
         ],
-        "slideLocalDecorationObjectIds": [
-          "p21_i4",
-          "p21_i7"
-        ]
+        "slideLocalDecorationObjectIds": ["p21_i4", "p21_i7"]
       },
       "mediaSignature": {
         "mediaObjectCount": 0,
@@ -12653,12 +12415,7 @@
           "p22_i15",
           "p22_i16"
         ],
-        "slideLocalDecorationObjectIds": [
-          "p22_i4",
-          "p22_i7",
-          "p22_i10",
-          "p22_i13"
-        ]
+        "slideLocalDecorationObjectIds": ["p22_i4", "p22_i7", "p22_i10", "p22_i13"]
       },
       "mediaSignature": {
         "mediaObjectCount": 0,
@@ -13994,11 +13751,7 @@
           "p24_i16",
           "p24_i17"
         ],
-        "slideLocalDecorationObjectIds": [
-          "p24_i4",
-          "p24_i9",
-          "p24_i14"
-        ]
+        "slideLocalDecorationObjectIds": ["p24_i4", "p24_i9", "p24_i14"]
       },
       "mediaSignature": {
         "mediaObjectCount": 0,
@@ -15139,12 +14892,7 @@
           "p26_i14",
           "p26_i15"
         ],
-        "slideLocalDecorationObjectIds": [
-          "p26_i4",
-          "p26_i7",
-          "p26_i10",
-          "p26_i13"
-        ]
+        "slideLocalDecorationObjectIds": ["p26_i4", "p26_i7", "p26_i10", "p26_i13"]
       },
       "mediaSignature": {
         "mediaObjectCount": 0,
@@ -15807,13 +15555,7 @@
           "p27_i18",
           "p27_i19"
         ],
-        "slideLocalDecorationObjectIds": [
-          "p27_i4",
-          "p27_i7",
-          "p27_i10",
-          "p27_i13",
-          "p27_i16"
-        ]
+        "slideLocalDecorationObjectIds": ["p27_i4", "p27_i7", "p27_i10", "p27_i13", "p27_i16"]
       },
       "mediaSignature": {
         "mediaObjectCount": 0,
@@ -16286,11 +16028,7 @@
           "p28_i11",
           "p28_i12"
         ],
-        "slideLocalDecorationObjectIds": [
-          "p28_i4",
-          "p28_i7",
-          "p28_i10"
-        ]
+        "slideLocalDecorationObjectIds": ["p28_i4", "p28_i7", "p28_i10"]
       },
       "mediaSignature": {
         "mediaObjectCount": 0,
@@ -16903,11 +16641,7 @@
           "p29_i16",
           "p29_i17"
         ],
-        "slideLocalDecorationObjectIds": [
-          "p29_i4",
-          "p29_i9",
-          "p29_i14"
-        ]
+        "slideLocalDecorationObjectIds": ["p29_i4", "p29_i9", "p29_i14"]
       },
       "mediaSignature": {
         "mediaObjectCount": 0,
@@ -17327,10 +17061,7 @@
           "p30_i9",
           "p30_i10"
         ],
-        "slideLocalDecorationObjectIds": [
-          "p30_i4",
-          "p30_i7"
-        ]
+        "slideLocalDecorationObjectIds": ["p30_i4", "p30_i7"]
       },
       "mediaSignature": {
         "mediaObjectCount": 0,
@@ -17750,10 +17481,7 @@
           "g3fab20131ba_4_8",
           "g3fab20131ba_4_9"
         ],
-        "slideLocalDecorationObjectIds": [
-          "g3fab20131ba_4_3",
-          "g3fab20131ba_4_6"
-        ]
+        "slideLocalDecorationObjectIds": ["g3fab20131ba_4_3", "g3fab20131ba_4_6"]
       },
       "mediaSignature": {
         "mediaObjectCount": 0,
@@ -18173,10 +17901,7 @@
           "g3fab992b83f_4_90",
           "g3fab992b83f_4_91"
         ],
-        "slideLocalDecorationObjectIds": [
-          "g3fab992b83f_4_85",
-          "g3fab992b83f_4_88"
-        ]
+        "slideLocalDecorationObjectIds": ["g3fab992b83f_4_85", "g3fab992b83f_4_88"]
       },
       "mediaSignature": {
         "mediaObjectCount": 0,
@@ -18596,10 +18321,7 @@
           "g3fab992b83f_4_116",
           "g3fab992b83f_4_117"
         ],
-        "slideLocalDecorationObjectIds": [
-          "g3fab992b83f_4_111",
-          "g3fab992b83f_4_114"
-        ]
+        "slideLocalDecorationObjectIds": ["g3fab992b83f_4_111", "g3fab992b83f_4_114"]
       },
       "mediaSignature": {
         "mediaObjectCount": 0,
@@ -19153,12 +18875,7 @@
           "p13_i14",
           "p13_i15"
         ],
-        "slideLocalDecorationObjectIds": [
-          "p13_i4",
-          "p13_i7",
-          "p13_i10",
-          "p13_i13"
-        ]
+        "slideLocalDecorationObjectIds": ["p13_i4", "p13_i7", "p13_i10", "p13_i13"]
       },
       "mediaSignature": {
         "mediaObjectCount": 0,
@@ -19712,12 +19429,7 @@
           "p15_i14",
           "p15_i15"
         ],
-        "slideLocalDecorationObjectIds": [
-          "p15_i4",
-          "p15_i7",
-          "p15_i10",
-          "p15_i13"
-        ]
+        "slideLocalDecorationObjectIds": ["p15_i4", "p15_i7", "p15_i10", "p15_i13"]
       },
       "mediaSignature": {
         "mediaObjectCount": 0,
@@ -20383,12 +20095,7 @@
           "p16_i17",
           "p16_i19"
         ],
-        "slideLocalDecorationObjectIds": [
-          "p16_i4",
-          "p16_i9",
-          "p16_i14",
-          "p16_i18"
-        ]
+        "slideLocalDecorationObjectIds": ["p16_i4", "p16_i9", "p16_i14", "p16_i18"]
       },
       "mediaSignature": {
         "mediaObjectCount": 0,
