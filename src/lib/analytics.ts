@@ -64,12 +64,32 @@ type GaModule = typeof import('@react-native-firebase/analytics');
 let gaMod: GaModule | null = null;
 let ga: ReturnType<GaModule['getAnalytics']> | null = null;
 
-function initFirebase() {
+function initFirebase(collect: boolean) {
   if (Platform.OS === 'web') return;
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     gaMod = require('@react-native-firebase/analytics') as GaModule;
     ga = gaMod.getAnalytics();
+    if (!collect) {
+      /**
+       * 개발 빌드는 수집 자체를 끈다 (#954).
+       *
+       * 우리 `logEvent`만 막으면 부족하다 — **SDK의 자동 이벤트**
+       * (`first_open`·`session_start`·`screen_view`)는 네이티브에서 그대로
+       * 올라가고, 지표를 흐리는 게 정확히 그 `first_open`이다(GA4의 "새
+       * 사용자"는 로그인이 아니라 설치 후 첫 실행 기준이라, 개발 중 재설치
+       * 한 번이 새 사용자 한 명이 된다).
+       *
+       * 한계: 이 호출은 네이티브 초기화 **뒤**에 실행되므로 새로 설치한
+       * 개발 빌드의 첫 `first_open` 하나는 빠져나갈 수 있다. 설정은 기기에
+       * 저장돼 다음 실행부터 유지되므로 기기당 최대 1건이다. 완전 차단은
+       * 매니페스트/plist 플래그인데 그건 네이티브 지문을 바꾼다.
+       */
+      void gaMod.setAnalyticsCollectionEnabled(ga, false).catch(() => {});
+      // 우리 이벤트 경로도 닫는다 — track/screenView/identifyUser가 전부
+      // `ga` null을 보고 조용히 no-op이 된다.
+      ga = null;
+    }
   } catch {
     gaMod = null;
     ga = null;
@@ -78,12 +98,20 @@ function initFirebase() {
 
 let initialized = false;
 
-/** 앱 루트에서 1회 호출 — 키가 없거나 초기화가 실패하면 조용히 비활성.
- * 분석은 어떤 경우에도 앱을 죽이면 안 된다. */
-export function initAnalytics() {
+/**
+ * 앱 루트에서 1회 호출 — 키가 없거나 초기화가 실패하면 조용히 비활성.
+ * 분석은 어떤 경우에도 앱을 죽이면 안 된다.
+ *
+ * `collect`는 기본이 `!__DEV__`다 — 개발 빌드의 재설치가 GA4 새 사용자로
+ * 잡히던 것을 막는다 (#954). 옆의 Sentry는 이미 같은 규칙이다
+ * (`error-reporting.ts` — `enabled: !__DEV__`).
+ *
+ * jest는 `__DEV__`가 true라 테스트가 켜짐 경로를 보려면 명시해야 한다.
+ */
+export function initAnalytics(options?: { collect?: boolean }) {
   if (initialized) return;
   initialized = true;
-  initFirebase();
+  initFirebase(options?.collect ?? !__DEV__);
 }
 
 /** 로그인 후 사용자 식별 — 서버 회원 id 기준(이벤트가 사용자로 묶인다). */

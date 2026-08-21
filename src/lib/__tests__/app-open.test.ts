@@ -14,8 +14,12 @@ const freshModule = () => {
     // 격리된 analytics가 부르는 그 객체가 아니다.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     ga = require('@react-native-firebase/analytics');
+    // 이 파일은 app_open 이벤트가 나가는지를 보므로 수집을 켠 채로 (#954) —
+    // 인자를 안 주면 jest의 __DEV__ true 때문에 수집이 꺼져 아무것도 안 나간다.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    (require('@/lib/analytics') as typeof import('@/lib/analytics')).initAnalytics();
+    (require('@/lib/analytics') as typeof import('@/lib/analytics')).initAnalytics({
+      collect: true,
+    });
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     mod = require('@/lib/app-open');
   });

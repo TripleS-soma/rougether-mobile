@@ -7,4 +7,6 @@ module.exports = {
   logEvent: jest.fn(() => Promise.resolve()),
   logScreenView: jest.fn(() => Promise.resolve()),
   setUserId: jest.fn(() => Promise.resolve()),
+  // 개발 빌드 수집 차단 (#954).
+  setAnalyticsCollectionEnabled: jest.fn(() => Promise.resolve()),
 };
