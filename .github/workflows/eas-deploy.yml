@@ -66,6 +66,48 @@ jobs:
         run: eas update --branch preview --platform ios --non-interactive --auto
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      # OTA로 나간 JS는 네이티브 빌드와 **다른 번들**이다 — 소스맵을 안 올리면
+      # 이 업데이트에서 난 에러 스택이 압축된 채로 남아 못 읽는다 (#884).
+      # 정작 문제를 가장 많이 만나는 레인인데 release·hotfix에만 있었다.
+      #
+      # `dist`는 위 스텝들이 `eas update`를 돌리며 만든다. 액션이 내부 임시
+      # 디렉터리를 쓰는 경우엔 없을 수 있어, 없으면 조용히 건너뛴다 —
+      # 관측 도구가 배포를 막으면 안 된다.
+      - name: Sentry 소스맵 업로드 (dev 레인 OTA)
+        if: env.SENTRY_AUTH_TOKEN != '' && hashFiles('dist/**') != ''
+        continue-on-error: true
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: npx @sentry/expo-upload-sourcemaps dist
+
+      # 발행 성공 ≠ 도달. preview 채널에 **현재 지문의 빌드가 없으면** 업데이트는
+      # 아무도 듣지 않는 레인에 쌓인다 (#938 — iOS가 실제로 그 상태다).
+      # eas-release의 production 판정과 같은 장치를 dev 레인에 둔다: 조용한
+      # 실패를 드러내는 게 전부이고, 배포를 막지는 않는다.
+      - name: dev 레인 OTA 도달 여부 점검 (지문 대조)
+        continue-on-error: true
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          for platform in ios android; do
+            # preview 채널을 채우는 프로필이 플랫폼마다 다르다.
+            if [ "$platform" = "ios" ]; then profile=testflight; else profile=preview; fi
+            current=$(npx expo-updates fingerprint:generate --platform "$platform" | node -e \
+              'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).hash)}catch{console.log(s.trim())}})')
+            shipped=$(eas build:list --platform "$platform" --build-profile "$profile" --limit 1 \
+              --status finished --json --non-interactive | node -e \
+              'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const b=JSON.parse(s)[0]||{};const v=(b.runtime&&b.runtime.version)||(b.fingerprint&&b.fingerprint.hash)||"";console.log(v)}catch{console.log("")}})')
+            if [ -z "$shipped" ] || [ "$shipped" = "undefined" ]; then
+              echo "::notice::$platform — preview 레인($profile) 빌드의 런타임을 확인하지 못했습니다. 도달 여부를 판정하지 않았습니다."
+              echo "- **$platform**: preview 빌드 런타임 확인 불가 — 도달 여부 미판정." >> "$GITHUB_STEP_SUMMARY"
+            elif [ "$current" != "$shipped" ]; then
+              echo "::warning::$platform — 이 OTA는 **수신자가 없습니다** (이번 $current ≠ preview 빌드 $shipped). 발행은 됐지만 그 런타임을 가진 설치본이 없습니다 — $profile 프로필로 새 빌드가 필요합니다."
+              echo "- ⚠️ **$platform**: 지문 불일치 (\`$current\` ≠ preview \`$shipped\`) — **이 OTA는 아무에게도 안 갑니다**. $profile 빌드 필요." >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "- ✅ **$platform**: 지문 일치 (\`$current\`) — 테스터 설치본이 이 OTA를 받습니다." >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+
       # 플랫폼 실패를 잡 결과로 재표면화 — 양쪽 다 돌린 뒤에 빨간불을 켠다.
       - name: Surface platform failures
         if: steps.android.outcome == 'failure' || steps.ios.outcome == 'failure'
