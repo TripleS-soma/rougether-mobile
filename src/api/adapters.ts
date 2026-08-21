@@ -215,8 +215,12 @@ const REPEAT_TO_APP: Record<string, RepeatKind> = {
 const effectiveRepeat = (r: { repeat?: RepeatKind; days?: number[] }): RepeatKind =>
   r.repeat ?? (r.days && r.days.length ? 'weekly' : 'daily');
 
-/** repeatType + repeatDays request fields from an app-side repeat description. */
-function toApiRepeat(r: {
+/**
+ * repeatType + repeatDays request fields from an app-side repeat description.
+ * 캘린더 임포트(#952)도 같은 매핑을 써야 한다 — 반복 규칙이 두 군데로 갈리면
+ * 한쪽만 고쳐져 임포트한 루틴만 요일이 어긋나는 식으로 틀어진다.
+ */
+export function toApiRepeat(r: {
   repeat?: RepeatKind;
   days?: number[];
   dayOfMonth?: number;

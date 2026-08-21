@@ -37,6 +37,13 @@ export const ErrorCode = {
   /** 4xx — 이미 보상을 받은(COMPLETED) 미션 삭제 시도. */
   HOUSE_MISSION_ALREADY_CLAIMED: 'HOUSE_MISSION_ALREADY_CLAIMED',
   /** 409 — 살아있는 루틴이 있는 카테고리 삭제 (DELETE /categories/{id}, #517). */
+  /**
+   * 409 — 같은 캘린더 반복 일정을 이미 루틴으로 가져왔다 (POST /routines, #952).
+   * 투두의 `TODO_EXTERNAL_DUPLICATE`와 대칭이다 — 실패가 아니라 "건너뜀"이다.
+   * 서버는 지운 조합도 재등록해주지 않으므로, 사용자가 지운 일정이
+   * 동기화마다 되살아나지 않는다.
+   */
+  ROUTINE_EXTERNAL_DUPLICATE: 'ROUTINE_EXTERNAL_DUPLICATE',
   CATEGORY_IN_USE: 'CATEGORY_IN_USE',
   /**
    * 409 — 승인하려는 신청자가 이미 탈퇴함 (POST …/join-requests/{id}/accept,
