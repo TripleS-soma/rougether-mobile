@@ -41,6 +41,11 @@ export type LoginScreenProps = {
   /** 애플 로그인 (#489 소셜 3차) — iOS 전용 버튼(다른 플랫폼에선 숨김). */
   onAppleLogin?: () => Promise<'ok' | 'cancelled' | 'failed'>;
   /**
+   * 실패 문구에 제공자 코드를 덧붙인다 (#959). 생략하면 문구 그대로 —
+   * 화면은 순수하게 유지하고, 코드를 아는 건 인증 레이어다.
+   */
+  describeSocialFailure?: (base: string) => string;
+  /**
    * 마지막으로 성공한 소셜 로그인 (#489 후속) — 해당 버튼에 "최근 로그인"
    * 배지를 붙여 재로그인 때 어느 계정으로 들어왔었는지 알려준다.
    */
@@ -62,6 +67,7 @@ export function LoginScreen({
   onKakaoLogin,
   onAppleLogin,
   lastLoginProvider,
+  describeSocialFailure,
 }: LoginScreenProps) {
   const t = useTokens();
   const emph = useFontEmphasis();
@@ -110,7 +116,10 @@ export function LoginScreen({
     const result = await login();
     setSubmitting(false);
     if (result === 'ok') onAuthSuccess?.();
-    else if (result === 'failed') setError(failMessage);
+    // 실패 코드를 문구 뒤에 짧게 붙인다 (#959) — 사용자에겐 무의미하지만
+    // 테스터가 스크린샷 한 장만 보내면 원인이 갈린다. 배포본에서만 나는
+    // 장애는 재현이 안 돼 이 값이 유일한 단서다.
+    else if (result === 'failed') setError(describeSocialFailure?.(failMessage) ?? failMessage);
   };
   const submitGoogle = () =>
     submitSocial(onGoogleLogin, '구글 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.');
