@@ -136,6 +136,8 @@ describe('AuthProvider — 소셜 로그인 매핑', () => {
     // 화면이 문구 뒤에 붙일 수 있게 남는다.
     expect(getLastLoginFailure()).toMatchObject({ code: '10' });
     expect(getLastLoginFailure()?.hint).toContain('서명');
+    // 코드가 없는 실패에서는 메시지가 유일한 단서라 함께 남아야 한다.
+    expect(getLastLoginFailure()?.message).toBe('sign in failed');
   });
 
   it('카카오: 취소는 구조화 code(Cancelled)로 판별해 cancelled', async () => {

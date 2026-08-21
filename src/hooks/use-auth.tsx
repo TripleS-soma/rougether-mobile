@@ -66,8 +66,16 @@ function reportLoginFailure(provider: 'google' | 'kakao' | 'apple', err: unknown
     // 온 실패"와 "이벤트가 안 온 것"을 구분할 수 있어야 한다.
     code: f.code ?? 'unknown',
     ...(f.hint ? { hint: f.hint } : {}),
+    // 코드가 없는 실패(라이브러리가 코드를 안 주는 경로)에서는 메시지가
+    // 유일한 단서다 — 이게 빠지면 'unknown'만 남아 아무것도 못 가린다.
+    ...(f.message ? { detail: f.message } : {}),
   });
-  reportError(err, { scope: 'login', provider, ...(f.code ? { code: f.code } : {}) });
+  reportError(err, {
+    scope: 'login',
+    provider,
+    ...(f.code ? { code: f.code } : {}),
+    ...(f.message ? { detail: f.message } : {}),
+  });
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
