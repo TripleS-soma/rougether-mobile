@@ -4,7 +4,12 @@
  */
 import { useCallback, useState } from 'react';
 
-import { type BugReportImage, fetchMyBugReports, submitBugReport } from '@/api';
+import {
+  fetchBugReportScreenshot,
+  type BugReportImage,
+  fetchMyBugReports,
+  submitBugReport,
+} from '@/api';
 import { toBugReportEntry } from '@/api/adapters';
 import type { BugReportEntry } from '@/components/screens/bug-report-screen';
 import { appVersion, deviceInfo } from '@/lib/app-info';
@@ -35,5 +40,11 @@ export function useBugReports() {
     [load],
   );
 
-  return { entries, load, submit };
+  return {
+    /** 첨부 스크린샷 한 장 (#736) — 인증이 필요해 화면이 직접 못 그린다. */
+    loadScreenshot: fetchBugReportScreenshot,
+    entries,
+    load,
+    submit,
+  };
 }

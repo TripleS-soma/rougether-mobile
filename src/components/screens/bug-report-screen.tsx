@@ -1,12 +1,12 @@
 import { Image } from 'expo-image';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { memo, useEffect, useState } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Field } from '@/components/ui/field';
 import { Icon } from '@/components/ui/icon';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { useToast } from '@/components/ui/toast';
-import { Radius, Spacing } from '@/constants/theme';
+import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
@@ -28,6 +28,11 @@ export type BugReportEntry = {
   status: BugReportStatus;
   /** "M월 D일" — 제출일. */
   date: string;
+  /**
+   * 첨부 스크린샷 키 (#736). 비공개 리소스라 주소만으로는 못 그린다 —
+   * 화면이 `onLoadScreenshot`으로 바이트를 받아 data URI로 띄운다.
+   */
+  screenshotKeys?: string[];
 };
 
 const STATUS_LABEL: Record<BugReportStatus, string> = {
@@ -49,6 +54,12 @@ export type BugReportScreenProps = {
   }) => Promise<boolean>;
   /** Open the photo library; resolve the picked image or null on cancel. */
   onPickImage?: () => Promise<BugReportImageInput | null>;
+  /**
+   * 첨부 스크린샷 한 장을 불러온다 (#736) — 비공개 리소스라 주소만으로는 못
+   * 그리고 인증 헤더가 필요하다. 셸이 바이트를 받아 data URI로 준다.
+   * 생략하면 썸네일을 아예 안 그린다(데모·갤러리).
+   */
+  onLoadScreenshot?: (key: string) => Promise<string | null>;
   onBack?: () => void;
 };
 
@@ -60,12 +71,15 @@ export function BugReportScreen({
   entries = [],
   onSubmit,
   onPickImage,
+  onLoadScreenshot,
   onBack,
 }: BugReportScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const { show: toast } = useToast();
+  /** 크게 보는 중인 첨부 (#736) — null이면 뷰어를 안 띄운다. */
+  const [viewerUri, setViewerUri] = useState<string | null>(null);
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -215,6 +229,14 @@ export function BugReportScreen({
                     {e.date ? (
                       <Text style={[Typography.supporting, { color: t.textMuted }]}>{e.date}</Text>
                     ) : null}
+                    {/* 첨부 스크린샷 (#736) — 지금까지 제보 후 다시 볼 방법이 없었다. */}
+                    {onLoadScreenshot && e.screenshotKeys?.length ? (
+                      <EntryScreenshots
+                        keys={e.screenshotKeys}
+                        load={onLoadScreenshot}
+                        onOpen={setViewerUri}
+                      />
+                    ) : null}
                   </View>
                   <View style={[styles.badge, { backgroundColor: badge.bg }]}>
                     <Text style={[Typography.supporting, emph('semibold'), { color: badge.fg }]}>
@@ -227,9 +249,75 @@ export function BugReportScreen({
           )}
         </View>
       </ScrollView>
+      {/* 첨부 크게 보기 (#736) — 배경을 누르면 닫힌다. */}
+      <Modal
+        visible={viewerUri !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setViewerUri(null)}>
+        <Pressable
+          onPress={() => setViewerUri(null)}
+          accessibilityRole="button"
+          accessibilityLabel="첨부 닫기"
+          style={[styles.viewerBackdrop, { backgroundColor: Overlay.strong }]}>
+          {viewerUri ? (
+            <Image source={{ uri: viewerUri }} style={styles.viewerImage} contentFit="contain" />
+          ) : null}
+        </Pressable>
+      </Modal>
     </View>
   );
 }
+
+/**
+ * 제보 한 건의 첨부 썸네일 (#736). 비공개 리소스라 키만으로는 못 그린다 —
+ * 마운트될 때 한 장씩 받아 data URI로 바꿔 띄운다.
+ *
+ * memo 경계: 내역이 길어지면 행마다 이미지를 들고 있으므로, 부모 리렌더가
+ * 로딩을 다시 돌리지 않게 끊는다.
+ */
+const EntryScreenshots = memo(function EntryScreenshots({
+  keys,
+  load,
+  onOpen,
+}: {
+  keys: string[];
+  load: (key: string) => Promise<string | null>;
+  onOpen: (uri: string) => void;
+}) {
+  const [uris, setUris] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let alive = true;
+    for (const key of keys) {
+      void load(key).then((uri) => {
+        // 화면을 떠난 뒤 도착한 응답은 버린다.
+        if (alive && uri) setUris((prev) => ({ ...prev, [key]: uri }));
+      });
+    }
+    return () => {
+      alive = false;
+    };
+    // keys는 배열이라 참조가 매번 새로울 수 있어 내용으로 고정한다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keys.join('|'), load]);
+
+  const loaded = keys.filter((k) => uris[k]);
+  if (loaded.length === 0) return null;
+  return (
+    <View style={styles.shotRow}>
+      {loaded.map((key) => (
+        <Pressable
+          key={key}
+          onPress={() => onOpen(uris[key])}
+          accessibilityRole="button"
+          accessibilityLabel="첨부 스크린샷 크게 보기"
+          testID={`bug-shot-${key}`}>
+          <Image source={{ uri: uris[key] }} style={styles.shotThumb} contentFit="cover" />
+        </Pressable>
+      ))}
+    </View>
+  );
+});
 
 const styles = StyleSheet.create({
   screen: {
@@ -316,6 +404,26 @@ const styles = StyleSheet.create({
   entryText: {
     flex: 1,
     gap: Spacing.half,
+  },
+  shotRow: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    marginTop: Spacing.one,
+  },
+  shotThumb: {
+    width: 44,
+    height: 44,
+    borderRadius: Radius.sm,
+  },
+  viewerBackdrop: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.four,
+  },
+  viewerImage: {
+    width: '100%',
+    height: '80%',
   },
   badge: {
     paddingHorizontal: Spacing.two,

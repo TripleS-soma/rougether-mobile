@@ -770,9 +770,19 @@ describe('API adapters', () => {
         bugReportId: 7,
         title: '로그인이 안 돼요',
         status: 'IN_PROGRESS',
+        screenshotKeys: ['bug/a.png'],
         createdAt: '2026-07-20T09:00:00Z',
       }),
-    ).toEqual({ id: 7, title: '로그인이 안 돼요', status: 'IN_PROGRESS', date: '7월 20일' });
+    ).toEqual({
+      id: 7,
+      title: '로그인이 안 돼요',
+      status: 'IN_PROGRESS',
+      date: '7월 20일',
+      // 첨부 키를 그대로 흘려야 화면이 스크린샷을 받아올 수 있다 (#736).
+      screenshotKeys: ['bug/a.png'],
+    });
+    // 서버가 첨부 키를 안 주면 빈 배열 — 화면이 length로 분기한다.
+    expect(toBugReportEntry({ bugReportId: 9 }).screenshotKeys).toEqual([]);
     // 미지정 상태는 접수됨으로.
     expect(toBugReportEntry({ bugReportId: 8 }).status).toBe('RECEIVED');
   });

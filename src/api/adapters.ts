@@ -886,6 +886,8 @@ export function toBugReportEntry(b: BugReportResponse): BugReportEntry {
     title: b.title ?? '',
     status: b.status ?? 'RECEIVED',
     date: d ? `${d.getMonth() + 1}월 ${d.getDate()}일` : '',
+    // 첨부 키 (#736) — 화면이 이걸로 비공개 스크린샷을 따로 받아온다.
+    screenshotKeys: b.screenshotKeys ?? [],
   };
 }
 

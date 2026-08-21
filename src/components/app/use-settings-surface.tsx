@@ -91,7 +91,12 @@ export function useSettingsSurface({
   }, [toast]);
 
   // 버그 제보 (#496) — 화면을 열 때 내 제보 내역을 불러온다.
-  const { entries: bugReports, load: loadBugReports, submit: submitBugReport } = useBugReports();
+  const {
+    entries: bugReports,
+    load: loadBugReports,
+    submit: submitBugReport,
+    loadScreenshot: loadBugScreenshot,
+  } = useBugReports();
 
   // 친구 초대 리워드 (#518) — 설정 → 친구 초대 화면의 데이터·액션.
   const {
@@ -275,6 +280,7 @@ export function useSettingsSurface({
     ) : screen === 'bugReport' ? (
       <BugReportScreen
         entries={bugReports}
+        onLoadScreenshot={loadBugScreenshot}
         onSubmit={submitBugReport}
         onPickImage={pickLibraryImage}
         onBack={backToSettings}

@@ -86,4 +86,47 @@ describe('BugReportScreen', () => {
     await fireEvent.press(getByLabelText('스크린샷 1 삭제'));
     expect(queryByLabelText('스크린샷 1 삭제')).toBeNull();
   });
+
+  /**
+   * 제보 후 첨부를 다시 볼 방법이 없었다 (#736). 비공개 리소스라 주소만으로는
+   * 못 그리고, 셸이 인증 헤더로 받아 data URI로 넘겨준다.
+   */
+  describe('첨부 스크린샷 (#736)', () => {
+    const withShot = [
+      {
+        id: 1,
+        title: '방이 안 열려요',
+        status: 'RECEIVED' as const,
+        date: '8월 20일',
+        screenshotKeys: ['bug/a.png'],
+      },
+    ];
+
+    it('불러온 첨부를 썸네일로 보여주고, 누르면 크게 띄운다', async () => {
+      const onLoadScreenshot = jest.fn(async () => 'data:image/png;base64,AAA');
+      const { getByTestId, getByLabelText, queryByLabelText } = await render(
+        <BugReportScreen entries={withShot} onLoadScreenshot={onLoadScreenshot} />,
+      );
+      await waitFor(() => expect(getByTestId('bug-shot-bug/a.png')).toBeTruthy());
+      expect(onLoadScreenshot).toHaveBeenCalledWith('bug/a.png');
+
+      // 뷰어는 누르기 전엔 없다.
+      expect(queryByLabelText('첨부 닫기')).toBeNull();
+      await fireEvent.press(getByLabelText('첨부 스크린샷 크게 보기'));
+      expect(getByLabelText('첨부 닫기')).toBeTruthy();
+    });
+
+    it('불러오기가 실패하면 썸네일을 안 그린다 — 제보 내역은 그대로 보인다', async () => {
+      const { getByText, queryByLabelText } = await render(
+        <BugReportScreen entries={withShot} onLoadScreenshot={jest.fn(async () => null)} />,
+      );
+      expect(getByText('방이 안 열려요')).toBeTruthy();
+      await waitFor(() => expect(queryByLabelText('첨부 스크린샷 크게 보기')).toBeNull());
+    });
+
+    it('로더가 없으면 아예 시도하지 않는다 (데모·갤러리)', async () => {
+      const { queryByLabelText } = await render(<BugReportScreen entries={withShot} />);
+      expect(queryByLabelText('첨부 스크린샷 크게 보기')).toBeNull();
+    });
+  });
 });
