@@ -5,7 +5,13 @@
  * 파일에서 볼 수 없다 — 이 파일이 **꺼짐 경로 전용**이다.
  * 켜짐 경로는 `analytics.test.ts`가 `{ collect: true }`로 본다.
  */
-import { identifyUser, initAnalytics, screenView, track } from '@/lib/analytics';
+import {
+  identifyUser,
+  initAnalytics,
+  resetAnalyticsUser,
+  screenView,
+  track,
+} from '@/lib/analytics';
 
 const mockLogEvent = jest.fn(() => Promise.resolve());
 const mockScreenView = jest.fn(() => Promise.resolve());
@@ -35,6 +41,8 @@ describe('개발 빌드 수집 차단 (#954)', () => {
     track('login_success');
     screenView('myRoom');
     identifyUser(4);
+    // 로그아웃 경로도 같은 가드를 타야 한다 (#954 리뷰).
+    resetAnalyticsUser();
     expect(mockLogEvent).not.toHaveBeenCalled();
     expect(mockScreenView).not.toHaveBeenCalled();
     expect(mockSetUserId).not.toHaveBeenCalled();
