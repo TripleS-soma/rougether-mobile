@@ -520,6 +520,13 @@ export const SplashBackground = '#FEF1D6';
 export const SplashBackgroundDark = '#243273';
 
 /** Dim scrims behind sheets/dialogs/full-screen overlays — theme-independent. */
+/**
+ * 태블릿·큰 화면 콘텐츠 컬럼 상한 (#725). 화면들이 폰 폭(≈390)을 전제로
+ * 그려져 있어, 이 상한이 없으면 넓은 화면에서 리스트가 끝까지 늘어나고
+ * 정사각형 방 캔버스가 화면을 삼킨다. `useResponsiveColumn()`으로 쓴다.
+ */
+export const ContentMaxWidth = 560;
+
 export const Overlay = {
   /** Light scrim for anchored popovers — keeps the page readable behind. */
   subtle: 'rgba(0,0,0,0.2)',

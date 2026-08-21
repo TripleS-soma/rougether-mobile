@@ -50,6 +50,7 @@ import {
   skyPhaseForHour,
 } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useResolvedScheme, useTokens, useTypography } from '@/hooks/use-tokens';
 import type { MissionStatus } from '@/utils/mission-cta';
@@ -337,6 +338,7 @@ export const HouseScreen = memo(function HouseScreen({
   onScrollY,
 }: HouseScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
   // 시간대별 하늘 (#358) — 새벽/낮/노을/밤. 낮은 기존 sky 토큰과 동일.
   const scheme = useResolvedScheme();
@@ -999,7 +1001,8 @@ export const HouseScreen = memo(function HouseScreen({
         // 자리 드래그 중 당김 잠금 — 놓는 순간 새로고침이 배치를 끊지 않게.
         refreshDisabled={dragSeat != null}
         refreshTestID="house-refresh"
-        contentContainerStyle={styles.body}
+        // 집 커버는 aspectRatio라 폭이 넓어지면 초대형화돼 좌석이 잘린다 (#725).
+        contentContainerStyle={[styles.body, column]}
         scrollEnabled={dragSeat == null}
         testID="house-scroll">
         {/* 프레임 모드(#287) — 하늘 위에 스위처·집 프레임, 방은 창문 안에.
