@@ -15,6 +15,7 @@ import {
   typographyFor,
 } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
@@ -108,6 +109,7 @@ export const SettingsScreen = memo(function SettingsScreen({
   onScrollY,
 }: SettingsScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const headerInset = useHeaderInsetStyle();
@@ -157,7 +159,12 @@ export const SettingsScreen = memo(function SettingsScreen({
         <Text style={[Typography.h2, { color: t.text }]}>설정</Text>
       </View>
 
-      <ScrollView ref={scrollRef} contentContainerStyle={styles.body} {...scrollRestore}>
+      <ScrollView
+        ref={scrollRef}
+        // 넓은 화면에서 행이 끝까지 늘어나면 화살표가 라벨에서 멀어져 한 줄로
+        // 안 읽힌다 (#725).
+        contentContainerStyle={[styles.body, column]}
+        {...scrollRestore}>
         <View style={styles.section}>
           <Text style={[...sectionTitleStyle, { color: t.textMuted }]}>디자인</Text>
           <View style={[styles.card, { backgroundColor: t.surface }]}>

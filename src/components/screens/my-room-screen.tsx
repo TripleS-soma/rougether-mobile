@@ -76,6 +76,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { saveRoomImage } from '@/lib/room-capture';
 import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
@@ -335,6 +336,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   onScrollY,
 }: MyRoomScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
   const headerInset = useHeaderInsetStyle();
   // 좁은 폰은 콤팩트 지갑 필(코인만) (#425) — 닉네임 열이 필 2개에 밀려
@@ -1178,6 +1180,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           scrollEnabled={dragId === null}
           contentContainerStyle={[
             styles.body,
+            // 방 캔버스가 정사각형이라 폭이 넓으면 높이도 같이 커져 루틴
+            // 목록이 화면 밖으로 밀린다 (#725).
+            column,
             addingCategory != null && keyboardPad > 0 ? { paddingBottom: keyboardPad + 120 } : null,
           ]}
           {...scrollRestore}
