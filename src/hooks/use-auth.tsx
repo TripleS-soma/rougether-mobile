@@ -17,7 +17,8 @@ import { getKakaoAccessToken, signOutKakao } from '@/lib/kakao-auth';
 import { saveLastLoginProvider } from '@/lib/last-login';
 import { clearPushToken, syncPushToken } from '@/lib/push-token';
 import { resetAnalyticsUser, track } from '@/lib/analytics';
-import { clearErrorUser } from '@/lib/error-reporting';
+import { clearErrorUser, reportError } from '@/lib/error-reporting';
+import { clearLoginFailure, describeLoginError, rememberLoginFailure } from '@/lib/login-error';
 import { wipeLocalAppData } from '@/lib/local-wipe';
 
 type AuthStatus = 'loading' | 'authed' | 'guest';
@@ -51,6 +52,24 @@ const AuthContext = createContext<AuthContextValue | null>(null);
  * `status` (loading → authed | guest) plus login/logout. Wrap the app once in
  * the root layout; consume via `useAuth()`.
  */
+/**
+ * 로그인 실패를 남긴다 (#959) — 종전엔 `catch {}` 로 에러를 통째로 버려서
+ * 배포본 장애의 원인을 알 방법이 없었다. GA4에는 코드·힌트를, Sentry에는
+ * 에러 자체를 보낸다.
+ */
+function reportLoginFailure(provider: 'google' | 'kakao' | 'apple', err: unknown) {
+  const f = describeLoginError(err);
+  rememberLoginFailure(f);
+  track('login_failed', {
+    provider,
+    // 값이 없으면 파라미터를 비우지 않고 'unknown'으로 — GA4에서 "코드가 안
+    // 온 실패"와 "이벤트가 안 온 것"을 구분할 수 있어야 한다.
+    code: f.code ?? 'unknown',
+    ...(f.hint ? { hint: f.hint } : {}),
+  });
+  reportError(err, { scope: 'login', provider, ...(f.code ? { code: f.code } : {}) });
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('loading');
 
@@ -95,11 +114,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           saveLastLoginProvider('google');
           // 퍼널 첫 칸 (#799). 취소('cancelled')는 사용자가 스스로 물러난
           // 것이라 실패로 세지 않는다 — 실패율이 부풀면 신호가 죽는다.
+          clearLoginFailure();
           track('login_success', { provider: 'google' });
           void syncPushToken();
           return 'ok';
-        } catch {
-          track('login_failed', { provider: 'google' });
+        } catch (err) {
+          reportLoginFailure('google', err);
           return 'failed';
         }
       },
@@ -112,11 +132,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           saveLastLoginProvider('kakao');
           // 퍼널 첫 칸 (#799). 취소('cancelled')는 사용자가 스스로 물러난
           // 것이라 실패로 세지 않는다 — 실패율이 부풀면 신호가 죽는다.
+          clearLoginFailure();
           track('login_success', { provider: 'kakao' });
           void syncPushToken();
           return 'ok';
-        } catch {
-          track('login_failed', { provider: 'kakao' });
+        } catch (err) {
+          reportLoginFailure('kakao', err);
           return 'failed';
         }
       },
@@ -129,11 +150,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           saveLastLoginProvider('apple');
           // 퍼널 첫 칸 (#799). 취소('cancelled')는 사용자가 스스로 물러난
           // 것이라 실패로 세지 않는다 — 실패율이 부풀면 신호가 죽는다.
+          clearLoginFailure();
           track('login_success', { provider: 'apple' });
           void syncPushToken();
           return 'ok';
-        } catch {
-          track('login_failed', { provider: 'apple' });
+        } catch (err) {
+          reportLoginFailure('apple', err);
           return 'failed';
         }
       },

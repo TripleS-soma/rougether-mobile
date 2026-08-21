@@ -7,6 +7,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 
 import { clearSession, devLogin } from '@/api';
 import { AuthProvider, useAuth } from '@/hooks/use-auth';
+import { getLastLoginFailure } from '@/lib/login-error';
 import { syncPushToken } from '@/lib/push-token';
 
 jest.mock('@/lib/push-token', () => ({
@@ -116,6 +117,25 @@ describe('AuthProvider — 소셜 로그인 매핑', () => {
       expect(await result.current.loginWithGoogle()).toBe('failed');
     });
     expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  /**
+   * 배포본에서만 나는 로그인 장애는 재현이 안 된다 — 원격 신호가 유일한
+   * 단서인데 종전엔 `catch {}` 가 에러를 통째로 버렸다 (#959).
+   */
+  it('실패하면 제공자 코드를 실어 보내고 기억한다', async () => {
+    global.fetch = jest.fn() as unknown as typeof fetch;
+    // DEVELOPER_ERROR(10) = SHA-1/패키지명이 콘솔과 안 맞음.
+    (GoogleSignin.signIn as jest.Mock).mockRejectedValueOnce(
+      Object.assign(new Error('sign in failed'), { code: 10 }),
+    );
+    const { result } = await renderHook(() => useAuth(), { wrapper });
+    await act(async () => {
+      expect(await result.current.loginWithGoogle()).toBe('failed');
+    });
+    // 화면이 문구 뒤에 붙일 수 있게 남는다.
+    expect(getLastLoginFailure()).toMatchObject({ code: '10' });
+    expect(getLastLoginFailure()?.hint).toContain('서명');
   });
 
   it('카카오: 취소는 구조화 code(Cancelled)로 판별해 cancelled', async () => {
