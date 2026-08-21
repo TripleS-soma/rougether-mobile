@@ -11,6 +11,19 @@ import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import type { DeviceCalendar } from '@/lib/device-calendar';
 import type { ImportCandidate, ImportOutcome } from '@/hooks/use-calendar-import';
 
+/**
+ * 반복 배지 문구 (#952). 이 표시가 붙은 일정은 회차마다 투두가 아니라
+ * **루틴 하나**로 들어간다 — 가져오면 뭐가 생기는지 예측 가능해야 한다.
+ * 서버가 못 담는 반복은 `repeat`이 비어 있어 배지도 안 붙는다(회차 투두).
+ */
+const REPEAT_LABEL: Record<NonNullable<ImportCandidate['repeat']>, string> = {
+  daily: '매일 반복',
+  weekly: '매주 반복',
+  biweekly: '격주 반복',
+  monthly: '매월 반복',
+  yearly: '매년 반복',
+};
+
 export type CalendarImportScreenProps = {
   /** null = 아직 연결 전(권한 요청 안 함). */
   calendars?: DeviceCalendar[] | null;
@@ -155,17 +168,33 @@ export function CalendarImportScreen({
                   onPress={() => toggle(c)}
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: isOn(c) }}
-                  accessibilityLabel={
-                    c.similar.length > 0
-                      ? `${c.title}, ${shortDate(c.date)}, 비슷한 항목 있음`
-                      : `${c.title}, ${shortDate(c.date)}`
-                  }
+                  accessibilityLabel={[
+                    c.title,
+                    shortDate(c.date),
+                    c.repeat ? REPEAT_LABEL[c.repeat] : null,
+                    c.similar.length > 0 ? '비슷한 항목 있음' : null,
+                  ]
+                    .filter(Boolean)
+                    .join(', ')}
                   style={[styles.row, { backgroundColor: t.surfaceMuted }]}>
                   <BearCheck checked={isOn(c)} size={20} />
                   <View style={styles.flex}>
-                    <Text style={[Typography.label, { color: t.text }]} numberOfLines={1}>
-                      {c.title}
-                    </Text>
+                    <View style={styles.titleRow}>
+                      <Text
+                        style={[Typography.label, styles.flex, { color: t.text }]}
+                        numberOfLines={1}>
+                        {c.title}
+                      </Text>
+                      {c.repeat ? (
+                        <View
+                          testID={`repeat-badge-${c.occurrenceId}`}
+                          style={[styles.repeatBadge, { backgroundColor: t.primarySoft }]}>
+                          <Text style={[Typography.supporting, { color: t.primaryText }]}>
+                            {REPEAT_LABEL[c.repeat]}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
                     {c.similar.length > 0 ? (
                       <Text style={[Typography.supporting, { color: t.warningText }]}>
                         비슷한 {c.similar[0].kind === 'ROUTINE' ? '루틴' : '할 일'}이 있어요 ·{' '}
@@ -200,6 +229,16 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     padding: Spacing.three,
     borderRadius: Radius.md,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  repeatBadge: {
+    paddingHorizontal: Spacing.two,
+    paddingVertical: Spacing.half,
+    borderRadius: Radius.sm,
   },
   flex: { flex: 1 },
 });

@@ -121,4 +121,20 @@ describe('CalendarImportScreen', () => {
     );
     expect(getByText(/제목이 똑같은 것만 겹침으로 표시돼요/)).toBeTruthy();
   });
+
+  /** 가져오면 뭐가 생기는지 예측 가능해야 한다 — 투두 8개와 루틴 1개는 큰 차이다. */
+  it('루틴으로 들어갈 반복 일정에만 배지를 붙인다 (#952)', async () => {
+    const { getByTestId, queryByTestId, getByText } = await render(
+      <CalendarImportScreen
+        candidates={[
+          { seriesId: 'w', occurrenceId: 'w:2026-08-24', title: '주간 회의', date: '2026-08-24', allDay: false, similar: [], repeat: 'weekly' }, // prettier-ignore
+          { seriesId: 'o', occurrenceId: 'o:2026-08-25', title: '치과', date: '2026-08-25', allDay: false, similar: [] }, // prettier-ignore
+        ]}
+      />,
+    );
+    expect(getByTestId('repeat-badge-w:2026-08-24')).toBeTruthy();
+    expect(getByText('매주 반복')).toBeTruthy();
+    // 서버가 못 담는 반복과 일회성은 회차 투두라 배지가 없다.
+    expect(queryByTestId('repeat-badge-o:2026-08-25')).toBeNull();
+  });
 });

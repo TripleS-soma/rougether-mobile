@@ -26,6 +26,39 @@ export type DeviceCalendar = {
   source: string;
 };
 
+/**
+ * 서버 `repeatType`에 담을 수 있는 반복 (#952). 기기 규칙은 이보다 넓어서
+ * ("3주마다", "격일", "매월 셋째 화요일") 담기는 것만 루틴으로 보내고
+ * 나머지는 회차 투두로 떨어뜨린다 — 근사하면 없는 날에 할 일이 뜬다.
+ */
+export type DeviceRepeat = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly';
+
+/**
+ * `recurrenceRule`을 서버가 아는 반복으로 접는다. 담을 수 없으면 undefined.
+ *
+ * **요일·일·월은 여기서 안 정한다.** `daysOfTheWeek`는 iOS 전용이라
+ * 안드로이드에서는 비어 오므로, 종류만 규칙에서 읽고 나머지는 실제 회차
+ * 날짜에서 파생한다(두 플랫폼이 같게 동작한다).
+ */
+export function toDeviceRepeat(rule?: Calendar.RecurrenceRule | null): DeviceRepeat | undefined {
+  if (!rule) return undefined;
+  const every = rule.interval ?? 1;
+  switch (rule.frequency) {
+    case Calendar.Frequency.DAILY:
+      // 격일(interval 2)은 서버에 대응이 없다.
+      return every === 1 ? 'daily' : undefined;
+    case Calendar.Frequency.WEEKLY:
+      return every === 1 ? 'weekly' : every === 2 ? 'biweekly' : undefined;
+    case Calendar.Frequency.MONTHLY:
+      // "매월 셋째 화요일"은 daysOfTheWeek로 오는데 서버는 날짜(dayOfMonth)만 안다.
+      return every === 1 && !rule.daysOfTheWeek?.length ? 'monthly' : undefined;
+    case Calendar.Frequency.YEARLY:
+      return every === 1 ? 'yearly' : undefined;
+    default:
+      return undefined;
+  }
+}
+
 export type DeviceEvent = {
   /**
    * **시리즈 id — 반복 일정이면 회차마다 같다.** 고유 키로 쓰면 안 된다.
@@ -46,6 +79,11 @@ export type DeviceEvent = {
   date: string;
   /** 종일 일정인지 — 시각을 마감 시간으로 옮길지 판단에 쓴다. */
   allDay: boolean;
+  /**
+   * 서버가 아는 반복이면 그 종류 (#952) — 이 회차는 **루틴 후보**다.
+   * undefined면 일회성이거나 담을 수 없는 반복이라 회차 투두로 간다.
+   */
+  repeat?: DeviceRepeat;
 };
 
 /** 회차 키 — 시리즈와 날짜를 합친다. 서버 externalId 상한 255자에 여유가 있다. */
@@ -96,6 +134,7 @@ export async function readUpcomingEvents(calendarIds: string[]): Promise<DeviceE
         title: (e.title ?? '').trim(),
         date,
         allDay: !!e.allDay,
+        repeat: toDeviceRepeat(e.recurrenceRule),
       };
     })
     .filter((e) => e.title.length > 0 && e.date >= from);

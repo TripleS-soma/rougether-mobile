@@ -1,6 +1,9 @@
 /** 기기 캘린더 일정 임포트 (#844, 서버 2026-08-19). */
+import type { DeviceRepeat } from '@/lib/device-calendar';
+
+import { toApiRepeat } from './adapters';
 import { apiPost } from './client';
-import type { TodoResponse } from './types';
+import type { RoutineResponse, TodoResponse } from './types';
 
 /**
  * 유사 비교 요청/응답 타입.
@@ -67,4 +70,37 @@ export type ImportTodoInput = {
  */
 export function importCalendarTodo(input: ImportTodoInput) {
   return apiPost<TodoResponse>('/todos', input);
+}
+
+export type ImportRoutineInput = {
+  title: string;
+  /** 반복 종류 — 서버 repeatType으로 변환해 보낸다. */
+  repeat: DeviceRepeat;
+  /** 주간·격주의 요일 (0=일 … 6=토). 실제 회차 날짜에서 뽑는다. */
+  days: number[];
+  /** 월간·연간의 일. 연간은 month와 함께. */
+  dayOfMonth?: number;
+  month?: number;
+  /** 창 안 첫 회차 날짜 — 서버는 과거 startsOn을 거부한다. */
+  startsOn: string;
+  externalSource: string;
+  /** 루틴은 시리즈당 한 행이라 **시리즈 id**다 (투두는 회차 키). */
+  externalId: string;
+  categoryId?: number;
+};
+
+/**
+ * POST /routines — 기기 캘린더의 **반복 일정**을 루틴으로 (#952).
+ * 회차마다 투두를 만들면 매주 회의가 창 안에서 4~5개로 불어난다.
+ *
+ * 중복이면 409 `ROUTINE_EXTERNAL_DUPLICATE` — 투두와 같이 "이미 가져옴"으로
+ * 건너뛴다. 서버는 지운 조합도 재등록해주지 않는다.
+ */
+export function importCalendarRoutine(input: ImportRoutineInput) {
+  const { repeat, days, dayOfMonth, month, ...rest } = input;
+  return apiPost<RoutineResponse>('/routines', {
+    ...rest,
+    ...toApiRepeat({ repeat, days, dayOfMonth, month }),
+    authType: 'CHECK',
+  });
 }
