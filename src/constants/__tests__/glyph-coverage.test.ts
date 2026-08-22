@@ -4,7 +4,28 @@ import { join } from 'node:path';
 const SRC = join(__dirname, '..', '..');
 
 /** 스캔 제외 — 사용자에게 안 보이는 것들. */
-const EXEMPT = [/^src\/dev\//, /^src\/mocks\//, /__tests__/];
+const EXEMPT = [
+  /^src\/dev\//,
+  /^src\/mocks\//,
+  /__tests__/,
+  // 위젯은 SwiftUI·RemoteViews로 그려져 앱 폰트를 쓸 수 없다 (font-hygiene과 같은 기준).
+  /^src\/widgets\//,
+];
+
+/**
+ * **앱 폰트를 일부러 안 씌우는** 글리프 자리 — `font-hygiene.test.ts`의 `GLYPH_ONLY`와 짝이다.
+ *
+ * 그쪽 주석대로 `‹ › ＋` 같은 문자는 한글 폰트에 없는 경우가 많아, 패밀리를 강제하면
+ * 오히려 폴백이 더 튄다. 그래서 이 자리들은 처음부터 시스템 폰트로 **일관되게** 그린다
+ * — 폴백이 아니라 의도다. 파일+문자로 적어 줄 이동에 흔들리지 않게 한다.
+ */
+const GLYPH_ONLY: Record<string, string[]> = {
+  'src/components/ui/calendar.tsx': ['‹', '›'],
+  'src/components/screens/add-routine-screen.tsx': ['›'],
+  'src/components/screens/routine-manage-screen.tsx': ['›'],
+  'src/components/screens/settings/appearance-preview.tsx': ['＋'],
+  'src/components/screens/category-manage-screen.tsx': ['▲', '▼'],
+};
 
 /**
  * 한글 음절·ASCII 말고 UI 문구에 써도 되는 문자. **사유를 반드시 적는다.**
@@ -42,7 +63,10 @@ function stripComments(s: string): string {
       i = j < 0 ? s.length : j;
     } else if (s.startsWith('/*', i)) {
       const j = s.indexOf('*/', i);
-      i = j < 0 ? s.length : j + 2;
+      const end = j < 0 ? s.length : j + 2;
+      // 개행은 남긴다 — 지워버리면 실패 메시지의 줄 번호가 밀린다.
+      out += s.slice(i, end).replace(/[^\n]/g, '');
+      i = end;
     } else {
       out += c;
       i++;
@@ -87,16 +111,22 @@ describe('글리프 위생 — UI 문구가 커스텀 폰트 안에 있는가 (#
 
     for (const path of files) {
       const rel = path.replace(`${SRC}/`, 'src/');
+      const glyphOnly = GLYPH_ONLY[rel] ?? [];
       const code = stripComments(readFileSync(path, 'utf8'));
 
       for (const m of code.matchAll(LITERAL)) {
         const text = m[2] ?? m[3] ?? m[4] ?? '';
-        if (!HANGUL.test(text)) continue; // UI 문구만 본다
+        // 한글이 섞였는지로 거르지 않는다 — `{code ?? '—'}` 처럼 **순수 기호만**
+        // 담은 리터럴이 통째로 빠져나갔다 (#966 리뷰). 어차피 ASCII·한글은 아래에서
+        // 넘어가므로, 모든 리터럴을 봐도 잡히는 건 '낯선 문자'뿐이다.
         for (const ch of new Set(text)) {
           const cp = ch.codePointAt(0) ?? 0;
           if (cp < 0x80 || HANGUL.test(ch)) continue;
-          if (ch in ALLOWED || EMOJI.test(ch)) continue;
-          const line = code.slice(0, m.index).split('\n').length;
+          if (ch in ALLOWED || glyphOnly.includes(ch) || EMOJI.test(ch)) continue;
+          // 매치 시작이 아니라 **문제 문자 자체**의 위치를 가리킨다 — JSX 텍스트는
+          // 여는 `>`에서 매치가 시작해 한 줄 앞을 짚게 된다.
+          const at = (m.index ?? 0) + Math.max(0, m[0].indexOf(ch));
+          const line = code.slice(0, at).split('\n').length;
           offenders.push(
             `${rel}:${line}  ${ch} (U+${cp.toString(16).toUpperCase()})  ${text.slice(0, 40)}`,
           );
@@ -109,5 +139,16 @@ describe('글리프 위생 — UI 문구가 커스텀 폰트 안에 있는가 (#
 
   it('허용 목록에 사유가 빠진 항목이 없다', () => {
     expect(Object.entries(ALLOWED).filter(([, why]) => why.trim().length < 10)).toEqual([]);
+  });
+
+  it('글리프 전용 예외에 죽은 항목이 없다', () => {
+    // 파일이 사라졌거나 그 문자를 더는 안 쓰는데 예외만 남으면 잘못된 전제가 된다.
+    const dead = Object.entries(GLYPH_ONLY).filter(([rel, chars]) => {
+      const path = join(SRC, rel.replace('src/', ''));
+      if (!files.includes(path)) return true;
+      const code = stripComments(readFileSync(path, 'utf8'));
+      return !chars.every((c) => code.includes(c));
+    });
+    expect(dead).toEqual([]);
   });
 });

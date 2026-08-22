@@ -144,7 +144,7 @@ export function InviteFriendsScreen({
             <Text style={sectionTitle}>내 초대코드</Text>
             <View style={[styles.card, { backgroundColor: t.surface }]}>
               <Text style={[Typography.h1, styles.code, { color: t.text }]}>
-                {info?.code ?? '—'}
+                {info?.code ?? '-'}
               </Text>
               <View style={styles.codeActions}>
                 <ScalePressable

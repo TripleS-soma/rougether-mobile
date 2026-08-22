@@ -351,7 +351,7 @@ export function OnboardingScreen({
                 key={c.id}
                 onPress={() => focusCharacter(i)}
                 accessibilityRole="radio"
-                accessibilityLabel={`${c.name} — ${c.description}`}
+                accessibilityLabel={`${c.name}. ${c.description}`}
                 accessibilityState={{ selected: isActive }}
                 style={[
                   styles.characterSlide,
