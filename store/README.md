@@ -86,6 +86,42 @@ store/ko-KR/
   있고, `plugins/with-calendar-readonly.js`가 쓰기 권한을 떼어냅니다 — 심사자가 "읽기만
   한다"는 설명과 실제 권한이 일치하는지 봅니다.
 
+## 서명 인증서·키 해시 — 소셜 로그인이 여기에 달려 있다
+
+**Play가 AAB를 자기 키로 재서명한다**(Play 앱 서명). 업로드한 파일의 서명과 사용자
+기기에 깔리는 서명이 **다르다**. 소셜 로그인 SDK는 실행 중인 앱의 서명을 콘솔 등록값과
+대조하므로, 업로드 키만 등록해두면 **Play로 깐 설치본만 로그인이 통째로 실패한다**
+(2026-08-22, 안드로이드 배포본 전건 실패로 확인).
+
+증상은 SDK마다 다르게 나온다 — 구글은 `DEVELOPER_ERROR`(코드 `10`), 카카오는
+`misconfigured`. 둘 다 "서명이 등록 안 됨"의 다른 표현이다.
+
+| 인증서       | SHA-1                                                         | 카카오 키 해시                 | 어디에 깔린 설치본         |
+| ------------ | ------------------------------------------------------------- | ------------------------------ | -------------------------- |
+| Play 앱 서명 | `78:BF:C7:A5:B0:41:3B:63:17:AF:90:3A:3E:E5:24:27:33:03:00:83` | `eL/HpbBBO2MXr5A6PuUkJzMDAIM=` | **Play 스토어·내부테스트** |
+| 업로드 키    | `BB:C1:09:DA:6F:1E:6E:2B:0C:9E:69:22:5C:4A:1F:0E:C9:24:76:ED` | `u8EJ2m8ebisMnmkiXEofDskkdu0=` | EAS 링크 직접 설치         |
+
+**둘 다 등록해야 한다.** 하나만 넣으면 다른 경로로 깐 기기에서 로그인이 안 되는데,
+개발자는 보통 EAS 링크로 깔아 테스트하므로 **Play 쪽 누락을 못 느낀다.**
+
+등록처 (패키지명은 양쪽 다 `com.triples.rougether`):
+
+- **구글** — 클라우드 콘솔 **프로젝트 `499923665503`(rougether)** → OAuth 클라이언트 → Android.
+  파이어베이스 프로젝트(`437063052004`)가 **아니다.** 앱은 `webClientId`를 JS에서
+  넘기고(`src/lib/google-auth.ts`), 네이티브는 그 값만 읽는다
+  (`RNGoogleSigninModule.java:129` — `google-services.json`의 `default_web_client_id`로
+  떨어지는 폴백 경로가 없다). 검증 주체는 **webClientId가 속한 프로젝트** 하나뿐이다.
+  변경 전파에 최대 몇 시간 걸릴 수 있다.
+- **카카오** — 개발자 콘솔 → 내 애플리케이션 → 플랫폼 → Android → 키 해시.
+  키 해시는 SHA-1 바이트를 base64로 옮긴 값이다:
+  `python3 -c "import base64;print(base64.b64encode(bytes(int(x,16) for x in '<SHA-1>'.split(':'))).decode())"`
+
+**Play 앱 서명 SHA-1 확인**: Play Console → 설정 → 앱 서명 → "앱 서명 키 인증서".
+같은 화면의 "업로드 키 인증서"와 헷갈리기 쉬우니 제목을 확인할 것.
+
+**배포본이 실제로 어느 키로 서명됐는지 확인**(JDK 없이):
+`unzip -p app.aab 'META-INF/*.RSA' | openssl pkcs7 -inform DER -print_certs | openssl x509 -fingerprint -sha1 -noout`
+
 ## 알려진 ASO 과제
 
 2026-08-14 감사에서 나온 것들. 심사 통과 후 다음 버전에 함께 반영합니다.
