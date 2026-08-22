@@ -196,7 +196,7 @@ export function BugReportScreen({
                 emph('semibold'),
                 { color: canSubmit ? t.onPrimary : t.textMuted },
               ]}>
-              {submitting ? '접수 중…' : '제출하기'}
+              {submitting ? '접수 중...' : '제출하기'}
             </Text>
           </Pressable>
         </View>

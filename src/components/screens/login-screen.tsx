@@ -221,7 +221,7 @@ export function LoginScreen({
                     emph('semibold'),
                     { color: canSubmit ? t.onPrimary : t.textMuted },
                   ]}>
-                  {submitting ? '로그인 중…' : '로그인'}
+                  {submitting ? '로그인 중...' : '로그인'}
                 </Text>
               </Pressable>
             </>

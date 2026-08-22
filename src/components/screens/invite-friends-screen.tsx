@@ -225,7 +225,7 @@ export function InviteFriendsScreen({
                         Typography.label,
                         { color: code.trim() && !redeeming ? t.onPrimary : t.textMuted },
                       ]}>
-                      {redeeming ? '확인 중…' : '사용하기'}
+                      {redeeming ? '확인 중...' : '사용하기'}
                     </Text>
                   </ScalePressable>
                   <Text style={[Typography.supporting, { color: t.textMuted }]}>

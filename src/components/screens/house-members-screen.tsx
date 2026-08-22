@@ -228,7 +228,7 @@ export function HouseMembersScreen({
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
               {isOwner
                 ? '친구에게 코드를 공유해 집에 초대하세요.'
-                : '내 개인 초대코드로 친구를 초대해요 — 참여는 방장 승인 후 확정돼요.'}
+                : '내 개인 초대코드로 친구를 초대해요. 참여는 방장 승인 후 확정돼요.'}
             </Text>
             {displayCode ? (
               <View

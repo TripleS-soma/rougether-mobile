@@ -258,7 +258,7 @@ export function HouseMissionsScreen({
               accessibilityRole="button"
               accessibilityLabel="미션 만들기"
               style={[styles.missionAddBtn, { backgroundColor: t.surfaceMuted }]}>
-              <Text style={[Typography.supporting, { color: t.primaryText }]}>＋ 만들기</Text>
+              <Text style={[Typography.supporting, { color: t.primaryText }]}>+ 만들기</Text>
             </Pressable>
           ) : null}
         </View>
@@ -397,7 +397,7 @@ export function HouseMissionsScreen({
                             accessibilityLabel={`${mission.title} 내 루틴에 추가`}
                             style={[styles.missionBtn, { backgroundColor: t.primary }]}>
                             <Text style={[Typography.supporting, { color: t.onPrimary }]}>
-                              ＋ 내 루틴에
+                              + 내 루틴에
                             </Text>
                           </Pressable>
                         ) : null}

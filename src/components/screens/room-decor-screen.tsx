@@ -752,7 +752,7 @@ export function RoomDecorScreen({
           <View style={styles.loadingBlock}>
             <Loading />
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              카탈로그 불러오는 중…
+              카탈로그 불러오는 중...
             </Text>
           </View>
         ) : null}
@@ -1136,7 +1136,7 @@ export function RoomDecorScreen({
                     },
                   ]}>
                   {bulkBuying
-                    ? '구매 중…'
+                    ? '구매 중...'
                     : diamondBalance < previewTotal
                       ? '다이아가 부족해요'
                       : '모두 구매하고 저장'}

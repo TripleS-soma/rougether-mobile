@@ -817,7 +817,7 @@ export const HouseScreen = memo(function HouseScreen({
           {loading ? (
             <>
               <Loading />
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>불러오는 중…</Text>
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>불러오는 중...</Text>
             </>
           ) : loadError ? (
             // 로드 실패 (#549) — 집이 있는 사용자가 '집 없음' 가입 유도를 보지

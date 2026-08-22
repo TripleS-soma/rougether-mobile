@@ -61,7 +61,7 @@ export type NotificationSettingsScreenProps = {
  * 기술 상태를 보여줄 이유가 없다.
  */
 const PUSH_STEP_NOTICE: Partial<Record<PushRegistrationStep, string>> = {
-  'permission-denied': '기기에서 알림이 꺼져 있어요. 시스템 설정 → 알림에서 켜야 푸시가 도착해요.',
+  'permission-denied': '기기에서 알림이 꺼져 있어요. 시스템 설정의 알림에서 켜야 푸시가 도착해요.',
   'token-failed': '이 기기를 알림 서버에 등록하지 못했어요. 앱을 다시 켜보고, 계속되면 알려주세요.',
   'register-failed': '이 기기 등록이 저장되지 않았어요. 네트워크를 확인하고 앱을 다시 켜보세요.',
 };

@@ -11,7 +11,7 @@ describe('RoutineManageScreen', () => {
 
   it('shows a loading state instead of the empty state while loading', async () => {
     const { getByText, queryByText } = await render(<RoutineManageScreen loading />);
-    expect(getByText('불러오는 중…')).toBeTruthy();
+    expect(getByText('불러오는 중...')).toBeTruthy();
     expect(queryByText('아직 만든 루틴이 없어요.')).toBeNull();
   });
 

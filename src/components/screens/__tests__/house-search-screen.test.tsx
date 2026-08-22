@@ -106,7 +106,7 @@ describe('HouseSearchScreen', () => {
     await waitFor(() => expect(getByText('아침 루틴 하우스')).toBeTruthy());
     await fireEvent.press(getByLabelText('이 집에 입주'));
     await waitFor(() =>
-      expect(getByText('입주 신청을 보냈어요 — 방장이 승인하면 집에 들어가요.')).toBeTruthy(),
+      expect(getByText('입주 신청을 보냈어요. 방장이 승인하면 집에 들어가요.')).toBeTruthy(),
     );
     // 미리보기는 닫히고 에러 문구는 없다.
     expect(queryByText(/입주에 실패했어요/)).toBeNull();

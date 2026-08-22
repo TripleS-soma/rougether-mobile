@@ -88,7 +88,7 @@ export function RoutineManageScreen({
           <View style={styles.empty}>
             <Loading />
             <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
-              불러오는 중…
+              불러오는 중...
             </Text>
           </View>
         ) : null}
