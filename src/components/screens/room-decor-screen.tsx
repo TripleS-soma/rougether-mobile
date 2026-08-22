@@ -1,5 +1,14 @@
 import { Image } from 'expo-image';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  createContext,
+  memo,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { BackHandler, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import Animated, {
@@ -42,6 +51,7 @@ import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useStableCallback } from '@/hooks/use-stable-value';
 import { track } from '@/lib/analytics';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
 /**
@@ -201,6 +211,7 @@ export function RoomDecorScreen({
   onApply,
 }: RoomDecorScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
   const { show: toast } = useToast();
   const headerInset = useHeaderInsetStyle();
@@ -609,7 +620,10 @@ export function RoomDecorScreen({
       {/* 헤더 대신 화면 고정 플로팅 (#510) — 패널이 그만큼 올라와 가구가 더
           보인다. 뒤로가기는 상시 접근, 재화는 프리뷰 구매(#501) 잔액 확인용. */}
       <ScrollView contentContainerStyle={[styles.body, headerInset]}>
-        <View style={styles.preview}>
+        {/* 캔버스만 묶는다 — 방은 aspectRatio라 폭이 넓어지면 높이도 같이 커져
+            카탈로그가 화면 밖으로 밀린다. 카탈로그는 반대로 폭을 다 써서
+            열을 늘린다(DecorGrid) — 한 번에 보이는 가구가 많을수록 좋다 (#725). */}
+        <View style={[styles.preview, column]}>
           {/* 캔버스 = 방과 정확히 같은 박스 — 오버레이 좌표·정규화의 기준.
               (preview의 padding 박스 기준으로 재면 저장 좌표가 어긋난다.) */}
           <View
@@ -1194,6 +1208,48 @@ type BuyProps = {
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 /**
+ * 그리드 폭에 맞춰 열 수를 정한다 (#725).
+ *
+ * 종전에는 타일이 `flexBasis: '22%'`라 **폭과 무관하게 항상 4열**이었다. 폰에서는
+ * 맞지만 태블릿에서는 타일이 거대해지고 한 화면에 보이는 가구는 그대로였다.
+ *
+ * 폭을 재서 정하는 이유는 퍼센트로는 안 되기 때문이다 — 타일 사이 간격이 px(`GRID_GAP`)
+ * 고정이라 폭이 달라지면 퍼센트 몫이 어긋난다. 측정 전 첫 프레임은 기존 22%가 그대로
+ * 쓰이므로 폰에서는 보이는 변화가 없다.
+ */
+const MIN_TILE = 72;
+const MAX_COLUMNS = 8;
+
+/** 측정된 타일 폭. `null`이면 아직 레이아웃 전 — 타일이 기존 22%로 그려진다. */
+const TileWidthContext = createContext<number | null>(null);
+
+function DecorGrid({ children }: { children: React.ReactNode }) {
+  const [width, setWidth] = useState<number | null>(null);
+  const tileWidth = useMemo(() => {
+    if (width == null || width <= 0) return null;
+    const fit = Math.floor((width + GRID_GAP) / (MIN_TILE + GRID_GAP));
+    const columns = Math.min(MAX_COLUMNS, Math.max(4, fit));
+    return (width - (columns - 1) * GRID_GAP) / columns;
+  }, [width]);
+  return (
+    <TileWidthContext.Provider value={tileWidth}>
+      <View
+        style={styles.grid}
+        onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+        testID="decor-grid">
+        {children}
+      </View>
+    </TileWidthContext.Provider>
+  );
+}
+
+/** 타일에 얹는 폭 — flexBasis를 덮어써야 한다(주축에서 width보다 우선한다). */
+function useTileWidthStyle() {
+  const width = useContext(TileWidthContext);
+  return width == null ? null : { flexBasis: width };
+}
+
+/**
  * 방금 보유로 바뀐 타일의 팝 (#453) — false→true 전환에서만 눌렸다 튀어오른다.
  * 구매 확인 모달이 닫히며 카탈로그의 해당 카드가 "내 것이 됐다"고 답한다.
  */
@@ -1214,13 +1270,14 @@ function useOwnedPopStyle(isOwned: boolean) {
 /** 비우기 tile shared by the grids — clears the slot/surface being picked. */
 const ClearTile = memo(function ClearTile({ onClear, t }: { onClear?: () => void; t: Tokens }) {
   const emph = useFontEmphasis();
+  const tileWidth = useTileWidthStyle();
   if (!onClear) return null;
   return (
     <Pressable
       onPress={onClear}
       accessibilityRole="button"
       accessibilityLabel="비우기"
-      style={[styles.tile, styles.clearTile, { borderColor: t.border }]}>
+      style={[styles.tile, tileWidth, styles.clearTile, { borderColor: t.border }]}>
       <View style={[styles.thumbWrap, styles.clearThumb]}>
         <Icon name="close" size={18} color={t.textMuted} />
       </View>
@@ -1247,7 +1304,7 @@ const SwatchGrid = memo(function SwatchGrid({
   onClear?: () => void;
 }) {
   return (
-    <View style={styles.grid}>
+    <DecorGrid>
       <ClearTile onClear={onClear} t={t} />
       {items.map((item) => (
         <SwatchTile
@@ -1263,7 +1320,7 @@ const SwatchGrid = memo(function SwatchGrid({
           t={t}
         />
       ))}
-    </View>
+    </DecorGrid>
   );
 });
 
@@ -1288,6 +1345,7 @@ const SwatchTile = memo(function SwatchTile({
   t: Tokens;
 }) {
   const emph = useFontEmphasis();
+  const tileWidth = useTileWidthStyle();
   const popStyle = useOwnedPopStyle(isOwned);
   return (
     <AnimatedPressable
@@ -1308,6 +1366,7 @@ const SwatchTile = memo(function SwatchTile({
       }
       style={[
         styles.tile,
+        tileWidth,
         popStyle,
         {
           backgroundColor: t.surfaceMuted,
@@ -1372,7 +1431,7 @@ const FurnitureGrid = memo(function FurnitureGrid({
     );
   }
   return (
-    <View style={styles.grid}>
+    <DecorGrid>
       <ClearTile onClear={onClear} t={t} />
       {items.map((item) => (
         <FurnitureTile
@@ -1386,7 +1445,7 @@ const FurnitureGrid = memo(function FurnitureGrid({
           t={t}
         />
       ))}
-    </View>
+    </DecorGrid>
   );
 });
 
@@ -1407,6 +1466,7 @@ const FurnitureTile = memo(function FurnitureTile({
   t: Tokens;
 }) {
   const emph = useFontEmphasis();
+  const tileWidth = useTileWidthStyle();
   const popStyle = useOwnedPopStyle(isOwned);
   return (
     <AnimatedPressable
@@ -1417,6 +1477,7 @@ const FurnitureTile = memo(function FurnitureTile({
       accessibilityLabel={isOwned ? item.name : `${item.name} 미리 배치`}
       style={[
         styles.tile,
+        tileWidth,
         popStyle,
         {
           backgroundColor: t.surfaceMuted,
