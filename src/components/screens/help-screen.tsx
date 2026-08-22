@@ -5,6 +5,7 @@ import { Icon } from '@/components/ui/icon';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
 /**
@@ -40,6 +41,7 @@ export type HelpScreenProps = {
  */
 export function HelpScreen({ appVersion = '1.0.0', onContact, onBack }: HelpScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const [openIdx, setOpenIdx] = useState<number | null>(null);
@@ -48,7 +50,7 @@ export function HelpScreen({ appVersion = '1.0.0', onContact, onBack }: HelpScre
     <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader title="도움말" onBack={onBack} />
 
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView contentContainerStyle={[styles.body, column]}>
         <Text
           style={[
             Typography.supporting,

@@ -1131,7 +1131,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         </View>
       </View>
 
-      <View style={styles.tabBar}>
+      {/* 탭 줄도 본문과 같은 폭으로 묶는다 — 본문만 제한하면 넓은 화면에서
+          탭이 왼쪽 끝에 홀로 남아 밑줄이 본문과 어긋난다 (#725). */}
+      <View style={[styles.tabBar, column]}>
         {(
           [
             ['room', '방'],

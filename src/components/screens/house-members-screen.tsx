@@ -14,6 +14,7 @@ import { houseCapacityOptions } from '@/constants/house-themes';
 import { houseInviteLink } from '@/constants/links';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
 /** Capacity choices for the edit form (server allows 1~10). */
@@ -91,6 +92,7 @@ export function HouseMembersScreen({
   onLeaveDone,
 }: HouseMembersScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const { show: toast } = useToast();
@@ -208,7 +210,7 @@ export function HouseMembersScreen({
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView contentContainerStyle={[styles.body, column]}>
         {onReissueInviteCode || displayCode ? (
           <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
             <View style={styles.codeHead}>

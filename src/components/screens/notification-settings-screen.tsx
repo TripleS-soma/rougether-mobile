@@ -5,6 +5,7 @@ import type { PushRegistrationStep } from '@/lib/push-token';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 /**
@@ -84,13 +85,14 @@ export function NotificationSettingsScreen({
   onBack,
 }: NotificationSettingsScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader title="푸시 알림" onBack={onBack} />
 
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView contentContainerStyle={[styles.body, column]}>
         {/* 조회 실패 안내 (#549) — 지금 보이는 값은 기본값일 수 있다. */}
         {loadError ? (
           <View style={[styles.card, styles.errorCard, { backgroundColor: t.surface }]}>

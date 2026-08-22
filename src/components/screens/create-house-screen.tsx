@@ -8,6 +8,7 @@ import { CrownPictogram, Pictogram } from '@/components/ui/pictograms';
 import { Radius, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import {
   HOUSE_PRIVATE_ACCENT,
@@ -40,6 +41,7 @@ export type CreateHouseScreenProps = {
  */
 export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouseScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const headerInset = useHeaderInsetStyle();
@@ -68,7 +70,7 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
         <View style={styles.iconBtn} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView contentContainerStyle={[styles.body, column]}>
         {/* Preview */}
         <View style={[styles.card, styles.previewRow, { backgroundColor: t.surface }]}>
           <View

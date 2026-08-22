@@ -25,6 +25,7 @@ import { Overlay, Radius, Spacing, StaticWhite } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { track } from '@/lib/analytics';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { RARITY_COLORS, type Rarity } from '@/resources/furniture';
 import { hapticImpact, hapticSuccess } from '@/utils/haptics';
@@ -127,6 +128,7 @@ export function GachaScreen({
   onLoadRewards,
 }: GachaScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const headerInset = useHeaderInsetStyle();
@@ -279,7 +281,7 @@ export function GachaScreen({
         <WalletPills coin={coinBalance} diamond={diamondBalance} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView contentContainerStyle={[styles.body, column]}>
         {loading ? (
           <View style={styles.loadingBlock}>
             <Loading />

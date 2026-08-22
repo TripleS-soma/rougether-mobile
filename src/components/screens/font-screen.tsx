@@ -12,6 +12,7 @@ import {
   Radius,
 } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens } from '@/hooks/use-tokens';
 
 /** 글자 스와치에 쓸 견본 — 받침·둥근 획이 다 들어가 얼굴 차이가 잘 드러난다. */
@@ -41,12 +42,13 @@ export function FontScreen({
   onBack,
 }: FontScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
 
   return (
     <View style={[pickerStyles.screen, useScreenStyle([])]}>
       <ScreenHeader title="폰트" onBack={onBack} />
 
-      <ScrollView contentContainerStyle={pickerStyles.body}>
+      <ScrollView contentContainerStyle={[pickerStyles.body, column]}>
         <AppearancePreview userName={userName} characterId={characterId} />
 
         <View style={pickerStyles.list}>

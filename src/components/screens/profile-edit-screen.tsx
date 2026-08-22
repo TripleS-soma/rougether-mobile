@@ -16,6 +16,7 @@ import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/con
 import { BIO_MAX, NICKNAME_MAX } from '@/constants/profile';
 import { Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 export type ProfileEditScreenProps = {
@@ -39,6 +40,7 @@ export function ProfileEditScreen({
   onBack,
 }: ProfileEditScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
   const [nickname, setNickname] = useState(initialNickname);
   const [bio, setBio] = useState(initialBio);
@@ -58,7 +60,7 @@ export function ProfileEditScreen({
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
-          contentContainerStyle={styles.body}
+          contentContainerStyle={[styles.body, column]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag">
           <View style={styles.avatarWrap}>

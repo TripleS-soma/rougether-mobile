@@ -18,6 +18,7 @@ import { Icon } from '@/components/ui/icon';
 import { useToast } from '@/components/ui/toast';
 import { Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
 export type LoginScreenProps = {
@@ -70,6 +71,7 @@ export function LoginScreen({
   describeSocialFailure,
 }: LoginScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const emph = useFontEmphasis();
   const Typography = useTypography();
   const [email, setEmail] = useState('');
@@ -134,7 +136,7 @@ export function LoginScreen({
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
-          contentContainerStyle={styles.body}
+          contentContainerStyle={[styles.body, column]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
           <View style={styles.header}>

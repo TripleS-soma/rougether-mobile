@@ -6,6 +6,7 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import type { CharacterId } from '@/constants/characters';
 import { DEFAULT_THEME_ID, type ThemeId, THEME_OPTIONS } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens } from '@/hooks/use-tokens';
 
 export type ThemeScreenProps = {
@@ -33,12 +34,13 @@ export function ThemeScreen({
   onBack,
 }: ThemeScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
 
   return (
     <View style={[pickerStyles.screen, useScreenStyle([])]}>
       <ScreenHeader title="테마 색상" onBack={onBack} />
 
-      <ScrollView contentContainerStyle={pickerStyles.body}>
+      <ScrollView contentContainerStyle={[pickerStyles.body, column]}>
         <AppearancePreview userName={userName} characterId={characterId} />
 
         <View style={pickerStyles.list}>
