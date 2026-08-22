@@ -119,7 +119,10 @@ async function runConfig(browser, cfg) {
   await page.emulateMedia({ colorScheme: cfg.scheme });
   const see = (t, timeout = 20000) =>
     page.getByText(t, { exact: false }).first().waitFor({ timeout });
-  const tapLabel = (l) => page.getByLabel(l, { exact: false }).first().click();
+  // exact:true — 느슨하게 두면 `집`이 `집 탐색`·`우리 집의 목표`까지 매치해
+  // `.first()`가 화면 밖 요소를 집고 30초 타임아웃이 난다(house·house-search·settings가
+  // 네 컨피그 전부에서 이렇게 빠져 감사 커버리지가 7개 중 4개였다).
+  const tapLabel = (l) => page.getByLabel(l, { exact: true }).first().click();
 
   await page.goto(BASE, { waitUntil: 'domcontentloaded', timeout: 60000 });
   await see('로그인', 60000);
@@ -134,7 +137,9 @@ async function runConfig(browser, cfg) {
     ['house', async () => tapLabel('집'), null],
     ['house-search', async () => tapLabel('집 탐색'), '초대코드로 들어가기'],
     ['settings', async () => { await tapLabel('뒤로 가기'); await tapLabel('설정'); }, '튜토리얼 다시 보기'], // prettier-ignore
-    ['decor', async () => { await tapLabel('나의 방'); await tapLabel('메뉴'); await page.getByLabel('방 꾸미기', { exact: true }).first().click(); }, '적용하기'], // prettier-ignore
+    // `방 꾸미기`는 캔버스 연필 버튼(#727)과 팝오버 항목이 같은 라벨이라 last()가
+    // 메뉴 항목이다 — first()는 모달 뒤에 깔린 캔버스를 집어 클릭이 막힌다(smoke.js와 동일).
+    ['decor', async () => { await tapLabel('나의 방'); await tapLabel('메뉴'); await page.getByLabel('방 꾸미기', { exact: true }).last().click(); }, '적용하기'], // prettier-ignore
     ['gacha', async () => { await tapLabel('뒤로가기'); await tapLabel('뽑기 상점'); }, '가구 뽑기'], // prettier-ignore
   ];
 
