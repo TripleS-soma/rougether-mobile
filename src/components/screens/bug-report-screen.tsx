@@ -8,6 +8,7 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import { useToast } from '@/components/ui/toast';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
 /** 스크린샷 첨부 한도 — 서버 계약(최대 3장, png·jpeg·webp 각 10MB). */
@@ -75,6 +76,7 @@ export function BugReportScreen({
   onBack,
 }: BugReportScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const { show: toast } = useToast();
@@ -125,7 +127,7 @@ export function BugReportScreen({
     <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader title="버그 제보" onBack={onBack} />
 
-      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.body, column]} keyboardShouldPersistTaps="handled">
         <View style={[styles.card, { backgroundColor: t.surface }]}>
           <Field
             label="제목"

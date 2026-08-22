@@ -11,6 +11,7 @@ import { RetryState } from '@/components/ui/retry-state';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { DEMO_NOTIFICATIONS } from '@/mocks/fixtures';
 
@@ -106,6 +107,7 @@ export function NotificationListScreen({
   onLoadMore,
 }: NotificationListScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
   const entries = notifications ?? DEMO_NOTIFICATIONS;
   const hasUnread = entries.some((n) => !n.read);
@@ -131,7 +133,7 @@ export function NotificationListScreen({
       <FlatList
         data={entries}
         keyExtractor={(n) => String(n.id)}
-        contentContainerStyle={styles.body}
+        contentContainerStyle={[styles.body, column]}
         ListEmptyComponent={
           loading ? (
             <View style={styles.state}>

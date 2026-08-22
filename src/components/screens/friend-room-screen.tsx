@@ -33,6 +33,7 @@ import { BookOpenPictogram, Pictogram, type PictogramName } from '@/components/u
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { formatTime, todayIso } from '@/utils/datetime';
 import { hapticSuccess } from '@/utils/haptics';
@@ -148,6 +149,7 @@ export function FriendRoomScreen({
   onLoadMoreGuestbook,
 }: FriendRoomScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const headerInset = useHeaderInsetStyle();
@@ -361,6 +363,9 @@ export function FriendRoomScreen({
           ref={scrollRef}
           contentContainerStyle={[
             styles.body,
+            // 나의 방과 같은 이유 — 방 캔버스가 정사각형이라 폭이 넓어지면
+            // 높이도 같이 커져 방명록이 화면 밖으로 밀린다 (#725).
+            column,
             inputFocused && keyboardPad > 0 ? { paddingBottom: keyboardPad + 120 } : null,
           ]}
           keyboardShouldPersistTaps="handled">

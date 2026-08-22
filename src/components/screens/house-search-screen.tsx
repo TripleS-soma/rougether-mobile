@@ -19,6 +19,7 @@ import {
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { assetSource, isCdnKey } from '@/resources/asset';
 
@@ -146,6 +147,7 @@ export function HouseSearchScreen({
   onCreate,
 }: HouseSearchScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const headerInset = useHeaderInsetStyle();
@@ -263,7 +265,7 @@ export function HouseSearchScreen({
       <FlatList
         data={loading || loadError ? NO_HOUSES : filtered}
         keyExtractor={(h) => String(h.id)}
-        contentContainerStyle={styles.body}
+        contentContainerStyle={[styles.body, column]}
         ItemSeparatorComponent={ListGap}
         ListHeaderComponent={
           <View style={styles.headerBlock}>

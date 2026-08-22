@@ -6,6 +6,7 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 export type SoundSettings = {
@@ -43,6 +44,7 @@ export function SoundSettingsScreen({
   onBack,
 }: SoundSettingsScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
   const [settings, setSettings] = useState(initialSettings);
 
@@ -56,7 +58,7 @@ export function SoundSettingsScreen({
     <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader title="효과음" onBack={onBack} />
 
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView contentContainerStyle={[styles.body, column]}>
         <PendingNotice text="사운드 설정은 서버 준비 중이라 아직 이 기기에만 저장돼요." />
         <View style={[styles.card, { backgroundColor: t.surface }]}>
           {ROWS.map((r, idx) => (

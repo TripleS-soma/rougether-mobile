@@ -7,6 +7,7 @@ import { Loading } from '@/components/ui/loading';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import type { DeviceCalendar } from '@/lib/device-calendar';
 import type { ImportCandidate, ImportOutcome } from '@/hooks/use-calendar-import';
@@ -68,6 +69,7 @@ export function CalendarImportScreen({
   onBack,
 }: CalendarImportScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const [picked, setPicked] = useState<string[]>([]);
@@ -92,7 +94,7 @@ export function CalendarImportScreen({
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader title="캘린더 연동" onBack={onBack} />
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView contentContainerStyle={[styles.body, column]}>
         <Text style={[Typography.supporting, { color: t.textMuted }]}>
           기기 캘린더의 오늘 이후 {'→'} 30일 일정을 할 일로 가져와요. 캘린더에 쓰지 않고 읽기만
           해요.

@@ -11,6 +11,7 @@ import { useToast } from '@/components/ui/toast';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { MISSION_TYPE_RULES } from '@/constants/missions';
 import { missionCtaState } from '@/utils/mission-cta';
@@ -114,6 +115,7 @@ export function HouseMissionsScreen({
   onRemoveMissionRoutine,
 }: HouseMissionsScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
   const { show: toast } = useToast();
 
@@ -215,7 +217,9 @@ export function HouseMissionsScreen({
       {/* 나의 방(방/달력/주간회고)과 같은 언더라인 탭 — 화면 전체 목록이
           바뀌므로 '필터 칩'이 아니라 '탭'이 맞는 뜻이다. 미션이 하나도 없어도
           같이 그린다: 첫 미션을 만든 순간 탭 줄이 생겨 레이아웃이 튀지 않게. */}
-      <View style={styles.tabBar}>
+      {/* 탭 줄과 본문을 같은 폭으로 묶는다 — 한쪽만 제한하면 넓은 화면에서
+          탭 밑줄이 본문 밖으로 삐져나온다 (#725). */}
+      <View style={[styles.tabBar, column]}>
         {(
           [
             ['active', '진행 중'],
@@ -238,7 +242,7 @@ export function HouseMissionsScreen({
           );
         })}
       </View>
-      <View style={styles.body}>
+      <View style={[styles.body, column]}>
         {/* 제목은 ScreenHeader가 갖는다 (#875). 요약(#761)은 만들기 버튼과 **같은
             줄** 왼쪽에 둔다 — 제목을 헤더로 옮기면서 이 줄이 비어 버튼만 오른쪽에
             혼자 떠 있었다. */}

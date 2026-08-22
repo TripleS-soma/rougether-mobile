@@ -9,6 +9,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { type RoutineCategoryMeta, VISIBILITY_LABELS } from '@/constants/routines';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
 export type CategoryManageScreenProps = {
@@ -43,6 +44,7 @@ export function CategoryManageScreen({
   onBack,
 }: CategoryManageScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const headerInset = useHeaderInsetStyle();
@@ -86,7 +88,7 @@ export function CategoryManageScreen({
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView contentContainerStyle={[styles.body, column]}>
         {categories.length === 0 ? (
           <View style={styles.empty}>
             <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>

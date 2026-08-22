@@ -8,6 +8,7 @@ import { PawPictogram } from '@/components/ui/pictograms';
 import { Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
 export type SignupScreenProps = {
@@ -25,6 +26,7 @@ export type SignupScreenProps = {
  */
 export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const emph = useFontEmphasis();
   const Typography = useTypography();
   const headerInset = useHeaderInsetStyle();
@@ -123,7 +125,8 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
         <View style={styles.backBtn} />
       </View>
 
-      <View style={styles.intro}>
+      {/* 스크롤 컨테이너가 없어 블록마다 묶는다. 헤더는 풀폭 유지 (#725). */}
+      <View style={[styles.intro, column]}>
         <View style={styles.introTitleRow}>
           <Text style={[Typography.h2, { color: t.text }]}>마을의 새 친구를 환영해요</Text>
           <PawPictogram size={18} />
@@ -135,14 +138,15 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
 
       {/* The backend has no signup endpoint yet — be honest instead of a fake
           flow that bounces back to login. */}
-      <View style={[styles.notice, { backgroundColor: t.warningSoft, borderColor: t.warning }]}>
+      <View
+        style={[styles.notice, column, { backgroundColor: t.warningSoft, borderColor: t.warning }]}>
         <Text style={[Typography.supporting, styles.noticeText, { color: t.text }]}>
           이메일 가입은 준비 중이에요. 지금은 로그인 화면에서 이메일 칸을 비우고 로그인하면 새
           계정이 만들어져요.
         </Text>
       </View>
 
-      <View style={[styles.card, { backgroundColor: t.surface }]}>
+      <View style={[styles.card, column, { backgroundColor: t.surface }]}>
         <Field
           label="닉네임"
           placeholder="2~10자 닉네임"
@@ -305,7 +309,7 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
         />
       </View>
 
-      <View style={[styles.card, { backgroundColor: t.surface }]}>
+      <View style={[styles.card, column, { backgroundColor: t.surface }]}>
         <Pressable
           onPress={() => toggleAll(!agreeAll)}
           accessibilityRole="checkbox"
@@ -358,7 +362,7 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
         </Text>
       </Pressable>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, column]}>
         <Text style={[Typography.supporting, styles.msg, { color: t.textMuted }]}>
           이미 계정이 있으신가요?{' '}
         </Text>
