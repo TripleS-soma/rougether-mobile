@@ -163,7 +163,7 @@ export function HouseOrderDots({
     // 도트만으로는 터치 영역이 6px이라 잡을 수가 없다 — 행 높이로 확보한다.
     <View
       style={styles.row}
-      accessibilityLabel={canReorder ? '집 순서 — 꾹 눌러 좌우로 끌면 순서가 바뀌어요' : undefined}
+      accessibilityLabel={canReorder ? '집 순서. 꾹 눌러 좌우로 끌면 순서가 바뀌어요' : undefined}
       // collapsable={false}: 안드로이드 뷰 평탄화로 사라지면 제스처가 붙을
       // 대상이 없어진다 (친구 방 플링과 같은 규칙).
       collapsable={false}>

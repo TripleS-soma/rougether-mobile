@@ -194,7 +194,7 @@ function WeekdayRow({ label, done, total }: { label: string; done: number; total
       />
       {/* 직접 라벨 — 채움색 대비가 3:1 미만이라 색만으로 값을 읽게 두지 않는다. */}
       <Text style={[Typography.supporting, styles.statValue, { color: t.textMuted }]}>
-        {total > 0 ? `${done}/${total}` : '—'}
+        {total > 0 ? `${done}/${total}` : '-'}
       </Text>
     </View>
   );

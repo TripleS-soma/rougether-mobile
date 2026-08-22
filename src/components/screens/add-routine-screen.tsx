@@ -192,7 +192,7 @@ export function AddRoutineScreen({
   const submit = () => {
     if (!canSubmit) {
       if (!categoryValid) {
-        setFormError('카테고리가 필요해요 — 먼저 하나 만들어주세요.');
+        setFormError('카테고리가 필요해요. 먼저 하나 만들어주세요.');
         Keyboard.dismiss();
         setShowCategoryManager(true);
       } else if (title.trim().length === 0) {
@@ -570,7 +570,7 @@ export function AddRoutineScreen({
         <ConfirmDialog
           visible={confirmDelete}
           title="루틴 삭제"
-          body={`‘${editRoutine.title}’ 루틴을 삭제할까요?\n삭제하면 지난 수행 기록도 함께 사라져요.`}
+          body={`“${editRoutine.title}” 루틴을 삭제할까요?\n삭제하면 지난 수행 기록도 함께 사라져요.`}
           confirmLabel="삭제"
           destructive
           onConfirm={() => {

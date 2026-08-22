@@ -144,7 +144,7 @@ export function InviteFriendsScreen({
             <Text style={sectionTitle}>내 초대코드</Text>
             <View style={[styles.card, { backgroundColor: t.surface }]}>
               <Text style={[Typography.h1, styles.code, { color: t.text }]}>
-                {info?.code ?? '—'}
+                {info?.code ?? '-'}
               </Text>
               <View style={styles.codeActions}>
                 <ScalePressable
@@ -225,7 +225,7 @@ export function InviteFriendsScreen({
                         Typography.label,
                         { color: code.trim() && !redeeming ? t.onPrimary : t.textMuted },
                       ]}>
-                      {redeeming ? '확인 중…' : '사용하기'}
+                      {redeeming ? '확인 중...' : '사용하기'}
                     </Text>
                   </ScalePressable>
                   <Text style={[Typography.supporting, { color: t.textMuted }]}>

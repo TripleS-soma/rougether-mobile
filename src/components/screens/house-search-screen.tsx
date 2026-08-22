@@ -324,7 +324,7 @@ export function HouseSearchScreen({
                 ) : null}
                 {pendingNotice ? (
                   <Text style={[Typography.supporting, styles.msg, { color: t.primaryText }]}>
-                    입주 신청을 보냈어요 — 방장이 승인하면 집에 들어가요.
+                    입주 신청을 보냈어요. 방장이 승인하면 집에 들어가요.
                   </Text>
                 ) : null}
 
@@ -342,7 +342,7 @@ export function HouseSearchScreen({
                     {preview.info.requiresApproval ? (
                       // 승인형 코드 (#648) — '입주' 탭 후 pending 안내와 기대를 맞춘다.
                       <Text style={[Typography.supporting, { color: t.warningText }]}>
-                        방장 승인 후 입장하는 집이에요 — 신청을 보내고 기다리게 돼요.
+                        방장 승인 후 입장하는 집이에요. 신청을 보내고 기다리게 돼요.
                       </Text>
                     ) : null}
                     <View style={styles.previewActions}>

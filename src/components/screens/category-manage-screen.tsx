@@ -129,7 +129,7 @@ export function CategoryManageScreen({
                       <Text style={[Typography.body, { color: t.text }]}>{c.name}</Text>
                       <Text style={[Typography.supporting, { color: t.textMuted }]}>
                         {moving
-                          ? '순서 이동 중 — 완료를 누르면 끝나요'
+                          ? '순서 이동 중이에요. 완료를 누르면 끝나요'
                           : VISIBILITY_LABELS[c.visibility]}
                       </Text>
                     </View>
@@ -227,7 +227,7 @@ export function CategoryManageScreen({
         <ConfirmDialog
           visible
           title="루틴을 먼저 정리해주세요"
-          body={`‘${blockedDelete.name}’ 카테고리에 루틴 ${inUseCounts[blockedDelete.id]?.routines ?? 0}개가 있어요.\n루틴을 삭제하거나 다른 카테고리로 옮긴 뒤 삭제할 수 있어요.`}
+          body={`“${blockedDelete.name}” 카테고리에 루틴 ${inUseCounts[blockedDelete.id]?.routines ?? 0}개가 있어요.\n루틴을 삭제하거나 다른 카테고리로 옮긴 뒤 삭제할 수 있어요.`}
           confirmLabel="확인"
           confirmAccessibilityLabel="삭제 불가 확인"
           cancelLabel={null}
@@ -245,7 +245,7 @@ export function CategoryManageScreen({
             </Text>
             <Text style={[Typography.body, styles.confirmText, { color: t.textMuted }]}>
               {(inUseCounts[pendingDelete.id]?.todos ?? 0) > 0
-                ? `할 일 ${inUseCounts[pendingDelete.id]?.todos}개가 남아 있어요 — 미분류로 남기거나 함께 삭제할 수 있어요.\n`
+                ? `할 일 ${inUseCounts[pendingDelete.id]?.todos}개가 남아 있어요. 미분류로 남기거나 함께 삭제할 수 있어요.\n`
                 : ''}
               완전 삭제는 이 카테고리 루틴의 과거 수행 기록까지 지워져 되돌릴 수 없어요.
             </Text>

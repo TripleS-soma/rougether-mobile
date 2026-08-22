@@ -53,7 +53,7 @@ describe('WeeklyReportPanel', () => {
     // 월·수 둘 다 4/1이라 같은 값이 두 칸에 나온다.
     expect(getAllByText('4/5')).toHaveLength(2);
     // 서버가 안 준 요일(화·목·금·토)은 0/0이 아니라 '—'.
-    expect(getAllByText('—')).toHaveLength(4);
+    expect(getAllByText('-')).toHaveLength(4);
     // 스크린리더에도 같은 값이 간다.
     expect(getByLabelText('일요일 7개 중 0개 완료')).toBeTruthy();
     expect(getByLabelText('토요일 예정 없음')).toBeTruthy();

@@ -286,7 +286,7 @@ export function GachaScreen({
           <View style={styles.loadingBlock}>
             <Loading />
             <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
-              뽑기 목록 불러오는 중…
+              뽑기 목록 불러오는 중...
             </Text>
           </View>
         ) : null}
@@ -440,7 +440,7 @@ export function GachaScreen({
           {phase === 'charging' ? (
             <>
               <ChargingBox machine={box} />
-              <Text style={[Typography.label, styles.overlayText]}>뽑는 중…</Text>
+              <Text style={[Typography.label, styles.overlayText]}>뽑는 중...</Text>
             </>
           ) : phase === 'burst' ? (
             <BurstOverlay color={burstColor} strong={burstStrong} />

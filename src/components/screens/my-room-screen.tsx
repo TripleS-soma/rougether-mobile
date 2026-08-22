@@ -1271,7 +1271,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                   <View style={styles.stateBlock}>
                     <Loading />
                     <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                      불러오는 중…
+                      불러오는 중...
                     </Text>
                   </View>
                 ) : null}
