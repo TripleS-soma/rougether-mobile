@@ -1208,10 +1208,6 @@ type BuyProps = {
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 /**
- * 방금 보유로 바뀐 타일의 팝 (#453) — false→true 전환에서만 눌렸다 튀어오른다.
- * 구매 확인 모달이 닫히며 카탈로그의 해당 카드가 "내 것이 됐다"고 답한다.
- */
-/**
  * 그리드 폭에 맞춰 열 수를 정한다 (#725).
  *
  * 종전에는 타일이 `flexBasis: '22%'`라 **폭과 무관하게 항상 4열**이었다. 폰에서는
@@ -1253,6 +1249,10 @@ function useTileWidthStyle() {
   return width == null ? null : { flexBasis: width };
 }
 
+/**
+ * 방금 보유로 바뀐 타일의 팝 (#453) — false→true 전환에서만 눌렸다 튀어오른다.
+ * 구매 확인 모달이 닫히며 카탈로그의 해당 카드가 "내 것이 됐다"고 답한다.
+ */
 function useOwnedPopStyle(isOwned: boolean) {
   // jest의 useSharedValue는 렌더마다 새 객체 — useRef로 앵커 (#539 계약).
   const scale = useRef(useSharedValue(1)).current;
