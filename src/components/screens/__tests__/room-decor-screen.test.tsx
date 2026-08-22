@@ -1,4 +1,4 @@
-import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor, within } from '@testing-library/react-native';
 import { BackHandler, StyleSheet } from 'react-native';
 import { State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
@@ -1023,5 +1023,42 @@ describe('RoomDecorScreen — 보유중 필터', () => {
       const { getByLabelText } = await render(<RoomDecorScreen initialItems={[]} {...CATALOGS} />);
       expect(getByLabelText('가구 탭').props.accessibilityState.selected).toBe(true);
     });
+  });
+});
+
+describe('RoomDecorScreen — 카탈로그 열 수 (#725)', () => {
+  /** 그리드에 레이아웃 폭을 쏘고, 타일이 실제로 받은 flexBasis를 돌려준다. */
+  const basisAt = async (width: number | null) => {
+    const { getAllByTestId } = await render(<RoomDecorScreen initialItems={[]} />);
+    if (width != null) {
+      // act로 감싸야 setState가 플러시된다 (위 layoutCanvas와 같은 이유).
+      await act(async () => {
+        fireEvent(getAllByTestId('decor-grid')[0], 'layout', {
+          nativeEvent: { layout: { width, height: 400 } },
+        });
+      });
+    }
+    // 레이아웃 뒤에는 다시 찾는다 — 상태가 바뀌며 리렌더돼 앞의 인스턴스는 낡는다.
+    // 타일은 그리드의 직계 버튼 — 라벨은 보유 여부에 따라 달라져 role로 집는다.
+    const tile = within(getAllByTestId('decor-grid')[0]).getAllByRole('button')[0];
+    return StyleSheet.flatten(tile.props.style)?.flexBasis;
+  };
+
+  it('레이아웃 전에는 기존 4열 퍼센트 그대로 — 폰 첫 프레임이 안 튄다', async () => {
+    expect(await basisAt(null)).toBe('22%');
+  });
+
+  it('폰 폭이면 4열', async () => {
+    // 390 화면에서 패널 여백·패딩을 뺀 326. (326 - 간격 3칸) / 4
+    expect(await basisAt(326)).toBeCloseTo((326 - 3 * 8) / 4, 5);
+  });
+
+  it('태블릿 폭이면 상한인 8열에서 멈춘다', async () => {
+    // 폭만 보면 12열이 들어가지만 MAX_COLUMNS가 8에서 끊는다.
+    expect(await basisAt(960)).toBeCloseTo((960 - 7 * 8) / 8, 5);
+  });
+
+  it('아주 좁아도 4열 밑으로는 안 내려간다', async () => {
+    expect(await basisAt(200)).toBeCloseTo((200 - 3 * 8) / 4, 5);
   });
 });

@@ -23,8 +23,6 @@ const EXEMPT: Record<string, string> = {
   // 스스로 정하므로 네이티브 쪽에서 묶으면 오히려 이중 여백이 된다.
   'policy-viewer-screen.tsx': 'WebView — 문서가 자기 레이아웃을 가진다',
   'policy-viewer-screen.web.tsx': 'WebView — 문서가 자기 레이아웃을 가진다',
-  // 캔버스는 묶고 카탈로그는 넓히는 별도 처리가 필요해 후속 PR로 뺐다 (#725).
-  'room-decor-screen.tsx': '캔버스/카탈로그 분리 처리 — 후속 PR',
 };
 
 describe('화면 폭 제한 위생 (#725)', () => {
