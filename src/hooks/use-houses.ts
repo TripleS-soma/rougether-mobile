@@ -263,19 +263,29 @@ export function useHouses() {
       const list = await fetchHouses(next, SEARCH_PAGE_SIZE, true);
       searchPageRef.current = next;
       setSearchHouses((prev) => {
-        const seen = new Set(prev.map((h) => h.id));
         // 같은 집이 두 번 오면(생성/삭제로 페이지가 밀릴 때) 중복 키가 된다.
-        const added = (list.items ?? [])
-          .map((h, i) => toSearchHouse(h, prev.length + i))
-          .filter((h) => !seen.has(h.id));
+        // seen을 돌면서 갱신해 **한 페이지 안의 중복**까지 같이 막는다.
+        const seen = new Set(prev.map((h) => h.id));
+        const added: SearchHouse[] = [];
+        for (const h of list.items ?? []) {
+          // index는 최종 목록에서의 자리 — 아이콘·배경이 여기서 갈린다.
+          const mapped = toSearchHouse(h, prev.length + added.length);
+          if (seen.has(mapped.id)) continue;
+          seen.add(mapped.id);
+          added.push(mapped);
+        }
         const merged = [...prev, ...added];
         setSearchHasNext(hasNextPage(list, merged.length));
         return merged;
       });
+    } catch {
+      // 이 훅의 다른 액션과 같은 처리 — 조용히 멈추면 스피너만 사라져
+      // "왜 안 나오지?"가 된다. hasNext는 그대로라 다시 스크롤하면 재시도된다.
+      toast('집 목록을 더 불러오지 못했어요. 잠시 후 다시 시도해 주세요.', 'error');
     } finally {
       setSearchLoadingMore(false);
     }
-  }, [searchHasNext, searchLoadingMore]);
+  }, [searchHasNext, searchLoadingMore, toast]);
 
   /** 내 집 목록 로드 사이클 (스피너 → 데이터 | 에러) — 초기 로드·재시도 공용. */
   const loadMyHouses = useCallback(async () => {
