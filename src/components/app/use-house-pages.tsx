@@ -80,6 +80,9 @@ export function useHousePages({
     HousesData,
     | 'houses'
     | 'searchHouses'
+    | 'searchHasNext'
+    | 'searchLoadingMore'
+    | 'loadMoreSearch'
     | 'loading'
     | 'searchLoading'
     | 'error'
@@ -154,6 +157,9 @@ export function useHousePages({
   const {
     houses,
     searchHouses,
+    searchHasNext,
+    searchLoadingMore,
+    loadMoreSearch,
     loading: housesLoading,
     searchLoading,
     error: housesError,
@@ -459,6 +465,11 @@ export function useHousePages({
           clearPendingInviteCode();
         }}
         houses={searchHouses}
+        hasNext={searchHasNext}
+        loadingMore={searchLoadingMore}
+        onLoadMore={() => {
+          void loadMoreSearch();
+        }}
         loading={searchLoading}
         loadError={searchError}
         onRetry={retrySearch}

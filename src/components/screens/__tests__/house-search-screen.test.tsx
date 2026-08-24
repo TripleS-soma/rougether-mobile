@@ -440,3 +440,29 @@ describe('HouseSearchScreen — 참여 전 미리보기 (#328)', () => {
     expect(ui.queryByLabelText('이 집에 참여하기')).toBeNull();
   });
 });
+
+describe('HouseSearchScreen — 무한 스크롤·검색 범위 (#975)', () => {
+  const HOUSES = RECOMMENDED_HOUSES;
+
+  it('검색 중이고 더 받을 게 남았으면 결과가 부분적임을 밝힌다', async () => {
+    // 서버에 텍스트 검색이 없어 필터가 클라이언트다 — "없어요"로 보이면
+    // 정말 없는 줄 안다.
+    const { getByPlaceholderText, findByText } = await render(
+      <ToastProvider>
+        <HouseSearchScreen houses={HOUSES} hasNext />
+      </ToastProvider>,
+    );
+    await fireEvent.changeText(getByPlaceholderText('집 이름, 태그로 검색'), '아침');
+    expect(await findByText(/지금까지 불러온 집에서 찾은 결과예요/)).toBeTruthy();
+  });
+
+  it('더 받을 게 없으면 그 고지를 띄우지 않는다', async () => {
+    const { getByPlaceholderText, queryByText } = await render(
+      <ToastProvider>
+        <HouseSearchScreen houses={HOUSES} />
+      </ToastProvider>,
+    );
+    await fireEvent.changeText(getByPlaceholderText('집 이름, 태그로 검색'), '아침');
+    expect(queryByText(/지금까지 불러온 집에서 찾은 결과예요/)).toBeNull();
+  });
+});

@@ -62,12 +62,29 @@ import type {
   SearchHouse,
 } from '@/components/screens/house-search-screen';
 
+/** 집 탐색 한 페이지 크기 (#975). */
+const SEARCH_PAGE_SIZE = 30;
+
+/**
+ * 다음 페이지가 남았는지. `totalElements`가 정본이고, 서버가 그걸 안 주는
+ * 경우에만 "받은 개수가 페이지를 꽉 채웠나"로 추정한다.
+ */
+function hasNextPage(res: { items?: unknown[]; totalElements?: number }, loaded: number) {
+  if (typeof res.totalElements === 'number') return loaded < res.totalElements;
+  return (res.items?.length ?? 0) >= SEARCH_PAGE_SIZE;
+}
+
 export function useHouses() {
   const [houses, setHouses] = useState<House[]>([]);
   // Mission ids I contributed to today (session-scoped — the list API doesn't
   // expose per-member daily contribution, so this seeds from contribute calls).
   const [contributedMissionIds, setContributedMissionIds] = useState<Set<number>>(new Set());
   const [searchHouses, setSearchHouses] = useState<SearchHouse[]>([]);
+  /** 다음 페이지가 남았는지 (#975) — 목록 끝에서 이어 붙일지 판단. */
+  const [searchHasNext, setSearchHasNext] = useState(false);
+  const [searchLoadingMore, setSearchLoadingMore] = useState(false);
+  /** 마지막으로 받은 페이지 번호. 무한 스크롤이 여기서 이어간다. */
+  const searchPageRef = useRef(0);
   const [loading, setLoading] = useState(true);
   const [searchLoading, setSearchLoading] = useState(true);
   // 초기 로드 실패 플래그 (#549) — 빈 상태('집 없음' 가입 유도)로 위장하지
@@ -225,9 +242,50 @@ export function useHouses() {
 
   const reloadSearch = useCallback(async () => {
     // excludeJoined — 본인 ACTIVE(소유 포함) 집은 서버가 걸러 준다 (#578).
-    const list = await fetchHouses(0, 30, true);
-    setSearchHouses((list.items ?? []).map((h, i) => toSearchHouse(h, i)));
+    const list = await fetchHouses(0, SEARCH_PAGE_SIZE, true);
+    const items = (list.items ?? []).map((h, i) => toSearchHouse(h, i));
+    searchPageRef.current = 0;
+    setSearchHouses(items);
+    setSearchHasNext(hasNextPage(list, items.length));
   }, []);
+
+  /**
+   * 다음 페이지를 이어 붙인다 (#975) — 종전엔 30개에서 조용히 잘렸다.
+   *
+   * `toSearchHouse`의 index가 아이콘·배경색을 돌리므로 **이미 쌓인 개수만큼
+   * 밀어서** 넘긴다. 0부터 다시 세면 페이지 경계에서 같은 아이콘이 붙는다.
+   */
+  const loadMoreSearch = useCallback(async () => {
+    if (searchLoadingMore || !searchHasNext) return;
+    setSearchLoadingMore(true);
+    try {
+      const next = searchPageRef.current + 1;
+      const list = await fetchHouses(next, SEARCH_PAGE_SIZE, true);
+      searchPageRef.current = next;
+      setSearchHouses((prev) => {
+        // 같은 집이 두 번 오면(생성/삭제로 페이지가 밀릴 때) 중복 키가 된다.
+        // seen을 돌면서 갱신해 **한 페이지 안의 중복**까지 같이 막는다.
+        const seen = new Set(prev.map((h) => h.id));
+        const added: SearchHouse[] = [];
+        for (const h of list.items ?? []) {
+          // index는 최종 목록에서의 자리 — 아이콘·배경이 여기서 갈린다.
+          const mapped = toSearchHouse(h, prev.length + added.length);
+          if (seen.has(mapped.id)) continue;
+          seen.add(mapped.id);
+          added.push(mapped);
+        }
+        const merged = [...prev, ...added];
+        setSearchHasNext(hasNextPage(list, merged.length));
+        return merged;
+      });
+    } catch {
+      // 이 훅의 다른 액션과 같은 처리 — 조용히 멈추면 스피너만 사라져
+      // "왜 안 나오지?"가 된다. hasNext는 그대로라 다시 스크롤하면 재시도된다.
+      toast('집 목록을 더 불러오지 못했어요. 잠시 후 다시 시도해 주세요.', 'error');
+    } finally {
+      setSearchLoadingMore(false);
+    }
+  }, [searchHasNext, searchLoadingMore, toast]);
 
   /** 내 집 목록 로드 사이클 (스피너 → 데이터 | 에러) — 초기 로드·재시도 공용. */
   const loadMyHouses = useCallback(async () => {
@@ -631,6 +689,9 @@ export function useHouses() {
       contributedMissionIds,
       // 참여 중인 집은 서버 excludeJoined 필터가 이미 걸렀다 (#578).
       searchHouses,
+      searchHasNext,
+      searchLoadingMore,
+      loadMoreSearch,
       loading,
       searchLoading,
       error,
@@ -666,6 +727,9 @@ export function useHouses() {
       houses,
       contributedMissionIds,
       searchHouses,
+      searchHasNext,
+      searchLoadingMore,
+      loadMoreSearch,
       loading,
       searchLoading,
       error,
