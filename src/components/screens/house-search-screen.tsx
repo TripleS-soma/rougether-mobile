@@ -92,6 +92,11 @@ export type HouseSearchScreenProps = RoomCatalogProps & {
   houses?: SearchHouse[];
   /** True while the browse list is loading. */
   loading?: boolean;
+  /** 다음 페이지가 남았는지 (#975) — 끝에 닿으면 이어 붙인다. */
+  hasNext?: boolean;
+  /** 다음 페이지를 받는 중 — 푸터 스피너. */
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
   /** True when the browse list failed to load (#549) — 빈 결과와 구분해 표시. */
   loadError?: boolean;
   /** Re-run the failed browse-list load (다시 시도 button). */
@@ -131,6 +136,9 @@ export type HouseSearchScreenProps = RoomCatalogProps & {
 export function HouseSearchScreen({
   houses = [],
   loading = false,
+  hasNext = false,
+  loadingMore = false,
+  onLoadMore,
   loadError = false,
   onRetry,
   onBack,
@@ -267,6 +275,11 @@ export function HouseSearchScreen({
         keyExtractor={(h) => String(h.id)}
         contentContainerStyle={[styles.body, column]}
         ItemSeparatorComponent={ListGap}
+        // 검색 중에는 이어 붙이지 않는다 — 필터가 클라이언트라 다음 페이지를
+        // 받아봐야 화면에 안 걸리는 게 대부분이고, 스크롤이 짧아 끝에 붙어 있어
+        // 계속 요청이 나간다 (#975).
+        onEndReached={query.length === 0 && hasNext && !loadingMore ? onLoadMore : undefined}
+        onEndReachedThreshold={0.4}
         ListHeaderComponent={
           <View style={styles.headerBlock}>
             {/* Invite code */}
@@ -504,15 +517,27 @@ export function HouseSearchScreen({
           );
         }}
         ListFooterComponent={
-          <Pressable
-            onPress={onCreate}
-            accessibilityRole="button"
-            style={[styles.createBtn, { borderColor: t.disabledBg }]}>
-            <View style={styles.iconLabelRow}>
-              <CrownPictogram size={14} />
-              <Text style={[Typography.label, { color: t.textMuted }]}>새 집 만들기</Text>
-            </View>
-          </Pressable>
+          <>
+            {/* 다음 페이지 로딩 (#975). 끝에 닿으면 알아서 붙으므로 버튼이 없다. */}
+            {loadingMore ? <Loading style={styles.loadingMore} /> : null}
+            {/* 서버에 텍스트 검색이 없어 검색은 **불러온 집** 안에서만 걸린다
+                (#975). 목록이 아직 남아 있는데 검색 중이면 그 사실을 밝힌다 —
+                "없어요"로 보이면 정말 없는 줄 안다. */}
+            {query.length > 0 && hasNext ? (
+              <Text style={[Typography.supporting, styles.searchScope, { color: t.textMuted }]}>
+                지금까지 불러온 집에서 찾은 결과예요. 검색어를 지우고 더 내려보면 집이 더 나와요.
+              </Text>
+            ) : null}
+            <Pressable
+              onPress={onCreate}
+              accessibilityRole="button"
+              style={[styles.createBtn, { borderColor: t.disabledBg }]}>
+              <View style={styles.iconLabelRow}>
+                <CrownPictogram size={14} />
+                <Text style={[Typography.label, { color: t.textMuted }]}>새 집 만들기</Text>
+              </View>
+            </Pressable>
+          </>
         }
       />
       {/* 참여 전 집 미리보기 모달 (#328) — isFull은 참여 비활성, isMember는 안내만. */}
@@ -712,6 +737,8 @@ const styles = StyleSheet.create({
   },
   listGap: { height: Spacing.two },
   loading: { paddingVertical: Spacing.six },
+  loadingMore: { paddingVertical: Spacing.three },
+  searchScope: { textAlign: 'center', paddingHorizontal: Spacing.three },
   errorBlock: {
     alignItems: 'center',
     paddingVertical: Spacing.four,
