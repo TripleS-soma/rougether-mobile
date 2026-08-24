@@ -109,7 +109,9 @@ export function SoundSettingsScreen({
                 <Pressable
                   key={opt.id}
                   onPress={() => apply({ ...settings, hapticStrength: opt.id })}
-                  accessibilityRole="button"
+                  // 다크 모드 칩과 같은 role — 4지선다에서 하나만 고르는 배타적
+                  // 선택이라 button이 아니라 radio가 맞다 (settings-screen과 동일).
+                  accessibilityRole="radio"
                   accessibilityState={{ selected: active }}
                   accessibilityLabel={`햅틱 ${opt.label}`}
                   style={[
