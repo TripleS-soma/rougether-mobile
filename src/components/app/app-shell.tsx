@@ -61,7 +61,16 @@ export type AppShellProps = {
   onReplayOnboarding?: () => void;
   /** 온보딩을 방금 마쳤음 — 온보딩 미션 체인을 시작한다 (#571, 구 코치마크 #351). */
   startMissions?: boolean;
+  /**
+   * 마스터 `/characters` 프레임 맵. 친구 방이 친구 캐릭터를 **내 방과 같은 그림**으로
+   * 그리는 데 쓴다 (#968) — 친구 방 응답에는 `poses[]`가 없어 앱이 가진 마스터가
+   * 유일한 출처다. 루트가 이미 받아둔 값이라 추가 요청은 없다.
+   */
+  characterFrames?: Partial<Record<CharacterId, string[]>>;
 };
+
+/** 프레임 맵 기본값 — 인라인 `{}`은 매 렌더 새 객체라 소비자의 메모가 깨진다. */
+const NO_CHARACTER_FRAMES: Partial<Record<CharacterId, string[]>> = {};
 
 /** 각 미션의 진입 화면 (#571) — 배너 탭·완료 시트 '하러 가기'의 목적지. */
 const MISSION_TARGET_SCREEN: Record<OnboardingMissionStepId, Screen> = {
@@ -91,6 +100,7 @@ export function AppShell({
   characterId = DEFAULT_CHARACTER_ID,
   onReplayOnboarding,
   startMissions = false,
+  characterFrames = NO_CHARACTER_FRAMES,
 }: AppShellProps) {
   // 집 하늘 연출용 현재 비 여부 (#360) — 서울 고정, 30분 캐시.
   const { raining } = useWeather();
@@ -399,6 +409,7 @@ export function AppShell({
   const { visitFriend, subScreen: friendRoomSubScreen } = useFriendVisit({
     setScreen,
     catalogue,
+    characterFrames,
     arrangedHouses,
     houseIndex,
     screen,

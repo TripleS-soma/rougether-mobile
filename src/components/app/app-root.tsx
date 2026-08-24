@@ -144,6 +144,7 @@ export function AppRoot() {
   return (
     <AppShell
       characterId={characterId}
+      characterFrames={characterFrames}
       startMissions={justOnboarded}
       onReplayOnboarding={replayOnboarding}
     />
