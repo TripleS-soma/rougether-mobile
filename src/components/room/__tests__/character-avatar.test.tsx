@@ -39,17 +39,25 @@ describe('CharacterAvatar', () => {
     expect(invalid.queryByTestId('cdn-animation')).toBeNull();
   });
 
-  it('prefetches every frame once, but not for a single-frame set', async () => {
+  it('prefetchFrames를 켜면 나머지 프레임을 미리 받는다 (단일 프레임은 제외)', async () => {
     const prefetch = jest.spyOn(Image, 'prefetch').mockResolvedValue(true);
 
-    await render(<CharacterAvatar characterId="panda" frames={FRAMES} />);
+    await render(<CharacterAvatar characterId="panda" frames={FRAMES} prefetchFrames />);
     expect(prefetch).toHaveBeenCalledTimes(1);
     expect(prefetch.mock.calls[0][0]).toHaveLength(3);
     expect(String(prefetch.mock.calls[0][0])).toContain('idle.webp');
 
     prefetch.mockClear();
     // One frame has nothing to warm besides what <Image> already loads.
-    await render(<CharacterAvatar characterId="panda" frames={[FRAMES[0]]} />);
+    await render(<CharacterAvatar characterId="panda" frames={[FRAMES[0]]} prefetchFrames />);
+    expect(prefetch).not.toHaveBeenCalled();
+  });
+
+  it('기본값에서는 프리페치하지 않는다 — 포즈를 못 넘기는 화면 (#970)', async () => {
+    // 친구 방·온보딩 캐러셀은 첫 장만 보여줄 수 있는데도 전부 받고 있었다
+    // (고양이 기준 친구 방 1회 방문에 1.8MB).
+    const prefetch = jest.spyOn(Image, 'prefetch').mockResolvedValue(true);
+    await render(<CharacterAvatar characterId="panda" frames={FRAMES} />);
     expect(prefetch).not.toHaveBeenCalled();
   });
 });

@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { fireEvent, render } from '@testing-library/react-native';
 
 import { Room } from '@/components/room/room';
@@ -128,5 +129,24 @@ describe('Room', () => {
     );
     expect(queryByTestId('cdn-animation')).toBeNull();
     expect(getByLabelText('판다')).toBeTruthy();
+  });
+
+  // 포즈를 넘길 수 있는 화면에서만 다음 장을 미리 받는다 (#970).
+  describe('포즈 프레임 프리페치', () => {
+    const FRAMES = ['characters/cat/a.webp', 'characters/cat/b.webp', 'characters/cat/c.webp'];
+
+    it('interactiveCharacter면 나머지 프레임을 미리 받는다', async () => {
+      const prefetch = jest.spyOn(Image, 'prefetch').mockResolvedValue(true);
+      await render(<Room characterId="cat" characterFrames={FRAMES} interactiveCharacter />);
+      expect(prefetch).toHaveBeenCalledTimes(1);
+      prefetch.mockRestore();
+    });
+
+    it('아니면 받지 않는다 — 친구 방은 첫 장만 보여줄 수 있다', async () => {
+      const prefetch = jest.spyOn(Image, 'prefetch').mockResolvedValue(true);
+      await render(<Room characterId="cat" characterFrames={FRAMES} />);
+      expect(prefetch).not.toHaveBeenCalled();
+      prefetch.mockRestore();
+    });
   });
 });
