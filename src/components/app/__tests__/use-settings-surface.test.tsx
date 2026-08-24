@@ -4,6 +4,7 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { useSettingsSurface } from '@/components/app/use-settings-surface';
 import { ToastProvider } from '@/components/ui/toast';
 import { AuthProvider } from '@/hooks/use-auth';
+import { DEFAULT_HAPTIC_STRENGTH, getHapticStrength, setHapticStrength } from '@/utils/haptics';
 import { BrandThemeProvider } from '@/hooks/use-tokens';
 
 const PROFILE = { nickname: '준서', bio: '', characterId: 'cat' as const, onSave: jest.fn() };
@@ -12,7 +13,7 @@ const PROFILE = { nickname: '준서', bio: '', characterId: 'cat' as const, onSa
  * 훅이 만든 서브화면을 그대로 렌더한다 — 토스트 로직이 훅 안에 있고 핸들러는
  * 그 화면에만 넘어가므로, 실제로 눌러야 검증이 된다.
  */
-function Harness({ screen }: { screen: 'theme' | 'font' }) {
+function Harness({ screen }: { screen: 'theme' | 'font' | 'sound' }) {
   const { subScreen } = useSettingsSurface({
     screen,
     setScreen: jest.fn(),
@@ -21,7 +22,7 @@ function Harness({ screen }: { screen: 'theme' | 'font' }) {
   return <>{subScreen}</>;
 }
 
-const show = (screen: 'theme' | 'font') =>
+const show = (screen: 'theme' | 'font' | 'sound') =>
   render(
     <AuthProvider>
       <BrandThemeProvider>
@@ -60,5 +61,45 @@ describe('폰트·테마 변경 안내 (#972)', () => {
     );
     await fireEvent.press(getByLabelText('포근 테마'));
     await waitFor(() => expect(queryByText(/적용했어요/)).toBeNull());
+  });
+});
+
+describe('햅틱 세기 마이그레이션 (#974)', () => {
+  beforeEach(async () => {
+    await AsyncStorage.clear();
+    setHapticStrength(DEFAULT_HAPTIC_STRENGTH);
+  });
+
+  /** 종전 저장 형태 — `haptics: boolean`. */
+  const seedLegacy = (haptics: boolean) =>
+    AsyncStorage.setItem(
+      'rougether.device-settings',
+      JSON.stringify({ sound: { effects: true, music: false, haptics } }),
+    );
+
+  it('꺼둔 사람은 끄기로 옮겨진다', async () => {
+    await seedLegacy(false);
+    await show('sound');
+    await waitFor(() => expect(getHapticStrength()).toBe('off'));
+  });
+
+  it('켜둔 사람은 보통으로 옮겨진다', async () => {
+    await seedLegacy(true);
+    await show('sound');
+    await waitFor(() => expect(getHapticStrength()).toBe('medium'));
+  });
+
+  it('새 형태로 저장돼 있으면 그 값을 그대로 쓴다', async () => {
+    await AsyncStorage.setItem(
+      'rougether.device-settings',
+      JSON.stringify({ sound: { effects: true, music: false, hapticStrength: 'heavy' } }),
+    );
+    await show('sound');
+    await waitFor(() => expect(getHapticStrength()).toBe('heavy'));
+  });
+
+  it('저장값이 없으면 기본값(보통)이다', async () => {
+    await show('sound');
+    await waitFor(() => expect(getHapticStrength()).toBe('medium'));
   });
 });
