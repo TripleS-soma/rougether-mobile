@@ -5,12 +5,15 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Icon, type IconName } from '@/components/ui/icon';
 import {
   DEFAULT_FONT_ID,
+  DEFAULT_THEME_ID,
   DEFAULT_THEME_MODE,
   FONT_OPTIONS,
+  THEME_OPTIONS,
   Radius,
   Spacing,
   displayFaceFor,
   type BrandFontId,
+  type ThemeId,
   type ThemeMode,
   typographyFor,
 } from '@/constants/theme';
@@ -41,6 +44,8 @@ export type SettingsScreenProps = ScrollRestoreProps & {
   themeMode?: ThemeMode;
   onChangeThemeMode?: (mode: ThemeMode) => void;
   /** App font choice (#382) — 행 오른쪽 현재값 표시용. */
+  /** 현재 브랜드 테마 — 행 오른쪽에 이름·색을 보인다 (#972). */
+  themeId?: ThemeId;
   fontId?: BrandFontId;
   /** Opens the 폰트 picker screen (#750). */
   onOpenFont?: () => void;
@@ -90,6 +95,7 @@ export type SettingsScreenProps = ScrollRestoreProps & {
 export const SettingsScreen = memo(function SettingsScreen({
   themeMode = DEFAULT_THEME_MODE,
   onChangeThemeMode,
+  themeId = DEFAULT_THEME_ID,
   fontId = DEFAULT_FONT_ID,
   onOpenFont,
   onOpenTheme,
@@ -120,6 +126,7 @@ export const SettingsScreen = memo(function SettingsScreen({
   // 회원탈퇴는 복구 불가 — 파괴 확인 다이얼로그 뒤에만 (#547).
   const [confirmWithdraw, setConfirmWithdraw] = useState(false);
   const currentFontName = FONT_OPTIONS.find((o) => o.id === fontId)?.name ?? '';
+  const currentTheme = THEME_OPTIONS.find((o) => o.id === themeId);
   // 서브화면(도움말·버그 제보 …)에 다녀와도 보던 자리로 (#763).
   const scrollRef = useRef<ScrollView>(null);
   const scrollRestore = useScrollRestore(scrollRef, { getInitialScrollY, onScrollY });
@@ -203,8 +210,10 @@ export const SettingsScreen = memo(function SettingsScreen({
           {/*
             테마 색상·폰트 — 선택지가 많고 실제로 적용해 봐야 아는 것들이라
             인라인 칩 대신 미리보기가 있는 별도 화면으로 (#459 → 폰트도 #750).
-            폰트는 현재 이름을 행 오른쪽에 그 얼굴로 적어 들어가지 않고도
-            확인되게 했다. 테마 색상은 화면 전체가 이미 그 색이라 생략.
+            둘 다 현재 값을 행 오른쪽에 적어 들어가지 않고도 확인되게 했다 —
+            폰트는 그 얼굴로, 테마는 이름과 그 테마 색 점으로 (#972). 종전엔
+            "화면 전체가 이미 그 색"이라며 테마만 생략했는데, 색은 보여도
+            **그게 어떤 테마인지는 알 수 없었다**(5종 중 비슷한 색이 있다).
           */}
           <View style={[styles.card, { backgroundColor: t.surface }]}>
             <Pressable
@@ -221,6 +230,18 @@ export const SettingsScreen = memo(function SettingsScreen({
                 </View>
                 <Text style={[Typography.body, { color: t.text }]}>테마 색상</Text>
               </View>
+              {/* 점은 그 테마 색 자체 — 폰트 행이 이름을 그 얼굴로 그리는 것과 같은
+                  뜻이다. 글자에 색을 입히지 않은 건 대비가 나빠지기 때문(#232). */}
+              {currentTheme ? (
+                // 점과 이름을 한 덩어리로 — 따로 두면 각자 flex 자식이 돼 점만
+                // 왼쪽으로 밀린다.
+                <View style={[styles.rowValue, styles.themeValue]}>
+                  <View style={[styles.themeDot, { backgroundColor: currentTheme.swatch }]} />
+                  <Text style={[Typography.body, { color: t.textMuted }]} numberOfLines={1}>
+                    {currentTheme.name}
+                  </Text>
+                </View>
+              ) : null}
               <Icon name="forward" size={16} color={t.textDisabled} />
             </Pressable>
             <Pressable
@@ -387,6 +408,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
+  },
+  themeValue: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  themeDot: {
+    width: 12,
+    height: 12,
+    borderRadius: Radius.pill,
+    marginRight: Spacing.one,
   },
   rowValue: {
     // 이름이 길어도 라벨을 밀지 않고 자기 자리에서 줄어든다.
