@@ -34,7 +34,7 @@ import {
   subscribePendingFriendInviteCode,
 } from '@/lib/pending-invite';
 import { pickLibraryImage } from '@/lib/pick-image';
-import { setHapticsEnabled } from '@/utils/haptics';
+import { DEFAULT_HAPTIC_STRENGTH, setHapticStrength } from '@/utils/haptics';
 
 /** 사운드 설정의 기기 보관 키 (#405) — 알림 설정은 서버로 이관됨 (#495). */
 const DEVICE_SETTINGS_KEY = 'rougether.device-settings';
@@ -163,8 +163,22 @@ export function useSettingsSurface({
     void AsyncStorage.getItem(DEVICE_SETTINGS_KEY).then((raw) => {
       if (!raw) return;
       try {
-        const saved = JSON.parse(raw) as { sound?: SoundSettings };
-        if (saved.sound) setSoundSettings((p) => ({ ...p, ...saved.sound }));
+        // 종전 저장값은 `haptics: boolean`이었다 (#586 → #974). 켜져 있던 사람은
+        // '보통', 꺼둔 사람은 '끄기'로 옮긴다 — 안 하면 저장값이 그대로 남아
+        // hapticStrength가 undefined가 되고 기본값(보통)으로 되살아난다.
+        const saved = JSON.parse(raw) as {
+          sound?: Partial<SoundSettings> & { haptics?: boolean };
+        };
+        if (saved.sound) {
+          const { haptics, ...rest } = saved.sound;
+          const migrated =
+            rest.hapticStrength ?? (haptics === undefined ? undefined : haptics ? 'medium' : 'off');
+          setSoundSettings((p) => ({
+            ...p,
+            ...rest,
+            ...(migrated ? { hapticStrength: migrated } : {}),
+          }));
+        }
       } catch {
         // 손상된 저장값은 기본값으로 무시.
       }
@@ -173,11 +187,11 @@ export function useSettingsSurface({
   const persistDeviceSettings = (sound: SoundSettings) => {
     void AsyncStorage.setItem(DEVICE_SETTINGS_KEY, JSON.stringify({ sound })).catch(() => {});
   };
-  // '햅틱 진동' 토글을 전역 게이트에 주입 (#586) — 이 이펙트가 없으면 토글이
+  // 햅틱 세기를 전역 게이트에 주입 (#586 → #974) — 이 이펙트가 없으면 설정이
   // 저장만 되고 아무것도 제어하지 않는다(휠 틱·완료 햅틱 등 전부 무조건 발사).
   useEffect(() => {
-    setHapticsEnabled(soundSettings.haptics);
-  }, [soundSettings.haptics]);
+    setHapticStrength(soundSettings.hapticStrength ?? DEFAULT_HAPTIC_STRENGTH);
+  }, [soundSettings.hapticStrength]);
 
   // 설정 화면 콜백 — SettingsScreen이 memo라(탭 페이저로 상주, #539 후속)
   // 인라인 람다면 셸 리렌더마다 memo가 뚫린다. 전부 참조 고정.
