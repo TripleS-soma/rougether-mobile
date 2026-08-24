@@ -20,6 +20,7 @@ import {
 import { FontScreen } from '@/components/screens/font-screen';
 import { ThemeScreen } from '@/components/screens/theme-screen';
 import { useToast } from '@/components/ui/toast';
+import { FONT_OPTIONS, THEME_OPTIONS, type BrandFontId, type ThemeId } from '@/constants/theme';
 import { useCalendarImport } from '@/hooks/use-calendar-import';
 import type { CharacterId } from '@/constants/characters';
 import { SUPPORT_EMAIL } from '@/constants/policy';
@@ -65,6 +66,33 @@ export function useSettingsSurface({
 }) {
   const { themeId, setThemeId, mode: themeMode, setMode: setThemeMode, fontId, setFontId } = useBrandTheme(); // prettier-ignore
   const { show: toast } = useToast();
+
+  // 폰트·테마는 적용돼도 화면이 조용히 바뀔 뿐이라 "눌린 건가?" 싶다 — 바뀐
+  // 이름을 토스트로 확인시킨다 (#972). **같은 값을 다시 고르면 안 띄운다**:
+  // 바뀐 게 없는데 알림이 뜨면 그게 더 헷갈린다.
+  //
+  // 문구에 `으로/로`를 쓰지 않는 건 **조사가 이름마다 달라지기 때문**이다 —
+  // "포근"은 받침이 있어 `으로`, "인디고 타이드"는 없어 `로`다. 이름을 앞에 두고
+  // 고정 조사(`를`)만 쓰면 어떤 이름이 와도 맞는다.
+  const changeThemeId = useCallback(
+    (id: ThemeId) => {
+      if (id === themeId) return;
+      setThemeId(id);
+      const name = THEME_OPTIONS.find((o) => o.id === id)?.name;
+      if (name) toast(`“${name}” 테마를 적용했어요`);
+    },
+    [themeId, setThemeId, toast],
+  );
+
+  const changeFontId = useCallback(
+    (id: BrandFontId) => {
+      if (id === fontId) return;
+      setFontId(id);
+      const name = FONT_OPTIONS.find((o) => o.id === id)?.name;
+      if (name) toast(`“${name}” 폰트를 적용했어요`);
+    },
+    [fontId, setFontId, toast],
+  );
   // 캘린더 임포트 상태 (#844) — 권한·조회·임포트를 훅이 쥔다.
   const calendarImport = useCalendarImport();
   // 스토어 요건(#545): 도움말의 실제 앱 버전 표기.
@@ -188,6 +216,7 @@ export function useSettingsSurface({
   const tabProps = {
     themeMode,
     onChangeThemeMode: setThemeMode,
+    themeId,
     fontId,
     onOpenFont: openFont,
     onOpenTheme: openTheme,
@@ -212,7 +241,7 @@ export function useSettingsSurface({
     screen === 'theme' ? (
       <ThemeScreen
         themeId={themeId}
-        onChangeThemeId={setThemeId}
+        onChangeThemeId={changeThemeId}
         userName={profile.nickname}
         characterId={profile.characterId}
         onBack={backToSettings}
@@ -220,7 +249,7 @@ export function useSettingsSurface({
     ) : screen === 'font' ? (
       <FontScreen
         fontId={fontId}
-        onChangeFont={setFontId}
+        onChangeFont={changeFontId}
         userName={profile.nickname}
         characterId={profile.characterId}
         onBack={backToSettings}

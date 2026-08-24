@@ -66,6 +66,13 @@ describe('SettingsScreen', () => {
     expect(getByLabelText('폰트')).toHaveTextContent(/SUIT/);
   });
 
+  it('테마 색상도 폰트처럼 현재값을 단다 (#972)', async () => {
+    // 종전엔 "화면 전체가 이미 그 색"이라며 이름을 생략했는데, 색은 보여도
+    // 그게 어떤 테마인지는 알 수 없었다.
+    const { getByLabelText } = await render(<SettingsScreen themeId="indigo" />);
+    expect(getByLabelText('테마 색상')).toHaveTextContent(/인디고 타이드/);
+  });
+
   it('테마 색상·폰트 행이 각자의 화면을 연다 (#459, #750)', async () => {
     const onOpenTheme = jest.fn();
     const onOpenFont = jest.fn();
