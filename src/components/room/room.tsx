@@ -329,6 +329,8 @@ export const Room = memo(function Room({
             characterId={characterId}
             frames={characterFrames}
             pose={pose}
+            // 여기서만 포즈가 넘어간다 — 다음 장을 미리 받아둘 값어치가 있다 (#970).
+            prefetchFrames
             style={styles.characterFill}
             sharp={fill}
           />

@@ -73,6 +73,14 @@ export type CharacterAvatarProps = {
   style?: StyleProp<ImageStyle>;
   /** 원본 해상도 디코딩 — 카메라 줌 대상(집 창문)용. */
   sharp?: boolean;
+  /**
+   * 나머지 포즈 프레임을 미리 받아둘지 (#970). **기본은 끔.**
+   *
+   * 포즈를 넘길 수 있는 화면(나의 방)에서만 켠다 — 첫 탭에 빈 화면이 안 뜨게
+   * 하려는 것이다. 순환이 불가능한 화면(친구 방·온보딩 캐러셀)에서 켜면
+   * **보여줄 수도 없는 그림을 받는다**: 고양이 기준 친구 방 1회 방문에 1.8MB.
+   */
+  prefetchFrames?: boolean;
 };
 
 /**
@@ -86,6 +94,7 @@ export const CharacterAvatar = memo(function CharacterAvatar({
   characterId,
   frames,
   pose = 0,
+  prefetchFrames = false,
   size = 96,
   style,
   sharp = false,
@@ -105,16 +114,17 @@ export const CharacterAvatar = memo(function CharacterAvatar({
   const sizeStyle = useMemo(() => ({ width: size, height: size }), [size]);
 
   // Warm every frame up front so the first tap swaps without a blank flash
-  // (and a revisit works offline from the disk cache).
+  // (and a revisit works offline from the disk cache). 포즈를 넘길 수 있는
+  // 화면에서만 — 아니면 첫 장 말고는 영영 안 보이는 걸 받는 셈이다 (#970).
   useEffect(() => {
-    const keys = cdnFrameList ? cdnFrameList.split('|') : [];
+    const keys = prefetchFrames && cdnFrameList ? cdnFrameList.split('|') : [];
     if (keys.length > 1) {
       Image.prefetch?.(
         keys.map((key) => `${RESOURCE_BASE}/${key}`),
         { cachePolicy: 'memory-disk' },
       )?.catch(() => {});
     }
-  }, [cdnFrameList]);
+  }, [cdnFrameList, prefetchFrames]);
 
   if (cdnFrames.length > 0) {
     const key = cdnFrames[wrapPose(pose, cdnFrames.length)];
