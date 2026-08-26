@@ -23,6 +23,9 @@ const EXEMPT: Record<string, string> = {
   // 스스로 정하므로 네이티브 쪽에서 묶으면 오히려 이중 여백이 된다.
   'policy-viewer-screen.tsx': 'WebView — 문서가 자기 레이아웃을 가진다',
   'policy-viewer-screen.web.tsx': 'WebView — 문서가 자기 레이아웃을 가진다',
+  // 집 화면은 하늘이 화면을 꽉 채워야 한다 (#986). 560으로 묶으면 태블릿에서
+  // 좌우가 크림으로 남아 목적과 정반대가 된다 — 의도적으로 캡에서 뺀 유일한 화면.
+  'house-screen.tsx': '전체 폭 캔버스 — 하늘이 화면을 채워야 한다 (#986)',
 };
 
 describe('화면 폭 제한 위생 (#725)', () => {
