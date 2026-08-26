@@ -487,11 +487,14 @@ export type GachaMachine = {
   giftBoxKey?: string;
   /** Selector row grouping — themed machines drop furniture, the rest characters. */
   kind: 'furniture' | 'character';
+  /** 서버 기계 코드 (`bakery_morning` 등) — 노출 판정에 쓴다 (#983). */
+  code?: string;
 };
 
 export function toGachaMachine(g: GachaResponse, index = 0): GachaMachine {
   return {
     id: g.gachaId ?? 0,
+    code: g.code,
     name: g.name ?? '',
     costCurrencyType: g.costCurrencyType ?? 'COIN',
     costAmount: g.costAmount ?? 0,

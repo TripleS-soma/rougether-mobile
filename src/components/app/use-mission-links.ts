@@ -224,28 +224,49 @@ export function useMissionLinks({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [myRoomLoading, housesLoading, houses, routines, categories]);
 
-  // 미션이 사라진 연동 루틴 자동 정리 (#338) — 방장이 미션을 지웠거나 과거
-  // 삭제분이 남아 미션 목록과 어긋난 경우, 데이터가 다 실린 뒤 한 번 맞춘다.
-  // 링크 id 기준: 연동 카테고리의 집 미션 목록에 없는 linkedMissionId만 고아로
-  // 본다. 미션 목록이 비면(조회 실패와 구분 불가) 건드리지 않는다.
+  // 끝났거나 사라진 미션의 연동 루틴 자동 정리 (#338 → #979).
+  //
+  // 두 경우를 같이 본다. **사라진 미션**(방장이 지웠거나 과거 삭제분)은 원래
+  // 대상이었고, **끝난 미션**(COMPLETED·EXPIRED)이 #979에서 더해졌다 — 미션과
+  // 함께 시작한 루틴은 미션이 끝나면 목적을 다한 것으로 본다.
+  //
+  // `achieved && ACTIVE`(목표 달성·보상 미수령)는 여전히 ACTIVE라 대상이
+  // 아니다 — 보상에 닿을 길이 남아야 한다.
+  //
+  // **미션 목록이 비면 건드리지 않는다** (조회 실패와 "미션 없음"을 구분할 수
+  // 없다). 이 가드가 없으면 네트워크 한 번 실패에 루틴이 날아간다.
   const sweptRef = useRef(false);
   useEffect(() => {
     if (sweptRef.current || myRoomLoading || housesLoading) return;
     if (houses.length === 0 || routines.length === 0) return;
     sweptRef.current = true;
-    const orphans = routines.filter((r) => {
-      if (r.kind !== 'routine' || r.linkedMissionId == null) return false;
+    /** 정리 대상과 사유 — 문구가 달라서 사유를 함께 들고 다닌다. */
+    const stale: { id: string; reason: 'gone' | 'ended' }[] = [];
+    for (const r of routines) {
+      if (r.kind !== 'routine' || r.linkedMissionId == null) continue;
       const cat = r.category ? categories.find((c) => c.id === r.category) : undefined;
       const house =
         cat?.houseId != null ? houses.find((h) => h.houseId === cat.houseId) : undefined;
       const missions = house?.missions ?? [];
-      if (missions.length === 0) return false;
-      return !missions.some((m) => m.id === r.linkedMissionId);
-    });
-    if (orphans.length === 0) return;
+      if (missions.length === 0) continue;
+      const mission = missions.find((m) => m.id === r.linkedMissionId);
+      if (!mission) stale.push({ id: r.id, reason: 'gone' });
+      else if (mission.status !== 'ACTIVE') stale.push({ id: r.id, reason: 'ended' });
+    }
+    if (stale.length === 0) return;
     void (async () => {
-      for (const r of orphans) await deleteRoutine(r.id);
-      toast('사라진 미션의 연동 루틴을 정리했어요');
+      for (const r of stale) await deleteRoutine(r.id);
+      // 조용히 지우지 않는다 — 사용자가 해오던 루틴이 사라지는 일이다.
+      // 사유가 섞일 때만 두 말을 겹쳐 쓴다: 한쪽뿐인데 "끝나거나 사라진"이라고
+      // 하면 일어나지 않은 일까지 말하는 셈이다.
+      const ended = stale.filter((r) => r.reason === 'ended').length;
+      toast(
+        ended === stale.length
+          ? '끝난 미션의 연동 루틴을 정리했어요'
+          : ended === 0
+            ? '사라진 미션의 연동 루틴을 정리했어요'
+            : '끝나거나 사라진 미션의 연동 루틴을 정리했어요',
+      );
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [myRoomLoading, housesLoading, houses, routines, categories]);

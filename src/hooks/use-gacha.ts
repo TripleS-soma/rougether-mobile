@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { drawGacha, fetchGachas, type GachaDrawCount } from '@/api';
 import { type GachaMachine, toGachaMachine, toWallet } from '@/api/adapters';
+import { isDrawableGacha } from '@/constants/gacha';
 import type { DrawResult } from '@/api/types';
 import type { Wallet } from '@/constants/currency';
 import { track } from '@/lib/analytics';
@@ -24,7 +25,7 @@ export function useGacha(onWallet: (wallet: Wallet) => void) {
     setError(false);
     try {
       const list = await fetchGachas();
-      setGachas(list.map((g, i) => toGachaMachine(g, i)));
+      setGachas(list.map((g, i) => toGachaMachine(g, i)).filter(isDrawableGacha));
     } catch {
       setError(true);
     } finally {
