@@ -34,6 +34,7 @@ import type { OnboardingMissionStepId } from '@/hooks/use-onboarding-missions';
 import type { useRoomLayouts } from '@/hooks/use-room-layouts';
 import { clearPendingInviteCode, subscribePendingInviteCode } from '@/lib/pending-invite';
 import { assetSource } from '@/resources/asset';
+import { houseBackgroundKey } from '@/resources/house-background';
 import type { ShopCatalogue } from '@/api/adapters';
 
 type HousesData = ReturnType<typeof useHouses>;
@@ -218,11 +219,22 @@ export function useHousePages({
     [pendingJoinRequests],
   );
 
-  // 집 커버는 원격(S3)이고 house 화면은 탭 진입 때 처음 마운트돼, 그때부터
-  // fetch가 시작되면 프레임이 늦게 뜬다 (#463). 항상 마운트된 셸에서 집 목록이
-  // 오면 모든 커버(현재+스위처 대상)를 미리 디스크 캐시에 데워 둔다.
+  // 집 커버와 테마 배경은 원격(S3)이고 house 화면은 탭 진입 때 처음 마운트돼,
+  // 그때부터 fetch가 시작되면 집 전환 시 아트가 늦게 뜬다 (#463). 항상 마운트된
+  // 셸에서 집 목록이 오면 모든 커버·배경(현재+스위처 대상)을 함께 데워 둔다.
   useEffect(() => {
-    const uris = houses.map((h) => assetSource(houseCoverKey(h.coverImageKey)).uri);
+    const uris = [
+      ...new Set(
+        houses.flatMap((house) => {
+          const coverKey = houseCoverKey(house.coverImageKey);
+          const backgroundKey = houseBackgroundKey(coverKey);
+          return [
+            assetSource(coverKey).uri,
+            ...(backgroundKey ? [assetSource(backgroundKey).uri] : []),
+          ];
+        }),
+      ),
+    ];
     if (uris.length) void Image.prefetch?.(uris, { cachePolicy: 'memory-disk' });
   }, [houses]);
 
