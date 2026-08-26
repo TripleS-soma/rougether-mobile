@@ -46,24 +46,9 @@ describe('HouseScreen', () => {
     expect(ui.getByTestId('rain-overlay')).toBeTruthy();
   });
 
-  it('헤더바가 없다 — 닉네임·스트릭·재화를 집 화면에 두지 않는다 (#986)', async () => {
-    // #420이 헤더에 넣었던 것들이다. 집 이름은 캔버스 안 스위처 뱃지에 있고,
-    // 스트릭은 개인 기록이라 나의 방에 남는다. 재화는 쓰는 화면(꾸미기·뽑기)
-    // 에만 둔다 — 여기선 표시일 뿐이라 하늘을 가릴 이유가 없다.
-    const { queryByText } = await render(
-      <HouseScreen
-        houses={[MISSION_HOUSE]}
-        userName="채영"
-        streakDays={4}
-        coinBalance={1200}
-        diamondBalance={34}
-      />,
-    );
-    expect(queryByText('채영')).toBeNull();
-    expect(queryByText('4일')).toBeNull();
-    expect(queryByText('1,200')).toBeNull();
-    expect(queryByText('34')).toBeNull();
-  });
+  // 헤더바 제거(#986)로 `streakDays`·`coinBalance`·`diamondBalance` prop 자체가
+  // 사라졌다 — 넘길 수 없으니 "안 보인다"를 런타임에서 단언할 수 없고, 타입이
+  // 컴파일 단계에서 막는다. 무의미해질 테스트를 두는 대신 여기 근거만 남긴다.
 
   it('액션은 플로팅 레일에 있다 — 목표·집 탐색·구성원 (#986)', async () => {
     const onOpenMissions = jest.fn();
@@ -175,9 +160,14 @@ describe('HouseScreen', () => {
     expect(getByLabelText('우리 집의 목표, 진행 중 없음')).toBeTruthy();
   });
 
-  it('onOpenMissions가 없으면 요약 줄을 그리지 않는다', async () => {
-    const { queryByText } = await render(<HouseScreen houses={[MISSION_HOUSE]} />);
-    expect(queryByText('우리 집의 목표')).toBeNull();
+  it('onOpenMissions가 없으면 목표 버튼을 그리지 않는다', async () => {
+    // 레일 버튼이 되며 화면에 보이는 글자는 '목표'뿐이다 — `queryByText('우리 집의
+    // 목표')`로 두면 배선 유무와 무관하게 늘 null이라 단언이 조용히 무의미해진다.
+    const { queryByLabelText, queryByText } = await render(
+      <HouseScreen houses={[MISSION_HOUSE]} />,
+    );
+    expect(queryByLabelText(/^우리 집의 목표/)).toBeNull();
+    expect(queryByText('목표')).toBeNull();
   });
 
   it('keeps the visited house via the controlled index (#241)', async () => {

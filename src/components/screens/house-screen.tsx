@@ -207,9 +207,8 @@ export type HouseScreenProps = RoomCatalogProps &
     /** 당겨서 새로고침 (#454) — 내 집 목록 조용한 리로드. */
     onRefresh?: () => Promise<void> | void;
     characterId?: CharacterId;
-    /** 헤더 프로필 블록 — 나의 방 헤더와 같은 아바타·닉네임·스트릭 (#420). */
+    /** 방 타일의 표시 이름 — 내 자리를 '(나)'로 가리키는 데 쓴다. */
     userName?: string;
-    streakDays?: number;
     /**
      * Controlled house-switcher index. The screen unmounts while visiting a
      * friend's room, so the shell keeps this to restore the house being viewed
@@ -237,9 +236,6 @@ export type HouseScreenProps = RoomCatalogProps &
     nowHour?: number;
     /** 지금 비가 오는지 — 셸이 use-weather로 주입, 하늘을 흐린 톤 + 빗줄기로 (#360). */
     raining?: boolean;
-    /** 헤더 지갑 필 — 나의 방 헤더와 동일 (#353). */
-    coinBalance?: number;
-    diamondBalance?: number;
     /** 구성원 관리 화면 열기 (#753) — 셸 화면('houseMembers')으로 승격됐다. */
     onOpenMembers?: () => void;
     /** 강퇴 낙관 반영 (#753 승격 후 셸 소유) — 참이면 좌석을 빈 타일로 그린다. */
@@ -299,7 +295,6 @@ export const HouseScreen = memo(function HouseScreen({
   onRefresh,
   characterId = DEFAULT_CHARACTER_ID,
   userName = '',
-  streakDays = 0,
   houseIndex: houseIndexProp,
   onReorderHouses,
   onHouseIndexChange,
@@ -310,8 +305,6 @@ export const HouseScreen = memo(function HouseScreen({
   onOpenSearch,
   nowHour,
   raining = false,
-  coinBalance = 0,
-  diamondBalance = 0,
   onOpenMembers,
   isKickedMember,
   onKickMember,
@@ -1199,26 +1192,6 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
   },
-  missionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    marginHorizontal: Spacing.four,
-    // 헤더 바로 아래라 위쪽 여백이 필요하다 — 없으면 헤더에 붙어 읽힌다.
-    // 16으로는 여전히 붙어 보였다(#879 후속): 헤더가 흰 면이고 이 줄은 크림
-    // 배경 위라, 색이 바뀌는 경계가 곧 구분선처럼 읽혀 여백을 잡아먹는다.
-    //
-    // **아래도 같은 조건이라 같은 값을 준다** (#981) — 크림에서 하늘 캔버스로
-    // 바뀌는 경계다. 종전엔 8이라 위 24 / 아래 8로 3배 차이가 났고, 줄이
-    // 캔버스에 달라붙어 읽혔다.
-    marginTop: Spacing.four,
-    marginBottom: Spacing.four,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    borderRadius: Radius.md,
-  },
-  missionRowTitle: { flex: 1 },
-  missionRowDot: { width: 6, height: 6, borderRadius: Radius.pill },
   emptyWrap: {
     flex: 1,
     alignItems: 'center',
