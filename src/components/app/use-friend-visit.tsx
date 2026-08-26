@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState, type Dispatch, type SetStateAction } fr
 
 import { type Screen } from '@/components/app/navigation';
 import { FriendRoomScreen, type CheerType } from '@/components/screens/friend-room-screen';
+import type { CharacterId } from '@/constants/characters';
 import { type House, type VisitedFriend } from '@/components/screens/house-screen';
 import { useToast } from '@/components/ui/toast';
 import { useFriendRoom } from '@/hooks/use-friend-room';
@@ -18,6 +19,7 @@ import { track } from '@/lib/analytics';
 export function useFriendVisit({
   setScreen,
   catalogue,
+  characterFrames,
   arrangedHouses,
   houseIndex,
   screen,
@@ -25,8 +27,10 @@ export function useFriendVisit({
   clearPreviewCobweb,
 }: {
   setScreen: Dispatch<SetStateAction<Screen>>;
-  /** 상점 카탈로그 — 친구 방 슬롯의 assetKey 해석 (#149). */
+  /** 상점 카탈로그 — 친구 방 가구·표면의 assetKey 해석 (#149). */
   catalogue: ShopCatalogue;
+  /** 마스터 `/characters` 프레임 맵 — 친구 캐릭터를 내 방과 같은 그림으로 (#968). */
+  characterFrames: Partial<Record<CharacterId, string[]>>;
   /** 자리 배치 반영된 집 목록 (#278) — 스와이프 순회 순서의 근거. */
   arrangedHouses: House[];
   houseIndex: number;
@@ -55,10 +59,10 @@ export function useFriendVisit({
       track('friend_room_visit');
       setVisitingFriend(friend);
       void loadGuestbook(friend.userId, friend.houseId);
-      void loadFriendRoom(friend.houseId, friend.membershipId, catalogue);
+      void loadFriendRoom(friend.houseId, friend.membershipId, catalogue, characterFrames);
       setScreen('friendRoom');
     },
-    [loadGuestbook, loadFriendRoom, catalogue, setScreen],
+    [loadGuestbook, loadFriendRoom, catalogue, characterFrames, setScreen],
   );
   // 친구 방 좌우 스와이프 순회 (#644) — 현재 집의 자리 배치 순서로, 빈자리·
   // 내 방은 건너뛰고 순환한다. 방문 가능한 친구가 1명뿐이면 스와이프 없음.
@@ -93,8 +97,13 @@ export function useFriendVisit({
   // 방문 실패 시 다시 시도 (#549) — 같은 친구의 방·방명록을 다시 불러온다.
   const retryFriendRoomVisit = useCallback(() => {
     void loadGuestbook(visitingFriend.userId, visitingFriend.houseId);
-    void loadFriendRoom(visitingFriend.houseId, visitingFriend.membershipId, catalogue);
-  }, [loadGuestbook, loadFriendRoom, visitingFriend, catalogue]);
+    void loadFriendRoom(
+      visitingFriend.houseId,
+      visitingFriend.membershipId,
+      catalogue,
+      characterFrames,
+    );
+  }, [loadGuestbook, loadFriendRoom, visitingFriend, catalogue, characterFrames]);
 
   /** 친구 방 서브화면 — screen === 'friendRoom'일 때만 JSX, 아니면 null. */
   const subScreen =
@@ -117,8 +126,7 @@ export function useFriendVisit({
         onLoadMoreGuestbook={() => {
           void loadMoreGuestbook();
         }}
-        placedFurnitureIds={friendRoom.placement?.placedFurnitureIds ?? []}
-        placements={friendRoom.placement?.placements ?? null}
+        placements={friendRoom.placement?.placements ?? []}
         wallpaperId={friendRoom.placement?.wallpaperId}
         floorId={friendRoom.placement?.floorId ?? null}
         backgroundId={friendRoom.placement?.backgroundId ?? null}

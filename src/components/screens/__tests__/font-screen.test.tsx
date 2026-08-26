@@ -35,7 +35,7 @@ describe('FontScreen', () => {
   it('미리보기 카드가 활성 토큰·타입 스케일로 함께 렌더된다', async () => {
     const { getByText } = await render(<FontScreen fontId="nanum" />);
     // 테마 화면과 공유하는 AppearancePreview — 폰트를 바꾸면 이 글자들이 바뀐다.
-    expect(getByText('준서의 방')).toBeTruthy();
+    expect(getByText('내 방')).toBeTruthy();
     expect(getByText('오늘 루틴 완료하기')).toBeTruthy();
   });
 
@@ -44,5 +44,13 @@ describe('FontScreen', () => {
     const { getByLabelText } = await render(<FontScreen fontId="nanum" onBack={onBack} />);
     await fireEvent.press(getByLabelText('뒤로 가기'));
     expect(onBack).toHaveBeenCalled();
+  });
+
+  it('미리보기 카드에 내 닉네임·캐릭터를 넘긴다 (#899)', async () => {
+    const { getByText, getByLabelText } = await render(
+      <FontScreen userName="루티" characterId="otter" />,
+    );
+    expect(getByText('루티의 방')).toBeTruthy();
+    expect(getByLabelText('수달')).toBeTruthy();
   });
 });

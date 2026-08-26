@@ -27,6 +27,7 @@ import { CategoryIcon } from '@/components/ui/category-icon';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Radius, Spacing } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { formatDate, formatTime } from '@/utils/datetime';
 
@@ -85,6 +86,7 @@ export function AddRoutineScreen({
   onCreateCategory,
 }: AddRoutineScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
   const headerInset = useHeaderInsetStyle();
   const { show: toast } = useToast();
@@ -190,7 +192,7 @@ export function AddRoutineScreen({
   const submit = () => {
     if (!canSubmit) {
       if (!categoryValid) {
-        setFormError('카테고리가 필요해요 — 먼저 하나 만들어주세요.');
+        setFormError('카테고리가 필요해요. 먼저 하나 만들어주세요.');
         Keyboard.dismiss();
         setShowCategoryManager(true);
       } else if (title.trim().length === 0) {
@@ -234,7 +236,7 @@ export function AddRoutineScreen({
 
       {/* handled (#759): 제목 입력으로 키보드가 뜬 채 시트 버튼을 탭하면
           기본값('never')은 첫 탭을 키보드 닫기에 소모해 시트가 안 열렸다. */}
-      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.body, column]} keyboardShouldPersistTaps="handled">
         {/* Title */}
         <View style={styles.field}>
           <Text style={[Typography.label, { color: t.text }]}>루틴 이름</Text>
@@ -568,7 +570,7 @@ export function AddRoutineScreen({
         <ConfirmDialog
           visible={confirmDelete}
           title="루틴 삭제"
-          body={`‘${editRoutine.title}’ 루틴을 삭제할까요?\n삭제하면 지난 수행 기록도 함께 사라져요.`}
+          body={`“${editRoutine.title}” 루틴을 삭제할까요?\n삭제하면 지난 수행 기록도 함께 사라져요.`}
           confirmLabel="삭제"
           destructive
           onConfirm={() => {

@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
+import * as auth from '@/api/auth';
 import { useHouses } from '@/hooks/use-houses';
 
 // 토스트 캡처 — 탈퇴 신청자 승인 가드(#240) 문구 단언용.
@@ -19,6 +20,162 @@ beforeEach(() => mockToast.mockClear());
 afterEach(() => {
   global.fetch = realFetch;
   jest.clearAllMocks();
+});
+
+describe('useHouses — 집 탐색 페이지네이션 (#975)', () => {
+  /** page별 응답을 주는 fetch. 30개짜리 1페이지 + 5개짜리 2페이지 = 총 35. */
+  const pagedFetch = (opts: { total?: number } = {}) => {
+    const urls: string[] = [];
+    const page0 = Array.from({ length: 30 }, (_, i) => ({ houseId: i + 1, name: `집${i + 1}` }));
+    const page1 = Array.from({ length: 5 }, (_, i) => ({ houseId: i + 31, name: `집${i + 31}` }));
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/houses?')) {
+        urls.push(url);
+        const isNext = url.includes('page=1');
+        return res({
+          items: isNext ? page1 : page0,
+          page: isNext ? 1 : 0,
+          size: 30,
+          ...(opts.total != null ? { totalElements: opts.total } : {}),
+        });
+      }
+      if (url.endsWith('/me')) return res({ userId: 5, nickname: '나' });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+    return urls;
+  };
+
+  it('첫 페이지가 꽉 차고 남은 게 있으면 다음 페이지를 이어 붙인다', async () => {
+    const urls = pagedFetch({ total: 35 });
+    const { result } = await renderHook(() => useHouses());
+    await waitFor(() => expect(result.current.searchLoading).toBe(false));
+
+    expect(result.current.searchHouses).toHaveLength(30);
+    expect(result.current.searchHasNext).toBe(true);
+
+    await act(async () => {
+      await result.current.loadMoreSearch();
+    });
+
+    expect(result.current.searchHouses).toHaveLength(35);
+    // 이어 붙인 것이지 갈아치운 게 아니다.
+    expect(result.current.searchHouses[0].name).toBe('집1');
+    expect(result.current.searchHouses[34].name).toBe('집35');
+    // 다 받았으면 더 요청하지 않는다.
+    expect(result.current.searchHasNext).toBe(false);
+    expect(urls.some((u) => u.includes('page=1'))).toBe(true);
+  });
+
+  it('아이콘·배경이 페이지 경계에서 다시 시작하지 않는다', async () => {
+    // toSearchHouse의 index가 아이콘을 돌린다 — 0부터 다시 세면 경계에서 반복된다.
+    pagedFetch({ total: 35 });
+    const { result } = await renderHook(() => useHouses());
+    await waitFor(() => expect(result.current.searchLoading).toBe(false));
+    await act(async () => {
+      await result.current.loadMoreSearch();
+    });
+    const first = result.current.searchHouses[0];
+    const boundary = result.current.searchHouses[30];
+    expect(boundary.icon).not.toBe(first.icon);
+  });
+
+  it('같은 집이 두 번 와도 중복으로 쌓지 않는다', async () => {
+    // 생성·삭제로 페이지가 밀리면 겹쳐 올 수 있다 — 중복 키가 되면 안 된다.
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/houses?')) {
+        const dup = [{ houseId: 1, name: '겹친집' }];
+        const page0 = Array.from({ length: 30 }, (_, i) => ({
+          houseId: i + 1,
+          name: `집${i + 1}`,
+        }));
+        return res({ items: url.includes('page=1') ? dup : page0, size: 30, totalElements: 31 });
+      }
+      if (url.endsWith('/me')) return res({ userId: 5, nickname: '나' });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useHouses());
+    await waitFor(() => expect(result.current.searchLoading).toBe(false));
+    await act(async () => {
+      await result.current.loadMoreSearch();
+    });
+    const ids = result.current.searchHouses.map((h) => h.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('다음 페이지가 실패하면 조용히 멈추지 않고 알린다', async () => {
+    // 스피너만 사라지면 "왜 안 나오지?"가 된다. hasNext는 유지돼 재시도된다.
+    let call = 0;
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/houses?')) {
+        call += 1;
+        if (url.includes('page=1')) throw new Error('network');
+        return res({
+          items: Array.from({ length: 30 }, (_, i) => ({ houseId: i + 1, name: `집${i + 1}` })),
+          size: 30,
+          totalElements: 35,
+        });
+      }
+      if (url.endsWith('/me')) return res({ userId: 5, nickname: '나' });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useHouses());
+    await waitFor(() => expect(result.current.searchLoading).toBe(false));
+    await act(async () => {
+      await result.current.loadMoreSearch();
+    });
+
+    expect(mockToast).toHaveBeenCalledWith(
+      expect.stringContaining('더 불러오지 못했어요'),
+      'error',
+    );
+    // 목록은 그대로, 다음 스크롤에 다시 시도할 수 있다.
+    expect(result.current.searchHouses).toHaveLength(30);
+    expect(result.current.searchHasNext).toBe(true);
+    expect(result.current.searchLoadingMore).toBe(false);
+    expect(call).toBeGreaterThan(1);
+  });
+
+  it('한 페이지 안에 같은 집이 두 번 와도 중복으로 쌓지 않는다', async () => {
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/houses?')) {
+        const page0 = Array.from({ length: 30 }, (_, i) => ({
+          houseId: i + 1,
+          name: `집${i + 1}`,
+        }));
+        // 한 응답 안에서 같은 id가 두 번.
+        const page1 = [
+          { houseId: 99, name: '겹침' },
+          { houseId: 99, name: '겹침' },
+        ];
+        return res({ items: url.includes('page=1') ? page1 : page0, size: 30, totalElements: 32 });
+      }
+      if (url.endsWith('/me')) return res({ userId: 5, nickname: '나' });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useHouses());
+    await waitFor(() => expect(result.current.searchLoading).toBe(false));
+    await act(async () => {
+      await result.current.loadMoreSearch();
+    });
+    const ids = result.current.searchHouses.map((h) => h.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(result.current.searchHouses).toHaveLength(31);
+  });
+
+  it('첫 페이지가 안 찼으면 더 받을 게 없다', async () => {
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/houses?')) return res({ items: [{ houseId: 1, name: '집1' }], size: 30, totalElements: 1 }); // prettier-ignore
+      if (url.endsWith('/me')) return res({ userId: 5, nickname: '나' });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useHouses());
+    await waitFor(() => expect(result.current.searchLoading).toBe(false));
+    expect(result.current.searchHasNext).toBe(false);
+  });
 });
 
 describe('useHouses — 집 탐색 filter (#578)', () => {
@@ -181,6 +338,54 @@ describe('useHouses — 입주 신청 처리', () => {
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/houses/2/join-requests'),
       expect.objectContaining({ method: 'POST' }),
+    );
+  });
+
+  /**
+   * 앱이 정원 수로 미리 막지 않게 되면서(#948) "진짜 만석"을 아는 건 서버뿐이다 —
+   * 그 답이 사용자에게 그대로 전해져야 한다.
+   */
+  it('서버가 HOUSE_FULL을 주면 만석이라고 정확히 말한다 (#948)', async () => {
+    mockToast.mockClear();
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes('/join-requests') && init?.method === 'POST') {
+        return {
+          ok: false,
+          status: 409,
+          text: async () => JSON.stringify({ code: 'HOUSE_FULL', message: '정원 초과' }),
+        };
+      }
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useHouses());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => {
+      await result.current.joinHouse(2);
+    });
+
+    expect(mockToast).toHaveBeenCalledWith('정원이 가득 찼어요', 'error');
+  });
+
+  it('그 밖의 실패는 만석이라고 단정하지 않는다 (#948)', async () => {
+    // 종전 문구가 "만석일 수 있어요"라 네트워크 오류까지 만석으로 읽혔다.
+    mockToast.mockClear();
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes('/join-requests') && init?.method === 'POST') {
+        return { ok: false, status: 500, text: async () => '{}' };
+      }
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useHouses());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => {
+      await result.current.joinHouse(2);
+    });
+
+    expect(mockToast).toHaveBeenCalledWith(
+      '입주 신청에 실패했어요. 잠시 후 다시 시도해주세요.',
+      'error',
     );
   });
 
@@ -503,5 +708,49 @@ describe('useHouses — 집 순서 변경 (#820)', () => {
       '집 순서를 저장하지 못했어요. 잠시 후 다시 시도해 주세요.',
       'error',
     );
+  });
+});
+
+describe('useHouses — 프로필 닉네임 반영 (#924)', () => {
+  it('내 좌석 이름만 재조회 없이 새 닉네임으로 덮는다', async () => {
+    // isMine 판정이 세션 userId에 걸려 있다 — 테스트엔 세션이 없으므로 세운다.
+    const whoAmI = jest.spyOn(auth, 'getSessionUserId').mockReturnValue(5);
+    let houseCalls = 0;
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/me/houses')) return res({ items: [{ houseId: 1, name: '내집' }] });
+      if (url.includes('/houses/1/members'))
+        return res({
+          items: [
+            { membershipId: 1, userId: 5, nickname: '옛이름', role: 'OWNER', status: 'ACTIVE' },
+            { membershipId: 2, userId: 9, nickname: '이웃', role: 'MEMBER', status: 'ACTIVE' },
+          ],
+        });
+      if (url.includes('/houses/1/missions')) return res({ items: [] });
+      if (url.includes('/houses/1')) {
+        houseCalls += 1;
+        return res({ houseId: 1, name: '내집', myRole: 'OWNER', maxMembers: 2 });
+      }
+      if (url.endsWith('/me')) return res({ userId: 5, nickname: '옛이름' });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useHouses());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    const names = () => result.current.houses[0].floors.flatMap((f) => f.rooms).map((r) => r.name);
+    expect(names()).toContain('옛이름');
+    const callsBefore = houseCalls;
+
+    await act(async () => {
+      result.current.applyMyNickname('새이름');
+    });
+
+    // 내 좌석만 바뀌고, 이웃은 그대로다.
+    expect(names()).toContain('새이름');
+    expect(names()).not.toContain('옛이름');
+    expect(names()).toContain('이웃');
+    // 이름 하나 때문에 집을 다시 부르지 않는다 — 파생으로 끝낸다.
+    expect(houseCalls).toBe(callsBefore);
+    whoAmI.mockRestore();
   });
 });

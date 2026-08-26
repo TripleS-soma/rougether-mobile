@@ -33,6 +33,7 @@ import { BookOpenPictogram, Pictogram, type PictogramName } from '@/components/u
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { formatTime, todayIso } from '@/utils/datetime';
 import { hapticSuccess } from '@/utils/haptics';
@@ -63,6 +64,8 @@ export type GuestbookEntry = {
   content: string;
   /** Display date, e.g. "7월 7일". */
   date: string;
+  /** 동거 봇이 쓴 글 (서버 #310) — 사람 글과 구분해 배지를 붙인다. */
+  authorBot?: boolean;
 };
 
 /** 1~500 chars (server GuestbookCreateRequest). */
@@ -126,8 +129,7 @@ export function FriendRoomScreen({
   wallpaperId,
   floorId,
   backgroundId,
-  placedFurnitureIds,
-  placements = null,
+  placements = [],
   furniture,
   wallpapers,
   floors,
@@ -147,6 +149,7 @@ export function FriendRoomScreen({
   onLoadMoreGuestbook,
 }: FriendRoomScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const headerInset = useHeaderInsetStyle();
@@ -159,7 +162,6 @@ export function FriendRoomScreen({
     wallpaperId,
     floorId,
     backgroundId,
-    placedFurnitureIds,
     placements,
     furniture,
     wallpapers,
@@ -361,6 +363,9 @@ export function FriendRoomScreen({
           ref={scrollRef}
           contentContainerStyle={[
             styles.body,
+            // 나의 방과 같은 이유 — 방 캔버스가 정사각형이라 폭이 넓어지면
+            // 높이도 같이 커져 방명록이 화면 밖으로 밀린다 (#725).
+            column,
             inputFocused && keyboardPad > 0 ? { paddingBottom: keyboardPad + 120 } : null,
           ]}
           keyboardShouldPersistTaps="handled">
@@ -545,6 +550,16 @@ export function FriendRoomScreen({
                   <View key={note.id} style={[styles.gbRow, { backgroundColor: t.surfaceMuted }]}>
                     <View style={styles.gbRowHead}>
                       <Text style={[Typography.label, { color: t.text }]}>{note.author}</Text>
+                      {/* 방명록은 동거 봇 스케줄러(서버 #310)가 실제로 글을 쓴다 —
+                          사람이 남긴 말과 구분되어야 한다. */}
+                      {note.authorBot ? (
+                        <View
+                          testID={`guestbook-bot-${note.id}`}
+                          style={[styles.gbBotBadge, { backgroundColor: t.surface }]}>
+                          <Text style={[Typography.supporting, { color: t.textMuted }]}>봇</Text>
+                        </View>
+                      ) : null}
+                      <View style={styles.flex} />
                       <Text style={[Typography.supporting, { color: t.textMuted }]}>
                         {note.date}
                       </Text>
@@ -760,7 +775,14 @@ const styles = StyleSheet.create({
   gbRowHead: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    // 이름 — [봇] — (여백) — 날짜. 스페이서 View가 가운데를 밀어내므로
+    // space-between이 아니라 gap으로 붙인다.
+    gap: Spacing.one,
+  },
+  gbBotBadge: {
+    paddingHorizontal: Spacing.one,
+    paddingVertical: Spacing.half,
+    borderRadius: Radius.sm,
   },
   gbMore: {
     borderRadius: Radius.pill,

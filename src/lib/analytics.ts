@@ -64,12 +64,32 @@ type GaModule = typeof import('@react-native-firebase/analytics');
 let gaMod: GaModule | null = null;
 let ga: ReturnType<GaModule['getAnalytics']> | null = null;
 
-function initFirebase() {
+function initFirebase(collect: boolean) {
   if (Platform.OS === 'web') return;
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     gaMod = require('@react-native-firebase/analytics') as GaModule;
     ga = gaMod.getAnalytics();
+    if (!collect) {
+      /**
+       * 개발 빌드는 수집 자체를 끈다 (#954).
+       *
+       * 우리 `logEvent`만 막으면 부족하다 — **SDK의 자동 이벤트**
+       * (`first_open`·`session_start`·`screen_view`)는 네이티브에서 그대로
+       * 올라가고, 지표를 흐리는 게 정확히 그 `first_open`이다(GA4의 "새
+       * 사용자"는 로그인이 아니라 설치 후 첫 실행 기준이라, 개발 중 재설치
+       * 한 번이 새 사용자 한 명이 된다).
+       *
+       * 한계: 이 호출은 네이티브 초기화 **뒤**에 실행되므로 새로 설치한
+       * 개발 빌드의 첫 `first_open` 하나는 빠져나갈 수 있다. 설정은 기기에
+       * 저장돼 다음 실행부터 유지되므로 기기당 최대 1건이다. 완전 차단은
+       * 매니페스트/plist 플래그인데 그건 네이티브 지문을 바꾼다.
+       */
+      void gaMod.setAnalyticsCollectionEnabled(ga, false).catch(() => {});
+      // 우리 이벤트 경로도 닫는다 — track/screenView/identifyUser가 전부
+      // `ga` null을 보고 조용히 no-op이 된다.
+      ga = null;
+    }
   } catch {
     gaMod = null;
     ga = null;
@@ -78,18 +98,26 @@ function initFirebase() {
 
 let initialized = false;
 
-/** 앱 루트에서 1회 호출 — 키가 없거나 초기화가 실패하면 조용히 비활성.
- * 분석은 어떤 경우에도 앱을 죽이면 안 된다. */
-export function initAnalytics() {
+/**
+ * 앱 루트에서 1회 호출 — 키가 없거나 초기화가 실패하면 조용히 비활성.
+ * 분석은 어떤 경우에도 앱을 죽이면 안 된다.
+ *
+ * `collect`는 기본이 `!__DEV__`다 — 개발 빌드의 재설치가 GA4 새 사용자로
+ * 잡히던 것을 막는다 (#954). 옆의 Sentry는 이미 같은 규칙이다
+ * (`error-reporting.ts` — `enabled: !__DEV__`).
+ *
+ * jest는 `__DEV__`가 true라 테스트가 켜짐 경로를 보려면 명시해야 한다.
+ */
+export function initAnalytics(options?: { collect?: boolean }) {
   if (initialized) return;
   initialized = true;
-  initFirebase();
+  initFirebase(options?.collect ?? !__DEV__);
 }
 
 /** 로그인 후 사용자 식별 — 서버 회원 id 기준(이벤트가 사용자로 묶인다). */
 export function identifyUser(userId: number | string) {
   try {
-    if (ga && gaMod) void gaMod.setUserId(ga, String(userId));
+    if (ga && gaMod) void gaMod.setUserId(ga, String(userId)).catch(() => {});
   } catch {
     // no-op
   }
@@ -98,25 +126,52 @@ export function identifyUser(userId: number | string) {
 /** 로그아웃 — 익명 사용자로 리셋. */
 export function resetAnalyticsUser() {
   try {
-    if (ga && gaMod) void gaMod.setUserId(ga, null);
+    if (ga && gaMod) void gaMod.setUserId(ga, null).catch(() => {});
   } catch {
     // no-op
   }
 }
 
+/**
+ * GA4가 **구조를 정해둔 예약 파라미터** — 이름만 같아도 네이티브가 그 타입으로
+ * 캐스팅한다. `items`에 숫자를 넘겼다가 양 플랫폼에서 터졌다 (#912):
+ *   iOS      `-[__NSCFNumber enumerateObjectsUsingBlock:]: unrecognized selector`
+ *   Android  `java.lang.Double cannot be cast to ReadableArray`
+ * 이벤트 하나 때문에 앱이 죽으면 안 되므로, 보내기 전에 막고 이름을 바꾼다.
+ */
+const RESERVED_PARAMS = new Set(['items', 'extend_session']);
+
 export function track(event: AnalyticsEvent, props?: Record<string, string | number | boolean>) {
   try {
     // GA4 이벤트 이름 규칙(영소문자+언더스코어)은 AnalyticsEvent 유니온이 보장.
-    if (ga && gaMod) void gaMod.logEvent(ga, event, props);
+    if (!ga || !gaMod) return;
+    const safe = props && sanitize(props);
+    // logEvent는 Promise를 준다 — `void`로 버리면 **거부가 try/catch를 빠져나가**
+    // unhandled rejection이 된다. 실제로 그렇게 새어나갔다 (#912).
+    void gaMod.logEvent(ga, event, safe).catch(() => {});
   } catch {
     // no-op
   }
+}
+
+/** 예약 파라미터는 접두를 붙여 피한다 — 버리면 계측이 조용히 비고, 그대로 두면 죽는다. */
+function sanitize(props: Record<string, string | number | boolean>) {
+  let hit = false;
+  const out: Record<string, string | number | boolean> = {};
+  for (const [k, v] of Object.entries(props)) {
+    if (RESERVED_PARAMS.has(k)) {
+      hit = true;
+      out[`app_${k}`] = v;
+    } else out[k] = v;
+  }
+  return hit ? out : props;
 }
 
 /** 셸 화면 전환 추적 (탭·서브화면 공통). */
 export function screenView(name: string) {
   try {
-    if (ga && gaMod) void gaMod.logScreenView(ga, { screen_name: name, screen_class: name });
+    if (ga && gaMod)
+      void gaMod.logScreenView(ga, { screen_name: name, screen_class: name }).catch(() => {});
   } catch {
     // no-op
   }

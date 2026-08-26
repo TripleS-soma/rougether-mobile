@@ -65,7 +65,7 @@ describe('GachaScreen', () => {
     );
 
     await fireEvent.press(getByText('1회 뽑기'));
-    expect(getByText('뽑는 중…')).toBeTruthy();
+    expect(getByText('뽑는 중...')).toBeTruthy();
     expect(getByTestId('charging-gift-box-1')).toBeTruthy();
 
     // 애니메이션 타이머를 흘려보내 리빌까지 마무리 (#431).

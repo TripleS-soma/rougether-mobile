@@ -1,9 +1,11 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/ui/screen-header';
+import type { PushRegistrationStep } from '@/lib/push-token';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 /**
@@ -44,8 +46,29 @@ export type NotificationSettingsScreenProps = {
   loadError?: boolean;
   /** Re-fetch the settings (다시 불러오기 button). */
   onRetry?: () => void;
+  /**
+   * 이 기기의 푸시 등록이 어디서 끝났는지 (#903). 알림 설정을 다 켜뒀는데도
+   * 안 오는 경우, 서버가 아니라 **이 기기가 등록조차 안 된 것**일 수 있다 —
+   * 그 구분이 화면에 없어서 아무도 몰랐다. 생략하면 상태 줄을 안 그린다.
+   */
+  pushStep?: PushRegistrationStep;
   onBack?: () => void;
 };
+
+/**
+ * 등록 단계 → 사용자에게 할 말. 정상(registered)과 "볼 필요 없는" 경우
+ * (idle·unsupported·no-device)는 줄을 안 그린다 — 잘 되고 있을 때 굳이
+ * 기술 상태를 보여줄 이유가 없다.
+ */
+const PUSH_STEP_NOTICE: Partial<Record<PushRegistrationStep, string>> = {
+  'permission-denied': '기기에서 알림이 꺼져 있어요. 시스템 설정의 알림에서 켜야 푸시가 도착해요.',
+  'token-failed': '이 기기를 알림 서버에 등록하지 못했어요. 앱을 다시 켜보고, 계속되면 알려주세요.',
+  'register-failed': '이 기기 등록이 저장되지 않았어요. 네트워크를 확인하고 앱을 다시 켜보세요.',
+};
+
+export function pushStepNotice(step?: PushRegistrationStep): string | undefined {
+  return step ? PUSH_STEP_NOTICE[step] : undefined;
+}
 
 /**
  * "푸시 알림" settings reached from 설정 → 푸시 알림. A master switch plus
@@ -58,16 +81,18 @@ export function NotificationSettingsScreen({
   onToggle,
   loadError = false,
   onRetry,
+  pushStep,
   onBack,
 }: NotificationSettingsScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader title="푸시 알림" onBack={onBack} />
 
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView contentContainerStyle={[styles.body, column]}>
         {/* 조회 실패 안내 (#549) — 지금 보이는 값은 기본값일 수 있다. */}
         {loadError ? (
           <View style={[styles.card, styles.errorCard, { backgroundColor: t.surface }]}>
@@ -81,6 +106,15 @@ export function NotificationSettingsScreen({
               style={[styles.retryBtn, { backgroundColor: t.primary }]}>
               <Text style={[Typography.label, { color: t.onPrimary }]}>다시 불러오기</Text>
             </Pressable>
+          </View>
+        ) : null}
+        {/* 이 기기가 알림을 못 받는 상태면 토글보다 먼저 말해준다 (#903) —
+            설정을 아무리 켜도 등록이 안 됐으면 푸시는 안 온다. */}
+        {pushStepNotice(pushStep) ? (
+          <View
+            testID="push-status-notice"
+            style={[styles.card, { backgroundColor: t.warningSoft }]}>
+            <Text style={[Typography.body, { color: t.text }]}>{pushStepNotice(pushStep)}</Text>
           </View>
         ) : null}
         <View style={[styles.card, { backgroundColor: t.surface }]}>

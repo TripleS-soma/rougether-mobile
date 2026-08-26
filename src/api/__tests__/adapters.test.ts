@@ -29,8 +29,8 @@ import {
   toCharacterFrames,
   toCharacterFramesMap,
   toOwnedCharacter,
-  toSlotSaves,
   toUserItemMap,
+  toGuestbookEntry,
 } from '@/api/adapters';
 import type { ItemResponse, MissionSummary, RoutineResponse, TodayResponse } from '@/api/types';
 import type { NewRoutine } from '@/constants/routines';
@@ -305,8 +305,8 @@ describe('API adapters', () => {
     expect(cat.backgrounds.map((b) => b.id)).toEqual(['5']);
     expect(cat.ownedIds.sort()).toEqual(['1', '3', '4']);
 
+    // 표면만 고른다 — 가구 자동 배치는 없다 (#925).
     const placed = ownedPlacement(cat);
-    expect(placed.placedFurnitureIds).toEqual(['1']); // only owned furniture
     expect(placed.wallpaperId).toBe('3'); // owned wallpaper
     expect(placed.floorId).toBe('4'); // owned floor
     expect(placed.backgroundId).toBeNull(); // background not owned
@@ -421,6 +421,34 @@ describe('API adapters', () => {
     // Without a profile nickname it falls back to 멤버 N.
     const anon = toHouse(detail, members, 6);
     expect(anon.floors.flatMap((f) => f.rooms).find((r) => r.isMine)?.name).toBe('멤버 6');
+  });
+
+  it('prefers the live profile nickname over the stale members-API one (#924)', () => {
+    // 프로필에서 이름을 바꿔도 집을 다시 부르기 전까지 멤버 API는 옛 이름을
+    // 들고 있다. 좌석 타일은 뷰에서 라이브 이름으로 덮지만(#479), 멤버 목록
+    // (house-members-screen)은 room.name을 그대로 그려서 내 행만 옛 이름으로
+    // 남았다. 같은 값의 출처는 프로필이므로 그쪽이 이긴다.
+    const detail = { houseId: 1, name: '검증 하우스' };
+    const members = [
+      {
+        membershipId: 1,
+        userId: 6,
+        nickname: '옛이름',
+        role: 'OWNER' as const,
+        status: 'ACTIVE' as const,
+      },
+      {
+        membershipId: 2,
+        userId: 4,
+        nickname: '이웃',
+        role: 'MEMBER' as const,
+        status: 'ACTIVE' as const,
+      },
+    ];
+    const rooms = toHouse(detail, members, 6, '새이름').floors.flatMap((f) => f.rooms);
+    expect(rooms.find((r) => r.isMine)?.name).toBe('새이름');
+    // 남의 이름까지 덮으면 안 된다.
+    expect(rooms.find((r) => !r.isMine)?.name).toBe('이웃');
   });
 
   it('derives tile presence from lastAccessedAt (#383)', () => {
@@ -626,27 +654,12 @@ describe('API adapters', () => {
       cat,
       inv,
     );
+    // 표면만 읽는다 — positioned 슬롯(bottomLeft 등)은 무시된다 (#925).
     expect(placement).toEqual({
-      placedFurnitureIds: ['2'],
       wallpaperId: '9',
       floorId: '11',
       backgroundId: '12',
     });
-
-    const saves = toSlotSaves(['2', '5'], '9', cat, inv, '11', '12');
-    expect(saves).toContainEqual({ slotType: 'bottomLeft', userItemId: 21 });
-    expect(saves).toContainEqual({ slotType: 'topLeft', userItemId: 22 });
-    expect(saves).toContainEqual({ slotType: 'wallpaper', userItemId: 23 });
-    expect(saves).toContainEqual({ slotType: 'floor', userItemId: 24 });
-    expect(saves).toContainEqual({ slotType: 'background', userItemId: 25 });
-    // Every other positioned slot is cleared explicitly.
-    expect(saves).toContainEqual({ slotType: 'midLeft', userItemId: null });
-    expect(saves).toHaveLength(11);
-
-    // Cleared surfaces save explicit nulls.
-    const cleared = toSlotSaves(['2'], '9', cat, inv, null, null);
-    expect(cleared).toContainEqual({ slotType: 'floor', userItemId: null });
-    expect(cleared).toContainEqual({ slotType: 'background', userItemId: null });
 
     // A friend's slots carry their (unknown) userItemIds — resolution goes by
     // assetKey instead; keys missing from the catalogue are skipped.
@@ -661,7 +674,6 @@ describe('API adapters', () => {
       cat,
     );
     expect(friend).toEqual({
-      placedFurnitureIds: ['2'],
       wallpaperId: '9',
       floorId: '11',
       backgroundId: null,
@@ -700,13 +712,35 @@ describe('API adapters', () => {
     };
     const detail = toHousePreviewDetail(wire, cat);
     expect(detail.rooms).toHaveLength(2);
+    // 아직 SLOT_V1인 방 — **가구는 비고 표면(벽지)은 살아 있다** (#925).
+    // 예전엔 슬롯의 침대를 placedFurnitureIds로 되살려 앵커 좌표에 그렸다.
     expect(detail.rooms![0]).toMatchObject({
-      placedFurnitureIds: ['2'],
       wallpaperId: '9',
-      placements: null,
+      placements: [],
       characterId: 'cat',
     });
-    expect(detail.rooms![1]).toEqual({ placedFurnitureIds: [], placements: [] });
+    expect(detail.rooms![1]).toEqual({ placements: [] });
+
+    // FREE_V1 방의 가구는 그대로 실린다 — 폴백만 없앤 것이지 렌더를 끊은 게 아니다.
+    const freeWire = {
+      ...wire,
+      memberRooms: [
+        {
+          membershipId: 1,
+          room: {
+            layoutFormat: 'FREE_V1' as const,
+            character: { code: 'cat' },
+            slots: [{ slotType: 'wallpaper', assetKey: 'items/a/wp.png' }],
+            placements: [
+              { assetKey: 'items/a/bed.png', positionX: 0.4, positionY: 0.6, zIndex: 1 },
+            ],
+          },
+        },
+      ],
+    };
+    const freeDetail = toHousePreviewDetail(freeWire, cat);
+    expect(freeDetail.rooms![0].placements).toHaveLength(1);
+    expect(freeDetail.rooms![0].placements![0]).toMatchObject({ furnitureId: '2' });
 
     // 카탈로그가 없으면(상점 미로드) rooms를 만들지 않아 목업으로 폴백한다.
     expect(toHousePreviewDetail(wire).rooms).toBeUndefined();
@@ -736,9 +770,19 @@ describe('API adapters', () => {
         bugReportId: 7,
         title: '로그인이 안 돼요',
         status: 'IN_PROGRESS',
+        screenshotKeys: ['bug/a.png'],
         createdAt: '2026-07-20T09:00:00Z',
       }),
-    ).toEqual({ id: 7, title: '로그인이 안 돼요', status: 'IN_PROGRESS', date: '7월 20일' });
+    ).toEqual({
+      id: 7,
+      title: '로그인이 안 돼요',
+      status: 'IN_PROGRESS',
+      date: '7월 20일',
+      // 첨부 키를 그대로 흘려야 화면이 스크린샷을 받아올 수 있다 (#736).
+      screenshotKeys: ['bug/a.png'],
+    });
+    // 서버가 첨부 키를 안 주면 빈 배열 — 화면이 length로 분기한다.
+    expect(toBugReportEntry({ bugReportId: 9 }).screenshotKeys).toEqual([]);
     // 미지정 상태는 접수됨으로.
     expect(toBugReportEntry({ bugReportId: 8 }).status).toBe('RECEIVED');
   });
@@ -1007,5 +1051,38 @@ describe('API adapters', () => {
     const house = toSearchHouse({ name: '이름뿐인 집' });
     expect(house.id).toBe(0);
     expect(house.name).toBe('이름뿐인 집');
+  });
+
+  /** 동거 봇 (서버 #309·#310) — 화면이 배지를 그릴 수 있게 그대로 흘려보낸다. */
+  describe('동거 봇 필드 (#947)', () => {
+    it('toHouse가 MemberSummary.bot을 좌석에 흘린다', () => {
+      const house = toHouse(
+        { houseId: 1, name: '나의 집', maxMembers: 4 },
+        [
+          { membershipId: 10, userId: 100, nickname: '나', role: 'OWNER', status: 'ACTIVE' },
+          { membershipId: 11, userId: 101, nickname: '루티', status: 'ACTIVE', bot: true },
+        ],
+        100,
+      );
+      const cells = house.floors.flatMap((f) => f.rooms);
+      expect(cells.find((c) => c.name === '루티')?.bot).toBe(true);
+      // 사람 좌석에는 붙지 않는다 — 배지가 잘못 뜨면 안 된다.
+      expect(cells.find((c) => c.name === '나')?.bot).toBeUndefined();
+    });
+
+    it('toGuestbookEntry가 authorBot을 넘긴다', () => {
+      expect(
+        toGuestbookEntry({
+          guestbookId: 1,
+          authorNickname: '루티',
+          content: '안녕',
+          authorBot: true,
+        }).authorBot,
+      ).toBe(true);
+      // 사람 글은 값이 없거나 false — 배지가 붙으면 안 된다.
+      expect(
+        toGuestbookEntry({ guestbookId: 2, authorNickname: '친구', content: '하이' }).authorBot,
+      ).toBeUndefined();
+    });
   });
 });

@@ -1,5 +1,14 @@
 import { Image } from 'expo-image';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  createContext,
+  memo,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { BackHandler, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import Animated, {
@@ -35,7 +44,6 @@ import {
   type FurnitureItem,
   type PlacedFurniture,
   newFreePlacement,
-  slotIdsToPlacements,
   type Wallpaper,
   WALLPAPERS,
 } from '@/resources/furniture';
@@ -43,6 +51,7 @@ import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useStableCallback } from '@/hooks/use-stable-value';
 import { track } from '@/lib/analytics';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
 /**
@@ -55,11 +64,66 @@ import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 type PickerTarget = 'wallpaper' | 'floor' | 'background' | 'all';
 
 // RoomCatalogProps: 아이템·표면 카탈로그 (로컬 기본; floors/backgrounds는 API 전용, #691).
+/** 카탈로그 그리드의 종류 탭 — 한 번에 한 그리드만 보여준다 (#488). */
+export type DecorTab = 'furniture' | 'decor' | 'wallpaper' | 'floor' | 'background';
+
+/**
+ * 소품 = 서버 categoryCode 'decor'(장식)와 'floor'(러그); 가구 = 나머지
+ * (서버 'furniture', 데모 '한옥' 세트 포함).
+ */
+const isDecorItem = (i: FurnitureItem) => i.category === '장식' || i.category === '러그';
+
+/**
+ * 뽑은 아이템 id가 어느 탭에 있는지 (#897). 뽑기 결과(`DrawResult`)에는
+ * 종류가 없어서 카탈로그로 되짚는 수밖에 없다. 어디에도 없으면 undefined —
+ * 캐릭터 보상이거나 카탈로그가 아직 안 실린 경우다.
+ */
+export function decorTabForItem(
+  itemId: string,
+  catalogs: {
+    furniture?: FurnitureItem[];
+    wallpapers?: Wallpaper[];
+    floors?: Wallpaper[];
+    backgrounds?: Wallpaper[];
+  },
+): DecorTab | undefined {
+  if (catalogs.wallpapers?.some((w) => w.id === itemId)) return 'wallpaper';
+  if (catalogs.floors?.some((f) => f.id === itemId)) return 'floor';
+  if (catalogs.backgrounds?.some((b) => b.id === itemId)) return 'background';
+  const item = catalogs.furniture?.find((f) => f.id === itemId);
+  if (!item) return undefined;
+  return isDecorItem(item) ? 'decor' : 'furniture';
+}
+
+/**
+ * 여러 개를 뽑았을 때 열 탭 (#897) — **가장 많이 나온 종류**. 동률이면 결과에
+ * 먼저 나온 쪽이 이긴다. 하나도 못 알아보면 undefined(탭을 건드리지 않는다).
+ */
+export function dominantDecorTab(
+  itemIds: string[],
+  catalogs: Parameters<typeof decorTabForItem>[1],
+): DecorTab | undefined {
+  const counts = new Map<DecorTab, number>();
+  for (const id of itemIds) {
+    const tab = decorTabForItem(id, catalogs);
+    if (tab) counts.set(tab, (counts.get(tab) ?? 0) + 1);
+  }
+  let best: DecorTab | undefined;
+  let bestCount = 0;
+  // Map은 삽입 순서를 지키므로 먼저 들어온 종류가 동률에서 이긴다.
+  for (const [tab, n] of counts) {
+    if (n > bestCount) {
+      best = tab;
+      bestCount = n;
+    }
+  }
+  return best;
+}
+
 export type RoomDecorScreenProps = RoomCatalogProps & {
   /** 자유 배치 초기 상태 (#327); 없으면 데모 프리필. */
   initialItems?: PlacedFurniture[];
   /** 방이 이미 FREE_V1로 전환됐는지 — 첫 저장 전환 확인 모달 판단. */
-  freeLayout?: boolean;
   initialWallpaperId?: string;
   initialFloorId?: string | null;
   initialBackgroundId?: string | null;
@@ -98,6 +162,12 @@ export type RoomDecorScreenProps = RoomCatalogProps & {
   onConflictReload?: () => void;
   /** 방금 뽑은 아이템 id (#630) — 카탈로그 맨 앞 정렬 + NEW 배지로 강조. */
   highlightItemIds?: string[];
+  /**
+   * 처음 열릴 때 펼칠 종류 탭 (#897). 뽑기에서 넘어오면 뽑은 게 있는 탭을
+   * 연다 — 하이라이트가 안 보이는 탭에 있으면 소용이 없다. 화면이 열릴 때만
+   * 쓰는 씨앗값이라, 이후 사용자가 탭을 바꾸면 그 선택이 이긴다.
+   */
+  initialTab?: DecorTab;
 };
 
 /**
@@ -118,9 +188,9 @@ const NO_SURFACES: Wallpaper[] = [];
 
 export function RoomDecorScreen({
   initialItems,
-  freeLayout = false,
   onConflictReload,
   highlightItemIds,
+  initialTab = 'furniture',
   initialWallpaperId = DEFAULT_WALLPAPER_ID,
   initialFloorId = null,
   initialBackgroundId = null,
@@ -141,6 +211,7 @@ export function RoomDecorScreen({
   onApply,
 }: RoomDecorScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
   const { show: toast } = useToast();
   const headerInset = useHeaderInsetStyle();
@@ -155,9 +226,19 @@ export function RoomDecorScreen({
     [ownedIds, furniture, wallpapers, floors, backgrounds],
   );
 
-  // 자유 배치 상태 (#327). 데모(스토리) 프리필은 기존 한옥 세트를 슬롯 앵커로.
-  const demoItems = () =>
-    slotIdsToPlacements(['hanok-bed', 'hanok-shelf', 'hanok-window', 'hanok-rug'], furniture);
+  // 자유 배치 상태 (#327). dev 갤러리용 데모 프리필 — 슬롯 앵커가 사라져
+  // (#925) 좌표를 직접 적는다. 실사용 경로는 항상 initialItems를 받는다.
+  const demoItems = (): PlacedFurniture[] =>
+    (
+      [
+        ['hanok-bed', 0.3, 0.72],
+        ['hanok-shelf', 0.28, 0.3],
+        ['hanok-window', 0.72, 0.3],
+        ['hanok-rug', 0.7, 0.72],
+      ] as const
+    )
+      .filter(([id]) => furniture.some((f) => f.id === id))
+      .map(([id, x, y], i) => ({ furnitureId: id, x, y, z: i + 1 }));
   const [items, setItems] = useState<PlacedFurniture[]>(() => initialItems ?? demoItems());
   // 타일마다 placed.includes를 돌면 카탈로그 크기의 제곱이 된다 (실서버 가구
   // 122종) — 조회는 Set으로 O(1) (#794).
@@ -247,9 +328,6 @@ export function RoomDecorScreen({
   // 진입 즉시 가구 패널이 열려 있다 (#487) — 전체보기 버튼/가이드 카드 없이
   // 'all'이 기본 상태. 서브픽커(벽지/바닥)를 닫으면 'all'로 복귀한다.
   const [picker, setPicker] = useState<PickerTarget>('all');
-  // 첫 자유 배치 저장은 SLOT_V1→FREE_V1 비가역 전환 — 한 번 확인받는다 (#327).
-  const [confirmMigrate, setConfirmMigrate] = useState(false);
-  const migrateOkRef = useRef(freeLayout);
   const pendingBackRef = useRef(true);
   // 409 리비전 충돌(다른 기기 선저장) — 재로드 안내 모달.
   const [conflictOpen, setConflictOpen] = useState(false);
@@ -262,7 +340,6 @@ export function RoomDecorScreen({
   };
   const currentValues = (): ApplyValues => ({ items, wallpaperId, floorId, backgroundId });
   // 제외하고 저장 등에서 넘어온 값 — 마이그레이션 확인을 건너뛴 뒤에도 유지.
-  const pendingApplyRef = useRef<ApplyValues | null>(null);
   const doApply = async (thenBack: boolean, v: ApplyValues = currentValues()) => {
     const result = await onApply?.(v.items, v.wallpaperId, v.floorId, v.backgroundId);
     if (result === 'conflict') return setConflictOpen(true);
@@ -270,14 +347,8 @@ export function RoomDecorScreen({
     initialSnapRef.current = snap(v.items, v.wallpaperId, v.floorId, v.backgroundId);
     if (thenBack) onBack?.();
   };
-  /** 프리뷰 정리가 끝난 값으로 저장을 이어간다 — 마이그레이션 게이트 포함. */
+  /** 프리뷰 정리가 끝난 값으로 저장을 이어간다. */
   const proceedApply = (thenBack: boolean, v: ApplyValues) => {
-    if (!migrateOkRef.current) {
-      pendingBackRef.current = thenBack;
-      pendingApplyRef.current = v;
-      setConfirmMigrate(true);
-      return;
-    }
     void doApply(thenBack, v);
   };
   const apply = (thenBack = true) => {
@@ -494,12 +565,7 @@ export function RoomDecorScreen({
   // 전체보기 탭 — 표면류(surfaceSlotType: 벽지/바닥/배경)에 더해, positioned
   // 아이템은 categoryCode(가구/소품)로 한 번 더 나눈다 (#488). 한 번에 한
   // 그리드만 — 통짜 세로 나열은 스크롤이 너무 길다.
-  const [allTab, setAllTab] = useState<
-    'furniture' | 'decor' | 'wallpaper' | 'floor' | 'background'
-  >('furniture');
-  // 소품 = 서버 categoryCode 'decor'(장식)와 'floor'(러그); 가구 = 나머지
-  // (서버 'furniture', 데모 '한옥' 세트 포함).
-  const isDecorItem = (i: FurnitureItem) => i.category === '장식' || i.category === '러그';
+  const [allTab, setAllTab] = useState<DecorTab>(initialTab);
   const furnitureTabItems = useMemo(() => furniture.filter((i) => !isDecorItem(i)), [furniture]);
   const decorTabItems = useMemo(() => furniture.filter(isDecorItem), [furniture]);
   const isSurfacePicker = picker === 'wallpaper' || picker === 'floor' || picker === 'background';
@@ -554,7 +620,10 @@ export function RoomDecorScreen({
       {/* 헤더 대신 화면 고정 플로팅 (#510) — 패널이 그만큼 올라와 가구가 더
           보인다. 뒤로가기는 상시 접근, 재화는 프리뷰 구매(#501) 잔액 확인용. */}
       <ScrollView contentContainerStyle={[styles.body, headerInset]}>
-        <View style={styles.preview}>
+        {/* 캔버스만 묶는다 — 방은 aspectRatio라 폭이 넓어지면 높이도 같이 커져
+            카탈로그가 화면 밖으로 밀린다. 카탈로그는 반대로 폭을 다 써서
+            열을 늘린다(DecorGrid) — 한 번에 보이는 가구가 많을수록 좋다 (#725). */}
+        <View style={[styles.preview, column]}>
           {/* 캔버스 = 방과 정확히 같은 박스 — 오버레이 좌표·정규화의 기준.
               (preview의 padding 박스 기준으로 재면 저장 좌표가 어긋난다.) */}
           <View
@@ -683,7 +752,7 @@ export function RoomDecorScreen({
           <View style={styles.loadingBlock}>
             <Loading />
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              카탈로그 불러오는 중…
+              카탈로그 불러오는 중...
             </Text>
           </View>
         ) : null}
@@ -1067,7 +1136,7 @@ export function RoomDecorScreen({
                     },
                   ]}>
                   {bulkBuying
-                    ? '구매 중…'
+                    ? '구매 중...'
                     : diamondBalance < previewTotal
                       ? '다이아가 부족해요'
                       : '모두 구매하고 저장'}
@@ -1092,24 +1161,6 @@ export function RoomDecorScreen({
           </Pressable>
         </Pressable>
       </Modal>
-
-      {/* 첫 자유 배치 저장 — SLOT_V1→FREE_V1 비가역 전환 확인 (#327, #674 공용화). */}
-      <ConfirmDialog
-        visible={confirmMigrate}
-        title="새 꾸미기 방식으로 전환할까요?"
-        body={
-          '자유 배치로 저장하면 가구를 어디든 옮길 수 있어요.\n전환한 뒤에는 이전 방식으로 되돌릴 수 없어요.'
-        }
-        confirmLabel="전환하고 저장"
-        cancelAccessibilityLabel="전환 취소"
-        onConfirm={() => {
-          migrateOkRef.current = true;
-          setConfirmMigrate(false);
-          void doApply(pendingBackRef.current, pendingApplyRef.current ?? undefined);
-          pendingApplyRef.current = null;
-        }}
-        onCancel={() => setConfirmMigrate(false)}
-      />
 
       {/* 다른 기기가 먼저 저장한 경우(409) — 서버 상태로 다시 시작해야 한다 (#674 공용화). */}
       <ConfirmDialog
@@ -1157,6 +1208,48 @@ type BuyProps = {
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 /**
+ * 그리드 폭에 맞춰 열 수를 정한다 (#725).
+ *
+ * 종전에는 타일이 `flexBasis: '22%'`라 **폭과 무관하게 항상 4열**이었다. 폰에서는
+ * 맞지만 태블릿에서는 타일이 거대해지고 한 화면에 보이는 가구는 그대로였다.
+ *
+ * 폭을 재서 정하는 이유는 퍼센트로는 안 되기 때문이다 — 타일 사이 간격이 px(`GRID_GAP`)
+ * 고정이라 폭이 달라지면 퍼센트 몫이 어긋난다. 측정 전 첫 프레임은 기존 22%가 그대로
+ * 쓰이므로 폰에서는 보이는 변화가 없다.
+ */
+const MIN_TILE = 72;
+const MAX_COLUMNS = 8;
+
+/** 측정된 타일 폭. `null`이면 아직 레이아웃 전 — 타일이 기존 22%로 그려진다. */
+const TileWidthContext = createContext<number | null>(null);
+
+function DecorGrid({ children }: { children: React.ReactNode }) {
+  const [width, setWidth] = useState<number | null>(null);
+  const tileWidth = useMemo(() => {
+    if (width == null || width <= 0) return null;
+    const fit = Math.floor((width + GRID_GAP) / (MIN_TILE + GRID_GAP));
+    const columns = Math.min(MAX_COLUMNS, Math.max(4, fit));
+    return (width - (columns - 1) * GRID_GAP) / columns;
+  }, [width]);
+  return (
+    <TileWidthContext.Provider value={tileWidth}>
+      <View
+        style={styles.grid}
+        onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+        testID="decor-grid">
+        {children}
+      </View>
+    </TileWidthContext.Provider>
+  );
+}
+
+/** 타일에 얹는 폭 — flexBasis를 덮어써야 한다(주축에서 width보다 우선한다). */
+function useTileWidthStyle() {
+  const width = useContext(TileWidthContext);
+  return width == null ? null : { flexBasis: width };
+}
+
+/**
  * 방금 보유로 바뀐 타일의 팝 (#453) — false→true 전환에서만 눌렸다 튀어오른다.
  * 구매 확인 모달이 닫히며 카탈로그의 해당 카드가 "내 것이 됐다"고 답한다.
  */
@@ -1177,13 +1270,14 @@ function useOwnedPopStyle(isOwned: boolean) {
 /** 비우기 tile shared by the grids — clears the slot/surface being picked. */
 const ClearTile = memo(function ClearTile({ onClear, t }: { onClear?: () => void; t: Tokens }) {
   const emph = useFontEmphasis();
+  const tileWidth = useTileWidthStyle();
   if (!onClear) return null;
   return (
     <Pressable
       onPress={onClear}
       accessibilityRole="button"
       accessibilityLabel="비우기"
-      style={[styles.tile, styles.clearTile, { borderColor: t.border }]}>
+      style={[styles.tile, tileWidth, styles.clearTile, { borderColor: t.border }]}>
       <View style={[styles.thumbWrap, styles.clearThumb]}>
         <Icon name="close" size={18} color={t.textMuted} />
       </View>
@@ -1210,7 +1304,7 @@ const SwatchGrid = memo(function SwatchGrid({
   onClear?: () => void;
 }) {
   return (
-    <View style={styles.grid}>
+    <DecorGrid>
       <ClearTile onClear={onClear} t={t} />
       {items.map((item) => (
         <SwatchTile
@@ -1226,7 +1320,7 @@ const SwatchGrid = memo(function SwatchGrid({
           t={t}
         />
       ))}
-    </View>
+    </DecorGrid>
   );
 });
 
@@ -1251,6 +1345,7 @@ const SwatchTile = memo(function SwatchTile({
   t: Tokens;
 }) {
   const emph = useFontEmphasis();
+  const tileWidth = useTileWidthStyle();
   const popStyle = useOwnedPopStyle(isOwned);
   return (
     <AnimatedPressable
@@ -1271,6 +1366,7 @@ const SwatchTile = memo(function SwatchTile({
       }
       style={[
         styles.tile,
+        tileWidth,
         popStyle,
         {
           backgroundColor: t.surfaceMuted,
@@ -1335,7 +1431,7 @@ const FurnitureGrid = memo(function FurnitureGrid({
     );
   }
   return (
-    <View style={styles.grid}>
+    <DecorGrid>
       <ClearTile onClear={onClear} t={t} />
       {items.map((item) => (
         <FurnitureTile
@@ -1349,7 +1445,7 @@ const FurnitureGrid = memo(function FurnitureGrid({
           t={t}
         />
       ))}
-    </View>
+    </DecorGrid>
   );
 });
 
@@ -1370,6 +1466,7 @@ const FurnitureTile = memo(function FurnitureTile({
   t: Tokens;
 }) {
   const emph = useFontEmphasis();
+  const tileWidth = useTileWidthStyle();
   const popStyle = useOwnedPopStyle(isOwned);
   return (
     <AnimatedPressable
@@ -1380,6 +1477,7 @@ const FurnitureTile = memo(function FurnitureTile({
       accessibilityLabel={isOwned ? item.name : `${item.name} 미리 배치`}
       style={[
         styles.tile,
+        tileWidth,
         popStyle,
         {
           backgroundColor: t.surfaceMuted,

@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type Dispatch,
   type SetStateAction,
@@ -22,7 +23,7 @@ import { useNotifications } from '@/hooks/use-notifications';
 import { useRoutineOrder } from '@/hooks/use-routine-order';
 import { useWalletHistory } from '@/hooks/use-wallet-history';
 import { reportAppOpen } from '@/lib/app-open';
-import { onNotificationTap } from '@/lib/push-events';
+import { onNotificationReceived, onNotificationTap } from '@/lib/push-events';
 import type { ShopCatalogue } from '@/api/adapters';
 
 type MyRoomData = ReturnType<typeof useMyRoomData>;
@@ -101,7 +102,6 @@ export function useMyRoomPages({
   };
   /** 방 렌더 prop — 배치 상태·카탈로그는 꾸미기(셸 잔류)와 공유라 셸 소유. */
   room: {
-    placedFurnitureIds: string[];
     placements: MyRoomScreenProps['placements'];
     wallpaperId: string;
     floorId: string | null;
@@ -183,16 +183,47 @@ export function useMyRoomPages({
     void loadNotifications();
   }, [loadNotifications]);
 
+  /** 알림함으로 — 푸시 탭과 인앱 배너 탭이 같은 목적지를 쓴다 (#902). */
+  const openNotifications = useCallback(() => {
+    void loadNotifications();
+    setScreen('notificationList');
+  }, [loadNotifications, setScreen]);
+
   // 푸시 탭(콜드 스타트 포함) → 알림 목록으로 (#405).
   useEffect(
     () =>
       onNotificationTap(() => {
         reportAppOpen('push');
-        void loadNotifications();
-        setScreen('notificationList');
+        openNotifications();
       }),
-    [loadNotifications, setScreen],
+    [openNotifications],
   );
+
+  /**
+   * 앱이 켜져 있는 동안 도착한 알림 (#902) — 셸이 상단 배너로 그린다.
+   * 시스템 배너는 `push-events.ts`가 껐으므로 이게 유일한 포그라운드 표시다.
+   * 연달아 오면 마지막 것만 남긴다(배너를 쌓지 않는다) — 못 본 것은 알림함에 있다.
+   */
+  const [pushBanner, setPushBanner] = useState<{
+    key: number;
+    type?: string;
+    title: string;
+    body: string;
+  } | null>(null);
+  // key는 단조 증가 카운터다 — Date.now()면 같은 밀리초에 두 알림이 오는
+  // 배치 전달에서 key가 안 바뀌어 배너가 다시 마운트되지 않는다(#902 리뷰).
+  const pushBannerSeq = useRef(0);
+  useEffect(
+    () =>
+      onNotificationReceived((n) => {
+        // 배너가 떠 있는 동안 도착한 알림도 알림함에는 즉시 반영한다.
+        void loadNotifications();
+        pushBannerSeq.current += 1;
+        setPushBanner({ key: pushBannerSeq.current, ...n });
+      }),
+    [loadNotifications],
+  );
+  const dismissPushBanner = useCallback(() => setPushBanner(null), []);
 
   const openEditRoutine = useCallback(
     (routine: Routine, from: Screen) => {
@@ -284,7 +315,6 @@ export function useMyRoomPages({
     loading: myRoomLoading,
     loadError: !!myRoomError,
     onRetry: retryMyRoom,
-    placedFurnitureIds: room.placedFurnitureIds,
     placements: room.placements,
     wallpaperId: room.wallpaperId,
     floorId: room.floorId,
@@ -404,6 +434,10 @@ export function useMyRoomPages({
   return {
     tabProps,
     subScreen,
+    /** 인앱 푸시 배너 (#902) — 셸이 상단에 그린다. */
+    pushBanner,
+    dismissPushBanner,
+    openNotifications,
     /** 집 화면 '내 방으로' — 셸의 HouseScreen prop으로 흘러간다. */
     openMyRoom,
     /** 미션 배너 '루틴 등록하러 가기' — 셸의 openMissionScreen이 쓴다. */

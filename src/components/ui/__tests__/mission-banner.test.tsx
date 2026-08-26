@@ -5,7 +5,7 @@ import { MissionBanner } from '@/components/ui/mission-banner';
 describe('MissionBanner (#571)', () => {
   it('진행 카운터와 현재 미션 라벨을 보여주고, 탭하면 onPress가 발화한다', async () => {
     const onPress = jest.fn();
-    const { getByText, getByLabelText } = await render(
+    const { getByText, getByLabelText, getByTestId } = await render(
       <MissionBanner
         stepIndex={1}
         totalSteps={4}
@@ -16,6 +16,9 @@ describe('MissionBanner (#571)', () => {
     );
     expect(getByText(/미션 2\/4/)).toBeTruthy();
     expect(getByText('뽑기 1회 해보기')).toBeTruthy();
+    // 왼쪽 표식은 자체 제작 픽토그램 — 이모지(🎯)로 되돌아가지 않게 고정한다.
+    // 이모지는 플랫폼마다 그림이 다르고 테마를 못 따라간다.
+    expect(getByTestId('mission-flag')).toBeTruthy();
 
     await fireEvent.press(getByLabelText('미션 2 뽑기 1회 해보기'));
     expect(onPress).toHaveBeenCalled();

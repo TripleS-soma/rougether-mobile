@@ -61,6 +61,7 @@ import { WalletHistorySheet } from '@/components/screens/sheets/wallet-history-s
 import { SpringProgressBar } from '@/components/ui/spring-progress';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { MissionBanner } from '@/components/ui/mission-banner';
+import { NotificationBanner } from '@/components/ui/notification-banner';
 import { MissionSheet } from '@/components/screens/sheets/mission-sheet';
 import { PendingNotice } from '@/components/ui/pending-notice';
 import { RetryState } from '@/components/ui/retry-state';
@@ -435,18 +436,7 @@ export const galleryEntries: GalleryEntry[] = [
     description: 'Same renderer, hanok furniture + tiger character.',
     render: () => (
       <View style={{ width: 280, alignSelf: 'center' }}>
-        <Room
-          wallpaperId="hanok-simple"
-          characterId="tiger"
-          placedFurnitureIds={[
-            'hanok-bed',
-            'hanok-shelf',
-            'hanok-window',
-            'hanok-rug',
-            'hanok-plant',
-            'hanok-teatable',
-          ]}
-        />
+        <Room wallpaperId="hanok-simple" characterId="tiger" />
       </View>
     ),
   },
@@ -456,10 +446,7 @@ export const galleryEntries: GalleryEntry[] = [
       'Ported from the prototype MyRoomZoomScreen (#7): room view + today’s routines + reward.',
     render: () => (
       <View style={{ height: 900, alignSelf: 'stretch' }}>
-        <MyRoomScreen
-          routines={SAMPLE_ROUTINES}
-          placedFurnitureIds={['bed', 'window', 'plant', 'rug']}
-        />
+        <MyRoomScreen routines={SAMPLE_ROUTINES} />
       </View>
     ),
   },
@@ -495,10 +482,7 @@ export const galleryEntries: GalleryEntry[] = [
       'Ported from the prototype FriendRoomScreen (#9): read-only room + routines + cheers.',
     render: () => (
       <View style={{ height: 860, alignSelf: 'stretch' }}>
-        <FriendRoomScreen
-          friendName="민지"
-          placedFurnitureIds={['bed', 'window', 'plant', 'rug']}
-        />
+        <FriendRoomScreen friendName="민지" />
       </View>
     ),
   },
@@ -696,8 +680,9 @@ export const galleryEntries: GalleryEntry[] = [
   },
   {
     name: 'AppearancePreview',
-    description: '테마 색상·폰트 피커 공용 미리보기 카드 (#750): 활성 토큰·타입 스케일 그대로.',
-    render: () => <AppearancePreview />,
+    description:
+      '테마 색상·폰트 피커 공용 미리보기 카드 (#750): 활성 토큰·타입 스케일 그대로. 닉네임·캐릭터는 내 것 (#899).',
+    render: () => <AppearancePreview userName="루티" characterId="otter" />,
   },
   {
     name: 'FontScreen',
@@ -1031,8 +1016,24 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => <ConfirmDialogDemo />,
   },
   {
+    name: 'UI · NotificationBanner',
+    description:
+      '앱이 켜져 있을 때 뜨는 인앱 푸시 배너 (#902) — 종류별 아이콘 + 제목/본문, 탭하면 알림함. 갤러리에서는 자동으로 안 닫힌다.',
+    render: () => (
+      <View style={{ alignSelf: 'stretch', minHeight: 96 }}>
+        <NotificationBanner
+          type="FRIEND_CHEER"
+          title="루티니1님이 응원을 보냈어요"
+          body="오늘도 루틴 지키는 중! 화이팅 🐾"
+          visibleMs={0}
+          onPress={() => {}}
+        />
+      </View>
+    ),
+  },
+  {
     name: 'UI · MissionBanner',
-    description: '온보딩 미션 진행 배너 (#571) — 🎯 미션 N/4 + 건너뛰기(확인 다이얼로그).',
+    description: '온보딩 미션 진행 배너 (#571) — 깃발 표식 + 미션 N/4 + 건너뛰기(확인 다이얼로그).',
     render: () => (
       <View style={{ alignSelf: 'stretch', minHeight: 80 }}>
         <MissionBanner

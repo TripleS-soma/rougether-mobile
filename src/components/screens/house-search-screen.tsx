@@ -19,6 +19,7 @@ import {
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { assetSource, isCdnKey } from '@/resources/asset';
 
@@ -91,6 +92,11 @@ export type HouseSearchScreenProps = RoomCatalogProps & {
   houses?: SearchHouse[];
   /** True while the browse list is loading. */
   loading?: boolean;
+  /** 다음 페이지가 남았는지 (#975) — 끝에 닿으면 이어 붙인다. */
+  hasNext?: boolean;
+  /** 다음 페이지를 받는 중 — 푸터 스피너. */
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
   /** True when the browse list failed to load (#549) — 빈 결과와 구분해 표시. */
   loadError?: boolean;
   /** Re-run the failed browse-list load (다시 시도 button). */
@@ -130,6 +136,9 @@ export type HouseSearchScreenProps = RoomCatalogProps & {
 export function HouseSearchScreen({
   houses = [],
   loading = false,
+  hasNext = false,
+  loadingMore = false,
+  onLoadMore,
   loadError = false,
   onRetry,
   onBack,
@@ -146,6 +155,7 @@ export function HouseSearchScreen({
   onCreate,
 }: HouseSearchScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const headerInset = useHeaderInsetStyle();
@@ -263,8 +273,13 @@ export function HouseSearchScreen({
       <FlatList
         data={loading || loadError ? NO_HOUSES : filtered}
         keyExtractor={(h) => String(h.id)}
-        contentContainerStyle={styles.body}
+        contentContainerStyle={[styles.body, column]}
         ItemSeparatorComponent={ListGap}
+        // 검색 중에는 이어 붙이지 않는다 — 필터가 클라이언트라 다음 페이지를
+        // 받아봐야 화면에 안 걸리는 게 대부분이고, 스크롤이 짧아 끝에 붙어 있어
+        // 계속 요청이 나간다 (#975).
+        onEndReached={query.length === 0 && hasNext && !loadingMore ? onLoadMore : undefined}
+        onEndReachedThreshold={0.4}
         ListHeaderComponent={
           <View style={styles.headerBlock}>
             {/* Invite code */}
@@ -322,7 +337,7 @@ export function HouseSearchScreen({
                 ) : null}
                 {pendingNotice ? (
                   <Text style={[Typography.supporting, styles.msg, { color: t.primaryText }]}>
-                    입주 신청을 보냈어요 — 방장이 승인하면 집에 들어가요.
+                    입주 신청을 보냈어요. 방장이 승인하면 집에 들어가요.
                   </Text>
                 ) : null}
 
@@ -340,7 +355,7 @@ export function HouseSearchScreen({
                     {preview.info.requiresApproval ? (
                       // 승인형 코드 (#648) — '입주' 탭 후 pending 안내와 기대를 맞춘다.
                       <Text style={[Typography.supporting, { color: t.warningText }]}>
-                        방장 승인 후 입장하는 집이에요 — 신청을 보내고 기다리게 돼요.
+                        방장 승인 후 입장하는 집이에요. 신청을 보내고 기다리게 돼요.
                       </Text>
                     ) : null}
                     <View style={styles.previewActions}>
@@ -399,7 +414,15 @@ export function HouseSearchScreen({
           )
         }
         renderItem={({ item: h }) => {
-          const full = h.members >= h.capacity;
+          /**
+           * 정원이 다 찼는지 (#948). **이것으로 신청을 막지 않는다** — 동거
+           * 봇(서버 #309)이 차지한 자리는 사람이 신청하면 비켜주므로, 4/4인
+           * 집도 서버는 받아준다. 목록 응답(`HouseSummary`)에는 서버가
+           * 계산한 `isFull`이 없어 앱이 봇 수를 알 방법이 없다. 그래서 수치는
+           * 정보로만 보여주고, 진짜 만석은 서버의 `HOUSE_FULL`로 안내한다.
+           * (온보딩 기본 집이 사람 1 + 봇 2라 드문 경우가 아니다.)
+           */
+          const atCapacity = h.members >= h.capacity;
           const pending = h.joinRequestStatus === 'PENDING';
           const accepted = h.joinRequestStatus === 'ACCEPTED';
           return (
@@ -450,61 +473,71 @@ export function HouseSearchScreen({
                       style={[styles.meta, emph('normal'), { color: t.textMuted }]}
                       numberOfLines={1}>
                       {h.level != null ? `Lv.${h.level} · ` : ''}멤버 {h.members} / {h.capacity}
-                      {full ? <Text style={{ color: t.danger }}> · 만석</Text> : null}
+                      {atCapacity ? <Text style={{ color: t.danger }}> · 만석</Text> : null}
                     </Text>
                   </View>
                 </View>
                 {/* 미리보기 로딩 스피너 (#532). */}
                 {previewingHouseId === h.id ? <Loading size="small" /> : null}
               </Pressable>
+              {/* 정원이 다 찼어도 눌린다 — 봇이 비켜줄 수 있는지는 서버만 안다.
+                  이미 신청 중·입주 완료는 앱이 아는 사실이라 그대로 막는다. */}
               <Pressable
                 onPress={() =>
-                  full
-                    ? toast('정원이 가득 찼어요', 'error')
-                    : pending
-                      ? toast('방장의 수락을 기다리고 있어요')
-                      : accepted
-                        ? toast('이미 입주가 완료됐어요')
-                        : onJoinHouse?.(h.id)
+                  pending
+                    ? toast('방장의 수락을 기다리고 있어요')
+                    : accepted
+                      ? toast('이미 입주가 완료됐어요')
+                      : onJoinHouse?.(h.id)
                 }
                 accessibilityRole="button"
-                accessibilityState={{ disabled: full || pending || accepted }}
+                accessibilityState={{ disabled: pending || accepted }}
                 style={[
                   styles.joinBtn,
                   {
-                    backgroundColor: full || pending || accepted ? t.surfaceMuted : t.primary,
+                    backgroundColor: pending || accepted ? t.surfaceMuted : t.primary,
                   },
                 ]}>
                 <Text
                   style={[
                     Typography.supporting,
                     emph('semibold'),
-                    { color: full || pending || accepted ? t.textMuted : t.onPrimary },
+                    { color: pending || accepted ? t.textMuted : t.onPrimary },
                   ]}>
-                  {full
-                    ? '만석'
-                    : pending
-                      ? '신청 중'
-                      : accepted
-                        ? '입주 완료'
-                        : h.joinRequestStatus === 'REJECTED'
-                          ? '다시 신청'
-                          : '입주 신청'}
+                  {pending
+                    ? '신청 중'
+                    : accepted
+                      ? '입주 완료'
+                      : h.joinRequestStatus === 'REJECTED'
+                        ? '다시 신청'
+                        : '입주 신청'}
                 </Text>
               </Pressable>
             </View>
           );
         }}
         ListFooterComponent={
-          <Pressable
-            onPress={onCreate}
-            accessibilityRole="button"
-            style={[styles.createBtn, { borderColor: t.disabledBg }]}>
-            <View style={styles.iconLabelRow}>
-              <CrownPictogram size={14} />
-              <Text style={[Typography.label, { color: t.textMuted }]}>새 집 만들기</Text>
-            </View>
-          </Pressable>
+          <>
+            {/* 다음 페이지 로딩 (#975). 끝에 닿으면 알아서 붙으므로 버튼이 없다. */}
+            {loadingMore ? <Loading style={styles.loadingMore} /> : null}
+            {/* 서버에 텍스트 검색이 없어 검색은 **불러온 집** 안에서만 걸린다
+                (#975). 목록이 아직 남아 있는데 검색 중이면 그 사실을 밝힌다 —
+                "없어요"로 보이면 정말 없는 줄 안다. */}
+            {query.length > 0 && hasNext ? (
+              <Text style={[Typography.supporting, styles.searchScope, { color: t.textMuted }]}>
+                지금까지 불러온 집에서 찾은 결과예요. 검색어를 지우고 더 내려보면 집이 더 나와요.
+              </Text>
+            ) : null}
+            <Pressable
+              onPress={onCreate}
+              accessibilityRole="button"
+              style={[styles.createBtn, { borderColor: t.disabledBg }]}>
+              <View style={styles.iconLabelRow}>
+                <CrownPictogram size={14} />
+                <Text style={[Typography.label, { color: t.textMuted }]}>새 집 만들기</Text>
+              </View>
+            </Pressable>
+          </>
         }
       />
       {/* 참여 전 집 미리보기 모달 (#328) — isFull은 참여 비활성, isMember는 안내만. */}
@@ -704,6 +737,8 @@ const styles = StyleSheet.create({
   },
   listGap: { height: Spacing.two },
   loading: { paddingVertical: Spacing.six },
+  loadingMore: { paddingVertical: Spacing.three },
+  searchScope: { textAlign: 'center', paddingHorizontal: Spacing.three },
   errorBlock: {
     alignItems: 'center',
     paddingVertical: Spacing.four,

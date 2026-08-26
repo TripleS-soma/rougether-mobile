@@ -1,20 +1,20 @@
-import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor, within } from '@testing-library/react-native';
 import { BackHandler, StyleSheet } from 'react-native';
 import { State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
-import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
-import { ToastProvider } from '@/components/ui/toast';
 import {
-  FURNITURE_ITEMS,
-  slotIdsToPlacements,
-  type PlacedFurniture,
-  type Wallpaper,
-} from '@/resources/furniture';
+  decorTabForItem,
+  dominantDecorTab,
+  RoomDecorScreen,
+} from '@/components/screens/room-decor-screen';
+import { ToastProvider } from '@/components/ui/toast';
+import { FURNITURE_ITEMS, type PlacedFurniture, type Wallpaper } from '@/resources/furniture';
 
 // Local demo catalog anchors: 'bed'(포근한 침대) / 'plant'(초록 식물) /
 // default wallpaper 'simple', alternative 'paw'(발자국 패턴).
-const items = (ids: string[]) => slotIdsToPlacements(ids, FURNITURE_ITEMS);
+const items = (ids: string[]): PlacedFurniture[] =>
+  ids.map((id, i) => ({ furnitureId: id, x: 0.25 + (i % 2) * 0.4, y: 0.3 + Math.floor(i / 2) * 0.4, z: i + 1 })); // prettier-ignore
 const firstArgIds = (fn: jest.Mock) =>
   (fn.mock.calls[0][0] as PlacedFurniture[]).map((p) => p.furnitureId);
 
@@ -56,7 +56,7 @@ describe('RoomDecorScreen (#327 — 자유 배치)', () => {
   it('adds an item to the room center from 전체보기 and applies', async () => {
     const onApply = jest.fn();
     const { getByText, getByLabelText } = await render(
-      <RoomDecorScreen initialItems={[]} freeLayout onApply={onApply} />,
+      <RoomDecorScreen initialItems={[]} onApply={onApply} />,
     );
 
     await fireEvent.press(getByLabelText('소품 탭')); // 장식류는 소품 탭 (#488)
@@ -83,7 +83,7 @@ describe('RoomDecorScreen (#327 — 자유 배치)', () => {
       },
     ];
     const { getByText, getByLabelText } = await render(
-      <RoomDecorScreen initialItems={[]} freeLayout furniture={furniture} onApply={onApply} />,
+      <RoomDecorScreen initialItems={[]} furniture={furniture} onApply={onApply} />,
     );
 
     await fireEvent.press(getByLabelText('기준 램프'));
@@ -112,7 +112,7 @@ describe('RoomDecorScreen (#327 — 자유 배치)', () => {
       },
     ];
     const { getByText, getByLabelText } = await render(
-      <RoomDecorScreen initialItems={[]} freeLayout furniture={furniture} onApply={onApply} />,
+      <RoomDecorScreen initialItems={[]} furniture={furniture} onApply={onApply} />,
     );
 
     await fireEvent.press(getByLabelText('좌표 한쪽만 있는 램프'));
@@ -137,7 +137,7 @@ describe('RoomDecorScreen (#327 — 자유 배치)', () => {
       },
     ];
     const { getByText, getByLabelText } = await render(
-      <RoomDecorScreen initialItems={[]} freeLayout furniture={furniture} onApply={onApply} />,
+      <RoomDecorScreen initialItems={[]} furniture={furniture} onApply={onApply} />,
     );
 
     await fireEvent.press(getByLabelText('가장자리 큰 램프'));
@@ -169,12 +169,7 @@ describe('RoomDecorScreen (#327 — 자유 배치)', () => {
       scale: 0.8,
     };
     const { getByText } = await render(
-      <RoomDecorScreen
-        initialItems={[existing]}
-        freeLayout
-        furniture={furniture}
-        onApply={onApply}
-      />,
+      <RoomDecorScreen initialItems={[existing]} furniture={furniture} onApply={onApply} />,
     );
 
     await fireEvent.press(getByText('적용하기'));
@@ -186,7 +181,7 @@ describe('RoomDecorScreen (#327 — 자유 배치)', () => {
   it('toggles a placed item off in the full catalog', async () => {
     const onApply = jest.fn();
     const { getByText, getByLabelText } = await render(
-      <RoomDecorScreen initialItems={items(['plant'])} freeLayout onApply={onApply} />,
+      <RoomDecorScreen initialItems={items(['plant'])} onApply={onApply} />,
     );
 
     // 타일 이름 텍스트는 사라졌다 (#487) — 카탈로그 타일은 접근성 라벨로 누른다.
@@ -200,7 +195,7 @@ describe('RoomDecorScreen (#327 — 자유 배치)', () => {
   it('picks a wallpaper by tapping the wall', async () => {
     const onApply = jest.fn();
     const { getByText, getByLabelText } = await render(
-      <RoomDecorScreen initialItems={[]} freeLayout onApply={onApply} />,
+      <RoomDecorScreen initialItems={[]} onApply={onApply} />,
     );
 
     await fireEvent.press(getByLabelText('벽 꾸미기'));
@@ -241,7 +236,6 @@ describe('RoomDecorScreen (#327 — 자유 배치)', () => {
     const { getByText, getByLabelText } = await render(
       <RoomDecorScreen
         initialItems={[]}
-        freeLayout
         floors={floors}
         backgrounds={backgrounds}
         onApply={onApply}
@@ -262,13 +256,7 @@ describe('RoomDecorScreen (#327 — 자유 배치)', () => {
       { id: 'f1', name: '원목 바닥재', price: 100, assetKey: 'items/a/floor.png', color: '#EEE' },
     ];
     const { getByText, getByLabelText } = await render(
-      <RoomDecorScreen
-        initialItems={[]}
-        freeLayout
-        initialFloorId="f1"
-        floors={floors}
-        onApply={onApply}
-      />,
+      <RoomDecorScreen initialItems={[]} initialFloorId="f1" floors={floors} onApply={onApply} />,
     );
 
     await fireEvent.press(getByLabelText('바닥 꾸미기'));
@@ -279,7 +267,7 @@ describe('RoomDecorScreen (#327 — 자유 배치)', () => {
 
   it('서브픽커의 선택 닫기는 전체 패널로 복귀한다 (#487)', async () => {
     const { getByLabelText, queryByLabelText } = await render(
-      <RoomDecorScreen initialItems={items(['bed'])} freeLayout />,
+      <RoomDecorScreen initialItems={items(['bed'])} />,
     );
 
     // 기본 'all' 패널에는 닫기 버튼이 없다 — 닫을 곳이 없는 기본 상태.
@@ -295,9 +283,7 @@ describe('RoomDecorScreen (#327 — 자유 배치)', () => {
 describe('RoomDecorScreen — 안드로이드 하드웨어 백 (#488)', () => {
   it('서브픽커는 all로 복귀, all에선 폴스루, dirty면 나가기 확인', async () => {
     const spy = jest.spyOn(BackHandler, 'addEventListener');
-    const { getByLabelText, getByText } = await render(
-      <RoomDecorScreen initialItems={[]} freeLayout />,
-    );
+    const { getByLabelText, getByText } = await render(<RoomDecorScreen initialItems={[]} />);
     const lastHandler = () =>
       spy.mock.calls[spy.mock.calls.length - 1][1] as unknown as () => boolean;
 
@@ -434,12 +420,7 @@ describe('RoomDecorScreen — 프리뷰·구매 (#501)', () => {
 
   it('미보유 벽지는 프리뷰 적용 + 가격 칩, 재탭이 구매다', async () => {
     const { getByText, getByLabelText, queryByText } = await render(
-      <RoomDecorScreen
-        initialItems={[]}
-        ownedIds={['bed', 'simple']}
-        diamondBalance={9999}
-        freeLayout
-      />,
+      <RoomDecorScreen initialItems={[]} ownedIds={['bed', 'simple']} diamondBalance={9999} />,
     );
 
     await fireEvent.press(getByLabelText('벽지 탭'));
@@ -460,7 +441,6 @@ describe('RoomDecorScreen — 프리뷰·구매 (#501)', () => {
         initialItems={items(['bed'])}
         ownedIds={['bed', 'simple']}
         diamondBalance={9999}
-        freeLayout
         onApply={onApply}
       />,
     );
@@ -484,7 +464,6 @@ describe('RoomDecorScreen — 프리뷰·구매 (#501)', () => {
         initialItems={items(['bed'])}
         ownedIds={['bed', 'simple']}
         diamondBalance={9999}
-        freeLayout
         onBuy={onBuy}
         onApply={onApply}
       />,
@@ -511,7 +490,6 @@ describe('RoomDecorScreen — 프리뷰·구매 (#501)', () => {
         initialItems={items(['bed'])}
         ownedIds={['bed', 'simple']}
         diamondBalance={1}
-        freeLayout
         onBuy={jest.fn()}
       />,
     );
@@ -523,31 +501,18 @@ describe('RoomDecorScreen — 프리뷰·구매 (#501)', () => {
 });
 
 describe('RoomDecorScreen — 저장 흐름', () => {
-  it('첫 자유 배치 저장은 전환 확인 모달을 거친다 (#327)', async () => {
+  it('전환 확인 모달 없이 바로 저장한다 (#925)', async () => {
     const onApply = jest.fn();
     const onBack = jest.fn();
-    const { getByText, getByLabelText } = await render(
+    const { getByText, queryByText } = await render(
       <RoomDecorScreen initialItems={items(['bed'])} onApply={onApply} onBack={onBack} />,
     );
 
     await fireEvent.press(getByText('적용하기'));
-    expect(getByText('새 꾸미기 방식으로 전환할까요?')).toBeTruthy();
-    expect(onApply).not.toHaveBeenCalled();
-
-    await fireEvent.press(getByLabelText('전환하고 저장'));
-    await waitFor(() => expect(onApply).toHaveBeenCalled());
-    await waitFor(() => expect(onBack).toHaveBeenCalled());
-  });
-
-  it('이미 FREE_V1이면 전환 모달 없이 바로 저장한다', async () => {
-    const onApply = jest.fn();
-    const { getByText, queryByText } = await render(
-      <RoomDecorScreen initialItems={items(['bed'])} freeLayout onApply={onApply} />,
-    );
-
-    await fireEvent.press(getByText('적용하기'));
+    // 슬롯 렌더가 사라져 "이전 방식으로 되돌릴 수 없다"고 물을 것이 없어졌다 (#327 모달 제거).
     expect(queryByText('새 꾸미기 방식으로 전환할까요?')).toBeNull();
     await waitFor(() => expect(onApply).toHaveBeenCalled());
+    await waitFor(() => expect(onBack).toHaveBeenCalled());
   });
 
   it('리비전 충돌(409)이면 재로드 모달 → 새로 불러오기 (#327)', async () => {
@@ -557,7 +522,6 @@ describe('RoomDecorScreen — 저장 흐름', () => {
     const { getByText, getByLabelText } = await render(
       <RoomDecorScreen
         initialItems={items(['bed'])}
-        freeLayout
         onApply={onApply}
         onConflictReload={onConflictReload}
         onBack={onBack}
@@ -589,7 +553,7 @@ describe('RoomDecorScreen — 저장 흐름', () => {
     const onBack = jest.fn();
     const onApply = jest.fn();
     const { getByText, getByLabelText } = await render(
-      <RoomDecorScreen initialItems={[]} freeLayout onBack={onBack} onApply={onApply} />,
+      <RoomDecorScreen initialItems={[]} onBack={onBack} onApply={onApply} />,
     );
 
     await fireEvent.press(getByLabelText('소품 탭')); // 장식류는 소품 탭 (#488)
@@ -609,7 +573,7 @@ describe('RoomDecorScreen — 저장 흐름', () => {
     const onBack = jest.fn();
     const onApply = jest.fn();
     const { getByLabelText } = await render(
-      <RoomDecorScreen initialItems={[]} freeLayout onBack={onBack} onApply={onApply} />,
+      <RoomDecorScreen initialItems={[]} onBack={onBack} onApply={onApply} />,
     );
 
     await fireEvent.press(getByLabelText('소품 탭')); // 장식류는 소품 탭 (#488)
@@ -624,7 +588,7 @@ describe('RoomDecorScreen — 저장 흐름', () => {
   it('stays on the screen via 계속 꾸미기', async () => {
     const onBack = jest.fn();
     const { getByLabelText, queryByText } = await render(
-      <RoomDecorScreen initialItems={[]} freeLayout onBack={onBack} />,
+      <RoomDecorScreen initialItems={[]} onBack={onBack} />,
     );
 
     await fireEvent.press(getByLabelText('소품 탭')); // 장식류는 소품 탭 (#488)
@@ -640,7 +604,7 @@ describe('RoomDecorScreen — 저장 흐름', () => {
 describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
   it('tapping an item selects it: ring + toolbar appear, empty-canvas tap deselects', async () => {
     const { getByTestId, getByLabelText, queryByLabelText, queryByTestId } = await render(
-      <RoomDecorScreen initialItems={items(['plant'])} freeLayout />,
+      <RoomDecorScreen initialItems={items(['plant'])} />,
     );
     await layoutCanvas(getByTestId);
 
@@ -662,7 +626,7 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
   it('좌·우 회전은 15° 스텝(음수는 360으로 래핑); 좌우 반전 토글', async () => {
     const onApply = jest.fn();
     const { getByTestId, getByText, getByLabelText } = await render(
-      <RoomDecorScreen initialItems={items(['plant'])} freeLayout onApply={onApply} />,
+      <RoomDecorScreen initialItems={items(['plant'])} onApply={onApply} />,
     );
     await layoutCanvas(getByTestId);
     await tapItem('plant');
@@ -692,11 +656,7 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
     const onApply = jest.fn();
     // bed z=1(맨 뒤), plant z=2, rug z=3(맨 앞).
     const { getByTestId, getByText, getByLabelText } = await render(
-      <RoomDecorScreen
-        initialItems={items(['bed', 'plant', 'rug'])}
-        freeLayout
-        onApply={onApply}
-      />,
+      <RoomDecorScreen initialItems={items(['bed', 'plant', 'rug'])} onApply={onApply} />,
     );
     await layoutCanvas(getByTestId);
     await tapItem('bed');
@@ -719,7 +679,7 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
   it('빼기 removes the selected item and closes the toolbar', async () => {
     const onApply = jest.fn();
     const { getByTestId, getByText, getByLabelText, queryByLabelText } = await render(
-      <RoomDecorScreen initialItems={items(['plant'])} freeLayout onApply={onApply} />,
+      <RoomDecorScreen initialItems={items(['plant'])} onApply={onApply} />,
     );
     await layoutCanvas(getByTestId);
     await tapItem('plant');
@@ -734,7 +694,7 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
   it('pinch scale commits clamped to 0.5–3.5', async () => {
     const onApply = jest.fn();
     const { getByTestId, getByText } = await render(
-      <RoomDecorScreen initialItems={items(['plant'])} freeLayout onApply={onApply} />,
+      <RoomDecorScreen initialItems={items(['plant'])} onApply={onApply} />,
     );
     await layoutCanvas(getByTestId);
     // 선택된 가구만 이동·크기 조절을 받는다 (#768).
@@ -771,7 +731,7 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
   it('resize handle drag commits a new scale', async () => {
     const onApply = jest.fn();
     const { getByTestId, getByText } = await render(
-      <RoomDecorScreen initialItems={items(['plant'])} freeLayout onApply={onApply} />,
+      <RoomDecorScreen initialItems={items(['plant'])} onApply={onApply} />,
     );
     await layoutCanvas(getByTestId);
     await tapItem('plant');
@@ -793,7 +753,7 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
   it('drag is clamped to the room bounds — no drag-out removal', async () => {
     const onApply = jest.fn();
     const { getByTestId, getByText } = await render(
-      <RoomDecorScreen initialItems={items(['plant'])} freeLayout onApply={onApply} />,
+      <RoomDecorScreen initialItems={items(['plant'])} onApply={onApply} />,
     );
     await layoutCanvas(getByTestId);
     // 선택된 가구만 이동·크기 조절을 받는다 (#768).
@@ -821,7 +781,7 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
     const onApply = jest.fn();
     const before = items(['plant']);
     const { getByTestId, getByText } = await render(
-      <RoomDecorScreen initialItems={before} freeLayout onApply={onApply} />,
+      <RoomDecorScreen initialItems={before} onApply={onApply} />,
     );
     await layoutCanvas(getByTestId);
 
@@ -856,7 +816,7 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
     const onApply = jest.fn();
     const scaled = items(['plant']).map((item) => ({ ...item, scale: 2 }));
     const { getByTestId, getByText } = await render(
-      <RoomDecorScreen initialItems={scaled} freeLayout onApply={onApply} />,
+      <RoomDecorScreen initialItems={scaled} onApply={onApply} />,
     );
     await layoutCanvas(getByTestId);
     // 선택된 가구만 이동·크기 조절을 받는다 (#768).
@@ -890,9 +850,7 @@ describe('RoomDecorScreen — 선택 툴바 위치 회피 (#608)', () => {
     };
 
   it('벽 쪽(상반부) 가구를 선택하면 툴바가 캔버스 하단으로 회피한다', async () => {
-    const { getByTestId } = await render(
-      <RoomDecorScreen initialItems={placedAt('plant', 0.3)} freeLayout />,
-    );
+    const { getByTestId } = await render(<RoomDecorScreen initialItems={placedAt('plant', 0.3)} />);
     await layoutCanvas(getByTestId);
     await tapItem('plant');
 
@@ -902,9 +860,7 @@ describe('RoomDecorScreen — 선택 툴바 위치 회피 (#608)', () => {
   });
 
   it('하반부 가구는 상단 자리를 유지하고, 드래그로 벽 쪽에 놓으면 하단으로 옮겨간다', async () => {
-    const { getByTestId } = await render(
-      <RoomDecorScreen initialItems={placedAt('plant', 0.7)} freeLayout />,
-    );
+    const { getByTestId } = await render(<RoomDecorScreen initialItems={placedAt('plant', 0.7)} />);
     await layoutCanvas(getByTestId);
     await tapItem('plant');
     expect(toolbarStyle(getByTestId).top).toBeDefined();
@@ -927,7 +883,7 @@ describe('RoomDecorScreen — 선택 툴바 위치 회피 (#608)', () => {
 describe('RoomDecorScreen — 뽑기에서 온 NEW 강조 (#630)', () => {
   it('highlightItemIds 아이템이 카탈로그 맨 앞 + NEW 배지로 뜬다', async () => {
     const { getByTestId, queryByTestId, getByLabelText } = await render(
-      <RoomDecorScreen initialItems={[]} freeLayout highlightItemIds={['plant']} />,
+      <RoomDecorScreen initialItems={[]} highlightItemIds={['plant']} />,
     );
     // plant는 소품 탭 — NEW 배지가 붙는다.
     await fireEvent.press(getByLabelText('소품 탭'));
@@ -941,7 +897,7 @@ describe('RoomDecorScreen — 전체보기 탭', () => {
   it('splits the full catalog into tabs: 가구 default, 소품·벽지 on switch (#488)', async () => {
     const onApply = jest.fn();
     const { getByText, getByLabelText, queryByText, queryByLabelText } = await render(
-      <RoomDecorScreen initialItems={[]} freeLayout onApply={onApply} />,
+      <RoomDecorScreen initialItems={[]} onApply={onApply} />,
     );
 
     // 기본 탭은 가구 — 소품(장식류)·벽지는 아직 안 보인다. (이름 텍스트는
@@ -995,5 +951,114 @@ describe('RoomDecorScreen — 보유중 필터', () => {
     // Toggling back restores the shop side.
     await fireEvent.press(getByLabelText('보유중만 보기'));
     expect(queryByLabelText('초록 식물 미리 배치')).toBeTruthy();
+  });
+
+  /**
+   * 뽑기에서 넘어오면 하이라이트만으론 부족하다 (#897) — 뽑은 게 안 보이는
+   * 탭에 있으면 찾아야 한다.
+   */
+  describe('뽑은 종류의 탭을 연다 (#897)', () => {
+    const CATALOGS = {
+      furniture: [
+        {
+          id: 'bed',
+          name: '침대',
+          slot: 'bottomLeft' as const,
+          category: '가구' as const,
+          price: 0,
+          assetKey: 'items/a/bed.png',
+        },
+        {
+          id: 'rug',
+          name: '러그',
+          slot: 'bottomCenter' as const,
+          category: '러그' as const,
+          price: 0,
+          assetKey: 'items/a/rug.png',
+        },
+      ],
+      wallpapers: [
+        { id: 'wp1', name: '벽지', price: 0, color: '#fff', assetKey: 'items/a/wp.png' },
+      ],
+      floors: [{ id: 'fl1', name: '바닥', price: 0, color: '#eee', assetKey: 'items/a/fl.png' }],
+      backgrounds: [
+        { id: 'bg1', name: '배경', price: 0, color: '#ddd', assetKey: 'items/a/bg.png' },
+      ],
+    };
+
+    it('아이템 id를 카탈로그로 되짚어 탭을 고른다', () => {
+      expect(decorTabForItem('wp1', CATALOGS)).toBe('wallpaper');
+      expect(decorTabForItem('fl1', CATALOGS)).toBe('floor');
+      expect(decorTabForItem('bg1', CATALOGS)).toBe('background');
+      expect(decorTabForItem('bed', CATALOGS)).toBe('furniture');
+      // 러그는 '소품' 탭이다 (서버 categoryCode 'floor').
+      expect(decorTabForItem('rug', CATALOGS)).toBe('decor');
+      // 캐릭터 보상 등 카탈로그에 없는 것.
+      expect(decorTabForItem('unknown', CATALOGS)).toBeUndefined();
+    });
+
+    it('벽지 2개 + 가구 1개를 뽑으면 벽지 탭', () => {
+      expect(dominantDecorTab(['wp1', 'wp1', 'bed'], CATALOGS)).toBe('wallpaper');
+    });
+
+    it('동률이면 결과에 먼저 나온 종류가 이긴다', () => {
+      expect(dominantDecorTab(['bed', 'wp1'], CATALOGS)).toBe('furniture');
+      expect(dominantDecorTab(['wp1', 'bed'], CATALOGS)).toBe('wallpaper');
+    });
+
+    it('알아볼 수 있는 게 없으면 탭을 건드리지 않는다', () => {
+      expect(dominantDecorTab(['unknown', ''], CATALOGS)).toBeUndefined();
+      expect(dominantDecorTab([], CATALOGS)).toBeUndefined();
+    });
+
+    it('initialTab을 주면 그 탭이 열린 채로 시작한다', async () => {
+      const { getByLabelText } = await render(
+        <RoomDecorScreen initialItems={[]} initialTab="wallpaper" {...CATALOGS} />,
+      );
+      expect(getByLabelText('벽지 탭').props.accessibilityState.selected).toBe(true);
+      expect(getByLabelText('가구 탭').props.accessibilityState.selected).toBe(false);
+    });
+
+    it('initialTab이 없으면 가구 탭 — 꾸미기를 직접 열었을 때', async () => {
+      const { getByLabelText } = await render(<RoomDecorScreen initialItems={[]} {...CATALOGS} />);
+      expect(getByLabelText('가구 탭').props.accessibilityState.selected).toBe(true);
+    });
+  });
+});
+
+describe('RoomDecorScreen — 카탈로그 열 수 (#725)', () => {
+  /** 그리드에 레이아웃 폭을 쏘고, 타일이 실제로 받은 flexBasis를 돌려준다. */
+  const basisAt = async (width: number | null) => {
+    const { getAllByTestId } = await render(<RoomDecorScreen initialItems={[]} />);
+    if (width != null) {
+      // act로 감싸야 setState가 플러시된다 (위 layoutCanvas와 같은 이유).
+      await act(async () => {
+        fireEvent(getAllByTestId('decor-grid')[0], 'layout', {
+          nativeEvent: { layout: { width, height: 400 } },
+        });
+      });
+    }
+    // 레이아웃 뒤에는 다시 찾는다 — 상태가 바뀌며 리렌더돼 앞의 인스턴스는 낡는다.
+    // 타일은 그리드의 직계 버튼 — 라벨은 보유 여부에 따라 달라져 role로 집는다.
+    const tile = within(getAllByTestId('decor-grid')[0]).getAllByRole('button')[0];
+    return StyleSheet.flatten(tile.props.style)?.flexBasis;
+  };
+
+  it('레이아웃 전에는 기존 4열 퍼센트 그대로 — 폰 첫 프레임이 안 튄다', async () => {
+    expect(await basisAt(null)).toBe('22%');
+  });
+
+  it('폰 폭이면 4열', async () => {
+    // 390 화면에서 패널 여백·패딩을 뺀 326. (326 - 간격 3칸) / 4
+    expect(await basisAt(326)).toBeCloseTo((326 - 3 * 8) / 4, 5);
+  });
+
+  it('태블릿 폭이면 상한인 8열에서 멈춘다', async () => {
+    // 폭만 보면 12열이 들어가지만 MAX_COLUMNS가 8에서 끊는다.
+    expect(await basisAt(960)).toBeCloseTo((960 - 7 * 8) / 8, 5);
+  });
+
+  it('아주 좁아도 4열 밑으로는 안 내려간다', async () => {
+    expect(await basisAt(200)).toBeCloseTo((200 - 3 * 8) / 4, 5);
   });
 });

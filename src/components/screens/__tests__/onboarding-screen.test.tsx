@@ -1,4 +1,5 @@
 import { act, fireEvent, render } from '@testing-library/react-native';
+import { Keyboard } from 'react-native';
 import { State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
@@ -106,6 +107,25 @@ describe('OnboardingScreen', () => {
     await fireEvent.press(getByText('시작하기'));
 
     expect(onDone).toHaveBeenCalledWith(['exercise'], 'cat', '준서');
+  });
+
+  it('닉네임 단계에서 키보드를 내릴 수 있다 (#923)', async () => {
+    const dismiss = jest.spyOn(Keyboard, 'dismiss');
+    const { getByText, getByLabelText } = await render(<OnboardingScreen />);
+
+    await fireEvent.press(getByText('건너뛰기'));
+    await fireEvent.press(getByText('운동'));
+    await fireEvent.press(getByText('시작하기'));
+
+    // 완료 키로 내려간다.
+    await fireEvent(getByLabelText('닉네임 입력'), 'submitEditing');
+    expect(dismiss).toHaveBeenCalled();
+
+    // 입력칸 밖(배경) 탭으로도 내려간다 — 제보의 본체.
+    dismiss.mockClear();
+    await fireEvent.press(getByLabelText('닉네임 입력').parent!);
+    expect(dismiss).toHaveBeenCalled();
+    dismiss.mockRestore();
   });
 
   it('starts the goal survey pre-filled with the previous selections (replay = edit)', async () => {
@@ -267,7 +287,7 @@ describe('OnboardingScreen 캐릭터 캐러셀', () => {
 
   it('피크 카드를 탭하면 그 캐릭터가 활성이 된다', async () => {
     const { getByLabelText, getByText } = await openCarousel();
-    await fireEvent.press(getByLabelText(/판다 — /));
+    await fireEvent.press(getByLabelText(/판다\. /));
     expect(getByText('판다랑 함께하기')).toBeTruthy();
   });
 });

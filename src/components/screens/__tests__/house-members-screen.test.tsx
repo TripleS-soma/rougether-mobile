@@ -379,4 +379,45 @@ describe('HouseMembersScreen — 구성원 관리 (구 house-screen 흐름, #753
     );
     expect(getByText('강퇴된 멤버')).toBeTruthy();
   });
+
+  /**
+   * 동거 봇(서버 #307~#310)이 온보딩 기본 집에 자동 입주한다. 사람인 줄 알고
+   * 응원을 보내거나 방장을 넘기지 않도록 구분되어야 한다.
+   */
+  describe('동거 봇 (#947)', () => {
+    const withBot: House = {
+      ...MISSION_HOUSE,
+      floors: [
+        {
+          level: '1층',
+          rooms: [
+            { name: '나', color: '#E8E0D0', isMine: true, isOwner: true, membershipId: 43 },
+            { name: '친구', color: '#F5E1D8', membershipId: 42 },
+            { name: '루티', color: '#DCE7DA', membershipId: 44, bot: true },
+          ],
+        },
+      ],
+    };
+
+    it('봇 구성원에만 봇 배지를 붙인다', async () => {
+      const { getByTestId, queryByTestId } = await render(screenFor(withBot));
+      expect(getByTestId('bot-badge-루티')).toBeTruthy();
+      expect(queryByTestId('bot-badge-친구')).toBeNull();
+    });
+
+    it('봇에게는 방장 위임 버튼을 주지 않는다 — 서버가 거부한다', async () => {
+      // 고를 수 있는데 눌러야 실패하는 UI 대신 목록 단계에서 뺀다
+      // (HOUSE_OWNER_TRANSFER_TO_BOT, 서버 #309).
+      const { getByLabelText, queryByLabelText } = await render(
+        screenFor(withBot, { onTransferOwnership: jest.fn() }),
+      );
+      expect(getByLabelText('친구 방장 위임')).toBeTruthy();
+      expect(queryByLabelText('루티 방장 위임')).toBeNull();
+    });
+
+    it('봇도 강퇴는 할 수 있다 — 방장 권한 그대로', async () => {
+      const { getByLabelText } = await render(screenFor(withBot, { onKickMember: jest.fn() }));
+      expect(getByLabelText('루티 강퇴')).toBeTruthy();
+    });
+  });
 });

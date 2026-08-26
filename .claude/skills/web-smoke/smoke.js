@@ -70,6 +70,9 @@ const isoShift = (days) => {
     page.getByText(text, { exact: false }).first().waitFor({ timeout });
   const tap = async (text) => page.getByText(text, { exact: false }).first().click();
   const tapLabel = async (label) => page.getByLabel(label, { exact: false }).first().click();
+  // 정확 라벨 + 보이는 것만 — '집'이 숨은 '집 탐색'에 먼저 걸려 30초를 태웠다.
+  const tapExact = async (label) =>
+    page.getByLabel(label, { exact: true }).locator('visible=true').first().click();
 
   await step('boot-to-login', async () => {
     await page.goto(BASE, { waitUntil: 'domcontentloaded', timeout: 60000 });
@@ -113,7 +116,7 @@ const isoShift = (days) => {
     if (yesterday.slice(0, 7) !== isoShift(0).slice(0, 7)) await tapLabel('이전 달');
     await page.getByLabel(yesterday).first().click();
     // Server-backed day: either records render or the empty hint does.
-    await Promise.race([see('지난 날짜는'), see('예정된 루틴이 없어요')]);
+    await Promise.race([see('지난 날짜도'), see('예정된 루틴이 없어요')]);
     await page.getByText('방', { exact: true }).first().click();
   });
 
@@ -134,10 +137,14 @@ const isoShift = (days) => {
   });
 
   await step('house-tab', async () => {
-    await tapLabel('집');
+    await tapExact('집');
     // Either the empty-state guide or a populated house view is fine.
-    // #287: 미션 카드는 플로팅 버튼 → 시트로 이동 — 스탯 행이 집 화면 앵커.
-    await Promise.race([see('아직 함께하는 집이 없어요'), see('진행 중 미션')]);
+    // #876에서 미션이 요약 줄('우리 집의 목표')로 올라와 종전 앵커가 어긋났다.
+    await Promise.race([
+      see('아직 함께하는 집이 없어요'),
+      see('진행 중 미션'),
+      see('우리 집의 목표'),
+    ]);
   });
 
   await step('friend-room-visit', async () => {
@@ -201,14 +208,20 @@ const isoShift = (days) => {
     results.push(`INFO replay prefilled goals: ${checked}`);
     // Finish the flow FIRST so a failed assertion doesn't strand later steps.
     await tap('시작하기');
-    await tap('캐릭터 선택하기');
+    // #637에서 캐릭터 캐러셀이 빠져 목표 다음이 곧 닉네임 단계이고, #635부터
+    // 필수 입력이다 — 현재 닉네임을 그대로 채워(값 변화 없음) 흐름을 끝낸다.
+    await page.getByLabel('닉네임 입력').fill('준서');
+    await page.getByText('시작하기', { exact: true }).last().click();
     await see('의 방', 20000);
     if (checked === 0) throw new Error('no goal pre-checked on replay (#220 regression)');
   });
 
   await step('decor-unsaved-guard', async () => {
     await tapLabel('메뉴');
-    await page.getByLabel('방 꾸미기', { exact: true }).first().click();
+    // 캔버스의 연필 버튼(#727)이 팝오버 항목과 같은 aria-label을 쓴다. first()는
+    // 모달 뒤에 깔린 캔버스 쪽을 집어 클릭이 막힌다 — 팝오버는 Modal 포탈이라
+    // 항상 DOM 뒤쪽이므로 last()가 메뉴 항목이다.
+    await page.getByLabel('방 꾸미기', { exact: true }).last().click();
     await see('적용하기', 15000);
     // Preview-select a non-default wallpaper, then leave without applying —
     // the unsaved-change guard (PR #216) should intercept.

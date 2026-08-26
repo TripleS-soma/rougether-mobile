@@ -5,6 +5,7 @@ import { Field } from '@/components/ui/field';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 const MIN_LENGTH = 8;
@@ -24,6 +25,7 @@ export type PasswordChangeScreenProps = {
  */
 export function PasswordChangeScreen({ onBack }: PasswordChangeScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
@@ -36,7 +38,7 @@ export function PasswordChangeScreen({ onBack }: PasswordChangeScreenProps) {
     <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader title="비밀번호 변경" onBack={onBack} />
 
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView contentContainerStyle={[styles.body, column]}>
         {/* The dev API has no password auth yet — be honest instead of a fake
             success that just navigates back. */}
         <View style={[styles.notice, { backgroundColor: t.warningSoft, borderColor: t.warning }]}>

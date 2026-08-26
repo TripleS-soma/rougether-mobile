@@ -30,13 +30,12 @@ import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furnitur
 import { ErrorCode } from '@/api/error-codes';
 import type { RoomCobweb } from '@/components/room/room';
 
-/** 친구 방 배치 — FREE_V1이면 placements, 아니면 슬롯 id 목록으로 렌더 (#327). */
+/** 자유 배치 가구 — 가구의 유일한 정본 (#925). */
 export type FriendRoomPlacement = {
-  placedFurnitureIds: string[];
   wallpaperId: string;
   floorId: string | null;
   backgroundId: string | null;
-  placements: PlacedFurniture[] | null;
+  placements: PlacedFurniture[];
 };
 
 export type FriendRoom = {
@@ -81,7 +80,13 @@ export function useFriendRoom() {
    * useCallback: 셸이 memo 화면(HouseScreen)의 콜백 안에 넣는다 (#539).
    */
   const load = useCallback(
-    async (houseId?: number, membershipId?: number, catalogue?: ShopCatalogue) => {
+    async (
+      houseId?: number,
+      membershipId?: number,
+      catalogue?: ShopCatalogue,
+      /** 마스터 `/characters` 프레임 맵 — 내 방과 같은 그림을 쓰기 위한 것 (#968). */
+      masterFrames?: Partial<Record<CharacterId, string[]>>,
+    ) => {
       const seq = ++seqRef.current;
       if (houseId == null || membershipId == null) {
         setFriendRoom(EMPTY);
@@ -100,15 +105,13 @@ export function useFriendRoom() {
         setFriendRoom({ ...EMPTY, error: true });
         return;
       }
+      // 표면(벽지·바닥·배경)만 슬롯에서 읽는다 — 서버가 거기 저장한다 (서버 #162).
       const resolved = room && catalogue ? fromFriendRoomSlots(room.slots ?? [], catalogue) : null;
-      // FREE_V1 친구 방은 placements를 assetKey 기준으로 해석해 그대로 렌더 (#327).
+      // 가구는 자유 좌표가 정본 (#925) — assetKey 기준으로 해석해 그대로 렌더.
       const friendPlacements =
-        room && catalogue && room.layoutFormat === 'FREE_V1' && room.placements?.length
-          ? fromRoomPlacements(room.placements, catalogue)
-          : null;
+        room && catalogue ? fromRoomPlacements(room.placements ?? [], catalogue) : [];
       // Same guard as toOwnedCharacter: a code the app doesn't know renders as the
       // default character, so its frames must not ride along (wrong pairing).
-      // 친구 방 응답에는 poses[]가 없다 — 레거시 animations만 프레임으로 편다 (#735).
       const friendCharacterId = characterIdFromCode(room?.character?.code);
       setFriendRoom({
         placement: resolved
@@ -119,8 +122,13 @@ export function useFriendRoom() {
             }
           : null,
         characterId: friendCharacterId,
+        // 친구 방 응답에는 `poses[]`가 없다(#735 — 2026-08-24 재확인). 그래서 예전엔
+        // 레거시 `animations`만 폈는데, 내 방은 `poses`를 써서 **같은 캐릭터가 두
+        // 화면에서 다른 그림으로** 나왔다 (#968). 마스터 `/characters`가 주는 poses를
+        // 앱이 이미 갖고 있으므로 그걸 먼저 쓰고, 못 받았을 때만 응답으로 떨어진다.
         characterFrames: friendCharacterId
-          ? toCharacterFrames(undefined, room?.character?.animations)
+          ? (masterFrames?.[friendCharacterId] ??
+            toCharacterFrames(undefined, room?.character?.animations))
           : undefined,
         streakDays: room?.streak?.currentCount ?? 0,
         cobweb: room?.cobweb ?? null,

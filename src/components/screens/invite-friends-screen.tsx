@@ -11,6 +11,7 @@ import { friendInviteLink } from '@/constants/links';
 import { Radius, Spacing } from '@/constants/theme';
 import { track } from '@/lib/analytics';
 import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
 export type InviteInfo = {
@@ -54,6 +55,7 @@ export function InviteFriendsScreen({
   onBack,
 }: InviteFriendsScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const [copied, setCopied] = useState(false);
@@ -128,7 +130,7 @@ export function InviteFriendsScreen({
     <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader title="친구 초대" onBack={onBack} />
 
-      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.body, column]} keyboardShouldPersistTaps="handled">
         {loading ? (
           <View style={styles.loadingBlock}>
             <Loading />
@@ -142,7 +144,7 @@ export function InviteFriendsScreen({
             <Text style={sectionTitle}>내 초대코드</Text>
             <View style={[styles.card, { backgroundColor: t.surface }]}>
               <Text style={[Typography.h1, styles.code, { color: t.text }]}>
-                {info?.code ?? '—'}
+                {info?.code ?? '-'}
               </Text>
               <View style={styles.codeActions}>
                 <ScalePressable
@@ -223,7 +225,7 @@ export function InviteFriendsScreen({
                         Typography.label,
                         { color: code.trim() && !redeeming ? t.onPrimary : t.textMuted },
                       ]}>
-                      {redeeming ? '확인 중…' : '사용하기'}
+                      {redeeming ? '확인 중...' : '사용하기'}
                     </Text>
                   </ScalePressable>
                   <Text style={[Typography.supporting, { color: t.textMuted }]}>

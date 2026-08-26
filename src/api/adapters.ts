@@ -35,7 +35,7 @@ import {
 
 import { type OnboardingGoal } from '@/components/screens/onboarding-screen';
 import { toIsoDate, relativeTimeLabel } from '@/utils/datetime';
-import { type RoomPlacementSave, type RoomPlacementWire, type RoomSlotSave } from './rooms';
+import { type RoomPlacementSave, type RoomPlacementWire } from './rooms';
 
 import type { HouseCover } from '@/components/room/house-cover-picker';
 import type {
@@ -215,8 +215,12 @@ const REPEAT_TO_APP: Record<string, RepeatKind> = {
 const effectiveRepeat = (r: { repeat?: RepeatKind; days?: number[] }): RepeatKind =>
   r.repeat ?? (r.days && r.days.length ? 'weekly' : 'daily');
 
-/** repeatType + repeatDays request fields from an app-side repeat description. */
-function toApiRepeat(r: {
+/**
+ * repeatType + repeatDays request fields from an app-side repeat description.
+ * 캘린더 임포트(#952)도 같은 매핑을 써야 한다 — 반복 규칙이 두 군데로 갈리면
+ * 한쪽만 고쳐져 임포트한 루틴만 요일이 어긋나는 식으로 틀어진다.
+ */
+export function toApiRepeat(r: {
   repeat?: RepeatKind;
   days?: number[];
   dayOfMonth?: number;
@@ -579,21 +583,20 @@ export function toShopCatalogue(items: ItemResponse[]): ShopCatalogue {
 }
 
 /**
- * A starting room built from owned items: one owned item per slot plus an owned
- * wallpaper. Avoids an empty room while server-side placement isn't wired.
+ * 저장 전 방의 **표면 기본값** — 소유한 벽지·바닥·배경에서 고른다.
+ *
+ * 예전엔 슬롯마다 소유 가구를 하나씩 채워 "빈 방을 피하는" 역할도 했는데,
+ * 가구를 놓을 앵커가 사라져(#925) 표면만 남았다. 가구는 사용자가 놓은
+ * 자리(placements)에만 나온다.
  */
 export function ownedPlacement(cat: ShopCatalogue): {
-  placedFurnitureIds: string[];
   wallpaperId: string;
   floorId: string | null;
   backgroundId: string | null;
 } {
   const owned = new Set(cat.ownedIds);
-  const bySlot: Partial<Record<FurnitureSlot, string>> = {};
-  for (const f of cat.furniture) if (owned.has(f.id) && !bySlot[f.slot]) bySlot[f.slot] = f.id;
   const wp = cat.wallpapers.find((w) => owned.has(w.id));
   return {
-    placedFurnitureIds: Object.values(bySlot),
     wallpaperId: wp?.id ?? cat.wallpapers[0]?.id ?? DEFAULT_WALLPAPER_ID,
     floorId: cat.floors.find((f) => owned.has(f.id))?.id ?? null,
     backgroundId: cat.backgrounds.find((b) => owned.has(b.id))?.id ?? null,
@@ -741,16 +744,19 @@ export function toHouse(
     ...active.filter((m) => m.userId !== myUserId),
   ];
   const cells: RoomCell[] = ordered.map((m, i) => ({
-    // The members API may not carry my nickname (server nickname unset) — fall
-    // back to the profile nickname so my room reads by name, not '멤버 N'.
+    // 내 좌석 이름은 **프로필이 우선**이다 (#924). 멤버 API의 nickname은 집을
+    // 다시 불러올 때까지 옛 값을 들고 있어서, 프로필을 고쳐도 타일만 예전
+    // 이름으로 남았다. 프로필 쪽이 같은 값의 출처이므로 항상 그쪽을 믿는다.
+    // (멤버 API에 이름이 아예 없는 경우의 폴백도 겸한다.)
     name:
-      m.nickname ||
-      (m.userId === myUserId && myNickname ? myNickname : `멤버 ${m.userId ?? i + 1}`),
+      (m.userId === myUserId ? myNickname : undefined) || m.nickname || `멤버 ${m.userId ?? i + 1}`,
     color: m.userId === myUserId ? MyRoomTint : RoomTints[i % RoomTints.length],
     isMine: m.userId === myUserId,
     isOwner: m.role === 'OWNER',
     membershipId: m.membershipId,
     userId: m.userId,
+    // 동거 봇 (서버 #309) — 구성원 화면이 배지로 구분한다.
+    bot: m.bot,
     ...toPresence(m.lastAccessedAt, nowMs),
   }));
   // Pad to the capacity so the house always shows 정원 seats; the server keeps
@@ -854,6 +860,8 @@ export function toGuestbookEntry(g: GuestbookItem): GuestbookEntry {
     author: g.authorNickname || `멤버 ${g.authorId ?? ''}`,
     content: g.content ?? '',
     date: d ? `${d.getMonth() + 1}월 ${d.getDate()}일` : '',
+    // 방명록은 봇 스케줄러(서버 #310)가 실제로 글을 쓴다 — 누가 썼는지 밝힌다.
+    authorBot: g.authorBot,
   };
 }
 
@@ -878,6 +886,8 @@ export function toBugReportEntry(b: BugReportResponse): BugReportEntry {
     title: b.title ?? '',
     status: b.status ?? 'RECEIVED',
     date: d ? `${d.getMonth() + 1}월 ${d.getDate()}일` : '',
+    // 첨부 키 (#736) — 화면이 이걸로 비공개 스크린샷을 따로 받아온다.
+    screenshotKeys: b.screenshotKeys ?? [],
   };
 }
 
@@ -899,17 +909,15 @@ function toPreviewRoom(
   room: RoomResponse | null | undefined,
   cat: ShopCatalogue,
 ): MemberRoomPreview {
-  if (!room) return { placedFurnitureIds: [], placements: [] };
-  const placement = fromFriendRoomSlots(room.slots ?? [], cat);
+  if (!room) return { placements: [] };
+  // 표면(벽지·바닥·배경)만 슬롯에서 읽는다 — 서버가 거기 저장한다 (서버 #162).
+  const surfaces = fromFriendRoomSlots(room.slots ?? [], cat);
   return {
-    placedFurnitureIds: placement.placedFurnitureIds,
-    placements:
-      room.layoutFormat === 'FREE_V1' && room.placements?.length
-        ? fromRoomPlacements(room.placements, cat)
-        : null,
-    wallpaperId: placement.wallpaperId ?? DEFAULT_WALLPAPER_ID,
-    floorId: placement.floorId,
-    backgroundId: placement.backgroundId,
+    // 가구는 자유 좌표가 정본 (#925) — layoutFormat 분기 없음.
+    placements: fromRoomPlacements(room.placements ?? [], cat),
+    wallpaperId: surfaces.wallpaperId ?? DEFAULT_WALLPAPER_ID,
+    floorId: surfaces.floorId,
+    backgroundId: surfaces.backgroundId,
     characterId: characterIdFromCode(room.character?.code),
   };
 }
@@ -964,17 +972,6 @@ export function toSearchHouse(h: HouseSummary, index = 0): SearchHouse {
 
 // --- room placement (배치 저장) --------------------------------------------------
 
-const POSITIONED_SLOTS: FurnitureSlot[] = [
-  'topLeft',
-  'topCenter',
-  'topRight',
-  'midLeft',
-  'midRight',
-  'bottomLeft',
-  'bottomCenter',
-  'bottomRight',
-];
-
 /** Inventory → itemId(string) → userItemId map (placement saves need userItemId). */
 export function toUserItemMap(items: MyItemSummary[]): Map<string, number> {
   const map = new Map<string, number>();
@@ -983,20 +980,24 @@ export function toUserItemMap(items: MyItemSummary[]): Map<string, number> {
   return map;
 }
 
-/** Server room slots → app placement. Unknown/unowned entries are skipped. */
+/**
+ * 내 방 슬롯 → 표면(벽지·바닥·배경) (#925).
+ *
+ * 가구는 더 이상 슬롯에서 읽지 않는다 — 정본은 placements다. 표면은 서버가
+ * 계속 `room_surface_slots`에 저장하고 이 배열로 돌려주므로(서버 #162) 이
+ * 경로는 남는다. 소유하지 않은 항목은 건너뛴다.
+ */
 export function fromRoomSlots(
   slots: RoomSlotResponse[],
   cat: ShopCatalogue,
   userItemMap: Map<string, number>,
 ): {
-  placedFurnitureIds: string[];
   wallpaperId: string | null;
   floorId: string | null;
   backgroundId: string | null;
 } {
   const itemByUserItem = new Map<number, string>();
   for (const [itemId, uid] of userItemMap) itemByUserItem.set(uid, itemId);
-  const placed: string[] = [];
   let wallpaperId: string | null = null;
   let floorId: string | null = null;
   let backgroundId: string | null = null;
@@ -1010,11 +1011,9 @@ export function fromRoomSlots(
       if (cat.floors.some((f) => f.id === itemId)) floorId = itemId;
     } else if (s.slotType === 'background') {
       if (cat.backgrounds.some((b) => b.id === itemId)) backgroundId = itemId;
-    } else if ((POSITIONED_SLOTS as string[]).includes(s.slotType)) {
-      if (cat.furniture.some((f) => f.id === itemId)) placed.push(itemId);
     }
   }
-  return { placedFurnitureIds: placed, wallpaperId, floorId, backgroundId };
+  return { wallpaperId, floorId, backgroundId };
 }
 
 /**
@@ -1082,14 +1081,12 @@ export function fromFriendRoomSlots(
   slots: RoomSlotResponse[],
   cat: ShopCatalogue,
 ): {
-  placedFurnitureIds: string[];
   wallpaperId: string | null;
   floorId: string | null;
   backgroundId: string | null;
 } {
   const byAsset = (list: { id: string; assetKey?: string }[], key: string) =>
     list.find((i) => i.assetKey && i.assetKey === key)?.id ?? null;
-  const placed: string[] = [];
   let wallpaperId: string | null = null;
   let floorId: string | null = null;
   let backgroundId: string | null = null;
@@ -1101,12 +1098,9 @@ export function fromFriendRoomSlots(
       floorId = byAsset(cat.floors, s.assetKey) ?? floorId;
     } else if (s.slotType === 'background') {
       backgroundId = byAsset(cat.backgrounds, s.assetKey) ?? backgroundId;
-    } else if ((POSITIONED_SLOTS as string[]).includes(s.slotType)) {
-      const id = byAsset(cat.furniture, s.assetKey);
-      if (id) placed.push(id);
     }
   }
-  return { placedFurnitureIds: placed, wallpaperId, floorId, backgroundId };
+  return { wallpaperId, floorId, backgroundId };
 }
 
 /** Room character code (e.g. "cat") → app CharacterId, when the code exists app-side. */
@@ -1198,36 +1192,4 @@ export function toFriendActivity(
     day.titles.push(c.title ?? '루틴');
   }
   return days;
-}
-
-/**
- * App placement → the full slot layout for PUT /rooms/me/slots. Every
- * positioned slot (+ wallpaper) is sent each save — null clears — so the
- * server always mirrors the client exactly.
- */
-export function toSlotSaves(
-  placedIds: string[],
-  wallpaperId: string,
-  cat: ShopCatalogue,
-  userItemMap: Map<string, number>,
-  floorId?: string | null,
-  backgroundId?: string | null,
-): RoomSlotSave[] {
-  const bySlot: Partial<Record<FurnitureSlot, number>> = {};
-  for (const id of placedIds) {
-    const item = cat.furniture.find((f) => f.id === id);
-    const uid = userItemMap.get(id);
-    if (item && uid != null && bySlot[item.slot] == null) bySlot[item.slot] = uid;
-  }
-  const saves: RoomSlotSave[] = POSITIONED_SLOTS.map((s) => ({
-    slotType: s,
-    userItemId: bySlot[s] ?? null,
-  }));
-  saves.push({ slotType: 'wallpaper', userItemId: userItemMap.get(wallpaperId) ?? null });
-  saves.push({ slotType: 'floor', userItemId: (floorId && userItemMap.get(floorId)) || null });
-  saves.push({
-    slotType: 'background',
-    userItemId: (backgroundId && userItemMap.get(backgroundId)) || null,
-  });
-  return saves;
 }

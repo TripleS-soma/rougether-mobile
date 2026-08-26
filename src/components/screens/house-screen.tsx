@@ -50,6 +50,7 @@ import {
   skyPhaseForHour,
 } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useResolvedScheme, useTokens, useTypography } from '@/hooks/use-tokens';
 import type { MissionStatus } from '@/utils/mission-cta';
@@ -87,6 +88,12 @@ export type RoomCell = {
   membershipId?: number;
   /** API user id — the friend's room owner id (guestbook, room visit). */
   userId?: number;
+  /**
+   * 동거 봇 (서버 #307~#310). 온보딩 기본 집에 자동 입주하고 사람이 오면
+   * 자리를 비켜준다. 사람인 줄 알고 응원을 보내거나 방장을 넘기지 않도록
+   * 구성원 화면에서 배지로 구분한다.
+   */
+  bot?: boolean;
 };
 
 /** Context handed to onVisitFriend — ids enable server features (방명록, 방/루틴 조회). */
@@ -293,7 +300,7 @@ export const HouseScreen = memo(function HouseScreen({
   onRetry,
   onRefresh,
   characterId = DEFAULT_CHARACTER_ID,
-  userName = '준서',
+  userName = '',
   streakDays = 0,
   houseIndex: houseIndexProp,
   onReorderHouses,
@@ -331,6 +338,7 @@ export const HouseScreen = memo(function HouseScreen({
   onScrollY,
 }: HouseScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
   // 시간대별 하늘 (#358) — 새벽/낮/노을/밤. 낮은 기존 sky 토큰과 동일.
   const scheme = useResolvedScheme();
@@ -809,7 +817,7 @@ export const HouseScreen = memo(function HouseScreen({
           {loading ? (
             <>
               <Loading />
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>불러오는 중…</Text>
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>불러오는 중...</Text>
             </>
           ) : loadError ? (
             // 로드 실패 (#549) — 집이 있는 사용자가 '집 없음' 가입 유도를 보지
@@ -993,7 +1001,8 @@ export const HouseScreen = memo(function HouseScreen({
         // 자리 드래그 중 당김 잠금 — 놓는 순간 새로고침이 배치를 끊지 않게.
         refreshDisabled={dragSeat != null}
         refreshTestID="house-refresh"
-        contentContainerStyle={styles.body}
+        // 집 커버는 aspectRatio라 폭이 넓어지면 초대형화돼 좌석이 잘린다 (#725).
+        contentContainerStyle={[styles.body, column]}
         scrollEnabled={dragSeat == null}
         testID="house-scroll">
         {/* 프레임 모드(#287) — 하늘 위에 스위처·집 프레임, 방은 창문 안에.

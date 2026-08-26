@@ -1,6 +1,8 @@
 import { Image } from 'expo-image';
 import { useRef, useState } from 'react';
 import {
+  Keyboard,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
@@ -71,9 +73,8 @@ export const MAX_GOALS = 3;
 /** 닉네임 길이 상한 (#635) — 헤더·타일 등 표시 공간과 합의된 값. */
 
 /**
- * 태블릿·큰 화면 콘텐츠 중앙 고정폭 (#725) — 온보딩 요소가 넓은 폭에서
- * 끝까지 늘어나지 않게 폰 너비 근처로 묶는다. 폰에서는 width:'100%'가
- * 우세라 영향 없음.
+ * 온보딩만 공용 상한보다 좁게 묶는다 (#725) — 폰 목업이 가운데 서는
+ * 레이아웃이라 넓으면 허전하다. 상한 자체는 `useResponsiveColumn`이 관리한다.
  */
 const CONTENT_MAX_W = 480;
 
@@ -242,43 +243,54 @@ export function OnboardingScreen({
     const canStart = trimmed.length > 0;
     return (
       <View style={[styles.screen, screenStyle]}>
-        <View style={styles.intro}>
-          <Text style={[Typography.h1, { color: t.text }]}>어떻게 불러드릴까요?</Text>
-          <Text style={[Typography.supporting, styles.introBody, { color: t.textMuted }]}>
-            {active.name}가 부를 내 이름을 정해주세요.
-          </Text>
-        </View>
-        <View style={styles.nicknameBody}>
-          <CharacterAvatar
-            characterId={selectedCharacter}
-            frames={characterFrames?.[selectedCharacter]}
-            size={120}
-          />
-          <TextInput
-            value={nickname}
-            onChangeText={(v) => setNickname(v.slice(0, NICKNAME_MAX))}
-            placeholder="닉네임 (12자까지)"
-            placeholderTextColor={t.textDisabled}
-            autoFocus
-            autoCorrect={false}
-            maxLength={NICKNAME_MAX}
-            accessibilityLabel="닉네임 입력"
-            style={[
-              styles.nicknameInput,
-              Typography.h3,
-              { backgroundColor: t.surface, color: t.text, borderColor: t.border },
-            ]}
-          />
-        </View>
-        <View style={styles.actions}>
-          <PrimaryButton
-            label="시작하기"
-            disabled={!canStart}
-            blockedMessage="닉네임을 입력해주세요"
-            onPress={() => onDone?.(selectedGoals, selectedCharacter, trimmed)}
-          />
-          <TextButton label="이전" onPress={() => setShowNicknameStep(false)} />
-        </View>
+        {/* 이 단계만 ScrollView가 아니라 고정 레이아웃이라, 다른 입력 화면이
+            쓰는 keyboardShouldPersistTaps가 통하지 않는다 (#923). 키보드를
+            내리는 배경 탭은 Pressable로 직접 걸고, autoFocus로 곧장 올라온
+            키보드가 '시작하기'를 덮지 않게 KeyboardAvoidingView로 감싼다. */}
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={styles.intro}>
+            <Text style={[Typography.h1, { color: t.text }]}>어떻게 불러드릴까요?</Text>
+            <Text style={[Typography.supporting, styles.introBody, { color: t.textMuted }]}>
+              {active.name}가 부를 내 이름을 정해주세요.
+            </Text>
+          </View>
+          {/* accessible={false} — 배경을 스크린리더 대상으로 만들지 않는다. */}
+          <Pressable style={styles.nicknameBody} onPress={Keyboard.dismiss} accessible={false}>
+            <CharacterAvatar
+              characterId={selectedCharacter}
+              frames={characterFrames?.[selectedCharacter]}
+              size={120}
+            />
+            <TextInput
+              value={nickname}
+              onChangeText={(v) => setNickname(v.slice(0, NICKNAME_MAX))}
+              placeholder="닉네임 (12자까지)"
+              placeholderTextColor={t.textDisabled}
+              autoFocus
+              autoCorrect={false}
+              maxLength={NICKNAME_MAX}
+              accessibilityLabel="닉네임 입력"
+              returnKeyType="done"
+              onSubmitEditing={Keyboard.dismiss}
+              style={[
+                styles.nicknameInput,
+                Typography.h3,
+                { backgroundColor: t.surface, color: t.text, borderColor: t.border },
+              ]}
+            />
+          </Pressable>
+          <View style={styles.actions}>
+            <PrimaryButton
+              label="시작하기"
+              disabled={!canStart}
+              blockedMessage="닉네임을 입력해주세요"
+              onPress={() => onDone?.(selectedGoals, selectedCharacter, trimmed)}
+            />
+            <TextButton label="이전" onPress={() => setShowNicknameStep(false)} />
+          </View>
+        </KeyboardAvoidingView>
       </View>
     );
   }
@@ -339,7 +351,7 @@ export function OnboardingScreen({
                 key={c.id}
                 onPress={() => focusCharacter(i)}
                 accessibilityRole="radio"
-                accessibilityLabel={`${c.name} — ${c.description}`}
+                accessibilityLabel={`${c.name}. ${c.description}`}
                 accessibilityState={{ selected: isActive }}
                 style={[
                   styles.characterSlide,

@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useEffect } from 'react';
+import { memo, useEffect, useMemo } from 'react';
 import { type ImageStyle, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { PawPictogram } from '@/components/ui/pictograms';
@@ -73,6 +73,14 @@ export type CharacterAvatarProps = {
   style?: StyleProp<ImageStyle>;
   /** 원본 해상도 디코딩 — 카메라 줌 대상(집 창문)용. */
   sharp?: boolean;
+  /**
+   * 나머지 포즈 프레임을 미리 받아둘지 (#970). **기본은 끔.**
+   *
+   * 포즈를 넘길 수 있는 화면(나의 방)에서만 켠다 — 첫 탭에 빈 화면이 안 뜨게
+   * 하려는 것이다. 순환이 불가능한 화면(친구 방·온보딩 캐러셀)에서 켜면
+   * **보여줄 수도 없는 그림을 받는다**: 고양이 기준 친구 방 1회 방문에 1.8MB.
+   */
+  prefetchFrames?: boolean;
 };
 
 /**
@@ -82,38 +90,48 @@ export type CharacterAvatarProps = {
  * stays at 0). Falls back to the paw mark if no art exists. Shared by the room
  * and any single-character display.
  */
-export function CharacterAvatar({
+export const CharacterAvatar = memo(function CharacterAvatar({
   characterId,
   frames,
   pose = 0,
+  prefetchFrames = false,
   size = 96,
   style,
   sharp = false,
 }: CharacterAvatarProps) {
-  const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
+  const character = useMemo(
+    () => CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0],
+    [characterId],
+  );
 
   // 탭 순환 순서 = 서버 등록 순서. 유효하지 않은 키는 조용히 버린다.
-  const cdnFrames = (frames ?? []).filter(isCdnKey);
+  // 포즈 탭마다(그리고 부모 리렌더마다) 배열을 새로 걸러내던 것을 프레임 목록이
+  // 실제로 바뀔 때만 하도록 묶는다 — 방 캔버스 리프라 호출 빈도가 높다.
+  const cdnFrames = useMemo(() => (frames ?? []).filter(isCdnKey), [frames]);
   const cdnFrameList = cdnFrames.join('|');
 
+  // width/height 스타일도 size가 그대로면 참조를 유지한다 (<Image>의 style 배열).
+  const sizeStyle = useMemo(() => ({ width: size, height: size }), [size]);
+
   // Warm every frame up front so the first tap swaps without a blank flash
-  // (and a revisit works offline from the disk cache).
+  // (and a revisit works offline from the disk cache). 포즈를 넘길 수 있는
+  // 화면에서만 — 아니면 첫 장 말고는 영영 안 보이는 걸 받는 셈이다 (#970).
   useEffect(() => {
-    const keys = cdnFrameList ? cdnFrameList.split('|') : [];
+    const keys = prefetchFrames && cdnFrameList ? cdnFrameList.split('|') : [];
     if (keys.length > 1) {
       Image.prefetch?.(
         keys.map((key) => `${RESOURCE_BASE}/${key}`),
         { cachePolicy: 'memory-disk' },
       )?.catch(() => {});
     }
-  }, [cdnFrameList]);
+  }, [cdnFrameList, prefetchFrames]);
 
   if (cdnFrames.length > 0) {
     const key = cdnFrames[wrapPose(pose, cdnFrames.length)];
     return (
       <Image
         source={assetSource(key)}
-        style={[{ width: size, height: size }, style]}
+        style={[sizeStyle, style]}
         contentFit="contain"
         cachePolicy="memory-disk"
         // 줌 대상에서는 원본 해상도로 — 다운스케일 디코딩은 확대 시 흐려진다.
@@ -131,7 +149,7 @@ export function CharacterAvatar({
     // No frame art for this character yet — a neutral paw mark stands in.
     return (
       <View
-        style={[{ width: size, height: size }, styles.center, style as StyleProp<ViewStyle>]}
+        style={[sizeStyle, styles.center, style as StyleProp<ViewStyle>]}
         accessibilityLabel={character.name}>
         <PawPictogram size={size * 0.55} />
       </View>
@@ -141,13 +159,13 @@ export function CharacterAvatar({
   return (
     <Image
       source={source}
-      style={[{ width: size, height: size }, style]}
+      style={[sizeStyle, style]}
       contentFit="contain"
       allowDownscaling={!sharp}
       accessibilityLabel={character.name}
     />
   );
-}
+});
 
 const styles = StyleSheet.create({
   center: {

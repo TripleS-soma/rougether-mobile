@@ -76,6 +76,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { saveRoomImage } from '@/lib/room-capture';
 import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
@@ -270,7 +271,7 @@ function VisibilityMark({ visibility }: { visibility: CategoryVisibility }) {
 // memo 경계 (#539): 셸의 무관한 상태 변화에서 이 화면(그리고 안의 방 캔버스)
 // 리렌더를 끊는다 — AppShell이 넘기는 함수/객체 prop의 참조 안정이 전제다.
 export const MyRoomScreen = memo(function MyRoomScreen({
-  userName = '준서',
+  userName = '',
   streakDays = 7,
   coinBalance = 0,
   diamondBalance = 0,
@@ -287,8 +288,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   onOpenWeeklyReport,
   attendance,
   onOpenAttendance,
-  placedFurnitureIds,
-  placements = null,
+  placements = [],
   furniture,
   wallpapers,
   floors,
@@ -336,6 +336,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   onScrollY,
 }: MyRoomScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
   const headerInset = useHeaderInsetStyle();
   // 좁은 폰은 콤팩트 지갑 필(코인만) (#425) — 닉네임 열이 필 2개에 밀려
@@ -628,7 +629,6 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     wallpaperId,
     floorId,
     backgroundId,
-    placedFurnitureIds,
     placements,
     furniture,
     wallpapers,
@@ -646,11 +646,10 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         wallpaperId,
         floorId,
         backgroundId,
-        placedFurnitureIds,
         placements,
         characterId,
       }),
-    [wallpaperId, floorId, backgroundId, placedFurnitureIds, placements, characterId],
+    [wallpaperId, floorId, backgroundId, placements, characterId],
   );
   useWidgetRoomCapture({
     shotRef: roomShotRef,
@@ -1066,7 +1065,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               ellipsizeMode="middle"
               adjustsFontSizeToFit
               minimumFontScale={0.75}>
-              {userName}의 방
+              {userName ? `${userName}의 방` : '내 방'}
             </Text>
             {/* A 0-day streak is nothing to celebrate — show the flame only
                 once a streak exists. */}
@@ -1132,7 +1131,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         </View>
       </View>
 
-      <View style={styles.tabBar}>
+      {/* 탭 줄도 본문과 같은 폭으로 묶는다 — 본문만 제한하면 넓은 화면에서
+          탭이 왼쪽 끝에 홀로 남아 밑줄이 본문과 어긋난다 (#725). */}
+      <View style={[styles.tabBar, column]}>
         {(
           [
             ['room', '방'],
@@ -1181,6 +1182,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           scrollEnabled={dragId === null}
           contentContainerStyle={[
             styles.body,
+            // 방 캔버스가 정사각형이라 폭이 넓으면 높이도 같이 커져 루틴
+            // 목록이 화면 밖으로 밀린다 (#725).
+            column,
             addingCategory != null && keyboardPad > 0 ? { paddingBottom: keyboardPad + 120 } : null,
           ]}
           {...scrollRestore}
@@ -1267,7 +1271,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                   <View style={styles.stateBlock}>
                     <Loading />
                     <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                      불러오는 중…
+                      불러오는 중...
                     </Text>
                   </View>
                 ) : null}

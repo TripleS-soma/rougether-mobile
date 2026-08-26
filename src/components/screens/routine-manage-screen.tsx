@@ -12,6 +12,7 @@ import { CategoryIcon } from '@/components/ui/category-icon';
 import { RetryState } from '@/components/ui/retry-state';
 import { Spacing } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
 import { formatTime } from '@/utils/datetime';
@@ -45,6 +46,7 @@ export function RoutineManageScreen({
   onEdit,
 }: RoutineManageScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const headerInset = useHeaderInsetStyle();
@@ -81,12 +83,12 @@ export function RoutineManageScreen({
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView contentContainerStyle={[styles.body, column]}>
         {loading ? (
           <View style={styles.empty}>
             <Loading />
             <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
-              불러오는 중…
+              불러오는 중...
             </Text>
           </View>
         ) : null}

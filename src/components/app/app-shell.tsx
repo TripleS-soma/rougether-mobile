@@ -13,12 +13,18 @@ import { useSettingsSurface } from '@/components/app/use-settings-surface';
 import { GachaScreen } from '@/components/screens/gacha-screen';
 import { HouseScreen } from '@/components/screens/house-screen';
 import { isScheduledOn, MyRoomScreen } from '@/components/screens/my-room-screen';
-import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
+import {
+  type DecorTab,
+  dominantDecorTab,
+  RoomDecorScreen,
+} from '@/components/screens/room-decor-screen';
+import { useStableCallback } from '@/hooks/use-stable-value';
 import { SettingsScreen } from '@/components/screens/settings-screen';
 import { AttendanceSheet } from '@/components/screens/sheets/attendance-sheet';
 import { MissionSheet } from '@/components/screens/sheets/mission-sheet';
 import { BottomNav } from '@/components/ui/bottom-nav';
 import { MissionBanner } from '@/components/ui/mission-banner';
+import { NotificationBanner } from '@/components/ui/notification-banner';
 import { DEFAULT_CHARACTER_ID, type CharacterId } from '@/constants/characters';
 import { screenView, track } from '@/lib/analytics';
 import { todayIso } from '@/utils/datetime';
@@ -55,7 +61,16 @@ export type AppShellProps = {
   onReplayOnboarding?: () => void;
   /** 온보딩을 방금 마쳤음 — 온보딩 미션 체인을 시작한다 (#571, 구 코치마크 #351). */
   startMissions?: boolean;
+  /**
+   * 마스터 `/characters` 프레임 맵. 친구 방이 친구 캐릭터를 **내 방과 같은 그림**으로
+   * 그리는 데 쓴다 (#968) — 친구 방 응답에는 `poses[]`가 없어 앱이 가진 마스터가
+   * 유일한 출처다. 루트가 이미 받아둔 값이라 추가 요청은 없다.
+   */
+  characterFrames?: Partial<Record<CharacterId, string[]>>;
 };
+
+/** 프레임 맵 기본값 — 인라인 `{}`은 매 렌더 새 객체라 소비자의 메모가 깨진다. */
+const NO_CHARACTER_FRAMES: Partial<Record<CharacterId, string[]>> = {};
 
 /** 각 미션의 진입 화면 (#571) — 배너 탭·완료 시트 '하러 가기'의 목적지. */
 const MISSION_TARGET_SCREEN: Record<OnboardingMissionStepId, Screen> = {
@@ -85,6 +100,7 @@ export function AppShell({
   characterId = DEFAULT_CHARACTER_ID,
   onReplayOnboarding,
   startMissions = false,
+  characterFrames = NO_CHARACTER_FRAMES,
 }: AppShellProps) {
   // 집 하늘 연출용 현재 비 여부 (#360) — 서울 고정, 30분 캐시.
   const { raining } = useWeather();
@@ -213,13 +229,11 @@ export function AppShell({
   } = useShop(setWallet);
 
   const [placedItems, setPlacedItems] = useState<PlacedFurniture[]>([]);
-  const [placedFurnitureIds, setPlacedFurnitureIds] = useState<string[]>([]);
   const [wallpaperId, setWallpaperId] = useState(DEFAULT_WALLPAPER_ID);
   const [floorId, setFloorId] = useState<string | null>(null);
   const [backgroundId, setBackgroundId] = useState<string | null>(null);
   useEffect(() => {
     setPlacedItems(placement.items);
-    setPlacedFurnitureIds(placement.placedFurnitureIds);
     setWallpaperId(placement.wallpaperId);
     setFloorId(placement.floorId);
     setBackgroundId(placement.backgroundId);
@@ -232,12 +246,28 @@ export function AppShell({
     [catalogue.furniture],
   );
   const [newDecorItemIds, setNewDecorItemIds] = useState<string[]>([]);
-  const goPlaceDrawn = useCallback((results: DrawResult[]) => {
-    setNewDecorItemIds(results.map((r) => String(r.itemId)).filter(Boolean));
+  /** 뽑기에서 넘어올 때 열 종류 탭 (#897) — 그 외 경로는 기본 탭. */
+  const [decorInitialTab, setDecorInitialTab] = useState<DecorTab | undefined>(undefined);
+  /**
+   * 뽑기 → '가구 배치하러 가기' (#630). 하이라이트만으로는 부족하다 (#897):
+   * 벽지를 뽑았는데 가구 탭이 열려 있으면 표시가 안 보이는 탭에 있다.
+   * 뽑은 게 가장 많은 종류의 탭을 함께 열어준다.
+   */
+  // 참조 고정 (#794 결) — catalogue를 deps에 넣으면 상점 구매 때마다 이
+  // 콜백이 재생성된다. useStableCallback은 최신 catalogue를 읽으면서 참조는
+  // 유지한다.
+  const goPlaceDrawn = useStableCallback((results: DrawResult[]) => {
+    const ids = results.map((r) => String(r.itemId)).filter(Boolean);
+    setNewDecorItemIds(ids);
+    setDecorInitialTab(dominantDecorTab(ids, catalogue));
     setScreen('decor');
-  }, []);
+  });
   useEffect(() => {
-    if (screen !== 'decor') setNewDecorItemIds([]);
+    if (screen !== 'decor') {
+      setNewDecorItemIds([]);
+      // 다음에 꾸미기를 직접 열면 기본 탭이어야 한다 — 뽑기에서 온 게 아니다.
+      setDecorInitialTab(undefined);
+    }
   }, [screen]);
 
   // 공동미션 ↔ 내 루틴 연동 (#272 → #578) — use-mission-links.ts로 이관 (#692 3단계).
@@ -271,24 +301,27 @@ export function AppShell({
     applyMissionContribution,
   });
 
-  // Profile + settings. Nickname/bio seed from the API (/me) and persist via
-  // PUT /me (saveProfile); local state keeps edits visible immediately.
-  const [nickname, setNickname] = useState('준서');
-  const [bio, setBio] = useState('');
-  useEffect(() => {
-    if (apiNickname) setNickname(apiNickname);
-  }, [apiNickname]);
-  useEffect(() => {
-    if (apiBio != null) setBio(apiBio);
-  }, [apiBio]);
+  /**
+   * Profile + settings — **사본을 두지 않는다** (#924).
+   *
+   * 예전엔 셸이 `useState('준서')`로 별도 사본을 들고 API 값으로 seed했다.
+   * 같은 값이 두 군데 살면서 화면마다 다른 걸 보게 됐고, 하드코딩된 남의
+   * 이름이 로딩 구간에 노출됐다(온보딩에서 한 번 데었던 그 문제 —
+   * onboarding-screen의 주석 참고). `saveProfile`이 이미 낙관적으로
+   * 갱신하므로 사본 없이 그대로 파생하면 된다.
+   */
+  const nickname = apiNickname ?? '';
+  const bio = apiBio ?? '';
   // 설정 서피스 (#692 2단계) — 설정 탭·서브화면 8종의 훅·콜백·JSX 소유.
   const handleProfileSave = useCallback(
+    // saveProfile이 낙관적으로 상태를 바꾸고 실패 시 되돌린다 — 여기서 또
+    // 손대면 되돌리기가 어긋난다 (#924). 집 좌석 라벨만은 별도 캐시(서버
+    // 멤버 목록)에 살아서 재조회 없이 따로 파생해줘야 한다.
     (nick: string, b: string) => {
-      setNickname(nick);
-      setBio(b);
       void saveProfile(nick, b);
+      housesData.applyMyNickname(nick);
     },
-    [saveProfile],
+    [saveProfile, housesData],
   );
   const settingsSurface = useSettingsSurface({
     screen,
@@ -305,8 +338,7 @@ export function AppShell({
     missionLinks: { toggleWithMissionGuard, houseCategoryIds, addRoutineWithMission },
     character: { wornCharacterId, wornCharacterFrames, ownedCharacters, wearCharacter },
     room: {
-      placedFurnitureIds,
-      placements: placement.freeLayout ? placedItems : null,
+      placements: placedItems,
       wallpaperId,
       floorId,
       backgroundId,
@@ -377,6 +409,7 @@ export function AppShell({
   const { visitFriend, subScreen: friendRoomSubScreen } = useFriendVisit({
     setScreen,
     catalogue,
+    characterFrames,
     arrangedHouses,
     houseIndex,
     screen,
@@ -463,7 +496,7 @@ export function AppShell({
             <RoomDecorScreen
               initialItems={placedItems}
               highlightItemIds={newDecorItemIds}
-              freeLayout={placement.freeLayout}
+              initialTab={decorInitialTab}
               initialWallpaperId={wallpaperId}
               initialFloorId={floorId}
               initialBackgroundId={backgroundId}
@@ -485,7 +518,6 @@ export function AppShell({
                 const result = await saveLayout(its, wp, fl, bg);
                 if (result === 'ok') {
                   setPlacedItems(its);
-                  setPlacedFurnitureIds(its.map((p) => p.furnitureId));
                   setWallpaperId(wp);
                   setFloorId(fl);
                   setBackgroundId(bg);
@@ -493,7 +525,7 @@ export function AppShell({
                   // 여부는 따지지 않는다(사양 단순화).
                   // 퍼널 마지막 칸 (#799) — 루틴→코인→뽑기→꾸미기 한 바퀴가
                   // 닫힌 지점. 미션은 스킵 가능하므로 저장 자체를 센다.
-                  track('room_save', { items: its.length });
+                  track('room_save', { item_count: its.length });
                   completeMission('place-furniture');
                 }
                 return result;
@@ -555,6 +587,20 @@ export function AppShell({
             // 집이 없으면 집 탭은 빈 상태 대신 집 탐색으로 직행 (#571).
             setScreen(tab === 'house' && housePages.noHouses ? 'houseSearch' : SCREEN_FOR_TAB[tab])
           }
+        />
+      ) : null}
+
+      {/* 인앱 푸시 배너 (#902) — 앱이 켜져 있을 때 도착한 알림. 미션 배너와
+          같은 상단 슬롯이지만 zIndex가 높아 잠깐 덮었다 5초 뒤 사라진다.
+          key로 다시 마운트해야 연속 수신 때 애니메이션·타이머가 새로 돈다. */}
+      {myRoomPages.pushBanner ? (
+        <NotificationBanner
+          key={myRoomPages.pushBanner.key}
+          type={myRoomPages.pushBanner.type}
+          title={myRoomPages.pushBanner.title}
+          body={myRoomPages.pushBanner.body}
+          onPress={myRoomPages.openNotifications}
+          onDismiss={myRoomPages.dismissPushBanner}
         />
       ) : null}
 

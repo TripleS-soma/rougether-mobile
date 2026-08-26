@@ -106,7 +106,7 @@ describe('HouseSearchScreen', () => {
     await waitFor(() => expect(getByText('아침 루틴 하우스')).toBeTruthy());
     await fireEvent.press(getByLabelText('이 집에 입주'));
     await waitFor(() =>
-      expect(getByText('입주 신청을 보냈어요 — 방장이 승인하면 집에 들어가요.')).toBeTruthy(),
+      expect(getByText('입주 신청을 보냈어요. 방장이 승인하면 집에 들어가요.')).toBeTruthy(),
     );
     // 미리보기는 닫히고 에러 문구는 없다.
     expect(queryByText(/입주에 실패했어요/)).toBeNull();
@@ -328,6 +328,53 @@ describe('HouseSearchScreen — 참여 전 미리보기 (#328)', () => {
     expect(onJoinHouse).toHaveBeenCalledWith(21);
   });
 
+  /**
+   * 동거 봇(서버 #309) 이후 정원이 다 찼다고 사람이 못 들어가는 게 아니다 —
+   * 봇이 비켜준다. 목록 응답에는 서버가 계산한 isFull이 없어 앱이 봇 수를
+   * 알 수 없으므로, 수치로 미리 막지 않는다 (#948).
+   */
+  describe('정원이 다 찬 집도 신청은 보낸다 (#948)', () => {
+    const atCapacity = {
+      ...RECOMMENDED_HOUSES[0],
+      id: 31,
+      name: '가득집',
+      members: 4,
+      capacity: 4,
+    };
+
+    it('4/4 집이어도 입주 신청 버튼이 눌리고 onJoinHouse가 불린다', async () => {
+      const onJoinHouse = jest.fn();
+      const { getByText } = await render(
+        <ToastProvider>
+          <HouseSearchScreen houses={[atCapacity]} onJoinHouse={onJoinHouse} />
+        </ToastProvider>,
+      );
+      // 라벨이 '만석'으로 바뀌어 막히지 않는다.
+      await fireEvent.press(getByText('입주 신청'));
+      expect(onJoinHouse).toHaveBeenCalledWith(31);
+    });
+
+    it('정원이 찼다는 사실 자체는 메타 줄에 그대로 보여준다', async () => {
+      const { getByText } = await render(<HouseSearchScreen houses={[atCapacity]} />);
+      expect(getByText(/만석/)).toBeTruthy();
+    });
+
+    it('이미 신청 중·입주 완료는 그대로 막는다 — 앱이 아는 사실이다', async () => {
+      const onJoinHouse = jest.fn();
+      const { getByText } = await render(
+        <ToastProvider>
+          <HouseSearchScreen
+            houses={[{ ...atCapacity, joinRequestStatus: 'PENDING' }]}
+            onJoinHouse={onJoinHouse}
+          />
+        </ToastProvider>,
+      );
+      await fireEvent.press(getByText('신청 중'));
+      expect(onJoinHouse).not.toHaveBeenCalled();
+      expect(getByText('방장의 수락을 기다리고 있어요')).toBeTruthy();
+    });
+  });
+
   it('blocks joining a full house with a toast, and shows 이미 참여 중', async () => {
     const onJoinHouse = jest.fn();
     const full = { ...DETAIL, isFull: true };
@@ -366,9 +413,9 @@ describe('HouseSearchScreen — 참여 전 미리보기 (#328)', () => {
       members: 3,
       rooms: [
         // 실제 방(가구+캐릭터), FREE_V1 방, 방 미생성(기본 빈 방) — 3칸 모두 실렌더.
-        { placedFurnitureIds: ['hanok-bed'], placements: null, wallpaperId: 'wp-1', characterId: 'cat' as const }, // prettier-ignore
-        { placedFurnitureIds: ['hanok-rug'], placements: [{ furnitureId: 'hanok-rug', x: 0.5, y: 0.8, z: 1 }] }, // prettier-ignore
-        { placedFurnitureIds: [], placements: [] },
+        { placements: [], wallpaperId: 'wp-1', characterId: 'cat' as const },
+        { placements: [{ furnitureId: 'hanok-rug', x: 0.5, y: 0.8, z: 1 }] },
+        { placements: [] },
       ],
     };
     const houses = [{ ...RECOMMENDED_HOUSES[0], id: 21, name: '아침집' }];
@@ -391,5 +438,31 @@ describe('HouseSearchScreen — 참여 전 미리보기 (#328)', () => {
     await fireEvent.press(ui.getByLabelText('아침집 미리보기'));
     await waitFor(() => expect(ui.getByText('이미 참여 중')).toBeTruthy());
     expect(ui.queryByLabelText('이 집에 참여하기')).toBeNull();
+  });
+});
+
+describe('HouseSearchScreen — 무한 스크롤·검색 범위 (#975)', () => {
+  const HOUSES = RECOMMENDED_HOUSES;
+
+  it('검색 중이고 더 받을 게 남았으면 결과가 부분적임을 밝힌다', async () => {
+    // 서버에 텍스트 검색이 없어 필터가 클라이언트다 — "없어요"로 보이면
+    // 정말 없는 줄 안다.
+    const { getByPlaceholderText, findByText } = await render(
+      <ToastProvider>
+        <HouseSearchScreen houses={HOUSES} hasNext />
+      </ToastProvider>,
+    );
+    await fireEvent.changeText(getByPlaceholderText('집 이름, 태그로 검색'), '아침');
+    expect(await findByText(/지금까지 불러온 집에서 찾은 결과예요/)).toBeTruthy();
+  });
+
+  it('더 받을 게 없으면 그 고지를 띄우지 않는다', async () => {
+    const { getByPlaceholderText, queryByText } = await render(
+      <ToastProvider>
+        <HouseSearchScreen houses={HOUSES} />
+      </ToastProvider>,
+    );
+    await fireEvent.changeText(getByPlaceholderText('집 이름, 태그로 검색'), '아침');
+    expect(queryByText(/지금까지 불러온 집에서 찾은 결과예요/)).toBeNull();
   });
 });

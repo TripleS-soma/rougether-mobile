@@ -1,5 +1,13 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 import { CharacterAvatar } from '@/components/room/character-avatar';
 import { Field } from '@/components/ui/field';
@@ -8,6 +16,7 @@ import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/con
 import { BIO_MAX, NICKNAME_MAX } from '@/constants/profile';
 import { Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 export type ProfileEditScreenProps = {
@@ -24,13 +33,14 @@ export type ProfileEditScreenProps = {
  * by the app shell via onSave.
  */
 export function ProfileEditScreen({
-  initialNickname = '준서',
+  initialNickname = '',
   initialBio = '',
   characterId = DEFAULT_CHARACTER_ID,
   onSave,
   onBack,
 }: ProfileEditScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
   const [nickname, setNickname] = useState(initialNickname);
   const [bio, setBio] = useState(initialBio);
@@ -43,52 +53,65 @@ export function ProfileEditScreen({
     <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader title="프로필 편집" onBack={onBack} />
 
-      <ScrollView contentContainerStyle={styles.body}>
-        <View style={styles.avatarWrap}>
-          <View style={[styles.avatar, { backgroundColor: character.bg }]}>
-            <CharacterAvatar characterId={characterId} size={88} />
+      {/* 저장 버튼이 ScrollView 밖 하단 고정이라 키보드에 덮인다 (#923).
+          persistTaps="handled" 는 배경 탭에 키보드를 내리면서 버튼 탭은
+          한 번에 먹는다 — 기본값(never)이면 탭이 자식에게 안 간다. */}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          contentContainerStyle={[styles.body, column]}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag">
+          <View style={styles.avatarWrap}>
+            <View style={[styles.avatar, { backgroundColor: character.bg }]}>
+              <CharacterAvatar characterId={characterId} size={88} />
+            </View>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              캐릭터는 나의 방에서 바꿀 수 있어요.
+            </Text>
           </View>
-          <Text style={[Typography.supporting, { color: t.textMuted }]}>
-            캐릭터는 나의 방에서 바꿀 수 있어요.
-          </Text>
-        </View>
 
-        <View style={styles.form}>
-          <Field
-            label="닉네임"
-            value={nickname}
-            onChangeText={setNickname}
-            placeholder="닉네임을 입력해주세요"
-            maxLength={NICKNAME_MAX}
-          />
-          <Field
-            label="한 줄 소개"
-            value={bio}
-            onChangeText={setBio}
-            placeholder="나를 한 줄로 소개해보세요"
-            maxLength={BIO_MAX}
-          />
-        </View>
-      </ScrollView>
+          <View style={styles.form}>
+            <Field
+              label="닉네임"
+              value={nickname}
+              onChangeText={setNickname}
+              placeholder="닉네임을 입력해주세요"
+              maxLength={NICKNAME_MAX}
+            />
+            <Field
+              label="한 줄 소개"
+              value={bio}
+              onChangeText={setBio}
+              placeholder="나를 한 줄로 소개해보세요"
+              maxLength={BIO_MAX}
+            />
+          </View>
+        </ScrollView>
 
-      <View style={[styles.footer, { borderTopColor: t.border }]}>
-        <Pressable
-          onPress={() => canSave && onSave?.(trimmed, bio.trim())}
-          disabled={!canSave}
-          accessibilityRole="button"
-          accessibilityLabel="프로필 저장"
-          style={[styles.save, { backgroundColor: canSave ? t.primary : t.surfaceMuted }]}>
-          <Text style={[Typography.label, { color: canSave ? t.onPrimary : t.textMuted }]}>
-            저장
-          </Text>
-        </Pressable>
-      </View>
+        <View style={[styles.footer, { borderTopColor: t.border }]}>
+          <Pressable
+            onPress={() => canSave && onSave?.(trimmed, bio.trim())}
+            disabled={!canSave}
+            accessibilityRole="button"
+            accessibilityLabel="프로필 저장"
+            style={[styles.save, { backgroundColor: canSave ? t.primary : t.surfaceMuted }]}>
+            <Text style={[Typography.label, { color: canSave ? t.onPrimary : t.textMuted }]}>
+              저장
+            </Text>
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: {
+    flex: 1,
+  },
+  flex: {
     flex: 1,
   },
   body: {

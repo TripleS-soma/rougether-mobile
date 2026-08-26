@@ -1,54 +1,33 @@
 import { Image } from 'expo-image';
-import { memo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { Pressable, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { CharacterAvatar } from '@/components/room/character-avatar';
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { ROOM_RENDER_CONTRACT, roomPercent } from '@/components/room/room-render-contract';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
-import { FixedOverlay, Radius } from '@/constants/theme';
+import { Radius } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
 import { assetSource, isCdnKey } from '@/resources/asset';
 import {
-  DEFAULT_PLACED_FURNITURE_IDS,
   DEFAULT_WALLPAPER_COLOR,
   DEFAULT_WALLPAPER_ID,
   FURNITURE_ITEMS,
-  SLOT_LABELS,
-  SLOT_ORDER,
   WALLPAPERS,
   type FurnitureItem,
-  type FurnitureSlot,
   type PlacedFurniture,
   type Wallpaper,
 } from '@/resources/furniture';
 
-/** 자유 배치 아이템의 기본 폭 — 방 폭 대비 비율 (슬롯 기본 28%와 동일). */
+/** 자유 배치 아이템의 기본 폭 — 방 폭 대비 비율. */
 export const FREE_ITEM_WIDTH = ROOM_RENDER_CONTRACT.furniture.baseWidth;
 
-/** Region a decor-mode tap can target: a furniture slot or a surface band. */
-export type RoomRegion = FurnitureSlot | 'wall' | 'floor';
-
 /**
- * Where each furniture slot sits inside the (square) room. Symmetric layout:
- * the bottom row (bed / rug / chair) vertically mirrors the top row
- * (shelf / window / storage), and plant / table mirror each other left↔right at
- * mid-height. Default furniture is 28% wide, so left: '36%' centers an item;
- * the bottom corners stay 24% so they don't crowd the character.
+ * Region a decor-mode tap can target — 표면 밴드 2종뿐이다 (#925).
+ * 가구는 슬롯이 아니라 자유 좌표(FREE_V1, #327)라 탭 대상이 아니고, 편집은
+ * 꾸미기 화면의 오버레이가 맡는다.
  */
-const SLOT_STYLE = Object.fromEntries(
-  SLOT_ORDER.map((slot) => {
-    const rect = ROOM_RENDER_CONTRACT.furniture.slots[slot];
-    return [
-      slot,
-      {
-        top: roomPercent(rect.top),
-        left: roomPercent(rect.left),
-        width: roomPercent(rect.width),
-      },
-    ];
-  }),
-) as Record<FurnitureSlot, ViewStyle>;
+export type RoomRegion = 'wall' | 'floor';
 
 /** 방에 낀 거미줄 (서버 #277). `cleanable`은 청소 단계(#830·#831)에서 쓴다. */
 export type RoomCobweb = { assetKey?: string; cleanable?: boolean };
@@ -58,7 +37,6 @@ export type RoomProps = {
   /** Selected floor/background surface item ids (optional room layers). */
   floorId?: string | null;
   backgroundId?: string | null;
-  placedFurnitureIds?: string[];
   /** `null` renders an unoccupied room — no character (빈방 타일, #281). */
   characterId?: CharacterId | null;
   /** 서버가 등록한 포즈 프레임(CDN 키, 등록 순서) — 없으면 번들 스프라이트 (#735). */
@@ -69,11 +47,12 @@ export type RoomProps = {
   floors?: Wallpaper[];
   backgrounds?: Wallpaper[];
   /**
-   * 자유 배치(FREE_V1, #327) — 주어지면 슬롯 배치 대신 정규화 좌표(중심점)로
-   * 렌더한다. z 오름차순으로 쌓이고, 터치는 받지 않는다(편집은 꾸미기 화면의
-   * 오버레이가 담당). 빈 배열 = 가구 없는 방.
+   * 자유 배치 가구 (FREE_V1, #327) — 정규화 좌표(중심점)로 렌더한다. z 오름차순으로
+   * 쌓이고, 터치는 받지 않는다(편집은 꾸미기 화면의 오버레이가 담당).
+   * 빈 배열 = 가구 없는 방. **슬롯 렌더 폴백은 없다** (#925) — 서버가 정본을
+   * placements로 주고, 아직 SLOT_V1인 방은 애초에 가구가 비어 있다.
    */
-  placements?: PlacedFurniture[] | null;
+  placements?: PlacedFurniture[];
   /**
    * 장기 미접속 거미줄 (#829, 서버 #277) — 서버가 방 응답의 nullable
    * `cobweb`으로 준다. 왼쪽 위 모서리에 얹는다. `assetKey`가 CDN 키가
@@ -125,7 +104,6 @@ export type RoomSceneProps = RoomCatalogProps &
     | 'wallpaperId'
     | 'floorId'
     | 'backgroundId'
-    | 'placedFurnitureIds'
     | 'placements'
     | 'cobweb'
     | 'onCleanCobweb'
@@ -136,9 +114,8 @@ export type RoomSceneProps = RoomCatalogProps &
  * worn character). Absent entry = not loaded / fetch failed → mock fallback.
  */
 export type MemberRoomPreview = {
-  placedFurnitureIds: string[];
-  /** FREE_V1 방의 자유 배치 (#327) — null이면 슬롯 렌더. */
-  placements?: PlacedFurniture[] | null;
+  /** 자유 배치 가구 (#327) — 없으면 가구 없는 방 (#925).*/
+  placements?: PlacedFurniture[];
   wallpaperId?: string;
   floorId?: string | null;
   backgroundId?: string | null;
@@ -149,8 +126,8 @@ export type MemberRoomPreview = {
 
 /**
  * MemberRoomPreview(집 좌석 타일·탐색 창문)를 Room 씬 번들로 변환 (#691).
- * 기본값 규약을 한 곳에 고정한다: room이 없으면 캐릭터 없는 빈 방
- * (placements [] = 빈 자유배치), 있으면 placements null이 슬롯 렌더 폴백.
+ * 기본값 규약을 한 곳에 고정한다: room이 없으면 캐릭터 없는 빈 방이고,
+ * 가구는 언제나 placements가 정본이다 (슬롯 폴백 없음, #925).
  */
 export function memberRoomScene(
   room: MemberRoomPreview | undefined,
@@ -159,8 +136,7 @@ export function memberRoomScene(
   return {
     ...catalogs,
     characterId: room?.characterId ?? null,
-    placedFurnitureIds: room?.placedFurnitureIds ?? [],
-    placements: room ? (room.placements ?? null) : [],
+    placements: room?.placements ?? [],
     wallpaperId: room?.wallpaperId,
     floorId: room?.floorId,
     backgroundId: room?.backgroundId,
@@ -181,14 +157,13 @@ export const Room = memo(function Room({
   wallpaperId = DEFAULT_WALLPAPER_ID,
   floorId,
   backgroundId,
-  placedFurnitureIds = DEFAULT_PLACED_FURNITURE_IDS,
   characterId = DEFAULT_CHARACTER_ID,
   characterFrames,
   furniture = FURNITURE_ITEMS,
   wallpapers = WALLPAPERS,
   floors = [],
   backgrounds = [],
-  placements = null,
+  placements = [],
   cobweb = null,
   onCleanCobweb,
   interactiveCharacter = false,
@@ -199,12 +174,62 @@ export const Room = memo(function Room({
   style,
 }: RoomProps) {
   const t = useTokens();
-  const wallpaper = wallpapers.find((w) => w.id === wallpaperId) ?? wallpapers[0];
-  const floor = floorId ? floors.find((f) => f.id === floorId) : undefined;
-  const background = backgroundId ? backgrounds.find((b) => b.id === backgroundId) : undefined;
-  const placed = furniture.filter((f) => placedFurnitureIds.includes(f.id));
-  const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
   const [pose, setPose] = useState(0);
+
+  // 카탈로그 조회·배치 정렬은 방 하나만 보면 싸지만, 집 화면은 좌석 8~12칸이
+  // 동시에 살아 있고 핀치 줌·좌석 드래그가 매 프레임 전 좌석을 다시 그린다.
+  // (#775가 좌석에 memo 경계를 세운 뒤 Room 내부에 남아 있던 비용.)
+  const wallpaper = useMemo(
+    () => wallpapers.find((w) => w.id === wallpaperId) ?? wallpapers[0],
+    [wallpapers, wallpaperId],
+  );
+  const floor = useMemo(
+    () => (floorId ? floors.find((f) => f.id === floorId) : undefined),
+    [floors, floorId],
+  );
+  const background = useMemo(
+    () => (backgroundId ? backgrounds.find((b) => b.id === backgroundId) : undefined),
+    [backgrounds, backgroundId],
+  );
+  const character = useMemo(
+    () => CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0],
+    [characterId],
+  );
+
+  /**
+   * 그릴 가구 목록 — z 오름차순 + 아이템 해석 + 좌표/변형 스타일까지 한 번에.
+   * 예전엔 렌더마다 배열을 복사해 정렬하고, 배치 하나마다 카탈로그를 선형
+   * 탐색하고(O(배치 x 카탈로그)), 스타일 객체를 새로 만들었다.
+   */
+  const freeItems = useMemo(() => {
+    if (!placements) return null;
+    const byId = new Map(furniture.map((f) => [f.id, f]));
+    return [...placements]
+      .sort((a, b) => a.z - b.z)
+      .flatMap((p) => {
+        const item = byId.get(p.furnitureId);
+        if (!item) return [];
+        const transforms = [
+          ...(p.scale != null && p.scale !== 1 ? [{ scale: p.scale }] : []),
+          ...(p.rotationDeg ? [{ rotate: `${p.rotationDeg}deg` }] : []),
+          ...(p.flipped ? [{ scaleX: -1 }] : []),
+        ];
+        return [
+          {
+            key: p.furnitureId,
+            item,
+            style: [
+              styles.furniture,
+              {
+                left: `${(p.x - FREE_ITEM_WIDTH / 2) * 100}%`,
+                top: `${(p.y - FREE_ITEM_WIDTH / 2) * 100}%`,
+              },
+              transforms.length > 0 && { transform: transforms },
+            ] as StyleProp<ViewStyle>,
+          },
+        ];
+      });
+  }, [placements, furniture]);
 
   return (
     <View
@@ -285,75 +310,11 @@ export const Room = memo(function Room({
         </>
       ) : null}
       {/* 자유 배치 경로 (#327) — z 오름차순, 중심점 앵커(폭 28%의 절반 보정). */}
-      {placements
-        ? [...placements]
-            .sort((a, b) => a.z - b.z)
-            .map((p) => {
-              const item = furniture.find((f) => f.id === p.furnitureId);
-              if (!item) return null;
-              const transforms = [
-                ...(p.scale != null && p.scale !== 1 ? [{ scale: p.scale }] : []),
-                ...(p.rotationDeg ? [{ rotate: `${p.rotationDeg}deg` }] : []),
-                ...(p.flipped ? [{ scaleX: -1 }] : []),
-              ];
-              return (
-                <View
-                  key={p.furnitureId}
-                  pointerEvents="none"
-                  style={[
-                    styles.furniture,
-                    {
-                      left: `${(p.x - FREE_ITEM_WIDTH / 2) * 100}%`,
-                      top: `${(p.y - FREE_ITEM_WIDTH / 2) * 100}%`,
-                    },
-                    transforms.length > 0 && { transform: transforms },
-                  ]}>
-                  <FurniturePlaceholder item={item} sharp={fill} />
-                </View>
-              );
-            })
-        : null}
-      {placements
-        ? null
-        : placed.map((item) =>
-            editable ? (
-              <Pressable
-                key={item.id}
-                onPress={() => onRegionPress?.(item.slot)}
-                accessibilityRole="button"
-                accessibilityLabel={`${SLOT_LABELS[item.slot]} 자리 — ${item.name}`}
-                style={[
-                  styles.furniture,
-                  SLOT_STYLE[item.slot],
-                  activeRegion === item.slot && [styles.activeSlot, { borderColor: t.primary }],
-                ]}>
-                <FurniturePlaceholder item={item} sharp={fill} />
-              </Pressable>
-            ) : (
-              <View key={item.id} style={[styles.furniture, SLOT_STYLE[item.slot]]}>
-                <FurniturePlaceholder item={item} sharp={fill} />
-              </View>
-            ),
-          )}
-      {/* Empty slots invite a tap with a dashed + marker (슬롯 모드 전용). */}
-      {editable && placements == null
-        ? SLOT_ORDER.filter((slot) => !placed.some((i) => i.slot === slot)).map((slot) => (
-            <Pressable
-              key={slot}
-              onPress={() => onRegionPress?.(slot)}
-              accessibilityRole="button"
-              accessibilityLabel={`${SLOT_LABELS[slot]} 자리 비어 있음`}
-              style={[
-                styles.furniture,
-                SLOT_STYLE[slot],
-                styles.emptySlot,
-                activeRegion === slot && { borderColor: t.primary, borderStyle: 'solid' },
-              ]}>
-              <View style={styles.emptyPlus}>
-                <View style={[styles.plusH, { backgroundColor: FixedOverlay.gridLine }]} />
-                <View style={[styles.plusV, { backgroundColor: FixedOverlay.gridLine }]} />
-              </View>
-            </Pressable>
+      {freeItems
+        ? freeItems.map(({ key, item, style: itemStyle }) => (
+            <View key={key} pointerEvents="none" style={itemStyle}>
+              <FurniturePlaceholder item={item} sharp={fill} />
+            </View>
           ))
         : null}
       {characterId === null ? null : interactiveCharacter ? (
@@ -368,6 +329,8 @@ export const Room = memo(function Room({
             characterId={characterId}
             frames={characterFrames}
             pose={pose}
+            // 여기서만 포즈가 넘어간다 — 다음 장을 미리 받아둘 값어치가 있다 (#970).
+            prefetchFrames
             style={styles.characterFill}
             sharp={fill}
           />
@@ -455,37 +418,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: roomPercent(ROOM_RENDER_CONTRACT.furniture.baseWidth),
     aspectRatio: ROOM_RENDER_CONTRACT.furniture.aspectRatio,
-  },
-  activeSlot: {
-    borderWidth: 2.5,
-    borderRadius: Radius.md,
-  },
-  emptySlot: {
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: FixedOverlay.gridCell,
-    borderRadius: Radius.md,
-    backgroundColor: FixedOverlay.gridFill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyPlus: {
-    width: 22,
-    height: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  plusH: {
-    position: 'absolute',
-    width: 18,
-    height: 3,
-    borderRadius: 2,
-  },
-  plusV: {
-    position: 'absolute',
-    width: 3,
-    height: 18,
-    borderRadius: 2,
   },
   character: {
     position: 'absolute',

@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, render, renderHook, waitFor } from '@testing-library/react-native';
 import { Text } from 'react-native';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
@@ -6,6 +7,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 
 import { clearSession, devLogin } from '@/api';
 import { AuthProvider, useAuth } from '@/hooks/use-auth';
+import { getLastLoginFailure } from '@/lib/login-error';
 import { syncPushToken } from '@/lib/push-token';
 
 jest.mock('@/lib/push-token', () => ({
@@ -117,6 +119,27 @@ describe('AuthProvider — 소셜 로그인 매핑', () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
+  /**
+   * 배포본에서만 나는 로그인 장애는 재현이 안 된다 — 원격 신호가 유일한
+   * 단서인데 종전엔 `catch {}` 가 에러를 통째로 버렸다 (#959).
+   */
+  it('실패하면 제공자 코드를 실어 보내고 기억한다', async () => {
+    global.fetch = jest.fn() as unknown as typeof fetch;
+    // DEVELOPER_ERROR(10) = SHA-1/패키지명이 콘솔과 안 맞음.
+    (GoogleSignin.signIn as jest.Mock).mockRejectedValueOnce(
+      Object.assign(new Error('sign in failed'), { code: 10 }),
+    );
+    const { result } = await renderHook(() => useAuth(), { wrapper });
+    await act(async () => {
+      expect(await result.current.loginWithGoogle()).toBe('failed');
+    });
+    // 화면이 문구 뒤에 붙일 수 있게 남는다.
+    expect(getLastLoginFailure()).toMatchObject({ code: '10' });
+    expect(getLastLoginFailure()?.hint).toContain('서명');
+    // 코드가 없는 실패에서는 메시지가 유일한 단서라 함께 남아야 한다.
+    expect(getLastLoginFailure()?.message).toBe('sign in failed');
+  });
+
   it('카카오: 취소는 구조화 code(Cancelled)로 판별해 cancelled', async () => {
     global.fetch = jest.fn() as unknown as typeof fetch;
     (kakaoNativeLogin as jest.Mock).mockRejectedValueOnce(
@@ -221,6 +244,51 @@ describe('AuthProvider — 회원탈퇴', () => {
       ([, init]) => (init as { method?: string })?.method === 'DELETE',
     );
     expect(String(deleteCall?.[0])).toContain('/me');
+  });
+
+  it('성공: 계정 파생 로컬 데이터를 남김없이 지운다 (#922)', async () => {
+    await AsyncStorage.multiSet([
+      ['rougether.onboarding.v1', 'done'],
+      ['rougether.widget.room-image.v1', 'data:image/png;base64,AAAA'],
+      ['rougether.roomLayout.v1.1.11', '[]'],
+      ['rougether.theme', 'cozy'],
+    ]);
+    const fetchMock = jest.fn(async (url: string, init?: { method?: string }) => {
+      if (init?.method === 'DELETE') return res(204);
+      return res(200, { userId: 1, accessToken: 'a1', refreshToken: 'r1' });
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const { result } = await renderHook(() => useAuth(), { wrapper });
+    await act(async () => {
+      await result.current.login(1);
+    });
+
+    await act(async () => {
+      await result.current.withdraw();
+    });
+
+    // 온보딩 플래그가 남으면 재가입해도 온보딩이 안 뜬다 — 이 제보의 본체.
+    expect(await AsyncStorage.getAllKeys()).toEqual([]);
+  });
+
+  it('실패: 탈퇴가 실패하면 로컬 데이터를 지우지 않는다', async () => {
+    await AsyncStorage.setItem('rougether.onboarding.v1', 'done');
+    const fetchMock = jest.fn(async (url: string, init?: { method?: string }) => {
+      if (init?.method === 'DELETE') return res(500, { message: 'boom' });
+      return res(200, { userId: 1, accessToken: 'a1', refreshToken: 'r1' });
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const { result } = await renderHook(() => useAuth(), { wrapper });
+    await act(async () => {
+      await result.current.login(1);
+    });
+
+    await act(async () => {
+      await result.current.withdraw();
+    });
+
+    // 계정이 살아 있는데 로컬만 날리면 멀쩡한 계정이 초기화된 앱을 만난다.
+    expect(await AsyncStorage.getItem('rougether.onboarding.v1')).toBe('done');
   });
 
   it('실패: 서버 오류면 false를 돌려주고 세션을 유지한다', async () => {

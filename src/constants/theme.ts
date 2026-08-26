@@ -91,6 +91,13 @@ export type SemanticColors = {
   warningSoft: string;
   /** Soft tint of `danger` — destructive-action backgrounds (삭제/나가기). */
   dangerSoft: string;
+  /**
+   * `danger`의 **본문 텍스트용** 변종 (#900). `danger`는 채움·테두리를 겨냥해
+   * 밝게 잡혀 있어 흰 배경 위 글자로 쓰면 3.1:1로 AA(4.5:1)에 못 미친다.
+   * 색상은 그대로 두고 명도만 낮춰 라이트 서피스 전체에서 5:1을 넘긴다.
+   * 다크에서는 `danger`가 이미 6:1이라 같은 값을 쓴다 (warningText와 같은 결).
+   */
+  dangerText: string;
   /** Background of disabled buttons/controls (text on it: `onPrimary`/`textMuted`). */
   disabledBg: string;
   /** 집 화면 야외 배경 — 프레임 뒤 하늘 (#287). 커버와 무관한 고정 톤. */
@@ -123,6 +130,7 @@ export const Themes: Record<ThemeId, SemanticColors> = {
     primarySoft: '#7FA87F22',
     warningSoft: '#E8A24A22',
     dangerSoft: '#D6787822',
+    dangerText: '#C43D3D',
     disabledBg: '#D9D2C5',
     sky: '#C3E0F5',
     grass: '#B5D89A',
@@ -150,6 +158,7 @@ export const Themes: Record<ThemeId, SemanticColors> = {
     primarySoft: '#5F9B6A22',
     warningSoft: '#E8A24A22',
     dangerSoft: '#D6787822',
+    dangerText: '#C43D3D',
     disabledBg: '#CBD8C4',
     sky: '#C3E0F5',
     grass: '#B5D89A',
@@ -177,6 +186,7 @@ export const Themes: Record<ThemeId, SemanticColors> = {
     primarySoft: '#9A7B4F22',
     warningSoft: '#C9943F22',
     dangerSoft: '#C77A6A22',
+    dangerText: '#AD5341',
     disabledBg: '#DCCFB9',
     sky: '#C3E0F5',
     grass: '#B5D89A',
@@ -206,6 +216,7 @@ export const Themes: Record<ThemeId, SemanticColors> = {
     primarySoft: '#DDB28722',
     warningSoft: '#E8A24A22',
     dangerSoft: '#D6787822',
+    dangerText: '#C43D3D',
     disabledBg: '#D6CCC2',
     sky: '#C3E0F5',
     grass: '#B5D89A',
@@ -233,6 +244,7 @@ export const Themes: Record<ThemeId, SemanticColors> = {
     primarySoft: '#B5D08622',
     warningSoft: '#E8A24A22',
     dangerSoft: '#D6787822',
+    dangerText: '#C43D3D',
     disabledBg: '#CED6C2',
     sky: '#C3E0F5',
     grass: '#B5D89A',
@@ -260,6 +272,7 @@ export const Themes: Record<ThemeId, SemanticColors> = {
     primarySoft: '#F79B8D22',
     warningSoft: '#E8A24A22',
     dangerSoft: '#D6787822',
+    dangerText: '#C43D3D',
     disabledBg: '#D6C4C2',
     sky: '#C3E0F5',
     grass: '#B5D89A',
@@ -287,6 +300,7 @@ export const Themes: Record<ThemeId, SemanticColors> = {
     primarySoft: '#7FC2DE22',
     warningSoft: '#E8A24A22',
     dangerSoft: '#D6787822',
+    dangerText: '#C43D3D',
     disabledBg: '#C2D0D6',
     sky: '#C3E0F5',
     grass: '#B5D89A',
@@ -337,6 +351,7 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = {
     danger: '#E08D8D',
     warningSoft: '#EDB06122',
     dangerSoft: '#E08D8D22',
+    dangerText: '#E08D8D',
   },
   forest: {
     ...DarkNeutrals,
@@ -353,6 +368,7 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = {
     danger: '#E08D8D',
     warningSoft: '#EDB06122',
     dangerSoft: '#E08D8D22',
+    dangerText: '#E08D8D',
   },
   hanok: {
     ...DarkNeutrals,
@@ -369,6 +385,7 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = {
     danger: '#DA9384',
     warningSoft: '#DCA85522',
     dangerSoft: '#DA938422',
+    dangerText: '#DA9384',
   },
   // 신규 4종 다크 (#459) — 라이트와 같은 hue, 다크 표면 위로 primary를 밝혀
   // primaryText로 그대로 쓴다(대비 통과). (#755 이전엔 primaryActive가 라이트
@@ -388,6 +405,7 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = {
     danger: '#E08D8D',
     warningSoft: '#EDB06122',
     dangerSoft: '#E08D8D22',
+    dangerText: '#E08D8D',
   },
   citrus: {
     ...DarkNeutrals,
@@ -404,6 +422,7 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = {
     danger: '#E08D8D',
     warningSoft: '#EDB06122',
     dangerSoft: '#E08D8D22',
+    dangerText: '#E08D8D',
   },
   pastel: {
     ...DarkNeutrals,
@@ -420,6 +439,7 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = {
     danger: '#E08D8D',
     warningSoft: '#EDB06122',
     dangerSoft: '#E08D8D22',
+    dangerText: '#E08D8D',
   },
   indigo: {
     ...DarkNeutrals,
@@ -436,6 +456,7 @@ export const DarkThemes: Record<ThemeId, SemanticColors> = {
     danger: '#E08D8D',
     warningSoft: '#EDB06122',
     dangerSoft: '#E08D8D22',
+    dangerText: '#E08D8D',
   },
 };
 
@@ -499,6 +520,13 @@ export const SplashBackground = '#FEF1D6';
 export const SplashBackgroundDark = '#243273';
 
 /** Dim scrims behind sheets/dialogs/full-screen overlays — theme-independent. */
+/**
+ * 태블릿·큰 화면 콘텐츠 컬럼 상한 (#725). 화면들이 폰 폭(≈390)을 전제로
+ * 그려져 있어, 이 상한이 없으면 넓은 화면에서 리스트가 끝까지 늘어나고
+ * 정사각형 방 캔버스가 화면을 삼킨다. `useResponsiveColumn()`으로 쓴다.
+ */
+export const ContentMaxWidth = 560;
+
 export const Overlay = {
   /** Light scrim for anchored popovers — keeps the page readable behind. */
   subtle: 'rgba(0,0,0,0.2)',

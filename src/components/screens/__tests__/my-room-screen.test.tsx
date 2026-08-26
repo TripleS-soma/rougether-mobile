@@ -869,7 +869,7 @@ describe('MyRoomScreen', () => {
 
   it('shows a loading state, an error state with retry, and an empty state', async () => {
     const loading = await render(<MyRoomScreen loading />);
-    expect(loading.getByText('불러오는 중…')).toBeTruthy();
+    expect(loading.getByText('불러오는 중...')).toBeTruthy();
 
     const onRetry = jest.fn();
     const failed = await render(<MyRoomScreen loadError onRetry={onRetry} />);

@@ -78,13 +78,12 @@ describe('useFriendRoom', () => {
     // (#263) — friend rooms have no poses[], so the legacy set is flattened.
     expect(friendRoom.characterFrames).toEqual(['characters/otter/animations/idle.webp']);
     expect(friendRoom.streakDays).toBe(5);
+    // 표면은 슬롯에서, 가구는 placements에서 (#925) — 응답의 positioned 슬롯은 무시된다.
     expect(friendRoom.placement).toEqual({
-      placedFurnitureIds: ['2'],
       wallpaperId: '9',
       floorId: null,
       backgroundId: null,
-      // 슬롯 방(SLOT_V1)은 자유 배치 없음 (#327).
-      placements: null,
+      placements: [],
     });
     expect(friendRoom.routines).toHaveLength(2);
     expect(friendRoom.routines[0]).toMatchObject({ id: '3', completed: true });
@@ -120,6 +119,64 @@ describe('useFriendRoom', () => {
 
     expect(result.current.friendRoom.characterId).toBeUndefined();
     expect(result.current.friendRoom.characterFrames).toBeUndefined();
+  });
+
+  it('내 방과 같은 그림을 쓴다 — 마스터 poses가 응답 animations를 이긴다 (#968)', async () => {
+    // 친구 방 응답에는 poses[]가 없어 예전엔 무조건 레거시 animations로 떨어졌고,
+    // 내 방(마스터 poses)과 **같은 캐릭터가 다른 그림**으로 나왔다.
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/room')) {
+        return res({
+          character: {
+            characterId: 7,
+            code: 'cat',
+            animations: {
+              idle: 'characters/cat/animations/idle.webp',
+              poseCycle: 'characters/cat/animations/pose-cycle.webp',
+            },
+          },
+        });
+      }
+      return res({});
+    }) as unknown as typeof fetch;
+
+    const masterFrames = { cat: ['characters/pose-a.webp', 'characters/pose-b.webp'] };
+    const { result } = await renderHook(() => useFriendRoom());
+    await act(async () => {
+      await result.current.load(11, 42, CATALOGUE, masterFrames);
+    });
+    await waitFor(() => expect(result.current.friendRoom.loading).toBe(false));
+
+    expect(result.current.friendRoom.characterFrames).toEqual([
+      'characters/pose-a.webp',
+      'characters/pose-b.webp',
+    ]);
+  });
+
+  it('마스터에 그 캐릭터가 없으면 응답 animations로 떨어진다 (#968)', async () => {
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/room')) {
+        return res({
+          character: {
+            characterId: 7,
+            code: 'cat',
+            animations: { idle: 'characters/cat/animations/idle.webp' },
+          },
+        });
+      }
+      return res({});
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useFriendRoom());
+    await act(async () => {
+      // 마스터를 못 받은 상태(빈 맵) — 폴백이 살아 있어야 한다.
+      await result.current.load(11, 42, CATALOGUE, {});
+    });
+    await waitFor(() => expect(result.current.friendRoom.loading).toBe(false));
+
+    expect(result.current.friendRoom.characterFrames).toEqual([
+      'characters/cat/animations/idle.webp',
+    ]);
   });
 
   it('hides the activity section (undefined) when the history endpoint fails', async () => {

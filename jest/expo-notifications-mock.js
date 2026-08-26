@@ -4,6 +4,8 @@ const api = {
   getDevicePushTokenAsync: async () => ({ data: 'test-token' }),
   addPushTokenListener: () => ({ remove: () => {} }),
   addNotificationResponseReceivedListener: () => ({ remove: () => {} }),
+  // 인앱 푸시 배너 (#902) — 수신 구독. 응답 리스너와 같은 결로 no-op.
+  addNotificationReceivedListener: () => ({ remove: () => {} }),
   getLastNotificationResponseAsync: async () => null,
   setNotificationHandler: () => {},
   setNotificationChannelAsync: async () => ({}),

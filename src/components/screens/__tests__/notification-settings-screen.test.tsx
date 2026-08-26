@@ -1,6 +1,9 @@
 import { fireEvent, render } from '@testing-library/react-native';
 
-import { NotificationSettingsScreen } from '@/components/screens/notification-settings-screen';
+import {
+  NotificationSettingsScreen,
+  pushStepNotice,
+} from '@/components/screens/notification-settings-screen';
 
 describe('NotificationSettingsScreen', () => {
   it('renders the title and the server-backed rows (#495)', async () => {
@@ -52,5 +55,46 @@ describe('NotificationSettingsScreen', () => {
     // 재조회 성공(해제) 시 배너가 사라진다.
     await rerender(<NotificationSettingsScreen loadError={false} onRetry={onRetry} />);
     expect(queryByText(/설정을 불러오지 못했어요/)).toBeNull();
+  });
+
+  /**
+   * 설정을 다 켜뒀는데도 푸시가 안 오는 경우, 서버가 아니라 이 기기가
+   * 등록조차 안 된 것일 수 있다 (#903). 그 구분이 화면에 없었다.
+   */
+  describe('기기 등록 상태 안내 (#903)', () => {
+    it('등록이 끝났으면 아무 안내도 띄우지 않는다', async () => {
+      const { queryByTestId } = await render(<NotificationSettingsScreen pushStep="registered" />);
+      expect(queryByTestId('push-status-notice')).toBeNull();
+    });
+
+    // 한 테스트에 여러 번 render하면 앞 트리 정리가 끝나기 전에 다음이 붙어
+    // 조회가 엇나간다 — 단계마다 따로 돌린다.
+    it.each(['idle', 'unsupported', 'no-device'] as const)(
+      '%s 에는 안내를 띄우지 않는다 — 사용자가 할 일이 없다',
+      async (step) => {
+        const { queryByTestId } = await render(<NotificationSettingsScreen pushStep={step} />);
+        expect(queryByTestId('push-status-notice')).toBeNull();
+      },
+    );
+
+    it('권한 거부는 무엇을 해야 하는지 말해준다', async () => {
+      const { getByTestId, getByText } = await render(
+        <NotificationSettingsScreen pushStep="permission-denied" />,
+      );
+      expect(getByTestId('push-status-notice')).toBeTruthy();
+      expect(getByText(/시스템 설정/)).toBeTruthy();
+    });
+
+    it.each(['token-failed', 'register-failed'] as const)(
+      '%s 도 무엇이 잘못됐는지 알려준다',
+      async (step) => {
+        const { getByTestId } = await render(<NotificationSettingsScreen pushStep={step} />);
+        expect(getByTestId('push-status-notice')).toBeTruthy();
+      },
+    );
+
+    it('토큰 실패와 서버 등록 실패는 서로 다른 문구다 — 원인이 다르다', () => {
+      expect(pushStepNotice('token-failed')).not.toBe(pushStepNotice('register-failed'));
+    });
   });
 });

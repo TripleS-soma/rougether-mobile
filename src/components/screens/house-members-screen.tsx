@@ -14,6 +14,7 @@ import { houseCapacityOptions } from '@/constants/house-themes';
 import { houseInviteLink } from '@/constants/links';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
 /** Capacity choices for the edit form (server allows 1~10). */
@@ -91,6 +92,7 @@ export function HouseMembersScreen({
   onLeaveDone,
 }: HouseMembersScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const { show: toast } = useToast();
@@ -208,7 +210,7 @@ export function HouseMembersScreen({
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView contentContainerStyle={[styles.body, column]}>
         {onReissueInviteCode || displayCode ? (
           <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
             <View style={styles.codeHead}>
@@ -226,7 +228,7 @@ export function HouseMembersScreen({
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
               {isOwner
                 ? '친구에게 코드를 공유해 집에 초대하세요.'
-                : '내 개인 초대코드로 친구를 초대해요 — 참여는 방장 승인 후 확정돼요.'}
+                : '내 개인 초대코드로 친구를 초대해요. 참여는 방장 승인 후 확정돼요.'}
             </Text>
             {displayCode ? (
               <View
@@ -359,6 +361,17 @@ export function HouseMembersScreen({
                         </Text>
                       </View>
                     ) : null}
+                    {/* 동거 봇 (서버 #307~#310) — 사람인 줄 알고 응원을 보내거나
+                        말을 걸지 않게 이름 옆에서 바로 구분한다. */}
+                    {member.bot ? (
+                      <View
+                        testID={`bot-badge-${member.name}`}
+                        style={[styles.ownerBadge, { backgroundColor: t.surfaceMuted }]}>
+                        <Text style={[styles.ownerBadgeText, emph('bold'), { color: t.textMuted }]}>
+                          봇
+                        </Text>
+                      </View>
+                    ) : null}
                     {member.isMine ? (
                       <Text
                         style={[
@@ -374,9 +387,12 @@ export function HouseMembersScreen({
                     {kickedOut ? '강퇴된 멤버' : member.level}
                   </Text>
                 </View>
+                {/* 봇에게는 위임할 수 없다 — 서버가 HOUSE_OWNER_TRANSFER_TO_BOT으로
+                    거부한다(서버 #309). 고를 수 있는데 눌러야 실패하는 대신 아예 뺀다. */}
                 {isOwner &&
                 onTransferOwnership &&
                 !member.isMine &&
+                !member.bot &&
                 member.membershipId &&
                 !kickedOut ? (
                   <Pressable

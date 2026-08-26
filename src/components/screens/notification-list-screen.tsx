@@ -5,11 +5,13 @@ import ReanimatedSwipeable, {
 } from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 import { Loading } from '@/components/ui/loading';
-import { Icon, type IconName } from '@/components/ui/icon';
+import { Icon } from '@/components/ui/icon';
+import { notificationIcon } from '@/constants/notifications';
 import { RetryState } from '@/components/ui/retry-state';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Radius, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { DEMO_NOTIFICATIONS } from '@/mocks/fixtures';
 
@@ -23,23 +25,6 @@ export type NotificationEntry = {
   read: boolean;
   /** Display date, e.g. "7월 8일". */
   date: string;
-};
-
-/** Row icon by server notification type. */
-const TYPE_ICONS: Record<string, IconName> = {
-  ROUTINE_REMINDER: 'bell',
-  TODO_REMINDER: 'bell',
-  HOUSE_KICK: 'house',
-  // 친구 응원 알림 (#330 응원 보내기의 수신측) — 스웨거 enum 추가분.
-  FRIEND_CHEER: 'heart',
-  HOUSE_MISSION_ACHIEVED: 'flame',
-  HOUSE_MEMBER_JOINED: 'members',
-  HOUSE_MEMBER_LEFT: 'leave',
-  // 입주 신청 결과 (#595, 서버 #241) — 수락은 집, 거절도 같은 맥락의 집 알림.
-  HOUSE_JOIN_REQUEST_ACCEPTED: 'house',
-  HOUSE_JOIN_REQUEST_REJECTED: 'house',
-  // 남이 내 방 거미줄을 치워줬을 때 (#831, 서버 #277) — 방으로 돌아오라는 신호.
-  ROOM_COBWEB_CLEANED: 'house',
 };
 
 export type NotificationListScreenProps = {
@@ -122,6 +107,7 @@ export function NotificationListScreen({
   onLoadMore,
 }: NotificationListScreenProps) {
   const t = useTokens();
+  const column = useResponsiveColumn();
   const Typography = useTypography();
   const entries = notifications ?? DEMO_NOTIFICATIONS;
   const hasUnread = entries.some((n) => !n.read);
@@ -147,7 +133,7 @@ export function NotificationListScreen({
       <FlatList
         data={entries}
         keyExtractor={(n) => String(n.id)}
-        contentContainerStyle={styles.body}
+        contentContainerStyle={[styles.body, column]}
         ListEmptyComponent={
           loading ? (
             <View style={styles.state}>
@@ -187,7 +173,7 @@ export function NotificationListScreen({
                 { backgroundColor: n.read ? t.surfaceMuted : t.surface, borderColor: t.border },
               ]}>
               <View style={[styles.rowIcon, { backgroundColor: t.surfaceMuted }]}>
-                <Icon name={TYPE_ICONS[n.type ?? ''] ?? 'bell'} size={18} color={t.text} />
+                <Icon name={notificationIcon(n.type)} size={18} color={t.text} />
               </View>
               <View style={styles.rowBody}>
                 <View style={styles.rowHead}>

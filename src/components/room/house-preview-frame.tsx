@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import {
@@ -78,6 +79,16 @@ export function HousePreviewFrame({
   // 에셋 자체가 깨진 비정상 키일 때만 남는 안전망.)
   const coverKey = houseCoverKey(coverImageKey);
   const hasFrame = isCdnKey(coverKey);
+  // 창문 4칸의 씬을 한 번에 조합해 참조를 고정한다 — 렌더 안에서 매번
+  // `memberRoomScene(...)`을 부르면 씬 객체가 늘 새것이라 <Room>의 memo가
+  // 통째로 무력해진다(seat-tile이 같은 이유로 useMemo를 쓴다).
+  const scenes = useMemo(
+    () =>
+      WINDOW_RECTS.map((_, i) =>
+        memberRoomScene(rooms?.[i], { furniture, wallpapers, floors, backgrounds }),
+      ),
+    [rooms, furniture, wallpapers, floors, backgrounds],
+  );
   return (
     <View
       style={[styles.frame, !hasFrame && { backgroundColor: t.surfaceMuted }]}
@@ -85,7 +96,6 @@ export function HousePreviewFrame({
       {WINDOW_RECTS.map((rect, i) => {
         const seats = rooms ? rooms.length : memberCount;
         const occupied = i < Math.min(seats, WINDOW_RECTS.length);
-        const room = rooms?.[i];
         return (
           <View
             key={`window-${i}`}
@@ -97,10 +107,7 @@ export function HousePreviewFrame({
             ]}>
             {occupied ? (
               <View style={StyleSheet.absoluteFill} pointerEvents="none" testID="preview-room">
-                <Room
-                  {...memberRoomScene(room, { furniture, wallpapers, floors, backgrounds })}
-                  fill
-                />
+                <Room {...scenes[i]} fill />
               </View>
             ) : (
               <View

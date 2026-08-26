@@ -19,6 +19,7 @@ export type PictogramName =
   | 'sparkle'
   | 'crown'
   | 'target'
+  | 'mission-flag'
   | 'sun'
   | 'calendar'
   | 'book'
@@ -79,6 +80,31 @@ export function TargetPictogram({ size = 24, color }: PictogramProps) {
       <Circle cx={12} cy={12} r={9} stroke={c} strokeWidth={2.4} />
       <Circle cx={12} cy={12} r={4.6} stroke={c} strokeWidth={2.4} />
       <Circle cx={12} cy={12} r={1.5} fill={c} />
+    </Svg>
+  );
+}
+
+/**
+ * 온보딩 미션 배너의 진행 표식 (#571) — 목표 지점에 꽂힌 깃발. 🎯 이모지를
+ * 대체한다: 이모지는 플랫폼마다 다른 그림이 나오고 테마를 못 따라가는데,
+ * 이 마크는 깃대가 `text`, 깃발이 `warning`이라 라이트/다크에서 함께 뒤집힌다.
+ *
+ * 아래 접힘은 새 색을 만들지 않고 `onTint`(라이트·다크 동일한 고정 잉크)를
+ * 18%로 덮어 어둡게 한다 — 어느 테마의 warning 위에서도 같은 만큼 진해진다.
+ * 22px(배너 실제 크기)에서 형태가 뭉개지지 않는 선까지만 디테일을 둔다.
+ */
+export function MissionFlagPictogram({ size = 24 }: PictogramProps) {
+  const t = useTokens();
+  const wave = 'M6.8 11.6 Q11.4 9.8 15.3 11.8 Q18 13.2 19.8 12.2 L19.8 13.8 Q18 14.8 15.3 13.4 Q11.4 11.4 6.8 13.2 Z'; // prettier-ignore
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" testID="mission-flag">
+      <Path d="M5.4 3.2 V20.8" stroke={t.text} strokeWidth={2.2} strokeLinecap="round" />
+      <Path
+        d="M6.8 4.2 Q11.4 2.4 15.3 4.4 Q18 5.8 19.8 4.8 L19.8 12.2 Q18 13.2 15.3 11.8 Q11.4 9.8 6.8 11.6 Z"
+        fill={t.warning}
+      />
+      <Path d={wave} fill={t.warning} />
+      <Path d={wave} fill={t.onTint} opacity={0.18} />
     </Svg>
   );
 }
@@ -776,6 +802,7 @@ const PICTOGRAMS: Record<PictogramName, (p: PictogramProps) => React.JSX.Element
   sparkle: SparklePictogram,
   crown: CrownPictogram,
   target: TargetPictogram,
+  'mission-flag': MissionFlagPictogram,
   sun: SunPictogram,
   calendar: CalendarPictogram,
   book: BookPictogram,

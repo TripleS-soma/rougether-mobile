@@ -10,6 +10,7 @@ import { HelpScreen } from '@/components/screens/help-screen';
 import { InviteFriendsScreen } from '@/components/screens/invite-friends-screen';
 import { CalendarImportScreen } from '@/components/screens/calendar-import-screen';
 import { NotificationSettingsScreen } from '@/components/screens/notification-settings-screen';
+import { getPushDiagnostic } from '@/lib/push-token';
 import { ProfileEditScreen } from '@/components/screens/profile-edit-screen';
 import {
   DEFAULT_SOUND_SETTINGS,
@@ -19,6 +20,7 @@ import {
 import { FontScreen } from '@/components/screens/font-screen';
 import { ThemeScreen } from '@/components/screens/theme-screen';
 import { useToast } from '@/components/ui/toast';
+import { FONT_OPTIONS, THEME_OPTIONS, type BrandFontId, type ThemeId } from '@/constants/theme';
 import { useCalendarImport } from '@/hooks/use-calendar-import';
 import type { CharacterId } from '@/constants/characters';
 import { SUPPORT_EMAIL } from '@/constants/policy';
@@ -27,9 +29,12 @@ import { useBugReports } from '@/hooks/use-bug-reports';
 import { useInvites } from '@/hooks/use-invites';
 import { useNotificationSettings } from '@/hooks/use-notification-settings';
 import { useBrandTheme } from '@/hooks/use-tokens';
-import { subscribePendingFriendInviteCode } from '@/lib/pending-invite';
+import {
+  clearPendingFriendInviteCode,
+  subscribePendingFriendInviteCode,
+} from '@/lib/pending-invite';
 import { pickLibraryImage } from '@/lib/pick-image';
-import { setHapticsEnabled } from '@/utils/haptics';
+import { DEFAULT_HAPTIC_STRENGTH, setHapticStrength } from '@/utils/haptics';
 
 /** 사운드 설정의 기기 보관 키 (#405) — 알림 설정은 서버로 이관됨 (#495). */
 const DEVICE_SETTINGS_KEY = 'rougether.device-settings';
@@ -61,6 +66,33 @@ export function useSettingsSurface({
 }) {
   const { themeId, setThemeId, mode: themeMode, setMode: setThemeMode, fontId, setFontId } = useBrandTheme(); // prettier-ignore
   const { show: toast } = useToast();
+
+  // 폰트·테마는 적용돼도 화면이 조용히 바뀔 뿐이라 "눌린 건가?" 싶다 — 바뀐
+  // 이름을 토스트로 확인시킨다 (#972). **같은 값을 다시 고르면 안 띄운다**:
+  // 바뀐 게 없는데 알림이 뜨면 그게 더 헷갈린다.
+  //
+  // 문구에 `으로/로`를 쓰지 않는 건 **조사가 이름마다 달라지기 때문**이다 —
+  // "포근"은 받침이 있어 `으로`, "인디고 타이드"는 없어 `로`다. 이름을 앞에 두고
+  // 고정 조사(`를`)만 쓰면 어떤 이름이 와도 맞는다.
+  const changeThemeId = useCallback(
+    (id: ThemeId) => {
+      if (id === themeId) return;
+      setThemeId(id);
+      const name = THEME_OPTIONS.find((o) => o.id === id)?.name;
+      if (name) toast(`“${name}” 테마를 적용했어요`);
+    },
+    [themeId, setThemeId, toast],
+  );
+
+  const changeFontId = useCallback(
+    (id: BrandFontId) => {
+      if (id === fontId) return;
+      setFontId(id);
+      const name = FONT_OPTIONS.find((o) => o.id === id)?.name;
+      if (name) toast(`“${name}” 폰트를 적용했어요`);
+    },
+    [fontId, setFontId, toast],
+  );
   // 캘린더 임포트 상태 (#844) — 권한·조회·임포트를 훅이 쥔다.
   const calendarImport = useCalendarImport();
   // 스토어 요건(#545): 도움말의 실제 앱 버전 표기.
@@ -87,7 +119,12 @@ export function useSettingsSurface({
   }, [toast]);
 
   // 버그 제보 (#496) — 화면을 열 때 내 제보 내역을 불러온다.
-  const { entries: bugReports, load: loadBugReports, submit: submitBugReport } = useBugReports();
+  const {
+    entries: bugReports,
+    load: loadBugReports,
+    submit: submitBugReport,
+    loadScreenshot: loadBugScreenshot,
+  } = useBugReports();
 
   // 친구 초대 리워드 (#518) — 설정 → 친구 초대 화면의 데이터·액션.
   const {
@@ -126,8 +163,22 @@ export function useSettingsSurface({
     void AsyncStorage.getItem(DEVICE_SETTINGS_KEY).then((raw) => {
       if (!raw) return;
       try {
-        const saved = JSON.parse(raw) as { sound?: SoundSettings };
-        if (saved.sound) setSoundSettings((p) => ({ ...p, ...saved.sound }));
+        // 종전 저장값은 `haptics: boolean`이었다 (#586 → #974). 켜져 있던 사람은
+        // '보통', 꺼둔 사람은 '끄기'로 옮긴다 — 안 하면 저장값이 그대로 남아
+        // hapticStrength가 undefined가 되고 기본값(보통)으로 되살아난다.
+        const saved = JSON.parse(raw) as {
+          sound?: Partial<SoundSettings> & { haptics?: boolean };
+        };
+        if (saved.sound) {
+          const { haptics, ...rest } = saved.sound;
+          const migrated =
+            rest.hapticStrength ?? (haptics === undefined ? undefined : haptics ? 'medium' : 'off');
+          setSoundSettings((p) => ({
+            ...p,
+            ...rest,
+            ...(migrated ? { hapticStrength: migrated } : {}),
+          }));
+        }
       } catch {
         // 손상된 저장값은 기본값으로 무시.
       }
@@ -136,11 +187,11 @@ export function useSettingsSurface({
   const persistDeviceSettings = (sound: SoundSettings) => {
     void AsyncStorage.setItem(DEVICE_SETTINGS_KEY, JSON.stringify({ sound })).catch(() => {});
   };
-  // '햅틱 진동' 토글을 전역 게이트에 주입 (#586) — 이 이펙트가 없으면 토글이
+  // 햅틱 세기를 전역 게이트에 주입 (#586 → #974) — 이 이펙트가 없으면 설정이
   // 저장만 되고 아무것도 제어하지 않는다(휠 틱·완료 햅틱 등 전부 무조건 발사).
   useEffect(() => {
-    setHapticsEnabled(soundSettings.haptics);
-  }, [soundSettings.haptics]);
+    setHapticStrength(soundSettings.hapticStrength ?? DEFAULT_HAPTIC_STRENGTH);
+  }, [soundSettings.hapticStrength]);
 
   // 설정 화면 콜백 — SettingsScreen이 memo라(탭 페이저로 상주, #539 후속)
   // 인라인 람다면 셸 리렌더마다 memo가 뚫린다. 전부 참조 고정.
@@ -179,6 +230,7 @@ export function useSettingsSurface({
   const tabProps = {
     themeMode,
     onChangeThemeMode: setThemeMode,
+    themeId,
     fontId,
     onOpenFont: openFont,
     onOpenTheme: openTheme,
@@ -201,9 +253,21 @@ export function useSettingsSurface({
   /** 현재 화면이 설정 서브화면이면 그 JSX, 아니면 null — 셸이 그대로 렌더. */
   const subScreen =
     screen === 'theme' ? (
-      <ThemeScreen themeId={themeId} onChangeThemeId={setThemeId} onBack={backToSettings} />
+      <ThemeScreen
+        themeId={themeId}
+        onChangeThemeId={changeThemeId}
+        userName={profile.nickname}
+        characterId={profile.characterId}
+        onBack={backToSettings}
+      />
     ) : screen === 'font' ? (
-      <FontScreen fontId={fontId} onChangeFont={setFontId} onBack={backToSettings} />
+      <FontScreen
+        fontId={fontId}
+        onChangeFont={changeFontId}
+        userName={profile.nickname}
+        characterId={profile.characterId}
+        onBack={backToSettings}
+      />
     ) : screen === 'profileEdit' ? (
       <ProfileEditScreen
         initialNickname={profile.nickname}
@@ -221,6 +285,8 @@ export function useSettingsSurface({
         onToggle={toggleNotificationSetting}
         loadError={notificationSettingsLoadError}
         onRetry={loadNotificationSettings}
+        // 화면을 열 때의 등록 상태 (#903) — 로그인 시 syncPushToken이 남긴다.
+        pushStep={getPushDiagnostic().step}
         onBack={backToSettings}
       />
     ) : screen === 'calendarImport' ? (
@@ -257,6 +323,7 @@ export function useSettingsSurface({
     ) : screen === 'bugReport' ? (
       <BugReportScreen
         entries={bugReports}
+        onLoadScreenshot={loadBugScreenshot}
         onSubmit={submitBugReport}
         onPickImage={pickLibraryImage}
         onBack={backToSettings}
@@ -271,7 +338,10 @@ export function useSettingsSurface({
         onRetry={loadInvites}
         onRedeem={redeemInviteCode}
         initialRedeemCode={pendingFriendCode ?? undefined}
-        onInitialRedeemCodeConsumed={() => setPendingFriendCode(null)}
+        onInitialRedeemCodeConsumed={() => {
+          setPendingFriendCode(null);
+          clearPendingFriendInviteCode();
+        }}
         onBack={backToSettings}
       />
     ) : null;
