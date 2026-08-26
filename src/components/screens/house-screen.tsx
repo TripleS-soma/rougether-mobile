@@ -1198,8 +1198,12 @@ const styles = StyleSheet.create({
     // 헤더 바로 아래라 위쪽 여백이 필요하다 — 없으면 헤더에 붙어 읽힌다.
     // 16으로는 여전히 붙어 보였다(#879 후속): 헤더가 흰 면이고 이 줄은 크림
     // 배경 위라, 색이 바뀌는 경계가 곧 구분선처럼 읽혀 여백을 잡아먹는다.
+    //
+    // **아래도 같은 조건이라 같은 값을 준다** (#981) — 크림에서 하늘 캔버스로
+    // 바뀌는 경계다. 종전엔 8이라 위 24 / 아래 8로 3배 차이가 났고, 줄이
+    // 캔버스에 달라붙어 읽혔다.
     marginTop: Spacing.four,
-    marginBottom: Spacing.two,
+    marginBottom: Spacing.four,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     borderRadius: Radius.md,
