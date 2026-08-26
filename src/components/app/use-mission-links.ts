@@ -257,11 +257,15 @@ export function useMissionLinks({
     void (async () => {
       for (const r of stale) await deleteRoutine(r.id);
       // 조용히 지우지 않는다 — 사용자가 해오던 루틴이 사라지는 일이다.
+      // 사유가 섞일 때만 두 말을 겹쳐 쓴다: 한쪽뿐인데 "끝나거나 사라진"이라고
+      // 하면 일어나지 않은 일까지 말하는 셈이다.
       const ended = stale.filter((r) => r.reason === 'ended').length;
       toast(
         ended === stale.length
           ? '끝난 미션의 연동 루틴을 정리했어요'
-          : '끝나거나 사라진 미션의 연동 루틴을 정리했어요',
+          : ended === 0
+            ? '사라진 미션의 연동 루틴을 정리했어요'
+            : '끝나거나 사라진 미션의 연동 루틴을 정리했어요',
       );
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps

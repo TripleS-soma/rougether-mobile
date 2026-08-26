@@ -81,6 +81,25 @@ describe('연동 루틴 자동 정리 (#338 → #979)', () => {
     await waitFor(() => expect(deleteRoutine).toHaveBeenCalledWith('r-expired'));
   });
 
+  it('사라진 미션만 있으면 그 사유만 말한다 (#338 원래 경로)', async () => {
+    // "끝나거나 사라진"이라고 하면 일어나지 않은 일까지 말하는 셈이다.
+    const { deleteRoutine } = setup({
+      missions: [mission(1, 'ACTIVE')],
+      routines: [routine('r-gone', 99)], // 목록에 없는 미션 id
+    });
+    await waitFor(() => expect(deleteRoutine).toHaveBeenCalledWith('r-gone'));
+    expect(mockToast).toHaveBeenCalledWith('사라진 미션의 연동 루틴을 정리했어요');
+  });
+
+  it('사유가 섞이면 두 말을 겹쳐 쓴다', async () => {
+    const { deleteRoutine } = setup({
+      missions: [mission(1, 'ACTIVE'), mission(2, 'COMPLETED')],
+      routines: [routine('r-gone', 99), routine('r-ended', 2)],
+    });
+    await waitFor(() => expect(deleteRoutine).toHaveBeenCalledTimes(2));
+    expect(mockToast).toHaveBeenCalledWith('끝나거나 사라진 미션의 연동 루틴을 정리했어요');
+  });
+
   it('목표를 채웠어도 ACTIVE면 남긴다 — 보상에 닿을 길이 있어야 한다', async () => {
     const { deleteRoutine } = setup({
       missions: [mission(4, 'ACTIVE', true)],
