@@ -35,7 +35,6 @@ import {
   type PictogramName,
   TargetPictogram,
 } from '@/components/ui/pictograms';
-import { WalletPills } from '@/components/ui/wallet-pills';
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { characterIdForMember } from '@/hooks/use-member-room-previews';
@@ -50,7 +49,6 @@ import {
   skyPhaseForHour,
 } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
-import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useResolvedScheme, useTokens, useTypography } from '@/hooks/use-tokens';
 import type { MissionStatus } from '@/utils/mission-cta';
@@ -209,9 +207,8 @@ export type HouseScreenProps = RoomCatalogProps &
     /** 당겨서 새로고침 (#454) — 내 집 목록 조용한 리로드. */
     onRefresh?: () => Promise<void> | void;
     characterId?: CharacterId;
-    /** 헤더 프로필 블록 — 나의 방 헤더와 같은 아바타·닉네임·스트릭 (#420). */
+    /** 방 타일의 표시 이름 — 내 자리를 '(나)'로 가리키는 데 쓴다. */
     userName?: string;
-    streakDays?: number;
     /**
      * Controlled house-switcher index. The screen unmounts while visiting a
      * friend's room, so the shell keeps this to restore the house being viewed
@@ -239,9 +236,6 @@ export type HouseScreenProps = RoomCatalogProps &
     nowHour?: number;
     /** 지금 비가 오는지 — 셸이 use-weather로 주입, 하늘을 흐린 톤 + 빗줄기로 (#360). */
     raining?: boolean;
-    /** 헤더 지갑 필 — 나의 방 헤더와 동일 (#353). */
-    coinBalance?: number;
-    diamondBalance?: number;
     /** 구성원 관리 화면 열기 (#753) — 셸 화면('houseMembers')으로 승격됐다. */
     onOpenMembers?: () => void;
     /** 강퇴 낙관 반영 (#753 승격 후 셸 소유) — 참이면 좌석을 빈 타일로 그린다. */
@@ -301,7 +295,6 @@ export const HouseScreen = memo(function HouseScreen({
   onRefresh,
   characterId = DEFAULT_CHARACTER_ID,
   userName = '',
-  streakDays = 0,
   houseIndex: houseIndexProp,
   onReorderHouses,
   onHouseIndexChange,
@@ -312,8 +305,6 @@ export const HouseScreen = memo(function HouseScreen({
   onOpenSearch,
   nowHour,
   raining = false,
-  coinBalance = 0,
-  diamondBalance = 0,
   onOpenMembers,
   isKickedMember,
   onKickMember,
@@ -338,7 +329,6 @@ export const HouseScreen = memo(function HouseScreen({
   onScrollY,
 }: HouseScreenProps) {
   const t = useTokens();
-  const column = useResponsiveColumn();
   const Typography = useTypography();
   // 시간대별 하늘 (#358) — 새벽/낮/노을/밤. 낮은 기존 sky 토큰과 동일.
   const scheme = useResolvedScheme();
@@ -911,88 +901,6 @@ export const HouseScreen = memo(function HouseScreen({
 
   return (
     <View style={[styles.screen, screenStyle]}>
-      <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
-        {/* 나의 방 헤더와 같은 프로필 블록 — 닉네임·스트릭 (아바타 제거, #461). */}
-        <View style={styles.headerLeft}>
-          <View style={styles.headerName}>
-            <Text
-              style={[Typography.h3, { color: t.text }]}
-              numberOfLines={1}
-              ellipsizeMode="middle"
-              adjustsFontSizeToFit
-              minimumFontScale={0.75}>
-              {userName}
-            </Text>
-            {streakDays > 0 ? (
-              <View style={styles.headerStreak}>
-                <Icon name="flame" size={14} color={t.warningText} />
-                <Text style={[Typography.supporting, { color: t.warningText }]}>
-                  {streakDays}일
-                </Text>
-              </View>
-            ) : null}
-          </View>
-        </View>
-        <WalletPills coin={coinBalance} diamond={diamondBalance} />
-        <CoachTarget id="house-search">
-          <Pressable
-            onPress={onOpenSearch}
-            accessibilityRole="button"
-            accessibilityLabel="집 탐색"
-            style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-            <Icon name="search" size={18} color={t.text} />
-          </Pressable>
-        </CoachTarget>
-        <ScalePressable
-          onPress={onOpenMembers}
-          accessibilityRole="button"
-          accessibilityLabel="구성원 목록"
-          style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-          <Icon name="members" size={18} color={t.text} />
-        </ScalePressable>
-      </View>
-
-      {/* 공동 미션 요약 줄 (#875) — 예전엔 우하단 FAB 뒤에 통째로 숨어서, 집에
-          들어와도 우리 집이 뭘 하는지 **누르기 전엔 보이지 않았다.** 집 화면은
-          핀치·팬 캔버스라 목록을 상시로 얹으면 제스처가 싸운다 — 한 줄이면
-          캔버스와 안 싸우면서 "지금 뭐가 진행 중이고 내가 오늘 기여했나"를
-          답한다. 탭하면 미션 화면으로. */}
-      {onOpenMissions ? (
-        <CoachTarget id="house-missions">
-          <ScalePressable
-            onPress={onOpenMissions}
-            accessibilityRole="button"
-            /* 명시 라벨을 주면 자식 Text가 스크린리더로 안 흘러간다 —
-               눈에 보이는 진행 상황을 라벨에도 담는다 (리뷰 반영). */
-            accessibilityLabel={[
-              '우리 집의 목표',
-              activeMissionCount > 0
-                ? `오늘 ${contributedTodayCount}/${activeMissionCount} 기여`
-                : '진행 중 없음',
-              claimableCount > 0 ? `받을 보상 ${claimableCount}개` : null,
-            ]
-              .filter(Boolean)
-              .join(', ')}
-            style={[styles.missionRow, { backgroundColor: t.surfaceMuted }]}>
-            <TargetPictogram size={16} />
-            <Text style={[Typography.label, styles.missionRowTitle, { color: t.text }]}>
-              우리 집의 목표
-            </Text>
-            {activeMissionCount > 0 ? (
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                오늘 {contributedTodayCount}/{activeMissionCount}
-              </Text>
-            ) : (
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>진행 중 없음</Text>
-            )}
-            {claimableCount > 0 ? (
-              <View style={[styles.missionRowDot, { backgroundColor: t.warning }]} />
-            ) : null}
-            <Icon name="forward" size={14} color={t.textDisabled} />
-          </ScalePressable>
-        </CoachTarget>
-      ) : null}
-
       {/* 타일 드래그 중에는 스크롤이 제스처를 뺏지 않게 잠근다 (#278). */}
       <PawRefreshScroll
         scrollRef={scrollRef}
@@ -1001,8 +909,10 @@ export const HouseScreen = memo(function HouseScreen({
         // 자리 드래그 중 당김 잠금 — 놓는 순간 새로고침이 배치를 끊지 않게.
         refreshDisabled={dragSeat != null}
         refreshTestID="house-refresh"
-        // 집 커버는 aspectRatio라 폭이 넓어지면 초대형화돼 좌석이 잘린다 (#725).
-        contentContainerStyle={[styles.body, column]}
+        // 이 화면은 폭 제한에서 뺀다 (#986) — 하늘이 화면을 꽉 채워야 하고,
+        // 태블릿에서 560으로 잘리면 좌우가 크림으로 남아 목적과 반대가 된다.
+        // 프레임은 aspectRatio라 폭을 따라 커지지만, 좌석 좌표는 정규화라 안전.
+        contentContainerStyle={styles.body}
         scrollEnabled={dragSeat == null}
         testID="house-scroll">
         {/* 프레임 모드(#287) — 하늘 위에 스위처·집 프레임, 방은 창문 안에.
@@ -1068,6 +978,9 @@ export const HouseScreen = memo(function HouseScreen({
               </Text>
             </View>
           </View>
+          {/* 남는 세로를 여기서 먹어 집을 잔디에 붙인다 (#986). CoachTarget이
+              flex 자식이라 안쪽 View에 auto 마진을 줘도 안 먹는다 — 명시 스페이서. */}
+          <View style={styles.skySpacer} />
           <CoachTarget id="house-frame">
             <Animated.View
               style={[
@@ -1158,58 +1071,127 @@ export const HouseScreen = memo(function HouseScreen({
             </Animated.View>
           </CoachTarget>
         </View>
-        <View style={styles.floors} {...gridPanResponder.panHandlers}>
-          {roomPairs.map((pair, pairIdx) => {
-            // The dragged tile must float above sibling rows too.
-            const rowHasDrag =
-              dragSeat != null &&
-              dragSeat >= rowOffsets[pairIdx] &&
-              dragSeat < rowOffsets[pairIdx] + pair.length;
-            return (
-              // Vacant rows share the '빈방' name — the row index keys them.
-              <View
-                key={`${pairIdx}-${pair[0]?.name ?? ''}`}
-                style={[styles.floor, rowHasDrag && styles.dragRow]}>
-                <View style={styles.floorRooms}>
-                  {pair.map((room, i) => renderSeatTile(room, rowOffsets[pairIdx] + i))}
-                  {/* Odd capacity → invisible filler keeps the lone tile half-width. */}
-                  {pair.length === 1 ? (
-                    <View style={styles.roomSpacer} testID="room-spacer" />
-                  ) : null}
+        {/* 프레임 모드에선 방이 창문 안에 그려져 이 격자가 비는데, paddingTop이
+            남아 잔디 아래 24px 크림 띠를 만들었다 (#986). 내용이 있을 때만 그린다. */}
+        {roomPairs.length === 0 ? null : (
+          <View style={styles.floors} {...gridPanResponder.panHandlers}>
+            {roomPairs.map((pair, pairIdx) => {
+              // The dragged tile must float above sibling rows too.
+              const rowHasDrag =
+                dragSeat != null &&
+                dragSeat >= rowOffsets[pairIdx] &&
+                dragSeat < rowOffsets[pairIdx] + pair.length;
+              return (
+                // Vacant rows share the '빈방' name — the row index keys them.
+                <View
+                  key={`${pairIdx}-${pair[0]?.name ?? ''}`}
+                  style={[styles.floor, rowHasDrag && styles.dragRow]}>
+                  <View style={styles.floorRooms}>
+                    {pair.map((room, i) => renderSeatTile(room, rowOffsets[pairIdx] + i))}
+                    {/* Odd capacity → invisible filler keeps the lone tile half-width. */}
+                    {pair.length === 1 ? (
+                      <View style={styles.roomSpacer} testID="room-spacer" />
+                    ) : null}
+                  </View>
                 </View>
-              </View>
-            );
-          })}
-        </View>
+              );
+            })}
+          </View>
+        )}
       </PawRefreshScroll>
+
+      {/* 화면 고정 플로팅 레일 (#986) — 헤더바를 없애고 하늘이 맨 위부터
+          시작하게 하려면 액션이 아트 **위에** 떠야 한다. 흰 원 + 라벨은
+          배경이 하늘색이든 다크모드든 대비가 보장되는 형태다(#232). */}
+      <View style={[styles.rail, headerInset]} pointerEvents="box-none">
+        {onOpenMissions ? (
+          <CoachTarget id="house-missions">
+            <RailButton
+              icon={<TargetPictogram size={20} />}
+              label="목표"
+              onPress={onOpenMissions}
+              /* 줄에서 버튼이 되며 '오늘 1/1'이 눈에서 사라진다 (#875가 드러내려던
+                 것이다) — 라벨에는 그대로 담고, 받을 보상은 점으로 남긴다. */
+              accessibilityLabel={[
+                '우리 집의 목표',
+                activeMissionCount > 0
+                  ? `오늘 ${contributedTodayCount}/${activeMissionCount} 기여`
+                  : '진행 중 없음',
+                claimableCount > 0 ? `받을 보상 ${claimableCount}개` : null,
+              ]
+                .filter(Boolean)
+                .join(', ')}
+              badge={claimableCount > 0 ? t.warning : undefined}
+              t={t}
+              Typography={Typography}
+            />
+          </CoachTarget>
+        ) : null}
+        <CoachTarget id="house-search">
+          <RailButton
+            icon={<Icon name="search" size={20} color={t.text} />}
+            label="집 탐색"
+            onPress={onOpenSearch}
+            accessibilityLabel="집 탐색"
+            t={t}
+            Typography={Typography}
+          />
+        </CoachTarget>
+        <RailButton
+          icon={<Icon name="members" size={20} color={t.text} />}
+          label="구성원"
+          onPress={onOpenMembers}
+          accessibilityLabel="구성원 목록"
+          t={t}
+          Typography={Typography}
+        />
+      </View>
     </View>
   );
 });
+
+/** 아트 위에 뜨는 액션 하나 — 흰 원 아이콘 + 그 아래 라벨. */
+function RailButton({
+  icon,
+  label,
+  onPress,
+  accessibilityLabel,
+  badge,
+  t,
+  Typography,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onPress?: () => void;
+  accessibilityLabel: string;
+  /** 점 색 — 받을 보상처럼 '지금 할 게 있다'를 남길 때만. */
+  badge?: string;
+  t: ReturnType<typeof useTokens>;
+  Typography: ReturnType<typeof useTypography>;
+}) {
+  return (
+    <ScalePressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      style={styles.railBtn}>
+      <View style={[styles.railCircle, { backgroundColor: t.surface }]}>
+        {icon}
+        {badge ? <View style={[styles.railBadge, { backgroundColor: badge }]} /> : null}
+      </View>
+      <View style={[styles.railLabelWrap, { backgroundColor: t.surface }]}>
+        <Text style={[Typography.supporting, { color: t.text }]} numberOfLines={1}>
+          {label}
+        </Text>
+      </View>
+    </ScalePressable>
+  );
+}
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
   },
-  missionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    marginHorizontal: Spacing.four,
-    // 헤더 바로 아래라 위쪽 여백이 필요하다 — 없으면 헤더에 붙어 읽힌다.
-    // 16으로는 여전히 붙어 보였다(#879 후속): 헤더가 흰 면이고 이 줄은 크림
-    // 배경 위라, 색이 바뀌는 경계가 곧 구분선처럼 읽혀 여백을 잡아먹는다.
-    //
-    // **아래도 같은 조건이라 같은 값을 준다** (#981) — 크림에서 하늘 캔버스로
-    // 바뀌는 경계다. 종전엔 8이라 위 24 / 아래 8로 3배 차이가 났고, 줄이
-    // 캔버스에 달라붙어 읽혔다.
-    marginTop: Spacing.four,
-    marginBottom: Spacing.four,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    borderRadius: Radius.md,
-  },
-  missionRowTitle: { flex: 1 },
-  missionRowDot: { width: 6, height: 6, borderRadius: Radius.pill },
   emptyWrap: {
     flex: 1,
     alignItems: 'center',
@@ -1246,27 +1228,34 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     paddingHorizontal: Spacing.six,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.three,
-  },
-  headerLeft: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+  skySpacer: { flexGrow: 1 },
+  rail: {
+    position: 'absolute',
+    right: Spacing.three,
+    top: 0,
     gap: Spacing.three,
-    marginRight: Spacing.two,
-  },
-  headerName: {
-    flexShrink: 1,
-  },
-  headerStreak: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.half,
+    zIndex: 30,
+  },
+  railBtn: { alignItems: 'center', gap: Spacing.half },
+  railCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  railBadge: {
+    position: 'absolute',
+    top: Spacing.half,
+    right: Spacing.half,
+    width: 8,
+    height: 8,
+    borderRadius: Radius.pill,
+  },
+  railLabelWrap: {
+    paddingHorizontal: Spacing.one,
+    borderRadius: Radius.pill,
   },
   iconBtn: {
     width: 40,
@@ -1276,7 +1265,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   body: {
-    paddingBottom: Spacing.six,
+    // 하늘이 남은 높이를 먹는다 (#986) — 종전엔 paddingBottom 64에 더해
+    // 남는 세로를 아무도 안 써서, 잔디 아래로 104~155px의 죽은 띠가 탭바까지
+    // 이어졌다. 집이 선반에 얹힌 것처럼 보이던 원인이다.
+    flexGrow: 1,
   },
   dots: {
     flexDirection: 'row',
@@ -1325,7 +1317,10 @@ const styles = StyleSheet.create({
     position: 'relative',
     paddingTop: Spacing.three,
     paddingBottom: Spacing.four,
-    marginBottom: Spacing.two,
+    // 남은 높이를 여기서 먹는다 (#986). 프레임 앞의 skySpacer가 그 여유를
+    // **집 위쪽**으로 몰아, 집은 잔디에 붙고 하늘만 트인다 — 집이 공중에
+    // 뜨지 않게 하는 게 요점이다.
+    flexGrow: 1,
   },
   // 잔디 밴드 — 프레임 하단 뒤에 깔린다.
   grassBand: {
@@ -1395,6 +1390,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.four,
     marginTop: Spacing.three,
+    // 우측 플로팅 레일(44 + 여백)이 지나가는 길 — 안 비우면 멤버 필을 덮는다 (#986).
+    paddingRight: Spacing.six,
   },
   skyPill: {
     flexDirection: 'row',
