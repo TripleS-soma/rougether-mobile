@@ -46,43 +46,26 @@ describe('HouseScreen', () => {
     expect(ui.getByTestId('rain-overlay')).toBeTruthy();
   });
 
-  it('헤더에 닉네임·스트릭 프로필 블록과 코인·다이아 지갑 필이 보인다 (#420)', async () => {
-    const { getByText, queryByText } = await render(
+  // 헤더바 제거(#986)로 `streakDays`·`coinBalance`·`diamondBalance` prop 자체가
+  // 사라졌다 — 넘길 수 없으니 "안 보인다"를 런타임에서 단언할 수 없고, 타입이
+  // 컴파일 단계에서 막는다. 무의미해질 테스트를 두는 대신 여기 근거만 남긴다.
+
+  it('액션은 플로팅 레일에 있다 — 목표·집 탐색·구성원 (#986)', async () => {
+    const onOpenMissions = jest.fn();
+    const onOpenSearch = jest.fn();
+    const onOpenMembers = jest.fn();
+    const { getByLabelText } = await render(
       <HouseScreen
         houses={[MISSION_HOUSE]}
-        userName="채영"
-        streakDays={4}
-        coinBalance={1200}
-        diamondBalance={34}
+        onOpenMissions={onOpenMissions}
+        onOpenSearch={onOpenSearch}
+        onOpenMembers={onOpenMembers}
       />,
     );
-    expect(queryByText('함께 크는 집')).toBeNull();
-    expect(getByText('채영')).toBeTruthy();
-    expect(getByText('4일')).toBeTruthy();
-    expect(getByText('1,200')).toBeTruthy();
-    expect(getByText('34')).toBeTruthy();
-  });
-
-  it('스트릭 0일이면 스트릭 라벨을 숨긴다 (#420)', async () => {
-    const { queryByText } = await render(
-      <HouseScreen houses={[MISSION_HOUSE]} userName="채영" streakDays={0} />,
-    );
-    expect(queryByText(/0일/)).toBeNull();
-  });
-
-  it('헤더에 코인·다이아 필을 함께 보여준다 (프로필 아바타 제거로 확보한 자리)', async () => {
-    const { getByText } = await render(
-      <HouseScreen
-        houses={[MISSION_HOUSE]}
-        userName="채영"
-        coinBalance={1200}
-        diamondBalance={34}
-      />,
-    );
-    // 아바타를 빼고 다이아를 상시 노출 — 좁은 폭 코인-only(#425)를 되돌림.
-    expect(getByText('채영')).toBeTruthy();
-    expect(getByText('1,200')).toBeTruthy();
-    expect(getByText('34')).toBeTruthy();
+    await fireEvent.press(getByLabelText('집 탐색'));
+    expect(onOpenSearch).toHaveBeenCalled();
+    await fireEvent.press(getByLabelText('구성원 목록'));
+    expect(onOpenMembers).toHaveBeenCalled();
   });
 
   it('shows a green dot for online members and a last-seen label offline (#383)', async () => {
@@ -133,7 +116,9 @@ describe('HouseScreen', () => {
   });
 
   it('renders the current house, members, and group missions', async () => {
-    const { getByText, queryByText } = await render(<HouseScreen onOpenMissions={jest.fn()} />);
+    const { getByText, queryByText, getByLabelText } = await render(
+      <HouseScreen onOpenMissions={jest.fn()} />,
+    );
     expect(getByText('소마파이팅')).toBeTruthy();
     // The level pill shows the house's real growth level (demo: 3).
     expect(getByText('Lv.3')).toBeTruthy();
@@ -141,9 +126,8 @@ describe('HouseScreen', () => {
     expect(queryByText('5,600')).toBeNull();
     // The demo owner's tile carries the 방장 crown.
     expect(getByText('최준서')).toBeTruthy();
-    // 공동 미션은 요약 줄로 화면에 드러난다 (#875) — 예전엔 FAB 뒤에 숨어
-    // 누르기 전엔 우리 집이 뭘 하는지 보이지 않았다.
-    expect(getByText('우리 집의 목표')).toBeTruthy();
+    // 공동 미션 진입점은 플로팅 레일의 '목표' 버튼이다 (#875 → #986).
+    expect(getByLabelText(/^우리 집의 목표/)).toBeTruthy();
   });
 
   /**
@@ -151,36 +135,39 @@ describe('HouseScreen', () => {
    * 들어와도 우리 집이 뭘 하는지 **누르기 전엔** 보이지 않았다. FAB은 없앴다:
    * 요약 줄이 진입점이라 진입점을 둘로 두지 않는다(#856과 같은 결).
    */
-  it('요약 줄이 진행 상황을 보여주고 탭하면 미션 화면을 연다 (#875)', async () => {
+  it('목표 버튼 라벨이 진행 상황을 담고 탭하면 미션 화면을 연다 (#875 → #986)', async () => {
     const onOpenMissions = jest.fn();
-    const { getByText, getByLabelText, queryByLabelText } = await render(
+    const { getByLabelText, queryByLabelText } = await render(
       <HouseScreen
         houses={[MISSION_HOUSE]}
         linkedRoutines={[{ missionId: 11, completedToday: true }]}
         onOpenMissions={onOpenMissions}
       />,
     );
-    expect(getByText('우리 집의 목표')).toBeTruthy();
-    // ACTIVE 2개 중 11이 오늘 완료 → 1/2.
-    expect(getByText('오늘 1/2')).toBeTruthy();
-    // 눈에 보이는 진행 상황과 받을 보상이 모두 라벨에 담긴다 — 명시 라벨을
-    // 주면 자식 Text가 스크린리더로 안 흘러가므로.
+    // 줄이 레일 버튼이 되며 '오늘 1/2'가 눈에서는 사라졌다 (#986) — #875가
+    // 드러내려던 진행 상황이 **라벨에는 그대로** 남아야 한다. 이 단언이 그
+    // 약속을 지키는 그물이다.
     await fireEvent.press(getByLabelText('우리 집의 목표, 오늘 1/2 기여, 받을 보상 1개'));
     expect(onOpenMissions).toHaveBeenCalled();
     // FAB은 사라졌다 — 진입점은 하나다.
     expect(queryByLabelText('공동 미션')).toBeNull();
   });
 
-  it('미션이 없으면 요약 줄이 진행 중 없음으로 말한다 (#875)', async () => {
-    const { getByText } = await render(
+  it('미션이 없으면 목표 버튼 라벨이 진행 중 없음으로 말한다 (#875 → #986)', async () => {
+    const { getByLabelText } = await render(
       <HouseScreen houses={[{ ...MISSION_HOUSE, missions: [] }]} onOpenMissions={jest.fn()} />,
     );
-    expect(getByText('진행 중 없음')).toBeTruthy();
+    expect(getByLabelText('우리 집의 목표, 진행 중 없음')).toBeTruthy();
   });
 
-  it('onOpenMissions가 없으면 요약 줄을 그리지 않는다', async () => {
-    const { queryByText } = await render(<HouseScreen houses={[MISSION_HOUSE]} />);
-    expect(queryByText('우리 집의 목표')).toBeNull();
+  it('onOpenMissions가 없으면 목표 버튼을 그리지 않는다', async () => {
+    // 레일 버튼이 되며 화면에 보이는 글자는 '목표'뿐이다 — `queryByText('우리 집의
+    // 목표')`로 두면 배선 유무와 무관하게 늘 null이라 단언이 조용히 무의미해진다.
+    const { queryByLabelText, queryByText } = await render(
+      <HouseScreen houses={[MISSION_HOUSE]} />,
+    );
+    expect(queryByLabelText(/^우리 집의 목표/)).toBeNull();
+    expect(queryByText('목표')).toBeNull();
   });
 
   it('keeps the visited house via the controlled index (#241)', async () => {
@@ -246,7 +233,7 @@ describe('HouseScreen', () => {
       growthPoints: 130,
       coverImageKey: 'house/cloud-balloon/frame.png',
     };
-    const { getByTestId, getByText } = await render(
+    const { getByTestId, getByText, getByLabelText } = await render(
       <HouseScreen
         houses={[house]}
         userName="나"
@@ -263,7 +250,7 @@ describe('HouseScreen', () => {
     expect(getByText('나 (나)')).toBeTruthy();
     // 미션 상세는 별도 화면으로 옮겼다 (#875) — 여기선 요약 줄만 단언한다.
     // ACTIVE 2개(11·12) 중 11이 연동 완료라 오늘 기여 1/2.
-    expect(getByText('오늘 1/2')).toBeTruthy();
+    expect(getByLabelText(/오늘 1\/2 기여/)).toBeTruthy();
   });
 
   it('frame tiles: a single tap visits after the double-tap window (#307)', async () => {
