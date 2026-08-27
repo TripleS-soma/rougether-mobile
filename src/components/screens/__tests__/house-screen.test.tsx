@@ -28,21 +28,34 @@ const MISSION_HOUSE: House = {
 };
 
 describe('HouseScreen', () => {
-  it('하늘색이 시간대에 따라 바뀐다 (#358)', async () => {
-    const skyOf = async (hour: number) => {
-      const ui = await render(<HouseScreen houses={[MISSION_HOUSE]} nowHour={hour} />);
-      return StyleSheet.flatten(ui.getByTestId('sky-section').props.style).backgroundColor;
+  it('선택한 집의 커버 테마를 전면 배경에도 즉시 적용한다', async () => {
+    const cloudHouse = {
+      ...MISSION_HOUSE,
+      name: '구름 집',
+      coverImageKey: 'house/cloud-balloon/house-unified-cloud-balloon-frame.png',
     };
-    expect(await skyOf(10)).toBe('#C3E0F5'); // 낮 = 기존 sky
-    expect(await skyOf(6)).toBe('#DCD6EC'); // 새벽
-    expect(await skyOf(18)).toBe('#F6CDAB'); // 노을
-    expect(await skyOf(22)).toBe('#3E4A6B'); // 밤
+    const mushroomHouse = {
+      ...MISSION_HOUSE,
+      houseId: 8,
+      name: '버섯 집',
+      coverImageKey: 'house/mushroom-forest/house-unified-mushroom-forest-frame.png',
+    };
+    const ui = await render(<HouseScreen houses={[cloudHouse, mushroomHouse]} />);
+
+    expect(ui.getByTestId('house-background').props).toMatchObject({
+      recyclingKey: 'house/cloud-balloon/backgrounds/house-cloud-balloon-background-v1.webp',
+      contentFit: 'cover',
+      cachePolicy: 'memory-disk',
+    });
+    await fireEvent.press(ui.getByLabelText('다음 집'));
+    expect(ui.getByTestId('house-background').props.recyclingKey).toBe(
+      'house/mushroom-forest/backgrounds/house-mushroom-forest-background-v1.webp',
+    );
   });
 
-  it('비가 오면 시간대와 무관하게 흐린 하늘 + 빗줄기 (#360)', async () => {
+  it('비가 오면 테마 배경 위에 빗줄기를 유지한다 (#360)', async () => {
     const ui = await render(<HouseScreen houses={[MISSION_HOUSE]} nowHour={10} raining />);
-    const style = StyleSheet.flatten(ui.getByTestId('sky-section').props.style);
-    expect(style.backgroundColor).toBe('#A9B3C2');
+    expect(ui.getByTestId('house-background')).toBeTruthy();
     expect(ui.getByTestId('rain-overlay')).toBeTruthy();
   });
 

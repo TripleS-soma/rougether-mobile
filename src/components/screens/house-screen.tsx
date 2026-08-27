@@ -53,6 +53,7 @@ import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-re
 import { useResolvedScheme, useTokens, useTypography } from '@/hooks/use-tokens';
 import type { MissionStatus } from '@/utils/mission-cta';
 import { assetSource } from '@/resources/asset';
+import { houseBackgroundKey } from '@/resources/house-background';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
 import { DEFAULT_HOUSES } from '@/mocks/fixtures';
 import type { Wallpaper } from '@/resources/furniture';
@@ -434,6 +435,9 @@ export const HouseScreen = memo(function HouseScreen({
   // 프레임 아래 그리드로 이어붙는다. 커버를 안 고른 집도 기본 프레임으로 —
   // 어느 집이든 "커버 위에 방이 보이는" 같은 형태 (히어로 폴백은 안전망).
   const coverKey = houseCoverKey(currentHouse?.coverImageKey);
+  // 서버가 가진 coverImageKey의 테마 경로에서 전면 배경을 파생한다. 집 전환과
+  // 같은 렌더에 키가 바뀌므로 별도 저장 상태 없이 항상 프레임과 맞는다.
+  const backgroundKey = houseBackgroundKey(coverKey);
   // WINDOW_RECTS 순서(좌상·우상·좌하·우하)로 좌석 매핑 — 아래 행이 아래 창문.
   const windowSlots = useMemo(() => {
     const frameRows = seatRows.slice(-2);
@@ -900,7 +904,26 @@ export const HouseScreen = memo(function HouseScreen({
   ).length;
 
   return (
-    <View style={[styles.screen, screenStyle]}>
+    <View style={[styles.screen, screenStyle, { backgroundColor: skyColor }]} testID="house-screen">
+      {/* 하단 탭은 AppShell의 형제라 이 absoluteFill 배경에 포함되지 않는다.
+          9:16 마스터를 cover/center로 그려 다양한 화면 높이에서도 가장자리만
+          자연스럽게 잘리고 집 뒤 핵심 여백은 유지한다. */}
+      <View style={StyleSheet.absoluteFill} pointerEvents="none" testID="house-background-layer">
+        {backgroundKey ? (
+          <Image
+            source={assetSource(backgroundKey)}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            contentPosition="center"
+            transition={200}
+            cachePolicy="memory-disk"
+            recyclingKey={backgroundKey}
+            accessible={false}
+            testID="house-background"
+          />
+        ) : null}
+        {raining ? <RainOverlay /> : null}
+      </View>
       {/* 타일 드래그 중에는 스크롤이 제스처를 뺏지 않게 잠근다 (#278). */}
       <PawRefreshScroll
         scrollRef={scrollRef}
@@ -917,10 +940,9 @@ export const HouseScreen = memo(function HouseScreen({
         testID="house-scroll">
         {/* 프레임 모드(#287) — 하늘 위에 스위처·집 프레임, 방은 창문 안에.
             커버가 없어도 기본 프레임으로 통일(#328)이라 유일한 경로다. */}
-        <View style={[styles.skySection, { backgroundColor: skyColor }]} testID="sky-section">
-          {/* 마당 잔디 — 프레임 하단이 밟고 서는 밴드. */}
-          <View style={[styles.grassBand, { backgroundColor: t.grass }]} />
-          {raining ? <RainOverlay /> : null}
+        {/* 배경·비는 #989가 화면 루트의 absoluteFill 레이어로 옮겼다 — 여기선
+            안전영역 여백만 준다(헤더바가 없어 하늘이 맨 위부터 시작한다). */}
+        <View style={[styles.skySection, headerInset]} testID="sky-section">
           <View style={styles.switcher}>
             {totalPages > 1 ? (
               <Pressable
@@ -1315,20 +1337,15 @@ const styles = StyleSheet.create({
   // --- 프레임 모드 (#287) ---
   skySection: {
     position: 'relative',
-    paddingTop: Spacing.three,
-    paddingBottom: Spacing.four,
+    // paddingTop은 headerInset이 준다 (안전영역 + 기본 여백) — 헤더바를 없애며
+    // 하늘이 화면 맨 위부터 시작해서, 상태바·노치와 겹치지 않게 해야 한다.
+    // 집을 위로 올린다 — 배경 아트의 바닥이 그만큼 넓게 보인다 (#989 이후
+    // 잔디는 밴드가 아니라 테마 배경 이미지가 그린다).
+    paddingBottom: Spacing.six,
     // 남은 높이를 여기서 먹는다 (#986). 프레임 앞의 skySpacer가 그 여유를
     // **집 위쪽**으로 몰아, 집은 잔디에 붙고 하늘만 트인다 — 집이 공중에
     // 뜨지 않게 하는 게 요점이다.
     flexGrow: 1,
-  },
-  // 잔디 밴드 — 프레임 하단 뒤에 깔린다.
-  grassBand: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 56,
   },
   switcher: {
     flexDirection: 'row',
@@ -1385,13 +1402,12 @@ const styles = StyleSheet.create({
   },
   // 창문용 타일 — 슬롯을 가득 채운다 (정사각형 비율 대신).
   framePillsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    // 레벨 위에 멤버를 세로로 쌓는다 — 좌우로 벌리면 멤버 필이 우측 플로팅
+    // 레일과 같은 줄에 놓여 서로 밀어낸다.
+    alignItems: 'flex-start',
+    gap: Spacing.one,
     paddingHorizontal: Spacing.four,
     marginTop: Spacing.three,
-    // 우측 플로팅 레일(44 + 여백)이 지나가는 길 — 안 비우면 멤버 필을 덮는다 (#986).
-    paddingRight: Spacing.six,
   },
   skyPill: {
     flexDirection: 'row',
