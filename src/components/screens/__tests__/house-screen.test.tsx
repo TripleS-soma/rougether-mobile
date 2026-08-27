@@ -63,6 +63,14 @@ describe('HouseScreen', () => {
   // 사라졌다 — 넘길 수 없으니 "안 보인다"를 런타임에서 단언할 수 없고, 타입이
   // 컴파일 단계에서 막는다. 무의미해질 테스트를 두는 대신 여기 근거만 남긴다.
 
+  it('긴 집 이름이 화살표를 밀어내지 않는다 — 뱃지가 말줄임으로 접힌다 (#994)', async () => {
+    // 서버는 집 이름을 30자까지 받는다(스웨거). 안 자르면 뱃지가 부풀어
+    // 좌우 전환 화살표가 화면 밖으로 밀려 집을 바꿀 수단이 사라진다.
+    const long = '가'.repeat(30);
+    const { getByText } = await render(<HouseScreen houses={[{ ...MISSION_HOUSE, name: long }]} />);
+    expect(getByText(long).props.numberOfLines).toBe(1);
+  });
+
   it('액션은 플로팅 레일에 있다 — 목표·집 탐색·구성원 (#986)', async () => {
     const onOpenMissions = jest.fn();
     const onOpenSearch = jest.fn();

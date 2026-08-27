@@ -185,6 +185,15 @@ export type NewHouseMission = {
 
 // 빈방 타일의 바닥 밴드 — 일반 빈 방(#281)이라 서버 카탈로그와 무관한 고정
 // 파스텔(방 타일 팔레트와 같은 결)로 그린다.
+/**
+ * 레일 첫 버튼(목표)이 Lv.·멤버 필과 같은 라인에 오도록 밀어내는 값 (#994).
+ *
+ * 스위처 줄(집 이름 뱃지 + 순서 점)이 차지하는 높이다 — 실측(390px 기준
+ * 필 상단 106, 레일 상단 16)으로 맞췄다. 종전엔 레일이 화면 맨 위라 집이
+ * 여럿인 사용자의 `다음 집` 화살표와 같은 띠를 다퉜다.
+ */
+const RAIL_TOP_GAP = 106;
+
 const VACANT_FLOOR: Wallpaper[] = [
   { id: 'vacant-floor', name: '빈방 바닥', price: 0, assetKey: 'vacant-floor', color: '#E7D9BE' },
 ];
@@ -337,6 +346,10 @@ export const HouseScreen = memo(function HouseScreen({
     ? RAIN_SKY[scheme]
     : SKY_BY_PHASE[scheme][skyPhaseForHour(nowHour ?? new Date().getHours())];
   const headerInset = useHeaderInsetStyle();
+  // 레일을 스위처 줄 아래로 내려 첫 버튼(목표)이 Lv.·멤버 필과 같은 라인에
+  // 오게 한다 (#994). 종전엔 레일이 맨 위라 집이 여럿인 사용자의 `다음 집`
+  // 화살표와 같은 띠를 다퉜다 — 이름이 길수록 화살표가 레일 쪽으로 밀렸다.
+  const railInset = useHeaderInsetStyle(RAIL_TOP_GAP);
   const screenStyle = useScreenStyle([]);
 
   const [internalHouseIndex, setInternalHouseIndex] = useState(0);
@@ -733,7 +746,11 @@ export const HouseScreen = memo(function HouseScreen({
             ) : null}
             <View style={[styles.titleBadge, { backgroundColor: t.surface }]}>
               <Icon name="lock" size={14} color={t.textMuted} />
-              <Text style={[Typography.h3, { color: t.text }]}>{pendingHouse.name}</Text>
+              {/* 서버는 집 이름을 30자까지 받는다 — 안 자르면 뱃지가 부풀어
+                  좌우 전환 화살표를 화면 밖으로 밀어낸다 (#994). */}
+              <Text style={[Typography.h3, styles.titleText, { color: t.text }]} numberOfLines={1}>
+                {pendingHouse.name}
+              </Text>
             </View>
             {totalPages > 1 ? (
               <Pressable
@@ -960,7 +977,9 @@ export const HouseScreen = memo(function HouseScreen({
               ) : (
                 <HousePictogram size={14} />
               )}
-              <Text style={[Typography.h3, { color: t.text }]}>{currentHouse.name}</Text>
+              <Text style={[Typography.h3, styles.titleText, { color: t.text }]} numberOfLines={1}>
+                {currentHouse.name}
+              </Text>
             </View>
             {totalPages > 1 ? (
               <Pressable
@@ -1125,7 +1144,7 @@ export const HouseScreen = memo(function HouseScreen({
       {/* 화면 고정 플로팅 레일 (#986) — 헤더바를 없애고 하늘이 맨 위부터
           시작하게 하려면 액션이 아트 **위에** 떠야 한다. 흰 원 + 라벨은
           배경이 하늘색이든 다크모드든 대비가 보장되는 형태다(#232). */}
-      <View style={[styles.rail, headerInset]} pointerEvents="box-none">
+      <View style={[styles.rail, railInset]} pointerEvents="box-none">
         {onOpenMissions ? (
           <CoachTarget id="house-missions">
             <RailButton
@@ -1353,7 +1372,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: Spacing.three,
   },
+  titleText: { flexShrink: 1 },
   titleBadge: {
+    flexShrink: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
