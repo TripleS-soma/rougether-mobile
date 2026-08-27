@@ -53,12 +53,6 @@ describe('HouseScreen', () => {
     );
   });
 
-  it('비가 오면 테마 배경 위에 빗줄기를 유지한다 (#360)', async () => {
-    const ui = await render(<HouseScreen houses={[MISSION_HOUSE]} nowHour={10} raining />);
-    expect(ui.getByTestId('house-background')).toBeTruthy();
-    expect(ui.getByTestId('rain-overlay')).toBeTruthy();
-  });
-
   // 헤더바 제거(#986)로 `streakDays`·`coinBalance`·`diamondBalance` prop 자체가
   // 사라졌다 — 넘길 수 없으니 "안 보인다"를 런타임에서 단언할 수 없고, 타입이
   // 컴파일 단계에서 막는다. 무의미해질 테스트를 두는 대신 여기 근거만 남긴다.

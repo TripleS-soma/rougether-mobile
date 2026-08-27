@@ -38,19 +38,10 @@ import {
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { characterIdForMember } from '@/hooks/use-member-room-previews';
-import { RainOverlay } from '@/components/room/rain-overlay';
-import {
-  FixedOverlay,
-  RAIN_SKY,
-  Radius,
-  SKY_BY_PHASE,
-  ShadowColor,
-  Spacing,
-  skyPhaseForHour,
-} from '@/constants/theme';
+import { FixedOverlay, Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
-import { useResolvedScheme, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 import type { MissionStatus } from '@/utils/mission-cta';
 import { assetSource } from '@/resources/asset';
 import { houseBackgroundKey } from '@/resources/house-background';
@@ -233,10 +224,6 @@ export type HouseScreenProps = RoomCatalogProps &
     onVisitFriend?: (friend: VisitedFriend) => void;
     onVisitMyRoom?: () => void;
     onOpenSearch?: () => void;
-    /** 하늘색 시간대 판정용 현재 시(0~23) — 테스트 주입용, 기본은 기기 시각 (#358). */
-    nowHour?: number;
-    /** 지금 비가 오는지 — 셸이 use-weather로 주입, 하늘을 흐린 톤 + 빗줄기로 (#360). */
-    raining?: boolean;
     /** 구성원 관리 화면 열기 (#753) — 셸 화면('houseMembers')으로 승격됐다. */
     onOpenMembers?: () => void;
     /** 강퇴 낙관 반영 (#753 승격 후 셸 소유) — 참이면 좌석을 빈 타일로 그린다. */
@@ -304,8 +291,6 @@ export const HouseScreen = memo(function HouseScreen({
   onVisitFriend,
   onVisitMyRoom,
   onOpenSearch,
-  nowHour,
-  raining = false,
   onOpenMembers,
   isKickedMember,
   onKickMember,
@@ -331,11 +316,9 @@ export const HouseScreen = memo(function HouseScreen({
 }: HouseScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
-  // 시간대별 하늘 (#358) — 새벽/낮/노을/밤. 낮은 기존 sky 토큰과 동일.
-  const scheme = useResolvedScheme();
-  const skyColor = raining
-    ? RAIN_SKY[scheme]
-    : SKY_BY_PHASE[scheme][skyPhaseForHour(nowHour ?? new Date().getHours())];
+  // 배경 이미지를 못 고른 집(매핑에 없는 새 테마)의 폴백 (#992). 시간·날씨에
+  // 따라 바뀌던 하늘은 집별 배경 아트(#989)가 대체했다 — 정적 색만 남긴다.
+  const skyColor = t.sky;
   const headerInset = useHeaderInsetStyle();
   const screenStyle = useScreenStyle([]);
 
@@ -922,7 +905,6 @@ export const HouseScreen = memo(function HouseScreen({
             testID="house-background"
           />
         ) : null}
-        {raining ? <RainOverlay /> : null}
       </View>
       {/* 타일 드래그 중에는 스크롤이 제스처를 뺏지 않게 잠근다 (#278). */}
       <PawRefreshScroll

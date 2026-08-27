@@ -42,7 +42,6 @@ import { useMyCharacters } from '@/hooks/use-my-characters';
 import { useMyRoomData } from '@/hooks/use-my-room-data';
 import { useMemberRoomPreviews } from '@/hooks/use-member-room-previews';
 import { useShop } from '@/hooks/use-shop';
-import { useWeather } from '@/hooks/use-weather';
 import { useResolvedScheme } from '@/hooks/use-tokens';
 import type { DrawResult } from '@/api';
 import { fetchGachaRewards } from '@/api';
@@ -103,7 +102,6 @@ export function AppShell({
   characterFrames = NO_CHARACTER_FRAMES,
 }: AppShellProps) {
   // 집 하늘 연출용 현재 비 여부 (#360) — 서울 고정, 30분 캐시.
-  const { raining } = useWeather();
   // 위젯에 넘길 실효 라이트/다크 (#746) — 앱 테마 모드 설정이 적용된 값.
   const resolvedScheme = useResolvedScheme();
   const [screen, setScreen] = useState<Screen>('myRoom');
@@ -454,7 +452,6 @@ export function AppShell({
     catalogue,
     shopLoading,
     wallet,
-    raining,
     nickname,
     streak,
     selectedCharacterId,
