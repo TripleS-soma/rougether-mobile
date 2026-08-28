@@ -52,6 +52,24 @@ describe('GachaScreen', () => {
   });
 
   /**
+   * 그런데 폴백을 **치우지도** 않아서, 아트가 뜬 뒤에도 뒤에 그대로 남아 있었다
+   * (#1001). 상자 PNG는 캔버스 여백이 투명해 "위로 덮인다"가 성립하지 않는다 —
+   * teddy 머신에서 곰 귀가 상자 위로 삐져나왔다.
+   */
+  it('아트가 실제로 뜨면 폴백 픽토그램을 치운다 (#1001)', async () => {
+    const withArt: GachaMachine = { ...machine, giftBoxKey: 'items/gift-box.png' };
+    const { getAllByTestId, queryAllByTestId } = await render(
+      <GachaScreen gachas={[withArt]} coinBalance={5600} />,
+    );
+    expect(queryAllByTestId('gift-box-fallback-1').length).toBeGreaterThan(0);
+    // 칩과 헤로가 같은 머신을 각자 그리므로 인스턴스마다 표시 시점이 따로 온다.
+    for (const art of getAllByTestId('gift-box-1')) {
+      await fireEvent(art, 'display');
+    }
+    expect(queryAllByTestId('gift-box-fallback-1')).toHaveLength(0);
+  });
+
+  /**
    * 뽑기 버튼을 누른 순간 오버레이가 픽토그램으로 갈아타면, 방금 고른 **그
    * 상자**를 여는 것으로 안 읽힌다. 충전 중에도 같은 아트를 보여준다.
    */
