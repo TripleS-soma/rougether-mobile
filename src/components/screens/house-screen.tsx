@@ -675,33 +675,46 @@ export const HouseScreen = memo(function HouseScreen({
    * RNGH에서 `fail()`은 그 터치를 영구히 포기하는 것이라 의미가 다르다 —
    * 아직 아니면 아무것도 안 하고, 조건이 서면 그때 `activate()`한다.
    */
-  const cameraGesture = useConstant(() =>
-    Gesture.Pan()
+  const cameraGesture = useConstant(() => {
+    /**
+     * 지금 손가락 배치로 기준점을 다시 잡는다 — 종전 `anchorCamera`(#290).
+     * 세 시점에서 불린다: 터치 시작, **캡처되는 순간**, 손가락 수 변경.
+     *
+     * 캡처 순간이 특히 중요하다 (PR #1005 리뷰). 한 손가락 팬은 슬롭
+     * `CAM_PAN_SLOP=8`을 넘겨야 활성화되는데, 그때 기준점을 다시 안 잡으면
+     * 슬롭을 넘느라 이미 움직인 거리가 첫 델타에 통째로 들어가 카메라가
+     * 그만큼 튄다. 종전 PanResponder는 `onPanResponderGrant`가 이 일을 했다.
+     */
+    const anchor = (ts: { absoluteX: number; absoluteY: number }[]) => {
+      'worklet';
+      camTouchCount.value = ts.length;
+      if (ts.length >= 2) {
+        const dx = ts[0].absoluteX - ts[1].absoluteX;
+        const dy = ts[0].absoluteY - ts[1].absoluteY;
+        pinchAnchor.value = {
+          dist: Math.hypot(dx, dy),
+          cx: (ts[0].absoluteX + ts[1].absoluteX) / 2,
+          cy: (ts[0].absoluteY + ts[1].absoluteY) / 2,
+          scale: camScale.value,
+          tx: camTx.value,
+          ty: camTy.value,
+        };
+      } else if (ts.length === 1) {
+        panAnchor.value = {
+          x: ts[0].absoluteX,
+          y: ts[0].absoluteY,
+          tx: camTx.value,
+          ty: camTy.value,
+        };
+      }
+    };
+    return Gesture.Pan()
       .manualActivation(true)
       .onTouchesDown((e) => {
         'worklet';
         const ts = e.allTouches;
-        camTouchCount.value = ts.length;
         if (ts.length > 0) camTouchStart.value = { x: ts[0].absoluteX, y: ts[0].absoluteY };
-        if (ts.length >= 2) {
-          const dx = ts[0].absoluteX - ts[1].absoluteX;
-          const dy = ts[0].absoluteY - ts[1].absoluteY;
-          pinchAnchor.value = {
-            dist: Math.hypot(dx, dy),
-            cx: (ts[0].absoluteX + ts[1].absoluteX) / 2,
-            cy: (ts[0].absoluteY + ts[1].absoluteY) / 2,
-            scale: camScale.value,
-            tx: camTx.value,
-            ty: camTy.value,
-          };
-        } else if (ts.length === 1) {
-          panAnchor.value = {
-            x: ts[0].absoluteX,
-            y: ts[0].absoluteY,
-            tx: camTx.value,
-            ty: camTy.value,
-          };
-        }
+        anchor(ts);
       })
       .onTouchesMove((e, mgr) => {
         'worklet';
@@ -712,32 +725,15 @@ export const HouseScreen = memo(function HouseScreen({
           const dy = ts[0].absoluteY - camTouchStart.value.y;
           if (cameraClaimsMove(ts.length, zoomedSV.value, draggingSV.value, dx, dy)) {
             camActive.value = true;
+            // 캡처된 지금 위치를 기준으로 — 슬롭만큼의 점프를 없앤다.
+            anchor(ts);
             mgr.activate();
           }
           return;
         }
         // 손가락 수가 바뀌면(2→1, 1→2) 기준점을 다시 잡는다.
         if (ts.length !== camTouchCount.value) {
-          camTouchCount.value = ts.length;
-          if (ts.length >= 2) {
-            const dx = ts[0].absoluteX - ts[1].absoluteX;
-            const dy = ts[0].absoluteY - ts[1].absoluteY;
-            pinchAnchor.value = {
-              dist: Math.hypot(dx, dy),
-              cx: (ts[0].absoluteX + ts[1].absoluteX) / 2,
-              cy: (ts[0].absoluteY + ts[1].absoluteY) / 2,
-              scale: camScale.value,
-              tx: camTx.value,
-              ty: camTy.value,
-            };
-          } else {
-            panAnchor.value = {
-              x: ts[0].absoluteX,
-              y: ts[0].absoluteY,
-              tx: camTx.value,
-              ty: camTy.value,
-            };
-          }
+          anchor(ts);
           return;
         }
         let next;
@@ -779,8 +775,8 @@ export const HouseScreen = memo(function HouseScreen({
         camTouchCount.value = 0;
         camActive.value = false;
         runOnJS(snapCamIfNearDefault)();
-      }),
-  );
+      });
+  });
 
   // 집 전환 가로 플링은 폐지 (#761) — 셸 탭 페이저(#563)와 같은 축을 다퉈
   // "어디선 탭이 넘어가고 어디선 집이 넘어가는" 불예측성이 남았다. 가로
