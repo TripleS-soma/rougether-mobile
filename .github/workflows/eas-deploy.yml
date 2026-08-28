@@ -1,6 +1,8 @@
 # dev 브랜치 CI/CD: 머지될 때마다 네이티브 지문을 비교해
 # 변화 없으면 OTA(preview 채널), 변했으면 EAS 네이티브 빌드를 자동 실행.
 # Android는 preview APK, iOS는 testflight 빌드 + App Store Connect 자동 제출.
+# 잡이 빨개지는 건 **이번 머지가 아무에게도 안 갔을 때뿐**이다 (#998) — 빌드
+# 쿼터 소진처럼 손쓸 수 없는 실패는 노랑(warning)으로 요약에만 남긴다.
 # 필요 시크릿: EXPO_TOKEN (expo.dev → Access tokens), ASC_API_KEY_P8 (ASC API 키 .p8 원문)
 name: eas-deploy
 on:
@@ -40,7 +42,11 @@ jobs:
       # 같은 지문의 로컬 빌드 APK가 JS 변경을 계속 받는다. 빌드가 성공하는
       # 평시에는 액션이 스스로 업데이트를 발행하므로 이 스텝은 건너뛴다.
       - name: Android — OTA fallback
+        id: android_fallback
         if: steps.android.outcome == 'failure'
+        # 말미 판정 스텝이 이 결과를 읽어 빨강/노랑을 가른다 (#998) — 여기서
+        # 잡을 죽이면 그 판정도, 도달 여부 점검도 돌지 못한다.
+        continue-on-error: true
         run: eas update --branch preview --platform android --non-interactive --auto
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
@@ -62,7 +68,9 @@ jobs:
       # iOS도 빌드 생성 실패(쿼터 소진 등) 시 OTA만이라도 발행 — Android
       # 폴백(#435)과 대칭. 7/31 쿼터 소진 때 iOS OTA만 조용히 누락됐던 구멍.
       - name: iOS — OTA fallback
+        id: ios_fallback
         if: steps.ios.outcome == 'failure'
+        continue-on-error: true
         run: eas update --branch preview --platform ios --non-interactive --auto
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
@@ -125,14 +133,66 @@ jobs:
             fi
           done
 
-      # 플랫폼 실패를 잡 결과로 재표면화 — 양쪽 다 돌린 뒤에 빨간불을 켠다.
-      - name: Surface platform failures
-        if: steps.android.outcome == 'failure' || steps.ios.outcome == 'failure'
+      # 스토어 사용자에게 지금 보낼 수 있는지 (#998). 위 점검은 **preview 레인**만
+      # 본다 — dev 머지 OTA가 가는 곳이라 그게 맞다. 그런데 "iOS 프리뷰 빌드가
+      # 낡았다"를 "iOS에 아무것도 못 보낸다"로 읽는 사고가 실제로 났다:
+      # 프리뷰(testflight)가 v1.1.0에 멈춰 있는 동안 **production 빌드는 현재
+      # 지문과 같았고**, eas-release 한 번이면 스토어 사용자 전원에게 갈 수
+      # 있었다. 판단 근거를 매 런의 요약에 남겨 그 오독을 막는다.
+      - name: production 레인 도달 여부 (참고)
+        continue-on-error: true
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          if [ "${{ steps.android.outcome }}" = "failure" ]; then
-            echo "::error::Android 배포 실패 — 위 'Android — OTA or preview build' 로그 확인 (쿼터 소진이면 리셋 대기 또는 플랜 업그레이드)"
-          fi
-          if [ "${{ steps.ios.outcome }}" = "failure" ]; then
-            echo "::error::iOS 배포 실패 — 위 'iOS — OTA or TestFlight build' 로그 확인 (쿼터 소진이면 리셋 대기 또는 플랜 업그레이드)"
-          fi
-          exit 1
+          for platform in ios android; do
+            current=$(npx expo-updates fingerprint:generate --platform "$platform" | node -e \
+              'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).hash)}catch{console.log(s.trim())}})')
+            store=$(eas build:list --platform "$platform" --build-profile production --limit 1 \
+              --status finished --json --non-interactive | node -e \
+              'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const b=JSON.parse(s)[0]||{};const v=(b.runtime&&b.runtime.version)||(b.fingerprint&&b.fingerprint.hash)||"";console.log(v)}catch{console.log("")}})')
+            if [ -z "$current" ] || [ -z "$store" ] || [ "$current" = "undefined" ] || [ "$store" = "undefined" ]; then
+              continue
+            elif [ "$current" = "$store" ]; then
+              echo "- 📦 **$platform**: production 빌드도 같은 지문 — \`eas-release\`로 스토어 사용자에게 바로 보낼 수 있습니다." >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "- 📦 **$platform**: production 빌드 지문이 다릅니다 (\`$store\`) — 스토어 사용자에게 보내려면 새 빌드가 필요합니다." >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+
+      # 빨간불은 **지금 할 수 있는 일이 있을 때만** 켠다 (#998).
+      #
+      # 종전엔 플랫폼 스텝이 실패하면 무조건 exit 1이었다. 그런데 그 실패의
+      # 대부분은 EAS 무료 플랜 빌드 쿼터 소진이다 — 코드 문제가 아니라 예산
+      # 문제고, 결제 주기가 바뀌기 전엔 손쓸 방법이 없다. 8/22~8/28에 15런이
+      # 연속 빨간불이었고(iOS 15/15 소진), 그 사이 진짜 실패가 났어도 구분할
+      # 수 없었다. 늑대소년을 만드는 대가가 빨간불의 가치보다 크다.
+      #
+      # 판정은 원인이 아니라 **결과**로 한다 — 빌드가 왜 실패했는지 액션은
+      # 알려주지 않지만, "이번 머지의 JS가 나갔는가"는 폴백의 결과로 안다.
+      #   🔴 빌드도 OTA도 실패 = 이번 머지가 아무에게도 안 갔다. 조치 가능.
+      #   🟡 빌드는 못 걸었지만 OTA는 나갔다. 쿼터 리셋 전엔 할 게 없다.
+      # 도달 여부(수신자 0인 레인)는 위 두 점검이 요약과 주석으로 남긴다.
+      - name: 배포 결과 판정
+        if: steps.android.outcome == 'failure' || steps.ios.outcome == 'failure'
+        env:
+          ANDROID_OUTCOME: ${{ steps.android.outcome }}
+          IOS_OUTCOME: ${{ steps.ios.outcome }}
+          ANDROID_FALLBACK: ${{ steps.android_fallback.outcome }}
+          IOS_FALLBACK: ${{ steps.ios_fallback.outcome }}
+        run: |
+          fatal=0
+          classify() {
+            platform=$1; step=$2; fallback=$3
+            [ "$step" = "failure" ] || return 0
+            if [ "$fallback" = "success" ]; then
+              echo "::warning::$platform — 새 빌드는 걸지 못했지만(쿼터 소진 등) OTA 폴백은 발행됐습니다. 빌드가 필요하면 쿼터 리셋 뒤에, 급하면 \`eas build --local\` + \`eas submit --path\`로."
+              echo "- 🟡 **$platform**: 빌드 생성 실패 · OTA 폴백 발행됨." >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "::error::$platform — 빌드도 OTA도 실패했습니다. **이번 머지의 JS는 아무에게도 가지 않았습니다.**"
+              echo "- 🔴 **$platform**: 빌드·OTA 모두 실패 — 이번 머지는 배포되지 않았습니다." >> "$GITHUB_STEP_SUMMARY"
+              fatal=1
+            fi
+          }
+          classify ios "$IOS_OUTCOME" "$IOS_FALLBACK"
+          classify android "$ANDROID_OUTCOME" "$ANDROID_FALLBACK"
+          [ "$fatal" = 0 ] || exit 1
