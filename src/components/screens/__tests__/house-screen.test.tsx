@@ -113,9 +113,31 @@ describe('HouseScreen', () => {
     // 접속 중인 내 타일: 초록 점 + 접근성 라벨, 상대 시각 없음.
     expect(getByTestId('online-dot')).toBeTruthy();
     expect(getByLabelText('나 (나), 접속 중')).toBeTruthy();
-    // 오프라인 친구 타일: 마지막 접속 상대 시각.
-    expect(getByText('3시간 전')).toBeTruthy();
+    // 오프라인 친구 타일: 마지막 접속 상대 시각이 이름과 **같은 줄**에 (#999).
+    // 가운뎃점까지 한 Text에 담기므로 라벨만 따로 찾으면 잡히지 않는다.
+    expect(getByText('· 3시간 전')).toBeTruthy();
     expect(getByLabelText('친구, 3시간 전 접속')).toBeTruthy();
+  });
+
+  it('마지막 접속 라벨이 이름과 한 줄에 온다 (#999)', async () => {
+    const presenceHouse: House = {
+      ...MISSION_HOUSE,
+      floors: [
+        {
+          level: '1층',
+          rooms: [{ name: '진형', color: '#F5E1D8', membershipId: 42, lastSeenLabel: '8일 전' }],
+        },
+      ],
+    };
+    const { getByText } = await render(<HouseScreen houses={[presenceHouse]} userName="나" />);
+    // 이름과 시간이 같은 부모(roomNameRow) 아래에 나란히 있어야 한다 — 종전엔
+    // 시간이 그 형제인 별도 줄로 떨어져 있었다.
+    const name = getByText('진형');
+    const lastSeen = getByText('· 8일 전');
+    expect(lastSeen.parent).toBe(name.parent);
+    // 이름만 말줄임 — 시간 라벨은 항상 통째로 보인다.
+    expect(name.props.numberOfLines).toBe(1);
+    expect(lastSeen.props.numberOfLines).toBeUndefined();
   });
 
   it('내 타일 이름은 stale한 houses 값이 아니라 라이브 userName을 쓴다 (#479)', async () => {
