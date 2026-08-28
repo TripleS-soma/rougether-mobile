@@ -487,15 +487,6 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
-    name: 'HouseScreen · 비 오는 날',
-    description: '흐린 하늘 + 빗줄기 오버레이 (#360) — raining 주입.',
-    render: () => (
-      <View style={{ height: 700, alignSelf: 'stretch' }}>
-        <HouseScreen raining nowHour={10} />
-      </View>
-    ),
-  },
-  {
     name: 'HouseScreen',
     description:
       'Ported from the prototype HouseScreen (#10): house switcher, member rooms, 공동 미션 요약 줄. 구성원 관리·공동 미션은 셸 화면으로 승격(#753·#875) — 아래 항목에서 미리보기.',

@@ -65,7 +65,6 @@ export function useHousePages({
   catalogue,
   shopLoading,
   wallet,
-  raining,
   nickname,
   streak,
   selectedCharacterId,
@@ -138,7 +137,6 @@ export function useHousePages({
   shopLoading: boolean;
   wallet: Wallet;
   /** 집 하늘 연출용 현재 비 여부 (#360). */
-  raining: boolean;
   nickname: string;
   streak: number;
   /** 서버 확정 착용 캐릭터 id — 프리뷰 내 좌석 파생(#282)은 미로드(undefined)
@@ -407,7 +405,6 @@ export function useHousePages({
     onVisitFriend: visitFriend,
     onVisitMyRoom: openMyRoom,
     onOpenSearch: openHouseSearch,
-    raining,
     onOpenMembers: openMembers,
     isKickedMember,
     onAcceptJoinRequest: handleAcceptJoinRequest,
