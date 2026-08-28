@@ -491,7 +491,9 @@ export const HouseScreen = memo(function HouseScreen({
     dragGranted.current = false;
     draggingSV.value = false;
     dragPan.value = { x: 0, y: 0 };
-    liftScale.value = withSpring(1, { damping: 12, stiffness: 220, mass: 1 });
+    // liftScale은 여기서 되돌리지 않는다 — `dragging`이 같은 렌더에서 false가
+    // 되어 SeatTile의 liftStyle이 즉시 {}가 되므로 복귀 스프링은 화면에 안
+    // 보인다 (PR #1005 리뷰). 다음 픽업의 startDrag가 1로 되돌린다.
     setDragSeat(null);
   };
   const dropAt = (x: number, y: number) => {
@@ -708,74 +710,82 @@ export const HouseScreen = memo(function HouseScreen({
         };
       }
     };
-    return Gesture.Pan()
-      .manualActivation(true)
-      .onTouchesDown((e) => {
-        'worklet';
-        const ts = e.allTouches;
-        if (ts.length > 0) camTouchStart.value = { x: ts[0].absoluteX, y: ts[0].absoluteY };
-        anchor(ts);
-      })
-      .onTouchesMove((e, mgr) => {
-        'worklet';
-        const ts = e.allTouches;
-        if (ts.length === 0) return;
-        if (!camActive.value) {
-          const dx = ts[0].absoluteX - camTouchStart.value.x;
-          const dy = ts[0].absoluteY - camTouchStart.value.y;
-          if (cameraClaimsMove(ts.length, zoomedSV.value, draggingSV.value, dx, dy)) {
-            camActive.value = true;
-            // 캡처된 지금 위치를 기준으로 — 슬롭만큼의 점프를 없앤다.
-            anchor(ts);
-            mgr.activate();
-          }
-          return;
-        }
-        // 손가락 수가 바뀌면(2→1, 1→2) 기준점을 다시 잡는다.
-        if (ts.length !== camTouchCount.value) {
+    return (
+      Gesture.Pan()
+        .manualActivation(true)
+        .onTouchesDown((e) => {
+          'worklet';
+          const ts = e.allTouches;
+          if (ts.length > 0) camTouchStart.value = { x: ts[0].absoluteX, y: ts[0].absoluteY };
           anchor(ts);
-          return;
-        }
-        let next;
-        if (ts.length >= 2) {
-          const a = pinchAnchor.value;
-          if (a.dist === 0) return;
-          const dx = ts[0].absoluteX - ts[1].absoluteX;
-          const dy = ts[0].absoluteY - ts[1].absoluteY;
-          const cx = (ts[0].absoluteX + ts[1].absoluteX) / 2;
-          const cy = (ts[0].absoluteY + ts[1].absoluteY) / 2;
-          next = clampCam(
-            frameSizeSV.value,
-            a.scale * (Math.hypot(dx, dy) / a.dist),
-            a.tx + (cx - a.cx),
-            a.ty + (cy - a.cy),
-          );
-        } else if (zoomedSV.value) {
-          const a = panAnchor.value;
-          next = clampCam(
-            frameSizeSV.value,
-            camScale.value,
-            a.tx + (ts[0].absoluteX - a.x),
-            a.ty + (ts[0].absoluteY - a.y),
-          );
-        } else {
-          return;
-        }
-        camScale.value = next.scale;
-        camTx.value = next.tx;
-        camTy.value = next.ty;
-        const away = isCamAway(next);
-        if (away !== zoomedSV.value) {
-          zoomedSV.value = away;
-          runOnJS(applyZoomed)(away);
-        }
-      })
-      .onFinalize(() => {
-        'worklet';
-        camTouchCount.value = 0;
-        camActive.value = false;
-        runOnJS(snapCamIfNearDefault)();
-      });
+        })
+        .onTouchesMove((e, mgr) => {
+          'worklet';
+          const ts = e.allTouches;
+          if (ts.length === 0) return;
+          if (!camActive.value) {
+            const dx = ts[0].absoluteX - camTouchStart.value.x;
+            const dy = ts[0].absoluteY - camTouchStart.value.y;
+            if (cameraClaimsMove(ts.length, zoomedSV.value, draggingSV.value, dx, dy)) {
+              camActive.value = true;
+              // 캡처된 지금 위치를 기준으로 — 슬롭만큼의 점프를 없앤다.
+              anchor(ts);
+              mgr.activate();
+            }
+            return;
+          }
+          // 손가락 수가 바뀌면(2→1, 1→2) 기준점을 다시 잡는다.
+          if (ts.length !== camTouchCount.value) {
+            anchor(ts);
+            return;
+          }
+          let next;
+          if (ts.length >= 2) {
+            const a = pinchAnchor.value;
+            if (a.dist === 0) return;
+            const dx = ts[0].absoluteX - ts[1].absoluteX;
+            const dy = ts[0].absoluteY - ts[1].absoluteY;
+            const cx = (ts[0].absoluteX + ts[1].absoluteX) / 2;
+            const cy = (ts[0].absoluteY + ts[1].absoluteY) / 2;
+            next = clampCam(
+              frameSizeSV.value,
+              a.scale * (Math.hypot(dx, dy) / a.dist),
+              a.tx + (cx - a.cx),
+              a.ty + (cy - a.cy),
+            );
+          } else if (zoomedSV.value) {
+            const a = panAnchor.value;
+            next = clampCam(
+              frameSizeSV.value,
+              camScale.value,
+              a.tx + (ts[0].absoluteX - a.x),
+              a.ty + (ts[0].absoluteY - a.y),
+            );
+          } else {
+            return;
+          }
+          camScale.value = next.scale;
+          camTx.value = next.tx;
+          camTy.value = next.ty;
+          const away = isCamAway(next);
+          if (away !== zoomedSV.value) {
+            zoomedSV.value = away;
+            runOnJS(applyZoomed)(away);
+          }
+        })
+        // onFinalize는 **활성화 여부와 무관하게** 항상 불린다 — activate()를 한
+        // 번도 안 부른 단순 탭(좌석 방문)에서도 온다. 기본 배율이 1이라
+        // snapCamIfNearDefault의 가드(<1.05)가 항상 참이 되어, 탭마다 runOnJS
+        // 브리지 + withSpring 3개가 헛돌았다 (PR #1005 리뷰). 종전
+        // onPanResponderRelease는 responder가 grant된 경우에만 불렸다.
+        .onFinalize(() => {
+          'worklet';
+          const wasActive = camActive.value;
+          camTouchCount.value = 0;
+          camActive.value = false;
+          if (wasActive) runOnJS(snapCamIfNearDefault)();
+        })
+    );
   });
 
   // 집 전환 가로 플링은 폐지 (#761) — 셸 탭 페이저(#563)와 같은 축을 다퉈
