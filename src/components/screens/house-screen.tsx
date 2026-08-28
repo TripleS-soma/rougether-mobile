@@ -38,19 +38,10 @@ import {
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { characterIdForMember } from '@/hooks/use-member-room-previews';
-import { RainOverlay } from '@/components/room/rain-overlay';
-import {
-  FixedOverlay,
-  RAIN_SKY,
-  Radius,
-  SKY_BY_PHASE,
-  ShadowColor,
-  Spacing,
-  skyPhaseForHour,
-} from '@/constants/theme';
+import { FixedOverlay, Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
-import { useResolvedScheme, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 import type { MissionStatus } from '@/utils/mission-cta';
 import { assetSource } from '@/resources/asset';
 import { houseBackgroundKey } from '@/resources/house-background';
@@ -185,6 +176,15 @@ export type NewHouseMission = {
 
 // 빈방 타일의 바닥 밴드 — 일반 빈 방(#281)이라 서버 카탈로그와 무관한 고정
 // 파스텔(방 타일 팔레트와 같은 결)로 그린다.
+/**
+ * 레일 첫 버튼(목표)이 Lv.·멤버 필과 같은 라인에 오도록 밀어내는 값 (#994).
+ *
+ * 스위처 줄(집 이름 뱃지 + 순서 점)이 차지하는 높이다 — 실측(390px 기준
+ * 필 상단 106, 레일 상단 16)으로 맞췄다. 종전엔 레일이 화면 맨 위라 집이
+ * 여럿인 사용자의 `다음 집` 화살표와 같은 띠를 다퉜다.
+ */
+const RAIL_TOP_GAP = 106;
+
 const VACANT_FLOOR: Wallpaper[] = [
   { id: 'vacant-floor', name: '빈방 바닥', price: 0, assetKey: 'vacant-floor', color: '#E7D9BE' },
 ];
@@ -233,10 +233,6 @@ export type HouseScreenProps = RoomCatalogProps &
     onVisitFriend?: (friend: VisitedFriend) => void;
     onVisitMyRoom?: () => void;
     onOpenSearch?: () => void;
-    /** 하늘색 시간대 판정용 현재 시(0~23) — 테스트 주입용, 기본은 기기 시각 (#358). */
-    nowHour?: number;
-    /** 지금 비가 오는지 — 셸이 use-weather로 주입, 하늘을 흐린 톤 + 빗줄기로 (#360). */
-    raining?: boolean;
     /** 구성원 관리 화면 열기 (#753) — 셸 화면('houseMembers')으로 승격됐다. */
     onOpenMembers?: () => void;
     /** 강퇴 낙관 반영 (#753 승격 후 셸 소유) — 참이면 좌석을 빈 타일로 그린다. */
@@ -304,8 +300,6 @@ export const HouseScreen = memo(function HouseScreen({
   onVisitFriend,
   onVisitMyRoom,
   onOpenSearch,
-  nowHour,
-  raining = false,
   onOpenMembers,
   isKickedMember,
   onKickMember,
@@ -331,12 +325,14 @@ export const HouseScreen = memo(function HouseScreen({
 }: HouseScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
-  // 시간대별 하늘 (#358) — 새벽/낮/노을/밤. 낮은 기존 sky 토큰과 동일.
-  const scheme = useResolvedScheme();
-  const skyColor = raining
-    ? RAIN_SKY[scheme]
-    : SKY_BY_PHASE[scheme][skyPhaseForHour(nowHour ?? new Date().getHours())];
+  // 배경 이미지를 못 고른 집(매핑에 없는 새 테마)의 폴백 (#992). 시간·날씨에
+  // 따라 바뀌던 하늘은 집별 배경 아트(#989)가 대체했다 — 정적 색만 남긴다.
+  const skyColor = t.sky;
   const headerInset = useHeaderInsetStyle();
+  // 레일을 스위처 줄 아래로 내려 첫 버튼(목표)이 Lv.·멤버 필과 같은 라인에
+  // 오게 한다 (#994). 종전엔 레일이 맨 위라 집이 여럿인 사용자의 `다음 집`
+  // 화살표와 같은 띠를 다퉜다 — 이름이 길수록 화살표가 레일 쪽으로 밀렸다.
+  const railInset = useHeaderInsetStyle(RAIL_TOP_GAP);
   const screenStyle = useScreenStyle([]);
 
   const [internalHouseIndex, setInternalHouseIndex] = useState(0);
@@ -733,7 +729,11 @@ export const HouseScreen = memo(function HouseScreen({
             ) : null}
             <View style={[styles.titleBadge, { backgroundColor: t.surface }]}>
               <Icon name="lock" size={14} color={t.textMuted} />
-              <Text style={[Typography.h3, { color: t.text }]}>{pendingHouse.name}</Text>
+              {/* 서버는 집 이름을 30자까지 받는다 — 안 자르면 뱃지가 부풀어
+                  좌우 전환 화살표를 화면 밖으로 밀어낸다 (#994). */}
+              <Text style={[Typography.h3, styles.titleText, { color: t.text }]} numberOfLines={1}>
+                {pendingHouse.name}
+              </Text>
             </View>
             {totalPages > 1 ? (
               <Pressable
@@ -922,7 +922,6 @@ export const HouseScreen = memo(function HouseScreen({
             testID="house-background"
           />
         ) : null}
-        {raining ? <RainOverlay /> : null}
       </View>
       {/* 타일 드래그 중에는 스크롤이 제스처를 뺏지 않게 잠근다 (#278). */}
       <PawRefreshScroll
@@ -960,7 +959,9 @@ export const HouseScreen = memo(function HouseScreen({
               ) : (
                 <HousePictogram size={14} />
               )}
-              <Text style={[Typography.h3, { color: t.text }]}>{currentHouse.name}</Text>
+              <Text style={[Typography.h3, styles.titleText, { color: t.text }]} numberOfLines={1}>
+                {currentHouse.name}
+              </Text>
             </View>
             {totalPages > 1 ? (
               <Pressable
@@ -1125,7 +1126,7 @@ export const HouseScreen = memo(function HouseScreen({
       {/* 화면 고정 플로팅 레일 (#986) — 헤더바를 없애고 하늘이 맨 위부터
           시작하게 하려면 액션이 아트 **위에** 떠야 한다. 흰 원 + 라벨은
           배경이 하늘색이든 다크모드든 대비가 보장되는 형태다(#232). */}
-      <View style={[styles.rail, headerInset]} pointerEvents="box-none">
+      <View style={[styles.rail, railInset]} pointerEvents="box-none">
         {onOpenMissions ? (
           <CoachTarget id="house-missions">
             <RailButton
@@ -1352,8 +1353,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.three,
+    // 부모가 폭을 안 정해주면 뱃지의 flexShrink가 줄일 대상이 없어 말줄임이
+    // 안 걸린다 (#994 리뷰). 승인 대기 페이지는 emptyWrap(alignItems: center)
+    // 안이라 이게 없으면 긴 이름이 화살표를 화면 밖으로 민다. 일반 페이지는
+    // skySection이 이미 stretch라 무해하다.
+    alignSelf: 'stretch',
   },
+  titleText: { flexShrink: 1 },
   titleBadge: {
+    flexShrink: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
