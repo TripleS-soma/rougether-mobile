@@ -182,6 +182,9 @@ function SeatTileBase({
               {/* 최근 접속(#383) — 초록 점. 은은한 펄스로 "지금 있음" (#450). */}
               {online ? <OnlineDot color={t.success} /> : null}
               <Text
+                // 이름만 줄인다 (#999) — 시간 라벨은 3~5글자로 폭이 거의
+                // 일정해서, 둘 다 줄이면 어느 쪽이 잘릴지 타일마다 달라진다.
+                numberOfLines={1}
                 style={[
                   Typography.supporting,
                   styles.roomName,
@@ -189,17 +192,20 @@ function SeatTileBase({
                 ]}>
                 {isMine ? `${displayName} (나)` : displayName}
               </Text>
+              {/* 마지막 접속은 이름과 같은 줄에 (#999) — 온라인일 때 초록 점이
+                  그렇듯 한 줄로 끝나야 뱃지 높이가 좌석마다 흔들리지 않는다.
+                  가운뎃점은 흐린 톤을 같이 받도록 라벨 텍스트에 붙인다. */}
+              {!online && lastSeenLabel ? (
+                <Text
+                  style={[
+                    Typography.supporting,
+                    styles.lastSeen,
+                    { color: preview ? StaticWhite : t.onTint },
+                  ]}>
+                  {`· ${lastSeenLabel}`}
+                </Text>
+              ) : null}
             </View>
-            {!online && lastSeenLabel ? (
-              <Text
-                style={[
-                  Typography.supporting,
-                  styles.lastSeen,
-                  { color: preview ? StaticWhite : t.onTint },
-                ]}>
-                {lastSeenLabel}
-              </Text>
-            ) : null}
           </Animated.View>
         )}
       </Pressable>
@@ -246,6 +252,9 @@ const styles = StyleSheet.create({
   },
   roomMeta: {
     alignItems: 'center',
+    // 말줄임이 걸리려면 줄의 폭이 타일 안에서 유계여야 한다 (#999) — 부모가
+    // alignItems:'center'라 이게 없으면 폭이 내용만큼 늘어나 이름이 그냥 넘친다.
+    maxWidth: '100%',
   },
   roomNameOverlay: {
     position: 'absolute',
@@ -264,11 +273,14 @@ const styles = StyleSheet.create({
   roomName: {
     fontSize: 12,
     lineHeight: 16,
+    // 좁을 때 줄어드는 건 이름 쪽 (#999).
+    flexShrink: 1,
   },
   lastSeen: {
     opacity: 0.75,
     // roomName과 같은 이유로 이전 크기 고정 (#669).
     fontSize: 12,
     lineHeight: 16,
+    flexShrink: 0,
   },
 });
