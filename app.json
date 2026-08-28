@@ -22,8 +22,12 @@
       }
     },
     "android": {
-      "_comment_blockedPermissions": "카메라·마이크는 어느 기능도 쓰지 않는다 (#752). expo-image-picker는 앨범 선택만, expo-audio는 재생만 쓰는데 두 라이브러리가 자기 매니페스트에 CAMERA·RECORD_AUDIO를 선언해 스토어 목록에 '카메라'·'마이크'로 노출된다 — 병합 단계에서 제거한다.",
-      "blockedPermissions": ["android.permission.CAMERA", "android.permission.RECORD_AUDIO"],
+      "_comment_blockedPermissions": "카메라는 어느 기능도 쓰지 않는다 (#752) — expo-image-picker가 앨범 선택만 쓰면서 자기 매니페스트에 CAMERA를 선언해 스토어 목록에 '카메라'로 노출된다. RECORD_AUDIO는 expo-audio를 걷어내(#921) 더는 선언되지 않지만, 효과음을 넣을 때 같은 라이브러리가 다시 들어올 수 있어 방어로 남긴다. SYSTEM_ALERT_WINDOW는 Expo bare 템플릿이 넣는 기본값(템플릿 주석: 'REMOVE WHATEVER YOU DO NOT NEED')이고 릴리스 코드 중 읽는 곳이 없다.",
+      "blockedPermissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#FEF1D6",
         "foregroundImage": "./assets/images/icon.png"
@@ -86,12 +90,6 @@
         }
       ],
       "expo-asset",
-      [
-        "expo-audio",
-        {
-          "enableBackgroundPlayback": false
-        }
-      ],
       [
         "expo-notifications",
         {
