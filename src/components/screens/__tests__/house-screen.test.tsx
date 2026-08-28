@@ -71,6 +71,17 @@ describe('HouseScreen', () => {
     expect(getByText(long).props.numberOfLines).toBe(1);
   });
 
+  it('승인 대기 페이지에서도 긴 이름이 접힌다 (#994 리뷰)', async () => {
+    // 이 경로는 emptyWrap(alignItems: center) 안이라 스위처가 콘텐츠 폭만
+    // 갖는다 — 조상이 폭을 안 정해주면 flexShrink가 줄일 대상이 없어
+    // 말줄임이 안 걸리고, 긴 이름이 화살표를 화면 밖으로 민다.
+    const long = '나'.repeat(30);
+    const { getByText } = await render(
+      <HouseScreen houses={[]} pendingHouses={[{ requestId: 1, name: long }]} houseIndex={0} />,
+    );
+    expect(getByText(long).props.numberOfLines).toBe(1);
+  });
+
   it('액션은 플로팅 레일에 있다 — 목표·집 탐색·구성원 (#986)', async () => {
     const onOpenMissions = jest.fn();
     const onOpenSearch = jest.fn();

@@ -1371,6 +1371,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.three,
+    // 부모가 폭을 안 정해주면 뱃지의 flexShrink가 줄일 대상이 없어 말줄임이
+    // 안 걸린다 (#994 리뷰). 승인 대기 페이지는 emptyWrap(alignItems: center)
+    // 안이라 이게 없으면 긴 이름이 화살표를 화면 밖으로 민다. 일반 페이지는
+    // skySection이 이미 stretch라 무해하다.
+    alignSelf: 'stretch',
   },
   titleText: { flexShrink: 1 },
   titleBadge: {
