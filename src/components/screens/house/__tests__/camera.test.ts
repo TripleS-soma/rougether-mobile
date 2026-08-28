@@ -1,4 +1,11 @@
-import { CAM_MAX_SCALE, camDefault, clampCam, isCamAway } from '@/components/screens/house/camera';
+import {
+  CAM_MAX_SCALE,
+  CAM_META_FADE_END,
+  camDefault,
+  clampCam,
+  isCamAway,
+  seatMetaOpacityFor,
+} from '@/components/screens/house/camera';
 
 const FRAME = { w: 300, h: 268 };
 
@@ -39,5 +46,30 @@ describe('isCamAway', () => {
     expect(isCamAway({ scale: 1.05, tx: 0, ty: 0 })).toBe(true);
     expect(isCamAway({ scale: 1, tx: 7, ty: 0 })).toBe(true);
     expect(isCamAway({ scale: 1, tx: 0, ty: -7 })).toBe(true);
+  });
+});
+
+/**
+ * 이름표 페이드 (#665 → #776). 종전엔 화면 안 `camScale.interpolate(...)`라
+ * house-screen 테스트가 RN Animated의 평탄화에 기대 `opacity === 1`만 봤고,
+ * Reanimated로 옮기면 그 방법이 아예 막힌다(jest mock이 useAnimatedStyle을
+ * 평가하지 않는다). 곡선을 여기서 직접 단언한다.
+ */
+describe('seatMetaOpacityFor', () => {
+  it('기본 배율에서는 완전히 보인다', () => {
+    expect(seatMetaOpacityFor(1)).toBe(1);
+  });
+
+  it('페이드 끝 배율에서 사라진다', () => {
+    expect(seatMetaOpacityFor(CAM_META_FADE_END)).toBe(0);
+  });
+
+  it('중간 배율은 선형으로 흐려진다', () => {
+    expect(seatMetaOpacityFor(1 + (CAM_META_FADE_END - 1) / 2)).toBeCloseTo(0.5);
+  });
+
+  it('구간 밖은 잘린다 — 축소도, 최대 확대도 튀지 않는다', () => {
+    expect(seatMetaOpacityFor(0.5)).toBe(1);
+    expect(seatMetaOpacityFor(CAM_MAX_SCALE)).toBe(0);
   });
 });

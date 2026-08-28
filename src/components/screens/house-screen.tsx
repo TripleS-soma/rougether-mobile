@@ -1,15 +1,14 @@
 import { Image } from 'expo-image';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Animated,
-  Easing,
-  PanResponder,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Reanimated, {
+  runOnJS,
+  useAnimatedStyle,
+  useDerivedValue,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 
 import { type HouseCover } from '@/components/room/house-cover-picker';
 import { HouseOrderDots } from '@/components/room/house-order-dots';
@@ -20,6 +19,7 @@ import { type MemberRoomPreview, type RoomCatalogProps } from '@/components/room
 import {
   camDefault,
   cameraClaimsMove,
+  seatMetaOpacityFor,
   clampCam,
   isCamAway,
 } from '@/components/screens/house/camera';
@@ -50,7 +50,6 @@ import { DEFAULT_HOUSES } from '@/mocks/fixtures';
 import { VACANT_FLOOR } from '@/resources/furniture';
 import {
   useAnimatedValue,
-  useAnimatedValueXY,
   useConstant,
   useLatestRef,
   useStableCallback,
@@ -462,21 +461,23 @@ export const HouseScreen = memo(function HouseScreen({
   const [dragSeat, setDragSeat] = useState<number | null>(null);
   const dragSeatRef = useRef<number | null>(null);
   const dragGranted = useRef(false);
-  const dragPan = useAnimatedValueXY();
+  // 공유값은 첫 렌더 인스턴스에 앵커링 (#776) — 프로덕션 useSharedValue는
+  // 참조가 안정적이지만 jest는 렌더마다 새 객체를 돌려줘, 1회 생성한 제스처의
+  // 클로저와 최신 쓰기가 서로 다른 객체를 보게 된다 (tab-pager와 같은 이유).
+  const dragPan = useRef(useSharedValue({ x: 0, y: 0 })).current;
   const tileRefs = useRef(new Map<number, View>());
   const tileRects = useRef(new Map<number, SeatRect>());
 
   // 픽업 순간 스프링으로 살짝 떠오르는 리프트 (#450).
-  const liftScale = useAnimatedValue(1);
+  const liftScale = useRef(useSharedValue(1)).current;
+  /** 카메라 워클릿이 "자리 드래그 중인가"를 읽는 창구 — dragSeatRef의 UI 스레드 사본. */
+  const draggingSV = useRef(useSharedValue(false)).current;
   const startDrag = (seat: number) => {
     hapticSelection();
-    liftScale.setValue(1);
-    Animated.spring(liftScale, {
-      toValue: 1.07,
-      friction: 4,
-      tension: 220,
-      useNativeDriver: false,
-    }).start();
+    liftScale.value = 1;
+    // friction 4 / tension 220 → Reanimated 환산 (damping/stiffness).
+    liftScale.value = withSpring(1.07, { damping: 4, stiffness: 220, mass: 1 });
+    draggingSV.value = true;
     tileRects.current.clear();
     tileRefs.current.forEach((ref, idx) =>
       ref.measureInWindow((x, y, w, h) => tileRects.current.set(idx, { x, y, w, h })),
@@ -488,7 +489,9 @@ export const HouseScreen = memo(function HouseScreen({
   const endDrag = () => {
     dragSeatRef.current = null;
     dragGranted.current = false;
-    dragPan.setValue({ x: 0, y: 0 });
+    draggingSV.value = false;
+    dragPan.value = { x: 0, y: 0 };
+    liftScale.value = withSpring(1, { damping: 12, stiffness: 220, mass: 1 });
     setDragSeat(null);
   };
   const dropAt = (x: number, y: number) => {
@@ -517,21 +520,51 @@ export const HouseScreen = memo(function HouseScreen({
   // The responder is created once — route through a ref so the release sees
   // the current house/permutation, not the mount-time closure.
   const dropAtRef = useLatestRef(dropAt);
-  const gridPanResponder = useConstant(() =>
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-      // Claim the ongoing touch only once a long-press lifted a tile.
-      onMoveShouldSetPanResponderCapture: () => dragSeatRef.current != null,
-      onPanResponderGrant: () => {
-        dragGranted.current = true;
-      },
-      onPanResponderMove: Animated.event([null, { dx: dragPan.x, dy: dragPan.y }], {
-        useNativeDriver: false,
-      }),
-      onPanResponderRelease: (_evt, g) => dropAtRef.current(g.moveX, g.moveY),
-      onPanResponderTerminate: () => endDrag(),
-    }),
-  );
+  // 워클릿에서 부를 JS 콜백들 — ref.current를 UI 스레드에서 읽을 수 없으므로
+  // 참조가 고정된 래퍼를 거친다 (#776).
+  const handleDrop = useStableCallback((x: number, y: number) => dropAtRef.current(x, y));
+  const handleDragGranted = useStableCallback(() => {
+    dragGranted.current = true;
+  });
+  const handleDragCancel = useStableCallback(() => endDrag());
+  /**
+   * 자리 드래그 (#776) — 종전엔 PanResponder + `Animated.event`(useNativeDriver
+   * false)라 손가락 이동이 매 프레임 JS를 거쳐 타일 transform까지 갔다. 이제
+   * 오프셋은 UI 스레드에서만 움직이고, JS는 **놓는 순간 한 번**만 깨운다.
+   *
+   * 히트테스트는 그대로 JS다 — `measureInWindow`가 비동기라 사각형을 공유값에
+   * 복제해야 하는데, 드롭은 프레임당이 아니라 제스처당 1회라 이득이 없다.
+   *
+   * 같은 제스처 객체를 두 GestureDetector에 못 쓴다(프레임 격자·평면 격자).
+   * 팩토리로 두 벌 만들되 공유값·콜백은 같은 것을 닫는다.
+   */
+  const makeDragGesture = () =>
+    Gesture.Pan()
+      .manualActivation(true)
+      // 롱프레스로 타일이 들리기 전에는 터치를 가져가지 않는다 — fail()이
+      // 아니라 '아직 활성화 안 함'이라, 들린 뒤의 이동은 같은 터치에서 잡힌다.
+      .onTouchesMove((_e, mgr) => {
+        'worklet';
+        if (draggingSV.value) mgr.activate();
+      })
+      .onStart(() => {
+        'worklet';
+        runOnJS(handleDragGranted)();
+      })
+      .onUpdate((e) => {
+        'worklet';
+        dragPan.value = { x: e.translationX, y: e.translationY };
+      })
+      .onEnd((e) => {
+        'worklet';
+        runOnJS(handleDrop)(e.absoluteX, e.absoluteY);
+      })
+      .onFinalize((_e, success) => {
+        'worklet';
+        if (!success) runOnJS(handleDragCancel)();
+      });
+  const frameDragGesture = useConstant(makeDragGesture);
+  const floorsDragGesture = useConstant(makeDragGesture);
   // A lift with no movement never grants the responder — the tile's pressOut
   // is then the only release signal, so it clears the stuck lift.
   const onTilePressOut = () => {
@@ -546,14 +579,23 @@ export const HouseScreen = memo(function HouseScreen({
   // 자리 교환 드래그를 끄고(좌표계 어긋남 방지) 탭 방문만 유지한다.
   const [zoomed, setZoomed] = useState(false);
   const zoomedRef = useRef(false);
-  const camScale = useAnimatedValue(1);
-  const camTx = useAnimatedValue(0);
-  const camTy = useAnimatedValue(0);
+  const camScale = useRef(useSharedValue(1)).current;
+  const camTx = useRef(useSharedValue(0)).current;
+  const camTy = useRef(useSharedValue(0)).current;
+  /** `zoomed`의 UI 스레드 사본 — cameraClaimsMove가 워클릿에서 읽는다. */
+  const zoomedSV = useRef(useSharedValue(false)).current;
+  /** clampCam이 워클릿에서 읽을 프레임 크기 — JS쪽 frameSize ref의 사본. */
+  const frameSizeSV = useRef(useSharedValue({ w: 0, h: 0 })).current;
   // 확대 = '방 구경 모드' (#665) — 이름/접속 라벨은 카메라와 함께 스케일돼
   // 방을 덮으므로, 배율 1→1.15 구간에서 핀치에 연속 추종하며 사라진다.
-  const seatMetaOpacity = useConstant(() =>
-    camScale.interpolate({ inputRange: [1, 1.15], outputRange: [1, 0], extrapolate: 'clamp' }),
-  );
+  const seatMetaOpacity = useRef(useDerivedValue(() => seatMetaOpacityFor(camScale.value))).current;
+  const camStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: camTx.value },
+      { translateY: camTy.value },
+      { scale: camScale.value },
+    ],
+  }));
   const visitSeat = (room: RoomCell) => {
     if (room.isMine) return onVisitMyRoom?.();
     onVisitFriend?.({
@@ -586,109 +628,158 @@ export const HouseScreen = memo(function HouseScreen({
   const handleSeatLongPress = useStableCallback((seatIdx: number) => startDrag(seatIdx));
   const handleTilePressOut = useStableCallback(() => onTilePressOut());
 
-  const cam = useRef({ scale: 1, tx: 0, ty: 0 });
   const frameSize = useRef({ w: 0, h: 0 });
-  const pinchAnchor = useRef({ dist: 0, cx: 0, cy: 0, scale: 1, tx: 0, ty: 0 });
-  const panAnchor = useRef({ x: 0, y: 0, tx: 0, ty: 0 });
-  const camTouchCount = useRef(0);
+  // 제스처 앵커도 공유값 — 워클릿이 읽고 쓴다.
+  const pinchAnchor = useRef(
+    useSharedValue({ dist: 0, cx: 0, cy: 0, scale: 1, tx: 0, ty: 0 }),
+  ).current;
+  const panAnchor = useRef(useSharedValue({ x: 0, y: 0, tx: 0, ty: 0 })).current;
+  const camTouchCount = useRef(useSharedValue(0)).current;
+  /** 터치 시작점 — PanResponder의 누적 `g.dx/dy`(슬롭 판정)를 대신한다. */
+  const camTouchStart = useRef(useSharedValue({ x: 0, y: 0 })).current;
+  const camActive = useRef(useSharedValue(false)).current;
 
-  // 카메라 상수·판정·클램프 수학은 house/camera.ts로 이동 (#693).
-  const syncZoomed = () => {
-    const away = isCamAway(cam.current);
+  // 카메라 상수·판정·클램프 수학은 house/camera.ts로 이동 (#693), #776에서 워클릿화.
+  const applyZoomed = useStableCallback((away: boolean) => {
     if (away !== zoomedRef.current) {
       zoomedRef.current = away;
       setZoomed(away);
     }
-  };
-  const setCam = (scale: number, tx: number, ty: number) => {
-    const c = clampCam(frameSize.current, scale, tx, ty);
-    cam.current = c;
-    camScale.setValue(c.scale);
-    camTx.setValue(c.tx);
-    camTy.setValue(c.ty);
-    syncZoomed();
-  };
+  });
+  /** JS에서 카메라를 스프링으로 옮긴다 — ⟲ 리셋과 놓을 때의 1× 스냅. */
   const animateCamTo = (scale: number, tx: number, ty: number) => {
     const c = clampCam(frameSize.current, scale, tx, ty);
-    cam.current = c;
-    syncZoomed();
-    Animated.parallel([
-      Animated.spring(camScale, { toValue: c.scale, useNativeDriver: true }),
-      Animated.spring(camTx, { toValue: c.tx, useNativeDriver: true }),
-      Animated.spring(camTy, { toValue: c.ty, useNativeDriver: true }),
-    ]).start();
+    camScale.value = withSpring(c.scale, { damping: 15, stiffness: 180 });
+    camTx.value = withSpring(c.tx, { damping: 15, stiffness: 180 });
+    camTy.value = withSpring(c.ty, { damping: 15, stiffness: 180 });
+    const away = isCamAway(c);
+    zoomedSV.value = away;
+    applyZoomed(away);
   };
   const resetCam = () => {
     const d = camDefault();
     animateCamTo(d.scale, d.tx, d.ty);
   };
-  // 더블탭 줌 — 그 방의 창문이 카메라 뷰포트를 거의 가득 채우게 (#307).
-  const anchorCamera = (evt: { nativeEvent: { touches: { pageX: number; pageY: number }[] } }) => {
-    const ts = evt.nativeEvent.touches;
-    camTouchCount.current = ts.length;
-    if (ts.length >= 2) {
-      const dx = ts[0].pageX - ts[1].pageX;
-      const dy = ts[0].pageY - ts[1].pageY;
-      pinchAnchor.current = {
-        dist: Math.hypot(dx, dy),
-        cx: (ts[0].pageX + ts[1].pageX) / 2,
-        cy: (ts[0].pageY + ts[1].pageY) / 2,
-        scale: cam.current.scale,
-        tx: cam.current.tx,
-        ty: cam.current.ty,
-      };
-    } else if (ts.length === 1) {
-      panAnchor.current = {
-        x: ts[0].pageX,
-        y: ts[0].pageY,
-        tx: cam.current.tx,
-        ty: cam.current.ty,
-      };
-    }
-  };
-  const cameraResponder = useConstant(() =>
-    PanResponder.create({
-      // 두 손가락은 즉시, 한 손가락은 확대 상태에서 슬롭을 넘겼을 때만
-      // (드래그 중엔 양보) — 탭 지터 캡처가 방 탭 방문을 죽였다 (#669).
-      onStartShouldSetPanResponderCapture: (evt) => evt.nativeEvent.touches.length >= 2,
-      onMoveShouldSetPanResponderCapture: (evt, g) =>
-        cameraClaimsMove(
-          evt.nativeEvent.touches.length,
-          zoomedRef.current,
-          dragSeatRef.current != null,
-          g.dx,
-          g.dy,
-        ),
-      onPanResponderGrant: (evt) => anchorCamera(evt),
-      onPanResponderMove: (evt) => {
-        const ts = evt.nativeEvent.touches;
-        // 손가락 수가 바뀌면(2→1, 1→2) 기준점을 다시 잡는다.
-        if (ts.length !== camTouchCount.current) {
-          anchorCamera(evt);
+  // 거의 원배율(축소 조망)이면 딱 1×로 스냅 — 기본(방 뷰) 복귀는 ⟲로.
+  const snapCamIfNearDefault = useStableCallback(() => {
+    if (camScale.value < 1.05) animateCamTo(1, 0, 0);
+  });
+
+  /**
+   * 프레임 카메라 제스처 (#776) — PanResponder를 RNGH로 옮기되 **판정은 그대로**
+   * 둔다. `cameraClaimsMove`(#669의 CAM_PAN_SLOP=8 포함)를 워클릿으로 그대로
+   * 부르므로 손맛과 테스트가 함께 산다.
+   *
+   * `manualActivation`인 이유: 종전 `onMoveShouldSetPanResponderCapture`는
+   * 슬롭을 넘길 때까지 **매 move마다 false를 돌려주다가** 넘는 순간 캡처했다.
+   * RNGH에서 `fail()`은 그 터치를 영구히 포기하는 것이라 의미가 다르다 —
+   * 아직 아니면 아무것도 안 하고, 조건이 서면 그때 `activate()`한다.
+   */
+  const cameraGesture = useConstant(() =>
+    Gesture.Pan()
+      .manualActivation(true)
+      .onTouchesDown((e) => {
+        'worklet';
+        const ts = e.allTouches;
+        camTouchCount.value = ts.length;
+        if (ts.length > 0) camTouchStart.value = { x: ts[0].absoluteX, y: ts[0].absoluteY };
+        if (ts.length >= 2) {
+          const dx = ts[0].absoluteX - ts[1].absoluteX;
+          const dy = ts[0].absoluteY - ts[1].absoluteY;
+          pinchAnchor.value = {
+            dist: Math.hypot(dx, dy),
+            cx: (ts[0].absoluteX + ts[1].absoluteX) / 2,
+            cy: (ts[0].absoluteY + ts[1].absoluteY) / 2,
+            scale: camScale.value,
+            tx: camTx.value,
+            ty: camTy.value,
+          };
+        } else if (ts.length === 1) {
+          panAnchor.value = {
+            x: ts[0].absoluteX,
+            y: ts[0].absoluteY,
+            tx: camTx.value,
+            ty: camTy.value,
+          };
+        }
+      })
+      .onTouchesMove((e, mgr) => {
+        'worklet';
+        const ts = e.allTouches;
+        if (ts.length === 0) return;
+        if (!camActive.value) {
+          const dx = ts[0].absoluteX - camTouchStart.value.x;
+          const dy = ts[0].absoluteY - camTouchStart.value.y;
+          if (cameraClaimsMove(ts.length, zoomedSV.value, draggingSV.value, dx, dy)) {
+            camActive.value = true;
+            mgr.activate();
+          }
           return;
         }
-        if (ts.length >= 2) {
-          const a = pinchAnchor.current;
-          if (a.dist === 0) return;
-          const dx = ts[0].pageX - ts[1].pageX;
-          const dy = ts[0].pageY - ts[1].pageY;
-          const cx = (ts[0].pageX + ts[1].pageX) / 2;
-          const cy = (ts[0].pageY + ts[1].pageY) / 2;
-          setCam(a.scale * (Math.hypot(dx, dy) / a.dist), a.tx + (cx - a.cx), a.ty + (cy - a.cy));
-        } else if (ts.length === 1 && zoomedRef.current) {
-          const a = panAnchor.current;
-          setCam(cam.current.scale, a.tx + (ts[0].pageX - a.x), a.ty + (ts[0].pageY - a.y));
+        // 손가락 수가 바뀌면(2→1, 1→2) 기준점을 다시 잡는다.
+        if (ts.length !== camTouchCount.value) {
+          camTouchCount.value = ts.length;
+          if (ts.length >= 2) {
+            const dx = ts[0].absoluteX - ts[1].absoluteX;
+            const dy = ts[0].absoluteY - ts[1].absoluteY;
+            pinchAnchor.value = {
+              dist: Math.hypot(dx, dy),
+              cx: (ts[0].absoluteX + ts[1].absoluteX) / 2,
+              cy: (ts[0].absoluteY + ts[1].absoluteY) / 2,
+              scale: camScale.value,
+              tx: camTx.value,
+              ty: camTy.value,
+            };
+          } else {
+            panAnchor.value = {
+              x: ts[0].absoluteX,
+              y: ts[0].absoluteY,
+              tx: camTx.value,
+              ty: camTy.value,
+            };
+          }
+          return;
         }
-      },
-      onPanResponderRelease: () => {
-        camTouchCount.current = 0;
-        // 거의 원배율(축소 조망)이면 딱 1×로 스냅 — 기본(방 뷰) 복귀는 ⟲로.
-        if (cam.current.scale < 1.05) animateCamTo(1, 0, 0);
-      },
-      onPanResponderTerminate: () => {
-        camTouchCount.current = 0;
-      },
-    }),
+        let next;
+        if (ts.length >= 2) {
+          const a = pinchAnchor.value;
+          if (a.dist === 0) return;
+          const dx = ts[0].absoluteX - ts[1].absoluteX;
+          const dy = ts[0].absoluteY - ts[1].absoluteY;
+          const cx = (ts[0].absoluteX + ts[1].absoluteX) / 2;
+          const cy = (ts[0].absoluteY + ts[1].absoluteY) / 2;
+          next = clampCam(
+            frameSizeSV.value,
+            a.scale * (Math.hypot(dx, dy) / a.dist),
+            a.tx + (cx - a.cx),
+            a.ty + (cy - a.cy),
+          );
+        } else if (zoomedSV.value) {
+          const a = panAnchor.value;
+          next = clampCam(
+            frameSizeSV.value,
+            camScale.value,
+            a.tx + (ts[0].absoluteX - a.x),
+            a.ty + (ts[0].absoluteY - a.y),
+          );
+        } else {
+          return;
+        }
+        camScale.value = next.scale;
+        camTx.value = next.tx;
+        camTy.value = next.ty;
+        const away = isCamAway(next);
+        if (away !== zoomedSV.value) {
+          zoomedSV.value = away;
+          runOnJS(applyZoomed)(away);
+        }
+      })
+      .onFinalize(() => {
+        'worklet';
+        camTouchCount.value = 0;
+        camActive.value = false;
+        runOnJS(snapCamIfNearDefault)();
+      }),
   );
 
   // 집 전환 가로 플링은 폐지 (#761) — 셸 탭 페이저(#563)와 같은 축을 다퉈
@@ -1008,75 +1099,78 @@ export const HouseScreen = memo(function HouseScreen({
                 styles.cameraViewportOuter,
                 { opacity: switchFade, transform: [{ translateX: switchX }] },
               ]}>
-              <View style={styles.cameraViewport} {...cameraResponder.panHandlers}>
-                <Animated.View
-                  style={{
-                    transform: [{ translateX: camTx }, { translateY: camTy }, { scale: camScale }],
-                  }}>
-                  <View style={styles.frameWrap} {...gridPanResponder.panHandlers}>
-                    {/* 프레임 측정용 — 반응자 프롭이 있는 부모에는 테스트에서
+              <GestureDetector gesture={cameraGesture}>
+                <View style={styles.cameraViewport}>
+                  <Reanimated.View style={camStyle}>
+                    <GestureDetector gesture={frameDragGesture}>
+                      <View style={styles.frameWrap}>
+                        {/* 프레임 측정용 — 반응자 프롭이 있는 부모에는 테스트에서
                       layout 이벤트가 닿지 않아 absolute-fill 형제로 잰다. */}
-                    <View
-                      testID="frame-camera"
-                      pointerEvents="none"
-                      style={StyleSheet.absoluteFill}
-                      onLayout={(e) => {
-                        const first = frameSize.current.w === 0;
-                        frameSize.current = {
-                          w: e.nativeEvent.layout.width,
-                          h: e.nativeEvent.layout.height,
-                        };
-                        // 첫 레이아웃에 기본 카메라(방 4칸 클로즈업)를 즉시 적용 (#307).
-                        if (first) {
-                          const d = camDefault();
-                          cam.current = d;
-                          camScale.setValue(d.scale);
-                          camTx.setValue(d.tx);
-                          camTy.setValue(d.ty);
-                        }
-                      }}
-                    />
-                    {/* 창문 뒤 좌석 — 프레임 PNG의 투명 창문으로 방이 보인다. */}
-                    {WINDOW_RECTS.map((rect, w) => {
-                      const seatIdx = windowSlots[w];
-                      return (
                         <View
-                          key={`window-${w}`}
-                          style={[
-                            styles.windowSlot,
-                            rect,
-                            seatIdx != null && dragSeat === seatIdx && styles.dragRow,
-                          ]}>
-                          {seatIdx != null ? (
-                            renderSeatTile(displayCells[seatIdx], seatIdx, true)
-                          ) : (
-                            /* 정원 밖 창문 — 조용한 벽 패널. */
+                          testID="frame-camera"
+                          pointerEvents="none"
+                          style={StyleSheet.absoluteFill}
+                          onLayout={(e) => {
+                            const first = frameSize.current.w === 0;
+                            frameSize.current = {
+                              w: e.nativeEvent.layout.width,
+                              h: e.nativeEvent.layout.height,
+                            };
+                            // clampCam이 워클릿에서 읽는 사본 (#776).
+                            frameSizeSV.value = frameSize.current;
+                            // 첫 레이아웃에 기본 카메라(방 4칸 클로즈업)를 즉시 적용 (#307).
+                            if (first) {
+                              const d = camDefault();
+                              camScale.value = d.scale;
+                              camTx.value = d.tx;
+                              camTy.value = d.ty;
+                              zoomedSV.value = false;
+                            }
+                          }}
+                        />
+                        {/* 창문 뒤 좌석 — 프레임 PNG의 투명 창문으로 방이 보인다. */}
+                        {WINDOW_RECTS.map((rect, w) => {
+                          const seatIdx = windowSlots[w];
+                          return (
                             <View
-                              style={[styles.windowFiller, { backgroundColor: t.surfaceMuted }]}
-                              testID="window-filler"
-                            />
-                          )}
-                        </View>
-                      );
-                    })}
-                    {/* Android는 Image 계열이 pointerEvents prop을 무시하고 터치를
+                              key={`window-${w}`}
+                              style={[
+                                styles.windowSlot,
+                                rect,
+                                seatIdx != null && dragSeat === seatIdx && styles.dragRow,
+                              ]}>
+                              {seatIdx != null ? (
+                                renderSeatTile(displayCells[seatIdx], seatIdx, true)
+                              ) : (
+                                /* 정원 밖 창문 — 조용한 벽 패널. */
+                                <View
+                                  style={[styles.windowFiller, { backgroundColor: t.surfaceMuted }]}
+                                  testID="window-filler"
+                                />
+                              )}
+                            </View>
+                          );
+                        })}
+                        {/* Android는 Image 계열이 pointerEvents prop을 무시하고 터치를
                       삼킨다(#401) — ViewGroup 래퍼가 확실하게 투과시킨다. */}
-                    <View style={StyleSheet.absoluteFill} pointerEvents="none">
-                      <Image
-                        source={assetSource(coverKey)}
-                        style={StyleSheet.absoluteFill}
-                        contentFit="contain"
-                        transition={120}
-                        // 디스크 캐시 유지 — 앱 재실행 후에도 재요청 없이 즉시 (#463).
-                        cachePolicy="memory-disk"
-                        accessibilityLabel={`${currentHouse.name} 집`}
-                        testID="house-frame"
-                      />
-                    </View>
-                  </View>
-                </Animated.View>
-              </View>
-              {/* ⟲ 리셋 버튼은 cameraResponder(팬 responder)를 가진 cameraViewport
+                        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+                          <Image
+                            source={assetSource(coverKey)}
+                            style={StyleSheet.absoluteFill}
+                            contentFit="contain"
+                            transition={120}
+                            // 디스크 캐시 유지 — 앱 재실행 후에도 재요청 없이 즉시 (#463).
+                            cachePolicy="memory-disk"
+                            accessibilityLabel={`${currentHouse.name} 집`}
+                            testID="house-frame"
+                          />
+                        </View>
+                      </View>
+                    </GestureDetector>
+                  </Reanimated.View>
+                </View>
+              </GestureDetector>
+              {/* ⟲ 리셋 버튼은 카메라 제스처를 가진 cameraViewport
                   바깥, 그 형제로 둔다 — zoomed 동안 부모의 capture move 핸들러가
                   버튼 위 탭의 미세한 손가락 이동마저 가로채 onPress가 취소됐다
                   (실기기, #307 후속). cameraViewportOuter가 절대배치 기준. */}
@@ -1095,29 +1189,31 @@ export const HouseScreen = memo(function HouseScreen({
         {/* 프레임 모드에선 방이 창문 안에 그려져 이 격자가 비는데, paddingTop이
             남아 잔디 아래 24px 크림 띠를 만들었다 (#986). 내용이 있을 때만 그린다. */}
         {roomPairs.length === 0 ? null : (
-          <View style={styles.floors} {...gridPanResponder.panHandlers}>
-            {roomPairs.map((pair, pairIdx) => {
-              // The dragged tile must float above sibling rows too.
-              const rowHasDrag =
-                dragSeat != null &&
-                dragSeat >= rowOffsets[pairIdx] &&
-                dragSeat < rowOffsets[pairIdx] + pair.length;
-              return (
-                // Vacant rows share the '빈방' name — the row index keys them.
-                <View
-                  key={`${pairIdx}-${pair[0]?.name ?? ''}`}
-                  style={[styles.floor, rowHasDrag && styles.dragRow]}>
-                  <View style={styles.floorRooms}>
-                    {pair.map((room, i) => renderSeatTile(room, rowOffsets[pairIdx] + i))}
-                    {/* Odd capacity → invisible filler keeps the lone tile half-width. */}
-                    {pair.length === 1 ? (
-                      <View style={styles.roomSpacer} testID="room-spacer" />
-                    ) : null}
+          <GestureDetector gesture={floorsDragGesture}>
+            <View style={styles.floors}>
+              {roomPairs.map((pair, pairIdx) => {
+                // The dragged tile must float above sibling rows too.
+                const rowHasDrag =
+                  dragSeat != null &&
+                  dragSeat >= rowOffsets[pairIdx] &&
+                  dragSeat < rowOffsets[pairIdx] + pair.length;
+                return (
+                  // Vacant rows share the '빈방' name — the row index keys them.
+                  <View
+                    key={`${pairIdx}-${pair[0]?.name ?? ''}`}
+                    style={[styles.floor, rowHasDrag && styles.dragRow]}>
+                    <View style={styles.floorRooms}>
+                      {pair.map((room, i) => renderSeatTile(room, rowOffsets[pairIdx] + i))}
+                      {/* Odd capacity → invisible filler keeps the lone tile half-width. */}
+                      {pair.length === 1 ? (
+                        <View style={styles.roomSpacer} testID="room-spacer" />
+                      ) : null}
+                    </View>
                   </View>
-                </View>
-              );
-            })}
-          </View>
+                );
+              })}
+            </View>
+          </GestureDetector>
         )}
       </PawRefreshScroll>
 

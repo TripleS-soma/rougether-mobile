@@ -1,5 +1,6 @@
 import { memo, useCallback, useMemo } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { type SharedValue, useAnimatedStyle } from 'react-native-reanimated';
 
 import { CharacterAvatar } from '@/components/room/character-avatar';
 import {
@@ -50,11 +51,11 @@ export type SeatTileProps = {
 
   // --- 아래는 전부 참조 고정 계약 (#775). ---
   /** 들린 좌석이 손가락을 따라가는 오프셋 (한 번에 하나만 들린다). */
-  dragPan: Animated.ValueXY;
+  dragPan: SharedValue<{ x: number; y: number }>;
   /** 픽업 스프링. */
-  liftScale: Animated.Value;
-  /** 확대 시 이름표를 접는 페이드 — camScale에서 보간된 값이라 Value가 아니다. */
-  seatMetaOpacity: Animated.AnimatedInterpolation<number> | Animated.Value;
+  liftScale: SharedValue<number>;
+  /** 확대 시 이름표를 접는 페이드 — camScale에서 파생된다 (#776). */
+  seatMetaOpacity: SharedValue<number>;
   onVisit: (seatIdx: number) => void;
   onLongPress: (seatIdx: number) => void;
   onPressOut: () => void;
@@ -124,6 +125,26 @@ function SeatTileBase({
           ? `${lastSeenLabel} 접속`
           : null;
 
+  /**
+   * 들린 타일만 손가락을 따라간다 (#776). 종전엔 RN Animated 값을 style에
+   * 꽂았는데, 그 값을 먹이는 PanResponder가 JS 스레드라 매 프레임 브리지를
+   * 탔다. 이제 UI 스레드에서 shared value를 읽는다 — 안 들린 타일은 빈
+   * 스타일이라 좌석 수만큼 transform이 붙지 않는다.
+   */
+  const liftStyle = useAnimatedStyle(() =>
+    dragging
+      ? {
+          transform: [
+            { translateX: dragPan.value.x },
+            { translateY: dragPan.value.y },
+            { scale: liftScale.value },
+          ],
+        }
+      : {},
+  );
+  // 확대 = '방 구경 모드' (#665) — 배율 1→1.15 구간에서 핀치에 연속 추종.
+  const metaStyle = useAnimatedStyle(() => ({ opacity: seatMetaOpacity.value }));
+
   const setRef = useCallback((el: View | null) => registerRef(seatIdx, el), [registerRef, seatIdx]);
   const visit = useCallback(() => onVisit(seatIdx), [onVisit, seatIdx]);
   const lift = useCallback(() => onLongPress(seatIdx), [onLongPress, seatIdx]);
@@ -131,13 +152,7 @@ function SeatTileBase({
   return (
     <Animated.View
       ref={setRef}
-      style={[
-        styles.roomCellWrap,
-        dragging && {
-          transform: [...dragPan.getTranslateTransform(), { scale: liftScale }],
-          ...styles.roomCellLifted,
-        },
-      ]}>
+      style={[styles.roomCellWrap, dragging && styles.roomCellLifted, liftStyle]}>
       <Pressable
         onPress={empty ? undefined : visit}
         onLongPress={empty || zoomed ? undefined : lift}
@@ -193,11 +208,7 @@ function SeatTileBase({
         {empty ? null : (
           <Animated.View
             testID={`seat-meta-${seatIdx}`}
-            style={[
-              styles.roomMeta,
-              preview && styles.roomNameOverlay,
-              { opacity: seatMetaOpacity },
-            ]}>
+            style={[styles.roomMeta, preview && styles.roomNameOverlay, metaStyle]}>
             <View style={styles.roomNameRow}>
               {isOwner ? <CrownPictogram size={12} /> : null}
               {/* 최근 접속(#383) — 초록 점. 은은한 펄스로 "지금 있음" (#450). */}
