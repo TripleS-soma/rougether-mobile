@@ -119,6 +119,52 @@ describe('HouseScreen', () => {
     expect(getByLabelText('친구, 3시간 전 접속')).toBeTruthy();
   });
 
+  /**
+   * 동거 봇 (#1013) — 서버 스케줄러가 봇의 lastAccessedAt을 갱신해서, 그대로
+   * 두면 좌석 타일에 "접속 중"이나 "1시간 전"이 떠 **봇이 사람보다 활발해
+   * 보였다.** 접속 자리를 "봇"이 대신한다.
+   */
+  it('봇 좌석은 접속 대신 봇 라벨을 보여준다 (#1013)', async () => {
+    const botHouse: House = {
+      ...MISSION_HOUSE,
+      floors: [
+        {
+          level: '1층',
+          rooms: [
+            { name: '루나', color: '#F5E1D8', membershipId: 91, bot: true },
+            { name: '진형', color: '#E8E0D0', membershipId: 92, lastSeenLabel: '8일 전' },
+          ],
+        },
+      ],
+    };
+    const { getByText, queryByTestId, getByLabelText } = await render(
+      <HouseScreen houses={[botHouse]} userName="나" />,
+    );
+    expect(getByText('· 봇')).toBeTruthy();
+    expect(getByLabelText('루나, 봇')).toBeTruthy();
+    // 사람 쪽은 그대로.
+    expect(getByText('· 8일 전')).toBeTruthy();
+    // 봇에는 접속 점을 붙이지 않는다.
+    expect(queryByTestId('online-dot')).toBeNull();
+  });
+
+  it('봇이면서 online이 들어와도 접속 점을 그리지 않는다 (#1013)', async () => {
+    const botHouse: House = {
+      ...MISSION_HOUSE,
+      floors: [
+        {
+          level: '1층',
+          rooms: [{ name: '루나', color: '#F5E1D8', membershipId: 91, bot: true, online: true }],
+        },
+      ],
+    };
+    const { queryByTestId, getByText } = await render(
+      <HouseScreen houses={[botHouse]} userName="나" />,
+    );
+    expect(queryByTestId('online-dot')).toBeNull();
+    expect(getByText('· 봇')).toBeTruthy();
+  });
+
   it('마지막 접속 라벨이 이름과 한 줄에 온다 (#999)', async () => {
     const presenceHouse: House = {
       ...MISSION_HOUSE,

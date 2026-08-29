@@ -1086,3 +1086,33 @@ describe('API adapters', () => {
     });
   });
 });
+
+/**
+ * 동거 봇의 접속 표시 (#1013). 서버 스케줄러가 `lastAccessedAt`을 갱신하므로
+ * 그대로 통과시키면 좌석 타일에 "접속 중"·"1시간 전"이 떠서 **봇이 사람보다
+ * 활발해 보인다.** 사람의 접속과 뜻이 다른 값이라 같은 모양이면 거짓말이다.
+ */
+describe('봇에는 접속 표시를 붙이지 않는다 (#1013)', () => {
+  const at = (msAgo: number) => new Date(Date.now() - msAgo).toISOString();
+  const member = (over: Record<string, unknown>) =>
+    ({ membershipId: 1, userId: 10, role: 'MEMBER', status: 'ACTIVE', ...over }) as never;
+  const detail = { houseId: 1, name: '테스트 집', maxMembers: 2 } as never;
+
+  const seatOf = (bot: boolean) =>
+    toHouse(
+      detail,
+      [member({ nickname: bot ? '루나' : '진형', bot, lastAccessedAt: at(1000) })],
+      99,
+    ).floors[0].rooms[0];
+
+  it('봇은 online·lastSeenLabel이 모두 없다', () => {
+    const seat = seatOf(true);
+    expect(seat.bot).toBe(true);
+    expect(seat.online).toBeUndefined();
+    expect(seat.lastSeenLabel).toBeUndefined();
+  });
+
+  it('사람은 그대로 접속 표시를 받는다', () => {
+    expect(seatOf(false).online).toBe(true);
+  });
+});

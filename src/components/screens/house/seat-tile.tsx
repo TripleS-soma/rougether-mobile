@@ -26,6 +26,8 @@ export type SeatTileProps = {
   isOwner: boolean;
   online: boolean;
   lastSeenLabel?: string;
+  /** 동거 봇 (서버 #309) — 접속 자리를 "봇"이 대신한다 (#1013). */
+  bot?: boolean;
   /** 좌석 배경 틴트 — 다크에서도 고정 파스텔이라 onTint 잉크를 쓴다. */
   color: string;
   /** 프레임 창문 안이면 슬롯을 가득 채운다. */
@@ -75,6 +77,7 @@ function SeatTileBase({
   isOwner,
   online,
   lastSeenLabel,
+  bot,
   color,
   fill,
   dragging,
@@ -100,6 +103,14 @@ function SeatTileBase({
     [preview, catalogs],
   );
 
+  /**
+   * 이름 뒤 꼬리 라벨 (#1013). 봇은 "언제 접속했나"가 뜻을 갖지 않으므로
+   * 그 자리를 "봇"이 대신한다 — 폭을 늘리지 않고 가짜 접속 표시도 함께
+   * 없앤다. 어댑터가 봇의 presence를 이미 끊지만(`adapters.ts`), 순수
+   * 컴포넌트로서 prop만 보고도 옳게 그리도록 여기서도 봇을 먼저 본다.
+   */
+  const trailing = bot ? '봇' : !online && lastSeenLabel ? lastSeenLabel : null;
+
   const setRef = useCallback((el: View | null) => registerRef(seatIdx, el), [registerRef, seatIdx]);
   const visit = useCallback(() => onVisit(seatIdx), [onVisit, seatIdx]);
   const lift = useCallback(() => onLongPress(seatIdx), [onLongPress, seatIdx]);
@@ -123,7 +134,8 @@ function SeatTileBase({
         accessibilityRole="button"
         accessibilityLabel={[
           isMine ? `${displayName} (나)` : displayName,
-          online ? '접속 중' : lastSeenLabel && `${lastSeenLabel} 접속`,
+          // 봇은 접속 상태 대신 정체를 읽어준다 (#1013).
+          bot ? '봇' : online ? '접속 중' : lastSeenLabel && `${lastSeenLabel} 접속`,
         ]
           .filter(Boolean)
           .join(', ')}
@@ -180,7 +192,7 @@ function SeatTileBase({
             <View style={styles.roomNameRow}>
               {isOwner ? <CrownPictogram size={12} /> : null}
               {/* 최근 접속(#383) — 초록 점. 은은한 펄스로 "지금 있음" (#450). */}
-              {online ? <OnlineDot color={t.success} /> : null}
+              {online && !bot ? <OnlineDot color={t.success} /> : null}
               <Text
                 // 이름만 줄인다 (#999) — 시간 라벨은 3~5글자로 폭이 거의
                 // 일정해서, 둘 다 줄이면 어느 쪽이 잘릴지 타일마다 달라진다.
@@ -195,14 +207,14 @@ function SeatTileBase({
               {/* 마지막 접속은 이름과 같은 줄에 (#999) — 온라인일 때 초록 점이
                   그렇듯 한 줄로 끝나야 뱃지 높이가 좌석마다 흔들리지 않는다.
                   가운뎃점은 흐린 톤을 같이 받도록 라벨 텍스트에 붙인다. */}
-              {!online && lastSeenLabel ? (
+              {trailing ? (
                 <Text
                   style={[
                     Typography.supporting,
                     styles.lastSeen,
                     { color: preview ? StaticWhite : t.onTint },
                   ]}>
-                  {`· ${lastSeenLabel}`}
+                  {`· ${trailing}`}
                 </Text>
               ) : null}
             </View>

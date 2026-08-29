@@ -871,6 +871,7 @@ export const HouseScreen = memo(function HouseScreen({
         empty={empty}
         isMine={!!room.isMine}
         isOwner={!!room.isOwner}
+        bot={!!room.bot}
         online={!!room.online}
         lastSeenLabel={room.lastSeenLabel}
         color={room.color}
