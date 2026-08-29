@@ -7,6 +7,7 @@
  */
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
+import { StaticWhite } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
 
 export type PictogramName =
@@ -332,7 +333,7 @@ function WaterPictogram({ size = 24, color }: PictogramProps) {
       />
       <Path
         d="M9 14.6 Q9 17 11 17.6"
-        stroke="#FFFFFF"
+        stroke={StaticWhite}
         strokeWidth={1.6}
         strokeLinecap="round"
         opacity={0.85}
