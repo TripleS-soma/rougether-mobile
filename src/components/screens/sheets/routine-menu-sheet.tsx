@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
   sheetHandle: {
     width: 40,
     height: 4,
-    borderRadius: 2,
+    borderRadius: Radius.pill,
     alignSelf: 'center',
     marginBottom: Spacing.one,
   },

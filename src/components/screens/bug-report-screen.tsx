@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
     right: -6,
     width: 20,
     height: 20,
-    borderRadius: 10,
+    borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },

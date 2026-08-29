@@ -710,7 +710,7 @@ const styles = StyleSheet.create({
   },
   dot: {
     height: 8,
-    borderRadius: 4,
+    borderRadius: Radius.pill,
   },
   actions: {
     paddingHorizontal: Spacing.four,

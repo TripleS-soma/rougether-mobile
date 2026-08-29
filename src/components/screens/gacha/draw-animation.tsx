@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 180,
     height: 180,
-    borderRadius: 90,
+    borderRadius: Radius.pill,
   },
   chargeBox: {
     width: 120,
@@ -461,8 +461,14 @@ const styles = StyleSheet.create({
     backgroundColor: StaticWhite,
   },
   ray: { position: 'absolute', width: 5, borderRadius: 3 },
-  burstRing: { position: 'absolute', width: 150, height: 150, borderRadius: 75, borderWidth: 3 },
-  particle: { position: 'absolute', width: 10, height: 10, borderRadius: 5 },
+  burstRing: {
+    position: 'absolute',
+    width: 150,
+    height: 150,
+    borderRadius: Radius.pill,
+    borderWidth: 3,
+  },
+  particle: { position: 'absolute', width: 10, height: 10, borderRadius: Radius.pill },
 
   // 10연 flip reveal (#431)
   flipWrap: { width: 104, height: 158 },

@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
   close: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
   avatar: {
     width: 72,
     height: 72,
-    borderRadius: 36,
+    borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',

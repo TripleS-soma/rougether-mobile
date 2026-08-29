@@ -1265,7 +1265,7 @@ const styles = StyleSheet.create({
   railCircle: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1391,7 +1391,7 @@ const styles = StyleSheet.create({
     zIndex: 20,
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 4,

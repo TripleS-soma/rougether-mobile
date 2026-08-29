@@ -707,7 +707,7 @@ const styles = StyleSheet.create({
   memberAvatar: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
