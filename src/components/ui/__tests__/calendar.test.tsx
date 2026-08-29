@@ -252,4 +252,36 @@ describe('Calendar', () => {
     );
     expect(getByLabelText('2026-08-16, 오늘, 할 일 있음')).toBeTruthy();
   });
+
+  /**
+   * 월말 날짜가 통째로 사라지던 버그 (#1008) — `weeks`가 `cells.length / 7`로
+   * 주 수를 세는데 `Array.from`의 length가 **내림**돼, 7의 배수가 아닌 달은
+   * 마지막 부분 주가 렌더되지 않았다. 2026년 12달 중 9달이 그랬고 7월은 6일이
+   * 빠졌다. `blocks completion on future dates`(my-room-screen)가 8/29(토)에야
+   * 처음 깨진 이유는 **오늘이 잘린 구간에 걸려야만** 드러났기 때문이다.
+   *
+   * 오늘 날짜에 의존하지 않게 `today`를 고정해 달마다 단언한다.
+   */
+  describe('마지막 주를 버리지 않는다 (#1008)', () => {
+    // 2026년의 7의 배수가 아닌 달 — 앞 빈칸 + 일수가 35/42로 안 떨어진다.
+    const CASES: [string, string, string][] = [
+      ['2026-03', '2026-03-15', '2026-03-31'],
+      ['2026-07', '2026-07-15', '2026-07-31'],
+      ['2026-08', '2026-08-16', '2026-08-31'],
+      ['2026-12', '2026-12-15', '2026-12-31'],
+    ];
+    it.each(CASES)('%s 달의 마지막 날이 렌더된다', async (_label, today, lastDay) => {
+      const { getByLabelText } = await render(
+        <Calendar value={today} today={today} onSelect={() => {}} />,
+      );
+      expect(getByLabelText(lastDay)).toBeTruthy();
+    });
+
+    it('그 달의 모든 날짜가 렌더된다 — 31일 달에서 31칸', async () => {
+      const { queryAllByLabelText } = await render(
+        <Calendar value="2026-08-16" today="2026-08-16" onSelect={() => {}} />,
+      );
+      expect(queryAllByLabelText(/^2026-08-\d{2}/)).toHaveLength(31);
+    });
+  });
 });
