@@ -1094,14 +1094,22 @@ describe('API adapters', () => {
  */
 describe('봇에는 접속 표시를 붙이지 않는다 (#1013)', () => {
   const at = (msAgo: number) => new Date(Date.now() - msAgo).toISOString();
-  const member = (over: Record<string, unknown>) =>
-    ({ membershipId: 1, userId: 10, role: 'MEMBER', status: 'ACTIVE', ...over }) as never;
-  const detail = { houseId: 1, name: '테스트 집', maxMembers: 2 } as never;
-
+  // 캐스팅 없이 구조적 타입 검사를 그대로 받는다 (#1014 리뷰) — 스키마가
+  // 바뀌면 런타임이 아니라 컴파일에서 걸려야 한다.
   const seatOf = (bot: boolean) =>
     toHouse(
-      detail,
-      [member({ nickname: bot ? '루나' : '진형', bot, lastAccessedAt: at(1000) })],
+      { houseId: 1, name: '테스트 집', maxMembers: 2 },
+      [
+        {
+          membershipId: 1,
+          userId: 10,
+          nickname: bot ? '루나' : '진형',
+          role: 'MEMBER' as const,
+          status: 'ACTIVE' as const,
+          bot,
+          lastAccessedAt: at(1000),
+        },
+      ],
       99,
     ).floors[0].rooms[0];
 
