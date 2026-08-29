@@ -61,7 +61,9 @@ export type AttendanceCheckInResult = {
  * 에러가 아니라 "이벤트 없음"이므로 호출부(useAttendance)가 null로 접는다.
  */
 export function fetchAttendance() {
-  return apiGet<AttendanceStatus>('/events/attendance');
+  // 404는 정상 경로이므로 api_error로 세지 않는다 (#1010) — 그러지 않으면
+  // "오늘 이벤트 없음"이 장애 통계의 최대 기여자가 된다.
+  return apiGet<AttendanceStatus>('/events/attendance', { expectedStatuses: [404] });
 }
 
 /** POST /events/attendance/check-ins — body 없이 KST 오늘 출석. 멱등. */
