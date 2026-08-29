@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
   sheetItemIcon: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: Radius.xl,
     alignItems: 'center',
     justifyContent: 'center',
   },
