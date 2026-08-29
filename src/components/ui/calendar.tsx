@@ -103,10 +103,18 @@ function CalendarBase({
   const cells = useMemo<(number | null)[]>(() => {
     const firstWeekday = new Date(view.y, view.m, 1).getDay();
     const daysInMonth = new Date(view.y, view.m + 1, 0).getDate();
-    return [
+    const days = [
       ...Array.from({ length: firstWeekday }, () => null),
       ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
     ];
+    /**
+     * 뒤도 7의 배수까지 채운다 (#1008) — 안 채우면 아래 `cells.length / 7`이
+     * **내림**돼 마지막 부분 주가 통째로 사라진다. 2026년 8월은 앞 빈칸 6 +
+     * 31일 = 37칸이라 5주(35칸)만 그려져 **30·31일이 렌더되지 않았다.**
+     * 2026년 12달 중 9달이 같은 상태였고, 7월은 6일이 빠졌다.
+     */
+    const trailing = (7 - (days.length % 7)) % 7;
+    return [...days, ...Array.from({ length: trailing }, () => null)];
   }, [view.y, view.m]);
   /** 7칸씩 주 단위로 자른다 (#845) — 한 줄에 몰아넣고 wrap 시키면 퍼센트 폭
    * 반올림으로 7번째가 다음 줄로 밀린다(맥에서 재현). 줄마다 flex:1이면
