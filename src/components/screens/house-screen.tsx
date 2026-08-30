@@ -47,7 +47,7 @@ import { assetSource } from '@/resources/asset';
 import { houseBackgroundKey } from '@/resources/house-background';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
 import { DEFAULT_HOUSES } from '@/mocks/fixtures';
-import type { Wallpaper } from '@/resources/furniture';
+import { VACANT_FLOOR } from '@/resources/furniture';
 import {
   useAnimatedValue,
   useAnimatedValueXY,
@@ -185,9 +185,6 @@ export type NewHouseMission = {
  */
 const RAIL_TOP_GAP = 106;
 
-const VACANT_FLOOR: Wallpaper[] = [
-  { id: 'vacant-floor', name: '빈방 바닥', price: 0, assetKey: 'vacant-floor', color: '#E7D9BE' },
-];
 // Room이 memo 경계(#539)라 빈방 프리뷰의 prop도 렌더마다 새로 만들지 않는다.
 
 // 커버 프레임 PNG(house-unified-*-frame.png, 3종 공통 567×508)의 투명 창문

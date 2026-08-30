@@ -70,6 +70,18 @@ export function newFreePlacement(item: FurnitureItem, items: PlacedFurniture[]):
 /** Catalog tab a furniture item belongs to (decor screen filter). */
 export type FurnitureCategory = '가구' | '장식' | '러그' | '한옥';
 
+/**
+ * 카테고리별 파스텔 배경 (#1015) — CDN 아트가 없는 슬롯이 서로 구분되게 한다.
+ * 화면(`furniture-placeholder.tsx`)에 있던 것을 카탈로그 옆으로 옮겼다:
+ * 스타일 값이 아니라 **카탈로그 데이터**라 `RARITY_COLORS`와 같은 자리다.
+ */
+export const CATEGORY_COLORS: Record<FurnitureCategory, string> = {
+  가구: '#EADFD0',
+  장식: '#DCE7DA',
+  러그: '#E8DCE4',
+  한옥: '#EEE2CC',
+};
+
 export type FurnitureItem = {
   id: string;
   name: string;
@@ -231,6 +243,15 @@ export const WALLPAPERS: Wallpaper[] = [
 ];
 
 /** 벽지 정보가 없을 때 방 바탕색 (#781) — 크림 벽지와 같은 톤. */
+/**
+ * 빈 좌석의 바닥 (#1015) — 집 화면이 "주인 없는 방"을 그릴 때 쓰는 가짜
+ * 카탈로그 항목이다. `house-screen.tsx`에 있던 것을 진짜 카탈로그 옆으로
+ * 옮겼다 — 값의 성격이 WALLPAPERS와 같다.
+ */
+export const VACANT_FLOOR: Wallpaper[] = [
+  { id: 'vacant-floor', name: '빈방 바닥', price: 0, assetKey: 'vacant-floor', color: '#E7D9BE' },
+];
+
 export const DEFAULT_WALLPAPER_COLOR = '#F3E9D6';
 
 export const DEFAULT_WALLPAPER_ID = 'simple';
