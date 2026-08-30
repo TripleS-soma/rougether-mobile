@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   avatar: {
     width: 96,
     height: 96,
-    borderRadius: 48,
+    borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
   avatar: {
     width: 112,
     height: 112,
-    borderRadius: 56,
+    borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.two,

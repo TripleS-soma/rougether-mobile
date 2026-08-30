@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Spacing, StaticWhite } from '@/constants/theme';
+import { Radius, Spacing, StaticWhite } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
 import { hapticSelection } from '@/utils/haptics';
 
@@ -32,14 +32,14 @@ const styles = StyleSheet.create({
   track: {
     width: 44,
     height: 26,
-    borderRadius: 13,
+    borderRadius: Radius.pill,
     padding: Spacing.half,
     justifyContent: 'center',
   },
   thumb: {
     width: 22,
     height: 22,
-    borderRadius: 11,
+    borderRadius: Radius.pill,
     backgroundColor: StaticWhite,
   },
   thumbOn: {

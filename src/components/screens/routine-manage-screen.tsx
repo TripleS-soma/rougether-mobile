@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
   catDot: {
     width: 28,
     height: 28,
-    borderRadius: 14,
+    borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },

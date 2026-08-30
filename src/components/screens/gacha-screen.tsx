@@ -549,7 +549,7 @@ const styles = StyleSheet.create({
   sheetHandle: {
     width: 40,
     height: 4,
-    borderRadius: 2,
+    borderRadius: Radius.pill,
     alignSelf: 'center',
     marginBottom: Spacing.one,
   },
@@ -580,7 +580,7 @@ const styles = StyleSheet.create({
   rarityDot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
+    borderRadius: Radius.pill,
   },
   screen: { flex: 1 },
   center: { textAlign: 'center' },
