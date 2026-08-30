@@ -6,15 +6,7 @@ import { type StyleProp, StyleSheet, Text, View, type ViewStyle } from 'react-na
 
 import { ROOM_RENDER_CONTRACT } from '@/components/room/room-render-contract';
 import { assetSource, isCdnKey } from '@/resources/asset';
-import { type FurnitureCategory, type FurnitureItem } from '@/resources/furniture';
-
-/** Pastel background per catalog category, so slots read as distinct tiles. */
-const CATEGORY_BG: Record<FurnitureCategory, string> = {
-  가구: '#EADFD0',
-  장식: '#DCE7DA',
-  러그: '#E8DCE4',
-  한옥: '#EEE2CC',
-};
+import { CATEGORY_COLORS, type FurnitureItem } from '@/resources/furniture';
 
 export type FurniturePlaceholderProps = {
   item: FurnitureItem;
@@ -66,7 +58,7 @@ export const FurniturePlaceholder = memo(function FurniturePlaceholder({
   return (
     <View
       accessibilityLabel={item.name}
-      style={[styles.tile, { backgroundColor: CATEGORY_BG[item.category] }, style]}>
+      style={[styles.tile, { backgroundColor: CATEGORY_COLORS[item.category] }, style]}>
       {/* Pastel tile background is fixed regardless of theme — onTint ink. */}
       {showName ? (
         <Text style={[styles.name, emph('semibold'), { color: t.onTint }]} numberOfLines={2}>
