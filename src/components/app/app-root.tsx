@@ -39,6 +39,10 @@ export function AppRoot() {
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
   // 이 세션에서 온보딩을 갓 마쳤는지 — 미션 체인 자동 시작 신호 (#571).
   const [justOnboarded, setJustOnboarded] = useState(false);
+  // 설정 → '튜토리얼 다시 보기'로 되돌아온 세션인지 (#1023). 첫 실행과 다시
+  // 보기는 `onboarded === false`로 같아서 이 플래그 없이는 구분되지 않는다 —
+  // 온보딩의 건너뛰기와 미션 배너의 건너뛰기가 둘 다 이 값으로 열린다.
+  const [replaying, setReplaying] = useState(false);
   const [characterId, setCharacterId] = useState<CharacterId>(DEFAULT_CHARACTER_ID);
   const [serverGoals, setServerGoals] = useState<OnboardingGoal[]>([]);
   // Previously selected goal ids — 온보딩 다시 보기 opens the goal survey as an
@@ -87,8 +91,16 @@ export function AppRoot() {
     void resetOnboarding();
     // 미션 완료/스킵 플래그도 지운다 — 슬라이드 후 체인이 다시 시작 (#571).
     void resetOnboardingMissions();
+    setReplaying(true);
     setOnboarded(false);
   }, []);
+
+  /**
+   * 다시 보기에서 건너뛰기 (#1023) — 슬라이드만 보러 들어왔다 나가는 경로다.
+   * 목표·닉네임·캐릭터는 이미 서버에 있으므로 아무것도 다시 쓰지 않고 화면만
+   * 닫는다. `justOnboarded`를 세우지 않으므로 미션 체인도 시작하지 않는다.
+   */
+  const skipReplay = useCallback(() => setOnboarded(true), []);
 
   // 두 관문(세션 복원 → 온보딩 플래그)이 끝나야 그릴 수 있다. 둘 다 통과하면
   // 스플래시에 알린다 (#847) — 오버레이가 시간이 아니라 이 신호를 기다린다.
@@ -111,6 +123,8 @@ export function AppRoot() {
         initialGoals={selectedGoalIds}
         initialCharacterId={characterId}
         characterFrames={characterFrames}
+        replay={replaying}
+        onSkip={skipReplay}
         onDone={(goals, chosen, nickname) => {
           setCharacterId(chosen);
           setSelectedGoalIds(goals);
@@ -146,6 +160,7 @@ export function AppRoot() {
       characterId={characterId}
       characterFrames={characterFrames}
       startMissions={justOnboarded}
+      missionSkipEnabled={replaying}
       onReplayOnboarding={replayOnboarding}
     />
   );

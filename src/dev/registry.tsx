@@ -673,12 +673,27 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
-    name: 'OnboardingScreen',
+    name: 'OnboardingScreen · 첫 실행',
     description:
-      'Ported from the prototype OnboardingScreen (#4): slides → goals → (캐러셀은 MVP 오프 #637 — 갤러리는 열어 보존 UI 확인) → nickname.',
+      'Ported from the prototype OnboardingScreen (#4): slides → goals → (캐러셀은 MVP 오프 #637 — 갤러리는 열어 보존 UI 확인) → nickname. 첫 실행에는 건너뛰기가 없다 (#1023).',
     render: () => (
       <View style={{ height: 720, alignSelf: 'stretch' }}>
         <OnboardingScreen characterSelectEnabled />
+      </View>
+    ),
+  },
+  {
+    name: 'OnboardingScreen · 다시 보기',
+    description:
+      '설정 → 튜토리얼 다시 보기 진입 (#1023) — 우상단 건너뛰기가 생기고, 누르면 목표 설문이 아니라 온보딩을 끝낸다(여기서는 콘솔 로그).',
+    render: () => (
+      <View style={{ height: 720, alignSelf: 'stretch' }}>
+        <OnboardingScreen
+          characterSelectEnabled
+          replay
+          initialGoals={['exercise']}
+          onSkip={() => console.log('[dev] 온보딩 건너뛰기 — 앱으로 복귀')}
+        />
       </View>
     ),
   },
@@ -1069,8 +1084,19 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
-    name: 'UI · MissionBanner',
-    description: '온보딩 미션 진행 배너 (#571) — 깃발 표식 + 미션 N/4 + 건너뛰기(확인 다이얼로그).',
+    name: 'UI · MissionBanner · 첫 실행',
+    description:
+      '온보딩 미션 진행 배너 (#571) — 깃발 표식 + 미션 N/4. 첫 실행에는 건너뛰기가 없다 (#1023).',
+    render: () => (
+      <View style={{ alignSelf: 'stretch', minHeight: 80 }}>
+        <MissionBanner stepIndex={1} totalSteps={4} label="뽑기 1회 해보기" onPress={() => {}} />
+      </View>
+    ),
+  },
+  {
+    name: 'UI · MissionBanner · 다시 보기',
+    description:
+      '설정 → 튜토리얼 다시 보기로 시작된 체인 (#1023) — 건너뛰기(확인 다이얼로그)가 붙는다.',
     render: () => (
       <View style={{ alignSelf: 'stretch', minHeight: 80 }}>
         <MissionBanner
@@ -1079,6 +1105,7 @@ export const galleryEntries: GalleryEntry[] = [
           label="뽑기 1회 해보기"
           onPress={() => {}}
           onSkip={() => {}}
+          canSkip
         />
       </View>
     ),

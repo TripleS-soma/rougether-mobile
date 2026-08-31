@@ -33,6 +33,7 @@ describe('MissionBanner (#571)', () => {
         label="첫 루틴 등록하기"
         onPress={jest.fn()}
         onSkip={onSkip}
+        canSkip
       />,
     );
     await fireEvent.press(getByLabelText('미션 건너뛰기'));
@@ -46,12 +47,29 @@ describe('MissionBanner (#571)', () => {
   it('취소하면 onSkip 없이 다이얼로그만 닫힌다', async () => {
     const onSkip = jest.fn();
     const { getByLabelText, queryByText } = await render(
-      <MissionBanner stepIndex={0} totalSteps={4} label="첫 루틴 등록하기" onSkip={onSkip} />,
+      <MissionBanner
+        stepIndex={0}
+        totalSteps={4}
+        label="첫 루틴 등록하기"
+        onSkip={onSkip}
+        canSkip
+      />,
     );
     await fireEvent.press(getByLabelText('미션 건너뛰기'));
     await fireEvent.press(getByLabelText('취소'));
     expect(onSkip).not.toHaveBeenCalled();
     expect(queryByText('미션을 건너뛸까요?')).toBeNull();
+  });
+
+  // #1023 — 첫 실행에는 체인을 빠져나갈 출구를 두지 않는다. 건너뛰기는 설정
+  // → 튜토리얼 다시 보기로 되돌린 체인에서만 붙는다.
+  it('기본값(첫 실행)에는 건너뛰기가 없다 (#1023)', async () => {
+    const { queryByLabelText, getByText } = await render(
+      <MissionBanner stepIndex={0} totalSteps={4} label="첫 루틴 등록하기" onSkip={jest.fn()} />,
+    );
+    expect(queryByLabelText('미션 건너뛰기')).toBeNull();
+    // 배너 자체는 그대로 — 사라지는 게 아니라 출구만 없다.
+    expect(getByText('첫 루틴 등록하기')).toBeTruthy();
   });
 
   it('탭 어포던스 문구를 보여준다 (#571 후속)', async () => {
