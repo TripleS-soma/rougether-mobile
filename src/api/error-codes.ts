@@ -16,6 +16,12 @@ export const ErrorCode = {
   ROOM_COBWEB_NOT_ACTIVE: 'ROOM_COBWEB_NOT_ACTIVE',
   /** 409 — 다른 기기가 먼저 저장 (PUT /rooms/me/layout, #327). */
   ROOM_LAYOUT_REVISION_CONFLICT: 'ROOM_LAYOUT_REVISION_CONFLICT',
+  /**
+   * 400 — 동거 봇에게 방장을 위임하려 함 (POST /houses/{id}/transfer-ownership, #1013).
+   * 구성원 화면이 봇을 목록에서 빼므로 평시엔 안 나지만, 목록이 낡은 사이
+   * 탭하면 도달한다 — 그때 "실패했어요"만 뜨면 이유를 알 수 없다.
+   */
+  HOUSE_OWNER_TRANSFER_TO_BOT: 'HOUSE_OWNER_TRANSFER_TO_BOT',
   /** 409 — 이미 입주 신청 중 (POST /houses/{id}/join-requests). */
   HOUSE_JOIN_REQUEST_ALREADY_PENDING: 'HOUSE_JOIN_REQUEST_ALREADY_PENDING',
   /**

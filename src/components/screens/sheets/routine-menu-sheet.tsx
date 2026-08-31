@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
   sheetHandle: {
     width: 40,
     height: 4,
-    borderRadius: 2,
+    borderRadius: Radius.pill,
     alignSelf: 'center',
     marginBottom: Spacing.one,
   },
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
   sheetItemIcon: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: Radius.xl,
     alignItems: 'center',
     justifyContent: 'center',
   },

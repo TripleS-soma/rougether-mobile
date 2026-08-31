@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
   iconBtn: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: Radius.xl,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
   catDot: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
   rowBtn: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },

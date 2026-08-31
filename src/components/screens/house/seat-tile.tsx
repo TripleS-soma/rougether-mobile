@@ -26,6 +26,8 @@ export type SeatTileProps = {
   isOwner: boolean;
   online: boolean;
   lastSeenLabel?: string;
+  /** 동거 봇 (서버 #309) — 접속 자리를 "봇"이 대신한다 (#1013). */
+  bot?: boolean;
   /** 좌석 배경 틴트 — 다크에서도 고정 파스텔이라 onTint 잉크를 쓴다. */
   color: string;
   /** 프레임 창문 안이면 슬롯을 가득 채운다. */
@@ -75,6 +77,7 @@ function SeatTileBase({
   isOwner,
   online,
   lastSeenLabel,
+  bot,
   color,
   fill,
   dragging,
@@ -100,6 +103,27 @@ function SeatTileBase({
     [preview, catalogs],
   );
 
+  /**
+   * 현재 상태 하나로 화면 문구와 접근성 라벨을 **둘 다** 파생시킨다 (#1013 리뷰).
+   * 우선순위(봇 > 접속 중 > 마지막 접속)를 두 군데에 적으면, 나중에 순서를
+   * 바꿀 때 한쪽만 고쳐 보이는 것과 읽히는 것이 어긋난다.
+   *
+   * 봇은 "언제 접속했나"가 뜻을 갖지 않으므로 그 자리를 정체가 대신한다 —
+   * 폭을 늘리지 않고 가짜 접속 표시도 함께 없앤다. 어댑터가 봇의 presence를
+   * 이미 끊지만(`adapters.ts`), 순수 컴포넌트로서 prop만 보고도 옳게 그린다.
+   */
+  const presence = bot ? 'bot' : online ? 'online' : lastSeenLabel ? 'lastSeen' : 'none';
+  /** 이름 뒤에 붙는 꼬리 문구 — 접속 중일 땐 초록 점이 대신하므로 비운다. */
+  const trailing = presence === 'bot' ? '봇' : presence === 'lastSeen' ? lastSeenLabel : null;
+  const presenceLabel =
+    presence === 'bot'
+      ? '봇'
+      : presence === 'online'
+        ? '접속 중'
+        : presence === 'lastSeen'
+          ? `${lastSeenLabel} 접속`
+          : null;
+
   const setRef = useCallback((el: View | null) => registerRef(seatIdx, el), [registerRef, seatIdx]);
   const visit = useCallback(() => onVisit(seatIdx), [onVisit, seatIdx]);
   const lift = useCallback(() => onLongPress(seatIdx), [onLongPress, seatIdx]);
@@ -121,10 +145,7 @@ function SeatTileBase({
         onPressOut={onPressOut}
         disabled={empty}
         accessibilityRole="button"
-        accessibilityLabel={[
-          isMine ? `${displayName} (나)` : displayName,
-          online ? '접속 중' : lastSeenLabel && `${lastSeenLabel} 접속`,
-        ]
+        accessibilityLabel={[isMine ? `${displayName} (나)` : displayName, presenceLabel]
           .filter(Boolean)
           .join(', ')}
         accessibilityHint={
@@ -180,7 +201,7 @@ function SeatTileBase({
             <View style={styles.roomNameRow}>
               {isOwner ? <CrownPictogram size={12} /> : null}
               {/* 최근 접속(#383) — 초록 점. 은은한 펄스로 "지금 있음" (#450). */}
-              {online ? <OnlineDot color={t.success} /> : null}
+              {presence === 'online' ? <OnlineDot color={t.success} /> : null}
               <Text
                 // 이름만 줄인다 (#999) — 시간 라벨은 3~5글자로 폭이 거의
                 // 일정해서, 둘 다 줄이면 어느 쪽이 잘릴지 타일마다 달라진다.
@@ -195,14 +216,14 @@ function SeatTileBase({
               {/* 마지막 접속은 이름과 같은 줄에 (#999) — 온라인일 때 초록 점이
                   그렇듯 한 줄로 끝나야 뱃지 높이가 좌석마다 흔들리지 않는다.
                   가운뎃점은 흐린 톤을 같이 받도록 라벨 텍스트에 붙인다. */}
-              {!online && lastSeenLabel ? (
+              {trailing ? (
                 <Text
                   style={[
                     Typography.supporting,
                     styles.lastSeen,
                     { color: preview ? StaticWhite : t.onTint },
                   ]}>
-                  {`· ${lastSeenLabel}`}
+                  {`· ${trailing}`}
                 </Text>
               ) : null}
             </View>

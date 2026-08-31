@@ -4,7 +4,7 @@ import { AppearancePreview } from '@/components/screens/settings/appearance-prev
 import { PickerRow, pickerStyles } from '@/components/screens/settings/picker-row';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import type { CharacterId } from '@/constants/characters';
-import { DEFAULT_THEME_ID, type ThemeId, THEME_OPTIONS } from '@/constants/theme';
+import { DEFAULT_THEME_ID, Radius, THEME_OPTIONS, type ThemeId } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens } from '@/hooks/use-tokens';
@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
   swatch: {
     width: 28,
     height: 28,
-    borderRadius: 14,
+    borderRadius: Radius.pill,
     borderWidth: StyleSheet.hairlineWidth,
   },
 });

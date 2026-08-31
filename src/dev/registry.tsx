@@ -49,7 +49,9 @@ import { AttendanceSheet } from '@/components/screens/sheets/attendance-sheet';
 import { ActivityStrip } from '@/components/screens/house/activity-strip';
 import { shiftIso, todayIso } from '@/utils/datetime';
 import { Calendar } from '@/components/ui/calendar';
+import { RecommendationSection } from '@/components/screens/my-room/recommendation-section';
 import { WeeklyReportPanel } from '@/components/screens/my-room/weekly-report-panel';
+import type { RecommendationItem } from '@/api';
 import { CoachMarkOverlay } from '@/components/ui/coach-mark';
 import { Card } from '@/components/ui/card';
 import { IconButton } from '@/components/ui/icon-button';
@@ -117,6 +119,44 @@ function WalletHistorySheetDemo() {
  * 출석 시트 데모 (#851) — 실제로 출석이 되게 해서 도장·코인·카운트업 연출을
  * 갤러리에서 확인할 수 있다. 10일차를 채우면 트로피 리빌까지 이어진다.
  */
+/** 조정 추천 섹션 데모 (#1006) — 적용/무시로 카드가 실제로 빠지는 걸 본다. */
+function RecommendationSectionDemo() {
+  const [items, setItems] = useState<RecommendationItem[]>([
+    {
+      recommendationId: 1,
+      type: 'ADJUST_DAYS',
+      message:
+        '『아침 러닝』 수요일 수행이 3주 연속 실패했어요. 수요일을 빼고 나머지 요일에 집중해 보면 어떨까요?',
+      routineId: 42,
+      originRoutineId: 42,
+      routineTitle: '아침 러닝',
+      proposal: { repeatType: 'WEEKLY', daysOfWeek: ['MON', 'FRI'] },
+      expiresAt: '2026-09-05T00:00:00',
+    },
+    {
+      recommendationId: 2,
+      type: 'ADJUST_DAYS',
+      message:
+        '『독서 30분』이 2주째 완료율 40% 아래예요. 잘 지켜지는 요일 3개로 줄여보면 어떨까요?',
+      routineId: 77,
+      routineTitle: '독서 30분',
+      proposal: { repeatType: 'WEEKLY', daysOfWeek: ['TUE', 'THU', 'SAT'] },
+      expiresAt: '2026-08-31T00:00:00',
+    },
+  ]);
+  const remove = (id: number) => setItems((prev) => prev.filter((r) => r.recommendationId !== id));
+  return (
+    <RecommendationSection
+      items={items}
+      onAccept={remove}
+      onDismiss={remove}
+      // 42는 월·수·금 루틴 — 카드가 '월 수 금 → 월 금'을 그린다.
+      currentDaysById={{ 42: [1, 3, 5] }}
+      now={new Date('2026-08-31T09:00:00')}
+    />
+  );
+}
+
 function AttendanceSheetDemo() {
   const [open, setOpen] = useState(false);
   const [streak, setStreak] = useState(3);
@@ -633,12 +673,27 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
-    name: 'OnboardingScreen',
+    name: 'OnboardingScreen · 첫 실행',
     description:
-      'Ported from the prototype OnboardingScreen (#4): slides → goals → (캐러셀은 MVP 오프 #637 — 갤러리는 열어 보존 UI 확인) → nickname.',
+      'Ported from the prototype OnboardingScreen (#4): slides → goals → (캐러셀은 MVP 오프 #637 — 갤러리는 열어 보존 UI 확인) → nickname. 첫 실행에는 건너뛰기가 없다 (#1023).',
     render: () => (
       <View style={{ height: 720, alignSelf: 'stretch' }}>
         <OnboardingScreen characterSelectEnabled />
+      </View>
+    ),
+  },
+  {
+    name: 'OnboardingScreen · 다시 보기',
+    description:
+      '설정 → 튜토리얼 다시 보기 진입 (#1023) — 우상단 건너뛰기가 생기고, 누르면 목표 설문이 아니라 온보딩을 끝낸다(여기서는 콘솔 로그).',
+    render: () => (
+      <View style={{ height: 720, alignSelf: 'stretch' }}>
+        <OnboardingScreen
+          characterSelectEnabled
+          replay
+          initialGoals={['exercise']}
+          onSkip={() => console.log('[dev] 온보딩 건너뛰기 — 앱으로 복귀')}
+        />
       </View>
     ),
   },
@@ -925,6 +980,12 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
+    name: 'RecommendationSection',
+    description:
+      'AI 조정 추천 카드 (#1006) — 주간회고 탭 하단. 적용하기는 확인 다이얼로그를 한 번 거친다.',
+    render: () => <RecommendationSectionDemo />,
+  },
+  {
     name: 'Calendar',
     description: 'Pure-JS month-grid date picker used by the duration sheet (#5).',
     render: () => (
@@ -1023,8 +1084,19 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
-    name: 'UI · MissionBanner',
-    description: '온보딩 미션 진행 배너 (#571) — 깃발 표식 + 미션 N/4 + 건너뛰기(확인 다이얼로그).',
+    name: 'UI · MissionBanner · 첫 실행',
+    description:
+      '온보딩 미션 진행 배너 (#571) — 깃발 표식 + 미션 N/4. 첫 실행에는 건너뛰기가 없다 (#1023).',
+    render: () => (
+      <View style={{ alignSelf: 'stretch', minHeight: 80 }}>
+        <MissionBanner stepIndex={1} totalSteps={4} label="뽑기 1회 해보기" onPress={() => {}} />
+      </View>
+    ),
+  },
+  {
+    name: 'UI · MissionBanner · 다시 보기',
+    description:
+      '설정 → 튜토리얼 다시 보기로 시작된 체인 (#1023) — 건너뛰기(확인 다이얼로그)가 붙는다.',
     render: () => (
       <View style={{ alignSelf: 'stretch', minHeight: 80 }}>
         <MissionBanner
@@ -1033,6 +1105,7 @@ export const galleryEntries: GalleryEntry[] = [
           label="뽑기 1회 해보기"
           onPress={() => {}}
           onSkip={() => {}}
+          canSkip
         />
       </View>
     ),

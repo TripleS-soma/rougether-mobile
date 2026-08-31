@@ -41,6 +41,7 @@ export * from './masters';
 export * from './onboarding';
 export * from './me';
 export * from './notifications';
+export * from './recommendations';
 export * from './reports';
 export * from './rooms';
 export * from './invites';

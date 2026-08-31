@@ -656,8 +656,11 @@ export function useHouses() {
         await transferHouseOwnership(houseId, membershipId);
         toast('방장을 위임했어요', 'success');
         await reloadHouse(houseId);
-      } catch {
-        toast('방장 위임에 실패했어요', 'error');
+      } catch (err) {
+        // 봇에게 위임은 서버가 막는다 (#1013) — UI가 목록에서 빼지만 목록이
+        // 낡은 사이 탭하면 도달한다. 이유 없는 실패로 두지 않는다.
+        const toBot = err instanceof ApiError && err.code === ErrorCode.HOUSE_OWNER_TRANSFER_TO_BOT;
+        toast(toBot ? '봇에게는 방장을 위임할 수 없어요' : '방장 위임에 실패했어요', 'error');
       }
     },
     [toast, reloadHouse],

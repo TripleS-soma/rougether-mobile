@@ -30,8 +30,7 @@ import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { formatDate, formatTime } from '@/utils/datetime';
-
-const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
+import { WEEKDAY_LABELS as DAYS } from '@/constants/routines';
 
 const REPEAT_OPTIONS: { id: RepeatKind; label: string }[] = [
   { id: 'daily', label: '매일' },
@@ -611,7 +610,7 @@ const styles = StyleSheet.create({
   iconBtn: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: Radius.xl,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -703,7 +702,7 @@ const styles = StyleSheet.create({
   infoIcon: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },

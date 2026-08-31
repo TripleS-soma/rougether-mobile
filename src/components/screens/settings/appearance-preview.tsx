@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
   avatar: {
     width: 34,
     height: 34,
-    borderRadius: 17,
+    borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
   dayCircle: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },

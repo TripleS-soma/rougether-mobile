@@ -29,6 +29,15 @@ export const VISIBILITY_ICONS: Record<CategoryVisibility, PictogramName> = {
   private: 'lock',
 };
 
+/**
+ * 요일 라벨 — 일요일 시작. 달력 머리글·루틴 요일 칩·조정 추천 카드(#1006)가
+ * 같은 순서를 써야 눈이 같은 자리를 찾는다.
+ */
+export const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'] as const;
+
+/** 서버 요일 토큰 — 인덱스가 `WEEKDAY_LABELS`와 맞는다(일요일 0). */
+export const DAY_CODES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'] as const;
+
 /** Color palette assigned to newly created categories (cycled by index). */
 export const CATEGORY_COLORS = [
   '#E8A87C',

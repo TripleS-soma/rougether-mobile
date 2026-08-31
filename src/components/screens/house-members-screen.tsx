@@ -635,7 +635,7 @@ const styles = StyleSheet.create({
   iconBtn: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: Radius.xl,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -707,7 +707,7 @@ const styles = StyleSheet.create({
   memberAvatar: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },

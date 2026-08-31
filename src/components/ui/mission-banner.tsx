@@ -17,12 +17,18 @@ export type MissionBannerProps = {
   onPress?: () => void;
   /** 건너뛰기 확정(확인 다이얼로그 통과) — 체인 전체 스킵. */
   onSkip?: () => void;
+  /**
+   * 건너뛰기 노출 (#1023) — 설정 → '튜토리얼 다시 보기'로 시작된 체인에서만
+   * 켠다. 첫 실행에는 출구를 두지 않는다는 결정이라 **기본값은 꺼짐**이다.
+   */
+  canSkip?: boolean;
 };
 
 /**
  * 온보딩 미션 진행 배너 (#571) — 관련 화면 상단에 셸이 띄우는 오버레이.
  * 탭하면 현재 미션 화면으로 이동하고, 우측 건너뛰기는 확인 다이얼로그를
- * 거쳐 체인 전체를 스킵한다. 상태는 전부 prop — 다이얼로그 개폐만 로컬.
+ * 거쳐 체인 전체를 스킵한다. 건너뛰기는 다시 보기 경로에서만 켜진다(#1023).
+ * 상태는 전부 prop — 다이얼로그 개폐만 로컬.
  */
 export function MissionBanner({
   stepIndex,
@@ -30,6 +36,7 @@ export function MissionBanner({
   label,
   onPress,
   onSkip,
+  canSkip = false,
 }: MissionBannerProps) {
   const t = useTokens();
   const Typography = useTypography();
@@ -62,13 +69,15 @@ export function MissionBanner({
             </Text>
           </View>
         </Pressable>
-        <Pressable
-          onPress={() => setConfirming(true)}
-          accessibilityRole="button"
-          accessibilityLabel="미션 건너뛰기"
-          hitSlop={8}>
-          <Text style={[Typography.supporting, { color: t.textMuted }]}>건너뛰기</Text>
-        </Pressable>
+        {canSkip ? (
+          <Pressable
+            onPress={() => setConfirming(true)}
+            accessibilityRole="button"
+            accessibilityLabel="미션 건너뛰기"
+            hitSlop={8}>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>건너뛰기</Text>
+          </Pressable>
+        ) : null}
       </View>
 
       <ConfirmDialog

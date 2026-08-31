@@ -1588,7 +1588,7 @@ const styles = StyleSheet.create({
   iconBtn: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: Radius.xl,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1632,7 +1632,7 @@ const styles = StyleSheet.create({
   toolBtn: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1677,7 +1677,7 @@ const styles = StyleSheet.create({
   closeBtn: {
     width: 28,
     height: 28,
-    borderRadius: 14,
+    borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },

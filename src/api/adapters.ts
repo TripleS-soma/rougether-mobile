@@ -18,6 +18,7 @@ import {
 } from '@/constants/theme';
 import {
   CATEGORY_COLORS,
+  DAY_CODES,
   type CategoryVisibility,
   type NewRoutine,
   type RepeatKind,
@@ -100,8 +101,6 @@ import type {
 } from './types';
 
 // Weekday code by app day number (0 = Sunday … 6 = Saturday).
-const DAY_CODES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'] as const;
-
 const dayNumToCode = (n: number) => DAY_CODES[n];
 const dayCodeToNum = (code: string) => DAY_CODES.indexOf(code as (typeof DAY_CODES)[number]);
 
@@ -760,7 +759,14 @@ export function toHouse(
     userId: m.userId,
     // 동거 봇 (서버 #309) — 구성원 화면이 배지로 구분한다.
     bot: m.bot,
-    ...toPresence(m.lastAccessedAt, nowMs),
+    /**
+     * **봇에는 접속 표시를 붙이지 않는다** (#1013). 서버 스케줄러가 봇의
+     * `lastAccessedAt`을 갱신하기 때문에, 그대로 통과시키면 좌석 타일에
+     * "● 접속 중"이나 "1시간 전"이 떠서 **봇이 사람보다 활발해 보인다.**
+     * 그건 사람의 접속과 뜻이 다른 값이라 같은 모양으로 보이면 거짓말이다.
+     * 좌석 타일은 비워진 이 자리에 "봇"을 대신 넣는다.
+     */
+    ...(m.bot ? {} : toPresence(m.lastAccessedAt, nowMs)),
   }));
   // Pad to the capacity so the house always shows 정원 seats; the server keeps
   // maxMembers >= headcount, but clamp anyway so a stale detail can't drop rooms.
