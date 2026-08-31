@@ -18,6 +18,7 @@ import {
 } from '@/constants/theme';
 import {
   CATEGORY_COLORS,
+  DAY_CODES,
   type CategoryVisibility,
   type NewRoutine,
   type RepeatKind,
@@ -100,8 +101,6 @@ import type {
 } from './types';
 
 // Weekday code by app day number (0 = Sunday … 6 = Saturday).
-const DAY_CODES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'] as const;
-
 const dayNumToCode = (n: number) => DAY_CODES[n];
 const dayCodeToNum = (code: string) => DAY_CODES.indexOf(code as (typeof DAY_CODES)[number]);
 

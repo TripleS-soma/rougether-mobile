@@ -1,6 +1,10 @@
 import { useMemo, type ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import {
+  RecommendationSection,
+  type RecommendationSectionProps,
+} from '@/components/screens/my-room/recommendation-section';
 import { Loading } from '@/components/ui/loading';
 import { SpringProgressBar } from '@/components/ui/spring-progress';
 import { Radius, Spacing } from '@/constants/theme';
@@ -30,6 +34,12 @@ function shortDate(iso?: string) {
 export type WeeklyReportPanelProps = {
   report?: WeeklyReportDetailResponse | null;
   loading?: boolean;
+  /**
+   * AI 조정 추천 (#1006) — 회고 본문 아래에 붙는다. **회고가 없어도 이것만으로
+   * 패널이 선다**: 추천은 회고와 같은 일요일 사이클로 도는데, 회고가 아직 없는
+   * 주에 추천만 생기면 보여줄 자리가 사라지기 때문이다.
+   */
+  recommendations?: RecommendationSectionProps;
 };
 
 /**
@@ -47,7 +57,7 @@ export type WeeklyReportPanelProps = {
  *
  * 순수/prop 기반 — 데이터 로딩은 useWeeklyReport가 한다.
  */
-export function WeeklyReportPanel({ report, loading }: WeeklyReportPanelProps) {
+export function WeeklyReportPanel({ report, loading, recommendations }: WeeklyReportPanelProps) {
   const t = useTokens();
   const Typography = useTypography();
   const emph = useFontEmphasis();
@@ -85,16 +95,23 @@ export function WeeklyReportPanel({ report, loading }: WeeklyReportPanelProps) {
   // 늘어놓는 대신 접고 이유를 밝힌다.
   const hasText = report?.status !== 'FALLBACK';
 
+  const recommendationSection = recommendations ? (
+    <RecommendationSection {...recommendations} />
+  ) : null;
+
   if (loading || !report) {
     return (
-      <View style={styles.stateBlock}>
-        {loading ? (
-          <Loading />
-        ) : (
-          <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
-            아직 회고가 없어요.
-          </Text>
-        )}
+      <View style={styles.body}>
+        <View style={styles.stateBlock}>
+          {loading ? (
+            <Loading />
+          ) : (
+            <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
+              아직 회고가 없어요.
+            </Text>
+          )}
+        </View>
+        {recommendationSection}
       </View>
     );
   }
@@ -145,6 +162,8 @@ export function WeeklyReportPanel({ report, loading }: WeeklyReportPanelProps) {
           이번 주는 회고 문구를 만들지 못해 통계만 보여드려요.
         </Text>
       )}
+
+      {recommendationSection}
     </View>
   );
 }
