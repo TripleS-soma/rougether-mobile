@@ -8,8 +8,7 @@ import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
 import { horizontalFlingGesture } from '@/utils/gesture';
 import { useAnimatedValue, useAnimatedValueXY, useLatestRef } from '@/hooks/use-stable-value';
-
-const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+import { WEEKDAY_LABELS as WEEKDAYS } from '@/constants/routines';
 
 // 선택 원 지름 — 원 배치 계산과 스타일이 공유하는 단일 출처.
 const SEL_SIZE = 34;

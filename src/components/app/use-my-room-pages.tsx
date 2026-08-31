@@ -13,6 +13,7 @@ import type { useMissionLinks } from '@/components/app/use-mission-links';
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
 import { CategoryManageScreen } from '@/components/screens/category-manage-screen';
 import { type CalendarDayItem, type MyRoomScreenProps } from '@/components/screens/my-room-screen';
+import { useRecommendations } from '@/hooks/use-recommendations';
 import { useWeeklyReport } from '@/hooks/use-weekly-report';
 import { NotificationListScreen } from '@/components/screens/notification-list-screen';
 import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
@@ -24,7 +25,7 @@ import { useRoutineOrder } from '@/hooks/use-routine-order';
 import { useWalletHistory } from '@/hooks/use-wallet-history';
 import { reportAppOpen } from '@/lib/app-open';
 import { onNotificationReceived, onNotificationTap } from '@/lib/push-events';
-import type { ShopCatalogue } from '@/api/adapters';
+import { toServerItemId, type ShopCatalogue } from '@/api/adapters';
 
 type MyRoomData = ReturnType<typeof useMyRoomData>;
 type MissionLinks = ReturnType<typeof useMissionLinks>;
@@ -299,6 +300,31 @@ export function useMyRoomPages({
     weeklyReport.markRead();
   }, [weeklyReport]);
 
+  // AI 조정 추천 (#1006) — 수락은 서버에서 루틴 버전을 분기시켜 **id가 바뀌므로**
+  // 응답을 부분 반영하지 않고 루틴 데이터를 통째로 다시 받는다. 완료 기록
+  // (`completions`)이 옛 id에 매달려 오늘 표시가 사라지는 걸 막는 값이 크다.
+  const recommendations = useRecommendations({ onAccepted: reloadMyRoom });
+  // 카드의 '월 수 금 → 월 금'을 그리려면 변경 **전** 요일이 필요한데 추천
+  // 응답에는 제안(후) 값만 있다 — 서버 루틴 id로 현재 루틴을 되짚는다.
+  const currentDaysById = useMemo(() => {
+    const out: Record<number, number[] | undefined> = {};
+    for (const r of routines) {
+      if (r.kind === 'todo' || !r.days?.length) continue;
+      out[toServerItemId(r.id)] = r.days;
+    }
+    return out;
+  }, [routines]);
+  const recommendationProps = useMemo(
+    () => ({
+      items: recommendations.items,
+      pendingId: recommendations.pendingId,
+      onAccept: (id: number) => void recommendations.accept(id),
+      onDismiss: (id: number) => void recommendations.dismiss(id),
+      currentDaysById,
+    }),
+    [recommendations, currentDaysById],
+  );
+
   /** 탭 페이저의 나의 방 페이지 prop — `<MyRoomScreen {...tabProps} />`. */
   const tabProps = {
     userName: nickname,
@@ -331,6 +357,7 @@ export function useMyRoomPages({
         }
       : undefined,
     onOpenWeeklyReport: openWeeklyReport,
+    recommendations: recommendationProps,
     attendance: attendance.attendance,
     onOpenAttendance: attendance.onOpenAttendance,
     furniture: room.catalogue.furniture,

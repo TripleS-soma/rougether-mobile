@@ -990,6 +990,40 @@ describe('MyRoomScreen', () => {
     expect(queryByText('주간회고')).toBeNull();
   });
 
+  /**
+   * 조정 추천 (#1006) — 추천과 회고는 같은 일요일 사이클로 도는데, 회고만
+   * 탭의 조건이면 회고가 아직 없는 주의 제안은 닿을 자리가 없다.
+   */
+  it('회고가 없어도 조정 제안이 있으면 주간회고 탭이 열린다 (#1006)', async () => {
+    const onAccept = jest.fn();
+    const { getByText, getByLabelText } = await render(
+      <ToastProvider>
+        <MyRoomScreen
+          userName="준서"
+          routines={[]}
+          recommendations={{
+            items: [
+              {
+                recommendationId: 1,
+                message: '수요일을 빼보면 어떨까요?',
+                routineTitle: '아침 러닝',
+                proposal: { repeatType: 'WEEKLY', daysOfWeek: ['MON', 'FRI'] },
+              },
+            ],
+            onAccept,
+            onDismiss: jest.fn(),
+          }}
+        />
+      </ToastProvider>,
+    );
+    // 점 라벨이 이유를 말한다 — 회고가 아니라 제안이 왔다.
+    expect(getByLabelText('주간회고, 새 제안')).toBeTruthy();
+
+    await fireEvent.press(getByText('주간회고'));
+    expect(getByText('아직 회고가 없어요.')).toBeTruthy();
+    expect(getByText('수요일을 빼보면 어떨까요?')).toBeTruthy();
+  });
+
   it('회고가 있으면 탭을 그리고 열면 본문을 보여준다 (#856)', async () => {
     const onOpenWeeklyReport = jest.fn();
     const { getByText } = await render(

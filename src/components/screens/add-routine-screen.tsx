@@ -30,8 +30,7 @@ import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { formatDate, formatTime } from '@/utils/datetime';
-
-const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
+import { WEEKDAY_LABELS as DAYS } from '@/constants/routines';
 
 const REPEAT_OPTIONS: { id: RepeatKind; label: string }[] = [
   { id: 'daily', label: '매일' },
