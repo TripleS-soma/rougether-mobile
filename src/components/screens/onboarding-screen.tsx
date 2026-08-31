@@ -108,6 +108,18 @@ export type OnboardingScreenProps = {
    * 첫 포즈를 재생하는 데 쓴다 — 없으면(오프라인 등) 번들 정적 포즈로 폴백.
    */
   characterFrames?: Partial<Record<CharacterId, string[]>>;
+  /**
+   * 설정 → '튜토리얼 다시 보기'로 들어왔는가 (#1023). 첫 실행과 다시 보기는
+   * 앱 상태가 똑같아서(`app-root`가 `onboarded`만 false로 되돌린다) 화면이
+   * 스스로는 구분할 수 없다 — 건너뛰기 노출을 가르는 값이라 명시적으로 받는다.
+   */
+  replay?: boolean;
+  /**
+   * 다시 보기에서 건너뛰기 (#1023) — 목표 설문으로 넘어가는 게 아니라 온보딩을
+   * 끝내고 앱으로 돌아간다. 이미 저장된 목표·닉네임은 건드리지 않는다.
+   * `replay`가 아닐 때는 버튼 자체가 없으므로 호출되지 않는다.
+   */
+  onSkip?: () => void;
 };
 
 /** 받침 유무에 따른 '이랑/랑' — CTA "OO(이)랑 함께하기" (#589). */
@@ -130,6 +142,8 @@ export function OnboardingScreen({
   initialGoals,
   initialCharacterId,
   characterFrames,
+  replay = false,
+  onSkip,
 }: OnboardingScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
@@ -463,9 +477,15 @@ export function OnboardingScreen({
   // 넘긴다. 왼쪽으로 밀면 다음(마지막 장에서는 목표 선택), 오른쪽은 이전.
   return (
     <View style={[styles.screen, screenStyle]}>
+      {/* 건너뛰기는 '다시 보기'로 들어온 사람에게만 (#1023) — 처음 온 사람이
+          소개를 지나치지 않게 한다. 빈 줄은 남겨 두 경로의 레이아웃을 맞춘다. */}
       <View style={styles.skipRow}>
-        {!isLast ? (
-          <Pressable onPress={() => setShowGoalSurvey(true)} accessibilityRole="button">
+        {replay && !isLast ? (
+          <Pressable
+            onPress={onSkip}
+            accessibilityRole="button"
+            accessibilityLabel="튜토리얼 건너뛰고 나가기"
+            hitSlop={8}>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>건너뛰기</Text>
           </Pressable>
         ) : null}

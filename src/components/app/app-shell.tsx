@@ -61,6 +61,11 @@ export type AppShellProps = {
   /** 온보딩을 방금 마쳤음 — 온보딩 미션 체인을 시작한다 (#571, 구 코치마크 #351). */
   startMissions?: boolean;
   /**
+   * 미션 배너에 건너뛰기를 노출할지 (#1023) — 설정 → '튜토리얼 다시 보기'로
+   * 다시 돈 체인에서만 켠다. 첫 실행에는 출구를 두지 않는다.
+   */
+  missionSkipEnabled?: boolean;
+  /**
    * 마스터 `/characters` 프레임 맵. 친구 방이 친구 캐릭터를 **내 방과 같은 그림**으로
    * 그리는 데 쓴다 (#968) — 친구 방 응답에는 `poses[]`가 없어 앱이 가진 마스터가
    * 유일한 출처다. 루트가 이미 받아둔 값이라 추가 요청은 없다.
@@ -99,6 +104,7 @@ export function AppShell({
   characterId = DEFAULT_CHARACTER_ID,
   onReplayOnboarding,
   startMissions = false,
+  missionSkipEnabled = false,
   characterFrames = NO_CHARACTER_FRAMES,
 }: AppShellProps) {
   // 집 하늘 연출용 현재 비 여부 (#360) — 서울 고정, 30분 캐시.
@@ -612,6 +618,7 @@ export function AppShell({
             if (id) openMissionScreen(id);
           }}
           onSkip={missions.skip}
+          canSkip={missionSkipEnabled}
         />
       ) : null}
 

@@ -159,7 +159,7 @@ describe('AppShell — 온보딩 미션 체인 (#571)', () => {
 
     const on = await render(
       <AuthProvider>
-        <AppShell startMissions />
+        <AppShell startMissions missionSkipEnabled />
       </AuthProvider>,
     );
     await waitFor(() => on.getByTestId('mission-banner'));
@@ -168,6 +168,19 @@ describe('AppShell — 온보딩 미션 체인 (#571)', () => {
     await waitFor(() => expect(on.queryByTestId('mission-banner')).toBeNull());
     // 스킵 플래그 영속 — 다음 시작에 다시 시작하지 않는다.
     expect(await AsyncStorage.getItem('rougether.onboarding-missions.v1')).toBe('skipped');
+  });
+
+  // #1023 — 첫 실행 체인에는 건너뛰기를 두지 않는다. 다시 보기로 되돌린
+  // 체인에서만(missionSkipEnabled) 출구가 붙는다.
+  it('첫 실행 체인의 배너에는 건너뛰기가 없다 (#1023)', async () => {
+    const ui = await render(
+      <AuthProvider>
+        <AppShell startMissions />
+      </AuthProvider>,
+    );
+    await waitFor(() => ui.getByTestId('mission-banner'));
+    expect(ui.queryByLabelText('미션 건너뛰기')).toBeNull();
+    expect(ui.getByText('첫 루틴 등록하기')).toBeTruthy();
   });
 });
 
