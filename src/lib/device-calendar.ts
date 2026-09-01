@@ -1,3 +1,4 @@
+import { PermissionsAndroid, Platform } from 'react-native';
 import * as Calendar from 'expo-calendar';
 
 import { shiftIso, todayIso } from '@/utils/datetime';
@@ -6,11 +7,15 @@ import { shiftIso, todayIso } from '@/utils/datetime';
  * 기기 캘린더 읽기 (#844) — OS 캘린더에 연결된 계정(구글 등)의 일정을 읽는다.
  * **읽기 전용이다.** 우리는 캘린더에 쓰지 않는다 — 이 파일은 읽기 API만 부른다.
  *
- * 다만 **선언되는 권한은 읽기만이 아니다.** 예전엔 config plugin으로 미리알림
- * 권한 문구와 안드로이드 WRITE_CALENDAR를 걷어냈는데, expo-calendar가 그걸
- * 전제로 동작해서 iOS는 시작하자마자 죽고 안드로이드는 기능이 조용히 멎었다
- * (#913). 지금은 라이브러리가 요구하는 대로 선언하고, "쓰지 않는다"는 사실은
- * 권한 문구·스토어 설명·개인정보처리방침이 말한다.
+ * **안드로이드는 WRITE_CALENDAR 없이 동작해야 한다 (#1004).** 매니페스트에서
+ * 쓰기 권한을 걷어냈는데, expo-calendar **구형 API는 요청도 검사도
+ * READ+WRITE 묶음**이라 그대로 쓰면 항상 "거부됨"이 된다 — #913 때 기능이
+ * 조용히 멎었던 것과 같은 함정이고, 이 파일의 옛 주석이 그 역사를 적어뒀는데
+ * #1004 착수 때 재확인하지 않아 한 번 더 밟았다(vc6 실기기에서 발견).
+ * 그래서 안드로이드만 갈라진다: 권한은 RN 코어로 READ만 직접 요청하고,
+ * 조회는 신형(`expo-calendar/next`) API를 쓴다 — 신형의 읽기 함수들은
+ * 네이티브에서 READ만 검사한다(`requireSystemPermissions(false)` 실측).
+ * iOS는 자체 권한 모델이라 구형 경로를 그대로 둔다(검증된 경로 유지).
  *
  * expo-calendar는 네이티브 모듈이라 웹에서는 없다. 모든 함수가 웹에서
  * 조용히 빈 결과로 떨어진다 — dev 갤러리·웹 스모크가 죽지 않게.
@@ -91,14 +96,39 @@ export function occurrenceKey(seriesId: string, date: string) {
   return `${seriesId}:${date}`;
 }
 
+/**
+ * 신형 API 지연 로더 — 웹 번들이 모듈 평가 시점에 네이티브 모듈을 찾다
+ * 죽지 않게, 안드로이드 경로 안에서만 require한다.
+ */
+function calendarNext() {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- 위 주석 참조
+  return require('expo-calendar/next') as typeof import('expo-calendar/next');
+}
+
 /** 권한 요청. 거부면 false — 화면이 안내를 띄운다. */
 export async function requestCalendarAccess(): Promise<boolean> {
+  if (Platform.OS === 'android') {
+    // 구형 requestCalendarPermissionsAsync는 READ+WRITE 묶음 요청이라,
+    // WRITE가 매니페스트에 없는 지금은 OS가 WRITE를 자동 거부해 전체가
+    // "거부됨"으로 떨어진다. READ만 직접 요청한다.
+    const res = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.READ_CALENDAR);
+    return res === PermissionsAndroid.RESULTS.GRANTED;
+  }
   const { status } = await Calendar.requestCalendarPermissionsAsync();
   return status === 'granted';
 }
 
 /** 읽을 수 있는 캘린더 목록. 권한이 없으면 빈 배열. */
 export async function listDeviceCalendars(): Promise<DeviceCalendar[]> {
+  if (Platform.OS === 'android') {
+    // 신형 getCalendars — 네이티브 가드가 READ만 요구한다.
+    const cals = await calendarNext().getCalendars(Calendar.EntityTypes.EVENT);
+    return cals.map((c) => ({
+      id: c.id,
+      title: c.title,
+      source: typeof c.source === 'string' ? c.source : (c.source?.name ?? ''),
+    }));
+  }
   const cals = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
   return cals.map((c) => ({
     id: c.id,
@@ -119,11 +149,11 @@ export async function readUpcomingEvents(calendarIds: string[]): Promise<DeviceE
   if (calendarIds.length === 0) return [];
   const from = todayIso();
   const to = shiftIso(from, IMPORT_WINDOW_DAYS);
-  const events = await Calendar.getEventsAsync(
-    calendarIds,
-    startOfLocalDay(from),
-    endOfLocalDay(to),
-  );
+  // 신형 listEvents도 Instances 테이블을 조회하므로 회차 펼치기가 같다(실측).
+  const events =
+    Platform.OS === 'android'
+      ? await calendarNext().listEvents(calendarIds, startOfLocalDay(from), endOfLocalDay(to))
+      : await Calendar.getEventsAsync(calendarIds, startOfLocalDay(from), endOfLocalDay(to));
   return events
     .map((e) => {
       const seriesId = String(e.id);
