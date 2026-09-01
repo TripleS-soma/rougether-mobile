@@ -11,6 +11,7 @@ import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { AppShell } from '@/components/app/app-shell';
 import { Room } from '@/components/room/room';
 import { AuthProvider } from '@/hooks/use-auth';
+import { QueryProvider } from '@/test-utils/query-wrapper';
 
 // 렌더마다 받은 props를 기록하는 MyRoomScreen 프로브.
 const mockMyRoomRenders: Record<string, unknown>[] = [];
@@ -113,9 +114,11 @@ const changedRefs = (
 describe('AppShell → MyRoomScreen prop 참조 안정성 (#539)', () => {
   it('무관한 상태 변화(집 탭 전환 후 복귀) 전후로 대표 prop의 참조가 같다', async () => {
     const { getByLabelText } = await render(
-      <AuthProvider>
-        <AppShell />
-      </AuthProvider>,
+      <QueryProvider>
+        <AuthProvider>
+          <AppShell />
+        </AuthProvider>
+      </QueryProvider>,
     );
 
     // 초기 로드(루틴·집·상점·캐릭터 등)가 전부 정착할 때까지 기다린다 —
@@ -146,9 +149,11 @@ describe('AppShell → MyRoomScreen prop 참조 안정성 (#539)', () => {
 describe('AppShell → HouseScreen prop 참조 안정성 (#539, 리뷰 반영)', () => {
   it('탭 이탈로 언마운트됐다 재진입해도 셸의 핸들러·파생 prop 참조가 같다', async () => {
     const { getByLabelText } = await render(
-      <AuthProvider>
-        <AppShell />
-      </AuthProvider>,
+      <QueryProvider>
+        <AuthProvider>
+          <AppShell />
+        </AuthProvider>
+      </QueryProvider>,
     );
     await waitFor(() => expect(mockMyRoomRenders.at(-1)?.loading).toBe(false));
 
@@ -174,9 +179,11 @@ describe('AppShell → HouseScreen prop 참조 안정성 (#539, 리뷰 반영)',
 describe('AppShell → SettingsScreen prop 참조 안정성 (#563 후속)', () => {
   it('무관한 상태 변화(집 탭 왕복) 전후로 셸 콜백 prop의 참조가 같다', async () => {
     const { getByLabelText } = await render(
-      <AuthProvider>
-        <AppShell />
-      </AuthProvider>,
+      <QueryProvider>
+        <AuthProvider>
+          <AppShell />
+        </AuthProvider>
+      </QueryProvider>,
     );
     await waitFor(() => expect(mockMyRoomRenders.at(-1)?.loading).toBe(false));
     await act(async () => {
@@ -204,9 +211,11 @@ describe('AppShell → SettingsScreen prop 참조 안정성 (#563 후속)', () =
 describe('탭 스크롤 위치 보존 (#763)', () => {
   it('탭별로 위치를 기억하고, 게터·보고 콜백은 참조가 고정이다', async () => {
     const { getByLabelText } = await render(
-      <AuthProvider>
-        <AppShell />
-      </AuthProvider>,
+      <QueryProvider>
+        <AuthProvider>
+          <AppShell />
+        </AuthProvider>
+      </QueryProvider>,
     );
     // 세 탭 화면은 페이저에 함께 마운트된다 — 두 프로브 모두 기록이 있다.
     await waitFor(() => expect(mockSettingsRenders.length).toBeGreaterThan(0));

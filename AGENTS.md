@@ -25,6 +25,10 @@
 - **임포트 별칭**: `@/*` → `src/*`, `@/assets/*` → `assets/*`. 상대 경로(`../../`) 대신 별칭을 사용하세요.
 - **스타일링**: `StyleSheet.create` + 토큰. 색은 `useTokens()`(`const t = useTokens()`)에서, 크기는 `Spacing`/`Radius`에서, 텍스트는 `useTypography()`의 타입 스케일에서 가져옵니다. 화면에 hex 색상이나 매직 넘버를 하드코딩하지 말고 토큰을 추가/확장하세요. **`fontWeight`를 스타일에 직접 쓰지 마세요** — 커스텀 폰트(#382)는 weight별 파일이라 가짜 볼드가 생깁니다. 굵기 강조는 `useFontEmphasis()`로. **반대로 `fontSize`만 적고 패밀리를 안 주면 그 텍스트는 선택 폰트를 영영 안 따릅니다** — 로컬 스타일에 크기만 두려면 `emph('normal')`을 같이 붙이세요(시스템 폰트에서는 무해한 `fontWeight`로 떨어집니다). `src/constants/__tests__/font-hygiene.test.ts`가 이걸 강제합니다.
 - **화면은 순수하게**: 데이터와 콜백을 prop으로 받고(예: `onChangeTheme`, `onLogout`) 합리적인 기본값을 둡니다. 라우팅·데이터 패칭·전역 상태는 별도로 연결합니다.
+- **서버 상태는 react-query로** (2026-09-01, #1027): **새로 만드는 데이터 훅은 `useQuery`/`useMutation`을 씁니다.** 기존 훅 23개는 `useState` + `useEffect`로 각자 캐시를 들고 있는데, 통째로 옮기지 않고 **그 파일을 만질 때 함께** 옮깁니다(전면 리라이트 PR은 리뷰가 불가능합니다). 무효화 규칙이 없어서 생긴 버그가 실재합니다 — 루틴 수정이 완료 기록을 옛 id에 남기는 #1028이 그것입니다.
+  - 클라이언트 기본값은 `src/lib/query-client.ts`(staleTime 30초 · retry 1 · 포커스 재조회). RN 포커스 감지는 `subscribeAppStateFocus`가 배선합니다 — **온라인 감지(`onlineManager`)는 없습니다**(NetInfo가 네이티브 모듈이라 지문이 바뀝니다).
+  - 훅이 돌려주는 객체는 **참조를 고정**하세요. `useMutation`이 주는 **객체는 매 렌더 새것**이라 의존성에 넣으면 나의 방 memo 경계(#539)가 뚫립니다 — `mutateAsync`만 꺼내 쓰고 중복 탭 가드는 `useLatestRef`로 읽습니다. `app-shell-render-stability.test.tsx`가 이걸 강제합니다.
+  - 테스트는 `@/test-utils/query-wrapper`의 `queryWrapper()`(훅) 또는 `QueryProvider`(트리)로 감쌉니다. 캐시 반영은 `notifyManager`가 배칭하므로 **즉시 단언하지 말고 `waitFor`** 로 기다리세요.
 - **UI 문구는 한국어**, 코드·주석·식별자는 영어.
 - **아이콘**은 현재 이모지 플레이스홀더이며, 실제 스프라이트/CDN 아트는 추후 포팅합니다.
 - 파일명은 kebab-case, 컴포넌트는 PascalCase named export.
