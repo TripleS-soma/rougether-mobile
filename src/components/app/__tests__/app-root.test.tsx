@@ -3,6 +3,7 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import { AppRoot } from '@/components/app/app-root';
 import { AuthProvider } from '@/hooks/use-auth';
+import { QueryProvider } from '@/test-utils/query-wrapper';
 
 const KEY = 'rougether.onboarding.v1';
 
@@ -19,9 +20,11 @@ const realFetch = global.fetch;
 
 const renderApp = () =>
   render(
-    <AuthProvider>
-      <AppRoot />
-    </AuthProvider>,
+    <QueryProvider>
+      <AuthProvider>
+        <AppRoot />
+      </AuthProvider>
+    </QueryProvider>,
   );
 
 describe('AppRoot', () => {
