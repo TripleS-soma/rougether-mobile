@@ -11,10 +11,7 @@
       "android": {
         "buildType": "apk"
       },
-      "environment": "development",
-      "ios": {
-        "image": "macos-sequoia-15.6-xcode-16.4"
-      }
+      "environment": "development"
     },
     "preview": {
       "distribution": "internal",
@@ -22,10 +19,7 @@
       "android": {
         "buildType": "apk"
       },
-      "environment": "preview",
-      "ios": {
-        "image": "macos-sequoia-15.6-xcode-16.4"
-      }
+      "environment": "preview"
     },
     "production": {
       "autoIncrement": true,
@@ -33,17 +27,13 @@
       "android": {
         "buildType": "app-bundle"
       },
-      "environment": "production",
-      "ios": {
-        "image": "macos-sequoia-15.6-xcode-16.4"
-      }
+      "environment": "production"
     },
     "testflight": {
       "autoIncrement": true,
       "channel": "preview",
       "ios": {
-        "distribution": "store",
-        "image": "macos-sequoia-15.6-xcode-16.4"
+        "distribution": "store"
       },
       "environment": "preview"
     }
