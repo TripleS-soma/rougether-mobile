@@ -355,13 +355,28 @@ export function useMyRoomData() {
           setRoutines((prev) => prev.map((r) => (r.id === id ? toAppTodo(updated) : r)));
         } else {
           const updated = await apiUpdateRoutine(toServerItemId(id), toRoutineUpdate(item, n));
-          setRoutines((prev) => prev.map((r) => (r.id === id ? toAppRoutine(updated) : r)));
+          const next = toAppRoutine(updated);
+          setRoutines((prev) => prev.map((r) => (r.id === id ? next : r)));
+          // 반복 스케줄 수정은 서버에서 **버전 분기**라 응답 id가 바뀐다
+          // (스펙 routine-todo/features.md — 옛 버전을 닫고 새 row로 분기).
+          // completions는 앱 id(`r{버전id}`)를 키로 쓰므로 이관하지 않으면
+          // 오늘 완료 표시가 옛 id에 매달려 사라져 보인다 (#1028).
+          if (next.id !== id) {
+            setCompletions((prev) => {
+              if (!(id in prev)) return prev;
+              const { [id]: moved, ...rest } = prev;
+              return { ...rest, [next.id]: moved };
+            });
+          }
         }
+        // 스케줄이 바뀌면 캐시된 달력 날짜의 수행 대상도 바뀐다 — 제목만
+        // 고치는 renameRoutine도 재조회하는데 정작 여기가 빠져 있었다.
+        refreshCachedCalendarDays();
       } catch {
         toast('수정에 실패했어요', 'error');
       }
     },
-    [findItem, toast],
+    [findItem, refreshCachedCalendarDays, toast],
   );
 
   const renameRoutine = useCallback(

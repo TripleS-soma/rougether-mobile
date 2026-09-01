@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useRecommendations } from '@/hooks/use-recommendations';
+import { queryWrapper } from '@/test-utils/query-wrapper';
 
 const res = (body: unknown, status = 200) => ({
   ok: status < 400,
@@ -28,14 +29,14 @@ afterEach(() => {
 describe('useRecommendations', () => {
   it('마운트하면 활성 추천을 불러온다', async () => {
     global.fetch = jest.fn(async () => res({ items: [ITEM] })) as unknown as typeof global.fetch;
-    const { result } = await renderHook(() => useRecommendations());
+    const { result } = await renderHook(() => useRecommendations(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.items).toHaveLength(1));
     expect(result.current.items[0].routineTitle).toBe('아침 러닝');
   });
 
   it('목록 조회가 실패해도 빈 목록으로 접는다 — 추천은 부가 정보다', async () => {
     global.fetch = jest.fn(async () => res({}, 500)) as unknown as typeof global.fetch;
-    const { result } = await renderHook(() => useRecommendations());
+    const { result } = await renderHook(() => useRecommendations(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.items).toEqual([]));
   });
 
@@ -46,14 +47,18 @@ describe('useRecommendations', () => {
       return String(url).includes('/accept') ? res({ id: 99 }) : res({ items: [ITEM] });
     }) as unknown as typeof global.fetch;
     const onAccepted = jest.fn();
-    const { result } = await renderHook(() => useRecommendations({ onAccepted }));
+    const { result } = await renderHook(() => useRecommendations({ onAccepted }), {
+      wrapper: queryWrapper(),
+    });
     await waitFor(() => expect(result.current.items).toHaveLength(1));
 
     await act(async () => {
       await result.current.accept(1);
     });
     expect(calls.some((u) => u.endsWith('/recommendations/1/accept'))).toBe(true);
-    expect(result.current.items).toHaveLength(0);
+    // react-query는 리렌더 알림을 notifyManager가 배칭하므로 즉시 단언하면
+    // 직전 값을 본다 — 캐시 반영을 기다린다.
+    await waitFor(() => expect(result.current.items).toHaveLength(0));
     expect(onAccepted).toHaveBeenCalled();
   });
 
@@ -65,7 +70,9 @@ describe('useRecommendations', () => {
       return res({ items: [ITEM] });
     }) as unknown as typeof global.fetch;
     const onAccepted = jest.fn();
-    const { result } = await renderHook(() => useRecommendations({ onAccepted }));
+    const { result } = await renderHook(() => useRecommendations({ onAccepted }), {
+      wrapper: queryWrapper(),
+    });
     await waitFor(() => expect(result.current.items).toHaveLength(1));
 
     await act(async () => {
@@ -83,14 +90,16 @@ describe('useRecommendations', () => {
       return String(url).includes('/dismiss') ? res({}, 204) : res({ items: [ITEM] });
     }) as unknown as typeof global.fetch;
     const onAccepted = jest.fn();
-    const { result } = await renderHook(() => useRecommendations({ onAccepted }));
+    const { result } = await renderHook(() => useRecommendations({ onAccepted }), {
+      wrapper: queryWrapper(),
+    });
     await waitFor(() => expect(result.current.items).toHaveLength(1));
 
     await act(async () => {
       await result.current.dismiss(1);
     });
     expect(calls.some((u) => u.endsWith('/recommendations/1/dismiss'))).toBe(true);
-    expect(result.current.items).toHaveLength(0);
+    await waitFor(() => expect(result.current.items).toHaveLength(0));
     expect(onAccepted).not.toHaveBeenCalled();
   });
 });

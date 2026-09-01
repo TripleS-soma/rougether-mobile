@@ -7,6 +7,7 @@ import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-han
 import { AppShell } from '@/components/app/app-shell';
 import { ToastProvider } from '@/components/ui/toast';
 import { AuthProvider } from '@/hooks/use-auth';
+import { QueryProvider } from '@/test-utils/query-wrapper';
 
 // 푸시 탭 콜백을 붙잡아 테스트에서 직접 발화한다 (#405).
 let notificationTapCb: (() => void) | null = null;
@@ -50,9 +51,11 @@ afterEach(() => {
 describe('AppShell — 푸시 탭 라우팅 (#405)', () => {
   it('알림 탭 콜백이 발화하면 알림 목록 화면으로 이동한다', async () => {
     const { getByText } = await render(
-      <AuthProvider>
-        <AppShell />
-      </AuthProvider>,
+      <QueryProvider>
+        <AuthProvider>
+          <AppShell />
+        </AuthProvider>
+      </QueryProvider>,
     );
     expect(notificationTapCb).toBeTruthy();
 
@@ -65,9 +68,11 @@ describe('AppShell — 푸시 탭 라우팅 (#405)', () => {
 describe('AppShell — 인앱 푸시 배너 (#902)', () => {
   it('앱이 켜져 있을 때 도착한 알림을 상단 배너로 띄우고, 탭하면 알림함으로 간다', async () => {
     const { getByText, getByLabelText, queryByTestId } = await render(
-      <AuthProvider>
-        <AppShell />
-      </AuthProvider>,
+      <QueryProvider>
+        <AuthProvider>
+          <AppShell />
+        </AuthProvider>
+      </QueryProvider>,
     );
     expect(notificationReceivedCb).toBeTruthy();
     // 아무것도 안 왔으면 배너도 없다.
@@ -112,9 +117,11 @@ describe('AppShell — 온보딩 미션 체인 (#571)', () => {
 
   it('startMissions면 미션 1 배너가 뜨고, 배너 탭이 루틴 추가 화면으로 보낸다', async () => {
     const { getByText, getByTestId, getByLabelText } = await render(
-      <AuthProvider>
-        <AppShell startMissions />
-      </AuthProvider>,
+      <QueryProvider>
+        <AuthProvider>
+          <AppShell startMissions />
+        </AuthProvider>
+      </QueryProvider>,
     );
     await waitFor(() => getByTestId('mission-banner'));
     expect(getByText(/미션 1\/4/)).toBeTruthy();
@@ -127,9 +134,11 @@ describe('AppShell — 온보딩 미션 체인 (#571)', () => {
   it('루틴 등록 성공 → 완료 시트 → 하러 가기로 미션 2(뽑기)로 이어진다', async () => {
     global.fetch = jest.fn(missionFetch) as unknown as typeof fetch;
     const { getByText, getByTestId, getByLabelText } = await render(
-      <AuthProvider>
-        <AppShell startMissions />
-      </AuthProvider>,
+      <QueryProvider>
+        <AuthProvider>
+          <AppShell startMissions />
+        </AuthProvider>
+      </QueryProvider>,
     );
     await waitFor(() => getByTestId('mission-banner'));
 
@@ -150,17 +159,21 @@ describe('AppShell — 온보딩 미션 체인 (#571)', () => {
 
   it('건너뛰기는 확인을 거쳐 배너를 없애고, startMissions 없으면 배너가 없다', async () => {
     const off = await render(
-      <AuthProvider>
-        <AppShell />
-      </AuthProvider>,
+      <QueryProvider>
+        <AuthProvider>
+          <AppShell />
+        </AuthProvider>
+      </QueryProvider>,
     );
     await act(async () => {});
     expect(off.queryByTestId('mission-banner')).toBeNull();
 
     const on = await render(
-      <AuthProvider>
-        <AppShell startMissions missionSkipEnabled />
-      </AuthProvider>,
+      <QueryProvider>
+        <AuthProvider>
+          <AppShell startMissions missionSkipEnabled />
+        </AuthProvider>
+      </QueryProvider>,
     );
     await waitFor(() => on.getByTestId('mission-banner'));
     await fireEvent.press(on.getByLabelText('미션 건너뛰기'));
@@ -174,9 +187,11 @@ describe('AppShell — 온보딩 미션 체인 (#571)', () => {
   // 체인에서만(missionSkipEnabled) 출구가 붙는다.
   it('첫 실행 체인의 배너에는 건너뛰기가 없다 (#1023)', async () => {
     const ui = await render(
-      <AuthProvider>
-        <AppShell startMissions />
-      </AuthProvider>,
+      <QueryProvider>
+        <AuthProvider>
+          <AppShell startMissions />
+        </AuthProvider>
+      </QueryProvider>,
     );
     await waitFor(() => ui.getByTestId('mission-banner'));
     expect(ui.queryByLabelText('미션 건너뛰기')).toBeNull();
@@ -193,9 +208,11 @@ describe('AppShell — 집 없는 유저의 집 탭 (#571)', () => {
     }) as unknown as typeof fetch;
 
     const { getByText, getByLabelText, queryByText } = await render(
-      <AuthProvider>
-        <AppShell />
-      </AuthProvider>,
+      <QueryProvider>
+        <AuthProvider>
+          <AppShell />
+        </AuthProvider>
+      </QueryProvider>,
     );
     // 집 목록 로드가 끝나(빈 목록 확정) noHouses 판정이 서고 나서 탭을 누른다.
     await waitFor(() => expect(calls.some((u) => u.endsWith('/me/houses'))).toBe(true));
@@ -215,9 +232,11 @@ describe('AppShell — 집 없는 유저의 집 탭 (#571)', () => {
 describe('AppShell', () => {
   it('opens on the my-room screen with the bottom nav', async () => {
     const { getByText, getByLabelText } = await render(
-      <AuthProvider>
-        <AppShell />
-      </AuthProvider>,
+      <QueryProvider>
+        <AuthProvider>
+          <AppShell />
+        </AuthProvider>
+      </QueryProvider>,
     );
     // 닉네임을 아직 모를 때의 폴백 — 데모 이름('준서')을 흘리지 않는다 (#924).
     expect(getByText('내 방')).toBeTruthy();
@@ -234,9 +253,11 @@ describe('AppShell', () => {
   // 시점 가드가 백을 막는지 본다. 막지 못하면 설정 → (집 건너뜀) → 방.
   it('탭 루트에서는 엣지 백이 발화해도 화면이 바뀌지 않는다 (#740)', async () => {
     const { getByText, getByLabelText, queryByText } = await render(
-      <AuthProvider>
-        <AppShell />
-      </AuthProvider>,
+      <QueryProvider>
+        <AuthProvider>
+          <AppShell />
+        </AuthProvider>
+      </QueryProvider>,
     );
     await fireEvent.press(getByLabelText('설정'));
     // '설정'은 탭 라벨과 헤더 양쪽에 있어 화면 고유 문구로 단언한다.
@@ -330,9 +351,11 @@ describe('AppShell — 공동미션 연동', () => {
 
   it('완료 시 서버 자동 기여를 반영하고 클라 수동 contribute는 쏘지 않는다 (#578)', async () => {
     const { getByLabelText } = await render(
-      <AuthProvider>
-        <AppShell />
-      </AuthProvider>,
+      <QueryProvider>
+        <AuthProvider>
+          <AppShell />
+        </AuthProvider>
+      </QueryProvider>,
     );
     await waitFor(() => expect(calls.some((c) => c.url.includes('/houses/2/missions'))).toBe(true));
     const missionFetchesBefore = calls.filter((c) => c.url.includes('/houses/2/missions')).length;
@@ -356,9 +379,11 @@ describe('AppShell — 공동미션 연동', () => {
 
   it('blocks un-toggling a linked routine — contributions cannot be revoked', async () => {
     const { getByLabelText } = await render(
-      <AuthProvider>
-        <AppShell />
-      </AuthProvider>,
+      <QueryProvider>
+        <AuthProvider>
+          <AppShell />
+        </AuthProvider>
+      </QueryProvider>,
     );
     await waitFor(() => expect(calls.some((c) => c.url.includes('/houses/2/missions'))).toBe(true));
 
@@ -378,9 +403,11 @@ describe('AppShell — 공동미션 연동', () => {
 
   it('adding a mission routine reuses the existing house category (no duplicate)', async () => {
     const { getByLabelText, getByText } = await render(
-      <AuthProvider>
-        <AppShell />
-      </AuthProvider>,
+      <QueryProvider>
+        <AuthProvider>
+          <AppShell />
+        </AuthProvider>
+      </QueryProvider>,
     );
     await waitFor(() => expect(calls.some((c) => c.url.includes('/houses/2/missions'))).toBe(true));
 
@@ -404,9 +431,11 @@ describe('AppShell — 공동미션 연동', () => {
 
   it('미션 삭제 시 연동 루틴도 함께 삭제된다 (#338)', async () => {
     const { getByLabelText } = await render(
-      <AuthProvider>
-        <AppShell />
-      </AuthProvider>,
+      <QueryProvider>
+        <AuthProvider>
+          <AppShell />
+        </AuthProvider>
+      </QueryProvider>,
     );
     await waitFor(() => expect(calls.some((c) => c.url.includes('/houses/2/missions'))).toBe(true));
 
@@ -428,9 +457,11 @@ describe('AppShell — 공동미션 연동', () => {
 
   it('집 나가기/삭제 시 그 집 미션들의 연동 루틴도 정리된다 (#338)', async () => {
     const { getByLabelText } = await render(
-      <AuthProvider>
-        <AppShell />
-      </AuthProvider>,
+      <QueryProvider>
+        <AuthProvider>
+          <AppShell />
+        </AuthProvider>
+      </QueryProvider>,
     );
     await waitFor(() => expect(calls.some((c) => c.url.includes('/houses/2/missions'))).toBe(true));
 
@@ -506,9 +537,11 @@ describe('AppShell — 연동 루틴 스윕', () => {
 
   it('미션이 사라진 연동 루틴은 로드 후 자동 삭제되고, 일치하는 루틴은 남는다', async () => {
     await render(
-      <AuthProvider>
-        <AppShell />
-      </AuthProvider>,
+      <QueryProvider>
+        <AuthProvider>
+          <AppShell />
+        </AuthProvider>
+      </QueryProvider>,
     );
     await waitFor(() =>
       expect(calls.some((c) => c.method === 'DELETE' && c.url.includes('/routines/45'))).toBe(true),
@@ -576,9 +609,11 @@ describe('AppShell — 링크 id 승격 마이그레이션', () => {
 
   it('이름 일치·id 없음 카테고리와 루틴에 링크 id를 PUT으로 심는다', async () => {
     await render(
-      <AuthProvider>
-        <AppShell />
-      </AuthProvider>,
+      <QueryProvider>
+        <AuthProvider>
+          <AppShell />
+        </AuthProvider>
+      </QueryProvider>,
     );
 
     // 카테고리 승격 — houseId가 실린 PUT.
@@ -608,9 +643,11 @@ describe('AppShell — 루트 뒤로가기 더블 백 종료 (#522)', () => {
 
     const ui = await render(
       <ToastProvider>
-        <AuthProvider>
-          <AppShell />
-        </AuthProvider>
+        <QueryProvider>
+          <AuthProvider>
+            <AppShell />
+          </AuthProvider>
+        </QueryProvider>
       </ToastProvider>,
     );
 
@@ -645,9 +682,11 @@ describe('AppShell — 루트 뒤로가기 더블 백 종료 (#522)', () => {
 
     const ui = await render(
       <ToastProvider>
-        <AuthProvider>
-          <AppShell />
-        </AuthProvider>
+        <QueryProvider>
+          <AuthProvider>
+            <AppShell />
+          </AuthProvider>
+        </QueryProvider>
       </ToastProvider>,
     );
 
