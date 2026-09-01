@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useMyRoomData } from '@/hooks/use-my-room-data';
+import type { NewRoutine } from '@/constants/routines';
 
 // Server state: no categories, two routines with categoryId null (legacy data).
 // The hook must adopt them into a freshly created 기타 category — uncategorized
@@ -479,5 +480,78 @@ describe('useMyRoomData — 스트릭 즉시 반영 (#895)', () => {
       await result.current.toggleCompletion('r9', today());
     });
     await waitFor(() => expect(result.current.streak).toBe(2));
+  });
+});
+
+/**
+ * 스케줄 수정은 서버에서 **버전 분기**다 (스펙 routine-todo/features.md) —
+ * 옛 버전을 닫고 새 row를 만들어 응답 `id`가 바뀐다. completions는 앱
+ * id(`r{버전id}`)를 키로 쓰므로 이관하지 않으면 오늘 완료가 옛 id에 매달려
+ * 화면에서 사라져 보였다 (#1028).
+ */
+describe('useMyRoomData — 스케줄 수정의 버전 분기 (#1028)', () => {
+  const today = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  };
+
+  /** 수정 페이로드 기본형 — 화면(add-routine)이 항상 전체 폼 값을 보낸다. */
+  const N = (over: { title?: string; repeat?: 'weekly'; days?: number[] }): NewRoutine => ({
+    title: '아침 러닝',
+    category: '1',
+    days: [],
+    startDate: today(),
+    alarmEnabled: false,
+    time: '07:00',
+    ...over,
+  });
+
+  /** 루틴 r42 하나가 오늘 완료된 상태로 부팅하고, PUT 응답의 id를 주입한다. */
+  const harness = (updatedId: number) => {
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+      if (url.includes('/categories')) return res({ items: [{ id: 1, name: '건강' }] });
+      if (method === 'PUT' && url.endsWith('/routines/42'))
+        return res({ id: updatedId, title: '아침 러닝', categoryId: 1, repeatType: 'WEEKLY' });
+      if (url.endsWith('/routines'))
+        return res({ items: [{ id: 42, title: '아침 러닝', categoryId: 1, repeatType: 'DAILY' }] });
+      if (url.endsWith('/today'))
+        return res({
+          categories: [{ routines: [{ id: 42, completed: true }], todos: [] }],
+          summary: {},
+          streak: {},
+        });
+      if (url.endsWith('/me')) return res({ userId: 1, nickname: '테스터' });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+  };
+
+  it('응답 id가 바뀌면 completions 키를 새 id로 이관한다', async () => {
+    harness(99);
+    const { result } = await renderHook(() => useMyRoomData());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.completions.r42).toEqual([today()]);
+
+    await act(async () => {
+      await result.current.updateRoutine('r42', N({ repeat: 'weekly', days: [1, 5] }));
+    });
+
+    // 루틴도 completions도 새 버전 id를 본다 — 오늘 완료 표시가 유지된다.
+    expect(result.current.routines.map((r) => r.id)).toEqual(['r99']);
+    expect(result.current.completions.r99).toEqual([today()]);
+    expect(result.current.completions.r42).toBeUndefined();
+  });
+
+  it('제자리 수정(id 불변)은 completions를 건드리지 않는다', async () => {
+    harness(42);
+    const { result } = await renderHook(() => useMyRoomData());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      await result.current.updateRoutine('r42', N({ title: '저녁 러닝' }));
+    });
+
+    expect(result.current.routines.map((r) => r.id)).toEqual(['r42']);
+    expect(result.current.completions.r42).toEqual([today()]);
   });
 });
