@@ -530,13 +530,21 @@ describe('HouseScreen', () => {
     expect(cameraClaimsMove(2, true, true, 0, 20)).toBe(false); // 자리 드래그 중 양보
   });
 
-  // 확대 = 방 구경 모드 (#665) — 이름/접속 라벨은 카메라 배율에 묶인
-  // 페이드 오파시티를 가진다(jest의 Animated는 현재값으로 평탄화되므로
-  // 기본 배율 1에서 완전 표시임을 단언; 배율 추종은 보간 정의가 담당).
-  it('자리 라벨에 카메라 페이드 오파시티가 걸려 있다 (#665)', async () => {
+  /**
+   * 확대 = 방 구경 모드 (#665) — 이름/접속 라벨은 카메라 배율에 묶인 페이드를
+   * 갖는다. 종전엔 RN Animated가 현재값으로 평탄화돼 `opacity === 1`을 볼 수
+   * 있었지만, Reanimated의 jest mock은 `useAnimatedStyle`을 평가하지 않고 빈
+   * 객체를 돌려준다 (#776) — **값은 여기서 확인할 수 없다.** 곡선 자체는
+   * `house/__tests__/camera.test.ts`의 seatMetaOpacityFor가 단언하고, 여기서는
+   * 라벨이 애니메이션 스타일 슬롯을 달고 렌더되는 배선만 지킨다.
+   */
+  it('자리 라벨이 카메라 페이드 스타일 슬롯을 달고 렌더된다 (#665 → #776)', async () => {
     const { getByTestId } = await render(<HouseScreen houses={[MISSION_HOUSE]} />);
-    const style = StyleSheet.flatten(getByTestId('seat-meta-0').props.style);
-    expect(style.opacity).toBe(1);
+    const style = getByTestId('seat-meta-0').props.style;
+    expect(Array.isArray(style)).toBe(true);
+    // [정적 roomMeta, preview 오버레이(없으면 null), 애니메이션 스타일]
+    expect(style).toHaveLength(3);
+    expect(StyleSheet.flatten(style).alignItems).toBe('center');
   });
 
   it('구성원 목록 버튼은 셸 화면을 연다 — onOpenMembers 콜백 (#753)', async () => {
