@@ -86,7 +86,15 @@ jobs:
         continue-on-error: true
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-        run: npx @sentry/expo-upload-sourcemaps dist
+        # `npx @sentry/…`(패키지명)는 레지스트리의 **다른 패키지**를 임시 설치해
+        # `@expo/env`를 못 찾고 죽는다 — 그래서 소스맵이 한 번도 안 올라갔다
+        # (#1026). 로컬 bin(sentry-expo-upload-sourcemaps, @sentry/react-native
+        # 제공)을 --no-install로 강제한다. 실패는 배포를 막지 않되 드러낸다.
+        run: |
+          if ! npx --no-install sentry-expo-upload-sourcemaps dist; then
+            echo "::warning::Sentry 소스맵 업로드 실패 — 이 OTA에서 난 JS 에러의 스택이 난독화된 채로 수집됩니다 (#1026). 배포 자체는 계속됩니다."
+            echo "- ⚠️ Sentry 소스맵 업로드 실패 — 이 OTA의 에러 스택은 난독 상태." >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       # 발행 성공 ≠ 도달. preview 채널에 **현재 지문의 빌드가 없으면** 업데이트는
       # 아무도 듣지 않는 레인에 쌓인다 (#938 — iOS가 실제로 그 상태다).
