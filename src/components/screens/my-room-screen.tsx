@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
@@ -12,8 +12,10 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { NavMenuPopover } from '@/components/app/nav-menu-popover';
 import { FlyingCoin } from '@/components/ui/flying-coin';
@@ -60,7 +62,6 @@ import { Pictogram } from '@/components/ui/pictograms';
 import { RetryState } from '@/components/ui/retry-state';
 import { SpringProgressBar } from '@/components/ui/spring-progress';
 import { useToast } from '@/components/ui/toast';
-import { WalletPills } from '@/components/ui/wallet-pills';
 import type { WeeklyReportDetailResponse } from '@/api/types';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import {
@@ -77,7 +78,7 @@ import { ScalePressable } from '@/components/ui/scale-pressable';
 import { Radius, Spacing } from '@/constants/theme';
 import { saveRoomImage } from '@/lib/room-capture';
 import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
-import { useBottomNavInset, useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useBottomNavInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
@@ -101,6 +102,13 @@ export type CalendarDayItem = {
   /** Category id at record time — may reference a deleted category. */
   category?: string;
 };
+
+// 떠 있는 크롬 (#1055) — 이름 알약·세그먼트 한 줄의 높이. 달력 탭의 콘텐츠 상단
+// 패딩과 보상 알약 위치가 같은 값을 본다.
+const CHROME_ROW_HEIGHT = 40;
+/** 보상 알약이 떠 있는 시간 — 코인 플라이(~600ms)가 도착하고 읽을 만큼. */
+const REWARD_PILL_MS = 2200;
+const ZERO_INSETS = { top: 0, bottom: 0, left: 0, right: 0 };
 
 // RoomSceneProps: <Room />에 스프레드로 전달되는 씬 번들 (#691) — 내 방은
 // 캐릭터가 항상 있으므로 characterId만 null 불가로 좁힌다.
@@ -347,26 +355,33 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   const t = useTokens();
   const column = useResponsiveColumn();
   const Typography = useTypography();
-  const headerInset = useHeaderInsetStyle();
   // 글래스 알약 바텀바가 떠 있으면 마지막 루틴이 그 밑에 안 숨게 (#1049).
   const navInset = useBottomNavInset();
-  // 좁은 폰은 콤팩트 지갑 필(코인만) (#425) — 닉네임 열이 필 2개에 밀려
-  // 뭉개지는 것 방지. 다이아는 뽑기 상점·꾸미기에서 보인다.
+  // 떠 있는 크롬(#1055)이 상태바 밑에 서지 않게 — 방은 상태바 밑까지 차지한다.
+  const insets = useContext(SafeAreaInsetsContext) ?? ZERO_INSETS;
+  const { height: windowHeight } = useWindowDimensions();
 
-  // 코인 플라이 (#440) — 완료 탭 지점에서 헤더 지갑 필로 포물선 비행.
+  // 코인 플라이 (#440) — 완료 탭 지점에서 보상 알약(#1055)으로 포물선 비행.
   const rootRef = useRef<View>(null);
-  const walletRef = useRef<View>(null);
+  const rewardPillRef = useRef<View>(null);
   const flyTarget = useRef({ x: 0, y: 0 });
-  const walletPulse = useAnimatedValue(1);
+  const rewardPulse = useAnimatedValue(1);
   const coinSeq = useRef(0);
   const [flyingCoins, setFlyingCoins] = useState<
     { id: number; x: number; y: number; tx: number; ty: number }[]
   >([]);
-  const measureWallet = () => {
-    walletRef.current?.measureInWindow((x, y, w, h) => {
-      flyTarget.current = { x: x + w / 2, y: y + h / 2 };
-    });
-  };
+  // 보상 알약 (#1055) — 스트릭·코인은 상시 헤더가 아니라 보상이 확인된 순간에만
+  // 방 위에 떠서 증분을 보여주고 REWARD_PILL_MS 뒤 사라진다. 표시 중 또 오면 합산.
+  const [reward, setReward] = useState<{ coins: number } | null>(null);
+  const rewardTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 알약이 아직 안 떠 있을 때 도착한 보상 — 알약이 그려져 위치가 측정되면 그때 쏜다.
+  const pendingFly = useRef<{ x: number; y: number } | null>(null);
+  useEffect(
+    () => () => {
+      if (rewardTimer.current) clearTimeout(rewardTimer.current);
+    },
+    [],
+  );
   const launchCoinAt = ({ x: pageX, y: pageY }: { x: number; y: number }) => {
     rootRef.current?.measureInWindow((rx, ry) => {
       const target = flyTarget.current;
@@ -378,16 +393,37 @@ export const MyRoomScreen = memo(function MyRoomScreen({
       ]);
     });
   };
+  const showReward = (coins: number, from: { x: number; y: number } | null) => {
+    setReward((prev) => ({ coins: (prev?.coins ?? 0) + coins }));
+    if (rewardTimer.current) clearTimeout(rewardTimer.current);
+    rewardTimer.current = setTimeout(() => {
+      setReward(null);
+      flyTarget.current = { x: 0, y: 0 };
+    }, REWARD_PILL_MS);
+    if (!from) return;
+    if (flyTarget.current.x || flyTarget.current.y) launchCoinAt(from);
+    else pendingFly.current = from;
+  };
+  const measureRewardPill = () => {
+    rewardPillRef.current?.measureInWindow((x, y, w, h) => {
+      flyTarget.current = { x: x + w / 2, y: y + h / 2 };
+      const from = pendingFly.current;
+      if (from) {
+        pendingFly.current = null;
+        launchCoinAt(from);
+      }
+    });
+  };
   // 거미줄 청소 (#830) — 보상이 실제로 지급됐을 때만 코인이 난다.
   const handleCleanCobweb = async (at: { x: number; y: number }) => {
-    const reward = await onCleanCobweb?.();
-    if (reward && reward > 0) launchCoinAt(at);
+    const earned = await onCleanCobweb?.();
+    if (earned && earned > 0) showReward(earned, at);
   };
 
   const onCoinArrive = (id: number) => {
     setFlyingCoins((prev) => prev.filter((c) => c.id !== id));
-    walletPulse.setValue(1.18);
-    Animated.spring(walletPulse, { toValue: 1, friction: 3.5, useNativeDriver: true }).start();
+    rewardPulse.setValue(1.18);
+    Animated.spring(rewardPulse, { toValue: 1, friction: 3.5, useNativeDriver: true }).start();
   };
 
   // 스트릭 펄스 (#440) — 수치가 오르는 순간 🔥가 한 번 크게 일렁.
@@ -463,6 +499,11 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // button position — a fixed offset misaligns across notch/status-bar sizes.
   const [navMenuOpen, setNavMenuOpen] = useState(false);
   const [navMenuTop, setNavMenuTop] = useState(104);
+  // 버튼이 방 오른쪽 아래로 내려가(#1055) 팝오버는 **남은 공간이 큰 쪽**으로 연다 —
+  // 버튼이 화면 위쪽 절반이면 아래로, 아래쪽 절반이면 위로(bottom 앵커). 한쪽으로
+  // 고정하면 6항목 팝오버가 상태바 위나 바텀바 아래로 잘린다(시뮬레이터 실측).
+  // 측정이 안 되는 곳(테스트·웹)은 종전 top 폴백.
+  const [navMenuBottom, setNavMenuBottom] = useState<number | undefined>(undefined);
   const menuBtnRef = useRef<View>(null);
   const [characterSheetOpen, setCharacterSheetOpen] = useState(false);
   // 재화 내역 시트 (#734) — 열 때마다 1페이지 재로드(완료 취소로 이력이 지워질 수 있음).
@@ -478,7 +519,10 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     setNavMenuOpen(true);
     // measureInWindow is a no-op in tests/web — the fallback top then applies.
     menuBtnRef.current?.measureInWindow?.((_x, y, _w, h) => {
-      if (typeof y === 'number' && typeof h === 'number') setNavMenuTop(y + h + Spacing.one);
+      if (typeof y === 'number' && typeof h === 'number') {
+        setNavMenuTop(y + h + Spacing.one);
+        setNavMenuBottom(y > windowHeight / 2 ? windowHeight - y + Spacing.one : undefined);
+      }
     });
   };
 
@@ -802,7 +846,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
       const res = onToggleCompletion?.(routine.id, date);
       if (flyFrom && res && typeof res.then === 'function') {
         void res.then((result) => {
-          if (result?.rewardAmount) launchCoinAt(flyFrom);
+          if (result?.rewardAmount) showReward(result.rewardAmount, flyFrom);
         });
       }
     };
@@ -1068,135 +1112,6 @@ export const MyRoomScreen = memo(function MyRoomScreen({
 
   return (
     <View ref={rootRef} style={[styles.screen, useScreenStyle([])]}>
-      <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
-        <View style={styles.headerLeft}>
-          <View style={styles.headerName}>
-            {/* Narrow phones: shrink the font (≥75%) first; if the title still
-                overflows, middle-ellipsize so the 의 방 suffix stays visible. */}
-            <Text
-              style={[Typography.h3, { color: t.text }]}
-              numberOfLines={1}
-              ellipsizeMode="middle"
-              adjustsFontSizeToFit
-              minimumFontScale={0.75}>
-              {userName ? `${userName}의 방` : '내 방'}
-            </Text>
-            {/* A 0-day streak is nothing to celebrate — show the flame only
-                once a streak exists. */}
-            {streakDays > 0 ? (
-              <Animated.View style={[styles.streak, { transform: [{ scale: streakPulse }] }]}>
-                <Icon name="flame" size={14} color={t.warningText} />
-                <Text style={[Typography.supporting, { color: t.warningText }]}>
-                  {streakDays}일
-                </Text>
-              </Animated.View>
-            ) : null}
-          </View>
-        </View>
-        <View style={styles.headerRight}>
-          <Animated.View
-            ref={walletRef}
-            onLayout={measureWallet}
-            style={{ transform: [{ scale: walletPulse }] }}>
-            <WalletPills
-              coin={coinBalance}
-              diamond={diamondBalance}
-              onOpenHistory={openWalletHistory}
-            />
-          </Animated.View>
-          {/* 출석 이벤트 (#851) — 이벤트가 있을 때만. 미출석이면 빨간 점으로
-              "오늘 할 게 남았다"를 알린다(알림 벨의 안읽음 점과 같은 결). */}
-          {attendance && onOpenAttendance ? (
-            <ScalePressable
-              onPress={onOpenAttendance}
-              accessibilityRole="button"
-              accessibilityLabel={attendance.pending ? '출석 이벤트, 오늘 미출석' : '출석 이벤트'}
-              style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-              <Icon name="calendar" size={20} color={t.text} />
-              {attendance.pending ? (
-                <View style={[styles.menuDot, { backgroundColor: t.danger }]} />
-              ) : null}
-            </ScalePressable>
-          ) : null}
-          {/* 알림 벨 복원 (#727) — #257에서 메뉴로 합쳤던 것을 1탭으로 승격.
-              제목은 축소·중간 말줄임 로직이 있어 좁은 폭도 견딘다. */}
-          {onOpenNotifications ? (
-            <ScalePressable
-              onPress={onOpenNotifications}
-              accessibilityRole="button"
-              accessibilityLabel="알림"
-              style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-              <Icon name="bell" size={20} color={t.text} />
-              {unreadNotificationCount > 0 ? (
-                <View style={[styles.menuDot, { backgroundColor: t.danger }]} />
-              ) : null}
-            </ScalePressable>
-          ) : null}
-          <CoachTarget id="room-menu">
-            <ScalePressable
-              ref={menuBtnRef}
-              onPress={openNavMenu}
-              accessibilityRole="button"
-              accessibilityLabel="메뉴"
-              style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-              <Icon name="menu" size={20} color={t.text} />
-            </ScalePressable>
-          </CoachTarget>
-        </View>
-      </View>
-
-      {/* 탭 줄도 본문과 같은 폭으로 묶는다 — 본문만 제한하면 넓은 화면에서
-          탭이 왼쪽 끝에 홀로 남아 밑줄이 본문과 어긋난다 (#725). */}
-      <View style={[styles.tabBar, column]}>
-        {(
-          [
-            ['room', '방'],
-            ['calendar', '달력'],
-            // 회고도 조정 제안(#1006)도 없으면 탭을 아예 빼서 2탭으로 둔다.
-            ...(weeklyReport || hasRecommendations ? ([['report', '주간회고']] as const) : []),
-          ] as const
-        ).map(([key, label]) => {
-          const active = tab === key;
-          // 점이 켜지는 이유 두 가지 (#1006) — 새 회고(영구 저장된 읽음 표식)
-          // 이거나, 아직 이번 실행에서 열어보지 않은 조정 제안. 제안 쪽을 세션
-          // 단위로 두는 건 만료가 7일이라 영구 표식이면 일주일 내내 점이 남기
-          // 때문이다. 라벨이 이유를 그대로 말한다 — 점만 보고는 뭐가 왔는지 모른다.
-          const dotReason = weeklyReport?.unread
-            ? '새 회고'
-            : hasRecommendations && !reportTabOpened
-              ? '새 제안'
-              : null;
-          const dot = key === 'report' && !active && dotReason !== null;
-          const btn = (
-            <Pressable
-              onPress={() => {
-                setTab(key);
-                if (key === 'report') {
-                  setReportTabOpened(true);
-                  onOpenWeeklyReport?.();
-                }
-              }}
-              accessibilityRole="button"
-              accessibilityState={{ selected: active }}
-              accessibilityLabel={dot ? `${label}, ${dotReason}` : label}
-              style={[styles.tab, active && { borderBottomColor: t.primary }]}>
-              <Text style={[Typography.label, { color: active ? t.primaryText : t.textMuted }]}>
-                {label}
-              </Text>
-              {dot ? <View style={[styles.tabDot, { backgroundColor: t.danger }]} /> : null}
-            </Pressable>
-          );
-          // 달력 탭은 코치마크 대상 (#351).
-          return key === 'calendar' ? (
-            <CoachTarget key={key} id="room-tab-calendar">
-              {btn}
-            </CoachTarget>
-          ) : (
-            <View key={key}>{btn}</View>
-          );
-        })}
-      </View>
-
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -1208,9 +1123,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           scrollEnabled={dragId === null}
           contentContainerStyle={[
             styles.body,
-            // 방 캔버스가 정사각형이라 폭이 넓으면 높이도 같이 커져 루틴
-            // 목록이 화면 밖으로 밀린다 (#725).
-            column,
+            // 달력·회고 탭은 방이 없어 떠 있는 크롬(#1055) 밑으로 콘텐츠를 내린다.
+            tab !== 'room' ? { paddingTop: insets.top + Spacing.two + CHROME_ROW_HEIGHT } : null,
             navInset ? { paddingBottom: Spacing.six + navInset } : null,
             addingCategory != null && keyboardPad > 0 ? { paddingBottom: keyboardPad + 120 } : null,
           ]}
@@ -1230,42 +1144,79 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                     캡처를 JPEG(알파 없음)로 바꾸면서 여백이 검정으로 눌러붙어
                     위젯에 검은 띠가 생겼다. 플로팅 버튼들은 roomWrap 기준
                     absolute라 바깥에 남겨도 위치가 그대로다.
+                    전체화면(#1055): 방이 화면 폭을 다 쓰고 상태바 밑까지 올라간다 —
+                    집 탭의 하늘처럼. 위 모서리는 각지게, 아래는 종전 둥근 모서리.
                   */}
                 <View ref={roomShotRef} collapsable={false}>
-                  <Room {...roomScene} interactiveCharacter />
+                  <Room {...roomScene} interactiveCharacter style={styles.roomFullBleed} />
                 </View>
-                {/* 방 이미지 저장 중에는 빼서 사진에서 제외한다 (#475). opacity로
-                    숨기면 글래스 면(#1050)이 안 그려지고 복귀가 불안정해 조건부 렌더. */}
+                {/* 오른쪽 버튼 열 (#1055) — 메뉴·알림(헤더에서 이동)·꾸미기·뽑기.
+                    방 이미지 저장 중에는 통째로 빼서 사진에서 제외한다 (#475).
+                    opacity로 숨기면 글래스 면(#1050)이 안 그려지고 복귀가 불안정. */}
                 {capturing ? null : (
-                  <Pressable
-                    onPress={onOpenGacha}
-                    accessibilityRole="button"
-                    accessibilityLabel="뽑기 상점"
-                    style={styles.gachaBtn}>
-                    <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
-                      {/* absolute 버튼이라 래퍼 대신 내용을 측정 (#351). */}
-                      <CoachTarget id="room-gacha">
-                        <Icon name="gift" size={20} color={t.text} />
-                      </CoachTarget>
-                    </GlassSurface>
-                  </Pressable>
+                  <View style={styles.btnColumn}>
+                    <CoachTarget id="room-menu">
+                      <Pressable
+                        ref={menuBtnRef}
+                        onPress={openNavMenu}
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                          attendance?.pending && onOpenAttendance ? '메뉴, 오늘 미출석' : '메뉴'
+                        }
+                        style={styles.floatBtn}>
+                        <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
+                          <Icon name="menu" size={20} color={t.text} />
+                          {/* 출석 이벤트가 메뉴 안으로 들어가(#1055) 미출석 점은 여기에. */}
+                          {attendance?.pending && onOpenAttendance ? (
+                            <View style={[styles.menuDot, { backgroundColor: t.danger }]} />
+                          ) : null}
+                        </GlassSurface>
+                      </Pressable>
+                    </CoachTarget>
+                    {onOpenNotifications ? (
+                      <Pressable
+                        onPress={onOpenNotifications}
+                        accessibilityRole="button"
+                        accessibilityLabel="알림"
+                        style={styles.floatBtn}>
+                        <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
+                          <Icon name="bell" size={20} color={t.text} />
+                          {unreadNotificationCount > 0 ? (
+                            <View style={[styles.menuDot, { backgroundColor: t.danger }]} />
+                          ) : null}
+                        </GlassSurface>
+                      </Pressable>
+                    ) : null}
+                    {/* 방 꾸미기 1탭 승격 (#727) — 보상 루프의 종착지를 뽑기 옆에. */}
+                    {onEdit ? (
+                      <Pressable
+                        onPress={onEdit}
+                        accessibilityRole="button"
+                        accessibilityLabel="방 꾸미기"
+                        style={styles.floatBtn}>
+                        <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
+                          <Icon name="edit" size={20} color={t.text} />
+                        </GlassSurface>
+                      </Pressable>
+                    ) : null}
+                    <Pressable
+                      onPress={onOpenGacha}
+                      accessibilityRole="button"
+                      accessibilityLabel="뽑기 상점"
+                      style={styles.floatBtn}>
+                      <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
+                        {/* absolute 버튼이라 래퍼 대신 내용을 측정 (#351). */}
+                        <CoachTarget id="room-gacha">
+                          <Icon name="gift" size={20} color={t.text} />
+                        </CoachTarget>
+                      </GlassSurface>
+                    </Pressable>
+                  </View>
                 )}
-                {/* 방 꾸미기 1탭 승격 (#727) — 메뉴(2탭) 뒤에 있던 보상 루프의
-                      종착지를 뽑기 버튼 위에 나란히. 메뉴 항목은 습관 경로로 유지. */}
-                {onEdit && !capturing ? (
-                  <Pressable
-                    onPress={onEdit}
-                    accessibilityRole="button"
-                    accessibilityLabel="방 꾸미기"
-                    style={styles.decorBtn}>
-                    <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
-                      <Icon name="edit" size={20} color={t.text} />
-                    </GlassSurface>
-                  </Pressable>
-                ) : null}
               </View>
 
-              <View style={styles.section}>
+              {/* 폭 제한(#725)은 목록에만 — 방은 전체 폭 (#1055). */}
+              <View style={[styles.section, column]}>
                 <CoachTarget id="room-routines">
                   <View style={styles.sectionHead}>
                     <Text style={[Typography.h2, { color: t.text }]}>오늘의 할 일</Text>
@@ -1329,13 +1280,15 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               </View>
             </>
           ) : tab === 'report' ? (
-            <WeeklyReportPanel
-              report={weeklyReport?.report}
-              loading={weeklyReport?.loading}
-              recommendations={recommendations}
-            />
+            <View style={column}>
+              <WeeklyReportPanel
+                report={weeklyReport?.report}
+                loading={weeklyReport?.loading}
+                recommendations={recommendations}
+              />
+            </View>
           ) : (
-            <View style={styles.calendarPanel}>
+            <View style={[styles.calendarPanel, column]}>
               {/* monthSwipe=false 유지 (#825) — 달력 위 가로 스와이프가 월
                   이동이라는 또 다른 뜻을 갖게 되면 "가로 스와이프 = 하단 탭
                   이동" 규칙이 다시 깨진다. 월 이동은 ‹ › 버튼. */}
@@ -1409,6 +1362,101 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         </PawRefreshScroll>
       </KeyboardAvoidingView>
 
+      {/* 떠 있는 크롬 (#1055) — 헤더바 대신 이름 알약과 방/달력 세그먼트가 방 위에
+          뜬다. 스크롤 바깥 오버레이라 목록을 내려도 제자리. 회고 탭은 회고·조정
+          제안이 있을 때만 (#1006). */}
+      <View pointerEvents="box-none" style={[styles.chromeRow, { top: insets.top + Spacing.two }]}>
+        <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.namePill}>
+          {/* Narrow phones: shrink the font (≥75%) first; if the title still
+              overflows, middle-ellipsize so the 의 방 suffix stays visible. */}
+          <Text
+            style={[Typography.label, { color: t.text }]}
+            numberOfLines={1}
+            ellipsizeMode="middle"
+            adjustsFontSizeToFit
+            minimumFontScale={0.75}>
+            {userName ? `${userName}의 방` : '내 방'}
+          </Text>
+        </GlassSurface>
+        <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.segment}>
+          {(
+            [
+              ['room', '방'],
+              ['calendar', '달력'],
+              ...(weeklyReport || hasRecommendations ? ([['report', '주간회고']] as const) : []),
+            ] as const
+          ).map(([key, label]) => {
+            const active = tab === key;
+            // 점이 켜지는 이유 두 가지 (#1006) — 새 회고(영구 저장된 읽음 표식)
+            // 이거나, 아직 이번 실행에서 열어보지 않은 조정 제안.
+            const dotReason = weeklyReport?.unread
+              ? '새 회고'
+              : hasRecommendations && !reportTabOpened
+                ? '새 제안'
+                : null;
+            const dot = key === 'report' && !active && dotReason !== null;
+            const btn = (
+              <Pressable
+                onPress={() => {
+                  setTab(key);
+                  if (key === 'report') {
+                    setReportTabOpened(true);
+                    onOpenWeeklyReport?.();
+                  }
+                }}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={dot ? `${label}, ${dotReason}` : label}
+                style={[styles.segmentItem, active && { backgroundColor: t.surfaceMuted }]}>
+                <Text style={[Typography.label, { color: active ? t.primaryText : t.textMuted }]}>
+                  {label}
+                </Text>
+                {dot ? <View style={[styles.segmentDot, { backgroundColor: t.danger }]} /> : null}
+              </Pressable>
+            );
+            // 달력 탭은 코치마크 대상 (#351).
+            return key === 'calendar' ? (
+              <CoachTarget key={key} id="room-tab-calendar">
+                {btn}
+              </CoachTarget>
+            ) : (
+              <View key={key}>{btn}</View>
+            );
+          })}
+        </GlassSurface>
+      </View>
+
+      {/* 보상 알약 (#1055) — 완료 보상이 확인된 순간에만 크롬 아래 가운데에 떠서
+          스트릭·코인 증분을 보여주고 사라진다. 코인 플라이의 목적지. */}
+      {reward ? (
+        <View
+          pointerEvents="none"
+          style={[
+            styles.rewardWrap,
+            { top: insets.top + Spacing.two + CHROME_ROW_HEIGHT + Spacing.three },
+          ]}>
+          <Animated.View
+            ref={rewardPillRef}
+            onLayout={measureRewardPill}
+            style={{ transform: [{ scale: rewardPulse }] }}>
+            <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.rewardPill}>
+              {/* A 0-day streak is nothing to celebrate — show the flame only
+                  once a streak exists. */}
+              {streakDays > 0 ? (
+                <Animated.View style={[styles.streak, { transform: [{ scale: streakPulse }] }]}>
+                  <Icon name="flame" size={14} color={t.warningText} />
+                  <Text style={[Typography.label, { color: t.warningText }]}>{streakDays}일</Text>
+                </Animated.View>
+              ) : null}
+              <View style={styles.streak}>
+                <Icon name="coin" size={14} color={t.warning} />
+                <Text style={[Typography.label, { color: t.text }]}>+{reward.coins}</Text>
+              </View>
+            </GlassSurface>
+          </Animated.View>
+        </View>
+      ) : null}
+
       <CategoryFormSheet
         visible={editingCategory !== null}
         editing={editingCategory}
@@ -1463,7 +1511,12 @@ export const MyRoomScreen = memo(function MyRoomScreen({
       <NavMenuPopover
         visible={navMenuOpen}
         top={navMenuTop}
+        bottom={navMenuBottom}
         onClose={() => setNavMenuOpen(false)}
+        // 출석 이벤트·재화 내역은 헤더 아이콘·지갑 필에서 메뉴 항목으로 (#1055).
+        onOpenAttendance={attendance && onOpenAttendance ? onOpenAttendance : undefined}
+        attendancePending={!!attendance?.pending}
+        onOpenWalletHistory={openWalletHistory}
         onOpenCharacterPicker={
           ownedCharacters && onSelectCharacter ? () => setCharacterSheetOpen(true) : undefined
         }
@@ -1517,32 +1570,6 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.three,
-  },
-  tabBar: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.four,
-  },
-  tab: {
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  // 라벨 오른쪽 위 점 — 헤더 아이콘의 안읽음 점(menuDot)과 같은 결.
-  tabDot: {
-    position: 'absolute',
-    top: Spacing.one,
-    right: Spacing.two,
-    width: 6,
-    height: 6,
-    borderRadius: Radius.pill,
-  },
   calendarPanel: {
     padding: Spacing.four,
     gap: Spacing.two,
@@ -1560,32 +1587,10 @@ const styles = StyleSheet.create({
   calEmpty: {
     paddingVertical: Spacing.three,
   },
-  headerLeft: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-    marginRight: Spacing.two,
-  },
-  headerName: {
-    flexShrink: 1,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-  },
   streak: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.half,
-  },
-  iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   menuDot: {
     position: 'absolute',
@@ -1599,23 +1604,75 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.six,
   },
   roomWrap: {
-    paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.four,
+    position: 'relative',
   },
-  // 꾸미기 버튼 (#727) — 뽑기 버튼 바로 위, 같은 크기.
-  decorBtn: {
-    position: 'absolute',
-    right: Spacing.four,
-    bottom: Spacing.three + 44 + Spacing.two,
-    width: 44,
-    height: 44,
+  // 전체화면 방 (#1055) — 위 모서리는 화면 가장자리에 붙으니 각지게.
+  roomFullBleed: {
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
   },
-  gachaBtn: {
+  // 오른쪽 버튼 열 (#1055) — 메뉴·알림·꾸미기·뽑기, 아래에서 위로.
+  btnColumn: {
     position: 'absolute',
     right: Spacing.four,
     bottom: Spacing.three,
+    gap: Spacing.two,
+  },
+  floatBtn: {
     width: 44,
     height: 44,
+  },
+  // 떠 있는 크롬 줄 (#1055) — 이름 알약(왼쪽)과 세그먼트(오른쪽).
+  chromeRow: {
+    position: 'absolute',
+    left: Spacing.three,
+    right: Spacing.three,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.two,
+    zIndex: 20,
+  },
+  namePill: {
+    flexShrink: 1,
+    height: CHROME_ROW_HEIGHT,
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.pill,
+  },
+  segment: {
+    flexDirection: 'row',
+    height: CHROME_ROW_HEIGHT,
+    padding: Spacing.one,
+    borderRadius: Radius.pill,
+  },
+  segmentItem: {
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.pill,
+  },
+  segmentDot: {
+    position: 'absolute',
+    top: Spacing.one,
+    right: Spacing.one,
+    width: 6,
+    height: 6,
+    borderRadius: Radius.pill,
+  },
+  rewardWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 20,
+  },
+  rewardPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderRadius: Radius.pill,
   },
   // 떠 있는 원형 버튼의 면 (#1050) — 위치·크기는 버튼이, 모양·배경은 면이.
   floatFace: {
