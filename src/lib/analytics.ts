@@ -150,9 +150,10 @@ export function track(event: AnalyticsEvent, props?: Record<string, string | num
     // GA4 이벤트 이름 규칙(영소문자+언더스코어)은 AnalyticsEvent 유니온이 보장.
     if (!ga || !gaMod) return;
     const safe = props && sanitize(props);
-    // logEvent는 Promise를 준다 — `void`로 버리면 **거부가 try/catch를 빠져나가**
-    // unhandled rejection이 된다. 실제로 그렇게 새어나갔다 (#912).
-    void gaMod.logEvent(ga, event, safe).catch(() => {});
+    // 거부가 try/catch를 빠져나가 unhandled rejection이 된 적이 있다 (#912).
+    // RNFB 26의 모듈러 `logEvent`는 내부 프로미스를 `void`로 버려 잡을 자리가
+    // 없으므로(#1031), Promise를 돌려주는 인스턴스 메서드를 직접 부른다.
+    void ga.logEvent(event, safe).catch(() => {});
   } catch {
     // no-op
   }

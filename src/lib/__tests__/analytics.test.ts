@@ -6,7 +6,9 @@
  *      넘겼더니 iOS `-[__NSCFNumber enumerateObjectsUsingBlock:]`,
  *      Android `java.lang.Double cannot be cast to ReadableArray`로 터졌다.
  *   2. `logEvent`가 준 Promise를 `void`로 버려서, 거부가 try/catch를 지나쳐
- *      unhandled rejection이 됐다.
+ *      unhandled rejection이 됐다. RNFB 26(#1031)은 모듈러 함수가 그 Promise를
+ *      스스로 버리므로 앱은 인스턴스 메서드 `ga.logEvent`를 부른다 — 목도
+ *      그 경로를 모듈 `logEvent` 호출 모양으로 흘린다.
  */
 import { initAnalytics, track } from '@/lib/analytics';
 
@@ -15,7 +17,12 @@ const mockLogEvent = jest.fn((..._a: unknown[]) => Promise.resolve());
 const mockSetCollection = jest.fn((..._a: unknown[]) => Promise.resolve());
 
 jest.mock('@react-native-firebase/analytics', () => ({
-  getAnalytics: () => ({}),
+  getAnalytics: () => {
+    const instance = {
+      logEvent: (...a: unknown[]) => mockLogEvent(instance, ...a),
+    };
+    return instance;
+  },
   logEvent: (...a: unknown[]) => mockLogEvent(...a),
   setUserId: () => Promise.resolve(),
   logScreenView: () => Promise.resolve(),
