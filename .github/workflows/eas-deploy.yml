@@ -26,12 +26,55 @@ jobs:
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
+      # 같은 지문의 직전 빌드가 실패해 있으면 자동 재시도를 막는다 (#1034).
+      # 9/1에 원인 수정 없는 연속 머지가 같은 에러의 빌드 재시도로 쿼터를
+      # 태웠다 — 사람이 런을 지켜보다 취소하는 규칙은 연속 머지에서 뚫린다.
+      #   · 같은 지문의 FINISHED 빌드가 있으면 스킵하지 않는다(액션이 재사용, 무비용)
+      #   · 같은 지문의 최신 시도가 ERRORED거나 아직 도는 중이면 새 빌드를
+      #     스킵하고 OTA 폴백만 발행한다
+      #   · CANCELED는 스킵 사유가 아니다 — 몰아 머지 절차의 의도된 취소를
+      #     재시도 차단으로 읽으면 안 된다
+      #   · 조회가 실패하면 항상 skip=false — 가드는 배포를 막는 장치가 아니다
+      - name: 실패 재시도 가드 (#1034)
+        id: guard
+        continue-on-error: true
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          for platform in ios android; do
+            if [ "$platform" = "ios" ]; then profile=testflight; else profile=preview; fi
+            skip=false
+            current=$(npx expo-updates fingerprint:generate --platform "$platform" 2>/dev/null | node -e               'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).hash||"")}catch{console.log("")}})')
+            builds=$(eas build:list --platform "$platform" --build-profile "$profile" --limit 10 --json --non-interactive 2>/dev/null || echo '[]')
+            if [ -n "$current" ]; then
+              skip=$(printf '%s' "$builds" | CURRENT_FP="$current" node -e '
+                let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{
+                  let skip=false;
+                  try{
+                    const fp=process.env.CURRENT_FP;
+                    const rt=b=>(b.runtime&&b.runtime.version)||(b.fingerprint&&b.fingerprint.hash)||"";
+                    const same=JSON.parse(s).filter(b=>rt(b)===fp);
+                    if(same.length&&!same.some(b=>b.status==="FINISHED")){
+                      const st=same[0].status;
+                      skip=(st==="ERRORED"||st==="IN_PROGRESS"||st==="IN_QUEUE"||st==="NEW"||st==="PENDING");
+                    }
+                  }catch{}
+                  console.log(skip);
+                })')
+            fi
+            if [ "$skip" = "true" ]; then
+              echo "::warning::$platform — 같은 지문($current)의 직전 $profile 빌드가 실패/진행 중이라 자동 재시도를 건너뜁니다 (#1034). 원인을 고친 뒤 수동으로: eas build -p $platform --profile $profile"
+              echo "- ⏭ **$platform**: 같은 지문의 직전 빌드가 실패/진행 중 — 자동 빌드 스킵, OTA 폴백만 발행 (#1034)." >> "$GITHUB_STEP_SUMMARY"
+            fi
+            echo "skip_$platform=$skip" >> "$GITHUB_OUTPUT"
+          done
       # 지문 비교 → 동일하면 eas update(OTA), 다르면 새 빌드.
       # Android: preview APK (internal 배포).
       # continue-on-error: Android 실패(쿼터 소진 등)가 iOS 배포까지 죽이지
       # 않게 한다 (#429) — 실패는 말미 스텝이 다시 표면화해 잡은 빨간색 유지.
       - name: Android — OTA or preview build
         id: android
+        if: steps.guard.outputs.skip_android != 'true'
         continue-on-error: true
         uses: expo/expo-github-action/continuous-deploy-fingerprint@main
         with:
@@ -43,7 +86,7 @@ jobs:
       # 평시에는 액션이 스스로 업데이트를 발행하므로 이 스텝은 건너뛴다.
       - name: Android — OTA fallback
         id: android_fallback
-        if: steps.android.outcome == 'failure'
+        if: steps.android.outcome == 'failure' || steps.guard.outputs.skip_android == 'true'
         # 말미 판정 스텝이 이 결과를 읽어 빨강/노랑을 가른다 (#998) — 여기서
         # 잡을 죽이면 그 판정도, 도달 여부 점검도 돌지 못한다.
         continue-on-error: true
@@ -58,6 +101,7 @@ jobs:
       # iOS: 네이티브 변경 시 testflight 빌드 + TestFlight 자동 제출 (ad-hoc 미사용).
       - name: iOS — OTA or TestFlight build
         id: ios
+        if: steps.guard.outputs.skip_ios != 'true'
         continue-on-error: true
         uses: expo/expo-github-action/continuous-deploy-fingerprint@main
         with:
@@ -69,7 +113,7 @@ jobs:
       # 폴백(#435)과 대칭. 7/31 쿼터 소진 때 iOS OTA만 조용히 누락됐던 구멍.
       - name: iOS — OTA fallback
         id: ios_fallback
-        if: steps.ios.outcome == 'failure'
+        if: steps.ios.outcome == 'failure' || steps.guard.outputs.skip_ios == 'true'
         continue-on-error: true
         run: eas update --branch preview --platform ios --non-interactive --auto
         env:
@@ -128,8 +172,9 @@ jobs:
               echo "- **$platform**: 지문 확인 불가 — 도달 여부 미판정." >> "$GITHUB_STEP_SUMMARY"
             elif [ "$current" = "$shipped" ]; then
               echo "- ✅ **$platform**: 지문 일치 (\`$current\`) — 테스터 설치본이 이 OTA를 받습니다." >> "$GITHUB_STEP_SUMMARY"
-            elif [ "$outcome" = "failure" ]; then
-              # 빌드가 실패해 폴백이 OTA를 쐈는데 그 런타임을 가진 설치본이 없다.
+            elif [ "$outcome" != "success" ]; then
+              # 빌드가 실패했거나(failure) 가드가 막아(skipped) 폴백만 OTA를
+              # 쐈는데, 그 런타임을 가진 설치본이 없다.
               # 이게 진짜 조용한 실패다 — 발행은 성공하고 수신자만 0이다.
               echo "::warning::$platform — 이 OTA는 **수신자가 없습니다** (이번 $current ≠ preview 빌드 $shipped). 발행은 됐지만 그 런타임을 가진 설치본이 없습니다 — $profile 프로필로 새 빌드가 필요합니다."
               echo "- ⚠️ **$platform**: 지문 불일치 (\`$current\` ≠ preview \`$shipped\`) — **이 OTA는 아무에게도 안 갑니다**. $profile 빌드 필요." >> "$GITHUB_STEP_SUMMARY"
