@@ -52,6 +52,7 @@ import { shiftIso, todayIso } from '@/utils/datetime';
 import { Calendar } from '@/components/ui/calendar';
 import { RecommendationSection } from '@/components/screens/my-room/recommendation-section';
 import { WeeklyReportPanel } from '@/components/screens/my-room/weekly-report-panel';
+import { WeeklyReportScreen } from '@/components/screens/weekly-report-screen';
 import type { RecommendationItem } from '@/api';
 import { CoachMarkOverlay } from '@/components/ui/coach-mark';
 import { Card } from '@/components/ui/card';
@@ -944,6 +945,27 @@ export const galleryEntries: GalleryEntry[] = [
     description:
       '연속 출석 시트 (#851) — 눌러서 도장·코인·카운트업 연출 확인. 10일차엔 트로피 리빌.',
     render: () => <AttendanceSheetDemo />,
+  },
+  {
+    name: 'WeeklyReportScreen · 주간회고 화면',
+    description:
+      '설정 > 주간회고 다시 보기 / 새 회고 배너 목적지 (#1056). 나의 방 탭에서 빠진 패널을 헤더 달린 화면으로.',
+    render: () => (
+      <View style={{ height: 520 }}>
+        <WeeklyReportScreen
+          report={{
+            reportId: 1,
+            weekStartDate: '2026-08-24',
+            weekEndDate: '2026-08-30',
+            completionRate: 80,
+            completedCount: 8,
+            scheduledCount: 10,
+            summary: '지난주엔 아침 루틴을 잘 지켰어요. 운동은 주중에 두 번 빠졌네요.',
+          }}
+          onBack={() => {}}
+        />
+      </View>
+    ),
   },
   {
     name: 'WeeklyReportPanel',

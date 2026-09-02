@@ -114,6 +114,11 @@ export function AppShell({
   // Remember where the add/edit-routine screen was opened from, so its back
   // button returns to the right place (my-room or routine manage).
   const [addReturnScreen, setAddReturnScreen] = useState<Screen>('routineManage');
+  // 설정 → 주간회고 (#1056): 연 곳(설정)으로 되돌아오게 addReturnScreen을 함께 세팅.
+  const openWeeklyReportFromSettings = useCallback(() => {
+    setAddReturnScreen('settings');
+    setScreen('weeklyReport');
+  }, []);
 
   // 온보딩 미션 체인 (#571) — 온보딩 완주 직후 시작, 완료/스킵 플래그가
   // 있으면 시작하지 않는다. 단계 완료는 아래 액션 지점들이 complete로 쏜다.
@@ -339,6 +344,9 @@ export function AppShell({
     screen,
     setScreen,
     onReplayOnboarding,
+    // 주간회고 다시 보기 (#1056) — 데이터는 나의 방 페이지 훅 소유. 훅 순서상
+    // myRoomPages가 뒤에 오므로 setScreen 기반의 안정 콜백으로 연결한다.
+    onOpenWeeklyReport: openWeeklyReportFromSettings,
     profile: { nickname, bio, characterId: wornCharacterId, onSave: handleProfileSave },
   });
   // 나의 방 페이지 배선 (#692 5단계) — 나의 방 탭 페이지와 서브화면 4종
@@ -610,7 +618,7 @@ export function AppShell({
           type={myRoomPages.pushBanner.type}
           title={myRoomPages.pushBanner.title}
           body={myRoomPages.pushBanner.body}
-          onPress={myRoomPages.openNotifications}
+          onPress={myRoomPages.pushBanner.onPress ?? myRoomPages.openNotifications}
           onDismiss={myRoomPages.dismissPushBanner}
         />
       ) : null}

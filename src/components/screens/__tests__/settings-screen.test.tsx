@@ -135,4 +135,11 @@ describe('SettingsScreen 회원탈퇴', () => {
     expect(onWithdraw).not.toHaveBeenCalled();
     expect(queryByText('정말 탈퇴할까요?')).toBeNull();
   });
+
+  it('주간회고 다시 보기 항목이 onOpenWeeklyReport를 부른다 (#1056)', async () => {
+    const onOpenWeeklyReport = jest.fn();
+    const { getByText } = await render(<SettingsScreen onOpenWeeklyReport={onOpenWeeklyReport} />);
+    await fireEvent.press(getByText('주간회고 다시 보기'));
+    expect(onOpenWeeklyReport).toHaveBeenCalledTimes(1);
+  });
 });

@@ -64,6 +64,8 @@ export type SettingsScreenProps = ScrollRestoreProps & {
   /** 캘린더 연동 (#844) — 미배선이면 항목이 숨는다(네이티브 모듈 필요). */
   onOpenCalendarImport?: () => void;
   onOpenHelp?: () => void;
+  /** 주간회고 다시 보기 (#1056) — 나의 방 탭에서 설정 항목으로. */
+  onOpenWeeklyReport?: () => void;
   /** 친구 초대 (#518) — 내 초대코드·코드 사용 화면. */
   onInviteFriends?: () => void;
   /** 버그 제보 화면 열기 (#496). */
@@ -104,6 +106,7 @@ export const SettingsScreen = memo(function SettingsScreen({
   onOpenSound,
   onOpenCalendarImport,
   onOpenHelp,
+  onOpenWeeklyReport,
   onInviteFriends,
   onReportBug,
   onOpenTerms,
@@ -152,6 +155,7 @@ export const SettingsScreen = memo(function SettingsScreen({
     {
       title: '기타',
       rows: [
+        { icon: 'list', label: '주간회고 다시 보기', onPress: onOpenWeeklyReport },
         { icon: 'help', label: '도움말', onPress: onOpenHelp },
         { icon: 'bug', label: '버그 제보', onPress: onReportBug },
         { icon: 'refresh', label: '튜토리얼 다시 보기', onPress: onReplayOnboarding },
