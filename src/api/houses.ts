@@ -107,9 +107,18 @@ export function requestHouseJoin(houseId: number) {
   return apiPost<HouseJoinRequestResponse>(`/houses/${houseId}/join-requests`);
 }
 
-/** GET /houses/{id}/join-requests — pending requests (owner only). */
+/**
+ * GET /houses/{id}/join-requests — pending requests (owner only).
+ *
+ * 비오너의 403은 **예상된 결과**다 (#1044) — 집 로드가 상세·멤버·미션·신청을
+ * 병렬로 쏘느라 역할을 미리 모르고(use-houses의 의도된 트레이드오프), 호출측이
+ * 빈 배열로 접는다. api_error로 집계되면 지표만 오염되므로 출석 404(#1011)와
+ * 같은 방식으로 뺀다.
+ */
 export function fetchHouseJoinRequests(houseId: number) {
-  return apiGetList<HouseJoinRequestResponse>(`/houses/${houseId}/join-requests`);
+  return apiGetList<HouseJoinRequestResponse>(`/houses/${houseId}/join-requests`, {
+    expectedStatuses: [403],
+  });
 }
 
 /** POST /houses/{id}/join-requests/{requestId}/accept — owner accepts. */
