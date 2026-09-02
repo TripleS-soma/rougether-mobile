@@ -10,6 +10,8 @@ import { Spacing } from '@/constants/theme';
 export const NAV_PILL_PAD_V = Spacing.two;
 /** 알약 안쪽 좌우 패딩. */
 export const NAV_PILL_PAD_H = Spacing.two;
+/** 알약 안 탭 사이 간격. */
+export const NAV_PILL_GAP = Spacing.two;
 /** 탭 아이콘 한 변. */
 export const NAV_ICON_SIZE = 24;
 /** 아이콘과 라벨 사이. */

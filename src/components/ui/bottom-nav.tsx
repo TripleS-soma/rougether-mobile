@@ -14,6 +14,7 @@ import {
   NAV_ICON_LABEL_GAP,
   NAV_ICON_SIZE,
   NAV_PILL_PAD_H,
+  NAV_PILL_GAP,
   NAV_PILL_PAD_V,
   navPillBottomOffset,
 } from '@/components/ui/bottom-nav-geometry';
@@ -91,7 +92,7 @@ export function BottomNav({ active, onChange }: BottomNavProps) {
         accessibilityRole="button"
         accessibilityState={{ selected: isActive }}
         accessibilityLabel={label}
-        style={styles.tab}>
+        style={[styles.tab, glass ? styles.glassTab : null]}>
         <TabIcon
           isActive={isActive}
           Icon={isActive ? ActiveIcon : InactiveIcon}
@@ -157,6 +158,10 @@ const styles = StyleSheet.create({
     gap: NAV_ICON_LABEL_GAP,
     paddingHorizontal: Spacing.three,
   },
+  // 알약 안에서는 탭 사이를 더 벌린다 — 꽉 찬 바보다 여유 있게 읽히도록.
+  glassTab: {
+    paddingHorizontal: Spacing.four,
+  },
   // 알약 오버레이 — 폭은 탭 3개에 맞춰 줄어들고(alignItems), 좌우는 빈 띠.
   floatWrap: {
     position: 'absolute',
@@ -166,6 +171,7 @@ const styles = StyleSheet.create({
   },
   pill: {
     flexDirection: 'row',
+    gap: NAV_PILL_GAP,
     paddingVertical: NAV_PILL_PAD_V,
     paddingHorizontal: NAV_PILL_PAD_H,
     borderRadius: Radius.pill,
