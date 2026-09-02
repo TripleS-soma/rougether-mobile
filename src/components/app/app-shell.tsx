@@ -18,7 +18,7 @@ import {
   dominantDecorTab,
   RoomDecorScreen,
 } from '@/components/screens/room-decor-screen';
-import { useStableCallback } from '@/hooks/use-stable-value';
+import { useLatestRef, useStableCallback } from '@/hooks/use-stable-value';
 import { SettingsScreen } from '@/components/screens/settings-screen';
 import { AttendanceSheet } from '@/components/screens/sheets/attendance-sheet';
 import { MissionSheet } from '@/components/screens/sheets/mission-sheet';
@@ -266,7 +266,15 @@ export function AppShell({
     setDecorInitialTab(dominantDecorTab(ids, catalogue));
     setScreen('decor');
   });
+  // 진입 시점의 값만 필요하고 의존성에 넣으면 화면 안에서 목록이 비워질 때
+  // 이펙트가 다시 돌므로 최신값 ref로 읽는다.
+  const fromGachaRef = useLatestRef(newDecorItemIds.length > 0);
   useEffect(() => {
+    if (screen === 'decor') {
+      // 꾸미기 퍼널의 첫 단계 (#1043) — 진입 경로 셋(나의 방·뽑기·미션)이 전부
+      // 이 상태 전환을 지나므로 여기서 한 번만 센다. 뽑기에서 온 경우만 구분.
+      track('decor_open', { from: fromGachaRef.current ? 'gacha' : 'direct' });
+    }
     if (screen !== 'decor') {
       setNewDecorItemIds([]);
       // 다음에 꾸미기를 직접 열면 기본 탭이어야 한다 — 뽑기에서 온 게 아니다.
