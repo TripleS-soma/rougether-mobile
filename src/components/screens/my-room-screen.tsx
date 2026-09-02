@@ -76,7 +76,7 @@ import { ScalePressable } from '@/components/ui/scale-pressable';
 import { Radius, Spacing } from '@/constants/theme';
 import { saveRoomImage } from '@/lib/room-capture';
 import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
-import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useBottomNavInset, useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
@@ -347,6 +347,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   const column = useResponsiveColumn();
   const Typography = useTypography();
   const headerInset = useHeaderInsetStyle();
+  // 글래스 알약 바텀바가 떠 있으면 마지막 루틴이 그 밑에 안 숨게 (#1049).
+  const navInset = useBottomNavInset();
   // 좁은 폰은 콤팩트 지갑 필(코인만) (#425) — 닉네임 열이 필 2개에 밀려
   // 뭉개지는 것 방지. 다이아는 뽑기 상점·꾸미기에서 보인다.
 
@@ -1208,6 +1210,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             // 방 캔버스가 정사각형이라 폭이 넓으면 높이도 같이 커져 루틴
             // 목록이 화면 밖으로 밀린다 (#725).
             column,
+            navInset ? { paddingBottom: Spacing.six + navInset } : null,
             addingCategory != null && keyboardPad > 0 ? { paddingBottom: keyboardPad + 120 } : null,
           ]}
           {...scrollRestore}

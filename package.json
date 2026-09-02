@@ -24,6 +24,7 @@
     "expo-constants": "~55.0.16",
     "expo-device": "~55.0.19",
     "expo-font": "~55.0.8",
+    "expo-glass-effect": "~55.0.11",
     "expo-haptics": "~55.0.15",
     "expo-image": "~55.0.11",
     "expo-image-picker": "~55.0.21",
@@ -104,7 +105,8 @@
       "^@/assets/(.*)$": "<rootDir>/assets/$1",
       "^@/(.*)$": "<rootDir>/src/$1",
       "^react-native-android-widget$": "<rootDir>/jest/react-native-android-widget-mock.js",
-      "^@sentry/react-native$": "<rootDir>/jest/sentry-mock.js"
+      "^@sentry/react-native$": "<rootDir>/jest/sentry-mock.js",
+      "^expo-glass-effect$": "<rootDir>/jest/expo-glass-effect-mock.js"
     },
     "transformIgnorePatterns": [
       "node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg))"

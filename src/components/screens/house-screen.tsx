@@ -39,7 +39,7 @@ import { ScalePressable } from '@/components/ui/scale-pressable';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { characterIdForMember } from '@/hooks/use-member-room-previews';
 import { FixedOverlay, Radius, ShadowColor, Spacing } from '@/constants/theme';
-import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useBottomNavInset, useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import type { MissionStatus } from '@/utils/mission-cta';
@@ -325,6 +325,8 @@ export const HouseScreen = memo(function HouseScreen({
   // 따라 바뀌던 하늘은 집별 배경 아트(#989)가 대체했다 — 정적 색만 남긴다.
   const skyColor = t.sky;
   const headerInset = useHeaderInsetStyle();
+  // 글래스 알약 바텀바가 떠 있으면 잔디·집 프레임이 그 밑에 안 깔리게 (#1049).
+  const navInset = useBottomNavInset();
   // 레일을 스위처 줄 아래로 내려 첫 버튼(목표)이 Lv.·멤버 필과 같은 라인에
   // 오게 한다 (#994). 종전엔 레일이 맨 위라 집이 여럿인 사용자의 `다음 집`
   // 화살표와 같은 띠를 다퉜다 — 이름이 길수록 화살표가 레일 쪽으로 밀렸다.
@@ -1029,7 +1031,7 @@ export const HouseScreen = memo(function HouseScreen({
         // 이 화면은 폭 제한에서 뺀다 (#986) — 하늘이 화면을 꽉 채워야 하고,
         // 태블릿에서 560으로 잘리면 좌우가 크림으로 남아 목적과 반대가 된다.
         // 프레임은 aspectRatio라 폭을 따라 커지지만, 좌석 좌표는 정규화라 안전.
-        contentContainerStyle={styles.body}
+        contentContainerStyle={[styles.body, navInset ? { paddingBottom: navInset } : null]}
         scrollEnabled={dragSeat == null}
         testID="house-scroll">
         {/* 프레임 모드(#287) — 하늘 위에 스위처·집 프레임, 방은 창문 안에.
