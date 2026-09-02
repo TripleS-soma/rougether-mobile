@@ -13,6 +13,7 @@ import {
   RevealCard,
   rarityColor,
 } from '@/components/screens/gacha/draw-animation';
+import { SheetHandle } from '@/components/ui/sheet-handle';
 import { Loading } from '@/components/ui/loading';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Icon } from '@/components/ui/icon';
@@ -483,7 +484,7 @@ export function GachaScreen({
         visible={rewardsOpen}
         onClose={() => setRewardsOpen(false)}
         cardStyle={[styles.rewardsSheet, { backgroundColor: t.screen }]}>
-        <View style={[styles.sheetHandle, { backgroundColor: t.border }]} />
+        <SheetHandle />
         <Text style={[Typography.h3, styles.center, { color: t.text }]}>나올 수 있는 보상</Text>
         <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
           이미 가진 아이템이 나오면 다이아로 바뀌어요.
@@ -545,13 +546,6 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.two,
     paddingBottom: Spacing.six,
     gap: Spacing.two,
-  },
-  sheetHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: Radius.pill,
-    alignSelf: 'center',
-    marginBottom: Spacing.one,
   },
   rewardsBlock: {
     paddingVertical: Spacing.five,

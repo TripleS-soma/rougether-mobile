@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { SheetHandle } from '@/components/ui/sheet-handle';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Calendar } from '@/components/ui/calendar';
 import type { Routine } from '@/constants/routines';
@@ -41,7 +42,7 @@ export function DateEditSheet({
       visible={item !== null}
       onClose={onClose}
       cardStyle={[styles.sheet, { backgroundColor: t.screen }]}>
-      <View style={[styles.sheetHandle, { backgroundColor: t.border }]} />
+      <SheetHandle />
       <Text style={[Typography.h3, styles.sheetTitle, { color: t.text }]} numberOfLines={1}>
         날짜 바꾸기
       </Text>
@@ -86,13 +87,6 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.two,
     paddingBottom: Spacing.six,
     gap: Spacing.three,
-  },
-  sheetHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: Radius.pill,
-    alignSelf: 'center',
-    marginBottom: Spacing.one,
   },
   sheetTitle: {
     textAlign: 'center',
