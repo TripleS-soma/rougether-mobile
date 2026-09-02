@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { SheetHandle } from '@/components/ui/sheet-handle';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Icon } from '@/components/ui/icon';
 import type { Routine } from '@/constants/routines';
@@ -56,7 +57,7 @@ export function RoutineMenuSheet({
       // 세로 스크롤 자식이 없는 메뉴 시트 — 본문 어디서든 끌어내려 닫기 (#657).
       dragScope="card"
       cardStyle={[styles.sheet, { backgroundColor: t.screen }]}>
-      <View style={[styles.sheetHandle, { backgroundColor: t.border }]} />
+      <SheetHandle />
       <Text style={[Typography.h3, styles.sheetTitle, { color: t.text }]} numberOfLines={1}>
         {item?.title}
       </Text>
@@ -166,13 +167,6 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.two,
     paddingBottom: Spacing.six,
     gap: Spacing.three,
-  },
-  sheetHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: Radius.pill,
-    alignSelf: 'center',
-    marginBottom: Spacing.one,
   },
   sheetTitle: {
     textAlign: 'center',

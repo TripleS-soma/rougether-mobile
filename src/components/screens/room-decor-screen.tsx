@@ -590,10 +590,18 @@ export function RoomDecorScreen({
     track('purchase_blocked', { currency: 'diamond' });
     toast('다이아가 부족해요', 'error');
   });
+  // 이 세션에서 가구를 놓아봤는지 (#1043) — decor_open→decor_place→room_save
+  // 퍼널의 가운데 단계. 배치마다 쏘면 소음이라 마운트당 1회만.
+  const placedOnceRef = useRef(false);
   // 배치 안 된 가구는 방 가운데로 추가, 배치된 가구는 다시 빼기.
-  const togglePlace = useStableCallback((item: FurnitureItem) =>
-    placedSet.has(item.id) ? removeItem(item.id) : addItem(item),
-  );
+  const togglePlace = useStableCallback((item: FurnitureItem) => {
+    if (placedSet.has(item.id)) return removeItem(item.id);
+    if (!placedOnceRef.current) {
+      placedOnceRef.current = true;
+      track('decor_place');
+    }
+    return addItem(item);
+  });
   const byOwnedFirst = useCallback(
     <T extends { id: string }>(arr: T[]) =>
       (ownedOnly ? arr.filter((i) => owned.has(i.id)) : [...arr]).sort(

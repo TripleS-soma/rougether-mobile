@@ -62,6 +62,7 @@ import { CurrencyGuide } from '@/components/ui/currency-guide';
 import { WalletHistorySheet } from '@/components/screens/sheets/wallet-history-sheet';
 import { SpringProgressBar } from '@/components/ui/spring-progress';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { SheetHandle } from '@/components/ui/sheet-handle';
 import { MissionBanner } from '@/components/ui/mission-banner';
 import { NotificationBanner } from '@/components/ui/notification-banner';
 import { MissionSheet } from '@/components/screens/sheets/mission-sheet';
@@ -1082,6 +1083,11 @@ export const galleryEntries: GalleryEntry[] = [
         />
       </View>
     ),
+  },
+  {
+    name: 'UI · SheetHandle',
+    description: '바텀시트 드래그 그래버 (#1015) — 세 시트에 복제돼 있던 40×4 pill의 공용화.',
+    render: () => <SheetHandle />,
   },
   {
     name: 'UI · MissionBanner · 첫 실행',

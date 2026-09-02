@@ -53,7 +53,13 @@ jobs:
       - name: Sentry 소스맵 업로드 (OTA)
         if: env.SENTRY_AUTH_TOKEN != ''
         continue-on-error: true
-        run: npx @sentry/expo-upload-sourcemaps dist
+        # 로컬 bin 강제 (#1026) — `npx @sentry/…`는 레지스트리의 다른 패키지를
+        # 받아 @expo/env 부재로 죽는다. eas-deploy의 같은 스텝과 동일한 이유.
+        run: |
+          if ! npx --no-install sentry-expo-upload-sourcemaps dist; then
+            echo "::warning::Sentry 소스맵 업로드 실패 — 이 OTA에서 난 JS 에러의 스택이 난독화된 채로 수집됩니다 (#1026). 배포 자체는 계속됩니다."
+            echo "- ⚠️ Sentry 소스맵 업로드 실패 — 이 OTA의 에러 스택은 난독 상태." >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       # 발행은 항상 성공한다 — 문제는 "그 업데이트를 받을 설치본이 있는가"다.
       # 런타임 지문이 스토어에 나가 있는 production 빌드와 다르면 업데이트는

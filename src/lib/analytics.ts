@@ -32,6 +32,10 @@ export type AnalyticsEvent =
   | 'routine_complete'
   | 'gacha_draw'
   | 'room_save'
+  /** 꾸미기 화면 진입 (#1043) — from: 'gacha'(뽑은 것 배치하러) | 'direct'(나의 방·미션). */
+  | 'decor_open'
+  /** 꾸미기 세션의 첫 가구 배치 (#1043) — 마운트당 1회. decor_open→decor_place→room_save 퍼널. */
+  | 'decor_place'
   // 재방문 계기 (#803) — 앱을 다시 연 이유를 셋으로 가른다: 푸시/위젯/직접.
   // push_open을 이 이벤트로 흡수했다 — 계기가 세 갈래인데 이벤트가 하나만
   // 있으면 "푸시로 온 사람 수"는 알아도 "그냥 연 사람 수"를 못 센다.
