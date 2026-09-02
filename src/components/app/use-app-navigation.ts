@@ -131,7 +131,7 @@ export function useAppNavigation({
     let slide = 28; // 기본: 서브화면 진입(우측에서)
     if (
       BACK_SCREEN[prev] === screen ||
-      (prev === 'addRoutine' && screen === addReturnScreen) ||
+      ((prev === 'addRoutine' || prev === 'weeklyReport') && screen === addReturnScreen) ||
       nextTab != null
     ) {
       // 뒤로 복귀(백맵 목적지·서브→탭) — 좌측에서 되돌아온다.

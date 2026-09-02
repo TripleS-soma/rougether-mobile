@@ -19,6 +19,8 @@ export const NOTIFICATION_TYPE_ICONS: Record<string, IconName> = {
   HOUSE_JOIN_REQUEST_REJECTED: 'house',
   // 남이 내 방 거미줄을 치워줬을 때 (#831, 서버 #277) — 방으로 돌아오라는 신호.
   ROOM_COBWEB_CLEANED: 'house',
+  // 새 주간회고 (#1056) — 서버 타입은 아직 없고(#1057) 앱이 감지해 띄우는 인앱 배너 전용.
+  WEEKLY_REPORT: 'list',
 };
 
 /**

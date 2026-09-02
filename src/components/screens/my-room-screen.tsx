@@ -39,8 +39,6 @@ import { QuickAddRow } from '@/components/screens/my-room/quick-add-row';
 import { RoutineRow } from '@/components/screens/my-room/routine-row';
 import { WalletHistorySheet } from '@/components/screens/sheets/wallet-history-sheet';
 import { useWidgetRoomCapture } from '@/components/screens/my-room/use-widget-room-capture';
-import type { RecommendationSectionProps } from '@/components/screens/my-room/recommendation-section';
-import { WeeklyReportPanel } from '@/components/screens/my-room/weekly-report-panel';
 import { Room, type RoomSceneProps } from '@/components/room/room';
 import {
   CharacterPickerSheet,
@@ -62,7 +60,6 @@ import { Pictogram } from '@/components/ui/pictograms';
 import { RetryState } from '@/components/ui/retry-state';
 import { SpringProgressBar } from '@/components/ui/spring-progress';
 import { useToast } from '@/components/ui/toast';
-import type { WeeklyReportDetailResponse } from '@/api/types';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import {
   type CategoryVisibility,
@@ -123,24 +120,6 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
     markedTodoDates?: ReadonlySet<string>;
     /** 달력에서 보이는 달이 바뀔 때 (#838) — 부모가 그 달 개수를 받아온다. */
     onCalendarMonthChange?: (yearMonth: string) => void;
-    /**
-     * 주간 회고 탭 (#852 → #856) — 회고가 아직 없으면 undefined로 두면
-     * **탭 자체가 그려지지 않는다**. 가입 첫 주에 빈 탭을 내주지 않는다.
-     */
-    weeklyReport?: {
-      report?: WeeklyReportDetailResponse | null;
-      loading?: boolean;
-      /** 아직 안 열어본 새 회고가 있는지 — 탭 라벨에 점. */
-      unread?: boolean;
-    };
-    /** 주간회고 탭을 열었을 때 — 셸이 본문을 받아오고 읽음 처리한다. */
-    onOpenWeeklyReport?: () => void;
-    /**
-     * AI 조정 추천 (#1006) — 주간회고 탭 안, 회고 아래에 붙는다. 제안이 하나라도
-     * 있으면 **회고가 없어도 탭이 열린다**: 추천과 회고가 같은 일요일 사이클로
-     * 도는데 회고만 탭의 조건이면, 회고 없는 주의 제안은 닿을 자리가 없다.
-     */
-    recommendations?: RecommendationSectionProps;
     /**
      * 연속 출석 이벤트 (#851) — 진행 중인 이벤트가 없으면 undefined로 두면
      * 헤더 아이콘 자체가 그려지지 않는다.
@@ -300,9 +279,6 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   onCleanCobweb,
   markedTodoDates,
   onCalendarMonthChange,
-  weeklyReport,
-  onOpenWeeklyReport,
-  recommendations,
   attendance,
   onOpenAttendance,
   placements = [],
@@ -566,10 +542,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // 손가락 위치 몇십 px 차이로 결과가 갈렸다. 이제 이 화면의 가로
   // 스와이프는 전부 셸 탭 페이저 몫이고, 달력도 monthSwipe=false를
   // 유지해 가로 제스처를 만들지 않는다(월 이동은 ‹ › 버튼).
-  const [tab, setTab] = useState<'room' | 'calendar' | 'report'>('room');
-  // 조정 제안 점 배지를 이번 실행에서 껐는지 (#1006) — 아래 탭 줄 참고.
-  const [reportTabOpened, setReportTabOpened] = useState(false);
-  const hasRecommendations = (recommendations?.items.length ?? 0) > 0;
+  // 주간회고는 탭이 아니라 설정·배너에서 여는 화면이 됐다 (#1056).
+  const [tab, setTab] = useState<'room' | 'calendar'>('room');
   const [selectedDate, setSelectedDate] = useState(() => todayIso());
   const dateRoutines = useMemo(
     () => routines.filter((r) => isScheduledOn(r, selectedDate)),
@@ -1123,7 +1097,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           scrollEnabled={dragId === null}
           contentContainerStyle={[
             styles.body,
-            // 달력·회고 탭은 방이 없어 떠 있는 크롬(#1055) 밑으로 콘텐츠를 내린다.
+            // 달력 탭은 방이 없어 떠 있는 크롬(#1055) 밑으로 콘텐츠를 내린다.
             tab !== 'room' ? { paddingTop: insets.top + Spacing.two + CHROME_ROW_HEIGHT } : null,
             navInset ? { paddingBottom: Spacing.six + navInset } : null,
             addingCategory != null && keyboardPad > 0 ? { paddingBottom: keyboardPad + 120 } : null,
@@ -1279,14 +1253,6 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                     )}
               </View>
             </>
-          ) : tab === 'report' ? (
-            <View style={column}>
-              <WeeklyReportPanel
-                report={weeklyReport?.report}
-                loading={weeklyReport?.loading}
-                recommendations={recommendations}
-              />
-            </View>
           ) : (
             <View style={[styles.calendarPanel, column]}>
               {/* monthSwipe=false 유지 (#825) — 달력 위 가로 스와이프가 월
@@ -1363,8 +1329,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
       </KeyboardAvoidingView>
 
       {/* 떠 있는 크롬 (#1055) — 헤더바 대신 이름 알약과 방/달력 세그먼트가 방 위에
-          뜬다. 스크롤 바깥 오버레이라 목록을 내려도 제자리. 회고 탭은 회고·조정
-          제안이 있을 때만 (#1006). */}
+          뜬다. 스크롤 바깥 오버레이라 목록을 내려도 제자리. */}
       <View pointerEvents="box-none" style={[styles.chromeRow, { top: insets.top + Spacing.two }]}>
         <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.namePill}>
           {/* Narrow phones: shrink the font (≥75%) first; if the title still
@@ -1383,35 +1348,19 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             [
               ['room', '방'],
               ['calendar', '달력'],
-              ...(weeklyReport || hasRecommendations ? ([['report', '주간회고']] as const) : []),
             ] as const
           ).map(([key, label]) => {
             const active = tab === key;
-            // 점이 켜지는 이유 두 가지 (#1006) — 새 회고(영구 저장된 읽음 표식)
-            // 이거나, 아직 이번 실행에서 열어보지 않은 조정 제안.
-            const dotReason = weeklyReport?.unread
-              ? '새 회고'
-              : hasRecommendations && !reportTabOpened
-                ? '새 제안'
-                : null;
-            const dot = key === 'report' && !active && dotReason !== null;
             const btn = (
               <Pressable
-                onPress={() => {
-                  setTab(key);
-                  if (key === 'report') {
-                    setReportTabOpened(true);
-                    onOpenWeeklyReport?.();
-                  }
-                }}
+                onPress={() => setTab(key)}
                 accessibilityRole="button"
                 accessibilityState={{ selected: active }}
-                accessibilityLabel={dot ? `${label}, ${dotReason}` : label}
+                accessibilityLabel={label}
                 style={[styles.segmentItem, active && { backgroundColor: t.surfaceMuted }]}>
                 <Text style={[Typography.label, { color: active ? t.primaryText : t.textMuted }]}>
                   {label}
                 </Text>
-                {dot ? <View style={[styles.segmentDot, { backgroundColor: t.danger }]} /> : null}
               </Pressable>
             );
             // 달력 탭은 코치마크 대상 (#351).
@@ -1649,14 +1598,6 @@ const styles = StyleSheet.create({
   segmentItem: {
     justifyContent: 'center',
     paddingHorizontal: Spacing.three,
-    borderRadius: Radius.pill,
-  },
-  segmentDot: {
-    position: 'absolute',
-    top: Spacing.one,
-    right: Spacing.one,
-    width: 6,
-    height: 6,
     borderRadius: Radius.pill,
   },
   rewardWrap: {
