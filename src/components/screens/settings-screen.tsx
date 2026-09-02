@@ -17,7 +17,7 @@ import {
   type ThemeMode,
   typographyFor,
 } from '@/constants/theme';
-import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useBottomNavInset, useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
@@ -119,6 +119,8 @@ export const SettingsScreen = memo(function SettingsScreen({
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const headerInset = useHeaderInsetStyle();
+  // 글래스 알약 바텀바가 떠 있으면 마지막 행이 그 밑에 안 숨게 (#1049).
+  const navInset = useBottomNavInset();
   // Section captions: supporting size with a semibold face via the active font.
   const sectionTitleStyle = [Typography.supporting, emph('semibold'), styles.sectionTitle];
   // Logging out drops the session immediately, so gate it behind a confirm.
@@ -170,7 +172,11 @@ export const SettingsScreen = memo(function SettingsScreen({
         ref={scrollRef}
         // 넓은 화면에서 행이 끝까지 늘어나면 화살표가 라벨에서 멀어져 한 줄로
         // 안 읽힌다 (#725).
-        contentContainerStyle={[styles.body, column]}
+        contentContainerStyle={[
+          styles.body,
+          column,
+          navInset ? { paddingBottom: Spacing.four + navInset } : null,
+        ]}
         {...scrollRestore}>
         <View style={styles.section}>
           <Text style={[...sectionTitleStyle, { color: t.textMuted }]}>디자인</Text>
