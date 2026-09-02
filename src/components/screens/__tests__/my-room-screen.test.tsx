@@ -1,4 +1,4 @@
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
@@ -34,36 +34,53 @@ const pickCalendarDate = async (
 };
 
 describe('MyRoomScreen', () => {
-  it('renders the room title, streak, and today progress', async () => {
+  it('renders the room title and today progress — 스트릭·잔액은 상시 표시하지 않는다 (#1055)', async () => {
     // Completion is per date: mark 3 of the 5 routines done today.
     const completions = { '1': [TODAY], '2': [TODAY], '3': [TODAY] };
-    const { getByText } = await render(
+    const { getByText, queryByText } = await render(
       <MyRoomScreen
         userName="준서"
         streakDays={7}
         routines={SAMPLE_ROUTINES}
         completions={completions}
-      />,
-    );
-    expect(getByText('준서의 방')).toBeTruthy();
-    expect(getByText('7일')).toBeTruthy();
-    // 3 of 5 routines completed today.
-    expect(getByText('3 / 5')).toBeTruthy();
-  });
-
-  it('헤더에 코인·다이아 필을 함께 보여준다 (프로필 아바타 제거로 확보한 자리)', async () => {
-    const { getByText } = await render(
-      <MyRoomScreen
-        userName="준서"
-        routines={SAMPLE_ROUTINES}
         coinBalance={1200}
         diamondBalance={34}
       />,
     );
-    // 아바타를 빼고 다이아를 상시 노출 — 좁은 폭 코인-only(#425)를 되돌림.
     expect(getByText('준서의 방')).toBeTruthy();
-    expect(getByText('1,200')).toBeTruthy();
-    expect(getByText('34')).toBeTruthy();
+    // 3 of 5 routines completed today.
+    expect(getByText('3 / 5')).toBeTruthy();
+    // 헤더바가 사라지며(#1055) 스트릭·코인·다이아는 보상 순간에만 알약으로 뜬다.
+    expect(queryByText('7일')).toBeNull();
+    expect(queryByText('1,200')).toBeNull();
+    expect(queryByText('34')).toBeNull();
+  });
+
+  it('완료 보상이 확인되면 스트릭·코인 증분 알약이 떴다가 사라진다 (#1055)', async () => {
+    jest.useFakeTimers();
+    try {
+      const onToggleCompletion = jest.fn(() => Promise.resolve({ rewardAmount: 10 }));
+      const { getByLabelText, queryByText, findByText } = await render(
+        <MyRoomScreen
+          streakDays={7}
+          routines={SAMPLE_ROUTINES}
+          onToggleCompletion={onToggleCompletion}
+        />,
+      );
+      expect(queryByText('+10')).toBeNull();
+      await fireEvent.press(getByLabelText('하루 회고'));
+      expect(await findByText('+10')).toBeTruthy();
+      expect(queryByText('7일')).toBeTruthy();
+      // 표시 중 또 오면 합산.
+      await fireEvent.press(getByLabelText('아침 7시 기상'));
+      expect(await findByText('+20')).toBeTruthy();
+      await act(async () => {
+        jest.advanceTimersByTime(2500);
+      });
+      expect(queryByText('+20')).toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('행 메뉴 → 루틴 수정을 누르면 그 루틴으로 onEditRoutine을 부른다 (#465)', async () => {
@@ -408,7 +425,7 @@ describe('MyRoomScreen', () => {
     expect(queryByLabelText('알림')).toBeNull();
   });
 
-  it('지갑 필 탭 → 재화 내역 시트 + 1페이지 로드 (#734)', async () => {
+  it('메뉴 → 재화 내역 시트 + 1페이지 로드 (#734, #1055)', async () => {
     const onLoadWalletHistory = jest.fn();
     const { getByLabelText, getByText } = await render(
       <MyRoomScreen
@@ -420,9 +437,10 @@ describe('MyRoomScreen', () => {
         ]}
       />,
     );
-    await fireEvent.press(getByLabelText('코인 120'));
+    // 지갑 필이 사라져(#1055) 메뉴 항목으로 연다.
+    await fireEvent.press(getByLabelText('메뉴'));
+    await fireEvent.press(getByLabelText('재화 내역'));
     expect(onLoadWalletHistory).toHaveBeenCalledTimes(1);
-    expect(getByText('재화 내역')).toBeTruthy();
     expect(getByText('루틴 완료')).toBeTruthy();
   });
 
@@ -943,7 +961,7 @@ describe('MyRoomScreen', () => {
     expect(queryByLabelText(/출석 이벤트/)).toBeNull();
   });
 
-  it('오늘 미출석이면 출석 아이콘에 미출석 라벨을 붙이고 탭을 전달한다 (#851)', async () => {
+  it('오늘 미출석이면 메뉴 버튼·출석 항목에 미출석 라벨을 붙이고 탭을 전달한다 (#851, #1055)', async () => {
     const onOpenAttendance = jest.fn();
     const { getByLabelText } = await render(
       <ToastProvider>
@@ -955,8 +973,9 @@ describe('MyRoomScreen', () => {
         />
       </ToastProvider>,
     );
-    const btn = getByLabelText('출석 이벤트, 오늘 미출석');
-    fireEvent.press(btn);
+    // 출석은 메뉴 안으로 (#1055) — 미출석 점은 메뉴 버튼과 항목 둘 다.
+    await fireEvent.press(getByLabelText('메뉴, 오늘 미출석'));
+    await fireEvent.press(getByLabelText('출석 이벤트, 오늘 미출석'));
     expect(onOpenAttendance).toHaveBeenCalled();
   });
 
@@ -971,6 +990,8 @@ describe('MyRoomScreen', () => {
         />
       </ToastProvider>,
     );
+    expect(queryByLabelText('메뉴, 오늘 미출석')).toBeNull();
+    await fireEvent.press(getByLabelText('메뉴'));
     expect(getByLabelText('출석 이벤트')).toBeTruthy();
     expect(queryByLabelText('출석 이벤트, 오늘 미출석')).toBeNull();
   });
