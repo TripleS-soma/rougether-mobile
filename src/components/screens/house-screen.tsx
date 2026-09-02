@@ -15,6 +15,7 @@ import { HouseOrderDots } from '@/components/room/house-order-dots';
 import { FRAME_ASPECT, houseCoverKey, WINDOW_RECTS } from '@/components/room/house-preview-frame';
 import { Loading } from '@/components/ui/loading';
 import { CoachTarget } from '@/components/ui/coach-mark';
+import { GlassSurface } from '@/components/ui/glass-surface';
 import { type MemberRoomPreview, type RoomCatalogProps } from '@/components/room/room';
 import {
   camDefault,
@@ -819,8 +820,10 @@ export const HouseScreen = memo(function HouseScreen({
                 accessibilityRole="button"
                 accessibilityLabel="이전 집"
                 hitSlop={8}
-                style={[styles.iconBtn, { backgroundColor: t.surface }]}>
-                <Icon name="back" size={18} color={t.text} />
+                style={styles.iconBtn}>
+                <GlassSurface style={styles.iconBtnFace} fallbackColor={t.surface}>
+                  <Icon name="back" size={18} color={t.text} />
+                </GlassSurface>
               </Pressable>
             ) : null}
             <View style={[styles.titleBadge, { backgroundColor: t.surface }]}>
@@ -837,8 +840,10 @@ export const HouseScreen = memo(function HouseScreen({
                 accessibilityRole="button"
                 accessibilityLabel="다음 집"
                 hitSlop={8}
-                style={[styles.iconBtn, { backgroundColor: t.surface }]}>
-                <Icon name="forward" size={18} color={t.text} />
+                style={styles.iconBtn}>
+                <GlassSurface style={styles.iconBtnFace} fallbackColor={t.surface}>
+                  <Icon name="forward" size={18} color={t.text} />
+                </GlassSurface>
               </Pressable>
             ) : null}
           </View>
@@ -1046,8 +1051,10 @@ export const HouseScreen = memo(function HouseScreen({
                 accessibilityRole="button"
                 accessibilityLabel="이전 집"
                 hitSlop={8}
-                style={[styles.iconBtn, { backgroundColor: t.surface }]}>
-                <Icon name="back" size={18} color={t.text} />
+                style={styles.iconBtn}>
+                <GlassSurface style={styles.iconBtnFace} fallbackColor={t.surface}>
+                  <Icon name="back" size={18} color={t.text} />
+                </GlassSurface>
               </Pressable>
             ) : null}
             <View style={[styles.titleBadge, { backgroundColor: t.surface }]}>
@@ -1066,8 +1073,10 @@ export const HouseScreen = memo(function HouseScreen({
                 accessibilityRole="button"
                 accessibilityLabel="다음 집"
                 hitSlop={8}
-                style={[styles.iconBtn, { backgroundColor: t.surface }]}>
-                <Icon name="forward" size={18} color={t.text} />
+                style={styles.iconBtn}>
+                <GlassSurface style={styles.iconBtnFace} fallbackColor={t.surface}>
+                  <Icon name="forward" size={18} color={t.text} />
+                </GlassSurface>
               </Pressable>
             ) : null}
           </View>
@@ -1187,8 +1196,10 @@ export const HouseScreen = memo(function HouseScreen({
                   onPress={resetCam}
                   accessibilityRole="button"
                   accessibilityLabel="확대 종료"
-                  style={[styles.camReset, { backgroundColor: t.surface }]}>
-                  <Icon name="refresh" size={16} color={t.text} />
+                  style={styles.camReset}>
+                  <GlassSurface style={styles.iconBtnFace} fallbackColor={t.surface}>
+                    <Icon name="refresh" size={16} color={t.text} />
+                  </GlassSurface>
                 </Pressable>
               ) : null}
             </Animated.View>
@@ -1300,15 +1311,16 @@ function RailButton({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       style={styles.railBtn}>
-      <View style={[styles.railCircle, { backgroundColor: t.surface }]}>
+      {/* 원과 라벨 알약 둘 다 글래스 면 (#1050) — 라벨은 눌리는 면이 아니라 비상호작용. */}
+      <GlassSurface style={styles.railCircle} fallbackColor={t.surface}>
         {icon}
         {badge ? <View style={[styles.railBadge, { backgroundColor: badge }]} /> : null}
-      </View>
-      <View style={[styles.railLabelWrap, { backgroundColor: t.surface }]}>
+      </GlassSurface>
+      <GlassSurface style={styles.railLabelWrap} fallbackColor={t.surface} interactive={false}>
         <Text style={[Typography.supporting, { color: t.text }]} numberOfLines={1}>
           {label}
         </Text>
-      </View>
+      </GlassSurface>
     </ScalePressable>
   );
 }
@@ -1385,7 +1397,11 @@ const styles = StyleSheet.create({
   iconBtn: {
     width: 40,
     height: 40,
-    borderRadius: Radius.xl,
+  },
+  // 떠 있는 원형 버튼의 면 (#1050) — 위치·크기는 버튼이, 모양·배경은 면이.
+  iconBtnFace: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },

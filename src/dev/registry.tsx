@@ -41,6 +41,7 @@ import { SignupScreen } from '@/components/screens/signup-screen';
 import { Badge } from '@/components/ui/badge';
 import { CoinIcon } from '@/components/ui/coin-icon';
 import { BearCheck } from '@/components/ui/bear-check';
+import { GlassSurface } from '@/components/ui/glass-surface';
 import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { CATEGORY_ICON_GEOMETRY, CategoryIcon } from '@/components/ui/category-icon';
@@ -333,6 +334,32 @@ export const galleryEntries: GalleryEntry[] = [
         }}>
         <Text style={{ color: '#FFFFFF' }}>눌러보기</Text>
       </ScalePressable>
+    ),
+  },
+  {
+    name: 'GlassSurface · 떠 있는 버튼의 글래스 면',
+    description:
+      'iOS 26 리퀴드 글래스 원/알약 (#1050) — 글래스 불가 환경(웹·Android·iOS 25)에서는 fallbackColor 면. 방·집 화면의 떠 있는 버튼이 쓴다.',
+    render: () => (
+      <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center', alignSelf: 'center' }}>
+        <GlassSurface
+          fallbackColor="#FFFFFF"
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 999,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+          <Text>🎁</Text>
+        </GlassSurface>
+        <GlassSurface
+          fallbackColor="#FFFFFF"
+          interactive={false}
+          style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999 }}>
+          <Text>라벨</Text>
+        </GlassSurface>
+      </View>
     ),
   },
   {

@@ -53,6 +53,7 @@ import { TodoDateDialog } from '@/components/screens/sheets/todo-date-dialog';
 import { Loading } from '@/components/ui/loading';
 import { Calendar } from '@/components/ui/calendar';
 import { CoachTarget } from '@/components/ui/coach-mark';
+import { GlassSurface } from '@/components/ui/glass-surface';
 import { CategoryIcon } from '@/components/ui/category-icon';
 import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
 import { Pictogram } from '@/components/ui/pictograms';
@@ -1233,36 +1234,33 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                 <View ref={roomShotRef} collapsable={false}>
                   <Room {...roomScene} interactiveCharacter />
                 </View>
-                <Pressable
-                  onPress={onOpenGacha}
-                  accessibilityRole="button"
-                  accessibilityLabel="뽑기 상점"
-                  // 방 이미지 저장 중에는 숨겨 사진에서 제외한다 (#475).
-                  pointerEvents={capturing ? 'none' : 'auto'}
-                  style={[
-                    styles.gachaBtn,
-                    { backgroundColor: t.surface },
-                    capturing && styles.hidden,
-                  ]}>
-                  {/* absolute 버튼이라 래퍼 대신 내용을 측정 (#351). */}
-                  <CoachTarget id="room-gacha">
-                    <Icon name="gift" size={20} color={t.text} />
-                  </CoachTarget>
-                </Pressable>
+                {/* 방 이미지 저장 중에는 빼서 사진에서 제외한다 (#475). opacity로
+                    숨기면 글래스 면(#1050)이 안 그려지고 복귀가 불안정해 조건부 렌더. */}
+                {capturing ? null : (
+                  <Pressable
+                    onPress={onOpenGacha}
+                    accessibilityRole="button"
+                    accessibilityLabel="뽑기 상점"
+                    style={styles.gachaBtn}>
+                    <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
+                      {/* absolute 버튼이라 래퍼 대신 내용을 측정 (#351). */}
+                      <CoachTarget id="room-gacha">
+                        <Icon name="gift" size={20} color={t.text} />
+                      </CoachTarget>
+                    </GlassSurface>
+                  </Pressable>
+                )}
                 {/* 방 꾸미기 1탭 승격 (#727) — 메뉴(2탭) 뒤에 있던 보상 루프의
                       종착지를 뽑기 버튼 위에 나란히. 메뉴 항목은 습관 경로로 유지. */}
-                {onEdit ? (
+                {onEdit && !capturing ? (
                   <Pressable
                     onPress={onEdit}
                     accessibilityRole="button"
                     accessibilityLabel="방 꾸미기"
-                    pointerEvents={capturing ? 'none' : 'auto'}
-                    style={[
-                      styles.decorBtn,
-                      { backgroundColor: t.surface },
-                      capturing && styles.hidden,
-                    ]}>
-                    <Icon name="edit" size={20} color={t.text} />
+                    style={styles.decorBtn}>
+                    <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
+                      <Icon name="edit" size={20} color={t.text} />
+                    </GlassSurface>
                   </Pressable>
                 ) : null}
               </View>
@@ -1611,9 +1609,6 @@ const styles = StyleSheet.create({
     bottom: Spacing.three + 44 + Spacing.two,
     width: 44,
     height: 44,
-    borderRadius: Radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   gachaBtn: {
     position: 'absolute',
@@ -1621,13 +1616,13 @@ const styles = StyleSheet.create({
     bottom: Spacing.three,
     width: 44,
     height: 44,
+  },
+  // 떠 있는 원형 버튼의 면 (#1050) — 위치·크기는 버튼이, 모양·배경은 면이.
+  floatFace: {
+    ...StyleSheet.absoluteFillObject,
     borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  // 방 이미지 저장 캡처 중 뽑기 버튼을 투명 처리해 사진에서 제외 (#475).
-  hidden: {
-    opacity: 0,
   },
   section: {
     paddingHorizontal: Spacing.four,
