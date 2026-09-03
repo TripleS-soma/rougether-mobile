@@ -6,6 +6,11 @@
 
 - **`dev` 머지 = 자동 배포 트리거**: CI(`.github/workflows/eas-deploy.yml`)가 네이티브 지문을 비교해 JS-only면 preview 채널 OTA, 네이티브 변경이면 EAS 빌드(+iOS TestFlight 자동 제출)를 실행합니다.
 
+- **채널 지도 (2026-09-03 재배선)**: 채널은 바이너리에 박히고 브랜치는 EAS에서 바꿀 수 있다. 지금 지도는 다음과 같다 — `eas channel:view <name>`으로 확인.
+  - `production` 채널 → `production` 브랜치: 스토어 production 빌드(main `store-build`). `eas-release`가 발행.
+  - `preview` 채널 → **`production` 브랜치**: 1.4.0 빌드 111이 `testflight` 프로필(채널 preview) 상태로 **App Store 심사에 제출**돼 버려서 묶었다. 그대로 두면 심사 중인 빌드가 dev 머지마다 새 JS를 받고, 출시 뒤 스토어 사용자가 dev 레인을 받는다(빌드 38 사고). 그래서 preview 채널을 듣는 모든 설치본(111, Android preview 7, 그 전 테스트 빌드)은 이제 **스토어 레인**이다. 1.4.0 사용자에게 JS 수정을 보내려면 dev→main 승격 후 `eas-release`(런타임 지문이 111과 같아야 도달).
+  - `dev` 채널 → `dev` 브랜치: **dev 레인의 새 이름.** `eas.json`의 `preview`·`testflight` 프로필이 이 채널로 빌드되고, `eas-deploy`가 `--branch dev`로 발행한다. 기존 테스터 기기는 다음 네이티브 윈도우의 새 빌드를 받아야 dev 레인으로 돌아온다.
+  - 교훈: **스토어 제출은 main의 production 프로필 빌드로만.** testflight 빌드는 TestFlight까지만 — ASC "빌드 추가"에서 고르지 말 것.
 - **`main` 승격 = 릴리스 후보 확정, 발행 아님** (2026-08-14 정립, #813): 승격 자체는 사용자에게 아무것도 보내지 않습니다. production 채널 OTA는 **`eas-release` 워크플로를 main에서 수동 실행**할 때만 나갑니다.
   - **왜 수동인가**: 심사 중인 빌드도 `channel=production`을 듣습니다. 자동 발행이면 승격이 곧 "심사자가 보는 코드를 바꾸는 일"이 되고, 제출본과 다른 코드가 심사대에 오르는 건 거부 사유가 될 수 있습니다.
   - **릴리스 리듬**: dev 개발 → 릴리스 후보 확정(dev→main 승격) → `store-build`(main)로 심사 제출 → **심사 통과·출시 후** `eas-release` 실행. 출시 뒤의 JS 핫픽스는 dev→main 승격 후 같은 워크플로를 다시 누릅니다.
