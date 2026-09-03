@@ -123,12 +123,17 @@
           },
           "ios": {
             "useFrameworks": "static",
-            "deploymentTarget": "16.4",
-            "extraPods": [{ "name": "GoogleUtilities", "version": "8.1.2" }]
+            "deploymentTarget": "16.4"
           }
         }
       ],
-      "@react-native-firebase/app",
+      [
+        "@react-native-firebase/app",
+        {
+          "_comment_disableSPM": "RNFB 26은 Firebase를 SPM으로 가져오는 게 기본인데 Expo의 use_frameworks static과 중복 심볼로 충돌한다(#1031). Podfile에 $RNFirebaseDisableSPM = true를 주입해 CocoaPods 경로를 유지한다 — FirebaseCore의 CocoaPods 배포가 2026-10 이후 중단되므로 한시적이고, 정식 해법은 dynamic linkage 전환.",
+          "ios": { "disableSPM": true }
+        }
+      ],
       "@react-native-firebase/messaging",
       "./plugins/with-fcm-manifest.js",
       [
