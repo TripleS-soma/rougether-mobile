@@ -826,14 +826,14 @@ export const HouseScreen = memo(function HouseScreen({
                 </GlassSurface>
               </Pressable>
             ) : null}
-            <View style={[styles.titleBadge, { backgroundColor: t.surface }]}>
+            <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.titleBadge}>
               <Icon name="lock" size={14} color={t.textMuted} />
               {/* 서버는 집 이름을 30자까지 받는다 — 안 자르면 뱃지가 부풀어
                   좌우 전환 화살표를 화면 밖으로 밀어낸다 (#994). */}
               <Text style={[Typography.h3, styles.titleText, { color: t.text }]} numberOfLines={1}>
                 {pendingHouse.name}
               </Text>
-            </View>
+            </GlassSurface>
             {totalPages > 1 ? (
               <Pressable
                 onPress={nextHouse}
@@ -1057,7 +1057,7 @@ export const HouseScreen = memo(function HouseScreen({
                 </GlassSurface>
               </Pressable>
             ) : null}
-            <View style={[styles.titleBadge, { backgroundColor: t.surface }]}>
+            <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.titleBadge}>
               {currentHouse.myRole === 'OWNER' ? (
                 <CrownPictogram size={14} />
               ) : (
@@ -1066,7 +1066,7 @@ export const HouseScreen = memo(function HouseScreen({
               <Text style={[Typography.h3, styles.titleText, { color: t.text }]} numberOfLines={1}>
                 {currentHouse.name}
               </Text>
-            </View>
+            </GlassSurface>
             {totalPages > 1 ? (
               <Pressable
                 onPress={nextHouse}
@@ -1090,7 +1090,10 @@ export const HouseScreen = memo(function HouseScreen({
           {/* 레벨·멤버 pill — 프레임 여백과 정렬된 행 (모서리 절대배치는
                 화면 끝에 걸려 보였다). 고정 밝기 흰 스크림 위라 onTint 잉크. */}
           <View style={styles.framePillsRow}>
-            <View style={[styles.skyPill, { backgroundColor: FixedOverlay.skyPill }]}>
+            <GlassSurface
+              interactive={false}
+              fallbackColor={FixedOverlay.skyPill}
+              style={styles.skyPill}>
               <HousePictogram size={12} />
               <Text style={[Typography.supporting, { color: t.onTint }]}>
                 Lv.{currentHouse.level ?? 0}
@@ -1098,14 +1101,17 @@ export const HouseScreen = memo(function HouseScreen({
                   ? ` · ${currentHouse.growthPoints % 100}/100`
                   : ''}
               </Text>
-            </View>
-            <View style={[styles.skyPill, { backgroundColor: FixedOverlay.skyPill }]}>
+            </GlassSurface>
+            <GlassSurface
+              interactive={false}
+              fallbackColor={FixedOverlay.skyPill}
+              style={styles.skyPill}>
               <Text style={[Typography.supporting, { color: t.onTint }]}>
                 {/* Vacant seats are not members — count the real ones. */}
                 멤버 {currentHouse.memberCount ?? manageableMembers(currentHouse).length}
                 {currentHouse.maxMembers ? ` / ${currentHouse.maxMembers}` : ''}
               </Text>
-            </View>
+            </GlassSurface>
           </View>
           {/* 남는 세로를 여기서 먹어 집을 잔디에 붙인다 (#986). CoachTarget이
               flex 자식이라 안쪽 View에 auto 마진을 줘도 안 먹는다 — 명시 스페이서. */}
