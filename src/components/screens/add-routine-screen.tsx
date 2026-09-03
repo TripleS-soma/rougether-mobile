@@ -23,10 +23,11 @@ import {
   type RoutineCategoryMeta,
 } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { CategoryIcon } from '@/components/ui/category-icon';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Radius, Spacing } from '@/constants/theme';
-import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { formatDate, formatTime } from '@/utils/datetime';
@@ -87,7 +88,8 @@ export function AddRoutineScreen({
   const t = useTokens();
   const column = useResponsiveColumn();
   const Typography = useTypography();
-  const headerInset = useHeaderInsetStyle();
+  // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
+  const headerInset = useHeaderContentInset();
   const { show: toast } = useToast();
   const isEdit = Boolean(editRoutine);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
@@ -222,20 +224,21 @@ export function AddRoutineScreen({
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
-      <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
-        <Pressable
-          onPress={requestBack}
-          accessibilityRole="button"
-          accessibilityLabel="뒤로가기"
-          style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-          <Icon name="back" size={26} color={t.text} />
-        </Pressable>
-        <Text style={[Typography.h2, { color: t.text }]}>{isEdit ? '루틴 수정' : '루틴 추가'}</Text>
-      </View>
+      <ScreenHeader
+        title={isEdit ? '루틴 수정' : '루틴 추가'}
+        onBack={requestBack}
+        backLabel="뒤로가기"
+      />
 
       {/* handled (#759): 제목 입력으로 키보드가 뜬 채 시트 버튼을 탭하면
           기본값('never')은 첫 탭을 키보드 닫기에 소모해 시트가 안 열렸다. */}
-      <ScrollView contentContainerStyle={[styles.body, column]} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[
+          styles.body,
+          column,
+          headerInset ? { paddingTop: headerInset } : null,
+        ]}
+        keyboardShouldPersistTaps="handled">
         {/* Title */}
         <View style={styles.field}>
           <Text style={[Typography.label, { color: t.text }]}>루틴 이름</Text>

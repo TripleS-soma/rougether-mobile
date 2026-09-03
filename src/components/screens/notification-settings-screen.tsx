@@ -4,7 +4,7 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import type { PushRegistrationStep } from '@/lib/push-token';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Radius, Spacing } from '@/constants/theme';
-import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 
@@ -86,13 +86,20 @@ export function NotificationSettingsScreen({
 }: NotificationSettingsScreenProps) {
   const t = useTokens();
   const column = useResponsiveColumn();
+  // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
+  const headerInset = useHeaderContentInset();
   const Typography = useTypography();
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader title="푸시 알림" onBack={onBack} />
 
-      <ScrollView contentContainerStyle={[styles.body, column]}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.body,
+          column,
+          headerInset ? { paddingTop: headerInset } : null,
+        ]}>
         {/* 조회 실패 안내 (#549) — 지금 보이는 값은 기본값일 수 있다. */}
         {loadError ? (
           <View style={[styles.card, styles.errorCard, { backgroundColor: t.surface }]}>

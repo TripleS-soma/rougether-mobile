@@ -2,7 +2,9 @@ import { useContext } from 'react';
 import { type ViewStyle } from 'react-native';
 import { type Edge, SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
+import { actionBarUnderlapInset } from '@/components/ui/action-bar-geometry';
 import { navUnderlapInset } from '@/components/ui/bottom-nav-geometry';
+import { headerUnderlapInset } from '@/components/ui/screen-header-geometry';
 import { Spacing } from '@/constants/theme';
 import { useLiquidGlass } from '@/hooks/use-liquid-glass';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
@@ -56,4 +58,25 @@ export function useBottomNavInset(): number {
   const insets = useContext(SafeAreaInsetsContext) ?? ZERO_INSETS;
   const Typography = useTypography();
   return glass ? navUnderlapInset(insets.bottom, Typography.supporting.lineHeight) : 0;
+}
+
+/**
+ * 떠 있는 헤더(#1069) 밑으로 지나가는 스크롤 콘텐츠의 추가 상단 패딩. 리퀴드
+ * 글래스 헤더가 오버레이일 때만 0이 아니다 — 폴백의 불투명 헤더 바는 flex
+ * 형제라 0. `ScreenHeader`를 쓰는 화면의 contentContainerStyle 맨 앞 패딩에 더한다.
+ */
+export function useHeaderContentInset(): number {
+  const glass = useLiquidGlass();
+  const insets = useContext(SafeAreaInsetsContext) ?? ZERO_INSETS;
+  return glass ? headerUnderlapInset(insets.top) : 0;
+}
+
+/**
+ * 떠 있는 하단 액션 바(#1069, `ui/action-bar`) 밑으로 지나가는 스크롤 콘텐츠의 추가
+ * 하단 패딩. 글래스 모드에서만 0이 아니다 — 폴백 바는 flex 형제라 0.
+ */
+export function useActionBarInset(): number {
+  const glass = useLiquidGlass();
+  const insets = useContext(SafeAreaInsetsContext) ?? ZERO_INSETS;
+  return glass ? actionBarUnderlapInset(insets.bottom) : 0;
 }

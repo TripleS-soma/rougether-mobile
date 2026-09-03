@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Loading } from '@/components/ui/loading';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Radius, Spacing } from '@/constants/theme';
-import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import type { DeviceCalendar } from '@/lib/device-calendar';
@@ -70,6 +70,8 @@ export function CalendarImportScreen({
 }: CalendarImportScreenProps) {
   const t = useTokens();
   const column = useResponsiveColumn();
+  // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
+  const headerInset = useHeaderContentInset();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const [picked, setPicked] = useState<string[]>([]);
@@ -94,7 +96,12 @@ export function CalendarImportScreen({
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader title="캘린더 연동" onBack={onBack} />
-      <ScrollView contentContainerStyle={[styles.body, column]}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.body,
+          column,
+          headerInset ? { paddingTop: headerInset } : null,
+        ]}>
         <Text style={[Typography.supporting, { color: t.textMuted }]}>
           기기 캘린더의 오늘 이후 {'→'} 30일 일정을 할 일로 가져와요. 캘린더에 쓰지 않고 읽기만
           해요.

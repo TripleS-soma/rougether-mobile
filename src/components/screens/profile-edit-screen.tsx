@@ -11,11 +11,13 @@ import {
 
 import { CharacterAvatar } from '@/components/room/character-avatar';
 import { Field } from '@/components/ui/field';
+import { ActionBar } from '@/components/ui/action-bar';
+import { GlassSurface } from '@/components/ui/glass-surface';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { BIO_MAX, NICKNAME_MAX } from '@/constants/profile';
 import { Radius, Spacing } from '@/constants/theme';
-import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useActionBarInset, useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 
@@ -41,6 +43,9 @@ export function ProfileEditScreen({
 }: ProfileEditScreenProps) {
   const t = useTokens();
   const column = useResponsiveColumn();
+  // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
+  const headerInset = useHeaderContentInset();
+  const actionBarInset = useActionBarInset();
   const Typography = useTypography();
   const [nickname, setNickname] = useState(initialNickname);
   const [bio, setBio] = useState(initialBio);
@@ -60,7 +65,12 @@ export function ProfileEditScreen({
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
-          contentContainerStyle={[styles.body, column]}
+          contentContainerStyle={[
+            styles.body,
+            column,
+            headerInset ? { paddingTop: headerInset } : null,
+            actionBarInset ? { paddingBottom: actionBarInset } : null,
+          ]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag">
           <View style={styles.avatarWrap}>
@@ -90,18 +100,24 @@ export function ProfileEditScreen({
           </View>
         </ScrollView>
 
-        <View style={[styles.footer, { borderTopColor: t.border }]}>
+        {/* 저장 버튼은 떠 있는 액션 바 (#1069) — 글래스면 콘텐츠 위에 뜨고, 아니면 종전 바. */}
+        <ActionBar style={styles.footer}>
           <Pressable
             onPress={() => canSave && onSave?.(trimmed, bio.trim())}
             disabled={!canSave}
             accessibilityRole="button"
             accessibilityLabel="프로필 저장"
-            style={[styles.save, { backgroundColor: canSave ? t.primary : t.surfaceMuted }]}>
-            <Text style={[Typography.label, { color: canSave ? t.onPrimary : t.textMuted }]}>
-              저장
-            </Text>
+            style={styles.save}>
+            <GlassSurface
+              style={styles.saveFace}
+              tintColor={canSave ? t.primary : undefined}
+              fallbackColor={canSave ? t.primary : t.surfaceMuted}>
+              <Text style={[Typography.label, { color: canSave ? t.onPrimary : t.textMuted }]}>
+                저장
+              </Text>
+            </GlassSurface>
           </Pressable>
-        </View>
+        </ActionBar>
       </KeyboardAvoidingView>
     </View>
   );
@@ -137,6 +153,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
   },
   save: {
+    borderRadius: Radius.pill,
+  },
+  saveFace: {
     borderRadius: Radius.pill,
     paddingVertical: Spacing.three,
     alignItems: 'center',

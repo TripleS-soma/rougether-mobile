@@ -5,7 +5,7 @@ import { WebView } from 'react-native-webview';
 import { Loading } from '@/components/ui/loading';
 import { RetryState } from '@/components/ui/retry-state';
 import { ScreenHeader } from '@/components/ui/screen-header';
-import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
 
 export type PolicyViewerScreenProps = {
@@ -23,6 +23,8 @@ export type PolicyViewerScreenProps = {
  */
 export function PolicyViewerScreen({ title, url, onBack }: PolicyViewerScreenProps) {
   const t = useTokens();
+  // 떠 있는 글래스 헤더(#1069) — 웹뷰는 RN 스크롤이 아니라 마진으로 비켜 준다.
+  const headerInset = useHeaderContentInset();
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   // Remounting with a fresh key is the retry path — the failed WebView is
@@ -49,7 +51,7 @@ export function PolicyViewerScreen({ title, url, onBack }: PolicyViewerScreenPro
           key={attempt}
           testID="policy-webview"
           source={{ uri: url }}
-          style={{ backgroundColor: t.screen }}
+          style={{ backgroundColor: t.screen, marginTop: headerInset }}
           onLoadEnd={() => setLoading(false)}
           // 서브 리소스(파비콘 등) 오류로 오탐하지 않게 메인 문서 요청만 실패 처리.
           onError={(e) => {

@@ -10,7 +10,7 @@ import { Pictogram, type PictogramName, TrashPictogram } from '@/components/ui/p
 import { useToast } from '@/components/ui/toast';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
-import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { MISSION_TYPE_RULES } from '@/constants/missions';
@@ -116,6 +116,8 @@ export function HouseMissionsScreen({
 }: HouseMissionsScreenProps) {
   const t = useTokens();
   const column = useResponsiveColumn();
+  // 떠 있는 글래스 헤더(#1069) — 탭 줄이 스크롤 밖이라 여기서 상단 패딩.
+  const headerInset = useHeaderContentInset();
   const Typography = useTypography();
   const { show: toast } = useToast();
 
@@ -219,7 +221,7 @@ export function HouseMissionsScreen({
           같이 그린다: 첫 미션을 만든 순간 탭 줄이 생겨 레이아웃이 튀지 않게. */}
       {/* 탭 줄과 본문을 같은 폭으로 묶는다 — 한쪽만 제한하면 넓은 화면에서
           탭 밑줄이 본문 밖으로 삐져나온다 (#725). */}
-      <View style={[styles.tabBar, column]}>
+      <View style={[styles.tabBar, column, headerInset ? { paddingTop: headerInset } : null]}>
         {(
           [
             ['active', '진행 중'],

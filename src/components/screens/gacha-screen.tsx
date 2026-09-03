@@ -17,6 +17,7 @@ import { SheetHandle } from '@/components/ui/sheet-handle';
 import { Loading } from '@/components/ui/loading';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Icon } from '@/components/ui/icon';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { GiftBoxArt } from '@/components/screens/gacha/gift-box-art';
 import { RewardRow } from '@/components/screens/gacha/reward-row';
 import { RetryState } from '@/components/ui/retry-state';
@@ -24,7 +25,7 @@ import { ScalePressable } from '@/components/ui/scale-pressable';
 import { WalletPills } from '@/components/ui/wallet-pills';
 import { Overlay, Radius, Spacing, StaticWhite } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
-import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { track } from '@/lib/analytics';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
@@ -132,7 +133,8 @@ export function GachaScreen({
   const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
-  const headerInset = useHeaderInsetStyle();
+  // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
+  const headerInset = useHeaderContentInset();
   const { show: toast } = useToast();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [error, setError] = useState('');
@@ -270,19 +272,18 @@ export function GachaScreen({
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
-      <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
-        <Pressable
-          onPress={onBack}
-          accessibilityRole="button"
-          accessibilityLabel="뒤로 가기"
-          style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-          <Icon name="back" size={26} color={t.text} />
-        </Pressable>
-        <Text style={[Typography.h2, { color: t.text }]}>뽑기</Text>
-        <WalletPills coin={coinBalance} diamond={diamondBalance} />
-      </View>
+      <ScreenHeader
+        title="뽑기"
+        onBack={onBack}
+        right={<WalletPills coin={coinBalance} diamond={diamondBalance} />}
+      />
 
-      <ScrollView contentContainerStyle={[styles.body, column]}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.body,
+          column,
+          headerInset ? { paddingTop: headerInset } : null,
+        ]}>
         {loading ? (
           <View style={styles.loadingBlock}>
             <Loading />
