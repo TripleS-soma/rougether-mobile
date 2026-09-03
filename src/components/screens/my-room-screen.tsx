@@ -1591,13 +1591,17 @@ const styles = StyleSheet.create({
   },
   segment: {
     flexDirection: 'row',
+    // 버튼을 감싼 래퍼(코치마크 대상 View)는 세로로 안 늘어나므로 행이 직접
+    // 세로 중앙 정렬한다 — 없으면 비활성 라벨이 위로 붙는다 (#1055 후속).
+    alignItems: 'center',
     height: CHROME_ROW_HEIGHT,
-    padding: Spacing.one,
+    paddingHorizontal: Spacing.one,
     borderRadius: Radius.pill,
   },
   segmentItem: {
     justifyContent: 'center',
     paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one,
     borderRadius: Radius.pill,
   },
   rewardWrap: {
