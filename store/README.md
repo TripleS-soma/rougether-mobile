@@ -57,7 +57,7 @@ store/ko-KR/
 | app-store / description      | ⬜ 1.2.0에 반영 | 사진 인증 문구 제거 + 캘린더 가져오기 추가. 1.2.0 제출 때 붙여넣을 것  |
 | app-store / keywords         | ⬜ 미반영       | **콘솔 값을 여기로 복사해야 함** (외부 조회 불가)                      |
 | app-store / promotional-text | ⬜ 미설정       | 콘솔에도 비어 있는 것으로 보임                                         |
-| app-store / release-notes    | ⬜ 1.2.0에 반영 | 1.2.0용 문구 작성됨. 제출 때 붙여넣을 것                               |
+| app-store / release-notes    | ⬜ 1.4.0에 반영 | 1.4.0용 문구(방 전체화면·글래스·회고 이동). 제출 때 붙여넣을 것        |
 | play / title                 | ⬜ 콘솔 미반영  | 문구 작성됨. 앱 생성 시 이 이름으로 (ASO — `루게더`만으론 검색량 없음) |
 | play / short-description     | ⬜ 콘솔 미반영  | 문구 작성됨                                                            |
 | play / full-description      | ⬜ 콘솔 미반영  | 문구 작성됨                                                            |
