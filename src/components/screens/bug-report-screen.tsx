@@ -7,7 +7,7 @@ import { Icon } from '@/components/ui/icon';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { useToast } from '@/components/ui/toast';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
-import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
@@ -77,6 +77,8 @@ export function BugReportScreen({
 }: BugReportScreenProps) {
   const t = useTokens();
   const column = useResponsiveColumn();
+  // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
+  const headerInset = useHeaderContentInset();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const { show: toast } = useToast();
@@ -127,7 +129,13 @@ export function BugReportScreen({
     <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader title="버그 제보" onBack={onBack} />
 
-      <ScrollView contentContainerStyle={[styles.body, column]} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[
+          styles.body,
+          column,
+          headerInset ? { paddingTop: headerInset } : null,
+        ]}
+        keyboardShouldPersistTaps="handled">
         <View style={[styles.card, { backgroundColor: t.surface }]}>
           <Field
             label="제목"

@@ -5,7 +5,7 @@ import { PickerRow, pickerStyles } from '@/components/screens/settings/picker-ro
 import { ScreenHeader } from '@/components/ui/screen-header';
 import type { CharacterId } from '@/constants/characters';
 import { DEFAULT_THEME_ID, Radius, THEME_OPTIONS, type ThemeId } from '@/constants/theme';
-import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens } from '@/hooks/use-tokens';
 
@@ -35,12 +35,19 @@ export function ThemeScreen({
 }: ThemeScreenProps) {
   const t = useTokens();
   const column = useResponsiveColumn();
+  // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
+  const headerInset = useHeaderContentInset();
 
   return (
     <View style={[pickerStyles.screen, useScreenStyle([])]}>
       <ScreenHeader title="테마 색상" onBack={onBack} />
 
-      <ScrollView contentContainerStyle={[pickerStyles.body, column]}>
+      <ScrollView
+        contentContainerStyle={[
+          pickerStyles.body,
+          column,
+          headerInset ? { paddingTop: headerInset } : null,
+        ]}>
         <AppearancePreview userName={userName} characterId={characterId} />
 
         <View style={pickerStyles.list}>

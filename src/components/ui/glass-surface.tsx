@@ -13,6 +13,12 @@ export type GlassSurfaceProps = Omit<ViewProps, 'style'> & {
    * 알약처럼 눌리지 않는 면이면 끈다.
    */
   interactive?: boolean;
+  /**
+   * 강조 버튼용 틴트 (#1069) — iOS 26의 prominent glass. 글래스가 가능하면 이 색을
+   * 유리에 입히고, 아니면 `fallbackColor`가 그대로 배경이 된다(호출 쪽이 같은 색을
+   * 넘기면 폴백은 종전 단색 버튼).
+   */
+  tintColor?: string;
   style?: StyleProp<ViewStyle>;
   children?: ReactNode;
 };
@@ -30,6 +36,7 @@ export type GlassSurfaceProps = Omit<ViewProps, 'style'> & {
 export function GlassSurface({
   fallbackColor,
   interactive = true,
+  tintColor,
   style,
   children,
   ...rest
@@ -48,6 +55,7 @@ export function GlassSurface({
       {...rest}
       glassEffectStyle="regular"
       isInteractive={interactive}
+      tintColor={tintColor}
       colorScheme={scheme}
       style={style}>
       {children}

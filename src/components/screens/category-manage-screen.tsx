@@ -4,11 +4,12 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { CategoryFormSheet } from '@/components/screens/sheets/category-form-sheet';
 import type { CategoryDeleteMode } from '@/api/categories';
 import { Icon } from '@/components/ui/icon';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { CategoryIcon } from '@/components/ui/category-icon';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { type RoutineCategoryMeta, VISIBILITY_LABELS } from '@/constants/routines';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
-import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
@@ -47,7 +48,8 @@ export function CategoryManageScreen({
   const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
-  const headerInset = useHeaderInsetStyle();
+  // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
+  const headerInset = useHeaderContentInset();
   // null = 시트 닫힘, 'new' = 생성, 카테고리 = 그 항목 수정.
   const [formTarget, setFormTarget] = useState<'new' | RoutineCategoryMeta | null>(null);
   const [pendingDelete, setPendingDelete] = useState<RoutineCategoryMeta | null>(null);
@@ -67,28 +69,28 @@ export function CategoryManageScreen({
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
-      <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
-        <View style={styles.headerLeft}>
+      <ScreenHeader
+        title="카테고리 관리"
+        onBack={onBack}
+        backLabel="뒤로가기"
+        right={
           <Pressable
-            onPress={onBack}
+            onPress={() => setFormTarget('new')}
             accessibilityRole="button"
-            accessibilityLabel="뒤로가기"
-            style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-            <Icon name="back" size={26} color={t.text} />
+            // 시트 제출 버튼('카테고리 추가')과 라벨이 겹치지 않게 구분.
+            accessibilityLabel="새 카테고리 추가"
+            style={[styles.iconBtn, { backgroundColor: t.primary }]}>
+            <Icon name="add" size={20} color={t.onPrimary} />
           </Pressable>
-          <Text style={[Typography.h2, { color: t.text }]}>카테고리 관리</Text>
-        </View>
-        <Pressable
-          onPress={() => setFormTarget('new')}
-          accessibilityRole="button"
-          // 시트 제출 버튼('카테고리 추가')과 라벨이 겹치지 않게 구분.
-          accessibilityLabel="새 카테고리 추가"
-          style={[styles.iconBtn, { backgroundColor: t.primary }]}>
-          <Icon name="add" size={20} color={t.onPrimary} />
-        </Pressable>
-      </View>
+        }
+      />
 
-      <ScrollView contentContainerStyle={[styles.body, column]}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.body,
+          column,
+          headerInset ? { paddingTop: headerInset } : null,
+        ]}>
         {categories.length === 0 ? (
           <View style={styles.empty}>
             <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>

@@ -10,7 +10,7 @@ import { notificationIcon } from '@/constants/notifications';
 import { RetryState } from '@/components/ui/retry-state';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Radius, Spacing } from '@/constants/theme';
-import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { DEMO_NOTIFICATIONS } from '@/mocks/fixtures';
@@ -108,6 +108,8 @@ export function NotificationListScreen({
 }: NotificationListScreenProps) {
   const t = useTokens();
   const column = useResponsiveColumn();
+  // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
+  const headerInset = useHeaderContentInset();
   const Typography = useTypography();
   const entries = notifications ?? DEMO_NOTIFICATIONS;
   const hasUnread = entries.some((n) => !n.read);
@@ -133,7 +135,11 @@ export function NotificationListScreen({
       <FlatList
         data={entries}
         keyExtractor={(n) => String(n.id)}
-        contentContainerStyle={[styles.body, column]}
+        contentContainerStyle={[
+          styles.body,
+          column,
+          headerInset ? { paddingTop: headerInset } : null,
+        ]}
         ListEmptyComponent={
           loading ? (
             <View style={styles.state}>

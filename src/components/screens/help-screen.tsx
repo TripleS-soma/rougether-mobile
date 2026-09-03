@@ -4,7 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Icon } from '@/components/ui/icon';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Radius, Spacing } from '@/constants/theme';
-import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
@@ -42,6 +42,8 @@ export type HelpScreenProps = {
 export function HelpScreen({ appVersion = '1.0.0', onContact, onBack }: HelpScreenProps) {
   const t = useTokens();
   const column = useResponsiveColumn();
+  // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
+  const headerInset = useHeaderContentInset();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const [openIdx, setOpenIdx] = useState<number | null>(null);
@@ -50,7 +52,12 @@ export function HelpScreen({ appVersion = '1.0.0', onContact, onBack }: HelpScre
     <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader title="도움말" onBack={onBack} />
 
-      <ScrollView contentContainerStyle={[styles.body, column]}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.body,
+          column,
+          headerInset ? { paddingTop: headerInset } : null,
+        ]}>
         <Text
           style={[
             Typography.supporting,

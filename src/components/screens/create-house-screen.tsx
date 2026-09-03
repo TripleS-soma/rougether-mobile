@@ -4,10 +4,11 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 
 import { type HouseCover, HouseCoverPicker } from '@/components/room/house-cover-picker';
 import { Icon } from '@/components/ui/icon';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { CrownPictogram, Pictogram } from '@/components/ui/pictograms';
 import { Radius, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
-import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import {
@@ -44,7 +45,8 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
   const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
-  const headerInset = useHeaderInsetStyle();
+  // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
+  const headerInset = useHeaderContentInset();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [themeId, setThemeId] = useState('morning');
@@ -58,19 +60,14 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
-      <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
-        <Pressable
-          onPress={onBack}
-          accessibilityRole="button"
-          accessibilityLabel="뒤로 가기"
-          style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-          <Icon name="back" size={26} color={t.text} />
-        </Pressable>
-        <Text style={[Typography.h2, { color: t.text }]}>새 집 만들기</Text>
-        <View style={styles.iconBtn} />
-      </View>
+      <ScreenHeader title="새 집 만들기" onBack={onBack} />
 
-      <ScrollView contentContainerStyle={[styles.body, column]}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.body,
+          column,
+          headerInset ? { paddingTop: headerInset } : null,
+        ]}>
         {/* Preview */}
         <View style={[styles.card, styles.previewRow, { backgroundColor: t.surface }]}>
           <View

@@ -4,10 +4,11 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Field } from '@/components/ui/field';
 import { type PolicyDoc } from '@/constants/policy';
 import { Icon } from '@/components/ui/icon';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { PawPictogram } from '@/components/ui/pictograms';
 import { Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
-import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
@@ -29,7 +30,8 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
   const column = useResponsiveColumn();
   const emph = useFontEmphasis();
   const Typography = useTypography();
-  const headerInset = useHeaderInsetStyle();
+  // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
+  const headerInset = useHeaderContentInset();
   const { show: toast } = useToast();
 
   const [nickname, setNickname] = useState('');
@@ -113,20 +115,10 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
-      <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
-        <Pressable
-          onPress={onBack}
-          accessibilityRole="button"
-          accessibilityLabel="뒤로 가기"
-          style={[styles.backBtn, { backgroundColor: t.surfaceMuted }]}>
-          <Icon name="back" size={26} color={t.text} />
-        </Pressable>
-        <Text style={[Typography.body, emph('bold'), { color: t.text }]}>회원가입</Text>
-        <View style={styles.backBtn} />
-      </View>
+      <ScreenHeader title="회원가입" onBack={onBack} />
 
       {/* 스크롤 컨테이너가 없어 블록마다 묶는다. 헤더는 풀폭 유지 (#725). */}
-      <View style={[styles.intro, column]}>
+      <View style={[styles.intro, column, headerInset ? { paddingTop: headerInset } : null]}>
         <View style={styles.introTitleRow}>
           <Text style={[Typography.h2, { color: t.text }]}>마을의 새 친구를 환영해요</Text>
           <PawPictogram size={18} />

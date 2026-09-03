@@ -6,7 +6,7 @@ import { PendingNotice } from '@/components/ui/pending-notice';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Radius, Spacing } from '@/constants/theme';
-import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 
@@ -56,6 +56,8 @@ export function SoundSettingsScreen({
 }: SoundSettingsScreenProps) {
   const t = useTokens();
   const column = useResponsiveColumn();
+  // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
+  const headerInset = useHeaderContentInset();
   const Typography = useTypography();
   const [settings, setSettings] = useState(initialSettings);
 
@@ -69,7 +71,12 @@ export function SoundSettingsScreen({
     <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader title="효과음" onBack={onBack} />
 
-      <ScrollView contentContainerStyle={[styles.body, column]}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.body,
+          column,
+          headerInset ? { paddingTop: headerInset } : null,
+        ]}>
         <PendingNotice text="사운드 설정은 서버 준비 중이라 아직 이 기기에만 저장돼요." />
         <View style={[styles.card, { backgroundColor: t.surface }]}>
           {ROWS.map((r, idx) => (

@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Icon, type IconName } from '@/components/ui/icon';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import {
   DEFAULT_FONT_ID,
   DEFAULT_THEME_ID,
@@ -17,7 +18,7 @@ import {
   type ThemeMode,
   typographyFor,
 } from '@/constants/theme';
-import { useBottomNavInset, useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useBottomNavInset, useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
@@ -121,7 +122,8 @@ export const SettingsScreen = memo(function SettingsScreen({
   const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
-  const headerInset = useHeaderInsetStyle();
+  // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
+  const headerInset = useHeaderContentInset();
   // 글래스 알약 바텀바가 떠 있으면 마지막 행이 그 밑에 안 숨게 (#1049).
   const navInset = useBottomNavInset();
   // Section captions: supporting size with a semibold face via the active font.
@@ -168,9 +170,7 @@ export const SettingsScreen = memo(function SettingsScreen({
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
-      <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
-        <Text style={[Typography.h2, { color: t.text }]}>설정</Text>
-      </View>
+      <ScreenHeader title="설정" />
 
       <ScrollView
         ref={scrollRef}
@@ -179,6 +179,7 @@ export const SettingsScreen = memo(function SettingsScreen({
         contentContainerStyle={[
           styles.body,
           column,
+          headerInset ? { paddingTop: headerInset } : null,
           navInset ? { paddingBottom: Spacing.four + navInset } : null,
         ]}
         {...scrollRestore}>

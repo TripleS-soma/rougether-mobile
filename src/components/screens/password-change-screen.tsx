@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Field } from '@/components/ui/field';
+import { ActionBar } from '@/components/ui/action-bar';
+import { GlassSurface } from '@/components/ui/glass-surface';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Radius, Spacing } from '@/constants/theme';
-import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useActionBarInset, useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 
@@ -26,6 +28,9 @@ export type PasswordChangeScreenProps = {
 export function PasswordChangeScreen({ onBack }: PasswordChangeScreenProps) {
   const t = useTokens();
   const column = useResponsiveColumn();
+  // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
+  const headerInset = useHeaderContentInset();
+  const actionBarInset = useActionBarInset();
   const Typography = useTypography();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
@@ -38,7 +43,13 @@ export function PasswordChangeScreen({ onBack }: PasswordChangeScreenProps) {
     <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader title="비밀번호 변경" onBack={onBack} />
 
-      <ScrollView contentContainerStyle={[styles.body, column]}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.body,
+          column,
+          headerInset ? { paddingTop: headerInset } : null,
+          actionBarInset ? { paddingBottom: actionBarInset } : null,
+        ]}>
         {/* The dev API has no password auth yet — be honest instead of a fake
             success that just navigates back. */}
         <View style={[styles.notice, { backgroundColor: t.warningSoft, borderColor: t.warning }]}>
@@ -81,17 +92,19 @@ export function PasswordChangeScreen({ onBack }: PasswordChangeScreenProps) {
         />
       </ScrollView>
 
-      <View style={[styles.footer, { borderTopColor: t.border }]}>
+      <ActionBar style={styles.footer}>
         {/* onSubmit is reserved for when a password API exists; disabled until then. */}
         <Pressable
           disabled
           accessibilityRole="button"
           accessibilityState={{ disabled: true }}
           accessibilityLabel="비밀번호 변경"
-          style={[styles.submit, { backgroundColor: t.surfaceMuted }]}>
-          <Text style={[Typography.label, { color: t.textMuted }]}>변경 준비 중</Text>
+          style={styles.submit}>
+          <GlassSurface style={styles.submitFace} fallbackColor={t.surfaceMuted}>
+            <Text style={[Typography.label, { color: t.textMuted }]}>변경 준비 중</Text>
+          </GlassSurface>
         </Pressable>
-      </View>
+      </ActionBar>
     </View>
   );
 }
@@ -118,6 +131,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
   },
   submit: {
+    borderRadius: Radius.pill,
+  },
+  submitFace: {
     borderRadius: Radius.pill,
     paddingVertical: Spacing.three,
     alignItems: 'center',

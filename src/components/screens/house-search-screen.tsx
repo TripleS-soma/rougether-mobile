@@ -7,6 +7,7 @@ import type { RoomCatalogProps } from '@/components/room/room';
 import type { HouseMission, MemberRoomPreview } from '@/components/screens/house-screen';
 import { Loading } from '@/components/ui/loading';
 import { Icon } from '@/components/ui/icon';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { RetryState } from '@/components/ui/retry-state';
 import { SpringProgressBar } from '@/components/ui/spring-progress';
 import {
@@ -18,7 +19,7 @@ import {
 } from '@/components/ui/pictograms';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
-import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { assetSource, isCdnKey } from '@/resources/asset';
@@ -158,7 +159,8 @@ export function HouseSearchScreen({
   const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
-  const headerInset = useHeaderInsetStyle();
+  // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
+  const headerInset = useHeaderContentInset();
   const [code, setCode] = useState(initialCode ?? '');
   const { show: toast } = useToast();
   const [query, setQuery] = useState('');
@@ -257,23 +259,17 @@ export function HouseSearchScreen({
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
-      <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
-        <Pressable
-          onPress={onBack}
-          accessibilityRole="button"
-          accessibilityLabel="뒤로 가기"
-          style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-          <Icon name="back" size={26} color={t.text} />
-        </Pressable>
-        <Text style={[Typography.h2, { color: t.text }]}>집 탐색</Text>
-        <View style={styles.iconBtn} />
-      </View>
+      <ScreenHeader title="집 탐색" onBack={onBack} />
       {/* 추천 목록이 서버 구동이라 가상화 리스트로 그린다 (#690) — 초대코드·검색은
           헤더, 새 집 만들기는 푸터로. */}
       <FlatList
         data={loading || loadError ? NO_HOUSES : filtered}
         keyExtractor={(h) => String(h.id)}
-        contentContainerStyle={[styles.body, column]}
+        contentContainerStyle={[
+          styles.body,
+          column,
+          headerInset ? { paddingTop: headerInset } : null,
+        ]}
         ItemSeparatorComponent={ListGap}
         // 검색 중에는 이어 붙이지 않는다 — 필터가 클라이언트라 다음 페이지를
         // 받아봐야 화면에 안 걸리는 게 대부분이고, 스크롤이 짧아 끝에 붙어 있어

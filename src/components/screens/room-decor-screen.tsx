@@ -34,6 +34,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { RetryState } from '@/components/ui/retry-state';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
+import { ActionBar } from '@/components/ui/action-bar';
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { Icon } from '@/components/ui/icon';
 import { WalletPills } from '@/components/ui/wallet-pills';
@@ -49,7 +50,7 @@ import {
   WALLPAPERS,
 } from '@/resources/furniture';
 import { useToast } from '@/components/ui/toast';
-import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useActionBarInset, useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useStableCallback } from '@/hooks/use-stable-value';
 import { track } from '@/lib/analytics';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
@@ -216,6 +217,8 @@ export function RoomDecorScreen({
   const Typography = useTypography();
   const { show: toast } = useToast();
   const headerInset = useHeaderInsetStyle();
+  // 떠 있는 적용하기 바(#1069) 밑으로 카탈로그가 지나가도록 하단 패딩.
+  const actionBarInset = useActionBarInset();
 
   // Owned items are placeable; everything else in the catalog is buyable.
   // (The demo default owns the whole catalogue, surfaces included.)
@@ -630,7 +633,12 @@ export function RoomDecorScreen({
     <View style={[styles.screen, useScreenStyle([])]}>
       {/* 헤더 대신 화면 고정 플로팅 (#510) — 패널이 그만큼 올라와 가구가 더
           보인다. 뒤로가기는 상시 접근, 재화는 프리뷰 구매(#501) 잔액 확인용. */}
-      <ScrollView contentContainerStyle={[styles.body, headerInset]}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.body,
+          headerInset,
+          actionBarInset ? { paddingBottom: actionBarInset } : null,
+        ]}>
         {/* 캔버스만 묶는다 — 방은 aspectRatio라 폭이 넓어지면 높이도 같이 커져
             카탈로그가 화면 밖으로 밀린다. 카탈로그는 반대로 폭을 다 써서
             열을 늘린다(DecorGrid) — 한 번에 보이는 가구가 많을수록 좋다 (#725). */}
@@ -1186,16 +1194,19 @@ export function RoomDecorScreen({
         onCancel={() => setConflictOpen(false)}
       />
 
-      <View style={[styles.applyBar, { backgroundColor: t.screen, borderTopColor: t.border }]}>
+      {/* 적용하기는 떠 있는 액션 바 (#1069) — 카탈로그가 그 밑으로 스크롤된다. */}
+      <ActionBar style={[styles.applyBar, { backgroundColor: t.screen }]}>
         <Pressable
           onPress={() => apply(true)}
           accessibilityRole="button"
           accessibilityLabel="적용하기"
-          style={[styles.applyBtn, { backgroundColor: t.primary }]}>
-          <Icon name="check" size={16} color={t.onPrimary} />
-          <Text style={[Typography.label, { color: t.onPrimary }]}>적용하기</Text>
+          style={styles.applyBtn}>
+          <GlassSurface style={styles.applyFace} tintColor={t.primary} fallbackColor={t.primary}>
+            <Icon name="check" size={16} color={t.onPrimary} />
+            <Text style={[Typography.label, { color: t.onPrimary }]}>적용하기</Text>
+          </GlassSurface>
         </Pressable>
-      </View>
+      </ActionBar>
     </View>
   );
 }
@@ -1806,6 +1817,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
   },
   applyBtn: {
+    borderRadius: Radius.pill,
+  },
+  applyFace: {
     flexDirection: 'row',
     borderRadius: Radius.pill,
     paddingVertical: Spacing.three,
