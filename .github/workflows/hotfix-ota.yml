@@ -20,9 +20,12 @@ on:
   workflow_dispatch:
     inputs:
       channel:
-        description: 발행할 채널 (목표 설치본이 듣는 채널)
+        # 값은 EAS **브랜치** 이름이다. 채널 지도(2026-09-03, release-ops "채널 지도"):
+        # dev 채널→dev 브랜치(dev 레인), production 채널→production 브랜치, 그리고
+        # preview 채널(1.4.0 빌드 111 등 옛 테스트 빌드)도 production 브랜치를 듣는다.
+        description: 발행할 브랜치 (dev = 개발 레인, production = 스토어·preview 채널 설치본)
         type: choice
-        options: [preview, production]
+        options: [dev, production]
         required: true
       platform:
         description: 플랫폼
