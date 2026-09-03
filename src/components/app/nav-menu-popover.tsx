@@ -1,5 +1,6 @@
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { GlassSurface } from '@/components/ui/glass-surface';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { Overlay, Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
@@ -61,13 +62,11 @@ export function NavMenuPopover({
         onPress={onClose}
         accessibilityRole="button"
         accessibilityLabel="닫기">
-        <View
+        <GlassSurface
+          interactive={false}
+          fallbackColor={t.screen}
           testID="nav-menu-popover"
-          style={[
-            styles.popover,
-            bottom !== undefined ? { bottom } : { top },
-            { backgroundColor: t.screen, borderColor: t.border },
-          ]}>
+          style={[styles.popover, bottom !== undefined ? { bottom } : { top }]}>
           {(
             [
               ...(onOpenCharacterPicker
@@ -140,7 +139,7 @@ export function NavMenuPopover({
               {item.dot ? <View style={[styles.dot, { backgroundColor: t.danger }]} /> : null}
             </Pressable>
           ))}
-        </View>
+        </GlassSurface>
       </Pressable>
     </Modal>
   );
@@ -157,7 +156,6 @@ const styles = StyleSheet.create({
     right: Spacing.four,
     minWidth: 176,
     borderRadius: Radius.md,
-    borderWidth: 1,
     overflow: 'hidden',
     elevation: 6,
     shadowColor: ShadowColor,

@@ -34,6 +34,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { RetryState } from '@/components/ui/retry-state';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
+import { GlassSurface } from '@/components/ui/glass-surface';
 import { Icon } from '@/components/ui/icon';
 import { WalletPills } from '@/components/ui/wallet-pills';
 import { Overlay, Radius, ShadowColor, Spacing } from '@/constants/theme';
@@ -487,8 +488,10 @@ export function RoomDecorScreen({
   // Animated 스타일로만 반응한다. jest의 useSharedValue는 렌더마다 새 객체라
   // useRef로 앵커 (#539 계약).
   const dragActive = useRef(useSharedValue(false)).current;
+  // opacity 0은 글래스 면(#1050)을 아예 안 그리고 복귀도 불안정해서, 드래그 중엔
+  // 접는(scale) 방식으로 숨긴다 — 리렌더 없이 UI 스레드에서만 반응하는 건 그대로.
   const toolbarDragStyle = useAnimatedStyle(() => ({
-    opacity: withTiming(dragActive.value ? 0 : 1, { duration: 120 }),
+    transform: [{ scale: withTiming(dragActive.value ? 0.01 : 1, { duration: 120 }) }],
     // 숨은 툴바의 유령 터치 차단 — 두 번째 손가락이 빼기를 누르는 사고 방지.
     pointerEvents: dragActive.value ? ('none' as const) : ('auto' as const),
   }));
@@ -696,15 +699,13 @@ export function RoomDecorScreen({
                     key={sp.kind}
                     onPress={() => requestBuy({ id: sp.id, name: sp.name, price: sp.price })}
                     accessibilityRole="button"
-                    accessibilityLabel={`${SURFACE_LABEL[sp.kind]} 프리뷰 구매`}
-                    style={[
-                      styles.previewChip,
-                      { backgroundColor: t.surface, borderColor: t.border },
-                    ]}>
-                    <Icon name="diamond" size={10} color={t.primary} />
-                    <Text style={[Typography.supporting, { color: t.text }]}>
-                      {SURFACE_LABEL[sp.kind]} {sp.price}
-                    </Text>
+                    accessibilityLabel={`${SURFACE_LABEL[sp.kind]} 프리뷰 구매`}>
+                    <GlassSurface style={styles.previewChip} fallbackColor={t.surface}>
+                      <Icon name="diamond" size={10} color={t.primary} />
+                      <Text style={[Typography.supporting, { color: t.text }]}>
+                        {SURFACE_LABEL[sp.kind]} {sp.price}
+                      </Text>
+                    </GlassSurface>
                   </Pressable>
                 ))}
               </View>
@@ -729,28 +730,29 @@ export function RoomDecorScreen({
                     ? styles.toolbarBottom
                     : styles.toolbarTop,
                   toolbarDragStyle,
-                  { backgroundColor: t.surface, borderColor: t.border },
                 ]}>
-                {(
-                  [
-                    ['rotate-ccw', '왼쪽 회전', () => rotateSelected(-1)],
-                    ['rotate-cw', '오른쪽 회전', () => rotateSelected(1)],
-                    ['flip', '좌우 반전', flipSelected],
-                    ['layer-up', '맨 앞으로', bringToFront],
-                    ['layer-down', '맨 뒤로', sendToBack],
-                    ['trash', '빼기', () => removeItem(selectedId)],
-                  ] as const
-                ).map(([icon, label, onPress]) => (
-                  <Pressable
-                    key={icon}
-                    onPress={onPress}
-                    accessibilityRole="button"
-                    accessibilityLabel={label}
-                    hitSlop={4}
-                    style={[styles.toolBtn, { backgroundColor: t.surfaceMuted }]}>
-                    <Icon name={icon} size={18} color={icon === 'trash' ? t.danger : t.text} />
-                  </Pressable>
-                ))}
+                <GlassSurface style={styles.toolbarFace} fallbackColor={t.surface}>
+                  {(
+                    [
+                      ['rotate-ccw', '왼쪽 회전', () => rotateSelected(-1)],
+                      ['rotate-cw', '오른쪽 회전', () => rotateSelected(1)],
+                      ['flip', '좌우 반전', flipSelected],
+                      ['layer-up', '맨 앞으로', bringToFront],
+                      ['layer-down', '맨 뒤로', sendToBack],
+                      ['trash', '빼기', () => removeItem(selectedId)],
+                    ] as const
+                  ).map(([icon, label, onPress]) => (
+                    <Pressable
+                      key={icon}
+                      onPress={onPress}
+                      accessibilityRole="button"
+                      accessibilityLabel={label}
+                      hitSlop={4}
+                      style={[styles.toolBtn, { backgroundColor: t.surfaceMuted }]}>
+                      <Icon name={icon} size={18} color={icon === 'trash' ? t.danger : t.text} />
+                    </Pressable>
+                  ))}
+                </GlassSurface>
               </Animated.View>
             ) : null}
           </View>
@@ -965,21 +967,17 @@ export function RoomDecorScreen({
           onPress={handleBack}
           accessibilityRole="button"
           accessibilityLabel="뒤로가기"
-          style={[
-            styles.iconBtn,
-            styles.floatBtn,
-            { backgroundColor: t.surface, borderColor: t.border },
-          ]}>
-          <Icon name="back" size={26} color={t.text} />
+          style={[styles.iconBtn, styles.floatBtn]}>
+          <GlassSurface style={styles.iconBtnFace} fallbackColor={t.surface}>
+            <Icon name="back" size={26} color={t.text} />
+          </GlassSurface>
         </Pressable>
-        <View
-          style={[
-            styles.floatBtn,
-            styles.floatWallet,
-            { backgroundColor: t.surface, borderColor: t.border },
-          ]}>
+        <GlassSurface
+          interactive={false}
+          fallbackColor={t.surface}
+          style={[styles.floatBtn, styles.floatWallet]}>
           <WalletPills coin={coinBalance} diamond={diamondBalance} />
-        </View>
+        </GlassSurface>
       </View>
 
       {/* Buying spends diamond irreversibly — confirm before calling onBuy. */}
@@ -1538,7 +1536,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
   },
   floatBtn: {
-    borderWidth: StyleSheet.hairlineWidth,
     // 그리드 위에 떠도 가독되게 살짝 띄운 카드 느낌.
     shadowColor: ShadowColor,
     shadowOpacity: 0.12,
@@ -1571,7 +1568,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.two,
     paddingVertical: 3,
     borderRadius: Radius.pill,
-    borderWidth: StyleSheet.hairlineWidth,
   },
   previewList: {
     alignSelf: 'stretch',
@@ -1600,6 +1596,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // 떠 있는 원형 버튼의 면 (#1050 규칙) — 위치·크기는 버튼이, 모양·배경은 면이.
+  iconBtnFace: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: Radius.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   body: {
     paddingBottom: Spacing.six,
   },
@@ -1622,12 +1625,14 @@ const styles = StyleSheet.create({
   toolbar: {
     position: 'absolute',
     alignSelf: 'center',
+    zIndex: 10001,
+  },
+  // 툴바의 면 — 글래스/폴백 배경은 GlassSurface가 칠한다.
+  toolbarFace: {
     flexDirection: 'row',
     gap: Spacing.one,
     borderRadius: Radius.pill,
-    borderWidth: 1,
     padding: Spacing.one,
-    zIndex: 10001,
   },
   // 하반부 가구 선택 — 기본 자리. 플로팅 재화 필(#510) 줄 아래에서 시작.
   toolbarTop: {
