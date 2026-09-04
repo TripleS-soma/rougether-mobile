@@ -36,8 +36,17 @@ export function ActionBar({ children, style, testID }: ActionBarProps) {
       </View>
     );
   }
+  // 폴백 바는 화면 맨 아래 flex 형제라 시스템 내비게이션 바(edge-to-edge, Android
+  // 15 강제) 밑으로 깔린다 — 1.4.0 Android에서 꾸미기 "적용하기"가 반쯤 잘렸다.
+  // 바텀바(#456)처럼 인셋을 바가 직접 갖는다. 화면 루트가 top만 패딩하는 계약
+  // (`useScreenStyle([])`)이라 여기서 더해도 이중 패딩이 없다.
   return (
-    <View testID={testID} style={[style, { borderTopColor: t.border }]}>
+    <View
+      testID={testID}
+      style={[
+        style,
+        { borderTopColor: t.border, paddingBottom: (insets?.bottom ?? 0) + Spacing.three },
+      ]}>
       {children}
     </View>
   );
