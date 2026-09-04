@@ -22,7 +22,9 @@ import { type Routine, type RoutineCategoryMeta, UNCATEGORIZED_META } from '@/co
 import { Loading } from '@/components/ui/loading';
 import { BearCheck } from '@/components/ui/bear-check';
 import { CategoryIcon } from '@/components/ui/category-icon';
+import { GlassSurface } from '@/components/ui/glass-surface';
 import { Icon } from '@/components/ui/icon';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { horizontalFlingGesture } from '@/utils/gesture';
 import { PendingNotice } from '@/components/ui/pending-notice';
@@ -32,7 +34,7 @@ import { SpringProgressBar } from '@/components/ui/spring-progress';
 import { BookOpenPictogram, Pictogram, type PictogramName } from '@/components/ui/pictograms';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
-import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { formatTime, todayIso } from '@/utils/datetime';
@@ -152,7 +154,8 @@ export function FriendRoomScreen({
   const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
-  const headerInset = useHeaderInsetStyle();
+  // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
+  const headerInset = useHeaderContentInset();
   const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
   // <Room />에 스프레드로 넘기는 씬 번들 (#691).
   const roomScene: RoomSceneProps = {
@@ -297,21 +300,8 @@ export function FriendRoomScreen({
   if (loadError) {
     return (
       <View style={[styles.screen, screenStyle]}>
-        <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
-          <Pressable
-            onPress={onBack}
-            accessibilityRole="button"
-            accessibilityLabel="뒤로가기"
-            style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-            <Icon name="back" size={26} color={t.text} />
-          </Pressable>
-          <View style={styles.flex}>
-            <Text style={[Typography.h3, { color: t.text }]} numberOfLines={1}>
-              {friendName}의 방
-            </Text>
-          </View>
-        </View>
-        <View style={styles.errorWrap}>
+        <ScreenHeader title={`${friendName}의 방`} onBack={onBack} backLabel="뒤로가기" />
+        <View style={[styles.errorWrap, headerInset ? { paddingTop: headerInset } : null]}>
           <RetryState
             message="친구 방을 불러오지 못했어요"
             detail="네트워크 상태를 확인하고 다시 시도해 주세요."
@@ -324,37 +314,29 @@ export function FriendRoomScreen({
 
   return (
     <View style={[styles.screen, screenStyle]}>
-      <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
-        <Pressable
-          onPress={onBack}
-          accessibilityRole="button"
-          accessibilityLabel="뒤로가기"
-          style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-          <Icon name="back" size={26} color={t.text} />
-        </Pressable>
-        <View style={[styles.avatar, { backgroundColor: character.bg }]}>
-          <CharacterAvatar characterId={characterId} size={36} />
-        </View>
-        <View style={styles.flex}>
-          {/* Narrow phones: shrink the font (≥75%) first; if the title still
-              overflows, middle-ellipsize so the 의 방 suffix stays visible. */}
-          <Text
-            style={[Typography.h3, { color: t.text }]}
-            numberOfLines={1}
-            ellipsizeMode="middle"
-            adjustsFontSizeToFit
-            minimumFontScale={0.75}>
-            {friendName}의 방
-          </Text>
-          {/* Same rule as 나의 방: a 0-day streak hides the flame badge. */}
-          {streakDays > 0 ? (
-            <View style={styles.streak}>
-              <Icon name="flame" size={14} color={t.warningText} />
-              <Text style={[Typography.supporting, { color: t.warningText }]}>{streakDays}일</Text>
+      {/* 공용 헤더 (#1069 후속) — 아바타·스트릭은 오른쪽 슬롯으로. 제목 알약이
+          이름을 말줄임하므로 종전의 축소 로직은 뺐다. */}
+      <ScreenHeader
+        title={`${friendName}의 방`}
+        onBack={onBack}
+        backLabel="뒤로가기"
+        right={
+          <View style={styles.headerRight}>
+            {/* Same rule as 나의 방: a 0-day streak hides the flame badge. */}
+            {streakDays > 0 ? (
+              <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.streakPill}>
+                <Icon name="flame" size={14} color={t.warningText} />
+                <Text style={[Typography.supporting, { color: t.warningText }]}>
+                  {streakDays}일
+                </Text>
+              </GlassSurface>
+            ) : null}
+            <View style={[styles.avatar, { backgroundColor: character.bg }]}>
+              <CharacterAvatar characterId={characterId} size={36} />
             </View>
-          ) : null}
-        </View>
-      </View>
+          </View>
+        }
+      />
 
       <KeyboardAvoidingView
         style={styles.flex}
@@ -366,6 +348,7 @@ export function FriendRoomScreen({
             // 나의 방과 같은 이유 — 방 캔버스가 정사각형이라 폭이 넓어지면
             // 높이도 같이 커져 방명록이 화면 밖으로 밀린다 (#725).
             column,
+            headerInset ? { paddingTop: headerInset } : null,
             inputFocused && keyboardPad > 0 ? { paddingBottom: keyboardPad + 120 } : null,
           ]}
           keyboardShouldPersistTaps="handled">
@@ -860,5 +843,18 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     paddingVertical: Spacing.three,
     alignItems: 'center',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  streakPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.half,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: Spacing.one,
+    borderRadius: Radius.pill,
   },
 });
