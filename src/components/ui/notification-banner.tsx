@@ -3,6 +3,7 @@ import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
+import { GlassSurface } from '@/components/ui/glass-surface';
 import { Icon } from '@/components/ui/icon';
 import { notificationIcon } from '@/constants/notifications';
 import { Radius, ShadowColor, Spacing } from '@/constants/theme';
@@ -14,6 +15,8 @@ export const BANNER_VISIBLE_MS = 5000;
 const FADE_MS = 200;
 /** 위로 이만큼 밀면 닫는다. */
 const DISMISS_DY = -28;
+// 숨김 위치 — 상태바 인셋에 이만큼 더해 카드 높이만큼 화면 위로 완전히 나간다.
+const BANNER_HIDE_DY = 120;
 
 export type NotificationBannerProps = {
   /** 서버 알림 종류 — 아이콘을 고른다. 모르는 값이면 종. */
@@ -97,28 +100,35 @@ export function NotificationBanner({
           styles.wrap,
           {
             top: (insets?.top ?? 0) + Spacing.two,
-            opacity: anim,
+            // 등장·퇴장은 슬라이드만 (#1069 후속) — opacity 0은 글래스 면이 아예 안
+            // 그려지고 복귀가 불안정해서, 화면 위 밖(상태바 너머)에서 내려오게 한다.
             transform: [
-              { translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [-16, 0] }) },
+              {
+                translateY: anim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-((insets?.top ?? 0) + Spacing.two + BANNER_HIDE_DY), 0],
+                }),
+              },
             ],
           },
         ]}>
         <Pressable
           onPress={handlePress}
           accessibilityRole="button"
-          accessibilityLabel={`${title}. ${body}`}
-          style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
-          <View style={[styles.iconWrap, { backgroundColor: t.surfaceMuted }]}>
-            <Icon name={notificationIcon(type)} size={18} color={t.text} />
-          </View>
-          <View style={styles.texts}>
-            <Text style={[Typography.label, { color: t.text }]} numberOfLines={1}>
-              {title}
-            </Text>
-            <Text style={[Typography.supporting, { color: t.textMuted }]} numberOfLines={2}>
-              {body}
-            </Text>
-          </View>
+          accessibilityLabel={`${title}. ${body}`}>
+          <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.card}>
+            <View style={[styles.iconWrap, { backgroundColor: t.surfaceMuted }]}>
+              <Icon name={notificationIcon(type)} size={18} color={t.text} />
+            </View>
+            <View style={styles.texts}>
+              <Text style={[Typography.label, { color: t.text }]} numberOfLines={1}>
+                {title}
+              </Text>
+              <Text style={[Typography.supporting, { color: t.textMuted }]} numberOfLines={2}>
+                {body}
+              </Text>
+            </View>
+          </GlassSurface>
         </Pressable>
       </Animated.View>
     </GestureDetector>
@@ -138,7 +148,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
-    borderWidth: 1,
     borderRadius: Radius.lg,
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.three,

@@ -58,7 +58,14 @@ export function ScreenHeader({ title, onBack, backLabel = '뒤로 가기', right
             </Pressable>
           ) : null}
           <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.titlePill}>
-            <Text style={[Typography.h3, { color: t.text }]} numberOfLines={1}>
+            {/* 긴 제목(친구 이름 등): 먼저 축소, 그래도 넘치면 중간 말줄임 — 의 방 같은
+                접미가 살아남는다. */}
+            <Text
+              style={[Typography.h3, { color: t.text }]}
+              numberOfLines={1}
+              ellipsizeMode="middle"
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}>
               {title}
             </Text>
           </GlassSurface>
@@ -73,7 +80,14 @@ export function ScreenHeader({ title, onBack, backLabel = '뒤로 가기', right
       style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
       <View style={styles.left}>
         {onBack ? <IconButton name="back" accessibilityLabel={backLabel} onPress={onBack} /> : null}
-        <Text style={[Typography.h2, { color: t.text }]}>{title}</Text>
+        <Text
+          style={[Typography.h2, styles.title, { color: t.text }]}
+          numberOfLines={1}
+          ellipsizeMode="middle"
+          adjustsFontSizeToFit
+          minimumFontScale={0.75}>
+          {title}
+        </Text>
       </View>
       {right ?? null}
     </View>
@@ -93,6 +107,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.three,
     flex: 1,
+  },
+  title: {
+    flexShrink: 1,
   },
   // 떠 있는 헤더 (#1069) — 나의 방 크롬(#1055)과 같은 자리·높이.
   float: {
