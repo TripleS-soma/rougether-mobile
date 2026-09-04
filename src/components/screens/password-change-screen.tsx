@@ -92,7 +92,7 @@ export function PasswordChangeScreen({ onBack }: PasswordChangeScreenProps) {
         />
       </ScrollView>
 
-      <ActionBar style={styles.footer}>
+      <ActionBar>
         {/* onSubmit is reserved for when a password API exists; disabled until then. */}
         <Pressable
           disabled

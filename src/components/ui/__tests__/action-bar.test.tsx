@@ -17,17 +17,17 @@ describe('ActionBar (#1069)', () => {
     jest.mocked(isLiquidGlassAvailable).mockReturnValue(false);
   });
 
-  it('폴백 바는 시스템 내비게이션 바 인셋을 직접 갖는다 — Android edge-to-edge에서 잘리지 않게', async () => {
+  it('글래스가 불가해도 바닥에서 띄운 오버레이 — 시스템 내비게이션 바 인셋 위에 뜬다 (#1074)', async () => {
     const { getByTestId } = await render(
       wrap(
-        <ActionBar testID="bar" style={{ padding: Spacing.four }}>
+        <ActionBar testID="bar">
           <Text>적용하기</Text>
         </ActionBar>,
       ),
     );
     const style = StyleSheet.flatten(getByTestId('bar').props.style);
-    expect(style.position).toBeUndefined();
-    expect(style.paddingBottom).toBe(34 + Spacing.three);
+    expect(style.position).toBe('absolute');
+    expect(style.bottom).toBe(34 + Spacing.one);
   });
 
   it('글래스면 바닥에서 띄운 오버레이 — 레이아웃 높이가 없다', async () => {

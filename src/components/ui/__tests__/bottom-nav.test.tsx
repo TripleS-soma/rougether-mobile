@@ -38,37 +38,38 @@ describe('BottomNav', () => {
     expect(colors.filter((c) => c === Themes.cozy.icon)).toHaveLength(2); // 비활성 탭
   });
 
-  describe('리퀴드 글래스 (#1049)', () => {
-    it('글래스가 불가하면 종전 불투명 바 — 알약 오버레이가 없다', async () => {
-      const { queryByTestId, getByText } = await render(
+  describe('떠 있는 알약 (#1049 → #1074 전 플랫폼)', () => {
+    it('글래스가 불가해도 알약 오버레이다 — 레이아웃 높이 없이 바닥에 뜬다', async () => {
+      const { getByTestId, getByText } = await render(
         <BottomNav active="myRoom" onChange={() => {}} />,
       );
-      expect(queryByTestId('bottom-nav-glass')).toBeNull();
+      const flat = Object.assign(
+        {},
+        ...[getByTestId('bottom-nav-pill').props.style].flat(Infinity),
+      );
+      expect(flat.position).toBe('absolute');
+      expect(flat.bottom).toBeGreaterThan(0);
       expect(getByText('설정')).toBeTruthy();
     });
 
-    it('글래스가 가능하면 떠 있는 알약으로 그리고 탭 전환은 그대로 동작한다', async () => {
+    it('글래스가 가능해도 같은 알약 — 탭 전환은 그대로 동작한다', async () => {
       jest.mocked(isLiquidGlassAvailable).mockReturnValue(true);
       const onChange = jest.fn();
       const { getByTestId, getByText } = await render(
         <BottomNav active="myRoom" onChange={onChange} />,
       );
-      const wrap = getByTestId('bottom-nav-glass');
-      // 오버레이 — 레이아웃 높이를 차지하지 않고 바닥에 붙는다.
-      const flat = Object.assign({}, ...[wrap.props.style].flat(Infinity));
-      expect(flat.position).toBe('absolute');
-      expect(flat.bottom).toBeGreaterThan(0);
+      expect(getByTestId('bottom-nav-pill')).toBeTruthy();
       fireEvent.press(getByText('집'));
       expect(onChange).toHaveBeenCalledWith('house');
     });
 
-    it('투명도 줄이기가 켜져 있으면 글래스가 가능해도 불투명 바로 돌아간다', async () => {
+    it('투명도 줄이기가 켜져 있어도 알약은 남고 면만 불투명이 된다', async () => {
       jest.mocked(isLiquidGlassAvailable).mockReturnValue(true);
       const spy = jest
         .spyOn(AccessibilityInfo, 'isReduceTransparencyEnabled')
         .mockResolvedValue(true);
-      const { queryByTestId } = await render(<BottomNav active="myRoom" onChange={() => {}} />);
-      await waitFor(() => expect(queryByTestId('bottom-nav-glass')).toBeNull());
+      const { getByTestId } = await render(<BottomNav active="myRoom" onChange={() => {}} />);
+      await waitFor(() => expect(getByTestId('bottom-nav-pill')).toBeTruthy());
       spy.mockRestore();
     });
   });

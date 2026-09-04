@@ -101,7 +101,7 @@ export function ProfileEditScreen({
         </ScrollView>
 
         {/* 저장 버튼은 떠 있는 액션 바 (#1069) — 글래스면 콘텐츠 위에 뜨고, 아니면 종전 바. */}
-        <ActionBar style={styles.footer}>
+        <ActionBar>
           <Pressable
             onPress={() => canSave && onSave?.(trimmed, bio.trim())}
             disabled={!canSave}

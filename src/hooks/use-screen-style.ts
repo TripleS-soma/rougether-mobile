@@ -6,7 +6,6 @@ import { actionBarUnderlapInset } from '@/components/ui/action-bar-geometry';
 import { navUnderlapInset } from '@/components/ui/bottom-nav-geometry';
 import { headerUnderlapInset } from '@/components/ui/screen-header-geometry';
 import { Spacing } from '@/constants/theme';
-import { useLiquidGlass } from '@/hooks/use-liquid-glass';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 const ZERO_INSETS = { top: 0, bottom: 0, left: 0, right: 0 };
@@ -54,10 +53,9 @@ export function useHeaderInsetStyle(basePadding: number = Spacing.three): ViewSt
  * 하단 탭 3서피스(나의 방·집·설정)의 contentContainerStyle에 더한다.
  */
 export function useBottomNavInset(): number {
-  const glass = useLiquidGlass();
   const insets = useContext(SafeAreaInsetsContext) ?? ZERO_INSETS;
   const Typography = useTypography();
-  return glass ? navUnderlapInset(insets.bottom, Typography.supporting.lineHeight) : 0;
+  return navUnderlapInset(insets.bottom, Typography.supporting.lineHeight);
 }
 
 /**
@@ -66,9 +64,8 @@ export function useBottomNavInset(): number {
  * 형제라 0. `ScreenHeader`를 쓰는 화면의 contentContainerStyle 맨 앞 패딩에 더한다.
  */
 export function useHeaderContentInset(): number {
-  const glass = useLiquidGlass();
   const insets = useContext(SafeAreaInsetsContext) ?? ZERO_INSETS;
-  return glass ? headerUnderlapInset(insets.top) : 0;
+  return headerUnderlapInset(insets.top);
 }
 
 /**
@@ -76,7 +73,6 @@ export function useHeaderContentInset(): number {
  * 하단 패딩. 글래스 모드에서만 0이 아니다 — 폴백 바는 flex 형제라 0.
  */
 export function useActionBarInset(): number {
-  const glass = useLiquidGlass();
   const insets = useContext(SafeAreaInsetsContext) ?? ZERO_INSETS;
-  return glass ? actionBarUnderlapInset(insets.bottom) : 0;
+  return actionBarUnderlapInset(insets.bottom);
 }

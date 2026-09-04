@@ -1195,7 +1195,7 @@ export function RoomDecorScreen({
       />
 
       {/* 적용하기는 떠 있는 액션 바 (#1069) — 카탈로그가 그 밑으로 스크롤된다. */}
-      <ActionBar style={[styles.applyBar, { backgroundColor: t.screen }]}>
+      <ActionBar>
         <Pressable
           onPress={() => apply(true)}
           accessibilityRole="button"

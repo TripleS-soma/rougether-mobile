@@ -545,7 +545,7 @@ export function AddRoutineScreen({
       />
 
       {/* 떠 있는 액션 바 (#1069 후속) — 글래스면 오류문·버튼이 폼 위에 뜨고, 아니면 종전 바. */}
-      <ActionBar style={[styles.footer, { backgroundColor: t.screen }]}>
+      <ActionBar>
         {formError ? (
           <GlassSurface interactive={false} fallbackColor={t.screen} style={styles.footerError}>
             <Text style={[Typography.supporting, { color: t.danger }]}>{formError}</Text>
