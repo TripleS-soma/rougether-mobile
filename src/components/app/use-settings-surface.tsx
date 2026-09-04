@@ -50,12 +50,15 @@ export function useSettingsSurface({
   screen,
   setScreen,
   onReplayOnboarding,
+  onOpenWeeklyReport,
   profile,
 }: {
   screen: Screen;
   setScreen: Dispatch<SetStateAction<Screen>>;
   /** 설정 → 튜토리얼 다시 보기 (셸 prop 통과). */
   onReplayOnboarding?: () => void;
+  /** 설정 → 주간회고 다시 보기 (#1056) — 회고 데이터는 나의 방 페이지 훅이 소유. */
+  onOpenWeeklyReport?: () => void;
   /** 프로필 편집 배선 — 닉네임·소개는 나의 방 헤더와 공유라 셸 소유. */
   profile: {
     nickname: string;
@@ -244,6 +247,7 @@ export function useSettingsSurface({
     onOpenPrivacy: openPrivacy,
     onReportBug: openBugReport,
     onReplayOnboarding,
+    onOpenWeeklyReport,
     onLogout: handleLogout,
     onWithdraw: handleWithdraw,
   };

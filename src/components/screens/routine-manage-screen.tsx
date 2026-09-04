@@ -8,10 +8,11 @@ import {
 } from '@/constants/routines';
 import { Loading } from '@/components/ui/loading';
 import { Icon } from '@/components/ui/icon';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { CategoryIcon } from '@/components/ui/category-icon';
 import { RetryState } from '@/components/ui/retry-state';
 import { Radius, Spacing } from '@/constants/theme';
-import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
@@ -49,7 +50,8 @@ export function RoutineManageScreen({
   const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
-  const headerInset = useHeaderInsetStyle();
+  // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
+  const headerInset = useHeaderContentInset();
   // The routines prop carries the merged routine+todo list; this screen manages routines only.
   const routineItems = routines.filter((r) => r.kind !== 'todo');
   const knownIds = categories.map((c) => c.id);
@@ -63,27 +65,27 @@ export function RoutineManageScreen({
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
-      <View style={[styles.header, headerInset, { backgroundColor: t.surface }]}>
-        <View style={styles.headerLeft}>
+      <ScreenHeader
+        title="루틴 관리"
+        onBack={onBack}
+        backLabel="뒤로가기"
+        right={
           <Pressable
-            onPress={onBack}
+            onPress={onAdd}
             accessibilityRole="button"
-            accessibilityLabel="뒤로가기"
-            style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
-            <Icon name="back" size={26} color={t.text} />
+            accessibilityLabel="루틴 추가"
+            style={[styles.iconBtn, { backgroundColor: t.primary }]}>
+            <Icon name="add" size={20} color={t.onPrimary} />
           </Pressable>
-          <Text style={[Typography.h2, { color: t.text }]}>루틴 관리</Text>
-        </View>
-        <Pressable
-          onPress={onAdd}
-          accessibilityRole="button"
-          accessibilityLabel="루틴 추가"
-          style={[styles.iconBtn, { backgroundColor: t.primary }]}>
-          <Icon name="add" size={20} color={t.onPrimary} />
-        </Pressable>
-      </View>
+        }
+      />
 
-      <ScrollView contentContainerStyle={[styles.body, column]}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.body,
+          column,
+          headerInset ? { paddingTop: headerInset } : null,
+        ]}>
         {loading ? (
           <View style={styles.empty}>
             <Loading />

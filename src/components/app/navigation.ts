@@ -27,7 +27,8 @@ export type Screen =
   | 'notifications'
   | 'sound'
   | 'help'
-  | 'inviteFriends';
+  | 'inviteFriends'
+  | 'weeklyReport';
 
 /** Which bottom-nav tab is active for each screen, or null to hide the nav. */
 export const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
@@ -54,6 +55,7 @@ export const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   sound: null,
   help: null,
   inviteFriends: null,
+  weeklyReport: null,
 };
 
 export const SCREEN_FOR_TAB: Record<NavTab, Screen> = {
@@ -94,6 +96,8 @@ export const BACK_SCREEN: Record<Screen, Screen | null> = {
   sound: 'settings',
   help: 'settings',
   inviteFriends: 'settings',
+  // 설정에서도, 새 회고 배너에서도 열린다 — 실제 목적지는 addReturnScreen (#1056).
+  weeklyReport: 'settings',
 };
 
 /** 더블 백 종료 허용 창 (#522) — 토스트 표시와 체감이 맞는 2초. */
@@ -101,15 +105,15 @@ export const EXIT_WINDOW_MS = 2000;
 
 /**
  * 지금 화면의 뒤로 목적지 (#522 하드웨어 백 · #564 엣지 백 공용). null이면
- * 루트(뒤로 갈 곳 없음). addRoutine은 연 곳으로, 집 없는 유저의 탐색 직행은
- * 빈 집 화면으로 되돌리지 않는다 (#571).
+ * 루트(뒤로 갈 곳 없음). addRoutine·weeklyReport는 연 곳으로(#1056), 집 없는
+ * 유저의 탐색 직행은 빈 집 화면으로 되돌리지 않는다 (#571).
  */
 export function backTargetFor(
   screen: Screen,
   addReturnScreen: Screen,
   noHouses: boolean,
 ): Screen | null {
-  if (screen === 'addRoutine') return addReturnScreen;
+  if (screen === 'addRoutine' || screen === 'weeklyReport') return addReturnScreen;
   if (screen === 'houseSearch' && noHouses) return 'myRoom';
   return BACK_SCREEN[screen];
 }

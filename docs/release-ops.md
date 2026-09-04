@@ -6,6 +6,11 @@
 
 - **`dev` 머지 = 자동 배포 트리거**: CI(`.github/workflows/eas-deploy.yml`)가 네이티브 지문을 비교해 JS-only면 preview 채널 OTA, 네이티브 변경이면 EAS 빌드(+iOS TestFlight 자동 제출)를 실행합니다.
 
+- **채널 지도 (2026-09-03 재배선)**: 채널은 바이너리에 박히고 브랜치는 EAS에서 바꿀 수 있다. 지금 지도는 다음과 같다 — `eas channel:view <name>`으로 확인.
+  - `production` 채널 → `production` 브랜치: 스토어 production 빌드(main `store-build`). `eas-release`가 발행.
+  - `preview` 채널 → **`production` 브랜치**: 1.4.0 빌드 111이 `testflight` 프로필(채널 preview) 상태로 **App Store 심사에 제출**돼 버려서 묶었다. 그대로 두면 심사 중인 빌드가 dev 머지마다 새 JS를 받고, 출시 뒤 스토어 사용자가 dev 레인을 받는다(빌드 38 사고). 그래서 preview 채널을 듣는 모든 설치본(111, Android preview 7, 그 전 테스트 빌드)은 이제 **스토어 레인**이다. 1.4.0 사용자에게 JS 수정을 보내려면 dev→main 승격 후 `eas-release`(런타임 지문이 111과 같아야 도달).
+  - `dev` 채널 → `dev` 브랜치: **dev 레인의 새 이름.** `eas.json`의 `preview`·`testflight` 프로필이 이 채널로 빌드되고, `eas-deploy`가 `--branch dev`로 발행한다. 기존 테스터 기기는 다음 네이티브 윈도우의 새 빌드를 받아야 dev 레인으로 돌아온다.
+  - 교훈: **스토어 제출은 main의 production 프로필 빌드로만.** testflight 빌드는 TestFlight까지만 — ASC "빌드 추가"에서 고르지 말 것.
 - **`main` 승격 = 릴리스 후보 확정, 발행 아님** (2026-08-14 정립, #813): 승격 자체는 사용자에게 아무것도 보내지 않습니다. production 채널 OTA는 **`eas-release` 워크플로를 main에서 수동 실행**할 때만 나갑니다.
   - **왜 수동인가**: 심사 중인 빌드도 `channel=production`을 듣습니다. 자동 발행이면 승격이 곧 "심사자가 보는 코드를 바꾸는 일"이 되고, 제출본과 다른 코드가 심사대에 오르는 건 거부 사유가 될 수 있습니다.
   - **릴리스 리듬**: dev 개발 → 릴리스 후보 확정(dev→main 승격) → `store-build`(main)로 심사 제출 → **심사 통과·출시 후** `eas-release` 실행. 출시 뒤의 JS 핫픽스는 dev→main 승격 후 같은 워크플로를 다시 누릅니다.
@@ -32,11 +37,12 @@
 
 - **네이티브 빌드 PR에는 `native-build` 라벨**: 네이티브 지문이 바뀌는 PR(새 네이티브 모듈, app.json 플러그인/네이티브 설정, google-services 류 파일 등)은 PR에도 `native-build` 라벨을 붙이세요. 머지 즉시 양 플랫폼 EAS 빌드가 소모되므로(빌드 쿼터·과금) 리뷰어가 머지 타이밍을 판단할 수 있게 하고, 가능하면 네이티브 변경 PR들을 몰아서 머지해 빌드 횟수를 아낍니다.
 
+- **출시 뒤 첫 네이티브 윈도우는 버전 범프부터** (2026-09-03 실측): App Store에 출시된 버전(예: 1.3.0)과 같은 `app.json` version으로 만든 testflight 빌드는 ASC가 업로드를 거부한다 — "Invalid Pre-Release Train. The train version '1.3.0' is closed" / "CFBundleShortVersionString must contain a higher version than the previously approved version". 빌드 번호(autoIncrement)를 올려도 소용없고, **EAS 빌드는 성공하므로 쿼터만 사라진다**(RNFB 26 #1052 빌드 110이 그랬다). 그래서 `native-build` PR은 `native-prebuild-check`의 **iOS 버전 트레인 가드**(`scripts/check-version-train.js`)가 app.json version을 마지막 production 빌드 버전과 대조해 같거나 낮으면 실패시키고, `eas-deploy`도 같은 가드로 iOS 빌드를 스킵한다. 네이티브 변경을 모을 때 **버전 범프 커밋을 그 PR에 같이 넣을 것**(app.json version은 어차피 지문을 바꾼다).
 - **native-build PR이 2개 이상 쌓이면 빌드는 한 번만**: 각 dev 머지가 배포 워크플로를 따로 트리거하므로, 따로따로 머지하면 그 수만큼 EAS 빌드가 돕니다(실패 빌드도 쿼터를 소모). 절차 — ① 대기 중인 native-build PR들을 시간 간격 없이 연속으로 머지한다. ② 마지막 머지를 제외한 앞선 머지들의 `eas-deploy` 런은 `eas build` 단계에 들어가기 전에 즉시 취소한다(`gh run list --workflow eas-deploy.yml` → `gh run cancel <run-id>`; 워크플로 셋업에 ~1분 걸리므로 그 안에 취소하면 빌드가 시작되지 않는다). ③ 빌드는 머지 커밋 시점의 dev 스냅샷 전체를 담으므로, 마지막 런 하나로 모든 네이티브 변경이 포함된 빌드가 나온다. 단, 앞선 PR의 변경이 빌드를 깨뜨릴 수 있는지(매니페스트·플러그인 충돌 등)는 마지막 PR 리뷰에서 함께 확인할 것 — 실패하면 어차피 재빌드로 쿼터를 더 쓴다.
 
 - **빌드 성공은 실행 가능을 뜻하지 않는다 — 제출 전 실행 확인은 필수** (2026-08-20, #915): 1.2.0 빌드 47은 EAS 빌드 성공·`check` 통과(테스트 990개)·ASC 업로드 성공을 전부 거치고도 **스플래시에서 즉사**했다(#913). 통과한 신호들 중 어느 것도 "앱이 켜지는가"를 보지 않았다.
   - **`Sentry가 조용하다`를 안전 신호로 읽지 말 것.** 그 크래시는 JS Sentry 초기화 **전에** 나서 Sentry에 아예 안 올라왔다. 네이티브 크래시는 디스크에 적혔다가 **다음 실행**에 올라가는데, 시작에서 죽으면 그 다음 실행이 없다.
   - **산출물을 검증한다, 입력이 아니라.** `app.json`이 멀쩡해도 config plugin이 prebuild 때 키를 지울 수 있다 — #913이 정확히 그랬다. `scripts/check-ios-plist.mjs`가 prebuild 산출물의 Info.plist 필수 권한 키를 검사하고, `native-prebuild-check.yml`의 `ios-plist` 잡이 **라벨과 무관하게 모든 PR에서** 돌린다(#914가 라벨이 없어 검증을 건너뛴 게 사고의 한 축이었다).
-  - **제출 전 실기기/시뮬레이터 실행 1회는 사람이 한다.** 로컬 iOS 빌드가 되므로(메모리의 Xcode 26 레시피 — RNFB 26.2.0 + `$RNFirebaseDisableSPM`) EAS 쿼터 없이 시뮬레이터에서 띄워볼 수 있다. 스토어 제출·TestFlight 배포 전에 **앱을 실제로 켜서 첫 화면까지 확인**할 것.
+  - **제출 전 실기기/시뮬레이터 실행 1회는 사람이 한다.** 로컬 iOS 빌드가 되므로(RNFB 26 #1031 이후 별도 레시피 없이 `npx expo prebuild --platform ios --clean` → `SENTRY_DISABLE_AUTO_UPLOAD=true npx expo run:ios --configuration Release` — `$RNFirebaseDisableSPM`은 app.json의 플러그인 옵션이 주입한다. **Debug 구성은 링크가 깨진다**: 미리 컴파일된 RN 코어가 Release용이라 `Sealable`·Hermes 인스펙터 심볼이 없다) EAS 쿼터 없이 시뮬레이터에서 띄워볼 수 있다. 스토어 제출·TestFlight 배포 전에 **앱을 실제로 켜서 첫 화면까지 확인**할 것.
 
 - **네이티브 설정 오류는 클라우드 빌드 전에 잡기**: `native-build` 라벨 PR은 CI(`native-prebuild-check.yml`)가 `expo prebuild` + Android 매니페스트 병합을 자동 검증한다(EAS 쿼터 소모 없음). 로컬에서도 머지 전 `npx expo prebuild --platform android --no-install`로 산출물을 확인할 것. 그리고 **네이티브 모듈 시행착오(FCM류 설정 반복)는 EAS release 빌드를 반복하지 말고** dev client 빌드 1회 위에서 반복하거나 `eas build --local`(월 10회 무료, JDK/SDK 필요)로 검증한다 — 7월 쿼터 소진의 실패 빌드 5회가 전부 이 비용이었다.

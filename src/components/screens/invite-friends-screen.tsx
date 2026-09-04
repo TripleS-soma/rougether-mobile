@@ -10,7 +10,7 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import { friendInviteLink } from '@/constants/links';
 import { Radius, Spacing } from '@/constants/theme';
 import { track } from '@/lib/analytics';
-import { useScreenStyle } from '@/hooks/use-screen-style';
+import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
@@ -56,6 +56,8 @@ export function InviteFriendsScreen({
 }: InviteFriendsScreenProps) {
   const t = useTokens();
   const column = useResponsiveColumn();
+  // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
+  const headerInset = useHeaderContentInset();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const [copied, setCopied] = useState(false);
@@ -130,7 +132,13 @@ export function InviteFriendsScreen({
     <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader title="친구 초대" onBack={onBack} />
 
-      <ScrollView contentContainerStyle={[styles.body, column]} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[
+          styles.body,
+          column,
+          headerInset ? { paddingTop: headerInset } : null,
+        ]}
+        keyboardShouldPersistTaps="handled">
         {loading ? (
           <View style={styles.loadingBlock}>
             <Loading />

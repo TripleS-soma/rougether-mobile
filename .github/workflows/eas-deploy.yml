@@ -1,6 +1,11 @@
 # dev 브랜치 CI/CD: 머지될 때마다 네이티브 지문을 비교해
 # 변화 없으면 OTA(preview 채널), 변했으면 EAS 네이티브 빌드를 자동 실행.
 # Android는 preview APK, iOS는 testflight 빌드 + App Store Connect 자동 제출.
+#
+# dev 레인 OTA는 `dev` 브랜치/채널로 나간다 (2026-09-03). `preview` 채널은 스토어에
+# 제출된 빌드 111(testflight 프로필, 1.4.0)이 듣고 있어 **production 브랜치**에
+# 묶었다 — 심사 중인 빌드의 코드가 dev 머지마다 바뀌고, 출시 후 사용자가 dev
+# 레인을 받는 사고(빌드 38)를 막기 위해. 자세한 건 docs/release-ops.md.
 # 잡이 빨개지는 건 **이번 머지가 아무에게도 안 갔을 때뿐**이다 (#998) — 빌드
 # 쿼터 소진처럼 손쓸 수 없는 실패는 노랑(warning)으로 요약에만 남긴다.
 # 필요 시크릿: EXPO_TOKEN (expo.dev → Access tokens), ASC_API_KEY_P8 (ASC API 키 .p8 원문)
@@ -68,6 +73,24 @@ jobs:
             fi
             echo "skip_$platform=$skip" >> "$GITHUB_OUTPUT"
           done
+      # iOS 버전 트레인 가드 (2026-09-03): app.json version이 스토어에 나간 버전보다
+      # 높지 않으면 testflight 빌드를 걸지 않는다. Apple이 승인된 버전과 같은
+      # CFBundleShortVersionString의 업로드를 거부해(“train closed”) 1.3.0 재빌드
+      # 하나가 쿼터만 태우고 아무 데도 못 갔다. 조회 실패 시엔 통과(배포를 막지 않음).
+      - name: iOS 버전 트레인 가드
+        id: train
+        continue-on-error: true
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          builds=$(eas build:list --platform ios --build-profile production --status finished --limit 10 --json --non-interactive 2>/dev/null || echo '[]')
+          if printf '%s' "$builds" | node scripts/check-version-train.js; then
+            echo "blocked=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "blocked=true" >> "$GITHUB_OUTPUT"
+            echo "::error::ios — app.json version이 스토어에 나간 버전보다 높지 않아 testflight 빌드를 걸지 않았습니다. app.json version을 올린 PR(native-build)을 먼저 머지하세요."
+            echo "- ⛔ **ios**: 버전 트레인 가드 — app.json version이 스토어 버전 이하라 빌드 스킵. 버전을 올려 다시 머지할 것." >> "$GITHUB_STEP_SUMMARY"
+          fi
       # 지문 비교 → 동일하면 eas update(OTA), 다르면 새 빌드.
       # Android: preview APK (internal 배포).
       # continue-on-error: Android 실패(쿼터 소진 등)가 iOS 배포까지 죽이지
@@ -79,7 +102,7 @@ jobs:
         uses: expo/expo-github-action/continuous-deploy-fingerprint@main
         with:
           profile: preview
-          branch: preview
+          branch: dev
           platform: android
       # Android 빌드 생성 실패(쿼터 소진 등) 시 OTA만이라도 발행 (#435) —
       # 같은 지문의 로컬 빌드 APK가 JS 변경을 계속 받는다. 빌드가 성공하는
@@ -90,7 +113,7 @@ jobs:
         # 말미 판정 스텝이 이 결과를 읽어 빨강/노랑을 가른다 (#998) — 여기서
         # 잡을 죽이면 그 판정도, 도달 여부 점검도 돌지 못한다.
         continue-on-error: true
-        run: eas update --branch preview --platform android --non-interactive --auto
+        run: eas update --branch dev --platform android --non-interactive --auto
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       # iOS 제출용 ASC API 키 복원 — eas.json의 ascApiKeyPath(./asc-api-key.p8)가 읽는다.
@@ -101,21 +124,21 @@ jobs:
       # iOS: 네이티브 변경 시 testflight 빌드 + TestFlight 자동 제출 (ad-hoc 미사용).
       - name: iOS — OTA or TestFlight build
         id: ios
-        if: steps.guard.outputs.skip_ios != 'true'
+        if: steps.guard.outputs.skip_ios != 'true' && steps.train.outputs.blocked != 'true'
         continue-on-error: true
         uses: expo/expo-github-action/continuous-deploy-fingerprint@main
         with:
           profile: testflight
-          branch: preview
+          branch: dev
           platform: ios
           auto-submit-builds: true
       # iOS도 빌드 생성 실패(쿼터 소진 등) 시 OTA만이라도 발행 — Android
       # 폴백(#435)과 대칭. 7/31 쿼터 소진 때 iOS OTA만 조용히 누락됐던 구멍.
       - name: iOS — OTA fallback
         id: ios_fallback
-        if: steps.ios.outcome == 'failure' || steps.guard.outputs.skip_ios == 'true'
+        if: steps.ios.outcome == 'failure' || steps.guard.outputs.skip_ios == 'true' || steps.train.outputs.blocked == 'true'
         continue-on-error: true
-        run: eas update --branch preview --platform ios --non-interactive --auto
+        run: eas update --branch dev --platform ios --non-interactive --auto
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       # OTA로 나간 JS는 네이티브 빌드와 **다른 번들**이다 — 소스맵을 안 올리면

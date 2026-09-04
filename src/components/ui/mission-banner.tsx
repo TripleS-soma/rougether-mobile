@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { GlassSurface } from '@/components/ui/glass-surface';
 import { MissionFlagPictogram } from '@/components/ui/pictograms';
 import { Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
@@ -50,7 +51,8 @@ export function MissionBanner({
       testID="mission-banner">
       {/* 카드 = 형제 Pressable 2개 — 버튼 안 버튼 중첩은 웹에서 hydration
           경고를 내므로(button-in-button) 이동·건너뛰기를 나란히 둔다. */}
-      <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
+      {/* 카드는 글래스 면 (#1050 후속) — 방·집 위에 뜨는 배너라 밑이 비친다. */}
+      <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.card}>
         <Pressable
           onPress={onPress}
           accessibilityRole="button"
@@ -78,7 +80,7 @@ export function MissionBanner({
             <Text style={[Typography.supporting, { color: t.textMuted }]}>건너뛰기</Text>
           </Pressable>
         ) : null}
-      </View>
+      </GlassSurface>
 
       <ConfirmDialog
         visible={confirming}
@@ -114,7 +116,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
-    borderWidth: 1,
     borderRadius: Radius.lg,
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.two,

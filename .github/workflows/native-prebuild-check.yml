@@ -80,6 +80,19 @@ jobs:
           distribution: temurin
           java-version: 17
       - run: npm ci
+      # iOS 버전 트레인 가드 (2026-09-03) — 네이티브 빌드 PR은 머지 전에 app.json
+      # version이 스토어 버전보다 높은지 본다. 배포 워크플로의 같은 가드는 빌드를
+      # 스킵할 뿐이고, 여기서 잡아야 "머지했는데 iOS가 안 나감"이 없다.
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: iOS 버전 트레인 가드
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          builds=$(eas build:list --platform ios --build-profile production --status finished --limit 10 --json --non-interactive 2>/dev/null || echo '[]')
+          printf '%s' "$builds" | node scripts/check-version-train.js
       - name: Expo prebuild (android)
         run: npx expo prebuild --platform android --no-install
       - name: Android manifest merge

@@ -16,6 +16,7 @@ import { type CalendarDayItem, type MyRoomScreenProps } from '@/components/scree
 import { useRecommendations } from '@/hooks/use-recommendations';
 import { useWeeklyReport } from '@/hooks/use-weekly-report';
 import { NotificationListScreen } from '@/components/screens/notification-list-screen';
+import { WeeklyReportScreen } from '@/components/screens/weekly-report-screen';
 import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
 import { CHARACTER_SELECTION_ENABLED, type CharacterId } from '@/constants/characters';
 import { type Routine } from '@/constants/routines';
@@ -210,6 +211,8 @@ export function useMyRoomPages({
     type?: string;
     title: string;
     body: string;
+    /** 탭 목적지 — 없으면 알림함 (#902). 새 회고 배너는 회고 화면으로 (#1056). */
+    onPress?: () => void;
   } | null>(null);
   // key는 단조 증가 카운터다 — Date.now()면 같은 밀리초에 두 알림이 오는
   // 배치 전달에서 key가 안 바뀌어 배너가 다시 마운트되지 않는다(#902 리뷰).
@@ -291,14 +294,45 @@ export function useMyRoomPages({
     [routines],
   );
 
-  // 주간 회고 (#852) — 목록은 마운트 때 1건만, 본문은 카드를 눌러야 받는다.
+  // 주간 회고 (#852) — 목록은 마운트 때 1건만, 본문은 화면을 열어야 받는다.
   const weeklyReport = useWeeklyReport();
-  // 주간회고 탭을 열었다 (#856) — 본문을 지연 로드하고 읽음으로 표시한다.
-  // 화면 전환이 아니라 탭 안이라 setScreen을 부르지 않는다.
-  const openWeeklyReport = useCallback(() => {
+  // 주간회고 화면 (#1056) — 탭이 아니라 서브화면이라 연 곳으로 되돌아온다
+  // (addReturnScreen, addRoutine과 같은 규칙). 열면 본문 지연 로드 + 읽음 처리.
+  const screenRef = useRef(screen);
+  screenRef.current = screen;
+  const openWeeklyReport = useCallback(
+    (from?: Screen) => {
+      setAddReturnScreen(from ?? screenRef.current);
+      setScreen('weeklyReport');
+    },
+    [setAddReturnScreen, setScreen],
+  );
+  // 본문 로드·읽음 처리는 **화면이 열린 사실**에 건다 — 설정 > 주간회고 다시
+  // 보기는 셸이 setScreen만 부르므로(훅 순서상 이 훅의 콜백을 못 씀) 배너
+  // 경로에서만 불러오면 설정 경로가 "아직 회고가 없어요"로 비어 보였다
+  // (1.4.0 스크린샷 촬영 중 발견). 목록이 늦게 와도 latest가 생기면 다시 돈다.
+  useEffect(() => {
+    if (screen !== 'weeklyReport') return;
     void weeklyReport.loadDetail();
     weeklyReport.markRead();
-  }, [weeklyReport]);
+  }, [screen, weeklyReport]);
+  // 새 회고 인앱 배너 (#1056) — 서버 알림 타입이 아직 없어(#1057) 앱이 감지한다.
+  // 미읽음 새 회고가 잡히면 상단 배너로 알리고, 탭하면 회고 화면. 한 회고당
+  // 이번 실행에서 1회 — 읽음 표식은 영구라 다음 실행에 또 뜨지는 않는다.
+  const announcedReportId = useRef<number | null>(null);
+  useEffect(() => {
+    const id = weeklyReport.latest?.reportId;
+    if (!weeklyReport.unread || id == null || announcedReportId.current === id) return;
+    announcedReportId.current = id;
+    pushBannerSeq.current += 1;
+    setPushBanner({
+      key: pushBannerSeq.current,
+      type: 'WEEKLY_REPORT',
+      title: '주간회고가 도착했어요',
+      body: '지난주 루틴을 돌아보고 이번 주 조정 제안을 확인해 보세요',
+      onPress: () => openWeeklyReport(),
+    });
+  }, [weeklyReport.unread, weeklyReport.latest?.reportId, openWeeklyReport]);
 
   // AI 조정 추천 (#1006) — 수락은 서버에서 루틴 버전을 분기시켜 **id가 바뀌므로**
   // 응답을 부분 반영하지 않고 루틴 데이터를 통째로 다시 받는다. 완료 기록
@@ -349,15 +383,6 @@ export function useMyRoomPages({
     onCleanCobweb: room.onCleanCobweb,
     markedTodoDates: room.markedTodoDates,
     onCalendarMonthChange: room.onCalendarMonthChange,
-    weeklyReport: weeklyReport.latest
-      ? {
-          report: weeklyReport.detail,
-          loading: weeklyReport.loading,
-          unread: weeklyReport.unread,
-        }
-      : undefined,
-    onOpenWeeklyReport: openWeeklyReport,
-    recommendations: recommendationProps,
     attendance: attendance.attendance,
     onOpenAttendance: attendance.onOpenAttendance,
     furniture: room.catalogue.furniture,
@@ -438,6 +463,13 @@ export function useMyRoomPages({
         }}
         onBack={() => setScreen('myRoom')}
       />
+    ) : screen === 'weeklyReport' ? (
+      <WeeklyReportScreen
+        report={weeklyReport.detail}
+        loading={weeklyReport.loading}
+        recommendations={recommendationProps}
+        onBack={() => setScreen(addReturnScreen)}
+      />
     ) : screen === 'notificationList' ? (
       <NotificationListScreen
         notifications={notificationEntries}
@@ -465,6 +497,8 @@ export function useMyRoomPages({
     pushBanner,
     dismissPushBanner,
     openNotifications,
+    /** 설정 > 주간회고 다시 보기·푸시 탭 (#1056) — 연 곳으로 되돌아온다. */
+    openWeeklyReport,
     /** 집 화면 '내 방으로' — 셸의 HouseScreen prop으로 흘러간다. */
     openMyRoom,
     /** 미션 배너 '루틴 등록하러 가기' — 셸의 openMissionScreen이 쓴다. */

@@ -1,4 +1,4 @@
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
@@ -34,36 +34,53 @@ const pickCalendarDate = async (
 };
 
 describe('MyRoomScreen', () => {
-  it('renders the room title, streak, and today progress', async () => {
+  it('renders the room title and today progress — 스트릭·잔액은 상시 표시하지 않는다 (#1055)', async () => {
     // Completion is per date: mark 3 of the 5 routines done today.
     const completions = { '1': [TODAY], '2': [TODAY], '3': [TODAY] };
-    const { getByText } = await render(
+    const { getByText, queryByText } = await render(
       <MyRoomScreen
         userName="준서"
         streakDays={7}
         routines={SAMPLE_ROUTINES}
         completions={completions}
-      />,
-    );
-    expect(getByText('준서의 방')).toBeTruthy();
-    expect(getByText('7일')).toBeTruthy();
-    // 3 of 5 routines completed today.
-    expect(getByText('3 / 5')).toBeTruthy();
-  });
-
-  it('헤더에 코인·다이아 필을 함께 보여준다 (프로필 아바타 제거로 확보한 자리)', async () => {
-    const { getByText } = await render(
-      <MyRoomScreen
-        userName="준서"
-        routines={SAMPLE_ROUTINES}
         coinBalance={1200}
         diamondBalance={34}
       />,
     );
-    // 아바타를 빼고 다이아를 상시 노출 — 좁은 폭 코인-only(#425)를 되돌림.
     expect(getByText('준서의 방')).toBeTruthy();
-    expect(getByText('1,200')).toBeTruthy();
-    expect(getByText('34')).toBeTruthy();
+    // 3 of 5 routines completed today.
+    expect(getByText('3 / 5')).toBeTruthy();
+    // 헤더바가 사라지며(#1055) 스트릭·코인·다이아는 보상 순간에만 알약으로 뜬다.
+    expect(queryByText('7일')).toBeNull();
+    expect(queryByText('1,200')).toBeNull();
+    expect(queryByText('34')).toBeNull();
+  });
+
+  it('완료 보상이 확인되면 스트릭·코인 증분 알약이 떴다가 사라진다 (#1055)', async () => {
+    jest.useFakeTimers();
+    try {
+      const onToggleCompletion = jest.fn(() => Promise.resolve({ rewardAmount: 10 }));
+      const { getByLabelText, queryByText, findByText } = await render(
+        <MyRoomScreen
+          streakDays={7}
+          routines={SAMPLE_ROUTINES}
+          onToggleCompletion={onToggleCompletion}
+        />,
+      );
+      expect(queryByText('+10')).toBeNull();
+      await fireEvent.press(getByLabelText('하루 회고'));
+      expect(await findByText('+10')).toBeTruthy();
+      expect(queryByText('7일')).toBeTruthy();
+      // 표시 중 또 오면 합산.
+      await fireEvent.press(getByLabelText('아침 7시 기상'));
+      expect(await findByText('+20')).toBeTruthy();
+      await act(async () => {
+        jest.advanceTimersByTime(2500);
+      });
+      expect(queryByText('+20')).toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('행 메뉴 → 루틴 수정을 누르면 그 루틴으로 onEditRoutine을 부른다 (#465)', async () => {
@@ -408,7 +425,7 @@ describe('MyRoomScreen', () => {
     expect(queryByLabelText('알림')).toBeNull();
   });
 
-  it('지갑 필 탭 → 재화 내역 시트 + 1페이지 로드 (#734)', async () => {
+  it('메뉴 → 재화 내역 시트 + 1페이지 로드 (#734, #1055)', async () => {
     const onLoadWalletHistory = jest.fn();
     const { getByLabelText, getByText } = await render(
       <MyRoomScreen
@@ -420,9 +437,10 @@ describe('MyRoomScreen', () => {
         ]}
       />,
     );
-    await fireEvent.press(getByLabelText('코인 120'));
+    // 지갑 필이 사라져(#1055) 메뉴 항목으로 연다.
+    await fireEvent.press(getByLabelText('메뉴'));
+    await fireEvent.press(getByLabelText('재화 내역'));
     expect(onLoadWalletHistory).toHaveBeenCalledTimes(1);
-    expect(getByText('재화 내역')).toBeTruthy();
     expect(getByText('루틴 완료')).toBeTruthy();
   });
 
@@ -943,7 +961,7 @@ describe('MyRoomScreen', () => {
     expect(queryByLabelText(/출석 이벤트/)).toBeNull();
   });
 
-  it('오늘 미출석이면 출석 아이콘에 미출석 라벨을 붙이고 탭을 전달한다 (#851)', async () => {
+  it('오늘 미출석이면 메뉴 버튼·출석 항목에 미출석 라벨을 붙이고 탭을 전달한다 (#851, #1055)', async () => {
     const onOpenAttendance = jest.fn();
     const { getByLabelText } = await render(
       <ToastProvider>
@@ -955,8 +973,9 @@ describe('MyRoomScreen', () => {
         />
       </ToastProvider>,
     );
-    const btn = getByLabelText('출석 이벤트, 오늘 미출석');
-    fireEvent.press(btn);
+    // 출석은 메뉴 안으로 (#1055) — 미출석 점은 메뉴 버튼과 항목 둘 다.
+    await fireEvent.press(getByLabelText('메뉴, 오늘 미출석'));
+    await fireEvent.press(getByLabelText('출석 이벤트, 오늘 미출석'));
     expect(onOpenAttendance).toHaveBeenCalled();
   });
 
@@ -971,117 +990,9 @@ describe('MyRoomScreen', () => {
         />
       </ToastProvider>,
     );
+    expect(queryByLabelText('메뉴, 오늘 미출석')).toBeNull();
+    await fireEvent.press(getByLabelText('메뉴'));
     expect(getByLabelText('출석 이벤트')).toBeTruthy();
     expect(queryByLabelText('출석 이벤트, 오늘 미출석')).toBeNull();
-  });
-
-  /**
-   * 주간회고 탭 (#856) — 회고가 없으면 탭 자체가 없어야 한다. 가입 첫 주에
-   * "아직 회고가 없어요"만 나오는 빈 탭을 내주지 않기로 했다.
-   */
-  it('회고가 없으면 주간회고 탭을 그리지 않는다 (#856)', async () => {
-    const { getByText, queryByText } = await render(
-      <ToastProvider>
-        <MyRoomScreen userName="준서" routines={[]} />
-      </ToastProvider>,
-    );
-    expect(getByText('방')).toBeTruthy();
-    expect(getByText('달력')).toBeTruthy();
-    expect(queryByText('주간회고')).toBeNull();
-  });
-
-  /**
-   * 조정 추천 (#1006) — 추천과 회고는 같은 일요일 사이클로 도는데, 회고만
-   * 탭의 조건이면 회고가 아직 없는 주의 제안은 닿을 자리가 없다.
-   */
-  it('회고가 없어도 조정 제안이 있으면 주간회고 탭이 열린다 (#1006)', async () => {
-    const onAccept = jest.fn();
-    const { getByText, getByLabelText } = await render(
-      <ToastProvider>
-        <MyRoomScreen
-          userName="준서"
-          routines={[]}
-          recommendations={{
-            items: [
-              {
-                recommendationId: 1,
-                message: '수요일을 빼보면 어떨까요?',
-                routineTitle: '아침 러닝',
-                proposal: { repeatType: 'WEEKLY', daysOfWeek: ['MON', 'FRI'] },
-              },
-            ],
-            onAccept,
-            onDismiss: jest.fn(),
-          }}
-        />
-      </ToastProvider>,
-    );
-    // 점 라벨이 이유를 말한다 — 회고가 아니라 제안이 왔다.
-    expect(getByLabelText('주간회고, 새 제안')).toBeTruthy();
-
-    await fireEvent.press(getByText('주간회고'));
-    expect(getByText('아직 회고가 없어요.')).toBeTruthy();
-    expect(getByText('수요일을 빼보면 어떨까요?')).toBeTruthy();
-  });
-
-  it('회고가 있으면 탭을 그리고 열면 본문을 보여준다 (#856)', async () => {
-    const onOpenWeeklyReport = jest.fn();
-    const { getByText } = await render(
-      <ToastProvider>
-        <MyRoomScreen
-          userName="준서"
-          routines={[]}
-          weeklyReport={{
-            report: {
-              reportId: 2,
-              weekStartDate: '2026-08-09',
-              weekEndDate: '2026-08-15',
-              status: 'GENERATED',
-              completionRate: 0.36,
-              completedCount: 14,
-              scheduledCount: 39,
-              stats: { streak: { currentCount: 3, longestCount: 6 } },
-            },
-          }}
-          onOpenWeeklyReport={onOpenWeeklyReport}
-        />
-      </ToastProvider>,
-    );
-    await fireEvent.press(getByText('주간회고'));
-    // 탭을 열면 셸이 본문을 받아오고 읽음 처리한다.
-    expect(onOpenWeeklyReport).toHaveBeenCalled();
-    expect(getByText('36%')).toBeTruthy();
-    expect(getByText('요일별')).toBeTruthy();
-  });
-
-  it('안 읽은 새 회고가 있으면 탭에 새 회고 표시를 붙인다 (#856)', async () => {
-    const { getByLabelText } = await render(
-      <ToastProvider>
-        <MyRoomScreen
-          userName="준서"
-          routines={[]}
-          weeklyReport={{ report: null, unread: true }}
-          onOpenWeeklyReport={() => {}}
-        />
-      </ToastProvider>,
-    );
-    expect(getByLabelText('주간회고, 새 회고')).toBeTruthy();
-  });
-
-  /** 탭을 열면 그 자리에서 점이 사라져야 한다 — 읽었는데 점이 남으면 거짓말. */
-  it('주간회고 탭을 열면 새 회고 표시가 사라진다 (#856)', async () => {
-    const { getByLabelText, queryByLabelText, getByText } = await render(
-      <ToastProvider>
-        <MyRoomScreen
-          userName="준서"
-          routines={[]}
-          weeklyReport={{ report: null, unread: true }}
-          onOpenWeeklyReport={() => {}}
-        />
-      </ToastProvider>,
-    );
-    await fireEvent.press(getByLabelText('주간회고, 새 회고'));
-    expect(queryByLabelText('주간회고, 새 회고')).toBeNull();
-    expect(getByText('주간회고')).toBeTruthy();
   });
 });

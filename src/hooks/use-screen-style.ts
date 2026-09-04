@@ -2,8 +2,12 @@ import { useContext } from 'react';
 import { type ViewStyle } from 'react-native';
 import { type Edge, SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
+import { actionBarUnderlapInset } from '@/components/ui/action-bar-geometry';
+import { navUnderlapInset } from '@/components/ui/bottom-nav-geometry';
+import { headerUnderlapInset } from '@/components/ui/screen-header-geometry';
 import { Spacing } from '@/constants/theme';
-import { useTokens } from '@/hooks/use-tokens';
+import { useLiquidGlass } from '@/hooks/use-liquid-glass';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 const ZERO_INSETS = { top: 0, bottom: 0, left: 0, right: 0 };
 
@@ -40,4 +44,39 @@ export function useScreenStyle(edges: Edge[] = ['top']): ViewStyle {
 export function useHeaderInsetStyle(basePadding: number = Spacing.three): ViewStyle {
   const insets = useContext(SafeAreaInsetsContext) ?? ZERO_INSETS;
   return { paddingTop: insets.top + basePadding };
+}
+
+/**
+ * 바텀바 밑으로 지나가는 스크롤 콘텐츠의 추가 하단 패딩 (#1049). 리퀴드
+ * 글래스 알약이 떠 있을 때만 0이 아니다 — 그때 바텀바는 오버레이라 레이아웃
+ * 높이가 없고, 마지막 항목이 알약에 가려지지 않으려면 콘텐츠가 이만큼 더
+ * 내려가야 한다. 불투명 바(폴백)는 flex 형제라 0.
+ * 하단 탭 3서피스(나의 방·집·설정)의 contentContainerStyle에 더한다.
+ */
+export function useBottomNavInset(): number {
+  const glass = useLiquidGlass();
+  const insets = useContext(SafeAreaInsetsContext) ?? ZERO_INSETS;
+  const Typography = useTypography();
+  return glass ? navUnderlapInset(insets.bottom, Typography.supporting.lineHeight) : 0;
+}
+
+/**
+ * 떠 있는 헤더(#1069) 밑으로 지나가는 스크롤 콘텐츠의 추가 상단 패딩. 리퀴드
+ * 글래스 헤더가 오버레이일 때만 0이 아니다 — 폴백의 불투명 헤더 바는 flex
+ * 형제라 0. `ScreenHeader`를 쓰는 화면의 contentContainerStyle 맨 앞 패딩에 더한다.
+ */
+export function useHeaderContentInset(): number {
+  const glass = useLiquidGlass();
+  const insets = useContext(SafeAreaInsetsContext) ?? ZERO_INSETS;
+  return glass ? headerUnderlapInset(insets.top) : 0;
+}
+
+/**
+ * 떠 있는 하단 액션 바(#1069, `ui/action-bar`) 밑으로 지나가는 스크롤 콘텐츠의 추가
+ * 하단 패딩. 글래스 모드에서만 0이 아니다 — 폴백 바는 flex 형제라 0.
+ */
+export function useActionBarInset(): number {
+  const glass = useLiquidGlass();
+  const insets = useContext(SafeAreaInsetsContext) ?? ZERO_INSETS;
+  return glass ? actionBarUnderlapInset(insets.bottom) : 0;
 }

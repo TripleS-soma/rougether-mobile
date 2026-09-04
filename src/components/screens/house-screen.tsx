@@ -15,6 +15,7 @@ import { HouseOrderDots } from '@/components/room/house-order-dots';
 import { FRAME_ASPECT, houseCoverKey, WINDOW_RECTS } from '@/components/room/house-preview-frame';
 import { Loading } from '@/components/ui/loading';
 import { CoachTarget } from '@/components/ui/coach-mark';
+import { GlassSurface } from '@/components/ui/glass-surface';
 import { type MemberRoomPreview, type RoomCatalogProps } from '@/components/room/room';
 import {
   camDefault,
@@ -39,7 +40,7 @@ import { ScalePressable } from '@/components/ui/scale-pressable';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { characterIdForMember } from '@/hooks/use-member-room-previews';
 import { FixedOverlay, Radius, ShadowColor, Spacing } from '@/constants/theme';
-import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
+import { useBottomNavInset, useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import type { MissionStatus } from '@/utils/mission-cta';
@@ -325,6 +326,8 @@ export const HouseScreen = memo(function HouseScreen({
   // 따라 바뀌던 하늘은 집별 배경 아트(#989)가 대체했다 — 정적 색만 남긴다.
   const skyColor = t.sky;
   const headerInset = useHeaderInsetStyle();
+  // 글래스 알약 바텀바가 떠 있으면 잔디·집 프레임이 그 밑에 안 깔리게 (#1049).
+  const navInset = useBottomNavInset();
   // 레일을 스위처 줄 아래로 내려 첫 버튼(목표)이 Lv.·멤버 필과 같은 라인에
   // 오게 한다 (#994). 종전엔 레일이 맨 위라 집이 여럿인 사용자의 `다음 집`
   // 화살표와 같은 띠를 다퉜다 — 이름이 길수록 화살표가 레일 쪽으로 밀렸다.
@@ -817,26 +820,30 @@ export const HouseScreen = memo(function HouseScreen({
                 accessibilityRole="button"
                 accessibilityLabel="이전 집"
                 hitSlop={8}
-                style={[styles.iconBtn, { backgroundColor: t.surface }]}>
-                <Icon name="back" size={18} color={t.text} />
+                style={styles.iconBtn}>
+                <GlassSurface style={styles.iconBtnFace} fallbackColor={t.surface}>
+                  <Icon name="back" size={18} color={t.text} />
+                </GlassSurface>
               </Pressable>
             ) : null}
-            <View style={[styles.titleBadge, { backgroundColor: t.surface }]}>
+            <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.titleBadge}>
               <Icon name="lock" size={14} color={t.textMuted} />
               {/* 서버는 집 이름을 30자까지 받는다 — 안 자르면 뱃지가 부풀어
                   좌우 전환 화살표를 화면 밖으로 밀어낸다 (#994). */}
               <Text style={[Typography.h3, styles.titleText, { color: t.text }]} numberOfLines={1}>
                 {pendingHouse.name}
               </Text>
-            </View>
+            </GlassSurface>
             {totalPages > 1 ? (
               <Pressable
                 onPress={nextHouse}
                 accessibilityRole="button"
                 accessibilityLabel="다음 집"
                 hitSlop={8}
-                style={[styles.iconBtn, { backgroundColor: t.surface }]}>
-                <Icon name="forward" size={18} color={t.text} />
+                style={styles.iconBtn}>
+                <GlassSurface style={styles.iconBtnFace} fallbackColor={t.surface}>
+                  <Icon name="forward" size={18} color={t.text} />
+                </GlassSurface>
               </Pressable>
             ) : null}
           </View>
@@ -1029,7 +1036,7 @@ export const HouseScreen = memo(function HouseScreen({
         // 이 화면은 폭 제한에서 뺀다 (#986) — 하늘이 화면을 꽉 채워야 하고,
         // 태블릿에서 560으로 잘리면 좌우가 크림으로 남아 목적과 반대가 된다.
         // 프레임은 aspectRatio라 폭을 따라 커지지만, 좌석 좌표는 정규화라 안전.
-        contentContainerStyle={styles.body}
+        contentContainerStyle={[styles.body, navInset ? { paddingBottom: navInset } : null]}
         scrollEnabled={dragSeat == null}
         testID="house-scroll">
         {/* 프레임 모드(#287) — 하늘 위에 스위처·집 프레임, 방은 창문 안에.
@@ -1044,11 +1051,13 @@ export const HouseScreen = memo(function HouseScreen({
                 accessibilityRole="button"
                 accessibilityLabel="이전 집"
                 hitSlop={8}
-                style={[styles.iconBtn, { backgroundColor: t.surface }]}>
-                <Icon name="back" size={18} color={t.text} />
+                style={styles.iconBtn}>
+                <GlassSurface style={styles.iconBtnFace} fallbackColor={t.surface}>
+                  <Icon name="back" size={18} color={t.text} />
+                </GlassSurface>
               </Pressable>
             ) : null}
-            <View style={[styles.titleBadge, { backgroundColor: t.surface }]}>
+            <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.titleBadge}>
               {currentHouse.myRole === 'OWNER' ? (
                 <CrownPictogram size={14} />
               ) : (
@@ -1057,15 +1066,17 @@ export const HouseScreen = memo(function HouseScreen({
               <Text style={[Typography.h3, styles.titleText, { color: t.text }]} numberOfLines={1}>
                 {currentHouse.name}
               </Text>
-            </View>
+            </GlassSurface>
             {totalPages > 1 ? (
               <Pressable
                 onPress={nextHouse}
                 accessibilityRole="button"
                 accessibilityLabel="다음 집"
                 hitSlop={8}
-                style={[styles.iconBtn, { backgroundColor: t.surface }]}>
-                <Icon name="forward" size={18} color={t.text} />
+                style={styles.iconBtn}>
+                <GlassSurface style={styles.iconBtnFace} fallbackColor={t.surface}>
+                  <Icon name="forward" size={18} color={t.text} />
+                </GlassSurface>
               </Pressable>
             ) : null}
           </View>
@@ -1079,7 +1090,10 @@ export const HouseScreen = memo(function HouseScreen({
           {/* 레벨·멤버 pill — 프레임 여백과 정렬된 행 (모서리 절대배치는
                 화면 끝에 걸려 보였다). 고정 밝기 흰 스크림 위라 onTint 잉크. */}
           <View style={styles.framePillsRow}>
-            <View style={[styles.skyPill, { backgroundColor: FixedOverlay.skyPill }]}>
+            <GlassSurface
+              interactive={false}
+              fallbackColor={FixedOverlay.skyPill}
+              style={styles.skyPill}>
               <HousePictogram size={12} />
               <Text style={[Typography.supporting, { color: t.onTint }]}>
                 Lv.{currentHouse.level ?? 0}
@@ -1087,14 +1101,17 @@ export const HouseScreen = memo(function HouseScreen({
                   ? ` · ${currentHouse.growthPoints % 100}/100`
                   : ''}
               </Text>
-            </View>
-            <View style={[styles.skyPill, { backgroundColor: FixedOverlay.skyPill }]}>
+            </GlassSurface>
+            <GlassSurface
+              interactive={false}
+              fallbackColor={FixedOverlay.skyPill}
+              style={styles.skyPill}>
               <Text style={[Typography.supporting, { color: t.onTint }]}>
                 {/* Vacant seats are not members — count the real ones. */}
                 멤버 {currentHouse.memberCount ?? manageableMembers(currentHouse).length}
                 {currentHouse.maxMembers ? ` / ${currentHouse.maxMembers}` : ''}
               </Text>
-            </View>
+            </GlassSurface>
           </View>
           {/* 남는 세로를 여기서 먹어 집을 잔디에 붙인다 (#986). CoachTarget이
               flex 자식이라 안쪽 View에 auto 마진을 줘도 안 먹는다 — 명시 스페이서. */}
@@ -1185,8 +1202,10 @@ export const HouseScreen = memo(function HouseScreen({
                   onPress={resetCam}
                   accessibilityRole="button"
                   accessibilityLabel="확대 종료"
-                  style={[styles.camReset, { backgroundColor: t.surface }]}>
-                  <Icon name="refresh" size={16} color={t.text} />
+                  style={styles.camReset}>
+                  <GlassSurface style={styles.iconBtnFace} fallbackColor={t.surface}>
+                    <Icon name="refresh" size={16} color={t.text} />
+                  </GlassSurface>
                 </Pressable>
               ) : null}
             </Animated.View>
@@ -1298,15 +1317,16 @@ function RailButton({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       style={styles.railBtn}>
-      <View style={[styles.railCircle, { backgroundColor: t.surface }]}>
+      {/* 원과 라벨 알약 둘 다 글래스 면 (#1050) — 라벨은 눌리는 면이 아니라 비상호작용. */}
+      <GlassSurface style={styles.railCircle} fallbackColor={t.surface}>
         {icon}
         {badge ? <View style={[styles.railBadge, { backgroundColor: badge }]} /> : null}
-      </View>
-      <View style={[styles.railLabelWrap, { backgroundColor: t.surface }]}>
+      </GlassSurface>
+      <GlassSurface style={styles.railLabelWrap} fallbackColor={t.surface} interactive={false}>
         <Text style={[Typography.supporting, { color: t.text }]} numberOfLines={1}>
           {label}
         </Text>
-      </View>
+      </GlassSurface>
     </ScalePressable>
   );
 }
@@ -1383,7 +1403,11 @@ const styles = StyleSheet.create({
   iconBtn: {
     width: 40,
     height: 40,
-    borderRadius: Radius.xl,
+  },
+  // 떠 있는 원형 버튼의 면 (#1050) — 위치·크기는 버튼이, 모양·배경은 면이.
+  iconBtnFace: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },

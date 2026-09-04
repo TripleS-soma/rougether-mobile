@@ -19,7 +19,7 @@
     },
     "preview": {
       "distribution": "internal",
-      "channel": "preview",
+      "channel": "dev",
       "android": {
         "buildType": "apk"
       },
@@ -43,7 +43,7 @@
     },
     "testflight": {
       "autoIncrement": true,
-      "channel": "preview",
+      "channel": "dev",
       "ios": {
         "distribution": "store"
       },
