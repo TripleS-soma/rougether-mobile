@@ -23,11 +23,13 @@ import {
   type RoutineCategoryMeta,
 } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
+import { ActionBar } from '@/components/ui/action-bar';
+import { GlassSurface } from '@/components/ui/glass-surface';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { CategoryIcon } from '@/components/ui/category-icon';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Radius, Spacing } from '@/constants/theme';
-import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
+import { useActionBarInset, useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { formatDate, formatTime } from '@/utils/datetime';
@@ -90,6 +92,7 @@ export function AddRoutineScreen({
   const Typography = useTypography();
   // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
   const headerInset = useHeaderContentInset();
+  const actionBarBase = useActionBarInset();
   const { show: toast } = useToast();
   const isEdit = Boolean(editRoutine);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
@@ -222,6 +225,10 @@ export function AddRoutineScreen({
     onBack?.();
   };
 
+  // 떠 있는 액션 바(#1069) — 한 줄 기준 인셋에 삭제 버튼·오류문 줄을 더한다.
+  const actionBarInset = actionBarBase
+    ? actionBarBase + (isEdit ? 54 + Spacing.two : 0) + (formError ? 32 : 0)
+    : 0;
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader
@@ -237,6 +244,7 @@ export function AddRoutineScreen({
           styles.body,
           column,
           headerInset ? { paddingTop: headerInset } : null,
+          actionBarInset ? { paddingBottom: actionBarInset } : null,
         ]}
         keyboardShouldPersistTaps="handled">
         {/* Title */}
@@ -536,11 +544,12 @@ export function AddRoutineScreen({
         onClose={() => setShowCategoryManager(false)}
       />
 
-      <View style={[styles.footer, { backgroundColor: t.screen }]}>
+      {/* 떠 있는 액션 바 (#1069 후속) — 글래스면 오류문·버튼이 폼 위에 뜨고, 아니면 종전 바. */}
+      <ActionBar style={[styles.footer, { backgroundColor: t.screen }]}>
         {formError ? (
-          <Text style={[Typography.supporting, styles.footerError, { color: t.danger }]}>
-            {formError}
-          </Text>
+          <GlassSurface interactive={false} fallbackColor={t.screen} style={styles.footerError}>
+            <Text style={[Typography.supporting, { color: t.danger }]}>{formError}</Text>
+          </GlassSurface>
         ) : null}
         {/* Pressable even when invalid — the tap explains what's missing
             (and opens the category manager when that's the blocker). */}
@@ -548,25 +557,30 @@ export function AddRoutineScreen({
           onPress={submit}
           accessibilityRole="button"
           accessibilityState={{ disabled: !canSubmit }}
-          style={({ pressed }) => [
-            styles.submit,
-            { backgroundColor: canSubmit ? t.primary : t.disabledBg },
-            pressed && canSubmit && { backgroundColor: t.primaryActive },
-          ]}>
-          <Text style={[Typography.label, { color: canSubmit ? t.onPrimary : t.textMuted }]}>
-            {isEdit ? '수정하기' : '루틴 추가하기'}
-          </Text>
+          style={styles.submit}>
+          <GlassSurface
+            style={styles.submitFace}
+            tintColor={canSubmit ? t.primary : undefined}
+            fallbackColor={canSubmit ? t.primary : t.disabledBg}>
+            <Text style={[Typography.label, { color: canSubmit ? t.onPrimary : t.textMuted }]}>
+              {isEdit ? '수정하기' : '루틴 추가하기'}
+            </Text>
+          </GlassSurface>
         </Pressable>
         {isEdit ? (
           <Pressable
             onPress={() => setConfirmDelete(true)}
             accessibilityRole="button"
             accessibilityLabel="루틴 삭제"
-            style={[styles.deleteBtn, { borderColor: t.danger }]}>
-            <Text style={[Typography.label, { color: t.danger }]}>삭제하기</Text>
+            style={styles.deleteBtn}>
+            <GlassSurface
+              fallbackColor={t.screen}
+              style={[styles.deleteFace, { borderColor: t.danger }]}>
+              <Text style={[Typography.label, { color: t.danger }]}>삭제하기</Text>
+            </GlassSurface>
           </Pressable>
         ) : null}
-      </View>
+      </ActionBar>
 
       {editRoutine ? (
         <ConfirmDialog
@@ -715,16 +729,25 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
   },
   footerError: {
-    textAlign: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one,
+    borderRadius: Radius.pill,
     marginBottom: Spacing.two,
   },
   submit: {
+    borderRadius: Radius.pill,
+  },
+  submitFace: {
     paddingVertical: Spacing.three,
     borderRadius: Radius.pill,
     alignItems: 'center',
   },
   deleteBtn: {
     marginTop: Spacing.two,
+    borderRadius: Radius.pill,
+  },
+  deleteFace: {
     paddingVertical: Spacing.three,
     borderRadius: Radius.pill,
     borderWidth: 1,
