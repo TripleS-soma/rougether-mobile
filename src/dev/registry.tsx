@@ -32,7 +32,6 @@ import { PolicyViewerScreen } from '@/components/screens/policy-viewer-screen';
 import { ProfileEditScreen } from '@/components/screens/profile-edit-screen';
 import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
 import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
-import { SettingsScreen } from '@/components/screens/settings-screen';
 import { FontScreen } from '@/components/screens/font-screen';
 import { AppearancePreview } from '@/components/screens/settings/appearance-preview';
 import { ThemeScreen } from '@/components/screens/theme-screen';
@@ -79,6 +78,7 @@ import { RoomRenderReference } from '@/dev/room-render-reference';
 import { TokenSwatches } from '@/dev/token-swatches';
 import { TypeScalePreview } from '@/dev/type-scale-preview';
 import { NavigationPreview } from '@/dev/navigation-preview';
+import { SettingsUpdatePreview } from '@/dev/settings-update-preview';
 
 export type GalleryEntry = {
   /** Unique, human-readable name shown as the section header. */
@@ -742,11 +742,12 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
-    name: 'SettingsScreen',
-    description: 'Ported from the prototype SettingsScreen (#14): theme picker + rows.',
+    name: 'SettingsScreen · 리퀴드 설정과 AppUpdateCard',
+    description:
+      '설정 카드·테마 선택과 업데이트 상태/재시작 확인. 실제 OTA 없이 상태를 재현합니다.',
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
-        <SettingsScreen />
+        <SettingsUpdatePreview />
       </View>
     ),
   },

@@ -34,6 +34,13 @@ describe('SettingsScreen', () => {
     expect(onChangeThemeMode).toHaveBeenCalledWith('system');
   });
 
+  it('announces the checked dark-mode option to assistive technology', async () => {
+    const ui = await render(<SettingsScreen themeMode="dark" />);
+    expect(ui.getByRole('radio', { name: '다크', checked: true })).toBeTruthy();
+    expect(ui.getByRole('radio', { name: '시스템', checked: false })).toBeTruthy();
+    expect(ui.getByRole('radio', { name: '라이트', checked: false })).toBeTruthy();
+  });
+
   it('logs out only after confirming', async () => {
     const onLogout = jest.fn();
     const { getByText, getByLabelText } = await render(<SettingsScreen onLogout={onLogout} />);

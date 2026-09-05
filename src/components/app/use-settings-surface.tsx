@@ -25,6 +25,7 @@ import { useCalendarImport } from '@/hooks/use-calendar-import';
 import type { CharacterId } from '@/constants/characters';
 import { SUPPORT_EMAIL } from '@/constants/policy';
 import { useAuth } from '@/hooks/use-auth';
+import { useAppUpdates } from '@/hooks/use-app-updates';
 import { useBugReports } from '@/hooks/use-bug-reports';
 import { useInvites } from '@/hooks/use-invites';
 import { useNotificationSettings } from '@/hooks/use-notification-settings';
@@ -100,6 +101,7 @@ export function useSettingsSurface({
   const calendarImport = useCalendarImport();
   // 스토어 요건(#545): 도움말의 실제 앱 버전 표기.
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
+  const appUpdates = useAppUpdates();
 
   const { logout, withdraw } = useAuth();
   const handleLogout = useCallback(() => {
@@ -231,6 +233,9 @@ export function useSettingsSurface({
 
   /** 탭 페이저의 설정 페이지 prop — `<SettingsScreen {...tabProps} />`. */
   const tabProps = {
+    appUpdate: appUpdates.state,
+    onCheckForUpdate: appUpdates.check,
+    onApplyUpdate: appUpdates.apply,
     themeMode,
     onChangeThemeMode: setThemeMode,
     themeId,
