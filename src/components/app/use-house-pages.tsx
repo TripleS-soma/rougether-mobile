@@ -32,6 +32,7 @@ import {
 } from '@/hooks/use-member-room-previews';
 import type { OnboardingMissionStepId } from '@/hooks/use-onboarding-missions';
 import type { useRoomLayouts } from '@/hooks/use-room-layouts';
+import { useResolvedScheme } from '@/hooks/use-tokens';
 import { clearPendingInviteCode, subscribePendingInviteCode } from '@/lib/pending-invite';
 import { assetSource } from '@/resources/asset';
 import { houseBackgroundKey } from '@/resources/house-background';
@@ -152,6 +153,7 @@ export function useHousePages({
    */
   roomPreviewStore: ReturnType<typeof useMemberRoomPreviews>;
 }) {
+  const scheme = useResolvedScheme();
   const { screen, setScreen } = nav;
   const {
     houses,
@@ -225,7 +227,7 @@ export function useHousePages({
       ...new Set(
         houses.flatMap((house) => {
           const coverKey = houseCoverKey(house.coverImageKey);
-          const backgroundKey = houseBackgroundKey(coverKey);
+          const backgroundKey = houseBackgroundKey(coverKey, scheme);
           return [
             assetSource(coverKey).uri,
             ...(backgroundKey ? [assetSource(backgroundKey).uri] : []),
@@ -234,7 +236,7 @@ export function useHousePages({
       ),
     ];
     if (uris.length) void Image.prefetch?.(uris, { cachePolicy: 'memory-disk' });
-  }, [houses]);
+  }, [houses, scheme]);
 
   // 집이 없는 유저 (#571) — 집 탭은 빈 상태 대신 집 탐색으로 직행하고,
   // 탐색의 뒤로가기도 (빈) 집 화면 대신 나의 방으로 돌아간다. 로딩/에러

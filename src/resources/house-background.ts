@@ -15,10 +15,24 @@ export const HOUSE_BACKGROUND_KEY_BY_THEME = {
 
 export type HouseBackgroundTheme = keyof typeof HOUSE_BACKGROUND_KEY_BY_THEME;
 
-export function houseBackgroundKey(coverImageKey?: string | null): string | null {
+export const HOUSE_DARK_BACKGROUND_KEY_BY_THEME = {
+  'cloud-balloon': 'house/cloud-balloon/backgrounds/house-cloud-balloon-background-dark-v1.webp',
+  'coral-aquarium': 'house/coral-aquarium/backgrounds/house-coral-aquarium-background-dark-v1.webp',
+  'mushroom-forest':
+    'house/mushroom-forest/backgrounds/house-mushroom-forest-background-dark-v1.webp',
+  'night-observatory':
+    'house/night-observatory/backgrounds/house-night-observatory-background-dark-v1.webp',
+} as const satisfies Record<HouseBackgroundTheme, string>;
+
+export function houseBackgroundKey(
+  coverImageKey?: string | null,
+  scheme: 'light' | 'dark' = 'light',
+): string | null {
   const theme = coverImageKey?.match(/^house\/([^/]+)\//)?.[1];
   if (theme && theme in HOUSE_BACKGROUND_KEY_BY_THEME) {
-    return HOUSE_BACKGROUND_KEY_BY_THEME[theme as HouseBackgroundTheme];
+    const backgrounds =
+      scheme === 'dark' ? HOUSE_DARK_BACKGROUND_KEY_BY_THEME : HOUSE_BACKGROUND_KEY_BY_THEME;
+    return backgrounds[theme as HouseBackgroundTheme];
   }
   // 새 테마가 배경 매핑보다 먼저 배포되면 엉뚱한 테마를 붙이지 않고 기존
   // 시간대별 하늘색을 쓴다. 커버 미지정 집은 houseCoverKey에서 기본 구름

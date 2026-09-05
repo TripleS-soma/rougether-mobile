@@ -1,8 +1,25 @@
 import { fireEvent, render } from '@testing-library/react-native';
-import { StyleSheet } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Pressable, StyleSheet } from 'react-native';
 import { getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { cameraClaimsMove, HouseScreen, type House } from '@/components/screens/house-screen';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { BrandThemeProvider, useBrandTheme } from '@/hooks/use-tokens';
+import { assetSource } from '@/resources/asset';
+
+jest.mock('@/hooks/use-color-scheme', () => ({ useColorScheme: jest.fn(() => 'light') }));
+beforeEach(() => jest.mocked(useColorScheme).mockReturnValue('light'));
+
+function BackgroundModeControl() {
+  const { setMode } = useBrandTheme();
+  return (
+    <>
+      <Pressable accessibilityLabel="test-dark-mode" onPress={() => setMode('dark')} />
+      <Pressable accessibilityLabel="test-light-mode" onPress={() => setMode('light')} />
+    </>
+  );
+}
 
 const MISSION_HOUSE: House = {
   houseId: 7,
@@ -28,6 +45,82 @@ const MISSION_HOUSE: House = {
 };
 
 describe('HouseScreen', () => {
+  it('시스템 모드는 OS 다크 설정을 따르고 명시적 라이트 선택이 우선한다', async () => {
+    await AsyncStorage.clear();
+    jest.mocked(useColorScheme).mockReturnValue('dark');
+    const ui = await render(
+      <BrandThemeProvider>
+        <BackgroundModeControl />
+        <HouseScreen
+          houses={[
+            {
+              ...MISSION_HOUSE,
+              coverImageKey: 'house/cloud-balloon/frame-v27.png',
+            },
+          ]}
+        />
+      </BrandThemeProvider>,
+    );
+    expect(ui.getByTestId('house-background').props.recyclingKey).toBe(
+      'house/cloud-balloon/backgrounds/house-cloud-balloon-background-dark-v1.webp',
+    );
+    await fireEvent.press(ui.getByLabelText('test-light-mode'));
+    expect(ui.getByTestId('house-background').props.recyclingKey).toBe(
+      'house/cloud-balloon/backgrounds/house-cloud-balloon-background-v1.webp',
+    );
+    await AsyncStorage.clear();
+  });
+
+  it('앱 모드 전환과 다크모드 집 이동에 맞춰 배경 source와 캐시 키가 바뀐다', async () => {
+    await AsyncStorage.clear();
+    const houses = ['cloud-balloon', 'coral-aquarium', 'mushroom-forest', 'night-observatory'].map(
+      (theme, index) => ({
+        ...MISSION_HOUSE,
+        houseId: index + 10,
+        coverImageKey: `house/${theme}/frame-v27.png`,
+      }),
+    );
+    const ui = await render(
+      <BrandThemeProvider>
+        <BackgroundModeControl />
+        <HouseScreen houses={houses} />
+      </BrandThemeProvider>,
+    );
+    await fireEvent.press(ui.getByLabelText('test-dark-mode'));
+    for (const [index, theme] of [
+      'cloud-balloon',
+      'coral-aquarium',
+      'mushroom-forest',
+      'night-observatory',
+    ].entries()) {
+      if (index > 0) await fireEvent.press(ui.getByLabelText('다음 집'));
+      const key = `house/${theme}/backgrounds/house-${theme}-background-dark-v1.webp`;
+      expect(ui.getByTestId('house-background').props).toMatchObject({
+        source: [assetSource(key)],
+        recyclingKey: key,
+      });
+    }
+    await fireEvent.press(ui.getByLabelText('test-light-mode'));
+    expect(ui.getByTestId('house-background').props.recyclingKey).toBe(
+      'house/night-observatory/backgrounds/house-night-observatory-background-v1.webp',
+    );
+    await AsyncStorage.clear();
+  });
+
+  it('알 수 없는 테마는 다크모드에서도 배경 이미지 대신 하늘 폴백을 유지한다', async () => {
+    await AsyncStorage.clear();
+    const ui = await render(
+      <BrandThemeProvider>
+        <BackgroundModeControl />
+        <HouseScreen houses={[{ ...MISSION_HOUSE, coverImageKey: 'house/unknown/frame.png' }]} />
+      </BrandThemeProvider>,
+    );
+    await fireEvent.press(ui.getByLabelText('test-dark-mode'));
+    expect(ui.queryByTestId('house-background')).toBeNull();
+    expect(ui.getByTestId('house-background-layer')).toBeTruthy();
+    await AsyncStorage.clear();
+  });
+
   it('선택한 집의 커버 테마를 전면 배경에도 즉시 적용한다', async () => {
     const cloudHouse = {
       ...MISSION_HOUSE,

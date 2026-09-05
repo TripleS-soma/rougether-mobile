@@ -42,7 +42,7 @@ import { characterIdForMember } from '@/hooks/use-member-room-previews';
 import { FixedOverlay, Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useBottomNavInset, useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
-import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useResolvedScheme, useTokens, useTypography } from '@/hooks/use-tokens';
 import type { MissionStatus } from '@/utils/mission-cta';
 import { assetSource } from '@/resources/asset';
 import { houseBackgroundKey } from '@/resources/house-background';
@@ -321,6 +321,7 @@ export const HouseScreen = memo(function HouseScreen({
   onScrollY,
 }: HouseScreenProps) {
   const t = useTokens();
+  const scheme = useResolvedScheme();
   const Typography = useTypography();
   // 배경 이미지를 못 고른 집(매핑에 없는 새 테마)의 폴백 (#992). 시간·날씨에
   // 따라 바뀌던 하늘은 집별 배경 아트(#989)가 대체했다 — 정적 색만 남긴다.
@@ -432,7 +433,7 @@ export const HouseScreen = memo(function HouseScreen({
   const coverKey = houseCoverKey(currentHouse?.coverImageKey);
   // 서버가 가진 coverImageKey의 테마 경로에서 전면 배경을 파생한다. 집 전환과
   // 같은 렌더에 키가 바뀌므로 별도 저장 상태 없이 항상 프레임과 맞는다.
-  const backgroundKey = houseBackgroundKey(coverKey);
+  const backgroundKey = houseBackgroundKey(coverKey, scheme);
   // WINDOW_RECTS 순서(좌상·우상·좌하·우하)로 좌석 매핑 — 아래 행이 아래 창문.
   const windowSlots = useMemo(() => {
     const frameRows = seatRows.slice(-2);
