@@ -1,7 +1,9 @@
 import { type FC, useEffect, useRef } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { type SvgProps } from 'react-native-svg';
+import { GestureDetector, Pressable } from 'react-native-gesture-handler';
+import Reanimated from 'react-native-reanimated';
 
 import HomeActive from '@/assets/images/common/home-icon-active.svg';
 import HomeInactive from '@/assets/images/common/home-icon.svg';
@@ -19,6 +21,7 @@ import {
 } from '@/components/ui/bottom-nav-geometry';
 import { CoachTarget } from '@/components/ui/coach-mark';
 import { GlassSurface } from '@/components/ui/glass-surface';
+import { useBottomNavScrub } from '@/components/ui/use-bottom-nav-scrub';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
@@ -79,10 +82,15 @@ export function BottomNav({ active, onChange }: BottomNavProps) {
   const t = useTokens();
   const Typography = useTypography();
   const insets = useSafeAreaInsets();
-  const tabs = TABS.map(({ key, label, active: ActiveIcon, inactive: InactiveIcon }) => {
+  const { pan, indicatorStyle, recordTab, recordHeight } = useBottomNavScrub((index) => {
+    const tab = TABS[index]?.key;
+    if (tab && tab !== active) onChange(tab);
+  });
+  const tabs = TABS.map(({ key, label, active: ActiveIcon, inactive: InactiveIcon }, index) => {
     const isActive = key === active;
     const inner = (
       <Pressable
+        requireExternalGestureToFail={pan}
         onPress={() => onChange(key)}
         accessibilityRole="button"
         accessibilityState={{ selected: isActive }}
@@ -99,12 +107,13 @@ export function BottomNav({ active, onChange }: BottomNavProps) {
       </Pressable>
     );
     // 설정 탭은 코치마크 마지막 단계의 대상 (#351).
-    return key === 'settings' ? (
-      <CoachTarget key={key} id="nav-settings">
-        {inner}
-      </CoachTarget>
-    ) : (
-      <View key={key}>{inner}</View>
+    return (
+      <View
+        key={key}
+        testID={`bottom-nav-tab-${key}`}
+        onLayout={(e) => recordTab(index, e.nativeEvent.layout)}>
+        {key === 'settings' ? <CoachTarget id="nav-settings">{inner}</CoachTarget> : inner}
+      </View>
     );
   });
 
@@ -117,7 +126,20 @@ export function BottomNav({ active, onChange }: BottomNavProps) {
       {/* 면은 GlassSurface가 고른다 (#1074): iOS 26 글래스 / 반투명 surface / 불투명.
           tint 없음 — 시스템 탭바처럼 밑 콘텐츠 색을 그대로 비춘다. */}
       <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.pill}>
-        {tabs}
+        <GestureDetector gesture={pan}>
+          <View
+            collapsable={false}
+            testID="bottom-nav-track"
+            onLayout={(e) => recordHeight(e.nativeEvent.layout.height)}
+            style={styles.track}>
+            <Reanimated.View
+              pointerEvents="none"
+              testID="bottom-nav-scrub-indicator"
+              style={[styles.indicator, { backgroundColor: t.primarySoft }, indicatorStyle]}
+            />
+            {tabs}
+          </View>
+        </GestureDetector>
       </GlassSurface>
     </View>
   );
@@ -138,11 +160,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   pill: {
+    borderRadius: Radius.pill,
+    overflow: 'hidden',
+  },
+  track: {
     flexDirection: 'row',
     gap: NAV_PILL_GAP,
     paddingVertical: NAV_PILL_PAD_V,
     paddingHorizontal: NAV_PILL_PAD_H,
+  },
+  indicator: {
+    position: 'absolute',
+    left: 0,
+    top: Spacing.one,
+    bottom: Spacing.one,
     borderRadius: Radius.pill,
-    overflow: 'hidden',
   },
 });

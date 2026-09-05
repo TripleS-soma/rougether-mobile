@@ -1,15 +1,106 @@
 import { isLiquidGlassAvailable } from 'expo-glass-effect';
 import { AccessibilityInfo } from 'react-native';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { State } from 'react-native-gesture-handler';
+import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { BottomNav } from '@/components/ui/bottom-nav';
 import { Themes } from '@/constants/theme';
+import { scrubTarget } from '@/components/ui/use-bottom-nav-scrub';
+
+const FRAMES = [
+  { x: 8, width: 90 },
+  { x: 106, width: 60 },
+  { x: 174, width: 76 },
+];
+
+async function measureNav(ui: Awaited<ReturnType<typeof render>>) {
+  await act(async () => {
+    fireEvent(ui.getByTestId('bottom-nav-track'), 'layout', {
+      nativeEvent: { layout: { x: 0, y: 0, width: 258, height: 64 } },
+    });
+    ['myRoom', 'house', 'settings'].forEach((key, i) => {
+      fireEvent(ui.getByTestId(`bottom-nav-tab-${key}`), 'layout', {
+        nativeEvent: { layout: { ...FRAMES[i], y: 8, height: 48 } },
+      });
+    });
+  });
+}
+
+async function scrub(x: number, y = 30, end: (typeof State)[keyof typeof State] = State.END) {
+  await act(async () => {
+    fireGestureHandler(getByGestureTestId('bottom-nav-scrub'), [
+      { state: State.BEGAN, x: 50, y: 30 },
+      { state: State.ACTIVE, x: 65, y: 30 },
+      { state: State.ACTIVE, x, y },
+      { state: end, x, y },
+    ]);
+  });
+}
 
 afterEach(() => {
   jest.mocked(isLiquidGlassAvailable).mockReturnValue(false);
 });
 
 describe('BottomNav', () => {
+  it('commits only the release target, skipping intermediate tabs', async () => {
+    const onChange = jest.fn();
+    const ui = await render(<BottomNav active="myRoom" onChange={onChange} />);
+    await measureNav(ui);
+    await scrub(210);
+    expect(onChange.mock.calls).toEqual([['settings']]);
+  });
+
+  it('can scrub back and uses the latest callback without replacing the gesture', async () => {
+    const previous = jest.fn();
+    const current = jest.fn();
+    const ui = await render(<BottomNav active="myRoom" onChange={previous} />);
+    await measureNav(ui);
+    const gesture = getByGestureTestId('bottom-nav-scrub');
+    await ui.rerender(<BottomNav active="settings" onChange={current} />);
+    expect(getByGestureTestId('bottom-nav-scrub')).toBe(gesture);
+    await scrub(30);
+    expect(current.mock.calls).toEqual([['myRoom']]);
+    expect(previous).not.toHaveBeenCalled();
+  });
+
+  it('does not navigate on cancellation, vertical escape, or release on the active tab', async () => {
+    const onChange = jest.fn();
+    const ui = await render(<BottomNav active="house" onChange={onChange} />);
+    await measureNav(ui);
+    await scrub(210, 30, State.CANCELLED);
+    await scrub(210, -60);
+    await scrub(210, 140);
+    await scrub(136);
+    expect(onChange).not.toHaveBeenCalled();
+    expect(ui.getByRole('button', { name: '집' }).props.accessibilityState.selected).toBe(true);
+  });
+
+  it('clamps horizontal overshoot and ignores gestures before measurement', async () => {
+    const onChange = jest.fn();
+    const ui = await render(<BottomNav active="house" onChange={onChange} />);
+    await scrub(300);
+    expect(onChange).not.toHaveBeenCalled();
+    await measureNav(ui);
+    await scrub(600);
+    await scrub(-300);
+    expect(onChange.mock.calls).toEqual([['settings'], ['myRoom']]);
+  });
+
+  it('leaves a failed vertical gesture to scrolling and preserves normal taps', async () => {
+    const onChange = jest.fn();
+    const ui = await render(<BottomNav active="myRoom" onChange={onChange} />);
+    await measureNav(ui);
+    await act(async () => {
+      fireGestureHandler(getByGestureTestId('bottom-nav-scrub'), [
+        { state: State.BEGAN, x: 136, y: 30 },
+        { state: State.FAILED, x: 136, y: 80 },
+      ]);
+    });
+    expect(onChange).not.toHaveBeenCalled();
+    fireEvent.press(ui.getByRole('button', { name: '집' }));
+    expect(onChange.mock.calls).toEqual([['house']]);
+  });
   it('renders the tabs and fires onChange with the selected tab', async () => {
     const onChange = jest.fn();
     const { getByText } = await render(<BottomNav active="myRoom" onChange={onChange} />);
@@ -72,5 +163,18 @@ describe('BottomNav', () => {
       await waitFor(() => expect(getByTestId('bottom-nav-pill')).toBeTruthy());
       spy.mockRestore();
     });
+  });
+});
+
+describe('scrubTarget', () => {
+  it('uses measured centers, including gaps and horizontal overshoot', () => {
+    expect([-30, 90, 100, 150, 175, 900].map((x) => scrubTarget(x, FRAMES))).toEqual([
+      0, 0, 1, 1, 2, 2,
+    ]);
+  });
+  it('rejects missing measurements and invalid coordinates', () => {
+    expect(scrubTarget(50, [])).toBe(-1);
+    expect(scrubTarget(50, [{ x: 0, width: 0 }, ...FRAMES.slice(1)])).toBe(-1);
+    expect(scrubTarget(Number.NaN, FRAMES)).toBe(-1);
   });
 });
