@@ -2,6 +2,8 @@ import { memo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { AppUpdateCard } from '@/components/ui/app-update-card';
+import { GlassSurface } from '@/components/ui/glass-surface';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import {
@@ -22,6 +24,7 @@ import { useBottomNavInset, useHeaderContentInset, useScreenStyle } from '@/hook
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import type { AppUpdateState } from '@/types/app-update';
 
 const MODE_OPTIONS: { id: ThemeMode; name: string }[] = [
   { id: 'system', name: '시스템' },
@@ -41,6 +44,9 @@ function fontPreviewStyle(id: BrandFontId) {
 type Row = { icon: IconName; label: string; onPress?: () => void };
 
 export type SettingsScreenProps = ScrollRestoreProps & {
+  appUpdate?: AppUpdateState;
+  onCheckForUpdate?: () => void;
+  onApplyUpdate?: () => void;
   /** Light/dark preference ('system' follows the OS). */
   themeMode?: ThemeMode;
   onChangeThemeMode?: (mode: ThemeMode) => void;
@@ -96,6 +102,9 @@ export type SettingsScreenProps = ScrollRestoreProps & {
  * 같은 memo 경계로 막는다. 셸이 주는 콜백 prop은 전부 참조 고정 필수.
  */
 export const SettingsScreen = memo(function SettingsScreen({
+  appUpdate,
+  onCheckForUpdate,
+  onApplyUpdate,
   themeMode = DEFAULT_THEME_MODE,
   onChangeThemeMode,
   themeId = DEFAULT_THEME_ID,
@@ -170,10 +179,19 @@ export const SettingsScreen = memo(function SettingsScreen({
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
+      <View
+        pointerEvents="none"
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        style={styles.ambient}>
+        <View style={[styles.ambientPrimary, { backgroundColor: t.primarySoft }]} />
+        <View style={[styles.ambientWarm, { backgroundColor: t.warningSoft }]} />
+      </View>
       <ScreenHeader title="설정" />
 
       <ScrollView
         ref={scrollRef}
+        showsVerticalScrollIndicator={false}
         // 넓은 화면에서 행이 끝까지 늘어나면 화살표가 라벨에서 멀어져 한 줄로
         // 안 읽힌다 (#725).
         contentContainerStyle={[
@@ -183,18 +201,25 @@ export const SettingsScreen = memo(function SettingsScreen({
           navInset ? { paddingBottom: Spacing.four + navInset } : null,
         ]}
         {...scrollRestore}>
+        {appUpdate ? (
+          <AppUpdateCard state={appUpdate} onCheck={onCheckForUpdate} onApply={onApplyUpdate} />
+        ) : null}
         <View style={styles.section}>
           <Text style={[...sectionTitleStyle, { color: t.textMuted }]}>디자인</Text>
-          <View style={[styles.card, { backgroundColor: t.surface }]}>
+          <GlassSurface
+            fallbackColor={t.surface}
+            interactive={false}
+            style={styles.card}
+            testID="settings-design-glass">
             <View style={styles.designHead}>
-              <View style={[styles.iconCircle, { backgroundColor: t.surfaceMuted }]}>
-                <Icon name="moon" size={20} color={t.text} />
+              <View style={[styles.iconCircle, { backgroundColor: t.primarySoft }]}>
+                <Icon name="moon" size={20} color={t.primaryText} />
               </View>
               <View style={styles.flex}>
                 <Text style={[Typography.label, { color: t.text }]}>다크 모드</Text>
               </View>
             </View>
-            <View style={styles.modeRow}>
+            <View style={[styles.modeRow, { backgroundColor: t.surfaceMuted }]}>
               {MODE_OPTIONS.map((opt) => {
                 const selected = opt.id === themeMode;
                 return (
@@ -202,21 +227,27 @@ export const SettingsScreen = memo(function SettingsScreen({
                     key={opt.id}
                     onPress={() => onChangeThemeMode?.(opt.id)}
                     accessibilityRole="radio"
-                    accessibilityState={{ selected }}
+                    accessibilityState={{ selected, checked: selected }}
+                    aria-checked={selected}
                     accessibilityLabel={opt.name}
-                    style={[
-                      styles.modeChip,
-                      { backgroundColor: selected ? t.primary : t.surfaceMuted },
-                    ]}>
-                    <Text
-                      style={[Typography.label, { color: selected ? t.onPrimary : t.textMuted }]}>
-                      {opt.name}
-                    </Text>
+                    style={styles.modeOption}>
+                    {selected ? (
+                      <GlassSurface
+                        fallbackColor={t.primary}
+                        tintColor={t.primary}
+                        style={styles.modeChip}>
+                        <Text style={[Typography.label, { color: t.onPrimary }]}>{opt.name}</Text>
+                      </GlassSurface>
+                    ) : (
+                      <View style={styles.modeChip}>
+                        <Text style={[Typography.label, { color: t.textMuted }]}>{opt.name}</Text>
+                      </View>
+                    )}
                   </Pressable>
                 );
               })}
             </View>
-          </View>
+          </GlassSurface>
 
           {/*
             테마 색상·폰트 — 선택지가 많고 실제로 적용해 봐야 아는 것들이라
@@ -226,81 +257,100 @@ export const SettingsScreen = memo(function SettingsScreen({
             "화면 전체가 이미 그 색"이라며 테마만 생략했는데, 색은 보여도
             **그게 어떤 테마인지는 알 수 없었다**(5종 중 비슷한 색이 있다).
           */}
-          <View style={[styles.card, { backgroundColor: t.surface }]}>
-            <Pressable
-              onPress={onOpenTheme}
-              accessibilityRole="button"
-              accessibilityLabel="테마 색상"
-              style={[
-                styles.row,
-                { borderBottomColor: t.border, borderBottomWidth: StyleSheet.hairlineWidth },
-              ]}>
-              <View style={styles.rowLeft}>
-                <View style={[styles.iconCircle, { backgroundColor: t.surfaceMuted }]}>
-                  <Icon name="palette" size={20} color={t.text} />
+          <GlassSurface
+            fallbackColor={t.surface}
+            interactive={false}
+            style={styles.card}
+            testID="settings-appearance-glass">
+            <View style={styles.cardContent}>
+              <Pressable
+                onPress={onOpenTheme}
+                accessibilityRole="button"
+                accessibilityLabel="테마 색상"
+                style={({ pressed }) => [
+                  styles.row,
+                  { borderBottomColor: t.border, borderBottomWidth: StyleSheet.hairlineWidth },
+                  pressed && { backgroundColor: t.primarySoft },
+                ]}>
+                <View style={[styles.rowLeft, styles.appearanceLabel]}>
+                  <View style={[styles.iconCircle, { backgroundColor: t.primarySoft }]}>
+                    <Icon name="palette" size={20} color={t.primaryText} />
+                  </View>
+                  <Text style={[Typography.body, { color: t.text }]}>테마 색상</Text>
                 </View>
-                <Text style={[Typography.body, { color: t.text }]}>테마 색상</Text>
-              </View>
-              {/* 점은 그 테마 색 자체 — 폰트 행이 이름을 그 얼굴로 그리는 것과 같은
+                {/* 점은 그 테마 색 자체 — 폰트 행이 이름을 그 얼굴로 그리는 것과 같은
                   뜻이다. 글자에 색을 입히지 않은 건 대비가 나빠지기 때문(#232). */}
-              {currentTheme ? (
-                // 점과 이름을 한 덩어리로 — 따로 두면 각자 flex 자식이 돼 점만
-                // 왼쪽으로 밀린다.
-                <View style={[styles.rowValue, styles.themeValue]}>
-                  <View style={[styles.themeDot, { backgroundColor: currentTheme.swatch }]} />
-                  <Text style={[Typography.body, { color: t.textMuted }]} numberOfLines={1}>
-                    {currentTheme.name}
-                  </Text>
+                {currentTheme ? (
+                  // 점과 이름을 한 덩어리로 — 따로 두면 각자 flex 자식이 돼 점만
+                  // 왼쪽으로 밀린다.
+                  <View style={[styles.rowValue, styles.themeValue]}>
+                    <View style={[styles.themeDot, { backgroundColor: currentTheme.swatch }]} />
+                    <Text
+                      style={[Typography.body, styles.valueText, { color: t.textMuted }]}
+                      numberOfLines={1}>
+                      {currentTheme.name}
+                    </Text>
+                  </View>
+                ) : null}
+                <Icon name="forward" size={16} color={t.textDisabled} />
+              </Pressable>
+              <Pressable
+                onPress={onOpenFont}
+                accessibilityRole="button"
+                accessibilityLabel="폰트"
+                style={({ pressed }) => [
+                  styles.row,
+                  pressed && { backgroundColor: t.primarySoft },
+                ]}>
+                <View style={[styles.rowLeft, styles.appearanceLabel]}>
+                  <View style={[styles.iconCircle, { backgroundColor: t.primarySoft }]}>
+                    <Icon name="edit" size={20} color={t.primaryText} />
+                  </View>
+                  <Text style={[Typography.body, { color: t.text }]}>폰트</Text>
                 </View>
-              ) : null}
-              <Icon name="forward" size={16} color={t.textDisabled} />
-            </Pressable>
-            <Pressable
-              onPress={onOpenFont}
-              accessibilityRole="button"
-              accessibilityLabel="폰트"
-              style={styles.row}>
-              <View style={styles.rowLeft}>
-                <View style={[styles.iconCircle, { backgroundColor: t.surfaceMuted }]}>
-                  <Icon name="edit" size={20} color={t.text} />
-                </View>
-                <Text style={[Typography.body, { color: t.text }]}>폰트</Text>
-              </View>
-              {/* 현재 폰트 이름은 그 폰트의 얼굴로 — 행 자체가 작은 견본이 된다. */}
-              <Text style={[fontPreviewStyle(fontId), styles.rowValue, { color: t.textMuted }]}>
-                {currentFontName}
-              </Text>
-              <Icon name="forward" size={16} color={t.textDisabled} />
-            </Pressable>
-          </View>
+                {/* 현재 폰트 이름은 그 폰트의 얼굴로 — 행 자체가 작은 견본이 된다. */}
+                <Text style={[fontPreviewStyle(fontId), styles.rowValue, { color: t.textMuted }]}>
+                  {currentFontName}
+                </Text>
+                <Icon name="forward" size={16} color={t.textDisabled} />
+              </Pressable>
+            </View>
+          </GlassSurface>
         </View>
 
         {sections.map((section) => (
           <View key={section.title} style={styles.section}>
             <Text style={[...sectionTitleStyle, { color: t.textMuted }]}>{section.title}</Text>
-            <View style={[styles.card, { backgroundColor: t.surface }]}>
-              {section.rows.map((row, idx) => (
-                <Pressable
-                  key={row.label}
-                  onPress={row.onPress}
-                  accessibilityRole="button"
-                  style={[
-                    styles.row,
-                    idx !== section.rows.length - 1 && {
-                      borderBottomColor: t.border,
-                      borderBottomWidth: StyleSheet.hairlineWidth,
-                    },
-                  ]}>
-                  <View style={styles.rowLeft}>
-                    <View style={[styles.iconCircle, { backgroundColor: t.surfaceMuted }]}>
-                      <Icon name={row.icon} size={20} color={t.text} />
+            <GlassSurface
+              fallbackColor={t.surface}
+              interactive={false}
+              style={styles.card}
+              testID={`settings-section-${section.title}`}>
+              <View style={styles.cardContent}>
+                {section.rows.map((row, idx) => (
+                  <Pressable
+                    key={row.label}
+                    onPress={row.onPress}
+                    accessibilityRole="button"
+                    style={({ pressed }) => [
+                      styles.row,
+                      pressed && { backgroundColor: t.primarySoft },
+                      idx !== section.rows.length - 1 && {
+                        borderBottomColor: t.border,
+                        borderBottomWidth: StyleSheet.hairlineWidth,
+                      },
+                    ]}>
+                    <View style={styles.rowLeft}>
+                      <View style={[styles.iconCircle, { backgroundColor: t.primarySoft }]}>
+                        <Icon name={row.icon} size={20} color={t.primaryText} />
+                      </View>
+                      <Text style={[Typography.body, { color: t.text }]}>{row.label}</Text>
                     </View>
-                    <Text style={[Typography.body, { color: t.text }]}>{row.label}</Text>
-                  </View>
-                  <Icon name="forward" size={16} color={t.textDisabled} />
-                </Pressable>
-              ))}
-            </View>
+                    <Icon name="forward" size={16} color={t.textDisabled} />
+                  </Pressable>
+                ))}
+              </View>
+            </GlassSurface>
           </View>
         ))}
 
@@ -357,10 +407,22 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
-  header: {
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.four,
-    gap: Spacing.half,
+  ambient: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
+  ambientPrimary: {
+    position: 'absolute',
+    top: Spacing.six,
+    right: -Spacing.six,
+    width: Spacing.six * 4,
+    height: Spacing.six * 4,
+    borderRadius: Radius.pill,
+  },
+  ambientWarm: {
+    position: 'absolute',
+    top: Spacing.six * 6,
+    left: -Spacing.six,
+    width: Spacing.six * 3,
+    height: Spacing.six * 3,
+    borderRadius: Radius.pill,
   },
   body: {
     paddingHorizontal: Spacing.three,
@@ -374,7 +436,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.two,
   },
   card: {
-    borderRadius: Radius.lg,
+    borderRadius: Radius.xl,
+  },
+  // Clip row feedback inside, leaving the outer fallback shadow visible.
+  cardContent: {
+    borderRadius: Radius.xl,
     overflow: 'hidden',
   },
   // 회원탈퇴 링크 (#547) — 목록 아래 중앙, 낮은 존재감.
@@ -391,20 +457,22 @@ const styles = StyleSheet.create({
   },
   modeRow: {
     flexDirection: 'row',
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingBottom: Spacing.three,
+    gap: Spacing.one,
+    marginHorizontal: Spacing.three,
+    marginBottom: Spacing.three,
+    padding: Spacing.one,
+    borderRadius: Radius.pill,
   },
+  modeOption: { flex: 1 },
   modeChip: {
-    flex: 1,
     alignItems: 'center',
-    paddingVertical: Spacing.two,
+    paddingVertical: Spacing.three,
     borderRadius: Radius.pill,
   },
   iconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: Radius.lg,
+    width: Spacing.four + Spacing.three,
+    height: Spacing.four + Spacing.three,
+    borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -419,7 +487,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
+    flexShrink: 1,
   },
+  appearanceLabel: { flexShrink: 0, marginRight: Spacing.two },
+  valueText: { flexShrink: 1 },
   themeValue: {
     flexDirection: 'row',
     alignItems: 'center',
