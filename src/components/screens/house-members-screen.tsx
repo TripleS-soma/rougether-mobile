@@ -583,6 +583,7 @@ export function HouseMembersScreen({
                   <HouseCoverPicker
                     covers={covers}
                     selectedKey={editCover}
+                    maxMembers={editMax}
                     onSelect={setEditCover}
                   />
                 </>

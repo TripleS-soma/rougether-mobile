@@ -1,9 +1,8 @@
-import { Image } from 'expo-image';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { type HouseCover, HouseCoverPicker } from '@/components/room/house-cover-picker';
-import { Icon } from '@/components/ui/icon';
+import { HouseCoverArt } from '@/components/room/house-cover-art';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { CrownPictogram, Pictogram } from '@/components/ui/pictograms';
 import { Radius, Spacing } from '@/constants/theme';
@@ -16,7 +15,6 @@ import {
   HOUSE_THEME_PRESETS,
   HOUSE_CAPACITY_OPTIONS,
 } from '@/constants/house-themes';
-import { assetSource } from '@/resources/asset';
 
 export type CreateHouseInput = {
   name: string;
@@ -73,12 +71,12 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
           <View
             style={[styles.previewEmoji, { backgroundColor: theme.bg, borderColor: theme.border }]}>
             {coverKey ? (
-              <Image
-                source={assetSource(coverKey)}
+              <HouseCoverArt
+                coverImageKey={coverKey}
+                maxMembers={capacity}
                 style={styles.previewCover}
-                contentFit="cover"
-                cachePolicy="memory-disk"
-                accessibilityLabel="선택한 대표 이미지"
+                legacyContentFit="cover"
+                name="선택한 대표 이미지"
                 testID="preview-cover"
               />
             ) : (
@@ -145,7 +143,12 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
               ]}>
               대표 이미지
             </Text>
-            <HouseCoverPicker covers={covers} selectedKey={coverKey} onSelect={setCoverKey} />
+            <HouseCoverPicker
+              covers={covers}
+              selectedKey={coverKey}
+              onSelect={setCoverKey}
+              maxMembers={capacity}
+            />
           </View>
         ) : null}
 

@@ -1,8 +1,8 @@
-import { Image } from 'expo-image';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { HousePreviewFrame } from '@/components/room/house-preview-frame';
+import { HouseCoverArt } from '@/components/room/house-cover-art';
 import type { RoomCatalogProps } from '@/components/room/room';
 import type { HouseMission, MemberRoomPreview } from '@/components/screens/house-screen';
 import { Loading } from '@/components/ui/loading';
@@ -17,12 +17,12 @@ import {
   type PictogramName,
   SparklePictogram,
 } from '@/components/ui/pictograms';
-import { Overlay, Radius, Spacing } from '@/constants/theme';
+import { ContentMaxWidth, Overlay, Radius, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
-import { assetSource, isCdnKey } from '@/resources/asset';
+import { isCdnKey } from '@/resources/asset';
 
 /** Browse-card display model (decorated from the API house summary). */
 export type SearchHouse = {
@@ -435,13 +435,12 @@ export function HouseSearchScreen({
                 <View style={[styles.houseEmoji, { backgroundColor: h.bg, borderColor: h.border }]}>
                   {/* Server cover art first; the pictogram tile is the fallback. */}
                   {isCdnKey(h.coverImageKey) ? (
-                    <Image
-                      source={assetSource(h.coverImageKey)}
+                    <HouseCoverArt
+                      coverImageKey={h.coverImageKey}
+                      maxMembers={h.capacity}
+                      legacyContentFit="cover"
                       style={styles.houseCover}
-                      contentFit="cover"
-                      cachePolicy="memory-disk"
-                      transition={120}
-                      accessibilityLabel={`${h.name} 대표 이미지`}
+                      name={`${h.name} 대표 이미지`}
                       testID="house-cover"
                     />
                   ) : (
@@ -540,12 +539,15 @@ export function HouseSearchScreen({
       {housePreview ? (
         <View style={styles.hpOverlay}>
           <Pressable style={styles.hpBackdrop} onPress={() => setHousePreview(null)} />
-          <View style={[styles.hpCard, { backgroundColor: t.screen }]}>
+          <ScrollView
+            style={[styles.hpCard, { backgroundColor: t.screen }]}
+            contentContainerStyle={styles.hpContent}>
             {/* 집 화면과 같은 프레임+창문 비주얼 — 프리뷰 응답의 memberRooms로
                 실제 방을 그리고 (#386), 없으면 인원수 목업으로 폴백. */}
             <HousePreviewFrame
               coverImageKey={housePreview.coverImageKey}
               memberCount={housePreview.members}
+              maxMembers={housePreview.capacity}
               rooms={housePreview.rooms}
               furniture={furniture}
               wallpapers={wallpapers}
@@ -658,7 +660,7 @@ export function HouseSearchScreen({
                 </Pressable>
               )}
             </View>
-          </View>
+          </ScrollView>
         </View>
       ) : null}
     </View>
@@ -764,7 +766,13 @@ const styles = StyleSheet.create({
     backgroundColor: Overlay.dim,
   },
   hpCard: {
+    maxHeight: '100%',
+    width: '100%',
+    maxWidth: ContentMaxWidth,
+    alignSelf: 'center',
     borderRadius: Radius.lg,
+  },
+  hpContent: {
     padding: Spacing.four,
     gap: Spacing.two,
   },
