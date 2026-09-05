@@ -51,9 +51,11 @@ describe('useBottomNavInset (#1049)', () => {
     jest.mocked(isLiquidGlassAvailable).mockReturnValue(false);
   });
 
-  it('글래스가 불가하면 0 — 불투명 바는 flex 형제라 콘텐츠를 안 가린다', async () => {
+  it('글래스가 불가해도 같은 인셋 — 알약은 전 플랫폼 오버레이다 (#1074)', async () => {
     const { getByTestId } = await render(wrap(<InsetProbe />));
-    expect(getByTestId('inset').props.children).toBe('0');
+    expect(getByTestId('inset').props.children).toBe(
+      String(navUnderlapInset(METRICS.insets.bottom, 18)),
+    );
   });
 
   it('글래스 알약이 떠 있으면 바닥 여백 + 알약 높이 + 숨 — 바텀바와 같은 식을 쓴다', async () => {

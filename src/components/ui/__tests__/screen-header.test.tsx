@@ -7,15 +7,15 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import { Spacing } from '@/constants/theme';
 
 describe('ScreenHeader', () => {
-  it('상태바 인셋만큼 자기 배경을 위로 확장한다 (#493)', async () => {
+  it('글래스가 불가해도 상단에 떠 있는 오버레이다 — 상태바 인셋 아래에 자리 잡는다 (#1074)', async () => {
     const { getByTestId } = await render(
       <SafeAreaInsetsContext.Provider value={{ top: 40, bottom: 0, left: 0, right: 0 }}>
         <ScreenHeader title="설정 서브" />
       </SafeAreaInsetsContext.Provider>,
     );
-    // 헤더 surface가 상태바 밑까지 이어져 시스템 바와 한 색으로 읽힌다.
     const style = StyleSheet.flatten(getByTestId('screen-header').props.style);
-    expect(style.paddingTop).toBe(40 + Spacing.three);
+    expect(style.position).toBe('absolute');
+    expect(style.top).toBe(40 + Spacing.two);
   });
 
   it('renders the title', async () => {

@@ -1,8 +1,9 @@
-import { GlassView } from 'expo-glass-effect';
 import { type FC, useEffect, useRef } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { type SvgProps } from 'react-native-svg';
+import { GestureDetector, Pressable } from 'react-native-gesture-handler';
+import Reanimated from 'react-native-reanimated';
 
 import HomeActive from '@/assets/images/common/home-icon-active.svg';
 import HomeInactive from '@/assets/images/common/home-icon.svg';
@@ -19,9 +20,10 @@ import {
   navPillBottomOffset,
 } from '@/components/ui/bottom-nav-geometry';
 import { CoachTarget } from '@/components/ui/coach-mark';
+import { GlassSurface } from '@/components/ui/glass-surface';
+import { useBottomNavScrub } from '@/components/ui/use-bottom-nav-scrub';
 import { Radius, Spacing } from '@/constants/theme';
-import { useLiquidGlass } from '@/hooks/use-liquid-glass';
-import { useResolvedScheme, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
 
 export type NavTab = 'myRoom' | 'house' | 'settings';
@@ -72,27 +74,28 @@ function TabIcon({
 /**
  * App bottom navigation (나의 방 / 집 / 설정) with custom SVG icons.
  *
- * 두 가지 모습 (#1049):
- * - **리퀴드 글래스 알약** (iOS 26 + Xcode 26 빌드, 투명도 줄이기 꺼짐) —
- *   화면 바닥에 떠 있는 오버레이. 레이아웃 높이가 없으므로 밑을 지나는
- *   스크롤 화면이 `useBottomNavInset()`만큼 하단 패딩을 가져야 한다.
- * - **불투명 바** (그 외 전부) — 종전 그대로 콘텐츠의 flex 형제.
+ * 화면 바닥에 떠 있는 알약 오버레이 (#1049 → #1074에서 전 플랫폼 공통). 레이아웃
+ * 높이가 없으므로 밑을 지나는 스크롤 화면이 `useBottomNavInset()`만큼 하단
+ * 패딩을 가져야 한다. 면의 재질(글래스/반투명/불투명)은 GlassSurface가 고른다.
  */
 export function BottomNav({ active, onChange }: BottomNavProps) {
   const t = useTokens();
   const Typography = useTypography();
   const insets = useSafeAreaInsets();
-  const glass = useLiquidGlass();
-  const scheme = useResolvedScheme();
-  const tabs = TABS.map(({ key, label, active: ActiveIcon, inactive: InactiveIcon }) => {
+  const { pan, indicatorStyle, recordTab, recordHeight } = useBottomNavScrub((index) => {
+    const tab = TABS[index]?.key;
+    if (tab && tab !== active) onChange(tab);
+  });
+  const tabs = TABS.map(({ key, label, active: ActiveIcon, inactive: InactiveIcon }, index) => {
     const isActive = key === active;
     const inner = (
       <Pressable
+        requireExternalGestureToFail={pan}
         onPress={() => onChange(key)}
         accessibilityRole="button"
         accessibilityState={{ selected: isActive }}
         accessibilityLabel={label}
-        style={[styles.tab, glass ? styles.glassTab : null]}>
+        style={styles.tab}>
         <TabIcon
           isActive={isActive}
           Icon={isActive ? ActiveIcon : InactiveIcon}
@@ -104,62 +107,49 @@ export function BottomNav({ active, onChange }: BottomNavProps) {
       </Pressable>
     );
     // 설정 탭은 코치마크 마지막 단계의 대상 (#351).
-    return key === 'settings' ? (
-      <CoachTarget key={key} id="nav-settings">
-        {inner}
-      </CoachTarget>
-    ) : (
-      <View key={key}>{inner}</View>
+    return (
+      <View
+        key={key}
+        testID={`bottom-nav-tab-${key}`}
+        onLayout={(e) => recordTab(index, e.nativeEvent.layout)}>
+        {key === 'settings' ? <CoachTarget id="nav-settings">{inner}</CoachTarget> : inner}
+      </View>
     );
   });
 
-  if (glass) {
-    return (
-      // box-none: 알약 바깥(좌우 빈 띠)의 터치는 밑 콘텐츠로 흘린다.
-      <View
-        pointerEvents="box-none"
-        testID="bottom-nav-glass"
-        style={[styles.floatWrap, { bottom: navPillBottomOffset(insets.bottom) }]}>
-        {/* colorScheme: 앱의 다크 모드 강제(#755)가 시스템과 다를 수 있어 명시.
-            tint 없음 — 시스템 탭바처럼 밑 콘텐츠 색을 그대로 비춘다. */}
-        <GlassView glassEffectStyle="regular" colorScheme={scheme} style={styles.pill}>
-          {tabs}
-        </GlassView>
-      </View>
-    );
-  }
-
   return (
+    // box-none: 알약 바깥(좌우 빈 띠)의 터치는 밑 콘텐츠로 흘린다.
     <View
-      style={[
-        styles.bar,
-        {
-          backgroundColor: t.surface,
-          borderTopColor: t.border,
-          // 시스템 내비게이션 바 높이(insets.bottom) + 여유(Spacing.three) — 여유가
-          // 8dp(Spacing.two)면 내비 바가 높은 기기에서 겹쳐 보인다 (#456).
-          paddingBottom: insets.bottom + Spacing.three,
-        },
-      ]}>
-      {tabs}
+      pointerEvents="box-none"
+      testID="bottom-nav-pill"
+      style={[styles.floatWrap, { bottom: navPillBottomOffset(insets.bottom) }]}>
+      {/* 면은 GlassSurface가 고른다 (#1074): iOS 26 글래스 / 반투명 surface / 불투명.
+          tint 없음 — 시스템 탭바처럼 밑 콘텐츠 색을 그대로 비춘다. */}
+      <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.pill}>
+        <GestureDetector gesture={pan}>
+          <View
+            collapsable={false}
+            testID="bottom-nav-track"
+            onLayout={(e) => recordHeight(e.nativeEvent.layout.height)}
+            style={styles.track}>
+            <Reanimated.View
+              pointerEvents="none"
+              testID="bottom-nav-scrub-indicator"
+              style={[styles.indicator, { backgroundColor: t.primarySoft }, indicatorStyle]}
+            />
+            {tabs}
+          </View>
+        </GestureDetector>
+      </GlassSurface>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  bar: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    borderTopWidth: 1,
-    paddingTop: Spacing.two,
-  },
+  // 알약 안에서 탭 사이를 넉넉히 — 꽉 찬 바보다 여유 있게 읽히도록.
   tab: {
     alignItems: 'center',
     gap: NAV_ICON_LABEL_GAP,
-    paddingHorizontal: Spacing.three,
-  },
-  // 알약 안에서는 탭 사이를 더 벌린다 — 꽉 찬 바보다 여유 있게 읽히도록.
-  glassTab: {
     paddingHorizontal: Spacing.four,
   },
   // 알약 오버레이 — 폭은 탭 3개에 맞춰 줄어들고(alignItems), 좌우는 빈 띠.
@@ -170,11 +160,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   pill: {
+    borderRadius: Radius.pill,
+    overflow: 'hidden',
+  },
+  track: {
     flexDirection: 'row',
     gap: NAV_PILL_GAP,
     paddingVertical: NAV_PILL_PAD_V,
     paddingHorizontal: NAV_PILL_PAD_H,
+  },
+  indicator: {
+    position: 'absolute',
+    left: 0,
+    top: Spacing.one,
+    bottom: Spacing.one,
     borderRadius: Radius.pill,
-    overflow: 'hidden',
   },
 });

@@ -78,6 +78,7 @@ import { RECOMMENDED_HOUSES } from '@/mocks/fixtures';
 import { RoomRenderReference } from '@/dev/room-render-reference';
 import { TokenSwatches } from '@/dev/token-swatches';
 import { TypeScalePreview } from '@/dev/type-scale-preview';
+import { NavigationPreview } from '@/dev/navigation-preview';
 
 export type GalleryEntry = {
   /** Unique, human-readable name shown as the section header. */
@@ -336,6 +337,11 @@ export const galleryEntries: GalleryEntry[] = [
         <Text style={{ color: '#FFFFFF' }}>눌러보기</Text>
       </ScalePressable>
     ),
+  },
+  {
+    name: 'BottomNav · 리퀴드 바 드래그와 본문 스와이프',
+    description: '누른 채 좌우로 끌어 선택, 놓을 때 한 번 이동. 집 확대 잠금 중에도 하단바는 동작.',
+    render: () => <NavigationPreview />,
   },
   {
     name: 'GlassSurface · 떠 있는 버튼의 글래스 면',
