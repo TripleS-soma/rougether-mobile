@@ -148,15 +148,13 @@ export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps
           tx.value =
             raw > 0 ? raw * EDGE_RESISTANCE : raw < min ? min + (raw - min) * EDGE_RESISTANCE : raw;
         })
-        .onEnd((e) => {
+        .onEnd((e, success) => {
           'worklet';
-          const target = settleTarget(
-            indexSV.value,
-            e.translationX,
-            e.velocityX,
-            widthSV.value,
-            count,
-          );
+          // RNGH also ends active gestures on cancellation/failure. Restore the
+          // current page in that case, without committing a navigation change.
+          const target = success
+            ? settleTarget(indexSV.value, e.translationX, e.velocityX, widthSV.value, count)
+            : indexSV.value;
           tx.value = withTiming(
             -target * widthSV.value,
             { duration: SETTLE_MS, easing: Easing.out(Easing.cubic) },
@@ -164,12 +162,9 @@ export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps
               if (finished) revealAll.value = false;
             },
           );
-          runOnJS(commit)(target);
-        })
-        .onFinalize((_e, success) => {
-          'worklet';
-          // 활성화 없이 무산된 터치 — 정착 콜백이 없으니 여기서 정리한다.
-          if (!success) revealAll.value = false;
+          if (success) runOnJS(commit)(target);
+          // Only the completed animation hides neighbors. Finalizing a cancelled
+          // drag (or a failed pre-activation touch) must not hide them early.
         }),
     // count는 페이지 수(고정), 공유값·commit은 참조 안정 — 사실상 1회 생성.
     [lock, count, commit, indexSV, widthSV, start, tx, revealAll],

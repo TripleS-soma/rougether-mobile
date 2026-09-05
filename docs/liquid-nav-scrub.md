@@ -27,19 +27,29 @@ npx expo start --web --port 8096
 
 2026-09-05 검증 결과:
 
-- TypeScript, 포맷, 전체 162 suites / 1,272 tests 통과. lint 오류 0, 기존 경고 2개(AppShell fromGachaRef, CreateHouseScreen Icon).
-- 전체 Jest는 기존 비동기 핸들 때문에 `--forceExit`를 사용했습니다. 변경 관련 3 suites / 15 tests는 강제 종료 없이 통과했습니다.
+- TypeScript, 포맷, 전체 162 suites / 1,278 tests 통과. lint 오류 0, 기존 경고 2개(AppShell fromGachaRef, CreateHouseScreen Icon).
+- 전체 Jest는 기존 비동기 핸들 때문에 `--forceExit`를 사용했습니다. 변경 관련 4 suites / 28 tests는 강제 종료 없이 통과했습니다.
 - Chromium 430px/1024px: 마우스 드래그, 역방향 두 탭 건너뛰기, 가로 끝 이탈, 비활성 탭에서 시작 후 세로 이탈 취소, 일반 클릭, 키보드 Enter 확인.
 - Chromium CDP 터치: 드래그 중 전환 없음 → 정상 릴리즈 시 1회, touchCancel 시 0회, 집 잠금 중 본문 전환 0회 및 하단바 전환 1회 확인.
+- 본문 취소 회귀 검증: 나의 방 좌향·집 좌우향·설정 우향 4개 터치를 취소해 모두 전환 0회. 복귀 도중 이웃 화면이 유지되고 완료 후 위치가 각각 0 / -430 / -430 / -860px로 정렬됨을 실제 DOM에서 확인했습니다. 이어지는 정상 스와이프는 모두 1회씩 이동했습니다.
 - 실제 iOS 글래스/VoiceOver와 Android TalkBack·시스템 제스처는 실기기 확인이 남아 있습니다. 웹 검증은 네이티브 검증을 대체하지 않습니다.
 
-## 본문 스와이프 진단 — 이번 변경에서 수정하지 않음
+## 본문 스와이프 취소 수정
 
 ### 재현된 취소 처리 버그
 
-기존 `TabPager`는 `onEnd`의 두 번째 인자인 `success`를 확인하지 않습니다. RNGH는 활성 제스처가 CANCELLED/FAILED로 끝나도 `onEnd(event, false)`를 호출합니다.
+기존 `TabPager`는 `onEnd`의 두 번째 인자인 `success`를 확인하지 않았습니다. RNGH는 활성 제스처가 CANCELLED/FAILED로 끝나도 `onEnd(event, false)`를 호출합니다.
 
-`/dev-navigation`에서 설정 탭을 열고 본문을 오른쪽으로 240px 이동한 뒤 정상 touchEnd 대신 touchCancel을 전달했을 때, 취소됐는데도 설정 → 집으로 전환되는 것을 Chromium 실제 터치 입력으로 재현했습니다. 손을 놓은 정상 스와이프와 시스템 취소를 구분하고, 취소 때 현재 페이지 위치로 복원해야 합니다. 별도 수정 승인 전에는 기존 본문 동작을 변경하지 않습니다.
+`/dev-navigation`에서 설정 탭을 열고 본문을 오른쪽으로 240px 이동한 뒤 정상 touchEnd 대신 touchCancel을 전달했을 때, 취소됐는데도 설정 → 집으로 전환되는 것을 Chromium 실제 터치 입력으로 재현했습니다.
+
+사용자 승인 후 같은 PR #1080에서 다음을 수정했습니다.
+
+- `success=false`이면 이동 거리/속도에 관계없이 현재 인덱스로 복귀하고 페이지 이동 콜백을 호출하지 않습니다.
+- 복귀는 기존 260ms 애니메이션을 그대로 사용합니다. 이웃 페이지는 완료 콜백에서만 숨겨, 돌아오는 중 빈 화면이 드러나지 않게 합니다.
+- `onFinalize`의 즉시 숨김을 제거했습니다. 활성화 전에 실패한 세로 터치/탭도 이미 진행 중인 화면 전환을 방해하지 않습니다.
+- CANCELLED/FAILED, 복귀 도중 이웃 페이지 유지, 취소 후 정상 스와이프, 활성화 전 실패를 회귀 테스트로 검증했습니다. 기존 코드에서 신규 5개 테스트의 실패를 먼저 확인했습니다.
+
+정상 스와이프의 거리/속도 임계값, 집 확대 잠금, iOS 뒤로가기 및 새로고침 제스처의 우선순위는 변경하지 않았습니다.
 
 ### 의도된 잠금 및 실기기 확인 항목
 
