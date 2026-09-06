@@ -19,7 +19,7 @@ async function measureNav(ui: Awaited<ReturnType<typeof render>>) {
     fireEvent(ui.getByTestId('bottom-nav-track'), 'layout', {
       nativeEvent: { layout: { x: 0, y: 0, width: 258, height: 64 } },
     });
-    ['myRoom', 'house', 'settings'].forEach((key, i) => {
+    ['myRoom', 'house', 'myPage'].forEach((key, i) => {
       fireEvent(ui.getByTestId(`bottom-nav-tab-${key}`), 'layout', {
         nativeEvent: { layout: { ...FRAMES[i], y: 8, height: 48 } },
       });
@@ -48,7 +48,7 @@ describe('BottomNav', () => {
     const ui = await render(<BottomNav active="myRoom" onChange={onChange} />);
     await measureNav(ui);
     await scrub(210);
-    expect(onChange.mock.calls).toEqual([['settings']]);
+    expect(onChange.mock.calls).toEqual([['myPage']]);
   });
 
   it('can scrub back and uses the latest callback without replacing the gesture', async () => {
@@ -57,7 +57,7 @@ describe('BottomNav', () => {
     const ui = await render(<BottomNav active="myRoom" onChange={previous} />);
     await measureNav(ui);
     const gesture = getByGestureTestId('bottom-nav-scrub');
-    await ui.rerender(<BottomNav active="settings" onChange={current} />);
+    await ui.rerender(<BottomNav active="myPage" onChange={current} />);
     expect(getByGestureTestId('bottom-nav-scrub')).toBe(gesture);
     await scrub(30);
     expect(current.mock.calls).toEqual([['myRoom']]);
@@ -84,7 +84,7 @@ describe('BottomNav', () => {
     await measureNav(ui);
     await scrub(600);
     await scrub(-300);
-    expect(onChange.mock.calls).toEqual([['settings'], ['myRoom']]);
+    expect(onChange.mock.calls).toEqual([['myPage'], ['myRoom']]);
   });
 
   it('leaves a failed vertical gesture to scrolling and preserves normal taps', async () => {
@@ -106,7 +106,7 @@ describe('BottomNav', () => {
     const { getByText } = await render(<BottomNav active="myRoom" onChange={onChange} />);
     expect(getByText('나의 방')).toBeTruthy();
     expect(getByText('집')).toBeTruthy();
-    expect(getByText('설정')).toBeTruthy();
+    expect(getByText('마이페이지')).toBeTruthy();
 
     fireEvent.press(getByText('집'));
     expect(onChange).toHaveBeenCalledWith('house');
@@ -140,7 +140,7 @@ describe('BottomNav', () => {
       );
       expect(flat.position).toBe('absolute');
       expect(flat.bottom).toBeGreaterThan(0);
-      expect(getByText('설정')).toBeTruthy();
+      expect(getByText('마이페이지')).toBeTruthy();
     });
 
     it('글래스가 가능해도 같은 알약 — 탭 전환은 그대로 동작한다', async () => {

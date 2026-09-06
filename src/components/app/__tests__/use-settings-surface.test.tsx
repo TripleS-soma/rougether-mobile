@@ -33,18 +33,20 @@ beforeEach(() => {
 });
 
 const PROFILE = { nickname: '준서', bio: '', characterId: 'cat' as const, onSave: jest.fn() };
+const STATS = { streak: 3, coin: 120, diamond: 2 };
 
 /**
  * 훅이 만든 서브화면을 그대로 렌더한다 — 토스트 로직이 훅 안에 있고 핸들러는
  * 그 화면에만 넘어가므로, 실제로 눌러야 검증이 된다.
  */
 function Harness({ screen }: { screen: 'theme' | 'font' | 'sound' | null }) {
-  const { subScreen, tabProps } = useSettingsSurface({
+  const { subScreen, settingsProps } = useSettingsSurface({
     screen: screen ?? 'settings',
     setScreen: jest.fn(),
     profile: PROFILE,
+    stats: STATS,
   });
-  return screen === null ? <SettingsScreen {...tabProps} /> : <>{subScreen}</>;
+  return screen === null ? <SettingsScreen {...settingsProps} /> : <>{subScreen}</>;
 }
 
 const show = (screen: 'theme' | 'font' | 'sound' | null) =>
