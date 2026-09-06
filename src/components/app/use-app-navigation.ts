@@ -1,4 +1,4 @@
-import { type Dispatch, type SetStateAction, useCallback, useEffect, useRef } from 'react';
+import { type Dispatch, type SetStateAction, useCallback, useEffect, useMemo, useRef } from 'react';
 import { BackHandler, Platform } from 'react-native';
 import { Gesture } from 'react-native-gesture-handler';
 
@@ -62,49 +62,51 @@ export function useAppNavigation({
     return () => sub.remove();
   }, [goBack, toast]);
 
-  // iOS 스와이프 백 (#564 → 전폭 #1135) — 서브화면(탭 루트 제외)에서 우향 팬.
-  // 가로 제스처를 쓰는 화면(FULL_SWIPE_BACK_EXCLUDED)만 왼쪽 엣지 시작 한정. 탭 루트의 가로 스와이프는 페이저(#563) 몫이라 서브화면 한정.
-  // Android는 시스템 백 제스처/버튼이 있어 끈다. 제스처는 관찰만 하고
-  // 콘텐츠 터치를 막지 않는다 — 엣지 밖 시작은 즉시 물러난다.
+  // iOS sub-screen back supports full-width swipes (#1135), except on screens
+  // that own horizontal gestures. Main tabs belong to the pager (#1143).
+  // Disable native recognition on tab roots so edge-back cannot claim the
+  // pager's touch before the JS navigation guard runs (#1143).
+  const edgeBackEnabled = Platform.OS === 'ios' && TAB_FOR_SCREEN[screen] == null;
   const edgeBackEnabledRef = useRef(false);
-  edgeBackEnabledRef.current = Platform.OS === 'ios' && TAB_FOR_SCREEN[screen] == null;
-  // 전폭 스와이프 백 (#1135) — 가로 제스처를 쓰는 화면만 가장자리 한정으로 남긴다.
+  edgeBackEnabledRef.current = edgeBackEnabled;
   const fullSwipeRef = useRef(false);
-  fullSwipeRef.current = edgeBackEnabledRef.current && !FULL_SWIPE_BACK_EXCLUDED.has(screen);
+  fullSwipeRef.current = edgeBackEnabled && !FULL_SWIPE_BACK_EXCLUDED.has(screen);
   const goBackRef = useRef(goBack);
   goBackRef.current = goBack;
-  // 이 터치가 엣지 백 자격을 갖췄는지 (#740) — onTouchesDown의 mgr.fail()은
-  // runOnJS라 UI 스레드 활성화와 경쟁한다(JS가 바쁘면 늦게 도착). fail이 져도
-  // 백이 나가지 않도록, 자격을 ref에 기록해 커밋 시점(onEnd)에 다시 본다.
+  // Keep the commit guard (#740) for delayed JS events after a screen change.
+  // Recognition on tab roots is blocked by enabled, not by the JS mgr.fail().
   // 이 가드가 없을 때: 설정 탭에서 우향 스와이프 → 페이저(집)가 아니라
   // backTargetFor('myPage')='myRoom'으로 튀어 집을 건너뛰었다(당시 설정 탭).
   const edgeStartOkRef = useRef(false);
-  const edgeBackPan = useRef(
-    Gesture.Pan()
-      .withTestId('edge-back-pan')
-      .enabled(Platform.OS === 'ios')
-      .runOnJS(true)
-      .maxPointers(1)
-      // 전폭(#1135)에서는 세로 스크롤과 더 자주 겹친다 — 가로 24px 뒤에 활성화하고
-      // 세로 16px이면 먼저 물러난다.
-      .activeOffsetX(24)
-      .failOffsetY([-16, 16])
-      .onTouchesDown((e, mgr) => {
-        const x = e.allTouches[0]?.x ?? Number.MAX_VALUE;
-        const ok = edgeBackEnabledRef.current && (fullSwipeRef.current || x <= EDGE_BACK_WIDTH);
-        edgeStartOkRef.current = ok;
-        if (!ok) mgr.fail();
-      })
-      .onEnd((e) => {
-        // 자격 재확인 — 탭 루트(방·집·마이페이지)에서는 절대 백이 나가지 않는다.
-        if (!edgeStartOkRef.current || !edgeBackEnabledRef.current) return;
-        if (e.translationX > EDGE_BACK_DISTANCE || e.velocityX > EDGE_BACK_VELOCITY)
-          goBackRef.current();
-      })
-      .onFinalize(() => {
-        edgeStartOkRef.current = false;
-      }),
-  ).current;
+  // Reconfigure only when crossing the tab/sub-screen boundary. Data renders
+  // and navigation between sub-screens must not replace an active gesture.
+  const edgeBackPan = useMemo(
+    () =>
+      Gesture.Pan()
+        .withTestId('edge-back-pan')
+        .enabled(edgeBackEnabled)
+        .runOnJS(true)
+        .maxPointers(1)
+        // Preserve the full-width swipe thresholds from #1135.
+        .activeOffsetX(24)
+        .failOffsetY([-16, 16])
+        .onTouchesDown((e, mgr) => {
+          const x = e.allTouches[0]?.x ?? Number.MAX_VALUE;
+          const ok = edgeBackEnabledRef.current && (fullSwipeRef.current || x <= EDGE_BACK_WIDTH);
+          edgeStartOkRef.current = ok;
+          if (!ok) mgr.fail();
+        })
+        .onEnd((e) => {
+          // 자격 재확인 — 탭 루트(방·집·마이페이지)에서는 절대 백이 나가지 않는다.
+          if (!edgeStartOkRef.current || !edgeBackEnabledRef.current) return;
+          if (e.translationX > EDGE_BACK_DISTANCE || e.velocityX > EDGE_BACK_VELOCITY)
+            goBackRef.current();
+        })
+        .onFinalize(() => {
+          edgeStartOkRef.current = false;
+        }),
+    [edgeBackEnabled],
+  );
 
   const activeTab = TAB_FOR_SCREEN[screen];
 
