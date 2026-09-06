@@ -590,7 +590,9 @@ export function HouseSearchScreen({
                   <SparklePictogram size={14} />
                   <Text style={[Typography.label, { color: t.text }]}>단체미션 미리보기</Text>
                 </View>
-                <ScrollView style={styles.previewMissionScroll}>
+                {/* 카드 전체가 ScrollView가 되면서(#1078) 같은 축 중첩 — Android는
+                    nestedScrollEnabled 없이는 안쪽이 스크롤되지 않는다. */}
+                <ScrollView style={styles.previewMissionScroll} nestedScrollEnabled>
                   <View style={styles.previewMissionList}>
                     {housePreview.missions.map((mission) => {
                       const progress = Math.min(1, mission.current / mission.target);
