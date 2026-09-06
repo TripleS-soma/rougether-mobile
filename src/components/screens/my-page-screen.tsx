@@ -36,6 +36,8 @@ export type MyPageScreenProps = ScrollRestoreProps & {
   onOpenWalletHistory?: () => void;
   /** 주간회고 다시 보기 (#1056) — 설정 항목에서 마이페이지 항목으로 (#1088). */
   onOpenWeeklyReport?: () => void;
+  /** 캘린더 연동 (#844) — 설정 > 알림에서 마이페이지 행으로 (#1097). 미배선이면 숨김. */
+  onOpenCalendarImport?: () => void;
   /** 친구 초대 (#518). */
   onInviteFriends?: () => void;
   onOpenHelp?: () => void;
@@ -68,6 +70,7 @@ export const MyPageScreen = memo(function MyPageScreen({
   attendancePending = false,
   onOpenWalletHistory,
   onOpenWeeklyReport,
+  onOpenCalendarImport,
   onInviteFriends,
   onOpenHelp,
   onReportBug,
@@ -87,6 +90,11 @@ export const MyPageScreen = memo(function MyPageScreen({
 
   const rows: Row[] = [
     { icon: 'list', label: '주간회고 다시 보기', onPress: onOpenWeeklyReport },
+    // 캘린더 연동은 "설정"이 아니라 콘텐츠 가져오기라 여기로 (#1097). 네이티브 모듈이
+    // 없는 곳(웹)은 미배선이라 숨긴다.
+    ...(onOpenCalendarImport
+      ? [{ icon: 'calendar' as const, label: '캘린더 연동', onPress: onOpenCalendarImport }]
+      : []),
     { icon: 'gift', label: '친구 초대', onPress: onInviteFriends },
     { icon: 'help', label: '도움말', onPress: onOpenHelp },
     { icon: 'bug', label: '버그 제보', onPress: onReportBug },

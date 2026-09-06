@@ -95,7 +95,7 @@ export const BACK_SCREEN: Record<Screen, Screen | null> = {
   font: 'settings',
   profileEdit: 'myPage',
   notificationList: 'myRoom',
-  calendarImport: 'settings',
+  calendarImport: 'myPage',
   bugReport: 'myPage',
   notifications: 'settings',
   sound: 'settings',

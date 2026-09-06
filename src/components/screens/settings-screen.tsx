@@ -2,7 +2,6 @@ import { memo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { AppUpdateCard } from '@/components/ui/app-update-card';
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { ListRow } from '@/components/ui/list-row';
@@ -25,7 +24,6 @@ import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style'
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
-import type { AppUpdateState } from '@/types/app-update';
 
 const MODE_OPTIONS: { id: ThemeMode; name: string }[] = [
   { id: 'system', name: '시스템' },
@@ -47,9 +45,6 @@ type Row = { icon: IconName; label: string; onPress?: () => void };
 export type SettingsScreenProps = ScrollRestoreProps & {
   /** 마이페이지의 서브화면 (#1088) — 헤더 뒤로 가기. 미배선이면 탭 루트처럼 그린다. */
   onBack?: () => void;
-  appUpdate?: AppUpdateState;
-  onCheckForUpdate?: () => void;
-  onApplyUpdate?: () => void;
   /** Light/dark preference ('system' follows the OS). */
   themeMode?: ThemeMode;
   onChangeThemeMode?: (mode: ThemeMode) => void;
@@ -71,8 +66,6 @@ export type SettingsScreenProps = ScrollRestoreProps & {
   onChangePassword?: () => void;
   onOpenNotifications?: () => void;
   onOpenSound?: () => void;
-  /** 캘린더 연동 (#844) — 미배선이면 항목이 숨는다(네이티브 모듈 필요). */
-  onOpenCalendarImport?: () => void;
   onReplayOnboarding?: () => void;
   /** 스토어 요건 — 인앱 약관/개인정보처리방침 링크 (#545). */
   onOpenTerms?: () => void;
@@ -88,7 +81,8 @@ export type SettingsScreenProps = ScrollRestoreProps & {
 /**
  * Settings screen, ported from the prototype `SettingsScreen`: dark-mode picker
  * + notification / misc rows. 마이페이지의 서브화면 (#1088) — "바꾸는 곳"만
- * 남기고 프로필·친구 초대·주간회고·도움말·버그 제보는 마이페이지로 갔다. Theme tokens + type scale; vector icons
+ * 남기고 프로필·친구 초대·주간회고·도움말·버그 제보·캘린더 연동은 마이페이지로
+ * 갔다(#1097). 업데이트 카드(#1083)는 뺐다 — OTA는 실행 시 자동 적용 (#1095). Theme tokens + type scale; vector icons
  * via the shared Icon. Each row navigates to its sub-screen via the matching
  * prop. The mode picker is prop-driven (onChangeThemeMode); the app shell wires
  * it to the global BrandThemeProvider. (The 포근/숲/한옥 brand picker was
@@ -99,9 +93,6 @@ export type SettingsScreenProps = ScrollRestoreProps & {
  */
 export const SettingsScreen = memo(function SettingsScreen({
   onBack,
-  appUpdate,
-  onCheckForUpdate,
-  onApplyUpdate,
   themeMode = DEFAULT_THEME_MODE,
   onChangeThemeMode,
   themeId = DEFAULT_THEME_ID,
@@ -110,7 +101,6 @@ export const SettingsScreen = memo(function SettingsScreen({
   onOpenTheme,
   onOpenNotifications,
   onOpenSound,
-  onOpenCalendarImport,
   onOpenTerms,
   onOpenPrivacy,
   onReplayOnboarding,
@@ -143,7 +133,6 @@ export const SettingsScreen = memo(function SettingsScreen({
       rows: [
         { icon: 'bell', label: '푸시 알림', onPress: onOpenNotifications },
         { icon: 'sound', label: '효과음', onPress: onOpenSound },
-        { icon: 'calendar', label: '캘린더 연동', onPress: onOpenCalendarImport },
       ],
     },
     {
@@ -182,9 +171,6 @@ export const SettingsScreen = memo(function SettingsScreen({
           { paddingBottom: Spacing.six },
         ]}
         {...scrollRestore}>
-        {appUpdate ? (
-          <AppUpdateCard state={appUpdate} onCheck={onCheckForUpdate} onApply={onApplyUpdate} />
-        ) : null}
         <View style={styles.section}>
           <Text style={[...sectionTitleStyle, { color: t.textMuted }]}>디자인</Text>
           <GlassSurface

@@ -8,6 +8,7 @@ describe('backTargetFor (#564)', () => {
     expect(backTargetFor('theme', 'routineManage', false)).toBe('settings');
     expect(backTargetFor('help', 'routineManage', false)).toBe('myPage');
     expect(backTargetFor('profileEdit', 'routineManage', false)).toBe('myPage');
+    expect(backTargetFor('calendarImport', 'routineManage', false)).toBe('myPage'); // #1097
     expect(backTargetFor('friendRoom', 'routineManage', false)).toBe('house');
     expect(backTargetFor('decor', 'routineManage', false)).toBe('myRoom');
   });

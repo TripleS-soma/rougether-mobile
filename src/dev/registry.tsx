@@ -37,6 +37,7 @@ import { RoutineManageScreen } from '@/components/screens/routine-manage-screen'
 import { FontScreen } from '@/components/screens/font-screen';
 import { AppearancePreview } from '@/components/screens/settings/appearance-preview';
 import { ThemeScreen } from '@/components/screens/theme-screen';
+import { SettingsScreen } from '@/components/screens/settings-screen';
 import { SoundSettingsScreen } from '@/components/screens/sound-settings-screen';
 import { SignupScreen } from '@/components/screens/signup-screen';
 import { Badge } from '@/components/ui/badge';
@@ -80,7 +81,6 @@ import { RoomRenderReference } from '@/dev/room-render-reference';
 import { TokenSwatches } from '@/dev/token-swatches';
 import { TypeScalePreview } from '@/dev/type-scale-preview';
 import { NavigationPreview } from '@/dev/navigation-preview';
-import { SettingsUpdatePreview } from '@/dev/settings-update-preview';
 
 export type GalleryEntry = {
   /** Unique, human-readable name shown as the section header. */
@@ -577,7 +577,7 @@ export const galleryEntries: GalleryEntry[] = [
   {
     name: 'CalendarImportScreen',
     description:
-      '설정 → 캘린더 연동 (#844): 캘린더 선택 → 미리보기 → 선택 임포트. 비슷한 루틴이 있는 항목은 기본 해제.',
+      '마이페이지 → 캘린더 연동 (#844 → #1097): 캘린더 선택 → 미리보기 → 선택 임포트. 비슷한 루틴이 있는 항목은 기본 해제.',
     render: () => (
       <View style={{ alignSelf: 'stretch', height: 720 }}>
         <CalendarImportScreen
@@ -771,12 +771,12 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
-    name: 'SettingsScreen · 리퀴드 설정과 AppUpdateCard',
+    name: 'SettingsScreen',
     description:
-      '설정 카드·테마 선택과 업데이트 상태/재시작 확인. 실제 OTA 없이 상태를 재현합니다.',
+      '마이페이지의 서브화면 (#1088): 디자인(다크모드·테마·폰트)·알림·기타·로그아웃·회원탈퇴. 업데이트 카드는 #1095에서 뺐다.',
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
-        <SettingsUpdatePreview />
+        <SettingsScreen onBack={() => {}} />
       </View>
     ),
   },

@@ -7,31 +7,6 @@ import { ToastProvider } from '@/components/ui/toast';
 import { AuthProvider } from '@/hooks/use-auth';
 import { DEFAULT_HAPTIC_STRENGTH, getHapticStrength, setHapticStrength } from '@/utils/haptics';
 import { BrandThemeProvider } from '@/hooks/use-tokens';
-import { useAppUpdates } from '@/hooks/use-app-updates';
-
-jest.mock('@/hooks/use-app-updates', () => ({ useAppUpdates: jest.fn() }));
-
-const mockUpdateInfo = {
-  appVersion: '1.4.0',
-  channel: 'preview',
-  runtimeVersion: 'native-runtime',
-  updateId: 'current-update',
-  embedded: false,
-  emergencyLaunch: false,
-};
-const mockCheckUpdate = jest.fn();
-const mockApplyUpdate = jest.fn();
-
-beforeEach(() => {
-  mockCheckUpdate.mockClear();
-  mockApplyUpdate.mockClear();
-  jest.mocked(useAppUpdates).mockReturnValue({
-    state: { status: 'idle', info: mockUpdateInfo },
-    check: mockCheckUpdate,
-    apply: mockApplyUpdate,
-  });
-});
-
 const PROFILE = { nickname: '준서', bio: '', characterId: 'cat' as const, onSave: jest.fn() };
 const STATS = { streak: 3, coin: 120, diamond: 2 };
 
@@ -59,30 +34,6 @@ const show = (screen: 'theme' | 'font' | 'sound' | null) =>
       </BrandThemeProvider>
     </AuthProvider>,
   );
-
-describe('설정 OTA 연결 (#1082)', () => {
-  it('passes the actual updater check callback and metadata to the settings card', async () => {
-    const ui = await show(null);
-    await fireEvent.press(ui.getByRole('button', { name: '업데이트 확인' }));
-    expect(mockCheckUpdate).toHaveBeenCalledTimes(1);
-    expect(mockApplyUpdate).not.toHaveBeenCalled();
-    await fireEvent.press(ui.getByRole('button', { name: '업데이트 정보' }));
-    expect(ui.getByText('native-runtime')).toBeTruthy();
-  });
-
-  it('passes apply through the explicit restart confirmation only', async () => {
-    jest.mocked(useAppUpdates).mockReturnValue({
-      state: { status: 'ready', info: mockUpdateInfo },
-      check: mockCheckUpdate,
-      apply: mockApplyUpdate,
-    });
-    const ui = await show(null);
-    await fireEvent.press(ui.getByRole('button', { name: '지금 적용' }));
-    expect(mockApplyUpdate).not.toHaveBeenCalled();
-    await fireEvent.press(ui.getByRole('button', { name: '업데이트 적용 확인' }));
-    expect(mockApplyUpdate).toHaveBeenCalledTimes(1);
-  });
-});
 
 describe('폰트·테마 변경 안내 (#972)', () => {
   // BrandThemeProvider가 선택을 AsyncStorage에 남긴다 — 안 지우면 앞 테스트가
