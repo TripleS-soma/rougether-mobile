@@ -7,10 +7,15 @@
  * (프로브 mock이 실제 화면 렌더를 대체하므로 기존 app-shell.test.tsx와 분리.)
  */
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Image } from 'expo-image';
+import { Pressable } from 'react-native';
 
 import { AppShell } from '@/components/app/app-shell';
 import { Room } from '@/components/room/room';
 import { AuthProvider } from '@/hooks/use-auth';
+import { BrandThemeProvider, useBrandTheme } from '@/hooks/use-tokens';
+import { assetSource } from '@/resources/asset';
 import { QueryProvider } from '@/test-utils/query-wrapper';
 
 // 렌더마다 받은 props를 기록하는 MyRoomScreen 프로브.
@@ -69,6 +74,53 @@ const stableRes = (url: string) => {
   return { ok: true, status: 200, text: async () => JSON.stringify(body) };
 };
 const realFetch = global.fetch;
+
+function PrefetchModeControl() {
+  const { setMode } = useBrandTheme();
+  return <Pressable accessibilityLabel="prefetch-dark-mode" onPress={() => setMode('dark')} />;
+}
+
+it('집 목록이 그대로여도 다크모드 전환 시 새 배경을 미리 받는다', async () => {
+  await AsyncStorage.clear();
+  const prefetch = jest.spyOn(Image, 'prefetch').mockResolvedValue(true);
+  try {
+    const ui = await render(
+      <QueryProvider>
+        <AuthProvider>
+          <BrandThemeProvider>
+            <PrefetchModeControl />
+            <AppShell />
+          </BrandThemeProvider>
+        </AuthProvider>
+      </QueryProvider>,
+    );
+    const light = assetSource(
+      'house/cloud-balloon/backgrounds/house-cloud-balloon-background-v1.webp',
+    ).uri;
+    const dark = assetSource(
+      'house/cloud-balloon/backgrounds/house-cloud-balloon-background-dark-v1.webp',
+    ).uri;
+    await waitFor(() =>
+      expect(prefetch).toHaveBeenCalledWith(expect.arrayContaining([light]), {
+        cachePolicy: 'memory-disk',
+      }),
+    );
+    prefetch.mockClear();
+    await fireEvent.press(ui.getByLabelText('prefetch-dark-mode'));
+    await waitFor(() =>
+      expect(prefetch).toHaveBeenCalledWith(expect.arrayContaining([dark]), {
+        cachePolicy: 'memory-disk',
+      }),
+    );
+    expect(prefetch.mock.calls.flatMap(([uris]) => uris)).not.toContain(
+      assetSource('house/cloud-balloon/house-unified-cloud-balloon-frame.png').uri,
+    );
+  } finally {
+    prefetch.mockRestore();
+    await AsyncStorage.clear();
+  }
+});
+
 beforeEach(() => {
   mockMyRoomRenders.length = 0;
   mockHouseRenders.length = 0;

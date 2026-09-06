@@ -45,9 +45,9 @@ export const STACKED_HOUSE_THEMES = [
 ] as const;
 export type StackedHouseThemeId = (typeof STACKED_HOUSE_THEMES)[number]['id'];
 
-// Expo inlines direct EXPO_PUBLIC accesses at bundle time. Default OFF; this is
-// not a live remote kill switch. Enabling only maps the three existing covers.
-export const STACKED_HOUSES_ENABLED = process.env.EXPO_PUBLIC_STACKED_HOUSES === '1';
+// Build 113 enables the three approved legacy covers by default. An explicit
+// zero builds a rollback bundle; this is not a live remote kill switch.
+export const STACKED_HOUSES_ENABLED = process.env.EXPO_PUBLIC_STACKED_HOUSES !== '0';
 
 const percent = (value: number, total: number): Percent => `${(value / total) * 100}%`;
 const stackedGeometry = (capacity: 2 | 4 | 6) => {
@@ -72,6 +72,8 @@ export type HouseFrameOptions = {
   enabled?: boolean;
   /** Dev gallery only. Does not add anything to the public cover picker. */
   previewTheme?: StackedHouseThemeId;
+  /** Reset transient image failures when the displayed house changes. */
+  failureScope?: string | number;
 };
 export type HouseFrame = {
   kind: 'legacy' | 'stacked';

@@ -1,0 +1,64 @@
+# 집 다크모드 배경 연결
+
+관련 이슈: #1086, #1108. 기존 네 집의 커버·방 배치·구매 정책은 변경하지 않는다.
+
+> 2026-09-06 후속 승인: #1114에서 세로형 집 PR #1078까지 통합해 1.4.2 / 빌드 113으로 준비한다. 아래의 “세로형 미포함”, “app.json 변경 없음”, “배포 미실행”은 최초 다크 배경 단독 작업 시점의 기록이다. 최신 통합 범위·배포 게이트는 `docs/release-113.md`를 따른다.
+
+## 빌드 112 이후 통합 범위
+
+- 사용자 확인 빌드 112 이후의 최신 dev `fc591a2`를 충돌 없이 병합했다. 팀원의 마이페이지, 설정 적용 버튼, 하단바 및 화면 전환 변경을 유지한다.
+- 만들기·방장 수정 화면의 공통 정원 선택지를 2–6명으로 확대한다. 기본값은 4명이며, 기존 집 정원을 자동 변경하지 않는다.
+- 현재 인원보다 작은 정원은 선택할 수 없다. 기존 7–10명 정원은 현재 선택값으로 유지하여 의도치 않은 축소를 막는다.
+- 5·6번째 구성원은 기존 추가 방 영역에 표시한다. 세로형 집 프레임 PR #1078은 포함하거나 수정하지 않는다.
+- 모드 변경 시 배경만 다시 프리패치하고, 모드와 무관한 커버는 다시 요청하지 않는다.
+
+## 표시 규칙
+
+- `useResolvedScheme()`으로 앱 설정의 라이트·다크 또는 시스템 모드를 해석한다.
+- 집 화면 렌더와 셸의 이미지 프리패치가 같은 `houseBackgroundKey(coverKey, scheme)`를 사용한다.
+- 라이트 모드는 종전 `background-v1.webp`를 유지한다. 다크 모드는 아래 별도 파일을 사용한다.
+- 테마·모드가 바뀌면 `source`와 `recyclingKey`가 같은 렌더에서 바뀐다.
+- 알 수 없는 테마는 기존 `t.sky` 폴백을 유지한다. 커버 미지정 집은 기존 기본 구름 커버 규칙을 따른다.
+
+## 업로드 manifest
+
+모두 WebP, 941×1672. 경로는 `house/{theme}/backgrounds/house-{theme}-background-dark-v1.webp`다.
+
+| theme             |  bytes | SHA-256                                                            |
+| ----------------- | -----: | ------------------------------------------------------------------ |
+| cloud-balloon     |  57046 | `23347838c3038ecffda488e923dec60dc7d8e372c2bd87b23280aa7d06d8099f` |
+| coral-aquarium    |  78248 | `6d1963b9cdd2aa580389bb3c63a0041f4e5bed0be66e195fffc8fe085c8e1e73` |
+| mushroom-forest   | 127710 | `a88f3eeaffd8d57fd14456d1552346d735b26e4079b9f0d3d451f930c302861f` |
+| night-observatory |  75450 | `aea512e182802ee2b070e405578a0ab1401a252abd3bd0d0d7c590e1ab9a9dbb` |
+
+원본 패키지: 서버 작업공간의 `output/imagegen/house-dark-mode-2026-09-05/`.
+PNG는 편집용 원본이고 배포에는 WebP 4개만 사용한다. DB/API 수정은 없다.
+
+## 병합·배포 전 게이트
+
+2026-09-05 **WebP 4개 업로드와 CDN 검증 완료**. 이후 팀원이 빌드 112를 배포했으므로 기존의 새 1.4.1 빌드 계획을 그대로 재실행하지 않는다. 설치본의 채널·런타임과 배포 대상을 재확인해야 하며, production OTA와 App Store 심사 제출은 실행하지 않았다.
+
+1. 기존 AWS SSO 세션을 갱신한다(`aws sso login --profile rougether-isb`). 계정 및 현재 CDN origin 버킷을 읽기 전용으로 재확인한다.
+2. 정확히 위 네 key를 검사한다. 403은 파일 부재가 아니라 권한 오류이므로 중단한다. 기존 object가 있으면 체크섬을 대조하고, 다른 내용이면 덮어쓰지 않는다.
+3. 신규 object만 조건부 업로드한다. `Content-Type: image/webp`, `Cache-Control: public,max-age=31536000,immutable`을 사용한다. 기존 라이트 배경·커버 파일은 건드리지 않는다.
+4. 앱의 `src/config/shared-endpoints.json` assetBase에서 네 URL의 200, MIME, bytes, SHA-256을 대조한다.
+5. 실제 앱에서 네 집을 라이트/다크/시스템 모드로 전환한다. 집 이동, 앱 재시작, 미지정 커버, 모르는 테마의 폴백을 확인한다. 기존 Remotion 합성 미리보기는 실기기 검증을 대신하지 않는다.
+6. 위 게이트가 끝난 뒤 사용자와 배포 범위를 확인한다. dev 병합, production OTA, 새 네이티브 빌드는 서로 다른 단계다. `docs/release-ops.md`의 채널·런타임 검증을 따른다.
+
+초기에는 asset MCP의 HeadObject가 403, `rougether-isb`의 STS 검사가 SSO 만료로 실패했다. 이후 사용자가 SSO 로그인을 갱신했고, 계정과 CDN origin을 재확인한 뒤 정상 업로드했다.
+
+- 대상: `rougether-assets-isb-776158585524`, CDN `https://d1eazfl0tw7r0v.cloudfront.net`.
+- 네 key의 404를 먼저 확인하고 `If-None-Match: *`로 신규 object만 업로드했다. 기존 라이트 배경·커버를 덮어쓰지 않았다.
+- 실제 CDN GET 4/4가 200, `image/webp`, 위 bytes·SHA-256과 일치했다.
+- TestFlight 배포 전 iOS Release 앱 첫 화면 실행을 확인한다. 로그인 후 실기기 네 테마 전환은 별도의 최종 수동 점검 항목이며, 자동 테스트나 웹 갤러리 결과를 실기기 결과로 기록하지 않는다.
+  이 변경은 `app.json`, `package.json`, 네이티브 플러그인, `.gitignore`를 수정하지 않는다.
+
+## 회귀 검증
+
+- resource 테스트: 네 테마의 라이트/다크 key, 버전별 커버 파일, 미지정/알 수 없는 테마의 폴백.
+- HouseScreen 테스트: 모드 변경, 다크 상태의 네 집 이동, OS 다크 설정, 앱의 명시적 라이트 우선, 폴백.
+- AppShell 테스트: 집 목록이 바뀌지 않아도 모드 변경 때 다크 배경을 프리패치한다.
+- 정원 테스트: 6명 생성·수정, 기본 4명, 현재 인원 미만 축소 차단, 기존 8명 정원 보존, 네 테마의 5·6번째 방 방문.
+- 2026-09-06 최신 dev 통합 후 전체 Jest: 165 suites / 1,311 tests 통과. 정원·배경 집중 테스트 46개로 `house-themes.ts`와 `house-background.ts`의 statements·branches·functions·lines 100%.
+- typecheck, lint(오류 0, 기존 경고 2), format:check, diff --check 및 iOS export 통과.
+- 로컬 iOS Release 빌드 명령은 종료 코드 0으로 끝났으나, Xcode 27 / iOS 27 시뮬레이터에서 앱이 시작 직후 종료됐다. 앱 로그의 원인은 `UIScene life cycle is required for apps built with this SDK`다. 첫 화면 검증은 **미통과**이며 배포 게이트를 유지한다. 이번 변경에 앱/네이티브 설정 수정은 포함하지 않는다.

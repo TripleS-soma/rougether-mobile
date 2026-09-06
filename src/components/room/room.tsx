@@ -256,13 +256,13 @@ export const Room = memo(function Room({
       ) : null}
       {/* Wallpaper art renders as the wall band on top of the background —
           the room backgroundColor alone is invisible once a background covers
-          it, which made applied wallpapers look like a no-op. (CDN wallpaper
-          art is wall-band shaped, ~1205x585.) */}
+          it, which made applied wallpapers look like a no-op. */}
       {wallpaper && isCdnKey(wallpaper.assetKey) ? (
         <Image
           source={assetSource(wallpaper.assetKey)}
           style={styles.wall}
           contentFit="cover"
+          contentPosition={ROOM_RENDER_CONTRACT.surfaces.wallpaper.contentPosition}
           cachePolicy="memory-disk"
           transition={120}
           allowDownscaling={!fill}
@@ -277,6 +277,7 @@ export const Room = memo(function Room({
             source={assetSource(floor.assetKey)}
             style={styles.floor}
             contentFit="cover"
+            contentPosition={ROOM_RENDER_CONTRACT.surfaces.floor.contentPosition}
             cachePolicy="memory-disk"
             transition={120}
             allowDownscaling={!fill}
@@ -396,8 +397,7 @@ const styles = StyleSheet.create({
     borderRadius: ROOM_RENDER_CONTRACT.room.borderRadiusPx,
     overflow: 'hidden',
   },
-  // Wall band: CDN wallpaper art is ~1205x585 (width:height ≈ 2:1), so it
-  // covers the top half of the square room above the floor band.
+  // The 1205×964 wallpaper covers two thirds of the room above the floor.
   wall: {
     position: 'absolute',
     top: roomPercent(ROOM_RENDER_CONTRACT.surfaces.wallpaper.top),
@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
     width: roomPercent(ROOM_RENDER_CONTRACT.surfaces.wallpaper.width),
     height: roomPercent(ROOM_RENDER_CONTRACT.surfaces.wallpaper.height),
   },
-  // Floor band meets the wall band exactly at the midline — no bare strip.
+  // Floor starts exactly where the wall ends, without a bare strip.
   floor: {
     position: 'absolute',
     top: roomPercent(ROOM_RENDER_CONTRACT.surfaces.floor.top),

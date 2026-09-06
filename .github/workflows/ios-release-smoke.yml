@@ -1,0 +1,64 @@
+name: ios-release-smoke
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+
+permissions:
+  contents: read
+
+jobs:
+  release-smoke:
+    if: contains(github.event.pull_request.labels.*.name, 'release-smoke') && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: macos-15
+    timeout-minutes: 50
+    concurrency:
+      group: ios-release-smoke-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+      SENTRY_DISABLE_AUTO_UPLOAD: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Prepare Release native project
+        run: |
+          xcodebuild -version
+          npx expo prebuild --platform ios --no-install
+          node scripts/check-ios-plist.mjs
+          cd ios
+          pod install
+      - name: Build and launch Release simulator
+        run: |
+          mkdir -p release-smoke
+          xcodebuild -workspace ios/Rougether.xcworkspace -scheme Rougether \
+            -configuration Release -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/rougether-release" \
+            ARCHS=arm64 ONLY_ACTIVE_ARCH=YES CODE_SIGNING_ALLOWED=NO \
+            > release-smoke/build.log 2>&1
+          simulator=$(xcrun simctl list devices available --json | node -e '
+            let s=""; process.stdin.on("data",d=>s+=d).on("end",()=>{
+              const entry=Object.entries(JSON.parse(s).devices).find(([k,v])=>k.includes("iOS-26")&&v.some(d=>d.name.startsWith("iPhone")));
+              if(!entry)process.exit(1); console.log(entry[1].find(d=>d.name.startsWith("iPhone")).udid);
+            });')
+          xcrun simctl boot "$simulator"
+          xcrun simctl bootstatus "$simulator" -b
+          xcrun simctl install "$simulator" "$RUNNER_TEMP/rougether-release/Build/Products/Release-iphonesimulator/Rougether.app"
+          xcrun simctl launch "$simulator" com.triples.rougether | tee release-smoke/launch.txt
+          sleep 12
+          xcrun simctl io "$simulator" screenshot release-smoke/first-screen.png
+          xcrun simctl spawn "$simulator" log show --last 2m --style compact \
+            --predicate 'process == "Rougether"' > release-smoke/app.log
+          xcrun simctl spawn "$simulator" launchctl list | grep com.triples.rougether > release-smoke/process.txt
+          xcrun simctl shutdown "$simulator"
+          echo 'Release launch evidence saved. Manually inspect first-screen.png before TestFlight submission.' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-release-smoke-${{ github.event.pull_request.head.sha }}
+          path: release-smoke/
+          retention-days: 7

@@ -14,7 +14,8 @@ import { useFontEmphasis, useTypography } from '@/hooks/use-tokens';
  * it together with the registry; the /dev route lazy-requires it behind __DEV__.
  */
 export function DevGallery() {
-  const { entry } = useLocalSearchParams<{ entry?: string }>();
+  const { entry: rawEntry } = useLocalSearchParams<{ entry?: string | string[] }>();
+  const entry = Array.isArray(rawEntry) ? rawEntry[0] : rawEntry;
   const entries = entry ? galleryEntries.filter((item) => item.name === entry) : galleryEntries;
   const theme = useTheme();
   const Typography = useTypography();
