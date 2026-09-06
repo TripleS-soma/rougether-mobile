@@ -129,6 +129,14 @@ describe('BottomNav', () => {
     expect(colors.filter((c) => c === Themes.cozy.icon)).toHaveLength(2); // 비활성 탭
   });
 
+  it('badges — 해당 탭 아이콘에 점, 없으면 안 그린다 (#1089)', async () => {
+    const ui = await render(<BottomNav active="myRoom" onChange={() => {}} />);
+    expect(ui.queryByTestId('bottom-nav-badge')).toBeNull();
+    await ui.rerender(<BottomNav active="myRoom" onChange={() => {}} badges={{ myPage: true }} />);
+    expect(ui.getAllByTestId('bottom-nav-badge')).toHaveLength(1);
+    expect(ui.getByLabelText('마이페이지').props.accessibilityHint).toBe('오늘 미출석');
+  });
+
   describe('떠 있는 알약 (#1049 → #1074 전 플랫폼)', () => {
     it('글래스가 불가해도 알약 오버레이다 — 레이아웃 높이 없이 바닥에 뜬다', async () => {
       const { getByTestId, getByText } = await render(

@@ -58,6 +58,7 @@ export function useSettingsSurface({
   onOpenWeeklyReport,
   profile,
   stats,
+  shortcuts,
 }: {
   screen: Screen;
   setScreen: Dispatch<SetStateAction<Screen>>;
@@ -75,6 +76,12 @@ export function useSettingsSurface({
   };
   /** 마이페이지 지표 한 줄 (#1088) — 스트릭·지갑은 나의 방 데이터 훅 소유. */
   stats: { streak: number; coin: number; diamond: number };
+  /** 마이페이지 바로가기 (#1089) — 출석·재화 내역 시트는 셸이 들고 있다. */
+  shortcuts?: {
+    onOpenAttendance?: () => void;
+    attendancePending?: boolean;
+    onOpenWalletHistory?: () => void;
+  };
 }) {
   const { themeId, setThemeId, mode: themeMode, setMode: setThemeMode, fontId, setFontId } = useBrandTheme(); // prettier-ignore
   const { show: toast } = useToast();
@@ -251,6 +258,9 @@ export function useSettingsSurface({
     diamondBalance: stats.diamond,
     onEditProfile: openProfileEdit,
     onOpenSettings: openSettings,
+    onOpenAttendance: shortcuts?.onOpenAttendance,
+    attendancePending: shortcuts?.attendancePending ?? false,
+    onOpenWalletHistory: shortcuts?.onOpenWalletHistory,
     onOpenWeeklyReport,
     onInviteFriends: openInviteFriends,
     onOpenHelp: openHelp,

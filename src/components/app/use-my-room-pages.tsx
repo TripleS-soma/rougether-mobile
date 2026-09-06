@@ -23,7 +23,6 @@ import { type Routine } from '@/constants/routines';
 import type { useMyRoomData } from '@/hooks/use-my-room-data';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useRoutineOrder } from '@/hooks/use-routine-order';
-import { useWalletHistory } from '@/hooks/use-wallet-history';
 import { reportAppOpen } from '@/lib/app-open';
 import { onNotificationReceived, onNotificationTap } from '@/lib/push-events';
 import { toServerItemId, type ShopCatalogue } from '@/api/adapters';
@@ -47,7 +46,6 @@ export function useMyRoomPages({
   missionLinks,
   character,
   room,
-  attendance,
 }: {
   /** 셸 내비 상태 — 추가/수정 화면의 복귀 목적지 포함. */
   nav: {
@@ -117,11 +115,6 @@ export function useMyRoomPages({
     markedTodoDates: MyRoomScreenProps['markedTodoDates'];
     onCalendarMonthChange: MyRoomScreenProps['onCalendarMonthChange'];
   };
-  /** 연속 출석 이벤트 (#851) — 이벤트가 없으면 둘 다 undefined. */
-  attendance: {
-    attendance: MyRoomScreenProps['attendance'];
-    onOpenAttendance: MyRoomScreenProps['onOpenAttendance'];
-  };
 }) {
   const { screen, setScreen, addReturnScreen, setAddReturnScreen } = nav;
   const {
@@ -152,9 +145,6 @@ export function useMyRoomPages({
     reorderCategories,
   } = data;
   const { toggleWithMissionGuard, houseCategoryIds, addRoutineWithMission } = missionLinks;
-
-  // 재화 증감 이력 (#734) — 지갑 필 탭 시트. 시트가 열릴 때 load.
-  const walletHistory = useWalletHistory();
 
   // 루틴 수동 순서 (#716) — 기기 로컬 보관, 방 '오늘' 리스트에 적용.
   const { order: routineOrder, reorder: reorderRoutines } = useRoutineOrder();
@@ -383,8 +373,6 @@ export function useMyRoomPages({
     onCleanCobweb: room.onCleanCobweb,
     markedTodoDates: room.markedTodoDates,
     onCalendarMonthChange: room.onCalendarMonthChange,
-    attendance: attendance.attendance,
-    onOpenAttendance: attendance.onOpenAttendance,
     furniture: room.catalogue.furniture,
     wallpapers: room.catalogue.wallpapers,
     floors: room.catalogue.floors,
@@ -416,12 +404,6 @@ export function useMyRoomPages({
     routineOrder,
     onReorderRoutines: reorderRoutines,
     onMoveRoutineCategory: moveRoutineCategory,
-    walletHistory: walletHistory.entries,
-    walletHistoryLoading: walletHistory.loading,
-    walletHistoryError: walletHistory.error,
-    walletHistoryHasNext: walletHistory.hasNext,
-    onLoadWalletHistory: walletHistory.load,
-    onLoadMoreWalletHistory: walletHistory.loadMore,
   };
 
   /** 현재 화면이 나의 방 서브화면 4종이면 그 JSX, 아니면 null — 셸이 그대로 렌더. */

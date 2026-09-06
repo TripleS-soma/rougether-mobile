@@ -38,6 +38,8 @@ const TABS: { key: NavTab; label: string; active: FC<SvgProps>; inactive: FC<Svg
 export type BottomNavProps = {
   active: NavTab;
   onChange: (tab: NavTab) => void;
+  /** 탭 아이콘 위 빨간 점 (#1089) — 마이페이지의 오늘 미출석. 참조 고정 권장. */
+  badges?: Partial<Record<NavTab, boolean>>;
 };
 
 /** 활성 전환 시 스프링으로 한 번 통 튀는 탭 아이콘 (#446). */
@@ -45,10 +47,14 @@ function TabIcon({
   isActive,
   Icon: NavIcon,
   color,
+  badge,
+  badgeColor,
 }: {
   isActive: boolean;
   Icon: FC<SvgProps>;
   color: string;
+  badge?: boolean;
+  badgeColor: string;
 }) {
   const bounce = useAnimatedValue(1);
   const wasActive = useRef(isActive);
@@ -68,6 +74,9 @@ function TabIcon({
     <Animated.View style={{ transform: [{ scale: bounce }] }}>
       {/* SVG 스트로크는 currentColor (#529) — 테마 토큰이 color로 주입된다. */}
       <NavIcon width={NAV_ICON_SIZE} height={NAV_ICON_SIZE} color={color} />
+      {badge ? (
+        <View testID="bottom-nav-badge" style={[styles.badge, { backgroundColor: badgeColor }]} />
+      ) : null}
     </Animated.View>
   );
 }
@@ -79,7 +88,7 @@ function TabIcon({
  * 높이가 없으므로 밑을 지나는 스크롤 화면이 `useBottomNavInset()`만큼 하단
  * 패딩을 가져야 한다. 면의 재질(글래스/반투명/불투명)은 GlassSurface가 고른다.
  */
-export function BottomNav({ active, onChange }: BottomNavProps) {
+export function BottomNav({ active, onChange, badges }: BottomNavProps) {
   const t = useTokens();
   const Typography = useTypography();
   const insets = useSafeAreaInsets();
@@ -96,11 +105,14 @@ export function BottomNav({ active, onChange }: BottomNavProps) {
         accessibilityRole="button"
         accessibilityState={{ selected: isActive }}
         accessibilityLabel={label}
+        accessibilityHint={badges?.[key] ? '오늘 미출석' : undefined}
         style={styles.tab}>
         <TabIcon
           isActive={isActive}
           Icon={isActive ? ActiveIcon : InactiveIcon}
           color={isActive ? t.primary : t.icon}
+          badge={badges?.[key]}
+          badgeColor={t.danger}
         />
         <Text style={[Typography.supporting, { color: isActive ? t.primaryText : t.textMuted }]}>
           {label}
@@ -169,6 +181,15 @@ const styles = StyleSheet.create({
     gap: NAV_PILL_GAP,
     paddingVertical: NAV_PILL_PAD_V,
     paddingHorizontal: NAV_PILL_PAD_H,
+  },
+  // 아이콘 오른쪽 위 점 — 방 메뉴 버튼의 점(#1055)과 같은 크기.
+  badge: {
+    position: 'absolute',
+    top: -2,
+    right: -4,
+    width: 8,
+    height: 8,
+    borderRadius: Radius.pill,
   },
   indicator: {
     position: 'absolute',

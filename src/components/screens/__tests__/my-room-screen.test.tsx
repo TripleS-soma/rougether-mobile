@@ -425,25 +425,6 @@ describe('MyRoomScreen', () => {
     expect(queryByLabelText('알림')).toBeNull();
   });
 
-  it('메뉴 → 재화 내역 시트 + 1페이지 로드 (#734, #1055)', async () => {
-    const onLoadWalletHistory = jest.fn();
-    const { getByLabelText, getByText } = await render(
-      <MyRoomScreen
-        routines={[]}
-        coinBalance={120}
-        onLoadWalletHistory={onLoadWalletHistory}
-        walletHistory={[
-          { id: 1, currency: 'coin', amount: 10, reason: '루틴 완료', balanceAfter: 130 },
-        ]}
-      />,
-    );
-    // 지갑 필이 사라져(#1055) 메뉴 항목으로 연다.
-    await fireEvent.press(getByLabelText('메뉴'));
-    await fireEvent.press(getByLabelText('재화 내역'));
-    expect(onLoadWalletHistory).toHaveBeenCalledTimes(1);
-    expect(getByText('루틴 완료')).toBeTruthy();
-  });
-
   it('방 꾸미기 플로팅 버튼 — 방 위에서 1탭 진입 (#727)', async () => {
     const onEdit = jest.fn();
     const { getByLabelText } = await render(<MyRoomScreen routines={[]} onEdit={onEdit} />);
@@ -949,50 +930,19 @@ describe('MyRoomScreen', () => {
   });
 
   /**
-   * 출석 이벤트 (#851) — 이벤트가 없으면 헤더 아이콘 자체가 없어야 한다.
-   * 비활성으로 남겨두면 "눌러도 아무 일 없는 버튼"이 상시 자리를 차지한다.
+   * 출석 이벤트·재화 내역은 마이페이지 바로가기로 (#851 → #1055 → #1089) —
+   * 방 메뉴는 방 작업만 남고 메뉴 버튼의 미출석 점도 하단 탭 배지로 갔다.
    */
-  it('출석 이벤트가 없으면 헤더에 출석 아이콘을 그리지 않는다 (#851)', async () => {
-    const { queryByLabelText } = await render(
+  it('방 메뉴에 출석 이벤트·재화 내역이 없고 메뉴 버튼 라벨은 항상 "메뉴" (#1089)', async () => {
+    const { getByLabelText, queryByLabelText } = await render(
       <ToastProvider>
         <MyRoomScreen userName="준서" routines={[]} />
       </ToastProvider>,
     );
-    expect(queryByLabelText(/출석 이벤트/)).toBeNull();
-  });
-
-  it('오늘 미출석이면 메뉴 버튼·출석 항목에 미출석 라벨을 붙이고 탭을 전달한다 (#851, #1055)', async () => {
-    const onOpenAttendance = jest.fn();
-    const { getByLabelText } = await render(
-      <ToastProvider>
-        <MyRoomScreen
-          userName="준서"
-          routines={[]}
-          attendance={{ pending: true }}
-          onOpenAttendance={onOpenAttendance}
-        />
-      </ToastProvider>,
-    );
-    // 출석은 메뉴 안으로 (#1055) — 미출석 점은 메뉴 버튼과 항목 둘 다.
-    await fireEvent.press(getByLabelText('메뉴, 오늘 미출석'));
-    await fireEvent.press(getByLabelText('출석 이벤트, 오늘 미출석'));
-    expect(onOpenAttendance).toHaveBeenCalled();
-  });
-
-  it('오늘 출석했으면 미출석 표시 없이 그린다 (#851)', async () => {
-    const { getByLabelText, queryByLabelText } = await render(
-      <ToastProvider>
-        <MyRoomScreen
-          userName="준서"
-          routines={[]}
-          attendance={{ pending: false }}
-          onOpenAttendance={() => {}}
-        />
-      </ToastProvider>,
-    );
-    expect(queryByLabelText('메뉴, 오늘 미출석')).toBeNull();
+    expect(queryByLabelText(/오늘 미출석/)).toBeNull();
     await fireEvent.press(getByLabelText('메뉴'));
-    expect(getByLabelText('출석 이벤트')).toBeTruthy();
-    expect(queryByLabelText('출석 이벤트, 오늘 미출석')).toBeNull();
+    expect(getByLabelText('방 꾸미기')).toBeTruthy();
+    expect(queryByLabelText(/출석 이벤트/)).toBeNull();
+    expect(queryByLabelText('재화 내역')).toBeNull();
   });
 });
