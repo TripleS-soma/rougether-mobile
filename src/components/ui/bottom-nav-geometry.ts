@@ -12,6 +12,8 @@ export const NAV_PILL_PAD_V = Spacing.two;
 export const NAV_PILL_PAD_H = Spacing.two;
 /** 알약 안 탭 사이 간격. */
 export const NAV_PILL_GAP = Spacing.two;
+/** 탭 하나의 좌우 패딩 — 탭 폭 = 가장 넓은 라벨 + 이 값×2 (#1098). */
+export const NAV_TAB_PAD_H = Spacing.four;
 /** 탭 아이콘 한 변. */
 export const NAV_ICON_SIZE = 24;
 /** 아이콘과 라벨 사이. */
