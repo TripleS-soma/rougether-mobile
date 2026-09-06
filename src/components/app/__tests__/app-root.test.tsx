@@ -106,4 +106,105 @@ describe('AppRoot', () => {
 
     await waitFor(() => expect(getByText('내 방')).toBeTruthy());
   });
+
+  it('중도 종료한 계정은 관심사 추천으로 재개하고 나중에 선택하면 다음 실행에 강제하지 않는다', async () => {
+    await AsyncStorage.setItem('rougether.auth.userId', '71');
+    await AsyncStorage.setItem(KEY, JSON.stringify({ characterId: 'cat', goals: ['5'] }));
+    await AsyncStorage.setItem(
+      'rougether.starter-routine.v1.71',
+      JSON.stringify({
+        status: 'pending',
+        goals: [{ id: '5', code: 'reading', label: '독서' }],
+      }),
+    );
+    const ui = await renderApp();
+    await waitFor(() => expect(ui.getByText('작게 시작해볼까요?')).toBeTruthy());
+    expect(ui.getByText('책 2쪽 읽기')).toBeTruthy();
+    await fireEvent.press(ui.getByText('나중에 할게요'));
+    await waitFor(() => expect(ui.getByText('내 방')).toBeTruthy());
+    expect(
+      JSON.parse((await AsyncStorage.getItem('rougether.starter-routine.v1.71'))!).status,
+    ).toBe('skipped');
+    expect(ui.queryByText('첫 루틴 등록하기')).toBeNull();
+    await ui.unmount();
+    const restarted = await renderApp();
+    await waitFor(() => expect(restarted.getByText('내 방')).toBeTruthy());
+    expect(restarted.queryByText('작게 시작해볼까요?')).toBeNull();
+  });
+
+  it('미완료 추천이 남아도 루틴이 이미 있으면 추가 요청 없이 앱으로 들어간다', async () => {
+    await AsyncStorage.setItem('rougether.auth.userId', '72');
+    await AsyncStorage.setItem(KEY, JSON.stringify({ characterId: 'cat', goals: ['5'] }));
+    await AsyncStorage.setItem(
+      'rougether.starter-routine.v1.72',
+      JSON.stringify({
+        status: 'pending',
+        goals: [{ id: '5', code: 'reading', label: '독서' }],
+      }),
+    );
+    const posts: string[] = [];
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method === 'POST') posts.push(url);
+      if (url.endsWith('/routines'))
+        return {
+          ok: true,
+          status: 200,
+          text: async () =>
+            JSON.stringify({
+              items: [{ id: 3, title: '기존 루틴', repeatType: 'DAILY', authType: 'CHECK' }],
+            }),
+        };
+      return emptyRes(url);
+    }) as unknown as typeof fetch;
+    const ui = await renderApp();
+    await waitFor(() => expect(ui.getByText('내 방')).toBeTruthy());
+    expect(posts.filter((url) => url.endsWith('/routines'))).toEqual([]);
+    expect(
+      JSON.parse((await AsyncStorage.getItem('rougether.starter-routine.v1.72'))!).status,
+    ).toBe('existing');
+  });
+
+  it('첫 온보딩에서 관심사를 골라 루틴을 생성하면 미션 시트 없이 오늘 할 일로 이어진다', async () => {
+    await AsyncStorage.setItem('rougether.auth.userId', '73');
+    let created = false;
+    const routine = { id: 101, title: '책 2쪽 읽기', repeatType: 'DAILY', authType: 'CHECK' };
+    const posts: unknown[] = [];
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      const body = (value: unknown) => ({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify(value),
+      });
+      if (url.endsWith('/goals'))
+        return body({ items: [{ id: 91, code: 'reading', name: '독서' }] });
+      if (url.endsWith('/routines')) {
+        if (init?.method === 'POST') {
+          posts.push(JSON.parse(init.body as string));
+          created = true;
+          return body(routine);
+        }
+        return body({ items: created ? [routine] : [] });
+      }
+      return emptyRes(url);
+    }) as unknown as typeof fetch;
+    const ui = await renderApp();
+    await waitFor(() => expect(ui.getByText('루게더에 오신 걸 환영해요')).toBeTruthy());
+    await fireEvent.press(ui.getByLabelText('5번째 슬라이드로 이동'));
+    await fireEvent.press(ui.getByText('목표 선택하기'));
+    await fireEvent.press(ui.getByText('독서'));
+    await fireEvent.press(ui.getByText('시작하기'));
+    await fireEvent.changeText(ui.getByLabelText('닉네임 입력'), '테스트');
+    await fireEvent.press(ui.getByText('시작하기'));
+    await waitFor(() => expect(ui.getByText('작게 시작해볼까요?')).toBeTruthy());
+    await waitFor(() => expect(ui.queryByLabelText('내 루틴 확인 중')).toBeNull());
+    await fireEvent.press(ui.getByLabelText('책 2쪽 읽기'));
+    await fireEvent.press(ui.getByText('이 루틴으로 시작하기'));
+    await waitFor(() => expect(ui.getByText('내 방')).toBeTruthy());
+    expect(posts).toEqual([{ title: '책 2쪽 읽기', authType: 'CHECK', repeatType: 'DAILY' }]);
+    await waitFor(() => expect(ui.getAllByText('책 2쪽 읽기').length).toBeGreaterThan(0));
+    expect(
+      JSON.parse((await AsyncStorage.getItem('rougether.starter-routine.v1.73'))!).status,
+    ).toBe('created');
+    expect(ui.queryByText('뽑기 1회 해보기')).toBeNull();
+  });
 });
