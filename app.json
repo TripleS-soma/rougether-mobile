@@ -2,7 +2,7 @@
   "expo": {
     "name": "Rougether",
     "slug": "rougether-mobile",
-    "version": "1.4.2",
+    "version": "1.5.0",
     "runtimeVersion": {
       "policy": "fingerprint"
     },
@@ -131,7 +131,9 @@
         "@react-native-firebase/app",
         {
           "_comment_disableSPM": "RNFB 26은 Firebase를 SPM으로 가져오는 게 기본인데 Expo의 use_frameworks static과 중복 심볼로 충돌한다(#1031). Podfile에 $RNFirebaseDisableSPM = true를 주입해 CocoaPods 경로를 유지한다 — FirebaseCore의 CocoaPods 배포가 2026-10 이후 중단되므로 한시적이고, 정식 해법은 dynamic linkage 전환.",
-          "ios": { "disableSPM": true }
+          "ios": {
+            "disableSPM": true
+          }
         }
       ],
       "@react-native-firebase/messaging",
@@ -196,7 +198,53 @@
           "organization": "triples",
           "project": "rougether-mobile"
         }
-      ]
+      ],
+      [
+        "expo-alternate-app-icons",
+        [
+          {
+            "name": "MissingYou",
+            "ios": "./assets/images/app-icons/missing-you.png",
+            "android": {
+              "foregroundImage": "./assets/images/app-icons/missing-you.png",
+              "backgroundColor": "#FEF1D6"
+            }
+          },
+          {
+            "name": "Teary",
+            "ios": "./assets/images/app-icons/teary.png",
+            "android": {
+              "foregroundImage": "./assets/images/app-icons/teary.png",
+              "backgroundColor": "#FEF1D6"
+            }
+          },
+          {
+            "name": "Sobbing",
+            "ios": "./assets/images/app-icons/sobbing.png",
+            "android": {
+              "foregroundImage": "./assets/images/app-icons/sobbing.png",
+              "backgroundColor": "#FEF1D6"
+            }
+          },
+          {
+            "name": "DailySuccess",
+            "ios": "./assets/images/app-icons/daily-success.png",
+            "android": {
+              "foregroundImage": "./assets/images/app-icons/daily-success.png",
+              "backgroundColor": "#FEF1D6"
+            }
+          },
+          {
+            "name": "StreakChampion",
+            "ios": "./assets/images/app-icons/streak-champion.png",
+            "android": {
+              "foregroundImage": "./assets/images/app-icons/streak-champion.png",
+              "backgroundColor": "#FEF1D6"
+            }
+          }
+        ]
+      ],
+      "./plugins/with-app-icon-launchers.js"
     ],
     "experiments": {
       "typedRoutes": true,
