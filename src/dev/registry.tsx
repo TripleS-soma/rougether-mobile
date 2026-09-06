@@ -30,6 +30,8 @@ import { MyPageScreen } from '@/components/screens/my-page-screen';
 import { ListRow } from '@/components/ui/list-row';
 import { NotificationSettingsScreen } from '@/components/screens/notification-settings-screen';
 import { OnboardingScreen } from '@/components/screens/onboarding-screen';
+import { StarterRoutineScreen } from '@/components/screens/starter-routine-screen';
+import { recommendStarterRoutines } from '@/constants/starter-routines';
 import { PasswordChangeScreen } from '@/components/screens/password-change-screen';
 import { PolicyViewerScreen } from '@/components/screens/policy-viewer-screen';
 import { ProfileEditScreen } from '@/components/screens/profile-edit-screen';
@@ -722,6 +724,22 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ height: 720, alignSelf: 'stretch' }}>
         <OnboardingScreen characterSelectEnabled />
+      </View>
+    ),
+  },
+  {
+    name: 'StarterRoutineScreen · 관심사로 첫 루틴',
+    description:
+      '운동·독서·정리에서 하나씩 추천. 선택 후 바로 시작하며 서버 쓰기 없이 화면만 확인한다 (#1148).',
+    render: () => (
+      <View style={{ height: 780, alignSelf: 'stretch' }}>
+        <StarterRoutineScreen
+          recommendations={recommendStarterRoutines([
+            { id: 'exercise', label: '운동' },
+            { id: 'reading', label: '독서' },
+            { id: 'organizing', label: '정리' },
+          ])}
+        />
       </View>
     ),
   },

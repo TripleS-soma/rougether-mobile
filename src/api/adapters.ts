@@ -612,6 +612,7 @@ export function toOnboardingGoal(g: GoalItem, index: number): OnboardingGoal {
   return {
     id: String(g.id ?? index),
     label: g.name ?? g.code ?? '목표',
+    code: g.code,
   };
 }
 
