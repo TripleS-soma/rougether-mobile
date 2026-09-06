@@ -21,6 +21,7 @@ import {
 import { useLatestRef, useStableCallback } from '@/hooks/use-stable-value';
 import { MyPageScreen } from '@/components/screens/my-page-screen';
 import { AttendanceSheet } from '@/components/screens/sheets/attendance-sheet';
+import { WalletHistorySheet } from '@/components/screens/sheets/wallet-history-sheet';
 import { MissionSheet } from '@/components/screens/sheets/mission-sheet';
 import { BottomNav } from '@/components/ui/bottom-nav';
 import { MissionBanner } from '@/components/ui/mission-banner';
@@ -31,6 +32,7 @@ import { todayIso } from '@/utils/datetime';
 import { refreshWidgets } from '@/widgets/rougether-widgets';
 import { buildWidgetSummary, saveWidgetSummary, saveWidgetTheme } from '@/widgets/widget-data';
 import { useAttendance } from '@/hooks/use-attendance';
+import { useWalletHistory } from '@/hooks/use-wallet-history';
 import { useGacha } from '@/hooks/use-gacha';
 import {
   type OnboardingMissionStepId,
@@ -161,12 +163,24 @@ export function AppShell({
   );
 
   // 연속 출석 이벤트 (#851) — 진행 중인 이벤트가 없으면 status가 null이라
-  // 헤더 아이콘도 시트도 그려지지 않는다. 출석 코인은 응답의 잔액으로 지갑을
-  // 맞춘다(뽑기·상점과 같은 결).
+  // 마이페이지 바로가기도 시트도 그려지지 않는다(#1089). 출석 코인은 응답의
+  // 잔액으로 지갑을 맞춘다(뽑기·상점과 같은 결).
   const [attendanceOpen, setAttendanceOpen] = useState(false);
   const syncCoin = useCallback((coin: number) => setWallet((w) => ({ ...w, coin })), [setWallet]);
   const attendance = useAttendance({ onCoinBalance: syncCoin });
   const openAttendance = useCallback(() => setAttendanceOpen(true), []);
+  // 오늘 미출석 — 마이페이지 타일·하단 탭 배지 (#1089). 이벤트가 없으면 false.
+  const attendancePending = !!attendance.status && !attendance.status.checkedInToday;
+
+  // 재화 내역 시트 (#734 → #1089) — 나의 방 메뉴에서 마이페이지 바로가기로.
+  // 열 때마다 1페이지 재로드(완료 취소로 이력이 지워질 수 있음).
+  const walletHistory = useWalletHistory();
+  const [walletHistoryOpen, setWalletHistoryOpen] = useState(false);
+  const { load: loadWalletHistory } = walletHistory;
+  const openWalletHistory = useCallback(() => {
+    setWalletHistoryOpen(true);
+    loadWalletHistory();
+  }, [loadWalletHistory]);
 
   // Gacha machines + draw (spend + dupe→diamond handled server-side; wallet synced
   // from the draw response).
@@ -355,6 +369,12 @@ export function AppShell({
       onSave: handleProfileSave,
     },
     stats: { streak, coin: wallet.coin, diamond: wallet.diamond },
+    // 바로가기 (#1089) — 출석은 이벤트가 있을 때만 배선(없으면 타일이 숨는다).
+    shortcuts: {
+      onOpenAttendance: attendance.status ? openAttendance : undefined,
+      attendancePending,
+      onOpenWalletHistory: openWalletHistory,
+    },
   });
   // 나의 방 페이지 배선 (#692 5단계) — 나의 방 탭 페이지와 서브화면 4종
   // (루틴 관리·추가·카테고리 관리·알림 목록)의 훅·콜백·JSX 소유.
@@ -374,10 +394,6 @@ export function AppShell({
       onCleanCobweb: cleanCobweb,
       markedTodoDates: myRoomData.markedTodoDates,
       onCalendarMonthChange: myRoomData.loadCalendarMonth,
-    },
-    attendance: {
-      attendance: attendance.status ? { pending: !attendance.status.checkedInToday } : undefined,
-      onOpenAttendance: attendance.status ? openAttendance : undefined,
     },
   });
   // 홈 위젯 오늘 요약 동기화 (#604, 안드로이드 전용) — 완료 토글·루틴
@@ -609,6 +625,8 @@ export function AppShell({
       {activeTab ? (
         <BottomNav
           active={activeTab}
+          // 미출석 점은 방 메뉴 버튼에서 마이페이지 탭으로 (#1089).
+          badges={attendancePending ? MY_PAGE_BADGE : undefined}
           onChange={(tab) =>
             // 집이 없으면 집 탭은 빈 상태 대신 집 탐색으로 직행 (#571).
             setScreen(tab === 'house' && housePages.noHouses ? 'houseSearch' : SCREEN_FOR_TAB[tab])
@@ -674,9 +692,24 @@ export function AppShell({
           onClose={() => setAttendanceOpen(false)}
         />
       ) : null}
+
+      {/* 재화 내역 시트 (#734 → #1089) — 마이페이지 바로가기가 연다. */}
+      <WalletHistorySheet
+        visible={walletHistoryOpen}
+        onClose={() => setWalletHistoryOpen(false)}
+        entries={walletHistory.entries}
+        loading={walletHistory.loading}
+        loadError={walletHistory.error}
+        onRetry={walletHistory.load}
+        hasNext={walletHistory.hasNext}
+        onLoadMore={walletHistory.loadMore}
+      />
     </View>
   );
 }
+
+// 참조 고정 — BottomNav prop이 렌더마다 새 객체면 memo 검증(#539)에 잡힌다.
+const MY_PAGE_BADGE = { myPage: true } as const;
 
 const styles = StyleSheet.create({
   root: {

@@ -32,6 +32,12 @@ export type MyPageScreenProps = ScrollRestoreProps & {
   onEditProfile?: () => void;
   /** 헤더 우측 톱니 — 설정 서브화면 (#1088). */
   onOpenSettings?: () => void;
+  /** 출석 이벤트 바로가기 (#851 → #1089) — 이벤트가 있을 때만 배선, 없으면 타일이 숨는다. */
+  onOpenAttendance?: () => void;
+  /** 오늘 미출석 — 타일에 빨간 점. */
+  attendancePending?: boolean;
+  /** 재화 내역 바로가기 (#734 → #1089). */
+  onOpenWalletHistory?: () => void;
   /** 주간회고 다시 보기 (#1056) — 설정 항목에서 마이페이지 항목으로 (#1088). */
   onOpenWeeklyReport?: () => void;
   /** 친구 초대 (#518). */
@@ -43,7 +49,8 @@ export type MyPageScreenProps = ScrollRestoreProps & {
 
 /**
  * 마이페이지 탭 (#1088) — 종전 설정 탭 자리. "보는 곳"이다: 프로필 카드
- * (대표 캐릭터·닉네임·소개), 지표 한 줄(스트릭·코인·다이아), 계정·콘텐츠성
+ * (대표 캐릭터·닉네임·소개), 지표 한 줄(스트릭·코인·다이아), 바로가기 타일
+ * (출석 이벤트·재화 내역 — 나의 방 메뉴에서 옮겨옴, #1089), 계정·콘텐츠성
  * 항목(주간회고·친구 초대·도움말·버그 제보). "바꾸는 곳"인 설정(디자인·알림·
  * 계정 관리)은 헤더 우측 톱니 뒤의 서브화면으로 내려갔다.
  *
@@ -61,6 +68,9 @@ export const MyPageScreen = memo(function MyPageScreen({
   diamondBalance = 0,
   onEditProfile,
   onOpenSettings,
+  onOpenAttendance,
+  attendancePending = false,
+  onOpenWalletHistory,
   onOpenWeeklyReport,
   onInviteFriends,
   onOpenHelp,
@@ -84,6 +94,23 @@ export const MyPageScreen = memo(function MyPageScreen({
     { icon: 'gift', label: '친구 초대', onPress: onInviteFriends },
     { icon: 'help', label: '도움말', onPress: onOpenHelp },
     { icon: 'bug', label: '버그 제보', onPress: onReportBug },
+  ];
+
+  // 바로가기 타일 — 배선된 것만. 캐릭터 교체는 기능 제외 상태(#637)라 없다.
+  const tiles: { icon: IconName; label: string; onPress: () => void; dot?: boolean }[] = [
+    ...(onOpenAttendance
+      ? [
+          {
+            icon: 'calendar' as const,
+            label: '출석 이벤트',
+            onPress: onOpenAttendance,
+            dot: attendancePending,
+          },
+        ]
+      : []),
+    ...(onOpenWalletHistory
+      ? [{ icon: 'coin' as const, label: '재화 내역', onPress: onOpenWalletHistory }]
+      : []),
   ];
 
   const stats: { icon: IconName; color: string; value: string; label: string }[] = [
@@ -191,6 +218,29 @@ export const MyPageScreen = memo(function MyPageScreen({
             ))}
           </View>
         </GlassSurface>
+
+        {tiles.length > 0 ? (
+          <View style={styles.tiles} testID="my-page-tiles">
+            {tiles.map((tile) => (
+              <Pressable
+                key={tile.label}
+                onPress={tile.onPress}
+                accessibilityRole="button"
+                accessibilityLabel={tile.dot ? `${tile.label}, 오늘 미출석` : tile.label}
+                style={styles.tile}>
+                <GlassSurface fallbackColor={t.surface} style={styles.tileFace}>
+                  <View style={[styles.iconCircle, { backgroundColor: t.primarySoft }]}>
+                    <Icon name={tile.icon} size={20} color={t.primaryText} />
+                    {tile.dot ? (
+                      <View style={[styles.tileDot, { backgroundColor: t.danger }]} />
+                    ) : null}
+                  </View>
+                  <Text style={[Typography.label, { color: t.text }]}>{tile.label}</Text>
+                </GlassSurface>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
 
         <GlassSurface
           fallbackColor={t.surface}
@@ -310,6 +360,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.one,
+  },
+  tiles: {
+    flexDirection: 'row',
+    gap: Spacing.three,
+  },
+  tile: { flex: 1 },
+  tileFace: {
+    alignItems: 'center',
+    gap: Spacing.two,
+    paddingVertical: Spacing.three,
+    borderRadius: Radius.xl,
+  },
+  // 미출석 점 — 방 메뉴 버튼에 있던 점(#1055)과 같은 결.
+  tileDot: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 8,
+    height: 8,
+    borderRadius: Radius.pill,
   },
   iconCircle: {
     width: Spacing.four + Spacing.three,

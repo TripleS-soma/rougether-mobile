@@ -63,4 +63,24 @@ describe('MyPageScreen', () => {
     expect(onOpenHelp).toHaveBeenCalledTimes(1);
     expect(onReportBug).toHaveBeenCalledTimes(1);
   });
+
+  it('바로가기 타일 — 출석은 배선될 때만, 미출석이면 라벨에 점 (#1089)', async () => {
+    const onOpenAttendance = jest.fn();
+    const onOpenWalletHistory = jest.fn();
+    const { getByLabelText, queryByLabelText, queryByTestId, rerender } = await render(
+      <MyPageScreen onOpenWalletHistory={onOpenWalletHistory} />,
+    );
+    // 이벤트가 없으면 출석 타일 자체가 없다.
+    expect(queryByLabelText(/출석 이벤트/)).toBeNull();
+    await fireEvent.press(getByLabelText('재화 내역'));
+    expect(onOpenWalletHistory).toHaveBeenCalledTimes(1);
+
+    await rerender(<MyPageScreen onOpenAttendance={onOpenAttendance} attendancePending />);
+    await fireEvent.press(getByLabelText('출석 이벤트, 오늘 미출석'));
+    expect(onOpenAttendance).toHaveBeenCalledTimes(1);
+
+    // 둘 다 없으면 타일 줄이 사라진다.
+    await rerender(<MyPageScreen />);
+    expect(queryByTestId('my-page-tiles')).toBeNull();
+  });
 });
