@@ -1,9 +1,8 @@
 import { type Dispatch, type SetStateAction, useCallback, useEffect, useRef } from 'react';
-import { Animated, BackHandler, Easing, Platform } from 'react-native';
+import { BackHandler, Platform } from 'react-native';
 import { Gesture } from 'react-native-gesture-handler';
 
 import {
-  BACK_SCREEN,
   backTargetFor,
   EDGE_BACK_DISTANCE,
   EDGE_BACK_VELOCITY,
@@ -15,11 +14,10 @@ import {
   type Screen,
 } from '@/components/app/navigation';
 import { useToast } from '@/components/ui/toast';
-import { useAnimatedValue } from '@/hooks/use-stable-value';
 
 /**
  * 셸 내비게이션 컨트롤러 (#692) — 뒤로가기(하드웨어 백 #522 · iOS 엣지 백
- * #564)·화면 전환 손맛(#446)·탭 페이저 정착(#563)을 소유한다. screen 상태
+ * #564)·탭 페이저 정착(#563)을 소유한다. 화면 전환 연출은 use-screen-transition. screen 상태
  * 자체는 셸이 소유해 넘긴다(수십 개 셸 콜백이 setScreen을 의존성 없이 쓰는
  * useState setter 계약 유지). 도메인 상태(집 유무, 미션 판정)도 파라미터.
  */
@@ -115,48 +113,12 @@ export function useAppNavigation({
     [noHouses, setScreen],
   );
 
-  // 화면 전환 손맛 (#446) — 들어오는 화면이 이동 방향에서 밀려 들어온다.
-  // 진입(서브화면)은 우측에서, 복귀(뒤로)는 좌측에서. 탭 간 전환은 이제
-  // 페이저(#563)가 손가락 추종/슬라이드로 직접 그리므로 여기선 건너뛴다.
-  const transOpacity = useAnimatedValue(1);
-  const transX = useAnimatedValue(0);
-  const prevScreenRef = useRef<Screen>(screen);
-  useEffect(() => {
-    const prev = prevScreenRef.current;
-    if (prev === screen) return;
-    prevScreenRef.current = screen;
-    const prevTab = TAB_FOR_SCREEN[prev];
-    const nextTab = TAB_FOR_SCREEN[screen];
-    if (prevTab != null && nextTab != null) return; // 탭 간 — 페이저가 그린다.
-    let slide = 28; // 기본: 서브화면 진입(우측에서)
-    if (
-      BACK_SCREEN[prev] === screen ||
-      ((prev === 'addRoutine' || prev === 'weeklyReport') && screen === addReturnScreen) ||
-      nextTab != null
-    ) {
-      // 뒤로 복귀(백맵 목적지·서브→탭) — 좌측에서 되돌아온다.
-      slide = -28;
-    }
-    // 페이드가 짧으면 깜빡임으로 읽힌다 — 서브화면은 바닥 0.08에서 넉넉히.
-    transOpacity.setValue(0.08);
-    transX.setValue(slide);
-    Animated.parallel([
-      Animated.timing(transOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
-      Animated.timing(transX, {
-        toValue: 0,
-        duration: 340,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [screen, addReturnScreen, transOpacity, transX]);
+  // 화면 전환은 use-screen-transition(#1094 — 두 층 슬라이드)이 맡는다.
 
   return {
     goBack,
     edgeBackPan,
     activeTab,
     handlePageChange,
-    transOpacity,
-    transX,
   };
 }
