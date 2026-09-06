@@ -24,6 +24,7 @@ export type HouseCoverPickerProps = Pick<HouseFrameOptions, 'maxMembers' | 'enab
 /**
  * Cover-image grid shared by 집 생성 and 집 정보 수정: two-per-row CDN
  * thumbnails with the name underneath; the selected cell gets a primary ring.
+ * 사용자에게는 "집 테마"로 읽힌다 (#1112).
  */
 export function HouseCoverPicker({
   covers,
@@ -66,10 +67,13 @@ export function HouseCoverPicker({
               name={c.name}
               testID="cover-art"
             />
-            {/* Supporting base; the label carries the selection so it reads bolder. */}
+            {/* Supporting base; the label carries the selection so it reads bolder.
+                "밤의 천문대 집"처럼 긴 이름이 2열 셀에서 잘리던 것(#1112) — 두 줄까지
+                허용하고 가운데 정렬. */}
             <Text
-              style={[Typography.supporting, emph('semibold'), { color: t.text }]}
-              numberOfLines={1}>
+              style={[Typography.supporting, emph('semibold'), styles.label, { color: t.text }]}
+              numberOfLines={2}
+              testID="cover-label">
               {c.name}
             </Text>
           </Pressable>
@@ -98,4 +102,5 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: Radius.sm,
   },
+  label: { textAlign: 'center' },
 });

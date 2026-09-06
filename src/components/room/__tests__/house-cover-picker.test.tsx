@@ -17,6 +17,16 @@ const COVERS: HouseCover[] = [
 ];
 
 describe('HouseCoverPicker', () => {
+  it('긴 이름이 잘리지 않게 두 줄까지 허용한다 (#1112)', async () => {
+    const covers: HouseCover[] = [
+      { code: 'obs', name: '밤의 천문대 집', coverImageKey: 'house/obs/frame.png' },
+    ];
+    const { getByTestId } = await render(
+      <HouseCoverPicker covers={covers} selectedKey={undefined} onSelect={() => {}} />,
+    );
+    expect(getByTestId('cover-label').props.numberOfLines).toBe(2);
+  });
+
   it('renders a CDN thumbnail per cover and reports the tapped key', async () => {
     const onSelect = jest.fn();
     const { getByLabelText, queryAllByTestId } = await render(

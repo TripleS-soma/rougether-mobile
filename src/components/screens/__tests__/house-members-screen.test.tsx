@@ -180,7 +180,7 @@ describe('HouseMembersScreen — 구성원 관리 (구 house-screen 흐름, #753
       ),
     );
     await fireEvent.press(getByLabelText('집 정보 수정'));
-    expect(getByText('대표 이미지')).toBeTruthy();
+    expect(getByText('집 테마')).toBeTruthy(); // #1112
     // The house's current cover arrives pre-selected.
     expect(getByLabelText('구름 풍선 집 커버').props.accessibilityState.selected).toBe(true);
 
@@ -194,7 +194,7 @@ describe('HouseMembersScreen — 구성원 관리 (구 house-screen 흐름, #753
     // No catalog (load failed / server empty) → the section stays hidden.
     const bare = await render(screenFor(MISSION_HOUSE, { covers: [], onUpdateHouse: jest.fn() }));
     await fireEvent.press(bare.getByLabelText('집 정보 수정'));
-    expect(bare.queryByText('대표 이미지')).toBeNull();
+    expect(bare.queryByText('집 테마')).toBeNull();
   });
 
   it('transfers ownership to a member after confirming', async () => {
