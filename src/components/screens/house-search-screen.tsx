@@ -590,6 +590,7 @@ export function HouseSearchScreen({
                   <SparklePictogram size={14} />
                   <Text style={[Typography.label, { color: t.text }]}>단체미션 미리보기</Text>
                 </View>
+                {/* One vertical scroll region preserves access to every mission (#1119). */}
                 <View>
                   <View style={styles.previewMissionList}>
                     {housePreview.missions.map((mission) => {
