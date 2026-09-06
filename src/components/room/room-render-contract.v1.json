@@ -12,8 +12,27 @@
   },
   "surfaces": {
     "background": { "top": 0, "left": 0, "width": 1, "height": 1, "contentFit": "cover" },
-    "wallpaper": { "top": 0, "left": 0, "width": 1, "height": 0.5, "contentFit": "cover" },
-    "floor": { "top": 0.5, "left": 0, "width": 1, "height": 0.5, "contentFit": "cover" }
+    "wallpaper": {
+      "top": 0,
+      "left": 0,
+      "width": 1,
+      "height": 0.6667,
+      "contentFit": "cover",
+      "contentPosition": "bottom"
+    },
+    "floor": {
+      "top": 0.6667,
+      "left": 0,
+      "width": 1,
+      "height": 0.3333,
+      "contentFit": "cover",
+      "contentPosition": "top"
+    }
+  },
+  "art": {
+    "wallpaper": { "width": 1205, "height": 964 },
+    "floor": { "width": 1205, "height": 482 },
+    "heroHeightRatio": 1.2
   },
   "furniture": {
     "baseWidth": 0.28,
@@ -52,12 +71,12 @@
       "wallpaper": {
         "id": "reference-wallpaper",
         "name": "야자수 조개 벽지",
-        "assetKey": "items/summer-beach-room-v2/wallpaper/summer-beach-room-v2-subtle-palm-shell-wallpaper-1205x585.png"
+        "assetKey": "items/summer-beach-room-v2/wallpaper/summer-beach-room-v2-wallpaper-1205x964.webp"
       },
       "floor": {
         "id": "reference-floor",
         "name": "밝은 모래 원목 바닥",
-        "assetKey": "items/summer-beach-room-v2/wallpaper/summer-beach-room-v2-light-sand-wood-floor-1205x584.png"
+        "assetKey": "items/summer-beach-room-v2/floor/summer-beach-room-v2-floor-1205x482.webp"
       }
     },
     "furniture": {

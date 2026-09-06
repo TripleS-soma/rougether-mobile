@@ -2,7 +2,7 @@
   "expo": {
     "name": "Rougether",
     "slug": "rougether-mobile",
-    "version": "1.4.1",
+    "version": "1.4.2",
     "runtimeVersion": {
       "policy": "fingerprint"
     },

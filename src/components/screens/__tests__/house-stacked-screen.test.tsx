@@ -34,6 +34,29 @@ const SIX: House = {
 };
 
 describe('stacked house screen', () => {
+  it('retries the same frame after moving to another house and returning', async () => {
+    const other = { ...SIX, houseId: 9, name: '다른 집' };
+    const ui = await render(<HouseScreen houses={[SIX, other]} houseIndex={0} enabled />);
+    await fireEvent(ui.getByTestId('house-frame'), 'error', { nativeEvent: { error: 'offline' } });
+    expect(ui.getByTestId('house-frame').props.recyclingKey).toBe(DEFAULT_HOUSE_COVER_KEY);
+    await ui.rerender(<HouseScreen houses={[SIX, other]} houseIndex={1} enabled />);
+    expect(ui.getByTestId('house-frame').props.recyclingKey).toContain('-6p-frame.webp');
+    await ui.rerender(<HouseScreen houses={[SIX, other]} houseIndex={0} enabled />);
+    expect(ui.getByTestId('house-frame').props.recyclingKey).toContain('-6p-frame.webp');
+  });
+
+  it('does not drop members from malformed rows wider than two seats', async () => {
+    const rooms = SIX.floors.flatMap((f) => f.rooms);
+    const wide = {
+      ...SIX,
+      floors: [
+        { level: '2층', rooms: rooms.slice(0, 3) },
+        { level: '1층', rooms: rooms.slice(3) },
+      ],
+    };
+    const ui = await render(<HouseScreen houses={[wide]} enabled />);
+    for (const room of rooms) expect(ui.getByLabelText(room.name!)).toBeTruthy();
+  });
   it('places all six seats in the frame, keeps visit identity, and preserves rooms on fallback', async () => {
     const onVisitFriend = jest.fn();
     const ui = await render(<HouseScreen houses={[SIX]} enabled onVisitFriend={onVisitFriend} />);

@@ -33,8 +33,8 @@ export const HOUSE_PRIVATE_ACCENT = '#D4A574';
 
 /**
  * App capacity choices (#1108). The server still permits 1–10, but new choices
- * stop at six. Legacy frames render seats beyond their windows in the room grid;
- * the separate stacked-frame rollout does not change this policy.
+ * stop at six. Supported covers grow to three stories; legacy covers retain
+ * their extra-room grid. Existing houses are never resized automatically.
  */
 export const HOUSE_CAPACITY_MAX = 6;
 

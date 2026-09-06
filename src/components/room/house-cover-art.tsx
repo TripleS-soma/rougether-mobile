@@ -28,8 +28,8 @@ export function HouseCoverArt({
       key={frame.assetKey}
       source={assetSource(frame.assetKey)}
       style={[{ aspectRatio: frame.aspectRatio }, style]}
-      contentFit={frame.kind === 'stacked' ? 'contain' : legacyContentFit}
-      transition={frame.kind === 'stacked' ? 0 : 120}
+      contentFit={legacyContentFit}
+      transition={0}
       cachePolicy="memory-disk"
       recyclingKey={frame.assetKey}
       onError={onFrameError}

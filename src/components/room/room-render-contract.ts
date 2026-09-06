@@ -22,8 +22,14 @@ export type RoomRenderContract = {
     'background' | 'wallpaper' | 'floor',
     Required<NormalizedRect> & {
       contentFit: 'cover';
+      contentPosition?: 'top' | 'bottom';
     }
   >;
+  art: {
+    wallpaper: { width: number; height: number };
+    floor: { width: number; height: number };
+    heroHeightRatio: number;
+  };
   furniture: {
     baseWidth: number;
     aspectRatio: number;

@@ -422,7 +422,12 @@ export const HouseScreen = memo(function HouseScreen({
     const rows: number[][] = [];
     let seatOffset = 0;
     for (const size of rowShapes) {
-      rows.push(Array.from({ length: size }, (_, i) => seatOffset + i));
+      // Defensively split malformed wide rows so no member is dropped.
+      for (let start = 0; start < size; start += 2) {
+        rows.push(
+          Array.from({ length: Math.min(2, size - start) }, (_, i) => seatOffset + start + i),
+        );
+      }
       seatOffset += size;
     }
     return rows;
@@ -430,6 +435,7 @@ export const HouseScreen = memo(function HouseScreen({
   // Resolve the asset and its cutouts together. Legacy art keeps its lower
   // two rows plus overflow; stacked art contains all supported capacity rows.
   const { frame, onFrameError } = useHouseFrame(currentHouse?.coverImageKey, {
+    failureScope: currentHouse?.houseId ?? houseIndex,
     maxMembers: currentHouse?.maxMembers,
     minimumSeats: displayCells.length,
     enabled,
@@ -1132,8 +1138,8 @@ export const HouseScreen = memo(function HouseScreen({
                           style={StyleSheet.absoluteFill}
                           onLayout={(e) => {
                             const changed =
-                              frameSize.current.w !== e.nativeEvent.layout.width ||
-                              frameSize.current.h !== e.nativeEvent.layout.height;
+                              Math.abs(frameSize.current.w - e.nativeEvent.layout.width) > 1 ||
+                              Math.abs(frameSize.current.h - e.nativeEvent.layout.height) > 1;
                             frameSize.current = {
                               w: e.nativeEvent.layout.width,
                               h: e.nativeEvent.layout.height,

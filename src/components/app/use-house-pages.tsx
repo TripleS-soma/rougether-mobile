@@ -11,7 +11,7 @@ import {
 import { type Screen } from '@/components/app/navigation';
 import type { useFriendVisit } from '@/components/app/use-friend-visit';
 import type { useMissionLinks } from '@/components/app/use-mission-links';
-import { resolveHouseFrame } from '@/resources/house-frame';
+import { houseCoverKey, resolveHouseFrame } from '@/resources/house-frame';
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import {
   type House,
@@ -225,13 +225,14 @@ export function useHousePages({
   useEffect(() => {
     const uris = [
       ...new Set(
-        houses.map((house) =>
-          assetSource(
-            resolveHouseFrame(house.coverImageKey, {
-              maxMembers: house.maxMembers,
-              minimumSeats: house.floors.reduce((sum, floor) => sum + floor.rooms.length, 0),
-            }).assetKey,
-          ).uri,
+        houses.map(
+          (house) =>
+            assetSource(
+              resolveHouseFrame(house.coverImageKey, {
+                maxMembers: house.maxMembers,
+                minimumSeats: house.floors.reduce((sum, floor) => sum + floor.rooms.length, 0),
+              }).assetKey,
+            ).uri,
         ),
       ),
     ];

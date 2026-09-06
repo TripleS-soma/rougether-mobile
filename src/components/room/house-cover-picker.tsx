@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { HouseCoverArt } from '@/components/room/house-cover-art';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
-import type { HouseFrameOptions } from '@/resources/house-frame';
+import { FRAME_ASPECT, type HouseFrameOptions } from '@/resources/house-frame';
 
 /** One selectable house cover (server GET /houses/cover-images). */
 export type HouseCover = {
@@ -96,6 +96,7 @@ const styles = StyleSheet.create({
   },
   art: {
     width: '100%',
+    aspectRatio: FRAME_ASPECT,
     borderRadius: Radius.sm,
   },
 });

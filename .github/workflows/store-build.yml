@@ -24,6 +24,10 @@ on:
         description: iOS 빌드 완료 후 App Store Connect에 자동 제출
         type: boolean
         default: false
+      expected_ios_build:
+        description: '예상 다음 iOS 빌드 번호 (불일치 시 빌드 전 중단, 선택)'
+        type: string
+        required: false
 
 jobs:
   build:
@@ -62,7 +66,19 @@ jobs:
         if: inputs.platform == 'ios' || inputs.platform == 'all'
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPECTED_IOS_BUILD: ${{ inputs.expected_ios_build }}
         run: |
+          if [ -n "$EXPECTED_IOS_BUILD" ]; then
+            eas build:version:get --platform ios --profile production --json --non-interactive | node -e '
+              let s=""; process.stdin.on("data",d=>s+=d).on("end",()=>{
+                const current=Number(JSON.parse(s).buildNumber);
+                const expected=Number(process.env.EXPECTED_IOS_BUILD);
+                if(!Number.isInteger(current)||!Number.isInteger(expected)||current+1!==expected){
+                  console.error(`Build number drift: current=${current}, expected next=${expected}`); process.exit(1);
+                }
+                console.log(`Confirmed next iOS build: ${expected}`);
+              });'
+          fi
           if [ "${{ inputs.submit }}" = "true" ]; then
             # 자동 제출은 빌드 완료를 기다려야 성립한다 — --no-wait면 큐에 넣고
             # CLI가 종료돼 제출이 일어나지 않는다. 대신 러너가 빌드 내내(20~40분)

@@ -4,9 +4,16 @@ import {
   STACKED_HOUSE_THEMES,
   resolveHouseFrame,
   houseWindowSeats,
+  STACKED_HOUSES_ENABLED,
 } from '@/resources/house-frame';
 
 describe('staged house frame contract', () => {
+  it('enables the release by default without publishing new catalog keys', () => {
+    expect(STACKED_HOUSES_ENABLED).toBe(true);
+    const frame = resolveHouseFrame(DEFAULT_HOUSE_COVER_KEY, { maxMembers: 6 });
+    expect(frame.kind).toBe('stacked');
+    expect(frame.canonicalKey).toBe(DEFAULT_HOUSE_COVER_KEY);
+  });
   it.each([2, 3, 4, 6, 10])('OFF preserves art and geometry for %i seats', (maxMembers) => {
     expect(
       resolveHouseFrame(DEFAULT_HOUSE_COVER_KEY, { maxMembers, enabled: false }),
