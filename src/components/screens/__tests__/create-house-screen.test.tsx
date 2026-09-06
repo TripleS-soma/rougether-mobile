@@ -57,7 +57,7 @@ describe('CreateHouseScreen', () => {
     const { getByText, getByLabelText, getByPlaceholderText } = await render(
       <CreateHouseScreen covers={covers} onCreate={onCreate} />,
     );
-    expect(getByText('대표 이미지')).toBeTruthy();
+    expect(getByText('집 테마')).toBeTruthy(); // #1112 후속
 
     await fireEvent.changeText(getByPlaceholderText('우리 집 이름을 정해주세요'), '우리집');
     await fireEvent.press(getByLabelText('구름 풍선 집 커버'));
@@ -68,7 +68,7 @@ describe('CreateHouseScreen', () => {
 
     // No catalog (load failed / server empty) → the section stays hidden.
     const bare = await render(<CreateHouseScreen />);
-    expect(bare.queryByText('대표 이미지')).toBeNull();
+    expect(bare.queryByText('집 테마')).toBeNull();
   });
 
   it('explains a too-short name with a toast instead of creating', async () => {

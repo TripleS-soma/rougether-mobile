@@ -974,7 +974,7 @@ export const galleryEntries: GalleryEntry[] = [
   {
     name: 'HouseCoverPicker',
     description:
-      '집 대표 이미지 선택 그리드 — 서버 커버 카탈로그(GET /houses/cover-images) (#261).',
+      '집 테마(커버) 선택 그리드 — 서버 커버 카탈로그(GET /houses/cover-images) (#261, 문구 #1112).',
     render: () => <HouseCoverPickerDemo />,
   },
   {

@@ -31,6 +31,8 @@ export type SearchHouse = {
   members: number;
   capacity: number;
   tag: string;
+  /** 검색에 잡히는 목표 이름 전부 (#1110) — `tag`는 그중 대표 하나. */
+  tags?: string[];
   /** Server cover art; the pictogram tile is the fallback. */
   coverImageKey?: string;
   icon: PictogramName;
@@ -173,15 +175,18 @@ export function HouseSearchScreen({
   const [preview, setPreview] = useState<{ code: string; info: HousePreview } | null>(null);
   // 탐색 카드 탭 → 미리보기 모달 (#328, 미션 포함 #532). 실패는 훅이 토스트로.
   const [housePreview, setHousePreview] = useState<HousePreviewDetail | null>(null);
+  // 카드가 `#운동`으로 보여주니 그대로 치는 사람이 있다 — 앞의 #·공백은 떼고 비교 (#1110).
+  const needle = query.trim().replace(/^#/, '').toLowerCase();
   const filtered = useMemo(
     () =>
       houses.filter(
         (h) =>
-          query.length === 0 ||
-          h.name.toLowerCase().includes(query.toLowerCase()) ||
-          h.tag.toLowerCase().includes(query.toLowerCase()),
+          needle.length === 0 ||
+          h.name.toLowerCase().includes(needle) ||
+          h.tag.toLowerCase().includes(needle) ||
+          (h.tags ?? []).some((tg) => tg.toLowerCase().includes(needle)),
       ),
-    [houses, query],
+    [houses, needle],
   );
 
   const joinByCode = async () => {
@@ -440,7 +445,7 @@ export function HouseSearchScreen({
                       maxMembers={h.capacity}
                       legacyContentFit="cover"
                       style={styles.houseCover}
-                      name={`${h.name} 대표 이미지`}
+                      name={`${h.name} 집 테마`}
                       testID="house-cover"
                     />
                   ) : (
