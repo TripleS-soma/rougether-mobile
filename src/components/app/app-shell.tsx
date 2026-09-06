@@ -19,7 +19,7 @@ import {
   RoomDecorScreen,
 } from '@/components/screens/room-decor-screen';
 import { useLatestRef, useStableCallback } from '@/hooks/use-stable-value';
-import { SettingsScreen } from '@/components/screens/settings-screen';
+import { MyPageScreen } from '@/components/screens/my-page-screen';
 import { AttendanceSheet } from '@/components/screens/sheets/attendance-sheet';
 import { MissionSheet } from '@/components/screens/sheets/mission-sheet';
 import { BottomNav } from '@/components/ui/bottom-nav';
@@ -114,9 +114,9 @@ export function AppShell({
   // Remember where the add/edit-routine screen was opened from, so its back
   // button returns to the right place (my-room or routine manage).
   const [addReturnScreen, setAddReturnScreen] = useState<Screen>('routineManage');
-  // 설정 → 주간회고 (#1056): 연 곳(설정)으로 되돌아오게 addReturnScreen을 함께 세팅.
-  const openWeeklyReportFromSettings = useCallback(() => {
-    setAddReturnScreen('settings');
+  // 마이페이지 → 주간회고 (#1056 → #1088): 연 곳으로 되돌아오게 addReturnScreen을 함께 세팅.
+  const openWeeklyReportFromMyPage = useCallback(() => {
+    setAddReturnScreen('myPage');
     setScreen('weeklyReport');
   }, []);
 
@@ -329,7 +329,7 @@ export function AppShell({
    */
   const nickname = apiNickname ?? '';
   const bio = apiBio ?? '';
-  // 설정 서피스 (#692 2단계) — 설정 탭·서브화면 8종의 훅·콜백·JSX 소유.
+  // 마이페이지·설정 서피스 (#692 2단계 → #1088) — 마이페이지 탭·서브화면 9종의 훅·콜백·JSX 소유.
   const handleProfileSave = useCallback(
     // saveProfile이 낙관적으로 상태를 바꾸고 실패 시 되돌린다 — 여기서 또
     // 손대면 되돌리기가 어긋난다 (#924). 집 좌석 라벨만은 별도 캐시(서버
@@ -346,8 +346,15 @@ export function AppShell({
     onReplayOnboarding,
     // 주간회고 다시 보기 (#1056) — 데이터는 나의 방 페이지 훅 소유. 훅 순서상
     // myRoomPages가 뒤에 오므로 setScreen 기반의 안정 콜백으로 연결한다.
-    onOpenWeeklyReport: openWeeklyReportFromSettings,
-    profile: { nickname, bio, characterId: wornCharacterId, onSave: handleProfileSave },
+    onOpenWeeklyReport: openWeeklyReportFromMyPage,
+    profile: {
+      nickname,
+      bio,
+      characterId: wornCharacterId,
+      characterFrames: wornCharacterFrames,
+      onSave: handleProfileSave,
+    },
+    stats: { streak, coin: wallet.coin, diamond: wallet.diamond },
   });
   // 나의 방 페이지 배선 (#692 5단계) — 나의 방 탭 페이지와 서브화면 4종
   // (루틴 관리·추가·카테고리 관리·알림 목록)의 훅·콜백·JSX 소유.
@@ -507,7 +514,7 @@ export function AppShell({
               lock={pagerLock}>
               <MyRoomScreen {...myRoomPages.tabProps} {...tabScroll.myRoom} />
               <HouseScreen {...housePages.tabProps} {...tabScroll.house} />
-              <SettingsScreen {...settingsSurface.tabProps} {...tabScroll.settings} />
+              <MyPageScreen {...settingsSurface.myPageProps} {...tabScroll.myPage} />
             </TabPager>
           ) : null}
 
@@ -594,7 +601,7 @@ export function AppShell({
           {/* 집 서브화면 2종 (#692 6단계) — use-house-pages가 그린다. */}
           {housePages.subScreen}
 
-          {/* 설정 서브화면 8종 (#692) — use-settings-surface가 그린다. */}
+          {/* 마이페이지 서브화면 9종(설정 포함, #692 → #1088) — use-settings-surface가 그린다. */}
           {settingsSurface.subScreen}
         </Animated.View>
       </GestureDetector>

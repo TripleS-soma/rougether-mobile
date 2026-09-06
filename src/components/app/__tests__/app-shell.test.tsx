@@ -244,13 +244,13 @@ describe('AppShell', () => {
     // Bottom nav tabs present.
     expect(getByLabelText('나의 방')).toBeTruthy();
     expect(getByLabelText('집')).toBeTruthy();
-    expect(getByLabelText('설정')).toBeTruthy();
+    expect(getByLabelText('마이페이지')).toBeTruthy();
   });
 
   // 엣지 백 오발화 회귀 (#740) — onTouchesDown의 mgr.fail()은 runOnJS라
   // UI 스레드 활성화와 경쟁한다. fail이 늦게 도착한 상황(= jest처럼
   // onTouchesDown 없이 팬이 끝나는 경우)을 재현해, 탭 루트에서는 커밋
-  // 시점 가드가 백을 막는지 본다. 막지 못하면 설정 → (집 건너뜀) → 방.
+  // 시점 가드가 백을 막는지 본다. 막지 못하면 마이페이지 → (집 건너뜀) → 방.
   it('탭 루트에서는 엣지 백이 발화해도 화면이 바뀌지 않는다 (#740)', async () => {
     const { getByText, getByLabelText, queryByText } = await render(
       <QueryProvider>
@@ -259,8 +259,8 @@ describe('AppShell', () => {
         </AuthProvider>
       </QueryProvider>,
     );
-    await fireEvent.press(getByLabelText('설정'));
-    // '설정'은 탭 라벨과 헤더 양쪽에 있어 화면 고유 문구로 단언한다.
+    await fireEvent.press(getByLabelText('마이페이지'));
+    // '마이페이지'는 탭 라벨과 헤더 양쪽에 있어 화면 고유 문구로 단언한다.
     expect(getByText('프로필 편집')).toBeTruthy();
 
     await act(async () =>
@@ -271,7 +271,7 @@ describe('AppShell', () => {
       ]),
     );
 
-    // 설정 탭 유지 — 방(나의 방)으로 튀지 않는다.
+    // 마이페이지 탭 유지 — 방(나의 방)으로 튀지 않는다.
     expect(getByText('프로필 편집')).toBeTruthy();
     expect(queryByText('오늘의 할 일')).toBeNull();
   });

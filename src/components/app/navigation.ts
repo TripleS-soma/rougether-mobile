@@ -17,6 +17,7 @@ export type Screen =
   | 'friendRoom'
   | 'houseSearch'
   | 'createHouse'
+  | 'myPage'
   | 'settings'
   | 'theme'
   | 'font'
@@ -44,7 +45,9 @@ export const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   friendRoom: null,
   houseSearch: null,
   createHouse: null,
-  settings: 'settings',
+  // 마이페이지 탭 (#1088) — 설정은 그 안의 서브화면이 됐다.
+  myPage: 'myPage',
+  settings: null,
   theme: null,
   font: null,
   profileEdit: null,
@@ -61,11 +64,11 @@ export const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
 export const SCREEN_FOR_TAB: Record<NavTab, Screen> = {
   myRoom: 'myRoom',
   house: 'house',
-  settings: 'settings',
+  myPage: 'myPage',
 };
 
 /** 하단 탭의 페이지 순서 (#563) — 페이저 인덱스 ↔ 탭 매핑. */
-export const NAV_ORDER: NavTab[] = ['myRoom', 'house', 'settings'];
+export const NAV_ORDER: NavTab[] = ['myRoom', 'house', 'myPage'];
 
 /**
  * Where the Android hardware back button lands from each screen. `null` on
@@ -85,19 +88,21 @@ export const BACK_SCREEN: Record<Screen, Screen | null> = {
   friendRoom: 'house',
   houseSearch: 'house',
   createHouse: 'houseSearch',
-  settings: 'myRoom',
+  myPage: 'myRoom',
+  // 설정은 마이페이지의 서브화면 (#1088); 계정·콘텐츠성 화면은 마이페이지로 돌아간다.
+  settings: 'myPage',
   theme: 'settings',
   font: 'settings',
-  profileEdit: 'settings',
+  profileEdit: 'myPage',
   notificationList: 'myRoom',
   calendarImport: 'settings',
-  bugReport: 'settings',
+  bugReport: 'myPage',
   notifications: 'settings',
   sound: 'settings',
-  help: 'settings',
-  inviteFriends: 'settings',
-  // 설정에서도, 새 회고 배너에서도 열린다 — 실제 목적지는 addReturnScreen (#1056).
-  weeklyReport: 'settings',
+  help: 'myPage',
+  inviteFriends: 'myPage',
+  // 마이페이지에서도, 새 회고 배너에서도 열린다 — 실제 목적지는 addReturnScreen (#1056).
+  weeklyReport: 'myPage',
 };
 
 /** 더블 백 종료 허용 창 (#522) — 토스트 표시와 체감이 맞는 2초. */

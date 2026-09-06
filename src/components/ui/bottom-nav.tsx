@@ -9,8 +9,8 @@ import HomeActive from '@/assets/images/common/home-icon-active.svg';
 import HomeInactive from '@/assets/images/common/home-icon.svg';
 import HouseActive from '@/assets/images/common/house-icon-active.svg';
 import HouseInactive from '@/assets/images/common/house-icon.svg';
-import SettingsActive from '@/assets/images/common/settings-icon-active.svg';
-import SettingsInactive from '@/assets/images/common/settings-icon.svg';
+import ProfileActive from '@/assets/images/common/profile-icon-active.svg';
+import ProfileInactive from '@/assets/images/common/profile-icon.svg';
 import {
   NAV_ICON_LABEL_GAP,
   NAV_ICON_SIZE,
@@ -26,12 +26,13 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
 
-export type NavTab = 'myRoom' | 'house' | 'settings';
+export type NavTab = 'myRoom' | 'house' | 'myPage';
 
 const TABS: { key: NavTab; label: string; active: FC<SvgProps>; inactive: FC<SvgProps> }[] = [
   { key: 'myRoom', label: '나의 방', active: HomeActive, inactive: HomeInactive },
   { key: 'house', label: '집', active: HouseActive, inactive: HouseInactive },
-  { key: 'settings', label: '설정', active: SettingsActive, inactive: SettingsInactive },
+  // 마이페이지 (#1088) — 설정 탭을 대체. 설정은 마이페이지 헤더의 톱니로 들어간다.
+  { key: 'myPage', label: '마이페이지', active: ProfileActive, inactive: ProfileInactive },
 ];
 
 export type BottomNavProps = {
@@ -72,7 +73,7 @@ function TabIcon({
 }
 
 /**
- * App bottom navigation (나의 방 / 집 / 설정) with custom SVG icons.
+ * App bottom navigation (나의 방 / 집 / 마이페이지) with custom SVG icons.
  *
  * 화면 바닥에 떠 있는 알약 오버레이 (#1049 → #1074에서 전 플랫폼 공통). 레이아웃
  * 높이가 없으므로 밑을 지나는 스크롤 화면이 `useBottomNavInset()`만큼 하단
@@ -106,13 +107,13 @@ export function BottomNav({ active, onChange }: BottomNavProps) {
         </Text>
       </Pressable>
     );
-    // 설정 탭은 코치마크 마지막 단계의 대상 (#351).
+    // 마이페이지 탭은 코치마크 마지막 단계의 대상 (#351 → #1088).
     return (
       <View
         key={key}
         testID={`bottom-nav-tab-${key}`}
         onLayout={(e) => recordTab(index, e.nativeEvent.layout)}>
-        {key === 'settings' ? <CoachTarget id="nav-settings">{inner}</CoachTarget> : inner}
+        {key === 'myPage' ? <CoachTarget id="nav-my-page">{inner}</CoachTarget> : inner}
       </View>
     );
   });
