@@ -445,7 +445,7 @@ export function HouseSearchScreen({
                       maxMembers={h.capacity}
                       legacyContentFit="cover"
                       style={styles.houseCover}
-                      name={`${h.name} 대표 이미지`}
+                      name={`${h.name} 집 테마`}
                       testID="house-cover"
                     />
                   ) : (
