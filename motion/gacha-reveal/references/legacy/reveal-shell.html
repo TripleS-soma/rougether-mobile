@@ -1,0 +1,517 @@
+<!doctype html>
+<html
+  lang="en"
+  data-composition-variables='[
+    {"id":"tier","type":"string","label":"Tier","default":"common"}
+  ]'>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=720, height=1280" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 720px;
+        height: 1280px;
+        margin: 0;
+        overflow: hidden;
+        background: #15120f;
+      }
+
+      #root {
+        position: relative;
+        width: 720px;
+        height: 1280px;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 50% 41%, var(--heart) 0 6%, transparent 32%),
+          radial-gradient(circle at 50% 38%, var(--aura) 0 15%, transparent 48%),
+          linear-gradient(180deg, var(--sky-a), var(--sky-b) 49%, var(--floor) 100%);
+      }
+
+      .back-panel {
+        position: absolute;
+        left: 74px;
+        top: 210px;
+        width: 572px;
+        height: 630px;
+        border: 2px solid rgba(255, 245, 215, 0.13);
+        border-radius: 58px;
+        background:
+          linear-gradient(
+            90deg,
+            transparent 0 48%,
+            rgba(255, 255, 255, 0.045) 48% 52%,
+            transparent 52%
+          ),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.05));
+        box-shadow: inset 0 0 90px rgba(255, 255, 255, 0.05);
+      }
+
+      .floor-ring {
+        position: absolute;
+        left: 116px;
+        top: 730px;
+        width: 488px;
+        height: 164px;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 236, 182, 0.25);
+        background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.12), transparent 68%);
+      }
+
+      .vignette {
+        position: absolute;
+        inset: -80px;
+        background:
+          radial-gradient(
+            circle at 50% 39%,
+            transparent 0 27%,
+            rgba(0, 0, 0, 0.14) 48%,
+            rgba(0, 0, 0, 0.67) 100%
+          ),
+          linear-gradient(180deg, rgba(0, 0, 0, 0.18), transparent 36%, rgba(0, 0, 0, 0.38));
+      }
+
+      .portal,
+      .portal-core,
+      .portal-ring,
+      .shock,
+      .flash,
+      .curtain,
+      .ray,
+      .shard,
+      .seed {
+        position: absolute;
+      }
+
+      .portal {
+        left: 130px;
+        top: 335px;
+        width: 460px;
+        height: 460px;
+        border-radius: 50%;
+        filter: drop-shadow(0 0 55px var(--glow));
+      }
+
+      .portal-core {
+        left: 118px;
+        top: 118px;
+        width: 224px;
+        height: 224px;
+        border-radius: 50%;
+        background:
+          radial-gradient(
+            circle,
+            rgba(255, 255, 255, 0.98),
+            rgba(255, 242, 185, 0.74) 27%,
+            transparent 62%
+          ),
+          radial-gradient(circle, var(--core), transparent 72%);
+        opacity: 0.18;
+      }
+
+      .portal-ring {
+        left: 72px;
+        top: 72px;
+        width: 316px;
+        height: 316px;
+        border-radius: 50%;
+        border: 8px solid var(--ring);
+        opacity: 0.16;
+      }
+
+      .portal-ring.r2 {
+        left: 39px;
+        top: 39px;
+        width: 382px;
+        height: 382px;
+        border-width: 3px;
+        border-color: rgba(255, 255, 255, 0.38);
+      }
+
+      .portal-ring.r3 {
+        left: 9px;
+        top: 9px;
+        width: 442px;
+        height: 442px;
+        border-width: 2px;
+        border-color: var(--accent);
+      }
+
+      .shock {
+        left: 166px;
+        top: 372px;
+        width: 388px;
+        height: 388px;
+        border-radius: 50%;
+        border: 5px solid var(--accent);
+        opacity: 0;
+      }
+
+      .flash {
+        inset: -80px;
+        background: radial-gradient(
+          circle at 50% 43%,
+          rgba(255, 255, 255, 1),
+          rgba(255, 236, 180, 0.76) 18%,
+          transparent 58%
+        );
+        opacity: 0;
+      }
+
+      .curtain {
+        width: 62%;
+        top: 0;
+        bottom: 0;
+        background:
+          linear-gradient(90deg, rgba(0, 0, 0, 0.82), rgba(0, 0, 0, 0.28) 72%, transparent),
+          radial-gradient(circle at 100% 45%, rgba(255, 245, 196, 0.12), transparent 42%);
+      }
+
+      .curtain.right {
+        right: 0;
+        transform: scaleX(-1);
+      }
+
+      .curtain.left {
+        left: 0;
+      }
+
+      .ray {
+        left: 358px;
+        top: 486px;
+        width: 7px;
+        height: var(--ray-length);
+        border-radius: 999px;
+        background: linear-gradient(180deg, transparent, var(--ray), transparent);
+        opacity: 0;
+        transform-origin: 50% 100%;
+      }
+
+      .shard {
+        left: 350px;
+        top: 557px;
+        width: 18px;
+        height: 46px;
+        border-radius: 999px 999px 12px 12px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), var(--accent));
+        box-shadow: 0 0 18px var(--glow);
+        opacity: 0;
+      }
+
+      .seed {
+        left: 352px;
+        top: 552px;
+        width: 16px;
+        height: 16px;
+        border-radius: 999px;
+        background: var(--seed);
+        box-shadow: 0 0 18px var(--seed);
+        opacity: 0;
+      }
+
+      .safe-zone {
+        position: absolute;
+        left: 150px;
+        top: 355px;
+        width: 420px;
+        height: 420px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.08), transparent 66%);
+        opacity: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="reveal-shell"
+      data-start="0"
+      data-duration="2.8"
+      data-width="720"
+      data-height="1280"
+      data-fps="30">
+      <div class="back-panel"></div>
+      <div class="floor-ring"></div>
+      <div class="portal">
+        <div class="portal-ring r3"></div>
+        <div class="portal-ring r2"></div>
+        <div class="portal-ring r1"></div>
+        <div class="portal-core"></div>
+      </div>
+      <div class="safe-zone"></div>
+      <div class="rays" data-layout-allow-overflow></div>
+      <div class="shards"></div>
+      <div class="seeds"></div>
+      <div class="shock"></div>
+      <div class="flash" data-layout-allow-overflow></div>
+      <div class="curtain left" data-layout-allow-overflow></div>
+      <div class="curtain right" data-layout-allow-overflow></div>
+      <div class="vignette" data-layout-allow-overflow></div>
+    </div>
+
+    <script>
+      const vars = window.__hyperframes?.getVariables?.() ?? { tier: 'common' };
+      const tier = ['common', 'rare', 'legendary'].includes(vars.tier) ? vars.tier : 'common';
+      const profiles = {
+        common: {
+          skyA: '#463C2E',
+          skyB: '#7B6245',
+          floor: '#2D2620',
+          heart: 'rgba(255, 231, 153, 0.48)',
+          aura: 'rgba(255, 185, 92, 0.34)',
+          core: '#FFD77D',
+          ring: '#FFE09A',
+          accent: '#F7B95A',
+          glow: 'rgba(247, 185, 90, 0.78)',
+          ray: 'rgba(255, 220, 137, 0.86)',
+          seed: '#FFE7A7',
+          rayLength: '330px',
+          rayCount: 10,
+          shardCount: 12,
+          seedCount: 16,
+          push: 1.035,
+        },
+        rare: {
+          skyA: '#263E45',
+          skyB: '#4D7C75',
+          floor: '#1D2C31',
+          heart: 'rgba(197, 255, 229, 0.55)',
+          aura: 'rgba(105, 211, 201, 0.42)',
+          core: '#A7FFF0',
+          ring: '#C4FFF0',
+          accent: '#72E2CF',
+          glow: 'rgba(114, 226, 207, 0.86)',
+          ray: 'rgba(192, 255, 240, 0.92)',
+          seed: '#C7FFF4',
+          rayLength: '440px',
+          rayCount: 16,
+          shardCount: 22,
+          seedCount: 26,
+          push: 1.065,
+        },
+        legendary: {
+          skyA: '#201A39',
+          skyB: '#725334',
+          floor: '#171225',
+          heart: 'rgba(255, 242, 168, 0.72)',
+          aura: 'rgba(255, 188, 74, 0.52)',
+          core: '#FFF0A8',
+          ring: '#FFE376',
+          accent: '#FFC74D',
+          glow: 'rgba(255, 199, 77, 0.96)',
+          ray: 'rgba(255, 238, 166, 1)',
+          seed: '#FFF4B7',
+          rayLength: '560px',
+          rayCount: 24,
+          shardCount: 36,
+          seedCount: 40,
+          push: 1.105,
+        },
+      };
+      const profile = profiles[tier];
+      const root = document.querySelector('#root');
+      root.dataset.tier = tier;
+      root.style.setProperty('--sky-a', profile.skyA);
+      root.style.setProperty('--sky-b', profile.skyB);
+      root.style.setProperty('--floor', profile.floor);
+      root.style.setProperty('--heart', profile.heart);
+      root.style.setProperty('--aura', profile.aura);
+      root.style.setProperty('--core', profile.core);
+      root.style.setProperty('--ring', profile.ring);
+      root.style.setProperty('--accent', profile.accent);
+      root.style.setProperty('--glow', profile.glow);
+      root.style.setProperty('--ray', profile.ray);
+      root.style.setProperty('--seed', profile.seed);
+      root.style.setProperty('--ray-length', profile.rayLength);
+
+      const rayHost = document.querySelector('.rays');
+      for (let i = 0; i < profile.rayCount; i += 1) {
+        const node = document.createElement('div');
+        node.className = 'ray';
+        node.dataset.layoutAllowOverflow = '';
+        node.style.transform = `rotate(${(360 / profile.rayCount) * i}deg) translateY(-38px)`;
+        rayHost.appendChild(node);
+      }
+
+      const vectors = [
+        [-160, -210],
+        [168, -196],
+        [-206, -92],
+        [216, -64],
+        [-176, 86],
+        [188, 112],
+        [-88, 208],
+        [98, 226],
+        [-22, -258],
+        [34, 268],
+        [-268, 28],
+        [276, 34],
+      ];
+      const shardHost = document.querySelector('.shards');
+      for (let i = 0; i < profile.shardCount; i += 1) {
+        const node = document.createElement('div');
+        node.className = 'shard';
+        const [x, y] = vectors[i % vectors.length];
+        node.dataset.x = String(x * (1 + Math.floor(i / vectors.length) * 0.16));
+        node.dataset.y = String(y * (1 + Math.floor(i / vectors.length) * 0.1));
+        node.dataset.r = String((i * 29) % 360);
+        shardHost.appendChild(node);
+      }
+
+      const seedHost = document.querySelector('.seeds');
+      for (let i = 0; i < profile.seedCount; i += 1) {
+        const node = document.createElement('div');
+        node.className = 'seed';
+        const angle = (Math.PI * 2 * i) / profile.seedCount;
+        const radius = 132 + (i % 5) * 34;
+        node.dataset.x = String(Math.cos(angle) * radius);
+        node.dataset.y = String(Math.sin(angle) * radius * 0.74);
+        seedHost.appendChild(node);
+      }
+
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      tl.set('.curtain.left', { x: 0 }, 0);
+      tl.set('.curtain.right', { x: 0 }, 0);
+      tl.set('.portal', { scale: 0.62, rotation: -12, opacity: 0.42 }, 0);
+      tl.set('.portal-core', { scale: 0.5, opacity: 0.12 }, 0);
+      tl.set('.portal-ring', { scale: 0.7, opacity: 0.08 }, 0);
+      tl.set('.floor-ring', { scaleX: 0.58, scaleY: 0.76, opacity: 0.2 }, 0);
+      tl.to('#root', { scale: profile.push, duration: 2.1, ease: 'sine.inOut' }, 0.16);
+      tl.to(
+        '.back-panel',
+        { scale: 0.96, opacity: 0.86, duration: 0.9, ease: 'power1.inOut' },
+        0.16,
+      );
+      tl.to(
+        '.floor-ring',
+        { scaleX: 1.0, scaleY: 1, opacity: 0.68, duration: 0.72, ease: 'expo.out' },
+        0.26,
+      );
+      tl.to(
+        '.portal',
+        { scale: 1, rotation: 16, opacity: 1, duration: 1.04, ease: 'expo.out' },
+        0.3,
+      );
+      tl.to(
+        '.portal-core',
+        { scale: 1.2, opacity: 0.74, duration: 0.82, ease: 'sine.inOut' },
+        0.64,
+      );
+      tl.to(
+        '.portal-ring.r1',
+        { scale: 1.06, opacity: 0.92, duration: 0.58, ease: 'back.out(1.7)' },
+        0.72,
+      );
+      tl.to(
+        '.portal-ring.r2',
+        { scale: 1.08, opacity: 0.54, duration: 0.72, ease: 'circ.out' },
+        0.82,
+      );
+      tl.to(
+        '.portal-ring.r3',
+        {
+          scale: 1.04,
+          opacity: tier === 'legendary' ? 0.6 : 0.34,
+          duration: 0.88,
+          ease: 'power3.out',
+        },
+        0.98,
+      );
+      tl.to('.curtain.left', { x: -260, duration: 0.52, ease: 'power4.in' }, 1.2);
+      tl.to('.curtain.right', { x: 260, duration: 0.52, ease: 'power4.in' }, 1.2);
+      tl.to(
+        '.ray',
+        {
+          opacity: tier === 'common' ? 0.48 : 0.78,
+          scaleY: tier === 'legendary' ? 1.32 : 1.08,
+          duration: 0.34,
+          stagger: 0.006,
+          ease: 'expo.out',
+        },
+        1.34,
+      );
+      tl.to(
+        '.flash',
+        {
+          opacity: tier === 'legendary' ? 0.92 : tier === 'rare' ? 0.72 : 0.54,
+          duration: 0.14,
+          ease: 'power4.out',
+        },
+        1.48,
+      );
+      tl.to('.flash', { opacity: 0, duration: 0.36, ease: 'sine.out' }, 1.62);
+      tl.to('.shock', { opacity: 0.72, scale: 1.42, duration: 0.24, ease: 'expo.out' }, 1.5);
+      tl.to('.shock', { opacity: 0, scale: 1.86, duration: 0.4, ease: 'power2.out' }, 1.76);
+      tl.to('.safe-zone', { opacity: 0.72, duration: 0.18, ease: 'power4.out' }, 1.54);
+      tl.to('.safe-zone', { opacity: 0.16, duration: 0.72, ease: 'sine.inOut' }, 1.78);
+      document.querySelectorAll('.shard').forEach((node, index) => {
+        tl.to(
+          node,
+          {
+            x: Number(node.dataset.x),
+            y: Number(node.dataset.y),
+            rotation: Number(node.dataset.r),
+            opacity: index % 3 === 0 && tier === 'legendary' ? 0.95 : 0.72,
+            scale: index % 2 === 0 ? 0.84 : 0.58,
+            duration: 0.62,
+            ease: index % 2 === 0 ? 'expo.out' : 'circ.out',
+          },
+          1.5 + (index % 6) * 0.012,
+        );
+        tl.to(
+          node,
+          { opacity: 0, scale: 0.18, duration: 0.38, ease: 'power3.in' },
+          2.1 + (index % 5) * 0.015,
+        );
+      });
+      document.querySelectorAll('.seed').forEach((node, index) => {
+        tl.to(
+          node,
+          {
+            x: Number(node.dataset.x),
+            y: Number(node.dataset.y),
+            opacity: 0.72,
+            scale: index % 4 === 0 ? 1.28 : 0.86,
+            duration: 0.7,
+            ease: index % 3 === 0 ? 'power4.out' : 'sine.out',
+          },
+          1.58 + (index % 8) * 0.01,
+        );
+        tl.to(node, { opacity: 0.18, duration: 0.44, ease: 'sine.in' }, 2.18 + (index % 4) * 0.02);
+      });
+      tl.to(
+        '.portal',
+        {
+          scale: tier === 'legendary' ? 1.08 : 1.02,
+          rotation: tier === 'common' ? 22 : 34,
+          duration: 0.88,
+          ease: 'sine.inOut',
+        },
+        1.66,
+      );
+      tl.to(
+        '.ray',
+        { opacity: tier === 'common' ? 0.1 : 0.2, scaleY: 0.8, duration: 0.56, ease: 'power2.in' },
+        2.14,
+      );
+      tl.to(
+        '.portal-core',
+        {
+          opacity: tier === 'legendary' ? 0.5 : 0.34,
+          scale: 0.96,
+          duration: 0.72,
+          ease: 'sine.inOut',
+        },
+        2.02,
+      );
+      tl.to('.vignette', { opacity: 0.88, duration: 0.4, ease: 'sine.inOut' }, 2.36);
+      window.__timelines['reveal-shell'] = tl;
+    </script>
+  </body>
+</html>

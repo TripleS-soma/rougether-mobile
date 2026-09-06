@@ -213,11 +213,15 @@ export type GachaListResponse = {
   items?: GachaResponse[];
 };
 
+export type GachaCategory = 'WALLPAPER' | 'FLOOR' | 'FURNITURE';
+
 export type GachaResponse = {
   gachaId?: number;
   code?: string;
   name?: string;
-  themeId?: number;
+  themeId?: number | null;
+  /** Theme-independent decoration box; legacy machines may omit it. */
+  category?: GachaCategory | null;
   giftBoxAssetKey?: string;
   costCurrencyType?: 'COIN' | 'DIAMOND';
   costAmount?: number;

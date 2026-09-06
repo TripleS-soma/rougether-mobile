@@ -2,19 +2,18 @@ import { openBrowserAsync } from 'expo-web-browser';
 import { type ReactNode, useState } from 'react';
 import { Text, View } from 'react-native';
 
-import type { GachaMachine } from '@/api/adapters';
 import { type HouseCover, HouseCoverPicker } from '@/components/room/house-cover-picker';
 import { HouseOrderDots } from '@/components/room/house-order-dots';
 import { HousePreviewFrame } from '@/components/room/house-preview-frame';
 import { StackedHouseDemo } from '@/dev/stacked-house-demo';
 import { Room } from '@/components/room/room';
-import { GachaAccents } from '@/constants/theme';
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
 import { CategoryManageScreen } from '@/components/screens/category-manage-screen';
 import { CalendarImportScreen } from '@/components/screens/calendar-import-screen';
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
-import { GachaScreen } from '@/components/screens/gacha-screen';
+import { GachaPhonePreview } from '@/dev/gacha-phone-preview';
+import { GachaStorybookPreview } from '@/dev/gacha-preview';
 import { HouseScreen, type House } from '@/components/screens/house-screen';
 import { HouseMissionsScreen } from '@/components/screens/house-missions-screen';
 import { HouseMembersScreen, manageableMembers } from '@/components/screens/house-members-screen';
@@ -962,12 +961,34 @@ export const galleryEntries: GalleryEntry[] = [
   },
   {
     name: 'GachaScreen',
-    description: 'Ported from the prototype GachaScreen (#13): box select + pull animation.',
-    render: () => (
-      <View style={{ height: 700, alignSelf: 'stretch' }}>
-        <GachaScreen gachas={GACHA_SAMPLES} coinBalance={5600} />
-      </View>
-    ),
+    description:
+      '테마 구분 없는 벽지·바닥·가구 3개 상자. 실제 재화 소모 없이 단챠·5+1·보상 목록을 확인한다.',
+    render: () => <GachaPhonePreview />,
+  },
+  {
+    name: 'GachaPhonePreview',
+    description: '전체 화면 휴대폰 QA · 전설 연출 · 안전 영역 상단 59 / 하단 34',
+    render: () => <GachaPhonePreview fullscreen />,
+  },
+  {
+    name: 'GachaPhoneCommon',
+    description: '전체 화면 휴대폰 QA · 일반 연출',
+    render: () => <GachaPhonePreview fullscreen rarity="일반" />,
+  },
+  {
+    name: 'GachaPhoneRare',
+    description: '전체 화면 휴대폰 QA · 희귀 연출',
+    render: () => <GachaPhonePreview fullscreen rarity="희귀" />,
+  },
+  {
+    name: 'GachaPhoneReducedMotion',
+    description: '전체 화면 휴대폰 QA · 동작 줄이기',
+    render: () => <GachaPhonePreview fullscreen reducedMotion />,
+  },
+  {
+    name: 'GachaStorybookArchive',
+    description: '이전 PR의 숲속 선물상자 아트 비교용. 실제 유료 뽑기와 분리된 개발 전용 무대.',
+    render: () => <GachaStorybookPreview />,
   },
   {
     name: 'HouseSearchScreen',
@@ -1238,36 +1259,6 @@ export const galleryEntries: GalleryEntry[] = [
         <ToastDemo />
       </ToastProvider>
     ),
-  },
-];
-
-/**
- * 뽑기 머신 샘플 — 갤러리에서 선물상자 아트(서버 #276)를 눈으로 확인하려고 둔다.
- * `giftBoxKey`는 실서버 `GET /gacha`가 주는 공용 상자 키의 스냅샷(2026-08-16)이고,
- * 아트가 교체되면 화면이 픽토그램으로 폴백하므로 깨지지는 않는다. 두 번째 머신은
- * 키를 비워 **폴백 경로도 같이** 보이게 했다.
- */
-const GACHA_SAMPLES: GachaMachine[] = [
-  {
-    id: 1,
-    name: '작은 베이커리 아침 뽑기',
-    costCurrencyType: 'COIN',
-    costAmount: 25,
-    drawCount: 1,
-    icon: 'croissant',
-    accent: GachaAccents[0],
-    giftBoxKey: 'items/0c213078-69ce-4a77-a729-9144905dfc22.png',
-    kind: 'furniture',
-  },
-  {
-    id: 12,
-    name: '캐릭터 뽑기',
-    costCurrencyType: 'COIN',
-    costAmount: 500,
-    drawCount: 1,
-    icon: 'paw',
-    accent: GachaAccents[1],
-    kind: 'character',
   },
 ];
 

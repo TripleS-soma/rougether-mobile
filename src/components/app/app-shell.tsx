@@ -590,6 +590,7 @@ export function AppShell({
           onRetry={retryGachas}
           coinBalance={wallet.coin}
           diamondBalance={wallet.diamond}
+          soundEffectsEnabled={settingsSurface.soundSettings.effects}
           onBack={() => setScreen('myRoom')}
           onDraw={async (gachaId, count) => {
             const results = await drawGachaMachine(gachaId, count);

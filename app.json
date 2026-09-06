@@ -199,6 +199,7 @@
           "project": "rougether-mobile"
         }
       ],
+      "expo-video",
       [
         "expo-alternate-app-icons",
         [
