@@ -579,7 +579,8 @@ export function HouseMembersScreen({
               </View>
               {covers.length > 0 ? (
                 <>
-                  <Text style={[Typography.supporting, { color: t.textMuted }]}>대표 이미지</Text>
+                  {/* 커버는 집의 겉모습 자체라 "집 테마"로 (#1112). */}
+                  <Text style={[Typography.supporting, { color: t.textMuted }]}>집 테마</Text>
                   <HouseCoverPicker
                     covers={covers}
                     selectedKey={editCover}
