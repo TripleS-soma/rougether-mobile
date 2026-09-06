@@ -944,7 +944,7 @@ export const galleryEntries: GalleryEntry[] = [
   },
   {
     name: 'GachaScreen',
-    description: '상자 충전 → 축하 연출 → 카드 공개. 등급별 단챠·5+1회 무료 미리보기.',
+    description: '생성 아트로 만든 숲속 개봉 무대 · 상자를 톡 눌러 열기 · 등급별 무료 미리보기.',
     render: () => <GachaPreview machines={GACHA_SAMPLES} />,
   },
   {

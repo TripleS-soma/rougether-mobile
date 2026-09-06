@@ -29,6 +29,7 @@ export const Spacing = {
 
 /** Gacha stage/art geometry; animation transforms are relative to these sizes. */
 export const GachaStage = {
+  storybook: 360,
   size: 240,
   halo: 200,
   box: 120,
@@ -40,6 +41,18 @@ export const GachaStage = {
   art: 68,
   heroArt: 150,
   particle: 8,
+} as const;
+
+/** Fixed ink/paper palette paired with the illustrated forest reward stage. */
+export const GachaSceneColors = {
+  ink: '#41472F',
+  muted: '#67734F',
+  paper: '#FFFAEC',
+  leaf: '#B5C98A',
+  onLeaf: '#343D24',
+  gold: '#D99D46',
+  glow: '#FFF0AD',
+  veil: 'rgba(255,250,236,0.12)',
 } as const;
 
 /**

@@ -2,11 +2,11 @@ import { act, fireEvent, render } from '@testing-library/react-native';
 
 import {
   AUTO_REVEAL_MS,
-  ChargingBox,
   FlipCard,
   REVEAL_STAGGER_MS,
   RevealCard,
 } from '@/components/screens/gacha/draw-animation';
+import { GiftOpeningStage } from '@/components/screens/gacha/storybook-draw';
 import { hapticImpact, hapticSelection } from '@/utils/haptics';
 
 jest.mock('@/utils/haptics', () => ({ hapticImpact: jest.fn(), hapticSelection: jest.fn() }));
@@ -69,7 +69,7 @@ describe('Gacha reward animation', () => {
     const onReveal = jest.fn();
     const screen = await render(
       <>
-        <ChargingBox />
+        <GiftOpeningStage phase="opening" />
         <FlipCard item={reward} index={0} onReveal={onReveal} />
       </>,
     );

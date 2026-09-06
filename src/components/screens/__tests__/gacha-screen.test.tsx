@@ -74,7 +74,7 @@ describe('GachaScreen', () => {
     const pullButton = screen.getByText('1회 뽑기');
     await fireEvent.press(pullButton);
     await fireEvent(screen.getByTestId('gacha-draw-modal'), 'requestClose');
-    expect(screen.getByTestId('gacha-charge')).toBeTruthy();
+    expect(screen.getByTestId('gacha-gift-stage')).toBeTruthy();
     await fireEvent.press(pullButton);
     expect(onDraw).toHaveBeenCalledTimes(1);
     await screen.unmount();
@@ -144,7 +144,7 @@ describe('GachaScreen', () => {
    * 뽑기 버튼을 누른 순간 오버레이가 픽토그램으로 갈아타면, 방금 고른 **그
    * 상자**를 여는 것으로 안 읽힌다. 충전 중에도 같은 아트를 보여준다.
    */
-  it('뽑는 중 오버레이도 같은 선물상자 아트를 보여준다', async () => {
+  it('개봉 무대에도 선택한 머신의 상자를 테마 배지로 보여준다', async () => {
     const withArt: GachaMachine = { ...machine, giftBoxKey: 'items/gift-box.png' };
     const onDraw = jest.fn(async (): Promise<DrawResult[]> => [
       { name: '허브 화분', rarity: '희귀', converted: false },

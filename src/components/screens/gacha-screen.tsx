@@ -14,15 +14,13 @@ import { useReducedMotion } from 'react-native-reanimated';
 import type { GachaMachine } from '@/api/adapters';
 import type { DrawResult, GachaDrawCount, GachaRewardResponse } from '@/api';
 import {
-  BURST_MS,
   BurstOverlay,
-  ChargingBox,
   DEFAULT_RARITY,
   FlipCard,
-  MIN_CHARGE_MS,
   RevealCard,
   rarityColor,
 } from '@/components/screens/gacha/draw-animation';
+import { GiftOpeningStage, StorybookBackdrop } from '@/components/screens/gacha/storybook-draw';
 import { SheetHandle } from '@/components/ui/sheet-handle';
 import { Loading } from '@/components/ui/loading';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
@@ -33,16 +31,17 @@ import { RewardRow } from '@/components/screens/gacha/reward-row';
 import { RetryState } from '@/components/ui/retry-state';
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { WalletPills } from '@/components/ui/wallet-pills';
-import { GachaStage, Overlay, Radius, Spacing, StaticWhite } from '@/constants/theme';
+import { GachaSceneColors as Scene, GachaStage, Radius, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { track } from '@/lib/analytics';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { RARITY_COLORS, type Rarity } from '@/resources/furniture';
+import { GIFT_AUTO_OPEN_MS, GIFT_CHARGE_MS, GIFT_OPEN_MS } from '@/resources/gacha-art';
 import { hapticImpact, hapticSelection, hapticSuccess } from '@/utils/haptics';
 
-type Phase = 'idle' | 'charging' | 'burst' | 'reveal';
+type Phase = 'idle' | 'charging' | 'ready' | 'opening' | 'reveal';
 
 /** 레어도 우선순위 — 버스트 색은 뽑은 것 중 최고 레어도를 따른다. */
 const bestRarity = (results: DrawResult[]): Rarity =>
@@ -163,6 +162,8 @@ export function GachaScreen({
   const [burstStrong, setBurstStrong] = useState(false);
   const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const chargeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoOpenTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const canOpenGift = useRef(false);
   const drawBusy = useRef(false);
   const mounted = useRef(true);
   useEffect(() => {
@@ -171,6 +172,7 @@ export function GachaScreen({
       mounted.current = false;
       clearTimeout(chargeTimer.current ?? undefined);
       clearTimeout(revealTimer.current ?? undefined);
+      clearTimeout(autoOpenTimer.current ?? undefined);
     };
   }, []);
   // 보상 목록 시트 (#620) — 머신별 lazy 로드, 같은 머신 재열람은 캐시.
@@ -259,6 +261,7 @@ export function GachaScreen({
     }
     setError('');
     drawBusy.current = true;
+    canOpenGift.current = false;
     setOpenedCards([]);
     setRevealAll(false);
     hapticImpact();
@@ -291,15 +294,25 @@ export function GachaScreen({
     }
     chargeTimer.current = setTimeout(
       () => {
-        setPhase('burst');
-        hapticImpact();
-        revealTimer.current = setTimeout(() => {
-          setPhase('reveal');
-          hapticSuccess();
-        }, BURST_MS);
+        canOpenGift.current = true;
+        setPhase('ready');
+        autoOpenTimer.current = setTimeout(openGift, GIFT_AUTO_OPEN_MS);
       },
-      Math.max(0, MIN_CHARGE_MS - (Date.now() - started)),
+      Math.max(0, GIFT_CHARGE_MS - (Date.now() - started)),
     );
+  };
+
+  const openGift = () => {
+    // A reveal interaction only: never call onDraw or spend again here.
+    if (!canOpenGift.current || !mounted.current) return;
+    canOpenGift.current = false;
+    clearTimeout(autoOpenTimer.current ?? undefined);
+    setPhase('opening');
+    hapticImpact();
+    revealTimer.current = setTimeout(() => {
+      setPhase('reveal');
+      hapticSuccess();
+    }, GIFT_OPEN_MS);
   };
 
   const close = () => {
@@ -497,26 +510,51 @@ export function GachaScreen({
         animationType={reducedMotion ? 'none' : 'fade'}
         onRequestClose={close}>
         <View style={styles.overlay}>
-          {phase === 'charging' ? (
+          <StorybookBackdrop />
+          {phase === 'charging' || phase === 'ready' || phase === 'opening' ? (
             <>
-              <ChargingBox machine={box} reducedMotion={reducedMotion} />
-              <Text style={[Typography.label, styles.overlayText]}>뽑는 중...</Text>
-              <Text style={[Typography.supporting, styles.overlayText]}>
-                어떤 선물이 기다릴까요?
-              </Text>
+              <View style={styles.themeBadge}>
+                {box ? (
+                  <GiftBoxArt machine={box} size={Spacing.five} testIDPrefix="charging-gift-box" />
+                ) : null}
+                <Text style={[Typography.supporting, styles.sceneText]} numberOfLines={1}>
+                  {box?.name ?? '오늘의 선물'}
+                </Text>
+              </View>
+              <Text style={[Typography.h1, styles.sceneText]}>작은 숲에 도착한 선물</Text>
+              <GiftOpeningStage
+                phase={phase}
+                machine={box}
+                onOpen={openGift}
+                reducedMotion={reducedMotion}
+              />
+              <View style={styles.stageCaption} accessibilityLiveRegion="polite">
+                <Text style={[Typography.h3, styles.sceneText]}>
+                  {phase === 'ready'
+                    ? '상자를 톡! 열어보세요'
+                    : phase === 'opening'
+                      ? '두근두근, 열리는 중!'
+                      : '뽑는 중...'}
+                </Text>
+                <Text style={[Typography.supporting, styles.sceneText]}>
+                  {phase === 'ready'
+                    ? '잠시 후 자동으로 열려요'
+                    : phase === 'opening'
+                      ? '어떤 선물이 찾아왔을까요?'
+                      : '오늘의 설렘을 담고 있어요'}
+                </Text>
+              </View>
             </>
-          ) : phase === 'burst' ? (
-            <BurstOverlay color={burstColor} strong={burstStrong} />
-          ) : (
+          ) : phase === 'reveal' ? (
             <>
               {!reducedMotion ? (
                 <View style={styles.celebration} pointerEvents="none">
                   <BurstOverlay color={burstColor} strong={burstStrong} celebration />
                 </View>
               ) : null}
-              <Text style={[Typography.h3, styles.overlayText]}>축하해요!</Text>
+              <Text style={[Typography.h1, styles.sceneText]}>축하해요!</Text>
               <Text
-                style={[Typography.supporting, styles.overlayText]}
+                style={[Typography.supporting, styles.sceneText]}
                 accessibilityLiveRegion="polite">
                 {pulled.length > 1
                   ? openedCards.length === pulled.length
@@ -552,8 +590,8 @@ export function GachaScreen({
                   }}
                   accessibilityRole="button"
                   accessibilityLabel="한 번에 열기"
-                  style={[styles.confirmBtn, { backgroundColor: t.surface }]}>
-                  <Text style={[Typography.label, { color: t.text }]}>한 번에 열기</Text>
+                  style={[styles.confirmBtn, { backgroundColor: Scene.paper }]}>
+                  <Text style={[Typography.label, { color: Scene.ink }]}>한 번에 열기</Text>
                 </ScalePressable>
               ) : null}
               {placeablePulled.length > 0 ? (
@@ -561,19 +599,21 @@ export function GachaScreen({
                   onPress={goPlace}
                   accessibilityRole="button"
                   accessibilityLabel="가구 배치하러 가기"
-                  style={[styles.goPlaceBtn, { backgroundColor: t.primary }]}>
-                  <Text style={[Typography.label, { color: t.onPrimary }]}>가구 배치하러 가기</Text>
+                  style={[styles.goPlaceBtn, { backgroundColor: Scene.leaf }]}>
+                  <Text style={[Typography.label, { color: Scene.onLeaf }]}>
+                    가구 배치하러 가기
+                  </Text>
                 </ScalePressable>
               ) : null}
               <ScalePressable
                 onPress={close}
                 accessibilityRole="button"
                 accessibilityLabel="확인"
-                style={[styles.confirmBtn, { backgroundColor: t.primary }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>확인</Text>
+                style={[styles.confirmBtn, { backgroundColor: Scene.leaf }]}>
+                <Text style={[Typography.label, { color: Scene.onLeaf }]}>확인</Text>
               </ScalePressable>
             </>
-          )}
+          ) : null}
         </View>
       </Modal>
 
@@ -731,13 +771,24 @@ const styles = StyleSheet.create({
   // Pull animation overlay (rendered inside a full-screen Modal)
   overlay: {
     flex: 1,
-    backgroundColor: Overlay.strong,
+    backgroundColor: Scene.paper,
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.four,
     padding: Spacing.four,
   },
-  overlayText: { color: StaticWhite, textAlign: 'center' },
+  sceneText: { color: Scene.ink, textAlign: 'center', flexShrink: 1 },
+  stageCaption: { alignItems: 'center', gap: Spacing.two },
+  themeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one,
+    borderRadius: Radius.pill,
+    backgroundColor: Scene.paper,
+    maxWidth: '100%',
+  },
   celebration: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
   revealScroll: {
     flexGrow: 0,

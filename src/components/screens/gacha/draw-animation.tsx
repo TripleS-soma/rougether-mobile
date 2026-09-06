@@ -3,18 +3,21 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { DrawResult } from '@/api';
-import type { GachaMachine } from '@/api/adapters';
-import { GiftBoxArt } from '@/components/screens/gacha/gift-box-art';
 import { Icon } from '@/components/ui/icon';
-import { Pictogram } from '@/components/ui/pictograms';
-import { GachaStage as Stage, Radius, Spacing, StaticWhite } from '@/constants/theme';
+import { PaintedGiftIcon } from '@/components/screens/gacha/storybook-draw';
+import {
+  GachaSceneColors as Scene,
+  GachaStage as Stage,
+  Radius,
+  Spacing,
+  StaticWhite,
+} from '@/constants/theme';
 import { useAnimatedValue, useStableCallback } from '@/hooks/use-stable-value';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { assetSource, isCdnKey } from '@/resources/asset';
 import { RARITY_COLORS, type Rarity } from '@/resources/furniture';
 import { hapticImpact, hapticSelection } from '@/utils/haptics';
 
-export const MIN_CHARGE_MS = 1800;
 export const BURST_MS = 550;
 export const DEFAULT_RARITY: Rarity = '일반';
 export const rarityColor = (rarity?: string) =>
@@ -24,131 +27,6 @@ const SPARKLES = Array.from({ length: 12 }, (_, i) => {
   const angle = (i * Math.PI) / 6;
   return { x: Math.cos(angle), y: Math.sin(angle) };
 });
-
-/** Squash, hop, then accelerating wiggle. Keep the selected box recognizable. */
-export function ChargingBox({
-  machine,
-  reducedMotion = false,
-}: {
-  machine?: GachaMachine;
-  reducedMotion?: boolean;
-}) {
-  const t = useTokens();
-  const charge = useAnimatedValue(0);
-  const bounce = useAnimatedValue(0);
-  const shake = useAnimatedValue(0);
-  useEffect(() => {
-    if (reducedMotion) return;
-    const build = Animated.timing(charge, {
-      toValue: 1,
-      duration: MIN_CHARGE_MS,
-      easing: Easing.inOut(Easing.cubic),
-      useNativeDriver: true,
-    });
-    const hops = Animated.loop(
-      Animated.sequence([
-        Animated.timing(bounce, { toValue: 1, duration: 380, useNativeDriver: true }),
-        Animated.timing(bounce, { toValue: 0, duration: 280, useNativeDriver: true }),
-      ]),
-    );
-    const wiggle = Animated.sequence(
-      [260, 200, 140, 100, 80].flatMap((duration, i) => [
-        Animated.timing(shake, { toValue: (i + 1) / 5, duration, useNativeDriver: true }),
-        Animated.timing(shake, { toValue: -(i + 1) / 5, duration, useNativeDriver: true }),
-      ]),
-    );
-    build.start();
-    hops.start();
-    wiggle.start();
-    // A short rhythm, not endless vibration on a slow connection.
-    const beats = [520, 1060, 1520].map((delay) => setTimeout(hapticSelection, delay));
-    return () => {
-      build.stop();
-      hops.stop();
-      wiggle.stop();
-      beats.forEach(clearTimeout);
-    };
-  }, [charge, bounce, shake, reducedMotion]);
-  return (
-    <View style={styles.stage} testID="gacha-charge">
-      <Animated.View
-        style={[
-          styles.halo,
-          {
-            backgroundColor: t.primary,
-            opacity: charge.interpolate({ inputRange: [0, 1], outputRange: [0.12, 0.3] }),
-            transform: [
-              { scale: bounce.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1.1] }) },
-            ],
-          },
-        ]}
-      />
-      {!reducedMotion &&
-        SPARKLES.filter((_, i) => i % 2 === 0).map((point, i) => (
-          <Animated.View
-            key={i}
-            style={[
-              styles.sparkle,
-              {
-                backgroundColor: i % 2 ? t.primary : t.warning,
-                opacity: charge.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0, 0.5, 1] }),
-                transform: [
-                  {
-                    translateX: charge.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [point.x * Stage.orbit * 1.4, point.x * Stage.orbit],
-                    }),
-                  },
-                  {
-                    translateY: charge.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [point.y * Stage.orbit * 1.4, point.y * Stage.orbit],
-                    }),
-                  },
-                  { rotate: '45deg' },
-                  { scale: bounce.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1.2] }) },
-                ],
-              },
-            ]}
-          />
-        ))}
-      <Animated.View
-        style={[
-          styles.chargeBox,
-          {
-            backgroundColor: machine?.accent ?? t.surfaceMuted,
-            transform: [
-              {
-                translateY: bounce.interpolate({
-                  inputRange: [0, 0.2, 1],
-                  outputRange: [0, Spacing.one, -Spacing.four],
-                }),
-              },
-              { scale: charge.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1.12] }) },
-              {
-                scaleY: bounce.interpolate({
-                  inputRange: [0, 0.2, 1],
-                  outputRange: [1, 0.92, 1.06],
-                }),
-              },
-              {
-                rotate: shake.interpolate({
-                  inputRange: [-1, 1],
-                  outputRange: ['-10deg', '10deg'],
-                }),
-              },
-            ],
-          },
-        ]}>
-        {machine ? (
-          <GiftBoxArt machine={machine} size={Stage.boxArt} testIDPrefix="charging-gift-box" />
-        ) : (
-          <Pictogram name="gift" size={Spacing.six} />
-        )}
-      </Animated.View>
-    </View>
-  );
-}
 
 /** Localized rings and confetti, never a full-screen white flash. */
 export function BurstOverlay({
@@ -249,7 +127,6 @@ export function BurstOverlay({
 }
 
 function RewardContent({ item, large = false }: { item: DrawResult; large?: boolean }) {
-  const t = useTokens();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const color = rarityColor(item.rarity);
@@ -276,7 +153,11 @@ function RewardContent({ item, large = false }: { item: DrawResult; large?: bool
         </Text>
       ) : null}
       <Text
-        style={[large ? Typography.label : Typography.supporting, styles.center, { color: t.text }]}
+        style={[
+          large ? Typography.label : Typography.supporting,
+          styles.center,
+          { color: Scene.ink },
+        ]}
         numberOfLines={2}>
         {item.name ?? '보상'}
       </Text>
@@ -285,7 +166,7 @@ function RewardContent({ item, large = false }: { item: DrawResult; large?: bool
           Typography.supporting,
           emph('semibold'),
           styles.center,
-          { color: item.converted ? t.textMuted : t.primaryActive },
+          { color: item.converted ? Scene.muted : Scene.ink },
         ]}>
         {item.converted
           ? `중복 · ${item.refundCurrencyType === 'COIN' ? '코인' : '다이아'} +${item.refundAmount ?? 0}`
@@ -307,7 +188,6 @@ export function RevealCard({
   large?: boolean;
   reducedMotion?: boolean;
 }) {
-  const t = useTokens();
   const p = useAnimatedValue(reducedMotion ? 1 : 0);
   useEffect(() => {
     if (reducedMotion) {
@@ -331,7 +211,7 @@ export function RevealCard({
         styles.revealCard,
         large && styles.heroCard,
         {
-          backgroundColor: t.surface,
+          backgroundColor: Scene.paper,
           borderColor: rarityColor(item.rarity),
           opacity: p,
           transform: [
@@ -364,7 +244,6 @@ export function FlipCard({
   onReveal?: (index: number) => void;
   width?: number;
 }) {
-  const t = useTokens();
   const Typography = useTypography();
   const deal = useAnimatedValue(reducedMotion ? 1 : 0);
   const flip = useAnimatedValue(reducedMotion ? 1 : 0);
@@ -471,8 +350,8 @@ export function FlipCard({
           style={[
             styles.flipFace,
             {
-              backgroundColor: t.primary,
-              borderColor: t.primaryActive,
+              backgroundColor: Scene.paper,
+              borderColor: Scene.gold,
               opacity: flip.interpolate({
                 inputRange: [0, 0.49, 0.5, 1],
                 outputRange: [1, 1, 0, 0],
@@ -488,9 +367,9 @@ export function FlipCard({
               ],
             },
           ]}>
-          <Pictogram name="gift" size={Spacing.five} />
-          <Text style={[Typography.supporting, { color: t.onPrimary }]}>두근두근</Text>
-          <Text style={[Typography.supporting, { color: t.onPrimary }]}>{index + 1}</Text>
+          <PaintedGiftIcon size={Stage.boxArt} />
+          <Text style={[Typography.supporting, { color: Scene.ink }]}>두근두근</Text>
+          <Text style={[Typography.supporting, { color: Scene.muted }]}>{index + 1}</Text>
         </Animated.View>
         <Animated.View
           aria-hidden={!flipped}
@@ -499,7 +378,7 @@ export function FlipCard({
           style={[
             styles.flipFace,
             {
-              backgroundColor: t.surface,
+              backgroundColor: Scene.paper,
               borderColor: rarityColor(item.rarity),
               opacity: flip.interpolate({
                 inputRange: [0, 0.49, 0.5, 1],
