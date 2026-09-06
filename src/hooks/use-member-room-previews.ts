@@ -124,5 +124,14 @@ export function useMemberRoomPreviews() {
     );
   }, []);
 
-  return { previews, load, clearCobweb };
+  /**
+   * 캐시 무효화 (#1099) — 내 방 꾸미기를 저장하면 집 좌석의 내 방 미리보기가
+   * 옛 방으로 남는다. 다음 집 화면 진입 때 그 집을 다시 불러오게만 표시하고,
+   * 지금 그려진 미리보기는 새 응답이 올 때까지 남겨 둔다(빈 타일 깜빡임 방지).
+   */
+  const invalidate = useCallback(() => {
+    loadedHouseRef.current = null;
+  }, []);
+
+  return { previews, load, clearCobweb, invalidate };
 }

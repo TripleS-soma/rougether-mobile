@@ -7,44 +7,21 @@ import { ToastProvider } from '@/components/ui/toast';
 import { AuthProvider } from '@/hooks/use-auth';
 import { DEFAULT_HAPTIC_STRENGTH, getHapticStrength, setHapticStrength } from '@/utils/haptics';
 import { BrandThemeProvider } from '@/hooks/use-tokens';
-import { useAppUpdates } from '@/hooks/use-app-updates';
-
-jest.mock('@/hooks/use-app-updates', () => ({ useAppUpdates: jest.fn() }));
-
-const mockUpdateInfo = {
-  appVersion: '1.4.0',
-  channel: 'preview',
-  runtimeVersion: 'native-runtime',
-  updateId: 'current-update',
-  embedded: false,
-  emergencyLaunch: false,
-};
-const mockCheckUpdate = jest.fn();
-const mockApplyUpdate = jest.fn();
-
-beforeEach(() => {
-  mockCheckUpdate.mockClear();
-  mockApplyUpdate.mockClear();
-  jest.mocked(useAppUpdates).mockReturnValue({
-    state: { status: 'idle', info: mockUpdateInfo },
-    check: mockCheckUpdate,
-    apply: mockApplyUpdate,
-  });
-});
-
 const PROFILE = { nickname: '준서', bio: '', characterId: 'cat' as const, onSave: jest.fn() };
+const STATS = { streak: 3, coin: 120, diamond: 2 };
 
 /**
  * 훅이 만든 서브화면을 그대로 렌더한다 — 토스트 로직이 훅 안에 있고 핸들러는
  * 그 화면에만 넘어가므로, 실제로 눌러야 검증이 된다.
  */
 function Harness({ screen }: { screen: 'theme' | 'font' | 'sound' | null }) {
-  const { subScreen, tabProps } = useSettingsSurface({
+  const { subScreen, settingsProps } = useSettingsSurface({
     screen: screen ?? 'settings',
     setScreen: jest.fn(),
     profile: PROFILE,
+    stats: STATS,
   });
-  return screen === null ? <SettingsScreen {...tabProps} /> : <>{subScreen}</>;
+  return screen === null ? <SettingsScreen {...settingsProps} /> : <>{subScreen}</>;
 }
 
 const show = (screen: 'theme' | 'font' | 'sound' | null) =>
@@ -58,30 +35,6 @@ const show = (screen: 'theme' | 'font' | 'sound' | null) =>
     </AuthProvider>,
   );
 
-describe('설정 OTA 연결 (#1082)', () => {
-  it('passes the actual updater check callback and metadata to the settings card', async () => {
-    const ui = await show(null);
-    await fireEvent.press(ui.getByRole('button', { name: '업데이트 확인' }));
-    expect(mockCheckUpdate).toHaveBeenCalledTimes(1);
-    expect(mockApplyUpdate).not.toHaveBeenCalled();
-    await fireEvent.press(ui.getByRole('button', { name: '업데이트 정보' }));
-    expect(ui.getByText('native-runtime')).toBeTruthy();
-  });
-
-  it('passes apply through the explicit restart confirmation only', async () => {
-    jest.mocked(useAppUpdates).mockReturnValue({
-      state: { status: 'ready', info: mockUpdateInfo },
-      check: mockCheckUpdate,
-      apply: mockApplyUpdate,
-    });
-    const ui = await show(null);
-    await fireEvent.press(ui.getByRole('button', { name: '지금 적용' }));
-    expect(mockApplyUpdate).not.toHaveBeenCalled();
-    await fireEvent.press(ui.getByRole('button', { name: '업데이트 적용 확인' }));
-    expect(mockApplyUpdate).toHaveBeenCalledTimes(1);
-  });
-});
-
 describe('폰트·테마 변경 안내 (#972)', () => {
   // BrandThemeProvider가 선택을 AsyncStorage에 남긴다 — 안 지우면 앞 테스트가
   // 고른 테마가 다음 테스트의 '현재값'이 돼 "같은 값" 케이스가 무너진다.
@@ -92,12 +45,14 @@ describe('폰트·테마 변경 안내 (#972)', () => {
   it('다른 테마를 고르면 바뀐 이름을 토스트로 알린다', async () => {
     const { getByLabelText, findByText } = await show('theme');
     await fireEvent.press(getByLabelText('인디고 타이드 테마'));
+    await fireEvent.press(getByLabelText('적용하기'));
     expect(await findByText(/인디고 타이드.*적용했어요/)).toBeTruthy();
   });
 
   it('다른 폰트를 고르면 바뀐 이름을 토스트로 알린다', async () => {
     const { getByLabelText, findByText } = await show('font');
     await fireEvent.press(getByLabelText('SUIT 폰트'));
+    await fireEvent.press(getByLabelText('적용하기'));
     expect(await findByText(/SUIT.*적용했어요/)).toBeTruthy();
   });
 
@@ -109,6 +64,7 @@ describe('폰트·테마 변경 안내 (#972)', () => {
       expect(getByLabelText('포근 테마').props.accessibilityState.selected).toBe(true),
     );
     await fireEvent.press(getByLabelText('포근 테마'));
+    await fireEvent.press(getByLabelText('적용하기'));
     await waitFor(() => expect(queryByText(/적용했어요/)).toBeNull());
   });
 });

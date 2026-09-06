@@ -11,15 +11,23 @@ describe('ThemeScreen', () => {
     }
   });
 
-  it('reports the picked theme id', async () => {
-    const onChangeThemeId = jest.fn();
+  it('고르면 선택만 바뀌고, 적용하기를 눌러야 콜백 (#1096)', async () => {
+    const onApplyThemeId = jest.fn();
     const { getByLabelText } = await render(
-      <ThemeScreen themeId="cozy" onChangeThemeId={onChangeThemeId} />,
+      <ThemeScreen themeId="cozy" onApplyThemeId={onApplyThemeId} />,
     );
+    // 현재 값 그대로면 적용하기는 비활성.
+    expect(getByLabelText('적용하기').props.accessibilityState.disabled).toBe(true);
+    await fireEvent.press(getByLabelText('적용하기'));
+    expect(onApplyThemeId).not.toHaveBeenCalled();
 
     await fireEvent.press(getByLabelText('인디고 타이드 테마'));
+    expect(onApplyThemeId).not.toHaveBeenCalled();
+    expect(getByLabelText('인디고 타이드 테마').props.accessibilityState.selected).toBe(true);
+    expect(getByLabelText('적용하기').props.accessibilityState.disabled).toBe(false);
 
-    expect(onChangeThemeId).toHaveBeenCalledWith('indigo');
+    await fireEvent.press(getByLabelText('적용하기'));
+    expect(onApplyThemeId).toHaveBeenCalledWith('indigo');
   });
 
   it('marks the active theme as selected', async () => {

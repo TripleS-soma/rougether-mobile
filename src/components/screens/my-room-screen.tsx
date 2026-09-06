@@ -34,10 +34,8 @@ import {
   useLatestRef,
   useStableCallback,
 } from '@/hooks/use-stable-value';
-import type { WalletHistoryEntry } from '@/api/adapters';
 import { QuickAddRow } from '@/components/screens/my-room/quick-add-row';
 import { RoutineRow } from '@/components/screens/my-room/routine-row';
-import { WalletHistorySheet } from '@/components/screens/sheets/wallet-history-sheet';
 import { useWidgetRoomCapture } from '@/components/screens/my-room/use-widget-room-capture';
 import { Room, type RoomSceneProps } from '@/components/room/room';
 import {
@@ -120,17 +118,6 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
     markedTodoDates?: ReadonlySet<string>;
     /** 달력에서 보이는 달이 바뀔 때 (#838) — 부모가 그 달 개수를 받아온다. */
     onCalendarMonthChange?: (yearMonth: string) => void;
-    /**
-     * 연속 출석 이벤트 (#851) — 진행 중인 이벤트가 없으면 undefined로 두면
-     * 헤더 아이콘 자체가 그려지지 않는다.
-     */
-    attendance?: {
-      /** 오늘 아직 출석 안 했는지 — 아이콘에 빨간 점. */
-      pending: boolean;
-    };
-    /** 출석 아이콘 탭 — 셸이 출석 시트를 연다. */
-    onOpenAttendance?: () => void;
-
     /** Room occupant's display name (header title becomes "{userName}의 방"). */
     userName?: string;
     /** Consecutive-day streak shown in the header. */
@@ -233,13 +220,6 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
     onReorderRoutines?: (categoryId: string, orderedRoutineIds: string[]) => void;
     /** 다른 카테고리로 드롭 = 영구 이동 (#716) — 서버 categoryId 변경. */
     onMoveRoutineCategory?: (id: string, toCategoryId: string) => void;
-    /** 재화 내역 (#734) — 지갑 필 탭 → 시트. 열 때마다 onLoadWalletHistory로 재로드. */
-    walletHistory?: WalletHistoryEntry[];
-    walletHistoryLoading?: boolean;
-    walletHistoryError?: boolean;
-    walletHistoryHasNext?: boolean;
-    onLoadWalletHistory?: () => void;
-    onLoadMoreWalletHistory?: () => void;
   };
 
 /**
@@ -279,8 +259,6 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   onCleanCobweb,
   markedTodoDates,
   onCalendarMonthChange,
-  attendance,
-  onOpenAttendance,
   placements = [],
   furniture,
   wallpapers,
@@ -319,12 +297,6 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   routineOrder,
   onReorderRoutines,
   onMoveRoutineCategory,
-  walletHistory,
-  walletHistoryLoading = false,
-  walletHistoryError = false,
-  walletHistoryHasNext = false,
-  onLoadWalletHistory,
-  onLoadMoreWalletHistory,
   getInitialScrollY,
   onScrollY,
 }: MyRoomScreenProps) {
@@ -482,15 +454,6 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   const [navMenuBottom, setNavMenuBottom] = useState<number | undefined>(undefined);
   const menuBtnRef = useRef<View>(null);
   const [characterSheetOpen, setCharacterSheetOpen] = useState(false);
-  // 재화 내역 시트 (#734) — 열 때마다 1페이지 재로드(완료 취소로 이력이 지워질 수 있음).
-  const [walletHistoryOpen, setWalletHistoryOpen] = useState(false);
-  const openWalletHistory = onLoadWalletHistory
-    ? () => {
-        setWalletHistoryOpen(true);
-        onLoadWalletHistory();
-      }
-    : undefined;
-
   const openNavMenu = () => {
     setNavMenuOpen(true);
     // measureInWindow is a no-op in tests/web — the fallback top then applies.
@@ -1134,16 +1097,10 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                         ref={menuBtnRef}
                         onPress={openNavMenu}
                         accessibilityRole="button"
-                        accessibilityLabel={
-                          attendance?.pending && onOpenAttendance ? '메뉴, 오늘 미출석' : '메뉴'
-                        }
+                        accessibilityLabel="메뉴"
                         style={styles.floatBtn}>
                         <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
                           <Icon name="menu" size={20} color={t.text} />
-                          {/* 출석 이벤트가 메뉴 안으로 들어가(#1055) 미출석 점은 여기에. */}
-                          {attendance?.pending && onOpenAttendance ? (
-                            <View style={[styles.menuDot, { backgroundColor: t.danger }]} />
-                          ) : null}
                         </GlassSurface>
                       </Pressable>
                     </CoachTarget>
@@ -1462,10 +1419,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         top={navMenuTop}
         bottom={navMenuBottom}
         onClose={() => setNavMenuOpen(false)}
-        // 출석 이벤트·재화 내역은 헤더 아이콘·지갑 필에서 메뉴 항목으로 (#1055).
-        onOpenAttendance={attendance && onOpenAttendance ? onOpenAttendance : undefined}
-        attendancePending={!!attendance?.pending}
-        onOpenWalletHistory={openWalletHistory}
+        // 출석 이벤트·재화 내역은 마이페이지 바로가기로 (#1055 → #1089) — 메뉴는 방 작업만.
         onOpenCharacterPicker={
           ownedCharacters && onSelectCharacter ? () => setCharacterSheetOpen(true) : undefined
         }
@@ -1481,17 +1435,6 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         characters={ownedCharacters ?? []}
         onSelect={(serverId) => onSelectCharacter?.(serverId)}
         onClose={() => setCharacterSheetOpen(false)}
-      />
-
-      <WalletHistorySheet
-        visible={walletHistoryOpen}
-        onClose={() => setWalletHistoryOpen(false)}
-        entries={walletHistory ?? []}
-        loading={walletHistoryLoading}
-        loadError={walletHistoryError}
-        onRetry={onLoadWalletHistory}
-        hasNext={walletHistoryHasNext}
-        onLoadMore={onLoadMoreWalletHistory}
       />
 
       <TimePickerSheet
