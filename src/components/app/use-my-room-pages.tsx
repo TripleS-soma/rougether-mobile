@@ -184,11 +184,12 @@ export function useMyRoomPages({
   // 푸시 탭(콜드 스타트 포함) → 알림 목록으로 (#405).
   useEffect(
     () =>
-      onNotificationTap(() => {
+      onNotificationTap((notification) => {
         reportAppOpen('push');
-        openNotifications();
+        if (notification?.type === 'APP_INACTIVITY_REMINDER') setScreen('myRoom');
+        else openNotifications();
       }),
-    [openNotifications],
+    [openNotifications, setScreen],
   );
 
   /**
@@ -213,9 +214,13 @@ export function useMyRoomPages({
         // 배너가 떠 있는 동안 도착한 알림도 알림함에는 즉시 반영한다.
         void loadNotifications();
         pushBannerSeq.current += 1;
-        setPushBanner({ key: pushBannerSeq.current, ...n });
+        setPushBanner({
+          key: pushBannerSeq.current,
+          ...n,
+          onPress: n.type === 'APP_INACTIVITY_REMINDER' ? () => setScreen('myRoom') : undefined,
+        });
       }),
-    [loadNotifications],
+    [loadNotifications, setScreen],
   );
   const dismissPushBanner = useCallback(() => setPushBanner(null), []);
 
