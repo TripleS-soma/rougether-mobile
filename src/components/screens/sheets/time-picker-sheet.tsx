@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { BottomSheet, SheetDragExclude } from '@/components/ui/bottom-sheet';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Icon } from '@/components/ui/icon';
 import { WHEEL_ITEM_HEIGHT, WHEEL_VISIBLE_ROWS, WheelPicker } from '@/components/ui/wheel-picker';
@@ -124,7 +124,8 @@ export function TimePickerSheet({
                 style={[styles.band, { backgroundColor: t.surfaceMuted }]}
                 pointerEvents="none"
               />
-              <View style={styles.wheels}>
+              {/* 휠은 세로 스와이프를 스스로 쓴다 — 시트 끌어내리기에서 제외 (#1132). */}
+              <SheetDragExclude style={styles.wheels}>
                 <WheelPicker
                   items={AMPM_ITEMS}
                   value={ampm}
@@ -146,7 +147,7 @@ export function TimePickerSheet({
                   accessibilityLabel="분 선택"
                   testID="wheel-minute"
                 />
-              </View>
+              </SheetDragExclude>
             </View>
           </>
         ) : null}

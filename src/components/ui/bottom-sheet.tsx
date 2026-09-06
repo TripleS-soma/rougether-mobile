@@ -1,4 +1,12 @@
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import {
+  createContext,
+  type MutableRefObject,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import {
   Animated,
   Easing,
@@ -8,6 +16,7 @@ import {
   StyleSheet,
   type StyleProp,
   useWindowDimensions,
+  View,
   type ViewStyle,
 } from 'react-native';
 
@@ -43,9 +52,52 @@ export function inDragClaimZone(y0: number, cardTop: number): boolean {
  */
 export type BottomSheetDragScope = 'header' | 'card';
 
-/** 시작점 기준으로 이 드래그를 시트가 가져갈지 (#514·#657). */
-export function claimsDrag(scope: BottomSheetDragScope, y0: number, cardTop: number): boolean {
+/**
+ * 시작점 기준으로 이 드래그를 시트가 가져갈지 (#514·#657·#1132). `excluded`는
+ * 터치가 `SheetDragExclude`(휠·스크롤 목록) 안에서 시작했다는 뜻 — 그 자식의
+ * 세로 제스처를 시트 내림으로 빼앗지 않는다.
+ */
+export function claimsDrag(
+  scope: BottomSheetDragScope,
+  y0: number,
+  cardTop: number,
+  excluded = false,
+): boolean {
+  if (excluded) return false;
   return scope === 'card' || inDragClaimZone(y0, cardTop);
+}
+
+const SheetDragContext = createContext<MutableRefObject<boolean> | null>(null);
+
+/**
+ * 시트 안에서 세로 제스처를 스스로 쓰는 영역(#1132) — 휠 피커, ScrollView·FlatList
+ * 본문. 이 안에서 시작한 터치는 시트가 끌어내리기로 가져가지 않는다. 카드 전체
+ * 클레임('card')이 기본이 되면서, 종전 #514의 "휠 스와이프를 빼앗는" 문제를 이
+ * 표시로 막는다. 터치 이벤트는 버블링이라 자식에서 true, 카드에서 false로 닫는다.
+ */
+export function SheetDragExclude({
+  children,
+  style,
+  testID,
+}: {
+  children: ReactNode;
+  style?: StyleProp<ViewStyle>;
+  testID?: string;
+}) {
+  const excluded = useContext(SheetDragContext);
+  const mark = (on: boolean) => () => {
+    if (excluded) excluded.current = on;
+  };
+  return (
+    <View
+      style={style}
+      testID={testID}
+      onTouchStart={mark(true)}
+      onTouchEnd={mark(false)}
+      onTouchCancel={mark(false)}>
+      {children}
+    </View>
+  );
 }
 
 export type BottomSheetProps = {
@@ -54,7 +106,10 @@ export type BottomSheetProps = {
   onClose?: () => void;
   /** 시트 카드 스타일 — 각 시트의 기존 styles.sheet를 그대로 넘긴다. */
   cardStyle?: StyleProp<ViewStyle>;
-  /** 끌어내리기 클레임 범위 — 기본 'header' (#514). */
+  /**
+   * 끌어내리기 클레임 범위 — 기본 'card' (#1132: 본문 어디서나 끌어 닫는다).
+   * 세로 제스처를 쓰는 자식은 `SheetDragExclude`로 감싼다. 'header'는 종전 #514.
+   */
   dragScope?: BottomSheetDragScope;
   children: ReactNode;
 };
@@ -68,7 +123,7 @@ export function BottomSheet({
   visible,
   onClose,
   cardStyle,
-  dragScope = 'header',
+  dragScope = 'card',
   children,
 }: BottomSheetProps) {
   const { height: windowH } = useWindowDimensions();
@@ -83,6 +138,8 @@ export function BottomSheet({
   // PanResponder는 한 번만 만들어지므로 최신 onClose·dragScope를 ref로 참조한다.
   const onCloseRef = useLatestRef(onClose);
   const dragScopeRef = useLatestRef(dragScope);
+  // 이 터치가 SheetDragExclude 안에서 시작했는가 (#1132) — 자식이 true, 카드가 false.
+  const excludedRef = useRef(false);
 
   useEffect(() => {
     if (visible) {
@@ -115,7 +172,7 @@ export function BottomSheet({
       onMoveShouldSetPanResponder: (_e, g) =>
         g.dy > 6 &&
         g.dy > Math.abs(g.dx) &&
-        claimsDrag(dragScopeRef.current, g.y0, cardTopRef.current),
+        claimsDrag(dragScopeRef.current, g.y0, cardTopRef.current, excludedRef.current),
       onPanResponderMove: (_e, g) => {
         if (g.dy > 0) dragY.setValue(g.dy);
       },
@@ -172,9 +229,17 @@ export function BottomSheet({
             setCardH(e.nativeEvent.layout.height);
             cardTopRef.current = e.nativeEvent.layout.y;
           }}
+          // 자식(SheetDragExclude)의 onTouchStart가 먼저 돌고 여기로 버블링한다 —
+          // 끝날 때 카드에서 플래그를 닫는다.
+          onTouchEnd={() => {
+            excludedRef.current = false;
+          }}
+          onTouchCancel={() => {
+            excludedRef.current = false;
+          }}
           style={[cardStyle, { transform: [{ translateY }] }]}
           testID="bottom-sheet-card">
-          {children}
+          <SheetDragContext.Provider value={excludedRef}>{children}</SheetDragContext.Provider>
         </Animated.View>
       </Animated.View>
     </Modal>
