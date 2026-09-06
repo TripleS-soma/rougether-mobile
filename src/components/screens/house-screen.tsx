@@ -803,6 +803,8 @@ export const HouseScreen = memo(function HouseScreen({
   useEffect(() => {
     onPagerLockChange?.(zoomed || dragSeat != null);
   }, [zoomed, dragSeat, onPagerLockChange]);
+  // The camera/seat gesture no longer owns any touches once this screen exits.
+  useEffect(() => () => onPagerLockChange?.(false), [onPagerLockChange]);
 
   // No houses yet (fresh account) → guide to 집 탐색 instead of crashing on
   // an empty switcher.

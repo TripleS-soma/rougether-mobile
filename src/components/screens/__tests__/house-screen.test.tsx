@@ -45,6 +45,17 @@ const MISSION_HOUSE: House = {
 };
 
 describe('HouseScreen', () => {
+  it('releases the pager lock when leaving during a seat lift', async () => {
+    const onPagerLockChange = jest.fn();
+    const ui = await render(
+      <HouseScreen houses={[MISSION_HOUSE]} onPagerLockChange={onPagerLockChange} />,
+    );
+    await fireEvent(ui.getByLabelText('친구'), 'longPress');
+    expect(onPagerLockChange).toHaveBeenLastCalledWith(true);
+    await ui.unmount();
+    expect(onPagerLockChange).toHaveBeenLastCalledWith(false);
+  });
+
   it.each(['cloud-balloon', 'coral-aquarium', 'mushroom-forest', 'night-observatory'])(
     '%s 기존 프레임에서도 6명과 5·6번째 방 방문을 보존한다',
     async (theme) => {

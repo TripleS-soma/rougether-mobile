@@ -350,7 +350,8 @@ export const galleryEntries: GalleryEntry[] = [
   },
   {
     name: 'BottomNav · 리퀴드 바 드래그와 본문 스와이프',
-    description: '누른 채 좌우로 끌어 선택, 놓을 때 한 번 이동. 집 확대 잠금 중에도 하단바는 동작.',
+    description:
+      'iOS 본문 가로·대각선 스와이프와 세로 스크롤·당겨서 새로고침 경쟁 확인. 마이페이지는 일반 스크롤. 집 확대 잠금 중에도 하단바는 동작.',
     render: () => <NavigationPreview />,
   },
   {

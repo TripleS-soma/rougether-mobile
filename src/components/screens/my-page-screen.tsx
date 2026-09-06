@@ -1,5 +1,6 @@
 import { memo, useRef } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, type ScrollView, StyleSheet, Text, View } from 'react-native';
+import { PagerScrollView } from '@/components/ui/pager-scroll-view';
 
 import { CharacterAvatar } from '@/components/room/character-avatar';
 import { GlassSurface } from '@/components/ui/glass-surface';
@@ -155,7 +156,7 @@ export const MyPageScreen = memo(function MyPageScreen({
         }
       />
 
-      <ScrollView
+      <PagerScrollView
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
@@ -268,7 +269,7 @@ export const MyPageScreen = memo(function MyPageScreen({
             ))}
           </View>
         </GlassSurface>
-      </ScrollView>
+      </PagerScrollView>
     </View>
   );
 });
