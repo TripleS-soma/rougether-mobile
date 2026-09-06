@@ -6,6 +6,7 @@ import { usePagerLock } from '@/components/app/use-pager-lock';
 import { BottomNav, type NavTab } from '@/components/ui/bottom-nav';
 import { Button } from '@/components/ui/button';
 import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
+import { PagerScrollView } from '@/components/ui/pager-scroll-view';
 import { Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 
@@ -30,32 +31,35 @@ export function NavigationPreview() {
         {LABELS[index]} · 전환 {changes}회
       </Text>
       <TabPager index={index} onIndexChange={select} lock={lock}>
-        {TABS.map((tab, i) => (
-          <PawRefreshScroll
-            key={tab}
-            testID={`navigation-page-${tab}`}
-            onRefresh={async () => {}}
-            contentContainerStyle={styles.content}>
-            <Text style={[typography.h2, { color: t.text }]}>{LABELS[i]} 본문</Text>
-            <Text style={[typography.body, { color: t.textMuted }]}>
-              본문은 좌우 스와이프, 하단바는 누른 채 끌어 선택해요.
-            </Text>
-            {tab === 'house' ? (
-              <Button
-                label={locked ? '집 확대 잠금 해제' : '집 확대 잠금 재현'}
-                onPress={() => {
-                  setHouseLocked(!locked);
-                  setLocked(!locked);
-                }}
-              />
-            ) : null}
-            {Array.from({ length: 14 }, (_, row) => (
-              <Text key={row} style={[typography.body, styles.row, { color: t.text }]}>
-                {LABELS[i]} 스크롤 항목 {row + 1}
+        {TABS.map((tab, i) => {
+          const Scroll = tab === 'myPage' ? PagerScrollView : PawRefreshScroll;
+          return (
+            <Scroll
+              key={tab}
+              testID={`navigation-page-${tab}`}
+              {...(tab === 'myPage' ? {} : { onRefresh: async () => {} })}
+              contentContainerStyle={styles.content}>
+              <Text style={[typography.h2, { color: t.text }]}>{LABELS[i]} 본문</Text>
+              <Text style={[typography.body, { color: t.textMuted }]}>
+                본문은 좌우 스와이프, 하단바는 누른 채 끌어 선택해요.
               </Text>
-            ))}
-          </PawRefreshScroll>
-        ))}
+              {tab === 'house' ? (
+                <Button
+                  label={locked ? '집 확대 잠금 해제' : '집 확대 잠금 재현'}
+                  onPress={() => {
+                    setHouseLocked(!locked);
+                    setLocked(!locked);
+                  }}
+                />
+              ) : null}
+              {Array.from({ length: 14 }, (_, row) => (
+                <Text key={row} style={[typography.body, styles.row, { color: t.text }]}>
+                  {LABELS[i]} 스크롤 항목 {row + 1}
+                </Text>
+              ))}
+            </Scroll>
+          );
+        })}
       </TabPager>
       <BottomNav active={TABS[index]} onChange={(tab) => select(TABS.indexOf(tab))} />
     </View>

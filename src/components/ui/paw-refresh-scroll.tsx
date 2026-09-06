@@ -1,4 +1,12 @@
-import { type ReactNode, type Ref, useCallback, useEffect, useMemo, useRef } from 'react';
+import {
+  type ReactNode,
+  type Ref,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+} from 'react';
 import {
   type LayoutChangeEvent,
   type NativeScrollEvent,
@@ -20,6 +28,11 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { PawPictogram } from '@/components/ui/pictograms';
+import {
+  PagerGestureContext,
+  PagerScrollView,
+  usePagerNativeGesture,
+} from '@/components/ui/pager-scroll-view';
 
 /** 당김 저항 — 손가락 이동의 절반만 따라온다 (고무줄 감). */
 const DAMPING = 0.5;
@@ -150,7 +163,8 @@ export function PawRefreshScroll({
 
   // ScrollView의 네이티브 제스처와 동시 인식으로 묶는다 — 팬이 스크롤을
   // 막지 않고, 맨 위에서만 당김으로 해석한다.
-  const nativeScroll = useMemo(() => Gesture.Native(), []);
+  const pager = useContext(PagerGestureContext);
+  const nativeScroll = usePagerNativeGesture(pager);
   const pan = useMemo(() => {
     const base = Gesture.Pan()
       .withTestId(`${refreshTestID}-pan`)
@@ -191,10 +205,14 @@ export function PawRefreshScroll({
           pull.value = withTiming(0, { duration: 200 });
         }
       });
+    // Both recognizers must wait: leaving the refresh pan unrelated still lets
+    // a slightly diagonal horizontal swipe cancel the parent pager (#1150).
+    if (pager) base.requireExternalGestureToFail(pager);
     return base.simultaneousWithExternalGesture(nativeScroll);
   }, [
     refreshTestID,
     nativeScroll,
+    pager,
     engaged,
     baseY,
     pull,
@@ -237,7 +255,7 @@ export function PawRefreshScroll({
   // 새로고침이 있다), RNGH Native 제스처의 웹 지원 한계로 팬 인식이 깨진다.
   if (!onRefresh || Platform.OS === 'web') {
     return (
-      <ScrollView
+      <PagerScrollView
         ref={scrollRef}
         onScroll={onScroll}
         onContentSizeChange={onContentSizeChange}
@@ -245,7 +263,7 @@ export function PawRefreshScroll({
         contentOffset={contentOffset}
         {...scrollProps}>
         {children}
-      </ScrollView>
+      </PagerScrollView>
     );
   }
 
