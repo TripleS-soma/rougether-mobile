@@ -8,6 +8,7 @@ import {
   EDGE_BACK_VELOCITY,
   EDGE_BACK_WIDTH,
   EXIT_WINDOW_MS,
+  FULL_SWIPE_BACK_EXCLUDED,
   NAV_ORDER,
   SCREEN_FOR_TAB,
   TAB_FOR_SCREEN,
@@ -61,12 +62,15 @@ export function useAppNavigation({
     return () => sub.remove();
   }, [goBack, toast]);
 
-  // iOS 엣지 스와이프 백 (#564) — 서브화면(탭 루트 제외)에서 왼쪽 엣지의
-  // 우향 팬. 탭 루트의 가로 스와이프는 페이저(#563) 몫이라 서브화면 한정.
+  // iOS 스와이프 백 (#564 → 전폭 #1135) — 서브화면(탭 루트 제외)에서 우향 팬.
+  // 가로 제스처를 쓰는 화면(FULL_SWIPE_BACK_EXCLUDED)만 왼쪽 엣지 시작 한정. 탭 루트의 가로 스와이프는 페이저(#563) 몫이라 서브화면 한정.
   // Android는 시스템 백 제스처/버튼이 있어 끈다. 제스처는 관찰만 하고
   // 콘텐츠 터치를 막지 않는다 — 엣지 밖 시작은 즉시 물러난다.
   const edgeBackEnabledRef = useRef(false);
   edgeBackEnabledRef.current = Platform.OS === 'ios' && TAB_FOR_SCREEN[screen] == null;
+  // 전폭 스와이프 백 (#1135) — 가로 제스처를 쓰는 화면만 가장자리 한정으로 남긴다.
+  const fullSwipeRef = useRef(false);
+  fullSwipeRef.current = edgeBackEnabledRef.current && !FULL_SWIPE_BACK_EXCLUDED.has(screen);
   const goBackRef = useRef(goBack);
   goBackRef.current = goBack;
   // 이 터치가 엣지 백 자격을 갖췄는지 (#740) — onTouchesDown의 mgr.fail()은
@@ -81,11 +85,13 @@ export function useAppNavigation({
       .enabled(Platform.OS === 'ios')
       .runOnJS(true)
       .maxPointers(1)
-      .activeOffsetX(16)
-      .failOffsetY([-24, 24])
+      // 전폭(#1135)에서는 세로 스크롤과 더 자주 겹친다 — 가로 24px 뒤에 활성화하고
+      // 세로 16px이면 먼저 물러난다.
+      .activeOffsetX(24)
+      .failOffsetY([-16, 16])
       .onTouchesDown((e, mgr) => {
         const x = e.allTouches[0]?.x ?? Number.MAX_VALUE;
-        const ok = edgeBackEnabledRef.current && x <= EDGE_BACK_WIDTH;
+        const ok = edgeBackEnabledRef.current && (fullSwipeRef.current || x <= EDGE_BACK_WIDTH);
         edgeStartOkRef.current = ok;
         if (!ok) mgr.fail();
       })

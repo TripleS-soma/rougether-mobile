@@ -1,4 +1,5 @@
 import { backTargetFor } from '@/components/app/app-shell';
+import { FULL_SWIPE_BACK_EXCLUDED } from '@/components/app/navigation';
 
 // 하드웨어 백(#522)과 iOS 엣지 백(#564)이 공유하는 뒤로 목적지 규칙.
 describe('backTargetFor (#564)', () => {
@@ -27,5 +28,13 @@ describe('backTargetFor (#564)', () => {
 
   it('루트(나의 방)는 목적지 없음', () => {
     expect(backTargetFor('myRoom', 'routineManage', false)).toBeNull();
+  });
+
+  it('전폭 스와이프 백 제외 화면 — 가로 제스처를 쓰는 곳만 (#1135)', () => {
+    expect([...FULL_SWIPE_BACK_EXCLUDED].sort()).toEqual(
+      ['addRoutine', 'decor', 'friendRoom', 'gacha'].sort(),
+    );
+    // 설정·도움말 같은 세로 화면은 어디서나 우향 스와이프로 뒤로.
+    expect(FULL_SWIPE_BACK_EXCLUDED.has('settings')).toBe(false);
   });
 });
