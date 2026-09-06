@@ -5,6 +5,7 @@ import plist from '@expo/plist';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const { AndroidConfig } = require('@expo/config-plugins');
+const xcode = require('xcode');
 const names = ['MissingYou', 'Teary', 'Sobbing', 'DailySuccess', 'StreakChampion'];
 const manifestPath = process.argv[2] ?? 'android/app/src/main/AndroidManifest.xml';
 let checked = false;
@@ -35,11 +36,19 @@ if (fs.existsSync(manifestPath)) {
 }
 if (fs.existsSync('ios/Rougether/Info.plist')) {
   const info = plist.default.parse(fs.readFileSync('ios/Rougether/Info.plist', 'utf8'));
-  const project = fs.readFileSync('ios/Rougether.xcodeproj/project.pbxproj', 'utf8');
-  for (const name of names) {
-    assert(
-      project.includes(`ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "${names.join(' ')}"`),
+  const project = xcode.project('ios/Rougether.xcodeproj/project.pbxproj');
+  project.parseSync();
+  const entries = Object.values(project.pbxXCBuildConfigurationSection())
+    .map((config) => config.buildSettings?.ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES)
+    .filter(Boolean);
+  assert(entries.length > 0, 'missing alternate app icon build settings');
+  for (const value of entries) {
+    const registered = (Array.isArray(value) ? value : value.replaceAll('"', '').split(/\s+/)).map(
+      (name) => name.replaceAll('"', ''),
     );
+    assert.deepEqual([...registered].sort(), [...names].sort());
+  }
+  for (const name of names) {
     const dir = `ios/Rougether/Images.xcassets/${name}.appiconset`;
     const catalog = JSON.parse(fs.readFileSync(`${dir}/Contents.json`, 'utf8'));
     assert(

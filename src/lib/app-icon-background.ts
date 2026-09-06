@@ -35,10 +35,18 @@ if (Platform.OS === 'android' && !TaskManager.isTaskDefined(APP_ICON_TASK)) {
   });
 }
 
-export async function setAppIconBackgroundEnabled(enabled: boolean) {
-  if (Platform.OS !== 'android') return;
-  const registered = await TaskManager.isTaskRegisteredAsync(APP_ICON_TASK);
-  if (enabled && !registered)
-    await BackgroundTask.registerTaskAsync(APP_ICON_TASK, { minimumInterval: 60 });
-  if (!enabled && registered) await BackgroundTask.unregisterTaskAsync(APP_ICON_TASK);
+let registration: Promise<void> = Promise.resolve();
+
+export function setAppIconBackgroundEnabled(enabled: boolean): Promise<void> {
+  // A logout queued during registration must unregister the task afterward.
+  registration = registration
+    .catch(() => {})
+    .then(async () => {
+      if (Platform.OS !== 'android') return;
+      const registered = await TaskManager.isTaskRegisteredAsync(APP_ICON_TASK);
+      if (enabled && !registered)
+        await BackgroundTask.registerTaskAsync(APP_ICON_TASK, { minimumInterval: 60 });
+      if (!enabled && registered) await BackgroundTask.unregisterTaskAsync(APP_ICON_TASK);
+    });
+  return registration;
 }
