@@ -37,6 +37,15 @@ describe('MyPageScreen', () => {
     expect(onOpenSettings).toHaveBeenCalledTimes(1);
   });
 
+  it('캘린더 연동 행은 배선될 때만 (#1097)', async () => {
+    const onOpenCalendarImport = jest.fn();
+    const { getByText, queryByText, rerender } = await render(<MyPageScreen />);
+    expect(queryByText('캘린더 연동')).toBeNull();
+    await rerender(<MyPageScreen onOpenCalendarImport={onOpenCalendarImport} />);
+    await fireEvent.press(getByText('캘린더 연동'));
+    expect(onOpenCalendarImport).toHaveBeenCalledTimes(1);
+  });
+
   it('프로필 편집·주간회고·친구 초대·도움말·버그 제보가 각자의 콜백을 부른다', async () => {
     const onEditProfile = jest.fn();
     const onOpenWeeklyReport = jest.fn();

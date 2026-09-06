@@ -26,7 +26,6 @@ import { useCalendarImport } from '@/hooks/use-calendar-import';
 import type { CharacterId } from '@/constants/characters';
 import { SUPPORT_EMAIL } from '@/constants/policy';
 import { useAuth } from '@/hooks/use-auth';
-import { useAppUpdates } from '@/hooks/use-app-updates';
 import { useBugReports } from '@/hooks/use-bug-reports';
 import { useInvites } from '@/hooks/use-invites';
 import { useNotificationSettings } from '@/hooks/use-notification-settings';
@@ -116,7 +115,6 @@ export function useSettingsSurface({
   const calendarImport = useCalendarImport();
   // 스토어 요건(#545): 도움말의 실제 앱 버전 표기.
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
-  const appUpdates = useAppUpdates();
 
   const { logout, withdraw } = useAuth();
   const handleLogout = useCallback(() => {
@@ -225,7 +223,7 @@ export function useSettingsSurface({
     void loadNotificationSettings();
   }, [setScreen, loadNotificationSettings]);
   const openSound = useCallback(() => setScreen('sound'), [setScreen]);
-  // 캘린더 연동 (#844) — 화면에서 권한을 요청하므로 여는 것만 한다.
+  // 캘린더 연동 (#844 → 마이페이지 행 #1097) — 화면에서 권한을 요청하므로 여는 것만 한다.
   const openCalendarImport = useCallback(() => setScreen('calendarImport'), [setScreen]);
   const openHelp = useCallback(() => setScreen('help'), [setScreen]);
   // 친구 초대 (#518) — 진입 시점에 내 코드를 로드(없으면 서버가 발급).
@@ -262,6 +260,7 @@ export function useSettingsSurface({
     attendancePending: shortcuts?.attendancePending ?? false,
     onOpenWalletHistory: shortcuts?.onOpenWalletHistory,
     onOpenWeeklyReport,
+    onOpenCalendarImport: openCalendarImport,
     onInviteFriends: openInviteFriends,
     onOpenHelp: openHelp,
     onReportBug: openBugReport,
@@ -279,9 +278,6 @@ export function useSettingsSurface({
 
   /** 설정 서브화면 prop — `<SettingsScreen {...settingsProps} />` (테스트 하네스용 노출). */
   const settingsProps = {
-    appUpdate: appUpdates.state,
-    onCheckForUpdate: appUpdates.check,
-    onApplyUpdate: appUpdates.apply,
     themeMode,
     onChangeThemeMode: setThemeMode,
     themeId,
@@ -290,7 +286,6 @@ export function useSettingsSurface({
     onOpenTheme: openTheme,
     onOpenNotifications: openNotificationSettings,
     onOpenSound: openSound,
-    onOpenCalendarImport: openCalendarImport,
     onOpenTerms: openTerms,
     onOpenPrivacy: openPrivacy,
     onReplayOnboarding,
@@ -362,7 +357,7 @@ export function useSettingsSurface({
           );
           return out;
         }}
-        onBack={backToSettings}
+        onBack={backToMyPage}
       />
     ) : screen === 'sound' ? (
       <SoundSettingsScreen

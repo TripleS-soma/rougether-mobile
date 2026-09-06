@@ -22,6 +22,8 @@ describe('SettingsScreen', () => {
     expect(queryByText('친구 초대')).toBeNull();
     expect(queryByText('주간회고 다시 보기')).toBeNull();
     expect(queryByText('도움말')).toBeNull();
+    expect(queryByText('캘린더 연동')).toBeNull(); // #1097
+    expect(queryByText('업데이트 확인')).toBeNull(); // #1095
     // "바꾸는 곳"은 남는다.
     expect(getByText('푸시 알림')).toBeTruthy();
     expect(getByText('로그아웃')).toBeTruthy();
