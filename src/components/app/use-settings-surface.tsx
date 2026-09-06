@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } 
 import { Linking } from 'react-native';
 
 import { type Screen } from '@/components/app/navigation';
+import { SettingsScreen } from '@/components/screens/settings-screen';
 import { BugReportScreen } from '@/components/screens/bug-report-screen';
 import { HelpScreen } from '@/components/screens/help-screen';
 import { InviteFriendsScreen } from '@/components/screens/invite-friends-screen';
@@ -25,7 +26,6 @@ import { useCalendarImport } from '@/hooks/use-calendar-import';
 import type { CharacterId } from '@/constants/characters';
 import { SUPPORT_EMAIL } from '@/constants/policy';
 import { useAuth } from '@/hooks/use-auth';
-import { useAppUpdates } from '@/hooks/use-app-updates';
 import { useBugReports } from '@/hooks/use-bug-reports';
 import { useInvites } from '@/hooks/use-invites';
 import { useNotificationSettings } from '@/hooks/use-notification-settings';
@@ -35,17 +35,20 @@ import {
   subscribePendingFriendInviteCode,
 } from '@/lib/pending-invite';
 import { pickLibraryImage } from '@/lib/pick-image';
+import type { ScrollRestoreProps } from '@/hooks/use-scroll-restore';
+import { useConstant, useStableCallback } from '@/hooks/use-stable-value';
 import { DEFAULT_HAPTIC_STRENGTH, setHapticStrength } from '@/utils/haptics';
 
 /** 사운드 설정의 기기 보관 키 (#405) — 알림 설정은 서버로 이관됨 (#495). */
 const DEVICE_SETTINGS_KEY = 'rougether.device-settings';
 
 /**
- * 설정 서피스 배선 (#692 2단계) — 설정 탭과 그 서브화면 8종(테마·폰트·프로필·
- * 알림·사운드·버그 제보·도움말·친구 초대)의 도메인 훅·콜백·JSX를
- * 소유한다. 서브화면에 있는 동안 탭 페이저가 언마운트되므로 상태는 컴포넌트가
- * 아니라 항상 마운트된 셸에서 이 훅으로 산다. 셸은 `tabProps`를
- * `<SettingsScreen {...tabProps} />`로 스프레드하고 `subScreen`을 렌더만 한다.
+ * 마이페이지·설정 서피스 배선 (#692 2단계 → #1088) — 마이페이지 탭과 그
+ * 서브화면 9종(설정·테마·폰트·프로필·알림·사운드·버그 제보·도움말·친구 초대)의
+ * 도메인 훅·콜백·JSX를 소유한다. 서브화면에 있는 동안 탭 페이저가
+ * 언마운트되므로 상태는 컴포넌트가 아니라 항상 마운트된 셸에서 이 훅으로
+ * 산다. 셸은 `myPageProps`를 `<MyPageScreen {...myPageProps} />`로 스프레드하고
+ * `subScreen`을 렌더만 한다. 설정 화면 자체도 서브화면이라 `subScreen`이 그린다.
  */
 export function useSettingsSurface({
   screen,
@@ -53,19 +56,30 @@ export function useSettingsSurface({
   onReplayOnboarding,
   onOpenWeeklyReport,
   profile,
+  stats,
+  shortcuts,
 }: {
   screen: Screen;
   setScreen: Dispatch<SetStateAction<Screen>>;
   /** 설정 → 튜토리얼 다시 보기 (셸 prop 통과). */
   onReplayOnboarding?: () => void;
-  /** 설정 → 주간회고 다시 보기 (#1056) — 회고 데이터는 나의 방 페이지 훅이 소유. */
+  /** 마이페이지 → 주간회고 다시 보기 (#1056) — 회고 데이터는 나의 방 페이지 훅이 소유. */
   onOpenWeeklyReport?: () => void;
-  /** 프로필 편집 배선 — 닉네임·소개는 나의 방 헤더와 공유라 셸 소유. */
+  /** 프로필 카드·편집 배선 — 닉네임·소개는 나의 방 헤더와 공유라 셸 소유. */
   profile: {
     nickname: string;
     bio: string;
     characterId: CharacterId;
+    characterFrames?: string[];
     onSave: (nickname: string, bio: string) => void;
+  };
+  /** 마이페이지 지표 한 줄 (#1088) — 스트릭·지갑은 나의 방 데이터 훅 소유. */
+  stats: { streak: number; coin: number; diamond: number };
+  /** 마이페이지 바로가기 (#1089) — 출석·재화 내역 시트는 셸이 들고 있다. */
+  shortcuts?: {
+    onOpenAttendance?: () => void;
+    attendancePending?: boolean;
+    onOpenWalletHistory?: () => void;
   };
 }) {
   const { themeId, setThemeId, mode: themeMode, setMode: setThemeMode, fontId, setFontId } = useBrandTheme(); // prettier-ignore
@@ -78,14 +92,16 @@ export function useSettingsSurface({
   // 문구에 `으로/로`를 쓰지 않는 건 **조사가 이름마다 달라지기 때문**이다 —
   // "포근"은 받침이 있어 `으로`, "인디고 타이드"는 없어 `로`다. 이름을 앞에 두고
   // 고정 조사(`를`)만 쓰면 어떤 이름이 와도 맞는다.
+  // 적용하기 버튼(#1096)으로 들어온다 — 적용 뒤 설정으로 돌아간다.
   const changeThemeId = useCallback(
     (id: ThemeId) => {
       if (id === themeId) return;
       setThemeId(id);
       const name = THEME_OPTIONS.find((o) => o.id === id)?.name;
       if (name) toast(`“${name}” 테마를 적용했어요`);
+      setScreen('settings');
     },
-    [themeId, setThemeId, toast],
+    [themeId, setThemeId, toast, setScreen],
   );
 
   const changeFontId = useCallback(
@@ -94,14 +110,14 @@ export function useSettingsSurface({
       setFontId(id);
       const name = FONT_OPTIONS.find((o) => o.id === id)?.name;
       if (name) toast(`“${name}” 폰트를 적용했어요`);
+      setScreen('settings');
     },
-    [fontId, setFontId, toast],
+    [fontId, setFontId, toast, setScreen],
   );
   // 캘린더 임포트 상태 (#844) — 권한·조회·임포트를 훅이 쥔다.
   const calendarImport = useCalendarImport();
   // 스토어 요건(#545): 도움말의 실제 앱 버전 표기.
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
-  const appUpdates = useAppUpdates();
 
   const { logout, withdraw } = useAuth();
   const handleLogout = useCallback(() => {
@@ -131,7 +147,7 @@ export function useSettingsSurface({
     loadScreenshot: loadBugScreenshot,
   } = useBugReports();
 
-  // 친구 초대 리워드 (#518) — 설정 → 친구 초대 화면의 데이터·액션.
+  // 친구 초대 리워드 (#518) — 마이페이지 → 친구 초대 화면의 데이터·액션.
   const {
     info: inviteInfo,
     loading: invitesLoading,
@@ -198,8 +214,9 @@ export function useSettingsSurface({
     setHapticStrength(soundSettings.hapticStrength ?? DEFAULT_HAPTIC_STRENGTH);
   }, [soundSettings.hapticStrength]);
 
-  // 설정 화면 콜백 — SettingsScreen이 memo라(탭 페이저로 상주, #539 후속)
-  // 인라인 람다면 셸 리렌더마다 memo가 뚫린다. 전부 참조 고정.
+  // 마이페이지·설정 화면 콜백 — 둘 다 memo라(#539 후속) 인라인 람다면 셸
+  // 리렌더마다 memo가 뚫린다. 전부 참조 고정.
+  const openSettings = useCallback(() => setScreen('settings'), [setScreen]);
   const openTheme = useCallback(() => setScreen('theme'), [setScreen]);
   const openFont = useCallback(() => setScreen('font'), [setScreen]);
   const openProfileEdit = useCallback(() => setScreen('profileEdit'), [setScreen]);
@@ -209,7 +226,7 @@ export function useSettingsSurface({
     void loadNotificationSettings();
   }, [setScreen, loadNotificationSettings]);
   const openSound = useCallback(() => setScreen('sound'), [setScreen]);
-  // 캘린더 연동 (#844) — 화면에서 권한을 요청하므로 여는 것만 한다.
+  // 캘린더 연동 (#844 → 마이페이지 행 #1097) — 화면에서 권한을 요청하므로 여는 것만 한다.
   const openCalendarImport = useCallback(() => setScreen('calendarImport'), [setScreen]);
   const openHelp = useCallback(() => setScreen('help'), [setScreen]);
   // 친구 초대 (#518) — 진입 시점에 내 코드를 로드(없으면 서버가 발급).
@@ -231,40 +248,65 @@ export function useSettingsSurface({
     void loadBugReports();
   }, [setScreen, loadBugReports]);
 
-  /** 탭 페이저의 설정 페이지 prop — `<SettingsScreen {...tabProps} />`. */
-  const tabProps = {
-    appUpdate: appUpdates.state,
-    onCheckForUpdate: appUpdates.check,
-    onApplyUpdate: appUpdates.apply,
+  /** 탭 페이저의 마이페이지 prop — `<MyPageScreen {...myPageProps} />`. */
+  const myPageProps = {
+    nickname: profile.nickname,
+    bio: profile.bio,
+    characterId: profile.characterId,
+    characterFrames: profile.characterFrames,
+    streakDays: stats.streak,
+    coinBalance: stats.coin,
+    diamondBalance: stats.diamond,
+    onEditProfile: openProfileEdit,
+    onOpenSettings: openSettings,
+    onOpenAttendance: shortcuts?.onOpenAttendance,
+    attendancePending: shortcuts?.attendancePending ?? false,
+    onOpenWalletHistory: shortcuts?.onOpenWalletHistory,
+    onOpenWeeklyReport,
+    onOpenCalendarImport: openCalendarImport,
+    onInviteFriends: openInviteFriends,
+    onOpenHelp: openHelp,
+    onReportBug: openBugReport,
+  };
+
+  // 설정 서브화면의 스크롤 위치 (#763) — 테마·폰트·알림에 다녀오면 설정 화면이
+  // 리마운트되므로 탭 스크롤(use-tab-scroll)과 같은 방식으로 훅이 들고 있는다.
+  const settingsOffset = useConstant(() => ({ y: 0 }));
+  const settingsScroll: ScrollRestoreProps = {
+    getInitialScrollY: useStableCallback(() => settingsOffset.y),
+    onScrollY: useStableCallback((y: number) => {
+      settingsOffset.y = y;
+    }),
+  };
+
+  /** 설정 서브화면 prop — `<SettingsScreen {...settingsProps} />` (테스트 하네스용 노출). */
+  const settingsProps = {
     themeMode,
     onChangeThemeMode: setThemeMode,
     themeId,
     fontId,
     onOpenFont: openFont,
     onOpenTheme: openTheme,
-    onEditProfile: openProfileEdit,
     onOpenNotifications: openNotificationSettings,
     onOpenSound: openSound,
-    onOpenCalendarImport: openCalendarImport,
-    onOpenHelp: openHelp,
-    onInviteFriends: openInviteFriends,
     onOpenTerms: openTerms,
     onOpenPrivacy: openPrivacy,
-    onReportBug: openBugReport,
     onReplayOnboarding,
-    onOpenWeeklyReport,
     onLogout: handleLogout,
     onWithdraw: handleWithdraw,
   };
 
-  const backToSettings = useCallback(() => setScreen('settings'), [setScreen]);
+  const backToMyPage = useCallback(() => setScreen('myPage'), [setScreen]);
+  const backToSettings = openSettings;
 
-  /** 현재 화면이 설정 서브화면이면 그 JSX, 아니면 null — 셸이 그대로 렌더. */
+  /** 현재 화면이 마이페이지 서브화면이면 그 JSX, 아니면 null — 셸이 그대로 렌더. */
   const subScreen =
-    screen === 'theme' ? (
+    screen === 'settings' ? (
+      <SettingsScreen {...settingsProps} {...settingsScroll} onBack={backToMyPage} />
+    ) : screen === 'theme' ? (
       <ThemeScreen
         themeId={themeId}
-        onChangeThemeId={changeThemeId}
+        onApplyThemeId={changeThemeId}
         userName={profile.nickname}
         characterId={profile.characterId}
         onBack={backToSettings}
@@ -272,7 +314,7 @@ export function useSettingsSurface({
     ) : screen === 'font' ? (
       <FontScreen
         fontId={fontId}
-        onChangeFont={changeFontId}
+        onApplyFont={changeFontId}
         userName={profile.nickname}
         characterId={profile.characterId}
         onBack={backToSettings}
@@ -284,9 +326,9 @@ export function useSettingsSurface({
         characterId={profile.characterId}
         onSave={(nick, b) => {
           profile.onSave(nick, b);
-          setScreen('settings');
+          setScreen('myPage');
         }}
-        onBack={backToSettings}
+        onBack={backToMyPage}
       />
     ) : screen === 'notifications' ? (
       <NotificationSettingsScreen
@@ -318,7 +360,7 @@ export function useSettingsSurface({
           );
           return out;
         }}
-        onBack={backToSettings}
+        onBack={backToMyPage}
       />
     ) : screen === 'sound' ? (
       <SoundSettingsScreen
@@ -335,10 +377,10 @@ export function useSettingsSurface({
         onLoadScreenshot={loadBugScreenshot}
         onSubmit={submitBugReport}
         onPickImage={pickLibraryImage}
-        onBack={backToSettings}
+        onBack={backToMyPage}
       />
     ) : screen === 'help' ? (
-      <HelpScreen onBack={backToSettings} appVersion={appVersion} onContact={openSupportMail} />
+      <HelpScreen onBack={backToMyPage} appVersion={appVersion} onContact={openSupportMail} />
     ) : screen === 'inviteFriends' ? (
       <InviteFriendsScreen
         info={inviteInfo}
@@ -351,9 +393,9 @@ export function useSettingsSurface({
           setPendingFriendCode(null);
           clearPendingFriendInviteCode();
         }}
-        onBack={backToSettings}
+        onBack={backToMyPage}
       />
     ) : null;
 
-  return { tabProps, subScreen };
+  return { myPageProps, settingsProps, subScreen };
 }

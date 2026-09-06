@@ -8,7 +8,9 @@ describe('NavigationPreview', () => {
     expect(ui.getByTestId('navigation-status').props.children.join('')).toBe('나의 방 · 전환 0회');
     await act(async () => fireEvent.press(ui.getByRole('button', { name: '집' })));
     await act(async () => fireEvent.press(ui.getByRole('button', { name: '집 확대 잠금 재현' })));
-    await act(async () => fireEvent.press(ui.getByRole('button', { name: '설정' })));
-    expect(ui.getByTestId('navigation-status').props.children.join('')).toBe('설정 · 전환 2회');
+    await act(async () => fireEvent.press(ui.getByRole('button', { name: '마이페이지' })));
+    expect(ui.getByTestId('navigation-status').props.children.join('')).toBe(
+      '마이페이지 · 전환 2회',
+    );
   });
 });

@@ -57,6 +57,8 @@ describe('AppRoot', () => {
     const { getByText, getByLabelText } = await renderApp();
     await waitFor(() => expect(getByText('내 방')).toBeTruthy());
 
+    // 설정은 마이페이지 헤더의 톱니 뒤 서브화면 (#1088).
+    await fireEvent.press(getByLabelText('마이페이지'));
     await fireEvent.press(getByLabelText('설정'));
     await waitFor(() => expect(getByText('튜토리얼 다시 보기')).toBeTruthy());
     await fireEvent.press(getByText('튜토리얼 다시 보기'));

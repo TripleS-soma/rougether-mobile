@@ -25,6 +25,8 @@ import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { CharacterPickerSheet } from '@/components/screens/sheets/character-picker-sheet';
 import { BugReportScreen } from '@/components/screens/bug-report-screen';
 import { NotificationListScreen } from '@/components/screens/notification-list-screen';
+import { MyPageScreen } from '@/components/screens/my-page-screen';
+import { ListRow } from '@/components/ui/list-row';
 import { NotificationSettingsScreen } from '@/components/screens/notification-settings-screen';
 import { OnboardingScreen } from '@/components/screens/onboarding-screen';
 import { PasswordChangeScreen } from '@/components/screens/password-change-screen';
@@ -35,6 +37,7 @@ import { RoutineManageScreen } from '@/components/screens/routine-manage-screen'
 import { FontScreen } from '@/components/screens/font-screen';
 import { AppearancePreview } from '@/components/screens/settings/appearance-preview';
 import { ThemeScreen } from '@/components/screens/theme-screen';
+import { SettingsScreen } from '@/components/screens/settings-screen';
 import { SoundSettingsScreen } from '@/components/screens/sound-settings-screen';
 import { SignupScreen } from '@/components/screens/signup-screen';
 import { Badge } from '@/components/ui/badge';
@@ -78,7 +81,6 @@ import { RoomRenderReference } from '@/dev/room-render-reference';
 import { TokenSwatches } from '@/dev/token-swatches';
 import { TypeScalePreview } from '@/dev/type-scale-preview';
 import { NavigationPreview } from '@/dev/navigation-preview';
-import { SettingsUpdatePreview } from '@/dev/settings-update-preview';
 
 export type GalleryEntry = {
   /** Unique, human-readable name shown as the section header. */
@@ -575,7 +577,7 @@ export const galleryEntries: GalleryEntry[] = [
   {
     name: 'CalendarImportScreen',
     description:
-      '설정 → 캘린더 연동 (#844): 캘린더 선택 → 미리보기 → 선택 임포트. 비슷한 루틴이 있는 항목은 기본 해제.',
+      '마이페이지 → 캘린더 연동 (#844 → #1097): 캘린더 선택 → 미리보기 → 선택 임포트. 비슷한 루틴이 있는 항목은 기본 해제.',
     render: () => (
       <View style={{ alignSelf: 'stretch', height: 720 }}>
         <CalendarImportScreen
@@ -742,12 +744,39 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
-    name: 'SettingsScreen · 리퀴드 설정과 AppUpdateCard',
+    name: 'ListRow',
     description:
-      '설정 카드·테마 선택과 업데이트 상태/재시작 확인. 실제 OTA 없이 상태를 재현합니다.',
+      '설정·마이페이지 공용 목록 행 — 아이콘 원 + 라벨 + 화살표, 마지막 행은 구분선 없음.',
+    render: () => (
+      <View style={{ alignSelf: 'stretch' }}>
+        <ListRow icon="help" label="도움말" />
+        <ListRow icon="bug" label="버그 제보" last />
+      </View>
+    ),
+  },
+  {
+    name: 'MyPageScreen',
+    description:
+      '마이페이지 탭 (#1088): 프로필 카드·지표 한 줄·계정/콘텐츠 행. 설정은 헤더 우측 톱니 뒤 서브화면.',
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
-        <SettingsUpdatePreview />
+        <MyPageScreen
+          nickname="준서"
+          bio="매일 조금씩"
+          streakDays={12}
+          coinBalance={1240}
+          diamondBalance={3}
+        />
+      </View>
+    ),
+  },
+  {
+    name: 'SettingsScreen',
+    description:
+      '마이페이지의 서브화면 (#1088): 디자인(다크모드·테마·폰트)·알림·기타·로그아웃·회원탈퇴. 업데이트 카드는 #1095에서 뺐다.',
+    render: () => (
+      <View style={{ height: 640, alignSelf: 'stretch' }}>
+        <SettingsScreen onBack={() => {}} />
       </View>
     ),
   },
@@ -956,7 +985,7 @@ export const galleryEntries: GalleryEntry[] = [
   {
     name: 'WeeklyReportScreen · 주간회고 화면',
     description:
-      '설정 > 주간회고 다시 보기 / 새 회고 배너 목적지 (#1056). 나의 방 탭에서 빠진 패널을 헤더 달린 화면으로.',
+      '마이페이지 > 주간회고 다시 보기 / 새 회고 배너 목적지 (#1056 → #1088). 나의 방 탭에서 빠진 패널을 헤더 달린 화면으로.',
     render: () => (
       <View style={{ height: 520 }}>
         <WeeklyReportScreen

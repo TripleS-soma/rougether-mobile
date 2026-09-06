@@ -12,12 +12,30 @@ describe('SettingsScreen', () => {
     expect(queryByText('숲')).toBeNull();
   });
 
-  it('계정 섹션에 비밀번호 변경 행이 없다 (#787)', async () => {
+  it('비밀번호 변경 행이 없고, 계정·콘텐츠성 행은 마이페이지로 갔다 (#787, #1088)', async () => {
     // 서버 인증이 소셜·dev 로그인뿐이라 비밀번호 계정이 없다 — 막다른 화면으로
     // 가는 행이 다시 새어 나오면 여기서 잡는다.
     const { getByText, queryByText } = await render(<SettingsScreen />);
-    expect(getByText('프로필 편집')).toBeTruthy();
     expect(queryByText('비밀번호 변경')).toBeNull();
+    // 프로필 편집·친구 초대·주간회고·도움말·버그 제보는 마이페이지 몫 (#1088).
+    expect(queryByText('프로필 편집')).toBeNull();
+    expect(queryByText('친구 초대')).toBeNull();
+    expect(queryByText('주간회고 다시 보기')).toBeNull();
+    expect(queryByText('도움말')).toBeNull();
+    expect(queryByText('캘린더 연동')).toBeNull(); // #1097
+    expect(queryByText('업데이트 확인')).toBeNull(); // #1095
+    // "바꾸는 곳"은 남는다.
+    expect(getByText('푸시 알림')).toBeTruthy();
+    expect(getByText('로그아웃')).toBeTruthy();
+  });
+
+  it('마이페이지의 서브화면 — onBack이 있으면 뒤로 가기가 보인다 (#1088)', async () => {
+    const onBack = jest.fn();
+    const { getByLabelText, queryByLabelText, rerender } = await render(<SettingsScreen />);
+    expect(queryByLabelText('뒤로 가기')).toBeNull();
+    await rerender(<SettingsScreen onBack={onBack} />);
+    await fireEvent.press(getByLabelText('뒤로 가기'));
+    expect(onBack).toHaveBeenCalledTimes(1);
   });
 
   it('changes the dark mode preference', async () => {
@@ -141,12 +159,5 @@ describe('SettingsScreen 회원탈퇴', () => {
     await fireEvent.press(getByText('취소'));
     expect(onWithdraw).not.toHaveBeenCalled();
     expect(queryByText('정말 탈퇴할까요?')).toBeNull();
-  });
-
-  it('주간회고 다시 보기 항목이 onOpenWeeklyReport를 부른다 (#1056)', async () => {
-    const onOpenWeeklyReport = jest.fn();
-    const { getByText } = await render(<SettingsScreen onOpenWeeklyReport={onOpenWeeklyReport} />);
-    await fireEvent.press(getByText('주간회고 다시 보기'));
-    expect(onOpenWeeklyReport).toHaveBeenCalledTimes(1);
   });
 });

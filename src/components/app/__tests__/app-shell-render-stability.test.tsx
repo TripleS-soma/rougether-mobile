@@ -45,16 +45,16 @@ jest.mock('@/components/screens/house-screen', () => {
   };
 });
 
-// SettingsScreen 프로브 (#563 후속) — 탭 페이저로 상주하게 되면서 memo가
+// MyPageScreen 프로브 (#563 후속 → #1088) — 탭 페이저로 상주하므로 memo가
 // 없으면 셸의 모든 상태 변화에 함께 리렌더된다.
 const mockSettingsRenders: Record<string, unknown>[] = [];
-jest.mock('@/components/screens/settings-screen', () => {
+jest.mock('@/components/screens/my-page-screen', () => {
   const React = jest.requireActual('react');
   const { Text } = jest.requireActual('react-native');
   return {
-    SettingsScreen: (props: Record<string, unknown>) => {
+    MyPageScreen: (props: Record<string, unknown>) => {
       mockSettingsRenders.push(props);
-      return React.createElement(Text, null, 'settings-probe');
+      return React.createElement(Text, null, 'my-page-probe');
     },
   };
 });
@@ -225,7 +225,7 @@ describe('AppShell → HouseScreen prop 참조 안정성 (#539, 리뷰 반영)',
   });
 });
 
-describe('AppShell → SettingsScreen prop 참조 안정성 (#563 후속)', () => {
+describe('AppShell → MyPageScreen prop 참조 안정성 (#563 후속)', () => {
   it('무관한 상태 변화(집 탭 왕복) 전후로 셸 콜백 prop의 참조가 같다', async () => {
     const { getByLabelText } = await render(
       <QueryProvider>
@@ -284,7 +284,7 @@ describe('탭 스크롤 위치 보존 (#763)', () => {
 
     // 탭 왕복(=셸 리렌더) 후에도 참조가 같다 — memo 화면(#539)을 깨지 않는다.
     await fireEvent.press(getByLabelText('집'));
-    await fireEvent.press(getByLabelText('설정'));
+    await fireEvent.press(getByLabelText('마이페이지'));
     const after = mockSettingsRenders[mockSettingsRenders.length - 1];
     expect(after.getInitialScrollY).toBe(settings.getInitialScrollY);
     expect(after.onScrollY).toBe(settings.onScrollY);

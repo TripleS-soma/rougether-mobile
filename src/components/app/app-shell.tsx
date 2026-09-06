@@ -5,6 +5,7 @@ import { GestureDetector } from 'react-native-gesture-handler';
 import { NAV_ORDER, SCREEN_FOR_TAB, type Screen } from '@/components/app/navigation';
 import { TabPager } from '@/components/app/tab-pager';
 import { useAppNavigation } from '@/components/app/use-app-navigation';
+import { useScreenTransition } from '@/components/app/use-screen-transition';
 import { useFriendVisit } from '@/components/app/use-friend-visit';
 import { useHousePages } from '@/components/app/use-house-pages';
 import { useMissionLinks } from '@/components/app/use-mission-links';
@@ -19,8 +20,9 @@ import {
   RoomDecorScreen,
 } from '@/components/screens/room-decor-screen';
 import { useLatestRef, useStableCallback } from '@/hooks/use-stable-value';
-import { SettingsScreen } from '@/components/screens/settings-screen';
+import { MyPageScreen } from '@/components/screens/my-page-screen';
 import { AttendanceSheet } from '@/components/screens/sheets/attendance-sheet';
+import { WalletHistorySheet } from '@/components/screens/sheets/wallet-history-sheet';
 import { MissionSheet } from '@/components/screens/sheets/mission-sheet';
 import { BottomNav } from '@/components/ui/bottom-nav';
 import { MissionBanner } from '@/components/ui/mission-banner';
@@ -31,6 +33,7 @@ import { todayIso } from '@/utils/datetime';
 import { refreshWidgets } from '@/widgets/rougether-widgets';
 import { buildWidgetSummary, saveWidgetSummary, saveWidgetTheme } from '@/widgets/widget-data';
 import { useAttendance } from '@/hooks/use-attendance';
+import { useWalletHistory } from '@/hooks/use-wallet-history';
 import { useGacha } from '@/hooks/use-gacha';
 import {
   type OnboardingMissionStepId,
@@ -114,9 +117,9 @@ export function AppShell({
   // Remember where the add/edit-routine screen was opened from, so its back
   // button returns to the right place (my-room or routine manage).
   const [addReturnScreen, setAddReturnScreen] = useState<Screen>('routineManage');
-  // 설정 → 주간회고 (#1056): 연 곳(설정)으로 되돌아오게 addReturnScreen을 함께 세팅.
-  const openWeeklyReportFromSettings = useCallback(() => {
-    setAddReturnScreen('settings');
+  // 마이페이지 → 주간회고 (#1056 → #1088): 연 곳으로 되돌아오게 addReturnScreen을 함께 세팅.
+  const openWeeklyReportFromMyPage = useCallback(() => {
+    setAddReturnScreen('myPage');
     setScreen('weeklyReport');
   }, []);
 
@@ -161,12 +164,24 @@ export function AppShell({
   );
 
   // 연속 출석 이벤트 (#851) — 진행 중인 이벤트가 없으면 status가 null이라
-  // 헤더 아이콘도 시트도 그려지지 않는다. 출석 코인은 응답의 잔액으로 지갑을
-  // 맞춘다(뽑기·상점과 같은 결).
+  // 마이페이지 바로가기도 시트도 그려지지 않는다(#1089). 출석 코인은 응답의
+  // 잔액으로 지갑을 맞춘다(뽑기·상점과 같은 결).
   const [attendanceOpen, setAttendanceOpen] = useState(false);
   const syncCoin = useCallback((coin: number) => setWallet((w) => ({ ...w, coin })), [setWallet]);
   const attendance = useAttendance({ onCoinBalance: syncCoin });
   const openAttendance = useCallback(() => setAttendanceOpen(true), []);
+  // 오늘 미출석 — 마이페이지 타일·하단 탭 배지 (#1089). 이벤트가 없으면 false.
+  const attendancePending = !!attendance.status && !attendance.status.checkedInToday;
+
+  // 재화 내역 시트 (#734 → #1089) — 나의 방 메뉴에서 마이페이지 바로가기로.
+  // 열 때마다 1페이지 재로드(완료 취소로 이력이 지워질 수 있음).
+  const walletHistory = useWalletHistory();
+  const [walletHistoryOpen, setWalletHistoryOpen] = useState(false);
+  const { load: loadWalletHistory } = walletHistory;
+  const openWalletHistory = useCallback(() => {
+    setWalletHistoryOpen(true);
+    loadWalletHistory();
+  }, [loadWalletHistory]);
 
   // Gacha machines + draw (spend + dupe→diamond handled server-side; wallet synced
   // from the draw response).
@@ -329,7 +344,7 @@ export function AppShell({
    */
   const nickname = apiNickname ?? '';
   const bio = apiBio ?? '';
-  // 설정 서피스 (#692 2단계) — 설정 탭·서브화면 8종의 훅·콜백·JSX 소유.
+  // 마이페이지·설정 서피스 (#692 2단계 → #1088) — 마이페이지 탭·서브화면 9종의 훅·콜백·JSX 소유.
   const handleProfileSave = useCallback(
     // saveProfile이 낙관적으로 상태를 바꾸고 실패 시 되돌린다 — 여기서 또
     // 손대면 되돌리기가 어긋난다 (#924). 집 좌석 라벨만은 별도 캐시(서버
@@ -346,8 +361,21 @@ export function AppShell({
     onReplayOnboarding,
     // 주간회고 다시 보기 (#1056) — 데이터는 나의 방 페이지 훅 소유. 훅 순서상
     // myRoomPages가 뒤에 오므로 setScreen 기반의 안정 콜백으로 연결한다.
-    onOpenWeeklyReport: openWeeklyReportFromSettings,
-    profile: { nickname, bio, characterId: wornCharacterId, onSave: handleProfileSave },
+    onOpenWeeklyReport: openWeeklyReportFromMyPage,
+    profile: {
+      nickname,
+      bio,
+      characterId: wornCharacterId,
+      characterFrames: wornCharacterFrames,
+      onSave: handleProfileSave,
+    },
+    stats: { streak, coin: wallet.coin, diamond: wallet.diamond },
+    // 바로가기 (#1089) — 출석은 이벤트가 있을 때만 배선(없으면 타일이 숨는다).
+    shortcuts: {
+      onOpenAttendance: attendance.status ? openAttendance : undefined,
+      attendancePending,
+      onOpenWalletHistory: openWalletHistory,
+    },
   });
   // 나의 방 페이지 배선 (#692 5단계) — 나의 방 탭 페이지와 서브화면 4종
   // (루틴 관리·추가·카테고리 관리·알림 목록)의 훅·콜백·JSX 소유.
@@ -367,10 +395,6 @@ export function AppShell({
       onCleanCobweb: cleanCobweb,
       markedTodoDates: myRoomData.markedTodoDates,
       onCalendarMonthChange: myRoomData.loadCalendarMonth,
-    },
-    attendance: {
-      attendance: attendance.status ? { pending: !attendance.status.checkedInToday } : undefined,
-      onOpenAttendance: attendance.status ? openAttendance : undefined,
     },
   });
   // 홈 위젯 오늘 요약 동기화 (#604, 안드로이드 전용) — 완료 토글·루틴
@@ -484,124 +508,143 @@ export function AppShell({
 
   // 내비게이션 컨트롤러 (#692) — 뒤로가기·엣지 백·전환 손맛·페이저 정착.
   // noHouses·탐색 이탈 판정이 use-house-pages 반환값이라 훅 호출이 그 뒤에 선다.
-  const { edgeBackPan, activeTab, handlePageChange, transOpacity, transX } = useAppNavigation({
+  const { edgeBackPan, activeTab, handlePageChange } = useAppNavigation({
     screen,
     setScreen,
     addReturnScreen,
     noHouses: housePages.noHouses,
   });
 
+  // 현재 화면 트리 — 슬라이드 전환(#1094)이 직전 렌더의 노드를 떠나는 층으로 들고 있는다.
+  const screenNode = (
+    <>
+      {/* 하단 탭 3서피스는 수평 페이저에 상주한다 (#563) — 스와이프 중
+        이웃 화면이 손가락을 따라 끝까지 보인다. 비활성 페이지는 페이저가
+        드래그/정착 중에만 그린다. 서브화면들은 기존처럼 단독 렌더. */}
+      {activeTab ? (
+        <TabPager
+          index={NAV_ORDER.indexOf(activeTab)}
+          onIndexChange={handlePageChange}
+          lock={pagerLock}>
+          <MyRoomScreen {...myRoomPages.tabProps} {...tabScroll.myRoom} />
+          <HouseScreen {...housePages.tabProps} {...tabScroll.house} />
+          <MyPageScreen {...settingsSurface.myPageProps} {...tabScroll.myPage} />
+        </TabPager>
+      ) : null}
+
+      {screen === 'decor' ? (
+        <RoomDecorScreen
+          initialItems={placedItems}
+          highlightItemIds={newDecorItemIds}
+          initialTab={decorInitialTab}
+          initialWallpaperId={wallpaperId}
+          initialFloorId={floorId}
+          initialBackgroundId={backgroundId}
+          ownedIds={ownedIds}
+          furniture={catalogue.furniture}
+          wallpapers={catalogue.wallpapers}
+          floors={catalogue.floors}
+          backgrounds={catalogue.backgrounds}
+          loading={shopLoading}
+          loadError={shopError}
+          onRetry={retryShop}
+          coinBalance={wallet.coin}
+          diamondBalance={wallet.diamond}
+          characterId={wornCharacterId}
+          characterFrames={wornCharacterFrames}
+          // 일괄 구매(프리뷰 저장, #501)가 결과를 기다린다 — Promise를 그대로.
+          onBuy={(itemId) => purchaseFurniture(itemId)}
+          onApply={async (its, wp, fl, bg) => {
+            const result = await saveLayout(its, wp, fl, bg);
+            if (result === 'ok') {
+              setPlacedItems(its);
+              setWallpaperId(wp);
+              setFloorId(fl);
+              setBackgroundId(bg);
+              // 집 좌석의 내 방 미리보기가 옛 방으로 남지 않게 (#1099).
+              memberRoomPreviews.invalidate();
+              // 꾸미기 저장 성공 = 미션 3 완료 (#571) — 새 아이템 포함
+              // 여부는 따지지 않는다(사양 단순화).
+              // 퍼널 마지막 칸 (#799) — 루틴→코인→뽑기→꾸미기 한 바퀴가
+              // 닫힌 지점. 미션은 스킵 가능하므로 저장 자체를 센다.
+              track('room_save', { item_count: its.length });
+              completeMission('place-furniture');
+            }
+            return result;
+          }}
+          onConflictReload={() => {
+            void retryShop();
+          }}
+          onBack={() => setScreen('myRoom')}
+        />
+      ) : null}
+
+      {/* 나의 방 서브화면 4종 (#692 5단계) — use-my-room-pages가 그린다. */}
+      {myRoomPages.subScreen}
+
+      {screen === 'gacha' ? (
+        <GachaScreen
+          gachas={gachas}
+          loading={gachasLoading}
+          loadError={gachasError}
+          onRetry={retryGachas}
+          coinBalance={wallet.coin}
+          diamondBalance={wallet.diamond}
+          onBack={() => setScreen('myRoom')}
+          onDraw={async (gachaId, count) => {
+            const results = await drawGachaMachine(gachaId, count);
+            // Drawn items land in the inventory — re-sync so 방 꾸미기 shows
+            // them as 보유중 and placement saves know their userItemId.
+            if (results?.some((r) => r.itemId != null && !r.converted)) void refreshOwned();
+            // A drawn character must show up in the 캐릭터 교체 picker too.
+            if (results?.some((r) => r.characterId != null && !r.converted))
+              void reloadMyCharacters();
+            return results;
+          }}
+          placeableItemIds={placeableFurnitureIds}
+          // 보상 목록 (#620) — 시트가 자체 재시도를 가지므로 실패는 null로.
+          onLoadRewards={(gachaId) => fetchGachaRewards(gachaId).catch(() => null)}
+          onGoPlace={goPlaceDrawn}
+          // 뽑기 성공 = 미션 2 완료 (#571) — 연출이 끝나고 확인을 누른
+          // 순간에. 뽑기 직후 완료시키면 미션 시트가 연출을 덮는다.
+          onResultsConfirmed={() => completeMission('first-draw')}
+        />
+      ) : null}
+
+      {/* 친구 방 (#149) — use-friend-visit이 그린다 (#692 4단계). */}
+      {friendRoomSubScreen}
+
+      {/* 집 서브화면 2종 (#692 6단계) — use-house-pages가 그린다. */}
+      {housePages.subScreen}
+
+      {/* 마이페이지 서브화면 9종(설정 포함, #692 → #1088) — use-settings-surface가 그린다. */}
+      {settingsSurface.subScreen}
+    </>
+  );
+  const layers = useScreenTransition({ screen, addReturnScreen, node: screenNode });
+
   return (
     <View style={styles.root}>
       {/* 엣지 백 (#564) — 콘텐츠 전체를 감싸되 관찰만 한다(차단 없음). */}
       <GestureDetector gesture={edgeBackPan}>
-        <Animated.View
-          style={[styles.content, { opacity: transOpacity, transform: [{ translateX: transX }] }]}>
-          {/* 하단 탭 3서피스는 수평 페이저에 상주한다 (#563) — 스와이프 중
-            이웃 화면이 손가락을 따라 끝까지 보인다. 비활성 페이지는 페이저가
-            드래그/정착 중에만 그린다. 서브화면들은 기존처럼 단독 렌더. */}
-          {activeTab ? (
-            <TabPager
-              index={NAV_ORDER.indexOf(activeTab)}
-              onIndexChange={handlePageChange}
-              lock={pagerLock}>
-              <MyRoomScreen {...myRoomPages.tabProps} {...tabScroll.myRoom} />
-              <HouseScreen {...housePages.tabProps} {...tabScroll.house} />
-              <SettingsScreen {...settingsSurface.tabProps} {...tabScroll.settings} />
-            </TabPager>
-          ) : null}
-
-          {screen === 'decor' ? (
-            <RoomDecorScreen
-              initialItems={placedItems}
-              highlightItemIds={newDecorItemIds}
-              initialTab={decorInitialTab}
-              initialWallpaperId={wallpaperId}
-              initialFloorId={floorId}
-              initialBackgroundId={backgroundId}
-              ownedIds={ownedIds}
-              furniture={catalogue.furniture}
-              wallpapers={catalogue.wallpapers}
-              floors={catalogue.floors}
-              backgrounds={catalogue.backgrounds}
-              loading={shopLoading}
-              loadError={shopError}
-              onRetry={retryShop}
-              coinBalance={wallet.coin}
-              diamondBalance={wallet.diamond}
-              characterId={wornCharacterId}
-              characterFrames={wornCharacterFrames}
-              // 일괄 구매(프리뷰 저장, #501)가 결과를 기다린다 — Promise를 그대로.
-              onBuy={(itemId) => purchaseFurniture(itemId)}
-              onApply={async (its, wp, fl, bg) => {
-                const result = await saveLayout(its, wp, fl, bg);
-                if (result === 'ok') {
-                  setPlacedItems(its);
-                  setWallpaperId(wp);
-                  setFloorId(fl);
-                  setBackgroundId(bg);
-                  // 꾸미기 저장 성공 = 미션 3 완료 (#571) — 새 아이템 포함
-                  // 여부는 따지지 않는다(사양 단순화).
-                  // 퍼널 마지막 칸 (#799) — 루틴→코인→뽑기→꾸미기 한 바퀴가
-                  // 닫힌 지점. 미션은 스킵 가능하므로 저장 자체를 센다.
-                  track('room_save', { item_count: its.length });
-                  completeMission('place-furniture');
-                }
-                return result;
-              }}
-              onConflictReload={() => {
-                void retryShop();
-              }}
-              onBack={() => setScreen('myRoom')}
-            />
-          ) : null}
-
-          {/* 나의 방 서브화면 4종 (#692 5단계) — use-my-room-pages가 그린다. */}
-          {myRoomPages.subScreen}
-
-          {screen === 'gacha' ? (
-            <GachaScreen
-              gachas={gachas}
-              loading={gachasLoading}
-              loadError={gachasError}
-              onRetry={retryGachas}
-              coinBalance={wallet.coin}
-              diamondBalance={wallet.diamond}
-              onBack={() => setScreen('myRoom')}
-              onDraw={async (gachaId, count) => {
-                const results = await drawGachaMachine(gachaId, count);
-                // Drawn items land in the inventory — re-sync so 방 꾸미기 shows
-                // them as 보유중 and placement saves know their userItemId.
-                if (results?.some((r) => r.itemId != null && !r.converted)) void refreshOwned();
-                // A drawn character must show up in the 캐릭터 교체 picker too.
-                if (results?.some((r) => r.characterId != null && !r.converted))
-                  void reloadMyCharacters();
-                return results;
-              }}
-              placeableItemIds={placeableFurnitureIds}
-              // 보상 목록 (#620) — 시트가 자체 재시도를 가지므로 실패는 null로.
-              onLoadRewards={(gachaId) => fetchGachaRewards(gachaId).catch(() => null)}
-              onGoPlace={goPlaceDrawn}
-              // 뽑기 성공 = 미션 2 완료 (#571) — 연출이 끝나고 확인을 누른
-              // 순간에. 뽑기 직후 완료시키면 미션 시트가 연출을 덮는다.
-              onResultsConfirmed={() => completeMission('first-draw')}
-            />
-          ) : null}
-
-          {/* 친구 방 (#149) — use-friend-visit이 그린다 (#692 4단계). */}
-          {friendRoomSubScreen}
-
-          {/* 집 서브화면 2종 (#692 6단계) — use-house-pages가 그린다. */}
-          {housePages.subScreen}
-
-          {/* 설정 서브화면 8종 (#692) — use-settings-surface가 그린다. */}
-          {settingsSurface.subScreen}
-        </Animated.View>
+        <View style={styles.content}>
+          {/* 두 층 슬라이드 (#1094) — 전환 중 300ms만 두 화면이 함께 산다. */}
+          {layers.map((layer) => (
+            <Animated.View
+              key={layer.key}
+              pointerEvents={layer.pointerEvents}
+              style={[styles.layer, layer.style]}>
+              {layer.node}
+            </Animated.View>
+          ))}
+        </View>
       </GestureDetector>
 
       {activeTab ? (
         <BottomNav
           active={activeTab}
+          // 미출석 점은 방 메뉴 버튼에서 마이페이지 탭으로 (#1089).
+          badges={attendancePending ? MY_PAGE_BADGE : undefined}
           onChange={(tab) =>
             // 집이 없으면 집 탭은 빈 상태 대신 집 탐색으로 직행 (#571).
             setScreen(tab === 'house' && housePages.noHouses ? 'houseSearch' : SCREEN_FOR_TAB[tab])
@@ -667,9 +710,24 @@ export function AppShell({
           onClose={() => setAttendanceOpen(false)}
         />
       ) : null}
+
+      {/* 재화 내역 시트 (#734 → #1089) — 마이페이지 바로가기가 연다. */}
+      <WalletHistorySheet
+        visible={walletHistoryOpen}
+        onClose={() => setWalletHistoryOpen(false)}
+        entries={walletHistory.entries}
+        loading={walletHistory.loading}
+        loadError={walletHistory.error}
+        onRetry={walletHistory.load}
+        hasNext={walletHistory.hasNext}
+        onLoadMore={walletHistory.loadMore}
+      />
     </View>
   );
 }
+
+// 참조 고정 — BottomNav prop이 렌더마다 새 객체면 memo 검증(#539)에 잡힌다.
+const MY_PAGE_BADGE = { myPage: true } as const;
 
 const styles = StyleSheet.create({
   root: {
@@ -677,5 +735,8 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  layer: {
+    ...StyleSheet.absoluteFillObject,
   },
 });
