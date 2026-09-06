@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, SectionList, StyleSheet, Text, View } from 'react-native';
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  SectionList,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 
 import type { GachaMachine } from '@/api/adapters';
 import type { DrawResult, GachaDrawCount, GachaRewardResponse } from '@/api';
@@ -23,14 +33,14 @@ import { RewardRow } from '@/components/screens/gacha/reward-row';
 import { RetryState } from '@/components/ui/retry-state';
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { WalletPills } from '@/components/ui/wallet-pills';
-import { Overlay, Radius, Spacing, StaticWhite } from '@/constants/theme';
+import { GachaStage, Overlay, Radius, Spacing, StaticWhite } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { track } from '@/lib/analytics';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { RARITY_COLORS, type Rarity } from '@/resources/furniture';
-import { hapticImpact, hapticSuccess } from '@/utils/haptics';
+import { hapticImpact, hapticSelection, hapticSuccess } from '@/utils/haptics';
 
 type Phase = 'idle' | 'charging' | 'burst' | 'reveal';
 
@@ -130,6 +140,9 @@ export function GachaScreen({
   onLoadRewards,
 }: GachaScreenProps) {
   const t = useTokens();
+  const reducedMotion = useReducedMotion();
+  const { width } = useWindowDimensions();
+  const cardWidth = Math.min(GachaStage.card, (width - Spacing.four * 2 - Spacing.two * 4) / 3);
   const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
@@ -140,11 +153,26 @@ export function GachaScreen({
   const [error, setError] = useState('');
   const [phase, setPhase] = useState<Phase>('idle');
   const [pulled, setPulled] = useState<DrawResult[]>([]);
+  const [revealAll, setRevealAll] = useState(false);
+  const [openedCards, setOpenedCards] = useState<number[]>([]);
+  const markRevealed = useCallback((index: number) => {
+    setOpenedCards((prev) => (prev.includes(index) ? prev : [...prev, index]));
+  }, []);
   // 버스트 연출 파라미터 (#431) — 최고 레어도의 색, 일반은 짧은 버스트.
   const [burstColor, setBurstColor] = useState(RARITY_COLORS[DEFAULT_RARITY]);
   const [burstStrong, setBurstStrong] = useState(false);
   const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => clearTimeout(revealTimer.current ?? undefined), []);
+  const chargeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const drawBusy = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      clearTimeout(chargeTimer.current ?? undefined);
+      clearTimeout(revealTimer.current ?? undefined);
+    };
+  }, []);
   // 보상 목록 시트 (#620) — 머신별 lazy 로드, 같은 머신 재열람은 캐시.
   const [rewardsOpen, setRewardsOpen] = useState(false);
   const [rewardsLoading, setRewardsLoading] = useState(false);
@@ -218,7 +246,7 @@ export function GachaScreen({
     box ? balanceFor(box.costCurrencyType) >= drawCost(count) : false;
 
   const pull = async (count: GachaDrawCount) => {
-    if (!box || phase !== 'idle') return;
+    if (!box || phase !== 'idle' || drawBusy.current) return;
     // The button stays tappable when unaffordable — the tap says why.
     if (!canAfford(count)) {
       // 뽑기 앞에서 코인이 모자라 돌아서는 지점 (#799) — 퍼널의 흔한 막힘.
@@ -230,31 +258,54 @@ export function GachaScreen({
       return;
     }
     setError('');
+    drawBusy.current = true;
+    setOpenedCards([]);
+    setRevealAll(false);
     hapticImpact();
     setPhase('charging');
     const started = Date.now();
-    const results = await onDraw?.(box.id, count);
-    if (!results) {
+    let results: DrawResult[] | null | undefined;
+    try {
+      results = await onDraw?.(box.id, count);
+    } catch {
+      results = null;
+    }
+    if (!mounted.current) return;
+    if (!results?.length) {
+      drawBusy.current = false;
       setPhase('idle');
       setError('뽑기에 실패했어요.');
       return;
     }
     // The API answers fast — hold the charge build-up so the reveal lands
     // after a beat of anticipation instead of flashing by.
-    const remain = MIN_CHARGE_MS - (Date.now() - started);
-    if (remain > 0) await new Promise((r) => setTimeout(r, remain));
     setPulled(results);
-    // 정점 버스트 (#431) — 최고 레어도 색의 광선·파티클, 전설은 햅틱 2연타.
+    // Only the actual server result determines the celebration color.
     const best = bestRarity(results);
     setBurstColor(RARITY_COLORS[best]);
     setBurstStrong(best !== DEFAULT_RARITY);
-    setPhase('burst');
-    hapticSuccess();
-    if (best === '전설') setTimeout(hapticSuccess, 180);
-    revealTimer.current = setTimeout(() => setPhase('reveal'), BURST_MS);
+    if (reducedMotion) {
+      setPhase('reveal');
+      hapticSuccess();
+      return;
+    }
+    chargeTimer.current = setTimeout(
+      () => {
+        setPhase('burst');
+        hapticImpact();
+        revealTimer.current = setTimeout(() => {
+          setPhase('reveal');
+          hapticSuccess();
+        }, BURST_MS);
+      },
+      Math.max(0, MIN_CHARGE_MS - (Date.now() - started)),
+    );
   };
 
   const close = () => {
+    // Android back must not dismiss a paid draw while its result is in flight.
+    if (phase !== 'reveal' || !drawBusy.current) return;
+    drawBusy.current = false;
     clearTimeout(revealTimer.current ?? undefined);
     // 결과를 보고 닫는 경우에만 — 실패/취소 닫기에는 결과가 없다.
     if (pulled.length > 0) onResultsConfirmed?.();
@@ -386,7 +437,9 @@ export function GachaScreen({
                 return (
                   <ScalePressable
                     key={count}
-                    onPress={() => pull(count)}
+                    onPress={() => {
+                      void pull(count);
+                    }}
                     disabled={phase !== 'idle'}
                     accessibilityState={{ disabled: !affordable }}
                     accessibilityRole="button"
@@ -437,28 +490,72 @@ export function GachaScreen({
 
       {/* Pull animation overlay — a Modal so it fills the whole screen and
           centers regardless of the screen's safe-area padding. */}
-      <Modal visible={phase !== 'idle'} transparent animationType="fade" onRequestClose={close}>
+      <Modal
+        testID="gacha-draw-modal"
+        visible={phase !== 'idle'}
+        transparent
+        animationType={reducedMotion ? 'none' : 'fade'}
+        onRequestClose={close}>
         <View style={styles.overlay}>
           {phase === 'charging' ? (
             <>
-              <ChargingBox machine={box} />
+              <ChargingBox machine={box} reducedMotion={reducedMotion} />
               <Text style={[Typography.label, styles.overlayText]}>뽑는 중...</Text>
+              <Text style={[Typography.supporting, styles.overlayText]}>
+                어떤 선물이 기다릴까요?
+              </Text>
             </>
           ) : phase === 'burst' ? (
             <BurstOverlay color={burstColor} strong={burstStrong} />
           ) : (
             <>
+              {!reducedMotion ? (
+                <View style={styles.celebration} pointerEvents="none">
+                  <BurstOverlay color={burstColor} strong={burstStrong} celebration />
+                </View>
+              ) : null}
               <Text style={[Typography.h3, styles.overlayText]}>축하해요!</Text>
+              <Text
+                style={[Typography.supporting, styles.overlayText]}
+                accessibilityLiveRegion="polite">
+                {pulled.length > 1
+                  ? openedCards.length === pulled.length
+                    ? '선물을 모두 열었어요!'
+                    : `카드를 눌러 열어보세요 · ${openedCards.length} / ${pulled.length}`
+                  : pulled[0]?.rarity === '전설'
+                    ? '반짝! 전설의 선물이 도착했어요'
+                    : '오늘의 작은 설렘이 도착했어요'}
+              </Text>
               <ScrollView style={styles.revealScroll} contentContainerStyle={styles.revealGrid}>
                 {pulled.length === 1 ? (
-                  <RevealCard item={pulled[0]} index={0} large />
+                  <RevealCard item={pulled[0]} index={0} large reducedMotion={reducedMotion} />
                 ) : (
-                  // 10연은 뒷면 카드가 깔린 뒤 순차 플립 — 탭하면 즉시 (#431).
+                  // Six cards deal face down; tap to reveal ahead of the sequence.
                   pulled.map((it, idx) => (
-                    <FlipCard key={`${it.name ?? 'item'}-${idx}`} item={it} index={idx} />
+                    <FlipCard
+                      key={`${it.name ?? 'item'}-${idx}`}
+                      item={it}
+                      index={idx}
+                      width={cardWidth}
+                      revealAll={revealAll}
+                      reducedMotion={reducedMotion}
+                      onReveal={markRevealed}
+                    />
                   ))
                 )}
               </ScrollView>
+              {pulled.length > 1 && openedCards.length < pulled.length ? (
+                <ScalePressable
+                  onPress={() => {
+                    hapticSelection();
+                    setRevealAll(true);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="한 번에 열기"
+                  style={[styles.confirmBtn, { backgroundColor: t.surface }]}>
+                  <Text style={[Typography.label, { color: t.text }]}>한 번에 열기</Text>
+                </ScalePressable>
+              ) : null}
               {placeablePulled.length > 0 ? (
                 <ScalePressable
                   onPress={goPlace}
@@ -641,13 +738,20 @@ const styles = StyleSheet.create({
     padding: Spacing.four,
   },
   overlayText: { color: StaticWhite, textAlign: 'center' },
-  revealScroll: { flexGrow: 0, maxHeight: '70%' },
+  celebration: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
+  revealScroll: {
+    flexGrow: 0,
+    maxHeight: '55%',
+    width: '100%',
+    maxWidth: GachaStage.card * 3 + Spacing.two * 4,
+  },
   revealGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.three,
+    gap: Spacing.two,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: Spacing.two,
   },
   confirmBtn: {
     borderRadius: Radius.pill,

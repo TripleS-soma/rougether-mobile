@@ -27,6 +27,21 @@ export const Spacing = {
   six: 64,
 } as const;
 
+/** Gacha stage/art geometry; animation transforms are relative to these sizes. */
+export const GachaStage = {
+  size: 240,
+  halo: 200,
+  box: 120,
+  boxArt: 96,
+  orbit: 92,
+  card: 104,
+  cardHeight: 208,
+  hero: 240,
+  art: 68,
+  heroArt: 150,
+  particle: 8,
+} as const;
+
 /**
  * Rougether brand design tokens — semantic color roles. Values keep the warm
  * prototype brand (cozy/forest/hanok); the token *structure* follows the
