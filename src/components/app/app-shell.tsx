@@ -563,6 +563,8 @@ export function AppShell({
                   setWallpaperId(wp);
                   setFloorId(fl);
                   setBackgroundId(bg);
+                  // 집 좌석의 내 방 미리보기가 옛 방으로 남지 않게 (#1099).
+                  memberRoomPreviews.invalidate();
                   // 꾸미기 저장 성공 = 미션 3 완료 (#571) — 새 아이템 포함
                   // 여부는 따지지 않는다(사양 단순화).
                   // 퍼널 마지막 칸 (#799) — 루틴→코인→뽑기→꾸미기 한 바퀴가

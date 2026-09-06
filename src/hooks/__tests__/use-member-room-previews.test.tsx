@@ -57,6 +57,32 @@ describe('useMemberRoomPreviews', () => {
     });
   });
 
+  it('invalidate 뒤에는 같은 집을 다시 불러온다 — 방 저장 후 옛 미리보기 (#1099)', async () => {
+    const fetchMock = jest.fn(async () =>
+      res({ character: { characterId: 1, code: 'otter' }, slots: [] }),
+    );
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const { result } = await renderHook(() => useMemberRoomPreviews());
+    await act(async () => {
+      await result.current.load(11, [42], CATALOGUE);
+    });
+    // 같은 집은 한 번만 (캐시).
+    await act(async () => {
+      await result.current.load(11, [42], CATALOGUE);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      result.current.invalidate();
+    });
+    await act(async () => {
+      await result.current.load(11, [42], CATALOGUE);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    // 무효화만으로는 그려진 미리보기를 지우지 않는다(빈 타일 깜빡임 방지).
+    expect(result.current.previews[42]).toBeTruthy();
+  });
+
   it('does not poison the cache while the catalogue is still loading', async () => {
     global.fetch = jest.fn(async () => res({ slots: [] })) as unknown as typeof fetch;
 
