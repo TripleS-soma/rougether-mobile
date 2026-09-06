@@ -33,8 +33,9 @@ Android SDK·JDK 17 환경에서 `android/gradlew :app:processReleaseMainManifes
 - Android 최종 매니페스트: 금지 권한 9종 없음·필수 5종 존재. 카메라·마이크 권한 없음.
 - 최신 dev #1147 병합 후 `1.5.0` Android prebuild·소스 매니페스트 검사·앱 아이콘 검사를 재실행해 통과했습니다. 런처 6개 중 기본 런처만 활성이고 딥링크 Activity는 활성입니다. 최종 `1.5.0` Gradle 병합·Kotlin 검증은 PR CI에서 수행합니다.
 - TypeScript·Prettier 통과. ESLint 오류 없음; 기존 `app-shell.tsx`의 `fromGachaRef` 의존성 경고 1개는 유지합니다.
-- 최신 통합본 전체 테스트: 183개 스위트 / 1,442개 테스트 통과. `--runInBand --watchman=false --detectOpenHandles` 결과 JSON에서 `success=true`, 실패 0개, `openHandles=[]`를 확인했습니다.
-- `--maxWorkers=2 --watchman=false` 재실행도 183개 스위트 / 1,442개 테스트 통과, 31.136초, 프로세스 exit 0입니다. 워커 하나의 정리 지연·강제 종료 경고가 남았습니다. 단일 프로세스 실행은 결과 출력 이후 종료 지연이 재현되어 중단했으며, 신규 누수 원인은 확인되지 않았습니다.
+- 형제 테스트 추가 전 `aacb3b5` 스냅샷은 183개 스위트 / 1,442개 테스트 통과했습니다. `--runInBand --watchman=false --detectOpenHandles` 결과 JSON에서 `success=true`, 실패 0개, `openHandles=[]`를 확인했습니다.
+- `GachaLobby` 직접 테스트 7개와 `RewardArtwork` 직접 테스트 11개를 추가했습니다. 두 파일 집중 테스트 18개, TypeScript·대상 ESLint·Prettier 모두 통과했습니다. 운영 코드는 변경하지 않았습니다.
+- 최신 `7dfd49d` 전체 테스트를 `--maxWorkers=2 --watchman=false`로 1회 실행해 185개 스위트 / 1,460개 테스트 통과, 47.036초, 프로세스 exit 0을 확인했습니다. 결과 JSON은 `success=true`, 실패 0개입니다. 기존 워커 하나의 정리 지연·강제 종료 경고는 남습니다. 이전 단일 프로세스 실행은 결과 출력 이후 종료 지연이 재현되어 중단했으며, 신규 누수 원인은 확인되지 않았습니다.
 
 ## 화면 QA 범위와 남은 확인
 
