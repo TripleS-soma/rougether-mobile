@@ -26,6 +26,7 @@ import { CharacterPickerSheet } from '@/components/screens/sheets/character-pick
 import { BugReportScreen } from '@/components/screens/bug-report-screen';
 import { NotificationListScreen } from '@/components/screens/notification-list-screen';
 import { MyPageScreen } from '@/components/screens/my-page-screen';
+import { ListRow } from '@/components/ui/list-row';
 import { NotificationSettingsScreen } from '@/components/screens/notification-settings-screen';
 import { OnboardingScreen } from '@/components/screens/onboarding-screen';
 import { PasswordChangeScreen } from '@/components/screens/password-change-screen';
@@ -739,6 +740,17 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
         <RoutineManageScreen routines={SAMPLE_ROUTINES} />
+      </View>
+    ),
+  },
+  {
+    name: 'ListRow',
+    description:
+      '설정·마이페이지 공용 목록 행 — 아이콘 원 + 라벨 + 화살표, 마지막 행은 구분선 없음.',
+    render: () => (
+      <View style={{ alignSelf: 'stretch' }}>
+        <ListRow icon="help" label="도움말" />
+        <ListRow icon="bug" label="버그 제보" last />
       </View>
     ),
   },

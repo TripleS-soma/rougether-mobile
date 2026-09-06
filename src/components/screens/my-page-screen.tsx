@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { CharacterAvatar } from '@/components/room/character-avatar';
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { Icon, type IconName } from '@/components/ui/icon';
+import { ListRow } from '@/components/ui/list-row';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { HEADER_ROW_HEIGHT } from '@/components/ui/screen-header-geometry';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
@@ -14,11 +15,6 @@ import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-re
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
 type Row = { icon: IconName; label: string; onPress?: () => void };
-
-/** 1240 → "1,240". Hermes Intl에 기대지 않는 단순 천 단위 구분. */
-function formatCount(n: number): string {
-  return String(Math.max(0, Math.floor(n))).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-}
 
 export type MyPageScreenProps = ScrollRestoreProps & {
   nickname?: string;
@@ -115,8 +111,13 @@ export const MyPageScreen = memo(function MyPageScreen({
 
   const stats: { icon: IconName; color: string; value: string; label: string }[] = [
     { icon: 'flame', color: t.warningText, value: `${streakDays}일`, label: '연속' },
-    { icon: 'coin', color: t.warning, value: formatCount(coinBalance), label: '코인' },
-    { icon: 'diamond', color: t.primaryText, value: formatCount(diamondBalance), label: '다이아' },
+    { icon: 'coin', color: t.warning, value: coinBalance.toLocaleString(), label: '코인' },
+    {
+      icon: 'diamond',
+      color: t.primaryText,
+      value: diamondBalance.toLocaleString(),
+      label: '다이아',
+    },
   ];
 
   return (
@@ -249,26 +250,13 @@ export const MyPageScreen = memo(function MyPageScreen({
           testID="my-page-rows">
           <View style={styles.cardContent}>
             {rows.map((row, idx) => (
-              <Pressable
+              <ListRow
                 key={row.label}
+                icon={row.icon}
+                label={row.label}
                 onPress={row.onPress}
-                accessibilityRole="button"
-                style={({ pressed }) => [
-                  styles.row,
-                  pressed && { backgroundColor: t.primarySoft },
-                  idx !== rows.length - 1 && {
-                    borderBottomColor: t.border,
-                    borderBottomWidth: StyleSheet.hairlineWidth,
-                  },
-                ]}>
-                <View style={styles.rowLeft}>
-                  <View style={[styles.iconCircle, { backgroundColor: t.primarySoft }]}>
-                    <Icon name={row.icon} size={20} color={t.primaryText} />
-                  </View>
-                  <Text style={[Typography.body, { color: t.text }]}>{row.label}</Text>
-                </View>
-                <Icon name="forward" size={16} color={t.textDisabled} />
-              </Pressable>
+                last={idx === rows.length - 1}
+              />
             ))}
           </View>
         </GlassSurface>
@@ -387,18 +375,5 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.three,
-  },
-  rowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-    flexShrink: 1,
   },
 });
