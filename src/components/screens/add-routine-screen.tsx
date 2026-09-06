@@ -32,6 +32,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useActionBarInset, useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { formatDate, formatTime } from '@/utils/datetime';
 import { WEEKDAY_LABELS as DAYS } from '@/constants/routines';
 
@@ -108,20 +109,22 @@ export function AddRoutineScreen({
   }, [categoryValid, categories]);
   // Repeat cadence — legacy routines without an explicit repeat derive it
   // from their days (with days = weekly, without = daily).
+  // 새 루틴 기본은 매일 (#1126) — 대부분 그렇게 시작하고, 요일은 매주를 고를 때만 묻는다.
   const [repeat, setRepeat] = useState<RepeatKind>(
-    editRoutine
-      ? (editRoutine.repeat ?? (editRoutine.days?.length ? 'weekly' : 'daily'))
-      : 'weekly',
+    editRoutine ? (editRoutine.repeat ?? (editRoutine.days?.length ? 'weekly' : 'daily')) : 'daily',
   );
   // 새 루틴의 반복 요일은 전부 해제가 기본 — 사용자가 직접 고르게 한다.
   const [days, setDays] = useState<number[]>(editRoutine?.days ?? []);
   // Sub-picks: 매월 → day of month (yearly reuses it), 매년 → month.
   const [monthDay, setMonthDay] = useState(editRoutine?.dayOfMonth ?? 1);
   const [yearMonth, setYearMonth] = useState(editRoutine?.month ?? 1);
-  const [alarmEnabled, setAlarmEnabled] = useState(editRoutine?.alarmEnabled ?? true);
+  // 알림·지속 기간은 기본 꺼짐 (#1126) — 필요한 사람만 항목 토글로 켠다.
+  const [alarmEnabled, setAlarmEnabled] = useState(editRoutine?.alarmEnabled ?? false);
   const [time, setTime] = useState(editRoutine?.time ?? '07:00');
   const [startDate, setStartDate] = useState(editRoutine?.startDate ?? today());
   const [endDate, setEndDate] = useState<string | undefined>(editRoutine?.endDate);
+  // 지속 기간 토글 — 수정 화면은 종료일이 있을 때 켜진 채로 시작한다.
+  const [durationOn, setDurationOn] = useState(!!editRoutine?.endDate);
   const [showDateSheet, setShowDateSheet] = useState(false);
   const [showTimeSheet, setShowTimeSheet] = useState(false);
   // 추천 루틴 accordion — closed by default (add mode only).
@@ -137,11 +140,11 @@ export function AddRoutineScreen({
     title: editRoutine?.title ?? '',
     repeat: editRoutine
       ? (editRoutine.repeat ?? (editRoutine.days?.length ? 'weekly' : 'daily'))
-      : 'weekly',
+      : 'daily',
     days: editRoutine?.days ?? [],
     monthDay: editRoutine?.dayOfMonth ?? 1,
     yearMonth: editRoutine?.month ?? 1,
-    alarmEnabled: editRoutine?.alarmEnabled ?? true,
+    alarmEnabled: editRoutine?.alarmEnabled ?? false,
     time: editRoutine?.time ?? '07:00',
     startDate: editRoutine?.startDate ?? today(),
     endDate: editRoutine?.endDate,
@@ -466,52 +469,87 @@ export function AddRoutineScreen({
           ) : null}
         </View>
 
-        {/* Duration */}
+        {/* Duration — 기본 꺼짐, 토글로 켜면 행이 나타나며 시트가 바로 열린다 (#1126). */}
         <View style={styles.field}>
-          <Text style={[Typography.label, { color: t.text }]}>지속 기간</Text>
-          <Pressable
-            onPress={() => {
-              Keyboard.dismiss();
-              setShowDateSheet(true);
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="지속 기간 선택"
-            style={[styles.infoRow, { backgroundColor: t.surface }]}>
-            <View style={[styles.infoIcon, { backgroundColor: t.surfaceMuted }]}>
-              <Icon name="calendar" size={16} color={t.icon} />
-            </View>
-            <View style={styles.flex}>
-              <Text style={[Typography.body, { color: t.text }]}>
-                {formatDate(startDate)} ~ {endDate ? formatDate(endDate) : '계속'}
-              </Text>
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>기간 선택</Text>
-            </View>
-            <Text style={[styles.chevron, { color: t.textDisabled }]}>›</Text>
-          </Pressable>
+          <View style={styles.fieldHead}>
+            <Text style={[Typography.label, { color: t.text }]}>지속 기간</Text>
+            <ToggleSwitch
+              value={durationOn}
+              accessibilityLabel="지속 기간 설정"
+              onToggle={() => {
+                if (durationOn) {
+                  // 끄면 오늘부터 계속 — 골랐던 기간은 버린다.
+                  setDurationOn(false);
+                  setStartDate(today());
+                  setEndDate(undefined);
+                } else {
+                  setDurationOn(true);
+                  Keyboard.dismiss();
+                  setShowDateSheet(true);
+                }
+              }}
+            />
+          </View>
+          {durationOn ? (
+            <Pressable
+              onPress={() => {
+                Keyboard.dismiss();
+                setShowDateSheet(true);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="지속 기간 선택"
+              style={[styles.infoRow, { backgroundColor: t.surface }]}>
+              <View style={[styles.infoIcon, { backgroundColor: t.surfaceMuted }]}>
+                <Icon name="calendar" size={16} color={t.icon} />
+              </View>
+              <View style={styles.flex}>
+                <Text style={[Typography.body, { color: t.text }]}>
+                  {formatDate(startDate)} ~ {endDate ? formatDate(endDate) : '계속'}
+                </Text>
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>기간 선택</Text>
+              </View>
+              <Text style={[styles.chevron, { color: t.textDisabled }]}>›</Text>
+            </Pressable>
+          ) : null}
         </View>
 
-        {/* Alarm */}
+        {/* Alarm — 기본 꺼짐, 토글이 alarmEnabled 자체다 (#1126). 시트 안 켜기/끄기와 같은 값. */}
         <View style={styles.field}>
-          <Text style={[Typography.label, { color: t.text }]}>알림 시간</Text>
-          <Pressable
-            onPress={() => {
-              Keyboard.dismiss();
-              setShowTimeSheet(true);
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="알림 시간 선택"
-            style={[styles.infoRow, { backgroundColor: t.surface }]}>
-            <View style={[styles.infoIcon, { backgroundColor: t.surfaceMuted }]}>
-              <Icon name="bell" size={16} color={t.icon} />
-            </View>
-            <View style={styles.flex}>
-              <Text style={[Typography.body, { color: t.text }]}>
-                {alarmEnabled ? formatTime(time) : '알림 없음'}
-              </Text>
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>시간 선택</Text>
-            </View>
-            <Text style={[styles.chevron, { color: t.textDisabled }]}>›</Text>
-          </Pressable>
+          <View style={styles.fieldHead}>
+            <Text style={[Typography.label, { color: t.text }]}>알림 시간</Text>
+            <ToggleSwitch
+              value={alarmEnabled}
+              accessibilityLabel="알림 설정"
+              onToggle={() => {
+                if (alarmEnabled) {
+                  setAlarmEnabled(false);
+                } else {
+                  setAlarmEnabled(true);
+                  Keyboard.dismiss();
+                  setShowTimeSheet(true);
+                }
+              }}
+            />
+          </View>
+          {alarmEnabled ? (
+            <Pressable
+              onPress={() => {
+                Keyboard.dismiss();
+                setShowTimeSheet(true);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="알림 시간 선택"
+              style={[styles.infoRow, { backgroundColor: t.surface }]}>
+              <View style={[styles.infoIcon, { backgroundColor: t.surfaceMuted }]}>
+                <Icon name="bell" size={16} color={t.icon} />
+              </View>
+              <View style={styles.flex}>
+                <Text style={[Typography.body, { color: t.text }]}>{formatTime(time)}</Text>
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>시간 선택</Text>
+              </View>
+              <Text style={[styles.chevron, { color: t.textDisabled }]}>›</Text>
+            </Pressable>
+          ) : null}
         </View>
       </ScrollView>
 

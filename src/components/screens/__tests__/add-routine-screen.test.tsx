@@ -31,7 +31,7 @@ describe('AddRoutineScreen', () => {
 
     await fireEvent.press(getByText('추천 루틴')); // unfold the accordion
     await fireEvent.press(getByText('독서 30분'));
-    await fireEvent.press(getByText('월')); // 요일은 전부 해제가 기본 — 하나 골라야 저장된다.
+    // 기본 반복이 매일이라(#1126) 요일 없이 바로 저장된다.
     await fireEvent.press(getByText('루틴 추가하기'));
 
     expect(onAdd).toHaveBeenCalledWith(
@@ -121,7 +121,8 @@ describe('AddRoutineScreen', () => {
   });
 
   it('요일 토글은 선택 상태를 accessibilityState로 전달한다 (#550)', async () => {
-    const { getByRole } = await render(<AddRoutineScreen />);
+    const { getByRole, getByText } = await render(<AddRoutineScreen />);
+    await fireEvent.press(getByText('매주')); // 요일 피커는 매주에서만 (#1126)
     const monday = getByRole('button', { name: '월' });
     expect(monday.props.accessibilityState?.selected).toBe(false);
     await fireEvent.press(monday);
@@ -134,9 +135,10 @@ describe('AddRoutineScreen', () => {
       <AddRoutineScreen onAdd={onAdd} />,
     );
 
-    // Weekly by default — the day picker is visible.
+    // 매일이 기본 (#1126) — 요일 피커는 매주를 고를 때만 나타난다.
+    expect(queryByText('반복 요일')).toBeNull();
+    await fireEvent.press(getByText('매주'));
     expect(queryByText('반복 요일')).toBeTruthy();
-
     await fireEvent.press(getByText('매일'));
     expect(queryByText('반복 요일')).toBeNull();
 
@@ -196,7 +198,8 @@ describe('AddRoutineScreen', () => {
       </ToastProvider>,
     );
 
-    // 요일은 전부 해제가 기본 — 그대로 저장하려 하면 막힌다.
+    // 매주로 바꾸면 요일은 전부 해제 — 그대로 저장하려 하면 막힌다.
+    await fireEvent.press(getByText('매주'));
     await fireEvent.changeText(getByPlaceholderText('예) 매일 30분 산책'), '산책');
     await fireEvent.press(getByText('루틴 추가하기'));
 
@@ -251,6 +254,60 @@ describe('AddRoutineScreen', () => {
     expect(queryByText('반복 일자')).toBeTruthy();
     await fireEvent.press(getByLabelText('12월'));
     expect(getByLabelText('12월').props.accessibilityState.selected).toBe(true);
+  });
+
+  // 기본값 (#1126) — 매일, 기간 없음, 알림 없음. 필요한 사람만 토글로 켠다.
+  it('새 루틴 기본은 매일·기간 없음·알림 없음이고, 기간·알림 행은 숨겨져 있다 (#1126)', async () => {
+    const onAdd = jest.fn();
+    const { getByText, getByPlaceholderText, queryByLabelText } = await render(
+      <AddRoutineScreen onAdd={onAdd} />,
+    );
+    expect(queryByLabelText('지속 기간 선택')).toBeNull();
+    expect(queryByLabelText('알림 시간 선택')).toBeNull();
+    await fireEvent.changeText(getByPlaceholderText('예) 매일 30분 산책'), '물 마시기');
+    await fireEvent.press(getByText('루틴 추가하기'));
+    expect(onAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        repeat: 'daily',
+        days: [],
+        endDate: undefined,
+        alarmEnabled: false,
+      }),
+    );
+  });
+
+  it('알림 토글을 켜면 시간 행이 나타나고 07:00으로 켜진 채 저장된다 (#1126)', async () => {
+    const onAdd = jest.fn();
+    const { getByText, getByLabelText, getByPlaceholderText, queryByLabelText } = await render(
+      <AddRoutineScreen onAdd={onAdd} />,
+    );
+    await fireEvent.press(getByLabelText('알림 설정'));
+    expect(getByLabelText('알림 시간 선택')).toBeTruthy();
+    // 다시 끄면 행이 사라지고 alarmEnabled=false.
+    await fireEvent.press(getByLabelText('알림 설정'));
+    expect(queryByLabelText('알림 시간 선택')).toBeNull();
+    await fireEvent.press(getByLabelText('알림 설정'));
+    await fireEvent.changeText(getByPlaceholderText('예) 매일 30분 산책'), '산책');
+    await fireEvent.press(getByText('루틴 추가하기'));
+    expect(onAdd).toHaveBeenCalledWith(
+      expect.objectContaining({ alarmEnabled: true, time: '07:00' }),
+    );
+  });
+
+  it('지속 기간 토글을 켜면 기간 행이 나타나고, 끄면 오늘부터 계속으로 돌아간다 (#1126)', async () => {
+    const { getByLabelText, queryByLabelText, getByText } = await render(
+      <AddRoutineScreen
+        editRoutine={{ id: 'r1', title: '독서', category: '취미', endDate: '2026-12-31' }}
+      />,
+    );
+    // 수정 화면 — 종료일이 있으면 켜진 채로 시작.
+    expect(getByLabelText('지속 기간 선택')).toBeTruthy();
+    expect(getByText(/계속|2026/)).toBeTruthy();
+    await fireEvent.press(getByLabelText('지속 기간 설정'));
+    expect(queryByLabelText('지속 기간 선택')).toBeNull();
+    await fireEvent.press(getByLabelText('지속 기간 설정'));
+    expect(getByLabelText('지속 기간 선택')).toBeTruthy();
+    expect(getByText(/~ 계속/)).toBeTruthy();
   });
 
   it('prefills 매일 for a routine without repeat days', async () => {

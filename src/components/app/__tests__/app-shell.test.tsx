@@ -146,7 +146,7 @@ describe('AppShell — 온보딩 미션 체인 (#571)', () => {
     await fireEvent.press(getByLabelText('미션 1 첫 루틴 등록하기'));
     await fireEvent.press(getByText('추천 루틴'));
     await fireEvent.press(getByText('독서 30분'));
-    await fireEvent.press(getByText('월'));
+    // 기본 반복이 매일 (#1126) — 요일 없이 바로 등록.
     await fireEvent.press(getByText('루틴 추가하기'));
 
     // 완료 전환 시트 — 다음 미션 안내와 하러 가기.
