@@ -1,5 +1,5 @@
 import { render } from '@testing-library/react-native';
-import { Text } from 'react-native';
+import { Platform, Text } from 'react-native';
 import { Gesture } from 'react-native-gesture-handler';
 import { getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
@@ -7,9 +7,38 @@ import { TabPager } from '@/components/app/tab-pager';
 import { PagerScrollView } from '@/components/ui/pager-scroll-view';
 import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
 
-afterEach(() => jest.restoreAllMocks());
+const originalOS = Platform.OS;
+afterEach(() => {
+  Platform.OS = originalOS;
+  jest.restoreAllMocks();
+});
 
 describe('Pager scroll arbitration (#1150)', () => {
+  it.each(['android', 'web'] as const)(
+    'preserves %s activation thresholds without scroll wait relations',
+    async (platform) => {
+      Platform.OS = platform;
+      const nativeFactory = jest.spyOn(Gesture, 'Native');
+      await render(
+        <TabPager index={0} onIndexChange={jest.fn()}>
+          <PawRefreshScroll onRefresh={jest.fn()}>
+            <Text>본문</Text>
+          </PawRefreshScroll>
+          <Text>이웃</Text>
+        </TabPager>,
+      );
+      const { config } = getByGestureTestId('tab-pager-pan');
+      expect(config.manualActivation).not.toBe(true);
+      expect([config.activeOffsetXStart, config.activeOffsetXEnd]).toEqual([-24, 24]);
+      expect([config.failOffsetYStart, config.failOffsetYEnd]).toEqual([-36, 36]);
+      for (const { value } of nativeFactory.mock.results) {
+        expect(value.config.requireToFail ?? []).toEqual([]);
+      }
+      if (platform === 'android')
+        expect(getByGestureTestId('paw-refresh-pan').config.requireToFail).toEqual([]);
+    },
+  );
+
   it.each([true, false])(
     'connects the native scroll to the actual ancestor pager (refresh=%s)',
     async (refresh) => {

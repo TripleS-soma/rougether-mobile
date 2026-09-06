@@ -164,7 +164,7 @@ export function PawRefreshScroll({
   // ScrollView의 네이티브 제스처와 동시 인식으로 묶는다 — 팬이 스크롤을
   // 막지 않고, 맨 위에서만 당김으로 해석한다.
   const pager = useContext(PagerGestureContext);
-  const nativeScroll = usePagerNativeGesture();
+  const nativeScroll = usePagerNativeGesture(pager);
   const pan = useMemo(() => {
     const base = Gesture.Pan()
       .withTestId(`${refreshTestID}-pan`)

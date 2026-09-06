@@ -1,7 +1,8 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Pressable, StyleSheet } from 'react-native';
 import { getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
+import { type PanGesture, PointerType, State } from 'react-native-gesture-handler';
 
 import { cameraClaimsMove, HouseScreen, type House } from '@/components/screens/house-screen';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -45,6 +46,59 @@ const MISSION_HOUSE: House = {
 };
 
 describe('HouseScreen', () => {
+  it.each(['pending', 'empty'])(
+    'releases a zoom lock when the camera is replaced by %s content',
+    async (destination) => {
+      const onPagerLockChange = jest.fn();
+      const ui = await render(
+        <HouseScreen houses={[MISSION_HOUSE]} onPagerLockChange={onPagerLockChange} />,
+      );
+      const camera = getByGestureTestId('house-camera-pan') as PanGesture;
+      const manager = {
+        handlerTag: camera.handlerTag,
+        begin: jest.fn(),
+        activate: jest.fn(),
+        fail: jest.fn(),
+        end: jest.fn(),
+      };
+      const touches = (distance: number) => {
+        const allTouches = [100, 100 + distance].map((x, id) => ({
+          id,
+          x,
+          y: 100,
+          absoluteX: x,
+          absoluteY: 100,
+        }));
+        return {
+          handlerTag: camera.handlerTag,
+          state: State.BEGAN,
+          eventType: 2 as const,
+          numberOfTouches: 2,
+          pointerType: PointerType.TOUCH,
+          allTouches,
+          changedTouches: allTouches,
+        };
+      };
+      await act(async () => {
+        camera.handlers.onTouchesDown?.(touches(100), manager);
+        camera.handlers.onTouchesMove?.(touches(100), manager);
+        camera.handlers.onTouchesMove?.(touches(160), manager);
+      });
+      expect(onPagerLockChange).toHaveBeenLastCalledWith(true);
+      expect(ui.getByLabelText('확대 종료')).toBeTruthy();
+      await ui.rerender(
+        <HouseScreen
+          houses={destination === 'empty' ? [] : [MISSION_HOUSE]}
+          pendingHouses={destination === 'pending' ? [{ requestId: 1, name: '대기 집' }] : []}
+          houseIndex={destination === 'pending' ? 1 : 0}
+          onPagerLockChange={onPagerLockChange}
+        />,
+      );
+      expect(ui.queryByLabelText('확대 종료')).toBeNull();
+      expect(onPagerLockChange).toHaveBeenLastCalledWith(false);
+    },
+  );
+
   it('releases the pager lock when leaving during a seat lift', async () => {
     const onPagerLockChange = jest.fn();
     const ui = await render(

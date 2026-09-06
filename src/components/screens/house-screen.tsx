@@ -717,6 +717,7 @@ export const HouseScreen = memo(function HouseScreen({
     };
     return (
       Gesture.Pan()
+        .withTestId('house-camera-pan')
         .manualActivation(true)
         .onTouchesDown((e) => {
           'worklet';
@@ -800,9 +801,12 @@ export const HouseScreen = memo(function HouseScreen({
   // 그대로 페이저로 흐른다 (확대·드래그 중엔 아래 잠금이 페이저를 막는다).
 
   // 확대·자리 드래그 동안 셸의 탭 페이저를 잠근다 (#563).
+  // Pending/empty content keeps HouseScreen mounted but removes the camera and
+  // its reset button. A hidden camera must not keep the entire pager locked.
+  const pagerLocked = currentHouse != null && !pendingHouse && (zoomed || dragSeat != null);
   useEffect(() => {
-    onPagerLockChange?.(zoomed || dragSeat != null);
-  }, [zoomed, dragSeat, onPagerLockChange]);
+    onPagerLockChange?.(pagerLocked);
+  }, [pagerLocked, onPagerLockChange]);
   // The camera/seat gesture no longer owns any touches once this screen exits.
   useEffect(() => () => onPagerLockChange?.(false), [onPagerLockChange]);
 

@@ -1,5 +1,5 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
@@ -11,7 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { PagerGestureContext } from '@/components/ui/pager-scroll-view';
-import { SWIPE_CLAIM_DX } from '@/utils/gesture';
+import { SWIPE_CLAIM_DX, SWIPE_FAIL_DY } from '@/utils/gesture';
 
 /** 페이지 스냅 판정 — 폭 대비 이 비율을 넘게 끌면 넘어간다. */
 export const PAGE_SNAP_RATIO = 0.3;
@@ -70,6 +70,7 @@ export type TabPagerProps = {
  * 하단 탭 이동 하나로 통일했다. 달력 월 이동도 monthSwipe=false로 꺼져 있다.
  */
 export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps) {
+  const arbitrateScroll = Platform.OS === 'ios';
   const count = children.length;
   const [width, setWidth] = useState(0);
   // 공유값은 첫 렌더 인스턴스에 앵커링(useRef) — 프로덕션 useSharedValue는
@@ -124,81 +125,107 @@ export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps
   const commit = useCallback((target: number) => commitRef.current(target), []);
 
   const pan = useMemo(
-    () =>
-      Gesture.Pan()
-        .withTestId('tab-pager-pan')
-        .maxPointers(1)
-        .activeOffsetX([-SWIPE_CLAIM_DX, SWIPE_CLAIM_DX])
-        .onTouchesDown((e, mgr) => {
-          'worklet';
-          if (lock?.value || e.allTouches.length !== 1) {
-            mgr.fail();
-            return;
-          }
-          const touch = e.allTouches[0];
-          touchStart.value = { x: touch.absoluteX, y: touch.absoluteY };
-        })
-        // 잠금은 터치 도중에도 걸린다 — 자리 드래그(롱프레스 후)처럼 같은 터치
-        // 안에서 페이지 콘텐츠가 전권을 가져가는 경우.
-        .onTouchesMove((e, mgr) => {
-          'worklet';
-          if (lock?.value || e.allTouches.length !== 1) {
-            mgr.fail();
-            return;
-          }
-          if (swiping.value) return;
-          // Native scrolls and pull-to-refresh wait for this decision. Without
-          // that relation, UIScrollView can cancel the pager before 24px even
-          // when its content cannot actually scroll horizontally (#1150).
-          const touch = e.allTouches[0];
-          const dx = Math.abs(touch.absoluteX - touchStart.value.x);
-          const dy = Math.abs(touch.absoluteY - touchStart.value.y);
-          if (dy > VERTICAL_SCROLL_SLOP && dy > dx) mgr.fail();
-        })
-        .onStart(() => {
-          'worklet';
-          swiping.value = true;
-          start.value = tx.value;
-          revealAll.value = true;
-        })
-        .onUpdate((e) => {
-          'worklet';
-          const raw = start.value + e.translationX;
-          const min = -(count - 1) * widthSV.value;
-          // 끝 페이지 밖은 저항을 걸어 살짝만 끌린다.
-          tx.value =
-            raw > 0 ? raw * EDGE_RESISTANCE : raw < min ? min + (raw - min) * EDGE_RESISTANCE : raw;
-        })
-        .onEnd((e, success) => {
-          'worklet';
-          // RNGH also ends active gestures on cancellation/failure. Restore the
-          // current page in that case, without committing a navigation change.
-          const target = success
-            ? settleTarget(indexSV.value, e.translationX, e.velocityX, widthSV.value, count)
-            : indexSV.value;
-          tx.value = withTiming(
-            -target * widthSV.value,
-            { duration: SETTLE_MS, easing: Easing.out(Easing.cubic) },
-            (finished) => {
-              if (finished) revealAll.value = false;
-            },
-          );
-          if (success) runOnJS(commit)(target);
-          // Only the completed animation hides neighbors. Finalizing a cancelled
-          // drag (or a failed pre-activation touch) must not hide them early.
-        })
-        .onFinalize(() => {
-          'worklet';
-          swiping.value = false;
-        }),
+    () => {
+      const gesture = Gesture.Pan().withTestId('tab-pager-pan').maxPointers(1);
+      // Only iOS scrolls wait for the pager. Decide both outcomes in one worklet
+      // there; preserve the existing Android/web recognizer configuration.
+      if (arbitrateScroll) gesture.manualActivation(true);
+      else
+        gesture
+          .activeOffsetX([-SWIPE_CLAIM_DX, SWIPE_CLAIM_DX])
+          .failOffsetY([-SWIPE_FAIL_DY, SWIPE_FAIL_DY]);
+      return (
+        gesture
+          .onTouchesDown((e, mgr) => {
+            'worklet';
+            if (lock?.value || (arbitrateScroll && e.allTouches.length !== 1)) {
+              mgr.fail();
+              return;
+            }
+            if (!arbitrateScroll) return;
+            const touch = e.allTouches[0];
+            touchStart.value = { x: touch.absoluteX, y: touch.absoluteY };
+          })
+          // 잠금은 터치 도중에도 걸린다 — 자리 드래그(롱프레스 후)처럼 같은 터치
+          // 안에서 페이지 콘텐츠가 전권을 가져가는 경우.
+          .onTouchesMove((e, mgr) => {
+            'worklet';
+            if (lock?.value || (arbitrateScroll && e.allTouches.length !== 1)) {
+              mgr.fail();
+              return;
+            }
+            if (!arbitrateScroll || swiping.value) return;
+            // Native scrolls and pull-to-refresh wait for this decision. Without
+            // that relation, UIScrollView can cancel the pager before 24px even
+            // when its content cannot actually scroll horizontally (#1150).
+            const touch = e.allTouches[0];
+            const dx = Math.abs(touch.absoluteX - touchStart.value.x);
+            const dy = Math.abs(touch.absoluteY - touchStart.value.y);
+            if (dy > VERTICAL_SCROLL_SLOP && dy > dx) mgr.fail();
+            else if (dx > SWIPE_CLAIM_DX) mgr.activate();
+          })
+          .onStart(() => {
+            'worklet';
+            swiping.value = true;
+            start.value = tx.value;
+            revealAll.value = true;
+          })
+          .onUpdate((e) => {
+            'worklet';
+            const raw = start.value + e.translationX;
+            const min = -(count - 1) * widthSV.value;
+            // 끝 페이지 밖은 저항을 걸어 살짝만 끌린다.
+            tx.value =
+              raw > 0
+                ? raw * EDGE_RESISTANCE
+                : raw < min
+                  ? min + (raw - min) * EDGE_RESISTANCE
+                  : raw;
+          })
+          .onEnd((e, success) => {
+            'worklet';
+            // RNGH also ends active gestures on cancellation/failure. Restore the
+            // current page in that case, without committing a navigation change.
+            const target = success
+              ? settleTarget(indexSV.value, e.translationX, e.velocityX, widthSV.value, count)
+              : indexSV.value;
+            tx.value = withTiming(
+              -target * widthSV.value,
+              { duration: SETTLE_MS, easing: Easing.out(Easing.cubic) },
+              (finished) => {
+                if (finished) revealAll.value = false;
+              },
+            );
+            if (success) runOnJS(commit)(target);
+            // Only the completed animation hides neighbors. Finalizing a cancelled
+            // drag (or a failed pre-activation touch) must not hide them early.
+          })
+          .onFinalize(() => {
+            'worklet';
+            swiping.value = false;
+          })
+      );
+    },
     // count는 페이지 수(고정), 공유값·commit은 참조 안정 — 사실상 1회 생성.
-    [lock, count, commit, indexSV, widthSV, start, touchStart, swiping, tx, revealAll],
+    [
+      arbitrateScroll,
+      lock,
+      count,
+      commit,
+      indexSV,
+      widthSV,
+      start,
+      touchStart,
+      swiping,
+      tx,
+      revealAll,
+    ],
   );
 
   const rowStyle = useAnimatedStyle(() => ({ transform: [{ translateX: tx.value }] }));
 
   return (
-    <PagerGestureContext.Provider value={pan}>
+    <PagerGestureContext.Provider value={arbitrateScroll ? pan : undefined}>
       <GestureDetector gesture={pan}>
         <View
           style={styles.viewport}

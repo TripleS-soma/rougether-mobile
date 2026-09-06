@@ -37,7 +37,7 @@ export function NavigationPreview() {
             <Scroll
               key={tab}
               testID={`navigation-page-${tab}`}
-              onRefresh={async () => {}}
+              {...(tab === 'myPage' ? {} : { onRefresh: async () => {} })}
               contentContainerStyle={styles.content}>
               <Text style={[typography.h2, { color: t.text }]}>{LABELS[i]} 본문</Text>
               <Text style={[typography.body, { color: t.textMuted }]}>
