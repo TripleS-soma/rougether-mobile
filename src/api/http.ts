@@ -26,19 +26,35 @@ export type RawRequestOptions = {
   body?: unknown;
 };
 
-/** `code` field of the server's JSON error body, when it parses as such. */
-function parseErrorCode(bodyText?: string): string | undefined {
-  if (!bodyText) return undefined;
+type ParsedErrorBody = {
+  code?: string;
+  message?: string;
+  details?: Record<string, unknown>;
+};
+
+/** `code` / `message` / `details` of the server's JSON error body, when it parses as such. */
+function parseErrorBody(bodyText?: string): ParsedErrorBody {
+  if (!bodyText) return {};
   try {
     const parsed: unknown = JSON.parse(bodyText);
-    if (parsed && typeof parsed === 'object' && 'code' in parsed) {
-      const code = (parsed as { code: unknown }).code;
-      if (typeof code === 'string') return code;
-    }
+    if (!parsed || typeof parsed !== 'object') return {};
+    const { code, message, details } = parsed as {
+      code?: unknown;
+      message?: unknown;
+      details?: unknown;
+    };
+    return {
+      code: typeof code === 'string' ? code : undefined,
+      message: typeof message === 'string' ? message : undefined,
+      details:
+        details && typeof details === 'object' && !Array.isArray(details)
+          ? (details as Record<string, unknown>)
+          : undefined,
+    };
   } catch {
-    // Non-JSON body (HTML error page, plain text) — no structured code.
+    // Non-JSON body (HTML error page, plain text) — no structured fields.
+    return {};
   }
-  return undefined;
 }
 
 /** Error thrown for any non-2xx API response. */
@@ -49,6 +65,16 @@ export class ApiError extends Error {
    * against `ErrorCode` (#557) instead of substring-matching `bodyText`.
    */
   readonly code?: string;
+  /**
+   * Human-readable `message` from the server body — safe to show verbatim when
+   * it is guidance, e.g. the 409 AUTH_EMAIL_LINKED_TO_OTHER_PROVIDER notice.
+   */
+  readonly serverMessage?: string;
+  /**
+   * Structured `details` the server attaches when `code`/`message` alone can't
+   * drive a decision, e.g. `providers: ['APPLE']` on that same 409.
+   */
+  readonly details?: Record<string, unknown>;
 
   constructor(
     readonly status: number,
@@ -58,7 +84,10 @@ export class ApiError extends Error {
   ) {
     super(`API ${status}: ${method} ${path}`);
     this.name = 'ApiError';
-    this.code = parseErrorCode(bodyText);
+    const parsed = parseErrorBody(bodyText);
+    this.code = parsed.code;
+    this.serverMessage = parsed.message;
+    this.details = parsed.details;
   }
 }
 

@@ -108,13 +108,35 @@ export async function devLogin(userId?: number): Promise<LoginResponse> {
 }
 
 /**
+ * 소셜 로그인 공통 옵션. `allowNewAccount` 는 서버가 409
+ * AUTH_EMAIL_LINKED_TO_OTHER_PROVIDER(같은 이메일의 활성 계정이 다른 provider로
+ * 있음)로 가입을 막았을 때, 사용자가 "새 계정으로 계속"을 고른 재요청에서만 true.
+ */
+export type SocialLoginOptions = { allowNewAccount?: boolean };
+
+/**
+ * 서버 스펙에 `allowNewAccount`가 올라오기 전까지의 클라 전용 바디 확장. `types.ts`는
+ * 생성 파일이라 손으로 고치면 재생성 때 사라진다(#733) — 스펙 반영 후 `npm run
+ * gen:api-types` 로 필드가 들어오면 이 타입은 지운다.
+ */
+type LoginFlags = { allowNewAccount?: true };
+
+/** 기본 요청 바디는 그대로 두고, 켜졌을 때만 플래그를 싣는다 (기존 바디 계약 유지). */
+function loginFlags(options?: SocialLoginOptions): LoginFlags {
+  return options?.allowNewAccount ? { allowNewAccount: true } : {};
+}
+
+/**
  * 구글 로그인 (#489): 네이티브 SDK가 얻은 id token을 서버로 보내 토큰 쌍을
  * 받고 세션을 시작한다. 최초 로그인이면 서버가 자동 가입(isNewUser: true).
  * 서버는 JWK로 서명·aud를 검증한다 (aud 허용목록 fail-closed).
  */
-export async function googleLogin(idToken: string): Promise<LoginResponse> {
+export async function googleLogin(
+  idToken: string,
+  options?: SocialLoginOptions,
+): Promise<LoginResponse> {
   const res = await rawRequest<LoginResponse>('POST', '/auth/google', {
-    body: { idToken } as GoogleLoginRequest,
+    body: { idToken, ...loginFlags(options) } satisfies GoogleLoginRequest & LoginFlags,
   });
   if (res.accessToken && res.refreshToken) {
     await persist({
@@ -131,9 +153,12 @@ export async function googleLogin(idToken: string): Promise<LoginResponse> {
  * 보내 토큰 쌍을 받고 세션을 시작한다. 최초 로그인이면 자동 가입. 서버가
  * 카카오 API로 토큰 유효성·앱 id를 검증한다.
  */
-export async function kakaoLogin(accessToken: string): Promise<LoginResponse> {
+export async function kakaoLogin(
+  accessToken: string,
+  options?: SocialLoginOptions,
+): Promise<LoginResponse> {
   const res = await rawRequest<LoginResponse>('POST', '/auth/kakao', {
-    body: { accessToken } as KakaoLoginRequest,
+    body: { accessToken, ...loginFlags(options) } satisfies KakaoLoginRequest & LoginFlags,
   });
   if (res.accessToken && res.refreshToken) {
     await persist({
@@ -154,9 +179,14 @@ export async function kakaoLogin(accessToken: string): Promise<LoginResponse> {
 export async function appleLogin(
   idToken: string,
   authorizationCode: string,
+  options?: SocialLoginOptions,
 ): Promise<LoginResponse> {
   const res = await rawRequest<LoginResponse>('POST', '/auth/apple', {
-    body: { idToken, authorizationCode } as AppleLoginRequest,
+    body: {
+      idToken,
+      authorizationCode,
+      ...loginFlags(options),
+    } satisfies AppleLoginRequest & LoginFlags,
   });
   if (res.accessToken && res.refreshToken) {
     await persist({
