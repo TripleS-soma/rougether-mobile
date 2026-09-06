@@ -11,7 +11,7 @@ import {
 import { type Screen } from '@/components/app/navigation';
 import type { useFriendVisit } from '@/components/app/use-friend-visit';
 import type { useMissionLinks } from '@/components/app/use-mission-links';
-import { resolveHouseFrame } from '@/resources/house-frame';
+import { houseCoverKey, resolveHouseFrame } from '@/resources/house-frame';
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import {
   type House,
@@ -32,6 +32,7 @@ import {
 } from '@/hooks/use-member-room-previews';
 import type { OnboardingMissionStepId } from '@/hooks/use-onboarding-missions';
 import type { useRoomLayouts } from '@/hooks/use-room-layouts';
+import { useResolvedScheme } from '@/hooks/use-tokens';
 import { clearPendingInviteCode, subscribePendingInviteCode } from '@/lib/pending-invite';
 import { assetSource } from '@/resources/asset';
 import { houseBackgroundKey } from '@/resources/house-background';
@@ -152,6 +153,7 @@ export function useHousePages({
    */
   roomPreviewStore: ReturnType<typeof useMemberRoomPreviews>;
 }) {
+  const scheme = useResolvedScheme();
   const { screen, setScreen } = nav;
   const {
     houses,
@@ -223,23 +225,33 @@ export function useHousePages({
   useEffect(() => {
     const uris = [
       ...new Set(
-        houses.flatMap((house) => {
-          const frame = resolveHouseFrame(house.coverImageKey, {
-            maxMembers: house.maxMembers,
-            minimumSeats: house.floors.reduce((sum, floor) => sum + floor.rooms.length, 0),
-          });
-          const coverKey = frame.assetKey;
-          const backgroundKey = houseBackgroundKey(frame.canonicalKey);
-          return [
-            assetSource(coverKey).uri,
-            ...(frame.kind === 'stacked' ? [assetSource(frame.canonicalKey).uri] : []),
-            ...(backgroundKey ? [assetSource(backgroundKey).uri] : []),
-          ];
-        }),
+        houses.map(
+          (house) =>
+            assetSource(
+              resolveHouseFrame(house.coverImageKey, {
+                maxMembers: house.maxMembers,
+                minimumSeats: house.floors.reduce((sum, floor) => sum + floor.rooms.length, 0),
+              }).assetKey,
+            ).uri,
+        ),
       ),
     ];
     if (uris.length) void Image.prefetch?.(uris, { cachePolicy: 'memory-disk' });
   }, [houses]);
+
+  // Mode changes only prefetch backgrounds; cover art is mode-independent.
+  useEffect(() => {
+    const uris = [
+      ...new Set(
+        houses.flatMap((house) => {
+          const coverKey = houseCoverKey(house.coverImageKey);
+          const backgroundKey = houseBackgroundKey(coverKey, scheme);
+          return backgroundKey ? [assetSource(backgroundKey).uri] : [];
+        }),
+      ),
+    ];
+    if (uris.length) void Image.prefetch?.(uris, { cachePolicy: 'memory-disk' });
+  }, [houses, scheme]);
 
   // 집이 없는 유저 (#571) — 집 탭은 빈 상태 대신 집 탐색으로 직행하고,
   // 탐색의 뒤로가기도 (빈) 집 화면 대신 나의 방으로 돌아간다. 로딩/에러

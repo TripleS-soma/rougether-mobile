@@ -43,7 +43,7 @@ import { characterIdForMember } from '@/hooks/use-member-room-previews';
 import { FixedOverlay, Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useBottomNavInset, useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
-import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useResolvedScheme, useTokens, useTypography } from '@/hooks/use-tokens';
 import type { MissionStatus } from '@/utils/mission-cta';
 import { assetSource } from '@/resources/asset';
 import { houseBackgroundKey } from '@/resources/house-background';
@@ -322,6 +322,7 @@ export const HouseScreen = memo(function HouseScreen({
   previewTheme,
 }: HouseScreenProps) {
   const t = useTokens();
+  const scheme = useResolvedScheme();
   const Typography = useTypography();
   // 배경 이미지를 못 고른 집(매핑에 없는 새 테마)의 폴백 (#992). 시간·날씨에
   // 따라 바뀌던 하늘은 집별 배경 아트(#989)가 대체했다 — 정적 색만 남긴다.
@@ -421,7 +422,12 @@ export const HouseScreen = memo(function HouseScreen({
     const rows: number[][] = [];
     let seatOffset = 0;
     for (const size of rowShapes) {
-      rows.push(Array.from({ length: size }, (_, i) => seatOffset + i));
+      // Defensively split malformed wide rows so no member is dropped.
+      for (let start = 0; start < size; start += 2) {
+        rows.push(
+          Array.from({ length: Math.min(2, size - start) }, (_, i) => seatOffset + start + i),
+        );
+      }
       seatOffset += size;
     }
     return rows;
@@ -429,6 +435,7 @@ export const HouseScreen = memo(function HouseScreen({
   // Resolve the asset and its cutouts together. Legacy art keeps its lower
   // two rows plus overflow; stacked art contains all supported capacity rows.
   const { frame, onFrameError } = useHouseFrame(currentHouse?.coverImageKey, {
+    failureScope: currentHouse?.houseId ?? houseIndex,
     maxMembers: currentHouse?.maxMembers,
     minimumSeats: displayCells.length,
     enabled,
@@ -437,7 +444,7 @@ export const HouseScreen = memo(function HouseScreen({
   const coverKey = frame.assetKey;
   // 서버가 가진 coverImageKey의 테마 경로에서 전면 배경을 파생한다. 집 전환과
   // 같은 렌더에 키가 바뀌므로 별도 저장 상태 없이 항상 프레임과 맞는다.
-  const backgroundKey = houseBackgroundKey(frame.canonicalKey);
+  const backgroundKey = houseBackgroundKey(frame.canonicalKey, scheme);
   // Preserve adapter row order; first members stay on the bottom story.
   const windowSlots = useMemo(
     () => houseWindowSeats(seatRows, frame.windowRects.length),
@@ -1131,8 +1138,8 @@ export const HouseScreen = memo(function HouseScreen({
                           style={StyleSheet.absoluteFill}
                           onLayout={(e) => {
                             const changed =
-                              frameSize.current.w !== e.nativeEvent.layout.width ||
-                              frameSize.current.h !== e.nativeEvent.layout.height;
+                              Math.abs(frameSize.current.w - e.nativeEvent.layout.width) > 1 ||
+                              Math.abs(frameSize.current.h - e.nativeEvent.layout.height) > 1;
                             frameSize.current = {
                               w: e.nativeEvent.layout.width,
                               h: e.nativeEvent.layout.height,

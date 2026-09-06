@@ -127,44 +127,53 @@ describe('HouseMembersScreen — 구성원 관리 (구 house-screen 흐름, #753
     await fireEvent.press(getByLabelText('집 정보 수정'));
     await fireEvent.changeText(getByLabelText('집 이름'), '저녁 루틴 하우스');
     await fireEvent.changeText(getByLabelText('집 소개'), '저녁 루틴으로 바꿨어요');
-    // 정원 상한이 4로 내려갔다 (#869) — 6·8·10은 더 이상 선택지에 없다.
-    await fireEvent.press(getByLabelText('정원 3명'));
+    await fireEvent.press(getByLabelText('정원 6명'));
     await fireEvent.press(getByLabelText('집 정보 저장'));
     expect(onUpdateHouse).toHaveBeenCalledWith(7, {
       name: '저녁 루틴 하우스',
       description: '저녁 루틴으로 바꿨어요',
-      maxMembers: 3,
+      maxMembers: 6,
     });
   });
 
-  /**
-   * 집 이미지가 담는 창문 수가 한계라 정원을 4로 제한했다 (#869). 서버는
-   * 1~10을 여전히 허용하므로 막는 건 고를 수 있는 폭뿐이다.
-   */
-  it('정원 선택지는 4명까지만 보여준다 (#869)', async () => {
+  it('정원 선택지는 6명까지만 보여준다 (#1108)', async () => {
     const { getByLabelText, queryByLabelText } = await render(
       screenFor(MISSION_HOUSE, { onUpdateHouse: jest.fn() }),
     );
     await fireEvent.press(getByLabelText('집 정보 수정'));
-    for (const n of [2, 3, 4]) expect(getByLabelText(`정원 ${n}명`)).toBeTruthy();
-    for (const n of [6, 8, 10]) expect(queryByLabelText(`정원 ${n}명`)).toBeNull();
+    for (const n of [2, 3, 4, 5, 6]) expect(getByLabelText(`정원 ${n}명`)).toBeTruthy();
+    for (const n of [7, 8, 10]) expect(queryByLabelText(`정원 ${n}명`)).toBeNull();
   });
 
   /**
-   * 상한이 내려가기 전에 만들어진 집은 정원이 4를 넘는다. 그 값을 선택지에서
+   * 기존 집은 정원이 6을 넘을 수 있다. 그 값을 선택지에서
    * 없애면 **현재 상태가 표현되지 않아** 아무것도 안 고른 것처럼 보인다.
    * 내릴 수는 있고 올릴 수는 없게 남겨둔다.
    */
-  it('이미 정원이 4를 넘는 집은 그 값도 함께 보여준다 (#869)', async () => {
+  it('이미 정원이 6을 넘는 집은 그 값을 보존한다 (#1108)', async () => {
     const legacy = { ...MISSION_HOUSE, maxMembers: 8 };
     const { getByLabelText, queryByLabelText } = await render(
       screenFor(legacy, { onUpdateHouse: jest.fn() }),
     );
     await fireEvent.press(getByLabelText('집 정보 수정'));
     expect(getByLabelText('정원 8명')).toBeTruthy();
-    // 그 사이 값(6)이 덤으로 열리지는 않는다 — 올리는 길은 없다.
-    expect(queryByLabelText('정원 6명')).toBeNull();
+    expect(getByLabelText('정원 8명').props.accessibilityState.selected).toBe(true);
+    expect(getByLabelText('정원 6명')).toBeTruthy();
     expect(queryByLabelText('정원 10명')).toBeNull();
+  });
+
+  it('현재 6명이면 그보다 작은 정원을 선택할 수 없다', async () => {
+    const onUpdateHouse = jest.fn();
+    const ui = await render(
+      screenFor({ ...MISSION_HOUSE, maxMembers: 6, memberCount: 6 }, { onUpdateHouse }),
+    );
+    await fireEvent.press(ui.getByLabelText('집 정보 수정'));
+    for (const n of [2, 3, 4, 5]) {
+      expect(ui.getByLabelText(`정원 ${n}명`).props.accessibilityState.disabled).toBe(true);
+      await fireEvent.press(ui.getByLabelText(`정원 ${n}명`));
+    }
+    await fireEvent.press(ui.getByLabelText('집 정보 저장'));
+    expect(onUpdateHouse).toHaveBeenCalledWith(7, expect.objectContaining({ maxMembers: 6 }));
   });
 
   it('prefills the current cover, sends the new pick, and hides the section without a catalog', async () => {

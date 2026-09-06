@@ -590,9 +590,8 @@ export function HouseSearchScreen({
                   <SparklePictogram size={14} />
                   <Text style={[Typography.label, { color: t.text }]}>단체미션 미리보기</Text>
                 </View>
-                {/* 카드 전체가 ScrollView가 되면서(#1078) 같은 축 중첩 — Android는
-                    nestedScrollEnabled 없이는 안쪽이 스크롤되지 않는다. */}
-                <ScrollView style={styles.previewMissionScroll} nestedScrollEnabled>
+                {/* One vertical scroll region preserves access to every mission (#1119). */}
+                <View>
                   <View style={styles.previewMissionList}>
                     {housePreview.missions.map((mission) => {
                       const progress = Math.min(1, mission.current / mission.target);
@@ -625,7 +624,7 @@ export function HouseSearchScreen({
                       );
                     })}
                   </View>
-                </ScrollView>
+                </View>
                 <Text style={[Typography.supporting, { color: t.textMuted }]}>
                   입주 후 미션에 참여하고 보상을 받을 수 있어요
                 </Text>
@@ -859,10 +858,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.one,
-  },
-  previewMissionScroll: {
-    flexGrow: 0,
-    maxHeight: 180,
   },
   previewMissionList: {
     gap: Spacing.two,

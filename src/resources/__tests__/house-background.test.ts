@@ -1,6 +1,27 @@
-import { HOUSE_BACKGROUND_KEY_BY_THEME, houseBackgroundKey } from '@/resources/house-background';
+import {
+  HOUSE_BACKGROUND_KEY_BY_THEME,
+  HOUSE_DARK_BACKGROUND_KEY_BY_THEME,
+  houseBackgroundKey,
+  type HouseBackgroundTheme,
+} from '@/resources/house-background';
 
 describe('houseBackgroundKey', () => {
+  it.each(Object.keys(HOUSE_BACKGROUND_KEY_BY_THEME) as HouseBackgroundTheme[])(
+    'selects the approved light/dark asset for %s without changing frame keys',
+    (theme) => {
+      const cover = `house/${theme}/frame-v27.png`;
+      expect(houseBackgroundKey(cover, 'light')).toBe(HOUSE_BACKGROUND_KEY_BY_THEME[theme]);
+      expect(houseBackgroundKey(cover, 'dark')).toBe(HOUSE_DARK_BACKGROUND_KEY_BY_THEME[theme]);
+      expect(houseBackgroundKey(cover, 'dark')).toBe(
+        `house/${theme}/backgrounds/house-${theme}-background-dark-v1.webp`,
+      );
+    },
+  );
+
+  it.each([undefined, null, '', 'house/unknown/frame.png', 'furniture/bed'])(
+    'preserves the sky fallback in dark mode for %s',
+    (cover) => expect(houseBackgroundKey(cover, 'dark')).toBeNull(),
+  );
   it.each([
     [
       'house/cloud-balloon/house-unified-cloud-balloon-frame.png',

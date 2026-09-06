@@ -18,14 +18,21 @@ describe('CreateHouseScreen', () => {
     expect(getByRole('button', { name: '2' }).props.accessibilityState?.selected).toBe(false);
   });
 
-  /**
-   * 집 이미지가 담는 창문 수가 한계라 정원을 4로 제한했다 (#869). 서버는
-   * 1~10을 여전히 허용하므로 막히는 건 고를 수 있는 폭뿐이다.
-   */
-  it('정원 선택지는 4명까지만 보여준다 (#869)', async () => {
+  it('정원 선택지는 6명까지 제공하고 기본값은 4명을 유지한다 (#1108)', async () => {
     const { getByRole, queryByRole } = await render(<CreateHouseScreen />);
-    for (const n of ['2', '3', '4']) expect(getByRole('button', { name: n })).toBeTruthy();
-    for (const n of ['6', '8', '10']) expect(queryByRole('button', { name: n })).toBeNull();
+    for (const n of ['2', '3', '4', '5', '6'])
+      expect(getByRole('button', { name: n })).toBeTruthy();
+    for (const n of ['7', '8', '10']) expect(queryByRole('button', { name: n })).toBeNull();
+    expect(getByRole('button', { name: '4' }).props.accessibilityState?.selected).toBe(true);
+  });
+
+  it('선택한 정원 6명을 생성 요청에 전달한다', async () => {
+    const onCreate = jest.fn();
+    const ui = await render(<CreateHouseScreen onCreate={onCreate} />);
+    await fireEvent.changeText(ui.getByPlaceholderText('우리 집 이름을 정해주세요'), '여섯 친구');
+    await fireEvent.press(ui.getByRole('button', { name: '6' }));
+    await fireEvent.press(ui.getByText('집 만들기'));
+    expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({ maxMembers: 6 }));
   });
 
   it('creates a house with name/description/capacity', async () => {

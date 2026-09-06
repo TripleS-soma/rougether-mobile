@@ -7,6 +7,17 @@ import type { FurnitureSlot } from '@/resources/furniture';
 const SLOT_KEYS = Object.keys(ROOM_RENDER_CONTRACT.furniture.slots) as FurnitureSlot[];
 
 describe('ROOM_RENDER_CONTRACT', () => {
+  it('uses the new 2:1 surfaces without changing saved furniture coordinates', () => {
+    const { wallpaper, floor } = ROOM_RENDER_CONTRACT.surfaces;
+    expect(wallpaper.height).toBe(0.6667);
+    expect(floor.top).toBe(wallpaper.height);
+    expect(floor.top + floor.height).toBe(1);
+    expect(wallpaper.contentPosition).toBe('bottom');
+    expect(floor.contentPosition).toBe('top');
+    expect(ROOM_RENDER_CONTRACT.art.wallpaper).toEqual({ width: 1205, height: 964 });
+    expect(ROOM_RENDER_CONTRACT.art.floor).toEqual({ width: 1205, height: 482 });
+    expect(ROOM_RENDER_CONTRACT.coordinateSpace.furnitureAnchor).toBe('center');
+  });
   it('keeps every slot inside the normalized square and derives its center', () => {
     expect(SLOT_KEYS.length).toBeGreaterThan(0);
     for (const slot of SLOT_KEYS) {
