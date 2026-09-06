@@ -57,6 +57,13 @@ export type AnalyticsEvent =
   | 'onboarding_mission_skip'
   // 이탈 원인
   | 'login_failed'
+  /**
+   * 같은 이메일 타 provider 안내(서버 409) — provider: 시도한 쪽, existing: 이미 가입된 쪽('apple|google').
+   * 빈 새 계정이 조용히 생기던 사고의 대응이라 얼마나 자주 뜨는지·어느 쪽을 고르는지가 핵심 지표.
+   */
+  | 'login_conflict'
+  /** 안내에서 [새 계정으로 계속]을 고름 — [OO로 로그인]은 그 provider 의 login_success 로 잡힌다. */
+  | 'login_conflict_continue'
   | 'purchase_blocked'
   | 'api_error';
 

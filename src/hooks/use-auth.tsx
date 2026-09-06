@@ -11,13 +11,20 @@ import {
   logout as apiLogout,
   onSessionCleared,
 } from '@/api';
+import type { SocialLoginOptions } from '@/api/auth';
+import type { LoginResponse } from '@/api/types';
 import { getAppleCredential } from '@/lib/apple-auth';
 import { getGoogleIdToken, signOutGoogle } from '@/lib/google-auth';
 import { getKakaoAccessToken, signOutKakao } from '@/lib/kakao-auth';
-import { saveLastLoginProvider } from '@/lib/last-login';
+import { saveLastLoginProvider, type SocialProvider } from '@/lib/last-login';
 import { clearPushToken, syncPushToken } from '@/lib/push-token';
 import { resetAnalyticsUser, track } from '@/lib/analytics';
 import { clearErrorUser, reportError } from '@/lib/error-reporting';
+import {
+  type LoginConflict,
+  parseLoginConflict,
+  type SocialLoginResult,
+} from '@/lib/login-conflict';
 import { clearLoginFailure, describeLoginError, rememberLoginFailure } from '@/lib/login-error';
 import { wipeLocalAppData } from '@/lib/local-wipe';
 
@@ -29,13 +36,15 @@ type AuthContextValue = {
   login: (userId?: number) => Promise<boolean>;
   /**
    * 구글 로그인 (#489): 계정 시트 → id token → POST /auth/google.
-   * 'ok' 성공 / 'cancelled' 사용자가 시트를 닫음(조용히 무시) / 'failed' 실패.
+   * 'ok' 성공 / 'cancelled' 사용자가 시트를 닫음(조용히 무시) / 'failed' 실패 /
+   * `LoginConflict` 같은 이메일의 활성 계정이 다른 provider로 있어 서버가 가입을
+   * 막음(409) — 화면이 [OO로 로그인] / [새 계정으로 계속]을 띄운다.
    */
-  loginWithGoogle: () => Promise<'ok' | 'cancelled' | 'failed'>;
+  loginWithGoogle: () => Promise<SocialLoginResult>;
   /** 카카오 로그인 (#489 소셜 2차): 카카오 SDK → access token → POST /auth/kakao. */
-  loginWithKakao: () => Promise<'ok' | 'cancelled' | 'failed'>;
+  loginWithKakao: () => Promise<SocialLoginResult>;
   /** 애플 로그인 (#489 소셜 3차, iOS 전용): Apple 시트 → identityToken → POST /auth/apple. */
-  loginWithApple: () => Promise<'ok' | 'cancelled' | 'failed'>;
+  loginWithApple: () => Promise<SocialLoginResult>;
   logout: () => Promise<void>;
   /**
    * 회원탈퇴 (#547, 서버 #235) — DELETE /me 성공 시 로컬 세션·소셜 세션을
@@ -78,6 +87,69 @@ function reportLoginFailure(provider: 'google' | 'kakao' | 'apple', err: unknown
   });
 }
 
+/**
+ * 자격증명 → 서버 교환 → 세션 시작. 409(같은 이메일 타 provider 계정 안내)는 실패가
+ * 아니라 선택지다 — 자격증명을 닫아둔 채 `continueAsNew`(allowNewAccount 재요청)를
+ * 돌려주고, 그 재요청에서 또 409가 오면 더는 안내하지 않고 실패로 본다.
+ */
+async function exchangeCredential(
+  provider: SocialProvider,
+  exchange: (options: SocialLoginOptions) => Promise<LoginResponse>,
+  onAuthed: () => void,
+  options: SocialLoginOptions = {},
+): Promise<'ok' | 'failed' | LoginConflict> {
+  try {
+    await exchange(options);
+  } catch (err) {
+    const conflict = options.allowNewAccount ? null : parseLoginConflict(err);
+    if (conflict) {
+      // 퍼널 계측 (#799 결) — 실패도 성공도 아닌 갈림길이라 따로 센다.
+      track('login_conflict', { provider, existing: conflict.providers.join('|') });
+      return {
+        status: 'conflict',
+        ...conflict,
+        continueAsNew: async () => {
+          track('login_conflict_continue', { provider });
+          const retry = await exchangeCredential(provider, exchange, onAuthed, {
+            allowNewAccount: true,
+          });
+          return retry === 'ok' ? 'ok' : 'failed';
+        },
+      };
+    }
+    reportLoginFailure(provider, err);
+    return 'failed';
+  }
+  onAuthed();
+  // 최근 로그인 배지(#489 후속) — 다음 로그인 화면이 이 버튼을 표시.
+  saveLastLoginProvider(provider);
+  // 퍼널 첫 칸 (#799). 취소('cancelled')는 사용자가 스스로 물러난
+  // 것이라 실패로 세지 않는다 — 실패율이 부풀면 신호가 죽는다.
+  clearLoginFailure();
+  track('login_success', { provider });
+  void syncPushToken();
+  return 'ok';
+}
+
+/** 네이티브 시트(취소 → null, 실패 → throw) 뒤 서버 교환까지 — 세 provider 공통 골격. */
+async function socialLogin<C>(
+  provider: SocialProvider,
+  obtain: () => Promise<C | null>,
+  exchange: (credential: C, options: SocialLoginOptions) => Promise<LoginResponse>,
+  onAuthed: () => void,
+): Promise<SocialLoginResult> {
+  let credential: C | null;
+  try {
+    credential = await obtain();
+  } catch (err) {
+    reportLoginFailure(provider, err);
+    return 'failed';
+  }
+  if (credential == null) return 'cancelled';
+  const obtained = credential;
+  return exchangeCredential(provider, (options) => exchange(obtained, options), onAuthed);
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('loading');
 
@@ -98,8 +170,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // invalid tokens). Flip to guest so AppRoot redirects to /login.
   useEffect(() => onSessionCleared(() => setStatus('guest')), []);
 
-  const value = useMemo<AuthContextValue>(
-    () => ({
+  const value = useMemo<AuthContextValue>(() => {
+    const onAuthed = () => setStatus('authed');
+    return {
       status,
       login: async (userId) => {
         try {
@@ -112,61 +185,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return false;
         }
       },
-      loginWithGoogle: async () => {
-        try {
-          const idToken = await getGoogleIdToken();
-          if (idToken == null) return 'cancelled';
-          await googleLogin(idToken);
-          setStatus('authed');
-          // 최근 로그인 배지(#489 후속) — 다음 로그인 화면이 이 버튼을 표시.
-          saveLastLoginProvider('google');
-          // 퍼널 첫 칸 (#799). 취소('cancelled')는 사용자가 스스로 물러난
-          // 것이라 실패로 세지 않는다 — 실패율이 부풀면 신호가 죽는다.
-          clearLoginFailure();
-          track('login_success', { provider: 'google' });
-          void syncPushToken();
-          return 'ok';
-        } catch (err) {
-          reportLoginFailure('google', err);
-          return 'failed';
-        }
-      },
-      loginWithKakao: async () => {
-        try {
-          const accessToken = await getKakaoAccessToken();
-          if (accessToken == null) return 'cancelled';
-          await kakaoLogin(accessToken);
-          setStatus('authed');
-          saveLastLoginProvider('kakao');
-          // 퍼널 첫 칸 (#799). 취소('cancelled')는 사용자가 스스로 물러난
-          // 것이라 실패로 세지 않는다 — 실패율이 부풀면 신호가 죽는다.
-          clearLoginFailure();
-          track('login_success', { provider: 'kakao' });
-          void syncPushToken();
-          return 'ok';
-        } catch (err) {
-          reportLoginFailure('kakao', err);
-          return 'failed';
-        }
-      },
-      loginWithApple: async () => {
-        try {
-          const credential = await getAppleCredential();
-          if (credential == null) return 'cancelled';
-          await appleLogin(credential.identityToken, credential.authorizationCode);
-          setStatus('authed');
-          saveLastLoginProvider('apple');
-          // 퍼널 첫 칸 (#799). 취소('cancelled')는 사용자가 스스로 물러난
-          // 것이라 실패로 세지 않는다 — 실패율이 부풀면 신호가 죽는다.
-          clearLoginFailure();
-          track('login_success', { provider: 'apple' });
-          void syncPushToken();
-          return 'ok';
-        } catch (err) {
-          reportLoginFailure('apple', err);
-          return 'failed';
-        }
-      },
+      loginWithGoogle: () =>
+        socialLogin(
+          'google',
+          getGoogleIdToken,
+          (idToken, options) => googleLogin(idToken, options),
+          onAuthed,
+        ),
+      loginWithKakao: () =>
+        socialLogin(
+          'kakao',
+          getKakaoAccessToken,
+          (accessToken, options) => kakaoLogin(accessToken, options),
+          onAuthed,
+        ),
+      loginWithApple: () =>
+        socialLogin(
+          'apple',
+          getAppleCredential,
+          (credential, options) =>
+            appleLogin(credential.identityToken, credential.authorizationCode, options),
+          onAuthed,
+        ),
       logout: async () => {
         resetAnalyticsUser();
         clearErrorUser();
@@ -202,9 +242,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setStatus('guest');
         return true;
       },
-    }),
-    [status],
-  );
+    };
+  }, [status]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

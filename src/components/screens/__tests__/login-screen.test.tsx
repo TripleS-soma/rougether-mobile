@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import { LoginScreen } from '@/components/screens/login-screen';
 import { ToastProvider } from '@/components/ui/toast';
@@ -133,6 +133,75 @@ describe('LoginScreen', () => {
     const cancelled = await render(<LoginScreen onKakaoLogin={async () => 'cancelled'} />);
     await fireEvent.press(cancelled.getByLabelText('Kakao로 시작'));
     expect(cancelled.queryByText(/카카오 로그인에 실패했어요/)).toBeNull();
+  });
+
+  /**
+   * 같은 이메일 타 provider 안내(서버 409) — 실패 문구 대신 다이얼로그로
+   * [OO로 로그인] / [새 계정으로 계속] / [닫기]를 고르게 한다.
+   */
+  it('같은 이메일 타 provider 안내는 다이얼로그 — [애플로 로그인]이 애플 흐름으로 넘긴다', async () => {
+    const continueAsNew = jest.fn(async () => 'ok' as const);
+    const onKakaoLogin = jest.fn(async () => ({
+      status: 'conflict' as const,
+      providers: ['apple' as const],
+      message: '이 이메일은 애플 로그인으로 가입되어 있어요.',
+      continueAsNew,
+    }));
+    const onAppleLogin = jest.fn(async () => 'ok' as const);
+    const onAuthSuccess = jest.fn();
+    const screen = await render(
+      <LoginScreen
+        onKakaoLogin={onKakaoLogin}
+        onAppleLogin={onAppleLogin}
+        onAuthSuccess={onAuthSuccess}
+      />,
+    );
+    await fireEvent.press(screen.getByLabelText('Kakao로 시작'));
+    expect(screen.getByText(/이 이메일은 애플 로그인으로 가입되어 있어요/)).toBeTruthy();
+    expect(screen.queryByText(/카카오 로그인에 실패했어요/)).toBeNull();
+    expect(onAuthSuccess).not.toHaveBeenCalled();
+
+    await fireEvent.press(screen.getByLabelText('애플로 로그인'));
+    // 네이티브 시트는 Modal 이 닫힌 뒤에 띄운다 — 곧바로가 아니라 잠시 뒤 호출된다.
+    await waitFor(() => expect(onAppleLogin).toHaveBeenCalledTimes(1));
+    expect(continueAsNew).not.toHaveBeenCalled();
+    await waitFor(() => expect(onAuthSuccess).toHaveBeenCalledTimes(1));
+  });
+
+  it('[새 계정으로 계속]은 continueAsNew 를 부르고 성공 시 onAuthSuccess, [닫기]는 아무것도 안 한다', async () => {
+    const continueAsNew = jest.fn(async () => 'ok' as const);
+    const conflict = {
+      status: 'conflict' as const,
+      providers: ['google' as const],
+      message: '이 이메일은 구글 로그인으로 가입되어 있어요.',
+      continueAsNew,
+    };
+    const onAuthSuccess = jest.fn();
+    const screen = await render(
+      <LoginScreen onKakaoLogin={async () => conflict} onAuthSuccess={onAuthSuccess} />,
+    );
+    await fireEvent.press(screen.getByLabelText('Kakao로 시작'));
+    await fireEvent.press(screen.getByLabelText('닫기'));
+    expect(continueAsNew).not.toHaveBeenCalled();
+    expect(onAuthSuccess).not.toHaveBeenCalled();
+
+    await fireEvent.press(screen.getByLabelText('Kakao로 시작'));
+    await fireEvent.press(screen.getByLabelText('새 계정으로 계속'));
+    await waitFor(() => expect(continueAsNew).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(onAuthSuccess).toHaveBeenCalledTimes(1));
+  });
+
+  it('[새 계정으로 계속]이 실패하면 에러 문구를 띄운다', async () => {
+    const conflict = {
+      status: 'conflict' as const,
+      providers: ['google' as const],
+      message: '이 이메일은 구글 로그인으로 가입되어 있어요.',
+      continueAsNew: async () => 'failed' as const,
+    };
+    const screen = await render(<LoginScreen onKakaoLogin={async () => conflict} />);
+    await fireEvent.press(screen.getByLabelText('Kakao로 시작'));
+    await fireEvent.press(screen.getByLabelText('새 계정으로 계속'));
+    await waitFor(() => expect(screen.getByText(/새 계정 만들기에 실패했어요/)).toBeTruthy());
   });
 
   it('애플 버튼이 onAppleLogin을 부르고 성공 시 onAuthSuccess (#489 소셜 3차)', async () => {

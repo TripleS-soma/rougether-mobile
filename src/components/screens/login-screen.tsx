@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useRef, useState } from 'react';
 import Svg, { Path } from 'react-native-svg';
 import {
   KeyboardAvoidingView,
@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 
 import appIcon from '@/assets/images/icon.png';
+import { LoginConflictDialog } from '@/components/screens/login/login-conflict-dialog';
 import { Field } from '@/components/ui/field';
 import { Icon } from '@/components/ui/icon';
 import { useToast } from '@/components/ui/toast';
@@ -20,6 +21,11 @@ import { Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import type { SocialProvider } from '@/lib/last-login';
+import { isLoginConflict, type LoginConflict, type SocialLoginResult } from '@/lib/login-conflict';
+
+/** iOS Modal fade 닫힘(≈300ms)보다 넉넉한 예비 대기 — onDismiss 가 먼저 오면 그쪽이 실행한다. */
+const MODAL_DISMISS_FALLBACK_MS = 500;
 
 export type LoginScreenProps = {
   onAuthSuccess?: () => void;
@@ -34,13 +40,15 @@ export type LoginScreenProps = {
   onLogin?: (userId?: number) => Promise<boolean>;
   /**
    * 구글 로그인 (#489) — 계정 시트 → 서버 교환까지 수행하고 결과를 돌려준다.
-   * 'cancelled'는 조용히 무시, 'failed'만 에러로 알린다.
+   * 'cancelled'는 조용히 무시, 'failed'만 에러로 알린다. `LoginConflict`(같은
+   * 이메일의 활성 계정이 다른 provider로 있음, 서버 409)는 다이얼로그로
+   * [OO로 로그인] / [새 계정으로 계속]을 고르게 한다.
    */
-  onGoogleLogin?: () => Promise<'ok' | 'cancelled' | 'failed'>;
+  onGoogleLogin?: () => Promise<SocialLoginResult>;
   /** 카카오 로그인 (#489 소셜 2차) — 시맨틱은 onGoogleLogin과 동일. */
-  onKakaoLogin?: () => Promise<'ok' | 'cancelled' | 'failed'>;
+  onKakaoLogin?: () => Promise<SocialLoginResult>;
   /** 애플 로그인 (#489 소셜 3차) — iOS 전용 버튼(다른 플랫폼에선 숨김). */
-  onAppleLogin?: () => Promise<'ok' | 'cancelled' | 'failed'>;
+  onAppleLogin?: () => Promise<SocialLoginResult>;
   /**
    * 실패 문구에 제공자 코드를 덧붙인다 (#959). 생략하면 문구 그대로 —
    * 화면은 순수하게 유지하고, 코드를 아는 건 인증 레이어다.
@@ -80,6 +88,8 @@ export function LoginScreen({
   const [keepLogin, setKeepLogin] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // 같은 이메일 타 provider 계정 안내(서버 409) — 다이얼로그가 열려 있는 동안의 선택지.
+  const [conflict, setConflict] = useState<LoginConflict | null>(null);
   const { show: toast } = useToast();
 
   // Dev-login: password is a formality; empty userId(email 칸) = new account.
@@ -109,7 +119,7 @@ export function LoginScreen({
 
   // 소셜 로그인 (#489) — 취소는 조용히, 실패만 에러 문구로.
   const submitSocial = async (
-    login: (() => Promise<'ok' | 'cancelled' | 'failed'>) | undefined,
+    login: (() => Promise<SocialLoginResult>) | undefined,
     failMessage: string,
   ) => {
     if (submitting || !login) return;
@@ -122,6 +132,8 @@ export function LoginScreen({
     // 테스터가 스크린샷 한 장만 보내면 원인이 갈린다. 배포본에서만 나는
     // 장애는 재현이 안 돼 이 값이 유일한 단서다.
     else if (result === 'failed') setError(describeSocialFailure?.(failMessage) ?? failMessage);
+    // 가입을 막은 409 — 실패가 아니라 선택지. 다이얼로그가 다음 행동을 받는다.
+    else if (isLoginConflict(result)) setConflict(result);
   };
   const submitGoogle = () =>
     submitSocial(onGoogleLogin, '구글 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.');
@@ -129,6 +141,40 @@ export function LoginScreen({
     submitSocial(onKakaoLogin, '카카오 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.');
   const submitApple = () =>
     submitSocial(onAppleLogin, '애플 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.');
+
+  // 안내 다이얼로그의 [OO로 로그인] — 그 provider 의 평소 로그인 흐름으로 넘긴다.
+  // 단, RN Modal 이 닫히는 중에 네이티브 시트(카카오·애플·구글)를 띄우면 iOS 가 present 를
+  // 삼켜 아무 반응이 없을 수 있어, 닫힘이 끝난 뒤(onClosed) 시작한다. onDismiss 가 안 오는
+  // 경로(Android·구 RN·테스트)를 위해 잠시 뒤 한 번 더 시도하며, 실행은 ref 로 1회만.
+  const pendingProviderRef = useRef<SocialProvider | null>(null);
+  const startPendingLogin = () => {
+    const provider = pendingProviderRef.current;
+    if (!provider) return;
+    pendingProviderRef.current = null;
+    if (provider === 'kakao') void submitKakao();
+    else if (provider === 'apple') void submitApple();
+    else void submitGoogle();
+  };
+  const loginWithExisting = (provider: SocialProvider) => {
+    pendingProviderRef.current = provider;
+    setConflict(null);
+    setTimeout(startPendingLogin, Platform.OS === 'ios' ? MODAL_DISMISS_FALLBACK_MS : 0);
+  };
+  // [새 계정으로 계속] — 같은 자격증명으로 allowNewAccount 재요청.
+  const continueAsNew = async () => {
+    if (!conflict || submitting) return;
+    const pending = conflict;
+    setConflict(null);
+    setSubmitting(true);
+    setError(null);
+    const result = await pending.continueAsNew();
+    setSubmitting(false);
+    if (result === 'ok') onAuthSuccess?.();
+    else {
+      const failMessage = '새 계정 만들기에 실패했어요. 잠시 후 다시 시도해 주세요.';
+      setError(describeSocialFailure?.(failMessage) ?? failMessage);
+    }
+  };
 
   return (
     <View style={[styles.screen, useScreenStyle(['top', 'bottom'])]}>
@@ -285,6 +331,15 @@ export function LoginScreen({
           </View> */}
         </ScrollView>
       </KeyboardAvoidingView>
+      <LoginConflictDialog
+        visible={conflict != null}
+        message={conflict?.message ?? ''}
+        providers={conflict?.providers ?? []}
+        onLoginWith={loginWithExisting}
+        onContinueAsNew={() => void continueAsNew()}
+        onDismiss={() => setConflict(null)}
+        onClosed={startPendingLogin}
+      />
     </View>
   );
 }

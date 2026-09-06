@@ -7,7 +7,9 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 
 import { clearSession, devLogin } from '@/api';
 import { AuthProvider, useAuth } from '@/hooks/use-auth';
-import { getLastLoginFailure } from '@/lib/login-error';
+import type { LoginConflict, SocialLoginResult } from '@/lib/login-conflict';
+import { loadLastLoginProvider } from '@/lib/last-login';
+import { clearLoginFailure, getLastLoginFailure } from '@/lib/login-error';
 import { syncPushToken } from '@/lib/push-token';
 
 jest.mock('@/lib/push-token', () => ({
@@ -158,6 +160,113 @@ describe('AuthProvider — 소셜 로그인 매핑', () => {
     await act(async () => {
       expect(await result.current.loginWithKakao()).toBe('failed');
     });
+  });
+
+  /**
+   * 재설치 뒤 다른 provider 버튼을 누르면 서버가 빈 새 계정을 만들던 사고 —
+   * 이제 서버가 409로 막고, 앱은 실패가 아니라 선택지(conflict)로 돌려준다.
+   */
+  it('카카오: 같은 이메일 타 provider 409는 conflict 로 돌려주고, 새 계정 계속은 allowNewAccount 재요청', async () => {
+    clearLoginFailure();
+    const fetchMock = jest.fn(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { allowNewAccount?: boolean };
+      if (body.allowNewAccount) {
+        return res(200, { userId: 9, accessToken: 'a9', refreshToken: 'r9', isNewUser: true });
+      }
+      return res(409, {
+        code: 'AUTH_EMAIL_LINKED_TO_OTHER_PROVIDER',
+        message: '이 이메일은 애플 로그인으로 가입되어 있어요.',
+        details: { providers: ['APPLE'] },
+      });
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const { result } = await renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.status).toBe('guest'));
+
+    let outcome: SocialLoginResult = 'failed';
+    await act(async () => {
+      outcome = await result.current.loginWithKakao();
+    });
+    expect(outcome).toMatchObject({
+      status: 'conflict',
+      providers: ['apple'],
+      message: '이 이메일은 애플 로그인으로 가입되어 있어요.',
+    });
+    // 첫 요청 바디는 기존 계약 그대로(플래그 없음), 실패로 기록하지도 않는다.
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({
+      accessToken: expect.any(String),
+    });
+    expect(getLastLoginFailure()).toBeNull();
+    expect(result.current.status).toBe('guest');
+
+    await act(async () => {
+      expect(await (outcome as LoginConflict).continueAsNew()).toBe('ok');
+    });
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({
+      accessToken: expect.any(String),
+      allowNewAccount: true,
+    });
+    await waitFor(() => expect(result.current.status).toBe('authed'));
+  });
+
+  it('conflict 에서는 세션 부수효과(푸시 동기화·최근 로그인 배지)가 없고, 재요청 성공 때만 생긴다', async () => {
+    await AsyncStorage.clear();
+    global.fetch = jest.fn(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { allowNewAccount?: boolean };
+      if (body.allowNewAccount) {
+        return res(200, { userId: 9, accessToken: 'a9', refreshToken: 'r9', isNewUser: true });
+      }
+      return res(409, {
+        code: 'AUTH_EMAIL_LINKED_TO_OTHER_PROVIDER',
+        details: { providers: ['APPLE'] },
+      });
+    }) as unknown as typeof fetch;
+    const { result } = await renderHook(() => useAuth(), { wrapper });
+    let outcome: SocialLoginResult = 'failed';
+    await act(async () => {
+      outcome = await result.current.loginWithKakao();
+    });
+    expect(syncPushToken).not.toHaveBeenCalled();
+    expect(await loadLastLoginProvider()).toBeNull();
+
+    await act(async () => {
+      expect(await (outcome as LoginConflict).continueAsNew()).toBe('ok');
+    });
+    expect(syncPushToken).toHaveBeenCalledTimes(1);
+    expect(await loadLastLoginProvider()).toBe('kakao');
+  });
+
+  it('allowNewAccount 재요청에 또 409 가 오면 다시 안내하지 않고 failed 로 끝난다 (무한 루프 방지)', async () => {
+    clearLoginFailure();
+    global.fetch = jest.fn(async () =>
+      res(409, { code: 'AUTH_EMAIL_LINKED_TO_OTHER_PROVIDER', details: { providers: ['APPLE'] } }),
+    ) as unknown as typeof fetch;
+    const { result } = await renderHook(() => useAuth(), { wrapper });
+    let outcome: SocialLoginResult = 'failed';
+    await act(async () => {
+      outcome = await result.current.loginWithKakao();
+    });
+    expect(outcome).toMatchObject({ status: 'conflict' });
+    await act(async () => {
+      expect(await (outcome as LoginConflict).continueAsNew()).toBe('failed');
+    });
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(getLastLoginFailure()).toMatchObject({ code: 'AUTH_EMAIL_LINKED_TO_OTHER_PROVIDER' });
+  });
+
+  it('카카오: 409 가 아닌 서버 오류는 여전히 failed 로 기록한다', async () => {
+    clearLoginFailure();
+    global.fetch = jest.fn(async () =>
+      res(401, {
+        code: 'AUTH_OAUTH_KAKAO_TOKEN_INVALID',
+        message: '카카오 토큰이 유효하지 않습니다.',
+      }),
+    ) as unknown as typeof fetch;
+    const { result } = await renderHook(() => useAuth(), { wrapper });
+    await act(async () => {
+      expect(await result.current.loginWithKakao()).toBe('failed');
+    });
+    expect(getLastLoginFailure()).not.toBeNull();
   });
 
   it('애플: 시트 취소(ERR_REQUEST_CANCELED)는 cancelled, 성공은 ok', async () => {
