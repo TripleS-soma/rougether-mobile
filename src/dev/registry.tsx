@@ -14,7 +14,7 @@ import { CategoryManageScreen } from '@/components/screens/category-manage-scree
 import { CalendarImportScreen } from '@/components/screens/calendar-import-screen';
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
-import { GachaScreen } from '@/components/screens/gacha-screen';
+import { GachaPreview } from '@/dev/gacha-preview';
 import { HouseScreen, type House } from '@/components/screens/house-screen';
 import { HouseMissionsScreen } from '@/components/screens/house-missions-screen';
 import { HouseMembersScreen, manageableMembers } from '@/components/screens/house-members-screen';
@@ -944,12 +944,8 @@ export const galleryEntries: GalleryEntry[] = [
   },
   {
     name: 'GachaScreen',
-    description: 'Ported from the prototype GachaScreen (#13): box select + pull animation.',
-    render: () => (
-      <View style={{ height: 700, alignSelf: 'stretch' }}>
-        <GachaScreen gachas={GACHA_SAMPLES} coinBalance={5600} />
-      </View>
-    ),
+    description: '생성 아트로 만든 숲속 개봉 무대 · 상자를 톡 눌러 열기 · 등급별 무료 미리보기.',
+    render: () => <GachaPreview machines={GACHA_SAMPLES} />,
   },
   {
     name: 'HouseSearchScreen',

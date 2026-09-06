@@ -1,4 +1,5 @@
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 
 import type { GachaMachine } from '@/api/adapters';
 import type { DrawResult } from '@/api/types';
@@ -28,6 +29,76 @@ const characterMachine: GachaMachine = {
 };
 
 describe('GachaScreen', () => {
+  it('reduced motion skips the charge delay and burst, keeping the server result', async () => {
+    jest.mocked(useReducedMotion).mockReturnValueOnce(true);
+    const onDraw = jest.fn(async () => [{ name: '달빛 침대', rarity: '전설' }]);
+    const screen = await render(
+      <GachaScreen gachas={[machine]} coinBalance={5600} onDraw={onDraw} />,
+    );
+    // The hook should remain enabled across all renders of this draw.
+    jest.mocked(useReducedMotion).mockReturnValue(true);
+    try {
+      await fireEvent.press(screen.getByText('1회 뽑기'));
+      expect(screen.getByText('달빛 침대')).toBeTruthy();
+      expect(screen.queryByTestId('gacha-charge')).toBeNull();
+      expect(screen.queryByTestId('gacha-burst')).toBeNull();
+      expect(onDraw).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.mocked(useReducedMotion).mockReturnValue(false);
+    }
+  });
+
+  it('a rejected draw exits the overlay and allows a retry', async () => {
+    const onDraw = jest.fn().mockRejectedValue(new Error('offline'));
+    const screen = await render(
+      <GachaScreen gachas={[machine]} coinBalance={5600} onDraw={onDraw} />,
+    );
+    await fireEvent.press(screen.getByText('1회 뽑기'));
+    expect(screen.getByText('뽑기에 실패했어요.')).toBeTruthy();
+    expect(screen.queryByTestId('gacha-charge')).toBeNull();
+    await fireEvent.press(screen.getByText('1회 뽑기'));
+    expect(onDraw).toHaveBeenCalledTimes(2);
+  });
+
+  it('Android back cannot abandon an in-flight paid draw or trigger another draw', async () => {
+    let resolve!: (value: DrawResult[]) => void;
+    const onDraw = jest.fn(
+      () =>
+        new Promise<DrawResult[]>((done) => {
+          resolve = done;
+        }),
+    );
+    const screen = await render(
+      <GachaScreen gachas={[machine]} coinBalance={5600} onDraw={onDraw} />,
+    );
+    const pullButton = screen.getByText('1회 뽑기');
+    await fireEvent.press(pullButton);
+    await fireEvent(screen.getByTestId('gacha-draw-modal'), 'requestClose');
+    expect(screen.getByTestId('gacha-gift-stage')).toBeTruthy();
+    await fireEvent.press(pullButton);
+    expect(onDraw).toHaveBeenCalledTimes(1);
+    await screen.unmount();
+    await act(() => resolve([{ name: '달빛 침대' }]));
+  });
+
+  it('opens every card without another server draw', async () => {
+    const onDraw = jest.fn(async () =>
+      Array.from({ length: 6 }, (_, i) => ({ name: `선물 ${i + 1}`, rarity: '희귀' })),
+    );
+    const screen = await render(
+      <GachaScreen gachas={[machine]} coinBalance={5600} onDraw={onDraw} />,
+    );
+    await fireEvent.press(screen.getByText('5+1회 뽑기'));
+    await waitFor(() => expect(screen.getByLabelText('한 번에 열기')).toBeTruthy(), {
+      timeout: 8000,
+    });
+    await fireEvent.press(screen.getByLabelText('한 번에 열기'));
+    expect(screen.getByText('선물을 모두 열었어요!')).toBeTruthy();
+    expect(screen.queryByLabelText('한 번에 열기')).toBeNull();
+    expect(onDraw).toHaveBeenCalledTimes(1);
+    expect(onDraw).toHaveBeenCalledWith(1, 6);
+  });
+
   // 선물상자 아트 (서버 #276) — 서버가 giftBoxAssetKey를 주면 그 이미지를,
   // 아니면 기존 픽토그램을 그린다. 칩·헤로 두 자리에 같은 머신이 나오므로
   // 아트가 붙은 머신은 testID가 2개 잡힌다.
@@ -73,7 +144,7 @@ describe('GachaScreen', () => {
    * 뽑기 버튼을 누른 순간 오버레이가 픽토그램으로 갈아타면, 방금 고른 **그
    * 상자**를 여는 것으로 안 읽힌다. 충전 중에도 같은 아트를 보여준다.
    */
-  it('뽑는 중 오버레이도 같은 선물상자 아트를 보여준다', async () => {
+  it('개봉 무대에도 선택한 머신의 상자를 테마 배지로 보여준다', async () => {
     const withArt: GachaMachine = { ...machine, giftBoxKey: 'items/gift-box.png' };
     const onDraw = jest.fn(async (): Promise<DrawResult[]> => [
       { name: '허브 화분', rarity: '희귀', converted: false },
