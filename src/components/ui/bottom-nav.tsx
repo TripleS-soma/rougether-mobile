@@ -1,8 +1,8 @@
-import { type FC, useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { type FC, useEffect, useRef, useState } from 'react';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { type SvgProps } from 'react-native-svg';
-import { GestureDetector, Pressable } from 'react-native-gesture-handler';
+import { GestureDetector } from 'react-native-gesture-handler';
 import Reanimated from 'react-native-reanimated';
 
 import HomeActive from '@/assets/images/common/home-icon-active.svg';
@@ -17,6 +17,7 @@ import {
   NAV_PILL_PAD_H,
   NAV_PILL_GAP,
   NAV_PILL_PAD_V,
+  NAV_TAB_PAD_H,
   navPillBottomOffset,
 } from '@/components/ui/bottom-nav-geometry';
 import { CoachTarget } from '@/components/ui/coach-mark';
@@ -92,21 +93,35 @@ export function BottomNav({ active, onChange, badges }: BottomNavProps) {
   const t = useTokens();
   const Typography = useTypography();
   const insets = useSafeAreaInsets();
+  // 세 탭을 같은 폭으로 (#1098) — 라벨 길이가 달라("집" vs "마이페이지") 탭 폭이
+  // 제각각이면 가운데 탭이 알약 중앙에서 벗어난다. 라벨의 자연 폭을 재서 가장
+  // 넓은 것에 맞춘다. 고정 상수가 아닌 이유: 선택 폰트(#382)·글꼴 배율마다 다르다.
+  const [labelWidths, setLabelWidths] = useState<number[]>([]);
+  const tabMinWidth = labelWidths.length === TABS.length ? Math.max(...labelWidths) : undefined;
+  const recordLabel = (index: number, width: number) =>
+    setLabelWidths((prev) => {
+      if (prev[index] === width) return prev;
+      const next = [...prev];
+      next[index] = width;
+      return next;
+    });
   const { pan, indicatorStyle, recordTab, recordHeight } = useBottomNavScrub((index) => {
     const tab = TABS[index]?.key;
     if (tab && tab !== active) onChange(tab);
   });
   const tabs = TABS.map(({ key, label, active: ActiveIcon, inactive: InactiveIcon }, index) => {
     const isActive = key === active;
+    // RN Pressable (#1093): RNGH Pressable + `requireExternalGestureToFail(pan)` 조합은
+    // Android에서 탭이 영영 발화하지 않았다(iOS만 동작). 일반 Pressable은 pan이
+    // 활성화(8px 이동)되는 순간 터치 취소를 받아 탭과 끌기가 자연히 갈린다.
     const inner = (
       <Pressable
-        requireExternalGestureToFail={pan}
         onPress={() => onChange(key)}
         accessibilityRole="button"
         accessibilityState={{ selected: isActive }}
         accessibilityLabel={label}
         accessibilityHint={badges?.[key] ? '오늘 미출석' : undefined}
-        style={styles.tab}>
+        style={[styles.tab, tabMinWidth ? { minWidth: tabMinWidth + NAV_TAB_PAD_H * 2 } : null]}>
         <TabIcon
           isActive={isActive}
           Icon={isActive ? ActiveIcon : InactiveIcon}
@@ -114,7 +129,10 @@ export function BottomNav({ active, onChange, badges }: BottomNavProps) {
           badge={badges?.[key]}
           badgeColor={t.danger}
         />
-        <Text style={[Typography.supporting, { color: isActive ? t.primaryText : t.textMuted }]}>
+        <Text
+          style={[Typography.supporting, { color: isActive ? t.primaryText : t.textMuted }]}
+          numberOfLines={1}
+          onLayout={(e) => recordLabel(index, e.nativeEvent.layout.width)}>
           {label}
         </Text>
       </Pressable>
@@ -163,7 +181,7 @@ const styles = StyleSheet.create({
   tab: {
     alignItems: 'center',
     gap: NAV_ICON_LABEL_GAP,
-    paddingHorizontal: Spacing.four,
+    paddingHorizontal: NAV_TAB_PAD_H,
   },
   // 알약 오버레이 — 폭은 탭 3개에 맞춰 줄어들고(alignItems), 좌우는 빈 띠.
   floatWrap: {
