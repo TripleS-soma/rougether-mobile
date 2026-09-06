@@ -1,0 +1,77 @@
+name: app-icon-release-status
+on:
+  push:
+    branches: [codex/app-icon-release-status]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 승인된 앱 빌드·제출 완료 조회
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          node <<'JS'
+          const fs = require('node:fs');
+          const appId = '430c1f3b-4035-47c8-9864-8e07687d628c';
+          const release = '3111b510dde849f0b9cfb9413bb6e83e51b9ab54';
+          const fingerprints = { ANDROID: '8c7c88277819d19b81e77b21a43e8f1797560520', IOS: '3002e497be3f2fd8d1072ef7483f36ee8cd4030e' };
+          const query = `query ReleaseBuilds($appId: String!) {
+            app { byId(appId: $appId) { builds(offset: 0, limit: 20) {
+              id status platform appVersion appBuildVersion gitCommitHash buildProfile
+              fingerprint { hash } runtime { version }
+              artifacts { applicationArchiveUrl buildUrl }
+              error { errorCode }
+              submissions { id status error { errorCode } }
+            } } }
+          }`;
+          (async () => {
+            let previous = '';
+            for (let attempt = 0; attempt < 35; attempt++) {
+              const response = await fetch('https://api.expo.dev/graphql', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + process.env.EXPO_TOKEN },
+                body: JSON.stringify({ query, variables: { appId } }),
+                signal: AbortSignal.timeout(30000),
+              });
+              const body = await response.json();
+              if (!response.ok || body.errors) throw new Error('EAS read-only status query failed: ' + response.status + ' ' + JSON.stringify(body.errors?.map(e => ({ message: e.message, code: e.extensions?.code }))));
+              const found = body.data.app.byId.builds.filter(b => b.gitCommitHash === release && b.appVersion === '1.5.0');
+              const selected = ['ANDROID', 'IOS'].map(platform => found.find(b => b.platform === platform && b.buildProfile === (platform === 'ANDROID' ? 'preview' : 'testflight'))).filter(Boolean);
+              const safe = selected.map(b => ({
+                id: b.id, platform: b.platform, status: b.status, version: b.appVersion, build: b.appBuildVersion,
+                commit: b.gitCommitHash, profile: b.buildProfile,
+                runtime: b.runtime?.version, fingerprint: b.fingerprint?.hash,
+                artifactAvailable: Boolean(b.artifacts?.applicationArchiveUrl || b.artifacts?.buildUrl),
+                url: 'https://expo.dev/accounts/evan7484/projects/rougether-mobile/builds/' + b.id,
+                errorCode: b.error?.errorCode,
+                submissions: (b.submissions || []).map(s => ({ id: s.id, status: s.status, errorCode: s.error?.errorCode })),
+              }));
+              const serialized = JSON.stringify(safe, null, 2);
+              fs.writeFileSync('release-status.json', serialized);
+              if (serialized !== previous) { console.log(serialized); previous = serialized; }
+              for (const b of safe) {
+                if ((b.runtime || b.fingerprint) !== fingerprints[b.platform]) throw new Error('Unexpected runtime for ' + b.platform);
+                if (['ERRORED', 'CANCELED'].includes(b.status) || b.submissions.some(s => ['ERRORED', 'CANCELED'].includes(s.status))) throw new Error('Build or submission failed: ' + b.platform + ' ' + (b.errorCode || ''));
+              }
+              if (safe.length === 2 && safe.every(b => b.status === 'FINISHED' && b.artifactAvailable) && safe.find(b => b.platform === 'IOS').submissions.some(s => s.status === 'FINISHED')) {
+                fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, '승인한 앱 1.5.0의 Android APK·iOS 빌드 및 TestFlight 제출 완료를 확인했습니다.\n\n```json\n' + serialized + '\n```\n');
+                return;
+              }
+              await new Promise(resolve => setTimeout(resolve, 60000));
+            }
+            throw new Error('EAS build completion exceeded the 35-minute observation window');
+          })().catch(error => { console.error(error.message); process.exitCode = 1; });
+          JS
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: app-icon-1.5.0-release-status
+          path: release-status.json
+          retention-days: 7
+          if-no-files-found: ignore
