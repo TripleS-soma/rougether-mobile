@@ -11,17 +11,20 @@ describe('FontScreen', () => {
     }
   });
 
-  it('reports the picked font id', async () => {
-    const onChangeFont = jest.fn();
+  it('고르면 선택만 바뀌고, 적용하기를 눌러야 콜백 (#1096)', async () => {
+    const onApplyFont = jest.fn();
     const { getByLabelText } = await render(
-      <FontScreen fontId="nanum" onChangeFont={onChangeFont} />,
+      <FontScreen fontId="nanum" onApplyFont={onApplyFont} />,
     );
+    expect(getByLabelText('적용하기').props.accessibilityState.disabled).toBe(true);
 
     await fireEvent.press(getByLabelText('프리텐다드 폰트'));
-    expect(onChangeFont).toHaveBeenCalledWith('pretendard');
-
     await fireEvent.press(getByLabelText('시스템 기본 폰트'));
-    expect(onChangeFont).toHaveBeenCalledWith('system');
+    expect(onApplyFont).not.toHaveBeenCalled();
+    expect(getByLabelText('시스템 기본 폰트').props.accessibilityState.selected).toBe(true);
+
+    await fireEvent.press(getByLabelText('적용하기'));
+    expect(onApplyFont).toHaveBeenCalledWith('system');
   });
 
   it('marks the active font as selected', async () => {
