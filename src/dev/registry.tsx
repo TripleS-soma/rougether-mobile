@@ -6,6 +6,7 @@ import type { GachaMachine } from '@/api/adapters';
 import { type HouseCover, HouseCoverPicker } from '@/components/room/house-cover-picker';
 import { HouseOrderDots } from '@/components/room/house-order-dots';
 import { HousePreviewFrame } from '@/components/room/house-preview-frame';
+import { StackedHouseDemo } from '@/dev/stacked-house-demo';
 import { Room } from '@/components/room/room';
 import { GachaAccents } from '@/constants/theme';
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
@@ -306,6 +307,11 @@ function WheelPickerDemo() {
 }
 
 export const galleryEntries: GalleryEntry[] = [
+  {
+    name: 'StackedHouseFrames',
+    description: '세로형 집 10테마 · 2/3/4/6인 · 기존형 복귀 · 방 방문/자리 교환 검증 (#1077).',
+    render: () => <StackedHouseDemo />,
+  },
   {
     name: 'Room · renderer contract v1 reference',
     description:
@@ -968,7 +974,7 @@ export const galleryEntries: GalleryEntry[] = [
   {
     name: 'HouseCoverPicker',
     description:
-      '집 대표 이미지 선택 그리드 — 서버 커버 카탈로그(GET /houses/cover-images) (#261).',
+      '집 테마(커버) 선택 그리드 — 서버 커버 카탈로그(GET /houses/cover-images) (#261, 문구 #1112).',
     render: () => <HouseCoverPickerDemo />,
   },
   {

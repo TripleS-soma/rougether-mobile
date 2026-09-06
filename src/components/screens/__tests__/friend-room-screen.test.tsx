@@ -8,6 +8,21 @@ import { shiftIso as isoShift, todayIso } from '@/utils/datetime';
 import { ToastProvider } from '@/components/ui/toast';
 
 describe('FriendRoomScreen', () => {
+  it(
+    '청소 가능한 거미줄을 탭하면 onCleanCobweb이 불린다 (#@N@)'.replace('@N@', '1116'),
+    async () => {
+      const onCleanCobweb = jest.fn(async () => 3);
+      const { getByLabelText } = await render(
+        <FriendRoomScreen
+          cobweb={{ assetKey: 'items/cobweb.png', cleanable: true }}
+          onCleanCobweb={onCleanCobweb}
+        />,
+      );
+      await fireEvent.press(getByLabelText('거미줄 치우기'));
+      expect(onCleanCobweb).toHaveBeenCalledTimes(1);
+    },
+  );
+
   // 거미줄 (#829) — 친구 방 씬 번들도 명시 조립이라 도달 여부를 직접 본다.
   it('거미줄 prop이 친구 방 캔버스까지 전달된다 (#829)', async () => {
     const { getByLabelText } = await render(

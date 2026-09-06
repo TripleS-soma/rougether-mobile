@@ -1,10 +1,9 @@
-import { Image } from 'expo-image';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { FRAME_ASPECT } from '@/components/room/house-preview-frame';
+import { HouseCoverArt } from '@/components/room/house-cover-art';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
-import { assetSource } from '@/resources/asset';
+import type { HouseFrameOptions } from '@/resources/house-frame';
 
 /** One selectable house cover (server GET /houses/cover-images). */
 export type HouseCover = {
@@ -14,7 +13,7 @@ export type HouseCover = {
   coverImageKey: string;
 };
 
-export type HouseCoverPickerProps = {
+export type HouseCoverPickerProps = Pick<HouseFrameOptions, 'maxMembers' | 'enabled'> & {
   /** Cover catalog, server order. Empty = still loading (renders nothing). */
   covers: HouseCover[];
   /** Currently selected cover key; undefined = none picked yet. */
@@ -25,8 +24,15 @@ export type HouseCoverPickerProps = {
 /**
  * Cover-image grid shared by 집 생성 and 집 정보 수정: two-per-row CDN
  * thumbnails with the name underneath; the selected cell gets a primary ring.
+ * 사용자에게는 "집 테마"로 읽힌다 (#1112).
  */
-export function HouseCoverPicker({ covers, selectedKey, onSelect }: HouseCoverPickerProps) {
+export function HouseCoverPicker({
+  covers,
+  selectedKey,
+  onSelect,
+  maxMembers,
+  enabled,
+}: HouseCoverPickerProps) {
   const t = useTokens();
   const Typography = useTypography();
   const emph = useFontEmphasis();
@@ -53,19 +59,21 @@ export function HouseCoverPicker({ covers, selectedKey, onSelect }: HouseCoverPi
             {/* 프레임 전체가 보이게 contain — cover는 위(지붕)·아래(받침)를
                 잘라 프레임이 잘린 것처럼 보였다 (#723). 셀 비율도 프레임
                 원본(FRAME_ASPECT)에 맞춰 레터박스를 최소화. */}
-            <Image
-              source={assetSource(c.coverImageKey)}
+            <HouseCoverArt
+              coverImageKey={c.coverImageKey}
+              maxMembers={maxMembers}
+              enabled={enabled}
               style={styles.art}
-              contentFit="contain"
-              cachePolicy="memory-disk"
-              transition={120}
-              accessibilityLabel={c.name}
+              name={c.name}
               testID="cover-art"
             />
-            {/* Supporting base; the label carries the selection so it reads bolder. */}
+            {/* Supporting base; the label carries the selection so it reads bolder.
+                "밤의 천문대 집"처럼 긴 이름이 2열 셀에서 잘리던 것(#1112) — 두 줄까지
+                허용하고 가운데 정렬. */}
             <Text
-              style={[Typography.supporting, emph('semibold'), { color: t.text }]}
-              numberOfLines={1}>
+              style={[Typography.supporting, emph('semibold'), styles.label, { color: t.text }]}
+              numberOfLines={2}
+              testID="cover-label">
               {c.name}
             </Text>
           </Pressable>
@@ -92,7 +100,7 @@ const styles = StyleSheet.create({
   },
   art: {
     width: '100%',
-    aspectRatio: FRAME_ASPECT,
     borderRadius: Radius.sm,
   },
+  label: { textAlign: 'center' },
 });

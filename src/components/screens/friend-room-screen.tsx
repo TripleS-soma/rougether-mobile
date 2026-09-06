@@ -126,6 +126,7 @@ export function FriendRoomScreen({
   onSwipeFriend,
   streakDays = 7,
   cobweb,
+  onCleanCobweb,
   characterId = DEFAULT_CHARACTER_ID,
   characterFrames,
   wallpaperId,
@@ -162,6 +163,8 @@ export function FriendRoomScreen({
     characterId,
     characterFrames,
     cobweb,
+    // 청소 콜백 (#831) — 번들에서 빠져 있어 친구 방 거미줄이 눌리지 않았다 (#1116).
+    onCleanCobweb,
     wallpaperId,
     floorId,
     backgroundId,
