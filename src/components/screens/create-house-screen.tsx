@@ -76,7 +76,7 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
                 maxMembers={capacity}
                 style={styles.previewCover}
                 legacyContentFit="cover"
-                name="선택한 대표 이미지"
+                name="선택한 집 테마"
                 testID="preview-cover"
               />
             ) : (
@@ -141,7 +141,7 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
                 styles.sectionLabel,
                 { color: t.textMuted },
               ]}>
-              대표 이미지
+              집 테마
             </Text>
             <HouseCoverPicker
               covers={covers}
@@ -161,7 +161,7 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
               styles.sectionLabel,
               { color: t.textMuted },
             ]}>
-            테마 선택
+            아이콘 색상
           </Text>
           <View style={styles.themeGrid}>
             {HOUSE_THEME_PRESETS.map((x) => {
