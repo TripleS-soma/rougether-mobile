@@ -33,6 +33,8 @@ export type SeatTileProps = {
   color: string;
   /** 프레임 창문 안이면 슬롯을 가득 채운다. */
   fill: boolean;
+  /** Exact square cutouts have no rounded bleed or visible tile border. */
+  squareFrame?: boolean;
   /** 지금 들려 있는 좌석인가. */
   dragging: boolean;
   /** 확대 중 — 롱프레스 드래그를 막는다(카메라 팬과 충돌). */
@@ -81,6 +83,7 @@ function SeatTileBase({
   bot,
   color,
   fill,
+  squareFrame = false,
   dragging,
   zoomed,
   preview,
@@ -173,6 +176,7 @@ function SeatTileBase({
         style={[
           fill ? styles.roomCellFill : styles.roomCell,
           { backgroundColor: empty ? t.surfaceMuted : color, borderColor: t.border },
+          fill && squareFrame && styles.squareFrame,
         ]}>
         {/* 그 멤버의 실제 방이 타일을 채운다(방문 미리보기); 로드 전엔
             단색 틴트 + 아바타가 자리를 지킨다. */}
@@ -278,6 +282,7 @@ const styles = StyleSheet.create({
   roomPreview: {
     ...StyleSheet.absoluteFillObject,
   },
+  squareFrame: { borderRadius: 0, borderWidth: 0 },
   roomPreviewFill: {
     width: '100%',
     height: '100%',

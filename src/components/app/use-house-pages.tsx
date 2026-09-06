@@ -11,7 +11,7 @@ import {
 import { type Screen } from '@/components/app/navigation';
 import type { useFriendVisit } from '@/components/app/use-friend-visit';
 import type { useMissionLinks } from '@/components/app/use-mission-links';
-import { houseCoverKey } from '@/components/room/house-preview-frame';
+import { resolveHouseFrame } from '@/resources/house-frame';
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import {
   type House,
@@ -224,10 +224,15 @@ export function useHousePages({
     const uris = [
       ...new Set(
         houses.flatMap((house) => {
-          const coverKey = houseCoverKey(house.coverImageKey);
-          const backgroundKey = houseBackgroundKey(coverKey);
+          const frame = resolveHouseFrame(house.coverImageKey, {
+            maxMembers: house.maxMembers,
+            minimumSeats: house.floors.reduce((sum, floor) => sum + floor.rooms.length, 0),
+          });
+          const coverKey = frame.assetKey;
+          const backgroundKey = houseBackgroundKey(frame.canonicalKey);
           return [
             assetSource(coverKey).uri,
+            ...(frame.kind === 'stacked' ? [assetSource(frame.canonicalKey).uri] : []),
             ...(backgroundKey ? [assetSource(backgroundKey).uri] : []),
           ];
         }),

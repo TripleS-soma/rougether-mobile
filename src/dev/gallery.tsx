@@ -1,5 +1,6 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams } from 'expo-router';
 
 import { Spacing } from '@/constants/theme';
 import { galleryEntries } from '@/dev/registry';
@@ -13,6 +14,8 @@ import { useFontEmphasis, useTypography } from '@/hooks/use-tokens';
  * it together with the registry; the /dev route lazy-requires it behind __DEV__.
  */
 export function DevGallery() {
+  const { entry } = useLocalSearchParams<{ entry?: string }>();
+  const entries = entry ? galleryEntries.filter((item) => item.name === entry) : galleryEntries;
   const theme = useTheme();
   const Typography = useTypography();
   const emph = useFontEmphasis();
@@ -23,11 +26,11 @@ export function DevGallery() {
           <View style={styles.header}>
             <Text style={[Typography.h2, { color: theme.text }]}>Component gallery</Text>
             <Text style={[Typography.supporting, { color: theme.textSecondary }]}>
-              {galleryEntries.length} entries · edit src/dev/registry.tsx to add more
+              {entries.length} entries · edit src/dev/registry.tsx to add more
             </Text>
           </View>
 
-          {galleryEntries.map((entry) => (
+          {entries.map((entry) => (
             <View key={entry.name} style={styles.entry}>
               <Text style={[Typography.supporting, emph('bold'), { color: theme.text }]}>
                 {entry.name}
