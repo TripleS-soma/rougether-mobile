@@ -28,6 +28,9 @@ export type AnalyticsEvent =
   // 퍼널
   | 'login_success'
   | 'onboarding_complete'
+  | 'starter_routine_view'
+  | 'starter_routine_skip'
+  | 'starter_routine_failed'
   | 'routine_create'
   | 'routine_complete'
   | 'gacha_draw'

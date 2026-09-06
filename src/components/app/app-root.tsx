@@ -6,6 +6,7 @@ import {
   fetchCharacters,
   fetchGoals,
   fetchOnboarding,
+  getSessionUserId,
   saveOnboardingCharacter,
   saveOnboardingGoals,
   updateMe,
@@ -20,6 +21,7 @@ import type { CharacterItem, GoalItem } from '@/api/types';
 import { useResolvedScheme, useTokens } from '@/hooks/use-tokens';
 import { SplashBackground, SplashBackgroundDark } from '@/constants/theme';
 import { AppShell } from '@/components/app/app-shell';
+import { StarterRoutineGate } from '@/components/app/starter-routine-gate';
 import { OnboardingScreen, type OnboardingGoal } from '@/components/screens/onboarding-screen';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { useAuth } from '@/hooks/use-auth';
@@ -27,6 +29,11 @@ import { resetOnboardingMissions } from '@/hooks/use-onboarding-missions';
 import { track } from '@/lib/analytics';
 import { loadOnboarding, resetOnboarding, saveOnboarding } from '@/lib/onboarding-store';
 import { markAppReady } from '@/lib/app-ready';
+import {
+  loadStarterRoutineProgress,
+  saveStarterRoutineProgress,
+  type StarterRoutineProgress,
+} from '@/lib/starter-routine-store';
 
 /**
  * App entry gate: on first launch shows the onboarding flow (intro → goals →
@@ -49,6 +56,9 @@ export function AppRoot() {
   // edit of these instead of a blank slate.
   const [selectedGoalIds, setSelectedGoalIds] = useState<string[]>([]);
   const [characters, setCharacters] = useState<CharacterItem[]>([]);
+  const [starterProgress, setStarterProgress] = useState<StarterRoutineProgress | null>(null);
+  const userId = status === 'authed' ? getSessionUserId() : undefined;
+  const [loadedUserId, setLoadedUserId] = useState<number | undefined | null>(null);
 
   useEffect(() => {
     if (status !== 'authed') return;
@@ -56,14 +66,17 @@ export function AppRoot() {
     void (async () => {
       // Local cache + server state + masters in one round; the server may be
       // unreachable (offline) — every remote call degrades to the local cache.
-      const [saved, remote, goals, chars] = await Promise.all([
+      const [saved, remote, goals, chars, starter] = await Promise.all([
         loadOnboarding(),
         fetchOnboarding().catch(() => null),
         fetchGoals().catch(() => [] as GoalItem[]),
         fetchCharacters().catch(() => [] as CharacterItem[]),
+        loadStarterRoutineProgress(userId),
       ]);
       if (!active) return;
       setCharacters(chars);
+      setLoadedUserId(userId);
+      setStarterProgress(starter?.status === 'pending' ? starter : null);
       setServerGoals(goals.map(toOnboardingGoal));
       const remoteCharacter =
         remote?.selectedCharacterId != null
@@ -80,7 +93,16 @@ export function AppRoot() {
     return () => {
       active = false;
     };
-  }, [status]);
+  }, [status, userId]);
+
+  const finishStarter = useCallback(
+    async (outcome: 'created' | 'skipped' | 'existing') => {
+      if (getSessionUserId() !== userId || !starterProgress) return;
+      await saveStarterRoutineProgress(userId, { ...starterProgress, status: outcome });
+      if (getSessionUserId() === userId) setStarterProgress(null);
+    },
+    [starterProgress, userId],
+  );
 
   // 캐릭터별 서버 포즈 프레임 (#589·#735) — 온보딩 캐러셀 활성 카드 재생용.
   const characterFrames = useMemo(() => toCharacterFramesMap(characters), [characters]);
@@ -114,7 +136,7 @@ export function AppRoot() {
   // Not signed in → send to the login route.
   if (status === 'guest') return <Redirect href="/login" />;
 
-  if (onboarded === null) return <BootFallback />;
+  if (onboarded === null || loadedUserId !== userId) return <BootFallback />;
 
   if (!onboarded) {
     return (
@@ -129,8 +151,18 @@ export function AppRoot() {
           setCharacterId(chosen);
           setSelectedGoalIds(goals);
           setOnboarded(true);
-          // 온보딩을 방금 마침 — 셸이 온보딩 미션 체인을 시작한다 (#571).
-          setJustOnboarded(true);
+          // New users start with one routine; the legacy mission tour is replay-only.
+          setJustOnboarded(replaying);
+          if (!replaying) {
+            const progress: StarterRoutineProgress = {
+              status: 'pending',
+              goals: goals.map(
+                (id) => serverGoals.find((goal) => goal.id === id) ?? { id, label: id },
+              ),
+            };
+            setStarterProgress(progress);
+            void saveStarterRoutineProgress(userId, progress);
+          }
           // 퍼널 (#799) — 목표·캐릭터·닉네임까지 마친 지점. 닉네임은 값이
           // 아니라 입력 여부만 남긴다(개인정보를 분석 도구로 흘리지 않는다).
           track('onboarding_complete', {
@@ -151,6 +183,17 @@ export function AppRoot() {
           // 노출되던 문제. best-effort — 실패해도 온보딩은 계속.
           if (nickname) void updateMe({ nickname }).catch(() => {});
         }}
+      />
+    );
+  }
+
+  if (starterProgress?.status === 'pending') {
+    return (
+      <StarterRoutineGate
+        key={userId}
+        userId={userId}
+        goals={starterProgress.goals}
+        onFinish={finishStarter}
       />
     );
   }
