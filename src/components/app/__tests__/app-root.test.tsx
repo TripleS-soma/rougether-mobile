@@ -52,6 +52,14 @@ describe('AppRoot', () => {
     expect(queryByText('건너뛰기')).toBeNull();
   });
 
+  it('시작 화면 설정이 마이페이지면 앱이 마이페이지로 열린다 (#1139)', async () => {
+    await AsyncStorage.setItem(KEY, JSON.stringify({ characterId: 'cat', goals: ['exercise'] }));
+    await AsyncStorage.setItem('rougether.start-tab', 'myPage');
+    const { getByText, queryByText } = await renderApp();
+    await waitFor(() => expect(getByText('프로필 편집')).toBeTruthy());
+    expect(queryByText('오늘의 할 일')).toBeNull();
+  });
+
   it('튜토리얼 다시 보기로 들어오면 건너뛰기가 생기고, 누르면 앱으로 돌아온다 (#1023)', async () => {
     await AsyncStorage.setItem(KEY, JSON.stringify({ characterId: 'cat', goals: ['exercise'] }));
     const { getByText, getByLabelText } = await renderApp();

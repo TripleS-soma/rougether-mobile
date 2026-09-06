@@ -10,8 +10,8 @@ import { PagerScrollView } from '@/components/ui/pager-scroll-view';
 import { Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 
-const TABS: NavTab[] = ['myRoom', 'house', 'myPage'];
-const LABELS = ['나의 방', '집', '마이페이지'];
+const TABS: NavTab[] = ['myRoom', 'calendar', 'house', 'myPage'];
+const LABELS = ['나의 방', '달력', '집', '마이페이지'];
 
 /** Local-only navigation harness: no authentication, API writes or catalog changes. */
 export function NavigationPreview() {
