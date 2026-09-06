@@ -224,14 +224,19 @@ export function useHousePages({
   // 셸에서 집 목록이 오면 모든 커버·배경(현재+스위처 대상)을 함께 데워 둔다.
   useEffect(() => {
     const uris = [
+      ...new Set(houses.map((house) => assetSource(houseCoverKey(house.coverImageKey)).uri)),
+    ];
+    if (uris.length) void Image.prefetch?.(uris, { cachePolicy: 'memory-disk' });
+  }, [houses]);
+
+  // Mode changes only prefetch backgrounds; cover art is mode-independent.
+  useEffect(() => {
+    const uris = [
       ...new Set(
         houses.flatMap((house) => {
           const coverKey = houseCoverKey(house.coverImageKey);
           const backgroundKey = houseBackgroundKey(coverKey, scheme);
-          return [
-            assetSource(coverKey).uri,
-            ...(backgroundKey ? [assetSource(backgroundKey).uri] : []),
-          ];
+          return backgroundKey ? [assetSource(backgroundKey).uri] : [];
         }),
       ),
     ];

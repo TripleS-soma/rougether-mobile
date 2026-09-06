@@ -45,6 +45,37 @@ const MISSION_HOUSE: House = {
 };
 
 describe('HouseScreen', () => {
+  it.each(['cloud-balloon', 'coral-aquarium', 'mushroom-forest', 'night-observatory'])(
+    '%s 기존 프레임에서도 6명과 5·6번째 방 방문을 보존한다',
+    async (theme) => {
+      const onVisitFriend = jest.fn();
+      const rooms = Array.from({ length: 6 }, (_, index) => ({
+        name: `구성원${index + 1}`,
+        membershipId: 101 + index,
+        color: '#F5E1D8',
+      }));
+      const house: House = {
+        ...MISSION_HOUSE,
+        maxMembers: 6,
+        memberCount: 6,
+        coverImageKey: `house/${theme}/house-unified-${theme}-frame${theme === 'night-observatory' ? '-v3' : ''}.png`,
+        floors: [0, 1, 2].map((index) => ({
+          level: `${index + 1}층`,
+          rooms: rooms.slice(index * 2, index * 2 + 2),
+        })),
+      };
+      const ui = await render(<HouseScreen houses={[house]} onVisitFriend={onVisitFriend} />);
+      for (const room of rooms) expect(ui.getByText(room.name)).toBeTruthy();
+      for (const room of rooms.slice(4)) {
+        await fireEvent.press(ui.getByText(room.name));
+        expect(onVisitFriend).toHaveBeenLastCalledWith(
+          expect.objectContaining({ membershipId: room.membershipId }),
+        );
+      }
+      expect(onVisitFriend).toHaveBeenCalledTimes(2);
+    },
+  );
+
   it('시스템 모드는 OS 다크 설정을 따르고 명시적 라이트 선택이 우선한다', async () => {
     await AsyncStorage.clear();
     jest.mocked(useColorScheme).mockReturnValue('dark');

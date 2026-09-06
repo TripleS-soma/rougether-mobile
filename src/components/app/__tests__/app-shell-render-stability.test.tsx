@@ -112,6 +112,9 @@ it('집 목록이 그대로여도 다크모드 전환 시 새 배경을 미리 �
         cachePolicy: 'memory-disk',
       }),
     );
+    expect(prefetch.mock.calls.flatMap(([uris]) => uris)).not.toContain(
+      assetSource('house/cloud-balloon/house-unified-cloud-balloon-frame.png').uri,
+    );
   } finally {
     prefetch.mockRestore();
     await AsyncStorage.clear();
