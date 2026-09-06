@@ -42,11 +42,9 @@ jobs:
           set -x
           mkdir -p release-smoke
           xcrun simctl list devices available --json > release-smoke/devices.json
-          simulator=$(node -e '
-            const devices=require("./release-smoke/devices.json").devices;
-            const entry=Object.entries(devices).find(([k,v])=>k.includes("iOS-26")&&v.some(d=>d.name.startsWith("iPhone")));
-            if(!entry)throw new Error("No available iOS 26 iPhone simulator");
-            console.log(entry[1].find(d=>d.name.startsWith("iPhone")).udid);')
+          simulator_sdk_version=$(xcrun --sdk iphonesimulator --show-sdk-version)
+          echo "$simulator_sdk_version" > release-smoke/sdk-version.txt
+          simulator=$(node scripts/select-ios-simulator.js release-smoke/devices.json "$simulator_sdk_version")
           echo "SIMULATOR_UDID=$simulator" >> "$GITHUB_ENV"
           echo "$simulator" > release-smoke/simulator.txt
       - name: Boot Release simulator

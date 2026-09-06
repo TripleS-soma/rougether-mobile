@@ -43,6 +43,8 @@ Android SDK·JDK 17 환경에서 `android/gradlew :app:processReleaseMainManifes
 - `aacb3b5`의 [실행 34036410005](https://github.com/TripleS-soma/rougether-mobile/actions/runs/34036410005)은 50분 잡 제한 초과로 취소됐습니다. 아티팩트의 `build.log`에는 약 11분 37초 만에 `BUILD SUCCEEDED`가 남았습니다. 앱·`expo-video` 컴파일 실패는 아닙니다.
 - 빌드 후 약 36분의 시뮬레이터 명령 대기가 확인됩니다. 명령별 추적 로그가 없어 `simctl list`, `boot`, `bootstatus` 초기 연결 중 어느 호출인지 확정하지 않습니다. 실행 PID·`first-screen.png`가 없어 이 실행을 앱 시작 통과로 취급하지 않습니다.
 - 이전 성공 실행 `34025336246`과 macOS·Xcode·러너 이미지가 같습니다. 타임아웃을 늘리는 대신 선택·부팅·빌드·설치/실행·화면 확인을 분리하고 단계별 제한 시간과 진단 로그를 추가했습니다. 시뮬레이터를 빌드 전에 준비해 대기 오류를 일찍 검출합니다.
+- 보강 후 [실행 34039636384](https://github.com/TripleS-soma/rougether-mobile/actions/runs/34039636384)은 선택을 통과했으나 부팅의 `Waiting on BackBoard`에서 5분 제한에 걸렸습니다. 실제 선택된 런타임은 iOS 26.0이었습니다. 같은 러너에 iOS 26.2가 있는데도 목록의 첫 iOS 26을 선택하던 문제를 고쳐 활성 SDK의 major/minor와 일치하는 런타임만 사용합니다. 이 선택 결함과 부팅 지연의 인과관계는 새 실행으로 검증하며, 다른 런타임으로 조용히 대체하지 않습니다.
+- SDK 선택 회귀 6개와 실패 러너의 실제 `devices.json` 입력 검증이 통과했습니다. 선택 보강 후 전체 검증은 186개 스위트 / 1,466개 테스트, 17.08초, exit 0입니다. TypeScript·전체 ESLint(기존 경고 1개)·Prettier·YAML/Bash 문법도 통과했습니다.
 - 최종 PR head의 새 실행에서 실제 첫 화면과 생존 PID를 확인한 뒤 결과를 갱신합니다. 서버의 새 3종 목록 준비 전에는 앱 PR 머지·EAS 배포를 진행하지 않습니다.
 
 ## 화면 QA 범위와 남은 확인
