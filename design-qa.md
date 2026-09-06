@@ -34,7 +34,7 @@ Android SDK·JDK 17 환경에서 `android/gradlew :app:processReleaseMainManifes
 - 최신 dev #1147 병합 후 `1.5.0` Android prebuild·소스 매니페스트 검사·앱 아이콘 검사를 재실행해 통과했습니다. 런처 6개 중 기본 런처만 활성이고 딥링크 Activity는 활성입니다. 최종 `1.5.0` Gradle 병합·Kotlin 검증은 PR CI에서 수행합니다.
 - TypeScript·Prettier 통과. ESLint 오류 없음; 기존 `app-shell.tsx`의 `fromGachaRef` 의존성 경고 1개는 유지합니다.
 - 최신 통합본 전체 테스트: 183개 스위트 / 1,442개 테스트 통과. `--runInBand --watchman=false --detectOpenHandles` 결과 JSON에서 `success=true`, 실패 0개, `openHandles=[]`를 확인했습니다.
-- 단일 프로세스 실행은 테스트 결과 출력 이후 종료 지연이 재현됩니다. 테스트 실패나 신규 누수 원인은 확인되지 않았으며, 워커 실행 종료 상태는 릴리스 인계 시 별도로 기록합니다.
+- `--maxWorkers=2 --watchman=false` 재실행도 183개 스위트 / 1,442개 테스트 통과, 31.136초, 프로세스 exit 0입니다. 워커 하나의 정리 지연·강제 종료 경고가 남았습니다. 단일 프로세스 실행은 결과 출력 이후 종료 지연이 재현되어 중단했으며, 신규 누수 원인은 확인되지 않았습니다.
 
 ## 화면 QA 범위와 남은 확인
 
