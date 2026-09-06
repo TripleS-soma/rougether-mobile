@@ -220,6 +220,25 @@ describe('HouseSearchScreen', () => {
     expect(onJoinHouse).not.toHaveBeenCalled();
   });
 
+  it('태그 검색 — #접두를 떼고, 두 번째 이후 목표도 잡는다 (#1110)', async () => {
+    const houses = [
+      { ...RECOMMENDED_HOUSES[0], name: '새벽 클럽', tag: '기상', tags: ['기상', '독서'] },
+      { ...RECOMMENDED_HOUSES[1], name: '코딩 모임', tag: '코딩', tags: ['코딩'] },
+    ];
+    const { getByPlaceholderText, queryByText } = await render(
+      <HouseSearchScreen houses={houses} />,
+    );
+    const input = getByPlaceholderText('집 이름, 태그로 검색');
+    // 카드에 보이는 그대로 '#기상'을 쳐도 찾는다.
+    await fireEvent.changeText(input, '#기상');
+    expect(queryByText('새벽 클럽')).toBeTruthy();
+    expect(queryByText('코딩 모임')).toBeNull();
+    // 대표 태그가 아닌 두 번째 목표(독서)로도 찾는다.
+    await fireEvent.changeText(input, ' 독서 ');
+    expect(queryByText('새벽 클럽')).toBeTruthy();
+    expect(queryByText('코딩 모임')).toBeNull();
+  });
+
   it('filters the list by query', async () => {
     const { getByPlaceholderText, queryByText } = await render(
       <HouseSearchScreen houses={RECOMMENDED_HOUSES} />,

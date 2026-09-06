@@ -968,6 +968,8 @@ export function toSearchHouse(h: HouseSummary, index = 0): SearchHouse {
     members: h.currentMemberCount ?? 0,
     capacity: h.maxMembers ?? 0,
     tag: h.goals?.[0]?.name ?? '루틴',
+    // 검색용 — 목표 전부 (#1110). 칩은 대표 하나만 보여도 검색은 다 잡혀야 한다.
+    tags: (h.goals ?? []).map((g) => g.name ?? '').filter((n) => n.length > 0),
     coverImageKey: h.coverImageKey ?? undefined,
     icon: HOUSE_ICONS[index % HOUSE_ICONS.length],
     bg: HouseBgs[index % HouseBgs.length],

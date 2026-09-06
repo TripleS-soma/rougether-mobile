@@ -1045,6 +1045,16 @@ describe('API adapters', () => {
     });
   });
 
+  it('toSearchHouse는 목표 전부를 tags에 담는다 — 검색용 (#1110)', () => {
+    const house = toSearchHouse({
+      houseId: 7,
+      name: '새벽 클럽',
+      goals: [{ code: 'WAKE', name: '기상' }, { code: 'READ', name: '독서' }, { code: 'X' }],
+    });
+    expect(house.tag).toBe('기상');
+    expect(house.tags).toEqual(['기상', '독서']);
+  });
+
   it('toSearchHouse falls back to id 0 when the summary lacks houseId (#544)', () => {
     // houseId number 전환 후의 결측 폴백 안전망 — 서버 스키마가 전부 옵셔널이라
     // 결측 시에도 리스트 렌더가 깨지지 않아야 한다.
