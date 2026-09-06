@@ -811,7 +811,9 @@ describe('MyRoomScreen', () => {
     );
 
     await pickCalendarDate(ui, TOMORROW);
-    expect(ui.getByText('미래 날짜는 아직 완료할 수 없어요.')).toBeTruthy();
+    // 상시 안내는 뺐다 (#1134) — 완료 시도 시 토스트가 안내한다.
+    expect(ui.queryByText('미래 날짜는 아직 완료할 수 없어요.')).toBeNull();
+    expect(ui.queryByText(/지난 날짜도 완료 체크할 수 있어요/)).toBeNull();
 
     await fireEvent.press(ui.getByLabelText('내일 할 일'));
     expect(onToggleCalendarItem).not.toHaveBeenCalled();

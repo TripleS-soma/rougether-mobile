@@ -1240,11 +1240,10 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                   trackColor={t.surfaceMuted}
                 />
               ) : null}
-              {serverBackedDay ? (
+              {/* 미래 날짜의 상시 안내는 뺐다 (#1134) — 완료를 시도하면 토스트가 같은 말을 한다. */}
+              {serverBackedDay && selectedDate <= today ? (
                 <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                  {selectedDate > today
-                    ? '미래 날짜는 아직 완료할 수 없어요.'
-                    : '지난 날짜도 완료 체크할 수 있어요. (코인은 당일 완료에만 지급돼요)'}
+                  지난 날짜도 완료 체크할 수 있어요. (코인은 당일 완료에만 지급돼요)
                 </Text>
               ) : null}
               {loading || (serverBackedDay && !dayItems) ? (
