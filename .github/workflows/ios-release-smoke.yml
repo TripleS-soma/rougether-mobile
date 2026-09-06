@@ -11,6 +11,9 @@ jobs:
     if: contains(github.event.pull_request.labels.*.name, 'release-smoke') && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: macos-15
     timeout-minutes: 50
+    defaults:
+      run:
+        shell: bash
     concurrency:
       group: ios-release-smoke-${{ github.event.pull_request.number }}
       cancel-in-progress: true
@@ -25,37 +28,75 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Prepare Release native project
+        timeout-minutes: 10
         run: |
           xcodebuild -version
           npx expo prebuild --platform ios --no-install
           node scripts/check-ios-plist.mjs
           cd ios
           pod install
-      - name: Build and launch Release simulator
+      # Fail fast on CoreSimulator hangs before spending time on a native build.
+      - name: Select Release simulator
+        timeout-minutes: 2
         run: |
+          set -x
           mkdir -p release-smoke
+          xcrun simctl list devices available --json > release-smoke/devices.json
+          simulator=$(node -e '
+            const devices=require("./release-smoke/devices.json").devices;
+            const entry=Object.entries(devices).find(([k,v])=>k.includes("iOS-26")&&v.some(d=>d.name.startsWith("iPhone")));
+            if(!entry)throw new Error("No available iOS 26 iPhone simulator");
+            console.log(entry[1].find(d=>d.name.startsWith("iPhone")).udid);')
+          echo "SIMULATOR_UDID=$simulator" >> "$GITHUB_ENV"
+          echo "$simulator" > release-smoke/simulator.txt
+      - name: Boot Release simulator
+        timeout-minutes: 5
+        run: |
+          set -x
+          xcrun simctl bootstatus "$SIMULATOR_UDID" -b 2>&1 | tee release-smoke/boot.log
+      - name: Build Release simulator app
+        timeout-minutes: 25
+        run: |
           xcodebuild -workspace ios/Rougether.xcworkspace -scheme Rougether \
             -configuration Release -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath "$RUNNER_TEMP/rougether-release" \
             ARCHS=arm64 ONLY_ACTIVE_ARCH=YES CODE_SIGNING_ALLOWED=NO \
             > release-smoke/build.log 2>&1
-          simulator=$(xcrun simctl list devices available --json | node -e '
-            let s=""; process.stdin.on("data",d=>s+=d).on("end",()=>{
-              const entry=Object.entries(JSON.parse(s).devices).find(([k,v])=>k.includes("iOS-26")&&v.some(d=>d.name.startsWith("iPhone")));
-              if(!entry)process.exit(1); console.log(entry[1].find(d=>d.name.startsWith("iPhone")).udid);
-            });')
-          xcrun simctl boot "$simulator"
-          xcrun simctl bootstatus "$simulator" -b
-          xcrun simctl install "$simulator" "$RUNNER_TEMP/rougether-release/Build/Products/Release-iphonesimulator/Rougether.app"
-          xcrun simctl launch "$simulator" com.triples.rougether | tee release-smoke/launch.txt
+      - name: Install and launch Release app
+        timeout-minutes: 3
+        run: |
+          set -x
+          xcrun simctl install "$SIMULATOR_UDID" "$RUNNER_TEMP/rougether-release/Build/Products/Release-iphonesimulator/Rougether.app"
+          xcrun simctl launch "$SIMULATOR_UDID" com.triples.rougether | tee release-smoke/launch.txt
+      - name: Capture first screen and verify process
+        timeout-minutes: 2
+        run: |
+          set -x
           sleep 12
-          xcrun simctl io "$simulator" screenshot release-smoke/first-screen.png
-          xcrun simctl spawn "$simulator" log show --last 2m --style compact \
+          xcrun simctl io "$SIMULATOR_UDID" screenshot release-smoke/first-screen.png
+          xcrun simctl spawn "$SIMULATOR_UDID" log show --last 2m --style compact \
             --predicate 'process == "Rougether"' > release-smoke/app.log
-          xcrun simctl spawn "$simulator" launchctl list | grep com.triples.rougether > release-smoke/process.txt
-          xcrun simctl shutdown "$simulator"
+          xcrun simctl spawn "$SIMULATOR_UDID" launchctl list | grep com.triples.rougether > release-smoke/process.txt
+          app_pid=$(awk -F ': ' '/^com[.]triples[.]rougether: [0-9]+$/ { print $2 }' release-smoke/launch.txt)
+          test -n "$app_pid"
+          awk -v pid="$app_pid" '$1 == pid { alive=1 } END { exit !alive }' release-smoke/process.txt
           echo 'Release launch evidence saved. Manually inspect first-screen.png before TestFlight submission.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Collect simulator diagnostics
+        if: always()
+        continue-on-error: true
+        timeout-minutes: 1
+        run: |
+          mkdir -p release-smoke
+          ps -axo pid,ppid,state,etime,comm > release-smoke/runner-processes.txt
+          /usr/bin/log show --last 5m --style compact \
+            --predicate 'process == "CoreSimulatorService" OR process == "simctl"' \
+            > release-smoke/simulator.log 2>&1
+      - name: Shut down Release simulator
+        if: always() && env.SIMULATOR_UDID != ''
+        continue-on-error: true
+        timeout-minutes: 1
+        run: xcrun simctl shutdown "$SIMULATOR_UDID"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -17,7 +17,7 @@ npm ci --ignore-scripts --no-audit --no-fund
 npm run typecheck
 npm run lint
 npm run format:check
-npm test -- --runInBand --watchman=false
+npm test -- --maxWorkers=2 --watchman=false
 CI=1 EXPO_OFFLINE=1 SENTRY_DISABLE_AUTO_UPLOAD=true node_modules/.bin/expo prebuild --platform android --no-install
 node scripts/check-android-manifest.mjs --source
 ```
@@ -36,6 +36,14 @@ Android SDK·JDK 17 환경에서 `android/gradlew :app:processReleaseMainManifes
 - 형제 테스트 추가 전 `aacb3b5` 스냅샷은 183개 스위트 / 1,442개 테스트 통과했습니다. `--runInBand --watchman=false --detectOpenHandles` 결과 JSON에서 `success=true`, 실패 0개, `openHandles=[]`를 확인했습니다.
 - `GachaLobby` 직접 테스트 7개와 `RewardArtwork` 직접 테스트 11개를 추가했습니다. 두 파일 집중 테스트 18개, TypeScript·대상 ESLint·Prettier 모두 통과했습니다. 운영 코드는 변경하지 않았습니다.
 - 최신 `7dfd49d` 전체 테스트를 `--maxWorkers=2 --watchman=false`로 1회 실행해 185개 스위트 / 1,460개 테스트 통과, 47.036초, 프로세스 exit 0을 확인했습니다. 결과 JSON은 `success=true`, 실패 0개입니다. 기존 워커 하나의 정리 지연·강제 종료 경고는 남습니다. 이전 단일 프로세스 실행은 결과 출력 이후 종료 지연이 재현되어 중단했으며, 신규 누수 원인은 확인되지 않았습니다.
+- 릴리스 재개 시 `803ad8a` + 아래 smoke 보강 변경에서 TypeScript·전체 ESLint·전체 Prettier·185개 스위트 / 1,460개 테스트를 다시 통과했습니다(27.854초, exit 0). 기존 ESLint 경고 1개·Jest 워커 종료 경고는 동일합니다. 새 결과는 로컬 `output/gacha-release-final-tests.json`에 보관하며 커밋하지 않습니다. 워크플로 YAML 파싱·각 실행 스크립트의 Bash 문법도 검사했습니다.
+
+## iOS Release smoke 재개
+
+- `aacb3b5`의 [실행 34036410005](https://github.com/TripleS-soma/rougether-mobile/actions/runs/34036410005)은 50분 잡 제한 초과로 취소됐습니다. 아티팩트의 `build.log`에는 약 11분 37초 만에 `BUILD SUCCEEDED`가 남았습니다. 앱·`expo-video` 컴파일 실패는 아닙니다.
+- 빌드 후 약 36분의 시뮬레이터 명령 대기가 확인됩니다. 명령별 추적 로그가 없어 `simctl list`, `boot`, `bootstatus` 초기 연결 중 어느 호출인지 확정하지 않습니다. 실행 PID·`first-screen.png`가 없어 이 실행을 앱 시작 통과로 취급하지 않습니다.
+- 이전 성공 실행 `34025336246`과 macOS·Xcode·러너 이미지가 같습니다. 타임아웃을 늘리는 대신 선택·부팅·빌드·설치/실행·화면 확인을 분리하고 단계별 제한 시간과 진단 로그를 추가했습니다. 시뮬레이터를 빌드 전에 준비해 대기 오류를 일찍 검출합니다.
+- 최종 PR head의 새 실행에서 실제 첫 화면과 생존 PID를 확인한 뒤 결과를 갱신합니다. 서버의 새 3종 목록 준비 전에는 앱 PR 머지·EAS 배포를 진행하지 않습니다.
 
 ## 화면 QA 범위와 남은 확인
 
