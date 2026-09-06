@@ -92,7 +92,7 @@ export function useAppNavigation({
         if (!ok) mgr.fail();
       })
       .onEnd((e) => {
-        // 자격 재확인 — 탭 루트(방·집·설정)에서는 절대 백이 나가지 않는다.
+        // 자격 재확인 — 탭 루트(방·집·마이페이지)에서는 절대 백이 나가지 않는다.
         if (!edgeStartOkRef.current || !edgeBackEnabledRef.current) return;
         if (e.translationX > EDGE_BACK_DISTANCE || e.velocityX > EDGE_BACK_VELOCITY)
           goBackRef.current();

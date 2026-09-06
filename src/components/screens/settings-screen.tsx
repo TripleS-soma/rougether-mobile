@@ -5,6 +5,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { AppUpdateCard } from '@/components/ui/app-update-card';
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { Icon, type IconName } from '@/components/ui/icon';
+import { ListRow } from '@/components/ui/list-row';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import {
   DEFAULT_FONT_ID,
@@ -20,7 +21,7 @@ import {
   type ThemeMode,
   typographyFor,
 } from '@/constants/theme';
-import { useBottomNavInset, useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
+import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
@@ -124,9 +125,6 @@ export const SettingsScreen = memo(function SettingsScreen({
   const emph = useFontEmphasis();
   // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
   const headerInset = useHeaderContentInset();
-  // 서브화면이라 바텀바는 없지만(#1088) 인셋 훅은 바텀바 유무와 무관하게
-  // 홈 인디케이터 여백을 준다 — 마지막 링크가 바닥에 붙지 않게.
-  const navInset = useBottomNavInset();
   // Section captions: supporting size with a semibold face via the active font.
   const sectionTitleStyle = [Typography.supporting, emph('semibold'), styles.sectionTitle];
   // Logging out drops the session immediately, so gate it behind a confirm.
@@ -180,7 +178,8 @@ export const SettingsScreen = memo(function SettingsScreen({
           styles.body,
           column,
           headerInset ? { paddingTop: headerInset } : null,
-          navInset ? { paddingBottom: Spacing.four + navInset } : null,
+          // 서브화면(#1088)이라 바텀바가 없다 — 바텀바 인셋 대신 고정 여백(리뷰 반영).
+          { paddingBottom: Spacing.six },
         ]}
         {...scrollRestore}>
         {appUpdate ? (
@@ -310,26 +309,13 @@ export const SettingsScreen = memo(function SettingsScreen({
               testID={`settings-section-${section.title}`}>
               <View style={styles.cardContent}>
                 {section.rows.map((row, idx) => (
-                  <Pressable
+                  <ListRow
                     key={row.label}
+                    icon={row.icon}
+                    label={row.label}
                     onPress={row.onPress}
-                    accessibilityRole="button"
-                    style={({ pressed }) => [
-                      styles.row,
-                      pressed && { backgroundColor: t.primarySoft },
-                      idx !== section.rows.length - 1 && {
-                        borderBottomColor: t.border,
-                        borderBottomWidth: StyleSheet.hairlineWidth,
-                      },
-                    ]}>
-                    <View style={styles.rowLeft}>
-                      <View style={[styles.iconCircle, { backgroundColor: t.primarySoft }]}>
-                        <Icon name={row.icon} size={20} color={t.primaryText} />
-                      </View>
-                      <Text style={[Typography.body, { color: t.text }]}>{row.label}</Text>
-                    </View>
-                    <Icon name="forward" size={16} color={t.textDisabled} />
-                  </Pressable>
+                    last={idx === section.rows.length - 1}
+                  />
                 ))}
               </View>
             </GlassSurface>
