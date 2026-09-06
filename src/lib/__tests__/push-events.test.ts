@@ -4,7 +4,7 @@
  */
 import * as Notifications from 'expo-notifications';
 
-import { onNotificationReceived } from '@/lib/push-events';
+import { onNotificationReceived, onNotificationTap } from '@/lib/push-events';
 
 type Received = { type?: string; title: string; body: string };
 
@@ -51,5 +51,38 @@ describe('onNotificationReceived (#902)', () => {
       title: '제목만 있는 알림',
       body: '',
     });
+  });
+});
+
+describe('onNotificationTap', () => {
+  it('passes a cold-start cat reminder once and ignores a late callback after cleanup', async () => {
+    const response = {
+      notification: {
+        request: { identifier: 'cat-42', content: { data: { type: 'APP_INACTIVITY_REMINDER' } } },
+      },
+    };
+    const getLast = jest
+      .spyOn(Notifications, 'getLastNotificationResponseAsync')
+      .mockResolvedValue(response as never);
+    let listener: ((r: typeof response) => void) | undefined;
+    const subscribe = jest
+      .spyOn(Notifications, 'addNotificationResponseReceivedListener')
+      .mockImplementation((cb) => {
+        listener = cb as unknown as typeof listener;
+        return { remove: jest.fn() } as never;
+      });
+    const received = jest.fn();
+    const stop = onNotificationTap(received);
+    await Promise.resolve();
+    listener?.(response);
+    expect(received).toHaveBeenCalledTimes(1);
+    expect(received).toHaveBeenCalledWith({ type: 'APP_INACTIVITY_REMINDER' });
+    stop();
+    listener?.({
+      notification: { request: { ...response.notification.request, identifier: 'late' } },
+    });
+    expect(received).toHaveBeenCalledTimes(1);
+    getLast.mockRestore();
+    subscribe.mockRestore();
   });
 });

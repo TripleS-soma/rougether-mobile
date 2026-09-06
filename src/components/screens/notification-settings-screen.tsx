@@ -27,7 +27,11 @@ export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
 
 type RowKey = Exclude<keyof NotificationSettings, 'all'>;
 const ROWS: { key: RowKey; label: string; desc: string }[] = [
-  { key: 'reminder', label: '루틴 리마인더', desc: '설정한 시간에 루틴을 알려드려요' },
+  {
+    key: 'reminder',
+    label: '루틴 리마인더',
+    desc: '루틴·할 일, 주간 회고와 고양이 복귀 알림을 받아요',
+  },
   { key: 'house', label: '집 알림', desc: '응원과 우리 집 소식을 알려드려요' },
 ];
 

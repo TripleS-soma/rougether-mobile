@@ -27,7 +27,9 @@ jobs:
       - name: Expo prebuild (ios)
         run: npx expo prebuild --platform ios --clean --no-install
       - name: Info.plist 필수 권한 키 검증
-        run: node scripts/check-ios-plist.mjs
+        run: |
+          node scripts/check-ios-plist.mjs
+          node scripts/check-app-icons.mjs
 
   # Android 매니페스트 권한 검증 (#921 후속) — **라벨 없이 모든 PR에서** 돈다.
   # 아래 prebuild 잡은 Gradle이 필요해 라벨 게이트가 걸려 있는데, #913이 가르친
@@ -53,7 +55,9 @@ jobs:
       - name: Expo prebuild (android)
         run: npx expo prebuild --platform android --no-install
       - name: 매니페스트 권한 검증 (소스)
-        run: node scripts/check-android-manifest.mjs --source
+        run: |
+          node scripts/check-android-manifest.mjs --source
+          node scripts/check-app-icons.mjs
 
   prebuild:
     # 라벨이 native-build인 PR에서만.
@@ -97,9 +101,13 @@ jobs:
         run: npx expo prebuild --platform android --no-install
       - name: Android manifest merge
         working-directory: android
-        run: ./gradlew :app:processReleaseMainManifest --no-daemon --stacktrace
+        run: ./gradlew :rougether-app-icon:compileReleaseKotlin :app:processReleaseMainManifest --no-daemon --stacktrace
       # 병합이 성공했다는 것과 결과가 옳다는 것은 다르다 (#915의 교훈).
       # 라이브러리 매니페스트까지 합쳐진 최종본에서 금지 권한이 사라졌는지,
       # POST_NOTIFICATIONS처럼 라이브러리가 주는 필수 권한이 들어왔는지 본다.
       - name: 매니페스트 권한 검증 (병합 산출물)
-        run: node scripts/check-android-manifest.mjs --merged
+        run: |
+          node scripts/check-android-manifest.mjs --merged
+          manifest=$(find android/app/build/intermediates/merged_manifests android/app/build/intermediates/merged_manifest -name AndroidManifest.xml 2>/dev/null | head -1)
+          test -n "$manifest"
+          node scripts/check-app-icons.mjs "$manifest"
