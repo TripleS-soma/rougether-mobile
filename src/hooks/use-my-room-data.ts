@@ -262,11 +262,12 @@ export function useMyRoomData() {
             if (typeof log.streak?.currentCount === 'number') setStreak(log.streak.currentCount);
           }
         }
-        // Completion pays out server-side — surface the actual amount. 일일
-        // 상한을 다 받은 오늘 완료(보상 0)는 코인 대신 상한 안내 (#444);
+        // 받은 코인은 화면의 보상 알약이 스트릭과 함께 띄운다(#1055) — 토스트까지
+        // 띄우면 같은 정보가 두 번 보여 뺐다 (#1129). 일일 상한을 다 받은 오늘
+        // 완료(보상 0)는 알약이 아무것도 안 띄우므로 상한 안내만 남긴다 (#444);
         // 과거 날짜는 원래 보상 0이라(#183) 조용히 지나간다.
-        if (!wasDone && rewardAmount) toast(`+${rewardAmount} 코인 획득!`, 'success');
-        else if (!wasDone && date === todayIso()) toast('오늘 받을 수 있는 코인을 다 모았어요');
+        if (!wasDone && !rewardAmount && date === todayIso())
+          toast('오늘 받을 수 있는 코인을 다 모았어요');
         if (!wasDone) track('routine_complete', { kind: item?.kind ?? 'routine' });
         await refreshWallet();
         return wasDone
