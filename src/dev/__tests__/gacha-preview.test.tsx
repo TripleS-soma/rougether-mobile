@@ -1,19 +1,15 @@
 import { fireEvent, render } from '@testing-library/react-native';
 
-import { GachaPreview, previewRewards } from '@/dev/gacha-preview';
+import { GachaStorybookPreview } from '@/dev/gacha-preview';
 
-it('previews the selected rarity without a real draw handler', async () => {
-  const screen = await render(<GachaPreview machines={[]} />);
-  await fireEvent.press(screen.getByLabelText('희귀 연출'));
-  expect(screen.getByLabelText('희귀 연출').props.accessibilityState.selected).toBe(true);
-  expect(previewRewards(1, '희귀', false)[0].rarity).toBe('희귀');
-});
-
-it('covers six rewards, duplicates, and character coin refunds in local fixtures', () => {
-  expect(previewRewards(6, '전설', false)).toHaveLength(6);
-  expect(previewRewards(6, '전설', true)[3]).toMatchObject({
-    converted: true,
-    refundCurrencyType: 'COIN',
-    refundAmount: 100,
-  });
+it('keeps the earlier illustrated stage as an isolated art comparison without a paid draw', async () => {
+  const screen = await render(<GachaStorybookPreview />);
+  expect(
+    screen.getByText('이전 숲속 아트 비교용 · 실제 뽑기 화면에서는 사용하지 않아요'),
+  ).toBeTruthy();
+  expect(screen.queryByText('1회 뽑기')).toBeNull();
+  await fireEvent.press(screen.getByLabelText('선물상자 열기'));
+  expect(screen.getByText('다시 보기')).toBeTruthy();
+  await fireEvent.press(screen.getByText('다시 보기'));
+  expect(screen.queryByText('다시 보기')).toBeNull();
 });

@@ -1,58 +1,42 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Modal,
-  Pressable,
-  ScrollView,
-  SectionList,
-  StyleSheet,
-  Text,
-  View,
-  useWindowDimensions,
-} from 'react-native';
-import { useReducedMotion } from 'react-native-reanimated';
+import { Image } from 'expo-image';
+import { Modal, Pressable, ScrollView, SectionList, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { GachaMachine } from '@/api/adapters';
 import type { DrawResult, GachaDrawCount, GachaRewardResponse } from '@/api';
 import {
-  BurstOverlay,
-  DEFAULT_RARITY,
+  CinematicRevealShell,
+  CinematicRewardStage,
   FlipCard,
-  RevealCard,
   rarityColor,
 } from '@/components/screens/gacha/draw-animation';
-import { GiftOpeningStage, StorybookBackdrop } from '@/components/screens/gacha/storybook-draw';
+import { buildRevealPlan } from '@/components/screens/gacha/reveal-motion';
 import { SheetHandle } from '@/components/ui/sheet-handle';
 import { Loading } from '@/components/ui/loading';
 import { BottomSheet, SheetDragExclude } from '@/components/ui/bottom-sheet';
 import { Icon } from '@/components/ui/icon';
 import { ScreenHeader } from '@/components/ui/screen-header';
-import { GiftBoxArt } from '@/components/screens/gacha/gift-box-art';
+import { GachaLobby } from '@/components/screens/gacha/gacha-lobby';
+import giftRoom from '@/assets/images/gacha/gift-room-hero-v2.webp';
 import { RewardRow } from '@/components/screens/gacha/reward-row';
 import { RetryState } from '@/components/ui/retry-state';
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { WalletPills } from '@/components/ui/wallet-pills';
-import { GachaSceneColors as Scene, GachaStage, Radius, Spacing } from '@/constants/theme';
+import { Overlay, Radius, Spacing, StaticWhite } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { track } from '@/lib/analytics';
-import { useResponsiveColumn } from '@/hooks/use-responsive-column';
+import { getCategoryGachas, getGachaCategory } from '@/constants/gacha';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
-import { RARITY_COLORS, type Rarity } from '@/resources/furniture';
-import { GIFT_AUTO_OPEN_MS, GIFT_CHARGE_MS, GIFT_OPEN_MS } from '@/resources/gacha-art';
-import { hapticImpact, hapticSelection, hapticSuccess } from '@/utils/haptics';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
+import { assetSource } from '@/resources/asset';
+import { hapticImpact } from '@/utils/haptics';
 
-type Phase = 'idle' | 'charging' | 'ready' | 'opening' | 'reveal';
-
-/** 레어도 우선순위 — 버스트 색은 뽑은 것 중 최고 레어도를 따른다. */
-const bestRarity = (results: DrawResult[]): Rarity =>
-  results.some((r) => r.rarity === '전설')
-    ? '전설'
-    : results.some((r) => r.rarity === '희귀')
-      ? '희귀'
-      : DEFAULT_RARITY;
+type Phase = 'idle' | 'charging' | 'burst' | 'reveal';
 
 /** 5+1 뽑기 (#520) — 6개 뽑고 비용은 단챠 5회분. */
-const BONUS_DRAW_COUNT = 6;
 const BONUS_DRAW_COST_MULTIPLIER = 5;
 
 export type GachaScreenProps = {
@@ -67,6 +51,8 @@ export type GachaScreenProps = {
   onRetry?: () => void;
   coinBalance?: number;
   diamondBalance?: number;
+  /** 테스트·Dev 프리뷰에서 시스템 동작 줄이기 값을 덮어쓴다. */
+  reducedMotion?: boolean;
   /**
    * Draw from a machine (count: 1=단챠, 6=5+1회); resolves the drawn results, or
    * null on failure. Spending + dupe→diamond conversion happen server-side; the
@@ -91,6 +77,8 @@ export type GachaScreenProps = {
    * 다시 시도를 보여준다). 없으면 '나올 수 있는 보상' 진입점을 숨긴다.
    */
   onLoadRewards?: (gachaId: number) => Promise<GachaRewardResponse[] | null>;
+  /** 설정 > 효과음 토글. 리빌 영상의 짧은 스팅/우시 효과도 이 값을 따른다. */
+  soundEffectsEnabled?: boolean;
 };
 
 /** 보상 시트의 등급 그룹 순서 (#620) — 미지의 등급은 맨 뒤 '기타'. */
@@ -132,21 +120,23 @@ export function GachaScreen({
   onRetry,
   coinBalance = 0,
   diamondBalance = 0,
+  reducedMotion,
   onDraw,
   onResultsConfirmed,
   placeableItemIds,
   onGoPlace,
   onLoadRewards,
+  soundEffectsEnabled = true,
 }: GachaScreenProps) {
   const t = useTokens();
-  const reducedMotion = useReducedMotion();
-  const { width } = useWindowDimensions();
-  const cardWidth = Math.min(GachaStage.card, (width - Spacing.four * 2 - Spacing.two * 4) / 3);
-  const column = useResponsiveColumn();
+  const insets = useSafeAreaInsets();
   const Typography = useTypography();
   const emph = useFontEmphasis();
+  const systemReducedMotion = useReducedMotion();
+  const shouldReduceMotion = reducedMotion ?? systemReducedMotion;
   // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
   const headerInset = useHeaderContentInset();
+  const column = useResponsiveColumn(520);
   const { show: toast } = useToast();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [error, setError] = useState('');
@@ -155,43 +145,46 @@ export function GachaScreen({
   const [revealAll, setRevealAll] = useState(false);
   const [openedCards, setOpenedCards] = useState<number[]>([]);
   const markRevealed = useCallback((index: number) => {
-    setOpenedCards((prev) => (prev.includes(index) ? prev : [...prev, index]));
+    setOpenedCards((current) => (current.includes(index) ? current : [...current, index]));
   }, []);
-  // 버스트 연출 파라미터 (#431) — 최고 레어도의 색, 일반은 짧은 버스트.
-  const [burstColor, setBurstColor] = useState(RARITY_COLORS[DEFAULT_RARITY]);
-  const [burstStrong, setBurstStrong] = useState(false);
-  const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const chargeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const autoOpenTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const canOpenGift = useRef(false);
+  const revealPlan = useMemo(
+    () => buildRevealPlan(pulled, shouldReduceMotion),
+    [pulled, shouldReduceMotion],
+  );
+  const skipRequested = useRef(false);
+  const readyResults = useRef<DrawResult[] | null>(null);
+  const drawRun = useRef(0);
   const drawBusy = useRef(false);
-  const mounted = useRef(true);
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-      clearTimeout(chargeTimer.current ?? undefined);
-      clearTimeout(revealTimer.current ?? undefined);
-      clearTimeout(autoOpenTimer.current ?? undefined);
-    };
-  }, []);
   // 보상 목록 시트 (#620) — 머신별 lazy 로드, 같은 머신 재열람은 캐시.
   const [rewardsOpen, setRewardsOpen] = useState(false);
   const [rewardsLoading, setRewardsLoading] = useState(false);
   const [rewards, setRewards] = useState<GachaRewardResponse[] | null>(null);
   const rewardsForRef = useRef<number | null>(null);
-  const openRewards = (gachaId: number) => {
+  const rewardsRun = useRef(0);
+  useEffect(
+    () => () => {
+      drawRun.current += 1;
+      rewardsRun.current += 1;
+    },
+    [],
+  );
+  const openRewards = async (gachaId: number) => {
     setRewardsOpen(true);
     if (rewardsForRef.current === gachaId && rewards) return;
+    const run = ++rewardsRun.current;
     rewardsForRef.current = gachaId;
     setRewards(null);
     setRewardsLoading(true);
-    void onLoadRewards?.(gachaId).then((res) => {
-      // 다른 머신으로 갈아탄 뒤 도착한 응답은 버린다.
-      if (rewardsForRef.current !== gachaId) return;
-      setRewards(res);
-      setRewardsLoading(false);
-    });
+    let response: GachaRewardResponse[] | null = null;
+    try {
+      response = (await onLoadRewards?.(gachaId)) ?? null;
+    } catch {
+      /* 시트에서 재시도 */
+    }
+    // 같은 머신을 떠났다가 다시 열어도 이전 요청이 새 결과를 덮지 않는다.
+    if (rewardsForRef.current !== gachaId || rewardsRun.current !== run) return;
+    setRewards(response);
+    setRewardsLoading(false);
   };
 
   // 등급 그룹은 rewards가 바뀔 때만 재계산 (#678) — 시트가 열린 동안의
@@ -237,10 +230,13 @@ export function GachaScreen({
     !r.converted && r.itemId != null && placeableSet.has(String(r.itemId));
   const placeablePulled = pulled.filter(isPlaceable);
 
-  const box = gachas.find((b) => b.id === selectedId) ?? gachas[0];
-  // Selector rows: themed furniture machines first, the character gacha below.
-  const furnitureMachines = gachas.filter((b) => b.kind !== 'character');
-  const characterMachines = gachas.filter((b) => b.kind === 'character');
+  const machines = useMemo(() => getCategoryGachas(gachas), [gachas]);
+  const box =
+    machines.find((b) => b.id === selectedId) ??
+    machines.find((b) => getGachaCategory(b) === 'FURNITURE') ??
+    machines[0];
+  const featuredRevealItem =
+    revealPlan.items.find((item) => item.tier === revealPlan.bestTier) ?? revealPlan.items[0];
   const balanceFor = (c: 'COIN' | 'DIAMOND') => (c === 'COIN' ? coinBalance : diamondBalance);
   const drawCost = (count: GachaDrawCount) =>
     box ? box.costAmount * (count === 1 ? 1 : BONUS_DRAW_COST_MULTIPLIER) : 0;
@@ -248,7 +244,7 @@ export function GachaScreen({
     box ? balanceFor(box.costCurrencyType) >= drawCost(count) : false;
 
   const pull = async (count: GachaDrawCount) => {
-    if (!box || phase !== 'idle' || drawBusy.current) return;
+    if (!box || drawBusy.current) return;
     // The button stays tappable when unaffordable — the tap says why.
     if (!canAfford(count)) {
       // 뽑기 앞에서 코인이 모자라 돌아서는 지점 (#799) — 퍼널의 흔한 막힘.
@@ -261,74 +257,72 @@ export function GachaScreen({
     }
     setError('');
     drawBusy.current = true;
-    canOpenGift.current = false;
-    setOpenedCards([]);
+    skipRequested.current = false;
+    readyResults.current = null;
+    setPulled([]);
     setRevealAll(false);
+    setOpenedCards([]);
+    const run = ++drawRun.current;
     hapticImpact();
     setPhase('charging');
-    const started = Date.now();
     let results: DrawResult[] | null | undefined;
     try {
       results = await onDraw?.(box.id, count);
     } catch {
       results = null;
     }
-    if (!mounted.current) return;
+    if (run !== drawRun.current) return;
     if (!results?.length) {
       drawBusy.current = false;
       setPhase('idle');
       setError('뽑기에 실패했어요.');
       return;
     }
-    // The API answers fast — hold the charge build-up so the reveal lands
-    // after a beat of anticipation instead of flashing by.
+    // 결과 아트는 슬롯에만 꽂고, 연출 강도는 결과 중 최고 등급 프로필 하나가
+    // 결정한다. 따라서 새 가구를 추가해도 화면 코드는 바뀌지 않는다.
+    const plan = buildRevealPlan(results, shouldReduceMotion);
+    const preloadUris = plan.items
+      .map((item) =>
+        item.renderKind === 'asset' && item.assetKey ? assetSource(item.assetKey).uri : null,
+      )
+      .filter((uri): uri is string => uri != null);
+    if (preloadUris.length > 0) void Image.prefetch(preloadUris).catch(() => {});
+    readyResults.current = results;
     setPulled(results);
-    // Only the actual server result determines the celebration color.
-    const best = bestRarity(results);
-    setBurstColor(RARITY_COLORS[best]);
-    setBurstStrong(best !== DEFAULT_RARITY);
-    if (reducedMotion) {
+    if (skipRequested.current || shouldReduceMotion) {
       setPhase('reveal');
-      hapticSuccess();
       return;
     }
-    chargeTimer.current = setTimeout(
-      () => {
-        canOpenGift.current = true;
-        setPhase('ready');
-        autoOpenTimer.current = setTimeout(openGift, GIFT_AUTO_OPEN_MS);
-      },
-      Math.max(0, GIFT_CHARGE_MS - (Date.now() - started)),
-    );
+    // Anticipation is part of the video; network time adds no artificial charge wait.
+    setPhase('burst');
   };
 
-  const openGift = () => {
-    // A reveal interaction only: never call onDraw or spend again here.
-    if (!canOpenGift.current || !mounted.current) return;
-    canOpenGift.current = false;
-    clearTimeout(autoOpenTimer.current ?? undefined);
-    setPhase('opening');
-    hapticImpact();
-    revealTimer.current = setTimeout(() => {
-      setPhase('reveal');
-      hapticSuccess();
-    }, GIFT_OPEN_MS);
+  const finishCinematic = useCallback(() => {
+    if (drawBusy.current && readyResults.current) setPhase('reveal');
+  }, []);
+
+  const skipAnimation = () => {
+    skipRequested.current = true;
+    if (readyResults.current) setPhase('reveal');
   };
 
   const close = () => {
-    // Android back must not dismiss a paid draw while its result is in flight.
-    if (phase !== 'reveal' || !drawBusy.current) return;
+    if (!readyResults.current) return;
+    readyResults.current = null;
     drawBusy.current = false;
-    clearTimeout(revealTimer.current ?? undefined);
+    drawRun.current += 1;
     // 결과를 보고 닫는 경우에만 — 실패/취소 닫기에는 결과가 없다.
     if (pulled.length > 0) onResultsConfirmed?.();
     setPhase('idle');
     setPulled([]);
+    readyResults.current = null;
+    skipRequested.current = false;
   };
 
   // '가구 배치하러 가기' (#630) — 결과 확인으로 간주(미션 타이밍 #571 동일)하고
   // 뽑은 가구 목록과 함께 꾸미기로 넘긴다.
   const goPlace = () => {
+    if (!readyResults.current) return;
     const targets = placeablePulled;
     close();
     onGoPlace?.(targets);
@@ -342,276 +336,198 @@ export function GachaScreen({
         right={<WalletPills coin={coinBalance} diamond={diamondBalance} />}
       />
 
-      <ScrollView
-        contentContainerStyle={[
-          styles.body,
-          column,
-          headerInset ? { paddingTop: headerInset } : null,
-        ]}>
-        {loading ? (
-          <View style={styles.loadingBlock}>
-            <Loading />
-            <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
-              뽑기 목록 불러오는 중...
-            </Text>
-          </View>
-        ) : null}
-        {/* 로드 실패 (#549) — 빈 상태('뽑기 없음')로 위장하지 않는다. */}
-        {!loading && loadError ? (
-          <View style={styles.loadingBlock}>
-            <RetryState message="뽑기 목록을 불러오지 못했어요." onRetry={onRetry} />
-          </View>
-        ) : null}
-        {!loading && !loadError && gachas.length === 0 ? (
-          <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
-            지금은 뽑을 수 있는 뽑기가 없어요.
+      {loading ? (
+        <View style={[styles.loadingBlock, { paddingTop: headerInset + Spacing.six }]}>
+          <Loading />
+          <Text style={[Typography.supporting, { color: t.textMuted }]}>
+            뽑기 목록 불러오는 중...
           </Text>
-        ) : null}
-
-        {/* Machine selector — one labeled row per machine kind. */}
-        <View style={styles.selector}>
-          {(
-            [
-              ['가구 뽑기', furnitureMachines],
-              ['캐릭터 뽑기', characterMachines],
-            ] as const
-          ).map(([label, machines]) =>
-            machines.length === 0 ? null : (
-              <View key={label} style={styles.rowBlock}>
-                <Text style={[Typography.supporting, { color: t.textMuted }]}>{label}</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.boxRow}>
-                  {machines.map((b) => {
-                    const active = b.id === box?.id;
-                    return (
-                      <ScalePressable
-                        key={b.id}
-                        onPress={() => {
-                          setSelectedId(b.id);
-                          setError('');
-                        }}
-                        accessibilityRole="button"
-                        accessibilityLabel={b.name}
-                        accessibilityState={{ selected: active }}
-                        style={[
-                          styles.boxChip,
-                          {
-                            backgroundColor: b.accent,
-                            borderColor: active ? t.primary : 'transparent',
-                          },
-                        ]}>
-                        <GiftBoxArt machine={b} size={44} />
-                      </ScalePressable>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            ),
-          )}
         </View>
+      ) : loadError ? (
+        <View style={[styles.loadingBlock, { paddingTop: headerInset + Spacing.six }]}>
+          <RetryState message="뽑기 목록을 불러오지 못했어요." onRetry={onRetry} />
+        </View>
+      ) : box ? (
+        <View style={[styles.screen, column]}>
+          <GachaLobby
+            machines={machines}
+            selected={box}
+            onSelect={(selected) => {
+              setSelectedId(selected.id);
+              setError('');
+              rewardsForRef.current = null;
+              setRewardsOpen(false);
+            }}
+            onDraw={(count) => {
+              void pull(count);
+            }}
+            onRewards={onLoadRewards ? () => openRewards(box.id) : undefined}
+            canAfford={canAfford}
+            busy={phase !== 'idle'}
+            error={error}
+            topInset={headerInset}
+            bottomInset={insets.bottom}
+          />
+        </View>
+      ) : (
+        <View style={[styles.loadingBlock, { paddingTop: headerInset + Spacing.six }]}>
+          <Icon name="gift" size={48} color={t.primary} />
+          <Text style={[Typography.h3, { color: t.text }]}>새로운 선물을 준비하고 있어요</Text>
+          <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
+            벽지·바닥·가구 상자가 준비되면 여기서 만날 수 있어요.
+          </Text>
+          {onRetry ? (
+            <ScalePressable
+              onPress={onRetry}
+              accessibilityRole="button"
+              accessibilityLabel="뽑기 목록 새로고침"
+              style={styles.confirmBtn}>
+              <Text style={[Typography.label, { color: t.primaryText }]}>새로고침</Text>
+            </ScalePressable>
+          ) : null}
+        </View>
+      )}
 
-        {/* Selected machine */}
-        {box ? (
-          <View style={[styles.card, { backgroundColor: t.surface }]}>
-            <View style={[styles.boxHero, { backgroundColor: box.accent }]}>
-              <GiftBoxArt machine={box} size={96} />
-            </View>
-            <Text style={[Typography.h3, styles.center, { color: t.text }]}>{box.name}</Text>
-            <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
-              1회 뽑기에 {box.drawCount}개 획득
-            </Text>
-            {/* 나올 수 있는 보상 (#620) — 뽑기 전 기대 관리. */}
-            {onLoadRewards ? (
-              <Pressable
-                onPress={() => openRewards(box.id)}
-                accessibilityRole="button"
-                accessibilityLabel="나올 수 있는 보상 보기"
-                style={styles.rewardsLink}>
-                <Text style={[Typography.supporting, emph('semibold'), { color: t.primaryText }]}>
-                  나올 수 있는 보상 보기
-                </Text>
-                <Icon name="forward" size={12} color={t.primaryText} />
-              </Pressable>
-            ) : null}
-
-            {error ? (
-              <Text style={[Typography.supporting, styles.center, { color: t.danger }]}>
-                {error}
-              </Text>
-            ) : null}
-
-            <View style={styles.pullRow}>
-              {([1, BONUS_DRAW_COUNT] as const).map((count) => {
-                const affordable = canAfford(count);
-                const cost = drawCost(count);
-                const label = count === 1 ? '1회 뽑기' : '5+1회 뽑기';
-                return (
-                  <ScalePressable
-                    key={count}
-                    onPress={() => {
-                      void pull(count);
-                    }}
-                    disabled={phase !== 'idle'}
-                    accessibilityState={{ disabled: !affordable }}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${label}, ${cost.toLocaleString()} ${
-                      box.costCurrencyType === 'COIN' ? '코인' : '다이아'
-                    }`}
-                    style={[
-                      styles.pullBtn,
-                      { backgroundColor: affordable ? t.primary : t.disabledBg },
-                    ]}>
-                    {/* onPrimary is dark in dark mode — unreadable on
-                        disabledBg, so disabled text falls back to textMuted. */}
-                    <Text
-                      style={[Typography.label, { color: affordable ? t.onPrimary : t.textMuted }]}>
-                      {label}
-                    </Text>
-                    <View style={styles.costRow}>
-                      {/* 코인은 지갑 필과 같은 골드로 고정 (#742) — 활성/비활성
-                          공통. 화폐 정체성은 색이 절반이라 버튼 틴트를 따르지
-                          않는다. 다이아는 primary 버튼 배경과 겹쳐 보류. */}
-                      <Icon
-                        name={box.costCurrencyType === 'COIN' ? 'coin' : 'diamond'}
-                        size={12}
-                        color={
-                          box.costCurrencyType === 'COIN'
-                            ? t.warning
-                            : affordable
-                              ? t.onPrimary
-                              : t.textMuted
-                        }
-                      />
-                      <Text
-                        style={[
-                          Typography.supporting,
-                          emph('semibold'),
-                          { color: affordable ? t.onPrimary : t.textMuted },
-                        ]}>
-                        {cost.toLocaleString()}
-                      </Text>
-                    </View>
-                  </ScalePressable>
-                );
-              })}
-            </View>
-          </View>
-        ) : null}
-      </ScrollView>
-
-      {/* Pull animation overlay — a Modal so it fills the whole screen and
-          centers regardless of the screen's safe-area padding. */}
+      {/* 영상·투명 아이템·결과가 동일한 전체 화면 좌표를 공유한다. */}
       <Modal
-        testID="gacha-draw-modal"
         visible={phase !== 'idle'}
         transparent
-        animationType={reducedMotion ? 'none' : 'fade'}
-        onRequestClose={close}>
-        <View style={styles.overlay}>
-          <StorybookBackdrop />
-          {phase === 'charging' || phase === 'ready' || phase === 'opening' ? (
-            <>
-              <View style={styles.themeBadge}>
-                {box ? (
-                  <GiftBoxArt machine={box} size={Spacing.five} testIDPrefix="charging-gift-box" />
-                ) : null}
-                <Text style={[Typography.supporting, styles.sceneText]} numberOfLines={1}>
-                  {box?.name ?? '오늘의 선물'}
-                </Text>
-              </View>
-              <Text style={[Typography.h1, styles.sceneText]}>작은 숲에 도착한 선물</Text>
-              <GiftOpeningStage
-                phase={phase}
-                machine={box}
-                onOpen={openGift}
-                reducedMotion={reducedMotion}
-              />
-              <View style={styles.stageCaption} accessibilityLiveRegion="polite">
-                <Text style={[Typography.h3, styles.sceneText]}>
-                  {phase === 'ready'
-                    ? '상자를 톡! 열어보세요'
-                    : phase === 'opening'
-                      ? '두근두근, 열리는 중!'
-                      : '뽑는 중...'}
-                </Text>
-                <Text style={[Typography.supporting, styles.sceneText]}>
-                  {phase === 'ready'
-                    ? '잠시 후 자동으로 열려요'
-                    : phase === 'opening'
-                      ? '어떤 선물이 찾아왔을까요?'
-                      : '오늘의 설렘을 담고 있어요'}
-                </Text>
-              </View>
-            </>
+        statusBarTranslucent
+        navigationBarTranslucent
+        animationType={shouldReduceMotion ? 'none' : 'fade'}
+        onRequestClose={phase === 'reveal' ? close : skipAnimation}>
+        <View style={[styles.overlay, { backgroundColor: t.screen }]}>
+          {phase === 'charging' || phase === 'burst' ? (
+            <Pressable
+              onPress={skipAnimation}
+              accessibilityRole="button"
+              accessibilityLabel="뽑기 연출 건너뛰기"
+              style={[
+                styles.skipButton,
+                { top: Math.max(insets.top, Spacing.three), backgroundColor: Overlay.dim },
+              ]}>
+              <Text style={[Typography.supporting, emph('semibold'), styles.skipText]}>
+                건너뛰기
+              </Text>
+              <Icon name="forward" size={14} color={StaticWhite} />
+            </Pressable>
+          ) : null}
+          {phase === 'charging' ? (
+            <View style={styles.charging}>
+              <Image source={giftRoom} style={styles.chargingArt} contentFit="cover" />
+              <Loading />
+              <Text style={[Typography.label, { color: t.text }]}>선물을 준비하고 있어요</Text>
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                잠깐만 기다려 주세요
+              </Text>
+            </View>
+          ) : phase === 'burst' ? (
+            <CinematicRevealShell
+              entry={featuredRevealItem}
+              profile={revealPlan.profile}
+              soundEffectsEnabled={soundEffectsEnabled}
+              reducedMotion={shouldReduceMotion}
+              onComplete={finishCinematic}
+            />
           ) : phase === 'reveal' ? (
             <>
-              {!reducedMotion ? (
-                <View style={styles.celebration} pointerEvents="none">
-                  <BurstOverlay color={burstColor} strong={burstStrong} celebration />
+              <CinematicRewardStage
+                entry={featuredRevealItem}
+                tier={revealPlan.bestTier}
+                showArtwork={revealPlan.items.length === 1}
+              />
+              {revealPlan.items.length === 1 ? (
+                <View style={styles.singleCaption} accessibilityLiveRegion="polite">
+                  <Text style={[Typography.supporting, emph('semibold'), { color: t.onTint }]}>
+                    {featuredRevealItem?.badgeLabel ?? '나만의 새로운 발견'}
+                  </Text>
+                  <Text
+                    style={[Typography.h2, emph('bold'), styles.center, { color: t.onTint }]}
+                    numberOfLines={2}>
+                    {featuredRevealItem?.displayName}
+                  </Text>
+                  <Text style={[Typography.supporting, styles.center, { color: t.onTint }]}>
+                    {featuredRevealItem?.conversionLabel
+                      ? featuredRevealItem.conversionLabel
+                      : '새로운 선물이 내 방을 기다려요'}
+                  </Text>
                 </View>
-              ) : null}
-              <Text style={[Typography.h1, styles.sceneText]}>축하해요!</Text>
-              <Text
-                style={[Typography.supporting, styles.sceneText]}
-                accessibilityLiveRegion="polite">
-                {pulled.length > 1
-                  ? openedCards.length === pulled.length
-                    ? '선물을 모두 열었어요!'
-                    : `카드를 눌러 열어보세요 · ${openedCards.length} / ${pulled.length}`
-                  : pulled[0]?.rarity === '전설'
-                    ? '반짝! 전설의 선물이 도착했어요'
-                    : '오늘의 작은 설렘이 도착했어요'}
-              </Text>
-              <ScrollView style={styles.revealScroll} contentContainerStyle={styles.revealGrid}>
-                {pulled.length === 1 ? (
-                  <RevealCard item={pulled[0]} index={0} large reducedMotion={reducedMotion} />
-                ) : (
-                  // Six cards deal face down; tap to reveal ahead of the sequence.
-                  pulled.map((it, idx) => (
-                    <FlipCard
-                      key={`${it.name ?? 'item'}-${idx}`}
-                      item={it}
-                      index={idx}
-                      width={cardWidth}
-                      revealAll={revealAll}
-                      reducedMotion={reducedMotion}
-                      onReveal={markRevealed}
-                    />
-                  ))
-                )}
-              </ScrollView>
-              {pulled.length > 1 && openedCards.length < pulled.length ? (
+              ) : (
+                <View
+                  style={[
+                    styles.multiResults,
+                    { paddingTop: Math.max(insets.top, Spacing.four) + Spacing.four },
+                  ]}>
+                  <Text style={[Typography.supporting, emph('semibold'), { color: t.onTint }]}>
+                    오늘 도착한 선물
+                  </Text>
+                  <Text style={[Typography.h2, emph('bold'), styles.center, { color: t.onTint }]}>
+                    여섯 가지 작은 설렘
+                  </Text>
+                  <Text
+                    style={[Typography.supporting, { color: t.onTint }]}
+                    accessibilityLiveRegion="polite">
+                    {openedCards.length === revealPlan.items.length
+                      ? '선물을 모두 열었어요!'
+                      : `카드를 눌러 열어보세요 · ${openedCards.length} / ${revealPlan.items.length}`}
+                  </Text>
+                  {openedCards.length < revealPlan.items.length ? (
+                    <ScalePressable
+                      onPress={() => setRevealAll(true)}
+                      accessibilityRole="button"
+                      accessibilityLabel="한 번에 열기"
+                      style={[styles.openAllButton, { backgroundColor: t.surface }]}>
+                      <Text style={[Typography.label, { color: t.text }]}>한 번에 열기</Text>
+                    </ScalePressable>
+                  ) : null}
+                  <ScrollView
+                    style={styles.revealScroll}
+                    contentContainerStyle={styles.revealGrid}
+                    showsVerticalScrollIndicator={false}>
+                    {revealPlan.items.map((entry) => (
+                      <FlipCard
+                        key={`${entry.displayName}-${entry.index}`}
+                        entry={entry}
+                        reducedMotion={shouldReduceMotion}
+                        revealAll={revealAll}
+                        onReveal={markRevealed}
+                      />
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+              <View
+                style={[
+                  styles.resultActions,
+                  { bottom: Math.max(insets.bottom, Spacing.three) + Spacing.two },
+                ]}>
+                {placeablePulled.length > 0 ? (
+                  <ScalePressable
+                    onPress={goPlace}
+                    accessibilityRole="button"
+                    accessibilityLabel="방 꾸미러 가기"
+                    style={[styles.confirmBtn, { backgroundColor: t.primary }]}>
+                    <Text style={[Typography.label, { color: t.onPrimary }]}>방 꾸미러 가기</Text>
+                    <Icon name="forward" size={18} color={t.onPrimary} />
+                  </ScalePressable>
+                ) : null}
                 <ScalePressable
-                  onPress={() => {
-                    hapticSelection();
-                    setRevealAll(true);
-                  }}
+                  onPress={close}
                   accessibilityRole="button"
-                  accessibilityLabel="한 번에 열기"
-                  style={[styles.confirmBtn, { backgroundColor: Scene.paper }]}>
-                  <Text style={[Typography.label, { color: Scene.ink }]}>한 번에 열기</Text>
-                </ScalePressable>
-              ) : null}
-              {placeablePulled.length > 0 ? (
-                <ScalePressable
-                  onPress={goPlace}
-                  accessibilityRole="button"
-                  accessibilityLabel="가구 배치하러 가기"
-                  style={[styles.goPlaceBtn, { backgroundColor: Scene.leaf }]}>
-                  <Text style={[Typography.label, { color: Scene.onLeaf }]}>
-                    가구 배치하러 가기
+                  accessibilityLabel="확인"
+                  style={[
+                    styles.confirmBtn,
+                    { backgroundColor: placeablePulled.length ? t.surface : t.primary },
+                  ]}>
+                  <Text
+                    style={[
+                      Typography.label,
+                      { color: placeablePulled.length ? t.text : t.onPrimary },
+                    ]}>
+                    확인
                   </Text>
                 </ScalePressable>
-              ) : null}
-              <ScalePressable
-                onPress={close}
-                accessibilityRole="button"
-                accessibilityLabel="확인"
-                style={[styles.confirmBtn, { backgroundColor: Scene.leaf }]}>
-                <Text style={[Typography.label, { color: Scene.onLeaf }]}>확인</Text>
-              </ScalePressable>
+              </View>
             </>
           ) : null}
         </View>
@@ -643,7 +559,6 @@ export function GachaScreen({
           </View>
         ) : (
           <SheetDragExclude>
-            {/* 세로 스크롤 본문 — 시트 끌어내리기에서 제외 (#1132). 닫기는 손잡이·헤더에서. */}
             <SectionList
               style={styles.rewardsList}
               contentContainerStyle={styles.rewardsListBody}
@@ -672,13 +587,13 @@ export function GachaScreen({
 }
 
 const styles = StyleSheet.create({
-  // --- 보상 목록 시트 (#620) ---
-  rewardsLink: {
-    flexDirection: 'row',
+  screen: { flex: 1 },
+  center: { textAlign: 'center' },
+  loadingBlock: {
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.half,
-    paddingVertical: Spacing.one,
+    paddingVertical: Spacing.six,
+    paddingHorizontal: Spacing.four,
+    gap: Spacing.two,
   },
   rewardsSheet: {
     borderTopLeftRadius: Radius.lg,
@@ -688,137 +603,81 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.six,
     gap: Spacing.two,
   },
-  rewardsBlock: {
-    paddingVertical: Spacing.five,
-    alignItems: 'center',
-  },
-  rewardsList: {
-    maxHeight: 420,
-  },
-  rewardsListBody: {
-    paddingBottom: Spacing.two,
-  },
-  /** 같은 등급 안 행 사이 (구 rewardsGroup의 gap). */
-  rewardGap: {
-    height: Spacing.one,
-  },
+  rewardsBlock: { paddingVertical: Spacing.five, alignItems: 'center' },
+  rewardsList: { maxHeight: 420 },
+  rewardsListBody: { paddingBottom: Spacing.two },
+  rewardGap: { height: Spacing.one },
   rewardsGroupHead: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.one,
     marginBottom: Spacing.half,
   },
-  /** 등급 사이 (구 rewardsListBody의 gap) — 첫 그룹 위에는 두지 않는다. */
-  rewardsGroupGap: {
-    marginTop: Spacing.three,
-  },
-  rarityDot: {
-    width: 8,
-    height: 8,
-    borderRadius: Radius.pill,
-  },
-  screen: { flex: 1 },
-  center: { textAlign: 'center' },
-  header: {
+  rewardsGroupGap: { marginTop: Spacing.three },
+  rarityDot: { width: 8, height: 8, borderRadius: Radius.pill },
+  overlay: { flex: 1 },
+  charging: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.three },
+  chargingArt: { width: '100%', maxWidth: 520, aspectRatio: 4 / 3 },
+  skipButton: {
+    position: 'absolute',
+    right: Spacing.four,
+    zIndex: 10,
+    minHeight: 44,
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.three,
-  },
-  iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  body: { padding: Spacing.four, gap: Spacing.four },
-  loadingBlock: { alignItems: 'center', paddingVertical: Spacing.six, gap: Spacing.two },
-  selector: { gap: Spacing.two },
-  rowBlock: { gap: Spacing.one },
-  boxRow: { gap: Spacing.two, paddingVertical: Spacing.half },
-  boxChip: {
-    width: 56,
-    height: 56,
-    borderRadius: Radius.lg,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  card: {
-    borderRadius: Radius.lg,
-    padding: Spacing.four,
-    gap: Spacing.three,
-    alignItems: 'stretch',
-  },
-  boxHero: {
-    height: 120,
-    borderRadius: Radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pullRow: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-  },
-  pullBtn: {
-    flex: 1,
-    paddingVertical: Spacing.three,
-    borderRadius: Radius.pill,
     alignItems: 'center',
     gap: Spacing.half,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.pill,
   },
-  costRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.half },
-
-  // Pull animation overlay (rendered inside a full-screen Modal)
-  overlay: {
-    flex: 1,
-    backgroundColor: Scene.paper,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.four,
-    padding: Spacing.four,
-  },
-  sceneText: { color: Scene.ink, textAlign: 'center', flexShrink: 1 },
-  stageCaption: { alignItems: 'center', gap: Spacing.two },
-  themeBadge: {
-    flexDirection: 'row',
+  skipText: { color: StaticWhite },
+  singleCaption: {
+    position: 'absolute',
+    top: '67%',
+    left: Spacing.four,
+    right: Spacing.four,
     alignItems: 'center',
     gap: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.one,
-    borderRadius: Radius.pill,
-    backgroundColor: Scene.paper,
-    maxWidth: '100%',
   },
-  celebration: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
-  revealScroll: {
-    flexGrow: 0,
-    maxHeight: '55%',
-    width: '100%',
-    maxWidth: GachaStage.card * 3 + Spacing.two * 4,
+  multiResults: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 164,
+    paddingHorizontal: Spacing.three,
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  revealScroll: { marginTop: Spacing.three, width: '100%' },
+  openAllButton: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.four,
+    borderRadius: Radius.pill,
   },
   revealGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.two,
     justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.two,
+    paddingBottom: Spacing.three,
+  },
+  resultActions: {
+    position: 'absolute',
+    left: Spacing.four,
+    right: Spacing.four,
+    maxWidth: 472,
+    alignSelf: 'center',
+    gap: Spacing.two,
   },
   confirmBtn: {
+    minHeight: 50,
     borderRadius: Radius.pill,
     paddingVertical: Spacing.three,
-    paddingHorizontal: Spacing.six,
+    paddingHorizontal: Spacing.four,
+    flexDirection: 'row',
+    gap: Spacing.two,
+    justifyContent: 'center',
     alignItems: 'center',
-  },
-  // 가구 배치하러 가기 (#630) — 확인 위의 주 행동 버튼.
-  goPlaceBtn: {
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.three,
-    paddingHorizontal: Spacing.six,
-    alignItems: 'center',
-    marginBottom: Spacing.two,
   },
 });

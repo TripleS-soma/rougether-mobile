@@ -397,5 +397,5 @@ export function useSettingsSurface({
       />
     ) : null;
 
-  return { myPageProps, settingsProps, subScreen };
+  return { myPageProps, settingsProps, subScreen, soundSettings };
 }

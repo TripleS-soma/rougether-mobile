@@ -1,11 +1,18 @@
-# Generated gacha artwork
+# 뽑기 이미지 자산
+
+현재 유료 뽑기는 `gift-room-hero-v2.webp` 로비 이미지와 `cinematic-*.jpg` 결과 포스터,
+`assets/videos/gacha-reveal-*.mp4` 공용 영상을 사용합니다. 제작·타이밍 계약은
+`motion/gacha-reveal/README.md`와 `timing-contract.json`에서 관리합니다.
+
+아래 숲속 자산은 기존 PR #1124의 아트 비교용으로 보존하며, 개발 갤러리
+`/dev?entry=GachaStorybookArchive`에서만 사용합니다. 실제 유료 뽑기에는 연결하지 않습니다.
 
 Built-in image generation was used; no CLI/API fallback. The source generation and alpha-extraction outputs are preserved outside the repository. These are project-owned copies, not remote image URLs.
 
 ## Assets
 
 - `cozy-gift-parts-v1.webp`: 1024 × 1024 RGBA (generated at 1254 px, resized + WebP q86 — 1.3 MB → 99 KB), detached lid above the open base. Runtime clipping at normalized y=0.44 keeps both original layers intact; the lid translates vertically to close/open. The final PNG has a real alpha channel (verified with `sips`).
-- `forest-stage-v1.webp`: 1024 × 1537 portrait watercolor forest stage (2.2 MB PNG → 120 KB), used as the full-screen reward background.
+- `forest-stage-v1.webp`: 1024 × 1537 portrait watercolor forest stage (2.2 MB PNG → 120 KB), retained as the development-only storybook background.
 
 Reference: the user-provided Rougether gacha screen (cream gift boxes and sage/lavender ribbons). No user screenshot is shipped in the app.
 
@@ -23,6 +30,6 @@ Use case: stylized-concept. Asset type: full-bleed mobile game reward-opening st
 
 ## Runtime and review
 
-The UI uses native-driven layer transforms rather than a looping video: it can wait for the server response, accept a reveal tap, and respect reduced motion. Opening the gift does not call the draw API again. With reduced motion enabled the stage is skipped; only the already-awarded results are shown. An image decode error falls back to the selected machine art.
+The archived development stage uses native-driven layer transforms and accepts a reveal tap. It has no draw API connection. An image decode error falls back to the selected machine art. The production screen uses the generic cinematic shell and dynamic reward artwork instead.
 
-Preview at `/dev?entry=GachaScreen` (development only). The preview uses local result fixtures and does not spend real coins. Production draw costs, odds and reward contents remain server-controlled.
+Current cinematic preview: `/dev?entry=GachaScreen`. Archived illustrated stage: `/dev?entry=GachaStorybookArchive`. Both are development-only and do not spend real coins. Production draw costs, odds and reward contents remain server-controlled.

@@ -1,251 +1,396 @@
-import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
-import { useReducedMotion } from 'react-native-reanimated';
+import { act, fireEvent, render } from '@testing-library/react-native';
+import type { TestInstance } from 'test-renderer';
 
 import type { GachaMachine } from '@/api/adapters';
-import type { DrawResult } from '@/api/types';
+import type { DrawResult, GachaRewardResponse } from '@/api/types';
 import { GachaScreen } from '@/components/screens/gacha-screen';
 import { ToastProvider } from '@/components/ui/toast';
 
+const videoMock = jest.requireActual('expo-video') as {
+  __emitVideoEvent: (event: string, payload?: unknown) => void;
+  __getLastVideoPlayer: () => unknown;
+  __resetVideoPlayerMock: () => void;
+};
+
 const machine: GachaMachine = {
-  id: 1,
-  name: '작은 베이커리 아침 뽑기',
+  id: 103,
+  code: 'furniture_gacha',
+  category: 'FURNITURE',
+  name: '가구 뽑기',
   costCurrencyType: 'COIN',
-  costAmount: 250,
+  costAmount: 25,
   drawCount: 1,
-  icon: 'croissant' as const,
+  icon: 'croissant',
   accent: '#F7E6C8',
   kind: 'furniture',
 };
-
-const characterMachine: GachaMachine = {
-  id: 12,
-  name: '캐릭터 뽑기',
-  costCurrencyType: 'COIN',
-  costAmount: 1000,
-  drawCount: 1,
-  icon: 'paw' as const,
-  accent: '#D6E4D2',
-  kind: 'character',
+const wallpaperMachine: GachaMachine = {
+  ...machine,
+  id: 101,
+  code: 'wallpaper_gacha',
+  category: 'WALLPAPER',
+  name: '벽지 뽑기',
 };
+const floorMachine: GachaMachine = {
+  ...machine,
+  id: 102,
+  code: 'floor_gacha',
+  category: 'FLOOR',
+  name: '바닥 뽑기',
+};
+const machines = [wallpaperMachine, floorMachine, machine];
+const reward: DrawResult = { itemId: 7, name: '허브 화분', rarity: '희귀', converted: false };
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
+// RNTL 14 exposes host instances, while Pressable keeps onPress on its React fiber.
+// Resolve the same handler as fireEvent, then batch collision events in one act.
+function pressHandler(element: TestInstance): () => void {
+  let fiber: TestInstance['unstable_fiber'] | null = element.unstable_fiber;
+  while (fiber) {
+    const handler = fiber.memoizedProps?.onPress;
+    if (typeof handler === 'function') return handler;
+    fiber = fiber.return;
+  }
+  throw new Error('Expected a press handler on the selected action');
+}
 
 describe('GachaScreen', () => {
-  it('reduced motion skips the charge delay and burst, keeping the server result', async () => {
-    jest.mocked(useReducedMotion).mockReturnValueOnce(true);
-    const onDraw = jest.fn(async () => [{ name: '달빛 침대', rarity: '전설' }]);
-    const screen = await render(
-      <GachaScreen gachas={[machine]} coinBalance={5600} onDraw={onDraw} />,
-    );
-    // The hook should remain enabled across all renders of this draw.
-    jest.mocked(useReducedMotion).mockReturnValue(true);
-    try {
-      await fireEvent.press(screen.getByText('1회 뽑기'));
-      expect(screen.getByText('달빛 침대')).toBeTruthy();
-      expect(screen.queryByTestId('gacha-charge')).toBeNull();
-      expect(screen.queryByTestId('gacha-burst')).toBeNull();
-      expect(onDraw).toHaveBeenCalledTimes(1);
-    } finally {
-      jest.mocked(useReducedMotion).mockReturnValue(false);
-    }
+  beforeEach(() => {
+    jest.clearAllMocks();
+    videoMock.__resetVideoPlayerMock();
   });
 
-  it('a rejected draw exits the overlay and allows a retry', async () => {
-    const onDraw = jest.fn().mockRejectedValue(new Error('offline'));
-    const screen = await render(
-      <GachaScreen gachas={[machine]} coinBalance={5600} onDraw={onDraw} />,
-    );
-    await fireEvent.press(screen.getByText('1회 뽑기'));
-    expect(screen.getByText('뽑기에 실패했어요.')).toBeTruthy();
-    expect(screen.queryByTestId('gacha-charge')).toBeNull();
-    await fireEvent.press(screen.getByText('1회 뽑기'));
-    expect(onDraw).toHaveBeenCalledTimes(2);
-  });
-
-  it('Android back cannot abandon an in-flight paid draw or trigger another draw', async () => {
-    let resolve!: (value: DrawResult[]) => void;
-    const onDraw = jest.fn(
-      () =>
-        new Promise<DrawResult[]>((done) => {
-          resolve = done;
-        }),
-    );
-    const screen = await render(
-      <GachaScreen gachas={[machine]} coinBalance={5600} onDraw={onDraw} />,
-    );
-    const pullButton = screen.getByText('1회 뽑기');
-    await fireEvent.press(pullButton);
-    await fireEvent(screen.getByTestId('gacha-draw-modal'), 'requestClose');
-    expect(screen.getByTestId('gacha-gift-stage')).toBeTruthy();
-    await fireEvent.press(pullButton);
-    expect(onDraw).toHaveBeenCalledTimes(1);
-    await screen.unmount();
-    await act(() => resolve([{ name: '달빛 침대' }]));
-  });
-
-  it('opens every card without another server draw', async () => {
-    const onDraw = jest.fn(async () =>
-      Array.from({ length: 6 }, (_, i) => ({ name: `선물 ${i + 1}`, rarity: '희귀' })),
-    );
-    const screen = await render(
-      <GachaScreen gachas={[machine]} coinBalance={5600} onDraw={onDraw} />,
-    );
-    await fireEvent.press(screen.getByText('5+1회 뽑기'));
-    await waitFor(() => expect(screen.getByLabelText('한 번에 열기')).toBeTruthy(), {
-      timeout: 8000,
-    });
-    await fireEvent.press(screen.getByLabelText('한 번에 열기'));
-    expect(screen.getByText('선물을 모두 열었어요!')).toBeTruthy();
-    expect(screen.queryByLabelText('한 번에 열기')).toBeNull();
-    expect(onDraw).toHaveBeenCalledTimes(1);
-    expect(onDraw).toHaveBeenCalledWith(1, 6);
-  });
-
-  // 선물상자 아트 (서버 #276) — 서버가 giftBoxAssetKey를 주면 그 이미지를,
-  // 아니면 기존 픽토그램을 그린다. 칩·헤로 두 자리에 같은 머신이 나오므로
-  // 아트가 붙은 머신은 testID가 2개 잡힌다.
-  it('선물상자 아트 키가 있으면 이미지로 그린다', async () => {
-    const withArt: GachaMachine = { ...machine, giftBoxKey: 'items/gift-box.png' };
-    const { getAllByTestId } = await render(<GachaScreen gachas={[withArt]} coinBalance={5600} />);
-    expect(getAllByTestId('gift-box-1').length).toBeGreaterThan(0);
-  });
-
-  /**
-   * 서버 아트가 1254×1254 PNG(장당 ~2MB)라 44px 칩에 뜨기까지 눈에 띄게
-   * 걸린다 (#877). 그동안 칸이 비어 있으면 "늦게 뜬다"로 읽히므로, 아트
-   * 뒤에 픽토그램이 자리를 지킨다 — 도착하면 그 위로 덮인다.
-   */
-  it('아트가 도착하기 전에도 픽토그램이 자리를 지킨다 (#877)', async () => {
-    const withArt: GachaMachine = { ...machine, giftBoxKey: 'items/gift-box.png' };
-    const { getAllByTestId } = await render(<GachaScreen gachas={[withArt]} coinBalance={5600} />);
-    // 아트는 그려지고,
-    expect(getAllByTestId('gift-box-1').length).toBeGreaterThan(0);
-    // 그 뒤에 폴백 픽토그램도 함께 있다(빈 칸이 생기지 않게).
-    expect(getAllByTestId('gift-box-fallback-1').length).toBeGreaterThan(0);
-  });
-
-  /**
-   * 그런데 폴백을 **치우지도** 않아서, 아트가 뜬 뒤에도 뒤에 그대로 남아 있었다
-   * (#1001). 상자 PNG는 캔버스 여백이 투명해 "위로 덮인다"가 성립하지 않는다 —
-   * teddy 머신에서 곰 귀가 상자 위로 삐져나왔다.
-   */
-  it('아트가 실제로 뜨면 폴백 픽토그램을 치운다 (#1001)', async () => {
-    const withArt: GachaMachine = { ...machine, giftBoxKey: 'items/gift-box.png' };
-    const { getAllByTestId, queryAllByTestId } = await render(
-      <GachaScreen gachas={[withArt]} coinBalance={5600} />,
-    );
-    expect(queryAllByTestId('gift-box-fallback-1').length).toBeGreaterThan(0);
-    // 칩과 헤로가 같은 머신을 각자 그리므로 인스턴스마다 표시 시점이 따로 온다.
-    for (const art of getAllByTestId('gift-box-1')) {
-      await fireEvent(art, 'display');
-    }
-    expect(queryAllByTestId('gift-box-fallback-1')).toHaveLength(0);
-  });
-
-  /**
-   * 뽑기 버튼을 누른 순간 오버레이가 픽토그램으로 갈아타면, 방금 고른 **그
-   * 상자**를 여는 것으로 안 읽힌다. 충전 중에도 같은 아트를 보여준다.
-   */
-  it('개봉 무대에도 선택한 머신의 상자를 테마 배지로 보여준다', async () => {
-    const withArt: GachaMachine = { ...machine, giftBoxKey: 'items/gift-box.png' };
-    const onDraw = jest.fn(async (): Promise<DrawResult[]> => [
-      { name: '허브 화분', rarity: '희귀', converted: false },
-    ]);
-    const { getByText, getByTestId } = await render(
-      <GachaScreen gachas={[withArt]} coinBalance={5600} onDraw={onDraw} />,
-    );
-
-    await fireEvent.press(getByText('1회 뽑기'));
-    expect(getByText('뽑는 중...')).toBeTruthy();
-    expect(getByTestId('charging-gift-box-1')).toBeTruthy();
-
-    // 애니메이션 타이머를 흘려보내 리빌까지 마무리 (#431).
-    await waitFor(() => expect(getByText('허브 화분')).toBeTruthy(), { timeout: 8000 });
-  });
-
-  it('아트 키가 없거나 CDN 키가 아니면 이미지를 그리지 않는다 — 픽토그램 폴백', async () => {
-    // 구버전 서버·로컬 카탈로그 키는 CDN에 아트가 없다(isCdnKey=false).
-    const legacy: GachaMachine = { ...machine, giftBoxKey: 'furniture/bed' };
-    const noKey = await render(<GachaScreen gachas={[machine]} coinBalance={5600} />);
-    expect(noKey.queryByTestId('gift-box-1')).toBeNull();
-
-    const legacyKey = await render(<GachaScreen gachas={[legacy]} coinBalance={5600} />);
-    expect(legacyKey.queryByTestId('gift-box-1')).toBeNull();
-  });
-
-  it('renders the title and balance', async () => {
+  it('renders the title and real wallet balance', async () => {
     const { getByText } = await render(<GachaScreen coinBalance={5600} />);
     expect(getByText('뽑기')).toBeTruthy();
     expect(getByText('5,600')).toBeTruthy();
   });
 
-  it('splits the selector into furniture and character rows', async () => {
-    const both = await render(
-      <GachaScreen gachas={[machine, characterMachine]} coinBalance={5600} />,
+  it('shows three category tabs and starts on furniture regardless of API order', async () => {
+    const legacy: GachaMachine = {
+      ...machine,
+      id: 88,
+      code: 'bakery_morning',
+      category: undefined,
+      name: '작은 베이커리 아침 뽑기',
+    };
+    const { getAllByRole, getByLabelText, queryByLabelText } = await render(
+      <GachaScreen gachas={[legacy, ...machines]} coinBalance={5600} />,
     );
-    expect(both.getByText('가구 뽑기')).toBeTruthy();
-    expect(both.getByText('캐릭터 뽑기')).toBeTruthy();
-
-    // Without a character machine the character row disappears entirely.
-    const onlyFurniture = await render(<GachaScreen gachas={[machine]} coinBalance={5600} />);
-    expect(onlyFurniture.queryByText('캐릭터 뽑기')).toBeNull();
+    expect(getAllByRole('tab')).toHaveLength(3);
+    expect(getByLabelText('벽지 뽑기')).not.toBeSelected();
+    expect(getByLabelText('바닥 뽑기')).not.toBeSelected();
+    expect(getByLabelText('가구 뽑기')).toBeSelected();
+    expect(queryByLabelText(legacy.name)).toBeNull();
   });
 
-  it('뽑기 상자 선택 상태를 accessibilityState로 전달한다 (#550)', async () => {
-    const { getByLabelText } = await render(
-      <GachaScreen gachas={[machine, characterMachine]} coinBalance={5600} />,
+  it.each([
+    ['벽지 뽑기', 101],
+    ['바닥 뽑기', 102],
+    ['가구 뽑기', 103],
+  ] as const)('selecting %s draws from its real API machine id %i', async (label, id) => {
+    const onDraw = jest.fn().mockResolvedValue([reward]);
+    const { getByLabelText, getByText } = await render(
+      <GachaScreen gachas={machines} coinBalance={5600} onDraw={onDraw} reducedMotion />,
     );
-    // 첫 머신이 기본 선택 — 다른 머신을 탭하면 선택이 옮겨간다.
-    expect(getByLabelText('작은 베이커리 아침 뽑기').props.accessibilityState?.selected).toBe(true);
-    await fireEvent.press(getByLabelText('캐릭터 뽑기'));
-    expect(getByLabelText('캐릭터 뽑기').props.accessibilityState?.selected).toBe(true);
-    expect(getByLabelText('작은 베이커리 아침 뽑기').props.accessibilityState?.selected).toBe(
-      false,
-    );
-  });
-
-  it('draws from the API and reveals the reward', async () => {
-    const onDraw = jest.fn(async (): Promise<DrawResult[]> => [
-      { name: '허브 화분', rarity: '희귀', converted: false },
-    ]);
-    const { getByText } = await render(
-      <GachaScreen gachas={[machine]} coinBalance={5600} onDraw={onDraw} />,
-    );
-
+    await fireEvent.press(getByLabelText(label));
+    expect(getByLabelText(label)).toBeSelected();
     await fireEvent.press(getByText('1회 뽑기'));
-
-    expect(onDraw).toHaveBeenCalledWith(1, 1);
-    // 차지(1.8s) → 버스트(0.65s)를 지나 리빌 — 실제 타이머라 여유를 둔다 (#431).
-    await waitFor(() => expect(getByText('허브 화분')).toBeTruthy(), { timeout: 8000 });
+    expect(onDraw).toHaveBeenCalledTimes(1);
+    expect(onDraw).toHaveBeenCalledWith(id, 1);
+    expect(getByText(reward.name!)).toBeTruthy();
   });
 
-  it('다연차는 뒷면 카드로 깔리고 탭하면 즉시 뒤집힌다 (#431, 5+1 라벨 #520)', async () => {
-    const onDraw = jest.fn(async (): Promise<DrawResult[]> => [
-      { name: '허브 화분', rarity: '희귀', converted: false },
-      { name: '나무 의자', rarity: '일반', converted: false },
-    ]);
-    const { getByText, getByLabelText } = await render(
+  it('does not draw from a legacy theme machine before the category catalog is ready', async () => {
+    const onDraw = jest.fn();
+    const legacy = { ...machine, category: undefined, code: 'bakery_morning' };
+    const { queryByText, queryAllByRole } = await render(
+      <GachaScreen gachas={[legacy]} coinBalance={5600} onDraw={onDraw} />,
+    );
+    expect(queryByText('1회 뽑기')).toBeNull();
+    expect(queryAllByRole('tab')).toHaveLength(0);
+    expect(onDraw).not.toHaveBeenCalled();
+  });
+
+  it('requests six results from the selected machine for its actual five-pull price', async () => {
+    const onDraw = jest.fn().mockResolvedValue([reward]);
+    const { getByLabelText } = await render(
+      <GachaScreen
+        gachas={[wallpaperMachine, { ...floorMachine, costAmount: 37 }, machine]}
+        coinBalance={5600}
+        onDraw={onDraw}
+        reducedMotion
+      />,
+    );
+    await fireEvent.press(getByLabelText('바닥 뽑기'));
+    expect(getByLabelText('1회 뽑기, 37 코인')).toBeTruthy();
+    await fireEvent.press(getByLabelText('5+1회 뽑기, 185 코인'));
+    expect(onDraw).toHaveBeenCalledWith(102, 6);
+  });
+
+  it('explains an unaffordable pull without making a draw request', async () => {
+    const onDraw = jest.fn();
+    const { getByText } = await render(
+      <ToastProvider>
+        <GachaScreen gachas={[machine]} coinBalance={24} onDraw={onDraw} />
+      </ToastProvider>,
+    );
+    await fireEvent.press(getByText('1회 뽑기'));
+    expect(getByText('잔액이 부족해요')).toBeTruthy();
+    expect(onDraw).not.toHaveBeenCalled();
+  });
+
+  it('guards two taps in one render and locks the draw while the API is pending', async () => {
+    const response = deferred<DrawResult[] | null>();
+    const onDraw = jest.fn(() => response.promise);
+    const { getByLabelText, getByText } = await render(
+      <GachaScreen gachas={[machine]} coinBalance={5600} onDraw={onDraw} reducedMotion />,
+    );
+    const press = pressHandler(getByLabelText('1회 뽑기, 25 코인'));
+    // Native events may arrive before React commits the disabled state.
+    await act(() => {
+      press();
+      press();
+    });
+    expect(onDraw).toHaveBeenCalledTimes(1);
+    await act(() => response.resolve([reward]));
+    expect(getByText(reward.name!)).toBeTruthy();
+    expect(onDraw).toHaveBeenCalledTimes(1);
+  });
+
+  it('recovers from a rejected draw and permits a fresh request', async () => {
+    const onDraw = jest
+      .fn()
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce([reward]);
+    const { getByText, queryByLabelText } = await render(
+      <GachaScreen gachas={[machine]} coinBalance={5600} onDraw={onDraw} reducedMotion />,
+    );
+    await fireEvent.press(getByText('1회 뽑기'));
+    expect(getByText('뽑기에 실패했어요.')).toBeTruthy();
+    expect(queryByLabelText('확인')).toBeNull();
+    await fireEvent.press(getByText('1회 뽑기'));
+    expect(getByText(reward.name!)).toBeTruthy();
+    expect(onDraw).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([null, []])(
+    'treats an unsuccessful %p result as a recoverable failure',
+    async (result) => {
+      const onResultsConfirmed = jest.fn();
+      const { getByText, queryByLabelText } = await render(
+        <GachaScreen
+          gachas={[machine]}
+          coinBalance={5600}
+          onDraw={jest.fn().mockResolvedValue(result)}
+          onResultsConfirmed={onResultsConfirmed}
+          reducedMotion
+        />,
+      );
+      await fireEvent.press(getByText('1회 뽑기'));
+      expect(getByText('뽑기에 실패했어요.')).toBeTruthy();
+      expect(queryByLabelText('확인')).toBeNull();
+      expect(onResultsConfirmed).not.toHaveBeenCalled();
+    },
+  );
+
+  it('skipping a pending draw reveals its eventual response without issuing another draw', async () => {
+    const response = deferred<DrawResult[]>();
+    const onDraw = jest.fn(() => response.promise);
+    const { getByText, getByLabelText, queryByLabelText, queryByTestId } = await render(
       <GachaScreen gachas={[machine]} coinBalance={5600} onDraw={onDraw} />,
     );
-
-    await fireEvent.press(getByText('5+1회 뽑기'));
-    await waitFor(() => expect(getByText('축하해요!')).toBeTruthy(), { timeout: 8000 });
-
-    // 두 장 모두 뒷면 카드로 깔린다 (자동 플립 전).
-    const first = getByLabelText('1번째 카드 뒤집기');
-    expect(getByLabelText('2번째 카드 뒤집기')).toBeTruthy();
-
-    // 탭하면 그 카드는 즉시 뒤집혀 아이템 라벨이 된다.
-    await fireEvent.press(first);
-    await waitFor(() => expect(getByLabelText('허브 화분')).toBeTruthy());
+    await fireEvent.press(getByText('1회 뽑기'));
+    await fireEvent.press(getByLabelText('뽑기 연출 건너뛰기'));
+    await fireEvent.press(getByLabelText('뽑기 연출 건너뛰기'));
+    expect(queryByLabelText('확인')).toBeNull();
+    expect(onDraw).toHaveBeenCalledTimes(1);
+    await act(() => response.resolve([reward]));
+    expect(getByText(reward.name!)).toBeTruthy();
+    expect(queryByTestId('gacha-reveal-video-rare')).toBeNull();
+    expect(onDraw).toHaveBeenCalledTimes(1);
   });
 
-  it("배치 가능한 신규 가구가 있으면 '가구 배치하러 가기'가 뜨고, 탭하면 결과와 함께 넘긴다 (#630)", async () => {
-    const onDraw = jest.fn(async (): Promise<DrawResult[]> => [
-      { itemId: 7, name: '허브 화분', rarity: '희귀', converted: false },
-      { itemId: 9, name: '중복 의자', rarity: '일반', converted: true, refundAmount: 3 },
+  it('moves from cinematic playback to results when the video completes', async () => {
+    const onResultsConfirmed = jest.fn();
+    const { getByText, getByLabelText, findByTestId, queryByLabelText } = await render(
+      <GachaScreen
+        gachas={[machine]}
+        coinBalance={5600}
+        onDraw={jest.fn().mockResolvedValue([reward])}
+        onResultsConfirmed={onResultsConfirmed}
+      />,
+    );
+    await fireEvent.press(getByText('1회 뽑기'));
+    expect(await findByTestId('gacha-reveal-video-rare', {}, { timeout: 3000 })).toBeTruthy();
+    expect(queryByLabelText('확인')).toBeNull();
+    expect(onResultsConfirmed).not.toHaveBeenCalled();
+    await act(() => videoMock.__emitVideoEvent('playToEnd'));
+    expect(getByLabelText('확인')).toBeTruthy();
+    expect(getByText(reward.name!)).toBeTruthy();
+    expect(onResultsConfirmed).not.toHaveBeenCalled();
+  });
+
+  it('reduced motion reveals an arbitrary API artwork without mounting video', async () => {
+    const result: DrawResult = {
+      rewardType: 'ITEM',
+      itemId: 4001,
+      name: '별빛 원목 수납장',
+      assetKey: 'items/themes/starlight/furniture/cabinet-v42.png',
+      rarity: '전설',
+      converted: false,
+    };
+    const { getByText, getByTestId } = await render(
+      <GachaScreen
+        gachas={[machine]}
+        coinBalance={5600}
+        onDraw={jest.fn().mockResolvedValue([result])}
+        reducedMotion
+      />,
+    );
+    await fireEvent.press(getByText('1회 뽑기'));
+    expect(getByText(result.name!)).toBeTruthy();
+    expect(getByTestId('gacha-reward-art-0')).toBeTruthy();
+    expect(videoMock.__getLastVideoPlayer()).toBeNull();
+  });
+
+  it('shows the dynamic refund when a currency result has no original artwork or name', async () => {
+    const onDraw = jest.fn().mockResolvedValue([
+      {
+        rewardType: 'CURRENCY',
+        converted: true,
+        refundCurrencyType: 'DIAMOND',
+        refundAmount: 3,
+        rarity: '일반',
+      },
     ]);
+    const { getByText, queryByTestId } = await render(
+      <GachaScreen gachas={[machine]} coinBalance={5600} onDraw={onDraw} reducedMotion />,
+    );
+    await fireEvent.press(getByText('1회 뽑기'));
+    expect(getByText('다이아 환급')).toBeTruthy();
+    expect(getByText('중복 · 다이아 +3')).toBeTruthy();
+    expect(queryByTestId('gacha-reward-art-0')).toBeNull();
+  });
+
+  it('shows all six API results including a duplicate in reduced motion', async () => {
+    const results: DrawResult[] = Array.from({ length: 6 }, (_, index) => ({
+      itemId: index + 1,
+      name: `새로운 가구 ${index + 1}`,
+      rarity: index === 5 ? '전설' : '일반',
+      converted: index === 3,
+      ...(index === 3 ? { refundCurrencyType: 'DIAMOND' as const, refundAmount: 3 } : {}),
+    }));
+    const { getByText } = await render(
+      <GachaScreen
+        gachas={[machine]}
+        coinBalance={5600}
+        onDraw={jest.fn().mockResolvedValue(results)}
+        reducedMotion
+      />,
+    );
+    await fireEvent.press(getByText('5+1회 뽑기'));
+    for (const result of results) expect(getByText(result.name!)).toBeTruthy();
+    expect(getByText('중복 · 다이아 +3')).toBeTruthy();
+  });
+
+  it('lets the user flip a multi-pull card immediately after skipping the cinematic', async () => {
+    const results: DrawResult[] = [reward, { name: '나무 의자', rarity: '일반', converted: false }];
+    const { getByText, getByLabelText } = await render(
+      <GachaScreen
+        gachas={[machine]}
+        coinBalance={5600}
+        onDraw={jest.fn().mockResolvedValue(results)}
+      />,
+    );
+    await fireEvent.press(getByText('5+1회 뽑기'));
+    await fireEvent.press(getByLabelText('뽑기 연출 건너뛰기'));
+    expect(getByLabelText('2번째 카드 뒤집기')).toBeTruthy();
+    await fireEvent.press(getByLabelText('1번째 카드 뒤집기'));
+    expect(getByText(reward.name!)).toBeTruthy();
+  });
+
+  it('confirms a result once even when its close action is pressed twice', async () => {
+    const onResultsConfirmed = jest.fn();
+    const { getByText, getByLabelText, queryByLabelText } = await render(
+      <GachaScreen
+        gachas={[machine]}
+        coinBalance={5600}
+        onDraw={jest.fn().mockResolvedValue([reward])}
+        onResultsConfirmed={onResultsConfirmed}
+        reducedMotion
+      />,
+    );
+    await fireEvent.press(getByText('1회 뽑기'));
+    expect(onResultsConfirmed).not.toHaveBeenCalled();
+    const confirm = pressHandler(getByLabelText('확인'));
+    await act(() => {
+      confirm();
+      confirm();
+    });
+    expect(onResultsConfirmed).toHaveBeenCalledTimes(1);
+    expect(queryByLabelText('확인')).toBeNull();
+  });
+
+  it('opens all six cards without drawing again and resets the count on the next pull', async () => {
+    jest.useFakeTimers();
+    try {
+      const results = Array.from({ length: 6 }, (_, index) => ({
+        itemId: index + 1,
+        name: `묶음 선물 ${index + 1}`,
+        rarity: '일반',
+        converted: false,
+      }));
+      const onDraw = jest.fn().mockResolvedValue(results);
+      const screen = await render(
+        <GachaScreen gachas={[machine]} coinBalance={5600} onDraw={onDraw} />,
+      );
+      await fireEvent.press(screen.getByText('5+1회 뽑기'));
+      await fireEvent.press(screen.getByLabelText('뽑기 연출 건너뛰기'));
+      expect(screen.getByText('카드를 눌러 열어보세요 · 0 / 6')).toBeTruthy();
+      await fireEvent.press(screen.getByLabelText('1번째 카드 뒤집기'));
+      expect(screen.getByText('카드를 눌러 열어보세요 · 1 / 6')).toBeTruthy();
+      const openAll = pressHandler(screen.getByLabelText('한 번에 열기'));
+      await act(() => {
+        openAll();
+        openAll();
+      });
+      expect(screen.getByText('선물을 모두 열었어요!')).toBeTruthy();
+      expect(screen.queryByLabelText('한 번에 열기')).toBeNull();
+      for (const result of results) expect(screen.getByText(result.name)).toBeTruthy();
+      await act(() => jest.advanceTimersByTime(5000));
+      expect(screen.getByText('선물을 모두 열었어요!')).toBeTruthy();
+      expect(onDraw).toHaveBeenCalledTimes(1);
+      await fireEvent.press(screen.getByLabelText('확인'));
+      await fireEvent.press(screen.getByText('5+1회 뽑기'));
+      await fireEvent.press(screen.getByLabelText('뽑기 연출 건너뛰기'));
+      expect(screen.getByText('카드를 눌러 열어보세요 · 0 / 6')).toBeTruthy();
+      expect(onDraw).toHaveBeenCalledTimes(2);
+      await screen.unmount();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('passes only new placeable rewards to decor and confirms the results once', async () => {
+    const onDraw = jest
+      .fn()
+      .mockResolvedValue([
+        reward,
+        { itemId: 9, name: '중복 의자', rarity: '일반', converted: true, refundAmount: 3 },
+      ]);
     const onGoPlace = jest.fn();
     const onResultsConfirmed = jest.fn();
-    const { getByText, getByLabelText, queryByText } = await render(
+    const { getByText, getByLabelText, queryByLabelText } = await render(
       <GachaScreen
         gachas={[machine]}
         coinBalance={5600}
@@ -253,171 +398,131 @@ describe('GachaScreen', () => {
         placeableItemIds={['7', '9']}
         onGoPlace={onGoPlace}
         onResultsConfirmed={onResultsConfirmed}
+        reducedMotion
       />,
     );
-
-    await fireEvent.press(getByText('1회 뽑기'));
-    await waitFor(() => expect(getByLabelText('가구 배치하러 가기')).toBeTruthy(), {
-      timeout: 8000,
-    });
-
-    await fireEvent.press(getByLabelText('가구 배치하러 가기'));
-    // 배치 대상은 신규 획득만 — 중복(전환)은 걸러진다.
-    expect(onGoPlace).toHaveBeenCalledWith([
-      expect.objectContaining({ itemId: 7, name: '허브 화분' }),
-    ]);
-    // 배치하러 가기도 결과 확인으로 친다 (#571 미션 타이밍).
+    await fireEvent.press(getByText('5+1회 뽑기'));
+    await fireEvent.press(getByLabelText('방 꾸미러 가기'));
+    expect(onGoPlace).toHaveBeenCalledWith([expect.objectContaining({ itemId: 7 })]);
     expect(onResultsConfirmed).toHaveBeenCalledTimes(1);
-    // 리빌은 닫힌다.
-    expect(queryByText('축하해요!')).toBeNull();
+    expect(queryByLabelText('확인')).toBeNull();
   });
 
-  it('배치 가능한 가구가 없으면(캐릭터·전부 중복) 배치하러 가기가 없다 (#630)', async () => {
-    const onDraw = jest.fn(async (): Promise<DrawResult[]> => [
-      { itemId: 7, name: '중복 화분', rarity: '희귀', converted: true, refundAmount: 3 },
-      { characterId: 2, name: '판다', rarity: '전설', converted: false },
-    ]);
+  it('does not offer decor when every reward is already owned', async () => {
     const { getByText, queryByLabelText } = await render(
       <GachaScreen
         gachas={[machine]}
         coinBalance={5600}
-        onDraw={onDraw}
+        onDraw={jest.fn().mockResolvedValue([{ ...reward, converted: true, refundAmount: 3 }])}
         placeableItemIds={['7']}
         onGoPlace={jest.fn()}
+        reducedMotion
       />,
     );
-
-    await fireEvent.press(getByText('5+1회 뽑기'));
-    await waitFor(() => expect(getByText('축하해요!')).toBeTruthy(), { timeout: 8000 });
-    expect(queryByLabelText('가구 배치하러 가기')).toBeNull();
-  });
-
-  it('draws six for the price of five with the 5+1 button', async () => {
-    const onDraw = jest.fn(async (): Promise<DrawResult[]> => []);
-    const { getByText } = await render(
-      <GachaScreen gachas={[machine]} coinBalance={5600} onDraw={onDraw} />,
-    );
-
-    // 5+1 costs costAmount × 5 (1,250) and requests six results.
-    expect(getByText('1,250')).toBeTruthy();
-    await fireEvent.press(getByText('5+1회 뽑기'));
-    expect(onDraw).toHaveBeenCalledWith(1, 6);
-  });
-
-  it('explains an unaffordable pull with a toast instead of drawing', async () => {
-    const onDraw = jest.fn();
-    const { getByText } = await render(
-      <ToastProvider>
-        <GachaScreen gachas={[machine]} coinBalance={100} onDraw={onDraw} />
-      </ToastProvider>,
-    );
-
-    // The blocked button stays tappable — the tap says why nothing happens.
     await fireEvent.press(getByText('1회 뽑기'));
-    expect(getByText('잔액이 부족해요')).toBeTruthy();
-    expect(onDraw).not.toHaveBeenCalled();
+    expect(queryByLabelText('방 꾸미러 가기')).toBeNull();
   });
 
-  // 로드 실패는 빈 상태('뽑기 없음')로 위장하지 않는다 (#549).
-  it('로드 실패 시 빈 상태 대신 실패 + 다시 시도를 보여준다 (#549)', async () => {
+  it('shows catalog failure and a retry action', async () => {
     const onRetry = jest.fn();
-    const { getByText, getByLabelText, queryByText } = await render(
+    const { getByText, getByLabelText } = await render(
       <GachaScreen gachas={[]} loadError onRetry={onRetry} />,
     );
-
     expect(getByText('뽑기 목록을 불러오지 못했어요.')).toBeTruthy();
-    expect(queryByText('지금은 뽑을 수 있는 뽑기가 없어요.')).toBeNull();
     await fireEvent.press(getByLabelText('다시 시도'));
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
-  // 온보딩 미션 완료 타이밍 (#571 후속) — 뽑기 연출이 끝나고 확인을 누른
-  // 순간에만 셸에 알린다. 뽑기 직후 완료시키면 미션 시트가 연출을 덮는다.
-  it('결과 확인을 누른 순간에만 onResultsConfirmed가 불린다', async () => {
-    const onDraw = jest.fn(async (): Promise<DrawResult[]> => [
-      { name: '허브 화분', rarity: '희귀', converted: false },
-    ]);
-    const onResultsConfirmed = jest.fn();
-    const { getByText, getByLabelText } = await render(
-      <GachaScreen
-        gachas={[machine]}
-        coinBalance={5600}
-        onDraw={onDraw}
-        onResultsConfirmed={onResultsConfirmed}
-      />,
-    );
-
-    await fireEvent.press(getByText('1회 뽑기'));
-    // 연출이 도는 동안(리빌 전)에는 아직 아니다.
-    expect(onResultsConfirmed).not.toHaveBeenCalled();
-    await waitFor(() => expect(getByText('허브 화분')).toBeTruthy(), { timeout: 8000 });
-    expect(onResultsConfirmed).not.toHaveBeenCalled();
-
-    await fireEvent.press(getByLabelText('확인'));
-    expect(onResultsConfirmed).toHaveBeenCalledTimes(1);
-  });
-
-  // 나올 수 있는 보상 시트 (#620) — 등급 그룹 + 보유 배지, 실패 시 재시도.
-  it('보상 목록 시트를 열면 등급 그룹과 보유 배지를 보여준다 (#620)', async () => {
+  it('loads rewards for the selected category and shows rarity groups and ownership', async () => {
     const onLoadRewards = jest.fn().mockResolvedValue([
       { rewardType: 'ITEM', itemId: 7, name: '구름 소파', rarity: '일반', owned: true },
       { rewardType: 'ITEM', itemId: 8, name: '한옥 자개 침대', rarity: '전설', owned: false },
-      { rewardType: 'CHARACTER', characterId: 3, name: '호랑이', rarity: '희귀', owned: false },
+      { rewardType: 'ITEM', itemId: 9, name: '달빛 책장', rarity: '희귀', owned: false },
     ]);
     const { getByLabelText, getByText, findByText } = await render(
-      <GachaScreen gachas={[machine]} coinBalance={5600} onLoadRewards={onLoadRewards} />,
+      <GachaScreen gachas={machines} coinBalance={5600} onLoadRewards={onLoadRewards} />,
     );
     await fireEvent.press(getByLabelText('나올 수 있는 보상 보기'));
-    expect(onLoadRewards).toHaveBeenCalledWith(1);
-    // 희소한 등급부터: 전설 → 희귀 → 일반, 보유 아이템엔 '보유' 배지.
+    expect(onLoadRewards).toHaveBeenCalledWith(103);
     expect(await findByText('한옥 자개 침대')).toBeTruthy();
     expect(getByText('전설')).toBeTruthy();
-    expect(getByText('호랑이')).toBeTruthy();
-    expect(getByText('캐릭터')).toBeTruthy();
+    expect(getByText('달빛 책장')).toBeTruthy();
     expect(getByText('보유')).toBeTruthy();
   });
 
-  it('보상 행에 아이템 썸네일을 보여준다 — CDN 아트면 이미지, 없으면 기프트 폴백 (#721)', async () => {
+  it('keeps the newer category rewards when an older response arrives last', async () => {
+    const oldResponse = deferred<GachaRewardResponse[]>();
+    const newResponse = deferred<GachaRewardResponse[]>();
+    const onLoadRewards = jest
+      .fn()
+      .mockImplementationOnce(() => oldResponse.promise)
+      .mockImplementationOnce(() => newResponse.promise);
+    const { getByLabelText, getByText, queryByText } = await render(
+      <GachaScreen gachas={machines} coinBalance={5600} onLoadRewards={onLoadRewards} />,
+    );
+    await act(() => {
+      void pressHandler(getByLabelText('나올 수 있는 보상 보기'))();
+    });
+    expect(onLoadRewards).toHaveBeenCalledWith(103);
+    await fireEvent.press(getByLabelText('시트 닫기'));
+    await fireEvent.press(getByLabelText('벽지 뽑기'));
+    await act(() => {
+      void pressHandler(getByLabelText('나올 수 있는 보상 보기'))();
+    });
+    expect(onLoadRewards.mock.calls).toEqual([[103], [101]]);
+    await act(() =>
+      newResponse.resolve([{ rewardType: 'ITEM', itemId: 70, name: '새 벽지', rarity: '일반' }]),
+    );
+    expect(getByText('새 벽지')).toBeTruthy();
+    await act(() =>
+      oldResponse.resolve([{ rewardType: 'ITEM', itemId: 7, name: '늦은 소파', rarity: '일반' }]),
+    );
+    expect(getByText('새 벽지')).toBeTruthy();
+    expect(queryByText('늦은 소파')).toBeNull();
+  });
+
+  it('renders reward thumbnail rows for CDN art and fallback items', async () => {
     const onLoadRewards = jest.fn().mockResolvedValue([
-      // CDN 키(items/...) → 이미지, 키 없음 → 기프트 아이콘 폴백.
-      { rewardType: 'ITEM', itemId: 7, name: '구름 소파', rarity: '일반', assetKey: 'items/sofa.png' }, // prettier-ignore
+      {
+        rewardType: 'ITEM',
+        itemId: 7,
+        name: '구름 소파',
+        rarity: '일반',
+        assetKey: 'items/sofa.png',
+      },
       { rewardType: 'ITEM', itemId: 8, name: '이름만 보상', rarity: '일반' },
     ]);
     const { getByLabelText, findByTestId } = await render(
       <GachaScreen gachas={[machine]} coinBalance={5600} onLoadRewards={onLoadRewards} />,
     );
     await fireEvent.press(getByLabelText('나올 수 있는 보상 보기'));
-    // 두 행 모두 썸네일 컨테이너를 렌더(내용은 이미지/아이콘으로 갈림).
     expect(await findByTestId('reward-row-7')).toBeTruthy();
     expect(await findByTestId('reward-row-8')).toBeTruthy();
   });
 
-  it('보상이 많아도 처음엔 일부만 마운트한다 — 가상화 (#773)', async () => {
-    // 머신 하나의 보상 풀은 수십~수백. 예전엔 ScrollView + map이라 시트를 여는
-    // 프레임에 전부 마운트되고 원격 썸네일도 한꺼번에 요청됐다.
-    const many = Array.from({ length: 60 }, (_, i) => ({
+  it('virtualizes a large reward pool instead of mounting every thumbnail', async () => {
+    const many = Array.from({ length: 60 }, (_, index) => ({
       rewardType: 'ITEM' as const,
-      itemId: i + 1,
-      name: `보상 ${i + 1}`,
+      itemId: index + 1,
+      name: `보상 ${index + 1}`,
       rarity: '일반',
-      assetKey: `items/r${i + 1}.png`,
+      assetKey: `items/r${index + 1}.png`,
     }));
     const { getByLabelText, findByTestId, queryByTestId } = await render(
       <GachaScreen gachas={[machine]} coinBalance={5600} onLoadRewards={async () => many} />,
     );
     await fireEvent.press(getByLabelText('나올 수 있는 보상 보기'));
-
-    // 앞쪽은 바로 보이고,
     expect(await findByTestId('reward-row-1')).toBeTruthy();
-    // 60번째는 아직 창 밖이라 마운트되지 않는다.
     expect(queryByTestId('reward-row-60')).toBeNull();
   });
 
-  it('보상 목록 로드 실패면 시트 안에서 다시 시도를 보여준다 (#620)', async () => {
-    const onLoadRewards = jest
-      .fn()
-      .mockResolvedValueOnce(null)
-      .mockResolvedValue([{ rewardType: 'ITEM', itemId: 7, name: '구름 소파', rarity: '일반' }]);
+  it.each(['null', 'rejected'])('allows reward-list retry after a %s response', async (failure) => {
+    const onLoadRewards = jest.fn();
+    if (failure === 'null') onLoadRewards.mockResolvedValueOnce(null);
+    else onLoadRewards.mockRejectedValueOnce(new Error('offline'));
+    onLoadRewards.mockResolvedValueOnce([
+      { rewardType: 'ITEM', itemId: 7, name: '구름 소파', rarity: '일반' },
+    ]);
     const { getByLabelText, getByText, findByText } = await render(
       <GachaScreen gachas={[machine]} coinBalance={5600} onLoadRewards={onLoadRewards} />,
     );
@@ -425,5 +530,6 @@ describe('GachaScreen', () => {
     expect(await findByText('보상 목록을 불러오지 못했어요.')).toBeTruthy();
     await fireEvent.press(getByText('다시 시도'));
     expect(await findByText('구름 소파')).toBeTruthy();
+    expect(onLoadRewards.mock.calls).toEqual([[103], [103]]);
   });
 });

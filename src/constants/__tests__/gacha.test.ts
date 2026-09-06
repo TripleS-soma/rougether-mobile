@@ -1,5 +1,5 @@
 import type { GachaMachine } from '@/api/adapters';
-import { isDrawableGacha } from '@/constants/gacha';
+import { getCategoryGachas, getGachaCategory, isDrawableGacha } from '@/constants/gacha';
 
 const machine = (code?: string): GachaMachine =>
   ({ id: 1, name: '뽑기', code, kind: 'furniture' }) as GachaMachine;
@@ -34,5 +34,43 @@ describe('쓸 수 없는 뽑기 차단 (#983)', () => {
 
   it('코드가 없으면 막지 않는다 — 모르는 것을 숨기지는 않는다', () => {
     expect(isDrawableGacha(machine(undefined))).toBe(true);
+  });
+});
+
+describe('theme-independent category boxes', () => {
+  it('uses the additive category first and exact canonical codes as legacy fallback', () => {
+    expect(getGachaCategory({ category: 'WALLPAPER', code: 'future_wallpaper_code' })).toBe(
+      'WALLPAPER',
+    );
+    expect(getGachaCategory({ code: 'floor_gacha' })).toBe('FLOOR');
+    expect(getGachaCategory({ category: null, code: 'furniture_gacha' })).toBe('FURNITURE');
+    expect(getGachaCategory({ code: 'floor_gacha_special' })).toBeUndefined();
+    expect(getGachaCategory({ category: 'UNKNOWN', code: 'floor_gacha' })).toBeUndefined();
+  });
+
+  it('orders exactly the existing three server machines without replacing IDs or prices', () => {
+    const wallpaper = { ...machine('wallpaper_gacha'), id: 81, costAmount: 120 };
+    const floor = { ...machine('floor_gacha'), id: 83, costAmount: 90 };
+    const furniture = { ...machine('furniture_gacha'), id: 86, costAmount: 100 };
+    const result = getCategoryGachas([furniture, floor, machine('forest_sage'), wallpaper]);
+    expect(result).toEqual([wallpaper, floor, furniture]);
+    expect(result[0]).toBe(wallpaper);
+    expect(result[1]).toBe(floor);
+    expect(result[2]).toBe(furniture);
+  });
+
+  it('does not invent category boxes from legacy themed machines', () => {
+    expect(getCategoryGachas([machine('forest_sage'), machine('calm_hanok')])).toEqual([]);
+  });
+
+  it('never exposes a malformed ID or a second machine for the same category', () => {
+    const floor = { ...machine('floor_gacha'), id: 4 };
+    expect(
+      getCategoryGachas([
+        { ...machine('wallpaper_gacha'), id: 0 },
+        floor,
+        { ...machine('floor_gacha'), id: 5 },
+      ]),
+    ).toEqual([floor]);
   });
 });

@@ -20,9 +20,9 @@ export function purchaseItem(itemId: number) {
   return apiPost<PurchaseResponse>(`/items/${itemId}/purchase`);
 }
 
-/** GET /gacha — available gacha machines. */
+/** GET /gacha?catalog=category — decoration categories; the default remains legacy. */
 export function fetchGachas() {
-  return apiGetList<GachaResponse>('/gacha');
+  return apiGetList<GachaResponse>('/gacha?catalog=category');
 }
 
 /** POST /gacha/{id}/draw — draw `count` times. */

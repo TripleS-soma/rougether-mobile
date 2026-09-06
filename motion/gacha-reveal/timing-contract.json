@@ -1,0 +1,56 @@
+{
+  "canvas": {
+    "width": 1080,
+    "height": 2340
+  },
+  "output": {
+    "width": 720,
+    "height": 1560,
+    "fps": 30,
+    "codec": "h264",
+    "audioCodec": "aac"
+  },
+  "furniture": {
+    "center": {
+      "x": 540,
+      "y": 780
+    },
+    "peakMaxWidth": 470,
+    "peakMaxHeight": 460,
+    "restWidth": 439,
+    "restHeight": 430,
+    "transparent": true
+  },
+  "tiers": {
+    "common": {
+      "duration": 2.4,
+      "revealAt": 1.1,
+      "strength": 0.48,
+      "zoom": 1.035,
+      "dip": 0.18,
+      "particles": 8,
+      "music": 0.46,
+      "whoosh": 0.32
+    },
+    "rare": {
+      "duration": 2.7,
+      "revealAt": 1.3,
+      "strength": 0.74,
+      "zoom": 1.068,
+      "dip": 0.27,
+      "particles": 14,
+      "music": 0.56,
+      "whoosh": 0.43
+    },
+    "legendary": {
+      "duration": 2.9,
+      "revealAt": 1.55,
+      "strength": 1,
+      "zoom": 1.11,
+      "dip": 0.36,
+      "particles": 22,
+      "music": 0.64,
+      "whoosh": 0.52
+    }
+  }
+}
