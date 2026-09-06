@@ -1,10 +1,12 @@
 import { type FC, useEffect, useRef, useState } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { type SvgProps } from 'react-native-svg';
 import { GestureDetector } from 'react-native-gesture-handler';
 import Reanimated from 'react-native-reanimated';
 
+import CalendarActive from '@/assets/images/common/calendar-icon-active.svg';
+import CalendarInactive from '@/assets/images/common/calendar-icon.svg';
 import HomeActive from '@/assets/images/common/home-icon-active.svg';
 import HomeInactive from '@/assets/images/common/home-icon.svg';
 import HouseActive from '@/assets/images/common/house-icon-active.svg';
@@ -27,10 +29,12 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
 
-export type NavTab = 'myRoom' | 'house' | 'myPage';
+export type NavTab = 'myRoom' | 'calendar' | 'house' | 'myPage';
 
 const TABS: { key: NavTab; label: string; active: FC<SvgProps>; inactive: FC<SvgProps> }[] = [
   { key: 'myRoom', label: '나의 방', active: HomeActive, inactive: HomeInactive },
+  // 달력 (#1138) — 나의 방 안의 방/달력 알약에서 하단 탭으로.
+  { key: 'calendar', label: '달력', active: CalendarActive, inactive: CalendarInactive },
   { key: 'house', label: '집', active: HouseActive, inactive: HouseInactive },
   // 마이페이지 (#1088) — 설정 탭을 대체. 설정은 마이페이지 헤더의 톱니로 들어간다.
   { key: 'myPage', label: '마이페이지', active: ProfileActive, inactive: ProfileInactive },
@@ -83,7 +87,7 @@ function TabIcon({
 }
 
 /**
- * App bottom navigation (나의 방 / 집 / 마이페이지) with custom SVG icons.
+ * App bottom navigation (나의 방 / 달력 / 집 / 마이페이지) with custom SVG icons.
  *
  * 화면 바닥에 떠 있는 알약 오버레이 (#1049 → #1074에서 전 플랫폼 공통). 레이아웃
  * 높이가 없으므로 밑을 지나는 스크롤 화면이 `useBottomNavInset()`만큼 하단
@@ -93,11 +97,20 @@ export function BottomNav({ active, onChange, badges }: BottomNavProps) {
   const t = useTokens();
   const Typography = useTypography();
   const insets = useSafeAreaInsets();
-  // 세 탭을 같은 폭으로 (#1098) — 라벨 길이가 달라("집" vs "마이페이지") 탭 폭이
+  const { width: windowW } = useWindowDimensions();
+  // 탭을 같은 폭으로 (#1098) — 라벨 길이가 달라("집" vs "마이페이지") 탭 폭이
   // 제각각이면 가운데 탭이 알약 중앙에서 벗어난다. 라벨의 자연 폭을 재서 가장
   // 넓은 것에 맞춘다. 고정 상수가 아닌 이유: 선택 폰트(#382)·글꼴 배율마다 다르다.
   const [labelWidths, setLabelWidths] = useState<number[]>([]);
-  const tabMinWidth = labelWidths.length === TABS.length ? Math.max(...labelWidths) : undefined;
+  // 4탭(#1138)부터는 좁은 기기에서 라벨 폭 합이 화면을 넘을 수 있다 — 알약이 화면
+  // 안에 들도록 탭 폭 상한을 두고, 라벨은 그 안에서 줄인다(adjustsFontSizeToFit).
+  const tabCap =
+    (windowW - Spacing.four * 2 - NAV_PILL_PAD_H * 2 - NAV_PILL_GAP * (TABS.length - 1)) /
+    TABS.length;
+  const tabMinWidth =
+    labelWidths.length === TABS.length
+      ? Math.min(Math.max(...labelWidths) + NAV_TAB_PAD_H * 2, tabCap)
+      : undefined;
   const recordLabel = (index: number, width: number) =>
     setLabelWidths((prev) => {
       if (prev[index] === width) return prev;
@@ -108,7 +121,7 @@ export function BottomNav({ active, onChange, badges }: BottomNavProps) {
   const { pan, indicatorStyle, recordTab, recordHeight } = useBottomNavScrub((index) => {
     const tab = TABS[index]?.key;
     if (tab && tab !== active) onChange(tab);
-  });
+  }, TABS.length);
   const tabs = TABS.map(({ key, label, active: ActiveIcon, inactive: InactiveIcon }, index) => {
     const isActive = key === active;
     // RN Pressable (#1093): RNGH Pressable + `requireExternalGestureToFail(pan)` 조합은
@@ -121,7 +134,7 @@ export function BottomNav({ active, onChange, badges }: BottomNavProps) {
         accessibilityState={{ selected: isActive }}
         accessibilityLabel={label}
         accessibilityHint={badges?.[key] ? '오늘 미출석' : undefined}
-        style={[styles.tab, tabMinWidth ? { minWidth: tabMinWidth + NAV_TAB_PAD_H * 2 } : null]}>
+        style={[styles.tab, tabMinWidth ? { minWidth: tabMinWidth, maxWidth: tabCap } : null]}>
         <TabIcon
           isActive={isActive}
           Icon={isActive ? ActiveIcon : InactiveIcon}
@@ -132,6 +145,8 @@ export function BottomNav({ active, onChange, badges }: BottomNavProps) {
         <Text
           style={[Typography.supporting, { color: isActive ? t.primaryText : t.textMuted }]}
           numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.8}
           onLayout={(e) => recordLabel(index, e.nativeEvent.layout.width)}>
           {label}
         </Text>

@@ -34,6 +34,30 @@ const pickCalendarDate = async (
 };
 
 describe('MyRoomScreen', () => {
+  // 달력이 하단 탭으로 (#1138) — 셸이 view를 고정하면 방/달력 알약은 없고, 달력 뷰의
+  // '이 날의 할 일' 옆 ＋ 루틴이 고른 날짜를 넘긴다.
+  it("view='calendar'면 알약 없이 달력을 그리고, ＋ 루틴이 고른 날짜로 부른다 (#1138)", async () => {
+    const onAddRoutineForDate = jest.fn();
+    const ui = await render(
+      <MyRoomScreen
+        routines={[]}
+        view="calendar"
+        onSelectDate={jest.fn()}
+        onAddRoutineForDate={onAddRoutineForDate}
+      />,
+    );
+    expect(ui.queryByLabelText('방')).toBeNull();
+    expect(ui.getByText('이 날의 할 일')).toBeTruthy();
+    await fireEvent.press(ui.getByLabelText('이 날에 루틴 추가'));
+    expect(onAddRoutineForDate).toHaveBeenCalledWith(TODAY);
+  });
+
+  it("view='room'이면 달력 알약 없이 방만 — 오늘의 할 일 (#1138)", async () => {
+    const ui = await render(<MyRoomScreen routines={[]} view="room" />);
+    expect(ui.queryByText('달력')).toBeNull();
+    expect(ui.getByText('오늘의 할 일')).toBeTruthy();
+  });
+
   it('renders the room title and today progress — 스트릭·잔액은 상시 표시하지 않는다 (#1055)', async () => {
     // Completion is per date: mark 3 of the 5 routines done today.
     const completions = { '1': [TODAY], '2': [TODAY], '3': [TODAY] };

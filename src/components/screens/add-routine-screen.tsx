@@ -64,6 +64,8 @@ export type AddRoutineScreenProps = {
   editRoutine?: Routine | null;
   onUpdate?: (id: string, routine: NewRoutine) => void;
   onDelete?: (id: string) => void;
+  /** 새 루틴의 시작일 프리필 (#1138 달력 ＋ 루틴) — 오늘이 아니면 지속 기간 토글이 켜진 채 열린다. */
+  initialStartDate?: string;
   categories?: RoutineCategoryMeta[];
   /** 카테고리 빠른 생성 (#394) — 폼을 벗어나지 않는 CategoryFormSheet 경유. */
   onCreateCategory?: (category: RoutineCategoryMeta) => void;
@@ -85,6 +87,7 @@ export function AddRoutineScreen({
   editRoutine,
   onUpdate,
   onDelete,
+  initialStartDate,
   categories = ROUTINE_CATEGORIES,
   onCreateCategory,
 }: AddRoutineScreenProps) {
@@ -121,10 +124,12 @@ export function AddRoutineScreen({
   // 알림·지속 기간은 기본 꺼짐 (#1126) — 필요한 사람만 항목 토글로 켠다.
   const [alarmEnabled, setAlarmEnabled] = useState(editRoutine?.alarmEnabled ?? false);
   const [time, setTime] = useState(editRoutine?.time ?? '07:00');
-  const [startDate, setStartDate] = useState(editRoutine?.startDate ?? today());
+  const [startDate, setStartDate] = useState(editRoutine?.startDate ?? initialStartDate ?? today());
   const [endDate, setEndDate] = useState<string | undefined>(editRoutine?.endDate);
   // 지속 기간 토글 — 수정 화면은 종료일이 있을 때 켜진 채로 시작한다.
-  const [durationOn, setDurationOn] = useState(!!editRoutine?.endDate);
+  const [durationOn, setDurationOn] = useState(
+    !!editRoutine?.endDate || (!!initialStartDate && initialStartDate !== today()),
+  );
   const [showDateSheet, setShowDateSheet] = useState(false);
   const [showTimeSheet, setShowTimeSheet] = useState(false);
   // 추천 루틴 accordion — closed by default (add mode only).
@@ -146,7 +151,7 @@ export function AddRoutineScreen({
     yearMonth: editRoutine?.month ?? 1,
     alarmEnabled: editRoutine?.alarmEnabled ?? false,
     time: editRoutine?.time ?? '07:00',
-    startDate: editRoutine?.startDate ?? today(),
+    startDate: editRoutine?.startDate ?? initialStartDate ?? today(),
     endDate: editRoutine?.endDate,
   }).current;
   const initialCategory = editRoutine?.category ?? categories[0]?.id ?? '';
