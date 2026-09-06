@@ -71,11 +71,17 @@ export function useBottomNavScrub(onSelect: (index: number) => void) {
     );
     return { opacity: 1, width, transform: [{ translateX: center - width / 2 }] };
   });
+  // 측정값의 원본은 JS ref (#1102). 종전엔 `frames.value`를 JS에서 읽어 한 칸만 바꿔
+  // 다시 썼는데, Android에서는 세 탭의 onLayout이 한 틱에 몰려 오면서 읽기가 직전
+  // 쓰기를 못 보고 앞 탭들을 빈 칸으로 덮었다 — 끌기 시작 때 "측정 미완료"로
+  // 판정돼 선택이 영영 나가지 않았다(iOS는 레이아웃이 틱마다 나뉘어 우연히 동작).
+  const framesRef = useRef<TabFrame[]>([]);
   const recordTab = (index: number, frame: LayoutRectangle) => {
-    const next = [...frames.value];
+    const next = [...framesRef.current];
     // Keep placeholders dense so incomplete layout never passes the readiness check.
     while (next.length < 3) next.push({ x: 0, width: 0 });
     next[index] = { x: frame.x, width: frame.width };
+    framesRef.current = next;
     frames.value = next;
   };
   const recordHeight = (value: number) => {
