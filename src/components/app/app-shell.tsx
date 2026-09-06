@@ -526,7 +526,10 @@ export function AppShell({
           index={NAV_ORDER.indexOf(activeTab)}
           onIndexChange={handlePageChange}
           lock={pagerLock}>
-          <MyRoomScreen {...myRoomPages.tabProps} {...tabScroll.myRoom} />
+          {/* 달력은 나의 방과 같은 데이터·콜백을 쓰는 두 번째 인스턴스 (#1138) — 방
+              캔버스는 view='room'일 때만 그려지므로 비용은 목록 하나 분이다. */}
+          <MyRoomScreen {...myRoomPages.tabProps} view="room" {...tabScroll.myRoom} />
+          <MyRoomScreen {...myRoomPages.tabProps} view="calendar" {...tabScroll.calendar} />
           <HouseScreen {...housePages.tabProps} {...tabScroll.house} />
           <MyPageScreen {...settingsSurface.myPageProps} {...tabScroll.myPage} />
         </TabPager>

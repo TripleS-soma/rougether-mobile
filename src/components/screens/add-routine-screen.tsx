@@ -63,6 +63,8 @@ export type AddRoutineScreenProps = {
   editRoutine?: Routine | null;
   onUpdate?: (id: string, routine: NewRoutine) => void;
   onDelete?: (id: string) => void;
+  /** 새 루틴의 시작일 프리필 (#1138 달력 ＋ 루틴) — 오늘이 아니면 지속 기간 토글이 켜진 채 열린다. */
+  initialStartDate?: string;
   categories?: RoutineCategoryMeta[];
   /** 카테고리 빠른 생성 (#394) — 폼을 벗어나지 않는 CategoryFormSheet 경유. */
   onCreateCategory?: (category: RoutineCategoryMeta) => void;
@@ -84,6 +86,7 @@ export function AddRoutineScreen({
   editRoutine,
   onUpdate,
   onDelete,
+  initialStartDate,
   categories = ROUTINE_CATEGORIES,
   onCreateCategory,
 }: AddRoutineScreenProps) {
@@ -120,7 +123,7 @@ export function AddRoutineScreen({
   const [yearMonth, setYearMonth] = useState(editRoutine?.month ?? 1);
   const [alarmEnabled, setAlarmEnabled] = useState(editRoutine?.alarmEnabled ?? true);
   const [time, setTime] = useState(editRoutine?.time ?? '07:00');
-  const [startDate, setStartDate] = useState(editRoutine?.startDate ?? today());
+  const [startDate, setStartDate] = useState(editRoutine?.startDate ?? initialStartDate ?? today());
   const [endDate, setEndDate] = useState<string | undefined>(editRoutine?.endDate);
   const [showDateSheet, setShowDateSheet] = useState(false);
   const [showTimeSheet, setShowTimeSheet] = useState(false);
@@ -143,7 +146,7 @@ export function AddRoutineScreen({
     yearMonth: editRoutine?.month ?? 1,
     alarmEnabled: editRoutine?.alarmEnabled ?? true,
     time: editRoutine?.time ?? '07:00',
-    startDate: editRoutine?.startDate ?? today(),
+    startDate: editRoutine?.startDate ?? initialStartDate ?? today(),
     endDate: editRoutine?.endDate,
   }).current;
   const initialCategory = editRoutine?.category ?? categories[0]?.id ?? '';

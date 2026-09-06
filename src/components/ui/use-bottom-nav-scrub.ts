@@ -7,10 +7,13 @@ import { useStableCallback } from '@/hooks/use-stable-value';
 
 type TabFrame = Pick<LayoutRectangle, 'x' | 'width'>;
 
-/** Use measured centers: translated labels and font scaling can give tabs unequal widths. */
-export function scrubTarget(x: number, frames: TabFrame[]): number {
+/**
+ * Use measured centers: translated labels and font scaling can give tabs unequal widths.
+ * `count`는 탭 수 (#1138 — 4탭) — 전부 측정되기 전엔 -1.
+ */
+export function scrubTarget(x: number, frames: TabFrame[], count = 3): number {
   'worklet';
-  if (!Number.isFinite(x) || frames.length !== 3 || frames.some((f) => !f || f.width <= 0)) {
+  if (!Number.isFinite(x) || frames.length !== count || frames.some((f) => !f || f.width <= 0)) {
     return -1;
   }
   for (let i = 0; i < frames.length - 1; i++) {
@@ -21,7 +24,7 @@ export function scrubTarget(x: number, frames: TabFrame[]): number {
   return frames.length - 1;
 }
 
-export function useBottomNavScrub(onSelect: (index: number) => void) {
+export function useBottomNavScrub(onSelect: (index: number) => void, count = 3) {
   const frames = useRef(useSharedValue<TabFrame[]>([])).current;
   const height = useRef(useSharedValue(0)).current;
   const dragging = useRef(useSharedValue(false)).current;
@@ -36,7 +39,7 @@ export function useBottomNavScrub(onSelect: (index: number) => void) {
         .failOffsetY([-12, 12])
         .onStart((e) => {
           'worklet';
-          dragging.value = scrubTarget(e.x, frames.value) >= 0;
+          dragging.value = scrubTarget(e.x, frames.value, count) >= 0;
           pointerX.value = e.x;
         })
         .onUpdate((e) => {
@@ -46,7 +49,7 @@ export function useBottomNavScrub(onSelect: (index: number) => void) {
         .onEnd((e, success) => {
           'worklet';
           if (!success) return;
-          const target = scrubTarget(e.x, frames.value);
+          const target = scrubTarget(e.x, frames.value, count);
           // Leaving the bar vertically is an escape; horizontal overshoot selects the end tab.
           if (dragging.value && target >= 0 && e.y >= -24 && e.y <= height.value + 24) {
             runOnJS(select)(target);
@@ -56,14 +59,14 @@ export function useBottomNavScrub(onSelect: (index: number) => void) {
           'worklet';
           dragging.value = false;
         }),
-    [frames, height, dragging, pointerX, select],
+    [frames, height, dragging, pointerX, select, count],
   );
   const indicatorStyle = useAnimatedStyle(() => {
-    const target = scrubTarget(pointerX.value, frames.value);
+    const target = scrubTarget(pointerX.value, frames.value, count);
     if (target < 0 || !dragging.value)
       return { opacity: 0, width: 0, transform: [{ translateX: 0 }] };
     const first = frames.value[0];
-    const last = frames.value[2];
+    const last = frames.value[count - 1];
     const width = frames.value[target].width;
     const center = Math.max(
       first.x + first.width / 2,
@@ -79,7 +82,7 @@ export function useBottomNavScrub(onSelect: (index: number) => void) {
   const recordTab = (index: number, frame: LayoutRectangle) => {
     const next = [...framesRef.current];
     // Keep placeholders dense so incomplete layout never passes the readiness check.
-    while (next.length < 3) next.push({ x: 0, width: 0 });
+    while (next.length < count) next.push({ x: 0, width: 0 });
     next[index] = { x: frame.x, width: frame.width };
     framesRef.current = next;
     frames.value = next;
