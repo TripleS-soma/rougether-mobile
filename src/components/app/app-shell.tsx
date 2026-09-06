@@ -62,6 +62,8 @@ export type AppShellProps = {
   /** Re-run the onboarding (설정 → 튜토리얼 다시 보기 → 온보딩 → 미션 체인). */
   onReplayOnboarding?: () => void;
   /** 온보딩을 방금 마쳤음 — 온보딩 미션 체인을 시작한다 (#571, 구 코치마크 #351). */
+  /** 첫 화면 (#1139 시작 화면 설정) — 기본 나의 방. */
+  initialScreen?: Screen;
   startMissions?: boolean;
   /**
    * 미션 배너에 건너뛰기를 노출할지 (#1023) — 설정 → '튜토리얼 다시 보기'로
@@ -106,6 +108,7 @@ const MISSION_BANNER_SCREENS: ReadonlySet<Screen> = new Set<Screen>([
 export function AppShell({
   characterId = DEFAULT_CHARACTER_ID,
   onReplayOnboarding,
+  initialScreen = 'myRoom',
   startMissions = false,
   missionSkipEnabled = false,
   characterFrames = NO_CHARACTER_FRAMES,
@@ -113,7 +116,7 @@ export function AppShell({
   // 집 하늘 연출용 현재 비 여부 (#360) — 서울 고정, 30분 캐시.
   // 위젯에 넘길 실효 라이트/다크 (#746) — 앱 테마 모드 설정이 적용된 값.
   const resolvedScheme = useResolvedScheme();
-  const [screen, setScreen] = useState<Screen>('myRoom');
+  const [screen, setScreen] = useState<Screen>(initialScreen);
   // Remember where the add/edit-routine screen was opened from, so its back
   // button returns to the right place (my-room or routine manage).
   const [addReturnScreen, setAddReturnScreen] = useState<Screen>('routineManage');
@@ -505,6 +508,14 @@ export function AppShell({
     onPagerLockChange: handleHousePagerLock,
     roomPreviewStore: memberRoomPreviews,
   });
+
+  // 시작 화면이 집인데 집이 없으면(#571 규칙) 탐색으로 — 집 목록이 도착한 첫 순간 한 번만.
+  const startHouseCorrectedRef = useRef(initialScreen !== 'house');
+  useEffect(() => {
+    if (startHouseCorrectedRef.current || !housePages.noHouses) return;
+    startHouseCorrectedRef.current = true;
+    setScreen((s) => (s === 'house' ? 'houseSearch' : s));
+  }, [housePages.noHouses]);
 
   // 내비게이션 컨트롤러 (#692) — 뒤로가기·엣지 백·전환 손맛·페이저 정착.
   // noHouses·탐색 이탈 판정이 use-house-pages 반환값이라 훅 호출이 그 뒤에 선다.
