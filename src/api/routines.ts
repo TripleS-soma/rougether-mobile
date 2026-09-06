@@ -1,3 +1,4 @@
+import { notifyAppIconEvent } from '@/lib/app-icon-events';
 /** Routine + routine-log (per-date completion) endpoints. */
 import { apiDelete, apiGetList, apiPost, apiPut } from './client';
 import { buildQuery } from './http';
@@ -36,7 +37,10 @@ export function deleteRoutine(id: number) {
 
 /** POST /routines/{id}/logs — mark the routine completed on a date ("YYYY-MM-DD"). */
 export function completeRoutine(id: number, routineDate: string) {
-  return apiPost<RoutineLogResponse>(`/routines/${id}/logs`, { routineDate });
+  return apiPost<RoutineLogResponse>(`/routines/${id}/logs`, { routineDate }).then((result) => {
+    notifyAppIconEvent('completion');
+    return result;
+  });
 }
 
 /**
@@ -47,5 +51,10 @@ export function completeRoutine(id: number, routineDate: string) {
  * 🔥 일수가 새로고침 전까지 옛 값을 들고 있었다.
  */
 export function uncompleteRoutine(id: number, date: string) {
-  return apiDelete<StreakSummaryResponse>(`/routines/${id}/logs${buildQuery({ date })}`);
+  return apiDelete<StreakSummaryResponse>(`/routines/${id}/logs${buildQuery({ date })}`).then(
+    (result) => {
+      notifyAppIconEvent('completion');
+      return result;
+    },
+  );
 }

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
 import { Modal, StyleSheet, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
@@ -125,7 +126,10 @@ export function GachaPhonePreview({
   rarity?: DemoRarity;
   reducedMotion?: boolean;
 }) {
-  const [open, setOpen] = useState(true);
+  const { entry } = useLocalSearchParams<{ entry?: string | string[] }>();
+  // The full gallery mounts every demo. Only a directly selected entry may
+  // open immediately; otherwise several full-screen modals cover the gallery.
+  const [open, setOpen] = useState(() => fullscreen && Boolean(entry));
   const screen = (
     <GachaScreen
       gachas={DEMO_MACHINES}

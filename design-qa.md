@@ -4,8 +4,8 @@
 
 ## 통합 범위
 
-- 최신 dev `9bfd609`와 기존 PR #1124의 `7b8ee79` 이력을 함께 보존했습니다. 집 아트·iOS 뒤로가기·바텀시트 스크롤 제외 변경을 유지합니다.
-- 앱 버전은 새 네이티브 윈도우용 `1.4.3`입니다. `expo-video` 때문에 기존 설치본에 JS OTA만으로 적용할 수 없습니다.
+- 최신 dev `3111b51`와 기존 PR #1124의 `7b8ee79` 이력을 함께 보존했습니다. 집 아트·iOS 뒤로가기·바텀시트 스크롤 제외·앱 아이콘 기능을 유지합니다.
+- 앱 버전은 최신 dev의 `1.5.0`을 유지합니다. 임시 검증 버전 `1.4.3`으로 낮추지 않습니다. `expo-video` 때문에 기존 설치본에 JS OTA만으로 적용할 수 없습니다.
 - 새 앱은 `GET /gacha?catalog=category`로 세 카테고리를 요청합니다. 구버전의 매개변수 없는 목록·기존 머신의 실행을 유지하는 서버와 함께 배포합니다.
 - PR #1124의 한 번에 열기·공개 개수 표시·중복 공개 방지를 새 6개 카드 흐름에 통합했습니다.
 - 기존 숲속 아트는 `/dev?entry=GachaStorybookArchive`에서 비교할 수 있는 개발 전용 무대로 보존합니다. 실제 유료 뽑기는 시네마틱 화면만 사용합니다.
@@ -27,11 +27,14 @@ Android SDK·JDK 17 환경에서 `android/gradlew :app:processReleaseMainManifes
 
 ## 검증 결과
 
-- Android prebuild 통과: `versionName "1.4.3"`.
+- PR #1147 반영 전 통합 스냅샷의 Android prebuild 통과: `versionName "1.4.3"`. 아래 네이티브 결과는 해당 스냅샷의 결과이며 최종 `1.5.0` 네이티브 검증과 구분합니다.
 - Android 소스 매니페스트: 금지 권한 9종 없음·필수 4종 존재.
 - Android Release 매니페스트 병합: 157개 태스크, BUILD SUCCESSFUL. 실제 Metro 번들 2,624개 모듈·81개 에셋 생성; 공용 MP4 세 개가 네이티브 리소스에 포함됩니다.
 - Android 최종 매니페스트: 금지 권한 9종 없음·필수 5종 존재. 카메라·마이크 권한 없음.
-- 앱 정적 검사·전체 테스트는 통합 수정 후 다시 실행하며, 최종 결과를 아래에 기록합니다.
+- 최신 dev #1147 병합 후 `1.5.0` Android prebuild·소스 매니페스트 검사·앱 아이콘 검사를 재실행해 통과했습니다. 런처 6개 중 기본 런처만 활성이고 딥링크 Activity는 활성입니다. 최종 `1.5.0` Gradle 병합·Kotlin 검증은 PR CI에서 수행합니다.
+- TypeScript·Prettier 통과. ESLint 오류 없음; 기존 `app-shell.tsx`의 `fromGachaRef` 의존성 경고 1개는 유지합니다.
+- 최신 통합본 전체 테스트: 183개 스위트 / 1,442개 테스트 통과. `--runInBand --watchman=false --detectOpenHandles` 결과 JSON에서 `success=true`, 실패 0개, `openHandles=[]`를 확인했습니다.
+- 단일 프로세스 실행은 테스트 결과 출력 이후 종료 지연이 재현됩니다. 테스트 실패나 신규 누수 원인은 확인되지 않았으며, 워커 실행 종료 상태는 릴리스 인계 시 별도로 기록합니다.
 
 ## 화면 QA 범위와 남은 확인
 

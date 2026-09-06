@@ -2,7 +2,7 @@
   "expo": {
     "name": "Rougether",
     "slug": "rougether-mobile",
-    "version": "1.4.3",
+    "version": "1.5.0",
     "runtimeVersion": {
       "policy": "fingerprint"
     },
@@ -199,7 +199,53 @@
           "project": "rougether-mobile"
         }
       ],
-      "expo-video"
+      "expo-video",
+      [
+        "expo-alternate-app-icons",
+        [
+          {
+            "name": "MissingYou",
+            "ios": "./assets/images/app-icons/missing-you.png",
+            "android": {
+              "foregroundImage": "./assets/images/app-icons/missing-you.png",
+              "backgroundColor": "#FEF1D6"
+            }
+          },
+          {
+            "name": "Teary",
+            "ios": "./assets/images/app-icons/teary.png",
+            "android": {
+              "foregroundImage": "./assets/images/app-icons/teary.png",
+              "backgroundColor": "#FEF1D6"
+            }
+          },
+          {
+            "name": "Sobbing",
+            "ios": "./assets/images/app-icons/sobbing.png",
+            "android": {
+              "foregroundImage": "./assets/images/app-icons/sobbing.png",
+              "backgroundColor": "#FEF1D6"
+            }
+          },
+          {
+            "name": "DailySuccess",
+            "ios": "./assets/images/app-icons/daily-success.png",
+            "android": {
+              "foregroundImage": "./assets/images/app-icons/daily-success.png",
+              "backgroundColor": "#FEF1D6"
+            }
+          },
+          {
+            "name": "StreakChampion",
+            "ios": "./assets/images/app-icons/streak-champion.png",
+            "android": {
+              "foregroundImage": "./assets/images/app-icons/streak-champion.png",
+              "backgroundColor": "#FEF1D6"
+            }
+          }
+        ]
+      ],
+      "./plugins/with-app-icon-launchers.js"
     ],
     "experiments": {
       "typedRoutes": true,
