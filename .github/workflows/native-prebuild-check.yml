@@ -108,6 +108,6 @@ jobs:
       - name: 매니페스트 권한 검증 (병합 산출물)
         run: |
           node scripts/check-android-manifest.mjs --merged
-          manifest=$(find android/app/build/intermediates/merged_manifests android/app/build/intermediates/merged_manifest -name AndroidManifest.xml 2>/dev/null | head -1)
+          manifest=$(find android/app/build/intermediates -path '*/merged_manifest*/release/*/AndroidManifest.xml' -print -quit)
           test -n "$manifest"
           node scripts/check-app-icons.mjs "$manifest"
