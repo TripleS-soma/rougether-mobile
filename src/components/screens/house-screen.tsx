@@ -12,7 +12,8 @@ import Reanimated, {
 
 import { type HouseCover } from '@/components/room/house-cover-picker';
 import { HouseOrderDots } from '@/components/room/house-order-dots';
-import { FRAME_ASPECT, houseCoverKey, WINDOW_RECTS } from '@/components/room/house-preview-frame';
+import { useHouseFrame } from '@/hooks/use-house-frame';
+import { type HouseFrameOptions, houseWindowSeats } from '@/resources/house-frame';
 import { Loading } from '@/components/ui/loading';
 import { CoachTarget } from '@/components/ui/coach-mark';
 import { GlassSurface } from '@/components/ui/glass-surface';
@@ -187,13 +188,11 @@ const RAIL_TOP_GAP = 106;
 
 // Room이 memo 경계(#539)라 빈방 프리뷰의 prop도 렌더마다 새로 만들지 않는다.
 
-// 커버 프레임 PNG(house-unified-*-frame.png, 3종 공통 567×508)의 투명 창문
-// 4칸 — 알파 채널 측정값 (#287). 좌상·우상·좌하·우하 순.
-// FRAME_ASPECT / WINDOW_RECTS는 집 탐색 미리보기(#328)와 공유 —
-// house-preview-frame.tsx가 단일 출처.
+// Frame geometry is shared with browse previews through resources/house-frame.
 
 // RoomCatalogProps: 좌석 타일 미리보기가 해석할 카탈로그 4종 (#691).
 export type HouseScreenProps = RoomCatalogProps &
+  Pick<HouseFrameOptions, 'enabled' | 'previewTheme'> &
   ScrollRestoreProps & {
     houses?: House[];
     /** True while my houses are loading from the API. */
@@ -319,6 +318,8 @@ export const HouseScreen = memo(function HouseScreen({
   onPagerLockChange,
   getInitialScrollY,
   onScrollY,
+  enabled,
+  previewTheme,
 }: HouseScreenProps) {
   const t = useTokens();
   const scheme = useResolvedScheme();
@@ -426,36 +427,30 @@ export const HouseScreen = memo(function HouseScreen({
     }
     return rows;
   }, [rowShapes]);
-  // 프레임 모드(#287): 커버 PNG는 창문 4칸(2×2)이 투명하게 뚫린 집 프레임이다.
-  // 아래 두 행(내 방·초기 멤버)이 창문에 들어가고, 그 위 행들(초과 좌석·빈방)은
-  // 프레임 아래 그리드로 이어붙는다. 커버를 안 고른 집도 기본 프레임으로 —
-  // 어느 집이든 "커버 위에 방이 보이는" 같은 형태 (히어로 폴백은 안전망).
-  const coverKey = houseCoverKey(currentHouse?.coverImageKey);
+  // Resolve the asset and its cutouts together. Legacy art keeps its lower
+  // two rows plus overflow; stacked art contains all supported capacity rows.
+  const { frame, onFrameError } = useHouseFrame(currentHouse?.coverImageKey, {
+    maxMembers: currentHouse?.maxMembers,
+    minimumSeats: displayCells.length,
+    enabled,
+    previewTheme,
+  });
+  const coverKey = frame.assetKey;
   // 서버가 가진 coverImageKey의 테마 경로에서 전면 배경을 파생한다. 집 전환과
   // 같은 렌더에 키가 바뀌므로 별도 저장 상태 없이 항상 프레임과 맞는다.
-  const backgroundKey = houseBackgroundKey(coverKey, scheme);
-  // WINDOW_RECTS 순서(좌상·우상·좌하·우하)로 좌석 매핑 — 아래 행이 아래 창문.
-  const windowSlots = useMemo(() => {
-    const frameRows = seatRows.slice(-2);
-    const slots: (number | null)[] = [null, null, null, null];
-    frameRows
-      .slice()
-      .reverse()
-      .forEach((row, r) =>
-        row.forEach((seatIdx, c) => {
-          const slot = (r === 0 ? 2 : 0) + c;
-          if (slot < slots.length) slots[slot] = seatIdx;
-        }),
-      );
-    return slots;
-  }, [seatRows]);
+  const backgroundKey = houseBackgroundKey(frame.canonicalKey, scheme);
+  // Preserve adapter row order; first members stay on the bottom story.
+  const windowSlots = useMemo(
+    () => houseWindowSeats(seatRows, frame.windowRects.length),
+    [seatRows, frame.windowRects],
+  );
   const { roomPairs, rowOffsets } = useMemo(() => {
-    const gridSeatRows = seatRows.slice(0, -2);
+    const gridSeatRows = seatRows.slice(0, -frame.windowRects.length / 2);
     return {
       roomPairs: gridSeatRows.map((row) => row.map((i) => displayCells[i])) as RoomCell[][],
       rowOffsets: gridSeatRows.map((row) => row[0] ?? 0),
     };
-  }, [seatRows, displayCells]);
+  }, [seatRows, displayCells, frame.windowRects]);
 
   // --- 타일 드래그 앤 드롭 (자리 맞바꾸기, #278) ---
   // Long-press lifts a tile, the grid captures the active touch and the tile
@@ -978,6 +973,7 @@ export const HouseScreen = memo(function HouseScreen({
         lastSeenLabel={room.lastSeenLabel}
         color={room.color}
         fill={fill}
+        squareFrame={frame.kind === 'stacked'}
         dragging={dragSeat === seatIdx}
         zoomed={zoomed}
         preview={preview}
@@ -1127,7 +1123,7 @@ export const HouseScreen = memo(function HouseScreen({
                 <View style={styles.cameraViewport}>
                   <Reanimated.View style={camStyle}>
                     <GestureDetector gesture={frameDragGesture}>
-                      <View style={styles.frameWrap}>
+                      <View style={[styles.frameWrap, { aspectRatio: frame.aspectRatio }]}>
                         {/* 프레임 측정용 — 반응자 프롭이 있는 부모에는 테스트에서
                       layout 이벤트가 닿지 않아 absolute-fill 형제로 잰다. */}
                         <View
@@ -1135,29 +1131,33 @@ export const HouseScreen = memo(function HouseScreen({
                           pointerEvents="none"
                           style={StyleSheet.absoluteFill}
                           onLayout={(e) => {
-                            const first = frameSize.current.w === 0;
+                            const changed =
+                              frameSize.current.w !== e.nativeEvent.layout.width ||
+                              frameSize.current.h !== e.nativeEvent.layout.height;
                             frameSize.current = {
                               w: e.nativeEvent.layout.width,
                               h: e.nativeEvent.layout.height,
                             };
                             // clampCam이 워클릿에서 읽는 사본 (#776).
                             frameSizeSV.value = frameSize.current;
-                            // 첫 레이아웃에 기본 카메라(방 4칸 클로즈업)를 즉시 적용 (#307).
-                            if (first) {
+                            // Capacity changes, fallback and resizing invalidate the old camera.
+                            if (changed) {
                               const d = camDefault();
                               camScale.value = d.scale;
                               camTx.value = d.tx;
                               camTy.value = d.ty;
                               zoomedSV.value = false;
+                              applyZoomed(false);
                             }
                           }}
                         />
                         {/* 창문 뒤 좌석 — 프레임 PNG의 투명 창문으로 방이 보인다. */}
-                        {WINDOW_RECTS.map((rect, w) => {
+                        {frame.windowRects.map((rect, w) => {
                           const seatIdx = windowSlots[w];
                           return (
                             <View
                               key={`window-${w}`}
+                              testID={`house-window-${w}`}
                               style={[
                                 styles.windowSlot,
                                 rect,
@@ -1179,10 +1179,13 @@ export const HouseScreen = memo(function HouseScreen({
                       삼킨다(#401) — ViewGroup 래퍼가 확실하게 투과시킨다. */}
                         <View style={StyleSheet.absoluteFill} pointerEvents="none">
                           <Image
+                            key={coverKey}
                             source={assetSource(coverKey)}
                             style={StyleSheet.absoluteFill}
                             contentFit="contain"
-                            transition={120}
+                            transition={frame.kind === 'stacked' ? 0 : 120}
+                            onError={onFrameError}
+                            recyclingKey={coverKey}
                             // 디스크 캐시 유지 — 앱 재실행 후에도 재요청 없이 즉시 (#463).
                             cachePolicy="memory-disk"
                             accessibilityLabel={`${currentHouse.name} 집`}
@@ -1505,7 +1508,6 @@ const styles = StyleSheet.create({
   },
   frameWrap: {
     width: '100%',
-    aspectRatio: FRAME_ASPECT,
   },
   camReset: {
     position: 'absolute',

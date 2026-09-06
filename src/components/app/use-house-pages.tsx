@@ -11,7 +11,7 @@ import {
 import { type Screen } from '@/components/app/navigation';
 import type { useFriendVisit } from '@/components/app/use-friend-visit';
 import type { useMissionLinks } from '@/components/app/use-mission-links';
-import { houseCoverKey } from '@/components/room/house-preview-frame';
+import { resolveHouseFrame } from '@/resources/house-frame';
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import {
   type House,
@@ -224,7 +224,16 @@ export function useHousePages({
   // 셸에서 집 목록이 오면 모든 커버·배경(현재+스위처 대상)을 함께 데워 둔다.
   useEffect(() => {
     const uris = [
-      ...new Set(houses.map((house) => assetSource(houseCoverKey(house.coverImageKey)).uri)),
+      ...new Set(
+        houses.map((house) =>
+          assetSource(
+            resolveHouseFrame(house.coverImageKey, {
+              maxMembers: house.maxMembers,
+              minimumSeats: house.floors.reduce((sum, floor) => sum + floor.rooms.length, 0),
+            }).assetKey,
+          ).uri,
+        ),
+      ),
     ];
     if (uris.length) void Image.prefetch?.(uris, { cachePolicy: 'memory-disk' });
   }, [houses]);
