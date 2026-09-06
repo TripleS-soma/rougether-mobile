@@ -45,12 +45,14 @@ describe('폰트·테마 변경 안내 (#972)', () => {
   it('다른 테마를 고르면 바뀐 이름을 토스트로 알린다', async () => {
     const { getByLabelText, findByText } = await show('theme');
     await fireEvent.press(getByLabelText('인디고 타이드 테마'));
+    await fireEvent.press(getByLabelText('적용하기'));
     expect(await findByText(/인디고 타이드.*적용했어요/)).toBeTruthy();
   });
 
   it('다른 폰트를 고르면 바뀐 이름을 토스트로 알린다', async () => {
     const { getByLabelText, findByText } = await show('font');
     await fireEvent.press(getByLabelText('SUIT 폰트'));
+    await fireEvent.press(getByLabelText('적용하기'));
     expect(await findByText(/SUIT.*적용했어요/)).toBeTruthy();
   });
 
@@ -62,6 +64,7 @@ describe('폰트·테마 변경 안내 (#972)', () => {
       expect(getByLabelText('포근 테마').props.accessibilityState.selected).toBe(true),
     );
     await fireEvent.press(getByLabelText('포근 테마'));
+    await fireEvent.press(getByLabelText('적용하기'));
     await waitFor(() => expect(queryByText(/적용했어요/)).toBeNull());
   });
 });

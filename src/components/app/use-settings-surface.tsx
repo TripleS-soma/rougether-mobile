@@ -92,14 +92,16 @@ export function useSettingsSurface({
   // 문구에 `으로/로`를 쓰지 않는 건 **조사가 이름마다 달라지기 때문**이다 —
   // "포근"은 받침이 있어 `으로`, "인디고 타이드"는 없어 `로`다. 이름을 앞에 두고
   // 고정 조사(`를`)만 쓰면 어떤 이름이 와도 맞는다.
+  // 적용하기 버튼(#1096)으로 들어온다 — 적용 뒤 설정으로 돌아간다.
   const changeThemeId = useCallback(
     (id: ThemeId) => {
       if (id === themeId) return;
       setThemeId(id);
       const name = THEME_OPTIONS.find((o) => o.id === id)?.name;
       if (name) toast(`“${name}” 테마를 적용했어요`);
+      setScreen('settings');
     },
-    [themeId, setThemeId, toast],
+    [themeId, setThemeId, toast, setScreen],
   );
 
   const changeFontId = useCallback(
@@ -108,8 +110,9 @@ export function useSettingsSurface({
       setFontId(id);
       const name = FONT_OPTIONS.find((o) => o.id === id)?.name;
       if (name) toast(`“${name}” 폰트를 적용했어요`);
+      setScreen('settings');
     },
-    [fontId, setFontId, toast],
+    [fontId, setFontId, toast, setScreen],
   );
   // 캘린더 임포트 상태 (#844) — 권한·조회·임포트를 훅이 쥔다.
   const calendarImport = useCalendarImport();
@@ -303,7 +306,7 @@ export function useSettingsSurface({
     ) : screen === 'theme' ? (
       <ThemeScreen
         themeId={themeId}
-        onChangeThemeId={changeThemeId}
+        onApplyThemeId={changeThemeId}
         userName={profile.nickname}
         characterId={profile.characterId}
         onBack={backToSettings}
@@ -311,7 +314,7 @@ export function useSettingsSurface({
     ) : screen === 'font' ? (
       <FontScreen
         fontId={fontId}
-        onChangeFont={changeFontId}
+        onApplyFont={changeFontId}
         userName={profile.nickname}
         characterId={profile.characterId}
         onBack={backToSettings}
