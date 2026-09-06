@@ -8,6 +8,7 @@ import {
   EDGE_BACK_VELOCITY,
   EDGE_BACK_WIDTH,
   EXIT_WINDOW_MS,
+  FULL_SWIPE_BACK_EXCLUDED,
   NAV_ORDER,
   SCREEN_FOR_TAB,
   TAB_FOR_SCREEN,
@@ -61,13 +62,15 @@ export function useAppNavigation({
     return () => sub.remove();
   }, [goBack, toast]);
 
-  // iOS 엣지 스와이프 백 (#564) — 서브화면(탭 루트 제외)에서 왼쪽 엣지의
-  // 우향 팬. 탭 루트의 가로 스와이프는 페이저(#563) 몫이라 서브화면 한정.
+  // iOS sub-screen back supports full-width swipes (#1135), except on screens
+  // that own horizontal gestures. Main tabs belong to the pager (#1143).
   // Disable native recognition on tab roots so edge-back cannot claim the
   // pager's touch before the JS navigation guard runs (#1143).
   const edgeBackEnabled = Platform.OS === 'ios' && TAB_FOR_SCREEN[screen] == null;
   const edgeBackEnabledRef = useRef(false);
   edgeBackEnabledRef.current = edgeBackEnabled;
+  const fullSwipeRef = useRef(false);
+  fullSwipeRef.current = edgeBackEnabled && !FULL_SWIPE_BACK_EXCLUDED.has(screen);
   const goBackRef = useRef(goBack);
   goBackRef.current = goBack;
   // Keep the commit guard (#740) for delayed JS events after a screen change.
@@ -84,11 +87,12 @@ export function useAppNavigation({
         .enabled(edgeBackEnabled)
         .runOnJS(true)
         .maxPointers(1)
-        .activeOffsetX(16)
-        .failOffsetY([-24, 24])
+        // Preserve the full-width swipe thresholds from #1135.
+        .activeOffsetX(24)
+        .failOffsetY([-16, 16])
         .onTouchesDown((e, mgr) => {
           const x = e.allTouches[0]?.x ?? Number.MAX_VALUE;
-          const ok = edgeBackEnabledRef.current && x <= EDGE_BACK_WIDTH;
+          const ok = edgeBackEnabledRef.current && (fullSwipeRef.current || x <= EDGE_BACK_WIDTH);
           edgeStartOkRef.current = ok;
           if (!ok) mgr.fail();
         })

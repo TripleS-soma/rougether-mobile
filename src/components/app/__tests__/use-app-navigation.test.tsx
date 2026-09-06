@@ -1,5 +1,6 @@
 import { renderHook } from '@testing-library/react-native';
 import { Platform } from 'react-native';
+import { PointerType, State } from 'react-native-gesture-handler';
 
 import type { Screen } from '@/components/app/navigation';
 import { useAppNavigation } from '@/components/app/use-app-navigation';
@@ -12,11 +13,50 @@ afterEach(() => {
 
 async function renderNavigation(screen: Screen) {
   const setScreen = jest.fn();
-  return renderHook(
+  const hook = await renderHook(
     ({ screen }: { screen: Screen }) =>
       useAppNavigation({ screen, setScreen, addReturnScreen: 'myRoom', noHouses: false }),
     { initialProps: { screen } },
   );
+  return { ...hook, setScreen };
+}
+
+// Exercise JS navigation eligibility only; native recognition is checked by
+// the enabled assertions below, not simulated by these callback events.
+function swipeBack(gesture: ReturnType<typeof useAppNavigation>['edgeBackPan'], x: number) {
+  const touch = { id: 0, x, y: 100, absoluteX: x, absoluteY: 100 };
+  gesture.handlers.onTouchesDown?.(
+    {
+      handlerTag: gesture.handlerTag,
+      numberOfTouches: 1,
+      state: State.BEGAN,
+      eventType: 1, // TOUCHES_DOWN
+      allTouches: [touch],
+      changedTouches: [touch],
+      pointerType: PointerType.TOUCH,
+    },
+    {
+      handlerTag: gesture.handlerTag,
+      begin: jest.fn(),
+      activate: jest.fn(),
+      fail: jest.fn(),
+      end: jest.fn(),
+    },
+  );
+  const end = {
+    ...touch,
+    handlerTag: gesture.handlerTag,
+    numberOfPointers: 1,
+    pointerType: PointerType.TOUCH,
+    state: State.END,
+    oldState: State.ACTIVE,
+    translationX: 100,
+    translationY: 0,
+    velocityX: 800,
+    velocityY: 0,
+  };
+  gesture.handlers.onEnd?.(end, true);
+  gesture.handlers.onFinalize?.(end, true);
 }
 
 describe('main-tab edge-back recognition', () => {
@@ -54,6 +94,34 @@ describe('main-tab edge-back recognition', () => {
     expect(result.current.edgeBackPan).toBe(gesture);
     expect(result.current.edgeBackPan.config.enabled).toBe(true);
   });
+
+  it.each<{ screen: Screen; back: Screen }>([
+    { screen: 'friendRoom', back: 'house' },
+    { screen: 'decor', back: 'myRoom' },
+    { screen: 'gacha', back: 'myRoom' },
+    { screen: 'addRoutine', back: 'myRoom' },
+  ])(
+    'preserves full-width back and the edge-only exception for $screen',
+    async ({ screen, back }) => {
+      const { result, rerender, setScreen } = await renderNavigation('settings');
+      const gesture = result.current.edgeBackPan;
+      swipeBack(gesture, 200);
+      expect(setScreen).toHaveBeenCalledWith('myPage');
+
+      setScreen.mockClear();
+      await rerender({ screen });
+      expect(result.current.edgeBackPan).toBe(gesture);
+      swipeBack(result.current.edgeBackPan, 200);
+      expect(setScreen).not.toHaveBeenCalled();
+      swipeBack(result.current.edgeBackPan, 10);
+      expect(setScreen).toHaveBeenCalledWith(back);
+
+      setScreen.mockClear();
+      await rerender({ screen: 'settings' });
+      swipeBack(result.current.edgeBackPan, 200);
+      expect(setScreen).toHaveBeenCalledWith('myPage');
+    },
+  );
 
   it.each(['android', 'web'] as const)('keeps edge-back disabled on %s', async (platform) => {
     Platform.OS = platform;
