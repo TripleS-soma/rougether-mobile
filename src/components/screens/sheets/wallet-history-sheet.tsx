@@ -2,7 +2,7 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { WalletHistoryEntry } from '@/api/adapters';
 import { Loading } from '@/components/ui/loading';
-import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { BottomSheet, SheetDragExclude } from '@/components/ui/bottom-sheet';
 import { CurrencyGuide } from '@/components/ui/currency-guide';
 import { Icon } from '@/components/ui/icon';
 import { RetryState } from '@/components/ui/retry-state';
@@ -78,59 +78,62 @@ export function WalletHistorySheet({
           아직 재화 내역이 없어요
         </Text>
       ) : (
-        <FlatList
-          data={entries}
-          keyExtractor={(e) => String(e.id)}
-          style={styles.list}
-          contentContainerStyle={styles.listBody}
-          renderItem={({ item }) => {
-            const earn = item.amount > 0;
-            return (
-              <View style={[styles.row, { backgroundColor: t.surface }]}>
-                <Icon
-                  name={item.currency === 'diamond' ? 'diamond' : 'coin'}
-                  size={16}
-                  color={item.currency === 'diamond' ? t.primary : t.warning}
-                />
-                <View style={styles.rowBody}>
-                  <Text style={[Typography.body, { color: t.text }]} numberOfLines={1}>
-                    {item.reason}
-                  </Text>
-                  <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                    {item.createdAt ? relativeTimeLabel(new Date(item.createdAt)) : ''}
-                    {' · 잔액 '}
-                    {item.balanceAfter.toLocaleString()}
+        <SheetDragExclude>
+          {/* 세로 스크롤 본문 — 시트 끌어내리기에서 제외 (#1132). 닫기는 손잡이·헤더에서. */}
+          <FlatList
+            data={entries}
+            keyExtractor={(e) => String(e.id)}
+            style={styles.list}
+            contentContainerStyle={styles.listBody}
+            renderItem={({ item }) => {
+              const earn = item.amount > 0;
+              return (
+                <View style={[styles.row, { backgroundColor: t.surface }]}>
+                  <Icon
+                    name={item.currency === 'diamond' ? 'diamond' : 'coin'}
+                    size={16}
+                    color={item.currency === 'diamond' ? t.primary : t.warning}
+                  />
+                  <View style={styles.rowBody}>
+                    <Text style={[Typography.body, { color: t.text }]} numberOfLines={1}>
+                      {item.reason}
+                    </Text>
+                    <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                      {item.createdAt ? relativeTimeLabel(new Date(item.createdAt)) : ''}
+                      {' · 잔액 '}
+                      {item.balanceAfter.toLocaleString()}
+                    </Text>
+                  </View>
+                  <Text
+                    style={[
+                      Typography.label,
+                      styles.amount,
+                      { color: earn ? t.primaryText : t.danger },
+                    ]}>
+                    {earn ? '+' : ''}
+                    {item.amount.toLocaleString()}
                   </Text>
                 </View>
-                <Text
-                  style={[
-                    Typography.label,
-                    styles.amount,
-                    { color: earn ? t.primaryText : t.danger },
-                  ]}>
-                  {earn ? '+' : ''}
-                  {item.amount.toLocaleString()}
-                </Text>
-              </View>
-            );
-          }}
-          ListFooterComponent={
-            hasNext ? (
-              <Pressable
-                onPress={onLoadMore}
-                disabled={loading}
-                accessibilityRole="button"
-                accessibilityLabel="재화 내역 더보기"
-                style={[styles.moreBtn, { backgroundColor: t.surfaceMuted }]}>
-                {loading ? (
-                  <Loading size="small" />
-                ) : (
-                  <Text style={[Typography.label, { color: t.text }]}>더보기</Text>
-                )}
-              </Pressable>
-            ) : null
-          }
-        />
+              );
+            }}
+            ListFooterComponent={
+              hasNext ? (
+                <Pressable
+                  onPress={onLoadMore}
+                  disabled={loading}
+                  accessibilityRole="button"
+                  accessibilityLabel="재화 내역 더보기"
+                  style={[styles.moreBtn, { backgroundColor: t.surfaceMuted }]}>
+                  {loading ? (
+                    <Loading size="small" />
+                  ) : (
+                    <Text style={[Typography.label, { color: t.text }]}>더보기</Text>
+                  )}
+                </Pressable>
+              ) : null
+            }
+          />
+        </SheetDragExclude>
       )}
     </BottomSheet>
   );

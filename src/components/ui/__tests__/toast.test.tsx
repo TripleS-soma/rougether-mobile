@@ -2,6 +2,7 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { Pressable, Text } from 'react-native';
 
 import { ToastProvider, useToast } from '@/components/ui/toast';
+import { Themes } from '@/constants/theme';
 
 function Trigger() {
   const { show } = useToast();
@@ -23,6 +24,25 @@ describe('Toast', () => {
     expect(queryByText('저장에 실패했어요')).toBeNull();
     await fireEvent.press(getByText('fire'));
     expect(getByText('저장에 실패했어요')).toBeTruthy();
+  });
+
+  it('면은 GlassSurface — 글래스 불가 환경에선 토스트 색 단색 폴백 (#1131)', async () => {
+    function Trigger() {
+      const { show } = useToast();
+      return (
+        <Pressable onPress={() => show('저장했어요', 'success')}>
+          <Text>fire</Text>
+        </Pressable>
+      );
+    }
+    const { getByText, getByTestId } = await render(
+      <ToastProvider>
+        <Trigger />
+      </ToastProvider>,
+    );
+    await fireEvent.press(getByText('fire'));
+    const flat = Object.assign({}, ...[getByTestId('toast-face').props.style].flat(Infinity));
+    expect(flat.backgroundColor).toBe(Themes.cozy.success);
   });
 
   it('useToast is a safe no-op without a provider', async () => {

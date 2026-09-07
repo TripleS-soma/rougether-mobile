@@ -15,7 +15,7 @@ import {
 } from '@/components/screens/gacha/draw-animation';
 import { SheetHandle } from '@/components/ui/sheet-handle';
 import { Loading } from '@/components/ui/loading';
-import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { BottomSheet, SheetDragExclude } from '@/components/ui/bottom-sheet';
 import { Icon } from '@/components/ui/icon';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { GiftBoxArt } from '@/components/screens/gacha/gift-box-art';
@@ -505,26 +505,29 @@ export function GachaScreen({
             />
           </View>
         ) : (
-          <SectionList
-            style={styles.rewardsList}
-            contentContainerStyle={styles.rewardsListBody}
-            sections={rewardSections}
-            keyExtractor={rewardKey}
-            renderSectionHeader={renderRaritySection}
-            renderItem={renderRewardRow}
-            // 등급 안은 촘촘히, 등급 사이는 넓게 — 예전 2단 간격 구조를 유지한다
-            // (#773). SectionList는 헤더·아이템을 형제로 평탄화하므로 컨테이너
-            // gap 하나만 두면 그룹 경계가 사라진다.
-            ItemSeparatorComponent={RewardGap}
-            // iOS 기본값이 true라 그냥 두면 등급 헤더가 상단에 붙는 동작이
-            // 이 플랫폼에만 새로 생긴다 — 기존 ScrollView엔 없던 동작.
-            stickySectionHeadersEnabled={false}
-            // 보상 풀은 머신당 수십~수백 — 시트를 여는 프레임에 전부 마운트하면
-            // 원격 썸네일까지 한꺼번에 요청된다 (#773).
-            initialNumToRender={12}
-            windowSize={7}
-            removeClippedSubviews
-          />
+          <SheetDragExclude>
+            {/* 세로 스크롤 본문 — 시트 끌어내리기에서 제외 (#1132). 닫기는 손잡이·헤더에서. */}
+            <SectionList
+              style={styles.rewardsList}
+              contentContainerStyle={styles.rewardsListBody}
+              sections={rewardSections}
+              keyExtractor={rewardKey}
+              renderSectionHeader={renderRaritySection}
+              renderItem={renderRewardRow}
+              // 등급 안은 촘촘히, 등급 사이는 넓게 — 예전 2단 간격 구조를 유지한다
+              // (#773). SectionList는 헤더·아이템을 형제로 평탄화하므로 컨테이너
+              // gap 하나만 두면 그룹 경계가 사라진다.
+              ItemSeparatorComponent={RewardGap}
+              // iOS 기본값이 true라 그냥 두면 등급 헤더가 상단에 붙는 동작이
+              // 이 플랫폼에만 새로 생긴다 — 기존 ScrollView엔 없던 동작.
+              stickySectionHeadersEnabled={false}
+              // 보상 풀은 머신당 수십~수백 — 시트를 여는 프레임에 전부 마운트하면
+              // 원격 썸네일까지 한꺼번에 요청된다 (#773).
+              initialNumToRender={12}
+              windowSize={7}
+              removeClippedSubviews
+            />
+          </SheetDragExclude>
         )}
       </BottomSheet>
     </View>

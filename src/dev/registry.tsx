@@ -30,6 +30,8 @@ import { MyPageScreen } from '@/components/screens/my-page-screen';
 import { ListRow } from '@/components/ui/list-row';
 import { NotificationSettingsScreen } from '@/components/screens/notification-settings-screen';
 import { OnboardingScreen } from '@/components/screens/onboarding-screen';
+import { StarterRoutineScreen } from '@/components/screens/starter-routine-screen';
+import { recommendStarterRoutines } from '@/constants/starter-routines';
 import { PasswordChangeScreen } from '@/components/screens/password-change-screen';
 import { PolicyViewerScreen } from '@/components/screens/policy-viewer-screen';
 import { ProfileEditScreen } from '@/components/screens/profile-edit-screen';
@@ -347,8 +349,9 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
-    name: 'BottomNav · 리퀴드 바 드래그와 본문 스와이프',
-    description: '누른 채 좌우로 끌어 선택, 놓을 때 한 번 이동. 집 확대 잠금 중에도 하단바는 동작.',
+    name: 'BottomNav · PagerScrollView · 리퀴드 바 드래그와 본문 스와이프',
+    description:
+      'iOS 본문 가로·대각선 스와이프와 세로 스크롤·당겨서 새로고침 경쟁 확인. 마이페이지는 일반 스크롤. 집 확대 잠금 중에도 하단바는 동작.',
     render: () => <NavigationPreview />,
   },
   {
@@ -722,6 +725,22 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ height: 720, alignSelf: 'stretch' }}>
         <OnboardingScreen characterSelectEnabled />
+      </View>
+    ),
+  },
+  {
+    name: 'StarterRoutineScreen · 관심사로 첫 루틴',
+    description:
+      '운동·독서·정리에서 하나씩 추천. 선택 후 바로 시작하며 서버 쓰기 없이 화면만 확인한다 (#1148).',
+    render: () => (
+      <View style={{ height: 780, alignSelf: 'stretch' }}>
+        <StarterRoutineScreen
+          recommendations={recommendStarterRoutines([
+            { id: 'exercise', label: '운동' },
+            { id: 'reading', label: '독서' },
+            { id: 'organizing', label: '정리' },
+          ])}
+        />
       </View>
     ),
   },

@@ -211,10 +211,34 @@ export function useMyRoomData() {
       // 점은 보조 정보다 — 실패해도 달력 자체는 쓸 수 있으니 조용히 넘어간다.
     }
   }, []);
-  /** 방문한 달을 합친 표시용 집합 — 이미 받은 달은 다시 부르지 않는다. */
+  // 추가 요청이 서버에 가 있는 동안의 날짜 (#1133) — 응답을 기다리지 않고 점을 찍는다.
+  const [pendingTodoDates, setPendingTodoDates] = useState<string[]>([]);
+  /**
+   * 방문한 달을 합친 표시용 집합 — 이미 받은 달은 다시 부르지 않는다.
+   * 여기에 **지금 앱이 들고 있는 투두의 날짜**와 요청 중인 날짜를 합친다 (#1133):
+   * 추가하자마자 점이 찍히고, 삭제하면 서버 월 목록을 다시 받기 전에도 빠진다
+   * (그 날의 마지막 투두를 지운 경우는 월 집합에서도 걷어낸다 — deleteRoutine).
+   */
   const markedTodoDates = useMemo(
-    () => new Set(Object.values(todoDatesByMonth).flat()),
-    [todoDatesByMonth],
+    () =>
+      new Set([
+        ...Object.values(todoDatesByMonth).flat(),
+        ...pendingTodoDates,
+        ...routines.flatMap((r) => (r.kind === 'todo' && r.dueDate ? [r.dueDate] : [])),
+      ]),
+    [todoDatesByMonth, pendingTodoDates, routines],
+  );
+  const markPending = useCallback(
+    (date: string) => setPendingTodoDates((prev) => [...prev, date]),
+    [],
+  );
+  const unmarkPending = useCallback(
+    (date: string) =>
+      setPendingTodoDates((prev) => {
+        const i = prev.indexOf(date);
+        return i < 0 ? prev : [...prev.slice(0, i), ...prev.slice(i + 1)];
+      }),
+    [],
   );
 
   const findItem = useCallback((id: string) => routines.find((r) => r.id === id), [routines]);
@@ -262,11 +286,12 @@ export function useMyRoomData() {
             if (typeof log.streak?.currentCount === 'number') setStreak(log.streak.currentCount);
           }
         }
-        // Completion pays out server-side — surface the actual amount. 일일
-        // 상한을 다 받은 오늘 완료(보상 0)는 코인 대신 상한 안내 (#444);
+        // 받은 코인은 화면의 보상 알약이 스트릭과 함께 띄운다(#1055) — 토스트까지
+        // 띄우면 같은 정보가 두 번 보여 뺐다 (#1129). 일일 상한을 다 받은 오늘
+        // 완료(보상 0)는 알약이 아무것도 안 띄우므로 상한 안내만 남긴다 (#444);
         // 과거 날짜는 원래 보상 0이라(#183) 조용히 지나간다.
-        if (!wasDone && rewardAmount) toast(`+${rewardAmount} 코인 획득!`, 'success');
-        else if (!wasDone && date === todayIso()) toast('오늘 받을 수 있는 코인을 다 모았어요');
+        if (!wasDone && !rewardAmount && date === todayIso())
+          toast('오늘 받을 수 있는 코인을 다 모았어요');
         if (!wasDone) track('routine_complete', { kind: item?.kind ?? 'routine' });
         await refreshWallet();
         return wasDone
@@ -313,6 +338,8 @@ export function useMyRoomData() {
 
   const quickAddTodo = useCallback(
     async (category: string, title: string, dueDate: string) => {
+      // 점은 응답을 기다리지 않는다 (#1133) — 실패하면 걷는다.
+      markPending(dueDate);
       try {
         const created = await createTodo(toTodoCreate(category, title, dueDate));
         setRoutines((prev) => [...prev, toAppTodo(created)]);
@@ -322,9 +349,11 @@ export function useMyRoomData() {
         if (dueDate !== todayIso()) void loadCalendarDay(dueDate);
       } catch {
         toast('할 일을 추가하지 못했어요', 'error');
+      } finally {
+        unmarkPending(dueDate);
       }
     },
-    [loadCalendarDay, toast],
+    [loadCalendarDay, toast, markPending, unmarkPending],
   );
 
   // 성공 여부를 돌려준다 — 온보딩 미션(첫 루틴 등록, #571)이 성공 시점에 후킹.
@@ -479,6 +508,7 @@ export function useMyRoomData() {
     async (id: string, dueDate: string) => {
       const item = findItem(id);
       if (!item || item.kind === 'todo') return;
+      markPending(dueDate);
       try {
         const created = await createTodo(toTodoCreate(item.category, item.title, dueDate));
         setRoutines((prev) => [...prev, toAppTodo(created)]);
@@ -486,9 +516,11 @@ export function useMyRoomData() {
         toast('선택한 날짜에 할 일로 추가했어요', 'success');
       } catch {
         toast('날짜 변경에 실패했어요', 'error');
+      } finally {
+        unmarkPending(dueDate);
       }
     },
-    [findItem, refreshCachedCalendarDays, toast],
+    [findItem, refreshCachedCalendarDays, toast, markPending, unmarkPending],
   );
 
   const deleteRoutine = useCallback(
@@ -500,12 +532,26 @@ export function useMyRoomData() {
         if (item.kind === 'todo') await deleteTodo(toServerItemId(id));
         else await apiDeleteRoutine(toServerItemId(id));
         refreshCachedCalendarDays();
+        // 그 날의 마지막 투두였으면 달력 점도 바로 걷는다 (#1133) — 서버 월 목록은
+        // 다시 받기 전까지 옛 값이라 여기서 빼 준다.
+        if (item.kind === 'todo' && item.dueDate) {
+          const date = item.dueDate;
+          const stillHasTodo =
+            routines.some((r) => r.id !== id && r.kind === 'todo' && r.dueDate === date) ||
+            (calendarDays[date] ?? []).some((c) => c.kind === 'todo' && c.id !== id);
+          if (!stillHasTodo)
+            setTodoDatesByMonth((prev) => {
+              const ym = date.slice(0, 7);
+              if (!prev[ym]?.includes(date)) return prev;
+              return { ...prev, [ym]: prev[ym].filter((d) => d !== date) };
+            });
+        }
       } catch {
         setRoutines((prev) => [...prev, item]);
         toast('삭제에 실패했어요', 'error');
       }
     },
-    [findItem, refreshCachedCalendarDays, toast],
+    [findItem, refreshCachedCalendarDays, toast, routines, calendarDays],
   );
 
   /** Persist the profile (PUT /me) — nickname + bio together, optimistic. */

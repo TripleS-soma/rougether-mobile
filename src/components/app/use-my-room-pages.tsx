@@ -157,6 +157,8 @@ export function useMyRoomPages({
   );
 
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
+  // 달력 ＋ 루틴 (#1138) — 고른 날짜를 추가 화면의 시작일로.
+  const [addRoutineStartDate, setAddRoutineStartDate] = useState<string | undefined>(undefined);
 
   // 알림 (list + read receipts); loaded on mount so the header bell can show
   // the unread dot, refreshed each time the list opens.
@@ -184,11 +186,12 @@ export function useMyRoomPages({
   // 푸시 탭(콜드 스타트 포함) → 알림 목록으로 (#405).
   useEffect(
     () =>
-      onNotificationTap(() => {
+      onNotificationTap((notification) => {
         reportAppOpen('push');
-        openNotifications();
+        if (notification?.type === 'APP_INACTIVITY_REMINDER') setScreen('myRoom');
+        else openNotifications();
       }),
-    [openNotifications],
+    [openNotifications, setScreen],
   );
 
   /**
@@ -213,9 +216,13 @@ export function useMyRoomPages({
         // 배너가 떠 있는 동안 도착한 알림도 알림함에는 즉시 반영한다.
         void loadNotifications();
         pushBannerSeq.current += 1;
-        setPushBanner({ key: pushBannerSeq.current, ...n });
+        setPushBanner({
+          key: pushBannerSeq.current,
+          ...n,
+          onPress: n.type === 'APP_INACTIVITY_REMINDER' ? () => setScreen('myRoom') : undefined,
+        });
       }),
-    [loadNotifications],
+    [loadNotifications, setScreen],
   );
   const dismissPushBanner = useCallback(() => setPushBanner(null), []);
 
@@ -243,9 +250,20 @@ export function useMyRoomPages({
   // + 버튼은 바로 추가 화면으로 — 뒤로 가면 나의 방으로 복귀 (#335).
   const addRoutineFromMyRoom = useCallback(() => {
     setEditingRoutine(null);
+    setAddRoutineStartDate(undefined);
     setAddReturnScreen('myRoom');
     setScreen('addRoutine');
   }, [setAddReturnScreen, setScreen]);
+  // 달력 탭의 ＋ 루틴 (#1138) — 그 날짜가 시작일, 뒤로 가면 달력으로.
+  const addRoutineForDate = useCallback(
+    (date: string) => {
+      setEditingRoutine(null);
+      setAddRoutineStartDate(date);
+      setAddReturnScreen('calendar');
+      setScreen('addRoutine');
+    },
+    [setAddReturnScreen, setScreen],
+  );
   const editRoutineFromMyRoom = useCallback(
     (r: Routine) => openEditRoutine(r, 'myRoom'),
     [openEditRoutine],
@@ -382,6 +400,7 @@ export function useMyRoomPages({
     onToggleCompletion: toggleWithMissionGuard,
     onEdit: openDecor,
     onAddRoutine: addRoutineFromMyRoom,
+    onAddRoutineForDate: addRoutineForDate,
     onManageRoutines: openRoutineManage,
     onOpenNotifications: openNotificationList,
     unreadNotificationCount: unreadCount,
@@ -427,6 +446,7 @@ export function useMyRoomPages({
       <AddRoutineScreen
         categories={categories}
         editRoutine={editingRoutine}
+        initialStartDate={addRoutineStartDate}
         onAdd={addRoutineWithMission}
         onUpdate={updateRoutine}
         onDelete={deleteRoutine}

@@ -387,6 +387,58 @@ describe('useMyRoomData — 달력 월 점 (#838)', () => {
     expect([...result.current.markedTodoDates].sort()).toEqual(['2026-08-02', '2026-08-03']);
   });
 
+  it('할 일을 추가하면 서버 응답 전에 점이 찍히고, 실패하면 걷는다 (#1133)', async () => {
+    let resolveCreate: (v: unknown) => void = () => {};
+    let rejectCreate: (e: unknown) => void = () => {};
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method === 'POST' && url.endsWith('/todos')) {
+        return new Promise((resolve, reject) => {
+          resolveCreate = (v) => resolve(res(v));
+          rejectCreate = reject;
+        });
+      }
+      if (url.includes('/calendar/month')) return res({ days: [] });
+      if (url.endsWith('/today')) return res({ categories: [], summary: {}, streak: {} });
+      if (url.endsWith('/me')) return res({ userId: 1, nickname: '테스터' });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useMyRoomData());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.markedTodoDates.has('2026-08-20')).toBe(false);
+
+    // 응답이 오기 전에 이미 점이 있다.
+    let pending!: Promise<void>;
+    await act(async () => {
+      pending = result.current.quickAddTodo('1', '치과 예약', '2026-08-20');
+    });
+    expect(result.current.markedTodoDates.has('2026-08-20')).toBe(true);
+
+    // 성공 — 앱이 든 투두의 날짜로 점이 유지된다.
+    await act(async () => {
+      resolveCreate({
+        id: 9,
+        title: '치과 예약',
+        categoryId: 1,
+        dueDate: '2026-08-20',
+        status: 'PENDING',
+      });
+      await pending;
+    });
+    expect(result.current.markedTodoDates.has('2026-08-20')).toBe(true);
+
+    // 실패 — 요청 중 점은 걷힌다.
+    await act(async () => {
+      pending = result.current.quickAddTodo('1', '실패할 일', '2026-08-21');
+    });
+    expect(result.current.markedTodoDates.has('2026-08-21')).toBe(true);
+    await act(async () => {
+      rejectCreate(new Error('boom'));
+      await pending;
+    });
+    expect(result.current.markedTodoDates.has('2026-08-21')).toBe(false);
+  });
+
   it('여러 달을 오가도 받은 달이 누적된다', async () => {
     global.fetch = jest.fn(async (url: string) => {
       if (url.includes('/calendar/month')) {

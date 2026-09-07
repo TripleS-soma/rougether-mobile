@@ -8,6 +8,8 @@ import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AppIconSync } from '@/components/app/app-icon-sync';
+import { notifyAppForegroundInteraction } from '@/lib/app-icon-events';
 import { AnimatedSplashOverlay } from '@/components/app/animated-splash-overlay';
 import { ToastProvider } from '@/components/ui/toast';
 import { AuthProvider } from '@/hooks/use-auth';
@@ -67,12 +69,13 @@ export default function RootLayout() {
   useEffect(subscribeAppStateFocus, []);
   return (
     // RNGH 제스처(방 꾸미기 자유 배치 #327 등)의 루트 컨텍스트.
-    <GestureHandlerRootView style={styles.root}>
+    <GestureHandlerRootView style={styles.root} onTouchStart={notifyAppForegroundInteraction}>
       {/* initialMetrics: 첫 프레임부터 정확한 인셋을 동기로 준다 — 없으면 인셋이
           0에서 시작해 하단 탭바가 내비게이션 바 아래에 깔렸다가 보정된다 (#456). */}
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
+            <AppIconSync />
             <BrandThemeProvider>
               <ToastProvider>
                 <NavigationTheme>

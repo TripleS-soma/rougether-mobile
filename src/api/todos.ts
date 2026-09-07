@@ -1,3 +1,4 @@
+import { notifyAppIconEvent } from '@/lib/app-icon-events';
 /** Todo + todo-completion endpoints. */
 import { apiDelete, apiGetList, apiPost, apiPut } from './client';
 import { buildQuery } from './http';
@@ -37,10 +38,16 @@ export function deleteTodo(id: number) {
 
 /** POST /todos/{id}/complete. */
 export function completeTodo(id: number) {
-  return apiPost<TodoCompleteResponse>(`/todos/${id}/complete`);
+  return apiPost<TodoCompleteResponse>(`/todos/${id}/complete`).then((result) => {
+    notifyAppIconEvent('completion');
+    return result;
+  });
 }
 
 /** DELETE /todos/{id}/complete — undo completion. */
 export function uncompleteTodo(id: number) {
-  return apiDelete<void>(`/todos/${id}/complete`);
+  return apiDelete<void>(`/todos/${id}/complete`).then((result) => {
+    notifyAppIconEvent('completion');
+    return result;
+  });
 }

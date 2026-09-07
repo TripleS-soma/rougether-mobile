@@ -54,8 +54,8 @@ export function RoutineMenuSheet({
     <BottomSheet
       visible={item !== null}
       onClose={onClose}
+      nativeDrag
       // 세로 스크롤 자식이 없는 메뉴 시트 — 본문 어디서든 끌어내려 닫기 (#657).
-      dragScope="card"
       cardStyle={[styles.sheet, { backgroundColor: t.screen }]}>
       <SheetHandle />
       <Text style={[Typography.h3, styles.sheetTitle, { color: t.text }]} numberOfLines={1}>

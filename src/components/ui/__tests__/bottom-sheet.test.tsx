@@ -65,11 +65,12 @@ describe('BottomSheet', () => {
   });
 
   // 휠 스크롤 경합 (#514) — 시트 pan은 카드 상단에서 시작한 드래그만 claim.
-  it('본문(휠 영역)에서 시작한 세로 드래그는 시트가 클레임하지 않는다 (#514)', async () => {
+  // 기본이 'card'가 된 뒤(#1132) 이 계약은 'header' 범위에서만 유효하다.
+  it("'header' 범위: 본문(휠 영역)에서 시작한 세로 드래그는 시트가 클레임하지 않는다 (#514)", async () => {
     const createSpy = jest.spyOn(PanResponder, 'create');
     try {
       const ui = await render(
-        <BottomSheet visible>
+        <BottomSheet visible dragScope="header">
           <Text>시트 내용</Text>
         </BottomSheet>,
       );

@@ -10,12 +10,12 @@ import { AuthProvider } from '@/hooks/use-auth';
 import { QueryProvider } from '@/test-utils/query-wrapper';
 
 // 푸시 탭 콜백을 붙잡아 테스트에서 직접 발화한다 (#405).
-let notificationTapCb: (() => void) | null = null;
+let notificationTapCb: ((n?: { type?: string }) => void) | null = null;
 let notificationReceivedCb: ((n: { type?: string; title: string; body: string }) => void) | null =
   null;
 
 jest.mock('@/lib/push-events', () => ({
-  onNotificationTap: (cb: () => void) => {
+  onNotificationTap: (cb: (n?: { type?: string }) => void) => {
     notificationTapCb = cb;
     return () => {
       notificationTapCb = null;
@@ -49,6 +49,21 @@ afterEach(() => {
 });
 
 describe('AppShell — 푸시 탭 라우팅 (#405)', () => {
+  it('고양이 복귀 알림을 누르면 알림함에서 내 방으로 돌아간다', async () => {
+    const view = await render(
+      <QueryProvider>
+        <AuthProvider>
+          <AppShell />
+        </AuthProvider>
+      </QueryProvider>,
+    );
+    await act(async () => notificationTapCb?.());
+    await waitFor(() => expect(view.getByText('알림')).toBeTruthy());
+    await act(async () => notificationTapCb?.({ type: 'APP_INACTIVITY_REMINDER' }));
+    await waitFor(() => expect(view.queryByText('알림')).toBeNull());
+    expect(view.getByLabelText('알림')).toBeTruthy();
+  });
+
   it('알림 탭 콜백이 발화하면 알림 목록 화면으로 이동한다', async () => {
     const { getByText } = await render(
       <QueryProvider>
@@ -146,7 +161,7 @@ describe('AppShell — 온보딩 미션 체인 (#571)', () => {
     await fireEvent.press(getByLabelText('미션 1 첫 루틴 등록하기'));
     await fireEvent.press(getByText('추천 루틴'));
     await fireEvent.press(getByText('독서 30분'));
-    await fireEvent.press(getByText('월'));
+    // 기본 반복이 매일 (#1126) — 요일 없이 바로 등록.
     await fireEvent.press(getByText('루틴 추가하기'));
 
     // 완료 전환 시트 — 다음 미션 안내와 하러 가기.

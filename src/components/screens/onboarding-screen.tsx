@@ -65,7 +65,7 @@ const SLIDES: Slide[] = [
   },
 ];
 
-export type OnboardingGoal = { id: string; label: string };
+export type OnboardingGoal = { id: string; label: string; code?: string };
 
 /** 목표 선택 상한 — 집 생성의 서버 제약(goalIds ≤ 3)과 맞춘다 (#598 후속). */
 export const MAX_GOALS = 3;

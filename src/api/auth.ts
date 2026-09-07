@@ -25,14 +25,17 @@ const USER_KEY = 'rougether.auth.userId';
 type Session = { accessToken: string; refreshToken: string; userId?: number };
 
 let session: Session | null = null;
+let sessionRevision = 0;
 
 /** Load a persisted session into memory (call once at app startup). */
-export async function loadSession(): Promise<Session | null> {
+export async function loadSession(isCurrent: () => boolean = () => true): Promise<Session | null> {
+  const revision = sessionRevision;
   const [access, refresh, userId] = await Promise.all([
     AsyncStorage.getItem(ACCESS_KEY),
     AsyncStorage.getItem(REFRESH_KEY),
     AsyncStorage.getItem(USER_KEY),
   ]);
+  if (!isCurrent() || revision !== sessionRevision) return session;
   if (access && refresh) {
     session = {
       accessToken: access,
@@ -44,6 +47,7 @@ export async function loadSession(): Promise<Session | null> {
 }
 
 async function persist(next: Session) {
+  sessionRevision += 1;
   session = next;
   await Promise.all([
     AsyncStorage.setItem(ACCESS_KEY, next.accessToken),
@@ -80,6 +84,7 @@ export function onSessionCleared(listener: SessionClearedListener): () => void {
 
 /** Clear the in-memory + persisted session (e.g. on logout or refresh failure). */
 export async function clearSession(): Promise<void> {
+  sessionRevision += 1;
   session = null;
   await Promise.all([
     AsyncStorage.removeItem(ACCESS_KEY),

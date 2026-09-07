@@ -11,7 +11,8 @@ import {
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
-import { Radius, ShadowColor, Spacing } from '@/constants/theme';
+import { GlassSurface } from '@/components/ui/glass-surface';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
 
@@ -41,25 +42,28 @@ type ToastState = { message: string; type: ToastType; key: number };
  */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<ToastState | null>(null);
-  const opacity = useAnimatedValue(0);
+  // 등장 진행도(0→1): 아래에서 밀려 올라오며 살짝 커진다. opacity를 쓰지 않는 건
+  // 글래스 면(#1131)이 opacity 0에서 그려지지 않기 때문 — 토스트는 조건부 렌더라
+  // 사라질 때는 다시 내려간 뒤 언마운트한다.
+  const progress = useAnimatedValue(0);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const hide = useCallback(() => {
     if (hideTimer.current) clearTimeout(hideTimer.current);
     hideTimer.current = null;
-    Animated.timing(opacity, { toValue: 0, duration: FADE_MS, useNativeDriver: true }).start(() =>
+    Animated.timing(progress, { toValue: 0, duration: FADE_MS, useNativeDriver: true }).start(() =>
       setToast(null),
     );
-  }, [opacity]);
+  }, [progress]);
 
   const show = useCallback(
     (message: string, type: ToastType = 'info') => {
       if (hideTimer.current) clearTimeout(hideTimer.current);
       setToast({ message, type, key: Date.now() });
-      Animated.timing(opacity, { toValue: 1, duration: FADE_MS, useNativeDriver: true }).start();
+      Animated.timing(progress, { toValue: 1, duration: FADE_MS, useNativeDriver: true }).start();
       hideTimer.current = setTimeout(hide, VISIBLE_MS);
     },
-    [opacity, hide],
+    [progress, hide],
   );
 
   useEffect(
@@ -78,18 +82,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <View style={styles.fill} onTouchStart={toast ? hide : undefined}>
         {children}
       </View>
-      {toast ? <ToastView toast={toast} opacity={opacity} onPress={hide} /> : null}
+      {toast ? <ToastView toast={toast} progress={progress} onPress={hide} /> : null}
     </ToastContext.Provider>
   );
 }
 
 function ToastView({
   toast,
-  opacity,
+  progress,
   onPress,
 }: {
   toast: ToastState;
-  opacity: Animated.Value;
+  progress: Animated.Value;
   onPress: () => void;
 }) {
   const t = useTokens();
@@ -108,18 +112,26 @@ function ToastView({
         {
           // Above the bottom nav (≈64px) and the home indicator on any device.
           bottom: (insets?.bottom ?? 0) + 80,
-          backgroundColor: bg,
-          opacity,
           transform: [
-            { translateY: opacity.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) },
+            { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) },
+            { scale: progress.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] }) },
           ],
         },
       ]}>
-      <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel="알림 닫기">
-        <Text style={[Typography.label, styles.text, { color: ink }]} numberOfLines={2}>
-          {toast.message}
-        </Text>
-      </Pressable>
+      {/* 면은 GlassSurface (#1131) — iOS 26에선 토스트 색을 입힌 prominent 글래스,
+          그 밖에선 종전과 같은 단색(fallback = tint). */}
+      <GlassSurface
+        interactive={false}
+        tintColor={bg}
+        fallbackColor={bg}
+        style={styles.face}
+        testID="toast-face">
+        <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel="알림 닫기">
+          <Text style={[Typography.label, styles.text, { color: ink }]} numberOfLines={2}>
+            {toast.message}
+          </Text>
+        </Pressable>
+      </GlassSurface>
     </Animated.View>
   );
 }
@@ -132,15 +144,15 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: Spacing.four,
     right: Spacing.four,
+    alignItems: 'center',
+  },
+  // 그림자는 GlassSurface 폴백이 스스로 든다(lift) — 여기서 겹치지 않는다.
+  face: {
+    alignSelf: 'stretch',
     borderRadius: Radius.pill,
     paddingVertical: Spacing.three,
     paddingHorizontal: Spacing.four,
     alignItems: 'center',
-    elevation: 4,
-    shadowColor: ShadowColor,
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
   },
   text: {
     textAlign: 'center',

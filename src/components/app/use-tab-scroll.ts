@@ -13,12 +13,20 @@ import { useConstant, useStableCallback } from '@/hooks/use-stable-value';
  * (`getInitialScrollY`) memo 경계(#539)를 건드리지 않는다.
  */
 export function useTabScroll(): Record<NavTab, ScrollRestoreProps> {
-  const offsets = useConstant(() => ({ myRoom: 0, house: 0, myPage: 0 }) as Record<NavTab, number>);
+  const offsets = useConstant(
+    () => ({ myRoom: 0, calendar: 0, house: 0, myPage: 0 }) as Record<NavTab, number>,
+  );
 
   const myRoom: ScrollRestoreProps = {
     getInitialScrollY: useStableCallback(() => offsets.myRoom),
     onScrollY: useStableCallback((y: number) => {
       offsets.myRoom = y;
+    }),
+  };
+  const calendar: ScrollRestoreProps = {
+    getInitialScrollY: useStableCallback(() => offsets.calendar),
+    onScrollY: useStableCallback((y: number) => {
+      offsets.calendar = y;
     }),
   };
   const house: ScrollRestoreProps = {
@@ -34,5 +42,5 @@ export function useTabScroll(): Record<NavTab, ScrollRestoreProps> {
     }),
   };
 
-  return { myRoom, house, myPage };
+  return { myRoom, calendar, house, myPage };
 }

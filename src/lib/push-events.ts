@@ -44,15 +44,29 @@ export function initPushDisplay(): void {
  * tap that cold-started the app (the launch response predates any listener).
  * Returns the unsubscribe.
  */
-export function onNotificationTap(cb: () => void): () => void {
+export type PushTap = { type?: string };
+
+export function onNotificationTap(cb: (notification?: PushTap) => void): () => void {
   if (Platform.OS === 'web') return () => {};
-  const sub = Notifications.addNotificationResponseReceivedListener(() => cb());
+  let alive = true;
+  let lastId: string | undefined;
+  const receive = (response: Notifications.NotificationResponse) => {
+    const { identifier, content } = response.notification.request;
+    if (!alive || identifier === lastId) return;
+    lastId = identifier;
+    const type: unknown = content.data?.type;
+    cb({ type: typeof type === 'string' ? type : undefined });
+  };
+  const sub = Notifications.addNotificationResponseReceivedListener(receive);
   void Notifications.getLastNotificationResponseAsync()
     .then((resp) => {
-      if (resp) cb();
+      if (resp) receive(resp);
     })
     .catch(() => {});
-  return () => sub.remove();
+  return () => {
+    alive = false;
+    sub.remove();
+  };
 }
 
 /**

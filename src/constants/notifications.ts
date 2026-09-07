@@ -8,6 +8,7 @@ import type { IconName } from '@/components/ui/icon';
 export const NOTIFICATION_TYPE_ICONS: Record<string, IconName> = {
   ROUTINE_REMINDER: 'bell',
   TODO_REMINDER: 'bell',
+  APP_INACTIVITY_REMINDER: 'house',
   HOUSE_KICK: 'house',
   // 친구 응원 알림 (#330 응원 보내기의 수신측) — 스웨거 enum 추가분.
   FRIEND_CHEER: 'heart',

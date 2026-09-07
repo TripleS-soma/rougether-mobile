@@ -24,6 +24,8 @@ import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style'
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import type { NavTab } from '@/components/ui/bottom-nav';
+import { DEFAULT_START_TAB, START_TAB_OPTIONS } from '@/lib/start-tab';
 
 const MODE_OPTIONS: { id: ThemeMode; name: string }[] = [
   { id: 'system', name: '시스템' },
@@ -45,6 +47,9 @@ type Row = { icon: IconName; label: string; onPress?: () => void };
 export type SettingsScreenProps = ScrollRestoreProps & {
   /** 마이페이지의 서브화면 (#1088) — 헤더 뒤로 가기. 미배선이면 탭 루트처럼 그린다. */
   onBack?: () => void;
+  /** 시작 화면 (#1139) — 앱을 열 때 처음 보일 탭. 다음 실행부터 적용. */
+  startTab?: NavTab;
+  onChangeStartTab?: (tab: NavTab) => void;
   /** Light/dark preference ('system' follows the OS). */
   themeMode?: ThemeMode;
   onChangeThemeMode?: (mode: ThemeMode) => void;
@@ -93,6 +98,8 @@ export type SettingsScreenProps = ScrollRestoreProps & {
  */
 export const SettingsScreen = memo(function SettingsScreen({
   onBack,
+  startTab = DEFAULT_START_TAB,
+  onChangeStartTab,
   themeMode = DEFAULT_THEME_MODE,
   onChangeThemeMode,
   themeId = DEFAULT_THEME_ID,
@@ -208,6 +215,65 @@ export const SettingsScreen = memo(function SettingsScreen({
                     ) : (
                       <View style={styles.modeChip}>
                         <Text style={[Typography.label, { color: t.textMuted }]}>{opt.name}</Text>
+                      </View>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+          </GlassSurface>
+
+          {/* 시작 화면 (#1139) — 다크 모드와 같은 칩 열. 바꾸면 다음 실행부터. */}
+          <GlassSurface
+            fallbackColor={t.surface}
+            interactive={false}
+            style={styles.card}
+            testID="settings-start-tab-glass">
+            <View style={styles.designHead}>
+              <View style={[styles.iconCircle, { backgroundColor: t.primarySoft }]}>
+                <Icon name="myRoom" size={20} color={t.primaryText} />
+              </View>
+              <View style={styles.flex}>
+                <Text style={[Typography.label, { color: t.text }]}>시작 화면</Text>
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                  앱을 열 때 처음 보일 탭 · 다음 실행부터
+                </Text>
+              </View>
+            </View>
+            <View style={[styles.modeRow, { backgroundColor: t.surfaceMuted }]}>
+              {START_TAB_OPTIONS.map((opt) => {
+                const selected = opt.id === startTab;
+                return (
+                  <Pressable
+                    key={opt.id}
+                    onPress={() => onChangeStartTab?.(opt.id)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected, checked: selected }}
+                    aria-checked={selected}
+                    accessibilityLabel={`시작 화면 ${opt.name}`}
+                    style={styles.modeOption}>
+                    {selected ? (
+                      <GlassSurface
+                        fallbackColor={t.primary}
+                        tintColor={t.primary}
+                        style={styles.modeChip}>
+                        <Text
+                          style={[Typography.label, { color: t.onPrimary }]}
+                          numberOfLines={1}
+                          adjustsFontSizeToFit
+                          minimumFontScale={0.8}>
+                          {opt.name}
+                        </Text>
+                      </GlassSurface>
+                    ) : (
+                      <View style={styles.modeChip}>
+                        <Text
+                          style={[Typography.label, { color: t.textMuted }]}
+                          numberOfLines={1}
+                          adjustsFontSizeToFit
+                          minimumFontScale={0.8}>
+                          {opt.name}
+                        </Text>
                       </View>
                     )}
                   </Pressable>

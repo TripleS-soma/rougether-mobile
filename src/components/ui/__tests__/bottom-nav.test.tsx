@@ -8,18 +8,22 @@ import { BottomNav } from '@/components/ui/bottom-nav';
 import { Themes } from '@/constants/theme';
 import { scrubTarget } from '@/components/ui/use-bottom-nav-scrub';
 
+// 4탭 (#1138): 나의 방 · 달력 · 집 · 마이페이지 — 중심 53 · 136 · 212 · 298.
 const FRAMES = [
   { x: 8, width: 90 },
   { x: 106, width: 60 },
   { x: 174, width: 76 },
+  { x: 258, width: 80 },
 ];
+// scrubTarget 단위 테스트용 3탭 프레임(#1080 당시 기하).
+const FRAMES3 = FRAMES.slice(0, 3);
 
 async function measureNav(ui: Awaited<ReturnType<typeof render>>) {
   await act(async () => {
     fireEvent(ui.getByTestId('bottom-nav-track'), 'layout', {
-      nativeEvent: { layout: { x: 0, y: 0, width: 258, height: 64 } },
+      nativeEvent: { layout: { x: 0, y: 0, width: 346, height: 64 } },
     });
-    ['myRoom', 'house', 'myPage'].forEach((key, i) => {
+    ['myRoom', 'calendar', 'house', 'myPage'].forEach((key, i) => {
       fireEvent(ui.getByTestId(`bottom-nav-tab-${key}`), 'layout', {
         nativeEvent: { layout: { ...FRAMES[i], y: 8, height: 48 } },
       });
@@ -48,7 +52,7 @@ describe('BottomNav', () => {
     const ui = await render(<BottomNav active="myRoom" onChange={onChange} />);
     await measureNav(ui);
     await scrub(210);
-    expect(onChange.mock.calls).toEqual([['myPage']]);
+    expect(onChange.mock.calls).toEqual([['house']]);
   });
 
   it('can scrub back and uses the latest callback without replacing the gesture', async () => {
@@ -68,10 +72,10 @@ describe('BottomNav', () => {
     const onChange = jest.fn();
     const ui = await render(<BottomNav active="house" onChange={onChange} />);
     await measureNav(ui);
-    await scrub(210, 30, State.CANCELLED);
-    await scrub(210, -60);
-    await scrub(210, 140);
-    await scrub(136);
+    await scrub(212, 30, State.CANCELLED);
+    await scrub(212, -60);
+    await scrub(212, 140);
+    await scrub(212);
     expect(onChange).not.toHaveBeenCalled();
     expect(ui.getByRole('button', { name: '집' }).props.accessibilityState.selected).toBe(true);
   });
@@ -105,6 +109,7 @@ describe('BottomNav', () => {
     const onChange = jest.fn();
     const { getByText } = await render(<BottomNav active="myRoom" onChange={onChange} />);
     expect(getByText('나의 방')).toBeTruthy();
+    expect(getByText('달력')).toBeTruthy(); // #1138
     expect(getByText('집')).toBeTruthy();
     expect(getByText('마이페이지')).toBeTruthy();
 
@@ -124,9 +129,9 @@ describe('BottomNav', () => {
     };
     const tree = ui.toJSON();
     (Array.isArray(tree) ? tree : [tree]).forEach((n) => walk(n as Node));
-    expect(colors).toHaveLength(3);
+    expect(colors).toHaveLength(4);
     expect(colors.filter((c) => c === Themes.cozy.primary)).toHaveLength(1); // 활성 탭
-    expect(colors.filter((c) => c === Themes.cozy.icon)).toHaveLength(2); // 비활성 탭
+    expect(colors.filter((c) => c === Themes.cozy.icon)).toHaveLength(3); // 비활성 탭
   });
 
   it('badges — 해당 탭 아이콘에 점, 없으면 안 그린다 (#1089)', async () => {
@@ -176,13 +181,17 @@ describe('BottomNav', () => {
 
 describe('scrubTarget', () => {
   it('uses measured centers, including gaps and horizontal overshoot', () => {
-    expect([-30, 90, 100, 150, 175, 900].map((x) => scrubTarget(x, FRAMES))).toEqual([
+    expect([-30, 90, 100, 150, 175, 900].map((x) => scrubTarget(x, FRAMES3, 3))).toEqual([
       0, 0, 1, 1, 2, 2,
     ]);
+    // 4탭 (#1138): 마지막 경계 255 — 그 너머는 마이페이지.
+    expect([230, 260, 900].map((x) => scrubTarget(x, FRAMES, 4))).toEqual([2, 3, 3]);
   });
   it('rejects missing measurements and invalid coordinates', () => {
-    expect(scrubTarget(50, [])).toBe(-1);
-    expect(scrubTarget(50, [{ x: 0, width: 0 }, ...FRAMES.slice(1)])).toBe(-1);
-    expect(scrubTarget(Number.NaN, FRAMES)).toBe(-1);
+    expect(scrubTarget(50, [], 3)).toBe(-1);
+    expect(scrubTarget(50, [{ x: 0, width: 0 }, ...FRAMES3.slice(1)], 3)).toBe(-1);
+    expect(scrubTarget(Number.NaN, FRAMES3, 3)).toBe(-1);
+    // 탭 수와 프레임 수가 다르면(측정 미완료) -1.
+    expect(scrubTarget(50, FRAMES3, 4)).toBe(-1);
   });
 });
