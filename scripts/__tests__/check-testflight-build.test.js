@@ -262,4 +262,32 @@ describe('store-build workflow boundaries', () => {
     expect(lane['timeout-minutes']).toBe(90);
     expect(JSON.stringify(lane)).not.toMatch(/ASC_API_KEY|asc-api-key|eas update|auto-submit/);
   });
+
+  it('tests and builds the exact candidate head instead of a moving PR merge ref', () => {
+    const smoke = yaml.load(
+      fs.readFileSync(
+        path.join(__dirname, '../../.github/workflows/ios-release-smoke.yml'),
+        'utf8',
+      ),
+    ).jobs['release-smoke'];
+    const head = '${{ github.event.pull_request.head.sha }}';
+    expect(smoke.steps[0].with.ref).toBe(head);
+    expect(smoke.env.CANDIDATE_SOURCE_SHA).toBe(head);
+    const verificationIndex = smoke.steps.findIndex(
+      (step) => step.name === 'Verify and test candidate source',
+    );
+    const prepareIndex = smoke.steps.findIndex(
+      (step) => step.name === 'Prepare Release native project',
+    );
+    expect(verificationIndex).toBeGreaterThan(0);
+    expect(verificationIndex).toBeLessThan(prepareIndex);
+    const verification = smoke.steps[verificationIndex];
+    expect(verification['timeout-minutes']).toBe(5);
+    expect(verification.run).toContain('source-sha.txt');
+    expect(verification.run).toContain('= "$CANDIDATE_SOURCE_SHA"');
+    expect(verification.run).toContain('npm run typecheck');
+    expect(verification.run).toContain('npm test -- --ci');
+    expect(verification.run).toContain('--forceExit');
+    expect(verification['continue-on-error']).toBeUndefined();
+  });
 });

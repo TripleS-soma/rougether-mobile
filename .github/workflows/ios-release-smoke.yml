@@ -20,13 +20,26 @@ jobs:
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
       SENTRY_DISABLE_AUTO_UPLOAD: 'true'
+      CANDIDATE_SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
+      # A moving PR merge ref is not the source uploaded by a branch build.
+      - name: Verify and test candidate source
+        timeout-minutes: 5
+        run: |
+          mkdir -p release-smoke
+          git rev-parse HEAD | tee release-smoke/source-sha.txt
+          test "$(cat release-smoke/source-sha.txt)" = "$CANDIDATE_SOURCE_SHA"
+          npm run typecheck
+          # Existing Jest async handles must not hang after the test result; failures still exit nonzero.
+          npm test -- --ci --maxWorkers=2 --watchman=false --forceExit
       - name: Prepare Release native project
         timeout-minutes: 10
         run: |
