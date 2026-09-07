@@ -967,7 +967,7 @@ export const galleryEntries: GalleryEntry[] = [
   },
   {
     name: 'GachaPhonePreview',
-    description: '전체 화면 휴대폰 QA · 전설 연출 · 안전 영역 상단 59 / 하단 34',
+    description: '전체 화면 휴대폰 QA · 5+1 순차 차임과 일괄 결과 · 전설 연출 · 상단 59 / 하단 34',
     render: () => <GachaPhonePreview fullscreen />,
   },
   {

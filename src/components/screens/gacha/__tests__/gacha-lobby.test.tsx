@@ -50,6 +50,13 @@ function lobbyProps(overrides: Partial<ComponentProps<typeof GachaLobby>> = {}) 
 describe('GachaLobby', () => {
   beforeEach(() => jest.clearAllMocks());
 
+  it('omits the extra footer copy while retaining explicit draw counts and prices', async () => {
+    const screen = await render(<GachaLobby {...lobbyProps()} />);
+    expect(screen.queryByText(/5회 가격으로 6개/)).toBeNull();
+    expect(screen.queryByText(/중복 아이템은 다이아로/)).toBeNull();
+    expect(screen.getByLabelText('5+1회 뽑기, 185 코인')).toBeTruthy();
+  });
+
   it('keeps category selection controlled and passes the original server machine to its owner', async () => {
     const onSelect = jest.fn();
     const props = lobbyProps({ onSelect });

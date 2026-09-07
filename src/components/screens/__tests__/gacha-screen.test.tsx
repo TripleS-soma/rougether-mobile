@@ -4,6 +4,10 @@ import type { TestInstance } from 'test-renderer';
 import type { GachaMachine } from '@/api/adapters';
 import type { DrawResult, GachaRewardResponse } from '@/api/types';
 import { GachaScreen } from '@/components/screens/gacha-screen';
+import {
+  getMultiRevealBeatMs,
+  getMultiRevealDuration,
+} from '@/components/screens/gacha/multi-reveal-timeline';
 import { ToastProvider } from '@/components/ui/toast';
 
 const videoMock = jest.requireActual('expo-video') as {
@@ -303,9 +307,9 @@ describe('GachaScreen', () => {
     expect(getByText('중복 · 다이아 +3')).toBeTruthy();
   });
 
-  it('lets the user flip a multi-pull card immediately after skipping the cinematic', async () => {
+  it('shows a nonstandard result count immediately without inventing extra rewards or playing surplus beats', async () => {
     const results: DrawResult[] = [reward, { name: '나무 의자', rarity: '일반', converted: false }];
-    const { getByText, getByLabelText } = await render(
+    const { getByText, getByLabelText, queryByLabelText } = await render(
       <GachaScreen
         gachas={[machine]}
         coinBalance={5600}
@@ -313,10 +317,14 @@ describe('GachaScreen', () => {
       />,
     );
     await fireEvent.press(getByText('5+1회 뽑기'));
-    await fireEvent.press(getByLabelText('뽑기 연출 건너뛰기'));
-    expect(getByLabelText('2번째 카드 뒤집기')).toBeTruthy();
-    await fireEvent.press(getByLabelText('1번째 카드 뒤집기'));
+    expect(queryByLabelText('뽑기 연출 건너뛰기')).toBeNull();
+    expect(getByText('2개 획득')).toBeTruthy();
+    expect(queryByLabelText('1번째 카드 뒤집기')).toBeNull();
+    expect(queryByLabelText('한 번에 열기')).toBeNull();
+    expect(getByText('나무 의자')).toBeTruthy();
     expect(getByText(reward.name!)).toBeTruthy();
+    expect(getByLabelText('확인')).toBeTruthy();
+    expect(videoMock.__getLastVideoPlayer()).toBeNull();
   });
 
   it('confirms a result once even when its close action is pressed twice', async () => {
@@ -341,7 +349,7 @@ describe('GachaScreen', () => {
     expect(queryByLabelText('확인')).toBeNull();
   });
 
-  it('opens all six cards without drawing again and resets the count on the next pull', async () => {
+  it('shows six face-up cards after completion without drawing again and clears them on the next pull', async () => {
     jest.useFakeTimers();
     try {
       const results = Array.from({ length: 6 }, (_, index) => ({
@@ -355,30 +363,97 @@ describe('GachaScreen', () => {
         <GachaScreen gachas={[machine]} coinBalance={5600} onDraw={onDraw} />,
       );
       await fireEvent.press(screen.getByText('5+1회 뽑기'));
-      await fireEvent.press(screen.getByLabelText('뽑기 연출 건너뛰기'));
-      expect(screen.getByText('카드를 눌러 열어보세요 · 0 / 6')).toBeTruthy();
-      await fireEvent.press(screen.getByLabelText('1번째 카드 뒤집기'));
-      expect(screen.getByText('카드를 눌러 열어보세요 · 1 / 6')).toBeTruthy();
-      const openAll = pressHandler(screen.getByLabelText('한 번에 열기'));
-      await act(() => {
-        openAll();
-        openAll();
-      });
-      expect(screen.getByText('선물을 모두 열었어요!')).toBeTruthy();
+      expect(screen.queryByTestId('gacha-multi-results')).toBeNull();
+      expect(screen.queryByLabelText('확인')).toBeNull();
+      await act(() => videoMock.__emitVideoEvent('playToEnd'));
+      expect(screen.getByTestId('gacha-multi-results')).toBeTruthy();
+      expect(screen.getByText('6개 획득')).toBeTruthy();
       expect(screen.queryByLabelText('한 번에 열기')).toBeNull();
+      expect(screen.queryByLabelText('1번째 카드 뒤집기')).toBeNull();
       for (const result of results) expect(screen.getByText(result.name)).toBeTruthy();
       await act(() => jest.advanceTimersByTime(5000));
-      expect(screen.getByText('선물을 모두 열었어요!')).toBeTruthy();
+      expect(screen.getByText('6개 획득')).toBeTruthy();
       expect(onDraw).toHaveBeenCalledTimes(1);
       await fireEvent.press(screen.getByLabelText('확인'));
       await fireEvent.press(screen.getByText('5+1회 뽑기'));
+      expect(screen.queryByTestId('gacha-multi-results')).toBeNull();
       await fireEvent.press(screen.getByLabelText('뽑기 연출 건너뛰기'));
-      expect(screen.getByText('카드를 눌러 열어보세요 · 0 / 6')).toBeTruthy();
+      expect(screen.getByText('6개 획득')).toBeTruthy();
       expect(onDraw).toHaveBeenCalledTimes(2);
       await screen.unmount();
     } finally {
       jest.useRealTimers();
     }
+  });
+
+  it('skips a pending multi-draw into all six real results without playing another animation', async () => {
+    const response = deferred<DrawResult[]>();
+    const results = Array.from({ length: 6 }, (_, index) => ({
+      ...reward,
+      name: `대기 보상 ${index + 1}`,
+    }));
+    const onDraw = jest.fn(() => response.promise);
+    const screen = await render(
+      <GachaScreen gachas={[machine]} coinBalance={5600} onDraw={onDraw} />,
+    );
+    await fireEvent.press(screen.getByText('5+1회 뽑기'));
+    await fireEvent.press(screen.getByLabelText('뽑기 연출 건너뛰기'));
+    expect(screen.queryByTestId('gacha-multi-results')).toBeNull();
+    await act(() => response.resolve(results));
+    for (const result of results) expect(screen.getByText(result.name)).toBeTruthy();
+    expect(videoMock.__getLastVideoPlayer()).toBeNull();
+    expect(onDraw).toHaveBeenCalledTimes(1);
+    expect(onDraw).toHaveBeenCalledWith(machine.id, 6);
+  });
+
+  it('waits through six reveal beats and the final settle before mounting any result cards', async () => {
+    const results = Array.from({ length: 6 }, (_, index) => ({
+      ...reward,
+      name: `순서 보상 ${index + 1}`,
+      rarity: index === 4 ? '전설' : '일반',
+      converted: index === 2,
+      ...(index === 2 ? { refundCurrencyType: 'DIAMOND' as const, refundAmount: 3 } : {}),
+    }));
+    const onDraw = jest.fn().mockResolvedValue(results);
+    const onResultsConfirmed = jest.fn();
+    const screen = await render(
+      <GachaScreen
+        gachas={[machine]}
+        coinBalance={5600}
+        onDraw={onDraw}
+        onResultsConfirmed={onResultsConfirmed}
+      />,
+    );
+    await fireEvent.press(screen.getByText('5+1회 뽑기'));
+    for (let index = 0; index < results.length; index++) {
+      await act(() =>
+        videoMock.__emitVideoEvent('timeUpdate', {
+          currentTime: getMultiRevealBeatMs(index) / 1000,
+        }),
+      );
+      expect(screen.queryByTestId('gacha-multi-results')).toBeNull();
+      expect(screen.queryByLabelText('확인')).toBeNull();
+    }
+    await act(() =>
+      videoMock.__emitVideoEvent('timeUpdate', {
+        currentTime: (getMultiRevealDuration(results.length) - 1) / 1000,
+      }),
+    );
+    expect(screen.queryByTestId('gacha-multi-results')).toBeNull();
+    await act(() =>
+      videoMock.__emitVideoEvent('timeUpdate', {
+        currentTime: getMultiRevealDuration(results.length) / 1000,
+      }),
+    );
+    expect(screen.getByTestId('gacha-multi-results')).toBeTruthy();
+    expect(screen.getAllByText(/^순서 보상/).map((node) => node.props.children)).toEqual(
+      results.map((result) => result.name),
+    );
+    expect(screen.getByText('중복 · 다이아 +3')).toBeTruthy();
+    expect(onDraw).toHaveBeenCalledTimes(1);
+    expect(onResultsConfirmed).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByLabelText('확인'));
+    expect(onResultsConfirmed).toHaveBeenCalledTimes(1);
   });
 
   it('passes only new placeable rewards to decor and confirms the results once', async () => {

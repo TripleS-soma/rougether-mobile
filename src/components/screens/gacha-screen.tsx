@@ -8,10 +8,11 @@ import type { DrawResult, GachaDrawCount, GachaRewardResponse } from '@/api';
 import {
   CinematicRevealShell,
   CinematicRewardStage,
-  FlipCard,
+  RevealCard,
   rarityColor,
 } from '@/components/screens/gacha/draw-animation';
 import { buildRevealPlan } from '@/components/screens/gacha/reveal-motion';
+import { MultiReveal } from '@/components/screens/gacha/multi-reveal';
 import { SheetHandle } from '@/components/ui/sheet-handle';
 import { Loading } from '@/components/ui/loading';
 import { BottomSheet, SheetDragExclude } from '@/components/ui/bottom-sheet';
@@ -103,9 +104,8 @@ export function groupRewardsByRarity(
 /**
  * Gacha screen, ported from the prototype `GachaScreen` + `GachaAnimation`, now
  * API-driven: machines and rewards come from the server, and a draw shows a
- * two-phase animation (charge build-up while the request is in flight → staggered
- * reward reveal). Uses the built-in Animated API (no worklets) so it runs in
- * tests.
+ * request wait → cinematic reward entrances → face-up results. Multi-draws
+ * complete every entrance before showing any result cards.
  */
 /** 같은 등급 안 행 사이 간격 (#773) — 모듈 스코프라 참조가 고정된다. */
 function RewardGap() {
@@ -142,11 +142,7 @@ export function GachaScreen({
   const [error, setError] = useState('');
   const [phase, setPhase] = useState<Phase>('idle');
   const [pulled, setPulled] = useState<DrawResult[]>([]);
-  const [revealAll, setRevealAll] = useState(false);
-  const [openedCards, setOpenedCards] = useState<number[]>([]);
-  const markRevealed = useCallback((index: number) => {
-    setOpenedCards((current) => (current.includes(index) ? current : [...current, index]));
-  }, []);
+  const [resultActionsHeight, setResultActionsHeight] = useState(0);
   const revealPlan = useMemo(
     () => buildRevealPlan(pulled, shouldReduceMotion),
     [pulled, shouldReduceMotion],
@@ -260,10 +256,8 @@ export function GachaScreen({
     skipRequested.current = false;
     readyResults.current = null;
     setPulled([]);
-    setRevealAll(false);
-    setOpenedCards([]);
     const run = ++drawRun.current;
-    hapticImpact();
+    if (!shouldReduceMotion) hapticImpact();
     setPhase('charging');
     let results: DrawResult[] | null | undefined;
     try {
@@ -278,8 +272,8 @@ export function GachaScreen({
       setError('뽑기에 실패했어요.');
       return;
     }
-    // 결과 아트는 슬롯에만 꽂고, 연출 강도는 결과 중 최고 등급 프로필 하나가
-    // 결정한다. 따라서 새 가구를 추가해도 화면 코드는 바뀌지 않는다.
+    // Artwork and rarity come from each server result; new furniture needs no
+    // item-specific animation or additional draw request.
     const plan = buildRevealPlan(results, shouldReduceMotion);
     const preloadUris = plan.items
       .map((item) =>
@@ -422,13 +416,22 @@ export function GachaScreen({
               </Text>
             </View>
           ) : phase === 'burst' ? (
-            <CinematicRevealShell
-              entry={featuredRevealItem}
-              profile={revealPlan.profile}
-              soundEffectsEnabled={soundEffectsEnabled}
-              reducedMotion={shouldReduceMotion}
-              onComplete={finishCinematic}
-            />
+            revealPlan.items.length > 1 ? (
+              <MultiReveal
+                plan={revealPlan}
+                soundEffectsEnabled={soundEffectsEnabled}
+                reducedMotion={shouldReduceMotion}
+                onComplete={finishCinematic}
+              />
+            ) : (
+              <CinematicRevealShell
+                entry={featuredRevealItem}
+                profile={revealPlan.profile}
+                soundEffectsEnabled={soundEffectsEnabled}
+                reducedMotion={shouldReduceMotion}
+                onComplete={finishCinematic}
+              />
+            )
           ) : phase === 'reveal' ? (
             <>
               <CinematicRewardStage
@@ -456,47 +459,41 @@ export function GachaScreen({
                 <View
                   style={[
                     styles.multiResults,
-                    { paddingTop: Math.max(insets.top, Spacing.four) + Spacing.four },
-                  ]}>
-                  <Text style={[Typography.supporting, emph('semibold'), { color: t.onTint }]}>
-                    오늘 도착한 선물
-                  </Text>
+                    {
+                      paddingTop: Math.max(insets.top, Spacing.four) + Spacing.four,
+                      bottom:
+                        resultActionsHeight +
+                        Math.max(insets.bottom, Spacing.three) +
+                        Spacing.two +
+                        Spacing.four,
+                    },
+                  ]}
+                  testID="gacha-multi-results">
                   <Text style={[Typography.h2, emph('bold'), styles.center, { color: t.onTint }]}>
-                    여섯 가지 작은 설렘
+                    뽑기 결과
                   </Text>
                   <Text
                     style={[Typography.supporting, { color: t.onTint }]}
                     accessibilityLiveRegion="polite">
-                    {openedCards.length === revealPlan.items.length
-                      ? '선물을 모두 열었어요!'
-                      : `카드를 눌러 열어보세요 · ${openedCards.length} / ${revealPlan.items.length}`}
+                    {revealPlan.items.length}개 획득
                   </Text>
-                  {openedCards.length < revealPlan.items.length ? (
-                    <ScalePressable
-                      onPress={() => setRevealAll(true)}
-                      accessibilityRole="button"
-                      accessibilityLabel="한 번에 열기"
-                      style={[styles.openAllButton, { backgroundColor: t.surface }]}>
-                      <Text style={[Typography.label, { color: t.text }]}>한 번에 열기</Text>
-                    </ScalePressable>
-                  ) : null}
                   <ScrollView
                     style={styles.revealScroll}
                     contentContainerStyle={styles.revealGrid}
                     showsVerticalScrollIndicator={false}>
                     {revealPlan.items.map((entry) => (
-                      <FlipCard
+                      <RevealCard
                         key={`${entry.displayName}-${entry.index}`}
                         entry={entry}
-                        reducedMotion={shouldReduceMotion}
-                        revealAll={revealAll}
-                        onReveal={markRevealed}
+                        // The cinematic already revealed every reward; never deal or flip again.
+                        reducedMotion
                       />
                     ))}
                   </ScrollView>
                 </View>
               )}
               <View
+                onLayout={({ nativeEvent }) => setResultActionsHeight(nativeEvent.layout.height)}
                 style={[
                   styles.resultActions,
                   { bottom: Math.max(insets.bottom, Spacing.three) + Spacing.two },
@@ -643,18 +640,11 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    bottom: 164,
     paddingHorizontal: Spacing.three,
     alignItems: 'center',
     gap: Spacing.two,
   },
   revealScroll: { marginTop: Spacing.three, width: '100%' },
-  openAllButton: {
-    minHeight: 44,
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.four,
-    borderRadius: Radius.pill,
-  },
   revealGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

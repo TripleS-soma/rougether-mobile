@@ -185,9 +185,6 @@ export function GachaLobby({
             );
           })}
         </View>
-        <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
-          5회 가격으로 6개 · 중복 아이템은 다이아로
-        </Text>
       </View>
     </View>
   );
