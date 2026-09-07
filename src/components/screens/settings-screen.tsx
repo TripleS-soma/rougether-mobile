@@ -45,7 +45,7 @@ function fontPreviewStyle(id: BrandFontId) {
 type Row = { icon: IconName; label: string; onPress?: () => void };
 
 export type SettingsScreenProps = ScrollRestoreProps & {
-  /** 마이페이지의 서브화면 (#1088) — 헤더 뒤로 가기. 미배선이면 탭 루트처럼 그린다. */
+  /** 내 정보의 서브화면 (#1088) — 헤더 뒤로 가기. 미배선이면 탭 루트처럼 그린다. */
   onBack?: () => void;
   /** 시작 화면 (#1139) — 앱을 열 때 처음 보일 탭. 다음 실행부터 적용. */
   startTab?: NavTab;
@@ -66,7 +66,7 @@ export type SettingsScreenProps = ScrollRestoreProps & {
    * 없다. 행을 내렸고 셸도 넘기지 않는다. 서버가 비밀번호 인증을 붙이면 기타
    * 섹션 위에 계정 섹션을 되살려 `{ icon: 'lock', label: '비밀번호 변경',
    * onPress: onChangePassword }`를 넣을 것 (화면·Dev 갤러리 엔트리는 그대로).
-   * 프로필 편집·친구 초대는 마이페이지로 갔다 (#1088).
+   * 프로필 편집·친구 초대는 내 정보로 갔다 (#1088).
    */
   onChangePassword?: () => void;
   onOpenNotifications?: () => void;
@@ -85,8 +85,8 @@ export type SettingsScreenProps = ScrollRestoreProps & {
 
 /**
  * Settings screen, ported from the prototype `SettingsScreen`: dark-mode picker
- * + notification / misc rows. 마이페이지의 서브화면 (#1088) — "바꾸는 곳"만
- * 남기고 프로필·친구 초대·주간회고·도움말·버그 제보·캘린더 연동은 마이페이지로
+ * + notification / misc rows. 내 정보의 서브화면 (#1088) — "바꾸는 곳"만
+ * 남기고 프로필·친구 초대·주간회고·도움말·버그 제보·캘린더 연동은 내 정보로
  * 갔다(#1097). 업데이트 카드(#1083)는 뺐다 — OTA는 실행 시 자동 적용 (#1095). Theme tokens + type scale; vector icons
  * via the shared Icon. Each row navigates to its sub-screen via the matching
  * prop. The mode picker is prop-driven (onChangeThemeMode); the app shell wires

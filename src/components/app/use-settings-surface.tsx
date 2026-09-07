@@ -44,7 +44,7 @@ import { DEFAULT_HAPTIC_STRENGTH, setHapticStrength } from '@/utils/haptics';
 const DEVICE_SETTINGS_KEY = 'rougether.device-settings';
 
 /**
- * 마이페이지·설정 서피스 배선 (#692 2단계 → #1088) — 마이페이지 탭과 그
+ * 내 정보·설정 서피스 배선 (#692 2단계 → #1088) — 내 정보 탭과 그
  * 서브화면 9종(설정·테마·폰트·프로필·알림·사운드·버그 제보·도움말·친구 초대)의
  * 도메인 훅·콜백·JSX를 소유한다. 서브화면에 있는 동안 탭 페이저가
  * 언마운트되므로 상태는 컴포넌트가 아니라 항상 마운트된 셸에서 이 훅으로
@@ -64,7 +64,7 @@ export function useSettingsSurface({
   setScreen: Dispatch<SetStateAction<Screen>>;
   /** 설정 → 튜토리얼 다시 보기 (셸 prop 통과). */
   onReplayOnboarding?: () => void;
-  /** 마이페이지 → 주간회고 다시 보기 (#1056) — 회고 데이터는 나의 방 페이지 훅이 소유. */
+  /** 내 정보 → 주간회고 다시 보기 (#1056) — 회고 데이터는 나의 방 페이지 훅이 소유. */
   onOpenWeeklyReport?: () => void;
   /** 프로필 카드·편집 배선 — 닉네임·소개는 나의 방 헤더와 공유라 셸 소유. */
   profile: {
@@ -74,9 +74,9 @@ export function useSettingsSurface({
     characterFrames?: string[];
     onSave: (nickname: string, bio: string) => void;
   };
-  /** 마이페이지 지표 한 줄 (#1088) — 스트릭·지갑은 나의 방 데이터 훅 소유. */
+  /** 내 정보 지표 한 줄 (#1088) — 스트릭·지갑은 나의 방 데이터 훅 소유. */
   stats: { streak: number; coin: number; diamond: number };
-  /** 마이페이지 바로가기 (#1089) — 출석·재화 내역 시트는 셸이 들고 있다. */
+  /** 내 정보 바로가기 (#1089) — 출석·재화 내역 시트는 셸이 들고 있다. */
   shortcuts?: {
     onOpenAttendance?: () => void;
     attendancePending?: boolean;
@@ -150,7 +150,7 @@ export function useSettingsSurface({
     loadScreenshot: loadBugScreenshot,
   } = useBugReports();
 
-  // 친구 초대 리워드 (#518) — 마이페이지 → 친구 초대 화면의 데이터·액션.
+  // 친구 초대 리워드 (#518) — 내 정보 → 친구 초대 화면의 데이터·액션.
   const {
     info: inviteInfo,
     loading: invitesLoading,
@@ -217,7 +217,7 @@ export function useSettingsSurface({
     setHapticStrength(soundSettings.hapticStrength ?? DEFAULT_HAPTIC_STRENGTH);
   }, [soundSettings.hapticStrength]);
 
-  // 마이페이지·설정 화면 콜백 — 둘 다 memo라(#539 후속) 인라인 람다면 셸
+  // 내 정보·설정 화면 콜백 — 둘 다 memo라(#539 후속) 인라인 람다면 셸
   // 리렌더마다 memo가 뚫린다. 전부 참조 고정.
   const openSettings = useCallback(() => setScreen('settings'), [setScreen]);
   const openTheme = useCallback(() => setScreen('theme'), [setScreen]);
@@ -229,7 +229,7 @@ export function useSettingsSurface({
     void loadNotificationSettings();
   }, [setScreen, loadNotificationSettings]);
   const openSound = useCallback(() => setScreen('sound'), [setScreen]);
-  // 캘린더 연동 (#844 → 마이페이지 행 #1097) — 화면에서 권한을 요청하므로 여는 것만 한다.
+  // 캘린더 연동 (#844 → 내 정보 행 #1097) — 화면에서 권한을 요청하므로 여는 것만 한다.
   const openCalendarImport = useCallback(() => setScreen('calendarImport'), [setScreen]);
   const openHelp = useCallback(() => setScreen('help'), [setScreen]);
   // 친구 초대 (#518) — 진입 시점에 내 코드를 로드(없으면 서버가 발급).
@@ -251,7 +251,7 @@ export function useSettingsSurface({
     void loadBugReports();
   }, [setScreen, loadBugReports]);
 
-  /** 탭 페이저의 마이페이지 prop — `<MyPageScreen {...myPageProps} />`. */
+  /** 탭 페이저의 내 정보 prop — `<MyPageScreen {...myPageProps} />`. */
   const myPageProps = {
     nickname: profile.nickname,
     bio: profile.bio,
@@ -304,7 +304,7 @@ export function useSettingsSurface({
   const backToMyPage = useCallback(() => setScreen('myPage'), [setScreen]);
   const backToSettings = openSettings;
 
-  /** 현재 화면이 마이페이지 서브화면이면 그 JSX, 아니면 null — 셸이 그대로 렌더. */
+  /** 현재 화면이 내 정보 서브화면이면 그 JSX, 아니면 null — 셸이 그대로 렌더. */
   const subScreen =
     screen === 'settings' ? (
       <SettingsScreen {...settingsProps} {...settingsScroll} onBack={backToMyPage} />

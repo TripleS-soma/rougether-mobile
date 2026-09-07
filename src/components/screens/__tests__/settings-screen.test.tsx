@@ -12,12 +12,12 @@ describe('SettingsScreen', () => {
     expect(queryByText('숲')).toBeNull();
   });
 
-  it('비밀번호 변경 행이 없고, 계정·콘텐츠성 행은 마이페이지로 갔다 (#787, #1088)', async () => {
+  it('비밀번호 변경 행이 없고, 계정·콘텐츠성 행은 내 정보로 갔다 (#787, #1088)', async () => {
     // 서버 인증이 소셜·dev 로그인뿐이라 비밀번호 계정이 없다 — 막다른 화면으로
     // 가는 행이 다시 새어 나오면 여기서 잡는다.
     const { getByText, queryByText } = await render(<SettingsScreen />);
     expect(queryByText('비밀번호 변경')).toBeNull();
-    // 프로필 편집·친구 초대·주간회고·도움말·버그 제보는 마이페이지 몫 (#1088).
+    // 프로필 편집·친구 초대·주간회고·도움말·버그 제보는 내 정보 몫 (#1088).
     expect(queryByText('프로필 편집')).toBeNull();
     expect(queryByText('친구 초대')).toBeNull();
     expect(queryByText('주간회고 다시 보기')).toBeNull();
@@ -29,7 +29,7 @@ describe('SettingsScreen', () => {
     expect(getByText('로그아웃')).toBeTruthy();
   });
 
-  it('마이페이지의 서브화면 — onBack이 있으면 뒤로 가기가 보인다 (#1088)', async () => {
+  it('내 정보의 서브화면 — onBack이 있으면 뒤로 가기가 보인다 (#1088)', async () => {
     const onBack = jest.fn();
     const { getByLabelText, queryByLabelText, rerender } = await render(<SettingsScreen />);
     expect(queryByLabelText('뒤로 가기')).toBeNull();
@@ -45,7 +45,7 @@ describe('SettingsScreen', () => {
     );
     expect(ui.getByRole('radio', { name: '시작 화면 집', checked: true })).toBeTruthy();
     expect(ui.getByRole('radio', { name: '시작 화면 달력', checked: false })).toBeTruthy();
-    await fireEvent.press(ui.getByLabelText('시작 화면 마이페이지'));
+    await fireEvent.press(ui.getByLabelText('시작 화면 내 정보'));
     expect(onChangeStartTab).toHaveBeenCalledWith('myPage');
   });
 

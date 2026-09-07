@@ -48,14 +48,8 @@ const TABS: {
   // 달력 (#1138) — 나의 방 안의 방/달력 알약에서 하단 탭으로.
   { key: 'calendar', label: '달력', active: CalendarActive, inactive: CalendarInactive },
   { key: 'house', label: '집', active: HouseActive, inactive: HouseInactive },
-  // 마이페이지 (#1088) — 설정 탭을 대체. 설정은 마이페이지 헤더의 톱니로 들어간다.
-  {
-    key: 'myPage',
-    label: '마이',
-    accessibilityLabel: '마이페이지',
-    active: ProfileActive,
-    inactive: ProfileInactive,
-  },
+  // 내 정보 (#1088) — 설정 탭을 대체. 설정은 내 정보 헤더의 톱니로 들어간다.
+  { key: 'myPage', label: '내 정보', active: ProfileActive, inactive: ProfileInactive },
 ];
 const MIN_TAB_TOUCH_SIZE = 44;
 /** 좁은 화면에서 라벨을 함께 줄일 때의 하한 배율 (#1098 후속). */
@@ -65,7 +59,7 @@ const LONGEST_TAB_LABEL_LENGTH = Math.max(...TABS.map(({ label }) => label.lengt
 export type BottomNavProps = {
   active: NavTab;
   onChange: (tab: NavTab) => void;
-  /** 탭 아이콘 위 빨간 점 (#1089) — 마이페이지의 오늘 미출석. 참조 고정 권장. */
+  /** 탭 아이콘 위 빨간 점 (#1089) — 내 정보의 오늘 미출석. 참조 고정 권장. */
   badges?: Partial<Record<NavTab, boolean>>;
 };
 
@@ -200,7 +194,7 @@ export function BottomNav({ active, onChange, badges }: BottomNavProps) {
         </Text>
       </Pressable>
     );
-    // 마이페이지 탭은 코치마크 마지막 단계의 대상 (#351 → #1088).
+    // 내 정보 탭은 코치마크 마지막 단계의 대상 (#351 → #1088).
     return (
       <View
         key={key}

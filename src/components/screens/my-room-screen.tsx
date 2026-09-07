@@ -1455,7 +1455,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         top={navMenuTop}
         bottom={navMenuBottom}
         onClose={() => setNavMenuOpen(false)}
-        // 출석 이벤트·재화 내역은 마이페이지 바로가기로 (#1055 → #1089) — 메뉴는 방 작업만.
+        // 출석 이벤트·재화 내역은 내 정보 바로가기로 (#1055 → #1089) — 메뉴는 방 작업만.
         onOpenCharacterPicker={
           ownedCharacters && onSelectCharacter ? () => setCharacterSheetOpen(true) : undefined
         }

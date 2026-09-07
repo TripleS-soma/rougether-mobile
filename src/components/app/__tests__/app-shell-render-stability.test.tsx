@@ -287,7 +287,7 @@ describe('탭 스크롤 위치 보존 (#763)', () => {
 
     // 탭 왕복(=셸 리렌더) 후에도 참조가 같다 — memo 화면(#539)을 깨지 않는다.
     await fireEvent.press(getByLabelText('집'));
-    await fireEvent.press(getByLabelText('마이페이지'));
+    await fireEvent.press(getByLabelText('내 정보'));
     const after = mockSettingsRenders[mockSettingsRenders.length - 1];
     expect(after.getInitialScrollY).toBe(settings.getInitialScrollY);
     expect(after.onScrollY).toBe(settings.onScrollY);

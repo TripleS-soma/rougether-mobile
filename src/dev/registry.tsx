@@ -354,7 +354,7 @@ export const galleryEntries: GalleryEntry[] = [
   {
     name: 'BottomNav · PagerScrollView · 리퀴드 바 드래그와 본문 스와이프',
     description:
-      'iOS 본문 가로·대각선 스와이프와 세로 스크롤·당겨서 새로고침 경쟁 확인. 마이페이지는 일반 스크롤. 집 확대 잠금 중에도 하단바는 동작.',
+      'iOS 본문 가로·대각선 스와이프와 세로 스크롤·당겨서 새로고침 경쟁 확인. 내 정보는 일반 스크롤. 집 확대 잠금 중에도 하단바는 동작.',
     render: () => <NavigationPreview />,
   },
   {
@@ -589,7 +589,7 @@ export const galleryEntries: GalleryEntry[] = [
   {
     name: 'CalendarImportScreen',
     description:
-      '마이페이지 → 캘린더 연동 (#844 → #1097): 캘린더 선택 → 미리보기 → 선택 임포트. 비슷한 루틴이 있는 항목은 기본 해제.',
+      '내 정보 → 캘린더 연동 (#844 → #1097): 캘린더 선택 → 미리보기 → 선택 임포트. 비슷한 루틴이 있는 항목은 기본 해제.',
     render: () => (
       <View style={{ alignSelf: 'stretch', height: 720 }}>
         <CalendarImportScreen
@@ -773,8 +773,7 @@ export const galleryEntries: GalleryEntry[] = [
   },
   {
     name: 'ListRow',
-    description:
-      '설정·마이페이지 공용 목록 행 — 아이콘 원 + 라벨 + 화살표, 마지막 행은 구분선 없음.',
+    description: '설정·내 정보 공용 목록 행 — 아이콘 원 + 라벨 + 화살표, 마지막 행은 구분선 없음.',
     render: () => (
       <View style={{ alignSelf: 'stretch' }}>
         <ListRow icon="help" label="도움말" />
@@ -785,7 +784,7 @@ export const galleryEntries: GalleryEntry[] = [
   {
     name: 'MyPageScreen',
     description:
-      '마이페이지 탭 (#1088): 프로필 카드·지표 한 줄·계정/콘텐츠 행. 설정은 헤더 우측 톱니 뒤 서브화면.',
+      '내 정보 탭 (#1088): 프로필 카드·지표 한 줄·계정/콘텐츠 행. 설정은 헤더 우측 톱니 뒤 서브화면.',
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
         <MyPageScreen
@@ -801,7 +800,7 @@ export const galleryEntries: GalleryEntry[] = [
   {
     name: 'SettingsScreen',
     description:
-      '마이페이지의 서브화면 (#1088): 디자인(다크모드·테마·폰트)·알림·기타·로그아웃·회원탈퇴. 업데이트 카드는 #1095에서 뺐다.',
+      '내 정보의 서브화면 (#1088): 디자인(다크모드·테마·폰트)·알림·기타·로그아웃·회원탈퇴. 업데이트 카드는 #1095에서 뺐다.',
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
         <SettingsScreen onBack={() => {}} />
@@ -1035,7 +1034,7 @@ export const galleryEntries: GalleryEntry[] = [
   {
     name: 'WeeklyReportScreen · 주간회고 화면',
     description:
-      '마이페이지 > 주간회고 다시 보기 / 새 회고 배너 목적지 (#1056 → #1088). 나의 방 탭에서 빠진 패널을 헤더 달린 화면으로.',
+      '내 정보 > 주간회고 다시 보기 / 새 회고 배너 목적지 (#1056 → #1088). 나의 방 탭에서 빠진 패널을 헤더 달린 화면으로.',
     render: () => (
       <View style={{ height: 520 }}>
         <WeeklyReportScreen

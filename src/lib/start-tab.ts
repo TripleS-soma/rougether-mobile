@@ -9,7 +9,7 @@ export const START_TAB_OPTIONS: { id: NavTab; name: string }[] = [
   { id: 'myRoom', name: '나의 방' },
   { id: 'calendar', name: '달력' },
   { id: 'house', name: '집' },
-  { id: 'myPage', name: '마이페이지' },
+  { id: 'myPage', name: '내 정보' },
 ];
 
 export function isNavTab(value: unknown): value is NavTab {
