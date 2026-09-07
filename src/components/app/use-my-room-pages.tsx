@@ -191,7 +191,11 @@ export function useMyRoomPages({
     () =>
       onNotificationTap((notification) => {
         reportAppOpen('push');
-        if (notification?.type === 'APP_INACTIVITY_REMINDER') setScreen('myRoom');
+        if (
+          notification?.type === 'APP_INACTIVITY_REMINDER' ||
+          notification?.type === 'ROOM_COBWEB_APPEARED'
+        )
+          setScreen('myRoom');
         else openNotifications();
       }),
     [openNotifications, setScreen],
@@ -222,7 +226,10 @@ export function useMyRoomPages({
         setPushBanner({
           key: pushBannerSeq.current,
           ...n,
-          onPress: n.type === 'APP_INACTIVITY_REMINDER' ? () => setScreen('myRoom') : undefined,
+          onPress:
+            n.type === 'APP_INACTIVITY_REMINDER' || n.type === 'ROOM_COBWEB_APPEARED'
+              ? () => setScreen('myRoom')
+              : undefined,
         });
       }),
     [loadNotifications, setScreen],
