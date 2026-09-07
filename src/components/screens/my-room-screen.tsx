@@ -1077,8 +1077,14 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           scrollEnabled={dragId === null}
           contentContainerStyle={[
             styles.body,
-            // 달력 탭은 방이 없어 떠 있는 크롬(#1055) 밑으로 콘텐츠를 내린다.
-            tab !== 'room' ? { paddingTop: insets.top + Spacing.two + CHROME_ROW_HEIGHT } : null,
+            // 달력은 상태바 바로 아래부터. 떠 있는 크롬 행(방/달력 알약, #1055)은 단독
+            // 미리보기에만 있으니 그때만 그 높이만큼 내린다.
+            tab !== 'room'
+              ? {
+                  paddingTop:
+                    insets.top + Spacing.two + (view === undefined ? CHROME_ROW_HEIGHT : 0),
+                }
+              : null,
             navInset ? { paddingBottom: Spacing.six + navInset } : null,
             addingCategory != null && keyboardPad > 0 ? { paddingBottom: keyboardPad + 120 } : null,
           ]}
@@ -1314,57 +1320,45 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         </PawRefreshScroll>
       </KeyboardAvoidingView>
 
-      {/* The room canvas has no title overlay. Keep the calendar title and the
-          standalone preview's room/calendar switch outside the scroll view. */}
-      {view !== 'room' ? (
+      {/* The room canvas has no title overlay, and the calendar tab has none either —
+          the bottom tab already names it. Only the standalone preview's room/calendar
+          switch lives here, outside the scroll view. */}
+      {view === undefined ? (
         <View
           testID="my-room-chrome"
           pointerEvents="box-none"
           style={[styles.chromeRow, { top: insets.top + Spacing.two }]}>
-          {view === 'calendar' ? (
-            <GlassSurface
-              interactive={false}
-              fallbackColor={t.surface}
-              style={styles.calendarTitlePill}>
-              <Text style={[Typography.label, { color: t.text }]} numberOfLines={1}>
-                달력
-              </Text>
-            </GlassSurface>
-          ) : null}
           {/* 방/달력 알약은 view 미지정(단독 모드)에서만 — 앱에선 달력이 하단 탭 (#1138). */}
-          {view === undefined ? (
-            <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.segment}>
-              {(
-                [
-                  ['room', '방'],
-                  ['calendar', '달력'],
-                ] as const
-              ).map(([key, label]) => {
-                const active = tab === key;
-                const btn = (
-                  <Pressable
-                    onPress={() => setTab(key)}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: active }}
-                    accessibilityLabel={label}
-                    style={[styles.segmentItem, active && { backgroundColor: t.surfaceMuted }]}>
-                    <Text
-                      style={[Typography.label, { color: active ? t.primaryText : t.textMuted }]}>
-                      {label}
-                    </Text>
-                  </Pressable>
-                );
-                // 달력 탭은 코치마크 대상 (#351).
-                return key === 'calendar' ? (
-                  <CoachTarget key={key} id="room-tab-calendar">
-                    {btn}
-                  </CoachTarget>
-                ) : (
-                  <View key={key}>{btn}</View>
-                );
-              })}
-            </GlassSurface>
-          ) : null}
+          <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.segment}>
+            {(
+              [
+                ['room', '방'],
+                ['calendar', '달력'],
+              ] as const
+            ).map(([key, label]) => {
+              const active = tab === key;
+              const btn = (
+                <Pressable
+                  onPress={() => setTab(key)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={label}
+                  style={[styles.segmentItem, active && { backgroundColor: t.surfaceMuted }]}>
+                  <Text style={[Typography.label, { color: active ? t.primaryText : t.textMuted }]}>
+                    {label}
+                  </Text>
+                </Pressable>
+              );
+              // 달력 탭은 코치마크 대상 (#351).
+              return key === 'calendar' ? (
+                <CoachTarget key={key} id="room-tab-calendar">
+                  {btn}
+                </CoachTarget>
+              ) : (
+                <View key={key}>{btn}</View>
+              );
+            })}
+          </GlassSurface>
         </View>
       ) : null}
 
@@ -1560,13 +1554,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: Spacing.two,
     zIndex: 20,
-  },
-  calendarTitlePill: {
-    flexShrink: 1,
-    height: CHROME_ROW_HEIGHT,
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.three,
-    borderRadius: Radius.pill,
   },
   segment: {
     marginLeft: 'auto',
