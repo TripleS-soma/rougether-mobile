@@ -26,6 +26,7 @@ import { useRoutineOrder } from '@/hooks/use-routine-order';
 import { reportAppOpen } from '@/lib/app-open';
 import { onNotificationReceived, onNotificationTap } from '@/lib/push-events';
 import { toServerItemId, type ShopCatalogue } from '@/api/adapters';
+import { todayIso } from '@/utils/datetime';
 
 type MyRoomData = ReturnType<typeof useMyRoomData>;
 type MissionLinks = ReturnType<typeof useMissionLinks>;
@@ -157,6 +158,8 @@ export function useMyRoomPages({
   );
 
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
+  // The pager unmounts after a sub-screen transition; keep the date in the shell.
+  const [calendarSelectedDate, setCalendarSelectedDate] = useState(todayIso);
   // 달력 ＋ 루틴 (#1138) — 고른 날짜를 추가 화면의 시작일로.
   const [addRoutineStartDate, setAddRoutineStartDate] = useState<string | undefined>(undefined);
 
@@ -266,6 +269,10 @@ export function useMyRoomPages({
   );
   const editRoutineFromMyRoom = useCallback(
     (r: Routine) => openEditRoutine(r, 'myRoom'),
+    [openEditRoutine],
+  );
+  const editRoutineFromCalendar = useCallback(
+    (r: Routine) => openEditRoutine(r, 'calendar'),
     [openEditRoutine],
   );
   const handleSelectDate = useCallback(
@@ -494,6 +501,12 @@ export function useMyRoomPages({
 
   return {
     tabProps,
+    calendarTabProps: {
+      ...tabProps,
+      selectedDate: calendarSelectedDate,
+      onSelectedDateChange: setCalendarSelectedDate,
+      onEditRoutine: editRoutineFromCalendar,
+    },
     subScreen,
     /** 인앱 푸시 배너 (#902) — 셸이 상단에 그린다. */
     pushBanner,
