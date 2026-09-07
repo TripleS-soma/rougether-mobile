@@ -5,6 +5,7 @@ import { GestureDetector } from 'react-native-gesture-handler';
 import { NAV_ORDER, SCREEN_FOR_TAB, type Screen } from '@/components/app/navigation';
 import { TabPager } from '@/components/app/tab-pager';
 import { useAppNavigation } from '@/components/app/use-app-navigation';
+import { useStoreReview } from '@/hooks/use-store-review';
 import { useScreenTransition } from '@/components/app/use-screen-transition';
 import { useFriendVisit } from '@/components/app/use-friend-visit';
 import { useHousePages } from '@/components/app/use-house-pages';
@@ -426,6 +427,24 @@ export function AppShell({
     widgetSummarySigRef.current = sig;
     void saveWidgetSummary(summary).then(refreshWidgets);
   }, [routines, completions, streak]);
+
+  // 스토어 리뷰 요청 (#1107) — 오늘 예정 루틴이 전부 완료되는 완료 순간에만.
+  // 시트·모달 위에 겹치지 않게 탭 루트(나의 방·달력)에서만 띄운다.
+  const todayForReview = todayIso();
+  const todayRoutines = useMemo(
+    () => routines.filter((r) => isScheduledOn(r, todayForReview)),
+    [routines, todayForReview],
+  );
+  const todayDoneCount = useMemo(
+    () => todayRoutines.filter((r) => (completions[r.id] ?? []).includes(todayForReview)).length,
+    [todayRoutines, completions, todayForReview],
+  );
+  useStoreReview({
+    doneCount: todayDoneCount,
+    totalCount: todayRoutines.length,
+    ready: !myRoomLoading,
+    suppressed: screen !== 'myRoom' && screen !== 'calendar',
+  });
 
   // 화면 전환 추적 (#437) — 셸의 screen 상태가 곧 내비게이션 단위.
   useEffect(() => {

@@ -43,6 +43,8 @@ export type AnalyticsEvent =
   // push_open을 이 이벤트로 흡수했다 — 계기가 세 갈래인데 이벤트가 하나만
   // 있으면 "푸시로 온 사람 수"는 알아도 "그냥 연 사람 수"를 못 센다.
   | 'app_open'
+  // 스토어 리뷰 요청 (#1107) — 요청 사실만; 실제 시트 표시는 OS 몫이라 알 수 없다.
+  | 'review_prompt_requested'
   // 소셜 — 집에 들어간 사람이 더 오래 남는가 (#803)
   | 'house_preview'
   | 'house_create'
