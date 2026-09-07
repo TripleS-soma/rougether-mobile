@@ -195,6 +195,7 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
       date: string,
     ) => void | Promise<{ rewardAmount: number } | null | undefined>;
     onOpenGacha?: () => void;
+    onOpenFurnitureStudio?: () => void;
     /** 당겨서 새로고침 (#454) — 서버 데이터 전체 리로드. resolve까지 발바닥이 두근거린다. */
     onRefresh?: () => Promise<void> | void;
     /** Quick-add a todo to a category with a due date (the + on a category header). */
@@ -298,6 +299,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   onUpdateCategory,
   onToggleCompletion,
   onOpenGacha,
+  onOpenFurnitureStudio,
   onRefresh,
   onQuickAddRoutine,
   quickAddDisabledCategoryIds = [],
@@ -1150,6 +1152,17 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                         style={styles.floatBtn}>
                         <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
                           <Icon name="edit" size={20} color={t.text} />
+                        </GlassSurface>
+                      </Pressable>
+                    ) : null}
+                    {onOpenFurnitureStudio ? (
+                      <Pressable
+                        onPress={onOpenFurnitureStudio}
+                        accessibilityRole="button"
+                        accessibilityLabel="AI 가구 만들기"
+                        style={styles.floatBtn}>
+                        <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
+                          <Icon name="sparkles" size={20} color={t.primaryText} />
                         </GlassSurface>
                       </Pressable>
                     ) : null}

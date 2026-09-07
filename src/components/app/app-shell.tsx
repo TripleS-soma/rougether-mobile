@@ -22,6 +22,7 @@ import {
 } from '@/components/screens/room-decor-screen';
 import { useLatestRef, useStableCallback } from '@/hooks/use-stable-value';
 import { MyPageScreen } from '@/components/screens/my-page-screen';
+import { FurnitureStudio } from '@/components/app/furniture-studio';
 import { AttendanceSheet } from '@/components/screens/sheets/attendance-sheet';
 import { WalletHistorySheet } from '@/components/screens/sheets/wallet-history-sheet';
 import { MissionSheet } from '@/components/screens/sheets/mission-sheet';
@@ -173,6 +174,7 @@ export function AppShell({
   const [attendanceOpen, setAttendanceOpen] = useState(false);
   const syncCoin = useCallback((coin: number) => setWallet((w) => ({ ...w, coin })), [setWallet]);
   const attendance = useAttendance({ onCoinBalance: syncCoin });
+  const openFurnitureStudio = useCallback(() => setScreen('furnitureStudio'), []);
   const openAttendance = useCallback(() => setAttendanceOpen(true), []);
   // 오늘 미출석 — 내 정보 타일·하단 탭 배지 (#1089). 이벤트가 없으면 false.
   const attendancePending = !!attendance.status && !attendance.status.checkedInToday;
@@ -558,13 +560,35 @@ export function AppShell({
           lock={pagerLock}>
           {/* 달력은 나의 방과 같은 데이터·콜백을 쓰는 두 번째 인스턴스 (#1138) — 방
               캔버스는 view='room'일 때만 그려지므로 비용은 목록 하나 분이다. */}
-          <MyRoomScreen {...myRoomPages.tabProps} view="room" {...tabScroll.myRoom} />
+          <MyRoomScreen
+            {...myRoomPages.tabProps}
+            view="room"
+            {...tabScroll.myRoom}
+            onOpenFurnitureStudio={openFurnitureStudio}
+          />
           <MyRoomScreen {...myRoomPages.calendarTabProps} view="calendar" {...tabScroll.calendar} />
           <HouseScreen {...housePages.tabProps} {...tabScroll.house} />
           <MyPageScreen {...settingsSurface.myPageProps} {...tabScroll.myPage} />
         </TabPager>
       ) : null}
 
+      {screen === 'furnitureStudio' ? (
+        <FurnitureStudio
+          key={`${attendance.status?.eventId ?? 0}:${attendance.status?.completed ?? false}`}
+          onBack={() => setScreen('myRoom')}
+          onAttendance={
+            attendance.status?.reward?.type === 'GENERATION_CREDIT' ? openAttendance : undefined
+          }
+          onGoToRoom={async () => {
+            const refreshed = await refreshOwned();
+            if (refreshed) {
+              setDecorInitialTab('furniture');
+              setScreen('decor');
+            }
+            return refreshed;
+          }}
+        />
+      ) : null}
       {screen === 'decor' ? (
         <RoomDecorScreen
           initialItems={placedItems}
@@ -737,6 +761,10 @@ export function AppShell({
           status={attendance.status}
           checkingIn={attendance.checkingIn}
           onCheckIn={attendance.checkIn}
+          onGoToStudio={() => {
+            setAttendanceOpen(false);
+            openFurnitureStudio();
+          }}
           onGoToRoom={() => {
             setAttendanceOpen(false);
             setScreen('decor');

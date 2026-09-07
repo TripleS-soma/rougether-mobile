@@ -87,7 +87,7 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
         fetchMyItems().catch(() => []),
         fetchMyRoom().catch(() => null),
       ]);
-      const cat = toShopCatalogue(items);
+      const cat = toShopCatalogue(items, myItems);
       userItemMapRef.current = toUserItemMap(myItems);
       catalogueRef.current = cat;
       setCatalogue(cat);
@@ -187,12 +187,16 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
    */
   const refreshOwned = useCallback(async () => {
     try {
-      const myItems = await fetchMyItems();
+      const [items, myItems] = await Promise.all([fetchItems(), fetchMyItems()]);
+      const cat = toShopCatalogue(items, myItems);
+      catalogueRef.current = cat;
+      setCatalogue(cat);
       const map = toUserItemMap(myItems);
       userItemMapRef.current = map;
       setOwnedIds((prev) => Array.from(new Set([...prev, ...map.keys()])));
+      return true;
     } catch {
-      // Non-fatal: the next full catalogue load catches up.
+      return false;
     }
   }, []);
 

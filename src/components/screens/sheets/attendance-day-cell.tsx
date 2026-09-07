@@ -11,6 +11,8 @@ export type AttendanceDayCellProps = {
   coinAmount: number;
   /** 이 일차에 보상 가구가 걸려 있는지 (마지막 날). */
   furnitureReward: boolean;
+  generationCreditAmount?: number;
+  compact?: boolean;
   /** 현재 연속 출석이 이 일차에 도달했는지 — 도장 찍힌 상태. */
   claimed: boolean;
   /** 기본 코인보다 많이 주는 날 — 보너스 표시. */
@@ -31,6 +33,8 @@ export function AttendanceDayCell({
   day,
   coinAmount,
   furnitureReward,
+  generationCreditAmount = 0,
+  compact = false,
   claimed,
   bonus,
   stampNow,
@@ -55,14 +59,15 @@ export function AttendanceDayCell({
 
   const filled = claimed;
   return (
-    <View style={styles.cell}>
+    <View style={[styles.cell, compact ? styles.compactCell : null]}>
       <Animated.View
         style={[
           styles.mark,
           {
             backgroundColor: filled ? t.primary : t.surfaceMuted,
-            borderColor: bonus || furnitureReward ? t.warning : 'transparent',
-            borderWidth: bonus || furnitureReward ? 2 : 0,
+            borderColor:
+              bonus || furnitureReward || generationCreditAmount > 0 ? t.warning : 'transparent',
+            borderWidth: bonus || furnitureReward || generationCreditAmount > 0 ? 2 : 0,
             transform: [
               // 1.35 → 1: 위에서 내려찍히는 크기 변화.
               { scale: stamp.interpolate({ inputRange: [0, 1], outputRange: [1.35, 1] }) },
@@ -76,7 +81,9 @@ export function AttendanceDayCell({
             opacity: stamp.interpolate({ inputRange: [0, 0.35, 1], outputRange: [0, 1, 1] }),
           },
         ]}>
-        {furnitureReward ? (
+        {generationCreditAmount > 0 ? (
+          <Icon name="sparkles" size={16} color={filled ? StaticWhite : t.primaryText} />
+        ) : furnitureReward ? (
           <Icon name="gift" size={16} color={filled ? StaticWhite : t.textMuted} />
         ) : filled ? (
           <Icon name="check" size={16} color={StaticWhite} />
@@ -98,6 +105,7 @@ export function AttendanceDayCell({
 }
 
 const styles = StyleSheet.create({
+  compactCell: { width: Spacing.five + Spacing.one },
   cell: { alignItems: 'center', gap: Spacing.half, width: 44 },
   mark: {
     width: 36,

@@ -578,7 +578,18 @@ export type ShopCatalogue = {
 const bySurfaceCategory = (items: ItemResponse[], categoryCode: string) =>
   items.filter((i) => i.categoryCode === categoryCode).map((i, idx) => toWallpaper(i, idx));
 
-export function toShopCatalogue(items: ItemResponse[]): ShopCatalogue {
+export function toShopCatalogue(
+  items: ItemResponse[],
+  inventory: MyItemSummary[] = [],
+): ShopCatalogue {
+  // Personal AI furniture is not part of the public shop catalogue.
+  const merged = new Map(items.map((item) => [item.id, item]));
+  for (const owned of inventory) {
+    if (owned.itemId == null) continue;
+    const existing = merged.get(owned.itemId);
+    merged.set(owned.itemId, { ...existing, ...owned, id: owned.itemId, owned: true });
+  }
+  items = [...merged.values()];
   return {
     furniture: items.filter(isPositioned).map(toFurnitureItem),
     wallpapers: bySurfaceCategory(items, 'wallpaper'),

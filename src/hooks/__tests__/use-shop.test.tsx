@@ -175,3 +175,44 @@ describe('useShop — 거미줄 청소 (#830)', () => {
     expect(result.current.placement.cobweb).not.toBeNull();
   });
 });
+
+it('loads and refreshes personal AI furniture that is not sold in the public shop', async () => {
+  let created = false;
+  global.fetch = jest.fn(async (url: string) => {
+    if (url.includes('/me/items'))
+      return res({
+        items: created
+          ? [
+              {
+                itemId: 99,
+                userItemId: 199,
+                name: '내가 만든 의자',
+                assetKey: 'items/generated/chair.png',
+                categoryCode: 'furniture',
+                placementType: 'positioned',
+                defaultSlot: 'midRight',
+              },
+            ]
+          : [],
+      });
+    if (url.includes('/rooms/me')) return res({ slots: [] });
+    if (url.includes('/items')) return res(ITEMS);
+    return res({ items: [] });
+  }) as unknown as typeof fetch;
+  const first = await renderHook(() => useShop(jest.fn()));
+  await waitFor(() => expect(first.result.current.loading).toBe(false));
+  created = true;
+  await act(async () => {
+    await first.result.current.refreshOwned();
+  });
+  expect(first.result.current.catalogue.furniture).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ id: '99', assetKey: 'items/generated/chair.png' }),
+    ]),
+  );
+  expect(first.result.current.ownedIds).toContain('99');
+  await first.unmount();
+  const reopened = await renderHook(() => useShop(jest.fn()));
+  await waitFor(() => expect(reopened.result.current.loading).toBe(false));
+  expect(reopened.result.current.catalogue.furniture.map((item) => item.id)).toContain('99');
+});
