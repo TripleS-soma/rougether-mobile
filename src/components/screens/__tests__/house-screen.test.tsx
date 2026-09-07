@@ -158,11 +158,11 @@ describe('HouseScreen', () => {
       </BrandThemeProvider>,
     );
     expect(ui.getByTestId('house-background').props.recyclingKey).toBe(
-      'house/cloud-balloon/backgrounds/house-cloud-balloon-background-dark-v1.webp',
+      'house/cloud-balloon/backgrounds/rounded-v2-20260907/house-cloud-balloon-background-night.webp',
     );
     await fireEvent.press(ui.getByLabelText('test-light-mode'));
     expect(ui.getByTestId('house-background').props.recyclingKey).toBe(
-      'house/cloud-balloon/backgrounds/house-cloud-balloon-background-v1.webp',
+      'house/cloud-balloon/backgrounds/rounded-v2-20260907/house-cloud-balloon-background-day.webp',
     );
     await AsyncStorage.clear();
   });
@@ -190,7 +190,10 @@ describe('HouseScreen', () => {
       'night-observatory',
     ].entries()) {
       if (index > 0) await fireEvent.press(ui.getByLabelText('다음 집'));
-      const key = `house/${theme}/backgrounds/house-${theme}-background-dark-v1.webp`;
+      const key =
+        theme === 'night-observatory'
+          ? 'house/night-observatory/backgrounds/house-night-observatory-background-dark-v1.webp'
+          : `house/${theme}/backgrounds/rounded-v2-20260907/house-${theme}-background-night.webp`;
       expect(ui.getByTestId('house-background').props).toMatchObject({
         source: [assetSource(key)],
         recyclingKey: key,
@@ -232,13 +235,14 @@ describe('HouseScreen', () => {
     const ui = await render(<HouseScreen houses={[cloudHouse, mushroomHouse]} />);
 
     expect(ui.getByTestId('house-background').props).toMatchObject({
-      recyclingKey: 'house/cloud-balloon/backgrounds/house-cloud-balloon-background-v1.webp',
+      recyclingKey:
+        'house/cloud-balloon/backgrounds/rounded-v2-20260907/house-cloud-balloon-background-day.webp',
       contentFit: 'cover',
       cachePolicy: 'memory-disk',
     });
     await fireEvent.press(ui.getByLabelText('다음 집'));
     expect(ui.getByTestId('house-background').props.recyclingKey).toBe(
-      'house/mushroom-forest/backgrounds/house-mushroom-forest-background-v1.webp',
+      'house/mushroom-forest/backgrounds/rounded-v2-20260907/house-mushroom-forest-background-day.webp',
     );
   });
 

@@ -1,5 +1,6 @@
 import { ROOM_ASPECT_RATIO } from '@/components/room/room-render-contract';
 import { isCdnKey } from '@/resources/asset';
+import { HOUSE_ART_RELEASE } from '@/resources/house-art-release';
 
 export const FRAME_ASPECT = 567 / 508;
 export const DEFAULT_HOUSE_COVER_KEY = 'house/cloud-balloon/house-unified-cloud-balloon-frame.png';
@@ -23,9 +24,14 @@ export const WINDOW_RECTS: readonly HouseWindowRect[] = [
 // portrait rooms. Percentages remain those of the immutable published bitmap.
 const LEGACY_DISPLAY_ASPECT = ROOM_ASPECT_RATIO * (33 / 37);
 
-// Immutable published release. These are display assets, NEVER a save catalog.
-// Source: house/releases/stacked-v1-20260905/manifest.json on the asset CDN.
+// Keep the original release for the seven dev-only skins. Display asset keys
+// never replace canonical cover keys in create/update requests.
 export const STACKED_HOUSE_RELEASE = 'stacked-v1-20260905';
+const ROUNDED_FRAME_RELEASE_BY_THEME: Readonly<Record<string, string | undefined>> = {
+  'cloud-balloon': HOUSE_ART_RELEASE,
+  'coral-lagoon': HOUSE_ART_RELEASE,
+  'mushroom-forest': HOUSE_ART_RELEASE,
+};
 export const STACKED_HOUSE_THEMES = [
   { id: 'cloud-balloon', name: '구름 풍선 집', group: 1, legacyKey: DEFAULT_HOUSE_COVER_KEY },
   {
@@ -112,10 +118,11 @@ export function resolveHouseFrame(
       : STACKED_HOUSE_THEMES.find((t) => t.legacyKey === canonicalKey);
   if (!theme) return legacy;
   const capacity = seats <= 2 ? 2 : seats <= 4 ? 4 : 6;
+  const release = ROUNDED_FRAME_RELEASE_BY_THEME[theme.id] ?? STACKED_HOUSE_RELEASE;
   return {
     kind: 'stacked',
     canonicalKey,
-    assetKey: `house/${theme.id}/frames/${STACKED_HOUSE_RELEASE}/house-${theme.id}-${capacity}p-frame.webp`,
+    assetKey: `house/${theme.id}/frames/${release}/house-${theme.id}-${capacity}p-frame.webp`,
     ...GEOMETRY[capacity],
   };
 }

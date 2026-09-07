@@ -13,7 +13,14 @@ describe('houseBackgroundKey', () => {
       expect(houseBackgroundKey(cover, 'light')).toBe(HOUSE_BACKGROUND_KEY_BY_THEME[theme]);
       expect(houseBackgroundKey(cover, 'dark')).toBe(HOUSE_DARK_BACKGROUND_KEY_BY_THEME[theme]);
       expect(houseBackgroundKey(cover, 'dark')).toBe(
-        `house/${theme}/backgrounds/house-${theme}-background-dark-v1.webp`,
+        theme === 'night-observatory'
+          ? 'house/night-observatory/backgrounds/house-night-observatory-background-dark-v1.webp'
+          : `house/${theme}/backgrounds/rounded-v2-20260907/house-${theme}-background-night.webp`,
+      );
+      expect(houseBackgroundKey(cover, 'light')).toBe(
+        theme === 'night-observatory'
+          ? 'house/night-observatory/backgrounds/house-night-observatory-background-v1.webp'
+          : `house/${theme}/backgrounds/rounded-v2-20260907/house-${theme}-background-day.webp`,
       );
     },
   );
