@@ -854,11 +854,28 @@ describe('API adapters', () => {
     ]);
   });
 
-  it('groups gacha machines by theme: themed → furniture, unthemed → character', () => {
+  it('uses explicit character identity instead of a missing theme to group gacha', () => {
     expect(toGachaMachine({ gachaId: 1, name: '숲속 세이지 뽑기', themeId: 1 }).kind).toBe(
       'furniture',
     );
-    expect(toGachaMachine({ gachaId: 12, name: '캐릭터 뽑기' }).kind).toBe('character');
+    expect(toGachaMachine({ gachaId: 12, code: 'character_gacha' }).kind).toBe('character');
+    expect(toGachaMachine({ gachaId: 13, themeId: null }).kind).toBe('furniture');
+  });
+
+  it.each(['WALLPAPER', 'FLOOR', 'FURNITURE'] as const)(
+    '%s keeps furniture compatibility with a null theme and stable category visuals',
+    (category) => {
+      const wire = { gachaId: 81, category, themeId: null, costAmount: 100 };
+      const first = toGachaMachine(wire, 0);
+      const reordered = toGachaMachine(wire, 17);
+      expect(first).toEqual(reordered);
+      expect(first).toMatchObject({ id: 81, category, kind: 'furniture', costAmount: 100 });
+    },
+  );
+
+  it('recognizes only canonical category codes when the additive field is absent', () => {
+    expect(toGachaMachine({ code: 'floor_gacha', themeId: null }).category).toBe('FLOOR');
+    expect(toGachaMachine({ code: 'forest_sage' }).category).toBeUndefined();
   });
 
   it('선물상자 아트 키를 그대로 싣는다 — 없으면 undefined (서버 #276)', () => {

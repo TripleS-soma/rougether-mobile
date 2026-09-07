@@ -31,14 +31,34 @@ import { useAnimatedValue } from '@/hooks/use-stable-value';
 
 export type NavTab = 'myRoom' | 'calendar' | 'house' | 'myPage';
 
-const TABS: { key: NavTab; label: string; active: FC<SvgProps>; inactive: FC<SvgProps> }[] = [
-  { key: 'myRoom', label: '나의 방', active: HomeActive, inactive: HomeInactive },
+const TABS: {
+  key: NavTab;
+  label: string;
+  accessibilityLabel?: string;
+  active: FC<SvgProps>;
+  inactive: FC<SvgProps>;
+}[] = [
+  {
+    key: 'myRoom',
+    label: '방',
+    accessibilityLabel: '나의 방',
+    active: HomeActive,
+    inactive: HomeInactive,
+  },
   // 달력 (#1138) — 나의 방 안의 방/달력 알약에서 하단 탭으로.
   { key: 'calendar', label: '달력', active: CalendarActive, inactive: CalendarInactive },
   { key: 'house', label: '집', active: HouseActive, inactive: HouseInactive },
   // 마이페이지 (#1088) — 설정 탭을 대체. 설정은 마이페이지 헤더의 톱니로 들어간다.
-  { key: 'myPage', label: '마이페이지', active: ProfileActive, inactive: ProfileInactive },
+  {
+    key: 'myPage',
+    label: '마이',
+    accessibilityLabel: '마이페이지',
+    active: ProfileActive,
+    inactive: ProfileInactive,
+  },
 ];
+const MIN_TAB_TOUCH_SIZE = 44;
+const LONGEST_TAB_LABEL_LENGTH = Math.max(...TABS.map(({ label }) => label.length));
 
 export type BottomNavProps = {
   active: NavTab;
@@ -87,7 +107,7 @@ function TabIcon({
 }
 
 /**
- * App bottom navigation (나의 방 / 달력 / 집 / 마이페이지) with custom SVG icons.
+ * App bottom navigation (방 / 달력 / 집 / 마이) with custom SVG icons.
  *
  * 화면 바닥에 떠 있는 알약 오버레이 (#1049 → #1074에서 전 플랫폼 공통). 레이아웃
  * 높이가 없으므로 밑을 지나는 스크롤 화면이 `useBottomNavInset()`만큼 하단
@@ -97,20 +117,26 @@ export function BottomNav({ active, onChange, badges }: BottomNavProps) {
   const t = useTokens();
   const Typography = useTypography();
   const insets = useSafeAreaInsets();
-  const { width: windowW } = useWindowDimensions();
-  // 탭을 같은 폭으로 (#1098) — 라벨 길이가 달라("집" vs "마이페이지") 탭 폭이
-  // 제각각이면 가운데 탭이 알약 중앙에서 벗어난다. 라벨의 자연 폭을 재서 가장
-  // 넓은 것에 맞춘다. 고정 상수가 아닌 이유: 선택 폰트(#382)·글꼴 배율마다 다르다.
+  const { width: windowW, fontScale } = useWindowDimensions();
+  // Reserve a full em for each Korean character before the first measurement.
+  // A clipped onLayout width must never shrink the space needed by the label.
   const [labelWidths, setLabelWidths] = useState<number[]>([]);
-  // 4탭(#1138)부터는 좁은 기기에서 라벨 폭 합이 화면을 넘을 수 있다 — 알약이 화면
-  // 안에 들도록 탭 폭 상한을 두고, 라벨은 그 안에서 줄인다(adjustsFontSizeToFit).
-  const tabCap =
+  const contentMinWidth = Math.max(
+    NAV_ICON_SIZE,
+    Typography.supporting.fontSize * fontScale * LONGEST_TAB_LABEL_LENGTH,
+    ...labelWidths.filter(Number.isFinite),
+  );
+  const tabCap = Math.max(
+    MIN_TAB_TOUCH_SIZE,
     (windowW - Spacing.four * 2 - NAV_PILL_PAD_H * 2 - NAV_PILL_GAP * (TABS.length - 1)) /
-    TABS.length;
-  const tabMinWidth =
-    labelWidths.length === TABS.length
-      ? Math.min(Math.max(...labelWidths) + NAV_TAB_PAD_H * 2, tabCap)
-      : undefined;
+      TABS.length,
+  );
+  // On narrow phones, give up horizontal padding before reducing the text.
+  const tabPaddingH = Math.min(NAV_TAB_PAD_H, Math.max(0, (tabCap - contentMinWidth) / 2));
+  const tabMinWidth = Math.max(
+    MIN_TAB_TOUCH_SIZE,
+    Math.min(contentMinWidth + tabPaddingH * 2, tabCap),
+  );
   const recordLabel = (index: number, width: number) =>
     setLabelWidths((prev) => {
       if (prev[index] === width) return prev;
@@ -122,7 +148,8 @@ export function BottomNav({ active, onChange, badges }: BottomNavProps) {
     const tab = TABS[index]?.key;
     if (tab && tab !== active) onChange(tab);
   }, TABS.length);
-  const tabs = TABS.map(({ key, label, active: ActiveIcon, inactive: InactiveIcon }, index) => {
+  const tabs = TABS.map((tab, index) => {
+    const { key, label, active: ActiveIcon, inactive: InactiveIcon } = tab;
     const isActive = key === active;
     // RN Pressable (#1093): RNGH Pressable + `requireExternalGestureToFail(pan)` 조합은
     // Android에서 탭이 영영 발화하지 않았다(iOS만 동작). 일반 Pressable은 pan이
@@ -132,9 +159,12 @@ export function BottomNav({ active, onChange, badges }: BottomNavProps) {
         onPress={() => onChange(key)}
         accessibilityRole="button"
         accessibilityState={{ selected: isActive }}
-        accessibilityLabel={label}
+        accessibilityLabel={tab.accessibilityLabel ?? label}
         accessibilityHint={badges?.[key] ? '오늘 미출석' : undefined}
-        style={[styles.tab, tabMinWidth ? { minWidth: tabMinWidth, maxWidth: tabCap } : null]}>
+        style={[
+          styles.tab,
+          { minWidth: tabMinWidth, maxWidth: tabCap, paddingHorizontal: tabPaddingH },
+        ]}>
         <TabIcon
           isActive={isActive}
           Icon={isActive ? ActiveIcon : InactiveIcon}
@@ -196,7 +226,7 @@ const styles = StyleSheet.create({
   tab: {
     alignItems: 'center',
     gap: NAV_ICON_LABEL_GAP,
-    paddingHorizontal: NAV_TAB_PAD_H,
+    minHeight: MIN_TAB_TOUCH_SIZE,
   },
   // 알약 오버레이 — 폭은 탭 3개에 맞춰 줄어들고(alignItems), 좌우는 빈 띠.
   floatWrap: {

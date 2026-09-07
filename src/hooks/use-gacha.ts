@@ -1,53 +1,72 @@
-/**
- * Gacha machines + draw, backed by the API. Loads the machine list on mount and
- * exposes `draw(gachaId)`, which spends via the API and returns the drawn
- * results. The API applies the dupe→diamond conversion server-side and returns the
- * updated wallet balances, which we forward via `onWallet`.
- */
-import { useCallback, useEffect, useState } from 'react';
+/** Category gacha catalogue and non-retrying, single-flight paid draws. */
+import { useCallback, useMemo, useRef } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
 
 import { drawGacha, fetchGachas, type GachaDrawCount } from '@/api';
 import { type GachaMachine, toGachaMachine, toWallet } from '@/api/adapters';
-import { isDrawableGacha } from '@/constants/gacha';
-import type { DrawResult } from '@/api/types';
+import { getCategoryGachas } from '@/constants/gacha';
+import type { DrawResult, GachaResponse } from '@/api/types';
 import type { Wallet } from '@/constants/currency';
+import { useLatestRef } from '@/hooks/use-stable-value';
 import { track } from '@/lib/analytics';
 
+export const GACHAS_KEY = ['gachas', 'categories'] as const;
+
+const NO_GACHAS: GachaMachine[] = [];
+const selectGachas = (list: GachaResponse[]) =>
+  getCategoryGachas(list.filter((gacha) => gacha.active !== false).map(toGachaMachine));
+
 export function useGacha(onWallet: (wallet: Wallet) => void) {
-  const [gachas, setGachas] = useState<GachaMachine[]>([]);
-  const [loading, setLoading] = useState(true);
-  // 로드 실패 (#549) — 화면이 빈 상태('뽑기 없음')와 구분해 다시 시도를 보여준다.
-  const [error, setError] = useState(false);
+  const walletRef = useLatestRef(onWallet);
+  // A synchronous lock also covers two taps before React renders isPending.
+  const drawingRef = useRef(false);
+  const { data, isPending, isFetching, isError, refetch } = useQuery({
+    queryKey: GACHAS_KEY,
+    queryFn: fetchGachas,
+    select: selectGachas,
+  });
+  const { mutateAsync } = useMutation({
+    mutationFn: ({ gachaId, count }: { gachaId: number; count: GachaDrawCount }) =>
+      drawGacha(gachaId, count),
+    // A timed-out spending request must never trigger an automatic second charge.
+    retry: false,
+  });
 
-  /** 머신 목록 로드 사이클 (스피너 → 데이터 | 에러) — 초기 로드·재시도 공용. */
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(false);
-    try {
-      const list = await fetchGachas();
-      setGachas(list.map((g, i) => toGachaMachine(g, i)).filter(isDrawableGacha));
-    } catch {
-      setError(true);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const retry = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const draw = useCallback(
+    async (gachaId: number, count: GachaDrawCount = 1): Promise<DrawResult[] | null> => {
+      if (
+        drawingRef.current ||
+        !Number.isInteger(gachaId) ||
+        gachaId <= 0 ||
+        (count !== 1 && count !== 6)
+      ) {
+        return null;
+      }
+      drawingRef.current = true;
+      try {
+        const response = await mutateAsync({ gachaId, count });
+        if (response.wallets?.length) walletRef.current(toWallet(response.wallets));
+        track('gacha_draw', { gachaId, count });
+        return response.results ?? [];
+      } catch {
+        return null;
+      } finally {
+        drawingRef.current = false;
+      }
+    },
+    [mutateAsync, walletRef],
+  );
 
-  /** Draw once or use the 5+1 option (the server accepts count 1 or 6). */
-  const draw = async (gachaId: number, count: GachaDrawCount = 1): Promise<DrawResult[] | null> => {
-    try {
-      const res = await drawGacha(gachaId, count);
-      if (res.wallets?.length) onWallet(toWallet(res.wallets));
-      track('gacha_draw', { gachaId, count });
-      return res.results ?? [];
-    } catch {
-      return null;
-    }
-  };
+  const gachas = data ?? NO_GACHAS;
+  const loading = isPending || (isFetching && !data);
+  const error = isError && !isFetching;
 
-  return { gachas, loading, error, retry: load, draw };
+  return useMemo(
+    () => ({ gachas, loading, error, retry, draw }),
+    [gachas, loading, error, retry, draw],
+  );
 }

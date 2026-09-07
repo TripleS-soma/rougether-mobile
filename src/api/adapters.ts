@@ -7,6 +7,7 @@
 import { isCdnKey } from '@/resources/asset';
 import { CHARACTER_OPTIONS, type CharacterId } from '@/constants/characters';
 import { type Wallet } from '@/constants/currency';
+import { GACHA_CATEGORY_META, getGachaCategory } from '@/constants/gacha';
 import { MISSION_TYPE_FALLBACK, MISSION_TYPE_RULES } from '@/constants/missions';
 import {
   GachaAccents,
@@ -73,6 +74,7 @@ import type {
   CharacterPoseResponse,
   CategoryResponse,
   GachaResponse,
+  GachaCategory,
   GoalItem,
   HouseCoverImage,
   HouseDetailResponse,
@@ -456,9 +458,8 @@ export function toWallet(list: WalletLike[]): Wallet {
 }
 
 // --- gacha --------------------------------------------------------------------
-// 선물상자 아트는 서버가 준다(`giftBoxAssetKey`, 서버 #276). 아이콘·accent는
-// 키가 없거나 CDN 키가 아닐 때의 폴백으로 남는다 — 지금은 14개 머신이 같은
-// 상자 한 장을 쓰므로 accent가 머신 구분을 계속 맡는다.
+// Category icons and accents are stable across server ordering. These indexed
+// fallbacks only support legacy machines that do not declare a category.
 const GACHA_ICONS: PictogramName[] = [
   'gift',
   'pagoda',
@@ -484,13 +485,16 @@ export type GachaMachine = {
    * 가공하지 않고 그대로 싣는다.
    */
   giftBoxKey?: string;
-  /** Selector row grouping — themed machines drop furniture, the rest characters. */
+  /** Compatibility grouping; all decoration categories belong to furniture. */
   kind: 'furniture' | 'character';
+  category?: GachaCategory;
   /** 서버 기계 코드 (`bakery_morning` 등) — 노출 판정에 쓴다 (#983). */
   code?: string;
 };
 
 export function toGachaMachine(g: GachaResponse, index = 0): GachaMachine {
+  const category = getGachaCategory(g);
+  const categoryMeta = category ? GACHA_CATEGORY_META[category] : undefined;
   return {
     id: g.gachaId ?? 0,
     code: g.code,
@@ -498,11 +502,11 @@ export function toGachaMachine(g: GachaResponse, index = 0): GachaMachine {
     costCurrencyType: g.costCurrencyType ?? 'COIN',
     costAmount: g.costAmount ?? 0,
     drawCount: g.drawCount ?? 1,
-    icon: GACHA_ICONS[index % GACHA_ICONS.length],
-    accent: GachaAccents[index % GachaAccents.length],
+    icon: categoryMeta?.icon ?? GACHA_ICONS[index % GACHA_ICONS.length],
+    accent: categoryMeta?.accent ?? GachaAccents[index % GachaAccents.length],
     giftBoxKey: g.giftBoxAssetKey,
-    // Furniture gachas draw from a room theme; the character gacha has none.
-    kind: g.themeId == null ? 'character' : 'furniture',
+    category,
+    kind: category || !g.code?.startsWith('character') ? 'furniture' : 'character',
   };
 }
 

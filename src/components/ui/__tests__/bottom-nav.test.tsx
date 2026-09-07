@@ -1,5 +1,5 @@
 import { isLiquidGlassAvailable } from 'expo-glass-effect';
-import { AccessibilityInfo } from 'react-native';
+import { AccessibilityInfo, Dimensions, Platform, StyleSheet } from 'react-native';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
@@ -47,6 +47,52 @@ afterEach(() => {
 });
 
 describe('BottomNav', () => {
+  it.each([
+    { width: 320, fontScale: 1 },
+    { width: 320, fontScale: 2 },
+    { width: 393, fontScale: 1 },
+  ])(
+    'reserves full two-character labels before padding at $width px / font scale $fontScale',
+    async ({ width, fontScale }) => {
+      const dimensions = jest
+        .spyOn(Dimensions, 'get')
+        .mockReturnValue({ width, height: 700, scale: 2, fontScale });
+      try {
+        const ui = await render(<BottomNav active="myRoom" onChange={jest.fn()} />);
+        const labelSize = StyleSheet.flatten(ui.getByText('달력').props.style).fontSize;
+        const requiredContentWidth = Math.max(24, labelSize * fontScale * 2);
+        const assertTabSpace = () => {
+          const tabs = ['나의 방', '달력', '집', '마이페이지'].map((name) =>
+            StyleSheet.flatten(ui.getByRole('button', { name }).props.style),
+          );
+          expect(new Set(tabs.map((tab) => tab.minWidth)).size).toBe(1);
+          for (const tab of tabs) {
+            expect(tab.minWidth).toBeGreaterThanOrEqual(44);
+            expect(tab.minHeight).toBeGreaterThanOrEqual(44);
+            expect(tab.minWidth).toBeLessThanOrEqual(tab.maxWidth);
+            expect(tab.minWidth - tab.paddingHorizontal * 2).toBeGreaterThanOrEqual(
+              requiredContentWidth,
+            );
+          }
+          if (width === 393) expect(tabs[0].paddingHorizontal).toBe(24);
+        };
+        // The first paint must fit too, before any text measurement has arrived.
+        assertTabSpace();
+        await act(async () => {
+          for (const label of ['방', '달력', '집', '마이']) {
+            fireEvent(ui.getByText(label), 'layout', {
+              nativeEvent: { layout: { x: 0, y: 0, width: 10, height: 18 } },
+            });
+          }
+        });
+        // A previously clipped measurement must not make the available space collapse again.
+        assertTabSpace();
+      } finally {
+        dimensions.mockRestore();
+      }
+    },
+  );
+
   it('commits only the release target, skipping intermediate tabs', async () => {
     const onChange = jest.fn();
     const ui = await render(<BottomNav active="myRoom" onChange={onChange} />);
@@ -105,17 +151,32 @@ describe('BottomNav', () => {
     fireEvent.press(ui.getByRole('button', { name: '집' }));
     expect(onChange.mock.calls).toEqual([['house']]);
   });
-  it('renders the tabs and fires onChange with the selected tab', async () => {
-    const onChange = jest.fn();
-    const { getByText } = await render(<BottomNav active="myRoom" onChange={onChange} />);
-    expect(getByText('나의 방')).toBeTruthy();
-    expect(getByText('달력')).toBeTruthy(); // #1138
-    expect(getByText('집')).toBeTruthy();
-    expect(getByText('마이페이지')).toBeTruthy();
+  it.each(['ios', 'android', 'web'] as const)(
+    'uses compact labels with descriptive accessible names and unchanged targets on %s',
+    async (platform) => {
+      const os = jest.replaceProperty(Platform, 'OS', platform);
+      try {
+        const onChange = jest.fn();
+        const ui = await render(<BottomNav active="myRoom" onChange={onChange} />);
+        expect(ui.getByText('방')).toBeTruthy();
+        expect(ui.getByText('달력')).toBeTruthy();
+        expect(ui.getByText('집')).toBeTruthy();
+        expect(ui.getByText('마이')).toBeTruthy();
+        expect(ui.queryByText('나의 방')).toBeNull();
+        expect(ui.queryByText('마이페이지')).toBeNull();
+        expect(ui.getByRole('button', { name: '나의 방' }).props.accessibilityState.selected).toBe(
+          true,
+        );
 
-    fireEvent.press(getByText('집'));
-    expect(onChange).toHaveBeenCalledWith('house');
-  });
+        for (const label of ['나의 방', '달력', '집', '마이페이지']) {
+          await fireEvent.press(ui.getByRole('button', { name: label }));
+        }
+        expect(onChange.mock.calls).toEqual([['myRoom'], ['calendar'], ['house'], ['myPage']]);
+      } finally {
+        os.restore();
+      }
+    },
+  );
 
   it('아이콘 색이 테마 토큰을 따른다 — 활성 primary/비활성 icon (#529)', async () => {
     const ui = await render(<BottomNav active="house" onChange={() => {}} />);
@@ -153,7 +214,7 @@ describe('BottomNav', () => {
       );
       expect(flat.position).toBe('absolute');
       expect(flat.bottom).toBeGreaterThan(0);
-      expect(getByText('마이페이지')).toBeTruthy();
+      expect(getByText('마이')).toBeTruthy();
     });
 
     it('글래스가 가능해도 같은 알약 — 탭 전환은 그대로 동작한다', async () => {

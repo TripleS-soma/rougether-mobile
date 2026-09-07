@@ -3,6 +3,9 @@
 // jest는 항상 JS 스레드이므로 false로 고정한다.
 globalThis._WORKLET = false;
 
+// Reanimated 4.2's official mock omits this synchronous accessibility hook.
+require('react-native-reanimated').useReducedMotion = jest.fn(() => false);
+
 // safe-area-context 공식 목 — useSafeAreaInsets()가 provider 없이도 기본 인셋(0)을
 // 돌려줘 테스트에서 던지지 않게 한다 (#456: BottomNav가 hook으로 전환됨).
 jest.mock(
