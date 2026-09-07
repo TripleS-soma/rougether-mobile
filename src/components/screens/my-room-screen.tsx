@@ -123,6 +123,9 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
      * 미지정이면(Dev 갤러리·단독 테스트) 방/달력 알약이 남아 스스로 전환한다.
      */
     view?: 'room' | 'calendar';
+    /** Controlled selection survives the tab pager unmounting for a sub-screen. */
+    selectedDate?: string;
+    onSelectedDateChange?: (date: string) => void;
     /** 달력 '이 날의 할 일' 옆 ＋ 루틴 — 그 날짜를 시작일로 루틴 추가 (#1138). */
     onAddRoutineForDate?: (date: string) => void;
     /** Room occupant's display name (header title becomes "{userName}의 방"). */
@@ -276,6 +279,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   routines = [],
   allCategories,
   calendarDays,
+  selectedDate: controlledSelectedDate,
+  onSelectedDateChange,
   onSelectDate,
   onToggleCalendarItem,
   completions = {},
@@ -518,14 +523,16 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // 셸이 view를 주면 그게 곧 탭 (#1138); 없으면 알약으로 스스로 전환한다.
   const [ownTab, setTab] = useState<'room' | 'calendar'>('room');
   const tab = view ?? ownTab;
-  const [selectedDate, setSelectedDate] = useState(() => todayIso());
+  const [ownSelectedDate, setOwnSelectedDate] = useState(() => todayIso());
+  const selectedDate = controlledSelectedDate ?? ownSelectedDate;
   const dateRoutines = useMemo(
     () => routines.filter((r) => isScheduledOn(r, selectedDate)),
     [routines, selectedDate],
   );
   // 참조 고정 (#771) — Calendar가 memo라, 매 렌더 새 함수면 42칸이 매번 다시 그려진다.
   const pickDate = useStableCallback((date: string) => {
-    setSelectedDate(date);
+    if (controlledSelectedDate === undefined) setOwnSelectedDate(date);
+    onSelectedDateChange?.(date);
     if (date !== today) onSelectDate?.(date);
   });
   const catMeta = allCategories ?? categories;
