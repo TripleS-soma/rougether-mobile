@@ -527,9 +527,10 @@ export function RoomDecorScreen({
       const maxZ = prev.reduce((m, p) => Math.max(m, p.z), 0);
       const target = prev.find((p) => p.furnitureId === id);
       const bounds = dragClampBounds(target?.scale ?? 1);
-      const clamp = (v: number) => Math.min(bounds.max, Math.max(bounds.min, v));
+      const clamp = (v: number, axis: 'x' | 'y') =>
+        Math.min(bounds[axis].max, Math.max(bounds[axis].min, v));
       return prev.map((p) =>
-        p.furnitureId === id ? { ...p, x: clamp(x), y: clamp(y), z: maxZ + 1 } : p,
+        p.furnitureId === id ? { ...p, x: clamp(x, 'x'), y: clamp(y, 'y'), z: maxZ + 1 } : p,
       );
     });
   };
@@ -537,10 +538,11 @@ export function RoomDecorScreen({
   const commitScale = (id: string, scale: number) => {
     const clamped = Math.round(Math.min(SCALE_MAX, Math.max(SCALE_MIN, scale)) * 100) / 100;
     const bounds = dragClampBounds(clamped);
-    const clamp = (v: number) => Math.min(bounds.max, Math.max(bounds.min, v));
+    const clamp = (v: number, axis: 'x' | 'y') =>
+      Math.min(bounds[axis].max, Math.max(bounds[axis].min, v));
     setItems((prev) =>
       prev.map((p) =>
-        p.furnitureId === id ? { ...p, x: clamp(p.x), y: clamp(p.y), scale: clamped } : p,
+        p.furnitureId === id ? { ...p, x: clamp(p.x, 'x'), y: clamp(p.y, 'y'), scale: clamped } : p,
       ),
     );
   };
@@ -649,7 +651,7 @@ export function RoomDecorScreen({
             testID="decor-canvas"
             style={styles.canvas}
             onLayout={(e) =>
-              setRoomSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.width })
+              setRoomSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })
             }>
             {/* 가구는 Room이 아니라 드래그 오버레이가 그린다 — 방은 표면만. */}
             <Room
@@ -676,7 +678,7 @@ export function RoomDecorScreen({
                 onPress={() => setSelectedId(null)}
               />
             ) : null}
-            {roomSize.w > 0
+            {roomSize.w > 0 && roomSize.h > 0
               ? [...items]
                   .sort((a, b) => a.z - b.z)
                   .map((p) => {
@@ -1668,7 +1670,7 @@ const styles = StyleSheet.create({
     ),
     bottom: roomPercent(ROOM_RENDER_CONTRACT.character.bottom),
     width: roomPercent(ROOM_RENDER_CONTRACT.character.width),
-    height: roomPercent(ROOM_RENDER_CONTRACT.character.height),
+    aspectRatio: ROOM_RENDER_CONTRACT.character.aspectRatio,
   },
   filterRow: {
     flexDirection: 'row',

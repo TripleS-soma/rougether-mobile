@@ -46,6 +46,8 @@ jobs:
       cancel-in-progress: false
     env:
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      OTA_CHANNEL: ${{ inputs.channel }}
+      OTA_ENVIRONMENT: ${{ inputs.channel == 'dev' && 'preview' || 'production' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -55,14 +57,21 @@ jobs:
       - run: npm ci
       - uses: expo/expo-github-action@v8
         with:
-          eas-version: latest
+          eas-version: '23.2.0'
           token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: 채널 연결 대조
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: node scripts/check-ota-channel.js "$OTA_CHANNEL"
 
       # 발행 전 검문소. 여기서 막히면 그 브랜치에 네이티브 입력이 섞인 것이고,
       # 필요한 건 OTA가 아니라 새 빌드다.
       - name: 지문 대조
+        env:
+          EXPECTED_RUNTIME: ${{ inputs.expected_runtime }}
         run: |
-          expected="${{ inputs.expected_runtime }}"
+          expected="$EXPECTED_RUNTIME"
           fail=0
           for platform in ios android; do
             [ "${{ inputs.platform }}" = "all" ] || [ "${{ inputs.platform }}" = "$platform" ] || continue
@@ -81,7 +90,7 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          eas update --branch "${{ inputs.channel }}" --platform "${{ inputs.platform }}" \
+          eas update --branch "$OTA_CHANNEL" --platform "${{ inputs.platform }}" --environment "$OTA_ENVIRONMENT" \
             --message "hotfix from ${{ github.ref_name }} (${{ github.sha }})" --non-interactive
 
       - name: Sentry 소스맵 업로드

@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { type SharedValue, useAnimatedStyle } from 'react-native-reanimated';
 
 import { CharacterAvatar } from '@/components/room/character-avatar';
+import { ROOM_ASPECT_RATIO } from '@/components/room/room-render-contract';
 import {
   memberRoomScene,
   type MemberRoomPreview,
@@ -33,7 +34,7 @@ export type SeatTileProps = {
   color: string;
   /** 프레임 창문 안이면 슬롯을 가득 채운다. */
   fill: boolean;
-  /** Exact square cutouts have no rounded bleed or visible tile border. */
+  /** Exact rectangular cutouts have no rounded bleed or visible tile border. */
   squareFrame?: boolean;
   /** 지금 들려 있는 좌석인가. */
   dragging: boolean;
@@ -261,7 +262,7 @@ const styles = StyleSheet.create({
   },
   roomCell: {
     width: '100%',
-    aspectRatio: 1,
+    aspectRatio: ROOM_ASPECT_RATIO,
     borderRadius: Radius.sm,
     borderWidth: 1,
     alignItems: 'center',

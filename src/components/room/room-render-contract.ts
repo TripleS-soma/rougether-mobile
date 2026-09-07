@@ -1,4 +1,4 @@
-import rawContract from '@/components/room/room-render-contract.v1.json';
+import rawContract from '@/components/room/room-render-contract.v2.json';
 
 import type { FurnitureSlot } from '@/resources/furniture';
 
@@ -13,7 +13,7 @@ export type RoomRenderContract = {
   id: string;
   version: number;
   coordinateSpace: {
-    type: 'normalized-square';
+    type: 'normalized-rect';
     origin: 'top-left';
     furnitureAnchor: 'center';
   };
@@ -44,7 +44,7 @@ export type RoomRenderContract = {
     centerX: number;
     bottom: number;
     width: number;
-    height: number;
+    aspectRatio: number;
     contentFit: 'contain';
   };
   referenceFixture: {
@@ -77,6 +77,26 @@ export type RoomRenderContract = {
  * vendoring해 사용하고, 이 모듈은 RN 스타일과 자유배치 초기값을 여기서 파생한다.
  */
 export const ROOM_RENDER_CONTRACT = rawContract as RoomRenderContract;
+export const ROOM_ASPECT_RATIO = ROOM_RENDER_CONTRACT.room.aspectRatio;
+
+const { baseWidth, editorScale } = ROOM_RENDER_CONTRACT.furniture;
+const SCALE_MIN = editorScale.min;
+const SCALE_MAX = editorScale.max;
+
+/** Square furniture stays width-sized; normalized vertical bounds use room height. */
+export function furnitureClampBounds(scale = 1, roomAspectRatio = ROOM_ASPECT_RATIO) {
+  'worklet';
+  const halfX = (baseWidth * Math.min(SCALE_MAX, Math.max(SCALE_MIN, scale))) / 2;
+  const halfY = halfX * roomAspectRatio;
+  return { x: { min: halfX, max: 1 - halfX }, y: { min: halfY, max: 1 - halfY } };
+}
+
+export function roomFurnitureOrigin(x: number, y: number) {
+  return {
+    left: roomPercent(x - baseWidth / 2),
+    top: roomPercent(y - (baseWidth * ROOM_ASPECT_RATIO) / 2),
+  };
+}
 
 export const roomPercent = (value: number): `${number}%` => `${value * 100}%`;
 
@@ -84,6 +104,6 @@ export function roomSlotCenter(slot: FurnitureSlot) {
   const rect = ROOM_RENDER_CONTRACT.furniture.slots[slot];
   return {
     x: rect.left + rect.width / 2,
-    y: rect.top + rect.width / 2,
+    y: rect.top + (rect.width * ROOM_ASPECT_RATIO) / 2,
   };
 }

@@ -1,13 +1,13 @@
 {
   "id": "rougether-room-renderer",
-  "version": 1,
+  "version": 2,
   "coordinateSpace": {
-    "type": "normalized-square",
+    "type": "normalized-rect",
     "origin": "top-left",
     "furnitureAnchor": "center"
   },
   "room": {
-    "aspectRatio": 1,
+    "aspectRatio": 0.8333333333333334,
     "borderRadiusPx": 16
   },
   "surfaces": {
@@ -57,7 +57,7 @@
     "centerX": 0.5,
     "bottom": 0.16,
     "width": 0.42,
-    "height": 0.42,
+    "aspectRatio": 1,
     "contentFit": "contain"
   },
   "referenceFixture": {

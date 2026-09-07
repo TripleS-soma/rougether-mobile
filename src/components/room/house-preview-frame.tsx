@@ -131,7 +131,7 @@ export function HousePreviewFrame({
             key={coverKey}
             source={assetSource(coverKey)}
             style={StyleSheet.absoluteFill}
-            contentFit="contain"
+            contentFit="fill"
             transition={frame.kind === 'stacked' ? 0 : 120}
             onError={onFrameError}
             // 셸이 집 목록을 받자마자 memory-disk로 프리페치하는데(#463,

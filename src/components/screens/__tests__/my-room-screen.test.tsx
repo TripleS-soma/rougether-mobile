@@ -47,6 +47,7 @@ describe('MyRoomScreen', () => {
       />,
     );
     expect(ui.queryByLabelText('방')).toBeNull();
+    expect(ui.getByText('달력')).toBeTruthy();
     expect(ui.getByText('이 날의 할 일')).toBeTruthy();
     await fireEvent.press(ui.getByLabelText('이 날에 루틴 추가'));
     expect(onAddRoutineForDate).toHaveBeenCalledWith(TODAY);
@@ -55,10 +56,11 @@ describe('MyRoomScreen', () => {
   it("view='room'이면 달력 알약 없이 방만 — 오늘의 할 일 (#1138)", async () => {
     const ui = await render(<MyRoomScreen routines={[]} view="room" />);
     expect(ui.queryByText('달력')).toBeNull();
+    expect(ui.queryByTestId('my-room-chrome')).toBeNull();
     expect(ui.getByText('오늘의 할 일')).toBeTruthy();
   });
 
-  it('renders the room title and today progress — 스트릭·잔액은 상시 표시하지 않는다 (#1055)', async () => {
+  it('renders today progress without a room title — 스트릭·잔액은 상시 표시하지 않는다 (#1055)', async () => {
     // Completion is per date: mark 3 of the 5 routines done today.
     const completions = { '1': [TODAY], '2': [TODAY], '3': [TODAY] };
     const { getByText, queryByText } = await render(
@@ -71,7 +73,7 @@ describe('MyRoomScreen', () => {
         diamondBalance={34}
       />,
     );
-    expect(getByText('준서의 방')).toBeTruthy();
+    expect(queryByText('준서의 방')).toBeNull();
     // 3 of 5 routines completed today.
     expect(getByText('3 / 5')).toBeTruthy();
     // 헤더바가 사라지며(#1055) 스트릭·코인·다이아는 보상 순간에만 알약으로 뜬다.
@@ -218,15 +220,28 @@ describe('MyRoomScreen', () => {
     expect(getAllByLabelText('전체 공개').length).toBeGreaterThan(0);
   });
 
-  it('keeps the 의 방 suffix visible on narrow screens (shrink + middle ellipsis)', async () => {
-    const { getByText } = await render(<MyRoomScreen userName="김철수베리롱네임" routines={[]} />);
-    const title = getByText('김철수베리롱네임의 방');
-    // Shrinks the font first, then ellipsizes the middle — never the suffix.
-    expect(title.props.adjustsFontSizeToFit).toBe(true);
-    expect(title.props.minimumFontScale).toBe(0.75);
-    expect(title.props.ellipsizeMode).toBe('middle');
-    expect(title.props.numberOfLines).toBe(1);
-  });
+  it.each([undefined, 'room'] as const)(
+    'omits the personal room name and fallback in view=%s, keeping room actions',
+    async (view) => {
+      const onOpenNotifications = jest.fn();
+      const onEdit = jest.fn();
+      const onOpenGacha = jest.fn();
+      const props = { view, routines: [], onOpenNotifications, onEdit, onOpenGacha };
+      const ui = await render(<MyRoomScreen {...props} userName="김철수베리롱네임" />);
+      expect(ui.queryByText(/의 방$/)).toBeNull();
+      expect(ui.queryByText('내 방')).toBeNull();
+      expect(ui.getByLabelText('메뉴')).toBeTruthy();
+      await fireEvent.press(ui.getByLabelText('알림'));
+      await fireEvent.press(ui.getByLabelText('방 꾸미기'));
+      await fireEvent.press(ui.getByLabelText('뽑기 상점'));
+      expect(onOpenNotifications).toHaveBeenCalledTimes(1);
+      expect(onEdit).toHaveBeenCalledTimes(1);
+      expect(onOpenGacha).toHaveBeenCalledTimes(1);
+
+      await ui.rerender(<MyRoomScreen {...props} />);
+      expect(ui.queryByText('내 방')).toBeNull();
+    },
+  );
 
   it('hides the streak badge when the streak is 0', async () => {
     const { queryByText } = await render(<MyRoomScreen streakDays={0} routines={[]} />);

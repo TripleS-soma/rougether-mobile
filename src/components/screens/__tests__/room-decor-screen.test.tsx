@@ -19,10 +19,10 @@ const firstArgIds = (fn: jest.Mock) =>
   (fn.mock.calls[0][0] as PlacedFurniture[]).map((p) => p.furnitureId);
 
 // 드래그 오버레이는 캔버스 onLayout으로 크기를 알아야 렌더된다 — 테스트에서
-// 레이아웃 이벤트를 직접 쏴 320px 정사각을 흉내낸다. (await로 상태 플러시)
+// 레이아웃 이벤트를 직접 쏴 320×384px 방을 흉내낸다. (await로 상태 플러시)
 const layoutCanvas = (getByTestId: (id: string) => unknown) =>
   fireEvent(getByTestId('decor-canvas') as never, 'layout', {
-    nativeEvent: { layout: { width: 320, height: 320 } },
+    nativeEvent: { layout: { width: 320, height: 384 } },
   });
 
 /** 가구 탭 제스처(선택)를 성공 상태로 발사한다. */
@@ -145,7 +145,12 @@ describe('RoomDecorScreen (#327 — 자유 배치)', () => {
 
     await waitFor(() => expect(onApply).toHaveBeenCalled());
     expect(onApply.mock.calls[0][0]).toEqual([
-      expect.objectContaining({ furnitureId: 'edge-position', scale: 2, x: 0.28, y: 0.72 }),
+      expect.objectContaining({
+        furnitureId: 'edge-position',
+        scale: 2,
+        x: 0.28,
+        y: expect.closeTo(23 / 30),
+      }),
     ]);
   });
 
@@ -602,6 +607,38 @@ describe('RoomDecorScreen — 저장 흐름', () => {
 });
 
 describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
+  it('uses measured portrait height for item centers and bottom-edge drag/save', async () => {
+    const onApply = jest.fn();
+    const ui = await render(
+      <RoomDecorScreen
+        initialItems={[{ furnitureId: 'plant', x: 0.5, y: 0.5, z: 1 }]}
+        onApply={onApply}
+      />,
+    );
+    await layoutCanvas(ui.getByTestId);
+    const style = StyleSheet.flatten(ui.getByLabelText('초록 식물 옮기기').props.style);
+    expect(style.width).toBeCloseTo(89.6);
+    expect(style.height).toBeCloseTo(89.6);
+    expect(style.top + style.height / 2).toBeCloseTo(192);
+    await tapItem('plant');
+    await act(() =>
+      fireGestureHandler(getByGestureTestId('item-pan-plant'), [
+        { state: State.BEGAN },
+        { state: State.ACTIVE },
+        { state: State.ACTIVE, translationX: 0, translationY: 1000 },
+        { state: State.END, translationX: 0, translationY: 1000 },
+      ]),
+    );
+    await fireEvent.press(ui.getByText('적용하기'));
+    await waitFor(() => expect(onApply).toHaveBeenCalled());
+    const saved = lastApply(onApply)[0];
+    expect(saved.x).toBeCloseTo(0.5);
+    expect(saved.y * 384 + 44.8).toBeCloseTo(384);
+    await ui.rerender(<RoomDecorScreen initialItems={lastApply(onApply)} onApply={onApply} />);
+    const reopened = StyleSheet.flatten(ui.getByLabelText('초록 식물 옮기기').props.style);
+    expect(reopened.top + reopened.height).toBeCloseTo(384);
+  });
+
   it('tapping an item selects it: ring + toolbar appear, empty-canvas tap deselects', async () => {
     const { getByTestId, getByLabelText, queryByLabelText, queryByTestId } = await render(
       <RoomDecorScreen initialItems={items(['plant'])} />,

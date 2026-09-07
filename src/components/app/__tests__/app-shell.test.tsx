@@ -246,20 +246,22 @@ describe('AppShell — 집 없는 유저의 집 탭 (#571)', () => {
 
 describe('AppShell', () => {
   it('opens on the my-room screen with the bottom nav', async () => {
-    const { getByText, getByLabelText } = await render(
+    const { getByText, getByLabelText, queryByText } = await render(
       <QueryProvider>
         <AuthProvider>
           <AppShell />
         </AuthProvider>
       </QueryProvider>,
     );
-    // 닉네임을 아직 모를 때의 폴백 — 데모 이름('준서')을 흘리지 않는다 (#924).
-    expect(getByText('내 방')).toBeTruthy();
+    // The room title is gone, including the fallback used before the nickname loads.
+    expect(queryByText('내 방')).toBeNull();
     expect(getByText('오늘의 할 일')).toBeTruthy();
     // Bottom nav tabs present.
     expect(getByLabelText('나의 방')).toBeTruthy();
     expect(getByLabelText('집')).toBeTruthy();
     expect(getByLabelText('마이페이지')).toBeTruthy();
+    expect(getByText('방')).toBeTruthy();
+    expect(getByText('마이')).toBeTruthy();
   });
 
   // 엣지 백 오발화 회귀 (#740) — onTouchesDown의 mgr.fail()은 runOnJS라
