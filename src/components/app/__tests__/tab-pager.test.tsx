@@ -113,7 +113,7 @@ describe('TabPager direction handoff (#1150)', () => {
       <TabPager index={1} onIndexChange={jest.fn()} lock={lock}>
         <Text>나의 방</Text>
         <Text>집</Text>
-        <Text>마이페이지</Text>
+        <Text>내 정보</Text>
       </TabPager>,
     );
     const pan = getByGestureTestId('tab-pager-pan') as PanGesture;

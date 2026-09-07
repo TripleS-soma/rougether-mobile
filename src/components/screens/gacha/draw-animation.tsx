@@ -1,49 +1,72 @@
-import { Image } from 'expo-image';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import type { DrawResult } from '@/api';
 import type { GachaMachine } from '@/api/adapters';
 import { GiftBoxArt } from '@/components/screens/gacha/gift-box-art';
 import { Icon } from '@/components/ui/icon';
 import { Pictogram } from '@/components/ui/pictograms';
 import { Radius, Spacing, StaticWhite } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
-import { assetSource, isCdnKey } from '@/resources/asset';
-import { RARITY_COLORS, type Rarity } from '@/resources/furniture';
-import { useAnimatedValue } from '@/hooks/use-stable-value';
+import { RewardArtwork, rarityColor } from '@/components/screens/gacha/reward-artwork';
+import { useAnimatedValue, useStableCallback } from '@/hooks/use-stable-value';
+import { hapticImpact } from '@/utils/haptics';
+import {
+  getRevealMotionProfile,
+  type RevealMotionProfile,
+  type RevealPlanItem,
+} from '@/components/screens/gacha/reveal-motion';
 
-/** Minimum charge-phase duration — keeps the build-up on screen even when the
- * draw API answers in a few hundred ms. */
-export const MIN_CHARGE_MS = 1800;
-/** Burst transition (#431) — flash → rays/particles, then the reveal lands. */
-export const BURST_MS = 650;
-/** 기본 레어도 — rarity가 없는(또는 미지의) 아이템의 뱃지·색 폴백. */
-export const DEFAULT_RARITY: Rarity = '일반';
-
-/** 아이템 rarity 문자열 → 뱃지/버스트 색. 미지정·미지의 값은 기본 레어도 색. */
-export const rarityColor = (rarity?: string) =>
-  RARITY_COLORS[(rarity as Rarity) ?? DEFAULT_RARITY] ?? RARITY_COLORS[DEFAULT_RARITY];
+export {
+  DEFAULT_RARITY,
+  rarityColor,
+  RewardArtwork,
+} from '@/components/screens/gacha/reward-artwork';
+export {
+  CinematicRevealShell,
+  CinematicRewardStage,
+  getRevealVideoSource,
+  getRevealPosterSource,
+} from '@/components/screens/gacha/cinematic-reveal';
 
 /**
  * Animated box shown during the charge phase (#431): the shake escalates —
- * amplitude grows while the period shrinks over MIN_CHARGE_MS, then holds an
- * intense loop until the burst. The growing tension makes the same 1.8s read
- * far more dramatic than the old uniform wobble.
+ * amplitude grows while the period shrinks according to the rarity profile,
+ * then holds an intense loop until the burst.
  */
-export function ChargingBox({ machine }: { machine?: GachaMachine }) {
+export function ChargingBox({
+  machine,
+  profile,
+  reducedMotion = false,
+}: {
+  machine?: GachaMachine;
+  profile: RevealMotionProfile;
+  reducedMotion?: boolean;
+}) {
   const t = useTokens();
   const grow = useAnimatedValue(0);
   const shake = useAnimatedValue(0);
   const glow = useAnimatedValue(0);
+  const seal = useAnimatedValue(0);
 
   useEffect(() => {
-    // 진폭↑·주기↓ 에스컬레이션 (~1760ms) 후 최고 강도 루프 유지.
+    grow.stopAnimation();
+    shake.stopAnimation();
+    glow.stopAnimation();
+    seal.stopAnimation();
+    grow.setValue(reducedMotion ? 1 : 0);
+    shake.setValue(0);
+    glow.setValue(reducedMotion ? 0.45 : 0);
+    seal.setValue(reducedMotion ? 1 : 0);
+    if (reducedMotion) return;
+
+    // 가구가 아니라 프로필만 본다. 결과를 받은 뒤 등급 프로필이 바뀌면 같은
+    // 상자가 더 강한 진폭·빛으로 다시 시작해 고등급을 미리 예고한다.
+    const pace = Math.max(70, Math.floor(profile.minChargeMs / 12));
     const steps: { amp: number; dur: number; reps: number }[] = [
-      { amp: 1, dur: 280, reps: 1 },
-      { amp: 1.7, dur: 200, reps: 1 },
-      { amp: 2.4, dur: 150, reps: 2 },
-      { amp: 3, dur: 100, reps: 1 },
+      { amp: 0.25, dur: pace * 2, reps: 1 },
+      { amp: 0.5, dur: Math.round(pace * 1.5), reps: 1 },
+      { amp: 0.75, dur: pace, reps: 2 },
+      { amp: 1, dur: pace, reps: 1 },
     ];
     const seq: Animated.CompositeAnimation[] = [];
     for (const s of steps)
@@ -54,48 +77,103 @@ export function ChargingBox({ machine }: { machine?: GachaMachine }) {
         );
     const intense = Animated.loop(
       Animated.sequence([
-        Animated.timing(shake, { toValue: 3.4, duration: 70, useNativeDriver: true }),
-        Animated.timing(shake, { toValue: -3.4, duration: 70, useNativeDriver: true }),
+        Animated.timing(shake, { toValue: 1, duration: pace, useNativeDriver: true }),
+        Animated.timing(shake, { toValue: -1, duration: pace, useNativeDriver: true }),
       ]),
     );
     const escalate = Animated.sequence(seq);
     escalate.start(({ finished }) => finished && intense.start());
     const growAnim = Animated.timing(grow, {
       toValue: 1,
-      duration: MIN_CHARGE_MS,
+      duration: profile.minChargeMs,
       easing: Easing.in(Easing.cubic),
       useNativeDriver: true,
     });
     growAnim.start();
     const glowLoop = Animated.loop(
       Animated.sequence([
-        Animated.timing(glow, { toValue: 1, duration: 420, useNativeDriver: true }),
-        Animated.timing(glow, { toValue: 0, duration: 420, useNativeDriver: true }),
+        Animated.timing(glow, { toValue: 1, duration: pace * 4, useNativeDriver: true }),
+        Animated.timing(glow, { toValue: 0, duration: pace * 4, useNativeDriver: true }),
       ]),
     );
     glowLoop.start();
+    // 발도장 코인은 결과 아트와 무관한 공용 레이어다. 상자 속으로 떨어지는
+    // 한 사이클을 반복하므로 API 응답이 늦어져도 정지 화면이 되지 않는다.
+    const sealLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(seal, {
+          toValue: 1,
+          duration: Math.max(560, pace * 6),
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.delay(pace * 2),
+        Animated.timing(seal, { toValue: 0, duration: 0, useNativeDriver: true }),
+      ]),
+    );
+    sealLoop.start();
     return () => {
       escalate.stop();
       intense.stop();
       growAnim.stop();
       glowLoop.stop();
+      sealLoop.stop();
     };
-  }, [grow, shake, glow]);
+  }, [glow, grow, profile, reducedMotion, seal, shake]);
 
   const boxStyle = {
     transform: [
-      { scale: grow.interpolate({ inputRange: [0, 1], outputRange: [1, 1.22] }) },
-      { rotate: shake.interpolate({ inputRange: [-3.4, 3.4], outputRange: ['-12deg', '12deg'] }) },
+      { scale: grow.interpolate({ inputRange: [0, 1], outputRange: [1, profile.chargeScale] }) },
+      {
+        rotate: shake.interpolate({
+          inputRange: [-1, 1],
+          outputRange: [`-${profile.shakeDegrees}deg`, `${profile.shakeDegrees}deg`],
+        }),
+      },
     ],
   };
   const glowStyle = {
-    opacity: glow.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0.85] }),
+    opacity: glow.interpolate({
+      inputRange: [0, 1],
+      outputRange: [profile.glowOpacity * 0.28, profile.glowOpacity],
+    }),
     transform: [{ scale: glow.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1.25] }) }],
+  };
+  const sealStyle = {
+    opacity: seal.interpolate({ inputRange: [0, 0.12, 0.82, 1], outputRange: [0, 1, 1, 0] }),
+    transform: [
+      { translateY: seal.interpolate({ inputRange: [0, 1], outputRange: [-118, -8] }) },
+      { scale: seal.interpolate({ inputRange: [0, 0.82, 1], outputRange: [0.72, 1, 0.58] }) },
+      { rotate: seal.interpolate({ inputRange: [0, 1], outputRange: ['-24deg', '0deg'] }) },
+    ],
   };
 
   return (
     <View style={styles.chargeWrap}>
-      <Animated.View style={[styles.glowRing, glowStyle, { backgroundColor: t.primary }]} />
+      {Array.from({ length: profile.ringCount }, (_, index) => (
+        <Animated.View
+          key={index}
+          testID={`charging-glow-ring-${index}`}
+          style={[
+            styles.glowRing,
+            glowStyle,
+            {
+              backgroundColor: profile.tier === 'legendary' ? t.warning : t.primary,
+              transform: [
+                {
+                  scale: glow.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.86 + index * 0.12, 1.18 + index * 0.16],
+                  }),
+                },
+              ],
+            },
+          ]}
+        />
+      ))}
+      <Animated.View style={[styles.sealCoin, sealStyle]} testID="gacha-paw-seal">
+        <Icon name="coin" size={42} color={t.warning} />
+      </Animated.View>
       <Animated.View
         style={[
           styles.chargeBox,
@@ -114,7 +192,7 @@ export function ChargingBox({ machine }: { machine?: GachaMachine }) {
   );
 }
 
-/** 파티클 비산 좌표 — 버스트 중심에서 바깥으로 (#431). */
+/** 파티클 비산 좌표 — 최대 전설 프로필까지 버스트 중심에서 바깥으로 비산한다. */
 const BURST_PARTICLES = [
   { dx: -84, dy: -100 },
   { dx: 88, dy: -74 },
@@ -122,6 +200,20 @@ const BURST_PARTICLES = [
   { dx: 96, dy: 56 },
   { dx: -44, dy: -126 },
   { dx: 52, dy: -122 },
+  { dx: -126, dy: -38 },
+  { dx: 128, dy: -20 },
+  { dx: -72, dy: 104 },
+  { dx: 76, dy: 112 },
+  { dx: -22, dy: 142 },
+  { dx: 24, dy: -152 },
+  { dx: -146, dy: 72 },
+  { dx: 148, dy: 68 },
+  { dx: -112, dy: -106 },
+  { dx: 116, dy: -104 },
+  { dx: -152, dy: 4 },
+  { dx: 154, dy: 10 },
+  { dx: -104, dy: 126 },
+  { dx: 108, dy: 132 },
 ];
 
 /**
@@ -129,55 +221,97 @@ const BURST_PARTICLES = [
  * + particles. `strong` (희귀 이상) lengthens the rays and doubles particles;
  * 일반 keeps it short so the rarity difference is felt.
  */
-export function BurstOverlay({ color, strong }: { color: string; strong: boolean }) {
+export function BurstOverlay({
+  color,
+  strong,
+  profile,
+  reducedMotion = false,
+}: {
+  color: string;
+  strong: boolean;
+  profile?: RevealMotionProfile;
+  reducedMotion?: boolean;
+}) {
   const t = useTokens();
   const p = useAnimatedValue(0);
+  // 출석 트로피도 이 컴포넌트를 재사용한다. 기존 strong API는 유지하고,
+  // 가챠만 더 세밀한 프로필을 주입한다.
+  const motion = profile ?? getRevealMotionProfile(strong ? '희귀' : '일반', reducedMotion);
 
   useEffect(() => {
+    p.setValue(0);
     Animated.timing(p, {
       toValue: 1,
-      duration: BURST_MS,
+      duration: motion.burstMs,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();
-  }, [p]);
+  }, [motion, p]);
 
   const flashStyle = {
-    opacity: p.interpolate({ inputRange: [0, 0.12, 0.32, 1], outputRange: [0.95, 0.65, 0, 0] }),
-  };
-  const ringStyle = {
-    opacity: p.interpolate({ inputRange: [0, 0.15, 0.8, 1], outputRange: [0, 0.8, 0.15, 0] }),
-    transform: [{ scale: p.interpolate({ inputRange: [0, 1], outputRange: [0.4, 2] }) }],
+    opacity: p.interpolate({
+      inputRange: [0, 0.12, 0.38, 1],
+      outputRange: [motion.glowOpacity * 0.34, motion.glowOpacity * 0.18, 0, 0],
+    }),
   };
   const rayOpacity = p.interpolate({
     inputRange: [0, 0.2, 0.75, 1],
     outputRange: [0, 0.95, 0.35, 0],
   });
   const rayScale = p.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0.1, 1, 1.15] });
-  const particles = strong ? BURST_PARTICLES : BURST_PARTICLES.slice(0, 3);
+  const particles = BURST_PARTICLES.slice(0, motion.particleCount);
   const particleColors = [color, t.warning, t.primary];
+  const rays = Array.from({ length: motion.rayCount }, (_, index) =>
+    Math.round((180 / Math.max(1, motion.rayCount)) * index),
+  );
 
   return (
     <View style={styles.burstWrap} pointerEvents="none" testID="gacha-burst">
-      <Animated.View style={[styles.flash, flashStyle]} />
-      {[0, 45, 90, 135].map((deg) => (
+      <Animated.View style={[styles.flash, flashStyle, { backgroundColor: color }]} />
+      {rays.map((deg) => (
         <Animated.View
           key={deg}
           style={[
             styles.ray,
-            { height: strong ? 260 : 150, backgroundColor: color, opacity: rayOpacity },
+            {
+              height: 130 + motion.rayCount * 18,
+              backgroundColor: color,
+              opacity: rayOpacity,
+            },
             { transform: [{ rotate: `${deg}deg` }, { scaleY: rayScale }] },
           ]}
         />
       ))}
-      <Animated.View style={[styles.burstRing, ringStyle, { borderColor: color }]} />
+      {Array.from({ length: motion.ringCount }, (_, index) => (
+        <Animated.View
+          key={index}
+          testID={`gacha-burst-ring-${index}`}
+          style={[
+            styles.burstRing,
+            {
+              borderColor: color,
+              opacity: p.interpolate({
+                inputRange: [0, 0.15 + index * 0.05, 0.82, 1],
+                outputRange: [0, 0.82 - index * 0.12, 0.12, 0],
+              }),
+              transform: [
+                {
+                  scale: p.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.35 + index * 0.08, 1.65 + index * 0.35],
+                  }),
+                },
+              ],
+            },
+          ]}
+        />
+      ))}
       {particles.map((pt, i) => (
         <Animated.View
           key={`${pt.dx}-${pt.dy}`}
           style={[
             styles.particle,
             {
-              backgroundColor: particleColors[i % particleColors.length],
               opacity: p.interpolate({
                 inputRange: [0, 0.15, 0.85, 1],
                 outputRange: [0, 1, 0.6, 0],
@@ -188,81 +322,185 @@ export function BurstOverlay({ color, strong }: { color: string; strong: boolean
                 { scale: p.interpolate({ inputRange: [0, 1], outputRange: [1, 0.3] }) },
               ],
             },
-          ]}
-        />
+          ]}>
+          <Pictogram
+            name={i % 3 === 0 ? 'leaf' : 'sparkle'}
+            size={i % 2 === 0 ? 14 : 11}
+            color={particleColors[i % particleColors.length]}
+          />
+        </Animated.View>
       ))}
     </View>
   );
 }
 
-/** Single-pull hero card (#431): slams down from above with a bounce — the
- * burst's momentum carries straight into the reward landing. */
+const HERO_ORNAMENTS = [
+  { left: 18, top: 78 },
+  { right: 14, top: 58 },
+  { left: 42, top: 28 },
+  { right: 38, top: 112 },
+  { left: 8, top: 146 },
+  { right: 8, top: 158 },
+  { left: 76, top: 8 },
+  { right: 72, top: 8 },
+  { left: 28, top: 188 },
+  { right: 26, top: 196 },
+] as const;
+
+/**
+ * 단챠 공용 히어로 리빌. `assetKey`는 가운데 아트 슬롯에만 들어가며 모션은
+ * 전부 rarity 프로필이 결정한다. 새 가구가 추가되어도 이 컴포넌트는 바뀌지 않는다.
+ */
 export function RevealCard({
-  item,
-  index,
+  entry,
+  machine,
   large,
+  reducedMotion = false,
 }: {
-  item: DrawResult;
-  index: number;
+  entry: RevealPlanItem;
+  machine?: GachaMachine;
   large?: boolean;
+  reducedMotion?: boolean;
 }) {
   const t = useTokens();
   const Typography = useTypography();
   const emph = useFontEmphasis();
-  const p = useAnimatedValue(0);
-  const fade = useAnimatedValue(0);
-  const color = rarityColor(item.rarity);
+  const p = useAnimatedValue(reducedMotion ? 1 : 0);
+  const fade = useAnimatedValue(reducedMotion ? 1 : 0);
+  const glow = useAnimatedValue(reducedMotion ? 0.45 : 0.25);
+  const profile = entry.profile;
+  const color = rarityColor(entry.result.rarity);
 
   useEffect(() => {
+    if (reducedMotion) {
+      p.setValue(1);
+      fade.setValue(1);
+      glow.setValue(0.45);
+      return;
+    }
+    p.setValue(0);
+    fade.setValue(0);
     Animated.parallel([
       Animated.timing(p, {
         toValue: 1,
-        duration: 620,
-        delay: index * 120,
-        easing: Easing.bounce,
+        duration: profile.revealMs,
+        delay: entry.index * 80,
+        easing: Easing.out(Easing.back(profile.heroScale > 1.1 ? 1.8 : 1.25)),
         useNativeDriver: true,
       }),
       Animated.timing(fade, {
         toValue: 1,
-        duration: 160,
-        delay: index * 120,
+        duration: Math.min(220, profile.revealMs),
+        delay: entry.index * 80,
         useNativeDriver: true,
       }),
     ]).start();
-  }, [p, fade, index]);
+    if (profile.tier === 'rare' || profile.tier === 'legendary') {
+      const halo = Animated.loop(
+        Animated.sequence([
+          Animated.timing(glow, { toValue: 1, duration: 520, useNativeDriver: true }),
+          Animated.timing(glow, { toValue: 0.28, duration: 520, useNativeDriver: true }),
+        ]),
+      );
+      halo.start();
+      return () => halo.stop();
+    }
+  }, [entry.index, fade, glow, p, profile, reducedMotion]);
 
-  const style = {
+  const landingStyle = {
     opacity: fade,
-    transform: [{ translateY: p.interpolate({ inputRange: [0, 1], outputRange: [-180, 0] }) }],
+    transform: [
+      {
+        translateY: p.interpolate({
+          inputRange: [0, 1],
+          outputRange: [-profile.heroLift, 0],
+        }),
+      },
+      { scale: p.interpolate({ inputRange: [0, 1], outputRange: [0.72, 1] }) },
+    ],
   };
+  const revealStyle = { opacity: fade };
+  const haloStyle = {
+    opacity: glow.interpolate({ inputRange: [0, 1], outputRange: [0.18, profile.glowOpacity] }),
+    transform: [
+      { scale: glow.interpolate({ inputRange: [0, 1], outputRange: [0.92, profile.heroScale] }) },
+    ],
+  };
+  const heroOrnamentCount = Math.min(HERO_ORNAMENTS.length, Math.ceil(profile.particleCount / 2));
+
+  if (large) {
+    return (
+      <Animated.View style={[styles.heroReveal, revealStyle]} testID={`gacha-hero-${profile.tier}`}>
+        <View style={styles.heroStage}>
+          {Array.from({ length: profile.ringCount }, (_, index) => (
+            <Animated.View
+              key={index}
+              style={[
+                styles.heroHalo,
+                haloStyle,
+                {
+                  borderColor: color,
+                  width: 184 + index * 32,
+                  height: 184 + index * 32,
+                  left: (300 - (184 + index * 32)) / 2,
+                  borderRadius: Radius.pill,
+                },
+              ]}
+            />
+          ))}
+          {HERO_ORNAMENTS.slice(0, heroOrnamentCount).map((position, index) => (
+            <Animated.View
+              key={index}
+              style={[styles.heroOrnament, position, haloStyle]}
+              testID={`gacha-hero-ornament-${index}`}>
+              <Pictogram
+                name={index % 3 === 0 ? 'leaf' : 'sparkle'}
+                size={index % 2 === 0 ? 18 : 14}
+                color={index % 2 === 0 ? color : t.warning}
+              />
+            </Animated.View>
+          ))}
+          <Animated.View style={[styles.heroReward, landingStyle]}>
+            <RewardArtwork entry={entry} size={profile.tier === 'legendary' ? 232 : 204} />
+          </Animated.View>
+          {machine && profile.tier !== 'legendary' ? (
+            <View style={[styles.heroGift, { backgroundColor: machine.accent }]}>
+              <GiftBoxArt machine={machine} size={112} testIDPrefix="reveal-gift-box" />
+            </View>
+          ) : null}
+        </View>
+        {entry.badgeLabel ? (
+          <Text style={[styles.heroBadge, emph('bold'), { backgroundColor: color }]}>
+            {entry.badgeLabel}
+          </Text>
+        ) : null}
+        <Text style={[Typography.h3, styles.center, { color: StaticWhite }]} numberOfLines={2}>
+          {entry.displayName}
+        </Text>
+        {entry.conversionLabel ? (
+          <Text style={[styles.convertNote, emph('semibold'), { color: StaticWhite }]}>
+            {entry.conversionLabel}
+          </Text>
+        ) : null}
+      </Animated.View>
+    );
+  }
 
   return (
     <Animated.View
-      style={[
-        styles.revealCard,
-        large && styles.revealCardLarge,
-        style,
-        { backgroundColor: t.surface, borderColor: color },
-      ]}>
-      {isCdnKey(item.assetKey) ? (
-        <Image
-          source={assetSource(item.assetKey)}
-          style={large ? styles.revealArtLarge : styles.revealArt}
-          contentFit="contain"
-          transition={120}
-        />
-      ) : (
-        <Icon name="gift" size={large ? 72 : 34} color={color} />
-      )}
-      <Text style={[styles.revealBadge, emph('bold'), { backgroundColor: color }]}>
-        {item.rarity ?? DEFAULT_RARITY}
-      </Text>
+      style={[styles.revealCard, landingStyle, { backgroundColor: t.surface, borderColor: color }]}>
+      <RewardArtwork entry={entry} size={68} />
+      {entry.badgeLabel ? (
+        <Text style={[styles.revealBadge, emph('bold'), { backgroundColor: color }]}>
+          {entry.badgeLabel}
+        </Text>
+      ) : null}
       <Text style={[Typography.supporting, styles.center, { color: t.text }]} numberOfLines={2}>
-        {item.name}
+        {entry.displayName}
       </Text>
-      {item.converted ? (
+      {entry.conversionLabel ? (
         <Text style={[styles.convertNote, emph('normal'), { color: t.textMuted }]}>
-          중복 · 다이아 +{item.refundAmount ?? 0}
+          {entry.conversionLabel}
         </Text>
       ) : null}
     </Animated.View>
@@ -274,65 +512,117 @@ const FLIP_DEAL_MS = 300;
 const FLIP_STAGGER_MS = 70;
 const FLIP_AUTO_BASE_MS = 500;
 const FLIP_AUTO_STEP_MS = 110;
+export const AUTO_REVEAL_MS = FLIP_DEAL_MS + FLIP_AUTO_BASE_MS;
+export const REVEAL_STAGGER_MS = FLIP_STAGGER_MS + FLIP_AUTO_STEP_MS;
 
 /**
- * 10연 reveal card (#431): deals in face-down from the top-right, then flips
+ * 다연차 reveal card (#431): deals in face-down from the top-right, then flips
  * on its own (staggered) or immediately on tap. 전설 cards leak a gold glow
  * before flipping so the good pull announces itself.
  */
-export function FlipCard({ item, index }: { item: DrawResult; index: number }) {
+export function FlipCard({
+  entry,
+  reducedMotion = false,
+  revealAll = false,
+  onReveal,
+}: {
+  entry: RevealPlanItem;
+  reducedMotion?: boolean;
+  revealAll?: boolean;
+  onReveal?: (index: number) => void;
+}) {
   const t = useTokens();
   const Typography = useTypography();
   const emph = useFontEmphasis();
-  const deal = useAnimatedValue(0);
-  const flip = useAnimatedValue(0);
-  const glow = useAnimatedValue(0.3);
-  const [flipped, setFlipped] = useState(false);
+  const deal = useAnimatedValue(reducedMotion ? 1 : 0);
+  const flip = useAnimatedValue(reducedMotion ? 1 : 0);
+  const glow = useAnimatedValue(reducedMotion ? 0.45 : 0.25);
+  const [flipped, setFlipped] = useState(reducedMotion);
   const autoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const color = rarityColor(item.rarity);
-  const legend = item.rarity === '전설';
+  const mounted = useRef(false);
+  const revealed = useRef(false);
+  const { index, profile } = entry;
+  const color = rarityColor(entry.result.rarity);
+  const highlighted = profile.tier === 'rare' || profile.tier === 'legendary';
 
-  const runFlip = () => {
+  const runFlip = useStableCallback((withHaptic = false) => {
+    if (!mounted.current || revealed.current) return;
+    // Lock before state updates: a tap, timer, or reveal-all may share one render.
+    revealed.current = true;
     clearTimeout(autoTimer.current ?? undefined);
-    setFlipped((was) => {
-      if (!was)
-        Animated.timing(flip, {
-          toValue: 1,
-          duration: 420,
-          easing: Easing.inOut(Easing.cubic),
-          useNativeDriver: true,
-        }).start();
-      return true;
-    });
-  };
+    autoTimer.current = null;
+    setFlipped(true);
+    if (reducedMotion) {
+      flip.stopAnimation();
+      flip.setValue(1);
+    } else {
+      Animated.timing(flip, {
+        toValue: 1,
+        duration: Math.max(260, Math.min(520, profile.revealMs)),
+        easing: Easing.inOut(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    }
+    if (withHaptic && !reducedMotion) hapticImpact();
+    onReveal?.(index);
+  });
 
   useEffect(() => {
-    Animated.timing(deal, {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      clearTimeout(autoTimer.current ?? undefined);
+      deal.stopAnimation();
+      flip.stopAnimation();
+    };
+  }, [deal, flip]);
+
+  useEffect(() => {
+    if (reducedMotion) {
+      deal.setValue(1);
+      flip.setValue(1);
+      runFlip();
+      return;
+    }
+    const dealAnimation = Animated.timing(deal, {
       toValue: 1,
       duration: FLIP_DEAL_MS,
       delay: index * FLIP_STAGGER_MS,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
-    }).start();
-    autoTimer.current = setTimeout(
-      runFlip,
-      index * FLIP_STAGGER_MS + FLIP_DEAL_MS + FLIP_AUTO_BASE_MS + index * FLIP_AUTO_STEP_MS,
-    );
-    return () => clearTimeout(autoTimer.current ?? undefined);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 마운트 시 1회 딜·예약
-  }, []);
+    });
+    dealAnimation.start();
+    if (!revealed.current) {
+      autoTimer.current = setTimeout(() => runFlip(), AUTO_REVEAL_MS + index * REVEAL_STAGGER_MS);
+    }
+    return () => {
+      clearTimeout(autoTimer.current ?? undefined);
+      dealAnimation.stop();
+    };
+  }, [deal, flip, index, reducedMotion, runFlip]);
 
   useEffect(() => {
-    if (!legend || flipped) return;
+    if (!revealAll) return;
+    deal.stopAnimation();
+    deal.setValue(1);
+    runFlip();
+  }, [deal, revealAll, runFlip]);
+
+  useEffect(() => {
+    if (!highlighted || flipped || reducedMotion) return;
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(glow, { toValue: 1, duration: 500, useNativeDriver: true }),
-        Animated.timing(glow, { toValue: 0.3, duration: 500, useNativeDriver: true }),
+        Animated.timing(glow, {
+          toValue: profile.glowOpacity,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(glow, { toValue: 0.25, duration: 500, useNativeDriver: true }),
       ]),
     );
     loop.start();
     return () => loop.stop();
-  }, [legend, flipped, glow]);
+  }, [flipped, glow, highlighted, profile.glowOpacity, reducedMotion]);
 
   const dealStyle = {
     opacity: deal,
@@ -356,40 +646,42 @@ export function FlipCard({ item, index }: { item: DrawResult; index: number }) {
   };
 
   return (
-    <Animated.View style={[styles.flipWrap, dealStyle]}>
-      {legend && !flipped ? (
+    <Animated.View
+      style={[styles.flipWrap, dealStyle]}
+      testID={`gacha-flip-${index}-${profile.tier}`}>
+      {highlighted && !flipped ? (
         <Animated.View style={[styles.flipGlow, { backgroundColor: color, opacity: glow }]} />
       ) : null}
       <Pressable
-        onPress={runFlip}
+        onPress={() => runFlip(true)}
         disabled={flipped}
         accessibilityRole="button"
-        accessibilityLabel={flipped ? (item.name ?? '아이템') : `${index + 1}번째 카드 뒤집기`}
+        accessibilityLabel={flipped ? entry.displayName : `${index + 1}번째 카드 뒤집기`}
         style={styles.flipInner}>
-        <Animated.View style={[styles.flipFace, backStyle, { backgroundColor: t.primary }]}>
+        <Animated.View
+          accessibilityElementsHidden={flipped}
+          importantForAccessibility={flipped ? 'no-hide-descendants' : 'auto'}
+          testID={`gacha-flip-back-${index}`}
+          style={[styles.flipFace, backStyle, { backgroundColor: t.primary }]}>
           <Pictogram name="paw" size={34} />
         </Animated.View>
         <Animated.View
+          accessibilityElementsHidden={!flipped}
+          importantForAccessibility={flipped ? 'auto' : 'no-hide-descendants'}
+          testID={`gacha-flip-front-${index}`}
           style={[styles.flipFace, frontStyle, { backgroundColor: t.surface, borderColor: color }]}>
-          {isCdnKey(item.assetKey) ? (
-            <Image
-              source={assetSource(item.assetKey)}
-              style={styles.revealArt}
-              contentFit="contain"
-              transition={120}
-            />
-          ) : (
-            <Icon name="gift" size={34} color={color} />
-          )}
-          <Text style={[styles.revealBadge, emph('bold'), { backgroundColor: color }]}>
-            {item.rarity ?? DEFAULT_RARITY}
-          </Text>
+          <RewardArtwork entry={entry} size={68} />
+          {entry.badgeLabel ? (
+            <Text style={[styles.revealBadge, emph('bold'), { backgroundColor: color }]}>
+              {entry.badgeLabel}
+            </Text>
+          ) : null}
           <Text style={[Typography.supporting, styles.center, { color: t.text }]} numberOfLines={2}>
-            {item.name}
+            {entry.displayName}
           </Text>
-          {item.converted ? (
+          {entry.conversionLabel ? (
             <Text style={[styles.convertNote, emph('normal'), { color: t.textMuted }]}>
-              중복 · 다이아 +{item.refundAmount ?? 0}
+              {entry.conversionLabel}
             </Text>
           ) : null}
         </Animated.View>
@@ -416,16 +708,54 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  sealCoin: {
+    position: 'absolute',
+    zIndex: 3,
+  },
 
   // Reveal cards (#431)
-  revealCardLarge: {
-    width: 220,
-    paddingVertical: Spacing.five,
+  heroReveal: {
+    width: 360,
+    alignItems: 'center',
     gap: Spacing.two,
   },
-  revealArtLarge: {
-    width: 150,
-    height: 150,
+  heroStage: {
+    width: 340,
+    height: 360,
+    alignItems: 'center',
+  },
+  heroHalo: {
+    position: 'absolute',
+    top: 38,
+    left: 58,
+    borderWidth: 2,
+  },
+  heroOrnament: {
+    position: 'absolute',
+    zIndex: 4,
+  },
+  heroReward: {
+    position: 'absolute',
+    top: 6,
+    zIndex: 3,
+  },
+  heroGift: {
+    position: 'absolute',
+    bottom: 14,
+    zIndex: 2,
+    width: 132,
+    height: 132,
+    borderRadius: Radius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroBadge: {
+    color: StaticWhite,
+    fontSize: 13,
+    overflow: 'hidden',
+    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one,
   },
   revealCard: {
     width: 104,
@@ -435,10 +765,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.two,
     alignItems: 'center',
     gap: Spacing.one,
-  },
-  revealArt: {
-    width: 68,
-    height: 68,
   },
   revealBadge: {
     color: StaticWhite,
@@ -468,9 +794,9 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     borderWidth: 3,
   },
-  particle: { position: 'absolute', width: 10, height: 10, borderRadius: Radius.pill },
+  particle: { position: 'absolute', width: 18, height: 18, alignItems: 'center' },
 
-  // 10연 flip reveal (#431)
+  // 다연차 flip reveal (#431)
   flipWrap: { width: 104, height: 158 },
   flipInner: { flex: 1 },
   flipGlow: {

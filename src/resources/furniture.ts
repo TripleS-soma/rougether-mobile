@@ -1,4 +1,4 @@
-import { ROOM_RENDER_CONTRACT } from '@/components/room/room-render-contract';
+import { furnitureClampBounds, ROOM_RENDER_CONTRACT } from '@/components/room/room-render-contract';
 
 /**
  * Furniture & wallpaper resource catalog (ported/simplified from the prototype
@@ -51,17 +51,18 @@ export type PlacedFurniture = {
  * 상수는 렌더 계약이 단일 출처라 함께 움직인다.
  */
 export function newFreePlacement(item: FurnitureItem, items: PlacedFurniture[]): PlacedFurniture {
-  const { baseWidth, editorScale, newPlacementCenter } = ROOM_RENDER_CONTRACT.furniture;
+  const { editorScale, newPlacementCenter } = ROOM_RENDER_CONTRACT.furniture;
   const maxZ = items.reduce((m, p) => Math.max(m, p.z), 0);
   const scale = Math.min(editorScale.max, Math.max(editorScale.min, item.defaultScale ?? 1));
-  const half = (baseWidth * scale) / 2;
-  const clamp = (v: number) => Math.min(1 - half, Math.max(half, v));
+  const bounds = furnitureClampBounds(scale);
+  const clamp = (v: number, range: { min: number; max: number }) =>
+    Math.min(range.max, Math.max(range.min, v));
   const hasItemDefault =
     typeof item.defaultPositionX === 'number' && typeof item.defaultPositionY === 'number';
   return {
     furnitureId: item.id,
-    x: clamp(hasItemDefault ? item.defaultPositionX! : newPlacementCenter.x),
-    y: clamp(hasItemDefault ? item.defaultPositionY! : newPlacementCenter.y),
+    x: clamp(hasItemDefault ? item.defaultPositionX! : newPlacementCenter.x, bounds.x),
+    y: clamp(hasItemDefault ? item.defaultPositionY! : newPlacementCenter.y, bounds.y),
     z: maxZ + 1,
     scale,
   };

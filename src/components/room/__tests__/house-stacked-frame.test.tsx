@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 
 import { HousePreviewFrame } from '@/components/room/house-preview-frame';
 import { HouseCoverPicker } from '@/components/room/house-cover-picker';
-import { DEFAULT_HOUSE_COVER_KEY, FRAME_ASPECT } from '@/resources/house-frame';
+import { DEFAULT_HOUSE_COVER_KEY } from '@/resources/house-frame';
 
 describe('stacked frame consumers', () => {
   it('shows six separate rooms and falls back with matching geometry when the frame fails', async () => {
@@ -11,14 +11,15 @@ describe('stacked frame consumers', () => {
       <HousePreviewFrame enabled maxMembers={6} memberCount={6} name="여섯 집" />,
     );
     expect(ui.getAllByTestId('preview-room')).toHaveLength(6);
+    expect(ui.getByLabelText('여섯 집 집 미리보기').props.contentFit).toBe('fill');
     expect(StyleSheet.flatten(ui.getByTestId('house-preview-frame').props.style).aspectRatio).toBe(
-      1024 / 1576,
+      (1024 / 1576) * (5 / 6),
     );
     await fireEvent(ui.getByLabelText('여섯 집 집 미리보기'), 'error', {
       nativeEvent: { error: 'unavailable' },
     });
     expect(StyleSheet.flatten(ui.getByTestId('house-preview-frame').props.style).aspectRatio).toBe(
-      FRAME_ASPECT,
+      (5 / 6) * (33 / 37),
     );
     expect(ui.getByLabelText('여섯 집 집 미리보기').props.recyclingKey).toBe(
       DEFAULT_HOUSE_COVER_KEY,

@@ -95,10 +95,10 @@ it('집 목록이 그대로여도 다크모드 전환 시 새 배경을 미리 �
       </QueryProvider>,
     );
     const light = assetSource(
-      'house/cloud-balloon/backgrounds/house-cloud-balloon-background-v1.webp',
+      'house/cloud-balloon/backgrounds/rounded-v2-20260907/house-cloud-balloon-background-day.webp',
     ).uri;
     const dark = assetSource(
-      'house/cloud-balloon/backgrounds/house-cloud-balloon-background-dark-v1.webp',
+      'house/cloud-balloon/backgrounds/rounded-v2-20260907/house-cloud-balloon-background-night.webp',
     ).uri;
     await waitFor(() =>
       expect(prefetch).toHaveBeenCalledWith(expect.arrayContaining([light]), {
@@ -287,7 +287,7 @@ describe('탭 스크롤 위치 보존 (#763)', () => {
 
     // 탭 왕복(=셸 리렌더) 후에도 참조가 같다 — memo 화면(#539)을 깨지 않는다.
     await fireEvent.press(getByLabelText('집'));
-    await fireEvent.press(getByLabelText('마이페이지'));
+    await fireEvent.press(getByLabelText('내 정보'));
     const after = mockSettingsRenders[mockSettingsRenders.length - 1];
     expect(after.getInitialScrollY).toBe(settings.getInitialScrollY);
     expect(after.onScrollY).toBe(settings.onScrollY);

@@ -1,0 +1,6 @@
+{
+  "leadInMs": 600,
+  "beatMs": 520,
+  "finalHoldMs": 1100,
+  "maxItems": 6
+}

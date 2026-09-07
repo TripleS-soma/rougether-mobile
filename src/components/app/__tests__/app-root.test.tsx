@@ -52,7 +52,7 @@ describe('AppRoot', () => {
     expect(queryByText('건너뛰기')).toBeNull();
   });
 
-  it('시작 화면 설정이 마이페이지면 앱이 마이페이지로 열린다 (#1139)', async () => {
+  it('시작 화면 설정이 내 정보면 앱이 내 정보로 열린다 (#1139)', async () => {
     await AsyncStorage.setItem(KEY, JSON.stringify({ characterId: 'cat', goals: ['exercise'] }));
     await AsyncStorage.setItem('rougether.start-tab', 'myPage');
     const { getByText, queryByText } = await renderApp();
@@ -63,10 +63,10 @@ describe('AppRoot', () => {
   it('튜토리얼 다시 보기로 들어오면 건너뛰기가 생기고, 누르면 앱으로 돌아온다 (#1023)', async () => {
     await AsyncStorage.setItem(KEY, JSON.stringify({ characterId: 'cat', goals: ['exercise'] }));
     const { getByText, getByLabelText } = await renderApp();
-    await waitFor(() => expect(getByText('내 방')).toBeTruthy());
+    await waitFor(() => expect(getByText('오늘의 할 일')).toBeTruthy());
 
-    // 설정은 마이페이지 헤더의 톱니 뒤 서브화면 (#1088).
-    await fireEvent.press(getByLabelText('마이페이지'));
+    // 설정은 내 정보 헤더의 톱니 뒤 서브화면 (#1088).
+    await fireEvent.press(getByLabelText('내 정보'));
     await fireEvent.press(getByLabelText('설정'));
     await waitFor(() => expect(getByText('튜토리얼 다시 보기')).toBeTruthy());
     await fireEvent.press(getByText('튜토리얼 다시 보기'));
@@ -76,7 +76,7 @@ describe('AppRoot', () => {
     await fireEvent.press(getByText('건너뛰기'));
 
     // 목표 설문을 거치지 않고 바로 앱 — 저장된 선택은 그대로다.
-    await waitFor(() => expect(getByText('내 방')).toBeTruthy());
+    await waitFor(() => expect(getByText('오늘의 할 일')).toBeTruthy());
   });
 
   it('goes straight to the app when onboarding was already completed', async () => {
@@ -84,7 +84,7 @@ describe('AppRoot', () => {
 
     const { getByText } = await renderApp();
 
-    await waitFor(() => expect(getByText('내 방')).toBeTruthy()); // MyRoom title
+    await waitFor(() => expect(getByText('오늘의 할 일')).toBeTruthy());
   });
 
   it('skips onboarding when the server says completed (no local cache)', async () => {
@@ -112,7 +112,7 @@ describe('AppRoot', () => {
 
     const { getByText } = await renderApp();
 
-    await waitFor(() => expect(getByText('내 방')).toBeTruthy());
+    await waitFor(() => expect(getByText('오늘의 할 일')).toBeTruthy());
   });
 
   it('중도 종료한 계정은 관심사 추천으로 재개하고 나중에 선택하면 다음 실행에 강제하지 않는다', async () => {
@@ -129,14 +129,14 @@ describe('AppRoot', () => {
     await waitFor(() => expect(ui.getByText('작게 시작해볼까요?')).toBeTruthy());
     expect(ui.getByText('책 2쪽 읽기')).toBeTruthy();
     await fireEvent.press(ui.getByText('나중에 할게요'));
-    await waitFor(() => expect(ui.getByText('내 방')).toBeTruthy());
+    await waitFor(() => expect(ui.getByText('오늘의 할 일')).toBeTruthy());
     expect(
       JSON.parse((await AsyncStorage.getItem('rougether.starter-routine.v1.71'))!).status,
     ).toBe('skipped');
     expect(ui.queryByText('첫 루틴 등록하기')).toBeNull();
     await ui.unmount();
     const restarted = await renderApp();
-    await waitFor(() => expect(restarted.getByText('내 방')).toBeTruthy());
+    await waitFor(() => expect(restarted.getByText('오늘의 할 일')).toBeTruthy());
     expect(restarted.queryByText('작게 시작해볼까요?')).toBeNull();
   });
 
@@ -165,7 +165,7 @@ describe('AppRoot', () => {
       return emptyRes(url);
     }) as unknown as typeof fetch;
     const ui = await renderApp();
-    await waitFor(() => expect(ui.getByText('내 방')).toBeTruthy());
+    await waitFor(() => expect(ui.getByText('오늘의 할 일')).toBeTruthy());
     expect(posts.filter((url) => url.endsWith('/routines'))).toEqual([]);
     expect(
       JSON.parse((await AsyncStorage.getItem('rougether.starter-routine.v1.72'))!).status,
@@ -207,7 +207,7 @@ describe('AppRoot', () => {
     await waitFor(() => expect(ui.queryByLabelText('내 루틴 확인 중')).toBeNull());
     await fireEvent.press(ui.getByLabelText('책 2쪽 읽기'));
     await fireEvent.press(ui.getByText('이 루틴으로 시작하기'));
-    await waitFor(() => expect(ui.getByText('내 방')).toBeTruthy());
+    await waitFor(() => expect(ui.getByText('오늘의 할 일')).toBeTruthy());
     expect(posts).toEqual([{ title: '책 2쪽 읽기', authType: 'CHECK', repeatType: 'DAILY' }]);
     await waitFor(() => expect(ui.getAllByText('책 2쪽 읽기').length).toBeGreaterThan(0));
     expect(

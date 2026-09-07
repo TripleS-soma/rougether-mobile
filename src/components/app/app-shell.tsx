@@ -5,6 +5,7 @@ import { GestureDetector } from 'react-native-gesture-handler';
 import { NAV_ORDER, SCREEN_FOR_TAB, type Screen } from '@/components/app/navigation';
 import { TabPager } from '@/components/app/tab-pager';
 import { useAppNavigation } from '@/components/app/use-app-navigation';
+import { useStoreReview } from '@/hooks/use-store-review';
 import { useScreenTransition } from '@/components/app/use-screen-transition';
 import { useFriendVisit } from '@/components/app/use-friend-visit';
 import { useHousePages } from '@/components/app/use-house-pages';
@@ -120,7 +121,7 @@ export function AppShell({
   // Remember where the add/edit-routine screen was opened from, so its back
   // button returns to the right place (my-room or routine manage).
   const [addReturnScreen, setAddReturnScreen] = useState<Screen>('routineManage');
-  // 마이페이지 → 주간회고 (#1056 → #1088): 연 곳으로 되돌아오게 addReturnScreen을 함께 세팅.
+  // 내 정보 → 주간회고 (#1056 → #1088): 연 곳으로 되돌아오게 addReturnScreen을 함께 세팅.
   const openWeeklyReportFromMyPage = useCallback(() => {
     setAddReturnScreen('myPage');
     setScreen('weeklyReport');
@@ -167,16 +168,16 @@ export function AppShell({
   );
 
   // 연속 출석 이벤트 (#851) — 진행 중인 이벤트가 없으면 status가 null이라
-  // 마이페이지 바로가기도 시트도 그려지지 않는다(#1089). 출석 코인은 응답의
+  // 내 정보 바로가기도 시트도 그려지지 않는다(#1089). 출석 코인은 응답의
   // 잔액으로 지갑을 맞춘다(뽑기·상점과 같은 결).
   const [attendanceOpen, setAttendanceOpen] = useState(false);
   const syncCoin = useCallback((coin: number) => setWallet((w) => ({ ...w, coin })), [setWallet]);
   const attendance = useAttendance({ onCoinBalance: syncCoin });
   const openAttendance = useCallback(() => setAttendanceOpen(true), []);
-  // 오늘 미출석 — 마이페이지 타일·하단 탭 배지 (#1089). 이벤트가 없으면 false.
+  // 오늘 미출석 — 내 정보 타일·하단 탭 배지 (#1089). 이벤트가 없으면 false.
   const attendancePending = !!attendance.status && !attendance.status.checkedInToday;
 
-  // 재화 내역 시트 (#734 → #1089) — 나의 방 메뉴에서 마이페이지 바로가기로.
+  // 재화 내역 시트 (#734 → #1089) — 나의 방 메뉴에서 내 정보 바로가기로.
   // 열 때마다 1페이지 재로드(완료 취소로 이력이 지워질 수 있음).
   const walletHistory = useWalletHistory();
   const [walletHistoryOpen, setWalletHistoryOpen] = useState(false);
@@ -347,7 +348,7 @@ export function AppShell({
    */
   const nickname = apiNickname ?? '';
   const bio = apiBio ?? '';
-  // 마이페이지·설정 서피스 (#692 2단계 → #1088) — 마이페이지 탭·서브화면 9종의 훅·콜백·JSX 소유.
+  // 내 정보·설정 서피스 (#692 2단계 → #1088) — 내 정보 탭·서브화면 9종의 훅·콜백·JSX 소유.
   const handleProfileSave = useCallback(
     // saveProfile이 낙관적으로 상태를 바꾸고 실패 시 되돌린다 — 여기서 또
     // 손대면 되돌리기가 어긋난다 (#924). 집 좌석 라벨만은 별도 캐시(서버
@@ -426,6 +427,24 @@ export function AppShell({
     widgetSummarySigRef.current = sig;
     void saveWidgetSummary(summary).then(refreshWidgets);
   }, [routines, completions, streak]);
+
+  // 스토어 리뷰 요청 (#1107) — 오늘 예정 루틴이 전부 완료되는 완료 순간에만.
+  // 시트·모달 위에 겹치지 않게 탭 루트(나의 방·달력)에서만 띄운다.
+  const todayForReview = todayIso();
+  const todayRoutines = useMemo(
+    () => routines.filter((r) => isScheduledOn(r, todayForReview)),
+    [routines, todayForReview],
+  );
+  const todayDoneCount = useMemo(
+    () => todayRoutines.filter((r) => (completions[r.id] ?? []).includes(todayForReview)).length,
+    [todayRoutines, completions, todayForReview],
+  );
+  useStoreReview({
+    doneCount: todayDoneCount,
+    totalCount: todayRoutines.length,
+    ready: !myRoomLoading,
+    suppressed: screen !== 'myRoom' && screen !== 'calendar',
+  });
 
   // 화면 전환 추적 (#437) — 셸의 screen 상태가 곧 내비게이션 단위.
   useEffect(() => {
@@ -540,7 +559,7 @@ export function AppShell({
           {/* 달력은 나의 방과 같은 데이터·콜백을 쓰는 두 번째 인스턴스 (#1138) — 방
               캔버스는 view='room'일 때만 그려지므로 비용은 목록 하나 분이다. */}
           <MyRoomScreen {...myRoomPages.tabProps} view="room" {...tabScroll.myRoom} />
-          <MyRoomScreen {...myRoomPages.tabProps} view="calendar" {...tabScroll.calendar} />
+          <MyRoomScreen {...myRoomPages.calendarTabProps} view="calendar" {...tabScroll.calendar} />
           <HouseScreen {...housePages.tabProps} {...tabScroll.house} />
           <MyPageScreen {...settingsSurface.myPageProps} {...tabScroll.myPage} />
         </TabPager>
@@ -604,6 +623,7 @@ export function AppShell({
           onRetry={retryGachas}
           coinBalance={wallet.coin}
           diamondBalance={wallet.diamond}
+          soundEffectsEnabled={settingsSurface.soundSettings.effects}
           onBack={() => setScreen('myRoom')}
           onDraw={async (gachaId, count) => {
             const results = await drawGachaMachine(gachaId, count);
@@ -631,7 +651,7 @@ export function AppShell({
       {/* 집 서브화면 2종 (#692 6단계) — use-house-pages가 그린다. */}
       {housePages.subScreen}
 
-      {/* 마이페이지 서브화면 9종(설정 포함, #692 → #1088) — use-settings-surface가 그린다. */}
+      {/* 내 정보 서브화면 9종(설정 포함, #692 → #1088) — use-settings-surface가 그린다. */}
       {settingsSurface.subScreen}
     </>
   );
@@ -657,7 +677,7 @@ export function AppShell({
       {activeTab ? (
         <BottomNav
           active={activeTab}
-          // 미출석 점은 방 메뉴 버튼에서 마이페이지 탭으로 (#1089).
+          // 미출석 점은 방 메뉴 버튼에서 내 정보 탭으로 (#1089).
           badges={attendancePending ? MY_PAGE_BADGE : undefined}
           onChange={(tab) =>
             // 집이 없으면 집 탭은 빈 상태 대신 집 탐색으로 직행 (#571).
@@ -725,7 +745,7 @@ export function AppShell({
         />
       ) : null}
 
-      {/* 재화 내역 시트 (#734 → #1089) — 마이페이지 바로가기가 연다. */}
+      {/* 재화 내역 시트 (#734 → #1089) — 내 정보 바로가기가 연다. */}
       <WalletHistorySheet
         visible={walletHistoryOpen}
         onClose={() => setWalletHistoryOpen(false)}

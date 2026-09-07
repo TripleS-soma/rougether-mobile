@@ -2,19 +2,18 @@ import { openBrowserAsync } from 'expo-web-browser';
 import { type ReactNode, useState } from 'react';
 import { Text, View } from 'react-native';
 
-import type { GachaMachine } from '@/api/adapters';
 import { type HouseCover, HouseCoverPicker } from '@/components/room/house-cover-picker';
 import { HouseOrderDots } from '@/components/room/house-order-dots';
 import { HousePreviewFrame } from '@/components/room/house-preview-frame';
 import { StackedHouseDemo } from '@/dev/stacked-house-demo';
 import { Room } from '@/components/room/room';
-import { GachaAccents } from '@/constants/theme';
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
 import { CategoryManageScreen } from '@/components/screens/category-manage-screen';
 import { CalendarImportScreen } from '@/components/screens/calendar-import-screen';
 import { CreateHouseScreen } from '@/components/screens/create-house-screen';
 import { FriendRoomScreen } from '@/components/screens/friend-room-screen';
-import { GachaScreen } from '@/components/screens/gacha-screen';
+import { GachaPhonePreview } from '@/dev/gacha-phone-preview';
+import { GachaStorybookPreview } from '@/dev/gacha-preview';
 import { HouseScreen, type House } from '@/components/screens/house-screen';
 import { HouseMissionsScreen } from '@/components/screens/house-missions-screen';
 import { HouseMembersScreen, manageableMembers } from '@/components/screens/house-members-screen';
@@ -310,14 +309,18 @@ function WheelPickerDemo() {
 
 export const galleryEntries: GalleryEntry[] = [
   {
+    name: 'HouseSixSeatViewport',
+    description: '6인 집 최초 구도 · viewport=1로 화면 전체와 안전영역 검증 (#1163).',
+    render: () => <StackedHouseDemo viewportOnly />,
+  },
+  {
     name: 'StackedHouseFrames',
     description: '세로형 집 10테마 · 2/3/4/6인 · 기존형 복귀 · 방 방문/자리 교환 검증 (#1077).',
     render: () => <StackedHouseDemo />,
   },
   {
-    name: 'Room · renderer contract v1 reference',
-    description:
-      '관리자 크기 스튜디오와 동일한 geometry JSON·여름 바다 CDN fixture·캐릭터 애니메이션.',
+    name: 'Room · renderer contract v2 reference',
+    description: '가로:세로 1:1.2 캔버스 · 폭 기준 가구·캐릭터 · 여름 바다 CDN fixture.',
     render: () => <RoomRenderReference />,
   },
   {
@@ -351,7 +354,7 @@ export const galleryEntries: GalleryEntry[] = [
   {
     name: 'BottomNav · PagerScrollView · 리퀴드 바 드래그와 본문 스와이프',
     description:
-      'iOS 본문 가로·대각선 스와이프와 세로 스크롤·당겨서 새로고침 경쟁 확인. 마이페이지는 일반 스크롤. 집 확대 잠금 중에도 하단바는 동작.',
+      'iOS 본문 가로·대각선 스와이프와 세로 스크롤·당겨서 새로고침 경쟁 확인. 내 정보는 일반 스크롤. 집 확대 잠금 중에도 하단바는 동작.',
     render: () => <NavigationPreview />,
   },
   {
@@ -586,7 +589,7 @@ export const galleryEntries: GalleryEntry[] = [
   {
     name: 'CalendarImportScreen',
     description:
-      '마이페이지 → 캘린더 연동 (#844 → #1097): 캘린더 선택 → 미리보기 → 선택 임포트. 비슷한 루틴이 있는 항목은 기본 해제.',
+      '내 정보 → 캘린더 연동 (#844 → #1097): 캘린더 선택 → 미리보기 → 선택 임포트. 비슷한 루틴이 있는 항목은 기본 해제.',
     render: () => (
       <View style={{ alignSelf: 'stretch', height: 720 }}>
         <CalendarImportScreen
@@ -770,8 +773,7 @@ export const galleryEntries: GalleryEntry[] = [
   },
   {
     name: 'ListRow',
-    description:
-      '설정·마이페이지 공용 목록 행 — 아이콘 원 + 라벨 + 화살표, 마지막 행은 구분선 없음.',
+    description: '설정·내 정보 공용 목록 행 — 아이콘 원 + 라벨 + 화살표, 마지막 행은 구분선 없음.',
     render: () => (
       <View style={{ alignSelf: 'stretch' }}>
         <ListRow icon="help" label="도움말" />
@@ -782,7 +784,7 @@ export const galleryEntries: GalleryEntry[] = [
   {
     name: 'MyPageScreen',
     description:
-      '마이페이지 탭 (#1088): 프로필 카드·지표 한 줄·계정/콘텐츠 행. 설정은 헤더 우측 톱니 뒤 서브화면.',
+      '내 정보 탭 (#1088): 프로필 카드·지표 한 줄·계정/콘텐츠 행. 설정은 헤더 우측 톱니 뒤 서브화면.',
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
         <MyPageScreen
@@ -798,7 +800,7 @@ export const galleryEntries: GalleryEntry[] = [
   {
     name: 'SettingsScreen',
     description:
-      '마이페이지의 서브화면 (#1088): 디자인(다크모드·테마·폰트)·알림·기타·로그아웃·회원탈퇴. 업데이트 카드는 #1095에서 뺐다.',
+      '내 정보의 서브화면 (#1088): 디자인(다크모드·테마·폰트)·알림·기타·로그아웃·회원탈퇴. 업데이트 카드는 #1095에서 뺐다.',
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
         <SettingsScreen onBack={() => {}} />
@@ -963,12 +965,34 @@ export const galleryEntries: GalleryEntry[] = [
   },
   {
     name: 'GachaScreen',
-    description: 'Ported from the prototype GachaScreen (#13): box select + pull animation.',
-    render: () => (
-      <View style={{ height: 700, alignSelf: 'stretch' }}>
-        <GachaScreen gachas={GACHA_SAMPLES} coinBalance={5600} />
-      </View>
-    ),
+    description:
+      '테마 구분 없는 벽지·바닥·가구 3개 상자. 실제 재화 소모 없이 단챠·5+1·보상 목록을 확인한다.',
+    render: () => <GachaPhonePreview />,
+  },
+  {
+    name: 'GachaPhonePreview',
+    description: '전체 화면 휴대폰 QA · 5+1 순차 차임과 일괄 결과 · 전설 연출 · 상단 59 / 하단 34',
+    render: () => <GachaPhonePreview fullscreen />,
+  },
+  {
+    name: 'GachaPhoneCommon',
+    description: '전체 화면 휴대폰 QA · 일반 연출',
+    render: () => <GachaPhonePreview fullscreen rarity="일반" />,
+  },
+  {
+    name: 'GachaPhoneRare',
+    description: '전체 화면 휴대폰 QA · 희귀 연출',
+    render: () => <GachaPhonePreview fullscreen rarity="희귀" />,
+  },
+  {
+    name: 'GachaPhoneReducedMotion',
+    description: '전체 화면 휴대폰 QA · 동작 줄이기',
+    render: () => <GachaPhonePreview fullscreen reducedMotion />,
+  },
+  {
+    name: 'GachaStorybookArchive',
+    description: '이전 PR의 숲속 선물상자 아트 비교용. 실제 유료 뽑기와 분리된 개발 전용 무대.',
+    render: () => <GachaStorybookPreview />,
   },
   {
     name: 'HouseSearchScreen',
@@ -1010,7 +1034,7 @@ export const galleryEntries: GalleryEntry[] = [
   {
     name: 'WeeklyReportScreen · 주간회고 화면',
     description:
-      '마이페이지 > 주간회고 다시 보기 / 새 회고 배너 목적지 (#1056 → #1088). 나의 방 탭에서 빠진 패널을 헤더 달린 화면으로.',
+      '내 정보 > 주간회고 다시 보기 / 새 회고 배너 목적지 (#1056 → #1088). 나의 방 탭에서 빠진 패널을 헤더 달린 화면으로.',
     render: () => (
       <View style={{ height: 520 }}>
         <WeeklyReportScreen
@@ -1239,36 +1263,6 @@ export const galleryEntries: GalleryEntry[] = [
         <ToastDemo />
       </ToastProvider>
     ),
-  },
-];
-
-/**
- * 뽑기 머신 샘플 — 갤러리에서 선물상자 아트(서버 #276)를 눈으로 확인하려고 둔다.
- * `giftBoxKey`는 실서버 `GET /gacha`가 주는 공용 상자 키의 스냅샷(2026-08-16)이고,
- * 아트가 교체되면 화면이 픽토그램으로 폴백하므로 깨지지는 않는다. 두 번째 머신은
- * 키를 비워 **폴백 경로도 같이** 보이게 했다.
- */
-const GACHA_SAMPLES: GachaMachine[] = [
-  {
-    id: 1,
-    name: '작은 베이커리 아침 뽑기',
-    costCurrencyType: 'COIN',
-    costAmount: 25,
-    drawCount: 1,
-    icon: 'croissant',
-    accent: GachaAccents[0],
-    giftBoxKey: 'items/0c213078-69ce-4a77-a729-9144905dfc22.png',
-    kind: 'furniture',
-  },
-  {
-    id: 12,
-    name: '캐릭터 뽑기',
-    costCurrencyType: 'COIN',
-    costAmount: 500,
-    drawCount: 1,
-    icon: 'paw',
-    accent: GachaAccents[1],
-    kind: 'character',
   },
 ];
 

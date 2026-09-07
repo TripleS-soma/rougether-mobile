@@ -98,7 +98,7 @@ export type CalendarDayItem = {
   category?: string;
 };
 
-// 떠 있는 크롬 (#1055) — 이름 알약·세그먼트 한 줄의 높이. 달력 탭의 콘텐츠 상단
+// 떠 있는 크롬 (#1055) — 달력 제목·세그먼트 한 줄의 높이. 달력 탭의 콘텐츠 상단
 // 패딩과 보상 알약 위치가 같은 값을 본다.
 const CHROME_ROW_HEIGHT = 40;
 /** 보상 알약이 떠 있는 시간 — 코인 플라이(~600ms)가 도착하고 읽을 만큼. */
@@ -123,9 +123,12 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
      * 미지정이면(Dev 갤러리·단독 테스트) 방/달력 알약이 남아 스스로 전환한다.
      */
     view?: 'room' | 'calendar';
+    /** Controlled selection survives the tab pager unmounting for a sub-screen. */
+    selectedDate?: string;
+    onSelectedDateChange?: (date: string) => void;
     /** 달력 '이 날의 할 일' 옆 ＋ 루틴 — 그 날짜를 시작일로 루틴 추가 (#1138). */
     onAddRoutineForDate?: (date: string) => void;
-    /** Room occupant's display name (header title becomes "{userName}의 방"). */
+    /** Retained for existing callers; the personal room name is no longer displayed. */
     userName?: string;
     /** Consecutive-day streak shown in the header. */
     streakDays?: number;
@@ -253,7 +256,6 @@ function VisibilityMark({ visibility }: { visibility: CategoryVisibility }) {
 // memo 경계 (#539): 셸의 무관한 상태 변화에서 이 화면(그리고 안의 방 캔버스)
 // 리렌더를 끊는다 — AppShell이 넘기는 함수/객체 prop의 참조 안정이 전제다.
 export const MyRoomScreen = memo(function MyRoomScreen({
-  userName = '',
   streakDays = 7,
   coinBalance = 0,
   diamondBalance = 0,
@@ -276,6 +278,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   routines = [],
   allCategories,
   calendarDays,
+  selectedDate: controlledSelectedDate,
+  onSelectedDateChange,
   onSelectDate,
   onToggleCalendarItem,
   completions = {},
@@ -518,14 +522,16 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // 셸이 view를 주면 그게 곧 탭 (#1138); 없으면 알약으로 스스로 전환한다.
   const [ownTab, setTab] = useState<'room' | 'calendar'>('room');
   const tab = view ?? ownTab;
-  const [selectedDate, setSelectedDate] = useState(() => todayIso());
+  const [ownSelectedDate, setOwnSelectedDate] = useState(() => todayIso());
+  const selectedDate = controlledSelectedDate ?? ownSelectedDate;
   const dateRoutines = useMemo(
     () => routines.filter((r) => isScheduledOn(r, selectedDate)),
     [routines, selectedDate],
   );
   // 참조 고정 (#771) — Calendar가 memo라, 매 렌더 새 함수면 42칸이 매번 다시 그려진다.
   const pickDate = useStableCallback((date: string) => {
-    setSelectedDate(date);
+    if (controlledSelectedDate === undefined) setOwnSelectedDate(date);
+    onSelectedDateChange?.(date);
     if (date !== today) onSelectDate?.(date);
   });
   const catMeta = allCategories ?? categories;
@@ -1308,55 +1314,59 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         </PawRefreshScroll>
       </KeyboardAvoidingView>
 
-      {/* 떠 있는 크롬 (#1055) — 헤더바 대신 이름 알약과 방/달력 세그먼트가 방 위에
-          뜬다. 스크롤 바깥 오버레이라 목록을 내려도 제자리. */}
-      <View pointerEvents="box-none" style={[styles.chromeRow, { top: insets.top + Spacing.two }]}>
-        <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.namePill}>
-          {/* Narrow phones: shrink the font (≥75%) first; if the title still
-              overflows, middle-ellipsize so the 의 방 suffix stays visible. */}
-          <Text
-            style={[Typography.label, { color: t.text }]}
-            numberOfLines={1}
-            ellipsizeMode="middle"
-            adjustsFontSizeToFit
-            minimumFontScale={0.75}>
-            {view === 'calendar' ? '달력' : userName ? `${userName}의 방` : '내 방'}
-          </Text>
-        </GlassSurface>
-        {/* 방/달력 알약은 view 미지정(단독 모드)에서만 — 앱에선 달력이 하단 탭 (#1138). */}
-        {view === undefined ? (
-          <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.segment}>
-            {(
-              [
-                ['room', '방'],
-                ['calendar', '달력'],
-              ] as const
-            ).map(([key, label]) => {
-              const active = tab === key;
-              const btn = (
-                <Pressable
-                  onPress={() => setTab(key)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  accessibilityLabel={label}
-                  style={[styles.segmentItem, active && { backgroundColor: t.surfaceMuted }]}>
-                  <Text style={[Typography.label, { color: active ? t.primaryText : t.textMuted }]}>
-                    {label}
-                  </Text>
-                </Pressable>
-              );
-              // 달력 탭은 코치마크 대상 (#351).
-              return key === 'calendar' ? (
-                <CoachTarget key={key} id="room-tab-calendar">
-                  {btn}
-                </CoachTarget>
-              ) : (
-                <View key={key}>{btn}</View>
-              );
-            })}
-          </GlassSurface>
-        ) : null}
-      </View>
+      {/* The room canvas has no title overlay. Keep the calendar title and the
+          standalone preview's room/calendar switch outside the scroll view. */}
+      {view !== 'room' ? (
+        <View
+          testID="my-room-chrome"
+          pointerEvents="box-none"
+          style={[styles.chromeRow, { top: insets.top + Spacing.two }]}>
+          {view === 'calendar' ? (
+            <GlassSurface
+              interactive={false}
+              fallbackColor={t.surface}
+              style={styles.calendarTitlePill}>
+              <Text style={[Typography.label, { color: t.text }]} numberOfLines={1}>
+                달력
+              </Text>
+            </GlassSurface>
+          ) : null}
+          {/* 방/달력 알약은 view 미지정(단독 모드)에서만 — 앱에선 달력이 하단 탭 (#1138). */}
+          {view === undefined ? (
+            <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.segment}>
+              {(
+                [
+                  ['room', '방'],
+                  ['calendar', '달력'],
+                ] as const
+              ).map(([key, label]) => {
+                const active = tab === key;
+                const btn = (
+                  <Pressable
+                    onPress={() => setTab(key)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    accessibilityLabel={label}
+                    style={[styles.segmentItem, active && { backgroundColor: t.surfaceMuted }]}>
+                    <Text
+                      style={[Typography.label, { color: active ? t.primaryText : t.textMuted }]}>
+                      {label}
+                    </Text>
+                  </Pressable>
+                );
+                // 달력 탭은 코치마크 대상 (#351).
+                return key === 'calendar' ? (
+                  <CoachTarget key={key} id="room-tab-calendar">
+                    {btn}
+                  </CoachTarget>
+                ) : (
+                  <View key={key}>{btn}</View>
+                );
+              })}
+            </GlassSurface>
+          ) : null}
+        </View>
+      ) : null}
 
       {/* 보상 알약 (#1055) — 완료 보상이 확인된 순간에만 크롬 아래 가운데에 떠서
           스트릭·코인 증분을 보여주고 사라진다. 코인 플라이의 목적지. */}
@@ -1445,7 +1455,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         top={navMenuTop}
         bottom={navMenuBottom}
         onClose={() => setNavMenuOpen(false)}
-        // 출석 이벤트·재화 내역은 마이페이지 바로가기로 (#1055 → #1089) — 메뉴는 방 작업만.
+        // 출석 이벤트·재화 내역은 내 정보 바로가기로 (#1055 → #1089) — 메뉴는 방 작업만.
         onOpenCharacterPicker={
           ownedCharacters && onSelectCharacter ? () => setCharacterSheetOpen(true) : undefined
         }
@@ -1540,7 +1550,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
   },
-  // 떠 있는 크롬 줄 (#1055) — 이름 알약(왼쪽)과 세그먼트(오른쪽).
+  // Calendar title on the left; the standalone preview switch stays on the right.
   chromeRow: {
     position: 'absolute',
     left: Spacing.three,
@@ -1551,7 +1561,7 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     zIndex: 20,
   },
-  namePill: {
+  calendarTitlePill: {
     flexShrink: 1,
     height: CHROME_ROW_HEIGHT,
     justifyContent: 'center',
@@ -1559,6 +1569,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
   },
   segment: {
+    marginLeft: 'auto',
     flexDirection: 'row',
     // 버튼을 감싼 래퍼(코치마크 대상 View)는 세로로 안 늘어나므로 행이 직접
     // 세로 중앙 정렬한다 — 없으면 비활성 라벨이 위로 붙는다 (#1055 후속).

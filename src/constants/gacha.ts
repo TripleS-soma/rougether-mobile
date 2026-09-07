@@ -1,28 +1,72 @@
 import type { GachaMachine } from '@/api/adapters';
+import type { GachaCategory } from '@/api/types';
+import type { PictogramName } from '@/components/ui/pictograms';
+import { GachaAccents } from '@/constants/theme';
+
+export const GACHA_CATEGORIES = ['WALLPAPER', 'FLOOR', 'FURNITURE'] as const;
+
+/** Category identity must not change with server list order or room theme. */
+export const GACHA_CATEGORY_META: Record<
+  GachaCategory,
+  { code: string; title: string; label: string; icon: PictogramName; accent: string }
+> = {
+  WALLPAPER: {
+    code: 'wallpaper_gacha',
+    title: '벽지 뽑기',
+    label: '벽지',
+    icon: 'palette',
+    accent: GachaAccents[3],
+  },
+  FLOOR: {
+    code: 'floor_gacha',
+    title: '바닥 뽑기',
+    label: '바닥',
+    icon: 'house',
+    accent: GachaAccents[1],
+  },
+  FURNITURE: {
+    code: 'furniture_gacha',
+    title: '가구 뽑기',
+    label: '가구',
+    icon: 'gift',
+    accent: GachaAccents[2],
+  },
+};
+
+/** Only explicit categories or the three canonical server codes identify a box. */
+export function getGachaCategory(machine: {
+  category?: unknown;
+  code?: string;
+}): GachaCategory | undefined {
+  if (machine.category != null) {
+    return GACHA_CATEGORIES.find((category) => category === machine.category);
+  }
+  return GACHA_CATEGORIES.find((category) => GACHA_CATEGORY_META[category].code === machine.code);
+}
+
+/** Keep actual IDs, prices and pool identity; legacy themed boxes cannot be merged. */
+export function getCategoryGachas(machines: readonly GachaMachine[]): GachaMachine[] {
+  return GACHA_CATEGORIES.flatMap((category) => {
+    const machine = machines.find(
+      (candidate) =>
+        candidate.id > 0 &&
+        Number.isInteger(candidate.id) &&
+        isDrawableGacha(candidate) &&
+        getGachaCategory(candidate) === category,
+    );
+    return machine ? [machine] : [];
+  });
+}
 
 /**
- * 뽑아도 **쓸 수 없는** 기계는 상점에 올리지 않는다 (#983).
- *
- * 서버는 캐릭터 뽑기(500코인)와 악세사리 뽑기를 `active: true`로 내려주지만,
- * 앱에는 그 결과를 장착할 경로가 없다:
- *
- * - **캐릭터** — `CHARACTER_SELECTION_ENABLED = false` (#637 MVP 고양이 단일).
- *   교체 진입점이 숨어 있어 뽑아도 바꿔 낄 수 없다.
- * - **악세사리** — 장착 배선이 아예 없다 (#618 on-hold).
- *
- * 코드 접두로 거른다. 숫자 id보다 안정적이고, `kind`로는 못 거른다 — 악세사리
- * 기계는 `themeId`가 있어 **가구로 분류**된다(`toGachaMachine`).
- *
- * 2026-08-26 서버 실측: 방 테마 12종은 `bakery_morning`·`calm_hanok`처럼 테마
- * 이름이고, `character`로 시작하는 건 `character_gacha`와
- * `character_accessories_accessories` 정확히 둘뿐이다.
- *
- * **되돌리는 시점**: #637의 스위치를 켜거나 #618이 풀릴 때 이 필터를 지운다.
- * 서버가 `active: false`로 내려주면 그쪽이 더 옳은 해결이다.
+ * Legacy visibility guard (#983): character switching (#637) and accessory
+ * equipment (#618) are unavailable. Category selection is stricter and uses
+ * getCategoryGachas; recognizing an old themed box here does not make it a
+ * category machine.
  */
 const BLOCKED_CODE_PREFIX = 'character';
 
 export function isDrawableGacha(machine: GachaMachine): boolean {
-  // 코드가 없으면(구 서버·목) 막지 않는다 — 모르는 것을 숨기지는 않는다.
+  // Preserve this legacy predicate's contract; category selection rejects unknowns.
   return !machine.code?.startsWith(BLOCKED_CODE_PREFIX);
 }
