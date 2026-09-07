@@ -27,8 +27,8 @@ describe('newFreePlacement · defaultScale (#654)', () => {
     const half = (baseWidth * editorScale.max) / 2;
     expect(placed.x).toBeGreaterThanOrEqual(half);
     expect(placed.x).toBeLessThanOrEqual(1 - half);
-    expect(placed.y).toBeGreaterThanOrEqual(half);
-    expect(placed.y).toBeLessThanOrEqual(1 - half);
+    expect(placed.y).toBeGreaterThanOrEqual(half / 1.2);
+    expect(placed.y).toBeLessThanOrEqual(1 - half / 1.2);
   });
 
   it('every catalog defaultScale sits inside the editor clamp range', () => {

@@ -4,7 +4,11 @@ import { Pressable, type StyleProp, StyleSheet, View, type ViewStyle } from 'rea
 
 import { CharacterAvatar } from '@/components/room/character-avatar';
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
-import { ROOM_RENDER_CONTRACT, roomPercent } from '@/components/room/room-render-contract';
+import {
+  ROOM_RENDER_CONTRACT,
+  roomFurnitureOrigin,
+  roomPercent,
+} from '@/components/room/room-render-contract';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Radius } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
@@ -77,9 +81,7 @@ export type RoomProps = {
   /** Region whose picker is open — ring-highlighted. */
   activeRegion?: RoomRegion | null;
   /**
-   * 부모 크기를 그대로 채운다 — 정사각형(aspectRatio 1) 강제 해제. 프레임
-   * 창문처럼 정사각형이 아닌 칸에 쓴다. 네이티브 Yoga는 width/height보다
-   * aspectRatio를 우선해 정사각형이 칸을 벗어난다.
+   * Fill a house slot whose parent already supplies the shared room aspect ratio.
    */
   fill?: boolean;
   style?: StyleProp<ViewStyle>;
@@ -220,10 +222,7 @@ export const Room = memo(function Room({
             item,
             style: [
               styles.furniture,
-              {
-                left: `${(p.x - FREE_ITEM_WIDTH / 2) * 100}%`,
-                top: `${(p.y - FREE_ITEM_WIDTH / 2) * 100}%`,
-              },
+              roomFurnitureOrigin(p.x, p.y),
               transforms.length > 0 && { transform: transforms },
             ] as StyleProp<ViewStyle>,
           },
@@ -233,6 +232,7 @@ export const Room = memo(function Room({
 
   return (
     <View
+      testID="room-canvas"
       style={[
         fill ? styles.roomFill : styles.room,
         { backgroundColor: wallpaper?.color ?? DEFAULT_WALLPAPER_COLOR },
@@ -313,7 +313,7 @@ export const Room = memo(function Room({
       {/* 자유 배치 경로 (#327) — z 오름차순, 중심점 앵커(폭 28%의 절반 보정). */}
       {freeItems
         ? freeItems.map(({ key, item, style: itemStyle }) => (
-            <View key={key} pointerEvents="none" style={itemStyle}>
+            <View key={key} testID={`room-furniture-${key}`} pointerEvents="none" style={itemStyle}>
               <FurniturePlaceholder item={item} sharp={fill} />
             </View>
           ))
@@ -426,7 +426,7 @@ const styles = StyleSheet.create({
     ),
     bottom: roomPercent(ROOM_RENDER_CONTRACT.character.bottom),
     width: roomPercent(ROOM_RENDER_CONTRACT.character.width),
-    height: roomPercent(ROOM_RENDER_CONTRACT.character.height),
+    aspectRatio: ROOM_RENDER_CONTRACT.character.aspectRatio,
   },
   characterFill: {
     width: '100%',

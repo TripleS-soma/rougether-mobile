@@ -1,4 +1,6 @@
+import { ROOM_ASPECT_RATIO } from '@/components/room/room-render-contract';
 import { isCdnKey } from '@/resources/asset';
+import { HOUSE_ART_RELEASE } from '@/resources/house-art-release';
 
 export const FRAME_ASPECT = 567 / 508;
 export const DEFAULT_HOUSE_COVER_KEY = 'house/cloud-balloon/house-unified-cloud-balloon-frame.png';
@@ -18,9 +20,18 @@ export const WINDOW_RECTS: readonly HouseWindowRect[] = [
   { left: '50.3%', top: '57.6%', width: '37%', height: '33%' },
 ];
 
-// Immutable published release. These are display assets, NEVER a save catalog.
-// Source: house/releases/stacked-v1-20260905/manifest.json on the asset CDN.
+// Stretch only the frame artwork to keep its transparent holes aligned with
+// portrait rooms. Percentages remain those of the immutable published bitmap.
+const LEGACY_DISPLAY_ASPECT = ROOM_ASPECT_RATIO * (33 / 37);
+
+// Keep the original release for the seven dev-only skins. Display asset keys
+// never replace canonical cover keys in create/update requests.
 export const STACKED_HOUSE_RELEASE = 'stacked-v1-20260905';
+const ROUNDED_FRAME_RELEASE_BY_THEME: Readonly<Record<string, string | undefined>> = {
+  'cloud-balloon': HOUSE_ART_RELEASE,
+  'coral-lagoon': HOUSE_ART_RELEASE,
+  'mushroom-forest': HOUSE_ART_RELEASE,
+};
 export const STACKED_HOUSE_THEMES = [
   { id: 'cloud-balloon', name: '구름 풍선 집', group: 1, legacyKey: DEFAULT_HOUSE_COVER_KEY },
   {
@@ -54,7 +65,8 @@ const stackedGeometry = (capacity: 2 | 4 | 6) => {
   const width = 1024;
   const height = 872 + (capacity / 2 - 1) * 352;
   return {
-    aspectRatio: width / height,
+    sourceAspectRatio: width / height,
+    aspectRatio: (width / height) * ROOM_ASPECT_RATIO,
     windowRects: Array.from({ length: capacity }, (_, i) => ({
       left: percent(i % 2 === 0 ? 165 : 536, width),
       top: percent(358 + Math.floor(i / 2) * 352, height),
@@ -79,6 +91,7 @@ export type HouseFrame = {
   kind: 'legacy' | 'stacked';
   assetKey: string;
   canonicalKey: string;
+  sourceAspectRatio: number;
   aspectRatio: number;
   windowRects: readonly HouseWindowRect[];
 };
@@ -92,7 +105,8 @@ export function resolveHouseFrame(
     kind: 'legacy',
     assetKey: canonicalKey,
     canonicalKey,
-    aspectRatio: FRAME_ASPECT,
+    sourceAspectRatio: FRAME_ASPECT,
+    aspectRatio: LEGACY_DISPLAY_ASPECT,
     windowRects: WINDOW_RECTS,
   };
   if (!(options.enabled ?? STACKED_HOUSES_ENABLED)) return legacy;
@@ -104,10 +118,11 @@ export function resolveHouseFrame(
       : STACKED_HOUSE_THEMES.find((t) => t.legacyKey === canonicalKey);
   if (!theme) return legacy;
   const capacity = seats <= 2 ? 2 : seats <= 4 ? 4 : 6;
+  const release = ROUNDED_FRAME_RELEASE_BY_THEME[theme.id] ?? STACKED_HOUSE_RELEASE;
   return {
     kind: 'stacked',
     canonicalKey,
-    assetKey: `house/${theme.id}/frames/${STACKED_HOUSE_RELEASE}/house-${theme.id}-${capacity}p-frame.webp`,
+    assetKey: `house/${theme.id}/frames/${release}/house-${theme.id}-${capacity}p-frame.webp`,
     ...GEOMETRY[capacity],
   };
 }

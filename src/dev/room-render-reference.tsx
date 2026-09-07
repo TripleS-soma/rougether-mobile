@@ -27,7 +27,7 @@ const placement: PlacedFurniture = {
 };
 
 /**
- * 관리자 가구 크기 스튜디오와 같은 JSON 계약·CDN fixture를 사용하는 RN 기준 화면.
+ * Portrait room contract with the existing CDN reference fixture.
  * 새 route는 만들지 않고 기존 개발 갤러리에서만 렌더한다.
  */
 export function RoomRenderReference() {

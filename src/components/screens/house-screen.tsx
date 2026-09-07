@@ -1194,7 +1194,7 @@ export const HouseScreen = memo(function HouseScreen({
                             key={coverKey}
                             source={assetSource(coverKey)}
                             style={StyleSheet.absoluteFill}
-                            contentFit="contain"
+                            contentFit="fill"
                             transition={frame.kind === 'stacked' ? 0 : 120}
                             onError={onFrameError}
                             recyclingKey={coverKey}

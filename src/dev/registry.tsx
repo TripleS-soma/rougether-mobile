@@ -315,9 +315,8 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => <StackedHouseDemo />,
   },
   {
-    name: 'Room · renderer contract v1 reference',
-    description:
-      '관리자 크기 스튜디오와 동일한 geometry JSON·여름 바다 CDN fixture·캐릭터 애니메이션.',
+    name: 'Room · renderer contract v2 reference',
+    description: '가로:세로 1:1.2 캔버스 · 폭 기준 가구·캐릭터 · 여름 바다 CDN fixture.',
     render: () => <RoomRenderReference />,
   },
   {
