@@ -61,7 +61,7 @@ describe('AttendanceSheet', () => {
         onCheckIn={onCheckIn}
       />,
     );
-    fireEvent.press(getByText('오늘 출석 완료'));
+    await fireEvent.press(getByText('오늘 출석 완료'));
     expect(onCheckIn).not.toHaveBeenCalled();
   });
 
@@ -84,7 +84,7 @@ describe('AttendanceSheet', () => {
       <AttendanceSheet visible status={STATUS} onCheckIn={onCheckIn} />,
     );
     await act(async () => {
-      fireEvent.press(getByText('오늘 출석하기'));
+      await fireEvent.press(getByText('오늘 출석하기'));
     });
     expect(onCheckIn).toHaveBeenCalled();
     expect(queryByTestId('attendance-trophy-reveal')).toBeNull();
@@ -100,7 +100,7 @@ describe('AttendanceSheet', () => {
       <AttendanceSheet visible status={STATUS} onCheckIn={onCheckIn} />,
     );
     await act(async () => {
-      fireEvent.press(getByText('오늘 출석하기'));
+      await fireEvent.press(getByText('오늘 출석하기'));
     });
     expect(queryByTestId('attendance-trophy-reveal')).toBeNull();
   });
@@ -111,7 +111,7 @@ describe('AttendanceSheet', () => {
       <AttendanceSheet visible status={STATUS} onCheckIn={onCheckIn} />,
     );
     await act(async () => {
-      fireEvent.press(getByText('오늘 출석하기'));
+      await fireEvent.press(getByText('오늘 출석하기'));
     });
     expect(getByTestId('attendance-trophy-reveal')).toBeTruthy();
     expect(getByText('10일 출석 기념 트로피 획득!')).toBeTruthy();
@@ -123,7 +123,7 @@ describe('AttendanceSheet', () => {
       <AttendanceSheet visible status={STATUS} onCheckIn={onCheckIn} />,
     );
     await act(async () => {
-      fireEvent.press(getByText('오늘 출석하기'));
+      await fireEvent.press(getByText('오늘 출석하기'));
     });
     expect(queryByTestId('attendance-trophy-reveal')).toBeNull();
   });
@@ -140,12 +140,12 @@ describe('AttendanceSheet', () => {
       <AttendanceSheet visible status={STATUS} onCheckIn={onCheckIn} onGoToRoom={onGoToRoom} />,
     );
     await act(async () => {
-      fireEvent.press(ui.getByText('오늘 출석하기'));
+      await fireEvent.press(ui.getByText('오늘 출석하기'));
     });
     expect(ui.getByTestId('attendance-trophy-reveal')).toBeTruthy();
 
     // 방에 배치하러 가기 → 셸이 시트를 닫는다.
-    fireEvent.press(ui.getByText('방에 배치하러 가기'));
+    await fireEvent.press(ui.getByText('방에 배치하러 가기'));
     expect(onGoToRoom).toHaveBeenCalled();
     await ui.rerender(
       <AttendanceSheet
@@ -161,4 +161,40 @@ describe('AttendanceSheet', () => {
     );
     expect(ui.queryByTestId('attendance-trophy-reveal')).toBeNull();
   });
+});
+
+it('7일 생성권 보상은 가구 리빌 대신 만들기 화면으로 연결한다', async () => {
+  const open = jest.fn();
+  const ui = await render(
+    <AttendanceSheet
+      visible
+      onGoToStudio={open}
+      status={{
+        ...STATUS,
+        targetDays: 7,
+        currentStreak: 7,
+        completed: true,
+        dailyRewards: rewards(7)
+          .slice(0, 7)
+          .map((day) => ({
+            ...day,
+            furnitureReward: false,
+            generationCreditAmount: day.day === 7 ? 1 : 0,
+          })),
+        reward: {
+          itemId: null,
+          assetKey: null,
+          userItemId: null,
+          name: 'AI 가구 생성권',
+          received: true,
+          type: 'GENERATION_CREDIT',
+          generationCreditAmount: 1,
+        },
+      }}
+    />,
+  );
+  expect(ui.getByText('목표 7일')).toBeTruthy();
+  expect(ui.getByText('AI 가구 생성권 1회를 받았어요')).toBeTruthy();
+  await fireEvent.press(ui.getByLabelText('내 가구 만들러 가기'));
+  expect(open).toHaveBeenCalledTimes(1);
 });

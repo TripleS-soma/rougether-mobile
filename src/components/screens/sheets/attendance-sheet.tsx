@@ -21,6 +21,7 @@ export type AttendanceSheetProps = {
   onCheckIn?: () => Promise<AttendanceCheckInResult | null>;
   /** 완주 보상 '방에 배치하러 가기'. */
   onGoToRoom?: () => void;
+  onGoToStudio?: () => void;
   onClose?: () => void;
 };
 
@@ -46,6 +47,7 @@ export function AttendanceSheet({
   checkingIn,
   onCheckIn,
   onGoToRoom,
+  onGoToStudio,
   onClose,
 }: AttendanceSheetProps) {
   const t = useTokens();
@@ -114,10 +116,14 @@ export function AttendanceSheet({
     }
     // 이번 호출에서 **새로** 지급된 가구만 리빌한다. 이미 갖고 있던 가구로
     // 완주 처리된 경우(rewardGrantedNow=false)는 받은 게 없다.
-    if (result.rewardGrantedNow && result.status.reward) {
+    if (
+      result.rewardGrantedNow &&
+      result.status.reward &&
+      result.status.reward.type !== 'GENERATION_CREDIT'
+    ) {
       setTrophy({
         name: result.status.reward.name,
-        assetKey: result.status.reward.assetKey,
+        assetKey: result.status.reward.assetKey ?? undefined,
       });
     }
   }, [onCheckIn]);
@@ -155,7 +161,9 @@ export function AttendanceSheet({
         </Text>
       </View>
 
-      <View style={styles.grid} onLayout={measureOrigin(gridOrigin)}>
+      <View
+        style={[styles.grid, status.targetDays === 7 ? styles.weekGrid : null]}
+        onLayout={measureOrigin(gridOrigin)}>
         {days.map((d) => (
           <View
             key={d.day}
@@ -168,6 +176,8 @@ export function AttendanceSheet({
               day={d.day}
               coinAmount={d.coinAmount}
               furnitureReward={d.furnitureReward}
+              generationCreditAmount={d.generationCreditAmount}
+              compact={status.targetDays === 7}
               claimed={d.claimed}
               bonus={d.coinAmount > base}
               stampNow={stampedDay === d.day}
@@ -176,6 +186,17 @@ export function AttendanceSheet({
         ))}
       </View>
 
+      {status.reward?.type === 'GENERATION_CREDIT' ? (
+        <View style={[styles.creditReward, { backgroundColor: t.surfaceMuted }]}>
+          <Icon name="sparkles" size={24} color={t.primaryText} />
+          <Text style={[Typography.label, { color: t.text }]}>
+            {status.completed
+              ? 'AI 가구 생성권 1회를 받았어요'
+              : '7일 연속 출석하면 AI 가구 생성권 1회'}
+          </Text>
+          {status.completed ? <Button label="내 가구 만들러 가기" onPress={onGoToStudio} /> : null}
+        </View>
+      ) : null}
       <Button
         label={buttonLabel}
         onPress={press}
@@ -206,6 +227,7 @@ export function AttendanceSheet({
 }
 
 const styles = StyleSheet.create({
+  creditReward: { padding: Spacing.three, gap: Spacing.two, borderRadius: Radius.lg },
   sheet: { padding: Spacing.three, gap: Spacing.two },
   head: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   title: { flex: 1 },
@@ -215,6 +237,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
   },
   streakRow: { flexDirection: 'row', alignItems: 'baseline', gap: Spacing.two },
+  weekGrid: { gap: Spacing.one },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

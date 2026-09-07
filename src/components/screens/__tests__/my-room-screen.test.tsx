@@ -989,3 +989,14 @@ describe('MyRoomScreen', () => {
     expect(queryByLabelText('재화 내역')).toBeNull();
   });
 });
+
+it('메인 AI 아이콘에서 가구 만들기를 연다', async () => {
+  const open = jest.fn();
+  const ui = await render(
+    <ToastProvider>
+      <MyRoomScreen view="room" onOpenFurnitureStudio={open} />
+    </ToastProvider>,
+  );
+  await fireEvent.press(ui.getByLabelText('AI 가구 만들기'));
+  expect(open).toHaveBeenCalledTimes(1);
+});
