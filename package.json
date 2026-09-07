@@ -96,7 +96,6 @@
       "\\.(css)$": "<rootDir>/jest/style-mock.js",
       "\\.svg$": "<rootDir>/jest/svg-mock.js",
       "^expo-haptics$": "<rootDir>/jest/expo-haptics-mock.js",
-      "^expo-video$": "<rootDir>/jest/expo-video-mock.js",
       "^@react-native-async-storage/async-storage$": "<rootDir>/jest/async-storage-mock.js",
       "^expo-notifications$": "<rootDir>/jest/expo-notifications-mock.js",
       "^expo-device$": "<rootDir>/jest/expo-device-mock.js",
@@ -113,7 +112,8 @@
       "^react-native-android-widget$": "<rootDir>/jest/react-native-android-widget-mock.js",
       "^@sentry/react-native$": "<rootDir>/jest/sentry-mock.js",
       "^expo-glass-effect$": "<rootDir>/jest/expo-glass-effect-mock.js",
-      "^expo-store-review$": "<rootDir>/jest/expo-store-review-mock.js"
+      "^expo-store-review$": "<rootDir>/jest/expo-store-review-mock.js",
+      "^expo-video$": "<rootDir>/jest/expo-video-mock.js"
     },
     "transformIgnorePatterns": [
       "node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg))"
