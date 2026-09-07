@@ -1,3 +1,5 @@
+import { HOUSE_ART_RELEASE } from '@/resources/house-art-release';
+
 /**
  * 공동집 프레임의 S3 경로에서 테마를 읽어, 같은 테마의 전면 배경을 고른다.
  *
@@ -6,9 +8,9 @@
  * 화면/프리페치 계층은 그대로 유지할 수 있다.
  */
 export const HOUSE_BACKGROUND_KEY_BY_THEME = {
-  'cloud-balloon': 'house/cloud-balloon/backgrounds/house-cloud-balloon-background-v1.webp',
-  'coral-aquarium': 'house/coral-aquarium/backgrounds/house-coral-aquarium-background-v1.webp',
-  'mushroom-forest': 'house/mushroom-forest/backgrounds/house-mushroom-forest-background-v1.webp',
+  'cloud-balloon': `house/cloud-balloon/backgrounds/${HOUSE_ART_RELEASE}/house-cloud-balloon-background-day.webp`,
+  'coral-aquarium': `house/coral-aquarium/backgrounds/${HOUSE_ART_RELEASE}/house-coral-aquarium-background-day.webp`,
+  'mushroom-forest': `house/mushroom-forest/backgrounds/${HOUSE_ART_RELEASE}/house-mushroom-forest-background-day.webp`,
   'night-observatory':
     'house/night-observatory/backgrounds/house-night-observatory-background-v1.webp',
 } as const;
@@ -16,10 +18,9 @@ export const HOUSE_BACKGROUND_KEY_BY_THEME = {
 export type HouseBackgroundTheme = keyof typeof HOUSE_BACKGROUND_KEY_BY_THEME;
 
 export const HOUSE_DARK_BACKGROUND_KEY_BY_THEME = {
-  'cloud-balloon': 'house/cloud-balloon/backgrounds/house-cloud-balloon-background-dark-v1.webp',
-  'coral-aquarium': 'house/coral-aquarium/backgrounds/house-coral-aquarium-background-dark-v1.webp',
-  'mushroom-forest':
-    'house/mushroom-forest/backgrounds/house-mushroom-forest-background-dark-v1.webp',
+  'cloud-balloon': `house/cloud-balloon/backgrounds/${HOUSE_ART_RELEASE}/house-cloud-balloon-background-night.webp`,
+  'coral-aquarium': `house/coral-aquarium/backgrounds/${HOUSE_ART_RELEASE}/house-coral-aquarium-background-night.webp`,
+  'mushroom-forest': `house/mushroom-forest/backgrounds/${HOUSE_ART_RELEASE}/house-mushroom-forest-background-night.webp`,
   'night-observatory':
     'house/night-observatory/backgrounds/house-night-observatory-background-dark-v1.webp',
 } as const satisfies Record<HouseBackgroundTheme, string>;

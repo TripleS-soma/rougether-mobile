@@ -23,6 +23,32 @@ describe('staged house frame contract', () => {
     expect(frame.kind).toBe('stacked');
     expect(frame.canonicalKey).toBe(DEFAULT_HOUSE_COVER_KEY);
   });
+  it.each([2, 4, 6])(
+    'selects published rounded art and keeps canonical keys for %i seats',
+    (capacity) => {
+      for (const [theme, canonical] of [
+        ['cloud-balloon', DEFAULT_HOUSE_COVER_KEY],
+        ['coral-lagoon', 'house/coral-aquarium/house-unified-coral-aquarium-frame.png'],
+        ['mushroom-forest', 'house/mushroom-forest/house-unified-mushroom-forest-frame.png'],
+      ]) {
+        const frame = resolveHouseFrame(canonical, { maxMembers: capacity });
+        expect(frame.assetKey).toBe(
+          `house/${theme}/frames/rounded-v2-20260907/house-${theme}-${capacity}p-frame.webp`,
+        );
+        expect(frame.canonicalKey).toBe(canonical);
+      }
+    },
+  );
+  it('keeps the seven dev-only skins on their existing published release', () => {
+    const hiddenThemes = STACKED_HOUSE_THEMES.filter((theme) => !theme.legacyKey);
+    expect(hiddenThemes).toHaveLength(7);
+    for (const theme of hiddenThemes) {
+      const frame = resolveHouseFrame(null, { previewTheme: theme.id, maxMembers: 6 });
+      expect(frame.assetKey).toBe(
+        `house/${theme.id}/frames/stacked-v1-20260905/house-${theme.id}-6p-frame.webp`,
+      );
+    }
+  });
   it.each([2, 3, 4, 6, 10])('OFF preserves art and geometry for %i seats', (maxMembers) => {
     expect(
       resolveHouseFrame(DEFAULT_HOUSE_COVER_KEY, { maxMembers, enabled: false }),

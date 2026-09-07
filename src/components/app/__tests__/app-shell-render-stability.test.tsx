@@ -95,10 +95,10 @@ it('집 목록이 그대로여도 다크모드 전환 시 새 배경을 미리 �
       </QueryProvider>,
     );
     const light = assetSource(
-      'house/cloud-balloon/backgrounds/house-cloud-balloon-background-v1.webp',
+      'house/cloud-balloon/backgrounds/rounded-v2-20260907/house-cloud-balloon-background-day.webp',
     ).uri;
     const dark = assetSource(
-      'house/cloud-balloon/backgrounds/house-cloud-balloon-background-dark-v1.webp',
+      'house/cloud-balloon/backgrounds/rounded-v2-20260907/house-cloud-balloon-background-night.webp',
     ).uri;
     await waitFor(() =>
       expect(prefetch).toHaveBeenCalledWith(expect.arrayContaining([light]), {
