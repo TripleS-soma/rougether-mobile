@@ -12,9 +12,8 @@
         "buildType": "apk"
       },
       "environment": "development",
-      "env": {
-        "EXPO_USE_PRECOMPILED_MODULES": "1",
-        "EXPO_PRECOMPILED_MODULES_BASE_URL": "http://cocoapods.caches.eas-build.internal/storage.googleapis.com/eas-build-precompiled-modules/"
+      "ios": {
+        "cocoapods": "1.17.0"
       }
     },
     "preview": {
@@ -24,9 +23,8 @@
         "buildType": "apk"
       },
       "environment": "preview",
-      "env": {
-        "EXPO_USE_PRECOMPILED_MODULES": "1",
-        "EXPO_PRECOMPILED_MODULES_BASE_URL": "http://cocoapods.caches.eas-build.internal/storage.googleapis.com/eas-build-precompiled-modules/"
+      "ios": {
+        "cocoapods": "1.17.0"
       }
     },
     "production": {
@@ -36,22 +34,18 @@
         "buildType": "app-bundle"
       },
       "environment": "production",
-      "env": {
-        "EXPO_USE_PRECOMPILED_MODULES": "1",
-        "EXPO_PRECOMPILED_MODULES_BASE_URL": "http://cocoapods.caches.eas-build.internal/storage.googleapis.com/eas-build-precompiled-modules/"
+      "ios": {
+        "cocoapods": "1.17.0"
       }
     },
     "testflight": {
       "autoIncrement": true,
       "channel": "dev",
       "ios": {
-        "distribution": "store"
+        "distribution": "store",
+        "cocoapods": "1.17.0"
       },
-      "environment": "preview",
-      "env": {
-        "EXPO_USE_PRECOMPILED_MODULES": "1",
-        "EXPO_PRECOMPILED_MODULES_BASE_URL": "http://cocoapods.caches.eas-build.internal/storage.googleapis.com/eas-build-precompiled-modules/"
-      }
+      "environment": "preview"
     }
   },
   "submit": {
