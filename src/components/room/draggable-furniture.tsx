@@ -11,7 +11,7 @@ import Animated, {
 
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { Icon } from '@/components/ui/icon';
-import { ROOM_RENDER_CONTRACT } from '@/components/room/room-render-contract';
+import { furnitureClampBounds, ROOM_RENDER_CONTRACT } from '@/components/room/room-render-contract';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens } from '@/hooks/use-tokens';
 import type { FurnitureItem, PlacedFurniture } from '@/resources/furniture';
@@ -39,12 +39,7 @@ export function hitSlopInset(boxSize: number): number {
   const target = Math.max(MIN_HIT_SIZE, boxSize * HITBOX_RATIO);
   return Math.max(0, (boxSize - target) / 2);
 }
-export const dragClampBounds = (scale = 1) => {
-  'worklet';
-  const clampedScale = Math.min(SCALE_MAX, Math.max(SCALE_MIN, scale));
-  const min = (FREE_ITEM_WIDTH * clampedScale) / 2;
-  return { min, max: 1 - min };
-};
+export const dragClampBounds = furnitureClampBounds;
 
 export type DraggableFurnitureProps = {
   item: FurnitureItem;
@@ -133,14 +128,14 @@ export function DraggableFurniture({
     })
     .onUpdate((e) => {
       // 실제 렌더 크기(기본 박스 × scale)까지 방 안에 남게 한다 (#333).
-      const clamp = dragClampBounds(scaleSV.value);
+      const clamp = dragClampBounds(scaleSV.value, roomSize.w / roomSize.h);
       cx.value = Math.min(
-        clamp.max * roomSize.w,
-        Math.max(clamp.min * roomSize.w, start.value.x + e.translationX),
+        clamp.x.max * roomSize.w,
+        Math.max(clamp.x.min * roomSize.w, start.value.x + e.translationX),
       );
       cy.value = Math.min(
-        clamp.max * roomSize.h,
-        Math.max(clamp.min * roomSize.h, start.value.y + e.translationY),
+        clamp.y.max * roomSize.h,
+        Math.max(clamp.y.min * roomSize.h, start.value.y + e.translationY),
       );
     })
     .onEnd(() => {

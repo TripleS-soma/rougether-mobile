@@ -1,6 +1,5 @@
 import {
   DEFAULT_HOUSE_COVER_KEY,
-  FRAME_ASPECT,
   STACKED_HOUSE_THEMES,
   resolveHouseFrame,
   houseWindowSeats,
@@ -8,6 +7,16 @@ import {
 } from '@/resources/house-frame';
 
 describe('staged house frame contract', () => {
+  it('keeps legacy holes and portrait rooms aligned during fallback', () => {
+    const frame = resolveHouseFrame(null, { enabled: false });
+    const height = 360 / frame.aspectRatio;
+    for (const rect of frame.windowRects) {
+      const roomWidth = (parseFloat(rect.width) * 360) / 100;
+      const roomHeight = (parseFloat(rect.height) * height) / 100;
+      expect(roomHeight / roomWidth).toBeCloseTo(1.2);
+    }
+  });
+
   it('enables the release by default without publishing new catalog keys', () => {
     expect(STACKED_HOUSES_ENABLED).toBe(true);
     const frame = resolveHouseFrame(DEFAULT_HOUSE_COVER_KEY, { maxMembers: 6 });
@@ -20,7 +29,7 @@ describe('staged house frame contract', () => {
     ).toMatchObject({
       kind: 'legacy',
       assetKey: DEFAULT_HOUSE_COVER_KEY,
-      aspectRatio: FRAME_ASPECT,
+      aspectRatio: (5 / 6) * (33 / 37),
     });
   });
 
@@ -28,7 +37,7 @@ describe('staged house frame contract', () => {
     [2, 872],
     [4, 1224],
     [6, 1576],
-  ])('renders %i square rooms without scaling furniture coordinates', (capacity, height) => {
+  ])('renders %i portrait rooms without scaling furniture', (capacity, height) => {
     for (const theme of STACKED_HOUSE_THEMES) {
       const frame = resolveHouseFrame(theme.legacyKey, {
         maxMembers: capacity,
@@ -36,9 +45,11 @@ describe('staged house frame contract', () => {
         previewTheme: theme.id,
       });
       expect(frame.assetKey).toContain(`/house-${theme.id}-${capacity}p-frame.webp`);
-      expect(frame.aspectRatio).toBe(1024 / height);
+      expect(frame.aspectRatio).toBe((1024 / height) * (5 / 6));
       expect(frame.windowRects).toHaveLength(capacity);
+      const displayHeight = 1024 / frame.aspectRatio;
       frame.windowRects.forEach((rect, index) => {
+        expect((parseFloat(rect.height) * displayHeight) / 100).toBeCloseTo(384);
         expect((parseFloat(rect.left) * 1024) / 100).toBeCloseTo(index % 2 ? 536 : 165);
         expect((parseFloat(rect.top) * height) / 100).toBeCloseTo(
           358 + Math.floor(index / 2) * 352,

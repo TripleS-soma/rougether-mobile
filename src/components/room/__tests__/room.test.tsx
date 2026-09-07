@@ -1,9 +1,45 @@
 import { Image } from 'expo-image';
 import { fireEvent, render } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 
 import { Room } from '@/components/room/room';
 
 describe('Room', () => {
+  it('adds vertical space while keeping a saved center and width-sized sprites', async () => {
+    const placement = {
+      furnitureId: 'plant',
+      x: 0.3,
+      y: 0.7,
+      z: 2,
+      scale: 1.5,
+      rotationDeg: 15,
+      flipped: true,
+    };
+    const { getByTestId, getByLabelText } = await render(
+      <Room placements={[placement]} interactiveCharacter />,
+    );
+    const canvas = StyleSheet.flatten(getByTestId('room-canvas').props.style);
+    expect(360 / canvas.aspectRatio).toBeCloseTo(432);
+    const item = StyleSheet.flatten(getByTestId('room-furniture-plant').props.style);
+    const width = (parseFloat(item.width) * 360) / 100;
+    expect(width).toBeCloseTo(100.8);
+    expect((parseFloat(item.left) * 360) / 100 + width / 2).toBeCloseTo(108);
+    expect((parseFloat(item.top) * 432) / 100 + width / 2).toBeCloseTo(302.4);
+    expect(item.transform).toEqual([{ scale: 1.5 }, { rotate: '15deg' }, { scaleX: -1 }]);
+    const character = StyleSheet.flatten(getByLabelText('고양이, 눌러서 포즈 바꾸기').props.style);
+    expect(character).toMatchObject({ width: '42%', aspectRatio: 1 });
+    expect(character.height).toBeUndefined();
+    expect(placement).toEqual({
+      furnitureId: 'plant',
+      x: 0.3,
+      y: 0.7,
+      z: 2,
+      scale: 1.5,
+      rotationDeg: 15,
+      flipped: true,
+    });
+  });
+
   // 장기 미접속 거미줄 (#829, 서버 #277) — 방 응답의 nullable cobweb.
   it('CDN 키가 있으면 거미줄을 그린다', async () => {
     const { getByLabelText } = await render(

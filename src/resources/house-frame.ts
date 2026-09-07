@@ -1,3 +1,4 @@
+import { ROOM_ASPECT_RATIO } from '@/components/room/room-render-contract';
 import { isCdnKey } from '@/resources/asset';
 
 export const FRAME_ASPECT = 567 / 508;
@@ -17,6 +18,10 @@ export const WINDOW_RECTS: readonly HouseWindowRect[] = [
   { left: '11.7%', top: '57.6%', width: '37%', height: '33%' },
   { left: '50.3%', top: '57.6%', width: '37%', height: '33%' },
 ];
+
+// Stretch only the frame artwork to keep its transparent holes aligned with
+// portrait rooms. Percentages remain those of the immutable published bitmap.
+const LEGACY_DISPLAY_ASPECT = ROOM_ASPECT_RATIO * (33 / 37);
 
 // Immutable published release. These are display assets, NEVER a save catalog.
 // Source: house/releases/stacked-v1-20260905/manifest.json on the asset CDN.
@@ -54,7 +59,8 @@ const stackedGeometry = (capacity: 2 | 4 | 6) => {
   const width = 1024;
   const height = 872 + (capacity / 2 - 1) * 352;
   return {
-    aspectRatio: width / height,
+    sourceAspectRatio: width / height,
+    aspectRatio: (width / height) * ROOM_ASPECT_RATIO,
     windowRects: Array.from({ length: capacity }, (_, i) => ({
       left: percent(i % 2 === 0 ? 165 : 536, width),
       top: percent(358 + Math.floor(i / 2) * 352, height),
@@ -79,6 +85,7 @@ export type HouseFrame = {
   kind: 'legacy' | 'stacked';
   assetKey: string;
   canonicalKey: string;
+  sourceAspectRatio: number;
   aspectRatio: number;
   windowRects: readonly HouseWindowRect[];
 };
@@ -92,7 +99,8 @@ export function resolveHouseFrame(
     kind: 'legacy',
     assetKey: canonicalKey,
     canonicalKey,
-    aspectRatio: FRAME_ASPECT,
+    sourceAspectRatio: FRAME_ASPECT,
+    aspectRatio: LEGACY_DISPLAY_ASPECT,
     windowRects: WINDOW_RECTS,
   };
   if (!(options.enabled ?? STACKED_HOUSES_ENABLED)) return legacy;
