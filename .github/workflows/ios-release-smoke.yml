@@ -10,7 +10,8 @@ jobs:
   release-smoke:
     if: contains(github.event.pull_request.labels.*.name, 'release-smoke') && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: macos-15
-    timeout-minutes: 50
+    # SPM Firebase(#1053)부터 첫 빌드가 패키지 해석·동적 프레임워크 컴파일로 35~45분 — 여유 있게.
+    timeout-minutes: 75
     defaults:
       run:
         shell: bash
@@ -66,7 +67,7 @@ jobs:
           set -x
           xcrun simctl bootstatus "$SIMULATOR_UDID" -b 2>&1 | tee release-smoke/boot.log
       - name: Build Release simulator app
-        timeout-minutes: 25
+        timeout-minutes: 55
         run: |
           xcodebuild -workspace ios/Rougether.xcworkspace -scheme Rougether \
             -configuration Release -sdk iphonesimulator \
