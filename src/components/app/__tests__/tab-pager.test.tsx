@@ -1,5 +1,5 @@
 import { act, fireEvent, render } from '@testing-library/react-native';
-import { DeviceEventEmitter, Text } from 'react-native';
+import { DeviceEventEmitter, StyleSheet, Text } from 'react-native';
 import { type PanGesture, PointerType, State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 import * as Reanimated from 'react-native-reanimated';
@@ -137,6 +137,41 @@ describe('TabPager direction handoff (#1150)', () => {
 });
 
 describe('TabPager (#563)', () => {
+  it.each([
+    [0, 100, 0],
+    [2, -100, -2 * WIDTH],
+    [0, -100, -100],
+    [1, 100, -WIDTH + 100],
+  ])('keeps page %i inside the content bounds during a %ipx drag', async (index, dx, expected) => {
+    const onIndexChange = jest.fn();
+    const ui = await renderPager(index, onIndexChange);
+    const pan = getByGestureTestId('tab-pager-pan') as PanGesture;
+    await act(async () => {
+      pan.handlers.onStart?.({} as never);
+      pan.handlers.onUpdate?.({ translationX: dx } as never);
+    });
+    await ui.rerender(<Harness index={index} onIndexChange={onIndexChange} />);
+    expect(StyleSheet.flatten(ui.getByTestId('tab-pager-row').props.style).transform).toEqual([
+      { translateX: expected },
+    ]);
+    expect(onIndexChange).not.toHaveBeenCalled();
+  });
+
+  it('does not expose the empty side when an active inward drag reverses', async () => {
+    const onIndexChange = jest.fn();
+    const ui = await renderPager(0, onIndexChange);
+    const pan = getByGestureTestId('tab-pager-pan') as PanGesture;
+    await act(async () => {
+      pan.handlers.onStart?.({} as never);
+      pan.handlers.onUpdate?.({ translationX: -80 } as never);
+      pan.handlers.onUpdate?.({ translationX: 80 } as never);
+    });
+    await ui.rerender(<Harness index={0} onIndexChange={onIndexChange} />);
+    expect(StyleSheet.flatten(ui.getByTestId('tab-pager-row').props.style).transform).toEqual([
+      { translateX: 0 },
+    ]);
+  });
+
   it.each([
     { index: 0, dx: -240, state: State.CANCELLED },
     { index: 1, dx: -240, state: State.CANCELLED },

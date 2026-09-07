@@ -75,14 +75,17 @@ class PointerProbe extends WebPanGestureHandler {
 }
 
 it.each([
-  [30, 80, State.FAILED],
-  [-30, 80, State.FAILED],
-  [40, 20, State.ACTIVE],
+  [1, 30, 80, State.FAILED],
+  [1, -30, 80, State.FAILED],
+  [1, 40, 20, State.ACTIVE],
+  [0, 40, 0, State.FAILED],
+  [0, -40, 0, State.ACTIVE],
+  [1, -40, 0, State.FAILED],
 ])(
-  'classifies the first large pointer move (%i, %i) before automatic activation',
-  async (dx, dy, expected) => {
+  'page %i classifies pointer move (%i, %i) before automatic activation',
+  async (index, dx, dy, expected) => {
     await render(
-      <TabPager index={1} onIndexChange={jest.fn()}>
+      <TabPager index={index} onIndexChange={jest.fn()}>
         <Text>방</Text>
         <Text>집</Text>
       </TabPager>,
