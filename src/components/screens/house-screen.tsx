@@ -1,6 +1,15 @@
 import { Image } from 'expo-image';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Animated,
+  Easing,
+  type LayoutChangeEvent,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Reanimated, {
   runOnJS,
@@ -376,6 +385,18 @@ export const HouseScreen = memo(function HouseScreen({
   // 서브화면(구성원 관리·집 탐색 …)에 다녀와도 보던 자리로 (#763).
   const scrollRef = useRef<ScrollView>(null);
   const scrollRestore = useScrollRestore(scrollRef, { getInitialScrollY, onScrollY });
+  const [houseViewport, setHouseViewport] = useState({ width: 0, height: 0 });
+  const [headerBottom, setHeaderBottom] = useState(0);
+  const measureHouseViewport = useStableCallback((event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    setHouseViewport((previous) =>
+      previous.width === width && previous.height === height ? previous : { width, height },
+    );
+  });
+  const measureHeaderBottom = useStableCallback((event: LayoutChangeEvent) => {
+    const { y, height } = event.nativeEvent.layout;
+    setHeaderBottom(y + height);
+  });
 
   // 승인 대기 신청 (#648) — 집 페이지들 뒤에 잠금 카드 페이지로 이어 붙는다.
   const pendingList = pendingHouses ?? [];
@@ -442,6 +463,20 @@ export const HouseScreen = memo(function HouseScreen({
     previewTheme,
   });
   const coverKey = frame.assetKey;
+  const isThreeStorey = frame.kind === 'stacked' && frame.windowRects.length === 6;
+  const frameBottomGap = isThreeStorey ? Spacing.three : Spacing.six;
+  // Three portrait floors can exceed the first viewport at full screen width.
+  // Reserve the measured header, floating navigation and existing frame gaps.
+  // Landscape/short embedded previews retain scrolling instead of collapsing.
+  const availableFrameHeight =
+    houseViewport.height - headerBottom - navInset - frameBottomGap - Spacing.two;
+  const fittedFrameWidth =
+    isThreeStorey &&
+    houseViewport.height > houseViewport.width &&
+    headerBottom > 0 &&
+    availableFrameHeight > 0
+      ? Math.min(houseViewport.width, availableFrameHeight * frame.aspectRatio)
+      : undefined;
   // 서버가 가진 coverImageKey의 테마 경로에서 전면 배경을 파생한다. 집 전환과
   // 같은 렌더에 키가 바뀌므로 별도 저장 상태 없이 항상 프레임과 맞는다.
   const backgroundKey = houseBackgroundKey(frame.canonicalKey, scheme);
@@ -1038,6 +1073,7 @@ export const HouseScreen = memo(function HouseScreen({
       <PawRefreshScroll
         scrollRef={scrollRef}
         {...scrollRestore}
+        onLayout={measureHouseViewport}
         onRefresh={onRefresh}
         // 자리 드래그 중 당김 잠금 — 놓는 순간 새로고침이 배치를 끊지 않게.
         refreshDisabled={dragSeat != null}
@@ -1052,7 +1088,9 @@ export const HouseScreen = memo(function HouseScreen({
             커버가 없어도 기본 프레임으로 통일(#328)이라 유일한 경로다. */}
         {/* 배경·비는 #989가 화면 루트의 absoluteFill 레이어로 옮겼다 — 여기선
             안전영역 여백만 준다(헤더바가 없어 하늘이 맨 위부터 시작한다). */}
-        <View style={[styles.skySection, headerInset]} testID="sky-section">
+        <View
+          style={[styles.skySection, headerInset, { paddingBottom: frameBottomGap }]}
+          testID="sky-section">
           <View style={styles.switcher}>
             {totalPages > 1 ? (
               <Pressable
@@ -1096,9 +1134,16 @@ export const HouseScreen = memo(function HouseScreen({
             index={houseIndex}
             onReorder={onReorderHouses}
           />
+          <View onLayout={measureHeaderBottom} testID="house-header-end" />
           {/* 레벨·멤버 pill — 프레임 여백과 정렬된 행 (모서리 절대배치는
                 화면 끝에 걸려 보였다). 고정 밝기 흰 스크림 위라 onTint 잉크. */}
-          <View style={styles.framePillsRow}>
+          <View
+            style={[
+              styles.framePillsRow,
+              // Tall roofs leave quiet corners beside the balloon/roof peak.
+              // Float metadata there instead of pushing all three floors down.
+              isThreeStorey ? [styles.floatingFramePills, { top: headerBottom }] : null,
+            ]}>
             <GlassSurface
               interactive={false}
               fallbackColor={FixedOverlay.skyPill}
@@ -1127,8 +1172,12 @@ export const HouseScreen = memo(function HouseScreen({
           <View style={styles.skySpacer} />
           <CoachTarget id="house-frame">
             <Animated.View
+              testID="house-frame-viewport"
               style={[
                 styles.cameraViewportOuter,
+                fittedFrameWidth == null
+                  ? null
+                  : { maxWidth: fittedFrameWidth, alignSelf: 'center' },
                 { opacity: switchFade, transform: [{ translateX: switchX }] },
               ]}>
               <GestureDetector gesture={cameraGesture}>
@@ -1555,6 +1604,11 @@ const styles = StyleSheet.create({
     gap: Spacing.one,
     paddingHorizontal: Spacing.four,
     marginTop: Spacing.three,
+  },
+  floatingFramePills: {
+    position: 'absolute',
+    left: 0,
+    zIndex: 2,
   },
   skyPill: {
     flexDirection: 'row',

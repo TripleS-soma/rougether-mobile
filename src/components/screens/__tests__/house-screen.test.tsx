@@ -8,6 +8,8 @@ import { cameraClaimsMove, HouseScreen, type House } from '@/components/screens/
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { BrandThemeProvider, useBrandTheme } from '@/hooks/use-tokens';
 import { assetSource } from '@/resources/asset';
+import { resolveHouseFrame } from '@/resources/house-frame';
+import { Spacing } from '@/constants/theme';
 
 jest.mock('@/hooks/use-color-scheme', () => ({ useColorScheme: jest.fn(() => 'light') }));
 beforeEach(() => jest.mocked(useColorScheme).mockReturnValue('light'));
@@ -46,6 +48,70 @@ const MISSION_HOUSE: House = {
 };
 
 describe('HouseScreen', () => {
+  it.each([
+    [320, 568],
+    [393, 852],
+    [430, 932],
+  ])('keeps all six rooms above navigation in a %s × %s viewport', async (width, height) => {
+    const house = { ...MISSION_HOUSE, maxMembers: 6 };
+    const ui = await render(<HouseScreen houses={[house]} />);
+    const headerBottom = 164;
+    await fireEvent(ui.getByTestId('house-scroll'), 'layout', {
+      nativeEvent: { layout: { x: 0, y: 0, width, height } },
+    });
+    await fireEvent(ui.getByTestId('house-header-end'), 'layout', {
+      nativeEvent: { layout: { x: 0, y: headerBottom, width, height: 0 } },
+    });
+    const style = StyleSheet.flatten(ui.getByTestId('house-frame-viewport').props.style);
+    const { paddingBottom: navInset } = StyleSheet.flatten(
+      ui.getByTestId('house-scroll').props.contentContainerStyle,
+    );
+    const frame = resolveHouseFrame(undefined, { maxMembers: 6 });
+    const frameHeight = style.maxWidth / frame.aspectRatio;
+    expect(style.maxWidth).toBeGreaterThan(0);
+    expect(style.maxWidth).toBeLessThan(width);
+    expect(headerBottom + Spacing.two + frameHeight + Spacing.three + navInset).toBeCloseTo(height);
+    // Bottom-floor windows remain inside the frame and preserve portrait geometry.
+    const lastRoom = frame.windowRects[5];
+    const roomBottom = (parseFloat(lastRoom.top) + parseFloat(lastRoom.height)) / 100;
+    expect(headerBottom + Spacing.two + roomBottom * frameHeight).toBeLessThan(height - navInset);
+
+    // Returning to a two/four-seat or legacy house must remove the six-seat width limit.
+    for (const next of [
+      { ...house, maxMembers: 2 },
+      { ...house, maxMembers: 4 },
+      { ...house, coverImageKey: 'house/unknown/frame.png' },
+    ]) {
+      await ui.rerender(<HouseScreen houses={[next]} />);
+      expect(
+        StyleSheet.flatten(ui.getByTestId('house-frame-viewport').props.style).maxWidth,
+      ).toBeUndefined();
+    }
+  });
+
+  it('remeasures the six-seat framing after resize and header growth', async () => {
+    const ui = await render(<HouseScreen houses={[{ ...MISSION_HOUSE, maxMembers: 6 }]} />);
+    const layout = (width: number, height: number) =>
+      fireEvent(ui.getByTestId('house-scroll'), 'layout', {
+        nativeEvent: { layout: { x: 0, y: 0, width, height } },
+      });
+    const header = (height: number) =>
+      fireEvent(ui.getByTestId('house-header-end'), 'layout', {
+        nativeEvent: { layout: { x: 0, y: 80, width: 393, height } },
+      });
+    const fittedWidth = () =>
+      StyleSheet.flatten(ui.getByTestId('house-frame-viewport').props.style).maxWidth;
+    await layout(393, 852);
+    await header(84);
+    const originalWidth = fittedWidth();
+    await header(120);
+    expect(fittedWidth()).toBeLessThan(originalWidth);
+    await layout(393, 1100);
+    expect(fittedWidth()).toBe(393);
+    await layout(852, 393);
+    expect(fittedWidth()).toBeUndefined();
+  });
+
   it.each(['pending', 'empty'])(
     'releases a zoom lock when the camera is replaced by %s content',
     async (destination) => {
