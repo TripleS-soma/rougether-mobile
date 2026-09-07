@@ -73,7 +73,7 @@ describe('Pager scroll arbitration (#1150)', () => {
     const ui = await render(
       <TabPager index={0} onIndexChange={jest.fn()}>
         <PagerScrollView testID="plain-scroll" onScroll={onScroll} contentOffset={{ x: 0, y: 120 }}>
-          <Text>마이페이지 본문</Text>
+          <Text>내 정보 본문</Text>
         </PagerScrollView>
         <Text>이웃</Text>
       </TabPager>,

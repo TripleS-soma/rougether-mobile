@@ -61,7 +61,7 @@ describe('달력 하단 탭 왕복 (#1159)', () => {
     await fireEvent.press(ui.getByLabelText('이전 달'));
     await fireEvent.press(ui.getByLabelText(PREVIOUS_MONTH_DATE));
 
-    await fireEvent.press(ui.getByLabelText('마이페이지'));
+    await fireEvent.press(ui.getByLabelText('내 정보'));
     await fireEvent.press(ui.getByLabelText('달력'));
     expect(ui.getByLabelText(PREVIOUS_MONTH_DATE).props.accessibilityState.selected).toBe(true);
 

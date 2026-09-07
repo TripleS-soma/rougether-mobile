@@ -38,7 +38,7 @@ describe('NavMenuPopover', () => {
     expect(onOpenCategoryManager).toHaveBeenCalledTimes(1);
   });
 
-  it('방 작업만 남는다 — 재화 내역·출석 이벤트 항목은 마이페이지로 갔다 (#1055 → #1089)', async () => {
+  it('방 작업만 남는다 — 재화 내역·출석 이벤트 항목은 내 정보로 갔다 (#1055 → #1089)', async () => {
     const { getByLabelText, queryByLabelText } = await render(<NavMenuPopover {...baseProps} />);
     expect(getByLabelText('방 꾸미기')).toBeTruthy();
     expect(getByLabelText('루틴 관리')).toBeTruthy();

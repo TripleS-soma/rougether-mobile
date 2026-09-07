@@ -35,9 +35,9 @@ export type MyPageScreenProps = ScrollRestoreProps & {
   attendancePending?: boolean;
   /** 재화 내역 바로가기 (#734 → #1089). */
   onOpenWalletHistory?: () => void;
-  /** 주간회고 다시 보기 (#1056) — 설정 항목에서 마이페이지 항목으로 (#1088). */
+  /** 주간회고 다시 보기 (#1056) — 설정 항목에서 내 정보 항목으로 (#1088). */
   onOpenWeeklyReport?: () => void;
-  /** 캘린더 연동 (#844) — 설정 > 알림에서 마이페이지 행으로 (#1097). 미배선이면 숨김. */
+  /** 캘린더 연동 (#844) — 설정 > 알림에서 내 정보 행으로 (#1097). 미배선이면 숨김. */
   onOpenCalendarImport?: () => void;
   /** 친구 초대 (#518). */
   onInviteFriends?: () => void;
@@ -47,7 +47,7 @@ export type MyPageScreenProps = ScrollRestoreProps & {
 };
 
 /**
- * 마이페이지 탭 (#1088) — 종전 설정 탭 자리. "보는 곳"이다: 프로필 카드
+ * 내 정보 탭 (#1088) — 종전 설정 탭 자리. "보는 곳"이다: 프로필 카드
  * (대표 캐릭터·닉네임·소개), 지표 한 줄(스트릭·코인·다이아), 바로가기 타일
  * (출석 이벤트·재화 내역 — 나의 방 메뉴에서 옮겨옴, #1089), 계정·콘텐츠성
  * 항목(주간회고·친구 초대·도움말·버그 제보). "바꾸는 곳"인 설정(디자인·알림·
@@ -140,7 +140,7 @@ export const MyPageScreen = memo(function MyPageScreen({
         <View style={[styles.ambientWarm, { backgroundColor: t.warningSoft }]} />
       </View>
       <ScreenHeader
-        title="마이페이지"
+        title="내 정보"
         right={
           // 설정은 "바꾸는 곳"이라 목록 행이 아니라 헤더 톱니 뒤로 — 보통 앱의 자리.
           <Pressable

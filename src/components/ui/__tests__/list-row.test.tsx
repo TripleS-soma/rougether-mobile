@@ -2,7 +2,7 @@ import { fireEvent, render } from '@testing-library/react-native';
 
 import { ListRow } from '@/components/ui/list-row';
 
-// 설정·마이페이지 공용 목록 행 (#1088 리뷰 반영).
+// 설정·내 정보 공용 목록 행 (#1088 리뷰 반영).
 describe('ListRow', () => {
   it('라벨을 그리고 누르면 onPress', async () => {
     const onPress = jest.fn();

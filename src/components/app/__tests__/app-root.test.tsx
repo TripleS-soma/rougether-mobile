@@ -52,7 +52,7 @@ describe('AppRoot', () => {
     expect(queryByText('건너뛰기')).toBeNull();
   });
 
-  it('시작 화면 설정이 마이페이지면 앱이 마이페이지로 열린다 (#1139)', async () => {
+  it('시작 화면 설정이 내 정보면 앱이 내 정보로 열린다 (#1139)', async () => {
     await AsyncStorage.setItem(KEY, JSON.stringify({ characterId: 'cat', goals: ['exercise'] }));
     await AsyncStorage.setItem('rougether.start-tab', 'myPage');
     const { getByText, queryByText } = await renderApp();
@@ -65,8 +65,8 @@ describe('AppRoot', () => {
     const { getByText, getByLabelText } = await renderApp();
     await waitFor(() => expect(getByText('오늘의 할 일')).toBeTruthy());
 
-    // 설정은 마이페이지 헤더의 톱니 뒤 서브화면 (#1088).
-    await fireEvent.press(getByLabelText('마이페이지'));
+    // 설정은 내 정보 헤더의 톱니 뒤 서브화면 (#1088).
+    await fireEvent.press(getByLabelText('내 정보'));
     await fireEvent.press(getByLabelText('설정'));
     await waitFor(() => expect(getByText('튜토리얼 다시 보기')).toBeTruthy());
     await fireEvent.press(getByText('튜토리얼 다시 보기'));

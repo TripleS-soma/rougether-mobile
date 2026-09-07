@@ -32,7 +32,7 @@ export type NavMenuPopoverProps = {
  * from my-room-screen (pure move, no behavior change); item visibility follows
  * which callbacks are wired, and every press closes the popover first.
  *
- * 방 작업만 남긴다 (#1089) — 재화 내역·출석 이벤트는 마이페이지 바로가기로 갔다.
+ * 방 작업만 남긴다 (#1089) — 재화 내역·출석 이벤트는 내 정보 바로가기로 갔다.
  */
 export function NavMenuPopover({
   visible,

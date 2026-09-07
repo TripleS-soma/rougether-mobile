@@ -48,22 +48,18 @@ const TABS: {
   // 달력 (#1138) — 나의 방 안의 방/달력 알약에서 하단 탭으로.
   { key: 'calendar', label: '달력', active: CalendarActive, inactive: CalendarInactive },
   { key: 'house', label: '집', active: HouseActive, inactive: HouseInactive },
-  // 마이페이지 (#1088) — 설정 탭을 대체. 설정은 마이페이지 헤더의 톱니로 들어간다.
-  {
-    key: 'myPage',
-    label: '마이',
-    accessibilityLabel: '마이페이지',
-    active: ProfileActive,
-    inactive: ProfileInactive,
-  },
+  // 내 정보 (#1088) — 설정 탭을 대체. 설정은 내 정보 헤더의 톱니로 들어간다.
+  { key: 'myPage', label: '내 정보', active: ProfileActive, inactive: ProfileInactive },
 ];
 const MIN_TAB_TOUCH_SIZE = 44;
+/** 좁은 화면에서 라벨을 함께 줄일 때의 하한 배율 (#1098 후속). */
+const MIN_LABEL_SCALE = 0.8;
 const LONGEST_TAB_LABEL_LENGTH = Math.max(...TABS.map(({ label }) => label.length));
 
 export type BottomNavProps = {
   active: NavTab;
   onChange: (tab: NavTab) => void;
-  /** 탭 아이콘 위 빨간 점 (#1089) — 마이페이지의 오늘 미출석. 참조 고정 권장. */
+  /** 탭 아이콘 위 빨간 점 (#1089) — 내 정보의 오늘 미출석. 참조 고정 권장. */
   badges?: Partial<Record<NavTab, boolean>>;
 };
 
@@ -118,8 +114,8 @@ export function BottomNav({ active, onChange, badges }: BottomNavProps) {
   const Typography = useTypography();
   const insets = useSafeAreaInsets();
   const { width: windowW, fontScale } = useWindowDimensions();
-  // Reserve a full em for each Korean character before the first measurement.
-  // A clipped onLayout width must never shrink the space needed by the label.
+  // 라벨의 **자연 폭**은 숨은 측정용 Text로 잰다 — 보이는 라벨은 탭 폭에 잘려 onLayout이
+  // 줄어든 값을 준다. 첫 측정 전엔 한 글자 한 em으로 잡아 자리를 미리 확보한다.
   const [labelWidths, setLabelWidths] = useState<number[]>([]);
   const contentMinWidth = Math.max(
     NAV_ICON_SIZE,
@@ -137,6 +133,20 @@ export function BottomNav({ active, onChange, badges }: BottomNavProps) {
     MIN_TAB_TOUCH_SIZE,
     Math.min(contentMinWidth + tabPaddingH * 2, tabCap),
   );
+  // 글자 크기는 **네 탭이 같은 배율**로만 줄어든다 — 라벨마다 자동 축소를 두면 긴
+  // 라벨만 작아져 크기가 제각각이었다. 가장 넓은 라벨이 탭 안에 들 때까지 전부 함께
+  // 줄이고(하한 0.8), 평소엔 1이다.
+  const widestLabel = Math.max(0, ...labelWidths.filter(Number.isFinite));
+  const labelRoom = Math.max(1, tabCap - tabPaddingH * 2);
+  const labelScale =
+    widestLabel > labelRoom ? Math.max(MIN_LABEL_SCALE, labelRoom / widestLabel) : 1;
+  const labelSizeStyle =
+    labelScale < 1
+      ? {
+          fontSize: Typography.supporting.fontSize * labelScale,
+          lineHeight: Typography.supporting.lineHeight * labelScale,
+        }
+      : null;
   const recordLabel = (index: number, width: number) =>
     setLabelWidths((prev) => {
       if (prev[index] === width) return prev;
@@ -173,16 +183,18 @@ export function BottomNav({ active, onChange, badges }: BottomNavProps) {
           badgeColor={t.danger}
         />
         <Text
-          style={[Typography.supporting, { color: isActive ? t.primaryText : t.textMuted }]}
+          style={[
+            Typography.supporting,
+            labelSizeStyle,
+            { color: isActive ? t.primaryText : t.textMuted },
+          ]}
           numberOfLines={1}
-          adjustsFontSizeToFit
-          minimumFontScale={0.8}
-          onLayout={(e) => recordLabel(index, e.nativeEvent.layout.width)}>
+          testID={`bottom-nav-label-${key}`}>
           {label}
         </Text>
       </Pressable>
     );
-    // 마이페이지 탭은 코치마크 마지막 단계의 대상 (#351 → #1088).
+    // 내 정보 탭은 코치마크 마지막 단계의 대상 (#351 → #1088).
     return (
       <View
         key={key}
@@ -208,6 +220,22 @@ export function BottomNav({ active, onChange, badges }: BottomNavProps) {
             testID="bottom-nav-track"
             onLayout={(e) => recordHeight(e.nativeEvent.layout.height)}
             style={styles.track}>
+            {/* 자연 폭 측정용 — 화면에는 안 보이고 접근성에도 잡히지 않는다. */}
+            <View
+              pointerEvents="none"
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+              style={styles.measure}>
+              {TABS.map(({ key, label }, index) => (
+                <Text
+                  key={key}
+                  style={Typography.supporting}
+                  numberOfLines={1}
+                  onLayout={(e) => recordLabel(index, e.nativeEvent.layout.width)}>
+                  {label}
+                </Text>
+              ))}
+            </View>
             <Reanimated.View
               pointerEvents="none"
               testID="bottom-nav-scrub-indicator"
@@ -244,6 +272,14 @@ const styles = StyleSheet.create({
     gap: NAV_PILL_GAP,
     paddingVertical: NAV_PILL_PAD_V,
     paddingHorizontal: NAV_PILL_PAD_H,
+  },
+  // 숨은 측정 행 — 레이아웃에 자리를 차지하지 않는다.
+  measure: {
+    position: 'absolute',
+    opacity: 0,
+    flexDirection: 'row',
+    top: 0,
+    left: 0,
   },
   // 아이콘 오른쪽 위 점 — 방 메뉴 버튼의 점(#1055)과 같은 크기.
   badge: {

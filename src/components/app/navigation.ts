@@ -48,7 +48,7 @@ export const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   friendRoom: null,
   houseSearch: null,
   createHouse: null,
-  // 마이페이지 탭 (#1088) — 설정은 그 안의 서브화면이 됐다.
+  // 내 정보 탭 (#1088) — 설정은 그 안의 서브화면이 됐다.
   myPage: 'myPage',
   settings: null,
   theme: null,
@@ -94,7 +94,7 @@ export const BACK_SCREEN: Record<Screen, Screen | null> = {
   houseSearch: 'house',
   createHouse: 'houseSearch',
   myPage: 'myRoom',
-  // 설정은 마이페이지의 서브화면 (#1088); 계정·콘텐츠성 화면은 마이페이지로 돌아간다.
+  // 설정은 내 정보의 서브화면 (#1088); 계정·콘텐츠성 화면은 내 정보로 돌아간다.
   settings: 'myPage',
   theme: 'settings',
   font: 'settings',
@@ -106,7 +106,7 @@ export const BACK_SCREEN: Record<Screen, Screen | null> = {
   sound: 'settings',
   help: 'myPage',
   inviteFriends: 'myPage',
-  // 마이페이지에서도, 새 회고 배너에서도 열린다 — 실제 목적지는 addReturnScreen (#1056).
+  // 내 정보에서도, 새 회고 배너에서도 열린다 — 실제 목적지는 addReturnScreen (#1056).
   weeklyReport: 'myPage',
 };
 

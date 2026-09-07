@@ -8,7 +8,7 @@ import { BottomNav } from '@/components/ui/bottom-nav';
 import { Themes } from '@/constants/theme';
 import { scrubTarget } from '@/components/ui/use-bottom-nav-scrub';
 
-// 4탭 (#1138): 나의 방 · 달력 · 집 · 마이페이지 — 중심 53 · 136 · 212 · 298.
+// 4탭 (#1138): 나의 방 · 달력 · 집 · 내 정보 — 중심 53 · 136 · 212 · 298.
 const FRAMES = [
   { x: 8, width: 90 },
   { x: 106, width: 60 },
@@ -52,7 +52,7 @@ describe('BottomNav', () => {
     { width: 320, fontScale: 2 },
     { width: 393, fontScale: 1 },
   ])(
-    'reserves full two-character labels before padding at $width px / font scale $fontScale',
+    'reserves the longest label (내 정보, 4자) before padding at $width px / font scale $fontScale',
     async ({ width, fontScale }) => {
       const dimensions = jest
         .spyOn(Dimensions, 'get')
@@ -60,9 +60,10 @@ describe('BottomNav', () => {
       try {
         const ui = await render(<BottomNav active="myRoom" onChange={jest.fn()} />);
         const labelSize = StyleSheet.flatten(ui.getByText('달력').props.style).fontSize;
-        const requiredContentWidth = Math.max(24, labelSize * fontScale * 2);
+        // 가장 긴 라벨 '내 정보'(공백 포함 4자) 몫을 첫 그리기부터 확보한다.
+        const requiredContentWidth = Math.max(24, labelSize * fontScale * 4);
         const assertTabSpace = () => {
-          const tabs = ['나의 방', '달력', '집', '마이페이지'].map((name) =>
+          const tabs = ['나의 방', '달력', '집', '내 정보'].map((name) =>
             StyleSheet.flatten(ui.getByRole('button', { name }).props.style),
           );
           expect(new Set(tabs.map((tab) => tab.minWidth)).size).toBe(1);
@@ -70,16 +71,22 @@ describe('BottomNav', () => {
             expect(tab.minWidth).toBeGreaterThanOrEqual(44);
             expect(tab.minHeight).toBeGreaterThanOrEqual(44);
             expect(tab.minWidth).toBeLessThanOrEqual(tab.maxWidth);
+            // 탭 상한(maxWidth)이 라벨 몫보다 작은 극단(320px·글꼴 200%)에서는 상한까지만
+            // 채우고 라벨은 공통 배율로 줄어든다.
             expect(tab.minWidth - tab.paddingHorizontal * 2).toBeGreaterThanOrEqual(
-              requiredContentWidth,
+              Math.min(requiredContentWidth, tab.maxWidth - tab.paddingHorizontal * 2),
             );
           }
-          if (width === 393) expect(tabs[0].paddingHorizontal).toBe(24);
+          // 393px에선 4자 라벨을 위해 패딩이 24 아래로 양보하되 0은 아니다.
+          if (width === 393) {
+            expect(tabs[0].paddingHorizontal).toBeGreaterThan(0);
+            expect(tabs[0].paddingHorizontal).toBeLessThan(24);
+          }
         };
         // The first paint must fit too, before any text measurement has arrived.
         assertTabSpace();
         await act(async () => {
-          for (const label of ['방', '달력', '집', '마이']) {
+          for (const label of ['방', '달력', '집', '내 정보']) {
             fireEvent(ui.getByText(label), 'layout', {
               nativeEvent: { layout: { x: 0, y: 0, width: 10, height: 18 } },
             });
@@ -161,14 +168,13 @@ describe('BottomNav', () => {
         expect(ui.getByText('방')).toBeTruthy();
         expect(ui.getByText('달력')).toBeTruthy();
         expect(ui.getByText('집')).toBeTruthy();
-        expect(ui.getByText('마이')).toBeTruthy();
+        expect(ui.getByText('내 정보')).toBeTruthy();
         expect(ui.queryByText('나의 방')).toBeNull();
-        expect(ui.queryByText('마이페이지')).toBeNull();
         expect(ui.getByRole('button', { name: '나의 방' }).props.accessibilityState.selected).toBe(
           true,
         );
 
-        for (const label of ['나의 방', '달력', '집', '마이페이지']) {
+        for (const label of ['나의 방', '달력', '집', '내 정보']) {
           await fireEvent.press(ui.getByRole('button', { name: label }));
         }
         expect(onChange.mock.calls).toEqual([['myRoom'], ['calendar'], ['house'], ['myPage']]);
@@ -200,7 +206,7 @@ describe('BottomNav', () => {
     expect(ui.queryByTestId('bottom-nav-badge')).toBeNull();
     await ui.rerender(<BottomNav active="myRoom" onChange={() => {}} badges={{ myPage: true }} />);
     expect(ui.getAllByTestId('bottom-nav-badge')).toHaveLength(1);
-    expect(ui.getByLabelText('마이페이지').props.accessibilityHint).toBe('오늘 미출석');
+    expect(ui.getByLabelText('내 정보').props.accessibilityHint).toBe('오늘 미출석');
   });
 
   describe('떠 있는 알약 (#1049 → #1074 전 플랫폼)', () => {
@@ -214,7 +220,7 @@ describe('BottomNav', () => {
       );
       expect(flat.position).toBe('absolute');
       expect(flat.bottom).toBeGreaterThan(0);
-      expect(getByText('마이')).toBeTruthy();
+      expect(getByText('내 정보')).toBeTruthy();
     });
 
     it('글래스가 가능해도 같은 알약 — 탭 전환은 그대로 동작한다', async () => {
@@ -245,7 +251,7 @@ describe('scrubTarget', () => {
     expect([-30, 90, 100, 150, 175, 900].map((x) => scrubTarget(x, FRAMES3, 3))).toEqual([
       0, 0, 1, 1, 2, 2,
     ]);
-    // 4탭 (#1138): 마지막 경계 255 — 그 너머는 마이페이지.
+    // 4탭 (#1138): 마지막 경계 255 — 그 너머는 내 정보.
     expect([230, 260, 900].map((x) => scrubTarget(x, FRAMES, 4))).toEqual([2, 3, 3]);
   });
   it('rejects missing measurements and invalid coordinates', () => {
