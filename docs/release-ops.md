@@ -30,6 +30,8 @@
     - 토큰은 **EAS 환경**(`preview`·`production`)에 있어야 한다 — GitHub Secrets는 EAS 빌더가 못 본다. 형식은 org auth token(`sntrys_…`, 스코프 `project:releases`·`org:read`)이고, **32자리 hex는 DSN public key라 401이 난다.**
     - 넣는 법(값이 셸 히스토리에 안 남게 `--value` 없이): `npx eas-cli env:set --name SENTRY_AUTH_TOKEN --environment preview --environment production --visibility secret`
 
+- **머지 전 iOS 1.5.0 후보만 만들기**: `store-build`의 기본 `mode=production`은 위 규칙 그대로다. 별도 `mode=testflight-build-only`는 지정 브랜치에서 `platform=ios`, `submit=false`, `expected_source_sha=<해당 브랜치의 전체 40자리 SHA>`로 실행한다. 먼저 기본 `action=inspect`로 기존 CI의 `EXPO_TOKEN`을 이용해 최근 iOS 빌드 식별자·상태·버전·소스·런타임·프로필·채널과 원격 빌드 번호·로컬 지문만 확인한다(빌드 시 testflight 프로필 지문을 별도 확인하며, 토큰·키·산출물 URL은 출력하지 않음). 새 빌드가 승인된 경우에만 `action=build`로 다시 실행하며, 동일 SHA의 최신 `check`·`prebuild`·`ios-plist`·`android-manifest`·`release-smoke` 성공과 고정된 1.5.0/testflight/dev/preview/store 설정을 요구한다. 원격 카운터의 다음 번호를 사용하고 선택 입력 `expected_ios_build`와도 대조한다. 같은 지문의 완료·진행·실패 시도가 있거나 조회가 불완전하면 새 빌드를 거부한다. `eas-deploy-dev`와 직렬화하며, iOS 빌드 1회 완료까지 기다릴 뿐 자동 제출·OTA·production 폴백·자격증명 수정·자동 재시도는 하지 않는다. **이 경로의 성공은 EAS 후보 바이너리 생성이지 TestFlight 배포 완료가 아니다.** 실제 제출과 서버 기능 활성화는 각각의 QA·승인 절차를 별도로 거친다.
+
 - **핫픽스 OTA는 조준 발행** (#815): 이미 나가 있는 설치본에 급히 JS 수정을 보내야 하면 Actions → **hotfix-ota** 를 **그 핫픽스 브랜치에서** 실행한다.
   - **OTA는 채널 + 런타임 지문이 둘 다 맞아야 도달한다.** 정규 경로(`eas-release`)는 "main의 현재 지문 → production"만 쏘므로, 구 스토어 빌드처럼 그 조합 밖에 있는 설치본에는 닿지 않는다.
   - 절차 — ① 목표 설치본이 빌드된 **그 커밋**에서 브랜치를 딴다 ② **JS만** 고친다(`app.json`·`package.json`·`plugins`·`targets`·`.gitignore` 금지 — 하나라도 건드리면 지문이 바뀌어 무용) ③ `hotfix-ota` 실행(채널·플랫폼·목표 런타임 입력) ④ **같은 수정을 dev에도 정식 PR로** 반영.

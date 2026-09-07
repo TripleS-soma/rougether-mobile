@@ -1,4 +1,5 @@
-# 스토어 제출용 빌드 — **main에서만**, 수동 트리거로만 돈다.
+# 스토어 제출용 빌드 — production은 **main에서만**, 수동 트리거로만 돈다.
+# testflight-build-only는 명시한 커밋의 조회/빌드 전용이며 제출·OTA는 하지 않는다.
 #
 # 왜 수동인가: EAS 무료 쿼터(월 30회)를 사람이 통제해야 하고(AGENTS.md 빌드
 # 절약 규칙), 스토어 제출 타이밍은 심사·메타데이터 준비와 묶여 있다.
@@ -13,6 +14,20 @@ name: store-build
 on:
   workflow_dispatch:
     inputs:
+      mode:
+        description: production 스토어 빌드 또는 제출 없는 TestFlight 후보 빌드
+        type: choice
+        options: [production, testflight-build-only]
+        default: production
+      action:
+        description: testflight-build-only 전용 (inspect는 조회만, build는 새 빌드)
+        type: choice
+        options: [inspect, build]
+        default: inspect
+      expected_source_sha:
+        description: 'testflight-build-only 대상 커밋 전체 SHA (40자리, 해당 모드에서 필수)'
+        type: string
+        required: false
       platform:
         description: 빌드할 플랫폼
         type: choice
@@ -31,6 +46,7 @@ on:
 
 jobs:
   build:
+    if: inputs.mode == 'production' || inputs.mode == ''
     runs-on: ubuntu-latest
     concurrency:
       group: store-build
@@ -95,4 +111,43 @@ jobs:
         if: inputs.platform == 'android' || inputs.platform == 'all'
         run: eas build --platform android --profile production --non-interactive --no-wait
         env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+  testflight-build-only:
+    if: inputs.mode == 'testflight-build-only'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      actions: read
+      checks: read
+    concurrency:
+      group: eas-deploy-dev
+      cancel-in-progress: false
+    env:
+      BUILD_MODE: ${{ inputs.mode }}
+      BUILD_ACTION: ${{ inputs.action }}
+      BUILD_PLATFORM: ${{ inputs.platform }}
+      BUILD_SUBMIT: ${{ inputs.submit }}
+      EXPECTED_SOURCE_SHA: ${{ inputs.expected_source_sha }}
+      EXPECTED_IOS_BUILD: ${{ inputs.expected_ios_build }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: 명시한 커밋 및 빌드 전용 설정 확인
+        run: node scripts/check-testflight-build.js validate
+      - run: npm ci
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: iOS 1.5.0 후보 조회 또는 빌드 (제출·OTA 없음)
+        run: node scripts/check-testflight-build.js
+        env:
+          GH_TOKEN: ${{ github.token }}
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
