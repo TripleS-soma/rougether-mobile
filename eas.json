@@ -12,6 +12,9 @@
         "buildType": "apk"
       },
       "environment": "development",
+      "env": {
+        "EXPO_USE_PRECOMPILED_MODULES": "0"
+      },
       "ios": {
         "cocoapods": "1.17.0"
       }
@@ -23,6 +26,9 @@
         "buildType": "apk"
       },
       "environment": "preview",
+      "env": {
+        "EXPO_USE_PRECOMPILED_MODULES": "0"
+      },
       "ios": {
         "cocoapods": "1.17.0"
       }
@@ -34,6 +40,9 @@
         "buildType": "app-bundle"
       },
       "environment": "production",
+      "env": {
+        "EXPO_USE_PRECOMPILED_MODULES": "0"
+      },
       "ios": {
         "cocoapods": "1.17.0"
       }
@@ -45,7 +54,10 @@
         "distribution": "store",
         "cocoapods": "1.17.0"
       },
-      "environment": "preview"
+      "environment": "preview",
+      "env": {
+        "EXPO_USE_PRECOMPILED_MODULES": "0"
+      }
     }
   },
   "submit": {
