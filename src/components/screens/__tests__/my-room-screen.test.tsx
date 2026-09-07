@@ -47,7 +47,9 @@ describe('MyRoomScreen', () => {
       />,
     );
     expect(ui.queryByLabelText('방')).toBeNull();
-    expect(ui.getByText('달력')).toBeTruthy();
+    // 상단 '달력' 알약은 없다 — 하단 탭이 이미 이름을 말한다.
+    expect(ui.queryByText('달력')).toBeNull();
+    expect(ui.queryByTestId('my-room-chrome')).toBeNull();
     expect(ui.getByText('이 날의 할 일')).toBeTruthy();
     await fireEvent.press(ui.getByLabelText('이 날에 루틴 추가'));
     expect(onAddRoutineForDate).toHaveBeenCalledWith(TODAY);
