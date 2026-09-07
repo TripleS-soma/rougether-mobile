@@ -1,6 +1,6 @@
 import { act, fireEvent, render } from '@testing-library/react-native';
 import { DeviceEventEmitter, Text } from 'react-native';
-import { State } from 'react-native-gesture-handler';
+import { type PanGesture, PointerType, State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 import * as Reanimated from 'react-native-reanimated';
 
@@ -43,6 +43,98 @@ const fling = (translationX: number, velocityX = 0) =>
       { state: State.END, translationX, translationY: 0, velocityX },
     ]),
   );
+
+function touchEvent(pan: PanGesture, x: number, y: number, fingers = 1) {
+  const allTouches = Array.from({ length: fingers }, (_, id) => ({
+    id,
+    x: x + id * 20,
+    y,
+    absoluteX: x + id * 20,
+    absoluteY: y,
+  }));
+  return {
+    handlerTag: pan.handlerTag,
+    numberOfTouches: fingers,
+    state: State.BEGAN,
+    eventType: 2 as const,
+    allTouches,
+    changedTouches: allTouches,
+    pointerType: PointerType.TOUCH,
+  };
+}
+
+// These exercise worklet decisions, not UIKit's recognizer arbitration.
+describe('TabPager direction handoff (#1150)', () => {
+  it.each([
+    [4, 5, false],
+    [20, 16, false],
+    [-40, 37, false],
+    [4, 13, true],
+    [-10, -18, true],
+  ])('move (%i, %i) yields to vertical scroll: %s', async (dx, dy, yields) => {
+    await renderPager(1);
+    const pan = getByGestureTestId('tab-pager-pan') as PanGesture;
+    const manager = {
+      handlerTag: pan.handlerTag,
+      begin: jest.fn(),
+      activate: jest.fn(),
+      fail: jest.fn(),
+      end: jest.fn(),
+    };
+    pan.handlers.onTouchesDown?.(touchEvent(pan, 100, 200), manager);
+    pan.handlers.onTouchesMove?.(touchEvent(pan, 100 + dx, 200 + dy), manager);
+    expect(manager.fail).toHaveBeenCalledTimes(yields ? 1 : 0);
+  });
+
+  it('keeps a claimed horizontal swipe until release, then decides the next touch afresh', async () => {
+    await renderPager(1);
+    const pan = getByGestureTestId('tab-pager-pan') as PanGesture;
+    const manager = {
+      handlerTag: pan.handlerTag,
+      begin: jest.fn(),
+      activate: jest.fn(),
+      fail: jest.fn(),
+      end: jest.fn(),
+    };
+    pan.handlers.onTouchesDown?.(touchEvent(pan, 100, 200), manager);
+    // fireGestureHandler appends END, so begin the active interval directly.
+    pan.handlers.onStart?.({} as Parameters<NonNullable<typeof pan.handlers.onStart>>[0]);
+    pan.handlers.onTouchesMove?.(touchEvent(pan, 140, 290), manager);
+    expect(manager.fail).not.toHaveBeenCalled();
+    await fling(-180);
+    pan.handlers.onTouchesDown?.(touchEvent(pan, 100, 200), manager);
+    pan.handlers.onTouchesMove?.(touchEvent(pan, 102, 220), manager);
+    expect(manager.fail).toHaveBeenCalledTimes(1);
+  });
+
+  it('yields immediately for pinch or a house lock, and accepts a new touch after unlock', async () => {
+    const lock = { value: false } as Reanimated.SharedValue<boolean>;
+    await render(
+      <TabPager index={1} onIndexChange={jest.fn()} lock={lock}>
+        <Text>나의 방</Text>
+        <Text>집</Text>
+        <Text>마이페이지</Text>
+      </TabPager>,
+    );
+    const pan = getByGestureTestId('tab-pager-pan') as PanGesture;
+    const manager = {
+      handlerTag: pan.handlerTag,
+      begin: jest.fn(),
+      activate: jest.fn(),
+      fail: jest.fn(),
+      end: jest.fn(),
+    };
+    pan.handlers.onTouchesDown?.(touchEvent(pan, 100, 200, 2), manager);
+    expect(manager.fail).toHaveBeenCalledTimes(1);
+    lock.value = true;
+    pan.handlers.onTouchesMove?.(touchEvent(pan, 150, 200), manager);
+    expect(manager.fail).toHaveBeenCalledTimes(2);
+    lock.value = false;
+    pan.handlers.onTouchesDown?.(touchEvent(pan, 100, 200), manager);
+    pan.handlers.onTouchesMove?.(touchEvent(pan, 150, 200), manager);
+    expect(manager.fail).toHaveBeenCalledTimes(2);
+  });
+});
 
 describe('TabPager (#563)', () => {
   it.each([

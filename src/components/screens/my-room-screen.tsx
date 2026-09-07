@@ -118,6 +118,13 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
     markedTodoDates?: ReadonlySet<string>;
     /** 달력에서 보이는 달이 바뀔 때 (#838) — 부모가 그 달 개수를 받아온다. */
     onCalendarMonthChange?: (yearMonth: string) => void;
+    /**
+     * 보여줄 뷰 (#1138) — 셸이 방 탭엔 'room', 달력 탭엔 'calendar'로 고정한다.
+     * 미지정이면(Dev 갤러리·단독 테스트) 방/달력 알약이 남아 스스로 전환한다.
+     */
+    view?: 'room' | 'calendar';
+    /** 달력 '이 날의 할 일' 옆 ＋ 루틴 — 그 날짜를 시작일로 루틴 추가 (#1138). */
+    onAddRoutineForDate?: (date: string) => void;
     /** Room occupant's display name (header title becomes "{userName}의 방"). */
     userName?: string;
     /** Consecutive-day streak shown in the header. */
@@ -259,6 +266,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   onCleanCobweb,
   markedTodoDates,
   onCalendarMonthChange,
+  view,
+  onAddRoutineForDate,
   placements = [],
   furniture,
   wallpapers,
@@ -506,7 +515,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // 스와이프는 전부 셸 탭 페이저 몫이고, 달력도 monthSwipe=false를
   // 유지해 가로 제스처를 만들지 않는다(월 이동은 ‹ › 버튼).
   // 주간회고는 탭이 아니라 설정·배너에서 여는 화면이 됐다 (#1056).
-  const [tab, setTab] = useState<'room' | 'calendar'>('room');
+  // 셸이 view를 주면 그게 곧 탭 (#1138); 없으면 알약으로 스스로 전환한다.
+  const [ownTab, setTab] = useState<'room' | 'calendar'>('room');
+  const tab = view ?? ownTab;
   const [selectedDate, setSelectedDate] = useState(() => todayIso());
   const dateRoutines = useMemo(
     () => routines.filter((r) => isScheduledOn(r, selectedDate)),
@@ -1227,11 +1238,24 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                 <Text style={[Typography.h3, styles.calListTitle, { color: t.text }]}>
                   이 날의 할 일
                 </Text>
-                {calDayTotal > 0 ? (
-                  <Text style={[Typography.label, { color: t.primaryText }]}>
-                    {calDayDone} / {calDayTotal}
-                  </Text>
-                ) : null}
+                <View style={styles.sectionHeadRight}>
+                  {calDayTotal > 0 ? (
+                    <Text style={[Typography.label, { color: t.primaryText }]}>
+                      {calDayDone} / {calDayTotal}
+                    </Text>
+                  ) : null}
+                  {/* 오늘 목록과 같은 ＋ 루틴 (#1138) — 고른 날짜가 시작일. */}
+                  {onAddRoutineForDate ? (
+                    <Pressable
+                      onPress={() => onAddRoutineForDate(selectedDate)}
+                      accessibilityRole="button"
+                      accessibilityLabel="이 날에 루틴 추가"
+                      style={[styles.addPill, { backgroundColor: t.primary }]}>
+                      <Icon name="add" size={14} color={t.onPrimary} />
+                      <Text style={[Typography.label, { color: t.onPrimary }]}>루틴</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
               </View>
               {calDayTotal > 0 ? (
                 <SpringProgressBar
@@ -1296,39 +1320,42 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             ellipsizeMode="middle"
             adjustsFontSizeToFit
             minimumFontScale={0.75}>
-            {userName ? `${userName}의 방` : '내 방'}
+            {view === 'calendar' ? '달력' : userName ? `${userName}의 방` : '내 방'}
           </Text>
         </GlassSurface>
-        <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.segment}>
-          {(
-            [
-              ['room', '방'],
-              ['calendar', '달력'],
-            ] as const
-          ).map(([key, label]) => {
-            const active = tab === key;
-            const btn = (
-              <Pressable
-                onPress={() => setTab(key)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                accessibilityLabel={label}
-                style={[styles.segmentItem, active && { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: active ? t.primaryText : t.textMuted }]}>
-                  {label}
-                </Text>
-              </Pressable>
-            );
-            // 달력 탭은 코치마크 대상 (#351).
-            return key === 'calendar' ? (
-              <CoachTarget key={key} id="room-tab-calendar">
-                {btn}
-              </CoachTarget>
-            ) : (
-              <View key={key}>{btn}</View>
-            );
-          })}
-        </GlassSurface>
+        {/* 방/달력 알약은 view 미지정(단독 모드)에서만 — 앱에선 달력이 하단 탭 (#1138). */}
+        {view === undefined ? (
+          <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.segment}>
+            {(
+              [
+                ['room', '방'],
+                ['calendar', '달력'],
+              ] as const
+            ).map(([key, label]) => {
+              const active = tab === key;
+              const btn = (
+                <Pressable
+                  onPress={() => setTab(key)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={label}
+                  style={[styles.segmentItem, active && { backgroundColor: t.surfaceMuted }]}>
+                  <Text style={[Typography.label, { color: active ? t.primaryText : t.textMuted }]}>
+                    {label}
+                  </Text>
+                </Pressable>
+              );
+              // 달력 탭은 코치마크 대상 (#351).
+              return key === 'calendar' ? (
+                <CoachTarget key={key} id="room-tab-calendar">
+                  {btn}
+                </CoachTarget>
+              ) : (
+                <View key={key}>{btn}</View>
+              );
+            })}
+          </GlassSurface>
+        ) : null}
       </View>
 
       {/* 보상 알약 (#1055) — 완료 보상이 확인된 순간에만 크롬 아래 가운데에 떠서

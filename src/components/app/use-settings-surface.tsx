@@ -30,6 +30,7 @@ import { useBugReports } from '@/hooks/use-bug-reports';
 import { useInvites } from '@/hooks/use-invites';
 import { useNotificationSettings } from '@/hooks/use-notification-settings';
 import { useBrandTheme } from '@/hooks/use-tokens';
+import { useStartTab } from '@/hooks/use-start-tab';
 import {
   clearPendingFriendInviteCode,
   subscribePendingFriendInviteCode,
@@ -84,6 +85,8 @@ export function useSettingsSurface({
 }) {
   const { themeId, setThemeId, mode: themeMode, setMode: setThemeMode, fontId, setFontId } = useBrandTheme(); // prettier-ignore
   const { show: toast } = useToast();
+  // 시작 화면 (#1139) — 읽고 쓴다. 앱 루트는 따로 읽어 첫 화면을 정한다.
+  const startTab = useStartTab();
 
   // 폰트·테마는 적용돼도 화면이 조용히 바뀔 뿐이라 "눌린 건가?" 싶다 — 바뀐
   // 이름을 토스트로 확인시킨다 (#972). **같은 값을 다시 고르면 안 띄운다**:
@@ -281,6 +284,8 @@ export function useSettingsSurface({
 
   /** 설정 서브화면 prop — `<SettingsScreen {...settingsProps} />` (테스트 하네스용 노출). */
   const settingsProps = {
+    startTab: startTab.tab ?? undefined,
+    onChangeStartTab: startTab.set,
     themeMode,
     onChangeThemeMode: setThemeMode,
     themeId,

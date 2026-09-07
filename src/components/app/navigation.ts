@@ -6,6 +6,7 @@ import type { NavTab } from '@/components/ui/bottom-nav';
  */
 export type Screen =
   | 'myRoom'
+  | 'calendar'
   | 'decor'
   | 'routineManage'
   | 'addRoutine'
@@ -34,6 +35,8 @@ export type Screen =
 /** Which bottom-nav tab is active for each screen, or null to hide the nav. */
 export const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   myRoom: 'myRoom',
+  // 달력 탭 (#1138) — 나의 방의 달력 뷰가 독립 탭으로.
+  calendar: 'calendar',
   decor: null,
   routineManage: null,
   addRoutine: null,
@@ -63,12 +66,13 @@ export const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
 
 export const SCREEN_FOR_TAB: Record<NavTab, Screen> = {
   myRoom: 'myRoom',
+  calendar: 'calendar',
   house: 'house',
   myPage: 'myPage',
 };
 
 /** 하단 탭의 페이지 순서 (#563) — 페이저 인덱스 ↔ 탭 매핑. */
-export const NAV_ORDER: NavTab[] = ['myRoom', 'house', 'myPage'];
+export const NAV_ORDER: NavTab[] = ['myRoom', 'calendar', 'house', 'myPage'];
 
 /**
  * Where the Android hardware back button lands from each screen. `null` on
@@ -77,6 +81,7 @@ export const NAV_ORDER: NavTab[] = ['myRoom', 'house', 'myPage'];
  */
 export const BACK_SCREEN: Record<Screen, Screen | null> = {
   myRoom: null,
+  calendar: 'myRoom',
   decor: 'myRoom',
   routineManage: 'myRoom',
   addRoutine: 'routineManage',

@@ -38,6 +38,17 @@ describe('SettingsScreen', () => {
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
+  it('시작 화면 — 4탭 라디오, 고르면 onChangeStartTab (#1139)', async () => {
+    const onChangeStartTab = jest.fn();
+    const ui = await render(
+      <SettingsScreen startTab="house" onChangeStartTab={onChangeStartTab} />,
+    );
+    expect(ui.getByRole('radio', { name: '시작 화면 집', checked: true })).toBeTruthy();
+    expect(ui.getByRole('radio', { name: '시작 화면 달력', checked: false })).toBeTruthy();
+    await fireEvent.press(ui.getByLabelText('시작 화면 마이페이지'));
+    expect(onChangeStartTab).toHaveBeenCalledWith('myPage');
+  });
+
   it('changes the dark mode preference', async () => {
     const onChangeThemeMode = jest.fn();
     const { getByText, getByLabelText } = await render(

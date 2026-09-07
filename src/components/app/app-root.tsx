@@ -25,6 +25,8 @@ import { StarterRoutineGate } from '@/components/app/starter-routine-gate';
 import { OnboardingScreen, type OnboardingGoal } from '@/components/screens/onboarding-screen';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { useAuth } from '@/hooks/use-auth';
+import { useStartTab } from '@/hooks/use-start-tab';
+import { SCREEN_FOR_TAB } from '@/components/app/navigation';
 import { resetOnboardingMissions } from '@/hooks/use-onboarding-missions';
 import { track } from '@/lib/analytics';
 import { loadOnboarding, resetOnboarding, saveOnboarding } from '@/lib/onboarding-store';
@@ -59,6 +61,8 @@ export function AppRoot() {
   const [starterProgress, setStarterProgress] = useState<StarterRoutineProgress | null>(null);
   const userId = status === 'authed' ? getSessionUserId() : undefined;
   const [loadedUserId, setLoadedUserId] = useState<number | undefined | null>(null);
+  // 시작 화면 설정 (#1139) — 셸의 첫 화면. 읽기 전엔 부팅 대기.
+  const { tab: startTab } = useStartTab();
 
   useEffect(() => {
     if (status !== 'authed') return;
@@ -126,7 +130,8 @@ export function AppRoot() {
 
   // 두 관문(세션 복원 → 온보딩 플래그)이 끝나야 그릴 수 있다. 둘 다 통과하면
   // 스플래시에 알린다 (#847) — 오버레이가 시간이 아니라 이 신호를 기다린다.
-  const booting = status === 'loading' || (status === 'authed' && onboarded === null);
+  const booting =
+    status === 'loading' || (status === 'authed' && (onboarded === null || startTab === null));
   if (!booting) markAppReady();
 
   // 평소엔 스플래시 오버레이가 이 구간을 덮는다. 상한(4초)을 넘겨 오버레이가
@@ -136,7 +141,7 @@ export function AppRoot() {
   // Not signed in → send to the login route.
   if (status === 'guest') return <Redirect href="/login" />;
 
-  if (onboarded === null || loadedUserId !== userId) return <BootFallback />;
+  if (onboarded === null || loadedUserId !== userId || startTab === null) return <BootFallback />;
 
   if (!onboarded) {
     return (
@@ -200,6 +205,7 @@ export function AppRoot() {
 
   return (
     <AppShell
+      initialScreen={SCREEN_FOR_TAB[startTab]}
       characterId={characterId}
       characterFrames={characterFrames}
       startMissions={justOnboarded}

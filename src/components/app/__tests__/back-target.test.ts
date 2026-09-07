@@ -6,6 +6,9 @@ describe('backTargetFor (#564)', () => {
   it('서브화면은 백맵 목적지로', () => {
     // 설정은 마이페이지의 서브화면 (#1088) — 디자인·알림 화면은 설정으로, 계정·콘텐츠성 화면은 마이페이지로.
     expect(backTargetFor('settings', 'routineManage', false)).toBe('myPage');
+    // 달력 탭(#1138)의 백은 나의 방, 달력에서 연 루틴 추가는 달력으로.
+    expect(backTargetFor('calendar', 'routineManage', false)).toBe('myRoom');
+    expect(backTargetFor('addRoutine', 'calendar', false)).toBe('calendar');
     expect(backTargetFor('theme', 'routineManage', false)).toBe('settings');
     expect(backTargetFor('help', 'routineManage', false)).toBe('myPage');
     expect(backTargetFor('profileEdit', 'routineManage', false)).toBe('myPage');
