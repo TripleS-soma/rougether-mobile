@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { HousePreviewFrame } from '@/components/room/house-preview-frame';
 import type { MemberRoomPreview } from '@/components/room/room';
@@ -37,7 +38,7 @@ const DEMO_ROOMS: MemberRoomPreview[] = Array.from({ length: 6 }, () => ({
 const DEMO_PREVIEWS = Object.fromEntries(DEMO_ROOMS.map((room, index) => [index + 1, room]));
 
 /** Fixture-only harness: no API calls, catalog mutation, or seat persistence. */
-export function StackedHouseDemo() {
+export function StackedHouseDemo({ viewportOnly = false }: { viewportOnly?: boolean }) {
   const t = useTokens();
   const Typography = useTypography();
   const [themeIndex, setThemeIndex] = useState(0);
@@ -67,6 +68,26 @@ export function StackedHouseDemo() {
     ],
     [theme, capacity, t.surfaceMuted],
   );
+  const screen = (
+    <HouseScreen
+      houses={houses}
+      roomPreviews={DEMO_PREVIEWS}
+      wallpapers={DEMO_WALLS}
+      floors={DEMO_FLOORS}
+      furniture={DEMO_FURNITURE}
+      enabled={enabled}
+      previewTheme={theme.id}
+      onVisitFriend={(friend) => setVisited(friend.name)}
+    />
+  );
+  if (viewportOnly) {
+    // iPhone safe-area fixture. The screen reserves the actual pill-nav height.
+    return (
+      <SafeAreaInsetsContext.Provider value={{ top: 59, bottom: 34, left: 0, right: 0 }}>
+        {screen}
+      </SafeAreaInsetsContext.Provider>
+    );
+  }
   return (
     <View style={styles.root}>
       <Text style={[Typography.supporting, { color: t.text }]}>
@@ -92,18 +113,7 @@ export function StackedHouseDemo() {
         <Text style={[Typography.supporting, { color: t.text }]}>{visited} 방문 클릭 확인</Text>
       ) : null}
       {detail ? (
-        <View style={styles.screen}>
-          <HouseScreen
-            houses={houses}
-            roomPreviews={DEMO_PREVIEWS}
-            wallpapers={DEMO_WALLS}
-            floors={DEMO_FLOORS}
-            furniture={DEMO_FURNITURE}
-            enabled={enabled}
-            previewTheme={theme.id}
-            onVisitFriend={(friend) => setVisited(friend.name)}
-          />
-        </View>
+        <View style={styles.screen}>{screen}</View>
       ) : (
         <HousePreviewFrame
           coverImageKey={theme.legacyKey ?? undefined}

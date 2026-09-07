@@ -310,6 +310,11 @@ function WheelPickerDemo() {
 
 export const galleryEntries: GalleryEntry[] = [
   {
+    name: 'HouseSixSeatViewport',
+    description: '6인 집 최초 구도 · viewport=1로 화면 전체와 안전영역 검증 (#1163).',
+    render: () => <StackedHouseDemo viewportOnly />,
+  },
+  {
     name: 'StackedHouseFrames',
     description: '세로형 집 10테마 · 2/3/4/6인 · 기존형 복귀 · 방 방문/자리 교환 검증 (#1077).',
     render: () => <StackedHouseDemo />,

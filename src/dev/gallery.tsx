@@ -14,12 +14,20 @@ import { useFontEmphasis, useTypography } from '@/hooks/use-tokens';
  * it together with the registry; the /dev route lazy-requires it behind __DEV__.
  */
 export function DevGallery() {
-  const { entry: rawEntry } = useLocalSearchParams<{ entry?: string | string[] }>();
+  const { entry: rawEntry, viewport } = useLocalSearchParams<{
+    entry?: string | string[];
+    viewport?: string;
+  }>();
   const entry = Array.isArray(rawEntry) ? rawEntry[0] : rawEntry;
   const entries = entry ? galleryEntries.filter((item) => item.name === entry) : galleryEntries;
   const theme = useTheme();
   const Typography = useTypography();
   const emph = useFontEmphasis();
+  // Full-size screen fixtures must measure the device viewport, not a padded
+  // card inside the gallery's outer ScrollView (#1163).
+  if (viewport === '1' && entries.length === 1) {
+    return <View style={styles.flex}>{entries[0].render()}</View>;
+  }
   return (
     <View style={[styles.flex, { backgroundColor: theme.background }]}>
       <SafeAreaView style={styles.flex} edges={['top']}>
