@@ -1,4 +1,6 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
+import { State } from 'react-native-gesture-handler';
+import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { RoutineMenuSheet } from '@/components/screens/sheets/routine-menu-sheet';
 import type { Routine } from '@/constants/routines';
@@ -26,6 +28,43 @@ async function renderSheet(
 }
 
 describe('RoutineMenuSheet', () => {
+  it.each([
+    [140, 0, State.END, true],
+    [24, 800, State.END, true],
+    [24, 200, State.END, false],
+    [-24, 800, State.END, false],
+    [140, 800, State.CANCELLED, false],
+    [140, 800, State.FAILED, false],
+  ])('downward drag %ipx at %ipx/s ending in %i closes: %s', async (dy, vy, state, closes) => {
+    const { props } = await renderSheet(ROUTINE);
+    await act(async () => {
+      fireGestureHandler(getByGestureTestId('bottom-sheet-dismiss-pan'), [
+        { state: State.BEGAN },
+        { state: State.ACTIVE, translationY: 0 },
+        { state: State.ACTIVE, translationY: dy },
+        { state, translationY: dy, velocityY: vy },
+      ]);
+    });
+    expect(props.onClose).toHaveBeenCalledTimes(closes ? 1 : 0);
+    expect(props.onDelete).not.toHaveBeenCalled();
+    expect(props.onToggleComplete).not.toHaveBeenCalled();
+    expect(props.onEdit).not.toHaveBeenCalled();
+  });
+
+  it('accepts a new dismiss drag after cancellation', async () => {
+    const { props } = await renderSheet(TODO);
+    await act(async () => {
+      for (const state of [State.CANCELLED, State.END]) {
+        fireGestureHandler(getByGestureTestId('bottom-sheet-dismiss-pan'), [
+          { state: State.BEGAN },
+          { state: State.ACTIVE, translationY: 0 },
+          { state, translationY: 120, velocityY: 0 },
+        ]);
+      }
+    });
+    expect(props.onClose).toHaveBeenCalledTimes(1);
+  });
+
   it('루틴은 이름 변경과 루틴 수정을 모두 보여준다', async () => {
     const { getByText } = await renderSheet(ROUTINE);
     expect(getByText('이름 변경')).toBeTruthy();
