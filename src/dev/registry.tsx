@@ -50,6 +50,7 @@ import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { CATEGORY_ICON_GEOMETRY, CategoryIcon } from '@/components/ui/category-icon';
 import { Button } from '@/components/ui/button';
+import { FurnitureStudioScreen } from '@/components/screens/furniture-studio-screen';
 import { AttendanceSheet } from '@/components/screens/sheets/attendance-sheet';
 import { ActivityStrip } from '@/components/screens/house/activity-strip';
 import { shiftIso, todayIso } from '@/utils/datetime';
@@ -168,31 +169,34 @@ function RecommendationSectionDemo() {
 function AttendanceSheetDemo() {
   const [open, setOpen] = useState(false);
   const [streak, setStreak] = useState(3);
-  // 갤러리에서는 오늘 출석 잠금을 걸지 않는다 — 연속으로 눌러 10일차까지
-  // 걸어가며 보너스 링·트로피 리빌까지 확인하기 위해서다. 실제 시트는
+  // 갤러리에서는 오늘 출석 잠금을 걸지 않는다 — 연속으로 눌러 7일차까지
+  // 걸어가며 보너스 링·생성권 완료 안내까지 확인하기 위해서다. 실제 시트는
   // checkedInToday가 true가 되면 버튼이 잠긴다.
   const today = false;
   const status = {
     eventId: 7,
-    code: 'ATTENDANCE_10D_2026',
-    title: '10일 연속 출석',
+    code: 'ATTENDANCE_7D_2026',
+    title: '7일 연속 출석',
     startsOn: '2026-08-16',
     endsOn: '2026-09-14',
-    targetDays: 10,
+    targetDays: 7,
     currentStreak: streak,
     checkedInToday: today,
-    completed: streak >= 10,
+    completed: streak >= 7,
     checkInDates: [],
-    dailyRewards: Array.from({ length: 10 }, (_, i) => ({
+    dailyRewards: Array.from({ length: 7 }, (_, i) => ({
       day: i + 1,
       coinAmount: i + 1 === 5 ? 50 : 30,
-      furnitureReward: i + 1 === 10,
+      furnitureReward: false,
+      generationCreditAmount: i + 1 === 7 ? 1 : 0,
       claimed: i + 1 <= streak,
     })),
     reward: {
-      itemId: 42,
-      name: '10일 출석 기념 트로피',
-      assetKey: 'items/events/attendance-10-day-trophy.png',
+      itemId: null,
+      type: 'GENERATION_CREDIT' as const,
+      generationCreditAmount: 1,
+      name: 'AI 가구 생성권',
+      assetKey: null,
       userItemId: null,
       received: false,
     },
@@ -213,13 +217,13 @@ function AttendanceSheetDemo() {
         onClose={() => setOpen(false)}
         status={status}
         onCheckIn={async () => {
-          const next = Math.min(streak + 1, 10);
+          const next = Math.min(streak + 1, 7);
           setStreak(next);
           return {
             newCheckIn: true,
             coinRewardAmount: next === 5 ? 50 : 30,
             coinBalance: 190,
-            rewardGrantedNow: next >= 10,
+            rewardGrantedNow: next >= 7,
             status: { ...status, currentStreak: next, checkedInToday: true },
           };
         }}
@@ -308,6 +312,18 @@ function WheelPickerDemo() {
 }
 
 export const galleryEntries: GalleryEntry[] = [
+  {
+    name: 'FurnitureStudio',
+    description: '7일 출석 생성권으로 사진 속 가구 만들기 (#1173).',
+    render: () => (
+      <FurnitureStudioScreen
+        balance={{ available: 1, reserved: 0 }}
+        jobs={[]}
+        photo={null}
+        onAttendance={() => {}}
+      />
+    ),
+  },
   {
     name: 'HouseSixSeatViewport',
     description: '6인 집 최초 구도 · viewport=1로 화면 전체와 안전영역 검증 (#1163).',
@@ -1028,7 +1044,7 @@ export const galleryEntries: GalleryEntry[] = [
   {
     name: 'AttendanceSheet',
     description:
-      '연속 출석 시트 (#851) — 눌러서 도장·코인·카운트업 연출 확인. 10일차엔 트로피 리빌.',
+      '연속 출석 시트 (#851) — 눌러서 도장·코인·카운트업 연출 확인. 7일차엔 AI 가구 생성권.',
     render: () => <AttendanceSheetDemo />,
   },
   {

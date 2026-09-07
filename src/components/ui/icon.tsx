@@ -21,6 +21,8 @@ const ICONS = {
   members: 'people',
   kebab: 'ellipsis-vertical',
   gift: 'gift',
+  sparkles: 'sparkles-outline',
+  ticket: 'ticket-outline',
   trash: 'trash-outline',
   check: 'checkmark',
   copy: 'copy-outline',

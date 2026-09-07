@@ -16,14 +16,17 @@ export type AttendanceDailyReward = {
   day: number;
   coinAmount: number;
   furnitureReward: boolean;
+  generationCreditAmount?: number;
   /** 현재 연속 출석 기준으로 이 일차까지 도달했는지. */
   claimed: boolean;
 };
 
 export type AttendanceReward = {
-  itemId: number;
+  itemId: number | null;
+  type?: 'FURNITURE' | 'GENERATION_CREDIT';
+  generationCreditAmount?: number;
   name: string;
-  assetKey: string;
+  assetKey: string | null;
   userItemId: number | null;
   received: boolean;
 };
