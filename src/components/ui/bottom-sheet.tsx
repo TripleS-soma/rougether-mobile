@@ -12,6 +12,7 @@ import {
   Easing,
   Modal,
   PanResponder,
+  Platform,
   Pressable,
   StyleSheet,
   type StyleProp,
@@ -19,6 +20,7 @@ import {
   View,
   type ViewStyle,
 } from 'react-native';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { Overlay } from '@/constants/theme';
 import { useAnimatedValue, useConstant, useLatestRef } from '@/hooks/use-stable-value';
@@ -111,6 +113,8 @@ export type BottomSheetProps = {
    * 세로 제스처를 쓰는 자식은 `SheetDragExclude`로 감싼다. 'header'는 종전 #514.
    */
   dragScope?: BottomSheetDragScope;
+  /** Native card pan for action sheets without scrollable children or SheetDragExclude. */
+  nativeDrag?: boolean;
   children: ReactNode;
 };
 
@@ -124,6 +128,7 @@ export function BottomSheet({
   onClose,
   cardStyle,
   dragScope = 'card',
+  nativeDrag = false,
   children,
 }: BottomSheetProps) {
   const { height: windowH } = useWindowDimensions();
@@ -140,6 +145,35 @@ export function BottomSheet({
   const dragScopeRef = useLatestRef(dragScope);
   // 이 터치가 SheetDragExclude 안에서 시작했는가 (#1132) — 자식이 true, 카드가 false.
   const excludedRef = useRef(false);
+  const useNativeDrag = nativeDrag && dragScope === 'card' && Platform.OS !== 'web';
+  const resetDrag = useConstant(() => () => {
+    Animated.spring(dragY, {
+      toValue: 0,
+      friction: 9,
+      tension: 70,
+      useNativeDriver: true,
+    }).start();
+  });
+  const nativePan = useConstant(() =>
+    Gesture.Pan()
+      .withTestId('bottom-sheet-dismiss-pan')
+      .maxPointers(1)
+      .activeOffsetY(6)
+      .failOffsetY(-6)
+      // Keep RN Animated's existing entrance/exit animation. Recognition and
+      // cancellation of child button touches happen natively; updates use JS.
+      .runOnJS(true)
+      .onStart(() => dragY.stopAnimation())
+      .onUpdate((e) => dragY.setValue(Math.max(0, e.translationY)))
+      .onEnd((e, success) => {
+        // RNGH reports px/s; the existing dismissal helper expects px/ms.
+        if (success && e.translationY > 0 && shouldDismiss(e.translationY, e.velocityY / 1000)) {
+          onCloseRef.current?.();
+        } else {
+          resetDrag();
+        }
+      }),
+  );
 
   useEffect(() => {
     if (visible) {
@@ -180,22 +214,10 @@ export function BottomSheet({
         if (shouldDismiss(g.dy, g.vy)) {
           onCloseRef.current?.();
         } else {
-          Animated.spring(dragY, {
-            toValue: 0,
-            friction: 9,
-            tension: 70,
-            useNativeDriver: true,
-          }).start();
+          resetDrag();
         }
       },
-      onPanResponderTerminate: () => {
-        Animated.spring(dragY, {
-          toValue: 0,
-          friction: 9,
-          tension: 70,
-          useNativeDriver: true,
-        }).start();
-      },
+      onPanResponderTerminate: resetDrag,
     }),
   );
 
@@ -211,42 +233,50 @@ export function BottomSheet({
     dragY,
   );
 
-  // 투명 Modal 위에 올려 탭바까지 덮는다 — 애니메이션은 직접 재생하므로
-  // Modal 기본 전환은 끈다.
+  const card = (
+    <Animated.View
+      {...(useNativeDrag ? {} : pan.panHandlers)}
+      onLayout={(e) => {
+        setCardH(e.nativeEvent.layout.height);
+        cardTopRef.current = e.nativeEvent.layout.y;
+      }}
+      onTouchEnd={() => {
+        excludedRef.current = false;
+      }}
+      onTouchCancel={() => {
+        excludedRef.current = false;
+      }}
+      style={[cardStyle, { transform: [{ translateY }] }]}
+      testID="bottom-sheet-card">
+      <SheetDragContext.Provider value={excludedRef}>{children}</SheetDragContext.Provider>
+    </Animated.View>
+  );
+  const overlay = (
+    <Animated.View style={styles.overlay} testID="bottom-sheet">
+      <Animated.View style={[styles.backdrop, { opacity: progress }]} />
+      <Pressable
+        style={StyleSheet.absoluteFill}
+        onPress={onClose}
+        accessibilityRole="button"
+        accessibilityLabel="시트 닫기"
+      />
+      {useNativeDrag ? <GestureDetector gesture={nativePan}>{card}</GestureDetector> : card}
+    </Animated.View>
+  );
+
   return (
     <Modal transparent visible statusBarTranslucent animationType="none" onRequestClose={onClose}>
-      <Animated.View style={styles.overlay} testID="bottom-sheet">
-        <Animated.View style={[styles.backdrop, { opacity: progress }]} />
-        <Pressable
-          style={StyleSheet.absoluteFill}
-          onPress={onClose}
-          accessibilityRole="button"
-          accessibilityLabel="시트 닫기"
-        />
-        <Animated.View
-          {...pan.panHandlers}
-          onLayout={(e) => {
-            setCardH(e.nativeEvent.layout.height);
-            cardTopRef.current = e.nativeEvent.layout.y;
-          }}
-          // 자식(SheetDragExclude)의 onTouchStart가 먼저 돌고 여기로 버블링한다 —
-          // 끝날 때 카드에서 플래그를 닫는다.
-          onTouchEnd={() => {
-            excludedRef.current = false;
-          }}
-          onTouchCancel={() => {
-            excludedRef.current = false;
-          }}
-          style={[cardStyle, { transform: [{ translateY }] }]}
-          testID="bottom-sheet-card">
-          <SheetDragContext.Provider value={excludedRef}>{children}</SheetDragContext.Provider>
-        </Animated.View>
-      </Animated.View>
+      {useNativeDrag ? (
+        <GestureHandlerRootView style={styles.gestureRoot}>{overlay}</GestureHandlerRootView>
+      ) : (
+        overlay
+      )}
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  gestureRoot: { flex: 1 },
   overlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'flex-end',

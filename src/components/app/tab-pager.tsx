@@ -19,8 +19,6 @@ export const PAGE_SNAP_RATIO = 0.3;
 export const PAGE_FLING_VELOCITY = 500;
 /** 페이지 정착 애니메이션 길이(ms) — 셸 화면 전환(340ms)과 같은 결. */
 const SETTLE_MS = 260;
-/** 끝 페이지 밖으로 끌 때의 저항 배율. */
-const EDGE_RESISTANCE = 0.25;
 /** Release vertical scrolls promptly instead of waiting for the 24px page claim. */
 const VERTICAL_SCROLL_SLOP = 12;
 
@@ -159,10 +157,17 @@ export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps
             // that relation, UIScrollView can cancel the pager before 24px even
             // when its content cannot actually scroll horizontally (#1150).
             const touch = e.allTouches[0];
-            const dx = Math.abs(touch.absoluteX - touchStart.value.x);
+            const translationX = touch.absoluteX - touchStart.value.x;
+            const dx = Math.abs(translationX);
             const dy = Math.abs(touch.absoluteY - touchStart.value.y);
             if (dy > VERTICAL_SCROLL_SLOP && dy > dx) mgr.fail();
-            else if (dx > SWIPE_CLAIM_DX) mgr.activate();
+            else if (dx > SWIPE_CLAIM_DX) {
+              const outside =
+                (indexSV.value === 0 && translationX > 0) ||
+                (indexSV.value === count - 1 && translationX < 0);
+              if (outside) mgr.fail();
+              else mgr.activate();
+            }
           })
           .onStart(() => {
             'worklet';
@@ -174,13 +179,8 @@ export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps
             'worklet';
             const raw = start.value + e.translationX;
             const min = -(count - 1) * widthSV.value;
-            // 끝 페이지 밖은 저항을 걸어 살짝만 끌린다.
-            tx.value =
-              raw > 0
-                ? raw * EDGE_RESISTANCE
-                : raw < min
-                  ? min + (raw - min) * EDGE_RESISTANCE
-                  : raw;
+            // Never reveal an empty page, including after reversing an active drag.
+            tx.value = Math.max(min, Math.min(0, raw));
           })
           .onEnd((e, success) => {
             'worklet';
@@ -234,7 +234,9 @@ export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps
             widthSV.value = e.nativeEvent.layout.width;
             setWidth(e.nativeEvent.layout.width);
           }}>
-          <Animated.View style={[styles.row, { width: width * count || undefined }, rowStyle]}>
+          <Animated.View
+            testID="tab-pager-row"
+            style={[styles.row, { width: width * count || undefined }, rowStyle]}>
             {children.map((child, i) => (
               <Page key={i} index={i} width={width} active={i === index} revealAll={revealAll}>
                 {child}
