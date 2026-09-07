@@ -33,7 +33,7 @@ import { useActionBarInset, useHeaderContentInset, useScreenStyle } from '@/hook
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
-import { formatDate, formatTime } from '@/utils/datetime';
+import { formatDate, formatTime, todayIso } from '@/utils/datetime';
 import { WEEKDAY_LABELS as DAYS } from '@/constants/routines';
 
 const REPEAT_OPTIONS: { id: RepeatKind; label: string }[] = [
@@ -70,10 +70,6 @@ export type AddRoutineScreenProps = {
   /** 카테고리 빠른 생성 (#394) — 폼을 벗어나지 않는 CategoryFormSheet 경유. */
   onCreateCategory?: (category: RoutineCategoryMeta) => void;
 };
-
-function today() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 /**
  * Add/edit-routine form, ported from the prototype `AddRoutineScreen`. Title +
@@ -124,11 +120,13 @@ export function AddRoutineScreen({
   // 알림·지속 기간은 기본 꺼짐 (#1126) — 필요한 사람만 항목 토글로 켠다.
   const [alarmEnabled, setAlarmEnabled] = useState(editRoutine?.alarmEnabled ?? false);
   const [time, setTime] = useState(editRoutine?.time ?? '07:00');
-  const [startDate, setStartDate] = useState(editRoutine?.startDate ?? initialStartDate ?? today());
+  const [startDate, setStartDate] = useState(
+    editRoutine?.startDate ?? initialStartDate ?? todayIso(),
+  );
   const [endDate, setEndDate] = useState<string | undefined>(editRoutine?.endDate);
   // 지속 기간 토글 — 수정 화면은 종료일이 있을 때 켜진 채로 시작한다.
   const [durationOn, setDurationOn] = useState(
-    !!editRoutine?.endDate || (!!initialStartDate && initialStartDate !== today()),
+    !!editRoutine?.endDate || (!!initialStartDate && initialStartDate !== todayIso()),
   );
   const [showDateSheet, setShowDateSheet] = useState(false);
   const [showTimeSheet, setShowTimeSheet] = useState(false);
@@ -151,7 +149,7 @@ export function AddRoutineScreen({
     yearMonth: editRoutine?.month ?? 1,
     alarmEnabled: editRoutine?.alarmEnabled ?? false,
     time: editRoutine?.time ?? '07:00',
-    startDate: editRoutine?.startDate ?? initialStartDate ?? today(),
+    startDate: editRoutine?.startDate ?? initialStartDate ?? todayIso(),
     endDate: editRoutine?.endDate,
   }).current;
   const initialCategory = editRoutine?.category ?? categories[0]?.id ?? '';
@@ -485,7 +483,7 @@ export function AddRoutineScreen({
                 if (durationOn) {
                   // 끄면 오늘부터 계속 — 골랐던 기간은 버린다.
                   setDurationOn(false);
-                  setStartDate(today());
+                  setStartDate(todayIso());
                   setEndDate(undefined);
                 } else {
                   setDurationOn(true);
