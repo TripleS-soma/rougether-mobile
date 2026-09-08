@@ -1,9 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { fireEvent, waitFor } from '@testing-library/react-native';
 
 import { AppRoot } from '@/components/app/app-root';
-import { AuthProvider } from '@/hooks/use-auth';
-import { QueryProvider } from '@/test-utils/query-wrapper';
+import { renderWithProviders } from '@/test-utils/render';
 
 const KEY = 'rougether.onboarding.v1';
 
@@ -18,18 +17,10 @@ const emptyRes = (url: string) => ({
 });
 const realFetch = global.fetch;
 
-const renderApp = () =>
-  render(
-    <QueryProvider>
-      <AuthProvider>
-        <AppRoot />
-      </AuthProvider>
-    </QueryProvider>,
-  );
+const renderApp = () => renderWithProviders(<AppRoot />);
 
 describe('AppRoot', () => {
   beforeEach(async () => {
-    await AsyncStorage.clear();
     // Seed an authed session so the auth gate lets the app render.
     await AsyncStorage.setItem('rougether.auth.accessToken', 'access');
     await AsyncStorage.setItem('rougether.auth.refreshToken', 'refresh');

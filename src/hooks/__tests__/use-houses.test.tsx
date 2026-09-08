@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import * as auth from '@/api/auth';
 import { useHouses } from '@/hooks/use-houses';
+import { jsonRes as res } from '@/test-utils/fetch';
 
 // 토스트 캡처 — 탈퇴 신청자 승인 가드(#240) 문구 단언용.
 const mockToast = jest.fn();
@@ -9,17 +10,10 @@ jest.mock('@/components/ui/toast', () => ({
   useToast: () => ({ show: mockToast }),
 }));
 
-const res = (body: unknown) => ({
-  ok: true,
-  status: 200,
-  text: async () => JSON.stringify(body),
-});
-
 const realFetch = global.fetch;
 beforeEach(() => mockToast.mockClear());
 afterEach(() => {
   global.fetch = realFetch;
-  jest.clearAllMocks();
 });
 
 describe('useHouses — 집 탐색 페이지네이션 (#975)', () => {

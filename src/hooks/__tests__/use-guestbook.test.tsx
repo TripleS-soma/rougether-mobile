@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react-native';
 
 import { useGuestbook } from '@/hooks/use-guestbook';
+import { jsonRes as res } from '@/test-utils/fetch';
 
 // 토스트 스파이 — 훅은 no-op 기본 컨텍스트로도 돌지만 발화 여부를 단언한다.
 const mockShowToast = jest.fn();
@@ -8,16 +9,9 @@ jest.mock('@/components/ui/toast', () => ({
   useToast: () => ({ show: mockShowToast }),
 }));
 
-const res = (body: unknown) => ({
-  ok: true,
-  status: 200,
-  text: async () => JSON.stringify(body),
-});
-
 const realFetch = global.fetch;
 afterEach(() => {
   global.fetch = realFetch;
-  jest.clearAllMocks();
 });
 
 describe('useGuestbook', () => {

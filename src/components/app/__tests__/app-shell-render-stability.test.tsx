@@ -6,17 +6,15 @@
  * 단언한다 — 참조가 흔들리면 memo 경계가 무효가 되는 회귀를 잡는다.
  * (프로브 mock이 실제 화면 렌더를 대체하므로 기존 app-shell.test.tsx와 분리.)
  */
-import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { act, fireEvent, waitFor } from '@testing-library/react-native';
 import { Image } from 'expo-image';
 import { Pressable } from 'react-native';
 
 import { AppShell } from '@/components/app/app-shell';
 import { Room } from '@/components/room/room';
-import { AuthProvider } from '@/hooks/use-auth';
 import { BrandThemeProvider, useBrandTheme } from '@/hooks/use-tokens';
 import { assetSource } from '@/resources/asset';
-import { QueryProvider } from '@/test-utils/query-wrapper';
+import { renderWithProviders } from '@/test-utils/render';
 
 // 렌더마다 받은 props를 기록하는 MyRoomScreen 프로브.
 const mockMyRoomRenders: Record<string, unknown>[] = [];
@@ -81,18 +79,13 @@ function PrefetchModeControl() {
 }
 
 it('집 목록이 그대로여도 다크모드 전환 시 새 배경을 미리 받는다', async () => {
-  await AsyncStorage.clear();
   const prefetch = jest.spyOn(Image, 'prefetch').mockResolvedValue(true);
   try {
-    const ui = await render(
-      <QueryProvider>
-        <AuthProvider>
-          <BrandThemeProvider>
-            <PrefetchModeControl />
-            <AppShell />
-          </BrandThemeProvider>
-        </AuthProvider>
-      </QueryProvider>,
+    const ui = await renderWithProviders(
+      <BrandThemeProvider>
+        <PrefetchModeControl />
+        <AppShell />
+      </BrandThemeProvider>,
     );
     const light = assetSource(
       'house/cloud-balloon/backgrounds/rounded-v2-20260907/house-cloud-balloon-background-day.webp',
@@ -117,7 +110,6 @@ it('집 목록이 그대로여도 다크모드 전환 시 새 배경을 미리 �
     );
   } finally {
     prefetch.mockRestore();
-    await AsyncStorage.clear();
   }
 });
 
@@ -165,13 +157,7 @@ const changedRefs = (
 
 describe('AppShell → MyRoomScreen prop 참조 안정성 (#539)', () => {
   it('무관한 상태 변화(집 탭 전환 후 복귀) 전후로 대표 prop의 참조가 같다', async () => {
-    const { getByLabelText } = await render(
-      <QueryProvider>
-        <AuthProvider>
-          <AppShell />
-        </AuthProvider>
-      </QueryProvider>,
-    );
+    const { getByLabelText } = await renderWithProviders(<AppShell />);
 
     // 초기 로드(루틴·집·상점·캐릭터 등)가 전부 정착할 때까지 기다린다 —
     // 데이터가 갈리는 중의 참조 변화는 정당한 리렌더라 비교 대상이 아니다.
@@ -200,13 +186,7 @@ describe('AppShell → MyRoomScreen prop 참조 안정성 (#539)', () => {
 
 describe('AppShell → HouseScreen prop 참조 안정성 (#539, 리뷰 반영)', () => {
   it('탭 이탈로 언마운트됐다 재진입해도 셸의 핸들러·파생 prop 참조가 같다', async () => {
-    const { getByLabelText } = await render(
-      <QueryProvider>
-        <AuthProvider>
-          <AppShell />
-        </AuthProvider>
-      </QueryProvider>,
-    );
+    const { getByLabelText } = await renderWithProviders(<AppShell />);
     await waitFor(() => expect(mockMyRoomRenders.at(-1)?.loading).toBe(false));
 
     // 첫 방문 — 집 탭 데이터가 정착할 때까지 기다린 스냅샷.
@@ -230,13 +210,7 @@ describe('AppShell → HouseScreen prop 참조 안정성 (#539, 리뷰 반영)',
 
 describe('AppShell → MyPageScreen prop 참조 안정성 (#563 후속)', () => {
   it('무관한 상태 변화(집 탭 왕복) 전후로 셸 콜백 prop의 참조가 같다', async () => {
-    const { getByLabelText } = await render(
-      <QueryProvider>
-        <AuthProvider>
-          <AppShell />
-        </AuthProvider>
-      </QueryProvider>,
-    );
+    const { getByLabelText } = await renderWithProviders(<AppShell />);
     await waitFor(() => expect(mockMyRoomRenders.at(-1)?.loading).toBe(false));
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -262,13 +236,7 @@ describe('AppShell → MyPageScreen prop 참조 안정성 (#563 후속)', () => 
  */
 describe('탭 스크롤 위치 보존 (#763)', () => {
   it('탭별로 위치를 기억하고, 게터·보고 콜백은 참조가 고정이다', async () => {
-    const { getByLabelText } = await render(
-      <QueryProvider>
-        <AuthProvider>
-          <AppShell />
-        </AuthProvider>
-      </QueryProvider>,
-    );
+    const { getByLabelText } = await renderWithProviders(<AppShell />);
     // 세 탭 화면은 페이저에 함께 마운트된다 — 두 프로브 모두 기록이 있다.
     await waitFor(() => expect(mockSettingsRenders.length).toBeGreaterThan(0));
     const settings = mockSettingsRenders[mockSettingsRenders.length - 1];

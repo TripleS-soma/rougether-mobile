@@ -30,7 +30,6 @@ const realFetch = global.fetch;
 afterEach(async () => {
   await clearSession();
   global.fetch = realFetch;
-  jest.clearAllMocks();
 });
 
 describe('AuthProvider', () => {

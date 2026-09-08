@@ -36,12 +36,6 @@ const show = (screen: 'theme' | 'font' | 'sound' | null) =>
   );
 
 describe('폰트·테마 변경 안내 (#972)', () => {
-  // BrandThemeProvider가 선택을 AsyncStorage에 남긴다 — 안 지우면 앞 테스트가
-  // 고른 테마가 다음 테스트의 '현재값'이 돼 "같은 값" 케이스가 무너진다.
-  beforeEach(async () => {
-    await AsyncStorage.clear();
-  });
-
   it('다른 테마를 고르면 바뀐 이름을 토스트로 알린다', async () => {
     const { getByLabelText, findByText } = await show('theme');
     await fireEvent.press(getByLabelText('인디고 타이드 테마'));
@@ -70,8 +64,7 @@ describe('폰트·테마 변경 안내 (#972)', () => {
 });
 
 describe('햅틱 세기 마이그레이션 (#974)', () => {
-  beforeEach(async () => {
-    await AsyncStorage.clear();
+  beforeEach(() => {
     setHapticStrength(DEFAULT_HAPTIC_STRENGTH);
   });
 

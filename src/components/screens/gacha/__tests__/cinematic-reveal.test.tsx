@@ -1,12 +1,13 @@
 import { act, fireEvent, render } from '@testing-library/react-native';
 import * as Haptics from 'expo-haptics';
 import { useState } from 'react';
-import { AppState, StyleSheet, type AppStateStatus } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import {
   CinematicRevealShell,
   CinematicRewardStage,
 } from '@/components/screens/gacha/cinematic-reveal';
+import { spyAppState } from '@/test-utils/app-state';
 import { buildRevealPlan } from '@/components/screens/gacha/reveal-motion';
 import { setHapticStrength } from '@/utils/haptics';
 
@@ -41,7 +42,6 @@ const entry = buildRevealPlan([
 describe('CinematicRevealShell', () => {
   beforeEach(() => {
     jest.useFakeTimers();
-    jest.clearAllMocks();
     video.__resetVideoPlayerMock();
     setHapticStrength('medium');
   });
@@ -219,20 +219,15 @@ describe('CinematicRevealShell', () => {
   );
 
   it('ends quietly on background and does not resume old haptics', async () => {
-    let onAppState: (state: AppStateStatus) => void = () => {};
-    const remove = jest.fn();
-    jest.spyOn(AppState, 'addEventListener').mockImplementation((_type, listener) => {
-      onAppState = listener;
-      return { remove };
-    });
+    const appState = spyAppState();
     const onComplete = jest.fn();
     const screen = await render(
       <CinematicRevealShell profile={entry.profile} onComplete={onComplete} />,
     );
     const player = video.__getLastVideoPlayer()!;
     await act(() => {
-      onAppState('background');
-      onAppState('active');
+      appState.emit('background');
+      appState.emit('active');
       player.__emit('timeUpdate', { currentTime: 1.56 });
     });
     expect(onComplete).toHaveBeenCalledTimes(1);
@@ -240,7 +235,7 @@ describe('CinematicRevealShell', () => {
     expect(Haptics.impactAsync).not.toHaveBeenCalled();
     expect(player.play).toHaveBeenCalledTimes(1);
     await screen.unmount();
-    expect(remove).toHaveBeenCalled();
+    expect(appState.removes[0]).toHaveBeenCalled();
   });
 
   it('honors the global haptic strength gate', async () => {

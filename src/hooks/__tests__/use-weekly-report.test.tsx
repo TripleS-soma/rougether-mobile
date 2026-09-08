@@ -2,17 +2,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useWeeklyReport } from '@/hooks/use-weekly-report';
-
-const res = (body: unknown) => ({
-  ok: true,
-  status: 200,
-  text: async () => JSON.stringify(body),
-});
+import { jsonRes as res } from '@/test-utils/fetch';
 
 const realFetch = global.fetch;
 afterEach(() => {
   global.fetch = realFetch;
-  jest.clearAllMocks();
 });
 
 /** 목록은 일부러 오래된 주를 먼저 준다 — 훅이 서버 정렬을 믿으면 안 된다. */

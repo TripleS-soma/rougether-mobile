@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react-native';
 
 import { splitForImport, useCalendarImport } from '@/hooks/use-calendar-import';
+import { jsonRes as res } from '@/test-utils/fetch';
 
 jest.mock('@/lib/device-calendar', () => ({
   IMPORT_WINDOW_DAYS: 30,
@@ -11,16 +12,9 @@ jest.mock('@/lib/device-calendar', () => ({
 
 const dc = jest.requireMock('@/lib/device-calendar');
 
-const res = (body: unknown, status = 200) => ({
-  ok: status < 400,
-  status,
-  text: async () => JSON.stringify(body),
-});
-
 const realFetch = global.fetch;
 afterEach(() => {
   global.fetch = realFetch;
-  jest.clearAllMocks();
 });
 
 describe('useCalendarImport', () => {

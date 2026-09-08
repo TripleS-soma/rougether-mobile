@@ -2,12 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import type { ShopCatalogue } from '@/api/adapters';
 import { useFriendRoom } from '@/hooks/use-friend-room';
-
-const res = (body: unknown) => ({
-  ok: true,
-  status: 200,
-  text: async () => JSON.stringify(body),
-});
+import { jsonRes as res } from '@/test-utils/fetch';
 
 const CATALOGUE: ShopCatalogue = {
   furniture: [
@@ -22,7 +17,6 @@ const CATALOGUE: ShopCatalogue = {
 const realFetch = global.fetch;
 afterEach(() => {
   global.fetch = realFetch;
-  jest.clearAllMocks();
 });
 
 describe('useFriendRoom', () => {

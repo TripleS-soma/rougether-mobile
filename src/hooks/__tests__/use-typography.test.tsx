@@ -50,8 +50,6 @@ describe('typographyFor (#382)', () => {
 });
 
 describe('useTypography / useFontEmphasis via BrandThemeProvider', () => {
-  beforeEach(() => AsyncStorage.clear());
-
   it('defaults to 나눔스퀘어라운드 and re-resolves when the font changes', async () => {
     const { result } = await renderHook(
       () => ({ control: useBrandTheme(), type: useTypography(), emph: useFontEmphasis() }),

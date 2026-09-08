@@ -59,8 +59,6 @@ const setup = (opts: { missions: HouseMission[]; routines: Routine[] }) => {
   return { deleteRoutine, view };
 };
 
-beforeEach(() => jest.clearAllMocks());
-
 describe('연동 루틴 자동 정리 (#338 → #979)', () => {
   it('끝난 미션의 연동 루틴을 지운다', async () => {
     const { deleteRoutine } = setup({

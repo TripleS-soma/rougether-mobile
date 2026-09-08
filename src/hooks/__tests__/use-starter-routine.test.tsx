@@ -17,7 +17,6 @@ const template = recommendStarterRoutines([{ id: 'reading', label: '독서' }])[
 
 describe('첫 루틴 저장', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
     jest.mocked(getSessionUserId).mockReturnValue(7);
     jest.mocked(fetchRoutines).mockResolvedValue([]);
     jest.mocked(fetchCategories).mockResolvedValue([{ id: 90, name: '취미' }]);

@@ -1,13 +1,8 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useGacha } from '@/hooks/use-gacha';
+import { jsonRes as res } from '@/test-utils/fetch';
 import { queryWrapper } from '@/test-utils/query-wrapper';
-
-const res = (body: unknown) => ({
-  ok: true,
-  status: 200,
-  text: async () => JSON.stringify(body),
-});
 
 const MACHINES = {
   items: [
@@ -18,7 +13,6 @@ const MACHINES = {
 const realFetch = global.fetch;
 afterEach(() => {
   global.fetch = realFetch;
-  jest.clearAllMocks();
 });
 
 describe('useGacha', () => {

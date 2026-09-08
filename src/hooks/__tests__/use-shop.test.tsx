@@ -1,12 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useShop } from '@/hooks/use-shop';
-
-const res = (body: unknown) => ({
-  ok: true,
-  status: 200,
-  text: async () => JSON.stringify(body),
-});
+import { jsonRes as res } from '@/test-utils/fetch';
 
 const ITEMS = {
   items: [
@@ -18,7 +13,6 @@ const ITEMS = {
 const realFetch = global.fetch;
 afterEach(() => {
   global.fetch = realFetch;
-  jest.clearAllMocks();
 });
 
 describe('useShop — refreshOwned (가챠 획득 동기화)', () => {
