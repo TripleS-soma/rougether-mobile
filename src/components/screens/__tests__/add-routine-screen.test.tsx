@@ -395,3 +395,39 @@ it('수정 중 카테고리가 사라졌다면 안내하고 미분류를 고른 
     expect.objectContaining({ title: '독서', category: '' }),
   );
 });
+
+describe('AddRoutineScreen — start date at the KST midnight boundary', () => {
+  afterEach(() => jest.useRealTimers());
+
+  it('defaults startDate to the Asia/Seoul date, not the UTC date (2026-09 incident)', async () => {
+    // 2026-09-08 00:30 KST == 2026-09-07 15:30 UTC — UTC truncation would send "yesterday",
+    // which the server rejects with ROUTINE_STARTS_ON_BEFORE_TODAY.
+    jest.useFakeTimers({
+      doNotFake: [
+        'setTimeout',
+        'clearTimeout',
+        'setInterval',
+        'clearInterval',
+        'setImmediate',
+        'clearImmediate',
+        'nextTick',
+        'queueMicrotask',
+        'hrtime',
+        'performance',
+        'requestAnimationFrame',
+        'cancelAnimationFrame',
+        'requestIdleCallback',
+        'cancelIdleCallback',
+      ],
+      now: new Date('2026-09-07T15:30:00Z'),
+    });
+    const onAdd = jest.fn();
+    const { getByText } = await render(<AddRoutineScreen onAdd={onAdd} />);
+
+    await fireEvent.press(getByText('추천 루틴'));
+    await fireEvent.press(getByText('독서 30분'));
+    await fireEvent.press(getByText('루틴 추가하기'));
+
+    expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ startDate: '2026-09-08' }));
+  });
+});
