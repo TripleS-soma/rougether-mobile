@@ -319,6 +319,7 @@ export const Room = memo(function Room({
         : null}
       {characterId === null ? null : interactiveCharacter ? (
         <Pressable
+          testID="room-character"
           // The avatar wraps the pose over however many frames it has (4 local
           // sprites vs. the server's CDN animation set) — just keep counting.
           onPress={() => setPose((p) => p + 1)}
@@ -336,12 +337,16 @@ export const Room = memo(function Room({
           />
         </Pressable>
       ) : (
-        <CharacterAvatar
-          characterId={characterId}
-          frames={characterFrames}
-          style={styles.character}
-          sharp={fill}
-        />
+        // Keep the same width-sized frame as the interactive room. Applying
+        // its style directly to the avatar leaves the default 96px height.
+        <View testID="room-character" style={styles.character}>
+          <CharacterAvatar
+            characterId={characterId}
+            frames={characterFrames}
+            style={styles.characterFill}
+            sharp={fill}
+          />
+        </View>
       )}
       {/* 장기 미접속 거미줄 (#829) — 캐릭터·가구 위, 왼쪽 위 모서리.
           청소 탭은 다음 단계(#830·#831)라 지금은 표시 전용이다. */}

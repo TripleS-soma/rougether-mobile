@@ -5,6 +5,31 @@ import { StyleSheet } from 'react-native';
 import { Room } from '@/components/room/room';
 
 describe('Room', () => {
+  it.each([
+    { fill: false, frames: undefined },
+    { fill: true, frames: undefined },
+    { fill: false, frames: ['characters/cat/animations/idle.webp'] },
+    { fill: true, frames: ['characters/cat/animations/idle.webp'] },
+  ])(
+    'keeps static and interactive characters aligned (fill=$fill, frames=$frames)',
+    async ({ fill, frames }) => {
+      const { getByLabelText, getByTestId, rerender } = await render(
+        <Room fill={fill} characterFrames={frames} />,
+      );
+      // Check the rendered image, where the avatar's default 96px height used to
+      // survive and center small house characters above their floor position.
+      const staticImage = StyleSheet.flatten(getByLabelText('고양이').props.style);
+      expect(staticImage).toMatchObject({ width: '100%', height: '100%' });
+      const staticFrame = StyleSheet.flatten(getByTestId('room-character').props.style);
+      expect(staticFrame).toMatchObject({ width: '42%', aspectRatio: 1, bottom: '16%' });
+      expect(staticFrame.height).toBeUndefined();
+
+      await rerender(<Room fill={fill} characterFrames={frames} interactiveCharacter />);
+      expect(StyleSheet.flatten(getByTestId('room-character').props.style)).toEqual(staticFrame);
+      expect(StyleSheet.flatten(getByLabelText('고양이').props.style)).toEqual(staticImage);
+    },
+  );
+
   it('adds vertical space while keeping a saved center and width-sized sprites', async () => {
     const placement = {
       furnitureId: 'plant',
