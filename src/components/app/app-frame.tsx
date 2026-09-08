@@ -18,7 +18,8 @@ import { useTokens } from '@/hooks/use-tokens';
  */
 export function AppFrame({ children }: { children: ReactNode }) {
   const t = useTokens();
-  const { framed } = useAppFrame();
+  // 2단(#1230)이면 프레임이 1200까지 넓어진다 — 폭은 훅이 정한다.
+  const { framed, width } = useAppFrame();
   if (Platform.OS !== 'web') return <>{children}</>;
   return (
     <View
@@ -29,7 +30,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
         style={[
           styles.inner,
           framed
-            ? [styles.innerFramed, { backgroundColor: t.screen, borderColor: t.border }]
+            ? [styles.innerFramed, { width, backgroundColor: t.screen, borderColor: t.border }]
             : styles.innerFull,
         ]}>
         {children}
@@ -58,7 +59,22 @@ export function ModalFrame({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * 2단 프레임 안에서 폰 폭 컬럼을 유지해야 하는 페이지(집·내 정보, #1230)의 래퍼 —
+ * 2단이 아니면 자식 그대로. 페이지 배경(집 하늘 등)은 컬럼 안에 머문다.
+ */
+export function PhoneColumn({ children }: { children: ReactNode }) {
+  const { split } = useAppFrame();
+  if (!split) return <>{children}</>;
+  return (
+    <View style={styles.phoneColumn} testID="phone-column">
+      {children}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  phoneColumn: { flex: 1, width: APP_FRAME_MAX_WIDTH, alignSelf: 'center' },
   outer: { flex: 1, alignItems: 'center' },
   inner: { flex: 1, overflow: 'hidden' },
   innerFull: { width: '100%' },
