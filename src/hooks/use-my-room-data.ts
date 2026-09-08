@@ -3,9 +3,12 @@
  * todos, today's completion and wallet on mount, and exposes the same callback
  * shapes the screens already use — so the app shell wires straight through.
  *
- * The 달력 tab reads non-today dates from GET /calendar (loadCalendarDay);
- * completion toggles are server-accepted for today and past dates (past
- * routine completions pay 0 coins); future dates are rejected.
+ * The 달력 tab reads non-today dates from GET /calendar — that slice lives in
+ * `useCalendarData` on react-query (#1027, first extraction) and is composed
+ * here so the return shape is unchanged: `calendarDays` · `loadCalendarDay` ·
+ * `loadCalendarMonth` · `markedTodoDates` · `toggleCalendarItem`. Completion
+ * toggles are server-accepted for today and past dates (past routine
+ * completions pay 0 coins); future dates are rejected.
  *
  * Every action is useCallback-wrapped and the return object is useMemo'd so
  * memoized consumers (#539 memo boundaries) get stable references.
@@ -24,8 +27,6 @@ import {
   deleteCategory as apiDeleteCategory,
   deleteRoutine as apiDeleteRoutine,
   deleteTodo,
-  fetchCalendarDay,
-  fetchCalendarMonth,
   fetchCategories,
   fetchMe,
   fetchRoutines,
@@ -43,7 +44,6 @@ import {
   toAppCategory,
   toAppRoutine,
   toAppTodo,
-  toCalendarItems,
   toCategoryCreate,
   toRoutineCreate,
   toServerItemId,
@@ -61,11 +61,11 @@ import {
   type RoutineCategoryMeta,
   UNCATEGORIZED_META,
 } from '@/constants/routines';
-import type { CalendarDayItem } from '@/components/screens/my-room-screen';
 import type { HouseMissionContributeResponse } from '@/api/types';
 import { todayIso } from '@/utils/datetime';
 import { identifyUser, track } from '@/lib/analytics';
 import { setErrorUser } from '@/lib/error-reporting';
+import { useCalendarData } from '@/hooks/use-calendar-data';
 
 /** 완료 토글 결과 — 코인 보상액과 서버 자동 미션 기여 결과 (#578). */
 export type CompletionToggleResult = {
@@ -81,8 +81,6 @@ export function useMyRoomData() {
   const [categories, setCategories] = useState<RoutineCategoryMeta[]>([]);
   // Active + deleted categories — past records resolve their original meta here.
   const [allCategories, setAllCategories] = useState<RoutineCategoryMeta[]>([]);
-  // 달력 tab data per date (server GET /calendar), refreshed on each pick.
-  const [calendarDays, setCalendarDays] = useState<Record<string, CalendarDayItem[]>>({});
   const [wallet, setWallet] = useState<Wallet>(DEFAULT_WALLET);
   // Identity + streak, surfaced in the my-room header / profile edit.
   const [nickname, setNickname] = useState<string | null>(null);
@@ -178,76 +176,21 @@ export function useMyRoomData() {
     }
   }, []);
 
-  /**
-   * Load a date's 달력 list from GET /calendar. Always refetches (routine edits
-   * change future dates); the previous data stays visible until it lands.
-   */
-  const loadCalendarDay = useCallback(
-    async (date: string) => {
-      try {
-        const day = await fetchCalendarDay(date);
-        setCalendarDays((prev) => ({ ...prev, [date]: toCalendarItems(day) }));
-      } catch {
-        toast('달력 기록을 불러오지 못했어요', 'error');
-      }
-    },
-    [toast],
-  );
-
-  /**
-   * 월 캘린더 점 (#838, 서버 #295) — 그 달에 **투두가 있는 날**의 집합.
-   * 루틴은 세지 않는다: 대부분의 날에 반복되므로 점을 찍으면 거의 모든
-   * 날에 찍혀 아무것도 구분하지 못한다. 서버는 routineCount도 주지만 버린다.
-   */
-  const [todoDatesByMonth, setTodoDatesByMonth] = useState<Record<string, string[]>>({});
-  const loadCalendarMonth = useCallback(async (yearMonth: string) => {
-    try {
-      const res = await fetchCalendarMonth(yearMonth);
-      const marked = (res.days ?? []).flatMap((d) =>
-        (d.todoCount ?? 0) > 0 && d.date ? [d.date] : [],
-      );
-      setTodoDatesByMonth((prev) => ({ ...prev, [yearMonth]: marked }));
-    } catch {
-      // 점은 보조 정보다 — 실패해도 달력 자체는 쓸 수 있으니 조용히 넘어간다.
-    }
-  }, []);
-  // 추가 요청이 서버에 가 있는 동안의 날짜 (#1133) — 응답을 기다리지 않고 점을 찍는다.
-  const [pendingTodoDates, setPendingTodoDates] = useState<string[]>([]);
-  /**
-   * 방문한 달을 합친 표시용 집합 — 이미 받은 달은 다시 부르지 않는다.
-   * 여기에 **지금 앱이 들고 있는 투두의 날짜**와 요청 중인 날짜를 합친다 (#1133):
-   * 추가하자마자 점이 찍히고, 삭제하면 서버 월 목록을 다시 받기 전에도 빠진다
-   * (그 날의 마지막 투두를 지운 경우는 월 집합에서도 걷어낸다 — deleteRoutine).
-   */
-  const markedTodoDates = useMemo(
-    () =>
-      new Set([
-        ...Object.values(todoDatesByMonth).flat(),
-        ...pendingTodoDates,
-        ...routines.flatMap((r) => (r.kind === 'todo' && r.dueDate ? [r.dueDate] : [])),
-      ]),
-    [todoDatesByMonth, pendingTodoDates, routines],
-  );
-  const markPending = useCallback(
-    (date: string) => setPendingTodoDates((prev) => [...prev, date]),
-    [],
-  );
-  const unmarkPending = useCallback(
-    (date: string) =>
-      setPendingTodoDates((prev) => {
-        const i = prev.indexOf(date);
-        return i < 0 ? prev : [...prev.slice(0, i), ...prev.slice(i + 1)];
-      }),
-    [],
-  );
+  // 달력 탭 (GET /calendar · /calendar/month) — react-query 캐시 (#1027).
+  // 루틴·투두를 바꾸는 액션은 `invalidateCalendar()`로 방문한 날짜·달을 재조회한다.
+  const {
+    calendarDays,
+    loadCalendarDay,
+    loadCalendarMonth,
+    markedTodoDates,
+    markPending,
+    unmarkPending,
+    unmarkTodoDate,
+    invalidateCalendar,
+    toggleCalendarItem,
+  } = useCalendarData({ routines, refreshWallet });
 
   const findItem = useCallback((id: string) => routines.find((r) => r.id === id), [routines]);
-
-  // 시트 액션(이름/시간/날짜/삭제)이 달력 탭의 서버 캐시에도 반영되도록,
-  // 캐시된 날짜들을 재조회한다 (#323). 방문한 날짜 수만큼만 호출된다.
-  const refreshCachedCalendarDays = useCallback(() => {
-    for (const date of Object.keys(calendarDays)) void loadCalendarDay(date);
-  }, [calendarDays, loadCalendarDay]);
 
   /**
    * Toggle a completion. Resolves null on an un-complete (or failure); on a
@@ -307,33 +250,6 @@ export function useMyRoomData() {
       }
     },
     [completions, findItem, refreshWallet, toast],
-  );
-
-  /**
-   * 달력 (non-today) completion toggle. Todos flip status (date-agnostic);
-   * routines log against the picked date — the server accepts past dates
-   * (reward 0 for non-today, #183) and rejects future ones (screen blocks
-   * those first). Refetches the day so the list mirrors the server.
-   */
-  const toggleCalendarItem = useCallback(
-    async (item: CalendarDayItem, date: string) => {
-      try {
-        const numId = toServerItemId(item.id);
-        let rewardAmount: number | undefined;
-        if (item.kind === 'todo') {
-          if (item.completed) await uncompleteTodo(numId);
-          else rewardAmount = (await completeTodo(numId)).rewardAmount;
-        } else {
-          if (item.completed) await uncompleteRoutine(numId, date);
-          else rewardAmount = (await completeRoutine(numId, date)).rewardAmount;
-        }
-        if (rewardAmount) toast(`+${rewardAmount} 코인 획득!`, 'success');
-        await Promise.all([loadCalendarDay(date), refreshWallet()]);
-      } catch {
-        toast('완료 처리에 실패했어요', 'error');
-      }
-    },
-    [loadCalendarDay, refreshWallet, toast],
   );
 
   const quickAddTodo = useCallback(
@@ -400,12 +316,12 @@ export function useMyRoomData() {
         }
         // 스케줄이 바뀌면 캐시된 달력 날짜의 수행 대상도 바뀐다 — 제목만
         // 고치는 renameRoutine도 재조회하는데 정작 여기가 빠져 있었다.
-        refreshCachedCalendarDays();
+        invalidateCalendar();
       } catch {
         toast('수정에 실패했어요', 'error');
       }
     },
-    [findItem, refreshCachedCalendarDays, toast],
+    [findItem, invalidateCalendar, toast],
   );
 
   const renameRoutine = useCallback(
@@ -417,13 +333,13 @@ export function useMyRoomData() {
         if (item.kind === 'todo')
           await updateTodo(toServerItemId(id), toTodoUpdate(item, { title }));
         else await apiUpdateRoutine(toServerItemId(id), toRoutineUpdate(item, { title }));
-        refreshCachedCalendarDays();
+        invalidateCalendar();
       } catch {
         setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, title: item.title } : r)));
         toast('수정에 실패했어요', 'error');
       }
     },
-    [findItem, refreshCachedCalendarDays, toast],
+    [findItem, invalidateCalendar, toast],
   );
 
   /** 카테고리 이동 (#716, 롱프레스 드래그) — categoryId만 바꾸는 부분 수정. */
@@ -440,7 +356,7 @@ export function useMyRoomData() {
         if (item.kind === 'todo')
           await updateTodo(toServerItemId(id), toTodoUpdate(item, { category: categoryId }));
         else await apiUpdateRoutine(toServerItemId(id), toRoutineUpdate(item, { category: categoryId })); // prettier-ignore
-        refreshCachedCalendarDays();
+        invalidateCalendar();
       } catch {
         setRoutines((prev) =>
           prev.map((r) => (r.id === id ? { ...r, category: prevCategory } : r)),
@@ -448,7 +364,7 @@ export function useMyRoomData() {
         toast('카테고리 이동에 실패했어요', 'error');
       }
     },
-    [findItem, refreshCachedCalendarDays, toast],
+    [findItem, invalidateCalendar, toast],
   );
 
   const updateRoutineTime = useCallback(
@@ -468,7 +384,7 @@ export function useMyRoomData() {
         } else {
           await apiUpdateRoutine(toServerItemId(id), toRoutineUpdate(item, { alarmEnabled, time }));
         }
-        refreshCachedCalendarDays();
+        invalidateCalendar();
       } catch {
         setRoutines((prev) =>
           prev.map((r) =>
@@ -478,7 +394,7 @@ export function useMyRoomData() {
         toast('수정에 실패했어요', 'error');
       }
     },
-    [findItem, refreshCachedCalendarDays, toast],
+    [findItem, invalidateCalendar, toast],
   );
 
   /** Change a todo's due date (메뉴 시트 → 날짜 바꾸기). */
@@ -489,13 +405,13 @@ export function useMyRoomData() {
       setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, dueDate } : r)));
       try {
         await updateTodo(toServerItemId(id), toTodoUpdate(item, { dueDate }));
-        refreshCachedCalendarDays();
+        invalidateCalendar();
       } catch {
         setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, dueDate: item.dueDate } : r)));
         toast('수정에 실패했어요', 'error');
       }
     },
-    [findItem, refreshCachedCalendarDays, toast],
+    [findItem, invalidateCalendar, toast],
   );
 
   /**
@@ -512,7 +428,7 @@ export function useMyRoomData() {
       try {
         const created = await createTodo(toTodoCreate(item.category, item.title, dueDate));
         setRoutines((prev) => [...prev, toAppTodo(created)]);
-        refreshCachedCalendarDays();
+        invalidateCalendar();
         toast('선택한 날짜에 할 일로 추가했어요', 'success');
       } catch {
         toast('날짜 변경에 실패했어요', 'error');
@@ -520,7 +436,7 @@ export function useMyRoomData() {
         unmarkPending(dueDate);
       }
     },
-    [findItem, refreshCachedCalendarDays, toast, markPending, unmarkPending],
+    [findItem, invalidateCalendar, toast, markPending, unmarkPending],
   );
 
   const deleteRoutine = useCallback(
@@ -531,7 +447,7 @@ export function useMyRoomData() {
       try {
         if (item.kind === 'todo') await deleteTodo(toServerItemId(id));
         else await apiDeleteRoutine(toServerItemId(id));
-        refreshCachedCalendarDays();
+        invalidateCalendar();
         // 그 날의 마지막 투두였으면 달력 점도 바로 걷는다 (#1133) — 서버 월 목록은
         // 다시 받기 전까지 옛 값이라 여기서 빼 준다.
         if (item.kind === 'todo' && item.dueDate) {
@@ -539,19 +455,14 @@ export function useMyRoomData() {
           const stillHasTodo =
             routines.some((r) => r.id !== id && r.kind === 'todo' && r.dueDate === date) ||
             (calendarDays[date] ?? []).some((c) => c.kind === 'todo' && c.id !== id);
-          if (!stillHasTodo)
-            setTodoDatesByMonth((prev) => {
-              const ym = date.slice(0, 7);
-              if (!prev[ym]?.includes(date)) return prev;
-              return { ...prev, [ym]: prev[ym].filter((d) => d !== date) };
-            });
+          if (!stillHasTodo) unmarkTodoDate(date);
         }
       } catch {
         setRoutines((prev) => [...prev, item]);
         toast('삭제에 실패했어요', 'error');
       }
     },
-    [findItem, refreshCachedCalendarDays, toast, routines, calendarDays],
+    [findItem, invalidateCalendar, unmarkTodoDate, toast, routines, calendarDays],
   );
 
   /** Persist the profile (PUT /me) — nickname + bio together, optimistic. */
@@ -737,10 +648,10 @@ export function useMyRoomData() {
       } catch {
         // CATEGORY_IN_USE 등 — reload가 실제 상태를 복원한다.
       }
-      refreshCachedCalendarDays();
+      invalidateCalendar();
       await reload();
     },
-    [routines, refreshCachedCalendarDays, reload],
+    [routines, invalidateCalendar, reload],
   );
 
   const deleteRoutineCategory = useCallback(
