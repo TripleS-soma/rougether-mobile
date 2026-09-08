@@ -7,6 +7,7 @@ import {
   DRAG_CLAIM_HEIGHT,
   inDragClaimZone,
   shouldDismiss,
+  __resetSheetSerializer,
 } from '@/components/ui/bottom-sheet';
 
 describe('shouldDismiss (#469)', () => {
@@ -134,5 +135,47 @@ describe('BottomSheet', () => {
       </BottomSheet>,
     );
     expect(queryByText('숨김')).toBeNull();
+  });
+
+  // iOS RN Modal 직렬화 (2026-09-08) — 메뉴 시트가 퇴장하는 동안 다음 시트가 마운트되면
+  // UIKit이 "already presenting"으로 새 Modal을 거부해 시트가 영영 안 떴다(시뮬레이터 로그).
+  describe('시트 직렬화', () => {
+    afterEach(() => __resetSheetSerializer());
+    const Two = ({ a, b }: { a: boolean; b: boolean }) => (
+      <>
+        <BottomSheet visible={a}>
+          <Text>메뉴 시트</Text>
+        </BottomSheet>
+        <BottomSheet visible={b}>
+          <Text>시간 시트</Text>
+        </BottomSheet>
+      </>
+    );
+
+    it('퇴장 중인 시트가 있으면 다음 시트는 그 언마운트 뒤에 뜬다', async () => {
+      const ui = await render(<Two a b={false} />);
+      expect(ui.getByText('메뉴 시트')).toBeTruthy();
+      // 메뉴 액션: 메뉴 닫기 + 시간 시트 열기가 같은 렌더에 일어난다.
+      await ui.rerender(<Two a={false} b />);
+      expect(ui.queryByText('시간 시트')).toBeNull();
+      expect(ui.getByText('메뉴 시트')).toBeTruthy();
+      await waitFor(() => expect(ui.queryByText('메뉴 시트')).toBeNull());
+      await waitFor(() => expect(ui.getByText('시간 시트')).toBeTruthy());
+    });
+
+    it('퇴장 중인 시트가 없으면 즉시 뜬다', async () => {
+      const ui = await render(<Two a={false} b={false} />);
+      await ui.rerender(<Two a={false} b />);
+      expect(ui.getByText('시간 시트')).toBeTruthy();
+    });
+
+    it('퇴장 중에 다시 열리면 대기 중이던 시트를 막지 않는다', async () => {
+      const ui = await render(<Two a b={false} />);
+      await ui.rerender(<Two a={false} b={false} />);
+      // 퇴장 도중 A가 다시 열림 → 퇴장 카운트가 풀려 B는 바로 뜬다.
+      await ui.rerender(<Two a b />);
+      await waitFor(() => expect(ui.getByText('시간 시트')).toBeTruthy());
+      expect(ui.getByText('메뉴 시트')).toBeTruthy();
+    });
   });
 });
