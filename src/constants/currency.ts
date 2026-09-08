@@ -52,3 +52,11 @@ export const CURRENCY_GUIDES: CurrencyGuide[] = [
     spend: [{ label: '꾸미기에서 가구 구매', detail: '아이템마다 다름' }],
   },
 ];
+
+/**
+ * 재화 표시 — 천 단위 구분(기기 로캘). JS의 -0(#714: `Math.round(-0.2)`, JSON "-0")은
+ * `toLocaleString()`이 "-0"으로 찍으므로 여기서 0으로 눌러 편다.
+ */
+export function formatAmount(n: number): string {
+  return (n === 0 ? 0 : n).toLocaleString();
+}

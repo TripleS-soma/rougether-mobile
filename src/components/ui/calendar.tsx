@@ -3,6 +3,7 @@ import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 
 import { Icon } from '@/components/ui/icon';
+import { toIsoDate } from '@/utils/datetime';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
@@ -21,7 +22,7 @@ function parse(date: string): YMD {
 }
 
 function iso(y: number, m: number, d: number): string {
-  return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  return toIsoDate(new Date(y, m, d));
 }
 
 export type CalendarProps = {

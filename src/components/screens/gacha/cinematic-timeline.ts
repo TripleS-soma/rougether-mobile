@@ -1,4 +1,5 @@
 import type { RevealTier } from '@/components/screens/gacha/reveal-motion';
+import { clamp01, lerp } from '@/utils/math';
 
 export type CinematicHapticCue = { atMs: number; strength: 'light' | 'medium' | 'heavy' };
 
@@ -54,19 +55,17 @@ const MOTION: Record<RevealTier, CinematicMotion> = {
 
 export const getCinematicMotion = (tier: RevealTier): CinematicMotion => MOTION[tier];
 
-const clamp = (value: number) => Math.min(1, Math.max(0, value));
-const lerp = (from: number, to: number, progress: number) => from + (to - from) * progress;
 const expoOut = (progress: number) => (progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress));
 
 /** Sample the furniture from media time, so buffering freezes every visual together. */
 export function getCinematicArtFrame(tier: RevealTier, currentMs: number) {
   const motion = getCinematicMotion(tier);
   const elapsed = Math.max(0, currentMs - motion.revealAtMs);
-  const entrance = expoOut(clamp(elapsed / motion.entranceMs));
-  const settle = 1 - Math.pow(1 - clamp((elapsed - motion.entranceMs) / 320), 3);
+  const entrance = expoOut(clamp01(elapsed / motion.entranceMs));
+  const settle = 1 - Math.pow(1 - clamp01((elapsed - motion.entranceMs) / 320), 3);
   const peakRotation = tier === 'legendary' ? 1 : 0;
   return {
-    opacity: currentMs < motion.revealAtMs ? 0 : clamp(elapsed / 110),
+    opacity: currentMs < motion.revealAtMs ? 0 : clamp01(elapsed / 110),
     translateY: lerp(lerp(72, -8, entrance), 0, settle),
     scale: lerp(lerp(motion.initialScale, motion.overshootScale, entrance), 1, settle),
     rotation: lerp(lerp(motion.initialRotation, peakRotation, entrance), 0, settle),

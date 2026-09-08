@@ -5,6 +5,7 @@ import { StyleSheet, type StyleProp, View, type ViewProps, type ViewStyle } from
 import { ShadowColor } from '@/constants/theme';
 
 import { useGlassMaterial } from '@/hooks/use-liquid-glass';
+import { withAlpha } from '@/utils/color';
 import { useResolvedScheme } from '@/hooks/use-tokens';
 
 export type GlassSurfaceProps = Omit<ViewProps, 'style'> & {
@@ -73,18 +74,6 @@ export function GlassSurface({
 
 /** 반투명 폴백의 알파 — 0.9면 밑 콘텐츠가 은은히 비치면서 글자 대비는 유지된다. */
 const TRANSLUCENT_ALPHA = 0.9;
-
-/** `#RRGGBB` 토큰에 알파를 붙인다. 그 외 형식(rgba 등)은 그대로 둔다. */
-function withAlpha(color: string, alpha: number): string {
-  if (!/^#[0-9a-fA-F]{6}$/.test(color)) return color;
-  return (
-    color +
-    Math.round(alpha * 255)
-      .toString(16)
-      .padStart(2, '0')
-      .toUpperCase()
-  );
-}
 
 const styles = StyleSheet.create({
   lift: {

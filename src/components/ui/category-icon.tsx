@@ -1,6 +1,7 @@
 import Svg, { Path } from 'react-native-svg';
 
 import { StaticWhite } from '@/constants/theme';
+import { mixHex } from '@/utils/color';
 import { Pictogram, type PictogramName } from '@/components/ui/pictograms';
 import { useTokens } from '@/hooks/use-tokens';
 
@@ -156,17 +157,8 @@ export const CATEGORY_ICON_GEOMETRY: Partial<Record<PictogramName, Part[]>> = {
   ],
 };
 
-/** `hex`를 `to` 쪽으로 pct(0~1)만큼 혼합. */
-function mix(hex: string, pct: number, to: string = StaticWhite): string {
-  const ch = (x: string) => [1, 3, 5].map((i) => parseInt(x.slice(i, i + 2), 16));
-  const [r1, g1, b1] = ch(hex);
-  const [r2, g2, b2] = ch(to);
-  const c = (a: number, b: number) =>
-    Math.round(a + (b - a) * pct)
-      .toString(16)
-      .padStart(2, '0');
-  return `#${c(r1, r2)}${c(g1, g2)}${c(b1, b2)}`;
-}
+/** `hex`를 `to` 쪽으로 pct(0~1)만큼 혼합 — 기본은 흰색 쪽으로. */
+const mix = (hex: string, pct: number, to: string = StaticWhite) => mixHex(hex, pct, to);
 
 const isLine = (role: PartRole) => role.includes('line');
 

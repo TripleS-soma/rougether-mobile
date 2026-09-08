@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import giftRoom from '@/assets/images/gacha/gift-room-hero-v2.webp';
+import { formatAmount } from '@/constants/currency';
 import type { GachaDrawCount } from '@/api';
 import type { GachaMachine } from '@/api/adapters';
 import { Icon } from '@/components/ui/icon';
@@ -161,7 +162,7 @@ export function GachaLobby({
                 disabled={busy}
                 accessibilityRole="button"
                 accessibilityState={{ disabled: busy }}
-                accessibilityLabel={`${label}, ${cost.toLocaleString()} ${selected.costCurrencyType === 'COIN' ? '코인' : '다이아'}`}
+                accessibilityLabel={`${label}, ${formatAmount(cost)} ${selected.costCurrencyType === 'COIN' ? '코인' : '다이아'}`}
                 style={[
                   styles.draw,
                   {
@@ -178,7 +179,7 @@ export function GachaLobby({
                     color={selected.costCurrencyType === 'COIN' ? t.warning : ink}
                   />
                   <Text style={[Typography.supporting, emph('semibold'), { color: ink }]}>
-                    {cost.toLocaleString()}
+                    {formatAmount(cost)}
                   </Text>
                 </View>
               </ScalePressable>

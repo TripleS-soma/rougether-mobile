@@ -1,6 +1,7 @@
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { WalletHistoryEntry } from '@/api/adapters';
+import { formatAmount } from '@/constants/currency';
 import { Loading } from '@/components/ui/loading';
 import { BottomSheet, SheetDragExclude } from '@/components/ui/bottom-sheet';
 import { CurrencyGuide } from '@/components/ui/currency-guide';
@@ -101,7 +102,7 @@ export function WalletHistorySheet({
                     <Text style={[Typography.supporting, { color: t.textMuted }]}>
                       {item.createdAt ? relativeTimeLabel(new Date(item.createdAt)) : ''}
                       {' · 잔액 '}
-                      {item.balanceAfter.toLocaleString()}
+                      {formatAmount(item.balanceAfter)}
                     </Text>
                   </View>
                   <Text
@@ -111,7 +112,7 @@ export function WalletHistorySheet({
                       { color: earn ? t.primaryText : t.danger },
                     ]}>
                     {earn ? '+' : ''}
-                    {item.amount.toLocaleString()}
+                    {formatAmount(item.amount)}
                   </Text>
                 </View>
               );

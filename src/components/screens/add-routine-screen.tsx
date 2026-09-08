@@ -73,7 +73,7 @@ export type AddRoutineScreenProps = {
 
 /**
  * Add/edit-routine form, ported from the prototype `AddRoutineScreen`. Title +
- * emoji, category, presets, repeat days, duration / alarm sheets, photo verify.
+ * emoji, category, presets, repeat days, duration / alarm sheets.
  * When `editRoutine` is given, the form prefills its values and submitting calls
  * `onUpdate` (with a delete action); otherwise it's add mode with `onAdd`.
  */

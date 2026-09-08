@@ -1,6 +1,7 @@
 import { memo, useRef } from 'react';
 import { Pressable, type ScrollView, StyleSheet, Text, View } from 'react-native';
 import { PagerScrollView } from '@/components/ui/pager-scroll-view';
+import { formatAmount } from '@/constants/currency';
 
 import { CharacterAvatar } from '@/components/room/character-avatar';
 import { GlassSurface } from '@/components/ui/glass-surface';
@@ -120,11 +121,11 @@ export const MyPageScreen = memo(function MyPageScreen({
 
   const stats: { icon: IconName; color: string; value: string; label: string }[] = [
     { icon: 'flame', color: t.warningText, value: `${streakDays}일`, label: '연속' },
-    { icon: 'coin', color: t.warning, value: coinBalance.toLocaleString(), label: '코인' },
+    { icon: 'coin', color: t.warning, value: formatAmount(coinBalance), label: '코인' },
     {
       icon: 'diamond',
       color: t.primaryText,
-      value: diamondBalance.toLocaleString(),
+      value: formatAmount(diamondBalance),
       label: '다이아',
     },
   ];

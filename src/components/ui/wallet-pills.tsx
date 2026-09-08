@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon, type IconName } from '@/components/ui/icon';
+import { formatAmount } from '@/constants/currency';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
@@ -95,7 +96,7 @@ function Pill({
   const safeValue = noNegativeZero(value);
   const rolled = useRollingNumber(safeValue);
   const overCap = rolled > CAP;
-  const shown = overCap && !revealed ? `${CAP}+` : rolled.toLocaleString();
+  const shown = overCap && !revealed ? `${CAP}+` : formatAmount(rolled);
   return (
     <Pressable
       onPress={onOpenHistory ?? (() => setRevealed((v) => !v))}

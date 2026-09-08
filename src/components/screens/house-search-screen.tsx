@@ -133,7 +133,7 @@ export type HouseSearchScreenProps = RoomCatalogProps & {
 
 /**
  * House search, ported from the prototype `HouseSearchScreen`: invite-code join,
- * search, recommended list (fetched from the business API via MSW), create-new.
+ * search, recommended list (from the business API), create-new.
  * Theme tokens + type scale; icons emoji.
  */
 export function HouseSearchScreen({

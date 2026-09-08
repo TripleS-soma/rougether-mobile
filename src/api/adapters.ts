@@ -36,7 +36,7 @@ import {
 } from '@/resources/furniture';
 
 import { type OnboardingGoal } from '@/components/screens/onboarding-screen';
-import { toIsoDate, relativeTimeLabel } from '@/utils/datetime';
+import { monthDayLabel, relativeTimeLabel, toIsoDate } from '@/utils/datetime';
 import { type RoomPlacementSave, type RoomPlacementWire } from './rooms';
 
 import type { HouseCover } from '@/components/room/house-cover-picker';
@@ -884,7 +884,7 @@ export function toGuestbookEntry(g: GuestbookItem): GuestbookEntry {
     id: String(g.guestbookId ?? ''),
     author: g.authorNickname || `멤버 ${g.authorId ?? ''}`,
     content: g.content ?? '',
-    date: d ? `${d.getMonth() + 1}월 ${d.getDate()}일` : '',
+    date: d ? monthDayLabel(d) : '',
     // 방명록은 봇 스케줄러(서버 #310)가 실제로 글을 쓴다 — 누가 썼는지 밝힌다.
     authorBot: g.authorBot,
   };
@@ -910,7 +910,7 @@ export function toBugReportEntry(b: BugReportResponse): BugReportEntry {
     id: b.bugReportId ?? 0,
     title: b.title ?? '',
     status: b.status ?? 'RECEIVED',
-    date: d ? `${d.getMonth() + 1}월 ${d.getDate()}일` : '',
+    date: d ? monthDayLabel(d) : '',
     // 첨부 키 (#736) — 화면이 이걸로 비공개 스크린샷을 따로 받아온다.
     screenshotKeys: b.screenshotKeys ?? [],
   };
