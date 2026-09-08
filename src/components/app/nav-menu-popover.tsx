@@ -1,8 +1,9 @@
-import { Modal, Pressable, StyleSheet, Text } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, useWindowDimensions } from 'react-native';
 
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { Overlay, Radius, ShadowColor, Spacing } from '@/constants/theme';
+import { useAppFrame } from '@/hooks/use-app-frame';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 export type NavMenuPopoverProps = {
@@ -47,6 +48,11 @@ export function NavMenuPopover({
 }: NavMenuPopoverProps) {
   const t = useTokens();
   const Typography = useTypography();
+  // 팝오버는 Modal(창 기준 좌표)에 뜬다. 웹 데스크톱의 중앙 컬럼 프레임(#1227)에서는
+  // 창 오른쪽 끝이 아니라 프레임 오른쪽 끝에 붙어야 햄버거 버튼 아래에 놓인다.
+  const { width: frameWidth } = useAppFrame();
+  const { width: windowWidth } = useWindowDimensions();
+  const frameInset = Math.max(0, (windowWidth - frameWidth) / 2);
 
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
@@ -59,7 +65,11 @@ export function NavMenuPopover({
           interactive={false}
           fallbackColor={t.screen}
           testID="nav-menu-popover"
-          style={[styles.popover, bottom !== undefined ? { bottom } : { top }]}>
+          style={[
+            styles.popover,
+            { right: Spacing.four + frameInset },
+            bottom !== undefined ? { bottom } : { top },
+          ]}>
           {(
             [
               ...(onOpenCharacterPicker
