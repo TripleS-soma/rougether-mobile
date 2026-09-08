@@ -1,4 +1,4 @@
-import { memo, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import { memo, type ReactNode, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   type GestureResponderEvent,
@@ -81,6 +81,7 @@ import { ScalePressable } from '@/components/ui/scale-pressable';
 import { Radius, Spacing } from '@/constants/theme';
 import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
 import { useBottomNavInset, useScreenStyle } from '@/hooks/use-screen-style';
+import { APP_FRAME_MAX_WIDTH, useAppFrame } from '@/hooks/use-app-frame';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
@@ -332,12 +333,14 @@ export const MyRoomScreen = memo(function MyRoomScreen({
 }: MyRoomScreenProps) {
   const t = useTokens();
   const column = useResponsiveColumn();
+  // 웹 데스크톱 2단 (#1230) — 창 ≥ 960px에서만 true.
+  const { split } = useAppFrame();
   const Typography = useTypography();
   // 글래스 알약 바텀바가 떠 있으면 마지막 루틴이 그 밑에 안 숨게 (#1049).
   const navInset = useBottomNavInset();
   // 떠 있는 크롬(#1055)이 상태바 밑에 서지 않게 — 방은 상태바 밑까지 차지한다.
   const insets = useContext(SafeAreaInsetsContext) ?? ZERO_INSETS;
-  const { height: windowHeight } = useWindowDimensions();
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
 
   // 보상 알약·코인 플라이·스트릭 펄스 (#440 → #1055) — my-room/use-reward-fly.
   const {
@@ -396,16 +399,22 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // 고정하면 6항목 팝오버가 상태바 위나 바텀바 아래로 잘린다(시뮬레이터 실측).
   // 측정이 안 되는 곳(테스트·웹)은 종전 top 폴백.
   const [navMenuBottom, setNavMenuBottom] = useState<number | undefined>(undefined);
+  const [navMenuRight, setNavMenuRight] = useState<number | undefined>(undefined);
   const menuBtnRef = useRef<View>(null);
   const [characterSheetOpen, setCharacterSheetOpen] = useState(false);
   const openNavMenu = () => {
     setNavMenuOpen(true);
     // measureInWindow is a no-op in tests/web — the fallback top then applies.
-    menuBtnRef.current?.measureInWindow?.((_x, y, _w, h) => {
+    menuBtnRef.current?.measureInWindow?.((x, y, w, h) => {
       if (typeof y === 'number' && typeof h === 'number') {
         setNavMenuTop(y + h + Spacing.one);
         setNavMenuBottom(y > windowHeight / 2 ? windowHeight - y + Spacing.one : undefined);
       }
+      // 2단(#1230)에선 버튼이 왼쪽 칸에 있어 프레임 오른쪽 기준 앵커가 700px 빗나간다 —
+      // 버튼의 실측 오른쪽 끝에 붙인다. 폰·단일 컬럼은 종전 앵커.
+      setNavMenuRight(
+        split && typeof x === 'number' && typeof w === 'number' ? windowWidth - (x + w) : undefined,
+      );
     });
   };
 
@@ -1013,41 +1022,45 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     );
   };
 
-  return (
-    <View ref={rootRef} style={[styles.screen, useScreenStyle([])]}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <PawRefreshScroll
-          scrollRef={scrollRef}
-          onRefresh={onRefresh}
-          refreshTestID="my-room-refresh"
-          // 재정렬 드래그 중엔 세로 스크롤을 잠근다 (#716) — 카테고리 드래그도 같다.
-          scrollEnabled={dragId === null && catDragId === null}
-          contentContainerStyle={[
-            styles.body,
-            // 달력은 상태바 바로 아래부터. 떠 있는 크롬 행(방/달력 알약, #1055)은 단독
-            // 미리보기에만 있으니 그때만 그 높이만큼 내린다.
-            tab !== 'room'
-              ? {
-                  paddingTop:
-                    insets.top + Spacing.two + (view === undefined ? CHROME_ROW_HEIGHT : 0),
-                }
-              : null,
-            navInset ? { paddingBottom: Spacing.six + navInset } : null,
-            addingCategory != null && keyboardPad > 0 ? { paddingBottom: keyboardPad + 120 } : null,
-          ]}
-          {...scrollRestore}
-          onScroll={(e) => {
-            // 빠른 추가 입력 스크롤인(#…)용 로컬 추적 + 셸의 탭별 기억(#763).
-            scrollYRef.current = e.nativeEvent.contentOffset.y;
-            scrollRestore.onScroll?.(e);
-          }}
-          keyboardShouldPersistTaps="handled">
-          {tab === 'room' ? (
-            <>
-              <View style={styles.roomWrap}>
-                {/*
+  const renderScroll = (children: ReactNode) => (
+    <PawRefreshScroll
+      scrollRef={scrollRef}
+      onRefresh={onRefresh}
+      refreshTestID="my-room-refresh"
+      // 재정렬 드래그 중엔 세로 스크롤을 잠근다 (#716) — 카테고리 드래그도 같다.
+      scrollEnabled={dragId === null && catDragId === null}
+      contentContainerStyle={[
+        styles.body,
+        // 달력은 상태바 바로 아래부터. 떠 있는 크롬 행(방/달력 알약, #1055)은 단독
+        // 미리보기에만 있으니 그때만 그 높이만큼 내린다.
+        split
+          ? { paddingTop: insets.top + Spacing.four }
+          : tab !== 'room'
+            ? {
+                paddingTop: insets.top + Spacing.two + (view === undefined ? CHROME_ROW_HEIGHT : 0),
+              }
+            : null,
+        navInset ? { paddingBottom: Spacing.six + navInset } : null,
+        addingCategory != null && keyboardPad > 0 ? { paddingBottom: keyboardPad + 120 } : null,
+      ]}
+      {...scrollRestore}
+      onScroll={(e) => {
+        // 빠른 추가 입력 스크롤인(#…)용 로컬 추적 + 셸의 탭별 기억(#763).
+        scrollYRef.current = e.nativeEvent.contentOffset.y;
+        scrollRestore.onScroll?.(e);
+      }}
+      keyboardShouldPersistTaps="handled">
+      {children}
+    </PawRefreshScroll>
+  );
+  // 2단(#1230): 왼쪽 고정 칸에 방 캔버스/달력, 오른쪽에 할 일 스크롤. 폰·좁은 창은
+  // 종전대로 한 스크롤에 위아래로. hero/list는 두 배치가 같이 쓴다. **활성 탭의 것만**
+  // 만든다 — renderCategoryGroup이 렌더마다 rowHandlers·groupOrder를 채우므로 두 탭의
+  // 목록을 다 만들면 등록이 겹쳐 드래그 드롭 판정이 어긋난다.
+  const hero =
+    tab === 'room' ? (
+      <View style={styles.roomWrap}>
+        {/*
                     캡처 대상은 방 자체만 (#778) — 예전엔 ref가 패딩 있는
                     roomWrap에 붙어 있어 그 **투명 여백까지 찍혔고**, #744에서
                     캡처를 JPEG(알파 없음)로 바꾸면서 여백이 검정으로 눌러붙어
@@ -1056,229 +1069,265 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                     전체화면(#1055): 방이 화면 폭을 다 쓰고 상태바 밑까지 올라간다 —
                     집 탭의 하늘처럼. 네 모서리 전부 각지게(아래도).
                   */}
-                <View ref={roomShotRef} collapsable={false}>
-                  <Room {...roomScene} interactiveCharacter style={styles.roomFullBleed} />
-                </View>
-                {/* 오른쪽 버튼 열 (#1055) — 메뉴·알림(헤더에서 이동)·꾸미기·뽑기.
+        <View ref={roomShotRef} collapsable={false}>
+          {/* 2단에서는 방이 칸 안의 카드라 계약 반경(16)을 되살린다. */}
+          <Room
+            {...roomScene}
+            interactiveCharacter
+            style={split ? undefined : styles.roomFullBleed}
+          />
+        </View>
+        {/* 오른쪽 버튼 열 (#1055) — 메뉴·알림(헤더에서 이동)·꾸미기·뽑기.
                     방 이미지 저장 중에는 통째로 빼서 사진에서 제외한다 (#475).
                     opacity로 숨기면 글래스 면(#1050)이 안 그려지고 복귀가 불안정. */}
-                {capturing ? null : (
-                  <View style={styles.btnColumn}>
-                    <CoachTarget id="room-menu">
-                      <Pressable
-                        ref={menuBtnRef}
-                        onPress={openNavMenu}
-                        accessibilityRole="button"
-                        accessibilityLabel="메뉴"
-                        style={styles.floatBtn}>
-                        <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
-                          <Icon name="menu" size={20} color={t.text} />
-                        </GlassSurface>
-                      </Pressable>
-                    </CoachTarget>
-                    {onOpenNotifications ? (
-                      <Pressable
-                        onPress={onOpenNotifications}
-                        accessibilityRole="button"
-                        accessibilityLabel="알림"
-                        style={styles.floatBtn}>
-                        <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
-                          <Icon name="bell" size={20} color={t.text} />
-                          {unreadNotificationCount > 0 ? (
-                            <View style={[styles.menuDot, { backgroundColor: t.danger }]} />
-                          ) : null}
-                        </GlassSurface>
-                      </Pressable>
-                    ) : null}
-                    {/* 방 꾸미기 1탭 승격 (#727) — 보상 루프의 종착지를 뽑기 옆에. */}
-                    {onEdit ? (
-                      <Pressable
-                        onPress={onEdit}
-                        accessibilityRole="button"
-                        accessibilityLabel="방 꾸미기"
-                        style={styles.floatBtn}>
-                        <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
-                          <Icon name="edit" size={20} color={t.text} />
-                        </GlassSurface>
-                      </Pressable>
-                    ) : null}
-                    {onOpenFurnitureStudio ? (
-                      <Pressable
-                        onPress={onOpenFurnitureStudio}
-                        accessibilityRole="button"
-                        accessibilityLabel="AI 가구 만들기"
-                        style={styles.floatBtn}>
-                        <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
-                          <Icon name="sparkles" size={20} color={t.primaryText} />
-                        </GlassSurface>
-                      </Pressable>
-                    ) : null}
-                    <Pressable
-                      onPress={onOpenGacha}
-                      accessibilityRole="button"
-                      accessibilityLabel="뽑기 상점"
-                      style={styles.floatBtn}>
-                      <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
-                        {/* absolute 버튼이라 래퍼 대신 내용을 측정 (#351). */}
-                        <CoachTarget id="room-gacha">
-                          <Icon name="gift" size={20} color={t.text} />
-                        </CoachTarget>
-                      </GlassSurface>
-                    </Pressable>
-                  </View>
-                )}
-              </View>
-
-              {/* 폭 제한(#725)은 목록에만 — 방은 전체 폭 (#1055). */}
-              <View style={[styles.section, column]}>
-                <CoachTarget id="room-routines">
-                  <View style={styles.sectionHead}>
-                    <Text style={[Typography.h2, { color: t.text }]}>오늘의 할 일</Text>
-                    <View style={styles.sectionHeadRight}>
-                      {roomRoutines.length > 0 ? (
-                        <Text style={[Typography.label, { color: t.primaryText }]}>
-                          {completedCount} / {roomRoutines.length}
-                        </Text>
-                      ) : null}
-                      <CoachTarget id="room-add-routine">
-                        {/* '＋ 루틴' 라벨 필 (#483) — 카테고리의 원형 ＋(할 일 추가)와
-                            같은 문법이라 헷갈렸다. 라벨로 용도를 말해 구분한다. */}
-                        <Pressable
-                          onPress={onAddRoutine}
-                          accessibilityRole="button"
-                          accessibilityLabel="루틴 추가"
-                          style={[styles.addPill, { backgroundColor: t.primary }]}>
-                          <Icon name="add" size={14} color={t.onPrimary} />
-                          <Text style={[Typography.label, { color: t.onPrimary }]}>루틴</Text>
-                        </Pressable>
-                      </CoachTarget>
-                    </View>
-                  </View>
+        {capturing ? null : (
+          <View style={styles.btnColumn}>
+            <CoachTarget id="room-menu">
+              <Pressable
+                ref={menuBtnRef}
+                onPress={openNavMenu}
+                accessibilityRole="button"
+                accessibilityLabel="메뉴"
+                style={styles.floatBtn}>
+                <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
+                  <Icon name="menu" size={20} color={t.text} />
+                </GlassSurface>
+              </Pressable>
+            </CoachTarget>
+            {onOpenNotifications ? (
+              <Pressable
+                onPress={onOpenNotifications}
+                accessibilityRole="button"
+                accessibilityLabel="알림"
+                style={styles.floatBtn}>
+                <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
+                  <Icon name="bell" size={20} color={t.text} />
+                  {unreadNotificationCount > 0 ? (
+                    <View style={[styles.menuDot, { backgroundColor: t.danger }]} />
+                  ) : null}
+                </GlassSurface>
+              </Pressable>
+            ) : null}
+            {/* 방 꾸미기 1탭 승격 (#727) — 보상 루프의 종착지를 뽑기 옆에. */}
+            {onEdit ? (
+              <Pressable
+                onPress={onEdit}
+                accessibilityRole="button"
+                accessibilityLabel="방 꾸미기"
+                style={styles.floatBtn}>
+                <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
+                  <Icon name="edit" size={20} color={t.text} />
+                </GlassSurface>
+              </Pressable>
+            ) : null}
+            {onOpenFurnitureStudio ? (
+              <Pressable
+                onPress={onOpenFurnitureStudio}
+                accessibilityRole="button"
+                accessibilityLabel="AI 가구 만들기"
+                style={styles.floatBtn}>
+                <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
+                  <Icon name="sparkles" size={20} color={t.primaryText} />
+                </GlassSurface>
+              </Pressable>
+            ) : null}
+            <Pressable
+              onPress={onOpenGacha}
+              accessibilityRole="button"
+              accessibilityLabel="뽑기 상점"
+              style={styles.floatBtn}>
+              <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
+                {/* absolute 버튼이라 래퍼 대신 내용을 측정 (#351). */}
+                <CoachTarget id="room-gacha">
+                  <Icon name="gift" size={20} color={t.text} />
                 </CoachTarget>
+              </GlassSurface>
+            </Pressable>
+          </View>
+        )}
+      </View>
+    ) : (
+      // monthSwipe=false 유지 (#825) — 달력 위 가로 스와이프가 월 이동이라는 또 다른
+      // 뜻을 갖게 되면 "가로 스와이프 = 하단 탭 이동" 규칙이 다시 깨진다. 월 이동은 ‹ › 버튼.
+      <Calendar
+        value={selectedDate}
+        onSelect={pickDate}
+        today={today}
+        monthSwipe={false}
+        markedDates={markedTodoDates}
+        onVisibleMonthChange={onCalendarMonthChange}
+      />
+    );
+  // 폭 제한(#725)은 목록에만 — 방은 전체 폭 (#1055).
+  const list =
+    tab === 'room' ? (
+      <View style={[styles.section, column]}>
+        <CoachTarget id="room-routines">
+          <View style={styles.sectionHead}>
+            <Text style={[Typography.h2, { color: t.text }]}>오늘의 할 일</Text>
+            <View style={styles.sectionHeadRight}>
+              {roomRoutines.length > 0 ? (
+                <Text style={[Typography.label, { color: t.primaryText }]}>
+                  {completedCount} / {roomRoutines.length}
+                </Text>
+              ) : null}
+              <CoachTarget id="room-add-routine">
+                {/* '＋ 루틴' 라벨 필 (#483) — 카테고리의 원형 ＋(할 일 추가)와
+                            같은 문법이라 헷갈렸다. 라벨로 용도를 말해 구분한다. */}
+                <Pressable
+                  onPress={onAddRoutine}
+                  accessibilityRole="button"
+                  accessibilityLabel="루틴 추가"
+                  style={[styles.addPill, { backgroundColor: t.primary }]}>
+                  <Icon name="add" size={14} color={t.onPrimary} />
+                  <Text style={[Typography.label, { color: t.onPrimary }]}>루틴</Text>
+                </Pressable>
+              </CoachTarget>
+            </View>
+          </View>
+        </CoachTarget>
 
-                {loading ? (
-                  <View style={styles.stateBlock}>
-                    <Loading />
-                    <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                      불러오는 중...
-                    </Text>
-                  </View>
-                ) : null}
+        {loading ? (
+          <View style={styles.stateBlock}>
+            <Loading />
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>불러오는 중...</Text>
+          </View>
+        ) : null}
 
-                {!loading && loadError ? (
-                  <View style={styles.stateBlock}>
-                    <RetryState message="데이터를 불러오지 못했어요." onRetry={onRetry} />
-                  </View>
-                ) : null}
+        {!loading && loadError ? (
+          <View style={styles.stateBlock}>
+            <RetryState message="데이터를 불러오지 못했어요." onRetry={onRetry} />
+          </View>
+        ) : null}
 
-                {!loading && !loadError && roomRoutines.length > 0 ? (
-                  <SpringProgressBar
-                    progress={progress}
-                    color={t.primary}
-                    trackColor={t.surfaceMuted}
-                  />
-                ) : null}
+        {!loading && !loadError && roomRoutines.length > 0 ? (
+          <SpringProgressBar progress={progress} color={t.primary} trackColor={t.surfaceMuted} />
+        ) : null}
 
-                {loading || loadError
-                  ? null
-                  : roomGroups.map(({ meta: cat, items }) =>
-                      // Empty categories still render their header — the + quick-add
-                      // must stay reachable even before the first routine exists.
-                      // 미분류(id '')도 달력 탭처럼 이름 있는 키로 (#1207).
-                      renderCategoryGroup(
-                        cat.id || 'uncat',
-                        cat,
-                        items.map((r) => rowFromRoutine(r, today)),
-                        today,
-                      ),
-                    )}
-              </View>
-            </>
+        {loading || loadError
+          ? null
+          : roomGroups.map(({ meta: cat, items }) =>
+              // Empty categories still render their header — the + quick-add
+              // must stay reachable even before the first routine exists.
+              // 미분류(id '')도 달력 탭처럼 이름 있는 키로 (#1207).
+              renderCategoryGroup(
+                cat.id || 'uncat',
+                cat,
+                items.map((r) => rowFromRoutine(r, today)),
+                today,
+              ),
+            )}
+      </View>
+    ) : (
+      <>
+        <View style={styles.calListHead}>
+          <Text style={[Typography.h3, styles.calListTitle, { color: t.text }]}>이 날의 할 일</Text>
+          <View style={styles.sectionHeadRight}>
+            {calDayTotal > 0 ? (
+              <Text style={[Typography.label, { color: t.primaryText }]}>
+                {calDayDone} / {calDayTotal}
+              </Text>
+            ) : null}
+            {/* 오늘 목록과 같은 ＋ 루틴 (#1138) — 고른 날짜가 시작일. */}
+            {onAddRoutineForDate ? (
+              <Pressable
+                onPress={() => onAddRoutineForDate(selectedDate)}
+                accessibilityRole="button"
+                accessibilityLabel="이 날에 루틴 추가"
+                style={[styles.addPill, { backgroundColor: t.primary }]}>
+                <Icon name="add" size={14} color={t.onPrimary} />
+                <Text style={[Typography.label, { color: t.onPrimary }]}>루틴</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
+        {calDayTotal > 0 ? (
+          <SpringProgressBar
+            progress={calDayDone / calDayTotal}
+            color={t.primary}
+            trackColor={t.surfaceMuted}
+          />
+        ) : null}
+        {/* 미래 날짜의 상시 안내는 뺐다 (#1134) — 완료를 시도하면 토스트가 같은 말을 한다. */}
+        {serverBackedDay && selectedDate <= today ? (
+          <Text style={[Typography.supporting, { color: t.textMuted }]}>
+            지난 날짜도 완료 체크할 수 있어요. (코인은 당일 완료에만 지급돼요)
+          </Text>
+        ) : null}
+        {loading || (serverBackedDay && !dayItems) ? (
+          <View style={styles.stateBlock}>
+            <Loading />
+          </View>
+        ) : serverBackedDay ? (
+          calServerGroups!.length === 0 ? (
+            <Text style={[Typography.body, styles.calEmpty, { color: t.textMuted }]}>
+              예정된 루틴이 없어요.
+            </Text>
           ) : (
-            <View style={[styles.calendarPanel, column]}>
-              {/* monthSwipe=false 유지 (#825) — 달력 위 가로 스와이프가 월
-                  이동이라는 또 다른 뜻을 갖게 되면 "가로 스와이프 = 하단 탭
-                  이동" 규칙이 다시 깨진다. 월 이동은 ‹ › 버튼. */}
-              <Calendar
-                value={selectedDate}
-                onSelect={pickDate}
-                today={today}
-                monthSwipe={false}
-                markedDates={markedTodoDates}
-                onVisibleMonthChange={onCalendarMonthChange}
-              />
-              <View style={styles.calListHead}>
-                <Text style={[Typography.h3, styles.calListTitle, { color: t.text }]}>
-                  이 날의 할 일
-                </Text>
-                <View style={styles.sectionHeadRight}>
-                  {calDayTotal > 0 ? (
-                    <Text style={[Typography.label, { color: t.primaryText }]}>
-                      {calDayDone} / {calDayTotal}
-                    </Text>
-                  ) : null}
-                  {/* 오늘 목록과 같은 ＋ 루틴 (#1138) — 고른 날짜가 시작일. */}
-                  {onAddRoutineForDate ? (
-                    <Pressable
-                      onPress={() => onAddRoutineForDate(selectedDate)}
-                      accessibilityRole="button"
-                      accessibilityLabel="이 날에 루틴 추가"
-                      style={[styles.addPill, { backgroundColor: t.primary }]}>
-                      <Icon name="add" size={14} color={t.onPrimary} />
-                      <Text style={[Typography.label, { color: t.onPrimary }]}>루틴</Text>
-                    </Pressable>
-                  ) : null}
-                </View>
-              </View>
-              {calDayTotal > 0 ? (
-                <SpringProgressBar
-                  progress={calDayDone / calDayTotal}
-                  color={t.primary}
-                  trackColor={t.surfaceMuted}
-                />
-              ) : null}
-              {/* 미래 날짜의 상시 안내는 뺐다 (#1134) — 완료를 시도하면 토스트가 같은 말을 한다. */}
-              {serverBackedDay && selectedDate <= today ? (
-                <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                  지난 날짜도 완료 체크할 수 있어요. (코인은 당일 완료에만 지급돼요)
-                </Text>
-              ) : null}
-              {loading || (serverBackedDay && !dayItems) ? (
-                <View style={styles.stateBlock}>
-                  <Loading />
-                </View>
-              ) : serverBackedDay ? (
-                calServerGroups!.length === 0 ? (
-                  <Text style={[Typography.body, styles.calEmpty, { color: t.textMuted }]}>
-                    예정된 루틴이 없어요.
-                  </Text>
-                ) : (
-                  calServerGroups!.map((group, gi) =>
-                    renderCategoryGroup(
-                      group.meta.id || `uncat-${gi}`,
-                      group.meta,
-                      group.items.map(rowFromCalendarItem),
-                      selectedDate,
-                    ),
-                  )
-                )
-              ) : calClientGroups.length === 0 ? (
-                <Text style={[Typography.body, styles.calEmpty, { color: t.textMuted }]}>
-                  예정된 루틴이 없어요.
-                </Text>
-              ) : (
-                calClientGroups.map((group, gi) =>
-                  renderCategoryGroup(
-                    group.meta.id || `uncat-${gi}`,
-                    group.meta,
-                    group.items.map((r) => rowFromRoutine(r, selectedDate)),
-                    selectedDate,
-                  ),
-                )
+            calServerGroups!.map((group, gi) =>
+              renderCategoryGroup(
+                group.meta.id || `uncat-${gi}`,
+                group.meta,
+                group.items.map(rowFromCalendarItem),
+                selectedDate,
+              ),
+            )
+          )
+        ) : calClientGroups.length === 0 ? (
+          <Text style={[Typography.body, styles.calEmpty, { color: t.textMuted }]}>
+            예정된 루틴이 없어요.
+          </Text>
+        ) : (
+          calClientGroups.map((group, gi) =>
+            renderCategoryGroup(
+              group.meta.id || `uncat-${gi}`,
+              group.meta,
+              group.items.map((r) => rowFromRoutine(r, selectedDate)),
+              selectedDate,
+            ),
+          )
+        )}
+      </>
+    );
+
+  return (
+    <View ref={rootRef} style={[styles.screen, useScreenStyle([])]}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        {split ? (
+          <View style={styles.splitRow} testID="my-room-split">
+            {/* 왼쪽 칸은 창이 낮을 때만 따로 스크롤 — 당김 새로고침은 목록 쪽에만. */}
+            <ScrollView
+              style={styles.splitHero}
+              contentContainerStyle={[
+                styles.splitHeroContent,
+                { paddingTop: insets.top + Spacing.four },
+              ]}
+              showsVerticalScrollIndicator={false}>
+              {hero}
+            </ScrollView>
+            <View style={[styles.splitList, { borderLeftColor: t.border }]}>
+              {renderScroll(
+                tab === 'room' ? list : <View style={[styles.calendarPanel, column]}>{list}</View>,
               )}
             </View>
-          )}
-        </PawRefreshScroll>
+          </View>
+        ) : (
+          renderScroll(
+            tab === 'room' ? (
+              <>
+                {hero}
+                {list}
+              </>
+            ) : (
+              <View style={[styles.calendarPanel, column]}>
+                {hero}
+                {list}
+              </View>
+            ),
+          )
+        )}
       </KeyboardAvoidingView>
 
       {/* The room canvas has no title overlay, and the calendar tab has none either —
@@ -1409,6 +1458,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         visible={navMenuOpen}
         top={navMenuTop}
         bottom={navMenuBottom}
+        right={navMenuRight}
         onClose={() => setNavMenuOpen(false)}
         // 출석 이벤트·재화 내역은 내 정보 바로가기로 (#1055 → #1089) — 메뉴는 방 작업만.
         onOpenCharacterPicker={
@@ -1488,6 +1538,23 @@ const styles = StyleSheet.create({
   },
   roomWrap: {
     position: 'relative',
+  },
+  // 2단 (#1230) — 왼쪽 칸은 폰 컬럼 폭, 오른쪽 목록이 남은 폭을 쓴다.
+  splitRow: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  splitHero: {
+    width: APP_FRAME_MAX_WIDTH,
+    flexGrow: 0,
+  },
+  splitHeroContent: {
+    paddingHorizontal: Spacing.four,
+    paddingBottom: Spacing.six,
+  },
+  splitList: {
+    flex: 1,
+    borderLeftWidth: StyleSheet.hairlineWidth,
   },
   // 전체화면 방 (#1055) — 위 모서리는 화면 가장자리에 붙으니 각지게.
   // 나의 방 전체화면(#1058)에서만 네 모서리 전부 각지게 — 아래 둥근 모서리가
