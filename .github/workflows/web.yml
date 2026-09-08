@@ -34,7 +34,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # 카카오 웹 로그인의 REST API 키(비밀 아님 — 번들에 인라인됨). repo variable KAKAO_REST_API_KEY.
       - run: npx expo export --platform web --output-dir dist
+        env:
+          EXPO_PUBLIC_KAKAO_REST_API_KEY: ${{ vars.KAKAO_REST_API_KEY }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
