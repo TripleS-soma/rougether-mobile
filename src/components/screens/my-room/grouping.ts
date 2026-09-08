@@ -93,12 +93,15 @@ export function groupRoomRoutines({
 export function groupCalendarClientRoutines({
   routines,
   categories,
+  routineOrder,
   isDone,
   canQuickAdd,
 }: {
   /** 선택한 날짜에 예정된 루틴만. */
   routines: Routine[];
   categories: RoutineCategoryMeta[];
+  /** 수동 순서 맵 (#716) — 달력도 방 탭과 같은 순서로 그린다 (2026-09-08). */
+  routineOrder?: Record<string, string[]>;
   /** 선택한 날짜의 완료 여부 (routine id 기준). */
   isDone: (id: string) => boolean;
   canQuickAdd: (categoryId?: string) => boolean;
@@ -117,7 +120,10 @@ export function groupCalendarClientRoutines({
       const items = routines.filter(
         (r) => r.category === cat.id || (isUncategorized && isOrphan(r, knownIds)),
       );
-      return { meta: cat, items: sinkDone(items, (r) => isDone(r.id)) };
+      return {
+        meta: cat,
+        items: sinkDone(applyRoutineOrder(items, routineOrder?.[cat.id]), (r) => isDone(r.id)),
+      };
     })
     .filter((g) => g.items.length > 0 || canQuickAdd(g.meta.id));
 }
@@ -130,10 +136,13 @@ export function groupCalendarClientRoutines({
  * 되찾음)는 그 뒤에 등장 순서대로, 미분류는 맨 뒤. `dayItems`가 없으면(로딩 중)
  * undefined.
  */
-export function groupCalendarServerItems<T extends { category?: string; completed: boolean }>({
+export function groupCalendarServerItems<
+  T extends { id: string; category?: string; completed: boolean },
+>({
   dayItems,
   catMeta,
   categories,
+  routineOrder,
   canQuickAdd,
 }: {
   dayItems: T[] | undefined;
@@ -141,6 +150,11 @@ export function groupCalendarServerItems<T extends { category?: string; complete
   catMeta: RoutineCategoryMeta[];
   /** 현재(살아 있는) 카테고리 — 빈 그룹 헤더용. */
   categories: RoutineCategoryMeta[];
+  /**
+   * 수동 순서 맵 (#716) — 서버 응답 순서 대신 방 탭과 같은 순서로 (2026-09-08).
+   * 없으면 롱프레스 재정렬이 달력에서 아무 변화도 못 보여준다.
+   */
+  routineOrder?: Record<string, string[]>;
   canQuickAdd: (categoryId?: string) => boolean;
 }): CategoryGroup<T>[] | undefined {
   if (!dayItems) return undefined;
@@ -149,15 +163,16 @@ export function groupCalendarServerItems<T extends { category?: string; complete
     const key = item.category ?? '';
     byCat.set(key, [...(byCat.get(key) ?? []), item]);
   }
+  const orderedItems = (key: string) =>
+    sinkDone(applyRoutineOrder(byCat.get(key) ?? [], routineOrder?.[key]), (i) => i.completed);
   const toGroup = (key: string) => ({
     meta: catMeta.find((c) => c.id === key) ?? UNCATEGORIZED_META,
-    items: sinkDone(byCat.get(key) ?? [], (i) => i.completed),
+    items: orderedItems(key),
   });
   const groups: CategoryGroup<T>[] = [];
   // 1) 현재 카테고리를 사용자 순서대로 — 그 날 항목이 없어도 퀵애드 가능하면 빈 헤더 (#323).
   for (const cat of categories) {
-    if (byCat.has(cat.id))
-      groups.push({ meta: cat, items: sinkDone(byCat.get(cat.id)!, (i) => i.completed) });
+    if (byCat.has(cat.id)) groups.push({ meta: cat, items: orderedItems(cat.id) });
     else if (canQuickAdd(cat.id)) groups.push({ meta: cat, items: [] });
   }
   // 2) 현재에 없는(삭제된) 카테고리는 등장 순서대로, 3) 미분류('')는 맨 뒤.
