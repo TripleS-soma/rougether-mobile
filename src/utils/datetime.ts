@@ -60,5 +60,10 @@ export function relativeTimeLabel(at: Date, now: Date = new Date()): string {
   if (hours < 24) return `${hours}시간 전`;
   const days = Math.floor(hours / 24);
   if (days < 7) return `${days}일 전`;
-  return `${at.getMonth() + 1}월 ${at.getDate()}일`;
+  return monthDayLabel(at);
+}
+
+/** "M월 D일" — 방명록·알림·버그 제보 날짜와 relativeTimeLabel의 꼬리가 같은 모양. */
+export function monthDayLabel(d: Date): string {
+  return `${d.getMonth() + 1}월 ${d.getDate()}일`;
 }

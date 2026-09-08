@@ -1,13 +1,8 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useRecommendations } from '@/hooks/use-recommendations';
+import { jsonRes as res } from '@/test-utils/fetch';
 import { queryWrapper } from '@/test-utils/query-wrapper';
-
-const res = (body: unknown, status = 200) => ({
-  ok: status < 400,
-  status,
-  text: async () => JSON.stringify(body),
-});
 
 const ITEM = {
   recommendationId: 1,
@@ -23,7 +18,6 @@ const ITEM = {
 const realFetch = global.fetch;
 afterEach(() => {
   global.fetch = realFetch;
-  jest.clearAllMocks();
 });
 
 describe('useRecommendations', () => {

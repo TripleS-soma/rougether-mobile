@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Platform, StyleSheet, View } from 'react-native';
+import { Animated, StyleSheet, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 
 import { NAV_ORDER, SCREEN_FOR_TAB, type Screen } from '@/components/app/navigation';
@@ -23,8 +23,6 @@ import {
 import { useLatestRef, useStableCallback } from '@/hooks/use-stable-value';
 import { MyPageScreen } from '@/components/screens/my-page-screen';
 import { FurnitureStudio } from '@/components/app/furniture-studio';
-import { AttendanceSheet } from '@/components/screens/sheets/attendance-sheet';
-import { WalletHistorySheet } from '@/components/screens/sheets/wallet-history-sheet';
 import { MissionSheet } from '@/components/screens/sheets/mission-sheet';
 import { BottomNav } from '@/components/ui/bottom-nav';
 import { MissionBanner } from '@/components/ui/mission-banner';
@@ -32,10 +30,8 @@ import { NotificationBanner } from '@/components/ui/notification-banner';
 import { DEFAULT_CHARACTER_ID, type CharacterId } from '@/constants/characters';
 import { screenView, track } from '@/lib/analytics';
 import { todayIso } from '@/utils/datetime';
-import { refreshWidgets } from '@/widgets/rougether-widgets';
-import { buildWidgetSummary, saveWidgetSummary, saveWidgetTheme } from '@/widgets/widget-data';
-import { useAttendance } from '@/hooks/use-attendance';
-import { useWalletHistory } from '@/hooks/use-wallet-history';
+import { useAttendanceSurface } from '@/components/app/use-attendance-surface';
+import { useWidgetSync } from '@/components/app/use-widget-sync';
 import { useGacha } from '@/hooks/use-gacha';
 import {
   type OnboardingMissionStepId,
@@ -85,7 +81,6 @@ const NO_CHARACTER_FRAMES: Partial<Record<CharacterId, string[]>> = {};
 
 /** 각 미션의 진입 화면 (#571) — 배너 탭·완료 시트 '하러 가기'의 목적지. */
 const MISSION_TARGET_SCREEN: Record<OnboardingMissionStepId, Screen> = {
-  'register-routine': 'addRoutine',
   'first-draw': 'gacha',
   'place-furniture': 'decor',
   'invite-house': 'houseMembers',
@@ -158,36 +153,22 @@ export function AppShell({
     deleteCategoryCascade,
   } = myRoomData;
 
-  // 루틴 등록 성공 = 미션 1 완료 (#571) — 추가 화면과 공동미션 연동 추가 공용.
+  // 루틴 추가 — 추가 화면과 공동미션 연동 추가 공용. (첫 루틴 등록 미션은 뺐다 —
+  // 온보딩 직후 추천 루틴 게이트(#1149)가 그 역할. 이름은 호출부 안정을 위해 유지.)
   const addRoutineWithMission = useCallback(
-    async (n: Parameters<typeof addRoutine>[0]) => {
-      const ok = await addRoutine(n);
-      if (ok) completeMission('register-routine');
-      return ok;
-    },
-    [addRoutine, completeMission],
+    async (n: Parameters<typeof addRoutine>[0]) => addRoutine(n),
+    [addRoutine],
   );
 
-  // 연속 출석 이벤트 (#851) — 진행 중인 이벤트가 없으면 status가 null이라
-  // 내 정보 바로가기도 시트도 그려지지 않는다(#1089). 출석 코인은 응답의
-  // 잔액으로 지갑을 맞춘다(뽑기·상점과 같은 결).
-  const [attendanceOpen, setAttendanceOpen] = useState(false);
-  const syncCoin = useCallback((coin: number) => setWallet((w) => ({ ...w, coin })), [setWallet]);
-  const attendance = useAttendance({ onCoinBalance: syncCoin });
-  const openFurnitureStudio = useCallback(() => setScreen('furnitureStudio'), []);
-  const openAttendance = useCallback(() => setAttendanceOpen(true), []);
-  // 오늘 미출석 — 내 정보 타일·하단 탭 배지 (#1089). 이벤트가 없으면 false.
-  const attendancePending = !!attendance.status && !attendance.status.checkedInToday;
-
-  // 재화 내역 시트 (#734 → #1089) — 나의 방 메뉴에서 내 정보 바로가기로.
-  // 열 때마다 1페이지 재로드(완료 취소로 이력이 지워질 수 있음).
-  const walletHistory = useWalletHistory();
-  const [walletHistoryOpen, setWalletHistoryOpen] = useState(false);
-  const { load: loadWalletHistory } = walletHistory;
-  const openWalletHistory = useCallback(() => {
-    setWalletHistoryOpen(true);
-    loadWalletHistory();
-  }, [loadWalletHistory]);
+  // 출석 이벤트·재화 내역 시트 (#851·#1089) — use-attendance-surface가 데이터·열림·JSX를 소유.
+  const {
+    attendance,
+    attendancePending,
+    openAttendance,
+    openFurnitureStudio,
+    openWalletHistory,
+    sheets: attendanceSheets,
+  } = useAttendanceSurface({ setWallet, setScreen });
 
   // Gacha machines + draw (spend + dupe→diamond handled server-side; wallet synced
   // from the draw response).
@@ -206,7 +187,6 @@ export function AppShell({
     selectedCharacterId,
     selectedCharacterFrames: wornCharacterFrames,
     select: selectWornCharacter,
-    reload: reloadMyCharacters,
   } = useMyCharacters();
   const wornCharacterId = selectedCharacterId ?? characterId;
   const wearCharacter = useCallback(
@@ -382,6 +362,9 @@ export function AppShell({
       attendancePending,
       onOpenWalletHistory: openWalletHistory,
     },
+    // 무효화 누락 2건 (리팩토링 3묶음): 가져온 루틴·초대 보상이 즉시 보이게.
+    onRoutinesImported: myRoomData.reload,
+    onWalletChanged: myRoomData.refreshWallet,
   });
   // 나의 방 페이지 배선 (#692 5단계) — 나의 방 탭 페이지와 서브화면 4종
   // (루틴 관리·추가·카테고리 관리·알림 목록)의 훅·콜백·JSX 소유.
@@ -403,32 +386,8 @@ export function AppShell({
       onCalendarMonthChange: myRoomData.loadCalendarMonth,
     },
   });
-  // 홈 위젯 오늘 요약 동기화 (#604, 안드로이드 전용) — 완료 토글·루틴
-  // 변경·스트릭 갱신이 위젯에 바로 반영되게 요약을 기록하고 재렌더를 민다.
-  // 위젯 다크모드 동기화 (#746) — 앱의 테마 모드('system'|'light'|'dark')가
-  // 적용된 실효 스킴을 위젯 저장소에 기록한다. 위젯은 시스템 설정만 볼 수
-  // 있어, 앱에서 다크로 바꿔도 위젯이 라이트로 남던 불일치를 없앤다.
-  useEffect(() => {
-    if (Platform.OS !== 'android' && Platform.OS !== 'ios') return;
-    void saveWidgetTheme(resolvedScheme === 'dark').then(refreshWidgets);
-  }, [resolvedScheme]);
-
-  const widgetSummarySigRef = useRef('');
-  useEffect(() => {
-    // 홈 위젯이 있는 플랫폼만 (#604 안드, #606 iOS) — 웹은 제외.
-    if (Platform.OS !== 'android' && Platform.OS !== 'ios') return;
-    const today = todayIso();
-    const summary = buildWidgetSummary(
-      routines.filter((r) => isScheduledOn(r, today)),
-      completions,
-      streak,
-      today,
-    );
-    const sig = JSON.stringify(summary);
-    if (sig === widgetSummarySigRef.current) return;
-    widgetSummarySigRef.current = sig;
-    void saveWidgetSummary(summary).then(refreshWidgets);
-  }, [routines, completions, streak]);
+  // 홈 위젯 동기화 (#604·#746·#1122) — 요약·다크모드·마지막 접속. 셸과 결합 없음.
+  useWidgetSync({ resolvedScheme, routines, completions, streak });
 
   // 스토어 리뷰 요청 (#1107) — 오늘 예정 루틴이 전부 완료되는 완료 순간에만.
   // 시트·모달 위에 겹치지 않게 탭 루트(나의 방·달력)에서만 띄운다.
@@ -454,19 +413,9 @@ export function AppShell({
   }, [screen]);
 
   /** 미션 배너 탭·완료 시트 '하러 가기' — 해당 미션의 진입 화면으로 (#571). */
-  const { addRoutineFromMyRoom } = myRoomPages;
-  const openMissionScreen = useCallback(
-    (id: OnboardingMissionStepId) => {
-      if (id === 'register-routine') {
-        // 루틴 추가 화면(추천 루틴 아코디언)으로 — 뒤로 가면 나의 방 복귀.
-        // (편집 중 루틴 초기화 포함 — use-my-room-pages의 + 버튼 경로와 동일.)
-        addRoutineFromMyRoom();
-        return;
-      }
-      setScreen(MISSION_TARGET_SCREEN[id]);
-    },
-    [addRoutineFromMyRoom],
-  );
+  const openMissionScreen = useCallback((id: OnboardingMissionStepId) => {
+    setScreen(MISSION_TARGET_SCREEN[id]);
+  }, []);
 
   // 멤버 방 프리뷰 (#775) — 집 좌석 타일과 친구 방문이 함께 쓴다. 훅 호출이
   // use-house-pages 안에 있으면 그보다 먼저 서는 use-friend-visit이 거미줄
@@ -649,16 +598,9 @@ export function AppShell({
           diamondBalance={wallet.diamond}
           soundEffectsEnabled={settingsSurface.soundSettings.effects}
           onBack={() => setScreen('myRoom')}
-          onDraw={async (gachaId, count) => {
-            const results = await drawGachaMachine(gachaId, count);
-            // Drawn items land in the inventory — re-sync so 방 꾸미기 shows
-            // them as 보유중 and placement saves know their userItemId.
-            if (results?.some((r) => r.itemId != null && !r.converted)) void refreshOwned();
-            // A drawn character must show up in the 캐릭터 교체 picker too.
-            if (results?.some((r) => r.characterId != null && !r.converted))
-              void reloadMyCharacters();
-            return results;
-          }}
+          // 뽑은 아이템·캐릭터의 재조회는 useGacha가 인벤토리·캐릭터 쿼리를
+          // 무효화해 처리한다 (#1027) — 셸이 손으로 꿰던 재조회 두 줄이 사라졌다.
+          onDraw={drawGachaMachine}
           placeableItemIds={placeableFurnitureIds}
           // 보상 목록 (#620) — 시트가 자체 재시도를 가지므로 실패는 null로.
           onLoadRewards={(gachaId) => fetchGachaRewards(gachaId).catch(() => null)}
@@ -754,36 +696,8 @@ export function AppShell({
         onClose={missions.dismissCompleted}
       />
 
-      {/* 연속 출석 시트 (#851) — 이벤트가 있을 때만 존재한다. */}
-      {attendance.status ? (
-        <AttendanceSheet
-          visible={attendanceOpen}
-          status={attendance.status}
-          checkingIn={attendance.checkingIn}
-          onCheckIn={attendance.checkIn}
-          onGoToStudio={() => {
-            setAttendanceOpen(false);
-            openFurnitureStudio();
-          }}
-          onGoToRoom={() => {
-            setAttendanceOpen(false);
-            setScreen('decor');
-          }}
-          onClose={() => setAttendanceOpen(false)}
-        />
-      ) : null}
-
-      {/* 재화 내역 시트 (#734 → #1089) — 내 정보 바로가기가 연다. */}
-      <WalletHistorySheet
-        visible={walletHistoryOpen}
-        onClose={() => setWalletHistoryOpen(false)}
-        entries={walletHistory.entries}
-        loading={walletHistory.loading}
-        loadError={walletHistory.error}
-        onRetry={walletHistory.load}
-        hasNext={walletHistory.hasNext}
-        onLoadMore={walletHistory.loadMore}
-      />
+      {/* 출석·재화 내역 시트 (#851·#1089) — use-attendance-surface가 그린다. */}
+      {attendanceSheets}
     </View>
   );
 }

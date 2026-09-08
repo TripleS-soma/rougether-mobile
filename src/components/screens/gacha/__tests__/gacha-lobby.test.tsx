@@ -48,8 +48,6 @@ function lobbyProps(overrides: Partial<ComponentProps<typeof GachaLobby>> = {}) 
 }
 
 describe('GachaLobby', () => {
-  beforeEach(() => jest.clearAllMocks());
-
   it('omits the extra footer copy while retaining explicit draw counts and prices', async () => {
     const screen = await render(<GachaLobby {...lobbyProps()} />);
     expect(screen.queryByText(/5회 가격으로 6개/)).toBeNull();

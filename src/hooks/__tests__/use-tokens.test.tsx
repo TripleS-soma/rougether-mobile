@@ -1,12 +1,8 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fireEvent, render } from '@testing-library/react-native';
 import { Pressable, Text } from 'react-native';
 
 import { DarkThemes, Themes } from '@/constants/theme';
 import { BrandThemeProvider, useBrandTheme, useTokens } from '@/hooks/use-tokens';
-
-// The provider persists {themeId, mode} — clear it so tests stay independent.
-beforeEach(() => AsyncStorage.clear());
 
 function Probe() {
   const t = useTokens();

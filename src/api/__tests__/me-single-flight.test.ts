@@ -9,7 +9,6 @@ const res = (status: number, body: unknown) => ({
 const realFetch = global.fetch;
 afterEach(() => {
   global.fetch = realFetch;
-  jest.clearAllMocks();
 });
 
 describe('fetchMe — single-flight (PR #542 안전망)', () => {

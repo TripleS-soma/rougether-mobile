@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
-import type { House } from '@/components/screens/house-screen';
+import type { House } from '@/components/screens/house/types';
 import { useToast } from '@/components/ui/toast';
 import { CATEGORY_COLORS, type Routine, type RoutineCategoryMeta } from '@/constants/routines';
 import type { CompletionToggleResult } from '@/hooks/use-my-room-data';

@@ -35,8 +35,8 @@ export function useGuestbook() {
       try {
         const page = await fetchGuestbooks(roomOwnerId, houseId);
         ctxRef.current.cursor = page.nextCursor ?? undefined;
-        setEntries((page.items ?? []).map(toGuestbookEntry));
-        setHasNext(!!page.hasNext);
+        setEntries(page.items.map(toGuestbookEntry));
+        setHasNext(page.hasNext);
       } catch {
         // 로드 실패를 '방명록 없음'으로 위장하지 않도록 정직하게 알린다 (#549).
         setEntries([]);
@@ -55,8 +55,8 @@ export function useGuestbook() {
     try {
       const page = await fetchGuestbooks(ctx.roomOwnerId, ctx.houseId, ctx.cursor);
       ctx.cursor = page.nextCursor ?? undefined;
-      setEntries((prev) => [...(prev ?? []), ...(page.items ?? []).map(toGuestbookEntry)]);
-      setHasNext(!!page.hasNext);
+      setEntries((prev) => [...(prev ?? []), ...page.items.map(toGuestbookEntry)]);
+      setHasNext(page.hasNext);
     } catch {
       toast('방명록을 더 불러오지 못했어요', 'error');
     }

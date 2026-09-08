@@ -16,6 +16,4 @@ export const GIFT_ATLAS = {
   centerOffset: -0.14,
 } as const;
 
-export const GIFT_CHARGE_MS = 900;
-export const GIFT_AUTO_OPEN_MS = 1600;
 export const GIFT_OPEN_MS = 1100;

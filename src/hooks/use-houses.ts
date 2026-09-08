@@ -3,6 +3,11 @@
  * mount plus the browsable list for 집 탐색, and exposes join/create/kick/leave
  * actions. Failures surface as toasts; loading/error drive the screens.
  *
+ * 합성 훅 — 집 탐색은 `useHouseSearch`, 공동미션은 `useHouseMissions`, 집
+ * 번들 요청은 `house-bundle.ts`가 들고 있고, 이 파일은 내 집 목록 상태와
+ * 그 위의 행동(입주코드·신청 처리·생성·강퇴·나가기·순서·위임)만 남긴다.
+ * 소비자에게는 종전과 같은 한 객체로 돌려준다.
+ *
  * Every action is useCallback-wrapped and the return object is useMemo'd so
  * memoized consumers (#539 memo boundaries) get stable references.
  */
@@ -13,26 +18,15 @@ import {
   ErrorCode,
   apiGet,
   cheerHouseMember,
-  claimHouseMission,
   acceptHouseJoinRequest,
-  contributeHouseMission,
   type HouseCheerType,
   createHouse as apiCreateHouse,
-  createHouseMission,
-  deleteHouseMission,
-  fetchHouse,
-  fetchHouseJoinRequests,
-  fetchHouseMembers,
-  fetchHouseMissions,
-  fetchHousePreviewDetail,
   fetchMe,
   fetchGoals,
   cancelMyJoinRequest,
-  fetchHouses,
   fetchMyHouses,
   updateHouseOrder,
   fetchMyJoinRequests,
-  getSessionUserId,
   joinHouseByCode,
   type MyJoinRequestSummary,
   kickHouseMember,
@@ -40,86 +34,34 @@ import {
   previewHouseByCode,
   reissueInviteCode as apiReissueInviteCode,
   rejectHouseJoinRequest,
-  requestHouseJoin,
   transferHouseOwnership,
   updateHouse as apiUpdateHouse,
 } from '@/api';
-import {
-  toHouse,
-  toHouseMission,
-  toHousePreview,
-  toHousePreviewDetail,
-  toSearchHouse,
-  type ShopCatalogue,
-} from '@/api/adapters';
-import type { HouseMissionContributeResponse } from '@/api/types';
+import { toHousePreview } from '@/api/adapters';
 import { useToast } from '@/components/ui/toast';
-import type { House, HouseEditInput, NewHouseMission } from '@/components/screens/house-screen';
+import type { House, HouseEditInput } from '@/components/screens/house/types';
+import { fetchHouseBundle } from '@/hooks/house-bundle';
+import { useHouseMissions } from '@/hooks/use-house-missions';
+import { useHouseSearch } from '@/hooks/use-house-search';
 import { track } from '@/lib/analytics';
-import type {
-  HousePreview,
-  HousePreviewDetail,
-  SearchHouse,
-} from '@/components/screens/house-search-screen';
-
-/** 집 탐색 한 페이지 크기 (#975). */
-const SEARCH_PAGE_SIZE = 30;
-
-/**
- * 다음 페이지가 남았는지. `totalElements`가 정본이고, 서버가 그걸 안 주는
- * 경우에만 "받은 개수가 페이지를 꽉 채웠나"로 추정한다.
- */
-function hasNextPage(res: { items?: unknown[]; totalElements?: number }, loaded: number) {
-  if (typeof res.totalElements === 'number') return loaded < res.totalElements;
-  return (res.items?.length ?? 0) >= SEARCH_PAGE_SIZE;
-}
+import type { HousePreview } from '@/components/screens/house-search-screen';
 
 export function useHouses() {
   const [houses, setHouses] = useState<House[]>([]);
-  // Mission ids I contributed to today (session-scoped — the list API doesn't
-  // expose per-member daily contribution, so this seeds from contribute calls).
-  const [contributedMissionIds, setContributedMissionIds] = useState<Set<number>>(new Set());
-  const [searchHouses, setSearchHouses] = useState<SearchHouse[]>([]);
-  /** 다음 페이지가 남았는지 (#975) — 목록 끝에서 이어 붙일지 판단. */
-  const [searchHasNext, setSearchHasNext] = useState(false);
-  const [searchLoadingMore, setSearchLoadingMore] = useState(false);
-  /** 마지막으로 받은 페이지 번호. 무한 스크롤이 여기서 이어간다. */
-  const searchPageRef = useRef(0);
   const [loading, setLoading] = useState(true);
-  const [searchLoading, setSearchLoading] = useState(true);
   // 초기 로드 실패 플래그 (#549) — 빈 상태('집 없음' 가입 유도)로 위장하지
   // 않도록 화면이 에러+다시 시도를 보여준다. 재시도 성공 시 해제.
   const [error, setError] = useState(false);
-  const [searchError, setSearchError] = useState(false);
   const { show: toast } = useToast();
 
   // 내 셀 라벨용 닉네임 캐시 — 단일 집 갱신(#534)이 fetchMe를 반복하지 않게.
   const myNicknameRef = useRef<string | undefined>(undefined);
 
-  /**
-   * 한 집의 상세 묶음 → House 모델 (#534). 상세·멤버·미션·입주신청을 전부
-   * 병렬 요청한다 — 신청 목록은 방장이 아니면 403이라 실패를 빈 배열로
-   * 무시하는 것으로 역할 확인 직렬 홉을 없앤다. 그 403은 api_error에서도
-   * 빠진다(fetchHouseJoinRequests의 expectedStatuses, #1044).
-   */
-  const fetchHouseBundle = useCallback(async (id: number): Promise<House> => {
-    const [detail, members, missions, joinRequests] = await Promise.all([
-      fetchHouse(id),
-      fetchHouseMembers(id),
-      // Missions are additive — a failure shouldn't take the house down.
-      fetchHouseMissions(id).catch(() => []),
-      fetchHouseJoinRequests(id).catch(() => []),
-    ]);
-    return toHouse(
-      detail,
-      members,
-      getSessionUserId(),
-      myNicknameRef.current,
-      missions.map(toHouseMission),
-      Date.now(),
-      joinRequests,
-    );
-  }, []);
+  /** 집 번들(house-bundle.ts)에 닉네임 캐시를 실어 보내는 얇은 래퍼. */
+  const loadBundle = useCallback(
+    (id: number): Promise<House> => fetchHouseBundle(id, myNicknameRef.current),
+    [],
+  );
 
   /**
    * 프로필 닉네임 변경을 내 좌석에 즉시 반영한다 (#924).
@@ -166,9 +108,9 @@ export function useHouses() {
     ]);
     myNicknameRef.current = nickname;
     if (requests) setPendingJoinRequests(requests.filter((r) => r.status === 'PENDING'));
-    const detailed = await Promise.all(mine.map((h) => fetchHouseBundle(h.houseId ?? 0)));
+    const detailed = await Promise.all(mine.map((h) => loadBundle(h.houseId ?? 0)));
     setHouses(detailed);
-  }, [fetchHouseBundle]);
+  }, [loadBundle]);
 
   /** 입주 신청 철회 (#648) — 성공 시 목록에서 즉시 제거. */
   const cancelJoinRequest = useCallback(
@@ -232,61 +174,14 @@ export function useHouses() {
   const reloadHouse = useCallback(
     async (houseId: number) => {
       try {
-        const fresh = await fetchHouseBundle(houseId);
+        const fresh = await loadBundle(houseId);
         setHouses((prev) => prev.map((h) => (h.houseId === houseId ? fresh : h)));
       } catch {
         await reloadMyHouses();
       }
     },
-    [fetchHouseBundle, reloadMyHouses],
+    [loadBundle, reloadMyHouses],
   );
-
-  const reloadSearch = useCallback(async () => {
-    // excludeJoined — 본인 ACTIVE(소유 포함) 집은 서버가 걸러 준다 (#578).
-    const list = await fetchHouses(0, SEARCH_PAGE_SIZE, true);
-    const items = (list.items ?? []).map((h, i) => toSearchHouse(h, i));
-    searchPageRef.current = 0;
-    setSearchHouses(items);
-    setSearchHasNext(hasNextPage(list, items.length));
-  }, []);
-
-  /**
-   * 다음 페이지를 이어 붙인다 (#975) — 종전엔 30개에서 조용히 잘렸다.
-   *
-   * `toSearchHouse`의 index가 아이콘·배경색을 돌리므로 **이미 쌓인 개수만큼
-   * 밀어서** 넘긴다. 0부터 다시 세면 페이지 경계에서 같은 아이콘이 붙는다.
-   */
-  const loadMoreSearch = useCallback(async () => {
-    if (searchLoadingMore || !searchHasNext) return;
-    setSearchLoadingMore(true);
-    try {
-      const next = searchPageRef.current + 1;
-      const list = await fetchHouses(next, SEARCH_PAGE_SIZE, true);
-      searchPageRef.current = next;
-      setSearchHouses((prev) => {
-        // 같은 집이 두 번 오면(생성/삭제로 페이지가 밀릴 때) 중복 키가 된다.
-        // seen을 돌면서 갱신해 **한 페이지 안의 중복**까지 같이 막는다.
-        const seen = new Set(prev.map((h) => h.id));
-        const added: SearchHouse[] = [];
-        for (const h of list.items ?? []) {
-          // index는 최종 목록에서의 자리 — 아이콘·배경이 여기서 갈린다.
-          const mapped = toSearchHouse(h, prev.length + added.length);
-          if (seen.has(mapped.id)) continue;
-          seen.add(mapped.id);
-          added.push(mapped);
-        }
-        const merged = [...prev, ...added];
-        setSearchHasNext(hasNextPage(list, merged.length));
-        return merged;
-      });
-    } catch {
-      // 이 훅의 다른 액션과 같은 처리 — 조용히 멈추면 스피너만 사라져
-      // "왜 안 나오지?"가 된다. hasNext는 그대로라 다시 스크롤하면 재시도된다.
-      toast('집 목록을 더 불러오지 못했어요. 잠시 후 다시 시도해 주세요.', 'error');
-    } finally {
-      setSearchLoadingMore(false);
-    }
-  }, [searchHasNext, searchLoadingMore, toast]);
 
   /** 내 집 목록 로드 사이클 (스피너 → 데이터 | 에러) — 초기 로드·재시도 공용. */
   const loadMyHouses = useCallback(async () => {
@@ -301,23 +196,32 @@ export function useHouses() {
     }
   }, [reloadMyHouses]);
 
-  /** 탐색 목록 로드 사이클 — 실패는 빈 검색 결과와 구분해 표시한다 (#549). */
-  const loadSearch = useCallback(async () => {
-    setSearchLoading(true);
-    setSearchError(false);
-    try {
-      await reloadSearch();
-    } catch {
-      setSearchError(true);
-    } finally {
-      setSearchLoading(false);
-    }
-  }, [reloadSearch]);
-
   useEffect(() => {
     void loadMyHouses();
-    void loadSearch();
-  }, [loadMyHouses, loadSearch]);
+  }, [loadMyHouses]);
+
+  // 집 탐색 — 자체 로드 사이클을 돈다. 내 집 목록과는 서버 필터로만 엮인다.
+  const {
+    searchHouses,
+    searchHasNext,
+    searchLoadingMore,
+    loadMoreSearch,
+    searchLoading,
+    searchError,
+    retrySearch,
+    joinHouse,
+    previewHouse,
+  } = useHouseSearch();
+
+  // 공동미션 — 변경은 그 집 하나만 재동기화(#534), 자동 기여(#578)는 houses에서 집을 찾는다.
+  const {
+    contributedMissionIds,
+    contributeMission,
+    applyMissionContribution,
+    claimMission,
+    createMission,
+    deleteMission,
+  } = useHouseMissions({ houses, reloadHouse });
 
   // 초대코드 오류 구분 (#549): 잘못된/만료 코드(4xx)는 null, 그 외(네트워크
   // 단절·서버 5xx)는 'network' — 화면 문구가 갈린다.
@@ -360,34 +264,6 @@ export function useHouses() {
       }
     },
     [toast, reloadMyHouses],
-  );
-
-  /** Request admission to a browsable house; true when the request is pending. */
-  const joinHouse = useCallback(
-    async (houseId: number): Promise<boolean> => {
-      try {
-        await requestHouseJoin(houseId);
-        track('house_join_request', { via: 'browse' });
-        toast('입주 신청을 보냈어요!', 'success');
-        await reloadSearch();
-        return true;
-      } catch (error) {
-        // 앱은 정원 수로 미리 막지 않는다 (#948) — 봇이 비켜줄 수 있어서
-        // 서버만이 "사람이 들어갈 수 있는지"를 안다. 그래서 만석은 추측이
-        // 아니라 서버가 준 코드로 말한다.
-        const code = error instanceof ApiError ? error.code : undefined;
-        toast(
-          code === ErrorCode.HOUSE_JOIN_REQUEST_ALREADY_PENDING
-            ? '이미 입주 신청 중이에요'
-            : code === ErrorCode.HOUSE_FULL
-              ? '정원이 가득 찼어요'
-              : '입주 신청에 실패했어요. 잠시 후 다시 시도해주세요.',
-          'error',
-        );
-        return false;
-      }
-    },
-    [toast, reloadSearch],
   );
 
   /** 신청 행을 목록에서 즉시 뺀다 (#534 낙관적 반영) — 실패 시 재동기화가 복원. */
@@ -513,73 +389,6 @@ export function useHouses() {
     [toast, reloadMyHouses],
   );
 
-  const contributeMission = useCallback(
-    async (houseId: number, missionId: number) => {
-      try {
-        const res = await contributeHouseMission(houseId, missionId);
-        setContributedMissionIds((prev) => new Set(prev).add(missionId));
-        toast(res.achieved ? '기여 완료! 목표를 달성했어요' : '기여했어요 (+1)', 'success');
-        await reloadHouse(houseId);
-      } catch (err) {
-        // The server caps contributions at one per day per member.
-        const already =
-          err instanceof ApiError && err.code === ErrorCode.HOUSE_MISSION_ALREADY_CONTRIBUTED;
-        // Already-today still means "contributed" — the card shows 기여됨.
-        if (already) setContributedMissionIds((prev) => new Set(prev).add(missionId));
-        toast(already ? '오늘은 이미 기여했어요. 내일 또 만나요!' : '기여에 실패했어요', 'error');
-      }
-    },
-    [toast, reloadHouse],
-  );
-
-  /**
-   * 완료 응답에 실려온 서버 자동 기여 결과 반영 (#578) — contributeMission 성공
-   * 처리와 동일하게 기여 마킹 + 해당 집만 재동기화(미션 currentValue 갱신).
-   */
-  const applyMissionContribution = useCallback(
-    (res: HouseMissionContributeResponse) => {
-      const missionId = res.missionId;
-      if (missionId == null) return;
-      setContributedMissionIds((prev) => new Set(prev).add(missionId));
-      toast(res.achieved ? '기여 완료! 목표를 달성했어요' : '기여했어요 (+1)', 'success');
-      const house = houses.find((h) => h.missions?.some((m) => m.id === missionId));
-      if (house?.houseId != null) void reloadHouse(house.houseId);
-    },
-    [houses, toast, reloadHouse],
-  );
-
-  const claimMission = useCallback(
-    async (houseId: number, missionId: number) => {
-      try {
-        const res = await claimHouseMission(houseId, missionId);
-        toast(`보상 수령! 집 성장 포인트 +${res.grantedGrowthPoints ?? 0}`, 'success');
-        await reloadHouse(houseId);
-      } catch (err) {
-        const notAchieved =
-          err instanceof ApiError && err.code === ErrorCode.HOUSE_MISSION_NOT_ACHIEVED;
-        toast(notAchieved ? '아직 목표를 달성하지 못했어요' : '보상 받기에 실패했어요', 'error');
-      }
-    },
-    [toast, reloadHouse],
-  );
-
-  // 탐색 카드 → 참여 전 미리보기 (#328). null이면 호출측은 모달을 열지 않는다.
-  // 카탈로그를 주면 memberRooms를 실제 방 렌더 모델로 변환한다 (#386).
-  const previewHouse = useCallback(
-    async (houseId: number, catalogue?: ShopCatalogue): Promise<HousePreviewDetail | null> => {
-      try {
-        const detail = toHousePreviewDetail(await fetchHousePreviewDetail(houseId), catalogue);
-        // 소셜 퍼널 (#803) — 탐색에서 카드를 눌러 안을 들여다본 지점.
-        track('house_preview');
-        return detail;
-      } catch {
-        toast('집 정보를 불러오지 못했어요', 'error');
-        return null;
-      }
-    },
-    [toast],
-  );
-
   // 원탭 응원 — 성공하면 서버가 대상에게 푸시를 보낸다 (#329).
   const cheerMember = useCallback(
     async (houseId: number, membershipId: number, type: HouseCheerType) => {
@@ -594,48 +403,6 @@ export function useHouses() {
       }
     },
     [toast],
-  );
-
-  const createMission = useCallback(
-    async (houseId: number, input: NewHouseMission) => {
-      try {
-        await createHouseMission(houseId, input);
-        toast('새 미션을 만들었어요!', 'success');
-        await reloadHouse(houseId);
-      } catch (err) {
-        // The server restricts mission creation to the OWNER (403).
-        const notOwner = err instanceof ApiError && err.code === ErrorCode.HOUSE_NOT_OWNER;
-        toast(notOwner ? '방장만 미션을 만들 수 있어요' : '미션 만들기에 실패했어요', 'error');
-      }
-    },
-    [toast, reloadHouse],
-  );
-
-  /** 미션 삭제 — 성공 여부 반환 (연동 루틴 정리 판단, #338). */
-  const deleteMission = useCallback(
-    async (houseId: number, missionId: number): Promise<boolean> => {
-      try {
-        await deleteHouseMission(houseId, missionId);
-        toast('미션을 삭제했어요', 'success');
-        await reloadHouse(houseId);
-        return true;
-      } catch (err) {
-        // The server keeps COMPLETED missions (growth points already granted).
-        const claimed =
-          err instanceof ApiError && err.code === ErrorCode.HOUSE_MISSION_ALREADY_CLAIMED;
-        const notOwner = err instanceof ApiError && err.code === ErrorCode.HOUSE_NOT_OWNER;
-        toast(
-          claimed
-            ? '보상을 받은 미션은 삭제할 수 없어요'
-            : notOwner
-              ? '방장만 미션을 삭제할 수 있어요'
-              : '미션 삭제에 실패했어요',
-          'error',
-        );
-        return false;
-      }
-    },
-    [toast, reloadHouse],
   );
 
   const updateHouse = useCallback(
@@ -702,7 +469,7 @@ export function useHouses() {
       searchError,
       /** Re-run the failed initial load (에러 상태의 다시 시도, #549). */
       retry: loadMyHouses,
-      retrySearch: loadSearch,
+      retrySearch,
       refreshHouses: reloadMyHouses,
       applyMyNickname,
       pendingJoinRequests,
@@ -739,7 +506,7 @@ export function useHouses() {
       error,
       searchError,
       loadMyHouses,
-      loadSearch,
+      retrySearch,
       reloadMyHouses,
       applyMyNickname,
       pendingJoinRequests,

@@ -17,9 +17,6 @@ export function supportsAppIcons() {
   const module = native();
   return module !== null && module.supportsAlternateIcons !== false;
 }
-export function getNativeAppIcon() {
-  return native()?.getAppIconName() ?? null;
-}
 export async function setNativeAppIcon(name: string | null) {
   const module = native();
   if (!module) throw new Error('App icons are unavailable in this build');

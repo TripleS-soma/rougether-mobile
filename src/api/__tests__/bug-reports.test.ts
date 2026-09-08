@@ -1,8 +1,8 @@
 import { submitBugReport } from '@/api/bug-reports';
-import { apiPost } from '@/api/client';
+import { apiUpload } from '@/api/client';
 
 jest.mock('@/api/client', () => ({
-  apiPost: jest.fn().mockResolvedValue({ bugReportId: 1 }),
+  apiUpload: jest.fn().mockResolvedValue({ bugReportId: 1 }),
   apiGetList: jest.fn().mockResolvedValue([]),
 }));
 
@@ -19,7 +19,7 @@ describe('submitBugReport (#567)', () => {
       deviceInfo: 'Pixel 7',
     });
 
-    const [path, body] = (apiPost as jest.Mock).mock.calls[0] as [string, FormData];
+    const [path, body] = (apiUpload as jest.Mock).mock.calls[0] as [string, FormData];
     expect(path).toBe('/bug-reports');
     expect(path).not.toContain('?');
 

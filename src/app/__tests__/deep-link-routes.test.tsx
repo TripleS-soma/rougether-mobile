@@ -37,7 +37,6 @@ jest.mock('@/lib/pending-invite', () => ({
 
 beforeEach(() => {
   mockRenderOrder.length = 0;
-  jest.clearAllMocks();
 });
 
 describe('딥링크 라우트 (#896)', () => {

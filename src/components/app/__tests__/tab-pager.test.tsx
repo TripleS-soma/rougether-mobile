@@ -107,6 +107,29 @@ describe('TabPager direction handoff (#1150)', () => {
     expect(manager.fail).toHaveBeenCalledTimes(1);
   });
 
+  // iOS 전용 증상(2026-09-08): 활성 팬이 형제 디텍터 재부착·취소로 드롭되면 onFinalize가
+  // 안 와 `swiping` 래치가 true로 굳고, 그 뒤 모든 터치에서 수동 활성화가 건너뛰어져
+  // 페이저가 영영 죽었다. 새 터치는 래치를 풀고 다시 판정해야 한다.
+  it('finalize 없이 드롭된 스와이프 뒤에도 다음 터치는 다시 활성화된다 (iOS 래치)', async () => {
+    await renderPager(1);
+    const pan = getByGestureTestId('tab-pager-pan') as PanGesture;
+    const manager = {
+      handlerTag: pan.handlerTag,
+      begin: jest.fn(),
+      activate: jest.fn(),
+      fail: jest.fn(),
+      end: jest.fn(),
+    };
+    // 1차 터치: 활성화까지 갔지만 END/FINALIZE가 오지 않고 드롭된다.
+    pan.handlers.onTouchesDown?.(touchEvent(pan, 100, 200), manager);
+    pan.handlers.onStart?.({} as Parameters<NonNullable<typeof pan.handlers.onStart>>[0]);
+    // 2차 터치: 래치가 남아 있으면 여기서 activate가 영영 안 불린다.
+    pan.handlers.onTouchesDown?.(touchEvent(pan, 100, 200), manager);
+    pan.handlers.onTouchesMove?.(touchEvent(pan, 140, 205), manager);
+    expect(manager.activate).toHaveBeenCalledTimes(1);
+    expect(manager.fail).not.toHaveBeenCalled();
+  });
+
   it('yields immediately for pinch or a house lock, and accepts a new touch after unlock', async () => {
     const lock = { value: false } as Reanimated.SharedValue<boolean>;
     await render(

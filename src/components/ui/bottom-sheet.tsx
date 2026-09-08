@@ -6,6 +6,7 @@ import {
   useEffect,
   useRef,
   useState,
+  useCallback,
 } from 'react';
 import {
   Animated,
@@ -52,6 +53,29 @@ export function inDragClaimZone(y0: number, cardTop: number): boolean {
  * 'card'는 카드 전체. 세로 스크롤 자식(휠·달력·ScrollView)이 없는 시트만
  * 'card'를 켤 것 — 있으면 그 자식의 스와이프를 시트 내림으로 빼앗는다.
  */
+/**
+ * iOS RN Modal 직렬화 (2026-09-08 "시간 추가 누르면 멈춤"). UIKit은 이미 Modal을
+ * 띄우고 있는 VC 위에 다른 Modal을 올리지 못한다 — 메뉴 시트가 200ms 퇴장하는 동안
+ * 다음 시트(알림 시간)가 마운트되면 "Attempt to present … which is already presenting"
+ * 으로 **새 시트가 영영 안 뜨고 visible만 true로 남아** 앱이 멈춘 것처럼 됐다(시뮬레이터
+ * 로그로 확인, Android Dialog는 겹쳐도 됨). 퇴장 중인 시트가 있으면 새 시트의 마운트를
+ * 그 언마운트 뒤로 미룬다. 모듈 스코프인 건 시트끼리 부모가 다르기 때문.
+ */
+let closingSheets = 0;
+const pendingOpens = new Set<() => void>();
+function markClosing(delta: 1 | -1) {
+  closingSheets = Math.max(0, closingSheets + delta);
+  if (closingSheets > 0) return;
+  const opens = Array.from(pendingOpens);
+  pendingOpens.clear();
+  opens.forEach((open) => open());
+}
+/** 테스트 전용 — 스위트 간 누수 방지. */
+export function __resetSheetSerializer() {
+  closingSheets = 0;
+  pendingOpens.clear();
+}
+
 export type BottomSheetDragScope = 'header' | 'card';
 
 /**
@@ -175,17 +199,43 @@ export function BottomSheet({
       }),
   );
 
+  // 이 시트가 지금 퇴장 카운트에 들어가 있는지 — 정확히 한 번만 빼기 위해.
+  const renderedRef = useLatestRef(rendered);
+  const closingRef = useRef(false);
+  const leaveClosing = useCallback(() => {
+    if (!closingRef.current) return;
+    closingRef.current = false;
+    markClosing(-1);
+  }, []);
   useEffect(() => {
     if (visible) {
-      dragY.setValue(0);
-      setRendered(true);
-      Animated.spring(progress, {
-        toValue: 1,
-        friction: 9,
-        tension: 70,
-        useNativeDriver: true,
-      }).start();
+      // 다시 열리면 퇴장 중이던 상태는 취소.
+      leaveClosing();
+      const open = () => {
+        dragY.setValue(0);
+        setRendered(true);
+        Animated.spring(progress, {
+          toValue: 1,
+          friction: 9,
+          tension: 70,
+          useNativeDriver: true,
+        }).start();
+      };
+      // 다른 시트가 퇴장 중이면(Modal 아직 붙어 있음) 그 언마운트 뒤에 연다.
+      if (closingSheets > 0) {
+        pendingOpens.add(open);
+        return () => {
+          pendingOpens.delete(open);
+        };
+      }
+      open();
       return;
+    }
+    // 마운트된 적 없는 시트(visible=false로 시작)는 Modal이 없으니 퇴장도, 대기시킬 것도 없다.
+    if (!renderedRef.current) return;
+    if (!closingRef.current) {
+      closingRef.current = true;
+      markClosing(1);
     }
     Animated.timing(progress, {
       toValue: 0,
@@ -193,9 +243,13 @@ export function BottomSheet({
       easing: Easing.in(Easing.cubic),
       useNativeDriver: true,
     }).start(({ finished }) => {
-      if (finished) setRendered(false);
+      if (!finished) return;
+      setRendered(false);
+      leaveClosing();
     });
-  }, [visible, progress, dragY]);
+  }, [visible, progress, dragY, leaveClosing, renderedRef]);
+  // 퇴장 애니메이션 도중 언마운트돼도 카운트가 남지 않게.
+  useEffect(() => leaveClosing, [leaveClosing]);
 
   // 아래로 끄는 팬만 가로챈다 — 수직 우세 + 클레임 범위(dragScope) 안에서
   // 시작한 드래그만 claim한다. 기본 'header'는 카드 상단(그립/헤더) 한정

@@ -37,7 +37,6 @@ describe('syncPushToken 진단 (#903)', () => {
   const getToken = jest.spyOn(Notifications, 'getDevicePushTokenAsync');
 
   beforeEach(() => {
-    jest.clearAllMocks();
     device.isDevice = true;
     getPerms.mockResolvedValue({ status: 'granted' } as never);
     getToken.mockResolvedValue({ data: 'fcm-abcdefghijklmnop' } as never);

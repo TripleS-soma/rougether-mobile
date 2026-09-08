@@ -1,8 +1,7 @@
-import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, waitFor } from '@testing-library/react-native';
 
 import { AppShell } from '@/components/app/app-shell';
-import { AuthProvider } from '@/hooks/use-auth';
-import { QueryProvider } from '@/test-utils/query-wrapper';
+import { renderWithProviders } from '@/test-utils/render';
 import { todayIso } from '@/utils/datetime';
 
 const TODAY = todayIso();
@@ -45,14 +44,7 @@ const finishTransition = () =>
     jest.advanceTimersByTime(400);
   });
 
-const renderShell = () =>
-  render(
-    <QueryProvider>
-      <AuthProvider>
-        <AppShell />
-      </AuthProvider>
-    </QueryProvider>,
-  );
+const renderShell = () => renderWithProviders(<AppShell />);
 
 describe('달력 하단 탭 왕복 (#1159)', () => {
   it('다른 달의 선택 날짜를 탭 전환과 루틴 추가 화면 왕복 뒤에도 유지한다', async () => {

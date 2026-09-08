@@ -16,7 +16,8 @@ import { GachaPhonePreview } from '@/dev/gacha-phone-preview';
 import { GachaStorybookPreview } from '@/dev/gacha-preview';
 import { HouseScreen, type House } from '@/components/screens/house-screen';
 import { HouseMissionsScreen } from '@/components/screens/house-missions-screen';
-import { HouseMembersScreen, manageableMembers } from '@/components/screens/house-members-screen';
+import { HouseMembersScreen } from '@/components/screens/house-members-screen';
+import { manageableMembers } from '@/components/screens/house/members';
 import { HelpScreen } from '@/components/screens/help-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { InviteFriendsScreen } from '@/components/screens/invite-friends-screen';
@@ -1245,7 +1246,7 @@ export const galleryEntries: GalleryEntry[] = [
       '온보딩 미션 진행 배너 (#571) — 깃발 표식 + 미션 N/4. 첫 실행에는 건너뛰기가 없다 (#1023).',
     render: () => (
       <View style={{ alignSelf: 'stretch', minHeight: 80 }}>
-        <MissionBanner stepIndex={1} totalSteps={4} label="뽑기 1회 해보기" onPress={() => {}} />
+        <MissionBanner stepIndex={1} totalSteps={3} label="뽑기 1회 해보기" onPress={() => {}} />
       </View>
     ),
   },
@@ -1257,7 +1258,7 @@ export const galleryEntries: GalleryEntry[] = [
       <View style={{ alignSelf: 'stretch', minHeight: 80 }}>
         <MissionBanner
           stepIndex={1}
-          totalSteps={4}
+          totalSteps={3}
           label="뽑기 1회 해보기"
           onPress={() => {}}
           onSkip={() => {}}
@@ -1340,7 +1341,7 @@ function MissionSheetDemo() {
       <MissionSheet
         visible={visible}
         completedStep={last ? 4 : 1}
-        totalSteps={4}
+        totalSteps={3}
         nextLabel={last ? null : '뽑기 1회 해보기'}
         onGo={() => setVisible(false)}
         onClose={() => setVisible(false)}

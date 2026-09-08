@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 
 import { createRoutine, fetchCategories, fetchRoutines, getSessionUserId } from '@/api';
+import { queryKeys } from '@/lib/query-keys';
 import type { StarterRoutine } from '@/constants/starter-routines';
 import { track } from '@/lib/analytics';
 
@@ -18,7 +19,7 @@ export function useStarterRoutine(userId: number | undefined) {
   }, []);
   const current = useCallback(() => mounted.current && getSessionUserId() === userId, [userId]);
   const routines = useQuery({
-    queryKey: ['starter-routine', userId],
+    queryKey: queryKeys.starterRoutine(userId),
     queryFn: () => fetchRoutines(),
     staleTime: 0,
     gcTime: 0,

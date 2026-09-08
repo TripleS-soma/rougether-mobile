@@ -29,8 +29,6 @@ const HOUSE: House = {
 const names = (h: House) => flatRooms(h).map((r) => (r.vacant ? '빈방' : r.name));
 
 describe('useRoomLayouts', () => {
-  beforeEach(() => AsyncStorage.clear());
-
   it('applies a saved layout once loaded', async () => {
     await AsyncStorage.setItem('rougether.roomLayout.v1.anon.7', JSON.stringify([1, 2, 3, null]));
     const { result } = await renderHook(() => useRoomLayouts([HOUSE]));

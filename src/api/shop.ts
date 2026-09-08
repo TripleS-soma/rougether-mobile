@@ -17,7 +17,10 @@ export function fetchItems() {
 
 /** POST /items/{itemId}/purchase. */
 export function purchaseItem(itemId: number) {
-  return apiPost<PurchaseResponse>(`/items/${itemId}/purchase`);
+  // 409 `SHOP_INSUFFICIENT_BALANCE`는 호출부가 "다이아 부족"으로 접는 예상 상태.
+  return apiPost<PurchaseResponse>(`/items/${itemId}/purchase`, undefined, {
+    expectedStatuses: [409],
+  });
 }
 
 /** GET /gacha?catalog=category — decoration categories; the default remains legacy. */

@@ -1,5 +1,6 @@
 import type { RevealPlanItem, RevealTier } from '@/components/screens/gacha/reveal-motion';
 import timing from '@/constants/gacha-multi-timing.json';
+import { clamp01, lerp } from '@/utils/math';
 import { GachaStage, Spacing } from '@/constants/theme';
 
 /** The six onsets are authored into gacha-reveal-multi.mp4, not JS timers. */
@@ -15,9 +16,6 @@ export const getMultiRevealBeatMs = (index: number) =>
 export const getMultiRevealDuration = (count: number) =>
   count > 0 ? getMultiRevealBeatMs(count - 1) + MULTI_REVEAL_TIMING.finalHoldMs : 0;
 
-const clamp = (value: number) => Math.min(1, Math.max(0, value));
-const lerp = (from: number, to: number, amount: number) => from + (to - from) * amount;
-
 const ENTRANCES: Record<RevealTier, { peak: number; turn: number; accent: number }> = {
   ungraded: { peak: 1.65, turn: 0, accent: 0.2 },
   common: { peak: 1.65, turn: -2, accent: 0.25 },
@@ -29,20 +27,20 @@ const ENTRANCES: Record<RevealTier, { peak: number; turn: number; accent: number
 export function getMultiRevealArtFrame(tier: RevealTier, index: number, currentMs: number) {
   const elapsed = Math.max(0, currentMs - getMultiRevealBeatMs(index));
   const visible = currentMs >= getMultiRevealBeatMs(index);
-  const entrance = 1 - Math.pow(1 - clamp(elapsed / 170), 3);
-  const dock = 1 - Math.pow(1 - clamp((elapsed - 150) / 340), 3);
+  const entrance = 1 - Math.pow(1 - clamp01(elapsed / 170), 3);
+  const dock = 1 - Math.pow(1 - clamp01((elapsed - 150) / 340), 3);
   const motion = ENTRANCES[tier];
   return {
     visible,
-    opacity: visible ? clamp(elapsed / 70) : 0,
+    opacity: visible ? clamp01(elapsed / 70) : 0,
     scale: lerp(lerp(0.45, motion.peak, entrance), 1, dock),
     centerWeight: 1 - dock,
     lift: lerp(Spacing.five, -Spacing.two, entrance) * (1 - dock),
     rotation: lerp(lerp(motion.turn, -motion.turn / 4, entrance), 0, dock),
     accentOpacity: visible
-      ? motion.accent * clamp(elapsed / 70) * (1 - clamp((elapsed - 180) / 700))
+      ? motion.accent * clamp01(elapsed / 70) * (1 - clamp01((elapsed - 180) / 700))
       : 0,
-    accentScale: lerp(0.65, 1.35, clamp(elapsed / 820)),
+    accentScale: lerp(0.65, 1.35, clamp01(elapsed / 820)),
   };
 }
 

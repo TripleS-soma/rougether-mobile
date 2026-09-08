@@ -1,4 +1,4 @@
-import { apiGet, apiGetList } from '@/api/client';
+import { apiGet, apiGetList, apiGetPage, apiUpload } from '@/api/client';
 import { fetchMe } from '@/api/me';
 import { clearSession, devLogin, getAccessToken, onSessionCleared } from '@/api/auth';
 import { track } from '@/lib/analytics';
@@ -20,7 +20,6 @@ const realFetch = global.fetch;
 afterEach(async () => {
   await clearSession();
   global.fetch = realFetch;
-  jest.clearAllMocks();
 });
 
 describe('API client', () => {
@@ -158,5 +157,109 @@ describe('expectedStatuses', () => {
   it('던지는 동작은 그대로 — 계측에서만 빠진다', async () => {
     global.fetch = jest.fn(async () => res(404)) as unknown as typeof fetch;
     await expect(apiGet('/events/attendance', { expectedStatuses: [404] })).rejects.toBeTruthy();
+  });
+});
+
+/**
+ * multipart 업로드 (버그 제보 스크린샷 #496, AI 가구 사진). 다른 메서드와 같은
+ * 경로(bearer·401 갱신 재요청·expectedStatuses·api_error)를 타되 Content-Type은
+ * 두지 않는다 — fetch가 boundary를 스스로 붙여야 한다.
+ */
+describe('apiUpload', () => {
+  const login = (fetchImpl: (url: string, init?: RequestInit) => Promise<MockRes>) => {
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      if (url.endsWith('/auth/dev-login')) {
+        return res(200, { userId: 1, accessToken: 'a1', refreshToken: 'r1' });
+      }
+      return fetchImpl(url, init);
+    }) as unknown as typeof fetch;
+    return devLogin(1);
+  };
+
+  it('bearer는 붙이고 Content-Type은 두지 않는다 — FormData 본문 그대로', async () => {
+    let seen: RequestInit | undefined;
+    await login(async (_url, init) => {
+      seen = init;
+      return res(201, { bugReportId: 9 });
+    });
+    const form = new FormData();
+    form.append('title', '제목');
+    const out = await apiUpload<{ bugReportId: number }>('/bug-reports', form);
+
+    expect(out.bugReportId).toBe(9);
+    expect(seen?.method).toBe('POST');
+    expect(seen?.body).toBe(form);
+    const headers = seen?.headers as Record<string, string>;
+    expect(headers.Authorization).toBe('Bearer a1');
+    expect(Object.keys(headers).map((k) => k.toLowerCase())).not.toContain('content-type');
+  });
+
+  it('401이면 갱신 후 같은 FormData로 한 번 재요청한다', async () => {
+    const uploads: RequestInit[] = [];
+    await login(async (url, init) => {
+      if (url.endsWith('/auth/refresh')) return res(200, { accessToken: 'a2', refreshToken: 'r2' });
+      uploads.push(init ?? {});
+      return uploads.length === 1 ? res(401, { message: 'expired' }) : res(201, { id: 'job' });
+    });
+    const form = new FormData();
+    const out = await apiUpload<{ id: string }>('/me/furniture-generations', form);
+
+    expect(out.id).toBe('job');
+    expect(uploads).toHaveLength(2);
+    expect(uploads.map((u) => (u.headers as Record<string, string>).Authorization)).toEqual([
+      'Bearer a1',
+      'Bearer a2',
+    ]);
+    expect(uploads.every((u) => u.body === form)).toBe(true);
+  });
+
+  it('expectedStatuses에 든 실패는 던지되 api_error로 세지 않는다', async () => {
+    await login(async () => res(413));
+    await expect(
+      apiUpload('/me/furniture-generations', new FormData(), { expectedStatuses: [413] }),
+    ).rejects.toMatchObject({ status: 413 });
+    expect(trackMock.mock.calls.filter(([name]) => name === 'api_error')).toHaveLength(0);
+
+    await expect(apiUpload('/me/furniture-generations', new FormData())).rejects.toBeTruthy();
+    const call = trackMock.mock.calls.find(([name]) => name === 'api_error');
+    expect(call?.[1]).toEqual({ endpoint: 'POST /me/furniture-generations', status: '413' });
+  });
+});
+
+/** 페이지 응답 정규화 — offset(`page·size·totalElements`)과 cursor(`hasNext`) 둘 다. */
+describe('apiGetPage', () => {
+  it('offset 페이지: 서버의 page·size·totalElements로 hasNext를 계산한다', async () => {
+    global.fetch = jest.fn(async () =>
+      res(200, { items: [{ id: 1 }], page: 0, size: 20, totalElements: 45 }),
+    ) as unknown as typeof fetch;
+    const first = await apiGetPage<{ id: number }>('/me/wallets/histories?page=0&size=20');
+    expect(first).toEqual({ items: [{ id: 1 }], totalElements: 45, nextCursor: undefined, hasNext: true }); // prettier-ignore
+
+    global.fetch = jest.fn(async () =>
+      res(200, { items: [{ id: 41 }], page: 2, size: 20, totalElements: 45 }),
+    ) as unknown as typeof fetch;
+    const last = await apiGetPage<{ id: number }>('/me/wallets/histories?page=2&size=20');
+    expect(last.hasNext).toBe(false);
+  });
+
+  it('cursor 페이지: 서버의 hasNext·nextCursor를 그대로 넘긴다', async () => {
+    global.fetch = jest.fn(async () =>
+      res(200, { items: [{ id: 3 }], nextCursor: 3, hasNext: true }),
+    ) as unknown as typeof fetch;
+    const page = await apiGetPage<{ id: number }>('/notifications');
+    expect(page).toEqual({ items: [{ id: 3 }], totalElements: undefined, nextCursor: 3, hasNext: true }); // prettier-ignore
+  });
+
+  it('빈 봉투도 items는 배열, hasNext는 false — 추측으로 다음 페이지를 돌리지 않는다', async () => {
+    global.fetch = jest.fn(async () => res(200, {})) as unknown as typeof fetch;
+    const page = await apiGetPage('/houses?page=0&size=30');
+    expect(page.items).toEqual([]);
+    expect(page.hasNext).toBe(false);
+
+    // page·size 없이 totalElements만 오면 offset 산술을 할 수 없다 → false.
+    global.fetch = jest.fn(async () =>
+      res(200, { items: [{ id: 1 }], totalElements: 99 }),
+    ) as unknown as typeof fetch;
+    expect((await apiGetPage('/houses?page=0&size=30')).hasNext).toBe(false);
   });
 });

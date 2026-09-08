@@ -31,7 +31,6 @@ let change: (() => void) | undefined;
 const originalState = AppState.currentState;
 let client: ReturnType<typeof createTestQueryClient>;
 beforeEach(() => {
-  jest.clearAllMocks();
   mockStatus = 'authed';
   mockUserId = 1;
   AppState.currentState = 'active';

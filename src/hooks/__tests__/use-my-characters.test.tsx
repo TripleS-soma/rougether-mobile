@@ -1,12 +1,8 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useMyCharacters } from '@/hooks/use-my-characters';
-
-const res = (body: unknown) => ({
-  ok: true,
-  status: 200,
-  text: async () => JSON.stringify(body),
-});
+import { jsonRes as res } from '@/test-utils/fetch';
+import { queryWrapper } from '@/test-utils/query-wrapper';
 
 // 서버 등록 포즈 — 정렬 전 순서를 일부러 섞어 둔다 (#735).
 const PANDA_POSES = [
@@ -26,14 +22,22 @@ const OWNED = {
 const realFetch = global.fetch;
 afterEach(() => {
   global.fetch = realFetch;
-  jest.clearAllMocks();
 });
+
+/**
+ * react-query는 뮤테이션 결과 알림을 `notifyManager`로 배칭한다(setTimeout 0) —
+ * act 안의 await만으로는 안 비워져 마지막 단언 뒤에 렌더가 새면 act 경고가 난다.
+ */
+const flushQueryNotifications = () =>
+  act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
 
 describe('useMyCharacters', () => {
   it('loads owned characters, maps codes, and surfaces the worn one', async () => {
     global.fetch = jest.fn(async () => res(OWNED)) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useMyCharacters());
+    const { result } = await renderHook(() => useMyCharacters(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.characters).toHaveLength(2));
 
     expect(result.current.characters?.map((c) => c.id)).toEqual(['cat', 'panda']);
@@ -55,7 +59,7 @@ describe('useMyCharacters', () => {
       return res(init?.method === 'PUT' ? { selectedCharacterId: 1 } : OWNED);
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useMyCharacters());
+    const { result } = await renderHook(() => useMyCharacters(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.characters).toHaveLength(2));
 
     await act(async () => {
@@ -65,7 +69,8 @@ describe('useMyCharacters', () => {
     const put = calls.find((c) => c.method === 'PUT');
     expect(put?.url.endsWith('/me/characters/select')).toBe(true);
     expect(JSON.parse(put?.body ?? '{}')).toEqual({ characterId: 1 });
-    expect(result.current.selectedCharacterId).toBe('cat');
+    await waitFor(() => expect(result.current.selectedCharacterId).toBe('cat'));
+    await flushQueryNotifications();
   });
 
   it('rolls the worn character back when the PUT fails', async () => {
@@ -74,7 +79,7 @@ describe('useMyCharacters', () => {
       return res(OWNED);
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useMyCharacters());
+    const { result } = await renderHook(() => useMyCharacters(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.characters).toHaveLength(2));
 
     await act(async () => {
@@ -82,5 +87,6 @@ describe('useMyCharacters', () => {
     });
 
     await waitFor(() => expect(result.current.selectedCharacterId).toBe('panda'));
+    await flushQueryNotifications();
   });
 });
