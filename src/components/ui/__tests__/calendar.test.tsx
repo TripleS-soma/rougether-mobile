@@ -1,8 +1,9 @@
-import { act, fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render, within } from '@testing-library/react-native';
 import { State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { Calendar } from '@/components/ui/calendar';
+import { Themes } from '@/constants/theme';
 import { flattenStyle } from '@/test-utils/style';
 
 describe('Calendar', () => {
@@ -277,5 +278,16 @@ describe('Calendar', () => {
       );
       expect(queryAllByLabelText(/^2026-08-\d{2}/)).toHaveLength(31);
     });
+  });
+  /** 토요일은 파랑(`info`), 일요일은 빨강(`danger`) — 평일 숫자는 기본 텍스트색. */
+  it('토요일 숫자는 info, 일요일은 danger, 평일은 text 색이다', async () => {
+    const { getByLabelText } = await render(
+      <Calendar value="2026-09-08" today="2026-09-08" onSelect={() => {}} />,
+    );
+    const dayColor = (date: string, day: string) =>
+      flattenStyle(within(getByLabelText(date)).getByText(day).props.style).color;
+    expect(dayColor('2026-09-05', '5')).toBe(Themes.cozy.info);
+    expect(dayColor('2026-09-06', '6')).toBe(Themes.cozy.danger);
+    expect(dayColor('2026-09-07', '7')).toBe(Themes.cozy.text);
   });
 });

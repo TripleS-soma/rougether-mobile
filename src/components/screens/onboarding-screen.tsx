@@ -9,11 +9,11 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  useWindowDimensions,
   View,
 } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 
+import { useAppFrame } from '@/hooks/use-app-frame';
 import { CharacterAvatar } from '@/components/room/character-avatar';
 import { Icon } from '@/components/ui/icon';
 import {
@@ -147,7 +147,8 @@ export function OnboardingScreen({
 }: OnboardingScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
-  const { width: windowW } = useWindowDimensions();
+  // 카드 폭은 앱 프레임 기준(웹 데스크톱 중앙 컬럼).
+  const { width: windowW } = useAppFrame();
   const characterScrollRef = useRef<ScrollView>(null);
   // RN-web은 momentum-end를 쏘지 않는다 — 스크롤 유휴로 정착시킨다
   // (wheel-picker와 같은 패턴).

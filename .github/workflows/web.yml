@@ -34,7 +34,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # 웹 카카오 로그인(#1225)은 브라우저가 kauth와 직접 토큰을 교환하므로 REST 키가
+      # 번들에 인라인된다(카카오 문서상 비밀값 아님 — 시크릿은 별도). 레포 variable.
       - run: npx expo export --platform web --output-dir dist
+        env:
+          EXPO_PUBLIC_KAKAO_REST_API_KEY: ${{ vars.KAKAO_REST_API_KEY }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

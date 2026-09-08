@@ -185,4 +185,18 @@ describe('LoginScreen 최근 로그인 배지', () => {
     const { getByLabelText } = await render(<LoginScreen lastLoginProvider="apple" />);
     expect(getByLabelText('Apple로 시작, 최근 로그인')).toBeTruthy();
   });
+  it('busy(화면 밖 진행 중)면 소셜 버튼 탭이 두 번째 시도를 시작하지 않는다 (#1225 리뷰)', async () => {
+    const onKakaoLogin = jest.fn(async () => 'ok' as const);
+    const { getByLabelText } = await render(<LoginScreen onKakaoLogin={onKakaoLogin} busy />);
+    await fireEvent.press(getByLabelText('Kakao로 시작'));
+    expect(onKakaoLogin).not.toHaveBeenCalled();
+  });
+
+  it('initialError는 에러 영역에 반영되고 값이 바뀌면 따라간다 (#1225)', async () => {
+    const view = await render(<LoginScreen initialError="첫 번째 실패" />);
+    expect(view.getByText('첫 번째 실패')).toBeTruthy();
+    await view.rerender(<LoginScreen initialError="두 번째 실패" />);
+    expect(view.getByText('두 번째 실패')).toBeTruthy();
+    expect(view.queryByText('첫 번째 실패')).toBeNull();
+  });
 });
