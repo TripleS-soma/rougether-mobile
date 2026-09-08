@@ -32,6 +32,7 @@
 - **UI 문구는 한국어**, 코드·주석·식별자는 영어.
 - **아이콘**은 현재 이모지 플레이스홀더이며, 실제 스프라이트/CDN 아트는 추후 포팅합니다.
 - 파일명은 kebab-case, 컴포넌트는 PascalCase named export.
+- **API 날짜(`YYYY-MM-DD`)는 Asia/Seoul 달력 날짜**입니다(spec `api.md` "날짜와 시각"). `Date` → 날짜 문자열은 반드시 `todayIso()` / `toKstDate()`(`src/utils/datetime.ts`)로만 만드세요. `toISOString().slice(0, 10)`(UTC — KST 00:00~08:59에 전날)과 `getFullYear()/getMonth()/getDate()`(단말 로컬)는 금지입니다. 경계값은 `contracts/date-boundary-cases.json`(spec 복사본)이며 `npm run test:date-boundary`가 실제 요청 생성 코드로 검증합니다.
 
 ## 작업 흐름
 
