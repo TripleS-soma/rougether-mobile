@@ -1,5 +1,5 @@
 /** House (집) endpoints. */
-import { apiDelete, apiGet, apiGetList, apiPost, apiPut } from './client';
+import { apiDelete, apiGet, apiGetList, apiGetPage, apiPost, apiPut } from './client';
 import { buildQuery } from './http';
 import type { RoomWithLayout } from './rooms';
 import type {
@@ -11,7 +11,6 @@ import type {
   HouseJoinResponse,
   InviteCodeResponse,
   HouseJoinRequestResponse,
-  HouseListResponse,
   HouseOrderUpdateRequest,
   HouseMemberDayResponse,
   HouseMemberRoutineCompletionListResponse,
@@ -21,6 +20,7 @@ import type {
   HouseMissionResponse,
   HousePreviewDetailResponse,
   HousePreviewResponse,
+  HouseSummary,
   HouseUpdateRequest,
   HouseUpdateResponse,
   MemberSummary,
@@ -46,10 +46,13 @@ export function fetchMyHouses() {
  * **전량 전송 계약**: 내가 active 구성원인 집 전체를 원하는 순서로 넘긴다.
  * 부분 목록·중복·남의 집 id는 전부 `HOUSE_ORDER_INVALID`(400)다 — 우리는
  * 항상 아는 목록 전부를 보내므로, 이 400은 사실상 "네가 아는 목록이 낡았다"는
- * 뜻이고 호출부는 재조회로 회복한다.
+ * 뜻이고 호출부는 재조회로 회복한다. 그래서 400은 예상 상태 — use-houses가
+ * 재조회로 접으므로 api_error로 세지 않는다.
  */
 export function updateHouseOrder(houseIds: number[]) {
-  return apiPut<void>('/me/houses/order', { houseIds } as HouseOrderUpdateRequest);
+  return apiPut<void>('/me/houses/order', { houseIds } as HouseOrderUpdateRequest, {
+    expectedStatuses: [400],
+  });
 }
 
 /** GET /houses/cover-images — selectable cover catalog (집 생성·설정). */
@@ -62,7 +65,7 @@ export function fetchHouseCoverImages() {
  * ACTIVE(소유 포함)인 집을 서버가 걸러서 내려준다 (#578).
  */
 export function fetchHouses(page = 0, size = 20, excludeJoined = false) {
-  return apiGet<HouseListResponse>(
+  return apiGetPage<HouseSummary>(
     `/houses${buildQuery({ page, size, excludeJoined: excludeJoined ? 'true' : undefined })}`,
   );
 }
@@ -102,9 +105,15 @@ export function cancelMyJoinRequest(requestId: number) {
   return apiDelete<void>(`/me/join-requests/${requestId}`);
 }
 
-/** POST /houses/{id}/join-requests — request admission to a browsable house. */
+/**
+ * POST /houses/{id}/join-requests — request admission to a browsable house.
+ * 409(`HOUSE_JOIN_REQUEST_ALREADY_PENDING`·`HOUSE_FULL`)는 호출부가 안내 문구로
+ * 접는 예상 상태 (#948) — 앱이 정원을 미리 막지 않으므로 만석은 늘 이 경로다.
+ */
 export function requestHouseJoin(houseId: number) {
-  return apiPost<HouseJoinRequestResponse>(`/houses/${houseId}/join-requests`);
+  return apiPost<HouseJoinRequestResponse>(`/houses/${houseId}/join-requests`, undefined, {
+    expectedStatuses: [409],
+  });
 }
 
 /**
@@ -121,9 +130,17 @@ export function fetchHouseJoinRequests(houseId: number) {
   });
 }
 
-/** POST /houses/{id}/join-requests/{requestId}/accept — owner accepts. */
+/**
+ * POST /houses/{id}/join-requests/{requestId}/accept — owner accepts.
+ * 409 `HOUSE_JOIN_REQUEST_APPLICANT_WITHDRAWN`(서버 #240)는 서버가 이미 정리한
+ * 신청 — 호출부가 안내만 하는 예상 상태.
+ */
 export function acceptHouseJoinRequest(houseId: number, requestId: number) {
-  return apiPost<HouseJoinResponse>(`/houses/${houseId}/join-requests/${requestId}/accept`);
+  return apiPost<HouseJoinResponse>(
+    `/houses/${houseId}/join-requests/${requestId}/accept`,
+    undefined,
+    { expectedStatuses: [409] },
+  );
 }
 
 /** POST /houses/{id}/join-requests/{requestId}/reject — owner rejects. */
@@ -170,8 +187,11 @@ export function fetchHouseMemberRoom(houseId: number, membershipId: number) {
  * 방 주인에게는 `ROOM_COBWEB_CLEANED` 알림이 간다(자기 방 청소는 알림 없음).
  */
 export function cleanHouseMemberCobweb(houseId: number, membershipId: number) {
+  // 409 `ROOM_COBWEB_NOT_ACTIVE` = 남이 먼저 치웠다 — 호출부가 "이미 깨끗함"으로 접는다.
   return apiPost<RoomCobwebCleanResponse>(
     `/houses/${houseId}/members/${membershipId}/room/cobweb/clean`,
+    undefined,
+    { expectedStatuses: [409] },
   );
 }
 
@@ -205,15 +225,25 @@ export function fetchHouseMissions(houseId: number) {
   return apiGetList<MissionSummary>(`/houses/${houseId}/missions`);
 }
 
-/** POST /houses/{id}/missions — create a mission (STREAK_DAYS unsupported: 400). */
+/**
+ * POST /houses/{id}/missions — create a mission (STREAK_DAYS unsupported: 400).
+ * 403 `HOUSE_NOT_OWNER`는 호출부가 "방장만" 안내로 접는 예상 상태.
+ */
 export function createHouseMission(houseId: number, body: HouseMissionCreateRequest) {
-  return apiPost<HouseMissionResponse>(`/houses/${houseId}/missions`, body);
+  return apiPost<HouseMissionResponse>(`/houses/${houseId}/missions`, body, {
+    expectedStatuses: [403],
+  });
 }
 
-/** POST /houses/{id}/missions/{missionId}/contribute — add my +1 contribution. */
+/**
+ * POST /houses/{id}/missions/{missionId}/contribute — add my +1 contribution.
+ * 409 `HOUSE_MISSION_ALREADY_CONTRIBUTED`(하루 1회)는 호출부가 "기여됨"으로 접는다.
+ */
 export function contributeHouseMission(houseId: number, missionId: number) {
   return apiPost<HouseMissionContributeResponse>(
     `/houses/${houseId}/missions/${missionId}/contribute`,
+    undefined,
+    { expectedStatuses: [409] },
   );
 }
 
@@ -230,12 +260,25 @@ export function fetchHousePreviewDetail(houseId: number) {
 /** 응원 3종 — 서버는 소문자 문자열로 받는다. */
 export type HouseCheerType = 'great' | 'support' | 'best';
 
-/** POST /houses/{id}/members/{membershipId}/cheer — 원탭 응원 (같은 타입 하루 1회: 409). */
+/**
+ * POST /houses/{id}/members/{membershipId}/cheer — 원탭 응원 (같은 타입 하루 1회:
+ * 409 `HOUSE_CHEER_DUPLICATED`, 호출부가 "이미 보냈어요"로 접는 예상 상태).
+ */
 export function cheerHouseMember(houseId: number, membershipId: number, type: HouseCheerType) {
-  return apiPost<HouseCheerResponse>(`/houses/${houseId}/members/${membershipId}/cheer`, { type });
+  return apiPost<HouseCheerResponse>(
+    `/houses/${houseId}/members/${membershipId}/cheer`,
+    { type },
+    { expectedStatuses: [409] },
+  );
 }
 
-/** DELETE /houses/{id}/missions/{missionId} — OWNER only; COMPLETED missions 409. */
+/**
+ * DELETE /houses/{id}/missions/{missionId} — OWNER only (403 `HOUSE_NOT_OWNER`);
+ * COMPLETED missions 409 (`HOUSE_MISSION_ALREADY_CLAIMED`). 둘 다 호출부가
+ * 이유 문구로 접는 예상 상태.
+ */
 export function deleteHouseMission(houseId: number, missionId: number) {
-  return apiDelete<void>(`/houses/${houseId}/missions/${missionId}`);
+  return apiDelete<void>(`/houses/${houseId}/missions/${missionId}`, undefined, {
+    expectedStatuses: [403, 409],
+  });
 }

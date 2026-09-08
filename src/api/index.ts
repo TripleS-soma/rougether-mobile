@@ -12,9 +12,12 @@ export {
   apiDelete,
   apiGet,
   apiGetList,
+  apiGetPage,
   apiPatch,
   apiPost,
   apiPut,
+  apiUpload,
+  type Page,
   type RequestOptions,
 } from './client';
 

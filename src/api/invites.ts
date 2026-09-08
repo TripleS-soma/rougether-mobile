@@ -17,5 +17,10 @@ export function fetchMyInvite() {
  * 통계를 덮지 않게.
  */
 export function redeemInvite(code: string) {
-  return apiPost<InviteRedeemResponse>('/invites/redeem', { code }, { expectedStatuses: [404] });
+  // 404 = 없는 코드, 409 = 이미 사용(INVITE_ALREADY_REDEEMED) — 둘 다 호출부가 안내로 접는다.
+  return apiPost<InviteRedeemResponse>(
+    '/invites/redeem',
+    { code },
+    { expectedStatuses: [404, 409] },
+  );
 }

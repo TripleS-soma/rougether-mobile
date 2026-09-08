@@ -2,7 +2,7 @@
 import { Platform } from 'react-native';
 
 import { getAccessToken } from './auth';
-import { apiGetList, apiPost } from './client';
+import { apiGetList, apiUpload } from './client';
 import { API_BASE } from './config';
 import type { BugReportResponse } from './types';
 
@@ -39,7 +39,7 @@ export async function submitBugReport(input: {
       form.append('images', img as unknown as Blob);
     }
   }
-  return apiPost<BugReportResponse>('/bug-reports', form);
+  return apiUpload<BugReportResponse>('/bug-reports', form);
 }
 
 /** GET /me/bug-reports — 내 제보 목록 (처리 현황 확인, 최신순). */

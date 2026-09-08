@@ -43,7 +43,7 @@ export function useHouseSearch() {
   const reloadSearch = useCallback(async () => {
     // excludeJoined — 본인 ACTIVE(소유 포함) 집은 서버가 걸러 준다 (#578).
     const list = await fetchHouses(0, SEARCH_PAGE_SIZE, true);
-    const items = (list.items ?? []).map((h, i) => toSearchHouse(h, i));
+    const items = list.items.map((h, i) => toSearchHouse(h, i));
     searchPageRef.current = 0;
     setSearchHouses(items);
     setSearchHasNext(hasNextPage(list, items.length));
@@ -67,7 +67,7 @@ export function useHouseSearch() {
         // seen을 돌면서 갱신해 **한 페이지 안의 중복**까지 같이 막는다.
         const seen = new Set(prev.map((h) => h.id));
         const added: SearchHouse[] = [];
-        for (const h of list.items ?? []) {
+        for (const h of list.items) {
           // index는 최종 목록에서의 자리 — 아이콘·배경이 여기서 갈린다.
           const mapped = toSearchHouse(h, prev.length + added.length);
           if (seen.has(mapped.id)) continue;
