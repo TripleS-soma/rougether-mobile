@@ -23,7 +23,6 @@ import { type HouseCover } from '@/components/room/house-cover-picker';
 import { HouseOrderDots } from '@/components/room/house-order-dots';
 import { useHouseFrame } from '@/hooks/use-house-frame';
 import { type HouseFrameOptions, houseWindowSeats } from '@/resources/house-frame';
-import { Loading } from '@/components/ui/loading';
 import { CoachTarget } from '@/components/ui/coach-mark';
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { type MemberRoomPreview, type RoomCatalogProps } from '@/components/room/room';
@@ -41,14 +40,17 @@ import {
   clampCam,
   isCamAway,
 } from '@/components/screens/house/camera';
+import { HouseEmptyState } from '@/components/screens/house/house-empty-state';
+import { HouseSwitcher } from '@/components/screens/house/house-switcher';
 import { manageableMembers } from '@/components/screens/house/members';
+import { PendingHousePage } from '@/components/screens/house/pending-house-page';
+import { RailButton } from '@/components/screens/house/rail-button';
 import { SeatTile } from '@/components/screens/house/seat-tile';
 import { type SeatRect, seatAtPoint } from '@/components/screens/house/seat-drag';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { gridRoomPairs, seatRowsFor } from '@/components/screens/house/seat-geometry';
 import { Icon } from '@/components/ui/icon';
 import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
 import { CrownPictogram, HousePictogram, TargetPictogram } from '@/components/ui/pictograms';
-import { ScalePressable } from '@/components/ui/scale-pressable';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { characterIdForMember } from '@/hooks/use-member-room-previews';
 import { FixedOverlay, Radius, ShadowColor, Spacing } from '@/constants/theme';
@@ -299,7 +301,15 @@ export const HouseScreen = memo(function HouseScreen({
     houseIndex >= houses.length && pendingList.length > 0
       ? pendingList[Math.min(houseIndex - houses.length, pendingList.length - 1)]
       : undefined;
-  const [pendingToCancel, setPendingToCancel] = useState<PendingJoinHouse | null>(null);
+  // 입주 신청 철회 (#648) — 확인 다이얼로그는 대기 페이지가 가진다. 없으면
+  // 페이지가 취소 버튼을 안 그리므로 undefined를 그대로 넘긴다.
+  const cancelJoinRequest = onCancelJoinRequest
+    ? (requestId: number) => {
+        onCancelJoinRequest(requestId);
+        // 마지막 대기 카드였다면 유효한 집 페이지로 복귀.
+        if (pendingList.length <= 1) setHouseIndex(Math.max(0, houses.length - 1));
+      }
+    : undefined;
 
   const prevHouse = () => setHouseIndex((houseIndex - 1 + totalPages) % totalPages);
   const nextHouse = () => setHouseIndex((houseIndex + 1) % totalPages);
@@ -326,21 +336,8 @@ export const HouseScreen = memo(function HouseScreen({
         : cellsInOrder,
     [onSwapSeats, perm, cellsInOrder],
   );
-  // 표시 행(어댑터 층 구성)별 좌석 인덱스.
-  const seatRows = useMemo(() => {
-    const rows: number[][] = [];
-    let seatOffset = 0;
-    for (const size of rowShapes) {
-      // Defensively split malformed wide rows so no member is dropped.
-      for (let start = 0; start < size; start += 2) {
-        rows.push(
-          Array.from({ length: Math.min(2, size - start) }, (_, i) => seatOffset + start + i),
-        );
-      }
-      seatOffset += size;
-    }
-    return rows;
-  }, [rowShapes]);
+  // 표시 행(어댑터 층 구성)별 좌석 인덱스 — 산식은 house/seat-geometry.ts.
+  const seatRows = useMemo(() => seatRowsFor(rowShapes), [rowShapes]);
   // Resolve the asset and its cutouts together. Legacy art keeps its lower
   // two rows plus overflow; stacked art contains all supported capacity rows.
   const { frame, onFrameError } = useHouseFrame(currentHouse?.coverImageKey, {
@@ -373,13 +370,10 @@ export const HouseScreen = memo(function HouseScreen({
     () => houseWindowSeats(seatRows, frame.windowRects.length),
     [seatRows, frame.windowRects],
   );
-  const { roomPairs, rowOffsets } = useMemo(() => {
-    const gridSeatRows = seatRows.slice(0, -frame.windowRects.length / 2);
-    return {
-      roomPairs: gridSeatRows.map((row) => row.map((i) => displayCells[i])) as RoomCell[][],
-      rowOffsets: gridSeatRows.map((row) => row[0] ?? 0),
-    };
-  }, [seatRows, displayCells, frame.windowRects]);
+  const { roomPairs, rowOffsets } = useMemo(
+    () => gridRoomPairs(seatRows, displayCells, frame.windowRects.length),
+    [seatRows, displayCells, frame.windowRects],
+  );
 
   // --- 타일 드래그 앤 드롭 (자리 맞바꾸기, #278) ---
   // Long-press lifts a tile, the grid captures the active touch and the tile
@@ -742,142 +736,30 @@ export const HouseScreen = memo(function HouseScreen({
   // 카메라·좌석 로직과 얽히지 않고, 스위처 산술(totalPages)만 공유한다.
   if (pendingHouse) {
     return (
-      <View style={[styles.screen, screenStyle]} testID="pending-house-page">
-        <View style={styles.emptyWrap}>
-          <View style={styles.switcher}>
-            {totalPages > 1 ? (
-              <Pressable
-                onPress={prevHouse}
-                accessibilityRole="button"
-                accessibilityLabel="이전 집"
-                hitSlop={8}
-                style={styles.iconBtn}>
-                <GlassSurface style={styles.iconBtnFace} fallbackColor={t.surface}>
-                  <Icon name="back" size={18} color={t.text} />
-                </GlassSurface>
-              </Pressable>
-            ) : null}
-            <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.titleBadge}>
-              <Icon name="lock" size={14} color={t.textMuted} />
-              {/* 서버는 집 이름을 30자까지 받는다 — 안 자르면 뱃지가 부풀어
-                  좌우 전환 화살표를 화면 밖으로 밀어낸다 (#994). */}
-              <Text style={[Typography.h3, styles.titleText, { color: t.text }]} numberOfLines={1}>
-                {pendingHouse.name}
-              </Text>
-            </GlassSurface>
-            {totalPages > 1 ? (
-              <Pressable
-                onPress={nextHouse}
-                accessibilityRole="button"
-                accessibilityLabel="다음 집"
-                hitSlop={8}
-                style={styles.iconBtn}>
-                <GlassSurface style={styles.iconBtnFace} fallbackColor={t.surface}>
-                  <Icon name="forward" size={18} color={t.text} />
-                </GlassSurface>
-              </Pressable>
-            ) : null}
-          </View>
-          <View style={[styles.pendingCard, { backgroundColor: t.surface }]}>
-            <Icon name="lock" size={40} color={t.textDisabled} />
-            <Text style={[Typography.h3, styles.pendingTitle, { color: t.text }]}>
-              방장 승인을 기다리고 있어요
-            </Text>
-            <Text style={[Typography.body, styles.emptyBody, { color: t.textMuted }]}>
-              승인되면 이 자리에 집이 열려요. 조금만 기다려 주세요!
-            </Text>
-            {pendingHouse.requestedAt ? (
-              <Text style={[Typography.supporting, { color: t.textDisabled }]}>
-                {pendingHouse.requestedAt.slice(0, 10).replace(/-/g, '.')} 신청
-              </Text>
-            ) : null}
-            {onCancelJoinRequest ? (
-              <ScalePressable
-                onPress={() => setPendingToCancel(pendingHouse)}
-                accessibilityRole="button"
-                accessibilityLabel="입주 신청 취소"
-                style={[styles.pendingCancelBtn, { borderColor: t.border }]}>
-                <Text style={[Typography.label, { color: t.textMuted }]}>신청 취소</Text>
-              </ScalePressable>
-            ) : null}
-          </View>
-          {/* 대기 카드 페이지(#648)는 내 집이 아니라 정렬 대상에서 빠진다. */}
-          <HouseOrderDots
-            houses={orderableHouses}
-            pendingCount={pendingList.length}
-            index={houseIndex}
-            onReorder={onReorderHouses}
-          />
-        </View>
-
-        <ConfirmDialog
-          visible={pendingToCancel != null}
-          title="입주 신청을 취소할까요?"
-          body={
-            pendingToCancel
-              ? `'${pendingToCancel.name}' 집에 보낸 신청이 철회돼요. 초대코드가 있으면 다시 신청할 수 있어요.`
-              : ''
-          }
-          confirmLabel="신청 취소"
-          confirmAccessibilityLabel="신청 취소 확인"
-          cancelLabel="유지"
-          destructive
-          onConfirm={() => {
-            if (pendingToCancel) {
-              onCancelJoinRequest?.(pendingToCancel.requestId);
-              // 마지막 대기 카드였다면 유효한 집 페이지로 복귀.
-              if (pendingList.length <= 1) setHouseIndex(Math.max(0, houses.length - 1));
-            }
-            setPendingToCancel(null);
-          }}
-          onCancel={() => setPendingToCancel(null)}
-        />
-      </View>
+      <PendingHousePage
+        pendingHouse={pendingHouse}
+        screenStyle={screenStyle}
+        totalPages={totalPages}
+        onPrev={prevHouse}
+        onNext={nextHouse}
+        orderableHouses={orderableHouses}
+        pendingCount={pendingList.length}
+        houseIndex={houseIndex}
+        onReorderHouses={onReorderHouses}
+        onCancelJoinRequest={cancelJoinRequest}
+      />
     );
   }
 
   if (!currentHouse) {
     return (
-      <View style={[styles.screen, screenStyle]}>
-        <View style={styles.emptyWrap}>
-          {loading ? (
-            <>
-              <Loading />
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>불러오는 중...</Text>
-            </>
-          ) : loadError ? (
-            // 로드 실패 (#549) — 집이 있는 사용자가 '집 없음' 가입 유도를 보지
-            // 않도록 빈 상태 분기보다 먼저 처리한다.
-            <>
-              <Text style={[Typography.h3, { color: t.text }]}>집 정보를 불러오지 못했어요</Text>
-              <Text style={[Typography.body, styles.emptyBody, { color: t.textMuted }]}>
-                네트워크 상태를 확인하고 다시 시도해 주세요.
-              </Text>
-              <ScalePressable
-                onPress={onRetry}
-                accessibilityRole="button"
-                accessibilityLabel="다시 시도"
-                style={[styles.emptyCta, { backgroundColor: t.primary }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>다시 시도</Text>
-              </ScalePressable>
-            </>
-          ) : (
-            <>
-              <Text style={[Typography.h3, { color: t.text }]}>아직 함께하는 집이 없어요</Text>
-              <Text style={[Typography.body, styles.emptyBody, { color: t.textMuted }]}>
-                집을 만들거나 초대코드로 입주해 친구들과 루틴을 함께 키워보세요.
-              </Text>
-              <ScalePressable
-                onPress={onOpenSearch}
-                accessibilityRole="button"
-                accessibilityLabel="집 탐색"
-                style={[styles.emptyCta, { backgroundColor: t.primary }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>집 탐색하기</Text>
-              </ScalePressable>
-            </>
-          )}
-        </View>
-      </View>
+      <HouseEmptyState
+        screenStyle={screenStyle}
+        loading={loading}
+        loadError={loadError}
+        onRetry={onRetry}
+        onOpenSearch={onOpenSearch}
+      />
     );
   }
 
@@ -979,42 +861,19 @@ export const HouseScreen = memo(function HouseScreen({
         <View
           style={[styles.skySection, headerInset, { paddingBottom: frameBottomGap }]}
           testID="sky-section">
-          <View style={styles.switcher}>
-            {totalPages > 1 ? (
-              <Pressable
-                onPress={prevHouse}
-                accessibilityRole="button"
-                accessibilityLabel="이전 집"
-                hitSlop={8}
-                style={styles.iconBtn}>
-                <GlassSurface style={styles.iconBtnFace} fallbackColor={t.surface}>
-                  <Icon name="back" size={18} color={t.text} />
-                </GlassSurface>
-              </Pressable>
-            ) : null}
-            <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.titleBadge}>
-              {currentHouse.myRole === 'OWNER' ? (
+          <HouseSwitcher
+            icon={
+              currentHouse.myRole === 'OWNER' ? (
                 <CrownPictogram size={14} />
               ) : (
                 <HousePictogram size={14} />
-              )}
-              <Text style={[Typography.h3, styles.titleText, { color: t.text }]} numberOfLines={1}>
-                {currentHouse.name}
-              </Text>
-            </GlassSurface>
-            {totalPages > 1 ? (
-              <Pressable
-                onPress={nextHouse}
-                accessibilityRole="button"
-                accessibilityLabel="다음 집"
-                hitSlop={8}
-                style={styles.iconBtn}>
-                <GlassSurface style={styles.iconBtnFace} fallbackColor={t.surface}>
-                  <Icon name="forward" size={18} color={t.text} />
-                </GlassSurface>
-              </Pressable>
-            ) : null}
-          </View>
+              )
+            }
+            title={currentHouse.name}
+            showArrows={totalPages > 1}
+            onPrev={prevHouse}
+            onNext={nextHouse}
+          />
           {/* 대기 카드 페이지(#648)는 내 집이 아니라 정렬 대상에서 빠진다. */}
           <HouseOrderDots
             houses={orderableHouses}
@@ -1245,84 +1104,9 @@ export const HouseScreen = memo(function HouseScreen({
   );
 });
 
-/** 아트 위에 뜨는 액션 하나 — 흰 원 아이콘 + 그 아래 라벨. */
-function RailButton({
-  icon,
-  label,
-  onPress,
-  accessibilityLabel,
-  badge,
-  t,
-  Typography,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  onPress?: () => void;
-  accessibilityLabel: string;
-  /** 점 색 — 받을 보상처럼 '지금 할 게 있다'를 남길 때만. */
-  badge?: string;
-  t: ReturnType<typeof useTokens>;
-  Typography: ReturnType<typeof useTypography>;
-}) {
-  return (
-    <ScalePressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      style={styles.railBtn}>
-      {/* 원과 라벨 알약 둘 다 글래스 면 (#1050) — 라벨은 눌리는 면이 아니라 비상호작용. */}
-      <GlassSurface style={styles.railCircle} fallbackColor={t.surface}>
-        {icon}
-        {badge ? <View style={[styles.railBadge, { backgroundColor: badge }]} /> : null}
-      </GlassSurface>
-      <GlassSurface style={styles.railLabelWrap} fallbackColor={t.surface} interactive={false}>
-        <Text style={[Typography.supporting, { color: t.text }]} numberOfLines={1}>
-          {label}
-        </Text>
-      </GlassSurface>
-    </ScalePressable>
-  );
-}
-
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-  },
-  emptyWrap: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.five,
-    gap: Spacing.two,
-  },
-  // --- 승인 대기 페이지 (#648) ---
-  pendingCard: {
-    alignSelf: 'stretch',
-    alignItems: 'center',
-    gap: Spacing.two,
-    borderRadius: Radius.lg,
-    paddingVertical: Spacing.six,
-    paddingHorizontal: Spacing.four,
-    marginTop: Spacing.three,
-  },
-  pendingTitle: {
-    textAlign: 'center',
-  },
-  pendingCancelBtn: {
-    marginTop: Spacing.two,
-    borderWidth: 1,
-    borderRadius: Radius.pill,
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two,
-  },
-  emptyBody: {
-    textAlign: 'center',
-  },
-  emptyCta: {
-    marginTop: Spacing.two,
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.three,
-    paddingHorizontal: Spacing.six,
   },
   skySpacer: { flexGrow: 1 },
   rail: {
@@ -1332,30 +1116,6 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     alignItems: 'center',
     zIndex: 30,
-  },
-  railBtn: { alignItems: 'center', gap: Spacing.half },
-  railCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  railBadge: {
-    position: 'absolute',
-    top: Spacing.half,
-    right: Spacing.half,
-    width: 8,
-    height: 8,
-    borderRadius: Radius.pill,
-  },
-  railLabelWrap: {
-    paddingHorizontal: Spacing.one,
-    borderRadius: Radius.pill,
-  },
-  iconBtn: {
-    width: 40,
-    height: 40,
   },
   // 떠 있는 원형 버튼의 면 (#1050) — 위치·크기는 버튼이, 모양·배경은 면이.
   iconBtnFace: {
@@ -1424,27 +1184,6 @@ const styles = StyleSheet.create({
     // **집 위쪽**으로 몰아, 집은 잔디에 붙고 하늘만 트인다 — 집이 공중에
     // 뜨지 않게 하는 게 요점이다.
     flexGrow: 1,
-  },
-  switcher: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.three,
-    // 부모가 폭을 안 정해주면 뱃지의 flexShrink가 줄일 대상이 없어 말줄임이
-    // 안 걸린다 (#994 리뷰). 승인 대기 페이지는 emptyWrap(alignItems: center)
-    // 안이라 이게 없으면 긴 이름이 화살표를 화면 밖으로 민다. 일반 페이지는
-    // skySection이 이미 stretch라 무해하다.
-    alignSelf: 'stretch',
-  },
-  titleText: { flexShrink: 1 },
-  titleBadge: {
-    flexShrink: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two,
-    borderRadius: Radius.pill,
   },
   // 여백 없이 화면 폭을 다 쓴다 — 기본 뷰(원배율)에서 집이 최대한 크게,
   // 잘리는 부분 없이 보이도록 (높이는 aspectRatio가 따라온다).
