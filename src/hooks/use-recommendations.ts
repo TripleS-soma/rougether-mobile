@@ -16,6 +16,7 @@ import { useCallback, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useLatestRef } from '@/hooks/use-stable-value';
+import { queryKeys } from '@/lib/query-keys';
 
 import {
   acceptRecommendation,
@@ -26,7 +27,6 @@ import {
 import { useToast } from '@/components/ui/toast';
 
 /** 추천 목록 쿼리 키 — 무효화 지점이 늘어날 때 여기서만 고친다. */
-export const RECOMMENDATIONS_KEY = ['recommendations'] as const;
 
 /**
  * 빈 목록 기본값 — 인라인 `[]`는 매 렌더 새 배열이라 소비자의 memo가 깨진다
@@ -53,7 +53,7 @@ export function useRecommendations({ onAccepted, enabled = true }: UseRecommenda
   const { show: toast } = useToast();
 
   const { data, isPending } = useQuery({
-    queryKey: RECOMMENDATIONS_KEY,
+    queryKey: queryKeys.recommendations,
     queryFn: fetchRecommendations,
     enabled,
     // 추천은 부가 정보다 — 실패하면 조용히 빈 목록으로 접는다(종전과 같은 결).
@@ -61,7 +61,7 @@ export function useRecommendations({ onAccepted, enabled = true }: UseRecommenda
   });
 
   const reload = useCallback(async () => {
-    await qc.invalidateQueries({ queryKey: RECOMMENDATIONS_KEY });
+    await qc.invalidateQueries({ queryKey: queryKeys.recommendations });
   }, [qc]);
 
   /**
@@ -78,7 +78,7 @@ export function useRecommendations({ onAccepted, enabled = true }: UseRecommenda
   /** 처리한 카드를 캐시에서 즉시 걷는다 — 같은 제안이 다시 눌리지 않게. */
   const dropFromCache = useCallback(
     (recommendationId: number) => {
-      qc.setQueryData<RecommendationItem[]>(RECOMMENDATIONS_KEY, (prev) =>
+      qc.setQueryData<RecommendationItem[]>(queryKeys.recommendations, (prev) =>
         (prev ?? []).filter((r) => r.recommendationId !== recommendationId),
       );
     },
