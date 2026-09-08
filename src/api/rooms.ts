@@ -1,9 +1,9 @@
 /** Room (my room) + furniture-slot + guestbook endpoints. */
-import { apiGet, apiPost, apiPut } from './client';
+import { apiGet, apiGetPage, apiPost, apiPut } from './client';
 import { buildQuery } from './http';
 import type {
   GuestbookCreateResponse,
-  GuestbookListResponse,
+  GuestbookItem,
   RoomCobwebCleanResponse,
   RoomResponse,
 } from './types';
@@ -27,7 +27,10 @@ export function fetchMyRoom() {
  * `ROOM_COBWEB_REWARD_WALLET_NOT_FOUND`(404).
  */
 export function cleanMyCobweb() {
-  return apiPost<RoomCobwebCleanResponse>('/rooms/me/cobweb/clean');
+  // 409 = 이미 치워짐 — 호출부(use-shop)가 "누가 먼저 치워줬어요"로 접는 예상 상태.
+  return apiPost<RoomCobwebCleanResponse>('/rooms/me/cobweb/clean', undefined, {
+    expectedStatuses: [409],
+  });
 }
 
 /** One slot assignment; null userItemId clears the slot server-side. */
@@ -61,14 +64,15 @@ export type RoomPlacementWire = {
  * PUT /rooms/me/layout — 자유 배치 저장. placements는 전체 교체, surfaceSlots는
  * 부분 갱신(null=슬롯 비우기). 첫 저장 시 SLOT_V1→FREE_V1 전환(비가역 — 이후 구
  * 슬롯 API는 409). baseRevision은 조회의 layoutRevision — 다르면 409
- * ROOM_LAYOUT_REVISION_CONFLICT(다른 기기 선저장).
+ * ROOM_LAYOUT_REVISION_CONFLICT(다른 기기 선저장) — 호출부가 'conflict' 흐름으로
+ * 처리하는 예상 상태라 api_error로 세지 않는다.
  */
 export function updateRoomLayout(body: {
   baseRevision: number;
   surfaceSlots: RoomSlotSave[];
   placements: RoomPlacementSave[];
 }) {
-  return apiPut<RoomWithLayout>('/rooms/me/layout', body);
+  return apiPut<RoomWithLayout>('/rooms/me/layout', body, { expectedStatuses: [409] });
 }
 
 /**
@@ -76,7 +80,7 @@ export function updateRoomLayout(body: {
  * houseId is required (the house the viewer shares with the room owner).
  */
 export function fetchGuestbooks(roomOwnerId: number, houseId: number, cursor?: number) {
-  return apiGet<GuestbookListResponse>(
+  return apiGetPage<GuestbookItem>(
     `/rooms/${roomOwnerId}/guestbooks${buildQuery({ houseId, cursor })}`,
   );
 }

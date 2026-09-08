@@ -4,7 +4,8 @@ import { type InfiniteData, useInfiniteQuery, useQueryClient } from '@tanstack/r
 import { fetchWalletHistories } from '@/api';
 import { getSessionUserId } from '@/api/auth';
 import { toWalletHistoryEntry, type WalletHistoryEntry } from '@/api/adapters';
-import type { WalletHistoryListResponse } from '@/api/types';
+import type { Page } from '@/api/client';
+import type { WalletHistoryResponse } from '@/api/types';
 import { useLatestRef } from '@/hooks/use-stable-value';
 import { queryKeys } from '@/lib/query-keys';
 
@@ -12,12 +13,12 @@ const PAGE_SIZE = 20;
 
 const NO_ENTRIES: WalletHistoryEntry[] = [];
 
-type HistoryPages = InfiniteData<WalletHistoryListResponse, number>;
+type HistoryPages = InfiniteData<Page<WalletHistoryResponse>, number>;
 
 /** 페이지들을 한 목록으로 — 모듈 스코프에 두어 react-query가 결과를 메모한다. */
 const selectEntries = (data: HistoryPages): WalletHistoryEntry[] =>
   data.pages.flatMap((page) =>
-    (page.items ?? []).map(toWalletHistoryEntry).filter((e): e is WalletHistoryEntry => e !== null),
+    page.items.map(toWalletHistoryEntry).filter((e): e is WalletHistoryEntry => e !== null),
   );
 
 /**
@@ -41,8 +42,9 @@ export function useWalletHistory() {
       queryKey,
       queryFn: ({ pageParam }) => fetchWalletHistories(pageParam, PAGE_SIZE),
       initialPageParam: 0,
+      // 다음 페이지 여부는 apiGetPage가 서버의 page·size·totalElements로 계산한다.
       getNextPageParam: (last, _pages, lastPageParam) =>
-        (lastPageParam + 1) * PAGE_SIZE < (last.totalElements ?? 0) ? lastPageParam + 1 : undefined,
+        last.hasNext ? lastPageParam + 1 : undefined,
       select: selectEntries,
       enabled: false,
     });

@@ -29,8 +29,8 @@ export function useNotifications() {
     try {
       const page = await fetchNotifications();
       cursorRef.current = page.nextCursor ?? undefined;
-      setEntries((page.items ?? []).map(toNotificationEntry));
-      setHasNext(!!page.hasNext);
+      setEntries(page.items.map(toNotificationEntry));
+      setHasNext(page.hasNext);
     } catch {
       // Keep whatever was on screen; a fresh open shows the error state (#549).
       setEntries((prev) => prev ?? []);
@@ -46,8 +46,8 @@ export function useNotifications() {
     try {
       const page = await fetchNotifications(cursorRef.current);
       cursorRef.current = page.nextCursor ?? undefined;
-      setEntries((prev) => [...(prev ?? []), ...(page.items ?? []).map(toNotificationEntry)]);
-      setHasNext(!!page.hasNext);
+      setEntries((prev) => [...(prev ?? []), ...page.items.map(toNotificationEntry)]);
+      setHasNext(page.hasNext);
     } catch {
       toast('알림을 더 불러오지 못했어요', 'error');
     }

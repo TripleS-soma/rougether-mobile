@@ -69,7 +69,7 @@ export type ImportTodoInput = {
  * 건너뛴다. 지운 걸 되살리지 않는 게 의도다.
  */
 export function importCalendarTodo(input: ImportTodoInput) {
-  return apiPost<TodoResponse>('/todos', input);
+  return apiPost<TodoResponse>('/todos', input, { expectedStatuses: [409] });
 }
 
 export type ImportRoutineInput = {
@@ -98,9 +98,13 @@ export type ImportRoutineInput = {
  */
 export function importCalendarRoutine(input: ImportRoutineInput) {
   const { repeat, days, dayOfMonth, month, ...rest } = input;
-  return apiPost<RoutineResponse>('/routines', {
-    ...rest,
-    ...toApiRepeat({ repeat, days, dayOfMonth, month }),
-    authType: 'CHECK',
-  });
+  return apiPost<RoutineResponse>(
+    '/routines',
+    {
+      ...rest,
+      ...toApiRepeat({ repeat, days, dayOfMonth, month }),
+      authType: 'CHECK',
+    },
+    { expectedStatuses: [409] },
+  );
 }

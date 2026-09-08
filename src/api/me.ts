@@ -1,12 +1,12 @@
 /** Current user + wallet endpoints. */
-import { apiDelete, apiGet, apiGetList, apiPut } from './client';
+import { apiDelete, apiGet, apiGetList, apiGetPage, apiPut } from './client';
 import type {
   CharacterSelectResponse,
   MeResponse,
   MemberUpdateRequest,
   MyCharacterItem,
   MyItemSummary,
-  WalletHistoryListResponse,
+  WalletHistoryResponse,
   WalletResponse,
 } from './types';
 
@@ -33,7 +33,7 @@ export function fetchWallets() {
  * 완료 취소 시 해당 적립 이력은 서버에서 삭제되어 목록에서 사라진다.
  */
 export function fetchWalletHistories(page: number, size = 20) {
-  return apiGet<WalletHistoryListResponse>(`/me/wallets/histories?page=${page}&size=${size}`);
+  return apiGetPage<WalletHistoryResponse>(`/me/wallets/histories?page=${page}&size=${size}`);
 }
 
 /** GET /me/items — owned-item inventory (userItemId ↔ itemId, for room placement). */
