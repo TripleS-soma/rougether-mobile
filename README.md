@@ -37,16 +37,17 @@ npm start        # Expo dev 서버 — i / a / w 로 iOS / Android / web
 
 ## 스크립트
 
-| 명령                              | 하는 일                                         |
-| --------------------------------- | ----------------------------------------------- |
-| `npm start`                       | Expo dev 서버                                   |
-| `npm run ios` / `android` / `web` | 플랫폼별 실행                                   |
-| `npm run typecheck`               | `tsc --noEmit`                                  |
-| `npm run lint`                    | `expo lint`                                     |
-| `npm run format` / `format:check` | Prettier write / check                          |
-| `npm test` / `test:watch`         | Jest (jest-expo + React Native Testing Library) |
-| `npm run gen:api-types`           | 스웨거에서 API 타입 생성                        |
-| `npm run build:characters`        | 캐릭터 스프라이트 시트 빌드                     |
+| 명령                              | 하는 일                                                                                         |
+| --------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `npm start`                       | Expo dev 서버                                                                                   |
+| `npm run ios` / `android` / `web` | 플랫폼별 실행                                                                                   |
+| `npm run typecheck`               | `tsc --noEmit`                                                                                  |
+| `npm run lint`                    | `expo lint`                                                                                     |
+| `npm run format` / `format:check` | Prettier write / check                                                                          |
+| `npm test` / `test:watch`         | Jest (jest-expo + React Native Testing Library)                                                 |
+| `npm run test:date-boundary`      | spec 날짜 경계 fixture로 실제 요청 생성 검증(단말 시간대 매트릭스) — `output/contracts/`에 기록 |
+| `npm run gen:api-types`           | 스웨거에서 API 타입 생성                                                                        |
+| `npm run build:characters`        | 캐릭터 스프라이트 시트 빌드                                                                     |
 
 커밋 전에 **typecheck · lint · format:check · test** 네 가지를 통과시키세요.
 [`ci.yml`](.github/workflows/ci.yml)이 모든 PR에서 같은 것을 돌립니다.

@@ -85,6 +85,7 @@
     "format:check": "prettier --check .",
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:date-boundary": "node scripts/run-date-boundary.js",
     "gen:api-types": "node scripts/gen-api-types.js"
   },
   "jest": {
