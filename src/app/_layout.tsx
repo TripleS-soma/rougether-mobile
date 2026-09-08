@@ -8,6 +8,7 @@ import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AppFrame } from '@/components/app/app-frame';
 import { AppIconSync } from '@/components/app/app-icon-sync';
 import { notifyAppForegroundInteraction } from '@/lib/app-icon-events';
 import { AnimatedSplashOverlay } from '@/components/app/animated-splash-overlay';
@@ -86,7 +87,10 @@ export default function RootLayout() {
               <ToastProvider>
                 <NavigationTheme>
                   <AnimatedSplashOverlay />
-                  <Stack screenOptions={{ headerShown: false }} />
+                  {/* 웹 데스크톱: 중앙 480px 컬럼. 네이티브는 그대로 통과. */}
+                  <AppFrame>
+                    <Stack screenOptions={{ headerShown: false }} />
+                  </AppFrame>
                 </NavigationTheme>
               </ToastProvider>
             </BrandThemeProvider>
