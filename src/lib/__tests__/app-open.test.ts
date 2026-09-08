@@ -1,4 +1,5 @@
-import { AppState, Linking } from 'react-native';
+import { Linking } from 'react-native';
+import { spyAppState } from '@/test-utils/app-state';
 
 type GaMock = typeof import('@react-native-firebase/analytics');
 
@@ -35,19 +36,15 @@ const freshModule = () => {
 };
 
 /** AppState·Linking 리스너를 붙잡아 백그라운드 왕복·딥링크를 흉내낸다. */
-const appStateHandlers: ((s: string) => void)[] = [];
+let appState: ReturnType<typeof spyAppState>;
 const urlHandlers: ((e: { url: string }) => void)[] = [];
+
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
 describe('app-open 재방문 계기 (#803)', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    appStateHandlers.length = 0;
     urlHandlers.length = 0;
-    jest.spyOn(AppState, 'addEventListener').mockImplementation((_e, handler) => {
-      appStateHandlers.push(handler as (s: string) => void);
-      return { remove: jest.fn() } as never;
-    });
+    appState = spyAppState();
     jest.spyOn(Linking, 'addEventListener').mockImplementation((_e, handler) => {
       urlHandlers.push(handler as (e: { url: string }) => void);
       return { remove: jest.fn() } as never;
@@ -79,7 +76,7 @@ describe('app-open 재방문 계기 (#803)', () => {
     await flush();
     expect(app.opens()).toHaveLength(1); // 콜드 스타트 direct
 
-    appStateHandlers.forEach((h) => h('background'));
+    appState.emit('background');
     urlHandlers.forEach((h) => h({ url: 'rougether://widget' }));
     expect(app.lastSource()).toBe('widget');
     expect(app.opens()).toHaveLength(2);
@@ -90,8 +87,8 @@ describe('app-open 재방문 계기 (#803)', () => {
     app.initAppOpenTracking();
     await flush();
 
-    appStateHandlers.forEach((h) => h('background'));
-    appStateHandlers.forEach((h) => h('active'));
+    appState.emit('background');
+    appState.emit('active');
     await flush();
     expect(app.opens()).toHaveLength(1);
   });
@@ -101,10 +98,10 @@ describe('app-open 재방문 계기 (#803)', () => {
     app.initAppOpenTracking();
     await flush();
 
-    appStateHandlers.forEach((h) => h('background'));
+    appState.emit('background');
     const realNow = Date.now();
     jest.spyOn(Date, 'now').mockReturnValue(realNow + 31 * 60 * 1000);
-    appStateHandlers.forEach((h) => h('active'));
+    appState.emit('active');
     await flush();
     expect(app.opens()).toHaveLength(2);
     expect(app.lastSource()).toBe('direct');

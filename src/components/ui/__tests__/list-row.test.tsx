@@ -1,6 +1,7 @@
 import { fireEvent, render } from '@testing-library/react-native';
 
 import { ListRow } from '@/components/ui/list-row';
+import { flattenStyle } from '@/test-utils/style';
 
 // 설정·내 정보 공용 목록 행 (#1088 리뷰 반영).
 describe('ListRow', () => {
@@ -12,14 +13,9 @@ describe('ListRow', () => {
   });
 
   it('마지막 행(last)은 하단 구분선을 긋지 않는다', async () => {
-    const flatten = (node: { props: Record<string, unknown> }) =>
-      Object.assign({}, ...[node.props.style].flat(Infinity).filter(Boolean)) as Record<
-        string,
-        unknown
-      >;
     const mid = await render(<ListRow icon="help" label="중간" />);
-    expect(flatten(mid.getByRole('button')).borderBottomWidth).toBeGreaterThan(0);
+    expect(flattenStyle(mid.getByRole('button')).borderBottomWidth).toBeGreaterThan(0);
     const last = await render(<ListRow icon="help" label="마지막" last />);
-    expect(flatten(last.getByRole('button')).borderBottomWidth).toBeUndefined();
+    expect(flattenStyle(last.getByRole('button')).borderBottomWidth).toBeUndefined();
   });
 });

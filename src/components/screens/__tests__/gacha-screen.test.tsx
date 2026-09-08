@@ -69,7 +69,6 @@ function pressHandler(element: TestInstance): () => void {
 
 describe('GachaScreen', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
     videoMock.__resetVideoPlayerMock();
   });
 

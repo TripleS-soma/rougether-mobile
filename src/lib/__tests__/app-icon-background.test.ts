@@ -33,7 +33,6 @@ const originalState = AppState.currentState;
 afterEach(() => {
   Platform.OS = originalOS;
   AppState.currentState = originalState;
-  jest.clearAllMocks();
 });
 
 it('headless Android refresh reads the state without recording a visit', async () => {

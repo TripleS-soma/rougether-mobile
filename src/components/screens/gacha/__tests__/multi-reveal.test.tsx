@@ -1,10 +1,11 @@
 import { act, fireEvent, render } from '@testing-library/react-native';
 import * as Haptics from 'expo-haptics';
 import { useState } from 'react';
-import { AppState, StyleSheet, type AppStateStatus } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { MultiReveal } from '@/components/screens/gacha/multi-reveal';
 import { getMultiRevealBeatMs } from '@/components/screens/gacha/multi-reveal-timeline';
+import { spyAppState } from '@/test-utils/app-state';
 import { buildRevealPlan } from '@/components/screens/gacha/reveal-motion';
 import { setHapticStrength } from '@/utils/haptics';
 
@@ -43,7 +44,6 @@ const assetPlan = buildRevealPlan(
 describe('MultiReveal', () => {
   beforeEach(() => {
     jest.useFakeTimers();
-    jest.clearAllMocks();
     video.__resetVideoPlayerMock();
     setHapticStrength('medium');
   });
@@ -269,18 +269,13 @@ describe('MultiReveal', () => {
   );
 
   it('completes quietly on background and never replays when the app resumes', async () => {
-    let onAppState: (state: AppStateStatus) => void = () => {};
-    const remove = jest.fn();
-    jest.spyOn(AppState, 'addEventListener').mockImplementation((_type, listener) => {
-      onAppState = listener;
-      return { remove };
-    });
+    const appState = spyAppState();
     const onComplete = jest.fn();
     const screen = await render(<MultiReveal plan={plan} onComplete={onComplete} />);
     const player = video.__getLastVideoPlayer()!;
     await act(() => {
-      onAppState('background');
-      onAppState('active');
+      appState.emit('background');
+      appState.emit('active');
       player.__emit('timeUpdate', { currentTime: 0.6 });
     });
     expect(onComplete).toHaveBeenCalledTimes(1);
@@ -289,7 +284,7 @@ describe('MultiReveal', () => {
     expect(player.play).toHaveBeenCalledTimes(1);
     expect(Haptics.impactAsync).not.toHaveBeenCalled();
     await screen.unmount();
-    expect(remove).toHaveBeenCalled();
+    expect(appState.removes[0]).toHaveBeenCalled();
   });
 
   it('safely releases when finishing immediately unmounts the cinematic', async () => {

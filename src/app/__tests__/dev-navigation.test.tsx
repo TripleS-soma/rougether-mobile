@@ -9,7 +9,6 @@ jest.mock('expo-router', () => ({ Redirect: (props: unknown) => mockRedirect(pro
 
 afterEach(() => {
   Object.assign(globalThis, { __DEV__: true });
-  jest.clearAllMocks();
 });
 
 it('only renders the fixture in development', async () => {

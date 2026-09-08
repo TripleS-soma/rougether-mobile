@@ -13,8 +13,7 @@ jest.mock('@/lib/analytics', () => ({ track: jest.fn() }));
 const KEY = 'rougether.onboarding-missions.v1';
 
 describe('useOnboardingMissions (#571)', () => {
-  beforeEach(async () => {
-    await AsyncStorage.clear();
+  beforeEach(() => {
     (track as jest.Mock).mockClear();
   });
 

@@ -1,12 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useAttendance } from '@/hooks/use-attendance';
-
-const res = (body: unknown, status = 200) => ({
-  ok: status < 400,
-  status,
-  text: async () => JSON.stringify(body),
-});
+import { jsonRes as res } from '@/test-utils/fetch';
 
 const STATUS = {
   eventId: 7,
@@ -26,7 +21,6 @@ const STATUS = {
 const realFetch = global.fetch;
 afterEach(() => {
   global.fetch = realFetch;
-  jest.clearAllMocks();
 });
 
 describe('useAttendance', () => {

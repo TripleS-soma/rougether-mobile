@@ -1,12 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useMyCharacters } from '@/hooks/use-my-characters';
-
-const res = (body: unknown) => ({
-  ok: true,
-  status: 200,
-  text: async () => JSON.stringify(body),
-});
+import { jsonRes as res } from '@/test-utils/fetch';
 
 // 서버 등록 포즈 — 정렬 전 순서를 일부러 섞어 둔다 (#735).
 const PANDA_POSES = [
@@ -26,7 +21,6 @@ const OWNED = {
 const realFetch = global.fetch;
 afterEach(() => {
   global.fetch = realFetch;
-  jest.clearAllMocks();
 });
 
 describe('useMyCharacters', () => {

@@ -21,7 +21,6 @@ const mocked = Haptics as jest.Mocked<typeof Haptics>;
 
 describe('haptics 전역 게이트 (#586 → 세기 단계 #974)', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
     setHapticStrength(DEFAULT_HAPTIC_STRENGTH);
   });
   afterEach(() => setHapticStrength(DEFAULT_HAPTIC_STRENGTH));

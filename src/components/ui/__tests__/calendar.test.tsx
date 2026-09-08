@@ -3,6 +3,7 @@ import { State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { Calendar } from '@/components/ui/calendar';
+import { flattenStyle } from '@/test-utils/style';
 
 describe('Calendar', () => {
   /**
@@ -23,16 +24,13 @@ describe('Calendar', () => {
       <Calendar value="2026-08-16" today="2026-08-16" onSelect={() => {}} />,
     );
 
-    const flatten = (style: unknown): Record<string, unknown> =>
-      Object.assign({}, ...[style].flat(Infinity).filter(Boolean));
-
     // 날짜 칸은 flex:1 — 퍼센트 폭이면 반올림 줄바꿈이 되돌아온다.
-    const cell = flatten(getByLabelText('2026-08-16').props.style);
+    const cell = flattenStyle(getByLabelText('2026-08-16').props.style);
     expect(cell.flex).toBe(1);
     expect(typeof cell.width).not.toBe('string');
 
     // grid는 가로 wrap이 아니라 세로 스택이어야 한다.
-    const grid = flatten(getByTestId('calendar-grid').props.style);
+    const grid = flattenStyle(getByTestId('calendar-grid').props.style);
     expect(grid.flexWrap).toBeUndefined();
     expect(grid.flexDirection).toBe('column');
   });
@@ -51,12 +49,11 @@ describe('Calendar', () => {
         markedDates={new Set(['2026-08-20'])}
       />,
     );
-    const flatten = (style: unknown): Record<string, unknown> =>
-      Object.assign({}, ...[style].flat(Infinity).filter(Boolean));
-
     const marked = getByLabelText('2026-08-20, 할 일 있음');
     const children = marked.children as unknown as { props?: { style?: unknown } }[];
-    const dot = children.map((c) => flatten(c?.props?.style)).find((style) => style.bottom != null);
+    const dot = children
+      .map((c) => flattenStyle(c?.props?.style))
+      .find((style) => style.bottom != null);
 
     expect(dot).toBeTruthy();
     expect(dot?.position).toBe('absolute');
@@ -213,13 +210,10 @@ describe('Calendar', () => {
     const { getByLabelText } = await render(
       <Calendar value="2026-08-20" today="2026-08-16" onSelect={() => {}} />,
     );
-    const flatten = (style: unknown): Record<string, unknown> =>
-      Object.assign({}, ...[style].flat(Infinity).filter(Boolean));
-
     const todayCell = getByLabelText('2026-08-16, 오늘');
     const ring = (todayCell.children as unknown as { children?: unknown[] }[])
       .flatMap((c) => (c?.children ?? []) as { props?: { style?: unknown } }[])
-      .map((c) => flatten(c?.props?.style))
+      .map((c) => flattenStyle(c?.props?.style))
       .find((st) => st.borderWidth != null);
 
     expect(ring).toBeTruthy();

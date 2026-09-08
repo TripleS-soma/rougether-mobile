@@ -2,20 +2,14 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useMyRoomData } from '@/hooks/use-my-room-data';
 import type { NewRoutine } from '@/constants/routines';
+import { jsonRes as res } from '@/test-utils/fetch';
 
 // Server state: no categories, two routines with categoryId null (legacy data).
 // The hook must adopt them into a freshly created 기타 category — uncategorized
 // routines must not exist.
-const res = (body: unknown) => ({
-  ok: true,
-  status: 200,
-  text: async () => JSON.stringify(body),
-});
-
 const realFetch = global.fetch;
 afterEach(() => {
   global.fetch = realFetch;
-  jest.clearAllMocks();
 });
 
 describe('useMyRoomData — completion routing on id collision', () => {

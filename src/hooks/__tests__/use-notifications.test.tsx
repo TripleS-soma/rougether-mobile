@@ -1,12 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useNotifications } from '@/hooks/use-notifications';
-
-const res = (body: unknown) => ({
-  ok: true,
-  status: 200,
-  text: async () => JSON.stringify(body),
-});
+import { jsonRes as res } from '@/test-utils/fetch';
 
 const PAGE_1 = {
   items: [
@@ -20,7 +15,6 @@ const PAGE_1 = {
 const realFetch = global.fetch;
 afterEach(() => {
   global.fetch = realFetch;
-  jest.clearAllMocks();
 });
 
 describe('useNotifications', () => {

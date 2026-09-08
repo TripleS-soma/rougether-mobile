@@ -27,12 +27,12 @@ jest.mock('@react-native-firebase/analytics', () => ({
 }));
 
 describe('개발 빌드 수집 차단 (#954)', () => {
-  beforeAll(() => {
+  // 초기화는 첫 테스트 안에서 — `clearMocks`가 테스트마다 호출 기록을 지우므로
+  // beforeAll에서 부르면 단언 시점엔 기록이 없다. 모듈 상태는 한 번 정해지면
+  // 남아서 뒤 테스트들도 꺼진 경로를 그대로 탄다.
+  it('수집 자체를 끈다 — logEvent만 막으면 SDK 자동 이벤트가 새어나간다', () => {
     // 인자를 안 주면 기본값 !__DEV__ — jest에서 __DEV__는 true라 꺼진다.
     initAnalytics();
-  });
-
-  it('수집 자체를 끈다 — logEvent만 막으면 SDK 자동 이벤트가 새어나간다', () => {
     // first_open·session_start는 우리가 부르는 게 아니라 네이티브가 쏜다.
     expect(mockSetCollection).toHaveBeenCalledWith(expect.anything(), false);
   });

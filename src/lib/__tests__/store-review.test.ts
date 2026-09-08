@@ -44,8 +44,6 @@ describe('shouldRequestReview', () => {
 });
 
 describe('store-review 보관', () => {
-  beforeEach(() => AsyncStorage.clear());
-
   it('없으면 지금을 첫 실행으로, 깨진 값은 기본으로', async () => {
     expect(await readStoreReviewState(123)).toEqual(initialStoreReviewState(123));
     await AsyncStorage.setItem('rougether.store-review', '{broken');

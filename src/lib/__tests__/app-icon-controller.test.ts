@@ -21,7 +21,6 @@ beforeEach(async () => {
   Platform.OS = 'android';
   AppState.currentState = 'background';
   await AsyncStorage.clear();
-  jest.clearAllMocks();
   invalidateAppIconWork();
 });
 afterAll(() => {
