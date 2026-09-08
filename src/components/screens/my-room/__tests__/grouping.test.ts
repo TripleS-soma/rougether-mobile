@@ -213,3 +213,36 @@ describe('canQuickAddCategory', () => {
     expect(canQuickAddCategory('', [], [])).toBe(true);
   });
 });
+
+describe('달력 그룹도 routineOrder를 따른다 (2026-09-08)', () => {
+  const categories = [cat('건강')];
+  it('서버 날짜 — 미완료 항목이 저장된 순서, 완료는 그 뒤', () => {
+    const groups = groupCalendarServerItems({
+      dayItems: [
+        { id: 'a', category: '건강', completed: false },
+        { id: 'b', category: '건강', completed: false },
+        { id: 'c', category: '건강', completed: true },
+      ],
+      catMeta: categories,
+      categories,
+      routineOrder: { 건강: ['b', 'a'] },
+      canQuickAdd: () => true,
+    })!;
+    expect(groups[0].items.map((i) => i.id)).toEqual(['b', 'a', 'c']);
+  });
+
+  it('클라이언트 날짜(오늘) — 방 탭과 같은 순서', () => {
+    const routines: Routine[] = [
+      { id: 'a', title: 'a', category: '건강' },
+      { id: 'b', title: 'b', category: '건강' },
+    ];
+    const groups = groupCalendarClientRoutines({
+      routines,
+      categories,
+      routineOrder: { 건강: ['b', 'a'] },
+      isDone: () => false,
+      canQuickAdd: () => true,
+    });
+    expect(groups[0].items.map((i) => i.id)).toEqual(['b', 'a']);
+  });
+});

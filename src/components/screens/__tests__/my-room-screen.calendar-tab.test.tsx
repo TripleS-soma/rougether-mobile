@@ -1,4 +1,7 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
+import { View } from 'react-native';
+import { State } from 'react-native-gesture-handler';
+import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { ToastProvider } from '@/components/ui/toast';
@@ -285,5 +288,123 @@ describe('MyRoomScreen', () => {
     await fireEvent.press(getByText('달력'));
     await fireEvent.press(getByLabelText(OTHER_DAY));
     expect(queryByText('예정된 루틴이 없어요.')).toBeNull();
+  });
+});
+
+/**
+ * 달력 탭 롱프레스 재정렬 (2026-09-08) — 서버 날짜의 행도 방 탭과 같은 의미로 끌린다.
+ * 행 슬롯은 리프트 시점의 measureInWindow로 재는데 jest의 View 목은 no-op이라,
+ * 행 testID → window y 표를 심어 동기 콜백으로 대답하게 한다(행 높이 48).
+ */
+describe('달력 탭 롱프레스 재정렬 (2026-09-08)', () => {
+  const ROW_H = 48;
+  const ROW_TOP: Record<string, number> = {
+    'routine-row-routine-a': 100,
+    'routine-row-routine-b': 148,
+    'routine-row-routine-done': 196,
+    'routine-row-routine-c': 300,
+  };
+  const measureInWindow = View.prototype.measureInWindow as unknown as jest.Mock;
+  beforeEach(() => {
+    measureInWindow.mockImplementation(function (
+      this: { props?: { testID?: string } },
+      cb: (x: number, y: number, w: number, h: number) => void,
+    ) {
+      const top = ROW_TOP[this.props?.testID ?? ''];
+      if (top !== undefined) cb(0, top, 300, ROW_H);
+    });
+  });
+  afterEach(() => measureInWindow.mockReset());
+
+  const categories = [
+    { id: '건강', name: '건강', icon: 'dumbbell' as const, color: '#7FA87F', visibility: 'public' as const }, // prettier-ignore
+    { id: '공부', name: '공부', icon: 'book' as const, color: '#7FA8D4', visibility: 'public' as const }, // prettier-ignore
+  ];
+  const routines = [
+    { id: 'a', title: '작업 에이', category: '건강', kind: 'routine' as const },
+    { id: 'b', title: '작업 비', category: '건강', kind: 'routine' as const },
+    { id: 'done', title: '끝난 일', category: '건강', kind: 'routine' as const },
+    { id: 'c', title: '작업 씨', category: '공부', kind: 'routine' as const },
+  ];
+  const calendarDays = {
+    [YESTERDAY]: [
+      { id: 'a', kind: 'routine' as const, title: '작업 에이', completed: false, category: '건강' },
+      { id: 'b', kind: 'routine' as const, title: '작업 비', completed: false, category: '건강' },
+      { id: 'done', kind: 'routine' as const, title: '끝난 일', completed: true, category: '건강' },
+      { id: 'c', kind: 'routine' as const, title: '작업 씨', completed: false, category: '공부' },
+      // 삭제된 루틴의 기록 — routines에 없다.
+      { id: 'gone', kind: 'routine' as const, title: '사라진 일', completed: false, category: '공부' }, // prettier-ignore
+    ],
+  };
+
+  /** 행을 꾹 눌러 window y로 끌고 놓는다 — activateAfterLongPress는 jest-utils가 건너뛴다. */
+  const dragRow = (rowKey: string, toY: number) =>
+    act(async () =>
+      fireGestureHandler(getByGestureTestId(`routine-drag-${rowKey}`), [
+        { state: State.BEGAN },
+        { state: State.ACTIVE, translationY: 0, absoluteY: ROW_TOP[`routine-row-${rowKey}`] + 10 },
+        { state: State.ACTIVE, translationY: toY, absoluteY: toY },
+        { state: State.END, translationY: toY, absoluteY: toY },
+      ]),
+    );
+
+  const renderServerDay = async () => {
+    const onReorderRoutines = jest.fn();
+    const onMoveRoutineCategory = jest.fn();
+    const ui = await render(
+      <MyRoomScreen
+        routines={routines}
+        categories={categories}
+        calendarDays={calendarDays}
+        onSelectDate={jest.fn()}
+        onReorderRoutines={onReorderRoutines}
+        onMoveRoutineCategory={onMoveRoutineCategory}
+      />,
+    );
+    await pickCalendarDate(ui, YESTERDAY);
+    return { ui, onReorderRoutines, onMoveRoutineCategory };
+  };
+
+  it('서버 날짜에서 같은 카테고리 안으로 끌면 onReorderRoutines에 루틴 id 순서', async () => {
+    const { onReorderRoutines, onMoveRoutineCategory } = await renderServerDay();
+    // a(100~148)를 b(148~196) 중심(172) 아래(190)로 → 건강: [b, a].
+    await dragRow('routine-a', 190);
+    expect(onReorderRoutines).toHaveBeenCalledWith('건강', ['b', 'a']);
+    expect(onMoveRoutineCategory).not.toHaveBeenCalled();
+  });
+
+  it('서버 날짜에서 다른 카테고리 그룹에 놓으면 영구 이동 + 양쪽 순서', async () => {
+    const { onReorderRoutines, onMoveRoutineCategory } = await renderServerDay();
+    // a를 공부의 c(300~348) 중심(324) 위(310)로 → 공부로 이동, 공부: [a, c], 건강: [b].
+    await dragRow('routine-a', 310);
+    expect(onMoveRoutineCategory).toHaveBeenCalledWith('a', '공부');
+    expect(onReorderRoutines).toHaveBeenCalledWith('공부', ['a', 'c']);
+    expect(onReorderRoutines).toHaveBeenCalledWith('건강', ['b']);
+  });
+
+  it('완료 행과 삭제된 루틴의 기록은 끌 수 없고, 오늘(클라이언트 경로)도 끌린다', async () => {
+    const { ui } = await renderServerDay();
+    expect(getByGestureTestId('routine-drag-routine-a').config.enabled).toBe(true);
+    expect(getByGestureTestId('routine-drag-routine-done').config.enabled).toBe(false);
+    expect(getByGestureTestId('routine-drag-routine-gone').config.enabled).toBe(false);
+    // 달력 탭 오늘 — 클라이언트 경로도 드래그 활성 (예전엔 방 탭에서만).
+    await fireEvent.press(ui.getByLabelText(`${TODAY}, 오늘`));
+    expect(getByGestureTestId('routine-drag-routine-a').config.enabled).toBe(true);
+  });
+
+  it('서버 날짜 목록도 routineOrder 순서로 그린다 — 드롭 결과가 보이게', async () => {
+    const ui = await render(
+      <MyRoomScreen
+        routines={routines}
+        categories={categories}
+        calendarDays={calendarDays}
+        routineOrder={{ 건강: ['b', 'a'] }}
+        onSelectDate={jest.fn()}
+        onReorderRoutines={jest.fn()}
+      />,
+    );
+    await pickCalendarDate(ui, YESTERDAY);
+    const titles = ui.getAllByText(/작업 (에이|비)/).map((n) => n.props.children);
+    expect(titles).toEqual(['작업 비', '작업 에이']);
   });
 });

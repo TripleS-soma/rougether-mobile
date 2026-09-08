@@ -1,8 +1,11 @@
 import {
   type DragSlot,
+  type GroupSlot,
   isRejectedDrop,
+  mergeOrderedSubset,
   reorderedIds,
   resolveDrop,
+  resolveGroupDrop,
 } from '@/components/screens/my-room/routine-drag';
 
 // 세 행: 운동(a,b) 40~120, 공부(c) 140~180. 각 행 높이 40, 간격 20.
@@ -76,5 +79,49 @@ describe('isRejectedDrop (#716, PR #718 리뷰)', () => {
 
   it('실제 카테고리로의 이동은 항상 허용', () => {
     expect(isRejectedDrop({ categoryId: 'st', index: 1 }, 'ex', true)).toBe(false);
+  });
+});
+
+// 그룹 넷: 일정 0~100, 공부 100~200, 취미 200~300, 미분류 300~400 (부모 기준 onLayout).
+const GROUPS = new Map<string, GroupSlot>([
+  ['일정', { y: 0, height: 100 }],
+  ['공부', { y: 100, height: 100 }],
+  ['취미', { y: 200, height: 100 }],
+  ['', { y: 300, height: 100 }],
+]);
+const REAL = ['일정', '공부', '취미'];
+
+describe('resolveGroupDrop (카테고리 헤더 드래그, 2026-09-08)', () => {
+  it('아래 그룹 중심을 넘기면 그 아래 index', () => {
+    // 일정 중심 50 + 120 = 170 > 공부 중심 150 → 공부 다음(1).
+    expect(resolveGroupDrop(GROUPS, REAL, '일정', 120)).toBe(1);
+  });
+
+  it('중심을 못 넘기면 제자리', () => {
+    expect(resolveGroupDrop(GROUPS, REAL, '일정', 80)).toBe(0);
+    expect(resolveGroupDrop(GROUPS, REAL, '취미', -80)).toBe(2);
+  });
+
+  it('미분류 아래로 끌어도 미분류는 세지 않는다 — 실제 카테고리 끝에 멈춘다', () => {
+    expect(resolveGroupDrop(GROUPS, REAL, '일정', 1000)).toBe(2);
+    expect(resolveGroupDrop(GROUPS, REAL, '취미', 1000)).toBe(2);
+  });
+
+  it('들린 그룹의 레이아웃이 없으면(측정 전) null', () => {
+    expect(resolveGroupDrop(GROUPS, REAL, '없음', 10)).toBeNull();
+  });
+});
+
+describe('mergeOrderedSubset (2026-09-08)', () => {
+  it('보이는 카테고리끼리만 자리를 바꾸고 안 보이는 것은 원래 자리', () => {
+    expect(mergeOrderedSubset(['A', 'B', 'C', 'D'], ['D', 'A', 'C'])).toEqual(['D', 'B', 'A', 'C']);
+  });
+
+  it('부분 순서가 전체와 같으면 그대로', () => {
+    expect(mergeOrderedSubset(['A', 'B', 'C'], ['A', 'B', 'C'])).toEqual(['A', 'B', 'C']);
+  });
+
+  it('전체에 없는 id(삭제된 카테고리)는 버린다', () => {
+    expect(mergeOrderedSubset(['A', 'B'], ['B', 'X', 'A'])).toEqual(['B', 'A']);
   });
 });
