@@ -16,6 +16,8 @@
 import { AppState, type AppStateStatus, Platform } from 'react-native';
 import { focusManager, QueryClient } from '@tanstack/react-query';
 
+import { onSessionCleared } from '@/api/auth';
+
 export function createQueryClient() {
   return new QueryClient({
     defaultOptions: {
@@ -64,4 +66,14 @@ export function subscribeAppStateFocus(): () => void {
     focusManager.setFocused(status === 'active');
   });
   return () => sub.remove();
+}
+
+/**
+ * 세션이 지워지면(로그아웃·리프레시 실패·탈퇴) 캐시를 통째로 비운다 (#1027 후속).
+ * 추천·뽑기 같은 키는 사용자 스코프가 없어, 비우지 않으면 계정을 바꿔도 이전
+ * 사용자의 데이터가 첫 화면에 남는다. 훅별로 지우던 것(`use-app-icon-sync`)을
+ * 한 곳으로. 구독 해제 함수를 돌려준다 — 루트 레이아웃이 클라이언트 수명에 묶는다.
+ */
+export function bindSessionCacheReset(client: QueryClient): () => void {
+  return onSessionCleared(() => client.clear());
 }

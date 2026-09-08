@@ -8,7 +8,7 @@
   },
   "room": {
     "aspectRatio": 0.8333333333333334,
-    "borderRadiusPx": 0
+    "borderRadiusPx": 16
   },
   "surfaces": {
     "background": { "top": 0, "left": 0, "width": 1, "height": 1, "contentFit": "cover" },

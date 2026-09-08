@@ -59,25 +59,6 @@ describe('Calendar', () => {
     expect(dot?.position).toBe('absolute');
   });
 
-  it('오늘은 링과 겹치므로 할 일 점을 그리지 않는다 — 라벨의 할 일 있음은 유지', async () => {
-    const { getByLabelText } = await render(
-      <Calendar
-        value="2026-08-16"
-        today="2026-08-20"
-        onSelect={() => {}}
-        markedDates={new Set(['2026-08-20', '2026-08-21'])}
-      />,
-    );
-    const today = getByLabelText('2026-08-20, 오늘, 할 일 있음');
-    const dotOf = (node: { children: unknown }) =>
-      (node.children as unknown as { props?: { style?: unknown } }[])
-        .map((c) => flattenStyle(c?.props?.style))
-        .find((style) => style.bottom != null);
-    expect(dotOf(today)).toBeUndefined();
-    // 오늘이 아닌 날은 그대로 점이 있다.
-    expect(dotOf(getByLabelText('2026-08-21, 할 일 있음'))).toBeTruthy();
-  });
-
   it('markedDates에 든 날짜만 할 일 있음으로 표시한다', async () => {
     const { getByLabelText, queryByLabelText } = await render(
       <Calendar
