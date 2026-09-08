@@ -96,22 +96,6 @@ describe('AppShell — 인앱 푸시 배너 (#902)', () => {
 });
 
 describe('AppShell — 온보딩 미션 체인 (#571)', () => {
-  // 미션 1(루틴 등록) 성공 왕복이 있는 세계 — 추천 루틴이 붙을 카테고리 포함.
-  const missionFetch = async (url: string, init?: RequestInit) => {
-    const method = init?.method ?? 'GET';
-    const body =
-      method === 'POST' && url.endsWith('/routines')
-        ? { id: 99, title: '독서 30분', categoryId: 20, repeatType: 'DAILY' }
-        : url.includes('/auth/')
-          ? { accessToken: 't', refreshToken: 'r' }
-          : url.includes('/categories')
-            ? { items: [{ id: 20, name: '취미' }] }
-            : url.endsWith('/today')
-              ? { categories: [], summary: {}, streak: {} }
-              : { items: [] };
-    return { ok: true, status: 200, text: async () => JSON.stringify(body) };
-  };
-
   it('startMissions면 미션 1(뽑기) 배너가 뜨고, 배너 탭이 뽑기 화면으로 보낸다', async () => {
     const { getByText, getByTestId, getByLabelText, getAllByText } = await renderWithProviders(
       <AppShell startMissions />,
