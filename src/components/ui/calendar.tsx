@@ -258,7 +258,14 @@ function CalendarBase({
                   style={[
                     Typography.supporting,
                     emph('semibold'),
-                    { color: i === 0 ? readableTextColor(t.danger, t.surfaceMuted) : t.textMuted },
+                    {
+                      color:
+                        i === 0
+                          ? readableTextColor(t.danger, t.surfaceMuted)
+                          : i === 6
+                            ? readableTextColor(t.info, t.surfaceMuted)
+                            : t.textMuted,
+                    },
                   ]}>
                   {w}
                 </Text>
@@ -285,6 +292,7 @@ function CalendarBase({
                 // 알 수 있게. 선택된 날은 이미 꽉 찬 원이라 겹쳐 그리지 않는다.
                 const isToday = !!today && date === today && !isSelected;
                 const isSunday = di === 0;
+                const isSaturday = di === 6;
                 return (
                   <Pressable
                     key={date}
@@ -331,7 +339,9 @@ function CalendarBase({
                                 ? t.onPrimary
                                 : isSunday
                                   ? t.danger
-                                  : t.text,
+                                  : isSaturday
+                                    ? t.info
+                                    : t.text,
                           },
                         ]}>
                         {day}
