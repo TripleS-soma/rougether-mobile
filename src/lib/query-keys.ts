@@ -16,4 +16,8 @@ export const queryKeys = {
     all: ['app-icon'] as const,
     byUser: (userId: number | null | undefined) => ['app-icon', userId] as const,
   },
+  /** 친구 초대 리워드 (#518) — 내 코드·보상 현황. */
+  invites: (userId: number | null | undefined) => ['invites', userId] as const,
+  /** 재화 증감 이력 (#734) — 무한 쿼리, 페이지 파라미터는 0부터. */
+  walletHistory: (userId: number | null | undefined) => ['wallet-history', userId] as const,
 };
