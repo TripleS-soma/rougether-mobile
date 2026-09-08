@@ -187,7 +187,6 @@ export function AppShell({
     selectedCharacterId,
     selectedCharacterFrames: wornCharacterFrames,
     select: selectWornCharacter,
-    reload: reloadMyCharacters,
   } = useMyCharacters();
   const wornCharacterId = selectedCharacterId ?? characterId;
   const wearCharacter = useCallback(
@@ -599,16 +598,9 @@ export function AppShell({
           diamondBalance={wallet.diamond}
           soundEffectsEnabled={settingsSurface.soundSettings.effects}
           onBack={() => setScreen('myRoom')}
-          onDraw={async (gachaId, count) => {
-            const results = await drawGachaMachine(gachaId, count);
-            // Drawn items land in the inventory — re-sync so 방 꾸미기 shows
-            // them as 보유중 and placement saves know their userItemId.
-            if (results?.some((r) => r.itemId != null && !r.converted)) void refreshOwned();
-            // A drawn character must show up in the 캐릭터 교체 picker too.
-            if (results?.some((r) => r.characterId != null && !r.converted))
-              void reloadMyCharacters();
-            return results;
-          }}
+          // 뽑은 아이템·캐릭터의 재조회는 useGacha가 인벤토리·캐릭터 쿼리를
+          // 무효화해 처리한다 (#1027) — 셸이 손으로 꿰던 재조회 두 줄이 사라졌다.
+          onDraw={drawGachaMachine}
           placeableItemIds={placeableFurnitureIds}
           // 보상 목록 (#620) — 시트가 자체 재시도를 가지므로 실패는 null로.
           onLoadRewards={(gachaId) => fetchGachaRewards(gachaId).catch(() => null)}
