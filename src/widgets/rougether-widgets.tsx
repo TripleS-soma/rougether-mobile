@@ -146,11 +146,12 @@ export function TodayListWidget({
           style={{ fontSize: 12, color: t.textMuted as `#${string}` }}
         />
       ) : allDone ? (
+        // 다 한 날에도 미접속(슬픔·울음)이 우선이면 그 문구가 오므로 색도 mood를 따른다.
         <TextWidget
           text={mood.message ?? '모두 완료했어요! 🎉'}
           truncate="END"
           maxLines={2}
-          style={{ fontSize: 12, fontWeight: '700', color: t.primaryText as `#${string}` }}
+          style={{ fontSize: 12, fontWeight: '700', color: moodColor as `#${string}` }}
         />
       ) : (
         <FlexWidget style={{ flexDirection: 'column', width: 'match_parent' }}>
