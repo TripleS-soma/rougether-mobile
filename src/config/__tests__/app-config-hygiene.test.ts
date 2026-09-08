@@ -111,9 +111,10 @@ describe('app.json ↔ JS 키 일치 (#1015)', () => {
    * `com.googleusercontent.apps.{id}` (뒤의 `.apps.googleusercontent.com` 제외).
    * 이게 어긋나면 구글 로그인이 콜백에서 앱으로 못 돌아온다.
    */
-  it('구글 iOS 클라이언트 id가 app.json 스킴과 google-auth.ts에서 같다', () => {
+  it('구글 iOS 클라이언트 id가 app.json 스킴과 oauth-client-ids.ts에서 같다', () => {
     const scheme = entryFor('@react-native-google-signin/google-signin')?.[1]?.iosUrlScheme;
-    const clientId = literalOf(srcOf('lib/google-auth.ts'), 'GOOGLE_IOS_CLIENT_ID');
+    // 클라이언트 id의 단일 출처는 oauth-client-ids.ts(네이티브·웹 google-auth가 함께 씀).
+    const clientId = literalOf(srcOf('lib/oauth-client-ids.ts'), 'GOOGLE_IOS_CLIENT_ID');
     expect(scheme).toBeDefined();
     expect(scheme).toBe(
       `com.googleusercontent.apps.${clientId.replace('.apps.googleusercontent.com', '')}`,
