@@ -106,6 +106,26 @@ describe('AppRoot', () => {
     await waitFor(() => expect(getByText('오늘의 할 일')).toBeTruthy());
   });
 
+  it('첫 가입: 온보딩 완료 → 추천 루틴 게이트 → 게이트를 닫으면 미션 1(뽑기) 배너가 뜬다', async () => {
+    await AsyncStorage.setItem('rougether.auth.userId', '72');
+    const ui = await renderApp();
+    await waitFor(() => expect(ui.getByText('루게더에 오신 걸 환영해요')).toBeTruthy());
+    await fireEvent.press(ui.getByLabelText('5번째 슬라이드로 이동'));
+    await fireEvent.press(ui.getByText('목표 선택하기'));
+    await fireEvent.press(ui.getByText('운동'));
+    await fireEvent.press(ui.getByText('시작하기'));
+    await fireEvent.changeText(ui.getByLabelText('닉네임 입력'), '준서');
+    await fireEvent.press(ui.getByText('시작하기'));
+    // 관심사 추천 루틴 게이트(#1149)가 먼저 — 여기서는 미션 배너가 없다.
+    await waitFor(() => expect(ui.getByText('작게 시작해볼까요?')).toBeTruthy());
+    expect(ui.queryByTestId('mission-banner')).toBeNull();
+    await fireEvent.press(ui.getByText('나중에 할게요'));
+    // 게이트가 닫히면 셸이 뜨고, 첫 루틴 등록 없이 뽑기 미션부터 시작한다.
+    await waitFor(() => expect(ui.getByTestId('mission-banner')).toBeTruthy());
+    expect(ui.getByText('뽑기 1회 해보기')).toBeTruthy();
+    expect(ui.queryByText('첫 루틴 등록하기')).toBeNull();
+  });
+
   it('중도 종료한 계정은 관심사 추천으로 재개하고 나중에 선택하면 다음 실행에 강제하지 않는다', async () => {
     await AsyncStorage.setItem('rougether.auth.userId', '71');
     await AsyncStorage.setItem(KEY, JSON.stringify({ characterId: 'cat', goals: ['5'] }));
@@ -163,7 +183,7 @@ describe('AppRoot', () => {
     ).toBe('existing');
   });
 
-  it('첫 온보딩에서 관심사를 골라 루틴을 생성하면 미션 시트 없이 오늘 할 일로 이어진다', async () => {
+  it('첫 온보딩에서 관심사를 골라 루틴을 생성하면 오늘 할 일로 이어지고 뽑기 미션이 시작된다', async () => {
     await AsyncStorage.setItem('rougether.auth.userId', '73');
     let created = false;
     const routine = { id: 101, title: '책 2쪽 읽기', repeatType: 'DAILY', authType: 'CHECK' };
@@ -204,6 +224,8 @@ describe('AppRoot', () => {
     expect(
       JSON.parse((await AsyncStorage.getItem('rougether.starter-routine.v1.73'))!).status,
     ).toBe('created');
-    expect(ui.queryByText('뽑기 1회 해보기')).toBeNull();
+    // 첫 루틴 등록 미션은 뺐다(게이트가 대신) — 게이트가 닫히면 뽑기 미션부터 시작한다.
+    await waitFor(() => expect(ui.getByTestId('mission-banner')).toBeTruthy());
+    expect(ui.getByText('뽑기 1회 해보기')).toBeTruthy();
   });
 });

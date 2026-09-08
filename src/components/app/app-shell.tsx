@@ -81,7 +81,6 @@ const NO_CHARACTER_FRAMES: Partial<Record<CharacterId, string[]>> = {};
 
 /** 각 미션의 진입 화면 (#571) — 배너 탭·완료 시트 '하러 가기'의 목적지. */
 const MISSION_TARGET_SCREEN: Record<OnboardingMissionStepId, Screen> = {
-  'register-routine': 'addRoutine',
   'first-draw': 'gacha',
   'place-furniture': 'decor',
   'invite-house': 'houseMembers',
@@ -154,14 +153,11 @@ export function AppShell({
     deleteCategoryCascade,
   } = myRoomData;
 
-  // 루틴 등록 성공 = 미션 1 완료 (#571) — 추가 화면과 공동미션 연동 추가 공용.
+  // 루틴 추가 — 추가 화면과 공동미션 연동 추가 공용. (첫 루틴 등록 미션은 뺐다 —
+  // 온보딩 직후 추천 루틴 게이트(#1149)가 그 역할. 이름은 호출부 안정을 위해 유지.)
   const addRoutineWithMission = useCallback(
-    async (n: Parameters<typeof addRoutine>[0]) => {
-      const ok = await addRoutine(n);
-      if (ok) completeMission('register-routine');
-      return ok;
-    },
-    [addRoutine, completeMission],
+    async (n: Parameters<typeof addRoutine>[0]) => addRoutine(n),
+    [addRoutine],
   );
 
   // 출석 이벤트·재화 내역 시트 (#851·#1089) — use-attendance-surface가 데이터·열림·JSX를 소유.
@@ -418,19 +414,9 @@ export function AppShell({
   }, [screen]);
 
   /** 미션 배너 탭·완료 시트 '하러 가기' — 해당 미션의 진입 화면으로 (#571). */
-  const { addRoutineFromMyRoom } = myRoomPages;
-  const openMissionScreen = useCallback(
-    (id: OnboardingMissionStepId) => {
-      if (id === 'register-routine') {
-        // 루틴 추가 화면(추천 루틴 아코디언)으로 — 뒤로 가면 나의 방 복귀.
-        // (편집 중 루틴 초기화 포함 — use-my-room-pages의 + 버튼 경로와 동일.)
-        addRoutineFromMyRoom();
-        return;
-      }
-      setScreen(MISSION_TARGET_SCREEN[id]);
-    },
-    [addRoutineFromMyRoom],
-  );
+  const openMissionScreen = useCallback((id: OnboardingMissionStepId) => {
+    setScreen(MISSION_TARGET_SCREEN[id]);
+  }, []);
 
   // 멤버 방 프리뷰 (#775) — 집 좌석 타일과 친구 방문이 함께 쓴다. 훅 호출이
   // use-house-pages 안에 있으면 그보다 먼저 서는 use-friend-visit이 거미줄

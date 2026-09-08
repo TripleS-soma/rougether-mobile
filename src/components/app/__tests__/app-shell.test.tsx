@@ -112,38 +112,16 @@ describe('AppShell — 온보딩 미션 체인 (#571)', () => {
     return { ok: true, status: 200, text: async () => JSON.stringify(body) };
   };
 
-  it('startMissions면 미션 1 배너가 뜨고, 배너 탭이 루틴 추가 화면으로 보낸다', async () => {
-    const { getByText, getByTestId, getByLabelText } = await renderWithProviders(
+  it('startMissions면 미션 1(뽑기) 배너가 뜨고, 배너 탭이 뽑기 화면으로 보낸다', async () => {
+    const { getByText, getByTestId, getByLabelText, getAllByText } = await renderWithProviders(
       <AppShell startMissions />,
     );
     await waitFor(() => getByTestId('mission-banner'));
-    expect(getByText(/미션 1\/4/)).toBeTruthy();
-    expect(getByText('첫 루틴 등록하기')).toBeTruthy();
-
-    await fireEvent.press(getByLabelText('미션 1 첫 루틴 등록하기'));
-    await waitFor(() => getByText('루틴 추가'));
-  });
-
-  it('루틴 등록 성공 → 완료 시트 → 하러 가기로 미션 2(뽑기)로 이어진다', async () => {
-    global.fetch = jest.fn(missionFetch) as unknown as typeof fetch;
-    const { getByText, getByTestId, getByLabelText } = await renderWithProviders(
-      <AppShell startMissions />,
-    );
-    await waitFor(() => getByTestId('mission-banner'));
-
-    // 배너 → 루틴 추가 화면에서 추천 루틴으로 등록.
-    await fireEvent.press(getByLabelText('미션 1 첫 루틴 등록하기'));
-    await fireEvent.press(getByText('추천 루틴'));
-    await fireEvent.press(getByText('독서 30분'));
-    // 기본 반복이 매일 (#1126) — 요일 없이 바로 등록.
-    await fireEvent.press(getByText('루틴 추가하기'));
-
-    // 완료 전환 시트 — 다음 미션 안내와 하러 가기.
-    await waitFor(() => getByText('✅ 미션 1 완료!'));
-    expect(getByText(/다음 미션: 뽑기 1회 해보기/)).toBeTruthy();
-    await fireEvent.press(getByLabelText('다음 미션 하러 가기'));
-    await waitFor(() => getByText(/미션 2\/4/));
+    expect(getByText(/미션 1\/3/)).toBeTruthy();
     expect(getByText('뽑기 1회 해보기')).toBeTruthy();
+
+    await fireEvent.press(getByLabelText('미션 1 뽑기 1회 해보기'));
+    await waitFor(() => expect(getAllByText('뽑기').length).toBeGreaterThan(0));
   });
 
   it('건너뛰기는 확인을 거쳐 배너를 없애고, startMissions 없으면 배너가 없다', async () => {
@@ -166,7 +144,7 @@ describe('AppShell — 온보딩 미션 체인 (#571)', () => {
     const ui = await renderWithProviders(<AppShell startMissions />);
     await waitFor(() => ui.getByTestId('mission-banner'));
     expect(ui.queryByLabelText('미션 건너뛰기')).toBeNull();
-    expect(ui.getByText('첫 루틴 등록하기')).toBeTruthy();
+    expect(ui.getByText('뽑기 1회 해보기')).toBeTruthy();
   });
 });
 
