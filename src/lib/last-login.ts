@@ -4,7 +4,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export type SocialProvider = 'kakao' | 'apple' | 'google';
 
 const KEY = 'rougether.last-login-provider.v1';
-const PROVIDERS: SocialProvider[] = ['kakao', 'apple', 'google'];
+/** 지원하는 소셜 provider 전체 — 서버 응답 값 검증 등 다른 곳에서도 이 한 곳을 본다. */
+export const SOCIAL_PROVIDERS: readonly SocialProvider[] = ['kakao', 'apple', 'google'];
 
 /**
  * 마지막으로 성공한 소셜 로그인 프로바이더 (#489 후속). 로그인 화면이
@@ -14,7 +15,7 @@ const PROVIDERS: SocialProvider[] = ['kakao', 'apple', 'google'];
 export async function loadLastLoginProvider(): Promise<SocialProvider | null> {
   try {
     const raw = await AsyncStorage.getItem(KEY);
-    return PROVIDERS.includes(raw as SocialProvider) ? (raw as SocialProvider) : null;
+    return SOCIAL_PROVIDERS.includes(raw as SocialProvider) ? (raw as SocialProvider) : null;
   } catch {
     return null;
   }
