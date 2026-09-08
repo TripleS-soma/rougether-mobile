@@ -43,7 +43,7 @@ describe('MyRoomScreen', () => {
     const todos = [
       { id: 't9', title: '장보기', kind: 'todo' as const, dueDate: TODAY, category: '건강' },
     ];
-    const { getByText, getByLabelText, queryByText } = await render(
+    const { getByText, getByLabelText, findByLabelText, queryByText } = await render(
       <MyRoomScreen routines={todos} onUpdateTodoDueDate={onUpdateTodoDueDate} />,
     );
 
@@ -51,7 +51,7 @@ describe('MyRoomScreen', () => {
     expect(queryByText('시간 수정')).toBeNull(); // 시간 없는 항목은 '시간 추가' (#325)
 
     await fireEvent.press(getByText('날짜 바꾸기')); // → calendar bottom sheet
-    await fireEvent.press(getByLabelText(OTHER_DAY)); // draft only — not saved yet
+    await fireEvent.press(await findByLabelText(OTHER_DAY, {}, { timeout: 3000 })); // draft only — not saved yet
     expect(onUpdateTodoDueDate).not.toHaveBeenCalled();
 
     await fireEvent.press(getByLabelText('확인'));
@@ -63,31 +63,31 @@ describe('MyRoomScreen', () => {
     const todos = [
       { id: 't9', title: '장보기', kind: 'todo' as const, dueDate: TODAY, category: '건강' },
     ];
-    const { getByText, getByLabelText } = await render(
+    const { getByText, getByLabelText, findByLabelText } = await render(
       <MyRoomScreen routines={todos} onUpdateRoutineTime={onUpdateRoutineTime} />,
     );
     await fireEvent.press(getByText('장보기'));
     // 알림 시간 시트 재사용 — 토글 켜고 저장하면 기본 07:00으로 콜백.
     await fireEvent.press(getByText('시간 추가'));
-    await fireEvent.press(getByLabelText('알림 받기'));
+    await fireEvent.press(await findByLabelText('알림 받기'));
     await fireEvent.press(getByLabelText('알림 저장'));
     expect(onUpdateRoutineTime).toHaveBeenCalledWith('t9', true, '07:00');
   });
 
   it('시간 라벨 분기 — 시간 있는 루틴은 시간 수정, 없는 루틴은 시간 추가 (#325)', async () => {
-    const { getByText, queryByText, getByLabelText } = await render(
+    const { getByText, queryByText, findByText, findByLabelText } = await render(
       <MyRoomScreen routines={SAMPLE_ROUTINES} />,
     );
     // '하루 회고'는 23:00 알림 보유 → 시간 수정.
     await fireEvent.press(getByText('하루 회고'));
     expect(getByText('시간 수정')).toBeTruthy();
-    // 시간 수정 → 알림 시트 열림(메뉴 닫힘) → 닫기.
+    // 시간 수정 → (메뉴 퇴장 뒤) 알림 시트 열림 → 닫기.
     await fireEvent.press(getByText('시간 수정'));
-    await fireEvent.press(getByLabelText('닫기'));
+    await fireEvent.press(await findByLabelText('닫기'));
     // '물 2L 마시기'는 alarmEnabled: false → 시간 추가.
     await fireEvent.press(getByText('물 2L 마시기'));
+    expect(await findByText('시간 추가')).toBeTruthy();
     expect(queryByText('시간 수정')).toBeNull();
-    expect(getByText('시간 추가')).toBeTruthy();
   });
 
   it('cancels a date change without saving', async () => {
@@ -95,27 +95,27 @@ describe('MyRoomScreen', () => {
     const todos = [
       { id: 't9', title: '장보기', kind: 'todo' as const, dueDate: TODAY, category: '건강' },
     ];
-    const { getByText, getByLabelText } = await render(
+    const { getByText, getByLabelText, findByLabelText } = await render(
       <MyRoomScreen routines={todos} onUpdateTodoDueDate={onUpdateTodoDueDate} />,
     );
 
     await fireEvent.press(getByText('장보기'));
     await fireEvent.press(getByText('날짜 바꾸기'));
-    await fireEvent.press(getByLabelText(OTHER_DAY));
+    await fireEvent.press(await findByLabelText(OTHER_DAY, {}, { timeout: 3000 }));
     await fireEvent.press(getByLabelText('취소'));
     expect(onUpdateTodoDueDate).not.toHaveBeenCalled();
   });
 
   it('moves a single routine occurrence via 날짜 바꾸기, repeat untouched', async () => {
     const onMoveRoutineOccurrence = jest.fn();
-    const { getByText, getByLabelText } = await render(
+    const { getByText, getByLabelText, findByText } = await render(
       <MyRoomScreen routines={SAMPLE_ROUTINES} onMoveRoutineOccurrence={onMoveRoutineOccurrence} />,
     );
 
     await fireEvent.press(getByText('하루 회고')); // routine row → menu sheet
     await fireEvent.press(getByText('날짜 바꾸기'));
     // Routines get the occurrence-move note.
-    expect(getByText(/루틴 반복은 그대로 두고/)).toBeTruthy();
+    expect(await findByText(/루틴 반복은 그대로 두고/, {}, { timeout: 3000 })).toBeTruthy();
 
     await fireEvent.press(getByLabelText(OTHER_DAY));
     expect(onMoveRoutineOccurrence).not.toHaveBeenCalled();
