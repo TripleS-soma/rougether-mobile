@@ -37,4 +37,15 @@ export const queryKeys = {
     all: ['me', 'characters'] as const,
     byUser: (userId: number | null | undefined) => ['me', 'characters', userId] as const,
   },
+  /**
+   * 달력 탭 (GET /calendar, GET /calendar/month) — 날짜별 목록과 달별 점.
+   * 루틴·투두 변경은 `all`로 통째 무효화한다(방문한 날짜·달만 재조회된다).
+   */
+  calendar: {
+    all: (userId: number | null | undefined) => ['calendar', userId] as const,
+    day: (userId: number | null | undefined, dateIso: string) =>
+      ['calendar', userId, 'day', dateIso] as const,
+    month: (userId: number | null | undefined, yearMonth: string) =>
+      ['calendar', userId, 'month', yearMonth] as const,
+  },
 };
