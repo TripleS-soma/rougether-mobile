@@ -156,6 +156,14 @@ export function useMyRoomPages({
     },
     [moveRoutineToCategory],
   );
+  // 카테고리 헤더 롱프레스 드래그 (2026-09-08) — 카테고리 관리 화면의 정렬과 같은
+  // 서버 경로(sortOrder 일괄 저장). 방 탭·달력 탭 두 인스턴스가 같은 참조를 받는다.
+  const reorderCategoryOrder = useCallback(
+    (orderedIds: string[]) => {
+      void reorderCategories(orderedIds);
+    },
+    [reorderCategories],
+  );
 
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
   // The pager unmounts after a sub-screen transition; keep the date in the shell.
@@ -437,6 +445,7 @@ export function useMyRoomPages({
     routineOrder,
     onReorderRoutines: reorderRoutines,
     onMoveRoutineCategory: moveRoutineCategory,
+    onReorderCategories: reorderCategoryOrder,
   };
 
   /** 현재 화면이 나의 방 서브화면 4종이면 그 JSX, 아니면 null — 셸이 그대로 렌더. */

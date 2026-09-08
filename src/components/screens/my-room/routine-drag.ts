@@ -68,3 +68,51 @@ export function reorderedIds(baseIds: string[], draggedId: string, index: number
   const clamped = Math.max(0, Math.min(index, without.length));
   return [...without.slice(0, clamped), draggedId, ...without.slice(clamped)];
 }
+
+// --- 카테고리 그룹 롱프레스 드래그 (2026-09-08) ---
+// 그룹 헤더를 꾹 눌러 끌면 그 카테고리(안의 루틴·투두 포함)가 통째로 움직인다.
+// 행 드래그(window 좌표 + 손가락 절대 y)와 달리 그룹은 부모 기준 onLayout 사각형과
+// 팬 translationY만으로 계산한다 — 그룹 컨테이너는 같은 부모 안에 있어 상대 좌표가
+// 서로 비교 가능하고, 측정 콜백(비동기)을 리프트 시점에 기다릴 필요가 없다.
+
+/** 그룹 컨테이너의 onLayout 사각형 — 부모(리스트 섹션) 기준. */
+export type GroupSlot = { y: number; height: number };
+
+/**
+ * 끌고 있는 그룹의 새 index (#716 확장). 들린 그룹의 중심(레이아웃 중심 + translationY)
+ * 보다 위에 중심이 있는 **다른** 그룹의 개수가 곧 삽입 위치다 — resolveDrop의 행
+ * 규칙과 같다. `order`는 드래그 대상이 될 수 있는 그룹 id만(미분류·삭제된 카테고리
+ * 제외) 렌더 순서대로; 그 밖의 그룹은 아예 세지 않으므로 미분류 아래로는 떨어질 수
+ * 없다. 들린 그룹의 레이아웃이 없으면(측정 전) null.
+ */
+export function resolveGroupDrop(
+  layouts: ReadonlyMap<string, GroupSlot>,
+  order: readonly string[],
+  draggedId: string,
+  translationY: number,
+): number | null {
+  const me = layouts.get(draggedId);
+  if (!me) return null;
+  const center = me.y + me.height / 2 + translationY;
+  let index = 0;
+  for (const id of order) {
+    if (id === draggedId) continue;
+    const slot = layouts.get(id);
+    if (slot && center > slot.y + slot.height / 2) index += 1;
+  }
+  return index;
+}
+
+/**
+ * 부분 순서를 전체 순서에 되섞는다. 달력 서버 날짜에는 일부 카테고리(그 날 항목이
+ * 없고 퀵애드도 막힌 것)가 안 그려지는데, 서버 저장은 전체 카테고리 순서를 요구한다
+ * (reorderCategories는 개수가 다르면 무시). 보이는 카테고리끼리만 자리를 바꾸고
+ * 안 보이는 카테고리는 원래 자리를 지킨다 — `full`에 없는 id는 버린다.
+ */
+export function mergeOrderedSubset(full: readonly string[], subsetOrdered: readonly string[]) {
+  const inFull = new Set(full);
+  const queue = subsetOrdered.filter((id) => inFull.has(id));
+  const moving = new Set(queue);
+  let k = 0;
+  return full.map((id) => (moving.has(id) ? queue[k++] : id));
+}

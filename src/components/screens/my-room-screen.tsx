@@ -26,9 +26,12 @@ import { isScheduledOn } from '@/components/screens/my-room/schedule';
 import {
   type DragSlot,
   type DropTarget,
+  type GroupSlot,
   isRejectedDrop,
+  mergeOrderedSubset,
   reorderedIds,
   resolveDrop,
+  resolveGroupDrop,
 } from '@/components/screens/my-room/routine-drag';
 import {
   useAnimatedValue,
@@ -36,6 +39,7 @@ import {
   useLatestRef,
   useStableCallback,
 } from '@/hooks/use-stable-value';
+import { CategoryDragHandle } from '@/components/screens/my-room/category-drag-handle';
 import { QuickAddRow } from '@/components/screens/my-room/quick-add-row';
 import { RoutineRow } from '@/components/screens/my-room/routine-row';
 import { useQuickAddKeyboard } from '@/components/screens/my-room/use-quick-add-keyboard';
@@ -228,10 +232,19 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
      * 미완료 항목을 이 순서로 정렬한다(완료는 기존대로 하단). 기기 로컬 보관.
      */
     routineOrder?: Record<string, string[]>;
-    /** 롱프레스 재정렬 확정 — 해당 카테고리의 새 루틴 id 순서(미완료 기준). */
+    /**
+     * 롱프레스 재정렬 확정 — 해당 카테고리의 새 루틴 id 순서(미완료 기준). 방 탭과
+     * 달력 탭(오늘·서버 날짜) 모두에서 발화한다 (2026-09-08) — 달력 서버 날짜의
+     * 행도 루틴 id로 나간다.
+     */
     onReorderRoutines?: (categoryId: string, orderedRoutineIds: string[]) => void;
     /** 다른 카테고리로 드롭 = 영구 이동 (#716) — 서버 categoryId 변경. */
     onMoveRoutineCategory?: (id: string, toCategoryId: string) => void;
+    /**
+     * 카테고리 헤더 롱프레스 드래그 확정 (2026-09-08) — 전체 카테고리 id의 새 순서
+     * (미분류 '' 제외, 서버 sortOrder = index). 없으면 헤더 드래그 비활성.
+     */
+    onReorderCategories?: (orderedCategoryIds: string[]) => void;
   };
 
 /**
@@ -313,6 +326,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   routineOrder,
   onReorderRoutines,
   onMoveRoutineCategory,
+  onReorderCategories,
   getInitialScrollY,
   onScrollY,
 }: MyRoomScreenProps) {
@@ -484,14 +498,15 @@ export const MyRoomScreen = memo(function MyRoomScreen({
       groupCalendarClientRoutines({
         routines: dateRoutines,
         categories,
+        routineOrder,
         isDone: (id) => isDone(id, selectedDate),
         canQuickAdd,
       }),
-    [categories, dateRoutines, isDone, selectedDate, canQuickAdd],
+    [categories, dateRoutines, routineOrder, isDone, selectedDate, canQuickAdd],
   );
   const calServerGroups = useMemo(
-    () => groupCalendarServerItems({ dayItems, catMeta, categories, canQuickAdd }),
-    [dayItems, catMeta, categories, canQuickAdd],
+    () => groupCalendarServerItems({ dayItems, catMeta, categories, routineOrder, canQuickAdd }),
+    [dayItems, catMeta, categories, routineOrder, canQuickAdd],
   );
 
   // 방 이미지 갤러리 저장 (#245) + 캡처 중 버튼 숨김 플래그 (#475) —
@@ -652,6 +667,11 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     routineId: string;
     title: string;
     done: boolean;
+    /**
+     * 롱프레스 재정렬 대상인가 — 미완료이고 루틴이 아직 살아 있을 때. 달력 서버
+     * 날짜의 삭제된 루틴 기록은 옮길 곳이 없어(서버 no-op) 제외한다.
+     */
+    draggable: boolean;
     /** 알림/마감 시각 — 있으면 종 배지. */
     time?: string;
     /** 반복 루틴 — 제목 뒤 은은한 ↻ 마커로 1회성 투두와 구분 (#576, 시안 A). */
@@ -669,6 +689,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     routineId: routine.id,
     title: routine.title,
     done: isDone(routine.id, date),
+    draggable: !isDone(routine.id, date),
     time: routine.alarmEnabled && routine.time ? routine.time : undefined,
     onToggle: (e) => handleToggle(routine, date, e),
     onMenu: () => openRowMenu(routine.id, date),
@@ -676,19 +697,22 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     onDelete: onDeleteRoutine ? () => onDeleteRoutine(routine.id) : undefined,
   });
 
-  const rowFromCalendarItem = (item: CalendarDayItem): RowSpec => ({
-    repeats: item.kind === 'routine',
-    key: `${item.kind}-${item.id}`,
-    routineId: item.id,
-    title: item.title,
-    done: item.completed,
-    time: item.time,
-    onToggle: () => handleCalendarItemPress(item),
-    // 기록만 남은(삭제된) 항목은 메뉴를 열 수 없다 — 그대로 표시만.
-    onMenu: routines.some((r) => r.id === item.id)
-      ? () => openRowMenu(item.id, selectedDate)
-      : undefined,
-  });
+  const rowFromCalendarItem = (item: CalendarDayItem): RowSpec => {
+    const live = routines.some((r) => r.id === item.id);
+    return {
+      repeats: item.kind === 'routine',
+      key: `${item.kind}-${item.id}`,
+      routineId: item.id,
+      title: item.title,
+      done: item.completed,
+      // 살아 있는 루틴의 미완료 기록만 — 드래그는 그 루틴 자체를 옮긴다 (2026-09-08).
+      draggable: live && !item.completed,
+      time: item.time,
+      onToggle: () => handleCalendarItemPress(item),
+      // 기록만 남은(삭제된) 항목은 메뉴를 열 수 없다 — 그대로 표시만.
+      onMenu: live ? () => openRowMenu(item.id, selectedDate) : undefined,
+    };
+  };
 
   /**
    * 행 핸들러 레지스트리 (#769) — RowSpec의 콜백은 매 렌더 새 클로저라 그대로
@@ -701,10 +725,12 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   const rowHandlers = useConstant(() => new Map<string, { spec: RowSpec; categoryId?: string }>());
 
   // --- 루틴/투두 롱프레스 재정렬 (#716) ---
-  // 방 '오늘' 리스트의 미완료 행만 대상. 롱프레스로 들어 손가락을 따라가고,
-  // 놓으면 같은 카테고리면 순서 변경(로컬), 다른 카테고리 그룹 위면 영구
-  // 이동(서버). 완료 행은 하단으로 가라앉은 상태라 드래그에서 제외한다.
-  const reorderEnabled = !!onReorderRoutines && tab === 'room';
+  // 미완료 행만 대상. 롱프레스로 들어 손가락을 따라가고, 놓으면 같은 카테고리면
+  // 순서 변경(로컬), 다른 카테고리 그룹 위면 영구 이동(서버). 완료 행은 하단으로
+  // 가라앉은 상태라 드래그에서 제외한다. 방 탭뿐 아니라 달력 탭의 모든 날짜에서도
+  // 같은 의미다 (2026-09-08) — 서버 날짜의 행은 레지스트리의 routineId로 그 루틴
+  // 자체를 옮기고, 순서는 카테고리 전역 순서(routineOrder)에 쓴다.
+  const reorderEnabled = !!onReorderRoutines;
   const [dragId, setDragId] = useState<string | null>(null);
   const dragTY = useAnimatedValue(0);
   const rowRefs = useRef(new Map<string, View>());
@@ -718,16 +744,17 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     (rowKey: string) => {
       hapticSelection();
       setDragId(rowKey);
+      // 기준 순서는 **지금 그려진 리스트**(방 탭 오늘 / 달력 오늘 / 달력 서버 날짜)의
+      // 드래그 가능한 행 — 레지스트리는 렌더 순서대로 채워지므로 그대로 읽는다.
+      // 카테고리 id는 그룹의 것(서버 날짜면 기록 당시 카테고리).
       const base = new Map<string, string[]>();
-      for (const g of roomGroups) {
-        base.set(
-          g.meta.id,
-          g.items.filter((r) => !isDone(r.id, today)).map((r) => r.id),
-        );
-      }
+      const catById = new Map<string, string>();
+      rowHandlers.forEach(({ spec, categoryId }) => {
+        if (!spec.draggable || categoryId === undefined) return;
+        base.set(categoryId, [...(base.get(categoryId) ?? []), spec.routineId]);
+        catById.set(spec.routineId, categoryId);
+      });
       baseOrderRef.current = base;
-      const catOf = (id: string) =>
-        [...base.entries()].find(([, ids]) => ids.includes(id))?.[0] ?? '';
       // window 좌표 측정은 비동기 — 다음 프레임 안에 채워져 onUpdate가 쓴다
       // (집 좌석 드래그 #278와 같은 리프트 시점 측정).
       dragSlotsRef.current = [];
@@ -738,14 +765,14 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         node.measureInWindow((x, y, w, h) => {
           dragSlotsRef.current.push({
             routineId,
-            categoryId: catOf(routineId),
+            categoryId: catById.get(routineId) ?? '',
             top: y,
             bottom: y + h,
           });
         });
       });
     },
-    [roomGroups, isDone, today, rowHandlers],
+    [rowHandlers],
   );
 
   const updateDrop = useCallback((draggedId: string, absoluteY: number) => {
@@ -818,9 +845,70 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     dragTY.setValue(0);
   });
 
+  // --- 카테고리 헤더 롱프레스 드래그 (2026-09-08) ---
+  // 헤더를 꾹 눌러 끌면 그룹(헤더+행)이 통째로 들려 손가락을 따라가고, 놓으면
+  // onReorderCategories(전체 카테고리 id 순서)로 서버 sortOrder를 바꾼다. 미분류('')는
+  // 항상 꼬리라 들 수 없고 그 아래로 떨어질 수도 없다(resolveGroupDrop이 세지 않음).
+  // 행 드래그와는 배타 — 한쪽이 활성이면 다른 쪽 제스처는 enabled=false.
+  const categoryReorderEnabled = !!onReorderCategories;
+  const [catDragId, setCatDragId] = useState<string | null>(null);
+  const catDragTY = useAnimatedValue(0);
+  /** 그룹 컨테이너 onLayout 사각형 — 카테고리 id 키, 부모(리스트 섹션) 기준. */
+  const groupLayouts = useConstant(() => new Map<string, GroupSlot>());
+  /** 이번 렌더에 그려진 그룹의 카테고리 id — 렌더 순서. 렌더마다 비우고 다시 채운다. */
+  const groupOrder = useConstant(() => [] as string[]);
+  /** 드래그 시작 시점의 이동 가능(실제 카테고리) 그룹 순서 스냅샷. */
+  const catOrderRef = useRef<string[]>([]);
+  const catDropRef = useRef<number | null>(null);
+  const catDragIdRef = useLatestRef(catDragId);
+  const categoriesRef = useLatestRef(categories);
+
+  const isRealCategory = (id: string) => id !== '' && categories.some((c) => c.id === id);
+
+  const dispatchCatDragStart = useStableCallback((categoryId: string) => {
+    hapticSelection();
+    setCatDragId(categoryId);
+    catDropRef.current = null;
+    const live = new Set(categoriesRef.current.map((c) => c.id));
+    catOrderRef.current = groupOrder.filter((id) => id !== '' && live.has(id));
+  });
+  const dispatchCatDragUpdate = useStableCallback((categoryId: string, translationY: number) => {
+    catDropRef.current = resolveGroupDrop(
+      groupLayouts,
+      catOrderRef.current,
+      categoryId,
+      translationY,
+    );
+  });
+  const dispatchCatDragEnd = useStableCallback((categoryId: string) => {
+    const index = catDropRef.current;
+    catDropRef.current = null;
+    setCatDragId(null);
+    catDragTY.setValue(0);
+    if (index === null) return;
+    const order = catOrderRef.current;
+    const next = reorderedIds(order, categoryId, index);
+    // 구분자는 이스케이프 `\0` — 위 endDrag의 주석 참고.
+    if (next.join('\0') === order.join('\0')) return;
+    hapticSuccess();
+    // 달력 서버 날짜엔 일부 카테고리가 안 그려질 수 있다 — 전체 순서에 되섞어 보낸다.
+    onReorderCategories?.(
+      mergeOrderedSubset(
+        categoriesRef.current.map((c) => c.id),
+        next,
+      ),
+    );
+  });
+  const dispatchCatDragFinalize = useStableCallback((categoryId: string) => {
+    if (catDragIdRef.current !== categoryId) return;
+    setCatDragId(null);
+    catDragTY.setValue(0);
+  });
+
   // 이번 렌더의 행만 남긴다 (#1207) — 아래 renderCategoryGroup이 같은 렌더 안에서
   // 동기적으로 다시 채운다. 지우지 않으면 지나간 날짜·삭제된 루틴의 항목이 영영 쌓였다.
   rowHandlers.clear();
+  groupOrder.length = 0;
 
   // 카테고리 그룹 = 헤더(아이콘·라벨·공개범위·카운트·＋) + 행들 + 퀵애드 입력행.
   // 빈 그룹도 헤더는 그린다 — ＋가 항상 닿아야 한다 (#323).
@@ -834,9 +922,32 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     // 이번 렌더의 콜백으로 레지스트리를 갱신한다 (#769) — 행이 memo로
     // 리렌더를 건너뛰어도 디스패처는 항상 최신 클로저를 부른다.
     for (const row of rows) rowHandlers.set(row.key, { spec: row, categoryId: meta.id });
+    groupOrder.push(meta.id);
+    const catDraggable = categoryReorderEnabled && isRealCategory(meta.id) && dragId === null;
+    const catActive = catDragId === meta.id;
     return (
-      <View key={key} style={styles.group}>
-        <View style={styles.catHeader}>
+      <Animated.View
+        key={key}
+        testID={`category-group-${meta.id || 'uncat'}`}
+        onLayout={(e) => {
+          const { y, height } = e.nativeEvent.layout;
+          groupLayouts.set(meta.id, { y, height });
+        }}
+        style={[
+          styles.group,
+          catActive
+            ? { transform: [{ translateY: catDragTY }], zIndex: 20, elevation: 8, opacity: 0.96 }
+            : null,
+        ]}>
+        <CategoryDragHandle
+          categoryId={meta.id}
+          draggable={catDraggable}
+          dragTY={catDragTY}
+          style={styles.catHeader}
+          onDragStart={dispatchCatDragStart}
+          onDragUpdate={dispatchCatDragUpdate}
+          onDragEnd={dispatchCatDragEnd}
+          onDragFinalize={dispatchCatDragFinalize}>
           {/* 미분류(pseudo) 그룹은 실제 카테고리가 아니라 수정 진입이 없다 (#541). */}
           <Pressable
             style={styles.catHeaderTap}
@@ -865,12 +976,12 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           ) : null}
           <View style={styles.flex} />
           {renderQuickAddButton(meta, date)}
-        </View>
+        </CategoryDragHandle>
         <View style={styles.rows}>
-          {/* categoryId를 넘겨 방 탭에서만 드래그 활성 — 달력 탭은
-              reorderEnabled(tab==='room')가 false라 categoryId를 받아도 무효. */}
+          {/* 카테고리 드래그 중엔 행 드래그를 끈다(배타) — 그룹이 통째로 들린 동안
+              행이 따로 들리면 두 translateY가 겹친다. */}
           {rows.map((row) => {
-            const draggable = reorderEnabled && !row.done && meta.id !== undefined;
+            const draggable = reorderEnabled && row.draggable && catDragId === null;
             return (
               <RoutineRow
                 key={row.key}
@@ -898,7 +1009,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           })}
           {addingCategory === meta.id ? renderQuickAddRow(meta.id) : null}
         </View>
-      </View>
+      </Animated.View>
     );
   };
 
@@ -911,8 +1022,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           scrollRef={scrollRef}
           onRefresh={onRefresh}
           refreshTestID="my-room-refresh"
-          // 재정렬 드래그 중엔 세로 스크롤을 잠근다 (#716).
-          scrollEnabled={dragId === null}
+          // 재정렬 드래그 중엔 세로 스크롤을 잠근다 (#716) — 카테고리 드래그도 같다.
+          scrollEnabled={dragId === null && catDragId === null}
           contentContainerStyle={[
             styles.body,
             // 달력은 상태바 바로 아래부터. 떠 있는 크롬 행(방/달력 알약, #1055)은 단독
