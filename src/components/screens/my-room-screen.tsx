@@ -1107,7 +1107,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                     위젯에 검은 띠가 생겼다. 플로팅 버튼들은 roomWrap 기준
                     absolute라 바깥에 남겨도 위치가 그대로다.
                     전체화면(#1055): 방이 화면 폭을 다 쓰고 상태바 밑까지 올라간다 —
-                    집 탭의 하늘처럼. 위 모서리는 각지게, 아래는 종전 둥근 모서리.
+                    집 탭의 하늘처럼. 네 모서리 전부 각지게(아래도).
                   */}
                 <View ref={roomShotRef} collapsable={false}>
                   <Room {...roomScene} interactiveCharacter style={styles.roomFullBleed} />
@@ -1542,9 +1542,10 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   // 전체화면 방 (#1055) — 위 모서리는 화면 가장자리에 붙으니 각지게.
+  // 나의 방 전체화면(#1058)에서만 네 모서리 전부 각지게 — 아래 둥근 모서리가
+  // '오늘의 할 일' 패널 경계와 어긋나 보였다(2026-09-08). 친구 방·꾸미기는 계약 반경 그대로.
   roomFullBleed: {
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
+    borderRadius: 0,
   },
   // 오른쪽 버튼 열 (#1055) — 메뉴·알림·꾸미기·뽑기, 아래에서 위로.
   btnColumn: {
