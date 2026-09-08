@@ -27,6 +27,17 @@ export const Spacing = {
   six: 64,
 } as const;
 
+/**
+ * 소셜 로그인 버튼의 벤더 지정색 — 각 브랜드 가이드가 정한 값이라 테마를 타지 않는다
+ * (카카오 노랑, 애플 검정, 구글 흰 바탕 + 4색 G). 토큰이 아니라 "규정색"이다.
+ */
+export const OAuthBrand = {
+  kakao: { bg: '#FEE500', fg: '#191919' },
+  apple: { bg: '#000000', fg: '#FFFFFF' },
+  google: { bg: '#FFFFFF', fg: '#4A403A' },
+  googleG: { red: '#EA4335', blue: '#4285F4', yellow: '#FBBC05', green: '#34A853' },
+} as const;
+
 /** Gacha stage/art geometry; animation transforms are relative to these sizes. */
 export const GachaStage = {
   /** 스토리북 무대의 최대 한 변 — 좁은 화면에선 폭·높이에 맞춰 줄어든다. */

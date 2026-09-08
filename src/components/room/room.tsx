@@ -24,7 +24,6 @@ import {
 } from '@/resources/furniture';
 
 /** 자유 배치 아이템의 기본 폭 — 방 폭 대비 비율. */
-export const FREE_ITEM_WIDTH = ROOM_RENDER_CONTRACT.furniture.baseWidth;
 
 /**
  * Region a decor-mode tap can target — 표면 밴드 2종뿐이다 (#925).

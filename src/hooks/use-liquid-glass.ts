@@ -39,8 +39,3 @@ export function useGlassMaterial(): GlassMaterial {
   if (reduceTransparency) return 'opaque';
   return capable ? 'glass' : 'translucent';
 }
-
-/** iOS 26 리퀴드 글래스를 그려도 되는가 — `useGlassMaterial() === 'glass'`. */
-export function useLiquidGlass(): boolean {
-  return useGlassMaterial() === 'glass';
-}

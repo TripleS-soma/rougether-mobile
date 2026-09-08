@@ -6,7 +6,7 @@
  */
 
 /** #RRGGBB → [r, g, b] 0–255, or null when not parseable. */
-function parseHex(hex: string): [number, number, number] | null {
+export function parseHex(hex: string): [number, number, number] | null {
   const m = /^#([0-9a-f]{6})$/i.exec(hex);
   if (!m) return null;
   const n = parseInt(m[1], 16);
@@ -94,4 +94,21 @@ export function readableTextColor(color: string, bg: string, target = 4.5): stri
   const result = hslToHex(h, s, darkBg ? hi : lo);
   // Extremes may still fall short on mid-tone backgrounds — return the extreme.
   return contrastRatio(result, bg) >= target ? result : hslToHex(h, s, darkBg ? 1 : 0);
+}
+
+const hex2 = (n: number) => Math.round(n).toString(16).padStart(2, '0');
+
+/** `#RRGGBB` 토큰에 알파를 붙여 `#RRGGBBAA`로. 그 외 형식(rgba 등)은 그대로 둔다. */
+export function withAlpha(color: string, alpha: number): string {
+  if (!parseHex(color)) return color;
+  return `${color}${hex2(alpha * 255)}`.toUpperCase();
+}
+
+/** `hex`를 `to` 쪽으로 pct(0~1)만큼 혼합한 `#RRGGBB`. 파싱 불가면 `hex` 그대로. */
+export function mixHex(hex: string, pct: number, to: string): string {
+  const a = parseHex(hex);
+  const b = parseHex(to);
+  if (!a || !b) return hex;
+  const c = (x: number, y: number) => hex2(x + (y - x) * pct);
+  return `#${c(a[0], b[0])}${c(a[1], b[1])}${c(a[2], b[2])}`;
 }

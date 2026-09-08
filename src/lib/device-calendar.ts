@@ -1,7 +1,7 @@
 import { PermissionsAndroid, Platform } from 'react-native';
 import * as Calendar from 'expo-calendar';
 
-import { shiftIso, todayIso } from '@/utils/datetime';
+import { shiftIso, todayIso, toIsoDate } from '@/utils/datetime';
 
 /**
  * 기기 캘린더 읽기 (#844) — OS 캘린더에 연결된 계정(구글 등)의 일정을 읽는다.
@@ -180,8 +180,5 @@ function endOfLocalDay(iso: string) {
 }
 /** expo-calendar는 Date 또는 ISO 문자열을 준다 — 둘 다 로컬 날짜로 접는다. */
 function localDateOf(value: string | Date) {
-  const dt = value instanceof Date ? value : new Date(value);
-  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(
-    dt.getDate(),
-  ).padStart(2, '0')}`;
+  return toIsoDate(value instanceof Date ? value : new Date(value));
 }

@@ -63,7 +63,7 @@ const IDLE: MissionState = { active: false, stepIndex: 0, completedIndex: null }
  * 온보딩 미션 체인 상태 (#571) — 코치마크 튜토리얼을 대체한다.
  * `autoStart`(온보딩 완주 직후)일 때 완료/스킵 플래그가 없으면 1단계부터
  * 시작하고, 셸의 액션 지점이 `complete(stepId)`를 쏘면 현재 단계와 일치할
- * 때만 다음으로 진행된다. PostHog 퍼널 이벤트는 여기서만 발화한다.
+ * 때만 다음으로 진행된다.
  */
 export function useOnboardingMissions(autoStart: boolean) {
   const [state, setState] = useState<MissionState>(IDLE);
