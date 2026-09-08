@@ -338,9 +338,10 @@ function CalendarBase({
                       </Text>
                     </View>
                     {/* 할 일 있는 날 표시 (#838) — 선택된 날은 원이 이미 강조라
-                        점을 생략한다(원 안에서 잉크가 겹친다). 절대 배치라
-                        없을 때 자리를 채워둘 필요가 없다 (#845 후속). */}
-                    {markedDates?.has(date) && !isSelected ? (
+                        점을 생략한다(원 안에서 잉크가 겹친다). 오늘 링(#862)과도
+                        겹쳐 보여 오늘은 점을 생략한다 — 라벨의 '할 일 있음'은 남긴다.
+                        절대 배치라 없을 때 자리를 채워둘 필요가 없다 (#845 후속). */}
+                    {markedDates?.has(date) && !isSelected && !isToday ? (
                       <View
                         style={[
                           styles.dot,
