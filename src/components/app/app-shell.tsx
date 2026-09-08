@@ -3,6 +3,7 @@ import { Animated, StyleSheet, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 
 import { NAV_ORDER, SCREEN_FOR_TAB, type Screen } from '@/components/app/navigation';
+import { PhoneColumn } from '@/components/app/app-frame';
 import { TabPager } from '@/components/app/tab-pager';
 import { useAppNavigation } from '@/components/app/use-app-navigation';
 import { useStoreReview } from '@/hooks/use-store-review';
@@ -516,8 +517,13 @@ export function AppShell({
             onOpenFurnitureStudio={openFurnitureStudio}
           />
           <MyRoomScreen {...myRoomPages.calendarTabProps} view="calendar" {...tabScroll.calendar} />
-          <HouseScreen {...housePages.tabProps} {...tabScroll.house} />
-          <MyPageScreen {...settingsSurface.myPageProps} {...tabScroll.myPage} />
+          {/* 집·내 정보는 2단(#1230) 프레임 안에서도 폰 컬럼 — 캔버스·메뉴 행이 1200px로 늘지 않게. */}
+          <PhoneColumn>
+            <HouseScreen {...housePages.tabProps} {...tabScroll.house} />
+          </PhoneColumn>
+          <PhoneColumn>
+            <MyPageScreen {...settingsSurface.myPageProps} {...tabScroll.myPage} />
+          </PhoneColumn>
         </TabPager>
       ) : null}
 

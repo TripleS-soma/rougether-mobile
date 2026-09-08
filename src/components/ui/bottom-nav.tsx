@@ -5,7 +5,7 @@ import { type SvgProps } from 'react-native-svg';
 import { GestureDetector } from 'react-native-gesture-handler';
 import Reanimated from 'react-native-reanimated';
 
-import { useAppFrame } from '@/hooks/use-app-frame';
+import { APP_FRAME_MAX_WIDTH, useAppFrame } from '@/hooks/use-app-frame';
 import CalendarActive from '@/assets/images/common/calendar-icon-active.svg';
 import CalendarInactive from '@/assets/images/common/calendar-icon.svg';
 import HomeActive from '@/assets/images/common/home-icon-active.svg';
@@ -114,8 +114,10 @@ export function BottomNav({ active, onChange, badges }: BottomNavProps) {
   const t = useTokens();
   const Typography = useTypography();
   const insets = useSafeAreaInsets();
-  // 폭은 앱 프레임 기준 — 웹 데스크톱에서 탭이 창 전체로 퍼지지 않게.
-  const { width: windowW, fontScale } = useAppFrame();
+  // 폭은 앱 프레임 기준 — 웹 데스크톱에서 탭이 창 전체로 퍼지지 않게. 2단
+  // 프레임(#1230)에서도 알약은 폰 폭 안에 모아 가운데 둔다.
+  const { width: frameW, fontScale } = useAppFrame();
+  const windowW = Math.min(frameW, APP_FRAME_MAX_WIDTH);
   // 라벨의 **자연 폭**은 숨은 측정용 Text로 잰다 — 보이는 라벨은 탭 폭에 잘려 onLayout이
   // 줄어든 값을 준다. 첫 측정 전엔 한 글자 한 em으로 잡아 자리를 미리 확보한다.
   const [labelWidths, setLabelWidths] = useState<number[]>([]);
