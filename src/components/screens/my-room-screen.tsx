@@ -1,9 +1,7 @@
-import { memo, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import {
   Animated,
-  Dimensions,
   type GestureResponderEvent,
-  Keyboard,
   KeyboardAvoidingView,
   LayoutAnimation,
   Platform,
@@ -11,7 +9,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -19,6 +16,12 @@ import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { NavMenuPopover } from '@/components/app/nav-menu-popover';
 import { FlyingCoin } from '@/components/ui/flying-coin';
+import {
+  canQuickAddCategory,
+  groupCalendarClientRoutines,
+  groupCalendarServerItems,
+  groupRoomRoutines,
+} from '@/components/screens/my-room/grouping';
 import { isScheduledOn } from '@/components/screens/my-room/schedule';
 import {
   type DragSlot,
@@ -27,7 +30,6 @@ import {
   reorderedIds,
   resolveDrop,
 } from '@/components/screens/my-room/routine-drag';
-import { applyRoutineOrder } from '@/hooks/use-routine-order';
 import {
   useAnimatedValue,
   useConstant,
@@ -36,6 +38,9 @@ import {
 } from '@/hooks/use-stable-value';
 import { QuickAddRow } from '@/components/screens/my-room/quick-add-row';
 import { RoutineRow } from '@/components/screens/my-room/routine-row';
+import { useQuickAddKeyboard } from '@/components/screens/my-room/use-quick-add-keyboard';
+import { useRewardFly } from '@/components/screens/my-room/use-reward-fly';
+import { useRoomImageSave } from '@/components/screens/my-room/use-room-image-save';
 import { useWidgetRoomCapture } from '@/components/screens/my-room/use-widget-room-capture';
 import { Room, type RoomSceneProps } from '@/components/room/room';
 import {
@@ -64,14 +69,12 @@ import {
   ROUTINE_CATEGORIES,
   type Routine,
   type RoutineCategoryMeta,
-  UNCATEGORIZED_META,
   VISIBILITY_ICONS,
   VISIBILITY_LABELS,
 } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { Radius, Spacing } from '@/constants/theme';
-import { saveRoomImage } from '@/lib/room-capture';
 import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
 import { useBottomNavInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
@@ -101,8 +104,6 @@ export type CalendarDayItem = {
 // 떠 있는 크롬 (#1055) — 달력 제목·세그먼트 한 줄의 높이. 달력 탭의 콘텐츠 상단
 // 패딩과 보상 알약 위치가 같은 값을 본다.
 const CHROME_ROW_HEIGHT = 40;
-/** 보상 알약이 떠 있는 시간 — 코인 플라이(~600ms)가 도착하고 읽을 만큼. */
-const REWARD_PILL_MS = 2200;
 const ZERO_INSETS = { top: 0, bottom: 0, left: 0, right: 0 };
 
 // RoomSceneProps: <Room />에 스프레드로 전달되는 씬 번들 (#691) — 내 방은
@@ -324,97 +325,29 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   const insets = useContext(SafeAreaInsetsContext) ?? ZERO_INSETS;
   const { height: windowHeight } = useWindowDimensions();
 
-  // 코인 플라이 (#440) — 완료 탭 지점에서 보상 알약(#1055)으로 포물선 비행.
-  const rootRef = useRef<View>(null);
-  const rewardPillRef = useRef<View>(null);
-  const flyTarget = useRef({ x: 0, y: 0 });
-  const rewardPulse = useAnimatedValue(1);
-  const coinSeq = useRef(0);
-  const [flyingCoins, setFlyingCoins] = useState<
-    { id: number; x: number; y: number; tx: number; ty: number }[]
-  >([]);
-  // 보상 알약 (#1055) — 스트릭·코인은 상시 헤더가 아니라 보상이 확인된 순간에만
-  // 방 위에 떠서 증분을 보여주고 REWARD_PILL_MS 뒤 사라진다. 표시 중 또 오면 합산.
-  const [reward, setReward] = useState<{ coins: number } | null>(null);
-  const rewardTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // 알약이 아직 안 떠 있을 때 도착한 보상 — 알약이 그려져 위치가 측정되면 그때 쏜다.
-  const pendingFly = useRef<{ x: number; y: number } | null>(null);
-  useEffect(
-    () => () => {
-      if (rewardTimer.current) clearTimeout(rewardTimer.current);
-    },
-    [],
-  );
-  const launchCoinAt = ({ x: pageX, y: pageY }: { x: number; y: number }) => {
-    rootRef.current?.measureInWindow((rx, ry) => {
-      const target = flyTarget.current;
-      if (!target.x && !target.y) return;
-      const id = coinSeq.current++;
-      setFlyingCoins((prev) => [
-        ...prev,
-        { id, x: pageX - rx, y: pageY - ry, tx: target.x - rx, ty: target.y - ry },
-      ]);
-    });
-  };
-  const showReward = (coins: number, from: { x: number; y: number } | null) => {
-    setReward((prev) => ({ coins: (prev?.coins ?? 0) + coins }));
-    if (rewardTimer.current) clearTimeout(rewardTimer.current);
-    rewardTimer.current = setTimeout(() => {
-      setReward(null);
-      flyTarget.current = { x: 0, y: 0 };
-    }, REWARD_PILL_MS);
-    if (!from) return;
-    if (flyTarget.current.x || flyTarget.current.y) launchCoinAt(from);
-    else pendingFly.current = from;
-  };
-  const measureRewardPill = () => {
-    rewardPillRef.current?.measureInWindow((x, y, w, h) => {
-      flyTarget.current = { x: x + w / 2, y: y + h / 2 };
-      const from = pendingFly.current;
-      if (from) {
-        pendingFly.current = null;
-        launchCoinAt(from);
-      }
-    });
-  };
+  // 보상 알약·코인 플라이·스트릭 펄스 (#440 → #1055) — my-room/use-reward-fly.
+  const {
+    rootRef,
+    rewardPillRef,
+    rewardPulse,
+    streakPulse,
+    flyingCoins,
+    reward,
+    showReward,
+    measureRewardPill,
+    onCoinArrive,
+  } = useRewardFly(streakDays);
   // 거미줄 청소 (#830) — 보상이 실제로 지급됐을 때만 코인이 난다.
   const handleCleanCobweb = async (at: { x: number; y: number }) => {
     const earned = await onCleanCobweb?.();
     if (earned && earned > 0) showReward(earned, at);
   };
-
-  const onCoinArrive = (id: number) => {
-    setFlyingCoins((prev) => prev.filter((c) => c.id !== id));
-    rewardPulse.setValue(1.18);
-    Animated.spring(rewardPulse, { toValue: 1, friction: 3.5, useNativeDriver: true }).start();
-  };
-
-  // 스트릭 펄스 (#440) — 수치가 오르는 순간 🔥가 한 번 크게 일렁.
-  const streakPulse = useAnimatedValue(1);
-  const prevStreak = useRef(streakDays);
-  useEffect(() => {
-    if (streakDays > prevStreak.current) {
-      streakPulse.setValue(1.5);
-      Animated.spring(streakPulse, { toValue: 1, friction: 3, useNativeDriver: true }).start();
-    }
-    prevStreak.current = streakDays;
-  }, [streakDays, streakPulse]);
   const { show: toast } = useToast();
-  const knownIds = useMemo(() => categories.map((c) => c.id), [categories]);
 
   const today = todayIso();
   const isDone = useCallback(
     (id: string, date: string) => (completions[id] ?? []).includes(date),
     [completions],
-  );
-  // Checked items sink below unchecked ones within their category (stable in
-  // each half), keeping the remaining work on top of every list.
-  const sinkDone = useCallback(
-    <T,>(items: T[], done: (item: T) => boolean): T[] => [
-      ...items.filter((i) => !done(i)),
-      ...items.filter(done),
-    ],
-    [],
   );
   // The 방 tab lists only what's scheduled *today* (repeat days + start/end
   // range) — the same rule the 달력 tab applies to its selected date. Without
@@ -426,36 +359,18 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   const completedCount = roomRoutines.filter((r) => isDone(r.id, today)).length;
   const progress = roomRoutines.length > 0 ? completedCount / roomRoutines.length : 0;
 
-  // Routines with a missing/unknown category land in the last group; with no
-  // categories at all, render a single pseudo-group so they stay visible
-  // (routines can exist without any category, e.g. after a category delete).
-  // 미분류(카테고리 삭제 UNASSIGN 산물, #517)는 마지막 카테고리에 섞지 않고
-  // 전용 '미분류' 그룹으로 맨 뒤에 붙인다. 완전 빈 계정도 미분류 그룹을
-  // 세운다 (#626) — 첫 가입자가 카테고리 개념 없이도 그 자리에서 바로
-  // 추가를 시작한다(퀵애드는 categoryId 없이 생성 → 고아 입양이 수렴).
-  const roomGroups = useMemo(() => {
-    const hasUncategorizedRoom = roomRoutines.some(
-      (r) => !r.category || !knownIds.includes(r.category),
-    );
-    const metas =
-      categories.length > 0
-        ? [...categories, ...(hasUncategorizedRoom ? [UNCATEGORIZED_META] : [])]
-        : [UNCATEGORIZED_META];
-    return metas.map((cat) => {
-      // 미분류 그룹(id '')이 무소속·미상 카테고리 항목을 받는다 (#517).
-      const isUncategorized = cat.id === '';
-      const inCat = roomRoutines.filter((r) => {
-        if (r.category === cat.id) return true;
-        return isUncategorized && (!r.category || !knownIds.includes(r.category));
-      });
-      // 수동 순서(#716)를 미완료 항목에 적용한 뒤 완료를 하단으로 가라앉힌다 —
-      // 순서는 "내가 정한 미완료 배치"가 진실이고, 완료는 자동으로 밀린다.
-      const items = sinkDone(applyRoutineOrder(inCat, routineOrder?.[cat.id]), (r) =>
-        isDone(r.id, today),
-      );
-      return { meta: cat, items };
-    });
-  }, [categories, roomRoutines, knownIds, sinkDone, isDone, today, routineOrder]);
+  // 카테고리 그룹 규칙(미분류 꼬리 #517·빈 계정 #626·수동 순서 #716·완료 하단)은
+  // my-room/grouping의 순수 함수 — 여기서는 useMemo로 참조만 고정한다.
+  const roomGroups = useMemo(
+    () =>
+      groupRoomRoutines({
+        routines: roomRoutines,
+        categories,
+        routineOrder,
+        isDone: (id) => isDone(id, today),
+      }),
+    [categories, roomRoutines, isDone, today, routineOrder],
+  );
 
   // Header hamburger popover (방 꾸미기 / 카테고리 관리 / 루틴 관리) + the
   // category manager sheet it opens. The popover anchors under the measured
@@ -555,84 +470,33 @@ export const MyRoomScreen = memo(function MyRoomScreen({
       ? isDone(menuRoutine.id, menuDate)
       : false;
 
-  // Quick-add is limited to real (non-deleted) categories; 미분류(pseudo)와
-  // 미션 연동 카테고리는 임의 추가를 막는다 — 방탭·달력탭 공통 규칙 (#323).
-  // 예외 (#626): 완전 빈 계정의 미분류(id '')는 첫 추가의 출발점이라 연다 —
-  // categoryId 없이 생성되고, 다음 로드의 고아 입양이 실제 미분류로 수렴한다.
+  // 퀵애드 허용 규칙(#323·#626·#272)은 my-room/grouping — 참조 고정용 래퍼.
   const canQuickAdd = useCallback(
     (categoryId?: string) =>
-      categoryId === ''
-        ? categories.length === 0
-        : !!categoryId &&
-          categories.some((c) => c.id === categoryId) &&
-          !quickAddDisabledCategoryIds.includes(categoryId),
+      canQuickAddCategory(categoryId, categories, quickAddDisabledCategoryIds),
     [categories, quickAddDisabledCategoryIds],
   );
 
-  // 달력 lists mirror the room tab's category sections (emoji + colored label
-  // + done count). Empty groups still render when they can quick-add — the +
-  // must stay reachable on any date, like the room tab (#323).
-  const calClientGroups = useMemo(() => {
-    const hasUncategorizedCal = dateRoutines.some(
-      (r) => !r.category || !knownIds.includes(r.category),
-    );
-    const calGroupsBase =
-      categories.length > 0
-        ? [...categories, ...(hasUncategorizedCal ? [UNCATEGORIZED_META] : [])]
-        : dateRoutines.length > 0
-          ? [UNCATEGORIZED_META]
-          : [];
-    return calGroupsBase
-      .map((cat) => {
-        const isUncategorized = cat.id === '';
-        const items = dateRoutines.filter(
-          (r) =>
-            r.category === cat.id ||
-            (isUncategorized && (!r.category || !knownIds.includes(r.category))),
-        );
-        return { meta: cat, items: sinkDone(items, (r) => isDone(r.id, selectedDate)) };
-      })
-      .filter((g) => g.items.length > 0 || canQuickAdd(g.meta.id));
-  }, [categories, dateRoutines, knownIds, sinkDone, isDone, selectedDate, canQuickAdd]);
-  // Server days group by the record-time categoryId (kept in server order:
-  // categoryId asc, 미분류 last); deleted categories resolve via catMeta.
-  const calServerGroups = useMemo(() => {
-    if (!dayItems) return undefined;
-    const byCat = new Map<string, CalendarDayItem[]>();
-    for (const item of dayItems) {
-      const key = item.category ?? '';
-      byCat.set(key, [...(byCat.get(key) ?? []), item]);
-    }
-    const groups = Array.from(byCat, ([key, items]) => ({
-      meta: catMeta.find((c) => c.id === key) ?? UNCATEGORIZED_META,
-      items: sinkDone(items, (i) => i.completed),
-    }));
-    // 그 날 항목이 없는 현재 카테고리도 헤더를 렌더 — +로 할 일 추가 (#323).
-    for (const cat of categories) {
-      if (canQuickAdd(cat.id) && !groups.some((g) => g.meta.id === cat.id)) {
-        groups.push({ meta: cat, items: [] });
-      }
-    }
-    return groups;
-  }, [dayItems, catMeta, categories, canQuickAdd, sinkDone]);
+  // 달력 lists mirror the room tab's category sections — 그룹 규칙은
+  // my-room/grouping. 클라이언트 날짜(오늘)와 서버 날짜가 각각의 함수.
+  const calClientGroups = useMemo(
+    () =>
+      groupCalendarClientRoutines({
+        routines: dateRoutines,
+        categories,
+        isDone: (id) => isDone(id, selectedDate),
+        canQuickAdd,
+      }),
+    [categories, dateRoutines, isDone, selectedDate, canQuickAdd],
+  );
+  const calServerGroups = useMemo(
+    () => groupCalendarServerItems({ dayItems, catMeta, categories, canQuickAdd }),
+    [dayItems, catMeta, categories, canQuickAdd],
+  );
 
-  // 방 뷰 캡처 대상 (#245) — 갤러리 저장은 네이티브 전용.
-  const roomShotRef = useRef<View>(null);
-  // 캡처 동안 뽑기 버튼을 숨긴다 (#475) — view-shot이 보이는 트리를 찍으므로,
-  // 이 플래그로 버튼을 잠깐 감췄다가 저장 후 되돌린다.
-  const [capturing, setCapturing] = useState(false);
-  const onSaveRoomImage = async () => {
-    setCapturing(true);
-    // 상태 반영(버튼 숨김)이 네이티브에 커밋된 뒤 찍히도록 두 프레임 양보.
-    await new Promise<void>((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-    );
-    const result = await saveRoomImage(roomShotRef).finally(() => setCapturing(false));
-    if (result === 'saved') toast('방 이미지를 갤러리에 저장했어요', 'success');
-    else if (result === 'denied') toast('사진 접근 권한을 허용해주세요', 'error');
-    else if (result === 'unsupported') toast('웹에서는 이미지 저장을 지원하지 않아요', 'error');
-    else toast('이미지 저장에 실패했어요', 'error');
-  };
+  // 방 이미지 갤러리 저장 (#245) + 캡처 중 버튼 숨김 플래그 (#475) —
+  // my-room/use-room-image-save. 위젯 캡처(아래)가 같은 ref·플래그를 쓴다.
+  const { roomShotRef, capturing, setCapturing, onSaveRoomImage } = useRoomImageSave();
 
   // <Room />에 스프레드로 넘기는 씬 번들 (#691).
   const roomScene: RoomSceneProps = {
@@ -677,63 +541,12 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   const scrollRef = useRef<ScrollView>(null);
   // 서브화면(꾸미기·루틴 관리 …)에 다녀와도 보던 자리로 (#763).
   const scrollRestore = useScrollRestore(scrollRef, { getInitialScrollY, onScrollY });
-  const addRowRef = useRef<View>(null);
-  const todoInputRef = useRef<TextInput>(null);
+  // 키보드 높이 추적·입력행 밀어 올리기는 my-room/use-quick-add-keyboard —
+  // 입력이 열린 카테고리를 넘기면 키보드+패딩이 자리 잡은 뒤 입력행을 보이게 민다.
+  const { addRowRef, todoInputRef, keyboardPad, scrollYRef, scrollToQuickAdd } =
+    useQuickAddKeyboard(scrollRef, addingCategory);
   // Set while opening the date picker so the input's blur doesn't commit/close.
   const skipBlurCommit = useRef(false);
-
-  // Track the keyboard height: while the quick-add input is open, that much
-  // bottom padding is added to the scroll content. Without it, short content
-  // has no scroll range at all (scrollTo clamps at the content end) and the
-  // input stays hidden behind the keyboard — Android (edge-to-edge) overlays
-  // the keyboard without resizing the window.
-  const [keyboardPad, setKeyboardPad] = useState(0);
-  // Ref mirrors for the measure callback below (kept out of its deps so the
-  // callback identity stays stable for the timers/effects that call it).
-  const keyboardPadRef = useRef(0);
-  const scrollYRef = useRef(0);
-  useEffect(() => {
-    const show = Keyboard.addListener('keyboardDidShow', (e) => {
-      const h = e.endCoordinates?.height ?? 320;
-      keyboardPadRef.current = h;
-      setKeyboardPad(h);
-    });
-    const hide = Keyboard.addListener('keyboardDidHide', () => {
-      keyboardPadRef.current = 0;
-      setKeyboardPad(0);
-    });
-    return () => {
-      show.remove();
-      hide.remove();
-    };
-  }, []);
-
-  // Bring the quick-add input itself into view (not just the category header —
-  // long categories left it hidden behind the keyboard). Measured in window
-  // coordinates and scrolled by the overflow: measureLayout against
-  // getInnerViewNode() silently no-ops when that ref API is unavailable (new
-  // architecture), which left the input hidden behind the keyboard.
-  const scrollToQuickAdd = useCallback(() => {
-    const scrollView = scrollRef.current;
-    const row = addRowRef.current;
-    if (!scrollView || !row) return;
-    row.measureInWindow?.((_x, y, _w, h) => {
-      // Keep the input row fully visible above the keyboard, with a margin.
-      const visibleBottom = Dimensions.get('window').height - keyboardPadRef.current - 24;
-      const overflow = y + h - visibleBottom;
-      if (overflow > 0) {
-        scrollView.scrollTo({ y: Math.max(0, scrollYRef.current + overflow), animated: true });
-      }
-    });
-  }, []);
-
-  // Re-align once the keyboard is up AND the extra bottom padding has been
-  // committed — only then is there guaranteed scroll range for the input.
-  useEffect(() => {
-    if (!addingCategory || keyboardPad === 0) return;
-    const timer = setTimeout(scrollToQuickAdd, 50);
-    return () => clearTimeout(timer);
-  }, [addingCategory, keyboardPad, scrollToQuickAdd]);
 
   // 방탭은 오늘, 달력탭은 선택한 날짜를 기본 마감일로 연다 (#323).
   const openQuickAdd = (categoryId: string, defaultDate = today) => {
