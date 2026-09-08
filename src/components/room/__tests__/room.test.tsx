@@ -185,4 +185,16 @@ describe('Room', () => {
       prefetch.mockRestore();
     });
   });
+
+  it('비인터랙티브 캐릭터도 자리 박스를 꽉 채운다 — 기본 96px 높이가 남지 않는다 (#1194)', async () => {
+    const { getByLabelText } = await render(<Room characterId="cat" />);
+    const avatar = StyleSheet.flatten(getByLabelText('고양이').props.style);
+    expect(avatar.width).toBe('100%');
+    expect(avatar.height).toBe('100%');
+    // 자리 박스(부모)는 계약 좌표 — 폭 42%, 정사각, 바닥에서 16%.
+    const slot = StyleSheet.flatten(getByLabelText('고양이').parent?.props.style);
+    expect(slot.width).toBe('42%');
+    expect(slot.bottom).toBe('16%');
+    expect(slot.aspectRatio).toBe(1);
+  });
 });
