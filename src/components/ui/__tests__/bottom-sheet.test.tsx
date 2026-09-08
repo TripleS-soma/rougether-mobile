@@ -1,5 +1,5 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
-import { PanResponder, Text } from 'react-native';
+import { PanResponder, StyleSheet, Text } from 'react-native';
 
 import {
   BottomSheet,
@@ -8,6 +8,7 @@ import {
   inDragClaimZone,
   shouldDismiss,
   __resetSheetSerializer,
+  SheetDragExclude,
 } from '@/components/ui/bottom-sheet';
 
 describe('shouldDismiss (#469)', () => {
@@ -177,5 +178,17 @@ describe('BottomSheet', () => {
       await waitFor(() => expect(ui.getByText('시간 시트')).toBeTruthy());
       expect(ui.getByText('메뉴 시트')).toBeTruthy();
     });
+  });
+
+  // maxHeight로 묶인 카드 안에서 스크롤 본문이 줄어들 수 있어야 한다 (2026-09-08 맥 PWA 잘림).
+  it('SheetDragExclude는 기본으로 flexShrink 1 — 카드 maxHeight 안에서 본문이 줄어든다', async () => {
+    const { getByTestId } = await render(
+      <SheetDragExclude testID="exclude">
+        <Text>본문</Text>
+      </SheetDragExclude>,
+    );
+    const style = StyleSheet.flatten(getByTestId('exclude').props.style);
+    expect(style.flexShrink).toBe(1);
+    expect(style.minHeight).toBe(0);
   });
 });
