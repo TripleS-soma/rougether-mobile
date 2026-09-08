@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useMyRoomData } from '@/hooks/use-my-room-data';
 import type { NewRoutine } from '@/constants/routines';
+import { queryWrapper } from '@/test-utils/query-wrapper';
 
 // Server state: no categories, two routines with categoryId null (legacy data).
 // The hook must adopt them into a freshly created 기타 category — uncategorized
@@ -49,7 +50,7 @@ describe('useMyRoomData — completion routing on id collision', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useMyRoomData());
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     const todo = result.current.routines.find((r) => r.kind === 'todo')!;
@@ -87,7 +88,7 @@ describe('useMyRoomData — 완료 응답의 서버 자동 미션 기여 (#578)'
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useMyRoomData());
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
     const routine = result.current.routines[0];
     // 링크 id가 앱 모델까지 내려온다.
@@ -128,7 +129,7 @@ describe('useMyRoomData — 코인 상한 피드백 (#444)', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useMyRoomData());
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
     const routine = result.current.routines[0];
 
@@ -169,21 +170,28 @@ describe('useMyRoomData — 달력 past-date routine completion (#183)', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useMyRoomData());
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
+    // 화면 흐름 그대로 — 토글은 골라서 불러온 날짜 위에서 일어난다.
+    await act(async () => {
+      await result.current.loadCalendarDay('2026-07-10');
+    });
+    const dayFetches = () =>
+      calls.filter((c) => c.url.includes('/calendar') && c.url.includes('2026-07-10')).length;
+    expect(dayFetches()).toBe(1);
 
-    await result.current.toggleCalendarItem(
-      { id: '7', kind: 'routine', title: '지난 루틴', completed: false, category: '' },
-      '2026-07-10',
-    );
+    await act(async () => {
+      await result.current.toggleCalendarItem(
+        { id: '7', kind: 'routine', title: '지난 루틴', completed: false, category: '' },
+        '2026-07-10',
+      );
+    });
 
     // The dated routine-log endpoint is hit with the picked (past) date…
     const post = calls.find((c) => c.method === 'POST' && c.url.endsWith('/routines/7/logs'));
     expect(JSON.parse(post?.body ?? '{}').routineDate).toBe('2026-07-10');
     // …and the day is refetched so the list mirrors the server.
-    expect(calls.some((c) => c.url.includes('/calendar') && c.url.includes('2026-07-10'))).toBe(
-      true,
-    );
+    expect(dayFetches()).toBe(2);
   });
 
   it('deletes a past routine log on uncheck', async () => {
@@ -197,7 +205,7 @@ describe('useMyRoomData — 달력 past-date routine completion (#183)', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useMyRoomData());
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     await result.current.toggleCalendarItem(
@@ -230,7 +238,7 @@ describe('useMyRoomData — profile save (PUT /me)', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useMyRoomData());
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     // bio seeds from GET /me.
@@ -255,7 +263,7 @@ describe('useMyRoomData — profile save (PUT /me)', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useMyRoomData());
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     const ok = await result.current.saveProfile('새닉', '새 소개');
@@ -292,7 +300,7 @@ describe('useMyRoomData — uncategorized adoption', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useMyRoomData());
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -326,7 +334,7 @@ describe('useMyRoomData — 카테고리 메타를 달력 소스(allCategories)�
 
   it('카테고리 수정(아이콘 등)이 allCategories에도 반영된다', async () => {
     global.fetch = catFetch();
-    const { result } = await renderHook(() => useMyRoomData());
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     const cat = result.current.categories[0];
@@ -341,7 +349,7 @@ describe('useMyRoomData — 카테고리 메타를 달력 소스(allCategories)�
 
   it('새 카테고리가 allCategories에도 추가된다', async () => {
     global.fetch = catFetch();
-    const { result } = await renderHook(() => useMyRoomData());
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     await act(async () => {
@@ -379,7 +387,7 @@ describe('useMyRoomData — 달력 월 점 (#838)', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useMyRoomData());
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
     await act(async () => {
       await result.current.loadCalendarMonth('2026-08');
     });
@@ -403,7 +411,7 @@ describe('useMyRoomData — 달력 월 점 (#838)', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useMyRoomData());
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.markedTodoDates.has('2026-08-20')).toBe(false);
 
@@ -448,7 +456,7 @@ describe('useMyRoomData — 달력 월 점 (#838)', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useMyRoomData());
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
     await act(async () => {
       await result.current.loadCalendarMonth('2026-08');
       await result.current.loadCalendarMonth('2026-07');
@@ -464,7 +472,7 @@ describe('useMyRoomData — 달력 월 점 (#838)', () => {
       return res({ items: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useMyRoomData());
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
     await act(async () => {
       await result.current.loadCalendarMonth('2026-08');
     });
@@ -504,7 +512,7 @@ describe('useMyRoomData — 스트릭 즉시 반영 (#895)', () => {
 
   it('완료 응답의 스트릭을 즉시 반영한다', async () => {
     harness(() => ({ rewardAmount: 10, streak: { currentCount: 4 } }));
-    const { result } = await renderHook(() => useMyRoomData());
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.streak).toBe(3);
 
@@ -520,7 +528,7 @@ describe('useMyRoomData — 스트릭 즉시 반영 (#895)', () => {
     harness((method) =>
       method === 'DELETE' ? { currentCount: 2 } : { rewardAmount: 10, streak: { currentCount: 4 } },
     );
-    const { result } = await renderHook(() => useMyRoomData());
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     await act(async () => {
@@ -580,7 +588,7 @@ describe('useMyRoomData — 스케줄 수정의 버전 분기 (#1028)', () => {
 
   it('응답 id가 바뀌면 completions 키를 새 id로 이관한다', async () => {
     harness(99);
-    const { result } = await renderHook(() => useMyRoomData());
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.completions.r42).toEqual([today()]);
 
@@ -596,7 +604,7 @@ describe('useMyRoomData — 스케줄 수정의 버전 분기 (#1028)', () => {
 
   it('제자리 수정(id 불변)은 completions를 건드리지 않는다', async () => {
     harness(42);
-    const { result } = await renderHook(() => useMyRoomData());
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     await act(async () => {
