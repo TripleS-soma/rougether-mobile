@@ -1,4 +1,4 @@
-import type { House, HouseMission } from '@/components/screens/house-screen';
+import type { House, HouseMission } from '@/components/screens/house/types';
 import type { GuestbookEntry } from '@/components/screens/friend-room-screen';
 import type { NotificationEntry } from '@/components/screens/notification-list-screen';
 import type { Routine } from '@/constants/routines';

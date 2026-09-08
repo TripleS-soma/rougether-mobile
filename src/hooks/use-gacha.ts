@@ -3,14 +3,13 @@ import { useCallback, useMemo, useRef } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 
 import { drawGacha, fetchGachas, type GachaDrawCount } from '@/api';
+import { queryKeys } from '@/lib/query-keys';
 import { type GachaMachine, toGachaMachine, toWallet } from '@/api/adapters';
 import { getCategoryGachas } from '@/constants/gacha';
 import type { DrawResult, GachaResponse } from '@/api/types';
 import type { Wallet } from '@/constants/currency';
 import { useLatestRef } from '@/hooks/use-stable-value';
 import { track } from '@/lib/analytics';
-
-export const GACHAS_KEY = ['gachas', 'categories'] as const;
 
 const NO_GACHAS: GachaMachine[] = [];
 const selectGachas = (list: GachaResponse[]) =>
@@ -21,7 +20,7 @@ export function useGacha(onWallet: (wallet: Wallet) => void) {
   // A synchronous lock also covers two taps before React renders isPending.
   const drawingRef = useRef(false);
   const { data, isPending, isFetching, isError, refetch } = useQuery({
-    queryKey: GACHAS_KEY,
+    queryKey: queryKeys.gachas,
     queryFn: fetchGachas,
     select: selectGachas,
   });

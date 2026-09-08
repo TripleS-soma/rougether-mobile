@@ -46,7 +46,7 @@ import type {
   HouseMission,
   MemberRoomPreview,
   RoomCell,
-} from '@/components/screens/house-screen';
+} from '@/components/screens/house/types';
 import type { FriendActivityDay, GuestbookEntry } from '@/components/screens/friend-room-screen';
 import { isPictogramName, type PictogramName } from '@/components/ui/pictograms';
 import type {
