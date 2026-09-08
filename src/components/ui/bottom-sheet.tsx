@@ -23,6 +23,7 @@ import {
 } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { ModalFrame } from '@/components/app/app-frame';
 import { Overlay } from '@/constants/theme';
 import { useAnimatedValue, useConstant, useLatestRef } from '@/hooks/use-stable-value';
 
@@ -314,7 +315,10 @@ export function BottomSheet({
         accessibilityRole="button"
         accessibilityLabel="시트 닫기"
       />
-      {useNativeDrag ? <GestureDetector gesture={nativePan}>{card}</GestureDetector> : card}
+      {/* 웹 데스크톱: 딤은 창 전체, 카드만 앱 프레임 폭(중앙 컬럼)에 맞춘다. */}
+      <ModalFrame>
+        {useNativeDrag ? <GestureDetector gesture={nativePan}>{card}</GestureDetector> : card}
+      </ModalFrame>
     </Animated.View>
   );
 

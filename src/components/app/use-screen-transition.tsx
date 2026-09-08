@@ -1,6 +1,7 @@
 import { type ReactNode, useLayoutEffect, useReducer, useRef } from 'react';
-import { Animated, Easing, useWindowDimensions } from 'react-native';
+import { Animated, Easing } from 'react-native';
 
+import { useAppFrame } from '@/hooks/use-app-frame';
 import { BACK_SCREEN, type Screen, TAB_FOR_SCREEN } from '@/components/app/navigation';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
 
@@ -72,7 +73,8 @@ export function useScreenTransition({
   /** 현재 `screen`의 화면 트리 — 셸이 매 렌더 새로 만든다. */
   node: ReactNode;
 }): ScreenLayer[] {
-  const { width } = useWindowDimensions();
+  // 슬라이드 거리는 앱 프레임 폭 — 웹 데스크톱에서 화면이 창 밖 1500px에서 날아오지 않게.
+  const { width } = useAppFrame();
   const [, rerender] = useReducer((n: number) => n + 1, 0);
   const enterX = useAnimatedValue(0);
   const exitX = useAnimatedValue(0);

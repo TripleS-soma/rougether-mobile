@@ -1,10 +1,11 @@
 import { type FC, useEffect, useRef, useState } from 'react';
-import { Animated, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { type SvgProps } from 'react-native-svg';
 import { GestureDetector } from 'react-native-gesture-handler';
 import Reanimated from 'react-native-reanimated';
 
+import { useAppFrame } from '@/hooks/use-app-frame';
 import CalendarActive from '@/assets/images/common/calendar-icon-active.svg';
 import CalendarInactive from '@/assets/images/common/calendar-icon.svg';
 import HomeActive from '@/assets/images/common/home-icon-active.svg';
@@ -113,7 +114,8 @@ export function BottomNav({ active, onChange, badges }: BottomNavProps) {
   const t = useTokens();
   const Typography = useTypography();
   const insets = useSafeAreaInsets();
-  const { width: windowW, fontScale } = useWindowDimensions();
+  // 폭은 앱 프레임 기준 — 웹 데스크톱에서 탭이 창 전체로 퍼지지 않게.
+  const { width: windowW, fontScale } = useAppFrame();
   // 라벨의 **자연 폭**은 숨은 측정용 Text로 잰다 — 보이는 라벨은 탭 폭에 잘려 onLayout이
   // 줄어든 값을 준다. 첫 측정 전엔 한 글자 한 em으로 잡아 자리를 미리 확보한다.
   const [labelWidths, setLabelWidths] = useState<number[]>([]);
