@@ -35,7 +35,7 @@ describe('ROOM_RENDER_CONTRACT', () => {
     expect(ROOM_RENDER_CONTRACT).toMatchObject({
       id: 'rougether-room-renderer',
       version: 2,
-      room: { aspectRatio: 5 / 6, borderRadiusPx: 0 },
+      room: { aspectRatio: 5 / 6, borderRadiusPx: 16 },
       furniture: {
         baseWidth: 0.28,
         imagePaddingPx: 4,

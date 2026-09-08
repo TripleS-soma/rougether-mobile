@@ -54,7 +54,7 @@ import {
 } from '@/api/adapters';
 import type { HouseMissionContributeResponse } from '@/api/types';
 import { useToast } from '@/components/ui/toast';
-import type { House, HouseEditInput, NewHouseMission } from '@/components/screens/house-screen';
+import type { House, HouseEditInput, NewHouseMission } from '@/components/screens/house/types';
 import { track } from '@/lib/analytics';
 import type {
   HousePreview,

@@ -13,7 +13,7 @@ import {
   fromRoomPlacements,
   type ShopCatalogue,
 } from '@/api/adapters';
-import type { House, MemberRoomPreview, RoomCell } from '@/components/screens/house-screen';
+import type { House, MemberRoomPreview, RoomCell } from '@/components/screens/house/types';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
 

@@ -319,7 +319,6 @@ export const Room = memo(function Room({
         : null}
       {characterId === null ? null : interactiveCharacter ? (
         <Pressable
-          testID="room-character"
           // The avatar wraps the pose over however many frames it has (4 local
           // sprites vs. the server's CDN animation set) — just keep counting.
           onPress={() => setPose((p) => p + 1)}
@@ -337,9 +336,11 @@ export const Room = memo(function Room({
           />
         </Pressable>
       ) : (
-        // Keep the same width-sized frame as the interactive room. Applying
-        // its style directly to the avatar leaves the default 96px height.
-        <View testID="room-character" style={styles.character}>
+        // 인터랙티브 분기와 같은 두 겹 — 자리 박스(계약 좌표)에 아바타를 꽉 채운다.
+        // 아바타에 자리 스타일을 직접 주면 CharacterAvatar의 기본 96px 높이가 살아남아
+        // 폭은 42%·높이는 96px인 박스에 contain으로 들어가, 작은 방(집 좌석)에선
+        // 캐릭터가 러그 위로 떠 보이고(#1194) 큰 방(친구 방)에선 나의 방보다 작았다.
+        <View style={styles.character} pointerEvents="none">
           <CharacterAvatar
             characterId={characterId}
             frames={characterFrames}

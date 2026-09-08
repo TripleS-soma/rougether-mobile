@@ -797,6 +797,8 @@ export function useMyRoomData() {
       retry: load,
       /** 조용한 전체 리페치 (#454 당겨서 새로고침) — 로딩 화면 없이 갱신. */
       reload,
+      /** 지갑만 다시 받기 — 보상 지급 뒤(초대 코드 등) 헤더 코인을 서버값으로. */
+      refreshWallet,
       toggleCompletion,
       toggleCalendarItem,
       saveProfile,
@@ -835,6 +837,7 @@ export function useMyRoomData() {
       error,
       load,
       reload,
+      refreshWallet,
       toggleCompletion,
       toggleCalendarItem,
       saveProfile,

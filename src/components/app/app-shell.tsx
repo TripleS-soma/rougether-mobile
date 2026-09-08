@@ -383,6 +383,9 @@ export function AppShell({
       attendancePending,
       onOpenWalletHistory: openWalletHistory,
     },
+    // 무효화 누락 2건 (리팩토링 3묶음): 가져온 루틴·초대 보상이 즉시 보이게.
+    onRoutinesImported: myRoomData.reload,
+    onWalletChanged: myRoomData.refreshWallet,
   });
   // 나의 방 페이지 배선 (#692 5단계) — 나의 방 탭 페이지와 서브화면 4종
   // (루틴 관리·추가·카테고리 관리·알림 목록)의 훅·콜백·JSX 소유.

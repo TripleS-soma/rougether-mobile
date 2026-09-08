@@ -17,9 +17,10 @@ import {
   type House,
   type HouseEditInput,
   type NewHouseMission,
-} from '@/components/screens/house-screen';
+} from '@/components/screens/house/types';
 import { HouseMissionsScreen } from '@/components/screens/house-missions-screen';
-import { HouseMembersScreen, manageableMembers } from '@/components/screens/house-members-screen';
+import { HouseMembersScreen } from '@/components/screens/house-members-screen';
+import { manageableMembers } from '@/components/screens/house/members';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { type CharacterId } from '@/constants/characters';
 import { type Wallet } from '@/constants/currency';
