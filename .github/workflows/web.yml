@@ -3,7 +3,17 @@ name: Deploy web (PWA)
 on:
   push:
     branches: [main]
-    paths: ['app/**', 'src/**', 'public/**', 'assets/**', 'app.json', 'package.json', 'package-lock.json', '.github/workflows/web.yml']
+    paths:
+      [
+        'app/**',
+        'src/**',
+        'public/**',
+        'assets/**',
+        'app.json',
+        'package.json',
+        'package-lock.json',
+        '.github/workflows/web.yml',
+      ]
   workflow_dispatch:
 
 permissions:

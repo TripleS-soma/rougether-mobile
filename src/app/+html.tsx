@@ -10,9 +10,15 @@ export default function Root({ children }: PropsWithChildren) {
       <head>
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover"
+        />
         <title>루게더</title>
-        <meta name="description" content="내 캐릭터와, 친구들과 한 집에서 함께 크는 할 일 관리 앱" />
+        <meta
+          name="description"
+          content="내 캐릭터와, 친구들과 한 집에서 함께 크는 할 일 관리 앱"
+        />
         <meta name="theme-color" content="#7FA87F" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-title" content="루게더" />
@@ -24,7 +30,8 @@ export default function Root({ children }: PropsWithChildren) {
         <style dangerouslySetInnerHTML={{ __html: 'html,body{background:#FBF8F3}' }} />
         <script
           dangerouslySetInnerHTML={{
-            __html: "if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('/sw.js'))}",
+            __html:
+              "if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('/sw.js'))}",
           }}
         />
         {/* GA4 — 웹앱 전용 속성 "루게더 웹앱"(랜딩·네이티브 앱과 분리). 네이티브 빌드에는 포함되지 않는다. */}
