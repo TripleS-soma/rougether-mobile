@@ -6,16 +6,7 @@
  */
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 
-/**
- * 백엔드 GCP 프로젝트(rougether, 499923665503)의 OAuth 클라이언트 (#489 B안).
- * 웹 ID는 idToken의 aud로 찍히는 값 — 서버 allowlist에 등록된 것과 동일해야
- * 한다. iOS ID는 명시해서 Firebase plist(다른 프로젝트)의 CLIENT_ID를
- * iOS 레이어가 주워가지 않게 한다.
- */
-const GOOGLE_WEB_CLIENT_ID =
-  '499923665503-f2l1b05h9q48f4lda8reh65d9hdh1jfo.apps.googleusercontent.com';
-const GOOGLE_IOS_CLIENT_ID =
-  '499923665503-b1brsuooa940tjrs8vapo4dl2m8mri19.apps.googleusercontent.com';
+import { GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID } from './oauth-client-ids';
 
 let configured = false;
 function ensureConfigured() {

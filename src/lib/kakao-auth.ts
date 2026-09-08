@@ -43,6 +43,14 @@ export async function getKakaoAccessToken(): Promise<string | null> {
   }
 }
 
+/**
+ * 카카오 리다이렉트 복귀 진입인가 — 웹 변형(`kakao-auth.web.ts`)만 true가 될 수
+ * 있다. 네이티브는 SDK가 앱 안에서 끝내므로 항상 false.
+ */
+export function hasKakaoRedirect(): boolean {
+  return false;
+}
+
 /** 로그아웃 시 카카오 세션도 정리(선택) — 실패해도 앱 로그아웃은 막지 않는다. */
 export async function signOutKakao(): Promise<void> {
   try {
