@@ -1,23 +1,7 @@
-import { Image } from 'expo-image';
-import {
-  createContext,
-  memo,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
-import { BackHandler, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { BackHandler, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-  ZoomIn,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { CharacterAvatar } from '@/components/room/character-avatar';
 import {
@@ -26,8 +10,20 @@ import {
   SCALE_MAX,
   SCALE_MIN,
 } from '@/components/room/draggable-furniture';
-import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { Room, type RoomCatalogProps, type RoomRegion } from '@/components/room/room';
+import { BuyConfirmModal } from '@/components/screens/decor/buy-confirm-modal';
+import { FurnitureGrid, SwatchGrid } from '@/components/screens/decor/decor-grid';
+import { PreviewCheckoutModal } from '@/components/screens/decor/preview-checkout-modal';
+import {
+  furniturePreviewsOf,
+  type LayoutValues,
+  mergePendingPreviews,
+  previewTotalOf,
+  stripPreviews,
+  SURFACE_LABEL,
+  surfacePreviewsOf,
+} from '@/components/screens/decor/preview-economics';
+import { UnsavedLeaveModal } from '@/components/screens/decor/unsaved-leave-modal';
 import { ROOM_RENDER_CONTRACT, roomPercent } from '@/components/room/room-render-contract';
 import { Loading } from '@/components/ui/loading';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -38,8 +34,7 @@ import { ActionBar } from '@/components/ui/action-bar';
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { Icon } from '@/components/ui/icon';
 import { WalletPills } from '@/components/ui/wallet-pills';
-import { Overlay, Radius, ShadowColor, Spacing } from '@/constants/theme';
-import { assetSource, isCdnKey } from '@/resources/asset';
+import { Radius, ShadowColor, Spacing } from '@/constants/theme';
 import {
   DEFAULT_WALLPAPER_ID,
   FURNITURE_ITEMS,
@@ -54,7 +49,7 @@ import { useActionBarInset, useHeaderInsetStyle, useScreenStyle } from '@/hooks/
 import { useStableCallback } from '@/hooks/use-stable-value';
 import { track } from '@/lib/analytics';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
-import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useTokens, useTypography } from '@/hooks/use-tokens';
 
 /**
  * What the picker panel is currently choosing for: the full catalog ('all',
@@ -272,60 +267,42 @@ export function RoomDecorScreen({
   // --- 프리뷰 (#501): 미보유인데 배치/적용돼 있는 아이템. 별도 상태 없이
   // owned와의 차집합으로 유도한다 — 구매 성공으로 ownedIds가 갱신되면 그
   // 자리에서 자동으로 정식 배치가 된다.
-  type SurfaceKind = 'wallpaper' | 'floor' | 'background';
-  const SURFACE_LABEL: Record<SurfaceKind, string> = {
-    wallpaper: '벽지',
-    floor: '바닥',
-    background: '배경',
-  };
-  const surfacePreviews = useMemo(() => {
-    const out: { kind: SurfaceKind; id: string; name: string; price: number }[] = [];
-    // 진입 시점 값(서버 저장/시드)은 미보유여도 프리뷰가 아니다 — 사용자가
-    // 고르지 않은 표면의 구매를 강요하지 않는다 (신규 계정 기본 벽지 등).
-    const push = (
-      kind: SurfaceKind,
-      id: string | null,
-      initial: string | null,
-      arr: Wallpaper[],
-    ) => {
-      if (!id || id === initial || owned.has(id)) return;
-      const it = arr.find((w) => w.id === id);
-      if (it) out.push({ kind, id: it.id, name: it.name, price: it.price });
-    };
-    push('wallpaper', wallpaperId, initialWallpaperId, wallpapers);
-    push('floor', floorId, initialFloorId, floors);
-    push('background', backgroundId, initialBackgroundId, backgrounds);
-    return out;
-  }, [
-    owned,
-    wallpaperId,
-    floorId,
-    backgroundId,
-    wallpapers,
-    floors,
-    backgrounds,
-    initialWallpaperId,
-    initialFloorId,
-    initialBackgroundId,
-  ]);
-  const furniturePreviews = useMemo(
+  // 계산은 decor/preview-economics.ts(순수) — 여기서는 memo 경계만 잡는다.
+  const surfacePreviews = useMemo(
     () =>
-      items
-        .filter((pl) => !owned.has(pl.furnitureId))
-        .map((pl) => furniture.find((f) => f.id === pl.furnitureId))
-        .filter((f): f is FurnitureItem => !!f)
-        .map((f) => ({ id: f.id, name: f.name, price: f.price })),
+      surfacePreviewsOf(
+        owned,
+        { wallpaperId, floorId, backgroundId },
+        {
+          wallpaperId: initialWallpaperId,
+          floorId: initialFloorId,
+          backgroundId: initialBackgroundId,
+        },
+        { wallpapers, floors, backgrounds },
+      ),
+    [
+      owned,
+      wallpaperId,
+      floorId,
+      backgroundId,
+      wallpapers,
+      floors,
+      backgrounds,
+      initialWallpaperId,
+      initialFloorId,
+      initialBackgroundId,
+    ],
+  );
+  const furniturePreviews = useMemo(
+    () => furniturePreviewsOf(items, owned, furniture),
     [items, owned, furniture],
   );
   /** 적용 시점에 구매가 필요한 프리뷰 전체 (가구 + 표면류). */
   const pendingPreviews = useMemo(
-    () => [
-      ...furniturePreviews,
-      ...surfacePreviews.map(({ id, name, price }) => ({ id, name, price })),
-    ],
+    () => mergePendingPreviews(furniturePreviews, surfacePreviews),
     [furniturePreviews, surfacePreviews],
   );
-  const previewTotal = pendingPreviews.reduce((sum, i) => sum + i.price, 0);
+  const previewTotal = previewTotalOf(pendingPreviews);
   // 적용하기 시 미구매 프리뷰 일괄 확인 모달 (#501).
   const [confirmPreviews, setConfirmPreviews] = useState(false);
   const [bulkBuying, setBulkBuying] = useState(false);
@@ -336,12 +313,7 @@ export function RoomDecorScreen({
   // 409 리비전 충돌(다른 기기 선저장) — 재로드 안내 모달.
   const [conflictOpen, setConflictOpen] = useState(false);
 
-  type ApplyValues = {
-    items: PlacedFurniture[];
-    wallpaperId: string;
-    floorId: string | null;
-    backgroundId: string | null;
-  };
+  type ApplyValues = LayoutValues;
   const currentValues = (): ApplyValues => ({ items, wallpaperId, floorId, backgroundId });
   // 제외하고 저장 등에서 넘어온 값 — 마이그레이션 확인을 건너뛴 뒤에도 유지.
   const doApply = async (thenBack: boolean, v: ApplyValues = currentValues()) => {
@@ -366,12 +338,12 @@ export function RoomDecorScreen({
     proceedApply(thenBack, currentValues());
   };
   /** 프리뷰를 뺀 저장값 — 표면류는 진입 시점 값으로 복원한다. */
-  const strippedValues = (): ApplyValues => ({
-    items: items.filter((pl) => owned.has(pl.furnitureId)),
-    wallpaperId: owned.has(wallpaperId) ? wallpaperId : initialWallpaperId,
-    floorId: floorId && owned.has(floorId) ? floorId : initialFloorId,
-    backgroundId: backgroundId && owned.has(backgroundId) ? backgroundId : initialBackgroundId,
-  });
+  const strippedValues = (): ApplyValues =>
+    stripPreviews(currentValues(), owned, {
+      wallpaperId: initialWallpaperId,
+      floorId: initialFloorId,
+      backgroundId: initialBackgroundId,
+    });
   const saveWithoutPreviews = () => {
     const v = strippedValues();
     // 화면 상태도 저장값과 맞춘다 — 프리뷰가 방에 남아 보이면 안 된다.
@@ -995,192 +967,39 @@ export function RoomDecorScreen({
       </View>
 
       {/* Buying spends diamond irreversibly — confirm before calling onBuy. */}
-      <Modal
-        transparent
-        visible={pendingBuy !== null}
-        animationType="fade"
-        // 결제 진행·체크 연출 중에는 닫기를 막는다 (#453) — 지출이 날아가는
-        // 중이라 취소가 성립하지 않는다.
-        onRequestClose={() => buyPhase === 'idle' && setPendingBuy(null)}>
-        <Pressable
-          style={styles.confirmBackdrop}
-          onPress={() => buyPhase === 'idle' && setPendingBuy(null)}>
-          <Pressable style={[styles.confirmCard, { backgroundColor: t.screen }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>구매하시겠습니까?</Text>
-            <Text style={[Typography.body, styles.confirmText, { color: t.textMuted }]}>
-              &lsquo;{pendingBuy?.name}&rsquo;을(를) 다이아 {pendingBuy?.price}개로 구매해요.
-              {'\n'}구매한 아이템은 바로 배치할 수 있어요.
-            </Text>
-            <View style={styles.confirmBtns}>
-              <Pressable
-                onPress={() => setPendingBuy(null)}
-                disabled={buyPhase !== 'idle'}
-                accessibilityRole="button"
-                accessibilityLabel="구매 취소"
-                style={[
-                  styles.confirmBtn,
-                  { backgroundColor: t.surfaceMuted, opacity: buyPhase === 'idle' ? 1 : 0.4 },
-                ]}>
-                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => void confirmPendingBuy()}
-                disabled={buyPhase !== 'idle'}
-                accessibilityRole="button"
-                accessibilityLabel="구매 확인"
-                accessibilityState={{ disabled: buyPhase !== 'idle' }}
-                style={[
-                  styles.confirmBtn,
-                  { backgroundColor: t.primary },
-                  buyPhase === 'buying' && styles.confirmBtnPressed,
-                ]}>
-                {buyPhase === 'done' ? (
-                  // 성공 확인 후에만 체크 팝 (#453) — 눌림에서 튀어오르는 변신.
-                  <Animated.View entering={ZoomIn.springify().damping(11)} testID="buy-done-check">
-                    <Icon name="check" size={18} color={t.onPrimary} />
-                  </Animated.View>
-                ) : (
-                  <Text style={[Typography.label, { color: t.onPrimary }]}>구매</Text>
-                )}
-              </Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <BuyConfirmModal
+        item={pendingBuy}
+        phase={buyPhase}
+        onCancel={() => setPendingBuy(null)}
+        onConfirm={() => void confirmPendingBuy()}
+      />
 
       {/* Leaving with unapplied changes — save, discard, or stay. */}
-      <Modal
-        transparent
+      <UnsavedLeaveModal
         visible={confirmLeave}
-        animationType="fade"
-        onRequestClose={() => setConfirmLeave(false)}>
-        <Pressable style={styles.confirmBackdrop} onPress={() => setConfirmLeave(false)}>
-          <Pressable style={[styles.confirmCard, { backgroundColor: t.screen }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>변경사항을 저장할까요?</Text>
-            <Text style={[Typography.body, styles.confirmText, { color: t.textMuted }]}>
-              적용하지 않은 꾸미기 변경이 있어요.
-            </Text>
-            <View style={styles.leaveBtns}>
-              <Pressable
-                onPress={() => {
-                  setConfirmLeave(false);
-                  apply(true);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="저장하고 나가기"
-                style={[styles.leaveBtn, { backgroundColor: t.primary }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>저장하고 나가기</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  setConfirmLeave(false);
-                  onBack?.();
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="저장하지 않고 나가기"
-                style={[styles.leaveBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>저장하지 않고 나가기</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => setConfirmLeave(false)}
-                accessibilityRole="button"
-                accessibilityLabel="계속 꾸미기"
-                style={styles.leaveStay}>
-                <Text style={[Typography.label, { color: t.textMuted }]}>계속 꾸미기</Text>
-              </Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+        onSaveAndLeave={() => {
+          setConfirmLeave(false);
+          apply(true);
+        }}
+        onLeaveWithoutSaving={() => {
+          setConfirmLeave(false);
+          onBack?.();
+        }}
+        onStay={() => setConfirmLeave(false)}
+      />
 
       {/* 적용 시 미구매 프리뷰 일괄 확인 (#501) — 서버는 미보유 저장 불가. */}
-      <Modal
-        transparent
+      <PreviewCheckoutModal
         visible={confirmPreviews}
-        animationType="fade"
-        onRequestClose={() => setConfirmPreviews(false)}>
-        <Pressable style={styles.confirmBackdrop} onPress={() => setConfirmPreviews(false)}>
-          <Pressable style={[styles.confirmCard, { backgroundColor: t.screen }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>
-              구매하지 않은 프리뷰가 {pendingPreviews.length}개 있어요
-            </Text>
-            <View style={styles.previewList}>
-              {pendingPreviews.map((pv) => (
-                <View key={pv.id} style={styles.previewRow}>
-                  <Text style={[Typography.body, styles.flex, { color: t.text }]} numberOfLines={1}>
-                    {pv.name}
-                  </Text>
-                  <View style={styles.priceRow}>
-                    <Icon name="diamond" size={11} color={t.primary} />
-                    <Text style={[Typography.body, { color: t.text }]}>{pv.price}</Text>
-                  </View>
-                </View>
-              ))}
-              <View
-                style={[styles.previewRow, styles.previewTotalRow, { borderTopColor: t.border }]}>
-                <Text style={[Typography.body, styles.flex, { color: t.textMuted }]}>
-                  합계 (보유 {diamondBalance})
-                </Text>
-                <View style={styles.priceRow}>
-                  <Icon name="diamond" size={11} color={t.primary} />
-                  <Text style={[Typography.body, { color: t.text }]}>{previewTotal}</Text>
-                </View>
-              </View>
-            </View>
-            <View style={styles.leaveBtns}>
-              <Pressable
-                onPress={() => void buyAllAndSave()}
-                disabled={bulkBuying || !onBuy || diamondBalance < previewTotal}
-                accessibilityRole="button"
-                accessibilityLabel="모두 구매하고 저장"
-                accessibilityState={{
-                  disabled: bulkBuying || !onBuy || diamondBalance < previewTotal,
-                }}
-                style={[
-                  styles.leaveBtn,
-                  {
-                    backgroundColor:
-                      bulkBuying || !onBuy || diamondBalance < previewTotal
-                        ? t.disabledBg
-                        : t.primary,
-                  },
-                ]}>
-                <Text
-                  style={[
-                    Typography.label,
-                    {
-                      color:
-                        bulkBuying || !onBuy || diamondBalance < previewTotal
-                          ? t.textMuted
-                          : t.onPrimary,
-                    },
-                  ]}>
-                  {bulkBuying
-                    ? '구매 중...'
-                    : diamondBalance < previewTotal
-                      ? '다이아가 부족해요'
-                      : '모두 구매하고 저장'}
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={saveWithoutPreviews}
-                disabled={bulkBuying}
-                accessibilityRole="button"
-                accessibilityLabel="제외하고 저장"
-                style={[styles.leaveBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>프리뷰 제외하고 저장</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => setConfirmPreviews(false)}
-                accessibilityRole="button"
-                accessibilityLabel="프리뷰 계속 보기"
-                style={styles.leaveStay}>
-                <Text style={[Typography.label, { color: t.textMuted }]}>계속 꾸미기</Text>
-              </Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+        previews={pendingPreviews}
+        total={previewTotal}
+        diamondBalance={diamondBalance}
+        buying={bulkBuying}
+        canBuy={!!onBuy}
+        onBuyAllAndSave={() => void buyAllAndSave()}
+        onSaveWithoutPreviews={saveWithoutPreviews}
+        onDismiss={() => setConfirmPreviews(false)}
+      />
 
       {/* 다른 기기가 먼저 저장한 경우(409) — 서버 상태로 다시 시작해야 한다 (#674 공용화). */}
       <ConfirmDialog
@@ -1216,327 +1035,6 @@ export function RoomDecorScreen({
     </View>
   );
 }
-
-type Tokens = ReturnType<typeof useTokens>;
-type BuyProps = {
-  owned: Set<string>;
-  diamondBalance: number;
-  /** Ask the parent to confirm buying this item (opens the 구매 modal). */
-  onBuyRequest: (item: { id: string; name: string; price: number }) => void;
-  /** Unaffordable tile tapped — the parent explains (다이아 부족 toast). */
-  onBlockedBuy: () => void;
-  t: Tokens;
-};
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
-/**
- * 그리드 폭에 맞춰 열 수를 정한다 (#725).
- *
- * 종전에는 타일이 `flexBasis: '22%'`라 **폭과 무관하게 항상 4열**이었다. 폰에서는
- * 맞지만 태블릿에서는 타일이 거대해지고 한 화면에 보이는 가구는 그대로였다.
- *
- * 폭을 재서 정하는 이유는 퍼센트로는 안 되기 때문이다 — 타일 사이 간격이 px(`GRID_GAP`)
- * 고정이라 폭이 달라지면 퍼센트 몫이 어긋난다. 측정 전 첫 프레임은 기존 22%가 그대로
- * 쓰이므로 폰에서는 보이는 변화가 없다.
- */
-const MIN_TILE = 72;
-const MAX_COLUMNS = 8;
-
-/** 측정된 타일 폭. `null`이면 아직 레이아웃 전 — 타일이 기존 22%로 그려진다. */
-const TileWidthContext = createContext<number | null>(null);
-
-function DecorGrid({ children }: { children: React.ReactNode }) {
-  const [width, setWidth] = useState<number | null>(null);
-  const tileWidth = useMemo(() => {
-    if (width == null || width <= 0) return null;
-    const fit = Math.floor((width + GRID_GAP) / (MIN_TILE + GRID_GAP));
-    const columns = Math.min(MAX_COLUMNS, Math.max(4, fit));
-    return (width - (columns - 1) * GRID_GAP) / columns;
-  }, [width]);
-  return (
-    <TileWidthContext.Provider value={tileWidth}>
-      <View
-        style={styles.grid}
-        onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
-        testID="decor-grid">
-        {children}
-      </View>
-    </TileWidthContext.Provider>
-  );
-}
-
-/** 타일에 얹는 폭 — flexBasis를 덮어써야 한다(주축에서 width보다 우선한다). */
-function useTileWidthStyle() {
-  const width = useContext(TileWidthContext);
-  return width == null ? null : { flexBasis: width };
-}
-
-/**
- * 방금 보유로 바뀐 타일의 팝 (#453) — false→true 전환에서만 눌렸다 튀어오른다.
- * 구매 확인 모달이 닫히며 카탈로그의 해당 카드가 "내 것이 됐다"고 답한다.
- */
-function useOwnedPopStyle(isOwned: boolean) {
-  // jest의 useSharedValue는 렌더마다 새 객체 — useRef로 앵커 (#539 계약).
-  const scale = useRef(useSharedValue(1)).current;
-  const prev = useRef(isOwned);
-  useEffect(() => {
-    if (isOwned && !prev.current) {
-      scale.value = 0.8;
-      scale.value = withSpring(1, { damping: 7, stiffness: 260 });
-    }
-    prev.current = isOwned;
-  }, [isOwned, scale]);
-  return useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-}
-
-/** 비우기 tile shared by the grids — clears the slot/surface being picked. */
-const ClearTile = memo(function ClearTile({ onClear, t }: { onClear?: () => void; t: Tokens }) {
-  const emph = useFontEmphasis();
-  const tileWidth = useTileWidthStyle();
-  if (!onClear) return null;
-  return (
-    <Pressable
-      onPress={onClear}
-      accessibilityRole="button"
-      accessibilityLabel="비우기"
-      style={[styles.tile, tileWidth, styles.clearTile, { borderColor: t.border }]}>
-      <View style={[styles.thumbWrap, styles.clearThumb]}>
-        <Icon name="close" size={18} color={t.textMuted} />
-      </View>
-      <Text style={[styles.tileName, emph('medium'), { color: t.textMuted }]}>비우기</Text>
-    </Pressable>
-  );
-});
-
-/** Surface picker grid (벽지/바닥/배경): single-select swatch/art tiles. */
-const SwatchGrid = memo(function SwatchGrid({
-  items,
-  selectedId,
-  onSelect,
-  onClear,
-  owned,
-  diamondBalance,
-  onBuyRequest,
-  onBlockedBuy,
-  t,
-}: BuyProps & {
-  items: Wallpaper[];
-  selectedId: string | null;
-  onSelect: (id: string) => void;
-  onClear?: () => void;
-}) {
-  return (
-    <DecorGrid>
-      <ClearTile onClear={onClear} t={t} />
-      {items.map((item) => (
-        <SwatchTile
-          key={item.id}
-          item={item}
-          isOwned={owned.has(item.id)}
-          // 프리뷰(#501)도 선택 링을 받는다 — 적용 중인 표면이 곧 프리뷰다.
-          active={item.id === selectedId}
-          affordable={diamondBalance >= item.price}
-          onSelect={onSelect}
-          onBuyRequest={onBuyRequest}
-          onBlockedBuy={onBlockedBuy}
-          t={t}
-        />
-      ))}
-    </DecorGrid>
-  );
-});
-
-/** 표면류 스와치 한 장 — 구매로 보유가 되는 순간 팝 (#453). */
-const SwatchTile = memo(function SwatchTile({
-  item,
-  isOwned,
-  active,
-  affordable,
-  onSelect,
-  onBuyRequest,
-  onBlockedBuy,
-  t,
-}: {
-  item: Wallpaper;
-  isOwned: boolean;
-  active: boolean;
-  affordable: boolean;
-  onSelect: (id: string) => void;
-  onBuyRequest: (item: { id: string; name: string; price: number }) => void;
-  onBlockedBuy: () => void;
-  t: Tokens;
-}) {
-  const emph = useFontEmphasis();
-  const tileWidth = useTileWidthStyle();
-  const popStyle = useOwnedPopStyle(isOwned);
-  return (
-    <AnimatedPressable
-      onPress={() =>
-        isOwned
-          ? onSelect(item.id)
-          : active
-            ? // 프리뷰 적용 중 재탭 = 구매 (#501). 잔액 부족은 토스트.
-              affordable
-              ? onBuyRequest({ id: item.id, name: item.name, price: item.price })
-              : onBlockedBuy()
-            : onSelect(item.id)
-      }
-      accessibilityRole="button"
-      accessibilityState={{ selected: active }}
-      accessibilityLabel={
-        isOwned ? item.name : active ? `${item.name} 구매` : `${item.name} 미리 적용`
-      }
-      style={[
-        styles.tile,
-        tileWidth,
-        popStyle,
-        {
-          backgroundColor: t.surfaceMuted,
-          borderColor: active ? t.primary : 'transparent',
-        },
-      ]}>
-      {isCdnKey(item.assetKey) ? (
-        <Image
-          source={assetSource(item.assetKey)}
-          style={styles.swatch}
-          contentFit="cover"
-          cachePolicy="memory-disk"
-          transition={120}
-        />
-      ) : (
-        <View style={[styles.swatch, { backgroundColor: item.color }]} />
-      )}
-      {/* 이름은 표시하지 않는다 (#487) — 이미지가 곧 정보. 접근성 라벨은 유지. */}
-      {isOwned ? (
-        <Text style={[styles.tilePrice, emph('normal'), { color: t.textMuted }]}>보유</Text>
-      ) : (
-        <View style={styles.priceRow}>
-          <Icon name="diamond" size={10} color={t.primary} />
-          <Text style={[styles.tilePrice, emph('normal'), { color: t.textMuted }]}>
-            {item.price}
-          </Text>
-        </View>
-      )}
-    </AnimatedPressable>
-  );
-});
-
-/**
- * Furniture picker grid for one slot: tap places (replacing the slot).
- * 미보유도 프리뷰로 배치되므로(#501) 구매 관련 prop이 없다 — 구매는 방의
- * 프리뷰 재탭/툴바에서.
- */
-const FurnitureGrid = memo(function FurnitureGrid({
-  items,
-  placed,
-  onPlace,
-  onClear,
-  owned,
-  highlighted,
-  t,
-}: {
-  items: FurnitureItem[];
-  placed: Set<string>;
-  onPlace: (item: FurnitureItem) => void;
-  onClear?: () => void;
-  owned: Set<string>;
-  /** 방금 뽑은 아이템 (#630) — NEW 배지. */
-  highlighted?: Set<string>;
-  t: Tokens;
-}) {
-  const Typography = useTypography();
-  if (items.length === 0) {
-    return (
-      <Text style={[Typography.supporting, styles.emptyPicker, { color: t.textMuted }]}>
-        이 자리에 놓을 수 있는 가구가 아직 없어요.
-      </Text>
-    );
-  }
-  return (
-    <DecorGrid>
-      <ClearTile onClear={onClear} t={t} />
-      {items.map((item) => (
-        <FurnitureTile
-          key={item.id}
-          item={item}
-          isOwned={owned.has(item.id)}
-          // 프리뷰(#501)도 배치 상태 링을 받는다.
-          active={placed.has(item.id)}
-          isNew={highlighted?.has(item.id)}
-          onPlace={onPlace}
-          t={t}
-        />
-      ))}
-    </DecorGrid>
-  );
-});
-
-/** 가구 타일 한 장 — 구매로 보유가 되는 순간 팝 (#453), 방금 뽑은 건 NEW (#630). */
-const FurnitureTile = memo(function FurnitureTile({
-  item,
-  isOwned,
-  active,
-  isNew = false,
-  onPlace,
-  t,
-}: {
-  item: FurnitureItem;
-  isOwned: boolean;
-  active: boolean;
-  isNew?: boolean;
-  onPlace: (item: FurnitureItem) => void;
-  t: Tokens;
-}) {
-  const emph = useFontEmphasis();
-  const tileWidth = useTileWidthStyle();
-  const popStyle = useOwnedPopStyle(isOwned);
-  return (
-    <AnimatedPressable
-      // 미보유도 일단 배치(프리뷰) — 구매는 방의 프리뷰를 다시 탭 (#501).
-      onPress={() => onPlace(item)}
-      accessibilityRole="button"
-      accessibilityState={{ selected: active }}
-      accessibilityLabel={isOwned ? item.name : `${item.name} 미리 배치`}
-      style={[
-        styles.tile,
-        tileWidth,
-        popStyle,
-        {
-          backgroundColor: t.surfaceMuted,
-          borderColor: active ? t.primary : 'transparent',
-        },
-      ]}>
-      {/* 미리보기는 접근성에서 숨긴다 — 타일 Pressable 라벨과 이중 안내 방지. */}
-      <View
-        style={styles.thumbWrap}
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants">
-        <FurniturePlaceholder item={item} showName={false} />
-      </View>
-      {isNew ? (
-        <View
-          style={[styles.newBadge, { backgroundColor: t.warning }]}
-          testID={`new-badge-${item.id}`}>
-          <Text style={[styles.newBadgeText, emph('normal'), { color: t.onPrimary }]}>NEW</Text>
-        </View>
-      ) : null}
-      {/* 이름은 표시하지 않는다 (#487) — 접근성 라벨은 유지. */}
-      {isOwned ? (
-        <Text style={[styles.tilePrice, emph('normal'), { color: t.textMuted }]}>보유</Text>
-      ) : (
-        <View style={styles.priceRow}>
-          <Icon name="diamond" size={10} color={t.primary} />
-          <Text style={[styles.tilePrice, emph('normal'), { color: t.textMuted }]}>
-            {item.price}
-          </Text>
-        </View>
-      )}
-    </AnimatedPressable>
-  );
-});
-
-const GRID_GAP = Spacing.two;
 
 const styles = StyleSheet.create({
   screen: {
@@ -1585,26 +1083,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.two,
     paddingVertical: 3,
     borderRadius: Radius.pill,
-  },
-  previewList: {
-    alignSelf: 'stretch',
-    gap: Spacing.one,
-    marginTop: Spacing.two,
-  },
-  previewRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-  },
-  previewTotalRow: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: Spacing.one,
-    marginTop: Spacing.half,
-  },
-  priceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.half,
   },
   iconBtn: {
     width: 40,
@@ -1712,110 +1190,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  emptyPicker: {
-    textAlign: 'center',
-    paddingVertical: Spacing.three,
-  },
-  confirmBackdrop: {
-    flex: 1,
-    backgroundColor: Overlay.dim,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  confirmCard: {
-    width: '80%',
-    maxWidth: 340,
-    borderRadius: Radius.lg,
-    padding: Spacing.four,
-    gap: Spacing.three,
-  },
-  confirmText: {
-    lineHeight: 24,
-  },
-  confirmBtns: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-    marginTop: Spacing.one,
-  },
-  confirmBtn: {
-    flex: 1,
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.three,
-    alignItems: 'center',
-  },
-  // 결제 진행 중 꾹 눌린 상태 (#453) — 체크 팝 직전의 '눌림'.
-  confirmBtnPressed: {
-    transform: [{ scale: 0.94 }],
-  },
-  // 방금 뽑은 아이템 (#630) — 타일 좌상단 NEW 배지.
-  newBadge: {
-    position: 'absolute',
-    top: 4,
-    left: 4,
-    borderRadius: Radius.pill,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-  },
-  newBadgeText: {
-    fontSize: 11,
-  },
-  leaveBtns: {
-    gap: Spacing.two,
-    marginTop: Spacing.one,
-  },
-  leaveBtn: {
-    borderRadius: Radius.pill,
-    paddingVertical: Spacing.three,
-    alignItems: 'center',
-  },
-  leaveStay: {
-    alignItems: 'center',
-    paddingVertical: Spacing.two,
-  },
   loadingBlock: {
     alignItems: 'center',
     paddingVertical: Spacing.six,
     gap: Spacing.two,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: GRID_GAP,
-  },
-  tile: {
-    // Four tiles per row, leaving room for the three inter-tile gaps.
-    flexBasis: '22%',
-    flexGrow: 0,
-    borderRadius: Radius.md,
-    borderWidth: 2,
-    padding: Spacing.two,
-    gap: Spacing.half,
-  },
-  clearTile: {
-    borderStyle: 'dashed',
-  },
-  clearThumb: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  swatch: {
-    width: '100%',
-    aspectRatio: 1,
-    borderRadius: Radius.sm,
-  },
-  thumbWrap: {
-    width: '100%',
-    aspectRatio: 1,
-    borderRadius: Radius.sm,
-    overflow: 'hidden',
-  },
-  tileName: {
-    fontSize: 13,
-    lineHeight: 16,
-    minHeight: 28,
-  },
-  tilePrice: {
-    fontSize: 12,
   },
   applyBar: {
     paddingHorizontal: Spacing.four,
