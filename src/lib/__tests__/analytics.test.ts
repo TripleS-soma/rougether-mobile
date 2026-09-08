@@ -40,8 +40,6 @@ jest.mock('@react-native-firebase/analytics', () => ({
 describe('analytics (#912)', () => {
   // jest는 __DEV__가 true라, 수집 켜짐 경로를 보려면 명시해야 한다 (#954).
   beforeAll(() => initAnalytics({ collect: true }));
-  beforeEach(() => jest.clearAllMocks());
-
   it('예약 파라미터 items를 그대로 보내지 않는다', () => {
     track('room_save', { items: 3 });
     const props = mockLogEvent.mock.calls[0]?.[2] as Record<string, unknown> | undefined;

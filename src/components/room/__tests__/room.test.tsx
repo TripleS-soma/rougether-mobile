@@ -5,6 +5,33 @@ import { StyleSheet } from 'react-native';
 import { Room } from '@/components/room/room';
 
 describe('Room', () => {
+  it.each([
+    { fill: false, frames: undefined },
+    { fill: true, frames: undefined },
+    { fill: false, frames: ['characters/cat/animations/idle.webp'] },
+    { fill: true, frames: ['characters/cat/animations/idle.webp'] },
+  ])(
+    'keeps static and interactive characters aligned (fill=$fill, frames=$frames)',
+    async ({ fill, frames }) => {
+      const { getByLabelText, rerender } = await render(
+        <Room fill={fill} characterFrames={frames} />,
+      );
+      // Check the rendered image, where the avatar's default 96px height used to
+      // survive and center small house characters above their floor position.
+      const staticImage = StyleSheet.flatten(getByLabelText('고양이').props.style);
+      expect(staticImage).toMatchObject({ width: '100%', height: '100%' });
+      const staticFrame = StyleSheet.flatten(getByLabelText('고양이').parent?.props.style);
+      expect(staticFrame).toMatchObject({ width: '42%', aspectRatio: 1, bottom: '16%' });
+      expect(staticFrame.height).toBeUndefined();
+
+      await rerender(<Room fill={fill} characterFrames={frames} interactiveCharacter />);
+      expect(StyleSheet.flatten(getByLabelText('고양이, 눌러서 포즈 바꾸기').props.style)).toEqual(
+        staticFrame,
+      );
+      expect(StyleSheet.flatten(getByLabelText('고양이').props.style)).toEqual(staticImage);
+    },
+  );
+
   it('adds vertical space while keeping a saved center and width-sized sprites', async () => {
     const placement = {
       furnitureId: 'plant',
@@ -184,5 +211,17 @@ describe('Room', () => {
       expect(prefetch).not.toHaveBeenCalled();
       prefetch.mockRestore();
     });
+  });
+
+  it('비인터랙티브 캐릭터도 자리 박스를 꽉 채운다 — 기본 96px 높이가 남지 않는다 (#1194)', async () => {
+    const { getByLabelText } = await render(<Room characterId="cat" />);
+    const avatar = StyleSheet.flatten(getByLabelText('고양이').props.style);
+    expect(avatar.width).toBe('100%');
+    expect(avatar.height).toBe('100%');
+    // 자리 박스(부모)는 계약 좌표 — 폭 42%, 정사각, 바닥에서 16%.
+    const slot = StyleSheet.flatten(getByLabelText('고양이').parent?.props.style);
+    expect(slot.width).toBe('42%');
+    expect(slot.bottom).toBe('16%');
+    expect(slot.aspectRatio).toBe(1);
   });
 });

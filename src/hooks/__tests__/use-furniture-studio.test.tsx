@@ -17,7 +17,6 @@ jest.mock('@/api/furniture-generation', () => ({
 }));
 jest.mock('expo-image-picker', () => ({ launchImageLibraryAsync: jest.fn() }));
 beforeEach(() => {
-  jest.clearAllMocks();
   (createFurniture as jest.Mock).mockReset();
   (fetchFurnitureCredits as jest.Mock).mockResolvedValue({ available: 1, reserved: 0 });
   (fetchFurnitureJobs as jest.Mock).mockResolvedValue([]);

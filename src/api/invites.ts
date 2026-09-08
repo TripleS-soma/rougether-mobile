@@ -11,7 +11,16 @@ export function fetchMyInvite() {
   return apiGet<MyInviteCodeResponse>('/invites/me');
 }
 
-/** POST /invites/redeem — 받은 초대코드 사용. */
+/**
+ * POST /invites/redeem — 받은 초대코드 사용. 404는 "그런 코드 없음"으로 화면이
+ * 안내하는 정상 경로라 `api_error` 계측에서 뺀다 (#1010) — 오타 한 번이 장애
+ * 통계를 덮지 않게.
+ */
 export function redeemInvite(code: string) {
-  return apiPost<InviteRedeemResponse>('/invites/redeem', { code });
+  // 404 = 없는 코드, 409 = 이미 사용(INVITE_ALREADY_REDEEMED) — 둘 다 호출부가 안내로 접는다.
+  return apiPost<InviteRedeemResponse>(
+    '/invites/redeem',
+    { code },
+    { expectedStatuses: [404, 409] },
+  );
 }

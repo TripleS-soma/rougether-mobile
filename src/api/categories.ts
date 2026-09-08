@@ -32,5 +32,8 @@ export type CategoryDeleteMode = 'UNASSIGN' | 'PURGE';
  * PURGE: 과거 수행 기록·사진 인증을 지우고 살아있는 투두도 삭제.
  */
 export function deleteCategory(id: number, mode: CategoryDeleteMode) {
-  return apiDelete<void>(`/categories/${id}?mode=${mode}`);
+  // 그 409는 호출부가 "루틴이 남아 있어요"로 접는 예상 상태.
+  return apiDelete<void>(`/categories/${id}?mode=${mode}`, undefined, {
+    expectedStatuses: [409],
+  });
 }

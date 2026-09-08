@@ -13,6 +13,8 @@ const SUMMARY_KEY = 'rougether.widget.summary.v1';
 const ROOM_IMAGE_KEY = 'rougether.widget.room-image.v1';
 /** 실효 라이트/다크 (#746) — 앱의 테마 모드 설정이 반영된 최종 값. */
 const THEME_KEY = 'rougether.widget.theme.v1';
+/** 마지막 실제 접속(포그라운드) 시각 ISO (#1122) — 위젯이 미접속 일수를 센다. */
+const LAST_ACTIVE_KEY = 'rougether.widget.last-active.v1';
 
 /** iOS 위젯 App Group (#606) — SwiftUI 위젯이 이 suite의 UserDefaults를 읽는다. */
 const IOS_APP_GROUP = 'group.com.triples.rougether';
@@ -20,6 +22,8 @@ const IOS_APP_GROUP = 'group.com.triples.rougether';
 const IOS_SUMMARY_KEY = 'summary';
 const IOS_ROOM_IMAGE_KEY = 'roomImage';
 const IOS_THEME_KEY = 'theme';
+/** iOS 위젯은 아직 안 읽는다(#1122 iOS는 네이티브 윈도우) — 미리 미러만 해 둔다. */
+const IOS_LAST_ACTIVE_KEY = 'lastActive';
 
 /**
  * iOS 미러 기록 (#606) — 저장은 AsyncStorage(안드 태스크 핸들러·테스트의 단일
@@ -67,13 +71,14 @@ function removeFromIosWidgets(key: string) {
  */
 export async function clearWidgetData(): Promise<void> {
   try {
-    await AsyncStorage.multiRemove([SUMMARY_KEY, ROOM_IMAGE_KEY, THEME_KEY]);
+    await AsyncStorage.multiRemove([SUMMARY_KEY, ROOM_IMAGE_KEY, THEME_KEY, LAST_ACTIVE_KEY]);
   } catch {
     // App Group 정리는 그대로 시도한다 — 눈에 보이는 쪽이 그쪽이다.
   }
   removeFromIosWidgets(IOS_SUMMARY_KEY);
   removeFromIosWidgets(IOS_ROOM_IMAGE_KEY);
   removeFromIosWidgets(IOS_THEME_KEY);
+  removeFromIosWidgets(IOS_LAST_ACTIVE_KEY);
 }
 
 export type WidgetSummary = {
@@ -82,6 +87,8 @@ export type WidgetSummary = {
   streak: number;
   /** 미완료 루틴 제목 앞 3개 — 오늘 리스트 위젯의 행. */
   remaining: string[];
+  /** 요약이 가리키는 날짜(기기 로컬 "YYYY-MM-DD", #1122) — 자정이 지난 요약으로 "다 했다"고 우기지 않게. 구버전 저장값엔 없다. */
+  date?: string;
 };
 
 /**
@@ -100,6 +107,7 @@ export function buildWidgetSummary(
     done: scheduled.filter(isDone).length,
     total: scheduled.length,
     streak,
+    date: todayIso,
     remaining: scheduled
       .filter((r) => !isDone(r))
       .slice(0, 3)
@@ -163,6 +171,24 @@ export async function loadWidgetTheme(): Promise<'light' | 'dark' | null> {
 export async function loadWidgetRoomImage(): Promise<string | null> {
   try {
     return await AsyncStorage.getItem(ROOM_IMAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** 마지막 실제 접속 시각 (#1122) — 앱이 포그라운드가 될 때마다 기록한다. */
+export async function saveWidgetLastActive(iso: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(LAST_ACTIVE_KEY, iso);
+  } catch {
+    // 위젯은 부가 표면 — 다음 포그라운드에 다시 기록된다.
+  }
+  mirrorToIosWidgets(IOS_LAST_ACTIVE_KEY, iso);
+}
+
+export async function loadWidgetLastActive(): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem(LAST_ACTIVE_KEY);
   } catch {
     return null;
   }

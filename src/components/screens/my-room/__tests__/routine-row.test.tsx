@@ -1,6 +1,9 @@
 import { fireEvent, render } from '@testing-library/react-native';
-import { Animated } from 'react-native';
+import { Animated, Platform, Text } from 'react-native';
+import { Gesture } from 'react-native-gesture-handler';
+import { getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
+import { TabPager } from '@/components/app/tab-pager';
 import { QuickAddRow } from '@/components/screens/my-room/quick-add-row';
 import { RoutineRow } from '@/components/screens/my-room/routine-row';
 
@@ -60,6 +63,106 @@ describe('RoutineRow (#769)', () => {
     const rich = await render(<RoutineRow {...rowProps} repeats time="07:00" />);
     expect(rich.getByTestId('repeat-marker')).toBeTruthy();
     expect(rich.getByText('오전 7:00')).toBeTruthy();
+  });
+});
+
+/** ReanimatedSwipeable 내부 팬 — dragOffset 기본값(±10)으로 행 드래그 팬과 구분한다. */
+const swipeablePans = (panFactory: jest.SpyInstance) =>
+  panFactory.mock.results
+    .map(({ value }) => value)
+    .filter((g) => g.config.activeOffsetXStart === -10 && g.config.activeOffsetXEnd === 10);
+/**
+ * 실제로 GestureDetector에 붙은(handlerTag 발급) Swipeable 팬. 리렌더로 팬 객체가
+ * 다시 만들어져도 같은 네이티브 핸들러(태그)를 이어받으므로, **서로 다른 태그 수 =
+ * 마운트된 Swipeable 수**다 — 재마운트됐다면 새 태그가 생긴다.
+ */
+const mountedSwipeables = (panFactory: jest.SpyInstance) => {
+  const byTag = new Map<number, { config: Record<string, unknown> }>();
+  for (const g of swipeablePans(panFactory)) if (g.handlerTag > 0) byTag.set(g.handlerTag, g);
+  return [...byTag.values()];
+};
+
+describe('RoutineRow 트리 모양 고정 (#1207)', () => {
+  const originalOS = Platform.OS;
+  afterEach(() => {
+    Platform.OS = originalOS;
+    jest.restoreAllMocks();
+  });
+
+  it('완료 토글로 draggable이 꺼져도 루트 노드가 같다 — 재마운트 없음', async () => {
+    const panFactory = jest.spyOn(Gesture, 'Pan');
+    const ui = await render(<RoutineRow {...rowProps} draggable done={false} />);
+    const before = ui.getByTestId('routine-row-r1');
+    // 드래그 GestureDetector(testId로 조회)와 Swipeable이 둘 다 마운트돼 있다.
+    expect(getByGestureTestId('routine-drag-r1').config.enabled).toBe(true);
+    expect(mountedSwipeables(panFactory)).toHaveLength(1);
+
+    // 화면이 완료 토글에 내리는 것과 같은 조합: done=true, draggable=false (sinkDone).
+    await ui.rerender(<RoutineRow {...rowProps} draggable={false} done />);
+    expect(ui.getByTestId('routine-row-r1')).toBe(before);
+    expect(mountedSwipeables(panFactory)).toHaveLength(1);
+    // 드래그는 제스처 자체가 아니라 enabled 플래그로만 꺼진다 — 디텍터는 그대로.
+    expect(getByGestureTestId('routine-drag-r1').config.enabled).toBe(false);
+  });
+
+  it('draggable=false여도 GestureDetector가 탭·삭제 액션을 삼키지 않는다', async () => {
+    const onToggle = jest.fn();
+    const onDelete = jest.fn();
+    const { getByLabelText } = await render(
+      <RoutineRow {...rowProps} draggable={false} onToggle={onToggle} onDelete={onDelete} />,
+    );
+    expect(getByGestureTestId('routine-drag-r1').config.enabled).toBe(false);
+    await fireEvent.press(getByLabelText('물 1L 마시기'));
+    expect(onToggle).toHaveBeenCalledWith('r1', expect.anything());
+    await fireEvent.press(getByLabelText('물 1L 마시기 스와이프 삭제'));
+    expect(onDelete).toHaveBeenCalledWith('r1');
+  });
+
+  it('삭제 미배선 행도 Swipeable 안에 있지만 삭제를 드러낼 수 없다', async () => {
+    const panFactory = jest.spyOn(Gesture, 'Pan');
+    const ui = await render(<RoutineRow {...rowProps} deleteEnabled={false} />);
+    expect(ui.queryByLabelText('물 1L 마시기 스와이프 삭제')).toBeNull();
+    const mounted = mountedSwipeables(panFactory);
+    expect(mounted).toHaveLength(1);
+    expect(mounted[0].config.enabled).toBe(false);
+
+    // 삭제가 배선되면 같은 트리에서 팬만 켜진다.
+    await ui.rerender(<RoutineRow {...rowProps} deleteEnabled />);
+    expect(ui.getByLabelText('물 1L 마시기 스와이프 삭제')).toBeTruthy();
+    expect(mountedSwipeables(panFactory)).toHaveLength(1);
+    expect(mountedSwipeables(panFactory)[0].config.enabled).not.toBe(false);
+  });
+
+  it('iOS 페이저 안에서는 페이저가 행 스와이프 팬의 실패를 기다린다 (blocksExternalGesture)', async () => {
+    Platform.OS = 'ios';
+    const panFactory = jest.spyOn(Gesture, 'Pan');
+    await render(
+      <TabPager index={0} onIndexChange={jest.fn()}>
+        <RoutineRow {...rowProps} />
+        <Text>이웃</Text>
+      </TabPager>,
+    );
+    const pager = getByGestureTestId('tab-pager-pan');
+    const mounted = mountedSwipeables(panFactory);
+    expect(mounted).toHaveLength(1);
+    expect(mounted[0].config.blocksHandlers).toContain(pager.handlerTag);
+    // 스크롤과 달리 페이저 실패를 기다리지는 않는다 — 기다리면 가로 스와이프가 영영 안 잡힌다.
+    expect(mounted[0].config.requireToFail ?? []).toEqual([]);
+  });
+
+  it('페이저 컨텍스트가 없으면(단독 화면·Android) 관계 없이 그대로 동작한다', async () => {
+    Platform.OS = 'android';
+    const panFactory = jest.spyOn(Gesture, 'Pan');
+    const { getByLabelText } = await render(
+      <TabPager index={0} onIndexChange={jest.fn()}>
+        <RoutineRow {...rowProps} />
+        <Text>이웃</Text>
+      </TabPager>,
+    );
+    const mounted = mountedSwipeables(panFactory);
+    expect(mounted).toHaveLength(1);
+    expect(mounted[0].config.blocksHandlers ?? []).toEqual([]);
+    expect(getByLabelText('물 1L 마시기 스와이프 삭제')).toBeTruthy();
   });
 });
 

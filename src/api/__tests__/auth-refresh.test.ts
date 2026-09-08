@@ -11,7 +11,6 @@ const realFetch = global.fetch;
 afterEach(async () => {
   global.fetch = realFetch;
   await clearSession();
-  jest.clearAllMocks();
 });
 
 const seedSession = async () => {

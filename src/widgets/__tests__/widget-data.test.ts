@@ -1,8 +1,10 @@
 import {
   buildWidgetSummary,
+  loadWidgetLastActive,
   loadWidgetRoomImage,
   loadWidgetSummary,
   loadWidgetTheme,
+  saveWidgetLastActive,
   saveWidgetRoomImage,
   saveWidgetSummary,
   saveWidgetTheme,
@@ -25,6 +27,7 @@ describe('widget-data (#604)', () => {
       done: 1,
       total: 5,
       streak: 7,
+      date: '2026-07-30',
       remaining: ['영양제', '산책', '독서'],
     });
     // 다른 날짜의 완료 기록은 오늘 완료로 치지 않는다.
@@ -33,6 +36,7 @@ describe('widget-data (#604)', () => {
       done: 0,
       total: 0,
       streak: 3,
+      date: '2026-07-30',
       remaining: [],
     });
   });
@@ -56,5 +60,11 @@ describe('widget-data (#604)', () => {
 
     await saveWidgetTheme(false);
     expect(await loadWidgetTheme()).toBe('light');
+  });
+
+  it('마지막 접속 시각 저장/로드 왕복 — 미저장은 null (#1122)', async () => {
+    expect(await loadWidgetLastActive()).toBeNull();
+    await saveWidgetLastActive('2026-09-08T03:00:00.000Z');
+    expect(await loadWidgetLastActive()).toBe('2026-09-08T03:00:00.000Z');
   });
 });

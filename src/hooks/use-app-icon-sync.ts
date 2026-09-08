@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { AppState, Platform } from 'react-native';
 
 import { getSessionUserId } from '@/api/auth';
+import { queryKeys } from '@/lib/query-keys';
 import { fetchAppIcon, recordAppActivity, type AppIconResponse } from '@/api/app-icon';
 import { useAuth } from '@/hooks/use-auth';
 import { onAppIconEvent } from '@/lib/app-icon-events';
@@ -36,7 +37,7 @@ export function useAppIconSync() {
       };
       reset();
       const sub = AppState.addEventListener('change', reset);
-      client.removeQueries({ queryKey: ['app-icon'] });
+      client.removeQueries({ queryKey: queryKeys.appIcon.all });
       return () => sub.remove();
     }
 
@@ -51,7 +52,7 @@ export function useAppIconSync() {
     const userId = getSessionUserId();
     const current = () => alive && getSessionUserId() === userId;
     const active = () => current() && AppState.currentState === 'active';
-    const key = ['app-icon', userId];
+    const key = queryKeys.appIcon.byUser(userId);
 
     async function accept(data: AppIconResponse, id: number, version: number) {
       if (!active() || id !== requestId) return;

@@ -59,6 +59,8 @@ export function useSettingsSurface({
   profile,
   stats,
   shortcuts,
+  onRoutinesImported,
+  onWalletChanged,
 }: {
   screen: Screen;
   setScreen: Dispatch<SetStateAction<Screen>>;
@@ -82,6 +84,10 @@ export function useSettingsSurface({
     attendancePending?: boolean;
     onOpenWalletHistory?: () => void;
   };
+  /** 캘린더 가져오기가 루틴·투두를 만든 뒤 — 나의 방 목록을 다시 받는다(없으면 당겨서 새로고침 전까지 안 보였다). */
+  onRoutinesImported?: () => void;
+  /** 초대 코드 보상이 들어온 뒤 — 지갑을 서버값으로 다시 받는다(없으면 헤더 코인이 그대로였다). */
+  onWalletChanged?: () => void;
 }) {
   const { themeId, setThemeId, mode: themeMode, setMode: setThemeMode, fontId, setFontId } = useBrandTheme(); // prettier-ignore
   const { show: toast } = useToast();
@@ -156,8 +162,17 @@ export function useSettingsSurface({
     loading: invitesLoading,
     loadError: invitesLoadError,
     load: loadInvites,
-    redeem: redeemInviteCode,
+    redeem: redeemInvite,
   } = useInvites();
+  // 보상이 실제로 들어왔을 때만 지갑 갱신 — 실패(null)·0코인은 그대로.
+  const redeemInviteCode = useCallback(
+    async (code: string) => {
+      const result = await redeemInvite(code);
+      if (result && result.rewardCoin > 0) onWalletChanged?.();
+      return result;
+    },
+    [redeemInvite, onWalletChanged],
+  );
   // 친구 초대 링크 (#667) — 친구 초대 화면을 열고 받은 코드 입력을 프리필.
   const [pendingFriendCode, setPendingFriendCode] = useState<string | null>(null);
   useEffect(
@@ -356,6 +371,8 @@ export function useSettingsSurface({
         onPreview={(ids) => void calendarImport.preview(ids)}
         onImport={async (selected) => {
           const out = await calendarImport.importSelected(selected);
+          // 하나라도 들어갔으면 나의 방 목록 재조회 — 가져온 루틴이 바로 보이게.
+          if (out.imported > 0) onRoutinesImported?.();
           toast(
             out.failed > 0
               ? `${out.imported}개를 가져왔어요. ${out.failed}개는 실패했어요.`

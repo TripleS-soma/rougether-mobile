@@ -90,6 +90,7 @@
   "jest": {
     "preset": "jest-expo",
     "testTimeout": 30000,
+    "clearMocks": true,
     "moduleNameMapper": {
       "^react-native-worklets(/.*)?$": "<rootDir>/jest/worklets-mock.js",
       "^react-native-reanimated$": "react-native-reanimated/mock",

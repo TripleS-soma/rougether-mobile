@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AttendanceDayCell } from '@/components/screens/sheets/attendance-day-cell';
 import { AttendanceTrophyReveal } from '@/components/screens/sheets/attendance-trophy-reveal';
@@ -32,7 +33,7 @@ function shortDate(iso?: string) {
 }
 
 /**
- * 연속 출석 시트 (#851) — 10칸 출석부 + 오늘 출석 버튼.
+ * 연속 출석 시트 (#851) — 출석부 + 오늘 출석 버튼.
  *
  * 출석 성공 연출은 **`newCheckIn`이 true일 때만** 재생한다. 같은 날 다시
  * 누르면 서버가 멱등 성공(`coinRewardAmount=0`)을 주는데, 거기에 도장·코인을
@@ -51,6 +52,7 @@ export function AttendanceSheet({
   onClose,
 }: AttendanceSheetProps) {
   const t = useTokens();
+  const insets = useSafeAreaInsets();
   const Typography = useTypography();
   const emph = useFontEmphasis();
 
@@ -139,7 +141,13 @@ export function AttendanceSheet({
       : '오늘 출석하기';
 
   return (
-    <BottomSheet visible={visible} onClose={onClose} cardStyle={styles.sheet}>
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      cardStyle={[
+        styles.sheet,
+        { backgroundColor: t.screen, paddingBottom: Spacing.three + insets.bottom },
+      ]}>
       <View style={styles.head} onLayout={measureOrigin(headOrigin)}>
         <Text style={[Typography.h3, styles.title, { color: t.text }]}>{status.title}</Text>
         <View
@@ -148,7 +156,7 @@ export function AttendanceSheet({
           <Icon name="coin" size={16} color={t.warning} />
         </View>
       </View>
-      <Text style={[Typography.supporting, { color: t.textMuted }]}>{period}</Text>
+      <Text style={[Typography.supporting, { color: t.text }]}>{period}</Text>
 
       <View style={styles.streakRow}>
         <CountUpText
@@ -228,7 +236,13 @@ export function AttendanceSheet({
 
 const styles = StyleSheet.create({
   creditReward: { padding: Spacing.three, gap: Spacing.two, borderRadius: Radius.lg },
-  sheet: { padding: Spacing.three, gap: Spacing.two },
+  sheet: {
+    padding: Spacing.three,
+    paddingTop: Spacing.four,
+    gap: Spacing.two,
+    borderTopLeftRadius: Radius.lg,
+    borderTopRightRadius: Radius.lg,
+  },
   head: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   title: { flex: 1 },
   walletPill: {

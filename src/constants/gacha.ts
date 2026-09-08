@@ -63,6 +63,13 @@ export function getCategoryGachas(machines: readonly GachaMachine[]): GachaMachi
  * equipment (#618) are unavailable. Category selection is stricter and uses
  * getCategoryGachas; recognizing an old themed box here does not make it a
  * category machine.
+ *
+ * 왜 `active` 필터와 별개로 남기나 — 2026-08-26 서버 실측에서 차단 대상인
+ * `character_gacha`·`character_accessories_accessories`도 **`active: true`로
+ * 내려왔다.** 그래서 #1124의 active 필터는 이 가드를 대체하지 못한다(중복이
+ * 아니다). 방 테마 12종은 `bakery_morning`·`calm_hanok`처럼 테마 이름이라
+ * 접두 `character`로만 거른다. 되돌리는 시점: #637을 켜거나 #618이 풀릴 때,
+ * 또는 서버가 `active: false`로 내려주기 시작할 때.
  */
 const BLOCKED_CODE_PREFIX = 'character';
 

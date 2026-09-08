@@ -157,7 +157,9 @@ export function AppRoot() {
           setSelectedGoalIds(goals);
           setOnboarded(true);
           // New users start with one routine; the legacy mission tour is replay-only.
-          setJustOnboarded(replaying);
+          // 미션 체인은 첫 온보딩·다시 보기 모두 시작한다(2026-09-08). 첫 온보딩은 추천 루틴
+          // 게이트(#1149)를 먼저 거치고, 게이트가 닫히면 셸이 마운트되며 배너가 뜬다.
+          setJustOnboarded(true);
           if (!replaying) {
             const progress: StarterRoutineProgress = {
               status: 'pending',

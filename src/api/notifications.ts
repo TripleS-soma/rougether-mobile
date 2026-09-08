@@ -1,8 +1,8 @@
 /** Notification (알림) endpoints. */
-import { apiGet, apiPatch } from './client';
+import { apiGet, apiGetPage, apiPatch } from './client';
 import { buildQuery } from './http';
 import type {
-  NotificationListResponse,
+  NotificationItem,
   NotificationSettingResponse,
   NotificationSettingUpdateRequest,
 } from './types';
@@ -12,7 +12,7 @@ import type {
  * scroll: first page without cursor, then pass the response's nextCursor).
  */
 export function fetchNotifications(cursor?: number, size?: number) {
-  return apiGet<NotificationListResponse>(`/notifications${buildQuery({ cursor, size })}`);
+  return apiGetPage<NotificationItem>(`/notifications${buildQuery({ cursor, size })}`);
 }
 
 /** PATCH /notifications/read-all — mark every unread notification read. */

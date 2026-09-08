@@ -98,6 +98,61 @@ export async function apiGetList<T>(path: string, options?: RequestOptions): Pro
   return data.items ?? [];
 }
 
+/**
+ * 서버 페이지 응답의 두 모양 (spec `api.md` 페이지네이션):
+ * - offset: `{ items, page, size, totalElements }` (집 탐색, 재화 내역)
+ * - cursor: `{ items, nextCursor, hasNext }` (알림, 방명록)
+ */
+type PageEnvelope<T> = {
+  items?: T[];
+  page?: number;
+  size?: number;
+  totalElements?: number;
+  nextCursor?: number;
+  hasNext?: boolean;
+};
+
+/** `apiGetPage`가 돌려주는 정규화된 한 페이지. */
+export type Page<T> = {
+  items: T[];
+  /** offset 페이지의 전체 건수 — cursor 페이지에는 없다. */
+  totalElements?: number;
+  /** cursor 페이지의 다음 커서 — 마지막 페이지·offset 페이지에는 없다. */
+  nextCursor?: number;
+  /** 다음 페이지가 남았는지. 아래 `hasNextOf` 참고. */
+  hasNext: boolean;
+};
+
+/**
+ * cursor 페이지는 서버의 `hasNext`를 그대로, offset 페이지는 서버가 되돌려준
+ * `page`·`size`·`totalElements`로 `(page + 1) * size < totalElements`.
+ * 셋 중 하나라도 없으면(서버가 안 준 경우) false — 추측으로 무한 스크롤을
+ * 계속 돌리지 않는다.
+ */
+function hasNextOf(res: PageEnvelope<unknown>): boolean {
+  if (typeof res.hasNext === 'boolean') return res.hasNext;
+  const { page, size, totalElements } = res;
+  if (typeof page === 'number' && typeof size === 'number' && typeof totalElements === 'number') {
+    return (page + 1) * size < totalElements;
+  }
+  return false;
+}
+
+/**
+ * GET a paged endpoint and normalise it to `Page<T>` — `items`는 항상 배열,
+ * `hasNext`는 항상 boolean. 호출부마다 `res.items ?? []`·`!!res.hasNext`·
+ * totalElements 산술을 따로 하던 것을 한곳으로.
+ */
+export async function apiGetPage<T>(path: string, options?: RequestOptions): Promise<Page<T>> {
+  const res = await apiGet<PageEnvelope<T>>(path, options);
+  return {
+    items: res.items ?? [],
+    totalElements: res.totalElements,
+    nextCursor: res.nextCursor,
+    hasNext: hasNextOf(res),
+  };
+}
+
 export function apiPost<T>(path: string, body?: unknown, options?: RequestOptions): Promise<T> {
   return request<T>('POST', path, body, options);
 }
@@ -112,4 +167,16 @@ export function apiPatch<T>(path: string, body?: unknown, options?: RequestOptio
 
 export function apiDelete<T>(path: string, body?: unknown, options?: RequestOptions): Promise<T> {
   return request<T>('DELETE', path, body, options);
+}
+
+/**
+ * POST a multipart body (파일 업로드 — 버그 제보 스크린샷 #496, AI 가구 사진).
+ *
+ * 다른 메서드와 같은 경로를 탄다: bearer 주입, 401 갱신 후 1회 재요청,
+ * `expectedStatuses`, `api_error` 계측. 다른 점은 **`Content-Type`을 직접
+ * 두지 않는다**는 것 — `rawRequest`가 FormData를 손대지 않고 넘기므로 fetch가
+ * multipart boundary를 스스로 붙인다(직접 지정하면 boundary가 빠져 400).
+ */
+export function apiUpload<T>(path: string, form: FormData, options?: RequestOptions): Promise<T> {
+  return request<T>('POST', path, form, options);
 }

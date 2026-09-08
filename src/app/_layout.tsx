@@ -19,7 +19,11 @@ import { initAnalytics } from '@/lib/analytics';
 import { initAppOpenTracking } from '@/lib/app-open';
 import { initErrorReporting } from '@/lib/error-reporting';
 import { initPushDisplay } from '@/lib/push-events';
-import { createQueryClient, subscribeAppStateFocus } from '@/lib/query-client';
+import {
+  bindSessionCacheReset,
+  createQueryClient,
+  subscribeAppStateFocus,
+} from '@/lib/query-client';
 
 // 포그라운드 푸시 표시 + Android 채널 (#405) — 앱 시작 시 1회, 웹은 no-op.
 initPushDisplay();
@@ -67,6 +71,8 @@ export default function RootLayout() {
   const [queryClient] = useState(createQueryClient);
   // RN 포커스 감지 — 없으면 refetchOnWindowFocus가 네이티브에서 영영 안 돈다.
   useEffect(subscribeAppStateFocus, []);
+  // 세션이 지워지면 캐시도 — 계정 전환 시 이전 사용자 데이터가 남지 않게.
+  useEffect(() => bindSessionCacheReset(queryClient), [queryClient]);
   return (
     // RNGH 제스처(방 꾸미기 자유 배치 #327 등)의 루트 컨텍스트.
     <GestureHandlerRootView style={styles.root} onTouchStart={notifyAppForegroundInteraction}>

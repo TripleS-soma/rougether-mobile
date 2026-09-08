@@ -6,7 +6,6 @@ const realFetch = global.fetch;
 
 afterEach(() => {
   global.fetch = realFetch;
-  jest.clearAllMocks();
 });
 
 describe('fetchGachas', () => {

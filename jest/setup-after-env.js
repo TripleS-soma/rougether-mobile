@@ -12,3 +12,8 @@ jest.mock(
   'react-native-safe-area-context',
   () => require('react-native-safe-area-context/jest/mock').default,
 );
+
+// 테스트 간 AsyncStorage 격리 — 전에는 파일마다 beforeEach(AsyncStorage.clear())를
+// 손으로 붙였고(15개 파일), 안 붙인 파일은 앞 테스트의 저장값을 물려받았다.
+// 각 테스트를 빈 저장소에서 시작시킨다. 테스트 중간의 의도적 clear는 그대로 둔다.
+beforeEach(() => require('@react-native-async-storage/async-storage').clear());

@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 
-import { apiGet, apiGetList, apiPost } from '@/api/client';
+import { apiGet, apiGetList, apiUpload } from '@/api/client';
 
 export type FurniturePhoto = { uri: string; name: string; type: string };
 export type FurnitureCreditBalance = { available: number; reserved: number };
@@ -26,5 +26,5 @@ export async function createFurniture(photo: FurniturePhoto, requestId: string) 
   } else {
     form.append('photo', photo as unknown as Blob);
   }
-  return apiPost<FurnitureJob>('/me/furniture-generations', form);
+  return apiUpload<FurnitureJob>('/me/furniture-generations', form);
 }

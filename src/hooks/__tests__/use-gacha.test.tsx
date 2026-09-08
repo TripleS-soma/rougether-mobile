@@ -1,13 +1,10 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useGacha } from '@/hooks/use-gacha';
+import { useMyCharacters } from '@/hooks/use-my-characters';
+import { useShop } from '@/hooks/use-shop';
+import { jsonRes as res } from '@/test-utils/fetch';
 import { queryWrapper } from '@/test-utils/query-wrapper';
-
-const res = (body: unknown) => ({
-  ok: true,
-  status: 200,
-  text: async () => JSON.stringify(body),
-});
 
 const MACHINES = {
   items: [
@@ -18,8 +15,16 @@ const MACHINES = {
 const realFetch = global.fetch;
 afterEach(() => {
   global.fetch = realFetch;
-  jest.clearAllMocks();
 });
+
+/**
+ * react-query는 뮤테이션 결과 알림을 `notifyManager`로 배칭한다(setTimeout 0) —
+ * act 안의 await만으로는 안 비워져 마지막 단언 뒤에 렌더가 새면 act 경고가 난다.
+ */
+const flushQueryNotifications = () =>
+  act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
 
 describe('useGacha', () => {
   it('loads the machine list on mount', async () => {
@@ -84,6 +89,7 @@ describe('useGacha', () => {
       await act(async () => {
         expect(await result.current.draw(result.current.gachas[0].id, count)).toEqual(rewards);
       });
+      await flushQueryNotifications();
       expect(global.fetch).toHaveBeenCalledWith(
         expect.stringMatching(/\/gacha\/81\/draw$/),
         expect.objectContaining({ method: 'POST', body: JSON.stringify({ count }) }),
@@ -116,6 +122,7 @@ describe('useGacha', () => {
     await act(async () => {
       await result.current.draw(81);
     });
+    await flushQueryNotifications();
     expect(drawCalls()).toHaveLength(2);
   });
 
@@ -134,6 +141,7 @@ describe('useGacha', () => {
     await act(async () => {
       expect(await result.current.draw(81)).toBeNull();
     });
+    await flushQueryNotifications();
     expect(global.fetch).toHaveBeenCalledTimes(3);
   });
 
@@ -159,9 +167,105 @@ describe('useGacha', () => {
     await act(async () => {
       await initial.draw(81);
     });
+    await flushQueryNotifications();
     expect(latestCallback).toHaveBeenCalledWith({ coin: 90, diamond: 0 });
     expect(originalCallback).not.toHaveBeenCalled();
     expect(result.current.draw).toBe(initial.draw);
     expect(result.current.retry).toBe(initial.retry);
+  });
+
+  /**
+   * 뽑기 후 재조회는 셸이 아니라 훅이 한다 (#1027) — 셸의 `refreshOwned()`·
+   * `reloadMyCharacters()` 두 줄이 없어도 인벤토리·캐릭터 쿼리가 다시 받는다.
+   */
+  describe('뽑기 성공 → 인벤토리·캐릭터 쿼리 무효화 (#1027)', () => {
+    const ITEMS = {
+      items: [
+        { id: 32, name: '새 벽지', categoryCode: 'wallpaper', priceAmount: 100, owned: false },
+      ],
+    };
+    const CHARACTERS = {
+      items: [{ userCharacterId: 11, characterId: 1, code: 'cat', name: '고양이', selected: true }],
+    };
+    const inventoryCalls = () =>
+      (global.fetch as jest.Mock).mock.calls.filter(([url]) => url.includes('/me/items'));
+    const characterCalls = () =>
+      (global.fetch as jest.Mock).mock.calls.filter(([url]) => url.includes('/me/characters'));
+
+    const setUp = (results: unknown[]) => {
+      let drawn = false;
+      global.fetch = jest.fn(async (url: string) => {
+        if (url.endsWith('/draw')) {
+          drawn = true;
+          return res({ results });
+        }
+        if (url.includes('/me/items'))
+          return res({ items: drawn ? [{ itemId: 32, userItemId: 320 }] : [] });
+        if (url.includes('/me/characters'))
+          return res(
+            drawn
+              ? { items: [...CHARACTERS.items, { userCharacterId: 12, characterId: 4, code: 'panda', name: '판다', selected: false }] } // prettier-ignore
+              : CHARACTERS,
+          );
+        if (url.includes('/rooms/me')) return res({});
+        if (url.includes('/items')) return res(ITEMS);
+        return res(MACHINES);
+      }) as unknown as typeof fetch;
+    };
+    // 셸처럼 세 훅이 같은 캐시를 본다 — 셸은 뽑기 결과를 넘길 뿐 아무것도 재조회하지 않는다.
+    const useShell = () => ({
+      gacha: useGacha(jest.fn()),
+      shop: useShop(jest.fn()),
+      characters: useMyCharacters(),
+    });
+    const settled = async (result: { current: ReturnType<typeof useShell> }) => {
+      await waitFor(() => expect(result.current.gacha.loading).toBe(false));
+      await waitFor(() => expect(result.current.shop.loading).toBe(false));
+      await waitFor(() => expect(result.current.characters.characters).toHaveLength(1));
+    };
+
+    it('아이템을 뽑으면 인벤토리만 다시 받아 보유중이 된다', async () => {
+      setUp([{ rewardType: 'ITEM', itemId: 32 }]);
+      const { result } = await renderHook(useShell, { wrapper: queryWrapper() });
+      await settled(result);
+      expect(result.current.shop.ownedIds).toEqual([]);
+      expect(inventoryCalls()).toHaveLength(1);
+
+      await act(async () => {
+        await result.current.gacha.draw(81);
+      });
+
+      await waitFor(() => expect(result.current.shop.ownedIds).toEqual(['32']));
+      expect(inventoryCalls()).toHaveLength(2);
+      expect(characterCalls()).toHaveLength(1);
+    });
+
+    it('캐릭터를 뽑으면 보유 캐릭터를 다시 받아 피커에 뜬다', async () => {
+      setUp([{ rewardType: 'CHARACTER', characterId: 4 }]);
+      const { result } = await renderHook(useShell, { wrapper: queryWrapper() });
+      await settled(result);
+
+      await act(async () => {
+        await result.current.gacha.draw(81);
+      });
+
+      await waitFor(() => expect(result.current.characters.characters).toHaveLength(2));
+      expect(characterCalls()).toHaveLength(2);
+      expect(inventoryCalls()).toHaveLength(1);
+    });
+
+    it('중복이라 재화로 바뀐 보상은 아무것도 다시 받지 않는다', async () => {
+      setUp([{ rewardType: 'ITEM', itemId: 32, converted: true }]);
+      const { result } = await renderHook(useShell, { wrapper: queryWrapper() });
+      await settled(result);
+
+      await act(async () => {
+        await result.current.gacha.draw(81);
+      });
+      await flushQueryNotifications();
+
+      expect(inventoryCalls()).toHaveLength(1);
+      expect(characterCalls()).toHaveLength(1);
+    });
   });
 });

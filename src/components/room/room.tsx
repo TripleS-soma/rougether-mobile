@@ -24,7 +24,6 @@ import {
 } from '@/resources/furniture';
 
 /** 자유 배치 아이템의 기본 폭 — 방 폭 대비 비율. */
-export const FREE_ITEM_WIDTH = ROOM_RENDER_CONTRACT.furniture.baseWidth;
 
 /**
  * Region a decor-mode tap can target — 표면 밴드 2종뿐이다 (#925).
@@ -337,12 +336,18 @@ export const Room = memo(function Room({
           />
         </Pressable>
       ) : (
-        <CharacterAvatar
-          characterId={characterId}
-          frames={characterFrames}
-          style={styles.character}
-          sharp={fill}
-        />
+        // 인터랙티브 분기와 같은 두 겹 — 자리 박스(계약 좌표)에 아바타를 꽉 채운다.
+        // 아바타에 자리 스타일을 직접 주면 CharacterAvatar의 기본 96px 높이가 살아남아
+        // 폭은 42%·높이는 96px인 박스에 contain으로 들어가, 작은 방(집 좌석)에선
+        // 캐릭터가 러그 위로 떠 보이고(#1194) 큰 방(친구 방)에선 나의 방보다 작았다.
+        <View style={styles.character} pointerEvents="none">
+          <CharacterAvatar
+            characterId={characterId}
+            frames={characterFrames}
+            style={styles.characterFill}
+            sharp={fill}
+          />
+        </View>
       )}
       {/* 장기 미접속 거미줄 (#829) — 캐릭터·가구 위, 왼쪽 위 모서리.
           청소 탭은 다음 단계(#830·#831)라 지금은 표시 전용이다. */}

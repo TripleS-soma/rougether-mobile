@@ -26,7 +26,6 @@ const seed = (extra: Partial<{ completions: number; lastRequestedAt: number | nu
 describe('useStoreReview', () => {
   beforeEach(async () => {
     jest.useFakeTimers();
-    await AsyncStorage.clear();
     jest.mocked(StoreReview.requestReview).mockClear();
     jest.mocked(StoreReview.hasAction).mockClear().mockResolvedValue(true);
     jest.mocked(track).mockClear();

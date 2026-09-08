@@ -27,29 +27,29 @@ export const Spacing = {
   six: 64,
 } as const;
 
+/**
+ * 소셜 로그인 버튼의 벤더 지정색 — 각 브랜드 가이드가 정한 값이라 테마를 타지 않는다
+ * (카카오 노랑, 애플 검정, 구글 흰 바탕 + 4색 G). 토큰이 아니라 "규정색"이다.
+ */
+export const OAuthBrand = {
+  kakao: { bg: '#FEE500', fg: '#191919' },
+  apple: { bg: '#000000', fg: '#FFFFFF' },
+  google: { bg: '#FFFFFF', fg: '#4A403A' },
+  googleG: { red: '#EA4335', blue: '#4285F4', yellow: '#FBBC05', green: '#34A853' },
+} as const;
+
 /** Gacha stage/art geometry; animation transforms are relative to these sizes. */
 export const GachaStage = {
+  /** 스토리북 무대의 최대 한 변 — 좁은 화면에선 폭·높이에 맞춰 줄어든다. */
   storybook: 360,
-  size: 240,
-  halo: 200,
+  /** 다중 뽑기 결과 그리드의 상자 한 칸. */
   box: 120,
-  boxArt: 96,
-  orbit: 92,
-  card: 104,
-  cardHeight: 208,
-  hero: 240,
-  art: 68,
-  heroArt: 150,
-  particle: 8,
 } as const;
 
 /** Fixed ink/paper palette paired with the illustrated forest reward stage. */
 export const GachaSceneColors = {
   ink: '#41472F',
-  muted: '#67734F',
   paper: '#FFFAEC',
-  leaf: '#B5C98A',
-  onLeaf: '#343D24',
   gold: '#D99D46',
   glow: '#FFF0AD',
   veil: 'rgba(255,250,236,0.12)',

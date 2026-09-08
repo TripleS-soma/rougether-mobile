@@ -3,7 +3,6 @@ import { registerDeviceToken, unregisterDeviceToken } from '@/api/device-tokens'
 const realFetch = global.fetch;
 afterEach(() => {
   global.fetch = realFetch;
-  jest.clearAllMocks();
 });
 
 const ok = { ok: true, status: 200, text: async () => '{}' };

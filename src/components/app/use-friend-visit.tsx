@@ -3,7 +3,7 @@ import { useCallback, useMemo, useState, type Dispatch, type SetStateAction } fr
 import { type Screen } from '@/components/app/navigation';
 import { FriendRoomScreen, type CheerType } from '@/components/screens/friend-room-screen';
 import type { CharacterId } from '@/constants/characters';
-import { type House, type VisitedFriend } from '@/components/screens/house-screen';
+import { type House, type VisitedFriend } from '@/components/screens/house/types';
 import { useToast } from '@/components/ui/toast';
 import { useFriendRoom } from '@/hooks/use-friend-room';
 import { useGuestbook } from '@/hooks/use-guestbook';

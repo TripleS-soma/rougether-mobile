@@ -76,7 +76,9 @@ jobs:
             ARCHS=arm64 ONLY_ACTIVE_ARCH=YES CODE_SIGNING_ALLOWED=NO \
             > release-smoke/build.log 2>&1
       - name: Install and launch Release app
-        timeout-minutes: 3
+        # 첫 설치·기동은 시뮬레이터 콜드 스타트라 3분을 넘기는 일이 잦았다(#1124 등 —
+        # 크래시 흔적 없이 타임아웃만). 빌드 55분에 비하면 10분은 싸다.
+        timeout-minutes: 10
         run: |
           set -x
           xcrun simctl install "$SIMULATOR_UDID" "$RUNNER_TEMP/rougether-release/Build/Products/Release-iphonesimulator/Rougether.app"

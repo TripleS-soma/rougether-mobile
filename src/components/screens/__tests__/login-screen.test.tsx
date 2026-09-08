@@ -2,6 +2,7 @@ import { fireEvent, render } from '@testing-library/react-native';
 
 import { LoginScreen } from '@/components/screens/login-screen';
 import { ToastProvider } from '@/components/ui/toast';
+import { flattenStyle } from '@/test-utils/style';
 
 describe('LoginScreen', () => {
   /**
@@ -13,11 +14,8 @@ describe('LoginScreen', () => {
   it('최근 로그인 배지는 절대 배치가 아니고 라벨이 남은 폭을 차지한다 (#835)', async () => {
     const { getByText } = await render(<LoginScreen lastLoginProvider="kakao" />);
 
-    const flatten = (style: unknown): Record<string, unknown> =>
-      Object.assign({}, ...[style].flat(Infinity).filter(Boolean));
-
-    const badge = flatten(getByText('최근 로그인').props.style);
-    const label = flatten(getByText('Kakao로 시작하기').props.style);
+    const badge = flattenStyle(getByText('최근 로그인').props.style);
+    const label = flattenStyle(getByText('Kakao로 시작하기').props.style);
 
     expect(badge.position).toBeUndefined();
     expect(label.flex).toBe(1);

@@ -7,12 +7,7 @@ import {
   withMyCharacter,
 } from '@/hooks/use-member-room-previews';
 import type { House, MemberRoomPreview } from '@/components/screens/house-screen';
-
-const res = (body: unknown) => ({
-  ok: true,
-  status: 200,
-  text: async () => JSON.stringify(body),
-});
+import { jsonRes as res } from '@/test-utils/fetch';
 
 const CATALOGUE: ShopCatalogue = {
   furniture: [
@@ -27,7 +22,6 @@ const CATALOGUE: ShopCatalogue = {
 const realFetch = global.fetch;
 afterEach(() => {
   global.fetch = realFetch;
-  jest.clearAllMocks();
 });
 
 describe('useMemberRoomPreviews', () => {
