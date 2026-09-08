@@ -99,6 +99,9 @@ export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps
   const prevWidthRef = useRef(0);
   useEffect(() => {
     if (width === 0) return;
+    // 외부 인덱스 변경(탭 버튼·스크럽)은 진행 중이던 스와이프를 무효로 한다 —
+    // 취소된 팬의 onFinalize가 누락돼도 래치가 남지 않게.
+    swiping.value = false;
     const widthChanged = prevWidthRef.current !== width;
     prevWidthRef.current = width;
     if (settledRef.current === index) {
@@ -114,7 +117,7 @@ export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps
         if (finished) revealAll.value = false;
       },
     );
-  }, [index, width, tx, revealAll]);
+  }, [index, width, tx, revealAll, swiping]);
 
   commitRef.current = (target: number) => {
     settledRef.current = target;
@@ -136,6 +139,11 @@ export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps
         gesture
           .onTouchesDown((e, mgr) => {
             'worklet';
+            // 새 터치는 언제나 깨끗한 상태에서 — `swiping`은 onFinalize에서만 풀리는데,
+            // iOS에서 활성 팬이 형제 디텍터의 재부착·취소로 드롭되면 onFinalize가 JS에
+            // 닿지 않아 true로 굳고, 그 뒤 수동 활성화(아래 onTouchesMove)가 영영
+            // 건너뛰어져 페이저가 죽는다(iOS 전용 증상, 2026-09-08 분석).
+            swiping.value = false;
             if (lock?.value || (arbitrateScroll && e.allTouches.length !== 1)) {
               mgr.fail();
               return;
@@ -197,6 +205,8 @@ export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps
               },
             );
             if (success) runOnJS(commit)(target);
+            // 끝났으면 래치도 푼다 — onFinalize가 안 오는 경로의 보험.
+            swiping.value = false;
             // Only the completed animation hides neighbors. Finalizing a cancelled
             // drag (or a failed pre-activation touch) must not hide them early.
           })
