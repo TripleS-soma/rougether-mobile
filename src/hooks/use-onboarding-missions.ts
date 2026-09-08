@@ -7,8 +7,7 @@ import { track } from '@/lib/analytics';
  * 다음 시작에 처음부터). */
 const STORE_KEY = 'rougether.onboarding-missions.v1';
 
-export type OnboardingMissionStepId =
-  'register-routine' | 'first-draw' | 'place-furniture' | 'invite-house';
+export type OnboardingMissionStepId = 'first-draw' | 'place-furniture' | 'invite-house';
 
 export type OnboardingMissionStep = {
   id: OnboardingMissionStepId;
@@ -18,12 +17,9 @@ export type OnboardingMissionStep = {
 };
 
 /** 온보딩 미션 체인 4단계 (#571) — 순서대로만 진행된다. */
+// 첫 루틴 등록 단계는 뺐다(2026-09-08) — 온보딩 직후의 관심사 추천 루틴 게이트(#1149)가
+// 그 역할을 하므로 중복이었다. 체인은 뽑기 → 방 꾸미기 → 친구 초대 3단계.
 export const ONBOARDING_MISSION_STEPS: OnboardingMissionStep[] = [
-  {
-    id: 'register-routine',
-    label: '첫 루틴 등록하기',
-    hint: '추천 루틴에서 골라 담으면 바로 끝나요',
-  },
   { id: 'first-draw', label: '뽑기 1회 해보기', hint: '뽑기에서 코인으로 한 번 뽑아요' },
   {
     id: 'place-furniture',
