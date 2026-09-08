@@ -722,11 +722,15 @@ export function RoomDecorScreen({
             ) : null}
             {/* 캐릭터는 항상 가구 앞 — 오버레이(드래그 중 z 9999)보다 위 전용 레이어. */}
             <View pointerEvents="none" style={styles.characterLayer}>
-              <CharacterAvatar
-                characterId={characterId}
-                frames={characterFrames}
-                style={styles.characterFigure}
-              />
+              {/* Room과 같은 두 겹(자리 박스 + 꽉 채운 아바타) — 아바타에 자리 스타일을
+                  직접 주면 기본 96px 높이가 남아 나의 방보다 작게 그려졌다. */}
+              <View style={styles.characterFigure}>
+                <CharacterAvatar
+                  characterId={characterId}
+                  frames={characterFrames}
+                  style={styles.characterFill}
+                />
+              </View>
             </View>
             {/* 선택 툴바 (#333) — 캔버스 위 플로팅, 캐릭터 레이어보다도 위.
                 벽 쪽(상반부) 가구를 가리지 않게 하단으로 회피하고(#608), 점프가
@@ -1672,6 +1676,7 @@ const styles = StyleSheet.create({
     width: roomPercent(ROOM_RENDER_CONTRACT.character.width),
     aspectRatio: ROOM_RENDER_CONTRACT.character.aspectRatio,
   },
+  characterFill: { width: '100%', height: '100%' },
   filterRow: {
     flexDirection: 'row',
     alignItems: 'center',
