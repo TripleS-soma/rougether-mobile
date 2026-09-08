@@ -123,9 +123,11 @@ export function groupCalendarClientRoutines({
 }
 
 /**
- * 달력 서버 날짜(GET /calendar)의 카테고리 그룹. Server days group by the
- * record-time categoryId (kept in server order: categoryId asc, 미분류 last);
- * deleted categories resolve via `catMeta`. `dayItems`가 없으면(로딩 중)
+ * 달력 서버 날짜(GET /calendar)의 카테고리 그룹. 기록 당시 categoryId로 묶고,
+ * 그룹 순서는 **현재 카테고리의 사용자 정렬**(`categories` 순, 방 탭·오늘과 동일)을
+ * 따른다 — 종전엔 서버 응답 순서(categoryId asc)라 카테고리 순서를 바꿔도 과거·
+ * 미래 날짜에는 반영되지 않았다(2026-09-08). 삭제된 카테고리(`catMeta`로 이름을
+ * 되찾음)는 그 뒤에 등장 순서대로, 미분류는 맨 뒤. `dayItems`가 없으면(로딩 중)
  * undefined.
  */
 export function groupCalendarServerItems<T extends { category?: string; completed: boolean }>({
@@ -147,15 +149,22 @@ export function groupCalendarServerItems<T extends { category?: string; complete
     const key = item.category ?? '';
     byCat.set(key, [...(byCat.get(key) ?? []), item]);
   }
-  const groups = Array.from(byCat, ([key, items]) => ({
+  const toGroup = (key: string) => ({
     meta: catMeta.find((c) => c.id === key) ?? UNCATEGORIZED_META,
-    items: sinkDone(items, (i) => i.completed),
-  }));
-  // 그 날 항목이 없는 현재 카테고리도 헤더를 렌더 — +로 할 일 추가 (#323).
+    items: sinkDone(byCat.get(key) ?? [], (i) => i.completed),
+  });
+  const groups: CategoryGroup<T>[] = [];
+  // 1) 현재 카테고리를 사용자 순서대로 — 그 날 항목이 없어도 퀵애드 가능하면 빈 헤더 (#323).
   for (const cat of categories) {
-    if (canQuickAdd(cat.id) && !groups.some((g) => g.meta.id === cat.id)) {
-      groups.push({ meta: cat, items: [] });
-    }
+    if (byCat.has(cat.id))
+      groups.push({ meta: cat, items: sinkDone(byCat.get(cat.id)!, (i) => i.completed) });
+    else if (canQuickAdd(cat.id)) groups.push({ meta: cat, items: [] });
   }
+  // 2) 현재에 없는(삭제된) 카테고리는 등장 순서대로, 3) 미분류('')는 맨 뒤.
+  const current = new Set(categories.map((c) => c.id));
+  for (const key of byCat.keys()) {
+    if (key !== '' && !current.has(key)) groups.push(toGroup(key));
+  }
+  if (byCat.has('')) groups.push(toGroup(''));
   return groups;
 }
