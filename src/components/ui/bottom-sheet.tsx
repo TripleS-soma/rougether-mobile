@@ -116,7 +116,7 @@ export function SheetDragExclude({
   };
   return (
     <View
-      style={style}
+      style={[styles.exclude, style]}
       testID={testID}
       onTouchStart={mark(true)}
       onTouchEnd={mark(false)}
@@ -330,6 +330,10 @@ export function BottomSheet({
 }
 
 const styles = StyleSheet.create({
+  exclude: {
+    flexShrink: 1,
+    minHeight: 0,
+  },
   gestureRoot: { flex: 1 },
   overlay: {
     ...StyleSheet.absoluteFillObject,
