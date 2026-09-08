@@ -34,6 +34,7 @@ import { screenView, track } from '@/lib/analytics';
 import { todayIso } from '@/utils/datetime';
 import { refreshWidgets } from '@/widgets/rougether-widgets';
 import { buildWidgetSummary, saveWidgetSummary, saveWidgetTheme } from '@/widgets/widget-data';
+import { useWidgetPresence } from '@/hooks/use-widget-presence';
 import { useAttendance } from '@/hooks/use-attendance';
 import { useWalletHistory } from '@/hooks/use-wallet-history';
 import { useGacha } from '@/hooks/use-gacha';
@@ -412,6 +413,9 @@ export function AppShell({
     if (Platform.OS !== 'android' && Platform.OS !== 'ios') return;
     void saveWidgetTheme(resolvedScheme === 'dark').then(refreshWidgets);
   }, [resolvedScheme]);
+
+  // 마지막 접속 기록 (#1122) — 위젯이 미접속 일수로 표정을 바꾼다.
+  useWidgetPresence();
 
   const widgetSummarySigRef = useRef('');
   useEffect(() => {

@@ -21,14 +21,30 @@ import {
 
 import { DarkThemes, Themes } from '@/constants/theme';
 import { WIDGET_OPEN_URL } from '@/lib/app-open';
+import { todayIso } from '@/utils/datetime';
 import {
+  loadWidgetLastActive,
   loadWidgetRoomImage,
   loadWidgetSummary,
   loadWidgetTheme,
   type WidgetSummary,
 } from '@/widgets/widget-data';
+import { resolveWidgetMood, WIDGET_FACE_IMAGES, type WidgetMood } from '@/widgets/widget-mood';
 
 const EMPTY_SUMMARY: WidgetSummary = { done: 0, total: 0, streak: 0, remaining: [] };
+const NEUTRAL_MOOD: WidgetMood = { face: 'neutral' };
+
+/** 캐릭터 얼굴 (#1122) — 헤더 왼쪽 🐾 자리. 아이콘 아트라 모서리를 둥글려 칩처럼. */
+function FaceWidget({ mood, size }: { mood: WidgetMood; size: number }) {
+  return (
+    <ImageWidget
+      image={WIDGET_FACE_IMAGES[mood.face]}
+      imageWidth={size}
+      imageHeight={size}
+      radius={Math.round(size * 0.3)}
+    />
+  );
+}
 
 /**
  * 위젯 껍데기 모서리 반경 (#746). 방 캡처는 껍데기에 딱 붙어(패딩 0) 그려지므로
@@ -47,9 +63,24 @@ const palette = (dark: boolean): Palette => (dark ? DarkThemes.cozy : Themes.coz
  * 맞춘 컴팩트 헤더(라벨 생략)이고, 제목은 flex:1 폭 제약 위에서 truncate가
  * 실제로 동작한다(제약 없이는 긴 제목이 레이아웃을 밀어냈다).
  */
-export function TodayListWidget({ summary, dark }: { summary: WidgetSummary; dark: boolean }) {
+export function TodayListWidget({
+  summary,
+  dark,
+  mood = NEUTRAL_MOOD,
+}: {
+  summary: WidgetSummary;
+  dark: boolean;
+  /** 표정·문구 (#1122) — 태스크 핸들러가 지금 시각으로 계산해 넘긴다. */
+  mood?: WidgetMood;
+}) {
   const t = palette(dark);
   const progress = summary.total > 0 ? summary.done / summary.total : 0;
+  const allDone = summary.total > 0 && summary.remaining.length === 0;
+  // 표정 문구의 색 — 걱정·슬픔은 눈에 띄게, 기쁨은 브랜드색.
+  const moodColor =
+    mood.face === 'worried' || mood.face === 'sad' || mood.face === 'crying'
+      ? t.warningText
+      : t.primaryText;
   return (
     <FlexWidget
       clickAction="OPEN_URI"
@@ -63,7 +94,7 @@ export function TodayListWidget({ summary, dark }: { summary: WidgetSummary; dar
         flexDirection: 'column',
       }}>
       <FlexWidget style={{ flexDirection: 'row', alignItems: 'center', width: 'match_parent' }}>
-        <TextWidget text="🐾" style={{ fontSize: 12 }} />
+        <FaceWidget mood={mood} size={18} />
         <FlexWidget style={{ flex: 1 }} />
         {summary.streak > 0 ? (
           <TextWidget
@@ -97,6 +128,16 @@ export function TodayListWidget({ summary, dark }: { summary: WidgetSummary; dar
         <FlexWidget style={{ flex: Math.round((1 - progress) * 100), height: 6 }} />
       </FlexWidget>
       <FlexWidget style={{ height: 4 }} />
+      {/* 표정 문구 (#1122) — 다 한 날은 축하 한 줄이 목록을 대신하고, 걱정·미접속은
+          목록 위에 한 줄 얹는다. 평소(neutral)엔 없다. */}
+      {mood.message && !allDone ? (
+        <TextWidget
+          text={mood.message}
+          truncate="END"
+          maxLines={1}
+          style={{ fontSize: 11, fontWeight: '700', color: moodColor as `#${string}` }}
+        />
+      ) : null}
       {summary.total === 0 ? (
         <TextWidget
           text="오늘 예정된 루틴이 없어요"
@@ -104,9 +145,9 @@ export function TodayListWidget({ summary, dark }: { summary: WidgetSummary; dar
           maxLines={2}
           style={{ fontSize: 12, color: t.textMuted as `#${string}` }}
         />
-      ) : summary.remaining.length === 0 ? (
+      ) : allDone ? (
         <TextWidget
-          text="모두 완료했어요! 🎉"
+          text={mood.message ?? '모두 완료했어요! 🎉'}
           truncate="END"
           maxLines={2}
           style={{ fontSize: 12, fontWeight: '700', color: t.primaryText as `#${string}` }}
@@ -153,10 +194,12 @@ export function MyRoomWidget({
   summary,
   roomImage,
   dark,
+  mood = NEUTRAL_MOOD,
 }: {
   summary: WidgetSummary;
   roomImage: string | null;
   dark: boolean;
+  mood?: WidgetMood;
 }) {
   const t = palette(dark);
   return (
@@ -215,8 +258,9 @@ export function MyRoomWidget({
           paddingHorizontal: 12,
           paddingVertical: 7,
         }}>
+        <FaceWidget mood={mood} size={16} />
         <TextWidget
-          text={`🐾 ${summary.done}/${summary.total}`}
+          text={` ${summary.done}/${summary.total}`}
           style={{ fontSize: 12, fontWeight: '700', color: t.primaryText as `#${string}` }}
         />
         <FlexWidget style={{ flex: 1 }} />
@@ -238,11 +282,18 @@ async function buildWidget(widgetName: string): Promise<React.JSX.Element> {
   const saved = await loadWidgetTheme();
   const dark = saved ? saved === 'dark' : Appearance.getColorScheme() === 'dark';
   const summary = (await loadWidgetSummary()) ?? EMPTY_SUMMARY;
+  // 표정은 그리는 순간의 시각으로 (#1122) — 주기 갱신(30분)마다 저녁·미접속이 반영된다.
+  const mood = resolveWidgetMood({
+    summary,
+    todayIso: todayIso(),
+    now: new Date(),
+    lastActiveAt: await loadWidgetLastActive(),
+  });
   if (widgetName === 'RougetherRoom') {
     const roomImage = await loadWidgetRoomImage();
-    return <MyRoomWidget summary={summary} roomImage={roomImage} dark={dark} />;
+    return <MyRoomWidget summary={summary} roomImage={roomImage} dark={dark} mood={mood} />;
   }
-  return <TodayListWidget summary={summary} dark={dark} />;
+  return <TodayListWidget summary={summary} dark={dark} mood={mood} />;
 }
 
 /** 위젯 태스크 핸들러 — 추가/주기 갱신/리사이즈 등 시스템 이벤트에 렌더. */
