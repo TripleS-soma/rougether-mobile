@@ -154,15 +154,26 @@ describe('groupCalendarServerItems', () => {
     ).toBeUndefined();
   });
 
-  it('기록 당시 카테고리로 서버 순서대로 묶고, 삭제된 카테고리는 catMeta로 이름을 되찾는다', () => {
+  it('기록 당시 카테고리로 묶되 현재 카테고리가 앞, 삭제된 카테고리(catMeta로 이름 복원)가 뒤, 미분류가 맨 뒤', () => {
     const groups = groupCalendarServerItems({
       dayItems: [item('a', false, '99'), item('b', false, '건강'), item('c', false)],
       catMeta: [cat('건강'), { ...cat('99'), name: '옛것', deleted: true }],
       categories: [cat('건강')],
       canQuickAdd: () => false,
     });
-    expect(groups?.map((g) => g.meta.name)).toEqual(['옛것', '건강', '미분류']);
+    expect(groups?.map((g) => g.meta.name)).toEqual(['건강', '옛것', '미분류']);
     expect(ids(groups![2].items)).toEqual(['c']);
+  });
+
+  it('그룹 순서는 서버 응답이 아니라 현재 카테고리의 사용자 정렬을 따른다 (2026-09-08)', () => {
+    // 서버는 categoryId 오름차순으로 준다(운동 → 독서 → 취미). 사용자는 취미·운동·독서로 정렬했다.
+    const groups = groupCalendarServerItems({
+      dayItems: [item('a', false, '운동'), item('b', false, '독서'), item('c', false, '취미')],
+      catMeta: [cat('운동'), cat('독서'), cat('취미')],
+      categories: [cat('취미'), cat('운동'), cat('독서')],
+      canQuickAdd: () => false,
+    });
+    expect(groupIds(groups!)).toEqual(['취미', '운동', '독서']);
   });
 
   it('완료 항목은 아래로 가라앉는다', () => {
