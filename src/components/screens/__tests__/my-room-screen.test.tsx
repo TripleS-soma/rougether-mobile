@@ -40,6 +40,58 @@ describe('MyRoomScreen', () => {
     expect(server.queryByLabelText('지난 기록 스와이프 삭제')).toBeNull();
   });
 
+  // iOS/Fabric 뷰 재활용 + RNGH reactTag 어긋남 (#1207) — 행이 재마운트되지 않아야
+  // 한다. 같은 루틴은 방 탭(오늘)·달력 클라이언트·달력 서버 어느 경로든 같은 키.
+  it('행 키는 방 탭·달력(오늘)·달력(서버 날짜)에서 같다 (#1207)', async () => {
+    const calendarDays = {
+      [YESTERDAY]: [
+        {
+          id: '1',
+          kind: 'routine' as const,
+          title: '아침 7시 기상',
+          completed: false,
+          category: '건강',
+        },
+        { id: 'x9', kind: 'todo' as const, title: '지난 할 일', completed: false, category: '' },
+      ],
+    };
+    const ui = await render(
+      <MyRoomScreen
+        routines={SAMPLE_ROUTINES}
+        calendarDays={calendarDays}
+        onSelectDate={jest.fn()}
+      />,
+    );
+    expect(ui.getByTestId('routine-row-routine-1')).toBeTruthy();
+
+    // 달력 탭 · 오늘(클라이언트 경로) — 같은 키.
+    await fireEvent.press(ui.getByText('달력'));
+    expect(ui.getByTestId('routine-row-routine-1')).toBeTruthy();
+
+    // 달력 탭 · 어제(서버 경로) — 여전히 같은 키, 투두는 kind 접두가 다르다.
+    await pickCalendarDate(ui, YESTERDAY);
+    expect(ui.getByTestId('routine-row-routine-1')).toBeTruthy();
+    expect(ui.getByTestId('routine-row-todo-x9')).toBeTruthy();
+  });
+
+  it('완료 토글로 행이 아래로 가라앉아도 같은 노드가 남는다 — 재마운트 없음 (#1207)', async () => {
+    const props = {
+      routines: SAMPLE_ROUTINES,
+      onDeleteRoutine: jest.fn(),
+      onReorderRoutines: jest.fn(),
+    };
+    const ui = await render(<MyRoomScreen {...props} />);
+    const before = ui.getByTestId('routine-row-routine-1');
+    expect(ui.getByLabelText('아침 7시 기상 스와이프 삭제')).toBeTruthy();
+
+    // 완료 → sinkDone으로 하단 이동 + draggable 해제. 키가 같으니 노드는 그대로.
+    await ui.rerender(<MyRoomScreen {...props} completions={{ '1': [TODAY] }} />);
+    expect(ui.getByTestId('routine-row-routine-1')).toBe(before);
+    // 스와이프 삭제 액션도 그대로 살아 있다.
+    await fireEvent.press(ui.getByLabelText('아침 7시 기상 스와이프 삭제'));
+    expect(props.onDeleteRoutine).toHaveBeenCalledWith('1');
+  });
+
   it('marks each category header with its visibility scope (#285)', async () => {
     const { getByLabelText, getAllByLabelText } = await render(
       <MyRoomScreen routines={SAMPLE_ROUTINES} />,

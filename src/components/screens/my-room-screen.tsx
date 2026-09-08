@@ -642,7 +642,14 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // 행 데이터를 RowSpec으로 정규화해 Routine(방탭·달력 클라이언트)과 서버
   // CalendarDayItem이 같은 코드로 그려진다.
   type RowSpec = {
+    /**
+     * 행 키 — `${kind}-${routineId}`, 방 탭(오늘)·달력 클라이언트·달력 서버 세 경로가
+     * **같은 루틴에 같은 키**를 쓴다 (#1207). 예전엔 클라이언트 경로가 맨 id, 서버
+     * 경로가 `${kind}-${id}`라 달력 날짜만 바꿔도 전 행이 재마운트됐다.
+     */
     key: string;
+    /** 서버 루틴/투두 id — 드래그·재정렬·메뉴가 쓰는 id 공간. */
+    routineId: string;
     title: string;
     done: boolean;
     /** 알림/마감 시각 — 있으면 종 배지. */
@@ -658,7 +665,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
 
   const rowFromRoutine = (routine: Routine, date: string): RowSpec => ({
     repeats: routine.kind !== 'todo',
-    key: routine.id,
+    key: `${routine.kind ?? 'routine'}-${routine.id}`,
+    routineId: routine.id,
     title: routine.title,
     done: isDone(routine.id, date),
     time: routine.alarmEnabled && routine.time ? routine.time : undefined,
@@ -671,6 +679,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   const rowFromCalendarItem = (item: CalendarDayItem): RowSpec => ({
     repeats: item.kind === 'routine',
     key: `${item.kind}-${item.id}`,
+    routineId: item.id,
     title: item.title,
     done: item.completed,
     time: item.time,
@@ -680,6 +689,16 @@ export const MyRoomScreen = memo(function MyRoomScreen({
       ? () => openRowMenu(item.id, selectedDate)
       : undefined,
   });
+
+  /**
+   * 행 핸들러 레지스트리 (#769) — RowSpec의 콜백은 매 렌더 새 클로저라 그대로
+   * 넘기면 memo가 무효다. 렌더마다 이 맵만 갈아끼우고, 행에는 아래 참조 고정
+   * 디스패처를 넘긴다. 행이 memo로 리렌더를 건너뛰어도 맵은 최신이라 낡은
+   * 클로저를 잡지 않는다. 렌더 본문(renderCategoryGroup) 안에서 **동기적으로**
+   * 비우고 다시 채우므로(#1207) 이벤트가 끼어들 틈이 없고, 이번 렌더에 없는 행의
+   * 항목은 남지 않는다.
+   */
+  const rowHandlers = useConstant(() => new Map<string, { spec: RowSpec; categoryId?: string }>());
 
   // --- 루틴/투두 롱프레스 재정렬 (#716) ---
   // 방 '오늘' 리스트의 미완료 행만 대상. 롱프레스로 들어 손가락을 따라가고,
@@ -694,10 +713,11 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // 드래그 시작 시점의 카테고리별 미완료 id 순서 스냅샷 — 드롭 계산의 기준.
   const baseOrderRef = useRef<Map<string, string[]>>(new Map());
 
+  // 인자는 행 키 (#1207) — dragId는 `active` 비교용이라 행 키 공간에 둔다.
   const beginDrag = useCallback(
-    (routineId: string) => {
+    (rowKey: string) => {
       hapticSelection();
-      setDragId(routineId);
+      setDragId(rowKey);
       const base = new Map<string, string[]>();
       for (const g of roomGroups) {
         base.set(
@@ -711,18 +731,21 @@ export const MyRoomScreen = memo(function MyRoomScreen({
       // window 좌표 측정은 비동기 — 다음 프레임 안에 채워져 onUpdate가 쓴다
       // (집 좌석 드래그 #278와 같은 리프트 시점 측정).
       dragSlotsRef.current = [];
-      rowRefs.current.forEach((node, id) => {
+      rowRefs.current.forEach((node, key) => {
+        // ref 맵은 행 키로 등록된다 — 슬롯은 루틴 id 공간이라 레지스트리로 되찾는다.
+        const routineId = rowHandlers.get(key)?.spec.routineId;
+        if (!routineId) return;
         node.measureInWindow((x, y, w, h) => {
           dragSlotsRef.current.push({
-            routineId: id,
-            categoryId: catOf(id),
+            routineId,
+            categoryId: catOf(routineId),
             top: y,
             bottom: y + h,
           });
         });
       });
     },
-    [roomGroups, isDone, today],
+    [roomGroups, isDone, today, rowHandlers],
   );
 
   const updateDrop = useCallback((draggedId: string, absoluteY: number) => {
@@ -763,19 +786,14 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     [dragTY, onReorderRoutines, onMoveRoutineCategory, categories.length],
   );
 
-  const registerRowRef = useCallback((routineId: string, node: View | null) => {
-    if (node) rowRefs.current.set(routineId, node);
-    else rowRefs.current.delete(routineId);
+  const registerRowRef = useCallback((rowKey: string, node: View | null) => {
+    if (node) rowRefs.current.set(rowKey, node);
+    else rowRefs.current.delete(rowKey);
   }, []);
 
-  /**
-   * 행 핸들러 레지스트리 (#769) — RowSpec의 콜백은 매 렌더 새 클로저라 그대로
-   * 넘기면 memo가 무효다. 렌더마다 이 맵만 갈아끼우고, 행에는 아래 참조 고정
-   * 디스패처를 넘긴다. 행이 memo로 리렌더를 건너뛰어도 맵은 최신이라 낡은
-   * 클로저를 잡지 않는다.
-   */
-  const rowHandlers = useConstant(() => new Map<string, { spec: RowSpec; categoryId?: string }>());
   const dragIdRef = useLatestRef(dragId);
+  /** 행 키 → 서버 루틴 id. 드래그 콜백은 행 키로 오지만 재정렬·이동은 루틴 id로 나간다. */
+  const routineIdOf = (rowKey: string) => rowHandlers.get(rowKey)?.spec.routineId;
   const dispatchToggle = useStableCallback((rowKey: string, e?: GestureResponderEvent) =>
     rowHandlers.get(rowKey)?.spec.onToggle(e),
   );
@@ -786,18 +804,23 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     rowHandlers.get(rowKey)?.spec.onDelete?.(),
   );
   const dispatchDragStart = useStableCallback((rowKey: string) => beginDrag(rowKey));
-  const dispatchDragUpdate = useStableCallback((rowKey: string, absoluteY: number) =>
-    updateDrop(rowKey, absoluteY),
-  );
+  const dispatchDragUpdate = useStableCallback((rowKey: string, absoluteY: number) => {
+    const routineId = routineIdOf(rowKey);
+    if (routineId !== undefined) updateDrop(routineId, absoluteY);
+  });
   const dispatchDragEnd = useStableCallback((rowKey: string) => {
-    const categoryId = rowHandlers.get(rowKey)?.categoryId;
-    if (categoryId !== undefined) endDrag(rowKey, categoryId);
+    const entry = rowHandlers.get(rowKey);
+    if (entry?.categoryId !== undefined) endDrag(entry.spec.routineId, entry.categoryId);
   });
   const dispatchDragFinalize = useStableCallback((rowKey: string) => {
     if (dragIdRef.current !== rowKey) return;
     setDragId(null);
     dragTY.setValue(0);
   });
+
+  // 이번 렌더의 행만 남긴다 (#1207) — 아래 renderCategoryGroup이 같은 렌더 안에서
+  // 동기적으로 다시 채운다. 지우지 않으면 지나간 날짜·삭제된 루틴의 항목이 영영 쌓였다.
+  rowHandlers.clear();
 
   // 카테고리 그룹 = 헤더(아이콘·라벨·공개범위·카운트·＋) + 행들 + 퀵애드 입력행.
   // 빈 그룹도 헤더는 그린다 — ＋가 항상 닿아야 한다 (#323).
@@ -1050,8 +1073,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                   : roomGroups.map(({ meta: cat, items }) =>
                       // Empty categories still render their header — the + quick-add
                       // must stay reachable even before the first routine exists.
+                      // 미분류(id '')도 달력 탭처럼 이름 있는 키로 (#1207).
                       renderCategoryGroup(
-                        cat.id,
+                        cat.id || 'uncat',
                         cat,
                         items.map((r) => rowFromRoutine(r, today)),
                         today,

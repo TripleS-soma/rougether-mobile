@@ -1,4 +1,4 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import {
   Animated,
   type GestureResponderEvent,
@@ -13,7 +13,7 @@ import { SwipeDeleteRow } from '@/components/screens/my-room/swipe-delete-row';
 import { BearCheck } from '@/components/ui/bear-check';
 import { Icon } from '@/components/ui/icon';
 import { Spacing } from '@/constants/theme';
-import { useConstant, useLatestRef } from '@/hooks/use-stable-value';
+import { useLatestRef } from '@/hooks/use-stable-value';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { formatTime } from '@/utils/datetime';
 
@@ -67,7 +67,14 @@ export type RoutineRowProps = {
  * 전 행의 제스처를 갈아치우니 성능 문제이기 이전에 재정렬이 튈 위험이었다.
  *
  * 그래서 콜백은 전부 **부모가 참조 고정해 rowKey로 디스패치**하는 형태로 받고,
- * 제스처는 `useConstant`로 1회만 만든 뒤 최신 핸들러를 ref로 읽는다.
+ * 제스처는 `draggable` 플래그가 바뀔 때만 다시 만들고 최신 핸들러는 ref로 읽는다.
+ *
+ * 트리 모양은 항상 같다 (#1207) — `GestureDetector > Animated.View > SwipeDeleteRow`.
+ * 예전엔 `draggable`이 꺼진 행(완료·달력)은 GestureDetector 없이 맨 SwipeDeleteRow를
+ * 루트로 그렸는데, 완료 토글마다 루트 타입이 바뀌어 행이 언마운트→재마운트됐다.
+ * iOS/Fabric은 뷰를 재활용하면서 RNGH가 찍어 둔 reactTag·리코그나이저를 지우지 않아,
+ * 재활용된 뷰가 A행의 리코그나이저를 들고 B행을 그리는 순간 **B를 밀었는데 A가
+ * 밀리는** 버그가 났다. 드래그 on/off는 `.enabled(draggable)`로만 다룬다.
  */
 function RoutineRowBase({
   rowKey,
@@ -94,26 +101,36 @@ function RoutineRowBase({
   const Typography = useTypography();
   const emph = useFontEmphasis();
 
-  // 제스처는 1회 생성이라 콜백을 클로저로 굳히면 안 된다 — 최신값을 ref로 읽는다.
+  // 제스처는 draggable이 바뀔 때만 재생성 — 콜백을 클로저로 굳히면 안 된다,
+  // 최신값을 ref로 읽는다. draggable은 드래그 도중 바뀌지 않으니(완료 토글은
+  // 드래그와 배타) 재생성이 활성 팬을 취소시킬 일은 없다. 꺼진 제스처는 네이티브
+  // 핸들러가 비활성이라 탭·스와이프를 삼키지 않는다 — GestureDetector는 그대로.
   const handlers = useLatestRef({ onDragStart, onDragUpdate, onDragEnd, onDragFinalize });
   const keyRef = useLatestRef(rowKey);
-  const gesture = useConstant(() =>
-    Gesture.Pan()
-      .activateAfterLongPress(ROUTINE_DRAG_LONG_PRESS_MS)
-      // runOnJS: 측정(measureInWindow)·Animated를 그대로 쓰기 위해 (#716).
-      .runOnJS(true)
-      .onStart(() => handlers.current.onDragStart(keyRef.current))
-      .onUpdate((e) => {
-        dragTY.setValue(e.translationY);
-        handlers.current.onDragUpdate(keyRef.current, e.absoluteY);
-      })
-      .onEnd(() => handlers.current.onDragEnd(keyRef.current))
-      .onFinalize(() => handlers.current.onDragFinalize(keyRef.current)),
+  const gesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .withTestId(`routine-drag-${rowKey}`)
+        .enabled(draggable)
+        .activateAfterLongPress(ROUTINE_DRAG_LONG_PRESS_MS)
+        // runOnJS: 측정(measureInWindow)·Animated를 그대로 쓰기 위해 (#716).
+        .runOnJS(true)
+        .onStart(() => handlers.current.onDragStart(keyRef.current))
+        .onUpdate((e) => {
+          dragTY.setValue(e.translationY);
+          handlers.current.onDragUpdate(keyRef.current, e.absoluteY);
+        })
+        .onEnd(() => handlers.current.onDragEnd(keyRef.current))
+        .onFinalize(() => handlers.current.onDragFinalize(keyRef.current)),
+    [draggable, dragTY, handlers, keyRef, rowKey],
   );
 
+  // 드래그 슬롯 측정용 ref는 드래그 가능한 행만 등록한다 — 예전엔 GestureDetector
+  // 자체가 없어 등록이 안 됐던 행(완료·달력)이 슬롯에 끼지 않게 같은 범위를 지킨다.
+  // draggable이 바뀌면 React가 옛 콜백을 null로 부른 뒤 새 콜백을 노드로 부른다.
   const setRef = useCallback(
-    (node: unknown) => registerRef(rowKey, (node as View | null) ?? null),
-    [registerRef, rowKey],
+    (node: unknown) => registerRef(rowKey, draggable ? ((node as View | null) ?? null) : null),
+    [registerRef, rowKey, draggable],
   );
   const toggle = useCallback(
     (e?: GestureResponderEvent) => onToggle(rowKey, e),
@@ -168,12 +185,11 @@ function RoutineRowBase({
     </SwipeDeleteRow>
   );
 
-  if (!draggable) return body;
-
   return (
     <GestureDetector gesture={gesture}>
       <Animated.View
         ref={setRef}
+        testID={`routine-row-${rowKey}`}
         style={
           active
             ? { transform: [{ translateY: dragTY }], zIndex: 20, elevation: 8, opacity: 0.96 }
