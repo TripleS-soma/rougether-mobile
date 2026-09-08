@@ -11,6 +11,11 @@ export type NavMenuPopoverProps = {
   /** Measured top offset — anchors the popover under the hamburger button. */
   top: number;
   /**
+   * 창 오른쪽 끝에서 버튼 오른쪽 끝까지의 실측 거리(#1230 2단). 있으면 프레임
+   * 기준 앵커 대신 이 값에 붙는다 — 버튼이 왼쪽 칸에 있을 때.
+   */
+  right?: number;
+  /**
    * 버튼 아래 여백(창 바닥 기준) — 있으면 `top` 대신 이걸로 버튼 **위에** 연다
    * (#1055). 메뉴 버튼이 방 오른쪽 아래로 내려가 아래로 열면 짧은 화면에서 잘린다.
    */
@@ -39,6 +44,7 @@ export function NavMenuPopover({
   visible,
   top,
   bottom,
+  right,
   onClose,
   onOpenCharacterPicker,
   onEditRoom,
@@ -67,7 +73,7 @@ export function NavMenuPopover({
           testID="nav-menu-popover"
           style={[
             styles.popover,
-            { right: Spacing.four + frameInset },
+            { right: right ?? Spacing.four + frameInset },
             bottom !== undefined ? { bottom } : { top },
           ]}>
           {(

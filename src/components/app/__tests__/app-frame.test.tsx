@@ -2,24 +2,47 @@ import { render } from '@testing-library/react-native';
 import { useEffect } from 'react';
 import { Platform, Text, View } from 'react-native';
 
-import { AppFrame, ModalFrame } from '@/components/app/app-frame';
+import { AppFrame, ModalFrame, PhoneColumn } from '@/components/app/app-frame';
 import { APP_FRAME_MAX_WIDTH, type AppFrame as AppFrameSize } from '@/hooks/use-app-frame';
 import { flattenStyle } from '@/test-utils/style';
 
 // 프레임 판정만 바꿔 가며 컴포넌트의 렌더 동작을 본다 — 순수 계산은 use-app-frame.test.
-let mockFrame: AppFrameSize = { width: 390, height: 844, scale: 2, fontScale: 1, framed: false };
+let mockFrame: AppFrameSize = {
+  width: 390,
+  height: 844,
+  scale: 2,
+  fontScale: 1,
+  framed: false,
+  split: false,
+};
 jest.mock('@/hooks/use-app-frame', () => ({
   ...jest.requireActual('@/hooks/use-app-frame'),
   useAppFrame: () => mockFrame,
 }));
 
-const NARROW: AppFrameSize = { width: 390, height: 844, scale: 2, fontScale: 1, framed: false };
+const NARROW: AppFrameSize = {
+  width: 390,
+  height: 844,
+  scale: 2,
+  fontScale: 1,
+  framed: false,
+  split: false,
+};
 const WIDE: AppFrameSize = {
   width: APP_FRAME_MAX_WIDTH,
   height: 900,
   scale: 2,
   fontScale: 1,
   framed: true,
+  split: false,
+};
+const SPLIT: AppFrameSize = {
+  width: 1200,
+  height: 900,
+  scale: 2,
+  fontScale: 1,
+  framed: true,
+  split: true,
 };
 
 function Probe({ onMount }: { onMount: () => void }) {
@@ -94,5 +117,35 @@ describe('AppFrame / ModalFrame (#1227)', () => {
     } finally {
       os.restore();
     }
+  });
+  it('2단 프레임은 훅이 정한 폭(최대 1200)으로 넓어지고, PhoneColumn은 그 안에서 480 컬럼 (#1230)', async () => {
+    const os = jest.replaceProperty(Platform, 'OS', 'web');
+    try {
+      mockFrame = SPLIT;
+      const { getByTestId } = await render(
+        <AppFrame>
+          <PhoneColumn>
+            <Text>page</Text>
+          </PhoneColumn>
+        </AppFrame>,
+      );
+      expect(flattenStyle(getByTestId('app-frame-inner').props.style).width).toBe(1200);
+      const col = flattenStyle(getByTestId('phone-column').props.style);
+      expect(col.width).toBe(APP_FRAME_MAX_WIDTH);
+      expect(col.alignSelf).toBe('center');
+    } finally {
+      os.restore();
+    }
+  });
+
+  it('PhoneColumn은 2단이 아니면 래퍼 없이 자식 그대로', async () => {
+    mockFrame = WIDE;
+    const { queryByTestId, getByText } = await render(
+      <PhoneColumn>
+        <Text>page</Text>
+      </PhoneColumn>,
+    );
+    expect(getByText('page')).toBeTruthy();
+    expect(queryByTestId('phone-column')).toBeNull();
   });
 });
