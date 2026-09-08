@@ -56,6 +56,12 @@ export type LoginScreenProps = {
    * 값이 바뀔 때마다 에러 영역에 반영된다 — 사용자의 다음 시도는 지운다.
    */
   initialError?: string | null;
+  /**
+   * 화면 밖에서 진행 중인 로그인 시도(웹 카카오 리다이렉트 복귀의 코드 교환 등).
+   * true인 동안 화면의 `submitting`과 같이 취급해 버튼이 잠긴다 — 아니면 교환
+   * 도중 다시 누른 탭이 두 번째 로그인을 시작한다.
+   */
+  busy?: boolean;
 };
 
 /**
@@ -74,6 +80,7 @@ export function LoginScreen({
   onAppleLogin,
   lastLoginProvider,
   initialError,
+  busy,
   describeSocialFailure,
 }: LoginScreenProps) {
   const t = useTokens();
@@ -84,7 +91,9 @@ export function LoginScreen({
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [keepLogin, setKeepLogin] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [ownSubmitting, setSubmitting] = useState(false);
+  // 화면 안 시도와 화면 밖 시도(busy)를 한 상태로 — 가드·버튼 잠금이 같이 본다.
+  const submitting = ownSubmitting || !!busy;
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     if (initialError) setError(initialError);

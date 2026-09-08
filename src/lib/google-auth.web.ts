@@ -28,7 +28,13 @@ declare global {
 
 const GSI_SRC = 'https://accounts.google.com/gsi/client';
 /** 팝업이 닫힌 뒤(창에 포커스 복귀) 이만큼 기다려도 credential이 없으면 취소로 본다. */
-const CANCEL_GRACE_MS = 1500;
+export const CANCEL_GRACE_MS = 1500;
+/**
+ * 버튼을 누른 뒤 이만큼 안에 본 창이 포커스를 잃지 않으면(팝업이 안 뜸) 차단으로
+ * 본다 — 사파리 팝업 정책이나 끊긴 사용자 제스처 체인. 이 판정이 없으면 focus도
+ * credential 콜백도 영영 안 와 Promise가 pending으로 남고 로그인 버튼이 잠긴다.
+ */
+export const POPUP_OPEN_TIMEOUT_MS = 2000;
 
 let host: HTMLDivElement | null = null;
 let ready: Promise<GoogleId> | null = null;
@@ -98,21 +104,45 @@ export async function getGoogleIdToken(): Promise<string | null> {
   await ensureReady();
   const button = hiddenButton();
   if (!button) throw new Error('google sign-in button not rendered');
-  return new Promise<string | null>((resolve) => {
+  return new Promise<string | null>((resolve, reject) => {
     let settled = false;
+    let opened = false;
+    let openTimer = 0;
+    const cleanup = () => {
+      settled = true;
+      pending = null;
+      window.clearTimeout(openTimer);
+      window.removeEventListener('blur', onBlur);
+      window.removeEventListener('focus', onFocus);
+    };
     const finish = (token: string | null) => {
       if (settled) return;
-      settled = true;
-      window.removeEventListener('focus', onFocus);
+      cleanup();
       resolve(token);
+    };
+    const fail = (reason: string) => {
+      if (settled) return;
+      cleanup();
+      reject(new Error(reason));
+    };
+    // 팝업이 뜨면 본 창이 포커스를 잃는다. 제한 시간 안에 안 잃으면 팝업 차단.
+    const onBlur = () => {
+      opened = true;
+      window.clearTimeout(openTimer);
     };
     // 팝업이 닫히면 본 창이 포커스를 되찾는다 — credential 콜백이 곧 따라오지
     // 않으면 사용자가 창을 닫은 것(취소). 성공 시엔 콜백이 먼저 finish한다.
+    // 팝업이 뜨기 전의 포커스 이벤트(클릭 직후 잔여 포커스)는 세지 않는다.
     const onFocus = () => {
+      if (!opened) return;
       window.setTimeout(() => finish(null), CANCEL_GRACE_MS);
     };
     pending = finish;
+    window.addEventListener('blur', onBlur);
     window.addEventListener('focus', onFocus);
+    openTimer = window.setTimeout(() => {
+      if (!opened) fail('google sign-in popup blocked');
+    }, POPUP_OPEN_TIMEOUT_MS);
     button.click();
   });
 }

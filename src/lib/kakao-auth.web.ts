@@ -74,18 +74,21 @@ async function exchangeCode(code: string): Promise<string> {
  * - 키 미설정·state 불일치·교환 실패는 throw — 호출부가 실패 문구를 띄운다.
  */
 export async function getKakaoAccessToken(): Promise<string | null> {
-  if (!REST_API_KEY) throw new Error('EXPO_PUBLIC_KAKAO_REST_API_KEY is not set for web');
   const state = readState();
   const back = parseKakaoRedirect(window.location.search, state);
   if (back) {
-    // 복귀 파라미터는 1회용 — 새로고침으로 같은 코드를 다시 교환하지 않게 즉시 걷어낸다.
+    // 복귀 파라미터는 1회용 — 새로고침으로 같은 코드를 다시 교환하지 않게 즉시
+    // 걷어낸다. 키 검사보다 먼저다: 키가 안 실린 배포에서 throw만 하고 URL을
+    // 남기면 `hasKakaoRedirect()`가 계속 true라 복귀 효과가 매 렌더 재시도한다.
     window.sessionStorage.removeItem(STATE_KEY);
     window.history.replaceState(null, '', stripKakaoParams(window.location.href));
     if (back.kind === 'cancelled') return null;
     if (back.kind === 'state_mismatch') throw new Error('kakao redirect state mismatch');
     if (back.kind === 'error') throw new Error(`kakao authorize error: ${back.error}`);
+    if (!REST_API_KEY) throw new Error('EXPO_PUBLIC_KAKAO_REST_API_KEY is not set for web');
     return exchangeCode(back.code);
   }
+  if (!REST_API_KEY) throw new Error('EXPO_PUBLIC_KAKAO_REST_API_KEY is not set for web');
   const fresh = createState();
   window.sessionStorage.setItem(STATE_KEY, fresh);
   window.location.assign(
