@@ -101,3 +101,114 @@ describe('햅틱 세기 마이그레이션 (#974)', () => {
     await waitFor(() => expect(getHapticStrength()).toBe('medium'));
   });
 });
+
+// 무효화 누락 2건 (리팩토링 3묶음) — 가져온 루틴과 초대 보상이 즉시 반영되게 셸 콜백을 부른다.
+const mockImportSelected = jest.fn();
+jest.mock('@/hooks/use-calendar-import', () => ({
+  useCalendarImport: () => ({
+    calendars: [],
+    candidates: [
+      {
+        seriesId: 's1',
+        occurrenceId: 's1@2026-09-09',
+        title: '아침 러닝',
+        date: '2026-09-09',
+        allDay: false,
+        repeat: null,
+        similar: [],
+      },
+    ],
+    busy: false,
+    denied: false,
+    embeddingApplied: false,
+    connect: jest.fn(),
+    preview: jest.fn(),
+    importSelected: mockImportSelected,
+  }),
+}));
+const mockRedeem = jest.fn();
+jest.mock('@/hooks/use-invites', () => ({
+  useInvites: () => ({
+    info: null,
+    loading: false,
+    loadError: false,
+    load: jest.fn(),
+    redeem: mockRedeem,
+  }),
+}));
+
+function GapHarness({
+  screen,
+  onRoutinesImported,
+  onWalletChanged,
+}: {
+  screen: 'calendarImport' | 'inviteFriends';
+  onRoutinesImported?: () => void;
+  onWalletChanged?: () => void;
+}) {
+  const { subScreen } = useSettingsSurface({
+    screen,
+    setScreen: jest.fn(),
+    profile: PROFILE,
+    stats: STATS,
+    onRoutinesImported,
+    onWalletChanged,
+  });
+  return <>{subScreen}</>;
+}
+const showGap = (props: Parameters<typeof GapHarness>[0]) =>
+  render(
+    <AuthProvider>
+      <BrandThemeProvider>
+        <ToastProvider>
+          <GapHarness {...props} />
+        </ToastProvider>
+      </BrandThemeProvider>
+    </AuthProvider>,
+  );
+
+describe('가져오기·초대 보상 뒤 재조회 콜백', () => {
+  it('캘린더 가져오기가 하나라도 만들면 onRoutinesImported, 0개면 부르지 않는다', async () => {
+    const onRoutinesImported = jest.fn();
+    mockImportSelected.mockResolvedValueOnce({
+      imported: 1,
+      skipped: 0,
+      failed: 0,
+      importedRoutines: 1,
+    });
+    const ui = await showGap({ screen: 'calendarImport', onRoutinesImported });
+    await fireEvent.press(await ui.findByText('1개 가져오기'));
+    await waitFor(() => expect(onRoutinesImported).toHaveBeenCalledTimes(1));
+
+    mockImportSelected.mockResolvedValueOnce({
+      imported: 0,
+      skipped: 1,
+      failed: 0,
+      importedRoutines: 0,
+    });
+    await fireEvent.press(ui.getByText('1개 가져오기'));
+    await waitFor(() => expect(mockImportSelected).toHaveBeenCalledTimes(2));
+    expect(onRoutinesImported).toHaveBeenCalledTimes(1);
+  });
+
+  it('초대 코드 보상이 들어오면 onWalletChanged를 부른다', async () => {
+    const onWalletChanged = jest.fn();
+    mockRedeem.mockResolvedValueOnce({ rewardCoin: 100 });
+    const ui = await showGap({ screen: 'inviteFriends', onWalletChanged });
+    await fireEvent.changeText(ui.getByLabelText('초대코드 입력'), 'ABCD12');
+    await fireEvent.press(ui.getByText('사용하기'));
+    await waitFor(() => expect(onWalletChanged).toHaveBeenCalledTimes(1));
+    // 화면도 보상 상태로 — 입력란이 결과 문구로 바뀐다.
+    expect(ui.getByText('코인 100개를 받았어요!')).toBeTruthy();
+  });
+
+  it('초대 코드 사용이 실패(null)면 지갑을 건드리지 않는다', async () => {
+    const onWalletChanged = jest.fn();
+    mockRedeem.mockResolvedValueOnce(null);
+    const ui = await showGap({ screen: 'inviteFriends', onWalletChanged });
+    await fireEvent.changeText(ui.getByLabelText('초대코드 입력'), 'ZZZZ99');
+    await fireEvent.press(ui.getByText('사용하기'));
+    await waitFor(() => expect(mockRedeem).toHaveBeenCalledTimes(1));
+    expect(onWalletChanged).not.toHaveBeenCalled();
+  });
+});
