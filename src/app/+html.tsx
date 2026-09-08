@@ -1,6 +1,8 @@
 import { ScrollViewStyleReset } from 'expo-router/html';
 import type { PropsWithChildren } from 'react';
 
+const WEB_GA_ID = 'G-P8V3RCKCD5';
+
 // 웹(PWA) 루트 HTML — 네이티브에는 영향 없음. 매니페스트·테마·서비스워커 등록.
 export default function Root({ children }: PropsWithChildren) {
   return (
@@ -23,6 +25,13 @@ export default function Root({ children }: PropsWithChildren) {
         <script
           dangerouslySetInnerHTML={{
             __html: "if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('/sw.js'))}",
+          }}
+        />
+        {/* GA4 — 웹앱 전용 속성 "루게더 웹앱"(랜딩·네이티브 앱과 분리). 네이티브 빌드에는 포함되지 않는다. */}
+        <script async src={`https://www.googletagmanager.com/gtag/js?id=${WEB_GA_ID}`} />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${WEB_GA_ID}');`,
           }}
         />
       </head>
