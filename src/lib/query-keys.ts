@@ -20,4 +20,21 @@ export const queryKeys = {
   invites: (userId: number | null | undefined) => ['invites', userId] as const,
   /** 재화 증감 이력 (#734) — 무한 쿼리, 페이지 파라미터는 0부터. */
   walletHistory: (userId: number | null | undefined) => ['wallet-history', userId] as const,
+  /** 상점 공개 카탈로그 (GET /items) — 사용자 무관. `owned` 플래그는 인벤토리로 덮는다. */
+  items: ['items'] as const,
+  /** 내 인벤토리 (GET /me/items, itemId↔userItemId) — 뽑기·구매·AI 가구가 갱신한다. */
+  myItems: {
+    all: ['me', 'items'] as const,
+    byUser: (userId: number | null | undefined) => ['me', 'items', userId] as const,
+  },
+  /** 내 방 (GET /rooms/me) — 배치·표면 슬롯·layoutRevision·거미줄. */
+  myRoom: {
+    all: ['rooms', 'me'] as const,
+    byUser: (userId: number | null | undefined) => ['rooms', 'me', userId] as const,
+  },
+  /** 보유 캐릭터 (GET /me/characters) — 뽑기로 캐릭터를 얻으면 무효화한다. */
+  myCharacters: {
+    all: ['me', 'characters'] as const,
+    byUser: (userId: number | null | undefined) => ['me', 'characters', userId] as const,
+  },
 };
