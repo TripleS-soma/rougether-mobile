@@ -13,7 +13,7 @@
       "no_clipping": true,
       "loop_mean_rgb_error": 0.0,
       "loop_p99_rgb_error": 0.0,
-      "ground_alpha_fixed": true
+      "support_paw_alpha_fixed": true
     },
     "blink": {
       "frames": 47,
@@ -26,7 +26,7 @@
       "no_clipping": true,
       "loop_mean_rgb_error": 1.1177246050181193,
       "loop_p99_rgb_error": 7.0,
-      "ground_alpha_fixed": true
+      "support_paw_alpha_fixed": true
     },
     "wink": {
       "frames": 47,
@@ -39,46 +39,46 @@
       "no_clipping": true,
       "loop_mean_rgb_error": 1.1147599022511592,
       "loop_p99_rgb_error": 7.0,
-      "ground_alpha_fixed": true
+      "support_paw_alpha_fixed": true
     },
     "seated": {
-      "frames": 49,
+      "frames": 50,
       "duration_ms": 4000,
-      "max_hold_ms": 160,
-      "bytes": 1370170,
-      "sha256": "f66444672679a4a87587b5fe7c18439bc42fb849a0133c8eab42a54aa7bab2f8",
+      "max_hold_ms": 80,
+      "bytes": 1410568,
+      "sha256": "24ef6d83aa7d4be74ccf508757be7b3b5a6b1f8728d02a668b157ae86d451d0f",
       "animated": true,
       "loop_geometry_equal": true,
       "no_clipping": true,
-      "loop_mean_rgb_error": 1.0702308130779898,
+      "loop_mean_rgb_error": 1.0769320208834932,
       "loop_p99_rgb_error": 7.0,
-      "ground_alpha_fixed": true
+      "support_paw_alpha_fixed": true
     },
     "wave": {
-      "frames": 73,
-      "duration_ms": 3000,
+      "frames": 50,
+      "duration_ms": 4000,
       "max_hold_ms": 80,
-      "bytes": 1870982,
-      "sha256": "edc18beebf0e055df3729a2d6e3d108df0e1213861c567fcc51d48b95f487896",
+      "bytes": 1203358,
+      "sha256": "956d76080eb50b65653b456efce4ca62c4fb97f1bf2d6d88302764124f363a14",
       "animated": true,
       "loop_geometry_equal": true,
       "no_clipping": true,
-      "loop_mean_rgb_error": 1.2081823568286958,
+      "loop_mean_rgb_error": 1.5934949894361419,
       "loop_p99_rgb_error": 8.0,
-      "ground_alpha_fixed": true
+      "support_paw_alpha_fixed": true
     },
     "stretch": {
       "frames": 50,
       "duration_ms": 4000,
       "max_hold_ms": 80,
-      "bytes": 1537566,
-      "sha256": "94c26d829816c0ad727b56b7735078a4714c4d18bfeb59fa75cd307636901c25",
+      "bytes": 1554754,
+      "sha256": "648a1e8793ae5bbd67ea5c15fb630e1636936fc8a0df1982bf7f1fa0a72f7166",
       "animated": true,
       "loop_geometry_equal": true,
       "no_clipping": true,
-      "loop_mean_rgb_error": 1.0586932797697186,
+      "loop_mean_rgb_error": 1.1102087188490148,
       "loop_p99_rgb_error": 6.0,
-      "ground_alpha_fixed": true
+      "support_paw_alpha_fixed": true
     },
     "sleep": {
       "frames": 59,
@@ -91,20 +91,20 @@
       "no_clipping": true,
       "loop_mean_rgb_error": 1.4358828071873955,
       "loop_p99_rgb_error": 8.0,
-      "ground_alpha_fixed": true
+      "support_paw_alpha_fixed": true
     },
     "groom": {
       "frames": 50,
       "duration_ms": 4000,
       "max_hold_ms": 80,
-      "bytes": 637378,
-      "sha256": "4399a751fb88d92382cc184405ae8d6ea461c82aa44702e78d343d3ff159b745",
+      "bytes": 663864,
+      "sha256": "3c22ae157d88e0979ee4d2f7de081197ced9a5851706aa8e78eb532da06da7ed",
       "animated": true,
       "loop_geometry_equal": true,
       "no_clipping": true,
       "loop_mean_rgb_error": 0.0,
       "loop_p99_rgb_error": 0.0,
-      "ground_alpha_fixed": true
+      "support_paw_alpha_fixed": true
     }
   }
 }

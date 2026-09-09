@@ -1,6 +1,6 @@
 {
   "lossless": false,
   "quality": 90,
-  "max_frame_mean_rgb_error": 2.113495767739894,
-  "source_ground_fixed": true
+  "max_frame_mean_rgb_error": 2.0757246577182267,
+  "source_support_paw_fixed": true
 }

@@ -522,7 +522,7 @@ export const galleryEntries: GalleryEntry[] = [
   {
     name: 'Room · 승인된 고양이',
     description:
-      '내 방: 고개 흔들기 → 깜빡임 → 윙크 → 앉아 쉬기 → 인사 → 기지개 → 잠들기 → 세수. 모두 반복 모션이며 터치할 때 다음 자세로 넘어갑니다.',
+      '내 방: 고개 흔들기 → 깜빡임 → 윙크 → 두리번 → 앞발 인사 → 기지개 → 잠들기 → 세수. 모두 반복 모션이며 터치할 때 다음 자세로 넘어갑니다.',
     render: () => (
       <View style={{ width: 320, alignSelf: 'center' }}>
         <Room characterId="cat" interactiveCharacter />
