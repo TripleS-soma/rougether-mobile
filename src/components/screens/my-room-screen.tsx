@@ -523,6 +523,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   });
   const catMeta = allCategories ?? categories;
   const serverBackedDay = !!onSelectDate && selectedDate !== today;
+  const calendarTodayError = !serverBackedDay && loadError;
   const rawDayItems = serverBackedDay ? calendarDays?.[selectedDate] : undefined;
   const dayItems = useMemo(
     () => rawDayItems?.filter((item) => calendarFilter === 'all' || item.kind === calendarFilter),
@@ -1345,7 +1346,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         <View style={styles.calListHead}>
           <Text style={[Typography.h3, styles.calListTitle, { color: t.text }]}>이 날의 할 일</Text>
           <View style={styles.sectionHeadRight}>
-            {calDayTotal > 0 ? (
+            {calDayTotal > 0 && !calendarTodayError ? (
               <Text style={[Typography.label, { color: t.primaryText }]}>
                 {selectedDate > today ? `예정 ${calDayTotal}개` : `${calDayDone} / ${calDayTotal}`}
               </Text>
@@ -1363,14 +1364,14 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             ) : null}
           </View>
         </View>
-        {calDayTotal > 0 && selectedDate <= today ? (
+        {calDayTotal > 0 && selectedDate <= today && !calendarTodayError ? (
           <SpringProgressBar
             progress={calDayDone / calDayTotal}
             color={t.primary}
             trackColor={t.surfaceMuted}
           />
         ) : null}
-        {!(loading || (serverBackedDay && !dayItems)) ? (
+        {!(loading || calendarTodayError || (serverBackedDay && !dayItems)) ? (
           <Text style={[Typography.supporting, { color: t.textMuted }]}>
             {selectedDate} ·{' '}
             {calDayTotal === 0
@@ -1382,7 +1383,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                 : `남은 ${calDayTotal - calDayDone}개 · 완료 ${calDayDone}개`}
           </Text>
         ) : null}
-        {calendarDayError ? (
+        {calendarDayError || calendarTodayError ? (
           <View style={styles.calendarState}>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
               이 날의 기록을 새로 불러오지 못했어요
@@ -1390,7 +1391,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="선택일 기록 다시 불러오기"
-              onPress={onRetryCalendarDay}
+              onPress={calendarTodayError ? onRetry : onRetryCalendarDay}
               style={styles.calendarRetry}>
               <Text style={[Typography.label, { color: t.primaryText }]}>다시 시도</Text>
             </Pressable>
@@ -1402,7 +1403,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             지난 날짜도 완료 체크할 수 있어요. (코인은 당일 완료에만 지급돼요)
           </Text>
         ) : null}
-        {loading || (serverBackedDay && !dayItems && !calendarDayError) ? (
+        {calendarTodayError ? null : loading ||
+          (serverBackedDay && !dayItems && !calendarDayError) ? (
           <View style={styles.stateBlock}>
             <Loading />
           </View>

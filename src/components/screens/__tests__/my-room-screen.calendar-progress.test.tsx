@@ -88,3 +88,14 @@ it('완료 수가 없는 월 응답도 알고 있는 할 일 표시는 남긴다
   await fireEvent.press(ui.getByRole('tab', { name: '루틴' }));
   expect(ui.getByLabelText(`${date}, 집계 확인 중`)).toBeTruthy();
 });
+
+it('오늘 목록의 첫 조회 실패를 일정 없음으로 표시하지 않는다', async () => {
+  const retry = jest.fn();
+  const ui = await render(
+    <MyRoomScreen {...props} selectedDate={props.today} loadError onRetry={retry} />,
+  );
+  expect(ui.getByText('이 날의 기록을 새로 불러오지 못했어요')).toBeTruthy();
+  expect(ui.queryByText(`${props.today} · 일정 없음`)).toBeNull();
+  await fireEvent.press(ui.getByLabelText('선택일 기록 다시 불러오기'));
+  expect(retry).toHaveBeenCalledTimes(1);
+});
