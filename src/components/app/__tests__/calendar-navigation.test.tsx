@@ -51,11 +51,13 @@ describe('달력 하단 탭 왕복 (#1159)', () => {
     const ui = await renderShell();
     await fireEvent.press(ui.getByLabelText('달력'));
     await fireEvent.press(ui.getByLabelText('이전 달'));
-    await fireEvent.press(ui.getByLabelText(PREVIOUS_MONTH_DATE));
+    await fireEvent.press(ui.getByLabelText(new RegExp(`^${PREVIOUS_MONTH_DATE},`)));
 
     await fireEvent.press(ui.getByLabelText('내 정보'));
     await fireEvent.press(ui.getByLabelText('달력'));
-    expect(ui.getByLabelText(PREVIOUS_MONTH_DATE).props.accessibilityState.selected).toBe(true);
+    expect(
+      ui.getByLabelText(new RegExp(`^${PREVIOUS_MONTH_DATE},`)).props.accessibilityState.selected,
+    ).toBe(true);
 
     await fireEvent.press(ui.getByLabelText('이 날에 루틴 추가'));
     await finishTransition();
@@ -64,7 +66,9 @@ describe('달력 하단 탭 왕복 (#1159)', () => {
     await finishTransition();
     await waitFor(() => expect(ui.getByText('이 날의 할 일')).toBeTruthy());
     expect(ui.getByLabelText('달력').props.accessibilityState.selected).toBe(true);
-    expect(ui.getByLabelText(PREVIOUS_MONTH_DATE).props.accessibilityState.selected).toBe(true);
+    expect(
+      ui.getByLabelText(new RegExp(`^${PREVIOUS_MONTH_DATE},`)).props.accessibilityState.selected,
+    ).toBe(true);
 
     // 오늘은 서버 날짜 조회를 생략해도 선택값 자체는 반드시 저장해야 한다.
     await fireEvent.press(ui.getByLabelText('오늘로'));
@@ -73,7 +77,9 @@ describe('달력 하단 탭 왕복 (#1159)', () => {
     await fireEvent.press(ui.getByLabelText('뒤로가기'));
     await finishTransition();
     await waitFor(() => expect(ui.getByText('이 날의 할 일')).toBeTruthy());
-    expect(ui.getByLabelText(TODAY).props.accessibilityState.selected).toBe(true);
+    expect(ui.getByLabelText(new RegExp(`^${TODAY},`)).props.accessibilityState.selected).toBe(
+      true,
+    );
   });
 
   it.each(['달력', '나의 방'])(

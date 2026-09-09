@@ -46,6 +46,8 @@ import { SignupScreen } from '@/components/screens/signup-screen';
 import { Badge } from '@/components/ui/badge';
 import { CoinIcon } from '@/components/ui/coin-icon';
 import { BearCheck } from '@/components/ui/bear-check';
+import { RoomGrowthPill } from '@/components/ui/room-growth-pill';
+import { CalendarDepthPreview } from '@/dev/calendar-depth-preview';
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
 import { ScalePressable } from '@/components/ui/scale-pressable';
@@ -552,7 +554,13 @@ export const galleryEntries: GalleryEntry[] = [
       'Ported from the prototype MyRoomZoomScreen (#7): room view + today’s routines + reward.',
     render: () => (
       <View style={{ height: 900, alignSelf: 'stretch' }}>
-        <MyRoomScreen routines={SAMPLE_ROUTINES} />
+        <MyRoomScreen
+          routines={SAMPLE_ROUTINES}
+          view="room"
+          growthLevel={2}
+          growthPoints={50}
+          pointsToNextLevel={16}
+        />
       </View>
     ),
   },
@@ -1136,6 +1144,16 @@ export const galleryEntries: GalleryEntry[] = [
     description:
       'AI 조정 추천 카드 (#1006) — 주간회고 탭 하단. 적용하기는 확인 다이얼로그를 한 번 거친다.',
     render: () => <RecommendationSectionDemo />,
+  },
+  {
+    name: 'CalendarDepth',
+    description: '달성도·종류 필터·선택일 기록을 실제 화면으로 확인한다 (#1252).',
+    render: () => <CalendarDepthPreview />,
+  },
+  {
+    name: 'RoomGrowthPill',
+    description: '나의 방 왼쪽 상단 Liquid Glass 레벨 배지.',
+    render: () => <RoomGrowthPill growthLevel={2} growthPoints={50} pointsToNextLevel={16} />,
   },
   {
     name: 'Calendar',
