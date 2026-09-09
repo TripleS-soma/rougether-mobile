@@ -13,6 +13,27 @@ const FRAMES = [
 describe('CharacterAvatar', () => {
   afterEach(() => jest.restoreAllMocks());
 
+  it('cycles only reviewed cat poses even when the server supplies rejected art', async () => {
+    const prefetch = jest.spyOn(Image, 'prefetch').mockResolvedValue(true);
+    const screen = await render(
+      <CharacterAvatar
+        characterId="cat"
+        frames={['characters/cat/poses/old.webp']}
+        prefetchFrames
+      />,
+    );
+    const seated = screen.getByTestId('approved-character').props.source;
+    expect(screen.queryByTestId('cdn-animation')).toBeNull();
+    expect(prefetch).not.toHaveBeenCalled();
+    await screen.rerender(<CharacterAvatar characterId="cat" pose={1} />);
+    const wave = screen.getByTestId('approved-character').props.source;
+    expect(wave).not.toEqual(seated);
+    await screen.rerender(<CharacterAvatar characterId="cat" pose={2} />);
+    expect(screen.getByTestId('approved-character').props.source).toEqual(seated);
+    await screen.rerender(<CharacterAvatar characterId="cat" pose={-1} />);
+    expect(screen.getByTestId('approved-character').props.source).toEqual(wave);
+  });
+
   it('renders the CDN frame for the pose, skipping non-CDN keys', async () => {
     const first = await render(<CharacterAvatar characterId="panda" frames={FRAMES} />);
     expect(first.getByTestId('cdn-animation').props.source[0].uri).toContain('idle.webp');

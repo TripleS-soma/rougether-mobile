@@ -5,6 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { approvedCharacterPoster } from '@/resources/character-art';
 import { assetSource, isCdnKey } from '@/resources/asset';
 
 export type RewardRowProps = {
@@ -35,7 +36,7 @@ function RewardRowBase({ rowId, name, rarityColor, assetKey, isCharacter, owned 
       <View style={[styles.rewardThumb, { backgroundColor: t.surfaceMuted }]}>
         {isCdnKey(assetKey) ? (
           <Image
-            source={assetSource(assetKey)}
+            source={approvedCharacterPoster(assetKey) ?? assetSource(assetKey)}
             style={styles.rewardThumbImg}
             contentFit="contain"
             cachePolicy="memory-disk"

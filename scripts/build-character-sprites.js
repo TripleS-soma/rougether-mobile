@@ -21,6 +21,8 @@ async function main() {
   const files = fs.readdirSync(SRC).filter((f) => f.endsWith('.png'));
   for (const file of files) {
     const name = path.basename(file, '.png');
+    // The cat has a reviewed master and motion; never recreate rejected poses.
+    if (name === 'cat') continue;
     const src = path.join(SRC, file);
     const { width, height } = await sharp(src).metadata();
     const fw = Math.floor(width / FRAMES);

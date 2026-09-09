@@ -32,6 +32,7 @@ import { getCategoryGachas, getGachaCategory } from '@/constants/gacha';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
+import { approvedCharacterPoster } from '@/resources/character-art';
 import { assetSource } from '@/resources/asset';
 import { hapticImpact } from '@/utils/haptics';
 
@@ -277,7 +278,9 @@ export function GachaScreen({
     const plan = buildRevealPlan(results, shouldReduceMotion);
     const preloadUris = plan.items
       .map((item) =>
-        item.renderKind === 'asset' && item.assetKey ? assetSource(item.assetKey).uri : null,
+        item.renderKind === 'asset' && item.assetKey && !approvedCharacterPoster(item.assetKey)
+          ? assetSource(item.assetKey).uri
+          : null,
       )
       .filter((uri): uri is string => uri != null);
     if (preloadUris.length > 0) void Image.prefetch(preloadUris).catch(() => {});

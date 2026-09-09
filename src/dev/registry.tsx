@@ -520,6 +520,15 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
+    name: 'Room · 승인된 고양이',
+    description: '앉기와 앞발 인사 두 포즈. 탭할 때 얼굴 크기와 발의 바닥 위치를 확인합니다.',
+    render: () => (
+      <View style={{ width: 320, alignSelf: 'center' }}>
+        <Room characterId="cat" interactiveCharacter />
+      </View>
+    ),
+  },
+  {
     name: 'Room · CDN character poses',
     description:
       'Server poses[] art in registration order — tap the character to cycle (#263, #735).',
