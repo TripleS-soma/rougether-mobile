@@ -32,6 +32,19 @@ def key_cyan(im):
     a[edge,2]=np.minimum(a[edge,2],a[edge,0])
     return Image.fromarray(np.dstack([a,alpha*255]).round().astype('uint8'))
 
+def seated_foot_anchor(im):
+    a=np.asarray(im.convert('RGBA'));h,w=a.shape[:2]
+    yy,xx=np.indices((h,w));rgb=a[:,:,:3].astype(float)
+    # Brown outlines also satisfy red-minus-green tests. Isolate the bright
+    # pink toe marks on BOTH planted paws, not a shifting portion of one paw.
+    pink=(rgb[:,:,0]>210)&(rgb[:,:,0]-rgb[:,:,1]>30)&(rgb[:,:,2]>145)
+    pink &= (np.abs(rgb[:,:,1]-rgb[:,:,2])<35)&(a[:,:,3]>230)
+    pink &= (yy>h*.76)&(xx>w*.2)&(xx<w*.75)
+    assert pink.sum()>100, 'seated: both planted toe marks must be visible'
+    ax=float(xx[pink].min()+xx[pink].max())/2
+    feet=(a[:,:,3]>128)&(np.abs(xx-ax)<w*.18)
+    return ax,float(yy[feet].max())
+
 def build(name, preview_only=False):
     sheet=Image.open(SRC/f'{name}-sheet.png')
     cells=[];anchors=[]
@@ -52,7 +65,9 @@ def build(name, preview_only=False):
                 ay=float(yy[visible].max())
             else:
                 bounds=cell.getbbox();ax=(bounds[0]+bounds[2])/2;ay=bounds[3]-1
-            if name=='stretch':
+            if name=='seated':
+                ax,ay=seated_foot_anchor(cell)
+            elif name=='stretch':
                 # Both forepaws slide during a stretch. Keep the whole silhouette
                 # above the floor instead of pinning one moving toe to the floor.
                 ay=cell.getbbox()[3]-1
@@ -62,7 +77,7 @@ def build(name, preview_only=False):
     scale=420/max_height
     frames=[]
     for cell,(ax,ay) in zip(cells,anchors):
-        target_x=275 if name!='stretch' else 265
+        target_x={'seated':251,'stretch':265}.get(name,275)
         left=target_x-ax*scale;top=495-ay*scale
         frame=cell.transform((512,512),Image.Transform.AFFINE,
             (1/scale,0,-left/scale,0,1/scale,-top/scale),Image.Resampling.BICUBIC)
@@ -83,6 +98,14 @@ def build(name, preview_only=False):
     assert np.array_equal(decoded[0],decoded[-1])
     assert all(not a[0,:,3].any() and not a[-1,:,3].any() and
                not a[:,0,3].any() and not a[:,-1,3].any() for a in decoded),f'{name}: clipping'
+    stability={}
+    if name=='seated':
+        locations=np.array([seated_foot_anchor(Image.fromarray(a)) for a in decoded])
+        drift=np.ptp(locations,axis=0)
+        assert drift[0]<=2 and drift[1]<=2, f'seated: planted body drift {drift}'
+        stability={'anchor_method':'midpoint of both pink forepaw toe groups and floor',
+                   'decoded_paw_center_drift_px':float(drift[0]),
+                   'decoded_floor_drift_px':float(drift[1])}
     staging.replace(dest)
     frame_dir=SRC/f'{name}-frames';frame_dir.mkdir(exist_ok=True)
     for i,frame in enumerate(frames):frame.save(frame_dir/f'{i:02d}.png')
@@ -93,6 +116,7 @@ def build(name, preview_only=False):
           'encoded_frames':len(decoded),'duration_ms':sum(timings),
           'common_scale':scale,'planted_paw_anchors':anchors,
           'art_deformation':False,'loop_endpoint_equal':True,'no_clipping':True,
+          **stability,
           'file_bytes':dest.stat().st_size,'asset_sha256':hashlib.sha256(dest.read_bytes()).hexdigest()}
     (SRC/f'{name}-verification.json').write_text(json.dumps(info,indent=2)+'\n')
     print(json.dumps(info))
