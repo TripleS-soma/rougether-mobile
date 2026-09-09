@@ -38,6 +38,11 @@ describe('staged house frame contract', () => {
           'house/mushroom-forest/house-unified-mushroom-forest-frame.png',
           'mushroom-grass-v1-20260909',
         ],
+        [
+          'night-observatory',
+          'house/night-observatory/house-unified-night-observatory-frame-v3.png',
+          'night-renewed-v1-20260909',
+        ],
       ]) {
         const frame = resolveHouseFrame(canonical, { maxMembers: capacity });
         expect(frame.assetKey).toBe(
@@ -58,13 +63,16 @@ describe('staged house frame contract', () => {
     }
   });
   it.each([2, 3, 4, 6, 10])('OFF preserves art and geometry for %i seats', (maxMembers) => {
-    expect(
-      resolveHouseFrame(DEFAULT_HOUSE_COVER_KEY, { maxMembers, enabled: false }),
-    ).toMatchObject({
-      kind: 'legacy',
-      assetKey: DEFAULT_HOUSE_COVER_KEY,
-      aspectRatio: (5 / 6) * (33 / 37),
-    });
+    for (const key of [
+      DEFAULT_HOUSE_COVER_KEY,
+      'house/night-observatory/house-unified-night-observatory-frame-v3.png',
+    ]) {
+      expect(resolveHouseFrame(key, { maxMembers, enabled: false })).toMatchObject({
+        kind: 'legacy',
+        assetKey: key,
+        aspectRatio: (5 / 6) * (33 / 37),
+      });
+    }
   });
 
   it.each([
@@ -94,16 +102,22 @@ describe('staged house frame contract', () => {
     }
   });
 
-  it('only maps the three exact existing keys; unsupported covers and capacities stay legacy', () => {
-    expect(STACKED_HOUSE_THEMES.filter((t) => t.legacyKey)).toHaveLength(3);
-    for (const key of [
-      'house/night-observatory/house-unified-night-observatory-frame-v3.png',
-      'house/cloud-balloon/unknown.png',
-    ]) {
+  it('only maps the four exact existing keys; unsupported covers and capacities stay legacy', () => {
+    expect(STACKED_HOUSE_THEMES.filter((t) => t.legacyKey)).toHaveLength(4);
+    for (const key of ['house/night-observatory/unknown.png', 'house/cloud-balloon/unknown.png']) {
       expect(resolveHouseFrame(key, { enabled: true }).assetKey).toBe(key);
     }
     for (const maxMembers of [0, 7, 10, NaN, Infinity, 2.5]) {
-      expect(resolveHouseFrame(null, { maxMembers, enabled: true }).kind).toBe('legacy');
+      for (const key of [
+        DEFAULT_HOUSE_COVER_KEY,
+        'house/night-observatory/house-unified-night-observatory-frame-v3.png',
+      ]) {
+        expect(resolveHouseFrame(key, { maxMembers, enabled: true })).toMatchObject({
+          kind: 'legacy',
+          assetKey: key,
+          canonicalKey: key,
+        });
+      }
     }
   });
 
