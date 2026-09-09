@@ -40,7 +40,7 @@ import tiger3 from '@/assets/images/characters/tiger-3.webp';
 import tiger4 from '@/assets/images/characters/tiger-4.webp';
 
 /** Static pose frames per character (index 0–3). */
-const SPRITES: Record<CharacterId, number[]> = {
+const SPRITES: Partial<Record<CharacterId, number[]>> = {
   bear: [bear1, bear2, bear3, bear4],
   cat: [cat1, cat2, cat3, cat4],
   dog: [dog1, dog2, dog3, dog4],

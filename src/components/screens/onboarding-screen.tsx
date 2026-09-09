@@ -17,7 +17,7 @@ import { useAppFrame } from '@/hooks/use-app-frame';
 import { CharacterAvatar } from '@/components/room/character-avatar';
 import { Icon } from '@/components/ui/icon';
 import {
-  CHARACTER_OPTIONS,
+  STARTER_CHARACTER_OPTIONS,
   CHARACTER_SELECTION_ENABLED,
   type CharacterId,
   DEFAULT_CHARACTER_ID,
@@ -158,10 +158,10 @@ export function OnboardingScreen({
   // 실측) 순서를 데이터에서 해결한다. 시각과 선택 상태가 항상 일치.
   const [characterOrder] = useState(() => {
     const first = initialCharacterId ?? DEFAULT_CHARACTER_ID;
-    const i = CHARACTER_OPTIONS.findIndex((c) => c.id === first);
+    const i = STARTER_CHARACTER_OPTIONS.findIndex((c) => c.id === first);
     return i <= 0
-      ? CHARACTER_OPTIONS
-      : [...CHARACTER_OPTIONS.slice(i), ...CHARACTER_OPTIONS.slice(0, i)];
+      ? STARTER_CHARACTER_OPTIONS
+      : [...STARTER_CHARACTER_OPTIONS.slice(i), ...STARTER_CHARACTER_OPTIONS.slice(0, i)];
   });
   // Pinned bottom action buttons → pad both edges so the notch / home indicator
   // don't clip the top title or the bottom buttons.

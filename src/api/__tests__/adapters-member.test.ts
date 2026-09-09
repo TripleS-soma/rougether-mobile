@@ -3,9 +3,29 @@ import {
   toCharacterFrames,
   toCharacterFramesMap,
   toOwnedCharacter,
+  toAppCharacterId,
 } from '@/api/adapters/member';
+import { characterIdFromCode } from '@/api/adapters/room';
 
 describe('API adapters — member', () => {
+  it('keeps Moru and all four server poses in owned, master, and room mappings', () => {
+    const keys = ['idle', 'wave', 'pose-cycle', 'lying'].map(
+      (motion) => `characters/moru/animations/${motion}.webp`,
+    );
+    const poses = keys.map((assetKey, i) => ({ id: i + 1, assetKey, sortOrder: (i + 1) * 10 }));
+    const master = { id: 10, code: 'moru', poses: [...poses].reverse() };
+    expect(toAppCharacterId(10, [master])).toBe('moru');
+    expect(characterIdFromCode('moru')).toBe('moru');
+    expect(toCharacterFramesMap([master])).toEqual({ moru: keys });
+    expect(toOwnedCharacter({ ...master, characterId: 10, selected: false })).toMatchObject({
+      serverId: 10,
+      id: 'moru',
+      name: '모루',
+      frames: keys,
+      selected: false,
+    });
+  });
+
   it('maps a bug report to the history row (#496)', () => {
     expect(
       toBugReportEntry({
