@@ -9,6 +9,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { assetSource } from '@/resources/asset';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { NATIVE_DRIVER } from '@/utils/animation';
 
 export type AttendanceTrophyRevealProps = {
   name: string;
@@ -39,7 +40,7 @@ export function AttendanceTrophyReveal({
       toValue: 1,
       duration: 520,
       easing: Easing.out(Easing.back(1.8)),
-      useNativeDriver: true,
+      useNativeDriver: NATIVE_DRIVER,
     }).start();
   }, [pop]);
 

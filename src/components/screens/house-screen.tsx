@@ -68,6 +68,7 @@ import {
   useLatestRef,
   useStableCallback,
 } from '@/hooks/use-stable-value';
+import { NATIVE_DRIVER } from '@/utils/animation';
 
 // 카메라 순수 로직은 house/camera.ts로 이동 (#693) — 기존 임포터(테스트)를 위한 재수출.
 export { cameraClaimsMove } from '@/components/screens/house/camera';
@@ -260,9 +261,9 @@ export const HouseScreen = memo(function HouseScreen({
         toValue: 0,
         duration: 240,
         easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
+        useNativeDriver: NATIVE_DRIVER,
       }),
-      Animated.timing(switchFade, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.timing(switchFade, { toValue: 1, duration: 200, useNativeDriver: NATIVE_DRIVER }),
     ]).start();
   }, [houseIndex, houses.length, switchX, switchFade]);
   const setHouseIndex = (next: number) => {

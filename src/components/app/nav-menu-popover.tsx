@@ -25,8 +25,8 @@ export type NavMenuPopoverProps = {
   onOpenCharacterPicker?: () => void;
   /** 방 꾸미기. */
   onEditRoom?: () => void;
-  /** 방 이미지 저장 (#245). */
-  onSaveRoomImage: () => void;
+  /** 방 이미지 저장 (#245). 없으면 항목을 숨긴다 — 웹(view-shot 없음). */
+  onSaveRoomImage?: () => void;
   /** 카테고리 관리 sheet 열기. */
   onOpenCategoryManager: () => void;
   /** 루틴 관리 — + 버튼의 바로 추가와 분리 (#335). */
@@ -92,11 +92,15 @@ export function NavMenuPopover({
                 label: '방 꾸미기',
                 onPress: () => onEditRoom?.(),
               },
-              {
-                icon: 'camera' as const,
-                label: '방 이미지 저장',
-                onPress: () => onSaveRoomImage(),
-              },
+              ...(onSaveRoomImage
+                ? [
+                    {
+                      icon: 'camera' as const,
+                      label: '방 이미지 저장',
+                      onPress: () => onSaveRoomImage(),
+                    },
+                  ]
+                : []),
               {
                 icon: 'folder' as const,
                 label: '카테고리 관리',

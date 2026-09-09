@@ -13,6 +13,7 @@ import { readableTextColor } from '@/utils/color';
 import { horizontalFlingGesture } from '@/utils/gesture';
 import { useAnimatedValue, useAnimatedValueXY, useLatestRef } from '@/hooks/use-stable-value';
 import { WEEKDAY_LABELS as WEEKDAYS } from '@/constants/routines';
+import { NATIVE_DRIVER } from '@/utils/animation';
 
 // 선택 원 지름 — 원 배치 계산과 스타일이 공유하는 단일 출처.
 const SEL_SIZE = 34;
@@ -189,18 +190,26 @@ function CalendarBase({
         toValue: target,
         friction: 7,
         tension: 90,
-        useNativeDriver: true,
+        useNativeDriver: NATIVE_DRIVER,
       }).start();
     }
     if (appearing) {
       selVisibleRef.current = true;
-      Animated.timing(selOpacity, { toValue: 1, duration: 140, useNativeDriver: true }).start();
+      Animated.timing(selOpacity, {
+        toValue: 1,
+        duration: 140,
+        useNativeDriver: NATIVE_DRIVER,
+      }).start();
     }
   };
   useEffect(() => {
     if (!selectedInView) {
       selVisibleRef.current = false;
-      Animated.timing(selOpacity, { toValue: 0, duration: 120, useNativeDriver: true }).start();
+      Animated.timing(selOpacity, {
+        toValue: 0,
+        duration: 120,
+        useNativeDriver: NATIVE_DRIVER,
+      }).start();
       return;
     }
     placeCircle(true);

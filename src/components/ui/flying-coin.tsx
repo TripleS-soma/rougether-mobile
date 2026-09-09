@@ -4,6 +4,7 @@ import { Animated, Easing, StyleSheet } from 'react-native';
 import { Icon } from '@/components/ui/icon';
 import { useTokens } from '@/hooks/use-tokens';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
+import { NATIVE_DRIVER } from '@/utils/animation';
 
 /**
  * 탭 지점에서 지갑까지 포물선으로 나는 코인 (#440, #851에서 ui로 승격).
@@ -30,7 +31,7 @@ export function FlyingCoin({
       toValue: 1,
       duration: 550,
       easing: Easing.in(Easing.quad),
-      useNativeDriver: true,
+      useNativeDriver: NATIVE_DRIVER,
     }).start(({ finished }) => finished && onDone());
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 마운트 시 1회 발사
   }, []);

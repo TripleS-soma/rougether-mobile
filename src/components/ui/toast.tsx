@@ -15,6 +15,7 @@ import { GlassSurface } from '@/components/ui/glass-surface';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
+import { NATIVE_DRIVER } from '@/utils/animation';
 
 export type ToastType = 'info' | 'success' | 'error';
 
@@ -51,16 +52,22 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const hide = useCallback(() => {
     if (hideTimer.current) clearTimeout(hideTimer.current);
     hideTimer.current = null;
-    Animated.timing(progress, { toValue: 0, duration: FADE_MS, useNativeDriver: true }).start(() =>
-      setToast(null),
-    );
+    Animated.timing(progress, {
+      toValue: 0,
+      duration: FADE_MS,
+      useNativeDriver: NATIVE_DRIVER,
+    }).start(() => setToast(null));
   }, [progress]);
 
   const show = useCallback(
     (message: string, type: ToastType = 'info') => {
       if (hideTimer.current) clearTimeout(hideTimer.current);
       setToast({ message, type, key: Date.now() });
-      Animated.timing(progress, { toValue: 1, duration: FADE_MS, useNativeDriver: true }).start();
+      Animated.timing(progress, {
+        toValue: 1,
+        duration: FADE_MS,
+        useNativeDriver: NATIVE_DRIVER,
+      }).start();
       hideTimer.current = setTimeout(hide, VISIBLE_MS);
     },
     [progress, hide],

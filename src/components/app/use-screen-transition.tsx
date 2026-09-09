@@ -4,6 +4,7 @@ import { Animated, Easing } from 'react-native';
 import { useAppFrame } from '@/hooks/use-app-frame';
 import { BACK_SCREEN, type Screen, TAB_FOR_SCREEN } from '@/components/app/navigation';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
+import { NATIVE_DRIVER } from '@/utils/animation';
 
 type Slot = 'a' | 'b';
 type Direction = 'push' | 'pop';
@@ -118,13 +119,13 @@ export function useScreenTransition({
         toValue: 0,
         duration: SCREEN_SLIDE_MS,
         easing,
-        useNativeDriver: true,
+        useNativeDriver: NATIVE_DRIVER,
       }),
       Animated.timing(exitX, {
         toValue: push ? -width * UNDER_PARALLAX : width,
         duration: SCREEN_SLIDE_MS,
         easing,
-        useNativeDriver: true,
+        useNativeDriver: NATIVE_DRIVER,
       }),
     ]);
     anim.start(({ finished }) => {
