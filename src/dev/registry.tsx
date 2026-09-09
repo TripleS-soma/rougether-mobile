@@ -332,7 +332,7 @@ export const galleryEntries: GalleryEntry[] = [
   },
   {
     name: 'StackedHouseFrames',
-    description: '세로형 집 10테마 · 2/3/4/6인 · 기존형 복귀 · 방 방문/자리 교환 검증 (#1077).',
+    description: '세로형 집 11테마 · 2/3/4/6인 · 기존형 복귀 · 방 방문/자리 교환 검증 (#1077).',
     render: () => <StackedHouseDemo />,
   },
   {

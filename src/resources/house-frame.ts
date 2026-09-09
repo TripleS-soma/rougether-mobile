@@ -31,6 +31,7 @@ const ROUNDED_FRAME_RELEASE_BY_THEME: Readonly<Record<string, string | undefined
   'cloud-balloon': 'cloud-renewed-v1-20260909',
   'coral-lagoon': HOUSE_ART_RELEASE,
   'mushroom-forest': 'mushroom-grass-v1-20260909',
+  'night-observatory': 'night-renewed-v1-20260909',
 };
 export const STACKED_HOUSE_THEMES = [
   { id: 'cloud-balloon', name: '구름 풍선 집', group: 1, legacyKey: DEFAULT_HOUSE_COVER_KEY },
@@ -46,6 +47,12 @@ export const STACKED_HOUSE_THEMES = [
     group: 1,
     legacyKey: 'house/mushroom-forest/house-unified-mushroom-forest-frame.png',
   },
+  {
+    id: 'night-observatory',
+    name: '밤의 천문대 집',
+    group: 1,
+    legacyKey: 'house/night-observatory/house-unified-night-observatory-frame-v3.png',
+  },
   { id: 'moonlit-hanok', name: '달빛 한옥', group: 2, legacyKey: null },
   { id: 'morning-bakery', name: '아침 빵집', group: 2, legacyKey: null },
   { id: 'sakura-teahouse', name: '벚꽃 찻집', group: 2, legacyKey: null },
@@ -56,7 +63,7 @@ export const STACKED_HOUSE_THEMES = [
 ] as const;
 export type StackedHouseThemeId = (typeof STACKED_HOUSE_THEMES)[number]['id'];
 
-// Build 113 enables the three approved legacy covers by default. An explicit
+// Enable the approved canonical covers by default. An explicit
 // zero builds a rollback bundle; this is not a live remote kill switch.
 export const STACKED_HOUSES_ENABLED = process.env.EXPO_PUBLIC_STACKED_HOUSES !== '0';
 
