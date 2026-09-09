@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Platform, useWindowDimensions } from 'react-native';
 
 /**
@@ -21,12 +22,20 @@ export type AppFrame = ReturnType<typeof useWindowDimensions> & {
   split: boolean;
 };
 
-/** 순수 계산 — 훅 밖에서 테스트한다. */
+/**
+ * 순수 계산 — 훅 밖에서 테스트한다.
+ * @param hydrated false면 무조건 프레임 없음(창 폭 그대로). 웹 정적 export의 서버
+ *   렌더는 창 폭을 모르고, 클라이언트 첫 렌더가 서버 마크업과 다르면 React가
+ *   className 차이를 고치지 않아 프레임 클래스가 영영 안 붙었다(app.rougether.com
+ *   실측 2026-09-09: props는 maxWidth 1200인데 DOM은 폭 100%). 마운트 뒤 두 번째
+ *   렌더에서 바뀌면 정상 갱신된다.
+ */
 export function resolveAppFrame(
   os: string,
   window: ReturnType<typeof useWindowDimensions>,
+  hydrated = true,
 ): AppFrame {
-  const framed = os === 'web' && window.width > APP_FRAME_MAX_WIDTH;
+  const framed = hydrated && os === 'web' && window.width > APP_FRAME_MAX_WIDTH;
   if (!framed) return { ...window, framed, split: false };
   const split = window.width >= SPLIT_MIN_WINDOW_WIDTH;
   const width = split ? Math.min(window.width, SPLIT_FRAME_MAX_WIDTH) : APP_FRAME_MAX_WIDTH;
@@ -40,5 +49,11 @@ export function resolveAppFrame(
  * 이 훅을 쓴다.
  */
 export function useAppFrame(): AppFrame {
-  return resolveAppFrame(Platform.OS, useWindowDimensions());
+  const window = useWindowDimensions();
+  // 서버 렌더·클라이언트 첫 렌더는 프레임 없이(마크업 일치), 마운트 뒤에 프레임.
+  const [hydrated, setHydrated] = useState(Platform.OS !== 'web');
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+  return resolveAppFrame(Platform.OS, window, hydrated);
 }
