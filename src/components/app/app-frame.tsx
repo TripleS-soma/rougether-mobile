@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 
-import { APP_FRAME_MAX_WIDTH, useAppFrame } from '@/hooks/use-app-frame';
+import { APP_FRAME_MAX_WIDTH, SPLIT_FRAME_MAX_WIDTH, useAppFrame } from '@/hooks/use-app-frame';
 import { useTokens } from '@/hooks/use-tokens';
 
 /**
@@ -19,7 +19,7 @@ import { useTokens } from '@/hooks/use-tokens';
 export function AppFrame({ children }: { children: ReactNode }) {
   const t = useTokens();
   // 2단(#1230)이면 프레임이 1200까지 넓어진다 — 폭은 훅이 정한다.
-  const { framed, split, width } = useAppFrame();
+  const { framed, split } = useAppFrame();
   if (Platform.OS !== 'web') return <>{children}</>;
   // 2단은 투두메이트처럼 창 전체가 한 면이고 내용 블록만 가운데 — 폰 컬럼일 때만
   // 테두리와 앱셸 색 여백으로 폰 프레임을 드러낸다.
@@ -35,9 +35,12 @@ export function AppFrame({ children }: { children: ReactNode }) {
         testID="app-frame-inner"
         style={[
           styles.inner,
+          // 폭은 정적 클래스(maxWidth)로 — 웹에서 동적 `width` 값이 DOM에 안 실리고
+          // 폭 100%가 남아 프레임이 창 전체로 퍼졌다(app.rougether.com 실측, 2026-09-09).
           framed
             ? [
-                { width, backgroundColor: t.screen },
+                split ? styles.innerSplit : styles.innerPhone,
+                { backgroundColor: t.screen },
                 phoneFrame ? [styles.innerFramed, { borderColor: t.border }] : null,
               ]
             : styles.innerFull,
@@ -87,6 +90,8 @@ const styles = StyleSheet.create({
   outer: { flex: 1, alignItems: 'center' },
   inner: { flex: 1, overflow: 'hidden' },
   innerFull: { width: '100%' },
+  innerPhone: { width: '100%', maxWidth: APP_FRAME_MAX_WIDTH },
+  innerSplit: { width: '100%', maxWidth: SPLIT_FRAME_MAX_WIDTH },
   innerFramed: {
     width: APP_FRAME_MAX_WIDTH,
     borderLeftWidth: StyleSheet.hairlineWidth,
