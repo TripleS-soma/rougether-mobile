@@ -1081,7 +1081,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                     방 이미지 저장 중에는 통째로 빼서 사진에서 제외한다 (#475).
                     opacity로 숨기면 글래스 면(#1050)이 안 그려지고 복귀가 불안정. */}
         {capturing ? null : (
-          <View style={styles.btnColumn}>
+          // 웹 데스크톱 2단(#1230 후속)에선 방 위 오버레이 대신 방 아래 한 줄 —
+          // 왼쪽 칸이 비어 보이던 것을 채우고 방도 가리지 않는다. 폰은 종전 세로 열.
+          <View style={split ? styles.btnRow : styles.btnColumn} testID="room-actions">
             <CoachTarget id="room-menu">
               <Pressable
                 ref={menuBtnRef}
@@ -1297,14 +1299,19 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {split ? (
           <View style={styles.splitRow} testID="my-room-split">
-            {/* 왼쪽 칸은 창이 낮을 때만 따로 스크롤 — 당김 새로고침은 목록 쪽에만. */}
+            {/* 왼쪽 칸은 화면 세로 가운데에 고정(sticky) — 목록이 길어도 방·달력은 제자리.
+                내용이 칸보다 크면(낮은 창) 그때만 자체 스크롤. 당김 새로고침은 목록 쪽에만. */}
             <ScrollView
               style={styles.splitHero}
               contentContainerStyle={[
                 styles.splitHeroContent,
-                { paddingTop: insets.top + Spacing.four },
+                {
+                  paddingTop: insets.top + Spacing.four,
+                  paddingBottom: Spacing.four + navInset,
+                },
               ]}
-              showsVerticalScrollIndicator={false}>
+              showsVerticalScrollIndicator={false}
+              testID="my-room-split-hero">
               {hero}
             </ScrollView>
             <View style={styles.splitList}>
@@ -1554,7 +1561,10 @@ const styles = StyleSheet.create({
   },
   splitHeroContent: {
     paddingHorizontal: Spacing.four,
-    paddingBottom: Spacing.six,
+    // 세로 가운데 — flexGrow 1로 칸 높이를 채우고 내용을 중앙에 둔다. 내용이 더 크면
+    // flexGrow가 무의미해져 위에서부터 스크롤된다.
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   splitList: {
     width: ContentMaxWidth,
@@ -1573,6 +1583,13 @@ const styles = StyleSheet.create({
     right: Spacing.four,
     bottom: Spacing.three,
     gap: Spacing.two,
+  },
+  // 2단 (#1230 후속) — 방 아래 가운데 한 줄. 같은 버튼·같은 순서(메뉴·알림·꾸미기·AI·뽑기).
+  btnRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: Spacing.three,
+    paddingTop: Spacing.three,
   },
   floatBtn: {
     width: 44,

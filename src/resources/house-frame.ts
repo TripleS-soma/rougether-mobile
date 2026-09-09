@@ -1,6 +1,5 @@
 import { ROOM_ASPECT_RATIO } from '@/components/room/room-render-contract';
 import { isCdnKey } from '@/resources/asset';
-import { HOUSE_ART_RELEASE } from '@/resources/house-art-release';
 
 export const FRAME_ASPECT = 567 / 508;
 export const DEFAULT_HOUSE_COVER_KEY = 'house/cloud-balloon/house-unified-cloud-balloon-frame.png';
@@ -29,7 +28,7 @@ const LEGACY_DISPLAY_ASPECT = ROOM_ASPECT_RATIO * (33 / 37);
 export const STACKED_HOUSE_RELEASE = 'stacked-v1-20260905';
 const ROUNDED_FRAME_RELEASE_BY_THEME: Readonly<Record<string, string | undefined>> = {
   'cloud-balloon': 'cloud-renewed-v1-20260909',
-  'coral-lagoon': HOUSE_ART_RELEASE,
+  'coral-lagoon': 'coral-renewed-v1-20260909',
   'mushroom-forest': 'mushroom-grass-v1-20260909',
   'night-observatory': 'night-renewed-v1-20260909',
 };

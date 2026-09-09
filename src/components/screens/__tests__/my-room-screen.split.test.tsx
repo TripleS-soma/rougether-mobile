@@ -1,5 +1,7 @@
 import { render } from '@testing-library/react-native';
 
+import { flattenStyle } from '@/test-utils/style';
+
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
 import type { AppFrame } from '@/hooks/use-app-frame';
@@ -36,6 +38,8 @@ describe('MyRoomScreen 2단 레이아웃 (#1230)', () => {
     const ui = await render(<MyRoomScreen routines={SAMPLE_ROUTINES} view="room" />);
     expect(ui.queryByTestId('my-room-split')).toBeNull();
     expect(ui.getByLabelText('메뉴')).toBeTruthy();
+    // 폰은 종전대로 방 위 오버레이 세로 열.
+    expect(flattenStyle(ui.getByTestId('room-actions').props.style).position).toBe('absolute');
     expect(ui.getByText('오늘의 할 일')).toBeTruthy();
   });
 
@@ -46,6 +50,16 @@ describe('MyRoomScreen 2단 레이아웃 (#1230)', () => {
     expect(ui.getByLabelText('메뉴')).toBeTruthy();
     expect(ui.getByLabelText('뽑기 상점')).toBeTruthy();
     expect(ui.getByText('오늘의 할 일')).toBeTruthy();
+    // 왼쪽 칸은 세로 가운데 고정 — 목록이 길어도 방은 제자리.
+    const heroContent = flattenStyle(
+      ui.getByTestId('my-room-split-hero').props.contentContainerStyle,
+    );
+    expect(heroContent.justifyContent).toBe('center');
+    expect(heroContent.flexGrow).toBe(1);
+    // 버튼은 방 위 오버레이가 아니라 방 아래 한 줄.
+    const actions = flattenStyle(ui.getByTestId('room-actions').props.style);
+    expect(actions.flexDirection).toBe('row');
+    expect(actions.position).toBeUndefined();
     expect(ui.getByText(SAMPLE_ROUTINES[0].title)).toBeTruthy();
   });
 
