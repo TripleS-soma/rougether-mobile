@@ -192,7 +192,43 @@ export function refreshSession(): Promise<boolean> {
   return refreshInFlight;
 }
 
-async function doRefreshSession(): Promise<boolean> {
+/**
+ * 웹 탭 간 갱신 직렬화 (#1261). 탭마다 JS 프로세스(=메모리 `session`)가 다르고
+ * 저장소(localStorage)만 공유하므로, 두 탭이 동시에 회전하면 진 쪽의 refresh가
+ * "재사용"으로 잡혀 서버가 **모든 토큰을 폐기**한다. Web Locks가 있으면 그 안에서
+ * 갱신하고, 없거나 네이티브면 그대로 실행한다(네이티브는 프로세스 하나).
+ */
+function withRefreshLock<T>(fn: () => Promise<T>): Promise<T> {
+  const locks = (globalThis as { navigator?: { locks?: LockManager } }).navigator?.locks;
+  if (locks?.request) return locks.request('rougether.auth.refresh', fn) as Promise<T>;
+  return fn();
+}
+
+/**
+ * 저장소의 쌍이 메모리와 다르면 다른 탭(또는 다른 진입점)이 이미 회전한 것 —
+ * 서버를 부르지 않고 그 쌍을 채택한다 (#1261). 채택 뒤 재시도가 다시 401이면
+ * 다음 갱신은 저장된 refresh(최신)로 뛴다.
+ */
+async function adoptStoredSessionIfNewer(): Promise<boolean> {
+  const [access, refresh] = await Promise.all([
+    AsyncStorage.getItem(ACCESS_KEY),
+    AsyncStorage.getItem(REFRESH_KEY),
+  ]);
+  if (!access || !refresh) return false;
+  if (access === session?.accessToken && refresh === session?.refreshToken) return false;
+  session = { accessToken: access, refreshToken: refresh, userId: session?.userId };
+  return true;
+}
+
+function doRefreshSession(): Promise<boolean> {
+  return withRefreshLock(async () => {
+    // 잠금을 얻는 사이 다른 탭이 끝냈을 수 있다 — 먼저 저장소를 본다.
+    if (await adoptStoredSessionIfNewer()) return true;
+    return exchangeRefreshToken();
+  });
+}
+
+async function exchangeRefreshToken(): Promise<boolean> {
   const refreshToken = session?.refreshToken;
   if (!refreshToken) return false;
   try {
