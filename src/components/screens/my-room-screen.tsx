@@ -78,7 +78,7 @@ import {
 } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
 import { ScalePressable } from '@/components/ui/scale-pressable';
-import { Radius, Spacing } from '@/constants/theme';
+import { ContentMaxWidth, Radius, Spacing } from '@/constants/theme';
 import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
 import { useBottomNavInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { APP_FRAME_MAX_WIDTH, useAppFrame } from '@/hooks/use-app-frame';
@@ -1307,7 +1307,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               showsVerticalScrollIndicator={false}>
               {hero}
             </ScrollView>
-            <View style={[styles.splitList, { borderLeftColor: t.border }]}>
+            <View style={styles.splitList}>
               {renderScroll(
                 tab === 'room' ? list : <View style={[styles.calendarPanel, column]}>{list}</View>,
               )}
@@ -1540,9 +1540,13 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   // 2단 (#1230) — 왼쪽 칸은 폰 컬럼 폭, 오른쪽 목록이 남은 폭을 쓴다.
+  // 2단 (#1230) — 왼쪽 칸은 폰 컬럼 폭, 오른쪽 목록은 콘텐츠 폭(560). 두 칸을 한 블록으로
+  // 화면 가운데에 붙인다(투두메이트 비례) — 프레임 끝까지 벌리지 않는다.
   splitRow: {
     flex: 1,
     flexDirection: 'row',
+    justifyContent: 'center',
+    gap: Spacing.six,
   },
   splitHero: {
     width: APP_FRAME_MAX_WIDTH,
@@ -1553,9 +1557,10 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.six,
   },
   splitList: {
-    flex: 1,
-    borderLeftWidth: StyleSheet.hairlineWidth,
+    width: ContentMaxWidth,
+    flexShrink: 1,
   },
+
   // 전체화면 방 (#1055) — 위 모서리는 화면 가장자리에 붙으니 각지게.
   // 나의 방 전체화면(#1058)에서만 네 모서리 전부 각지게 — 아래 둥근 모서리가
   // '오늘의 할 일' 패널 경계와 어긋나 보였다(2026-09-08). 친구 방·꾸미기는 계약 반경 그대로.
