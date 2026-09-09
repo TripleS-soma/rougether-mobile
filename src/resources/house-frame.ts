@@ -28,7 +28,7 @@ const LEGACY_DISPLAY_ASPECT = ROOM_ASPECT_RATIO * (33 / 37);
 // never replace canonical cover keys in create/update requests.
 export const STACKED_HOUSE_RELEASE = 'stacked-v1-20260905';
 const ROUNDED_FRAME_RELEASE_BY_THEME: Readonly<Record<string, string | undefined>> = {
-  'cloud-balloon': HOUSE_ART_RELEASE,
+  'cloud-balloon': 'cloud-renewed-v1-20260909',
   'coral-lagoon': HOUSE_ART_RELEASE,
   'mushroom-forest': 'mushroom-grass-v1-20260909',
 };
