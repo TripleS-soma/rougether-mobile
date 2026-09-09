@@ -47,7 +47,6 @@ def normalize(im):
 
 base, blink, wink = [normalize(im) for im in (base, blink, wink)]
 OUT.mkdir(exist_ok=True, parents=True)
-base.save(OUT / 'cat-approved-idle.webp', lossless=True, method=6)
 
 def save_loop(name, expressions, durations):
     path = OUT / f'cat-approved-{name}.webp'
@@ -58,7 +57,8 @@ def save_loop(name, expressions, durations):
     for frame in ImageSequence.Iterator(encoded):
         arrays.append(np.asarray(frame.convert('RGBA')))
         actual_durations.append(frame.info['duration'])
-    assert sum(actual_durations) == 4000
+    assert sum(actual_durations) == sum(durations)
+    assert len(arrays) > 1
     assert all(np.array_equal(a[:, :, 3], arrays[0][:, :, 3]) for a in arrays)
     # The nose, mouth, paws, silhouette and entire back/tail stay fixed.
     for x0, y0, x1, y1 in [(145, 360, 210, 399), (0, 420, 512, 512), (395, 0, 512, 512)]:
@@ -69,10 +69,11 @@ def save_loop(name, expressions, durations):
             'fixed_alpha': True, 'fixed_body': True, 'seamless_visible_loop': True}
 
 checks = {
+    'idle': save_loop('idle', [base, blink, base], [2800, 120, 3080]),
     'blink': save_loop('blink', [base, blink, base, blink, base], [1700, 90, 110, 90, 2010]),
     'wink': save_loop('wink', [base, wink, base], [1200, 650, 2150]),
 }
-report = {'default_pose': 'lying', 'size': [512, 512], 'ground_y': 500,
+report = {'default_pose': 'lying-idle', 'size': [512, 512], 'ground_y': 500,
           'eye_boxes_source': eye_boxes, 'pixels_outside_eye_masks_unchanged': True,
           'poses': ['lying', 'blink', 'wink', 'seated', 'wave'], 'loops': checks}
 (SRC / 'signature-verification.json').write_text(json.dumps(report, indent=2) + '\n')
