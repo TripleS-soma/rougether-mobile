@@ -417,7 +417,7 @@ function CalendarBase({
                           : progress.total === 0
                             ? '-'
                             : future
-                              ? `${progress.total} 예정`
+                              ? `${progress.total}`
                               : `${progress.completed}/${progress.total}`}
                       </Text>
                     ) : null}

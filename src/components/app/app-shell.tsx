@@ -522,13 +522,13 @@ export function AppShell({
             onOpenFurnitureStudio={openFurnitureStudio}
           />
           <MyRoomScreen {...myRoomPages.calendarTabProps} view="calendar" {...tabScroll.calendar} />
-          {/* 집·내 정보는 2단(#1230) 프레임 안에서도 폰 컬럼 — 캔버스·메뉴 행이 1200px로 늘지 않게. */}
+          {/* 집은 2단(#1230) 프레임 안에서도 폰 컬럼 — 캔버스가 1200px로 늘지 않게.
+              내 정보는 스스로 콘텐츠 폭을 제한하므로(useResponsiveColumn) 감싸지 않는다 —
+              감싸면 배경(블롭)까지 480px에 갇혀 설정 화면과 달리 양옆이 회색으로 남았다. */}
           <PhoneColumn>
             <HouseScreen {...housePages.tabProps} {...tabScroll.house} />
           </PhoneColumn>
-          <PhoneColumn>
-            <MyPageScreen {...settingsSurface.myPageProps} {...tabScroll.myPage} />
-          </PhoneColumn>
+          <MyPageScreen {...settingsSurface.myPageProps} {...tabScroll.myPage} />
         </TabPager>
       ) : null}
 
