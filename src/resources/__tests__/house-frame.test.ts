@@ -26,14 +26,22 @@ describe('staged house frame contract', () => {
   it.each([2, 4, 6])(
     'selects published rounded art and keeps canonical keys for %i seats',
     (capacity) => {
-      for (const [theme, canonical] of [
-        ['cloud-balloon', DEFAULT_HOUSE_COVER_KEY],
-        ['coral-lagoon', 'house/coral-aquarium/house-unified-coral-aquarium-frame.png'],
-        ['mushroom-forest', 'house/mushroom-forest/house-unified-mushroom-forest-frame.png'],
+      for (const [theme, canonical, release] of [
+        ['cloud-balloon', DEFAULT_HOUSE_COVER_KEY, 'rounded-v2-20260907'],
+        [
+          'coral-lagoon',
+          'house/coral-aquarium/house-unified-coral-aquarium-frame.png',
+          'rounded-v2-20260907',
+        ],
+        [
+          'mushroom-forest',
+          'house/mushroom-forest/house-unified-mushroom-forest-frame.png',
+          'mushroom-grass-v1-20260909',
+        ],
       ]) {
         const frame = resolveHouseFrame(canonical, { maxMembers: capacity });
         expect(frame.assetKey).toBe(
-          `house/${theme}/frames/rounded-v2-20260907/house-${theme}-${capacity}p-frame.webp`,
+          `house/${theme}/frames/${release}/house-${theme}-${capacity}p-frame.webp`,
         );
         expect(frame.canonicalKey).toBe(canonical);
       }
