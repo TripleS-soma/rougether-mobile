@@ -29,6 +29,7 @@ import { useBottomNavScrub } from '@/components/ui/use-bottom-nav-scrub';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
+import { NATIVE_DRIVER } from '@/utils/animation';
 
 export type NavTab = 'myRoom' | 'calendar' | 'house' | 'myPage';
 
@@ -87,7 +88,7 @@ function TabIcon({
         toValue: 1,
         friction: 3.4,
         tension: 240,
-        useNativeDriver: true,
+        useNativeDriver: NATIVE_DRIVER,
       }).start();
     }
     wasActive.current = isActive;

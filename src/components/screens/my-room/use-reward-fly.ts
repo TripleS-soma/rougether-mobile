@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, type View } from 'react-native';
 
 import { useAnimatedValue } from '@/hooks/use-stable-value';
+import { NATIVE_DRIVER } from '@/utils/animation';
 
 /** 보상 알약이 떠 있는 시간 — 코인 플라이(~600ms)가 도착하고 읽을 만큼. */
 const REWARD_PILL_MS = 2200;
@@ -74,7 +75,11 @@ export function useRewardFly(streakDays: number) {
   const onCoinArrive = (id: number) => {
     setFlyingCoins((prev) => prev.filter((c) => c.id !== id));
     rewardPulse.setValue(1.18);
-    Animated.spring(rewardPulse, { toValue: 1, friction: 3.5, useNativeDriver: true }).start();
+    Animated.spring(rewardPulse, {
+      toValue: 1,
+      friction: 3.5,
+      useNativeDriver: NATIVE_DRIVER,
+    }).start();
   };
 
   // 스트릭 펄스 (#440) — 수치가 오르는 순간 🔥가 한 번 크게 일렁.
@@ -83,7 +88,11 @@ export function useRewardFly(streakDays: number) {
   useEffect(() => {
     if (streakDays > prevStreak.current) {
       streakPulse.setValue(1.5);
-      Animated.spring(streakPulse, { toValue: 1, friction: 3, useNativeDriver: true }).start();
+      Animated.spring(streakPulse, {
+        toValue: 1,
+        friction: 3,
+        useNativeDriver: NATIVE_DRIVER,
+      }).start();
     }
     prevStreak.current = streakDays;
   }, [streakDays, streakPulse]);

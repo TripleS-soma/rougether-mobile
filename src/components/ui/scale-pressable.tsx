@@ -8,6 +8,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
+import { NATIVE_DRIVER } from '@/utils/animation';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -32,7 +33,7 @@ export function ScalePressable({ pressScale = 0.96, style, ...rest }: ScalePress
       toValue: v,
       friction: 5,
       tension: 300,
-      useNativeDriver: true,
+      useNativeDriver: NATIVE_DRIVER,
     }).start();
   return (
     <AnimatedPressable

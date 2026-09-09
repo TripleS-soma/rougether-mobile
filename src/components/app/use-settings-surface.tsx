@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from 'react';
-import { Linking } from 'react-native';
+import { Platform, Linking } from 'react-native';
 
 import { type Screen } from '@/components/app/navigation';
 import { SettingsScreen } from '@/components/screens/settings-screen';
@@ -281,7 +281,8 @@ export function useSettingsSurface({
     attendancePending: shortcuts?.attendancePending ?? false,
     onOpenWalletHistory: shortcuts?.onOpenWalletHistory,
     onOpenWeeklyReport,
-    onOpenCalendarImport: openCalendarImport,
+    // 기기 캘린더는 네이티브 모듈 — 웹은 행을 숨긴다(권한 안내가 거짓이 된다).
+    onOpenCalendarImport: Platform.OS === 'web' ? undefined : openCalendarImport,
     onInviteFriends: openInviteFriends,
     onOpenHelp: openHelp,
     onReportBug: openBugReport,

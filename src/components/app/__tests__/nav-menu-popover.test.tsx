@@ -79,12 +79,17 @@ describe('NavMenuPopover', () => {
     const narrow = await render(<NavMenuPopover {...baseProps} />);
     const narrowRight = flattenStyle(narrow.getByTestId('nav-menu-popover').props.style)
       .right as number;
-    narrow.unmount();
 
     mockWindowWidth = 1280;
     const wide = await render(<NavMenuPopover {...baseProps} />);
     const wideRight = flattenStyle(wide.getByTestId('nav-menu-popover').props.style).right;
     expect(wideRight).toBe(narrowRight + (1280 - APP_FRAME_MAX_WIDTH) / 2);
     mockWindowWidth = 390;
+  });
+  it('onSaveRoomImage가 없으면(웹) 방 이미지 저장 항목을 숨긴다', async () => {
+    const { onSaveRoomImage: _omit, ...rest } = baseProps;
+    const ui = await render(<NavMenuPopover {...rest} />);
+    expect(ui.queryByLabelText('방 이미지 저장')).toBeNull();
+    expect(ui.getByLabelText('방 꾸미기')).toBeTruthy();
   });
 });

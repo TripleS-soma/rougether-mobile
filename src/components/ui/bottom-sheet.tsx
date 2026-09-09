@@ -26,6 +26,7 @@ import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-g
 import { ModalFrame } from '@/components/app/app-frame';
 import { Overlay } from '@/constants/theme';
 import { useAnimatedValue, useConstant, useLatestRef } from '@/hooks/use-stable-value';
+import { NATIVE_DRIVER } from '@/utils/animation';
 
 // 스와이프-다운 닫기 (#469) — 이만큼 끌어내리거나(플링) 이 속도를 넘기면 닫는다.
 const DISMISS_DISTANCE = 96;
@@ -176,7 +177,7 @@ export function BottomSheet({
       toValue: 0,
       friction: 9,
       tension: 70,
-      useNativeDriver: true,
+      useNativeDriver: NATIVE_DRIVER,
     }).start();
   });
   const nativePan = useConstant(() =>
@@ -219,7 +220,7 @@ export function BottomSheet({
           toValue: 1,
           friction: 9,
           tension: 70,
-          useNativeDriver: true,
+          useNativeDriver: NATIVE_DRIVER,
         }).start();
       };
       // 다른 시트가 퇴장 중이면(Modal 아직 붙어 있음) 그 언마운트 뒤에 연다.
@@ -242,7 +243,7 @@ export function BottomSheet({
       toValue: 0,
       duration: 200,
       easing: Easing.in(Easing.cubic),
-      useNativeDriver: true,
+      useNativeDriver: NATIVE_DRIVER,
     }).start(({ finished }) => {
       if (!finished) return;
       setRendered(false);

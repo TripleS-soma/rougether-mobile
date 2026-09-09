@@ -4,6 +4,7 @@ import { useAnimatedValue } from '@/hooks/use-stable-value';
 
 import { Icon } from '@/components/ui/icon';
 import { useTokens } from '@/hooks/use-tokens';
+import { NATIVE_DRIVER } from '@/utils/animation';
 
 export type BearCheckProps = {
   checked: boolean;
@@ -47,7 +48,7 @@ export function BearCheck({
         toValue: 1,
         friction: 3.2,
         tension: 180,
-        useNativeDriver: true,
+        useNativeDriver: NATIVE_DRIVER,
       }).start();
     }
     prevChecked.current = checked;
