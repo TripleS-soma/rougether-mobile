@@ -30,7 +30,7 @@ export const STACKED_HOUSE_RELEASE = 'stacked-v1-20260905';
 const ROUNDED_FRAME_RELEASE_BY_THEME: Readonly<Record<string, string | undefined>> = {
   'cloud-balloon': HOUSE_ART_RELEASE,
   'coral-lagoon': HOUSE_ART_RELEASE,
-  'mushroom-forest': HOUSE_ART_RELEASE,
+  'mushroom-forest': 'mushroom-grass-v1-20260909',
 };
 export const STACKED_HOUSE_THEMES = [
   { id: 'cloud-balloon', name: '구름 풍선 집', group: 1, legacyKey: DEFAULT_HOUSE_COVER_KEY },
