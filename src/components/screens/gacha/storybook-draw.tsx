@@ -10,6 +10,7 @@ import { GachaSceneColors as Scene, GachaStage, Spacing } from '@/constants/them
 import { useAnimatedValue } from '@/hooks/use-stable-value';
 import { GACHA_ART, GIFT_ATLAS, GIFT_OPEN_MS } from '@/resources/gacha-art';
 import { hapticSelection } from '@/utils/haptics';
+import { NATIVE_DRIVER } from '@/utils/animation';
 
 export type GiftStagePhase = 'charging' | 'ready' | 'opening';
 
@@ -107,13 +108,13 @@ export function GiftOpeningStage({
           toValue: 1,
           duration: ready ? 420 : 650,
           easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
+          useNativeDriver: NATIVE_DRIVER,
         }),
         Animated.timing(pulse, {
           toValue: 0,
           duration: ready ? 420 : 650,
           easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
+          useNativeDriver: NATIVE_DRIVER,
         }),
       ]),
     );
@@ -134,7 +135,7 @@ export function GiftOpeningStage({
       toValue: 1,
       duration: GIFT_OPEN_MS,
       easing: Easing.linear,
-      useNativeDriver: true,
+      useNativeDriver: NATIVE_DRIVER,
     });
     animation.start();
     const beat = setTimeout(hapticSelection, 220);

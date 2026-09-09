@@ -8,6 +8,7 @@ import { Radius, Spacing, StaticWhite } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { RewardArtwork, rarityColor } from '@/components/screens/gacha/reward-artwork';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
+import { NATIVE_DRIVER } from '@/utils/animation';
 import {
   getRevealMotionProfile,
   type RevealMotionProfile,
@@ -72,7 +73,7 @@ export function BurstOverlay({
       toValue: 1,
       duration: motion.burstMs,
       easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
+      useNativeDriver: NATIVE_DRIVER,
     }).start();
   }, [motion, p]);
 
@@ -214,20 +215,20 @@ export function RevealCard({
         duration: profile.revealMs,
         delay: entry.index * 80,
         easing: Easing.out(Easing.back(profile.heroScale > 1.1 ? 1.8 : 1.25)),
-        useNativeDriver: true,
+        useNativeDriver: NATIVE_DRIVER,
       }),
       Animated.timing(fade, {
         toValue: 1,
         duration: Math.min(220, profile.revealMs),
         delay: entry.index * 80,
-        useNativeDriver: true,
+        useNativeDriver: NATIVE_DRIVER,
       }),
     ]).start();
     if (profile.tier === 'rare' || profile.tier === 'legendary') {
       const halo = Animated.loop(
         Animated.sequence([
-          Animated.timing(glow, { toValue: 1, duration: 520, useNativeDriver: true }),
-          Animated.timing(glow, { toValue: 0.28, duration: 520, useNativeDriver: true }),
+          Animated.timing(glow, { toValue: 1, duration: 520, useNativeDriver: NATIVE_DRIVER }),
+          Animated.timing(glow, { toValue: 0.28, duration: 520, useNativeDriver: NATIVE_DRIVER }),
         ]),
       );
       halo.start();

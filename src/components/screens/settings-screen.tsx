@@ -1,5 +1,5 @@
 import { memo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { GlassSurface } from '@/components/ui/glass-surface';
@@ -135,13 +135,18 @@ export const SettingsScreen = memo(function SettingsScreen({
   const scrollRestore = useScrollRestore(scrollRef, { getInitialScrollY, onScrollY });
 
   const sections: { title: string; rows: Row[] }[] = [
-    {
-      title: '알림',
-      rows: [
-        { icon: 'bell', label: '푸시 알림', onPress: onOpenNotifications },
-        { icon: 'sound', label: '효과음', onPress: onOpenSound },
-      ],
-    },
+    // 푸시·햅틱은 네이티브 전용 — 웹에선 토글이 되는 척만 하므로 섹션째 숨긴다.
+    ...(Platform.OS === 'web'
+      ? []
+      : [
+          {
+            title: '알림',
+            rows: [
+              { icon: 'bell' as const, label: '푸시 알림', onPress: onOpenNotifications },
+              { icon: 'sound' as const, label: '효과음', onPress: onOpenSound },
+            ],
+          },
+        ]),
     {
       title: '기타',
       rows: [

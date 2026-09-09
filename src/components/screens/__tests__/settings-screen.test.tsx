@@ -1,4 +1,5 @@
 import { fireEvent, render } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 
 import { SettingsScreen } from '@/components/screens/settings-screen';
 
@@ -170,5 +171,16 @@ describe('SettingsScreen 회원탈퇴', () => {
     await fireEvent.press(getByText('취소'));
     expect(onWithdraw).not.toHaveBeenCalled();
     expect(queryByText('정말 탈퇴할까요?')).toBeNull();
+  });
+  it('웹에서는 푸시 알림·효과음(네이티브 전용) 섹션을 숨긴다', async () => {
+    const os = jest.replaceProperty(Platform, 'OS', 'web');
+    try {
+      const ui = await render(<SettingsScreen />);
+      expect(ui.queryByText('푸시 알림')).toBeNull();
+      expect(ui.queryByText('효과음')).toBeNull();
+      expect(ui.getByText('튜토리얼 다시 보기')).toBeTruthy();
+    } finally {
+      os.restore();
+    }
   });
 });

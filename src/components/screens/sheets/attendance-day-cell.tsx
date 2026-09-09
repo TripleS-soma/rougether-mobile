@@ -5,6 +5,7 @@ import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing, StaticWhite } from '@/constants/theme';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { NATIVE_DRIVER } from '@/utils/animation';
 
 export type AttendanceDayCellProps = {
   day: number;
@@ -53,7 +54,7 @@ export function AttendanceDayCell({
       duration: 250,
       // 위에서 내리찍고 살짝 튕긴다 — back easing이 도장의 물리감을 준다.
       easing: Easing.out(Easing.back(2.2)),
-      useNativeDriver: true,
+      useNativeDriver: NATIVE_DRIVER,
     }).start();
   }, [stampNow, stamp]);
 

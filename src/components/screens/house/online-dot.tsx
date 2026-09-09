@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Animated, StyleSheet } from 'react-native';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
 import { Radius } from '@/constants/theme';
+import { NATIVE_DRIVER } from '@/utils/animation';
 
 /** 접속 점 — 은은한 숨쉬기 펄스 (#450). house-screen.tsx에서 분리 (#693). */
 export function OnlineDot({ color }: { color: string }) {
@@ -9,8 +10,8 @@ export function OnlineDot({ color }: { color: string }) {
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 0, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: NATIVE_DRIVER }),
+        Animated.timing(pulse, { toValue: 0, duration: 900, useNativeDriver: NATIVE_DRIVER }),
       ]),
     );
     loop.start();

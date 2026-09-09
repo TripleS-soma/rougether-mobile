@@ -41,6 +41,7 @@ import { formatTime, todayIso } from '@/utils/datetime';
 import { hapticSuccess } from '@/utils/haptics';
 import { DEMO_GUESTBOOK, FRIEND_DEMO_ROUTINES } from '@/mocks/fixtures';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
+import { NATIVE_DRIVER } from '@/utils/animation';
 
 /** Cheer reactions a visitor can leave on a friend's room. */
 export type CheerType = 'great' | 'support' | 'best';
@@ -614,7 +615,7 @@ function CheerBurst({ type, onDone }: { type: CheerType; onDone: () => void }) {
       toValue: 1,
       duration: 750,
       easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
+      useNativeDriver: NATIVE_DRIVER,
     }).start(({ finished }) => finished && onDone());
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 마운트 시 1회 발사
   }, []);

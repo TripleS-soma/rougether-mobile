@@ -1,6 +1,6 @@
 import * as Clipboard from 'expo-clipboard';
 import { useEffect, useRef, useState } from 'react';
-import { ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Loading } from '@/components/ui/loading';
 import { Icon } from '@/components/ui/icon';
@@ -10,6 +10,8 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import { friendInviteLink } from '@/constants/links';
 import { Radius, Spacing } from '@/constants/theme';
 import { track } from '@/lib/analytics';
+import { shareOrCopy } from '@/lib/share-link';
+import { useToast } from '@/components/ui/toast';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
@@ -79,6 +81,7 @@ export function InviteFriendsScreen({
     onInitialRedeemCodeConsumed?.();
   }, [initialRedeemCode, onInitialRedeemCodeConsumed]);
 
+  const { show: toast } = useToast();
   const copyCode = async () => {
     if (!info?.code) return;
     try {
@@ -96,14 +99,12 @@ export function InviteFriendsScreen({
   // 링크 공유 (#667) — 집 초대(#624)와 같은 결: 랜딩 경유 https라 메신저에서 눌린다.
   const shareLink = async () => {
     if (!info?.code) return;
-    try {
-      track('invite_code_copy', { kind: 'friend', how: 'share' });
-      await Share.share({
-        message: `루게더에서 함께 루틴 지켜요! 내 초대코드: ${info.code}\n${friendInviteLink(info.code)}`,
-      });
-    } catch {
-      // 공유 시트 취소/실패 — 조용히.
-    }
+    track('invite_code_copy', { kind: 'friend', how: 'share' });
+    const outcome = await shareOrCopy(
+      `루게더에서 함께 루틴 지켜요! 내 초대코드: ${info.code}\n${friendInviteLink(info.code)}`,
+    );
+    // 공유 시트가 없는 브라우저는 복사로 대신했으니 알려 준다. 취소는 조용히.
+    if (outcome === 'copied') toast('초대 링크를 복사했어요');
   };
 
   const submitRedeem = async () => {
