@@ -31,7 +31,7 @@ describe('staged house frame contract', () => {
         [
           'coral-lagoon',
           'house/coral-aquarium/house-unified-coral-aquarium-frame.png',
-          'rounded-v2-20260907',
+          'coral-renewed-v1-20260909',
         ],
         [
           'mushroom-forest',
