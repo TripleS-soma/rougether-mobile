@@ -129,7 +129,10 @@ describe('AppFrame / ModalFrame (#1227)', () => {
           </PhoneColumn>
         </AppFrame>,
       );
-      expect(flattenStyle(getByTestId('app-frame-inner').props.style).width).toBe(1200);
+      const inner = flattenStyle(getByTestId('app-frame-inner').props.style);
+      expect(inner.width).toBe(1200);
+      // 2단은 폰 프레임 테두리가 없다 — 창 전체가 한 면, 내용 블록만 가운데.
+      expect(inner.borderLeftWidth).toBeUndefined();
       const col = flattenStyle(getByTestId('phone-column').props.style);
       expect(col.width).toBe(APP_FRAME_MAX_WIDTH);
       expect(col.alignSelf).toBe('center');
