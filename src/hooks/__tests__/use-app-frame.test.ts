@@ -52,3 +52,11 @@ test('웹 창 ≥ 960px은 2단 — 프레임 폭은 창 폭, 최대 1200 (#1230
   // 경계 바로 아래는 폰 컬럼.
   expect(resolveAppFrame('web', win(SPLIT_MIN_WINDOW_WIDTH - 1)).split).toBe(false);
 });
+
+test('hydrated=false(서버 렌더·클라이언트 첫 렌더)면 웹 넓은 창도 프레임 없음 — 마크업 일치용', () => {
+  expect(resolveAppFrame('web', win(1440), false)).toEqual({
+    ...win(1440),
+    framed: false,
+    split: false,
+  });
+});
