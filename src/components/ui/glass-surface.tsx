@@ -1,10 +1,18 @@
 import { GlassView } from 'expo-glass-effect';
 import { type ReactNode } from 'react';
-import { StyleSheet, type StyleProp, View, type ViewProps, type ViewStyle } from 'react-native';
+import {
+  Platform,
+  StyleSheet,
+  type StyleProp,
+  View,
+  type ViewProps,
+  type ViewStyle,
+} from 'react-native';
 
 import { ShadowColor } from '@/constants/theme';
 
 import { useGlassMaterial } from '@/hooks/use-liquid-glass';
+import { withAlpha } from '@/utils/color';
 import { useResolvedScheme } from '@/hooks/use-tokens';
 
 export type GlassSurfaceProps = Omit<ViewProps, 'style'> & {
@@ -15,6 +23,8 @@ export type GlassSurfaceProps = Omit<ViewProps, 'style'> & {
    * 알약처럼 눌리지 않는 면이면 끈다.
    */
   interactive?: boolean;
+  /** Clear surfaces keep large panels lighter; controls retain regular glass. */
+  glassEffectStyle?: 'regular' | 'clear';
   /**
    * 강조 버튼용 틴트 (#1069) — iOS 26의 prominent glass. 글래스가 가능하면 이 색을
    * 유리에 입히고, 아니면 `fallbackColor`가 그대로 배경이 된다(호출 쪽이 같은 색을
@@ -38,6 +48,7 @@ export type GlassSurfaceProps = Omit<ViewProps, 'style'> & {
 export function GlassSurface({
   fallbackColor,
   interactive = true,
+  glassEffectStyle = 'regular',
   tintColor,
   style,
   children,
@@ -51,9 +62,19 @@ export function GlassSurface({
     // 그대로, 투명도 줄이기(opaque)는 알파 없이.
     const translucent = material === 'translucent' && !tintColor;
     const bg =
-      tintColor ?? (translucent ? withAlpha(fallbackColor, TRANSLUCENT_ALPHA) : fallbackColor);
+      tintColor ??
+      (translucent
+        ? withAlpha(fallbackColor, glassEffectStyle === 'clear' ? 0.5 : TRANSLUCENT_ALPHA)
+        : fallbackColor);
     return (
-      <View {...rest} style={[style, translucent && styles.lift, { backgroundColor: bg }]}>
+      <View
+        {...rest}
+        style={[
+          style,
+          translucent && styles.lift,
+          translucent && glassEffectStyle === 'clear' && styles.clear,
+          { backgroundColor: bg },
+        ]}>
         {children}
       </View>
     );
@@ -61,7 +82,7 @@ export function GlassSurface({
   return (
     <GlassView
       {...rest}
-      glassEffectStyle="regular"
+      glassEffectStyle={glassEffectStyle}
       isInteractive={interactive}
       tintColor={tintColor}
       colorScheme={scheme}
@@ -74,19 +95,14 @@ export function GlassSurface({
 /** 반투명 폴백의 알파 — 0.9면 밑 콘텐츠가 은은히 비치면서 글자 대비는 유지된다. */
 const TRANSLUCENT_ALPHA = 0.9;
 
-/** `#RRGGBB` 토큰에 알파를 붙인다. 그 외 형식(rgba 등)은 그대로 둔다. */
-function withAlpha(color: string, alpha: number): string {
-  if (!/^#[0-9a-fA-F]{6}$/.test(color)) return color;
-  return (
-    color +
-    Math.round(alpha * 255)
-      .toString(16)
-      .padStart(2, '0')
-      .toUpperCase()
-  );
-}
-
 const styles = StyleSheet.create({
+  clear: {
+    shadowOpacity: 0.06,
+    ...Platform.select({
+      web: { backdropFilter: 'blur(20px) saturate(1.3)' } as ViewStyle,
+      default: {},
+    }),
+  },
   lift: {
     elevation: 3,
     shadowColor: ShadowColor,

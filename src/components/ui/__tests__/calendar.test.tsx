@@ -1,8 +1,10 @@
-import { act, fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render, within } from '@testing-library/react-native';
 import { State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { Calendar } from '@/components/ui/calendar';
+import { Themes } from '@/constants/theme';
+import { flattenStyle } from '@/test-utils/style';
 
 describe('Calendar', () => {
   /**
@@ -23,16 +25,13 @@ describe('Calendar', () => {
       <Calendar value="2026-08-16" today="2026-08-16" onSelect={() => {}} />,
     );
 
-    const flatten = (style: unknown): Record<string, unknown> =>
-      Object.assign({}, ...[style].flat(Infinity).filter(Boolean));
-
     // 날짜 칸은 flex:1 — 퍼센트 폭이면 반올림 줄바꿈이 되돌아온다.
-    const cell = flatten(getByLabelText('2026-08-16').props.style);
+    const cell = flattenStyle(getByLabelText('2026-08-16').props.style);
     expect(cell.flex).toBe(1);
     expect(typeof cell.width).not.toBe('string');
 
     // grid는 가로 wrap이 아니라 세로 스택이어야 한다.
-    const grid = flatten(getByTestId('calendar-grid').props.style);
+    const grid = flattenStyle(getByTestId('calendar-grid').props.style);
     expect(grid.flexWrap).toBeUndefined();
     expect(grid.flexDirection).toBe('column');
   });
@@ -51,12 +50,11 @@ describe('Calendar', () => {
         markedDates={new Set(['2026-08-20'])}
       />,
     );
-    const flatten = (style: unknown): Record<string, unknown> =>
-      Object.assign({}, ...[style].flat(Infinity).filter(Boolean));
-
     const marked = getByLabelText('2026-08-20, 할 일 있음');
     const children = marked.children as unknown as { props?: { style?: unknown } }[];
-    const dot = children.map((c) => flatten(c?.props?.style)).find((style) => style.bottom != null);
+    const dot = children
+      .map((c) => flattenStyle(c?.props?.style))
+      .find((style) => style.bottom != null);
 
     expect(dot).toBeTruthy();
     expect(dot?.position).toBe('absolute');
@@ -213,13 +211,10 @@ describe('Calendar', () => {
     const { getByLabelText } = await render(
       <Calendar value="2026-08-20" today="2026-08-16" onSelect={() => {}} />,
     );
-    const flatten = (style: unknown): Record<string, unknown> =>
-      Object.assign({}, ...[style].flat(Infinity).filter(Boolean));
-
     const todayCell = getByLabelText('2026-08-16, 오늘');
     const ring = (todayCell.children as unknown as { children?: unknown[] }[])
       .flatMap((c) => (c?.children ?? []) as { props?: { style?: unknown } }[])
-      .map((c) => flatten(c?.props?.style))
+      .map((c) => flattenStyle(c?.props?.style))
       .find((st) => st.borderWidth != null);
 
     expect(ring).toBeTruthy();
@@ -284,4 +279,68 @@ describe('Calendar', () => {
       expect(queryAllByLabelText(/^2026-08-\d{2}/)).toHaveLength(31);
     });
   });
+  /** 토요일은 파랑(`info`), 일요일은 빨강(`danger`) — 평일 숫자는 기본 텍스트색. */
+  it('토요일 숫자는 info, 일요일은 danger, 평일은 text 색이다', async () => {
+    const { getByLabelText } = await render(
+      <Calendar value="2026-09-08" today="2026-09-08" onSelect={() => {}} />,
+    );
+    const dayColor = (date: string, day: string) =>
+      flattenStyle(within(getByLabelText(date)).getByText(day).props.style).color;
+    expect(dayColor('2026-09-05', '5')).toBe(Themes.cozy.info);
+    expect(dayColor('2026-09-06', '6')).toBe(Themes.cozy.danger);
+    expect(dayColor('2026-09-07', '7')).toBe(Themes.cozy.text);
+  });
+});
+
+it('KST 월 경계에서 외부 선택일 변경은 보이는 월과 조회 신호를 함께 바꾼다', async () => {
+  const monthChanged = jest.fn();
+  const ui = await render(
+    <Calendar
+      value="2026-09-30"
+      today="2026-09-30"
+      onSelect={() => {}}
+      onVisibleMonthChange={monthChanged}
+      progressByDate={{}}
+    />,
+  );
+  await ui.rerender(
+    <Calendar
+      value="2026-10-01"
+      today="2026-10-01"
+      onSelect={() => {}}
+      onVisibleMonthChange={monthChanged}
+      progressByDate={{}}
+    />,
+  );
+  expect(ui.getByText('2026년 10월')).toBeTruthy();
+  expect(ui.getByLabelText('2026-10-01, 집계 확인 중')).toBeTruthy();
+  expect(monthChanged).toHaveBeenLastCalledWith('2026-10');
+});
+
+it('달성도 모드에서 빈 날짜와 미래 날짜에 숫자 범례를 반복하지 않는다', async () => {
+  const onSelect = jest.fn();
+  const ui = await render(
+    <Calendar
+      value="2026-09-08"
+      today="2026-09-09"
+      markedDates={new Set(['2026-09-08', '2026-09-10'])}
+      onSelect={onSelect}
+      progressByDate={{
+        '2026-09-08': { total: 3, completed: 2 },
+        '2026-09-09': { total: 0, completed: 0 },
+        '2026-09-10': { total: 2, completed: 0 },
+      }}
+    />,
+  );
+  const past = ui.getByLabelText('2026-09-08, 2개 완료, 전체 3개');
+  expect(within(past).queryByText('2/3')).toBeNull();
+  expect(within(past).getByTestId('calendar-todo-dot-2026-09-08')).toBeTruthy();
+  const empty = ui.getByLabelText('2026-09-09, 오늘, 일정 없음');
+  expect(within(empty).queryByText('-')).toBeNull();
+  expect(ui.queryByTestId('calendar-todo-dot-2026-09-09')).toBeNull();
+  const future = ui.getByLabelText('2026-09-10, 예정 2개');
+  expect(within(future).queryByText('2')).toBeNull();
+  expect(ui.getByTestId('calendar-todo-dot-2026-09-10')).toBeTruthy();
+  await fireEvent.press(future);
+  expect(onSelect).toHaveBeenCalledWith('2026-09-10');
 });

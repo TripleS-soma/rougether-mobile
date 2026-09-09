@@ -95,3 +95,11 @@ export function readableTextColor(color: string, bg: string, target = 4.5): stri
   // Extremes may still fall short on mid-tone backgrounds — return the extreme.
   return contrastRatio(result, bg) >= target ? result : hslToHex(h, s, darkBg ? 1 : 0);
 }
+
+const hex2 = (n: number) => Math.round(n).toString(16).padStart(2, '0');
+
+/** `#RRGGBB` 토큰에 알파를 붙여 `#RRGGBBAA`로. 그 외 형식(rgba 등)은 그대로 둔다. */
+export function withAlpha(color: string, alpha: number): string {
+  if (!parseHex(color)) return color;
+  return `${color}${hex2(alpha * 255)}`.toUpperCase();
+}

@@ -1,3 +1,6 @@
+import { useQuery } from '@tanstack/react-query';
+import { fetchMyRoom, getSessionUserId } from '@/api';
+import { queryKeys } from '@/lib/query-keys';
 import {
   useCallback,
   useEffect,
@@ -26,7 +29,8 @@ import { useRoutineOrder } from '@/hooks/use-routine-order';
 import { reportAppOpen } from '@/lib/app-open';
 import { onNotificationReceived, onNotificationTap } from '@/lib/push-events';
 import { toServerItemId, type ShopCatalogue } from '@/api/adapters';
-import { todayIso } from '@/utils/datetime';
+import { useCalendarView } from '@/hooks/use-calendar-view';
+import type { RoomGrowthProps } from '@/components/ui/room-growth-pill';
 
 type MyRoomData = ReturnType<typeof useMyRoomData>;
 type MissionLinks = ReturnType<typeof useMissionLinks>;
@@ -102,7 +106,7 @@ export function useMyRoomPages({
     wearCharacter: (serverId: number) => void;
   };
   /** 방 렌더 prop — 배치 상태·카탈로그는 꾸미기(셸 잔류)와 공유라 셸 소유. */
-  room: {
+  room: RoomGrowthProps & {
     placements: MyRoomScreenProps['placements'];
     wallpaperId: string;
     floorId: string | null;
@@ -114,10 +118,14 @@ export function useMyRoomPages({
     onCleanCobweb: MyRoomScreenProps['onCleanCobweb'];
     /** 달력 점 (#838) — 할 일 있는 날 집합 + 보이는 달 변경 알림. */
     markedTodoDates: MyRoomScreenProps['markedTodoDates'];
-    onCalendarMonthChange: MyRoomScreenProps['onCalendarMonthChange'];
   };
 }) {
   const { screen, setScreen, addReturnScreen, setAddReturnScreen } = nav;
+  const { data: growthRoom } = useQuery({
+    queryKey: queryKeys.myRoom.byUser(getSessionUserId()),
+    queryFn: fetchMyRoom,
+    staleTime: 30_000,
+  });
   const {
     routines,
     completions,
@@ -159,7 +167,23 @@ export function useMyRoomPages({
 
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
   // The pager unmounts after a sub-screen transition; keep the date in the shell.
-  const [calendarSelectedDate, setCalendarSelectedDate] = useState(todayIso);
+  const calendar = useCalendarView(reloadMyRoom);
+  const {
+    selectedDate: calendarSelectedDate,
+    setSelectedDate: setCalendarSelectedDate,
+    refresh: refreshCalendar,
+  } = calendar;
+  const markedCalendarDates = useMemo(
+    () => new Set([...(room.markedTodoDates ?? []), ...(calendar.monthTodoDates ?? [])]),
+    [room.markedTodoDates, calendar.monthTodoDates],
+  );
+  const visibleCalendarDays = useMemo(
+    () =>
+      calendar.selectedDayItems
+        ? { ...calendarDays, [calendarSelectedDate]: calendar.selectedDayItems }
+        : calendarDays,
+    [calendarDays, calendarSelectedDate, calendar.selectedDayItems],
+  );
   // 달력 ＋ 루틴 (#1138) — 고른 날짜를 추가 화면의 시작일로.
   const [addRoutineStartDate, setAddRoutineStartDate] = useState<string | undefined>(undefined);
 
@@ -278,19 +302,29 @@ export function useMyRoomPages({
   );
   const handleToggleCalendarItem = useCallback(
     (item: CalendarDayItem, date: string) => {
-      void toggleCalendarItem(item, date);
+      void toggleCalendarItem(item, date).finally(refreshCalendar);
     },
-    [toggleCalendarItem],
+    [toggleCalendarItem, refreshCalendar],
   );
   // 당겨서 새로고침 (#454) — 실패해도 조용히 접는다(훅이 상태를 유지하고,
   // 인디케이터는 어차피 되돌아간다). 나의 방은 전체 리페치.
   const refreshMyRoom = useCallback(async () => {
     try {
-      await reloadMyRoom();
+      await Promise.all([reloadMyRoom(), refreshCalendar()]);
     } catch {
       // 유지 — 기존 데이터가 그대로 남는다.
     }
-  }, [reloadMyRoom]);
+  }, [reloadMyRoom, refreshCalendar]);
+  const toggleAndRefreshGrowth = useCallback<NonNullable<MyRoomScreenProps['onToggleCompletion']>>(
+    async (...args) => {
+      try {
+        return await toggleWithMissionGuard(...args);
+      } finally {
+        await refreshCalendar();
+      }
+    },
+    [toggleWithMissionGuard, refreshCalendar],
+  );
   // 지난·완료 할 일 등 안 보이는 항목까지 포함한 카테고리별 점유 수 (#505).
   const categoryInUseCounts = useMemo(
     () =>
@@ -372,6 +406,16 @@ export function useMyRoomPages({
   /** 탭 페이저의 나의 방 페이지 prop — `<MyRoomScreen {...tabProps} />`. */
   const tabProps = {
     userName: nickname,
+    today: calendar.today,
+    growthLevel: growthRoom?.growthLevel,
+    growthPoints: growthRoom?.growthPoints,
+    pointsToNextLevel: growthRoom?.pointsToNextLevel,
+    calendarMonthDays: calendar.monthDays,
+    calendarMonthLoading: calendar.monthLoading,
+    calendarMonthError: calendar.monthError,
+    calendarDayError: calendar.dayError,
+    onRetryCalendarMonth: calendar.retryMonth,
+    onRetryCalendarDay: calendar.retryDay,
     streakDays: streak,
     coinBalance: wallet.coin,
     diamondBalance: wallet.diamond,
@@ -379,7 +423,7 @@ export function useMyRoomPages({
     completions,
     categories,
     allCategories,
-    calendarDays,
+    calendarDays: visibleCalendarDays,
     onSelectDate: handleSelectDate,
     onToggleCalendarItem: handleToggleCalendarItem,
     loading: myRoomLoading,
@@ -391,15 +435,15 @@ export function useMyRoomPages({
     backgroundId: room.backgroundId,
     cobweb: room.cobweb,
     onCleanCobweb: room.onCleanCobweb,
-    markedTodoDates: room.markedTodoDates,
-    onCalendarMonthChange: room.onCalendarMonthChange,
+    markedTodoDates: markedCalendarDates,
+    onCalendarMonthChange: calendar.setMonth,
     furniture: room.catalogue.furniture,
     wallpapers: room.catalogue.wallpapers,
     floors: room.catalogue.floors,
     backgrounds: room.catalogue.backgrounds,
     characterId: character.wornCharacterId,
     characterFrames: character.wornCharacterFrames,
-    onToggleCompletion: toggleWithMissionGuard,
+    onToggleCompletion: toggleAndRefreshGrowth,
     onEdit: openDecor,
     onAddRoutine: addRoutineFromMyRoom,
     onAddRoutineForDate: addRoutineForDate,

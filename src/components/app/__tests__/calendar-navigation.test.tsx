@@ -1,9 +1,9 @@
-import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, waitFor } from '@testing-library/react-native';
 
 import { AppShell } from '@/components/app/app-shell';
-import { AuthProvider } from '@/hooks/use-auth';
-import { QueryProvider } from '@/test-utils/query-wrapper';
+import { renderWithProviders } from '@/test-utils/render';
 import { todayIso } from '@/utils/datetime';
+import { calendarHeading } from '@/test-utils/my-room-screen-fixtures';
 
 const TODAY = todayIso();
 const [year, month] = TODAY.split('-').map(Number);
@@ -21,8 +21,9 @@ const realFetch = global.fetch;
 beforeEach(() => {
   jest.useFakeTimers();
   global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
-    const body =
-      url.endsWith('/routines/42') && init?.method === 'PUT'
+    const body = url.endsWith('/rooms/me')
+      ? { growthLevel: 2, growthPoints: 50, pointsToNextLevel: 16 }
+      : url.endsWith('/routines/42') && init?.method === 'PUT'
         ? routine
         : url.endsWith('/routines')
           ? { items: [routine] }
@@ -45,34 +46,33 @@ const finishTransition = () =>
     jest.advanceTimersByTime(400);
   });
 
-const renderShell = () =>
-  render(
-    <QueryProvider>
-      <AuthProvider>
-        <AppShell />
-      </AuthProvider>
-    </QueryProvider>,
-  );
+const renderShell = () => renderWithProviders(<AppShell />);
 
 describe('달력 하단 탭 왕복 (#1159)', () => {
   it('다른 달의 선택 날짜를 탭 전환과 루틴 추가 화면 왕복 뒤에도 유지한다', async () => {
     const ui = await renderShell();
     await fireEvent.press(ui.getByLabelText('달력'));
     await fireEvent.press(ui.getByLabelText('이전 달'));
-    await fireEvent.press(ui.getByLabelText(PREVIOUS_MONTH_DATE));
+    await fireEvent.press(ui.getByLabelText(new RegExp(`^${PREVIOUS_MONTH_DATE},`)));
 
     await fireEvent.press(ui.getByLabelText('마이페이지'));
     await fireEvent.press(ui.getByLabelText('달력'));
-    expect(ui.getByLabelText(PREVIOUS_MONTH_DATE).props.accessibilityState.selected).toBe(true);
+    expect(
+      ui.getByLabelText(new RegExp(`^${PREVIOUS_MONTH_DATE},`)).props.accessibilityState.selected,
+    ).toBe(true);
 
     await fireEvent.press(ui.getByLabelText('이 날에 루틴 추가'));
     await finishTransition();
     expect(ui.getByText('루틴 추가')).toBeTruthy();
     await fireEvent.press(ui.getByLabelText('뒤로가기'));
     await finishTransition();
-    await waitFor(() => expect(ui.getByText('이 날의 할 일')).toBeTruthy());
+    await waitFor(() =>
+      expect(ui.getByRole('header', { name: calendarHeading(PREVIOUS_MONTH_DATE) })).toBeTruthy(),
+    );
     expect(ui.getByLabelText('달력').props.accessibilityState.selected).toBe(true);
-    expect(ui.getByLabelText(PREVIOUS_MONTH_DATE).props.accessibilityState.selected).toBe(true);
+    expect(
+      ui.getByLabelText(new RegExp(`^${PREVIOUS_MONTH_DATE},`)).props.accessibilityState.selected,
+    ).toBe(true);
 
     // 오늘은 서버 날짜 조회를 생략해도 선택값 자체는 반드시 저장해야 한다.
     await fireEvent.press(ui.getByLabelText('오늘로'));
@@ -80,8 +80,12 @@ describe('달력 하단 탭 왕복 (#1159)', () => {
     await finishTransition();
     await fireEvent.press(ui.getByLabelText('뒤로가기'));
     await finishTransition();
-    await waitFor(() => expect(ui.getByText('이 날의 할 일')).toBeTruthy());
-    expect(ui.getByLabelText(TODAY).props.accessibilityState.selected).toBe(true);
+    await waitFor(() =>
+      expect(ui.getByRole('header', { name: calendarHeading(TODAY) })).toBeTruthy(),
+    );
+    expect(ui.getByLabelText(new RegExp(`^${TODAY},`)).props.accessibilityState.selected).toBe(
+      true,
+    );
   });
 
   it.each(['달력', '나의 방'])(
@@ -102,5 +106,12 @@ describe('달력 하단 탭 왕복 (#1159)', () => {
         expect.objectContaining({ method: 'PUT' }),
       );
     },
+  );
+});
+
+it('기존 Android 소스에서도 서버 방 레벨을 헤더에 표시한다', async () => {
+  const ui = await renderShell();
+  await waitFor(() =>
+    expect(ui.getByLabelText('나의 방 레벨 2, 다음 레벨까지 16포인트, 누적 50포인트')).toBeTruthy(),
   );
 });

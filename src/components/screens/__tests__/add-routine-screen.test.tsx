@@ -253,13 +253,14 @@ describe('AddRoutineScreen', () => {
     expect(getByLabelText('12월').props.accessibilityState.selected).toBe(true);
   });
 
-  it('initialStartDate가 오늘이 아니면 지속 기간이 켜진 채 그 날짜로 시작한다 (#1138)', async () => {
+  it('initialStartDate를 루틴 시작일로 전달한다 (#1138)', async () => {
     const onAdd = jest.fn();
     const { getByText, getByLabelText, getByPlaceholderText } = await render(
       <AddRoutineScreen onAdd={onAdd} initialStartDate="2030-01-15" />,
     );
     expect(getByLabelText('지속 기간 선택')).toBeTruthy();
     expect(getByText(/2030/)).toBeTruthy();
+    await fireEvent.press(getByText('월'));
     await fireEvent.changeText(getByPlaceholderText('예) 매일 30분 산책'), '독서');
     await fireEvent.press(getByText('루틴 추가하기'));
     expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ startDate: '2030-01-15' }));

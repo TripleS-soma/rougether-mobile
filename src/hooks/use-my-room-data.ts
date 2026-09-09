@@ -62,7 +62,7 @@ import {
   UNCATEGORIZED_META,
 } from '@/constants/routines';
 import type { HouseMissionContributeResponse } from '@/api/types';
-import { todayIso } from '@/utils/datetime';
+import { calendarToday as todayIso } from '@/utils/calendar-progress';
 import { identifyUser, track } from '@/lib/analytics';
 import { setErrorUser } from '@/lib/error-reporting';
 import { useCalendarData } from '@/hooks/use-calendar-data';
@@ -259,6 +259,7 @@ export function useMyRoomData() {
         const created = await createTodo(toTodoCreate(category, title, dueDate));
         setRoutines((prev) => [...prev, toAppTodo(created)]);
         track('routine_create', { kind: 'todo' });
+        invalidateCalendar();
         // 달력의 서버 백업 날짜(오늘 외)에 추가한 경우 그 날짜 기록을 재조회해
         // 목록에 즉시 반영한다 (#323).
         if (dueDate !== todayIso()) void loadCalendarDay(dueDate);
@@ -268,7 +269,7 @@ export function useMyRoomData() {
         unmarkPending(dueDate);
       }
     },
-    [loadCalendarDay, toast, markPending, unmarkPending],
+    [loadCalendarDay, toast, markPending, unmarkPending, invalidateCalendar],
   );
 
   // 성공 여부를 돌려준다 — 온보딩 미션(첫 루틴 등록, #571)이 성공 시점에 후킹.
@@ -280,13 +281,14 @@ export function useMyRoomData() {
         // 퍼널 (#799) — 온보딩 미션은 스킵할 수 있어 미션 이벤트만으로는
         // 등록한 사람을 다 세지 못한다. 생성 자체를 여기서 센다.
         track('routine_create', { kind: 'routine' });
+        invalidateCalendar();
         return true;
       } catch {
         toast('루틴을 만들지 못했어요', 'error');
         return false;
       }
     },
-    [toast],
+    [toast, invalidateCalendar],
   );
 
   const updateRoutine = useCallback(
@@ -672,6 +674,7 @@ export function useMyRoomData() {
       );
       try {
         await apiDeleteCategory(Number(id), mode);
+        invalidateCalendar();
         await reload();
       } catch (err) {
         setCategories(before.categories);
@@ -683,7 +686,7 @@ export function useMyRoomData() {
         );
       }
     },
-    [routines, categories, reload, toast],
+    [routines, categories, reload, toast, invalidateCalendar],
   );
 
   return useMemo(

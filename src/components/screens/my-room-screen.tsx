@@ -49,6 +49,9 @@ import { RoutineMenuSheet } from '@/components/screens/sheets/routine-menu-sheet
 import { TimePickerSheet } from '@/components/screens/sheets/time-picker-sheet';
 import { TodoDateDialog } from '@/components/screens/sheets/todo-date-dialog';
 import { Loading } from '@/components/ui/loading';
+import type { CalendarDayCount } from '@/api/types';
+import { RoomGrowthPill, type RoomGrowthProps } from '@/components/ui/room-growth-pill';
+import { calendarProgress, type CalendarFilter } from '@/utils/calendar-progress';
 import { Calendar } from '@/components/ui/calendar';
 import { CoachTarget } from '@/components/ui/coach-mark';
 import { GlassSurface } from '@/components/ui/glass-surface';
@@ -116,6 +119,16 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
     onCleanCobweb?: () => Promise<number | null>;
     /** 할 일 있는 날 (#838) — 달력 점 표시. 없으면 점 없이 그린다. */
     markedTodoDates?: ReadonlySet<string>;
+    today?: string;
+    growthLevel?: RoomGrowthProps['growthLevel'];
+    growthPoints?: number;
+    pointsToNextLevel?: number;
+    calendarMonthDays?: CalendarDayCount[];
+    calendarMonthLoading?: boolean;
+    calendarMonthError?: boolean;
+    calendarDayError?: boolean;
+    onRetryCalendarMonth?: () => void;
+    onRetryCalendarDay?: () => void;
     /** 달력에서 보이는 달이 바뀔 때 (#838) — 부모가 그 달 개수를 받아온다. */
     onCalendarMonthChange?: (yearMonth: string) => void;
     /**
@@ -268,6 +281,16 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   cobweb,
   onCleanCobweb,
   markedTodoDates,
+  today: serverToday,
+  growthLevel,
+  growthPoints,
+  pointsToNextLevel,
+  calendarMonthDays,
+  calendarMonthLoading,
+  calendarMonthError,
+  calendarDayError,
+  onRetryCalendarMonth,
+  onRetryCalendarDay,
   onCalendarMonthChange,
   view,
   onAddRoutineForDate,
@@ -401,7 +424,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   const { show: toast } = useToast();
   const knownIds = useMemo(() => categories.map((c) => c.id), [categories]);
 
-  const today = todayIso();
+  const today = serverToday ?? todayIso();
   const isDone = useCallback(
     (id: string, date: string) => (completions[id] ?? []).includes(date),
     [completions],
@@ -523,11 +546,26 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // 셸이 view를 주면 그게 곧 탭 (#1138); 없으면 알약으로 스스로 전환한다.
   const [ownTab, setTab] = useState<'room' | 'calendar'>('room');
   const tab = view ?? ownTab;
-  const [ownSelectedDate, setOwnSelectedDate] = useState(() => todayIso());
+  const [ownSelectedDate, setOwnSelectedDate] = useState(() => today);
+  const [calendarFilter, setCalendarFilter] = useState<CalendarFilter>('all');
+  const progressByDate = useMemo(() => {
+    const counts: Record<string, { total: number; completed: number }> = {};
+    for (const day of calendarMonthDays ?? []) {
+      const progress = calendarProgress(day, calendarFilter);
+      if (day.date && progress) counts[day.date] = progress;
+    }
+    return counts;
+  }, [calendarMonthDays, calendarFilter]);
+  const showCalendarProgress = !!onRetryCalendarMonth || !!calendarMonthDays;
   const selectedDate = controlledSelectedDate ?? ownSelectedDate;
   const dateRoutines = useMemo(
-    () => routines.filter((r) => isScheduledOn(r, selectedDate)),
-    [routines, selectedDate],
+    () =>
+      routines.filter(
+        (r) =>
+          isScheduledOn(r, selectedDate) &&
+          (calendarFilter === 'all' || (r.kind ?? 'routine') === calendarFilter),
+      ),
+    [routines, selectedDate, calendarFilter],
   );
   // 참조 고정 (#771) — Calendar가 memo라, 매 렌더 새 함수면 42칸이 매번 다시 그려진다.
   const pickDate = useStableCallback((date: string) => {
@@ -537,12 +575,17 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   });
   const catMeta = allCategories ?? categories;
   const serverBackedDay = !!onSelectDate && selectedDate !== today;
-  const dayItems = serverBackedDay ? calendarDays?.[selectedDate] : undefined;
-  // 선택한 날짜의 전체 완료/총 개수 (#346) — 방탭의 2/4 + 진행 바와 같은 표시.
-  const calDayTotal = serverBackedDay ? (dayItems?.length ?? 0) : dateRoutines.length;
-  const calDayDone = serverBackedDay
-    ? (dayItems?.filter((i) => i.completed).length ?? 0)
-    : dateRoutines.filter((r) => isDone(r.id, selectedDate)).length;
+  const calendarTodayError = !serverBackedDay && loadError;
+  const rawDayItems = serverBackedDay ? calendarDays?.[selectedDate] : undefined;
+  const dayItems = useMemo(
+    () => rawDayItems?.filter((item) => calendarFilter === 'all' || item.kind === calendarFilter),
+    [rawDayItems, calendarFilter],
+  );
+  const selectedDay = new Date(`${selectedDate}T12:00:00`);
+  const selectedDayLabel = `${selectedDay.getMonth() + 1}월 ${selectedDay.getDate()}일`;
+  const selectedWeekday = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'][
+    selectedDay.getDay()
+  ];
 
   // 달력 서버 날짜에서 연 메뉴 — 완료 라벨/토글은 그 날의 기록과 달력 규칙
   // (미래 차단, 과거 허용)을 따른다 (#323).
@@ -1021,7 +1064,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           </Pressable>
           {/* 미분류(pseudo) 그룹은 실제 카테고리가 아니라 표시하지 않는다. */}
           {meta.id ? <VisibilityMark visibility={meta.visibility} /> : null}
-          {rows.length > 0 ? (
+          {tab === 'room' && rows.length > 0 ? (
             <Text style={[Typography.supporting, { color: t.textDisabled }]}>
               {doneCount}/{rows.length}
             </Text>
@@ -1079,7 +1122,12 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           contentContainerStyle={[
             styles.body,
             // 달력 탭은 방이 없어 떠 있는 크롬(#1055) 밑으로 콘텐츠를 내린다.
-            tab !== 'room' ? { paddingTop: insets.top + Spacing.two + CHROME_ROW_HEIGHT } : null,
+            tab !== 'room'
+              ? {
+                  paddingTop:
+                    insets.top + Spacing.two + (view === undefined ? CHROME_ROW_HEIGHT : 0),
+                }
+              : null,
             navInset ? { paddingBottom: Spacing.six + navInset } : null,
             addingCategory != null && keyboardPad > 0 ? { paddingBottom: keyboardPad + 120 } : null,
           ]}
@@ -1093,6 +1141,25 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           {tab === 'room' ? (
             <>
               <View style={styles.roomWrap}>
+                {!capturing ? (
+                  <View
+                    pointerEvents="box-none"
+                    style={[
+                      styles.growthOverlay,
+                      {
+                        top:
+                          insets.top +
+                          Spacing.two +
+                          (view === undefined ? CHROME_ROW_HEIGHT + Spacing.two : 0),
+                      },
+                    ]}>
+                    <RoomGrowthPill
+                      growthLevel={growthLevel}
+                      growthPoints={growthPoints}
+                      pointsToNextLevel={pointsToNextLevel}
+                    />
+                  </View>
+                ) : null}
                 {/*
                     캡처 대상은 방 자체만 (#778) — 예전엔 ref가 패딩 있는
                     roomWrap에 붙어 있어 그 **투명 여백까지 찍혔고**, #744에서
@@ -1230,27 +1297,77 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             </>
           ) : (
             <View style={[styles.calendarPanel, column]}>
-              {/* monthSwipe=false 유지 (#825) — 달력 위 가로 스와이프가 월
-                  이동이라는 또 다른 뜻을 갖게 되면 "가로 스와이프 = 하단 탭
-                  이동" 규칙이 다시 깨진다. 월 이동은 ‹ › 버튼. */}
-              <Calendar
-                value={selectedDate}
-                onSelect={pickDate}
-                today={today}
-                monthSwipe={false}
-                markedDates={markedTodoDates}
-                onVisibleMonthChange={onCalendarMonthChange}
-              />
-              <View style={styles.calListHead}>
-                <Text style={[Typography.h3, styles.calListTitle, { color: t.text }]}>
-                  이 날의 할 일
-                </Text>
-                <View style={styles.sectionHeadRight}>
-                  {calDayTotal > 0 ? (
-                    <Text style={[Typography.label, { color: t.primaryText }]}>
-                      {calDayDone} / {calDayTotal}
+              <View style={styles.calendarOverview}>
+                <Calendar
+                  value={selectedDate}
+                  onSelect={pickDate}
+                  today={today}
+                  monthSwipe={false}
+                  markedDates={calendarFilter === 'routine' ? undefined : markedTodoDates}
+                  progressByDate={showCalendarProgress ? progressByDate : undefined}
+                  glass
+                  onVisibleMonthChange={onCalendarMonthChange}
+                  headerAccessory={
+                    <View style={styles.calendarFilters} accessibilityRole="tablist">
+                      {(['all', 'routine', 'todo'] as const).map((filter) => (
+                        <Pressable
+                          key={filter}
+                          accessibilityRole="tab"
+                          accessibilityState={{ selected: calendarFilter === filter }}
+                          onPress={() => setCalendarFilter(filter)}
+                          style={styles.calendarFilter}>
+                          {calendarFilter === filter ? (
+                            <GlassSurface
+                              testID={`calendar-filter-glass-${filter}`}
+                              pointerEvents="none"
+                              fallbackColor={t.surface}
+                              style={[StyleSheet.absoluteFill, styles.calendarFilterFace]}
+                            />
+                          ) : null}
+                          <Text
+                            style={[
+                              Typography.label,
+                              { color: calendarFilter === filter ? t.text : t.textMuted },
+                            ]}>
+                            {filter === 'all' ? '전체' : filter === 'routine' ? '루틴' : '할 일'}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  }
+                />
+                {calendarMonthLoading ? (
+                  <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                    이번 달 기록을 불러오는 중이에요
+                  </Text>
+                ) : null}
+                {calendarMonthError ? (
+                  <View style={styles.calendarState}>
+                    <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                      달성도를 새로 불러오지 못했어요
                     </Text>
-                  ) : null}
+                    <Pressable
+                      onPress={onRetryCalendarMonth}
+                      accessibilityRole="button"
+                      accessibilityLabel="월 달성도 다시 불러오기"
+                      style={styles.calendarRetry}>
+                      <Text style={[Typography.label, { color: t.primaryText }]}>다시 시도</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+              </View>
+              <View style={styles.calListHead}>
+                <View
+                  style={styles.calDateHeading}
+                  accessible
+                  accessibilityRole="header"
+                  accessibilityLabel={`${selectedDay.getFullYear()}년 ${selectedDayLabel} ${selectedWeekday}`}>
+                  <Text style={[Typography.h3, { color: t.text }]}>{selectedDayLabel}</Text>
+                  <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                    {selectedWeekday}
+                  </Text>
+                </View>
+                <View style={styles.sectionHeadRight}>
                   {/* 오늘 목록과 같은 ＋ 루틴 (#1138) — 고른 날짜가 시작일. */}
                   {onAddRoutineForDate ? (
                     <Pressable
@@ -1264,28 +1381,29 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                   ) : null}
                 </View>
               </View>
-              {calDayTotal > 0 ? (
-                <SpringProgressBar
-                  progress={calDayDone / calDayTotal}
-                  color={t.primary}
-                  trackColor={t.surfaceMuted}
-                />
+              {calendarDayError || calendarTodayError ? (
+                <View style={styles.calendarState}>
+                  <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                    이 날의 기록을 새로 불러오지 못했어요
+                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="선택일 기록 다시 불러오기"
+                    onPress={calendarTodayError ? onRetry : onRetryCalendarDay}
+                    style={styles.calendarRetry}>
+                    <Text style={[Typography.label, { color: t.primaryText }]}>다시 시도</Text>
+                  </Pressable>
+                </View>
               ) : null}
-              {serverBackedDay ? (
-                <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                  {selectedDate > today
-                    ? '미래 날짜는 아직 완료할 수 없어요.'
-                    : '지난 날짜도 완료 체크할 수 있어요. (코인은 당일 완료에만 지급돼요)'}
-                </Text>
-              ) : null}
-              {loading || (serverBackedDay && !dayItems) ? (
+              {calendarTodayError ? null : loading ||
+                (serverBackedDay && !dayItems && !calendarDayError) ? (
                 <View style={styles.stateBlock}>
                   <Loading />
                 </View>
-              ) : serverBackedDay ? (
+              ) : serverBackedDay && !dayItems ? null : serverBackedDay ? (
                 calServerGroups!.length === 0 ? (
                   <Text style={[Typography.body, styles.calEmpty, { color: t.textMuted }]}>
-                    예정된 루틴이 없어요.
+                    {selectedDate < today ? '기록이 없어요' : '일정이 없어요'}
                   </Text>
                 ) : (
                   calServerGroups!.map((group, gi) =>
@@ -1299,7 +1417,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                 )
               ) : calClientGroups.length === 0 ? (
                 <Text style={[Typography.body, styles.calEmpty, { color: t.textMuted }]}>
-                  예정된 루틴이 없어요.
+                  {selectedDate < today ? '기록이 없어요' : '일정이 없어요'}
                 </Text>
               ) : (
                 calClientGroups.map((group, gi) =>
@@ -1318,53 +1436,58 @@ export const MyRoomScreen = memo(function MyRoomScreen({
 
       {/* 떠 있는 크롬 (#1055) — 헤더바 대신 이름 알약과 방/달력 세그먼트가 방 위에
           뜬다. 스크롤 바깥 오버레이라 목록을 내려도 제자리. */}
-      <View pointerEvents="box-none" style={[styles.chromeRow, { top: insets.top + Spacing.two }]}>
-        <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.namePill}>
-          {/* Narrow phones: shrink the font (≥75%) first; if the title still
+      {view === undefined ? (
+        <View
+          pointerEvents="box-none"
+          style={[styles.chromeRow, { top: insets.top + Spacing.two }]}>
+          <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.namePill}>
+            {/* Narrow phones: shrink the font (≥75%) first; if the title still
               overflows, middle-ellipsize so the 의 방 suffix stays visible. */}
-          <Text
-            style={[Typography.label, { color: t.text }]}
-            numberOfLines={1}
-            ellipsizeMode="middle"
-            adjustsFontSizeToFit
-            minimumFontScale={0.75}>
-            {view === 'calendar' ? '달력' : userName ? `${userName}의 방` : '내 방'}
-          </Text>
-        </GlassSurface>
-        {/* 방/달력 알약은 view 미지정(단독 모드)에서만 — 앱에선 달력이 하단 탭 (#1138). */}
-        {view === undefined ? (
-          <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.segment}>
-            {(
-              [
-                ['room', '방'],
-                ['calendar', '달력'],
-              ] as const
-            ).map(([key, label]) => {
-              const active = tab === key;
-              const btn = (
-                <Pressable
-                  onPress={() => setTab(key)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  accessibilityLabel={label}
-                  style={[styles.segmentItem, active && { backgroundColor: t.surfaceMuted }]}>
-                  <Text style={[Typography.label, { color: active ? t.primaryText : t.textMuted }]}>
-                    {label}
-                  </Text>
-                </Pressable>
-              );
-              // 달력 탭은 코치마크 대상 (#351).
-              return key === 'calendar' ? (
-                <CoachTarget key={key} id="room-tab-calendar">
-                  {btn}
-                </CoachTarget>
-              ) : (
-                <View key={key}>{btn}</View>
-              );
-            })}
+            <Text
+              style={[Typography.label, { color: t.text }]}
+              numberOfLines={1}
+              ellipsizeMode="middle"
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}>
+              {userName ? `${userName}의 방` : '내 방'}
+            </Text>
           </GlassSurface>
-        ) : null}
-      </View>
+          {/* 방/달력 알약은 view 미지정(단독 모드)에서만 — 앱에선 달력이 하단 탭 (#1138). */}
+          {view === undefined ? (
+            <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.segment}>
+              {(
+                [
+                  ['room', '방'],
+                  ['calendar', '달력'],
+                ] as const
+              ).map(([key, label]) => {
+                const active = tab === key;
+                const btn = (
+                  <Pressable
+                    onPress={() => setTab(key)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    accessibilityLabel={label}
+                    style={[styles.segmentItem, active && { backgroundColor: t.surfaceMuted }]}>
+                    <Text
+                      style={[Typography.label, { color: active ? t.primaryText : t.textMuted }]}>
+                      {label}
+                    </Text>
+                  </Pressable>
+                );
+                // 달력 탭은 코치마크 대상 (#351).
+                return key === 'calendar' ? (
+                  <CoachTarget key={key} id="room-tab-calendar">
+                    {btn}
+                  </CoachTarget>
+                ) : (
+                  <View key={key}>{btn}</View>
+                );
+              })}
+            </GlassSurface>
+          ) : null}
+        </View>
+      ) : null}
 
       {/* 보상 알약 (#1055) — 완료 보상이 확인된 순간에만 크롬 아래 가운데에 떠서
           스트릭·코인 증분을 보여주고 사라진다. 코인 플라이의 목적지. */}
@@ -1490,6 +1613,27 @@ export const MyRoomScreen = memo(function MyRoomScreen({
 });
 
 const styles = StyleSheet.create({
+  calDateHeading: { flexDirection: 'row', alignItems: 'baseline', gap: Spacing.two },
+  // The selected date is the single heading for its list.
+
+  calendarFilterFace: { borderRadius: Radius.pill },
+
+  growthOverlay: { position: 'absolute', left: Spacing.four, zIndex: 3 },
+  calendarOverview: { gap: Spacing.three },
+  calendarFilters: { flexDirection: 'row', padding: Spacing.one, borderRadius: Radius.pill },
+  calendarFilter: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: Spacing.two,
+    alignItems: 'center',
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderRadius: Radius.pill,
+    minHeight: 40,
+    justifyContent: 'center',
+  },
+  calendarState: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: Spacing.two },
+  calendarRetry: { padding: Spacing.two, minHeight: 44, justifyContent: 'center' },
   screen: {
     flex: 1,
   },
@@ -1506,7 +1650,8 @@ const styles = StyleSheet.create({
   // 이 날의 할 일 제목 + 완료/총 카운트 행 (#346) — 방탭 sectionHead와 같은 결.
   calListHead: {
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'center',
+    marginBottom: Spacing.two,
     justifyContent: 'space-between',
     gap: Spacing.two,
   },
