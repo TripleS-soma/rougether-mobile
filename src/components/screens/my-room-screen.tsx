@@ -1625,7 +1625,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           ownedCharacters && onSelectCharacter ? () => setCharacterSheetOpen(true) : undefined
         }
         onEditRoom={onEdit}
-        onSaveRoomImage={() => void onSaveRoomImage()}
+        // 웹은 view-shot이 없어 항목을 숨긴다 — 눌러서 '지원 안 함' 토스트를 보이는 것보다 낫다.
+        onSaveRoomImage={Platform.OS === 'web' ? undefined : () => void onSaveRoomImage()}
         onOpenCategoryManager={() => onManageCategories?.()}
         // + 버튼(onAddRoutine)은 바로 추가로 가고, 관리는 여기서만 (#335).
         onManageRoutines={onManageRoutines ?? onAddRoutine}

@@ -9,6 +9,7 @@ import { notificationIcon } from '@/constants/notifications';
 import { Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { NATIVE_DRIVER } from '@/utils/animation';
 
 /** 자동으로 접히기까지 (ms). 시스템 배너와 비슷한 체류 시간. */
 export const BANNER_VISIBLE_MS = 5000;
@@ -59,13 +60,17 @@ export function NotificationBanner({
   const close = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = null;
-    Animated.timing(anim, { toValue: 0, duration: FADE_MS, useNativeDriver: true }).start(() =>
-      onDismiss?.(),
+    Animated.timing(anim, { toValue: 0, duration: FADE_MS, useNativeDriver: NATIVE_DRIVER }).start(
+      () => onDismiss?.(),
     );
   }, [anim, onDismiss]);
 
   useEffect(() => {
-    Animated.timing(anim, { toValue: 1, duration: FADE_MS, useNativeDriver: true }).start();
+    Animated.timing(anim, {
+      toValue: 1,
+      duration: FADE_MS,
+      useNativeDriver: NATIVE_DRIVER,
+    }).start();
     if (visibleMs > 0) timer.current = setTimeout(close, visibleMs);
     return () => {
       if (timer.current) clearTimeout(timer.current);

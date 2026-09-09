@@ -1,6 +1,6 @@
 import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
-import { Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { CharacterAvatar } from '@/components/room/character-avatar';
 import { type HouseCover, HouseCoverPicker } from '@/components/room/house-cover-picker';
@@ -9,6 +9,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Icon } from '@/components/ui/icon';
 import { CrownPictogram, DoorPictogram, PencilPictogram } from '@/components/ui/pictograms';
 import { useToast } from '@/components/ui/toast';
+import { shareOrCopy } from '@/lib/share-link';
 import type { CharacterId } from '@/constants/characters';
 import { houseCapacityOptions } from '@/constants/house-themes';
 import { houseInviteLink } from '@/constants/links';
@@ -116,14 +117,12 @@ export function HouseMembersScreen({
   };
   const shareInviteLink = async () => {
     if (!displayCode) return;
-    try {
-      await Share.share({
-        message: `루게더 '${currentHouse.name}' 집에 초대해요!\n${houseInviteLink(displayCode)}`,
-      });
-      onInviteShared?.();
-    } catch {
-      // 공유 시트 취소/실패 — 조용히.
-    }
+    const outcome = await shareOrCopy(
+      `루게더 '${currentHouse.name}' 집에 초대해요!\n${houseInviteLink(displayCode)}`,
+    );
+    // 공유 시트가 없는 브라우저는 복사로 대신했으니 알려 준다. 취소는 조용히.
+    if (outcome === 'copied') toast('초대 링크를 복사했어요');
+    if (outcome !== 'cancelled') onInviteShared?.();
   };
   const headerInset = useHeaderInsetStyle();
   const screenStyle = useScreenStyle([]);
