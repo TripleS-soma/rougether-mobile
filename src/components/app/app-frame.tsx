@@ -19,18 +19,27 @@ import { useTokens } from '@/hooks/use-tokens';
 export function AppFrame({ children }: { children: ReactNode }) {
   const t = useTokens();
   // 2단(#1230)이면 프레임이 1200까지 넓어진다 — 폭은 훅이 정한다.
-  const { framed, width } = useAppFrame();
+  const { framed, split, width } = useAppFrame();
   if (Platform.OS !== 'web') return <>{children}</>;
+  // 2단은 투두메이트처럼 창 전체가 한 면이고 내용 블록만 가운데 — 폰 컬럼일 때만
+  // 테두리와 앱셸 색 여백으로 폰 프레임을 드러낸다.
+  const phoneFrame = framed && !split;
   return (
     <View
       testID="app-frame"
-      style={[styles.outer, framed ? { backgroundColor: t.appShell } : null]}>
+      style={[
+        styles.outer,
+        framed ? { backgroundColor: phoneFrame ? t.appShell : t.screen } : null,
+      ]}>
       <View
         testID="app-frame-inner"
         style={[
           styles.inner,
           framed
-            ? [styles.innerFramed, { width, backgroundColor: t.screen, borderColor: t.border }]
+            ? [
+                { width, backgroundColor: t.screen },
+                phoneFrame ? [styles.innerFramed, { borderColor: t.border }] : null,
+              ]
             : styles.innerFull,
         ]}>
         {children}
