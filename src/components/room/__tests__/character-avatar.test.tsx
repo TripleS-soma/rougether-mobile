@@ -22,14 +22,24 @@ describe('CharacterAvatar', () => {
         prefetchFrames
       />,
     );
-    const seated = screen.getByTestId('approved-character').props.source;
+    const lying = screen.getByTestId('approved-character').props.source;
     expect(screen.queryByTestId('cdn-animation')).toBeNull();
     expect(prefetch).not.toHaveBeenCalled();
-    await screen.rerender(<CharacterAvatar characterId="cat" pose={1} />);
+    expect(lying).toEqual([
+      expect.objectContaining({ testUri: expect.stringContaining('cat-approved-idle') }),
+    ]);
+    const names = ['blink', 'wink', 'seated', 'wave'];
+    for (let pose = 1; pose <= names.length; pose++) {
+      await screen.rerender(<CharacterAvatar characterId="cat" pose={pose} />);
+      expect(screen.getByTestId('approved-character').props.source).toEqual([
+        expect.objectContaining({
+          testUri: expect.stringContaining(`cat-approved-${names[pose - 1]}`),
+        }),
+      ]);
+    }
     const wave = screen.getByTestId('approved-character').props.source;
-    expect(wave).not.toEqual(seated);
-    await screen.rerender(<CharacterAvatar characterId="cat" pose={2} />);
-    expect(screen.getByTestId('approved-character').props.source).toEqual(seated);
+    await screen.rerender(<CharacterAvatar characterId="cat" pose={5} />);
+    expect(screen.getByTestId('approved-character').props.source).toEqual(lying);
     await screen.rerender(<CharacterAvatar characterId="cat" pose={-1} />);
     expect(screen.getByTestId('approved-character').props.source).toEqual(wave);
   });

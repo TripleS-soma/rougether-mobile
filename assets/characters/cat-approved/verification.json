@@ -4,6 +4,7 @@
   "crop_at_677x581": [61, 69, 552, 560],
   "wave_face_max_difference": 0,
   "wave_first_last_visible_difference": 0,
+  "seated_normalization_scale": 0.8984375,
   "source_frames": 51,
   "poses": ["seated", "wave"]
 }

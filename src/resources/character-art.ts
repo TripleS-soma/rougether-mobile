@@ -1,11 +1,14 @@
 import type { CharacterId } from '@/constants/characters';
 
 import catIdle from '@/assets/images/characters/cat-approved-idle.webp';
+import catBlink from '@/assets/images/characters/cat-approved-blink.webp';
+import catWink from '@/assets/images/characters/cat-approved-wink.webp';
+import catSeated from '@/assets/images/characters/cat-approved-seated.webp';
 import catWave from '@/assets/images/characters/cat-approved-wave.webp';
 
 /** Reviewed poses supersede legacy server art until a new set is approved. */
 const APPROVED_POSES: Partial<Record<CharacterId, readonly number[]>> = {
-  cat: [catIdle, catWave],
+  cat: [catIdle, catBlink, catWink, catSeated, catWave],
 };
 
 export function approvedCharacterPoses(characterId: CharacterId) {

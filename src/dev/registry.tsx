@@ -521,7 +521,8 @@ export const galleryEntries: GalleryEntry[] = [
   },
   {
     name: 'Room · 승인된 고양이',
-    description: '앉기와 앞발 인사 두 포즈. 탭할 때 얼굴 크기와 발의 바닥 위치를 확인합니다.',
+    description:
+      '시그니처 눕기 → 눈깜빡임 → 윙크 → 앉기 → 인사. 눕기 원화와 표정 모션의 일관성을 확인합니다.',
     render: () => (
       <View style={{ width: 320, alignSelf: 'center' }}>
         <Room characterId="cat" interactiveCharacter />

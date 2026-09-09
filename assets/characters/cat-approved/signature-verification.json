@@ -1,0 +1,27 @@
+{
+  "default_pose": "lying",
+  "size": [512, 512],
+  "ground_y": 500,
+  "eye_boxes_source": [
+    [212, 618, 347, 762],
+    [525, 695, 659, 838]
+  ],
+  "pixels_outside_eye_masks_unchanged": true,
+  "poses": ["lying", "blink", "wink", "seated", "wave"],
+  "loops": {
+    "blink": {
+      "duration_ms": 4000,
+      "encoded_frames": 5,
+      "fixed_alpha": true,
+      "fixed_body": true,
+      "seamless_visible_loop": true
+    },
+    "wink": {
+      "duration_ms": 4000,
+      "encoded_frames": 3,
+      "fixed_alpha": true,
+      "fixed_body": true,
+      "seamless_visible_loop": true
+    }
+  }
+}

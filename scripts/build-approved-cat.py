@@ -39,19 +39,22 @@ left = (x0 + x1 - side) // 2
 crop = (left, y1 + 12 - side, left + side, y1 + 12)
 
 def normalize(im):
-    return im.crop(crop).resize((512, 512), Image.Resampling.LANCZOS)
+    pose = im.crop(crop).resize((460, 460), Image.Resampling.LANCZOS)
+    canvas = Image.new('RGBA', (512, 512))
+    canvas.alpha_composite(pose, (26, 51))
+    return canvas
 
 idle = normalize(idle)
 frames = [normalize(frame) for frame in frames]
 OUT.mkdir(parents=True, exist_ok=True)
-idle.save(OUT / 'cat-approved-idle.webp', lossless=True, method=6)
+idle.save(OUT / 'cat-approved-seated.webp', lossless=True, method=6)
 frames[0].save(OUT / 'cat-approved-wave.webp', save_all=True, append_images=frames[1:],
                duration=durations, loop=0, lossless=True, method=6)
 
 # Animation must contain a visible, fixed face and a seamless loop.
-face = np.asarray(frames[0].crop((120, 175, 320, 270)))
+face = np.asarray(frames[0].crop((120, 225, 330, 320)))
 assert face[:, :, 3].mean() > 245
-assert all(np.array_equal(face, np.asarray(f.crop((120, 175, 320, 270)))) for f in frames)
+assert all(np.array_equal(face, np.asarray(f.crop((120, 225, 330, 320)))) for f in frames)
 assert np.array_equal(np.asarray(frames[0]), np.asarray(frames[-1]))
 
 # WebP may discard RGB underneath alpha=0. Verify decoded visible pixels too.
@@ -61,9 +64,9 @@ first, last = decoded[0], decoded[-1]
 assert np.array_equal(first[:, :, 3], last[:, :, 3])
 visible = first[:, :, 3] > 0
 assert np.array_equal(first[visible], last[visible])
-assert all(np.array_equal(first[175:270, 120:320], f[175:270, 120:320]) for f in decoded)
+assert all(np.array_equal(first[225:320, 120:330], f[225:320, 120:330]) for f in decoded)
 metadata = {'size': [512, 512], 'duration_ms': sum(durations), 'crop_at_677x581': crop,
             'wave_face_max_difference': 0, 'wave_first_last_visible_difference': 0,
-            'source_frames': len(frames), 'poses': ['seated', 'wave']}
+            'seated_normalization_scale': 460 / 512, 'source_frames': len(frames), 'poses': ['seated', 'wave']}
 (SRC / 'verification.json').write_text('{\n' + ',\n'.join('  ' + json.dumps(k) + ': ' + json.dumps(v) for k, v in metadata.items()) + '\n}\n')
 print(json.dumps(metadata))
