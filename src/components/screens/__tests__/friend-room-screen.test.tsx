@@ -8,6 +8,13 @@ import { shiftIso as isoShift, todayIso } from '@/utils/datetime';
 import { ToastProvider } from '@/components/ui/toast';
 
 describe('FriendRoomScreen', () => {
+  it('uses static cat artwork for both friend room and friend avatar', async () => {
+    const screen = await render(<FriendRoomScreen characterId="cat" />);
+    expect(screen.queryByTestId('approved-character')).toBeNull();
+    expect(screen.getAllByTestId('approved-character-still')).toHaveLength(2);
+    expect(screen.queryByRole('button', { name: '고양이, 눌러서 포즈 바꾸기' })).toBeNull();
+  });
+
   it(
     '청소 가능한 거미줄을 탭하면 onCleanCobweb이 불린다 (#@N@)'.replace('@N@', '1116'),
     async () => {

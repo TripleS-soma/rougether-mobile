@@ -28,7 +28,7 @@ describe('CharacterAvatar', () => {
     expect(lying).toEqual([
       expect.objectContaining({ testUri: expect.stringContaining('cat-approved-idle') }),
     ]);
-    const names = ['blink', 'wink', 'seated', 'wave'];
+    const names = ['blink', 'wink', 'seated', 'wave', 'stretch', 'sleep', 'groom'];
     for (let pose = 1; pose <= names.length; pose++) {
       await screen.rerender(<CharacterAvatar characterId="cat" pose={pose} />);
       expect(screen.getByTestId('approved-character').props.source).toEqual([
@@ -37,11 +37,11 @@ describe('CharacterAvatar', () => {
         }),
       ]);
     }
-    const wave = screen.getByTestId('approved-character').props.source;
-    await screen.rerender(<CharacterAvatar characterId="cat" pose={5} />);
+    const last = screen.getByTestId('approved-character').props.source;
+    await screen.rerender(<CharacterAvatar characterId="cat" pose={8} />);
     expect(screen.getByTestId('approved-character').props.source).toEqual(lying);
     await screen.rerender(<CharacterAvatar characterId="cat" pose={-1} />);
-    expect(screen.getByTestId('approved-character').props.source).toEqual(wave);
+    expect(screen.getByTestId('approved-character').props.source).toEqual(last);
   });
 
   it('renders the CDN frame for the pose, skipping non-CDN keys', async () => {

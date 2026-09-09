@@ -70,6 +70,8 @@ export type RoomProps = {
   onCleanCobweb?: (at: { x: number; y: number }) => void;
   /** When true, tapping the character cycles through its poses (나의 방). */
   interactiveCharacter?: boolean;
+  /** Use the reviewed still when visiting a friend. */
+  animateCharacter?: boolean;
   /**
    * Decor-edit mode (#243): slots and surface bands become tappable and empty
    * slots show a dashed + marker, so the room itself is the catalog's entry
@@ -168,6 +170,7 @@ export const Room = memo(function Room({
   cobweb = null,
   onCleanCobweb,
   interactiveCharacter = false,
+  animateCharacter = true,
   editable = false,
   onRegionPress,
   activeRegion = null,
@@ -319,8 +322,7 @@ export const Room = memo(function Room({
         : null}
       {characterId === null ? null : interactiveCharacter ? (
         <Pressable
-          // The avatar wraps the pose over however many frames it has (4 local
-          // sprites vs. the server's CDN animation set) — just keep counting.
+          // The avatar wraps across the full available motion list.
           onPress={() => setPose((p) => p + 1)}
           accessibilityRole="button"
           accessibilityLabel={`${character.name}, 눌러서 포즈 바꾸기`}
@@ -329,6 +331,7 @@ export const Room = memo(function Room({
             characterId={characterId}
             frames={characterFrames}
             pose={pose}
+            animated
             // 여기서만 포즈가 넘어간다 — 다음 장을 미리 받아둘 값어치가 있다 (#970).
             prefetchFrames
             style={styles.characterFill}
@@ -344,6 +347,7 @@ export const Room = memo(function Room({
           <CharacterAvatar
             characterId={characterId}
             frames={characterFrames}
+            animated={animateCharacter}
             style={styles.characterFill}
             sharp={fill}
           />

@@ -1,52 +1,66 @@
 # 고양이 시그니처 포즈 리뉴얼
 
-관련 이슈: #1250. 누워 있는 시그니처를 기본 자세로 유지하면서 같은 원화에서 표정 모션을 만든다. 기존 앉기 시안과 Blender 인사는 추가 포즈로 제공한다.
+관련 이슈: #1250. 누워 있는 시그니처와 얼굴·체형을 유지하면서, 내 방은 모든 포즈가 반복 재생되고 터치마다 다음 포즈로 넘어가도록 리뉴얼한다.
 
-## 표시 순서
+## 화면별 동작
 
-1. `cat-approved-idle.webp`: 새로 그린 시그니처 눕기. 두 앞발을 내밀고 고개를 기울인 기본 대기 모션. 3.2초 주기로 고개를 좌우 ±3° 흔든다. 눈깜빡임은 별도 포즈로 유지한다.
-2. `cat-approved-blink.webp`: 누운 채 두 번 눈깜빡임, 4초 루프.
-3. `cat-approved-wink.webp`: 누운 채 한쪽 눈 윙크, 4초 루프.
-4. `cat-approved-seated.webp`: 기존 승인 앉기 원화.
-5. `cat-approved-wave.webp`: 앉아서 앞발 인사, 3초 루프.
+- 내 방: 아래 8종을 모두 애니메이션으로 제공한다. 8번 터치하면 기본 눕기로 돌아온다. 정지 이미지는 순환 목록에 없다.
+- 친구 방: 같은 눕기 원화의 `cat-approved-still.webp`를 사용한다. 포즈 터치 버튼이 없으며 헤더의 고양이도 정지 이미지다.
+- 캐릭터 선택·프로필·뽑기: 새 기본 눕기 모션을 사용한다.
 
-인사 다음에는 눕기로 돌아간다. 프로필·선택창·뽑기에서도 같은 눕기 대기 모션을 사용한다. 시그니처를 삭제하거나 앉기로 대체하지 않는다.
+`Room.interactiveCharacter`가 켜져 있으면 항상 움직인다. 친구 화면은 `animateCharacter={false}`를 명시하고 `CharacterAvatar`가 별도 정지 원화를 선택한다. 단순히 웹에서 지원되지 않는 autoplay 끄기에 의존하지 않는다. 고양이 리뉴얼 범위이며 다른 동물 에셋은 변경하지 않는다.
+
+## 내 방 표시 순서
+
+| 순서 | 파일                        | 반복 동작                                 | 주기  |
+| ---- | --------------------------- | ----------------------------------------- | ----- |
+| 1    | `cat-approved-idle.webp`    | 누운 채 고개 좌우 흔들기                  | 3.2초 |
+| 2    | `cat-approved-blink.webp`   | 누워 숨 쉬며 두 번 깜빡임                 | 4초   |
+| 3    | `cat-approved-wink.webp`    | 누워 숨 쉬며 윙크                         | 4초   |
+| 4    | `cat-approved-seated.webp`  | 앉아서 숨 쉬기                            | 4초   |
+| 5    | `cat-approved-wave.webp`    | 앉아서 숨 쉬며 앞발 인사                  | 3초   |
+| 6    | `cat-approved-stretch.webp` | 앞발을 짚고 엉덩이·꼬리를 움직이는 기지개 | 4초   |
+| 7    | `cat-approved-sleep.webp`   | 몸을 말고 잠들어 천천히 숨 쉬기           | 6초   |
+| 8    | `cat-approved-groom.webp`   | 짧게 든 앞발로 볼 문지르기                | 4초   |
+
+포즈를 전환할 때 새 모션을 처음부터 재생한다. 서로 다른 자세 사이를 이어주는 전환 동작은 포함하지 않는다. 기본 고개 흔들기의 ±3°/3.2초는 새로 조정한 값이며 기존 설치본의 정확한 속도를 측정한 값은 아니다.
 
 ## 원화와 일관성
 
-눕기 원화는 기존 `cat-1.webp`의 자세와 사용자가 승인한 앉기 시안의 얼굴·그림체를 참조해 새로 제작했다. 눈을 감은 생성 결과에서는 눈 주변만 마스크로 사용하고, 나머지는 눕기 원화의 픽셀을 그대로 유지한다. 윙크는 동일한 눈 편집 중 한쪽만 적용한다.
+승인된 눕기·앉기 원화를 기준으로 기지개·잠들기·세수 원화를 built-in imagegen으로 제작했다. 생성 입력과 프롬프트는 `assets/characters/cat-approved/new-pose-prompts.md`에 보관한다. 세 원화의 청록 배경은 투명 처리용이며 앱에는 투명 WebP만 표시한다.
 
-눈깜빡임·윙크에서 실루엣, 코·입, 앞발, 몸통, 꼬리는 움직이지 않는다. 원본 마스크 밖 픽셀 동일성과 디코딩한 WebP의 알파, 몸통, 루프 시작/끝을 검사한다. 결과는 `assets/characters/cat-approved/signature-verification.json`에 남는다.
+프레임마다 새 이미지를 생성하지 않는다. 눈 편집은 원화의 눈 주변에만 적용하고, 반복 동작은 원화의 좌표 변형으로 만든다. 고개 흔들기에서는 눈·코·입을 같은 회전으로 움직인다. 세수는 앞발 영역만 변형하고 눈·코·입의 고정 영역을 검사한다. 앉기·눕기의 숨 쉬기는 얼굴을 함께 이동시키고 바닥으로 갈수록 이동량을 줄인다. 인사는 기존 Blender 앞발 모션에 숨 쉬기를 더한다.
 
-기본 대기는 같은 원화에 고개 회전을 적용하고 목 부분에서만 변형량을 줄인다. 눈·코·입은 같은 회전으로 움직여 비율을 유지하고 앞발·뒷몸통·꼬리는 고정한다. `head-idle-verification.json`은 움직임 존재, 얼굴 기준점, 고정 영역, 캔버스 잘림, 반복 경계를 검사한다. 전체 프레임에 같은 256색 팔레트를 사용해 용량을 약 2.1MB로 줄였고, 팔레트 적용 전후 불투명 픽셀의 프레임별 평균 RGB 오차는 255 중 최대 1.60 이하다. 3.2초/±3°는 새로 조정한 값이며 기존 설치본의 정확한 속도를 측정한 값은 아니다.
-
-5종 모두 512×512 투명 캔버스를 사용한다. 눕기 3종은 같은 크롭/배율/바닥 좌표를 사용하고, 앉기·인사도 두 눈 사이 간격이 눕기와 비슷하도록 함께 축소한다. 눕기와 앉기 사이의 연결 동작은 포함하지 않는다.
+모든 표시 파일은 512×512 투명 캔버스이며 발·꼬리의 바닥 위치를 고정한다. 자세별 머리 크기가 비슷하도록 원화 배율을 맞췄다. 고개 흔들기·세수는 무손실 WebP, 나머지는 품질 90 WebP를 사용한다. 압축 전 시작·끝은 같고 디코딩한 시작·끝의 알파도 같아야 한다. 손실 압축의 색상 차이는 불투명 영역의 평균 RGB 2 미만, 99백분위 12 이하(255 기준)로 제한한다. 원본 대비 프레임별 평균 색상 오차도 4 미만인지 검사한다.
 
 ## 모바일 적용
 
-- `src/resources/character-art.ts`에 고양이 5포즈와 포스터 매핑을 모은다.
-- `CharacterAvatar`는 고양이의 옛 서버 `poses`/`animations`보다 리뉴얼 포즈를 우선한다. 구형 고양이 이미지 프리페치는 생략한다.
-- 캐릭터 선택창은 옛 `baseAssetKey` 대신 새 눕기 원화를 표시한다.
-- 뽑기 결과와 보상 목록의 `characters/cat/...`, `characters/cat_...`, `characters/cat.png` 계열 키도 새 눕기 포스터를 사용한다.
-- 다른 동물, 가구, 캐릭터 보유/선택 ID, 서버 카탈로그와 S3 원본은 유지한다. 새 서버 고양이 포즈를 노출하려면 리뉴얼 목록도 함께 갱신해야 한다.
+`src/resources/character-art.ts`가 8종 모션과 친구 방 정지 원화를 관리한다. `CharacterAvatar`는 서버의 옛 고양이 포즈보다 이 목록을 우선하며 옛 이미지는 프리페치하지 않는다. 새 서버 고양이 포즈를 노출하려면 이 목록도 함께 갱신해야 한다.
 
-원래 4장의 번들 파일은 새 세트로 교체했다. 원본은 Git 이력에서 찾을 수 있다. `build:characters`는 고양이의 오래된 스트립을 재생성하지 않는다.
+캐릭터 보유·선택 ID, 다른 동물, 가구, 서버 카탈로그와 S3 원본은 유지한다. 기존 번들 4장은 새 세트로 교체했고, 원본은 Git 이력에 남는다. `build:characters`는 옛 고양이 스트립을 재생성하지 않는다.
 
-## 재생성
+## 재생성 및 검증
 
-`assets/characters/cat-approved`에는 눕기 원화·눈 편집 참조, 승인 앉기 원화·Blender 인사 원본이 있다. 앱에는 `assets/images/characters/cat-approved-*.webp`만 import된다.
-
-Python 3, Pillow, numpy, OpenCV가 있는 환경에서:
+Python 3, Pillow, numpy, OpenCV가 있는 환경에서 실행한다.
 
 ```sh
 python3 scripts/build-approved-cat.py
 python3 scripts/build-signature-cat.py
 python3 scripts/build-cat-head-idle.py
+python3 scripts/build-cat-motion-set.py
 npx prettier --write assets/characters/cat-approved/*.json
 ```
 
-Expo SDK 55의 [Image](https://docs.expo.dev/versions/v55.0.0/sdk/image/)로 번들 WebP를 렌더한다. 개발 갤러리의 `Room · 승인된 고양이`에서 5번 탭하면 눕기 → 깜빡임 → 윙크 → 앉기 → 인사 → 눕기로 돌아온다.
+`build-approved-cat.py`와 `build-signature-cat.py`가 만든 정지 PNG는 제작용 중간 원화다. 내 방에는 `build-cat-motion-set.py`가 만든 최종 애니메이션만 import된다.
 
-웹 갤러리/자동 테스트 검증은 iOS·Android 설치본 검증과 별개다. 이 PR은 업데이트 배포 전이며 기존 S3 파일이나 서버 카탈로그를 삭제하지 않는다. 작업 이슈 #1250의 프로젝트 보드 등록은 CLI 토큰의 `read:project` 권한 부족으로 미완료다.
+- `motion-set-verification.json`: 8종의 프레임 수, 주기, 파일 크기·해시, 무한 반복 설정, 움직임 존재, 루프 경계, 잘림, 바닥 알파 고정.
+- `head-idle-verification.json`: 기본 눕기의 얼굴 기준점과 고정 부위.
+- `signature-verification.json`: 눈 마스크 밖 원화 픽셀 보존.
+- `*-encoding.json`: 원본 프레임 대비 압축된 영상의 색상 오차와 압축 설정.
+- 컴포넌트 테스트: 서버의 구형 포즈를 건너뛰고 8종 순환, 8번 탭 후 기본 복귀, 친구 화면의 정지 원화 및 탭 버튼 부재.
 
-![리뉴얼된 눕기와 5가지 포즈](assets/cat-art-renewal.jpg)
+Expo SDK 55의 [Image](https://docs.expo.dev/versions/v55.0.0/sdk/image/)를 사용한다. 개발 갤러리 `Room · 승인된 고양이`와 `Room · 친구 고양이 (정지)`에서 두 동작을 비교할 수 있다.
+
+웹 갤러리와 자동 테스트 검증은 iOS·Android 설치본 검증과 별개다. 이 PR은 업데이트 배포 전이다. 이슈의 프로젝트 보드 등록은 CLI 토큰의 `read:project` 권한 부족으로 미완료다.
+
+![리뉴얼된 8종 고양이 포즈](assets/cat-art-renewal.jpg)

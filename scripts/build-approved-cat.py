@@ -47,8 +47,8 @@ def normalize(im):
 idle = normalize(idle)
 frames = [normalize(frame) for frame in frames]
 OUT.mkdir(parents=True, exist_ok=True)
-idle.save(OUT / 'cat-approved-seated.webp', lossless=True, method=6)
-frames[0].save(OUT / 'cat-approved-wave.webp', save_all=True, append_images=frames[1:],
+idle.save(SRC / 'seated-normalized.png')
+frames[0].save(SRC / 'wave-normalized.webp', save_all=True, append_images=frames[1:],
                duration=durations, loop=0, lossless=True, method=6)
 
 # Animation must contain a visible, fixed face and a seamless loop.
@@ -58,7 +58,7 @@ assert all(np.array_equal(face, np.asarray(f.crop((120, 225, 330, 320)))) for f 
 assert np.array_equal(np.asarray(frames[0]), np.asarray(frames[-1]))
 
 # WebP may discard RGB underneath alpha=0. Verify decoded visible pixels too.
-encoded = Image.open(OUT / 'cat-approved-wave.webp')
+encoded = Image.open(SRC / 'wave-normalized.webp')
 decoded = [np.asarray(f.convert('RGBA')) for f in ImageSequence.Iterator(encoded)]
 first, last = decoded[0], decoded[-1]
 assert np.array_equal(first[:, :, 3], last[:, :, 3])

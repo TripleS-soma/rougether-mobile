@@ -5,6 +5,24 @@ import { StyleSheet } from 'react-native';
 import { Room } from '@/components/room/room';
 
 describe('Room', () => {
+  it('cycles every animated cat pose on taps and keeps friend stills separate', async () => {
+    const screen = await render(
+      <Room characterId="cat" interactiveCharacter animateCharacter={false} />,
+    );
+    const names = ['idle', 'blink', 'wink', 'seated', 'wave', 'stretch', 'sleep', 'groom', 'idle'];
+    for (const name of names) {
+      const avatar = screen.getByTestId('approved-character');
+      expect(avatar.props.autoplay).toBe(true);
+      expect(avatar.props.source[0].testUri).toContain(`cat-approved-${name}`);
+      await fireEvent.press(screen.getByRole('button', { name: '고양이, 눌러서 포즈 바꾸기' }));
+    }
+    await screen.rerender(<Room characterId="cat" animateCharacter={false} />);
+    expect(screen.queryByRole('button', { name: '고양이, 눌러서 포즈 바꾸기' })).toBeNull();
+    const still = screen.getByTestId('approved-character-still');
+    expect(still.props.source[0].testUri).toContain('cat-approved-still');
+    expect(still.props.autoplay).toBe(false);
+  });
+
   it.each([
     { fill: false, frames: undefined },
     { fill: true, frames: undefined },

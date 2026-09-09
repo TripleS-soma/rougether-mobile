@@ -1,0 +1,110 @@
+{
+  "own_room_order": ["idle", "blink", "wink", "seated", "wave", "stretch", "sleep", "groom"],
+  "friend_room_still": "cat-approved-still.webp",
+  "poses": {
+    "idle": {
+      "frames": 64,
+      "duration_ms": 3200,
+      "max_hold_ms": 50,
+      "bytes": 2150032,
+      "sha256": "b1b67a685a26f4e1d23068bde8f547210b5e8e224d29e119050516c8ce6b5d19",
+      "animated": true,
+      "loop_geometry_equal": true,
+      "no_clipping": true,
+      "loop_mean_rgb_error": 0.0,
+      "loop_p99_rgb_error": 0.0,
+      "ground_alpha_fixed": true
+    },
+    "blink": {
+      "frames": 47,
+      "duration_ms": 4000,
+      "max_hold_ms": 160,
+      "bytes": 1221252,
+      "sha256": "2825722e864b4bfde87fc6ab7622edd8c9e556ada77692fd7917697ce3ca0cdc",
+      "animated": true,
+      "loop_geometry_equal": true,
+      "no_clipping": true,
+      "loop_mean_rgb_error": 1.1177246050181193,
+      "loop_p99_rgb_error": 7.0,
+      "ground_alpha_fixed": true
+    },
+    "wink": {
+      "frames": 47,
+      "duration_ms": 4000,
+      "max_hold_ms": 160,
+      "bytes": 1219230,
+      "sha256": "d5c97222c459e820216f2fa87025f440295cc929c14b733668faa4204b83e8e7",
+      "animated": true,
+      "loop_geometry_equal": true,
+      "no_clipping": true,
+      "loop_mean_rgb_error": 1.1147599022511592,
+      "loop_p99_rgb_error": 7.0,
+      "ground_alpha_fixed": true
+    },
+    "seated": {
+      "frames": 49,
+      "duration_ms": 4000,
+      "max_hold_ms": 160,
+      "bytes": 1370170,
+      "sha256": "f66444672679a4a87587b5fe7c18439bc42fb849a0133c8eab42a54aa7bab2f8",
+      "animated": true,
+      "loop_geometry_equal": true,
+      "no_clipping": true,
+      "loop_mean_rgb_error": 1.0702308130779898,
+      "loop_p99_rgb_error": 7.0,
+      "ground_alpha_fixed": true
+    },
+    "wave": {
+      "frames": 73,
+      "duration_ms": 3000,
+      "max_hold_ms": 80,
+      "bytes": 1870982,
+      "sha256": "edc18beebf0e055df3729a2d6e3d108df0e1213861c567fcc51d48b95f487896",
+      "animated": true,
+      "loop_geometry_equal": true,
+      "no_clipping": true,
+      "loop_mean_rgb_error": 1.2081823568286958,
+      "loop_p99_rgb_error": 8.0,
+      "ground_alpha_fixed": true
+    },
+    "stretch": {
+      "frames": 50,
+      "duration_ms": 4000,
+      "max_hold_ms": 80,
+      "bytes": 1537566,
+      "sha256": "94c26d829816c0ad727b56b7735078a4714c4d18bfeb59fa75cd307636901c25",
+      "animated": true,
+      "loop_geometry_equal": true,
+      "no_clipping": true,
+      "loop_mean_rgb_error": 1.0586932797697186,
+      "loop_p99_rgb_error": 6.0,
+      "ground_alpha_fixed": true
+    },
+    "sleep": {
+      "frames": 59,
+      "duration_ms": 6000,
+      "max_hold_ms": 200,
+      "bytes": 1515996,
+      "sha256": "48f62cb5f7100148d1639f9c2decc12ca0865cf668d3eccabed55772770a0eac",
+      "animated": true,
+      "loop_geometry_equal": true,
+      "no_clipping": true,
+      "loop_mean_rgb_error": 1.4358828071873955,
+      "loop_p99_rgb_error": 8.0,
+      "ground_alpha_fixed": true
+    },
+    "groom": {
+      "frames": 50,
+      "duration_ms": 4000,
+      "max_hold_ms": 80,
+      "bytes": 637378,
+      "sha256": "4399a751fb88d92382cc184405ae8d6ea461c82aa44702e78d343d3ff159b745",
+      "animated": true,
+      "loop_geometry_equal": true,
+      "no_clipping": true,
+      "loop_mean_rgb_error": 0.0,
+      "loop_p99_rgb_error": 0.0,
+      "ground_alpha_fixed": true
+    }
+  }
+}

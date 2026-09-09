@@ -4,7 +4,7 @@ import { type ImageStyle, type StyleProp, StyleSheet, View, type ViewStyle } fro
 
 import { PawPictogram } from '@/components/ui/pictograms';
 import { CHARACTER_OPTIONS, type CharacterId } from '@/constants/characters';
-import { approvedCharacterPoses } from '@/resources/character-art';
+import { approvedCharacterPoses, approvedCharacterStill } from '@/resources/character-art';
 import { assetSource, isCdnKey, RESOURCE_BASE } from '@/resources/asset';
 
 import bear1 from '@/assets/images/characters/bear-1.webp';
@@ -62,6 +62,8 @@ export type CharacterAvatarProps = {
   frames?: string[];
   /** Which pose frame to show; wraps over the available frames. Defaults to 0. */
   pose?: number;
+  /** Friend rooms use a dedicated still; interactive rooms always animate. */
+  animated?: boolean;
   size?: number;
   style?: StyleProp<ImageStyle>;
   /** 원본 해상도 디코딩 — 카메라 줌 대상(집 창문)용. */
@@ -87,6 +89,7 @@ export const CharacterAvatar = memo(function CharacterAvatar({
   characterId,
   frames,
   pose = 0,
+  animated = true,
   prefetchFrames = false,
   size = 96,
   style,
@@ -140,7 +143,8 @@ export const CharacterAvatar = memo(function CharacterAvatar({
   }
 
   const sprites = approvedPoses ?? SPRITES[characterId];
-  const source = sprites?.[wrapPose(pose, sprites.length)];
+  const still = !animated ? approvedCharacterStill(characterId) : undefined;
+  const source = still ?? sprites?.[wrapPose(pose, sprites.length)];
 
   if (!source) {
     // No frame art for this character yet — a neutral paw mark stands in.
@@ -155,12 +159,14 @@ export const CharacterAvatar = memo(function CharacterAvatar({
 
   return (
     <Image
+      key={`${characterId}:${animated}:${pose}`}
       source={source}
+      autoplay={animated}
       style={[sizeStyle, style]}
       contentFit="contain"
       allowDownscaling={!sharp}
       accessibilityLabel={character.name}
-      testID={approvedPoses ? 'approved-character' : undefined}
+      testID={still ? 'approved-character-still' : approvedPoses ? 'approved-character' : undefined}
     />
   );
 });
