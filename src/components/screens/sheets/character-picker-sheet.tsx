@@ -35,7 +35,7 @@ export type CharacterPickerSheetProps = {
 /**
  * "캐릭터 교체" bottom sheet: the owned-character grid from GET /me/characters.
  * Tapping an unworn character calls onSelect (PUT …/select) and closes; new
- * characters come only from onboarding's free pick or the character gacha.
+ * Characters include server-awarded room growth rewards.
  */
 export function CharacterPickerSheet({
   visible,

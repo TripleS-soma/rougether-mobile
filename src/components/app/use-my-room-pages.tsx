@@ -7,6 +7,7 @@ import {
   type Dispatch,
   type SetStateAction,
 } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { type Screen } from '@/components/app/navigation';
 import type { useMissionLinks } from '@/components/app/use-mission-links';
@@ -28,6 +29,7 @@ import { onNotificationReceived, onNotificationTap } from '@/lib/push-events';
 import { toServerItemId, type ShopCatalogue } from '@/api/adapters';
 import { useCalendarView } from '@/hooks/use-calendar-view';
 import type { RoomGrowthProps } from '@/components/ui/room-growth-pill';
+import { queryKeys } from '@/lib/query-keys';
 
 type MyRoomData = ReturnType<typeof useMyRoomData>;
 type MissionLinks = ReturnType<typeof useMissionLinks>;
@@ -117,6 +119,7 @@ export function useMyRoomPages({
     markedTodoDates: MyRoomScreenProps['markedTodoDates'];
   };
 }) {
+  const queryClient = useQueryClient();
   const { screen, setScreen, addReturnScreen, setAddReturnScreen } = nav;
   const {
     routines,
@@ -146,6 +149,18 @@ export function useMyRoomPages({
     reorderCategories,
   } = data;
   const { toggleWithMissionGuard, houseCategoryIds, addRoutineWithMission } = missionLinks;
+  const refreshCharacters = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: queryKeys.myCharacters.all }),
+    [queryClient],
+  );
+  const toggleWithCharacterReward = useCallback(
+    async (...args: Parameters<MissionLinks['toggleWithMissionGuard']>) => {
+      const result = await toggleWithMissionGuard(...args);
+      if (result) await refreshCharacters();
+      return result;
+    },
+    [toggleWithMissionGuard, refreshCharacters],
+  );
 
   // 루틴 수동 순서 (#716) — 기기 로컬 보관, 방 '오늘' 리스트에 적용.
   const { order: routineOrder, reorder: reorderRoutines } = useRoutineOrder();
@@ -313,29 +328,33 @@ export function useMyRoomPages({
     [loadCalendarDay],
   );
   const handleToggleCalendarItem = useCallback(
-    (item: CalendarDayItem, date: string) => {
-      void toggleCalendarItem(item, date).finally(refreshCalendar);
+    async (item: CalendarDayItem, date: string) => {
+      try {
+        await toggleCalendarItem(item, date);
+      } finally {
+        await Promise.all([refreshCalendar(), refreshCharacters()]);
+      }
     },
-    [toggleCalendarItem, refreshCalendar],
+    [toggleCalendarItem, refreshCalendar, refreshCharacters],
   );
   // 당겨서 새로고침 (#454) — 실패해도 조용히 접는다(훅이 상태를 유지하고,
   // 인디케이터는 어차피 되돌아간다). 나의 방은 전체 리페치.
   const refreshMyRoom = useCallback(async () => {
     try {
-      await Promise.all([reloadMyRoom(), refreshCalendar()]);
+      await Promise.all([reloadMyRoom(), refreshCalendar(), refreshCharacters()]);
     } catch {
       // 유지 — 기존 데이터가 그대로 남는다.
     }
-  }, [reloadMyRoom, refreshCalendar]);
+  }, [reloadMyRoom, refreshCalendar, refreshCharacters]);
   const toggleAndRefreshGrowth = useCallback<NonNullable<MyRoomScreenProps['onToggleCompletion']>>(
     async (...args) => {
       try {
-        return await toggleWithMissionGuard(...args);
+        return await toggleWithCharacterReward(...args);
       } finally {
         await refreshCalendar();
       }
     },
-    [toggleWithMissionGuard, refreshCalendar],
+    [toggleWithCharacterReward, refreshCalendar],
   );
   // 지난·완료 할 일 등 안 보이는 항목까지 포함한 카테고리별 점유 수 (#505).
   const categoryInUseCounts = useMemo(
@@ -415,6 +434,10 @@ export function useMyRoomPages({
     [recommendations, currentDaysById],
   );
 
+  // Unlock the existing picker once the server has awarded Moru.
+  const canSelectCharacter =
+    CHARACTER_SELECTION_ENABLED || character.ownedCharacters?.some((c) => c.id === 'moru');
+
   /** 탭 페이저의 나의 방 페이지 prop — `<MyRoomScreen {...tabProps} />`. */
   const tabProps = {
     userName: nickname,
@@ -462,10 +485,8 @@ export function useMyRoomPages({
     onManageRoutines: openRoutineManage,
     onOpenNotifications: openNotificationList,
     unreadNotificationCount: unreadCount,
-    // MVP 고양이 단일 (#637) — 미배선이면 캐릭터 교체 항목이 숨는
-    // 기존 계약(#260)을 그대로 쓴다. 시트·훅 코드는 재사용 대기.
-    ownedCharacters: CHARACTER_SELECTION_ENABLED ? character.ownedCharacters : undefined,
-    onSelectCharacter: CHARACTER_SELECTION_ENABLED ? character.wearCharacter : undefined,
+    ownedCharacters: canSelectCharacter ? character.ownedCharacters : undefined,
+    onSelectCharacter: canSelectCharacter ? character.wearCharacter : undefined,
     onManageCategories: openCategoryManage,
     onUpdateCategory: updateRoutineCategory,
     onOpenGacha: openGacha,
