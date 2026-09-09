@@ -522,6 +522,25 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
+    name: 'Room · 승인된 고양이',
+    description:
+      '내 방: 고개 흔들기 → 깜빡임 → 윙크 → 두리번 → 앞발 인사 → 기지개 → 잠들기 → 세수. 모두 반복 모션이며 터치할 때 다음 자세로 넘어갑니다.',
+    render: () => (
+      <View style={{ width: 320, alignSelf: 'center' }}>
+        <Room characterId="cat" interactiveCharacter />
+      </View>
+    ),
+  },
+  {
+    name: 'Room · 친구 고양이 (정지)',
+    description: '친구 방 전용 정지 원화. 내 방의 8종 모션 목록에는 들어가지 않습니다.',
+    render: () => (
+      <View style={{ width: 320, alignSelf: 'center' }}>
+        <Room characterId="cat" animateCharacter={false} />
+      </View>
+    ),
+  },
+  {
     name: 'Room · CDN character poses',
     description:
       'Server poses[] art in registration order — tap the character to cycle (#263, #735).',

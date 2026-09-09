@@ -7,6 +7,7 @@ import { Icon } from '@/components/ui/icon';
 import { CHARACTER_OPTIONS, type CharacterId } from '@/constants/characters';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { approvedCharacterPoses } from '@/resources/character-art';
 import { assetSource, isCdnKey } from '@/resources/asset';
 
 /** One owned character (server GET /me/characters). */
@@ -92,8 +93,8 @@ export function CharacterPickerSheet({
                       },
                     ]}>
                     <View style={[styles.avatar, { backgroundColor: meta?.bg ?? t.surfaceMuted }]}>
-                      {/* Server CDN art first; the bundled sprite is the fallback. */}
-                      {isCdnKey(c.assetKey) ? (
+                      {/* Reviewed character art also replaces legacy baseAssetKey artwork. */}
+                      {!approvedCharacterPoses(c.id) && isCdnKey(c.assetKey) ? (
                         <Image
                           source={assetSource(c.assetKey)}
                           style={styles.cdnArt}

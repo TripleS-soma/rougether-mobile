@@ -1,6 +1,6 @@
 /**
- * Character metadata, ported from the prototype `character.ts`. Each character
- * has 4 static pose frames (assets/images/characters/<id>-1..4.webp, wired
+ * Character metadata, ported from the prototype `character.ts`. Legacy characters
+ * have 4 static pose frames (assets/images/characters/<id>-1..4.webp, wired
  * through CharacterAvatar; 나의 방 cycles poses on tap, elsewhere pose 0); the
  * Pure data — the avatar component supplies its own fallback mark. Pure data — reusable
  * across onboarding, room, etc.

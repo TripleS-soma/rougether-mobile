@@ -1,0 +1,19 @@
+{
+  "planted_forepaws_in_body": 1,
+  "moving_foreleg_layers": 1,
+  "source_pivot": [183.19847328244273, 393.23664122137404],
+  "paw_tip_excursion_px": 162.82951595896336,
+  "action": "lower-lift-rub-lower",
+  "keys": [
+    [0, -112],
+    [4, -104],
+    [12, -3],
+    [17, -16],
+    [22, 0],
+    [27, -16],
+    [32, 0],
+    [37, -16],
+    [45, -104],
+    [49, -112]
+  ]
+}

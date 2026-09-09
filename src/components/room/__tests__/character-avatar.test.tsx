@@ -13,6 +13,37 @@ const FRAMES = [
 describe('CharacterAvatar', () => {
   afterEach(() => jest.restoreAllMocks());
 
+  it('cycles only reviewed cat poses even when the server supplies rejected art', async () => {
+    const prefetch = jest.spyOn(Image, 'prefetch').mockResolvedValue(true);
+    const screen = await render(
+      <CharacterAvatar
+        characterId="cat"
+        frames={['characters/cat/poses/old.webp']}
+        prefetchFrames
+      />,
+    );
+    const lying = screen.getByTestId('approved-character').props.source;
+    expect(screen.queryByTestId('cdn-animation')).toBeNull();
+    expect(prefetch).not.toHaveBeenCalled();
+    expect(lying).toEqual([
+      expect.objectContaining({ testUri: expect.stringContaining('cat-approved-idle') }),
+    ]);
+    const names = ['blink', 'wink', 'seated', 'wave', 'stretch', 'sleep', 'groom'];
+    for (let pose = 1; pose <= names.length; pose++) {
+      await screen.rerender(<CharacterAvatar characterId="cat" pose={pose} />);
+      expect(screen.getByTestId('approved-character').props.source).toEqual([
+        expect.objectContaining({
+          testUri: expect.stringContaining(`cat-approved-${names[pose - 1]}`),
+        }),
+      ]);
+    }
+    const last = screen.getByTestId('approved-character').props.source;
+    await screen.rerender(<CharacterAvatar characterId="cat" pose={8} />);
+    expect(screen.getByTestId('approved-character').props.source).toEqual(lying);
+    await screen.rerender(<CharacterAvatar characterId="cat" pose={-1} />);
+    expect(screen.getByTestId('approved-character').props.source).toEqual(last);
+  });
+
   it('renders the CDN frame for the pose, skipping non-CDN keys', async () => {
     const first = await render(<CharacterAvatar characterId="panda" frames={FRAMES} />);
     expect(first.getByTestId('cdn-animation').props.source[0].uri).toContain('idle.webp');

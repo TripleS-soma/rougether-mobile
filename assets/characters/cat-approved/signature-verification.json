@@ -1,0 +1,11 @@
+{
+  "source_size": [512, 512],
+  "ground_y": 500,
+  "eye_boxes_source": [
+    [212, 618, 347, 762],
+    [525, 695, 659, 838]
+  ],
+  "pixels_outside_eye_masks_unchanged": true,
+  "motion_builder": "scripts/build-cat-motion-set.py",
+  "still_usage": "friend-room-only"
+}

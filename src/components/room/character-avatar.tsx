@@ -4,16 +4,13 @@ import { type ImageStyle, type StyleProp, StyleSheet, View, type ViewStyle } fro
 
 import { PawPictogram } from '@/components/ui/pictograms';
 import { CHARACTER_OPTIONS, type CharacterId } from '@/constants/characters';
+import { approvedCharacterPoses, approvedCharacterStill } from '@/resources/character-art';
 import { assetSource, isCdnKey, RESOURCE_BASE } from '@/resources/asset';
 
 import bear1 from '@/assets/images/characters/bear-1.webp';
 import bear2 from '@/assets/images/characters/bear-2.webp';
 import bear3 from '@/assets/images/characters/bear-3.webp';
 import bear4 from '@/assets/images/characters/bear-4.webp';
-import cat1 from '@/assets/images/characters/cat-1.webp';
-import cat2 from '@/assets/images/characters/cat-2.webp';
-import cat3 from '@/assets/images/characters/cat-3.webp';
-import cat4 from '@/assets/images/characters/cat-4.webp';
 import dog1 from '@/assets/images/characters/dog-1.webp';
 import dog2 from '@/assets/images/characters/dog-2.webp';
 import dog3 from '@/assets/images/characters/dog-3.webp';
@@ -40,9 +37,8 @@ import tiger3 from '@/assets/images/characters/tiger-3.webp';
 import tiger4 from '@/assets/images/characters/tiger-4.webp';
 
 /** Static pose frames per character (index 0–3). */
-const SPRITES: Record<CharacterId, number[]> = {
+const SPRITES: Partial<Record<CharacterId, number[]>> = {
   bear: [bear1, bear2, bear3, bear4],
-  cat: [cat1, cat2, cat3, cat4],
   dog: [dog1, dog2, dog3, dog4],
   horse: [horse1, horse2, horse3, horse4],
   otter: [otter1, otter2, otter3, otter4],
@@ -50,9 +46,6 @@ const SPRITES: Record<CharacterId, number[]> = {
   sheep: [sheep1, sheep2, sheep3, sheep4],
   tiger: [tiger1, tiger2, tiger3, tiger4],
 };
-
-/** Number of poses available per character. */
-const POSE_COUNT = 4;
 
 /** `pose` wraps over however many frames the avatar actually has. */
 function wrapPose(pose: number, count: number) {
@@ -69,6 +62,8 @@ export type CharacterAvatarProps = {
   frames?: string[];
   /** Which pose frame to show; wraps over the available frames. Defaults to 0. */
   pose?: number;
+  /** Friend rooms use a dedicated still; interactive rooms always animate. */
+  animated?: boolean;
   size?: number;
   style?: StyleProp<ImageStyle>;
   /** 원본 해상도 디코딩 — 카메라 줌 대상(집 창문)용. */
@@ -84,7 +79,7 @@ export type CharacterAvatarProps = {
 };
 
 /**
- * Renders a character via `expo-image`: the server's CDN pose frames (animated
+ * Reviewed local poses take priority. Otherwise renders the server's CDN frames (animated
  * webp) when `frames` carries a valid key, else the bundled static pose frame.
  * `pose` selects the frame (the room in 나의 방 cycles it on tap; elsewhere it
  * stays at 0). Falls back to the paw mark if no art exists. Shared by the room
@@ -94,6 +89,7 @@ export const CharacterAvatar = memo(function CharacterAvatar({
   characterId,
   frames,
   pose = 0,
+  animated = true,
   prefetchFrames = false,
   size = 96,
   style,
@@ -107,7 +103,11 @@ export const CharacterAvatar = memo(function CharacterAvatar({
   // 탭 순환 순서 = 서버 등록 순서. 유효하지 않은 키는 조용히 버린다.
   // 포즈 탭마다(그리고 부모 리렌더마다) 배열을 새로 걸러내던 것을 프레임 목록이
   // 실제로 바뀔 때만 하도록 묶는다 — 방 캔버스 리프라 호출 빈도가 높다.
-  const cdnFrames = useMemo(() => (frames ?? []).filter(isCdnKey), [frames]);
+  const approvedPoses = approvedCharacterPoses(characterId);
+  const cdnFrames = useMemo(
+    () => (approvedPoses ? [] : (frames ?? []).filter(isCdnKey)),
+    [approvedPoses, frames],
+  );
   const cdnFrameList = cdnFrames.join('|');
 
   // width/height 스타일도 size가 그대로면 참조를 유지한다 (<Image>의 style 배열).
@@ -142,8 +142,9 @@ export const CharacterAvatar = memo(function CharacterAvatar({
     );
   }
 
-  const sprites = SPRITES[characterId];
-  const source = sprites?.[wrapPose(pose, POSE_COUNT)];
+  const sprites = approvedPoses ?? SPRITES[characterId];
+  const still = !animated ? approvedCharacterStill(characterId) : undefined;
+  const source = still ?? sprites?.[wrapPose(pose, sprites.length)];
 
   if (!source) {
     // No frame art for this character yet — a neutral paw mark stands in.
@@ -158,11 +159,14 @@ export const CharacterAvatar = memo(function CharacterAvatar({
 
   return (
     <Image
+      key={`${characterId}:${animated}:${pose}`}
       source={source}
+      autoplay={animated}
       style={[sizeStyle, style]}
       contentFit="contain"
       allowDownscaling={!sharp}
       accessibilityLabel={character.name}
+      testID={still ? 'approved-character-still' : approvedPoses ? 'approved-character' : undefined}
     />
   );
 });

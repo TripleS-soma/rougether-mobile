@@ -34,7 +34,7 @@ describe('CharacterPickerSheet', () => {
     expect(onClose).toHaveBeenCalledTimes(2);
   });
 
-  it('renders CDN art when the asset key is valid, local sprite otherwise', async () => {
+  it('uses the approved cat poster even when a legacy base key is present', async () => {
     const mixed = [
       { serverId: 1, id: 'cat' as const, name: '고양이', assetKey: 'characters/cat_sitting.png', selected: true }, // prettier-ignore
       { serverId: 4, id: 'panda' as const, name: '판다', selected: false }, // no key → local sprite
@@ -42,7 +42,8 @@ describe('CharacterPickerSheet', () => {
     const { queryAllByTestId } = await render(
       <CharacterPickerSheet visible characters={mixed} onSelect={jest.fn()} onClose={jest.fn()} />,
     );
-    expect(queryAllByTestId('cdn-art')).toHaveLength(1);
+    expect(queryAllByTestId('cdn-art')).toHaveLength(0);
+    expect(queryAllByTestId('approved-character')).toHaveLength(1);
   });
 
   it('shows the empty hint and hides entirely when not visible', async () => {

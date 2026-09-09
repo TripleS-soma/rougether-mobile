@@ -1,0 +1,94 @@
+{
+  "own_room_order": ["idle", "blink", "wink", "seated", "wave", "stretch", "sleep", "groom"],
+  "friend_room_still": "cat-approved-still.webp",
+  "poses": {
+    "idle": {
+      "frames": 16,
+      "duration_ms": 3200,
+      "max_hold_ms": 200,
+      "bytes": 566290,
+      "sha256": "ec04940ef76463cc25e18ff380631c39ccb5325ebb1d85398df3d8f74c7b5c95",
+      "animated": true,
+      "loop_geometry_equal": true,
+      "no_clipping": true,
+      "animation_source": "imagegen common-model full-character frames"
+    },
+    "blink": {
+      "frames": 16,
+      "duration_ms": 2560,
+      "max_hold_ms": 160,
+      "bytes": 621432,
+      "sha256": "3a45a2f731b94c9286d32c02b339a90ddc1638a883f6aff74bd514924ab10cd6",
+      "animated": true,
+      "loop_geometry_equal": true,
+      "no_clipping": true,
+      "animation_source": "imagegen common-model full-character frames"
+    },
+    "wink": {
+      "frames": 16,
+      "duration_ms": 2560,
+      "max_hold_ms": 160,
+      "bytes": 555076,
+      "sha256": "cc7bab1329b7d3929efbb1f7dd215243f342d4dc5b46711c4526059e6de5ff26",
+      "animated": true,
+      "loop_geometry_equal": true,
+      "no_clipping": true,
+      "animation_source": "imagegen common-model full-character frames"
+    },
+    "seated": {
+      "frames": 15,
+      "duration_ms": 2560,
+      "max_hold_ms": 320,
+      "bytes": 592762,
+      "sha256": "ba1628d9b7981fa5f231cbf9fe286f08fac05d4badcb4592a39a93aeb5606b77",
+      "animated": true,
+      "loop_geometry_equal": true,
+      "no_clipping": true,
+      "animation_source": "imagegen common-model full-character frames"
+    },
+    "wave": {
+      "frames": 18,
+      "duration_ms": 2880,
+      "max_hold_ms": 160,
+      "bytes": 627448,
+      "sha256": "9fe3eb7e898e78bfa1550a75b5ed81cb510ac248b8b2460bc278cbf737a9075f",
+      "animated": true,
+      "loop_geometry_equal": true,
+      "no_clipping": true,
+      "animation_source": "imagegen common-model full-character frames"
+    },
+    "stretch": {
+      "frames": 16,
+      "duration_ms": 2560,
+      "max_hold_ms": 160,
+      "bytes": 565444,
+      "sha256": "c13425053afcf1567e4389174c75d1b141301841df75e22c1c467e724beef814",
+      "animated": true,
+      "loop_geometry_equal": true,
+      "no_clipping": true,
+      "animation_source": "imagegen common-model full-character frames"
+    },
+    "sleep": {
+      "frames": 16,
+      "duration_ms": 4800,
+      "max_hold_ms": 300,
+      "bytes": 581074,
+      "sha256": "3b8596cc70c76a08b0761279c6465f5a54bbc7c216968d8db3b7f41ecf8361e4",
+      "animated": true,
+      "loop_geometry_equal": true,
+      "no_clipping": true,
+      "animation_source": "imagegen common-model full-character frames"
+    },
+    "groom": {
+      "frames": 17,
+      "duration_ms": 2720,
+      "max_hold_ms": 160,
+      "bytes": 583308,
+      "sha256": "ac51980d8184dc398889caa3dba80aa64cefc0d0cc76c699fb1169df5937d6cf",
+      "animated": true,
+      "loop_geometry_equal": true,
+      "no_clipping": true,
+      "animation_source": "imagegen common-model full-character frames"
+    }
+  }
+}

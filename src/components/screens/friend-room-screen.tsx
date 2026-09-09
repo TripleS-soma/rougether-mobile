@@ -335,7 +335,7 @@ export function FriendRoomScreen({
               </GlassSurface>
             ) : null}
             <View style={[styles.avatar, { backgroundColor: character.bg }]}>
-              <CharacterAvatar characterId={characterId} size={36} />
+              <CharacterAvatar characterId={characterId} size={36} animated={false} />
             </View>
           </View>
         }
@@ -357,7 +357,7 @@ export function FriendRoomScreen({
           keyboardShouldPersistTaps="handled">
           <GestureDetector gesture={friendFling}>
             <View style={styles.roomWrap} collapsable={false}>
-              <Room {...roomScene} />
+              <Room {...roomScene} animateCharacter={false} />
             </View>
           </GestureDetector>
 

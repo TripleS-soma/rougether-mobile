@@ -3,11 +3,11 @@ import { render } from '@testing-library/react-native';
 import { RoomRenderReference } from '@/dev/room-render-reference';
 
 describe('RoomRenderReference', () => {
-  it('renders the shared contract fixture with the real animated character asset', async () => {
+  it('renders the shared contract fixture with the approved character artwork', async () => {
     const { getByLabelText, getByTestId } = await render(<RoomRenderReference />);
 
     expect(getByLabelText('Room renderer contract v2 기준 화면')).toBeTruthy();
     expect(getByLabelText('바다 창문')).toBeTruthy();
-    expect(getByTestId('cdn-animation')).toBeTruthy();
+    expect(getByTestId('approved-character')).toBeTruthy();
   });
 });

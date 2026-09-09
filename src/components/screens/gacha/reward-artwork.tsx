@@ -6,6 +6,7 @@ import type { RevealPlanItem } from '@/components/screens/gacha/reveal-motion';
 import { Icon } from '@/components/ui/icon';
 import { useLatestRef } from '@/hooks/use-stable-value';
 import { useTokens } from '@/hooks/use-tokens';
+import { approvedCharacterPoster } from '@/resources/character-art';
 import { assetSource } from '@/resources/asset';
 import { RARITY_COLORS, type Rarity } from '@/resources/furniture';
 
@@ -45,7 +46,7 @@ export function RewardArtwork({
   if (hasAsset) {
     return (
       <Image
-        source={assetSource(entry.assetKey)}
+        source={approvedCharacterPoster(entry.assetKey) ?? assetSource(entry.assetKey)}
         style={{ width, height }}
         contentFit="contain"
         transition={0}

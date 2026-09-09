@@ -311,14 +311,12 @@ describe('OnboardingScreen 캐릭터 캐러셀', () => {
   };
 
   it('8장 카드와 도트를 그리고, 활성 카드만 서버 프레임을 재생한다', async () => {
-    const { getAllByRole, getAllByTestId, getByLabelText } = await openCarousel();
+    const { getAllByRole, queryAllByTestId, getByTestId, getByLabelText } = await openCarousel();
     expect(getAllByRole('radio')).toHaveLength(8);
     expect(getByLabelText('수달 카드로 이동')).toBeTruthy();
-    // 프레임을 가진 카드 중 활성(고양이)만 CDN webp를 그린다 — 수달은
-    // 프레임이 있어도 비활성이라 정적 포즈.
-    const cdn = getAllByTestId('cdn-animation');
-    expect(cdn).toHaveLength(1);
-    expect(cdn[0].props.source[0].uri).toContain('characters/cat/animations/wave.webp');
+    // Reviewed cat artwork replaces legacy server art, including the active card.
+    expect(queryAllByTestId('cdn-animation')).toHaveLength(0);
+    expect(getByTestId('approved-character')).toBeTruthy();
   });
 
   it('스와이프 정착이 활성 캐릭터·CTA 라벨·프레임 재생 카드를 바꾼다', async () => {

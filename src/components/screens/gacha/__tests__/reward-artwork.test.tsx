@@ -152,7 +152,7 @@ describe('RewardArtwork', () => {
 
     expect(screen.getByLabelText('고양이')).toBeTruthy();
     expect(screen.getByTestId('gacha-reward-art-0').props.source).toEqual([
-      assetSource(entry.assetKey),
+      expect.objectContaining({ testUri: expect.stringContaining('cat-approved-idle') }),
     ]);
     expect(screen.queryByTestId('gacha-reward-fallback-0')).toBeNull();
     await fireEvent(screen.getByTestId('gacha-reward-art-0'), 'display');
