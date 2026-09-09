@@ -522,7 +522,7 @@ export const galleryEntries: GalleryEntry[] = [
   {
     name: 'Room · 승인된 고양이',
     description:
-      '시그니처 눕기(자동 깜빡임) → 두 번 깜빡임 → 윙크 → 앉기 → 인사. 눕기 원화와 표정 모션의 일관성을 확인합니다.',
+      '시그니처 눕기(고개 흔들기) → 두 번 깜빡임 → 윙크 → 앉기 → 인사. 눕기 원화와 표정 모션의 일관성을 확인합니다.',
     render: () => (
       <View style={{ width: 320, alignSelf: 'center' }}>
         <Room characterId="cat" interactiveCharacter />

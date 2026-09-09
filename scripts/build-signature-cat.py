@@ -69,12 +69,12 @@ def save_loop(name, expressions, durations):
             'fixed_alpha': True, 'fixed_body': True, 'seamless_visible_loop': True}
 
 checks = {
-    'idle': save_loop('idle', [base, blink, base], [2800, 120, 3080]),
     'blink': save_loop('blink', [base, blink, base, blink, base], [1700, 90, 110, 90, 2010]),
     'wink': save_loop('wink', [base, wink, base], [1200, 650, 2150]),
 }
-report = {'default_pose': 'lying-idle', 'size': [512, 512], 'ground_y': 500,
+report = {'default_pose': 'lying-head-sway', 'size': [512, 512], 'ground_y': 500,
           'eye_boxes_source': eye_boxes, 'pixels_outside_eye_masks_unchanged': True,
-          'poses': ['lying', 'blink', 'wink', 'seated', 'wave'], 'loops': checks}
+          'poses': ['lying', 'blink', 'wink', 'seated', 'wave'], 'loops': checks,
+          'idle_verification': 'head-idle-verification.json'}
 (SRC / 'signature-verification.json').write_text(json.dumps(report, indent=2) + '\n')
 print(json.dumps(report))

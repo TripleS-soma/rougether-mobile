@@ -4,7 +4,7 @@
 
 ## 표시 순서
 
-1. `cat-approved-idle.webp`: 새로 그린 시그니처 눕기. 두 앞발을 내밀고 고개를 기울인 기본 대기 모션. 6초 주기로 한 번 눈을 깜빡인다.
+1. `cat-approved-idle.webp`: 새로 그린 시그니처 눕기. 두 앞발을 내밀고 고개를 기울인 기본 대기 모션. 3.2초 주기로 고개를 좌우 ±3° 흔든다. 눈깜빡임은 별도 포즈로 유지한다.
 2. `cat-approved-blink.webp`: 누운 채 두 번 눈깜빡임, 4초 루프.
 3. `cat-approved-wink.webp`: 누운 채 한쪽 눈 윙크, 4초 루프.
 4. `cat-approved-seated.webp`: 기존 승인 앉기 원화.
@@ -17,6 +17,8 @@
 눕기 원화는 기존 `cat-1.webp`의 자세와 사용자가 승인한 앉기 시안의 얼굴·그림체를 참조해 새로 제작했다. 눈을 감은 생성 결과에서는 눈 주변만 마스크로 사용하고, 나머지는 눕기 원화의 픽셀을 그대로 유지한다. 윙크는 동일한 눈 편집 중 한쪽만 적용한다.
 
 눈깜빡임·윙크에서 실루엣, 코·입, 앞발, 몸통, 꼬리는 움직이지 않는다. 원본 마스크 밖 픽셀 동일성과 디코딩한 WebP의 알파, 몸통, 루프 시작/끝을 검사한다. 결과는 `assets/characters/cat-approved/signature-verification.json`에 남는다.
+
+기본 대기는 같은 원화에 고개 회전을 적용하고 목 부분에서만 변형량을 줄인다. 눈·코·입은 같은 회전으로 움직여 비율을 유지하고 앞발·뒷몸통·꼬리는 고정한다. `head-idle-verification.json`은 움직임 존재, 얼굴 기준점, 고정 영역, 캔버스 잘림, 반복 경계를 검사한다. 전체 프레임에 같은 256색 팔레트를 사용해 용량을 약 2.1MB로 줄였고, 팔레트 적용 전후 불투명 픽셀의 프레임별 평균 RGB 오차는 255 중 최대 1.60 이하다. 3.2초/±3°는 새로 조정한 값이며 기존 설치본의 정확한 속도를 측정한 값은 아니다.
 
 5종 모두 512×512 투명 캔버스를 사용한다. 눕기 3종은 같은 크롭/배율/바닥 좌표를 사용하고, 앉기·인사도 두 눈 사이 간격이 눕기와 비슷하도록 함께 축소한다. 눕기와 앉기 사이의 연결 동작은 포함하지 않는다.
 
@@ -34,11 +36,12 @@
 
 `assets/characters/cat-approved`에는 눕기 원화·눈 편집 참조, 승인 앉기 원화·Blender 인사 원본이 있다. 앱에는 `assets/images/characters/cat-approved-*.webp`만 import된다.
 
-Python 3, Pillow, numpy가 있는 환경에서:
+Python 3, Pillow, numpy, OpenCV가 있는 환경에서:
 
 ```sh
 python3 scripts/build-approved-cat.py
 python3 scripts/build-signature-cat.py
+python3 scripts/build-cat-head-idle.py
 npx prettier --write assets/characters/cat-approved/*.json
 ```
 
