@@ -27,7 +27,7 @@ describe('staged house frame contract', () => {
     'selects published rounded art and keeps canonical keys for %i seats',
     (capacity) => {
       for (const [theme, canonical, release] of [
-        ['cloud-balloon', DEFAULT_HOUSE_COVER_KEY, 'rounded-v2-20260907'],
+        ['cloud-balloon', DEFAULT_HOUSE_COVER_KEY, 'cloud-renewed-v1-20260909'],
         [
           'coral-lagoon',
           'house/coral-aquarium/house-unified-coral-aquarium-frame.png',
