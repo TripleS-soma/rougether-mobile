@@ -2,15 +2,17 @@
 
 Run build-approved-cat.py, build-signature-cat.py and build-cat-head-idle.py first.
 Dependencies: Python 3, Pillow, numpy, OpenCV. New art uses a cyan background
-for deterministic removal; all motion frames derive from one master per pose.
+for deterministic removal. Four actions use whole-character imagegen drawings.
 """
 from pathlib import Path
 import hashlib
 import json
 import math
+import runpy
+import sys
 import cv2
 import numpy as np
-from PIL import Image, ImageSequence, ImageDraw, ImageFilter
+from PIL import Image, ImageSequence
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / 'assets/characters/cat-approved'
@@ -23,7 +25,7 @@ def smooth(t):
     return t * t * (3 - 2 * t)
 
 def clean_and_normalize(name):
-    assert name in ('sleep','stretch')
+    assert name == 'sleep'
     raw = Image.open(SRC / f'{name}-generated.png').convert('RGB')
     rgb = np.asarray(raw).astype(np.float32)
     cyan = np.minimum(rgb[:, :, 1], rgb[:, :, 2]) - rgb[:, :, 0]
@@ -75,10 +77,10 @@ def encode(name, frames, duration):
         f = frame.convert('RGB').quantize(palette=palette, dither=Image.Dither.NONE).convert('RGBA')
         f.putalpha(frame.getchannel('A')); reduced.append(f)
     reduced[-1] = reduced[0].copy()
-    fixed_region = (slice(485,None),slice(235,315)) if name in ('groom','wave') else (slice(490,None),slice(None))
+    fixed_region = (slice(490,None),slice(None))
     assert all(np.array_equal(np.asarray(frames[0])[fixed_region],np.asarray(f)[fixed_region]) for f in frames)
     path = OUT/f'cat-approved-{name}.webp'
-    lossless = name == 'groom'
+    lossless = False
     keyframes = {} if lossless else {'kmin':1, 'kmax':1}
     staging = path.with_name(path.stem + '.building.webp')
     reduced[0].save(staging, save_all=True, append_images=reduced[1:], duration=duration,
@@ -115,98 +117,14 @@ def make_pose(name, master, count, duration):
         phase = 2*math.pi*i/(count-1)
         swell = (1-math.cos(phase))/2
         def field(x,y):
-            if name == 'seated':
-                # Look from side to side: rigid head rotation, not whole-sprite bobbing.
-                w = 1-smooth((y-338)/70)
-                angle = math.radians(8)*math.sin(phase)*w
-                dx,dy = x-255,y-340
-                hx = dx*np.cos(angle)-dy*np.sin(angle)-dx
-                hy = dx*np.sin(angle)+dy*np.cos(angle)-dy
-                tail = smooth((x-350)/45)*(1-smooth((y-420)/45))
-                return hx + 12*math.sin(phase*2)*tail,hy
             if name == 'sleep':
                 # Chest/back slowly rise, muzzle remains nearly resting on paws.
                 back = smooth((x-330)/75) * (1-smooth((y-405)/65))
                 upper = 1-smooth((y-390)/80)
                 return np.zeros_like(x), -swell*(1.5*upper + 4.5*back)
-            if name == 'stretch':
-                grounded = 1-smooth((y-435)/45)
-                back = smooth((x-340)/65)
-                tail = smooth((x-380)/35) * (1-smooth((y-245)/80))
-                # Rise out of the low stretch, then lower the head and raise hips again.
-                head = (1-smooth((x-340)/60))*(1-smooth((y-425)/55))
-                return 10*math.sin(phase)*tail, -30*swell*head+18*swell*back*grounded
             raise ValueError(f'Unsupported deformation pose: {name}')
         frames.append(deform(master, field))
     encode(name, frames, duration)
-
-def prepare_paw_rig():
-    # One planted paw in the body plate + one moving paw. No third foreleg.
-    raw = Image.open(SRC/'groom-body-generated.png').convert('RGB')
-    rgb = np.asarray(raw).astype(np.float32)
-    cyan = np.minimum(rgb[:,:,1],rgb[:,:,2])-rgb[:,:,0]
-    alpha = 1-smooth((cyan-3)/60)
-    edge = cyan>0
-    rgb[edge,1] = np.minimum(rgb[edge,1],rgb[edge,0])
-    rgb[edge,2] = np.minimum(rgb[edge,2],rgb[edge,0])
-    body = Image.fromarray(np.dstack([rgb,alpha*255]).round().astype('uint8'))
-    original = Image.open(SRC/'groom-foreleg-source.png').convert('RGBA')
-    assert original.size == body.size == (1254,1254)
-    # Trace only the raised foreleg; never carry the erroneous planted paw.
-    outline = [(244,753),(245,714),(249,685),(268,661),(291,647),(326,647),
-        (358,658),(385,682),(402,710),(405,741),(397,769),(434,803),
-        (458,838),(470,880),(457,917),(422,942),(377,929),(338,912),
-        (304,883),(276,847),(256,804)]
-    mask = Image.new('L',original.size)
-    ImageDraw.Draw(mask).polygon(outline,fill=255)
-    mask = mask.filter(ImageFilter.GaussianBlur(1.0))
-    yy,xx = np.indices((1254,1254),dtype=float)
-    joint_fade = smooth(np.sqrt((xx-436)**2+(yy-900)**2)/75)
-    mask = Image.fromarray((np.asarray(mask)*joint_fade).astype('uint8'))
-    paw = original.copy()
-    paw.putalpha(Image.fromarray((np.asarray(original.getchannel('A')).astype(float)*np.asarray(mask)/255).astype('uint8')))
-    # Keep a rounded shoulder joint; the root stays inside the torso at all angles.
-    body.save(SRC/'paw-rig-body.png'); paw.save(SRC/'paw-rig-foreleg.png')
-    bounds = body.getbbox(); scale=432/(bounds[3]-bounds[1])
-    width=round((bounds[2]-bounds[0])*scale)
-    left=(512-width)//2-bounds[0]*scale; top=500-bounds[3]*scale
-    def normalize(im):
-        return im.transform((512,512),Image.Transform.AFFINE,
-            (1/scale,0,-left/scale,0,1/scale,-top/scale),Image.Resampling.BICUBIC)
-    body,paw=normalize(body),normalize(paw)
-    pivot=(430*scale+left,900*scale+top)
-    tip=(320*scale+left,700*scale+top)
-    return body,paw,pivot,tip
-
-def make_paw_action(name):
-    body,paw,pivot,tip = prepare_paw_rig()
-    keys = ([(0,-112),(4,-104),(12,-3),(17,-16),(22,0),(27,-16),
-             (32,0),(37,-16),(45,-104),(49,-112)] if name=='groom' else
-            [(0,-112),(7,-65),(13,-5),(19,-65),(25,-5),(31,-65),
-             (37,-5),(44,-95),(49,-112)])
-    def angle_at(frame):
-        for (a,va),(b,vb) in zip(keys,keys[1:]):
-            if a<=frame<=b:
-                return va+(vb-va)*float(smooth((frame-a)/(b-a)))
-        return keys[-1][1]
-    frames=[];tips=[]
-    for frame in range(50):
-        angle=math.radians(angle_at(frame));c,sn=math.cos(angle),math.sin(angle)
-        # Inverse affine map: one physical foreleg rotates around its shoulder.
-        px,py=pivot
-        layer=paw.transform(paw.size,Image.Transform.AFFINE,
-            (c,sn,px-c*px-sn*py,-sn,c,py+sn*px-c*py),Image.Resampling.BICUBIC)
-        result=body.copy();result.alpha_composite(layer);frames.append(result)
-        dx,dy=tip[0]-px,tip[1]-py
-        tips.append((px+c*dx-sn*dy,py+sn*dx+c*dy))
-    excursion=float(np.linalg.norm(np.ptp(np.array(tips),axis=0)))
-    assert excursion>100, 'paw action must visibly lift and lower'
-    encode(name,frames,80)
-    (SRC/f'{name}-action.json').write_text(json.dumps({
-        'planted_forepaws_in_body':1,'moving_foreleg_layers':1,
-        'source_pivot':list(pivot),'paw_tip_excursion_px':excursion,
-        'action': 'lower-lift-rub-lower' if name=='groom' else 'lower-lift-wave-lower',
-        'keys':keys},indent=2)+'\n')
 
 def verify():
     report = {'own_room_order':ORDER, 'friend_room_still':'cat-approved-still.webp', 'poses':{}}
@@ -220,7 +138,8 @@ def verify():
             frames.append(a); durations.append(f.info['duration'])
         assert len(frames)>1, f'{name} is static'
         # Encoders may merge two identical frames at a breathing turning point.
-        assert max(durations)<=200, f'{name} has a static hold'
+        drawn = name in ('groom','wave','seated','stretch')
+        assert max(durations)<=(240 if drawn else 200), f'{name} has an excessive hold'
         assert any(not np.array_equal(frames[0],f) for f in frames[1:]), name
         # Lossy WebP can encode the same RGB endpoint differently. Geometry
         # must match exactly and its color difference must stay within the measured bound.
@@ -230,29 +149,32 @@ def verify():
         assert seam_error.mean()<2 and np.percentile(seam_error,99)<=12, f'{name} loop color jump'
         assert all(not f[0,:,3].any() and not f[-1,:,3].any() and
                    not f[:,0,3].any() and not f[:,-1,3].any() for f in frames), f'{name} clipped'
-        fixed_region = (slice(485,None),slice(235,315)) if name in ('groom','wave') else (slice(490,None),slice(None))
-        assert all(np.array_equal(frames[0][fixed_region][:,:,3], f[fixed_region][:,:,3]) for f in frames), f'{name} support paw drift'
-        if name == 'groom':
-            # Eye/nose/mouth pixels stay fixed; the moving paw may cover the cheek.
-            for x0,y0,x1,y1 in [(135,230,185,278),(200,230,320,322)]:
-                assert all(np.array_equal(frames[0][y0:y1,x0:x1],f[y0:y1,x0:x1]) for f in frames), 'groom face warped'
+        if drawn:
+            source = ROOT/'assets/characters/cat-drawn'/f'{name}-verification.json'
+            drawing_report = json.loads(source.read_text())
+            assert drawing_report['asset_sha256'] == hashlib.sha256(path.read_bytes()).hexdigest()
+            assert drawing_report['art_deformation'] is False
+            assert drawing_report['encoded_frames'] == len(frames)
+        else:
+            fixed_region = (slice(490,None),slice(None))
+            assert all(np.array_equal(frames[0][fixed_region][:,:,3], f[fixed_region][:,:,3]) for f in frames), f'{name} support paw drift'
         report['poses'][name] = {'frames':len(frames), 'duration_ms':sum(durations),
             'max_hold_ms':max(durations),'bytes':path.stat().st_size,
             'sha256':hashlib.sha256(path.read_bytes()).hexdigest(),
             'animated':True,'loop_geometry_equal':True,'no_clipping':True,
             'loop_mean_rgb_error':float(seam_error.mean()),
             'loop_p99_rgb_error':float(np.percentile(seam_error,99)),
-            'support_paw_alpha_fixed':True}
+            'support_paw_alpha_fixed':not drawn,
+            'animation_source':'imagegen whole-character frames' if drawn else 'approved master motion'}
     still = Image.open(OUT/'cat-approved-still.webp')
     assert getattr(still,'n_frames',1) == 1
     (SRC/'motion-set-verification.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report))
 
 if __name__ == '__main__':
-    make_paw_action('wave')
-    make_paw_action('groom')
-    for name in ['blink','wink']: make_expression(name)
-    make_pose('seated',Image.open(SRC/'seated-normalized.png').convert('RGBA'),50,80)
-    for name,count,duration in [('stretch',50,80),('sleep',60,100)]:
-        make_pose(name,clean_and_normalize(name),count,duration)
+    if '--verify-only' not in sys.argv:
+        drawn = runpy.run_path(str(ROOT/'scripts/build-drawn-cat.py'))
+        for name in drawn['NAMES']: drawn['build'](name)
+        for name in ['blink','wink']: make_expression(name)
+        make_pose('sleep',clean_and_normalize('sleep'),60,100)
     verify()

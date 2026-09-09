@@ -13,7 +13,8 @@
       "no_clipping": true,
       "loop_mean_rgb_error": 0.0,
       "loop_p99_rgb_error": 0.0,
-      "support_paw_alpha_fixed": true
+      "support_paw_alpha_fixed": true,
+      "animation_source": "approved master motion"
     },
     "blink": {
       "frames": 47,
@@ -26,7 +27,8 @@
       "no_clipping": true,
       "loop_mean_rgb_error": 1.1177246050181193,
       "loop_p99_rgb_error": 7.0,
-      "support_paw_alpha_fixed": true
+      "support_paw_alpha_fixed": true,
+      "animation_source": "approved master motion"
     },
     "wink": {
       "frames": 47,
@@ -39,46 +41,50 @@
       "no_clipping": true,
       "loop_mean_rgb_error": 1.1147599022511592,
       "loop_p99_rgb_error": 7.0,
-      "support_paw_alpha_fixed": true
+      "support_paw_alpha_fixed": true,
+      "animation_source": "approved master motion"
     },
     "seated": {
-      "frames": 50,
-      "duration_ms": 4000,
-      "max_hold_ms": 80,
-      "bytes": 1410568,
-      "sha256": "24ef6d83aa7d4be74ccf508757be7b3b5a6b1f8728d02a668b157ae86d451d0f",
+      "frames": 16,
+      "duration_ms": 2720,
+      "max_hold_ms": 240,
+      "bytes": 1752848,
+      "sha256": "43a578aa93d8c87772b088f2cf08f12194ac43b467dc87ceb60e95d0a7816100",
       "animated": true,
       "loop_geometry_equal": true,
       "no_clipping": true,
-      "loop_mean_rgb_error": 1.0769320208834932,
-      "loop_p99_rgb_error": 7.0,
-      "support_paw_alpha_fixed": true
+      "loop_mean_rgb_error": 0.0,
+      "loop_p99_rgb_error": 0.0,
+      "support_paw_alpha_fixed": false,
+      "animation_source": "imagegen whole-character frames"
     },
     "wave": {
-      "frames": 50,
-      "duration_ms": 4000,
-      "max_hold_ms": 80,
-      "bytes": 1203358,
-      "sha256": "956d76080eb50b65653b456efce4ca62c4fb97f1bf2d6d88302764124f363a14",
+      "frames": 16,
+      "duration_ms": 2720,
+      "max_hold_ms": 240,
+      "bytes": 1889698,
+      "sha256": "77690e47493a2e74e973ebdc3e0567a13e91cd021545814863d4dfb33cd35492",
       "animated": true,
       "loop_geometry_equal": true,
       "no_clipping": true,
-      "loop_mean_rgb_error": 1.5934949894361419,
-      "loop_p99_rgb_error": 8.0,
-      "support_paw_alpha_fixed": true
+      "loop_mean_rgb_error": 0.0,
+      "loop_p99_rgb_error": 0.0,
+      "support_paw_alpha_fixed": false,
+      "animation_source": "imagegen whole-character frames"
     },
     "stretch": {
-      "frames": 50,
-      "duration_ms": 4000,
-      "max_hold_ms": 80,
-      "bytes": 1554754,
-      "sha256": "648a1e8793ae5bbd67ea5c15fb630e1636936fc8a0df1982bf7f1fa0a72f7166",
+      "frames": 17,
+      "duration_ms": 2880,
+      "max_hold_ms": 240,
+      "bytes": 1768500,
+      "sha256": "4b9e5035b6cf3fd19369c7050cbd8a404b0868d7f8e716b7499a8e77096990e2",
       "animated": true,
       "loop_geometry_equal": true,
       "no_clipping": true,
-      "loop_mean_rgb_error": 1.1102087188490148,
-      "loop_p99_rgb_error": 6.0,
-      "support_paw_alpha_fixed": true
+      "loop_mean_rgb_error": 0.0,
+      "loop_p99_rgb_error": 0.0,
+      "support_paw_alpha_fixed": false,
+      "animation_source": "imagegen whole-character frames"
     },
     "sleep": {
       "frames": 59,
@@ -91,20 +97,22 @@
       "no_clipping": true,
       "loop_mean_rgb_error": 1.4358828071873955,
       "loop_p99_rgb_error": 8.0,
-      "support_paw_alpha_fixed": true
+      "support_paw_alpha_fixed": true,
+      "animation_source": "approved master motion"
     },
     "groom": {
-      "frames": 50,
-      "duration_ms": 4000,
-      "max_hold_ms": 80,
-      "bytes": 663864,
-      "sha256": "3c22ae157d88e0979ee4d2f7de081197ced9a5851706aa8e78eb532da06da7ed",
+      "frames": 16,
+      "duration_ms": 2720,
+      "max_hold_ms": 240,
+      "bytes": 1752376,
+      "sha256": "8b59f50bd4f4b905cf9e1ab99ae076cec7d81fb9e38d6f7f5a411d2621d39543",
       "animated": true,
       "loop_geometry_equal": true,
       "no_clipping": true,
       "loop_mean_rgb_error": 0.0,
       "loop_p99_rgb_error": 0.0,
-      "support_paw_alpha_fixed": true
+      "support_paw_alpha_fixed": false,
+      "animation_source": "imagegen whole-character frames"
     }
   }
 }

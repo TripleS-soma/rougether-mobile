@@ -12,26 +12,28 @@
 
 ## 내 방 표시 순서
 
-| 순서 | 파일                        | 반복 동작                                    | 주기  |
-| ---- | --------------------------- | -------------------------------------------- | ----- |
-| 1    | `cat-approved-idle.webp`    | 누운 채 고개 좌우 흔들기                     | 3.2초 |
-| 2    | `cat-approved-blink.webp`   | 누워 숨 쉬며 두 번 깜빡임                    | 4초   |
-| 3    | `cat-approved-wink.webp`    | 누워 숨 쉬며 윙크                            | 4초   |
-| 4    | `cat-approved-seated.webp`  | 앉아서 고개를 좌우로 기울여 두리번거리기     | 4초   |
-| 5    | `cat-approved-wave.webp`    | 앉아서 숨 쉬며 앞발 인사                     | 3초   |
-| 6    | `cat-approved-stretch.webp` | 고개를 들었다가 다시 몸을 낮추는 기지개      | 4초   |
-| 7    | `cat-approved-sleep.webp`   | 몸을 말고 잠들어 천천히 숨 쉬기              | 6초   |
-| 8    | `cat-approved-groom.webp`   | 앞발을 내렸다 올려 볼을 문지르고 다시 내리기 | 4초   |
+| 순서 | 파일                        | 반복 동작                                      | 주기   |
+| ---- | --------------------------- | ---------------------------------------------- | ------ |
+| 1    | `cat-approved-idle.webp`    | 누운 채 고개 좌우 흔들기                       | 3.2초  |
+| 2    | `cat-approved-blink.webp`   | 누워 숨 쉬며 두 번 깜빡임                      | 4초    |
+| 3    | `cat-approved-wink.webp`    | 누워 숨 쉬며 윙크                              | 4초    |
+| 4    | `cat-approved-seated.webp`  | 좌우를 돌아보고 눈을 깜빡이는 연속 그림        | 2.72초 |
+| 5    | `cat-approved-wave.webp`    | 앞발을 들어 흔들고 내려놓는 연속 그림          | 2.72초 |
+| 6    | `cat-approved-stretch.webp` | 앞발을 뻗고 엉덩이를 올렸다 돌아오는 연속 그림 | 2.88초 |
+| 7    | `cat-approved-sleep.webp`   | 몸을 말고 잠들어 천천히 숨 쉬기                | 6초    |
+| 8    | `cat-approved-groom.webp`   | 앞발을 핥고 볼을 닦은 뒤 내려놓는 연속 그림    | 2.72초 |
 
 포즈를 전환할 때 새 모션을 처음부터 재생한다. 서로 다른 자세 사이를 이어주는 전환 동작은 포함하지 않는다. 기본 고개 흔들기의 ±3°/3.2초는 새로 조정한 값이며 기존 설치본의 정확한 속도를 측정한 값은 아니다.
 
 ## 원화와 일관성
 
-승인된 눕기·앉기 원화를 기준으로 기지개·잠들기·세수 원화를 built-in imagegen으로 제작했다. 생성 입력과 프롬프트는 `assets/characters/cat-approved/new-pose-prompts.md`에 보관한다. 세 원화의 청록 배경은 투명 처리용이며 앱에는 투명 WebP만 표시한다.
+승인된 눕기·앉기 원화를 참조해 내장 `imagegen`으로 세수·앞발 인사·두리번·기지개의 전체 캐릭터 연속 그림을 새로 제작했다. 원본 4×4 시트와 실제 프롬프트는 [`assets/characters/cat-drawn`](../assets/characters/cat-drawn/prompts.md)에 보관한다. 한 동작에서 머리·얼굴·앞발·몸통이 함께 바뀌는 그림이며 Blender, 분리된 팔 회전, 메시 변형, 광학 보간으로 만들지 않는다.
 
-프레임마다 새 이미지를 생성하지 않는다. 눈 편집은 원화의 눈 주변에만 적용하고, 반복 동작은 원화의 좌표 변형으로 만든다. 고개 흔들기에서는 눈·코·입을 같은 회전으로 움직인다. 세수·인사는 바닥을 짚는 앞발 하나만 남긴 몸통과 움직이는 앞발 한 개를 합성한다. 앞발은 어깨 관절을 중심으로 내려간 자세부터 볼에 닿는 자세까지 실제로 이동한다. 이전 세수 그림에서 추가 앞발처럼 보이던 아래쪽 발은 몸통 원화에서 제거했다. 눈·코·입의 고정 영역과 지지하는 발을 검사하고, 움직이는 발 끝의 이동 범위가 100px 이상인지도 검사한다. 앉기는 고개 회전과 꼬리 움직임, 기지개는 머리를 들어 풀었다가 다시 낮추는 동작을 사용한다. 인사의 이전 Blender 시안은 제작 이력으로 보관하며 현재 앱 인사는 새 앞발 리그를 사용한다.
+`build-drawn-cat.py`가 청록 배경을 제거하고 동작별 공통 배율과 프레임 전체 이동으로 정렬한다. 그림 일부를 잘라 회전하거나 늘이지 않는다. 세수는 앞발이 턱처럼 보이던 교차 그림을 제외하고 볼을 위아래로 닦는 그림을 반복한다. 두리번은 정면을 거쳐 반대편을 보도록 순서를 정리했고, 기지개는 일어서던 마지막 그림 대신 몸을 낮춘 시작 자세로 역순 복귀한다. 실제 재생 순서는 `playback_cell_indices`에 기록한다.
 
-모든 표시 파일은 512×512 투명 캔버스이며 바닥을 짚는 발의 위치를 고정한다. 세수·인사의 움직이는 발은 바닥에서 떨어져야 하므로 전체 바닥 픽셀을 고정하는 검사는 적용하지 않는다. 자세별 머리 크기가 비슷하도록 원화 배율을 맞췄다. 고개 흔들기·세수는 무손실 WebP, 나머지는 품질 90 WebP를 사용한다. 압축 전 시작·끝은 같고 디코딩한 시작·끝의 알파도 같아야 한다. 손실 압축의 색상 차이는 불투명 영역의 평균 RGB 2 미만, 99백분위 12 이하(255 기준)로 제한한다. 원본 대비 프레임별 평균 색상 오차도 4 미만인지 검사한다.
+네 동작은 512×512 투명 무손실 WebP이며 16/17개 재생 프레임을 사용한다. 같은 시작 그림을 루프 끝에 재사용한다. 생성 그림 사이에 윤곽·얼굴 비율의 미세한 변화가 남아 있으므로, 픽셀 수준 일관성이나 완전한 자연스러움을 자동 검증했다고 주장하지 않는다. 약 6fps의 연속 그림 초안이며 기기 크기에서 시각 검토가 필요하다.
+
+사용자가 앞서 확인한 기본 눕기 고개 흔들기와 깜빡임·윙크·잠들기는 기존 원화 모션을 유지한다. 이 네 모션은 원화의 회전·호흡 변형을 사용한다. `cat-approved`의 이전 `paw-rig-*`, `groom-action.json`, `wave-action.json` 및 네 동작의 옛 `*-encoding.json`은 이전 시안 기록으로만 남으며 현재 네 동작의 검증 자료가 아니다.
 
 ## 모바일 적용
 
@@ -48,16 +50,16 @@ python3 scripts/build-approved-cat.py
 python3 scripts/build-signature-cat.py
 python3 scripts/build-cat-head-idle.py
 python3 scripts/build-cat-motion-set.py
-npx prettier --write assets/characters/cat-approved/*.json
+npx prettier --write assets/characters/cat-approved/*.json assets/characters/cat-drawn/*.json
 ```
 
-`build-approved-cat.py`와 `build-signature-cat.py`가 만든 정지 PNG는 제작용 중간 원화다. 내 방에는 `build-cat-motion-set.py`가 만든 최종 애니메이션만 import된다.
+`build-approved-cat.py`와 `build-signature-cat.py`의 정지 PNG는 제작용 중간 원화다. `build-cat-motion-set.py`는 새 4종을 `build-drawn-cat.py`로 조립하므로 재실행해도 폐기한 팔 리그로 되돌아가지 않는다. `--verify-only` 옵션은 에셋을 재생성하지 않고 현재 번들을 검사한다.
 
-- `motion-set-verification.json`: 8종의 프레임 수, 주기, 파일 크기·해시, 무한 반복 설정, 움직임 존재, 루프 경계, 잘림, 바닥 알파 고정.
-- `groom-action.json`, `wave-action.json`: 지지 발 1개와 움직이는 앞발 레이어 1개, 관절 키프레임과 발 끝 이동 범위.
+- `motion-set-verification.json`: 8종의 프레임 수, 주기, 파일 크기·해시, 무한 반복 설정, 움직임 존재, 루프 경계, 잘림, 생성 방식. 바닥 픽셀 고정 검사는 기존 원화 모션에만 적용한다.
+- `cat-drawn/*-verification.json`: 원본 시트 해시, 선택한 그림 순서, 공통 배율, 좌표, 무변형 조립 여부, 실제 WebP 해시. 세수의 두 앞발 구조와 포즈 연결은 그림별 시각 검토 대상이다.
 - `head-idle-verification.json`: 기본 눕기의 얼굴 기준점과 고정 부위.
 - `signature-verification.json`: 눈 마스크 밖 원화 픽셀 보존.
-- `*-encoding.json`: 원본 프레임 대비 압축된 영상의 색상 오차와 압축 설정.
+- `blink/wink/sleep-encoding.json`: 유지한 원화 모션의 압축 오차와 설정.
 - 컴포넌트 테스트: 서버의 구형 포즈를 건너뛰고 8종 순환, 8번 탭 후 기본 복귀, 친구 화면의 정지 원화 및 탭 버튼 부재.
 
 Expo SDK 55의 [Image](https://docs.expo.dev/versions/v55.0.0/sdk/image/)를 사용한다. 개발 갤러리 `Room · 승인된 고양이`와 `Room · 친구 고양이 (정지)`에서 두 동작을 비교할 수 있다.
