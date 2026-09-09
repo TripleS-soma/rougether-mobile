@@ -62,6 +62,8 @@ export type CalendarDayCount = {
   date?: string;
   routineCount?: number;
   todoCount?: number;
+  routineCompletedCount?: number;
+  todoCompletedCount?: number;
 };
 
 export type CalendarDayResponse = {
@@ -908,6 +910,8 @@ export type RoomRenderResponse = {
 export type RoomResponse = {
   roomUserId?: number;
   growthLevel?: number;
+  growthPoints?: number;
+  pointsToNextLevel?: number;
   layoutFormat?: 'SLOT_V1' | 'FREE_V1';
   layoutRevision?: number;
   character?: RoomCharacterResponse;

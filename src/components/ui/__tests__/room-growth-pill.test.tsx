@@ -1,0 +1,53 @@
+import { fireEvent, render } from '@testing-library/react-native';
+import { RoomGrowthPill } from '@/components/ui/room-growth-pill';
+import { ToastProvider } from '@/components/ui/toast';
+
+it('평소에는 레벨만 표시하고 터치하면 최신 남은 포인트를 안내한다', async () => {
+  const ui = await render(
+    <ToastProvider>
+      <RoomGrowthPill growthLevel={2} growthPoints={50} pointsToNextLevel={16} />
+    </ToastProvider>,
+  );
+  expect(ui.getByText('Lv. 2')).toBeTruthy();
+  expect(ui.queryByText(/다음/)).toBeNull();
+
+  await fireEvent.press(ui.getByRole('button', { name: /나의 방 레벨 2/ }));
+  expect(ui.getByText('다음 레벨까지 16포인트 남았어요')).toBeTruthy();
+
+  await ui.rerender(
+    <ToastProvider>
+      <RoomGrowthPill growthLevel={2} growthPoints={54} pointsToNextLevel={12} />
+    </ToastProvider>,
+  );
+  await fireEvent.press(ui.getByRole('button', { name: /나의 방 레벨 2/ }));
+  expect(ui.getByText('다음 레벨까지 12포인트 남았어요')).toBeTruthy();
+});
+
+it('서버 레벨 0을 숨기지 않고 다음 단계까지의 포인트를 읽어준다', async () => {
+  const ui = await render(
+    <RoomGrowthPill growthLevel={0} growthPoints={3} pointsToNextLevel={17} />,
+  );
+  expect(ui.getByLabelText('나의 방 레벨 0, 다음 레벨까지 17포인트, 누적 3포인트')).toBeTruthy();
+});
+it('포인트가 없는 서버 응답은 실제 레벨만 표시한다', async () => {
+  const ui = await render(<RoomGrowthPill growthLevel={2} />);
+  expect(ui.getByText('Lv. 2')).toBeTruthy();
+  expect(ui.queryByText(/다음까지/)).toBeNull();
+  expect(ui.queryByRole('button')).toBeNull();
+});
+it('로딩 중이거나 잘못된 레벨을 0레벨로 꾸며내지 않는다', async () => {
+  const ui = await render(<RoomGrowthPill />);
+  expect(ui.queryByText(/Lv\./)).toBeNull();
+  await ui.rerender(<RoomGrowthPill growthLevel={-1} />);
+  expect(ui.queryByText(/Lv\./)).toBeNull();
+});
+
+it.each([-1, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])(
+  '잘못된 누적 포인트 %s는 접근성 라벨에서 제외한다',
+  async (growthPoints) => {
+    const ui = await render(
+      <RoomGrowthPill growthLevel={2} growthPoints={growthPoints} pointsToNextLevel={16} />,
+    );
+    expect(ui.getByRole('button', { name: '나의 방 레벨 2, 다음 레벨까지 16포인트' })).toBeTruthy();
+  },
+);

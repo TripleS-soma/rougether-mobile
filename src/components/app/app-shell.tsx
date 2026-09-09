@@ -230,6 +230,9 @@ export function AppShell({
     catalogue,
     ownedIds,
     placement,
+    growthLevel,
+    growthPoints,
+    pointsToNextLevel,
     loading: shopLoading,
     error: shopError,
     retry: retryShop,
@@ -376,6 +379,9 @@ export function AppShell({
     missionLinks: { toggleWithMissionGuard, houseCategoryIds, addRoutineWithMission },
     character: { wornCharacterId, wornCharacterFrames, ownedCharacters, wearCharacter },
     room: {
+      growthLevel,
+      growthPoints,
+      pointsToNextLevel,
       placements: placedItems,
       wallpaperId,
       floorId,
@@ -384,7 +390,6 @@ export function AppShell({
       cobweb: placement.cobweb,
       onCleanCobweb: cleanCobweb,
       markedTodoDates: myRoomData.markedTodoDates,
-      onCalendarMonthChange: myRoomData.loadCalendarMonth,
     },
   });
   // 홈 위젯 동기화 (#604·#746·#1122) — 요약·다크모드·마지막 접속. 셸과 결합 없음.

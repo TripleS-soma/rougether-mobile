@@ -266,6 +266,9 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
 
   return useMemo(
     () => ({
+      growthLevel: room?.growthLevel,
+      growthPoints: room?.growthPoints,
+      pointsToNextLevel: room?.pointsToNextLevel,
       catalogue,
       ownedIds,
       placement,
@@ -278,6 +281,9 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
       saveLayout,
     }),
     [
+      room?.growthLevel,
+      room?.growthPoints,
+      room?.pointsToNextLevel,
       catalogue,
       ownedIds,
       placement,

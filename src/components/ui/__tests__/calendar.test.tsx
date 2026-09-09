@@ -291,3 +291,28 @@ describe('Calendar', () => {
     expect(dayColor('2026-09-07', '7')).toBe(Themes.cozy.text);
   });
 });
+
+it('KST 월 경계에서 외부 선택일 변경은 보이는 월과 조회 신호를 함께 바꾼다', async () => {
+  const monthChanged = jest.fn();
+  const ui = await render(
+    <Calendar
+      value="2026-09-30"
+      today="2026-09-30"
+      onSelect={() => {}}
+      onVisibleMonthChange={monthChanged}
+      progressByDate={{}}
+    />,
+  );
+  await ui.rerender(
+    <Calendar
+      value="2026-10-01"
+      today="2026-10-01"
+      onSelect={() => {}}
+      onVisibleMonthChange={monthChanged}
+      progressByDate={{}}
+    />,
+  );
+  expect(ui.getByText('2026년 10월')).toBeTruthy();
+  expect(ui.getByLabelText('2026-10-01, 집계 확인 중')).toBeTruthy();
+  expect(monthChanged).toHaveBeenLastCalledWith('2026-10');
+});

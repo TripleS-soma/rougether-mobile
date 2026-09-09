@@ -1,19 +1,8 @@
 /**
- * 달력 탭 서버 상태 (#1027 — useMyRoomData에서 분리한 첫 조각). 날짜별 목록
- * (GET /calendar)과 달별 점(GET /calendar/month)을 react-query 캐시로 들고,
- * 달력에서의 완료 토글을 뮤테이션으로 돌린다.
- *
- * 종전에는 `calendarDays`·`todoDatesByMonth` 두 useState가 캐시였고, 루틴을
- * 고칠 때마다 `refreshCachedCalendarDays`가 방문한 날짜를 하나씩 다시 불렀다.
- * 이제 그 자리는 `invalidateCalendar()` 한 번이다 — `queryKeys.calendar.all`
- * 접두로 무효화하면 **관찰 중인**(= 사용자가 골랐던) 날짜·달만 react-query가
- * 재조회한다. 요청 수는 같고, 콜백 참조가 캐시 내용에 묶이지 않는다 (#539).
- *
- * 조회는 종전과 똑같이 **지연**이다: 날짜는 사용자가 고를 때(`loadCalendarDay`),
- * 달은 보이는 달이 바뀔 때(`loadCalendarMonth`) 처음 요청되고, 그때마다 항상
- * 다시 받는다(루틴 수정이 미래 날짜를 바꾸므로 — 이전 데이터는 응답이 올 때까지
- * 남는다). 골랐던 날짜·달의 목록을 `useQueries`로 관찰해 캐시를 화면용 모양으로
- * 합친다 — `combine`은 모듈 스코프에 두어 결과 참조가 내용이 같으면 고정된다.
+ * 달력 날짜 목록·완료 뮤테이션. 월/일 query option을 useCalendarView와 공유한다.
+ * invalidateCalendar는 관찰 중인 날짜와 월 집계를 함께 갱신한다.
+ * loadCalendarDay/loadCalendarMonth는 기존 호출자의 명시적 조회용이며,
+ * 실제 달력 화면의 보이는 월·KST 날짜·오류 상태는 useCalendarView가 소유한다.
  */
 import { useCallback, useMemo, useState } from 'react';
 import {
@@ -34,6 +23,7 @@ import {
   uncompleteTodo,
 } from '@/api';
 import { toCalendarItems, toServerItemId } from '@/api/adapters';
+import type { CalendarDayCount } from '@/api/types';
 import type { CalendarDayItem } from '@/components/screens/my-room-screen';
 import { useToast } from '@/components/ui/toast';
 import type { Routine } from '@/constants/routines';
@@ -47,13 +37,11 @@ type UserId = ReturnType<typeof getSessionUserId>;
 /** 날짜 캐시 — 키의 날짜를 데이터에도 실어 `combine`이 키 없이 합칠 수 있게. */
 type CalendarDayData = { date: string; items: CalendarDayItem[] };
 /**
- * 달 캐시 (#838, 서버 #295) — 그 달에 **투두가 있는 날**의 집합. 루틴은 세지
- * 않는다: 대부분의 날에 반복되므로 점을 찍으면 거의 모든 날에 찍혀 아무것도
- * 구분하지 못한다. 서버는 routineCount도 주지만 버린다.
+ * 달 캐시 — 일별 네 가지 집계를 보존한다. dates는 기존 날짜 선택기의 투두 점 호환용.
  */
-type CalendarMonthData = { yearMonth: string; dates: string[] };
+type CalendarMonthData = { yearMonth: string; dates: string[]; days?: CalendarDayCount[] };
 
-const dayOptions = (userId: UserId, date: string) =>
+export const calendarDayOptions = (userId: UserId, date: string) =>
   queryOptions({
     queryKey: queryKeys.calendar.day(userId, date),
     queryFn: async (): Promise<CalendarDayData> => ({
@@ -63,13 +51,14 @@ const dayOptions = (userId: UserId, date: string) =>
     staleTime: Infinity,
   });
 
-const monthOptions = (userId: UserId, yearMonth: string) =>
+export const calendarMonthOptions = (userId: UserId, yearMonth: string) =>
   queryOptions({
     queryKey: queryKeys.calendar.month(userId, yearMonth),
     queryFn: async (): Promise<CalendarMonthData> => {
       const res = await fetchCalendarMonth(yearMonth);
       return {
         yearMonth,
+        days: res.days,
         dates: (res.days ?? []).flatMap((d) => ((d.todoCount ?? 0) > 0 && d.date ? [d.date] : [])),
       };
     },
@@ -112,13 +101,13 @@ export function useCalendarData({
   const [visitedMonths, setVisitedMonths] = useState<string[]>([]);
 
   const dayQueries = useMemo(
-    () => visitedDates.map((date) => dayOptions(userId, date)),
+    () => visitedDates.map((date) => calendarDayOptions(userId, date)),
     [userId, visitedDates],
   );
   const calendarDays = useQueries({ queries: dayQueries, combine: combineDays });
 
   const monthQueries = useMemo(
-    () => visitedMonths.map((ym) => monthOptions(userId, ym)),
+    () => visitedMonths.map((ym) => calendarMonthOptions(userId, ym)),
     [userId, visitedMonths],
   );
   const monthTodoDates = useQueries({ queries: monthQueries, combine: combineMonths });
@@ -133,7 +122,7 @@ export function useCalendarData({
     async (date: string) => {
       setVisitedDates((prev) => pushUnique(prev, date));
       try {
-        await qc.fetchQuery({ ...dayOptions(userId, date), staleTime: 0 });
+        await qc.fetchQuery({ ...calendarDayOptions(userId, date), staleTime: 0 });
       } catch {
         toast('달력 기록을 불러오지 못했어요', 'error');
       }
@@ -145,7 +134,7 @@ export function useCalendarData({
     async (yearMonth: string) => {
       setVisitedMonths((prev) => pushUnique(prev, yearMonth));
       try {
-        await qc.fetchQuery({ ...monthOptions(userId, yearMonth), staleTime: 0 });
+        await qc.fetchQuery({ ...calendarMonthOptions(userId, yearMonth), staleTime: 0 });
       } catch {
         // 점은 보조 정보다 — 실패해도 달력 자체는 쓸 수 있으니 조용히 넘어간다.
       }

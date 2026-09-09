@@ -1,5 +1,8 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
+import type { DayProgress } from '@/utils/calendar-progress';
+import { progressLabel } from '@/utils/calendar-progress';
 import { GestureDetector } from 'react-native-gesture-handler';
 
 import { Icon } from '@/components/ui/icon';
@@ -51,6 +54,8 @@ export type CalendarProps = {
    * 종전 그대로 — 날짜 선택 시트들은 점 없이 동작한다.
    */
   markedDates?: ReadonlySet<string>;
+  /** 달성도 모드. 빈 객체는 아직 집계가 없는 상태이며 0%로 대체하지 않는다. */
+  progressByDate?: Readonly<Record<string, DayProgress>>;
   /**
    * 보이는 달이 바뀔 때 "YYYY-MM" (#838) — 마운트 시 1회도 부른다. 부모가
    * 그 달 데이터를 받아 `markedDates`를 채우는 신호다. 달력이 스스로
@@ -72,6 +77,7 @@ function CalendarBase({
   today,
   monthSwipe = true,
   markedDates,
+  progressByDate,
   onVisibleMonthChange,
 }: CalendarProps) {
   const t = useTokens();
@@ -79,6 +85,12 @@ function CalendarBase({
   const emph = useFontEmphasis();
   const selected = parse(value);
   const [view, setView] = useState({ y: selected.y, m: selected.m });
+
+  // 자정·외부 선택 변경으로 다른 달의 날짜를 받으면 그 달로 함께 이동한다.
+  useEffect(() => {
+    const next = parse(value);
+    setView((prev) => (prev.y === next.y && prev.m === next.m ? prev : { y: next.y, m: next.m }));
+  }, [value]);
 
   // 보이는 달 알림 (#838) — 최신 콜백을 ref로 읽어, 부모가 인라인 함수를
   // 넘겨도 매 렌더 다시 부르지 않는다.
@@ -167,7 +179,7 @@ function CalendarBase({
     if (rowTop == null) return;
     const target = {
       x: l.x + (l.width - SEL_SIZE) / 2,
-      y: rowTop + l.y + (l.height - SEL_SIZE) / 2,
+      y: rowTop + l.y + (l.height - SEL_SIZE) / 2 - (progressByDate ? 8 : 0),
     };
     const appearing = !selVisibleRef.current;
     if (appearing || !animate) {
@@ -246,7 +258,7 @@ function CalendarBase({
               styles.selCircle,
               {
                 backgroundColor: t.primary,
-                opacity: selOpacity,
+                opacity: progressByDate ? 0 : selOpacity,
                 transform: selPos.getTranslateTransform(),
               },
             ]}
@@ -288,6 +300,8 @@ function CalendarBase({
                 const date = iso(view.y, view.m, day);
                 const disabled = (min && date < min) || (max && date > max);
                 const isSelected = date === value;
+                const progress = progressByDate?.[date];
+                const future = !!today && date > today;
                 // 오늘 표시 (#862) — 다른 날짜를 보고 있어도 오늘이 어디인지
                 // 알 수 있게. 선택된 날은 이미 꽉 찬 원이라 겹쳐 그리지 않는다.
                 const isToday = !!today && date === today && !isSelected;
@@ -302,7 +316,11 @@ function CalendarBase({
                     accessibilityLabel={[
                       date,
                       isToday ? '오늘' : null,
-                      markedDates?.has(date) ? '할 일 있음' : null,
+                      progressByDate
+                        ? `${progressLabel(progress, date, today ?? date)}${!progress && markedDates?.has(date) ? ', 할 일 있음' : ''}`
+                        : markedDates?.has(date)
+                          ? '할 일 있음'
+                          : null,
                     ]
                       .filter(Boolean)
                       .join(', ')}
@@ -312,8 +330,43 @@ function CalendarBase({
                       // 월 이동으로 이 셀이 새로 측정될 때, 선택 날짜면 즉시 원을 얹는다.
                       if (date === value && selectedInView) placeCircle(false);
                     }}
-                    style={styles.cell}>
-                    <View style={styles.dayCircle}>
+                    style={[styles.cell, progressByDate && styles.progressCell]}>
+                    <View
+                      style={[
+                        styles.dayCircle,
+                        progressByDate && styles.progressDate,
+                        progressByDate && isSelected && { backgroundColor: t.primary },
+                      ]}>
+                      {progress && progress.total > 0 && !future ? (
+                        <Svg
+                          width={42}
+                          height={42}
+                          style={styles.progressRing}
+                          pointerEvents="none">
+                          <Circle
+                            cx={21}
+                            cy={21}
+                            r={19}
+                            stroke={t.border}
+                            strokeWidth={2}
+                            fill="none"
+                          />
+                          <Circle
+                            cx={21}
+                            cy={21}
+                            r={19}
+                            stroke={t.primary}
+                            strokeWidth={2.5}
+                            fill="none"
+                            strokeLinecap="round"
+                            strokeDasharray={`${2 * Math.PI * 19}`}
+                            strokeDashoffset={
+                              2 * Math.PI * 19 * (1 - progress.completed / progress.total)
+                            }
+                            transform="rotate(-90 21 21)"
+                          />
+                        </Svg>
+                      ) : null}
                       {/* 채움이 아니라 테두리다 — primarySoft(알파 0x22) 채움은
                           배경과 ΔE 3~7이라 사실상 안 보인다(#860 스트립에서 같은
                           함정을 겪었다). 빈 원 = 오늘, 꽉 찬 원 = 선택으로 뜻도
@@ -350,7 +403,25 @@ function CalendarBase({
                     {/* 할 일 있는 날 표시 (#838) — 선택된 날은 원이 이미 강조라
                         점을 생략한다(원 안에서 잉크가 겹친다). 절대 배치라
                         없을 때 자리를 채워둘 필요가 없다 (#845 후속). */}
-                    {markedDates?.has(date) && !isSelected ? (
+                    {progressByDate ? (
+                      <Text
+                        style={[
+                          Typography.supporting,
+                          styles.progressCaption,
+                          { color: isSelected ? t.primaryText : t.textMuted },
+                        ]}>
+                        {!progress
+                          ? markedDates?.has(date)
+                            ? '할 일'
+                            : '·'
+                          : progress.total === 0
+                            ? '-'
+                            : future
+                              ? `${progress.total} 예정`
+                              : `${progress.completed}/${progress.total}`}
+                      </Text>
+                    ) : null}
+                    {!progressByDate && markedDates?.has(date) && !isSelected ? (
                       <View
                         style={[
                           styles.dot,
@@ -375,6 +446,10 @@ function CalendarBase({
 export const Calendar = memo(CalendarBase);
 
 const styles = StyleSheet.create({
+  progressCell: { aspectRatio: undefined, height: 66 },
+  progressDate: { transform: [{ translateY: -8 }] },
+  progressRing: { position: 'absolute', top: -4, left: -4 },
+  progressCaption: { position: 'absolute', bottom: 3, fontSize: 11 },
   /**
    * 날짜 아래 점 (#838) — **절대 배치여야 한다** (#845 후속). 흐름에 두면
    * 셀이 [숫자 + 점]을 통째로 세로 중앙에 놓아 숫자가 셀 중앙보다 위로
