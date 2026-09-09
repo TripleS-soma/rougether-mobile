@@ -316,6 +316,22 @@ function WheelPickerDemo() {
 
 export const galleryEntries: GalleryEntry[] = [
   {
+    name: 'MoruRoom',
+    description: '레벨 5 보상 모루. 캐릭터를 누르면 대기·인사·기쁨·눕기를 순환합니다.',
+    render: () => (
+      <View style={{ flex: 1, minHeight: 720 }}>
+        <MyRoomScreen
+          userName="모루의 친구"
+          characterId="moru"
+          characterFrames={['idle', 'wave', 'pose-cycle', 'lying'].map(
+            (motion) => `characters/moru/animations/${motion}.webp`,
+          )}
+          routines={[]}
+        />
+      </View>
+    ),
+  },
+  {
     name: 'FurnitureStudio',
     description: '7일 출석 생성권으로 사진 속 가구 만들기 (#1173).',
     render: () => (

@@ -13,6 +13,17 @@ const FRAMES = [
 describe('CharacterAvatar', () => {
   afterEach(() => jest.restoreAllMocks());
 
+  it('renders every Moru animation including lying with its own accessible name', async () => {
+    const motions = ['idle', 'wave', 'pose-cycle', 'lying'];
+    const frames = motions.map((motion) => `characters/moru/animations/${motion}.webp`);
+    const view = await render(<CharacterAvatar characterId="moru" frames={frames} />);
+    for (let pose = 0; pose < motions.length; pose++) {
+      await view.rerender(<CharacterAvatar characterId="moru" frames={frames} pose={pose} />);
+      expect(view.getByLabelText('모루').props.source[0].uri).toContain(frames[pose]);
+      expect(view.getByTestId('cdn-animation').props.contentFit).toBe('contain');
+    }
+  });
+
   it('renders the CDN frame for the pose, skipping non-CDN keys', async () => {
     const first = await render(<CharacterAvatar characterId="panda" frames={FRAMES} />);
     expect(first.getByTestId('cdn-animation').props.source[0].uri).toContain('idle.webp');

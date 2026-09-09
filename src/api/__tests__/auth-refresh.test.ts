@@ -1,4 +1,6 @@
 import { apiGet } from '@/api/client';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import { clearSession, devLogin, getAccessToken, refreshSession } from '@/api/auth';
 
 const res = (status: number, body: unknown) => ({
@@ -109,5 +111,61 @@ describe('refreshSession — single-flight (#515)', () => {
     expect(await refreshSession()).toBe(true);
     expect(await refreshSession()).toBe(true);
     expect(refreshCalls).toBe(2);
+  });
+});
+
+describe('refreshSession — 웹 다중 탭 (#1261)', () => {
+  it('다른 탭이 이미 회전해 저장소가 새 쌍이면 서버를 부르지 않고 그 쌍을 채택한다', async () => {
+    await seedSession();
+    // 다른 탭이 회전한 결과가 저장소에만 있는 상황.
+    await AsyncStorage.setItem('rougether.auth.accessToken', 'a-sibling');
+    await AsyncStorage.setItem('rougether.auth.refreshToken', 'r-sibling');
+
+    let refreshCalls = 0;
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/auth/refresh')) refreshCalls += 1;
+      return res(200, { accessToken: 'never', refreshToken: 'never' });
+    }) as unknown as typeof fetch;
+
+    await expect(refreshSession()).resolves.toBe(true);
+    expect(refreshCalls).toBe(0);
+    expect(getAccessToken()).toBe('a-sibling');
+  });
+
+  it('저장소가 메모리와 같으면 종전대로 서버에 회전을 요청한다', async () => {
+    await seedSession();
+    let sent: string | undefined;
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes('/auth/refresh')) {
+        sent = (JSON.parse(String(init?.body)) as { refreshToken: string }).refreshToken;
+        return res(200, { accessToken: 'a2', refreshToken: 'r2' });
+      }
+      return res(200, {});
+    }) as unknown as typeof fetch;
+
+    await expect(refreshSession()).resolves.toBe(true);
+    expect(sent).toBe('r1');
+    expect(getAccessToken()).toBe('a2');
+    expect(await AsyncStorage.getItem('rougether.auth.refreshToken')).toBe('r2');
+  });
+
+  it('Web Locks가 있으면 갱신을 그 잠금 안에서 돌린다', async () => {
+    await seedSession();
+    const request = jest.fn((_name: string, cb: () => Promise<unknown>) => cb());
+    const nav = globalThis as { navigator?: unknown };
+    const original = nav.navigator;
+    Object.defineProperty(globalThis, 'navigator', {
+      configurable: true,
+      value: { locks: { request } },
+    });
+    try {
+      global.fetch = jest.fn(async () =>
+        res(200, { accessToken: 'a2', refreshToken: 'r2' }),
+      ) as unknown as typeof fetch;
+      await expect(refreshSession()).resolves.toBe(true);
+      expect(request).toHaveBeenCalledWith('rougether.auth.refresh', expect.any(Function));
+    } finally {
+      Object.defineProperty(globalThis, 'navigator', { configurable: true, value: original });
+    }
   });
 });

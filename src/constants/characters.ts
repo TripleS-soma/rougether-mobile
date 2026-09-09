@@ -5,7 +5,8 @@
  * Pure data — the avatar component supplies its own fallback mark. Pure data — reusable
  * across onboarding, room, etc.
  */
-export type CharacterId = 'cat' | 'dog' | 'tiger' | 'panda' | 'bear' | 'sheep' | 'horse' | 'otter';
+export type CharacterId =
+  'cat' | 'dog' | 'tiger' | 'panda' | 'bear' | 'sheep' | 'horse' | 'otter' | 'moru';
 
 export type CharacterOption = {
   id: CharacterId;
@@ -13,6 +14,8 @@ export type CharacterOption = {
   description: string;
   /** Fallback glyph used where the animated sprite isn't rendered. */
   bg: string;
+  /** Earned through room growth; unavailable as a free onboarding choice. */
+  rewardLevel?: number;
 };
 
 export const CHARACTER_OPTIONS: CharacterOption[] = [
@@ -49,7 +52,16 @@ export const CHARACTER_OPTIONS: CharacterOption[] = [
     description: '장난기 많고 사랑스러운 루틴 친구',
     bg: '#E6E0D6',
   },
+  {
+    id: 'moru',
+    name: '모루',
+    description: '레벨 5에서 만나는 포근한 루틴 친구',
+    bg: '#E7F3E9',
+    rewardLevel: 5,
+  },
 ];
+
+export const STARTER_CHARACTER_OPTIONS = CHARACTER_OPTIONS.filter((c) => c.rewardLevel == null);
 
 export const DEFAULT_CHARACTER_ID: CharacterId = 'cat';
 
