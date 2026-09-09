@@ -95,7 +95,7 @@ describe('AppFrame / ModalFrame (#1227)', () => {
       );
       expect(onMount).toHaveBeenCalledTimes(1);
       const wideInner = flattenStyle(view.getByTestId('app-frame-inner').props.style);
-      expect(wideInner.width).toBe(APP_FRAME_MAX_WIDTH);
+      expect(wideInner.maxWidth).toBe(APP_FRAME_MAX_WIDTH);
     } finally {
       os.restore();
     }
@@ -130,7 +130,9 @@ describe('AppFrame / ModalFrame (#1227)', () => {
         </AppFrame>,
       );
       const inner = flattenStyle(getByTestId('app-frame-inner').props.style);
-      expect(inner.width).toBe(1200);
+      // 정적 maxWidth 클래스 — 동적 width는 웹 DOM에 안 실렸다.
+      expect(inner.maxWidth).toBe(1200);
+      expect(inner.width).toBe('100%');
       // 2단은 폰 프레임 테두리가 없다 — 창 전체가 한 면, 내용 블록만 가운데.
       expect(inner.borderLeftWidth).toBeUndefined();
       const col = flattenStyle(getByTestId('phone-column').props.style);

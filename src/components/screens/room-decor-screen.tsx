@@ -1406,8 +1406,10 @@ const styles = StyleSheet.create({
     width: APP_FRAME_MAX_WIDTH,
     flexGrow: 0,
   },
+  // ScrollView 기본 flexGrow 1을 끈다 — 안 그러면 남은 폭을 다 먹어 블록이 안 모인다.
   splitPanel: {
     width: ContentMaxWidth,
+    flexGrow: 0,
     flexShrink: 1,
   },
   // 적용하기도 블록 폭에 맞춘다 — 창 끝까지 늘어나지 않게.
