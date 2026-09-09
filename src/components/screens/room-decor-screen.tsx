@@ -34,7 +34,7 @@ import { ActionBar } from '@/components/ui/action-bar';
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { Icon } from '@/components/ui/icon';
 import { WalletPills } from '@/components/ui/wallet-pills';
-import { Radius, ShadowColor, Spacing } from '@/constants/theme';
+import { ContentMaxWidth, Radius, ShadowColor, Spacing } from '@/constants/theme';
 import {
   DEFAULT_WALLPAPER_ID,
   FURNITURE_ITEMS,
@@ -48,6 +48,7 @@ import { useToast } from '@/components/ui/toast';
 import { useActionBarInset, useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useStableCallback } from '@/hooks/use-stable-value';
 import { track } from '@/lib/analytics';
+import { APP_FRAME_MAX_WIDTH, useAppFrame } from '@/hooks/use-app-frame';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 
@@ -214,6 +215,8 @@ export function RoomDecorScreen({
   const headerInset = useHeaderInsetStyle();
   // 떠 있는 적용하기 바(#1069) 밑으로 카탈로그가 지나가도록 하단 패딩.
   const actionBarInset = useActionBarInset();
+  // 웹 데스크톱 2단 (#1230 후속) — 창 ≥ 960px에서만 true.
+  const { split } = useAppFrame();
 
   // Owned items are placeable; everything else in the catalog is buyable.
   // (The demo default owns the whole catalogue, surfaces included.)
@@ -607,345 +610,697 @@ export function RoomDecorScreen({
     <View style={[styles.screen, useScreenStyle([])]}>
       {/* 헤더 대신 화면 고정 플로팅 (#510) — 패널이 그만큼 올라와 가구가 더
           보인다. 뒤로가기는 상시 접근, 재화는 프리뷰 구매(#501) 잔액 확인용. */}
-      <ScrollView
-        contentContainerStyle={[
-          styles.body,
-          headerInset,
-          actionBarInset ? { paddingBottom: actionBarInset } : null,
-        ]}>
-        {/* 캔버스만 묶는다 — 방은 aspectRatio라 폭이 넓어지면 높이도 같이 커져
+      {/* 웹 데스크톱 2단 (#1230 후속): 왼쪽에 방 캔버스 고정, 오른쪽에 카탈로그 스크롤.
+          폰·좁은 창은 종전대로 한 스크롤에 위아래로. */}
+      {split ? (
+        <View style={styles.splitRow} testID="decor-split">
+          <View style={[styles.splitHero, headerInset]}>
+            {/* 캔버스만 묶는다 — 방은 aspectRatio라 폭이 넓어지면 높이도 같이 커져
             카탈로그가 화면 밖으로 밀린다. 카탈로그는 반대로 폭을 다 써서
             열을 늘린다(DecorGrid) — 한 번에 보이는 가구가 많을수록 좋다 (#725). */}
-        <View style={[styles.preview, column]}>
-          {/* 캔버스 = 방과 정확히 같은 박스 — 오버레이 좌표·정규화의 기준.
+            <View style={[styles.preview, column]}>
+              {/* 캔버스 = 방과 정확히 같은 박스 — 오버레이 좌표·정규화의 기준.
               (preview의 padding 박스 기준으로 재면 저장 좌표가 어긋난다.) */}
-          <View
-            testID="decor-canvas"
-            style={styles.canvas}
-            onLayout={(e) =>
-              setRoomSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })
-            }>
-            {/* 가구는 Room이 아니라 드래그 오버레이가 그린다 — 방은 표면만. */}
-            <Room
-              characterId={null}
-              wallpaperId={wallpaperId}
-              floorId={floorId}
-              backgroundId={backgroundId}
-              placements={[]}
-              furniture={furniture}
-              wallpapers={wallpapers}
-              floors={floors}
-              backgrounds={backgrounds}
-              editable
-              onRegionPress={onRegionPress}
-              activeRegion={activeRegion}
-            />
-            {/* 선택 중에만 존재하는 투명 레이어 — 빈 캔버스 탭 = 선택 해제.
-                아이템(z≥1)보다 아래라 가구 탭·드래그는 그대로 통과한다. */}
-            {selectedId ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="선택 해제"
-                style={StyleSheet.absoluteFill}
-                onPress={() => setSelectedId(null)}
-              />
-            ) : null}
-            {roomSize.w > 0 && roomSize.h > 0
-              ? [...items]
-                  .sort((a, b) => a.z - b.z)
-                  .map((p) => {
-                    const item = furniture.find((f) => f.id === p.furnitureId);
-                    if (!item) return null;
-                    return (
-                      <DraggableFurniture
-                        key={p.furnitureId}
-                        item={item}
-                        placement={p}
-                        roomSize={roomSize}
-                        selected={p.furnitureId === selectedId}
-                        onSelect={handleFurnitureSelect}
-                        onDragEnd={commitDrag}
-                        onScaleEnd={commitScale}
-                        dragActiveSV={dragActive}
-                        preview={!owned.has(p.furnitureId)}
-                        previewPrice={item.price}
-                      />
-                    );
-                  })
-              : null}
-            {/* 표면류 프리뷰 가격 칩 (#501) — 탭하면 구매 확인. */}
-            {surfacePreviews.length > 0 ? (
-              <View style={styles.previewChips} pointerEvents="box-none">
-                {surfacePreviews.map((sp) => (
-                  <Pressable
-                    key={sp.kind}
-                    onPress={() => requestBuy({ id: sp.id, name: sp.name, price: sp.price })}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${SURFACE_LABEL[sp.kind]} 프리뷰 구매`}>
-                    <GlassSurface style={styles.previewChip} fallbackColor={t.surface}>
-                      <Icon name="diamond" size={10} color={t.primary} />
-                      <Text style={[Typography.supporting, { color: t.text }]}>
-                        {SURFACE_LABEL[sp.kind]} {sp.price}
-                      </Text>
-                    </GlassSurface>
-                  </Pressable>
-                ))}
-              </View>
-            ) : null}
-            {/* 캐릭터는 항상 가구 앞 — 오버레이(드래그 중 z 9999)보다 위 전용 레이어. */}
-            <View pointerEvents="none" style={styles.characterLayer}>
-              {/* Room과 같은 두 겹(자리 박스 + 꽉 채운 아바타) — 아바타에 자리 스타일을
-                  직접 주면 기본 96px 높이가 남아 나의 방보다 작게 그려졌다. */}
-              <View style={styles.characterFigure}>
-                <CharacterAvatar
-                  characterId={characterId}
-                  frames={characterFrames}
-                  style={styles.characterFill}
+              <View
+                testID="decor-canvas"
+                style={styles.canvas}
+                onLayout={(e) =>
+                  setRoomSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })
+                }>
+                {/* 가구는 Room이 아니라 드래그 오버레이가 그린다 — 방은 표면만. */}
+                <Room
+                  characterId={null}
+                  wallpaperId={wallpaperId}
+                  floorId={floorId}
+                  backgroundId={backgroundId}
+                  placements={[]}
+                  furniture={furniture}
+                  wallpapers={wallpapers}
+                  floors={floors}
+                  backgrounds={backgrounds}
+                  editable
+                  onRegionPress={onRegionPress}
+                  activeRegion={activeRegion}
                 />
-              </View>
-            </View>
-            {/* 선택 툴바 (#333) — 캔버스 위 플로팅, 캐릭터 레이어보다도 위.
+                {/* 선택 중에만 존재하는 투명 레이어 — 빈 캔버스 탭 = 선택 해제.
+                아이템(z≥1)보다 아래라 가구 탭·드래그는 그대로 통과한다. */}
+                {selectedId ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="선택 해제"
+                    style={StyleSheet.absoluteFill}
+                    onPress={() => setSelectedId(null)}
+                  />
+                ) : null}
+                {roomSize.w > 0 && roomSize.h > 0
+                  ? [...items]
+                      .sort((a, b) => a.z - b.z)
+                      .map((p) => {
+                        const item = furniture.find((f) => f.id === p.furnitureId);
+                        if (!item) return null;
+                        return (
+                          <DraggableFurniture
+                            key={p.furnitureId}
+                            item={item}
+                            placement={p}
+                            roomSize={roomSize}
+                            selected={p.furnitureId === selectedId}
+                            onSelect={handleFurnitureSelect}
+                            onDragEnd={commitDrag}
+                            onScaleEnd={commitScale}
+                            dragActiveSV={dragActive}
+                            preview={!owned.has(p.furnitureId)}
+                            previewPrice={item.price}
+                          />
+                        );
+                      })
+                  : null}
+                {/* 표면류 프리뷰 가격 칩 (#501) — 탭하면 구매 확인. */}
+                {surfacePreviews.length > 0 ? (
+                  <View style={styles.previewChips} pointerEvents="box-none">
+                    {surfacePreviews.map((sp) => (
+                      <Pressable
+                        key={sp.kind}
+                        onPress={() => requestBuy({ id: sp.id, name: sp.name, price: sp.price })}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${SURFACE_LABEL[sp.kind]} 프리뷰 구매`}>
+                        <GlassSurface style={styles.previewChip} fallbackColor={t.surface}>
+                          <Icon name="diamond" size={10} color={t.primary} />
+                          <Text style={[Typography.supporting, { color: t.text }]}>
+                            {SURFACE_LABEL[sp.kind]} {sp.price}
+                          </Text>
+                        </GlassSurface>
+                      </Pressable>
+                    ))}
+                  </View>
+                ) : null}
+                {/* 캐릭터는 항상 가구 앞 — 오버레이(드래그 중 z 9999)보다 위 전용 레이어. */}
+                <View pointerEvents="none" style={styles.characterLayer}>
+                  {/* Room과 같은 두 겹(자리 박스 + 꽉 채운 아바타) — 아바타에 자리 스타일을
+                  직접 주면 기본 96px 높이가 남아 나의 방보다 작게 그려졌다. */}
+                  <View style={styles.characterFigure}>
+                    <CharacterAvatar
+                      characterId={characterId}
+                      frames={characterFrames}
+                      style={styles.characterFill}
+                    />
+                  </View>
+                </View>
+                {/* 선택 툴바 (#333) — 캔버스 위 플로팅, 캐릭터 레이어보다도 위.
                 벽 쪽(상반부) 가구를 가리지 않게 하단으로 회피하고(#608), 점프가
                 거슬리지 않게 드래그 중에는 숨겼다가 드롭 시점에 재배치된다. */}
-            {selectedId ? (
-              <Animated.View
-                testID="selection-toolbar"
-                style={[
-                  styles.toolbar,
-                  (items.find((p) => p.furnitureId === selectedId)?.y ?? 1) < 0.5
-                    ? styles.toolbarBottom
-                    : styles.toolbarTop,
-                  toolbarDragStyle,
-                ]}>
-                <GlassSurface style={styles.toolbarFace} fallbackColor={t.surface}>
-                  {(
-                    [
-                      ['rotate-ccw', '왼쪽 회전', () => rotateSelected(-1)],
-                      ['rotate-cw', '오른쪽 회전', () => rotateSelected(1)],
-                      ['flip', '좌우 반전', flipSelected],
-                      ['layer-up', '맨 앞으로', bringToFront],
-                      ['layer-down', '맨 뒤로', sendToBack],
-                      ['trash', '빼기', () => removeItem(selectedId)],
-                    ] as const
-                  ).map(([icon, label, onPress]) => (
+                {selectedId ? (
+                  <Animated.View
+                    testID="selection-toolbar"
+                    style={[
+                      styles.toolbar,
+                      (items.find((p) => p.furnitureId === selectedId)?.y ?? 1) < 0.5
+                        ? styles.toolbarBottom
+                        : styles.toolbarTop,
+                      toolbarDragStyle,
+                    ]}>
+                    <GlassSurface style={styles.toolbarFace} fallbackColor={t.surface}>
+                      {(
+                        [
+                          ['rotate-ccw', '왼쪽 회전', () => rotateSelected(-1)],
+                          ['rotate-cw', '오른쪽 회전', () => rotateSelected(1)],
+                          ['flip', '좌우 반전', flipSelected],
+                          ['layer-up', '맨 앞으로', bringToFront],
+                          ['layer-down', '맨 뒤로', sendToBack],
+                          ['trash', '빼기', () => removeItem(selectedId)],
+                        ] as const
+                      ).map(([icon, label, onPress]) => (
+                        <Pressable
+                          key={icon}
+                          onPress={onPress}
+                          accessibilityRole="button"
+                          accessibilityLabel={label}
+                          hitSlop={4}
+                          style={[styles.toolBtn, { backgroundColor: t.surfaceMuted }]}>
+                          <Icon
+                            name={icon}
+                            size={18}
+                            color={icon === 'trash' ? t.danger : t.text}
+                          />
+                        </Pressable>
+                      ))}
+                    </GlassSurface>
+                  </Animated.View>
+                ) : null}
+              </View>
+            </View>
+          </View>
+          <ScrollView
+            style={styles.splitPanel}
+            contentContainerStyle={[
+              styles.body,
+              headerInset,
+              actionBarInset ? { paddingBottom: actionBarInset } : null,
+            ]}>
+            {loading ? (
+              <View style={styles.loadingBlock}>
+                <Loading />
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                  카탈로그 불러오는 중...
+                </Text>
+              </View>
+            ) : null}
+
+            {!loading && loadError ? (
+              <View style={styles.loadingBlock}>
+                <RetryState message="카탈로그를 불러오지 못했어요." onRetry={onRetry} />
+              </View>
+            ) : null}
+
+            {!loading && !loadError ? (
+              <View style={[styles.panel, { backgroundColor: t.surface }]}>
+                <View style={styles.panelHead}>
+                  {picker === 'all' ? (
+                    // 전체보기: 서버 분류별 탭 — 가구가 기본, 소품(categoryCode
+                    // decor·러그)은 분리, 표면류는 있을 때만 (#488).
+                    <View style={styles.segment}>
+                      {(
+                        [
+                          ['furniture', '가구'] as const,
+                          ['decor', '소품'] as const,
+                          ['wallpaper', '벽지'] as const,
+                          ...(floors.length > 0 ? [['floor', '바닥'] as const] : []),
+                          ...(backgrounds.length > 0 ? [['background', '배경'] as const] : []),
+                        ] as const
+                      ).map(([key, label]) => {
+                        const active = allTab === key;
+                        return (
+                          <Pressable
+                            key={key}
+                            onPress={() => setAllTab(key)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`${label} 탭`}
+                            accessibilityState={{ selected: active }}
+                            style={[
+                              styles.segBtn,
+                              { backgroundColor: active ? t.primary : t.surfaceMuted },
+                            ]}>
+                            <Text
+                              style={[
+                                Typography.supporting,
+                                { color: active ? t.onPrimary : t.textMuted },
+                              ]}>
+                              {label}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  ) : isSurfacePicker ? (
+                    // 벽 탭은 벽지/배경을 함께 다룬다 (배경은 벽 너머 풍경).
+                    <View style={styles.segment}>
+                      {(
+                        [
+                          ['wallpaper', '벽지'],
+                          ...(backgrounds.length > 0 ? [['background', '배경'] as const] : []),
+                          ...(floors.length > 0 ? [['floor', '바닥'] as const] : []),
+                        ] as const
+                      ).map(([key, label]) => {
+                        const active = picker === key;
+                        return (
+                          <Pressable
+                            key={key}
+                            onPress={() => setPicker(key)}
+                            accessibilityRole="button"
+                            accessibilityState={{ selected: active }}
+                            style={[
+                              styles.segBtn,
+                              { backgroundColor: active ? t.primary : t.surfaceMuted },
+                            ]}>
+                            <Text
+                              style={[
+                                Typography.supporting,
+                                { color: active ? t.onPrimary : t.textMuted },
+                              ]}>
+                              {label}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  ) : (
+                    <Text style={[Typography.label, styles.flex, { color: t.text }]}>
+                      이 자리에 놓을 가구
+                    </Text>
+                  )}
+                  {/* 'all'은 기본 상태라 닫을 곳이 없다 — 서브픽커에서만 전체로 복귀 (#487). */}
+                  {picker !== 'all' ? (
                     <Pressable
-                      key={icon}
-                      onPress={onPress}
+                      onPress={() => setPicker('all')}
                       accessibilityRole="button"
-                      accessibilityLabel={label}
-                      hitSlop={4}
-                      style={[styles.toolBtn, { backgroundColor: t.surfaceMuted }]}>
-                      <Icon name={icon} size={18} color={icon === 'trash' ? t.danger : t.text} />
+                      accessibilityLabel="선택 닫기"
+                      hitSlop={8}
+                      style={[styles.closeBtn, { backgroundColor: t.surfaceMuted }]}>
+                      <Icon name="close" size={14} color={t.text} />
+                    </Pressable>
+                  ) : null}
+                </View>
+
+                <View style={styles.filterRow}>
+                  <Text style={[Typography.supporting, { color: t.textMuted }]}>보유중만 보기</Text>
+                  <ToggleSwitch
+                    value={ownedOnly}
+                    onToggle={() => setOwnedOnly((v) => !v)}
+                    accessibilityLabel="보유중만 보기"
+                  />
+                </View>
+
+                {picker === 'wallpaper' ? (
+                  <SwatchGrid
+                    items={sortedWallpapers}
+                    selectedId={wallpaperId}
+                    onSelect={selectWallpaper}
+                    owned={owned}
+                    diamondBalance={diamondBalance}
+                    onBuyRequest={setPendingBuy}
+                    onBlockedBuy={blockedBuy}
+                    t={t}
+                  />
+                ) : null}
+                {picker === 'floor' ? (
+                  <SwatchGrid
+                    items={sortedFloors}
+                    selectedId={floorId}
+                    onSelect={selectFloor}
+                    onClear={floorId ? clearFloor : undefined}
+                    owned={owned}
+                    diamondBalance={diamondBalance}
+                    onBuyRequest={setPendingBuy}
+                    onBlockedBuy={blockedBuy}
+                    t={t}
+                  />
+                ) : null}
+                {picker === 'background' ? (
+                  <SwatchGrid
+                    items={sortedBackgrounds}
+                    selectedId={backgroundId}
+                    onSelect={selectBackground}
+                    onClear={backgroundId ? clearBackground : undefined}
+                    owned={owned}
+                    diamondBalance={diamondBalance}
+                    onBuyRequest={setPendingBuy}
+                    onBlockedBuy={blockedBuy}
+                    t={t}
+                  />
+                ) : null}
+                {picker === 'all' && (allTab === 'furniture' || allTab === 'decor') ? (
+                  <FurnitureGrid
+                    items={allTab === 'furniture' ? sortedFurnitureTabItems : sortedDecorTabItems}
+                    placed={placedSet}
+                    onPlace={togglePlace}
+                    owned={owned}
+                    highlighted={highlightSet}
+                    t={t}
+                  />
+                ) : null}
+                {picker === 'all' && allTab === 'wallpaper' ? (
+                  <SwatchGrid
+                    items={sortedWallpapers}
+                    selectedId={wallpaperId}
+                    onSelect={selectWallpaper}
+                    owned={owned}
+                    diamondBalance={diamondBalance}
+                    onBuyRequest={setPendingBuy}
+                    onBlockedBuy={blockedBuy}
+                    t={t}
+                  />
+                ) : null}
+                {picker === 'all' && allTab === 'floor' ? (
+                  <SwatchGrid
+                    items={sortedFloors}
+                    selectedId={floorId}
+                    onSelect={selectFloor}
+                    onClear={floorId ? clearFloor : undefined}
+                    owned={owned}
+                    diamondBalance={diamondBalance}
+                    onBuyRequest={setPendingBuy}
+                    onBlockedBuy={blockedBuy}
+                    t={t}
+                  />
+                ) : null}
+                {picker === 'all' && allTab === 'background' ? (
+                  <SwatchGrid
+                    items={sortedBackgrounds}
+                    selectedId={backgroundId}
+                    onSelect={selectBackground}
+                    onClear={backgroundId ? clearBackground : undefined}
+                    owned={owned}
+                    diamondBalance={diamondBalance}
+                    onBuyRequest={setPendingBuy}
+                    onBlockedBuy={blockedBuy}
+                    t={t}
+                  />
+                ) : null}
+              </View>
+            ) : null}
+          </ScrollView>
+        </View>
+      ) : (
+        <ScrollView
+          contentContainerStyle={[
+            styles.body,
+            headerInset,
+            actionBarInset ? { paddingBottom: actionBarInset } : null,
+          ]}>
+          {/* 캔버스만 묶는다 — 방은 aspectRatio라 폭이 넓어지면 높이도 같이 커져
+            카탈로그가 화면 밖으로 밀린다. 카탈로그는 반대로 폭을 다 써서
+            열을 늘린다(DecorGrid) — 한 번에 보이는 가구가 많을수록 좋다 (#725). */}
+          <View style={[styles.preview, column]}>
+            {/* 캔버스 = 방과 정확히 같은 박스 — 오버레이 좌표·정규화의 기준.
+              (preview의 padding 박스 기준으로 재면 저장 좌표가 어긋난다.) */}
+            <View
+              testID="decor-canvas"
+              style={styles.canvas}
+              onLayout={(e) =>
+                setRoomSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })
+              }>
+              {/* 가구는 Room이 아니라 드래그 오버레이가 그린다 — 방은 표면만. */}
+              <Room
+                characterId={null}
+                wallpaperId={wallpaperId}
+                floorId={floorId}
+                backgroundId={backgroundId}
+                placements={[]}
+                furniture={furniture}
+                wallpapers={wallpapers}
+                floors={floors}
+                backgrounds={backgrounds}
+                editable
+                onRegionPress={onRegionPress}
+                activeRegion={activeRegion}
+              />
+              {/* 선택 중에만 존재하는 투명 레이어 — 빈 캔버스 탭 = 선택 해제.
+                아이템(z≥1)보다 아래라 가구 탭·드래그는 그대로 통과한다. */}
+              {selectedId ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="선택 해제"
+                  style={StyleSheet.absoluteFill}
+                  onPress={() => setSelectedId(null)}
+                />
+              ) : null}
+              {roomSize.w > 0 && roomSize.h > 0
+                ? [...items]
+                    .sort((a, b) => a.z - b.z)
+                    .map((p) => {
+                      const item = furniture.find((f) => f.id === p.furnitureId);
+                      if (!item) return null;
+                      return (
+                        <DraggableFurniture
+                          key={p.furnitureId}
+                          item={item}
+                          placement={p}
+                          roomSize={roomSize}
+                          selected={p.furnitureId === selectedId}
+                          onSelect={handleFurnitureSelect}
+                          onDragEnd={commitDrag}
+                          onScaleEnd={commitScale}
+                          dragActiveSV={dragActive}
+                          preview={!owned.has(p.furnitureId)}
+                          previewPrice={item.price}
+                        />
+                      );
+                    })
+                : null}
+              {/* 표면류 프리뷰 가격 칩 (#501) — 탭하면 구매 확인. */}
+              {surfacePreviews.length > 0 ? (
+                <View style={styles.previewChips} pointerEvents="box-none">
+                  {surfacePreviews.map((sp) => (
+                    <Pressable
+                      key={sp.kind}
+                      onPress={() => requestBuy({ id: sp.id, name: sp.name, price: sp.price })}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${SURFACE_LABEL[sp.kind]} 프리뷰 구매`}>
+                      <GlassSurface style={styles.previewChip} fallbackColor={t.surface}>
+                        <Icon name="diamond" size={10} color={t.primary} />
+                        <Text style={[Typography.supporting, { color: t.text }]}>
+                          {SURFACE_LABEL[sp.kind]} {sp.price}
+                        </Text>
+                      </GlassSurface>
                     </Pressable>
                   ))}
-                </GlassSurface>
-              </Animated.View>
-            ) : null}
-          </View>
-        </View>
-
-        {loading ? (
-          <View style={styles.loadingBlock}>
-            <Loading />
-            <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              카탈로그 불러오는 중...
-            </Text>
-          </View>
-        ) : null}
-
-        {!loading && loadError ? (
-          <View style={styles.loadingBlock}>
-            <RetryState message="카탈로그를 불러오지 못했어요." onRetry={onRetry} />
-          </View>
-        ) : null}
-
-        {!loading && !loadError ? (
-          <View style={[styles.panel, { backgroundColor: t.surface }]}>
-            <View style={styles.panelHead}>
-              {picker === 'all' ? (
-                // 전체보기: 서버 분류별 탭 — 가구가 기본, 소품(categoryCode
-                // decor·러그)은 분리, 표면류는 있을 때만 (#488).
-                <View style={styles.segment}>
-                  {(
-                    [
-                      ['furniture', '가구'] as const,
-                      ['decor', '소품'] as const,
-                      ['wallpaper', '벽지'] as const,
-                      ...(floors.length > 0 ? [['floor', '바닥'] as const] : []),
-                      ...(backgrounds.length > 0 ? [['background', '배경'] as const] : []),
-                    ] as const
-                  ).map(([key, label]) => {
-                    const active = allTab === key;
-                    return (
-                      <Pressable
-                        key={key}
-                        onPress={() => setAllTab(key)}
-                        accessibilityRole="button"
-                        accessibilityLabel={`${label} 탭`}
-                        accessibilityState={{ selected: active }}
-                        style={[
-                          styles.segBtn,
-                          { backgroundColor: active ? t.primary : t.surfaceMuted },
-                        ]}>
-                        <Text
-                          style={[
-                            Typography.supporting,
-                            { color: active ? t.onPrimary : t.textMuted },
-                          ]}>
-                          {label}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
                 </View>
-              ) : isSurfacePicker ? (
-                // 벽 탭은 벽지/배경을 함께 다룬다 (배경은 벽 너머 풍경).
-                <View style={styles.segment}>
-                  {(
-                    [
-                      ['wallpaper', '벽지'],
-                      ...(backgrounds.length > 0 ? [['background', '배경'] as const] : []),
-                      ...(floors.length > 0 ? [['floor', '바닥'] as const] : []),
-                    ] as const
-                  ).map(([key, label]) => {
-                    const active = picker === key;
-                    return (
-                      <Pressable
-                        key={key}
-                        onPress={() => setPicker(key)}
-                        accessibilityRole="button"
-                        accessibilityState={{ selected: active }}
-                        style={[
-                          styles.segBtn,
-                          { backgroundColor: active ? t.primary : t.surfaceMuted },
-                        ]}>
-                        <Text
-                          style={[
-                            Typography.supporting,
-                            { color: active ? t.onPrimary : t.textMuted },
-                          ]}>
-                          {label}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
+              ) : null}
+              {/* 캐릭터는 항상 가구 앞 — 오버레이(드래그 중 z 9999)보다 위 전용 레이어. */}
+              <View pointerEvents="none" style={styles.characterLayer}>
+                {/* Room과 같은 두 겹(자리 박스 + 꽉 채운 아바타) — 아바타에 자리 스타일을
+                  직접 주면 기본 96px 높이가 남아 나의 방보다 작게 그려졌다. */}
+                <View style={styles.characterFigure}>
+                  <CharacterAvatar
+                    characterId={characterId}
+                    frames={characterFrames}
+                    style={styles.characterFill}
+                  />
                 </View>
-              ) : (
-                <Text style={[Typography.label, styles.flex, { color: t.text }]}>
-                  이 자리에 놓을 가구
-                </Text>
-              )}
-              {/* 'all'은 기본 상태라 닫을 곳이 없다 — 서브픽커에서만 전체로 복귀 (#487). */}
-              {picker !== 'all' ? (
-                <Pressable
-                  onPress={() => setPicker('all')}
-                  accessibilityRole="button"
-                  accessibilityLabel="선택 닫기"
-                  hitSlop={8}
-                  style={[styles.closeBtn, { backgroundColor: t.surfaceMuted }]}>
-                  <Icon name="close" size={14} color={t.text} />
-                </Pressable>
+              </View>
+              {/* 선택 툴바 (#333) — 캔버스 위 플로팅, 캐릭터 레이어보다도 위.
+                벽 쪽(상반부) 가구를 가리지 않게 하단으로 회피하고(#608), 점프가
+                거슬리지 않게 드래그 중에는 숨겼다가 드롭 시점에 재배치된다. */}
+              {selectedId ? (
+                <Animated.View
+                  testID="selection-toolbar"
+                  style={[
+                    styles.toolbar,
+                    (items.find((p) => p.furnitureId === selectedId)?.y ?? 1) < 0.5
+                      ? styles.toolbarBottom
+                      : styles.toolbarTop,
+                    toolbarDragStyle,
+                  ]}>
+                  <GlassSurface style={styles.toolbarFace} fallbackColor={t.surface}>
+                    {(
+                      [
+                        ['rotate-ccw', '왼쪽 회전', () => rotateSelected(-1)],
+                        ['rotate-cw', '오른쪽 회전', () => rotateSelected(1)],
+                        ['flip', '좌우 반전', flipSelected],
+                        ['layer-up', '맨 앞으로', bringToFront],
+                        ['layer-down', '맨 뒤로', sendToBack],
+                        ['trash', '빼기', () => removeItem(selectedId)],
+                      ] as const
+                    ).map(([icon, label, onPress]) => (
+                      <Pressable
+                        key={icon}
+                        onPress={onPress}
+                        accessibilityRole="button"
+                        accessibilityLabel={label}
+                        hitSlop={4}
+                        style={[styles.toolBtn, { backgroundColor: t.surfaceMuted }]}>
+                        <Icon name={icon} size={18} color={icon === 'trash' ? t.danger : t.text} />
+                      </Pressable>
+                    ))}
+                  </GlassSurface>
+                </Animated.View>
               ) : null}
             </View>
-
-            <View style={styles.filterRow}>
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>보유중만 보기</Text>
-              <ToggleSwitch
-                value={ownedOnly}
-                onToggle={() => setOwnedOnly((v) => !v)}
-                accessibilityLabel="보유중만 보기"
-              />
-            </View>
-
-            {picker === 'wallpaper' ? (
-              <SwatchGrid
-                items={sortedWallpapers}
-                selectedId={wallpaperId}
-                onSelect={selectWallpaper}
-                owned={owned}
-                diamondBalance={diamondBalance}
-                onBuyRequest={setPendingBuy}
-                onBlockedBuy={blockedBuy}
-                t={t}
-              />
-            ) : null}
-            {picker === 'floor' ? (
-              <SwatchGrid
-                items={sortedFloors}
-                selectedId={floorId}
-                onSelect={selectFloor}
-                onClear={floorId ? clearFloor : undefined}
-                owned={owned}
-                diamondBalance={diamondBalance}
-                onBuyRequest={setPendingBuy}
-                onBlockedBuy={blockedBuy}
-                t={t}
-              />
-            ) : null}
-            {picker === 'background' ? (
-              <SwatchGrid
-                items={sortedBackgrounds}
-                selectedId={backgroundId}
-                onSelect={selectBackground}
-                onClear={backgroundId ? clearBackground : undefined}
-                owned={owned}
-                diamondBalance={diamondBalance}
-                onBuyRequest={setPendingBuy}
-                onBlockedBuy={blockedBuy}
-                t={t}
-              />
-            ) : null}
-            {picker === 'all' && (allTab === 'furniture' || allTab === 'decor') ? (
-              <FurnitureGrid
-                items={allTab === 'furniture' ? sortedFurnitureTabItems : sortedDecorTabItems}
-                placed={placedSet}
-                onPlace={togglePlace}
-                owned={owned}
-                highlighted={highlightSet}
-                t={t}
-              />
-            ) : null}
-            {picker === 'all' && allTab === 'wallpaper' ? (
-              <SwatchGrid
-                items={sortedWallpapers}
-                selectedId={wallpaperId}
-                onSelect={selectWallpaper}
-                owned={owned}
-                diamondBalance={diamondBalance}
-                onBuyRequest={setPendingBuy}
-                onBlockedBuy={blockedBuy}
-                t={t}
-              />
-            ) : null}
-            {picker === 'all' && allTab === 'floor' ? (
-              <SwatchGrid
-                items={sortedFloors}
-                selectedId={floorId}
-                onSelect={selectFloor}
-                onClear={floorId ? clearFloor : undefined}
-                owned={owned}
-                diamondBalance={diamondBalance}
-                onBuyRequest={setPendingBuy}
-                onBlockedBuy={blockedBuy}
-                t={t}
-              />
-            ) : null}
-            {picker === 'all' && allTab === 'background' ? (
-              <SwatchGrid
-                items={sortedBackgrounds}
-                selectedId={backgroundId}
-                onSelect={selectBackground}
-                onClear={backgroundId ? clearBackground : undefined}
-                owned={owned}
-                diamondBalance={diamondBalance}
-                onBuyRequest={setPendingBuy}
-                onBlockedBuy={blockedBuy}
-                t={t}
-              />
-            ) : null}
           </View>
-        ) : null}
-      </ScrollView>
+
+          {loading ? (
+            <View style={styles.loadingBlock}>
+              <Loading />
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                카탈로그 불러오는 중...
+              </Text>
+            </View>
+          ) : null}
+
+          {!loading && loadError ? (
+            <View style={styles.loadingBlock}>
+              <RetryState message="카탈로그를 불러오지 못했어요." onRetry={onRetry} />
+            </View>
+          ) : null}
+
+          {!loading && !loadError ? (
+            <View style={[styles.panel, { backgroundColor: t.surface }]}>
+              <View style={styles.panelHead}>
+                {picker === 'all' ? (
+                  // 전체보기: 서버 분류별 탭 — 가구가 기본, 소품(categoryCode
+                  // decor·러그)은 분리, 표면류는 있을 때만 (#488).
+                  <View style={styles.segment}>
+                    {(
+                      [
+                        ['furniture', '가구'] as const,
+                        ['decor', '소품'] as const,
+                        ['wallpaper', '벽지'] as const,
+                        ...(floors.length > 0 ? [['floor', '바닥'] as const] : []),
+                        ...(backgrounds.length > 0 ? [['background', '배경'] as const] : []),
+                      ] as const
+                    ).map(([key, label]) => {
+                      const active = allTab === key;
+                      return (
+                        <Pressable
+                          key={key}
+                          onPress={() => setAllTab(key)}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${label} 탭`}
+                          accessibilityState={{ selected: active }}
+                          style={[
+                            styles.segBtn,
+                            { backgroundColor: active ? t.primary : t.surfaceMuted },
+                          ]}>
+                          <Text
+                            style={[
+                              Typography.supporting,
+                              { color: active ? t.onPrimary : t.textMuted },
+                            ]}>
+                            {label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                ) : isSurfacePicker ? (
+                  // 벽 탭은 벽지/배경을 함께 다룬다 (배경은 벽 너머 풍경).
+                  <View style={styles.segment}>
+                    {(
+                      [
+                        ['wallpaper', '벽지'],
+                        ...(backgrounds.length > 0 ? [['background', '배경'] as const] : []),
+                        ...(floors.length > 0 ? [['floor', '바닥'] as const] : []),
+                      ] as const
+                    ).map(([key, label]) => {
+                      const active = picker === key;
+                      return (
+                        <Pressable
+                          key={key}
+                          onPress={() => setPicker(key)}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: active }}
+                          style={[
+                            styles.segBtn,
+                            { backgroundColor: active ? t.primary : t.surfaceMuted },
+                          ]}>
+                          <Text
+                            style={[
+                              Typography.supporting,
+                              { color: active ? t.onPrimary : t.textMuted },
+                            ]}>
+                            {label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  <Text style={[Typography.label, styles.flex, { color: t.text }]}>
+                    이 자리에 놓을 가구
+                  </Text>
+                )}
+                {/* 'all'은 기본 상태라 닫을 곳이 없다 — 서브픽커에서만 전체로 복귀 (#487). */}
+                {picker !== 'all' ? (
+                  <Pressable
+                    onPress={() => setPicker('all')}
+                    accessibilityRole="button"
+                    accessibilityLabel="선택 닫기"
+                    hitSlop={8}
+                    style={[styles.closeBtn, { backgroundColor: t.surfaceMuted }]}>
+                    <Icon name="close" size={14} color={t.text} />
+                  </Pressable>
+                ) : null}
+              </View>
+
+              <View style={styles.filterRow}>
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>보유중만 보기</Text>
+                <ToggleSwitch
+                  value={ownedOnly}
+                  onToggle={() => setOwnedOnly((v) => !v)}
+                  accessibilityLabel="보유중만 보기"
+                />
+              </View>
+
+              {picker === 'wallpaper' ? (
+                <SwatchGrid
+                  items={sortedWallpapers}
+                  selectedId={wallpaperId}
+                  onSelect={selectWallpaper}
+                  owned={owned}
+                  diamondBalance={diamondBalance}
+                  onBuyRequest={setPendingBuy}
+                  onBlockedBuy={blockedBuy}
+                  t={t}
+                />
+              ) : null}
+              {picker === 'floor' ? (
+                <SwatchGrid
+                  items={sortedFloors}
+                  selectedId={floorId}
+                  onSelect={selectFloor}
+                  onClear={floorId ? clearFloor : undefined}
+                  owned={owned}
+                  diamondBalance={diamondBalance}
+                  onBuyRequest={setPendingBuy}
+                  onBlockedBuy={blockedBuy}
+                  t={t}
+                />
+              ) : null}
+              {picker === 'background' ? (
+                <SwatchGrid
+                  items={sortedBackgrounds}
+                  selectedId={backgroundId}
+                  onSelect={selectBackground}
+                  onClear={backgroundId ? clearBackground : undefined}
+                  owned={owned}
+                  diamondBalance={diamondBalance}
+                  onBuyRequest={setPendingBuy}
+                  onBlockedBuy={blockedBuy}
+                  t={t}
+                />
+              ) : null}
+              {picker === 'all' && (allTab === 'furniture' || allTab === 'decor') ? (
+                <FurnitureGrid
+                  items={allTab === 'furniture' ? sortedFurnitureTabItems : sortedDecorTabItems}
+                  placed={placedSet}
+                  onPlace={togglePlace}
+                  owned={owned}
+                  highlighted={highlightSet}
+                  t={t}
+                />
+              ) : null}
+              {picker === 'all' && allTab === 'wallpaper' ? (
+                <SwatchGrid
+                  items={sortedWallpapers}
+                  selectedId={wallpaperId}
+                  onSelect={selectWallpaper}
+                  owned={owned}
+                  diamondBalance={diamondBalance}
+                  onBuyRequest={setPendingBuy}
+                  onBlockedBuy={blockedBuy}
+                  t={t}
+                />
+              ) : null}
+              {picker === 'all' && allTab === 'floor' ? (
+                <SwatchGrid
+                  items={sortedFloors}
+                  selectedId={floorId}
+                  onSelect={selectFloor}
+                  onClear={floorId ? clearFloor : undefined}
+                  owned={owned}
+                  diamondBalance={diamondBalance}
+                  onBuyRequest={setPendingBuy}
+                  onBlockedBuy={blockedBuy}
+                  t={t}
+                />
+              ) : null}
+              {picker === 'all' && allTab === 'background' ? (
+                <SwatchGrid
+                  items={sortedBackgrounds}
+                  selectedId={backgroundId}
+                  onSelect={selectBackground}
+                  onClear={backgroundId ? clearBackground : undefined}
+                  owned={owned}
+                  diamondBalance={diamondBalance}
+                  onBuyRequest={setPendingBuy}
+                  onBlockedBuy={blockedBuy}
+                  t={t}
+                />
+              ) : null}
+            </View>
+          ) : null}
+        </ScrollView>
+      )}
 
       {/* 화면 고정 플로팅 뒤로가기·재화 (#510) — 스크롤과 무관하게 유지. */}
       <View style={[styles.floatBar, headerInset]} pointerEvents="box-none">
@@ -1025,7 +1380,7 @@ export function RoomDecorScreen({
           onPress={() => apply(true)}
           accessibilityRole="button"
           accessibilityLabel="적용하기"
-          style={styles.applyBtn}>
+          style={[styles.applyBtn, split ? styles.splitApply : null]}>
           <GlassSurface style={styles.applyFace} tintColor={t.primary} fallbackColor={t.primary}>
             <Icon name="check" size={16} color={t.onPrimary} />
             <Text style={[Typography.label, { color: t.onPrimary }]}>적용하기</Text>
@@ -1039,6 +1394,27 @@ export function RoomDecorScreen({
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
+  },
+  // 2단 (#1230 후속) — 왼쪽 방 칸(폰 컬럼 폭) + 오른쪽 카탈로그(콘텐츠 폭), 한 블록으로 중앙.
+  splitRow: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: Spacing.six,
+  },
+  splitHero: {
+    width: APP_FRAME_MAX_WIDTH,
+    flexGrow: 0,
+  },
+  splitPanel: {
+    width: ContentMaxWidth,
+    flexShrink: 1,
+  },
+  // 적용하기도 블록 폭에 맞춘다 — 창 끝까지 늘어나지 않게.
+  splitApply: {
+    width: '100%',
+    maxWidth: APP_FRAME_MAX_WIDTH + Spacing.six + ContentMaxWidth,
+    alignSelf: 'center',
   },
   floatBar: {
     position: 'absolute',

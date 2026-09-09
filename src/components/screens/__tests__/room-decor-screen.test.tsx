@@ -822,23 +822,10 @@ describe('RoomDecorScreen — 선택 · 편집 툴바 (#333)', () => {
     );
     await layoutCanvas(getByTestId);
 
-    // 선택하지 않은 채로 끌어 보고, 크기도 바꿔 본다.
-    await act(() =>
-      fireGestureHandler(getByGestureTestId('item-pan-plant'), [
-        { state: State.BEGAN },
-        { state: State.ACTIVE },
-        { state: State.ACTIVE, translationX: 120, translationY: 80 },
-        { state: State.END, translationX: 120, translationY: 80 },
-      ]),
-    );
-    await act(() =>
-      fireGestureHandler(getByGestureTestId('item-pinch-plant'), [
-        { state: State.BEGAN },
-        { state: State.ACTIVE },
-        { state: State.ACTIVE, scale: 2 },
-        { state: State.END, scale: 2 },
-      ]),
-    );
+    // 선택하지 않은 가구에는 팬·핀치 핸들러가 아예 조합되지 않는다 — 비활성 팬을
+    // Exclusive에 두면 웹에서 탭이 영영 대기하던 것(2026-09-09). 끌거나 집을 수 없다.
+    expect(() => getByGestureTestId('item-pan-plant')).toThrow();
+    expect(() => getByGestureTestId('item-pinch-plant')).toThrow();
 
     await fireEvent.press(getByText('적용하기'));
     await waitFor(() => expect(onApply).toHaveBeenCalled());
@@ -1097,5 +1084,20 @@ describe('RoomDecorScreen — 카탈로그 열 수 (#725)', () => {
 
   it('아주 좁아도 4열 밑으로는 안 내려간다', async () => {
     expect(await basisAt(200)).toBeCloseTo((200 - 3 * 8) / 4, 5);
+  });
+  it('선택 전 가구의 제스처는 탭뿐 — 비활성 팬을 Exclusive에 두면 웹에서 탭이 영영 대기한다 (2026-09-09)', async () => {
+    const ui = await render(
+      <RoomDecorScreen initialItems={[{ furnitureId: 'plant', x: 0.5, y: 0.5, z: 1 }]} />,
+    );
+    await layoutCanvas(ui.getByTestId);
+    // 선택 전: 팬·핀치 핸들러가 아예 조합되지 않는다.
+    expect(() => getByGestureTestId('item-pan-plant')).toThrow();
+    expect(() => getByGestureTestId('item-pinch-plant')).toThrow();
+    expect(getByGestureTestId('item-tap-plant')).toBeTruthy();
+    await tapItem('plant');
+    // 선택 후: 이동·크기 조절이 붙는다.
+    expect(getByGestureTestId('item-pan-plant')).toBeTruthy();
+    expect(getByGestureTestId('item-pinch-plant')).toBeTruthy();
+    expect(ui.getByTestId('selection-ring-plant')).toBeTruthy();
   });
 });

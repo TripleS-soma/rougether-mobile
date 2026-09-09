@@ -177,7 +177,11 @@ export function DraggableFurniture({
 
   // 탭은 팬의 실패만 기다린다 — 핀치까지 기다리면(웹) 마우스 핀치가 영영
   // 실패하지 않아 탭이 무한 대기한다.
-  const gesture = Gesture.Simultaneous(Gesture.Exclusive(pan, tap), pinch);
+  // 선택 전에는 **탭만** 조합한다 — 비활성(enabled=false) 팬을 Exclusive에 두면
+  // 웹 RNGH 오케스트레이터가 그 팬을 "아직 안 끝난 핸들러"로 보고 탭을 영영
+  // 기다려, 데스크톱 웹에서 가구를 아예 고를 수 없었다(2026-09-09 실측). 네이티브는
+  // 비활성 인식기를 실패로 치니 두 조합이 같은 뜻이다.
+  const gesture = selected ? Gesture.Simultaneous(Gesture.Exclusive(pan, tap), pinch) : tap;
 
   // 크기 핸들(우하단) 드래그 — 대각선 이동량을 스케일로 환산 (#333).
   const handlePan = Gesture.Pan()
