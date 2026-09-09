@@ -50,6 +50,12 @@ describe('MyRoomScreen 2단 레이아웃 (#1230)', () => {
     expect(ui.getByLabelText('메뉴')).toBeTruthy();
     expect(ui.getByLabelText('뽑기 상점')).toBeTruthy();
     expect(ui.getByText('오늘의 할 일')).toBeTruthy();
+    // 왼쪽 칸은 세로 가운데 고정 — 목록이 길어도 방은 제자리.
+    const heroContent = flattenStyle(
+      ui.getByTestId('my-room-split-hero').props.contentContainerStyle,
+    );
+    expect(heroContent.justifyContent).toBe('center');
+    expect(heroContent.flexGrow).toBe(1);
     // 버튼은 방 위 오버레이가 아니라 방 아래 한 줄.
     const actions = flattenStyle(ui.getByTestId('room-actions').props.style);
     expect(actions.flexDirection).toBe('row');

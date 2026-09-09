@@ -1299,14 +1299,19 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {split ? (
           <View style={styles.splitRow} testID="my-room-split">
-            {/* 왼쪽 칸은 창이 낮을 때만 따로 스크롤 — 당김 새로고침은 목록 쪽에만. */}
+            {/* 왼쪽 칸은 화면 세로 가운데에 고정(sticky) — 목록이 길어도 방·달력은 제자리.
+                내용이 칸보다 크면(낮은 창) 그때만 자체 스크롤. 당김 새로고침은 목록 쪽에만. */}
             <ScrollView
               style={styles.splitHero}
               contentContainerStyle={[
                 styles.splitHeroContent,
-                { paddingTop: insets.top + Spacing.four },
+                {
+                  paddingTop: insets.top + Spacing.four,
+                  paddingBottom: Spacing.four + navInset,
+                },
               ]}
-              showsVerticalScrollIndicator={false}>
+              showsVerticalScrollIndicator={false}
+              testID="my-room-split-hero">
               {hero}
             </ScrollView>
             <View style={styles.splitList}>
@@ -1556,7 +1561,10 @@ const styles = StyleSheet.create({
   },
   splitHeroContent: {
     paddingHorizontal: Spacing.four,
-    paddingBottom: Spacing.six,
+    // 세로 가운데 — flexGrow 1로 칸 높이를 채우고 내용을 중앙에 둔다. 내용이 더 크면
+    // flexGrow가 무의미해져 위에서부터 스크롤된다.
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   splitList: {
     width: ContentMaxWidth,
