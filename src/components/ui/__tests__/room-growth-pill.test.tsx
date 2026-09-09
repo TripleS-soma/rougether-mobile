@@ -41,3 +41,13 @@ it('로딩 중이거나 잘못된 레벨을 0레벨로 꾸며내지 않는다', 
   await ui.rerender(<RoomGrowthPill growthLevel={-1} />);
   expect(ui.queryByText(/Lv\./)).toBeNull();
 });
+
+it.each([-1, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])(
+  '잘못된 누적 포인트 %s는 접근성 라벨에서 제외한다',
+  async (growthPoints) => {
+    const ui = await render(
+      <RoomGrowthPill growthLevel={2} growthPoints={growthPoints} pointsToNextLevel={16} />,
+    );
+    expect(ui.getByRole('button', { name: '나의 방 레벨 2, 다음 레벨까지 16포인트' })).toBeTruthy();
+  },
+);

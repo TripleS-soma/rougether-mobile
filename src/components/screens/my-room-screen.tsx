@@ -1123,7 +1123,12 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             pointerEvents="box-none"
             style={[
               styles.growthOverlay,
-              { top: (split ? 0 : insets.top) + Spacing.two + (view === undefined ? 48 : 0) },
+              {
+                top:
+                  (split ? 0 : insets.top) +
+                  Spacing.two +
+                  (view === undefined ? CHROME_ROW_HEIGHT + Spacing.two : 0),
+              },
             ]}>
             <RoomGrowthPill
               growthLevel={growthLevel}

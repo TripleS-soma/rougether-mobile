@@ -25,6 +25,10 @@ export const RoomGrowthPill = memo(function RoomGrowthPill({
     pointsToNextLevel != null && Number.isSafeInteger(pointsToNextLevel) && pointsToNextLevel > 0
       ? pointsToNextLevel
       : undefined;
+  const points =
+    growthPoints != null && Number.isSafeInteger(growthPoints) && growthPoints >= 0
+      ? growthPoints
+      : undefined;
   return (
     <Pressable
       accessible
@@ -35,7 +39,7 @@ export const RoomGrowthPill = memo(function RoomGrowthPill({
       onPress={
         remaining == null ? undefined : () => toast(`다음 레벨까지 ${remaining}포인트 남았어요`)
       }
-      accessibilityLabel={`나의 방 레벨 ${growthLevel}${remaining == null ? '' : `, 다음 레벨까지 ${remaining}포인트`}${growthPoints == null ? '' : `, 누적 ${growthPoints}포인트`}`}>
+      accessibilityLabel={`나의 방 레벨 ${growthLevel}${remaining == null ? '' : `, 다음 레벨까지 ${remaining}포인트`}${points == null ? '' : `, 누적 ${points}포인트`}`}>
       <GlassSurface fallbackColor={t.surface} interactive={remaining != null} style={styles.glass}>
         <Text style={[Typography.label, emph('bold'), { color: t.text }]}>Lv. {growthLevel}</Text>
       </GlassSurface>
