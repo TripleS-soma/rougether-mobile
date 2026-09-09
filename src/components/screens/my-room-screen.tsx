@@ -1081,7 +1081,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                     방 이미지 저장 중에는 통째로 빼서 사진에서 제외한다 (#475).
                     opacity로 숨기면 글래스 면(#1050)이 안 그려지고 복귀가 불안정. */}
         {capturing ? null : (
-          <View style={styles.btnColumn}>
+          // 웹 데스크톱 2단(#1230 후속)에선 방 위 오버레이 대신 방 아래 한 줄 —
+          // 왼쪽 칸이 비어 보이던 것을 채우고 방도 가리지 않는다. 폰은 종전 세로 열.
+          <View style={split ? styles.btnRow : styles.btnColumn} testID="room-actions">
             <CoachTarget id="room-menu">
               <Pressable
                 ref={menuBtnRef}
@@ -1573,6 +1575,13 @@ const styles = StyleSheet.create({
     right: Spacing.four,
     bottom: Spacing.three,
     gap: Spacing.two,
+  },
+  // 2단 (#1230 후속) — 방 아래 가운데 한 줄. 같은 버튼·같은 순서(메뉴·알림·꾸미기·AI·뽑기).
+  btnRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: Spacing.three,
+    paddingTop: Spacing.three,
   },
   floatBtn: {
     width: 44,
