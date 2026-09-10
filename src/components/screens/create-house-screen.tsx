@@ -107,7 +107,7 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
           <Labeled label="집 이름" t={t}>
             <View style={[styles.inputBox, { backgroundColor: t.surfaceMuted }]}>
               <TextInput
-                style={[styles.input, { color: t.text }]}
+                style={[styles.input, emph('normal'), { color: t.text }]}
                 value={name}
                 onChangeText={(v) => setName(v.slice(0, 16))}
                 placeholder="우리 집 이름을 정해주세요"
@@ -121,7 +121,7 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
           <Labeled label="한 줄 설명" t={t}>
             <View style={[styles.inputBox, { backgroundColor: t.surfaceMuted }]}>
               <TextInput
-                style={[styles.input, { color: t.text }]}
+                style={[styles.input, emph('normal'), { color: t.text }]}
                 value={description}
                 onChangeText={(v) => setDescription(v.slice(0, 40))}
                 placeholder="어떤 루틴을 함께 할까요?"

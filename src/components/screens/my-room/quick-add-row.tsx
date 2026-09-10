@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { BearCheck } from '@/components/ui/bear-check';
 import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing } from '@/constants/theme';
-import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
 export type QuickAddRowProps = {
   /** 마감일 칩에 보일 문구 ("오늘" 또는 날짜). */
@@ -40,6 +40,7 @@ export const QuickAddRow = forwardRef<View, QuickAddRowProps>(function QuickAddR
 ) {
   const t = useTokens();
   const Typography = useTypography();
+  const emph = useFontEmphasis();
   const [title, setTitle] = useState('');
 
   return (
@@ -54,7 +55,7 @@ export const QuickAddRow = forwardRef<View, QuickAddRowProps>(function QuickAddR
         onBlur={() => onCommit(title)}
         placeholder="할 일 입력 후 완료"
         placeholderTextColor={t.textMuted}
-        style={[styles.flex, styles.todoInput, { color: t.text }]}
+        style={[styles.flex, styles.todoInput, emph('normal'), { color: t.text }]}
       />
       <Pressable
         onPressIn={onDatePickerPressIn}

@@ -149,7 +149,11 @@ export function BugReportScreen({
               내용
             </Text>
             <TextInput
-              style={[styles.contentInput, { backgroundColor: t.surfaceMuted, color: t.text }]}
+              style={[
+                styles.contentInput,
+                emph('normal'),
+                { backgroundColor: t.surfaceMuted, color: t.text },
+              ]}
               placeholder="발생 상황을 자세히 적어주시면 해결에 큰 도움이 돼요"
               placeholderTextColor={t.textMuted}
               value={content}

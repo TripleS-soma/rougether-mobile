@@ -48,7 +48,7 @@ export function Field({
       ) : null}
       <View style={[styles.box, { backgroundColor: t.surfaceMuted, borderColor }]}>
         <TextInput
-          style={[styles.input, { color: t.text }]}
+          style={[styles.input, emph('normal'), { color: t.text }]}
           placeholder={placeholder}
           placeholderTextColor={t.textMuted}
           value={value}

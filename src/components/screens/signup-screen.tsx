@@ -168,7 +168,11 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
                 },
               ]}>
               <TextInput
-                style={[styles.input, { color: emailVerified ? t.textMuted : t.text }]}
+                style={[
+                  styles.input,
+                  emph('normal'),
+                  { color: emailVerified ? t.textMuted : t.text },
+                ]}
                 value={email}
                 onChangeText={handleEmailChange}
                 editable={!emailVerified}
@@ -228,6 +232,7 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
                   // iOS placeholder 자간 이슈 — 값 있을 때만 자간.
                   style={[
                     styles.input,
+                    emph('normal'),
                     verificationCode.length > 0 && styles.code,
                     { color: t.text },
                   ]}

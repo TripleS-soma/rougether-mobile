@@ -302,7 +302,12 @@ export function HouseSearchScreen({
                     <TextInput
                       // iOS는 letterSpacing이 placeholder에도 걸린다(안드는 미적용) — 값이
                       // 있을 때만 자간을 줘 placeholder 렌더를 플랫폼 동일하게 한다.
-                      style={[styles.input, code.length > 0 && styles.codeInput, { color: t.text }]}
+                      style={[
+                        styles.input,
+                        emph('normal'),
+                        code.length > 0 && styles.codeInput,
+                        { color: t.text },
+                      ]}
                       value={code}
                       onChangeText={(v) => {
                         setCode(v.toUpperCase().slice(0, 8));
@@ -390,7 +395,7 @@ export function HouseSearchScreen({
               <View style={[styles.searchBox, { backgroundColor: t.surface }]}>
                 <Icon name="search" size={16} color={t.text} />
                 <TextInput
-                  style={[styles.input, { color: t.text }]}
+                  style={[styles.input, emph('normal'), { color: t.text }]}
                   value={query}
                   onChangeText={setQuery}
                   placeholder="집 이름, 태그로 검색"
