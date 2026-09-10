@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { TodoComposeSheet } from '@/components/screens/sheets/todo-compose-sheet';
+import { RoutineTodoComposeSheet } from '@/components/screens/sheets/routine-todo-compose-sheet';
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { ROUTINE_CATEGORIES, SAMPLE_ROUTINES } from '@/constants/routines';
 import { Spacing } from '@/constants/theme';
@@ -18,13 +18,15 @@ export function TodoComposePreview() {
         <Text style={[Typography.label, { color: t.primaryText }]}>할 일 추가</Text>
       </Pressable>
       <Text style={[Typography.body, { color: t.text }]}>{saved}</Text>
-      <TodoComposeSheet
+      <RoutineTodoComposeSheet
         visible={visible}
         initialDate={todayIso()}
         today={todayIso()}
         categories={ROUTINE_CATEGORIES}
-        onSubmit={(category, title, date) => {
-          setSaved(`${date} · ${category || '미분류'} · ${title}`);
+        onSubmit={(draft) => {
+          setSaved(
+            `${draft.date} · ${draft.kind === 'routine' ? draft.routine.title : draft.title}`,
+          );
           return true;
         }}
         onClose={() => setVisible(false)}
@@ -42,6 +44,13 @@ export function RoomQuickTodoPreview() {
       growthLevel={2}
       growthPoints={50}
       pointsToNextLevel={16}
+      onCreateRoutine={(routine) => {
+        setRoutines((previous) => [
+          ...previous,
+          { ...routine, id: `r-${Date.now()}`, kind: 'routine' },
+        ]);
+        return true;
+      }}
       onQuickAddRoutine={(category, title, dueDate) => {
         setRoutines((previous) => [
           ...previous,

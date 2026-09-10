@@ -98,15 +98,8 @@ export function AddRoutineScreen({
   const isEdit = Boolean(editRoutine);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [title, setTitle] = useState(editRoutine?.title ?? '');
-  const [category, setCategory] = useState<RoutineCategory>(
-    editRoutine?.category ?? categories[0]?.id ?? '',
-  );
-  // Every routine must belong to an existing category — no uncategorized
-  // routines. Categories load async, so re-seed once they arrive.
-  const categoryValid = categories.some((c) => c.id === category);
-  useEffect(() => {
-    if (!categoryValid && categories.length > 0) setCategory(categories[0].id);
-  }, [categoryValid, categories]);
+  const [category, setCategory] = useState<RoutineCategory>(editRoutine?.category ?? '');
+  const categoryValid = !category || categories.some((c) => c.id === category);
   // Repeat cadence — legacy routines without an explicit repeat derive it
   // from their days (with days = weekly, without = daily).
   // 새 루틴 기본은 매일 (#1126) — 대부분 그렇게 시작하고, 요일은 매주를 고를 때만 묻는다.
@@ -153,7 +146,7 @@ export function AddRoutineScreen({
     startDate: editRoutine?.startDate ?? initialStartDate ?? todayIso(),
     endDate: editRoutine?.endDate,
   }).current;
-  const initialCategory = editRoutine?.category ?? categories[0]?.id ?? '';
+  const initialCategory = editRoutine?.category ?? '';
   const dirty =
     title !== initial.title ||
     category !== initialCategory ||
@@ -203,9 +196,8 @@ export function AddRoutineScreen({
   const submit = () => {
     if (!canSubmit) {
       if (!categoryValid) {
-        setFormError('카테고리가 필요해요. 먼저 하나 만들어주세요.');
+        setFormError('카테고리를 다시 선택해 주세요.');
         Keyboard.dismiss();
-        setShowCategoryManager(true);
       } else if (title.trim().length === 0) {
         setFormError('루틴 이름을 입력해주세요.');
       } else if (needsDays && days.length === 0) {
@@ -289,6 +281,14 @@ export function AddRoutineScreen({
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.chips}>
+            <Pressable
+              onPress={() => setCategory('')}
+              accessibilityRole="button"
+              accessibilityLabel="미분류"
+              accessibilityState={{ selected: !category }}
+              style={[styles.chip, { backgroundColor: !category ? t.primarySoft : t.surface }]}>
+              <Text style={[Typography.label, { color: t.text }]}>미분류</Text>
+            </Pressable>
             {categories.map((c) => {
               const active = category === c.id;
               return (
@@ -314,7 +314,7 @@ export function AddRoutineScreen({
           </ScrollView>
           {categories.length === 0 ? (
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              카테고리가 없어요. 위의 관리 버튼으로 먼저 만들어주세요.
+              카테고리 없이 시작할 수 있어요.
             </Text>
           ) : null}
         </View>
@@ -593,8 +593,7 @@ export function AddRoutineScreen({
             <Text style={[Typography.supporting, { color: t.danger }]}>{formError}</Text>
           </GlassSurface>
         ) : null}
-        {/* Pressable even when invalid — the tap explains what's missing
-            (and opens the category manager when that's the blocker). */}
+        {/* Keep invalid submission actionable so the missing field is explained. */}
         <Pressable
           onPress={submit}
           accessibilityRole="button"

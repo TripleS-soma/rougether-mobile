@@ -10,7 +10,7 @@ import { Icon } from '@/components/ui/icon';
 import { toIsoDate } from '@/utils/datetime';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
-import { readableTextColor, withAlpha } from '@/utils/color';
+import { readableTextColor } from '@/utils/color';
 import { horizontalFlingGesture } from '@/utils/gesture';
 import { useAnimatedValue, useAnimatedValueXY, useLatestRef } from '@/hooks/use-stable-value';
 import { WEEKDAY_LABELS as WEEKDAYS } from '@/constants/routines';
@@ -245,7 +245,8 @@ function CalendarBase({
           <Text style={[styles.navGlyph, { color: t.text }]}>‹</Text>
         </Pressable>
         <View style={styles.headCenter}>
-          <Text style={[progressByDate ? Typography.h3 : Typography.label, { color: t.text }]}>
+          <Text
+            style={[progressByDate || glass ? Typography.h3 : Typography.label, { color: t.text }]}>
             {view.y}년 {view.m + 1}월
           </Text>
           {showToday ? (
@@ -291,21 +292,7 @@ function CalendarBase({
       </View>
 
       {headerAccessory}
-      <View style={glass && styles.glassGrid}>
-        {glass ? (
-          <GlassSurface
-            testID="calendar-glass"
-            glassEffectStyle="clear"
-            pointerEvents="none"
-            interactive={false}
-            fallbackColor={t.surface}
-            style={[
-              StyleSheet.absoluteFill,
-              styles.glassGridFace,
-              { borderColor: withAlpha(t.surface, 0.7) },
-            ]}
-          />
-        ) : null}
+      <View>
         <GestureDetector gesture={monthFling}>
           <View style={styles.grid} testID="calendar-grid">
             <Animated.View
@@ -386,7 +373,11 @@ function CalendarBase({
                         // 월 이동으로 이 셀이 새로 측정될 때, 선택 날짜면 즉시 원을 얹는다.
                         if (date === value && selectedInView) placeCircle(false);
                       }}
-                      style={[styles.cell, progressByDate && styles.progressCell]}>
+                      style={[
+                        styles.cell,
+                        glass && styles.monthCell,
+                        progressByDate && styles.progressCell,
+                      ]}>
                       <View
                         style={[
                           styles.dayCircle,
@@ -461,22 +452,14 @@ function CalendarBase({
                         </Text>
                       </View>
                       {/* The single dot records todos, including past and selected dates. */}
-                      {progressByDate && markedDates?.has(date) ? (
+                      {markedDates?.has(date) ? (
                         <View
                           testID={`calendar-todo-dot-${date}`}
                           style={[
                             styles.scheduleDot,
-                            { backgroundColor: disabled ? t.textDisabled : t.info },
+                            { backgroundColor: disabled ? t.textDisabled : t.textMuted },
                           ]}
                           pointerEvents="none"
-                        />
-                      ) : null}
-                      {!progressByDate && markedDates?.has(date) && !isSelected ? (
-                        <View
-                          style={[
-                            styles.dot,
-                            { backgroundColor: disabled ? t.textDisabled : t.primary },
-                          ]}
                         />
                       ) : null}
                     </Pressable>
@@ -498,8 +481,7 @@ export const Calendar = memo(CalendarBase);
 
 const styles = StyleSheet.create({
   glassControl: { borderRadius: Radius.pill },
-  glassGrid: { paddingHorizontal: Spacing.one, paddingBottom: Spacing.two },
-  glassGridFace: { borderRadius: Radius.xl, borderWidth: StyleSheet.hairlineWidth },
+  monthCell: { aspectRatio: undefined, minHeight: Spacing.six },
   scheduleDot: {
     position: 'absolute',
     bottom: Spacing.half,
