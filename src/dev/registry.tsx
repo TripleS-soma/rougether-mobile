@@ -25,6 +25,9 @@ import { IntroScreen } from '@/components/screens/intro-screen';
 import { LoginScreen } from '@/components/screens/login-screen';
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { CharacterPickerSheet } from '@/components/screens/sheets/character-picker-sheet';
+import { InviteArrivalSheet } from '@/components/screens/sheets/invite-arrival-sheet';
+import { InvitePasteSheet } from '@/components/screens/sheets/invite-paste-sheet';
+import { parseInviteText } from '@/lib/invite-code';
 import { BugReportScreen } from '@/components/screens/bug-report-screen';
 import { NotificationListScreen } from '@/components/screens/notification-list-screen';
 import { MyPageScreen } from '@/components/screens/my-page-screen';
@@ -104,6 +107,67 @@ export type GalleryEntry = {
  * component in isolation on device / simulator / web without wiring it into a
  * real screen first. Add an entry whenever you build a new component.
  */
+/** 친구 초대 확인 시트 데모 (#1007). */
+function InviteArrivalSheetDemo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <View>
+      <ScalePressable
+        accessibilityRole="button"
+        onPress={() => setOpen(true)}
+        style={{ alignSelf: 'center', padding: 8 }}>
+        <Text>친구 초대 확인 열기</Text>
+      </ScalePressable>
+      <InviteArrivalSheet
+        visible={open}
+        preview={{
+          code: 'ROUGE123',
+          inviterNickname: '소마',
+          rewardCoin: 50,
+          alreadyRedeemed: false,
+        }}
+        onAccept={() => setOpen(false)}
+        onLater={() => setOpen(false)}
+      />
+    </View>
+  );
+}
+
+/** 붙여넣기 시트 데모 (#1007) — 붙여넣은 글을 실제 판정기로 돌려 결과를 보여 준다. */
+function InvitePasteSheetDemo() {
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<string | null>(null);
+  return (
+    <View style={{ alignItems: 'center', gap: 4 }}>
+      <ScalePressable
+        accessibilityRole="button"
+        onPress={() => {
+          setError(null);
+          setOpen(true);
+        }}
+        style={{ padding: 8 }}>
+        <Text>붙여넣기 시트 열기</Text>
+      </ScalePressable>
+      {result ? <Text>{result}</Text> : null}
+      <InvitePasteSheet
+        visible={open}
+        error={error}
+        onPaste={(text) => {
+          const parsed = parseInviteText(text);
+          if (!parsed) {
+            setError('초대코드를 찾지 못했어요.');
+            return;
+          }
+          setResult(`${parsed.kind} · ${parsed.code}`);
+          setOpen(false);
+        }}
+        onDismiss={() => setOpen(false)}
+      />
+    </View>
+  );
+}
+
 /** 재화 내역 시트 데모 (#734). */
 function WalletHistorySheetDemo() {
   const [open, setOpen] = useState(false);
@@ -575,6 +639,18 @@ export const galleryEntries: GalleryEntry[] = [
         <RoomQuickTodoPreview />
       </View>
     ),
+  },
+  {
+    name: 'InviteArrivalSheet · 친구 초대 확인',
+    description:
+      '링크·붙여넣기로 들어온 친구 초대코드 확인 (#1007) — 초대자·받을 코인을 보여 주고 [받기]에서만 사용한다(자동 사용 금지).',
+    render: () => <InviteArrivalSheetDemo />,
+  },
+  {
+    name: 'InvitePasteSheet · 초대받아 오셨나요?',
+    description:
+      '온보딩 직후 1회 붙여넣기 (#1007) — iOS 16+는 시스템 붙여넣기 버튼(허용 팝업 없음). 갤러리에서는 붙여넣은 글의 판정 결과를 보여 준다.',
+    render: () => <InvitePasteSheetDemo />,
   },
   {
     name: 'InviteFriendsScreen',

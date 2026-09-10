@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } 
 import { Platform, Linking } from 'react-native';
 
 import { type Screen } from '@/components/app/navigation';
+import { useInviteArrival } from '@/components/app/use-invite-arrival';
 import { SettingsScreen } from '@/components/screens/settings-screen';
 import { BugReportScreen } from '@/components/screens/bug-report-screen';
 import { HelpScreen } from '@/components/screens/help-screen';
@@ -27,14 +28,11 @@ import type { CharacterId } from '@/constants/characters';
 import { SUPPORT_EMAIL } from '@/constants/policy';
 import { useAuth } from '@/hooks/use-auth';
 import { useBugReports } from '@/hooks/use-bug-reports';
-import { useInvites } from '@/hooks/use-invites';
+import { type InviteVia, useInvites } from '@/hooks/use-invites';
 import { useNotificationSettings } from '@/hooks/use-notification-settings';
 import { useBrandTheme } from '@/hooks/use-tokens';
 import { useStartTab } from '@/hooks/use-start-tab';
-import {
-  clearPendingFriendInviteCode,
-  subscribePendingFriendInviteCode,
-} from '@/lib/pending-invite';
+import { clearPendingFriendInviteCode } from '@/lib/pending-invite';
 import { pickLibraryImage } from '@/lib/pick-image';
 import type { ScrollRestoreProps } from '@/hooks/use-scroll-restore';
 import { useConstant, useStableCallback } from '@/hooks/use-stable-value';
@@ -61,6 +59,7 @@ export function useSettingsSurface({
   shortcuts,
   onRoutinesImported,
   onWalletChanged,
+  offerInvitePaste = false,
 }: {
   screen: Screen;
   setScreen: Dispatch<SetStateAction<Screen>>;
@@ -88,6 +87,8 @@ export function useSettingsSurface({
   onRoutinesImported?: () => void;
   /** 초대 코드 보상이 들어온 뒤 — 지갑을 서버값으로 다시 받는다(없으면 헤더 코인이 그대로였다). */
   onWalletChanged?: () => void;
+  /** 첫 온보딩 직후 1회 '친구에게 초대받아 오셨나요?' 붙여넣기 시트 (#1007). */
+  offerInvitePaste?: boolean;
 }) {
   const { themeId, setThemeId, mode: themeMode, setMode: setThemeMode, fontId, setFontId } = useBrandTheme(); // prettier-ignore
   const { show: toast } = useToast();
@@ -162,30 +163,27 @@ export function useSettingsSurface({
     loading: invitesLoading,
     loadError: invitesLoadError,
     load: loadInvites,
+    preview: previewInvite,
     redeem: redeemInvite,
   } = useInvites();
   // 보상이 실제로 들어왔을 때만 지갑 갱신 — 실패(null)·0코인은 그대로.
   const redeemInviteCode = useCallback(
-    async (code: string) => {
-      const result = await redeemInvite(code);
+    async (code: string, via: InviteVia = 'manual') => {
+      const result = await redeemInvite(code, via);
       if (result && result.rewardCoin > 0) onWalletChanged?.();
       return result;
     },
     [redeemInvite, onWalletChanged],
   );
-  // 친구 초대 링크 (#667) — 친구 초대 화면을 열고 받은 코드 입력을 프리필.
+  // 친구 초대 링크·붙여넣기 (#667 → #1007) — 설정 화면으로 튀지 않고 앱 위 확인
+  // 시트로 받는다. [나중에]면 코드를 친구 초대 화면 입력란 프리필로 남긴다.
   const [pendingFriendCode, setPendingFriendCode] = useState<string | null>(null);
-  useEffect(
-    () =>
-      subscribePendingFriendInviteCode((code) => {
-        setPendingFriendCode(code);
-        setScreen('inviteFriends');
-        void loadInvites();
-      }),
-    // loadInvites·setScreen은 안정 참조 — 마운트 1회 구독.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  );
+  const inviteArrival = useInviteArrival({
+    offerPaste: offerInvitePaste,
+    preview: previewInvite,
+    redeem: redeemInviteCode,
+    onLater: setPendingFriendCode,
+  });
 
   // 알림 설정은 서버 보관으로 이관 (#495) — 열 때 GET, 토글마다 낙관적 PATCH.
   const {
@@ -411,6 +409,7 @@ export function useSettingsSurface({
         loadError={invitesLoadError}
         onRetry={loadInvites}
         onRedeem={redeemInviteCode}
+        onPreview={previewInvite}
         initialRedeemCode={pendingFriendCode ?? undefined}
         onInitialRedeemCodeConsumed={() => {
           setPendingFriendCode(null);
@@ -420,5 +419,11 @@ export function useSettingsSurface({
       />
     ) : null;
 
-  return { myPageProps, settingsProps, subScreen, soundSettings };
+  return {
+    myPageProps,
+    settingsProps,
+    subScreen,
+    soundSettings,
+    inviteSheets: inviteArrival.sheets,
+  };
 }

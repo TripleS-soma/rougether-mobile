@@ -369,6 +369,8 @@ export function AppShell({
     // 무효화 누락 2건 (리팩토링 3묶음): 가져온 루틴·초대 보상이 즉시 보이게.
     onRoutinesImported: myRoomData.reload,
     onWalletChanged: myRoomData.refreshWallet,
+    // 첫 온보딩 직후 1회만 (#1007) — 온보딩 다시 보기는 미션 건너뛰기가 켜진 쪽이다.
+    offerInvitePaste: startMissions && !missionSkipEnabled,
   });
   // 나의 방 페이지 배선 (#692 5단계) — 나의 방 탭 페이지와 서브화면 4종
   // (루틴 관리·추가·카테고리 관리·알림 목록)의 훅·콜백·JSX 소유.
@@ -709,6 +711,9 @@ export function AppShell({
 
       {/* 출석·재화 내역 시트 (#851·#1089) — use-attendance-surface가 그린다. */}
       {attendanceSheets}
+
+      {/* 친구 초대 확인·붙여넣기 시트 (#1007) — use-settings-surface가 그린다. */}
+      {settingsSurface.inviteSheets}
     </View>
   );
 }

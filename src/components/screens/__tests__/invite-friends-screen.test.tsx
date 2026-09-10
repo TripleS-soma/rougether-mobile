@@ -83,3 +83,88 @@ describe('InviteFriendsScreen (#518 — 친구 초대 리워드)', () => {
     expect(onConsumed).toHaveBeenCalledTimes(1);
   });
 });
+
+// 사용 전 초대자 확인 (#1007) — 직접 입력한 코드도 계정당 평생 1회라 한 번 더 묻는다.
+describe('InviteFriendsScreen — 사용 전 미리보기 (#1007)', () => {
+  const PREVIEW = {
+    code: 'FRIEND99',
+    inviterNickname: '소마',
+    rewardCoin: 30,
+    alreadyRedeemed: false,
+  };
+
+  it('사용하기는 곧장 쓰지 않고 초대자를 보여 준 뒤, 확정해야 쓴다', async () => {
+    const onPreview = jest.fn(async () => PREVIEW);
+    const onRedeem = jest.fn(async () => ({ rewardCoin: 30 }));
+    const ui = await render(
+      <InviteFriendsScreen info={INFO} onPreview={onPreview} onRedeem={onRedeem} />,
+    );
+
+    await fireEvent.changeText(ui.getByLabelText('초대코드 입력'), ' friend99 ');
+    await fireEvent.press(ui.getByLabelText('초대코드 사용'));
+    expect(onPreview).toHaveBeenCalledWith('friend99');
+    await waitFor(() => expect(ui.getByText('소마님의 초대가 맞나요?')).toBeTruthy());
+    expect(onRedeem).not.toHaveBeenCalled();
+
+    await fireEvent.press(ui.getByLabelText('초대코드 사용 확정'));
+    // 미리보기가 정규화한 코드로 쓴다.
+    expect(onRedeem).toHaveBeenCalledWith('FRIEND99');
+    await waitFor(() => expect(ui.getByText('코인 30개를 받았어요!')).toBeTruthy());
+  });
+
+  it('닉네임이 없는 초대자는 친구로 부른다', async () => {
+    const onPreview = jest.fn(async () => ({ ...PREVIEW, inviterNickname: null }));
+    const ui = await render(
+      <InviteFriendsScreen info={INFO} onPreview={onPreview} onRedeem={jest.fn()} />,
+    );
+    await fireEvent.changeText(ui.getByLabelText('초대코드 입력'), 'FRIEND99');
+    await fireEvent.press(ui.getByLabelText('초대코드 사용'));
+    await waitFor(() => expect(ui.getByText('친구의 초대가 맞나요?')).toBeTruthy());
+  });
+
+  it('이미 보상을 받은 계정이면 쓰지 않고 안내만 한다', async () => {
+    const onPreview = jest.fn(async () => ({ ...PREVIEW, alreadyRedeemed: true }));
+    const onRedeem = jest.fn();
+    const ui = await render(
+      <InviteFriendsScreen info={INFO} onPreview={onPreview} onRedeem={onRedeem} />,
+    );
+    await fireEvent.changeText(ui.getByLabelText('초대코드 입력'), 'FRIEND99');
+    await fireEvent.press(ui.getByLabelText('초대코드 사용'));
+    await waitFor(() => expect(ui.getByText('이미 초대 보상을 받은 계정이에요.')).toBeTruthy());
+    expect(onRedeem).not.toHaveBeenCalled();
+    expect(ui.queryByText(/초대가 맞나요/)).toBeNull();
+  });
+
+  it('미리보기 실패(null)면 입력 그대로, 다시 입력은 확인에서 입력으로 돌아간다', async () => {
+    const onPreview = jest.fn(async (): Promise<typeof PREVIEW | null> => null);
+    const ui = await render(
+      <InviteFriendsScreen info={INFO} onPreview={onPreview} onRedeem={jest.fn()} />,
+    );
+    await fireEvent.changeText(ui.getByLabelText('초대코드 입력'), 'NOPE1234');
+    await fireEvent.press(ui.getByLabelText('초대코드 사용'));
+    await waitFor(() => expect(onPreview).toHaveBeenCalled());
+    expect(ui.getByLabelText('초대코드 입력').props.value).toBe('NOPE1234');
+
+    onPreview.mockResolvedValueOnce(PREVIEW);
+    await fireEvent.press(ui.getByLabelText('초대코드 사용'));
+    await waitFor(() => expect(ui.getByText('소마님의 초대가 맞나요?')).toBeTruthy());
+    await fireEvent.press(ui.getByLabelText('초대코드 다시 입력'));
+    expect(ui.getByLabelText('초대코드 입력').props.value).toBe('NOPE1234');
+  });
+
+  it('서버 공유 링크(shareUrl)가 있으면 그 링크로 공유한다', async () => {
+    const { Share } = jest.requireActual('react-native');
+    const shareSpy = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
+    try {
+      const { getByLabelText } = await render(
+        <InviteFriendsScreen info={{ ...INFO, shareUrl: 'https://rougether.app/i/ROUGE123' }} />,
+      );
+      await fireEvent.press(getByLabelText('초대 링크 공유'));
+      const message = (shareSpy.mock.calls[0][0] as { message: string }).message;
+      expect(message).toContain('https://rougether.app/i/ROUGE123');
+      expect(message).not.toContain('invite.html');
+    } finally {
+      shareSpy.mockRestore();
+    }
+  });
+});

@@ -88,7 +88,7 @@ describe('useInvites', () => {
       outcome = await result.current.redeem('  friend1 ');
     });
     expect(outcome).toEqual({ rewardCoin: 50 });
-    expect(mockTrack).toHaveBeenCalledWith('invite_redeem');
+    expect(mockTrack).toHaveBeenCalledWith('invite_redeem', { via: 'manual' });
     expect(mockToastShow).not.toHaveBeenCalled();
 
     const redeemCall = calls.find((c) => c.includes('/invites/redeem'));
@@ -118,7 +118,7 @@ describe('useInvites', () => {
     });
     expect(outcome).toBeNull();
     expect(mockToastShow).toHaveBeenCalledWith(message, 'error');
-    expect(mockTrack).not.toHaveBeenCalledWith('invite_redeem');
+    expect(mockTrack).not.toHaveBeenCalledWith('invite_redeem', expect.anything());
   });
 
   it('돌려주는 콜백은 재렌더 사이에 참조가 고정된다 (#539)', async () => {
