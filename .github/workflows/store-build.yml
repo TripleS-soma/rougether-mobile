@@ -26,7 +26,7 @@ jobs:
         run: |
           node <<'NODE'
           const { execFileSync } = require('node:child_process');
-          const value = JSON.parse(execFileSync('eas', ['build:list', '--platform', 'android', '--limit', '40', '--json', '--non-interactive'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
+          const value = JSON.parse(execFileSync('eas', ['build:list', '--platform', 'android', '--limit', '10', '--json', '--non-interactive'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
           if (!Array.isArray(value)) throw new Error('Unexpected build list');
           const clean = s => typeof s === 'string' ? s.slice(0, 200) : null;
           for (const b of value) console.log(JSON.stringify({ id: clean(b.id), status: clean(b.status), profile: clean(b.buildProfile), channel: clean(b.channel), version: clean(b.appVersion), versionCode: clean(b.appBuildVersion), source: clean(b.gitCommitHash), runtime: clean(b.runtime?.version || b.fingerprint?.hash), createdAt: clean(b.createdAt) }));
@@ -37,7 +37,7 @@ jobs:
         run: |
           node <<'NODE'
           const { execFileSync } = require('node:child_process');
-          const value = JSON.parse(execFileSync('eas', ['update:list', '--branch', 'production', '--limit', '100', '--json', '--non-interactive'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
+          const value = JSON.parse(execFileSync('eas', ['update:list', '--branch', 'production', '--platform', 'android', '--runtime-version', '8615b89231a03429ee9746872c1d9bbdac2e9d91', '--limit', '50', '--json', '--non-interactive'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
           const groups = Array.isArray(value) ? value : value.currentPage;
           if (!Array.isArray(groups)) throw new Error('Unexpected update list');
           const clean = s => typeof s === 'string' ? s.slice(0, 300) : null;
