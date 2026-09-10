@@ -11,6 +11,7 @@ import {
 import {
   Animated,
   Easing,
+  KeyboardAvoidingView,
   Modal,
   PanResponder,
   Platform,
@@ -141,6 +142,10 @@ export type BottomSheetProps = {
   dragScope?: BottomSheetDragScope;
   /** Native card pan for action sheets without scrollable children or SheetDragExclude. */
   nativeDrag?: boolean;
+  /** Keep input sheets above the keyboard without changing other sheets. */
+  avoidKeyboard?: boolean;
+  /** Prevent swipe dismissal during a pending save. */
+  dragEnabled?: boolean;
   children: ReactNode;
 };
 
@@ -155,6 +160,8 @@ export function BottomSheet({
   cardStyle,
   dragScope = 'card',
   nativeDrag = false,
+  avoidKeyboard = false,
+  dragEnabled = true,
   children,
 }: BottomSheetProps) {
   const { height: windowH } = useWindowDimensions();
@@ -169,9 +176,10 @@ export function BottomSheet({
   // PanResponder는 한 번만 만들어지므로 최신 onClose·dragScope를 ref로 참조한다.
   const onCloseRef = useLatestRef(onClose);
   const dragScopeRef = useLatestRef(dragScope);
+  const dragEnabledRef = useLatestRef(dragEnabled);
   // 이 터치가 SheetDragExclude 안에서 시작했는가 (#1132) — 자식이 true, 카드가 false.
   const excludedRef = useRef(false);
-  const useNativeDrag = nativeDrag && dragScope === 'card' && Platform.OS !== 'web';
+  const useNativeDrag = nativeDrag && dragEnabled && dragScope === 'card' && Platform.OS !== 'web';
   const resetDrag = useConstant(() => () => {
     Animated.spring(dragY, {
       toValue: 0,
@@ -260,6 +268,7 @@ export function BottomSheet({
   const pan = useConstant(() =>
     PanResponder.create({
       onMoveShouldSetPanResponder: (_e, g) =>
+        dragEnabledRef.current &&
         g.dy > 6 &&
         g.dy > Math.abs(g.dx) &&
         claimsDrag(dragScopeRef.current, g.y0, cardTopRef.current, excludedRef.current),
@@ -308,7 +317,9 @@ export function BottomSheet({
     </Animated.View>
   );
   const overlay = (
-    <Animated.View style={styles.overlay} testID="bottom-sheet">
+    <Animated.View
+      style={avoidKeyboard ? styles.keyboardOverlay : styles.overlay}
+      testID="bottom-sheet">
       <Animated.View style={[styles.backdrop, { opacity: progress }]} />
       <Pressable
         style={StyleSheet.absoluteFill}
@@ -323,12 +334,22 @@ export function BottomSheet({
     </Animated.View>
   );
 
+  const content = avoidKeyboard ? (
+    <KeyboardAvoidingView
+      style={styles.gestureRoot}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      {overlay}
+    </KeyboardAvoidingView>
+  ) : (
+    overlay
+  );
+
   return (
     <Modal transparent visible statusBarTranslucent animationType="none" onRequestClose={onClose}>
       {useNativeDrag ? (
-        <GestureHandlerRootView style={styles.gestureRoot}>{overlay}</GestureHandlerRootView>
+        <GestureHandlerRootView style={styles.gestureRoot}>{content}</GestureHandlerRootView>
       ) : (
-        overlay
+        content
       )}
     </Modal>
   );
@@ -342,6 +363,12 @@ const styles = StyleSheet.create({
   gestureRoot: { flex: 1 },
   overlay: {
     ...StyleSheet.absoluteFillObject,
+    justifyContent: 'flex-end',
+    zIndex: 100,
+    elevation: 100,
+  },
+  keyboardOverlay: {
+    flex: 1,
     justifyContent: 'flex-end',
     zIndex: 100,
     elevation: 100,
