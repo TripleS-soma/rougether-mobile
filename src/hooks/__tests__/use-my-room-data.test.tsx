@@ -1,3 +1,4 @@
+import { onlineManager } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useMyRoomData } from '@/hooks/use-my-room-data';
@@ -704,6 +705,37 @@ describe('공통 작성 — 실제 생성 요청과 미분류 유지', () => {
     );
     expect(post.body).not.toHaveProperty('categoryId');
     expect(requests.filter((r) => r.method !== 'GET')).toHaveLength(1);
-    expect(result.current.routines.find((r) => r.id === 'r55')?.category).toBeUndefined();
+    expect(result.current.routines).toEqual([
+      expect.objectContaining({ id: 'r55', title: '독서' }),
+    ]);
+    expect(result.current.routines[0].category).toBeUndefined();
   });
+});
+
+it('오프라인에서도 생성을 무기한 대기하지 않고 실패를 반환한다', async () => {
+  global.fetch = jest.fn(async (_url: string, init?: RequestInit) => {
+    if (init?.method === 'POST') throw new Error('offline');
+    return res({ items: [], categories: [], summary: {}, streak: {} });
+  }) as unknown as typeof fetch;
+  const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
+  await waitFor(() => expect(result.current.loading).toBe(false));
+  onlineManager.setOnline(false);
+  try {
+    await act(async () => {
+      expect(
+        await result.current.addRoutine({
+          title: '독서',
+          category: '',
+          days: [],
+          startDate: '2026-09-10',
+          alarmEnabled: false,
+          time: '07:00',
+        }),
+      ).toBe(false);
+      expect(await result.current.quickAddTodo('', '장보기', '2026-09-10')).toBe(false);
+    });
+    expect(result.current.routines).toEqual([]);
+  } finally {
+    onlineManager.setOnline(true);
+  }
 });

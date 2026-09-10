@@ -218,8 +218,12 @@ export function useMyRoomData() {
     [completions, findItem, refreshWallet, toast],
   );
 
-  const { mutateAsync: saveTodo } = useMutation({ mutationFn: createTodo });
-  const { mutateAsync: saveRoutine } = useMutation({ mutationFn: createRoutine });
+  // Report offline failures immediately instead of queueing a locked composer.
+  const { mutateAsync: saveTodo } = useMutation({ mutationFn: createTodo, networkMode: 'always' });
+  const { mutateAsync: saveRoutine } = useMutation({
+    mutationFn: createRoutine,
+    networkMode: 'always',
+  });
   const quickAddTodo = useCallback(
     async (category: string, title: string, dueDate: string, time?: string) => {
       // 점은 응답을 기다리지 않는다 (#1133) — 실패하면 걷는다.
