@@ -198,7 +198,6 @@ export function AddRoutineScreen({
       if (!categoryValid) {
         setFormError('카테고리를 다시 선택해 주세요.');
         Keyboard.dismiss();
-        setShowCategoryManager(true);
       } else if (title.trim().length === 0) {
         setFormError('루틴 이름을 입력해주세요.');
       } else if (needsDays && days.length === 0) {
@@ -594,8 +593,7 @@ export function AddRoutineScreen({
             <Text style={[Typography.supporting, { color: t.danger }]}>{formError}</Text>
           </GlassSurface>
         ) : null}
-        {/* Pressable even when invalid — the tap explains what's missing
-            (and opens the category manager when that's the blocker). */}
+        {/* Keep invalid submission actionable so the missing field is explained. */}
         <Pressable
           onPress={submit}
           accessibilityRole="button"
