@@ -1,45 +1,35 @@
-import { act, fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import { Keyboard } from 'react-native';
-import { State } from 'react-native-gesture-handler';
-import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { OnboardingScreen, withRang } from '@/components/screens/onboarding-screen';
 import { ToastProvider } from '@/components/ui/toast';
 
-/**
- * 목표 설문까지 최단 경로 (#1023) — 예전엔 '건너뛰기' 한 번이면 됐지만 그
- * 버튼은 이제 다시 보기 진입에만 있다. 도트로 마지막 장에 가서 CTA를 누른다.
- */
-async function goToGoalSurvey(ui: {
-  getByText: (t: string) => unknown;
-  getByLabelText: (t: string) => unknown;
-}) {
-  await fireEvent.press(ui.getByLabelText('5번째 슬라이드로 이동') as never);
-  await fireEvent.press(ui.getByText('목표 선택하기') as never);
-}
-
+// 소개 슬라이드 자체(5장 순회·스와이프·도트)는 intro-screen.test.tsx가 본다 (#1282).
 describe('OnboardingScreen', () => {
-  it('renders the first welcome slide', async () => {
-    const { getByText } = await render(<OnboardingScreen />);
-    expect(getByText('루게더에 오신 걸 환영해요')).toBeTruthy();
+  // #1282 — 첫 실행의 소개는 로그인 전으로 옮겼다. 로그인 뒤에는 곧장 목표 설문.
+  it('첫 실행은 목표 설문부터 시작한다 (#1282)', async () => {
+    const { getByText, queryByText } = await render(<OnboardingScreen />);
+    expect(getByText('관심 있는 목표를 골라주세요')).toBeTruthy();
+    expect(queryByText('루게더에 오신 걸 환영해요')).toBeNull();
+    // 돌아갈 소개가 없으니 '이전'도 없다.
+    expect(queryByText('이전')).toBeNull();
   });
 
   // #1023 — 처음 온 사람은 소개를 지나칠 수 없다. 건너뛰기는 설정 → 튜토리얼
   // 다시 보기로 들어온 경우에만 붙고, 그때는 목표 설문이 아니라 앱으로 나간다.
-  describe('건너뛰기는 다시 보기 진입에만 (#1023)', () => {
+  describe('다시 보기는 소개부터 (#1023, #1282)', () => {
     it('첫 실행에는 건너뛰기가 없다', async () => {
-      const { queryByText, getByText } = await render(<OnboardingScreen />);
+      const { queryByText } = await render(<OnboardingScreen />);
       expect(queryByText('건너뛰기')).toBeNull();
-      // 슬라이드 자체는 그대로 — 없어진 건 지름길뿐이다.
-      expect(getByText('루게더에 오신 걸 환영해요')).toBeTruthy();
     });
 
-    it('다시 보기면 건너뛰기가 보이고, 누르면 온보딩을 끝낸다', async () => {
+    it('다시 보기면 소개와 건너뛰기가 보이고, 누르면 온보딩을 끝낸다', async () => {
       const onSkip = jest.fn();
       const onDone = jest.fn();
       const { getByText, queryByText } = await render(
         <OnboardingScreen replay onSkip={onSkip} onDone={onDone} />,
       );
+      expect(getByText('루게더에 오신 걸 환영해요')).toBeTruthy();
 
       await fireEvent.press(getByText('건너뛰기'));
 
@@ -50,91 +40,34 @@ describe('OnboardingScreen', () => {
       expect(onDone).not.toHaveBeenCalled();
     });
 
-    it('마지막 장에서는 다시 보기여도 건너뛰기가 없다 (CTA가 그 자리)', async () => {
-      const { getByLabelText, queryByText, getByText } = await render(
+    it('다시 보기에는 로그인 전용 출구가 없다', async () => {
+      const { queryByText } = await render(<OnboardingScreen replay onSkip={jest.fn()} />);
+      expect(queryByText('이미 계정이 있어요')).toBeNull();
+    });
+
+    it('마지막 장 목표 선택하기 → 목표 설문, 이전 → 소개로 돌아간다', async () => {
+      const { getByLabelText, getByText, queryByText } = await render(
         <OnboardingScreen replay onSkip={jest.fn()} />,
       );
       await fireEvent.press(getByLabelText('5번째 슬라이드로 이동'));
+      // 마지막 장에서는 건너뛰기 대신 CTA.
       expect(queryByText('건너뛰기')).toBeNull();
-      expect(getByText('목표 선택하기')).toBeTruthy();
+      await fireEvent.press(getByText('목표 선택하기'));
+      expect(getByText('관심 있는 목표를 골라주세요')).toBeTruthy();
+
+      await fireEvent.press(getByText('이전'));
+      expect(queryByText('관심 있는 목표를 골라주세요')).toBeNull();
     });
-  });
-
-  it('walks all five intro slides with the updated copy (#412)', async () => {
-    const { getByText, getByLabelText } = await render(<OnboardingScreen />);
-    // 5장 도트 — 마지막 장까지 존재.
-    expect(getByLabelText('5번째 슬라이드로 이동')).toBeTruthy();
-    await fireEvent.press(getByText('다음'));
-    expect(getByText(/곰 체크로 완료해요/)).toBeTruthy();
-    await fireEvent.press(getByText('다음'));
-    expect(getByText(/내 방을 꾸며요/)).toBeTruthy();
-    await fireEvent.press(getByText('다음'));
-    expect(getByText(/한 집에서/)).toBeTruthy();
-    await fireEvent.press(getByText('다음'));
-    expect(getByText(/기록은 달력으로/)).toBeTruthy();
-    // 마지막 장 CTA는 목표 선택으로 이어진다.
-    await fireEvent.press(getByText('목표 선택하기'));
-    expect(getByText('관심 있는 목표를 골라주세요')).toBeTruthy();
-  });
-
-  // 인트로 슬라이드 좌우 스와이프 (#825) — 예전 PanResponder는 RNGH와 섞여
-  // 실기기에서 잡히지 않았다. 다른 화면과 같은 horizontalFlingGesture로 통일.
-  it('좌우 스와이프로 인트로 슬라이드를 넘긴다 (#825)', async () => {
-    const ui = await render(<OnboardingScreen />);
-    const fling = (translationX: number) =>
-      act(async () =>
-        fireGestureHandler(getByGestureTestId('onboarding-slide-fling'), [
-          { state: State.BEGAN },
-          { state: State.ACTIVE },
-          { state: State.END, translationX, translationY: 0 },
-        ]),
-      );
-
-    // 왼쪽으로 밀면 다음 장.
-    await fling(-60);
-    expect(ui.getByText(/곰 체크로 완료해요/)).toBeTruthy();
-    // 오른쪽으로 밀면 이전 장.
-    await fling(60);
-    expect(ui.getByText('루게더에 오신 걸 환영해요')).toBeTruthy();
-    // 첫 장에서 더 뒤로는 안 간다.
-    await fling(60);
-    expect(ui.getByText('루게더에 오신 걸 환영해요')).toBeTruthy();
-    // 임계 미달(±40)은 무시.
-    await fling(-30);
-    expect(ui.getByText('루게더에 오신 걸 환영해요')).toBeTruthy();
-  });
-
-  it('마지막 장에서 왼쪽 스와이프하면 목표 선택으로 넘어간다 (#825)', async () => {
-    const ui = await render(<OnboardingScreen />);
-    for (let i = 0; i < 4; i += 1) await fireEvent.press(ui.getByText('다음'));
-    expect(ui.getByText(/기록은 달력으로/)).toBeTruthy();
-    await act(async () =>
-      fireGestureHandler(getByGestureTestId('onboarding-slide-fling'), [
-        { state: State.BEGAN },
-        { state: State.ACTIVE },
-        { state: State.END, translationX: -60, translationY: 0 },
-      ]),
-    );
-    expect(ui.getByText('관심 있는 목표를 골라주세요')).toBeTruthy();
-  });
-
-  it('도트로 마지막 장까지 가면 목표 설문이 열린다', async () => {
-    const { getByText, getByLabelText } = await render(<OnboardingScreen />);
-
-    await goToGoalSurvey({ getByText, getByLabelText });
-
-    expect(getByText('관심 있는 목표를 골라주세요')).toBeTruthy();
   });
 
   it('explains a missing goal pick with a toast on 시작하기', async () => {
     const onDone = jest.fn();
-    const { getByText, getByLabelText } = await render(
+    const { getByText } = await render(
       <ToastProvider>
         <OnboardingScreen onDone={onDone} />
       </ToastProvider>,
     );
 
-    await goToGoalSurvey({ getByText, getByLabelText });
     await fireEvent.press(getByText('시작하기'));
 
     expect(getByText('목표를 하나 이상 선택해주세요')).toBeTruthy();
@@ -145,7 +78,6 @@ describe('OnboardingScreen', () => {
     const onDone = jest.fn();
     const { getByText, getByLabelText } = await render(<OnboardingScreen onDone={onDone} />);
 
-    await goToGoalSurvey({ getByText, getByLabelText });
     await fireEvent.press(getByText('운동'));
     await fireEvent.press(getByText('시작하기'));
     // MVP 고양이 단일 (#637): 목표 시작하기 → 캐러셀 없이 닉네임으로 직행.
@@ -161,7 +93,6 @@ describe('OnboardingScreen', () => {
     const dismiss = jest.spyOn(Keyboard, 'dismiss');
     const { getByText, getByLabelText } = await render(<OnboardingScreen />);
 
-    await goToGoalSurvey({ getByText, getByLabelText });
     await fireEvent.press(getByText('운동'));
     await fireEvent.press(getByText('시작하기'));
 
@@ -186,7 +117,6 @@ describe('OnboardingScreen', () => {
       <OnboardingScreen onDone={onDone} goals={goals} initialGoals={['10']} />,
     );
 
-    await goToGoalSurvey({ getByText, getByLabelText });
     // Edit: add one more goal on top of the previous pick, then finish. The
     // final onDone payload carrying '10' untouched proves it was pre-checked.
     await fireEvent.press(getByText('아침형 인간'));
@@ -200,13 +130,12 @@ describe('OnboardingScreen', () => {
   it('drops previous goal ids that no longer exist in the option list', async () => {
     const onDone = jest.fn();
     const goals = [{ id: '10', label: '갓생 살기' }];
-    const { getByText, getByLabelText } = await render(
+    const { getByText } = await render(
       <ToastProvider>
         <OnboardingScreen onDone={onDone} goals={goals} initialGoals={['999']} />
       </ToastProvider>,
     );
 
-    await goToGoalSurvey({ getByText, getByLabelText });
     // The stale id must not count as a selection: 시작하기 stays blocked.
     await fireEvent.press(getByText('시작하기'));
     expect(getByText('목표를 하나 이상 선택해주세요')).toBeTruthy();
@@ -224,7 +153,6 @@ describe('OnboardingScreen', () => {
       />,
     );
 
-    await goToGoalSurvey({ getByText, getByLabelText });
     await fireEvent.press(getByText('시작하기'));
     // 이전 선택(곰)이 활성 카드 — CTA 라벨에 받침 조사('이랑')까지 반영.
     await fireEvent.press(getByText('곰이랑 함께하기'));
@@ -244,7 +172,6 @@ describe('OnboardingScreen', () => {
       <OnboardingScreen onDone={onDone} goals={goals} />,
     );
 
-    await goToGoalSurvey({ getByText, getByLabelText });
     expect(queryByText('운동')).toBeNull(); // local list replaced
     await fireEvent.press(getByText('갓생 살기'));
     await fireEvent.press(getByText('시작하기'));
@@ -258,12 +185,11 @@ describe('OnboardingScreen', () => {
 // 목표 선택 상한 (#598 후속) — 집 생성의 서버 제약(goalIds ≤ 3)과 맞춘다.
 describe('OnboardingScreen 목표 상한', () => {
   it('4번째 목표 선택은 차단되고 안내 토스트가 뜬다', async () => {
-    const { getByText, getByLabelText } = await render(
+    const { getByText } = await render(
       <ToastProvider>
         <OnboardingScreen />
       </ToastProvider>,
     );
-    await goToGoalSurvey({ getByText, getByLabelText });
     await fireEvent.press(getByText('운동'));
     await fireEvent.press(getByText('공부'));
     await fireEvent.press(getByText('수면'));
@@ -282,7 +208,6 @@ describe('OnboardingScreen 목표 상한', () => {
     const { getByText, getByLabelText } = await render(
       <OnboardingScreen onDone={onDone} goals={goals} initialGoals={['1', '2', '3', '4']} />,
     );
-    await goToGoalSurvey({ getByText, getByLabelText });
     await fireEvent.press(getByText('시작하기'));
     await fireEvent.changeText(getByLabelText('닉네임 입력'), '준서');
     await fireEvent.press(getByText('시작하기'));
@@ -305,7 +230,6 @@ describe('OnboardingScreen 캐릭터 캐러셀', () => {
         onDone={jest.fn()}
       />,
     );
-    await goToGoalSurvey(utils);
     await fireEvent.press(utils.getByText('시작하기'));
     return utils;
   };

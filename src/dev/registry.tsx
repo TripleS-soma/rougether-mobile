@@ -21,6 +21,7 @@ import { manageableMembers } from '@/components/screens/house/members';
 import { HelpScreen } from '@/components/screens/help-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { InviteFriendsScreen } from '@/components/screens/invite-friends-screen';
+import { IntroScreen } from '@/components/screens/intro-screen';
 import { LoginScreen } from '@/components/screens/login-screen';
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { CharacterPickerSheet } from '@/components/screens/sheets/character-picker-sheet';
@@ -758,9 +759,22 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
+    name: 'IntroScreen · 로그인 전 소개',
+    description:
+      "설치 후 첫 진입에 로그인보다 먼저 뜨는 소개 5장 (#1282). 첫 장에만 '이미 계정이 있어요', 마지막 장 '시작하기'는 로그인 화면으로(여기서는 콘솔 로그).",
+    render: () => (
+      <View style={{ height: 720, alignSelf: 'stretch' }}>
+        <IntroScreen
+          onHaveAccount={() => console.log('[dev] 이미 계정이 있어요 — 로그인으로')}
+          onDone={() => console.log('[dev] 소개 완료 — 로그인으로')}
+        />
+      </View>
+    ),
+  },
+  {
     name: 'OnboardingScreen · 첫 실행',
     description:
-      'Ported from the prototype OnboardingScreen (#4): slides → goals → (캐러셀은 MVP 오프 #637 — 갤러리는 열어 보존 UI 확인) → nickname. 첫 실행에는 건너뛰기가 없다 (#1023).',
+      'Ported from the prototype OnboardingScreen (#4): goals → (캐러셀은 MVP 오프 #637 — 갤러리는 열어 보존 UI 확인) → nickname. 소개는 로그인 전으로 옮겼다 (#1282).',
     render: () => (
       <View style={{ height: 720, alignSelf: 'stretch' }}>
         <OnboardingScreen characterSelectEnabled />
@@ -786,7 +800,7 @@ export const galleryEntries: GalleryEntry[] = [
   {
     name: 'OnboardingScreen · 다시 보기',
     description:
-      '설정 → 튜토리얼 다시 보기 진입 (#1023) — 우상단 건너뛰기가 생기고, 누르면 목표 설문이 아니라 온보딩을 끝낸다(여기서는 콘솔 로그).',
+      '설정 → 튜토리얼 다시 보기 진입 (#1023) — 소개부터 다시 보고(#1282) 목표 수정으로 이어진다. 우상단 건너뛰기를 누르면 목표 설문이 아니라 온보딩을 끝낸다(여기서는 콘솔 로그).',
     render: () => (
       <View style={{ height: 720, alignSelf: 'stretch' }}>
         <OnboardingScreen
