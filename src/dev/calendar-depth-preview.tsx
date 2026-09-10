@@ -41,6 +41,7 @@ export function CalendarDepthPreview() {
   );
   const month = DAYS.map((day) => ({
     ...day,
+    todoCount: (itemsByDate[day.date!] ?? []).filter((item) => item.kind === 'todo').length,
     routineCompletedCount: (itemsByDate[day.date!] ?? []).filter(
       (item) => item.kind === 'routine' && item.completed,
     ).length,
@@ -62,6 +63,22 @@ export function CalendarDepthPreview() {
       }
       calendarDays={itemsByDate}
       onSelectDate={() => {}}
+      onQuickAddRoutine={(category, title, dueDate) => {
+        setItemsByDate((previous) => ({
+          ...previous,
+          [dueDate]: [
+            ...(previous[dueDate] ?? []),
+            {
+              id: `t-${Date.now()}`,
+              kind: 'todo',
+              title,
+              category: category || undefined,
+              completed: false,
+            },
+          ],
+        }));
+        return true;
+      }}
       onToggleCalendarItem={(item) =>
         setItemsByDate((prev) => ({
           ...prev,

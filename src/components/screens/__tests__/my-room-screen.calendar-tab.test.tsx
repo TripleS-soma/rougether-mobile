@@ -33,7 +33,8 @@ describe('MyRoomScreen', () => {
     expect(ui.queryByText('달력')).toBeNull();
     expect(ui.queryByTestId('my-room-chrome')).toBeNull();
     expect(ui.getByRole('header', { name: calendarHeading(TODAY) })).toBeTruthy();
-    await fireEvent.press(ui.getByLabelText('이 날에 루틴 추가'));
+    await fireEvent.press(ui.getByLabelText('이 날에 할 일 추가'));
+    await fireEvent.press(ui.getByLabelText('루틴 추가'));
     expect(onAddRoutineForDate).toHaveBeenCalledWith(TODAY);
   });
 
