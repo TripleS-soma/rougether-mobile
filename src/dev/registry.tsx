@@ -1081,11 +1081,11 @@ export const galleryEntries: GalleryEntry[] = [
   },
   {
     name: 'CalendarDepth',
-    description: '달성도·종류 필터·선택일 기록을 실제 화면으로 확인한다 (#1252).',
+    description: '월·선택일 목록과 루틴/할 일 공통 작성을 확인한다 (#1279).',
     render: () => <CalendarDepthPreview />,
   },
   {
-    name: 'TodoComposeSheet',
+    name: 'RoutineTodoComposeSheet',
     description: '카테고리 이동 없이 제목부터 입력하는 투두 빠른 추가 (#1272).',
     render: () => <TodoComposePreview />,
   },

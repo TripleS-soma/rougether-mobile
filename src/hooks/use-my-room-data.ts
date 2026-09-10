@@ -14,6 +14,7 @@
  * memoized consumers (#539 memo boundaries) get stable references.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
 
 import type { CategoryDeleteMode } from '@/api/categories';
 import {
@@ -55,12 +56,7 @@ import {
 } from '@/api/adapters';
 import { useToast } from '@/components/ui/toast';
 import { DEFAULT_WALLET, type Wallet } from '@/constants/currency';
-import {
-  type NewRoutine,
-  type Routine,
-  type RoutineCategoryMeta,
-  UNCATEGORIZED_META,
-} from '@/constants/routines';
+import { type NewRoutine, type Routine, type RoutineCategoryMeta } from '@/constants/routines';
 import type { HouseMissionContributeResponse } from '@/api/types';
 import { calendarToday as todayIso } from '@/utils/calendar-progress';
 import { identifyUser, track } from '@/lib/analytics';
@@ -101,43 +97,12 @@ export function useMyRoomData() {
       fetchMe(),
     ]);
     const appCatsAll = cats.map((c, i) => toAppCategory(c, i));
-    let appCats = appCatsAll.filter((c) => !c.deleted);
-    let items = [...rts.map(toAppRoutine), ...tds.map(toAppTodo)];
-
-    // Preserve the legacy adoption of routines without a known category.
-    // Todos support an intentionally empty category and must remain unclassified.
-    // (Legacy data, or the server nulling categoryId on category delete.)
-    const known = new Set(appCats.map((c) => c.id));
-    // Unclassified todos are intentional: keep the optional category unset across reloads.
-    const isOrphan = (r: Routine) => r.kind !== 'todo' && (!r.category || !known.has(r.category));
-    if (items.some(isOrphan)) {
-      try {
-        let uncategorized = appCats.find((c) => c.name === UNCATEGORIZED_META.name);
-        if (!uncategorized) {
-          const created = await createCategory(
-            toCategoryCreate(UNCATEGORIZED_META, appCats.length),
-          );
-          uncategorized = toAppCategory(created, appCats.length);
-          appCats = [...appCats, uncategorized];
-        }
-        const target = uncategorized.id;
-        await Promise.all(
-          items
-            .filter(isOrphan)
-            .map((o) =>
-              o.kind === 'todo'
-                ? updateTodo(toServerItemId(o.id), toTodoUpdate(o, { category: target }))
-                : apiUpdateRoutine(toServerItemId(o.id), toRoutineUpdate(o, { category: target })),
-            ),
-        );
-        items = items.map((r) => (isOrphan(r) ? { ...r, category: target } : r));
-      } catch {
-        // Non-fatal: the pseudo 기타 group still keeps them visible.
-      }
-    }
+    const appCats = appCatsAll.filter((c) => !c.deleted);
+    // A null category is intentional for both types. Reload must never write classifications.
+    const items = [...rts.map(toAppRoutine), ...tds.map(toAppTodo)];
 
     setCategories(appCats);
-    // Active (incl. a just-created 기타) first, deleted ones behind for lookup.
+    // Retain deleted category metadata for historical records.
     setAllCategories([...appCats, ...appCatsAll.filter((c) => c.deleted)]);
     setRoutines(items);
     setCompletions(todayCompletions(today, todayIso()));
@@ -252,12 +217,18 @@ export function useMyRoomData() {
     [completions, findItem, refreshWallet, toast],
   );
 
+  // Report offline failures immediately instead of queueing a locked composer.
+  const { mutateAsync: saveTodo } = useMutation({ mutationFn: createTodo, networkMode: 'always' });
+  const { mutateAsync: saveRoutine } = useMutation({
+    mutationFn: createRoutine,
+    networkMode: 'always',
+  });
   const quickAddTodo = useCallback(
-    async (category: string, title: string, dueDate: string) => {
+    async (category: string, title: string, dueDate: string, time?: string) => {
       // 점은 응답을 기다리지 않는다 (#1133) — 실패하면 걷는다.
       markPending(dueDate);
       try {
-        const created = await createTodo(toTodoCreate(category, title, dueDate));
+        const created = await saveTodo(toTodoCreate(category, title, dueDate, time));
         setRoutines((prev) => [...prev, toAppTodo(created)]);
         track('routine_create', { kind: 'todo' });
         invalidateCalendar();
@@ -272,14 +243,14 @@ export function useMyRoomData() {
         unmarkPending(dueDate);
       }
     },
-    [loadCalendarDay, toast, markPending, unmarkPending, invalidateCalendar],
+    [loadCalendarDay, toast, markPending, unmarkPending, invalidateCalendar, saveTodo],
   );
 
   // 성공 여부를 돌려준다 — 온보딩 미션(첫 루틴 등록, #571)이 성공 시점에 후킹.
   const addRoutine = useCallback(
     async (n: NewRoutine) => {
       try {
-        const created = await createRoutine(toRoutineCreate(n));
+        const created = await saveRoutine(toRoutineCreate(n));
         setRoutines((prev) => [...prev, toAppRoutine(created)]);
         // 퍼널 (#799) — 온보딩 미션은 스킵할 수 있어 미션 이벤트만으로는
         // 등록한 사람을 다 세지 못한다. 생성 자체를 여기서 센다.
@@ -291,7 +262,7 @@ export function useMyRoomData() {
         return false;
       }
     },
-    [toast, invalidateCalendar],
+    [toast, invalidateCalendar, saveRoutine],
   );
 
   const updateRoutine = useCallback(

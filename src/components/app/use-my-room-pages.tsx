@@ -459,6 +459,7 @@ export function useMyRoomPages({
     onOpenGacha: openGacha,
     onRefresh: refreshMyRoom,
     onQuickAddRoutine: quickAddTodo,
+    onCreateRoutine: addRoutineWithMission,
     quickAddDisabledCategoryIds: houseCategoryIds,
     onRenameRoutine: renameRoutine,
     onEditRoutine: editRoutineFromMyRoom,

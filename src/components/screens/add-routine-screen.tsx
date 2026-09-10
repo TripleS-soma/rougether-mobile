@@ -100,15 +100,8 @@ export function AddRoutineScreen({
   const isEdit = Boolean(editRoutine);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [title, setTitle] = useState(editRoutine?.title ?? '');
-  const [category, setCategory] = useState<RoutineCategory>(
-    editRoutine?.category ?? categories[0]?.id ?? '',
-  );
-  // Every routine must belong to an existing category — no uncategorized
-  // routines. Categories load async, so re-seed once they arrive.
-  const categoryValid = categories.some((c) => c.id === category);
-  useEffect(() => {
-    if (!categoryValid && categories.length > 0) setCategory(categories[0].id);
-  }, [categoryValid, categories]);
+  const [category, setCategory] = useState<RoutineCategory>(editRoutine?.category ?? '');
+  const categoryValid = !category || categories.some((c) => c.id === category);
   // Repeat cadence — legacy routines without an explicit repeat derive it
   // from their days (with days = weekly, without = daily).
   const [repeat, setRepeat] = useState<RepeatKind>(
@@ -149,7 +142,7 @@ export function AddRoutineScreen({
     startDate: editRoutine?.startDate ?? initialStartDate ?? today(),
     endDate: editRoutine?.endDate,
   }).current;
-  const initialCategory = editRoutine?.category ?? categories[0]?.id ?? '';
+  const initialCategory = editRoutine?.category ?? '';
   const dirty =
     title !== initial.title ||
     category !== initialCategory ||
@@ -199,7 +192,7 @@ export function AddRoutineScreen({
   const submit = () => {
     if (!canSubmit) {
       if (!categoryValid) {
-        setFormError('카테고리가 필요해요. 먼저 하나 만들어주세요.');
+        setFormError('카테고리를 다시 선택해 주세요.');
         Keyboard.dismiss();
         setShowCategoryManager(true);
       } else if (title.trim().length === 0) {
@@ -285,6 +278,14 @@ export function AddRoutineScreen({
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.chips}>
+            <Pressable
+              onPress={() => setCategory('')}
+              accessibilityRole="button"
+              accessibilityLabel="미분류"
+              accessibilityState={{ selected: !category }}
+              style={[styles.chip, { backgroundColor: !category ? t.primarySoft : t.surface }]}>
+              <Text style={[Typography.label, { color: t.text }]}>미분류</Text>
+            </Pressable>
             {categories.map((c) => {
               const active = category === c.id;
               return (
@@ -310,7 +311,7 @@ export function AddRoutineScreen({
           </ScrollView>
           {categories.length === 0 ? (
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              카테고리가 없어요. 위의 관리 버튼으로 먼저 만들어주세요.
+              카테고리 없이 시작할 수 있어요.
             </Text>
           ) : null}
         </View>

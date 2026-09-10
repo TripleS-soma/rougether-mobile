@@ -83,33 +83,13 @@ describe('AddRoutineScreen', () => {
     expect(onAdd).not.toHaveBeenCalled();
   });
 
-  it('does not submit without a category (uncategorized routines cannot exist)', async () => {
+  it('카테고리 없이 루틴을 저장한다', async () => {
     const onAdd = jest.fn();
-    const { getByText, getByPlaceholderText } = await render(
-      <AddRoutineScreen categories={[]} onAdd={onAdd} />,
-    );
-
-    expect(getByText(/카테고리가 없어요/)).toBeTruthy();
-    await fireEvent.changeText(getByPlaceholderText('예) 매일 30분 산책'), '산책');
-    await fireEvent.press(getByText('루틴 추가하기'));
-
-    expect(onAdd).not.toHaveBeenCalled();
-  });
-
-  it('explains the blocker and opens the category manager on tap (fresh account)', async () => {
-    const onAdd = jest.fn();
-    const { getByText, getByPlaceholderText, queryByText } = await render(
-      <AddRoutineScreen categories={[]} onAdd={onAdd} />,
-    );
-
-    await fireEvent.changeText(getByPlaceholderText('예) 매일 30분 산책'), '산책');
-    await fireEvent.press(getByText('루틴 추가하기'));
-
-    // The dead-button mystery is gone: the tap says why and opens the
-    // quick-create sheet (#394 — 전체 관리는 카테고리 관리 화면으로 분리됨).
-    expect(getByText('카테고리가 필요해요. 먼저 하나 만들어주세요.')).toBeTruthy();
-    expect(queryByText('새 카테고리')).toBeTruthy();
-    expect(onAdd).not.toHaveBeenCalled();
+    const ui = await render(<AddRoutineScreen categories={[]} onAdd={onAdd} />);
+    await fireEvent.changeText(ui.getByPlaceholderText('예) 매일 30분 산책'), '독서');
+    await fireEvent.press(ui.getByText('매일'));
+    await fireEvent.press(ui.getByText('루틴 추가하기'));
+    expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ title: '독서', category: '' }));
   });
 
   it('explains a missing title on tap', async () => {
