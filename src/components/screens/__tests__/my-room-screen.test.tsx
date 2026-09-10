@@ -107,15 +107,15 @@ describe('MyRoomScreen', () => {
     const { getByLabelText, queryByLabelText } = await render(
       <MyRoomScreen routines={SAMPLE_ROUTINES} quickAddDisabledCategoryIds={['일정']} />,
     );
-    expect(queryByLabelText('일정 할 일 추가')).toBeNull();
-    expect(getByLabelText('건강 할 일 추가')).toBeTruthy();
+    expect(queryByLabelText('일정에 추가')).toBeNull();
+    expect(getByLabelText('건강에 추가')).toBeTruthy();
   });
 
   it('keeps the quick-add button reachable on empty categories', async () => {
     // No routines at all — every category header (and its +) must still render.
     const { getByLabelText } = await render(<MyRoomScreen routines={[]} />);
-    expect(getByLabelText('일정 할 일 추가')).toBeTruthy();
-    expect(getByLabelText('취미 할 일 추가')).toBeTruthy();
+    expect(getByLabelText('일정에 추가')).toBeTruthy();
+    expect(getByLabelText('취미에 추가')).toBeTruthy();
   });
 
   it('schedules 격주/매월/매년 routines by their cadence (#255)', async () => {
@@ -296,9 +296,10 @@ describe('MyRoomScreen', () => {
     );
     expect(empty.getByText('미분류')).toBeTruthy();
     // 미분류 퀵애드가 열리고(빈 계정 예외), categoryId 없이 제출된다.
-    await fireEvent.press(empty.getByLabelText('미분류 할 일 추가'));
-    await fireEvent.changeText(empty.getByPlaceholderText('할 일 입력 후 완료'), '물 마시기');
-    await fireEvent(empty.getByPlaceholderText('할 일 입력 후 완료'), 'blur');
+    await fireEvent.press(empty.getByLabelText('미분류에 추가'));
+    await fireEvent.press(empty.getByRole('tab', { name: '할 일' }));
+    await fireEvent.changeText(empty.getByLabelText('할 일 제목'), '물 마시기');
+    await fireEvent.press(empty.getByLabelText('할 일 저장'));
     expect(onQuickAddRoutine).toHaveBeenCalledWith('', '물 마시기', expect.any(String));
   });
 

@@ -24,8 +24,8 @@ describe('MyRoomScreen', () => {
     );
 
     // Per-category quick-add todo button still renders.
-    expect(getByLabelText('일정 할 일 추가')).toBeTruthy();
-    expect(getByLabelText('건강 할 일 추가')).toBeTruthy();
+    expect(getByLabelText('일정에 추가')).toBeTruthy();
+    expect(getByLabelText('건강에 추가')).toBeTruthy();
 
     // The checkbox (labelled by the routine title) toggles completion.
     await fireEvent.press(getByLabelText('하루 회고'));
@@ -169,22 +169,21 @@ describe('MyRoomScreen', () => {
     expect(onManageCategories).toHaveBeenCalledTimes(1);
   });
 
-  it('오늘의 +에서 루틴 추가를 선택하면 기존 콜백을 부른다', async () => {
+  it('오늘의 +는 루틴 입력으로 열고 저장은 생성 콜백을 호출한다', async () => {
+    const onCreateRoutine = jest.fn();
     const onAddRoutine = jest.fn();
-    const onManageRoutines = jest.fn();
-    const { getByLabelText } = await render(
+    const ui = await render(
       <MyRoomScreen
         routines={SAMPLE_ROUTINES}
+        onCreateRoutine={onCreateRoutine}
         onAddRoutine={onAddRoutine}
-        onManageRoutines={onManageRoutines}
       />,
     );
-
-    // '＋ 루틴' 라벨 필 (#483) — 카테고리 ＋(할 일 추가)와 구분되는 가시 라벨.
-    await fireEvent.press(getByLabelText('오늘 할 일 추가'));
-    await fireEvent.press(getByLabelText('루틴 추가'));
-    expect(onAddRoutine).toHaveBeenCalledTimes(1);
-    expect(onManageRoutines).not.toHaveBeenCalled();
+    await fireEvent.press(ui.getByLabelText('오늘에 추가'));
+    await fireEvent.changeText(ui.getByLabelText('루틴 제목'), '독서');
+    await fireEvent.press(ui.getByLabelText('루틴 저장'));
+    expect(onCreateRoutine).toHaveBeenCalledWith(expect.objectContaining({ title: '독서' }));
+    expect(onAddRoutine).not.toHaveBeenCalled();
   });
 
   it('onManageRoutines 미배선이면 메뉴의 루틴 관리는 onAddRoutine으로 폴백', async () => {

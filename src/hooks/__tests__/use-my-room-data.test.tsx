@@ -3,14 +3,20 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { useMyRoomData } from '@/hooks/use-my-room-data';
 import type { NewRoutine } from '@/constants/routines';
 import { jsonRes as res } from '@/test-utils/fetch';
-import { queryWrapper } from '@/test-utils/query-wrapper';
+import { createTestQueryClient, queryWrapper as wrapQuery } from '@/test-utils/query-wrapper';
+const clients: ReturnType<typeof createTestQueryClient>[] = [];
+const queryWrapper = () => {
+  const client = createTestQueryClient();
+  clients.push(client);
+  return wrapQuery(client);
+};
 
 // Server state: no categories, two routines with categoryId null (legacy data).
-// The hook must adopt them into a freshly created 기타 category — uncategorized
-// routines must not exist.
+// Reload preserves intentional null categories without writing to the server.
 const realFetch = global.fetch;
 afterEach(() => {
   global.fetch = realFetch;
+  clients.splice(0).forEach((client) => client.clear());
 });
 
 describe('useMyRoomData — completion routing on id collision', () => {
@@ -308,7 +314,7 @@ describe('useMyRoomData — uncategorized adoption', () => {
     expect(result.current.routines.every((item) => item.category == null)).toBe(true);
   });
 
-  it('creates a 기타 category and reassigns orphan routines on load', async () => {
+  it('미분류 루틴은 재조회해도 카테고리를 생성하거나 변경하지 않는다', async () => {
     const calls: { url: string; method: string; body?: string }[] = [];
     global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
       const method = init?.method ?? 'GET';
@@ -337,15 +343,15 @@ describe('useMyRoomData — uncategorized adoption', () => {
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    // A real 기타 category was created server-side…
-    expect(calls.some((c) => c.method === 'POST' && c.url.endsWith('/categories'))).toBe(true);
-    // …and both orphans were reassigned to it.
-    const puts = calls.filter((c) => c.method === 'PUT' && /\/routines\/\d+$/.test(c.url));
-    expect(puts).toHaveLength(2);
-    expect(JSON.parse(puts[0].body ?? '{}').categoryId).toBe(9);
-
-    expect(result.current.categories.map((c) => c.name)).toContain('기타');
-    expect(result.current.routines.every((r) => r.category === '9')).toBe(true);
+    expect(calls.every((c) => c.method === 'GET')).toBe(true);
+    expect(result.current.categories).toEqual([]);
+    expect(result.current.routines).toHaveLength(2);
+    expect(result.current.routines.every((r) => r.category == null)).toBe(true);
+    await act(async () => {
+      await result.current.reload();
+    });
+    expect(calls.every((c) => c.method === 'GET')).toBe(true);
+    expect(result.current.routines.every((r) => r.category == null)).toBe(true);
   });
 });
 
@@ -646,5 +652,58 @@ describe('useMyRoomData — 스케줄 수정의 버전 분기 (#1028)', () => {
 
     expect(result.current.routines.map((r) => r.id)).toEqual(['r42']);
     expect(result.current.completions.r42).toEqual([today()]);
+  });
+});
+
+describe('공통 작성 — 실제 생성 요청과 미분류 유지', () => {
+  const todayIso = '2026-09-10';
+  it('루틴 생성은 categoryId 없이 반복/시작일을 보내고 재조회 후에도 미분류를 유지한다', async () => {
+    const requests: { url: string; method: string; body: Record<string, unknown> | undefined }[] =
+      [];
+    const routines: Record<string, unknown>[] = [];
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+      const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+      requests.push({ url, method, body });
+      if (url.endsWith('/routines') && method === 'POST') {
+        const routine = { ...body, id: 55, categoryId: null };
+        routines.push(routine);
+        return res(routine);
+      }
+      if (url.endsWith('/routines')) return res({ items: routines });
+      if (url.endsWith('/today')) return res({ categories: [], summary: {}, streak: {} });
+      if (url.endsWith('/me')) return res({ userId: 1, nickname: '테스터' });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => {
+      expect(
+        await result.current.addRoutine({
+          title: '독서',
+          category: '',
+          repeat: 'weekly',
+          days: [5],
+          startDate: todayIso,
+          alarmEnabled: true,
+          time: '19:30',
+        }),
+      ).toBe(true);
+      await result.current.reload();
+    });
+    const post = requests.find((r) => r.method === 'POST' && r.url.endsWith('/routines'))!;
+    expect(post.body).toEqual(
+      expect.objectContaining({
+        title: '독서',
+        authType: 'CHECK',
+        repeatType: 'WEEKLY',
+        repeatDays: { daysOfWeek: ['FRI'] },
+        startsOn: todayIso,
+        scheduledTime: '19:30:00',
+      }),
+    );
+    expect(post.body).not.toHaveProperty('categoryId');
+    expect(requests.filter((r) => r.method !== 'GET')).toHaveLength(1);
+    expect(result.current.routines.find((r) => r.id === 'r55')?.category).toBeUndefined();
   });
 });

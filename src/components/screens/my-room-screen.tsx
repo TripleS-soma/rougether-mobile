@@ -3,7 +3,6 @@ import {
   Animated,
   type GestureResponderEvent,
   KeyboardAvoidingView,
-  LayoutAnimation,
   Platform,
   Pressable,
   ScrollView,
@@ -40,9 +39,7 @@ import {
   useStableCallback,
 } from '@/hooks/use-stable-value';
 import { CategoryDragHandle } from '@/components/screens/my-room/category-drag-handle';
-import { QuickAddRow } from '@/components/screens/my-room/quick-add-row';
 import { RoutineRow } from '@/components/screens/my-room/routine-row';
-import { useQuickAddKeyboard } from '@/components/screens/my-room/use-quick-add-keyboard';
 import { useRewardFly } from '@/components/screens/my-room/use-reward-fly';
 import { useRoomImageSave } from '@/components/screens/my-room/use-room-image-save';
 import { useWidgetRoomCapture } from '@/components/screens/my-room/use-widget-room-capture';
@@ -56,12 +53,14 @@ import { DateEditSheet } from '@/components/screens/sheets/date-edit-sheet';
 import { RenameDialog } from '@/components/screens/sheets/rename-dialog';
 import { RoutineMenuSheet } from '@/components/screens/sheets/routine-menu-sheet';
 import { TimePickerSheet } from '@/components/screens/sheets/time-picker-sheet';
-import { TodoComposeSheet } from '@/components/screens/sheets/todo-compose-sheet';
-import { TodoDateDialog } from '@/components/screens/sheets/todo-date-dialog';
+import {
+  RoutineTodoComposeSheet,
+  type ComposeKind,
+} from '@/components/screens/sheets/routine-todo-compose-sheet';
 import { Loading } from '@/components/ui/loading';
 import type { CalendarDayCount } from '@/api/types';
 import { RoomGrowthPill, type RoomGrowthProps } from '@/components/ui/room-growth-pill';
-import { calendarProgress, type CalendarFilter } from '@/utils/calendar-progress';
+import { type CalendarFilter } from '@/utils/calendar-progress';
 import { Calendar } from '@/components/ui/calendar';
 import { CoachTarget } from '@/components/ui/coach-mark';
 import { GlassSurface } from '@/components/ui/glass-surface';
@@ -74,6 +73,7 @@ import { useToast } from '@/components/ui/toast';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import {
   type CategoryVisibility,
+  type NewRoutine,
   ROUTINE_CATEGORIES,
   type Routine,
   type RoutineCategoryMeta,
@@ -90,7 +90,7 @@ import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
-import { formatDate, localDate, monthDayLabel, todayIso } from '@/utils/datetime';
+import { localDate, monthDayLabel, todayIso } from '@/utils/datetime';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
 
 // 스케줄 판정은 my-room/schedule로 이동 (#693) — 기존 임포트 경로 유지용 재수출.
@@ -219,10 +219,12 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
     /** 당겨서 새로고침 (#454) — 서버 데이터 전체 리로드. resolve까지 발바닥이 두근거린다. */
     onRefresh?: () => Promise<void> | void;
     /** Quick-add a todo to a category with a due date (the + on a category header). */
+    onCreateRoutine?: (routine: NewRoutine) => boolean | void | Promise<boolean | void>;
     onQuickAddRoutine?: (
       category: string,
       title: string,
       dueDate: string,
+      time?: string,
     ) => boolean | void | Promise<boolean | void>;
     /**
      * Categories whose quick-add(+) is hidden — 공동미션 연동 카테고리는 미션의
@@ -305,7 +307,6 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   growthLevel,
   growthPoints,
   pointsToNextLevel,
-  calendarMonthDays,
   calendarMonthLoading,
   calendarMonthError,
   calendarDayError,
@@ -313,7 +314,6 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   onRetryCalendarDay,
   onCalendarMonthChange,
   view,
-  onAddRoutineForDate,
   placements = [],
   furniture,
   wallpapers,
@@ -345,6 +345,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   onOpenFurnitureStudio,
   onRefresh,
   onQuickAddRoutine,
+  onCreateRoutine,
   quickAddDisabledCategoryIds = [],
   onRenameRoutine,
   onEditRoutine,
@@ -446,14 +447,11 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     });
   };
 
-  // Which category's quick-add input is open, the in-progress todo text + due
-  // date, and which routine's kebab menu is open.
-  const [addingCategory, setAddingCategory] = useState<string | null>(null);
-  const [composeDate, setComposeDate] = useState<string | null>(null);
-  // 입력 중인 제목은 QuickAddRow가 소유한다 (#769) — 여기 두면 한 글자마다
-  // 화면 전체가 리렌더돼 전 행의 스와이프 트리·제스처까지 재조정된다.
-  const [newTodoDate, setNewTodoDate] = useState(today);
-  const [todoDateOpen, setTodoDateOpen] = useState(false);
+  const [compose, setCompose] = useState<{
+    date: string;
+    category: string;
+    kind: ComposeKind;
+  } | null>(null);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   // 메뉴 시트의 날짜 문맥 — 방탭은 오늘, 달력탭은 선택한 날짜로 연다 (#323).
   const [menuDate, setMenuDate] = useState(today);
@@ -493,15 +491,6 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   const tab = view ?? ownTab;
   const [ownSelectedDate, setOwnSelectedDate] = useState(() => today);
   const [calendarFilter, setCalendarFilter] = useState<CalendarFilter>('all');
-  const progressByDate = useMemo(() => {
-    const counts: Record<string, { total: number; completed: number }> = {};
-    for (const day of calendarMonthDays ?? []) {
-      const progress = calendarProgress(day, calendarFilter);
-      if (day.date && progress) counts[day.date] = progress;
-    }
-    return counts;
-  }, [calendarMonthDays, calendarFilter]);
-  const showCalendarProgress = !!onRetryCalendarMonth || !!calendarMonthDays;
   const selectedDate = controlledSelectedDate ?? ownSelectedDate;
   const dateRoutines = useMemo(
     () =>
@@ -614,67 +603,23 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   const scrollRef = useRef<ScrollView>(null);
   // 서브화면(꾸미기·루틴 관리 …)에 다녀와도 보던 자리로 (#763).
   const scrollRestore = useScrollRestore(scrollRef, { getInitialScrollY, onScrollY });
-  // 키보드 높이 추적·입력행 밀어 올리기는 my-room/use-quick-add-keyboard —
-  // 입력이 열린 카테고리를 넘기면 키보드+패딩이 자리 잡은 뒤 입력행을 보이게 민다.
-  const { addRowRef, todoInputRef, keyboardPad, scrollYRef, scrollToQuickAdd } =
-    useQuickAddKeyboard(scrollRef, addingCategory);
-  // Set while opening the date picker so the input's blur doesn't commit/close.
-  const skipBlurCommit = useRef(false);
-
-  // 방탭은 오늘, 달력탭은 선택한 날짜를 기본 마감일로 연다 (#323).
-  const openQuickAdd = (categoryId: string, defaultDate = today) => {
-    setNewTodoDate(defaultDate);
-    const opening = addingCategory !== categoryId;
-    setAddingCategory(opening ? categoryId : null);
-    if (opening) {
-      // First pass once the input has rendered (fast feedback); the effect
-      // above does the authoritative pass after the keyboard + padding settle.
-      setTimeout(scrollToQuickAdd, 80);
-    }
-  };
-
-  const commitTodo = (categoryId: string, raw: string) => {
-    // Blur fired only to open the date picker → keep the input open.
-    if (skipBlurCommit.current) {
-      skipBlurCommit.current = false;
-      return;
-    }
-    const title = raw.trim();
-    // 새 행이 뚝 나타나는 대신 부드럽게 삽입되고 기존 행이 밀려난다 (#452).
-    if (title) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    if (title) onQuickAddRoutine?.(categoryId, title, newTodoDate);
-    // 행이 닫히며 언마운트되므로 입력 상태는 자연히 사라진다.
-    setAddingCategory(null);
-  };
-
-  // 카테고리 헤더의 + 버튼 — 방탭·달력탭 공용 (#323).
-  const renderQuickAddButton = (meta: RoutineCategoryMeta, defaultDate: string) =>
-    canQuickAdd(meta.id) ? (
+  const openCompose = (date: string, category = '') =>
+    setCompose({
+      date,
+      category,
+      kind: tab === 'calendar' && calendarFilter === 'todo' ? 'todo' : 'routine',
+    });
+  const renderQuickAddButton = (meta: RoutineCategoryMeta, date: string) =>
+    canQuickAdd(meta.id) && !meta.deleted && meta.houseId == null ? (
       <ScalePressable
-        onPress={() => openQuickAdd(meta.id, defaultDate)}
+        onPress={() => openCompose(date, meta.id)}
         accessibilityRole="button"
-        accessibilityLabel={`${meta.name} 할 일 추가`}
+        accessibilityLabel={`${meta.name}에 추가`}
         hitSlop={8}
         style={[styles.catAdd, { backgroundColor: meta.color }]}>
         <Icon name="add" size={14} color={t.onPrimary} />
       </ScalePressable>
     ) : null;
-
-  // 퀵애드 입력행 — 제목 입력 + 마감일 칩, blur가 커밋. 방탭·달력탭 공용 (#323).
-  const renderQuickAddRow = (categoryId: string) => (
-    <QuickAddRow
-      ref={addRowRef}
-      inputRef={todoInputRef}
-      dateLabel={newTodoDate === today ? '오늘' : formatDate(newTodoDate)}
-      onCommit={(title) => commitTodo(categoryId, title)}
-      onOpenDatePicker={() => setTodoDateOpen(true)}
-      // press-in은 입력의 blur보다 먼저 발화한다 — 이 blur는 피커 때문임을
-      // 표시해 행이 닫히지 않게 한다.
-      onDatePickerPressIn={() => {
-        skipBlurCommit.current = true;
-      }}
-    />
-  );
 
   // Completion is toggled for a specific date (오늘 in 방, 선택한 날짜 in 달력).
   const handleToggle = (routine: Routine, date: string, e?: GestureResponderEvent) => {
@@ -1065,7 +1010,6 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               />
             );
           })}
-          {addingCategory === meta.id ? renderQuickAddRow(meta.id) : null}
         </View>
       </Animated.View>
     );
@@ -1090,14 +1034,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               }
             : null,
         navInset ? { paddingBottom: Spacing.six + navInset } : null,
-        addingCategory != null && keyboardPad > 0 ? { paddingBottom: keyboardPad + 120 } : null,
       ]}
       {...scrollRestore}
-      onScroll={(e) => {
-        // 빠른 추가 입력 스크롤인(#…)용 로컬 추적 + 셸의 탭별 기억(#763).
-        scrollYRef.current = e.nativeEvent.contentOffset.y;
-        scrollRestore.onScroll?.(e);
-      }}
       keyboardShouldPersistTaps="handled">
       {children}
     </PawRefreshScroll>
@@ -1225,8 +1163,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           onSelect={pickDate}
           today={today}
           monthSwipe={false}
-          markedDates={calendarFilter === 'routine' ? undefined : markedTodoDates}
-          progressByDate={showCalendarProgress ? progressByDate : undefined}
+          markedDates={markedTodoDates}
           glass
           onVisibleMonthChange={onCalendarMonthChange}
           headerAccessory={
@@ -1266,12 +1203,12 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         {calendarMonthError ? (
           <View style={styles.calendarState}>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              달성도를 새로 불러오지 못했어요
+              이번 달 기록을 새로 불러오지 못했어요
             </Text>
             <Pressable
               onPress={onRetryCalendarMonth}
               accessibilityRole="button"
-              accessibilityLabel="월 달성도 다시 불러오기"
+              accessibilityLabel="월 기록 다시 불러오기"
               style={styles.calendarRetry}>
               <Text style={[Typography.label, { color: t.primaryText }]}>다시 시도</Text>
             </Pressable>
@@ -1294,9 +1231,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               ) : null}
               <CoachTarget id="room-add-routine">
                 <Pressable
-                  onPress={() => setComposeDate(today)}
+                  onPress={() => openCompose(today)}
                   accessibilityRole="button"
-                  accessibilityLabel="오늘 할 일 추가">
+                  accessibilityLabel="오늘에 추가">
                   <GlassSurface fallbackColor={t.surface} style={styles.quickAddTrigger}>
                     <Icon name="add" size={22} color={t.text} />
                   </GlassSurface>
@@ -1350,9 +1287,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           </View>
           <View style={styles.sectionHeadRight}>
             <Pressable
-              onPress={() => setComposeDate(selectedDate)}
+              onPress={() => openCompose(selectedDate)}
               accessibilityRole="button"
-              accessibilityLabel="이 날에 할 일 추가">
+              accessibilityLabel="선택한 날에 추가">
               <GlassSurface fallbackColor={t.surface} style={styles.quickAddTrigger}>
                 <Icon name="add" size={22} color={t.text} />
               </GlassSurface>
@@ -1566,42 +1503,38 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         onRename={onRenameRoutine}
       />
 
-      <TodoComposeSheet
-        visible={composeDate !== null}
-        initialDate={composeDate ?? today}
+      <RoutineTodoComposeSheet
+        visible={compose !== null}
+        initialDate={compose?.date ?? today}
+        initialKind={compose?.kind ?? 'routine'}
+        initialCategory={compose?.category ?? ''}
         today={today}
-        categories={categories.filter(
-          (category) =>
-            !!category.id &&
-            !category.deleted &&
-            category.houseId == null &&
-            canQuickAdd(category.id),
-        )}
-        onSubmit={async (category, title, date) => {
-          if (!onQuickAddRoutine) return false;
-          const result = await onQuickAddRoutine(category, title, date);
-          if (result !== false && tab === 'calendar') {
-            pickDate(date);
-            if (calendarFilter === 'routine') setCalendarFilter('todo');
+        categories={categories.filter((category) => canQuickAdd(category.id))}
+        onSubmit={async (draft) => {
+          let result: boolean | void;
+          if (draft.kind === 'routine') {
+            if (!onCreateRoutine) return false;
+            result = await onCreateRoutine(draft.routine);
+          } else {
+            if (!onQuickAddRoutine) return false;
+            result = draft.time
+              ? await onQuickAddRoutine(draft.category, draft.title, draft.date, draft.time)
+              : await onQuickAddRoutine(draft.category, draft.title, draft.date);
+          }
+          if (result !== false) {
+            if (tab === 'calendar') {
+              pickDate(draft.date);
+              if (calendarFilter !== 'all' && calendarFilter !== draft.kind)
+                setCalendarFilter(draft.kind);
+            }
+            if (draft.date !== today)
+              toast(
+                `${monthDayLabel(localDate(draft.date))}에 ${draft.kind === 'routine' ? '루틴' : '할 일'}을 추가했어요`,
+              );
           }
           return result;
         }}
-        onAddRoutine={
-          tab === 'calendar' ? onAddRoutineForDate : onAddRoutine ? () => onAddRoutine() : undefined
-        }
-        onClose={() => setComposeDate(null)}
-      />
-
-      <TodoDateDialog
-        visible={todoDateOpen}
-        value={newTodoDate}
-        onSelect={(date) => {
-          setNewTodoDate(date);
-          setTodoDateOpen(false);
-          // Re-focus the title input so blur-to-commit still works.
-          setTimeout(() => todoInputRef.current?.focus(), 60);
-        }}
-        onClose={() => setTodoDateOpen(false)}
+        onClose={() => setCompose(null)}
       />
 
       {/* Header hamburger popover: quick links to the management screens. */}

@@ -236,11 +236,13 @@ export function toTodoCreate(
   category: string | undefined,
   title: string,
   dueDate: string,
+  time?: string,
 ): TodoCreateRequest {
   return {
     title,
     categoryId: toCategoryId(category),
     dueDate,
+    ...(time ? { dueTime: toApiTime(time) } : {}),
   };
 }
 
