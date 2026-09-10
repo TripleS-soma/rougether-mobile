@@ -509,7 +509,11 @@ export function FriendRoomScreen({
                 placeholder="따뜻한 한마디를 남겨보세요"
                 placeholderTextColor={t.textMuted}
                 accessibilityLabel="방명록 입력"
-                style={[styles.gbInput, { backgroundColor: t.surfaceMuted, color: t.text }]}
+                style={[
+                  styles.gbInput,
+                  emph('normal'),
+                  { backgroundColor: t.surfaceMuted, color: t.text },
+                ]}
               />
               <ScalePressable
                 onPress={sendNote}

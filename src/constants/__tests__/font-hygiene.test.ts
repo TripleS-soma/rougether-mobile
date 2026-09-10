@@ -52,6 +52,22 @@ function safeStyleVars(source: string): Set<string> {
   return out;
 }
 
+/**
+ * `<TextInput …>`의 속성 구간. `<Text>`용 정규식(`[^>]*?`)을 그대로 쓰면
+ * `onChangeText={(v) => …}`의 `=>`에서 잘려 뒤따르는 `style`을 못 본다 —
+ * 여기서는 괄호 깊이를 세며 속성이 끝나는 `>`까지 걸어간다.
+ */
+function attrsOfElement(source: string, start: number): string {
+  let depth = 0;
+  for (let i = start; i < source.length; i += 1) {
+    const c = source[i];
+    if (c === '{' || c === '[' || c === '(') depth += 1;
+    else if (c === '}' || c === ']' || c === ')') depth -= 1;
+    else if (c === '>' && depth === 0) return source.slice(start, i);
+  }
+  return source.slice(start);
+}
+
 /** fontSize는 있는데 fontFamily가 없는 StyleSheet 키 — 그대로 쓰면 시스템 폰트다. */
 function fontlessStyleKeys(source: string): Set<string> {
   const out = new Set<string>();
@@ -105,6 +121,49 @@ describe('폰트 위생 — 선택 폰트가 모든 텍스트에 닿는가 (#382
         if (bad.every((k) => allowed.includes(k)) && bad.length > 0) continue;
 
         const line = before.split('\n').length;
+        offenders.push(`${rel}:${line}  ${used.length ? `styles.${used.join(',')}` : '(인라인)'}`);
+      }
+    }
+
+    expect(offenders).toEqual([]);
+  });
+
+  /**
+   * `<TextInput>`은 위 검사의 사각지대였다 (2026-09-10). 정규식이 `<Text` 뒤에
+   * 공백이나 `>`를 요구해 `<TextInput`은 한 번도 걸리지 않았고, 그 사이
+   * 퀵애드·회원가입·집 검색·방명록 등 13곳의 입력창이 `fontSize`만 든 채로
+   * 남아 폰트 설정(#382)이 입력창에서만 통째로 무력화돼 있었다.
+   *
+   * 입력창은 `<Text>`처럼 부모에게서 폰트를 물려받지 않으므로 중첩 예외가 없다.
+   */
+  it('타이포 스케일도 emph()도 거치지 않는 <TextInput>이 없다', () => {
+    const offenders: string[] = [];
+
+    for (const path of sourceFiles(SRC)) {
+      const rel = path.replace(`${SRC}/`, 'src/');
+      if (EXEMPT.some((re) => re.test(rel))) continue;
+
+      const source = readFileSync(path, 'utf8');
+      if (!source.includes('<TextInput')) continue;
+
+      const safeVars = safeStyleVars(source);
+      const fontless = fontlessStyleKeys(source);
+
+      for (const m of source.matchAll(/<TextInput[\s/>]/g)) {
+        // `React.Ref<TextInput>`·`useRef<TextInput>` 같은 타입 인자는 건너뛴다 —
+        // JSX 태그 앞에는 식별자 문자가 오지 않는다.
+        if (/[\w$.]/.test(source[m.index - 1] ?? '')) continue;
+
+        const attrs = attrsOfElement(source, m.index + '<TextInput'.length);
+
+        if (FONT_SOURCES.some((k) => attrs.includes(k))) continue;
+        if ([...safeVars].some((v) => attrs.includes(v))) continue;
+
+        const used = [...attrs.matchAll(/styles\.(\w+)/g)].map((s) => s[1]);
+        // 스타일 키가 붙어 있고 그중 폰트 없는 게 없으면 통과.
+        if (used.length > 0 && used.every((k) => !fontless.has(k))) continue;
+
+        const line = source.slice(0, m.index).split('\n').length;
         offenders.push(`${rel}:${line}  ${used.length ? `styles.${used.join(',')}` : '(인라인)'}`);
       }
     }

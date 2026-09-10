@@ -126,7 +126,7 @@ export function CategoryFormSheet({
               onChangeText={setName}
               placeholder="예) 자기계발"
               placeholderTextColor={t.textMuted}
-              style={[styles.flex, styles.nameInput, { color: t.text }]}
+              style={[styles.flex, styles.nameInput, emph('normal'), { color: t.text }]}
             />
           </View>
 
