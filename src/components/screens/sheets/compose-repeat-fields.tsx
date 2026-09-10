@@ -29,9 +29,7 @@ export function ComposeRepeatFields({
       accessibilityLabel={label}
       accessibilityState={{ selected }}
       style={[styles.choice, { backgroundColor: selected ? t.primarySoft : t.surfaceMuted }]}>
-      <Text style={[Typography.label, { color: selected ? t.primaryText : t.textMuted }]}>
-        {label}
-      </Text>
+      <Text style={[Typography.label, { color: selected ? t.primaryText : t.text }]}>{label}</Text>
     </Pressable>
   );
   return (

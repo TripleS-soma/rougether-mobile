@@ -96,6 +96,10 @@ export function RoutineTodoComposeSheet({
   const close = () => {
     if (savingRef.current) return;
     Keyboard.dismiss();
+    if (panel === 'category') {
+      setPanel(null);
+      return;
+    }
     if (discard) {
       setDiscard(false);
       return;
@@ -170,14 +174,19 @@ export function RoutineTodoComposeSheet({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ expanded: panel === target }}
-      style={[styles.row, { borderBottomColor: t.border }]}>
+      style={styles.row}>
       <Text style={[Typography.body, { color: t.text }]}>{name}</Text>
-      <Text numberOfLines={1} style={[Typography.body, styles.value, { color: t.textMuted }]}>
+      <Text
+        numberOfLines={1}
+        style={[Typography.body, emph('medium'), styles.value, { color: t.text }]}>
         {value}
       </Text>
       <Icon name="forward" size={14} color={t.textMuted} />
     </Pressable>
   );
+  const divider = <View style={[styles.divider, { backgroundColor: t.border }]} />;
+  const groupStyle = [styles.group, { backgroundColor: t.surface, borderColor: t.border }];
+  const selectingCategory = panel === 'category';
   return (
     <BottomSheet
       visible={visible}
@@ -187,60 +196,123 @@ export function RoutineTodoComposeSheet({
       dragScope="header"
       cardStyle={[styles.sheet, { backgroundColor: t.screen }]}>
       <View style={styles.header} testID="compose-fixed-header">
-        <Pressable
-          onPress={close}
-          disabled={saving}
-          accessibilityRole="button"
-          accessibilityLabel="취소"
-          style={styles.action}>
-          <Text style={[Typography.label, { color: t.textMuted }]}>취소</Text>
-        </Pressable>
-        <GlassSurface interactive={false} fallbackColor={t.surfaceMuted} style={styles.segment}>
-          <View style={styles.segmentRow} accessibilityRole="tablist">
-            {(['routine', 'todo'] as const).map((next) => (
-              <Pressable
-                key={next}
-                disabled={saving || discard}
-                accessibilityRole="tab"
-                accessibilityLabel={next === 'routine' ? '루틴' : '할 일'}
-                accessibilityState={{ selected: kind === next, disabled: saving || discard }}
-                onPress={() => {
-                  setKind(next);
-                  setPanel(null);
-                  setError('');
-                }}
-                style={[styles.kind, kind === next && { backgroundColor: t.surface }]}>
-                <Text
-                  style={[
-                    Typography.label,
-                    emph(kind === next ? 'bold' : 'normal'),
-                    { color: t.text },
-                  ]}>
-                  {next === 'routine' ? '루틴' : '할 일'}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </GlassSurface>
-        <Pressable
-          onPress={() => void submit()}
-          disabled={!canSubmit}
-          accessibilityRole="button"
-          accessibilityLabel={`${label} 저장`}
-          accessibilityState={{ disabled: !canSubmit, busy: saving }}
-          style={styles.action}>
-          <Text
-            style={[
-              Typography.label,
-              emph('bold'),
-              { color: canSubmit ? t.primaryText : t.textDisabled },
-            ]}>
-            {saving ? '저장 중' : '추가'}
-          </Text>
-        </Pressable>
+        {selectingCategory ? (
+          <>
+            <Pressable
+              onPress={() => setPanel(null)}
+              accessibilityRole="button"
+              accessibilityLabel="작성 화면으로 돌아가기"
+              style={styles.back}>
+              <Icon name="back" size={18} color={t.text} />
+              <Text style={[Typography.label, { color: t.text }]}>뒤로</Text>
+            </Pressable>
+            <Text
+              accessibilityRole="header"
+              style={[Typography.h3, styles.pageTitle, { color: t.text }]}>
+              카테고리
+            </Text>
+            <View style={styles.backSpace} />
+          </>
+        ) : (
+          <>
+            <Pressable
+              onPress={close}
+              disabled={saving}
+              accessibilityRole="button"
+              accessibilityLabel="취소"
+              style={styles.action}>
+              <Text style={[Typography.label, { color: t.text }]}>취소</Text>
+            </Pressable>
+            <GlassSurface interactive={false} fallbackColor={t.surfaceMuted} style={styles.segment}>
+              <View style={styles.segmentRow} accessibilityRole="tablist">
+                {(['routine', 'todo'] as const).map((next) => (
+                  <Pressable
+                    key={next}
+                    disabled={saving || discard}
+                    accessibilityRole="tab"
+                    accessibilityLabel={next === 'routine' ? '루틴' : '할 일'}
+                    accessibilityState={{ selected: kind === next, disabled: saving || discard }}
+                    onPress={() => {
+                      setKind(next);
+                      setPanel(null);
+                      setError('');
+                    }}
+                    style={[styles.kind, kind === next && { backgroundColor: t.surface }]}>
+                    <Text
+                      style={[
+                        Typography.label,
+                        emph(kind === next ? 'bold' : 'normal'),
+                        { color: t.text },
+                      ]}>
+                      {next === 'routine' ? '루틴' : '할 일'}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </GlassSurface>
+            <Pressable
+              onPress={() => void submit()}
+              disabled={!canSubmit}
+              accessibilityRole="button"
+              accessibilityLabel={`${label} 저장`}
+              accessibilityState={{ disabled: !canSubmit, busy: saving }}
+              style={styles.action}>
+              <Text
+                style={[
+                  Typography.label,
+                  emph('bold'),
+                  { color: canSubmit ? t.primaryText : t.textDisabled },
+                ]}>
+                {saving ? '저장 중' : '추가'}
+              </Text>
+            </Pressable>
+          </>
+        )}
       </View>
       <SheetDragExclude>
+        {selectingCategory ? (
+          <ScrollView
+            contentContainerStyle={[
+              styles.body,
+              { paddingBottom: Math.max(insets?.bottom ?? 0, Spacing.four) },
+            ]}>
+            <View style={groupStyle}>
+              {[{ id: '', name: '미분류' }, ...availableCategories].map((item, index) => (
+                <View key={item.id}>
+                  {index > 0 ? divider : null}
+                  <Pressable
+                    accessibilityRole="radio"
+                    accessibilityLabel={item.name}
+                    accessibilityState={{ checked: categoryId === item.id }}
+                    onPress={() => {
+                      setCategoryId(item.id);
+                      setPanel(null);
+                    }}
+                    style={styles.row}>
+                    <View style={styles.categoryLabel}>
+                      <Text style={[Typography.body, emph('medium'), { color: t.text }]}>
+                        {item.name}
+                      </Text>
+                      {'visibility' in item ? (
+                        <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                          {VISIBILITY_LABELS[item.visibility]}
+                        </Text>
+                      ) : null}
+                    </View>
+                    <View style={styles.check}>
+                      {categoryId === item.id ? (
+                        <Icon name="check" size={20} color={t.primaryText} />
+                      ) : null}
+                    </View>
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+        ) : null}
         <ScrollView
+          style={selectingCategory && styles.hidden}
+          accessibilityElementsHidden={selectingCategory}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           contentContainerStyle={[
@@ -266,165 +338,149 @@ export function RoutineTodoComposeSheet({
               </Pressable>
             </View>
           ) : (
-            <View pointerEvents={saving ? 'none' : 'auto'}>
-              <TextInput
-                autoFocus
-                accessibilityLabel={`${label} 제목`}
-                placeholder={kind === 'routine' ? '루틴 이름' : '할 일'}
-                placeholderTextColor={t.textMuted}
-                value={title}
-                onChangeText={setTitle}
-                editable={!saving}
-                maxLength={160}
-                returnKeyType="done"
-                onSubmitEditing={() => void submit()}
-                style={[Typography.h3, styles.input, { color: t.text }]}
-              />
-              {kind === 'routine' ? (
-                <>
-                  {row('반복', repeatLabel, 'repeat')}
-                  {panel === 'repeat' ? (
-                    <View style={styles.panel}>
-                      <ComposeRepeatFields
-                        value={repeat}
-                        onChange={(next) => {
-                          setRepeat(next);
-                          setError('');
-                        }}
-                      />
-                    </View>
-                  ) : null}
-                </>
-              ) : null}
-              {row(
-                kind === 'routine' ? '시작일' : '날짜',
-                dateLabel(date),
-                'date',
-                `${label} 날짜 선택`,
-              )}
-              {panel === 'date' ? (
-                <View style={styles.panel}>
-                  <Calendar
-                    value={date}
-                    min={kind === 'routine' ? today : undefined}
-                    onSelect={(next) => {
-                      setDate(next);
-                      setPanel(null);
-                      setError('');
-                    }}
-                  />
-                </View>
-              ) : null}
-              <Pressable
-                onPress={() => {
-                  Keyboard.dismiss();
-                  setDetails(!details);
-                  setPanel(null);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="추가 설정"
-                accessibilityState={{ expanded: details }}
-                style={styles.row}>
-                <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                  {category?.name ?? '추가 설정'}
-                </Text>
-                <Text style={[Typography.supporting, styles.value, { color: t.textMuted }]}>
-                  {details ? '접기' : '카테고리 · 시간'}
-                </Text>
-                <Icon name="forward" size={14} color={t.textMuted} />
-              </Pressable>
-              {details ? (
-                <>
-                  {row(
-                    '카테고리',
-                    category?.name ?? '미분류',
-                    'category',
-                    `카테고리 선택, ${category?.name ?? '미분류'}`,
-                  )}
-                  {panel === 'category' ? (
-                    <View style={styles.panel}>
-                      {[{ id: '', name: '미분류' }, ...availableCategories].map((item) => (
-                        <Pressable
-                          key={item.id}
-                          accessibilityRole="radio"
-                          accessibilityLabel={item.name}
-                          accessibilityState={{ checked: categoryId === item.id }}
-                          onPress={() => {
-                            setCategoryId(item.id);
-                            setPanel(null);
+            <View pointerEvents={saving ? 'none' : 'auto'} style={styles.form}>
+              <View style={groupStyle}>
+                <TextInput
+                  autoFocus
+                  accessibilityLabel={`${label} 제목`}
+                  placeholder={kind === 'routine' ? '루틴 이름' : '할 일'}
+                  placeholderTextColor={t.textMuted}
+                  value={title}
+                  onChangeText={setTitle}
+                  editable={!saving}
+                  maxLength={160}
+                  returnKeyType="done"
+                  onSubmitEditing={() => void submit()}
+                  style={[Typography.h3, styles.input, { color: t.text }]}
+                />
+              </View>
+              <View style={groupStyle}>
+                {kind === 'routine' ? (
+                  <>
+                    {row('반복', repeatLabel, 'repeat')}
+                    {panel === 'repeat' ? (
+                      <View style={styles.panel}>
+                        <ComposeRepeatFields
+                          value={repeat}
+                          onChange={(next) => {
+                            setRepeat(next);
+                            setError('');
                           }}
-                          style={styles.row}>
-                          <Text style={[Typography.body, { color: t.text }]}>{item.name}</Text>
-                          {'visibility' in item ? (
-                            <Text
-                              style={[Typography.supporting, styles.value, { color: t.textMuted }]}>
-                              {VISIBILITY_LABELS[item.visibility]}
-                            </Text>
-                          ) : (
-                            <View style={styles.value} />
-                          )}
-                          {categoryId === item.id ? (
-                            <Icon name="check" size={18} color={t.primaryText} />
-                          ) : null}
-                        </Pressable>
-                      ))}
-                    </View>
-                  ) : null}
-                  <View style={styles.row}>
-                    <Text style={[Typography.body, styles.value, { color: t.text }]}>
-                      {kind === 'routine' ? '알림 시간' : '시간'}
-                    </Text>
-                    <ToggleSwitch
-                      value={time.enabled}
-                      accessibilityLabel={`${label} 시간 설정`}
-                      onToggle={() => {
-                        Keyboard.dismiss();
-                        setTimes({ ...times, [kind]: { ...time, enabled: !time.enabled } });
-                        setPanel(time.enabled ? null : 'time');
+                        />
+                      </View>
+                    ) : null}
+                    {divider}
+                  </>
+                ) : null}
+                {row(
+                  kind === 'routine' ? '시작일' : '날짜',
+                  dateLabel(date),
+                  'date',
+                  `${label} 날짜 선택`,
+                )}
+                {panel === 'date' ? (
+                  <View style={styles.panel}>
+                    <Calendar
+                      value={date}
+                      min={kind === 'routine' ? today : undefined}
+                      onSelect={(next) => {
+                        setDate(next);
+                        setPanel(null);
+                        setError('');
                       }}
                     />
                   </View>
-                  {time.enabled ? (
-                    <>
-                      {row('시간', formatTime(time.value), 'time', `${label} 시간 선택`)}
-                      {panel === 'time' ? (
-                        <ComposeTimeFields
-                          value={time.value}
-                          onChange={(value) => setTimes({ ...times, [kind]: { ...time, value } })}
-                        />
-                      ) : null}
-                    </>
-                  ) : null}
-                  {kind === 'routine' ? (
-                    <>
-                      {row('종료일', endDate ? dateLabel(endDate) : '없음', 'end')}
-                      {panel === 'end' ? (
-                        <View style={styles.panel}>
-                          <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel="종료일 없음"
-                            onPress={() => {
-                              setEndDate(undefined);
-                              setPanel(null);
-                            }}
-                            style={styles.row}>
-                            <Text style={[Typography.label, { color: t.primaryText }]}>없음</Text>
-                          </Pressable>
-                          <Calendar
-                            value={endDate ?? date}
-                            min={date < today ? today : date}
-                            onSelect={(next) => {
-                              setEndDate(next);
-                              setPanel(null);
-                              setError('');
-                            }}
-                          />
-                        </View>
-                      ) : null}
-                    </>
-                  ) : null}
-                </>
-              ) : null}
+                ) : null}
+              </View>
+              <View style={groupStyle}>
+                <Pressable
+                  onPress={() => {
+                    Keyboard.dismiss();
+                    setDetails(!details);
+                    setPanel(null);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="추가 설정"
+                  accessibilityState={{ expanded: details }}
+                  style={styles.row}>
+                  <Text style={[Typography.label, { color: t.text }]}>추가 설정</Text>
+                  <Text style={[Typography.supporting, styles.value, { color: t.textMuted }]}>
+                    {details ? '접기' : (category?.name ?? '카테고리 · 시간')}
+                  </Text>
+                  <Icon name="forward" size={14} color={t.textMuted} />
+                </Pressable>
+                {details ? (
+                  <>
+                    {divider}
+                    {row(
+                      '카테고리',
+                      category?.name ?? '미분류',
+                      'category',
+                      `카테고리 선택, ${category?.name ?? '미분류'}`,
+                    )}
+                    {divider}
+                    <View style={styles.row}>
+                      <Text style={[Typography.body, styles.label, { color: t.text }]}>
+                        {kind === 'routine' ? '알림 시간' : '시간'}
+                      </Text>
+                      <ToggleSwitch
+                        value={time.enabled}
+                        accessibilityLabel={`${label} 시간 설정`}
+                        onToggle={() => {
+                          Keyboard.dismiss();
+                          setTimes({ ...times, [kind]: { ...time, enabled: !time.enabled } });
+                          setPanel(time.enabled ? null : 'time');
+                        }}
+                      />
+                    </View>
+                    {time.enabled ? (
+                      <>
+                        {divider}
+                        {row('시간', formatTime(time.value), 'time', `${label} 시간 선택`)}
+                        {panel === 'time' ? (
+                          <View style={styles.panel}>
+                            <ComposeTimeFields
+                              value={time.value}
+                              onChange={(value) =>
+                                setTimes({ ...times, [kind]: { ...time, value } })
+                              }
+                            />
+                          </View>
+                        ) : null}
+                      </>
+                    ) : null}
+                    {kind === 'routine' ? (
+                      <>
+                        {divider}
+                        {row('종료일', endDate ? dateLabel(endDate) : '없음', 'end')}
+                        {panel === 'end' ? (
+                          <View style={styles.panel}>
+                            <Pressable
+                              accessibilityRole="button"
+                              accessibilityLabel="종료일 없음"
+                              onPress={() => {
+                                setEndDate(undefined);
+                                setPanel(null);
+                              }}
+                              style={styles.row}>
+                              <Text style={[Typography.label, { color: t.primaryText }]}>없음</Text>
+                            </Pressable>
+                            <Calendar
+                              value={endDate ?? date}
+                              min={date < today ? today : date}
+                              onSelect={(next) => {
+                                setEndDate(next);
+                                setPanel(null);
+                                setError('');
+                              }}
+                            />
+                          </View>
+                        ) : null}
+                      </>
+                    ) : null}
+                  </>
+                ) : null}
+              </View>
               {error ? (
                 <Text
                   accessibilityRole="alert"
@@ -464,8 +520,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  body: { paddingHorizontal: Spacing.four },
-  input: { paddingVertical: Spacing.five, minHeight: 72 },
+  body: { paddingHorizontal: Spacing.four, paddingTop: Spacing.two },
+  form: { gap: Spacing.four },
+  hidden: { display: 'none' },
+  group: {
+    borderRadius: Radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: Spacing.four,
+    overflow: 'hidden',
+  },
+  divider: { height: StyleSheet.hairlineWidth },
+  input: { paddingVertical: Spacing.four, minHeight: Spacing.six },
+  label: { flex: 1 },
+  categoryLabel: { flex: 1, gap: Spacing.one },
+  check: { width: Spacing.four, alignItems: 'center' },
+  back: {
+    width: Spacing.six,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 44,
+    gap: Spacing.one,
+  },
+  backSpace: { width: Spacing.six },
+  pageTitle: { flex: 1, textAlign: 'center' },
   row: {
     flexDirection: 'row',
     gap: Spacing.two,
