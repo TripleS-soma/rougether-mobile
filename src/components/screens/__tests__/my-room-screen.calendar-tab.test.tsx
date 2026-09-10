@@ -7,6 +7,7 @@ import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { ToastProvider } from '@/components/ui/toast';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
 import {
+  calendarHeading,
   OTHER_DAY,
   pickCalendarDate,
   TODAY,
@@ -31,20 +32,23 @@ describe('MyRoomScreen', () => {
     // 상단 '달력' 알약은 없다 — 하단 탭이 이미 이름을 말한다.
     expect(ui.queryByText('달력')).toBeNull();
     expect(ui.queryByTestId('my-room-chrome')).toBeNull();
-    expect(ui.getByText('이 날의 할 일')).toBeTruthy();
+    expect(ui.getByRole('header', { name: calendarHeading(TODAY) })).toBeTruthy();
     await fireEvent.press(ui.getByLabelText('이 날에 루틴 추가'));
     expect(onAddRoutineForDate).toHaveBeenCalledWith(TODAY);
   });
 
-  it('달력탭에 선택 날짜의 전체 완료/총 개수와 진행 바가 보인다 (#346)', async () => {
+  it('선택 날짜를 제목으로 삼고 완료 상태는 각 항목에 유지한다', async () => {
     // 오늘(로컬 날짜): 5개 중 3개 완료 — 방탭과 같은 집계가 달력탭에도 표시.
     const completions = { '1': [TODAY], '2': [TODAY], '3': [TODAY] };
     const local = await render(
       <MyRoomScreen routines={SAMPLE_ROUTINES} completions={completions} />,
     );
     await fireEvent.press(local.getByText('달력'));
-    expect(local.getByText('이 날의 할 일')).toBeTruthy();
-    expect(local.getByText('3 / 5')).toBeTruthy();
+    expect(local.getByRole('header', { name: calendarHeading(TODAY) })).toBeTruthy();
+    expect(local.queryByText('3 / 5')).toBeNull();
+    expect(
+      local.getAllByRole('checkbox').some((item) => item.props.accessibilityState?.checked),
+    ).toBe(true);
 
     // 서버 날짜(어제): completed 플래그로 집계 — 1/2.
     const calendarDays = {
@@ -67,7 +71,10 @@ describe('MyRoomScreen', () => {
       />,
     );
     await pickCalendarDate(server, YESTERDAY);
-    expect(server.getByText('1 / 2')).toBeTruthy();
+    expect(server.getByRole('header', { name: calendarHeading(YESTERDAY) })).toBeTruthy();
+    expect(server.queryByText('1 / 2')).toBeNull();
+    expect(server.getByLabelText('지난 루틴').props.accessibilityState.checked).toBe(true);
+    expect(server.getByLabelText('지난 할 일').props.accessibilityState.checked).toBe(false);
   });
 
   it('renders the server list for non-today dates and toggles past routines', async () => {
@@ -98,9 +105,7 @@ describe('MyRoomScreen', () => {
     expect(getByText('옛 카테고리 루틴')).toBeTruthy();
     // Grouped under the record-time (deleted) category, like the room tab.
     expect(getByText('옛것')).toBeTruthy();
-    expect(
-      getByText('지난 날짜도 완료 체크할 수 있어요. (코인은 당일 완료에만 지급돼요)'),
-    ).toBeTruthy();
+    expect(ui.queryByText(/지난 날짜도 완료 체크할 수 있어요/)).toBeNull();
 
     // Past routines toggle for real — the server accepts past-date logs (#183).
     await fireEvent.press(ui.getByLabelText('옛 카테고리 루틴'));

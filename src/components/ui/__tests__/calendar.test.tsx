@@ -316,3 +316,31 @@ it('KST 월 경계에서 외부 선택일 변경은 보이는 월과 조회 신�
   expect(ui.getByLabelText('2026-10-01, 집계 확인 중')).toBeTruthy();
   expect(monthChanged).toHaveBeenLastCalledWith('2026-10');
 });
+
+it('달성도 모드에서 빈 날짜와 미래 날짜에 숫자 범례를 반복하지 않는다', async () => {
+  const onSelect = jest.fn();
+  const ui = await render(
+    <Calendar
+      value="2026-09-08"
+      today="2026-09-09"
+      markedDates={new Set(['2026-09-08', '2026-09-10'])}
+      onSelect={onSelect}
+      progressByDate={{
+        '2026-09-08': { total: 3, completed: 2 },
+        '2026-09-09': { total: 0, completed: 0 },
+        '2026-09-10': { total: 2, completed: 0 },
+      }}
+    />,
+  );
+  const past = ui.getByLabelText('2026-09-08, 2개 완료, 전체 3개');
+  expect(within(past).queryByText('2/3')).toBeNull();
+  expect(within(past).getByTestId('calendar-todo-dot-2026-09-08')).toBeTruthy();
+  const empty = ui.getByLabelText('2026-09-09, 오늘, 일정 없음');
+  expect(within(empty).queryByText('-')).toBeNull();
+  expect(ui.queryByTestId('calendar-todo-dot-2026-09-09')).toBeNull();
+  const future = ui.getByLabelText('2026-09-10, 예정 2개');
+  expect(within(future).queryByText('2')).toBeNull();
+  expect(ui.getByTestId('calendar-todo-dot-2026-09-10')).toBeTruthy();
+  await fireEvent.press(future);
+  expect(onSelect).toHaveBeenCalledWith('2026-09-10');
+});

@@ -8,6 +8,14 @@ import { todayIso } from '@/utils/datetime';
  */
 
 export const TODAY = todayIso();
+/** Expected visible date and weekday, formatted independently of the screen. */
+export const calendarHeading = (date: string) =>
+  new Date(`${date}T12:00:00`).toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long',
+  });
 // A non-today date guaranteed to sit in the calendar's current month view:
 // the 1st, or the 2nd when today is the 1st.
 export const OTHER_DAY = `${TODAY.slice(0, 8)}${TODAY.endsWith('01') ? '02' : '01'}`;
