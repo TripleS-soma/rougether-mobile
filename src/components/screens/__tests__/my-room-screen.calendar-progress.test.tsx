@@ -25,7 +25,7 @@ const props = {
 it('종류 필터가 월 링의 집계와 선택일 목록에 함께 적용된다', async () => {
   const ui = await render(<MyRoomScreen {...props} />);
   expect(ui.getByLabelText(`${date}, 1개 완료, 전체 2개`)).toBeTruthy();
-  expect(ui.getByRole('header', { name: '2026년 9월 8일' })).toBeTruthy();
+  expect(ui.getByRole('header', { name: '2026년 9월 8일 화요일' })).toBeTruthy();
   expect(ui.queryByText(/남은|완료 \/ 전체|하루하루 쌓인|지난 날짜도/)).toBeNull();
   expect(ui.queryByText('완료')).toBeNull();
   expect(ui.queryByText('1/2')).toBeNull();

@@ -3,6 +3,7 @@ import { act, fireEvent, waitFor } from '@testing-library/react-native';
 import { AppShell } from '@/components/app/app-shell';
 import { renderWithProviders } from '@/test-utils/render';
 import { todayIso } from '@/utils/datetime';
+import { calendarHeading } from '@/test-utils/my-room-screen-fixtures';
 
 const TODAY = todayIso();
 const [year, month] = TODAY.split('-').map(Number);
@@ -64,7 +65,9 @@ describe('달력 하단 탭 왕복 (#1159)', () => {
     expect(ui.getByText('루틴 추가')).toBeTruthy();
     await fireEvent.press(ui.getByLabelText('뒤로가기'));
     await finishTransition();
-    await waitFor(() => expect(ui.getByRole('header')).toBeTruthy());
+    await waitFor(() =>
+      expect(ui.getByRole('header', { name: calendarHeading(PREVIOUS_MONTH_DATE) })).toBeTruthy(),
+    );
     expect(ui.getByLabelText('달력').props.accessibilityState.selected).toBe(true);
     expect(
       ui.getByLabelText(new RegExp(`^${PREVIOUS_MONTH_DATE},`)).props.accessibilityState.selected,
@@ -76,7 +79,9 @@ describe('달력 하단 탭 왕복 (#1159)', () => {
     await finishTransition();
     await fireEvent.press(ui.getByLabelText('뒤로가기'));
     await finishTransition();
-    await waitFor(() => expect(ui.getByRole('header')).toBeTruthy());
+    await waitFor(() =>
+      expect(ui.getByRole('header', { name: calendarHeading(TODAY) })).toBeTruthy(),
+    );
     expect(ui.getByLabelText(new RegExp(`^${TODAY},`)).props.accessibilityState.selected).toBe(
       true,
     );

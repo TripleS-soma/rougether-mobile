@@ -544,6 +544,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   );
   const selectedDay = localDate(selectedDate);
   const selectedDayLabel = monthDayLabel(selectedDay);
+  const selectedWeekday = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'][
+    selectedDay.getDay()
+  ];
 
   // 달력 서버 날짜에서 연 메뉴 — 완료 라벨/토글은 그 날의 기록과 달력 규칙
   // (미래 차단, 과거 허용)을 따른다 (#323).
@@ -1368,15 +1371,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             style={styles.calDateHeading}
             accessible
             accessibilityRole="header"
-            accessibilityLabel={`${selectedDay.getFullYear()}년 ${selectedDayLabel}`}>
+            accessibilityLabel={`${selectedDay.getFullYear()}년 ${selectedDayLabel} ${selectedWeekday}`}>
             <Text style={[Typography.h3, { color: t.text }]}>{selectedDayLabel}</Text>
-            <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              {
-                ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'][
-                  selectedDay.getDay()
-                ]
-              }
-            </Text>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>{selectedWeekday}</Text>
           </View>
           <View style={styles.sectionHeadRight}>
             {/* 오늘 목록과 같은 ＋ 루틴 (#1138) — 고른 날짜가 시작일. */}

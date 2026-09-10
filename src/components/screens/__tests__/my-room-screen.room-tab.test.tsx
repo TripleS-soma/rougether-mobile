@@ -4,6 +4,7 @@ import { getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { ToastProvider } from '@/components/ui/toast';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
+import { calendarHeading, TODAY } from '@/test-utils/my-room-screen-fixtures';
 
 describe('MyRoomScreen', () => {
   it("view='room'이면 달력 알약 없이 방만 — 오늘의 할 일 (#1138)", async () => {
@@ -63,7 +64,7 @@ describe('MyRoomScreen', () => {
     // 탭 버튼은 그대로 동작한다.
     expect(ui.getByText('오늘의 할 일')).toBeTruthy();
     await fireEvent.press(ui.getByText('달력'));
-    expect(ui.getByRole('header')).toBeTruthy();
+    expect(ui.getByRole('header', { name: calendarHeading(TODAY) })).toBeTruthy();
     await fireEvent.press(ui.getByText('방'));
     expect(ui.getByText('오늘의 할 일')).toBeTruthy();
   });

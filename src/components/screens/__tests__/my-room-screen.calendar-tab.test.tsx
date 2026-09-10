@@ -7,6 +7,7 @@ import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { ToastProvider } from '@/components/ui/toast';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
 import {
+  calendarHeading,
   OTHER_DAY,
   pickCalendarDate,
   TODAY,
@@ -31,7 +32,7 @@ describe('MyRoomScreen', () => {
     // 상단 '달력' 알약은 없다 — 하단 탭이 이미 이름을 말한다.
     expect(ui.queryByText('달력')).toBeNull();
     expect(ui.queryByTestId('my-room-chrome')).toBeNull();
-    expect(ui.getByRole('header')).toBeTruthy();
+    expect(ui.getByRole('header', { name: calendarHeading(TODAY) })).toBeTruthy();
     await fireEvent.press(ui.getByLabelText('이 날에 루틴 추가'));
     expect(onAddRoutineForDate).toHaveBeenCalledWith(TODAY);
   });
@@ -43,7 +44,7 @@ describe('MyRoomScreen', () => {
       <MyRoomScreen routines={SAMPLE_ROUTINES} completions={completions} />,
     );
     await fireEvent.press(local.getByText('달력'));
-    expect(local.getByRole('header')).toBeTruthy();
+    expect(local.getByRole('header', { name: calendarHeading(TODAY) })).toBeTruthy();
     expect(local.queryByText('3 / 5')).toBeNull();
     expect(
       local.getAllByRole('checkbox').some((item) => item.props.accessibilityState?.checked),
@@ -70,6 +71,7 @@ describe('MyRoomScreen', () => {
       />,
     );
     await pickCalendarDate(server, YESTERDAY);
+    expect(server.getByRole('header', { name: calendarHeading(YESTERDAY) })).toBeTruthy();
     expect(server.queryByText('1 / 2')).toBeNull();
     expect(server.getByLabelText('지난 루틴').props.accessibilityState.checked).toBe(true);
     expect(server.getByLabelText('지난 할 일').props.accessibilityState.checked).toBe(false);
