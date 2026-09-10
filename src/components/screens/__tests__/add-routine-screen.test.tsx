@@ -299,3 +299,23 @@ describe('AddRoutineScreen', () => {
     expect(onBack).not.toHaveBeenCalled();
   });
 });
+
+it('수정 중 카테고리가 사라졌다면 안내하고 미분류를 고른 뒤 저장한다', async () => {
+  const onUpdate = jest.fn();
+  const ui = await render(
+    <AddRoutineScreen
+      editRoutine={{ id: 'r9', title: '독서', category: 'deleted' }}
+      categories={[]}
+      onUpdate={onUpdate}
+    />,
+  );
+  await fireEvent.press(ui.getByText('수정하기'));
+  expect(ui.getByText('카테고리를 다시 선택해 주세요.')).toBeTruthy();
+  expect(onUpdate).not.toHaveBeenCalled();
+  await fireEvent.press(ui.getByLabelText('미분류'));
+  await fireEvent.press(ui.getByText('수정하기'));
+  expect(onUpdate).toHaveBeenCalledWith(
+    'r9',
+    expect.objectContaining({ title: '독서', category: '' }),
+  );
+});

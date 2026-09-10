@@ -139,7 +139,6 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
     selectedDate?: string;
     onSelectedDateChange?: (date: string) => void;
     /** Quick composer → routine form, preserving the selected calendar date. */
-    onAddRoutineForDate?: (date: string) => void;
     /** Room occupant's display name (header title becomes "{userName}의 방"). */
     userName?: string;
     /** Consecutive-day streak shown in the header. */
