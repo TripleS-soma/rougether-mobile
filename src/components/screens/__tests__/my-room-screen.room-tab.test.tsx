@@ -63,7 +63,7 @@ describe('MyRoomScreen', () => {
     // 탭 버튼은 그대로 동작한다.
     expect(ui.getByText('오늘의 할 일')).toBeTruthy();
     await fireEvent.press(ui.getByText('달력'));
-    expect(ui.getByText('이 날의 할 일')).toBeTruthy();
+    expect(ui.getByRole('header')).toBeTruthy();
     await fireEvent.press(ui.getByText('방'));
     expect(ui.getByText('오늘의 할 일')).toBeTruthy();
   });

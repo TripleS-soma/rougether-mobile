@@ -25,7 +25,10 @@ const props = {
 it('종류 필터가 월 링의 집계와 선택일 목록에 함께 적용된다', async () => {
   const ui = await render(<MyRoomScreen {...props} />);
   expect(ui.getByLabelText(`${date}, 1개 완료, 전체 2개`)).toBeTruthy();
-  expect(ui.getByText('2026-09-08 · 남은 1개 · 완료 1개')).toBeTruthy();
+  expect(ui.getByRole('header', { name: '2026년 9월 8일' })).toBeTruthy();
+  expect(ui.queryByText(/남은|완료 \/ 전체|하루하루 쌓인|지난 날짜도/)).toBeNull();
+  expect(ui.queryByText('완료')).toBeNull();
+  expect(ui.queryByText('1/2')).toBeNull();
   await fireEvent.press(ui.getByRole('tab', { name: '루틴' }));
   expect(ui.getByLabelText(`${date}, 1개 완료, 전체 1개`)).toBeTruthy();
   expect(ui.queryByText('회의 준비')).toBeNull();
@@ -35,7 +38,7 @@ it('종류 필터가 월 링의 집계와 선택일 목록에 함께 적용된�
   expect(ui.queryByText('독서')).toBeNull();
   expect(ui.getByText('회의 준비')).toBeTruthy();
 });
-it('미래일은 실패율 대신 예정 수를 보여준다', async () => {
+it('미래일은 작은 표식과 목록을 보여주고 정확한 수는 접근성 라벨로 제공한다', async () => {
   const future = '2026-09-10';
   const ui = await render(
     <MyRoomScreen
@@ -47,7 +50,17 @@ it('미래일은 실패율 대신 예정 수를 보여준다', async () => {
   );
   expect(ui.getByLabelText(`${future}, 예정 2개`)).toBeTruthy();
   expect(ui.queryByText('0 / 2')).toBeNull();
-  expect(ui.getByText(`${future} · 예정 2개`)).toBeTruthy();
+  expect(ui.getByTestId(`calendar-schedule-dot-${future}`)).toBeTruthy();
+  expect(ui.queryByText(/예정/)).toBeNull();
+  expect(ui.getByText('회의 준비')).toBeTruthy();
+  expect(ui.getByTestId(`calendar-routine-dot-${future}`)).toBeTruthy();
+  expect(ui.getByTestId(`calendar-todo-dot-${future}`)).toBeTruthy();
+  expect(ui.getByTestId('calendar-glass')).toBeTruthy();
+  await fireEvent.press(ui.getByRole('tab', { name: '루틴' }));
+  expect(ui.getByTestId(`calendar-routine-dot-${future}`)).toBeTruthy();
+  expect(ui.queryByTestId(`calendar-todo-dot-${future}`)).toBeNull();
+  expect(ui.queryByText('회의 준비')).toBeNull();
+  expect(ui.getByTestId('calendar-filter-glass-routine')).toBeTruthy();
 });
 it('조회 오류와 재시도를 보여주고 기존 완료값을 보존한다', async () => {
   const retryMonth = jest.fn();

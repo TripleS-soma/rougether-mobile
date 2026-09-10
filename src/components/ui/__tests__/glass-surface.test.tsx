@@ -2,6 +2,7 @@ import { isLiquidGlassAvailable } from 'expo-glass-effect';
 import { Text } from 'react-native';
 import { render } from '@testing-library/react-native';
 
+import * as material from '@/hooks/use-liquid-glass';
 import { GlassSurface } from '@/components/ui/glass-surface';
 
 const flat = (style: unknown) => Object.assign({}, ...[style].flat(Infinity).filter(Boolean));
@@ -45,4 +46,43 @@ describe('GlassSurface (#1050)', () => {
     expect(el.props.glassEffectStyle).toBe('regular');
     expect(el.props.isInteractive).toBe(true);
   });
+});
+
+it('clear 패널은 옅은 폴백을 쓰고 투명도 줄이기에서는 완전히 불투명해진다', async () => {
+  const hook = jest.spyOn(material, 'useGlassMaterial');
+  try {
+    hook.mockReturnValue('translucent');
+    const ui = await render(
+      <GlassSurface
+        testID="panel"
+        fallbackColor="#ABCDEF"
+        glassEffectStyle="clear"
+        interactive={false}
+      />,
+    );
+    expect(flat(ui.getByTestId('panel').props.style).backgroundColor).toBe('#ABCDEF80');
+    hook.mockReturnValue('opaque');
+    await ui.rerender(
+      <GlassSurface
+        testID="panel"
+        fallbackColor="#ABCDEF"
+        glassEffectStyle="clear"
+        interactive={false}
+      />,
+    );
+    expect(flat(ui.getByTestId('panel').props.style).backgroundColor).toBe('#ABCDEF');
+    hook.mockReturnValue('glass');
+    await ui.rerender(
+      <GlassSurface
+        testID="panel"
+        fallbackColor="#ABCDEF"
+        glassEffectStyle="clear"
+        interactive={false}
+      />,
+    );
+    expect(ui.getByTestId('panel').props.glassEffectStyle).toBe('clear');
+    expect(ui.getByTestId('panel').props.isInteractive).toBe(false);
+  } finally {
+    hook.mockRestore();
+  }
 });

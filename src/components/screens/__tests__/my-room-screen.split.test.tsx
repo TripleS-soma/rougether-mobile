@@ -70,6 +70,6 @@ describe('MyRoomScreen 2단 레이아웃 (#1230)', () => {
     );
     expect(ui.getByTestId('my-room-split')).toBeTruthy();
     expect(ui.getByTestId('calendar-grid')).toBeTruthy();
-    expect(ui.getByText('이 날의 할 일')).toBeTruthy();
+    expect(ui.getByRole('header')).toBeTruthy();
   });
 });
