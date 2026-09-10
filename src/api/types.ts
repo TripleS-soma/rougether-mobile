@@ -334,6 +334,8 @@ export type HouseCreateRequest = {
   coverImageKey?: string;
   maxMembers?: number;
   goalIds: number[];
+  /** 공개 범위 (#1266, 서버 PR 후 유효 — 그 전엔 무시되고 공개로 생성). */
+  isPublic?: boolean;
 };
 
 export type HouseCreateResponse = {
@@ -349,6 +351,8 @@ export type HouseDetailResponse = {
   description?: string;
   coverImageKey?: string;
   maxMembers?: number;
+  /** 공개 범위 — 서버 PR 후 실림(#1266). 없으면 앱은 '알 수 없음'으로 둔다. */
+  isPublic?: boolean;
   currentMemberCount?: number;
   level?: number;
   growthPoints?: number;
@@ -504,6 +508,8 @@ export type HouseUpdateRequest = {
   description?: string;
   coverImageKey?: string;
   maxMembers?: number;
+  /** 공개 범위 (#1266) — true: 탐색·미리보기 노출, false: 초대코드로만 참여. 미지정 시 유지. */
+  isPublic?: boolean;
 };
 
 export type HouseUpdateResponse = {
@@ -512,6 +518,7 @@ export type HouseUpdateResponse = {
   description?: string;
   coverImageKey?: string;
   maxMembers?: number;
+  isPublic?: boolean;
 };
 
 export type InviteCodeResponse = {
@@ -670,6 +677,7 @@ export type MyHouseSummary = {
   level?: number;
   currentMemberCount?: number;
   maxMembers?: number;
+  isPublic?: boolean;
   myRole?: 'OWNER' | 'MEMBER';
   joinedAt?: string;
 };
