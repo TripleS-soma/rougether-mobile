@@ -141,6 +141,14 @@ describe('API adapters — routine / todo', () => {
     });
   });
 
+  it('includes the selected time when creating a todo without a category', () => {
+    expect(toTodoCreate('', '자료 보내기', '2026-09-10', '19:05')).toEqual({
+      title: '자료 보내기',
+      dueDate: '2026-09-10',
+      dueTime: '19:05:00',
+    });
+  });
+
   it('maps todo dueTime to the shared time slot and back (#325)', () => {
     // dueTime 있는 투두 → time/alarmEnabled, 없으면 알람 없음.
     const timed = toAppTodo({ id: 9, title: '장보기', dueDate: '2026-07-03', dueTime: '18:00:00' });

@@ -157,3 +157,62 @@ it('루틴 알림과 할 일 시간은 유형마다 별도로 보존한다', asy
     ),
   );
 });
+
+it('카테고리 선택에서는 폼을 숨기고 뒤로 이동과 선택 후 초안을 보존한다', async () => {
+  const p = props({
+    categories: [
+      { id: '20', name: '생활', icon: 'sun', color: '#7FA87F', visibility: 'private' },
+      {
+        id: '21',
+        name: '공동집',
+        icon: 'sun',
+        color: '#7FA87F',
+        visibility: 'public',
+        houseId: 7,
+      },
+    ],
+  });
+  const ui = await render(<RoutineTodoComposeSheet {...p} />);
+  await fireEvent.changeText(ui.getByLabelText('루틴 제목'), '독서 20분');
+  await fireEvent.press(ui.getByLabelText('추가 설정'));
+  await fireEvent.press(ui.getByLabelText('카테고리 선택, 미분류'));
+  expect(ui.getByRole('header', { name: '카테고리' })).toBeTruthy();
+  expect(ui.queryByLabelText('루틴 제목')).toBeNull();
+  expect(ui.queryByLabelText('루틴 저장')).toBeNull();
+  expect(ui.queryByRole('radio', { name: '공동집' })).toBeNull();
+  await fireEvent.press(ui.getByLabelText('작성 화면으로 돌아가기'));
+  expect(ui.getByLabelText('루틴 제목').props.value).toBe('독서 20분');
+  await fireEvent.press(ui.getByLabelText('카테고리 선택, 미분류'));
+  await fireEvent.press(ui.getByRole('radio', { name: '생활' }));
+  expect(ui.getByLabelText('루틴 제목').props.value).toBe('독서 20분');
+  expect(ui.getByLabelText('카테고리 선택, 생활')).toBeTruthy();
+  await fireEvent.press(ui.getByLabelText('카테고리 선택, 생활'));
+  expect(ui.getByRole('radio', { name: '생활' }).props.accessibilityState.checked).toBe(true);
+  // The native back/backdrop action returns to the draft before offering to discard it.
+  await fireEvent.press(ui.getByLabelText('시트 닫기'));
+  expect(ui.getByLabelText('루틴 제목').props.value).toBe('독서 20분');
+  expect(p.onClose).not.toHaveBeenCalled();
+  expect(p.onSubmit).not.toHaveBeenCalled();
+});
+
+it('할 일 시간을 선택한 뒤 카테고리를 왕복해도 지정한 시간으로 저장한다', async () => {
+  const p = props({ initialKind: 'todo' });
+  const ui = await render(<RoutineTodoComposeSheet {...p} />);
+  await fireEvent.changeText(ui.getByLabelText('할 일 제목'), '자료 보내기');
+  await fireEvent.press(ui.getByLabelText('추가 설정'));
+  await fireEvent.press(ui.getByLabelText('할 일 시간 설정'));
+  await fireEvent.press(ui.getByLabelText('오후'));
+  await fireEvent.press(ui.getByLabelText('5분'));
+  await fireEvent.press(ui.getByLabelText('카테고리 선택, 미분류'));
+  await fireEvent.press(ui.getByRole('radio', { name: '미분류' }));
+  await fireEvent.press(ui.getByLabelText('할 일 저장'));
+  await waitFor(() =>
+    expect(p.onSubmit).toHaveBeenCalledWith({
+      kind: 'todo',
+      title: '자료 보내기',
+      category: '',
+      date: DATE,
+      time: '19:05',
+    }),
+  );
+});
