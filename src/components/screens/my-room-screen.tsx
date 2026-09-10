@@ -495,28 +495,6 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     }
     return counts;
   }, [calendarMonthDays, calendarFilter]);
-  const scheduledKindsByDate = useMemo(() => {
-    const kinds: Record<string, ('routine' | 'todo')[]> = {};
-    for (const day of calendarMonthDays ?? []) {
-      const scheduled: ('routine' | 'todo')[] = [];
-      if (
-        calendarFilter !== 'todo' &&
-        typeof day.routineCount === 'number' &&
-        Number.isSafeInteger(day.routineCount) &&
-        day.routineCount > 0
-      )
-        scheduled.push('routine');
-      if (
-        calendarFilter !== 'routine' &&
-        typeof day.todoCount === 'number' &&
-        Number.isSafeInteger(day.todoCount) &&
-        day.todoCount > 0
-      )
-        scheduled.push('todo');
-      if (day.date && scheduled.length) kinds[day.date] = scheduled;
-    }
-    return kinds;
-  }, [calendarMonthDays, calendarFilter]);
   const showCalendarProgress = !!onRetryCalendarMonth || !!calendarMonthDays;
   const selectedDate = controlledSelectedDate ?? ownSelectedDate;
   const dateRoutines = useMemo(
@@ -1243,7 +1221,6 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           monthSwipe={false}
           markedDates={calendarFilter === 'routine' ? undefined : markedTodoDates}
           progressByDate={showCalendarProgress ? progressByDate : undefined}
-          scheduledKindsByDate={scheduledKindsByDate}
           glass
           onVisibleMonthChange={onCalendarMonthChange}
           headerAccessory={
@@ -1261,14 +1238,6 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                       pointerEvents="none"
                       fallbackColor={t.surface}
                       style={[StyleSheet.absoluteFill, styles.calendarFilterFace]}
-                    />
-                  ) : null}
-                  {filter !== 'all' ? (
-                    <View
-                      style={[
-                        styles.calendarKindDot,
-                        { backgroundColor: filter === 'routine' ? t.success : t.info },
-                      ]}
                     />
                   ) : null}
                   <Text
@@ -1668,7 +1637,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   calendarFilterFace: { borderRadius: Radius.pill },
-  calendarKindDot: { width: Spacing.one, height: Spacing.one, borderRadius: Radius.pill },
   calendarState: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: Spacing.two },
   calendarRetry: { padding: Spacing.two, minHeight: 44, justifyContent: 'center' },
   screen: {

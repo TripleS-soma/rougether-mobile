@@ -323,6 +323,7 @@ it('달성도 모드에서 빈 날짜와 미래 날짜에 숫자 범례를 반�
     <Calendar
       value="2026-09-08"
       today="2026-09-09"
+      markedDates={new Set(['2026-09-08', '2026-09-10'])}
       onSelect={onSelect}
       progressByDate={{
         '2026-09-08': { total: 3, completed: 2 },
@@ -333,12 +334,13 @@ it('달성도 모드에서 빈 날짜와 미래 날짜에 숫자 범례를 반�
   );
   const past = ui.getByLabelText('2026-09-08, 2개 완료, 전체 3개');
   expect(within(past).queryByText('2/3')).toBeNull();
+  expect(within(past).getByTestId('calendar-todo-dot-2026-09-08')).toBeTruthy();
   const empty = ui.getByLabelText('2026-09-09, 오늘, 일정 없음');
   expect(within(empty).queryByText('-')).toBeNull();
-  expect(ui.queryByTestId('calendar-schedule-dot-2026-09-09')).toBeNull();
+  expect(ui.queryByTestId('calendar-todo-dot-2026-09-09')).toBeNull();
   const future = ui.getByLabelText('2026-09-10, 예정 2개');
   expect(within(future).queryByText('2')).toBeNull();
-  expect(ui.getByTestId('calendar-schedule-dot-2026-09-10')).toBeTruthy();
+  expect(ui.getByTestId('calendar-todo-dot-2026-09-10')).toBeTruthy();
   await fireEvent.press(future);
   expect(onSelect).toHaveBeenCalledWith('2026-09-10');
 });

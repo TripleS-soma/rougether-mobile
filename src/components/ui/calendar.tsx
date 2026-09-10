@@ -71,7 +71,6 @@ export type CalendarProps = {
   /** Optional controls between the month heading and weekday row. */
   headerAccessory?: ReactNode;
   glass?: boolean;
-  scheduledKindsByDate?: Readonly<Record<string, readonly ('routine' | 'todo')[]>>;
 };
 
 /**
@@ -91,7 +90,6 @@ function CalendarBase({
   onVisibleMonthChange,
   headerAccessory,
   glass = false,
-  scheduledKindsByDate,
 }: CalendarProps) {
   const t = useTokens();
   const Typography = useTypography();
@@ -462,35 +460,16 @@ function CalendarBase({
                           {day}
                         </Text>
                       </View>
-                      {/* 할 일 있는 날 표시 (#838) — 선택된 날은 원이 이미 강조라
-                        점을 생략한다(원 안에서 잉크가 겹친다). 절대 배치라
-                        없을 때 자리를 채워둘 필요가 없다 (#845 후속). */}
-                      {progressByDate &&
-                      ((progress && progress.total > 0 && future) ||
-                        (!progress && markedDates?.has(date))) ? (
+                      {/* The single dot records todos, including past and selected dates. */}
+                      {progressByDate && markedDates?.has(date) ? (
                         <View
-                          testID={`calendar-schedule-dot-${date}`}
-                          style={styles.scheduleDots}
-                          pointerEvents="none">
-                          {(scheduledKindsByDate?.[date]?.length
-                            ? scheduledKindsByDate[date]
-                            : markedDates?.has(date)
-                              ? ['todo' as const]
-                              : []
-                          ).map((kind) => (
-                            <View
-                              key={kind}
-                              testID={`calendar-${kind}-dot-${date}`}
-                              style={[
-                                styles.scheduleDot,
-                                { backgroundColor: kind === 'routine' ? t.success : t.info },
-                              ]}
-                            />
-                          ))}
-                          {!scheduledKindsByDate?.[date]?.length && !markedDates?.has(date) ? (
-                            <View style={[styles.scheduleDot, { backgroundColor: t.textMuted }]} />
-                          ) : null}
-                        </View>
+                          testID={`calendar-todo-dot-${date}`}
+                          style={[
+                            styles.scheduleDot,
+                            { backgroundColor: disabled ? t.textDisabled : t.info },
+                          ]}
+                          pointerEvents="none"
+                        />
                       ) : null}
                       {!progressByDate && markedDates?.has(date) && !isSelected ? (
                         <View
@@ -521,13 +500,13 @@ const styles = StyleSheet.create({
   glassControl: { borderRadius: Radius.pill },
   glassGrid: { paddingHorizontal: Spacing.one, paddingBottom: Spacing.two },
   glassGridFace: { borderRadius: Radius.xl, borderWidth: StyleSheet.hairlineWidth },
-  scheduleDots: {
+  scheduleDot: {
     position: 'absolute',
     bottom: Spacing.half,
-    flexDirection: 'row',
-    gap: Spacing.one,
+    width: Spacing.one,
+    height: Spacing.one,
+    borderRadius: Radius.pill,
   },
-  scheduleDot: { width: Spacing.one, height: Spacing.one, borderRadius: Radius.pill },
   progressCell: { aspectRatio: undefined, minHeight: Spacing.five + Spacing.four },
   progressDate: {
     width: PROGRESS_DATE_SIZE,
