@@ -353,7 +353,7 @@ describe('AppShell — 공동미션 연동', () => {
     await waitFor(() => expect(calls.some((c) => c.url.includes('/houses/2/missions'))).toBe(true));
 
     await fireEvent.press(getByLabelText('집'));
-    await fireEvent.press(getByLabelText('구성원 목록'));
+    await fireEvent.press(getByLabelText('집 관리'));
     // 구성원 0명 세계라 1인 방장 = '집 삭제' 라벨.
     await fireEvent.press(getByLabelText(/집 삭제|집 나가기/));
     await fireEvent.press(getByLabelText(/집 삭제 확인|나가기 확인/));

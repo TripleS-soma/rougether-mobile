@@ -1094,9 +1094,9 @@ export const HouseScreen = memo(function HouseScreen({
         </CoachTarget>
         <RailButton
           icon={<Icon name="members" size={20} color={t.text} />}
-          label="구성원"
+          label="집 관리"
           onPress={onOpenMembers}
-          accessibilityLabel="구성원 목록"
+          accessibilityLabel="집 관리"
           t={t}
           Typography={Typography}
         />

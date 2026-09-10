@@ -134,6 +134,17 @@ describe('HouseMembersScreen — 구성원 관리 (구 house-screen 흐름, #753
       description: '저녁 루틴으로 바꿨어요',
       maxMembers: 6,
     });
+    // 공개 범위를 안 건드렸으면 보내지 않는다(서버 값 유지) — 현재 값을 모를 수 있어서.
+    expect(Object.keys(onUpdateHouse.mock.calls[0][1])).not.toContain('isPublic');
+  });
+
+  it('집 정보 수정에서 비공개를 고르면 isPublic=false를 보낸다 (#1266)', async () => {
+    const onUpdateHouse = jest.fn();
+    const ui = await render(screenFor(MISSION_HOUSE, { onUpdateHouse }));
+    await fireEvent.press(ui.getByLabelText('집 정보 수정'));
+    await fireEvent.press(ui.getByText('비공개'));
+    await fireEvent.press(ui.getByLabelText('집 정보 저장'));
+    expect(onUpdateHouse).toHaveBeenCalledWith(7, expect.objectContaining({ isPublic: false }));
   });
 
   it('정원 선택지는 6명까지만 보여준다 (#1108)', async () => {
