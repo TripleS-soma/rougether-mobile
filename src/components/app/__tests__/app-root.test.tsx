@@ -55,7 +55,9 @@ describe('AppRoot', () => {
   it('튜토리얼 다시 보기로 들어오면 건너뛰기가 생기고, 누르면 앱으로 돌아온다 (#1023)', async () => {
     await AsyncStorage.setItem(KEY, JSON.stringify({ characterId: 'cat', goals: ['exercise'] }));
     const { getByText, getByLabelText } = await renderApp();
-    await waitFor(() => expect(getByText('내 방')).toBeTruthy());
+    await waitFor(() =>
+      expect(getByLabelText('나의 방').props.accessibilityState.selected).toBe(true),
+    );
 
     // 설정은 마이페이지 헤더의 톱니 뒤 서브화면 (#1088).
     await fireEvent.press(getByLabelText('마이페이지'));
@@ -68,15 +70,19 @@ describe('AppRoot', () => {
     await fireEvent.press(getByText('건너뛰기'));
 
     // 목표 설문을 거치지 않고 바로 앱 — 저장된 선택은 그대로다.
-    await waitFor(() => expect(getByText('내 방')).toBeTruthy());
+    await waitFor(() =>
+      expect(getByLabelText('나의 방').props.accessibilityState.selected).toBe(true),
+    );
   });
 
   it('goes straight to the app when onboarding was already completed', async () => {
     await AsyncStorage.setItem(KEY, JSON.stringify({ characterId: 'cat', goals: [] }));
 
-    const { getByText } = await renderApp();
+    const { getByLabelText } = await renderApp();
 
-    await waitFor(() => expect(getByText('내 방')).toBeTruthy()); // MyRoom title
+    await waitFor(() =>
+      expect(getByLabelText('나의 방').props.accessibilityState.selected).toBe(true),
+    );
   });
 
   it('skips onboarding when the server says completed (no local cache)', async () => {
@@ -102,8 +108,10 @@ describe('AppRoot', () => {
       return emptyRes(url);
     }) as unknown as typeof fetch;
 
-    const { getByText } = await renderApp();
+    const { getByLabelText } = await renderApp();
 
-    await waitFor(() => expect(getByText('내 방')).toBeTruthy());
+    await waitFor(() =>
+      expect(getByLabelText('나의 방').props.accessibilityState.selected).toBe(true),
+    );
   });
 });
