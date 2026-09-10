@@ -906,7 +906,8 @@ export const galleryEntries: GalleryEntry[] = [
   },
   {
     name: 'NotificationListScreen',
-    description: '나의 방 헤더 벨 → 알림 목록: 안 읽음 점 + 개별/전체 읽음.',
+    description:
+      '나의 방 헤더 벨 → 알림 목록: 안 읽음 점 + 개별/전체 읽음, 헤더 전체 삭제(확인 다이얼로그). 스와이프 삭제(#1137)는 onDelete를 넘긴 실제 화면에서만 켜진다.',
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
         <NotificationListScreen />

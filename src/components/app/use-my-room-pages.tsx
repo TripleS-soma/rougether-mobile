@@ -212,6 +212,8 @@ export function useMyRoomPages({
     loadMore: loadMoreNotifications,
     markRead: markNotificationRead,
     markAllRead: markAllNotificationsRead,
+    remove: removeNotification,
+    removeAll: removeAllNotifications,
   } = useNotifications();
   useEffect(() => {
     void loadNotifications();
@@ -551,6 +553,12 @@ export function useMyRoomPages({
         }}
         onReadAll={() => {
           void markAllNotificationsRead();
+        }}
+        onDelete={(id) => {
+          void removeNotification(id);
+        }}
+        onDeleteAll={() => {
+          void removeAllNotifications();
         }}
         onLoadMore={() => {
           void loadMoreNotifications();
