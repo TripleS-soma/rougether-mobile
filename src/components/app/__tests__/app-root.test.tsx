@@ -30,17 +30,21 @@ describe('AppRoot', () => {
     global.fetch = realFetch;
   });
 
-  it('shows onboarding on first launch', async () => {
-    const { getByText } = await renderApp();
-    await waitFor(() => expect(getByText('루게더에 오신 걸 환영해요')).toBeTruthy());
+  // #1282 — 소개는 로그인 전(로그인 라우트)으로 옮겼다. 로그인 뒤 첫 실행은
+  // 곧장 목표 설문이다.
+  it('shows onboarding on first launch — goal survey first (#1282)', async () => {
+    const { getByText, queryByText } = await renderApp();
+    await waitFor(() => expect(getByText('관심 있는 목표를 골라주세요')).toBeTruthy());
+    expect(queryByText('루게더에 오신 걸 환영해요')).toBeNull();
   });
 
   // #1023 — 첫 실행과 다시 보기는 둘 다 `onboarded === false`라 화면만으로는
-  // 구분이 안 된다. 루트가 `replay`를 넘겨야 건너뛰기가 생긴다.
-  it('첫 실행 온보딩에는 건너뛰기가 없다 (#1023)', async () => {
+  // 구분이 안 된다. 루트가 `replay`를 넘겨야 소개와 건너뛰기가 생긴다.
+  it('첫 실행 온보딩에는 건너뛰기도 돌아갈 소개도 없다 (#1023, #1282)', async () => {
     const { queryByText, getByText } = await renderApp();
-    await waitFor(() => expect(getByText('루게더에 오신 걸 환영해요')).toBeTruthy());
+    await waitFor(() => expect(getByText('관심 있는 목표를 골라주세요')).toBeTruthy());
     expect(queryByText('건너뛰기')).toBeNull();
+    expect(queryByText('이전')).toBeNull();
   });
 
   it('시작 화면 설정이 내 정보면 앱이 내 정보로 열린다 (#1139)', async () => {
@@ -109,9 +113,7 @@ describe('AppRoot', () => {
   it('첫 가입: 온보딩 완료 → 추천 루틴 게이트 → 게이트를 닫으면 미션 1(뽑기) 배너가 뜬다', async () => {
     await AsyncStorage.setItem('rougether.auth.userId', '72');
     const ui = await renderApp();
-    await waitFor(() => expect(ui.getByText('루게더에 오신 걸 환영해요')).toBeTruthy());
-    await fireEvent.press(ui.getByLabelText('5번째 슬라이드로 이동'));
-    await fireEvent.press(ui.getByText('목표 선택하기'));
+    await waitFor(() => expect(ui.getByText('관심 있는 목표를 골라주세요')).toBeTruthy());
     await fireEvent.press(ui.getByText('운동'));
     await fireEvent.press(ui.getByText('시작하기'));
     await fireEvent.changeText(ui.getByLabelText('닉네임 입력'), '준서');
@@ -207,9 +209,7 @@ describe('AppRoot', () => {
       return emptyRes(url);
     }) as unknown as typeof fetch;
     const ui = await renderApp();
-    await waitFor(() => expect(ui.getByText('루게더에 오신 걸 환영해요')).toBeTruthy());
-    await fireEvent.press(ui.getByLabelText('5번째 슬라이드로 이동'));
-    await fireEvent.press(ui.getByText('목표 선택하기'));
+    await waitFor(() => expect(ui.getByText('관심 있는 목표를 골라주세요')).toBeTruthy());
     await fireEvent.press(ui.getByText('독서'));
     await fireEvent.press(ui.getByText('시작하기'));
     await fireEvent.changeText(ui.getByLabelText('닉네임 입력'), '테스트');

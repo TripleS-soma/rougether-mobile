@@ -1,4 +1,3 @@
-import { Image } from 'expo-image';
 import { useRef, useState } from 'react';
 import {
   Keyboard,
@@ -11,10 +10,11 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { GestureDetector } from 'react-native-gesture-handler';
 
 import { useAppFrame } from '@/hooks/use-app-frame';
 import { CharacterAvatar } from '@/components/room/character-avatar';
+import { IntroScreen } from '@/components/screens/intro-screen';
+import { PrimaryButton, TextButton } from '@/components/screens/onboarding/onboarding-buttons';
 import { Icon } from '@/components/ui/icon';
 import {
   STARTER_CHARACTER_OPTIONS,
@@ -23,47 +23,10 @@ import {
   DEFAULT_CHARACTER_ID,
 } from '@/constants/characters';
 import { NICKNAME_MAX } from '@/constants/profile';
-import { Radius, ShadowColor, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useScreenStyle } from '@/hooks/use-screen-style';
-import { useConstant, useLatestRef } from '@/hooks/use-stable-value';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
-import { horizontalFlingGesture } from '@/utils/gesture';
-
-type Slide = { image: number; title: string; description: string };
-
-/**
- * 인트로 5장 (#412, design-sync A안): 비주얼은 실제 앱 화면 캡처(라이트,
- * 1080×2192 → 표시 3배수인 689px로 축소·팔레트 압축, #746). UI가 크게 바뀌면
- * 재촬영해 교체한다 — 캡처 비율이 바뀌면 styles.captureFrame도 함께.
- */
-const SLIDES: Slide[] = [
-  {
-    image: require('@/assets/images/onboarding/my-room.png'),
-    title: '매일의 루틴이\n포근한 방이 되는 곳',
-    description: '루게더에 오신 걸 환영해요',
-  },
-  {
-    image: require('@/assets/images/onboarding/routines.png'),
-    title: '오늘의 루틴을\n곰 체크로 완료해요',
-    description: '카테고리로 모아 보고, 알림·반복 설정까지',
-  },
-  {
-    image: require('@/assets/images/onboarding/decor.png'),
-    title: '모은 보상으로\n내 방을 꾸며요',
-    description: '가구·벽지·바닥을 원하는 자리에 자유 배치',
-  },
-  {
-    image: require('@/assets/images/onboarding/house.png'),
-    title: '친구들과 한 집에서\n함께 자라요',
-    description: '방 구경 · 응원 보내기 · 공동 미션으로 집 레벨 업',
-  },
-  {
-    image: require('@/assets/images/onboarding/calendar.png'),
-    title: '기록은 달력으로,\n보상은 뽑기로',
-    description: '지난 완료를 돌아보고 캐릭터·가구를 모아요',
-  },
-];
 
 export type OnboardingGoal = { id: string; label: string; code?: string };
 
@@ -111,7 +74,8 @@ export type OnboardingScreenProps = {
   /**
    * 설정 → '튜토리얼 다시 보기'로 들어왔는가 (#1023). 첫 실행과 다시 보기는
    * 앱 상태가 똑같아서(`app-root`가 `onboarded`만 false로 되돌린다) 화면이
-   * 스스로는 구분할 수 없다 — 건너뛰기 노출을 가르는 값이라 명시적으로 받는다.
+   * 스스로는 구분할 수 없어 명시적으로 받는다. 다시 보기만 소개 슬라이드부터
+   * 시작한다 — 첫 실행의 소개는 로그인 전으로 옮겼다 (#1282).
    */
   replay?: boolean;
   /**
@@ -130,9 +94,12 @@ export function withRang(name: string): string {
 }
 
 /**
- * Onboarding flow, ported from the prototype `OnboardingScreen`: intro slides →
- * goal survey → character select. Theme tokens + type scale; emoji stand in for
+ * Onboarding flow, ported from the prototype `OnboardingScreen`: goal survey →
+ * character select → nickname. Theme tokens + type scale; emoji stand in for
  * the icon set and character sprites (TODO).
+ *
+ * 다시 보기(`replay`)만 소개 슬라이드가 앞에 붙는다 — 첫 실행의 소개는 로그인
+ * 전으로 옮겼다 (#1282).
  */
 export function OnboardingScreen({
   onDone,
@@ -167,8 +134,8 @@ export function OnboardingScreen({
   // don't clip the top title or the bottom buttons.
   const screenStyle = useScreenStyle(['top', 'bottom']);
   const goalOptions = goals && goals.length > 0 ? goals : GOALS;
-  const [index, setIndex] = useState(0);
-  const [showGoalSurvey, setShowGoalSurvey] = useState(false);
+  // 첫 실행은 목표 설문부터 (#1282) — 소개는 로그인 전에 이미 봤다.
+  const [showGoalSurvey, setShowGoalSurvey] = useState(!replay);
   const [showCharacterSelect, setShowCharacterSelect] = useState(false);
   // 닉네임 단계 (#635) — 캐릭터 다음, 시작 직전. 신규 계정의 서버 닉네임이
   // 비어 화면 데모 기본값이 노출되던 문제의 근본 해결.
@@ -182,32 +149,6 @@ export function OnboardingScreen({
   );
   const [selectedCharacter, setSelectedCharacter] = useState<CharacterId>(
     initialCharacterId ?? DEFAULT_CHARACTER_ID,
-  );
-
-  const isLast = index === SLIDES.length - 1;
-  const slide = SLIDES[index];
-
-  /**
-   * 인트로 슬라이드 좌우 스와이프 (#825). 예전엔 `PanResponder`였는데 앱의
-   * 나머지 제스처가 전부 RNGH라 두 시스템이 섞여 실기기에서 잡히지 않았다
-   * — 게다가 `ScrollView`에 panHandlers를 스프레드해 네이티브 스크롤뷰와도
-   * 경합했다. 다른 화면(친구 방 순회·달력 월)과 같은 유틸로 통일한다:
-   * 활성 ±24, 세로 실패 ±36이라 세로 스크롤을 뺏지 않는다.
-   *
-   * 최신 핸들러는 ref로 읽어 제스처를 재생성하지 않는다 (#539 계약) —
-   * 재생성은 진행 중인 팬을 취소시킨다. 훅이므로 조기 return(닉네임·캐릭터·
-   * 목표 단계)보다 위에 있어야 한다.
-   */
-  const slideFlingRef = useLatestRef((dir: 'left' | 'right') => {
-    if (dir === 'left') {
-      if (isLast) setShowGoalSurvey(true);
-      else setIndex((i) => i + 1);
-      return;
-    }
-    setIndex((i) => Math.max(0, i - 1));
-  });
-  const slideFling = useConstant(() =>
-    horizontalFlingGesture('onboarding-slide-fling', (dir) => slideFlingRef.current(dir)),
   );
 
   const { show: toast } = useToast();
@@ -467,128 +408,22 @@ export function OnboardingScreen({
               (characterSelectEnabled ? setShowCharacterSelect(true) : setShowNicknameStep(true))
             }
           />
-          <TextButton label="이전" onPress={() => setShowGoalSurvey(false)} />
+          {/* 첫 실행엔 돌아갈 소개가 없다 — 소개는 로그인 전에 끝났다 (#1282). */}
+          {replay ? <TextButton label="이전" onPress={() => setShowGoalSurvey(false)} /> : null}
         </View>
       </View>
     );
   }
 
-  // --- Intro slides ---
-  // 좌우 스와이프(slideFling, 위에서 생성) · 도트 · '다음' 버튼 세 경로로
-  // 넘긴다. 왼쪽으로 밀면 다음(마지막 장에서는 목표 선택), 오른쪽은 이전.
+  // --- Intro slides (다시 보기 전용) --- 첫 실행의 소개는 로그인 전으로 옮겼다
+  // (#1282, src/app/login.tsx). 설정 → 튜토리얼 다시 보기로 들어온 사람만 여기서
+  // 소개를 다시 보고, 건너뛰기로 나가거나 목표 수정으로 이어진다.
   return (
-    <View style={[styles.screen, screenStyle]}>
-      {/* 건너뛰기는 '다시 보기'로 들어온 사람에게만 (#1023) — 처음 온 사람이
-          소개를 지나치지 않게 한다. 빈 줄은 남겨 두 경로의 레이아웃을 맞춘다. */}
-      <View style={styles.skipRow}>
-        {replay && !isLast ? (
-          <Pressable
-            onPress={onSkip}
-            accessibilityRole="button"
-            accessibilityLabel="튜토리얼 건너뛰고 나가기"
-            hitSlop={8}>
-            <Text style={[Typography.supporting, { color: t.textMuted }]}>건너뛰기</Text>
-          </Pressable>
-        ) : null}
-      </View>
-
-      {/* 태블릿·짧은 캔버스(iPad 호환 모드) 대응 (#725): 세로가 부족하면
-          가운데 정렬 대신 스크롤로 흘려 제목이 위로 잘리지 않게 하고, 넓은
-          폭에서는 중앙 고정폭 컬럼으로 묶어 요소가 끝까지 늘어나지 않게 한다. */}
-      <ScrollView
-        style={styles.slideScroll}
-        contentContainerStyle={styles.slideBody}
-        showsVerticalScrollIndicator={false}>
-        {/* collapsable={false}: 안드로이드 뷰 평탄화로 사라지면 제스처가
-            붙을 대상이 없어진다 (친구 방 플링과 같은 규칙). */}
-        <GestureDetector gesture={slideFling}>
-          <View style={styles.slideContent} collapsable={false}>
-            <Text style={[Typography.h2, styles.center, { color: t.text }]}>{slide.title}</Text>
-            <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
-              {slide.description}
-            </Text>
-            {/* 실제 앱 화면 캡처 — 폰 프레임 카드 (#412). 390:844 비율 유지. */}
-            <View
-              style={[styles.captureFrame, { borderColor: t.border, backgroundColor: t.surface }]}>
-              <Image
-                source={slide.image}
-                style={styles.captureImage}
-                contentFit="cover"
-                transition={150}
-                accessibilityLabel={slide.title.replace('\n', ' ')}
-              />
-            </View>
-          </View>
-        </GestureDetector>
-      </ScrollView>
-
-      <View style={styles.dots}>
-        {SLIDES.map((_, i) => (
-          <Pressable
-            key={i}
-            onPress={() => setIndex(i)}
-            accessibilityRole="button"
-            accessibilityLabel={`${i + 1}번째 슬라이드로 이동`}
-            style={[
-              styles.dot,
-              i === index
-                ? { width: 24, backgroundColor: t.primary }
-                : { width: 8, backgroundColor: t.border },
-            ]}
-          />
-        ))}
-      </View>
-
-      <View style={styles.actions}>
-        <PrimaryButton
-          label={isLast ? '목표 선택하기' : '다음'}
-          onPress={() => (isLast ? setShowGoalSurvey(true) : setIndex((i) => i + 1))}
-        />
-      </View>
-    </View>
-  );
-}
-
-function PrimaryButton({
-  label,
-  onPress,
-  disabled,
-  blockedMessage,
-}: {
-  label: string;
-  onPress: () => void;
-  disabled?: boolean;
-  /** When set, a disabled tap stays live and explains itself with this toast. */
-  blockedMessage?: string;
-}) {
-  const t = useTokens();
-  const Typography = useTypography();
-  const { show: toast } = useToast();
-  return (
-    <Pressable
-      onPress={disabled && blockedMessage ? () => toast(blockedMessage, 'error') : onPress}
-      disabled={disabled && !blockedMessage}
-      accessibilityRole="button"
-      accessibilityState={{ disabled }}
-      style={({ pressed }) => [
-        styles.primaryBtn,
-        { backgroundColor: disabled ? t.disabledBg : t.primary },
-        pressed && !disabled && { backgroundColor: t.primaryActive },
-      ]}>
-      <Text style={[Typography.label, { color: disabled ? t.textMuted : t.onPrimary }]}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
-
-function TextButton({ label, onPress }: { label: string; onPress: () => void }) {
-  const t = useTokens();
-  const Typography = useTypography();
-  return (
-    <Pressable onPress={onPress} accessibilityRole="button" style={styles.textBtn}>
-      <Text style={[Typography.supporting, { color: t.textMuted }]}>{label}</Text>
-    </Pressable>
+    <IntroScreen
+      doneLabel="목표 선택하기"
+      onDone={() => setShowGoalSurvey(true)}
+      onSkip={replay ? onSkip : undefined}
+    />
   );
 }
 
@@ -670,55 +505,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  skipRow: {
-    height: 44,
-    width: '100%',
-    maxWidth: CONTENT_MAX_W,
-    alignSelf: 'center',
-    paddingHorizontal: Spacing.four,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-  },
-  slideScroll: {
-    flex: 1,
-  },
-  // contentContainer — 내용이 짧으면 가운데(flexGrow+center), 넘치면 스크롤.
-  slideBody: {
-    flexGrow: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.five,
-    paddingVertical: Spacing.three,
-  },
-  // 넓은 화면(태블릿) 중앙 고정폭 컬럼 (#725).
-  slideContent: {
-    width: '100%',
-    maxWidth: CONTENT_MAX_W,
-    alignItems: 'center',
-    gap: Spacing.three,
-  },
-  captureFrame: {
-    // 캡처 원본(1080×2192) 비율의 폰 프레임 카드 — 세로 공간에 맞춰 줄어든다.
-    // 비율이 어긋나면 contentFit="cover"가 화면 가장자리를 잘라내므로 원본과
-    // 같은 값을 쓴다 (#746).
-    width: 210,
-    aspectRatio: 1080 / 2192,
-    maxHeight: 460,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    overflow: 'hidden',
-    alignSelf: 'center',
-    marginTop: Spacing.two,
-    elevation: 3,
-    shadowColor: ShadowColor,
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-  },
-  captureImage: {
-    width: '100%',
-    height: '100%',
-  },
   dots: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -757,14 +543,5 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     paddingVertical: Spacing.three,
     paddingHorizontal: Spacing.four,
-  },
-  primaryBtn: {
-    paddingVertical: Spacing.three,
-    borderRadius: Radius.pill,
-    alignItems: 'center',
-  },
-  textBtn: {
-    paddingVertical: Spacing.two,
-    alignItems: 'center',
   },
 });
