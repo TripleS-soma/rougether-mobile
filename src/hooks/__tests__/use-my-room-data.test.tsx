@@ -275,6 +275,45 @@ describe('useMyRoomData — profile save (PUT /me)', () => {
 });
 
 describe('useMyRoomData — uncategorized adoption', () => {
+  it('미분류 투두는 생성 후 새로고침해도 카테고리를 만들거나 강제 이동하지 않는다', async () => {
+    const calls: { url: string; method: string; body?: string }[] = [];
+    const todos = [
+      {
+        id: 9,
+        title: '분류하지 않은 투두',
+        categoryId: null,
+        dueDate: '2026-09-18',
+        status: 'PENDING',
+      },
+    ];
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+      calls.push({ url, method, body: init?.body as string | undefined });
+      if (method === 'POST' && url.endsWith('/todos')) {
+        const todo = { ...todos[0], ...JSON.parse(init?.body as string), id: 10 };
+        todos.push(todo);
+        return res(todo);
+      }
+      if (url.includes('/categories')) return res({ items: [{ id: 1, name: '기존 카테고리' }] });
+      if (url.endsWith('/todos')) return res({ items: todos });
+      if (url.endsWith('/today')) return res({ categories: [], summary: {}, streak: {} });
+      if (url.endsWith('/me')) return res({ userId: 1 });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => {
+      expect(await result.current.quickAddTodo('', '제목만 추가', '2026-09-18')).toBe(true);
+      await result.current.reload();
+    });
+    const writes = calls.filter((call) => call.method !== 'GET');
+    expect(writes).toHaveLength(1);
+    expect(writes[0].url).toMatch(/\/todos$/);
+    expect(JSON.parse(writes[0].body!)).toEqual({ title: '제목만 추가', dueDate: '2026-09-18' });
+    expect(result.current.routines.filter((item) => item.kind === 'todo')).toHaveLength(2);
+    expect(result.current.routines.every((item) => item.category == null)).toBe(true);
+  });
+
   it('creates a 기타 category and reassigns orphan routines on load', async () => {
     const calls: { url: string; method: string; body?: string }[] = [];
     global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
@@ -416,7 +455,7 @@ describe('useMyRoomData — 달력 월 점 (#838)', () => {
     expect(result.current.markedTodoDates.has('2026-08-20')).toBe(false);
 
     // 응답이 오기 전에 이미 점이 있다.
-    let pending!: Promise<void>;
+    let pending!: Promise<boolean>;
     await act(async () => {
       pending = result.current.quickAddTodo('1', '치과 예약', '2026-08-20');
     });

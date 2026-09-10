@@ -62,3 +62,8 @@ export function relativeTimeLabel(at: Date, now: Date = new Date()): string {
   if (days < 7) return `${days}일 전`;
   return `${at.getMonth() + 1}월 ${at.getDate()}일`;
 }
+
+/** Month/day label for date-only controls. */
+export function monthDayLabel(d: Date): string {
+  return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+}

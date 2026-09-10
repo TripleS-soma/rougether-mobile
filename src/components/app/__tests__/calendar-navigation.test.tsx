@@ -61,7 +61,8 @@ describe('달력 하단 탭 왕복 (#1159)', () => {
       ui.getByLabelText(new RegExp(`^${PREVIOUS_MONTH_DATE},`)).props.accessibilityState.selected,
     ).toBe(true);
 
-    await fireEvent.press(ui.getByLabelText('이 날에 루틴 추가'));
+    await fireEvent.press(ui.getByLabelText('이 날에 할 일 추가'));
+    await fireEvent.press(ui.getByLabelText('루틴 추가'));
     await finishTransition();
     expect(ui.getByText('루틴 추가')).toBeTruthy();
     await fireEvent.press(ui.getByLabelText('뒤로가기'));
@@ -76,7 +77,8 @@ describe('달력 하단 탭 왕복 (#1159)', () => {
 
     // 오늘은 서버 날짜 조회를 생략해도 선택값 자체는 반드시 저장해야 한다.
     await fireEvent.press(ui.getByLabelText('오늘로'));
-    await fireEvent.press(ui.getByLabelText('이 날에 루틴 추가'));
+    await fireEvent.press(ui.getByLabelText('이 날에 할 일 추가'));
+    await fireEvent.press(ui.getByLabelText('루틴 추가'));
     await finishTransition();
     await fireEvent.press(ui.getByLabelText('뒤로가기'));
     await finishTransition();

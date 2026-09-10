@@ -22,7 +22,6 @@ import { HelpScreen } from '@/components/screens/help-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { InviteFriendsScreen } from '@/components/screens/invite-friends-screen';
 import { LoginScreen } from '@/components/screens/login-screen';
-import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { CharacterPickerSheet } from '@/components/screens/sheets/character-picker-sheet';
 import { BugReportScreen } from '@/components/screens/bug-report-screen';
 import { NotificationListScreen } from '@/components/screens/notification-list-screen';
@@ -46,6 +45,7 @@ import { CoinIcon } from '@/components/ui/coin-icon';
 import { BearCheck } from '@/components/ui/bear-check';
 import { RoomGrowthPill } from '@/components/ui/room-growth-pill';
 import { CalendarDepthPreview } from '@/dev/calendar-depth-preview';
+import { RoomQuickTodoPreview, TodoComposePreview } from '@/dev/todo-compose-preview';
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
 import { ScalePressable } from '@/components/ui/scale-pressable';
@@ -531,13 +531,7 @@ export const galleryEntries: GalleryEntry[] = [
       'Ported from the prototype MyRoomZoomScreen (#7): room view + today’s routines + reward.',
     render: () => (
       <View style={{ height: 900, alignSelf: 'stretch' }}>
-        <MyRoomScreen
-          routines={SAMPLE_ROUTINES}
-          view="room"
-          growthLevel={2}
-          growthPoints={50}
-          pointsToNextLevel={16}
-        />
+        <RoomQuickTodoPreview />
       </View>
     ),
   },
@@ -1089,6 +1083,11 @@ export const galleryEntries: GalleryEntry[] = [
     name: 'CalendarDepth',
     description: '달성도·종류 필터·선택일 기록을 실제 화면으로 확인한다 (#1252).',
     render: () => <CalendarDepthPreview />,
+  },
+  {
+    name: 'TodoComposeSheet',
+    description: '카테고리 이동 없이 제목부터 입력하는 투두 빠른 추가 (#1272).',
+    render: () => <TodoComposePreview />,
   },
   {
     name: 'RoomGrowthPill',

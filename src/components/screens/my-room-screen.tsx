@@ -47,6 +47,7 @@ import { DateEditSheet } from '@/components/screens/sheets/date-edit-sheet';
 import { RenameDialog } from '@/components/screens/sheets/rename-dialog';
 import { RoutineMenuSheet } from '@/components/screens/sheets/routine-menu-sheet';
 import { TimePickerSheet } from '@/components/screens/sheets/time-picker-sheet';
+import { TodoComposeSheet } from '@/components/screens/sheets/todo-compose-sheet';
 import { TodoDateDialog } from '@/components/screens/sheets/todo-date-dialog';
 import { Loading } from '@/components/ui/loading';
 import type { CalendarDayCount } from '@/api/types';
@@ -139,7 +140,7 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
     /** Controlled selection survives the tab pager unmounting for a sub-screen. */
     selectedDate?: string;
     onSelectedDateChange?: (date: string) => void;
-    /** 달력 '이 날의 할 일' 옆 ＋ 루틴 — 그 날짜를 시작일로 루틴 추가 (#1138). */
+    /** Quick composer → routine form, preserving the selected calendar date. */
     onAddRoutineForDate?: (date: string) => void;
     /** Room occupant's display name (header title becomes "{userName}의 방"). */
     userName?: string;
@@ -185,7 +186,7 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
     onRetry?: () => void;
     // Callbacks (wired separately).
     onEdit?: () => void;
-    /** 오늘의 루틴 + 버튼 — 바로 루틴 추가 화면으로 (#335). */
+    /** Today quick composer → routine form. */
     onAddRoutine?: () => void;
     /** 햄버거 메뉴의 루틴 관리 항목 (없으면 onAddRoutine으로 폴백). */
     onManageRoutines?: () => void;
@@ -211,7 +212,11 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
     /** 당겨서 새로고침 (#454) — 서버 데이터 전체 리로드. resolve까지 발바닥이 두근거린다. */
     onRefresh?: () => Promise<void> | void;
     /** Quick-add a todo to a category with a due date (the + on a category header). */
-    onQuickAddRoutine?: (category: string, title: string, dueDate: string) => void;
+    onQuickAddRoutine?: (
+      category: string,
+      title: string,
+      dueDate: string,
+    ) => boolean | void | Promise<boolean | void>;
     /**
      * Categories whose quick-add(+) is hidden — 공동미션 연동 카테고리는 미션의
      * + 버튼으로만 항목이 생겨야 하므로 임의 투두 추가를 막는다 (#272).
@@ -505,6 +510,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // Which category's quick-add input is open, the in-progress todo text + due
   // date, and which routine's kebab menu is open.
   const [addingCategory, setAddingCategory] = useState<string | null>(null);
+  const [composeDate, setComposeDate] = useState<string | null>(null);
   // 입력 중인 제목은 QuickAddRow가 소유한다 (#769) — 여기 두면 한 글자마다
   // 화면 전체가 리렌더돼 전 행의 스와이프 트리·제스처까지 재조정된다.
   const [newTodoDate, setNewTodoDate] = useState(today);
@@ -1243,15 +1249,13 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                         </Text>
                       ) : null}
                       <CoachTarget id="room-add-routine">
-                        {/* '＋ 루틴' 라벨 필 (#483) — 카테고리의 원형 ＋(할 일 추가)와
-                            같은 문법이라 헷갈렸다. 라벨로 용도를 말해 구분한다. */}
                         <Pressable
-                          onPress={onAddRoutine}
+                          onPress={() => setComposeDate(today)}
                           accessibilityRole="button"
-                          accessibilityLabel="루틴 추가"
-                          style={[styles.addPill, { backgroundColor: t.primary }]}>
-                          <Icon name="add" size={14} color={t.onPrimary} />
-                          <Text style={[Typography.label, { color: t.onPrimary }]}>루틴</Text>
+                          accessibilityLabel="오늘 할 일 추가">
+                          <GlassSurface fallbackColor={t.surface} style={styles.quickAddTrigger}>
+                            <Icon name="add" size={22} color={t.text} />
+                          </GlassSurface>
                         </Pressable>
                       </CoachTarget>
                     </View>
@@ -1368,17 +1372,14 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                   </Text>
                 </View>
                 <View style={styles.sectionHeadRight}>
-                  {/* 오늘 목록과 같은 ＋ 루틴 (#1138) — 고른 날짜가 시작일. */}
-                  {onAddRoutineForDate ? (
-                    <Pressable
-                      onPress={() => onAddRoutineForDate(selectedDate)}
-                      accessibilityRole="button"
-                      accessibilityLabel="이 날에 루틴 추가"
-                      style={[styles.addPill, { backgroundColor: t.primary }]}>
-                      <Icon name="add" size={14} color={t.onPrimary} />
-                      <Text style={[Typography.label, { color: t.onPrimary }]}>루틴</Text>
-                    </Pressable>
-                  ) : null}
+                  <Pressable
+                    onPress={() => setComposeDate(selectedDate)}
+                    accessibilityRole="button"
+                    accessibilityLabel="이 날에 할 일 추가">
+                    <GlassSurface fallbackColor={t.surface} style={styles.quickAddTrigger}>
+                      <Icon name="add" size={22} color={t.text} />
+                    </GlassSurface>
+                  </Pressable>
                 </View>
               </View>
               {calendarDayError || calendarTodayError ? (
@@ -1558,6 +1559,32 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         onRename={onRenameRoutine}
       />
 
+      <TodoComposeSheet
+        visible={composeDate !== null}
+        initialDate={composeDate ?? today}
+        today={today}
+        categories={categories.filter(
+          (category) =>
+            !!category.id &&
+            !category.deleted &&
+            category.houseId == null &&
+            canQuickAdd(category.id),
+        )}
+        onSubmit={async (category, title, date) => {
+          if (!onQuickAddRoutine) return false;
+          const result = await onQuickAddRoutine(category, title, date);
+          if (result !== false && tab === 'calendar') {
+            pickDate(date);
+            if (calendarFilter === 'routine') setCalendarFilter('todo');
+          }
+          return result;
+        }}
+        onAddRoutine={
+          tab === 'calendar' ? onAddRoutineForDate : onAddRoutine ? () => onAddRoutine() : undefined
+        }
+        onClose={() => setComposeDate(null)}
+      />
+
       <TodoDateDialog
         visible={todoDateOpen}
         value={newTodoDate}
@@ -1583,7 +1610,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         onEditRoom={onEdit}
         onSaveRoomImage={() => void onSaveRoomImage()}
         onOpenCategoryManager={() => onManageCategories?.()}
-        // + 버튼(onAddRoutine)은 바로 추가로 가고, 관리는 여기서만 (#335).
+        // Routine management remains separate from the quick composer.
         onManageRoutines={onManageRoutines ?? onAddRoutine}
       />
 
@@ -1613,6 +1640,12 @@ export const MyRoomScreen = memo(function MyRoomScreen({
 });
 
 const styles = StyleSheet.create({
+  quickAddTrigger: {
+    borderRadius: Radius.pill,
+    padding: Spacing.three,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   calDateHeading: { flexDirection: 'row', alignItems: 'baseline', gap: Spacing.two },
   // The selected date is the single heading for its list.
 

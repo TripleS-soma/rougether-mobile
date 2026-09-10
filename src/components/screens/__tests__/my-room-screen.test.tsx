@@ -49,7 +49,8 @@ describe('MyRoomScreen', () => {
     );
     expect(ui.queryByLabelText('방')).toBeNull();
     expect(ui.getByRole('header', { name: calendarHeading(TODAY) })).toBeTruthy();
-    await fireEvent.press(ui.getByLabelText('이 날에 루틴 추가'));
+    await fireEvent.press(ui.getByLabelText('이 날에 할 일 추가'));
+    await fireEvent.press(ui.getByLabelText('루틴 추가'));
     expect(onAddRoutineForDate).toHaveBeenCalledWith(TODAY);
   });
 
@@ -402,10 +403,10 @@ describe('MyRoomScreen', () => {
     expect(onManageCategories).toHaveBeenCalledTimes(1);
   });
 
-  it('오늘의 루틴 + 버튼은 바로 루틴 추가 콜백을 부른다 (#335)', async () => {
+  it('오늘의 빠른 추가에서 루틴 추가로 이동한다', async () => {
     const onAddRoutine = jest.fn();
     const onManageRoutines = jest.fn();
-    const { getByLabelText, getByText } = await render(
+    const { getByLabelText } = await render(
       <MyRoomScreen
         routines={SAMPLE_ROUTINES}
         onAddRoutine={onAddRoutine}
@@ -413,8 +414,7 @@ describe('MyRoomScreen', () => {
       />,
     );
 
-    // '＋ 루틴' 라벨 필 (#483) — 카테고리 ＋(할 일 추가)와 구분되는 가시 라벨.
-    expect(getByText('루틴')).toBeTruthy();
+    await fireEvent.press(getByLabelText('오늘 할 일 추가'));
     await fireEvent.press(getByLabelText('루틴 추가'));
     expect(onAddRoutine).toHaveBeenCalledTimes(1);
     expect(onManageRoutines).not.toHaveBeenCalled();

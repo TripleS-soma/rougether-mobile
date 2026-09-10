@@ -104,11 +104,12 @@ export function useMyRoomData() {
     let appCats = appCatsAll.filter((c) => !c.deleted);
     let items = [...rts.map(toAppRoutine), ...tds.map(toAppTodo)];
 
-    // Uncategorized routines must not exist: adopt any item without a (known)
-    // category into a real 기타 category, creating it server-side if needed.
+    // Preserve the legacy adoption of routines without a known category.
+    // Todos support an intentionally empty category and must remain unclassified.
     // (Legacy data, or the server nulling categoryId on category delete.)
     const known = new Set(appCats.map((c) => c.id));
-    const isOrphan = (r: Routine) => !r.category || !known.has(r.category);
+    // Unclassified todos are intentional: keep the optional category unset across reloads.
+    const isOrphan = (r: Routine) => r.kind !== 'todo' && (!r.category || !known.has(r.category));
     if (items.some(isOrphan)) {
       try {
         let uncategorized = appCats.find((c) => c.name === UNCATEGORIZED_META.name);
@@ -263,8 +264,10 @@ export function useMyRoomData() {
         // 달력의 서버 백업 날짜(오늘 외)에 추가한 경우 그 날짜 기록을 재조회해
         // 목록에 즉시 반영한다 (#323).
         if (dueDate !== todayIso()) void loadCalendarDay(dueDate);
+        return true;
       } catch {
         toast('할 일을 추가하지 못했어요', 'error');
+        return false;
       } finally {
         unmarkPending(dueDate);
       }

@@ -2,8 +2,10 @@ import { type ReactNode, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
+  KeyboardAvoidingView,
   Modal,
   PanResponder,
+  Platform,
   Pressable,
   StyleSheet,
   type StyleProp,
@@ -56,6 +58,10 @@ export type BottomSheetProps = {
   cardStyle?: StyleProp<ViewStyle>;
   /** 끌어내리기 클레임 범위 — 기본 'header' (#514). */
   dragScope?: BottomSheetDragScope;
+  /** Keep input sheets above the keyboard without changing other sheets. */
+  avoidKeyboard?: boolean;
+  /** Prevent swipe dismissal during a pending save. */
+  dragEnabled?: boolean;
   children: ReactNode;
 };
 
@@ -69,6 +75,8 @@ export function BottomSheet({
   onClose,
   cardStyle,
   dragScope = 'header',
+  avoidKeyboard = false,
+  dragEnabled = true,
   children,
 }: BottomSheetProps) {
   const { height: windowH } = useWindowDimensions();
@@ -83,6 +91,7 @@ export function BottomSheet({
   // PanResponder는 한 번만 만들어지므로 최신 onClose·dragScope를 ref로 참조한다.
   const onCloseRef = useLatestRef(onClose);
   const dragScopeRef = useLatestRef(dragScope);
+  const dragEnabledRef = useLatestRef(dragEnabled);
 
   useEffect(() => {
     if (visible) {
@@ -113,6 +122,7 @@ export function BottomSheet({
   const pan = useConstant(() =>
     PanResponder.create({
       onMoveShouldSetPanResponder: (_e, g) =>
+        dragEnabledRef.current &&
         g.dy > 6 &&
         g.dy > Math.abs(g.dx) &&
         claimsDrag(dragScopeRef.current, g.y0, cardTopRef.current),
@@ -154,34 +164,48 @@ export function BottomSheet({
     dragY,
   );
 
-  // 투명 Modal 위에 올려 탭바까지 덮는다 — 애니메이션은 직접 재생하므로
-  // Modal 기본 전환은 끈다.
+  const overlay = (
+    <Animated.View
+      style={avoidKeyboard ? styles.keyboardOverlay : styles.overlay}
+      testID="bottom-sheet">
+      <Animated.View style={[styles.backdrop, { opacity: progress }]} />
+      <Pressable
+        style={StyleSheet.absoluteFill}
+        onPress={onClose}
+        accessibilityRole="button"
+        accessibilityLabel="시트 닫기"
+      />
+      <Animated.View
+        {...pan.panHandlers}
+        onLayout={(e) => {
+          setCardH(e.nativeEvent.layout.height);
+          cardTopRef.current = e.nativeEvent.layout.y;
+        }}
+        style={[cardStyle, { transform: [{ translateY }] }]}
+        testID="bottom-sheet-card">
+        {children}
+      </Animated.View>
+    </Animated.View>
+  );
+
   return (
     <Modal transparent visible statusBarTranslucent animationType="none" onRequestClose={onClose}>
-      <Animated.View style={styles.overlay} testID="bottom-sheet">
-        <Animated.View style={[styles.backdrop, { opacity: progress }]} />
-        <Pressable
-          style={StyleSheet.absoluteFill}
-          onPress={onClose}
-          accessibilityRole="button"
-          accessibilityLabel="시트 닫기"
-        />
-        <Animated.View
-          {...pan.panHandlers}
-          onLayout={(e) => {
-            setCardH(e.nativeEvent.layout.height);
-            cardTopRef.current = e.nativeEvent.layout.y;
-          }}
-          style={[cardStyle, { transform: [{ translateY }] }]}
-          testID="bottom-sheet-card">
-          {children}
-        </Animated.View>
-      </Animated.View>
+      {avoidKeyboard ? (
+        <KeyboardAvoidingView
+          style={styles.keyboardRoot}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          {overlay}
+        </KeyboardAvoidingView>
+      ) : (
+        overlay
+      )}
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  keyboardRoot: { flex: 1 },
+  keyboardOverlay: { flex: 1, justifyContent: 'flex-end' },
   overlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'flex-end',
