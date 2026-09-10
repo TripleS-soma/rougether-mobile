@@ -1,8 +1,10 @@
+import { firstRoutineDate } from '@/utils/routine-compose';
+import { isScheduledOn } from '@/components/screens/my-room/schedule';
 import { useState } from 'react';
 import { MyRoomScreen, type CalendarDayItem } from '@/components/screens/my-room-screen';
 import type { CalendarDayCount } from '@/api/types';
 
-const TODAY = '2026-09-09';
+const TODAY = '2026-09-10';
 const TODO_DAYS = new Set([2, 5, 8, 10, 14, 18, 23, 26, 30]);
 const DAYS: CalendarDayCount[] = Array.from({ length: 30 }, (_, i) => ({
   date: `2026-09-${String(i + 1).padStart(2, '0')}`,
@@ -19,7 +21,7 @@ const ITEMS: CalendarDayItem[] = [
   { id: 't-2', kind: 'todo', title: '프로젝트 회고 작성', completed: false },
 ];
 export function CalendarDepthPreview() {
-  const [date, setDate] = useState('2026-09-08');
+  const [date, setDate] = useState('2026-09-10');
   const [itemsByDate, setItemsByDate] = useState<Record<string, CalendarDayItem[]>>(() =>
     Object.fromEntries(
       DAYS.map((day) => [
@@ -55,7 +57,10 @@ export function CalendarDepthPreview() {
       today={TODAY}
       selectedDate={date}
       onSelectedDateChange={setDate}
-      routines={[]}
+      routines={(itemsByDate[TODAY] ?? []).map((item) => ({
+        ...item,
+        dueDate: item.kind === 'todo' ? TODAY : undefined,
+      }))}
       categories={[]}
       calendarMonthDays={month}
       markedTodoDates={
@@ -63,6 +68,27 @@ export function CalendarDepthPreview() {
       }
       calendarDays={itemsByDate}
       onSelectDate={() => {}}
+      onCreateRoutine={(routine) => {
+        const first = firstRoutineDate(routine)!;
+        setItemsByDate((previous) => {
+          const next = { ...previous };
+          for (const date of new Set([...Object.keys(previous), first])) {
+            if (isScheduledOn({ ...routine, id: '' }, date))
+              next[date] = [
+                ...(previous[date] ?? []),
+                {
+                  id: `r-${Date.now()}`,
+                  kind: 'routine',
+                  title: routine.title,
+                  category: routine.category || undefined,
+                  completed: false,
+                },
+              ];
+          }
+          return next;
+        });
+        return true;
+      }}
       onQuickAddRoutine={(category, title, dueDate) => {
         setItemsByDate((previous) => ({
           ...previous,

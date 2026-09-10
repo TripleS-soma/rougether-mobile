@@ -19,13 +19,13 @@ describe('MyRoomScreen', () => {
   // 달력이 하단 탭으로 (#1138) — 셸이 view를 고정하면 방/달력 알약은 없고, 달력 뷰의
   // '이 날의 할 일' 옆 ＋ 루틴이 고른 날짜를 넘긴다.
   it("view='calendar'면 알약 없이 달력을 그리고, ＋ 루틴이 고른 날짜로 부른다 (#1138)", async () => {
-    const onAddRoutineForDate = jest.fn();
+    const onCreateRoutine = jest.fn();
     const ui = await render(
       <MyRoomScreen
         routines={[]}
         view="calendar"
         onSelectDate={jest.fn()}
-        onAddRoutineForDate={onAddRoutineForDate}
+        onCreateRoutine={onCreateRoutine}
       />,
     );
     expect(ui.queryByLabelText('방')).toBeNull();
@@ -33,9 +33,12 @@ describe('MyRoomScreen', () => {
     expect(ui.queryByText('달력')).toBeNull();
     expect(ui.queryByTestId('my-room-chrome')).toBeNull();
     expect(ui.getByRole('header', { name: calendarHeading(TODAY) })).toBeTruthy();
-    await fireEvent.press(ui.getByLabelText('이 날에 할 일 추가'));
-    await fireEvent.press(ui.getByLabelText('루틴 추가'));
-    expect(onAddRoutineForDate).toHaveBeenCalledWith(TODAY);
+    await fireEvent.press(ui.getByLabelText('선택한 날에 추가'));
+    await fireEvent.changeText(ui.getByLabelText('루틴 제목'), '새 루틴');
+    await fireEvent.press(ui.getByLabelText('루틴 저장'));
+    expect(onCreateRoutine).toHaveBeenCalledWith(
+      expect.objectContaining({ title: '새 루틴', startDate: TODAY }),
+    );
   });
 
   it('선택 날짜를 제목으로 삼고 완료 상태는 각 항목에 유지한다', async () => {
@@ -159,13 +162,13 @@ describe('MyRoomScreen', () => {
     );
     await pickCalendarDate(ui, YESTERDAY);
     // 미션 연동 카테고리는 달력에서도 + 미노출 (방탭과 같은 규칙).
-    expect(ui.queryByLabelText('일정 할 일 추가')).toBeNull();
-    await fireEvent.press(ui.getByLabelText('건강 할 일 추가'));
+    expect(ui.queryByLabelText('일정에 추가')).toBeNull();
+    await fireEvent.press(ui.getByLabelText('건강에 추가'));
     // 날짜 칩이 선택한 날짜(어제)로 프리필된다.
-    expect(ui.getByText(YESTERDAY.replaceAll('-', '.'))).toBeTruthy();
-    const input = ui.getByPlaceholderText('할 일 입력 후 완료');
+    await fireEvent.press(ui.getAllByRole('tab', { name: '할 일' }).at(-1)!);
+    const input = ui.getByLabelText('할 일 제목');
     await fireEvent.changeText(input, '어제 밀린 일');
-    await fireEvent(input, 'blur');
+    await fireEvent.press(ui.getByLabelText('할 일 저장'));
     expect(onQuickAddRoutine).toHaveBeenCalledWith('건강', '어제 밀린 일', YESTERDAY);
   });
 
@@ -175,12 +178,13 @@ describe('MyRoomScreen', () => {
       <MyRoomScreen routines={SAMPLE_ROUTINES} onQuickAddRoutine={onQuickAddRoutine} />,
     );
     await pickCalendarDate(ui, TODAY);
-    await fireEvent.press(ui.getByLabelText('건강 할 일 추가'));
+    await fireEvent.press(ui.getByLabelText('건강에 추가'));
     // 오늘이면 날짜 칩은 '오늘'.
+    await fireEvent.press(ui.getAllByRole('tab', { name: '할 일' }).at(-1)!);
     expect(ui.getByText('오늘')).toBeTruthy();
-    const input = ui.getByPlaceholderText('할 일 입력 후 완료');
+    const input = ui.getByLabelText('할 일 제목');
     await fireEvent.changeText(input, '오늘 할 일');
-    await fireEvent(input, 'blur');
+    await fireEvent.press(ui.getByLabelText('할 일 저장'));
     expect(onQuickAddRoutine).toHaveBeenCalledWith('건강', '오늘 할 일', TODAY);
   });
 
