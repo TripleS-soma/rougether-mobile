@@ -1,6 +1,13 @@
 import { GlassView } from 'expo-glass-effect';
 import { type ReactNode } from 'react';
-import { StyleSheet, type StyleProp, View, type ViewProps, type ViewStyle } from 'react-native';
+import {
+  Platform,
+  StyleSheet,
+  type StyleProp,
+  View,
+  type ViewProps,
+  type ViewStyle,
+} from 'react-native';
 
 import { ShadowColor } from '@/constants/theme';
 
@@ -16,6 +23,8 @@ export type GlassSurfaceProps = Omit<ViewProps, 'style'> & {
    * 알약처럼 눌리지 않는 면이면 끈다.
    */
   interactive?: boolean;
+  /** Clear surfaces keep large panels lighter; controls retain regular glass. */
+  glassEffectStyle?: 'regular' | 'clear';
   /**
    * 강조 버튼용 틴트 (#1069) — iOS 26의 prominent glass. 글래스가 가능하면 이 색을
    * 유리에 입히고, 아니면 `fallbackColor`가 그대로 배경이 된다(호출 쪽이 같은 색을
@@ -39,6 +48,7 @@ export type GlassSurfaceProps = Omit<ViewProps, 'style'> & {
 export function GlassSurface({
   fallbackColor,
   interactive = true,
+  glassEffectStyle = 'regular',
   tintColor,
   style,
   children,
@@ -52,9 +62,19 @@ export function GlassSurface({
     // 그대로, 투명도 줄이기(opaque)는 알파 없이.
     const translucent = material === 'translucent' && !tintColor;
     const bg =
-      tintColor ?? (translucent ? withAlpha(fallbackColor, TRANSLUCENT_ALPHA) : fallbackColor);
+      tintColor ??
+      (translucent
+        ? withAlpha(fallbackColor, glassEffectStyle === 'clear' ? 0.5 : TRANSLUCENT_ALPHA)
+        : fallbackColor);
     return (
-      <View {...rest} style={[style, translucent && styles.lift, { backgroundColor: bg }]}>
+      <View
+        {...rest}
+        style={[
+          style,
+          translucent && styles.lift,
+          translucent && glassEffectStyle === 'clear' && styles.clear,
+          { backgroundColor: bg },
+        ]}>
         {children}
       </View>
     );
@@ -62,7 +82,7 @@ export function GlassSurface({
   return (
     <GlassView
       {...rest}
-      glassEffectStyle="regular"
+      glassEffectStyle={glassEffectStyle}
       isInteractive={interactive}
       tintColor={tintColor}
       colorScheme={scheme}
@@ -76,6 +96,13 @@ export function GlassSurface({
 const TRANSLUCENT_ALPHA = 0.9;
 
 const styles = StyleSheet.create({
+  clear: {
+    shadowOpacity: 0.06,
+    ...Platform.select({
+      web: { backdropFilter: 'blur(20px) saturate(1.3)' } as ViewStyle,
+      default: {},
+    }),
+  },
   lift: {
     elevation: 3,
     shadowColor: ShadowColor,

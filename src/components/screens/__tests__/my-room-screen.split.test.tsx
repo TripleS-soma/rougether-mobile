@@ -4,6 +4,7 @@ import { flattenStyle } from '@/test-utils/style';
 
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
+import { calendarHeading, TODAY } from '@/test-utils/my-room-screen-fixtures';
 import type { AppFrame } from '@/hooks/use-app-frame';
 
 // 웹 데스크톱 2단 (#1230) — 프레임 판정만 바꿔 가며 배치를 본다.
@@ -70,6 +71,6 @@ describe('MyRoomScreen 2단 레이아웃 (#1230)', () => {
     );
     expect(ui.getByTestId('my-room-split')).toBeTruthy();
     expect(ui.getByTestId('calendar-grid')).toBeTruthy();
-    expect(ui.getByText('이 날의 할 일')).toBeTruthy();
+    expect(ui.getByRole('header', { name: calendarHeading(TODAY) })).toBeTruthy();
   });
 });
