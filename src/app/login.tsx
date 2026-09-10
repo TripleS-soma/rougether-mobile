@@ -35,7 +35,9 @@ export default function Login() {
   // 로그인 전 소개 (#1282) — 이 기기에서 처음이면 로그인 화면보다 먼저 보여 준다.
   // null = 아직 모름. 저장소를 읽기 전에 로그인 화면을 그리면 소개가 뒤늦게 덮으며
   // 깜빡이므로 그동안은 아무것도 그리지 않는다. hasKakaoRedirect는 window를 읽어
-  // 정적 export 렌더에서 부를 수 없으니 초기값이 아니라 이펙트에서 판정한다.
+  // 정적 export 렌더에서 부를 수 없으니 초기값이 아니라 이펙트에서 판정한다 —
+  // 판정은 아래 복귀 이펙트 한 곳에서만 한다(교환이 복귀 파라미터를 걷어내므로
+  // 다른 이펙트가 다시 물으면 false가 나온다).
   const [introSeen, setIntroSeen] = useState<boolean | null>(null);
   const via = useRef<LoginVia>('direct');
   // 웹 카카오 로그인은 kauth 리다이렉트로 돌아온다 — 복귀 진입이면 사용자가
@@ -47,6 +49,10 @@ export default function Login() {
   const [resuming, setResuming] = useState(false);
   useEffect(() => {
     if (!hasKakaoRedirect()) return;
+    // 이미 로그인 버튼을 누르고 돌아온 사람이다 — 소개 차례가 아니다. 교환을 시작하기
+    // 전에 기록한다: getKakaoAccessToken이 URL·세션스토리지의 복귀 파라미터를 지운다.
+    via.current = 'kakao_redirect';
+    setIntroSeen(true);
     setResuming(true);
     void loginWithKakao().then((result) => {
       setResuming(false);
@@ -60,15 +66,12 @@ export default function Login() {
     });
   }, [loginWithKakao]);
   useEffect(() => {
-    // 카카오 복귀는 이미 로그인 버튼을 누르고 돌아온 사람이다 — 소개 차례가 아니다.
-    if (hasKakaoRedirect()) {
-      via.current = 'kakao_redirect';
-      setIntroSeen(true);
-      return;
-    }
+    // 복귀 판정은 위 이펙트가 이미 했다(같은 커밋에서 선언 순서대로 돈다).
+    if (via.current === 'kakao_redirect') return;
     let active = true;
     void loadIntroSeen().then((seen) => {
-      if (active) setIntroSeen(seen);
+      // 이미 정해졌으면(복귀) 뒤늦은 저장소 값으로 덮지 않는다.
+      if (active) setIntroSeen((prev) => prev ?? seen);
     });
     return () => {
       active = false;

@@ -90,9 +90,20 @@ describe('로그인 전 소개 (#1282)', () => {
     await waitFor(async () => expect(await AsyncStorage.getItem(INTRO_KEY)).toBe('1'));
   });
 
+  /**
+   * 실제 교환(getKakaoAccessToken)은 복귀 파라미터를 **동기적으로** 걷어낸다 —
+   * 한 번 물은 뒤엔 hasKakaoRedirect가 false다. 목도 그렇게 소비시켜야 두 번째
+   * 판정에 기대는 회귀를 잡는다 (#1283 리뷰).
+   */
+  const consumeRedirect = (result: 'ok' | 'cancelled' | 'failed') =>
+    mockKakao.mockImplementation(() => {
+      mockRedirect = false;
+      return Promise.resolve(result);
+    });
+
   it('웹 카카오 복귀 중에는 소개를 건너뛰고 교환을 이어간다', async () => {
     mockRedirect = true;
-    mockKakao.mockResolvedValue('ok');
+    consumeRedirect('ok');
     const ui = await render(<Login />);
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'));
     expect(ui.queryByText('루게더에 오신 걸 환영해요')).toBeNull();
@@ -102,13 +113,18 @@ describe('로그인 전 소개 (#1282)', () => {
     expect(events('login_tap')).toEqual([]);
   });
 
-  it('웹 카카오 복귀가 취소면 취소로 남긴다', async () => {
+  it('웹 카카오 복귀가 취소면 취소로 남기고, 소개를 안 봤어도 로그인 화면에 머문다', async () => {
     mockRedirect = true;
-    mockKakao.mockResolvedValue('cancelled');
-    await render(<Login />);
+    consumeRedirect('cancelled');
+    const ui = await render(<Login />);
     await waitFor(() =>
       expect(events('login_cancel')).toEqual([['login_cancel', { provider: 'kakao' }]]),
     );
+    // 저장소엔 소개 기록이 없다 — 뒤늦은 저장소 값이 복귀 판정을 덮으면 소개가 뜬다.
+    expect(await AsyncStorage.getItem(INTRO_KEY)).toBeNull();
+    expect(ui.getByText('Kakao로 시작하기')).toBeTruthy();
+    expect(ui.queryByText('루게더에 오신 걸 환영해요')).toBeNull();
+    expect(events('login_view')).toEqual([['login_view', { via: 'kakao_redirect' }]]);
   });
 });
 
