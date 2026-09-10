@@ -349,7 +349,7 @@ describe('HouseScreen', () => {
     );
     await fireEvent.press(getByLabelText('집 탐색'));
     expect(onOpenSearch).toHaveBeenCalled();
-    await fireEvent.press(getByLabelText('구성원 목록'));
+    await fireEvent.press(getByLabelText('집 관리'));
     expect(onOpenMembers).toHaveBeenCalled();
   });
 
@@ -806,12 +806,12 @@ describe('HouseScreen', () => {
     expect(StyleSheet.flatten(style).alignItems).toBe('center');
   });
 
-  it('구성원 목록 버튼은 셸 화면을 연다 — onOpenMembers 콜백 (#753)', async () => {
+  it('집 관리 버튼은 셸 화면을 연다 — onOpenMembers 콜백 (#753)', async () => {
     const onOpenMembers = jest.fn();
     const { getByLabelText } = await render(
       <HouseScreen houses={[MISSION_HOUSE]} onOpenMembers={onOpenMembers} />,
     );
-    await fireEvent.press(getByLabelText('구성원 목록'));
+    await fireEvent.press(getByLabelText('집 관리'));
     expect(onOpenMembers).toHaveBeenCalledTimes(1);
   });
 

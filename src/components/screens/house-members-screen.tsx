@@ -11,8 +11,9 @@ import { CrownPictogram, DoorPictogram, PencilPictogram } from '@/components/ui/
 import { useToast } from '@/components/ui/toast';
 import { shareOrCopy } from '@/lib/share-link';
 import type { CharacterId } from '@/constants/characters';
-import { houseCapacityOptions } from '@/constants/house-themes';
+import { HOUSE_PRIVATE_ACCENT, houseCapacityOptions } from '@/constants/house-themes';
 import { houseInviteLink } from '@/constants/links';
+import { PrivacyCard } from '@/components/screens/house/privacy-card';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
@@ -130,6 +131,8 @@ export function HouseMembersScreen({
   const [memberToKick, setMemberToKick] = useState<RoomCell | null>(null);
   const [showEditHouse, setShowEditHouse] = useState(false);
   const [editName, setEditName] = useState('');
+  // 공개 범위 (#1266) — undefined는 '현재 값 모름'(서버가 GET에 아직 안 실어 줌).
+  const [editPublic, setEditPublic] = useState<boolean | undefined>(undefined);
   const [editDesc, setEditDesc] = useState('');
   const [editMax, setEditMax] = useState<number | undefined>(undefined);
   const [editCover, setEditCover] = useState<string | undefined>(undefined);
@@ -146,6 +149,7 @@ export function HouseMembersScreen({
     setEditDesc(currentHouse.description ?? '');
     setEditMax(currentHouse.maxMembers);
     setEditCover(currentHouse.coverImageKey);
+    setEditPublic(currentHouse.isPublic);
     setShowEditHouse(true);
   };
   const editNameValid = editName.trim().length >= 2 && editName.trim().length <= 30;
@@ -158,6 +162,8 @@ export function HouseMembersScreen({
       maxMembers: editMax,
       // Omitted keeps the server value — only send an actual pick.
       coverImageKey: editCover,
+      // 공개 범위도 고른 경우에만 — 미선택(현재 값 모름)이면 유지.
+      ...(editPublic === undefined ? {} : { isPublic: editPublic }),
     });
     setShowEditHouse(false);
   };
@@ -273,7 +279,7 @@ export function HouseMembersScreen({
           <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
             <Text style={[Typography.label, { color: t.text }]}>집 정보</Text>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              집 이름·소개·정원을 바꿀 수 있어요. (방장 전용)
+              집 이름·소개·정원·공개 범위를 바꿀 수 있어요. (방장 전용)
             </Text>
             <Pressable
               onPress={openEditHouse}
@@ -573,6 +579,26 @@ export function HouseMembersScreen({
                   );
                 })}
               </View>
+              {/* 공개 범위 (#1266) — 서버가 현재 값을 안 주면 둘 다 미선택으로 열린다. */}
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>공개 범위</Text>
+              <View style={styles.privacyRow}>
+                <PrivacyCard
+                  selected={editPublic === true}
+                  accent={t.primary}
+                  title="공개"
+                  subtitle="집 탐색에 노출돼요"
+                  onPress={() => setEditPublic(true)}
+                  t={t}
+                />
+                <PrivacyCard
+                  selected={editPublic === false}
+                  accent={HOUSE_PRIVATE_ACCENT}
+                  title="비공개"
+                  subtitle="초대코드로만 입장 가능"
+                  onPress={() => setEditPublic(false)}
+                  t={t}
+                />
+              </View>
               {covers.length > 0 ? (
                 <>
                   {/* 커버는 집의 겉모습 자체라 "집 테마"로 (#1112). */}
@@ -796,6 +822,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: Spacing.two,
   },
+  privacyRow: { flexDirection: 'row', gap: Spacing.two },
   capacityBtn: {
     flex: 1,
     borderRadius: Radius.pill,

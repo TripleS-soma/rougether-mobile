@@ -160,6 +160,7 @@ export function toHouse(
     maxMembers: detail.maxMembers ?? undefined,
     memberCount: detail.currentMemberCount ?? active.length,
     coverImageKey: detail.coverImageKey ?? undefined,
+    isPublic: detail.isPublic ?? undefined,
     growthPoints: detail.growthPoints ?? undefined,
     joinRequests: joinRequests
       // 처리(수락/거절)된 이력이 응답에 섞여도 대기 중만 노출한다 (#526 리뷰).

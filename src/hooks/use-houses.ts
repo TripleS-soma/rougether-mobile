@@ -322,6 +322,8 @@ export function useHouses() {
       description?: string;
       maxMembers: number;
       coverImageKey?: string;
+      /** 공개 범위 (#1266). 생성 API가 아직 안 받으면 생성 직후 PUT으로 반영. */
+      isPublic?: boolean;
     }): Promise<boolean> => {
       try {
         // The API requires ≥1 goalId. Prefer the goals the user picked during
@@ -347,7 +349,14 @@ export function useHouses() {
           toast('목표 데이터가 아직 준비되지 않아 집을 만들 수 없어요', 'error');
           return false;
         }
-        await apiCreateHouse({ ...input, goalIds });
+        const created = await apiCreateHouse({ ...input, goalIds });
+        // 서버 POST가 isPublic을 받기 전까지의 다리 — 비공개를 골랐으면 한 번 더 저장한다.
+        // 실패해도 집은 이미 생겼으니 생성 자체는 성공으로 두고 안내만 한다.
+        if (input.isPublic === false && created.houseId != null) {
+          await apiUpdateHouse(created.houseId, { isPublic: false }).catch(() =>
+            toast('비공개 설정은 집 관리에서 다시 저장해 주세요', 'error'),
+          );
+        }
         track('house_create');
         toast('새 집이 만들어졌어요!', 'success');
         await reloadMyHouses();
@@ -408,9 +417,15 @@ export function useHouses() {
   const updateHouse = useCallback(
     async (houseId: number, input: HouseEditInput) => {
       try {
-        await apiUpdateHouse(houseId, input);
+        const res = await apiUpdateHouse(houseId, input);
         toast('집 정보를 수정했어요', 'success');
         await reloadHouse(houseId);
+        // GET이 isPublic을 아직 안 실어 줘도(#1266 서버 PR 전) 방금 저장한 값은 안다 —
+        // 재조회로 덮인 뒤 응답값을 얹어 수정 시트가 현재 값을 보여주게 한다.
+        const isPublic = res.isPublic ?? input.isPublic;
+        if (isPublic !== undefined) {
+          setHouses((prev) => prev.map((h) => (h.houseId === houseId ? { ...h, isPublic } : h)));
+        }
       } catch {
         toast('집 정보 수정에 실패했어요', 'error');
       }

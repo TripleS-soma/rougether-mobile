@@ -45,8 +45,19 @@ describe('CreateHouseScreen', () => {
     await fireEvent.press(getByText('집 만들기'));
 
     expect(onCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ name: '우리집', maxMembers: expect.any(Number) }),
+      expect.objectContaining({ name: '우리집', maxMembers: expect.any(Number), isPublic: true }),
     );
+  });
+
+  it('비공개를 고르면 isPublic=false로 보낸다 (#1266) — 카드가 장식이 아니게', async () => {
+    const onCreate = jest.fn();
+    const { getByText, getByPlaceholderText } = await render(
+      <CreateHouseScreen onCreate={onCreate} />,
+    );
+    await fireEvent.changeText(getByPlaceholderText('우리 집 이름을 정해주세요'), '조용한 집');
+    await fireEvent.press(getByText('비공개'));
+    await fireEvent.press(getByText('집 만들기'));
+    expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({ isPublic: false }));
   });
 
   it('sends the picked cover key and hides the section without a catalog', async () => {
