@@ -30,3 +30,14 @@ jobs:
 
       - name: Test
         run: npm test -- --ci
+
+      # spec contracts/date-boundary-cases.json 기준으로, 실제 요청 생성 코드가 만든 날짜를
+      # 단말 시간대(TZ) 매트릭스에서 검증하고 요청 본문을 기록한다(서버 계약 테스트가 재생).
+      - name: Date boundary contract (TZ matrix)
+        run: npm run test:date-boundary
+
+      - name: Upload recorded date-boundary requests
+        uses: actions/upload-artifact@v4
+        with:
+          name: date-boundary-requests
+          path: output/contracts/date-boundary-requests.json

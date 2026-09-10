@@ -32,6 +32,7 @@
 - **UI 문구는 한국어**, 코드·주석·식별자는 영어.
 - **아이콘**은 현재 이모지 플레이스홀더이며, 실제 스프라이트/CDN 아트는 추후 포팅합니다.
 - 파일명은 kebab-case, 컴포넌트는 PascalCase named export.
+- **API 날짜(`YYYY-MM-DD`)는 Asia/Seoul 달력 날짜**입니다(spec `api.md` "날짜와 시각"). `Date` → 날짜 문자열은 반드시 `todayIso()` / `toKstDate()`(`src/utils/datetime.ts`)로만 만드세요. `toISOString().slice(0, 10)`(UTC — KST 00:00~08:59에 전날)과 `getFullYear()/getMonth()/getDate()`(단말 로컬)는 금지입니다. 경계값은 `contracts/date-boundary-cases.json`(spec 복사본)이며 `npm run test:date-boundary`가 실제 요청 생성 코드로 검증합니다.
 
 ## 작업 흐름
 
@@ -79,5 +80,5 @@
   #   / member 7f6cd448 / shop-gacha d757997c / notification d1f73111 / design cb4e8679 / infra 29ed7431)
   ```
 - **PR 연결**: PR 본문에 `Closes #N`을 넣어 머지 시 이슈가 자동으로 닫히고 보드가 Done으로 이동하게 합니다.
-- **코드 리뷰**: 모든 PR에 Claude 자동 리뷰가 달립니다(`.github/workflows/claude-code-review.yml`). 머지 전에 리뷰 지적 사항을 확인하고 반영하거나 근거를 남기세요.
+- **코드 리뷰**: 모든 PR에 Claude 자동 리뷰가 달립니다(`.github/workflows/claude-code-review.yml`). 리뷰 봇은 spec 저장소를 `rougether-spec/`에 함께 checkout해 API·날짜·보상 계약을 대조합니다. 머지 전에 리뷰 지적 사항을 확인하고 반영하거나 근거를 남기세요.
 - **미연동 API 추적**: 스웨거(`/v3/api-docs`)에 새 엔드포인트가 생기면 연동 이슈를 만들어 보드에 올립니다. 서버에 없는 기능은 화면에서 `ui/PendingNotice`("서버 준비 중")로 정직하게 표시합니다.
