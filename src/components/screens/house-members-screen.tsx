@@ -520,7 +520,11 @@ export function HouseMembersScreen({
                 accessibilityLabel="집 이름"
                 placeholder="집 이름"
                 placeholderTextColor={t.textMuted}
-                style={[styles.missionInput, { backgroundColor: t.surfaceMuted, color: t.text }]}
+                style={[
+                  styles.missionInput,
+                  emph('normal'),
+                  { backgroundColor: t.surfaceMuted, color: t.text },
+                ]}
               />
               <Text style={[Typography.supporting, { color: t.textMuted }]}>한 줄 소개</Text>
               <TextInput
@@ -529,7 +533,11 @@ export function HouseMembersScreen({
                 accessibilityLabel="집 소개"
                 placeholder="어떤 루틴을 함께 하나요?"
                 placeholderTextColor={t.textMuted}
-                style={[styles.missionInput, { backgroundColor: t.surfaceMuted, color: t.text }]}
+                style={[
+                  styles.missionInput,
+                  emph('normal'),
+                  { backgroundColor: t.surfaceMuted, color: t.text },
+                ]}
               />
               <Text style={[Typography.supporting, { color: t.textMuted }]}>
                 정원{currentHouse.memberCount ? ` (현재 ${currentHouse.memberCount}명)` : ''}

@@ -31,7 +31,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Radius, Spacing } from '@/constants/theme';
 import { useActionBarInset, useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
-import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { formatDate, formatTime, todayIso } from '@/utils/datetime';
 import { WEEKDAY_LABELS as DAYS } from '@/constants/routines';
@@ -90,6 +90,7 @@ export function AddRoutineScreen({
   const t = useTokens();
   const column = useResponsiveColumn();
   const Typography = useTypography();
+  const emph = useFontEmphasis();
   // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
   const headerInset = useHeaderContentInset();
   const actionBarBase = useActionBarInset();
@@ -258,7 +259,7 @@ export function AddRoutineScreen({
           <Text style={[Typography.label, { color: t.text }]}>루틴 이름</Text>
           <View style={[styles.titleRow, { backgroundColor: t.surface }]}>
             <TextInput
-              style={[styles.titleInput, { color: t.text }]}
+              style={[styles.titleInput, emph('normal'), { color: t.text }]}
               value={title}
               onChangeText={setTitle}
               placeholder="예) 매일 30분 산책"

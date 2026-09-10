@@ -12,7 +12,7 @@ import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
-import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { MISSION_TYPE_RULES } from '@/constants/missions';
 import { missionCtaState } from '@/utils/mission-cta';
 import { formatDate, todayIso, toIsoDate } from '@/utils/datetime';
@@ -119,6 +119,7 @@ export function HouseMissionsScreen({
   // 떠 있는 글래스 헤더(#1069) — 탭 줄이 스크롤 밖이라 여기서 상단 패딩.
   const headerInset = useHeaderContentInset();
   const Typography = useTypography();
+  const emph = useFontEmphasis();
   const { show: toast } = useToast();
 
   const [showCreateMission, setShowCreateMission] = useState(false);
@@ -484,7 +485,11 @@ export function HouseMissionsScreen({
                 placeholder="예) 이번 주 다같이 루틴 지키기"
                 placeholderTextColor={t.textMuted}
                 accessibilityLabel="미션 제목"
-                style={[styles.missionInput, { backgroundColor: t.surfaceMuted, color: t.text }]}
+                style={[
+                  styles.missionInput,
+                  emph('normal'),
+                  { backgroundColor: t.surfaceMuted, color: t.text },
+                ]}
               />
               <Text style={[Typography.supporting, { color: t.textMuted }]}>미션 유형</Text>
               <View style={styles.missionTypeRow}>
@@ -528,7 +533,12 @@ export function HouseMissionsScreen({
                   onChangeText={setMissionTarget}
                   keyboardType="number-pad"
                   accessibilityLabel="목표 수치"
-                  style={[styles.missionInput, styles.missionInputField, { color: t.text }]}
+                  style={[
+                    styles.missionInput,
+                    styles.missionInputField,
+                    emph('normal'),
+                    { color: t.text },
+                  ]}
                 />
                 <Text style={[Typography.label, styles.missionUnit, { color: t.textMuted }]}>
                   {targetRule.unit}
