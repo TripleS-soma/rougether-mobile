@@ -32,7 +32,7 @@ export const ONBOARDING_MISSION_STEPS: OnboardingMissionStep[] = [
   {
     id: 'invite-house',
     label: '집에 친구 초대하기',
-    hint: '집 구성원 목록에서 초대코드를 복사해 친구에게 보내요',
+    hint: '집 관리에서 초대코드를 복사해 친구에게 보내요',
   },
 ];
 

@@ -5,6 +5,7 @@ import { type HouseCover, HouseCoverPicker } from '@/components/room/house-cover
 import { HouseCoverArt } from '@/components/room/house-cover-art';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { CrownPictogram, Pictogram } from '@/components/ui/pictograms';
+import { PrivacyCard } from '@/components/screens/house/privacy-card';
 import { Radius, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
@@ -22,6 +23,8 @@ export type CreateHouseInput = {
   maxMembers: number;
   /** Selected cover from GET /houses/cover-images; omitted when none picked. */
   coverImageKey?: string;
+  /** 공개 범위 (#1266) — false면 탐색에 안 뜨고 초대코드로만 참여. */
+  isPublic: boolean;
 };
 
 export type CreateHouseScreenProps = {
@@ -282,6 +285,7 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
               description: description.trim(),
               maxMembers: capacity,
               coverImageKey: coverKey,
+              isPublic: !isPrivate,
             });
           }}
           accessibilityRole="button"
@@ -324,38 +328,6 @@ function Labeled({
       </Text>
       {children}
     </View>
-  );
-}
-
-function PrivacyCard({
-  selected,
-  accent,
-  title,
-  subtitle,
-  onPress,
-  t,
-}: {
-  selected: boolean;
-  accent: string;
-  title: string;
-  subtitle: string;
-  onPress: () => void;
-  t: ReturnType<typeof useTokens>;
-}) {
-  const Typography = useTypography();
-  const emph = useFontEmphasis();
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="radio"
-      accessibilityState={{ selected }}
-      style={[
-        styles.privacyCard,
-        { backgroundColor: t.surfaceMuted, borderColor: selected ? accent : 'transparent' },
-      ]}>
-      <Text style={[Typography.label, { color: t.text }]}>{title}</Text>
-      <Text style={[styles.privacySub, emph('normal'), { color: t.textMuted }]}>{subtitle}</Text>
-    </Pressable>
   );
 }
 
@@ -429,14 +401,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   privacyRow: { flexDirection: 'row', gap: Spacing.two },
-  privacyCard: {
-    flex: 1,
-    borderRadius: Radius.md,
-    borderWidth: 2,
-    padding: Spacing.three,
-    gap: Spacing.half,
-  },
-  privacySub: { fontSize: 13 },
   codeRow: { flexDirection: 'row', gap: Spacing.two },
   codeBox: {
     flex: 1,

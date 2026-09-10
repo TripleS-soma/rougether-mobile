@@ -78,6 +78,11 @@ export type House = {
   memberCount?: number;
   /** Current cover art key — prefill for the owner's edit form. */
   coverImageKey?: string;
+  /**
+   * 공개 범위 (#1266) — true: 집 탐색·비구성원 미리보기 노출, false: 초대코드로만.
+   * 서버가 GET에 안 실어 주면 undefined(알 수 없음) — 수정 시트는 미선택으로 연다.
+   */
+  isPublic?: boolean;
   /** Pending browse-join requests, loaded for owners only. */
   joinRequests?: HouseJoinRequest[];
 };
@@ -89,6 +94,8 @@ export type HouseEditInput = {
   maxMembers?: number;
   /** Cover from GET /houses/cover-images; omitted = keep the current one. */
   coverImageKey?: string;
+  /** 공개 범위 (#1266); omitted = keep the current one. */
+  isPublic?: boolean;
 };
 
 /** Group mission (server house mission) shown in the missions card. */
