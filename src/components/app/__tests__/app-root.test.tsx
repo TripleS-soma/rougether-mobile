@@ -2,9 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fireEvent, waitFor } from '@testing-library/react-native';
 
 import { AppRoot } from '@/components/app/app-root';
+import { LEGACY_ONBOARDING_KEY as KEY } from '@/lib/onboarding-store';
 import { renderWithProviders } from '@/test-utils/render';
-
-const KEY = 'rougether.onboarding.v1';
 
 // AppRoot gates on a session, then AppShell loads my-room data — mock both.
 const emptyRes = (url: string) => ({
@@ -231,6 +230,31 @@ describe('AppRoot', () => {
 
     const ui = await renderApp();
     await waitFor(() => expect(ui.getByText('오늘의 할 일')).toBeTruthy());
+    expect(await AsyncStorage.getItem(`${KEY}.72`)).toBeNull();
+    expect(await AsyncStorage.getItem(KEY)).toBe(other);
+  });
+
+  /**
+   * #1299 리뷰 4 — goalId는 계정 고유값이 아니라 공용 목표 카탈로그 id다. "하나라도 겹침"은
+   * 인기 목표(운동)를 고른 다른 계정도 통과한다. 기록의 목표 **집합**이 서버와 같을 때만 주인이다.
+   */
+  it('목표가 우연히 하나 겹칠 뿐인 다른 계정의 옛 기기 기록은 이 계정 것으로 옮기지 않는다', async () => {
+    const other = JSON.stringify({ characterId: 'bear', goals: ['1', '2'] });
+    await AsyncStorage.setItem(KEY, other);
+    await AsyncStorage.setItem('rougether.auth.userId', '72');
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.endsWith('/onboarding'))
+        return {
+          ok: true,
+          status: 200,
+          text: async () =>
+            JSON.stringify({ goals: [{ goalId: 1, code: 'exercise' }], completed: false }),
+        };
+      return emptyRes(url);
+    }) as unknown as typeof fetch;
+
+    const ui = await renderApp();
+    await waitFor(() => expect(ui.getByText('관심 있는 목표를 골라주세요')).toBeTruthy());
     expect(await AsyncStorage.getItem(`${KEY}.72`)).toBeNull();
     expect(await AsyncStorage.getItem(KEY)).toBe(other);
   });

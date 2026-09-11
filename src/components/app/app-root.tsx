@@ -42,6 +42,14 @@ import {
   type StarterRoutineProgress,
 } from '@/lib/starter-routine-store';
 
+/** 목표 id 집합이 같은지 — 순서·중복은 무시한다. 빈 집합끼리는 같다고 보지 않는다. */
+function sameGoalSet(local: string[], remote: string[]): boolean {
+  if (local.length === 0 || remote.length === 0) return false;
+  const a = new Set(local);
+  const b = new Set(remote);
+  return a.size === b.size && [...a].every((id) => b.has(id));
+}
+
 /**
  * App entry gate: on first launch shows the onboarding flow (intro → goals →
  * character select); afterwards it goes straight to the app with the saved
@@ -95,16 +103,17 @@ export function AppRoot() {
        * 앱으로 들어갔다 — 안드로이드 자동 백업이 앞 설치의 이 키를 복원했거나 같은 기기의
        * 앞 계정이 남긴 것이다.
        *
-       * 주인 판별: 기록의 목표가 **서버에 저장된 이 계정의 목표와 겹치면** 이 계정 것이다.
-       * 같은 온보딩이 로컬(문자열 id)과 서버(goalId)에 함께 저장했기 때문이다 — 캐릭터 저장
-       * 409로 completed=false인 옛 사용자도 목표는 서버에 있다. "서버에 목표가 있다"만으로
-       * 판정하면 이미 온보딩된 다른 계정이 앞 계정의 기록을 가져갔다(#1299 리뷰). 새 계정은
-       * 서버 목표가 비어 있어 당연히 겹치지 않는다. 서버에 못 닿으면(오프라인) 종전대로 믿되
-       * 옮기지는 않는다. 확인되면 계정별 키로 옮긴다.
+       * 주인 판별(#1299 리뷰): 옛 기록이 필요한 건 서버가 **미완료**인 계정뿐이다(캐릭터 저장
+       * 409로 completed=false인 옛 사용자) — 서버가 완료면 서버가 진실이라 옮기지도 지우지도
+       * 않는다. 미완료 계정은 기록의 **목표 집합이 서버에 저장된 목표 집합과 같을 때만** 주인이다.
+       * 같은 온보딩이 로컬(문자열 id)과 서버(goalId)에 함께 저장했기 때문이다. goalId는 공용
+       * 카탈로그 id라 "하나라도 겹침"은 같은 목표를 고른 다른 계정도 통과했다. 새 계정은 서버
+       * 목표가 비어 있어 같을 수 없다. 서버에 못 닿으면(오프라인) 종전대로 믿되 옮기지는 않는다.
        */
       const legacyOwned =
         saved?.legacy === true &&
-        (remote == null || saved.data.goals.some((id) => remoteGoalIds.includes(id)));
+        (remote == null ||
+          (remote.completed !== true && sameGoalSet(saved.data.goals, remoteGoalIds)));
       const local = saved && (!saved.legacy || legacyOwned) ? saved.data : null;
       if (saved && legacyOwned && remote != null && userId != null)
         void claimLegacyOnboarding(userId, saved.data);
