@@ -24,7 +24,6 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { ModalFrame } from '@/components/app/app-frame';
 import { Overlay } from '@/constants/theme';
@@ -191,7 +190,6 @@ export function BottomSheet({
   children,
 }: BottomSheetProps) {
   const { height: windowH } = useWindowDimensions();
-  const insets = useContext(SafeAreaInsetsContext);
   const keyboardHeight = useAndroidKeyboardHeight(avoidKeyboard && Platform.OS === 'android');
   const progress = useAnimatedValue(0);
   // 손가락으로 끌어내린 추가 오프셋(아래로만). 놓으면 0으로 튕겨 돌아가거나 닫힘.
@@ -372,14 +370,13 @@ export function BottomSheet({
       {overlay}
     </KeyboardAvoidingView>
   ) : (
-    // keyboardDidShow의 height는 ime − 시스템 바라, 내비바 인셋을 더해야 카드 아랫변이
-    // 키보드 윗변에 맞는다(엣지투엣지 Modal은 화면 맨 아래까지 그린다). 웹은 이벤트가 없어 0.
+    // keyboardDidShow의 height는 ime − 시스템 바라 카드 아랫변이 키보드 윗변보다 내비바
+    // 인셋만큼 아래에 놓인다. 입력 시트 본문은 이미 하단 인셋만큼 여백을 가지므로(작성 시트
+    // max(insets.bottom, 16)) 가려지는 띠가 정확히 그 여백이다 — 인셋을 더하면 키보드 위로
+    // 빈칸이 한 번 더 생긴다(#1291 리뷰). 웹은 키보드 이벤트가 없어 0.
     <View
       testID="bottom-sheet-keyboard"
-      style={[
-        styles.gestureRoot,
-        { paddingBottom: keyboardHeight > 0 ? keyboardHeight + (insets?.bottom ?? 0) : 0 },
-      ]}>
+      style={[styles.gestureRoot, { paddingBottom: keyboardHeight }]}>
       {overlay}
     </View>
   );

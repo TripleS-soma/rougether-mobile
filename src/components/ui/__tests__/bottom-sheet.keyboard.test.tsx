@@ -1,5 +1,6 @@
 import { act, render, screen } from '@testing-library/react-native';
 import { DeviceEventEmitter, Platform, StyleSheet, Text } from 'react-native';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { BottomSheet, __resetSheetSerializer } from '@/components/ui/bottom-sheet';
 
@@ -71,6 +72,24 @@ describe('BottomSheet avoidKeyboard — Android (#1290)', () => {
     await echoLayout(6);
 
     expect(offset()).toEqual({ height: undefined, paddingBottom: 0 });
+  });
+
+  it('내비바 인셋은 더하지 않는다 — 시트 본문이 이미 하단 인셋만큼 여백을 갖는다', async () => {
+    // 작성 시트 본문은 paddingBottom: max(insets.bottom, 16)을 늘 가진다. 래퍼가 인셋을
+    // 또 더하면 키보드 위로 내비바만큼 빈칸이 생긴다(#1291 리뷰). 키보드 높이만 쓰면
+    // 키보드에 가려지는 띠가 정확히 그 본문 여백이라 내용이 키보드 윗변에 붙는다.
+    await render(
+      <SafeAreaInsetsContext.Provider
+        value={{ top: STATUS_BAR, bottom: NAV_BAR, left: 0, right: 0 }}>
+        <BottomSheet visible avoidKeyboard onClose={() => {}}>
+          <Text>본문</Text>
+        </BottomSheet>
+      </SafeAreaInsetsContext.Provider>,
+    );
+    await echoLayout();
+    await keyboard('keyboardDidShow');
+
+    expect(offset()).toEqual({ height: undefined, paddingBottom: KEYBOARD });
   });
 
   it('키보드가 뜨면 키보드 높이만큼 시트를 올린다', async () => {
