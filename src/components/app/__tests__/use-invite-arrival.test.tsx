@@ -218,6 +218,24 @@ describe('useInviteArrival (#1007)', () => {
       await waitFor(() => expect(props.redeem).toHaveBeenCalledWith('ABCD2345', 'paste'));
     });
 
+    // #1286 리뷰 — 붙여넣기 코드가 무효로 끝난 뒤 같은 문자열이 링크로 오면 via는 link.
+    it('붙여넣은 코드가 무효로 끝나면, 같은 코드가 나중에 링크로 올 때 via는 link', async () => {
+      const check = jest
+        .fn<Promise<import('@/hooks/use-invites').InviteCheck>, [string]>()
+        .mockResolvedValueOnce({ kind: 'invalid', message: '초대코드를 찾을 수 없어요' })
+        .mockResolvedValueOnce({ kind: 'ok', preview: { ...PREVIEW, code: 'ABCD2345' } });
+      const { view } = await setup({ offerPaste: true, check });
+
+      await waitFor(() => expect(view.getByLabelText('paste-envelope')).toBeTruthy());
+      await fireEvent.press(view.getByLabelText('paste-envelope'));
+      await waitFor(() => expect(peekPendingFriendInviteCode()).toBeNull());
+
+      await act(async () => setPendingFriendInviteCode('ABCD2345'));
+      await waitFor(() => expect(view.getByText('arrival:소마:50')).toBeTruthy());
+      expect(mockTrack).toHaveBeenCalledWith('invite_arrival_view', { via: 'link' });
+      expect(mockTrack).not.toHaveBeenCalledWith('invite_arrival_view', { via: 'paste' });
+    });
+
     it('집 코드면 집 채널로 넘긴다 — 친구 확인 시트는 뜨지 않는다', async () => {
       const { props, view } = await setup({ offerPaste: true });
       await waitFor(() => expect(view.getByLabelText('paste-house')).toBeTruthy());

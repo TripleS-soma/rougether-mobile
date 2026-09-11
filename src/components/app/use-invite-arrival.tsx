@@ -70,6 +70,7 @@ export function useInviteArrival({ offerPaste, check, redeem, onLater }: UseInvi
           if (result.kind === 'unavailable') {
             // 네트워크·서버 일시 오류 — 코드를 지우지 않고 조용히 둔다. 기기 보관분이
             // 다음 실행의 복원에서 다시 확인된다. 같은 코드가 다시 흘러오면 재시도.
+            // 붙여넣기 표시(pastedRef)는 남긴다 — 재시도하는 건 여전히 붙여넣은 코드다.
             handlingRef.current = null;
             return;
           }
@@ -78,6 +79,8 @@ export function useInviteArrival({ offerPaste, check, redeem, onLater }: UseInvi
             if (result.kind === 'invalid') toast(result.message, 'error');
             clearPendingFriendInviteCode();
             handlingRef.current = null;
+            // 끝난 코드다 — 같은 문자열이 나중에 링크로 오면 via는 link여야 한다.
+            if (pastedRef.current === code) pastedRef.current = null;
             return;
           }
           track('invite_arrival_view', { via });
