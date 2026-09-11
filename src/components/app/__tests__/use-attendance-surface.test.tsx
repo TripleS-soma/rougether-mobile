@@ -110,6 +110,30 @@ describe('useAttendanceSurface — 그날 첫 완료 자동 출석 (#1294)', () 
     expect(lastSheet().visible).toBe(false);
   });
 
+  /**
+   * #1295 리뷰 — 판단을 예약 시점에만 하면, 기다리는 2.6초 사이에 사용자가 직접 연 시트가
+   * 자동 모드로 바뀌어 **누르지 않은 출석이 나가거나**, 이미 출석했는데 시트가 다시 튄다.
+   */
+  it('기다리는 동안 버튼으로 시트를 열었으면 자동 출석 모드로 바꾸지 않는다', async () => {
+    await render(<Harness />);
+    await act(() => surface.openAttendanceAfterFirstCompletion());
+    await wait(1000);
+    await act(() => surface.openAttendance());
+    expect(lastSheet()).toMatchObject({ visible: true, autoCheckIn: false });
+    await wait(AUTO_ATTENDANCE_DELAY_MS);
+    expect(lastSheet()).toMatchObject({ visible: true, autoCheckIn: false });
+  });
+
+  it('기다리는 동안 오늘 출석이 끝났으면 시트를 열지 않는다', async () => {
+    const ui = await render(<Harness />);
+    await act(() => surface.openAttendanceAfterFirstCompletion());
+    await wait(1000);
+    mockStatus = { ...PENDING, checkedInToday: true };
+    await ui.rerender(<Harness />);
+    await wait(AUTO_ATTENDANCE_DELAY_MS);
+    expect(lastSheet().visible).toBe(false);
+  });
+
   it('버튼으로 연 시트는 자동 출석 모드가 아니다', async () => {
     await render(<Harness />);
     await act(() => surface.openAttendance());

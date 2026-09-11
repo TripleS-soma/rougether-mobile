@@ -48,10 +48,19 @@ export function useAttendanceSurface({
   const syncCoin = useCallback((coin: number) => setWallet((w) => ({ ...w, coin })), [setWallet]);
   const attendance = useAttendance({ onCoinBalance: syncCoin });
   const openFurnitureStudio = useCallback(() => setScreen('furnitureStudio'), [setScreen]);
+  // 그날 첫 완료 자동 출석(#1294)의 대기 타이머 — 버튼으로 열면 취소한다.
+  const autoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelAutoTimer = useCallback(() => {
+    if (autoTimer.current) clearTimeout(autoTimer.current);
+    autoTimer.current = null;
+  }, []);
   const openAttendance = useCallback(() => {
+    // 기다리던 자동 열림은 버린다 — 사용자가 직접 연 시트가 2.6초 뒤 자동 모드로 바뀌면
+    // 누르지 않은 출석이 나간다 (#1295 리뷰).
+    cancelAutoTimer();
     setAutoCheckIn(false);
     setAttendanceOpen(true);
-  }, []);
+  }, [cancelAutoTimer]);
   const closeAttendance = useCallback(() => {
     setAttendanceOpen(false);
     setAutoCheckIn(false);
@@ -60,33 +69,31 @@ export function useAttendanceSurface({
   const attendancePending = !!attendance.status && !attendance.status.checkedInToday;
 
   /**
-   * 그날 첫 완료 뒤 자동 출석 (#1294). 완료 콜백이 부르는 시점의 **최신** 상태로 판단한다 —
-   * 이벤트 없음·오늘 출석함·완주면 아무것도 안 한다. 같은 날 두 번째 완료(취소 후 재완료
-   * 포함)는 날짜 가드로 막는다: 자동 요청이 실패해 checkedInToday가 그대로여도 시트를
-   * 다시 들이밀지 않는다 — 그땐 시트의 버튼이 남아 있다.
+   * 그날 첫 완료 뒤 자동 출석 (#1294). 이벤트 없음·오늘 출석함·완주면 아무것도 안 한다 —
+   * 이 판단을 **예약할 때와 실제로 여는 순간 두 번** 최신 상태로 한다. 기다리는 2.6초 사이에
+   * 출석이 끝났을 수 있어서다(#1295 리뷰). 같은 날 두 번째 완료(취소 후 재완료 포함)는
+   * 날짜 가드로 막는다: 자동 요청이 실패해 checkedInToday가 그대로여도 시트를 다시
+   * 들이밀지 않는다 — 그땐 시트의 버튼이 남아 있다.
    */
   const statusRef = useLatestRef(attendance.status);
   const autoDateRef = useRef<string | null>(null);
-  const autoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(
-    () => () => {
-      if (autoTimer.current) clearTimeout(autoTimer.current);
-    },
-    [],
-  );
+  useEffect(() => cancelAutoTimer, [cancelAutoTimer]);
   const openAttendanceAfterFirstCompletion = useCallback(() => {
-    const status = statusRef.current;
+    const eligible = () => {
+      const status = statusRef.current;
+      return !!status && !status.checkedInToday && !status.completed;
+    };
     const today = todayIso();
-    if (!status || status.checkedInToday || status.completed) return;
-    if (autoDateRef.current === today) return;
+    if (!eligible() || autoDateRef.current === today) return;
     autoDateRef.current = today;
-    if (autoTimer.current) clearTimeout(autoTimer.current);
+    cancelAutoTimer();
     autoTimer.current = setTimeout(() => {
       autoTimer.current = null;
+      if (!eligible()) return;
       setAutoCheckIn(true);
       setAttendanceOpen(true);
     }, AUTO_ATTENDANCE_DELAY_MS);
-  }, [statusRef]);
+  }, [statusRef, cancelAutoTimer]);
 
   const walletHistory = useWalletHistory();
   const [walletHistoryOpen, setWalletHistoryOpen] = useState(false);
