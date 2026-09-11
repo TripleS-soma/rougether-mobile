@@ -1,7 +1,9 @@
 import { Image } from 'expo-image';
+import { useId } from 'react';
 import { StyleSheet, View } from 'react-native';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
-import { HouseSceneColors } from '@/constants/theme';
+import { HouseSceneColors, Spacing } from '@/constants/theme';
 import { useResolvedScheme } from '@/hooks/use-tokens';
 import { assetSource } from '@/resources/asset';
 import type { HouseFrame } from '@/resources/house-frame';
@@ -11,12 +13,15 @@ export function HouseFrameArtwork({
   label,
   onError,
   testID,
+  groundColor,
 }: {
   frame: HouseFrame;
   label: string;
   onError: () => void;
   testID?: string;
+  groundColor?: string;
 }) {
+  const groundFadeId = useId().replace(/:/g, '');
   const scheme = useResolvedScheme();
   const integrated = frame.kind === 'integrated';
   return (
@@ -36,10 +41,26 @@ export function HouseFrameArtwork({
         accessibilityLabel={label}
         testID={testID}
       />
+      {integrated && groundColor ? (
+        <View style={styles.groundFade} testID="house-scene-ground-fade" pointerEvents="none">
+          <Svg width="100%" height="100%">
+            <Defs>
+              <LinearGradient id={groundFadeId} x1="0" x2="0" y1="0" y2="1">
+                <Stop offset="0" stopColor={groundColor} stopOpacity="0" />
+                <Stop offset="1" stopColor={groundColor} stopOpacity="1" />
+              </LinearGradient>
+            </Defs>
+            <Rect width="100%" height="100%" fill={`url(#${groundFadeId})`} />
+          </Svg>
+        </View>
+      ) : null}
       {integrated && scheme === 'dark' ? (
         <View style={[StyleSheet.absoluteFill, styles.nightTint]} testID="house-scene-dark-tint" />
       ) : null}
     </View>
   );
 }
-const styles = StyleSheet.create({ nightTint: { backgroundColor: HouseSceneColors.nightTint } });
+const styles = StyleSheet.create({
+  nightTint: { backgroundColor: HouseSceneColors.nightTint },
+  groundFade: { position: 'absolute', bottom: 0, left: 0, right: 0, height: Spacing.four },
+});

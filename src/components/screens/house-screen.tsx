@@ -55,12 +55,18 @@ import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
 import { CrownPictogram, HousePictogram, TargetPictogram } from '@/components/ui/pictograms';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { characterIdForMember } from '@/hooks/use-member-room-previews';
-import { FixedOverlay, Radius, ShadowColor, Spacing } from '@/constants/theme';
+import {
+  FixedOverlay,
+  HouseSceneColors,
+  HouseSceneGroundColors,
+  Radius,
+  ShadowColor,
+  Spacing,
+} from '@/constants/theme';
 import { useBottomNavInset, useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useResolvedScheme, useTokens, useTypography } from '@/hooks/use-tokens';
 import { assetSource } from '@/resources/asset';
-import { houseSceneDisplayWidth } from '@/resources/house-scene';
 import { houseBackgroundKey } from '@/resources/house-background';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
 import { DEFAULT_HOUSES } from '@/mocks/fixtures';
@@ -354,11 +360,11 @@ export const HouseScreen = memo(function HouseScreen({
     previewTheme,
   });
   const integrated = frame.kind === 'integrated';
-  const sceneWidth =
-    integrated && houseViewport.width > 0
-      ? houseSceneDisplayWidth(frame.scene!, houseViewport)
-      : undefined;
-  const sceneOffset = sceneWidth == null ? 0 : (houseViewport.width - sceneWidth) / 2;
+  const sceneGroundColor =
+    frame.scene && HouseSceneGroundColors[frame.scene.themeId]?.[frame.scene.capacity];
+  // Opaque scenes include roofs, walls and gardens beyond the room rectangles.
+  // Keep the whole original width at rest; portrait height must not zoom it in.
+  const sceneWidth = integrated && houseViewport.width > 0 ? houseViewport.width : undefined;
   const isThreeStorey = frame.kind === 'stacked' && frame.windowRects.length === 6;
   const frameBottomGap = isThreeStorey ? Spacing.three : Spacing.six;
   // Three portrait floors can exceed the first viewport at full screen width.
@@ -832,12 +838,8 @@ export const HouseScreen = memo(function HouseScreen({
         <GestureDetector gesture={cameraGesture}>
           <View style={[styles.cameraViewport, integrated && styles.integratedCameraViewport]}>
             <Reanimated.View
-              style={[
-                camStyle,
-                integrated && sceneWidth != null
-                  ? { width: sceneWidth, marginLeft: sceneOffset }
-                  : null,
-              ]}>
+              testID="house-scene-camera"
+              style={[camStyle, integrated && sceneWidth != null ? { width: sceneWidth } : null]}>
               <GestureDetector gesture={frameDragGesture}>
                 <View style={[styles.frameWrap, { aspectRatio: frame.aspectRatio }]}>
                   {/* 프레임 측정용 — 반응자 프롭이 있는 부모에는 테스트에서
@@ -899,6 +901,7 @@ export const HouseScreen = memo(function HouseScreen({
                     frame={frame}
                     label={`${currentHouse.name} 집`}
                     onError={onFrameError}
+                    groundColor={sceneGroundColor}
                     testID="house-frame"
                   />
                 </View>
@@ -936,11 +939,19 @@ export const HouseScreen = memo(function HouseScreen({
   ).length;
 
   return (
-    <View style={[styles.screen, screenStyle, { backgroundColor: skyColor }]} testID="house-screen">
+    <View
+      style={[styles.screen, screenStyle, { backgroundColor: sceneGroundColor ?? skyColor }]}
+      testID="house-screen">
       {/* 하단 탭은 AppShell의 형제라 이 absoluteFill 배경에 포함되지 않는다.
           9:16 마스터를 cover/center로 그려 다양한 화면 높이에서도 가장자리만
           자연스럽게 잘리고 집 뒤 핵심 여백은 유지한다. */}
-      <View style={StyleSheet.absoluteFill} pointerEvents="none" testID="house-background-layer">
+      <View
+        style={[
+          StyleSheet.absoluteFill,
+          integrated && scheme === 'dark' && { backgroundColor: HouseSceneColors.nightTint },
+        ]}
+        pointerEvents="none"
+        testID="house-background-layer">
         {backgroundKey ? (
           <Image
             source={assetSource(backgroundKey)}
