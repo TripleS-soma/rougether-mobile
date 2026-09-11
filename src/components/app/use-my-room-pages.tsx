@@ -31,7 +31,7 @@ import { useCalendarView } from '@/hooks/use-calendar-view';
 import type { RoomGrowthProps } from '@/components/ui/room-growth-pill';
 import { queryKeys } from '@/lib/query-keys';
 import { useLatestRef } from '@/hooks/use-stable-value';
-import { todayIso } from '@/utils/datetime';
+import { calendarToday } from '@/utils/calendar-progress';
 
 type MyRoomData = ReturnType<typeof useMyRoomData>;
 type MissionLinks = ReturnType<typeof useMissionLinks>;
@@ -169,8 +169,9 @@ export function useMyRoomPages({
     async (...args: Parameters<MissionLinks['toggleWithMissionGuard']>) => {
       const result = await toggleWithMissionGuard(...args);
       if (result) await refreshCharacters();
-      // result는 완료 성공일 때만 있다 — 취소·실패·미션 가드는 null.
-      if (result && args[1] === todayIso()) onCompletedTodayRef.current?.();
+      // result는 완료 성공일 때만 있다 — 취소·실패·미션 가드는 null. "오늘"은 완료 날짜와
+      // 같은 KST 서버 날짜로 비교한다(#1295 리뷰 — 기기 시간대 기준이면 해외·자정 경계에서 어긋남).
+      if (result && args[1] === calendarToday()) onCompletedTodayRef.current?.();
       return result;
     },
     [toggleWithMissionGuard, refreshCharacters, onCompletedTodayRef],
@@ -333,7 +334,7 @@ export function useMyRoomPages({
       try {
         const toggled = await toggleCalendarItem(item, date);
         // 달력 탭의 오늘 항목 완료도 자동 출석을 부른다 (#1294) — item.completed는 누르기 전 상태.
-        if (toggled && !item.completed && date === todayIso()) onCompletedTodayRef.current?.();
+        if (toggled && !item.completed && date === calendarToday()) onCompletedTodayRef.current?.();
       } finally {
         await Promise.all([refreshCalendar(), refreshCharacters()]);
       }

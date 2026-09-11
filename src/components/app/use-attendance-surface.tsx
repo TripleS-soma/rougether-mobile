@@ -15,7 +15,7 @@ import { useAttendance } from '@/hooks/use-attendance';
 import { useLatestRef } from '@/hooks/use-stable-value';
 import { REVIEW_PROMPT_DELAY_MS } from '@/hooks/use-store-review';
 import { useWalletHistory } from '@/hooks/use-wallet-history';
-import { todayIso } from '@/utils/datetime';
+import { calendarToday } from '@/utils/calendar-progress';
 
 /**
  * 그날 첫 완료 뒤 출석 시트를 여는 간격 (#1294) — 보상 알약(2.2초)이 사라진 뒤라
@@ -83,7 +83,8 @@ export function useAttendanceSurface({
       const status = statusRef.current;
       return !!status && !status.checkedInToday && !status.completed;
     };
-    const today = todayIso();
+    // 출석일은 KST 서버 날짜라 하루 1회 가드도 같은 기준으로 센다(#1295 리뷰).
+    const today = calendarToday();
     if (!eligible() || autoDateRef.current === today) return;
     autoDateRef.current = today;
     cancelAutoTimer();
