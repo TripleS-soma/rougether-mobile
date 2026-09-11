@@ -47,10 +47,11 @@ export const ONBOARDING_MISSION_STEPS: OnboardingMissionStep[] = [
 ];
 
 /** '튜토리얼 다시 보기' 재시작용 — 플래그를 지우면 온보딩 완주 직후의
- * 자동 시작 경로가 다시 열린다. */
+ * 자동 시작 경로가 다시 열린다. 이 계정 플래그만 지운다 — 옛 기기 플래그는 다른 계정
+ * 것일 수 있다(#1299 리뷰). */
 export async function resetOnboardingMissions(): Promise<void> {
   try {
-    await AsyncStorage.multiRemove([...new Set([storeKey(), LEGACY_STORE_KEY])]);
+    await AsyncStorage.removeItem(storeKey());
   } catch {
     // ignore — 다음 시작 판정만 영향받는 베스트 에포트 플래그.
   }

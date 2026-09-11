@@ -60,11 +60,14 @@ export async function claimLegacyOnboarding(userId: number, data: OnboardingData
   }
 }
 
+/**
+ * 튜토리얼 다시 보기 초기화 — 이 계정 기록만 지운다. 옛 기기 키는 주인이 확인되기 전까지
+ * 다른 계정 것일 수 있어 건드리지 않는다(#1299 리뷰): 서버 completed=false인 옛 사용자에게는
+ * 그 기록이 유일한 완료 신호다. 계정을 모를 때만 옛 키를 지운다.
+ */
 export async function resetOnboarding(userId?: number): Promise<void> {
   try {
-    await AsyncStorage.multiRemove(
-      userId != null ? [keyFor(userId), LEGACY_ONBOARDING_KEY] : [LEGACY_ONBOARDING_KEY],
-    );
+    await AsyncStorage.removeItem(userId != null ? keyFor(userId) : LEGACY_ONBOARDING_KEY);
   } catch {
     // ignore
   }

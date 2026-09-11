@@ -87,16 +87,24 @@ export function AppRoot() {
       setLoadedUserId(userId);
       setStarterProgress(starter?.status === 'pending' ? starter : null);
       setServerGoals(goals.map(toOnboardingGoal));
+      const remoteGoalIds =
+        remote?.goals?.flatMap((g) => (g.goalId != null ? [String(g.goalId)] : [])) ?? [];
       /**
        * 기기에 남은 옛 온보딩 기록(계정 구분 없던 키)은 **이 계정 것일 때만** 쓴다
        * (2026-09-11). 앱을 새로 깐 폰에서 새 계정으로 가입했는데 목표 설문도 미션도 없이
        * 앱으로 들어갔다 — 안드로이드 자동 백업이 앞 설치의 이 키를 복원했거나 같은 기기의
-       * 앞 계정이 남긴 것이다. 서버에 이 계정의 목표가 저장돼 있으면 온보딩을 거친 계정이고
-       * (캐릭터 저장 409로 completed=false인 옛 사용자 포함), 새 계정은 목표가 비어 있다.
-       * 서버에 못 닿으면(오프라인) 종전대로 믿는다. 확인되면 계정별 키로 옮긴다.
+       * 앞 계정이 남긴 것이다.
+       *
+       * 주인 판별: 기록의 목표가 **서버에 저장된 이 계정의 목표와 겹치면** 이 계정 것이다.
+       * 같은 온보딩이 로컬(문자열 id)과 서버(goalId)에 함께 저장했기 때문이다 — 캐릭터 저장
+       * 409로 completed=false인 옛 사용자도 목표는 서버에 있다. "서버에 목표가 있다"만으로
+       * 판정하면 이미 온보딩된 다른 계정이 앞 계정의 기록을 가져갔다(#1299 리뷰). 새 계정은
+       * 서버 목표가 비어 있어 당연히 겹치지 않는다. 서버에 못 닿으면(오프라인) 종전대로 믿되
+       * 옮기지는 않는다. 확인되면 계정별 키로 옮긴다.
        */
       const legacyOwned =
-        saved?.legacy === true && (remote == null || (remote.goals?.length ?? 0) > 0);
+        saved?.legacy === true &&
+        (remote == null || saved.data.goals.some((id) => remoteGoalIds.includes(id)));
       const local = saved && (!saved.legacy || legacyOwned) ? saved.data : null;
       if (saved && legacyOwned && remote != null && userId != null)
         void claimLegacyOnboarding(userId, saved.data);
@@ -106,8 +114,6 @@ export function AppRoot() {
           : undefined;
       if (remoteCharacter) setCharacterId(remoteCharacter);
       else if (local) setCharacterId(local.characterId);
-      const remoteGoalIds =
-        remote?.goals?.flatMap((g) => (g.goalId != null ? [String(g.goalId)] : [])) ?? [];
       if (remoteGoalIds.length > 0) setSelectedGoalIds(remoteGoalIds);
       else if (local) setSelectedGoalIds(local.goals);
       setOnboarded(remote?.completed === true || local != null);

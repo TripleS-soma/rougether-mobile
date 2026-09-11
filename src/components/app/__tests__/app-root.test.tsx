@@ -166,7 +166,8 @@ describe('AppRoot', () => {
    * 다시 보지 않고, 기록은 계정별 키로 옮겨진다.
    */
   it('서버에 목표가 있는 기존 사용자는 옛 기기 기록으로 그대로 앱에 들어가고 계정별로 옮긴다', async () => {
-    await AsyncStorage.setItem(KEY, JSON.stringify({ characterId: 'cat', goals: ['exercise'] }));
+    // 같은 온보딩이 로컬(문자열 id)과 서버(goalId)에 함께 저장했으니 목표가 겹친다.
+    await AsyncStorage.setItem(KEY, JSON.stringify({ characterId: 'cat', goals: ['1'] }));
     await AsyncStorage.setItem('rougether.auth.userId', '72');
     global.fetch = jest.fn(async (url: string) => {
       if (url.endsWith('/onboarding'))
@@ -183,7 +184,7 @@ describe('AppRoot', () => {
     await waitFor(() => expect(ui.getByText('오늘의 할 일')).toBeTruthy());
     await waitFor(async () =>
       expect(await AsyncStorage.getItem(`${KEY}.72`)).toBe(
-        JSON.stringify({ characterId: 'cat', goals: ['exercise'] }),
+        JSON.stringify({ characterId: 'cat', goals: ['1'] }),
       ),
     );
     expect(await AsyncStorage.getItem(KEY)).toBeNull();
@@ -206,6 +207,32 @@ describe('AppRoot', () => {
     await waitFor(() => expect(ui.getByText('오늘의 할 일')).toBeTruthy());
     expect(await AsyncStorage.getItem(`${KEY}.72`)).toBeNull();
     expect(await AsyncStorage.getItem(KEY)).not.toBeNull();
+  });
+
+  /**
+   * #1299 리뷰 2 — "이 계정이 서버에 목표가 있다"만으로는 옛 기기 기록의 주인이 아니다.
+   * 이미 온보딩된 계정 B가 앞 계정 A의 기록이 남은 기기에 처음 들어오면 A의 캐릭터·목표가
+   * B의 계정별 키에 옮겨지고 A의 기록은 사라졌다. 기록의 목표가 서버 목표와 겹칠 때만 주인이다.
+   */
+  it('다른 계정의 옛 기기 기록은 서버 목표와 겹치지 않으면 이 계정 것으로 옮기지 않는다', async () => {
+    const other = JSON.stringify({ characterId: 'bear', goals: ['9'] });
+    await AsyncStorage.setItem(KEY, other);
+    await AsyncStorage.setItem('rougether.auth.userId', '72');
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.endsWith('/onboarding'))
+        return {
+          ok: true,
+          status: 200,
+          text: async () =>
+            JSON.stringify({ goals: [{ goalId: 1, code: 'exercise' }], completed: true }),
+        };
+      return emptyRes(url);
+    }) as unknown as typeof fetch;
+
+    const ui = await renderApp();
+    await waitFor(() => expect(ui.getByText('오늘의 할 일')).toBeTruthy());
+    expect(await AsyncStorage.getItem(`${KEY}.72`)).toBeNull();
+    expect(await AsyncStorage.getItem(KEY)).toBe(other);
   });
 
   it('중도 종료한 계정은 관심사 추천으로 재개하고 나중에 선택하면 다음 실행에 강제하지 않는다', async () => {
