@@ -74,20 +74,3 @@ export function resolveHouseScene(
   const source = scene && HOUSE_SCENE_SOURCES[scene.file];
   return scene && source != null && validHouseScene(scene) ? { ...scene, source } : undefined;
 }
-
-/** Fill portrait height while protecting every room and its surrounding columns. */
-export function houseSceneDisplayWidth(
-  scene: HouseSceneMetadata,
-  viewport: { width: number; height: number },
-): number {
-  if (viewport.width <= 0) return 0;
-  const desired = Math.max(viewport.width, (viewport.height * scene.width) / scene.height);
-  const columnMargin = scene.width * 0.05;
-  const left = Math.max(0, Math.min(...scene.roomRects.map((rect) => rect.x)) - columnMargin);
-  const right = Math.min(
-    scene.width,
-    Math.max(...scene.roomRects.map((rect) => rect.x + rect.width)) + columnMargin,
-  );
-  const requiredFraction = Math.max(1 - (2 * left) / scene.width, (2 * right) / scene.width - 1);
-  return Math.min(desired, viewport.width / requiredFraction);
-}

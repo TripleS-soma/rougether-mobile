@@ -1,9 +1,4 @@
-import {
-  HOUSE_SCENE_MANIFEST,
-  validHouseScene,
-  resolveHouseScene,
-  houseSceneDisplayWidth,
-} from '@/resources/house-scene';
+import { HOUSE_SCENE_MANIFEST, validHouseScene, resolveHouseScene } from '@/resources/house-scene';
 import { resolveHouseFrame, STACKED_HOUSE_THEMES } from '@/resources/house-frame';
 
 describe('integrated house scene package', () => {
@@ -40,25 +35,6 @@ describe('integrated house scene package', () => {
         });
       }
       expect(resolveHouseScene(scene.themeId, scene.capacity, 'dark')?.file).toBe(scene.file);
-    }
-  });
-
-  it('never crops a room or its adjacent column at phone and tablet sizes', () => {
-    for (const scene of HOUSE_SCENE_MANIFEST.scenes) {
-      for (const viewport of [
-        { width: 320, height: 568 },
-        { width: 390, height: 844 },
-        { width: 430, height: 932 },
-        { width: 768, height: 1024 },
-      ]) {
-        const width = houseSceneDisplayWidth(scene, viewport);
-        const scale = width / scene.width;
-        const offset = (viewport.width - width) / 2;
-        scene.roomRects.forEach((rect) => {
-          expect(rect.x * scale + offset).toBeGreaterThanOrEqual(0);
-          expect((rect.x + rect.width) * scale + offset).toBeLessThanOrEqual(viewport.width);
-        });
-      }
     }
   });
 

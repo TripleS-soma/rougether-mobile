@@ -6,6 +6,7 @@ import { HouseRoomAperture } from '@/components/room/house-room-aperture';
 import { HouseScreen, type House } from '@/components/screens/house-screen';
 import { HOUSE_SCENE_MANIFEST } from '@/resources/house-scene';
 import { DEFAULT_HOUSE_COVER_KEY, STACKED_HOUSE_THEMES } from '@/resources/house-frame';
+import { HouseSceneGroundColors } from '@/constants/theme';
 
 const ROOM = {
   characterId: 'cat' as const,
@@ -94,6 +95,7 @@ describe('opaque scene consumers', () => {
     expect(visit).toHaveBeenCalledTimes(1);
     await fireEvent(ui.getByTestId('house-frame'), 'error', { nativeEvent: { error: 'missing' } });
     expect(ui.getByTestId('house-background')).toBeTruthy();
+    expect(ui.queryByTestId('house-scene-ground-fade')).toBeNull();
   });
 });
 
@@ -121,6 +123,33 @@ describe.each(HOUSE_SCENE_MANIFEST.scenes)('$themeId $capacity person screen', (
     expect(ui.getByTestId('house-frame').props.recyclingKey).toBe(
       `bundled-house-scene/${scene.file}`,
     );
+    expect(StyleSheet.flatten(ui.getByTestId('house-screen').props.style).backgroundColor).toBe(
+      HouseSceneGroundColors[scene.themeId][scene.capacity],
+    );
+    expect(ui.getByTestId('house-scene-ground-fade').props.pointerEvents).toBe('none');
+    // Roofs and gardens extend beyond room bounds. Fit the entire source image,
+    // including after native viewport measurements and portrait height changes.
+    for (const [width, height] of [
+      [393, 852],
+      [393, 1100],
+      [320, 568],
+      [768, 1024],
+    ]) {
+      await fireEvent(ui.getByTestId('house-scroll'), 'layout', {
+        nativeEvent: { layout: { x: 0, y: 0, width, height } },
+      });
+      const canvas = StyleSheet.flatten(ui.getByTestId('house-scene-camera').props.style);
+      expect(canvas.width).toBe(width);
+      expect(canvas.marginLeft ?? 0).toBe(0);
+      const scale = canvas.width / scene.width;
+      scene.roomRects.forEach((rect, index) => {
+        const slot = StyleSheet.flatten(ui.getByTestId(`house-window-${index}`).props.style);
+        expect((parseFloat(slot.left) / 100) * width).toBeCloseTo(rect.x * scale);
+        expect((parseFloat(slot.width) / 100) * width).toBeCloseTo(rect.width * scale);
+        expect(rect.x * scale).toBeGreaterThanOrEqual(0);
+        expect((rect.x + rect.width) * scale).toBeLessThanOrEqual(width);
+      });
+    }
     for (let member = 1; member <= scene.capacity; member++)
       expect(ui.getByRole('button', { name: `좌석 ${member}` })).toBeTruthy();
     await fireEvent.press(ui.getByRole('button', { name: `좌석 ${scene.capacity}` }));
