@@ -30,6 +30,8 @@ import { toServerItemId, type ShopCatalogue } from '@/api/adapters';
 import { useCalendarView } from '@/hooks/use-calendar-view';
 import type { RoomGrowthProps } from '@/components/ui/room-growth-pill';
 import { queryKeys } from '@/lib/query-keys';
+import { useLatestRef } from '@/hooks/use-stable-value';
+import { todayIso } from '@/utils/datetime';
 
 type MyRoomData = ReturnType<typeof useMyRoomData>;
 type MissionLinks = ReturnType<typeof useMissionLinks>;
@@ -50,6 +52,7 @@ export function useMyRoomPages({
   missionLinks,
   character,
   room,
+  onCompletedToday,
 }: {
   /** 셸 내비 상태 — 추가/수정 화면의 복귀 목적지 포함. */
   nav: {
@@ -118,6 +121,11 @@ export function useMyRoomPages({
     /** 달력 점 (#838) — 할 일 있는 날 집합 + 보이는 달 변경 알림. */
     markedTodoDates: MyRoomScreenProps['markedTodoDates'];
   };
+  /**
+   * 오늘 날짜로 루틴·할 일 완료에 성공했을 때 (#1294) — 셸이 그날 첫 완료면 출석 시트를
+   * 자동 출석 모드로 연다. 취소·실패·과거 날짜는 부르지 않는다.
+   */
+  onCompletedToday?: () => void;
 }) {
   const queryClient = useQueryClient();
   const { screen, setScreen, addReturnScreen, setAddReturnScreen } = nav;
@@ -153,13 +161,19 @@ export function useMyRoomPages({
     () => queryClient.invalidateQueries({ queryKey: queryKeys.myCharacters.all }),
     [queryClient],
   );
+  // 그날 첫 완료 → 자동 출석 (#1294). 판단(이벤트·오늘 출석 여부·하루 1회)은 셸의 출석
+  // 표면이 하고, 여기서는 "오늘 날짜로 완료에 성공했다"만 알린다. 참조를 ref로 떼어
+  // 완료 콜백들의 memo 경계(#539)를 흔들지 않는다.
+  const onCompletedTodayRef = useLatestRef(onCompletedToday);
   const toggleWithCharacterReward = useCallback(
     async (...args: Parameters<MissionLinks['toggleWithMissionGuard']>) => {
       const result = await toggleWithMissionGuard(...args);
       if (result) await refreshCharacters();
+      // result는 완료 성공일 때만 있다 — 취소·실패·미션 가드는 null.
+      if (result && args[1] === todayIso()) onCompletedTodayRef.current?.();
       return result;
     },
-    [toggleWithMissionGuard, refreshCharacters],
+    [toggleWithMissionGuard, refreshCharacters, onCompletedTodayRef],
   );
 
   // 루틴 수동 순서 (#716) — 기기 로컬 보관, 방 '오늘' 리스트에 적용.
@@ -317,12 +331,14 @@ export function useMyRoomPages({
   const handleToggleCalendarItem = useCallback(
     async (item: CalendarDayItem, date: string) => {
       try {
-        await toggleCalendarItem(item, date);
+        const toggled = await toggleCalendarItem(item, date);
+        // 달력 탭의 오늘 항목 완료도 자동 출석을 부른다 (#1294) — item.completed는 누르기 전 상태.
+        if (toggled && !item.completed && date === todayIso()) onCompletedTodayRef.current?.();
       } finally {
         await Promise.all([refreshCalendar(), refreshCharacters()]);
       }
     },
-    [toggleCalendarItem, refreshCalendar, refreshCharacters],
+    [toggleCalendarItem, refreshCalendar, refreshCharacters, onCompletedTodayRef],
   );
   // 당겨서 새로고침 (#454) — 실패해도 조용히 접는다(훅이 상태를 유지하고,
   // 인디케이터는 어차피 되돌아간다). 나의 방은 전체 리페치.
