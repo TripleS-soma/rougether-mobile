@@ -1,11 +1,21 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { getSessionUserId } from '@/api';
 import { track } from '@/lib/analytics';
 
 /** 완료/스킵 플래그만 영속 (#571) — 중간 진행은 저장하지 않는다(중도 이탈 시
  * 다음 시작에 처음부터). */
-const STORE_KEY = 'rougether.onboarding-missions.v1';
+const LEGACY_STORE_KEY = 'rougether.onboarding-missions.v1';
+/**
+ * 계정별 플래그 (2026-09-11) — 기기 단위 키였을 때는 같은 기기의 앞 계정(또는 안드로이드
+ * 자동 백업 복원분)이 끝낸 미션이 새 계정의 첫 가입 미션을 막았다. 자동 시작은 첫 온보딩·
+ * 다시 보기 직후에만 일어나므로 옛 키는 읽지 않는다. 계정을 모르면 옛 키를 쓴다.
+ */
+function storeKey(): string {
+  const userId = getSessionUserId();
+  return userId == null ? LEGACY_STORE_KEY : `${LEGACY_STORE_KEY}.${userId}`;
+}
 
 export type OnboardingMissionStepId = 'first-draw' | 'place-furniture' | 'invite-house';
 
@@ -37,10 +47,11 @@ export const ONBOARDING_MISSION_STEPS: OnboardingMissionStep[] = [
 ];
 
 /** '튜토리얼 다시 보기' 재시작용 — 플래그를 지우면 온보딩 완주 직후의
- * 자동 시작 경로가 다시 열린다. */
+ * 자동 시작 경로가 다시 열린다. 이 계정 플래그만 지운다 — 옛 기기 플래그는 다른 계정
+ * 것일 수 있다(#1299 리뷰). */
 export async function resetOnboardingMissions(): Promise<void> {
   try {
-    await AsyncStorage.removeItem(STORE_KEY);
+    await AsyncStorage.removeItem(storeKey());
   } catch {
     // ignore — 다음 시작 판정만 영향받는 베스트 에포트 플래그.
   }
@@ -71,7 +82,7 @@ export function useOnboardingMissions(autoStart: boolean) {
   useEffect(() => {
     if (!autoStart) return;
     let mounted = true;
-    void AsyncStorage.getItem(STORE_KEY)
+    void AsyncStorage.getItem(storeKey())
       .then((flag) => {
         if (!mounted || flag != null || stateRef.current.active) return;
         setState({ active: true, stepIndex: 0, completedIndex: null });
@@ -91,7 +102,7 @@ export function useOnboardingMissions(autoStart: boolean) {
     const next = s.stepIndex + 1;
     if (next >= ONBOARDING_MISSION_STEPS.length) {
       // 마지막 미션 — 배너는 소멸하고 축하 시트만 남는다.
-      void AsyncStorage.setItem(STORE_KEY, 'completed').catch(() => {});
+      void AsyncStorage.setItem(storeKey(), 'completed').catch(() => {});
       setState({ active: false, stepIndex: s.stepIndex, completedIndex: s.stepIndex });
       return;
     }
@@ -104,7 +115,7 @@ export function useOnboardingMissions(autoStart: boolean) {
     const s = stateRef.current;
     if (!s.active) return;
     track('onboarding_mission_skip', { step: ONBOARDING_MISSION_STEPS[s.stepIndex].id });
-    void AsyncStorage.setItem(STORE_KEY, 'skipped').catch(() => {});
+    void AsyncStorage.setItem(storeKey(), 'skipped').catch(() => {});
     setState({ active: false, stepIndex: s.stepIndex, completedIndex: null });
   }, []);
 
