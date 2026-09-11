@@ -77,3 +77,18 @@ iPhone 15의 393×852 화면에서 2인 장면의 지붕·외벽이 잘렸습니
 독립 시각 검토에서 night 6인(320×568), mushroom 2인(393×852), cloud 4인(430×932), coral 6인(768×1024 웹 내 480px 앱 프레임)의 전체 집·방 정렬·배경 연결을 확인했습니다. 브라우저 기하 15개 사례도 통과했습니다. 네이티브 태블릿의 실제 768px stage는 기하 검사로 별도 확인하며, 웹 앱 프레임 검증을 동일하게 간주하지 않습니다. 새 반응형 변경의 실기기 적용은 운영 담당자가 별도로 수행합니다.
 
 최종 15개 브라우저 사례는 393×852의 전체 12종과 작은 폰·큰 폰·태블릿 프레임 대표 3개입니다. 저장 캡처와 최종 좌표는 생성 패키지의 `qa/responsive/final-browser-matrix.json`에 남겼습니다. 새 React 경고는 없었고 개발 localhost의 기존 Google origin 403만 관측했습니다. 독립 코드 리뷰는 visible SVG watchdog의 이전 장면 이벤트 격리와 새로고침 회귀까지 확인한 뒤 승인했습니다.
+
+## iOS에서 집 외관이 표시되지 않은 후속 수정
+
+실기기의 산호 4인 화면에서 환경 배경과 방은 보이지만 집 외관이 투명하게 남았습니다. 기존 브라우저 검사와 SVG의 onLoad 성공은 이 네이티브 합성 결과를 검증하지 못했습니다. 설치된 라이브러리의 RNSVGImage는 이미지 수신 때 onLoad를 보내고, 마스크는 RNSVGRenderable의 별도 bitmap 합성에서 처리합니다. 정확한 CoreGraphics 실패 지점을 추정하지 않고 해당 런타임 마스크 경로를 제거합니다.
+
+같은 원본 크기와 보호영역을 유지한 채 외곽 alpha를 미리 계산한 PNG를 Expo Image로 직접 표시합니다. 원본 장면은 탐색 미리보기에 유지합니다. 집·방 좌표와 카메라·안전영역 계산은 바뀌지 않으며, 렌더용 그림 또는 환경 배경의 실제 onError가 동일한 그림·좌표 fallback을 수행합니다. probe와 SVG 성공 watchdog은 제거합니다.
+
+새 검사는 정확한 12종 렌더용 source 매핑, 원본과 구분된 실제 표시 source, 균일 좌표, 캐시·사전 로딩, 보이는 이미지의 오류, 환경 오류 및 누락 source의 fallback을 확인합니다. RGBA 보호영역 검증과 실제 네이티브 검증은 새 결과를 별도로 기록하며, 위 브라우저/SVG 검사 결과를 이 수정의 실기기 성공으로 간주하지 않습니다.
+
+- 렌더용 PNG 12장: 16,246,934 bytes. 생성 검증은 보호영역 전체 alpha 255, 원본 RGB 보존, PNG encode/decode pixel roundtrip 일치를 확인했습니다. 앱 번들의 파일별 SHA-256과 크기도 생성 manifest와 일치합니다.
+- production: typecheck·lint·format·diff 통과, 전체 256 suites / 2,093 tests 통과.
+- dev: typecheck·lint·format·diff 통과, 전체 266 suites / 2,179 tests 통과.
+- 기존 app-shell hook 의존성 경고 1개와 Jest 종료 옵션은 동일합니다.
+- 새 iOS fingerprint는 `8441e2f0e567fbd486e3a699fd20ec36c4a82ca2`로 기존과 일치합니다. 기존 집 원본·방 metadata·화면 맞춤 좌표·캐릭터 배치·네이티브 입력은 변경하지 않았습니다.
+- Expo SDK 55의 네이티브 검증 환경에서 실제 production `HouseSceneArtwork`와 산호 4인 PNG를 표시하여 지붕·외벽·기단이 모두 보이는 것을 확인했습니다. 이는 산호 4인 단독 렌더러 확인이며, 12종 네이티브 화면과 실제 설치 앱의 OTA 수신 성공을 의미하지 않습니다. 추가 캡처와 배포 검증은 별도로 진행합니다.

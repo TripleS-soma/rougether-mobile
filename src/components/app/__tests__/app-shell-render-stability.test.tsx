@@ -10,6 +10,8 @@ import { act, fireEvent, waitFor } from '@testing-library/react-native';
 import { Image } from 'expo-image';
 import { Image as NativeImage, Pressable } from 'react-native';
 import { HOUSE_SCENE_BACKDROPS } from '@/resources/house-scenes/backdrops/sources';
+import { HOUSE_SCENE_DISPLAY_SOURCES } from '@/resources/house-scenes/display/sources';
+import { resolveHouseScene } from '@/resources/house-scene';
 
 import { AppShell } from '@/components/app/app-shell';
 import { Room } from '@/components/room/room';
@@ -139,6 +141,9 @@ it('통합 장면과 환경 배경 번들을 미리 받고 모드 전환에는 �
       }),
     );
     expect(resolve).toHaveBeenCalledWith(HOUSE_SCENE_BACKDROPS['cloud-balloon']);
+    const scene = resolveHouseScene('cloud-balloon', 4)!;
+    expect(resolve).toHaveBeenCalledWith(scene.source);
+    expect(resolve).toHaveBeenCalledWith(HOUSE_SCENE_DISPLAY_SOURCES[scene.file]);
     prefetch.mockClear();
     await fireEvent.press(ui.getByLabelText('prefetch-dark-mode'));
     expect(prefetch).not.toHaveBeenCalled();
