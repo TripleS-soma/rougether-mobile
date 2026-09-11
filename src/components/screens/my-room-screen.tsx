@@ -92,6 +92,7 @@ import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
 import { localDate, monthDayLabel, todayIso } from '@/utils/datetime';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
+import { holidayName } from '@/utils/holidays';
 
 // 스케줄 판정은 my-room/schedule로 이동 (#693) — 기존 임포트 경로 유지용 재수출.
 export { isScheduledOn };
@@ -519,6 +520,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   const selectedWeekday = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'][
     selectedDay.getDay()
   ];
+  // 공휴일 이름 (#1292) — 달력 칸엔 빨간 숫자만, 이름은 선택한 날짜 제목에 붙인다.
+  const selectedHoliday = holidayName(selectedDate);
 
   // 달력 서버 날짜에서 연 메뉴 — 완료 라벨/토글은 그 날의 기록과 달력 규칙
   // (미래 차단, 과거 허용)을 따른다 (#323).
@@ -1280,9 +1283,11 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             style={styles.calDateHeading}
             accessible
             accessibilityRole="header"
-            accessibilityLabel={`${selectedDay.getFullYear()}년 ${selectedDayLabel} ${selectedWeekday}`}>
+            accessibilityLabel={`${selectedDay.getFullYear()}년 ${selectedDayLabel} ${selectedWeekday}${selectedHoliday ? `, ${selectedHoliday}` : ''}`}>
             <Text style={[Typography.h3, { color: t.text }]}>{selectedDayLabel}</Text>
-            <Text style={[Typography.supporting, { color: t.textMuted }]}>{selectedWeekday}</Text>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              {selectedHoliday ? `${selectedWeekday} · ${selectedHoliday}` : selectedWeekday}
+            </Text>
           </View>
           <View style={styles.sectionHeadRight}>
             <Pressable
