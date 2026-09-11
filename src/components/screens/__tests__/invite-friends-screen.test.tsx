@@ -152,6 +152,25 @@ describe('InviteFriendsScreen — 사용 전 미리보기 (#1007)', () => {
     expect(ui.getByLabelText('초대코드 입력').props.value).toBe('NOPE1234');
   });
 
+  // #1286 리뷰 — 미리보기와 확정 사이에 다른 기기에서 먼저 쓰는 등 확정이 실패하면
+  // 확인 화면을 닫고 입력으로 돌아간다. 입력한 코드는 그대로 남는다.
+  it('확정에서 사용이 실패하면 입력으로 돌아가고 코드는 남는다', async () => {
+    const onPreview = jest.fn(async () => PREVIEW);
+    const onRedeem = jest.fn(async () => null);
+    const ui = await render(
+      <InviteFriendsScreen info={INFO} onPreview={onPreview} onRedeem={onRedeem} />,
+    );
+    await fireEvent.changeText(ui.getByLabelText('초대코드 입력'), 'FRIEND99');
+    await fireEvent.press(ui.getByLabelText('초대코드 사용'));
+    await waitFor(() => expect(ui.getByText('소마님의 초대가 맞나요?')).toBeTruthy());
+
+    await fireEvent.press(ui.getByLabelText('초대코드 사용 확정'));
+    await waitFor(() => expect(onRedeem).toHaveBeenCalledWith('FRIEND99'));
+    await waitFor(() => expect(ui.queryByText('소마님의 초대가 맞나요?')).toBeNull());
+    expect(ui.getByLabelText('초대코드 입력').props.value).toBe('FRIEND99');
+    expect(ui.queryByText(/받았어요!/)).toBeNull();
+  });
+
   it('서버 공유 링크(shareUrl)가 있으면 그 링크로 공유한다', async () => {
     const { Share } = jest.requireActual('react-native');
     const shareSpy = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });

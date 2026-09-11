@@ -25,8 +25,11 @@ const CODE_RE = /^[A-Z0-9]{4,16}$/;
 const ENVELOPE_RE = /rougether-invite:(friend|house):([A-Za-z0-9]+)/i;
 const SCHEME_RE = /rougether:\/\/(invite|join)\?(?:[^\s#]*&)?code=([A-Za-z0-9]+)/i;
 const LANDING_PAGE_RE = /\/(invite|join)\.html\?(?:[^\s#]*&)?code=([A-Za-z0-9]+)/i;
-// 서버 랜딩 `/i/{CODE}`·`/h/{CODE}` — 흔한 경로라 호스트에 rougether가 있을 때만.
-const SHORT_LINK_RE = /https?:\/\/[^\s/]*rougether[^\s/]*\/(i|h)\/([A-Za-z0-9]+)/i;
+// 서버 랜딩 `/i/{CODE}`·`/h/{CODE}` — 흔한 경로라 우리 도메인(rougether.com·rougether.app과
+// 그 하위 도메인)일 때만. 호스트에 'rougether'가 들어간 남의 도메인은 받지 않는다(#1286 리뷰).
+// 서버 링크 도메인(`INVITE_SHARE_BASE_URL`)이 다른 곳으로 정해지면 여기에 더한다.
+const SHORT_LINK_RE =
+  /https?:\/\/(?:[A-Za-z0-9-]+\.)*rougether\.(?:com|app)(?::\d+)?\/(i|h)\/([A-Za-z0-9]+)/i;
 
 function normalize(code: string): string | null {
   const clean = code.trim().toUpperCase();

@@ -40,6 +40,9 @@ describe('parseInviteText (#1007)', () => {
 
   it('rougether가 아닌 호스트의 /i/ 경로는 초대 링크가 아니다', () => {
     expect(parseInviteText('https://example.com/i/ABCD2345')).toBeNull();
+    // 'rougether'가 들어간 남의 도메인도 아니다 (#1286 리뷰).
+    expect(parseInviteText('https://my-rougether-phish.com/i/ABCD2345')).toBeNull();
+    expect(parseInviteText('https://rougether.evil.io/i/ABCD2345')).toBeNull();
   });
 
   it('코드만 붙여넣으면 친구 코드로 본다 — rougether.com 랜딩의 복사 버튼', () => {
