@@ -189,6 +189,25 @@ describe('AppRoot', () => {
     expect(await AsyncStorage.getItem(KEY)).toBeNull();
   });
 
+  /**
+   * 서버에 못 닿으면(오프라인) 옛 기기 기록을 종전대로 믿어 앱으로 들어간다 — 기존
+   * 사용자가 오프라인으로 앱을 열 때마다 온보딩을 보지 않게. 주인이 확인된 건 아니므로
+   * 계정별 키로 옮기지 않고, 다음에 서버가 응답하면 다시 판정한다 (#1299 리뷰).
+   */
+  it('서버에 못 닿으면 옛 기기 기록으로 앱에 들어가되 계정별로 옮기지는 않는다', async () => {
+    await AsyncStorage.setItem(KEY, JSON.stringify({ characterId: 'cat', goals: ['exercise'] }));
+    await AsyncStorage.setItem('rougether.auth.userId', '72');
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.endsWith('/onboarding')) throw new TypeError('Network request failed');
+      return emptyRes(url);
+    }) as unknown as typeof fetch;
+
+    const ui = await renderApp();
+    await waitFor(() => expect(ui.getByText('오늘의 할 일')).toBeTruthy());
+    expect(await AsyncStorage.getItem(`${KEY}.72`)).toBeNull();
+    expect(await AsyncStorage.getItem(KEY)).not.toBeNull();
+  });
+
   it('중도 종료한 계정은 관심사 추천으로 재개하고 나중에 선택하면 다음 실행에 강제하지 않는다', async () => {
     await AsyncStorage.setItem('rougether.auth.userId', '71');
     // 이 계정이 이 기기에서 마친 온보딩 — 계정별 키에 있다.
