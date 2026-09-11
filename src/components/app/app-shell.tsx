@@ -166,6 +166,7 @@ export function AppShell({
     attendance,
     attendancePending,
     openAttendance,
+    openAttendanceAfterFirstCompletion,
     openFurnitureStudio,
     openWalletHistory,
     sheets: attendanceSheets,
@@ -379,6 +380,8 @@ export function AppShell({
     data: myRoomData,
     nickname,
     missionLinks: { toggleWithMissionGuard, houseCategoryIds, addRoutineWithMission },
+    // 그날 첫 완료 → 출석 시트 자동 출석 (#1294).
+    onCompletedToday: openAttendanceAfterFirstCompletion,
     character: { wornCharacterId, wornCharacterFrames, ownedCharacters, wearCharacter },
     room: {
       growthLevel,
@@ -398,7 +401,8 @@ export function AppShell({
   useWidgetSync({ resolvedScheme, routines, completions, streak });
 
   // 스토어 리뷰 요청 (#1107) — 오늘 예정 루틴이 전부 완료되는 완료 순간에만.
-  // 시트·모달 위에 겹치지 않게 탭 루트(나의 방·달력)에서만 띄운다.
+  // 시트·모달 위에 겹치지 않게 탭 루트(나의 방·달력)에서만 띄운다. 오늘 아직 출석 전이면
+  // 그 완료가 출석 시트를 자동으로 여므로(#1294) 같은 순간의 리뷰 요청은 건너뛴다.
   const todayForReview = todayIso();
   const todayRoutines = useMemo(
     () => routines.filter((r) => isScheduledOn(r, todayForReview)),
@@ -412,7 +416,7 @@ export function AppShell({
     doneCount: todayDoneCount,
     totalCount: todayRoutines.length,
     ready: !myRoomLoading,
-    suppressed: screen !== 'myRoom' && screen !== 'calendar',
+    suppressed: (screen !== 'myRoom' && screen !== 'calendar') || attendancePending,
   });
 
   // 화면 전환 추적 (#437) — 셸의 screen 상태가 곧 내비게이션 단위.
