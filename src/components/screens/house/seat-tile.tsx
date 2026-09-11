@@ -36,6 +36,8 @@ export type SeatTileProps = {
   fill: boolean;
   /** Exact rectangular cutouts have no rounded bleed or visible tile border. */
   squareFrame?: boolean;
+  /** Compact overviews keep the character area clear; tiny rooms retain their accessible name. */
+  metaPlacement?: 'bottom' | 'top' | 'hidden';
   /** 지금 들려 있는 좌석인가. */
   dragging: boolean;
   /** 확대 중 — 롱프레스 드래그를 막는다(카메라 팬과 충돌). */
@@ -85,6 +87,7 @@ function SeatTileBase({
   color,
   fill,
   squareFrame = false,
+  metaPlacement = 'bottom',
   dragging,
   zoomed,
   preview,
@@ -210,10 +213,15 @@ function SeatTileBase({
             아니라 onTint 잉크를 쓴다. 프리뷰 위에서는 하단 스크림으로 대비를
             확보한다. 빈 좌석은 라벨 없이 빈 방 비주얼만 — 접근성 라벨은
             Pressable이 유지한다. */}
-        {empty ? null : (
+        {empty || metaPlacement === 'hidden' ? null : (
           <Animated.View
             testID={`seat-meta-${seatIdx}`}
-            style={[styles.roomMeta, preview && styles.roomNameOverlay, metaStyle]}>
+            style={[
+              styles.roomMeta,
+              preview && styles.roomNameOverlay,
+              metaPlacement === 'top' && styles.roomNameTop,
+              metaStyle,
+            ]}>
             <View style={styles.roomNameRow}>
               {isOwner ? <CrownPictogram size={12} /> : null}
               {/* 최근 접속(#383) — 초록 점. 은은한 펄스로 "지금 있음" (#450). */}
@@ -303,6 +311,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.two,
     paddingVertical: Spacing.half,
   },
+  roomNameTop: { position: 'absolute', top: Spacing.one, bottom: 'auto' },
   roomNameRow: {
     flexDirection: 'row',
     alignItems: 'center',

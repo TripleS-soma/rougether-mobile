@@ -17,6 +17,7 @@ export type RailButtonProps = {
   accessibilityLabel: string;
   /** 점 색 — 받을 보상처럼 '지금 할 게 있다'를 남길 때만. */
   badge?: string;
+  compact?: boolean;
   t: ReturnType<typeof useTokens>;
   Typography: ReturnType<typeof useTypography>;
 };
@@ -28,6 +29,7 @@ export function RailButton({
   onPress,
   accessibilityLabel,
   badge,
+  compact = false,
   t,
   Typography,
 }: RailButtonProps) {
@@ -38,21 +40,36 @@ export function RailButton({
       accessibilityLabel={accessibilityLabel}
       style={styles.railBtn}>
       {/* 원과 라벨 알약 둘 다 글래스 면 (#1050) — 라벨은 눌리는 면이 아니라 비상호작용. */}
-      <GlassSurface style={styles.railCircle} fallbackColor={t.surface}>
+      <GlassSurface
+        style={[styles.railCircle, compact && styles.compact]}
+        fallbackColor={t.surface}>
         {icon}
+        {compact ? (
+          <Text style={[Typography.supporting, { color: t.text }]} numberOfLines={1}>
+            {label}
+          </Text>
+        ) : null}
         {badge ? <View style={[styles.railBadge, { backgroundColor: badge }]} /> : null}
       </GlassSurface>
-      <GlassSurface style={styles.railLabelWrap} fallbackColor={t.surface} interactive={false}>
-        <Text style={[Typography.supporting, { color: t.text }]} numberOfLines={1}>
-          {label}
-        </Text>
-      </GlassSurface>
+      {!compact ? (
+        <GlassSurface style={styles.railLabelWrap} fallbackColor={t.surface} interactive={false}>
+          <Text style={[Typography.supporting, { color: t.text }]} numberOfLines={1}>
+            {label}
+          </Text>
+        </GlassSurface>
+      ) : null}
     </ScalePressable>
   );
 }
 
 const styles = StyleSheet.create({
   railBtn: { alignItems: 'center', gap: Spacing.half },
+  compact: {
+    width: 'auto',
+    flexDirection: 'row',
+    gap: Spacing.one,
+    paddingHorizontal: Spacing.two,
+  },
   railCircle: {
     width: 44,
     height: 44,
