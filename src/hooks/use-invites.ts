@@ -14,6 +14,15 @@ export type RedeemResult = { rewardCoin: number };
 /** 코드가 어디서 왔나 (#1007) — `invite_redeem`의 via. */
 export type InviteVia = 'manual' | 'link' | 'paste';
 
+/** 미리보기 판정 (#1007) — 쓸 수 없는 코드와 일시적 실패를 가른다. */
+export type InviteCheck =
+  | { kind: 'ok'; preview: InvitePreview }
+  | { kind: 'invalid'; message: string }
+  | { kind: 'unavailable' };
+
+/** 코드 자체가 틀린 응답 — 400 내 코드·403 봇·404 없는 코드(서버 #343, redeem과 같다). */
+const INVALID_CODE_STATUSES = [400, 403, 404];
+
 /** 미리보기·사용 공통 에러 안내 — 서버 에러코드가 같다(#343). */
 function inviteErrorMessage(e: unknown, fallback: string): string {
   if (e instanceof ApiError) {
@@ -61,25 +70,45 @@ export function useInvites() {
     onSuccess: () => qc.invalidateQueries({ queryKey }),
   });
 
-  /** 사용 전 미리보기 — 실패는 토스트 후 null. */
-  const preview = useCallback(
-    async (code: string): Promise<InvitePreview | null> => {
-      const clean = code.trim().toUpperCase();
-      if (!clean) return null;
-      try {
-        const res = await fetchInvitePreview(clean);
-        return {
+  /**
+   * 미리보기 판정 (#1007) — 확정적으로 쓸 수 없는 코드(`invalid`: 없는 코드·내 코드·봇)와
+   * **일시적으로 확인하지 못한 것**(`unavailable`: 네트워크·5xx·인증 만료 등)을 가른다.
+   * 링크·붙여넣기로 기기에 보관한 코드는 일시적 실패에 지우면 되찾을 길이 없다.
+   */
+  const check = useCallback(async (code: string): Promise<InviteCheck> => {
+    const clean = code.trim().toUpperCase();
+    try {
+      const res = await fetchInvitePreview(clean);
+      return {
+        kind: 'ok',
+        preview: {
           code: clean,
           inviterNickname: res.inviterNickname ?? null,
           rewardCoin: res.inviteeRewardCoin ?? 0,
           alreadyRedeemed: res.alreadyRedeemed === true,
+        },
+      };
+    } catch (e) {
+      if (e instanceof ApiError && INVALID_CODE_STATUSES.includes(e.status)) {
+        return {
+          kind: 'invalid',
+          message: inviteErrorMessage(e, '이 초대코드는 사용할 수 없어요'),
         };
-      } catch (e) {
-        toast(inviteErrorMessage(e, '초대코드를 확인하지 못했어요'), 'error');
-        return null;
       }
+      return { kind: 'unavailable' };
+    }
+  }, []);
+
+  /** 사용 전 미리보기(직접 입력) — 실패는 이유와 함께 토스트 후 null. */
+  const preview = useCallback(
+    async (code: string): Promise<InvitePreview | null> => {
+      if (!code.trim()) return null;
+      const result = await check(code);
+      if (result.kind === 'ok') return result.preview;
+      toast(result.kind === 'invalid' ? result.message : '초대코드를 확인하지 못했어요', 'error');
+      return null;
     },
-    [toast],
+    [check, toast],
   );
 
   /** 받은 코드 사용 — 성공 시 보상 코인을 돌려주고, 실패는 토스트 후 null. */
@@ -104,7 +133,7 @@ export function useInvites() {
   const loadError = isError && !isFetching;
 
   return useMemo(
-    () => ({ info, loading, loadError, load, preview, redeem }),
-    [info, loading, loadError, load, preview, redeem],
+    () => ({ info, loading, loadError, load, check, preview, redeem }),
+    [info, loading, loadError, load, check, preview, redeem],
   );
 }

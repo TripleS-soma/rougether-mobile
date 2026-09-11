@@ -163,6 +163,7 @@ export function useSettingsSurface({
     loading: invitesLoading,
     loadError: invitesLoadError,
     load: loadInvites,
+    check: checkInvite,
     preview: previewInvite,
     redeem: redeemInvite,
   } = useInvites();
@@ -180,7 +181,7 @@ export function useSettingsSurface({
   const [pendingFriendCode, setPendingFriendCode] = useState<string | null>(null);
   const inviteArrival = useInviteArrival({
     offerPaste: offerInvitePaste,
-    preview: previewInvite,
+    check: checkInvite,
     redeem: redeemInviteCode,
     onLater: setPendingFriendCode,
   });

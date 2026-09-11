@@ -4,7 +4,7 @@ import type { InvitePreview } from '@/components/screens/invite-friends-screen';
 import { InviteArrivalSheet } from '@/components/screens/sheets/invite-arrival-sheet';
 import { InvitePasteSheet } from '@/components/screens/sheets/invite-paste-sheet';
 import { useToast } from '@/components/ui/toast';
-import type { InviteVia, RedeemResult } from '@/hooks/use-invites';
+import type { InviteCheck, InviteVia, RedeemResult } from '@/hooks/use-invites';
 import { useLatestRef } from '@/hooks/use-stable-value';
 import { track } from '@/lib/analytics';
 import { parseInviteText } from '@/lib/invite-code';
@@ -21,8 +21,11 @@ import {
 export type UseInviteArrivalArgs = {
   /** 첫 온보딩 직후 마운트 — '친구에게 초대받아 오셨나요?'를 1회 묻는다. */
   offerPaste: boolean;
-  /** 사용 전 미리보기 — 실패는 호출부가 토스트하고 null. */
-  preview: (code: string) => Promise<InvitePreview | null>;
+  /**
+   * 사용 전 판정 — 쓸 수 없는 코드(`invalid`)와 일시적 실패(`unavailable`)를 가른다.
+   * 일시적 실패면 기기에 보관한 코드를 지우지 않는다(다음 실행에 다시 확인).
+   */
+  check: (code: string) => Promise<InviteCheck>;
   /** 실제 사용 — 확인 시트의 [받기]에서만 부른다. */
   redeem: (code: string, via: InviteVia) => Promise<RedeemResult | null>;
   /** [나중에] — 코드를 친구 초대 화면 입력란에 남긴다. */
@@ -36,18 +39,19 @@ export type UseInviteArrivalArgs = {
  * 1. 기기에 남은 코드를 되살린다 — 링크를 열고 설치·로그인하는 사이 앱을 껐어도.
  * 2. 첫 온보딩 직후면 붙여넣기 시트를 1회 띄운다 — 링크로 이미 코드가 왔으면 묻지 않는다.
  * 3. 친구 코드가 들어오면(링크·붙여넣기) 미리보기 → 확인 시트. 이미 보상을 받은
- *    계정이거나 무효 코드면 시트 없이 끝낸다. **[받기] 전에는 redeem하지 않는다.**
+ *    계정이거나 쓸 수 없는 코드면 시트 없이 끝낸다. **[받기] 전에는 redeem하지 않는다.**
+ *    네트워크·서버 일시 오류면 코드를 지우지 않는다 — 기기 보관분이 다음 실행에 다시 온다.
  *
  * 집 코드는 기존 집 탐색 흐름(`use-house-pages`의 구독)이 받는다 — 붙여넣기에서
  * 집 코드가 나오면 그 채널로 넘기기만 한다.
  */
-export function useInviteArrival({ offerPaste, preview, redeem, onLater }: UseInviteArrivalArgs) {
+export function useInviteArrival({ offerPaste, check, redeem, onLater }: UseInviteArrivalArgs) {
   const { show: toast } = useToast();
   const [arrival, setArrival] = useState<{ preview: InvitePreview; via: InviteVia } | null>(null);
   const [accepting, setAccepting] = useState(false);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteError, setPasteError] = useState<string | null>(null);
-  const previewRef = useLatestRef(preview);
+  const checkRef = useLatestRef(check);
   const redeemRef = useLatestRef(redeem);
   const onLaterRef = useLatestRef(onLater);
   // 확인 중이거나 시트에 떠 있는 코드 — 같은 코드가 다시 흘러와도(재구독·복원) 한 번만.
@@ -62,18 +66,25 @@ export function useInviteArrival({ offerPaste, preview, redeem, onLater }: UseIn
         if (handlingRef.current === code) return;
         handlingRef.current = code;
         const via: InviteVia = pastedRef.current === code ? 'paste' : 'link';
-        void previewRef.current(code).then((result) => {
-          if (!result || result.alreadyRedeemed) {
-            // 무효 코드(안내는 미리보기 몫)·이미 받은 계정 — 조용히 끝낸다.
+        void checkRef.current(code).then((result) => {
+          if (result.kind === 'unavailable') {
+            // 네트워크·서버 일시 오류 — 코드를 지우지 않고 조용히 둔다. 기기 보관분이
+            // 다음 실행의 복원에서 다시 확인된다. 같은 코드가 다시 흘러오면 재시도.
+            handlingRef.current = null;
+            return;
+          }
+          if (result.kind === 'invalid' || result.preview.alreadyRedeemed) {
+            // 쓸 수 없는 코드는 이유를 알리고, 이미 받은 계정은 조용히 끝낸다.
+            if (result.kind === 'invalid') toast(result.message, 'error');
             clearPendingFriendInviteCode();
             handlingRef.current = null;
             return;
           }
           track('invite_arrival_view', { via });
-          setArrival({ preview: result, via });
+          setArrival({ preview: result.preview, via });
         });
       }),
-    [previewRef],
+    [checkRef, toast],
   );
 
   // 기기에 남은 코드 복원 — 구독 뒤에 해야 복원분이 곧장 흐른다.

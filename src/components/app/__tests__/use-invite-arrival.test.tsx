@@ -82,7 +82,10 @@ function Harness(props: UseInviteArrivalArgs) {
 async function setup(overrides: Partial<UseInviteArrivalArgs> = {}) {
   const props: UseInviteArrivalArgs = {
     offerPaste: false,
-    preview: jest.fn(async (code: string) => ({ ...PREVIEW, code: code.toUpperCase() })),
+    check: jest.fn(async (code: string) => ({
+      kind: 'ok' as const,
+      preview: { ...PREVIEW, code: code.toUpperCase() },
+    })),
     redeem: jest.fn(async () => ({ rewardCoin: 50 })),
     onLater: jest.fn(),
     ...overrides,
@@ -104,7 +107,7 @@ describe('useInviteArrival (#1007)', () => {
 
     await act(async () => setPendingFriendInviteCode('rouge123'));
     await waitFor(() => expect(view.getByText('arrival:소마:50')).toBeTruthy());
-    expect(props.preview).toHaveBeenCalledWith('ROUGE123');
+    expect(props.check).toHaveBeenCalledWith('ROUGE123');
     // 확인 전에는 절대 쓰지 않는다 — 자동 redeem 금지.
     expect(props.redeem).not.toHaveBeenCalled();
     expect(mockTrack).toHaveBeenCalledWith('invite_arrival_view', { via: 'link' });
@@ -121,27 +124,56 @@ describe('useInviteArrival (#1007)', () => {
     await act(async () => setPendingFriendInviteCode('ROUGE123'));
     await act(async () => setPendingFriendInviteCode('ROUGE123'));
     await waitFor(() => expect(view.getByText('arrival:소마:50')).toBeTruthy());
-    expect(props.preview).toHaveBeenCalledTimes(1);
+    expect(props.check).toHaveBeenCalledTimes(1);
   });
 
   it('이미 보상을 받은 계정이면 시트 없이 조용히 끝낸다', async () => {
     const { props, view } = await setup({
-      preview: jest.fn(async () => ({ ...PREVIEW, alreadyRedeemed: true })),
+      check: jest.fn(async () => ({
+        kind: 'ok' as const,
+        preview: { ...PREVIEW, alreadyRedeemed: true },
+      })),
     });
 
     await act(async () => setPendingFriendInviteCode('ROUGE123'));
     await waitFor(() => expect(peekPendingFriendInviteCode()).toBeNull());
-    expect(props.preview).toHaveBeenCalledTimes(1);
+    expect(props.check).toHaveBeenCalledTimes(1);
     expect(view.queryByText(/^arrival:/)).toBeNull();
     expect(props.redeem).not.toHaveBeenCalled();
   });
 
-  it('무효 코드(미리보기 실패)도 시트 없이 비운다', async () => {
-    const { props, view } = await setup({ preview: jest.fn(async () => null) });
+  it('쓸 수 없는 코드(invalid)는 이유를 알리고 비운다', async () => {
+    const { props, view } = await setup({
+      check: jest.fn(async () => ({
+        kind: 'invalid' as const,
+        message: '초대코드를 찾을 수 없어요',
+      })),
+    });
     await act(async () => setPendingFriendInviteCode('NOPE1234'));
     await waitFor(() => expect(peekPendingFriendInviteCode()).toBeNull());
+    expect(mockToast).toHaveBeenCalledWith('초대코드를 찾을 수 없어요', 'error');
     expect(view.queryByText(/^arrival:/)).toBeNull();
     expect(props.redeem).not.toHaveBeenCalled();
+  });
+
+  // #1286 리뷰 — 설치 직후 네트워크가 흔들려도 되찾은 코드를 잃으면 안 된다.
+  it('일시적 실패(unavailable)면 코드를 지우지 않고 조용히 두며, 다시 오면 재확인한다', async () => {
+    const check = jest
+      .fn<Promise<import('@/hooks/use-invites').InviteCheck>, [string]>()
+      .mockResolvedValueOnce({ kind: 'unavailable' })
+      .mockResolvedValueOnce({ kind: 'ok', preview: PREVIEW });
+    const { view } = await setup({ check });
+
+    await act(async () => setPendingFriendInviteCode('ROUGE123'));
+    await waitFor(() => expect(check).toHaveBeenCalledTimes(1));
+    expect(peekPendingFriendInviteCode()).toBe('ROUGE123');
+    expect(mockToast).not.toHaveBeenCalled();
+    expect(view.queryByText(/^arrival:/)).toBeNull();
+
+    // 재구독·다음 실행 복원처럼 같은 코드가 다시 흐르면 재확인해 시트로 잇는다.
+    await act(async () => setPendingFriendInviteCode('ROUGE123'));
+    await waitFor(() => expect(view.getByText('arrival:소마:50')).toBeTruthy());
+    expect(check).toHaveBeenCalledTimes(2);
   });
 
   it('나중에는 쓰지 않고 코드를 친구 초대 화면 프리필로 넘긴다', async () => {
@@ -176,7 +208,7 @@ describe('useInviteArrival (#1007)', () => {
       expect(mockTrack).toHaveBeenCalledWith('invite_paste_view');
 
       await fireEvent.press(view.getByLabelText('paste-envelope'));
-      await waitFor(() => expect(props.preview).toHaveBeenCalledWith('ABCD2345'));
+      await waitFor(() => expect(props.check).toHaveBeenCalledWith('ABCD2345'));
       await waitFor(() => expect(view.getByText('arrival:소마:50')).toBeTruthy());
       expect(view.queryByText('paste-sheet')).toBeNull();
       expect(mockTrack).toHaveBeenCalledWith('invite_paste_result', { kind: 'friend' });
@@ -191,7 +223,7 @@ describe('useInviteArrival (#1007)', () => {
       await waitFor(() => expect(view.getByLabelText('paste-house')).toBeTruthy());
       await fireEvent.press(view.getByLabelText('paste-house'));
       expect(peekPendingInviteCode()).toBe('HOME77');
-      expect(props.preview).not.toHaveBeenCalled();
+      expect(props.check).not.toHaveBeenCalled();
       expect(mockTrack).toHaveBeenCalledWith('invite_paste_result', { kind: 'house' });
     });
 
@@ -201,7 +233,7 @@ describe('useInviteArrival (#1007)', () => {
       await fireEvent.press(view.getByLabelText('paste-junk'));
       expect(view.getByText(/초대코드를 찾지 못했어요/)).toBeTruthy();
       expect(view.getByText('paste-sheet')).toBeTruthy();
-      expect(props.preview).not.toHaveBeenCalled();
+      expect(props.check).not.toHaveBeenCalled();
       expect(mockTrack).toHaveBeenCalledWith('invite_paste_result', { kind: 'invalid' });
     });
 
