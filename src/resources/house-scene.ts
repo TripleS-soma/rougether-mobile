@@ -15,6 +15,7 @@ export type HouseSceneMetadata = {
   width: number;
   height: number;
   roomRects: readonly HouseSceneRect[];
+  protectedRect: HouseSceneRect;
   appearance: 'day' | 'night' | 'all';
 };
 export type HouseScene = HouseSceneMetadata & { source: number };
@@ -32,6 +33,19 @@ export function validHouseScene(scene: HouseSceneMetadata): boolean {
     scene.width > 0 &&
     Number.isFinite(scene.height) &&
     scene.height > 0 &&
+    !!scene.protectedRect &&
+    [
+      scene.protectedRect.x,
+      scene.protectedRect.y,
+      scene.protectedRect.width,
+      scene.protectedRect.height,
+    ].every(Number.isFinite) &&
+    scene.protectedRect.x > 0 &&
+    scene.protectedRect.y > 0 &&
+    scene.protectedRect.width > 0 &&
+    scene.protectedRect.height > 0 &&
+    scene.protectedRect.x + scene.protectedRect.width < scene.width &&
+    scene.protectedRect.y + scene.protectedRect.height < scene.height &&
     scene.roomRects.length === scene.capacity &&
     !scene.roomRects.some((rect, i) =>
       scene.roomRects
@@ -54,7 +68,11 @@ export function validHouseScene(scene: HouseSceneMetadata): boolean {
         (rect.radius ?? 0) >= 0 &&
         (rect.radius ?? 0) <= Math.min(rect.width, rect.height) / 2 &&
         rect.x + rect.width <= scene.width &&
-        rect.y + rect.height <= scene.height,
+        rect.y + rect.height <= scene.height &&
+        rect.x >= scene.protectedRect.x &&
+        rect.y >= scene.protectedRect.y &&
+        rect.x + rect.width <= scene.protectedRect.x + scene.protectedRect.width &&
+        rect.y + rect.height <= scene.protectedRect.y + scene.protectedRect.height,
     )
   );
 }

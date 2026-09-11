@@ -717,7 +717,9 @@ describe('HouseScreen', () => {
   });
 
   it('locks scrolling while a tile is lifted for drag (#278)', async () => {
-    const { getByLabelText, getByTestId } = await render(<HouseScreen houses={[MISSION_HOUSE]} />);
+    const { getByLabelText, getByTestId } = await render(
+      <HouseScreen houses={[MISSION_HOUSE]} integratedEnabled={false} />,
+    );
     expect(getByTestId('house-scroll').props.scrollEnabled).toBe(true);
     // Long-press lifts the tile: the grid owns the touch, so the scroll locks.
     await fireEvent(getByLabelText('친구'), 'longPress');
@@ -805,7 +807,7 @@ describe('HouseScreen', () => {
     const style = getByTestId('seat-meta-0').props.style;
     expect(Array.isArray(style)).toBe(true);
     // [정적 roomMeta, preview 오버레이(없으면 null), 애니메이션 스타일]
-    expect(style).toHaveLength(3);
+    expect(StyleSheet.flatten(style).opacity).toBe(1);
     expect(StyleSheet.flatten(style).alignItems).toBe('center');
   });
 

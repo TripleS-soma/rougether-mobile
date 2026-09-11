@@ -8,7 +8,8 @@
  */
 import { act, fireEvent, waitFor } from '@testing-library/react-native';
 import { Image } from 'expo-image';
-import { Pressable } from 'react-native';
+import { Image as NativeImage, Pressable } from 'react-native';
+import { HOUSE_SCENE_BACKDROPS } from '@/resources/house-scenes/backdrops/sources';
 
 import { AppShell } from '@/components/app/app-shell';
 import { Room } from '@/components/room/room';
@@ -119,7 +120,10 @@ it('기존 프레임은 집 목록이 그대로여도 다크모드 전환 시 �
   }
 });
 
-it('통합 장면은 로컬 번들과 같은 그림의 밤 음영을 사용해 CDN 배경을 추가로 받지 않는다', async () => {
+it('통합 장면과 환경 배경 번들을 미리 받고 모드 전환에는 다시 요청하지 않는다', async () => {
+  const resolve = jest
+    .spyOn(NativeImage, 'resolveAssetSource')
+    .mockReturnValue({ uri: 'asset://bundled-house', width: 941, height: 1672, scale: 1 });
   const prefetch = jest.spyOn(Image, 'prefetch').mockResolvedValue(true);
   try {
     const ui = await renderWithProviders(
@@ -129,10 +133,17 @@ it('통합 장면은 로컬 번들과 같은 그림의 밤 음영을 사용해 C
       </BrandThemeProvider>,
     );
     await waitFor(() => expect(mockHouseRenders.length).toBeGreaterThan(0));
-    expect(prefetch).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(prefetch).toHaveBeenCalledWith(['asset://bundled-house'], {
+        cachePolicy: 'memory-disk',
+      }),
+    );
+    expect(resolve).toHaveBeenCalledWith(HOUSE_SCENE_BACKDROPS['cloud-balloon']);
+    prefetch.mockClear();
     await fireEvent.press(ui.getByLabelText('prefetch-dark-mode'));
     expect(prefetch).not.toHaveBeenCalled();
   } finally {
+    resolve.mockRestore();
     prefetch.mockRestore();
   }
 });

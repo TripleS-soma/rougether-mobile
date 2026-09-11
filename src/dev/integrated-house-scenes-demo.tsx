@@ -1,12 +1,14 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { HousePreviewFrame } from '@/components/room/house-preview-frame';
 import type { MemberRoomPreview } from '@/components/room/room';
 import { ROOM_RENDER_CONTRACT } from '@/components/room/room-render-contract';
 import { HouseScreen, type House } from '@/components/screens/house-screen';
 import { Button } from '@/components/ui/button';
+import { BottomNav } from '@/components/ui/bottom-nav';
 import { Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { STACKED_HOUSE_THEMES } from '@/resources/house-frame';
@@ -89,6 +91,9 @@ export function IntegratedHouseScenesDemo({
       floors={FLOORS}
       furniture={FURNITURE}
       integratedEnabled={integrated}
+      onOpenMissions={() => setVisited('집 목표 열기')}
+      onOpenSearch={() => setVisited('집 탐색 열기')}
+      onOpenMembers={() => setVisited('집 관리 열기')}
       onVisitFriend={(friend) => setVisited(`${friend.membershipId}번 ${friend.name} 방문`)}
     />
   );
@@ -167,18 +172,35 @@ const styles = StyleSheet.create({
 
 /** URL-selectable, full-device fixture for responsive viewport QA. */
 export function IntegratedHouseScenesViewport() {
-  const { theme, capacity } = useLocalSearchParams<{ theme?: string; capacity?: string }>();
+  const { width } = useWindowDimensions();
+  const { theme, capacity, safeTop, safeBottom } = useLocalSearchParams<{
+    theme?: string;
+    capacity?: string;
+    safeTop?: string;
+    safeBottom?: string;
+  }>();
   const themeIndex = Math.max(
     0,
     THEMES.findIndex((entry) => entry.id === theme),
   );
   const seats = capacity === '6' ? 6 : capacity === '4' ? 4 : 2;
   return (
-    <IntegratedHouseScenesDemo
-      key={`${themeIndex}-${seats}`}
-      viewportOnly
-      initialThemeIndex={themeIndex}
-      initialCapacity={seats}
-    />
+    <SafeAreaInsetsContext.Provider
+      value={{
+        top: safeTop ? Number(safeTop) : width <= 360 ? 20 : width >= 600 ? 24 : 59,
+        bottom: safeBottom ? Number(safeBottom) : width <= 360 ? 0 : width >= 600 ? 20 : 34,
+        left: 0,
+        right: 0,
+      }}>
+      <View style={{ flex: 1 }} testID="house-device-viewport">
+        <IntegratedHouseScenesDemo
+          key={`${themeIndex}-${seats}`}
+          viewportOnly
+          initialThemeIndex={themeIndex}
+          initialCapacity={seats}
+        />
+        <BottomNav active="house" onChange={() => undefined} />
+      </View>
+    </SafeAreaInsetsContext.Provider>
   );
 }

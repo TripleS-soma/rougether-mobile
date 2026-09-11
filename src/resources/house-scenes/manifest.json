@@ -38,7 +38,13 @@
         }
       ],
       "appearance": "all",
-      "sha256": "2161a7999188288c71f964c3889d884ed01535bbbaf914e902dcb2ca54b5a89c"
+      "sha256": "2161a7999188288c71f964c3889d884ed01535bbbaf914e902dcb2ca54b5a89c",
+      "protectedRect": {
+        "x": 24,
+        "y": 310,
+        "width": 897,
+        "height": 885
+      }
     },
     {
       "themeId": "cloud-balloon",
@@ -103,7 +109,13 @@
         }
       ],
       "appearance": "all",
-      "sha256": "40fc7e9a96c0d928adb07e57d187b1f617496dac959133e8043fbfa0f2087f78"
+      "sha256": "40fc7e9a96c0d928adb07e57d187b1f617496dac959133e8043fbfa0f2087f78",
+      "protectedRect": {
+        "x": 24,
+        "y": 130,
+        "width": 897,
+        "height": 1235
+      }
     },
     {
       "themeId": "cloud-balloon",
@@ -194,7 +206,13 @@
         }
       ],
       "appearance": "all",
-      "sha256": "4badca886b1090389730a3e878e7de1d6bcaaf768e41c715e49ca485a2d97953"
+      "sha256": "4badca886b1090389730a3e878e7de1d6bcaaf768e41c715e49ca485a2d97953",
+      "protectedRect": {
+        "x": 20,
+        "y": 155,
+        "width": 801,
+        "height": 1440
+      }
     },
     {
       "themeId": "coral-lagoon",
@@ -233,7 +251,13 @@
         }
       ],
       "appearance": "all",
-      "sha256": "694e5c5b87acf9a372adcd6913e76b156d02b609ef13d8d76be6027f8de5b670"
+      "sha256": "694e5c5b87acf9a372adcd6913e76b156d02b609ef13d8d76be6027f8de5b670",
+      "protectedRect": {
+        "x": 14,
+        "y": 340,
+        "width": 913,
+        "height": 765
+      }
     },
     {
       "themeId": "coral-lagoon",
@@ -298,7 +322,13 @@
         }
       ],
       "appearance": "all",
-      "sha256": "2c948012f5cf67cbce6071726c21259ded90611c64579d3361adad397fb84271"
+      "sha256": "2c948012f5cf67cbce6071726c21259ded90611c64579d3361adad397fb84271",
+      "protectedRect": {
+        "x": 16,
+        "y": 180,
+        "width": 909,
+        "height": 1135
+      }
     },
     {
       "themeId": "coral-lagoon",
@@ -389,7 +419,13 @@
         }
       ],
       "appearance": "all",
-      "sha256": "d14a58b2cdda8a8c913b1ff18ff85f6be598a2c8220811a2bfbbcee213c6818f"
+      "sha256": "d14a58b2cdda8a8c913b1ff18ff85f6be598a2c8220811a2bfbbcee213c6818f",
+      "protectedRect": {
+        "x": 14,
+        "y": 150,
+        "width": 813,
+        "height": 1370
+      }
     },
     {
       "themeId": "mushroom-forest",
@@ -428,7 +464,13 @@
         }
       ],
       "appearance": "all",
-      "sha256": "a4c0e9a9f010a1c3d8f52524459619f58e6b5542f81c940b3caee1094e09dc76"
+      "sha256": "a4c0e9a9f010a1c3d8f52524459619f58e6b5542f81c940b3caee1094e09dc76",
+      "protectedRect": {
+        "x": 12,
+        "y": 458,
+        "width": 917,
+        "height": 757
+      }
     },
     {
       "themeId": "mushroom-forest",
@@ -493,7 +535,13 @@
         }
       ],
       "appearance": "all",
-      "sha256": "293e77f0e3f3861f6842e285d427c975154de7ace8223133db9eafebe1bfc290"
+      "sha256": "293e77f0e3f3861f6842e285d427c975154de7ace8223133db9eafebe1bfc290",
+      "protectedRect": {
+        "x": 18,
+        "y": 244,
+        "width": 906,
+        "height": 1096
+      }
     },
     {
       "themeId": "mushroom-forest",
@@ -584,7 +632,13 @@
         }
       ],
       "appearance": "all",
-      "sha256": "3fb1d011f4b12649978f8714b7a2240642c3bb31f379e7f79b4fb3d50504b4f2"
+      "sha256": "3fb1d011f4b12649978f8714b7a2240642c3bb31f379e7f79b4fb3d50504b4f2",
+      "protectedRect": {
+        "x": 12,
+        "y": 218,
+        "width": 817,
+        "height": 1347
+      }
     },
     {
       "themeId": "night-observatory",
@@ -623,7 +677,13 @@
         }
       ],
       "appearance": "all",
-      "sha256": "f8c33362c405ccafd14be93d96208cf52d542e04255c3725005d72a3b5e0dedd"
+      "sha256": "f8c33362c405ccafd14be93d96208cf52d542e04255c3725005d72a3b5e0dedd",
+      "protectedRect": {
+        "x": 14,
+        "y": 355,
+        "width": 913,
+        "height": 850
+      }
     },
     {
       "themeId": "night-observatory",
@@ -688,7 +748,13 @@
         }
       ],
       "appearance": "all",
-      "sha256": "ffea08a712696ec35b5d8aa340fc18ed0bacce3a2d661dddd2dc603fe39d4c5f"
+      "sha256": "ffea08a712696ec35b5d8aa340fc18ed0bacce3a2d661dddd2dc603fe39d4c5f",
+      "protectedRect": {
+        "x": 24,
+        "y": 200,
+        "width": 893,
+        "height": 1165
+      }
     },
     {
       "themeId": "night-observatory",
@@ -779,7 +845,13 @@
         }
       ],
       "appearance": "all",
-      "sha256": "ac386fe2802ef67a587824048e03ad3868d8a6db3ae762af39d8adbbcfb345fd"
+      "sha256": "ac386fe2802ef67a587824048e03ad3868d8a6db3ae762af39d8adbbcfb345fd",
+      "protectedRect": {
+        "x": 20,
+        "y": 190,
+        "width": 801,
+        "height": 1400
+      }
     }
   ]
 }
