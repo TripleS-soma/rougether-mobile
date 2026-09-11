@@ -41,6 +41,21 @@ describe('MyRoomScreen', () => {
     );
   });
 
+  it('공휴일을 고르면 날짜 제목에 공휴일 이름을 붙인다 (#1292)', async () => {
+    const ui = await render(
+      <MyRoomScreen
+        routines={[]}
+        view="calendar"
+        today="2026-09-11"
+        selectedDate="2026-09-25"
+        onSelectedDateChange={jest.fn()}
+        onSelectDate={jest.fn()}
+      />,
+    );
+    expect(ui.getByRole('header', { name: '2026년 9월 25일 금요일, 추석' })).toBeTruthy();
+    expect(ui.getByText('금요일 · 추석')).toBeTruthy();
+  });
+
   it('선택 날짜를 제목으로 삼고 완료 상태는 각 항목에 유지한다', async () => {
     // 오늘(로컬 날짜): 5개 중 3개 완료 — 방탭과 같은 집계가 달력탭에도 표시.
     const completions = { '1': [TODAY], '2': [TODAY], '3': [TODAY] };
