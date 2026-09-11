@@ -1,0 +1,785 @@
+{
+  "version": 1,
+  "scenes": [
+    {
+      "themeId": "cloud-balloon",
+      "capacity": 2,
+      "file": "assets/cloud-balloon-2p.webp",
+      "width": 941,
+      "height": 1672,
+      "roomRects": [
+        {
+          "x": 161,
+          "y": 702,
+          "width": 280,
+          "height": 336,
+          "radius": 20
+        },
+        {
+          "x": 503,
+          "y": 702,
+          "width": 280,
+          "height": 336,
+          "radius": 20
+        }
+      ],
+      "apertureRects": [
+        {
+          "x": 156,
+          "y": 686,
+          "width": 289,
+          "height": 367
+        },
+        {
+          "x": 497,
+          "y": 686,
+          "width": 292,
+          "height": 367
+        }
+      ],
+      "appearance": "all",
+      "sha256": "2161a7999188288c71f964c3889d884ed01535bbbaf914e902dcb2ca54b5a89c"
+    },
+    {
+      "themeId": "cloud-balloon",
+      "capacity": 4,
+      "file": "assets/cloud-balloon-4p.webp",
+      "width": 941,
+      "height": 1672,
+      "roomRects": [
+        {
+          "x": 161,
+          "y": 510,
+          "width": 280,
+          "height": 336,
+          "radius": 20
+        },
+        {
+          "x": 502,
+          "y": 510,
+          "width": 280,
+          "height": 336,
+          "radius": 20
+        },
+        {
+          "x": 161,
+          "y": 884,
+          "width": 280,
+          "height": 336,
+          "radius": 20
+        },
+        {
+          "x": 502,
+          "y": 884,
+          "width": 280,
+          "height": 336,
+          "radius": 20
+        }
+      ],
+      "apertureRects": [
+        {
+          "x": 157,
+          "y": 506,
+          "width": 288,
+          "height": 343
+        },
+        {
+          "x": 496,
+          "y": 506,
+          "width": 291,
+          "height": 343
+        },
+        {
+          "x": 157,
+          "y": 877,
+          "width": 288,
+          "height": 350
+        },
+        {
+          "x": 496,
+          "y": 877,
+          "width": 291,
+          "height": 350
+        }
+      ],
+      "appearance": "all",
+      "sha256": "40fc7e9a96c0d928adb07e57d187b1f617496dac959133e8043fbfa0f2087f78"
+    },
+    {
+      "themeId": "cloud-balloon",
+      "capacity": 6,
+      "file": "assets/cloud-balloon-6p.webp",
+      "width": 841,
+      "height": 1870,
+      "roomRects": [
+        {
+          "x": 146,
+          "y": 502,
+          "width": 245,
+          "height": 294,
+          "radius": 18
+        },
+        {
+          "x": 451,
+          "y": 502,
+          "width": 245,
+          "height": 294,
+          "radius": 18
+        },
+        {
+          "x": 146,
+          "y": 832,
+          "width": 245,
+          "height": 294,
+          "radius": 18
+        },
+        {
+          "x": 451,
+          "y": 832,
+          "width": 245,
+          "height": 294,
+          "radius": 18
+        },
+        {
+          "x": 146,
+          "y": 1161,
+          "width": 245,
+          "height": 294,
+          "radius": 18
+        },
+        {
+          "x": 451,
+          "y": 1162,
+          "width": 245,
+          "height": 294,
+          "radius": 18
+        }
+      ],
+      "apertureRects": [
+        {
+          "x": 140,
+          "y": 497,
+          "width": 257,
+          "height": 304
+        },
+        {
+          "x": 444,
+          "y": 497,
+          "width": 258,
+          "height": 304
+        },
+        {
+          "x": 140,
+          "y": 827,
+          "width": 257,
+          "height": 304
+        },
+        {
+          "x": 444,
+          "y": 827,
+          "width": 258,
+          "height": 304
+        },
+        {
+          "x": 140,
+          "y": 1157,
+          "width": 257,
+          "height": 302
+        },
+        {
+          "x": 444,
+          "y": 1157,
+          "width": 258,
+          "height": 303
+        }
+      ],
+      "appearance": "all",
+      "sha256": "4badca886b1090389730a3e878e7de1d6bcaaf768e41c715e49ca485a2d97953"
+    },
+    {
+      "themeId": "coral-lagoon",
+      "capacity": 2,
+      "file": "assets/coral-lagoon-2p.webp",
+      "width": 941,
+      "height": 1672,
+      "roomRects": [
+        {
+          "x": 150,
+          "y": 638,
+          "width": 285,
+          "height": 342,
+          "radius": 20
+        },
+        {
+          "x": 506,
+          "y": 638,
+          "width": 285,
+          "height": 342,
+          "radius": 20
+        }
+      ],
+      "apertureRects": [
+        {
+          "x": 140,
+          "y": 632,
+          "width": 305,
+          "height": 354
+        },
+        {
+          "x": 496,
+          "y": 632,
+          "width": 305,
+          "height": 354
+        }
+      ],
+      "appearance": "all",
+      "sha256": "694e5c5b87acf9a372adcd6913e76b156d02b609ef13d8d76be6027f8de5b670"
+    },
+    {
+      "themeId": "coral-lagoon",
+      "capacity": 4,
+      "file": "assets/coral-lagoon-4p.webp",
+      "width": 941,
+      "height": 1672,
+      "roomRects": [
+        {
+          "x": 155,
+          "y": 474,
+          "width": 280,
+          "height": 336,
+          "radius": 20
+        },
+        {
+          "x": 507,
+          "y": 474,
+          "width": 280,
+          "height": 336,
+          "radius": 20
+        },
+        {
+          "x": 155,
+          "y": 854,
+          "width": 280,
+          "height": 336,
+          "radius": 20
+        },
+        {
+          "x": 507,
+          "y": 854,
+          "width": 280,
+          "height": 336,
+          "radius": 20
+        }
+      ],
+      "apertureRects": [
+        {
+          "x": 145,
+          "y": 467,
+          "width": 300,
+          "height": 349
+        },
+        {
+          "x": 496,
+          "y": 468,
+          "width": 301,
+          "height": 348
+        },
+        {
+          "x": 145,
+          "y": 844,
+          "width": 300,
+          "height": 355
+        },
+        {
+          "x": 496,
+          "y": 844,
+          "width": 301,
+          "height": 355
+        }
+      ],
+      "appearance": "all",
+      "sha256": "2c948012f5cf67cbce6071726c21259ded90611c64579d3361adad397fb84271"
+    },
+    {
+      "themeId": "coral-lagoon",
+      "capacity": 6,
+      "file": "assets/coral-lagoon-6p.webp",
+      "width": 841,
+      "height": 1870,
+      "roomRects": [
+        {
+          "x": 142,
+          "y": 430,
+          "width": 245,
+          "height": 294,
+          "radius": 18
+        },
+        {
+          "x": 452,
+          "y": 430,
+          "width": 245,
+          "height": 294,
+          "radius": 18
+        },
+        {
+          "x": 142,
+          "y": 764,
+          "width": 245,
+          "height": 294,
+          "radius": 18
+        },
+        {
+          "x": 452,
+          "y": 764,
+          "width": 245,
+          "height": 294,
+          "radius": 18
+        },
+        {
+          "x": 142,
+          "y": 1102,
+          "width": 245,
+          "height": 294,
+          "radius": 18
+        },
+        {
+          "x": 452,
+          "y": 1102,
+          "width": 245,
+          "height": 294,
+          "radius": 18
+        }
+      ],
+      "apertureRects": [
+        {
+          "x": 133,
+          "y": 421,
+          "width": 263,
+          "height": 311
+        },
+        {
+          "x": 442,
+          "y": 421,
+          "width": 264,
+          "height": 311
+        },
+        {
+          "x": 133,
+          "y": 756,
+          "width": 263,
+          "height": 310
+        },
+        {
+          "x": 442,
+          "y": 756,
+          "width": 264,
+          "height": 310
+        },
+        {
+          "x": 133,
+          "y": 1090,
+          "width": 263,
+          "height": 318
+        },
+        {
+          "x": 442,
+          "y": 1090,
+          "width": 264,
+          "height": 318
+        }
+      ],
+      "appearance": "all",
+      "sha256": "d14a58b2cdda8a8c913b1ff18ff85f6be598a2c8220811a2bfbbcee213c6818f"
+    },
+    {
+      "themeId": "mushroom-forest",
+      "capacity": 2,
+      "file": "assets/mushroom-forest-2p.webp",
+      "width": 941,
+      "height": 1672,
+      "roomRects": [
+        {
+          "x": 142,
+          "y": 747,
+          "width": 305,
+          "height": 366,
+          "radius": 22
+        },
+        {
+          "x": 502,
+          "y": 747,
+          "width": 305,
+          "height": 366,
+          "radius": 22
+        }
+      ],
+      "apertureRects": [
+        {
+          "x": 135,
+          "y": 738,
+          "width": 318,
+          "height": 383
+        },
+        {
+          "x": 497,
+          "y": 738,
+          "width": 314,
+          "height": 383
+        }
+      ],
+      "appearance": "all",
+      "sha256": "a4c0e9a9f010a1c3d8f52524459619f58e6b5542f81c940b3caee1094e09dc76"
+    },
+    {
+      "themeId": "mushroom-forest",
+      "capacity": 4,
+      "file": "assets/mushroom-forest-4p.webp",
+      "width": 941,
+      "height": 1672,
+      "roomRects": [
+        {
+          "x": 161,
+          "y": 531,
+          "width": 270,
+          "height": 324,
+          "radius": 19
+        },
+        {
+          "x": 512,
+          "y": 531,
+          "width": 270,
+          "height": 324,
+          "radius": 19
+        },
+        {
+          "x": 161,
+          "y": 907,
+          "width": 270,
+          "height": 324,
+          "radius": 19
+        },
+        {
+          "x": 512,
+          "y": 907,
+          "width": 270,
+          "height": 324,
+          "radius": 19
+        }
+      ],
+      "apertureRects": [
+        {
+          "x": 142,
+          "y": 526,
+          "width": 308,
+          "height": 334
+        },
+        {
+          "x": 494,
+          "y": 526,
+          "width": 306,
+          "height": 334
+        },
+        {
+          "x": 142,
+          "y": 894,
+          "width": 308,
+          "height": 349
+        },
+        {
+          "x": 494,
+          "y": 894,
+          "width": 306,
+          "height": 349
+        }
+      ],
+      "appearance": "all",
+      "sha256": "293e77f0e3f3861f6842e285d427c975154de7ace8223133db9eafebe1bfc290"
+    },
+    {
+      "themeId": "mushroom-forest",
+      "capacity": 6,
+      "file": "assets/mushroom-forest-6p.webp",
+      "width": 841,
+      "height": 1870,
+      "roomRects": [
+        {
+          "x": 137,
+          "y": 474,
+          "width": 250,
+          "height": 300,
+          "radius": 18
+        },
+        {
+          "x": 455,
+          "y": 474,
+          "width": 250,
+          "height": 300,
+          "radius": 18
+        },
+        {
+          "x": 137,
+          "y": 815,
+          "width": 250,
+          "height": 300,
+          "radius": 18
+        },
+        {
+          "x": 455,
+          "y": 815,
+          "width": 250,
+          "height": 300,
+          "radius": 18
+        },
+        {
+          "x": 137,
+          "y": 1159,
+          "width": 250,
+          "height": 300,
+          "radius": 18
+        },
+        {
+          "x": 455,
+          "y": 1159,
+          "width": 250,
+          "height": 300,
+          "radius": 18
+        }
+      ],
+      "apertureRects": [
+        {
+          "x": 123,
+          "y": 467,
+          "width": 277,
+          "height": 314
+        },
+        {
+          "x": 441,
+          "y": 467,
+          "width": 277,
+          "height": 314
+        },
+        {
+          "x": 123,
+          "y": 810,
+          "width": 277,
+          "height": 309
+        },
+        {
+          "x": 441,
+          "y": 810,
+          "width": 277,
+          "height": 309
+        },
+        {
+          "x": 123,
+          "y": 1149,
+          "width": 277,
+          "height": 320
+        },
+        {
+          "x": 441,
+          "y": 1149,
+          "width": 277,
+          "height": 320
+        }
+      ],
+      "appearance": "all",
+      "sha256": "3fb1d011f4b12649978f8714b7a2240642c3bb31f379e7f79b4fb3d50504b4f2"
+    },
+    {
+      "themeId": "night-observatory",
+      "capacity": 2,
+      "file": "assets/night-observatory-2p.webp",
+      "width": 941,
+      "height": 1672,
+      "roomRects": [
+        {
+          "x": 154,
+          "y": 725,
+          "width": 285,
+          "height": 342,
+          "radius": 20
+        },
+        {
+          "x": 504,
+          "y": 725,
+          "width": 285,
+          "height": 342,
+          "radius": 20
+        }
+      ],
+      "apertureRects": [
+        {
+          "x": 145,
+          "y": 720,
+          "width": 302,
+          "height": 352
+        },
+        {
+          "x": 495,
+          "y": 720,
+          "width": 303,
+          "height": 352
+        }
+      ],
+      "appearance": "all",
+      "sha256": "f8c33362c405ccafd14be93d96208cf52d542e04255c3725005d72a3b5e0dedd"
+    },
+    {
+      "themeId": "night-observatory",
+      "capacity": 4,
+      "file": "assets/night-observatory-4p.webp",
+      "width": 941,
+      "height": 1672,
+      "roomRects": [
+        {
+          "x": 171,
+          "y": 554,
+          "width": 265,
+          "height": 318,
+          "radius": 19
+        },
+        {
+          "x": 505,
+          "y": 554,
+          "width": 265,
+          "height": 318,
+          "radius": 19
+        },
+        {
+          "x": 171,
+          "y": 916,
+          "width": 265,
+          "height": 318,
+          "radius": 19
+        },
+        {
+          "x": 505,
+          "y": 916,
+          "width": 265,
+          "height": 318,
+          "radius": 19
+        }
+      ],
+      "apertureRects": [
+        {
+          "x": 159,
+          "y": 549,
+          "width": 288,
+          "height": 328
+        },
+        {
+          "x": 494,
+          "y": 549,
+          "width": 287,
+          "height": 328
+        },
+        {
+          "x": 160,
+          "y": 912,
+          "width": 287,
+          "height": 325
+        },
+        {
+          "x": 493,
+          "y": 912,
+          "width": 288,
+          "height": 325
+        }
+      ],
+      "appearance": "all",
+      "sha256": "ffea08a712696ec35b5d8aa340fc18ed0bacce3a2d661dddd2dc603fe39d4c5f"
+    },
+    {
+      "themeId": "night-observatory",
+      "capacity": 6,
+      "file": "assets/night-observatory-6p.webp",
+      "width": 841,
+      "height": 1870,
+      "roomRects": [
+        {
+          "x": 152,
+          "y": 522,
+          "width": 230,
+          "height": 276,
+          "radius": 17
+        },
+        {
+          "x": 459,
+          "y": 522,
+          "width": 230,
+          "height": 276,
+          "radius": 17
+        },
+        {
+          "x": 153,
+          "y": 842,
+          "width": 230,
+          "height": 276,
+          "radius": 17
+        },
+        {
+          "x": 459,
+          "y": 842,
+          "width": 230,
+          "height": 276,
+          "radius": 17
+        },
+        {
+          "x": 153,
+          "y": 1160,
+          "width": 230,
+          "height": 276,
+          "radius": 17
+        },
+        {
+          "x": 459,
+          "y": 1160,
+          "width": 230,
+          "height": 276,
+          "radius": 17
+        }
+      ],
+      "apertureRects": [
+        {
+          "x": 136,
+          "y": 514,
+          "width": 262,
+          "height": 291
+        },
+        {
+          "x": 443,
+          "y": 514,
+          "width": 261,
+          "height": 291
+        },
+        {
+          "x": 137,
+          "y": 835,
+          "width": 261,
+          "height": 289
+        },
+        {
+          "x": 443,
+          "y": 835,
+          "width": 261,
+          "height": 289
+        },
+        {
+          "x": 137,
+          "y": 1154,
+          "width": 261,
+          "height": 287
+        },
+        {
+          "x": 443,
+          "y": 1154,
+          "width": 261,
+          "height": 287
+        }
+      ],
+      "appearance": "all",
+      "sha256": "ac386fe2802ef67a587824048e03ad3868d8a6db3ae762af39d8adbbcfb345fd"
+    }
+  ]
+}

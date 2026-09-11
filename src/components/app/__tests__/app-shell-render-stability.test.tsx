@@ -78,7 +78,13 @@ function PrefetchModeControl() {
   return <Pressable accessibilityLabel="prefetch-dark-mode" onPress={() => setMode('dark')} />;
 }
 
-it('집 목록이 그대로여도 다크모드 전환 시 새 배경을 미리 받는다', async () => {
+it('기존 프레임은 집 목록이 그대로여도 다크모드 전환 시 새 배경을 미리 받는다', async () => {
+  global.fetch = jest.fn(async (url: string) => {
+    const response = stableRes(url);
+    const body = JSON.parse(await response.text());
+    if (body.houseId === 2) body.coverImageKey = 'house/cloud-balloon/legacy.png';
+    return { ...response, text: async () => JSON.stringify(body) };
+  }) as unknown as typeof fetch;
   const prefetch = jest.spyOn(Image, 'prefetch').mockResolvedValue(true);
   try {
     const ui = await renderWithProviders(
@@ -108,6 +114,24 @@ it('집 목록이 그대로여도 다크모드 전환 시 새 배경을 미리 �
     expect(prefetch.mock.calls.flatMap(([uris]) => uris)).not.toContain(
       assetSource('house/cloud-balloon/house-unified-cloud-balloon-frame.png').uri,
     );
+  } finally {
+    prefetch.mockRestore();
+  }
+});
+
+it('통합 장면은 로컬 번들과 같은 그림의 밤 음영을 사용해 CDN 배경을 추가로 받지 않는다', async () => {
+  const prefetch = jest.spyOn(Image, 'prefetch').mockResolvedValue(true);
+  try {
+    const ui = await renderWithProviders(
+      <BrandThemeProvider>
+        <PrefetchModeControl />
+        <AppShell />
+      </BrandThemeProvider>,
+    );
+    await waitFor(() => expect(mockHouseRenders.length).toBeGreaterThan(0));
+    expect(prefetch).not.toHaveBeenCalled();
+    await fireEvent.press(ui.getByLabelText('prefetch-dark-mode'));
+    expect(prefetch).not.toHaveBeenCalled();
   } finally {
     prefetch.mockRestore();
   }

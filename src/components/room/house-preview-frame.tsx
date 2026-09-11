@@ -1,4 +1,3 @@
-import { Image } from 'expo-image';
 import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -8,10 +7,12 @@ import {
   Room,
   type RoomCatalogProps,
 } from '@/components/room/room';
+import { HouseFrameArtwork } from '@/components/room/house-frame-artwork';
+import { HouseRoomAperture } from '@/components/room/house-room-aperture';
 import { Radius } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
 import { useHouseFrame } from '@/hooks/use-house-frame';
-import { assetSource, isCdnKey } from '@/resources/asset';
+import { isCdnKey } from '@/resources/asset';
 import { type HouseFrameOptions, houseWindowSeats } from '@/resources/house-frame';
 
 // Compatibility exports; all consumers resolve art and geometry in resources.
@@ -53,6 +54,7 @@ export function HousePreviewFrame({
   name,
   maxMembers,
   enabled,
+  integratedEnabled,
   previewTheme,
 }: HousePreviewFrameProps) {
   const t = useTokens();
@@ -63,6 +65,7 @@ export function HousePreviewFrame({
     maxMembers,
     minimumSeats: seats,
     enabled,
+    integratedEnabled,
     previewTheme,
   });
   const coverKey = frame.assetKey;
@@ -74,7 +77,7 @@ export function HousePreviewFrame({
     ).reverse();
     return houseWindowSeats(rows, frame.windowRects.length);
   }, [frame, maxMembers, seats]);
-  const hasFrame = isCdnKey(coverKey);
+  const hasFrame = frame.kind === 'integrated' || isCdnKey(coverKey);
   // 창문 4칸의 씬을 한 번에 조합해 참조를 고정한다 — 렌더 안에서 매번
   // `memberRoomScene(...)`을 부르면 씬 객체가 늘 새것이라 <Room>의 memo가
   // 통째로 무력해진다(seat-tile이 같은 이유로 useMemo를 쓴다).
@@ -107,41 +110,31 @@ export function HousePreviewFrame({
             style={[
               styles.window,
               rect,
-              frame.kind === 'stacked' && { borderRadius: 0 },
+              frame.kind !== 'legacy' && { borderRadius: 0 },
               // 프레임 PNG가 없으면 창틀을 직접 그려 창문처럼 보이게 한다.
               !hasFrame && [styles.windowBare, { borderColor: t.border }],
             ]}>
-            {occupied ? (
-              <View style={StyleSheet.absoluteFill} pointerEvents="none" testID="preview-room">
-                <Room {...scenes[i]} fill />
-              </View>
-            ) : (
-              <View
-                style={[styles.vacant, { backgroundColor: t.surface }]}
-                testID="preview-vacant"
-              />
-            )}
+            <HouseRoomAperture rect={frame.scene?.roomRects[i]}>
+              {occupied ? (
+                <View style={StyleSheet.absoluteFill} pointerEvents="none" testID="preview-room">
+                  <Room {...scenes[i]} fill />
+                </View>
+              ) : (
+                <View
+                  style={[styles.vacant, { backgroundColor: t.surface }]}
+                  testID="preview-vacant"
+                />
+              )}
+            </HouseRoomAperture>
           </View>
         );
       })}
       {hasFrame ? (
-        // Android는 Image 계열이 pointerEvents prop을 무시한다(#401) — View 래퍼로 투과.
-        <View style={StyleSheet.absoluteFill} pointerEvents="none">
-          <Image
-            key={coverKey}
-            source={assetSource(coverKey)}
-            style={StyleSheet.absoluteFill}
-            contentFit="fill"
-            transition={frame.kind === 'stacked' ? 0 : 120}
-            onError={onFrameError}
-            // 셸이 집 목록을 받자마자 memory-disk로 프리페치하는데(#463,
-            // use-house-pages) 렌더가 기본 'disk'면 메모리 히트를 못 써
-            // 프리페치 효과가 절반만 난다 (#771).
-            cachePolicy="memory-disk"
-            recyclingKey={coverKey}
-            accessibilityLabel={name ? `${name} 집 미리보기` : '집 미리보기'}
-          />
-        </View>
+        <HouseFrameArtwork
+          frame={frame}
+          label={name ? `${name} 집 미리보기` : '집 미리보기'}
+          onError={onFrameError}
+        />
       ) : null}
     </View>
   );
@@ -153,6 +146,7 @@ const styles = StyleSheet.create({
   },
   window: {
     position: 'absolute',
+    zIndex: 1,
     overflow: 'hidden',
     borderRadius: Radius.sm,
   },

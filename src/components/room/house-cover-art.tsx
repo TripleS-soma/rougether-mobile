@@ -26,7 +26,7 @@ export function HouseCoverArt({
   return (
     <Image
       key={frame.assetKey}
-      source={assetSource(frame.assetKey)}
+      source={frame.scene?.source ?? assetSource(frame.assetKey)}
       style={[{ aspectRatio: frame.sourceAspectRatio }, style]}
       contentFit={legacyContentFit}
       transition={0}
