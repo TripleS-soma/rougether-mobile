@@ -17,6 +17,12 @@ export const Colors = {
   },
 } as const;
 
+/** Illustrated house seams and a gentle night veil; room art is not recolored. */
+export const HouseSceneColors = {
+  edgeInk: '#554536',
+  nightTint: 'rgba(25,32,57,0.16)',
+} as const;
+
 export const Spacing = {
   half: 2,
   one: 4,

@@ -9,6 +9,10 @@ it('respects thumbnail fit and falls back atomically on image failure', async ()
     <HouseCoverArt name="집" testID="art" enabled maxMembers={6} legacyContentFit="cover" />,
   );
   expect(ui.getByTestId('art').props.contentFit).toBe('cover');
+  expect(ui.getByTestId('art').props.recyclingKey).toContain('bundled-house-scene/');
+  await fireEvent(ui.getByTestId('art'), 'error', {
+    nativeEvent: { error: 'invalid local asset' },
+  });
   expect(ui.getByTestId('art').props.recyclingKey).toContain('-6p-frame.webp');
   await fireEvent(ui.getByTestId('art'), 'error', { nativeEvent: { error: 'offline' } });
   expect(ui.getByTestId('art').props.recyclingKey).toBe(DEFAULT_HOUSE_COVER_KEY);

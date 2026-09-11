@@ -226,15 +226,13 @@ export function useHousePages({
   useEffect(() => {
     const uris = [
       ...new Set(
-        houses.map(
-          (house) =>
-            assetSource(
-              resolveHouseFrame(house.coverImageKey, {
-                maxMembers: house.maxMembers,
-                minimumSeats: house.floors.reduce((sum, floor) => sum + floor.rooms.length, 0),
-              }).assetKey,
-            ).uri,
-        ),
+        houses.flatMap((house) => {
+          const frame = resolveHouseFrame(house.coverImageKey, {
+            maxMembers: house.maxMembers,
+            minimumSeats: house.floors.reduce((sum, floor) => sum + floor.rooms.length, 0),
+          });
+          return frame.scene ? [] : [assetSource(frame.assetKey).uri];
+        }),
       ),
     ];
     if (uris.length) void Image.prefetch?.(uris, { cachePolicy: 'memory-disk' });
@@ -245,6 +243,10 @@ export function useHousePages({
     const uris = [
       ...new Set(
         houses.flatMap((house) => {
+          if (
+            resolveHouseFrame(house.coverImageKey, { maxMembers: house.maxMembers, scheme }).scene
+          )
+            return [];
           const coverKey = houseCoverKey(house.coverImageKey);
           const backgroundKey = houseBackgroundKey(coverKey, scheme);
           return backgroundKey ? [assetSource(backgroundKey).uri] : [];

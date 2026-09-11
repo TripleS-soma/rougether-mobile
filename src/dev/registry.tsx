@@ -1,3 +1,7 @@
+import {
+  IntegratedHouseScenesDemo,
+  IntegratedHouseScenesViewport,
+} from '@/dev/integrated-house-scenes-demo';
 import { openBrowserAsync } from 'expo-web-browser';
 import { type ReactNode, useState } from 'react';
 import { Text, View } from 'react-native';
@@ -316,6 +320,16 @@ function WheelPickerDemo() {
 }
 
 export const galleryEntries: GalleryEntry[] = [
+  {
+    name: 'IntegratedHouseViewport',
+    description: '통합 장면 전체 화면 검증. viewport=1, theme, capacity 파라미터.',
+    render: () => <IntegratedHouseScenesViewport />,
+  },
+  {
+    name: 'IntegratedHouseScenes',
+    description: '4테마 × 2·4·6인 통합 장면과 실제 Room, 방문·빈방·기존형 복귀 검증 (#1296).',
+    render: () => <IntegratedHouseScenesDemo />,
+  },
   {
     name: 'MoruRoom',
     description: '레벨 5 보상 모루. 캐릭터를 누르면 대기·인사·기쁨·눕기를 순환합니다.',

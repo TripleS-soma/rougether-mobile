@@ -36,12 +36,18 @@ const SIX: House = {
 describe('stacked house screen', () => {
   it('retries the same frame after moving to another house and returning', async () => {
     const other = { ...SIX, houseId: 9, name: '다른 집' };
-    const ui = await render(<HouseScreen houses={[SIX, other]} houseIndex={0} enabled />);
+    const ui = await render(
+      <HouseScreen integratedEnabled={false} houses={[SIX, other]} houseIndex={0} enabled />,
+    );
     await fireEvent(ui.getByTestId('house-frame'), 'error', { nativeEvent: { error: 'offline' } });
     expect(ui.getByTestId('house-frame').props.recyclingKey).toBe(DEFAULT_HOUSE_COVER_KEY);
-    await ui.rerender(<HouseScreen houses={[SIX, other]} houseIndex={1} enabled />);
+    await ui.rerender(
+      <HouseScreen integratedEnabled={false} houses={[SIX, other]} houseIndex={1} enabled />,
+    );
     expect(ui.getByTestId('house-frame').props.recyclingKey).toContain('-6p-frame.webp');
-    await ui.rerender(<HouseScreen houses={[SIX, other]} houseIndex={0} enabled />);
+    await ui.rerender(
+      <HouseScreen integratedEnabled={false} houses={[SIX, other]} houseIndex={0} enabled />,
+    );
     expect(ui.getByTestId('house-frame').props.recyclingKey).toContain('-6p-frame.webp');
   });
 
@@ -54,12 +60,19 @@ describe('stacked house screen', () => {
         { level: '1층', rooms: rooms.slice(3) },
       ],
     };
-    const ui = await render(<HouseScreen houses={[wide]} enabled />);
+    const ui = await render(<HouseScreen integratedEnabled={false} houses={[wide]} enabled />);
     for (const room of rooms) expect(ui.getByLabelText(room.name!)).toBeTruthy();
   });
   it('places all six seats in the frame, keeps visit identity, and preserves rooms on fallback', async () => {
     const onVisitFriend = jest.fn();
-    const ui = await render(<HouseScreen houses={[SIX]} enabled onVisitFriend={onVisitFriend} />);
+    const ui = await render(
+      <HouseScreen
+        integratedEnabled={false}
+        houses={[SIX]}
+        enabled
+        onVisitFriend={onVisitFriend}
+      />,
+    );
     expect(ui.getAllByTestId(/^house-window-/)).toHaveLength(6);
     expect(within(ui.getByTestId('house-window-0')).getByLabelText('다섯')).toBeTruthy();
     expect(within(ui.getByTestId('house-window-4')).getByLabelText('하나')).toBeTruthy();
@@ -78,13 +91,13 @@ describe('stacked house screen', () => {
   });
 
   it('keeps the odd upper half-row and bottom seats while switching capacity', async () => {
-    const ui = await render(<HouseScreen houses={[SIX]} enabled />);
+    const ui = await render(<HouseScreen integratedEnabled={false} houses={[SIX]} enabled />);
     const three = {
       ...SIX,
       maxMembers: 3,
       floors: [{ level: '2층', rooms: [SIX.floors[1].rooms[0]] }, SIX.floors[2]],
     };
-    await ui.rerender(<HouseScreen houses={[three]} enabled />);
+    await ui.rerender(<HouseScreen integratedEnabled={false} houses={[three]} enabled />);
     expect(ui.getByTestId('house-frame').props.recyclingKey).toContain('-4p-frame.webp');
     expect(within(ui.getByTestId('house-window-0')).getByLabelText('셋')).toBeTruthy();
     expect(within(ui.getByTestId('house-window-1')).getByTestId('window-filler')).toBeTruthy();

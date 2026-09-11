@@ -1,4 +1,9 @@
 import { ROOM_ASPECT_RATIO } from '@/components/room/room-render-contract';
+import {
+  INTEGRATED_HOUSES_ENABLED,
+  resolveHouseScene,
+  type HouseScene,
+} from '@/resources/house-scene';
 import { isCdnKey } from '@/resources/asset';
 
 export const FRAME_ASPECT = 567 / 508;
@@ -84,6 +89,8 @@ const stackedGeometry = (capacity: 2 | 4 | 6) => {
 const GEOMETRY = { 2: stackedGeometry(2), 4: stackedGeometry(4), 6: stackedGeometry(6) };
 
 export type HouseFrameOptions = {
+  integratedEnabled?: boolean;
+  scheme?: 'light' | 'dark';
   maxMembers?: number;
   /** Never hide members when a stale capacity is smaller than the room list. */
   minimumSeats?: number;
@@ -94,7 +101,8 @@ export type HouseFrameOptions = {
   failureScope?: string | number;
 };
 export type HouseFrame = {
-  kind: 'legacy' | 'stacked';
+  kind: 'legacy' | 'stacked' | 'integrated';
+  scene?: HouseScene;
   assetKey: string;
   canonicalKey: string;
   sourceAspectRatio: number;
@@ -124,6 +132,25 @@ export function resolveHouseFrame(
       : STACKED_HOUSE_THEMES.find((t) => t.legacyKey === canonicalKey);
   if (!theme) return legacy;
   const capacity = seats <= 2 ? 2 : seats <= 4 ? 4 : 6;
+  const scene =
+    (options.integratedEnabled ?? INTEGRATED_HOUSES_ENABLED)
+      ? resolveHouseScene(theme.id, capacity, options.scheme)
+      : undefined;
+  if (scene)
+    return {
+      kind: 'integrated',
+      canonicalKey,
+      assetKey: `bundled-house-scene/${scene.file}`,
+      sourceAspectRatio: scene.width / scene.height,
+      aspectRatio: scene.width / scene.height,
+      scene,
+      windowRects: scene.roomRects.map((rect) => ({
+        left: percent(rect.x, scene.width),
+        top: percent(rect.y, scene.height),
+        width: percent(rect.width, scene.width),
+        height: percent(rect.height, scene.height),
+      })),
+    };
   const release = ROUNDED_FRAME_RELEASE_BY_THEME[theme.id] ?? STACKED_HOUSE_RELEASE;
   return {
     kind: 'stacked',
