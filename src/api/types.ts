@@ -688,6 +688,13 @@ export type MyInviteCodeResponse = {
   inviterRewardCoin?: number;
   inviteeRewardCoin?: number;
   maxRewardedCount?: number;
+  shareUrl?: string | null;
+};
+
+export type InvitePreviewResponse = {
+  inviterNickname?: string | null;
+  inviteeRewardCoin?: number;
+  alreadyRedeemed?: boolean;
 };
 
 export type MyItemListResponse = {

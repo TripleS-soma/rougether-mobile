@@ -7,6 +7,24 @@ import {
   subscribePendingInviteCode,
 } from '@/lib/pending-invite';
 
+const mockDeviceStore = new Map<string, string>();
+jest.mock('@react-native-async-storage/async-storage', () => {
+  const storage = {
+    getItem: async (key: string) => mockDeviceStore.get(key) ?? null,
+    setItem: async (key: string, value: string) => {
+      mockDeviceStore.set(key, value);
+    },
+    removeItem: async (key: string) => {
+      mockDeviceStore.delete(key);
+    },
+    // 전역 jest 설정이 매 테스트 앞에서 `require(...).clear()`를 부른다.
+    clear: async () => {
+      mockDeviceStore.clear();
+    },
+  };
+  return { __esModule: true, ...storage, default: storage };
+});
+
 afterEach(() => {
   clearPendingInviteCode();
   clearPendingFriendInviteCode();
@@ -80,5 +98,66 @@ describe('pending-invite — 소비 전까지 살아남는다 (#896)', () => {
     const f2 = jest.fn();
     subscribePendingFriendInviteCode(f2)();
     expect(f2).toHaveBeenCalledWith('FRIEND1');
+  });
+});
+
+/**
+ * 기기 보관 (#1007) — 설치 → 로그인 → 온보딩 사이에 앱을 껐다 켜도 코드가 남아야
+ * 한다. 모듈 상태(이번 실행)는 테스트마다 새로 불러와 "다음 실행"을 흉내 내고,
+ * 기기 저장소는 실행을 건너 공유되도록 파일 안의 한 저장소로 흉내 낸다(격리된
+ * 모듈 레지스트리마다 AsyncStorage 목이 새로 생기면 "다음 실행"이 빈 기기를 본다).
+ */
+describe('pending-invite — 기기에 남아 다음 실행에서 되살아난다 (#1007)', () => {
+  type Mod = typeof import('@/lib/pending-invite');
+  const freshModule = (): Mod => {
+    let mod: Mod | undefined;
+    jest.isolateModules(() => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      mod = require('@/lib/pending-invite') as Mod;
+    });
+    return mod!;
+  };
+  const flush = () => new Promise((r) => setTimeout(r, 0));
+
+  beforeEach(() => {
+    mockDeviceStore.clear();
+  });
+
+  it('맡긴 코드는 기기에 적히고, 다음 실행의 복원에서 구독자에게 흐른다', async () => {
+    freshModule().setPendingFriendInviteCode('abcd2345');
+    await flush();
+    expect(mockDeviceStore.get('rougether.pending-invite.friend.v1')).toBe('ABCD2345');
+
+    const next = freshModule();
+    const onCode = jest.fn();
+    const unsub = next.subscribePendingFriendInviteCode(onCode);
+    expect(onCode).not.toHaveBeenCalled();
+    await next.hydratePendingInvites();
+    expect(onCode).toHaveBeenCalledWith('ABCD2345');
+    expect(next.peekPendingFriendInviteCode()).toBe('ABCD2345');
+    unsub();
+  });
+
+  it('소비를 알리면 기기에서도 지워진다', async () => {
+    const run = freshModule();
+    run.setPendingInviteCode('house1');
+    run.clearPendingInviteCode();
+    await flush();
+    expect(mockDeviceStore.has('rougether.pending-invite.house.v1')).toBe(false);
+
+    const next = freshModule();
+    await next.hydratePendingInvites();
+    expect(next.peekPendingInviteCode()).toBeNull();
+  });
+
+  it('복원이 늦게 끝나도 이번 실행에서 새로 맡긴 코드를 덮지 않는다', async () => {
+    freshModule().setPendingFriendInviteCode('old1');
+    await flush();
+
+    const next = freshModule();
+    const hydrating = next.hydratePendingInvites();
+    next.setPendingFriendInviteCode('new1');
+    await hydrating;
+    expect(next.peekPendingFriendInviteCode()).toBe('NEW1');
   });
 });

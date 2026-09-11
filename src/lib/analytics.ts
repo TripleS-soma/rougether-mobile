@@ -66,6 +66,14 @@ export type AnalyticsEvent =
   | 'house_joined'
   | 'invite_code_copy'
   | 'invite_redeem'
+  /** 링크·붙여넣기로 들어온 친구 초대 확인 시트 노출 (#1007) — via: link|paste. */
+  | 'invite_arrival_view'
+  /** 확인 시트에서 나중에 (#1007) — 코드는 친구 초대 화면 입력란에 남는다. */
+  | 'invite_arrival_later'
+  /** 온보딩 직후 1회 '초대받아 오셨나요?' 붙여넣기 시트 노출 (#1007). */
+  | 'invite_paste_view'
+  /** 붙여넣기 결과 (#1007) — kind: friend|house|invalid|dismiss. */
+  | 'invite_paste_result'
   // 그 밖의 핵심 행동
   | 'shop_purchase'
   | 'cheer_send'
