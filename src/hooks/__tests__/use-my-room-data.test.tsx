@@ -2,6 +2,7 @@ import { onlineManager } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useMyRoomData } from '@/hooks/use-my-room-data';
+import { calendarToday } from '@/utils/calendar-progress';
 import type { NewRoutine } from '@/constants/routines';
 import { jsonRes as res } from '@/test-utils/fetch';
 import { createTestQueryClient, queryWrapper as wrapQuery } from '@/test-utils/query-wrapper';
@@ -22,8 +23,7 @@ afterEach(() => {
 
 describe('useMyRoomData — completion routing on id collision', () => {
   it('completes the todo (not the same-numbered routine) when server ids collide', async () => {
-    const now = new Date();
-    const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const todayIso = calendarToday();
     const calls: { url: string; method: string }[] = [];
     global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
       const method = init?.method ?? 'GET';
@@ -67,8 +67,7 @@ describe('useMyRoomData — completion routing on id collision', () => {
 
 describe('useMyRoomData — 완료 응답의 서버 자동 미션 기여 (#578)', () => {
   it('surfaces houseMissionContribution on a completion, null result on un-complete', async () => {
-    const now = new Date();
-    const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const todayIso = calendarToday();
     global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
       if (url.includes('/categories'))
         return res({ items: [{ id: 1, name: '집카테고리', houseId: 2 }] });
@@ -115,8 +114,7 @@ describe('useMyRoomData — 완료 응답의 서버 자동 미션 기여 (#578)'
 
 describe('useMyRoomData — 코인 상한 피드백 (#444)', () => {
   it('보상이 있으면 보상액을 반환하고, 상한 도달(보상 0)이면 0 반환 + 상한 토스트', async () => {
-    const now = new Date();
-    const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const todayIso = calendarToday();
     let reward = 10;
     global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
       if (url.includes('/categories')) return res({ items: [{ id: 1, name: '건강' }] });
@@ -530,10 +528,8 @@ describe('useMyRoomData — 달력 월 점 (#838)', () => {
  * `StreakSummaryResponse`) 앱이 보상·미션 기여만 꺼내 쓰고 스트릭은 무시했다.
  */
 describe('useMyRoomData — 스트릭 즉시 반영 (#895)', () => {
-  const today = () => {
-    const n = new Date();
-    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
-  };
+  // KST 오늘 — 훅(calendarToday)과 같은 기준. 기기 로컬이면 UTC 러너에서 15:00Z 이후 갈린다.
+  const today = () => calendarToday();
 
   const harness = (onLog: (method: string) => unknown) => {
     global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
@@ -590,10 +586,8 @@ describe('useMyRoomData — 스트릭 즉시 반영 (#895)', () => {
  * 화면에서 사라져 보였다 (#1028).
  */
 describe('useMyRoomData — 스케줄 수정의 버전 분기 (#1028)', () => {
-  const today = () => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  };
+  // KST 오늘 — 훅(calendarToday)과 같은 기준. 기기 로컬이면 UTC 러너에서 15:00Z 이후 갈린다.
+  const today = () => calendarToday();
 
   /** 수정 페이로드 기본형 — 화면(add-routine)이 항상 전체 폼 값을 보낸다. */
   const N = (over: { title?: string; repeat?: 'weekly'; days?: number[] }): NewRoutine => ({
