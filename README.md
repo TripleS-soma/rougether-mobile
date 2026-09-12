@@ -44,11 +44,16 @@ npm start        # Expo dev 서버 — i / a / w 로 iOS / Android / web
 
 ```bash
 npm ci
-npm run storybook
+npx --no-install storybook dev -p 6006 --host 127.0.0.1 --no-open
 ```
 
-[로컬 Storybook](http://127.0.0.1:6006)을 엽니다. `npm run build-storybook`은 정적 파일을
-`storybook-static/`에 생성합니다. 스토리 작성법과 검증 기준은
+[로컬 Storybook](http://127.0.0.1:6006)을 엽니다. 정적 빌드는 아래 명령으로 생성합니다.
+
+```bash
+npx --no-install storybook build --output-dir web-build/storybook
+```
+
+결과물은 `web-build/storybook/`에 생성됩니다. 스토리 작성법과 검증 기준은
 [Storybook 가이드](docs/storybook.md)를 참고하세요. 실제 기기의 햅틱·네이티브 제스처는 기존
 Dev 갤러리에서 확인합니다.
 
@@ -64,8 +69,6 @@ Dev 갤러리에서 확인합니다.
 | `npm test` / `test:watch`         | Jest (jest-expo + React Native Testing Library) |
 | `npm run gen:api-types`           | 스웨거에서 API 타입 생성                        |
 | `npm run build:characters`        | 캐릭터 스프라이트 시트 빌드                     |
-| `npm run storybook`               | 디자인 Storybook 개발 서버 (`127.0.0.1:6006`)   |
-| `npm run build-storybook`         | Storybook 정적 빌드 (`storybook-static/`)       |
 
 커밋 전에 **typecheck · lint · format:check · test** 네 가지를 통과시키세요.
 [`ci.yml`](.github/workflows/ci.yml)이 모든 PR에서 네 가지 검사와 Storybook 정적 빌드를 실행합니다.

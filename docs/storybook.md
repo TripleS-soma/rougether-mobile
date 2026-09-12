@@ -10,18 +10,23 @@
 
 ```bash
 npm ci
-npm run storybook
+npx --no-install storybook dev -p 6006 --host 127.0.0.1 --no-open
 ```
 
 [로컬 Storybook](http://127.0.0.1:6006)을 엽니다. Expo 개발 서버와 별도로 실행되며,
 스토리에 지정한 예시 데이터와 콜백으로 공용 컴포넌트를 확인합니다.
 
 ```bash
-npm run build-storybook
+npx --no-install storybook build --output-dir web-build/storybook
 ```
 
-정적 결과물은 `storybook-static/`에 생성됩니다. 빌드 명령은 파일 생성까지만 수행합니다.
+정적 결과물은 `web-build/storybook/`에 생성됩니다. 빌드 명령은 파일 생성까지만 수행합니다.
 호스팅이나 공개 배포는 별도 작업입니다.
+
+이 저장소는 `package.json`의 실행 스크립트와 `.gitignore`도 Expo 네이티브 지문에 포함합니다.
+개발 도구 때문에 기존 설치본의 OTA 런타임이 달라지지 않도록 Storybook은 로컬 CLI를 직접
+호출하고, 출력물은 이미 제외된 `web-build/` 아래에 둡니다. 앱 OTA와 Sentry가 사용하는
+`dist/`와도 분리됩니다. 디버그 로그가 필요하면 `--logfile web-build/storybook.log`를 추가하세요.
 
 ## 카탈로그 사용법
 
@@ -137,7 +142,7 @@ npm run typecheck
 npm run lint
 npm run format:check
 npm test
-npm run build-storybook
+npx --no-install storybook build --output-dir web-build/storybook
 ```
 
 [`ci.yml`](../.github/workflows/ci.yml)도 기존 네 가지 검사에 이어 Storybook 정적 빌드를

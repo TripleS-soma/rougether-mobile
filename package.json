@@ -90,9 +90,7 @@
     "format:check": "prettier --check .",
     "test": "jest",
     "test:watch": "jest --watch",
-    "gen:api-types": "node scripts/gen-api-types.js",
-    "storybook": "storybook dev -p 6006 --host 127.0.0.1 --no-open",
-    "build-storybook": "storybook build"
+    "gen:api-types": "node scripts/gen-api-types.js"
   },
   "jest": {
     "preset": "jest-expo",

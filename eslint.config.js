@@ -8,6 +8,6 @@ module.exports = defineConfig([
   // Turn off ESLint rules that conflict with Prettier formatting.
   eslintConfigPrettier,
   {
-    ignores: ['dist/*', 'storybook-static/**', 'node_modules/*', '.expo/*'],
+    ignores: ['dist/*', 'web-build/storybook/**', 'node_modules/*', '.expo/*'],
   },
 ]);
