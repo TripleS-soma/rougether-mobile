@@ -92,6 +92,10 @@ import { RoomRenderReference } from '@/dev/room-render-reference';
 import { TokenSwatches } from '@/dev/token-swatches';
 import { TypeScalePreview } from '@/dev/type-scale-preview';
 import { NavigationPreview } from '@/dev/navigation-preview';
+import { MinigamePreview, MINIGAME_PREVIEW_CATALOG } from '@/dev/minigame-preview';
+import { MinigamesScreen } from '@/components/screens/minigames-screen';
+import { MinigameRunnerScreen } from '@/components/screens/minigame-runner-screen';
+import { MinigameLeaderboardScreen } from '@/components/screens/minigame-leaderboard-screen';
 
 export type GalleryEntry = {
   /** Unique, human-readable name shown as the section header. */
@@ -329,6 +333,61 @@ export const galleryEntries: GalleryEntry[] = [
     name: 'IntegratedHouseScenes',
     description: '4테마 × 2·4·6인 통합 장면과 실제 Room, 방문·빈방·기존형 복귀 검증 (#1296).',
     render: () => <IntegratedHouseScenesDemo />,
+  },
+  {
+    name: 'MinigamesPreview',
+    description:
+      '개발 미리보기 전용 3종 카탈로그 → 러너·계단·합치기 연습 → 빈 랭킹. API 기록 없음 (#1302).',
+    render: () => <MinigamePreview />,
+  },
+  {
+    name: 'CatStairsPreview',
+    description: '고양이 계단 연습 미리보기. 좌우 방향 조작, 실제 랭킹 미기록.',
+    render: () => <MinigamePreview initialGameCode="cat-stairs" />,
+  },
+  {
+    name: 'CatMergePreview',
+    description: '고양이 합치기 연습 미리보기. 4×4 타일 퍼즐, 실제 랭킹 미기록.',
+    render: () => <MinigamePreview initialGameCode="cat-merge" />,
+  },
+  {
+    name: 'MinigamesScreen',
+    description: '샘플 카탈로그 미리보기. 실제 서비스는 API에서 게임 목록을 받아요.',
+    render: () => <MinigamesScreen games={MINIGAME_PREVIEW_CATALOG} />,
+  },
+  {
+    name: 'MinigameRunnerScreen',
+    description: '루틴 러너 시작 화면 미리보기.',
+    render: () => <MinigameRunnerScreen />,
+  },
+  {
+    name: 'MinigameLeaderboardScreen',
+    description: '샘플 랭킹 미리보기. 아래 닉네임과 점수는 실제 유저 데이터가 아니에요.',
+    render: () => (
+      <MinigameLeaderboardScreen
+        leaderboard={{
+          items: [
+            { rank: 1, userId: 1, nickname: '샘플 고양이', score: 320 },
+            { rank: 1, userId: 2, nickname: '샘플 친구', score: 320 },
+            { rank: 3, userId: 3, nickname: '샘플 나', score: 150 },
+          ],
+          myEntry: { rank: 3, userId: 3, nickname: '샘플 나', score: 150 },
+          totalPlayers: 3,
+        }}
+      />
+    ),
+  },
+  {
+    name: 'MinigamesUnavailable',
+    description: '게임 목록 API 실패 미리보기. 랭킹 미기록 연습 진입이 분리돼요.',
+    render: () => (
+      <MinigamesScreen
+        error
+        practiceGames={MINIGAME_PREVIEW_CATALOG}
+        onRetry={() => {}}
+        onPractice={() => {}}
+      />
+    ),
   },
   {
     name: 'MoruRoom',
@@ -1200,6 +1259,8 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ alignSelf: 'stretch', gap: 8 }}>
         <Button label="저장" onPress={() => {}} />
+        <Button glass label="게임 시작" onPress={() => {}} />
+        <Button glass label="랭킹" variant="secondary" onPress={() => {}} />
         <Button label="집 만들기" variant="secondary" leftIcon="add" onPress={() => {}} />
         <Button label="삭제하기" variant="danger" leftIcon="trash" onPress={() => {}} />
         <Button label="비활성" disabled onPress={() => {}} />

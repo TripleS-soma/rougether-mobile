@@ -9,6 +9,11 @@
  * 앞으로 이관하는 훅은 여기에 키를 추가하고, 무효화는 접두 키(`all`)로 한다.
  */
 export const queryKeys = {
+  minigames: {
+    catalog: ['minigames', 'catalog'] as const,
+    leaderboard: (userId: number | null | undefined, gameCode: string) =>
+      ['minigames', userId, 'leaderboard', gameCode] as const,
+  },
   recommendations: ['recommendations'] as const,
   gachas: ['gachas', 'categories'] as const,
   starterRoutine: (userId: number | null | undefined) => ['starter-routine', userId] as const,

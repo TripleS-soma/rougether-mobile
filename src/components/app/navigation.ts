@@ -12,6 +12,9 @@ export type Screen =
   | 'addRoutine'
   | 'categoryManage'
   | 'furnitureStudio'
+  | 'minigames'
+  | 'minigameRunner'
+  | 'minigameLeaderboard'
   | 'gacha'
   | 'house'
   | 'houseMembers'
@@ -44,6 +47,9 @@ export const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   categoryManage: null,
   gacha: null,
   furnitureStudio: null,
+  minigames: null,
+  minigameRunner: null,
+  minigameLeaderboard: null,
   house: 'house',
   houseMembers: null,
   houseMissions: null,
@@ -90,6 +96,9 @@ export const BACK_SCREEN: Record<Screen, Screen | null> = {
   categoryManage: 'myRoom',
   gacha: 'myRoom',
   furnitureStudio: 'myRoom',
+  minigames: 'myRoom',
+  minigameRunner: 'minigames',
+  minigameLeaderboard: 'minigames',
   house: 'myRoom',
   houseMembers: 'house',
   houseMissions: 'house',

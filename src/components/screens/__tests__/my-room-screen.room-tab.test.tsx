@@ -103,3 +103,16 @@ it('메인 AI 아이콘에서 가구 만들기를 연다', async () => {
   await fireEvent.press(ui.getByLabelText('AI 가구 만들기'));
   expect(open).toHaveBeenCalledTimes(1);
 });
+
+it('방의 미니게임 리퀴드 버튼으로 허브를 열고 달력에서는 숨긴다', async () => {
+  const onOpenMinigames = jest.fn();
+  const ui = await render(<MyRoomScreen view="room" onOpenMinigames={onOpenMinigames} />);
+  await fireEvent.press(ui.getByRole('button', { name: '미니게임' }));
+  expect(onOpenMinigames).toHaveBeenCalledTimes(1);
+
+  await ui.rerender(<MyRoomScreen view="calendar" onOpenMinigames={onOpenMinigames} />);
+  expect(ui.queryByRole('button', { name: '미니게임' })).toBeNull();
+
+  await ui.rerender(<MyRoomScreen view="room" />);
+  expect(ui.queryByRole('button', { name: '미니게임' })).toBeNull();
+});
