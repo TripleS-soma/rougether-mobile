@@ -1,4 +1,4 @@
-/** Version 1 physics is mirrored by the server replay verifier. */
+/** Version 2 physics is mirrored by the server replay verifier. */
 export type RunnerObstacle = { x: number; width: number; height: number };
 export type RunnerState = {
   tick: number;
@@ -30,8 +30,8 @@ function createRunnerEngine(seed) {
   var tick = 0;
   var playerY = 0;
   var playerVy = 0;
-  var countdown = 90;
-  var speed = 6;
+  var countdown = 60;
+  var speed = 8;
   var obstacles = [];
   var jumpTicks = [];
   var ended = false;
@@ -59,7 +59,7 @@ function createRunnerEngine(seed) {
     if (ended) return getState();
     tick += 1;
     if (jump && playerY === 0) {
-      playerVy = 16;
+      playerVy = 15;
       jumpTicks.push(tick);
     }
     playerY += playerVy;
@@ -70,12 +70,12 @@ function createRunnerEngine(seed) {
     }
     countdown -= 1;
     if (countdown === 0) {
-      var width = 24 + (random() % 3) * 10;
-      var height = 28 + (random() % 3) * 10;
+      var width = 28 + (random() % 3) * 16;
+      var height = 40 + Math.min(2, Math.floor(tick / 600)) * 6 + (random() % 3) * 16;
       obstacles.push({ x: 720, width: width, height: height });
-      countdown = 75 + random() % 46;
+      countdown = 65 - Math.min(23, Math.floor(tick / 240) * 3) + random() % 31;
     }
-    speed = 6 + Math.min(6, Math.floor(tick / 600));
+    speed = 8 + Math.min(8, Math.floor(tick / 300));
     for (var i = 0; i < obstacles.length; i += 1) {
       var obstacle = obstacles[i];
       obstacle.x -= speed;

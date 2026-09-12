@@ -41,11 +41,11 @@ export type MinigameLeaderboard = {
 
 const gamePath = (gameCode: string) => `/minigames/${encodeURIComponent(gameCode)}`;
 
-export function fetchMinigames() {
-  return apiGetList<Minigame>('/minigames');
+export function fetchMinigames(rulesVersion: number) {
+  return apiGetList<Minigame>(`/minigames?rulesVersion=${rulesVersion}`);
 }
-export function startMinigameRun(gameCode: string) {
-  return apiPost<MinigameRun>(`${gamePath(gameCode)}/runs`);
+export function startMinigameRun(gameCode: string, rulesVersion: number) {
+  return apiPost<MinigameRun>(`${gamePath(gameCode)}/runs?rulesVersion=${rulesVersion}`);
 }
 export function finishMinigameRun(gameCode: string, runId: string, replay: MinigameReplay) {
   return apiPost<MinigameResult>(

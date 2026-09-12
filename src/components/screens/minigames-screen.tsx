@@ -54,17 +54,13 @@ export function MinigamesScreen({
           </View>
           <View style={styles.sceneCopy}>
             <Text style={[Typography.h3, { color: t.text }]}>{game.name}</Text>
-            {definition ? (
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                {definition.tagline}
-              </Text>
-            ) : null}
           </View>
         </View>
         {practice ? (
           <Button
             glass
-            label={`${game.name} 연습하기 · 랭킹 미기록`}
+            label="연습"
+            accessibilityLabel={`${game.name} 연습하기 · 랭킹 미기록`}
             variant="secondary"
             onPress={() => onPractice?.(game.gameCode)}
           />
@@ -95,13 +91,7 @@ export function MinigamesScreen({
       {loading ? (
         <ActivityIndicator color={t.primaryText} accessibilityLabel="게임 불러오는 중" />
       ) : null}
-      {error ? (
-        <RetryState
-          message="게임 목록을 불러오지 못했어요"
-          detail="연결을 확인하고 다시 시도해주세요. 연습은 기록 없이 즐길 수 있어요."
-          onRetry={onRetry}
-        />
-      ) : null}
+      {error ? <RetryState message="게임 목록을 불러오지 못했어요" onRetry={onRetry} /> : null}
       {!loading && !error && games.length === 0 ? (
         <Text style={[Typography.body, { color: t.textMuted }]}>지금은 등록된 게임이 없어요.</Text>
       ) : null}
@@ -109,10 +99,7 @@ export function MinigamesScreen({
       {showPractice ? (
         <View style={styles.practiceSection}>
           <Text accessibilityRole="header" style={[Typography.h3, { color: t.text }]}>
-            연습 게임 · 랭킹 미기록
-          </Text>
-          <Text style={[Typography.body, { color: t.textMuted }]}>
-            연결 없이도 즐길 수 있어요. 연습 기록은 저장되지 않아요.
+            연습 · 기록 안 함
           </Text>
           {availablePracticeGames.map((game) => renderGameCard(game, true))}
         </View>

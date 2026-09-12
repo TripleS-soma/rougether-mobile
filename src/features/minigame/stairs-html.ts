@@ -172,7 +172,7 @@ const STAIRS_BROWSER_SOURCE = String.raw`function runStairs(config) {
     scenery();stairs();cat();
     // The opaque header keeps higher stairs out of the score/timer area.
     ctx.fillStyle=colors.sky;ctx.fillRect(0,0,420,116);
-    text(config.practice?'연습 계단':'고양이 계단',24,28,17,colors.primaryDark);
+    text(config.practice?'고양이 계단 · 연습':'고양이 계단',24,28,17,colors.primaryDark);
     if(mode==='playing'||mode==='paused'||mode==='ended') {
       text(state.score+' 계단',24,61,29,colors.ink);
       roundRect(24,88,300,9,5,colors.ground);
@@ -187,27 +187,25 @@ const STAIRS_BROWSER_SOURCE = String.raw`function runStairs(config) {
       arrow('RIGHT',277,466,colors.white);text('오른쪽',336,466,22,colors.white,'center');
     }
     if(mode==='ready') {
-      roundRect(32,117,356,210,26,colors.paper);
-      text('한 칸씩, 구름 위로',210,152,25,colors.ink,'center');
-      text('다음 계단이 있는 방향을 눌러요',210,188,18,colors.muted,'center');
-      text('천천히 시작해서 리듬을 찾아 봐요',210,213,16,colors.muted,'center');
-      pill('계단 오르기 시작');text('왼쪽 · 오른쪽 버튼 또는 ← →',210,462,16,colors.muted,'center');
+      roundRect(60,174,300,146,26,colors.paper);
+      text('← · →',210,206,22,colors.muted,'center');
+      pill('시작');
     }
     if(mode==='paused') {
-      roundRect(32,128,356,190,26,colors.paper);
-      text('잠깐 쉬는 중',210,167,27,colors.ink,'center');
-      text('준비되면 이어서 올라가요',210,206,18,colors.muted,'center');
+      roundRect(60,158,300,162,26,colors.paper);
+      text('일시정지',210,198,26,colors.ink,'center');
       if(hostActive)pill('계속하기');
     }
     if(mode==='ended') {
-      roundRect(44,140,332,184,26,colors.paper);
-      text(state.endReason==='limit'?'구름까지 올라왔어요!':'한 칸 더, 다음 도전에!',210,180,23,colors.ink,'center');
-      text(state.score+' 계단',210,232,40,colors.primaryDark,'center');
-      text(state.endReason==='timeout'?'잠깐 쉬느라 시간이 다 됐어요':state.endReason==='wrong'?'다음 계단의 방향을 다시 살펴봐요':'멋진 리듬이었어요',210,287,16,colors.muted,'center');
+      roundRect(60,148,300,166,26,colors.paper);
+      text('게임 종료',210,183,23,colors.ink,'center');
+      text(state.score+'점',210,231,38,colors.primaryDark,'center');
+      if(state.endReason==='timeout')text('시간 초과',210,280,16,colors.muted,'center');
+      else if(state.endReason==='wrong')text('잘못된 방향',210,280,16,colors.muted,'center');
     }
     if(mode==='loading'||mode==='error') {
       roundRect(24,160,372,70,24,colors.paper);
-      text(mode==='loading'?'고양이가 준비하고 있어요':'고양이를 불러오지 못했어요',210,195,22,colors.ink,'center');
+      text(mode==='loading'?'불러오는 중':'불러오기 실패',210,195,22,colors.ink,'center');
     }
     syncButtons();
   }
@@ -271,7 +269,7 @@ const STAIRS_BROWSER_SOURCE = String.raw`function runStairs(config) {
   }
   window.setStairsActive=function(active){hostActive=active===true;if(!hostActive)pause();render();};
   window.render_game_to_text=function(){return JSON.stringify({
-    gameCode:'cat-stairs',rulesVersion:1,mode:mode,
+    gameCode:'cat-stairs',rulesVersion:2,mode:mode,
     coordinates:'420x520; origin top-left; columns -3..3 map x=210+column*36; current stair y=398; next stairs rise 38px',
     tick:state.tick,score:state.score,timeLeft:state.timeLeft,timeLimit:state.timeLimit,active:hostActive,
     practice:config.practice,manualTime:config.manualTime,character:'rougether-cat',

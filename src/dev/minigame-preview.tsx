@@ -73,7 +73,6 @@ export function MinigamePreview({ initialGameCode }: { initialGameCode?: Minigam
           finished={finished}
           gameName={definition.name}
           instructions={definition.instructions}
-          readyTitle={definition.readyTitle}
           characterPose={definition.pose}
           game={
             attempt ? (

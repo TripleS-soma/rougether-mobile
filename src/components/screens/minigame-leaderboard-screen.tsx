@@ -45,12 +45,9 @@ export function MinigameLeaderboardScreen({
   const t = useTokens();
   const Typography = useTypography();
   return (
-    <MinigameLayout title="전체 유저 랭킹" onBack={onBack}>
+    <MinigameLayout title="랭킹" onBack={onBack}>
       <View style={styles.section}>
         <Text style={[Typography.h2, { color: t.text }]}>{gameName}</Text>
-        <Text style={[Typography.body, { color: t.textMuted }]}>
-          전체 기간 최고 기록 · 상위 50명
-        </Text>
       </View>
       {loading ? (
         <ActivityIndicator color={t.primaryText} accessibilityLabel="랭킹 불러오는 중" />
@@ -67,9 +64,7 @@ export function MinigameLeaderboardScreen({
             {leaderboard.myEntry ? (
               <RankingRow entry={leaderboard.myEntry} mine />
             ) : (
-              <Text style={[Typography.body, { color: t.textMuted }]}>
-                아직 기록이 없어요. 첫 도전을 시작해보세요.
-              </Text>
+              <Text style={[Typography.body, { color: t.textMuted }]}>기록 없음</Text>
             )}
           </GlassSurface>
           <Text style={[Typography.label, { color: t.textMuted }]}>
@@ -89,15 +84,17 @@ export function MinigameLeaderboardScreen({
                 />
               ))}
             </GlassSurface>
-          ) : (
-            <Text style={[Typography.body, { color: t.textMuted }]}>
-              아직 등록된 기록이 없어요.
-            </Text>
-          )}
+          ) : null}
         </>
       ) : null}
       {!loading && !error && onRetry ? (
-        <Button glass label="랭킹 새로고침" onPress={onRetry} variant="secondary" />
+        <Button
+          glass
+          label="새로고침"
+          accessibilityLabel="랭킹 새로고침"
+          onPress={onRetry}
+          variant="secondary"
+        />
       ) : null}
     </MinigameLayout>
   );

@@ -42,15 +42,15 @@ describe('미니게임 API', () => {
       gameCode,
       name: gameCode,
       description: '미니게임 설명',
-      rulesVersion: 1,
+      rulesVersion: 2,
     }));
     const fetchMock = mockResponse({ items });
 
-    await expect(fetchMinigames()).resolves.toEqual(items);
+    await expect(fetchMinigames(2)).resolves.toEqual(items);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
-      `${API_BASE}/minigames`,
+      `${API_BASE}/minigames?rulesVersion=2`,
       expect.objectContaining({ method: 'GET', body: undefined }),
     );
   });
@@ -59,18 +59,18 @@ describe('미니게임 API', () => {
     const run: MinigameRun = {
       runId: 'run-123',
       gameCode,
-      rulesVersion: 1,
+      rulesVersion: 2,
       seed: 12345,
       maxTicks: gameCode === 'cat-stairs' ? 7200 : 18000,
       expiresAt: '2026-09-12T09:00:00Z',
     };
     const fetchMock = mockResponse(run);
 
-    await expect(startMinigameRun(gameCode)).resolves.toEqual(run);
+    await expect(startMinigameRun(gameCode, 2)).resolves.toEqual(run);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
-      `${API_BASE}/minigames/${gameCode}/runs`,
+      `${API_BASE}/minigames/${gameCode}/runs?rulesVersion=2`,
       expect.objectContaining({ method: 'POST', body: undefined }),
     );
   });
@@ -136,6 +136,28 @@ describe('미니게임 API', () => {
     );
   });
 
+  it('명시적으로 선택한 이전 버전도 경로에 그대로 전달한다', async () => {
+    const fetchMock = mockResponse({ items: [] });
+    await fetchMinigames(1);
+    await startMinigameRun('room-runner', 1);
+    await fetchMinigameLeaderboard('room-runner');
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      `${API_BASE}/minigames?rulesVersion=1`,
+      expect.any(Object),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      `${API_BASE}/minigames/room-runner/runs?rulesVersion=1`,
+      expect.any(Object),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      `${API_BASE}/minigames/room-runner/leaderboard`,
+      expect.any(Object),
+    );
+  });
+
   it('참여 기록이 없는 랭킹 응답의 null 내 순위를 보존한다', async () => {
     const leaderboard: MinigameLeaderboard = { items: [], myEntry: null, totalPlayers: 0 };
     mockResponse(leaderboard);
@@ -146,10 +168,10 @@ describe('미니게임 API', () => {
   it('시작 경로의 gameCode를 단일 URI 경로 요소로 인코딩한다', async () => {
     const fetchMock = mockResponse({});
 
-    await startMinigameRun('game/ a+b?');
+    await startMinigameRun('game/ a+b?', 2);
 
     expect(fetchMock).toHaveBeenCalledWith(
-      `${API_BASE}/minigames/game%2F%20a%2Bb%3F/runs`,
+      `${API_BASE}/minigames/game%2F%20a%2Bb%3F/runs?rulesVersion=2`,
       expect.objectContaining({ method: 'POST', body: undefined }),
     );
   });

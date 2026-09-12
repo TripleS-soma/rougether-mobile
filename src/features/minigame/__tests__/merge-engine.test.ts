@@ -1,5 +1,11 @@
-import { createMergeEngine, MergeDirection } from '@/features/minigame/merge-engine';
+import {
+  createMergeEngine as createVersionedMergeEngine,
+  MergeDirection,
+} from '@/features/minigame/merge-engine';
 import fixtures from '@/features/minigame/merge-fixtures.json';
+
+// Keep the original transcript fixtures pinned to the released rules.
+const createMergeEngine = (seed: number) => createVersionedMergeEngine(seed, 1);
 
 const cycle: MergeDirection[] = [0, 1, 2, 3];
 const directionCodes = { UP: 0, RIGHT: 1, DOWN: 2, LEFT: 3 } as const;
@@ -20,6 +26,7 @@ describe('cat-merge rules version 1', () => {
         board,
         directions: [],
         score: 0,
+        movesUntilExtraTile: null,
         ended: false,
         endReason: null,
       });
@@ -36,6 +43,7 @@ describe('cat-merge rules version 1', () => {
       board,
       directions: [direction],
       score: 4,
+      movesUntilExtraTile: null,
       ended: false,
       endReason: null,
     });
@@ -51,6 +59,7 @@ describe('cat-merge rules version 1', () => {
       board: fixture.board,
       directions: fixture.actions.map(({ direction }) => codeFor(direction)),
       score: fixture.score,
+      movesUntilExtraTile: null,
       ended: true,
       endReason:
         fixture.name === 'blocked' ? 'blocked' : fixture.name === 'move-limit' ? 'limit' : 'saved',

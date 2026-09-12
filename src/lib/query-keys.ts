@@ -10,7 +10,7 @@
  */
 export const queryKeys = {
   minigames: {
-    catalog: ['minigames', 'catalog'] as const,
+    catalog: (rulesVersion: number) => ['minigames', 'catalog', rulesVersion] as const,
     leaderboard: (userId: number | null | undefined, gameCode: string) =>
       ['minigames', userId, 'leaderboard', gameCode] as const,
   },

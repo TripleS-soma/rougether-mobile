@@ -13,6 +13,7 @@ import {
 } from '@/api/minigames';
 import { useMinigameLeaderboard, useMinigameRun, useMinigames } from '@/hooks/use-minigames';
 import { createTestQueryClient, queryWrapper } from '@/test-utils/query-wrapper';
+import { queryKeys } from '@/lib/query-keys';
 
 jest.mock('@/api/auth', () => ({ getSessionUserId: () => 7 }));
 jest.mock('@/api/minigames', () => ({
@@ -42,24 +43,24 @@ const GAME: Minigame = {
   gameCode: 'room-runner',
   name: '룸 러너',
   description: '장애물을 뛰어넘어요',
-  rulesVersion: 1,
+  rulesVersion: 2,
 };
 const STAIRS_GAME: Minigame = {
   gameCode: 'cat-stairs',
   name: '고양이 계단',
   description: '다음 계단 방향에 맞춰 올라가요',
-  rulesVersion: 1,
+  rulesVersion: 2,
 };
 const MERGE_GAME: Minigame = {
   gameCode: 'cat-merge',
   name: '고양이 합치기',
   description: '같은 숫자 타일을 합쳐요',
-  rulesVersion: 1,
+  rulesVersion: 2,
 };
 const RUN: MinigameRun = {
   runId: 'server-run-42',
   gameCode: GAME.gameCode,
-  rulesVersion: 1,
+  rulesVersion: 2,
   seed: 12345,
   maxTicks: 18000,
   expiresAt: '2026-09-12T12:00:00Z',
@@ -127,12 +128,13 @@ describe('minigame queries', () => {
     await rerender({ enabled: true });
     await waitFor(() => expect(result.current.games).toEqual([GAME]));
     expect(catalogRequest).toHaveBeenCalledTimes(1);
+    expect(catalogRequest).toHaveBeenCalledWith(2);
   });
 
   it('keeps supported runner rules and filters unknown games', async () => {
     catalogRequest.mockResolvedValue([
       GAME,
-      { ...GAME, rulesVersion: 2 },
+      { ...GAME, rulesVersion: 1 },
       { ...GAME, gameCode: 'another-game' },
     ]);
     const { result } = await renderHook(() => useMinigames(true), {
@@ -146,7 +148,7 @@ describe('minigame queries', () => {
     const supported = [MERGE_GAME, GAME, STAIRS_GAME];
     catalogRequest.mockResolvedValue([
       ...supported,
-      ...supported.map((game) => ({ ...game, rulesVersion: 2 })),
+      ...supported.map((game) => ({ ...game, rulesVersion: 1 })),
       { ...STAIRS_GAME, rulesVersion: 0 },
       { ...GAME, gameCode: 'another-game' },
     ]);
@@ -156,6 +158,35 @@ describe('minigame queries', () => {
 
     await waitFor(() => expect(result.current.games).toEqual(supported));
     expect(result.current.error).toBe(false);
+  });
+
+  it('loads the v2 catalog while keeping the shared cached leaderboard', async () => {
+    const wrapper = minigameQueryWrapper();
+    const client = clients[clients.length - 1];
+    const legacy = { ...GAME, rulesVersion: 1 };
+    const legacyBoard = {
+      items: [{ rank: 1, userId: 7, nickname: '이전 기록', score: 9999 }],
+      myEntry: { rank: 1, userId: 7, nickname: '이전 기록', score: 9999 },
+      totalPlayers: 1,
+    };
+    client.setQueryData(queryKeys.minigames.catalog(1), [legacy]);
+    client.setQueryData(queryKeys.minigames.leaderboard(7, GAME.gameCode), legacyBoard);
+    const { result } = await renderHook(
+      () => ({
+        catalog: useMinigames(true),
+        ranking: useMinigameLeaderboard(GAME.gameCode, false),
+      }),
+      { wrapper },
+    );
+
+    await waitFor(() => expect(result.current.catalog.games).toEqual([GAME]));
+    expect(result.current.ranking.leaderboard).toEqual(legacyBoard);
+    expect(catalogRequest).toHaveBeenCalledWith(2);
+    expect(leaderboardRequest).not.toHaveBeenCalled();
+    expect(client.getQueryData(queryKeys.minigames.catalog(1))).toEqual([legacy]);
+    expect(client.getQueryData(queryKeys.minigames.leaderboard(7, GAME.gameCode))).toEqual(
+      legacyBoard,
+    );
   });
 
   it('distinguishes an empty leaderboard from a request failure and retries a failure', async () => {
@@ -178,7 +209,7 @@ describe('minigame queries', () => {
 describe('minigame runs', () => {
   it('starts with the server seed and displays the authoritative score and ranking after finish', async () => {
     const { result } = await renderStartedRun();
-    expect(startRequest.mock.calls[0][0]).toBe(GAME.gameCode);
+    expect(startRequest).toHaveBeenCalledWith(GAME.gameCode, 2);
     expect(result.current.session).toEqual({
       id: RUN.runId,
       gameCode: GAME.gameCode,
@@ -233,8 +264,8 @@ describe('minigame runs', () => {
   });
 
   it.each([
-    { gameCode: 'cat-stairs', maxTicks: 18000, rulesVersion: 1, mismatch: 'tick limit' },
-    { gameCode: 'cat-merge', maxTicks: 18000, rulesVersion: 2, mismatch: 'rules version' },
+    { gameCode: 'cat-stairs', maxTicks: 18000, rulesVersion: 2, mismatch: 'tick limit' },
+    { gameCode: 'cat-merge', maxTicks: 18000, rulesVersion: 1, mismatch: 'rules version' },
   ])(
     'rejects a mismatched $mismatch for $gameCode',
     async ({ gameCode, maxTicks, rulesVersion }) => {
@@ -249,6 +280,20 @@ describe('minigame runs', () => {
       expect(finishRequest).not.toHaveBeenCalled();
     },
   );
+
+  it('invalidates the shared leaderboard after completing a v2 run', async () => {
+    const wrapper = minigameQueryWrapper();
+    const client = clients[clients.length - 1];
+    const leaderboardKey = queryKeys.minigames.leaderboard(7, GAME.gameCode);
+    client.setQueryData(leaderboardKey, EMPTY_LEADERBOARD);
+    const { result } = await renderHook(() => useMinigameRun(GAME.gameCode), { wrapper });
+    await act(() => result.current.start());
+    await waitFor(() => expect(result.current.session?.id).toBe(RUN.runId));
+    await act(() => result.current.finish(RUN.runId, { ticks: 120, jumpTicks: [] }));
+    await waitFor(() => expect(result.current.result).toEqual(SAVED));
+
+    expect(client.getQueryState(leaderboardKey)?.isInvalidated).toBe(true);
+  });
 
   it('retries a failed finish with the same run and an immutable copy of the original replay', async () => {
     finishRequest.mockRejectedValueOnce(new Error('response lost'));
