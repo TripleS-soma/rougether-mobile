@@ -144,7 +144,9 @@ describe('MyRoomScreen', () => {
   });
 
   it('hides routines not scheduled today from the 방 tab (repeat days respected)', async () => {
-    const todayWd = new Date().getDay();
+    // 요일도 KST TODAY에서 — 기기 로컬 new Date()면 UTC 러너에서 15:00Z 이후 하루 어긋난다.
+    const [ty, tm, td] = TODAY.split('-').map(Number);
+    const todayWd = new Date(ty, tm - 1, td).getDay();
     const otherWd = (todayWd + 1) % 7;
     const routines = [
       { id: '1', title: '오늘 루틴', kind: 'routine' as const, days: [todayWd] },

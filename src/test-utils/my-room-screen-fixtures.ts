@@ -1,6 +1,6 @@
 import { fireEvent } from '@testing-library/react-native';
 
-import { todayIso } from '@/utils/datetime';
+import { calendarToday } from '@/utils/calendar-progress';
 import { holidayName } from '@/utils/holidays';
 
 /**
@@ -8,7 +8,9 @@ import { holidayName } from '@/utils/holidays';
  * 나눠 쓴다. `__tests__` 안의 비테스트 파일은 jest가 빈 스위트로 잡으므로 여기.
  */
 
-export const TODAY = todayIso();
+// KST 오늘 — 화면·훅이 쓰는 기준(calendarToday)과 같아야 UTC 러너(15:00Z 이후 = KST 다음 날)에서
+// 갈리지 않는다. 기기 로컬 todayIso()는 CI에서 3건을 플레이키하게 만들었다(2026-09-12).
+export const TODAY = calendarToday();
 /**
  * Expected visible date and weekday, formatted independently of the screen. TODAY is the
  * real date, so a holiday run (e.g. 추석) also carries the holiday name (#1292).

@@ -60,7 +60,7 @@ import {
 import { Loading } from '@/components/ui/loading';
 import type { CalendarDayCount } from '@/api/types';
 import { RoomGrowthPill, type RoomGrowthProps } from '@/components/ui/room-growth-pill';
-import { type CalendarFilter } from '@/utils/calendar-progress';
+import { type CalendarFilter, calendarToday } from '@/utils/calendar-progress';
 import { Calendar } from '@/components/ui/calendar';
 import { CoachTarget } from '@/components/ui/coach-mark';
 import { GlassSurface } from '@/components/ui/glass-surface';
@@ -90,7 +90,7 @@ import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
-import { localDate, monthDayLabel, todayIso } from '@/utils/datetime';
+import { localDate, monthDayLabel } from '@/utils/datetime';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
 import { holidayName } from '@/utils/holidays';
 
@@ -393,7 +393,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   };
   const { show: toast } = useToast();
 
-  const today = serverToday ?? todayIso();
+  // 셸이 안 주면(테스트·Dev 갤러리) KST로 — 셸 경로(use-calendar-view)와 같은 기준.
+  // 기기 로컬 오늘로 두면 UTC 러너에서 15:00Z 이후 셸과 다른 날이 된다.
+  const today = serverToday ?? calendarToday();
   const isDone = useCallback(
     (id: string, date: string) => (completions[id] ?? []).includes(date),
     [completions],
