@@ -1,6 +1,7 @@
 node_modules/
 .expo/
 dist/
+storybook-static/
 android/
 ios/
 package-lock.json

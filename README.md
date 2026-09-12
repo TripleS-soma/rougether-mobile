@@ -21,19 +21,36 @@ npm start        # Expo dev 서버 — i / a / w 로 iOS / Android / web
 
 ## 구조
 
-| 경로                                                | 역할                                                                                          |
-| --------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| [`src/app/`](src/app)                               | Expo Router 라우트. `(tabs)/`가 앱 셸, `_layout.tsx`가 루트 Stack                             |
-| [`src/components/screens/`](src/components/screens) | 화면 컴포넌트. **순수·prop 기반**(라우팅·전역 상태 없음) + 형제 테스트                        |
-| [`src/components/ui/`](src/components/ui)           | 공용 프리미티브                                                                               |
-| [`src/constants/theme.ts`](src/constants/theme.ts)  | **디자인 토큰 단일 출처** — `Themes`(cozy/forest/hanok) · `Typography` · `Spacing` · `Radius` |
-| [`src/api/`](src/api)                               | 비즈니스 API 클라이언트 (`/api/v1`)                                                           |
-| [`src/hooks/`](src/hooks)                           | `useTokens()` · `useTypography()` · `useFontEmphasis()` · `useTheme()`                        |
-| [`src/resources/`](src/resources)                   | 이미지·카탈로그 데이터 (가구·캐릭터)                                                          |
-| [`src/widgets/`](src/widgets)                       | 홈 화면 위젯 (RemoteViews — 앱 폰트 사용 불가)                                                |
+| 경로                                                | 역할                                                                          |
+| --------------------------------------------------- | ----------------------------------------------------------------------------- |
+| [`src/app/`](src/app)                               | Expo Router 라우트. `(tabs)/`가 앱 셸, `_layout.tsx`가 루트 Stack             |
+| [`src/components/screens/`](src/components/screens) | 화면 컴포넌트. **순수·prop 기반**(라우팅·전역 상태 없음) + 형제 테스트        |
+| [`src/components/ui/`](src/components/ui)           | 공용 프리미티브                                                               |
+| [`src/constants/theme.ts`](src/constants/theme.ts)  | **디자인 토큰 단일 출처** — 브랜드 테마 · `Typography` · `Spacing` · `Radius` |
+| [`src/api/`](src/api)                               | 비즈니스 API 클라이언트 (`/api/v1`)                                           |
+| [`src/hooks/`](src/hooks)                           | `useTokens()` · `useTypography()` · `useFontEmphasis()` · `useTheme()`        |
+| [`src/resources/`](src/resources)                   | 이미지·카탈로그 데이터 (가구·캐릭터)                                          |
+| [`src/widgets/`](src/widgets)                       | 홈 화면 위젯 (RemoteViews — 앱 폰트 사용 불가)                                |
+| [`.storybook/`](.storybook)                         | 웹 Storybook 설정과 테마·글꼴 도구 모음                                       |
+| [`stories/`](stories)                               | 디자인 토큰과 실제 앱 컴포넌트의 상태별 스토리                                |
 
 **컴포넌트 갤러리** — `Dev` 탭(`/dev` 라우트)이 [`src/dev/registry.tsx`](src/dev/registry.tsx)에
 등록된 컴포넌트를 격리 상태로 렌더합니다. 새 컴포넌트를 만들면 여기 등록하세요.
+
+## 디자인 Storybook
+
+실제 앱 컴포넌트를 웹에서 보고, Controls로 props를 바꾸며 테마 5종·라이트/다크·글꼴 5종을
+비교할 수 있습니다. 폰트는 저장소의 앱 에셋을 사용합니다.
+
+```bash
+npm ci
+npm run storybook
+```
+
+[로컬 Storybook](http://127.0.0.1:6006)을 엽니다. `npm run build-storybook`은 정적 파일을
+`storybook-static/`에 생성합니다. 스토리 작성법과 검증 기준은
+[Storybook 가이드](docs/storybook.md)를 참고하세요. 실제 기기의 햅틱·네이티브 제스처는 기존
+Dev 갤러리에서 확인합니다.
 
 ## 스크립트
 
@@ -47,9 +64,11 @@ npm start        # Expo dev 서버 — i / a / w 로 iOS / Android / web
 | `npm test` / `test:watch`         | Jest (jest-expo + React Native Testing Library) |
 | `npm run gen:api-types`           | 스웨거에서 API 타입 생성                        |
 | `npm run build:characters`        | 캐릭터 스프라이트 시트 빌드                     |
+| `npm run storybook`               | 디자인 Storybook 개발 서버 (`127.0.0.1:6006`)   |
+| `npm run build-storybook`         | Storybook 정적 빌드 (`storybook-static/`)       |
 
 커밋 전에 **typecheck · lint · format:check · test** 네 가지를 통과시키세요.
-[`ci.yml`](.github/workflows/ci.yml)이 모든 PR에서 같은 것을 돌립니다.
+[`ci.yml`](.github/workflows/ci.yml)이 모든 PR에서 네 가지 검사와 Storybook 정적 빌드를 실행합니다.
 
 ## 배포
 

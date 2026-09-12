@@ -94,23 +94,29 @@ export function BrandThemeProvider({ children }: { children: ReactNode }) {
 }
 
 /**
- * 서브트리에만 다른 테마·폰트를 입히는 미리보기 프로바이더 (#1096) — 테마 색상·
- * 폰트 화면이 고른 값을 전역에 적용하기 전에 미리보기 카드에만 보여줄 때 쓴다.
- * 세터와 모드는 부모 것 그대로라 안에서 useBrandTheme()를 불러도 전역을 바꾼다.
+ * Overrides theme, font, and optionally color mode for a preview subtree.
+ * Omitted values and setters are inherited from the parent.
  */
 export function BrandThemePreview({
   themeId,
   fontId,
+  mode,
   children,
 }: {
   themeId?: ThemeId;
   fontId?: BrandFontId;
+  mode?: ThemeMode;
   children: ReactNode;
 }) {
   const parent = useContext(ThemeContext);
   const value = useMemo<ThemeControl>(
-    () => ({ ...parent, themeId: themeId ?? parent.themeId, fontId: fontId ?? parent.fontId }),
-    [parent, themeId, fontId],
+    () => ({
+      ...parent,
+      themeId: themeId ?? parent.themeId,
+      fontId: fontId ?? parent.fontId,
+      mode: mode ?? parent.mode,
+    }),
+    [parent, themeId, fontId, mode],
   );
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
