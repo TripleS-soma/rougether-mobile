@@ -32,4 +32,4 @@ jobs:
         run: npm test -- --ci
 
       - name: Build Storybook
-        run: npm run build-storybook
+        run: npx --no-install storybook build --output-dir web-build/storybook
