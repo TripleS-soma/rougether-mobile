@@ -24,6 +24,9 @@
     "android": {
       "_comment_blockedPermissions": "카메라는 어느 기능도 쓰지 않는다 (#752) — expo-image-picker가 앨범 선택만 쓰면서 자기 매니페스트에 CAMERA를 선언해 스토어 목록에 '카메라'로 노출된다. RECORD_AUDIO는 expo-audio를 걷어내(#921) 더는 선언되지 않지만, 효과음을 넣을 때 같은 라이브러리가 다시 들어올 수 있어 방어로 남긴다. SYSTEM_ALERT_WINDOW는 Expo bare 템플릿이 넣는 기본값(템플릿 주석: 'REMOVE WHATEVER YOU DO NOT NEED')이고 릴리스 코드 중 읽는 곳이 없다.",
       "blockedPermissions": [
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_AUDIO",
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
         "android.permission.SYSTEM_ALERT_WINDOW",
@@ -105,7 +108,9 @@
         "expo-media-library",
         {
           "photosPermission": "방 사진을 앨범에서 불러오기 위해 사진 접근 권한을 사용합니다.",
-          "savePhotosPermission": "방 사진을 앨범에 저장하기 위해 사진 추가 권한을 사용합니다."
+          "savePhotosPermission": "방 사진을 앨범에 저장하기 위해 사진 추가 권한을 사용합니다.",
+          "_comment_granularPermissions": "Play 사진/동영상 권한 정책(2026-09-12 거절): 플러그인 기본값이 READ_MEDIA_IMAGES/VIDEO/AUDIO를 넣는데, 앱은 앨범을 읽지 않는다 — 사진 고르기는 expo-image-picker의 시스템 선택기(13+ 무권한), 저장은 writeOnly(room-capture.ts)로 충분하다.",
+          "granularPermissions": []
         }
       ],
       [
