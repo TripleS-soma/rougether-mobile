@@ -133,6 +133,7 @@ const MERGE_BROWSER_SOURCE = String.raw`function runMerge(config) {
   function announce() {
     status.textContent='점수 '+state.score+'점. '+state.directions.length+'번 이동. '+
       (mode==='ended'?'게임 종료. ':mode==='paused'?'일시정지. ':'')+
+      (state.movesUntilExtraTile===null?'':'추가 타일 '+state.movesUntilExtraTile+'턴 뒤. ')+
       state.board.map(function(value,index){return (index%4===0?' '+(Math.floor(index/4)+1)+'행: ':'')+(value||'빈칸');}).join(', ');
   }
   function render() {
@@ -141,8 +142,10 @@ const MERGE_BROWSER_SOURCE = String.raw`function runMerge(config) {
     cat(12,5,75);
     text(config.practice?'고양이 합치기 · 연습':'고양이 합치기',86,25,15,colors.primaryDark);
     text(state.score+'점',86,53,25,colors.ink);
-    if(lastMerge>0&&glowTicks>0)text('+'+lastMerge,252,53,18,colors.primaryDark,'right');
+    if(lastMerge>0&&glowTicks>0)text('+'+lastMerge,218,53,14,colors.primaryDark,'right');
     if(mode==='playing'){
+      box(228,41,102,25,12,colors.paper);
+      text('추가 타일 '+state.movesUntilExtraTile+'턴',279,54,11,colors.primaryDark,'center');
       box(338,16,46,48,16,colors.paper);
       box(353,30,5,20,2,colors.primaryDark);box(364,30,5,20,2,colors.primaryDark);
     }
@@ -162,25 +165,23 @@ const MERGE_BROWSER_SOURCE = String.raw`function runMerge(config) {
     }
     if(mode==='playing'||mode==='paused'){
       box(50,530,300,54,17,colors.paper);
-      text(config.practice?'여기까지 연습하기':'그만하고 기록 저장',200,557,17,colors.primaryDark,'center');
+      text(config.practice?'그만하기':'기록 저장',200,557,17,colors.primaryDark,'center');
     }
     if(mode==='ready'||mode==='paused'||mode==='ended'){
       ctx.fillStyle='rgba(255,253,244,0.88)';ctx.fillRect(20,80,360,360);
       cat(147,107,106);
-      var title=mode==='ready'?'같은 숫자를 모아 봐요':mode==='paused'?'잠깐 쉬는 중':'차곡차곡 잘 모았어요!';
-      text(title,200,222,23,colors.ink,'center');
+      if(mode!=='ready')text(mode==='paused'?'일시정지':'게임 종료',200,242,23,colors.ink,'center');
       if(mode==='ended'){
-        text(state.score+'점',200,276,38,colors.primaryDark,'center');
-        text(endReason==='blocked'?'더 움직일 수 없어 게임을 마쳤어요':endReason==='limit'?'한 판을 끝까지 완주했어요':'지금까지 모은 점수예요',200,322,15,colors.muted,'center');
+        text(state.score+'점',200,294,38,colors.primaryDark,'center');
+        if(endReason==='blocked')text('이동 불가',200,342,15,colors.muted,'center');
       }else{
-        text(mode==='ready'?'밀어서 합치고, 큰 숫자에 도전해요':'준비되면 다시 모아 볼까요?',200,256,16,colors.muted,'center');
-        if(hostActive){box(100,284,200,56,20,colors.primaryDark);text(mode==='ready'?'합치기 시작':'계속하기',200,312,21,colors.white,'center');}
-        text('스와이프 · 방향키 · 아래 버튼',200,383,15,colors.muted,'center');
+        if(mode==='ready')text('스와이프 · 방향키',200,244,17,colors.muted,'center');
+        if(hostActive){box(100,284,200,56,20,colors.primaryDark);text(mode==='ready'?'시작':'계속하기',200,312,21,colors.white,'center');}
       }
     }
     if(mode==='loading'||mode==='error'){
       box(20,80,360,360,22,colors.paper);
-      text(mode==='loading'?'고양이가 준비하고 있어요':'고양이를 불러오지 못했어요',200,252,19,colors.ink,'center');
+      text(mode==='loading'?'불러오는 중':'불러오기 실패',200,252,19,colors.ink,'center');
     }
     syncButtons();
   }
@@ -267,8 +268,8 @@ const MERGE_BROWSER_SOURCE = String.raw`function runMerge(config) {
   }
   window.setMergeActive=function(active){hostActive=active===true;if(!hostActive)pause();render();};
   window.render_game_to_text=function(){return JSON.stringify({
-    gameCode:'cat-merge',rulesVersion:1,mode:mode,coordinates:'4x4 row-major; origin top-left; directions UP RIGHT DOWN LEFT',
-    ticks:ticks,score:state.score,board:state.board,moveCount:state.directions.length,
+    gameCode:'cat-merge',rulesVersion:2,mode:mode,coordinates:'4x4 row-major; origin top-left; directions UP RIGHT DOWN LEFT',
+    ticks:ticks,score:state.score,board:state.board,moveCount:state.directions.length,movesUntilExtraTile:state.movesUntilExtraTile,
     active:hostActive,practice:config.practice,manualTime:config.manualTime,character:'rougether-cat',endReason:endReason,
     lastAction:actions.length?actions[actions.length-1]:null
   });};

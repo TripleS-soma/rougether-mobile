@@ -53,7 +53,7 @@ it.each([
   {
     screen: 'leaderboard',
     element: <MinigameLeaderboardScreen />,
-    content: '전체 기간 최고 기록 · 상위 50명',
+    content: '루틴 러너',
   },
 ])(
   'keeps $screen content inside the shared width-limited scroll on a tablet',

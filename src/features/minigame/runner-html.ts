@@ -185,7 +185,7 @@ const RUNNER_BROWSER_SOURCE = String.raw`function runRunner(config) {
     scenery();
     state.obstacles.forEach(obstacle);
     cat();
-    text(config.practice ? '연습 달리기' : '고양이 달리기', 26, 35, 20, colors.primaryDark);
+    text(config.practice ? '루틴 러너 · 연습' : '루틴 러너', 26, 35, 20, colors.primaryDark);
     if (mode === 'playing' || mode === 'paused' || mode === 'ended') {
       text(String(state.score).padStart(4, '0'), 28, 71, 33, colors.ink);
     }
@@ -195,25 +195,21 @@ const RUNNER_BROWSER_SOURCE = String.raw`function runRunner(config) {
       roundRect(670, 32, 6, 24, 2, colors.primaryDark);
     }
     if (mode === 'ready') {
-      text('우리 고양이, 어디까지 달릴까?', 360, 141, 33, colors.ink, 'center');
-      text('탭하면 점프! 화분을 가볍게 넘어 봐요', 360, 179, 20, colors.muted, 'center');
-      pill('달리기 시작');
-      text('화면 탭 · 스페이스 · ↑', 360, 388, 18, colors.muted, 'center');
+      text('탭 · 스페이스 · ↑', 360, 169, 20, colors.muted, 'center');
+      pill('시작');
     }
     if (mode === 'paused') {
       ctx.fillStyle = 'rgba(255,253,244,0.76)'; ctx.fillRect(0, 90, 720, 220);
-      text('잠깐 쉬는 중', 360, 151, 35, colors.ink, 'center');
-      text('준비되면 다시 달려 볼까요?', 360, 187, 20, colors.muted, 'center');
+      text('일시정지', 360, 162, 32, colors.ink, 'center');
       if (hostActive) pill('계속하기');
     }
     if (mode === 'ended') {
-      roundRect(220, 112, 280, 165, 26, colors.paper);
-      text(state.endReason === 'limit' ? '끝까지 달렸어요!' : '잘 달렸어요!', 360, 151, 29, colors.ink, 'center');
-      text(state.score + '점', 360, 210, 47, colors.primaryDark, 'center');
-      text('다시 도전해서 기록을 높여 봐요', 360, 254, 17, colors.muted, 'center');
+      roundRect(220, 125, 280, 140, 26, colors.paper);
+      text('게임 종료', 360, 163, 26, colors.ink, 'center');
+      text(state.score + '점', 360, 216, 44, colors.primaryDark, 'center');
     }
     if (mode === 'loading' || mode === 'error') {
-      text(mode === 'loading' ? '고양이가 준비하고 있어요' : '고양이를 불러오지 못했어요', 360, 180, 28, colors.ink, 'center');
+      text(mode === 'loading' ? '불러오는 중' : '불러오기 실패', 360, 180, 28, colors.ink, 'center');
     }
     syncButtons();
   }
@@ -298,7 +294,7 @@ const RUNNER_BROWSER_SOURCE = String.raw`function runRunner(config) {
   };
   window.render_game_to_text = function () {
     return JSON.stringify({
-      gameCode: 'room-runner', rulesVersion: 1, mode: mode,
+      gameCode: 'room-runner', rulesVersion: 2, mode: mode,
       coordinates: '720x420; origin top-left; x right; playerY is feet height above groundY=340',
       tick: state.tick, score: state.score, speed: state.speed, active: hostActive,
       practice: config.practice, manualTime: config.manualTime, character: 'rougether-cat',

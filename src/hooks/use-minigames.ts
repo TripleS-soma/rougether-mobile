@@ -14,7 +14,7 @@ import {
 } from '@/api/minigames';
 import { useLatestRef } from '@/hooks/use-stable-value';
 import { queryKeys } from '@/lib/query-keys';
-import { getMinigameDefinition } from '@/constants/minigames';
+import { CURRENT_MINIGAME_RULES_VERSION, getMinigameDefinition } from '@/constants/minigames';
 
 const NO_GAMES: Minigame[] = [];
 const playableGames = (games: Minigame[]) =>
@@ -25,8 +25,8 @@ const playableGames = (games: Minigame[]) =>
 
 export function useMinigames(enabled: boolean) {
   const { data, isFetching, isError, refetch } = useQuery({
-    queryKey: queryKeys.minigames.catalog,
-    queryFn: fetchMinigames,
+    queryKey: queryKeys.minigames.catalog(CURRENT_MINIGAME_RULES_VERSION),
+    queryFn: () => fetchMinigames(CURRENT_MINIGAME_RULES_VERSION),
     select: playableGames,
     enabled,
   });
@@ -78,7 +78,11 @@ export function useMinigameRun(gameCode: string) {
   const practiceCounter = useRef(0);
   const generation = useRef(0);
   const finishedRef = useLatestRef(finished);
-  const { mutateAsync: startRequest } = useMutation({ mutationFn: startMinigameRun, retry: false });
+  const { mutateAsync: startRequest } = useMutation({
+    mutationFn: ({ code, rulesVersion }: { code: string; rulesVersion: number }) =>
+      startMinigameRun(code, rulesVersion),
+    retry: false,
+  });
   const { mutateAsync: finishRequest } = useMutation({
     mutationFn: ({ run, replay }: Submission) => finishMinigameRun(run.gameCode, run.runId, replay),
     retry: false,
@@ -98,7 +102,9 @@ export function useMinigameRun(gameCode: string) {
       const owner = ownerRef.current;
       const attemptGeneration = ++generation.current;
       try {
-        const run = practice ? null : await startRequest(gameCode);
+        const run = practice
+          ? null
+          : await startRequest({ code: gameCode, rulesVersion: definition.rulesVersion });
         if (ownerRef.current !== owner || generation.current !== attemptGeneration) return;
         // A newer rules version cannot be replayed by this client.
         if (
