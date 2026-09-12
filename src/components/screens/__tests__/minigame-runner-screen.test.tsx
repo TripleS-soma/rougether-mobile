@@ -68,3 +68,16 @@ it('labels practice and provides a fresh practice attempt after game over', asyn
   expect(practice).toHaveBeenCalledTimes(1);
   expect(ui.queryByText('다시 랭킹 도전')).toBeNull();
 });
+
+it('shows one recovery banner and retains the old score retry if a new start also failed', async () => {
+  const retry = jest.fn();
+  const ui = await render(
+    <MinigameRunnerScreen finished startError submitError onRetrySubmit={retry} />,
+  );
+  expect(ui.getByText('랭킹 게임을 준비하지 못했어요')).toBeTruthy();
+  expect(ui.getByText('이전 게임 기록은 다시 저장할 수 있어요.')).toBeTruthy();
+  expect(ui.queryByText('기록을 저장하지 못했어요')).toBeNull();
+  await fireEvent.press(ui.getByLabelText('기록 저장 다시 시도'));
+  expect(retry).toHaveBeenCalledTimes(1);
+  expect(ui.getByLabelText('저장 재시도를 그만하고 연습')).toBeTruthy();
+});

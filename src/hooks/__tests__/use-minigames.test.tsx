@@ -453,3 +453,59 @@ describe('minigame runs', () => {
     expect(finishRequest.mock.calls[1]).toEqual([GAME.gameCode, RUN.runId, replay]);
   });
 });
+
+describe('abandoned start recovery', () => {
+  it.each(['resolve', 'reject'] as const)(
+    'restarts immediately and keeps the new request locked after an old %s',
+    async (settlement) => {
+      const abandoned = deferred<MinigameRun>();
+      const current = deferred<MinigameRun>();
+      startRequest.mockReturnValueOnce(abandoned.promise).mockReturnValueOnce(current.promise);
+      const { result } = await renderRun();
+      await act(() => result.current.start());
+      await waitFor(() => expect(startRequest).toHaveBeenCalledTimes(1));
+      await act(() => result.current.abandonUnfinished());
+      expect(result.current.pending).toBe(false);
+      await act(() => result.current.start());
+      await waitFor(() => expect(startRequest).toHaveBeenCalledTimes(2));
+      await act(async () => {
+        if (settlement === 'resolve') abandoned.resolve(RUN);
+        else abandoned.reject(new Error('abandoned offline'));
+      });
+      expect(result.current.pending).toBe(true);
+      expect(result.current.session).toBeNull();
+      expect(result.current.startError).toBe(false);
+      await act(() => result.current.start());
+      expect(startRequest).toHaveBeenCalledTimes(2);
+      await act(async () => current.resolve({ ...RUN, runId: 'new-run' }));
+      await waitFor(() => expect(result.current.session?.id).toBe('new-run'));
+      expect(result.current.pending).toBe(false);
+    },
+  );
+
+  it('does not replace an active practice session on duplicate taps', async () => {
+    const { result } = await renderRun();
+    await act(() => {
+      result.current.practice();
+      result.current.practice();
+    });
+    expect(result.current.session?.id).toBe('room-runner:practice-1');
+    expect(startRequest).not.toHaveBeenCalled();
+  });
+
+  it('retains the previous failed score when a new start fails and can retry that score', async () => {
+    finishRequest.mockRejectedValueOnce(new Error('offline'));
+    const { result } = await renderStartedRun();
+    const replay = { ticks: 120, jumpTicks: [20, 80] };
+    await act(() => result.current.finish(RUN.runId, replay));
+    await waitFor(() => expect(result.current.submitError).toBe(true));
+    startRequest.mockRejectedValueOnce(new Error('offline'));
+    await act(() => result.current.start());
+    await waitFor(() => expect(result.current.startError).toBe(true));
+    expect(result.current.session?.id).toBe(RUN.runId);
+    await act(() => result.current.retrySubmit());
+    await waitFor(() => expect(result.current.result).toEqual(SAVED));
+    expect(result.current.startError).toBe(false);
+    expect(finishRequest).toHaveBeenLastCalledWith(GAME.gameCode, RUN.runId, replay);
+  });
+});

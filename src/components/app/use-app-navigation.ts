@@ -4,6 +4,7 @@ import { Gesture } from 'react-native-gesture-handler';
 
 import {
   backTargetFor,
+  EDGE_BACK_DISABLED_SCREENS,
   EDGE_BACK_DISTANCE,
   EDGE_BACK_VELOCITY,
   EDGE_BACK_WIDTH,
@@ -67,7 +68,9 @@ export function useAppNavigation({
   // Disable native recognition on tab roots and while playing so edge-back
   // cannot claim the pager's touch (#1143) or a game's input, even at the edge.
   const edgeBackEnabled =
-    Platform.OS === 'ios' && TAB_FOR_SCREEN[screen] == null && screen !== 'minigameRunner';
+    Platform.OS === 'ios' &&
+    TAB_FOR_SCREEN[screen] == null &&
+    !EDGE_BACK_DISABLED_SCREENS.has(screen);
   const edgeBackEnabledRef = useRef(false);
   edgeBackEnabledRef.current = edgeBackEnabled;
   const fullSwipeRef = useRef(false);

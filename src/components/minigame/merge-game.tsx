@@ -1,6 +1,10 @@
-import { useCallback, useEffect, useId, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { AppState, StyleSheet, View } from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
+
+import { GameRecovery } from '@/components/minigame/game-recovery';
+import { useGameRecovery } from '@/components/minigame/use-game-recovery';
+import { isCurrentGameFinish } from '@/features/minigame/message-envelope';
 
 import { Radius } from '@/constants/theme';
 import { parseMergeMessage, type MergeGameProps } from '@/features/minigame/merge-bridge';
@@ -18,10 +22,12 @@ export function MergeGame({
 }: MergeGameProps) {
   const t = useTokens();
   const palette = useRef(t).current;
-  const instanceId = useId();
-  const channelId = `${instanceId}-merge-${seed}-${practice}`;
+  const { channelId, finished, error, fail, retry, isCurrentChannel } = useGameRecovery(
+    'merge',
+    seed,
+    practice,
+  );
   const webView = useRef<WebView>(null);
-  const finished = useRef(false);
   const appActive = useRef(AppState.currentState === 'active');
   const source = useMemo(
     () => ({
@@ -44,7 +50,6 @@ export function MergeGame({
   }, [active]);
 
   useEffect(() => {
-    finished.current = false;
     const currentView = webView.current;
     return () => {
       currentView?.injectJavaScript(
@@ -65,8 +70,12 @@ export function MergeGame({
 
   const handleMessage = useCallback(
     (event: WebViewMessageEvent) => {
+      if (!isCurrentChannel(channelId)) return;
       const message = parseMergeMessage(event.nativeEvent.data, channelId);
-      if (!message) return;
+      if (!message) {
+        if (isCurrentGameFinish(event.nativeEvent.data, channelId)) fail('finish');
+        return;
+      }
       if (message.type === 'ready') {
         syncActive();
       } else if (message.type === 'pause') {
@@ -76,30 +85,37 @@ export function MergeGame({
         onFinish(message.result);
       }
     },
-    [channelId, onFinish, onPauseChange, syncActive],
+    [channelId, onFinish, onPauseChange, syncActive, fail, finished, isCurrentChannel],
   );
 
   return (
     <View style={[styles.frame, { backgroundColor: t.surfaceMuted }]}>
-      <WebView
-        key={channelId}
-        ref={webView}
-        testID={testID}
-        accessibilityLabel="고양이 합치기"
-        source={source}
-        style={[styles.game, { backgroundColor: t.surfaceMuted }]}
-        originWhitelist={['*']}
-        onShouldStartLoadWithRequest={({ url }) => url === 'about:blank'}
-        onMessage={handleMessage}
-        onLoadEnd={syncActive}
-        javaScriptEnabled
-        javaScriptCanOpenWindowsAutomatically={false}
-        setSupportMultipleWindows={false}
-        allowsLinkPreview={false}
-        dataDetectorTypes="none"
-        scrollEnabled={false}
-        bounces={false}
-      />
+      {error ? (
+        <GameRecovery error={error} onRetry={retry} />
+      ) : (
+        <WebView
+          key={channelId}
+          ref={webView}
+          testID={testID}
+          accessibilityLabel="고양이 합치기"
+          source={source}
+          style={[styles.game, { backgroundColor: t.surfaceMuted }]}
+          originWhitelist={['*']}
+          onShouldStartLoadWithRequest={({ url }) => url === 'about:blank'}
+          onMessage={handleMessage}
+          onLoadEnd={syncActive}
+          onError={() => fail('load')}
+          onContentProcessDidTerminate={() => fail('load')}
+          onRenderProcessGone={() => fail('load')}
+          javaScriptEnabled
+          javaScriptCanOpenWindowsAutomatically={false}
+          setSupportMultipleWindows={false}
+          allowsLinkPreview={false}
+          dataDetectorTypes="none"
+          scrollEnabled={false}
+          bounces={false}
+        />
+      )}
     </View>
   );
 }
