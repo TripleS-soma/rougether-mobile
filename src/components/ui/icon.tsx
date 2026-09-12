@@ -21,6 +21,7 @@ const ICONS = {
   members: 'people',
   kebab: 'ellipsis-vertical',
   gift: 'gift',
+  gamepad: 'game-controller-outline',
   sparkles: 'sparkles-outline',
   ticket: 'ticket-outline',
   trash: 'trash-outline',

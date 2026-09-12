@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import * as ts from 'typescript';
 
 const SCREENS = join(__dirname, '..');
 
@@ -28,6 +29,40 @@ const EXEMPT: Record<string, string> = {
   'house-screen.tsx': '전체 폭 캔버스 — 하늘이 화면을 채워야 한다 (#986)',
 };
 
+/** Shared layouts are verified delegation, not width-limit exemptions. */
+const DELEGATED_SCREENS: Record<string, string> = {
+  'minigames-screen.tsx': 'MinigamesScreen',
+  'minigame-runner-screen.tsx': 'MinigameRunnerScreen',
+  'minigame-leaderboard-screen.tsx': 'MinigameLeaderboardScreen',
+};
+
+function parseScreen(file: string) {
+  return ts.createSourceFile(
+    file,
+    readFileSync(join(SCREENS, file), 'utf8'),
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX,
+  );
+}
+
+function unwrapParentheses(expression: ts.Expression | undefined): ts.Expression | undefined {
+  if (expression && ts.isParenthesizedExpression(expression)) {
+    return unwrapParentheses(expression.expression);
+  }
+  return expression;
+}
+
+function exportedFunction(source: ts.SourceFile, name: string) {
+  return source.statements.find(
+    (statement): statement is ts.FunctionDeclaration =>
+      ts.isFunctionDeclaration(statement) &&
+      statement.name?.text === name &&
+      statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword) ===
+        true,
+  );
+}
+
 describe('화면 폭 제한 위생 (#725)', () => {
   const files = readdirSync(SCREENS).filter((f) => f.endsWith('.tsx'));
 
@@ -36,9 +71,66 @@ describe('화면 폭 제한 위생 (#725)', () => {
     expect(files.length).toBeGreaterThan(20);
   });
 
-  it.each(files.filter((f) => !(f in EXEMPT)))('%s 가 useResponsiveColumn을 쓴다', (file) => {
-    const src = readFileSync(join(SCREENS, file), 'utf8');
-    expect(src).toContain('useResponsiveColumn');
+  it.each(files.filter((f) => !(f in EXEMPT) && !(f in DELEGATED_SCREENS)))(
+    '%s 가 useResponsiveColumn을 쓴다',
+    (file) => {
+      const src = readFileSync(join(SCREENS, file), 'utf8');
+      expect(src).toContain('useResponsiveColumn');
+    },
+  );
+
+  it.each(Object.entries(DELEGATED_SCREENS))(
+    '%s 는 검증된 MinigameLayout으로 전체 화면을 감싼다',
+    (file, componentName) => {
+      const source = parseScreen(file);
+      const layoutImport = source.statements.find(
+        (statement): statement is ts.ImportDeclaration =>
+          ts.isImportDeclaration(statement) &&
+          ts.isStringLiteral(statement.moduleSpecifier) &&
+          statement.moduleSpecifier.text === '@/components/screens/minigame-layout',
+      );
+      const bindings = layoutImport?.importClause?.namedBindings;
+      expect(
+        bindings &&
+          ts.isNamedImports(bindings) &&
+          bindings.elements.some(
+            (binding) =>
+              binding.name.text === 'MinigameLayout' &&
+              (binding.propertyName?.text ?? binding.name.text) === 'MinigameLayout',
+          ),
+      ).toBe(true);
+      const returned = exportedFunction(source, componentName)?.body?.statements.find(
+        ts.isReturnStatement,
+      );
+      const expression = unwrapParentheses(returned?.expression);
+      if (!expression || !ts.isJsxElement(expression)) {
+        throw new Error(`${componentName} must return the shared layout as its root`);
+      }
+      expect(expression.openingElement.tagName.getText(source)).toBe('MinigameLayout');
+      expect(expression.closingElement.tagName.getText(source)).toBe('MinigameLayout');
+    },
+  );
+
+  it('공통 레이아웃이 useResponsiveColumn을 실제 호출한다', () => {
+    const source = parseScreen('minigame-layout.tsx');
+    const layout = exportedFunction(source, 'MinigameLayout');
+    const hasColumnCall = layout?.body?.statements.some(
+      (statement) =>
+        ts.isVariableStatement(statement) &&
+        statement.declarationList.declarations.some(
+          (declaration) =>
+            declaration.initializer &&
+            ts.isCallExpression(declaration.initializer) &&
+            ts.isIdentifier(declaration.initializer.expression) &&
+            declaration.initializer.expression.text === 'useResponsiveColumn',
+        ),
+    );
+    expect(hasColumnCall).toBe(true);
+    // Rendered tablet/phone constraints are verified in minigame-layout.test.tsx.
+  });
+
+  it('위임 목록에 죽은 화면이 없다', () => {
+    expect(Object.keys(DELEGATED_SCREENS).filter((file) => !files.includes(file))).toEqual([]);
   });
 
   it('면제 목록에 죽은 항목이 없다', () => {
