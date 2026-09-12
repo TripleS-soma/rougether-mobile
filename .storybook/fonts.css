@@ -1,0 +1,61 @@
+/* Match the native font family names used by typographyFor(). */
+@font-face {
+  font-family: NanumSquareRoundR;
+  src: url('../assets/fonts/NanumSquareRoundR.ttf') format('truetype');
+  font-display: swap;
+}
+@font-face {
+  font-family: NanumSquareRoundB;
+  src: url('../assets/fonts/NanumSquareRoundB.ttf') format('truetype');
+  font-display: swap;
+}
+@font-face {
+  font-family: NanumSquareRoundEB;
+  src: url('../assets/fonts/NanumSquareRoundEB.ttf') format('truetype');
+  font-display: swap;
+}
+@font-face {
+  font-family: Pretendard-Regular;
+  src: url('../assets/fonts/Pretendard-Regular.otf') format('opentype');
+  font-display: swap;
+}
+@font-face {
+  font-family: Pretendard-Medium;
+  src: url('../assets/fonts/Pretendard-Medium.otf') format('opentype');
+  font-display: swap;
+}
+@font-face {
+  font-family: Pretendard-SemiBold;
+  src: url('../assets/fonts/Pretendard-SemiBold.otf') format('opentype');
+  font-display: swap;
+}
+@font-face {
+  font-family: Pretendard-Bold;
+  src: url('../assets/fonts/Pretendard-Bold.otf') format('opentype');
+  font-display: swap;
+}
+@font-face {
+  font-family: Jua-Regular;
+  src: url('../assets/fonts/Jua-Regular.ttf') format('truetype');
+  font-display: swap;
+}
+@font-face {
+  font-family: SUIT-Regular;
+  src: url('../assets/fonts/SUIT-Regular.otf') format('opentype');
+  font-display: swap;
+}
+@font-face {
+  font-family: SUIT-Medium;
+  src: url('../assets/fonts/SUIT-Medium.otf') format('opentype');
+  font-display: swap;
+}
+@font-face {
+  font-family: SUIT-SemiBold;
+  src: url('../assets/fonts/SUIT-SemiBold.otf') format('opentype');
+  font-display: swap;
+}
+@font-face {
+  font-family: SUIT-Bold;
+  src: url('../assets/fonts/SUIT-Bold.otf') format('opentype');
+  font-display: swap;
+}
