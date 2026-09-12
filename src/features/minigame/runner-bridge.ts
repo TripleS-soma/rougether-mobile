@@ -1,3 +1,5 @@
+import { parseGameEnvelope } from '@/features/minigame/message-envelope';
+
 export type RunnerFinish = { ticks: number; jumpTicks: number[] };
 
 export type RunnerGameProps = {
@@ -16,18 +18,8 @@ export type RunnerMessage =
 
 /** An iframe/WebView message is untrusted even though its document is bundled. */
 export function parseRunnerMessage(raw: unknown, channelId: string): RunnerMessage | null {
-  let message: unknown = raw;
-  if (typeof raw === 'string') {
-    if (raw.length > 120000) return null;
-    try {
-      message = JSON.parse(raw);
-    } catch {
-      return null;
-    }
-  }
-  if (!message || typeof message !== 'object') return null;
-  const value = message as Record<string, unknown>;
-  if (value.channelId !== channelId) return null;
+  const value = parseGameEnvelope(raw, channelId, 120000);
+  if (!value) return null;
   if (value.type === 'ready') return { channelId, type: 'ready' };
   if (value.type === 'pause' && typeof value.paused === 'boolean') {
     return { channelId, type: 'pause', paused: value.paused };

@@ -157,6 +157,8 @@ export const FULL_SWIPE_BACK_EXCLUDED: ReadonlySet<Screen> = new Set<Screen>([
   'gacha',
   'addRoutine',
 ]);
+/** Screens that own input all the way to the screen edge. */
+export const EDGE_BACK_DISABLED_SCREENS: ReadonlySet<Screen> = new Set<Screen>(['minigameRunner']);
 // 이만큼 끌었거나(거리) 이 속도를 넘긴 릴리즈면 뒤로 간다.
 export const EDGE_BACK_DISTANCE = 64;
 export const EDGE_BACK_VELOCITY = 700;

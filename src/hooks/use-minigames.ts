@@ -73,7 +73,7 @@ export function useMinigameRun(gameCode: string) {
   const [pending, setPending] = useState(false);
   const sessionRef = useLatestRef(session);
   const ownerRef = useLatestRef(userId);
-  const busy = useRef(false);
+  const busy = useRef<'start' | 'submit' | null>(null);
   const submission = useRef<Submission | null>(null);
   const practiceCounter = useRef(0);
   const generation = useRef(0);
@@ -86,17 +86,17 @@ export function useMinigameRun(gameCode: string) {
 
   const begin = useCallback(
     async (practice: boolean) => {
-      if (busy.current) return;
+      if (busy.current || (sessionRef.current && !finishedRef.current)) return;
       const definition = getMinigameDefinition(gameCode);
       if (!definition) {
         setStartError(true);
         return;
       }
-      busy.current = true;
+      busy.current = 'start';
       setPending(true);
       setStartError(false);
       const owner = ownerRef.current;
-      const attemptGeneration = generation.current;
+      const attemptGeneration = ++generation.current;
       try {
         const run = practice ? null : await startRequest(gameCode);
         if (ownerRef.current !== owner || generation.current !== attemptGeneration) return;
@@ -131,8 +131,10 @@ export function useMinigameRun(gameCode: string) {
         if (ownerRef.current === owner && generation.current === attemptGeneration)
           setStartError(true);
       } finally {
-        busy.current = false;
-        setPending(false);
+        if (generation.current === attemptGeneration) {
+          busy.current = null;
+          setPending(false);
+        }
       }
     },
     [finishedRef, gameCode, ownerRef, sessionRef, startRequest],
@@ -141,7 +143,7 @@ export function useMinigameRun(gameCode: string) {
   const submit = useCallback(
     async (attempt: Submission) => {
       if (busy.current || sessionRef.current?.id !== attempt.sessionId) return;
-      busy.current = true;
+      busy.current = 'submit';
       setPending(true);
       setSubmitError(false);
       const owner = ownerRef.current;
@@ -158,7 +160,7 @@ export function useMinigameRun(gameCode: string) {
           setSubmitError(true);
         }
       } finally {
-        busy.current = false;
+        busy.current = null;
         setPending(false);
       }
     },
@@ -197,12 +199,17 @@ export function useMinigameRun(gameCode: string) {
   );
   const abandonUnfinished = useCallback(() => {
     generation.current += 1;
+    if (busy.current === 'start') {
+      busy.current = null;
+      setPending(false);
+    }
     if (finishedRef.current) return;
     sessionRef.current = null;
     setSession(null);
     setStartError(false);
   }, [finishedRef, sessionRef]);
   const retrySubmit = useCallback(() => {
+    setStartError(false);
     if (submission.current) void submit(submission.current);
   }, [submit]);
   const start = useCallback(() => void begin(false), [begin]);

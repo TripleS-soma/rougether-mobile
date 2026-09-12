@@ -1,5 +1,9 @@
-import { useCallback, useEffect, useId, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
+
+import { GameRecovery } from '@/components/minigame/game-recovery';
+import { useGameRecovery } from '@/components/minigame/use-game-recovery';
+import { isCurrentGameFinish } from '@/features/minigame/message-envelope';
 
 import { Radius } from '@/constants/theme';
 import { parseMergeMessage, type MergeGameProps } from '@/features/minigame/merge-bridge';
@@ -16,10 +20,12 @@ export function MergeGame({
 }: MergeGameProps) {
   const t = useTokens();
   const palette = useRef(t).current;
-  const instanceId = useId();
-  const channelId = `${instanceId}-merge-${seed}-${practice}`;
+  const { channelId, finished, error, fail, retry, isCurrentChannel } = useGameRecovery(
+    'merge',
+    seed,
+    practice,
+  );
   const frame = useRef<HTMLIFrameElement>(null);
-  const finished = useRef(false);
   const html = useMemo(
     () =>
       createMergeHtml({
@@ -40,7 +46,6 @@ export function MergeGame({
   }, [active, channelId]);
 
   useEffect(() => {
-    finished.current = false;
     const gameWindow = frame.current?.contentWindow;
     return () => {
       gameWindow?.postMessage({ channelId, type: 'active', active: false }, '*');
@@ -51,8 +56,12 @@ export function MergeGame({
   useEffect(() => {
     const receive = (event: MessageEvent<unknown>) => {
       if (event.source !== frame.current?.contentWindow) return;
+      if (!isCurrentChannel(channelId)) return;
       const message = parseMergeMessage(event.data, channelId);
-      if (!message) return;
+      if (!message) {
+        if (isCurrentGameFinish(event.data, channelId)) fail('finish');
+        return;
+      }
       if (message.type === 'ready') {
         syncActive();
       } else if (message.type === 'pause') {
@@ -69,20 +78,25 @@ export function MergeGame({
       window.removeEventListener('message', receive);
       document.removeEventListener('visibilitychange', syncActive);
     };
-  }, [channelId, onFinish, onPauseChange, syncActive]);
+  }, [channelId, onFinish, onPauseChange, syncActive, fail, finished, isCurrentChannel]);
 
   return (
     <View style={[styles.frame, { backgroundColor: t.surfaceMuted }]} testID={testID}>
-      <iframe
-        key={channelId}
-        ref={frame}
-        title="고양이 합치기"
-        srcDoc={html}
-        sandbox="allow-scripts"
-        allowFullScreen
-        onLoad={syncActive}
-        style={iframeStyle}
-      />
+      {error ? (
+        <GameRecovery error={error} onRetry={retry} />
+      ) : (
+        <iframe
+          key={channelId}
+          ref={frame}
+          title="고양이 합치기"
+          srcDoc={html}
+          sandbox="allow-scripts"
+          allowFullScreen
+          onLoad={syncActive}
+          onError={() => fail('load')}
+          style={iframeStyle}
+        />
+      )}
     </View>
   );
 }

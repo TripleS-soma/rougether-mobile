@@ -1,3 +1,5 @@
+import { parseGameEnvelope } from '@/features/minigame/message-envelope';
+
 export type MergeDirection = 'UP' | 'RIGHT' | 'DOWN' | 'LEFT';
 export type MergeAction = { tick: number; direction: MergeDirection };
 export type MergeFinish = { ticks: number; actions: MergeAction[] };
@@ -18,18 +20,8 @@ export type MergeMessage =
 
 /** Validate isolated document messages before they reach the API mutation. */
 export function parseMergeMessage(raw: unknown, channelId: string): MergeMessage | null {
-  let message: unknown = raw;
-  if (typeof raw === 'string') {
-    if (raw.length > 160000) return null;
-    try {
-      message = JSON.parse(raw);
-    } catch {
-      return null;
-    }
-  }
-  if (!message || typeof message !== 'object') return null;
-  const value = message as Record<string, unknown>;
-  if (value.channelId !== channelId) return null;
+  const value = parseGameEnvelope(raw, channelId, 160000);
+  if (!value) return null;
   if (value.type === 'ready') return { channelId, type: 'ready' };
   if (value.type === 'pause' && typeof value.paused === 'boolean') {
     return { channelId, type: 'pause', paused: value.paused };

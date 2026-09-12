@@ -76,10 +76,16 @@ export function MinigameRunnerScreen({
       {startError ? (
         <RetryState
           message="랭킹 게임을 준비하지 못했어요"
-          detail="연결 상태 또는 게임 버전을 확인해주세요. 연습은 기록 없이 즐길 수 있어요."
+          detail={
+            submitError
+              ? '이전 게임 기록은 다시 저장할 수 있어요.'
+              : '연결 상태 또는 게임 버전을 확인해주세요. 연습은 기록 없이 즐길 수 있어요.'
+          }
+          onRetry={submitError && !pending ? onRetrySubmit : undefined}
+          retryLabel="기록 저장 다시 시도"
         />
       ) : null}
-      {submitError ? (
+      {submitError && !startError ? (
         <RetryState
           message="기록을 저장하지 못했어요"
           detail="아직 랭킹에 반영됐는지 확인할 수 없어요. 같은 기록으로 다시 저장할 수 있어요."
@@ -120,7 +126,13 @@ export function MinigameRunnerScreen({
           ) : null}
           <Button
             glass
-            label={practice && game ? '다시 연습하기' : '연습하기 · 랭킹 미기록'}
+            label={
+              submitError
+                ? '저장 재시도를 그만하고 연습'
+                : practice && game
+                  ? '다시 연습하기'
+                  : '연습하기 · 랭킹 미기록'
+            }
             onPress={onPractice}
             disabled={pending}
             variant="secondary"

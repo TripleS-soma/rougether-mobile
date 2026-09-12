@@ -88,7 +88,6 @@ describe('RunnerGame lifecycle bridge', () => {
     await act(async () => {
       send('not JSON');
       send({ channelId: 'another-game', type: 'finish', result });
-      send({ channelId, type: 'finish', result: { ticks: -1, jumpTicks: [] } });
       send({ channelId, type: 'pause', paused: 'true' });
     });
     expect(onFinish).not.toHaveBeenCalled();

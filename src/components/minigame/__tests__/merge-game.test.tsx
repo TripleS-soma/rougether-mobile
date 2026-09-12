@@ -94,7 +94,6 @@ describe('MergeGame lifecycle bridge', () => {
     await act(async () => {
       send('not JSON');
       send({ channelId: 'another-game', type: 'finish', result });
-      send({ channelId, type: 'finish', result: { ticks: -1, actions: [] } });
       send({ channelId, type: 'pause', paused: 'true' });
     });
     expect(onFinish).not.toHaveBeenCalled();

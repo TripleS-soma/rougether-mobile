@@ -1,5 +1,9 @@
-import { useCallback, useEffect, useId, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
+
+import { GameRecovery } from '@/components/minigame/game-recovery';
+import { useGameRecovery } from '@/components/minigame/use-game-recovery';
+import { isCurrentGameFinish } from '@/features/minigame/message-envelope';
 
 import { Radius } from '@/constants/theme';
 import { parseStairsMessage, type StairsGameProps } from '@/features/minigame/stairs-bridge';
@@ -16,10 +20,12 @@ export function StairsGame({
 }: StairsGameProps) {
   const t = useTokens();
   const palette = useRef(t).current;
-  const instanceId = useId();
-  const channelId = `${instanceId}-stairs-${seed}-${practice}`;
+  const { channelId, finished, error, fail, retry, isCurrentChannel } = useGameRecovery(
+    'stairs',
+    seed,
+    practice,
+  );
   const frame = useRef<HTMLIFrameElement>(null);
-  const finished = useRef(false);
   const html = useMemo(
     () =>
       createStairsHtml({
@@ -40,7 +46,6 @@ export function StairsGame({
   }, [active, channelId]);
 
   useEffect(() => {
-    finished.current = false;
     const gameWindow = frame.current?.contentWindow;
     return () => {
       gameWindow?.postMessage({ channelId, type: 'active', active: false }, '*');
@@ -51,8 +56,12 @@ export function StairsGame({
   useEffect(() => {
     const receive = (event: MessageEvent<unknown>) => {
       if (event.source !== frame.current?.contentWindow) return;
+      if (!isCurrentChannel(channelId)) return;
       const message = parseStairsMessage(event.data, channelId);
-      if (!message) return;
+      if (!message) {
+        if (isCurrentGameFinish(event.data, channelId)) fail('finish');
+        return;
+      }
       if (message.type === 'ready') {
         syncActive();
       } else if (message.type === 'pause') {
@@ -69,19 +78,24 @@ export function StairsGame({
       window.removeEventListener('message', receive);
       document.removeEventListener('visibilitychange', syncActive);
     };
-  }, [channelId, onFinish, onPauseChange, syncActive]);
+  }, [channelId, onFinish, onPauseChange, syncActive, fail, finished, isCurrentChannel]);
 
   return (
     <View style={[styles.frame, { backgroundColor: t.surfaceMuted }]} testID={testID}>
-      <iframe
-        key={channelId}
-        ref={frame}
-        title="고양이 계단 오르기"
-        srcDoc={html}
-        sandbox="allow-scripts"
-        onLoad={syncActive}
-        style={iframeStyle}
-      />
+      {error ? (
+        <GameRecovery error={error} onRetry={retry} />
+      ) : (
+        <iframe
+          key={channelId}
+          ref={frame}
+          title="고양이 계단 오르기"
+          srcDoc={html}
+          sandbox="allow-scripts"
+          onLoad={syncActive}
+          onError={() => fail('load')}
+          style={iframeStyle}
+        />
+      )}
     </View>
   );
 }
