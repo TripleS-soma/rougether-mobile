@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useAttendance } from '@/hooks/use-attendance';
 import { jsonRes as res } from '@/test-utils/fetch';
+import { createTestQueryClient, queryWrapper } from '@/test-utils/query-wrapper';
 
 const STATUS = {
   eventId: 7,
@@ -28,7 +29,7 @@ describe('useAttendance', () => {
     global.fetch = jest.fn(async () =>
       res({ ...STATUS, checkedInToday: false }),
     ) as unknown as typeof global.fetch;
-    const { result } = await renderHook(() => useAttendance());
+    const { result } = await renderHook(() => useAttendance(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loaded).toBe(true));
     expect(result.current.status?.eventId).toBe(7);
   });
@@ -41,7 +42,7 @@ describe('useAttendance', () => {
     global.fetch = jest.fn(async () =>
       res({ code: 'ATTENDANCE_EVENT_NOT_FOUND', message: 'no event' }, 404),
     ) as unknown as typeof global.fetch;
-    const { result } = await renderHook(() => useAttendance());
+    const { result } = await renderHook(() => useAttendance(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loaded).toBe(true));
     expect(result.current.status).toBeNull();
   });
@@ -50,7 +51,7 @@ describe('useAttendance', () => {
     global.fetch = jest.fn(async () => {
       throw new Error('offline');
     }) as unknown as typeof global.fetch;
-    const { result } = await renderHook(() => useAttendance());
+    const { result } = await renderHook(() => useAttendance(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loaded).toBe(true));
     expect(result.current.status).toBeNull();
   });
@@ -70,7 +71,9 @@ describe('useAttendance', () => {
       return res({ ...STATUS, currentStreak: 3, checkedInToday: false });
     }) as unknown as typeof global.fetch;
 
-    const { result } = await renderHook(() => useAttendance({ onCoinBalance }));
+    const { result } = await renderHook(() => useAttendance({ onCoinBalance }), {
+      wrapper: queryWrapper(),
+    });
     await waitFor(() => expect(result.current.loaded).toBe(true));
 
     let out;
@@ -78,7 +81,8 @@ describe('useAttendance', () => {
       out = await result.current.checkIn();
     });
     expect(out).toMatchObject({ newCheckIn: true, coinRewardAmount: 30 });
-    expect(result.current.status?.currentStreak).toBe(4);
+    // 캐시 반영(setQueryData)은 notifyManager가 배칭한다 — 기다려서 단언한다.
+    await waitFor(() => expect(result.current.status?.currentStreak).toBe(4));
     expect(onCoinBalance).toHaveBeenCalledWith(190);
   });
 
@@ -100,7 +104,7 @@ describe('useAttendance', () => {
       return res(STATUS);
     }) as unknown as typeof global.fetch;
 
-    const { result } = await renderHook(() => useAttendance());
+    const { result } = await renderHook(() => useAttendance(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loaded).toBe(true));
     let out;
     await act(async () => {
@@ -116,16 +120,40 @@ describe('useAttendance', () => {
    */
   it('200이어도 형태가 안 맞는 응답은 이벤트 없음으로 접는다', async () => {
     global.fetch = jest.fn(async () => res({})) as unknown as typeof global.fetch;
-    const { result } = await renderHook(() => useAttendance());
+    const { result } = await renderHook(() => useAttendance(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loaded).toBe(true));
     expect(result.current.status).toBeNull();
+  });
+
+  /**
+   * 종전엔 마운트 때 한 번만 받아서, 앱을 백그라운드에 두고 KST 자정을 넘기면
+   * checkedInToday가 어제 값(true)으로 남았다 — 그날 첫 완료의 자동 출석(#1294)이
+   * "이미 출석"으로 보고 시트를 안 띄웠다. 재조회(포커스 복귀·무효화)가 캐시를
+   * 되돌려야 한다.
+   */
+  it('재조회하면 자정을 넘긴 checkedInToday가 서버 값으로 되돌아온다', async () => {
+    let today = true;
+    global.fetch = jest.fn(async () =>
+      res({ ...STATUS, checkedInToday: today }),
+    ) as unknown as typeof global.fetch;
+    const client = createTestQueryClient();
+    const { result } = await renderHook(() => useAttendance(), {
+      wrapper: queryWrapper(client),
+    });
+    await waitFor(() => expect(result.current.status?.checkedInToday).toBe(true));
+
+    today = false;
+    await act(async () => {
+      await client.invalidateQueries();
+    });
+    await waitFor(() => expect(result.current.status?.checkedInToday).toBe(false));
   });
 
   it('dailyRewards가 빠진 응답도 접는다', async () => {
     global.fetch = jest.fn(async () =>
       res({ eventId: 7, title: '10일 연속 출석' }),
     ) as unknown as typeof global.fetch;
-    const { result } = await renderHook(() => useAttendance());
+    const { result } = await renderHook(() => useAttendance(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loaded).toBe(true));
     expect(result.current.status).toBeNull();
   });

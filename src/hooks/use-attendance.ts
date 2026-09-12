@@ -5,12 +5,21 @@
  * 주고, 훅은 그걸 에러가 아니라 `status = null`로 접는다. 진입점(헤더
  * 아이콘)은 status가 있을 때만 그려진다.
  *
+ * react-query로 이관 (#1027, 장부 16번). 종전엔 마운트 때 한 번만 받아서 앱을
+ * 백그라운드에 두고 KST 자정을 넘기면 `checkedInToday`가 어제 값으로 남았다 —
+ * 그러면 그날 첫 완료의 자동 출석(#1294)이 "이미 출석"으로 보고 시트를 안 띄운다.
+ * 이제 포커스 복귀 재조회(query-client 기본값)가 이걸 되돌린다. 출석 응답의
+ * status는 캐시를 바로 덮는다.
+ *
  * 반환 객체는 useMemo, 액션은 useCallback — memo 경계(#539)를 뚫지 않게.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { ApiError, ErrorCode, checkInAttendance, fetchAttendance } from '@/api';
+import { checkInAttendance, fetchAttendance, getSessionUserId } from '@/api';
 import type { AttendanceCheckInResult, AttendanceStatus } from '@/api/events';
+import { useLatestRef } from '@/hooks/use-stable-value';
+import { queryKeys } from '@/lib/query-keys';
 
 export type UseAttendanceOptions = {
   enabled?: boolean;
@@ -29,58 +38,58 @@ function isUsableStatus(s: AttendanceStatus | null | undefined): s is Attendance
   return !!s && typeof s.eventId === 'number' && Array.isArray(s.dailyRewards);
 }
 
-export function useAttendance({ enabled = true, onCoinBalance }: UseAttendanceOptions = {}) {
-  const [status, setStatus] = useState<AttendanceStatus | null>(null);
-  // "아직 안 불러봤다"와 "이벤트가 없다"를 구분한다 — 이게 없으면 부팅 직후
-  // 헤더 아이콘이 잠깐 떴다 사라진다.
-  const [loaded, setLoaded] = useState(false);
-  const [checkingIn, setCheckingIn] = useState(false);
-  // 콜백 참조를 effect 의존성에서 떼어낸다(부모 리렌더마다 재요청 방지).
-  const onCoinBalanceRef = useRef(onCoinBalance);
-  onCoinBalanceRef.current = onCoinBalance;
+/**
+ * 404(이벤트 없음)도, 네트워크·5xx도, 형태가 안 맞는 200도 전부 null — 출석은
+ * 부가 기능이라 화면을 막을 이유가 없다. 에러를 던지지 않으므로 react-query의
+ * 재시도·에러 상태 없이 null이 캐시된다(다음 stale·포커스 복귀에 다시 받는다).
+ */
+async function fetchStatusOrNull(): Promise<AttendanceStatus | null> {
+  try {
+    const next = await fetchAttendance();
+    return isUsableStatus(next) ? next : null;
+  } catch {
+    return null;
+  }
+}
 
-  useEffect(() => {
-    if (!enabled) return;
-    let active = true;
-    void (async () => {
-      const next = await fetchAttendance().catch((e: unknown) => {
-        // 404 = 진행 중인 이벤트 없음. 그 외(네트워크·5xx)도 이벤트를 숨기는
-        // 쪽으로 접는다 — 출석은 부가 기능이라 화면을 막을 이유가 없다.
-        if (e instanceof ApiError && e.code === ErrorCode.ATTENDANCE_EVENT_NOT_FOUND) return null;
-        return null;
-      });
-      if (!active) return;
-      setStatus(isUsableStatus(next) ? next : null);
-      setLoaded(true);
-    })();
-    return () => {
-      active = false;
-    };
-  }, [enabled]);
+export function useAttendance({ enabled = true, onCoinBalance }: UseAttendanceOptions = {}) {
+  const qc = useQueryClient();
+  const userId = getSessionUserId();
+  const queryKey = useMemo(() => queryKeys.attendance(userId), [userId]);
+  // 콜백 참조를 의존성에서 떼어낸다(부모 리렌더마다 checkIn이 바뀌지 않게).
+  const onCoinBalanceRef = useLatestRef(onCoinBalance);
+
+  // "아직 안 불러봤다"와 "이벤트가 없다"를 구분한다(`loaded`) — 이게 없으면 부팅
+  // 직후 헤더 아이콘이 잠깐 떴다 사라진다.
+  const { data, isFetched } = useQuery({ queryKey, queryFn: fetchStatusOrNull, enabled });
+
+  const { mutateAsync, isPending: checkingIn } = useMutation({
+    mutationFn: checkInAttendance,
+    onSuccess: (result) => {
+      if (isUsableStatus(result.status)) qc.setQueryData(queryKey, result.status);
+      onCoinBalanceRef.current?.(result.coinBalance);
+    },
+  });
+  const checkingInRef = useLatestRef(checkingIn);
 
   /**
    * 오늘 출석. 성공하면 갱신된 상태로 갈아끼우고 결과를 그대로 돌려준다 —
    * **연출을 쏠지 말지는 호출부가 `newCheckIn`으로 판단한다.** 멱등 재호출은
    * `newCheckIn=false`·`coinRewardAmount=0`이라 여기서 연출을 쏘면 거짓말이
-   * 된다(거미줄 청소 #830과 같은 계약).
+   * 된다(거미줄 청소 #830과 같은 계약). 실패는 null.
    */
   const checkIn = useCallback(async (): Promise<AttendanceCheckInResult | null> => {
-    if (checkingIn) return null;
-    setCheckingIn(true);
+    if (checkingInRef.current) return null;
     try {
-      const result = await checkInAttendance();
-      if (isUsableStatus(result.status)) setStatus(result.status);
-      onCoinBalanceRef.current?.(result.coinBalance);
-      return result;
+      return await mutateAsync();
     } catch {
       return null;
-    } finally {
-      setCheckingIn(false);
     }
-  }, [checkingIn]);
+  }, [mutateAsync, checkingInRef]);
 
+  const status = data ?? null;
   return useMemo(
-    () => ({ status, loaded, checkingIn, checkIn }),
-    [status, loaded, checkingIn, checkIn],
+    () => ({ status, loaded: isFetched, checkingIn, checkIn }),
+    [status, isFetched, checkingIn, checkIn],
   );
 }

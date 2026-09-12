@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useNotificationSettings } from '@/hooks/use-notification-settings';
 import { jsonRes as res } from '@/test-utils/fetch';
+import { queryWrapper } from '@/test-utils/query-wrapper';
 
 const realFetch = global.fetch;
 afterEach(() => {
@@ -17,11 +18,16 @@ describe('useNotificationSettings', () => {
       return res({ all: true, reminder: true, house: false });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useNotificationSettings());
+    const { result } = await renderHook(() => useNotificationSettings(), {
+      wrapper: queryWrapper(),
+    });
     await act(async () => {
       await result.current.load();
     });
-    expect(result.current.settings).toEqual({ all: true, reminder: true, house: false });
+    // 캐시 반영은 notifyManager가 배칭한다 — 즉시 단언하지 않고 기다린다.
+    await waitFor(() =>
+      expect(result.current.settings).toEqual({ all: true, reminder: true, house: false }),
+    );
 
     await act(async () => {
       result.current.toggle('reminder', false);
@@ -42,11 +48,13 @@ describe('useNotificationSettings', () => {
       return res({ all: true, reminder: false, house: true });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useNotificationSettings());
+    const { result } = await renderHook(() => useNotificationSettings(), {
+      wrapper: queryWrapper(),
+    });
     await act(async () => {
       await result.current.load();
     });
-    expect(result.current.loadError).toBe(true);
+    await waitFor(() => expect(result.current.loadError).toBe(true));
     // 실패 시엔 기본값 유지.
     expect(result.current.settings).toEqual({ all: true, reminder: true, house: true });
 
@@ -54,7 +62,7 @@ describe('useNotificationSettings', () => {
     await act(async () => {
       await result.current.load();
     });
-    expect(result.current.loadError).toBe(false);
+    await waitFor(() => expect(result.current.loadError).toBe(false));
     expect(result.current.settings).toEqual({ all: true, reminder: false, house: true });
   });
 
@@ -65,7 +73,9 @@ describe('useNotificationSettings', () => {
       return res({ all: true, reminder: true, house: true });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useNotificationSettings(onError));
+    const { result } = await renderHook(() => useNotificationSettings(onError), {
+      wrapper: queryWrapper(),
+    });
     await act(async () => {
       await result.current.load();
     });

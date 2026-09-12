@@ -7,6 +7,7 @@ import { ToastProvider } from '@/components/ui/toast';
 import { AuthProvider } from '@/hooks/use-auth';
 import { DEFAULT_HAPTIC_STRENGTH, getHapticStrength, setHapticStrength } from '@/utils/haptics';
 import { BrandThemeProvider } from '@/hooks/use-tokens';
+import { QueryProvider } from '@/test-utils/query-wrapper';
 const PROFILE = { nickname: '준서', bio: '', characterId: 'cat' as const, onSave: jest.fn() };
 const STATS = { streak: 3, coin: 120, diamond: 2 };
 
@@ -26,13 +27,15 @@ function Harness({ screen }: { screen: 'theme' | 'font' | 'sound' | null }) {
 
 const show = (screen: 'theme' | 'font' | 'sound' | null) =>
   render(
-    <AuthProvider>
-      <BrandThemeProvider>
-        <ToastProvider>
-          <Harness screen={screen} />
-        </ToastProvider>
-      </BrandThemeProvider>
-    </AuthProvider>,
+    <QueryProvider>
+      <AuthProvider>
+        <BrandThemeProvider>
+          <ToastProvider>
+            <Harness screen={screen} />
+          </ToastProvider>
+        </BrandThemeProvider>
+      </AuthProvider>
+    </QueryProvider>,
   );
 
 describe('폰트·테마 변경 안내 (#972)', () => {
@@ -158,13 +161,15 @@ function GapHarness({
 }
 const showGap = (props: Parameters<typeof GapHarness>[0]) =>
   render(
-    <AuthProvider>
-      <BrandThemeProvider>
-        <ToastProvider>
-          <GapHarness {...props} />
-        </ToastProvider>
-      </BrandThemeProvider>
-    </AuthProvider>,
+    <QueryProvider>
+      <AuthProvider>
+        <BrandThemeProvider>
+          <ToastProvider>
+            <GapHarness {...props} />
+          </ToastProvider>
+        </BrandThemeProvider>
+      </AuthProvider>
+    </QueryProvider>,
   );
 
 describe('가져오기·초대 보상 뒤 재조회 콜백', () => {

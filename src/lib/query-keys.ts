@@ -37,6 +37,16 @@ export const queryKeys = {
     all: ['me', 'characters'] as const,
     byUser: (userId: number | null | undefined) => ['me', 'characters', userId] as const,
   },
+  /** 집 커버 카탈로그 (GET /houses/cover-images) — 사용자 무관, 마스터 데이터. */
+  houseCovers: ['houses', 'cover-images'] as const,
+  /** 푸시 알림 설정 (GET/PATCH /users/me/notification-settings, #495). */
+  notificationSettings: (userId: number | null | undefined) =>
+    ['me', 'notification-settings', userId] as const,
+  /**
+   * 연속 출석 이벤트 상태 (GET /events/attendance, #851). 출석하면 응답의 status로
+   * 캐시를 덮고, 포커스 복귀 재조회가 KST 자정을 넘긴 `checkedInToday`를 되돌린다.
+   */
+  attendance: (userId: number | null | undefined) => ['attendance', userId] as const,
   /**
    * 달력 탭 (GET /calendar, GET /calendar/month) — 날짜별 목록과 달별 점.
    * 루틴·투두 변경은 `all`로 통째 무효화한다(방문한 날짜·달만 재조회된다).
