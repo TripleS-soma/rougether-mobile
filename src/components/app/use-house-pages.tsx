@@ -1,4 +1,7 @@
 import { Image } from 'expo-image';
+import { Image as NativeImage } from 'react-native';
+import { HOUSE_SCENE_BACKDROPS } from '@/resources/house-scenes/backdrops/sources';
+import { HOUSE_SCENE_DISPLAY_SOURCES } from '@/resources/house-scenes/display/sources';
 import {
   useCallback,
   useEffect,
@@ -226,15 +229,22 @@ export function useHousePages({
   useEffect(() => {
     const uris = [
       ...new Set(
-        houses.map(
-          (house) =>
-            assetSource(
-              resolveHouseFrame(house.coverImageKey, {
-                maxMembers: house.maxMembers,
-                minimumSeats: house.floors.reduce((sum, floor) => sum + floor.rooms.length, 0),
-              }).assetKey,
-            ).uri,
-        ),
+        houses.flatMap((house) => {
+          const frame = resolveHouseFrame(house.coverImageKey, {
+            maxMembers: house.maxMembers,
+            minimumSeats: house.floors.reduce((sum, floor) => sum + floor.rooms.length, 0),
+          });
+          if (!frame.scene) return [assetSource(frame.assetKey).uri];
+          return [
+            frame.scene.source,
+            HOUSE_SCENE_DISPLAY_SOURCES[frame.scene.file],
+            HOUSE_SCENE_BACKDROPS[frame.scene.themeId],
+          ]
+            .map((source) =>
+              source == null ? undefined : NativeImage.resolveAssetSource(source)?.uri,
+            )
+            .filter((uri): uri is string => Boolean(uri));
+        }),
       ),
     ];
     if (uris.length) void Image.prefetch?.(uris, { cachePolicy: 'memory-disk' });
@@ -245,6 +255,10 @@ export function useHousePages({
     const uris = [
       ...new Set(
         houses.flatMap((house) => {
+          if (
+            resolveHouseFrame(house.coverImageKey, { maxMembers: house.maxMembers, scheme }).scene
+          )
+            return [];
           const coverKey = houseCoverKey(house.coverImageKey);
           const backgroundKey = houseBackgroundKey(coverKey, scheme);
           return backgroundKey ? [assetSource(backgroundKey).uri] : [];

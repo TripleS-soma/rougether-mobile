@@ -17,6 +17,20 @@ export const Colors = {
   },
 } as const;
 
+/** Illustrated house seams and a gentle night veil; room art is not recolored. */
+export const HouseSceneColors = {
+  edgeInk: '#554536',
+  nightTint: 'rgba(25,32,57,0.16)',
+} as const;
+
+/** Bottom-edge colors sampled from the reviewed opaque scenes, by capacity. */
+export const HouseSceneGroundColors: Readonly<Record<string, Readonly<Record<number, string>>>> = {
+  'mushroom-forest': { 2: '#c9c099', 4: '#cec5a2', 6: '#cec7a5' },
+  'cloud-balloon': { 2: '#e3e3df', 4: '#e6e4df', 6: '#e4e3df' },
+  'night-observatory': { 2: '#aa9d93', 4: '#b6a89b', 6: '#b8ab9f' },
+  'coral-lagoon': { 2: '#c2cdb9', 4: '#cad0bb', 6: '#c7cfbe' },
+};
+
 export const Spacing = {
   half: 2,
   one: 4,

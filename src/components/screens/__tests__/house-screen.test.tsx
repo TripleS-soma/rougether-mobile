@@ -54,7 +54,7 @@ describe('HouseScreen', () => {
     [430, 932],
   ])('keeps all six rooms above navigation in a %s × %s viewport', async (width, height) => {
     const house = { ...MISSION_HOUSE, maxMembers: 6 };
-    const ui = await render(<HouseScreen houses={[house]} />);
+    const ui = await render(<HouseScreen integratedEnabled={false} houses={[house]} />);
     const headerBottom = 164;
     await fireEvent(ui.getByTestId('house-scroll'), 'layout', {
       nativeEvent: { layout: { x: 0, y: 0, width, height } },
@@ -66,7 +66,7 @@ describe('HouseScreen', () => {
     const { paddingBottom: navInset } = StyleSheet.flatten(
       ui.getByTestId('house-scroll').props.contentContainerStyle,
     );
-    const frame = resolveHouseFrame(undefined, { maxMembers: 6 });
+    const frame = resolveHouseFrame(undefined, { maxMembers: 6, integratedEnabled: false });
     const frameHeight = style.maxWidth / frame.aspectRatio;
     expect(style.maxWidth).toBeGreaterThan(0);
     expect(style.maxWidth).toBeLessThan(width);
@@ -82,7 +82,7 @@ describe('HouseScreen', () => {
       { ...house, maxMembers: 4 },
       { ...house, coverImageKey: 'house/unknown/frame.png' },
     ]) {
-      await ui.rerender(<HouseScreen houses={[next]} />);
+      await ui.rerender(<HouseScreen integratedEnabled={false} houses={[next]} />);
       expect(
         StyleSheet.flatten(ui.getByTestId('house-frame-viewport').props.style).maxWidth,
       ).toBeUndefined();
@@ -90,7 +90,9 @@ describe('HouseScreen', () => {
   });
 
   it('remeasures the six-seat framing after resize and header growth', async () => {
-    const ui = await render(<HouseScreen houses={[{ ...MISSION_HOUSE, maxMembers: 6 }]} />);
+    const ui = await render(
+      <HouseScreen integratedEnabled={false} houses={[{ ...MISSION_HOUSE, maxMembers: 6 }]} />,
+    );
     const layout = (width: number, height: number) =>
       fireEvent(ui.getByTestId('house-scroll'), 'layout', {
         nativeEvent: { layout: { x: 0, y: 0, width, height } },
@@ -286,7 +288,7 @@ describe('HouseScreen', () => {
     await AsyncStorage.clear();
   });
 
-  it('선택한 집의 커버 테마를 전면 배경에도 즉시 적용한다', async () => {
+  it('집 이동에 맞춰 통합 장면을 바꾸고 별도 배경은 그리지 않는다', async () => {
     const cloudHouse = {
       ...MISSION_HOUSE,
       name: '구름 집',
@@ -300,16 +302,17 @@ describe('HouseScreen', () => {
     };
     const ui = await render(<HouseScreen houses={[cloudHouse, mushroomHouse]} />);
 
-    expect(ui.getByTestId('house-background').props).toMatchObject({
-      recyclingKey:
-        'house/cloud-balloon/backgrounds/rounded-v2-20260907/house-cloud-balloon-background-day.webp',
-      contentFit: 'cover',
+    expect(ui.queryByTestId('house-background')).toBeNull();
+    expect(ui.getByTestId('house-frame').props).toMatchObject({
+      recyclingKey: 'bundled-house-scene/assets/cloud-balloon-4p.webp',
+      contentFit: 'fill',
       cachePolicy: 'memory-disk',
     });
     await fireEvent.press(ui.getByLabelText('다음 집'));
-    expect(ui.getByTestId('house-background').props.recyclingKey).toBe(
-      'house/mushroom-forest/backgrounds/rounded-v2-20260907/house-mushroom-forest-background-day.webp',
+    expect(ui.getByTestId('house-frame').props.recyclingKey).toBe(
+      'bundled-house-scene/assets/mushroom-forest-4p.webp',
     );
+    expect(ui.queryByTestId('house-background')).toBeNull();
   });
 
   // 헤더바 제거(#986)로 `streakDays`·`coinBalance`·`diamondBalance` prop 자체가
@@ -714,7 +717,9 @@ describe('HouseScreen', () => {
   });
 
   it('locks scrolling while a tile is lifted for drag (#278)', async () => {
-    const { getByLabelText, getByTestId } = await render(<HouseScreen houses={[MISSION_HOUSE]} />);
+    const { getByLabelText, getByTestId } = await render(
+      <HouseScreen houses={[MISSION_HOUSE]} integratedEnabled={false} />,
+    );
     expect(getByTestId('house-scroll').props.scrollEnabled).toBe(true);
     // Long-press lifts the tile: the grid owns the touch, so the scroll locks.
     await fireEvent(getByLabelText('친구'), 'longPress');
@@ -802,7 +807,7 @@ describe('HouseScreen', () => {
     const style = getByTestId('seat-meta-0').props.style;
     expect(Array.isArray(style)).toBe(true);
     // [정적 roomMeta, preview 오버레이(없으면 null), 애니메이션 스타일]
-    expect(style).toHaveLength(3);
+    expect(StyleSheet.flatten(style).opacity).toBe(1);
     expect(StyleSheet.flatten(style).alignItems).toBe('center');
   });
 

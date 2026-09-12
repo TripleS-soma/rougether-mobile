@@ -76,6 +76,7 @@ export function StackedHouseDemo({ viewportOnly = false }: { viewportOnly?: bool
       floors={DEMO_FLOORS}
       furniture={DEMO_FURNITURE}
       enabled={enabled}
+      integratedEnabled={false}
       previewTheme={theme.id}
       onVisitFriend={(friend) => setVisited(friend.name)}
     />
@@ -124,6 +125,7 @@ export function StackedHouseDemo({ viewportOnly = false }: { viewportOnly?: bool
           floors={DEMO_FLOORS}
           furniture={DEMO_FURNITURE}
           enabled={enabled}
+          integratedEnabled={false}
           previewTheme={theme.id}
         />
       )}

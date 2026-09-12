@@ -12,6 +12,7 @@ describe('stacked frame consumers', () => {
   ])('shows six rooms and restores matching legacy geometry after %s fails', async (coverKey) => {
     const ui = await render(
       <HousePreviewFrame
+        integratedEnabled={false}
         coverImageKey={coverKey}
         enabled
         maxMembers={6}
@@ -34,6 +35,7 @@ describe('stacked frame consumers', () => {
     // A different capacity gets its own image attempt, not a permanently broken flag.
     await ui.rerender(
       <HousePreviewFrame
+        integratedEnabled={false}
         coverImageKey={coverKey}
         enabled
         maxMembers={2}
@@ -52,6 +54,7 @@ describe('stacked frame consumers', () => {
     const onSelect = jest.fn();
     const ui = await render(
       <HouseCoverPicker
+        integratedEnabled={false}
         enabled
         maxMembers={2}
         covers={[{ code: name, name, coverImageKey: coverKey }]}

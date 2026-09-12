@@ -1,10 +1,15 @@
 import {
   DEFAULT_HOUSE_COVER_KEY,
   STACKED_HOUSE_THEMES,
-  resolveHouseFrame,
+  resolveHouseFrame as resolveFrame,
+  type HouseFrameOptions,
   houseWindowSeats,
   STACKED_HOUSES_ENABLED,
 } from '@/resources/house-frame';
+
+// Keep the published-frame fallback contract independent of the integrated release.
+const resolveHouseFrame = (key?: string | null, options: HouseFrameOptions = {}) =>
+  resolveFrame(key, { ...options, integratedEnabled: false });
 
 describe('staged house frame contract', () => {
   it('keeps legacy holes and portrait rooms aligned during fallback', () => {

@@ -1,5 +1,6 @@
 import { Image } from 'expo-image';
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import {
   Animated,
   Easing,
@@ -19,6 +20,8 @@ import Reanimated, {
   withSpring,
 } from 'react-native-reanimated';
 
+import { HouseFrameArtwork } from '@/components/room/house-frame-artwork';
+import { HouseRoomAperture } from '@/components/room/house-room-aperture';
 import { type HouseCover } from '@/components/room/house-cover-picker';
 import { HouseOrderDots } from '@/components/room/house-order-dots';
 import { useHouseFrame } from '@/hooks/use-house-frame';
@@ -53,12 +56,20 @@ import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
 import { CrownPictogram, HousePictogram, TargetPictogram } from '@/components/ui/pictograms';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { characterIdForMember } from '@/hooks/use-member-room-previews';
-import { FixedOverlay, Radius, ShadowColor, Spacing } from '@/constants/theme';
+import {
+  FixedOverlay,
+  HouseSceneColors,
+  HouseSceneGroundColors,
+  Radius,
+  ShadowColor,
+  Spacing,
+} from '@/constants/theme';
 import { useBottomNavInset, useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useResolvedScheme, useTokens, useTypography } from '@/hooks/use-tokens';
 import { assetSource } from '@/resources/asset';
 import { houseBackgroundKey } from '@/resources/house-background';
+import { layoutHouseScene } from '@/resources/house-scene-layout';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
 import { DEFAULT_HOUSES } from '@/mocks/fixtures';
 import { VACANT_FLOOR } from '@/resources/furniture';
@@ -92,7 +103,7 @@ const RAIL_TOP_GAP = 106;
 
 // RoomCatalogProps: 좌석 타일 미리보기가 해석할 카탈로그 4종 (#691).
 export type HouseScreenProps = RoomCatalogProps &
-  Pick<HouseFrameOptions, 'enabled' | 'previewTheme'> &
+  Pick<HouseFrameOptions, 'enabled' | 'integratedEnabled' | 'previewTheme'> &
   ScrollRestoreProps & {
     houses?: House[];
     /** True while my houses are loading from the API. */
@@ -219,6 +230,7 @@ export const HouseScreen = memo(function HouseScreen({
   getInitialScrollY,
   onScrollY,
   enabled,
+  integratedEnabled,
   previewTheme,
 }: HouseScreenProps) {
   const t = useTokens();
@@ -228,6 +240,7 @@ export const HouseScreen = memo(function HouseScreen({
   // 따라 바뀌던 하늘은 집별 배경 아트(#989)가 대체했다 — 정적 색만 남긴다.
   const skyColor = t.sky;
   const headerInset = useHeaderInsetStyle();
+  const safeInsets = useContext(SafeAreaInsetsContext);
   // 글래스 알약 바텀바가 떠 있으면 잔디·집 프레임이 그 밑에 안 깔리게 (#1049).
   const navInset = useBottomNavInset();
   // 레일을 스위처 줄 아래로 내려 첫 버튼(목표)이 Lv.·멤버 필과 같은 라인에
@@ -346,9 +359,39 @@ export const HouseScreen = memo(function HouseScreen({
     maxMembers: currentHouse?.maxMembers,
     minimumSeats: displayCells.length,
     enabled,
+    integratedEnabled,
     previewTheme,
   });
-  const coverKey = frame.assetKey;
+  const integrated = frame.kind === 'integrated';
+  const sceneGroundColor =
+    frame.scene && HouseSceneGroundColors[frame.scene.themeId]?.[frame.scene.capacity];
+  const sceneLayout = useMemo(() => {
+    if (!integrated || !frame.scene || headerBottom <= 0) return undefined;
+    const left = (safeInsets?.left ?? 0) + Spacing.two;
+    const right = (safeInsets?.right ?? 0) + Spacing.two;
+    return layoutHouseScene(frame.scene, houseViewport, {
+      x: left,
+      y: headerBottom + Spacing.two,
+      width: houseViewport.width - left - right,
+      height: houseViewport.height - headerBottom - navInset - Spacing.two * 2,
+    });
+  }, [
+    integrated,
+    frame.scene,
+    houseViewport,
+    headerBottom,
+    navInset,
+    safeInsets?.left,
+    safeInsets?.right,
+  ]);
+  const visibleWindowRects = sceneLayout
+    ? sceneLayout.roomRects.map((rect) => ({
+        left: rect.x,
+        top: rect.y,
+        width: rect.width,
+        height: rect.height,
+      }))
+    : frame.windowRects;
   const isThreeStorey = frame.kind === 'stacked' && frame.windowRects.length === 6;
   const frameBottomGap = isThreeStorey ? Spacing.three : Spacing.six;
   // Three portrait floors can exceed the first viewport at full screen width.
@@ -365,7 +408,7 @@ export const HouseScreen = memo(function HouseScreen({
       : undefined;
   // 서버가 가진 coverImageKey의 테마 경로에서 전면 배경을 파생한다. 집 전환과
   // 같은 렌더에 키가 바뀌므로 별도 저장 상태 없이 항상 프레임과 맞는다.
-  const backgroundKey = houseBackgroundKey(frame.canonicalKey, scheme);
+  const backgroundKey = integrated ? null : houseBackgroundKey(frame.canonicalKey, scheme);
   // Preserve adapter row order; first members stay on the bottom story.
   const windowSlots = useMemo(
     () => houseWindowSeats(seatRows, frame.windowRects.length),
@@ -585,6 +628,34 @@ export const HouseScreen = memo(function HouseScreen({
     const d = camDefault();
     animateCamTo(d.scale, d.tx, d.ty);
   };
+  useEffect(() => {
+    if (!integrated) return;
+    handleDragCancel();
+    tileRects.current.clear();
+    const d = camDefault();
+    camScale.value = d.scale;
+    camTx.value = d.tx;
+    camTy.value = d.ty;
+    zoomedSV.value = false;
+    applyZoomed(false);
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+    onScrollY?.(0);
+  }, [
+    integrated,
+    frame.assetKey,
+    handleDragCancel,
+    sceneLayout?.scale,
+    sceneLayout?.protectedRect.x,
+    sceneLayout?.protectedRect.y,
+    houseViewport.width,
+    houseViewport.height,
+    camScale,
+    camTx,
+    camTy,
+    zoomedSV,
+    applyZoomed,
+    onScrollY,
+  ]);
   // 거의 원배율(축소 조망)이면 딱 1×로 스냅 — 기본(방 뷰) 복귀는 ⟲로.
   const snapCamIfNearDefault = useStableCallback(() => {
     if (camScale.value < 1.05) animateCamTo(1, 0, 0);
@@ -769,7 +840,7 @@ export const HouseScreen = memo(function HouseScreen({
   // 더블탭 줌 제거 (#727) — 판정 대기(260ms) 때문에 방문 탭 반응이 늦었다.
   // 줌은 핀치 전용으로 남고, 탭은 즉시 방문한다.
 
-  const renderSeatTile = (room: RoomCell, seatIdx: number, fill = false) => {
+  const renderSeatTile = (room: RoomCell, seatIdx: number, fill = false, roomWidth?: number) => {
     seatRooms.set(seatIdx, room);
     const empty = room.vacant || !!isKickedMember?.(room.name);
     // 내 타일 이름은 라이브 userName(=현재 닉네임)으로 — houses는 프로필 저장 시
@@ -791,7 +862,10 @@ export const HouseScreen = memo(function HouseScreen({
         lastSeenLabel={room.lastSeenLabel}
         color={room.color}
         fill={fill}
-        squareFrame={frame.kind === 'stacked'}
+        squareFrame={frame.kind !== 'legacy'}
+        metaPlacement={
+          integrated ? (roomWidth != null && roomWidth < Spacing.six ? 'hidden' : 'top') : 'bottom'
+        }
         dragging={dragSeat === seatIdx}
         zoomed={zoomed}
         preview={preview}
@@ -810,6 +884,129 @@ export const HouseScreen = memo(function HouseScreen({
     );
   };
 
+  const houseFrameView = (
+    <CoachTarget id="house-frame">
+      <Animated.View
+        testID="house-frame-viewport"
+        style={[
+          styles.cameraViewportOuter,
+          fittedFrameWidth == null ? null : { maxWidth: fittedFrameWidth, alignSelf: 'center' },
+          { opacity: switchFade, transform: [{ translateX: switchX }] },
+        ]}>
+        <GestureDetector gesture={cameraGesture}>
+          <View style={[styles.cameraViewport, integrated && styles.integratedCameraViewport]}>
+            <Reanimated.View
+              testID="house-scene-camera"
+              style={[
+                camStyle,
+                integrated
+                  ? {
+                      width: houseViewport.width,
+                      height: houseViewport.height,
+                      opacity: sceneLayout ? 1 : 0,
+                    }
+                  : null,
+              ]}>
+              <GestureDetector gesture={frameDragGesture}>
+                <View
+                  style={[
+                    styles.frameWrap,
+                    integrated
+                      ? { height: houseViewport.height }
+                      : { aspectRatio: frame.aspectRatio },
+                  ]}>
+                  {/* 프레임 측정용 — 반응자 프롭이 있는 부모에는 테스트에서
+                      layout 이벤트가 닿지 않아 absolute-fill 형제로 잰다. */}
+                  <View
+                    testID="frame-camera"
+                    pointerEvents="none"
+                    style={StyleSheet.absoluteFill}
+                    onLayout={(e) => {
+                      const changed =
+                        Math.abs(frameSize.current.w - e.nativeEvent.layout.width) > 1 ||
+                        Math.abs(frameSize.current.h - e.nativeEvent.layout.height) > 1;
+                      frameSize.current = {
+                        w: e.nativeEvent.layout.width,
+                        h: e.nativeEvent.layout.height,
+                      };
+                      // clampCam이 워클릿에서 읽는 사본 (#776).
+                      frameSizeSV.value = frameSize.current;
+                      // Capacity changes, fallback and resizing invalidate the old camera.
+                      if (changed) {
+                        const d = camDefault();
+                        camScale.value = d.scale;
+                        camTx.value = d.tx;
+                        camTy.value = d.ty;
+                        zoomedSV.value = false;
+                        applyZoomed(false);
+                      }
+                    }}
+                  />
+                  {/* 창문 뒤 좌석 — 프레임 PNG의 투명 창문으로 방이 보인다. */}
+                  {visibleWindowRects.map((rect, w) => {
+                    const seatIdx = windowSlots[w];
+                    return (
+                      <View
+                        key={`window-${w}`}
+                        testID={`house-window-${w}`}
+                        style={[
+                          styles.windowSlot,
+                          rect,
+                          seatIdx != null && dragSeat === seatIdx && styles.dragRow,
+                        ]}>
+                        <HouseRoomAperture
+                          rect={frame.scene?.roomRects[w]}
+                          dragging={seatIdx != null && dragSeat === seatIdx}>
+                          {seatIdx != null ? (
+                            renderSeatTile(
+                              displayCells[seatIdx],
+                              seatIdx,
+                              true,
+                              sceneLayout?.roomRects[w].width,
+                            )
+                          ) : (
+                            /* 정원 밖 창문 — 조용한 벽 패널. */
+                            <View
+                              style={[styles.windowFiller, { backgroundColor: t.surfaceMuted }]}
+                              testID="window-filler"
+                            />
+                          )}
+                        </HouseRoomAperture>
+                      </View>
+                    );
+                  })}
+                  <HouseFrameArtwork
+                    frame={frame}
+                    label={`${currentHouse.name} 집`}
+                    onError={onFrameError}
+                    groundColor={sceneGroundColor}
+                    sceneLayout={sceneLayout}
+                    testID="house-frame"
+                  />
+                </View>
+              </GestureDetector>
+            </Reanimated.View>
+          </View>
+        </GestureDetector>
+        {/* ⟲ 리셋 버튼은 카메라 제스처를 가진 cameraViewport
+                  바깥, 그 형제로 둔다 — zoomed 동안 부모의 capture move 핸들러가
+                  버튼 위 탭의 미세한 손가락 이동마저 가로채 onPress가 취소됐다
+                  (실기기, #307 후속). cameraViewportOuter가 절대배치 기준. */}
+        {zoomed ? (
+          <Pressable
+            onPress={resetCam}
+            accessibilityRole="button"
+            accessibilityLabel="확대 종료"
+            style={styles.camReset}>
+            <GlassSurface style={styles.iconBtnFace} fallbackColor={t.surface}>
+              <Icon name="refresh" size={16} color={t.text} />
+            </GlassSurface>
+          </Pressable>
+        ) : null}
+      </Animated.View>
+    </CoachTarget>
+  );
+
   // 요약 줄 파생 (#875) — 시트가 목록 위에 그리던 것과 같은 값.
   const activeMissions = missions.filter((m) => m.status === 'ACTIVE');
   const activeMissionCount = activeMissions.length;
@@ -820,12 +1017,94 @@ export const HouseScreen = memo(function HouseScreen({
       linkedRoutines.some((r) => r.missionId === m.id && r.completedToday),
   ).length;
 
+  const housePills = (
+    <View
+      style={[
+        styles.framePillsRow,
+        integrated && styles.integratedPills,
+        // Tall roofs leave quiet corners beside the balloon/roof peak.
+        // Float metadata there instead of pushing all three floors down.
+        isThreeStorey ? [styles.floatingFramePills, { top: headerBottom }] : null,
+      ]}>
+      <GlassSurface interactive={false} fallbackColor={FixedOverlay.skyPill} style={styles.skyPill}>
+        <HousePictogram size={12} />
+        <Text style={[Typography.supporting, { color: t.onTint }]}>
+          Lv.{currentHouse.level ?? 0}
+          {currentHouse.growthPoints != null ? ` · ${currentHouse.growthPoints % 100}/100` : ''}
+        </Text>
+      </GlassSurface>
+      <GlassSurface interactive={false} fallbackColor={FixedOverlay.skyPill} style={styles.skyPill}>
+        <Text style={[Typography.supporting, { color: t.onTint }]}>
+          {/* Vacant seats are not members — count the real ones. */}
+          멤버 {currentHouse.memberCount ?? manageableMembers(currentHouse).length}
+          {currentHouse.maxMembers ? ` / ${currentHouse.maxMembers}` : ''}
+        </Text>
+      </GlassSurface>
+    </View>
+  );
+  const houseActions = (
+    <>
+      {onOpenMissions ? (
+        <CoachTarget id="house-missions">
+          <RailButton
+            compact={integrated}
+            icon={<TargetPictogram size={20} />}
+            label="목표"
+            onPress={onOpenMissions}
+            /* 줄에서 버튼이 되며 '오늘 1/1'이 눈에서 사라진다 (#875가 드러내려던
+                 것이다) — 라벨에는 그대로 담고, 받을 보상은 점으로 남긴다. */
+            accessibilityLabel={[
+              '우리 집의 목표',
+              activeMissionCount > 0
+                ? `오늘 ${contributedTodayCount}/${activeMissionCount} 기여`
+                : '진행 중 없음',
+              claimableCount > 0 ? `받을 보상 ${claimableCount}개` : null,
+            ]
+              .filter(Boolean)
+              .join(', ')}
+            badge={claimableCount > 0 ? t.warning : undefined}
+            t={t}
+            Typography={Typography}
+          />
+        </CoachTarget>
+      ) : null}
+      <CoachTarget id="house-search">
+        <RailButton
+          compact={integrated}
+          icon={<Icon name="search" size={20} color={t.text} />}
+          label="집 탐색"
+          onPress={onOpenSearch}
+          accessibilityLabel="집 탐색"
+          t={t}
+          Typography={Typography}
+        />
+      </CoachTarget>
+      <RailButton
+        compact={integrated}
+        icon={<Icon name="members" size={20} color={t.text} />}
+        label="집 관리"
+        onPress={onOpenMembers}
+        accessibilityLabel="집 관리"
+        t={t}
+        Typography={Typography}
+      />
+    </>
+  );
+
   return (
-    <View style={[styles.screen, screenStyle, { backgroundColor: skyColor }]} testID="house-screen">
+    <View
+      style={[styles.screen, screenStyle, { backgroundColor: sceneGroundColor ?? skyColor }]}
+      testID="house-screen">
       {/* 하단 탭은 AppShell의 형제라 이 absoluteFill 배경에 포함되지 않는다.
           9:16 마스터를 cover/center로 그려 다양한 화면 높이에서도 가장자리만
           자연스럽게 잘리고 집 뒤 핵심 여백은 유지한다. */}
-      <View style={StyleSheet.absoluteFill} pointerEvents="none" testID="house-background-layer">
+      <View
+        style={[
+          StyleSheet.absoluteFill,
+          integrated && scheme === 'dark' && { backgroundColor: HouseSceneColors.nightTint },
+        ]}
+        pointerEvents="none"
+        testID="house-background-layer">
         {backgroundKey ? (
           <Image
             source={assetSource(backgroundKey)}
@@ -843,7 +1122,13 @@ export const HouseScreen = memo(function HouseScreen({
       {/* 타일 드래그 중에는 스크롤이 제스처를 뺏지 않게 잠근다 (#278). */}
       <PawRefreshScroll
         scrollRef={scrollRef}
-        {...scrollRestore}
+        {...(integrated
+          ? {
+              contentOffset: { x: 0, y: 0 },
+              onScroll: scrollRestore.onScroll,
+              scrollEventThrottle: scrollRestore.scrollEventThrottle,
+            }
+          : scrollRestore)}
         onLayout={measureHouseViewport}
         onRefresh={onRefresh}
         // 자리 드래그 중 당김 잠금 — 놓는 순간 새로고침이 배치를 끊지 않게.
@@ -852,177 +1137,56 @@ export const HouseScreen = memo(function HouseScreen({
         // 이 화면은 폭 제한에서 뺀다 (#986) — 하늘이 화면을 꽉 채워야 하고,
         // 태블릿에서 560으로 잘리면 좌우가 크림으로 남아 목적과 반대가 된다.
         // 프레임은 aspectRatio라 폭을 따라 커지지만, 좌석 좌표는 정규화라 안전.
-        contentContainerStyle={[styles.body, navInset ? { paddingBottom: navInset } : null]}
-        scrollEnabled={dragSeat == null}
+        contentContainerStyle={[
+          styles.body,
+          !integrated && navInset ? { paddingBottom: navInset } : null,
+        ]}
+        scrollEnabled={!integrated && dragSeat == null}
         testID="house-scroll">
         {/* 프레임 모드(#287) — 하늘 위에 스위처·집 프레임, 방은 창문 안에.
             커버가 없어도 기본 프레임으로 통일(#328)이라 유일한 경로다. */}
         {/* 배경·비는 #989가 화면 루트의 absoluteFill 레이어로 옮겼다 — 여기선
             안전영역 여백만 준다(헤더바가 없어 하늘이 맨 위부터 시작한다). */}
         <View
-          style={[styles.skySection, headerInset, { paddingBottom: frameBottomGap }]}
+          style={[
+            styles.skySection,
+            !integrated && headerInset,
+            { paddingBottom: integrated ? 0 : frameBottomGap },
+          ]}
           testID="sky-section">
-          <HouseSwitcher
-            icon={
-              currentHouse.myRole === 'OWNER' ? (
-                <CrownPictogram size={14} />
-              ) : (
-                <HousePictogram size={14} />
-              )
-            }
-            title={currentHouse.name}
-            showArrows={totalPages > 1}
-            onPrev={prevHouse}
-            onNext={nextHouse}
-          />
-          {/* 대기 카드 페이지(#648)는 내 집이 아니라 정렬 대상에서 빠진다. */}
-          <HouseOrderDots
-            houses={orderableHouses}
-            pendingCount={pendingList.length}
-            index={houseIndex}
-            onReorder={onReorderHouses}
-          />
-          <View onLayout={measureHeaderBottom} testID="house-header-end" />
+          {integrated ? houseFrameView : null}
+          <View style={integrated ? [styles.integratedHeader, headerInset] : undefined}>
+            <HouseSwitcher
+              icon={
+                currentHouse.myRole === 'OWNER' ? (
+                  <CrownPictogram size={14} />
+                ) : (
+                  <HousePictogram size={14} />
+                )
+              }
+              title={currentHouse.name}
+              showArrows={totalPages > 1}
+              onPrev={prevHouse}
+              onNext={nextHouse}
+            />
+            {/* 대기 카드 페이지(#648)는 내 집이 아니라 정렬 대상에서 빠진다. */}
+            <HouseOrderDots
+              houses={orderableHouses}
+              pendingCount={pendingList.length}
+              index={houseIndex}
+              onReorder={onReorderHouses}
+            />
+            {integrated ? housePills : null}
+            {integrated ? <View style={styles.integratedActions}>{houseActions}</View> : null}
+            <View onLayout={measureHeaderBottom} testID="house-header-end" />
+          </View>
           {/* 레벨·멤버 pill — 프레임 여백과 정렬된 행 (모서리 절대배치는
                 화면 끝에 걸려 보였다). 고정 밝기 흰 스크림 위라 onTint 잉크. */}
-          <View
-            style={[
-              styles.framePillsRow,
-              // Tall roofs leave quiet corners beside the balloon/roof peak.
-              // Float metadata there instead of pushing all three floors down.
-              isThreeStorey ? [styles.floatingFramePills, { top: headerBottom }] : null,
-            ]}>
-            <GlassSurface
-              interactive={false}
-              fallbackColor={FixedOverlay.skyPill}
-              style={styles.skyPill}>
-              <HousePictogram size={12} />
-              <Text style={[Typography.supporting, { color: t.onTint }]}>
-                Lv.{currentHouse.level ?? 0}
-                {currentHouse.growthPoints != null
-                  ? ` · ${currentHouse.growthPoints % 100}/100`
-                  : ''}
-              </Text>
-            </GlassSurface>
-            <GlassSurface
-              interactive={false}
-              fallbackColor={FixedOverlay.skyPill}
-              style={styles.skyPill}>
-              <Text style={[Typography.supporting, { color: t.onTint }]}>
-                {/* Vacant seats are not members — count the real ones. */}
-                멤버 {currentHouse.memberCount ?? manageableMembers(currentHouse).length}
-                {currentHouse.maxMembers ? ` / ${currentHouse.maxMembers}` : ''}
-              </Text>
-            </GlassSurface>
-          </View>
+          {!integrated ? housePills : null}
           {/* 남는 세로를 여기서 먹어 집을 잔디에 붙인다 (#986). CoachTarget이
               flex 자식이라 안쪽 View에 auto 마진을 줘도 안 먹는다 — 명시 스페이서. */}
-          <View style={styles.skySpacer} />
-          <CoachTarget id="house-frame">
-            <Animated.View
-              testID="house-frame-viewport"
-              style={[
-                styles.cameraViewportOuter,
-                fittedFrameWidth == null
-                  ? null
-                  : { maxWidth: fittedFrameWidth, alignSelf: 'center' },
-                { opacity: switchFade, transform: [{ translateX: switchX }] },
-              ]}>
-              <GestureDetector gesture={cameraGesture}>
-                <View style={styles.cameraViewport}>
-                  <Reanimated.View style={camStyle}>
-                    <GestureDetector gesture={frameDragGesture}>
-                      <View style={[styles.frameWrap, { aspectRatio: frame.aspectRatio }]}>
-                        {/* 프레임 측정용 — 반응자 프롭이 있는 부모에는 테스트에서
-                      layout 이벤트가 닿지 않아 absolute-fill 형제로 잰다. */}
-                        <View
-                          testID="frame-camera"
-                          pointerEvents="none"
-                          style={StyleSheet.absoluteFill}
-                          onLayout={(e) => {
-                            const changed =
-                              Math.abs(frameSize.current.w - e.nativeEvent.layout.width) > 1 ||
-                              Math.abs(frameSize.current.h - e.nativeEvent.layout.height) > 1;
-                            frameSize.current = {
-                              w: e.nativeEvent.layout.width,
-                              h: e.nativeEvent.layout.height,
-                            };
-                            // clampCam이 워클릿에서 읽는 사본 (#776).
-                            frameSizeSV.value = frameSize.current;
-                            // Capacity changes, fallback and resizing invalidate the old camera.
-                            if (changed) {
-                              const d = camDefault();
-                              camScale.value = d.scale;
-                              camTx.value = d.tx;
-                              camTy.value = d.ty;
-                              zoomedSV.value = false;
-                              applyZoomed(false);
-                            }
-                          }}
-                        />
-                        {/* 창문 뒤 좌석 — 프레임 PNG의 투명 창문으로 방이 보인다. */}
-                        {frame.windowRects.map((rect, w) => {
-                          const seatIdx = windowSlots[w];
-                          return (
-                            <View
-                              key={`window-${w}`}
-                              testID={`house-window-${w}`}
-                              style={[
-                                styles.windowSlot,
-                                rect,
-                                seatIdx != null && dragSeat === seatIdx && styles.dragRow,
-                              ]}>
-                              {seatIdx != null ? (
-                                renderSeatTile(displayCells[seatIdx], seatIdx, true)
-                              ) : (
-                                /* 정원 밖 창문 — 조용한 벽 패널. */
-                                <View
-                                  style={[styles.windowFiller, { backgroundColor: t.surfaceMuted }]}
-                                  testID="window-filler"
-                                />
-                              )}
-                            </View>
-                          );
-                        })}
-                        {/* Android는 Image 계열이 pointerEvents prop을 무시하고 터치를
-                      삼킨다(#401) — ViewGroup 래퍼가 확실하게 투과시킨다. */}
-                        <View style={StyleSheet.absoluteFill} pointerEvents="none">
-                          <Image
-                            key={coverKey}
-                            source={assetSource(coverKey)}
-                            style={StyleSheet.absoluteFill}
-                            contentFit="fill"
-                            transition={frame.kind === 'stacked' ? 0 : 120}
-                            onError={onFrameError}
-                            recyclingKey={coverKey}
-                            // 디스크 캐시 유지 — 앱 재실행 후에도 재요청 없이 즉시 (#463).
-                            cachePolicy="memory-disk"
-                            accessibilityLabel={`${currentHouse.name} 집`}
-                            testID="house-frame"
-                          />
-                        </View>
-                      </View>
-                    </GestureDetector>
-                  </Reanimated.View>
-                </View>
-              </GestureDetector>
-              {/* ⟲ 리셋 버튼은 카메라 제스처를 가진 cameraViewport
-                  바깥, 그 형제로 둔다 — zoomed 동안 부모의 capture move 핸들러가
-                  버튼 위 탭의 미세한 손가락 이동마저 가로채 onPress가 취소됐다
-                  (실기기, #307 후속). cameraViewportOuter가 절대배치 기준. */}
-              {zoomed ? (
-                <Pressable
-                  onPress={resetCam}
-                  accessibilityRole="button"
-                  accessibilityLabel="확대 종료"
-                  style={styles.camReset}>
-                  <GlassSurface style={styles.iconBtnFace} fallbackColor={t.surface}>
-                    <Icon name="refresh" size={16} color={t.text} />
-                  </GlassSurface>
-                </Pressable>
-              ) : null}
-            </Animated.View>
-          </CoachTarget>
+          {!integrated ? <View style={styles.skySpacer} /> : null}
+          {!integrated ? houseFrameView : null}
         </View>
         {/* 프레임 모드에선 방이 창문 안에 그려져 이 격자가 비는데, paddingTop이
             남아 잔디 아래 24px 크림 띠를 만들었다 (#986). 내용이 있을 때만 그린다. */}
@@ -1058,49 +1222,11 @@ export const HouseScreen = memo(function HouseScreen({
       {/* 화면 고정 플로팅 레일 (#986) — 헤더바를 없애고 하늘이 맨 위부터
           시작하게 하려면 액션이 아트 **위에** 떠야 한다. 흰 원 + 라벨은
           배경이 하늘색이든 다크모드든 대비가 보장되는 형태다(#232). */}
-      <View style={[styles.rail, railInset]} pointerEvents="box-none">
-        {onOpenMissions ? (
-          <CoachTarget id="house-missions">
-            <RailButton
-              icon={<TargetPictogram size={20} />}
-              label="목표"
-              onPress={onOpenMissions}
-              /* 줄에서 버튼이 되며 '오늘 1/1'이 눈에서 사라진다 (#875가 드러내려던
-                 것이다) — 라벨에는 그대로 담고, 받을 보상은 점으로 남긴다. */
-              accessibilityLabel={[
-                '우리 집의 목표',
-                activeMissionCount > 0
-                  ? `오늘 ${contributedTodayCount}/${activeMissionCount} 기여`
-                  : '진행 중 없음',
-                claimableCount > 0 ? `받을 보상 ${claimableCount}개` : null,
-              ]
-                .filter(Boolean)
-                .join(', ')}
-              badge={claimableCount > 0 ? t.warning : undefined}
-              t={t}
-              Typography={Typography}
-            />
-          </CoachTarget>
-        ) : null}
-        <CoachTarget id="house-search">
-          <RailButton
-            icon={<Icon name="search" size={20} color={t.text} />}
-            label="집 탐색"
-            onPress={onOpenSearch}
-            accessibilityLabel="집 탐색"
-            t={t}
-            Typography={Typography}
-          />
-        </CoachTarget>
-        <RailButton
-          icon={<Icon name="members" size={20} color={t.text} />}
-          label="집 관리"
-          onPress={onOpenMembers}
-          accessibilityLabel="집 관리"
-          t={t}
-          Typography={Typography}
-        />
-      </View>
+      {!integrated ? (
+        <View style={[styles.rail, railInset]} pointerEvents="box-none">
+          {houseActions}
+        </View>
+      ) : null}
     </View>
   );
 });
@@ -1188,6 +1314,20 @@ const styles = StyleSheet.create({
   },
   // 여백 없이 화면 폭을 다 쓴다 — 기본 뷰(원배율)에서 집이 최대한 크게,
   // 잘리는 부분 없이 보이도록 (높이는 aspectRatio가 따라온다).
+  integratedHeader: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 3 },
+  integratedPills: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: Spacing.two,
+  },
+  integratedActions: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: Spacing.two,
+    marginTop: Spacing.two,
+  },
+  integratedCameraViewport: { marginTop: 0 },
   cameraViewport: {
     marginTop: Spacing.two,
     overflow: 'hidden',
@@ -1218,6 +1358,7 @@ const styles = StyleSheet.create({
   // 프레임 PNG의 투명 창문 자리 — 좌석 타일이 이 안을 가득 채운다.
   windowSlot: {
     position: 'absolute',
+    zIndex: 1,
   },
   windowFiller: {
     flex: 1,
