@@ -4,6 +4,7 @@ import { Gesture } from 'react-native-gesture-handler';
 
 import {
   backTargetFor,
+  EDGE_BACK_DISABLED_SCREENS,
   EDGE_BACK_DISTANCE,
   EDGE_BACK_VELOCITY,
   EDGE_BACK_WIDTH,
@@ -64,9 +65,12 @@ export function useAppNavigation({
 
   // iOS sub-screen back supports full-width swipes (#1135), except on screens
   // that own horizontal gestures. Main tabs belong to the pager (#1143).
-  // Disable native recognition on tab roots so edge-back cannot claim the
-  // pager's touch before the JS navigation guard runs (#1143).
-  const edgeBackEnabled = Platform.OS === 'ios' && TAB_FOR_SCREEN[screen] == null;
+  // Disable native recognition on tab roots and while playing so edge-back
+  // cannot claim the pager's touch (#1143) or a game's input, even at the edge.
+  const edgeBackEnabled =
+    Platform.OS === 'ios' &&
+    TAB_FOR_SCREEN[screen] == null &&
+    !EDGE_BACK_DISABLED_SCREENS.has(screen);
   const edgeBackEnabledRef = useRef(false);
   edgeBackEnabledRef.current = edgeBackEnabled;
   const fullSwipeRef = useRef(false);
@@ -78,8 +82,8 @@ export function useAppNavigation({
   // 이 가드가 없을 때: 설정 탭에서 우향 스와이프 → 페이저(집)가 아니라
   // backTargetFor('myPage')='myRoom'으로 튀어 집을 건너뛰었다(당시 설정 탭).
   const edgeStartOkRef = useRef(false);
-  // Reconfigure only when crossing the tab/sub-screen boundary. Data renders
-  // and navigation between sub-screens must not replace an active gesture.
+  // Reconfigure only when recognition eligibility changes. Data renders and
+  // navigation between eligible sub-screens must not replace an active gesture.
   const edgeBackPan = useMemo(
     () =>
       Gesture.Pan()

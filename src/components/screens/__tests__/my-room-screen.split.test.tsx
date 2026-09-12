@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 
 import { flattenStyle } from '@/test-utils/style';
 
@@ -72,5 +72,13 @@ describe('MyRoomScreen 2단 레이아웃 (#1230)', () => {
     expect(ui.getByTestId('my-room-split')).toBeTruthy();
     expect(ui.getByTestId('calendar-grid')).toBeTruthy();
     expect(ui.getByRole('header', { name: calendarHeading(TODAY) })).toBeTruthy();
+  });
+
+  it('2단 방에서도 같은 미니게임 버튼으로 허브를 연다', async () => {
+    mockFrame = SPLIT;
+    const onOpenMinigames = jest.fn();
+    const ui = await render(<MyRoomScreen view="room" onOpenMinigames={onOpenMinigames} />);
+    await fireEvent.press(ui.getByRole('button', { name: '미니게임' }));
+    expect(onOpenMinigames).toHaveBeenCalledTimes(1);
   });
 });

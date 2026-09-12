@@ -18,6 +18,7 @@ const ICON_LABELS = {
   members: '멤버',
   kebab: '더보기',
   gift: '선물',
+  gamepad: '미니게임',
   sparkles: '반짝임',
   ticket: '티켓',
   trash: '삭제',
