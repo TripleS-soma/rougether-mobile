@@ -1,6 +1,8 @@
 import { ScrollViewStyleReset } from 'expo-router/html';
 import type { PropsWithChildren } from 'react';
 
+import { SERVICE_WORKER_REGISTER_SCRIPT } from '@/lib/web-service-worker';
+
 const WEB_GA_ID = 'G-P8V3RCKCD5';
 /** 계측을 켜는 유일한 호스트 — public/CNAME과 같은 값. */
 const WEB_HOST = 'app.rougether.com';
@@ -30,12 +32,7 @@ export default function Root({ children }: PropsWithChildren) {
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
         <ScrollViewStyleReset />
         <style dangerouslySetInnerHTML={{ __html: 'html,body{background:#FBF8F3}' }} />
-        <script
-          dangerouslySetInnerHTML={{
-            __html:
-              "if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('/sw.js'))}",
-          }}
-        />
+        <script dangerouslySetInnerHTML={{ __html: SERVICE_WORKER_REGISTER_SCRIPT }} />
         {/* GA4 — 웹앱 전용 속성 "루게더 웹앱"(랜딩·네이티브 앱과 분리). 네이티브 빌드에는
             포함되지 않는다. 배포 도메인에서만 켠다 — 로컬 expo start·로컬 export 미리보기가
             운영 속성의 사용자 수를 부풀리지 않게(네이티브 analytics.ts의 !__DEV__ 게이트와 같은 결). */}

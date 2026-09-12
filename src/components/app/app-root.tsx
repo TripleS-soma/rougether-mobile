@@ -29,13 +29,26 @@ import { useStartTab } from '@/hooks/use-start-tab';
 import { SCREEN_FOR_TAB } from '@/components/app/navigation';
 import { resetOnboardingMissions } from '@/hooks/use-onboarding-missions';
 import { track } from '@/lib/analytics';
-import { loadOnboarding, resetOnboarding, saveOnboarding } from '@/lib/onboarding-store';
+import {
+  claimLegacyOnboarding,
+  loadOnboarding,
+  resetOnboarding,
+  saveOnboarding,
+} from '@/lib/onboarding-store';
 import { markAppReady } from '@/lib/app-ready';
 import {
   loadStarterRoutineProgress,
   saveStarterRoutineProgress,
   type StarterRoutineProgress,
 } from '@/lib/starter-routine-store';
+
+/** 목표 id 집합이 같은지 — 순서·중복은 무시한다. 빈 집합끼리는 같다고 보지 않는다. */
+function sameGoalSet(local: string[], remote: string[]): boolean {
+  if (local.length === 0 || remote.length === 0) return false;
+  const a = new Set(local);
+  const b = new Set(remote);
+  return a.size === b.size && [...a].every((id) => b.has(id));
+}
 
 /**
  * App entry gate: on first launch shows the onboarding flow (intro → goals →
@@ -71,7 +84,7 @@ export function AppRoot() {
       // Local cache + server state + masters in one round; the server may be
       // unreachable (offline) — every remote call degrades to the local cache.
       const [saved, remote, goals, chars, starter] = await Promise.all([
-        loadOnboarding(),
+        loadOnboarding(userId),
         fetchOnboarding().catch(() => null),
         fetchGoals().catch(() => [] as GoalItem[]),
         fetchCharacters().catch(() => [] as CharacterItem[]),
@@ -82,17 +95,37 @@ export function AppRoot() {
       setLoadedUserId(userId);
       setStarterProgress(starter?.status === 'pending' ? starter : null);
       setServerGoals(goals.map(toOnboardingGoal));
+      const remoteGoalIds =
+        remote?.goals?.flatMap((g) => (g.goalId != null ? [String(g.goalId)] : [])) ?? [];
+      /**
+       * 기기에 남은 옛 온보딩 기록(계정 구분 없던 키)은 **이 계정 것일 때만** 쓴다
+       * (2026-09-11). 앱을 새로 깐 폰에서 새 계정으로 가입했는데 목표 설문도 미션도 없이
+       * 앱으로 들어갔다 — 안드로이드 자동 백업이 앞 설치의 이 키를 복원했거나 같은 기기의
+       * 앞 계정이 남긴 것이다.
+       *
+       * 주인 판별(#1299 리뷰): 옛 기록이 필요한 건 서버가 **미완료**인 계정뿐이다(캐릭터 저장
+       * 409로 completed=false인 옛 사용자) — 서버가 완료면 서버가 진실이라 옮기지도 지우지도
+       * 않는다. 미완료 계정은 기록의 **목표 집합이 서버에 저장된 목표 집합과 같을 때만** 주인이다.
+       * 같은 온보딩이 로컬(문자열 id)과 서버(goalId)에 함께 저장했기 때문이다. goalId는 공용
+       * 카탈로그 id라 "하나라도 겹침"은 같은 목표를 고른 다른 계정도 통과했다. 새 계정은 서버
+       * 목표가 비어 있어 같을 수 없다. 서버에 못 닿으면(오프라인) 종전대로 믿되 옮기지는 않는다.
+       */
+      const legacyOwned =
+        saved?.legacy === true &&
+        (remote == null ||
+          (remote.completed !== true && sameGoalSet(saved.data.goals, remoteGoalIds)));
+      const local = saved && (!saved.legacy || legacyOwned) ? saved.data : null;
+      if (saved && legacyOwned && remote != null && userId != null)
+        void claimLegacyOnboarding(userId, saved.data);
       const remoteCharacter =
         remote?.selectedCharacterId != null
           ? toAppCharacterId(remote.selectedCharacterId, chars)
           : undefined;
       if (remoteCharacter) setCharacterId(remoteCharacter);
-      else if (saved) setCharacterId(saved.characterId);
-      const remoteGoalIds =
-        remote?.goals?.flatMap((g) => (g.goalId != null ? [String(g.goalId)] : [])) ?? [];
+      else if (local) setCharacterId(local.characterId);
       if (remoteGoalIds.length > 0) setSelectedGoalIds(remoteGoalIds);
-      else if (saved) setSelectedGoalIds(saved.goals);
-      setOnboarded(remote?.completed === true || saved != null);
+      else if (local) setSelectedGoalIds(local.goals);
+      setOnboarded(remote?.completed === true || local != null);
     })();
     return () => {
       active = false;
@@ -114,7 +147,7 @@ export function AppRoot() {
   // 참조 고정 — 셸을 거쳐 memo된 SettingsScreen까지 흘러가는 콜백이라
   // AppRoot 리렌더가 설정 화면 memo를 뚫지 않게 한다 (#539 결).
   const replayOnboarding = useCallback(() => {
-    void resetOnboarding();
+    void resetOnboarding(getSessionUserId());
     // 미션 완료/스킵 플래그도 지운다 — 슬라이드 후 체인이 다시 시작 (#571).
     void resetOnboardingMissions();
     setReplaying(true);
@@ -177,7 +210,7 @@ export function AppRoot() {
             goals: goals.length,
             nickname: nickname ? 'set' : 'skipped',
           });
-          void saveOnboarding({ characterId: chosen, goals });
+          void saveOnboarding({ characterId: chosen, goals }, userId);
           // Push the selections to the server, best-effort: goal ids are
           // numeric only when the server master supplied them, and the
           // character save can 409 (CHARACTER_NOT_OWNED) for legacy users.

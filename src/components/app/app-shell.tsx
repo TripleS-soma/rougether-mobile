@@ -50,6 +50,7 @@ import { fetchGachaRewards } from '@/api';
 import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furniture';
 import { usePagerLock } from '@/components/app/use-pager-lock';
 import { useTabScroll } from '@/components/app/use-tab-scroll';
+import { MinigameActiveContext, useMinigameSurface } from '@/components/app/use-minigame-surface';
 
 // 내비게이션 상수·backTargetFor는 navigation.ts로 이동 (#692) — 기존
 // 임포터(테스트 등)를 위한 재수출.
@@ -115,6 +116,7 @@ export function AppShell({
   // 위젯에 넘길 실효 라이트/다크 (#746) — 앱 테마 모드 설정이 적용된 값.
   const resolvedScheme = useResolvedScheme();
   const [screen, setScreen] = useState<Screen>(initialScreen);
+  const minigames = useMinigameSurface({ screen, setScreen });
   // Remember where the add/edit-routine screen was opened from, so its back
   // button returns to the right place (my-room or routine manage).
   const [addReturnScreen, setAddReturnScreen] = useState<Screen>('routineManage');
@@ -166,6 +168,7 @@ export function AppShell({
     attendance,
     attendancePending,
     openAttendance,
+    openAttendanceAfterFirstCompletion,
     openFurnitureStudio,
     openWalletHistory,
     sheets: attendanceSheets,
@@ -369,6 +372,8 @@ export function AppShell({
     // 무효화 누락 2건 (리팩토링 3묶음): 가져온 루틴·초대 보상이 즉시 보이게.
     onRoutinesImported: myRoomData.reload,
     onWalletChanged: myRoomData.refreshWallet,
+    // 첫 온보딩 직후 1회만 (#1007) — 온보딩 다시 보기는 미션 건너뛰기가 켜진 쪽이다.
+    offerInvitePaste: startMissions && !missionSkipEnabled,
   });
   // 나의 방 페이지 배선 (#692 5단계) — 나의 방 탭 페이지와 서브화면 4종
   // (루틴 관리·추가·카테고리 관리·알림 목록)의 훅·콜백·JSX 소유.
@@ -377,6 +382,8 @@ export function AppShell({
     data: myRoomData,
     nickname,
     missionLinks: { toggleWithMissionGuard, houseCategoryIds, addRoutineWithMission },
+    // 그날 첫 완료 → 출석 시트 자동 출석 (#1294).
+    onCompletedToday: openAttendanceAfterFirstCompletion,
     character: { wornCharacterId, wornCharacterFrames, ownedCharacters, wearCharacter },
     room: {
       growthLevel,
@@ -396,7 +403,8 @@ export function AppShell({
   useWidgetSync({ resolvedScheme, routines, completions, streak });
 
   // 스토어 리뷰 요청 (#1107) — 오늘 예정 루틴이 전부 완료되는 완료 순간에만.
-  // 시트·모달 위에 겹치지 않게 탭 루트(나의 방·달력)에서만 띄운다.
+  // 시트·모달 위에 겹치지 않게 탭 루트(나의 방·달력)에서만 띄운다. 오늘 아직 출석 전이면
+  // 그 완료가 출석 시트를 자동으로 여므로(#1294) 같은 순간의 리뷰 요청은 건너뛴다.
   const todayForReview = todayIso();
   const todayRoutines = useMemo(
     () => routines.filter((r) => isScheduledOn(r, todayForReview)),
@@ -410,7 +418,7 @@ export function AppShell({
     doneCount: todayDoneCount,
     totalCount: todayRoutines.length,
     ready: !myRoomLoading,
-    suppressed: screen !== 'myRoom' && screen !== 'calendar',
+    suppressed: (screen !== 'myRoom' && screen !== 'calendar') || attendancePending,
   });
 
   // 화면 전환 추적 (#437) — 셸의 screen 상태가 곧 내비게이션 단위.
@@ -520,6 +528,7 @@ export function AppShell({
             view="room"
             {...tabScroll.myRoom}
             onOpenFurnitureStudio={openFurnitureStudio}
+            onOpenMinigames={minigames.openMinigames}
           />
           <MyRoomScreen {...myRoomPages.calendarTabProps} view="calendar" {...tabScroll.calendar} />
           {/* 집은 2단(#1230) 프레임 안에서도 폰 컬럼 — 캔버스가 1200px로 늘지 않게.
@@ -532,6 +541,7 @@ export function AppShell({
         </TabPager>
       ) : null}
 
+      {minigames.subScreen}
       {screen === 'furnitureStudio' ? (
         <FurnitureStudio
           key={`${attendance.status?.eventId ?? 0}:${attendance.status?.completed ?? false}`}
@@ -637,19 +647,22 @@ export function AppShell({
   return (
     <View style={styles.root}>
       {/* 엣지 백 (#564) — 콘텐츠 전체를 감싸되 관찰만 한다(차단 없음). */}
-      <GestureDetector gesture={edgeBackPan}>
-        <View style={styles.content}>
-          {/* 두 층 슬라이드 (#1094) — 전환 중 300ms만 두 화면이 함께 산다. */}
-          {layers.map((layer) => (
-            <Animated.View
-              key={layer.key}
-              pointerEvents={layer.pointerEvents}
-              style={[styles.layer, layer.style]}>
-              {layer.node}
-            </Animated.View>
-          ))}
-        </View>
-      </GestureDetector>
+      <MinigameActiveContext.Provider
+        value={screen === 'minigameRunner' ? minigames.activeSessionId : null}>
+        <GestureDetector gesture={edgeBackPan}>
+          <View style={styles.content}>
+            {/* 두 층 슬라이드 (#1094) — 전환 중 300ms만 두 화면이 함께 산다. */}
+            {layers.map((layer) => (
+              <Animated.View
+                key={layer.key}
+                pointerEvents={layer.pointerEvents}
+                style={[styles.layer, layer.style]}>
+                {layer.node}
+              </Animated.View>
+            ))}
+          </View>
+        </GestureDetector>
+      </MinigameActiveContext.Provider>
 
       {activeTab ? (
         <BottomNav
@@ -709,6 +722,9 @@ export function AppShell({
 
       {/* 출석·재화 내역 시트 (#851·#1089) — use-attendance-surface가 그린다. */}
       {attendanceSheets}
+
+      {/* 친구 초대 확인·붙여넣기 시트 (#1007) — use-settings-surface가 그린다. */}
+      {settingsSurface.inviteSheets}
     </View>
   );
 }

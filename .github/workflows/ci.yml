@@ -30,3 +30,6 @@ jobs:
 
       - name: Test
         run: npm test -- --ci
+
+      - name: Build Storybook
+        run: npx --no-install storybook build --output-dir web-build/storybook

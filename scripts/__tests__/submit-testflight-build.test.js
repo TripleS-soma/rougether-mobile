@@ -12,7 +12,11 @@ const {
   execute,
 } = require('../submit-testflight-build');
 const { REQUIRED_CHECKS } = require('../check-testflight-build');
-const app = require('../../app.json');
+// 이 레인은 iOS 1.5.0 (115) 후보 전용으로 얼어 있다 — 스크립트의 `'1.5.0'` 가드가 그 계약이다.
+// 살아 있는 app.json을 그대로 읽으면 버전 범프(1.5.1, #1310)마다 여기가 깨지므로,
+// 실제 설정을 복제하되 버전만 후보 값으로 고정한다.
+const app = JSON.parse(JSON.stringify(require('../../app.json')));
+app.expo.version = '1.5.0';
 const eas = require('../../eas.json');
 const toolingSha = 'd'.repeat(40);
 const env = {

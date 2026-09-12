@@ -60,7 +60,7 @@ import {
 import { Loading } from '@/components/ui/loading';
 import type { CalendarDayCount } from '@/api/types';
 import { RoomGrowthPill, type RoomGrowthProps } from '@/components/ui/room-growth-pill';
-import { type CalendarFilter } from '@/utils/calendar-progress';
+import { type CalendarFilter, calendarToday } from '@/utils/calendar-progress';
 import { Calendar } from '@/components/ui/calendar';
 import { CoachTarget } from '@/components/ui/coach-mark';
 import { GlassSurface } from '@/components/ui/glass-surface';
@@ -90,8 +90,9 @@ import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
-import { localDate, monthDayLabel, todayIso } from '@/utils/datetime';
+import { localDate, monthDayLabel } from '@/utils/datetime';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
+import { holidayName } from '@/utils/holidays';
 
 // 스케줄 판정은 my-room/schedule로 이동 (#693) — 기존 임포트 경로 유지용 재수출.
 export { isScheduledOn };
@@ -215,6 +216,8 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
     ) => void | Promise<{ rewardAmount: number } | null | undefined>;
     onOpenGacha?: () => void;
     onOpenFurnitureStudio?: () => void;
+    /** Open the minigame hub from the room's floating action column. */
+    onOpenMinigames?: () => void;
     /** 당겨서 새로고침 (#454) — 서버 데이터 전체 리로드. resolve까지 발바닥이 두근거린다. */
     onRefresh?: () => Promise<void> | void;
     /** Quick-add a todo to a category with a due date (the + on a category header). */
@@ -342,6 +345,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   onToggleCompletion,
   onOpenGacha,
   onOpenFurnitureStudio,
+  onOpenMinigames,
   onRefresh,
   onQuickAddRoutine,
   onCreateRoutine,
@@ -389,7 +393,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   };
   const { show: toast } = useToast();
 
-  const today = serverToday ?? todayIso();
+  // 셸이 안 주면(테스트·Dev 갤러리) KST로 — 셸 경로(use-calendar-view)와 같은 기준.
+  // 기기 로컬 오늘로 두면 UTC 러너에서 15:00Z 이후 셸과 다른 날이 된다.
+  const today = serverToday ?? calendarToday();
   const isDone = useCallback(
     (id: string, date: string) => (completions[id] ?? []).includes(date),
     [completions],
@@ -519,6 +525,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   const selectedWeekday = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'][
     selectedDay.getDay()
   ];
+  // 공휴일 이름 (#1292) — 달력 칸엔 빨간 숫자만, 이름은 선택한 날짜 제목에 붙인다.
+  const selectedHoliday = holidayName(selectedDate);
 
   // 달력 서버 날짜에서 연 메뉴 — 완료 라벨/토글은 그 날의 기록과 달력 규칙
   // (미래 차단, 과거 허용)을 따른다 (#323).
@@ -1138,6 +1146,17 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                 </GlassSurface>
               </Pressable>
             ) : null}
+            {onOpenMinigames ? (
+              <Pressable
+                onPress={onOpenMinigames}
+                accessibilityRole="button"
+                accessibilityLabel="미니게임"
+                style={styles.floatBtn}>
+                <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
+                  <Icon name="gamepad" size={20} color={t.primaryText} />
+                </GlassSurface>
+              </Pressable>
+            ) : null}
             <Pressable
               onPress={onOpenGacha}
               accessibilityRole="button"
@@ -1280,9 +1299,11 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             style={styles.calDateHeading}
             accessible
             accessibilityRole="header"
-            accessibilityLabel={`${selectedDay.getFullYear()}년 ${selectedDayLabel} ${selectedWeekday}`}>
+            accessibilityLabel={`${selectedDay.getFullYear()}년 ${selectedDayLabel} ${selectedWeekday}${selectedHoliday ? `, ${selectedHoliday}` : ''}`}>
             <Text style={[Typography.h3, { color: t.text }]}>{selectedDayLabel}</Text>
-            <Text style={[Typography.supporting, { color: t.textMuted }]}>{selectedWeekday}</Text>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              {selectedHoliday ? `${selectedWeekday} · ${selectedHoliday}` : selectedWeekday}
+            </Text>
           </View>
           <View style={styles.sectionHeadRight}>
             <Pressable

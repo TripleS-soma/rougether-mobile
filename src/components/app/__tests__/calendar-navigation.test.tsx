@@ -2,10 +2,10 @@ import { act, fireEvent, waitFor } from '@testing-library/react-native';
 
 import { AppShell } from '@/components/app/app-shell';
 import { renderWithProviders } from '@/test-utils/render';
-import { todayIso } from '@/utils/datetime';
-import { calendarHeading } from '@/test-utils/my-room-screen-fixtures';
+import { calendarHeading, TODAY } from '@/test-utils/my-room-screen-fixtures';
 
-const TODAY = todayIso();
+// TODAY는 픽스처의 KST 오늘 — 셸(use-calendar-view)이 쓰는 기준. 기기 로컬 todayIso()로
+// 두면 UTC 러너에서 15:00Z 이후 셸과 다른 날이 돼 '오늘로' 헤딩 단언이 깨진다(2026-09-12 CI).
 const [year, month] = TODAY.split('-').map(Number);
 const PREVIOUS_MONTH_DATE = `${month === 1 ? year - 1 : year}-${String(month === 1 ? 12 : month - 1).padStart(2, '0')}-15`;
 const routine = {

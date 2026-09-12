@@ -21,9 +21,13 @@ import { manageableMembers } from '@/components/screens/house/members';
 import { HelpScreen } from '@/components/screens/help-screen';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { InviteFriendsScreen } from '@/components/screens/invite-friends-screen';
+import { IntroScreen } from '@/components/screens/intro-screen';
 import { LoginScreen } from '@/components/screens/login-screen';
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { CharacterPickerSheet } from '@/components/screens/sheets/character-picker-sheet';
+import { InviteArrivalSheet } from '@/components/screens/sheets/invite-arrival-sheet';
+import { InvitePasteSheet } from '@/components/screens/sheets/invite-paste-sheet';
+import { parseInviteText } from '@/lib/invite-code';
 import { BugReportScreen } from '@/components/screens/bug-report-screen';
 import { NotificationListScreen } from '@/components/screens/notification-list-screen';
 import { MyPageScreen } from '@/components/screens/my-page-screen';
@@ -88,6 +92,10 @@ import { RoomRenderReference } from '@/dev/room-render-reference';
 import { TokenSwatches } from '@/dev/token-swatches';
 import { TypeScalePreview } from '@/dev/type-scale-preview';
 import { NavigationPreview } from '@/dev/navigation-preview';
+import { MinigamePreview, MINIGAME_PREVIEW_CATALOG } from '@/dev/minigame-preview';
+import { MinigamesScreen } from '@/components/screens/minigames-screen';
+import { MinigameRunnerScreen } from '@/components/screens/minigame-runner-screen';
+import { MinigameLeaderboardScreen } from '@/components/screens/minigame-leaderboard-screen';
 
 export type GalleryEntry = {
   /** Unique, human-readable name shown as the section header. */
@@ -103,6 +111,67 @@ export type GalleryEntry = {
  * component in isolation on device / simulator / web without wiring it into a
  * real screen first. Add an entry whenever you build a new component.
  */
+/** 친구 초대 확인 시트 데모 (#1007). */
+function InviteArrivalSheetDemo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <View>
+      <ScalePressable
+        accessibilityRole="button"
+        onPress={() => setOpen(true)}
+        style={{ alignSelf: 'center', padding: 8 }}>
+        <Text>친구 초대 확인 열기</Text>
+      </ScalePressable>
+      <InviteArrivalSheet
+        visible={open}
+        preview={{
+          code: 'ROUGE123',
+          inviterNickname: '소마',
+          rewardCoin: 50,
+          alreadyRedeemed: false,
+        }}
+        onAccept={() => setOpen(false)}
+        onLater={() => setOpen(false)}
+      />
+    </View>
+  );
+}
+
+/** 붙여넣기 시트 데모 (#1007) — 붙여넣은 글을 실제 판정기로 돌려 결과를 보여 준다. */
+function InvitePasteSheetDemo() {
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<string | null>(null);
+  return (
+    <View style={{ alignItems: 'center', gap: 4 }}>
+      <ScalePressable
+        accessibilityRole="button"
+        onPress={() => {
+          setError(null);
+          setOpen(true);
+        }}
+        style={{ padding: 8 }}>
+        <Text>붙여넣기 시트 열기</Text>
+      </ScalePressable>
+      {result ? <Text>{result}</Text> : null}
+      <InvitePasteSheet
+        visible={open}
+        error={error}
+        onPaste={(text) => {
+          const parsed = parseInviteText(text);
+          if (!parsed) {
+            setError('초대코드를 찾지 못했어요.');
+            return;
+          }
+          setResult(`${parsed.kind} · ${parsed.code}`);
+          setOpen(false);
+        }}
+        onDismiss={() => setOpen(false)}
+      />
+    </View>
+  );
+}
+
 /** 재화 내역 시트 데모 (#734). */
 function WalletHistorySheetDemo() {
   const [open, setOpen] = useState(false);
@@ -316,6 +385,61 @@ function WheelPickerDemo() {
 }
 
 export const galleryEntries: GalleryEntry[] = [
+  {
+    name: 'MinigamesPreview',
+    description:
+      '개발 미리보기 전용 3종 카탈로그 → 러너·계단·합치기 연습 → 빈 랭킹. API 기록 없음 (#1302).',
+    render: () => <MinigamePreview />,
+  },
+  {
+    name: 'CatStairsPreview',
+    description: '고양이 계단 연습 미리보기. 좌우 방향 조작, 실제 랭킹 미기록.',
+    render: () => <MinigamePreview initialGameCode="cat-stairs" />,
+  },
+  {
+    name: 'CatMergePreview',
+    description: '고양이 합치기 연습 미리보기. 4×4 타일 퍼즐, 실제 랭킹 미기록.',
+    render: () => <MinigamePreview initialGameCode="cat-merge" />,
+  },
+  {
+    name: 'MinigamesScreen',
+    description: '샘플 카탈로그 미리보기. 실제 서비스는 API에서 게임 목록을 받아요.',
+    render: () => <MinigamesScreen games={MINIGAME_PREVIEW_CATALOG} />,
+  },
+  {
+    name: 'MinigameRunnerScreen',
+    description: '루틴 러너 시작 화면 미리보기.',
+    render: () => <MinigameRunnerScreen />,
+  },
+  {
+    name: 'MinigameLeaderboardScreen',
+    description: '샘플 랭킹 미리보기. 아래 닉네임과 점수는 실제 유저 데이터가 아니에요.',
+    render: () => (
+      <MinigameLeaderboardScreen
+        leaderboard={{
+          items: [
+            { rank: 1, userId: 1, nickname: '샘플 고양이', score: 320 },
+            { rank: 1, userId: 2, nickname: '샘플 친구', score: 320 },
+            { rank: 3, userId: 3, nickname: '샘플 나', score: 150 },
+          ],
+          myEntry: { rank: 3, userId: 3, nickname: '샘플 나', score: 150 },
+          totalPlayers: 3,
+        }}
+      />
+    ),
+  },
+  {
+    name: 'MinigamesUnavailable',
+    description: '게임 목록 API 실패 미리보기. 랭킹 미기록 연습 진입이 분리돼요.',
+    render: () => (
+      <MinigamesScreen
+        error
+        practiceGames={MINIGAME_PREVIEW_CATALOG}
+        onRetry={() => {}}
+        onPractice={() => {}}
+      />
+    ),
+  },
   {
     name: 'MoruRoom',
     description: '레벨 5 보상 모루. 캐릭터를 누르면 대기·인사·기쁨·눕기를 순환합니다.',
@@ -576,6 +700,18 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
+    name: 'InviteArrivalSheet · 친구 초대 확인',
+    description:
+      '링크·붙여넣기로 들어온 친구 초대코드 확인 (#1007) — 초대자·받을 코인을 보여 주고 [받기]에서만 사용한다(자동 사용 금지).',
+    render: () => <InviteArrivalSheetDemo />,
+  },
+  {
+    name: 'InvitePasteSheet · 초대받아 오셨나요?',
+    description:
+      '온보딩 직후 1회 붙여넣기 (#1007) — iOS 16+는 시스템 붙여넣기 버튼(허용 팝업 없음). 갤러리에서는 붙여넣은 글의 판정 결과를 보여 준다.',
+    render: () => <InvitePasteSheetDemo />,
+  },
+  {
     name: 'InviteFriendsScreen',
     description: '친구 초대 (#518): 내 초대코드 복사 + 보상 현황 + 받은 코드 사용.',
     render: () => (
@@ -758,9 +894,22 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
+    name: 'IntroScreen · 로그인 전 소개',
+    description:
+      "설치 후 첫 진입에 로그인보다 먼저 뜨는 소개 5장 (#1282). 첫 장에만 '이미 계정이 있어요', 마지막 장 '시작하기'는 로그인 화면으로(여기서는 콘솔 로그).",
+    render: () => (
+      <View style={{ height: 720, alignSelf: 'stretch' }}>
+        <IntroScreen
+          onHaveAccount={() => console.log('[dev] 이미 계정이 있어요 — 로그인으로')}
+          onDone={() => console.log('[dev] 소개 완료 — 로그인으로')}
+        />
+      </View>
+    ),
+  },
+  {
     name: 'OnboardingScreen · 첫 실행',
     description:
-      'Ported from the prototype OnboardingScreen (#4): slides → goals → (캐러셀은 MVP 오프 #637 — 갤러리는 열어 보존 UI 확인) → nickname. 첫 실행에는 건너뛰기가 없다 (#1023).',
+      'Ported from the prototype OnboardingScreen (#4): goals → (캐러셀은 MVP 오프 #637 — 갤러리는 열어 보존 UI 확인) → nickname. 소개는 로그인 전으로 옮겼다 (#1282).',
     render: () => (
       <View style={{ height: 720, alignSelf: 'stretch' }}>
         <OnboardingScreen characterSelectEnabled />
@@ -786,7 +935,7 @@ export const galleryEntries: GalleryEntry[] = [
   {
     name: 'OnboardingScreen · 다시 보기',
     description:
-      '설정 → 튜토리얼 다시 보기 진입 (#1023) — 우상단 건너뛰기가 생기고, 누르면 목표 설문이 아니라 온보딩을 끝낸다(여기서는 콘솔 로그).',
+      '설정 → 튜토리얼 다시 보기 진입 (#1023) — 소개부터 다시 보고(#1282) 목표 수정으로 이어진다. 우상단 건너뛰기를 누르면 목표 설문이 아니라 온보딩을 끝낸다(여기서는 콘솔 로그).',
     render: () => (
       <View style={{ height: 720, alignSelf: 'stretch' }}>
         <OnboardingScreen
@@ -1186,6 +1335,8 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ alignSelf: 'stretch', gap: 8 }}>
         <Button label="저장" onPress={() => {}} />
+        <Button glass label="게임 시작" onPress={() => {}} />
+        <Button glass label="랭킹" variant="secondary" onPress={() => {}} />
         <Button label="집 만들기" variant="secondary" leftIcon="add" onPress={() => {}} />
         <Button label="삭제하기" variant="danger" leftIcon="trash" onPress={() => {}} />
         <Button label="비활성" disabled onPress={() => {}} />

@@ -44,6 +44,12 @@ const INTERMEDIATES = 'android/app/build/intermediates';
 const FORBIDDEN = [
   ['CAMERA', '#752에서 차단 — expo-image-picker는 앨범 선택만 쓴다.'],
   ['RECORD_AUDIO', '#752에서 차단 — 오디오 녹음 기능이 없다. 스토어에 "마이크"로 뜬다.'],
+  // Play 사진/동영상 권한 정책 (#1310, 2026-09-12 거절): 앱은 앨범을 읽지 않는다 —
+  // 사진 고르기는 image-picker의 시스템 선택기(13+ 무권한), 저장은 writeOnly.
+  // expo-media-library 플러그인 기본값(granularPermissions)이 넣던 것을 뗐다.
+  ['READ_MEDIA_IMAGES', '#1310에서 차단 — Play 정책은 시스템 사진 선택기를 요구한다.'],
+  ['READ_MEDIA_VIDEO', '#1310에서 차단 — 동영상을 쓰는 기능이 없다.'],
+  ['READ_MEDIA_AUDIO', '#1310에서 차단 — 오디오 파일을 쓰는 기능이 없다.'],
   ['ACCESS_FINE_LOCATION', '위치를 쓰는 기능이 없다.'],
   ['ACCESS_COARSE_LOCATION', '위치를 쓰는 기능이 없다.'],
   ['ACCESS_BACKGROUND_LOCATION', '위치를 쓰는 기능이 없다.'],
@@ -53,11 +59,22 @@ const FORBIDDEN = [
   ['READ_PHONE_STATE', '기기 식별자 접근으로 읽힌다 — 쓰는 기능이 없다.'],
 ];
 
+/**
+ * app.json `blockedPermissions`가 제거 지시자로 걷어내는 것 — 소스 모드에서 "없음"은
+ * 안전 신호가 아니라 blockedPermissions가 빠졌다는 신호다(아래 FORBIDDEN 판정 참고).
+ */
+const BLOCKED_BY_APP_JSON = new Set([
+  'CAMERA',
+  'RECORD_AUDIO',
+  'READ_MEDIA_IMAGES',
+  'READ_MEDIA_VIDEO',
+  'READ_MEDIA_AUDIO',
+]);
+
 /** 소스 매니페스트에 반드시 있어야 하는 것 (앱이 직접 선언). */
 const REQUIRED_SOURCE = [
   ['INTERNET', '서버 통신.'],
   ['READ_CALENDAR', '기기 캘린더 가져오기 (#844).'],
-  ['READ_MEDIA_IMAGES', '버그 제보 스크린샷 첨부 · 앨범 선택.'],
   ['VIBRATE', '햅틱 피드백.'],
 ];
 
@@ -132,7 +149,7 @@ for (const [name, why] of FORBIDDEN) {
   if (merged) {
     // 병합본에 남아 있으면 그대로 AAB에 실린다.
     if (tag) problems.push([`${name} 가 최종 매니페스트에 남아 있습니다`, why]);
-  } else if (name === 'CAMERA' || name === 'RECORD_AUDIO') {
+  } else if (BLOCKED_BY_APP_JSON.has(name)) {
     // 소스 모드: "없음"은 안전 신호가 아니다 — blockedPermissions가 지워지면
     // 항목 자체가 사라지고 병합 때 라이브러리에서 되살아난다. 제거 지시자를 본다.
     if (!tag) {

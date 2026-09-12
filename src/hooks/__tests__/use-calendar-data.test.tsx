@@ -215,7 +215,7 @@ describe('useCalendarData — 완료 토글', () => {
 
     holdRefetch = true;
     const item = result.current.calendarDays['2026-07-10'][0];
-    let pending!: Promise<void>;
+    let pending!: Promise<boolean>;
     await act(async () => {
       pending = result.current.toggleCalendarItem(item, '2026-07-10');
       await Promise.resolve();
@@ -246,7 +246,8 @@ describe('useCalendarData — 완료 토글', () => {
 
     const todo = result.current.calendarDays['2026-07-10'][1];
     await act(async () => {
-      await expect(result.current.toggleCalendarItem(todo, '2026-07-10')).resolves.toBeUndefined();
+      // 던지지 않고 실패를 false로 알린다 — 자동 출석(#1294)은 성공한 완료에만 반응한다.
+      await expect(result.current.toggleCalendarItem(todo, '2026-07-10')).resolves.toBe(false);
     });
     expect(calls.some((c) => c.method === 'DELETE' && c.url.endsWith('/todos/3/complete'))).toBe(
       true,

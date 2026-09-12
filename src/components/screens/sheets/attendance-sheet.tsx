@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AttendanceDayCell } from '@/components/screens/sheets/attendance-day-cell';
 import { AttendanceTrophyReveal } from '@/components/screens/sheets/attendance-trophy-reveal';
+import { useLatestRef } from '@/hooks/use-stable-value';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { CountUpText } from '@/components/ui/count-up-text';
@@ -20,6 +21,11 @@ export type AttendanceSheetProps = {
   checkingIn?: boolean;
   /** 출석 요청. 결과를 돌려주면 시트가 연출을 판단해 재생한다. */
   onCheckIn?: () => Promise<AttendanceCheckInResult | null>;
+  /**
+   * 그날 첫 완료로 열린 시트 (#1294) — 열리고 카드가 자리 잡으면 버튼과 같은 출석을 한 번
+   * 보낸다. 오늘 이미 출석했거나 완주했으면 아무것도 안 한다.
+   */
+  autoCheckIn?: boolean;
   /** 완주 보상 '방에 배치하러 가기'. */
   onGoToRoom?: () => void;
   onGoToStudio?: () => void;
@@ -42,11 +48,15 @@ function shortDate(iso?: string) {
  * 칸의 최종 모습은 전부 `status.dailyRewards[].claimed`가 그린다 — 연출은
  * 그 위에 얹히는 장식이라, 연타·조기 닫기로 중간에 끊겨도 화면은 맞다.
  */
+/** 자동 출석이 시트 입장 스프링이 끝난 뒤 도장을 찍게 기다리는 시간 (#1294). */
+export const AUTO_CHECK_IN_SETTLE_MS = 450;
+
 export function AttendanceSheet({
   visible,
   status,
   checkingIn,
   onCheckIn,
+  autoCheckIn = false,
   onGoToRoom,
   onGoToStudio,
   onClose,
@@ -129,6 +139,27 @@ export function AttendanceSheet({
       });
     }
   }, [onCheckIn]);
+
+  /**
+   * 자동 출석 (#1294) — 버튼과 **같은 `press`** 를 한 번 보낸다. 연출·멱등(`newCheckIn`)
+   * 판단이 수동 출석과 한 경로라 따로 둘 게 없다. `press`는 checkingIn 토글마다 새로
+   * 만들어지므로 ref로 읽고, 실행 표시는 타이머가 실제로 돌 때 한다 — 의존성 변화로
+   * 타이머가 지워져도 다음 실행에서 다시 예약된다. 닫히면 다음 자동 열림을 위해 초기화.
+   */
+  const pressRef = useLatestRef(press);
+  const autoRan = useRef(false);
+  useEffect(() => {
+    if (!visible) {
+      autoRan.current = false;
+      return;
+    }
+    if (!autoCheckIn || autoRan.current || status.checkedInToday || status.completed) return;
+    const timer = setTimeout(() => {
+      autoRan.current = true;
+      void pressRef.current();
+    }, AUTO_CHECK_IN_SETTLE_MS);
+    return () => clearTimeout(timer);
+  }, [visible, autoCheckIn, status.checkedInToday, status.completed, pressRef]);
 
   // 훅이 걸러 주지만 시트는 prop으로도 직접 쓰이므로 여기서도 방어한다.
   const days = status.dailyRewards ?? [];

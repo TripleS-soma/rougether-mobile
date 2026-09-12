@@ -2,9 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fireEvent, waitFor } from '@testing-library/react-native';
 
 import { AppRoot } from '@/components/app/app-root';
+import { LEGACY_ONBOARDING_KEY as KEY } from '@/lib/onboarding-store';
 import { renderWithProviders } from '@/test-utils/render';
-
-const KEY = 'rougether.onboarding.v1';
 
 // AppRoot gates on a session, then AppShell loads my-room data — mock both.
 const emptyRes = (url: string) => ({
@@ -30,17 +29,21 @@ describe('AppRoot', () => {
     global.fetch = realFetch;
   });
 
-  it('shows onboarding on first launch', async () => {
-    const { getByText } = await renderApp();
-    await waitFor(() => expect(getByText('루게더에 오신 걸 환영해요')).toBeTruthy());
+  // #1282 — 소개는 로그인 전(로그인 라우트)으로 옮겼다. 로그인 뒤 첫 실행은
+  // 곧장 목표 설문이다.
+  it('shows onboarding on first launch — goal survey first (#1282)', async () => {
+    const { getByText, queryByText } = await renderApp();
+    await waitFor(() => expect(getByText('관심 있는 목표를 골라주세요')).toBeTruthy());
+    expect(queryByText('루게더에 오신 걸 환영해요')).toBeNull();
   });
 
   // #1023 — 첫 실행과 다시 보기는 둘 다 `onboarded === false`라 화면만으로는
-  // 구분이 안 된다. 루트가 `replay`를 넘겨야 건너뛰기가 생긴다.
-  it('첫 실행 온보딩에는 건너뛰기가 없다 (#1023)', async () => {
+  // 구분이 안 된다. 루트가 `replay`를 넘겨야 소개와 건너뛰기가 생긴다.
+  it('첫 실행 온보딩에는 건너뛰기도 돌아갈 소개도 없다 (#1023, #1282)', async () => {
     const { queryByText, getByText } = await renderApp();
-    await waitFor(() => expect(getByText('루게더에 오신 걸 환영해요')).toBeTruthy());
+    await waitFor(() => expect(getByText('관심 있는 목표를 골라주세요')).toBeTruthy());
     expect(queryByText('건너뛰기')).toBeNull();
+    expect(queryByText('이전')).toBeNull();
   });
 
   it('시작 화면 설정이 내 정보면 앱이 내 정보로 열린다 (#1139)', async () => {
@@ -109,9 +112,7 @@ describe('AppRoot', () => {
   it('첫 가입: 온보딩 완료 → 추천 루틴 게이트 → 게이트를 닫으면 미션 1(뽑기) 배너가 뜬다', async () => {
     await AsyncStorage.setItem('rougether.auth.userId', '72');
     const ui = await renderApp();
-    await waitFor(() => expect(ui.getByText('루게더에 오신 걸 환영해요')).toBeTruthy());
-    await fireEvent.press(ui.getByLabelText('5번째 슬라이드로 이동'));
-    await fireEvent.press(ui.getByText('목표 선택하기'));
+    await waitFor(() => expect(ui.getByText('관심 있는 목표를 골라주세요')).toBeTruthy());
     await fireEvent.press(ui.getByText('운동'));
     await fireEvent.press(ui.getByText('시작하기'));
     await fireEvent.changeText(ui.getByLabelText('닉네임 입력'), '준서');
@@ -126,9 +127,142 @@ describe('AppRoot', () => {
     expect(ui.queryByText('첫 루틴 등록하기')).toBeNull();
   });
 
+  /**
+   * 같은 기기에서 다른 계정으로 새로 가입하면 튜토리얼 미션이 안 떴다 (2026-09-11 제보).
+   * 온보딩 캐시·미션 플래그가 **기기 단위** 키였고 로그아웃은 세션만 지운다 — 앞 계정의
+   * 흔적이 새 계정을 "온보딩 끝남·미션 끝남"으로 보이게 했다.
+   */
+  it('앞 계정이 온보딩을 마친 기기에서 새 계정이 로그인하면 온보딩부터 시작한다', async () => {
+    // 앞 계정(41)이 이 기기에서 온보딩·추천 루틴까지 마쳤다.
+    await AsyncStorage.setItem(KEY, JSON.stringify({ characterId: 'cat', goals: ['exercise'] }));
+    await AsyncStorage.setItem(
+      'rougether.starter-routine.v1.41',
+      JSON.stringify({ status: 'skipped', goals: [] }),
+    );
+    // 새 계정(72) — 서버는 온보딩 미완료(기본 응답에 completed 없음).
+    await AsyncStorage.setItem('rougether.auth.userId', '72');
+    const ui = await renderApp();
+    await waitFor(() => expect(ui.getByText('관심 있는 목표를 골라주세요')).toBeTruthy());
+  });
+
+  it('앞 계정이 미션을 끝낸 기기에서도 새 계정의 첫 가입에는 미션 배너가 뜬다', async () => {
+    await AsyncStorage.setItem('rougether.onboarding-missions.v1', 'completed');
+    await AsyncStorage.setItem('rougether.auth.userId', '72');
+    const ui = await renderApp();
+    await waitFor(() => expect(ui.getByText('관심 있는 목표를 골라주세요')).toBeTruthy());
+    await fireEvent.press(ui.getByText('운동'));
+    await fireEvent.press(ui.getByText('시작하기'));
+    await fireEvent.changeText(ui.getByLabelText('닉네임 입력'), '새친구');
+    await fireEvent.press(ui.getByText('시작하기'));
+    await waitFor(() => expect(ui.getByText('작게 시작해볼까요?')).toBeTruthy());
+    await fireEvent.press(ui.getByText('나중에 할게요'));
+    await waitFor(() => expect(ui.getByTestId('mission-banner')).toBeTruthy());
+  });
+
+  /**
+   * 옛 기기 기록의 주인 판별 — 서버에 이 계정의 목표가 있으면 온보딩을 거친 기존
+   * 사용자다(캐릭터 저장 409로 completed=false인 경우 포함). 업데이트 뒤에도 온보딩을
+   * 다시 보지 않고, 기록은 계정별 키로 옮겨진다.
+   */
+  it('서버에 목표가 있는 기존 사용자는 옛 기기 기록으로 그대로 앱에 들어가고 계정별로 옮긴다', async () => {
+    // 같은 온보딩이 로컬(문자열 id)과 서버(goalId)에 함께 저장했으니 목표가 겹친다.
+    await AsyncStorage.setItem(KEY, JSON.stringify({ characterId: 'cat', goals: ['1'] }));
+    await AsyncStorage.setItem('rougether.auth.userId', '72');
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.endsWith('/onboarding'))
+        return {
+          ok: true,
+          status: 200,
+          text: async () =>
+            JSON.stringify({ goals: [{ goalId: 1, code: 'exercise' }], completed: false }),
+        };
+      return emptyRes(url);
+    }) as unknown as typeof fetch;
+
+    const ui = await renderApp();
+    await waitFor(() => expect(ui.getByText('오늘의 할 일')).toBeTruthy());
+    await waitFor(async () =>
+      expect(await AsyncStorage.getItem(`${KEY}.72`)).toBe(
+        JSON.stringify({ characterId: 'cat', goals: ['1'] }),
+      ),
+    );
+    expect(await AsyncStorage.getItem(KEY)).toBeNull();
+  });
+
+  /**
+   * 서버에 못 닿으면(오프라인) 옛 기기 기록을 종전대로 믿어 앱으로 들어간다 — 기존
+   * 사용자가 오프라인으로 앱을 열 때마다 온보딩을 보지 않게. 주인이 확인된 건 아니므로
+   * 계정별 키로 옮기지 않고, 다음에 서버가 응답하면 다시 판정한다 (#1299 리뷰).
+   */
+  it('서버에 못 닿으면 옛 기기 기록으로 앱에 들어가되 계정별로 옮기지는 않는다', async () => {
+    await AsyncStorage.setItem(KEY, JSON.stringify({ characterId: 'cat', goals: ['exercise'] }));
+    await AsyncStorage.setItem('rougether.auth.userId', '72');
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.endsWith('/onboarding')) throw new TypeError('Network request failed');
+      return emptyRes(url);
+    }) as unknown as typeof fetch;
+
+    const ui = await renderApp();
+    await waitFor(() => expect(ui.getByText('오늘의 할 일')).toBeTruthy());
+    expect(await AsyncStorage.getItem(`${KEY}.72`)).toBeNull();
+    expect(await AsyncStorage.getItem(KEY)).not.toBeNull();
+  });
+
+  /**
+   * #1299 리뷰 2 — "이 계정이 서버에 목표가 있다"만으로는 옛 기기 기록의 주인이 아니다.
+   * 이미 온보딩된 계정 B가 앞 계정 A의 기록이 남은 기기에 처음 들어오면 A의 캐릭터·목표가
+   * B의 계정별 키에 옮겨지고 A의 기록은 사라졌다. 기록의 목표가 서버 목표와 겹칠 때만 주인이다.
+   */
+  it('다른 계정의 옛 기기 기록은 서버 목표와 겹치지 않으면 이 계정 것으로 옮기지 않는다', async () => {
+    const other = JSON.stringify({ characterId: 'bear', goals: ['9'] });
+    await AsyncStorage.setItem(KEY, other);
+    await AsyncStorage.setItem('rougether.auth.userId', '72');
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.endsWith('/onboarding'))
+        return {
+          ok: true,
+          status: 200,
+          text: async () =>
+            JSON.stringify({ goals: [{ goalId: 1, code: 'exercise' }], completed: true }),
+        };
+      return emptyRes(url);
+    }) as unknown as typeof fetch;
+
+    const ui = await renderApp();
+    await waitFor(() => expect(ui.getByText('오늘의 할 일')).toBeTruthy());
+    expect(await AsyncStorage.getItem(`${KEY}.72`)).toBeNull();
+    expect(await AsyncStorage.getItem(KEY)).toBe(other);
+  });
+
+  /**
+   * #1299 리뷰 4 — goalId는 계정 고유값이 아니라 공용 목표 카탈로그 id다. "하나라도 겹침"은
+   * 인기 목표(운동)를 고른 다른 계정도 통과한다. 기록의 목표 **집합**이 서버와 같을 때만 주인이다.
+   */
+  it('목표가 우연히 하나 겹칠 뿐인 다른 계정의 옛 기기 기록은 이 계정 것으로 옮기지 않는다', async () => {
+    const other = JSON.stringify({ characterId: 'bear', goals: ['1', '2'] });
+    await AsyncStorage.setItem(KEY, other);
+    await AsyncStorage.setItem('rougether.auth.userId', '72');
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.endsWith('/onboarding'))
+        return {
+          ok: true,
+          status: 200,
+          text: async () =>
+            JSON.stringify({ goals: [{ goalId: 1, code: 'exercise' }], completed: false }),
+        };
+      return emptyRes(url);
+    }) as unknown as typeof fetch;
+
+    const ui = await renderApp();
+    await waitFor(() => expect(ui.getByText('관심 있는 목표를 골라주세요')).toBeTruthy());
+    expect(await AsyncStorage.getItem(`${KEY}.72`)).toBeNull();
+    expect(await AsyncStorage.getItem(KEY)).toBe(other);
+  });
+
   it('중도 종료한 계정은 관심사 추천으로 재개하고 나중에 선택하면 다음 실행에 강제하지 않는다', async () => {
     await AsyncStorage.setItem('rougether.auth.userId', '71');
-    await AsyncStorage.setItem(KEY, JSON.stringify({ characterId: 'cat', goals: ['5'] }));
+    // 이 계정이 이 기기에서 마친 온보딩 — 계정별 키에 있다.
+    await AsyncStorage.setItem(`${KEY}.71`, JSON.stringify({ characterId: 'cat', goals: ['5'] }));
     await AsyncStorage.setItem(
       'rougether.starter-routine.v1.71',
       JSON.stringify({
@@ -153,7 +287,7 @@ describe('AppRoot', () => {
 
   it('미완료 추천이 남아도 루틴이 이미 있으면 추가 요청 없이 앱으로 들어간다', async () => {
     await AsyncStorage.setItem('rougether.auth.userId', '72');
-    await AsyncStorage.setItem(KEY, JSON.stringify({ characterId: 'cat', goals: ['5'] }));
+    await AsyncStorage.setItem(`${KEY}.72`, JSON.stringify({ characterId: 'cat', goals: ['5'] }));
     await AsyncStorage.setItem(
       'rougether.starter-routine.v1.72',
       JSON.stringify({
@@ -207,9 +341,7 @@ describe('AppRoot', () => {
       return emptyRes(url);
     }) as unknown as typeof fetch;
     const ui = await renderApp();
-    await waitFor(() => expect(ui.getByText('루게더에 오신 걸 환영해요')).toBeTruthy());
-    await fireEvent.press(ui.getByLabelText('5번째 슬라이드로 이동'));
-    await fireEvent.press(ui.getByText('목표 선택하기'));
+    await waitFor(() => expect(ui.getByText('관심 있는 목표를 골라주세요')).toBeTruthy());
     await fireEvent.press(ui.getByText('독서'));
     await fireEvent.press(ui.getByText('시작하기'));
     await fireEvent.changeText(ui.getByLabelText('닉네임 입력'), '테스트');
