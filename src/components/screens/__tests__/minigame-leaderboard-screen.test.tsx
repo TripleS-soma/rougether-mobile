@@ -24,8 +24,7 @@ it('does not invent an entry for users without a record', async () => {
   const ui = await render(
     <MinigameLeaderboardScreen leaderboard={{ items: [], myEntry: null, totalPlayers: 0 }} />,
   );
-  expect(ui.getByText('아직 기록이 없어요. 첫 도전을 시작해보세요.')).toBeTruthy();
-  expect(ui.getByText('아직 등록된 기록이 없어요.')).toBeTruthy();
+  expect(ui.getByText('기록 없음')).toBeTruthy();
   expect(ui.queryByText('0점')).toBeNull();
 });
 

@@ -1,4 +1,4 @@
-/** Rules version 1 is mirrored by the server replay verifier. */
+/** Versioned rules are mirrored by the server replay verifier. */
 export type StairsDirection = 'LEFT' | 'RIGHT';
 export type StairsInput = { tick: number; direction: StairsDirection };
 export type StairsState = {
@@ -19,9 +19,12 @@ export type StairsEngine = {
 
 /** The same fixed source runs in Canvas and deterministic replay tests. */
 export const STAIRS_ENGINE_SOURCE = String.raw`
-function createStairsEngine(seed) {
+function createStairsEngine(seed, rulesVersion = 2) {
   if (!Number.isInteger(seed) || seed < 1 || seed > 2147483647) {
     throw new Error('Invalid stairs seed');
+  }
+  if (rulesVersion !== 1 && rulesVersion !== 2) {
+    throw new Error('Invalid stairs rules version');
   }
   var rng = seed >>> 0;
   var path = [];
@@ -36,8 +39,8 @@ function createStairsEngine(seed) {
   }
   var tick = 0;
   var score = 0;
-  var timeLeft = 180;
-  var timeLimit = 180;
+  var timeLeft = rulesVersion === 1 ? 180 : 72;
+  var timeLimit = timeLeft;
   var lastInput = -5;
   var actions = [];
   var ended = false;
@@ -66,7 +69,9 @@ function createStairsEngine(seed) {
         ended = true; endReason = 'wrong';
       } else {
         score += 1;
-        timeLimit = Math.max(45, 180 - Math.floor(score / 5) * 6);
+        timeLimit = rulesVersion === 1
+          ? Math.max(45, 180 - Math.floor(score / 5) * 6)
+          : Math.max(18, 72 - Math.floor(score / 3) * 4);
         timeLeft = timeLimit;
       }
     }
@@ -77,9 +82,10 @@ function createStairsEngine(seed) {
 }`;
 
 /** Evaluate only the bundled source, never caller supplied code. */
-export function createStairsEngine(seed: number): StairsEngine {
+export function createStairsEngine(seed: number, rulesVersion: 1 | 2 = 2): StairsEngine {
   const factory = new Function(`return (${STAIRS_ENGINE_SOURCE})`)() as (
     seed: number,
+    rulesVersion: 1 | 2,
   ) => StairsEngine;
-  return factory(seed);
+  return factory(seed, rulesVersion);
 }

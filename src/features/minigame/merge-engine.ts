@@ -1,9 +1,10 @@
-/** Version 1 rules are mirrored by the server replay verifier. */
+/** Versioned rules are mirrored by the server replay verifier. */
 export type MergeDirection = 0 | 1 | 2 | 3;
 export type MergeState = {
   board: number[];
   directions: MergeDirection[];
   score: number;
+  movesUntilExtraTile: number | null;
   ended: boolean;
   endReason: 'blocked' | 'saved' | 'limit' | null;
 };
@@ -15,10 +16,15 @@ export type MergeEngine = {
 
 /** A fixed, platform-independent source shared by the game document and tests. */
 export const MERGE_ENGINE_SOURCE = String.raw`
-function createMergeEngine(seed) {
+function createMergeEngine(seed, rulesVersion) {
+  if (rulesVersion === undefined) rulesVersion = 2;
+  if (rulesVersion !== 1 && rulesVersion !== 2) {
+    throw new Error('Invalid merge rules version');
+  }
   if (!Number.isInteger(seed) || seed < 1 || seed > 2147483647) {
     throw new Error('Invalid merge seed');
   }
+  var extraTileInterval = 8;
   var rng = seed >>> 0;
   var board = Array(16).fill(0);
   var directions = [];
@@ -37,13 +43,14 @@ function createMergeEngine(seed) {
     if (empty.length === 0) return;
     // Low LCG bits would tie the tile-value draw to the seed's parity.
     var index = empty[(random() >>> 16) % empty.length];
-    board[index] = (random() >>> 16) % 10 === 0 ? 4 : 2;
+    board[index] = (random() >>> 16) % (rulesVersion === 1 ? 10 : 4) === 0 ? 4 : 2;
   }
   function getState() {
     return {
       board: board.slice(),
       directions: directions.slice(),
       score: score,
+      movesUntilExtraTile: rulesVersion === 2 ? extraTileInterval - directions.length % extraTileInterval : null,
       ended: ended,
       endReason: endReason
     };
@@ -93,6 +100,7 @@ function createMergeEngine(seed) {
     score += gained;
     directions.push(direction);
     spawn();
+    if (rulesVersion === 2 && directions.length % extraTileInterval === 0) spawn();
     if (isBlocked()) {
       ended = true;
       endReason = 'blocked';
@@ -109,15 +117,15 @@ function createMergeEngine(seed) {
     }
     return getState();
   }
-  spawn();
-  spawn();
+  for (var initial = 0; initial < (rulesVersion === 1 ? 2 : 4); initial += 1) spawn();
   return { move: move, finish: finish, getState: getState };
 }`;
 
 /** Evaluate only the fixed bundled source, never any caller-provided code. */
-export function createMergeEngine(seed: number): MergeEngine {
+export function createMergeEngine(seed: number, rulesVersion: 1 | 2 = 2): MergeEngine {
   const factory = new Function(`return (${MERGE_ENGINE_SOURCE})`)() as (
     seed: number,
+    rulesVersion: 1 | 2,
   ) => MergeEngine;
-  return factory(seed);
+  return factory(seed, rulesVersion);
 }

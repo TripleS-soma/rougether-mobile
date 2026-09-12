@@ -77,7 +77,7 @@ beforeEach(() => {
   start.mockImplementation(async (gameCode) => ({
     runId: `${gameCode}-run-1`,
     gameCode,
-    rulesVersion: 1,
+    rulesVersion: 2,
     seed: 42,
     maxTicks: gameCode === 'cat-stairs' ? 7200 : 18000,
     expiresAt: '2030-01-01T00:00:00Z',
@@ -98,10 +98,10 @@ it('navigates catalog to runner and starts an authenticated run only on an expli
   expect(start).not.toHaveBeenCalled();
   expect(ranking).not.toHaveBeenCalled();
   await fireEvent.press(ui.getByLabelText('루틴 러너 시작'));
-  expect(ui.getByText('고양이와 함께 폴짝!')).toBeTruthy();
+  expect(ui.getByText('탭해서 점프')).toBeTruthy();
   await fireEvent.press(ui.getByLabelText('랭킹 도전'));
   await waitFor(() => expect(ui.getByTestId('runner-active').props.children).toBe('true'));
-  expect(start.mock.calls[0][0]).toBe('room-runner');
+  expect(start).toHaveBeenCalledWith('room-runner', 2);
   expect(finish).not.toHaveBeenCalled();
 });
 
@@ -115,7 +115,7 @@ it('keeps a retained outgoing runner inactive and starts fresh when returning', 
   await waitFor(() => expect(ui.getByTestId('runner-active').props.children).toBe('false'));
   await fireEvent.press(ui.getByLabelText('루틴 러너 시작'));
   expect(ui.queryByTestId('runner-active')).toBeNull();
-  expect(ui.getByText('고양이와 함께 폴짝!')).toBeTruthy();
+  expect(ui.getByText('탭해서 점프')).toBeTruthy();
   expect(start).not.toHaveBeenCalled();
   expect(finish).not.toHaveBeenCalled();
 });
@@ -142,7 +142,7 @@ it.each(['cat-stairs', 'cat-merge'] as const)(
     expect(ui.queryByText(MINIGAME_DEFINITIONS['room-runner'].instructions)).toBeNull();
     await fireEvent.press(ui.getByLabelText('랭킹 도전'));
     await waitFor(() => expect(ui.getByTestId('selected-player').props.children).toBe(gameCode));
-    expect(start.mock.calls[0][0]).toBe(gameCode);
+    expect(start).toHaveBeenCalledWith(gameCode, 2);
     await fireEvent.press(ui.getByLabelText('테스트 게임 완료'));
     await waitFor(() =>
       expect(finish).toHaveBeenCalledWith(gameCode, `${gameCode}-run-1`, {
@@ -150,8 +150,8 @@ it.each(['cat-stairs', 'cat-merge'] as const)(
         actions: [{ tick: 30, direction: 'LEFT' }],
       }),
     );
-    await waitFor(() => expect(ui.getByText('나의 최고 기록을 넘었어요!')).toBeTruthy());
-    expect(ui.getByTestId('runner-active').props.children).toBe('false');
+    await waitFor(() => expect(ui.getByText('최고 기록')).toBeTruthy());
+    expect(ui.queryByTestId('runner-active')).toBeNull();
   },
 );
 
@@ -173,7 +173,7 @@ it('preserves a failed stair replay while another game is played and retries onl
   await fireEvent.press(ui.getByLabelText('고양이 계단 시작'));
   expect(ui.getByText('기록을 저장하지 못했어요')).toBeTruthy();
   expect(ui.getByTestId('runner-active').props.children).toBe('false');
-  await fireEvent.press(ui.getByLabelText('기록 저장 다시 시도'));
+  await fireEvent.press(ui.getByLabelText('다시 저장'));
   await waitFor(() => expect(finish).toHaveBeenCalledTimes(2));
   expect(finish.mock.calls[1]).toEqual(finish.mock.calls[0]);
   expect(start).toHaveBeenCalledTimes(1);

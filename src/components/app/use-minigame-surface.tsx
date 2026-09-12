@@ -136,7 +136,6 @@ export function useMinigameSurface({
         {...run}
         gameName={definition.name}
         instructions={definition.instructions}
-        readyTitle={definition.readyTitle}
         characterPose={definition.pose}
         practice={session?.practice}
         game={
