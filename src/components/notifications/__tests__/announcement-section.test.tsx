@@ -35,6 +35,24 @@ describe('AnnouncementSection (#1320)', () => {
     expect(onOpen).toHaveBeenCalledWith(expect.objectContaining({ id: 'a1' }));
   });
 
+  it('collapsible={false} shows everything without 더보기, and emptyText replaces the null render', async () => {
+    const all = await render(
+      <AnnouncementSection
+        announcements={[row(1), row(2), row(3), row(4)]}
+        collapsible={false}
+        title={null}
+      />,
+    );
+    expect(all.getByLabelText('소식 4')).toBeTruthy();
+    expect(all.queryByLabelText('지난 소식 1개 더보기')).toBeNull();
+    expect(all.queryByText('새 소식')).toBeNull();
+
+    const empty = await render(
+      <AnnouncementSection announcements={[]} emptyText="아직 새 소식이 없어요." />,
+    );
+    expect(empty.getByText('아직 새 소식이 없어요.')).toBeTruthy();
+  });
+
   it('collapses to the recent three and expands on 더보기', async () => {
     const { getByLabelText, queryByLabelText } = await render(
       <AnnouncementSection announcements={[row(1), row(2), row(3), row(4), row(5)]} />,

@@ -25,7 +25,9 @@ describe('isFullSwipe (#1137)', () => {
 });
 
 describe('NotificationListScreen', () => {
-  it('lists bundled announcements above notifications and counts them as unread (#1320)', async () => {
+  it('splits 알림 and 새 소식 into tabs; each tab has its own 모두 읽음 (#1320)', async () => {
+    const onReadAll = jest.fn();
+    const onReadAllAnnouncements = jest.fn();
     const onOpenAnnouncement = jest.fn();
     const announcement = {
       id: 'news-1',
@@ -34,26 +36,44 @@ describe('NotificationListScreen', () => {
       body: '미니게임이 생겼어요',
       read: false,
     };
-    const { getByText, getByLabelText, queryByLabelText, rerender } = await render(
+    const ui = await render(
       <NotificationListScreen
         notifications={NOTIFICATIONS.map((n) => ({ ...n, read: true }))}
+        onReadAll={onReadAll}
         announcements={[announcement]}
         onOpenAnnouncement={onOpenAnnouncement}
+        onReadAllAnnouncements={onReadAllAnnouncements}
       />,
     );
-    expect(getByText('새 소식')).toBeTruthy();
-    // Notifications are all read, so the header button exists only because of the announcement.
-    expect(getByLabelText('모두 읽음')).toBeTruthy();
-    await fireEvent.press(getByLabelText('새 기능 소식'));
-    expect(onOpenAnnouncement).toHaveBeenCalledWith(expect.objectContaining({ id: 'news-1' }));
+    // 알림 탭이 기본 — 소식 행은 여기 없고, 알림은 전부 읽어서 모두 읽음도 없다.
+    expect(ui.queryByLabelText('새 기능 소식')).toBeNull();
+    expect(ui.queryByLabelText('모두 읽음')).toBeNull();
+    expect(ui.getByTestId('notification-tab-dot-news')).toBeTruthy();
+    expect(ui.queryByTestId('notification-tab-dot-notifications')).toBeNull();
 
-    await rerender(
-      <NotificationListScreen
-        notifications={NOTIFICATIONS.map((n) => ({ ...n, read: true }))}
-        announcements={[{ ...announcement, read: true }]}
-      />,
+    await fireEvent.press(ui.getByLabelText('새 소식 탭'));
+    expect(ui.getByLabelText('새 기능 소식')).toBeTruthy();
+    expect(ui.queryByLabelText('알림 전체 삭제')).toBeNull();
+    await fireEvent.press(ui.getByLabelText('새 기능 소식'));
+    expect(onOpenAnnouncement).toHaveBeenCalledWith(expect.objectContaining({ id: 'news-1' }));
+    await fireEvent.press(ui.getByLabelText('새 소식 모두 읽음'));
+    expect(onReadAllAnnouncements).toHaveBeenCalledTimes(1);
+    expect(onReadAll).not.toHaveBeenCalled();
+
+    await fireEvent.press(ui.getByLabelText('내 알림 탭'));
+    expect(ui.queryByLabelText('새 기능 소식')).toBeNull();
+    expect(ui.getByText('물 마시기 할 시간이에요')).toBeTruthy();
+  });
+
+  it('shows an empty 새 소식 tab and no tabs at all when announcements are not wired', async () => {
+    const withTabs = await render(
+      <NotificationListScreen notifications={NOTIFICATIONS} announcements={[]} />,
     );
-    expect(queryByLabelText('모두 읽음')).toBeNull();
+    await fireEvent.press(withTabs.getByLabelText('새 소식 탭'));
+    expect(withTabs.getByText('아직 새 소식이 없어요.')).toBeTruthy();
+
+    const noTabs = await render(<NotificationListScreen notifications={NOTIFICATIONS} />);
+    expect(noTabs.queryByTestId('notification-tabs')).toBeNull();
   });
 
   it('renders rows and marks an unread one read on tap', async () => {
