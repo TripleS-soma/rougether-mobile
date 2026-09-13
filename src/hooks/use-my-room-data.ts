@@ -403,12 +403,6 @@ export function useMyRoomData() {
   );
 
   /**
-   * 루틴의 그 날 몫 하나를 다른 날짜로 옮기기 (메뉴 → 날짜 바꾸기 on a
-   * routine). The repeat schedule stays untouched; a one-off todo with the
-   * routine's title lands on the picked date. The server has no
-   * per-occurrence skip yet, so the original day's instance still shows.
-   */
-  /**
    * 루틴의 그날 몫 하나를 다른 날짜로 옮긴다 (#189): 선택한 날짜에 같은 제목의 할 일을
    * 만들고, 원래 날짜(`fromDate`)의 발생분은 서버에 SKIPPED로 남겨 숨긴다. 서버는
    * 오늘·미래만 건너뛸 수 있으므로 지난 날짜 몫은 그대로 두고 할 일만 추가한다.
