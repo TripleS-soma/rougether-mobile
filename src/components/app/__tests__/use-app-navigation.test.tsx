@@ -1,4 +1,4 @@
-import { renderHook } from '@testing-library/react-native';
+import { act, renderHook } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 import { PointerType, State } from 'react-native-gesture-handler';
 
@@ -129,5 +129,43 @@ describe('main-tab edge-back recognition', () => {
     expect(result.current.edgeBackPan.config.enabled).toBe(false);
     await rerender({ screen: 'settings' });
     expect(result.current.edgeBackPan.config.enabled).toBe(false);
+  });
+});
+
+describe('minigame navigation', () => {
+  beforeEach(() => {
+    Platform.OS = 'ios';
+  });
+
+  it.each<{ screen: Screen; back: Screen }>([
+    { screen: 'minigames', back: 'myRoom' },
+    { screen: 'minigameRunner', back: 'minigames' },
+    { screen: 'minigameLeaderboard', back: 'minigames' },
+  ])('hides tabs on $screen and lets explicit back return to $back', async ({ screen, back }) => {
+    const { result, setScreen } = await renderNavigation(screen);
+    expect(result.current.activeTab).toBeNull();
+    await act(() => {
+      expect(result.current.goBack()).toBe(true);
+    });
+    expect(setScreen).toHaveBeenCalledWith(back);
+  });
+
+  it('disables both edge and full-width back while playing, then restores hub swipes', async () => {
+    const { result, rerender, setScreen } = await renderNavigation('minigames');
+    const hubGesture = result.current.edgeBackPan;
+    expect(hubGesture.config.enabled).toBe(true);
+
+    await rerender({ screen: 'minigameRunner' });
+    expect(result.current.edgeBackPan.config.enabled).toBe(false);
+    swipeBack(result.current.edgeBackPan, 10);
+    swipeBack(result.current.edgeBackPan, 200);
+    // A delayed callback from the previous screen must also respect gameplay.
+    swipeBack(hubGesture, 10);
+    expect(setScreen).not.toHaveBeenCalled();
+
+    await rerender({ screen: 'minigames' });
+    expect(result.current.edgeBackPan.config.enabled).toBe(true);
+    swipeBack(result.current.edgeBackPan, 200);
+    expect(setScreen).toHaveBeenCalledWith('myRoom');
   });
 });

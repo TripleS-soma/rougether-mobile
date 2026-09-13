@@ -11,6 +11,7 @@ import {
 import {
   Animated,
   Easing,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   PanResponder,
@@ -80,6 +81,30 @@ export function __resetSheetSerializer() {
 }
 
 export type BottomSheetDragScope = 'header' | 'card';
+
+/**
+ * 안드로이드 키보드 높이 (#1290) — keyboardDidShow의 height를 그대로 쓰고 닫히면 0.
+ * KeyboardAvoidingView(height)는 안드로이드에서 닫힘도 `_onKeyboardChange`로 받아, 닫힘
+ * 이벤트의 screenY(보이는 영역의 **높이**)로 줄임을 다시 계산한다. 엣지투엣지 Modal은
+ * 프레임이 화면 전체라 키보드가 없는데도 상태바+내비바만큼 줄임이 남고, height 모드가
+ * 직전 줄임을 계산에 되먹여 레이아웃과 엇갈리며 시트가 계속 위아래로 흔들렸다(갤럭시
+ * S25 녹화). 여기선 레이아웃 결과를 계산에 쓰지 않으니 되먹임이 생길 수 없다.
+ */
+function useAndroidKeyboardHeight(enabled: boolean): number {
+  const [height, setHeight] = useState(() =>
+    enabled && Keyboard.isVisible() ? (Keyboard.metrics()?.height ?? 0) : 0,
+  );
+  useEffect(() => {
+    if (!enabled) return;
+    const show = Keyboard.addListener('keyboardDidShow', (e) => setHeight(e.endCoordinates.height));
+    const hide = Keyboard.addListener('keyboardDidHide', () => setHeight(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, [enabled]);
+  return enabled ? height : 0;
+}
 
 /**
  * 시작점 기준으로 이 드래그를 시트가 가져갈지 (#514·#657·#1132). `excluded`는
@@ -165,6 +190,7 @@ export function BottomSheet({
   children,
 }: BottomSheetProps) {
   const { height: windowH } = useWindowDimensions();
+  const keyboardHeight = useAndroidKeyboardHeight(avoidKeyboard && Platform.OS === 'android');
   const progress = useAnimatedValue(0);
   // 손가락으로 끌어내린 추가 오프셋(아래로만). 놓으면 0으로 튕겨 돌아가거나 닫힘.
   const dragY = useAnimatedValue(0);
@@ -334,14 +360,25 @@ export function BottomSheet({
     </Animated.View>
   );
 
-  const content = avoidKeyboard ? (
+  const content = !avoidKeyboard ? (
+    overlay
+  ) : Platform.OS === 'ios' ? (
     <KeyboardAvoidingView
+      testID="bottom-sheet-keyboard"
       style={styles.gestureRoot}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      behavior="padding">
       {overlay}
     </KeyboardAvoidingView>
   ) : (
-    overlay
+    // keyboardDidShow의 height는 ime − 시스템 바라 카드 아랫변이 키보드 윗변보다 내비바
+    // 인셋만큼 아래에 놓인다. 입력 시트 본문은 이미 하단 인셋만큼 여백을 가지므로(작성 시트
+    // max(insets.bottom, 16)) 가려지는 띠가 정확히 그 여백이다 — 인셋을 더하면 키보드 위로
+    // 빈칸이 한 번 더 생긴다(#1291 리뷰). 웹은 키보드 이벤트가 없어 0.
+    <View
+      testID="bottom-sheet-keyboard"
+      style={[styles.gestureRoot, { paddingBottom: keyboardHeight }]}>
+      {overlay}
+    </View>
   );
 
   return (

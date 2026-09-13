@@ -239,12 +239,15 @@ export function useCalendarData({
     retry: false,
   });
   // 실패는 onError가 토스트로 알렸다 — 호출부(`void toggleCalendarItem(...)`)로 던지지 않는다.
+  // 성공 여부만 돌려준다: 그날 첫 완료의 자동 출석(#1294)이 성공한 완료에만 반응한다.
   const toggleCalendarItem = useCallback(
-    async (item: CalendarDayItem, date: string) => {
+    async (item: CalendarDayItem, date: string): Promise<boolean> => {
       try {
         await toggleAsync({ item, date });
+        return true;
       } catch {
         // handled in onError
+        return false;
       }
     },
     [toggleAsync],

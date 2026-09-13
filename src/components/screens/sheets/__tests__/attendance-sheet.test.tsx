@@ -1,6 +1,9 @@
-import { act, fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
-import { AttendanceSheet } from '@/components/screens/sheets/attendance-sheet';
+import {
+  AttendanceSheet,
+  AUTO_CHECK_IN_SETTLE_MS,
+} from '@/components/screens/sheets/attendance-sheet';
 import type { AttendanceCheckInResult, AttendanceStatus } from '@/api/events';
 
 const rewards = (claimedThrough: number) =>
@@ -41,7 +44,50 @@ const result = (over: Partial<AttendanceCheckInResult> = {}): AttendanceCheckInR
   ...over,
 });
 
+/** 자동 출석 타이머가 돌고도 남을 만큼 실제 시간을 흘린다. */
+const afterSettle = () =>
+  act(() => new Promise<void>((resolve) => setTimeout(resolve, AUTO_CHECK_IN_SETTLE_MS + 150)));
+
 describe('AttendanceSheet', () => {
+  describe('자동 출석 (#1294)', () => {
+    it('autoCheckIn으로 열리면 버튼을 누르지 않아도 출석을 딱 한 번 보낸다', async () => {
+      const onCheckIn = jest.fn(async () => result());
+      await render(<AttendanceSheet visible autoCheckIn status={STATUS} onCheckIn={onCheckIn} />);
+      await waitFor(() => expect(onCheckIn).toHaveBeenCalledTimes(1));
+      await afterSettle();
+      expect(onCheckIn).toHaveBeenCalledTimes(1);
+    });
+
+    it('오늘 이미 출석했으면 자동으로 보내지 않는다', async () => {
+      const onCheckIn = jest.fn(async () => result());
+      await render(
+        <AttendanceSheet
+          visible
+          autoCheckIn
+          status={{ ...STATUS, checkedInToday: true }}
+          onCheckIn={onCheckIn}
+        />,
+      );
+      await afterSettle();
+      expect(onCheckIn).not.toHaveBeenCalled();
+    });
+
+    it('수동으로 연 시트(autoCheckIn 없음)는 자동으로 보내지 않는다', async () => {
+      const onCheckIn = jest.fn(async () => result());
+      await render(<AttendanceSheet visible status={STATUS} onCheckIn={onCheckIn} />);
+      await afterSettle();
+      expect(onCheckIn).not.toHaveBeenCalled();
+    });
+
+    it('자동 출석도 새 보상이면 수동과 같은 연출(트로피 리빌)을 탄다', async () => {
+      const onCheckIn = jest.fn(async () => result({ rewardGrantedNow: true }));
+      const { getByTestId } = await render(
+        <AttendanceSheet visible autoCheckIn status={STATUS} onCheckIn={onCheckIn} />,
+      );
+      await waitFor(() => expect(getByTestId('attendance-trophy-reveal')).toBeTruthy());
+    });
+  });
+
   it('이벤트 제목·기간·연속일수와 10칸 출석부를 보여준다', async () => {
     const { getByText } = await render(<AttendanceSheet visible status={STATUS} />);
     expect(getByText('10일 연속 출석')).toBeTruthy();

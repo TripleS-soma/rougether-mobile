@@ -8,6 +8,7 @@ import { GestureDetector } from 'react-native-gesture-handler';
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { Icon } from '@/components/ui/icon';
 import { toIsoDate } from '@/utils/datetime';
+import { holidayName } from '@/utils/holidays';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
@@ -350,6 +351,8 @@ function CalendarBase({
                   const isToday = !!today && date === today && !isSelected;
                   const isSunday = di === 0;
                   const isSaturday = di === 6;
+                  // 공휴일 (#1292) — 일요일과 같은 빨강. 토요일 공휴일도 파랑보다 우선.
+                  const holiday = holidayName(date);
                   return (
                     <Pressable
                       key={date}
@@ -358,6 +361,7 @@ function CalendarBase({
                       accessibilityRole="button"
                       accessibilityLabel={[
                         date,
+                        holiday,
                         isToday ? '오늘' : null,
                         progressByDate
                           ? `${progressLabel(progress, date, today ?? date)}${!progress && markedDates?.has(date) ? ', 할 일 있음' : ''}`
@@ -441,7 +445,7 @@ function CalendarBase({
                                 ? t.textDisabled
                                 : isSelected
                                   ? t.onPrimary
-                                  : isSunday
+                                  : isSunday || holiday
                                     ? t.danger
                                     : isSaturday
                                       ? t.info

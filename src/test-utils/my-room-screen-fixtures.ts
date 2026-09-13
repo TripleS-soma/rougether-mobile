@@ -1,21 +1,30 @@
 import { fireEvent } from '@testing-library/react-native';
 
-import { todayIso } from '@/utils/datetime';
+import { calendarToday } from '@/utils/calendar-progress';
+import { holidayName } from '@/utils/holidays';
 
 /**
  * MyRoomScreen 테스트 공용 픽스처 — my-room-screen.*.test.tsx 다섯 파일이
  * 나눠 쓴다. `__tests__` 안의 비테스트 파일은 jest가 빈 스위트로 잡으므로 여기.
  */
 
-export const TODAY = todayIso();
-/** Expected visible date and weekday, formatted independently of the screen. */
-export const calendarHeading = (date: string) =>
-  new Date(`${date}T12:00:00`).toLocaleDateString('ko-KR', {
+// KST 오늘 — 화면·훅이 쓰는 기준(calendarToday)과 같아야 UTC 러너(15:00Z 이후 = KST 다음 날)에서
+// 갈리지 않는다. 기기 로컬 todayIso()는 CI에서 3건을 플레이키하게 만들었다(2026-09-12).
+export const TODAY = calendarToday();
+/**
+ * Expected visible date and weekday, formatted independently of the screen. TODAY is the
+ * real date, so a holiday run (e.g. 추석) also carries the holiday name (#1292).
+ */
+export const calendarHeading = (date: string) => {
+  const heading = new Date(`${date}T12:00:00`).toLocaleDateString('ko-KR', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
     weekday: 'long',
   });
+  const holiday = holidayName(date);
+  return holiday ? `${heading}, ${holiday}` : heading;
+};
 // A non-today date guaranteed to sit in the calendar's current month view:
 // the 1st, or the 2nd when today is the 1st.
 export const OTHER_DAY = `${TODAY.slice(0, 8)}${TODAY.endsWith('01') ? '02' : '01'}`;
