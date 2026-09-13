@@ -18,6 +18,8 @@ const props: SpeakerSheetProps = {
 };
 it('재생·곡 선택·볼륨·닫기를 전달하고 로딩 중에도 취소할 수 있다', async () => {
   const view = await render(<SpeakerSheet {...props} />);
+  expect(view.queryByText('나를 위한 작은 휴식')).toBeNull();
+  expect(view.queryByText('방을 나가면 소리도 잠시 쉬어요.')).toBeNull();
   await fireEvent.press(view.getByText('재생'));
   expect(props.onPlay).toHaveBeenCalledTimes(1);
   await fireEvent.press(view.getByText('조용한 피아노'));
@@ -44,11 +46,17 @@ it('내 방에서만 스피커를 누를 수 있고 편집·방문 미리보기�
     placements: [{ furnitureId: item.id, x: 0.76, y: 0.72, z: 0 }],
   };
   const open = jest.fn();
-  const view = await render(<Room {...scene} onSpeakerPress={open} />);
-  await fireEvent.press(view.getByLabelText('스피커 열기'));
+  const settings = jest.fn();
+  const view = await render(
+    <Room {...scene} onSpeakerPress={open} onSpeakerLongPress={settings} />,
+  );
+  await fireEvent.press(view.getByLabelText('스피커 재생'));
+  expect(open).toHaveBeenCalledTimes(1);
+  await fireEvent(view.getByLabelText('스피커 재생'), 'longPress');
+  expect(settings).toHaveBeenCalledTimes(1);
   expect(open).toHaveBeenCalledTimes(1);
   await view.rerender(<Room {...scene} editable onSpeakerPress={open} />);
-  expect(view.queryByLabelText('스피커 열기')).toBeNull();
+  expect(view.queryByLabelText('스피커 재생')).toBeNull();
   await view.rerender(<Room {...scene} />);
-  expect(view.queryByLabelText('스피커 열기')).toBeNull();
+  expect(view.queryByLabelText('스피커 재생')).toBeNull();
 });

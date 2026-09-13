@@ -56,7 +56,7 @@ it('실제 재생 이벤트 후 움직이며 소리 변경 전에 이전 플레�
   await unmount();
   expect(instances[1].dispose).toHaveBeenCalledTimes(1);
 });
-it('정지 뒤 늦게 도착한 재생/실패 이벤트를 무시하고 방 이탈 시 정지한다', async () => {
+it('정지 뒤 늦게 도착한 재생/실패 이벤트를 무시하고 스피커 배치 해제 시 정지한다', async () => {
   const { result, rerender } = await renderHook(
     ({ active }: { active: boolean }) => useRoomSpeaker(active),
     {

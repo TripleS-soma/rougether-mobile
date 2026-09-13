@@ -1,3 +1,4 @@
+import { completeOnboardingTutorial } from '@/api/starter-gacha';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -30,7 +31,7 @@ export type OnboardingMissionStep = {
 // 첫 루틴 등록 단계는 뺐다(2026-09-08) — 온보딩 직후의 관심사 추천 루틴 게이트(#1149)가
 // 그 역할을 하므로 중복이었다. 체인은 뽑기 → 방 꾸미기 → 친구 초대 3단계.
 export const ONBOARDING_MISSION_STEPS: OnboardingMissionStep[] = [
-  { id: 'first-draw', label: '뽑기 1회 해보기', hint: '뽑기에서 코인으로 한 번 뽑아요' },
+  { id: 'first-draw', label: '뽑기 1회 해보기', hint: '첫 가구를 뽑고 내 방에 놓아봐요' },
   {
     id: 'place-furniture',
     label: '방 꾸미기 저장하기',
@@ -102,6 +103,7 @@ export function useOnboardingMissions(autoStart: boolean) {
     const next = s.stepIndex + 1;
     if (next >= ONBOARDING_MISSION_STEPS.length) {
       // 마지막 미션 — 배너는 소멸하고 축하 시트만 남는다.
+      void completeOnboardingTutorial().catch(() => {});
       void AsyncStorage.setItem(storeKey(), 'completed').catch(() => {});
       setState({ active: false, stepIndex: s.stepIndex, completedIndex: s.stepIndex });
       return;
@@ -115,6 +117,7 @@ export function useOnboardingMissions(autoStart: boolean) {
     const s = stateRef.current;
     if (!s.active) return;
     track('onboarding_mission_skip', { step: ONBOARDING_MISSION_STEPS[s.stepIndex].id });
+    void completeOnboardingTutorial().catch(() => {});
     void AsyncStorage.setItem(storeKey(), 'skipped').catch(() => {});
     setState({ active: false, stepIndex: s.stepIndex, completedIndex: null });
   }, []);

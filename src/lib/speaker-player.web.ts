@@ -1,5 +1,4 @@
 import { Asset } from 'expo-asset';
-import { crossfadeLoop } from '@/lib/speaker-loop';
 import type { SpeakerPlayerFactory } from '@/lib/speaker-player.types';
 
 /** Decode once per play session; Web Audio loops PCM without MP3 seek/reload gaps. */
@@ -22,17 +21,8 @@ export const createSpeakerPlayer: SpeakerPlayerFactory = (source, volume, onPlay
       if (!response.ok) throw new Error('Audio asset unavailable');
       const decoded = await context.decodeAudioData(await response.arrayBuffer());
       if (disposed) return;
-      const overlap = Math.min(Math.round(decoded.sampleRate * 2), Math.floor(decoded.length / 3));
-      const buffer = context.createBuffer(
-        decoded.numberOfChannels,
-        decoded.length - overlap,
-        decoded.sampleRate,
-      );
-      for (let channel = 0; channel < decoded.numberOfChannels; channel++) {
-        buffer.getChannelData(channel).set(crossfadeLoop(decoded.getChannelData(channel), overlap));
-      }
       node = context.createBufferSource();
-      node.buffer = buffer;
+      node.buffer = decoded;
       node.loop = true;
       node.connect(gain);
       node.onended = () => {

@@ -9,4 +9,4 @@
 | forest.mp3 | Forest Ambience / TinyWorlds   | https://opengameart.org/content/forest-ambience      |
 | piano.mp3  | Pianosoft8 / Tozan             | https://opengameart.org/content/pianosoft8           |
 
-라이선스: [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). FFmpeg으로 -23 LUFS / true peak -3 dB 정규화, 44.1 kHz 128 kbps MP3 변환. 웹은 디코딩한 PCM의 끝과 처음 2초를 교차 혼합해 반복한다. 네이티브는 미리 준비한 두 플레이어를 2초간 교차 재생한다.
+라이선스: [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). FFmpeg으로 -23 LUFS / true peak -3 dB 정규화, 44.1 kHz 128 kbps MP3 변환. `scripts/prepare-speaker-loops.py`가 이 MP3들의 끝과 처음 2초를 교차 혼합해 `*-loop.wav`(44.1kHz 스테레오 16bit PCM)를 만든다. 앱은 변환본을 반복 재생하며 동일한 CC0 출처가 적용된다.

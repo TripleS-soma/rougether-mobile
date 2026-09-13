@@ -39,6 +39,7 @@ export type RoomCobweb = { assetKey?: string; cleanable?: boolean };
 
 export type RoomProps = {
   onSpeakerPress?: () => void;
+  onSpeakerLongPress?: () => void;
   speakerPlaying?: boolean;
   wallpaperId?: string;
   /** Selected floor/background surface item ids (optional room layers). */
@@ -113,6 +114,7 @@ export type RoomSceneProps = RoomCatalogProps &
     | 'cobweb'
     | 'onCleanCobweb'
     | 'onSpeakerPress'
+    | 'onSpeakerLongPress'
     | 'speakerPlaying'
   >;
 
@@ -175,6 +177,7 @@ export const Room = memo(function Room({
   onCleanCobweb,
   interactiveCharacter = false,
   onSpeakerPress,
+  onSpeakerLongPress,
   speakerPlaying = false,
   editable = false,
   onRegionPress,
@@ -331,8 +334,16 @@ export const Room = memo(function Room({
                 <Pressable
                   style={{ flex: 1 }}
                   onPress={onSpeakerPress}
+                  onLongPress={onSpeakerLongPress}
+                  accessibilityHint="길게 누르면 소리와 볼륨을 조절할 수 있어요"
+                  accessibilityActions={
+                    onSpeakerLongPress ? [{ name: 'longpress', label: '소리 설정' }] : []
+                  }
+                  onAccessibilityAction={(event) => {
+                    if (event.nativeEvent.actionName === 'longpress') onSpeakerLongPress?.();
+                  }}
                   accessibilityRole="button"
-                  accessibilityLabel="스피커 열기">
+                  accessibilityLabel={speakerPlaying ? '스피커 정지' : '스피커 재생'}>
                   <SpeakerSprite playing={speakerPlaying} />
                 </Pressable>
               ) : (

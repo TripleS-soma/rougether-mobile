@@ -88,15 +88,6 @@ export function SpeakerSheet({
           <View style={styles.sprite}>
             <SpeakerSprite playing={playing} />
           </View>
-          <Text
-            accessibilityLiveRegion="polite"
-            style={[Typography.supporting, { color: t.textMuted }]}>
-            {loading
-              ? '소리를 준비하고 있어요'
-              : playing
-                ? '내 방을 채우는 중'
-                : '나를 위한 작은 휴식'}
-          </Text>
         </View>
         <View style={styles.tracks} accessibilityRole="radiogroup">
           {SPEAKER_TRACKS.map((track) => (
@@ -178,9 +169,6 @@ export function SpeakerSheet({
             {loading ? '취소' : playing ? '정지' : '재생'}
           </Text>
         </Pressable>
-        <Text style={[Typography.supporting, styles.note, { color: t.textMuted }]}>
-          방을 나가면 소리도 잠시 쉬어요.
-        </Text>
       </ScrollView>
     </BottomSheet>
   );
@@ -215,5 +203,4 @@ const styles = StyleSheet.create({
   rail: { height: Spacing.two, borderRadius: Radius.pill, overflow: 'hidden' },
   fill: { height: '100%', borderRadius: Radius.pill },
   play: { alignItems: 'center', padding: Spacing.three, borderRadius: Radius.lg },
-  note: { textAlign: 'center' },
 });

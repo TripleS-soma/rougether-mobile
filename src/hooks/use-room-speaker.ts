@@ -1,6 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, Platform } from 'react-native';
 import { createSpeakerPlayer } from '@/lib/speaker-player';
 import type { SpeakerPlayer } from '@/lib/speaker-player.types';
 import {
@@ -17,6 +16,8 @@ export function useRoomSpeaker(active = true) {
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const playback = useRef({ playing, loading });
+  playback.current = { playing, loading };
   const player = useRef<SpeakerPlayer | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const revision = useRef(0);
@@ -58,19 +59,6 @@ export function useRoomSpeaker(active = true) {
   useEffect(() => {
     if (!active) stop();
   }, [active, stop]);
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', (state) => {
-      if (state !== 'active') stop();
-    });
-    const onVisibility = () => {
-      if (document.hidden) stop();
-    };
-    if (Platform.OS === 'web') document.addEventListener('visibilitychange', onVisibility);
-    return () => {
-      subscription.remove();
-      if (Platform.OS === 'web') document.removeEventListener('visibilitychange', onVisibility);
-    };
-  }, [stop]);
   const persist = useCallback(() => {
     touched.current = true;
     void AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(preferences.current)).catch(() => {});
@@ -101,6 +89,7 @@ export function useRoomSpeaker(active = true) {
           }
         },
         fail,
+        track.name,
       );
       timer.current = setTimeout(fail, 15000);
       void player.current.play().catch(fail);
@@ -111,7 +100,7 @@ export function useRoomSpeaker(active = true) {
   const selectTrack = useCallback(
     (id: SpeakerTrackId) => {
       if (!isSpeakerTrackId(id) || id === preferences.current.trackId) return;
-      const resume = player.current !== null;
+      const resume = playback.current.playing || playback.current.loading;
       stop();
       preferences.current.trackId = id;
       setTrackId(id);

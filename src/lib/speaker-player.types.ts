@@ -9,4 +9,5 @@ export type SpeakerPlayerFactory = (
   volume: number,
   onPlaying: (playing: boolean) => void,
   onError: () => void,
+  title?: string,
 ) => SpeakerPlayer;

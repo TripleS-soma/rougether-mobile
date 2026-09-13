@@ -1,13 +1,13 @@
 import { useState } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
 import { Room } from '@/components/room/room';
 import { SpeakerSheet } from '@/components/room/speaker-sheet';
 import { useRoomSpeaker } from '@/hooks/use-room-speaker';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { STARTER_SPEAKER_KEY } from '@/resources/speaker';
 import { Spacing } from '@/constants/theme';
-import type { FurnitureItem } from '@/resources/furniture';
-const furniture: FurnitureItem[] = [
+import type { FurnitureItem, PlacedFurniture } from '@/resources/furniture';
+const defaultFurniture: FurnitureItem[] = [
   {
     id: 'starter-speaker',
     name: '포근한 스피커',
@@ -18,8 +18,11 @@ const furniture: FurnitureItem[] = [
     rarity: '일반',
   },
 ];
-const placements = [{ furnitureId: 'starter-speaker', x: 0.76, y: 0.72, z: 0, scale: 1 }];
-export function SpeakerPreview() {
+const defaultPlacements = [{ furnitureId: 'starter-speaker', x: 0.76, y: 0.72, z: 0, scale: 1 }];
+export function SpeakerPreview({
+  furniture = defaultFurniture,
+  placements = defaultPlacements,
+}: { furniture?: FurnitureItem[]; placements?: PlacedFurniture[] } = {}) {
   const [open, setOpen] = useState(false);
   const speaker = useRoomSpeaker();
   const t = useTokens();
@@ -36,17 +39,20 @@ export function SpeakerPreview() {
       }}>
       <Text style={[Typography.h2, { color: t.text }]}>내 첫 가구, 포근한 스피커</Text>
       <Text style={[Typography.supporting, { color: t.textMuted }]}>
-        스피커를 눌러 방에 소리를 채워 보세요.
+        한 번 누르면 재생·정지, 길게 누르면 소리 설정.
       </Text>
       <Room
         furniture={furniture}
         placements={placements}
-        onSpeakerPress={() => setOpen(true)}
+        onSpeakerPress={speaker.playing || speaker.loading ? speaker.stop : speaker.play}
+        onSpeakerLongPress={() => setOpen(true)}
         speakerPlaying={speaker.playing}
       />
-      <Pressable accessibilityRole="button" onPress={() => setOpen(true)}>
-        <Text style={[Typography.label, { color: t.primary }]}>스피커 열기</Text>
-      </Pressable>
+      {speaker.error ? (
+        <Text accessibilityRole="alert" style={[Typography.supporting, { color: t.text }]}>
+          {speaker.error}
+        </Text>
+      ) : null}
       <SpeakerSheet
         visible={open}
         onClose={() => setOpen(false)}
