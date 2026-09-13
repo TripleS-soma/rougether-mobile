@@ -244,10 +244,10 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
     /**
      * 날짜 바꾸기 on a routine: move that day's occurrence only. The repeat
      * schedule stays; a one-off todo with the routine's title is created on the
-     * picked date (no server per-occurrence skip yet, so the original day's
-     * instance still shows — the sheet says so).
+     * picked date and the original day's occurrence (`fromDate`, the date the
+     * menu was opened on) is skipped on the server (#189).
      */
-    onMoveRoutineOccurrence?: (id: string, dueDate: string) => void;
+    onMoveRoutineOccurrence?: (id: string, dueDate: string, fromDate: string) => void;
     /** Delete a routine (kebab → 삭제). */
     onDeleteRoutine?: (id: string) => void;
     /**
@@ -477,6 +477,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // 메뉴 → 날짜 바꾸기: calendar sheet. Todos move their dueDate; routines move
   // that day's occurrence only (repeat stays). The draft date lives in the sheet.
   const [dateEditId, setDateEditId] = useState<string | null>(null);
+  // 날짜 바꾸기의 원래 날짜 — 메뉴를 연 날짜(방 탭은 오늘, 달력 탭은 선택한 날짜) (#189).
+  const [dateEditFrom, setDateEditFrom] = useState(today);
   const dateEditItem = routines.find((r) => r.id === dateEditId) ?? null;
 
   // 방 / 달력 tab. The calendar lists routines + todos on the selected date.
@@ -1521,12 +1523,16 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           else handleToggle(r, menuDate);
         }}
         onEditTime={(r) => setTimeId(r.id)}
-        onChangeDate={(r) => setDateEditId(r.id)}
+        onChangeDate={(r) => {
+          setDateEditFrom(menuDate);
+          setDateEditId(r.id);
+        }}
       />
 
       {/* 날짜 바꾸기: calendar bottom sheet — the pick stays a draft until 확인. */}
       <DateEditSheet
         item={dateEditItem}
+        fromDate={dateEditFrom}
         onClose={() => setDateEditId(null)}
         onUpdateTodoDueDate={onUpdateTodoDueDate}
         onMoveRoutineOccurrence={onMoveRoutineOccurrence}
