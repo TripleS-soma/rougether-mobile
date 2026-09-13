@@ -20,6 +20,7 @@
     "expo-alternate-app-icons": "8.0.0",
     "expo-apple-authentication": "~55.0.17",
     "expo-asset": "~55.0.20",
+    "expo-audio": "~55.0.15",
     "expo-background-task": "~55.0.22",
     "expo-build-properties": "~55.0.18",
     "expo-calendar": "~55.0.19",
@@ -120,7 +121,8 @@
       "^@sentry/react-native$": "<rootDir>/jest/sentry-mock.js",
       "^expo-glass-effect$": "<rootDir>/jest/expo-glass-effect-mock.js",
       "^expo-store-review$": "<rootDir>/jest/expo-store-review-mock.js",
-      "^expo-video$": "<rootDir>/jest/expo-video-mock.js"
+      "^expo-video$": "<rootDir>/jest/expo-video-mock.js",
+      "^expo-audio$": "<rootDir>/jest/expo-audio-mock.js"
     },
     "transformIgnorePatterns": [
       "node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|@hyunbinseo/.*))"

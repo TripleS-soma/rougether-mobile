@@ -1,3 +1,9 @@
+import { useToast } from '@/components/ui/toast';
+import { useStarterGacha } from '@/hooks/use-starter-gacha';
+import { toGachaMachine } from '@/api/adapters';
+import { SpeakerSheet } from '@/components/room/speaker-sheet';
+import { useRoomSpeaker } from '@/hooks/use-room-speaker';
+import { isSpeakerFurniture } from '@/resources/speaker';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
@@ -194,6 +200,23 @@ export function AppShell({
     draw: drawGachaMachine,
   } = useGacha(setWallet);
 
+  const starterFlow = missions.step?.id === 'first-draw' && !missionSkipEnabled;
+  const starterGacha = useStarterGacha(starterFlow);
+  const starterAllowed = starterFlow && starterGacha.state?.state !== 'CLOSED';
+  const starterMachines = useMemo(
+    () => [
+      toGachaMachine({
+        gachaId: -1,
+        code: 'onboarding_starter',
+        category: 'FURNITURE',
+        name: '첫 가구',
+        costCurrencyType: 'COIN',
+        costAmount: 0,
+        drawCount: 1,
+      }),
+    ],
+    [],
+  );
   // Owned characters + worn one (GET /me/characters). Once loaded, the worn
   // character overrides the onboarding pick everywhere but friend rooms.
   const {
@@ -385,6 +408,34 @@ export function AppShell({
     // 첫 온보딩 직후 1회만 (#1007) — 온보딩 다시 보기는 미션 건너뛰기가 켜진 쪽이다.
     offerInvitePaste: startMissions && !missionSkipEnabled,
   });
+  const [speakerOpen, setSpeakerOpen] = useState(false);
+  const speakerPlaced = placedItems.some((placement) =>
+    catalogue.furniture.some(
+      (item) => item.id === placement.furnitureId && isSpeakerFurniture(item),
+    ),
+  );
+  const speaker = useRoomSpeaker(speakerPlaced);
+  const { show: showSpeakerError } = useToast();
+  useEffect(() => {
+    if (speaker.error) showSpeakerError(speaker.error);
+  }, [speaker.error, showSpeakerError]);
+  const playSpeaker = useStableCallback(() => {
+    settingsSurface.enableSpeakerMusic();
+    speaker.play();
+  });
+  const stopSpeaker = speaker.stop;
+  useEffect(() => {
+    if (!settingsSurface.soundSettings.music) stopSpeaker();
+  }, [settingsSurface.soundSettings.music, stopSpeaker]);
+  const toggleSpeaker = useStableCallback(() => {
+    if (speaker.playing || speaker.loading) speaker.stop();
+    else playSpeaker();
+  });
+  const openSpeaker = useCallback(() => setSpeakerOpen(true), []);
+  const closeSpeaker = useCallback(() => setSpeakerOpen(false), []);
+  useEffect(() => {
+    if (screen !== 'myRoom' || !speakerPlaced) setSpeakerOpen(false);
+  }, [screen, speakerPlaced]);
   // 나의 방 페이지 배선 (#692 5단계) — 나의 방 탭 페이지와 서브화면 4종
   // (루틴 관리·추가·카테고리 관리·알림 목록)의 훅·콜백·JSX 소유.
   const completedTodayHandler = useCallback(() => {
@@ -567,6 +618,9 @@ export function AppShell({
           <MyRoomScreen
             {...myRoomPages.tabProps}
             view="room"
+            onSpeakerPress={toggleSpeaker}
+            onSpeakerLongPress={openSpeaker}
+            speakerPlaying={speaker.playing}
             {...tabScroll.myRoom}
             onOpenFurnitureStudio={openFurnitureStudio}
             onOpenMinigames={minigames.openMinigames}
@@ -652,20 +706,29 @@ export function AppShell({
 
       {screen === 'gacha' ? (
         <GachaScreen
-          gachas={gachas}
-          loading={gachasLoading}
-          loadError={gachasError}
-          onRetry={retryGachas}
+          gachas={starterAllowed ? starterMachines : gachas}
+          starterDrawState={
+            starterAllowed
+              ? starterGacha.state?.state === 'CLAIMED'
+                ? 'CLAIMED'
+                : 'PENDING'
+              : undefined
+          }
+          loading={starterAllowed ? starterGacha.loading : gachasLoading}
+          loadError={starterAllowed ? starterGacha.error : gachasError}
+          onRetry={starterAllowed ? starterGacha.retry : retryGachas}
           coinBalance={wallet.coin}
           diamondBalance={wallet.diamond}
           soundEffectsEnabled={settingsSurface.soundSettings.effects}
           onBack={() => setScreen('myRoom')}
           // 뽑은 아이템·캐릭터의 재조회는 useGacha가 인벤토리·캐릭터 쿼리를
           // 무효화해 처리한다 (#1027) — 셸이 손으로 꿰던 재조회 두 줄이 사라졌다.
-          onDraw={drawGachaMachine}
+          onDraw={starterAllowed ? starterGacha.draw : drawGachaMachine}
           placeableItemIds={placeableFurnitureIds}
           // 보상 목록 (#620) — 시트가 자체 재시도를 가지므로 실패는 null로.
-          onLoadRewards={(gachaId) => fetchGachaRewards(gachaId).catch(() => null)}
+          onLoadRewards={
+            starterAllowed ? undefined : (gachaId) => fetchGachaRewards(gachaId).catch(() => null)
+          }
           onGoPlace={goPlaceDrawn}
           // 뽑기 성공 = 미션 2 완료 (#571) — 연출이 끝나고 확인을 누른
           // 순간에. 뽑기 직후 완료시키면 미션 시트가 연출을 덮는다.
@@ -691,6 +754,19 @@ export function AppShell({
       onLayout={(e) =>
         setCoachFrame({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })
       }>
+      <SpeakerSheet
+        visible={speakerOpen}
+        onClose={closeSpeaker}
+        trackId={speaker.trackId}
+        volume={speaker.volume}
+        playing={speaker.playing}
+        loading={speaker.loading}
+        error={speaker.error}
+        onPlay={playSpeaker}
+        onStop={speaker.stop}
+        onSelectTrack={speaker.selectTrack}
+        onVolumeChange={speaker.setVolume}
+      />
       {/* 엣지 백 (#564) — 콘텐츠 전체를 감싸되 관찰만 한다(차단 없음). */}
       <MinigameActiveContext.Provider
         value={screen === 'minigameRunner' ? minigames.activeSessionId : null}>

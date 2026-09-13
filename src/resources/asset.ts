@@ -8,6 +8,8 @@
  * an <Image> and fall back to the in-app placeholder.
  */
 import sharedEndpoints from '@/config/shared-endpoints.json';
+import { Asset } from 'expo-asset';
+import { SPEAKER_IMAGE, STARTER_SPEAKER_KEY } from '@/resources/speaker';
 
 // 폴백은 공용 환경 주소의 단일 출처에서 (#738 계약, api/config.ts와 같은 결).
 // 여기 값을 따로 박아 두면 CDN을 옮길 때 API·타입 생성만 따라가고 에셋은
@@ -43,7 +45,13 @@ export function assetSource(key?: string | null) {
   const hit = SOURCE_CACHE.get(path);
   if (hit) return hit;
   if (SOURCE_CACHE.size >= SOURCE_CACHE_MAX) SOURCE_CACHE.clear();
-  const source = { uri: `${RESOURCE_BASE}/${path}` };
+  // The first-draw reward is bundled for offline result recovery.
+  const source = {
+    uri:
+      path === STARTER_SPEAKER_KEY
+        ? Asset.fromModule(SPEAKER_IMAGE).uri
+        : `${RESOURCE_BASE}/${path}`,
+  };
   SOURCE_CACHE.set(path, source);
   return source;
 }

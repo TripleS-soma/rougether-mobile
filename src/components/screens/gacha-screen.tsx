@@ -41,6 +41,7 @@ type Phase = 'idle' | 'charging' | 'burst' | 'reveal';
 const BONUS_DRAW_COST_MULTIPLIER = 5;
 
 export type GachaScreenProps = {
+  starterDrawState?: 'PENDING' | 'CLAIMED';
   onBack?: () => void;
   /** Machines from the API (`GET /gacha`). */
   gachas?: GachaMachine[];
@@ -113,6 +114,7 @@ function RewardGap() {
 }
 
 export function GachaScreen({
+  starterDrawState,
   onBack,
   gachas = [],
   loading = false,
@@ -226,7 +228,11 @@ export function GachaScreen({
     !r.converted && r.itemId != null && placeableSet.has(String(r.itemId));
   const placeablePulled = pulled.filter(isPlaceable);
 
-  const machines = useMemo(() => getCategoryGachas(gachas), [gachas]);
+  // The free onboarding box uses its own endpoint, so it has no catalog gacha ID.
+  const machines = useMemo(
+    () => (starterDrawState ? gachas.slice(0, 1) : getCategoryGachas(gachas)),
+    [gachas, starterDrawState],
+  );
   const box =
     machines.find((b) => b.id === selectedId) ??
     machines.find((b) => getGachaCategory(b) === 'FURNITURE') ??
@@ -240,7 +246,7 @@ export function GachaScreen({
     box ? balanceFor(box.costCurrencyType) >= drawCost(count) : false;
 
   const pull = async (count: GachaDrawCount) => {
-    if (!box || drawBusy.current) return;
+    if (!box || drawBusy.current || (starterDrawState && count !== 1)) return;
     // The button stays tappable when unaffordable — the tap says why.
     if (!canAfford(count)) {
       // 뽑기 앞에서 코인이 모자라 돌아서는 지점 (#799) — 퍼널의 흔한 막힘.
@@ -344,6 +350,7 @@ export function GachaScreen({
       ) : box ? (
         <View style={[styles.screen, column]}>
           <GachaLobby
+            starterDrawState={starterDrawState}
             machines={machines}
             selected={box}
             onSelect={(selected) => {
