@@ -46,6 +46,8 @@ export function MinigamesScreen({
         key={game.gameCode}
         interactive={false}
         glassEffectStyle="clear"
+        // 안드로이드에서 반투명 카드의 elevation 그림자가 회색 테두리처럼 보였다 (#1328).
+        lift={false}
         fallbackColor={t.surface}
         style={styles.card}>
         <View style={styles.scene}>
