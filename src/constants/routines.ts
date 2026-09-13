@@ -128,6 +128,13 @@ export type Routine = {
   skippedDates?: string[];
 };
 
+/**
+ * 루틴 몫 옮기기의 서버 건너뜀(SKIPPED) 사용 여부 (#189 · #1334). 서버 #390이 운영에 배포되기
+ * 전엔 false — 옛 서버는 `status`를 무시하고 그 POST를 **완료**로 기록하므로, 배포 확인
+ * (운영 api-docs `RoutineLogCreateRequest.status`) 뒤에 true로 올린다.
+ */
+export const ROUTINE_OCCURRENCE_SKIP_ENABLED = false;
+
 /** Payload for creating/editing a routine (from the Add/Edit routine screen). */
 export type NewRoutine = {
   title: string;

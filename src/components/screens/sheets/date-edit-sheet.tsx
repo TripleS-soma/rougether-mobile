@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SheetHandle } from '@/components/ui/sheet-handle';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Calendar } from '@/components/ui/calendar';
-import type { Routine } from '@/constants/routines';
+import { ROUTINE_OCCURRENCE_SKIP_ENABLED, type Routine } from '@/constants/routines';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { todayIso } from '@/utils/datetime';
@@ -43,7 +43,8 @@ export function DateEditSheet({
     if (item) setDraft(item.dueDate ?? todayIso());
   }, [item]);
   const origin = fromDate ?? todayIso();
-  const pastOrigin = origin < todayIso();
+  // 서버 건너뜀이 꺼져 있으면(배포 전) 지난 날짜와 같은 안내 — 할 일만 추가된다.
+  const pastOrigin = !ROUTINE_OCCURRENCE_SKIP_ENABLED || origin < todayIso();
 
   return (
     <BottomSheet
@@ -57,7 +58,7 @@ export function DateEditSheet({
       {item?.kind !== 'todo' ? (
         <Text style={[Typography.supporting, styles.sheetNote, { color: t.textMuted }]}>
           {pastOrigin
-            ? '루틴 반복은 그대로 두고, 선택한 날짜에 이 날 몫이 할 일로 추가돼요.\n(지난 날짜 몫은 그대로 남아요)'
+            ? `루틴 반복은 그대로 두고, 선택한 날짜에 이 날 몫이 할 일로 추가돼요.\n${ROUTINE_OCCURRENCE_SKIP_ENABLED ? '(지난 날짜 몫은 그대로 남아요)' : '(원래 날짜에서 숨기는 건 서버 준비 중이에요)'}`
             : '루틴 반복은 그대로 두고, 이 날 몫만 선택한 날짜로 옮겨요.\n(원래 날짜에서는 빠지고, 옮긴 날짜엔 할 일로 들어가요)'}
         </Text>
       ) : null}

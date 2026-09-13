@@ -57,7 +57,12 @@ import {
 } from '@/api/adapters';
 import { useToast } from '@/components/ui/toast';
 import { DEFAULT_WALLET, type Wallet } from '@/constants/currency';
-import { type NewRoutine, type Routine, type RoutineCategoryMeta } from '@/constants/routines';
+import {
+  type NewRoutine,
+  ROUTINE_OCCURRENCE_SKIP_ENABLED,
+  type Routine,
+  type RoutineCategoryMeta,
+} from '@/constants/routines';
 import type { HouseMissionContributeResponse } from '@/api/types';
 import { calendarToday as todayIso } from '@/utils/calendar-progress';
 import { loadRoutineSkips, saveRoutineSkips, type RoutineSkips } from '@/lib/routine-skips-store';
@@ -421,7 +426,8 @@ export function useMyRoomData() {
         unmarkPending(dueDate);
         return;
       }
-      const hideOrigin = fromDate >= todayIso();
+      // 서버 미배포 동안은 할 일만 만든다 (ROUTINE_OCCURRENCE_SKIP_ENABLED) — 옛 서버는 완료로 기록한다.
+      const hideOrigin = ROUTINE_OCCURRENCE_SKIP_ENABLED && fromDate >= todayIso();
       try {
         if (hideOrigin) {
           await skipRoutineOccurrence(toServerItemId(id), fromDate);

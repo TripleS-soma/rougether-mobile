@@ -4,6 +4,12 @@ import { DateEditSheet } from '@/components/screens/sheets/date-edit-sheet';
 import type { Routine } from '@/constants/routines';
 import { calendarToday } from '@/utils/calendar-progress';
 
+// 서버 건너뜀 플래그 (#1334 게이트) — 이 스위트는 서버가 배포된 상태를 검증한다.
+jest.mock('@/constants/routines', () => ({
+  ...jest.requireActual('@/constants/routines'),
+  ROUTINE_OCCURRENCE_SKIP_ENABLED: true,
+}));
+
 const routine: Routine = { id: 'r5', title: '스트레칭', repeat: 'daily' };
 
 describe('DateEditSheet — 루틴 몫 옮기기 (#189)', () => {
