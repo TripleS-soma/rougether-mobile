@@ -82,7 +82,7 @@ export type AnalyticsEvent =
   | 'minigame_finish'
   /** 게임 중 화면을 떠남 — 시작은 했지만 끝내지 않은 세션. game, mode. */
   | 'minigame_abandon'
-  /** 랭킹 화면 진입 — via: picker(목록) | result(결과 화면). */
+  /** 랭킹 화면 진입 — via: picker(목록) | runner(시작 전 게임 화면) | result(결과 화면). */
   | 'minigame_leaderboard_view'
   /** 랭킹전 기록 저장 실패 — 재시도 버튼의 분모. 상세 status는 api_error. */
   | 'minigame_submit_failed'

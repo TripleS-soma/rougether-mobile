@@ -95,7 +95,7 @@ export function useMinigameSurface({
     [setScreen],
   );
   const openLeaderboard = useCallback(
-    (code: string, via: 'picker' | 'result' = 'picker') => {
+    (code: string, via: 'picker' | 'runner' | 'result' = 'picker') => {
       const next = getMinigameDefinition(code);
       if (!next) return;
       track('minigame_leaderboard_view', { game: next.gameCode, via });
@@ -156,7 +156,8 @@ export function useMinigameSurface({
         onStart={run.start}
         onPractice={run.practice}
         onRetrySubmit={run.retrySubmit}
-        onLeaderboard={() => openLeaderboard(gameCode, 'result')}
+        // The runner also shows the button before a game starts — only a finished game is a result.
+        onLeaderboard={() => openLeaderboard(gameCode, run.finished ? 'result' : 'runner')}
         onBack={openMinigames}
       />
     ) : screen === 'minigameLeaderboard' ? (

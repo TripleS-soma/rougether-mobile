@@ -118,6 +118,14 @@ it('logs where the leaderboard was opened from — the picker or a finished game
   await fireEvent.press(ui.getByLabelText('뒤로 가기'));
 
   await fireEvent.press(ui.getByLabelText('고양이 계단 시작'));
+  // Idle runner (before a game starts) is neither the picker nor a result.
+  await fireEvent.press(ui.getByLabelText('전체 유저 랭킹 보기'));
+  expect(mockTrack).toHaveBeenLastCalledWith('minigame_leaderboard_view', {
+    game: 'cat-stairs',
+    via: 'runner',
+  });
+  await fireEvent.press(ui.getByLabelText('뒤로 가기'));
+  await fireEvent.press(ui.getByLabelText('고양이 계단 시작'));
   await fireEvent.press(ui.getByLabelText('랭킹 도전'));
   await waitFor(() => expect(ui.getByLabelText('테스트 게임 완료')).toBeTruthy());
   await fireEvent.press(ui.getByLabelText('테스트 게임 완료'));
