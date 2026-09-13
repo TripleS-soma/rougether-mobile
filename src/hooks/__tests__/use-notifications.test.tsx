@@ -111,6 +111,104 @@ describe('useNotifications', () => {
     expect(result.current.entries).toHaveLength(2);
   });
 
+  describe('삭제 (#1137)', () => {
+    const mockServer = (deleteRes: () => unknown) => {
+      const calls: { url: string; method: string }[] = [];
+      global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+        const method = init?.method ?? 'GET';
+        calls.push({ url, method });
+        if (method === 'DELETE') return deleteRes();
+        return res(PAGE_1);
+      }) as unknown as typeof fetch;
+      return calls;
+    };
+    const loaded = async () => {
+      const hook = await renderHook(() => useNotifications());
+      await act(async () => {
+        await hook.result.current.load();
+      });
+      return hook;
+    };
+
+    it('하나를 먼저 빼고 DELETE를 보낸다 — 안 읽음 배지도 줄어든다', async () => {
+      const calls = mockServer(() => ({ ok: true, status: 204, text: async () => '' }));
+      const { result } = await loaded();
+
+      await act(async () => {
+        await result.current.remove(12);
+      });
+
+      expect(calls.some((c) => c.method === 'DELETE' && c.url.endsWith('/notifications/12'))).toBe(true); // prettier-ignore
+      expect(result.current.entries?.map((n) => n.id)).toEqual([11]);
+      expect(result.current.unreadCount).toBe(0);
+    });
+
+    it('실패하면 원래 자리로 되돌린다', async () => {
+      mockServer(() => ({ ok: false, status: 500, text: async () => '{}' }));
+      const { result } = await loaded();
+
+      await act(async () => {
+        await result.current.remove(12);
+      });
+
+      await waitFor(() => expect(result.current.entries?.map((n) => n.id)).toEqual([12, 11]));
+      expect(result.current.unreadCount).toBe(1);
+    });
+
+    it('404는 이미 없는 알림이라 되돌리지 않는다', async () => {
+      mockServer(() => ({
+        ok: false,
+        status: 404,
+        text: async () => JSON.stringify({ code: 'NOTIFICATION_NOT_FOUND' }),
+      }));
+      const { result } = await loaded();
+
+      await act(async () => {
+        await result.current.remove(11);
+      });
+
+      expect(result.current.entries?.map((n) => n.id)).toEqual([12]);
+    });
+
+    it('코드 없는 404(삭제 API가 없는 서버)는 실패로 되돌린다', async () => {
+      mockServer(() => ({ ok: false, status: 404, text: async () => '<html>Not Found</html>' }));
+      const { result } = await loaded();
+
+      await act(async () => {
+        await result.current.remove(11);
+      });
+
+      await waitFor(() => expect(result.current.entries?.map((n) => n.id)).toEqual([12, 11]));
+    });
+
+    it('전체 삭제는 목록을 비우고 더보기를 닫는다', async () => {
+      const calls = mockServer(() => ({ ok: true, status: 204, text: async () => '' }));
+      const { result } = await loaded();
+      expect(result.current.hasNext).toBe(true);
+
+      await act(async () => {
+        await result.current.removeAll();
+      });
+
+      expect(calls.some((c) => c.method === 'DELETE' && /\/notifications$/.test(c.url))).toBe(true);
+      expect(result.current.entries).toEqual([]);
+      expect(result.current.hasNext).toBe(false);
+      expect(result.current.unreadCount).toBe(0);
+    });
+
+    it('전체 삭제가 실패하면 목록과 더보기를 되돌린다', async () => {
+      mockServer(() => ({ ok: false, status: 500, text: async () => '{}' }));
+      const { result } = await loaded();
+
+      await act(async () => {
+        await result.current.removeAll();
+      });
+
+      await waitFor(() => expect(result.current.entries).toHaveLength(2));
+      expect(result.current.hasNext).toBe(true);
+    });
+  });
+
   it('marks everything read via read-all', async () => {
     const calls: { url: string; method: string }[] = [];
     global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
