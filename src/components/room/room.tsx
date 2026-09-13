@@ -1,3 +1,5 @@
+import { SpeakerSprite } from '@/components/room/speaker-sprite';
+import { isSpeakerFurniture } from '@/resources/speaker';
 import { Image } from 'expo-image';
 import { memo, useMemo, useState } from 'react';
 import { Pressable, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
@@ -36,6 +38,8 @@ export type RoomRegion = 'wall' | 'floor';
 export type RoomCobweb = { assetKey?: string; cleanable?: boolean };
 
 export type RoomProps = {
+  onSpeakerPress?: () => void;
+  speakerPlaying?: boolean;
   wallpaperId?: string;
   /** Selected floor/background surface item ids (optional room layers). */
   floorId?: string | null;
@@ -108,6 +112,8 @@ export type RoomSceneProps = RoomCatalogProps &
     | 'placements'
     | 'cobweb'
     | 'onCleanCobweb'
+    | 'onSpeakerPress'
+    | 'speakerPlaying'
   >;
 
 /**
@@ -168,6 +174,8 @@ export const Room = memo(function Room({
   cobweb = null,
   onCleanCobweb,
   interactiveCharacter = false,
+  onSpeakerPress,
+  speakerPlaying = false,
   editable = false,
   onRegionPress,
   activeRegion = null,
@@ -312,8 +320,24 @@ export const Room = memo(function Room({
       {/* 자유 배치 경로 (#327) — z 오름차순, 중심점 앵커(폭 28%의 절반 보정). */}
       {freeItems
         ? freeItems.map(({ key, item, style: itemStyle }) => (
-            <View key={key} testID={`room-furniture-${key}`} pointerEvents="none" style={itemStyle}>
-              <FurniturePlaceholder item={item} sharp={fill} />
+            <View
+              key={key}
+              testID={`room-furniture-${key}`}
+              pointerEvents={
+                isSpeakerFurniture(item) && onSpeakerPress && !editable ? 'auto' : 'none'
+              }
+              style={itemStyle}>
+              {isSpeakerFurniture(item) && onSpeakerPress && !editable ? (
+                <Pressable
+                  style={{ flex: 1 }}
+                  onPress={onSpeakerPress}
+                  accessibilityRole="button"
+                  accessibilityLabel="스피커 열기">
+                  <SpeakerSprite playing={speakerPlaying} />
+                </Pressable>
+              ) : (
+                <FurniturePlaceholder item={item} sharp={fill} />
+              )}
             </View>
           ))
         : null}

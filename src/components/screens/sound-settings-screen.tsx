@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { DEFAULT_HAPTIC_STRENGTH, type HapticStrength } from '@/utils/haptics';
-import { PendingNotice } from '@/components/ui/pending-notice';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Radius, Spacing } from '@/constants/theme';
@@ -27,7 +26,7 @@ type ToggleKey = 'effects' | 'music';
 
 const ROWS: { key: ToggleKey; label: string; desc: string }[] = [
   { key: 'effects', label: '효과음', desc: '버튼과 뽑기 등에서 소리가 나요' },
-  { key: 'music', label: '배경 음악', desc: '방에 있을 때 잔잔한 음악이 흘러요' },
+  { key: 'music', label: '배경 음악', desc: '스피커에서 직접 재생한 배경음을 허용해요' },
 ];
 
 /** 햅틱 세기 (#974) — 켜고 끄는 것만으로는 '너무 세다'를 해결할 수 없었다. */
@@ -77,7 +76,9 @@ export function SoundSettingsScreen({
           column,
           headerInset ? { paddingTop: headerInset } : null,
         ]}>
-        <PendingNotice text="사운드 설정은 서버 준비 중이라 아직 이 기기에만 저장돼요." />
+        <Text style={[Typography.supporting, { color: t.textMuted }]}>
+          소리와 진동 설정은 이 기기에 저장돼요.
+        </Text>
         <View style={[styles.card, { backgroundColor: t.surface }]}>
           {ROWS.map((r, idx) => (
             <View

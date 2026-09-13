@@ -242,7 +242,16 @@
           }
         ]
       ],
-      "./plugins/with-app-icon-launchers.js"
+      "./plugins/with-app-icon-launchers.js",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "enableBackgroundRecording": false,
+          "enableBackgroundPlayback": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

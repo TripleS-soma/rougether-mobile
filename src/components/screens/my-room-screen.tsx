@@ -304,6 +304,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   backgroundId,
   cobweb,
   onCleanCobweb,
+  onSpeakerPress,
+  speakerPlaying,
   markedTodoDates,
   today: serverToday,
   growthLevel,
@@ -569,6 +571,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
 
   // <Room />에 스프레드로 넘기는 씬 번들 (#691).
   const roomScene: RoomSceneProps = {
+    onSpeakerPress,
+    speakerPlaying,
     characterId,
     characterFrames,
     cobweb,

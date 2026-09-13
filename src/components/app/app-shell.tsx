@@ -1,3 +1,6 @@
+import { SpeakerSheet } from '@/components/room/speaker-sheet';
+import { useRoomSpeaker } from '@/hooks/use-room-speaker';
+import { isSpeakerFurniture } from '@/resources/speaker';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
@@ -375,6 +378,26 @@ export function AppShell({
     // 첫 온보딩 직후 1회만 (#1007) — 온보딩 다시 보기는 미션 건너뛰기가 켜진 쪽이다.
     offerInvitePaste: startMissions && !missionSkipEnabled,
   });
+  const [speakerOpen, setSpeakerOpen] = useState(false);
+  const speakerPlaced = placedItems.some((placement) =>
+    catalogue.furniture.some(
+      (item) => item.id === placement.furnitureId && isSpeakerFurniture(item),
+    ),
+  );
+  const speaker = useRoomSpeaker(screen === 'myRoom' && speakerPlaced);
+  const playSpeaker = useStableCallback(() => {
+    settingsSurface.enableSpeakerMusic();
+    speaker.play();
+  });
+  const stopSpeaker = speaker.stop;
+  useEffect(() => {
+    if (!settingsSurface.soundSettings.music) stopSpeaker();
+  }, [settingsSurface.soundSettings.music, stopSpeaker]);
+  const openSpeaker = useCallback(() => setSpeakerOpen(true), []);
+  const closeSpeaker = useCallback(() => setSpeakerOpen(false), []);
+  useEffect(() => {
+    if (screen !== 'myRoom' || !speakerPlaced) setSpeakerOpen(false);
+  }, [screen, speakerPlaced]);
   // 나의 방 페이지 배선 (#692 5단계) — 나의 방 탭 페이지와 서브화면 4종
   // (루틴 관리·추가·카테고리 관리·알림 목록)의 훅·콜백·JSX 소유.
   const myRoomPages = useMyRoomPages({
@@ -526,6 +549,8 @@ export function AppShell({
           <MyRoomScreen
             {...myRoomPages.tabProps}
             view="room"
+            onSpeakerPress={openSpeaker}
+            speakerPlaying={speaker.playing}
             {...tabScroll.myRoom}
             onOpenFurnitureStudio={openFurnitureStudio}
             onOpenMinigames={minigames.openMinigames}
@@ -646,6 +671,19 @@ export function AppShell({
 
   return (
     <View style={styles.root}>
+      <SpeakerSheet
+        visible={speakerOpen}
+        onClose={closeSpeaker}
+        trackId={speaker.trackId}
+        volume={speaker.volume}
+        playing={speaker.playing}
+        loading={speaker.loading}
+        error={speaker.error}
+        onPlay={playSpeaker}
+        onStop={speaker.stop}
+        onSelectTrack={speaker.selectTrack}
+        onVolumeChange={speaker.setVolume}
+      />
       {/* 엣지 백 (#564) — 콘텐츠 전체를 감싸되 관찰만 한다(차단 없음). */}
       <MinigameActiveContext.Provider
         value={screen === 'minigameRunner' ? minigames.activeSessionId : null}>
