@@ -1092,14 +1092,17 @@ export const HouseScreen = memo(function HouseScreen({
             Typography={Typography}
           />
         </CoachTarget>
-        <RailButton
-          icon={<Icon name="members" size={20} color={t.text} />}
-          label="집 관리"
-          onPress={onOpenMembers}
-          accessibilityLabel="집 관리"
-          t={t}
-          Typography={Typography}
-        />
+        {/* 튜토리얼 '친구 초대' 첫 대상 (#1324). */}
+        <CoachTarget id="house-manage">
+          <RailButton
+            icon={<Icon name="members" size={20} color={t.text} />}
+            label="집 관리"
+            onPress={onOpenMembers}
+            accessibilityLabel="집 관리"
+            t={t}
+            Typography={Typography}
+          />
+        </CoachTarget>
       </View>
     </View>
   );

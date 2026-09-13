@@ -117,14 +117,18 @@ export function StarterRoutineScreen({
                 : '이 루틴으로 시작하기'}
           </Text>
         </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          disabled={saving}
-          accessibilityState={{ disabled: saving }}
-          onPress={onSkip}
-          style={styles.skip}>
-          <Text style={[Typography.label, { color: t.textMuted }]}>나중에 할게요</Text>
-        </Pressable>
+        {/* 건너뛰기는 서버 오류로 추천을 못 받았을 때만 (#1324) — 루틴 없이 튜토리얼에
+            들어가면 첫 미션(루틴 완료)을 할 수 없다. 정상 경로엔 출구가 없다. */}
+        {error ? (
+          <Pressable
+            accessibilityRole="button"
+            disabled={saving}
+            accessibilityState={{ disabled: saving }}
+            onPress={onSkip}
+            style={styles.skip}>
+            <Text style={[Typography.label, { color: t.textMuted }]}>나중에 할게요</Text>
+          </Pressable>
+        ) : null}
       </View>
     </View>
   );

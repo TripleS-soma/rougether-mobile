@@ -205,7 +205,8 @@ export function BottomNav({ active, onChange, badges }: BottomNavProps) {
         key={key}
         testID={`bottom-nav-tab-${key}`}
         onLayout={(e) => recordTab(index, e.nativeEvent.layout)}>
-        {key === 'myPage' ? <CoachTarget id="nav-my-page">{inner}</CoachTarget> : inner}
+        {/* 모든 탭이 코치마크 대상 (#1324) — 다른 화면에 있으면 "돌아가기"를 짚어야 한다. */}
+        <CoachTarget id={key === 'myPage' ? 'nav-my-page' : `nav-${key}`}>{inner}</CoachTarget>
       </View>
     );
   });

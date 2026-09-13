@@ -12,6 +12,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { SwipeDeleteRow } from '@/components/screens/my-room/swipe-delete-row';
 import { BearCheck } from '@/components/ui/bear-check';
 import { Icon } from '@/components/ui/icon';
+import { CoachTarget } from '@/components/ui/coach-mark';
 import { Spacing } from '@/constants/theme';
 import { useLatestRef } from '@/hooks/use-stable-value';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
@@ -43,6 +44,8 @@ export type RoutineRowProps = {
   menuEnabled: boolean;
   /** 스와이프 삭제 (#566) — 서버 기반 달력 항목 등은 비활성. */
   deleteEnabled: boolean;
+  /** 체크를 튜토리얼 코치마크 대상으로 등록 (#1324) — 첫 미완료 행 하나만. */
+  coachTarget?: boolean;
 
   // --- 아래는 전부 참조 고정 계약 (#769). 부모가 useStableCallback으로 준다. ---
   onToggle: (rowKey: string, e?: GestureResponderEvent) => void;
@@ -88,6 +91,7 @@ function RoutineRowBase({
   dragTY,
   menuEnabled,
   deleteEnabled,
+  coachTarget = false,
   onToggle,
   onMenu,
   onDelete,
@@ -143,7 +147,13 @@ function RoutineRowBase({
     <SwipeDeleteRow label={title} onDelete={deleteEnabled ? remove : undefined}>
       <View style={styles.routineRow}>
         {/* 체크만 완료를 토글하고, 나머지 영역은 수정/삭제 시트를 연다. */}
-        <BearCheck checked={done} color={color} onPress={toggle} accessibilityLabel={title} />
+        {coachTarget ? (
+          <CoachTarget id="room-routine-check">
+            <BearCheck checked={done} color={color} onPress={toggle} accessibilityLabel={title} />
+          </CoachTarget>
+        ) : (
+          <BearCheck checked={done} color={color} onPress={toggle} accessibilityLabel={title} />
+        )}
         <Pressable
           onPress={menuEnabled ? openMenu : undefined}
           accessibilityRole="button"

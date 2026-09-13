@@ -45,6 +45,7 @@ import {
   WALLPAPERS,
 } from '@/resources/furniture';
 import { useToast } from '@/components/ui/toast';
+import { CoachTarget } from '@/components/ui/coach-mark';
 import { useActionBarInset, useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useStableCallback } from '@/hooks/use-stable-value';
 import { track } from '@/lib/analytics';
@@ -1050,10 +1051,13 @@ export function RoomDecorScreen({
           accessibilityRole="button"
           accessibilityLabel="적용하기"
           style={[styles.applyBtn, split ? styles.splitApply : null]}>
-          <GlassSurface style={styles.applyFace} tintColor={t.primary} fallbackColor={t.primary}>
-            <Icon name="check" size={16} color={t.onPrimary} />
-            <Text style={[Typography.label, { color: t.onPrimary }]}>적용하기</Text>
-          </GlassSurface>
+          {/* 튜토리얼 코치마크 대상 (#1324) — 격자와 함께 구멍을 이룬다. */}
+          <CoachTarget id="decor-apply">
+            <GlassSurface style={styles.applyFace} tintColor={t.primary} fallbackColor={t.primary}>
+              <Icon name="check" size={16} color={t.onPrimary} />
+              <Text style={[Typography.label, { color: t.onPrimary }]}>적용하기</Text>
+            </GlassSurface>
+          </CoachTarget>
         </Pressable>
       </ActionBar>
     </View>
