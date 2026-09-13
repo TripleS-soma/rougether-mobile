@@ -12,10 +12,12 @@ import {
   type MinigameRun,
 } from '@/api/minigames';
 import { useMinigameLeaderboard, useMinigameRun, useMinigames } from '@/hooks/use-minigames';
+import { track } from '@/lib/analytics';
 import { createTestQueryClient, queryWrapper } from '@/test-utils/query-wrapper';
 import { queryKeys } from '@/lib/query-keys';
 
 jest.mock('@/api/auth', () => ({ getSessionUserId: () => 7 }));
+jest.mock('@/lib/analytics', () => ({ track: jest.fn() }));
 jest.mock('@/api/minigames', () => ({
   fetchMinigames: jest.fn(),
   fetchMinigameLeaderboard: jest.fn(),
@@ -27,6 +29,7 @@ const catalogRequest = jest.mocked(fetchMinigames);
 const leaderboardRequest = jest.mocked(fetchMinigameLeaderboard);
 const startRequest = jest.mocked(startMinigameRun);
 const finishRequest = jest.mocked(finishMinigameRun);
+const mockTrack = jest.mocked(track);
 const clients: ReturnType<typeof createTestQueryClient>[] = [];
 
 function minigameQueryWrapper() {
@@ -496,6 +499,106 @@ describe('minigame runs', () => {
     await waitFor(() => expect(result.current.result).toEqual(SAVED));
     expect(finishRequest).toHaveBeenCalledTimes(2);
     expect(finishRequest.mock.calls[1]).toEqual([GAME.gameCode, RUN.runId, replay]);
+  });
+});
+
+describe('analytics (#1315)', () => {
+  const events = () => mockTrack.mock.calls.map(([name]) => name);
+
+  it('logs a ranked start from the picker and the finish only once the server accepted the score', async () => {
+    const { result } = await renderStartedRun();
+    expect(mockTrack).toHaveBeenCalledWith('minigame_start', {
+      game: GAME.gameCode,
+      mode: 'ranked',
+      via: 'picker',
+    });
+
+    await act(() => result.current.finish(RUN.runId, { ticks: 120, jumpTicks: [20, 80] }));
+    await waitFor(() => expect(result.current.result).toEqual(SAVED));
+    expect(mockTrack).toHaveBeenLastCalledWith('minigame_finish', {
+      game: GAME.gameCode,
+      mode: 'ranked',
+      ticks: 120,
+      score: SAVED.score,
+      personal_best: SAVED.personalBest,
+      rank: SAVED.rank,
+    });
+    expect(events()).toEqual(['minigame_start', 'minigame_finish']);
+  });
+
+  it('logs a practice finish immediately with the play length and no score', async () => {
+    const { result } = await renderRun();
+    await act(() => result.current.practice());
+    expect(mockTrack).toHaveBeenCalledWith('minigame_start', {
+      game: GAME.gameCode,
+      mode: 'practice',
+      via: 'picker',
+    });
+
+    await act(() =>
+      result.current.finish(result.current.session!.id, { ticks: 45, jumpTicks: [10] }),
+    );
+    expect(mockTrack).toHaveBeenLastCalledWith('minigame_finish', {
+      game: GAME.gameCode,
+      mode: 'practice',
+      ticks: 45,
+    });
+    expect(finishRequest).not.toHaveBeenCalled();
+  });
+
+  it('logs a failed submission and reports the finish when the retry succeeds', async () => {
+    finishRequest.mockRejectedValueOnce(new Error('response lost'));
+    const { result } = await renderStartedRun();
+    await act(() => result.current.finish(RUN.runId, { ticks: 120, jumpTicks: [20, 80] }));
+    await waitFor(() => expect(result.current.submitError).toBe(true));
+    expect(mockTrack).toHaveBeenLastCalledWith('minigame_submit_failed', { game: GAME.gameCode });
+    expect(events()).not.toContain('minigame_finish');
+
+    await act(() => result.current.retrySubmit());
+    await waitFor(() => expect(result.current.result).toEqual(SAVED));
+    expect(events()).toEqual(['minigame_start', 'minigame_submit_failed', 'minigame_finish']);
+  });
+
+  it('marks a replay after a finished game as a retry start', async () => {
+    const { result } = await renderStartedRun();
+    await act(() => result.current.finish(RUN.runId, { ticks: 120, jumpTicks: [] }));
+    await waitFor(() => expect(result.current.result).toEqual(SAVED));
+    startRequest.mockResolvedValue({ ...RUN, runId: 'server-run-43' });
+
+    await act(() => result.current.start());
+    await waitFor(() => expect(result.current.session?.id).toBe('server-run-43'));
+    expect(mockTrack).toHaveBeenLastCalledWith('minigame_start', {
+      game: GAME.gameCode,
+      mode: 'ranked',
+      via: 'retry',
+    });
+  });
+
+  it('logs an abandon only for a started, unfinished session', async () => {
+    const { result } = await renderStartedRun();
+    await act(() => result.current.abandonUnfinished());
+    expect(mockTrack).toHaveBeenLastCalledWith('minigame_abandon', {
+      game: GAME.gameCode,
+      mode: 'ranked',
+    });
+
+    // Leaving a finished game (results screen) or an idle screen is not an abandon.
+    mockTrack.mockClear();
+    const finishedHook = await renderStartedRun();
+    await act(() => finishedHook.result.current.finish(RUN.runId, { ticks: 120, jumpTicks: [] }));
+    await waitFor(() => expect(finishedHook.result.current.result).toEqual(SAVED));
+    await act(() => finishedHook.result.current.abandonUnfinished());
+    const idle = await renderRun();
+    await act(() => idle.result.current.abandonUnfinished());
+    expect(events()).not.toContain('minigame_abandon');
+  });
+
+  it('does not log a start when the server session is rejected', async () => {
+    startRequest.mockResolvedValue(RUN);
+    const { result } = await renderRun(MERGE_GAME.gameCode);
+    await act(() => result.current.start());
+    await waitFor(() => expect(result.current.startError).toBe(true));
+    expect(mockTrack).not.toHaveBeenCalled();
   });
 });
 

@@ -74,6 +74,18 @@ export type AnalyticsEvent =
   | 'invite_paste_view'
   /** 붙여넣기 결과 (#1007) — kind: friend|house|invalid|dismiss. */
   | 'invite_paste_result'
+  // 미니게임 (#1315) — 시작→완료 전환과 이탈 지점, 게임별 인기·점수 분포.
+  // 전부 `useMinigameRun`/서피스 한 곳에서 — 화면·WebView는 모른다.
+  /** 세션 시작 — game: room-runner|cat-stairs|cat-merge, mode: ranked|practice, via: picker|retry. */
+  | 'minigame_start'
+  /** 게임 종료 — ticks(플레이 길이). 랭킹전은 서버 저장 성공 시점에 score·personal_best·rank 포함. */
+  | 'minigame_finish'
+  /** 게임 중 화면을 떠남 — 시작은 했지만 끝내지 않은 세션. game, mode. */
+  | 'minigame_abandon'
+  /** 랭킹 화면 진입 — via: picker(목록) | result(결과 화면). */
+  | 'minigame_leaderboard_view'
+  /** 랭킹전 기록 저장 실패 — 재시도 버튼의 분모. 상세 status는 api_error. */
+  | 'minigame_submit_failed'
   // 그 밖의 핵심 행동
   | 'shop_purchase'
   | 'cheer_send'
