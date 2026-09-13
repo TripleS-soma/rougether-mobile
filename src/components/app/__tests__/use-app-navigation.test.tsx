@@ -169,3 +169,31 @@ describe('minigame navigation', () => {
     expect(setScreen).toHaveBeenCalledWith('myRoom');
   });
 });
+
+describe('뒤로가기 가로채기 (#1327 후속)', () => {
+  it('interceptor가 true면 하드웨어 백이 화면 몫이 되고 셸은 setScreen하지 않는다', async () => {
+    const setScreen = jest.fn();
+    const backInterceptorRef = { current: null as (() => boolean) | null };
+    const hook = await renderHook(() =>
+      useAppNavigation({
+        screen: 'calendarWeek',
+        setScreen,
+        addReturnScreen: 'myRoom',
+        noHouses: false,
+        backInterceptorRef,
+      }),
+    );
+    backInterceptorRef.current = jest.fn(() => true);
+    await act(async () => {
+      expect(hook.result.current.goBack()).toBe(true);
+    });
+    expect(backInterceptorRef.current).toHaveBeenCalledTimes(1);
+    expect(setScreen).not.toHaveBeenCalled();
+    // 화면이 비우면(떠남) 종전대로 백맵 목적지로.
+    backInterceptorRef.current = null;
+    await act(async () => {
+      expect(hook.result.current.goBack()).toBe(true);
+    });
+    expect(setScreen).toHaveBeenCalledWith('calendar');
+  });
+});
