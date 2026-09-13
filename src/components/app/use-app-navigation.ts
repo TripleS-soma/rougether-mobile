@@ -1,4 +1,12 @@
-import { type Dispatch, type SetStateAction, useCallback, useEffect, useMemo, useRef } from 'react';
+import {
+  type Dispatch,
+  type RefObject,
+  type SetStateAction,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from 'react';
 import { BackHandler, Platform } from 'react-native';
 import { Gesture } from 'react-native-gesture-handler';
 
@@ -28,6 +36,7 @@ export function useAppNavigation({
   setScreen,
   addReturnScreen,
   noHouses,
+  backInterceptorRef,
 }: {
   screen: Screen;
   setScreen: Dispatch<SetStateAction<Screen>>;
@@ -35,7 +44,12 @@ export function useAppNavigation({
   addReturnScreen: Screen;
   /** 집 없는 유저 (#571) — 집 탭/뒤로가기의 목적지 분기. */
   noHouses: boolean;
-  /** 탐색을 뒤로 떠나는 순간 호출 (#571 후속) — 미션 판정은 셸 몫. */
+  /**
+   * 뒤로가기 가로채기 (#1327 후속) — 하드웨어 백·엣지 백이 셸의 setScreen으로 가기 전에
+   * 현재 화면이 먼저 처리할 기회. true를 돌려주면 화면이 스스로 닫는다(주간 보기의 펼침
+   * 연출처럼). 화면이 ref에 넣고 떠날 때 비운다.
+   */
+  backInterceptorRef?: RefObject<(() => boolean) | null>;
 }) {
   const { show: toast } = useToast();
 
@@ -43,11 +57,12 @@ export function useAppNavigation({
   // 하드웨어 백(#522)과 엣지 백(#564)이 공유하는 뒤로가기 — 목적지가 없으면
   // false(루트). 탐색을 떠나는 경로도 화면의 뒤로 버튼과 같은 규칙.
   const goBack = useCallback(() => {
+    if (backInterceptorRef?.current?.()) return true;
     const target = backTargetFor(screen, addReturnScreen, noHouses);
     if (!target) return false;
     setScreen(target);
     return true;
-  }, [screen, addReturnScreen, noHouses, setScreen]);
+  }, [screen, addReturnScreen, noHouses, setScreen, backInterceptorRef]);
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       if (goBack()) return true;

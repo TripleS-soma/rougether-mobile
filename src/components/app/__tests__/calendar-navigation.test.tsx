@@ -1,4 +1,5 @@
 import { act, fireEvent, waitFor } from '@testing-library/react-native';
+import { BackHandler } from 'react-native';
 
 import { AppShell } from '@/components/app/app-shell';
 import { renderWithProviders } from '@/test-utils/render';
@@ -150,5 +151,30 @@ describe('주간 보기 (#1327)', () => {
     await goBackFromWeek(ui);
     expect(ui.getByLabelText('달력').props.accessibilityState.selected).toBe(true);
     expect(ui.getByLabelText('다음 달')).toBeTruthy();
+  });
+
+  it('하드웨어 뒤로가기도 펼침 연출을 거쳐 달력 탭으로 돌아간다 (#1327 후속)', async () => {
+    // RN jest 목엔 mockPressBack이 없다 — app-shell 테스트처럼 리스너를 직접 모아 부른다.
+    const handlers: (() => boolean)[] = [];
+    const spy = jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_e, cb) => {
+      const handler = () => cb() === true;
+      handlers.push(handler);
+      return { remove: () => handlers.splice(handlers.indexOf(handler), 1) } as never;
+    });
+    const ui = await renderShell();
+    await fireEvent.press(ui.getByLabelText('달력'));
+    await fireEvent.press(ui.getByLabelText(dateLabel(TODAY)));
+    expect(ui.getByText('주간 보기')).toBeTruthy();
+    await act(async () => {
+      // 나중에 등록된 리스너가 먼저 — RN BackHandler와 같은 순서.
+      [...handlers].reverse().some((h) => h());
+    });
+    spy.mockRestore();
+    // 셸이 바로 화면을 바꾸지 않는다 — 달력이 먼저 펼쳐진다.
+    expect(ui.getByText('주간 보기')).toBeTruthy();
+    expect(ui.getByLabelText('다음 달')).toBeTruthy();
+    await finishTransition();
+    await waitFor(() => expect(ui.queryByText('주간 보기')).toBeNull());
+    expect(ui.getByLabelText('달력').props.accessibilityState.selected).toBe(true);
   });
 });

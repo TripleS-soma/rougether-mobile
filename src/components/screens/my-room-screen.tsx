@@ -1,5 +1,6 @@
 import {
   memo,
+  type MutableRefObject,
   type ReactNode,
   useCallback,
   useContext,
@@ -167,6 +168,11 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
     onOpenDay?: (date: string) => void;
     /** 주간 보기의 뒤로 (#1327) — 펼침 연출이 끝난 뒤 불린다. */
     onBack?: () => void;
+    /**
+     * 셸의 뒤로가기 가로채기 (#1327 후속) — 주 모드에서 하드웨어 백·엣지 백도 화면 안
+     * 뒤로 버튼과 같은 펼침 연출을 타게, 여기 넣어 둔 함수를 셸이 먼저 부른다.
+     */
+    backInterceptorRef?: MutableRefObject<(() => boolean) | null>;
     /** Quick composer → routine form, preserving the selected calendar date. */
     /** Retained for existing callers; the personal room name is no longer displayed. */
     userName?: string;
@@ -349,6 +355,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   calendarMode = 'month',
   onOpenDay,
   onBack,
+  backInterceptorRef,
   onSelectDate,
   onToggleCalendarItem,
   completions = {},
@@ -570,6 +577,18 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     setWeekLeaving(true);
     weekBackTimer.current = setTimeout(() => onBackRef.current?.(), WEEK_COLLAPSE_MS);
   });
+  // 하드웨어 백·엣지 백도 같은 길로 (#1327 후속) — 셸이 setScreen하기 전에 펼침부터.
+  // 이미 떠나는 중이면 두 번째 뒤로는 삼킨다(타이머가 곧 닫는다).
+  useEffect(() => {
+    if (!weekMode || !backInterceptorRef) return;
+    backInterceptorRef.current = () => {
+      leaveWeek();
+      return true;
+    };
+    return () => {
+      backInterceptorRef.current = null;
+    };
+  }, [weekMode, backInterceptorRef, leaveWeek]);
   const catMeta = allCategories ?? categories;
   const serverBackedDay = !!onSelectDate && selectedDate !== today;
   const calendarTodayError = !serverBackedDay && loadError;

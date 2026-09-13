@@ -71,4 +71,46 @@ describe('MyRoomScreen — 달력 월/주 모드 (#1327)', () => {
       jest.useRealTimers();
     }
   });
+
+  it('주 모드는 셸의 뒤로 가로채기에 자신을 등록하고, 그 경로도 펼친 뒤 onBack (#1327 후속)', async () => {
+    jest.useFakeTimers();
+    try {
+      const onBack = jest.fn();
+      const backInterceptorRef = { current: null as (() => boolean) | null };
+      const ui = await render(
+        <MyRoomScreen
+          routines={SAMPLE_ROUTINES}
+          view="calendar"
+          calendarMode="week"
+          onBack={onBack}
+          backInterceptorRef={backInterceptorRef}
+        />,
+      );
+      expect(backInterceptorRef.current).not.toBeNull();
+      await act(async () => {
+        expect(backInterceptorRef.current!()).toBe(true);
+      });
+      // 펼침 중 — 아직 닫지 않고, 두 번째 뒤로도 삼킨다.
+      expect(onBack).not.toHaveBeenCalled();
+      expect(ui.getByLabelText('다음 달')).toBeTruthy();
+      await act(async () => {
+        expect(backInterceptorRef.current!()).toBe(true);
+      });
+      await act(async () => {
+        jest.advanceTimersByTime(400);
+      });
+      await waitFor(() => expect(onBack).toHaveBeenCalledTimes(1));
+      // 월 모드로 다시 그리면(떠남) 등록이 풀린다.
+      await ui.rerender(
+        <MyRoomScreen
+          routines={SAMPLE_ROUTINES}
+          view="calendar"
+          backInterceptorRef={backInterceptorRef}
+        />,
+      );
+      expect(backInterceptorRef.current).toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
 });
