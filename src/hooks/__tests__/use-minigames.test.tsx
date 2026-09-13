@@ -11,6 +11,7 @@ import {
   type MinigameResult,
   type MinigameRun,
 } from '@/api/minigames';
+import { CURRENT_MINIGAME_RULES_VERSION } from '@/constants/minigames';
 import { useMinigameLeaderboard, useMinigameRun, useMinigames } from '@/hooks/use-minigames';
 import { track } from '@/lib/analytics';
 import { createTestQueryClient, queryWrapper } from '@/test-utils/query-wrapper';
@@ -46,24 +47,24 @@ const GAME: Minigame = {
   gameCode: 'room-runner',
   name: '룸 러너',
   description: '장애물을 뛰어넘어요',
-  rulesVersion: 2,
+  rulesVersion: CURRENT_MINIGAME_RULES_VERSION,
 };
 const STAIRS_GAME: Minigame = {
   gameCode: 'cat-stairs',
   name: '고양이 계단',
   description: '다음 계단 방향에 맞춰 올라가요',
-  rulesVersion: 2,
+  rulesVersion: CURRENT_MINIGAME_RULES_VERSION,
 };
 const MERGE_GAME: Minigame = {
   gameCode: 'cat-merge',
   name: '고양이 합치기',
   description: '같은 숫자 타일을 합쳐요',
-  rulesVersion: 2,
+  rulesVersion: CURRENT_MINIGAME_RULES_VERSION,
 };
 const RUN: MinigameRun = {
   runId: 'server-run-42',
   gameCode: GAME.gameCode,
-  rulesVersion: 2,
+  rulesVersion: CURRENT_MINIGAME_RULES_VERSION,
   seed: 12345,
   maxTicks: 18000,
   expiresAt: '2026-09-12T12:00:00Z',
@@ -131,7 +132,7 @@ describe('minigame queries', () => {
     await rerender({ enabled: true });
     await waitFor(() => expect(result.current.games).toEqual([GAME]));
     expect(catalogRequest).toHaveBeenCalledTimes(1);
-    expect(catalogRequest).toHaveBeenCalledWith(2);
+    expect(catalogRequest).toHaveBeenCalledWith(CURRENT_MINIGAME_RULES_VERSION);
   });
 
   it('keeps supported runner rules and filters unknown games', async () => {
@@ -184,7 +185,7 @@ describe('minigame queries', () => {
 
     await waitFor(() => expect(result.current.catalog.games).toEqual([GAME]));
     expect(result.current.ranking.leaderboard).toEqual(legacyBoard);
-    expect(catalogRequest).toHaveBeenCalledWith(2);
+    expect(catalogRequest).toHaveBeenCalledWith(CURRENT_MINIGAME_RULES_VERSION);
     expect(leaderboardRequest).not.toHaveBeenCalled();
     expect(client.getQueryData(queryKeys.minigames.catalog(1))).toEqual([legacy]);
     expect(client.getQueryData(queryKeys.minigames.leaderboard(7, GAME.gameCode))).toEqual(
@@ -212,7 +213,7 @@ describe('minigame queries', () => {
 describe('minigame runs', () => {
   it('starts with the server seed and displays the authoritative score and ranking after finish', async () => {
     const { result } = await renderStartedRun();
-    expect(startRequest).toHaveBeenCalledWith(GAME.gameCode, 2);
+    expect(startRequest).toHaveBeenCalledWith(GAME.gameCode, CURRENT_MINIGAME_RULES_VERSION);
     expect(result.current.session).toEqual({
       id: RUN.runId,
       gameCode: GAME.gameCode,
@@ -267,7 +268,12 @@ describe('minigame runs', () => {
   });
 
   it.each([
-    { gameCode: 'cat-stairs', maxTicks: 18000, rulesVersion: 2, mismatch: 'tick limit' },
+    {
+      gameCode: 'cat-stairs',
+      maxTicks: 18000,
+      rulesVersion: CURRENT_MINIGAME_RULES_VERSION,
+      mismatch: 'tick limit',
+    },
     { gameCode: 'cat-merge', maxTicks: 18000, rulesVersion: 1, mismatch: 'rules version' },
   ])(
     'rejects a mismatched $mismatch for $gameCode',

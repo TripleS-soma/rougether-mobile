@@ -5,6 +5,8 @@ import { RunnerPalette } from '@/features/minigame/runner-palette';
 
 export type RunnerHtmlOptions = {
   seed: number;
+  /** Physics contract the server will replay against; defaults to the v2 rules. */
+  rulesVersion?: number;
   channelId: string;
   practice?: boolean;
   allowManualTime?: boolean;
@@ -32,6 +34,7 @@ export function createRunnerHtml(options: RunnerHtmlOptions): string {
     : RunnerPalette;
   const config = JSON.stringify({
     seed: options.seed,
+    rulesVersion: options.rulesVersion ?? 2,
     channelId: options.channelId,
     practice: options.practice === true,
     manualTime: options.practice === true && options.allowManualTime === true,
@@ -66,7 +69,7 @@ const RUNNER_BROWSER_SOURCE = String.raw`function runRunner(config) {
   var startButton = document.getElementById('start-btn');
   var pauseButton = document.getElementById('pause-btn');
   var resumeButton = document.getElementById('resume-btn');
-  var engine = createRunnerEngine(config.seed);
+  var engine = createRunnerEngine(config.seed, config.rulesVersion);
   var state = engine.getState();
   var mode = 'loading';
   var hostActive = true;
@@ -294,7 +297,7 @@ const RUNNER_BROWSER_SOURCE = String.raw`function runRunner(config) {
   };
   window.render_game_to_text = function () {
     return JSON.stringify({
-      gameCode: 'room-runner', rulesVersion: 2, mode: mode,
+      gameCode: 'room-runner', rulesVersion: config.rulesVersion, mode: mode,
       coordinates: '720x420; origin top-left; x right; playerY is feet height above groundY=340',
       tick: state.tick, score: state.score, speed: state.speed, active: hostActive,
       practice: config.practice, manualTime: config.manualTime, character: 'rougether-cat',

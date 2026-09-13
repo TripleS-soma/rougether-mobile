@@ -22,10 +22,12 @@ export type RunnerEngine = {
  * The factory has no clock, rendering, global state, or platform dependencies.
  */
 export const RUNNER_ENGINE_SOURCE = String.raw`
-function createRunnerEngine(seed) {
+function createRunnerEngine(seed, rulesVersion) {
   if (!Number.isInteger(seed) || seed < 1 || seed > 2147483647) {
     throw new Error('Invalid runner seed');
   }
+  // v3 (#1322): the speed keeps climbing after the v2 plateau and obstacles get one step taller.
+  var v3 = (rulesVersion === undefined ? 2 : rulesVersion) >= 3;
   var rng = seed >>> 0;
   var tick = 0;
   var playerY = 0;
@@ -71,11 +73,15 @@ function createRunnerEngine(seed) {
     countdown -= 1;
     if (countdown === 0) {
       var width = 28 + (random() % 3) * 16;
-      var height = 40 + Math.min(2, Math.floor(tick / 600)) * 6 + (random() % 3) * 16;
+      var height = v3
+        ? 40 + Math.min(3, Math.floor(tick / 600)) * 8 + (random() % 3) * 16
+        : 40 + Math.min(2, Math.floor(tick / 600)) * 6 + (random() % 3) * 16;
       obstacles.push({ x: 720, width: width, height: height });
       countdown = 65 - Math.min(23, Math.floor(tick / 240) * 3) + random() % 31;
     }
+    // v2 reaches 16 at tick 2400 and stays there; v3 then adds 1 every 600 ticks (10 s).
     speed = 8 + Math.min(8, Math.floor(tick / 300));
+    if (v3) speed += Math.max(0, Math.floor((tick - 2400) / 600));
     for (var i = 0; i < obstacles.length; i += 1) {
       var obstacle = obstacles[i];
       obstacle.x -= speed;
@@ -95,9 +101,10 @@ function createRunnerEngine(seed) {
 }`;
 
 /** Evaluate only the fixed bundled source, never any caller-provided code. */
-export function createRunnerEngine(seed: number): RunnerEngine {
+export function createRunnerEngine(seed: number, rulesVersion = 2): RunnerEngine {
   const factory = new Function(`return (${RUNNER_ENGINE_SOURCE})`)() as (
     seed: number,
+    rulesVersion: number,
   ) => RunnerEngine;
-  return factory(seed);
+  return factory(seed, rulesVersion);
 }
