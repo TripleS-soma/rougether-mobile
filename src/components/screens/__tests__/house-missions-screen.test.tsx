@@ -331,6 +331,21 @@ describe('HouseMissionsScreen', () => {
     expect(queryByText('루틴 연동됨')).toBeNull();
   });
 
+  it('서버 목록의 contributedToday로 기여함을 켜고 내 누적 기여를 보여준다 (#373-②)', async () => {
+    const missions = (MISSION_HOUSE.missions ?? []).map((m) =>
+      m.id === 12 ? { ...m, contributedToday: true, myContribution: 4 } : m,
+    );
+    const { getByText, getByLabelText } = await render(
+      <HouseMissionsScreen house={MISSION_HOUSE} missions={missions} isOwner />,
+    );
+    // 세션 추적·연동 루틴 없이 서버 값만으로 기여함.
+    expect(getByText('기여함')).toBeTruthy();
+    expect(getByText('내 기여 4회')).toBeTruthy();
+    expect(getByLabelText(/내 기여 4회$/)).toBeTruthy();
+    // 요약 줄도 서버 값을 센다.
+    expect(getByText(/오늘 나의 기여 1\//)).toBeTruthy();
+  });
+
   it('creates a mission through the modal', async () => {
     const onCreateMission = jest.fn();
     const { getByLabelText } = await render(

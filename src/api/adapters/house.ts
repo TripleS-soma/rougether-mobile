@@ -212,6 +212,8 @@ export function toHouseMission(m: MissionSummary): HouseMission {
     status: m.status ?? 'ACTIVE',
     achieved: target > 0 && (m.currentValue ?? 0) >= target,
     endsOn: m.endsAt ? localDateOf(m.endsAt) : undefined,
+    myContribution: m.myContribution ?? undefined,
+    contributedToday: m.contributedToday ?? undefined,
   };
 }
 
