@@ -13,7 +13,7 @@
  * Every action is useCallback-wrapped and the return object is useMemo'd so
  * memoized consumers (#539 memo boundaries) get stable references.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 
 import type { CategoryDeleteMode } from '@/api/categories';
@@ -34,6 +34,7 @@ import {
   fetchToday,
   fetchTodos,
   fetchWallets,
+  skipRoutineOccurrence,
   uncompleteRoutine,
   uncompleteTodo,
   updateCategory as apiUpdateCategory,
@@ -59,6 +60,7 @@ import { DEFAULT_WALLET, type Wallet } from '@/constants/currency';
 import { type NewRoutine, type Routine, type RoutineCategoryMeta } from '@/constants/routines';
 import type { HouseMissionContributeResponse } from '@/api/types';
 import { calendarToday as todayIso } from '@/utils/calendar-progress';
+import { loadRoutineSkips, saveRoutineSkips, type RoutineSkips } from '@/lib/routine-skips-store';
 import { identifyUser, track } from '@/lib/analytics';
 import { setErrorUser } from '@/lib/error-reporting';
 import { useCalendarData } from '@/hooks/use-calendar-data';
@@ -86,6 +88,10 @@ export function useMyRoomData() {
   const [error, setError] = useState<string | null>(null);
   const { show: toast } = useToast();
 
+  // 건너뛴 발생분 로컬 사본 (#189) — 계정별로 읽고, 옮길 때마다 갱신·저장한다.
+  const skipsRef = useRef<RoutineSkips>({});
+  const userIdRef = useRef<number | undefined>(undefined);
+
   const reload = useCallback(async () => {
     const [cats, rts, tds, today, wals, me] = await Promise.all([
       // includeDeleted → deleted categories still resolve for past records.
@@ -98,8 +104,14 @@ export function useMyRoomData() {
     ]);
     const appCatsAll = cats.map((c, i) => toAppCategory(c, i));
     const appCats = appCatsAll.filter((c) => !c.deleted);
+    userIdRef.current = me.userId ?? undefined;
+    const skips = await loadRoutineSkips(me.userId ?? undefined, todayIso());
+    skipsRef.current = skips;
     // A null category is intentional for both types. Reload must never write classifications.
-    const items = [...rts.map(toAppRoutine), ...tds.map(toAppTodo)];
+    const items = [
+      ...rts.map(toAppRoutine).map((r) => (skips[r.id] ? { ...r, skippedDates: skips[r.id] } : r)),
+      ...tds.map(toAppTodo),
+    ];
 
     setCategories(appCats);
     // Retain deleted category metadata for historical records.
@@ -396,19 +408,46 @@ export function useMyRoomData() {
    * routine's title lands on the picked date. The server has no
    * per-occurrence skip yet, so the original day's instance still shows.
    */
+  /**
+   * 루틴의 그날 몫 하나를 다른 날짜로 옮긴다 (#189): 선택한 날짜에 같은 제목의 할 일을
+   * 만들고, 원래 날짜(`fromDate`)의 발생분은 서버에 SKIPPED로 남겨 숨긴다. 서버는
+   * 오늘·미래만 건너뛸 수 있으므로 지난 날짜 몫은 그대로 두고 할 일만 추가한다.
+   * 할 일 생성이 먼저다 — 숨김이 실패해도 옮긴 몫이 사라지지는 않게.
+   */
   const moveRoutineOccurrence = useCallback(
-    async (id: string, dueDate: string) => {
+    async (id: string, dueDate: string, fromDate: string = todayIso()) => {
       const item = findItem(id);
       if (!item || item.kind === 'todo') return;
       markPending(dueDate);
       try {
         const created = await createTodo(toTodoCreate(item.category, item.title, dueDate));
         setRoutines((prev) => [...prev, toAppTodo(created)]);
-        invalidateCalendar();
-        toast('선택한 날짜에 할 일로 추가했어요', 'success');
       } catch {
         toast('날짜 변경에 실패했어요', 'error');
+        unmarkPending(dueDate);
+        return;
+      }
+      const hideOrigin = fromDate >= todayIso();
+      try {
+        if (hideOrigin) {
+          await skipRoutineOccurrence(toServerItemId(id), fromDate);
+          setRoutines((prev) =>
+            prev.map((r) =>
+              r.id === id ? { ...r, skippedDates: [...(r.skippedDates ?? []), fromDate] } : r,
+            ),
+          );
+          const skips = skipsRef.current;
+          skips[id] = [...(skips[id] ?? []), fromDate];
+          void saveRoutineSkips(userIdRef.current, skips);
+        }
+        toast(
+          hideOrigin ? '이 날 몫을 선택한 날짜로 옮겼어요' : '선택한 날짜에 할 일로 추가했어요',
+          'success',
+        );
+      } catch {
+        toast('할 일은 추가됐지만 원래 날짜에서 숨기지 못했어요', 'error');
       } finally {
+        invalidateCalendar();
         unmarkPending(dueDate);
       }
     },

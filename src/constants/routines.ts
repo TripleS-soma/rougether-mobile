@@ -121,6 +121,11 @@ export type Routine = {
   kind?: 'routine' | 'todo';
   /** 연동된 공동미션의 서버 id (#578) — 미션 연동 판정은 이름 대신 이 id로. */
   linkedMissionId?: number;
+  /**
+   * 건너뛴 발생분 날짜들 (#189, "YYYY-MM-DD") — 그날은 예정에서 빠진다. 서버 SKIPPED
+   * 로그의 로컬 사본이며 오늘·미래만 담긴다(`routine-skips-store`).
+   */
+  skippedDates?: string[];
 };
 
 /** Payload for creating/editing a routine (from the Add/Edit routine screen). */

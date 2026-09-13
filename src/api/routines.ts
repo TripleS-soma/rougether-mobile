@@ -44,6 +44,15 @@ export function completeRoutine(id: number, routineDate: string) {
 }
 
 /**
+ * POST /routines/{id}/logs status=SKIPPED — 그 날짜 발생분 하나를 건너뛴다 (#189).
+ * 서버는 오늘·미래만 허용하고(`SKIP_DATE_NOT_ALLOWED`), 이미 완료한 날은 409.
+ * /today·/calendar·월 집계에서 그 몫이 빠진다. 해제는 `uncompleteRoutine`과 같은 DELETE.
+ */
+export function skipRoutineOccurrence(id: number, routineDate: string) {
+  return apiPost<RoutineLogResponse>(`/routines/${id}/logs`, { routineDate, status: 'SKIPPED' });
+}
+
+/**
  * DELETE /routines/{id}/logs?date=… — undo completion for a date.
  *
  * **스트릭을 돌려준다** (#895) — 오늘 완료를 취소해 그날 완료한 루틴이 하나도

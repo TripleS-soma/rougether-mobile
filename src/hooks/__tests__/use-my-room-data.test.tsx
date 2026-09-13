@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { onlineManager } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
@@ -732,4 +733,74 @@ it('오프라인에서도 생성을 무기한 대기하지 않고 실패를 반�
   } finally {
     onlineManager.setOnline(true);
   }
+});
+
+describe('useMyRoomData — 루틴 몫 옮기기 (#189)', () => {
+  const setup = () => {
+    const todayIso = calendarToday();
+    const calls: { url: string; method: string; body?: unknown }[] = [];
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+      calls.push({ url, method, body: init?.body ? JSON.parse(String(init.body)) : undefined });
+      if (url.includes('/categories')) return res({ items: [] });
+      if (url.endsWith('/routines')) {
+        return res({ items: [{ id: 5, title: '스트레칭', repeatType: 'DAILY' }] });
+      }
+      if (method === 'POST' && url.endsWith('/todos')) {
+        return res({ id: 9, title: '스트레칭', dueDate: '2099-01-02', status: 'PENDING' });
+      }
+      if (method === 'POST' && url.endsWith('/routines/5/logs')) {
+        return res({ id: 77, routineDate: todayIso, status: 'SKIPPED' });
+      }
+      if (url.endsWith('/today')) return res({ categories: [], summary: {}, streak: {} });
+      if (url.endsWith('/me')) return res({ userId: 42, nickname: '테스터' });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+    return { todayIso, calls };
+  };
+
+  it('할 일을 만든 뒤 원래 날짜를 SKIPPED로 보내고, 그 루틴은 그날 예정에서 빠진다', async () => {
+    const { todayIso, calls } = setup();
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    const routine = result.current.routines.find((r) => r.kind !== 'todo')!;
+
+    await act(() => result.current.moveRoutineOccurrence(routine.id, '2099-01-02', todayIso));
+
+    const posts = calls
+      .filter((c) => c.method === 'POST')
+      .map((c) => [c.url.split('/api/v1')[1], c.body]);
+    expect(posts).toEqual([
+      ['/todos', expect.objectContaining({ title: '스트레칭', dueDate: '2099-01-02' })],
+      ['/routines/5/logs', { routineDate: todayIso, status: 'SKIPPED' }],
+    ]);
+    const moved = result.current.routines.find((r) => r.id === routine.id)!;
+    expect(moved.skippedDates).toEqual([todayIso]);
+    // 재실행 뒤에도 숨기려고 계정별 키에 남긴다.
+    const stored = await AsyncStorage.getItem('rougether.routine-skips.v1.42');
+    expect(JSON.parse(stored!)).toEqual({ [routine.id]: [todayIso] });
+  });
+
+  it('지난 날짜 몫은 서버가 건너뜀을 받지 않으니 할 일만 만든다', async () => {
+    const { calls } = setup();
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    const routine = result.current.routines.find((r) => r.kind !== 'todo')!;
+
+    await act(() => result.current.moveRoutineOccurrence(routine.id, '2099-01-02', '2020-01-01'));
+
+    expect(calls.some((c) => c.url.endsWith('/routines/5/logs'))).toBe(false);
+    expect(result.current.routines.find((r) => r.id === routine.id)!.skippedDates).toBeUndefined();
+  });
+
+  it('저장된 건너뜀은 다시 불러올 때 루틴에 붙는다', async () => {
+    const { todayIso } = setup();
+    await AsyncStorage.setItem(
+      'rougether.routine-skips.v1.42',
+      JSON.stringify({ r5: [todayIso, '2020-01-01'] }),
+    );
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.routines.find((r) => r.id === 'r5')!.skippedDates).toEqual([todayIso]);
+  });
 });
