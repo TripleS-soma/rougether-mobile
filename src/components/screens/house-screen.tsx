@@ -816,6 +816,7 @@ export const HouseScreen = memo(function HouseScreen({
   const claimableCount = activeMissions.filter((m) => m.achieved).length;
   const contributedTodayCount = activeMissions.filter(
     (m) =>
+      m.contributedToday === true ||
       contributedMissionIds.includes(m.id) ||
       linkedRoutines.some((r) => r.missionId === m.id && r.completedToday),
   ).length;
