@@ -1,6 +1,11 @@
 import type { Minigame } from '@/api/minigames';
 
-export const CURRENT_MINIGAME_RULES_VERSION = 2;
+/**
+ * 물리 계약 번호 — 서버 `MinigameCatalog.CURRENT_RULES_VERSION`과 같아야 한다.
+ * v3 (#1322): 러너 속도가 40초 이후에도 10초마다 +1, 장애물 최대 높이 84→96.
+ * 계단·합치기는 v2와 동일(엔진이 `rulesVersion === 1 ? … : …`로 분기).
+ */
+export const CURRENT_MINIGAME_RULES_VERSION = 3;
 
 export type MinigameCode = 'room-runner' | 'cat-stairs' | 'cat-merge';
 export type MinigameDefinition = Minigame & {
