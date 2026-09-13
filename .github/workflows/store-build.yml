@@ -25,6 +25,10 @@ on:
         type: choice
         options: [inspect, build, submit]
         default: inspect
+      expected_app_version:
+        description: '빌드 전용 후보 앱 버전 (기존 115 제출에는 적용 안 됨)'
+        type: string
+        default: '1.5.0'
       expected_source_sha:
         description: 'TestFlight 대상 앱 소스 SHA (40자리, 제출 시 기존 115의 앱 소스)'
         type: string
@@ -134,6 +138,7 @@ jobs:
       group: eas-deploy-dev
       cancel-in-progress: false
     env:
+      EXPECTED_APP_VERSION: ${{ inputs.expected_app_version }}
       BUILD_MODE: ${{ inputs.mode }}
       BUILD_ACTION: ${{ inputs.action }}
       BUILD_PLATFORM: ${{ inputs.platform }}
@@ -155,7 +160,7 @@ jobs:
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
-      - name: iOS 1.5.0 후보 조회 또는 빌드 (제출·OTA 없음)
+      - name: 명시한 iOS 후보 조회 또는 빌드 (제출·OTA 없음)
         run: node scripts/check-testflight-build.js
         env:
           GH_TOKEN: ${{ github.token }}
