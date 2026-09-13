@@ -3,7 +3,7 @@ import { fireEvent, render } from '@testing-library/react-native';
 import {
   AnnouncementSection,
   type AnnouncementRow,
-} from '@/components/screens/announcement-section';
+} from '@/components/notifications/announcement-section';
 
 const row = (n: number, read = false): AnnouncementRow => ({
   id: `a${n}`,

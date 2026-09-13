@@ -14,7 +14,7 @@ import { getSessionUserId } from '@/api/auth';
 import { type Screen } from '@/components/app/navigation';
 import type { useMissionLinks } from '@/components/app/use-mission-links';
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
-import type { AnnouncementRow } from '@/components/screens/announcement-section';
+import type { AnnouncementRow } from '@/components/notifications/announcement-section';
 import { CategoryManageScreen } from '@/components/screens/category-manage-screen';
 import { type CalendarDayItem, type MyRoomScreenProps } from '@/components/screens/my-room-screen';
 import { useRecommendations } from '@/hooks/use-recommendations';

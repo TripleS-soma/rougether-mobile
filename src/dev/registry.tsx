@@ -30,7 +30,7 @@ import { InvitePasteSheet } from '@/components/screens/sheets/invite-paste-sheet
 import { parseInviteText } from '@/lib/invite-code';
 import { BugReportScreen } from '@/components/screens/bug-report-screen';
 import { NotificationListScreen } from '@/components/screens/notification-list-screen';
-import { AnnouncementSection } from '@/components/screens/announcement-section';
+import { AnnouncementSection } from '@/components/notifications/announcement-section';
 import { ANNOUNCEMENTS } from '@/constants/announcements';
 import { MyPageScreen } from '@/components/screens/my-page-screen';
 import { ListRow } from '@/components/ui/list-row';

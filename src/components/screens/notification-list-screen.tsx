@@ -7,7 +7,7 @@ import ReanimatedSwipeable, {
 import {
   AnnouncementSection,
   type AnnouncementRow,
-} from '@/components/screens/announcement-section';
+} from '@/components/notifications/announcement-section';
 import { Loading } from '@/components/ui/loading';
 import { Icon } from '@/components/ui/icon';
 import { notificationIcon } from '@/constants/notifications';
