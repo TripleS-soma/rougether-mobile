@@ -181,6 +181,28 @@ function LoginConflictDialogDemo() {
   );
 }
 
+/** 달력 주 접힘 데모 (#1327) — 접기/펼치기 토글과 주 이동을 독립적으로 본다. */
+function CalendarWeekDemo() {
+  const [date, setDate] = useState('2026-09-16');
+  const [collapsed, setCollapsed] = useState(true);
+  return (
+    <View style={{ alignSelf: 'stretch', gap: 8 }}>
+      <ScalePressable
+        accessibilityRole="button"
+        onPress={() => setCollapsed((v) => !v)}
+        style={{ alignSelf: 'center', padding: 8 }}>
+        <Text>{collapsed ? '펼치기' : '접기'}</Text>
+      </ScalePressable>
+      <Calendar
+        value={date}
+        onSelect={setDate}
+        today="2026-09-16"
+        weekOf={collapsed ? date : null}
+      />
+    </View>
+  );
+}
+
 /** 붙여넣기 시트 데모 (#1007) — 붙여넣은 글을 실제 판정기로 돌려 결과를 보여 준다. */
 function InvitePasteSheetDemo() {
   const [open, setOpen] = useState(false);
@@ -1407,6 +1429,12 @@ export const galleryEntries: GalleryEntry[] = [
         <Calendar value="2026-06-15" onSelect={() => {}} />
       </View>
     ),
+  },
+  {
+    name: 'Calendar · 주 접힘',
+    description:
+      '주간 보기 모드 (#1327): 선택 주만 남기고 접힘, ‹ ›·가로 플링이 주 이동. 버튼으로 접기/펼치기.',
+    render: () => <CalendarWeekDemo />,
   },
   {
     name: 'UI · Button',

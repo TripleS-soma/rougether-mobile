@@ -583,6 +583,11 @@ export function AppShell({
       ) : null}
 
       {minigames.subScreen}
+      {/* 주간 보기 (#1327) — 달력 탭의 두 번째 인스턴스. 슬라이드 없이 즉시 바뀌고
+          (INSTANT_TRANSITION_SCREENS) 달력이 스스로 선택 주로 접힌다. */}
+      {screen === 'calendarWeek' ? (
+        <MyRoomScreen {...myRoomPages.calendarWeekProps} view="calendar" />
+      ) : null}
       {screen === 'furnitureStudio' ? (
         <FurnitureStudio
           key={`${attendance.status?.eventId ?? 0}:${attendance.status?.completed ?? false}`}

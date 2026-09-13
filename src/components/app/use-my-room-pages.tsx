@@ -208,6 +208,15 @@ export function useMyRoomPages({
     setSelectedDate: setCalendarSelectedDate,
     refresh: refreshCalendar,
   } = calendar;
+  // 달력 탭 날짜 탭 → 주간 보기 (#1327). 선택은 MyRoomScreen이 이미 바꿨다.
+  const openCalendarWeek = useCallback(
+    (date: string) => {
+      track('calendar_week_open', { today: date === calendar.today });
+      setScreen('calendarWeek');
+    },
+    [calendar.today, setScreen],
+  );
+  const closeCalendarWeek = useCallback(() => setScreen('calendar'), [setScreen]);
   const markedCalendarDates = useMemo(
     () => new Set([...(room.markedTodoDates ?? []), ...(calendar.monthTodoDates ?? [])]),
     [room.markedTodoDates, calendar.monthTodoDates],
@@ -341,6 +350,11 @@ export function useMyRoomPages({
   );
   const editRoutineFromCalendar = useCallback(
     (r: Routine) => openEditRoutine(r, 'calendar'),
+    [openEditRoutine],
+  );
+  // 주간 보기에서 연 수정은 주간 보기로 돌아온다 (#1327).
+  const editRoutineFromCalendarWeek = useCallback(
+    (r: Routine) => openEditRoutine(r, 'calendarWeek'),
     [openEditRoutine],
   );
   const handleSelectDate = useCallback(
@@ -611,6 +625,16 @@ export function useMyRoomPages({
       selectedDate: calendarSelectedDate,
       onSelectedDateChange: setCalendarSelectedDate,
       onEditRoutine: editRoutineFromCalendar,
+      onOpenDay: openCalendarWeek,
+    },
+    /** 주간 보기 (#1327) — 달력 탭과 같은 props에 week 모드·뒤로만 더한다. */
+    calendarWeekProps: {
+      ...tabProps,
+      selectedDate: calendarSelectedDate,
+      onSelectedDateChange: setCalendarSelectedDate,
+      onEditRoutine: editRoutineFromCalendarWeek,
+      calendarMode: 'week' as const,
+      onBack: closeCalendarWeek,
     },
     subScreen,
     /** 인앱 푸시 배너 (#902) — 셸이 상단에 그린다. */
