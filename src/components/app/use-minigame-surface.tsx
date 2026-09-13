@@ -23,6 +23,7 @@ import {
 } from '@/constants/minigames';
 import { useLatestRef } from '@/hooks/use-stable-value';
 import { useMinigames, useMinigameLeaderboard, useMinigameRun } from '@/hooks/use-minigames';
+import { track } from '@/lib/analytics';
 
 // Retained transition nodes must match the current session, not just the game screen.
 export const MinigameActiveContext = createContext<string | null>(null);
@@ -94,9 +95,10 @@ export function useMinigameSurface({
     [setScreen],
   );
   const openLeaderboard = useCallback(
-    (code: string) => {
+    (code: string, via: 'picker' | 'runner' | 'result' = 'picker') => {
       const next = getMinigameDefinition(code);
       if (!next) return;
+      track('minigame_leaderboard_view', { game: next.gameCode, via });
       setGameCode(next.gameCode);
       setScreen('minigameLeaderboard');
     },
@@ -154,7 +156,8 @@ export function useMinigameSurface({
         onStart={run.start}
         onPractice={run.practice}
         onRetrySubmit={run.retrySubmit}
-        onLeaderboard={() => openLeaderboard(gameCode)}
+        // The runner also shows the button before a game starts — only a finished game is a result.
+        onLeaderboard={() => openLeaderboard(gameCode, run.finished ? 'result' : 'runner')}
         onBack={openMinigames}
       />
     ) : screen === 'minigameLeaderboard' ? (

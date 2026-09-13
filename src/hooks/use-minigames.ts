@@ -13,10 +13,12 @@ import {
   type MinigameRun,
 } from '@/api/minigames';
 import { useLatestRef } from '@/hooks/use-stable-value';
+import { track } from '@/lib/analytics';
 import { queryKeys } from '@/lib/query-keys';
 import { CURRENT_MINIGAME_RULES_VERSION, getMinigameDefinition } from '@/constants/minigames';
 
 const NO_GAMES: Minigame[] = [];
+const modeOf = (practice: boolean) => (practice ? 'practice' : 'ranked');
 const playableGames = (games: Minigame[]) =>
   games.filter((game) => {
     const definition = getMinigameDefinition(game.gameCode);
@@ -101,6 +103,8 @@ export function useMinigameRun(gameCode: string) {
       setStartError(false);
       const owner = ownerRef.current;
       const attemptGeneration = ++generation.current;
+      // The guard above only lets a finished session through, so any existing one is a replay.
+      const via = sessionRef.current ? 'retry' : 'picker';
       try {
         const run = practice
           ? null
@@ -133,6 +137,7 @@ export function useMinigameRun(gameCode: string) {
         finishedRef.current = false;
         setFinished(false);
         setSubmitError(false);
+        track('minigame_start', { game: gameCode, mode: modeOf(practice), via });
       } catch {
         if (ownerRef.current === owner && generation.current === attemptGeneration)
           setStartError(true);
@@ -161,10 +166,20 @@ export function useMinigameRun(gameCode: string) {
         void qc.invalidateQueries({
           queryKey: queryKeys.minigames.leaderboard(owner, attempt.run.gameCode),
         });
+        // A ranked game counts as finished once the server accepted it — the score is server-side.
+        track('minigame_finish', {
+          game: attempt.run.gameCode,
+          mode: 'ranked',
+          ticks: attempt.replay.ticks,
+          score: saved.score,
+          personal_best: saved.personalBest,
+          rank: saved.rank,
+        });
       } catch {
         if (ownerRef.current === owner && sessionRef.current?.id === attempt.sessionId) {
           setSubmitError(true);
         }
+        track('minigame_submit_failed', { game: attempt.run.gameCode });
       } finally {
         busy.current = null;
         setPending(false);
@@ -186,7 +201,10 @@ export function useMinigameRun(gameCode: string) {
         return;
       finishedRef.current = true;
       setFinished(true);
-      if (current.practice || !current.run) return;
+      if (current.practice || !current.run) {
+        track('minigame_finish', { game: current.gameCode, mode: 'practice', ticks: replay.ticks });
+        return;
+      }
       const attempt = {
         sessionId,
         run: current.run,
@@ -210,6 +228,10 @@ export function useMinigameRun(gameCode: string) {
       setPending(false);
     }
     if (finishedRef.current) return;
+    const dropped = sessionRef.current;
+    if (dropped) {
+      track('minigame_abandon', { game: dropped.gameCode, mode: modeOf(dropped.practice) });
+    }
     sessionRef.current = null;
     setSession(null);
     setStartError(false);

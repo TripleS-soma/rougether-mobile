@@ -16,6 +16,8 @@ import {
 
 jest.mock('@/api/minigames');
 jest.mock('@/api/auth', () => ({ getSessionUserId: () => 7 }));
+const mockTrack = jest.fn();
+jest.mock('@/lib/analytics', () => ({ track: (...args: unknown[]) => mockTrack(...args) }));
 jest.mock('@/components/app/minigame-player', () => {
   const { Text, View, Pressable } = jest.requireActual('react-native');
   return {
@@ -103,6 +105,36 @@ it('navigates catalog to runner and starts an authenticated run only on an expli
   await waitFor(() => expect(ui.getByTestId('runner-active').props.children).toBe('true'));
   expect(start).toHaveBeenCalledWith('room-runner', 2);
   expect(finish).not.toHaveBeenCalled();
+});
+
+it('logs where the leaderboard was opened from — the picker or a finished game (#1315)', async () => {
+  const ui = await setup();
+  await waitFor(() => expect(ui.getByLabelText('루틴 러너 랭킹')).toBeTruthy());
+  await fireEvent.press(ui.getByLabelText('루틴 러너 랭킹'));
+  expect(mockTrack).toHaveBeenLastCalledWith('minigame_leaderboard_view', {
+    game: 'room-runner',
+    via: 'picker',
+  });
+  await fireEvent.press(ui.getByLabelText('뒤로 가기'));
+
+  await fireEvent.press(ui.getByLabelText('고양이 계단 시작'));
+  // Idle runner (before a game starts) is neither the picker nor a result.
+  await fireEvent.press(ui.getByLabelText('전체 유저 랭킹 보기'));
+  expect(mockTrack).toHaveBeenLastCalledWith('minigame_leaderboard_view', {
+    game: 'cat-stairs',
+    via: 'runner',
+  });
+  await fireEvent.press(ui.getByLabelText('뒤로 가기'));
+  await fireEvent.press(ui.getByLabelText('고양이 계단 시작'));
+  await fireEvent.press(ui.getByLabelText('랭킹 도전'));
+  await waitFor(() => expect(ui.getByLabelText('테스트 게임 완료')).toBeTruthy());
+  await fireEvent.press(ui.getByLabelText('테스트 게임 완료'));
+  await waitFor(() => expect(ui.getByLabelText('전체 유저 랭킹 보기')).toBeTruthy());
+  await fireEvent.press(ui.getByLabelText('전체 유저 랭킹 보기'));
+  expect(mockTrack).toHaveBeenLastCalledWith('minigame_leaderboard_view', {
+    game: 'cat-stairs',
+    via: 'result',
+  });
 });
 
 it('keeps a retained outgoing runner inactive and starts fresh when returning', async () => {
