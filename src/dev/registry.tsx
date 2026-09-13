@@ -23,6 +23,7 @@ import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { InviteFriendsScreen } from '@/components/screens/invite-friends-screen';
 import { IntroScreen } from '@/components/screens/intro-screen';
 import { LoginScreen } from '@/components/screens/login-screen';
+import { LoginConflictDialog } from '@/components/screens/login/login-conflict-dialog';
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { CharacterPickerSheet } from '@/components/screens/sheets/character-picker-sheet';
 import { InviteArrivalSheet } from '@/components/screens/sheets/invite-arrival-sheet';
@@ -901,6 +902,23 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
         <LoginScreen lastLoginProvider="kakao" />
+      </View>
+    ),
+  },
+  {
+    name: 'LoginConflictDialog',
+    description:
+      '같은 이메일 타 provider 계정 안내(서버 409, #1128): 기존 provider로 로그인 또는 새 계정으로 계속.',
+    render: () => (
+      <View style={{ height: 320, alignSelf: 'stretch' }}>
+        <LoginConflictDialog
+          visible
+          message="이 이메일은 애플 로그인으로 가입되어 있어요."
+          providers={['apple']}
+          onLoginWith={() => {}}
+          onContinueAsNew={() => {}}
+          onDismiss={() => {}}
+        />
       </View>
     ),
   },
