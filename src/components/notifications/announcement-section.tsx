@@ -16,6 +16,12 @@ export type AnnouncementSectionProps = {
   announcements: AnnouncementRow[];
   /** 행 탭 — 읽음 처리와 행동(화면 이동·링크)은 호출자가 한다. */
   onOpen?: (announcement: AnnouncementRow) => void;
+  /** 최근 3개만 펼치고 나머지는 더보기로 (기본). 전용 탭에서는 false로 전부 펼친다. */
+  collapsible?: boolean;
+  /** 섹션 제목 — 전용 탭에서는 헤더가 이미 말해 주니 생략(undefined). */
+  title?: string | null;
+  /** 소식이 없을 때 보여줄 문구 — 없으면(기본) 섹션 자체를 그리지 않는다. */
+  emptyText?: string;
 };
 
 /**
@@ -23,20 +29,35 @@ export type AnnouncementSectionProps = {
  * (반짝이 아이콘, primarySoft 원)으로 보여준다. 최근 3개만 펼치고 나머지는
  * 더보기로. 개인 알림 행과 같은 높이·간격이라 목록이 한 결로 읽힌다.
  */
-export function AnnouncementSection({ announcements, onOpen }: AnnouncementSectionProps) {
+export function AnnouncementSection({
+  announcements,
+  onOpen,
+  collapsible = true,
+  title = '새 소식',
+  emptyText,
+}: AnnouncementSectionProps) {
   const t = useTokens();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const [expanded, setExpanded] = useState(false);
-  if (announcements.length === 0) return null;
-  const hidden = Math.max(0, announcements.length - RECENT_ANNOUNCEMENT_COUNT);
-  const visible = expanded ? announcements : announcements.slice(0, RECENT_ANNOUNCEMENT_COUNT);
+  if (announcements.length === 0) {
+    if (!emptyText) return null;
+    return (
+      <Text style={[Typography.supporting, styles.empty, { color: t.textMuted }]}>{emptyText}</Text>
+    );
+  }
+  const hidden = collapsible ? Math.max(0, announcements.length - RECENT_ANNOUNCEMENT_COUNT) : 0;
+  const visible =
+    expanded || !collapsible ? announcements : announcements.slice(0, RECENT_ANNOUNCEMENT_COUNT);
 
   return (
     <View style={styles.section} testID="announcement-section">
-      <Text style={[Typography.supporting, emph('semibold'), styles.title, { color: t.textMuted }]}>
-        새 소식
-      </Text>
+      {title ? (
+        <Text
+          style={[Typography.supporting, emph('semibold'), styles.title, { color: t.textMuted }]}>
+          {title}
+        </Text>
+      ) : null}
       {visible.map((a) => (
         <Pressable
           key={a.id}
@@ -90,6 +111,10 @@ const styles = StyleSheet.create({
   },
   title: {
     paddingHorizontal: Spacing.one,
+  },
+  empty: {
+    textAlign: 'center',
+    paddingVertical: Spacing.six,
   },
   row: {
     flexDirection: 'row',

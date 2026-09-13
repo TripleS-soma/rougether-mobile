@@ -1,5 +1,5 @@
 import { type ReactNode, useRef, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import ReanimatedSwipeable, {
   type SwipeableMethods,
 } from 'react-native-gesture-handler/ReanimatedSwipeable';
@@ -9,6 +9,10 @@ import {
   AnnouncementSection,
   type AnnouncementRow,
 } from '@/components/notifications/announcement-section';
+import {
+  NotificationTabs,
+  type NotificationTab,
+} from '@/components/notifications/notification-tabs';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Loading } from '@/components/ui/loading';
 import { Icon } from '@/components/ui/icon';
@@ -53,10 +57,14 @@ export type NotificationListScreenProps = {
   /** 전체 삭제 (#1137) — 헤더 버튼 → 확인 다이얼로그를 거친 뒤에만 호출된다. */
   onDeleteAll?: () => void;
   onLoadMore?: () => void;
-  /** 앱 번들 새 소식 (#1320) — 목록 맨 위 섹션. 비어 있으면 섹션 자체가 없다. */
+  /** 앱 번들 새 소식 (#1320) — [새 소식] 탭의 목록. 생략하면 탭 자체를 그리지 않는다. */
   announcements?: AnnouncementRow[];
   /** 새 소식 행 탭 — 읽음 처리 + 행동(화면 이동·링크)은 호출자가. */
   onOpenAnnouncement?: (announcement: AnnouncementRow) => void;
+  /** [새 소식] 탭의 모두 읽음. */
+  onReadAllAnnouncements?: () => void;
+  /** 처음 열 때 보여줄 탭 (기본 알림). */
+  initialTab?: NotificationTab;
 };
 
 /** 짧게 밀었을 때 드러나는 삭제 버튼 폭. */
@@ -181,6 +189,8 @@ export function NotificationListScreen({
   onLoadMore,
   announcements,
   onOpenAnnouncement,
+  onReadAllAnnouncements,
+  initialTab = 'notifications',
 }: NotificationListScreenProps) {
   const t = useTokens();
   const column = useResponsiveColumn();
@@ -188,9 +198,22 @@ export function NotificationListScreen({
   const headerInset = useHeaderContentInset();
   const Typography = useTypography();
   const entries = notifications ?? DEMO_NOTIFICATIONS;
-  // 모두 읽음은 새 소식까지 함께 — 호출자가 onReadAll에서 둘 다 처리한다.
-  const hasUnread = entries.some((n) => !n.read) || (announcements?.some((a) => !a.read) ?? false);
+  const hasUnread = entries.some((n) => !n.read);
+  const hasUnreadNews = announcements?.some((a) => !a.read) ?? false;
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+  // [알림 | 새 소식] (#1320) — 개인 알림과 앱 공지를 한 목록에 섞지 않는다. 새 소식이
+  // 배선되지 않은 화면(데모·옛 호출자)은 탭 없이 알림만.
+  const hasNewsTab = announcements != null;
+  const [tab, setTab] = useState<NotificationTab>(hasNewsTab ? initialTab : 'notifications');
+  const showingNews = hasNewsTab && tab === 'news';
+
+  const tabs = hasNewsTab ? (
+    <NotificationTabs
+      value={tab}
+      onChange={setTab}
+      unread={{ notifications: hasUnread, news: hasUnreadNews }}
+    />
+  ) : null;
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
@@ -198,7 +221,17 @@ export function NotificationListScreen({
         title="알림"
         onBack={onBack}
         right={
-          entries.length > 0 ? (
+          showingNews ? (
+            hasUnreadNews ? (
+              <Pressable
+                onPress={onReadAllAnnouncements}
+                accessibilityRole="button"
+                accessibilityLabel="새 소식 모두 읽음"
+                style={[styles.headerBtn, { backgroundColor: t.surfaceMuted }]}>
+                <Text style={[Typography.label, { color: t.primaryText }]}>모두 읽음</Text>
+              </Pressable>
+            ) : undefined
+          ) : entries.length > 0 ? (
             <View style={styles.headerActions}>
               {hasUnread ? (
                 <Pressable
@@ -221,79 +254,95 @@ export function NotificationListScreen({
         }
       />
 
-      <FlatList
-        data={entries}
-        keyExtractor={(n) => String(n.id)}
-        contentContainerStyle={[
-          styles.body,
-          column,
-          headerInset ? { paddingTop: headerInset } : null,
-        ]}
-        ListHeaderComponent={
-          announcements && announcements.length > 0 ? (
-            <AnnouncementSection announcements={announcements} onOpen={onOpenAnnouncement} />
-          ) : null
-        }
-        ListEmptyComponent={
-          loading ? (
-            <View style={styles.state}>
-              <Loading />
-            </View>
-          ) : loadError ? (
-            // 로드 실패 (#549) — 빈 상태('알림 없음')로 위장하지 않는다.
-            <View style={styles.state}>
-              <RetryState message="알림을 불러오지 못했어요." onRetry={onRetry} />
-            </View>
-          ) : (
-            <Text style={[Typography.supporting, styles.state, { color: t.textMuted }]}>
-              아직 받은 알림이 없어요.
-            </Text>
-          )
-        }
-        ListFooterComponent={
-          hasNext && entries.length > 0 ? (
-            <Pressable
-              onPress={onLoadMore}
-              accessibilityRole="button"
-              accessibilityLabel="알림 더보기"
-              style={[styles.more, { backgroundColor: t.surfaceMuted }]}>
-              <Text style={[Typography.label, { color: t.primaryText }]}>더보기</Text>
-            </Pressable>
-          ) : null
-        }
-        renderItem={({ item: n }) => (
-          <SwipeDeleteRow entry={n} onDelete={onDelete}>
-            <Pressable
-              onPress={() => !n.read && onRead?.(n.id)}
-              accessibilityRole="button"
-              accessibilityLabel={n.title}
-              accessibilityState={{ selected: !n.read }}
-              // 스크린리더는 스와이프를 못 하니 행 동작으로 삭제를 연다.
-              accessibilityActions={onDelete ? [{ name: 'delete', label: '삭제' }] : undefined}
-              onAccessibilityAction={(e) => {
-                if (e.nativeEvent.actionName === 'delete') onDelete?.(n.id);
-              }}
-              style={[
-                styles.row,
-                { backgroundColor: n.read ? t.surfaceMuted : t.surface, borderColor: t.border },
-              ]}>
-              <View style={[styles.rowIcon, { backgroundColor: t.surfaceMuted }]}>
-                <Icon name={notificationIcon(n.type)} size={18} color={t.text} />
+      {showingNews ? (
+        <ScrollView
+          contentContainerStyle={[
+            styles.body,
+            column,
+            headerInset ? { paddingTop: headerInset } : null,
+          ]}>
+          {tabs}
+          <AnnouncementSection
+            announcements={announcements ?? []}
+            onOpen={onOpenAnnouncement}
+            collapsible={false}
+            title={null}
+            emptyText="아직 새 소식이 없어요."
+          />
+        </ScrollView>
+      ) : (
+        <FlatList
+          data={entries}
+          keyExtractor={(n) => String(n.id)}
+          contentContainerStyle={[
+            styles.body,
+            column,
+            headerInset ? { paddingTop: headerInset } : null,
+          ]}
+          ListHeaderComponent={tabs}
+          ListEmptyComponent={
+            loading ? (
+              <View style={styles.state}>
+                <Loading />
               </View>
-              <View style={styles.rowBody}>
-                <View style={styles.rowHead}>
-                  <Text style={[Typography.label, { color: t.text }]}>{n.title}</Text>
-                  <Text style={[Typography.supporting, { color: t.textMuted }]}>{n.date}</Text>
+            ) : loadError ? (
+              // 로드 실패 (#549) — 빈 상태('알림 없음')로 위장하지 않는다.
+              <View style={styles.state}>
+                <RetryState message="알림을 불러오지 못했어요." onRetry={onRetry} />
+              </View>
+            ) : (
+              <Text style={[Typography.supporting, styles.state, { color: t.textMuted }]}>
+                아직 받은 알림이 없어요.
+              </Text>
+            )
+          }
+          ListFooterComponent={
+            hasNext && entries.length > 0 ? (
+              <Pressable
+                onPress={onLoadMore}
+                accessibilityRole="button"
+                accessibilityLabel="알림 더보기"
+                style={[styles.more, { backgroundColor: t.surfaceMuted }]}>
+                <Text style={[Typography.label, { color: t.primaryText }]}>더보기</Text>
+              </Pressable>
+            ) : null
+          }
+          renderItem={({ item: n }) => (
+            <SwipeDeleteRow entry={n} onDelete={onDelete}>
+              <Pressable
+                onPress={() => !n.read && onRead?.(n.id)}
+                accessibilityRole="button"
+                accessibilityLabel={n.title}
+                accessibilityState={{ selected: !n.read }}
+                // 스크린리더는 스와이프를 못 하니 행 동작으로 삭제를 연다.
+                accessibilityActions={onDelete ? [{ name: 'delete', label: '삭제' }] : undefined}
+                onAccessibilityAction={(e) => {
+                  if (e.nativeEvent.actionName === 'delete') onDelete?.(n.id);
+                }}
+                style={[
+                  styles.row,
+                  { backgroundColor: n.read ? t.surfaceMuted : t.surface, borderColor: t.border },
+                ]}>
+                <View style={[styles.rowIcon, { backgroundColor: t.surfaceMuted }]}>
+                  <Icon name={notificationIcon(n.type)} size={18} color={t.text} />
                 </View>
-                <Text style={[Typography.body, { color: n.read ? t.textMuted : t.text }]}>
-                  {n.body}
-                </Text>
-              </View>
-              {!n.read ? <View style={[styles.unreadDot, { backgroundColor: t.primary }]} /> : null}
-            </Pressable>
-          </SwipeDeleteRow>
-        )}
-      />
+                <View style={styles.rowBody}>
+                  <View style={styles.rowHead}>
+                    <Text style={[Typography.label, { color: t.text }]}>{n.title}</Text>
+                    <Text style={[Typography.supporting, { color: t.textMuted }]}>{n.date}</Text>
+                  </View>
+                  <Text style={[Typography.body, { color: n.read ? t.textMuted : t.text }]}>
+                    {n.body}
+                  </Text>
+                </View>
+                {!n.read ? (
+                  <View style={[styles.unreadDot, { backgroundColor: t.primary }]} />
+                ) : null}
+              </Pressable>
+            </SwipeDeleteRow>
+          )}
+        />
+      )}
 
       <ConfirmDialog
         visible={confirmDeleteAll}

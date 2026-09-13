@@ -31,6 +31,10 @@ import { parseInviteText } from '@/lib/invite-code';
 import { BugReportScreen } from '@/components/screens/bug-report-screen';
 import { NotificationListScreen } from '@/components/screens/notification-list-screen';
 import { AnnouncementSection } from '@/components/notifications/announcement-section';
+import {
+  NotificationTabs,
+  type NotificationTab,
+} from '@/components/notifications/notification-tabs';
 import { ANNOUNCEMENTS } from '@/constants/announcements';
 import { MyPageScreen } from '@/components/screens/my-page-screen';
 import { ListRow } from '@/components/ui/list-row';
@@ -134,6 +138,20 @@ function InviteArrivalSheetDemo() {
         }}
         onAccept={() => setOpen(false)}
         onLater={() => setOpen(false)}
+      />
+    </View>
+  );
+}
+
+/** 알림 화면 탭 데모 (#1320) — 탭 전환과 안 읽음 점을 독립적으로 본다. */
+function NotificationTabsDemo() {
+  const [tab, setTab] = useState<NotificationTab>('notifications');
+  return (
+    <View style={{ alignSelf: 'stretch' }}>
+      <NotificationTabs
+        value={tab}
+        onChange={setTab}
+        unread={{ notifications: tab !== 'notifications', news: tab !== 'news' }}
       />
     </View>
   );
@@ -1044,12 +1062,20 @@ export const galleryEntries: GalleryEntry[] = [
   {
     name: 'NotificationListScreen',
     description:
-      '나의 방 헤더 벨 → 알림 목록: 안 읽음 점 + 개별/전체 읽음, 헤더 전체 삭제(확인 다이얼로그). 스와이프 삭제(#1137)는 onDelete를 넘긴 실제 화면에서만 켜진다.',
+      '나의 방 헤더 벨 → 알림 목록: [알림 | 새 소식] 탭(#1320), 안 읽음 점 + 개별/전체 읽음, 헤더 전체 삭제(확인 다이얼로그). 스와이프 삭제(#1137)는 onDelete를 넘긴 실제 화면에서만 켜진다.',
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
-        <NotificationListScreen />
+        <NotificationListScreen
+          announcements={ANNOUNCEMENTS.map((a, i) => ({ ...a, read: i > 0 }))}
+        />
       </View>
     ),
+  },
+  {
+    name: 'NotificationTabs',
+    description:
+      '알림 화면 [내 알림 | 새 소식] 세그먼트 (#1320): 선택 상태와 안 읽음 점. 본 탭은 점이 꺼진다.',
+    render: () => <NotificationTabsDemo />,
   },
   {
     name: 'AnnouncementSection',

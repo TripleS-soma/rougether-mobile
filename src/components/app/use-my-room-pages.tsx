@@ -588,8 +588,8 @@ export function useMyRoomPages({
         }}
         onReadAll={() => {
           void markAllNotificationsRead();
-          announcements.markAllRead();
         }}
+        onReadAllAnnouncements={announcements.markAllRead}
         onDelete={(id) => {
           void removeNotification(id);
         }}
