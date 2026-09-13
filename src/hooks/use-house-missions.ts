@@ -30,8 +30,8 @@ export function useHouseMissions({
   /** 영향받은 집 하나만 다시 받아 목록에 끼워넣는다 (#534). */
   reloadHouse: (houseId: number) => Promise<void>;
 }) {
-  // Mission ids I contributed to today (session-scoped — the list API doesn't
-  // expose per-member daily contribution, so this seeds from contribute calls).
+  // 오늘 기여한 미션 id (세션 범위). 목록 API가 contributedToday를 실어 주므로(#373-②)
+  // 이제 역할은 기여 직후 reloadHouse가 끝나기 전의 낙관적 '기여됨' 표시뿐이다.
   const [contributedMissionIds, setContributedMissionIds] = useState<Set<number>>(new Set());
   const { show: toast } = useToast();
 

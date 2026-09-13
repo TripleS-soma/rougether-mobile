@@ -781,6 +781,28 @@ describe('useMyRoomData — 루틴 몫 옮기기 (#189)', () => {
     expect(JSON.parse(stored!)).toEqual({ [routine.id]: [todayIso] });
   });
 
+  it('건너뜀만 실패하면 만든 할 일은 남기고 원래 날짜는 숨기지 않는다', async () => {
+    const { todayIso } = setup();
+    const inner = global.fetch as jest.Mock;
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      if ((init?.method ?? 'GET') === 'POST' && url.endsWith('/routines/5/logs')) {
+        return { ok: false, status: 500, text: async () => '{}' };
+      }
+      return inner(url, init);
+    }) as unknown as typeof fetch;
+    const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    const routine = result.current.routines.find((r) => r.kind !== 'todo')!;
+
+    await act(() => result.current.moveRoutineOccurrence(routine.id, '2099-01-02', todayIso));
+
+    expect(
+      result.current.routines.some((r) => r.kind === 'todo' && r.dueDate === '2099-01-02'),
+    ).toBe(true);
+    expect(result.current.routines.find((r) => r.id === routine.id)!.skippedDates).toBeUndefined();
+    expect(await AsyncStorage.getItem('rougether.routine-skips.v1.42')).toBeNull();
+  });
+
   it('지난 날짜 몫은 서버가 건너뜀을 받지 않으니 할 일만 만든다', async () => {
     const { calls } = setup();
     const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
