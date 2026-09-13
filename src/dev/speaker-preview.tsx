@@ -49,7 +49,7 @@ export function SpeakerPreview({
         speakerPlaying={speaker.playing}
       />
       {speaker.error ? (
-        <Text accessibilityRole="alert" style={[Typography.supporting, { color: t.text }]}>
+        <Text accessibilityRole="alert" style={[Typography.supporting, { color: t.dangerText }]}>
           {speaker.error}
         </Text>
       ) : null}

@@ -157,7 +157,7 @@ export function SpeakerSheet({
           </Pressable>
         </View>
         {error ? (
-          <Text accessibilityRole="alert" style={[Typography.supporting, { color: t.text }]}>
+          <Text accessibilityRole="alert" style={[Typography.supporting, { color: t.dangerText }]}>
             {error}
           </Text>
         ) : null}
