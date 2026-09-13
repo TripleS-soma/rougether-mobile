@@ -17,12 +17,12 @@ describe('useOnboardingMissions (#571)', () => {
     (track as jest.Mock).mockClear();
   });
 
-  it('autoStart에 플래그가 없으면 1단계(뽑기)부터 시작한다', async () => {
+  it('autoStart에 플래그가 없으면 1단계(루틴 완료)부터 시작한다 (#1324)', async () => {
     const { result } = await renderHook(() => useOnboardingMissions(true));
     await waitFor(() => expect(result.current.active).toBe(true));
     expect(result.current.stepIndex).toBe(0);
-    expect(result.current.step?.id).toBe('first-draw');
-    expect(track).toHaveBeenCalledWith('onboarding_mission_start', { step: 'first-draw' });
+    expect(result.current.step?.id).toBe('complete-routine');
+    expect(track).toHaveBeenCalledWith('onboarding_mission_start', { step: 'complete-routine' });
   });
 
   /**
@@ -31,16 +31,17 @@ describe('useOnboardingMissions (#571)', () => {
    * (#841). 첫 루틴 등록 단계는 추천 루틴 게이트(#1149)가 대신해 뺐다(2026-09-08) —
    * 체인이 3단계이고 마지막이 초대인 것을 고정한다.
    */
-  it('마지막 단계는 집에 친구 초대하기다 (#841)', () => {
-    expect(ONBOARDING_MISSION_STEPS).toHaveLength(3);
+  it('첫 단계는 루틴 완료(#1324), 마지막 단계는 집에 친구 초대하기다 (#841)', () => {
+    expect(ONBOARDING_MISSION_STEPS).toHaveLength(4);
     expect(ONBOARDING_MISSION_STEPS.map((s) => s.id)).toEqual([
+      'complete-routine',
       'first-draw',
       'place-furniture',
       'invite-house',
     ]);
   });
 
-  it('3단계까지 순서대로 완료하면 체인이 끝난다 (#841)', async () => {
+  it('4단계까지 순서대로 완료하면 체인이 끝난다 (#841 → #1324)', async () => {
     const { result } = await renderHook(() => useOnboardingMissions(true));
     await waitFor(() => expect(result.current.active).toBe(true));
 
@@ -70,18 +71,18 @@ describe('useOnboardingMissions (#571)', () => {
     const { result } = await renderHook(() => useOnboardingMissions(true));
     await waitFor(() => expect(result.current.active).toBe(true));
 
-    // 2단계(방 꾸미기)를 먼저 쏘면 무시 — 순서 강제.
-    await act(async () => result.current.complete('place-furniture'));
+    // 2단계(뽑기)를 먼저 쏘면 무시 — 순서 강제.
+    await act(async () => result.current.complete('first-draw'));
     expect(result.current.stepIndex).toBe(0);
     expect(result.current.completedIndex).toBeNull();
 
-    await act(async () => result.current.complete('first-draw'));
+    await act(async () => result.current.complete('complete-routine'));
     expect(result.current.stepIndex).toBe(1);
-    expect(result.current.step?.id).toBe('place-furniture');
+    expect(result.current.step?.id).toBe('first-draw');
     // 완료 전환 시트용 index + 퍼널 이벤트.
     expect(result.current.completedIndex).toBe(0);
-    expect(track).toHaveBeenCalledWith('onboarding_mission_complete', { step: 'first-draw' });
-    expect(track).toHaveBeenCalledWith('onboarding_mission_start', { step: 'place-furniture' });
+    expect(track).toHaveBeenCalledWith('onboarding_mission_complete', { step: 'complete-routine' });
+    expect(track).toHaveBeenCalledWith('onboarding_mission_start', { step: 'first-draw' });
 
     await act(async () => result.current.dismissCompleted());
     expect(result.current.completedIndex).toBeNull();
@@ -97,7 +98,7 @@ describe('useOnboardingMissions (#571)', () => {
     expect(result.current.active).toBe(false);
     expect(result.current.step).toBeNull();
     // 마지막 완료 시트(축하)용 index는 남는다.
-    expect(result.current.completedIndex).toBe(2);
+    expect(result.current.completedIndex).toBe(3);
     await waitFor(async () => expect(await AsyncStorage.getItem(KEY)).toBe('completed'));
   });
 
@@ -107,7 +108,7 @@ describe('useOnboardingMissions (#571)', () => {
 
     await act(async () => result.current.skip());
     expect(result.current.active).toBe(false);
-    expect(track).toHaveBeenCalledWith('onboarding_mission_skip', { step: 'first-draw' });
+    expect(track).toHaveBeenCalledWith('onboarding_mission_skip', { step: 'complete-routine' });
     await waitFor(async () => expect(await AsyncStorage.getItem(KEY)).toBe('skipped'));
   });
 

@@ -25,6 +25,19 @@ describe('GlassSurface (#1050)', () => {
     expect(style.elevation).toBe(3);
   });
 
+  it('lift={false}면 폴백에서 그림자(elevation)를 그리지 않는다 — 카드 목록의 회색 테두리 (#1328)', async () => {
+    const { getByTestId } = await render(
+      <GlassSurface testID="face" fallbackColor="#ABCDEF" glassEffectStyle="clear" lift={false}>
+        <Text>x</Text>
+      </GlassSurface>,
+    );
+    const style = flat(getByTestId('face').props.style);
+    expect(style.elevation).toBeUndefined();
+    expect(style.shadowOpacity).toBeUndefined();
+    // 반투명 폴백 자체는 유지된다(clear = 50% 알파).
+    expect(style.backgroundColor).toBe('#ABCDEF80');
+  });
+
   it('틴트(강조 버튼)는 폴백에서 단색 그대로', async () => {
     const { getByTestId } = await render(
       <GlassSurface testID="face" fallbackColor="#112233" tintColor="#112233">

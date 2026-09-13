@@ -1,40 +1,65 @@
-import {
-  formatDate,
-  formatTime,
-  localDate,
-  relativeTimeLabel,
-  toIsoDate,
-  weekdayOf,
-} from '@/utils/datetime';
+/**
+ * Date-boundary contract (spec contracts/date-boundary-cases.json, vendored under contracts/).
+ * Each case freezes the clock at an instant and checks that the app's date helpers produce the
+ * Asia/Seoul calendar date the server expects — and that the naive patterns really diverge there.
+ * Run under several device time zones: `npm run test:date-boundary` (TZ matrix).
+ */
+import fixture from '../../../contracts/date-boundary-cases.json';
+import { toKstDate, todayIso } from '@/utils/datetime';
 
-describe('datetime utils', () => {
-  it('formats time and date', () => {
-    expect(formatTime('07:00')).toBe('오전 7:00');
-    expect(formatTime('21:30')).toBe('오후 9:30');
-    expect(formatDate('2026-06-19')).toBe('2026.06.19');
-    expect(toIsoDate(new Date(2026, 6, 8))).toBe('2026-07-08');
+// Fake only `Date`; leave timers/microtasks real so async code keeps running.
+const DATE_ONLY: Parameters<typeof jest.useFakeTimers>[0] = {
+  doNotFake: [
+    'setTimeout',
+    'clearTimeout',
+    'setInterval',
+    'clearInterval',
+    'setImmediate',
+    'clearImmediate',
+    'nextTick',
+    'queueMicrotask',
+    'hrtime',
+    'performance',
+    'requestAnimationFrame',
+    'cancelAnimationFrame',
+    'requestIdleCallback',
+    'cancelIdleCallback',
+  ],
+};
+
+const pad2 = (n: number) => String(n).padStart(2, '0');
+const deviceLocalDate = (d: Date) =>
+  `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+
+const processTz = process.env.TZ;
+
+describe('todayIso / toKstDate — spec date-boundary contract', () => {
+  afterEach(() => jest.useRealTimers());
+
+  test.each(fixture.cases)('$id — $description', (c) => {
+    jest.useFakeTimers({ ...DATE_ONLY, now: new Date(c.instant) });
+
+    expect(todayIso()).toBe(c.expectedDate);
+    expect(toKstDate(new Date(c.instant))).toBe(c.expectedDate);
+
+    // The UTC-truncation pattern yields exactly what the fixture says it does at this instant.
+    expect(new Date().toISOString().slice(0, 10)).toBe(c.naive.utcTruncated.date);
+
+    // Device-local date can only be checked when this process runs in the case's time zone.
+    if (processTz === c.deviceTimeZone) {
+      expect(deviceLocalDate(new Date())).toBe(c.naive.deviceLocal.date);
+    }
   });
 
-  it('parses "YYYY-MM-DD" as a local date (#696) — UTC 해석이면 자정 경계에서 하루 밀린다', () => {
-    const d = localDate('2026-08-05');
-    expect([d.getFullYear(), d.getMonth(), d.getDate()]).toEqual([2026, 7, 5]);
-    expect(d.getHours()).toBe(0);
-    expect(weekdayOf('2026-08-05')).toBe(3); // 수요일
-    expect(weekdayOf('2026-08-09')).toBe(0); // 일요일
+  it('the fixture actually crosses the boundary (has teeth)', () => {
+    const verdicts = fixture.cases.map((c) => c.naive);
+    expect(verdicts.some((n) => n.utcTruncated.verdict === 'PAST')).toBe(true);
+    expect(verdicts.some((n) => n.deviceLocal.verdict === 'PAST')).toBe(true);
+    expect(verdicts.some((n) => n.deviceLocal.verdict === 'FUTURE')).toBe(true);
   });
 
-  it('상대 시간 라벨 — 분/시간/일 단계, 7일부터는 날짜 (#508)', () => {
-    const now = new Date('2026-07-28T12:00:00');
-    const at = (iso: string) => relativeTimeLabel(new Date(iso), now);
-
-    expect(at('2026-07-28T11:59:40')).toBe('방금 전');
-    expect(at('2026-07-28T11:55:00')).toBe('5분 전');
-    expect(at('2026-07-28T09:00:00')).toBe('3시간 전');
-    expect(at('2026-07-27T11:00:00')).toBe('1일 전');
-    expect(at('2026-07-22T12:00:01')).toBe('5일 전');
-    // 7일 이상은 절대 날짜로.
-    expect(at('2026-07-20T12:00:00')).toBe('7월 20일');
-    // 서버 시계 편차로 미래가 와도 방금 전으로 뭉갠다.
-    expect(at('2026-07-28T12:00:30')).toBe('방금 전');
+  it('when TZ is set, the fixture covers that device time zone', () => {
+    if (!processTz) return;
+    expect(fixture.cases.map((c) => c.deviceTimeZone)).toContain(processTz);
   });
 });

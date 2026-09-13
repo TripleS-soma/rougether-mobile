@@ -18,7 +18,8 @@ function storeKey(): string {
   return userId == null ? LEGACY_STORE_KEY : `${LEGACY_STORE_KEY}.${userId}`;
 }
 
-export type OnboardingMissionStepId = 'first-draw' | 'place-furniture' | 'invite-house';
+export type OnboardingMissionStepId =
+  'complete-routine' | 'first-draw' | 'place-furniture' | 'invite-house';
 
 export type OnboardingMissionStep = {
   id: OnboardingMissionStepId;
@@ -31,6 +32,13 @@ export type OnboardingMissionStep = {
 // 첫 루틴 등록 단계는 뺐다(2026-09-08) — 온보딩 직후의 관심사 추천 루틴 게이트(#1149)가
 // 그 역할을 하므로 중복이었다. 체인은 뽑기 → 방 꾸미기 → 친구 초대 3단계.
 export const ONBOARDING_MISSION_STEPS: OnboardingMissionStep[] = [
+  // 첫 단계는 루틴 완료 (#1324) — 추천 루틴 게이트가 루틴 1개를 보장하므로 "등록"이
+  // 아니라 "완료"를 시킨다. 완료 신호는 그날 첫 완료(#1295 자동 출석과 같은 seam).
+  {
+    id: 'complete-routine',
+    label: '오늘 루틴 1개 완료하기',
+    hint: '나의 방에서 루틴 체크를 눌러요',
+  },
   { id: 'first-draw', label: '뽑기 1회 해보기', hint: '첫 가구를 뽑고 내 방에 놓아봐요' },
   {
     id: 'place-furniture',
@@ -43,7 +51,7 @@ export const ONBOARDING_MISSION_STEPS: OnboardingMissionStep[] = [
   {
     id: 'invite-house',
     label: '집에 친구 초대하기',
-    hint: '집 관리에서 초대코드를 복사해 친구에게 보내요',
+    hint: '집 관리에서 초대 링크를 친구에게 공유해요',
   },
 ];
 

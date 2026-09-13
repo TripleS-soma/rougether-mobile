@@ -244,10 +244,10 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
     /**
      * 날짜 바꾸기 on a routine: move that day's occurrence only. The repeat
      * schedule stays; a one-off todo with the routine's title is created on the
-     * picked date (no server per-occurrence skip yet, so the original day's
-     * instance still shows — the sheet says so).
+     * picked date and the original day's occurrence (`fromDate`, the date the
+     * menu was opened on) is skipped on the server (#189).
      */
-    onMoveRoutineOccurrence?: (id: string, dueDate: string) => void;
+    onMoveRoutineOccurrence?: (id: string, dueDate: string, fromDate: string) => void;
     /** Delete a routine (kebab → 삭제). */
     onDeleteRoutine?: (id: string) => void;
     /**
@@ -480,6 +480,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // 메뉴 → 날짜 바꾸기: calendar sheet. Todos move their dueDate; routines move
   // that day's occurrence only (repeat stays). The draft date lives in the sheet.
   const [dateEditId, setDateEditId] = useState<string | null>(null);
+  // 날짜 바꾸기의 원래 날짜 — 메뉴를 연 날짜(방 탭은 오늘, 달력 탭은 선택한 날짜) (#189).
+  const [dateEditFrom, setDateEditFrom] = useState(today);
   const dateEditItem = routines.find((r) => r.id === dateEditId) ?? null;
 
   // 방 / 달력 tab. The calendar lists routines + todos on the selected date.
@@ -928,6 +930,16 @@ export const MyRoomScreen = memo(function MyRoomScreen({
 
   // 카테고리 그룹 = 헤더(아이콘·라벨·공개범위·카운트·＋) + 행들 + 퀵애드 입력행.
   // 빈 그룹도 헤더는 그린다 — ＋가 항상 닿아야 한다 (#323).
+  // 튜토리얼 '루틴 완료' 코치마크 대상 (#1324) — 방 탭 오늘 목록의 첫 미완료 행 하나.
+  // 전부 완료면 null(대상 없음 — 셸이 미션을 곧바로 완료 처리한다).
+  const firstIncompleteKey =
+    view === 'calendar'
+      ? null
+      : (roomGroups
+          .flatMap((g) => g.items)
+          .map((r) => rowFromRoutine(r, today))
+          .find((row) => !row.done)?.key ?? null);
+
   const renderCategoryGroup = (
     key: string,
     meta: RoutineCategoryMeta,
@@ -1004,6 +1016,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                 rowKey={row.key}
                 title={row.title}
                 done={row.done}
+                // 첫 미완료 행의 체크가 튜토리얼 '루틴 완료' 코치마크 대상 (#1324).
+                coachTarget={row.key === firstIncompleteKey}
                 time={row.time}
                 repeats={row.repeats}
                 color={meta.color}
@@ -1137,7 +1151,10 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                 accessibilityLabel="방 꾸미기"
                 style={styles.floatBtn}>
                 <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
-                  <Icon name="edit" size={20} color={t.text} />
+                  {/* absolute 버튼이라 내용을 측정 (#351 → #1324). */}
+                  <CoachTarget id="room-decor">
+                    <Icon name="edit" size={20} color={t.text} />
+                  </CoachTarget>
                 </GlassSurface>
               </Pressable>
             ) : null}
@@ -1512,12 +1529,16 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           else handleToggle(r, menuDate);
         }}
         onEditTime={(r) => setTimeId(r.id)}
-        onChangeDate={(r) => setDateEditId(r.id)}
+        onChangeDate={(r) => {
+          setDateEditFrom(menuDate);
+          setDateEditId(r.id);
+        }}
       />
 
       {/* 날짜 바꾸기: calendar bottom sheet — the pick stays a draft until 확인. */}
       <DateEditSheet
         item={dateEditItem}
+        fromDate={dateEditFrom}
         onClose={() => setDateEditId(null)}
         onUpdateTodoDueDate={onUpdateTodoDueDate}
         onMoveRoutineOccurrence={onMoveRoutineOccurrence}

@@ -31,6 +31,12 @@ export type GlassSurfaceProps = Omit<ViewProps, 'style'> & {
    * 넘기면 폴백은 종전 단색 버튼).
    */
   tintColor?: string;
+  /**
+   * 폴백(반투명 면)의 그림자로 "떠 있음"을 표현할지 (#1074). 배경 위에 촘촘히 놓인
+   * 카드 목록은 안드로이드 elevation 그림자가 뒤 배경과 섞여 회색 테두리처럼 보여서
+   * (#1328 미니게임 카드) 끈다. 글래스가 가능한 iOS 26에서는 영향 없음.
+   */
+  lift?: boolean;
   style?: StyleProp<ViewStyle>;
   children?: ReactNode;
 };
@@ -50,6 +56,7 @@ export function GlassSurface({
   interactive = true,
   glassEffectStyle = 'regular',
   tintColor,
+  lift = true,
   style,
   children,
   ...rest
@@ -71,8 +78,8 @@ export function GlassSurface({
         {...rest}
         style={[
           style,
-          translucent && styles.lift,
-          translucent && glassEffectStyle === 'clear' && styles.clear,
+          translucent && lift && styles.lift,
+          translucent && lift && glassEffectStyle === 'clear' && styles.clear,
           { backgroundColor: bg },
         ]}>
         {children}

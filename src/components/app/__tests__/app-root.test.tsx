@@ -6,13 +6,25 @@ import { LEGACY_ONBOARDING_KEY as KEY } from '@/lib/onboarding-store';
 import { renderWithProviders } from '@/test-utils/render';
 
 // AppRoot gates on a session, then AppShell loads my-room data — mock both.
-const emptyRes = (url: string) => ({
+// 추천 루틴 게이트는 건너뛰기가 없어(#1324) 첫 실행 케이스가 전부 `POST /routines`를 지난다 —
+// 생성 응답을 돌려줘야 게이트가 닫힌다.
+const emptyRes = (url: string, init?: RequestInit) => ({
   ok: true,
   status: 200,
-  text: async () =>
-    JSON.stringify(
+  text: async () => {
+    if (url.endsWith('/routines') && init?.method === 'POST') {
+      const body = JSON.parse(String(init.body ?? '{}')) as { title?: string };
+      return JSON.stringify({
+        id: 101,
+        title: body.title ?? '스트레칭 3분',
+        repeatType: 'DAILY',
+        authType: 'CHECK',
+      });
+    }
+    return JSON.stringify(
       url.endsWith('/today') ? { categories: [], summary: {}, streak: {} } : { items: [] },
-    ),
+    );
+  },
 });
 const realFetch = global.fetch;
 
@@ -23,7 +35,9 @@ describe('AppRoot', () => {
     // Seed an authed session so the auth gate lets the app render.
     await AsyncStorage.setItem('rougether.auth.accessToken', 'access');
     await AsyncStorage.setItem('rougether.auth.refreshToken', 'refresh');
-    global.fetch = jest.fn(async (url: string) => emptyRes(url)) as unknown as typeof fetch;
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) =>
+      emptyRes(url, init),
+    ) as unknown as typeof fetch;
   });
   afterEach(() => {
     global.fetch = realFetch;
@@ -82,7 +96,7 @@ describe('AppRoot', () => {
   });
 
   it('skips onboarding when the server says completed (no local cache)', async () => {
-    global.fetch = jest.fn(async (url: string) => {
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
       if (url.endsWith('/onboarding'))
         return {
           ok: true,
@@ -101,7 +115,7 @@ describe('AppRoot', () => {
           status: 200,
           text: async () => JSON.stringify({ items: [{ id: 1, code: 'bear', name: '곰' }] }),
         };
-      return emptyRes(url);
+      return emptyRes(url, init);
     }) as unknown as typeof fetch;
 
     const { getByText } = await renderApp();
@@ -120,10 +134,15 @@ describe('AppRoot', () => {
     // 관심사 추천 루틴 게이트(#1149)가 먼저 — 여기서는 미션 배너가 없다.
     await waitFor(() => expect(ui.getByText('작게 시작해볼까요?')).toBeTruthy());
     expect(ui.queryByTestId('mission-banner')).toBeNull();
-    await fireEvent.press(ui.getByText('나중에 할게요'));
-    // 게이트가 닫히면 셸이 뜨고, 첫 루틴 등록 없이 뽑기 미션부터 시작한다.
+    // 정상 경로엔 건너뛰기가 없다 (#1324) — 추천 하나를 골라 시작해야 넘어간다.
+    expect(ui.queryByText('나중에 할게요')).toBeNull();
+    // 기존 루틴 조회가 끝나기 전엔 타일이 잠겨 있어(`loading`) 누름이 무시된다 — 풀릴 때까지 기다린다.
+    await waitFor(() => expect(ui.getByLabelText('스트레칭 3분')).toBeEnabled());
+    await fireEvent.press(ui.getByLabelText('스트레칭 3분'));
+    await fireEvent.press(ui.getByText('이 루틴으로 시작하기'));
+    // 게이트가 닫히면 셸이 뜨고, 루틴 완료 미션부터 시작한다 (#1324).
     await waitFor(() => expect(ui.getByTestId('mission-banner')).toBeTruthy());
-    expect(ui.getByText('뽑기 1회 해보기')).toBeTruthy();
+    expect(ui.getByText('오늘 루틴 1개 완료하기')).toBeTruthy();
     expect(ui.queryByText('첫 루틴 등록하기')).toBeNull();
   });
 
@@ -155,7 +174,10 @@ describe('AppRoot', () => {
     await fireEvent.changeText(ui.getByLabelText('닉네임 입력'), '새친구');
     await fireEvent.press(ui.getByText('시작하기'));
     await waitFor(() => expect(ui.getByText('작게 시작해볼까요?')).toBeTruthy());
-    await fireEvent.press(ui.getByText('나중에 할게요'));
+    // 기존 루틴 조회가 끝나기 전엔 타일이 잠겨 있어(`loading`) 누름이 무시된다 — 풀릴 때까지 기다린다.
+    await waitFor(() => expect(ui.getByLabelText('스트레칭 3분')).toBeEnabled());
+    await fireEvent.press(ui.getByLabelText('스트레칭 3분'));
+    await fireEvent.press(ui.getByText('이 루틴으로 시작하기'));
     await waitFor(() => expect(ui.getByTestId('mission-banner')).toBeTruthy());
   });
 
@@ -168,7 +190,7 @@ describe('AppRoot', () => {
     // 같은 온보딩이 로컬(문자열 id)과 서버(goalId)에 함께 저장했으니 목표가 겹친다.
     await AsyncStorage.setItem(KEY, JSON.stringify({ characterId: 'cat', goals: ['1'] }));
     await AsyncStorage.setItem('rougether.auth.userId', '72');
-    global.fetch = jest.fn(async (url: string) => {
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
       if (url.endsWith('/onboarding'))
         return {
           ok: true,
@@ -176,7 +198,7 @@ describe('AppRoot', () => {
           text: async () =>
             JSON.stringify({ goals: [{ goalId: 1, code: 'exercise' }], completed: false }),
         };
-      return emptyRes(url);
+      return emptyRes(url, init);
     }) as unknown as typeof fetch;
 
     const ui = await renderApp();
@@ -197,9 +219,9 @@ describe('AppRoot', () => {
   it('서버에 못 닿으면 옛 기기 기록으로 앱에 들어가되 계정별로 옮기지는 않는다', async () => {
     await AsyncStorage.setItem(KEY, JSON.stringify({ characterId: 'cat', goals: ['exercise'] }));
     await AsyncStorage.setItem('rougether.auth.userId', '72');
-    global.fetch = jest.fn(async (url: string) => {
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
       if (url.endsWith('/onboarding')) throw new TypeError('Network request failed');
-      return emptyRes(url);
+      return emptyRes(url, init);
     }) as unknown as typeof fetch;
 
     const ui = await renderApp();
@@ -217,7 +239,7 @@ describe('AppRoot', () => {
     const other = JSON.stringify({ characterId: 'bear', goals: ['9'] });
     await AsyncStorage.setItem(KEY, other);
     await AsyncStorage.setItem('rougether.auth.userId', '72');
-    global.fetch = jest.fn(async (url: string) => {
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
       if (url.endsWith('/onboarding'))
         return {
           ok: true,
@@ -225,7 +247,7 @@ describe('AppRoot', () => {
           text: async () =>
             JSON.stringify({ goals: [{ goalId: 1, code: 'exercise' }], completed: true }),
         };
-      return emptyRes(url);
+      return emptyRes(url, init);
     }) as unknown as typeof fetch;
 
     const ui = await renderApp();
@@ -242,7 +264,7 @@ describe('AppRoot', () => {
     const other = JSON.stringify({ characterId: 'bear', goals: ['1', '2'] });
     await AsyncStorage.setItem(KEY, other);
     await AsyncStorage.setItem('rougether.auth.userId', '72');
-    global.fetch = jest.fn(async (url: string) => {
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
       if (url.endsWith('/onboarding'))
         return {
           ok: true,
@@ -250,7 +272,7 @@ describe('AppRoot', () => {
           text: async () =>
             JSON.stringify({ goals: [{ goalId: 1, code: 'exercise' }], completed: false }),
         };
-      return emptyRes(url);
+      return emptyRes(url, init);
     }) as unknown as typeof fetch;
 
     const ui = await renderApp();
@@ -273,11 +295,16 @@ describe('AppRoot', () => {
     const ui = await renderApp();
     await waitFor(() => expect(ui.getByText('작게 시작해볼까요?')).toBeTruthy());
     expect(ui.getByText('책 2쪽 읽기')).toBeTruthy();
-    await fireEvent.press(ui.getByText('나중에 할게요'));
+    // 건너뛰기 없음 (#1324) — 추천을 골라 시작한다.
+    expect(ui.queryByText('나중에 할게요')).toBeNull();
+    // 기존 루틴 조회가 끝나기 전엔 타일이 잠겨 있어(`loading`) 누름이 무시된다 — 풀릴 때까지 기다린다.
+    await waitFor(() => expect(ui.getByLabelText('책 2쪽 읽기')).toBeEnabled());
+    await fireEvent.press(ui.getByLabelText('책 2쪽 읽기'));
+    await fireEvent.press(ui.getByText('이 루틴으로 시작하기'));
     await waitFor(() => expect(ui.getByText('오늘의 할 일')).toBeTruthy());
     expect(
       JSON.parse((await AsyncStorage.getItem('rougether.starter-routine.v1.71'))!).status,
-    ).toBe('skipped');
+    ).toBe('created');
     expect(ui.queryByText('첫 루틴 등록하기')).toBeNull();
     await ui.unmount();
     const restarted = await renderApp();
@@ -307,7 +334,7 @@ describe('AppRoot', () => {
               items: [{ id: 3, title: '기존 루틴', repeatType: 'DAILY', authType: 'CHECK' }],
             }),
         };
-      return emptyRes(url);
+      return emptyRes(url, init);
     }) as unknown as typeof fetch;
     const ui = await renderApp();
     await waitFor(() => expect(ui.getByText('오늘의 할 일')).toBeTruthy());
@@ -338,7 +365,7 @@ describe('AppRoot', () => {
         }
         return body({ items: created ? [routine] : [] });
       }
-      return emptyRes(url);
+      return emptyRes(url, init);
     }) as unknown as typeof fetch;
     const ui = await renderApp();
     await waitFor(() => expect(ui.getByText('관심 있는 목표를 골라주세요')).toBeTruthy());
@@ -348,6 +375,8 @@ describe('AppRoot', () => {
     await fireEvent.press(ui.getByText('시작하기'));
     await waitFor(() => expect(ui.getByText('작게 시작해볼까요?')).toBeTruthy());
     await waitFor(() => expect(ui.queryByLabelText('내 루틴 확인 중')).toBeNull());
+    // 기존 루틴 조회가 끝나기 전엔 타일이 잠겨 있어(`loading`) 누름이 무시된다 — 풀릴 때까지 기다린다.
+    await waitFor(() => expect(ui.getByLabelText('책 2쪽 읽기')).toBeEnabled());
     await fireEvent.press(ui.getByLabelText('책 2쪽 읽기'));
     await fireEvent.press(ui.getByText('이 루틴으로 시작하기'));
     await waitFor(() => expect(ui.getByText('오늘의 할 일')).toBeTruthy());
@@ -356,8 +385,8 @@ describe('AppRoot', () => {
     expect(
       JSON.parse((await AsyncStorage.getItem('rougether.starter-routine.v1.73'))!).status,
     ).toBe('created');
-    // 첫 루틴 등록 미션은 뺐다(게이트가 대신) — 게이트가 닫히면 뽑기 미션부터 시작한다.
+    // 게이트가 닫히면 루틴 완료 미션부터 시작한다 (#1324).
     await waitFor(() => expect(ui.getByTestId('mission-banner')).toBeTruthy());
-    expect(ui.getByText('뽑기 1회 해보기')).toBeTruthy();
+    expect(ui.getByText('오늘 루틴 1개 완료하기')).toBeTruthy();
   });
 });

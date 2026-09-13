@@ -8,6 +8,7 @@ import type { GachaMachine } from '@/api/adapters';
 import { Icon } from '@/components/ui/icon';
 import { Pictogram } from '@/components/ui/pictograms';
 import { ScalePressable } from '@/components/ui/scale-pressable';
+import { CoachTarget } from '@/components/ui/coach-mark';
 import { GACHA_CATEGORIES, GACHA_CATEGORY_META, getGachaCategory } from '@/constants/gacha';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
@@ -191,7 +192,9 @@ export function GachaLobby({
                     backgroundColor: !affordable ? t.disabledBg : primary ? t.primary : t.surface,
                   },
                 ]}>
-                <Text style={[Typography.label, { color: ink }]}>{label}</Text>
+                <CoachTarget id={count === 1 ? 'gacha-draw' : `gacha-draw-${count}`}>
+                  <Text style={[Typography.label, { color: ink }]}>{label}</Text>
+                </CoachTarget>
                 {!starterDrawState ? (
                   <View style={styles.cost}>
                     <Icon

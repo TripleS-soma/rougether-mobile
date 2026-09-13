@@ -1,7 +1,6 @@
 import { fireEvent, render } from '@testing-library/react-native';
 
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
-import { toIsoDate } from '@/utils/datetime';
 import { ToastProvider } from '@/components/ui/toast';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
 
@@ -290,26 +289,6 @@ describe('AddRoutineScreen', () => {
     expect(getByText(/~ 계속/)).toBeTruthy();
   });
 
-  it('시작일 기본값은 기기 로컬 날짜 — 자정 직후(KST 00:xx)에 UTC 전날로 가지 않는다', async () => {
-    // 2026-09-07 15:30 UTC = 2026-09-08 00:30 KST. 종전 `toISOString().slice(0, 10)`은
-    // UTC 날짜(09-07)를 줘서 서버가 어제 시작일로 받았다. 로컬 자정을 기준으로 잡아야 한다.
-    jest.useFakeTimers({ now: new Date('2026-09-07T15:30:00Z') });
-    try {
-      const expected = toIsoDate(new Date());
-      const onAdd = jest.fn();
-      const { getByText, getByPlaceholderText } = await render(<AddRoutineScreen onAdd={onAdd} />);
-      await fireEvent.changeText(getByPlaceholderText('예) 매일 30분 산책'), '독서');
-      await fireEvent.press(getByText('루틴 추가하기'));
-      expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ startDate: expected }));
-      // 기기 시간대가 UTC보다 앞서면(KST 등) 두 값이 실제로 갈린다 — 그 경우를 잠근다.
-      if (new Date().getTimezoneOffset() < 0) {
-        expect(expected).not.toBe(new Date().toISOString().slice(0, 10));
-      }
-    } finally {
-      jest.useRealTimers();
-    }
-  });
-
   it('initialStartDate가 오늘이 아니면 지속 기간이 켜진 채 그 날짜로 시작한다 (#1138)', async () => {
     const onAdd = jest.fn();
     const { getByText, getByLabelText, getByPlaceholderText } = await render(
@@ -394,4 +373,40 @@ it('수정 중 카테고리가 사라졌다면 안내하고 미분류를 고른 
     'r9',
     expect.objectContaining({ title: '독서', category: '' }),
   );
+});
+
+describe('AddRoutineScreen — start date at the KST midnight boundary', () => {
+  afterEach(() => jest.useRealTimers());
+
+  it('defaults startDate to the Asia/Seoul date, not the UTC date (2026-09 incident)', async () => {
+    // 2026-09-08 00:30 KST == 2026-09-07 15:30 UTC — UTC truncation would send "yesterday",
+    // which the server rejects with ROUTINE_STARTS_ON_BEFORE_TODAY.
+    jest.useFakeTimers({
+      doNotFake: [
+        'setTimeout',
+        'clearTimeout',
+        'setInterval',
+        'clearInterval',
+        'setImmediate',
+        'clearImmediate',
+        'nextTick',
+        'queueMicrotask',
+        'hrtime',
+        'performance',
+        'requestAnimationFrame',
+        'cancelAnimationFrame',
+        'requestIdleCallback',
+        'cancelIdleCallback',
+      ],
+      now: new Date('2026-09-07T15:30:00Z'),
+    });
+    const onAdd = jest.fn();
+    const { getByText } = await render(<AddRoutineScreen onAdd={onAdd} />);
+
+    await fireEvent.press(getByText('추천 루틴'));
+    await fireEvent.press(getByText('독서 30분'));
+    await fireEvent.press(getByText('루틴 추가하기'));
+
+    expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ startDate: '2026-09-08' }));
+  });
 });

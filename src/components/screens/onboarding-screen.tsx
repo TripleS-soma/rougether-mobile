@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 
+import { useAndroidKeyboardHeight } from '@/hooks/use-android-keyboard-height';
 import { useAppFrame } from '@/hooks/use-app-frame';
 import { CharacterAvatar } from '@/components/room/character-avatar';
 import { IntroScreen } from '@/components/screens/intro-screen';
@@ -140,6 +141,8 @@ export function OnboardingScreen({
   // 닉네임 단계 (#635) — 캐릭터 다음, 시작 직전. 신규 계정의 서버 닉네임이
   // 비어 화면 데모 기본값이 노출되던 문제의 근본 해결.
   const [showNicknameStep, setShowNicknameStep] = useState(false);
+  // 안드로이드 닉네임 단계만 키보드 높이를 듣는다 (#1326) — 그 외엔 0.
+  const androidKeyboard = useAndroidKeyboardHeight(Platform.OS === 'android' && showNicknameStep);
   const [nickname, setNickname] = useState(initialNickname ?? '');
   // Seed from the previous selections (온보딩 다시 보기 edits rather than starts
   // over); ids that no longer exist in the option list are dropped so a stale
@@ -202,10 +205,13 @@ export function OnboardingScreen({
         {/* 이 단계만 ScrollView가 아니라 고정 레이아웃이라, 다른 입력 화면이
             쓰는 keyboardShouldPersistTaps가 통하지 않는다 (#923). 키보드를
             내리는 배경 탭은 Pressable로 직접 걸고, autoFocus로 곧장 올라온
-            키보드가 '시작하기'를 덮지 않게 KeyboardAvoidingView로 감싼다. */}
+            키보드가 '시작하기'를 덮지 않게 KeyboardAvoidingView로 감싼다.
+            안드로이드는 엣지투엣지라 KAV의 behavior가 전부 무력해(#1326 — 입력칸이
+            키보드에 가려진 채 그대로) 키보드 높이만큼 아래 여백을 직접 준다(#1290). */}
         <KeyboardAvoidingView
-          style={styles.flex}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          style={[styles.flex, Platform.OS === 'android' && { paddingBottom: androidKeyboard }]}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          testID="onboarding-nickname-keyboard">
           <View style={styles.intro}>
             <Text style={[Typography.h1, { color: t.text }]}>어떻게 불러드릴까요?</Text>
             <Text style={[Typography.supporting, styles.introBody, { color: t.textMuted }]}>

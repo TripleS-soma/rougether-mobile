@@ -117,6 +117,10 @@ export type HouseMission = {
   achieved?: boolean;
   /** Mission end date (device-local "YYYY-MM-DD"); absent = 무기한. */
   endsOn?: string;
+  /** 내 누적 기여 횟수 (#373-②, 서버 목록 응답). 미리보기(미가입 집)엔 없다. */
+  myContribution?: number;
+  /** 오늘 이미 기여했는지 (#373-②) — 세션 추적·연동 루틴 판정과 합쳐 '기여됨'을 정한다. */
+  contributedToday?: boolean;
 };
 
 /** Creatable mission types (STREAK_DAYS is not supported by the server yet). */
