@@ -86,6 +86,8 @@ export type AnalyticsEvent =
   | 'minigame_leaderboard_view'
   /** 랭킹전 기록 저장 실패 — 재시도 버튼의 분모. 상세 status는 api_error. */
   | 'minigame_submit_failed'
+  /** 알림 탭 새 소식 탭 (#1320) — id: 공지 id, kind: screen|url|none(행동 없는 소식). */
+  | 'announcement_open'
   // 그 밖의 핵심 행동
   | 'shop_purchase'
   | 'cheer_send'

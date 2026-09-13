@@ -9,6 +9,37 @@ const NOTIFICATIONS = [
 ];
 
 describe('NotificationListScreen', () => {
+  it('lists bundled announcements above notifications and counts them as unread (#1320)', async () => {
+    const onOpenAnnouncement = jest.fn();
+    const announcement = {
+      id: 'news-1',
+      date: '2026-09-13',
+      title: '새 기능 소식',
+      body: '미니게임이 생겼어요',
+      read: false,
+    };
+    const { getByText, getByLabelText, queryByLabelText, rerender } = await render(
+      <NotificationListScreen
+        notifications={NOTIFICATIONS.map((n) => ({ ...n, read: true }))}
+        announcements={[announcement]}
+        onOpenAnnouncement={onOpenAnnouncement}
+      />,
+    );
+    expect(getByText('새 소식')).toBeTruthy();
+    // Notifications are all read, so the header button exists only because of the announcement.
+    expect(getByLabelText('모두 읽음')).toBeTruthy();
+    await fireEvent.press(getByLabelText('새 기능 소식'));
+    expect(onOpenAnnouncement).toHaveBeenCalledWith(expect.objectContaining({ id: 'news-1' }));
+
+    await rerender(
+      <NotificationListScreen
+        notifications={NOTIFICATIONS.map((n) => ({ ...n, read: true }))}
+        announcements={[{ ...announcement, read: true }]}
+      />,
+    );
+    expect(queryByLabelText('모두 읽음')).toBeNull();
+  });
+
   it('renders rows and marks an unread one read on tap', async () => {
     const onRead = jest.fn();
     const { getByText, getByLabelText } = await render(
