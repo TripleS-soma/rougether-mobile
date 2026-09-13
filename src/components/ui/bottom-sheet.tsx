@@ -11,7 +11,6 @@ import {
 import {
   Animated,
   Easing,
-  Keyboard,
   KeyboardAvoidingView,
   Modal,
   PanResponder,
@@ -28,6 +27,7 @@ import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-g
 import { ModalFrame } from '@/components/app/app-frame';
 import { Overlay } from '@/constants/theme';
 import { useAnimatedValue, useConstant, useLatestRef } from '@/hooks/use-stable-value';
+import { useAndroidKeyboardHeight } from '@/hooks/use-android-keyboard-height';
 import { NATIVE_DRIVER } from '@/utils/animation';
 
 // 스와이프-다운 닫기 (#469) — 이만큼 끌어내리거나(플링) 이 속도를 넘기면 닫는다.
@@ -81,30 +81,6 @@ export function __resetSheetSerializer() {
 }
 
 export type BottomSheetDragScope = 'header' | 'card';
-
-/**
- * 안드로이드 키보드 높이 (#1290) — keyboardDidShow의 height를 그대로 쓰고 닫히면 0.
- * KeyboardAvoidingView(height)는 안드로이드에서 닫힘도 `_onKeyboardChange`로 받아, 닫힘
- * 이벤트의 screenY(보이는 영역의 **높이**)로 줄임을 다시 계산한다. 엣지투엣지 Modal은
- * 프레임이 화면 전체라 키보드가 없는데도 상태바+내비바만큼 줄임이 남고, height 모드가
- * 직전 줄임을 계산에 되먹여 레이아웃과 엇갈리며 시트가 계속 위아래로 흔들렸다(갤럭시
- * S25 녹화). 여기선 레이아웃 결과를 계산에 쓰지 않으니 되먹임이 생길 수 없다.
- */
-function useAndroidKeyboardHeight(enabled: boolean): number {
-  const [height, setHeight] = useState(() =>
-    enabled && Keyboard.isVisible() ? (Keyboard.metrics()?.height ?? 0) : 0,
-  );
-  useEffect(() => {
-    if (!enabled) return;
-    const show = Keyboard.addListener('keyboardDidShow', (e) => setHeight(e.endCoordinates.height));
-    const hide = Keyboard.addListener('keyboardDidHide', () => setHeight(0));
-    return () => {
-      show.remove();
-      hide.remove();
-    };
-  }, [enabled]);
-  return enabled ? height : 0;
-}
 
 /**
  * 시작점 기준으로 이 드래그를 시트가 가져갈지 (#514·#657·#1132). `excluded`는
