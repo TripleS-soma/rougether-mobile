@@ -922,6 +922,16 @@ export const MyRoomScreen = memo(function MyRoomScreen({
 
   // 카테고리 그룹 = 헤더(아이콘·라벨·공개범위·카운트·＋) + 행들 + 퀵애드 입력행.
   // 빈 그룹도 헤더는 그린다 — ＋가 항상 닿아야 한다 (#323).
+  // 튜토리얼 '루틴 완료' 코치마크 대상 (#1324) — 방 탭 오늘 목록의 첫 미완료 행 하나.
+  // 전부 완료면 null(대상 없음 — 셸이 미션을 곧바로 완료 처리한다).
+  const firstIncompleteKey =
+    view === 'calendar'
+      ? null
+      : (roomGroups
+          .flatMap((g) => g.items)
+          .map((r) => rowFromRoutine(r, today))
+          .find((row) => !row.done)?.key ?? null);
+
   const renderCategoryGroup = (
     key: string,
     meta: RoutineCategoryMeta,
@@ -998,6 +1008,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                 rowKey={row.key}
                 title={row.title}
                 done={row.done}
+                // 첫 미완료 행의 체크가 튜토리얼 '루틴 완료' 코치마크 대상 (#1324).
+                coachTarget={row.key === firstIncompleteKey}
                 time={row.time}
                 repeats={row.repeats}
                 color={meta.color}
@@ -1131,7 +1143,10 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                 accessibilityLabel="방 꾸미기"
                 style={styles.floatBtn}>
                 <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
-                  <Icon name="edit" size={20} color={t.text} />
+                  {/* absolute 버튼이라 내용을 측정 (#351 → #1324). */}
+                  <CoachTarget id="room-decor">
+                    <Icon name="edit" size={20} color={t.text} />
+                  </CoachTarget>
                 </GlassSurface>
               </Pressable>
             ) : null}

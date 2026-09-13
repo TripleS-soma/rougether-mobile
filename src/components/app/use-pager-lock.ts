@@ -18,13 +18,22 @@ export function usePagerLock(screen: Screen) {
   const activeTab = TAB_FOR_SCREEN[screen];
   const lock = useSharedValue(false);
   const houseLockedRef = useRef(false);
+  // 튜토리얼 코치마크 잠금 (#1324) — 탭과 무관하게 스와이프를 막는다.
+  const tutorialLockedRef = useRef(false);
+  const apply = (tab: typeof activeTab) => {
+    lock.value = tutorialLockedRef.current || (houseLockedRef.current && tab === 'house');
+  };
   const setHouseLocked = useStableCallback((locked: boolean) => {
     houseLockedRef.current = locked;
-    lock.value = locked && TAB_FOR_SCREEN[screen] === 'house';
+    apply(TAB_FOR_SCREEN[screen]);
+  });
+  const setTutorialLocked = useStableCallback((locked: boolean) => {
+    tutorialLockedRef.current = locked;
+    apply(TAB_FOR_SCREEN[screen]);
   });
   // 탭이 바뀌면 집 잠금 의사는 유지한 채 활성 여부만 다시 판정한다.
   useEffect(() => {
-    lock.value = houseLockedRef.current && activeTab === 'house';
+    lock.value = tutorialLockedRef.current || (houseLockedRef.current && activeTab === 'house');
   }, [activeTab, lock]);
-  return { lock, setHouseLocked };
+  return { lock, setHouseLocked, setTutorialLocked };
 }

@@ -20,26 +20,44 @@ describe('첫 루틴 선택 화면', () => {
     expect(ui.getByText(/알림은 꺼져 있고/)).toBeTruthy();
   });
 
-  it('나중에는 생성 요청 없이 빠져나가고 저장 중에는 모든 행동을 막는다', async () => {
+  // 정상 경로엔 건너뛰기가 없다 (#1324) — 루틴 없이 튜토리얼에 들어가면 첫 미션(루틴 완료)을 못 한다.
+  it('정상 경로에는 나중에 할게요가 없고, 서버 오류일 때만 출구가 생긴다 (#1324)', async () => {
+    const onSkip = jest.fn();
+    const onStart = jest.fn();
+    const normal = await render(
+      <StarterRoutineScreen recommendations={recommendations} onSkip={onSkip} onStart={onStart} />,
+    );
+    expect(normal.queryByText('나중에 할게요')).toBeNull();
+
+    const failed = await render(
+      <StarterRoutineScreen
+        recommendations={recommendations}
+        error="추천을 불러오지 못했어요"
+        needsReload
+        onSkip={onSkip}
+        onStart={onStart}
+      />,
+    );
+    await fireEvent.press(failed.getByText('나중에 할게요'));
+    expect(onSkip).toHaveBeenCalledTimes(1);
+    expect(onStart).not.toHaveBeenCalled();
+  });
+
+  it('저장 중에는 모든 행동을 막는다', async () => {
     const onSkip = jest.fn();
     const onStart = jest.fn();
     const ui = await render(
-      <StarterRoutineScreen recommendations={recommendations} onSkip={onSkip} onStart={onStart} />,
-    );
-    await fireEvent.press(ui.getByText('나중에 할게요'));
-    expect(onSkip).toHaveBeenCalledTimes(1);
-    expect(onStart).not.toHaveBeenCalled();
-    await ui.rerender(
       <StarterRoutineScreen
         recommendations={recommendations}
+        error="잠깐 실패"
+        saving
         onSkip={onSkip}
         onStart={onStart}
-        saving
       />,
     );
     await fireEvent.press(ui.getByText('나중에 할게요'));
-    await fireEvent.press(ui.getByLabelText('책 2쪽 읽기'));
-    expect(onSkip).toHaveBeenCalledTimes(1);
+    await fireEvent.press(ui.getByText('루틴을 만들고 있어요'));
+    expect(onSkip).not.toHaveBeenCalled();
     expect(onStart).not.toHaveBeenCalled();
   });
 

@@ -8,6 +8,7 @@ import type { GachaMachine } from '@/api/adapters';
 import { Icon } from '@/components/ui/icon';
 import { Pictogram } from '@/components/ui/pictograms';
 import { ScalePressable } from '@/components/ui/scale-pressable';
+import { CoachTarget } from '@/components/ui/coach-mark';
 import { GACHA_CATEGORIES, GACHA_CATEGORY_META, getGachaCategory } from '@/constants/gacha';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
@@ -171,7 +172,10 @@ export function GachaLobby({
                     backgroundColor: !affordable ? t.disabledBg : primary ? t.primary : t.surface,
                   },
                 ]}>
-                <Text style={[Typography.label, { color: ink }]}>{label}</Text>
+                {/* 1회 뽑기는 튜토리얼 코치마크 대상 (#1324) — 버튼이 눌리는 면이라 내용을 측정. */}
+                <CoachTarget id={count === 1 ? 'gacha-draw' : `gacha-draw-${count}`}>
+                  <Text style={[Typography.label, { color: ink }]}>{label}</Text>
+                </CoachTarget>
                 <View style={styles.cost}>
                   <Icon
                     name={selected.costCurrencyType === 'COIN' ? 'coin' : 'diamond'}

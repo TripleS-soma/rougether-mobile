@@ -9,6 +9,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Icon } from '@/components/ui/icon';
 import { CrownPictogram, DoorPictogram, PencilPictogram } from '@/components/ui/pictograms';
 import { useToast } from '@/components/ui/toast';
+import { CoachTarget } from '@/components/ui/coach-mark';
 import { shareOrCopy } from '@/lib/share-link';
 import type { CharacterId } from '@/constants/characters';
 import { HOUSE_PRIVATE_ACCENT, houseCapacityOptions } from '@/constants/house-themes';
@@ -262,14 +263,17 @@ export function HouseMembersScreen({
                   <Icon name="copy" size={14} color={t.text} />
                   <Text style={[Typography.supporting, { color: t.text }]}>코드 복사</Text>
                 </Pressable>
-                <Pressable
-                  onPress={() => void shareInviteLink()}
-                  accessibilityRole="button"
-                  accessibilityLabel="초대 링크 공유"
-                  style={[styles.inviteActionBtn, { backgroundColor: t.primary }]}>
-                  <Icon name="gift" size={14} color={t.onPrimary} />
-                  <Text style={[Typography.supporting, { color: t.onPrimary }]}>링크 공유</Text>
-                </Pressable>
+                {/* 튜토리얼 '친구 초대' 마지막 대상 (#1324) — 코드 복사가 아니라 링크 공유. */}
+                <CoachTarget id="house-invite-share">
+                  <Pressable
+                    onPress={() => void shareInviteLink()}
+                    accessibilityRole="button"
+                    accessibilityLabel="초대 링크 공유"
+                    style={[styles.inviteActionBtn, { backgroundColor: t.primary }]}>
+                    <Icon name="gift" size={14} color={t.onPrimary} />
+                    <Text style={[Typography.supporting, { color: t.onPrimary }]}>링크 공유</Text>
+                  </Pressable>
+                </CoachTarget>
               </View>
             ) : null}
           </View>
