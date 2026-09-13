@@ -187,7 +187,8 @@ describe('Calendar', () => {
       <Calendar value="2026-06-15" today="2026-07-24" onSelect={onSelect} />,
     );
     fireEvent.press(getByLabelText('오늘로'));
-    expect(onSelect).toHaveBeenCalledWith('2026-07-24');
+    // 계기 'today' (#1327) — 호출부가 날짜 탭과 구분한다.
+    expect(onSelect).toHaveBeenCalledWith('2026-07-24', 'today');
   });
 
   it('hides the 오늘 chip when already on today', async () => {
