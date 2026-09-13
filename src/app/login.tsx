@@ -9,8 +9,10 @@ import { track } from '@/lib/analytics';
 import { loadIntroSeen, markIntroSeen } from '@/lib/intro-store';
 import { hasKakaoRedirect } from '@/lib/kakao-auth';
 import { loadLastLoginProvider, type SocialProvider } from '@/lib/last-login';
+import type { SocialLoginResult } from '@/lib/login-conflict';
 
-type SocialLogin = () => Promise<'ok' | 'cancelled' | 'failed'>;
+// 409 안내(LoginConflict)도 결과에 포함 — 계측은 취소만 보고 나머지는 그대로 화면에 넘긴다.
+type SocialLogin = () => Promise<SocialLoginResult>;
 
 /**
  * 버튼 탭과 취소를 남긴다 (#1282). 성공·실패는 use-auth가 이미 남기므로

@@ -49,6 +49,9 @@ import type { DrawResult } from '@/api';
 import { fetchGachaRewards } from '@/api';
 import { DEFAULT_WALLPAPER_ID, type PlacedFurniture } from '@/resources/furniture';
 import { usePagerLock } from '@/components/app/use-pager-lock';
+import { tutorialCoachStep } from '@/components/app/use-tutorial-coach';
+import { calendarToday } from '@/utils/calendar-progress';
+import { CoachMarkOverlay, useCoachTargets } from '@/components/ui/coach-mark';
 import { useTabScroll } from '@/components/app/use-tab-scroll';
 import { MinigameActiveContext, useMinigameSurface } from '@/components/app/use-minigame-surface';
 
@@ -83,6 +86,7 @@ const NO_CHARACTER_FRAMES: Partial<Record<CharacterId, string[]>> = {};
 
 /** 각 미션의 진입 화면 (#571) — 배너 탭·완료 시트 '하러 가기'의 목적지. */
 const MISSION_TARGET_SCREEN: Record<OnboardingMissionStepId, Screen> = {
+  'complete-routine': 'myRoom',
   'first-draw': 'gacha',
   'place-furniture': 'decor',
   'invite-house': 'houseMembers',
@@ -96,6 +100,8 @@ const MISSION_BANNER_SCREENS: ReadonlySet<Screen> = new Set<Screen>([
   'gacha',
   'house',
   'houseSearch',
+  // 초대 미션의 목적지 (#1324) — 링크 공유 버튼이 여기 있다.
+  'houseMembers',
 ]);
 
 /**
@@ -130,6 +136,10 @@ export function AppShell({
   // 있으면 시작하지 않는다. 단계 완료는 아래 액션 지점들이 complete로 쏜다.
   const missions = useOnboardingMissions(startMissions);
   const completeMission = missions.complete;
+  // 튜토리얼 코치마크 (#1324) — 미션 진행 중 (현재 미션, 현재 화면)에 맞는 대상을 짚고
+  // 나머지를 잠근다. 완료 시트(Modal)가 떠 있는 동안은 그 시트가 유일한 조작이라 접는다.
+  const coachTargets = useCoachTargets();
+  const [coachFrame, setCoachFrame] = useState({ w: 0, h: 0 });
 
   // Routines / todos / categories / completion / wallet come from the API.
   // 전체 객체는 use-my-room-pages(나의 방 탭·서브화면 배선, #692 5단계)로
@@ -377,13 +387,29 @@ export function AppShell({
   });
   // 나의 방 페이지 배선 (#692 5단계) — 나의 방 탭 페이지와 서브화면 4종
   // (루틴 관리·추가·카테고리 관리·알림 목록)의 훅·콜백·JSX 소유.
+  const completedTodayHandler = useCallback(() => {
+    completeMission('complete-routine');
+    openAttendanceAfterFirstCompletion();
+  }, [completeMission, openAttendanceAfterFirstCompletion]);
+  // 미션이 '루틴 완료'인데 오늘 이미 완료한 루틴이 있으면(다시 보기·늦은 시작) 바로 넘긴다 —
+  // 대상(미완료 행)이 없어 코치마크가 짚을 곳이 없다.
+  const completedTodayAlready = useMemo(() => {
+    const today = calendarToday();
+    return Object.values(completions).some((dates) => dates.includes(today));
+  }, [completions]);
+  useEffect(() => {
+    if (missions.step?.id === 'complete-routine' && completedTodayAlready) {
+      completeMission('complete-routine');
+    }
+  }, [missions.step?.id, completedTodayAlready, completeMission]);
+
   const myRoomPages = useMyRoomPages({
     nav: { screen, setScreen, addReturnScreen, setAddReturnScreen },
     data: myRoomData,
     nickname,
     missionLinks: { toggleWithMissionGuard, houseCategoryIds, addRoutineWithMission },
-    // 그날 첫 완료 → 출석 시트 자동 출석 (#1294).
-    onCompletedToday: openAttendanceAfterFirstCompletion,
+    // 그날 첫 완료 → 튜토리얼 '루틴 완료' 미션(#1324) + 출석 시트 자동 출석 (#1294).
+    onCompletedToday: completedTodayHandler,
     character: { wornCharacterId, wornCharacterFrames, ownedCharacters, wearCharacter },
     room: {
       growthLevel,
@@ -457,7 +483,12 @@ export function AppShell({
   // 단 집 "페이지가 활성일 때만" — 확대를 남겨둔 채 탭 버튼으로 떠났을 때
   // 다른 페이지의 스와이프까지 막으면 안 된다. TabPager·내비와 결합된 셸
   // 잔류 클러스터 (#692 6단계) — 잠금 콜백만 집 페이지 prop으로 내려간다.
-  const { lock: pagerLock, setHouseLocked: handleHousePagerLock } = usePagerLock(screen);
+  const {
+    lock: pagerLock,
+    setHouseLocked: handleHousePagerLock,
+    setTutorialLocked,
+  } = usePagerLock(screen);
+
   // 탭별 스크롤 위치 (#763) — 서브화면에서 페이저가 언마운트돼도 셸이 기억한다.
   const tabScroll = useTabScroll();
 
@@ -493,6 +524,16 @@ export function AppShell({
     roomPreviewStore: memberRoomPreviews,
   });
 
+  // 코치마크 단계 (#1324) — housePages.noHouses를 읽으므로 그 아래에서 계산.
+  const coachStep =
+    missions.step && missions.completedIndex == null
+      ? tutorialCoachStep(missions.step.id, screen, { noHouses: housePages.noHouses })
+      : null;
+  const coachSteps = useMemo(() => (coachStep ? [coachStep] : []), [coachStep]);
+  useEffect(() => {
+    setTutorialLocked(coachStep != null);
+  }, [coachStep, setTutorialLocked]);
+
   // 시작 화면이 집인데 집이 없으면(#571 규칙) 탐색으로 — 집 목록이 도착한 첫 순간 한 번만.
   const startHouseCorrectedRef = useRef(initialScreen !== 'house');
   useEffect(() => {
@@ -503,11 +544,14 @@ export function AppShell({
 
   // 내비게이션 컨트롤러 (#692) — 뒤로가기·엣지 백·전환 손맛·페이저 정착.
   // noHouses·탐색 이탈 판정이 use-house-pages 반환값이라 훅 호출이 그 뒤에 선다.
+  // 주간 보기(#1327)가 하드웨어 백·엣지 백을 가로채 펼침 연출을 먼저 돌린다.
+  const weekBackRef = useRef<(() => boolean) | null>(null);
   const { edgeBackPan, activeTab, handlePageChange } = useAppNavigation({
     screen,
     setScreen,
     addReturnScreen,
     noHouses: housePages.noHouses,
+    backInterceptorRef: weekBackRef,
   });
 
   // 현재 화면 트리 — 슬라이드 전환(#1094)이 직전 렌더의 노드를 떠나는 층으로 들고 있는다.
@@ -542,6 +586,15 @@ export function AppShell({
       ) : null}
 
       {minigames.subScreen}
+      {/* 주간 보기 (#1327) — 달력 탭의 두 번째 인스턴스. 슬라이드 없이 즉시 바뀌고
+          (INSTANT_TRANSITION_SCREENS) 달력이 스스로 선택 주로 접힌다. */}
+      {screen === 'calendarWeek' ? (
+        <MyRoomScreen
+          {...myRoomPages.calendarWeekProps}
+          view="calendar"
+          backInterceptorRef={weekBackRef}
+        />
+      ) : null}
       {screen === 'furnitureStudio' ? (
         <FurnitureStudio
           key={`${attendance.status?.eventId ?? 0}:${attendance.status?.completed ?? false}`}
@@ -645,7 +698,11 @@ export function AppShell({
   const layers = useScreenTransition({ screen, addReturnScreen, node: screenNode });
 
   return (
-    <View style={styles.root}>
+    <View
+      style={styles.root}
+      onLayout={(e) =>
+        setCoachFrame({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })
+      }>
       {/* 엣지 백 (#564) — 콘텐츠 전체를 감싸되 관찰만 한다(차단 없음). */}
       <MinigameActiveContext.Provider
         value={screen === 'minigameRunner' ? minigames.activeSessionId : null}>
@@ -725,6 +782,18 @@ export function AppShell({
 
       {/* 친구 초대 확인·붙여넣기 시트 (#1007) — use-settings-surface가 그린다. */}
       {settingsSurface.inviteSheets}
+
+      {/* 튜토리얼 코치마크 (#1324) — 마지막 자식: 하단 바·미션 배너까지 덮고 대상만 뚫는다. */}
+      {coachStep ? (
+        <CoachMarkOverlay
+          hardLock
+          steps={coachSteps}
+          index={0}
+          targets={coachTargets}
+          frame={coachFrame}
+          caption={`미션 ${missions.stepIndex + 1}/${missions.totalSteps}`}
+        />
+      ) : null}
     </View>
   );
 }

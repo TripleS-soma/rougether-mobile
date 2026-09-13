@@ -22,7 +22,36 @@ export function weekdayOf(dateIso: string) {
   return localDate(dateIso).getDay();
 }
 
-/** Local date → "YYYY-MM-DD" (KST-agnostic; uses the device's local day). */
+/** The API's calendar zone (spec api.md "날짜와 시각"): every "YYYY-MM-DD" field is a date in Asia/Seoul. */
+export const API_DATE_ZONE = 'Asia/Seoul';
+
+/**
+ * Asia/Seoul has been fixed at UTC+9 with no DST since 1988, so shifting the epoch by the
+ * offset and reading the UTC fields gives the exact KST calendar date without depending on
+ * the device's ICU/Intl data (Hermes Intl coverage differs per platform).
+ */
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+/**
+ * Instant → "YYYY-MM-DD" in Asia/Seoul. This is the ONLY way to turn a `Date` into an API
+ * date. Never use `toISOString().slice(0, 10)` (UTC: "yesterday" between 00:00 and 08:59 KST —
+ * the 2026-09 incident) or `getFullYear()/getMonth()/getDate()` (device-local: wrong for
+ * users outside KST). Boundary cases: contracts/date-boundary-cases.json (shared with the server).
+ */
+export function toKstDate(dt: Date) {
+  const shifted = new Date(dt.getTime() + KST_OFFSET_MS);
+  return `${shifted.getUTCFullYear()}-${pad2(shifted.getUTCMonth() + 1)}-${pad2(
+    shifted.getUTCDate(),
+  )}`;
+}
+
+/**
+ * Device-local calendar date of `dt` → "YYYY-MM-DD". Display/local-calendar use only.
+ * NOT for API date fields — those are Asia/Seoul dates (`toKstDate` / `todayIso`) and this
+ * diverges from them for users whose device is not on KST.
+ */
 export function toIsoDate(dt: Date) {
   return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(
     dt.getDate(),
@@ -41,9 +70,9 @@ export function shiftIso(dateIso: string, days: number) {
   return toIsoDate(dt);
 }
 
-/** Today as "YYYY-MM-DD" in the device's local time. */
+/** Today as "YYYY-MM-DD" in Asia/Seoul — the API's "today", regardless of the device's time zone. */
 export function todayIso() {
-  return toIsoDate(new Date());
+  return toKstDate(new Date());
 }
 
 /**

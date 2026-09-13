@@ -86,6 +86,10 @@ export type AnalyticsEvent =
   | 'minigame_leaderboard_view'
   /** 랭킹전 기록 저장 실패 — 재시도 버튼의 분모. 상세 status는 api_error. */
   | 'minigame_submit_failed'
+  /** 알림 탭 새 소식 탭 (#1320) — id: 공지 id, kind: screen|url|none(행동 없는 소식). */
+  | 'announcement_open'
+  /** 달력 탭에서 날짜를 눌러 주간 보기로 (#1327) — today: 오늘을 눌렀는지. */
+  | 'calendar_week_open'
   // 그 밖의 핵심 행동
   | 'shop_purchase'
   | 'cheer_send'
@@ -96,6 +100,13 @@ export type AnalyticsEvent =
   | 'onboarding_mission_skip'
   // 이탈 원인
   | 'login_failed'
+  /**
+   * 같은 이메일 타 provider 안내(서버 409) — provider: 시도한 쪽, existing: 이미 가입된 쪽('apple|google').
+   * 빈 새 계정이 조용히 생기던 사고의 대응이라 얼마나 자주 뜨는지·어느 쪽을 고르는지가 핵심 지표.
+   */
+  | 'login_conflict'
+  /** 안내에서 [새 계정으로 계속]을 고름 — [OO로 로그인]은 그 provider 의 login_success 로 잡힌다. */
+  | 'login_conflict_continue'
   | 'purchase_blocked'
   | 'api_error';
 

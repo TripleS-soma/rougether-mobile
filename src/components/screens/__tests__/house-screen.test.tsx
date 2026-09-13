@@ -506,6 +506,17 @@ describe('HouseScreen', () => {
     expect(queryByLabelText('공동 미션')).toBeNull();
   });
 
+  it('서버 목록의 contributedToday만으로도 요약 라벨의 오늘 기여를 센다 (#373-②)', async () => {
+    const missions = (MISSION_HOUSE.missions ?? []).map((m) =>
+      m.id === 11 ? { ...m, contributedToday: true } : m,
+    );
+    const { getByLabelText } = await render(
+      <HouseScreen houses={[{ ...MISSION_HOUSE, missions }]} onOpenMissions={jest.fn()} />,
+    );
+    // 세션 추적·연동 루틴 없이 서버 값만으로 1/2.
+    expect(getByLabelText(/우리 집의 목표, 오늘 1\/2 기여/)).toBeTruthy();
+  });
+
   it('미션이 없으면 목표 버튼 라벨이 진행 중 없음으로 말한다 (#875 → #986)', async () => {
     const { getByLabelText } = await render(
       <HouseScreen houses={[{ ...MISSION_HOUSE, missions: [] }]} onOpenMissions={jest.fn()} />,

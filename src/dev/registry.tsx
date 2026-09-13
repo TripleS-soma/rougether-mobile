@@ -23,6 +23,7 @@ import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { InviteFriendsScreen } from '@/components/screens/invite-friends-screen';
 import { IntroScreen } from '@/components/screens/intro-screen';
 import { LoginScreen } from '@/components/screens/login-screen';
+import { LoginConflictDialog } from '@/components/screens/login/login-conflict-dialog';
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { CharacterPickerSheet } from '@/components/screens/sheets/character-picker-sheet';
 import { InviteArrivalSheet } from '@/components/screens/sheets/invite-arrival-sheet';
@@ -30,6 +31,12 @@ import { InvitePasteSheet } from '@/components/screens/sheets/invite-paste-sheet
 import { parseInviteText } from '@/lib/invite-code';
 import { BugReportScreen } from '@/components/screens/bug-report-screen';
 import { NotificationListScreen } from '@/components/screens/notification-list-screen';
+import { AnnouncementSection } from '@/components/notifications/announcement-section';
+import {
+  NotificationTabs,
+  type NotificationTab,
+} from '@/components/notifications/notification-tabs';
+import { ANNOUNCEMENTS } from '@/constants/announcements';
 import { MyPageScreen } from '@/components/screens/my-page-screen';
 import { ListRow } from '@/components/ui/list-row';
 import { NotificationSettingsScreen } from '@/components/screens/notification-settings-screen';
@@ -132,6 +139,65 @@ function InviteArrivalSheetDemo() {
         }}
         onAccept={() => setOpen(false)}
         onLater={() => setOpen(false)}
+      />
+    </View>
+  );
+}
+
+/** 알림 화면 탭 데모 (#1320) — 탭 전환과 안 읽음 점을 독립적으로 본다. */
+function NotificationTabsDemo() {
+  const [tab, setTab] = useState<NotificationTab>('notifications');
+  return (
+    <View style={{ alignSelf: 'stretch' }}>
+      <NotificationTabs
+        value={tab}
+        onChange={setTab}
+        unread={{ notifications: tab !== 'notifications', news: tab !== 'news' }}
+      />
+    </View>
+  );
+}
+
+/** 타 provider 가입 안내 데모 (#1128) — 버튼으로 열고, 어느 선택이든 닫힌다. */
+function LoginConflictDialogDemo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <View>
+      <ScalePressable
+        accessibilityRole="button"
+        onPress={() => setOpen(true)}
+        style={{ alignSelf: 'center', padding: 8 }}>
+        <Text>가입 충돌 안내 열기</Text>
+      </ScalePressable>
+      <LoginConflictDialog
+        visible={open}
+        message="이 이메일은 애플 로그인으로 가입되어 있어요."
+        providers={['apple']}
+        onLoginWith={() => setOpen(false)}
+        onContinueAsNew={() => setOpen(false)}
+        onDismiss={() => setOpen(false)}
+      />
+    </View>
+  );
+}
+
+/** 달력 주 접힘 데모 (#1327) — 접기/펼치기 토글과 주 이동을 독립적으로 본다. */
+function CalendarWeekDemo() {
+  const [date, setDate] = useState('2026-09-16');
+  const [collapsed, setCollapsed] = useState(true);
+  return (
+    <View style={{ alignSelf: 'stretch', gap: 8 }}>
+      <ScalePressable
+        accessibilityRole="button"
+        onPress={() => setCollapsed((v) => !v)}
+        style={{ alignSelf: 'center', padding: 8 }}>
+        <Text>{collapsed ? '펼치기' : '접기'}</Text>
+      </ScalePressable>
+      <Calendar
+        value={date}
+        onSelect={setDate}
+        today="2026-09-16"
+        weekOf={collapsed ? date : null}
       />
     </View>
   );
@@ -885,6 +951,12 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
+    name: 'LoginConflictDialog',
+    description:
+      '같은 이메일 타 provider 계정 안내(서버 409, #1128): 기존 provider로 로그인 또는 새 계정으로 계속.',
+    render: () => <LoginConflictDialogDemo />,
+  },
+  {
     name: 'SignupScreen',
     description: 'Ported from the prototype SignupScreen (#3). Preview at fixed height.',
     render: () => (
@@ -1041,10 +1113,39 @@ export const galleryEntries: GalleryEntry[] = [
   },
   {
     name: 'NotificationListScreen',
-    description: '나의 방 헤더 벨 → 알림 목록: 안 읽음 점 + 개별/전체 읽음.',
+    description:
+      '나의 방 헤더 벨 → 알림 목록: [알림 | 새 소식] 탭(#1320), 안 읽음 점 + 개별/전체 읽음, 헤더 전체 삭제(확인 다이얼로그). 스와이프 삭제(#1137)는 onDelete를 넘긴 실제 화면에서만 켜진다.',
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
-        <NotificationListScreen />
+        <NotificationListScreen
+          announcements={ANNOUNCEMENTS.map((a, i) => ({ ...a, read: i > 0 }))}
+        />
+      </View>
+    ),
+  },
+  {
+    name: 'NotificationTabs',
+    description:
+      '알림 화면 [내 알림 | 새 소식] 세그먼트 (#1320): 선택 상태와 안 읽음 점. 본 탭은 점이 꺼진다.',
+    render: () => <NotificationTabsDemo />,
+  },
+  {
+    name: 'AnnouncementSection',
+    description: '알림 목록 상단 새 소식 (#1320): 번들 공지, 안 읽음 점, 행동 라벨, 더보기 접힘.',
+    render: () => (
+      <View style={{ alignSelf: 'stretch' }}>
+        <AnnouncementSection
+          announcements={[
+            ...ANNOUNCEMENTS.map((a, i) => ({ ...a, read: i > 0 })),
+            {
+              id: 'demo-old',
+              date: '2026-09-01',
+              title: '지난 소식 예시',
+              body: '더보기로 접히는 네 번째 항목.',
+              read: true,
+            },
+          ]}
+        />
       </View>
     ),
   },
@@ -1328,6 +1429,12 @@ export const galleryEntries: GalleryEntry[] = [
         <Calendar value="2026-06-15" onSelect={() => {}} />
       </View>
     ),
+  },
+  {
+    name: 'Calendar · 주 접힘',
+    description:
+      '주간 보기 모드 (#1327): 선택 주만 남기고 접힘, ‹ ›·가로 플링이 주 이동. 버튼으로 접기/펼치기.',
+    render: () => <CalendarWeekDemo />,
   },
   {
     name: 'UI · Button',

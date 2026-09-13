@@ -1,5 +1,5 @@
 import { type ReactNode, memo, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import type { DayProgress } from '@/utils/calendar-progress';
 import { progressLabel } from '@/utils/calendar-progress';
@@ -19,6 +19,8 @@ import { NATIVE_DRIVER } from '@/utils/animation';
 
 // 선택 원 지름 — 원 배치 계산과 스타일이 공유하는 단일 출처.
 const SEL_SIZE = 34;
+/** 주 접힘/펼침 시간 (#1327) — 화면 슬라이드(300)보다 살짝 빠르게. 호출부 헤더 연출과 공유. */
+export const WEEK_COLLAPSE_MS = 220;
 // The progress ring also fits the narrowest phone column (320px minus panel padding).
 const PROGRESS_DATE_SIZE = Spacing.four + Spacing.one;
 const PROGRESS_RING_SIZE = PROGRESS_DATE_SIZE + Spacing.one + Spacing.half;
@@ -35,13 +37,16 @@ function iso(y: number, m: number, d: number): string {
   return toIsoDate(new Date(y, m, d));
 }
 
+/** 선택이 바뀐 계기 (#1327) — 날짜 탭 / '오늘로' 칩 / 주 이동(‹ ›·플링). 생략은 탭. */
+export type CalendarSelectSource = 'tap' | 'today' | 'week';
+
 export type CalendarProps = {
   /** Selected date, "YYYY-MM-DD". */
   value: string;
   /** Inclusive bounds, "YYYY-MM-DD". */
   min?: string;
   max?: string;
-  onSelect: (date: string) => void;
+  onSelect: (date: string, source?: CalendarSelectSource) => void;
   /**
    * Today's date "YYYY-MM-DD" (#467). When set, a "오늘" chip in the month header
    * jumps the view + selection back to today — but only while off-today (a
@@ -72,6 +77,12 @@ export type CalendarProps = {
   /** Optional controls between the month heading and weekday row. */
   headerAccessory?: ReactNode;
   glass?: boolean;
+  /**
+   * 주 접힘 모드 (#1327) — 이 날짜("YYYY-MM-DD")가 든 주만 남기고 나머지 주를 접는다.
+   * 마운트 때 주어지면 펼친 상태에서 접히며 들어오고, 다시 null이 되면 펼친다.
+   * 접힌 동안 ‹ ›와 가로 플링은 달이 아니라 **주** 이동(±7일, `onSelect`).
+   */
+  weekOf?: string | null;
 };
 
 /**
@@ -91,6 +102,7 @@ function CalendarBase({
   onVisibleMonthChange,
   headerAccessory,
   glass = false,
+  weekOf = null,
 }: CalendarProps) {
   const t = useTokens();
   const Typography = useTypography();
@@ -119,7 +131,7 @@ function CalendarBase({
   const goToday = () => {
     if (!today || !todayYmd) return;
     setView({ y: todayYmd.y, m: todayYmd.m });
-    onSelect(today);
+    onSelect(today, 'today');
   };
 
   // 42칸 배열 + Date 2개를 매 렌더 다시 만들던 자리 (#771) — 보이는 달이
@@ -153,6 +165,36 @@ function CalendarBase({
       const next = m + delta;
       return { y: y + Math.floor(next / 12), m: ((next % 12) + 12) % 12 };
     });
+  // 주 이동 (#1327) — 요일을 지키며 ±7일. 달이 바뀌면 위의 value 이펙트가 뷰를 따라 옮긴다.
+  const shiftWeek = (delta: number) =>
+    onSelect(iso(selected.y, selected.m, selected.d + 7 * delta), 'week');
+
+  // 주 접힘 (#1327) — 선택 주를 뺀 줄의 높이·투명도를 0으로. 줄 높이는 실측(첫 onLayout)
+  // 뒤에야 알 수 있어, 마운트와 동시에 접히는 경우 측정 전엔 애니메이션을 시작하지 않는다.
+  const collapsed = weekOf != null;
+  const collapse = useAnimatedValue(0);
+  const [rowH, setRowH] = useState(0);
+  useEffect(() => {
+    if (collapsed && rowH === 0) return;
+    const anim = Animated.timing(collapse, {
+      toValue: collapsed ? 1 : 0,
+      duration: WEEK_COLLAPSE_MS,
+      easing: Easing.out(Easing.cubic),
+      // height는 네이티브 드라이버가 못 다룬다.
+      useNativeDriver: false,
+    });
+    anim.start();
+    return () => anim.stop();
+  }, [collapsed, rowH, collapse]);
+  const weekOfYmd = weekOf ? parse(weekOf) : null;
+  const keptWeek =
+    weekOfYmd && weekOfYmd.y === view.y && weekOfYmd.m === view.m
+      ? weeks.findIndex((week) => week.includes(weekOfYmd.d))
+      : -1;
+  const rowCollapse = {
+    height: rowH ? collapse.interpolate({ inputRange: [0, 1], outputRange: [rowH, 0] }) : undefined,
+    opacity: collapse.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
+  };
 
   // 달력 월 스와이프 (#562) — 그리드의 가로 우세 플링으로 ‹ ›와 같은 이전/
   // 다음 달 이동. RNGH pan(#561과 공용 유틸) — RN 웹의 ScrollView 안에서
@@ -166,6 +208,15 @@ function CalendarBase({
       shiftMonth(dir === 'left' ? 1 : -1),
     ).enabled(monthSwipe),
   ).current;
+  // 주 플링 (#1327) — 접힌 동안만. 최신 shiftWeek를 ref로 읽어 제스처 객체는 모드가 바뀔 때만 새로 만든다.
+  const shiftWeekRef = useLatestRef(shiftWeek);
+  const weekFling = useMemo(
+    () =>
+      horizontalFlingGesture('calendar-week-fling', (dir) =>
+        shiftWeekRef.current(dir === 'left' ? 1 : -1),
+      ).enabled(collapsed),
+    [collapsed, shiftWeekRef],
+  );
 
   // 선택 원 슬라이드 (#452) — 원이 이전 날짜에서 새 날짜로 스프링 이동.
   // 원 좌표는 계산(cellW·행 높이 가정)이 아니라 각 날짜 셀이 onLayout으로
@@ -232,9 +283,9 @@ function CalendarBase({
     <View style={styles.wrap}>
       <View style={styles.head}>
         <Pressable
-          onPress={() => shiftMonth(-1)}
+          onPress={() => (collapsed ? shiftWeek(-1) : shiftMonth(-1))}
           accessibilityRole="button"
-          accessibilityLabel="이전 달"
+          accessibilityLabel={collapsed ? '이전 주' : '이전 달'}
           style={[styles.navBtn, !glass && { backgroundColor: t.surfaceMuted }]}>
           {glass ? (
             <GlassSurface
@@ -277,9 +328,9 @@ function CalendarBase({
           ) : null}
         </View>
         <Pressable
-          onPress={() => shiftMonth(1)}
+          onPress={() => (collapsed ? shiftWeek(1) : shiftMonth(1))}
           accessibilityRole="button"
-          accessibilityLabel="다음 달"
+          accessibilityLabel={collapsed ? '다음 주' : '다음 달'}
           style={[styles.navBtn, !glass && { backgroundColor: t.surfaceMuted }]}>
           {glass ? (
             <GlassSurface
@@ -294,7 +345,7 @@ function CalendarBase({
 
       {headerAccessory}
       <View>
-        <GestureDetector gesture={monthFling}>
+        <GestureDetector gesture={collapsed ? weekFling : monthFling}>
           <View style={styles.grid} testID="calendar-grid">
             <Animated.View
               pointerEvents="none"
@@ -328,149 +379,161 @@ function CalendarBase({
                 </View>
               ))}
             </View>
-            {weeks.map((week, wi) => (
-              <View
-                key={`week-${wi}`}
-                style={styles.week}
-                // 셀 onLayout은 이 줄 기준 좌표라, 선택 원을 grid 좌표에 얹으려면
-                // 줄의 y를 더해야 한다 (#845). 줄이 다시 측정되면 원도 다시 놓는다.
-                onLayout={(e) => {
-                  rowTops.current[wi] = e.nativeEvent.layout.y;
-                  if (selectedInView) placeCircle(false);
-                }}>
-                {week.map((day, di) => {
-                  const i = wi * 7 + di;
-                  if (day === null) return <View key={`blank-${i}`} style={styles.cell} />;
-                  const date = iso(view.y, view.m, day);
-                  const disabled = (min && date < min) || (max && date > max);
-                  const isSelected = date === value;
-                  const progress = progressByDate?.[date];
-                  const future = !!today && date > today;
-                  // 오늘 표시 (#862) — 다른 날짜를 보고 있어도 오늘이 어디인지
-                  // 알 수 있게. 선택된 날은 이미 꽉 찬 원이라 겹쳐 그리지 않는다.
-                  const isToday = !!today && date === today && !isSelected;
-                  const isSunday = di === 0;
-                  const isSaturday = di === 6;
-                  // 공휴일 (#1292) — 일요일과 같은 빨강. 토요일 공휴일도 파랑보다 우선.
-                  const holiday = holidayName(date);
-                  return (
-                    <Pressable
-                      key={date}
-                      onPress={() => !disabled && onSelect(date)}
-                      disabled={!!disabled}
-                      accessibilityRole="button"
-                      accessibilityLabel={[
-                        date,
-                        holiday,
-                        isToday ? '오늘' : null,
-                        progressByDate
-                          ? `${progressLabel(progress, date, today ?? date)}${!progress && markedDates?.has(date) ? ', 할 일 있음' : ''}`
-                          : markedDates?.has(date)
-                            ? '할 일 있음'
-                            : null,
-                      ]
-                        .filter(Boolean)
-                        .join(', ')}
-                      accessibilityState={{ selected: isSelected, disabled: !!disabled }}
-                      onLayout={(e) => {
-                        dayLayouts.current[date] = { ...e.nativeEvent.layout, row: wi };
-                        // 월 이동으로 이 셀이 새로 측정될 때, 선택 날짜면 즉시 원을 얹는다.
-                        if (date === value && selectedInView) placeCircle(false);
-                      }}
-                      style={[
-                        styles.cell,
-                        glass && styles.monthCell,
-                        progressByDate && styles.progressCell,
-                      ]}>
-                      <View
-                        style={[
-                          styles.dayCircle,
-                          progressByDate && styles.progressDate,
-                          progressByDate && isSelected && { backgroundColor: t.primary },
-                        ]}>
-                        {progress && progress.total > 0 && !future ? (
-                          <Svg
-                            width={PROGRESS_RING_SIZE}
-                            height={PROGRESS_RING_SIZE}
-                            style={styles.progressRing}
-                            pointerEvents="none">
-                            <Circle
-                              cx={PROGRESS_RING_SIZE / 2}
-                              cy={PROGRESS_RING_SIZE / 2}
-                              r={PROGRESS_RADIUS}
-                              stroke={t.border}
-                              strokeWidth={Spacing.half}
-                              fill="none"
-                            />
-                            <Circle
-                              cx={PROGRESS_RING_SIZE / 2}
-                              cy={PROGRESS_RING_SIZE / 2}
-                              r={PROGRESS_RADIUS}
-                              stroke={t.primary}
-                              strokeWidth={Spacing.half}
-                              fill="none"
-                              strokeLinecap="round"
-                              strokeDasharray={`${2 * Math.PI * PROGRESS_RADIUS}`}
-                              strokeDashoffset={
-                                2 *
-                                Math.PI *
-                                PROGRESS_RADIUS *
-                                (1 - progress.completed / progress.total)
-                              }
-                              transform={`rotate(-90 ${PROGRESS_RING_SIZE / 2} ${PROGRESS_RING_SIZE / 2})`}
-                            />
-                          </Svg>
-                        ) : null}
-                        {/* 채움이 아니라 테두리다 — primarySoft(알파 0x22) 채움은
+            {weeks.map((week, wi) => {
+              // 접히는 줄 (#1327) — 남기는 주가 이 달에 있을 때만 나머지를 접는다.
+              const folding = keptWeek >= 0 && wi !== keptWeek;
+              return (
+                <Animated.View
+                  key={`week-${wi}`}
+                  testID={`calendar-week-row-${wi}`}
+                  style={[styles.weekRow, folding && rowCollapse]}
+                  accessibilityElementsHidden={folding && collapsed}
+                  importantForAccessibility={folding && collapsed ? 'no-hide-descendants' : 'auto'}
+                  // 셀 onLayout은 이 줄 기준 좌표라, 선택 원을 grid 좌표에 얹으려면
+                  // 줄의 y를 더해야 한다 (#845). 줄이 다시 측정되면 원도 다시 놓는다.
+                  onLayout={(e) => {
+                    rowTops.current[wi] = e.nativeEvent.layout.y;
+                    // 줄 높이 실측 (#1327) — 접히지 않는 줄에서 한 번만.
+                    if (!folding && rowH === 0 && e.nativeEvent.layout.height > 0)
+                      setRowH(e.nativeEvent.layout.height);
+                    if (selectedInView) placeCircle(false);
+                  }}>
+                  <View style={styles.week}>
+                    {week.map((day, di) => {
+                      const i = wi * 7 + di;
+                      if (day === null) return <View key={`blank-${i}`} style={styles.cell} />;
+                      const date = iso(view.y, view.m, day);
+                      const disabled = (min && date < min) || (max && date > max);
+                      const isSelected = date === value;
+                      const progress = progressByDate?.[date];
+                      const future = !!today && date > today;
+                      // 오늘 표시 (#862) — 다른 날짜를 보고 있어도 오늘이 어디인지
+                      // 알 수 있게. 선택된 날은 이미 꽉 찬 원이라 겹쳐 그리지 않는다.
+                      const isToday = !!today && date === today && !isSelected;
+                      const isSunday = di === 0;
+                      const isSaturday = di === 6;
+                      // 공휴일 (#1292) — 일요일과 같은 빨강. 토요일 공휴일도 파랑보다 우선.
+                      const holiday = holidayName(date);
+                      return (
+                        <Pressable
+                          key={date}
+                          onPress={() => !disabled && onSelect(date)}
+                          disabled={!!disabled}
+                          accessibilityRole="button"
+                          accessibilityLabel={[
+                            date,
+                            holiday,
+                            isToday ? '오늘' : null,
+                            progressByDate
+                              ? `${progressLabel(progress, date, today ?? date)}${!progress && markedDates?.has(date) ? ', 할 일 있음' : ''}`
+                              : markedDates?.has(date)
+                                ? '할 일 있음'
+                                : null,
+                          ]
+                            .filter(Boolean)
+                            .join(', ')}
+                          accessibilityState={{ selected: isSelected, disabled: !!disabled }}
+                          onLayout={(e) => {
+                            dayLayouts.current[date] = { ...e.nativeEvent.layout, row: wi };
+                            // 월 이동으로 이 셀이 새로 측정될 때, 선택 날짜면 즉시 원을 얹는다.
+                            if (date === value && selectedInView) placeCircle(false);
+                          }}
+                          style={[
+                            styles.cell,
+                            glass && styles.monthCell,
+                            progressByDate && styles.progressCell,
+                          ]}>
+                          <View
+                            style={[
+                              styles.dayCircle,
+                              progressByDate && styles.progressDate,
+                              progressByDate && isSelected && { backgroundColor: t.primary },
+                            ]}>
+                            {progress && progress.total > 0 && !future ? (
+                              <Svg
+                                width={PROGRESS_RING_SIZE}
+                                height={PROGRESS_RING_SIZE}
+                                style={styles.progressRing}
+                                pointerEvents="none">
+                                <Circle
+                                  cx={PROGRESS_RING_SIZE / 2}
+                                  cy={PROGRESS_RING_SIZE / 2}
+                                  r={PROGRESS_RADIUS}
+                                  stroke={t.border}
+                                  strokeWidth={Spacing.half}
+                                  fill="none"
+                                />
+                                <Circle
+                                  cx={PROGRESS_RING_SIZE / 2}
+                                  cy={PROGRESS_RING_SIZE / 2}
+                                  r={PROGRESS_RADIUS}
+                                  stroke={t.primary}
+                                  strokeWidth={Spacing.half}
+                                  fill="none"
+                                  strokeLinecap="round"
+                                  strokeDasharray={`${2 * Math.PI * PROGRESS_RADIUS}`}
+                                  strokeDashoffset={
+                                    2 *
+                                    Math.PI *
+                                    PROGRESS_RADIUS *
+                                    (1 - progress.completed / progress.total)
+                                  }
+                                  transform={`rotate(-90 ${PROGRESS_RING_SIZE / 2} ${PROGRESS_RING_SIZE / 2})`}
+                                />
+                              </Svg>
+                            ) : null}
+                            {/* 채움이 아니라 테두리다 — primarySoft(알파 0x22) 채움은
                           배경과 ΔE 3~7이라 사실상 안 보인다(#860 스트립에서 같은
                           함정을 겪었다). 빈 원 = 오늘, 꽉 찬 원 = 선택으로 뜻도
                           갈린다. 절대 배치라 숫자 위치를 밀지 않는다 (#845). */}
-                        {isToday ? (
-                          <View
-                            pointerEvents="none"
-                            style={[
-                              StyleSheet.absoluteFill,
-                              styles.todayRing,
-                              { borderColor: disabled ? t.textDisabled : t.primary },
-                            ]}
-                          />
-                        ) : null}
-                        <Text
-                          style={[
-                            Typography.body,
-                            styles.dayText,
-                            progressByDate && styles.progressDayText,
-                            {
-                              color: disabled
-                                ? t.textDisabled
-                                : isSelected
-                                  ? t.onPrimary
-                                  : isSunday || holiday
-                                    ? t.danger
-                                    : isSaturday
-                                      ? t.info
-                                      : t.text,
-                            },
-                          ]}>
-                          {day}
-                        </Text>
-                      </View>
-                      {/* The single dot records todos, including past and selected dates. */}
-                      {markedDates?.has(date) ? (
-                        <View
-                          testID={`calendar-todo-dot-${date}`}
-                          style={[
-                            styles.scheduleDot,
-                            { backgroundColor: disabled ? t.textDisabled : t.textMuted },
-                          ]}
-                          pointerEvents="none"
-                        />
-                      ) : null}
-                    </Pressable>
-                  );
-                })}
-              </View>
-            ))}
+                            {isToday ? (
+                              <View
+                                pointerEvents="none"
+                                style={[
+                                  StyleSheet.absoluteFill,
+                                  styles.todayRing,
+                                  { borderColor: disabled ? t.textDisabled : t.primary },
+                                ]}
+                              />
+                            ) : null}
+                            <Text
+                              style={[
+                                Typography.body,
+                                styles.dayText,
+                                progressByDate && styles.progressDayText,
+                                {
+                                  color: disabled
+                                    ? t.textDisabled
+                                    : isSelected
+                                      ? t.onPrimary
+                                      : isSunday || holiday
+                                        ? t.danger
+                                        : isSaturday
+                                          ? t.info
+                                          : t.text,
+                                },
+                              ]}>
+                              {day}
+                            </Text>
+                          </View>
+                          {/* The single dot records todos, including past and selected dates. */}
+                          {markedDates?.has(date) ? (
+                            <View
+                              testID={`calendar-todo-dot-${date}`}
+                              style={[
+                                styles.scheduleDot,
+                                { backgroundColor: disabled ? t.textDisabled : t.textMuted },
+                              ]}
+                              pointerEvents="none"
+                            />
+                          ) : null}
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </Animated.View>
+              );
+            })}
           </View>
         </GestureDetector>
       </View>
@@ -558,6 +621,10 @@ const styles = StyleSheet.create({
   /** 한 주 = 7칸 한 줄 (#845). grid의 flexWrap에 기대지 않는다. */
   week: {
     flexDirection: 'row',
+  },
+  /** 주 줄 래퍼 (#1327) — 접힐 때 높이를 줄이므로 넘치는 내용은 잘라낸다. */
+  weekRow: {
+    overflow: 'hidden',
   },
   cell: {
     // 퍼센트(100/7 = 무한소수) 대신 flex — 반올림으로 7번째가 밀리지 않는다.

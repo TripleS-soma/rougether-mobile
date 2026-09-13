@@ -2,7 +2,12 @@ import { type ReactNode, useLayoutEffect, useReducer, useRef } from 'react';
 import { Animated, Easing } from 'react-native';
 
 import { useAppFrame } from '@/hooks/use-app-frame';
-import { BACK_SCREEN, type Screen, TAB_FOR_SCREEN } from '@/components/app/navigation';
+import {
+  BACK_SCREEN,
+  isInstantTransition,
+  type Screen,
+  TAB_FOR_SCREEN,
+} from '@/components/app/navigation';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
 import { NATIVE_DRIVER } from '@/utils/animation';
 
@@ -85,8 +90,9 @@ export function useScreenTransition({
   if (state.screen !== screen) {
     const prevTab = TAB_FOR_SCREEN[state.screen];
     const nextTab = TAB_FOR_SCREEN[screen];
-    if (prevTab != null && nextTab != null) {
-      // 탭 간 — 페이저가 그린다. 층도 그대로.
+    if ((prevTab != null && nextTab != null) || isInstantTransition(state.screen, screen)) {
+      // 탭 간 — 페이저가 그린다. 층도 그대로. 달력 탭 ↔ 주간 보기(#1327)도 층을 안 바꾼다 —
+      // 화면 스스로 접힘/펼침을 연출한다.
       stateRef.current = { ...state, screen, node };
     } else {
       const direction: Direction = isBackTransition(state.screen, screen, addReturnScreen)

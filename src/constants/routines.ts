@@ -121,7 +121,19 @@ export type Routine = {
   kind?: 'routine' | 'todo';
   /** 연동된 공동미션의 서버 id (#578) — 미션 연동 판정은 이름 대신 이 id로. */
   linkedMissionId?: number;
+  /**
+   * 건너뛴 발생분 날짜들 (#189, "YYYY-MM-DD") — 그날은 예정에서 빠진다. 서버 SKIPPED
+   * 로그의 로컬 사본이며 오늘·미래만 담긴다(`routine-skips-store`).
+   */
+  skippedDates?: string[];
 };
+
+/**
+ * 루틴 몫 옮기기의 서버 건너뜀(SKIPPED) 사용 여부 (#189 · #1334). 서버 #390이 운영에 배포되기
+ * 전엔 false — 옛 서버는 `status`를 무시하고 그 POST를 **완료**로 기록하므로, 배포 확인
+ * (운영 api-docs `RoutineLogCreateRequest.status`) 뒤에 true로 올린다.
+ */
+export const ROUTINE_OCCURRENCE_SKIP_ENABLED = false;
 
 /** Payload for creating/editing a routine (from the Add/Edit routine screen). */
 export type NewRoutine = {

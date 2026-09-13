@@ -1,5 +1,6 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
+import { calendarToday } from '@/utils/calendar-progress';
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { ToastProvider } from '@/components/ui/toast';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
@@ -120,7 +121,8 @@ describe('MyRoomScreen', () => {
     await fireEvent.press(getByLabelText(OTHER_DAY));
     expect(onMoveRoutineOccurrence).not.toHaveBeenCalled();
     await fireEvent.press(getByLabelText('확인'));
-    expect(onMoveRoutineOccurrence).toHaveBeenCalledWith('5', OTHER_DAY);
+    // 방 탭에서 연 메뉴라 원래 날짜는 오늘 (#189).
+    expect(onMoveRoutineOccurrence).toHaveBeenCalledWith('5', OTHER_DAY, calendarToday());
   });
 
   it('saves the room image from the hamburger menu (#245)', async () => {

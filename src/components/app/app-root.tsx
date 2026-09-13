@@ -27,6 +27,7 @@ import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { useAuth } from '@/hooks/use-auth';
 import { useStartTab } from '@/hooks/use-start-tab';
 import { SCREEN_FOR_TAB } from '@/components/app/navigation';
+import { CoachTargetProvider } from '@/components/ui/coach-mark';
 import { resetOnboardingMissions } from '@/hooks/use-onboarding-missions';
 import { track } from '@/lib/analytics';
 import {
@@ -239,14 +240,18 @@ export function AppRoot() {
   }
 
   return (
-    <AppShell
-      initialScreen={SCREEN_FOR_TAB[startTab]}
-      characterId={characterId}
-      characterFrames={characterFrames}
-      startMissions={justOnboarded}
-      missionSkipEnabled={replaying}
-      onReplayOnboarding={replayOnboarding}
-    />
+    // 코치마크 대상 좌표 저장소 (#351 → #1324) — 셸의 탭·버튼이 CoachTarget으로 등록하고
+    // 셸 안의 오버레이가 읽는다.
+    <CoachTargetProvider>
+      <AppShell
+        initialScreen={SCREEN_FOR_TAB[startTab]}
+        characterId={characterId}
+        characterFrames={characterFrames}
+        startMissions={justOnboarded}
+        missionSkipEnabled={replaying}
+        onReplayOnboarding={replayOnboarding}
+      />
+    </CoachTargetProvider>
   );
 }
 

@@ -1,5 +1,5 @@
-import { fireEvent, render } from '@testing-library/react-native';
-import { Keyboard } from 'react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
+import { DeviceEventEmitter, Keyboard, Platform, StyleSheet } from 'react-native';
 
 import { OnboardingScreen, withRang } from '@/components/screens/onboarding-screen';
 import { ToastProvider } from '@/components/ui/toast';
@@ -105,6 +105,41 @@ describe('OnboardingScreen', () => {
     await fireEvent.press(getByLabelText('닉네임 입력').parent!);
     expect(dismiss).toHaveBeenCalled();
     dismiss.mockRestore();
+  });
+
+  // 안드로이드는 엣지투엣지라 KeyboardAvoidingView가 무력 — 키보드 높이만큼 아래 여백을 직접 준다 (#1326).
+  it('안드로이드 닉네임 단계는 키보드 높이만큼 아래 여백을 두고, 닫히면 0으로 돌아온다 (#1326)', async () => {
+    const os = Platform.OS;
+    Platform.OS = 'android';
+    try {
+      const { getByText, getByTestId } = await render(<OnboardingScreen />);
+      await fireEvent.press(getByText('운동'));
+      await fireEvent.press(getByText('시작하기'));
+      const padding = () =>
+        StyleSheet.flatten(getByTestId('onboarding-nickname-keyboard').props.style).paddingBottom ??
+        0;
+      expect(padding()).toBe(0);
+
+      await act(async () => {
+        DeviceEventEmitter.emit('keyboardDidShow', {
+          endCoordinates: { screenX: 0, screenY: 561, width: 411, height: 282 },
+          easing: 'keyboard',
+          duration: 0,
+        });
+      });
+      expect(padding()).toBe(282);
+
+      await act(async () => {
+        DeviceEventEmitter.emit('keyboardDidHide', {
+          endCoordinates: { screenX: 0, screenY: 803, width: 411, height: 0 },
+          easing: 'keyboard',
+          duration: 0,
+        });
+      });
+      expect(padding()).toBe(0);
+    } finally {
+      Platform.OS = os;
+    }
   });
 
   it('starts the goal survey pre-filled with the previous selections (replay = edit)', async () => {

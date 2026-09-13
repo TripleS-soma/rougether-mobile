@@ -145,8 +145,9 @@ export function HouseMissionsScreen({
    */
   const [tab, setTab] = useState<'active' | 'past'>('active');
 
-  /** 오늘 기여 완료 판정 — 세션 추적 또는 연동 루틴의 오늘 완료에서 파생. */
+  /** 오늘 기여 완료 판정 — 서버 목록의 contributedToday(#373-②) 또는 세션 추적, 연동 루틴의 오늘 완료. */
   const isContributed = (mission: HouseMission) =>
+    mission.contributedToday === true ||
     contributedMissionIds.includes(mission.id) ||
     linkedRoutines.some((r) => r.missionId === mission.id && r.completedToday);
   // 요약 줄용 파생 (#761) — 집 화면 스탯 필이 여기로 옮겨왔다.
@@ -332,6 +333,14 @@ export function HouseMissionsScreen({
                           numberOfLines={1}>
                           {mission.desc}
                         </Text>
+                        {/* 내 누적 기여 (#373-②) — 목록 응답에 실려 카드마다 상세를 부르지 않는다. */}
+                        {mission.myContribution != null ? (
+                          <Text
+                            style={[Typography.supporting, { color: t.textMuted }]}
+                            accessibilityLabel={`${mission.title} 내 기여 ${mission.myContribution}회`}>
+                            내 기여 {mission.myContribution}회
+                          </Text>
+                        ) : null}
                         {/* Own node (not a desc suffix) so the long type label
                             truncates instead of the date. */}
                         {/* EXPIRED도 날짜를 보여준다 (#901 리뷰) — '지난 미션'

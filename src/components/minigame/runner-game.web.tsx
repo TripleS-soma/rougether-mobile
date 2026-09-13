@@ -5,6 +5,7 @@ import { GameRecovery } from '@/components/minigame/game-recovery';
 import { useGameRecovery } from '@/components/minigame/use-game-recovery';
 import { isCurrentGameFinish } from '@/features/minigame/message-envelope';
 
+import { MINIGAME_DEFINITIONS } from '@/constants/minigames';
 import { Radius } from '@/constants/theme';
 import { parseRunnerMessage, type RunnerGameProps } from '@/features/minigame/runner-bridge';
 import { createRunnerHtml } from '@/features/minigame/runner-html';
@@ -30,6 +31,7 @@ export function RunnerGame({
     () =>
       createRunnerHtml({
         seed,
+        rulesVersion: MINIGAME_DEFINITIONS['room-runner'].rulesVersion,
         practice,
         allowManualTime: __DEV__ && practice,
         channelId,

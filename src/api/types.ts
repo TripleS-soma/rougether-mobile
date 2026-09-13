@@ -647,6 +647,9 @@ export type MissionSummary = {
   endsAt?: string;
   todayClaimed?: boolean;
   createdAt?: string;
+  // 서버 #388 (mobile #373-②): 목록에도 내 기여 — 카드마다 상세를 부르지 않게. 미리보기(미가입)엔 없음.
+  myContribution?: number;
+  contributedToday?: boolean;
 };
 
 export type MyCharacterItem = {

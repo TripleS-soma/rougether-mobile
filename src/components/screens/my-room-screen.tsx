@@ -1,4 +1,14 @@
-import { memo, type ReactNode, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import {
+  memo,
+  type MutableRefObject,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   Animated,
   type GestureResponderEvent,
@@ -61,7 +71,7 @@ import { Loading } from '@/components/ui/loading';
 import type { CalendarDayCount } from '@/api/types';
 import { RoomGrowthPill, type RoomGrowthProps } from '@/components/ui/room-growth-pill';
 import { type CalendarFilter, calendarToday } from '@/utils/calendar-progress';
-import { Calendar } from '@/components/ui/calendar';
+import { Calendar, type CalendarSelectSource, WEEK_COLLAPSE_MS } from '@/components/ui/calendar';
 import { CoachTarget } from '@/components/ui/coach-mark';
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { CategoryIcon } from '@/components/ui/category-icon';
@@ -114,6 +124,8 @@ export type CalendarDayItem = {
 // 떠 있는 크롬 (#1055) — 달력 제목·세그먼트 한 줄의 높이. 달력 탭의 콘텐츠 상단
 // 패딩과 보상 알약 위치가 같은 값을 본다.
 const CHROME_ROW_HEIGHT = 40;
+/** 주간 보기 헤더(뒤로 + 제목) 높이 (#1327) — 접힘과 함께 0→이 값으로 자란다. */
+const WEEK_HEADER_H = 44;
 const ZERO_INSETS = { top: 0, bottom: 0, left: 0, right: 0 };
 
 // RoomSceneProps: <Room />에 스프레드로 전달되는 씬 번들 (#691) — 내 방은
@@ -147,6 +159,20 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
     /** Controlled selection survives the tab pager unmounting for a sub-screen. */
     selectedDate?: string;
     onSelectedDateChange?: (date: string) => void;
+    /**
+     * 달력 탭 모드 (#1327). 'month'(기본)는 월 달력 — `onOpenDay`가 있으면 목록을 숨기고
+     * 날짜 탭에 그걸 부른다. 'week'는 주간 보기: 달력이 선택 주 한 줄로 접히고 목록이 붙는다.
+     */
+    calendarMode?: 'month' | 'week';
+    /** 월 달력에서 날짜를 눌렀을 때 (#1327) — 셸이 주간 보기를 민다. 없으면 종전처럼 목록이 아래에. */
+    onOpenDay?: (date: string) => void;
+    /** 주간 보기의 뒤로 (#1327) — 펼침 연출이 끝난 뒤 불린다. */
+    onBack?: () => void;
+    /**
+     * 셸의 뒤로가기 가로채기 (#1327 후속) — 주 모드에서 하드웨어 백·엣지 백도 화면 안
+     * 뒤로 버튼과 같은 펼침 연출을 타게, 여기 넣어 둔 함수를 셸이 먼저 부른다.
+     */
+    backInterceptorRef?: MutableRefObject<(() => boolean) | null>;
     /** Quick composer → routine form, preserving the selected calendar date. */
     /** Retained for existing callers; the personal room name is no longer displayed. */
     userName?: string;
@@ -244,10 +270,10 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
     /**
      * 날짜 바꾸기 on a routine: move that day's occurrence only. The repeat
      * schedule stays; a one-off todo with the routine's title is created on the
-     * picked date (no server per-occurrence skip yet, so the original day's
-     * instance still shows — the sheet says so).
+     * picked date and the original day's occurrence (`fromDate`, the date the
+     * menu was opened on) is skipped on the server (#189).
      */
-    onMoveRoutineOccurrence?: (id: string, dueDate: string) => void;
+    onMoveRoutineOccurrence?: (id: string, dueDate: string, fromDate: string) => void;
     /** Delete a routine (kebab → 삭제). */
     onDeleteRoutine?: (id: string) => void;
     /**
@@ -326,6 +352,10 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   calendarDays,
   selectedDate: controlledSelectedDate,
   onSelectedDateChange,
+  calendarMode = 'month',
+  onOpenDay,
+  onBack,
+  backInterceptorRef,
   onSelectDate,
   onToggleCalendarItem,
   completions = {},
@@ -477,6 +507,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // 메뉴 → 날짜 바꾸기: calendar sheet. Todos move their dueDate; routines move
   // that day's occurrence only (repeat stays). The draft date lives in the sheet.
   const [dateEditId, setDateEditId] = useState<string | null>(null);
+  // 날짜 바꾸기의 원래 날짜 — 메뉴를 연 날짜(방 탭은 오늘, 달력 탭은 선택한 날짜) (#189).
+  const [dateEditFrom, setDateEditFrom] = useState(today);
   const dateEditItem = routines.find((r) => r.id === dateEditId) ?? null;
 
   // 방 / 달력 tab. The calendar lists routines + todos on the selected date.
@@ -507,11 +539,56 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     [routines, selectedDate, calendarFilter],
   );
   // 참조 고정 (#771) — Calendar가 memo라, 매 렌더 새 함수면 42칸이 매번 다시 그려진다.
-  const pickDate = useStableCallback((date: string) => {
+  const pickDate = useStableCallback((date: string, source: CalendarSelectSource = 'tap') => {
     if (controlledSelectedDate === undefined) setOwnSelectedDate(date);
     onSelectedDateChange?.(date);
     if (date !== today) onSelectDate?.(date);
+    // 월 모드의 날짜 **탭**만 주간 보기를 연다 (#1327) — '오늘로' 칩은 선택만 되돌리고,
+    // 주 모드의 탭·플링은 선택만 바꾼다.
+    if (calendarMode === 'month' && source === 'tap') onOpenDay?.(date);
   });
+  // 주간 보기 (#1327) — 뒤로는 달력이 다시 펼쳐진 뒤 닫는다. 헤더는 접힘과 같은 시간으로 자란다.
+  const weekMode = tab !== 'room' && calendarMode === 'week';
+  const hideDayList = tab !== 'room' && calendarMode === 'month' && !!onOpenDay;
+  const [weekLeaving, setWeekLeaving] = useState(false);
+  const weekIn = useAnimatedValue(0);
+  useEffect(() => {
+    if (!weekMode) return;
+    const anim = Animated.timing(weekIn, {
+      toValue: weekLeaving ? 0 : 1,
+      duration: WEEK_COLLAPSE_MS,
+      useNativeDriver: false,
+    });
+    anim.start();
+    return () => anim.stop();
+  }, [weekMode, weekLeaving, weekIn]);
+  // 뒤로: 펼침(WEEK_COLLAPSE_MS)이 끝난 뒤 닫는다 — 애니메이션 완료 콜백 대신 타이머로,
+  // 테스트(가짜 타이머)와 기기에서 같은 시점에 닫히게.
+  const onBackRef = useLatestRef(onBack);
+  const weekBackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (weekBackTimer.current) clearTimeout(weekBackTimer.current);
+    },
+    [],
+  );
+  const leaveWeek = useStableCallback(() => {
+    if (weekLeaving) return;
+    setWeekLeaving(true);
+    weekBackTimer.current = setTimeout(() => onBackRef.current?.(), WEEK_COLLAPSE_MS);
+  });
+  // 하드웨어 백·엣지 백도 같은 길로 (#1327 후속) — 셸이 setScreen하기 전에 펼침부터.
+  // 이미 떠나는 중이면 두 번째 뒤로는 삼킨다(타이머가 곧 닫는다).
+  useEffect(() => {
+    if (!weekMode || !backInterceptorRef) return;
+    backInterceptorRef.current = () => {
+      leaveWeek();
+      return true;
+    };
+    return () => {
+      backInterceptorRef.current = null;
+    };
+  }, [weekMode, backInterceptorRef, leaveWeek]);
   const catMeta = allCategories ?? categories;
   const serverBackedDay = !!onSelectDate && selectedDate !== today;
   const calendarTodayError = !serverBackedDay && loadError;
@@ -922,6 +999,16 @@ export const MyRoomScreen = memo(function MyRoomScreen({
 
   // 카테고리 그룹 = 헤더(아이콘·라벨·공개범위·카운트·＋) + 행들 + 퀵애드 입력행.
   // 빈 그룹도 헤더는 그린다 — ＋가 항상 닿아야 한다 (#323).
+  // 튜토리얼 '루틴 완료' 코치마크 대상 (#1324) — 방 탭 오늘 목록의 첫 미완료 행 하나.
+  // 전부 완료면 null(대상 없음 — 셸이 미션을 곧바로 완료 처리한다).
+  const firstIncompleteKey =
+    view === 'calendar'
+      ? null
+      : (roomGroups
+          .flatMap((g) => g.items)
+          .map((r) => rowFromRoutine(r, today))
+          .find((row) => !row.done)?.key ?? null);
+
   const renderCategoryGroup = (
     key: string,
     meta: RoutineCategoryMeta,
@@ -998,6 +1085,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                 rowKey={row.key}
                 title={row.title}
                 done={row.done}
+                // 첫 미완료 행의 체크가 튜토리얼 '루틴 완료' 코치마크 대상 (#1324).
+                coachTarget={row.key === firstIncompleteKey}
                 time={row.time}
                 repeats={row.repeats}
                 color={meta.color}
@@ -1131,7 +1220,10 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                 accessibilityLabel="방 꾸미기"
                 style={styles.floatBtn}>
                 <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
-                  <Icon name="edit" size={20} color={t.text} />
+                  {/* absolute 버튼이라 내용을 측정 (#351 → #1324). */}
+                  <CoachTarget id="room-decor">
+                    <Icon name="edit" size={20} color={t.text} />
+                  </CoachTarget>
                 </GlassSurface>
               </Pressable>
             ) : null}
@@ -1176,11 +1268,34 @@ export const MyRoomScreen = memo(function MyRoomScreen({
       // monthSwipe=false 유지 (#825) — 달력 위 가로 스와이프가 월 이동이라는 또 다른
       // 뜻을 갖게 되면 "가로 스와이프 = 하단 탭 이동" 규칙이 다시 깨진다. 월 이동은 ‹ › 버튼.
       <View style={styles.calendarOverview}>
+        {weekMode ? (
+          <Animated.View
+            testID="calendar-week-header"
+            style={[
+              styles.weekHead,
+              {
+                height: weekIn.interpolate({ inputRange: [0, 1], outputRange: [0, WEEK_HEADER_H] }),
+                opacity: weekIn,
+              },
+            ]}>
+            <Pressable
+              onPress={leaveWeek}
+              accessibilityRole="button"
+              accessibilityLabel="뒤로 가기"
+              hitSlop={8}>
+              <GlassSurface fallbackColor={t.surface} style={styles.weekBack}>
+                <Icon name="back" size={20} color={t.text} />
+              </GlassSurface>
+            </Pressable>
+            <Text style={[Typography.h3, { color: t.text }]}>주간 보기</Text>
+          </Animated.View>
+        ) : null}
         <Calendar
           value={selectedDate}
           onSelect={pickDate}
           today={today}
           monthSwipe={false}
+          weekOf={weekMode && !weekLeaving ? selectedDate : null}
           markedDates={markedTodoDates}
           glass
           onVisibleMonthChange={onCalendarMonthChange}
@@ -1292,7 +1407,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               ),
             )}
       </View>
-    ) : (
+    ) : hideDayList ? null : (
       <>
         <View style={styles.calListHead}>
           <View
@@ -1506,12 +1621,16 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           else handleToggle(r, menuDate);
         }}
         onEditTime={(r) => setTimeId(r.id)}
-        onChangeDate={(r) => setDateEditId(r.id)}
+        onChangeDate={(r) => {
+          setDateEditFrom(menuDate);
+          setDateEditId(r.id);
+        }}
       />
 
       {/* 날짜 바꾸기: calendar bottom sheet — the pick stays a draft until 확인. */}
       <DateEditSheet
         item={dateEditItem}
+        fromDate={dateEditFrom}
         onClose={() => setDateEditId(null)}
         onUpdateTodoDueDate={onUpdateTodoDueDate}
         onMoveRoutineOccurrence={onMoveRoutineOccurrence}
@@ -1605,6 +1724,19 @@ const styles = StyleSheet.create({
   quickAddTrigger: {
     borderRadius: Radius.pill,
     padding: Spacing.three,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  /** 주간 보기 헤더 (#1327) — 높이가 0에서 자라므로 넘치는 내용은 숨긴다. */
+  weekHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    overflow: 'hidden',
+  },
+  weekBack: {
+    borderRadius: Radius.pill,
+    padding: Spacing.two,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -399,6 +399,26 @@ describe('API adapters — house', () => {
     ).toBe('');
   });
 
+  it('carries my contribution from the list response, absent in previews (#373-②)', () => {
+    const mine = toHouseMission({
+      missionId: 1,
+      title: '영양제 먹기',
+      missionType: 'DAILY_MEMBER_RATE',
+      myContribution: 3,
+      contributedToday: true,
+    });
+    expect(mine.myContribution).toBe(3);
+    expect(mine.contributedToday).toBe(true);
+    // 미가입 집 미리보기는 두 값이 빠진다 — undefined로 두어 "0회"로 오해하지 않게.
+    const preview = toHouseMission({
+      missionId: 2,
+      title: '주간',
+      missionType: 'WEEKLY_MEMBER_COUNT',
+    });
+    expect(preview.myContribution).toBeUndefined();
+    expect(preview.contributedToday).toBeUndefined();
+  });
+
   it('maps a mission end time to a local end date for the card', () => {
     expect(
       toHouseMission({

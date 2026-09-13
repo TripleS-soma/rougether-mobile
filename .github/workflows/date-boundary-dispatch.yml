@@ -1,0 +1,39 @@
+name: Date boundary → server contract test
+
+# 날짜 생성·직렬화에 관여하는 파일이 main에 들어오면 서버 저장소의 교차 계약 테스트
+# (rougether-server `date-boundary-contract.yml`)를 이 커밋 SHA로 실행시킨다.
+# 서버 저장소 Actions를 트리거하려면 `actions: write` 권한의 토큰(CONTRACT_DISPATCH_TOKEN)이
+# 필요하다. 시크릿이 없으면 건너뛴다 — 그 경우 서버 워크플로의 주간 스케줄·수동 실행이 대신한다.
+on:
+  push:
+    branches: [main]
+    paths:
+      - contracts/**
+      - scripts/run-date-boundary.js
+      - src/utils/datetime.ts
+      - src/api/http.ts
+      - src/api/client.ts
+      - src/api/routines.ts
+      - src/api/todos.ts
+      - src/api/adapters.ts
+      - src/components/screens/add-routine-screen.tsx
+      - src/components/screens/my-room-screen.tsx
+      - src/hooks/use-my-room-data.ts
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger rougether-server date-boundary-contract
+        env:
+          GH_TOKEN: ${{ secrets.CONTRACT_DISPATCH_TOKEN }}
+        if: env.GH_TOKEN != ''
+        run: |
+          gh api repos/TripleS-soma/rougether-server/dispatches \
+            -f event_type=date-boundary-contract \
+            -F "client_payload[mobile_ref]=$GITHUB_SHA"
+      - name: No dispatch token
+        env:
+          GH_TOKEN: ${{ secrets.CONTRACT_DISPATCH_TOKEN }}
+        if: env.GH_TOKEN == ''
+        run: echo "CONTRACT_DISPATCH_TOKEN 시크릿이 없어 서버 계약 테스트 트리거를 건너뜁니다."

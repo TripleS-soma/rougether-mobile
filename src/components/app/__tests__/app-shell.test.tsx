@@ -96,16 +96,17 @@ describe('AppShell — 인앱 푸시 배너 (#902)', () => {
 });
 
 describe('AppShell — 온보딩 미션 체인 (#571)', () => {
-  it('startMissions면 미션 1(뽑기) 배너가 뜨고, 배너 탭이 뽑기 화면으로 보낸다', async () => {
-    const { getByText, getByTestId, getByLabelText, getAllByText } = await renderWithProviders(
-      <AppShell startMissions />,
-    );
-    await waitFor(() => getByTestId('mission-banner'));
-    expect(getByText(/미션 1\/3/)).toBeTruthy();
-    expect(getByText('뽑기 1회 해보기')).toBeTruthy();
-
-    await fireEvent.press(getByLabelText('미션 1 뽑기 1회 해보기'));
-    await waitFor(() => expect(getAllByText('뽑기').length).toBeGreaterThan(0));
+  it('startMissions면 미션 1(루틴 완료) 배너와 잠금 코치마크가 뜨고, 완료하면 미션 2(뽑기)로 넘어간다 (#1324)', async () => {
+    const ui = await renderWithProviders(<AppShell startMissions />);
+    await waitFor(() => ui.getByTestId('mission-banner'));
+    // 배너와 코치마크 말풍선이 같은 진행 라벨을 단다.
+    expect(ui.getAllByText(/미션 1\/4/).length).toBeGreaterThanOrEqual(1);
+    expect(ui.getByText('오늘 루틴 1개 완료하기')).toBeTruthy();
+    // 완전 잠금 오버레이 — 건너뛰기·다음 버튼이 없다.
+    expect(ui.getByTestId('coach-overlay')).toBeTruthy();
+    expect(ui.queryByLabelText('튜토리얼 건너뛰기')).toBeNull();
+    expect(ui.queryByLabelText('다음 단계')).toBeNull();
+    expect(ui.getByText('오늘 루틴을 완료해 봐요')).toBeTruthy();
   });
 
   it('건너뛰기는 확인을 거쳐 배너를 없애고, startMissions 없으면 배너가 없다', async () => {
@@ -128,7 +129,7 @@ describe('AppShell — 온보딩 미션 체인 (#571)', () => {
     const ui = await renderWithProviders(<AppShell startMissions />);
     await waitFor(() => ui.getByTestId('mission-banner'));
     expect(ui.queryByLabelText('미션 건너뛰기')).toBeNull();
-    expect(ui.getByText('뽑기 1회 해보기')).toBeTruthy();
+    expect(ui.getByText('오늘 루틴 1개 완료하기')).toBeTruthy();
   });
 });
 

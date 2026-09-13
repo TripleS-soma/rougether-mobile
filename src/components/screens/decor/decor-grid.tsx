@@ -6,6 +6,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 
 import { FurniturePlaceholder } from '@/components/room/furniture-placeholder';
 import { Icon } from '@/components/ui/icon';
+import { CoachTarget } from '@/components/ui/coach-mark';
 import { Radius, Spacing } from '@/constants/theme';
 import { assetSource, isCdnKey } from '@/resources/asset';
 import { type FurnitureItem, type Wallpaper } from '@/resources/furniture';
@@ -57,12 +58,15 @@ function DecorGrid({ children }: { children: React.ReactNode }) {
   }, [width]);
   return (
     <TileWidthContext.Provider value={tileWidth}>
-      <View
-        style={styles.grid}
-        onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
-        testID="decor-grid">
-        {children}
-      </View>
+      {/* 튜토리얼 '방 꾸미기' 코치마크 대상 (#1324) — 격자 전체. */}
+      <CoachTarget id="decor-grid">
+        <View
+          style={styles.grid}
+          onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+          testID="decor-grid">
+          {children}
+        </View>
+      </CoachTarget>
     </TileWidthContext.Provider>
   );
 }

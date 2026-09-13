@@ -3,7 +3,11 @@ import { useRef, useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 
 import type { Screen } from '@/components/app/navigation';
-import { MINIGAME_DEFINITIONS, PLAYABLE_MINIGAMES } from '@/constants/minigames';
+import {
+  CURRENT_MINIGAME_RULES_VERSION,
+  MINIGAME_DEFINITIONS,
+  PLAYABLE_MINIGAMES,
+} from '@/constants/minigames';
 import type { MinigamePlayerProps } from '@/components/app/minigame-player';
 import { MinigameActiveContext, useMinigameSurface } from '@/components/app/use-minigame-surface';
 import { createTestQueryClient, queryWrapper } from '@/test-utils/query-wrapper';
@@ -79,7 +83,7 @@ beforeEach(() => {
   start.mockImplementation(async (gameCode) => ({
     runId: `${gameCode}-run-1`,
     gameCode,
-    rulesVersion: 2,
+    rulesVersion: CURRENT_MINIGAME_RULES_VERSION,
     seed: 42,
     maxTicks: gameCode === 'cat-stairs' ? 7200 : 18000,
     expiresAt: '2030-01-01T00:00:00Z',
@@ -103,7 +107,7 @@ it('navigates catalog to runner and starts an authenticated run only on an expli
   expect(ui.getByText('탭해서 점프')).toBeTruthy();
   await fireEvent.press(ui.getByLabelText('랭킹 도전'));
   await waitFor(() => expect(ui.getByTestId('runner-active').props.children).toBe('true'));
-  expect(start).toHaveBeenCalledWith('room-runner', 2);
+  expect(start).toHaveBeenCalledWith('room-runner', CURRENT_MINIGAME_RULES_VERSION);
   expect(finish).not.toHaveBeenCalled();
 });
 
@@ -174,7 +178,7 @@ it.each(['cat-stairs', 'cat-merge'] as const)(
     expect(ui.queryByText(MINIGAME_DEFINITIONS['room-runner'].instructions)).toBeNull();
     await fireEvent.press(ui.getByLabelText('랭킹 도전'));
     await waitFor(() => expect(ui.getByTestId('selected-player').props.children).toBe(gameCode));
-    expect(start).toHaveBeenCalledWith(gameCode, 2);
+    expect(start).toHaveBeenCalledWith(gameCode, CURRENT_MINIGAME_RULES_VERSION);
     await fireEvent.press(ui.getByLabelText('테스트 게임 완료'));
     await waitFor(() =>
       expect(finish).toHaveBeenCalledWith(gameCode, `${gameCode}-run-1`, {

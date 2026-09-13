@@ -25,6 +25,8 @@ const inBiweeklyWeek = (dateIso: string, startIso: string) => {
  */
 export const isScheduledOn = (r: Routine, dateIso: string) => {
   if (r.kind === 'todo') return r.dueDate === dateIso;
+  // 건너뛴 발생분(#189)은 그날 예정에서 빠진다 — 서버 /today·/calendar와 같은 기준.
+  if (r.skippedDates?.includes(dateIso)) return false;
   if (r.startDate && dateIso < r.startDate) return false;
   if (r.endDate && dateIso > r.endDate) return false;
   const repeat = r.repeat ?? (r.days && r.days.length ? 'weekly' : 'daily');
