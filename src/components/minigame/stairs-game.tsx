@@ -111,7 +111,6 @@ export function StairsGame({
           javaScriptCanOpenWindowsAutomatically={false}
           setSupportMultipleWindows={false}
           allowsLinkPreview={false}
-          dataDetectorTypes="none"
           scrollEnabled={false}
           bounces={false}
         />
