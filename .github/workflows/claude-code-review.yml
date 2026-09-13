@@ -22,6 +22,15 @@ jobs:
         with:
           fetch-depth: 1
 
+      # 계약 정본(rougether-spec)을 함께 checkout — 리뷰 봇이 변경을 spec과 대조할 수 있게 한다.
+      # public 저장소라 기본 토큰으로 충분하다(private 으로 바뀌면 token: 이 필요).
+      - name: Checkout spec (contract source of truth)
+        uses: actions/checkout@v4
+        with:
+          repository: TripleS-soma/rougether-spec
+          path: rougether-spec
+          fetch-depth: 1
+
       - name: Run Claude Code Review
         uses: anthropics/claude-code-action@v1
         with:
@@ -36,6 +45,15 @@ jobs:
             - 실제 버그·엣지 케이스 (특히 API 어댑터의 null/undefined 처리)
             - 규칙 위반 (하드코딩 색상, 상대 경로 임포트, 등록 누락)
             - 테스트 커버리지 공백
+            - spec 대조: 변경이 API 요청·응답·날짜·보상 같은 계약에 닿으면
+              `rougether-spec/`(계약 정본 checkout)의 해당 문서와 대조하세요.
+              공통 규약은 `rougether-spec/api.md`(특히 "날짜와 시각"), 도메인 규칙은
+              `rougether-spec/domains/<도메인>/api.md`·`features.md`, 실행 가능한 경계 예제는
+              `rougether-spec/contracts/`입니다. 경로→도메인: `src/api/routines.ts`·`todos.ts`·
+              `today.ts`·`categories.ts` → routine-todo, `houses.ts` → house, `rooms.ts` → room,
+              `shop.ts` → shop·gacha, `me.ts`·`auth.ts`·`onboarding.ts` → member.
+              계약과 어긋나면 spec 문장을 인용해 지적하고, 코드만으로 명백하지 않으면
+              "spec 확인 필요"로 보고하세요. spec 미확정 값(open-questions.md)은 지적하지 마세요.
             사소한 스타일 지적은 생략하고, 확신 있는 지적만 남기세요.
             문제가 없으면 "LGTM"과 근거 한 줄이면 충분합니다.
           claude_args: |
