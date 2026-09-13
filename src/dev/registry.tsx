@@ -23,6 +23,7 @@ import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { InviteFriendsScreen } from '@/components/screens/invite-friends-screen';
 import { IntroScreen } from '@/components/screens/intro-screen';
 import { LoginScreen } from '@/components/screens/login-screen';
+import { LoginConflictDialog } from '@/components/screens/login/login-conflict-dialog';
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { CharacterPickerSheet } from '@/components/screens/sheets/character-picker-sheet';
 import { InviteArrivalSheet } from '@/components/screens/sheets/invite-arrival-sheet';
@@ -152,6 +153,29 @@ function NotificationTabsDemo() {
         value={tab}
         onChange={setTab}
         unread={{ notifications: tab !== 'notifications', news: tab !== 'news' }}
+      />
+    </View>
+  );
+}
+
+/** 타 provider 가입 안내 데모 (#1128) — 버튼으로 열고, 어느 선택이든 닫힌다. */
+function LoginConflictDialogDemo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <View>
+      <ScalePressable
+        accessibilityRole="button"
+        onPress={() => setOpen(true)}
+        style={{ alignSelf: 'center', padding: 8 }}>
+        <Text>가입 충돌 안내 열기</Text>
+      </ScalePressable>
+      <LoginConflictDialog
+        visible={open}
+        message="이 이메일은 애플 로그인으로 가입되어 있어요."
+        providers={['apple']}
+        onLoginWith={() => setOpen(false)}
+        onContinueAsNew={() => setOpen(false)}
+        onDismiss={() => setOpen(false)}
       />
     </View>
   );
@@ -903,6 +927,12 @@ export const galleryEntries: GalleryEntry[] = [
         <LoginScreen lastLoginProvider="kakao" />
       </View>
     ),
+  },
+  {
+    name: 'LoginConflictDialog',
+    description:
+      '같은 이메일 타 provider 계정 안내(서버 409, #1128): 기존 provider로 로그인 또는 새 계정으로 계속.',
+    render: () => <LoginConflictDialogDemo />,
   },
   {
     name: 'SignupScreen',
