@@ -4,6 +4,10 @@ import ReanimatedSwipeable, {
   type SwipeableMethods,
 } from 'react-native-gesture-handler/ReanimatedSwipeable';
 
+import {
+  AnnouncementSection,
+  type AnnouncementRow,
+} from '@/components/notifications/announcement-section';
 import { Loading } from '@/components/ui/loading';
 import { Icon } from '@/components/ui/icon';
 import { notificationIcon } from '@/constants/notifications';
@@ -43,6 +47,10 @@ export type NotificationListScreenProps = {
   /** Mark everything read (header button; shown while something is unread). */
   onReadAll?: () => void;
   onLoadMore?: () => void;
+  /** 앱 번들 새 소식 (#1320) — 목록 맨 위 섹션. 비어 있으면 섹션 자체가 없다. */
+  announcements?: AnnouncementRow[];
+  /** 새 소식 행 탭 — 읽음 처리 + 행동(화면 이동·링크)은 호출자가. */
+  onOpenAnnouncement?: (announcement: AnnouncementRow) => void;
 };
 
 /**
@@ -105,6 +113,8 @@ export function NotificationListScreen({
   onRead,
   onReadAll,
   onLoadMore,
+  announcements,
+  onOpenAnnouncement,
 }: NotificationListScreenProps) {
   const t = useTokens();
   const column = useResponsiveColumn();
@@ -112,7 +122,8 @@ export function NotificationListScreen({
   const headerInset = useHeaderContentInset();
   const Typography = useTypography();
   const entries = notifications ?? DEMO_NOTIFICATIONS;
-  const hasUnread = entries.some((n) => !n.read);
+  // 모두 읽음은 새 소식까지 함께 — 호출자가 onReadAll에서 둘 다 처리한다.
+  const hasUnread = entries.some((n) => !n.read) || (announcements?.some((a) => !a.read) ?? false);
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
@@ -140,6 +151,11 @@ export function NotificationListScreen({
           column,
           headerInset ? { paddingTop: headerInset } : null,
         ]}
+        ListHeaderComponent={
+          announcements && announcements.length > 0 ? (
+            <AnnouncementSection announcements={announcements} onOpen={onOpenAnnouncement} />
+          ) : null
+        }
         ListEmptyComponent={
           loading ? (
             <View style={styles.state}>

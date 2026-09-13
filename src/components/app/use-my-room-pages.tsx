@@ -7,11 +7,14 @@ import {
   type Dispatch,
   type SetStateAction,
 } from 'react';
+import { Linking } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 
+import { getSessionUserId } from '@/api/auth';
 import { type Screen } from '@/components/app/navigation';
 import type { useMissionLinks } from '@/components/app/use-mission-links';
 import { AddRoutineScreen } from '@/components/screens/add-routine-screen';
+import type { AnnouncementRow } from '@/components/notifications/announcement-section';
 import { CategoryManageScreen } from '@/components/screens/category-manage-screen';
 import { type CalendarDayItem, type MyRoomScreenProps } from '@/components/screens/my-room-screen';
 import { useRecommendations } from '@/hooks/use-recommendations';
@@ -22,8 +25,10 @@ import { RoutineManageScreen } from '@/components/screens/routine-manage-screen'
 import { CHARACTER_SELECTION_ENABLED, type CharacterId } from '@/constants/characters';
 import { type Routine } from '@/constants/routines';
 import type { useMyRoomData } from '@/hooks/use-my-room-data';
+import { useAnnouncements } from '@/hooks/use-announcements';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useRoutineOrder } from '@/hooks/use-routine-order';
+import { track } from '@/lib/analytics';
 import { reportAppOpen } from '@/lib/app-open';
 import { onNotificationReceived, onNotificationTap } from '@/lib/push-events';
 import { toServerItemId, type ShopCatalogue } from '@/api/adapters';
@@ -231,6 +236,19 @@ export function useMyRoomPages({
   useEffect(() => {
     void loadNotifications();
   }, [loadNotifications]);
+  // 앱 번들 새 소식 (#1320) — 알림함 상단 섹션, 읽지 않은 수는 벨 배지에 합산.
+  const announcements = useAnnouncements(getSessionUserId());
+  const openAnnouncement = useCallback(
+    (announcement: AnnouncementRow) => {
+      announcements.markRead(announcement.id);
+      const action = announcement.action;
+      track('announcement_open', { id: announcement.id, kind: action?.kind ?? 'none' });
+      if (!action) return;
+      if (action.kind === 'screen') setScreen(action.screen);
+      else void Linking.openURL(action.url).catch(() => {});
+    },
+    [announcements, setScreen],
+  );
 
   /** 알림함으로 — 푸시 탭과 인앱 배너 탭이 같은 목적지를 쓴다 (#902). */
   const openNotifications = useCallback(() => {
@@ -487,7 +505,7 @@ export function useMyRoomPages({
     onAddRoutine: addRoutineFromMyRoom,
     onManageRoutines: openRoutineManage,
     onOpenNotifications: openNotificationList,
-    unreadNotificationCount: unreadCount,
+    unreadNotificationCount: unreadCount + announcements.unreadCount,
     ownedCharacters: canSelectCharacter ? character.ownedCharacters : undefined,
     onSelectCharacter: canSelectCharacter ? character.wearCharacter : undefined,
     onManageCategories: openCategoryManage,
@@ -568,10 +586,13 @@ export function useMyRoomPages({
         }}
         onReadAll={() => {
           void markAllNotificationsRead();
+          announcements.markAllRead();
         }}
         onLoadMore={() => {
           void loadMoreNotifications();
         }}
+        announcements={announcements.items}
+        onOpenAnnouncement={openAnnouncement}
       />
     ) : null;
 

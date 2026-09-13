@@ -30,6 +30,8 @@ import { InvitePasteSheet } from '@/components/screens/sheets/invite-paste-sheet
 import { parseInviteText } from '@/lib/invite-code';
 import { BugReportScreen } from '@/components/screens/bug-report-screen';
 import { NotificationListScreen } from '@/components/screens/notification-list-screen';
+import { AnnouncementSection } from '@/components/notifications/announcement-section';
+import { ANNOUNCEMENTS } from '@/constants/announcements';
 import { MyPageScreen } from '@/components/screens/my-page-screen';
 import { ListRow } from '@/components/ui/list-row';
 import { NotificationSettingsScreen } from '@/components/screens/notification-settings-screen';
@@ -1045,6 +1047,26 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
         <NotificationListScreen />
+      </View>
+    ),
+  },
+  {
+    name: 'AnnouncementSection',
+    description: '알림 목록 상단 새 소식 (#1320): 번들 공지, 안 읽음 점, 행동 라벨, 더보기 접힘.',
+    render: () => (
+      <View style={{ alignSelf: 'stretch' }}>
+        <AnnouncementSection
+          announcements={[
+            ...ANNOUNCEMENTS.map((a, i) => ({ ...a, read: i > 0 })),
+            {
+              id: 'demo-old',
+              date: '2026-09-01',
+              title: '지난 소식 예시',
+              body: '더보기로 접히는 네 번째 항목.',
+              read: true,
+            },
+          ]}
+        />
       </View>
     ),
   },
