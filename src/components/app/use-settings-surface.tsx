@@ -20,6 +20,10 @@ import {
   SoundSettingsScreen,
 } from '@/components/screens/sound-settings-screen';
 import { FontScreen } from '@/components/screens/font-screen';
+import { track } from '@/lib/analytics';
+import { LanguageScreen } from '@/components/screens/language-screen';
+import { useLanguage } from '@/hooks/use-language';
+import { type AppLanguage, LANGUAGE_PICKER_ENABLED, useT } from '@/i18n';
 import { ThemeScreen } from '@/components/screens/theme-screen';
 import { useToast } from '@/components/ui/toast';
 import { FONT_OPTIONS, THEME_OPTIONS, type BrandFontId, type ThemeId } from '@/constants/theme';
@@ -236,6 +240,19 @@ export function useSettingsSurface({
   const openSettings = useCallback(() => setScreen('settings'), [setScreen]);
   const openTheme = useCallback(() => setScreen('theme'), [setScreen]);
   const openFont = useCallback(() => setScreen('font'), [setScreen]);
+  // 언어 (#893) — 고르면 즉시 적용·영속화, 토스트로 확인.
+  const openLanguage = useCallback(() => setScreen('language'), [setScreen]);
+  const { language, setLanguage } = useLanguage();
+  const tr = useT();
+  const changeLanguage = useCallback(
+    (next: AppLanguage) => {
+      if (next === language) return;
+      setLanguage(next);
+      track('language_change', { language: next });
+      toast(tr('language.changed'), 'success');
+    },
+    [language, setLanguage, toast, tr],
+  );
   const openProfileEdit = useCallback(() => setScreen('profileEdit'), [setScreen]);
   const openNotificationSettings = useCallback(() => {
     setScreen('notifications');
@@ -307,6 +324,8 @@ export function useSettingsSurface({
     fontId,
     onOpenFont: openFont,
     onOpenTheme: openTheme,
+    language,
+    onOpenLanguage: LANGUAGE_PICKER_ENABLED ? openLanguage : undefined,
     onOpenNotifications: openNotificationSettings,
     onOpenSound: openSound,
     onOpenTerms: openTerms,
@@ -337,6 +356,12 @@ export function useSettingsSurface({
         onApplyFont={changeFontId}
         userName={profile.nickname}
         characterId={profile.characterId}
+        onBack={backToSettings}
+      />
+    ) : screen === 'language' ? (
+      <LanguageScreen
+        language={language}
+        onSelectLanguage={changeLanguage}
         onBack={backToSettings}
       />
     ) : screen === 'profileEdit' ? (

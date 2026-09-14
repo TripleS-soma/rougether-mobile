@@ -27,6 +27,7 @@ export type Screen =
   | 'settings'
   | 'theme'
   | 'font'
+  | 'language'
   | 'profileEdit'
   | 'notificationList'
   | 'calendarImport'
@@ -64,6 +65,8 @@ export const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   settings: null,
   theme: null,
   font: null,
+  // 언어 (#893) — 설정의 서브화면.
+  language: null,
   profileEdit: null,
   notificationList: null,
   calendarImport: null,
@@ -114,6 +117,7 @@ export const BACK_SCREEN: Record<Screen, Screen | null> = {
   settings: 'myPage',
   theme: 'settings',
   font: 'settings',
+  language: 'settings',
   profileEdit: 'myPage',
   notificationList: 'myRoom',
   calendarImport: 'myPage',

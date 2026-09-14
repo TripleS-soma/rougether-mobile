@@ -106,8 +106,11 @@ it('할 일 필터의 +는 할 일로 열리고 루틴 저장 후 첫 실행일�
   );
 });
 
-it('개인 카테고리의 +도 루틴으로 열며 카테고리만 미리 채운다', async () => {
-  const create = jest.fn().mockResolvedValue(true);
+// 카테고리 옆 +는 공통 작성 시트가 아니라 인라인 입력행 (#1280 롤백, 2026-09-14) —
+// 텍스트만 넣고 blur하면 그 카테고리의 오늘 할 일로 바로 만들어진다.
+it('개인 카테고리의 +는 인라인 입력행을 열고 텍스트만으로 그 카테고리 할 일을 만든다', async () => {
+  const quickAdd = jest.fn().mockResolvedValue(true);
+  const create = jest.fn();
   const ui = await render(
     <MyRoomScreen
       view="room"
@@ -116,15 +119,20 @@ it('개인 카테고리의 +도 루틴으로 열며 카테고리만 미리 채�
       categories={[
         { id: '20', name: '생활', icon: 'sun', color: '#7FA87F', visibility: 'private' },
       ]}
+      onQuickAddRoutine={quickAdd}
       onCreateRoutine={create}
     />,
   );
-  await fireEvent.press(ui.getByLabelText('생활에 추가'));
-  await fireEvent.changeText(ui.getByLabelText('루틴 제목'), '산책');
-  await fireEvent.press(ui.getByLabelText('루틴 저장'));
-  await waitFor(() =>
-    expect(create).toHaveBeenCalledWith(
-      expect.objectContaining({ title: '산책', category: '20', startDate: TODAY }),
-    ),
-  );
+  await fireEvent.press(ui.getByLabelText('생활 할 일 추가'));
+  // 공통 작성 시트는 열리지 않는다.
+  expect(ui.queryByLabelText('루틴 제목')).toBeNull();
+  const input = ui.getByPlaceholderText('할 일 입력 후 완료');
+  await fireEvent.changeText(input, '산책');
+  await fireEvent(input, 'blur');
+  await waitFor(() => expect(quickAdd).toHaveBeenCalledWith('20', '산책', TODAY));
+  expect(create).not.toHaveBeenCalled();
+  // 빈 제목으로 닫으면 아무것도 만들지 않는다.
+  await fireEvent.press(ui.getByLabelText('생활 할 일 추가'));
+  await fireEvent(ui.getByPlaceholderText('할 일 입력 후 완료'), 'blur');
+  expect(quickAdd).toHaveBeenCalledTimes(1);
 });

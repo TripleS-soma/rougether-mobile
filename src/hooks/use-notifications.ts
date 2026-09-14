@@ -18,6 +18,7 @@ import { ApiError } from '@/api/http';
 import { useToast } from '@/components/ui/toast';
 import type { NotificationEntry } from '@/components/screens/notification-list-screen';
 import { useLatestRef } from '@/hooks/use-stable-value';
+import { i18n } from '@/i18n';
 
 /** 서버 목록 순서(id 내림차순)를 지키며 되돌린 행을 다시 끼운다. */
 function reinsert(list: NotificationEntry[], entry: NotificationEntry): NotificationEntry[] {
@@ -67,7 +68,7 @@ export function useNotifications() {
       setEntries((prev) => [...(prev ?? []), ...page.items.map(toNotificationEntry)]);
       setHasNext(page.hasNext);
     } catch {
-      toast('알림을 더 불러오지 못했어요', 'error');
+      toast(i18n.t('notification.list.loadMoreFailed'), 'error');
     }
   }, [toast]);
 
@@ -79,7 +80,7 @@ export function useNotifications() {
         await markNotificationRead(id);
       } catch {
         setEntries((prev) => prev?.map((n) => (n.id === id ? { ...n, read: false } : n)));
-        toast('읽음 처리에 실패했어요', 'error');
+        toast(i18n.t('notification.list.markReadFailed'), 'error');
       }
     },
     [toast],
@@ -93,7 +94,7 @@ export function useNotifications() {
       await markAllNotificationsRead();
     } catch {
       setEntries(before);
-      toast('읽음 처리에 실패했어요', 'error');
+      toast(i18n.t('notification.list.markReadFailed'), 'error');
     }
   }, [entries, toast]);
 
@@ -114,7 +115,7 @@ export function useNotifications() {
         if (e instanceof ApiError && e.status === 404 && e.code === 'NOTIFICATION_NOT_FOUND')
           return;
         setEntries((prev) => (prev ? reinsert(prev, entry) : prev));
-        toast('알림을 삭제하지 못했어요', 'error');
+        toast(i18n.t('notification.list.deleteFailed'), 'error');
       }
     },
     [entriesRef, toast],
@@ -134,7 +135,7 @@ export function useNotifications() {
       setEntries(before);
       setHasNext(beforeHasNext);
       cursorRef.current = beforeCursor;
-      toast('알림을 삭제하지 못했어요', 'error');
+      toast(i18n.t('notification.list.deleteFailed'), 'error');
     }
   }, [entriesRef, hasNextRef, toast]);
 

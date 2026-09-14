@@ -6,6 +6,8 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
+import { i18n } from '@/i18n';
+
 /**
  * Android channel FCM v1 payloads should target
  * (`android.notification.channel_id`) — also set as the plugin's
@@ -33,7 +35,7 @@ export function initPushDisplay(): void {
   });
   if (Platform.OS === 'android') {
     void Notifications.setNotificationChannelAsync(DEFAULT_CHANNEL_ID, {
-      name: '알림',
+      name: i18n.t('notification.push.channelName'),
       importance: Notifications.AndroidImportance.DEFAULT,
     }).catch(() => {});
   }

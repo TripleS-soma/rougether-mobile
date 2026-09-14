@@ -1,0 +1,40 @@
+{
+  "settings": {
+    "title": "Settings",
+    "sectionDesign": "Appearance",
+    "sectionNotifications": "Notifications",
+    "sectionEtc": "More",
+    "darkMode": "Dark mode",
+    "mode": {
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "startTab": "Start screen",
+    "startTabHint": "The tab shown when the app opens · from next launch",
+    "startTabOption": "Start screen {{name}}",
+    "themeColor": "Theme color",
+    "font": "Font",
+    "language": "Language",
+    "pushNotifications": "Push notifications",
+    "sound": "Sound effects",
+    "replayTutorial": "Replay tutorial",
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy",
+    "logout": "Log out",
+    "logoutConfirmTitle": "Log out?",
+    "logoutConfirmBody": "You'll need to log in again to continue.",
+    "logoutConfirmA11y": "Confirm log out",
+    "withdraw": "Delete account",
+    "withdrawConfirmTitle": "Delete your account?",
+    "withdrawConfirmBody": "All routines, records, and your profile will be deleted and can't be recovered. Logging in again with the same account starts fresh.",
+    "withdrawConfirmLabel": "Delete",
+    "withdrawConfirmA11y": "Confirm account deletion"
+  },
+  "language": {
+    "title": "Language",
+    "hint": "Applies to the whole app right away. Some server messages may still appear in Korean.",
+    "optionA11y": "{{name}} language",
+    "changed": "Language changed"
+  }
+}

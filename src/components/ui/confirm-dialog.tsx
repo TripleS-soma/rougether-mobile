@@ -2,6 +2,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 export type ConfirmDialogProps = {
   visible: boolean;
@@ -32,12 +33,14 @@ export function ConfirmDialog({
   body,
   confirmLabel,
   confirmAccessibilityLabel,
-  cancelLabel = '취소',
+  cancelLabel,
   cancelAccessibilityLabel,
   destructive,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const tr = useT();
+  const resolvedCancelLabel = cancelLabel ?? tr('common.cancel');
   const t = useTokens();
   const Typography = useTypography();
   return (
@@ -52,9 +55,9 @@ export function ConfirmDialog({
               <Pressable
                 onPress={onCancel}
                 accessibilityRole="button"
-                accessibilityLabel={cancelAccessibilityLabel ?? cancelLabel}
+                accessibilityLabel={cancelAccessibilityLabel ?? resolvedCancelLabel}
                 style={[styles.btn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>{cancelLabel}</Text>
+                <Text style={[Typography.label, { color: t.text }]}>{resolvedCancelLabel}</Text>
               </Pressable>
             ) : null}
             <Pressable

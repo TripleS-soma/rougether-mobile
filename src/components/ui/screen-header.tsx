@@ -2,6 +2,7 @@ import { type ReactNode, useContext } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
+import { useT } from '@/i18n';
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { Icon } from '@/components/ui/icon';
 import { HEADER_ROW_HEIGHT, HEADER_TOP_GAP } from '@/components/ui/screen-header-geometry';
@@ -26,7 +27,9 @@ export type ScreenHeaderProps = {
  * 반투명/불투명)은 GlassSurface가 고른다. 사용하는 화면의 루트는
  * `useScreenStyle([])`(top 패딩 없음).
  */
-export function ScreenHeader({ title, onBack, backLabel = '뒤로 가기', right }: ScreenHeaderProps) {
+export function ScreenHeader({ title, onBack, backLabel, right }: ScreenHeaderProps) {
+  const tr = useT();
+  const resolvedBackLabel = backLabel ?? tr('common.back');
   const t = useTokens();
   const Typography = useTypography();
   const insets = useContext(SafeAreaInsetsContext);
@@ -41,7 +44,7 @@ export function ScreenHeader({ title, onBack, backLabel = '뒤로 가기', right
           <Pressable
             onPress={onBack}
             accessibilityRole="button"
-            accessibilityLabel={backLabel}
+            accessibilityLabel={resolvedBackLabel}
             style={styles.floatBtn}>
             <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
               <Icon name="back" size={20} color={t.text} />

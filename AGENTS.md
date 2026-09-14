@@ -29,7 +29,7 @@
   - 클라이언트 기본값은 `src/lib/query-client.ts`(staleTime 30초 · retry 1 · 포커스 재조회). RN 포커스 감지는 `subscribeAppStateFocus`가 배선합니다 — **온라인 감지(`onlineManager`)는 없습니다**(NetInfo가 네이티브 모듈이라 지문이 바뀝니다).
   - 훅이 돌려주는 객체는 **참조를 고정**하세요. `useMutation`이 주는 **객체는 매 렌더 새것**이라 의존성에 넣으면 나의 방 memo 경계(#539)가 뚫립니다 — `mutateAsync`만 꺼내 쓰고 중복 탭 가드는 `useLatestRef`로 읽습니다. `app-shell-render-stability.test.tsx`가 이걸 강제합니다.
   - 테스트는 `@/test-utils/query-wrapper`의 `queryWrapper()`(훅) 또는 `QueryProvider`(트리)로 감쌉니다. 캐시 반영은 `notifyManager`가 배칭하므로 **즉시 단언하지 말고 `waitFor`** 로 기다리세요.
-- **UI 문구는 한국어**, 코드·주석·식별자는 영어.
+- **UI 문구는 i18n 키로** (2026-09-14, #893): 화면에 박힌 문자열 대신 `const tr = useT()`(`@/i18n`) + `tr('domain.key')`. **`src/i18n/resources/ko/<도메인>.json`이 원문**이고 `en/<도메인>.json`은 같은 키를 반드시 갖는다(도메인별 파일 — 최상위 키는 `member`·`routineTodo`처럼 도메인 접두로 겹치지 않게, 새 파일은 `src/i18n/index.ts`의 두 목록에 등록)(`src/i18n/__tests__/i18n-keys.test.ts`가 누락·빈 값·보간 불일치를 막는다). 새 문구는 두 파일에 같이 넣고, 테스트는 기본 언어(한국어) 문구로 단언한다. 아직 전환 안 된 화면의 한국어 리터럴은 그 화면을 만질 때 키로 옮긴다(전면 리라이트 PR 금지 — 도메인별로). 코드·주석·식별자는 영어(주석은 한국어 허용).
 - **아이콘**은 현재 이모지 플레이스홀더이며, 실제 스프라이트/CDN 아트는 추후 포팅합니다.
 - 파일명은 kebab-case, 컴포넌트는 PascalCase named export.
 - **API 날짜(`YYYY-MM-DD`)는 Asia/Seoul 달력 날짜**입니다(spec `api.md` "날짜와 시각"). `Date` → 날짜 문자열은 반드시 `todayIso()` / `toKstDate()`(`src/utils/datetime.ts`)로만 만드세요. `toISOString().slice(0, 10)`(UTC — KST 00:00~08:59에 전날)과 `getFullYear()/getMonth()/getDate()`(단말 로컬)는 금지입니다. 경계값은 `contracts/date-boundary-cases.json`(spec 복사본)이며 `node scripts/run-date-boundary.js`가 실제 요청 생성 코드로 검증합니다(**package.json 스크립트로 등록하지 마세요** — 스크립트 한 줄도 런타임 지문을 바꿔 OTA가 끊깁니다, 2026-09-14 실측).
