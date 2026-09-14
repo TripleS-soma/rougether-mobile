@@ -27,36 +27,37 @@ import { CoachTarget } from '@/components/ui/coach-mark';
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { useBottomNavScrub } from '@/components/ui/use-bottom-nav-scrub';
 import { Radius, Spacing } from '@/constants/theme';
+import { useT } from '@/i18n';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
 import { NATIVE_DRIVER } from '@/utils/animation';
 
 export type NavTab = 'myRoom' | 'calendar' | 'house' | 'myPage';
 
+// 라벨은 i18n 키 (#893) — 방 탭은 짧은 표기('방')와 접근성 라벨('나의 방')이 다르다.
 const TABS: {
   key: NavTab;
-  label: string;
-  accessibilityLabel?: string;
+  labelKey: string;
+  accessibilityLabelKey?: string;
   active: FC<SvgProps>;
   inactive: FC<SvgProps>;
 }[] = [
   {
     key: 'myRoom',
-    label: '방',
-    accessibilityLabel: '나의 방',
+    labelKey: 'nav.myRoomShort',
+    accessibilityLabelKey: 'nav.myRoom',
     active: HomeActive,
     inactive: HomeInactive,
   },
   // 달력 (#1138) — 나의 방 안의 방/달력 알약에서 하단 탭으로.
-  { key: 'calendar', label: '달력', active: CalendarActive, inactive: CalendarInactive },
-  { key: 'house', label: '집', active: HouseActive, inactive: HouseInactive },
+  { key: 'calendar', labelKey: 'nav.calendar', active: CalendarActive, inactive: CalendarInactive },
+  { key: 'house', labelKey: 'nav.house', active: HouseActive, inactive: HouseInactive },
   // 내 정보 (#1088) — 설정 탭을 대체. 설정은 내 정보 헤더의 톱니로 들어간다.
-  { key: 'myPage', label: '내 정보', active: ProfileActive, inactive: ProfileInactive },
+  { key: 'myPage', labelKey: 'nav.myPage', active: ProfileActive, inactive: ProfileInactive },
 ];
 const MIN_TAB_TOUCH_SIZE = 44;
 /** 좁은 화면에서 라벨을 함께 줄일 때의 하한 배율 (#1098 후속). */
 const MIN_LABEL_SCALE = 0.8;
-const LONGEST_TAB_LABEL_LENGTH = Math.max(...TABS.map(({ label }) => label.length));
 
 export type BottomNavProps = {
   active: NavTab;
@@ -113,6 +114,9 @@ function TabIcon({
  */
 export function BottomNav({ active, onChange, badges }: BottomNavProps) {
   const t = useTokens();
+  const tr = useT();
+  // 가장 긴 라벨은 언어마다 다르다 (#893) — 영어는 'Calendar'가 가장 길다.
+  const longestTabLabelLength = Math.max(...TABS.map(({ labelKey }) => tr(labelKey).length));
   const Typography = useTypography();
   const insets = useSafeAreaInsets();
   // 폭은 앱 프레임 기준 — 웹 데스크톱에서 탭이 창 전체로 퍼지지 않게. 2단
@@ -124,7 +128,7 @@ export function BottomNav({ active, onChange, badges }: BottomNavProps) {
   const [labelWidths, setLabelWidths] = useState<number[]>([]);
   const contentMinWidth = Math.max(
     NAV_ICON_SIZE,
-    Typography.supporting.fontSize * fontScale * LONGEST_TAB_LABEL_LENGTH,
+    Typography.supporting.fontSize * fontScale * longestTabLabelLength,
     ...labelWidths.filter(Number.isFinite),
   );
   const tabCap = Math.max(
@@ -164,7 +168,14 @@ export function BottomNav({ active, onChange, badges }: BottomNavProps) {
     if (tab && tab !== active) onChange(tab);
   }, TABS.length);
   const tabs = TABS.map((tab, index) => {
-    const { key, label, active: ActiveIcon, inactive: InactiveIcon } = tab;
+    const {
+      key,
+      labelKey,
+      accessibilityLabelKey,
+      active: ActiveIcon,
+      inactive: InactiveIcon,
+    } = tab;
+    const label = tr(labelKey);
     const isActive = key === active;
     // RN Pressable (#1093): RNGH Pressable + `requireExternalGestureToFail(pan)` 조합은
     // Android에서 탭이 영영 발화하지 않았다(iOS만 동작). 일반 Pressable은 pan이
@@ -174,8 +185,8 @@ export function BottomNav({ active, onChange, badges }: BottomNavProps) {
         onPress={() => onChange(key)}
         accessibilityRole="button"
         accessibilityState={{ selected: isActive }}
-        accessibilityLabel={tab.accessibilityLabel ?? label}
-        accessibilityHint={badges?.[key] ? '오늘 미출석' : undefined}
+        accessibilityLabel={accessibilityLabelKey ? tr(accessibilityLabelKey) : label}
+        accessibilityHint={badges?.[key] ? tr('nav.badgeAbsent') : undefined}
         style={[
           styles.tab,
           { minWidth: tabMinWidth, maxWidth: tabCap, paddingHorizontal: tabPaddingH },
@@ -232,13 +243,13 @@ export function BottomNav({ active, onChange, badges }: BottomNavProps) {
               accessibilityElementsHidden
               importantForAccessibility="no-hide-descendants"
               style={styles.measure}>
-              {TABS.map(({ key, label }, index) => (
+              {TABS.map(({ key, labelKey }, index) => (
                 <Text
                   key={key}
                   style={Typography.supporting}
                   numberOfLines={1}
                   onLayout={(e) => recordLabel(index, e.nativeEvent.layout.width)}>
-                  {label}
+                  {tr(labelKey)}
                 </Text>
               ))}
             </View>

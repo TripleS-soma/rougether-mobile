@@ -26,12 +26,9 @@ import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-re
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import type { NavTab } from '@/components/ui/bottom-nav';
 import { DEFAULT_START_TAB, START_TAB_OPTIONS } from '@/lib/start-tab';
+import { type AppLanguage, DEFAULT_LANGUAGE, LANGUAGE_OPTIONS, useT } from '@/i18n';
 
-const MODE_OPTIONS: { id: ThemeMode; name: string }[] = [
-  { id: 'system', name: '시스템' },
-  { id: 'light', name: '라이트' },
-  { id: 'dark', name: '다크' },
-];
+const MODE_OPTIONS: ThemeMode[] = ['system', 'light', 'dark'];
 
 /**
  * 설정 행 오른쪽의 현재 폰트 이름을 그 폰트로 그리는 스타일 (#382). 크기는
@@ -61,6 +58,9 @@ export type SettingsScreenProps = ScrollRestoreProps & {
   onOpenFont?: () => void;
   /** Opens the 테마 색상 picker screen (#459). */
   onOpenTheme?: () => void;
+  /** 앱 언어 (#893) — 행 오른쪽 현재값 표시용. */
+  language?: AppLanguage;
+  onOpenLanguage?: () => void;
   /**
    * 비밀번호 변경 (#787) — 서버 인증이 소셜·dev 로그인뿐이라 비밀번호 계정이
    * 없다. 행을 내렸고 셸도 넘기지 않는다. 서버가 비밀번호 인증을 붙이면 기타
@@ -106,6 +106,8 @@ export const SettingsScreen = memo(function SettingsScreen({
   fontId = DEFAULT_FONT_ID,
   onOpenFont,
   onOpenTheme,
+  language = DEFAULT_LANGUAGE,
+  onOpenLanguage,
   onOpenNotifications,
   onOpenSound,
   onOpenTerms,
@@ -117,6 +119,7 @@ export const SettingsScreen = memo(function SettingsScreen({
   onScrollY,
 }: SettingsScreenProps) {
   const t = useTokens();
+  const tr = useT();
   const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
@@ -130,30 +133,37 @@ export const SettingsScreen = memo(function SettingsScreen({
   const [confirmWithdraw, setConfirmWithdraw] = useState(false);
   const currentFontName = FONT_OPTIONS.find((o) => o.id === fontId)?.name ?? '';
   const currentTheme = THEME_OPTIONS.find((o) => o.id === themeId);
+  const currentLanguageName = LANGUAGE_OPTIONS.find((o) => o.id === language)?.name ?? '';
   // 서브화면(도움말·버그 제보 …)에 다녀와도 보던 자리로 (#763).
   const scrollRef = useRef<ScrollView>(null);
   const scrollRestore = useScrollRestore(scrollRef, { getInitialScrollY, onScrollY });
 
-  const sections: { title: string; rows: Row[] }[] = [
+  const sections: { id: string; title: string; rows: Row[] }[] = [
     // 푸시·햅틱은 네이티브 전용 — 웹에선 토글이 되는 척만 하므로 섹션째 숨긴다.
     ...(Platform.OS === 'web'
       ? []
       : [
           {
-            title: '알림',
+            id: 'notifications',
+            title: tr('settings.sectionNotifications'),
             rows: [
-              { icon: 'bell' as const, label: '푸시 알림', onPress: onOpenNotifications },
-              { icon: 'sound' as const, label: '효과음', onPress: onOpenSound },
+              {
+                icon: 'bell' as const,
+                label: tr('settings.pushNotifications'),
+                onPress: onOpenNotifications,
+              },
+              { icon: 'sound' as const, label: tr('settings.sound'), onPress: onOpenSound },
             ],
           },
         ]),
     {
-      title: '기타',
+      id: 'etc',
+      title: tr('settings.sectionEtc'),
       rows: [
-        { icon: 'refresh', label: '튜토리얼 다시 보기', onPress: onReplayOnboarding },
-        { icon: 'list', label: '이용약관', onPress: onOpenTerms },
-        { icon: 'lock', label: '개인정보처리방침', onPress: onOpenPrivacy },
-        { icon: 'leave', label: '로그아웃', onPress: () => setConfirmLogout(true) },
+        { icon: 'refresh', label: tr('settings.replayTutorial'), onPress: onReplayOnboarding },
+        { icon: 'list', label: tr('settings.terms'), onPress: onOpenTerms },
+        { icon: 'lock', label: tr('settings.privacy'), onPress: onOpenPrivacy },
+        { icon: 'leave', label: tr('settings.logout'), onPress: () => setConfirmLogout(true) },
       ],
     },
   ];
@@ -168,7 +178,7 @@ export const SettingsScreen = memo(function SettingsScreen({
         <View style={[styles.ambientPrimary, { backgroundColor: t.primarySoft }]} />
         <View style={[styles.ambientWarm, { backgroundColor: t.warningSoft }]} />
       </View>
-      <ScreenHeader title="설정" onBack={onBack} />
+      <ScreenHeader title={tr('settings.title')} onBack={onBack} />
 
       <ScrollView
         ref={scrollRef}
@@ -184,7 +194,9 @@ export const SettingsScreen = memo(function SettingsScreen({
         ]}
         {...scrollRestore}>
         <View style={styles.section}>
-          <Text style={[...sectionTitleStyle, { color: t.textMuted }]}>디자인</Text>
+          <Text style={[...sectionTitleStyle, { color: t.textMuted }]}>
+            {tr('settings.sectionDesign')}
+          </Text>
           <GlassSurface
             fallbackColor={t.surface}
             interactive={false}
@@ -195,31 +207,32 @@ export const SettingsScreen = memo(function SettingsScreen({
                 <Icon name="moon" size={20} color={t.primaryText} />
               </View>
               <View style={styles.flex}>
-                <Text style={[Typography.label, { color: t.text }]}>다크 모드</Text>
+                <Text style={[Typography.label, { color: t.text }]}>{tr('settings.darkMode')}</Text>
               </View>
             </View>
             <View style={[styles.modeRow, { backgroundColor: t.surfaceMuted }]}>
-              {MODE_OPTIONS.map((opt) => {
-                const selected = opt.id === themeMode;
+              {MODE_OPTIONS.map((id) => {
+                const selected = id === themeMode;
+                const name = tr(`settings.mode.${id}`);
                 return (
                   <Pressable
-                    key={opt.id}
-                    onPress={() => onChangeThemeMode?.(opt.id)}
+                    key={id}
+                    onPress={() => onChangeThemeMode?.(id)}
                     accessibilityRole="radio"
                     accessibilityState={{ selected, checked: selected }}
                     aria-checked={selected}
-                    accessibilityLabel={opt.name}
+                    accessibilityLabel={name}
                     style={styles.modeOption}>
                     {selected ? (
                       <GlassSurface
                         fallbackColor={t.primary}
                         tintColor={t.primary}
                         style={styles.modeChip}>
-                        <Text style={[Typography.label, { color: t.onPrimary }]}>{opt.name}</Text>
+                        <Text style={[Typography.label, { color: t.onPrimary }]}>{name}</Text>
                       </GlassSurface>
                     ) : (
                       <View style={styles.modeChip}>
-                        <Text style={[Typography.label, { color: t.textMuted }]}>{opt.name}</Text>
+                        <Text style={[Typography.label, { color: t.textMuted }]}>{name}</Text>
                       </View>
                     )}
                   </Pressable>
@@ -239,15 +252,16 @@ export const SettingsScreen = memo(function SettingsScreen({
                 <Icon name="myRoom" size={20} color={t.primaryText} />
               </View>
               <View style={styles.flex}>
-                <Text style={[Typography.label, { color: t.text }]}>시작 화면</Text>
+                <Text style={[Typography.label, { color: t.text }]}>{tr('settings.startTab')}</Text>
                 <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                  앱을 열 때 처음 보일 탭 · 다음 실행부터
+                  {tr('settings.startTabHint')}
                 </Text>
               </View>
             </View>
             <View style={[styles.modeRow, { backgroundColor: t.surfaceMuted }]}>
               {START_TAB_OPTIONS.map((opt) => {
                 const selected = opt.id === startTab;
+                const name = tr(`nav.${opt.id}`);
                 return (
                   <Pressable
                     key={opt.id}
@@ -255,7 +269,7 @@ export const SettingsScreen = memo(function SettingsScreen({
                     accessibilityRole="radio"
                     accessibilityState={{ selected, checked: selected }}
                     aria-checked={selected}
-                    accessibilityLabel={`시작 화면 ${opt.name}`}
+                    accessibilityLabel={tr('settings.startTabOption', { name })}
                     style={styles.modeOption}>
                     {selected ? (
                       <GlassSurface
@@ -267,7 +281,7 @@ export const SettingsScreen = memo(function SettingsScreen({
                           numberOfLines={1}
                           adjustsFontSizeToFit
                           minimumFontScale={0.8}>
-                          {opt.name}
+                          {name}
                         </Text>
                       </GlassSurface>
                     ) : (
@@ -277,7 +291,7 @@ export const SettingsScreen = memo(function SettingsScreen({
                           numberOfLines={1}
                           adjustsFontSizeToFit
                           minimumFontScale={0.8}>
-                          {opt.name}
+                          {name}
                         </Text>
                       </View>
                     )}
@@ -304,7 +318,7 @@ export const SettingsScreen = memo(function SettingsScreen({
               <Pressable
                 onPress={onOpenTheme}
                 accessibilityRole="button"
-                accessibilityLabel="테마 색상"
+                accessibilityLabel={tr('settings.themeColor')}
                 style={({ pressed }) => [
                   styles.row,
                   { borderBottomColor: t.border, borderBottomWidth: StyleSheet.hairlineWidth },
@@ -314,7 +328,9 @@ export const SettingsScreen = memo(function SettingsScreen({
                   <View style={[styles.iconCircle, { backgroundColor: t.primarySoft }]}>
                     <Icon name="palette" size={20} color={t.primaryText} />
                   </View>
-                  <Text style={[Typography.body, { color: t.text }]}>테마 색상</Text>
+                  <Text style={[Typography.body, { color: t.text }]}>
+                    {tr('settings.themeColor')}
+                  </Text>
                 </View>
                 {/* 점은 그 테마 색 자체 — 폰트 행이 이름을 그 얼굴로 그리는 것과 같은
                   뜻이다. 글자에 색을 입히지 않은 건 대비가 나빠지기 때문(#232). */}
@@ -335,20 +351,43 @@ export const SettingsScreen = memo(function SettingsScreen({
               <Pressable
                 onPress={onOpenFont}
                 accessibilityRole="button"
-                accessibilityLabel="폰트"
+                accessibilityLabel={tr('settings.font')}
                 style={({ pressed }) => [
                   styles.row,
+                  { borderBottomColor: t.border, borderBottomWidth: StyleSheet.hairlineWidth },
                   pressed && { backgroundColor: t.primarySoft },
                 ]}>
                 <View style={[styles.rowLeft, styles.appearanceLabel]}>
                   <View style={[styles.iconCircle, { backgroundColor: t.primarySoft }]}>
                     <Icon name="edit" size={20} color={t.primaryText} />
                   </View>
-                  <Text style={[Typography.body, { color: t.text }]}>폰트</Text>
+                  <Text style={[Typography.body, { color: t.text }]}>{tr('settings.font')}</Text>
                 </View>
                 {/* 현재 폰트 이름은 그 폰트의 얼굴로 — 행 자체가 작은 견본이 된다. */}
                 <Text style={[fontPreviewStyle(fontId), styles.rowValue, { color: t.textMuted }]}>
                   {currentFontName}
+                </Text>
+                <Icon name="forward" size={16} color={t.textDisabled} />
+              </Pressable>
+              {/* 언어 (#893) — 현재 언어를 그 언어의 이름으로. */}
+              <Pressable
+                onPress={onOpenLanguage}
+                accessibilityRole="button"
+                accessibilityLabel={tr('settings.language')}
+                style={({ pressed }) => [
+                  styles.row,
+                  pressed && { backgroundColor: t.primarySoft },
+                ]}>
+                <View style={[styles.rowLeft, styles.appearanceLabel]}>
+                  <View style={[styles.iconCircle, { backgroundColor: t.primarySoft }]}>
+                    <Icon name="menu" size={20} color={t.primaryText} />
+                  </View>
+                  <Text style={[Typography.body, { color: t.text }]}>
+                    {tr('settings.language')}
+                  </Text>
+                </View>
+                <Text style={[Typography.body, styles.rowValue, { color: t.textMuted }]}>
+                  {currentLanguageName}
                 </Text>
                 <Icon name="forward" size={16} color={t.textDisabled} />
               </Pressable>
@@ -357,13 +396,13 @@ export const SettingsScreen = memo(function SettingsScreen({
         </View>
 
         {sections.map((section) => (
-          <View key={section.title} style={styles.section}>
+          <View key={section.id} style={styles.section}>
             <Text style={[...sectionTitleStyle, { color: t.textMuted }]}>{section.title}</Text>
             <GlassSurface
               fallbackColor={t.surface}
               interactive={false}
               style={styles.card}
-              testID={`settings-section-${section.title}`}>
+              testID={`settings-section-${section.id}`}>
               <View style={styles.cardContent}>
                 {section.rows.map((row, idx) => (
                   <ListRow
@@ -388,18 +427,20 @@ export const SettingsScreen = memo(function SettingsScreen({
         <Pressable
           onPress={() => setConfirmWithdraw(true)}
           accessibilityRole="button"
-          accessibilityLabel="회원탈퇴"
+          accessibilityLabel={tr('settings.withdraw')}
           style={styles.withdrawLink}>
-          <Text style={[Typography.supporting, { color: t.dangerText }]}>회원탈퇴</Text>
+          <Text style={[Typography.supporting, { color: t.dangerText }]}>
+            {tr('settings.withdraw')}
+          </Text>
         </Pressable>
       </ScrollView>
 
       <ConfirmDialog
         visible={confirmWithdraw}
-        title="정말 탈퇴할까요?"
-        body="모든 루틴·기록·프로필이 삭제되고 복구할 수 없어요. 같은 계정으로 다시 로그인해도 새 계정으로 시작하게 돼요."
-        confirmLabel="탈퇴하기"
-        confirmAccessibilityLabel="회원탈퇴 확인"
+        title={tr('settings.withdrawConfirmTitle')}
+        body={tr('settings.withdrawConfirmBody')}
+        confirmLabel={tr('settings.withdrawConfirmLabel')}
+        confirmAccessibilityLabel={tr('settings.withdrawConfirmA11y')}
         destructive
         onConfirm={() => {
           setConfirmWithdraw(false);
@@ -410,10 +451,10 @@ export const SettingsScreen = memo(function SettingsScreen({
 
       <ConfirmDialog
         visible={confirmLogout}
-        title="로그아웃할까요?"
-        body="다시 이용하려면 로그인이 필요해요."
-        confirmLabel="로그아웃"
-        confirmAccessibilityLabel="로그아웃 확인"
+        title={tr('settings.logoutConfirmTitle')}
+        body={tr('settings.logoutConfirmBody')}
+        confirmLabel={tr('settings.logout')}
+        confirmAccessibilityLabel={tr('settings.logoutConfirmA11y')}
         destructive
         onConfirm={() => {
           setConfirmLogout(false);
