@@ -2,7 +2,7 @@
 /**
  * Runs the date-boundary contract tests once per device time zone named in the spec fixture
  * (TZ env var), collecting the requests the real app code produced into
- * output/contracts/date-boundary-requests.json — stamped with the mobile SHA and the spec
+ * .expo/date-boundary/date-boundary-requests.json — stamped with the mobile SHA and the spec
  * SHA the fixture copy came from. The server replays that file in DateBoundaryContractTest.
  */
 const { spawnSync, execSync } = require('node:child_process');
@@ -18,7 +18,7 @@ const TESTS = [
   'src/api/__tests__/date-boundary-requests.test.tsx',
 ];
 const zones = [...new Set(fixture.cases.map((c) => c.deviceTimeZone))];
-const runsDir = path.join(root, 'output', 'contracts', 'runs');
+const runsDir = path.join(root, '.expo', 'date-boundary', 'runs');
 fs.mkdirSync(runsDir, { recursive: true });
 
 const jestBin = require.resolve('jest/bin/jest');
@@ -59,7 +59,7 @@ const merged = {
   fixtureSchemaVersion: fixture.schemaVersion,
   runs,
 };
-const target = path.join(root, 'output', 'contracts', 'date-boundary-requests.json');
+const target = path.join(root, '.expo', 'date-boundary', 'date-boundary-requests.json');
 fs.writeFileSync(target, `${JSON.stringify(merged, null, 2)}\n`);
 
 const total = runs.reduce((n, r) => n + r.records.length, 0);
