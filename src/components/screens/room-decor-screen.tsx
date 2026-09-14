@@ -52,6 +52,7 @@ import { track } from '@/lib/analytics';
 import { APP_FRAME_MAX_WIDTH, useAppFrame } from '@/hooks/use-app-frame';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 /**
  * What the picker panel is currently choosing for: the full catalog ('all',
@@ -212,6 +213,7 @@ export function RoomDecorScreen({
   const t = useTokens();
   const column = useResponsiveColumn();
   const Typography = useTypography();
+  const tr = useT();
   const { show: toast } = useToast();
   const headerInset = useHeaderInsetStyle();
   // 떠 있는 적용하기 바(#1069) 밑으로 카탈로그가 지나가도록 하단 패딩.
@@ -419,7 +421,7 @@ export function RoomDecorScreen({
   /** 구매 진입점 공통 (#501) — 잔액 부족은 모달 대신 토스트로 끝낸다. */
   const requestBuy = (item: { id: string; name: string; price: number }) => {
     if (diamondBalance < item.price) {
-      toast('다이아가 부족해요', 'error');
+      toast(tr('roomShop.decor.insufficientDiamond'), 'error');
       return;
     }
     setBuyPhase('idle');
@@ -488,7 +490,7 @@ export function RoomDecorScreen({
    * 위치 로직은 뽑기 '방에 놓기'(#622)와 공유(newFreePlacement). */
   const addItem = (item: FurnitureItem) => {
     if (items.some((p) => p.furnitureId === item.id)) {
-      toast('이미 배치된 가구예요', 'error');
+      toast(tr('roomShop.decor.alreadyPlaced'), 'error');
       return;
     }
     setItems((prev) => [...prev, newFreePlacement(item, prev)]);
@@ -572,7 +574,7 @@ export function RoomDecorScreen({
   // 남는다 (#799). 가격 장벽이 이탈 원인인지 여기서만 보인다.
   const blockedBuy = useStableCallback(() => {
     track('purchase_blocked', { currency: 'diamond' });
-    toast('다이아가 부족해요', 'error');
+    toast(tr('roomShop.decor.insufficientDiamond'), 'error');
   });
   // 이 세션에서 가구를 놓아봤는지 (#1043) — decor_open→decor_place→room_save
   // 퍼널의 가운데 단계. 배치마다 쏘면 소음이라 마운트당 1회만.
@@ -647,7 +649,7 @@ export function RoomDecorScreen({
         {selectedId ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="선택 해제"
+            accessibilityLabel={tr('roomShop.decor.deselectA11y')}
             style={StyleSheet.absoluteFill}
             onPress={() => setSelectedId(null)}
           />
@@ -683,7 +685,9 @@ export function RoomDecorScreen({
                 key={sp.kind}
                 onPress={() => requestBuy({ id: sp.id, name: sp.name, price: sp.price })}
                 accessibilityRole="button"
-                accessibilityLabel={`${SURFACE_LABEL[sp.kind]} 프리뷰 구매`}>
+                accessibilityLabel={tr('roomShop.decor.surfacePreviewBuyA11y', {
+                  surface: SURFACE_LABEL[sp.kind],
+                })}>
                 <GlassSurface style={styles.previewChip} fallbackColor={t.surface}>
                   <Icon name="diamond" size={10} color={t.primary} />
                   <Text style={[Typography.supporting, { color: t.text }]}>
@@ -722,19 +726,19 @@ export function RoomDecorScreen({
             <GlassSurface style={styles.toolbarFace} fallbackColor={t.surface}>
               {(
                 [
-                  ['rotate-ccw', '왼쪽 회전', () => rotateSelected(-1)],
-                  ['rotate-cw', '오른쪽 회전', () => rotateSelected(1)],
-                  ['flip', '좌우 반전', flipSelected],
-                  ['layer-up', '맨 앞으로', bringToFront],
-                  ['layer-down', '맨 뒤로', sendToBack],
-                  ['trash', '빼기', () => removeItem(selectedId)],
+                  ['rotate-ccw', 'roomShop.decor.tool.rotateCcw', () => rotateSelected(-1)],
+                  ['rotate-cw', 'roomShop.decor.tool.rotateCw', () => rotateSelected(1)],
+                  ['flip', 'roomShop.decor.tool.flip', flipSelected],
+                  ['layer-up', 'roomShop.decor.tool.toFront', bringToFront],
+                  ['layer-down', 'roomShop.decor.tool.toBack', sendToBack],
+                  ['trash', 'roomShop.decor.tool.remove', () => removeItem(selectedId)],
                 ] as const
-              ).map(([icon, label, onPress]) => (
+              ).map(([icon, labelKey, onPress]) => (
                 <Pressable
                   key={icon}
                   onPress={onPress}
                   accessibilityRole="button"
-                  accessibilityLabel={label}
+                  accessibilityLabel={tr(labelKey)}
                   hitSlop={4}
                   style={[styles.toolBtn, { backgroundColor: t.surfaceMuted }]}>
                   <Icon name={icon} size={18} color={icon === 'trash' ? t.danger : t.text} />
@@ -752,14 +756,14 @@ export function RoomDecorScreen({
         <View style={styles.loadingBlock}>
           <Loading />
           <Text style={[Typography.supporting, { color: t.textMuted }]}>
-            카탈로그 불러오는 중...
+            {tr('roomShop.decor.catalogLoading')}
           </Text>
         </View>
       ) : null}
 
       {!loading && loadError ? (
         <View style={styles.loadingBlock}>
-          <RetryState message="카탈로그를 불러오지 못했어요." onRetry={onRetry} />
+          <RetryState message={tr('roomShop.decor.catalogError')} onRetry={onRetry} />
         </View>
       ) : null}
 
@@ -772,20 +776,21 @@ export function RoomDecorScreen({
               <View style={styles.segment}>
                 {(
                   [
-                    ['furniture', '가구'] as const,
-                    ['decor', '소품'] as const,
-                    ['wallpaper', '벽지'] as const,
-                    ...(floors.length > 0 ? [['floor', '바닥'] as const] : []),
-                    ...(backgrounds.length > 0 ? [['background', '배경'] as const] : []),
+                    'furniture' as const,
+                    'decor' as const,
+                    'wallpaper' as const,
+                    ...(floors.length > 0 ? ['floor' as const] : []),
+                    ...(backgrounds.length > 0 ? ['background' as const] : []),
                   ] as const
-                ).map(([key, label]) => {
+                ).map((key) => {
+                  const label = tr(`roomShop.decor.tab.${key}`);
                   const active = allTab === key;
                   return (
                     <Pressable
                       key={key}
                       onPress={() => setAllTab(key)}
                       accessibilityRole="button"
-                      accessibilityLabel={`${label} 탭`}
+                      accessibilityLabel={tr('roomShop.decor.tabA11y', { label })}
                       accessibilityState={{ selected: active }}
                       style={[
                         styles.segBtn,
@@ -807,11 +812,12 @@ export function RoomDecorScreen({
               <View style={styles.segment}>
                 {(
                   [
-                    ['wallpaper', '벽지'],
-                    ...(backgrounds.length > 0 ? [['background', '배경'] as const] : []),
-                    ...(floors.length > 0 ? [['floor', '바닥'] as const] : []),
+                    'wallpaper' as const,
+                    ...(backgrounds.length > 0 ? ['background' as const] : []),
+                    ...(floors.length > 0 ? ['floor' as const] : []),
                   ] as const
-                ).map(([key, label]) => {
+                ).map((key) => {
+                  const label = tr(`roomShop.decor.tab.${key}`);
                   const active = picker === key;
                   return (
                     <Pressable
@@ -836,7 +842,7 @@ export function RoomDecorScreen({
               </View>
             ) : (
               <Text style={[Typography.label, styles.flex, { color: t.text }]}>
-                이 자리에 놓을 가구
+                {tr('roomShop.decor.slotPickerTitle')}
               </Text>
             )}
             {/* 'all'은 기본 상태라 닫을 곳이 없다 — 서브픽커에서만 전체로 복귀 (#487). */}
@@ -844,7 +850,7 @@ export function RoomDecorScreen({
               <Pressable
                 onPress={() => setPicker('all')}
                 accessibilityRole="button"
-                accessibilityLabel="선택 닫기"
+                accessibilityLabel={tr('roomShop.decor.closePickerA11y')}
                 hitSlop={8}
                 style={[styles.closeBtn, { backgroundColor: t.surfaceMuted }]}>
                 <Icon name="close" size={14} color={t.text} />
@@ -853,11 +859,13 @@ export function RoomDecorScreen({
           </View>
 
           <View style={styles.filterRow}>
-            <Text style={[Typography.supporting, { color: t.textMuted }]}>보유중만 보기</Text>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              {tr('roomShop.decor.ownedOnly')}
+            </Text>
             <ToggleSwitch
               value={ownedOnly}
               onToggle={() => setOwnedOnly((v) => !v)}
-              accessibilityLabel="보유중만 보기"
+              accessibilityLabel={tr('roomShop.decor.ownedOnly')}
             />
           </View>
 
@@ -977,7 +985,7 @@ export function RoomDecorScreen({
         <Pressable
           onPress={handleBack}
           accessibilityRole="button"
-          accessibilityLabel="뒤로가기"
+          accessibilityLabel={tr('roomShop.decor.back')}
           style={[styles.iconBtn, styles.floatBtn]}>
           <GlassSurface style={styles.iconBtnFace} fallbackColor={t.surface}>
             <Icon name="back" size={26} color={t.text} />
@@ -1029,13 +1037,11 @@ export function RoomDecorScreen({
       {/* 다른 기기가 먼저 저장한 경우(409) — 서버 상태로 다시 시작해야 한다 (#674 공용화). */}
       <ConfirmDialog
         visible={conflictOpen}
-        title="다른 기기에서 먼저 저장했어요"
-        body={
-          '방 배치가 다른 곳에서 바뀌어 지금 편집을 저장할 수 없어요.\n새로 불러오면 지금 편집한 내용은 사라져요.'
-        }
-        confirmLabel="새로 불러오기"
-        cancelLabel="계속 보기"
-        cancelAccessibilityLabel="충돌 모달 닫기"
+        title={tr('roomShop.decor.conflictTitle')}
+        body={tr('roomShop.decor.conflictBody')}
+        confirmLabel={tr('roomShop.decor.conflictConfirm')}
+        cancelLabel={tr('roomShop.decor.conflictCancel')}
+        cancelAccessibilityLabel={tr('roomShop.decor.conflictCloseA11y')}
         onConfirm={() => {
           setConflictOpen(false);
           onConflictReload?.();
@@ -1049,13 +1055,13 @@ export function RoomDecorScreen({
         <Pressable
           onPress={() => apply(true)}
           accessibilityRole="button"
-          accessibilityLabel="적용하기"
+          accessibilityLabel={tr('common.apply')}
           style={[styles.applyBtn, split ? styles.splitApply : null]}>
           {/* 튜토리얼 코치마크 대상 (#1324) — 격자와 함께 구멍을 이룬다. */}
           <CoachTarget id="decor-apply">
             <GlassSurface style={styles.applyFace} tintColor={t.primary} fallbackColor={t.primary}>
               <Icon name="check" size={16} color={t.onPrimary} />
-              <Text style={[Typography.label, { color: t.onPrimary }]}>적용하기</Text>
+              <Text style={[Typography.label, { color: t.onPrimary }]}>{tr('common.apply')}</Text>
             </GlassSurface>
           </CoachTarget>
         </Pressable>

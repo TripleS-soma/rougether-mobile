@@ -1,3 +1,343 @@
 {
-  "roomShop": {}
+  "roomShop": {
+    "room": {
+      "vacant": "빈방"
+    },
+    "wallet": {
+      "coin": "코인",
+      "diamond": "다이아",
+      "reason": {
+        "ROUTINE_COMPLETE": "루틴 완료",
+        "TODO_COMPLETE": "할 일 완료",
+        "SIGNUP_BONUS": "가입 보너스",
+        "GACHA_DUPLICATE_CONVERT": "뽑기 중복 전환",
+        "INVITE_REWARD": "친구 초대 보상",
+        "GACHA_DRAW": "뽑기",
+        "SHOP_PURCHASE": "상점 구매",
+        "other": "기타"
+      },
+      "historyTitle": "재화 내역",
+      "closeA11y": "재화 내역 닫기",
+      "historyError": "재화 내역을 불러오지 못했어요.",
+      "historyEmpty": "아직 재화 내역이 없어요",
+      "balanceAfter": " · 잔액 {{balance}}",
+      "moreA11y": "재화 내역 더보기",
+      "more": "더보기"
+    },
+    "growth": {
+      "hint": "다음 레벨까지 남은 포인트를 확인해요",
+      "toast": "다음 레벨까지 {{n}}포인트 남았어요",
+      "a11y": "나의 방 레벨 {{level}}",
+      "a11yRemaining": ", 다음 레벨까지 {{n}}포인트",
+      "a11yPoints": ", 누적 {{n}}포인트"
+    },
+    "shop": {
+      "cobwebAlreadyCleaned": "누가 먼저 치워줬어요",
+      "cobwebCleanFailed": "거미줄을 치우지 못했어요. 잠시 후 다시 시도해 주세요.",
+      "purchaseDone": "구매 완료!",
+      "insufficientDiamond": "다이아가 부족해요",
+      "purchaseFailed": "구매에 실패했어요",
+      "layoutSaved": "방 배치를 저장했어요",
+      "layoutSaveFailed": "방 배치 저장에 실패했어요"
+    },
+    "decor": {
+      "back": "뒤로가기",
+      "deselectA11y": "선택 해제",
+      "surface": {
+        "wallpaper": "벽지",
+        "floor": "바닥",
+        "background": "배경"
+      },
+      "surfacePreviewBuyA11y": "{{surface}} 프리뷰 구매",
+      "tool": {
+        "rotateCcw": "왼쪽 회전",
+        "rotateCw": "오른쪽 회전",
+        "flip": "좌우 반전",
+        "toFront": "맨 앞으로",
+        "toBack": "맨 뒤로",
+        "remove": "빼기"
+      },
+      "catalogLoading": "카탈로그 불러오는 중...",
+      "catalogError": "카탈로그를 불러오지 못했어요.",
+      "tab": {
+        "furniture": "가구",
+        "decor": "소품",
+        "wallpaper": "벽지",
+        "floor": "바닥",
+        "background": "배경"
+      },
+      "tabA11y": "{{label}} 탭",
+      "slotPickerTitle": "이 자리에 놓을 가구",
+      "closePickerA11y": "선택 닫기",
+      "ownedOnly": "보유중만 보기",
+      "insufficientDiamond": "다이아가 부족해요",
+      "alreadyPlaced": "이미 배치된 가구예요",
+      "conflictTitle": "다른 기기에서 먼저 저장했어요",
+      "conflictBody": "방 배치가 다른 곳에서 바뀌어 지금 편집을 저장할 수 없어요.\n새로 불러오면 지금 편집한 내용은 사라져요.",
+      "conflictConfirm": "새로 불러오기",
+      "conflictCancel": "계속 보기",
+      "conflictCloseA11y": "충돌 모달 닫기",
+      "grid": {
+        "clear": "비우기",
+        "buyA11y": "{{name}} 구매",
+        "previewApplyA11y": "{{name}} 미리 적용",
+        "previewPlaceA11y": "{{name}} 미리 배치",
+        "owned": "보유",
+        "emptySlot": "이 자리에 놓을 수 있는 가구가 아직 없어요."
+      },
+      "furniture": {
+        "moveA11y": "{{name}} 옮기기",
+        "movePreviewA11y": "{{name}} 프리뷰 옮기기",
+        "moveHint": "탭해서 선택, 끌어서 이동해요",
+        "resizeA11y": "{{name}} 크기 조절"
+      },
+      "checkout": {
+        "title": "구매하지 않은 프리뷰가 {{n}}개 있어요",
+        "total": "합계 (보유 {{balance}})",
+        "buyAllA11y": "모두 구매하고 저장",
+        "buying": "구매 중...",
+        "insufficientDiamond": "다이아가 부족해요",
+        "buyAll": "모두 구매하고 저장",
+        "saveWithoutA11y": "제외하고 저장",
+        "saveWithout": "프리뷰 제외하고 저장",
+        "stayA11y": "프리뷰 계속 보기",
+        "stay": "계속 꾸미기"
+      },
+      "leave": {
+        "title": "변경사항을 저장할까요?",
+        "body": "적용하지 않은 꾸미기 변경이 있어요.",
+        "saveAndLeave": "저장하고 나가기",
+        "leaveWithoutSaving": "저장하지 않고 나가기",
+        "stay": "계속 꾸미기"
+      },
+      "buy": {
+        "title": "구매하시겠습니까?",
+        "body": "‘{{name}}’을(를) 다이아 {{price}}개로 구매해요.\n구매한 아이템은 바로 배치할 수 있어요.",
+        "cancelA11y": "구매 취소",
+        "confirmA11y": "구매 확인",
+        "confirm": "구매"
+      }
+    },
+    "friendRoom": {
+      "defaultName": "친구",
+      "cheer": {
+        "great": "잘하고 있어!",
+        "support": "응원하기",
+        "best": "오늘도 최고!"
+      },
+      "title": "{{name}}의 방",
+      "back": "뒤로가기",
+      "loadError": "친구 방을 불러오지 못했어요",
+      "loadErrorDetail": "네트워크 상태를 확인하고 다시 시도해 주세요.",
+      "streakDays": "{{n}}일",
+      "pendingNotice": "친구 방 꾸미기·루틴 데이터는 서버 준비 중이라 미리보기로 보여드려요.",
+      "routinesTitle": "{{name}}의 루틴",
+      "noRoutines": "오늘 예정된 루틴이 없어요.",
+      "guestbook": "방명록",
+      "guestbookEmptyInput": "방명록 내용을 입력해주세요",
+      "me": "나",
+      "today": "오늘",
+      "guestbookPlaceholder": "따뜻한 한마디를 남겨보세요",
+      "guestbookInputA11y": "방명록 입력",
+      "guestbookSendA11y": "방명록 남기기",
+      "guestbookSend": "남기기",
+      "guestbookEmpty": "아직 방명록이 없어요. 첫 인사를 남겨보세요!",
+      "bot": "봇",
+      "guestbookMoreA11y": "방명록 더보기",
+      "more": "더보기",
+      "recheerTitle": "응원 다시 보내기",
+      "recheerBody": "오늘은 이미 보낸 응원이에요. 그래도 보낼까요?",
+      "recheerCancelA11y": "응원 다시 보내기 취소",
+      "recheerConfirmA11y": "응원 다시 보내기 확인",
+      "send": "보내기"
+    },
+    "gacha": {
+      "title": "뽑기",
+      "listLoading": "뽑기 목록 불러오는 중...",
+      "listError": "뽑기 목록을 불러오지 못했어요.",
+      "insufficientBalance": "잔액이 부족해요",
+      "drawFailed": "뽑기에 실패했어요.",
+      "emptyTitle": "새로운 선물을 준비하고 있어요",
+      "emptyBody": "벽지·바닥·가구 상자가 준비되면 여기서 만날 수 있어요.",
+      "refreshListA11y": "뽑기 목록 새로고침",
+      "refresh": "새로고침",
+      "skipA11y": "뽑기 연출 건너뛰기",
+      "skip": "건너뛰기",
+      "preparing": "선물을 준비하고 있어요",
+      "preparingHint": "잠깐만 기다려 주세요",
+      "newDiscovery": "나만의 새로운 발견",
+      "newGiftWaiting": "새로운 선물이 내 방을 기다려요",
+      "resultsTitle": "뽑기 결과",
+      "resultsCount": "{{n}}개 획득",
+      "goDecorate": "방 꾸미러 가기",
+      "rewardsTitle": "나올 수 있는 보상",
+      "rewardsHint": "이미 가진 아이템이 나오면 다이아로 바뀌어요.",
+      "rewardsError": "보상 목록을 불러오지 못했어요.",
+      "rarity": {
+        "common": "일반",
+        "rare": "희귀",
+        "legendary": "전설",
+        "other": "기타"
+      },
+      "reward": {
+        "unnamed": "이름 없는 보상",
+        "character": "캐릭터",
+        "owned": "보유"
+      },
+      "reveal": {
+        "coin": "코인",
+        "diamond": "다이아",
+        "currency": "재화",
+        "refund": "{{currency}} 환급",
+        "characterReward": "캐릭터 보상",
+        "itemReward": "아이템 보상",
+        "duplicate": "중복 · {{label}}"
+      },
+      "category": {
+        "WALLPAPER": { "title": "벽지 뽑기", "label": "벽지" },
+        "FLOOR": { "title": "바닥 뽑기", "label": "바닥" },
+        "FURNITURE": { "title": "가구 뽑기", "label": "가구" }
+      },
+      "lobby": {
+        "copy": {
+          "WALLPAPER": {
+            "title": "벽에 새로운 표정을",
+            "detail": "다양한 테마의 벽지가 한 상자에 모였어요."
+          },
+          "FLOOR": {
+            "title": "포근함을 깔아볼까요",
+            "detail": "다양한 테마의 바닥으로 방의 분위기를 바꿔요."
+          },
+          "FURNITURE": {
+            "title": "마음에 쏙 드는 한 조각",
+            "detail": "다양한 테마의 가구와 소품을 만나보세요."
+          }
+        },
+        "eyebrow": "오늘의 작은 설렘",
+        "heading": "내 방에 도착한 선물",
+        "categoryA11y": "{{label}} 뽑기",
+        "heroA11y": "햇살이 드는 방에 놓인 초록 리본 선물상자",
+        "boxTag": "{{label}} 상자",
+        "rewardsA11y": "나올 수 있는 보상 보기",
+        "rewardsTitle": "어떤 선물이 기다릴까요?",
+        "rewardsHint": "나올 수 있는 보상 보기",
+        "drawOne": "1회 뽑기",
+        "drawBonus": "5+1회 뽑기",
+        "drawA11y": "{{label}}, {{cost}} {{currency}}"
+      },
+      "giftOpenA11y": "선물상자 열기",
+      "giftOpenHint": "이미 뽑은 선물을 열어요. 재화는 추가로 사용하지 않아요."
+    },
+    "studio": {
+      "title": "AI 가구 만들기",
+      "heroTitle": "사진 속 가구를 내 방으로",
+      "heroBody": "좋아하는 가구 사진 한 장으로\n루게더 속 나만의 가구를 만들어보세요.",
+      "credits": "생성권 {{n}}회",
+      "creditsChecking": "생성권 확인 중",
+      "creditsReserved": " · 사용 중 {{n}}회",
+      "creditsLoadingA11y": "생성권 불러오는 중",
+      "recheck": "다시 확인",
+      "makingTitle": "가구를 만들고 있어요",
+      "makingBody": "잠시 걸릴 수 있어요. 다른 화면에 다녀와도 계속 만들어요.",
+      "photoA11y": "선택한 가구 사진",
+      "changePhoto": "사진 바꾸기",
+      "choosePhoto": "가구 사진 선택",
+      "sending": "사진 보내는 중",
+      "submit": "생성권 1회로 만들기",
+      "photoHint": "가구 하나가 잘 보이는 JPG·PNG 사진 · 최대 10MB\n사진은 AI 가구 제작에 사용돼요. 생성에 실패하면 생성권을 돌려드려요.",
+      "attendanceTitle": "7일 출석하고, 내 가구 만들기",
+      "attendanceBody": "7일 연속 출석하면 생성권 1회를 받아요.",
+      "attendanceCta": "출석 이벤트 보기",
+      "myFurniture": "내가 만든 가구",
+      "resultA11y": "완성된 AI 가구",
+      "succeeded": "내 가구함에 담았어요",
+      "failed": "이번에는 완성하지 못했어요",
+      "placeInRoom": "방에 배치하기",
+      "retryHint": "사진을 바꿔 다시 시도해보세요.",
+      "error": {
+        "FURNITURE_CREDITS_REQUIRED": "생성권이 부족해요. 출석 이벤트에서 생성권을 받아보세요.",
+        "FURNITURE_GENERATION_UNAVAILABLE": "가구 만들기를 잠시 쉬고 있어요. 잠시 후 다시 이용해주세요.",
+        "FURNITURE_DAILY_LIMIT": "오늘 만들 수 있는 횟수를 모두 사용했어요. 내일 다시 만나요.",
+        "FURNITURE_JOB_IN_PROGRESS": "만들고 있는 가구가 있어요. 완료되면 새로 만들 수 있어요.",
+        "FURNITURE_PHOTO_INVALID": "가구가 잘 보이는 JPG 또는 PNG 사진을 선택해주세요.",
+        "tooLarge": "10MB 이하의 사진을 선택해주세요.",
+        "network": "연결을 확인하고 다시 시도해주세요.",
+        "wrongType": "JPG 또는 PNG 사진을 선택해주세요.",
+        "openFailed": "사진을 열지 못했어요. 사진 접근 설정을 확인해주세요.",
+        "inventoryLoadFailed": "가구함을 불러오지 못했어요. 다시 시도해주세요."
+      }
+    },
+    "minigame": {
+      "runner": {
+        "name": "루틴 러너",
+        "description": "탭해서 장애물을 넘고, 최고 기록에 도전해요.",
+        "instructions": "탭해서 점프"
+      },
+      "stairs": {
+        "name": "고양이 계단",
+        "description": "왼쪽, 오른쪽! 고양이와 더 높이 올라가요.",
+        "instructions": "다음 계단 방향으로 이동"
+      },
+      "merge": {
+        "name": "고양이 합치기",
+        "description": "같은 숫자의 고양이를 합쳐 더 큰 숫자를 만들어요.",
+        "instructions": "밀어서 같은 숫자 합치기"
+      },
+      "frame": {
+        "runner": "러너 게임",
+        "stairs": "고양이 계단 오르기",
+        "merge": "고양이 합치기"
+      },
+      "title": "미니게임",
+      "practice": "연습",
+      "practiceA11y": "{{name}} 연습하기 · 랭킹 미기록",
+      "start": "시작",
+      "startA11y": "{{name}} 시작",
+      "ranking": "랭킹",
+      "rankingA11y": "{{name}} 랭킹",
+      "loading": "게임 불러오는 중",
+      "listError": "게임 목록을 불러오지 못했어요",
+      "empty": "지금은 등록된 게임이 없어요.",
+      "practiceSection": "연습 · 기록 안 함",
+      "play": {
+        "savingA11y": "기록 저장 중",
+        "preparingA11y": "게임 준비 중",
+        "startError": "게임을 시작하지 못했어요",
+        "pendingSubmit": "이전 기록 저장 대기 중",
+        "retrySave": "다시 저장",
+        "submitError": "기록을 저장하지 못했어요",
+        "personalBest": "최고 기록",
+        "score": "{{score}}점",
+        "summary": "최고 {{best}}점 · 전체 {{rank}}위",
+        "retry": "다시 하기",
+        "retryAfterErrorA11y": "저장 재시도를 그만하고 새 도전",
+        "retryRankedA11y": "다시 랭킹 도전",
+        "rankedA11y": "랭킹 도전",
+        "practiceAgain": "다시 연습",
+        "practiceAfterErrorA11y": "저장 재시도를 그만하고 연습",
+        "practiceAgainA11y": "다시 연습하기",
+        "practiceA11y": "연습하기 · 랭킹 미기록",
+        "leaderboardA11y": "전체 유저 랭킹 보기"
+      },
+      "leaderboard": {
+        "rowA11y": "{{rank}}위 {{nickname}} {{score}}점",
+        "rowMineA11y": "{{rank}}위 {{nickname}} 나 {{score}}점",
+        "rank": "{{rank}}위",
+        "meSuffix": " · 나",
+        "score": "{{score}}점",
+        "loading": "랭킹 불러오는 중",
+        "error": "랭킹을 불러오지 못했어요",
+        "myBest": "내 최고 기록",
+        "noRecord": "기록 없음",
+        "players": "총 {{n}}명 참여",
+        "refresh": "새로고침",
+        "refreshA11y": "랭킹 새로고침"
+      },
+      "recovery": {
+        "finishError": "게임 기록을 확인하지 못했어요.",
+        "loadError": "게임을 불러오지 못했어요.",
+        "restart": "다시 시작"
+      }
+    }
+  }
 }

@@ -6,6 +6,7 @@ import { confirmStyles as styles } from '@/components/screens/decor/confirm-moda
 import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 export type BuyPhase = 'idle' | 'buying' | 'done';
 
@@ -26,6 +27,7 @@ export type BuyConfirmModalProps = {
 export function BuyConfirmModal({ item, phase, onCancel, onConfirm }: BuyConfirmModalProps) {
   const t = useTokens();
   const Typography = useTypography();
+  const tr = useT();
   return (
     <Modal
       transparent
@@ -36,28 +38,27 @@ export function BuyConfirmModal({ item, phase, onCancel, onConfirm }: BuyConfirm
       onRequestClose={() => phase === 'idle' && onCancel()}>
       <Pressable style={styles.confirmBackdrop} onPress={() => phase === 'idle' && onCancel()}>
         <Pressable style={[styles.confirmCard, { backgroundColor: t.screen }]}>
-          <Text style={[Typography.h3, { color: t.text }]}>구매하시겠습니까?</Text>
+          <Text style={[Typography.h3, { color: t.text }]}>{tr('roomShop.decor.buy.title')}</Text>
           <Text style={[Typography.body, styles.confirmText, { color: t.textMuted }]}>
-            &lsquo;{item?.name}&rsquo;을(를) 다이아 {item?.price}개로 구매해요.
-            {'\n'}구매한 아이템은 바로 배치할 수 있어요.
+            {tr('roomShop.decor.buy.body', { name: item?.name, price: item?.price })}
           </Text>
           <View style={local.confirmBtns}>
             <Pressable
               onPress={onCancel}
               disabled={phase !== 'idle'}
               accessibilityRole="button"
-              accessibilityLabel="구매 취소"
+              accessibilityLabel={tr('roomShop.decor.buy.cancelA11y')}
               style={[
                 local.confirmBtn,
                 { backgroundColor: t.surfaceMuted, opacity: phase === 'idle' ? 1 : 0.4 },
               ]}>
-              <Text style={[Typography.label, { color: t.text }]}>취소</Text>
+              <Text style={[Typography.label, { color: t.text }]}>{tr('common.cancel')}</Text>
             </Pressable>
             <Pressable
               onPress={onConfirm}
               disabled={phase !== 'idle'}
               accessibilityRole="button"
-              accessibilityLabel="구매 확인"
+              accessibilityLabel={tr('roomShop.decor.buy.confirmA11y')}
               accessibilityState={{ disabled: phase !== 'idle' }}
               style={[
                 local.confirmBtn,
@@ -70,7 +71,9 @@ export function BuyConfirmModal({ item, phase, onCancel, onConfirm }: BuyConfirm
                   <Icon name="check" size={18} color={t.onPrimary} />
                 </Animated.View>
               ) : (
-                <Text style={[Typography.label, { color: t.onPrimary }]}>구매</Text>
+                <Text style={[Typography.label, { color: t.onPrimary }]}>
+                  {tr('roomShop.decor.buy.confirm')}
+                </Text>
               )}
             </Pressable>
           </View>

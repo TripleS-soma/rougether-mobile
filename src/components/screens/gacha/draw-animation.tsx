@@ -11,9 +11,11 @@ import { useAnimatedValue } from '@/hooks/use-stable-value';
 import { NATIVE_DRIVER } from '@/utils/animation';
 import {
   getRevealMotionProfile,
+  rarityLabelKey,
   type RevealMotionProfile,
   type RevealPlanItem,
 } from '@/components/screens/gacha/reveal-motion';
+import { useT } from '@/i18n';
 
 export { rarityColor, RewardArtwork } from '@/components/screens/gacha/reward-artwork';
 export {
@@ -65,7 +67,7 @@ export function BurstOverlay({
   const p = useAnimatedValue(0);
   // 출석 트로피도 이 컴포넌트를 재사용한다. 기존 strong API는 유지하고,
   // 가챠만 더 세밀한 프로필을 주입한다.
-  const motion = profile ?? getRevealMotionProfile(strong ? '희귀' : '일반', reducedMotion);
+  const motion = profile ?? getRevealMotionProfile(strong ? 'rare' : 'common', reducedMotion);
 
   useEffect(() => {
     p.setValue(0);
@@ -194,6 +196,10 @@ export function RevealCard({
   const t = useTokens();
   const Typography = useTypography();
   const emph = useFontEmphasis();
+  const tr = useT();
+  // 등급 배지 — 서버 등급 어휘를 표시용으로만 번역 (#893).
+  const badgeKey = rarityLabelKey(entry.badgeLabel);
+  const badge = entry.badgeLabel ? (badgeKey ? tr(badgeKey) : entry.badgeLabel) : undefined;
   const p = useAnimatedValue(reducedMotion ? 1 : 0);
   const fade = useAnimatedValue(reducedMotion ? 1 : 0);
   const glow = useAnimatedValue(reducedMotion ? 0.45 : 0.25);
@@ -298,10 +304,8 @@ export function RevealCard({
             </View>
           ) : null}
         </View>
-        {entry.badgeLabel ? (
-          <Text style={[styles.heroBadge, emph('bold'), { backgroundColor: color }]}>
-            {entry.badgeLabel}
-          </Text>
+        {badge ? (
+          <Text style={[styles.heroBadge, emph('bold'), { backgroundColor: color }]}>{badge}</Text>
         ) : null}
         <Text style={[Typography.h3, styles.center, { color: StaticWhite }]} numberOfLines={2}>
           {entry.displayName}
@@ -319,10 +323,8 @@ export function RevealCard({
     <Animated.View
       style={[styles.revealCard, landingStyle, { backgroundColor: t.surface, borderColor: color }]}>
       <RewardArtwork entry={entry} size={68} />
-      {entry.badgeLabel ? (
-        <Text style={[styles.revealBadge, emph('bold'), { backgroundColor: color }]}>
-          {entry.badgeLabel}
-        </Text>
+      {badge ? (
+        <Text style={[styles.revealBadge, emph('bold'), { backgroundColor: color }]}>{badge}</Text>
       ) : null}
       <Text style={[Typography.supporting, styles.center, { color: t.text }]} numberOfLines={2}>
         {entry.displayName}

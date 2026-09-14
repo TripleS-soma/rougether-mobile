@@ -2,6 +2,7 @@
 import { type Wallet } from '@/constants/currency';
 import { GACHA_CATEGORY_META, getGachaCategory } from '@/constants/gacha';
 import { GachaAccents, WallpaperTints } from '@/constants/theme';
+import { i18n } from '@/i18n';
 import {
   DEFAULT_WALLPAPER_ID,
   type FurnitureCategory,
@@ -23,16 +24,24 @@ import type {
 // purchase/draw responses) — they share this shape.
 type WalletLike = { currencyType?: 'COIN' | 'DIAMOND'; balance?: number };
 
-/** 재화 이력 사유 → 표시 라벨 (#734, 스웨거 enum 7종). */
-const WALLET_REASON_LABELS: Record<string, string> = {
-  ROUTINE_COMPLETE: '루틴 완료',
-  TODO_COMPLETE: '할 일 완료',
-  SIGNUP_BONUS: '가입 보너스',
-  GACHA_DUPLICATE_CONVERT: '뽑기 중복 전환',
-  INVITE_REWARD: '친구 초대 보상',
-  GACHA_DRAW: '뽑기',
-  SHOP_PURCHASE: '상점 구매',
-};
+/** 재화 이력 사유 enum (#734, 스웨거 7종) — 표시 라벨은 `roomShop.wallet.reason.*`. */
+const WALLET_REASONS = [
+  'ROUTINE_COMPLETE',
+  'TODO_COMPLETE',
+  'SIGNUP_BONUS',
+  'GACHA_DUPLICATE_CONVERT',
+  'INVITE_REWARD',
+  'GACHA_DRAW',
+  'SHOP_PURCHASE',
+] as const;
+
+/** 사유 → 표시 라벨. 미지의 enum은 원문, 빈 값은 '기타'. */
+function walletReasonLabel(reason: string | undefined): string {
+  if (reason && (WALLET_REASONS as readonly string[]).includes(reason)) {
+    return i18n.t(`roomShop.wallet.reason.${reason}`);
+  }
+  return reason || i18n.t('roomShop.wallet.reason.other');
+}
 
 /** 지갑 내역 행 표시 모델 (#734). */
 export type WalletHistoryEntry = {
@@ -54,7 +63,7 @@ export function toWalletHistoryEntry(h: WalletHistoryResponse): WalletHistoryEnt
     id: h.id,
     currency: h.currencyType === 'DIAMOND' ? 'diamond' : 'coin',
     amount: h.amount,
-    reason: (h.reason && WALLET_REASON_LABELS[h.reason]) || h.reason || '기타',
+    reason: walletReasonLabel(h.reason),
     balanceAfter: h.balanceAfter ?? 0,
     createdAt: h.createdAt,
   };

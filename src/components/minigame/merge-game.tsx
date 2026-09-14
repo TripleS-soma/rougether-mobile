@@ -10,6 +10,7 @@ import { Radius } from '@/constants/theme';
 import { parseMergeMessage, type MergeGameProps } from '@/features/minigame/merge-bridge';
 import { createMergeHtml } from '@/features/minigame/merge-html';
 import { useTokens } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 /** Keep the game document isolated from application navigation and lifecycle. */
 export function MergeGame({
@@ -21,6 +22,7 @@ export function MergeGame({
   testID = 'merge-game',
 }: MergeGameProps) {
   const t = useTokens();
+  const tr = useT();
   const palette = useRef(t).current;
   const { channelId, finished, error, fail, retry, isCurrentChannel } = useGameRecovery(
     'merge',
@@ -97,7 +99,7 @@ export function MergeGame({
           key={channelId}
           ref={webView}
           testID={testID}
-          accessibilityLabel="고양이 합치기"
+          accessibilityLabel={tr('roomShop.minigame.frame.merge')}
           source={source}
           style={[styles.game, { backgroundColor: t.surfaceMuted }]}
           originWhitelist={['*']}

@@ -13,12 +13,7 @@ import { GACHA_CATEGORIES, GACHA_CATEGORY_META, getGachaCategory } from '@/const
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { hapticSelection } from '@/utils/haptics';
-
-const CATEGORY_COPY = {
-  WALLPAPER: { title: '벽에 새로운 표정을', detail: '다양한 테마의 벽지가 한 상자에 모였어요.' },
-  FLOOR: { title: '포근함을 깔아볼까요', detail: '다양한 테마의 바닥으로 방의 분위기를 바꿔요.' },
-  FURNITURE: { title: '마음에 쏙 드는 한 조각', detail: '다양한 테마의 가구와 소품을 만나보세요.' },
-} as const;
+import { useT } from '@/i18n';
 
 export function GachaLobby({
   machines,
@@ -46,8 +41,8 @@ export function GachaLobby({
   const t = useTokens();
   const Typography = useTypography();
   const emph = useFontEmphasis();
+  const tr = useT();
   const category = getGachaCategory(selected) ?? 'FURNITURE';
-  const copy = CATEGORY_COPY[category];
   return (
     <View style={styles.root}>
       <ScrollView
@@ -55,9 +50,11 @@ export function GachaLobby({
         contentContainerStyle={[styles.content, { paddingTop: topInset + Spacing.three }]}>
         <View style={styles.heading}>
           <Text style={[Typography.supporting, emph('semibold'), { color: t.primaryText }]}>
-            오늘의 작은 설렘
+            {tr('roomShop.gacha.lobby.eyebrow')}
           </Text>
-          <Text style={[Typography.h1, { color: t.text }]}>내 방에 도착한 선물</Text>
+          <Text style={[Typography.h1, { color: t.text }]}>
+            {tr('roomShop.gacha.lobby.heading')}
+          </Text>
         </View>
 
         <View style={[styles.categories, { backgroundColor: t.surfaceMuted }]}>
@@ -70,7 +67,7 @@ export function GachaLobby({
                 key={key}
                 disabled={!machine || busy}
                 accessibilityRole="tab"
-                accessibilityLabel={`${meta.label} 뽑기`}
+                accessibilityLabel={tr('roomShop.gacha.lobby.categoryA11y', { label: meta.label })}
                 accessibilityState={{ selected: active, disabled: !machine || busy }}
                 onPress={() => {
                   if (machine) {
@@ -97,19 +94,21 @@ export function GachaLobby({
             source={giftRoom}
             contentFit="cover"
             style={styles.illustration}
-            accessibilityLabel="햇살이 드는 방에 놓인 초록 리본 선물상자"
+            accessibilityLabel={tr('roomShop.gacha.lobby.heroA11y')}
           />
           <View style={[styles.heroTag, { backgroundColor: t.surface }]}>
             <Text style={[Typography.supporting, emph('semibold'), { color: t.text }]}>
-              {GACHA_CATEGORY_META[category].label} 상자
+              {tr('roomShop.gacha.lobby.boxTag', { label: GACHA_CATEGORY_META[category].label })}
             </Text>
           </View>
         </View>
 
         <View style={styles.description}>
-          <Text style={[Typography.h3, styles.center, { color: t.text }]}>{copy.title}</Text>
+          <Text style={[Typography.h3, styles.center, { color: t.text }]}>
+            {tr(`roomShop.gacha.lobby.copy.${category}.title`)}
+          </Text>
           <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
-            {copy.detail}
+            {tr(`roomShop.gacha.lobby.copy.${category}.detail`)}
           </Text>
         </View>
 
@@ -117,15 +116,17 @@ export function GachaLobby({
           <ScalePressable
             onPress={onRewards}
             accessibilityRole="button"
-            accessibilityLabel="나올 수 있는 보상 보기"
+            accessibilityLabel={tr('roomShop.gacha.lobby.rewardsA11y')}
             style={[styles.rewards, { borderColor: t.border }]}>
             <View style={[styles.rewardIcon, { backgroundColor: t.primarySoft }]}>
               <Icon name="gift" size={21} color={t.primaryText} />
             </View>
             <View style={styles.rewardCopy}>
-              <Text style={[Typography.label, { color: t.text }]}>어떤 선물이 기다릴까요?</Text>
+              <Text style={[Typography.label, { color: t.text }]}>
+                {tr('roomShop.gacha.lobby.rewardsTitle')}
+              </Text>
               <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                나올 수 있는 보상 보기
+                {tr('roomShop.gacha.lobby.rewardsHint')}
               </Text>
             </View>
             <Icon name="forward" size={17} color={t.textMuted} />
@@ -154,7 +155,9 @@ export function GachaLobby({
             const primary = count === 6;
             const affordable = canAfford(count);
             const cost = selected.costAmount * (primary ? 5 : 1);
-            const label = primary ? '5+1회 뽑기' : '1회 뽑기';
+            const label = tr(
+              primary ? 'roomShop.gacha.lobby.drawBonus' : 'roomShop.gacha.lobby.drawOne',
+            );
             const ink = affordable ? (primary ? t.onPrimary : t.text) : t.textMuted;
             return (
               <ScalePressable
@@ -163,7 +166,15 @@ export function GachaLobby({
                 disabled={busy}
                 accessibilityRole="button"
                 accessibilityState={{ disabled: busy }}
-                accessibilityLabel={`${label}, ${formatAmount(cost)} ${selected.costCurrencyType === 'COIN' ? '코인' : '다이아'}`}
+                accessibilityLabel={tr('roomShop.gacha.lobby.drawA11y', {
+                  label,
+                  cost: formatAmount(cost),
+                  currency: tr(
+                    selected.costCurrencyType === 'COIN'
+                      ? 'roomShop.wallet.coin'
+                      : 'roomShop.wallet.diamond',
+                  ),
+                })}
                 style={[
                   styles.draw,
                   {

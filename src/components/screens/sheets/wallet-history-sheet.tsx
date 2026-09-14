@@ -10,6 +10,7 @@ import { RetryState } from '@/components/ui/retry-state';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { relativeTimeLabel } from '@/utils/datetime';
+import { useT } from '@/i18n';
 
 export type WalletHistorySheetProps = {
   visible: boolean;
@@ -43,6 +44,7 @@ export function WalletHistorySheet({
 }: WalletHistorySheetProps) {
   const t = useTokens();
   const Typography = useTypography();
+  const tr = useT();
 
   return (
     <BottomSheet
@@ -50,11 +52,11 @@ export function WalletHistorySheet({
       onClose={onClose}
       cardStyle={[styles.sheet, { backgroundColor: t.screen }]}>
       <View style={styles.head}>
-        <Text style={[Typography.h3, { color: t.text }]}>재화 내역</Text>
+        <Text style={[Typography.h3, { color: t.text }]}>{tr('roomShop.wallet.historyTitle')}</Text>
         <Pressable
           onPress={onClose}
           accessibilityRole="button"
-          accessibilityLabel="재화 내역 닫기"
+          accessibilityLabel={tr('roomShop.wallet.closeA11y')}
           style={[styles.closeBtn, { backgroundColor: t.surfaceMuted }]}>
           <Icon name="close" size={16} color={t.text} />
         </Pressable>
@@ -68,7 +70,7 @@ export function WalletHistorySheet({
 
       {loadError ? (
         <View style={styles.stateBlock}>
-          <RetryState message="재화 내역을 불러오지 못했어요." onRetry={onRetry} />
+          <RetryState message={tr('roomShop.wallet.historyError')} onRetry={onRetry} />
         </View>
       ) : loading && entries.length === 0 ? (
         <View style={styles.stateBlock}>
@@ -76,7 +78,7 @@ export function WalletHistorySheet({
         </View>
       ) : entries.length === 0 ? (
         <Text style={[Typography.body, styles.empty, { color: t.textMuted }]}>
-          아직 재화 내역이 없어요
+          {tr('roomShop.wallet.historyEmpty')}
         </Text>
       ) : (
         <SheetDragExclude>
@@ -101,8 +103,9 @@ export function WalletHistorySheet({
                     </Text>
                     <Text style={[Typography.supporting, { color: t.textMuted }]}>
                       {item.createdAt ? relativeTimeLabel(new Date(item.createdAt)) : ''}
-                      {' · 잔액 '}
-                      {formatAmount(item.balanceAfter)}
+                      {tr('roomShop.wallet.balanceAfter', {
+                        balance: formatAmount(item.balanceAfter),
+                      })}
                     </Text>
                   </View>
                   <Text
@@ -123,12 +126,14 @@ export function WalletHistorySheet({
                   onPress={onLoadMore}
                   disabled={loading}
                   accessibilityRole="button"
-                  accessibilityLabel="재화 내역 더보기"
+                  accessibilityLabel={tr('roomShop.wallet.moreA11y')}
                   style={[styles.moreBtn, { backgroundColor: t.surfaceMuted }]}>
                   {loading ? (
                     <Loading size="small" />
                   ) : (
-                    <Text style={[Typography.label, { color: t.text }]}>더보기</Text>
+                    <Text style={[Typography.label, { color: t.text }]}>
+                      {tr('roomShop.wallet.more')}
+                    </Text>
                   )}
                 </Pressable>
               ) : null

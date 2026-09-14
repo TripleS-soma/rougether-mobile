@@ -42,14 +42,15 @@ import { hapticSuccess } from '@/utils/haptics';
 import { DEMO_GUESTBOOK, FRIEND_DEMO_ROUTINES } from '@/mocks/fixtures';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
 import { NATIVE_DRIVER } from '@/utils/animation';
+import { useT } from '@/i18n';
 
 /** Cheer reactions a visitor can leave on a friend's room. */
 export type CheerType = 'great' | 'support' | 'best';
 
-const CHEERS: { type: CheerType; icon: PictogramName; label: string }[] = [
-  { type: 'great', icon: 'thumb-up', label: '잘하고 있어!' },
-  { type: 'support', icon: 'heart', label: '응원하기' },
-  { type: 'best', icon: 'sparkle', label: '오늘도 최고!' },
+const CHEERS: { type: CheerType; icon: PictogramName; labelKey: string }[] = [
+  { type: 'great', icon: 'thumb-up', labelKey: 'roomShop.friendRoom.cheer.great' },
+  { type: 'support', icon: 'heart', labelKey: 'roomShop.friendRoom.cheer.support' },
+  { type: 'best', icon: 'sparkle', labelKey: 'roomShop.friendRoom.cheer.best' },
 ];
 
 /** One day of a friend's completion history (server GET …/routine-completions). */
@@ -123,7 +124,7 @@ export type FriendRoomScreenProps = Omit<RoomSceneProps, 'characterId'> & {
  * buttons. Pure + prop-driven. Spec domain: rougether-spec domains/room.
  */
 export function FriendRoomScreen({
-  friendName = '친구',
+  friendName: friendNameProp,
   onSwipeFriend,
   streakDays = 7,
   cobweb,
@@ -156,6 +157,8 @@ export function FriendRoomScreen({
   const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
+  const tr = useT();
+  const friendName = friendNameProp ?? tr('roomShop.friendRoom.defaultName');
   // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
   const headerInset = useHeaderContentInset();
   const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
@@ -260,9 +263,9 @@ export function FriendRoomScreen({
   const sendNote = () => {
     const content = draft.trim();
     // Blocked tap explains itself instead of a dead gray button.
-    if (!content) return toast('방명록 내용을 입력해주세요', 'error');
+    if (!content) return toast(tr('roomShop.friendRoom.guestbookEmptyInput'), 'error');
     if (onWriteGuestbook) onWriteGuestbook(content);
-    else setLocalNotes((prev) => [{ id: `local-${prev.length}`, author: '나', content, date: '오늘' }, ...prev]); // prettier-ignore
+    else setLocalNotes((prev) => [{ id: `local-${prev.length}`, author: tr('roomShop.friendRoom.me'), content, date: tr('roomShop.friendRoom.today') }, ...prev]); // prettier-ignore
     setDraft('');
   };
 
@@ -304,11 +307,15 @@ export function FriendRoomScreen({
   if (loadError) {
     return (
       <View style={[styles.screen, screenStyle]}>
-        <ScreenHeader title={`${friendName}의 방`} onBack={onBack} backLabel="뒤로가기" />
+        <ScreenHeader
+          title={tr('roomShop.friendRoom.title', { name: friendName })}
+          onBack={onBack}
+          backLabel={tr('roomShop.friendRoom.back')}
+        />
         <View style={[styles.errorWrap, headerInset ? { paddingTop: headerInset } : null]}>
           <RetryState
-            message="친구 방을 불러오지 못했어요"
-            detail="네트워크 상태를 확인하고 다시 시도해 주세요."
+            message={tr('roomShop.friendRoom.loadError')}
+            detail={tr('roomShop.friendRoom.loadErrorDetail')}
             onRetry={onRetry}
           />
         </View>
@@ -321,9 +328,9 @@ export function FriendRoomScreen({
       {/* 공용 헤더 (#1069 후속) — 아바타·스트릭은 오른쪽 슬롯으로. 제목 알약이
           이름을 말줄임하므로 종전의 축소 로직은 뺐다. */}
       <ScreenHeader
-        title={`${friendName}의 방`}
+        title={tr('roomShop.friendRoom.title', { name: friendName })}
         onBack={onBack}
-        backLabel="뒤로가기"
+        backLabel={tr('roomShop.friendRoom.back')}
         right={
           <View style={styles.headerRight}>
             {/* Same rule as 나의 방: a 0-day streak hides the flame badge. */}
@@ -331,7 +338,7 @@ export function FriendRoomScreen({
               <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.streakPill}>
                 <Icon name="flame" size={14} color={t.warningText} />
                 <Text style={[Typography.supporting, { color: t.warningText }]}>
-                  {streakDays}일
+                  {tr('roomShop.friendRoom.streakDays', { n: streakDays })}
                 </Text>
               </GlassSurface>
             ) : null}
@@ -365,13 +372,15 @@ export function FriendRoomScreen({
           {preview ? (
             <PendingNotice
               style={styles.pendingNotice}
-              text="친구 방 꾸미기·루틴 데이터는 서버 준비 중이라 미리보기로 보여드려요."
+              text={tr('roomShop.friendRoom.pendingNotice')}
             />
           ) : null}
 
           <View style={styles.section}>
             <View style={styles.sectionHead}>
-              <Text style={[Typography.h2, { color: t.text }]}>{friendName}의 루틴</Text>
+              <Text style={[Typography.h2, { color: t.text }]}>
+                {tr('roomShop.friendRoom.routinesTitle', { name: friendName })}
+              </Text>
               {loading ? null : (
                 <Text style={[Typography.label, { color: t.primaryText }]}>
                   {completedCount} / {routineList.length}
@@ -399,7 +408,7 @@ export function FriendRoomScreen({
               </View>
             ) : routineList.length === 0 ? (
               <Text style={[Typography.supporting, styles.listState, { color: t.textMuted }]}>
-                오늘 예정된 루틴이 없어요.
+                {tr('roomShop.friendRoom.noRoutines')}
               </Text>
             ) : null}
 
@@ -473,7 +482,7 @@ export function FriendRoomScreen({
                   key={cheer.type}
                   onPress={() => requestCheer(cheer.type)}
                   accessibilityRole="button"
-                  accessibilityLabel={cheer.label}
+                  accessibilityLabel={tr(cheer.labelKey)}
                   style={[
                     styles.cheerBtn,
                     { backgroundColor: idx === 0 ? t.primary : t.surfaceMuted },
@@ -485,7 +494,7 @@ export function FriendRoomScreen({
                     color={idx === 0 ? t.onPrimary : undefined}
                   />
                   <Text style={[Typography.label, { color: idx === 0 ? t.onPrimary : t.text }]}>
-                    {cheer.label}
+                    {tr(cheer.labelKey)}
                   </Text>
                 </ScalePressable>
               ))}
@@ -496,7 +505,9 @@ export function FriendRoomScreen({
             <View style={styles.sectionHead}>
               <View style={styles.gbTitleRow}>
                 <BookOpenPictogram size={18} />
-                <Text style={[Typography.h2, { color: t.text }]}>방명록</Text>
+                <Text style={[Typography.h2, { color: t.text }]}>
+                  {tr('roomShop.friendRoom.guestbook')}
+                </Text>
               </View>
             </View>
 
@@ -506,9 +517,9 @@ export function FriendRoomScreen({
                 onChangeText={(v) => setDraft(v.slice(0, GUESTBOOK_MAX))}
                 onFocus={() => setInputFocused(true)}
                 onBlur={() => setInputFocused(false)}
-                placeholder="따뜻한 한마디를 남겨보세요"
+                placeholder={tr('roomShop.friendRoom.guestbookPlaceholder')}
                 placeholderTextColor={t.textMuted}
-                accessibilityLabel="방명록 입력"
+                accessibilityLabel={tr('roomShop.friendRoom.guestbookInputA11y')}
                 style={[
                   styles.gbInput,
                   emph('normal'),
@@ -519,10 +530,10 @@ export function FriendRoomScreen({
                 onPress={sendNote}
                 accessibilityRole="button"
                 accessibilityState={{ disabled: !canSend }}
-                accessibilityLabel="방명록 남기기"
+                accessibilityLabel={tr('roomShop.friendRoom.guestbookSendA11y')}
                 style={[styles.gbSendBtn, { backgroundColor: canSend ? t.primary : t.disabledBg }]}>
                 <Text style={[Typography.label, { color: canSend ? t.onPrimary : t.textMuted }]}>
-                  남기기
+                  {tr('roomShop.friendRoom.guestbookSend')}
                 </Text>
               </ScalePressable>
             </View>
@@ -533,7 +544,7 @@ export function FriendRoomScreen({
               </View>
             ) : notes.length === 0 ? (
               <Text style={[Typography.supporting, styles.gbState, { color: t.textMuted }]}>
-                아직 방명록이 없어요. 첫 인사를 남겨보세요!
+                {tr('roomShop.friendRoom.guestbookEmpty')}
               </Text>
             ) : (
               <View style={styles.gbList}>
@@ -547,7 +558,9 @@ export function FriendRoomScreen({
                         <View
                           testID={`guestbook-bot-${note.id}`}
                           style={[styles.gbBotBadge, { backgroundColor: t.surface }]}>
-                          <Text style={[Typography.supporting, { color: t.textMuted }]}>봇</Text>
+                          <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                            {tr('roomShop.friendRoom.bot')}
+                          </Text>
                         </View>
                       ) : null}
                       <View style={styles.flex} />
@@ -562,9 +575,11 @@ export function FriendRoomScreen({
                   <Pressable
                     onPress={onLoadMoreGuestbook}
                     accessibilityRole="button"
-                    accessibilityLabel="방명록 더보기"
+                    accessibilityLabel={tr('roomShop.friendRoom.guestbookMoreA11y')}
                     style={[styles.gbMore, { backgroundColor: t.surfaceMuted }]}>
-                    <Text style={[Typography.label, { color: t.primaryText }]}>더보기</Text>
+                    <Text style={[Typography.label, { color: t.primaryText }]}>
+                      {tr('roomShop.friendRoom.more')}
+                    </Text>
                   </Pressable>
                 ) : null}
               </View>
@@ -576,17 +591,19 @@ export function FriendRoomScreen({
       {confirmCheer ? (
         <View style={styles.modalOverlay}>
           <View style={[styles.modal, { backgroundColor: t.surface }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>응원 다시 보내기</Text>
+            <Text style={[Typography.h3, { color: t.text }]}>
+              {tr('roomShop.friendRoom.recheerTitle')}
+            </Text>
             <Text style={[Typography.body, styles.modalBody, { color: t.textMuted }]}>
-              오늘은 이미 보낸 응원이에요. 그래도 보낼까요?
+              {tr('roomShop.friendRoom.recheerBody')}
             </Text>
             <View style={styles.modalActions}>
               <Pressable
                 onPress={() => setConfirmCheer(null)}
                 accessibilityRole="button"
-                accessibilityLabel="응원 다시 보내기 취소"
+                accessibilityLabel={tr('roomShop.friendRoom.recheerCancelA11y')}
                 style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
+                <Text style={[Typography.label, { color: t.text }]}>{tr('common.cancel')}</Text>
               </Pressable>
               <Pressable
                 onPress={() => {
@@ -594,9 +611,11 @@ export function FriendRoomScreen({
                   setConfirmCheer(null);
                 }}
                 accessibilityRole="button"
-                accessibilityLabel="응원 다시 보내기 확인"
+                accessibilityLabel={tr('roomShop.friendRoom.recheerConfirmA11y')}
                 style={[styles.modalBtn, { backgroundColor: t.primary }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>보내기</Text>
+                <Text style={[Typography.label, { color: t.onPrimary }]}>
+                  {tr('roomShop.friendRoom.send')}
+                </Text>
               </Pressable>
             </View>
           </View>

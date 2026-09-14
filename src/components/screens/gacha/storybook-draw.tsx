@@ -11,6 +11,7 @@ import { useAnimatedValue } from '@/hooks/use-stable-value';
 import { GACHA_ART, GIFT_ATLAS, GIFT_OPEN_MS } from '@/resources/gacha-art';
 import { hapticSelection } from '@/utils/haptics';
 import { NATIVE_DRIVER } from '@/utils/animation';
+import { useT } from '@/i18n';
 
 export type GiftStagePhase = 'charging' | 'ready' | 'opening';
 
@@ -91,6 +92,7 @@ export function GiftOpeningStage({
   onOpen?: () => void;
   reducedMotion?: boolean;
 }) {
+  const tr = useT();
   const { width, height } = useWindowDimensions();
   const size = Math.min(GachaStage.storybook, width - Spacing.four * 2, height * 0.42);
   const pulse = useAnimatedValue(0);
@@ -154,8 +156,8 @@ export function GiftOpeningStage({
       onPress={onOpen}
       disabled={!ready}
       accessibilityRole="button"
-      accessibilityLabel="선물상자 열기"
-      accessibilityHint="이미 뽑은 선물을 열어요. 재화는 추가로 사용하지 않아요."
+      accessibilityLabel={tr('roomShop.gacha.giftOpenA11y')}
+      accessibilityHint={tr('roomShop.gacha.giftOpenHint')}
       accessibilityState={{ disabled: !ready }}
       testID="gacha-gift-stage"
       style={{ width: size, height: size }}>
