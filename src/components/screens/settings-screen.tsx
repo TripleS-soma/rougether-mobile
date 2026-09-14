@@ -354,7 +354,9 @@ export const SettingsScreen = memo(function SettingsScreen({
                 accessibilityLabel={tr('settings.font')}
                 style={({ pressed }) => [
                   styles.row,
-                  { borderBottomColor: t.border, borderBottomWidth: StyleSheet.hairlineWidth },
+                  onOpenLanguage
+                    ? { borderBottomColor: t.border, borderBottomWidth: StyleSheet.hairlineWidth }
+                    : null,
                   pressed && { backgroundColor: t.primarySoft },
                 ]}>
                 <View style={[styles.rowLeft, styles.appearanceLabel]}>
@@ -369,28 +371,30 @@ export const SettingsScreen = memo(function SettingsScreen({
                 </Text>
                 <Icon name="forward" size={16} color={t.textDisabled} />
               </Pressable>
-              {/* 언어 (#893) — 현재 언어를 그 언어의 이름으로. */}
-              <Pressable
-                onPress={onOpenLanguage}
-                accessibilityRole="button"
-                accessibilityLabel={tr('settings.language')}
-                style={({ pressed }) => [
-                  styles.row,
-                  pressed && { backgroundColor: t.primarySoft },
-                ]}>
-                <View style={[styles.rowLeft, styles.appearanceLabel]}>
-                  <View style={[styles.iconCircle, { backgroundColor: t.primarySoft }]}>
-                    <Icon name="menu" size={20} color={t.primaryText} />
+              {/* 언어 (#893) — 셸이 LANGUAGE_PICKER_ENABLED일 때만 콜백을 준다(2단계 전엔 숨김). */}
+              {onOpenLanguage ? (
+                <Pressable
+                  onPress={onOpenLanguage}
+                  accessibilityRole="button"
+                  accessibilityLabel={tr('settings.language')}
+                  style={({ pressed }) => [
+                    styles.row,
+                    pressed && { backgroundColor: t.primarySoft },
+                  ]}>
+                  <View style={[styles.rowLeft, styles.appearanceLabel]}>
+                    <View style={[styles.iconCircle, { backgroundColor: t.primarySoft }]}>
+                      <Icon name="menu" size={20} color={t.primaryText} />
+                    </View>
+                    <Text style={[Typography.body, { color: t.text }]}>
+                      {tr('settings.language')}
+                    </Text>
                   </View>
-                  <Text style={[Typography.body, { color: t.text }]}>
-                    {tr('settings.language')}
+                  <Text style={[Typography.body, styles.rowValue, { color: t.textMuted }]}>
+                    {currentLanguageName}
                   </Text>
-                </View>
-                <Text style={[Typography.body, styles.rowValue, { color: t.textMuted }]}>
-                  {currentLanguageName}
-                </Text>
-                <Icon name="forward" size={16} color={t.textDisabled} />
-              </Pressable>
+                  <Icon name="forward" size={16} color={t.textDisabled} />
+                </Pressable>
+              ) : null}
             </View>
           </GlassSurface>
         </View>
