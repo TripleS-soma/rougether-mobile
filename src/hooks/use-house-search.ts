@@ -13,6 +13,7 @@ import { ApiError, ErrorCode, fetchHousePreviewDetail, fetchHouses, requestHouse
 import { toHousePreviewDetail, toSearchHouse, type ShopCatalogue } from '@/api/adapters';
 import type { HousePreviewDetail, SearchHouse } from '@/components/screens/house-search-screen';
 import { useToast } from '@/components/ui/toast';
+import { i18n } from '@/i18n';
 import { track } from '@/lib/analytics';
 
 /** 집 탐색 한 페이지 크기 (#975). */
@@ -81,7 +82,7 @@ export function useHouseSearch() {
     } catch {
       // 이 훅의 다른 액션과 같은 처리 — 조용히 멈추면 스피너만 사라져
       // "왜 안 나오지?"가 된다. hasNext는 그대로라 다시 스크롤하면 재시도된다.
-      toast('집 목록을 더 불러오지 못했어요. 잠시 후 다시 시도해 주세요.', 'error');
+      toast(i18n.t('house.search.loadMoreFailed'), 'error');
     } finally {
       setSearchLoadingMore(false);
     }
@@ -110,7 +111,7 @@ export function useHouseSearch() {
       try {
         await requestHouseJoin(houseId);
         track('house_join_request', { via: 'browse' });
-        toast('입주 신청을 보냈어요!', 'success');
+        toast(i18n.t('house.search.requestSent'), 'success');
         await reloadSearch();
         return true;
       } catch (error) {
@@ -120,10 +121,10 @@ export function useHouseSearch() {
         const code = error instanceof ApiError ? error.code : undefined;
         toast(
           code === ErrorCode.HOUSE_JOIN_REQUEST_ALREADY_PENDING
-            ? '이미 입주 신청 중이에요'
+            ? i18n.t('house.search.alreadyPending')
             : code === ErrorCode.HOUSE_FULL
-              ? '정원이 가득 찼어요'
-              : '입주 신청에 실패했어요. 잠시 후 다시 시도해주세요.',
+              ? i18n.t('house.search.fullToast')
+              : i18n.t('house.search.requestFailed'),
           'error',
         );
         return false;
@@ -142,7 +143,7 @@ export function useHouseSearch() {
         track('house_preview');
         return detail;
       } catch {
-        toast('집 정보를 불러오지 못했어요', 'error');
+        toast(i18n.t('house.search.loadFailed'), 'error');
         return null;
       }
     },

@@ -13,6 +13,7 @@ import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 import { MISSION_TYPE_RULES } from '@/constants/missions';
 import { missionCtaState } from '@/utils/mission-cta';
 import { formatDate, todayIso, toIsoDate } from '@/utils/datetime';
@@ -33,11 +34,11 @@ const CREATABLE_TYPES: NewHouseMission['missionType'][] = [
 const MISSION_TYPE_OPTIONS: {
   type: NewHouseMission['missionType'];
   icon: PictogramName;
-  label: string;
+  labelKey: string;
 }[] = CREATABLE_TYPES.map((type) => ({
   type,
   icon: MISSION_TYPE_RULES[type].icon,
-  label: MISSION_TYPE_RULES[type].shortLabel,
+  labelKey: MISSION_TYPE_RULES[type].shortLabelKey,
 }));
 
 export type HouseMissionsScreenProps = {
@@ -82,11 +83,12 @@ function LinkedBadge({
   onPress: (m: HouseMission) => void;
 }) {
   const Typography = useTypography();
+  const tr = useT();
   return (
     <Pressable
       onPress={() => onPress(mission)}
       accessibilityRole="button"
-      accessibilityLabel={`${mission.title} 연동 루틴 정리`}
+      accessibilityLabel={tr('house.missions.unlinkA11y', { title: mission.title })}
       hitSlop={8}
       style={styles.linkedBadge}>
       <Text style={[Typography.supporting, { color }]}>{label}</Text>
@@ -121,6 +123,7 @@ export function HouseMissionsScreen({
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const { show: toast } = useToast();
+  const tr = useT();
 
   const [showCreateMission, setShowCreateMission] = useState(false);
   const [missionTitle, setMissionTitle] = useState('');
@@ -178,10 +181,10 @@ export function HouseMissionsScreen({
   const canSubmitMission = missionTitle.trim().length > 0 && targetValid;
   const submitMission = () => {
     // Blocked taps explain themselves, first unmet condition first.
-    if (missionTitle.trim().length === 0) return toast('미션 이름을 입력해주세요', 'error');
+    if (missionTitle.trim().length === 0) return toast(tr('house.missions.titleRequired'), 'error');
     if (!targetValid)
       return toast(
-        `목표값은 1~${targetRule.max}${targetRule.unit} 사이 숫자로 입력해주세요`,
+        tr('house.missions.targetInvalid', { max: targetRule.max, unit: tr(targetRule.unitKey) }),
         'error',
       );
     if (!currentHouse.houseId) return;
@@ -217,7 +220,7 @@ export function HouseMissionsScreen({
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
-      <ScreenHeader title="우리 집의 목표" onBack={onBack} />
+      <ScreenHeader title={tr('house.missions.title')} onBack={onBack} />
       {/* 나의 방(방/달력/주간회고)과 같은 언더라인 탭 — 화면 전체 목록이
           바뀌므로 '필터 칩'이 아니라 '탭'이 맞는 뜻이다. 미션이 하나도 없어도
           같이 그린다: 첫 미션을 만든 순간 탭 줄이 생겨 레이아웃이 튀지 않게. */}
@@ -226,8 +229,8 @@ export function HouseMissionsScreen({
       <View style={[styles.tabBar, column, headerInset ? { paddingTop: headerInset } : null]}>
         {(
           [
-            ['active', '진행 중'],
-            ['past', '지난 미션'],
+            ['active', tr('house.missions.tabActive')],
+            ['past', tr('house.missions.tabPast')],
           ] as const
         ).map(([key, label]) => {
           const active = tab === key;
@@ -237,7 +240,7 @@ export function HouseMissionsScreen({
               onPress={() => setTab(key)}
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
-              accessibilityLabel={`${label} 탭`}
+              accessibilityLabel={tr('house.missions.tabA11y', { label })}
               style={[styles.tab, active && { borderBottomColor: t.primary }]}>
               <Text style={[Typography.label, { color: active ? t.primaryText : t.textMuted }]}>
                 {label}
@@ -253,16 +256,22 @@ export function HouseMissionsScreen({
         <View style={styles.missionHead}>
           <Text style={[Typography.supporting, styles.flex, { color: t.textMuted }]}>
             {tab === 'active' && activeMissions.length > 0
-              ? `진행 중 ${activeMissions.length}개 · 오늘 나의 기여 ${contributedToday}/${activeMissions.length}`
+              ? tr('house.missions.summary', {
+                  n: activeMissions.length,
+                  done: contributedToday,
+                  total: activeMissions.length,
+                })
               : ''}
           </Text>
           {canCreateMission ? (
             <Pressable
               onPress={() => setShowCreateMission(true)}
               accessibilityRole="button"
-              accessibilityLabel="미션 만들기"
+              accessibilityLabel={tr('house.missions.createA11y')}
               style={[styles.missionAddBtn, { backgroundColor: t.surfaceMuted }]}>
-              <Text style={[Typography.supporting, { color: t.primaryText }]}>+ 만들기</Text>
+              <Text style={[Typography.supporting, { color: t.primaryText }]}>
+                {tr('house.missions.create')}
+              </Text>
             </Pressable>
           ) : null}
         </View>
@@ -270,10 +279,10 @@ export function HouseMissionsScreen({
           {shownMissions.length === 0 ? (
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
               {tab === 'past'
-                ? '아직 지난 미션이 없어요. 완료했거나 기간이 끝난 미션이 여기에 모여요.'
+                ? tr('house.missions.emptyPast')
                 : missions.length === 0
-                  ? '아직 미션이 없어요. 첫 미션을 만들어 다 같이 도전해보세요!'
-                  : '진행 중인 미션이 없어요. 새 미션을 만들어 다 같이 도전해보세요!'}
+                  ? tr('house.missions.emptyNone')
+                  : tr('house.missions.emptyActive')}
             </Text>
           ) : (
             <View style={styles.goals}>
@@ -312,7 +321,9 @@ export function HouseMissionsScreen({
                           <Pressable
                             onPress={() => setMissionToDelete(mission)}
                             accessibilityRole="button"
-                            accessibilityLabel={`${mission.title} 삭제`}
+                            accessibilityLabel={tr('house.missions.deleteA11y', {
+                              title: mission.title,
+                            })}
                             hitSlop={8}
                             style={styles.missionDeleteBtn}>
                             <TrashPictogram size={14} color={t.textMuted} />
@@ -337,8 +348,11 @@ export function HouseMissionsScreen({
                         {mission.myContribution != null ? (
                           <Text
                             style={[Typography.supporting, { color: t.textMuted }]}
-                            accessibilityLabel={`${mission.title} 내 기여 ${mission.myContribution}회`}>
-                            내 기여 {mission.myContribution}회
+                            accessibilityLabel={tr('house.missions.myContributionA11y', {
+                              title: mission.title,
+                              n: mission.myContribution,
+                            })}>
+                            {tr('house.missions.myContribution', { n: mission.myContribution })}
                           </Text>
                         ) : null}
                         {/* Own node (not a desc suffix) so the long type label
@@ -353,24 +367,28 @@ export function HouseMissionsScreen({
                           </Text>
                         ) : null}
                         {cta.kind === 'completed' ? (
-                          <Text style={[Typography.supporting, { color: t.textMuted }]}>완료</Text>
+                          <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                            {tr('house.missions.completed')}
+                          </Text>
                         ) : cta.kind === 'ended' ? (
                           // 목표 미달인데 COMPLETED — 서버 쪽 문제지만 화면은 사실만 (#888).
                           <Text style={[Typography.supporting, { color: t.textDisabled }]}>
-                            종료
+                            {tr('house.missions.ended')}
                           </Text>
                         ) : cta.kind === 'expired' ? (
                           <Text style={[Typography.supporting, { color: t.textDisabled }]}>
-                            기간 만료
+                            {tr('house.missions.expired')}
                           </Text>
                         ) : cta.kind === 'claim' ? (
                           <Pressable
                             onPress={() => onClaimMission!(currentHouse.houseId!, mission.id)}
                             accessibilityRole="button"
-                            accessibilityLabel={`${mission.title} 보상 받기`}
+                            accessibilityLabel={tr('house.missions.claimA11y', {
+                              title: mission.title,
+                            })}
                             style={[styles.missionBtn, { backgroundColor: t.warning }]}>
                             <Text style={[Typography.supporting, { color: t.text }]}>
-                              보상 받기
+                              {tr('house.missions.claim')}
                             </Text>
                           </Pressable>
                         ) : cta.kind === 'contributed' ? (
@@ -378,38 +396,40 @@ export function HouseMissionsScreen({
                           // 앱을 다시 켜도 라벨이 유지된다.
                           canUnlink ? (
                             <LinkedBadge
-                              label="기여함"
+                              label={tr('house.missions.contributed')}
                               color={t.primaryText}
                               mission={mission}
                               onPress={setMissionToUnlink}
                             />
                           ) : (
                             <Text style={[Typography.supporting, { color: t.primaryText }]}>
-                              기여함
+                              {tr('house.missions.contributed')}
                             </Text>
                           )
                         ) : cta.kind === 'linked' ? (
                           // Filed as my routine — completing it contributes.
                           canUnlink ? (
                             <LinkedBadge
-                              label="루틴 연동됨"
+                              label={tr('house.missions.linked')}
                               color={t.textMuted}
                               mission={mission}
                               onPress={setMissionToUnlink}
                             />
                           ) : (
                             <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                              루틴 연동됨
+                              {tr('house.missions.linked')}
                             </Text>
                           )
                         ) : cta.kind === 'addRoutine' ? (
                           <Pressable
                             onPress={() => setMissionToAdd(mission)}
                             accessibilityRole="button"
-                            accessibilityLabel={`${mission.title} 내 루틴에 추가`}
+                            accessibilityLabel={tr('house.missions.addRoutineA11y', {
+                              title: mission.title,
+                            })}
                             style={[styles.missionBtn, { backgroundColor: t.primary }]}>
                             <Text style={[Typography.supporting, { color: t.onPrimary }]}>
-                              + 내 루틴에
+                              {tr('house.missions.addRoutine')}
                             </Text>
                           </Pressable>
                         ) : null}
@@ -426,16 +446,19 @@ export function HouseMissionsScreen({
       {/* 단순 [취소|확정] 확인은 공용 ConfirmDialog (#674). */}
       <ConfirmDialog
         visible={!!(missionToAdd && currentHouse.houseId)}
-        title="내 루틴에 추가하시겠습니까?"
+        title={tr('house.missions.addConfirm.title')}
         body={
           missionToAdd
-            ? `'${currentHouse.name}' 카테고리에 '${missionToAdd.title}' 루틴이 만들어져요. 루틴을 완료하면 자동으로 미션에 기여돼요.`
+            ? tr('house.missions.addConfirm.body', {
+                house: currentHouse.name,
+                title: missionToAdd.title,
+              })
             : ''
         }
-        confirmLabel="네"
-        confirmAccessibilityLabel="루틴 추가 확인"
-        cancelLabel="아니요"
-        cancelAccessibilityLabel="루틴 추가 취소"
+        confirmLabel={tr('house.missions.addConfirm.yes')}
+        confirmAccessibilityLabel={tr('house.missions.addConfirm.a11y')}
+        cancelLabel={tr('house.missions.addConfirm.no')}
+        cancelAccessibilityLabel={tr('house.missions.addConfirm.cancelA11y')}
         onConfirm={() => {
           if (missionToAdd) onAddMissionRoutine?.(currentHouse.houseId!, missionToAdd);
           setMissionToAdd(null);
@@ -445,15 +468,15 @@ export function HouseMissionsScreen({
 
       <ConfirmDialog
         visible={!!(missionToDelete && currentHouse.houseId)}
-        title="미션 삭제"
+        title={tr('house.missions.deleteConfirm.title')}
         body={
           missionToDelete
-            ? `'${missionToDelete.title}' 미션을 삭제할까요?\n지금까지의 기여 기록은 남지만 미션은 목록에서 사라져요. 내 연동 루틴도 함께 삭제되고, 다른 멤버의 루틴은 연동만 끊겨요.`
+            ? tr('house.missions.deleteConfirm.body', { title: missionToDelete.title })
             : ''
         }
-        confirmLabel="삭제"
-        confirmAccessibilityLabel="미션 삭제 확인"
-        cancelAccessibilityLabel="미션 삭제 취소"
+        confirmLabel={tr('house.missions.deleteConfirm.label')}
+        confirmAccessibilityLabel={tr('house.missions.deleteConfirm.a11y')}
+        cancelAccessibilityLabel={tr('house.missions.deleteConfirm.cancelA11y')}
         destructive
         onConfirm={() => {
           if (missionToDelete) onDeleteMission?.(currentHouse.houseId!, missionToDelete.id);
@@ -465,15 +488,15 @@ export function HouseMissionsScreen({
       {/* 배지는 '연동됨'인데 결과는 삭제다 — 문구가 그 차이를 메운다 (#890). */}
       <ConfirmDialog
         visible={!!missionToUnlink}
-        title="연동 루틴 삭제"
+        title={tr('house.missions.unlinkConfirm.title')}
         body={
           missionToUnlink
-            ? `'${missionToUnlink.title}' 루틴을 내 루틴에서 삭제할까요?\n지금까지의 기여 기록은 남아요. 미션 자체는 그대로예요.`
+            ? tr('house.missions.unlinkConfirm.body', { title: missionToUnlink.title })
             : ''
         }
-        confirmLabel="삭제"
-        confirmAccessibilityLabel="연동 루틴 삭제 확인"
-        cancelAccessibilityLabel="연동 루틴 삭제 취소"
+        confirmLabel={tr('house.missions.unlinkConfirm.label')}
+        confirmAccessibilityLabel={tr('house.missions.unlinkConfirm.a11y')}
+        cancelAccessibilityLabel={tr('house.missions.unlinkConfirm.cancelA11y')}
         destructive
         onConfirm={() => {
           if (missionToUnlink) onRemoveMissionRoutine?.(missionToUnlink);
@@ -485,22 +508,28 @@ export function HouseMissionsScreen({
       {showCreateMission ? (
         <View style={styles.modalOverlay}>
           <View style={[styles.modal, { backgroundColor: t.surface }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>새 미션 만들기</Text>
+            <Text style={[Typography.h3, { color: t.text }]}>
+              {tr('house.missions.form.title')}
+            </Text>
             <View style={styles.missionForm}>
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>미션 제목</Text>
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                {tr('house.missions.form.titleLabel')}
+              </Text>
               <TextInput
                 value={missionTitle}
                 onChangeText={(v) => setMissionTitle(v.slice(0, 160))}
-                placeholder="예) 이번 주 다같이 루틴 지키기"
+                placeholder={tr('house.missions.form.titlePlaceholder')}
                 placeholderTextColor={t.textMuted}
-                accessibilityLabel="미션 제목"
+                accessibilityLabel={tr('house.missions.form.titleA11y')}
                 style={[
                   styles.missionInput,
                   emph('normal'),
                   { backgroundColor: t.surfaceMuted, color: t.text },
                 ]}
               />
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>미션 유형</Text>
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                {tr('house.missions.form.type')}
+              </Text>
               <View style={styles.missionTypeRow}>
                 {MISSION_TYPE_OPTIONS.map((opt) => {
                   const selected = opt.type === missionType;
@@ -524,15 +553,17 @@ export function HouseMissionsScreen({
                           Typography.supporting,
                           { color: selected ? t.onPrimary : t.textMuted },
                         ]}>
-                        {opt.label}
+                        {tr(opt.labelKey)}
                       </Text>
                     </Pressable>
                   );
                 })}
               </View>
               <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                목표 수치 (1~{targetRule.max}
-                {targetRule.unit})
+                {tr('house.missions.form.target', {
+                  max: targetRule.max,
+                  unit: tr(targetRule.unitKey),
+                })}
               </Text>
               {/* 단위를 입력칸 안에 붙인다 — 달성률에 500을 적어도 통과하던
                   시절엔 이 값이 %인지 횟수인지 화면 어디에도 없었다. */}
@@ -541,7 +572,7 @@ export function HouseMissionsScreen({
                   value={missionTarget}
                   onChangeText={setMissionTarget}
                   keyboardType="number-pad"
-                  accessibilityLabel="목표 수치"
+                  accessibilityLabel={tr('house.missions.form.targetA11y')}
                   style={[
                     styles.missionInput,
                     styles.missionInputField,
@@ -550,25 +581,28 @@ export function HouseMissionsScreen({
                   ]}
                 />
                 <Text style={[Typography.label, styles.missionUnit, { color: t.textMuted }]}>
-                  {targetRule.unit}
+                  {tr(targetRule.unitKey)}
                 </Text>
               </View>
               <View style={styles.periodRow}>
-                <Text style={[Typography.supporting, { color: t.textMuted }]}>기간 설정</Text>
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                  {tr('house.missions.form.period')}
+                </Text>
                 <ToggleSwitch
                   value={missionHasPeriod}
                   onToggle={toggleMissionPeriod}
-                  accessibilityLabel="기간 설정"
+                  accessibilityLabel={tr('house.missions.form.periodA11y')}
                 />
               </View>
               {missionHasPeriod ? (
                 <Pressable
                   onPress={() => setShowPeriodSheet(true)}
                   accessibilityRole="button"
-                  accessibilityLabel="미션 기간 선택"
+                  accessibilityLabel={tr('house.missions.form.periodPickA11y')}
                   style={[styles.missionInput, { backgroundColor: t.surfaceMuted }]}>
                   <Text style={[Typography.supporting, { color: t.text }]}>
-                    {formatDate(missionStart)} ~ {missionEnd ? formatDate(missionEnd) : '무기한'}
+                    {formatDate(missionStart)} ~{' '}
+                    {missionEnd ? formatDate(missionEnd) : tr('house.missions.form.openEnded')}
                   </Text>
                 </Pressable>
               ) : null}
@@ -577,15 +611,15 @@ export function HouseMissionsScreen({
               <Pressable
                 onPress={() => setShowCreateMission(false)}
                 accessibilityRole="button"
-                accessibilityLabel="미션 만들기 취소"
+                accessibilityLabel={tr('house.missions.form.cancelA11y')}
                 style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
+                <Text style={[Typography.label, { color: t.text }]}>{tr('common.cancel')}</Text>
               </Pressable>
               <Pressable
                 onPress={submitMission}
                 accessibilityRole="button"
                 accessibilityState={{ disabled: !canSubmitMission }}
-                accessibilityLabel="미션 만들기 확인"
+                accessibilityLabel={tr('house.missions.form.submitA11y')}
                 style={[
                   styles.modalBtn,
                   { backgroundColor: canSubmitMission ? t.primary : t.disabledBg },
@@ -595,7 +629,7 @@ export function HouseMissionsScreen({
                     Typography.label,
                     { color: canSubmitMission ? t.onPrimary : t.textMuted },
                   ]}>
-                  만들기
+                  {tr('house.missions.form.submit')}
                 </Text>
               </Pressable>
             </View>

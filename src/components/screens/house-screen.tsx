@@ -57,6 +57,7 @@ import { FixedOverlay, Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useBottomNavInset, useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useResolvedScheme, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 import { assetSource } from '@/resources/asset';
 import { houseBackgroundKey } from '@/resources/house-background';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
@@ -222,6 +223,7 @@ export const HouseScreen = memo(function HouseScreen({
   previewTheme,
 }: HouseScreenProps) {
   const t = useTokens();
+  const tr = useT();
   const scheme = useResolvedScheme();
   const Typography = useTypography();
   // 배경 이미지를 못 고른 집(매핑에 없는 새 테마)의 폴백 (#992). 시간·날씨에
@@ -911,7 +913,9 @@ export const HouseScreen = memo(function HouseScreen({
               style={styles.skyPill}>
               <Text style={[Typography.supporting, { color: t.onTint }]}>
                 {/* Vacant seats are not members — count the real ones. */}
-                멤버 {currentHouse.memberCount ?? manageableMembers(currentHouse).length}
+                {tr('house.screen.members', {
+                  n: currentHouse.memberCount ?? manageableMembers(currentHouse).length,
+                })}
                 {currentHouse.maxMembers ? ` / ${currentHouse.maxMembers}` : ''}
               </Text>
             </GlassSurface>
@@ -998,7 +1002,9 @@ export const HouseScreen = memo(function HouseScreen({
                             recyclingKey={coverKey}
                             // 디스크 캐시 유지 — 앱 재실행 후에도 재요청 없이 즉시 (#463).
                             cachePolicy="memory-disk"
-                            accessibilityLabel={`${currentHouse.name} 집`}
+                            accessibilityLabel={tr('house.screen.houseA11y', {
+                              name: currentHouse.name,
+                            })}
                             testID="house-frame"
                           />
                         </View>
@@ -1015,7 +1021,7 @@ export const HouseScreen = memo(function HouseScreen({
                 <Pressable
                   onPress={resetCam}
                   accessibilityRole="button"
-                  accessibilityLabel="확대 종료"
+                  accessibilityLabel={tr('house.screen.zoomExit')}
                   style={styles.camReset}>
                   <GlassSurface style={styles.iconBtnFace} fallbackColor={t.surface}>
                     <Icon name="refresh" size={16} color={t.text} />
@@ -1064,16 +1070,21 @@ export const HouseScreen = memo(function HouseScreen({
           <CoachTarget id="house-missions">
             <RailButton
               icon={<TargetPictogram size={20} />}
-              label="목표"
+              label={tr('house.screen.railMissions')}
               onPress={onOpenMissions}
               /* 줄에서 버튼이 되며 '오늘 1/1'이 눈에서 사라진다 (#875가 드러내려던
                  것이다) — 라벨에는 그대로 담고, 받을 보상은 점으로 남긴다. */
               accessibilityLabel={[
-                '우리 집의 목표',
+                tr('house.screen.missionsA11yTitle'),
                 activeMissionCount > 0
-                  ? `오늘 ${contributedTodayCount}/${activeMissionCount} 기여`
-                  : '진행 중 없음',
-                claimableCount > 0 ? `받을 보상 ${claimableCount}개` : null,
+                  ? tr('house.screen.missionsA11yToday', {
+                      done: contributedTodayCount,
+                      total: activeMissionCount,
+                    })
+                  : tr('house.screen.missionsA11yNone'),
+                claimableCount > 0
+                  ? tr('house.screen.missionsA11yClaimable', { n: claimableCount })
+                  : null,
               ]
                 .filter(Boolean)
                 .join(', ')}
@@ -1086,9 +1097,9 @@ export const HouseScreen = memo(function HouseScreen({
         <CoachTarget id="house-search">
           <RailButton
             icon={<Icon name="search" size={20} color={t.text} />}
-            label="집 탐색"
+            label={tr('house.screen.railSearch')}
             onPress={onOpenSearch}
-            accessibilityLabel="집 탐색"
+            accessibilityLabel={tr('house.screen.railSearch')}
             t={t}
             Typography={Typography}
           />
@@ -1097,9 +1108,9 @@ export const HouseScreen = memo(function HouseScreen({
         <CoachTarget id="house-manage">
           <RailButton
             icon={<Icon name="members" size={20} color={t.text} />}
-            label="집 관리"
+            label={tr('house.screen.railManage')}
             onPress={onOpenMembers}
-            accessibilityLabel="집 관리"
+            accessibilityLabel={tr('house.screen.railManage')}
             t={t}
             Typography={Typography}
           />

@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { HouseCoverArt } from '@/components/room/house-cover-art';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 import { FRAME_ASPECT, type HouseFrameOptions } from '@/resources/house-frame';
 
 /** One selectable house cover (server GET /houses/cover-images). */
@@ -34,6 +35,7 @@ export function HouseCoverPicker({
   enabled,
 }: HouseCoverPickerProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   if (covers.length === 0) return null;
@@ -48,7 +50,7 @@ export function HouseCoverPicker({
             onPress={() => onSelect(c.coverImageKey)}
             accessibilityRole="radio"
             accessibilityState={{ selected }}
-            accessibilityLabel={`${c.name} 커버`}
+            accessibilityLabel={tr('house.coverPicker.coverA11y', { name: c.name })}
             style={[
               styles.cell,
               {

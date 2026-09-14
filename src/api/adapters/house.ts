@@ -8,6 +8,7 @@ import { HouseBgs, HouseBorders, MyRoomTint, RoomTints } from '@/constants/theme
 import { CATEGORY_COLORS, type Routine, type RoutineCategoryMeta } from '@/constants/routines';
 import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
 import { monthDayLabel, toIsoDate } from '@/utils/datetime';
+import { i18n } from '@/i18n';
 import type { HouseCover } from '@/components/room/house-cover-picker';
 import type {
   Floor,
@@ -79,12 +80,12 @@ export function toPresence(
   const diff = nowMs - then;
   if (diff <= ONLINE_WINDOW_MS) return { online: true };
   const minutes = Math.floor(diff / 60_000);
-  if (minutes < 60) return { lastSeenLabel: `${minutes}분 전` };
+  if (minutes < 60) return { lastSeenLabel: i18n.t('house.adapter.minutesAgo', { n: minutes }) };
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return { lastSeenLabel: `${hours}시간 전` };
+  if (hours < 24) return { lastSeenLabel: i18n.t('house.adapter.hoursAgo', { n: hours }) };
   const days = Math.floor(hours / 24);
-  if (days < 30) return { lastSeenLabel: `${days}일 전` };
-  return { lastSeenLabel: '오래 전' };
+  if (days < 30) return { lastSeenLabel: i18n.t('house.adapter.daysAgo', { n: days }) };
+  return { lastSeenLabel: i18n.t('house.adapter.longAgo') };
 }
 
 /**
@@ -116,7 +117,9 @@ export function toHouse(
     // 이름으로 남았다. 프로필 쪽이 같은 값의 출처이므로 항상 그쪽을 믿는다.
     // (멤버 API에 이름이 아예 없는 경우의 폴백도 겸한다.)
     name:
-      (m.userId === myUserId ? myNickname : undefined) || m.nickname || `멤버 ${m.userId ?? i + 1}`,
+      (m.userId === myUserId ? myNickname : undefined) ||
+      m.nickname ||
+      i18n.t('house.adapter.memberFallback', { id: m.userId ?? i + 1 }),
     color: m.userId === myUserId ? MyRoomTint : RoomTints[i % RoomTints.length],
     isMine: m.userId === myUserId,
     isOwner: m.role === 'OWNER',
@@ -137,14 +140,14 @@ export function toHouse(
   // maxMembers >= headcount, but clamp anyway so a stale detail can't drop rooms.
   const seats = Math.max(cells.length, detail.maxMembers ?? 0);
   for (let i = cells.length; i < seats; i++) {
-    cells.push({ name: '빈방', color: 'transparent', vacant: true });
+    cells.push({ name: i18n.t('house.adapter.vacant'), color: 'transparent', vacant: true });
   }
   const floorCount = Math.max(1, Math.ceil(cells.length / 2));
   const floors: Floor[] = [];
   // cells[0] is the 1층 왼쪽 seat; the screen renders top floor first.
   for (let f = floorCount - 1; f >= 0; f--) {
     floors.push({
-      level: `${f + 1}층`,
+      level: i18n.t('house.adapter.floor', { n: f + 1 }),
       rooms: cells.slice(f * 2, f * 2 + 2),
     });
   }
@@ -169,7 +172,9 @@ export function toHouse(
       )
       .map((request) => ({
         requestId: request.requestId!,
-        nickname: request.nickname || `멤버 ${request.userId ?? ''}`.trim(),
+        nickname:
+          request.nickname ||
+          i18n.t('house.adapter.memberFallback', { id: request.userId ?? '' }).trim(),
         requestedAt: request.requestedAt,
       })),
   };
@@ -203,10 +208,10 @@ export function toHouseMission(m: MissionSummary): HouseMission {
   return {
     id: m.missionId ?? 0,
     title: m.title ?? '',
-    desc: meta.label,
+    desc: i18n.t(meta.labelKey),
     icon: meta.icon,
     /** `25/100`이 %인지 횟수인지 카드에서 드러나게 (#887). */
-    unit: meta.unit,
+    unit: meta.unitKey ? i18n.t(meta.unitKey) : '',
     current: m.currentValue ?? 0,
     target: Math.max(1, target),
     status: m.status ?? 'ACTIVE',
@@ -234,7 +239,7 @@ export function toGuestbookEntry(g: GuestbookItem): GuestbookEntry {
   const d = g.createdAt ? new Date(g.createdAt) : null;
   return {
     id: String(g.guestbookId ?? ''),
-    author: g.authorNickname || `멤버 ${g.authorId ?? ''}`,
+    author: g.authorNickname || i18n.t('house.adapter.memberFallback', { id: g.authorId ?? '' }),
     content: g.content ?? '',
     date: d ? monthDayLabel(d) : '',
     // 방명록은 봇 스케줄러(서버 #310)가 실제로 글을 쓴다 — 누가 썼는지 밝힌다.
@@ -301,7 +306,7 @@ export function toSearchHouse(h: HouseSummary, index = 0): SearchHouse {
     name: h.name ?? '',
     members: h.currentMemberCount ?? 0,
     capacity: h.maxMembers ?? 0,
-    tag: h.goals?.[0]?.name ?? '루틴',
+    tag: h.goals?.[0]?.name ?? i18n.t('house.adapter.defaultTag'),
     // 검색용 — 목표 전부 (#1110). 칩은 대표 하나만 보여도 검색은 다 잡혀야 한다.
     tags: (h.goals ?? []).map((g) => g.name ?? '').filter((n) => n.length > 0),
     coverImageKey: h.coverImageKey ?? undefined,
@@ -324,7 +329,7 @@ export function toFriendRoutines(day: HouseMemberDayResponse): Routine[] {
   const routines = (day.routines ?? []).map((r): Routine => ({
     // originRoutineId is the stable lineage id; version ids change on edit.
     id: String(r.originRoutineId ?? r.id ?? ''),
-    title: r.title ?? '루틴',
+    title: r.title ?? i18n.t('house.adapter.routineFallback'),
     kind: 'routine',
     completed: r.completed === true,
     time: r.scheduledTime ? r.scheduledTime.slice(0, 5) : undefined,
@@ -335,7 +340,7 @@ export function toFriendRoutines(day: HouseMemberDayResponse): Routine[] {
   }));
   const todos = (day.todos ?? []).map((t): Routine => ({
     id: `todo-${t.id ?? ''}`,
-    title: t.title ?? '할 일',
+    title: t.title ?? i18n.t('house.adapter.todoFallback'),
     kind: 'todo',
     completed: t.status === 'COMPLETED',
     category: t.categoryId != null ? String(t.categoryId) : undefined,
@@ -374,10 +379,10 @@ export function toFriendActivity(
     let day = days[days.length - 1];
     if (!day || day.date !== date) {
       const [, m, d] = date.split('-').map(Number);
-      day = { date, label: `${m}월 ${d}일`, titles: [] };
+      day = { date, label: i18n.t('house.adapter.monthDay', { month: m, day: d }), titles: [] };
       days.push(day);
     }
-    day.titles.push(c.title ?? '루틴');
+    day.titles.push(c.title ?? i18n.t('house.adapter.routineFallback'));
   }
   return days;
 }

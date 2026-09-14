@@ -15,6 +15,7 @@ import { CrownPictogram } from '@/components/ui/pictograms';
 import { type CharacterId } from '@/constants/characters';
 import { Overlay, Radius, Spacing, StaticWhite } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 import type { Wallpaper } from '@/resources/furniture';
 
 /** 빈 좌석에 그리는 기본 빈 방 (#281) — 모듈 상수라 참조가 고정된다. */
@@ -101,6 +102,7 @@ function SeatTileBase({
   registerRef,
 }: SeatTileProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   // 원본 프리뷰·카탈로그가 그대로일 때 씬 객체도 그대로 — <Room>의 memo까지 산다.
   const scene = useMemo(
@@ -119,14 +121,15 @@ function SeatTileBase({
    */
   const presence = bot ? 'bot' : online ? 'online' : lastSeenLabel ? 'lastSeen' : 'none';
   /** 이름 뒤에 붙는 꼬리 문구 — 접속 중일 땐 초록 점이 대신하므로 비운다. */
-  const trailing = presence === 'bot' ? '봇' : presence === 'lastSeen' ? lastSeenLabel : null;
+  const trailing =
+    presence === 'bot' ? tr('house.seat.bot') : presence === 'lastSeen' ? lastSeenLabel : null;
   const presenceLabel =
     presence === 'bot'
-      ? '봇'
+      ? tr('house.seat.bot')
       : presence === 'online'
-        ? '접속 중'
+        ? tr('house.seat.online')
         : presence === 'lastSeen'
-          ? `${lastSeenLabel} 접속`
+          ? tr('house.seat.lastSeen', { label: lastSeenLabel })
           : null;
 
   /**
@@ -164,15 +167,14 @@ function SeatTileBase({
         onPressOut={onPressOut}
         disabled={empty}
         accessibilityRole="button"
-        accessibilityLabel={[isMine ? `${displayName} (나)` : displayName, presenceLabel]
+        accessibilityLabel={[
+          isMine ? tr('house.seat.mine', { name: displayName }) : displayName,
+          presenceLabel,
+        ]
           .filter(Boolean)
           .join(', ')}
         accessibilityHint={
-          empty
-            ? undefined
-            : fill
-              ? '두 번 탭해 확대, 길게 눌러 자리 옮기기'
-              : '길게 눌러 자리 옮기기'
+          empty ? undefined : fill ? tr('house.seat.hintFill') : tr('house.seat.hintMove')
         }
         style={[
           fill ? styles.roomCellFill : styles.roomCell,
@@ -227,7 +229,7 @@ function SeatTileBase({
                   styles.roomName,
                   { color: preview ? StaticWhite : t.onTint },
                 ]}>
-                {isMine ? `${displayName} (나)` : displayName}
+                {isMine ? tr('house.seat.mine', { name: displayName }) : displayName}
               </Text>
               {/* 마지막 접속은 이름과 같은 줄에 (#999) — 온라인일 때 초록 점이
                   그렇듯 한 줄로 끝나야 뱃지 높이가 좌석마다 흔들리지 않는다.

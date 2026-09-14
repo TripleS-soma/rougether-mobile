@@ -5,6 +5,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Radius, Spacing } from '@/constants/theme';
 import { useConstant, useLatestRef } from '@/hooks/use-stable-value';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 /** 순서를 바꿀 수 있는 페이지 — 내가 속한 집. */
 export type OrderableHouse = { houseId: number; name: string };
@@ -66,6 +67,7 @@ export function HouseOrderDots({
   onReorder,
 }: HouseOrderDotsProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   // 드래그 중 표시용 순서 — null이면 접힌 상태(평소 도트).
@@ -163,7 +165,7 @@ export function HouseOrderDots({
     // 도트만으로는 터치 영역이 6px이라 잡을 수가 없다 — 행 높이로 확보한다.
     <View
       style={styles.row}
-      accessibilityLabel={canReorder ? '집 순서. 꾹 눌러 좌우로 끌면 순서가 바뀌어요' : undefined}
+      accessibilityLabel={canReorder ? tr('house.orderDots.reorderHint') : undefined}
       // collapsable={false}: 안드로이드 뷰 평탄화로 사라지면 제스처가 붙을
       // 대상이 없어진다 (친구 방 플링과 같은 규칙).
       collapsable={false}>

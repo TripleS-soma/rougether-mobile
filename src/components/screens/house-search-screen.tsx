@@ -22,6 +22,7 @@ import { useToast } from '@/components/ui/toast';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 import { isCdnKey } from '@/resources/asset';
 
 /** Browse-card display model (decorated from the API house summary). */
@@ -79,7 +80,7 @@ export type HousePreviewDetail = {
 };
 
 /** 네트워크/서버 오류 안내 (#549) — 잘못된 초대코드 안내와 구분한다. */
-const NETWORK_ERROR_MSG = '네트워크를 확인해주세요. 잠시 후 다시 시도해 주세요.';
+const NETWORK_ERROR_KEY = 'house.search.networkError';
 
 /** 로딩·오류 중에는 리스트 데이터를 비운다 — 상태 표시는 ListEmptyComponent 몫 (#690). */
 const NO_HOUSES: SearchHouse[] = [];
@@ -158,6 +159,7 @@ export function HouseSearchScreen({
   onCreate,
 }: HouseSearchScreenProps) {
   const t = useTokens();
+  const tr = useT();
   const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
@@ -192,9 +194,9 @@ export function HouseSearchScreen({
   const joinByCode = async () => {
     const trimmed = code.trim().toUpperCase();
     // Blocked taps explain themselves; only the in-flight state stays dead.
-    if (trimmed.length === 0) return toast('초대 코드를 입력해주세요', 'error');
+    if (trimmed.length === 0) return toast(tr('house.search.codeRequired'), 'error');
     if (trimmed.length < 6) {
-      setCodeError('초대코드는 6자리 이상이에요');
+      setCodeError(tr('house.search.codeTooShort'));
       return;
     }
     setCodeError(null);
@@ -207,9 +209,9 @@ export function HouseSearchScreen({
       const info = await onPreviewCode(trimmed);
       setJoining(false);
       // 네트워크/서버 오류는 잘못된 코드와 구분해 안내한다 (#549).
-      if (info === 'network') setCodeError(NETWORK_ERROR_MSG);
-      else if (!info) setCodeError('초대코드를 확인해주세요. 만료되었거나 없는 코드예요.');
-      else if (info.expired) setCodeError('만료된 초대코드예요. 새 코드를 받아주세요.');
+      if (info === 'network') setCodeError(tr(NETWORK_ERROR_KEY));
+      else if (!info) setCodeError(tr('house.search.codeInvalid'));
+      else if (info.expired) setCodeError(tr('house.search.codeExpired'));
       else setPreview({ code: trimmed, info });
       return;
     }
@@ -218,8 +220,8 @@ export function HouseSearchScreen({
     if (ok === 'pending') {
       setCode('');
       setPendingNotice(true);
-    } else if (ok === 'network') setCodeError(NETWORK_ERROR_MSG);
-    else if (!ok) setCodeError('초대코드를 확인해주세요. 만료되었거나 없는 코드예요.');
+    } else if (ok === 'network') setCodeError(tr(NETWORK_ERROR_KEY));
+    else if (!ok) setCodeError(tr('house.search.codeInvalid'));
   };
 
   // 초대 링크 진입 (#624) — 마운트 1회, 시드된 코드로 미리보기를 자동 실행해
@@ -244,8 +246,8 @@ export function HouseSearchScreen({
       setPreview(null);
       setCode('');
       setPendingNotice(true);
-    } else if (ok === 'network') setCodeError(NETWORK_ERROR_MSG);
-    else setCodeError('입주에 실패했어요. 만석이거나 이미 참여 중일 수 있어요.');
+    } else if (ok === 'network') setCodeError(tr(NETWORK_ERROR_KEY));
+    else setCodeError(tr('house.search.joinFailed'));
   };
 
   const openHousePreview = async (houseId: number) => {
@@ -254,9 +256,9 @@ export function HouseSearchScreen({
     try {
       const detail = await onPreviewHouse(houseId);
       if (detail) setHousePreview(detail);
-      else toast('집 미리보기를 불러오지 못했어요', 'error');
+      else toast(tr('house.search.previewFailed'), 'error');
     } catch {
-      toast('집 미리보기를 불러오지 못했어요', 'error');
+      toast(tr('house.search.previewFailed'), 'error');
     } finally {
       setPreviewingHouseId(null);
     }
@@ -264,7 +266,7 @@ export function HouseSearchScreen({
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
-      <ScreenHeader title="집 탐색" onBack={onBack} />
+      <ScreenHeader title={tr('house.search.title')} onBack={onBack} />
       {/* 추천 목록이 서버 구동이라 가상화 리스트로 그린다 (#690) — 초대코드·검색은
           헤더, 새 집 만들기는 푸터로. */}
       <FlatList
@@ -285,9 +287,11 @@ export function HouseSearchScreen({
           <View style={styles.headerBlock}>
             {/* Invite code */}
             <View style={styles.section}>
-              <Text style={[Typography.label, { color: t.text }]}># 초대코드로 들어가기</Text>
+              <Text style={[Typography.label, { color: t.text }]}>
+                {tr('house.search.byCodeTitle')}
+              </Text>
               <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                친구에게 받은 초대코드를 입력하면 바로 그 집에 입주할 수 있어요.
+                {tr('house.search.byCodeHint')}
               </Text>
               <View style={[styles.card, { backgroundColor: t.surface }]}>
                 <View style={styles.inlineRow}>
@@ -313,7 +317,7 @@ export function HouseSearchScreen({
                         setCode(v.toUpperCase().slice(0, 8));
                         setCodeError(null);
                       }}
-                      placeholder="예: VLG-7K2X"
+                      placeholder={tr('house.search.codePlaceholder')}
                       placeholderTextColor={t.textMuted}
                       autoCapitalize="characters"
                     />
@@ -332,7 +336,7 @@ export function HouseSearchScreen({
                         Typography.label,
                         { color: code.trim().length === 0 ? t.textMuted : t.onPrimary },
                       ]}>
-                      입주
+                      {tr('house.search.join')}
                     </Text>
                   </Pressable>
                 </View>
@@ -343,7 +347,7 @@ export function HouseSearchScreen({
                 ) : null}
                 {pendingNotice ? (
                   <Text style={[Typography.supporting, styles.msg, { color: t.primaryText }]}>
-                    입주 신청을 보냈어요. 방장이 승인하면 집에 들어가요.
+                    {tr('house.search.pendingNotice')}
                   </Text>
                 ) : null}
 
@@ -354,31 +358,35 @@ export function HouseSearchScreen({
                       <Text style={[Typography.label, { color: t.text }]}>{preview.info.name}</Text>
                     </View>
                     <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                      멤버 {preview.info.members}
-                      {preview.info.capacity ? ` / ${preview.info.capacity}` : ''}명이 함께 살고
-                      있어요
+                      {tr('house.search.previewMembers', {
+                        members: `${preview.info.members}${preview.info.capacity ? ` / ${preview.info.capacity}` : ''}`,
+                      })}
                     </Text>
                     {preview.info.requiresApproval ? (
                       // 승인형 코드 (#648) — '입주' 탭 후 pending 안내와 기대를 맞춘다.
                       <Text style={[Typography.supporting, { color: t.warningText }]}>
-                        방장 승인 후 입장하는 집이에요. 신청을 보내고 기다리게 돼요.
+                        {tr('house.search.approvalHint')}
                       </Text>
                     ) : null}
                     <View style={styles.previewActions}>
                       <Pressable
                         onPress={() => setPreview(null)}
                         accessibilityRole="button"
-                        accessibilityLabel="입주 취소"
+                        accessibilityLabel={tr('house.search.cancelJoinA11y')}
                         style={[styles.previewBtn, { backgroundColor: t.surface }]}>
-                        <Text style={[Typography.label, { color: t.text }]}>취소</Text>
+                        <Text style={[Typography.label, { color: t.text }]}>
+                          {tr('common.cancel')}
+                        </Text>
                       </Pressable>
                       <Pressable
                         onPress={confirmJoinPreview}
                         disabled={joining}
                         accessibilityRole="button"
-                        accessibilityLabel="이 집에 입주"
+                        accessibilityLabel={tr('house.search.joinThisA11y')}
                         style={[styles.previewBtn, { backgroundColor: t.primary }]}>
-                        <Text style={[Typography.label, { color: t.onPrimary }]}>이 집에 입주</Text>
+                        <Text style={[Typography.label, { color: t.onPrimary }]}>
+                          {tr('house.search.joinThis')}
+                        </Text>
                       </Pressable>
                     </View>
                   </View>
@@ -390,7 +398,9 @@ export function HouseSearchScreen({
             <View style={styles.section}>
               <View style={styles.iconLabelRow}>
                 <SparklePictogram size={14} />
-                <Text style={[Typography.label, { color: t.text }]}>추천 집 둘러보기</Text>
+                <Text style={[Typography.label, { color: t.text }]}>
+                  {tr('house.search.browseTitle')}
+                </Text>
               </View>
               <View style={[styles.searchBox, { backgroundColor: t.surface }]}>
                 <Icon name="search" size={16} color={t.text} />
@@ -398,7 +408,7 @@ export function HouseSearchScreen({
                   style={[styles.input, emph('normal'), { color: t.text }]}
                   value={query}
                   onChangeText={setQuery}
-                  placeholder="집 이름, 태그로 검색"
+                  placeholder={tr('house.search.searchPlaceholder')}
                   placeholderTextColor={t.textMuted}
                 />
               </View>
@@ -411,11 +421,11 @@ export function HouseSearchScreen({
           ) : loadError ? (
             // 로드 실패 (#549) — 빈 검색 결과('검색 결과가 없어요')로 위장하지 않는다.
             <View style={styles.errorBlock}>
-              <RetryState message="추천 집 목록을 불러오지 못했어요." onRetry={onRetry} />
+              <RetryState message={tr('house.search.loadError')} onRetry={onRetry} />
             </View>
           ) : (
             <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
-              검색 결과가 없어요
+              {tr('house.search.noResults')}
             </Text>
           )
         }
@@ -439,7 +449,7 @@ export function HouseSearchScreen({
                 onPress={() => void openHousePreview(h.id)}
                 disabled={!onPreviewHouse || previewingHouseId !== null}
                 accessibilityRole="button"
-                accessibilityLabel={`${h.name} 미리보기`}
+                accessibilityLabel={tr('house.search.previewA11y', { name: h.name })}
                 accessibilityState={{ busy: previewingHouseId === h.id }}
                 style={[styles.flex, styles.houseBody]}>
                 <View style={[styles.houseEmoji, { backgroundColor: h.bg, borderColor: h.border }]}>
@@ -450,7 +460,7 @@ export function HouseSearchScreen({
                       maxMembers={h.capacity}
                       legacyContentFit="cover"
                       style={styles.houseCover}
-                      name={`${h.name} 집 테마`}
+                      name={tr('house.search.coverA11y', { name: h.name })}
                       testID="house-cover"
                     />
                   ) : (
@@ -477,8 +487,11 @@ export function HouseSearchScreen({
                     <Text
                       style={[styles.meta, emph('normal'), { color: t.textMuted }]}
                       numberOfLines={1}>
-                      {h.level != null ? `Lv.${h.level} · ` : ''}멤버 {h.members} / {h.capacity}
-                      {atCapacity ? <Text style={{ color: t.danger }}> · 만석</Text> : null}
+                      {h.level != null ? `Lv.${h.level} · ` : ''}
+                      {tr('house.search.membersOf', { members: h.members, capacity: h.capacity })}
+                      {atCapacity ? (
+                        <Text style={{ color: t.danger }}>{` · ${tr('house.search.full')}`}</Text>
+                      ) : null}
                     </Text>
                   </View>
                 </View>
@@ -490,9 +503,9 @@ export function HouseSearchScreen({
               <Pressable
                 onPress={() =>
                   pending
-                    ? toast('방장의 수락을 기다리고 있어요')
+                    ? toast(tr('house.search.pendingToast'))
                     : accepted
-                      ? toast('이미 입주가 완료됐어요')
+                      ? toast(tr('house.search.acceptedToast'))
                       : onJoinHouse?.(h.id)
                 }
                 accessibilityRole="button"
@@ -510,12 +523,12 @@ export function HouseSearchScreen({
                     { color: pending || accepted ? t.textMuted : t.onPrimary },
                   ]}>
                   {pending
-                    ? '신청 중'
+                    ? tr('house.search.statusPending')
                     : accepted
-                      ? '입주 완료'
+                      ? tr('house.search.statusAccepted')
                       : h.joinRequestStatus === 'REJECTED'
-                        ? '다시 신청'
-                        : '입주 신청'}
+                        ? tr('house.search.statusRejected')
+                        : tr('house.search.apply')}
                 </Text>
               </Pressable>
             </View>
@@ -530,7 +543,7 @@ export function HouseSearchScreen({
                 "없어요"로 보이면 정말 없는 줄 안다. */}
             {query.length > 0 && hasNext ? (
               <Text style={[Typography.supporting, styles.searchScope, { color: t.textMuted }]}>
-                지금까지 불러온 집에서 찾은 결과예요. 검색어를 지우고 더 내려보면 집이 더 나와요.
+                {tr('house.search.searchScope')}
               </Text>
             ) : null}
             <Pressable
@@ -539,7 +552,9 @@ export function HouseSearchScreen({
               style={[styles.createBtn, { borderColor: t.disabledBg }]}>
               <View style={styles.iconLabelRow}>
                 <CrownPictogram size={14} />
-                <Text style={[Typography.label, { color: t.textMuted }]}>새 집 만들기</Text>
+                <Text style={[Typography.label, { color: t.textMuted }]}>
+                  {tr('house.search.create')}
+                </Text>
               </View>
             </Pressable>
           </>
@@ -569,10 +584,13 @@ export function HouseSearchScreen({
               {housePreview.name}
             </Text>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              {housePreview.level != null ? `Lv.${housePreview.level} · ` : ''}멤버{' '}
-              {housePreview.members}
-              {housePreview.capacity ? ` / ${housePreview.capacity}` : ''}
-              {housePreview.isFull ? <Text style={{ color: t.danger }}> · 만석</Text> : null}
+              {housePreview.level != null ? `Lv.${housePreview.level} · ` : ''}
+              {tr('house.search.members', {
+                n: `${housePreview.members}${housePreview.capacity ? ` / ${housePreview.capacity}` : ''}`,
+              })}
+              {housePreview.isFull ? (
+                <Text style={{ color: t.danger }}>{` · ${tr('house.search.full')}`}</Text>
+              ) : null}
             </Text>
             {housePreview.description ? (
               <Text style={[Typography.body, styles.hpDesc, { color: t.text }]}>
@@ -593,7 +611,9 @@ export function HouseSearchScreen({
               <View style={styles.hpMissions}>
                 <View style={styles.previewMissionHeading}>
                   <SparklePictogram size={14} />
-                  <Text style={[Typography.label, { color: t.text }]}>단체미션 미리보기</Text>
+                  <Text style={[Typography.label, { color: t.text }]}>
+                    {tr('house.search.previewMissions')}
+                  </Text>
                 </View>
                 {/* One vertical scroll region preserves access to every mission (#1119). */}
                 <View>
@@ -631,7 +651,7 @@ export function HouseSearchScreen({
                   </View>
                 </View>
                 <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                  입주 후 미션에 참여하고 보상을 받을 수 있어요
+                  {tr('house.search.previewMissionsHint')}
                 </Text>
               </View>
             ) : null}
@@ -639,23 +659,27 @@ export function HouseSearchScreen({
               <Pressable
                 onPress={() => setHousePreview(null)}
                 accessibilityRole="button"
-                accessibilityLabel="미리보기 닫기"
+                accessibilityLabel={tr('house.search.closeA11y')}
                 style={[styles.hpBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>닫기</Text>
+                <Text style={[Typography.label, { color: t.text }]}>
+                  {tr('house.search.close')}
+                </Text>
               </Pressable>
               {housePreview.isMember ? (
                 <View style={[styles.hpBtn, { backgroundColor: t.disabledBg }]}>
-                  <Text style={[Typography.label, { color: t.textMuted }]}>이미 참여 중</Text>
+                  <Text style={[Typography.label, { color: t.textMuted }]}>
+                    {tr('house.search.alreadyMember')}
+                  </Text>
                 </View>
               ) : (
                 <Pressable
                   onPress={() => {
-                    if (housePreview.isFull) return toast('정원이 가득 찼어요', 'error');
+                    if (housePreview.isFull) return toast(tr('house.search.fullToast'), 'error');
                     onJoinHouse?.(housePreview.id);
                     setHousePreview(null);
                   }}
                   accessibilityRole="button"
-                  accessibilityLabel="이 집에 참여하기"
+                  accessibilityLabel={tr('house.search.joinPreviewA11y')}
                   accessibilityState={{ disabled: !!housePreview.isFull }}
                   style={[
                     styles.hpBtn,
@@ -666,7 +690,7 @@ export function HouseSearchScreen({
                       Typography.label,
                       { color: housePreview.isFull ? t.textMuted : t.onPrimary },
                     ]}>
-                    참여하기
+                    {tr('house.search.joinPreview')}
                   </Text>
                 </Pressable>
               )}
