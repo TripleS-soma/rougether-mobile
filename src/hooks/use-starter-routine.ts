@@ -5,6 +5,7 @@ import { createRoutine, fetchCategories, fetchRoutines, getSessionUserId } from 
 import { queryKeys } from '@/lib/query-keys';
 import type { StarterRoutine } from '@/constants/starter-routines';
 import { track } from '@/lib/analytics';
+import { i18n } from '@/i18n';
 
 export function useStarterRoutine(userId: number | undefined) {
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -60,7 +61,7 @@ export function useStarterRoutine(userId: number | undefined) {
         return await mutateAsync(template);
       } catch {
         if (current()) {
-          setSaveError('루틴 저장을 확인하지 못했어요. 다시 확인해 주세요.');
+          setSaveError(i18n.t('member.starterRoutine.saveUnconfirmed'));
           setNeedsConfirmation(true);
           track('starter_routine_failed', { template_id: template.id });
         }
@@ -82,9 +83,7 @@ export function useStarterRoutine(userId: number | undefined) {
 
   const existing = routines.isSuccess && routines.data.length > 0;
   const loading = routines.isFetching;
-  const error =
-    saveError ??
-    (routines.isError ? '내 루틴을 불러오지 못했어요. 연결 후 다시 확인해 주세요.' : null);
+  const error = saveError ?? (routines.isError ? i18n.t('member.starterRoutine.loadFailed') : null);
   const needsReload = needsConfirmation || routines.isError;
   return useMemo(
     () => ({

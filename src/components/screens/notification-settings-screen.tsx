@@ -7,6 +7,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { i18n, useT } from '@/i18n';
 
 /**
  * App model of GET/PATCH /users/me/notification-settings (#495) — 서버와 같은
@@ -26,14 +27,8 @@ export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
 };
 
 type RowKey = Exclude<keyof NotificationSettings, 'all'>;
-const ROWS: { key: RowKey; label: string; desc: string }[] = [
-  {
-    key: 'reminder',
-    label: '루틴 리마인더',
-    desc: '루틴·할 일, 주간 회고와 고양이 복귀 알림을 받아요',
-  },
-  { key: 'house', label: '집 알림', desc: '응원과 우리 집 소식을 알려드려요' },
-];
+/** 행 문구는 `member.notificationSettings.rows.<key>` (#893). */
+const ROW_KEYS: RowKey[] = ['reminder', 'house'];
 
 export type NotificationSettingsScreenProps = {
   /** Server-backed settings — controlled by the shell (fetch + optimistic PATCH). */
@@ -64,14 +59,16 @@ export type NotificationSettingsScreenProps = {
  * (idle·unsupported·no-device)는 줄을 안 그린다 — 잘 되고 있을 때 굳이
  * 기술 상태를 보여줄 이유가 없다.
  */
-const PUSH_STEP_NOTICE: Partial<Record<PushRegistrationStep, string>> = {
-  'permission-denied': '기기에서 알림이 꺼져 있어요. 시스템 설정의 알림에서 켜야 푸시가 도착해요.',
-  'token-failed': '이 기기를 알림 서버에 등록하지 못했어요. 앱을 다시 켜보고, 계속되면 알려주세요.',
-  'register-failed': '이 기기 등록이 저장되지 않았어요. 네트워크를 확인하고 앱을 다시 켜보세요.',
-};
+const PUSH_STEP_NOTICED: ReadonlySet<PushRegistrationStep> = new Set([
+  'permission-denied',
+  'token-failed',
+  'register-failed',
+]);
 
 export function pushStepNotice(step?: PushRegistrationStep): string | undefined {
-  return step ? PUSH_STEP_NOTICE[step] : undefined;
+  return step && PUSH_STEP_NOTICED.has(step)
+    ? i18n.t(`member.notificationSettings.pushStep.${step}`)
+    : undefined;
 }
 
 /**
@@ -93,10 +90,16 @@ export function NotificationSettingsScreen({
   // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
   const headerInset = useHeaderContentInset();
   const Typography = useTypography();
+  const tr = useT();
+  const rows = ROW_KEYS.map((key) => ({
+    key,
+    label: tr(`member.notificationSettings.rows.${key}.label`),
+    desc: tr(`member.notificationSettings.rows.${key}.desc`),
+  }));
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
-      <ScreenHeader title="푸시 알림" onBack={onBack} />
+      <ScreenHeader title={tr('member.notificationSettings.title')} onBack={onBack} />
 
       <ScrollView
         contentContainerStyle={[
@@ -108,14 +111,16 @@ export function NotificationSettingsScreen({
         {loadError ? (
           <View style={[styles.card, styles.errorCard, { backgroundColor: t.surface }]}>
             <Text style={[Typography.body, { color: t.text }]}>
-              설정을 불러오지 못했어요. 지금 보이는 값은 실제 설정과 다를 수 있어요.
+              {tr('member.notificationSettings.loadFailed')}
             </Text>
             <Pressable
               onPress={onRetry}
               accessibilityRole="button"
-              accessibilityLabel="다시 불러오기"
+              accessibilityLabel={tr('member.notificationSettings.retry')}
               style={[styles.retryBtn, { backgroundColor: t.primary }]}>
-              <Text style={[Typography.label, { color: t.onPrimary }]}>다시 불러오기</Text>
+              <Text style={[Typography.label, { color: t.onPrimary }]}>
+                {tr('member.notificationSettings.retry')}
+              </Text>
             </Pressable>
           </View>
         ) : null}
@@ -131,28 +136,30 @@ export function NotificationSettingsScreen({
         <View style={[styles.card, { backgroundColor: t.surface }]}>
           <View style={styles.row}>
             <View style={styles.flex}>
-              <Text style={[Typography.body, { color: t.text }]}>전체 알림</Text>
+              <Text style={[Typography.body, { color: t.text }]}>
+                {tr('member.notificationSettings.all')}
+              </Text>
               <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                모든 푸시 알림을 한 번에 켜고 꺼요
+                {tr('member.notificationSettings.allDesc')}
               </Text>
             </View>
             <ToggleSwitch
               value={settings.all}
               onToggle={() => onToggle?.('all', !settings.all)}
-              accessibilityLabel="전체 알림"
+              accessibilityLabel={tr('member.notificationSettings.all')}
             />
           </View>
         </View>
 
         <View style={[styles.card, { backgroundColor: t.surface }]}>
-          {ROWS.map((r, idx) => {
+          {rows.map((r, idx) => {
             const value = settings.all && settings[r.key];
             return (
               <View
                 key={r.key}
                 style={[
                   styles.row,
-                  idx !== ROWS.length - 1 && {
+                  idx !== rows.length - 1 && {
                     borderBottomColor: t.border,
                     borderBottomWidth: StyleSheet.hairlineWidth,
                   },

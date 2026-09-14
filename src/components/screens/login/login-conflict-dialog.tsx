@@ -4,6 +4,7 @@ import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import type { SocialProvider } from '@/lib/last-login';
 import { providerLabel } from '@/lib/login-conflict';
+import { i18n, useT } from '@/i18n';
 
 export type LoginConflictDialogProps = {
   visible: boolean;
@@ -37,6 +38,7 @@ export function LoginConflictDialog({
   onClosed,
 }: LoginConflictDialogProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   const existing = providers.length === 1 ? providers[0] : null;
   // Sign in with Apple 은 iOS 전용 — 다른 플랫폼에선 동작할 수 없는 버튼을 보여주지 않는다.
@@ -52,7 +54,9 @@ export function LoginConflictDialog({
       <Pressable style={styles.backdrop} onPress={onDismiss}>
         {/* Inner Pressable swallows taps so the card doesn't dismiss itself. */}
         <Pressable style={[styles.card, { backgroundColor: t.screen }]}>
-          <Text style={[Typography.h3, { color: t.text }]}>이미 가입된 이메일이에요</Text>
+          <Text style={[Typography.h3, { color: t.text }]}>
+            {tr('member.login.conflict.title')}
+          </Text>
           <Text style={[Typography.body, styles.body, { color: t.textMuted }]}>
             {message}
             {'\n'}
@@ -63,26 +67,32 @@ export function LoginConflictDialog({
               <Pressable
                 onPress={() => onLoginWith(existing)}
                 accessibilityRole="button"
-                accessibilityLabel={`${providerLabel(existing)}로 로그인`}
+                accessibilityLabel={tr('member.login.conflict.loginWith', {
+                  provider: providerLabel(existing),
+                })}
                 style={[styles.btn, { backgroundColor: t.primary }]}>
                 <Text style={[Typography.label, { color: t.onPrimary }]}>
-                  {providerLabel(existing)}로 로그인
+                  {tr('member.login.conflict.loginWith', { provider: providerLabel(existing) })}
                 </Text>
               </Pressable>
             ) : null}
             <Pressable
               onPress={onContinueAsNew}
               accessibilityRole="button"
-              accessibilityLabel="새 계정으로 계속"
+              accessibilityLabel={tr('member.login.conflict.continueAsNew')}
               style={[styles.btn, { backgroundColor: t.surfaceMuted }]}>
-              <Text style={[Typography.label, { color: t.text }]}>새 계정으로 계속</Text>
+              <Text style={[Typography.label, { color: t.text }]}>
+                {tr('member.login.conflict.continueAsNew')}
+              </Text>
             </Pressable>
             <Pressable
               onPress={onDismiss}
               accessibilityRole="button"
-              accessibilityLabel="닫기"
+              accessibilityLabel={tr('member.common.close')}
               style={styles.textBtn}>
-              <Text style={[Typography.label, { color: t.textMuted }]}>닫기</Text>
+              <Text style={[Typography.label, { color: t.textMuted }]}>
+                {tr('member.common.close')}
+              </Text>
             </Pressable>
           </View>
         </Pressable>
@@ -99,16 +109,16 @@ function guideText(
   canUseExisting: boolean,
 ): string {
   if (existing != null && canUseExisting) {
-    return `기존 계정을 쓰려면 ${providerLabel(existing)}로 로그인하고, 새로 시작하려면 새 계정으로 계속해 주세요.`;
+    return i18n.t('member.login.conflict.guideUseExisting', { provider: providerLabel(existing) });
   }
   if (existing != null) {
-    return `이 기기에서는 ${providerLabel(existing)} 로그인을 쓸 수 없어요. iOS 기기에서 ${providerLabel(existing)}로 로그인하거나, 새로 시작하려면 새 계정으로 계속해 주세요.`;
+    return i18n.t('member.login.conflict.guideUnavailable', { provider: providerLabel(existing) });
   }
   if (providers.length > 1) {
     const labels = providers.map(providerLabel).join('·');
-    return `기존 계정을 쓰려면 이 창을 닫고 ${labels} 버튼으로 로그인하고, 새로 시작하려면 새 계정으로 계속해 주세요.`;
+    return i18n.t('member.login.conflict.guideMultiple', { labels });
   }
-  return '기존 계정을 쓰려면 가입했던 방법으로 로그인하고, 새로 시작하려면 새 계정으로 계속해 주세요.';
+  return i18n.t('member.login.conflict.guideUnknown');
 }
 
 const styles = StyleSheet.create({

@@ -7,6 +7,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 /**
  * 도움말 FAQ — **앱에 실제로 있는 것만** 적는다. "인증 사진형 루틴" 항목이
@@ -14,20 +15,7 @@ import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
  * 전부 null) 카메라는 버그 제보 스크린샷에서만 쓴다 — 없는 기능을 하라고
  * 안내하던 셈이라 지웠다 (#797). 서버·UI가 생기면 그때 되살릴 것.
  */
-const FAQS: { q: string; a: string }[] = [
-  {
-    q: '루틴은 어떻게 추가하나요?',
-    a: '나의 방 화면에서 카테고리의 + 버튼을 누르거나, 루틴 관리 화면에서 루틴을 추가할 수 있어요.',
-  },
-  {
-    q: '코인과 다이아는 어떻게 모으나요?',
-    a: '매일 루틴을 완료하면 코인을 받아요. 코인으로 뽑기를 하고, 뽑기에서 이미 가진 아이템이 나오면 다이아로 바뀌어요. 다이아로는 방 꾸미기에서 가구를 살 수 있어요.',
-  },
-  {
-    q: '친구와 함께하려면 어떻게 하나요?',
-    a: '집 탭에서 새 집을 만들거나 친구의 집에 참여해 함께 루틴을 이어갈 수 있어요.',
-  },
-];
+const FAQ_IDS = ['addRoutine', 'currency', 'friends'] as const;
 
 export type HelpScreenProps = {
   appVersion?: string;
@@ -46,11 +34,17 @@ export function HelpScreen({ appVersion = '1.0.0', onContact, onBack }: HelpScre
   const headerInset = useHeaderContentInset();
   const Typography = useTypography();
   const emph = useFontEmphasis();
+  const tr = useT();
   const [openIdx, setOpenIdx] = useState<number | null>(null);
+  const faqs = FAQ_IDS.map((id) => ({
+    id,
+    q: tr(`member.help.faq.${id}.q`),
+    a: tr(`member.help.faq.${id}.a`),
+  }));
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
-      <ScreenHeader title="도움말" onBack={onBack} />
+      <ScreenHeader title={tr('member.help.title')} onBack={onBack} />
 
       <ScrollView
         contentContainerStyle={[
@@ -65,16 +59,16 @@ export function HelpScreen({ appVersion = '1.0.0', onContact, onBack }: HelpScre
             styles.sectionTitle,
             { color: t.textMuted },
           ]}>
-          자주 묻는 질문
+          {tr('member.help.faqTitle')}
         </Text>
         <View style={[styles.card, { backgroundColor: t.surface }]}>
-          {FAQS.map((faq, idx) => {
+          {faqs.map((faq, idx) => {
             const open = openIdx === idx;
             return (
               <View
-                key={faq.q}
+                key={faq.id}
                 style={
-                  idx !== FAQS.length - 1 && {
+                  idx !== faqs.length - 1 && {
                     borderBottomColor: t.border,
                     borderBottomWidth: StyleSheet.hairlineWidth,
                   }
@@ -107,21 +101,21 @@ export function HelpScreen({ appVersion = '1.0.0', onContact, onBack }: HelpScre
             styles.sectionTitle,
             { color: t.textMuted },
           ]}>
-          지원
+          {tr('member.help.support')}
         </Text>
         <View style={[styles.card, { backgroundColor: t.surface }]}>
           <Pressable
             onPress={onContact}
             accessibilityRole="button"
-            accessibilityLabel="문의하기"
+            accessibilityLabel={tr('member.help.contact')}
             style={styles.linkRow}>
-            <Text style={[Typography.body, { color: t.text }]}>문의하기</Text>
+            <Text style={[Typography.body, { color: t.text }]}>{tr('member.help.contact')}</Text>
             <Icon name="forward" size={16} color={t.textDisabled} />
           </Pressable>
         </View>
 
         <Text style={[Typography.supporting, styles.version, { color: t.textMuted }]}>
-          버전 {appVersion}
+          {tr('member.help.version', { version: appVersion })}
         </Text>
       </ScrollView>
     </View>

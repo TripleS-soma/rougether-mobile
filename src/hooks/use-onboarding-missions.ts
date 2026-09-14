@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { getSessionUserId } from '@/api';
 import { track } from '@/lib/analytics';
+import { i18n } from '@/i18n';
 
 /** 완료/스킵 플래그만 영속 (#571) — 중간 진행은 저장하지 않는다(중도 이탈 시
  * 다음 시작에 처음부터). */
@@ -30,28 +31,29 @@ export type OnboardingMissionStep = {
 /** 온보딩 미션 체인 4단계 (#571) — 순서대로만 진행된다. */
 // 첫 루틴 등록 단계는 뺐다(2026-09-08) — 온보딩 직후의 관심사 추천 루틴 게이트(#1149)가
 // 그 역할을 하므로 중복이었다. 체인은 뽑기 → 방 꾸미기 → 친구 초대 3단계.
+/** 문구는 접근 시점에 읽는 getter (#893) — 모듈 로드 때 굳히면 언어 변경이 반영되지 않는다. */
+function step(id: OnboardingMissionStepId): OnboardingMissionStep {
+  return {
+    id,
+    get label() {
+      return i18n.t(`member.missions.${id}.label`);
+    },
+    get hint() {
+      return i18n.t(`member.missions.${id}.hint`);
+    },
+  };
+}
+
 export const ONBOARDING_MISSION_STEPS: OnboardingMissionStep[] = [
   // 첫 단계는 루틴 완료 (#1324) — 추천 루틴 게이트가 루틴 1개를 보장하므로 "등록"이
   // 아니라 "완료"를 시킨다. 완료 신호는 그날 첫 완료(#1295 자동 출석과 같은 seam).
-  {
-    id: 'complete-routine',
-    label: '오늘 루틴 1개 완료하기',
-    hint: '나의 방에서 루틴 체크를 눌러요',
-  },
-  { id: 'first-draw', label: '뽑기 1회 해보기', hint: '뽑기에서 코인으로 한 번 뽑아요' },
-  {
-    id: 'place-furniture',
-    label: '방 꾸미기 저장하기',
-    hint: '방 꾸미기에서 가구를 놓고 저장해요',
-  },
+  step('complete-routine'),
+  step('first-draw'),
+  step('place-furniture'),
   // 4단계는 '다른 집 둘러보기'였다 (#571). 서버가 온보딩에서 기본 집을
   // 자동 생성하면서(서버 #288) 전제가 바뀌었다 — 이제 내 집이 이미 있고,
   // 혼자인 4인집을 채우는 게 다음 행동이다 (#841).
-  {
-    id: 'invite-house',
-    label: '집에 친구 초대하기',
-    hint: '집 관리에서 초대 링크를 친구에게 공유해요',
-  },
+  step('invite-house'),
 ];
 
 /** '튜토리얼 다시 보기' 재시작용 — 플래그를 지우면 온보딩 완주 직후의

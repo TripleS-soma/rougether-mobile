@@ -1,6 +1,7 @@
 import type { Screen } from '@/components/app/navigation';
 import type { CoachStep } from '@/components/ui/coach-mark';
 import type { OnboardingMissionStepId } from '@/hooks/use-onboarding-missions';
+import { i18n } from '@/i18n';
 
 /**
  * 튜토리얼 코치마크 매핑 (#1324) — (현재 미션, 현재 화면) → 스포트라이트할 대상과 문구.
@@ -14,11 +15,15 @@ export type TutorialContext = {
   noHouses?: boolean;
 };
 
-const BACK_TO_ROOM: CoachStep = {
-  target: 'nav-myRoom',
-  title: '나의 방으로 돌아가요',
-  body: '아래 방 탭을 눌러 미션을 이어가요.',
-};
+/** 문구는 호출 시점에 읽는다 (#893) — 셸이 렌더마다 부르므로 언어 변경이 곧 반영된다. */
+function copy(key: string): Pick<CoachStep, 'title' | 'body'> {
+  return {
+    title: i18n.t(`member.tutorial.coach.${key}.title`),
+    body: i18n.t(`member.tutorial.coach.${key}.body`),
+  };
+}
+
+const backToRoom = (): CoachStep => ({ target: 'nav-myRoom', ...copy('backToRoom') });
 
 export function tutorialCoachStep(
   step: OnboardingMissionStepId | undefined,
@@ -31,53 +36,46 @@ export function tutorialCoachStep(
       return screen === 'myRoom'
         ? {
             target: 'room-routine-check',
-            title: '오늘 루틴을 완료해 봐요',
-            body: '체크를 누르면 오늘 몫이 완료되고 코인을 받아요.',
+            ...copy('completeRoutine'),
           }
-        : BACK_TO_ROOM;
+        : backToRoom();
     case 'first-draw':
       if (screen === 'gacha') {
         return {
           target: 'gacha-draw',
-          title: '한 번 뽑아 볼까요?',
-          body: '1회 뽑기를 눌러 방을 꾸밀 가구를 얻어요.',
+          ...copy('draw'),
         };
       }
       return screen === 'myRoom'
         ? {
             target: 'room-gacha',
-            title: '뽑기로 가구를 얻어요',
-            body: '오른쪽의 선물 버튼을 눌러 뽑기로 가요.',
+            ...copy('goToGacha'),
           }
-        : BACK_TO_ROOM;
+        : backToRoom();
     case 'place-furniture':
       if (screen === 'decor') {
         return {
           targets: ['decor-grid', 'decor-apply'],
-          title: '가구를 놓고 저장해요',
-          body: '아래 목록에서 가구를 골라 방에 놓은 뒤 적용하기를 눌러요.',
+          ...copy('placeFurniture'),
         };
       }
       return screen === 'myRoom'
         ? {
             target: 'room-decor',
-            title: '방을 꾸며 볼까요?',
-            body: '연필 버튼을 눌러 꾸미기로 가요.',
+            ...copy('goToDecor'),
           }
-        : BACK_TO_ROOM;
+        : backToRoom();
     case 'invite-house':
       if (screen === 'houseMembers') {
         return {
           target: 'house-invite-share',
-          title: '친구에게 초대 링크를 보내요',
-          body: '링크 공유를 누르면 친구가 바로 집에 들어올 수 있어요.',
+          ...copy('shareInvite'),
         };
       }
       if (screen === 'house') {
         return {
           target: 'house-manage',
-          title: '집 관리로 들어가요',
-          body: '집 관리에서 친구를 초대할 수 있어요.',
+          ...copy('houseManage'),
         };
       }
       if (screen === 'houseSearch' && ctx.noHouses) {
@@ -86,8 +84,7 @@ export function tutorialCoachStep(
       }
       return {
         target: 'nav-house',
-        title: '집으로 가요',
-        body: '아래 집 탭을 눌러 친구를 초대해요.',
+        ...copy('goToHouse'),
       };
   }
 }

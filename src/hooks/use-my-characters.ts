@@ -18,6 +18,7 @@ import type { MyCharacterItem } from '@/api/types';
 import { useToast } from '@/components/ui/toast';
 import type { OwnedCharacter } from '@/components/screens/sheets/character-picker-sheet';
 import { queryKeys } from '@/lib/query-keys';
+import { i18n } from '@/i18n';
 
 /** 서버 목록 → 피커 항목 — 모듈 스코프에 두어 react-query가 결과를 메모한다. */
 const selectOwned = (items: MyCharacterItem[]): OwnedCharacter[] =>
@@ -51,9 +52,9 @@ export function useMyCharacters() {
     },
     onError: (_err, _serverId, ctx) => {
       qc.setQueryData(queryKey, ctx?.before);
-      toast('캐릭터 교체에 실패했어요', 'error');
+      toast(i18n.t('member.myCharacters.swapFailed'), 'error');
     },
-    onSuccess: () => toast('캐릭터를 교체했어요', 'success'),
+    onSuccess: () => toast(i18n.t('member.myCharacters.swapped'), 'success'),
   });
 
   /**

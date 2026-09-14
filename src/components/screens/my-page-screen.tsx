@@ -15,6 +15,7 @@ import { useBottomNavInset, useHeaderContentInset, useScreenStyle } from '@/hook
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 type Row = { icon: IconName; label: string; onPress?: () => void };
 
@@ -80,6 +81,7 @@ export const MyPageScreen = memo(function MyPageScreen({
   onScrollY,
 }: MyPageScreenProps) {
   const t = useTokens();
+  const tr = useT();
   const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
@@ -91,15 +93,21 @@ export const MyPageScreen = memo(function MyPageScreen({
   const scrollRestore = useScrollRestore(scrollRef, { getInitialScrollY, onScrollY });
 
   const rows: Row[] = [
-    { icon: 'list', label: '주간회고 다시 보기', onPress: onOpenWeeklyReport },
+    { icon: 'list', label: tr('member.myPage.weeklyReport'), onPress: onOpenWeeklyReport },
     // 캘린더 연동은 "설정"이 아니라 콘텐츠 가져오기라 여기로 (#1097). 네이티브 모듈이
     // 없는 곳(웹)은 미배선이라 숨긴다.
     ...(onOpenCalendarImport
-      ? [{ icon: 'calendar' as const, label: '캘린더 연동', onPress: onOpenCalendarImport }]
+      ? [
+          {
+            icon: 'calendar' as const,
+            label: tr('member.myPage.calendarImport'),
+            onPress: onOpenCalendarImport,
+          },
+        ]
       : []),
-    { icon: 'gift', label: '친구 초대', onPress: onInviteFriends },
-    { icon: 'help', label: '도움말', onPress: onOpenHelp },
-    { icon: 'bug', label: '버그 제보', onPress: onReportBug },
+    { icon: 'gift', label: tr('member.myPage.inviteFriends'), onPress: onInviteFriends },
+    { icon: 'help', label: tr('member.myPage.help'), onPress: onOpenHelp },
+    { icon: 'bug', label: tr('member.myPage.bugReport'), onPress: onReportBug },
   ];
 
   // 바로가기 타일 — 배선된 것만. 캐릭터 교체는 기능 제외 상태(#637)라 없다.
@@ -108,25 +116,41 @@ export const MyPageScreen = memo(function MyPageScreen({
       ? [
           {
             icon: 'calendar' as const,
-            label: '출석 이벤트',
+            label: tr('member.myPage.attendance'),
             onPress: onOpenAttendance,
             dot: attendancePending,
           },
         ]
       : []),
     ...(onOpenWalletHistory
-      ? [{ icon: 'coin' as const, label: '재화 내역', onPress: onOpenWalletHistory }]
+      ? [
+          {
+            icon: 'coin' as const,
+            label: tr('member.myPage.walletHistory'),
+            onPress: onOpenWalletHistory,
+          },
+        ]
       : []),
   ];
 
   const stats: { icon: IconName; color: string; value: string; label: string }[] = [
-    { icon: 'flame', color: t.warningText, value: `${streakDays}일`, label: '연속' },
-    { icon: 'coin', color: t.warning, value: formatAmount(coinBalance), label: '코인' },
+    {
+      icon: 'flame',
+      color: t.warningText,
+      value: tr('member.myPage.streakValue', { count: streakDays }),
+      label: tr('member.myPage.streak'),
+    },
+    {
+      icon: 'coin',
+      color: t.warning,
+      value: formatAmount(coinBalance),
+      label: tr('member.myPage.coin'),
+    },
     {
       icon: 'diamond',
       color: t.primaryText,
       value: formatAmount(diamondBalance),
-      label: '다이아',
+      label: tr('member.myPage.diamond'),
     },
   ];
 
@@ -141,13 +165,13 @@ export const MyPageScreen = memo(function MyPageScreen({
         <View style={[styles.ambientWarm, { backgroundColor: t.warningSoft }]} />
       </View>
       <ScreenHeader
-        title="내 정보"
+        title={tr('member.myPage.title')}
         right={
           // 설정은 "바꾸는 곳"이라 목록 행이 아니라 헤더 톱니 뒤로 — 보통 앱의 자리.
           <Pressable
             onPress={onOpenSettings}
             accessibilityRole="button"
-            accessibilityLabel="설정"
+            accessibilityLabel={tr('member.myPage.settingsA11y')}
             testID="my-page-settings"
             style={styles.headerBtn}>
             <GlassSurface style={styles.headerFace} fallbackColor={t.surface}>
@@ -183,20 +207,22 @@ export const MyPageScreen = memo(function MyPageScreen({
               <Text
                 style={[Typography.body, { color: bio ? t.textMuted : t.textDisabled }]}
                 numberOfLines={2}>
-                {bio || '한 줄 소개를 적어보세요'}
+                {bio || tr('member.myPage.bioPlaceholder')}
               </Text>
             </View>
           </View>
           <Pressable
             onPress={onEditProfile}
             accessibilityRole="button"
-            accessibilityLabel="프로필 편집"
+            accessibilityLabel={tr('member.myPage.editProfile')}
             style={({ pressed }) => [
               styles.editBtn,
               { backgroundColor: pressed ? t.primarySoft : t.surfaceMuted },
             ]}>
             <Icon name="edit" size={16} color={t.text} />
-            <Text style={[Typography.label, { color: t.text }]}>프로필 편집</Text>
+            <Text style={[Typography.label, { color: t.text }]}>
+              {tr('member.myPage.editProfile')}
+            </Text>
           </Pressable>
         </GlassSurface>
 
@@ -237,7 +263,9 @@ export const MyPageScreen = memo(function MyPageScreen({
                 key={tile.label}
                 onPress={tile.onPress}
                 accessibilityRole="button"
-                accessibilityLabel={tile.dot ? `${tile.label}, 오늘 미출석` : tile.label}
+                accessibilityLabel={
+                  tile.dot ? `${tile.label}, ${tr('nav.badgeAbsent')}` : tile.label
+                }
                 style={styles.tile}>
                 <GlassSurface fallbackColor={t.surface} style={styles.tileFace}>
                   <View style={[styles.iconCircle, { backgroundColor: t.primarySoft }]}>

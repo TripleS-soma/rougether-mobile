@@ -12,6 +12,7 @@ import { BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 /** 화면(윈도) 좌표계의 대상 사각형. */
 export type TargetRect = { x: number; y: number; w: number; h: number };
@@ -119,6 +120,7 @@ export function CoachMarkOverlay({
   caption,
 }: CoachMarkOverlayProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   const step = steps[index];
   // 완전 잠금 중엔 안드로이드 뒤로가기도 오버레이가 먹는다 — 밑 화면의 백 핸들러가
@@ -224,9 +226,11 @@ export function CoachMarkOverlay({
             <Pressable
               onPress={onSkip}
               accessibilityRole="button"
-              accessibilityLabel="튜토리얼 건너뛰기"
+              accessibilityLabel={tr('member.tutorial.skipA11y')}
               hitSlop={8}>
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>건너뛰기</Text>
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                {tr('member.common.skip')}
+              </Text>
             </Pressable>
             <Text style={[Typography.supporting, { color: t.textDisabled }]}>
               {index + 1} / {steps.length}
@@ -234,10 +238,12 @@ export function CoachMarkOverlay({
             <Pressable
               onPress={onNext}
               accessibilityRole="button"
-              accessibilityLabel={last ? '튜토리얼 마치기' : '다음 단계'}
+              accessibilityLabel={
+                last ? tr('member.tutorial.finishA11y') : tr('member.tutorial.nextA11y')
+              }
               style={[styles.nextBtn, { backgroundColor: t.primary }]}>
               <Text style={[Typography.label, { color: t.onPrimary }]}>
-                {last ? '시작하기' : '다음'}
+                {last ? tr('member.common.start') : tr('member.common.next')}
               </Text>
             </Pressable>
           </View>
