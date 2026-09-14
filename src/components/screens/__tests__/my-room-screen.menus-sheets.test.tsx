@@ -25,8 +25,8 @@ describe('MyRoomScreen', () => {
     );
 
     // Per-category quick-add todo button still renders.
-    expect(getByLabelText('일정에 추가')).toBeTruthy();
-    expect(getByLabelText('건강에 추가')).toBeTruthy();
+    expect(getByLabelText('일정 할 일 추가')).toBeTruthy();
+    expect(getByLabelText('건강 할 일 추가')).toBeTruthy();
 
     // The checkbox (labelled by the routine title) toggles completion.
     await fireEvent.press(getByLabelText('하루 회고'));

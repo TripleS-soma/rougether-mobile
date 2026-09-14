@@ -13,6 +13,7 @@ import {
   Animated,
   type GestureResponderEvent,
   KeyboardAvoidingView,
+  LayoutAnimation,
   Platform,
   Pressable,
   ScrollView,
@@ -60,6 +61,9 @@ import {
 } from '@/components/screens/sheets/character-picker-sheet';
 import { CategoryFormSheet } from '@/components/screens/sheets/category-form-sheet';
 import { DateEditSheet } from '@/components/screens/sheets/date-edit-sheet';
+import { TodoDateDialog } from '@/components/screens/sheets/todo-date-dialog';
+import { QuickAddRow } from '@/components/screens/my-room/quick-add-row';
+import { useQuickAddKeyboard } from '@/components/screens/my-room/use-quick-add-keyboard';
 import { RenameDialog } from '@/components/screens/sheets/rename-dialog';
 import { RoutineMenuSheet } from '@/components/screens/sheets/routine-menu-sheet';
 import { TimePickerSheet } from '@/components/screens/sheets/time-picker-sheet';
@@ -100,7 +104,7 @@ import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
-import { localDate, monthDayLabel } from '@/utils/datetime';
+import { formatDate, localDate, monthDayLabel } from '@/utils/datetime';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
 import { holidayName } from '@/utils/holidays';
 
@@ -507,6 +511,13 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // 메뉴 → 날짜 바꾸기: calendar sheet. Todos move their dueDate; routines move
   // that day's occurrence only (repeat stays). The draft date lives in the sheet.
   const [dateEditId, setDateEditId] = useState<string | null>(null);
+  // 카테고리 + 의 인라인 빠른 추가 (#1280 롤백, 2026-09-14) — 어느 카테고리의 입력행이
+  // 열렸는지, 마감일, 날짜 피커. 입력 중인 제목은 QuickAddRow가 소유한다 (#769).
+  const [addingCategory, setAddingCategory] = useState<string | null>(null);
+  const [newTodoDate, setNewTodoDate] = useState(today);
+  const [todoDateOpen, setTodoDateOpen] = useState(false);
+  // 날짜 피커를 여는 blur는 커밋/닫기가 아니다.
+  const skipBlurCommit = useRef(false);
   // 날짜 바꾸기의 원래 날짜 — 메뉴를 연 날짜(방 탭은 오늘, 달력 탭은 선택한 날짜) (#189).
   const [dateEditFrom, setDateEditFrom] = useState(today);
   const dateEditItem = routines.find((r) => r.id === dateEditId) ?? null;
@@ -687,6 +698,40 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   const scrollRef = useRef<ScrollView>(null);
   // 서브화면(꾸미기·루틴 관리 …)에 다녀와도 보던 자리로 (#763).
   const scrollRestore = useScrollRestore(scrollRef, { getInitialScrollY, onScrollY });
+  // 키보드 높이 추적·입력행 밀어 올리기 (my-room/use-quick-add-keyboard).
+  const { addRowRef, todoInputRef, keyboardPad, scrollYRef, scrollToQuickAdd } =
+    useQuickAddKeyboard(scrollRef, addingCategory);
+  // 방탭은 오늘, 달력탭은 선택한 날짜를 기본 마감일로 연다 (#323).
+  const openQuickAdd = (categoryId: string, defaultDate = today) => {
+    setNewTodoDate(defaultDate);
+    const opening = addingCategory !== categoryId;
+    setAddingCategory(opening ? categoryId : null);
+    if (opening) setTimeout(scrollToQuickAdd, 80);
+  };
+  const commitTodo = (categoryId: string, raw: string) => {
+    if (skipBlurCommit.current) {
+      skipBlurCommit.current = false;
+      return;
+    }
+    const title = raw.trim();
+    // 새 행이 뚝 나타나는 대신 부드럽게 삽입되고 기존 행이 밀려난다 (#452).
+    if (title) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    if (title) void onQuickAddRoutine?.(categoryId, title, newTodoDate);
+    setAddingCategory(null);
+  };
+  // 퀵애드 입력행 — 제목 입력 + 마감일 칩, blur가 커밋. 방탭·달력탭 공용 (#323).
+  const renderQuickAddRow = (categoryId: string) => (
+    <QuickAddRow
+      ref={addRowRef}
+      inputRef={todoInputRef}
+      dateLabel={newTodoDate === today ? '오늘' : formatDate(newTodoDate)}
+      onCommit={(title) => commitTodo(categoryId, title)}
+      onOpenDatePicker={() => setTodoDateOpen(true)}
+      onDatePickerPressIn={() => {
+        skipBlurCommit.current = true;
+      }}
+    />
+  );
   const openCompose = (date: string, category = '') =>
     setCompose({
       date,
@@ -696,9 +741,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   const renderQuickAddButton = (meta: RoutineCategoryMeta, date: string) =>
     canQuickAdd(meta.id) && !meta.deleted && meta.houseId == null ? (
       <ScalePressable
-        onPress={() => openCompose(date, meta.id)}
+        onPress={() => openQuickAdd(meta.id, date)}
         accessibilityRole="button"
-        accessibilityLabel={`${meta.name}에 추가`}
+        accessibilityLabel={`${meta.name} 할 일 추가`}
         hitSlop={8}
         style={[styles.catAdd, { backgroundColor: meta.color }]}>
         <Icon name="add" size={14} color={t.onPrimary} />
@@ -1074,6 +1119,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           <View style={styles.flex} />
           {renderQuickAddButton(meta, date)}
         </CategoryDragHandle>
+        {addingCategory === meta.id ? renderQuickAddRow(meta.id) : null}
         <View style={styles.rows}>
           {/* 카테고리 드래그 중엔 행 드래그를 끈다(배타) — 그룹이 통째로 들린 동안
               행이 따로 들리면 두 translateY가 겹친다. */}
@@ -1130,8 +1176,14 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               }
             : null,
         navInset ? { paddingBottom: Spacing.six + navInset } : null,
+        addingCategory != null && keyboardPad > 0 ? { paddingBottom: keyboardPad + 120 } : null,
       ]}
       {...scrollRestore}
+      onScroll={(e) => {
+        // 빠른 추가 입력행 스크롤인용 로컬 추적 + 셸의 탭별 기억(#763).
+        scrollYRef.current = e.nativeEvent.contentOffset.y;
+        scrollRestore.onScroll?.(e);
+      }}
       keyboardShouldPersistTaps="handled">
       {children}
     </PawRefreshScroll>
@@ -1628,6 +1680,18 @@ export const MyRoomScreen = memo(function MyRoomScreen({
       />
 
       {/* 날짜 바꾸기: calendar bottom sheet — the pick stays a draft until 확인. */}
+      <TodoDateDialog
+        visible={todoDateOpen}
+        value={newTodoDate}
+        onSelect={(date) => {
+          setNewTodoDate(date);
+          setTodoDateOpen(false);
+          // 제목 입력으로 포커스를 되돌려 blur 커밋이 계속 동작하게.
+          setTimeout(() => todoInputRef.current?.focus(), 60);
+        }}
+        onClose={() => setTodoDateOpen(false)}
+      />
+
       <DateEditSheet
         item={dateEditItem}
         fromDate={dateEditFrom}
