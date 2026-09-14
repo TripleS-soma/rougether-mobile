@@ -1,5 +1,5 @@
 import { act, fireEvent, waitFor } from '@testing-library/react-native';
-import { BackHandler } from 'react-native';
+import { BackHandler, Platform } from 'react-native';
 
 import { AppShell } from '@/components/app/app-shell';
 import { renderWithProviders } from '@/test-utils/render';
@@ -130,6 +130,24 @@ describe('달력 하단 탭 왕복 (#1159)', () => {
       );
     },
   );
+});
+
+describe('주간 보기 (#1327) — 웹은 종전 방식', () => {
+  const originalOS = Platform.OS;
+  afterEach(() => {
+    Platform.OS = originalOS;
+  });
+
+  it('웹에서는 달력 탭 아래에 목록이 그대로 있고 날짜를 눌러도 주간 보기로 가지 않는다', async () => {
+    Platform.OS = 'web';
+    const ui = await renderShell();
+    await fireEvent.press(ui.getByLabelText('달력'));
+    expect(ui.getByRole('header', { name: calendarHeading(TODAY) })).toBeTruthy();
+    expect(ui.getByLabelText('선택한 날에 추가')).toBeTruthy();
+    await fireEvent.press(ui.getByLabelText(dateLabel(TODAY)));
+    expect(ui.queryByText('주간 보기')).toBeNull();
+    expect(ui.getByLabelText('달력').props.accessibilityState.selected).toBe(true);
+  });
 });
 
 describe('주간 보기 (#1327)', () => {
