@@ -19,9 +19,10 @@ export function ComposeRepeatFields({
   const t = useTokens();
   const tr = useT();
   const Typography = useTypography();
-  const choice = (label: string, selected: boolean, onPress: () => void) => (
+  // 키는 라벨이 아니라 안정 id — 번역 라벨은 언어에 따라 겹칠 수 있다(영어 요일 글자 S·T 등, #893).
+  const choice = (key: string | number, label: string, selected: boolean, onPress: () => void) => (
     <Pressable
-      key={label}
+      key={key}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
@@ -34,7 +35,7 @@ export function ComposeRepeatFields({
     <View style={styles.panel}>
       <View style={styles.choices}>
         {REPEAT_KINDS.map((id) =>
-          choice(tr(repeatLabelKey(id)), value.repeat === id, () =>
+          choice(id, tr(repeatLabelKey(id)), value.repeat === id, () =>
             onChange({ ...value, repeat: id }),
           ),
         )}
@@ -42,7 +43,7 @@ export function ComposeRepeatFields({
       {value.repeat === 'weekly' || value.repeat === 'biweekly' ? (
         <View style={styles.choices}>
           {WEEKDAY_KEYS.map((_, day) =>
-            choice(tr(weekdayLongLabelKey(day)), value.days.includes(day), () =>
+            choice(day, tr(weekdayLongLabelKey(day)), value.days.includes(day), () =>
               onChange({
                 ...value,
                 days: value.days.includes(day)
@@ -61,8 +62,11 @@ export function ComposeRepeatFields({
       {value.repeat === 'yearly' ? (
         <View style={styles.choices}>
           {Array.from({ length: 12 }, (_, i) => i + 1).map((month) =>
-            choice(tr('routineTodo.repeat.monthLabel', { month }), value.month === month, () =>
-              onChange({ ...value, month }),
+            choice(
+              month,
+              tr('routineTodo.repeat.monthLabel', { month }),
+              value.month === month,
+              () => onChange({ ...value, month }),
             ),
           )}
         </View>
@@ -71,6 +75,7 @@ export function ComposeRepeatFields({
         <View style={styles.choices}>
           {Array.from({ length: 31 }, (_, i) => i + 1).map((dayOfMonth) =>
             choice(
+              dayOfMonth,
               tr('routineTodo.repeat.dayOfMonthLabel', { day: dayOfMonth }),
               value.dayOfMonth === dayOfMonth,
               () => onChange({ ...value, dayOfMonth }),
