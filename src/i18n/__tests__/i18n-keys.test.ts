@@ -25,6 +25,12 @@ describe('i18n resources', () => {
     const files = [
       require('@/i18n/resources/ko/common.json'),
       require('@/i18n/resources/ko/settings.json'),
+      require('@/i18n/resources/ko/member.json'),
+      require('@/i18n/resources/ko/routineTodo.json'),
+      require('@/i18n/resources/ko/house.json'),
+      require('@/i18n/resources/ko/roomShop.json'),
+      require('@/i18n/resources/ko/notification.json'),
+      require('@/i18n/resources/ko/app.json'),
     ] as Tree[];
     const total = files.reduce((n, f) => n + Object.keys(f).length, 0);
     expect(Object.keys(ko).length).toBe(total);
