@@ -144,14 +144,14 @@ export function useSettingsSurface({
       if (ok) toast(tr('app.settingsToast.withdrawDone'));
       else toast(tr('app.settingsToast.withdrawFailed'), 'error');
     });
-  }, [withdraw, toast]);
+  }, [withdraw, toast, tr]);
 
   // 외부 링크 — 핸들러 없는 기기(메일 앱 미설정 등)에서 reject되므로 토스트로 안내.
   const openSupportMail = useCallback(() => {
     Linking.openURL(
       `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(tr('app.settingsToast.mailSubject'))}`,
     ).catch(() => toast(tr('app.settingsToast.linkFailed'), 'error'));
-  }, [toast]);
+  }, [toast, tr]);
 
   // 버그 제보 (#496) — 화면을 열 때 내 제보 내역을 불러온다.
   const {
