@@ -31,7 +31,7 @@ export const DEFAULT_LANGUAGE: AppLanguage = 'ko';
  * 설정 > 언어 노출 (#893 2단계 게이트, 2026-09-14) — 도메인 전환이 끝나기 전엔 English가
  * 반쪽(설정·공통만 영어)이라 프로덕션에 행을 보이지 않는다. 전환 완료 시 true로.
  */
-export const LANGUAGE_PICKER_ENABLED = false;
+export const LANGUAGE_PICKER_ENABLED = true;
 
 /** 언어 선택 화면의 표기 — 각 언어의 자기 이름으로(번역하지 않는다). */
 export const LANGUAGE_OPTIONS: readonly { id: AppLanguage; name: string }[] = [
