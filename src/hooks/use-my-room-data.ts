@@ -69,6 +69,7 @@ import { loadRoutineSkips, saveRoutineSkips, type RoutineSkips } from '@/lib/rou
 import { identifyUser, track } from '@/lib/analytics';
 import { setErrorUser } from '@/lib/error-reporting';
 import { useCalendarData } from '@/hooks/use-calendar-data';
+import { i18n } from '@/i18n';
 
 /** 완료 토글 결과 — 코인 보상액과 서버 자동 미션 기여 결과 (#578). */
 export type CompletionToggleResult = {
@@ -217,7 +218,7 @@ export function useMyRoomData() {
         // 완료(보상 0)는 알약이 아무것도 안 띄우므로 상한 안내만 남긴다 (#444);
         // 과거 날짜는 원래 보상 0이라(#183) 조용히 지나간다.
         if (!wasDone && !rewardAmount && date === todayIso())
-          toast('오늘 받을 수 있는 코인을 다 모았어요');
+          toast(i18n.t('routineTodo.toast.coinCapReached'));
         if (!wasDone) track('routine_complete', { kind: item?.kind ?? 'routine' });
         await refreshWallet();
         return wasDone
@@ -228,7 +229,7 @@ export function useMyRoomData() {
           const dates = prev[id] ?? [];
           return { ...prev, [id]: wasDone ? [...dates, date] : dates.filter((d) => d !== date) };
         });
-        toast('완료 처리에 실패했어요', 'error');
+        toast(i18n.t('routineTodo.toast.completeFailed'), 'error');
         return null;
       }
     },
@@ -255,7 +256,7 @@ export function useMyRoomData() {
         if (dueDate !== todayIso()) void loadCalendarDay(dueDate);
         return true;
       } catch {
-        toast('할 일을 추가하지 못했어요', 'error');
+        toast(i18n.t('routineTodo.toast.todoAddFailed'), 'error');
         return false;
       } finally {
         unmarkPending(dueDate);
@@ -276,7 +277,7 @@ export function useMyRoomData() {
         invalidateCalendar();
         return true;
       } catch {
-        toast('루틴을 만들지 못했어요', 'error');
+        toast(i18n.t('routineTodo.toast.routineCreateFailed'), 'error');
         return false;
       }
     },
@@ -311,7 +312,7 @@ export function useMyRoomData() {
         // 고치는 renameRoutine도 재조회하는데 정작 여기가 빠져 있었다.
         invalidateCalendar();
       } catch {
-        toast('수정에 실패했어요', 'error');
+        toast(i18n.t('routineTodo.toast.updateFailed'), 'error');
       }
     },
     [findItem, invalidateCalendar, toast],
@@ -329,7 +330,7 @@ export function useMyRoomData() {
         invalidateCalendar();
       } catch {
         setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, title: item.title } : r)));
-        toast('수정에 실패했어요', 'error');
+        toast(i18n.t('routineTodo.toast.updateFailed'), 'error');
       }
     },
     [findItem, invalidateCalendar, toast],
@@ -354,7 +355,7 @@ export function useMyRoomData() {
         setRoutines((prev) =>
           prev.map((r) => (r.id === id ? { ...r, category: prevCategory } : r)),
         );
-        toast('카테고리 이동에 실패했어요', 'error');
+        toast(i18n.t('routineTodo.toast.categoryMoveFailed'), 'error');
       }
     },
     [findItem, invalidateCalendar, toast],
@@ -367,7 +368,7 @@ export function useMyRoomData() {
       // 투두 마감 시각(dueTime) 해제는 서버 미지원(null = 기존 값 유지) — 켠 채
       // 저장만 반영하고, 끄기는 정직하게 안내한다 (#325).
       if (item.kind === 'todo' && !alarmEnabled) {
-        if (item.time) toast('할 일 시간 삭제는 서버 준비 중이에요', 'error');
+        if (item.time) toast(i18n.t('routineTodo.toast.todoTimeDeletePending'), 'error');
         return;
       }
       setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, alarmEnabled, time } : r)));
@@ -384,7 +385,7 @@ export function useMyRoomData() {
             r.id === id ? { ...r, alarmEnabled: item.alarmEnabled, time: item.time } : r,
           ),
         );
-        toast('수정에 실패했어요', 'error');
+        toast(i18n.t('routineTodo.toast.updateFailed'), 'error');
       }
     },
     [findItem, invalidateCalendar, toast],
@@ -401,7 +402,7 @@ export function useMyRoomData() {
         invalidateCalendar();
       } catch {
         setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, dueDate: item.dueDate } : r)));
-        toast('수정에 실패했어요', 'error');
+        toast(i18n.t('routineTodo.toast.updateFailed'), 'error');
       }
     },
     [findItem, invalidateCalendar, toast],
@@ -422,7 +423,7 @@ export function useMyRoomData() {
         const created = await createTodo(toTodoCreate(item.category, item.title, dueDate));
         setRoutines((prev) => [...prev, toAppTodo(created)]);
       } catch {
-        toast('날짜 변경에 실패했어요', 'error');
+        toast(i18n.t('routineTodo.toast.dateChangeFailed'), 'error');
         unmarkPending(dueDate);
         return;
       }
@@ -441,11 +442,13 @@ export function useMyRoomData() {
           void saveRoutineSkips(userIdRef.current, skips);
         }
         toast(
-          hideOrigin ? '이 날 몫을 선택한 날짜로 옮겼어요' : '선택한 날짜에 할 일로 추가했어요',
+          hideOrigin
+            ? i18n.t('routineTodo.toast.occurrenceMoved')
+            : i18n.t('routineTodo.toast.occurrenceAddedAsTodo'),
           'success',
         );
       } catch {
-        toast('할 일은 추가됐지만 원래 날짜에서 숨기지 못했어요', 'error');
+        toast(i18n.t('routineTodo.toast.occurrenceHideFailed'), 'error');
       } finally {
         invalidateCalendar();
         unmarkPending(dueDate);
@@ -474,7 +477,7 @@ export function useMyRoomData() {
         }
       } catch {
         setRoutines((prev) => [...prev, item]);
-        toast('삭제에 실패했어요', 'error');
+        toast(i18n.t('routineTodo.toast.deleteFailed'), 'error');
       }
     },
     [findItem, invalidateCalendar, unmarkTodoDate, toast, routines, calendarDays],
@@ -488,12 +491,12 @@ export function useMyRoomData() {
       setBio(newBio);
       try {
         await updateMe({ nickname: nick, bio: newBio });
-        toast('프로필이 저장되었어요', 'success');
+        toast(i18n.t('routineTodo.toast.profileSaved'), 'success');
         return true;
       } catch {
         setNickname(before.nickname);
         setBio(before.bio);
-        toast('프로필 저장에 실패했어요', 'error');
+        toast(i18n.t('routineTodo.toast.profileSaveFailed'), 'error');
         return false;
       }
     },
@@ -513,7 +516,7 @@ export function useMyRoomData() {
         setAllCategories((prev) => [...prev, meta]);
         return meta;
       } catch {
-        toast('카테고리를 만들지 못했어요', 'error');
+        toast(i18n.t('routineTodo.toast.categoryCreateFailed'), 'error');
         return null;
       }
     },
@@ -609,7 +612,7 @@ export function useMyRoomData() {
       } catch {
         setCategories(before);
         setAllCategories(beforeAll);
-        toast('카테고리 수정에 실패했어요', 'error');
+        toast(i18n.t('routineTodo.toast.categoryUpdateFailed'), 'error');
       }
     },
     [categories, allCategories, toast],
@@ -633,7 +636,7 @@ export function useMyRoomData() {
       } catch {
         setCategories(before);
         setAllCategories([...before, ...allCategories.filter((c) => c.deleted)]);
-        toast('카테고리 순서 저장에 실패했어요', 'error');
+        toast(i18n.t('routineTodo.toast.categoryReorderFailed'), 'error');
       }
     },
     [categories, allCategories, toast],
@@ -675,7 +678,7 @@ export function useMyRoomData() {
       // CATEGORY_IN_USE) — 투두는 mode가 처리(UNASSIGN=미분류 전환, PURGE=삭제).
       // 깜빡임 방지를 위해 클라에서도 같은 기준으로 먼저 거른다.
       if (routines.some((r) => r.category === id && r.kind !== 'todo')) {
-        toast('카테고리에 루틴이 남아 있어 삭제할 수 없어요', 'error');
+        toast(i18n.t('routineTodo.toast.categoryInUse'), 'error');
         return;
       }
       const before = { categories, routines };
@@ -695,7 +698,9 @@ export function useMyRoomData() {
         setRoutines(before.routines);
         const inUse = err instanceof ApiError && err.code === ErrorCode.CATEGORY_IN_USE;
         toast(
-          inUse ? '카테고리에 루틴이 남아 있어 삭제할 수 없어요' : '카테고리 삭제에 실패했어요',
+          inUse
+            ? i18n.t('routineTodo.toast.categoryInUse')
+            : i18n.t('routineTodo.toast.categoryDeleteFailed'),
           'error',
         );
       }

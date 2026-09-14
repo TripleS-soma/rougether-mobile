@@ -6,6 +6,7 @@ import { Icon } from '@/components/ui/icon';
 import type { Routine } from '@/constants/routines';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 export type RoutineMenuSheetProps = {
   /** 메뉴를 연 행의 루틴/투두 — null이면 시트가 닫힌다. */
@@ -44,9 +45,13 @@ export function RoutineMenuSheet({
   onChangeDate,
 }: RoutineMenuSheetProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   // 시간이 없는 루틴/투두는 '시간 추가', 있으면 '시간 수정' (#325).
-  const timeLabel = item?.alarmEnabled && item?.time ? '시간 수정' : '시간 추가';
+  const timeLabel =
+    item?.alarmEnabled && item?.time
+      ? tr('routineTodo.menu.editTime')
+      : tr('routineTodo.menu.addTime');
   // 전체 편집은 반복 루틴 전용 — 투두는 필드가 달라(마감일 등) 이름/날짜만 (#465).
   const canFullEdit = item != null && item.kind !== 'todo';
 
@@ -70,10 +75,10 @@ export function RoutineMenuSheet({
             if (r) onRename(r);
           }}
           accessibilityRole="button"
-          accessibilityLabel={`${item?.title ?? ''} 이름 변경`}
+          accessibilityLabel={`${item?.title ?? ''} ${tr('routineTodo.menu.rename')}`}
           style={[styles.sheetAction, { backgroundColor: t.surface }]}>
           <Icon name="edit" size={22} color={t.text} />
-          <Text style={[Typography.label, { color: t.text }]}>이름 변경</Text>
+          <Text style={[Typography.label, { color: t.text }]}>{tr('routineTodo.menu.rename')}</Text>
         </Pressable>
         <Pressable
           onPress={() => {
@@ -82,10 +87,12 @@ export function RoutineMenuSheet({
             if (r) onDelete(r);
           }}
           accessibilityRole="button"
-          accessibilityLabel={`${item?.title ?? ''} 삭제`}
+          accessibilityLabel={`${item?.title ?? ''} ${tr('routineTodo.menu.deleteA11y')}`}
           style={[styles.sheetAction, { backgroundColor: t.surface }]}>
           <Icon name="trash" size={22} color={t.danger} />
-          <Text style={[Typography.label, { color: t.danger }]}>삭제하기</Text>
+          <Text style={[Typography.label, { color: t.danger }]}>
+            {tr('routineTodo.menu.delete')}
+          </Text>
         </Pressable>
       </View>
 
@@ -99,12 +106,14 @@ export function RoutineMenuSheet({
             if (r) onEdit(r);
           }}
           accessibilityRole="button"
-          accessibilityLabel={`${item?.title ?? ''} 루틴 수정`}
+          accessibilityLabel={`${item?.title ?? ''} ${tr('routineTodo.menu.editRoutine')}`}
           style={styles.sheetItem}>
           <View style={[styles.sheetItemIcon, { backgroundColor: t.surfaceMuted }]}>
             <Icon name="settings" size={18} color={t.text} />
           </View>
-          <Text style={[Typography.body, { color: t.text }]}>루틴 수정</Text>
+          <Text style={[Typography.body, { color: t.text }]}>
+            {tr('routineTodo.menu.editRoutine')}
+          </Text>
         </Pressable>
       ) : null}
 
@@ -115,12 +124,14 @@ export function RoutineMenuSheet({
           if (r) onToggleComplete(r);
         }}
         accessibilityRole="button"
-        accessibilityLabel={`${item?.title ?? ''} ${done ? '완료 취소' : '완료'}`}
+        accessibilityLabel={`${item?.title ?? ''} ${done ? tr('routineTodo.menu.uncomplete') : tr('routineTodo.menu.completeA11y')}`}
         style={styles.sheetItem}>
         <View style={[styles.sheetItemIcon, { backgroundColor: t.primary }]}>
           <Icon name={done ? 'checkbox-off' : 'check'} size={18} color={t.onPrimary} />
         </View>
-        <Text style={[Typography.body, { color: t.text }]}>{done ? '완료 취소' : '완료하기'}</Text>
+        <Text style={[Typography.body, { color: t.text }]}>
+          {done ? tr('routineTodo.menu.uncomplete') : tr('routineTodo.menu.complete')}
+        </Text>
       </Pressable>
 
       {/* 루틴은 알림 시간, 투두는 마감 시각(dueTime) — 같은 항목으로 다룬다 (#325). */}
@@ -148,12 +159,14 @@ export function RoutineMenuSheet({
           if (r) onChangeDate(r);
         }}
         accessibilityRole="button"
-        accessibilityLabel={`${item?.title ?? ''} 날짜 바꾸기`}
+        accessibilityLabel={`${item?.title ?? ''} ${tr('routineTodo.menu.changeDate')}`}
         style={styles.sheetItem}>
         <View style={[styles.sheetItemIcon, { backgroundColor: t.success }]}>
           <Icon name="calendar" size={18} color={t.onPrimary} />
         </View>
-        <Text style={[Typography.body, { color: t.text }]}>날짜 바꾸기</Text>
+        <Text style={[Typography.body, { color: t.text }]}>
+          {tr('routineTodo.menu.changeDate')}
+        </Text>
       </Pressable>
     </BottomSheet>
   );

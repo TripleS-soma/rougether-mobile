@@ -89,10 +89,11 @@ import {
   type CategoryVisibility,
   type NewRoutine,
   ROUTINE_CATEGORIES,
+  weekdayLongLabelKey,
   type Routine,
   type RoutineCategoryMeta,
   VISIBILITY_ICONS,
-  VISIBILITY_LABELS,
+  visibilityLabelKey,
 } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
 import { ScalePressable } from '@/components/ui/scale-pressable';
@@ -107,6 +108,7 @@ import { readableTextColor } from '@/utils/color';
 import { formatDate, localDate, monthDayLabel } from '@/utils/datetime';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
 import { holidayName } from '@/utils/holidays';
+import { useT } from '@/i18n';
 
 // 스케줄 판정은 my-room/schedule로 이동 (#693) — 기존 임포트 경로 유지용 재수출.
 export { isScheduledOn };
@@ -314,8 +316,9 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
  */
 function VisibilityMark({ visibility }: { visibility: CategoryVisibility }) {
   const t = useTokens();
+  const tr = useT();
   return (
-    <View accessible accessibilityLabel={VISIBILITY_LABELS[visibility]}>
+    <View accessible accessibilityLabel={tr(visibilityLabelKey(visibility))}>
       <Pictogram name={VISIBILITY_ICONS[visibility]} size={12} color={t.textMuted} />
     </View>
   );
@@ -398,6 +401,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   onScrollY,
 }: MyRoomScreenProps) {
   const t = useTokens();
+  const tr = useT();
   const column = useResponsiveColumn();
   // 웹 데스크톱 2단 (#1230) — 창 ≥ 960px에서만 true.
   const { split } = useAppFrame();
@@ -610,9 +614,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   );
   const selectedDay = localDate(selectedDate);
   const selectedDayLabel = monthDayLabel(selectedDay);
-  const selectedWeekday = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'][
-    selectedDay.getDay()
-  ];
+  const selectedWeekday = tr(weekdayLongLabelKey(selectedDay.getDay()));
   // 공휴일 이름 (#1292) — 달력 칸엔 빨간 숫자만, 이름은 선택한 날짜 제목에 붙인다.
   const selectedHoliday = holidayName(selectedDate);
 
@@ -724,7 +726,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     <QuickAddRow
       ref={addRowRef}
       inputRef={todoInputRef}
-      dateLabel={newTodoDate === today ? '오늘' : formatDate(newTodoDate)}
+      dateLabel={newTodoDate === today ? tr('routineTodo.today') : formatDate(newTodoDate)}
       onCommit={(title) => commitTodo(categoryId, title)}
       onOpenDatePicker={() => setTodoDateOpen(true)}
       onDatePickerPressIn={() => {
@@ -743,7 +745,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
       <ScalePressable
         onPress={() => openQuickAdd(meta.id, date)}
         accessibilityRole="button"
-        accessibilityLabel={`${meta.name} 할 일 추가`}
+        accessibilityLabel={tr('routineTodo.myRoom.quickAddA11y', { name: meta.name })}
         hitSlop={8}
         style={[styles.catAdd, { backgroundColor: meta.color }]}>
         <Icon name="add" size={14} color={t.onPrimary} />
@@ -776,7 +778,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // routine logs — reward is 0 coins for non-today completion, #183).
   const handleCalendarItemPress = (item: CalendarDayItem) => {
     if (selectedDate > today) {
-      toast('미래 날짜는 완료할 수 없어요', 'error');
+      toast(tr('routineTodo.myRoom.futureBlocked'), 'error');
       return;
     }
     if (item.completed) hapticSelection();
@@ -1096,7 +1098,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             disabled={!meta.id || !onUpdateCategory}
             onPress={() => setEditingCategory(meta)}
             accessibilityRole="button"
-            accessibilityLabel={`${meta.name} 카테고리 수정`}>
+            accessibilityLabel={tr('routineTodo.myRoom.editCategoryA11y', { name: meta.name })}>
             <View style={[styles.catDot, { backgroundColor: `${meta.color}33` }]}>
               <CategoryIcon name={meta.icon} color={meta.color} size={18} />
             </View>
@@ -1243,7 +1245,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                 ref={menuBtnRef}
                 onPress={openNavMenu}
                 accessibilityRole="button"
-                accessibilityLabel="메뉴"
+                accessibilityLabel={tr('routineTodo.myRoom.menu')}
                 style={styles.floatBtn}>
                 <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
                   <Icon name="menu" size={20} color={t.text} />
@@ -1254,7 +1256,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               <Pressable
                 onPress={onOpenNotifications}
                 accessibilityRole="button"
-                accessibilityLabel="알림"
+                accessibilityLabel={tr('routineTodo.myRoom.notifications')}
                 style={styles.floatBtn}>
                 <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
                   <Icon name="bell" size={20} color={t.text} />
@@ -1269,7 +1271,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               <Pressable
                 onPress={onEdit}
                 accessibilityRole="button"
-                accessibilityLabel="방 꾸미기"
+                accessibilityLabel={tr('routineTodo.myRoom.decorate')}
                 style={styles.floatBtn}>
                 <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
                   {/* absolute 버튼이라 내용을 측정 (#351 → #1324). */}
@@ -1283,7 +1285,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               <Pressable
                 onPress={onOpenFurnitureStudio}
                 accessibilityRole="button"
-                accessibilityLabel="AI 가구 만들기"
+                accessibilityLabel={tr('routineTodo.myRoom.furnitureStudio')}
                 style={styles.floatBtn}>
                 <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
                   <Icon name="sparkles" size={20} color={t.primaryText} />
@@ -1294,7 +1296,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               <Pressable
                 onPress={onOpenMinigames}
                 accessibilityRole="button"
-                accessibilityLabel="미니게임"
+                accessibilityLabel={tr('routineTodo.myRoom.minigames')}
                 style={styles.floatBtn}>
                 <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
                   <Icon name="gamepad" size={20} color={t.primaryText} />
@@ -1304,7 +1306,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             <Pressable
               onPress={onOpenGacha}
               accessibilityRole="button"
-              accessibilityLabel="뽑기 상점"
+              accessibilityLabel={tr('routineTodo.myRoom.gacha')}
               style={styles.floatBtn}>
               <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
                 {/* absolute 버튼이라 래퍼 대신 내용을 측정 (#351). */}
@@ -1333,13 +1335,15 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             <Pressable
               onPress={leaveWeek}
               accessibilityRole="button"
-              accessibilityLabel="뒤로 가기"
+              accessibilityLabel={tr('common.back')}
               hitSlop={8}>
               <GlassSurface fallbackColor={t.surface} style={styles.weekBack}>
                 <Icon name="back" size={20} color={t.text} />
               </GlassSurface>
             </Pressable>
-            <Text style={[Typography.h3, { color: t.text }]}>주간 보기</Text>
+            <Text style={[Typography.h3, { color: t.text }]}>
+              {tr('routineTodo.myRoom.weekView')}
+            </Text>
           </Animated.View>
         ) : null}
         <Calendar
@@ -1373,7 +1377,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                       Typography.label,
                       { color: calendarFilter === filter ? t.text : t.textMuted },
                     ]}>
-                    {filter === 'all' ? '전체' : filter === 'routine' ? '루틴' : '할 일'}
+                    {filter === 'all'
+                      ? tr('routineTodo.myRoom.filterAll')
+                      : tr(`routineTodo.kind.${filter}`)}
                   </Text>
                 </Pressable>
               ))}
@@ -1382,20 +1388,22 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         />
         {calendarMonthLoading ? (
           <Text style={[Typography.supporting, { color: t.textMuted }]}>
-            이번 달 기록을 불러오는 중이에요
+            {tr('routineTodo.myRoom.monthLoading')}
           </Text>
         ) : null}
         {calendarMonthError ? (
           <View style={styles.calendarState}>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              이번 달 기록을 새로 불러오지 못했어요
+              {tr('routineTodo.myRoom.monthLoadFailed')}
             </Text>
             <Pressable
               onPress={onRetryCalendarMonth}
               accessibilityRole="button"
-              accessibilityLabel="월 기록 다시 불러오기"
+              accessibilityLabel={tr('routineTodo.myRoom.monthRetryA11y')}
               style={styles.calendarRetry}>
-              <Text style={[Typography.label, { color: t.primaryText }]}>다시 시도</Text>
+              <Text style={[Typography.label, { color: t.primaryText }]}>
+                {tr('routineTodo.myRoom.retry')}
+              </Text>
             </Pressable>
           </View>
         ) : null}
@@ -1407,7 +1415,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
       <View style={[styles.section, column]}>
         <CoachTarget id="room-routines">
           <View style={styles.sectionHead}>
-            <Text style={[Typography.h2, { color: t.text }]}>오늘의 할 일</Text>
+            <Text style={[Typography.h2, { color: t.text }]}>
+              {tr('routineTodo.myRoom.todayTitle')}
+            </Text>
             <View style={styles.sectionHeadRight}>
               {roomRoutines.length > 0 ? (
                 <Text style={[Typography.label, { color: t.primaryText }]}>
@@ -1418,7 +1428,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                 <Pressable
                   onPress={() => openCompose(today)}
                   accessibilityRole="button"
-                  accessibilityLabel="오늘에 추가">
+                  accessibilityLabel={tr('routineTodo.myRoom.addTodayA11y')}>
                   <GlassSurface fallbackColor={t.surface} style={styles.quickAddTrigger}>
                     <Icon name="add" size={22} color={t.text} />
                   </GlassSurface>
@@ -1431,13 +1441,15 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         {loading ? (
           <View style={styles.stateBlock}>
             <Loading />
-            <Text style={[Typography.supporting, { color: t.textMuted }]}>불러오는 중...</Text>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              {tr('routineTodo.myRoom.loading')}
+            </Text>
           </View>
         ) : null}
 
         {!loading && loadError ? (
           <View style={styles.stateBlock}>
-            <RetryState message="데이터를 불러오지 못했어요." onRetry={onRetry} />
+            <RetryState message={tr('routineTodo.myRoom.loadFailed')} onRetry={onRetry} />
           </View>
         ) : null}
 
@@ -1466,7 +1478,11 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             style={styles.calDateHeading}
             accessible
             accessibilityRole="header"
-            accessibilityLabel={`${selectedDay.getFullYear()}년 ${selectedDayLabel} ${selectedWeekday}${selectedHoliday ? `, ${selectedHoliday}` : ''}`}>
+            accessibilityLabel={`${tr('routineTodo.myRoom.dayHeadingA11y', {
+              year: selectedDay.getFullYear(),
+              date: selectedDayLabel,
+              weekday: selectedWeekday,
+            })}${selectedHoliday ? `, ${selectedHoliday}` : ''}`}>
             <Text style={[Typography.h3, { color: t.text }]}>{selectedDayLabel}</Text>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
               {selectedHoliday ? `${selectedWeekday} · ${selectedHoliday}` : selectedWeekday}
@@ -1476,7 +1492,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             <Pressable
               onPress={() => openCompose(selectedDate)}
               accessibilityRole="button"
-              accessibilityLabel="선택한 날에 추가">
+              accessibilityLabel={tr('routineTodo.myRoom.addSelectedA11y')}>
               <GlassSurface fallbackColor={t.surface} style={styles.quickAddTrigger}>
                 <Icon name="add" size={22} color={t.text} />
               </GlassSurface>
@@ -1486,14 +1502,16 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         {calendarDayError || calendarTodayError ? (
           <View style={styles.calendarState}>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              이 날의 기록을 새로 불러오지 못했어요
+              {tr('routineTodo.myRoom.dayLoadFailed')}
             </Text>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="선택일 기록 다시 불러오기"
+              accessibilityLabel={tr('routineTodo.myRoom.dayRetryA11y')}
               onPress={calendarTodayError ? onRetry : onRetryCalendarDay}
               style={styles.calendarRetry}>
-              <Text style={[Typography.label, { color: t.primaryText }]}>다시 시도</Text>
+              <Text style={[Typography.label, { color: t.primaryText }]}>
+                {tr('routineTodo.myRoom.retry')}
+              </Text>
             </Pressable>
           </View>
         ) : null}
@@ -1505,7 +1523,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         ) : serverBackedDay && !dayItems ? null : serverBackedDay ? (
           calServerGroups!.length === 0 ? (
             <Text style={[Typography.body, styles.calEmpty, { color: t.textMuted }]}>
-              {selectedDate < today ? '기록이 없어요' : '일정이 없어요'}
+              {selectedDate < today
+                ? tr('routineTodo.myRoom.noRecord')
+                : tr('routineTodo.myRoom.noPlan')}
             </Text>
           ) : (
             calServerGroups!.map((group, gi) =>
@@ -1519,7 +1539,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           )
         ) : calClientGroups.length === 0 ? (
           <Text style={[Typography.body, styles.calEmpty, { color: t.textMuted }]}>
-            {selectedDate < today ? '기록이 없어요' : '일정이 없어요'}
+            {selectedDate < today
+              ? tr('routineTodo.myRoom.noRecord')
+              : tr('routineTodo.myRoom.noPlan')}
           </Text>
         ) : (
           calClientGroups.map((group, gi) =>
@@ -1591,8 +1613,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.segment}>
             {(
               [
-                ['room', '방'],
-                ['calendar', '달력'],
+                ['room', tr('nav.myRoomShort')],
+                ['calendar', tr('nav.calendar')],
               ] as const
             ).map(([key, label]) => {
               const active = tab === key;
@@ -1640,7 +1662,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               {streakDays > 0 ? (
                 <Animated.View style={[styles.streak, { transform: [{ scale: streakPulse }] }]}>
                   <Icon name="flame" size={14} color={t.warningText} />
-                  <Text style={[Typography.label, { color: t.warningText }]}>{streakDays}일</Text>
+                  <Text style={[Typography.label, { color: t.warningText }]}>
+                    {tr('routineTodo.myRoom.streakDays', { days: streakDays })}
+                  </Text>
                 </Animated.View>
               ) : null}
               <View style={styles.streak}>
@@ -1732,7 +1756,10 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             }
             if (draft.date !== today)
               toast(
-                `${monthDayLabel(localDate(draft.date))}에 ${draft.kind === 'routine' ? '루틴' : '할 일'}을 추가했어요`,
+                tr('routineTodo.myRoom.addedOnDate', {
+                  date: monthDayLabel(localDate(draft.date)),
+                  kind: tr(`routineTodo.kind.${draft.kind}`),
+                }),
               );
           }
           return result;

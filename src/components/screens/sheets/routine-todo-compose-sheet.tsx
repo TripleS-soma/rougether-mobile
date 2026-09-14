@@ -8,20 +8,21 @@ import { Icon } from '@/components/ui/icon';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import {
   ComposeRepeatFields,
-  REPEAT_OPTIONS,
   type RepeatDraft,
+  repeatLabelKey,
 } from '@/components/screens/sheets/compose-repeat-fields';
 import { ComposeTimeFields } from '@/components/screens/sheets/compose-time-fields';
 import {
   type NewRoutine,
   type RoutineCategoryMeta,
-  VISIBILITY_LABELS,
-  WEEKDAY_LABELS,
+  visibilityLabelKey,
+  weekdayLabelKey,
 } from '@/constants/routines';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { formatTime, localDate, monthDayLabel } from '@/utils/datetime';
 import { firstRoutineDate, routineComposeError } from '@/utils/routine-compose';
+import { useT } from '@/i18n';
 
 export type ComposeKind = 'routine' | 'todo';
 export type ComposeSubmission =
@@ -58,6 +59,7 @@ export function RoutineTodoComposeSheet({
   onClose,
 }: RoutineTodoComposeSheetProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const insets = useContext(SafeAreaInsetsContext);
@@ -90,7 +92,7 @@ export function RoutineTodoComposeSheet({
   }, [visible, initialDate, initialKind, initialCategory]);
   const availableCategories = categories.filter((c) => c.id && !c.deleted && c.houseId == null);
   const category = availableCategories.find((c) => c.id === categoryId);
-  const label = kind === 'routine' ? '루틴' : '할 일';
+  const label = tr(`routineTodo.kind.${kind}`);
   const time = times[kind];
   const canSubmit = !!title.trim() && !saving && !discard && (!categoryId || !!category);
   const close = () => {
@@ -143,13 +145,13 @@ export function RoutineTodoComposeSheet({
               time: times.todo.enabled ? times.todo.value : undefined,
             };
       const result = await onSubmit(draft);
-      if (result === false) setError('저장하지 못했어요. 다시 시도해 주세요.');
+      if (result === false) setError(tr('routineTodo.compose.saveFailed'));
       else {
         Keyboard.dismiss();
         onClose();
       }
     } catch {
-      setError('저장하지 못했어요. 다시 시도해 주세요.');
+      setError(tr('routineTodo.compose.saveFailed'));
     } finally {
       savingRef.current = false;
       setSaving(false);
@@ -157,18 +159,28 @@ export function RoutineTodoComposeSheet({
   };
   const dateLabel = (value: string) =>
     value === today
-      ? '오늘'
-      : `${value.slice(0, 4) !== today.slice(0, 4) ? `${localDate(value).getFullYear()}년 ` : ''}${monthDayLabel(localDate(value))}`;
-  const repeatLabel = `${REPEAT_OPTIONS.find((r) => r.id === repeat.repeat)!.label}${
+      ? tr('routineTodo.today')
+      : value.slice(0, 4) !== today.slice(0, 4)
+        ? tr('routineTodo.compose.dateWithYear', {
+            year: localDate(value).getFullYear(),
+            date: monthDayLabel(localDate(value)),
+          })
+        : monthDayLabel(localDate(value));
+  const repeatLabel = `${tr(repeatLabelKey(repeat.repeat))}${
     repeat.repeat === 'weekly' || repeat.repeat === 'biweekly'
-      ? ` ${repeat.days.map((d) => WEEKDAY_LABELS[d]).join(' · ')}`
+      ? ` ${repeat.days.map((d) => tr(weekdayLabelKey(d))).join(' · ')}`
       : repeat.repeat === 'monthly'
-        ? ` ${repeat.dayOfMonth}일`
+        ? ` ${tr('routineTodo.repeat.dayOfMonthLabel', { day: repeat.dayOfMonth })}`
         : repeat.repeat === 'yearly'
-          ? ` ${repeat.month}월 ${repeat.dayOfMonth}일`
+          ? ` ${tr('routineTodo.repeat.monthDayLabel', { month: repeat.month, day: repeat.dayOfMonth })}`
           : ''
   }`;
-  const row = (name: string, value: string, target: Panel, accessibilityLabel = `${name} 선택`) => (
+  const row = (
+    name: string,
+    value: string,
+    target: Panel,
+    accessibilityLabel = tr('routineTodo.compose.selectA11y', { name }),
+  ) => (
     <Pressable
       onPress={() => toggle(target)}
       accessibilityRole="button"
@@ -201,15 +213,17 @@ export function RoutineTodoComposeSheet({
             <Pressable
               onPress={() => setPanel(null)}
               accessibilityRole="button"
-              accessibilityLabel="작성 화면으로 돌아가기"
+              accessibilityLabel={tr('routineTodo.compose.backToForm')}
               style={styles.back}>
               <Icon name="back" size={18} color={t.text} />
-              <Text style={[Typography.label, { color: t.text }]}>뒤로</Text>
+              <Text style={[Typography.label, { color: t.text }]}>
+                {tr('routineTodo.compose.back')}
+              </Text>
             </Pressable>
             <Text
               accessibilityRole="header"
               style={[Typography.h3, styles.pageTitle, { color: t.text }]}>
-              카테고리
+              {tr('routineTodo.compose.category')}
             </Text>
             <View style={styles.backSpace} />
           </>
@@ -219,9 +233,9 @@ export function RoutineTodoComposeSheet({
               onPress={close}
               disabled={saving}
               accessibilityRole="button"
-              accessibilityLabel="취소"
+              accessibilityLabel={tr('common.cancel')}
               style={styles.action}>
-              <Text style={[Typography.label, { color: t.text }]}>취소</Text>
+              <Text style={[Typography.label, { color: t.text }]}>{tr('common.cancel')}</Text>
             </Pressable>
             <GlassSurface interactive={false} fallbackColor={t.surfaceMuted} style={styles.segment}>
               <View style={styles.segmentRow} accessibilityRole="tablist">
@@ -230,7 +244,7 @@ export function RoutineTodoComposeSheet({
                     key={next}
                     disabled={saving || discard}
                     accessibilityRole="tab"
-                    accessibilityLabel={next === 'routine' ? '루틴' : '할 일'}
+                    accessibilityLabel={tr(`routineTodo.kind.${next}`)}
                     accessibilityState={{ selected: kind === next, disabled: saving || discard }}
                     onPress={() => {
                       setKind(next);
@@ -244,7 +258,7 @@ export function RoutineTodoComposeSheet({
                         emph(kind === next ? 'bold' : 'normal'),
                         { color: t.text },
                       ]}>
-                      {next === 'routine' ? '루틴' : '할 일'}
+                      {tr(`routineTodo.kind.${next}`)}
                     </Text>
                   </Pressable>
                 ))}
@@ -254,7 +268,7 @@ export function RoutineTodoComposeSheet({
               onPress={() => void submit()}
               disabled={!canSubmit}
               accessibilityRole="button"
-              accessibilityLabel={`${label} 저장`}
+              accessibilityLabel={tr('routineTodo.compose.saveA11y', { kind: label })}
               accessibilityState={{ disabled: !canSubmit, busy: saving }}
               style={styles.action}>
               <Text
@@ -263,7 +277,7 @@ export function RoutineTodoComposeSheet({
                   emph('bold'),
                   { color: canSubmit ? t.primaryText : t.textDisabled },
                 ]}>
-                {saving ? '저장 중' : '추가'}
+                {saving ? tr('routineTodo.compose.saving') : tr('routineTodo.compose.add')}
               </Text>
             </Pressable>
           </>
@@ -277,7 +291,10 @@ export function RoutineTodoComposeSheet({
               { paddingBottom: Math.max(insets?.bottom ?? 0, Spacing.four) },
             ]}>
             <View style={groupStyle}>
-              {[{ id: '', name: '미분류' }, ...availableCategories].map((item, index) => (
+              {[
+                { id: '', name: tr('routineTodo.category.uncategorized') },
+                ...availableCategories,
+              ].map((item, index) => (
                 <View key={item.id}>
                   {index > 0 ? divider : null}
                   <Pressable
@@ -295,7 +312,7 @@ export function RoutineTodoComposeSheet({
                       </Text>
                       {'visibility' in item ? (
                         <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                          {VISIBILITY_LABELS[item.visibility]}
+                          {tr(visibilityLabelKey(item.visibility))}
                         </Text>
                       ) : null}
                     </View>
@@ -321,20 +338,26 @@ export function RoutineTodoComposeSheet({
           ]}>
           {discard ? (
             <View style={styles.discard}>
-              <Text style={[Typography.h3, { color: t.text }]}>입력한 내용을 버릴까요?</Text>
+              <Text style={[Typography.h3, { color: t.text }]}>
+                {tr('routineTodo.compose.discardTitle')}
+              </Text>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="계속 작성"
+                accessibilityLabel={tr('routineTodo.compose.keepEditing')}
                 onPress={() => setDiscard(false)}
                 style={styles.row}>
-                <Text style={[Typography.label, { color: t.primaryText }]}>계속 작성</Text>
+                <Text style={[Typography.label, { color: t.primaryText }]}>
+                  {tr('routineTodo.compose.keepEditing')}
+                </Text>
               </Pressable>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="내용 버리기"
+                accessibilityLabel={tr('routineTodo.compose.discard')}
                 onPress={onClose}
                 style={styles.row}>
-                <Text style={[Typography.label, { color: t.danger }]}>내용 버리기</Text>
+                <Text style={[Typography.label, { color: t.danger }]}>
+                  {tr('routineTodo.compose.discard')}
+                </Text>
               </Pressable>
             </View>
           ) : (
@@ -342,8 +365,12 @@ export function RoutineTodoComposeSheet({
               <View style={groupStyle}>
                 <TextInput
                   autoFocus
-                  accessibilityLabel={`${label} 제목`}
-                  placeholder={kind === 'routine' ? '루틴 이름' : '할 일'}
+                  accessibilityLabel={tr('routineTodo.compose.titleA11y', { kind: label })}
+                  placeholder={
+                    kind === 'routine'
+                      ? tr('routineTodo.compose.routinePlaceholder')
+                      : tr('routineTodo.kind.todo')
+                  }
                   placeholderTextColor={t.textMuted}
                   value={title}
                   onChangeText={setTitle}
@@ -357,7 +384,7 @@ export function RoutineTodoComposeSheet({
               <View style={groupStyle}>
                 {kind === 'routine' ? (
                   <>
-                    {row('반복', repeatLabel, 'repeat')}
+                    {row(tr('routineTodo.compose.repeat'), repeatLabel, 'repeat')}
                     {panel === 'repeat' ? (
                       <View style={styles.panel}>
                         <ComposeRepeatFields
@@ -373,10 +400,12 @@ export function RoutineTodoComposeSheet({
                   </>
                 ) : null}
                 {row(
-                  kind === 'routine' ? '시작일' : '날짜',
+                  kind === 'routine'
+                    ? tr('routineTodo.compose.startDate')
+                    : tr('routineTodo.compose.date'),
                   dateLabel(date),
                   'date',
-                  `${label} 날짜 선택`,
+                  tr('routineTodo.compose.pickDateA11y', { kind: label }),
                 )}
                 {panel === 'date' ? (
                   <View style={styles.panel}>
@@ -400,12 +429,16 @@ export function RoutineTodoComposeSheet({
                     setPanel(null);
                   }}
                   accessibilityRole="button"
-                  accessibilityLabel="추가 설정"
+                  accessibilityLabel={tr('routineTodo.compose.details')}
                   accessibilityState={{ expanded: details }}
                   style={styles.row}>
-                  <Text style={[Typography.label, { color: t.text }]}>추가 설정</Text>
+                  <Text style={[Typography.label, { color: t.text }]}>
+                    {tr('routineTodo.compose.details')}
+                  </Text>
                   <Text style={[Typography.supporting, styles.value, { color: t.textMuted }]}>
-                    {details ? '접기' : (category?.name ?? '카테고리 · 시간')}
+                    {details
+                      ? tr('routineTodo.compose.collapse')
+                      : (category?.name ?? tr('routineTodo.compose.detailsHint'))}
                   </Text>
                   <Icon name="forward" size={14} color={t.textMuted} />
                 </Pressable>
@@ -413,19 +446,25 @@ export function RoutineTodoComposeSheet({
                   <>
                     {divider}
                     {row(
-                      '카테고리',
-                      category?.name ?? '미분류',
+                      tr('routineTodo.compose.category'),
+                      category?.name ?? tr('routineTodo.category.uncategorized'),
                       'category',
-                      `카테고리 선택, ${category?.name ?? '미분류'}`,
+                      tr('routineTodo.compose.categoryA11y', {
+                        name: category?.name ?? tr('routineTodo.category.uncategorized'),
+                      }),
                     )}
                     {divider}
                     <View style={styles.row}>
                       <Text style={[Typography.body, styles.label, { color: t.text }]}>
-                        {kind === 'routine' ? '알림 시간' : '시간'}
+                        {kind === 'routine'
+                          ? tr('routineTodo.compose.alarmTime')
+                          : tr('routineTodo.compose.time')}
                       </Text>
                       <ToggleSwitch
                         value={time.enabled}
-                        accessibilityLabel={`${label} 시간 설정`}
+                        accessibilityLabel={tr('routineTodo.compose.timeToggleA11y', {
+                          kind: label,
+                        })}
                         onToggle={() => {
                           Keyboard.dismiss();
                           setTimes({ ...times, [kind]: { ...time, enabled: !time.enabled } });
@@ -436,7 +475,12 @@ export function RoutineTodoComposeSheet({
                     {time.enabled ? (
                       <>
                         {divider}
-                        {row('시간', formatTime(time.value), 'time', `${label} 시간 선택`)}
+                        {row(
+                          tr('routineTodo.compose.time'),
+                          formatTime(time.value),
+                          'time',
+                          tr('routineTodo.compose.pickTimeA11y', { kind: label }),
+                        )}
                         {panel === 'time' ? (
                           <View style={styles.panel}>
                             <ComposeTimeFields
@@ -452,18 +496,24 @@ export function RoutineTodoComposeSheet({
                     {kind === 'routine' ? (
                       <>
                         {divider}
-                        {row('종료일', endDate ? dateLabel(endDate) : '없음', 'end')}
+                        {row(
+                          tr('routineTodo.compose.endDate'),
+                          endDate ? dateLabel(endDate) : tr('routineTodo.compose.none'),
+                          'end',
+                        )}
                         {panel === 'end' ? (
                           <View style={styles.panel}>
                             <Pressable
                               accessibilityRole="button"
-                              accessibilityLabel="종료일 없음"
+                              accessibilityLabel={tr('routineTodo.compose.noEndDateA11y')}
                               onPress={() => {
                                 setEndDate(undefined);
                                 setPanel(null);
                               }}
                               style={styles.row}>
-                              <Text style={[Typography.label, { color: t.primaryText }]}>없음</Text>
+                              <Text style={[Typography.label, { color: t.primaryText }]}>
+                                {tr('routineTodo.compose.none')}
+                              </Text>
                             </Pressable>
                             <Calendar
                               value={endDate ?? date}
@@ -492,7 +542,7 @@ export function RoutineTodoComposeSheet({
                 <Text
                   accessibilityRole="alert"
                   style={[Typography.supporting, styles.error, { color: t.danger }]}>
-                  사용할 수 없는 카테고리예요. 다시 선택해 주세요.
+                  {tr('routineTodo.compose.categoryUnavailable')}
                 </Text>
               ) : null}
             </View>

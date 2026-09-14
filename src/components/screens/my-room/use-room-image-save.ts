@@ -3,6 +3,7 @@ import { type View } from 'react-native';
 
 import { useToast } from '@/components/ui/toast';
 import { saveRoomImage } from '@/lib/room-capture';
+import { i18n } from '@/i18n';
 
 /**
  * 방 이미지 갤러리 저장 (#245) — 나의 방 화면에서 뽑아냈다. 캡처 대상 ref와
@@ -24,10 +25,10 @@ export function useRoomImageSave() {
       requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
     );
     const result = await saveRoomImage(roomShotRef).finally(() => setCapturing(false));
-    if (result === 'saved') toast('방 이미지를 갤러리에 저장했어요', 'success');
-    else if (result === 'denied') toast('사진 접근 권한을 허용해주세요', 'error');
-    else if (result === 'unsupported') toast('웹에서는 이미지 저장을 지원하지 않아요', 'error');
-    else toast('이미지 저장에 실패했어요', 'error');
+    if (result === 'saved') toast(i18n.t('routineTodo.roomImage.saved'), 'success');
+    else if (result === 'denied') toast(i18n.t('routineTodo.roomImage.denied'), 'error');
+    else if (result === 'unsupported') toast(i18n.t('routineTodo.roomImage.unsupported'), 'error');
+    else toast(i18n.t('routineTodo.roomImage.failed'), 'error');
   };
 
   return { roomShotRef, capturing, setCapturing, onSaveRoomImage };
