@@ -23,7 +23,7 @@ import { FontScreen } from '@/components/screens/font-screen';
 import { track } from '@/lib/analytics';
 import { LanguageScreen } from '@/components/screens/language-screen';
 import { useLanguage } from '@/hooks/use-language';
-import { type AppLanguage, useT } from '@/i18n';
+import { type AppLanguage, LANGUAGE_PICKER_ENABLED, useT } from '@/i18n';
 import { ThemeScreen } from '@/components/screens/theme-screen';
 import { useToast } from '@/components/ui/toast';
 import { FONT_OPTIONS, THEME_OPTIONS, type BrandFontId, type ThemeId } from '@/constants/theme';
@@ -325,7 +325,7 @@ export function useSettingsSurface({
     onOpenFont: openFont,
     onOpenTheme: openTheme,
     language,
-    onOpenLanguage: openLanguage,
+    onOpenLanguage: LANGUAGE_PICKER_ENABLED ? openLanguage : undefined,
     onOpenNotifications: openNotificationSettings,
     onOpenSound: openSound,
     onOpenTerms: openTerms,

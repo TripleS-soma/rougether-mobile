@@ -17,6 +17,12 @@ describe('설정 · 언어 (#893)', () => {
     expect(onOpenLanguage).toHaveBeenCalledTimes(1);
   });
 
+  it('onOpenLanguage가 없으면(2단계 게이트) 언어 행을 그리지 않는다', async () => {
+    const ui = await render(<SettingsScreen language="en" />);
+    expect(ui.queryByLabelText('언어')).toBeNull();
+    expect(ui.queryByText('English')).toBeNull();
+  });
+
   it('영어로 바꾸면 설정 화면과 하단 탭 문구가 영어로 그려진다', async () => {
     const ui = await render(
       <>
