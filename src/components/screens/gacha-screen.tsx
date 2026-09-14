@@ -11,7 +11,7 @@ import {
   RevealCard,
   rarityColor,
 } from '@/components/screens/gacha/draw-animation';
-import { buildRevealPlan } from '@/components/screens/gacha/reveal-motion';
+import { buildRevealPlan, rarityLabelKey } from '@/components/screens/gacha/reveal-motion';
 import { MultiReveal } from '@/components/screens/gacha/multi-reveal';
 import { SheetHandle } from '@/components/ui/sheet-handle';
 import { Loading } from '@/components/ui/loading';
@@ -35,6 +35,7 @@ import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { assetSource } from '@/resources/asset';
 import { hapticImpact } from '@/utils/haptics';
+import { useT } from '@/i18n';
 
 type Phase = 'idle' | 'charging' | 'burst' | 'reveal';
 
@@ -83,8 +84,10 @@ export type GachaScreenProps = {
   soundEffectsEnabled?: boolean;
 };
 
-/** 보상 시트의 등급 그룹 순서 (#620) — 미지의 등급은 맨 뒤 '기타'. */
+/** 보상 시트의 등급 그룹 순서 (#620, 서버 등급 어휘) — 미지의 등급은 맨 뒤 '기타'. */
 export const REWARD_RARITY_ORDER: readonly string[] = ['전설', '희귀', '일반'];
+/** 미지의 등급을 묶는 센티널 — 표시는 `roomShop.gacha.rarity.other`. */
+export const OTHER_RARITY = 'other';
 
 /** 등급 → 그룹 정렬 키; 목록은 희소한 것부터 보여준다. */
 export function groupRewardsByRarity(
@@ -92,12 +95,12 @@ export function groupRewardsByRarity(
 ): { rarity: string; items: GachaRewardResponse[] }[] {
   const buckets = new Map<string, GachaRewardResponse[]>();
   for (const r of rewards) {
-    const key = REWARD_RARITY_ORDER.includes(r.rarity ?? '') ? (r.rarity as string) : '기타';
+    const key = REWARD_RARITY_ORDER.includes(r.rarity ?? '') ? (r.rarity as string) : OTHER_RARITY;
     const list = buckets.get(key) ?? [];
     list.push(r);
     buckets.set(key, list);
   }
-  return [...REWARD_RARITY_ORDER, '기타']
+  return [...REWARD_RARITY_ORDER, OTHER_RARITY]
     .filter((rarity) => buckets.has(rarity))
     .map((rarity) => ({ rarity, items: buckets.get(rarity)! }));
 }
@@ -134,6 +137,7 @@ export function GachaScreen({
   const insets = useSafeAreaInsets();
   const Typography = useTypography();
   const emph = useFontEmphasis();
+  const tr = useT();
   const systemReducedMotion = useReducedMotion();
   const shouldReduceMotion = reducedMotion ?? systemReducedMotion;
   // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
@@ -202,11 +206,13 @@ export function GachaScreen({
       <View style={[styles.rewardsGroupHead, section.first ? null : styles.rewardsGroupGap]}>
         <View style={[styles.rarityDot, { backgroundColor: rarityColor(section.rarity) }]} />
         <Text style={[Typography.supporting, emph('semibold'), { color: t.textMuted }]}>
-          {section.rarity}
+          {section.rarity === OTHER_RARITY
+            ? tr('roomShop.gacha.rarity.other')
+            : tr(rarityLabelKey(section.rarity) ?? section.rarity)}
         </Text>
       </View>
     ),
-    [Typography, emph, t.textMuted],
+    [Typography, emph, t.textMuted, tr],
   );
   const renderRewardRow = useCallback(
     ({ item: r, index }: { item: GachaRewardResponse; index: number }) => (
@@ -250,7 +256,7 @@ export function GachaScreen({
         currency: box.costCurrencyType === 'DIAMOND' ? 'diamond' : 'coin',
         count,
       });
-      toast('잔액이 부족해요', 'error');
+      toast(tr('roomShop.gacha.insufficientBalance'), 'error');
       return;
     }
     setError('');
@@ -271,7 +277,7 @@ export function GachaScreen({
     if (!results?.length) {
       drawBusy.current = false;
       setPhase('idle');
-      setError('뽑기에 실패했어요.');
+      setError(tr('roomShop.gacha.drawFailed'));
       return;
     }
     // Artwork and rarity come from each server result; new furniture needs no
@@ -327,7 +333,7 @@ export function GachaScreen({
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader
-        title="뽑기"
+        title={tr('roomShop.gacha.title')}
         onBack={onBack}
         right={<WalletPills coin={coinBalance} diamond={diamondBalance} />}
       />
@@ -336,12 +342,12 @@ export function GachaScreen({
         <View style={[styles.loadingBlock, { paddingTop: headerInset + Spacing.six }]}>
           <Loading />
           <Text style={[Typography.supporting, { color: t.textMuted }]}>
-            뽑기 목록 불러오는 중...
+            {tr('roomShop.gacha.listLoading')}
           </Text>
         </View>
       ) : loadError ? (
         <View style={[styles.loadingBlock, { paddingTop: headerInset + Spacing.six }]}>
-          <RetryState message="뽑기 목록을 불러오지 못했어요." onRetry={onRetry} />
+          <RetryState message={tr('roomShop.gacha.listError')} onRetry={onRetry} />
         </View>
       ) : box ? (
         <View style={[styles.screen, column]}>
@@ -368,17 +374,19 @@ export function GachaScreen({
       ) : (
         <View style={[styles.loadingBlock, { paddingTop: headerInset + Spacing.six }]}>
           <Icon name="gift" size={48} color={t.primary} />
-          <Text style={[Typography.h3, { color: t.text }]}>새로운 선물을 준비하고 있어요</Text>
+          <Text style={[Typography.h3, { color: t.text }]}>{tr('roomShop.gacha.emptyTitle')}</Text>
           <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
-            벽지·바닥·가구 상자가 준비되면 여기서 만날 수 있어요.
+            {tr('roomShop.gacha.emptyBody')}
           </Text>
           {onRetry ? (
             <ScalePressable
               onPress={onRetry}
               accessibilityRole="button"
-              accessibilityLabel="뽑기 목록 새로고침"
+              accessibilityLabel={tr('roomShop.gacha.refreshListA11y')}
               style={styles.confirmBtn}>
-              <Text style={[Typography.label, { color: t.primaryText }]}>새로고침</Text>
+              <Text style={[Typography.label, { color: t.primaryText }]}>
+                {tr('roomShop.gacha.refresh')}
+              </Text>
             </ScalePressable>
           ) : null}
         </View>
@@ -407,13 +415,13 @@ export function GachaScreen({
               <Pressable
                 onPress={skipAnimation}
                 accessibilityRole="button"
-                accessibilityLabel="뽑기 연출 건너뛰기"
+                accessibilityLabel={tr('roomShop.gacha.skipA11y')}
                 style={[
                   styles.skipButton,
                   { top: Math.max(insets.top, Spacing.three), backgroundColor: Overlay.dim },
                 ]}>
                 <Text style={[Typography.supporting, emph('semibold'), styles.skipText]}>
-                  건너뛰기
+                  {tr('roomShop.gacha.skip')}
                 </Text>
                 <Icon name="forward" size={14} color={StaticWhite} />
               </Pressable>
@@ -422,9 +430,11 @@ export function GachaScreen({
               <View style={styles.charging}>
                 <Image source={giftRoom} style={styles.chargingArt} contentFit="cover" />
                 <Loading />
-                <Text style={[Typography.label, { color: t.text }]}>선물을 준비하고 있어요</Text>
+                <Text style={[Typography.label, { color: t.text }]}>
+                  {tr('roomShop.gacha.preparing')}
+                </Text>
                 <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                  잠깐만 기다려 주세요
+                  {tr('roomShop.gacha.preparingHint')}
                 </Text>
               </View>
             ) : phase === 'burst' ? (
@@ -454,7 +464,12 @@ export function GachaScreen({
                 {revealPlan.items.length === 1 ? (
                   <View style={styles.singleCaption} accessibilityLiveRegion="polite">
                     <Text style={[Typography.supporting, emph('semibold'), { color: t.onTint }]}>
-                      {featuredRevealItem?.badgeLabel ?? '나만의 새로운 발견'}
+                      {featuredRevealItem?.badgeLabel
+                        ? tr(
+                            rarityLabelKey(featuredRevealItem.badgeLabel) ??
+                              featuredRevealItem.badgeLabel,
+                          )
+                        : tr('roomShop.gacha.newDiscovery')}
                     </Text>
                     <Text
                       style={[Typography.h2, emph('bold'), styles.center, { color: t.onTint }]}
@@ -464,7 +479,7 @@ export function GachaScreen({
                     <Text style={[Typography.supporting, styles.center, { color: t.onTint }]}>
                       {featuredRevealItem?.conversionLabel
                         ? featuredRevealItem.conversionLabel
-                        : '새로운 선물이 내 방을 기다려요'}
+                        : tr('roomShop.gacha.newGiftWaiting')}
                     </Text>
                   </View>
                 ) : (
@@ -482,12 +497,12 @@ export function GachaScreen({
                     ]}
                     testID="gacha-multi-results">
                     <Text style={[Typography.h2, emph('bold'), styles.center, { color: t.onTint }]}>
-                      뽑기 결과
+                      {tr('roomShop.gacha.resultsTitle')}
                     </Text>
                     <Text
                       style={[Typography.supporting, { color: t.onTint }]}
                       accessibilityLiveRegion="polite">
-                      {revealPlan.items.length}개 획득
+                      {tr('roomShop.gacha.resultsCount', { n: revealPlan.items.length })}
                     </Text>
                     <ScrollView
                       style={styles.revealScroll}
@@ -514,16 +529,18 @@ export function GachaScreen({
                     <ScalePressable
                       onPress={goPlace}
                       accessibilityRole="button"
-                      accessibilityLabel="방 꾸미러 가기"
+                      accessibilityLabel={tr('roomShop.gacha.goDecorate')}
                       style={[styles.confirmBtn, { backgroundColor: t.primary }]}>
-                      <Text style={[Typography.label, { color: t.onPrimary }]}>방 꾸미러 가기</Text>
+                      <Text style={[Typography.label, { color: t.onPrimary }]}>
+                        {tr('roomShop.gacha.goDecorate')}
+                      </Text>
                       <Icon name="forward" size={18} color={t.onPrimary} />
                     </ScalePressable>
                   ) : null}
                   <ScalePressable
                     onPress={close}
                     accessibilityRole="button"
-                    accessibilityLabel="확인"
+                    accessibilityLabel={tr('common.confirm')}
                     style={[
                       styles.confirmBtn,
                       { backgroundColor: placeablePulled.length ? t.surface : t.primary },
@@ -533,7 +550,7 @@ export function GachaScreen({
                         Typography.label,
                         { color: placeablePulled.length ? t.text : t.onPrimary },
                       ]}>
-                      확인
+                      {tr('common.confirm')}
                     </Text>
                   </ScalePressable>
                 </View>
@@ -549,9 +566,11 @@ export function GachaScreen({
         onClose={() => setRewardsOpen(false)}
         cardStyle={[styles.rewardsSheet, { backgroundColor: t.screen }]}>
         <SheetHandle />
-        <Text style={[Typography.h3, styles.center, { color: t.text }]}>나올 수 있는 보상</Text>
+        <Text style={[Typography.h3, styles.center, { color: t.text }]}>
+          {tr('roomShop.gacha.rewardsTitle')}
+        </Text>
         <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
-          이미 가진 아이템이 나오면 다이아로 바뀌어요.
+          {tr('roomShop.gacha.rewardsHint')}
         </Text>
         {rewardsLoading ? (
           <View style={styles.rewardsBlock}>
@@ -560,7 +579,7 @@ export function GachaScreen({
         ) : rewards == null ? (
           <View style={styles.rewardsBlock}>
             <RetryState
-              message="보상 목록을 불러오지 못했어요."
+              message={tr('roomShop.gacha.rewardsError')}
               onRetry={() => {
                 rewardsForRef.current = null;
                 if (box) openRewards(box.id);

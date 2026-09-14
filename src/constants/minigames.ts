@@ -1,4 +1,5 @@
 import type { Minigame } from '@/api/minigames';
+import { i18n } from '@/i18n';
 
 /**
  * 물리 계약 번호 — 서버 `MinigameCatalog.CURRENT_RULES_VERSION`과 같아야 한다.
@@ -15,33 +16,55 @@ export type MinigameDefinition = Minigame & {
   pose: number;
 };
 
-/** Only installed, version-matched game implementations may be offered for play. */
+/**
+ * Only installed, version-matched game implementations may be offered for play.
+ * 문구(name·description·instructions)는 getter — 모듈 로드 시점에 번역하면 언어 변경이
+ * 반영되지 않는다 (#893).
+ */
 export const MINIGAME_DEFINITIONS: Record<MinigameCode, MinigameDefinition> = {
   'room-runner': {
     gameCode: 'room-runner',
-    name: '루틴 러너',
-    description: '탭해서 장애물을 넘고, 최고 기록에 도전해요.',
+    get name() {
+      return i18n.t('roomShop.minigame.runner.name');
+    },
+    get description() {
+      return i18n.t('roomShop.minigame.runner.description');
+    },
     rulesVersion: CURRENT_MINIGAME_RULES_VERSION,
     maxTicks: 18000,
-    instructions: '탭해서 점프',
+    get instructions() {
+      return i18n.t('roomShop.minigame.runner.instructions');
+    },
     pose: 1,
   },
   'cat-stairs': {
     gameCode: 'cat-stairs',
-    name: '고양이 계단',
-    description: '왼쪽, 오른쪽! 고양이와 더 높이 올라가요.',
+    get name() {
+      return i18n.t('roomShop.minigame.stairs.name');
+    },
+    get description() {
+      return i18n.t('roomShop.minigame.stairs.description');
+    },
     rulesVersion: CURRENT_MINIGAME_RULES_VERSION,
     maxTicks: 7200,
-    instructions: '다음 계단 방향으로 이동',
+    get instructions() {
+      return i18n.t('roomShop.minigame.stairs.instructions');
+    },
     pose: 2,
   },
   'cat-merge': {
     gameCode: 'cat-merge',
-    name: '고양이 합치기',
-    description: '같은 숫자의 고양이를 합쳐 더 큰 숫자를 만들어요.',
+    get name() {
+      return i18n.t('roomShop.minigame.merge.name');
+    },
+    get description() {
+      return i18n.t('roomShop.minigame.merge.description');
+    },
     rulesVersion: CURRENT_MINIGAME_RULES_VERSION,
     maxTicks: 18000,
-    instructions: '밀어서 같은 숫자 합치기',
+    get instructions() {
+      return i18n.t('roomShop.minigame.merge.instructions');
+    },
     pose: 3,
   },
 };

@@ -10,6 +10,7 @@ import { Radius } from '@/constants/theme';
 import { parseRunnerMessage, type RunnerGameProps } from '@/features/minigame/runner-bridge';
 import { createRunnerHtml } from '@/features/minigame/runner-html';
 import { useTokens } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 export function RunnerGame({
   seed,
@@ -20,6 +21,7 @@ export function RunnerGame({
   testID = 'runner-game',
 }: RunnerGameProps) {
   const t = useTokens();
+  const tr = useT();
   const palette = useRef(t).current;
   const { channelId, finished, error, fail, retry, isCurrentChannel } = useGameRecovery(
     'runner',
@@ -90,7 +92,7 @@ export function RunnerGame({
         <iframe
           key={channelId}
           ref={frame}
-          title="러너 게임"
+          title={tr('roomShop.minigame.frame.runner')}
           srcDoc={html}
           sandbox="allow-scripts"
           onLoad={syncActive}

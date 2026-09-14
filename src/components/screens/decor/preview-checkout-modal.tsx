@@ -4,6 +4,7 @@ import { confirmStyles as styles } from '@/components/screens/decor/confirm-moda
 import { Icon } from '@/components/ui/icon';
 import { Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 export type PreviewCheckoutModalProps = {
   visible: boolean;
@@ -40,13 +41,14 @@ export function PreviewCheckoutModal({
 }: PreviewCheckoutModalProps) {
   const t = useTokens();
   const Typography = useTypography();
+  const tr = useT();
   const buyAllDisabled = buying || !canBuy || diamondBalance < total;
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onDismiss}>
       <Pressable style={styles.confirmBackdrop} onPress={onDismiss}>
         <Pressable style={[styles.confirmCard, { backgroundColor: t.screen }]}>
           <Text style={[Typography.h3, { color: t.text }]}>
-            구매하지 않은 프리뷰가 {previews.length}개 있어요
+            {tr('roomShop.decor.checkout.title', { n: previews.length })}
           </Text>
           <View style={local.previewList}>
             {previews.map((pv) => (
@@ -62,7 +64,7 @@ export function PreviewCheckoutModal({
             ))}
             <View style={[local.previewRow, local.previewTotalRow, { borderTopColor: t.border }]}>
               <Text style={[Typography.body, local.flex, { color: t.textMuted }]}>
-                합계 (보유 {diamondBalance})
+                {tr('roomShop.decor.checkout.total', { balance: diamondBalance })}
               </Text>
               <View style={local.priceRow}>
                 <Icon name="diamond" size={11} color={t.primary} />
@@ -75,7 +77,7 @@ export function PreviewCheckoutModal({
               onPress={onBuyAllAndSave}
               disabled={buyAllDisabled}
               accessibilityRole="button"
-              accessibilityLabel="모두 구매하고 저장"
+              accessibilityLabel={tr('roomShop.decor.checkout.buyAllA11y')}
               accessibilityState={{ disabled: buyAllDisabled }}
               style={[
                 styles.leaveBtn,
@@ -83,27 +85,33 @@ export function PreviewCheckoutModal({
               ]}>
               <Text
                 style={[Typography.label, { color: buyAllDisabled ? t.textMuted : t.onPrimary }]}>
-                {buying
-                  ? '구매 중...'
-                  : diamondBalance < total
-                    ? '다이아가 부족해요'
-                    : '모두 구매하고 저장'}
+                {tr(
+                  buying
+                    ? 'roomShop.decor.checkout.buying'
+                    : diamondBalance < total
+                      ? 'roomShop.decor.checkout.insufficientDiamond'
+                      : 'roomShop.decor.checkout.buyAll',
+                )}
               </Text>
             </Pressable>
             <Pressable
               onPress={onSaveWithoutPreviews}
               disabled={buying}
               accessibilityRole="button"
-              accessibilityLabel="제외하고 저장"
+              accessibilityLabel={tr('roomShop.decor.checkout.saveWithoutA11y')}
               style={[styles.leaveBtn, { backgroundColor: t.surfaceMuted }]}>
-              <Text style={[Typography.label, { color: t.text }]}>프리뷰 제외하고 저장</Text>
+              <Text style={[Typography.label, { color: t.text }]}>
+                {tr('roomShop.decor.checkout.saveWithout')}
+              </Text>
             </Pressable>
             <Pressable
               onPress={onDismiss}
               accessibilityRole="button"
-              accessibilityLabel="프리뷰 계속 보기"
+              accessibilityLabel={tr('roomShop.decor.checkout.stayA11y')}
               style={styles.leaveStay}>
-              <Text style={[Typography.label, { color: t.textMuted }]}>계속 꾸미기</Text>
+              <Text style={[Typography.label, { color: t.textMuted }]}>
+                {tr('roomShop.decor.checkout.stay')}
+              </Text>
             </Pressable>
           </View>
         </Pressable>
