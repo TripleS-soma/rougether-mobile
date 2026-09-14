@@ -1,5 +1,4 @@
-import en from '@/i18n/resources/en.json';
-import ko from '@/i18n/resources/ko.json';
+import { enResources as en, koResources as ko } from '@/i18n';
 
 type Tree = { [key: string]: string | Tree };
 
@@ -18,8 +17,18 @@ const placeholders = (s: string) => [...s.matchAll(/\{\{\s*(\w+)\s*\}\}/g)].map(
  * 보간 자리표시자가 일치해야 한다. 새 문구는 ko·en 두 파일에 같이 넣는다.
  */
 describe('i18n resources', () => {
-  const koFlat = flatten(ko as Tree);
-  const enFlat = flatten(en as Tree);
+  const koFlat = flatten(ko as unknown as Tree);
+  const enFlat = flatten(en as unknown as Tree);
+
+  it('도메인 파일끼리 최상위 키가 겹치지 않는다 (병합 시 덮어쓰기 방지)', () => {
+    // 병합 결과의 키 수가 각 파일 키 수의 합과 같아야 한다 — 겹치면 하나가 사라진다.
+    const files = [
+      require('@/i18n/resources/ko/common.json'),
+      require('@/i18n/resources/ko/settings.json'),
+    ] as Tree[];
+    const total = files.reduce((n, f) => n + Object.keys(f).length, 0);
+    expect(Object.keys(ko).length).toBe(total);
+  });
 
   it('en has every ko key and no extra keys', () => {
     const koKeys = Object.keys(koFlat).sort();
