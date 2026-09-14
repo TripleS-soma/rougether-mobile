@@ -9,6 +9,7 @@ import {
 } from '@/constants/announcements';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 export type AnnouncementRow = Announcement & { read: boolean };
 
@@ -18,7 +19,7 @@ export type AnnouncementSectionProps = {
   onOpen?: (announcement: AnnouncementRow) => void;
   /** 최근 3개만 펼치고 나머지는 더보기로 (기본). 전용 탭에서는 false로 전부 펼친다. */
   collapsible?: boolean;
-  /** 섹션 제목 — 전용 탭에서는 헤더가 이미 말해 주니 생략(undefined). */
+  /** 섹션 제목 — 생략하면 기본 '새 소식', 전용 탭에서는 헤더가 이미 말해 주니 null. */
   title?: string | null;
   /** 소식이 없을 때 보여줄 문구 — 없으면(기본) 섹션 자체를 그리지 않는다. */
   emptyText?: string;
@@ -33,10 +34,12 @@ export function AnnouncementSection({
   announcements,
   onOpen,
   collapsible = true,
-  title = '새 소식',
+  title,
   emptyText,
 }: AnnouncementSectionProps) {
   const t = useTokens();
+  const tr = useT();
+  const heading = title === undefined ? tr('notification.news.title') : title;
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const [expanded, setExpanded] = useState(false);
@@ -52,10 +55,10 @@ export function AnnouncementSection({
 
   return (
     <View style={styles.section} testID="announcement-section">
-      {title ? (
+      {heading ? (
         <Text
           style={[Typography.supporting, emph('semibold'), styles.title, { color: t.textMuted }]}>
-          {title}
+          {heading}
         </Text>
       ) : null}
       {visible.map((a) => (
@@ -76,7 +79,7 @@ export function AnnouncementSection({
             <View style={styles.rowHead}>
               <Text style={[Typography.label, { color: t.text }]}>{a.title}</Text>
               <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                {announcementDateLabel(a.date)}
+                {announcementDateLabel(a.date, tr)}
               </Text>
             </View>
             <Text style={[Typography.body, { color: a.read ? t.textMuted : t.text }]}>
@@ -93,10 +96,16 @@ export function AnnouncementSection({
         <Pressable
           onPress={() => setExpanded((v) => !v)}
           accessibilityRole="button"
-          accessibilityLabel={expanded ? '새 소식 접기' : `지난 소식 ${hidden}개 더보기`}
+          accessibilityLabel={
+            expanded
+              ? tr('notification.news.collapseA11y')
+              : tr('notification.news.moreOlder', { count: hidden })
+          }
           style={[styles.more, { backgroundColor: t.surfaceMuted }]}>
           <Text style={[Typography.label, { color: t.primaryText }]}>
-            {expanded ? '접기' : `지난 소식 ${hidden}개 더보기`}
+            {expanded
+              ? tr('notification.news.collapse')
+              : tr('notification.news.moreOlder', { count: hidden })}
           </Text>
         </Pressable>
       ) : null}

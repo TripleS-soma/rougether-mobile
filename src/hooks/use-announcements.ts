@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { ANNOUNCEMENTS, type Announcement } from '@/constants/announcements';
+import { type Announcement, getAnnouncements } from '@/constants/announcements';
+import { useT } from '@/i18n';
 import { loadReadAnnouncements, saveReadAnnouncements } from '@/lib/announcements-store';
 
 export type AnnouncementEntry = Announcement & { read: boolean };
@@ -13,6 +14,7 @@ const EMPTY: ReadonlySet<string> = new Set();
  */
 export function useAnnouncements(userId: number | undefined) {
   const [read, setRead] = useState<ReadonlySet<string> | null>(null);
+  const tr = useT();
 
   useEffect(() => {
     let alive = true;
@@ -41,12 +43,12 @@ export function useAnnouncements(userId: number | undefined) {
     [persist, read],
   );
   const markAllRead = useCallback(() => {
-    persist(new Set(ANNOUNCEMENTS.map((a) => a.id)));
-  }, [persist]);
+    persist(new Set(getAnnouncements(tr).map((a) => a.id)));
+  }, [persist, tr]);
 
   const items = useMemo<AnnouncementEntry[]>(
-    () => ANNOUNCEMENTS.map((a) => ({ ...a, read: read == null || read.has(a.id) })),
-    [read],
+    () => getAnnouncements(tr).map((a) => ({ ...a, read: read == null || read.has(a.id) })),
+    [read, tr],
   );
   const unreadCount = useMemo(() => items.filter((a) => !a.read).length, [items]);
 

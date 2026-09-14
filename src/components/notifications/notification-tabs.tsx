@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 export type NotificationTab = 'notifications' | 'news';
 
@@ -13,10 +14,10 @@ export type NotificationTabsProps = {
   unread: { notifications: boolean; news: boolean };
 };
 
-const TABS: readonly { key: NotificationTab; label: string }[] = [
+const TABS: readonly { key: NotificationTab; labelKey: string }[] = [
   // 헤더 제목이 이미 '알림'이라 탭은 '내 알림'으로 — 새 소식(전체 공지)과의 대비도 분명해진다.
-  { key: 'notifications', label: '내 알림' },
-  { key: 'news', label: '새 소식' },
+  { key: 'notifications', labelKey: 'notification.tabs.notifications' },
+  { key: 'news', labelKey: 'notification.tabs.news' },
 ];
 
 /**
@@ -26,18 +27,20 @@ const TABS: readonly { key: NotificationTab; label: string }[] = [
 export function NotificationTabs({ value, onChange, unread }: NotificationTabsProps) {
   const t = useTokens();
   const Typography = useTypography();
+  const tr = useT();
   return (
     <View style={styles.row} testID="notification-tabs">
       <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.segment}>
-        {TABS.map(({ key, label }) => {
+        {TABS.map(({ key, labelKey }) => {
           const active = value === key;
+          const label = tr(labelKey);
           return (
             <Pressable
               key={key}
               onPress={() => onChange(key)}
               accessibilityRole="tab"
               accessibilityState={{ selected: active }}
-              accessibilityLabel={`${label} 탭`}
+              accessibilityLabel={tr('notification.tabs.a11y', { label })}
               style={[styles.item, active && { backgroundColor: t.surfaceMuted }]}>
               <Text style={[Typography.label, { color: active ? t.primaryText : t.textMuted }]}>
                 {label}
