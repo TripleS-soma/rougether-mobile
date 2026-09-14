@@ -1,3 +1,4 @@
+import type { AppLanguage } from '@/i18n';
 import { openBrowserAsync } from 'expo-web-browser';
 import { type ReactNode, useState } from 'react';
 import { Text, View } from 'react-native';
@@ -48,6 +49,7 @@ import { PolicyViewerScreen } from '@/components/screens/policy-viewer-screen';
 import { ProfileEditScreen } from '@/components/screens/profile-edit-screen';
 import { RoomDecorScreen } from '@/components/screens/room-decor-screen';
 import { RoutineManageScreen } from '@/components/screens/routine-manage-screen';
+import { LanguageScreen } from '@/components/screens/language-screen';
 import { FontScreen } from '@/components/screens/font-screen';
 import { AppearancePreview } from '@/components/screens/settings/appearance-preview';
 import { ThemeScreen } from '@/components/screens/theme-screen';
@@ -199,6 +201,16 @@ function CalendarWeekDemo() {
         today="2026-09-16"
         weekOf={collapsed ? date : null}
       />
+    </View>
+  );
+}
+
+/** 언어 화면 데모 (#893) — 프로바이더 없이 선택 상태만 바뀐다. */
+function LanguageScreenDemo() {
+  const [language, setLanguage] = useState<AppLanguage>('ko');
+  return (
+    <View style={{ alignSelf: 'stretch', height: 360 }}>
+      <LanguageScreen language={language} onSelectLanguage={setLanguage} />
     </View>
   );
 }
@@ -1435,6 +1447,11 @@ export const galleryEntries: GalleryEntry[] = [
     description:
       '주간 보기 모드 (#1327): 선택 주만 남기고 접힘, ‹ ›·가로 플링이 주 이동. 버튼으로 접기/펼치기.',
     render: () => <CalendarWeekDemo />,
+  },
+  {
+    name: 'LanguageScreen',
+    description: '설정 → 언어 (#893): 한국어/English 즉시 적용. 갤러리에선 선택만 바뀐다.',
+    render: () => <LanguageScreenDemo />,
   },
   {
     name: 'UI · Button',

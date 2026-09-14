@@ -15,6 +15,7 @@ import { AnimatedSplashOverlay } from '@/components/app/animated-splash-overlay'
 import { ToastProvider } from '@/components/ui/toast';
 import { AuthProvider } from '@/hooks/use-auth';
 import { BrandThemeProvider, useResolvedScheme } from '@/hooks/use-tokens';
+import { LanguageProvider } from '@/hooks/use-language';
 import { useWebFonts } from '@/hooks/use-web-fonts';
 import { initAnalytics } from '@/lib/analytics';
 import { initAppOpenTracking } from '@/lib/app-open';
@@ -83,17 +84,19 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <AppIconSync />
-            <BrandThemeProvider>
-              <ToastProvider>
-                <NavigationTheme>
-                  <AnimatedSplashOverlay />
-                  {/* 웹 데스크톱: 중앙 480px 컬럼. 네이티브는 그대로 통과. */}
-                  <AppFrame>
-                    <Stack screenOptions={{ headerShown: false }} />
-                  </AppFrame>
-                </NavigationTheme>
-              </ToastProvider>
-            </BrandThemeProvider>
+            <LanguageProvider>
+              <BrandThemeProvider>
+                <ToastProvider>
+                  <NavigationTheme>
+                    <AnimatedSplashOverlay />
+                    {/* 웹 데스크톱: 중앙 480px 컬럼. 네이티브는 그대로 통과. */}
+                    <AppFrame>
+                      <Stack screenOptions={{ headerShown: false }} />
+                    </AppFrame>
+                  </NavigationTheme>
+                </ToastProvider>
+              </BrandThemeProvider>
+            </LanguageProvider>
           </AuthProvider>
         </QueryClientProvider>
       </SafeAreaProvider>
