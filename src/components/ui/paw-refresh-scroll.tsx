@@ -222,6 +222,11 @@ export function PawRefreshScroll({
     onRefresh,
     beginRefresh,
   ]);
+  // 합성 제스처도 참조 고정 (#1207 잔여, 2026-09-14) — 렌더마다 새 Gesture.Simultaneous를 주면
+  // GestureDetector가 인식기를 다시 붙이고, iOS에선 그 순간 **활성 중인 형제 팬(탭 페이저)이
+  // 떨어진다**. 집 탭은 스와이프 도중 리렌더가 잦아(카메라·전환 애니메이션) 스와이프가
+  // 시작하다 되돌아가는 증상으로 보였다. #1208은 그 결과인 래치만 풀었고 원인은 여기였다.
+  const composed = useMemo(() => Gesture.Simultaneous(pan, nativeScroll), [pan, nativeScroll]);
 
   // 레이아웃(flex)은 정적 스타일로 — animated 스타일에 섞으면 웹에서 적용이
   // 누락돼 콘텐츠가 0 높이로 접히는 사고가 있었다 (#454 스모크).
@@ -277,7 +282,7 @@ export function PawRefreshScroll({
       {/* translateY 래퍼는 제스처 대상이 아니다 — 팬·네이티브 스크롤 제스처는
           RNGH 문서의 정석대로 ScrollView 자체에 함께 붙인다. */}
       <Animated.View style={[styles.content, contentStyle]}>
-        <GestureDetector gesture={Gesture.Simultaneous(pan, nativeScroll)}>
+        <GestureDetector gesture={composed}>
           <ScrollView
             ref={scrollRef}
             onScroll={handleScroll}
