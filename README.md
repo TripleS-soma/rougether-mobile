@@ -67,7 +67,7 @@ Dev 갤러리에서 확인합니다.
 | `npm run lint`                    | `expo lint`                                                                                     |
 | `npm run format` / `format:check` | Prettier write / check                                                                          |
 | `npm test` / `test:watch`         | Jest (jest-expo + React Native Testing Library)                                                 |
-| `npm run test:date-boundary`      | spec 날짜 경계 fixture로 실제 요청 생성 검증(단말 시간대 매트릭스) — `output/contracts/`에 기록 |
+| `node scripts/run-date-boundary.js` | spec 날짜 경계 fixture로 실제 요청 생성 검증(단말 시간대 매트릭스) — `.expo/date-boundary/`에 기록. npm script로 두면 지문이 바뀐다 |
 | `npm run gen:api-types`           | 스웨거에서 API 타입 생성                                                                        |
 | `npm run build:characters`        | 캐릭터 스프라이트 시트 빌드                                                                     |
 
