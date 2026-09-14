@@ -1,6 +1,11 @@
 {
   "ios": {
-    "CFBundleDisplayName": "루게더"
+    "CFBundleDisplayName": "루게더",
+    "NSCalendarsUsageDescription": "기기 캘린더의 일정을 루게더 할 일로 가져오기 위해 캘린더를 읽습니다. 캘린더에 쓰지는 않습니다.",
+    "NSCalendarsFullAccessUsageDescription": "기기 캘린더의 일정을 루게더 할 일로 가져오기 위해 캘린더를 읽습니다. 캘린더에 쓰지는 않습니다.",
+    "NSRemindersUsageDescription": "이 앱은 미리알림을 사용하지 않습니다. 캘린더 일정만 읽어 할 일로 가져옵니다.",
+    "NSPhotoLibraryUsageDescription": "버그 제보에 첨부할 스크린샷을 앨범에서 선택하기 위해 사진 접근 권한을 사용합니다.",
+    "NSPhotoLibraryAddUsageDescription": "방 사진을 앨범에 저장하기 위해 사진 추가 권한을 사용합니다."
   },
   "android": {
     "app_name": "루게더"
