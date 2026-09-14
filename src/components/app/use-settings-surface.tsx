@@ -178,7 +178,7 @@ export function useSettingsSurface({
       if (result && result.rewardCoin > 0) onWalletChanged?.();
       return result;
     },
-    [redeemInvite, onWalletChanged, tr],
+    [redeemInvite, onWalletChanged],
   );
   // 친구 초대 링크·붙여넣기 (#667 → #1007) — 설정 화면으로 튀지 않고 앱 위 확인
   // 시트로 받는다. [나중에]면 코드를 친구 초대 화면 입력란 프리필로 남긴다.
@@ -251,7 +251,7 @@ export function useSettingsSurface({
       track('language_change', { language: next });
       toast(tr('language.changed'), 'success');
     },
-    [language, setLanguage, toast, tr, tr],
+    [language, setLanguage, toast, tr],
   );
   const openProfileEdit = useCallback(() => setScreen('profileEdit'), [setScreen]);
   const openNotificationSettings = useCallback(() => {
