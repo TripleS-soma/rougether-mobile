@@ -8,8 +8,24 @@ import {
   useState,
 } from 'react';
 
-import { type AppLanguage, DEFAULT_LANGUAGE, i18n } from '@/i18n';
+import { getLocales } from 'expo-localization';
+
+import { type AppLanguage, DEFAULT_LANGUAGE, i18n, isAppLanguage } from '@/i18n';
 import { loadLanguage, saveLanguage } from '@/lib/language-store';
+
+/**
+ * 기기 언어 (#893 3단계) — 저장된 선택이 없을 때만 쓴다. 지원 언어(ko/en)면 그대로,
+ * 그 외(ja, zh …)는 영어로 — 한국어보다 영어가 더 넓은 폴백이다.
+ */
+export function detectDeviceLanguage(): AppLanguage {
+  try {
+    const code = getLocales()[0]?.languageCode ?? null;
+    if (isAppLanguage(code)) return code;
+    return code ? 'en' : DEFAULT_LANGUAGE;
+  } catch {
+    return DEFAULT_LANGUAGE;
+  }
+}
 
 type LanguageContextValue = {
   language: AppLanguage;
@@ -19,9 +35,8 @@ type LanguageContextValue = {
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 /**
- * 앱 언어 프로바이더 (#893) — 저장된 언어를 읽어 i18next에 적용하고, 바꾸면 즉시
- * 반영·영속화한다. BrandThemeProvider와 나란히 루트에 둔다. 기기 언어 자동 감지
- * (expo-localization)는 네이티브 모듈이라 다음 네이티브 윈도우에 붙인다.
+ * 앱 언어 프로바이더 (#893) — 저장된 언어가 있으면 그것을, 없으면 기기 언어(expo-localization)를
+ * i18next에 적용하고, 바꾸면 즉시 반영·영속화한다. BrandThemeProvider와 나란히 루트에 둔다.
  */
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<AppLanguage>(
@@ -30,9 +45,12 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let alive = true;
     void loadLanguage().then((stored) => {
-      if (!alive || !stored || stored === i18n.language) return;
-      void i18n.changeLanguage(stored);
-      setLanguageState(stored);
+      if (!alive) return;
+      // 저장된 선택 > 기기 언어. 기기 언어로 정했을 땐 저장하지 않는다 — 기기 설정을 바꾸면 따라가게.
+      const next = stored ?? detectDeviceLanguage();
+      if (next === i18n.language) return;
+      void i18n.changeLanguage(next);
+      setLanguageState(next);
     });
     return () => {
       alive = false;
