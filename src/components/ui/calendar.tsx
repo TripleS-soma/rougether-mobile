@@ -365,8 +365,9 @@ function CalendarBase({
               ]}
             />
             <View style={styles.week}>
+              {/* 키는 인덱스 — 영어 요일 글자(S·T)가 겹쳐 라벨을 키로 쓰면 중복 키 경고 (#893). */}
               {WEEKDAY_KEYS.map((w, i) => (
-                <View key={tr(weekdayLabelKey(i))} style={styles.cell}>
+                <View key={i} style={styles.cell}>
                   <Text
                     style={[
                       Typography.supporting,
