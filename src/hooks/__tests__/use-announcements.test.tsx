@@ -1,8 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
-import { ANNOUNCEMENTS } from '@/constants/announcements';
+import { getAnnouncements } from '@/constants/announcements';
 import { useAnnouncements } from '@/hooks/use-announcements';
+
+const ANNOUNCEMENTS = getAnnouncements();
 
 const KEY = 'rougether.announcements.v1';
 

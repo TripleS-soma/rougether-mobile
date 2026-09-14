@@ -37,7 +37,7 @@ import {
   NotificationTabs,
   type NotificationTab,
 } from '@/components/notifications/notification-tabs';
-import { ANNOUNCEMENTS } from '@/constants/announcements';
+import { getAnnouncements } from '@/constants/announcements';
 import { MyPageScreen } from '@/components/screens/my-page-screen';
 import { ListRow } from '@/components/ui/list-row';
 import { NotificationSettingsScreen } from '@/components/screens/notification-settings-screen';
@@ -1130,7 +1130,7 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => (
       <View style={{ height: 640, alignSelf: 'stretch' }}>
         <NotificationListScreen
-          announcements={ANNOUNCEMENTS.map((a, i) => ({ ...a, read: i > 0 }))}
+          announcements={getAnnouncements().map((a, i) => ({ ...a, read: i > 0 }))}
         />
       </View>
     ),
@@ -1148,7 +1148,7 @@ export const galleryEntries: GalleryEntry[] = [
       <View style={{ alignSelf: 'stretch' }}>
         <AnnouncementSection
           announcements={[
-            ...ANNOUNCEMENTS.map((a, i) => ({ ...a, read: i > 0 })),
+            ...getAnnouncements().map((a, i) => ({ ...a, read: i > 0 })),
             {
               id: 'demo-old',
               date: '2026-09-01',

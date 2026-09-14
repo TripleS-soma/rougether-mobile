@@ -1,3 +1,56 @@
 {
-  "notification": {}
+  "notification": {
+    "list": {
+      "title": "Notifications",
+      "defaultTitle": "Notification",
+      "readAll": "Mark all read",
+      "readAllNewsA11y": "Mark all news read",
+      "deleteAll": "Delete all",
+      "deleteAllA11y": "Delete all notifications",
+      "delete": "Delete",
+      "deleteRowA11y": "Delete {{label}}",
+      "deleteAllConfirmTitle": "Delete all notifications?",
+      "deleteAllConfirmBody": "Deleted notifications can't be recovered.",
+      "deleteAllConfirmA11y": "Confirm delete all notifications",
+      "empty": "No notifications yet.",
+      "loadError": "Couldn't load notifications.",
+      "more": "Show more",
+      "moreA11y": "More notifications",
+      "loadMoreFailed": "Couldn't load more notifications",
+      "markReadFailed": "Couldn't mark as read",
+      "deleteFailed": "Couldn't delete the notification"
+    },
+    "tabs": {
+      "notifications": "Mine",
+      "news": "What's new",
+      "a11y": "{{label}} tab"
+    },
+    "news": {
+      "title": "What's new",
+      "empty": "Nothing new yet.",
+      "collapse": "Show less",
+      "collapseA11y": "Collapse news",
+      "moreOlder": "Show {{count}} older",
+      "dateLabel": "{{month}}/{{day}}"
+    },
+    "announcements": {
+      "2026-09-13-minigames": {
+        "title": "Three mini-games in your room",
+        "body": "Routine Runner, Cat Stairs, and Merge Cats. Pick one from the game icon on the right of your room and climb the global ranking.",
+        "action": "Play now"
+      },
+      "2026-09-13-auto-attendance": {
+        "title": "Automatic attendance, holidays on the calendar",
+        "body": "Completing your first routine of the day checks you in automatically. Public holidays show in red on the calendar."
+      },
+      "2026-09-11-web-app": {
+        "title": "Rougether on desktop and in the browser",
+        "body": "Log in with the same account and your room and routines are right there. Handy for organizing to-dos on a computer.",
+        "action": "Open on the web"
+      }
+    },
+    "push": {
+      "channelName": "Notifications"
+    }
+  }
 }
