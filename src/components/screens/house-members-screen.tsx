@@ -19,6 +19,7 @@ import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useHeaderInsetStyle, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 /** Capacity choices for the edit form (server allows 1~10). */
 
@@ -96,6 +97,7 @@ export function HouseMembersScreen({
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const { show: toast } = useToast();
+  const tr = useT();
   // 부원 개인 초대코드 (#646) — 집 상세에는 없어(소유자 전용) 발급 응답을
   // 화면이 보관한다. 소유자는 상세의 공용 코드를 그대로 쓴다.
   const [issuedCode, setIssuedCode] = useState<string | null>(null);
@@ -111,7 +113,7 @@ export function HouseMembersScreen({
     if (!displayCode) return;
     try {
       await Clipboard.setStringAsync(displayCode);
-      toast('초대코드를 복사했어요');
+      toast(tr('house.members.codeCopied'));
       onInviteShared?.();
     } catch {
       // 클립보드 실패 — 코드는 화면에 그대로 보인다.
@@ -120,10 +122,13 @@ export function HouseMembersScreen({
   const shareInviteLink = async () => {
     if (!displayCode) return;
     const outcome = await shareOrCopy(
-      `루게더 '${currentHouse.name}' 집에 초대해요!\n${houseInviteLink(displayCode)}`,
+      tr('house.members.shareMessage', {
+        name: currentHouse.name,
+        link: houseInviteLink(displayCode),
+      }),
     );
     // 공유 시트가 없는 브라우저는 복사로 대신했으니 알려 준다. 취소는 조용히.
-    if (outcome === 'copied') toast('초대 링크를 복사했어요');
+    if (outcome === 'copied') toast(tr('house.members.linkCopied'));
     if (outcome !== 'cancelled') onInviteShared?.();
   };
   const headerInset = useHeaderInsetStyle();
@@ -155,7 +160,7 @@ export function HouseMembersScreen({
   };
   const editNameValid = editName.trim().length >= 2 && editName.trim().length <= 30;
   const submitEditHouse = () => {
-    if (!editNameValid) return toast('집 이름은 2~30자로 입력해주세요', 'error');
+    if (!editNameValid) return toast(tr('house.members.nameLengthError'), 'error');
     if (!currentHouse.houseId) return;
     onUpdateHouse?.(currentHouse.houseId, {
       name: editName.trim(),
@@ -203,13 +208,13 @@ export function HouseMembersScreen({
         <Pressable
           onPress={onBack}
           accessibilityRole="button"
-          accessibilityLabel="뒤로 가기"
+          accessibilityLabel={tr('common.back')}
           style={[styles.iconBtn, { backgroundColor: t.surfaceMuted }]}>
           <Icon name="back" size={26} color={t.text} />
         </Pressable>
         <View style={styles.flex}>
           <Text style={[Typography.supporting, { color: t.primaryText }]}>{currentHouse.name}</Text>
-          <Text style={[Typography.h3, { color: t.text }]}>구성원 관리</Text>
+          <Text style={[Typography.h3, { color: t.text }]}>{tr('house.members.title')}</Text>
         </View>
       </View>
 
@@ -217,21 +222,23 @@ export function HouseMembersScreen({
         {onReissueInviteCode || displayCode ? (
           <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
             <View style={styles.codeHead}>
-              <Text style={[Typography.label, styles.flex, { color: t.text }]}>초대코드</Text>
+              <Text style={[Typography.label, styles.flex, { color: t.text }]}>
+                {tr('house.members.inviteCode')}
+              </Text>
               {onReissueInviteCode && displayCode ? (
                 <Pressable
                   onPress={() => setShowReissueConfirm(true)}
                   accessibilityRole="button"
-                  accessibilityLabel="초대코드 재발급"
+                  accessibilityLabel={tr('house.members.reissueA11y')}
                   style={[styles.reissueBtn, { backgroundColor: t.surfaceMuted }]}>
-                  <Text style={[Typography.supporting, { color: t.primaryText }]}>재발급</Text>
+                  <Text style={[Typography.supporting, { color: t.primaryText }]}>
+                    {tr('house.members.reissue')}
+                  </Text>
                 </Pressable>
               ) : null}
             </View>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              {isOwner
-                ? '친구에게 코드를 공유해 집에 초대하세요.'
-                : '내 개인 초대코드로 친구를 초대해요. 참여는 방장 승인 후 확정돼요.'}
+              {isOwner ? tr('house.members.ownerCodeHint') : tr('house.members.memberCodeHint')}
             </Text>
             {displayCode ? (
               <View
@@ -245,12 +252,14 @@ export function HouseMembersScreen({
               <Pressable
                 onPress={() => void requestIssue()}
                 accessibilityRole="button"
-                accessibilityLabel="초대코드 발급받기"
+                accessibilityLabel={tr('house.members.issueCode')}
                 style={[
                   styles.codeBox,
                   { borderColor: t.border, backgroundColor: t.surfaceMuted },
                 ]}>
-                <Text style={[Typography.label, { color: t.primaryText }]}>초대코드 발급받기</Text>
+                <Text style={[Typography.label, { color: t.primaryText }]}>
+                  {tr('house.members.issueCode')}
+                </Text>
               </Pressable>
             )}
             {displayCode ? (
@@ -258,20 +267,24 @@ export function HouseMembersScreen({
                 <Pressable
                   onPress={() => void copyInviteCode()}
                   accessibilityRole="button"
-                  accessibilityLabel="초대코드 복사"
+                  accessibilityLabel={tr('house.members.copyA11y')}
                   style={[styles.inviteActionBtn, { backgroundColor: t.surfaceMuted }]}>
                   <Icon name="copy" size={14} color={t.text} />
-                  <Text style={[Typography.supporting, { color: t.text }]}>코드 복사</Text>
+                  <Text style={[Typography.supporting, { color: t.text }]}>
+                    {tr('house.members.copy')}
+                  </Text>
                 </Pressable>
                 {/* 튜토리얼 '친구 초대' 마지막 대상 (#1324) — 코드 복사가 아니라 링크 공유. */}
                 <CoachTarget id="house-invite-share">
                   <Pressable
                     onPress={() => void shareInviteLink()}
                     accessibilityRole="button"
-                    accessibilityLabel="초대 링크 공유"
+                    accessibilityLabel={tr('house.members.shareA11y')}
                     style={[styles.inviteActionBtn, { backgroundColor: t.primary }]}>
                     <Icon name="gift" size={14} color={t.onPrimary} />
-                    <Text style={[Typography.supporting, { color: t.onPrimary }]}>링크 공유</Text>
+                    <Text style={[Typography.supporting, { color: t.onPrimary }]}>
+                      {tr('house.members.share')}
+                    </Text>
                   </Pressable>
                 </CoachTarget>
               </View>
@@ -281,17 +294,21 @@ export function HouseMembersScreen({
 
         {isOwner && onUpdateHouse ? (
           <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
-            <Text style={[Typography.label, { color: t.text }]}>집 정보</Text>
+            <Text style={[Typography.label, { color: t.text }]}>
+              {tr('house.members.houseInfo')}
+            </Text>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              집 이름·소개·정원·공개 범위를 바꿀 수 있어요. (방장 전용)
+              {tr('house.members.houseInfoHint')}
             </Text>
             <Pressable
               onPress={openEditHouse}
               accessibilityRole="button"
-              accessibilityLabel="집 정보 수정"
+              accessibilityLabel={tr('house.members.editHouse')}
               style={[styles.editHouseBtn, { backgroundColor: t.surfaceMuted }]}>
               <PencilPictogram size={14} />
-              <Text style={[Typography.label, { color: t.primaryText }]}>집 정보 수정</Text>
+              <Text style={[Typography.label, { color: t.primaryText }]}>
+                {tr('house.members.editHouse')}
+              </Text>
             </Pressable>
           </View>
         ) : null}
@@ -299,10 +316,10 @@ export function HouseMembersScreen({
         {isOwner && currentHouse.joinRequests?.length ? (
           <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
             <Text style={[Typography.label, { color: t.text }]}>
-              입주 신청 {currentHouse.joinRequests.length}건
+              {tr('house.members.joinRequests', { n: currentHouse.joinRequests.length })}
             </Text>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              탐색으로 찾아온 신청을 확인해 주세요.
+              {tr('house.members.joinRequestsHint')}
             </Text>
             {currentHouse.joinRequests.map((request) => (
               <View
@@ -310,24 +327,30 @@ export function HouseMembersScreen({
                 style={[styles.memberRow, { backgroundColor: t.surfaceMuted }]}>
                 <View style={styles.flex}>
                   <Text style={[Typography.label, { color: t.text }]}>{request.nickname}</Text>
-                  <Text style={[Typography.supporting, { color: t.textMuted }]}>입주 대기 중</Text>
+                  <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                    {tr('house.members.waiting')}
+                  </Text>
                 </View>
                 {onRejectJoinRequest && currentHouse.houseId ? (
                   <Pressable
                     onPress={() => onRejectJoinRequest(currentHouse.houseId!, request.requestId)}
                     accessibilityRole="button"
-                    accessibilityLabel={`${request.nickname} 입주 거절`}
+                    accessibilityLabel={tr('house.members.rejectA11y', { name: request.nickname })}
                     style={[styles.kickBtn, { backgroundColor: t.dangerSoft }]}>
-                    <Text style={[Typography.supporting, { color: t.danger }]}>거절</Text>
+                    <Text style={[Typography.supporting, { color: t.danger }]}>
+                      {tr('house.members.reject')}
+                    </Text>
                   </Pressable>
                 ) : null}
                 {onAcceptJoinRequest && currentHouse.houseId ? (
                   <Pressable
                     onPress={() => onAcceptJoinRequest(currentHouse.houseId!, request.requestId)}
                     accessibilityRole="button"
-                    accessibilityLabel={`${request.nickname} 입주 수락`}
+                    accessibilityLabel={tr('house.members.acceptA11y', { name: request.nickname })}
                     style={[styles.kickBtn, { backgroundColor: t.primarySoft }]}>
-                    <Text style={[Typography.supporting, { color: t.primaryText }]}>수락</Text>
+                    <Text style={[Typography.supporting, { color: t.primaryText }]}>
+                      {tr('house.members.accept')}
+                    </Text>
                   </Pressable>
                 ) : null}
               </View>
@@ -363,7 +386,7 @@ export function HouseMembersScreen({
                         <CrownPictogram size={10} />
                         <Text
                           style={[styles.ownerBadgeText, emph('bold'), { color: t.primaryText }]}>
-                          방장
+                          {tr('house.members.owner')}
                         </Text>
                       </View>
                     ) : null}
@@ -374,7 +397,7 @@ export function HouseMembersScreen({
                         testID={`bot-badge-${member.name}`}
                         style={[styles.ownerBadge, { backgroundColor: t.surfaceMuted }]}>
                         <Text style={[styles.ownerBadgeText, emph('bold'), { color: t.textMuted }]}>
-                          봇
+                          {tr('house.members.bot')}
                         </Text>
                       </View>
                     ) : null}
@@ -390,7 +413,7 @@ export function HouseMembersScreen({
                     ) : null}
                   </View>
                   <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                    {kickedOut ? '강퇴된 멤버' : member.level}
+                    {kickedOut ? tr('house.members.kickedMember') : member.level}
                   </Text>
                 </View>
                 {/* 봇에게는 위임할 수 없다 — 서버가 HOUSE_OWNER_TRANSFER_TO_BOT으로
@@ -404,9 +427,11 @@ export function HouseMembersScreen({
                   <Pressable
                     onPress={() => setTransferTarget(member)}
                     accessibilityRole="button"
-                    accessibilityLabel={`${member.name} 방장 위임`}
+                    accessibilityLabel={tr('house.members.transferA11y', { name: member.name })}
                     style={[styles.kickBtn, { backgroundColor: t.primarySoft }]}>
-                    <Text style={[Typography.supporting, { color: t.primaryText }]}>위임</Text>
+                    <Text style={[Typography.supporting, { color: t.primaryText }]}>
+                      {tr('house.members.transfer')}
+                    </Text>
                   </Pressable>
                 ) : null}
                 {/* 내 카드에는 강퇴 버튼 자체를 두지 않는다 (disable 아님). */}
@@ -415,7 +440,7 @@ export function HouseMembersScreen({
                     onPress={() => setMemberToKick(member)}
                     disabled={kickedOut}
                     accessibilityRole="button"
-                    accessibilityLabel={`${member.name} 강퇴`}
+                    accessibilityLabel={tr('house.members.kickA11y', { name: member.name })}
                     style={[
                       styles.kickBtn,
                       { backgroundColor: kickedOut ? t.surfaceMuted : t.dangerSoft },
@@ -425,7 +450,7 @@ export function HouseMembersScreen({
                         Typography.supporting,
                         { color: kickedOut ? t.textDisabled : t.danger },
                       ]}>
-                      {kickedOut ? '강퇴됨' : '강퇴'}
+                      {kickedOut ? tr('house.members.kicked') : tr('house.members.kick')}
                     </Text>
                   </Pressable>
                 ) : null}
@@ -438,17 +463,19 @@ export function HouseMembersScreen({
           <View style={styles.leaveWrap}>
             {isOwner && !isLoneOwner ? (
               <Text style={[Typography.supporting, styles.leaveHint, { color: t.textMuted }]}>
-                방장은 다른 멤버에게 방장을 위임한 뒤 나갈 수 있어요.
+                {tr('house.members.ownerLeaveHint')}
               </Text>
             ) : (
               <Pressable
                 onPress={() => setShowLeaveConfirm(true)}
                 accessibilityRole="button"
-                accessibilityLabel={isLoneOwner ? '집 삭제' : '집 나가기'}
+                accessibilityLabel={
+                  isLoneOwner ? tr('house.members.deleteHouse') : tr('house.members.leaveHouse')
+                }
                 style={[styles.leaveBtn, { backgroundColor: t.dangerSoft }]}>
                 <DoorPictogram size={14} />
                 <Text style={[Typography.label, { color: t.danger }]}>
-                  {isLoneOwner ? '집 삭제' : '집 나가기'}
+                  {isLoneOwner ? tr('house.members.deleteHouse') : tr('house.members.leaveHouse')}
                 </Text>
               </Pressable>
             )}
@@ -459,11 +486,11 @@ export function HouseMembersScreen({
       {/* 단순 [취소|확정] 확인은 공용 ConfirmDialog (#674). */}
       <ConfirmDialog
         visible={showReissueConfirm}
-        title="초대코드를 재발급할까요?"
-        body="기존 코드는 즉시 만료돼요. 이미 공유한 코드로는 더 이상 입주할 수 없어요."
-        confirmLabel="재발급"
-        confirmAccessibilityLabel="재발급 확인"
-        cancelAccessibilityLabel="재발급 취소"
+        title={tr('house.members.reissueConfirm.title')}
+        body={tr('house.members.reissueConfirm.body')}
+        confirmLabel={tr('house.members.reissueConfirm.label')}
+        confirmAccessibilityLabel={tr('house.members.reissueConfirm.a11y')}
+        cancelAccessibilityLabel={tr('house.members.reissueConfirm.cancelA11y')}
         onConfirm={() => {
           void requestIssue();
           setShowReissueConfirm(false);
@@ -473,18 +500,30 @@ export function HouseMembersScreen({
 
       <ConfirmDialog
         visible={showLeaveConfirm}
-        title={isLoneOwner ? '집을 삭제할까요?' : '집에서 나갈까요?'}
+        title={
+          isLoneOwner
+            ? tr('house.members.leaveConfirm.deleteTitle')
+            : tr('house.members.leaveConfirm.leaveTitle')
+        }
         body={
           isLoneOwner
-            ? `혼자 남은 집이라 나가면 '${currentHouse?.name}' 집이 삭제되고 탐색·조회에서 사라져요.\n이 집과 연동된 카테고리의 루틴·할 일도 함께 삭제돼요.`
+            ? tr('house.members.leaveConfirm.deleteBody', { name: currentHouse?.name })
             : // 나가기는 연동 카테고리를 루틴·할 일째 지운다 (#338, #908에서 유지 결정).
               // 예전 문구는 그 사실을 빼놓고 "이전 기록이 복원돼요"라고만 해서,
               // 되돌릴 수 없는 삭제를 되돌릴 수 있는 것처럼 읽혔다.
-              '나가면 이 집과 연동된 카테고리의 루틴·할 일이 함께 삭제돼요. 다시 참여해도 되돌아오지 않아요.\n집에 남긴 기여 기록은 그대로 유지돼요.'
+              tr('house.members.leaveConfirm.leaveBody')
         }
-        confirmLabel={isLoneOwner ? '삭제' : '나가기'}
-        confirmAccessibilityLabel={isLoneOwner ? '집 삭제 확인' : '나가기 확인'}
-        cancelAccessibilityLabel="나가기 취소"
+        confirmLabel={
+          isLoneOwner
+            ? tr('house.members.leaveConfirm.delete')
+            : tr('house.members.leaveConfirm.leave')
+        }
+        confirmAccessibilityLabel={
+          isLoneOwner
+            ? tr('house.members.leaveConfirm.deleteA11y')
+            : tr('house.members.leaveConfirm.leaveA11y')
+        }
+        cancelAccessibilityLabel={tr('house.members.leaveConfirm.cancelA11y')}
         destructive
         onConfirm={confirmLeave}
         onCancel={() => setShowLeaveConfirm(false)}
@@ -492,12 +531,10 @@ export function HouseMembersScreen({
 
       <ConfirmDialog
         visible={memberToKick != null}
-        title="정말 강퇴할까요?"
-        body={
-          memberToKick ? `${memberToKick.name}님을 강퇴하면 집 화면에서 빈방으로 표시됩니다.` : ''
-        }
-        confirmLabel="강퇴"
-        confirmAccessibilityLabel="강퇴 확인"
+        title={tr('house.members.kickConfirm.title')}
+        body={memberToKick ? tr('house.members.kickConfirm.body', { name: memberToKick.name }) : ''}
+        confirmLabel={tr('house.members.kickConfirm.label')}
+        confirmAccessibilityLabel={tr('house.members.kickConfirm.a11y')}
         destructive
         onConfirm={confirmKick}
         onCancel={() => setMemberToKick(null)}
@@ -505,15 +542,15 @@ export function HouseMembersScreen({
 
       <ConfirmDialog
         visible={transferTarget != null}
-        title="방장을 위임할까요?"
+        title={tr('house.members.transferConfirm.title')}
         body={
           transferTarget
-            ? `${transferTarget.name}님에게 방장을 넘기면 집 관리 권한(정보 수정·강퇴·초대코드)이 이동하고 되돌릴 수 없어요.`
+            ? tr('house.members.transferConfirm.body', { name: transferTarget.name })
             : ''
         }
-        confirmLabel="위임"
-        confirmAccessibilityLabel="위임 확인"
-        cancelAccessibilityLabel="위임 취소"
+        confirmLabel={tr('house.members.transferConfirm.label')}
+        confirmAccessibilityLabel={tr('house.members.transferConfirm.a11y')}
+        cancelAccessibilityLabel={tr('house.members.transferConfirm.cancelA11y')}
         onConfirm={confirmTransfer}
         onCancel={() => setTransferTarget(null)}
       />
@@ -521,27 +558,16 @@ export function HouseMembersScreen({
       {showEditHouse ? (
         <View style={styles.modalOverlay}>
           <View style={[styles.modal, { backgroundColor: t.surface }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>집 정보 수정</Text>
+            <Text style={[Typography.h3, { color: t.text }]}>{tr('house.members.edit.title')}</Text>
             <ScrollView style={styles.editScroll} contentContainerStyle={styles.missionForm}>
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>집 이름 (2~30자)</Text>
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                {tr('house.members.edit.nameLabel')}
+              </Text>
               <TextInput
                 value={editName}
                 onChangeText={(v) => setEditName(v.slice(0, 30))}
-                accessibilityLabel="집 이름"
-                placeholder="집 이름"
-                placeholderTextColor={t.textMuted}
-                style={[
-                  styles.missionInput,
-                  emph('normal'),
-                  { backgroundColor: t.surfaceMuted, color: t.text },
-                ]}
-              />
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>한 줄 소개</Text>
-              <TextInput
-                value={editDesc}
-                onChangeText={setEditDesc}
-                accessibilityLabel="집 소개"
-                placeholder="어떤 루틴을 함께 하나요?"
+                accessibilityLabel={tr('house.members.edit.nameA11y')}
+                placeholder={tr('house.members.edit.namePlaceholder')}
                 placeholderTextColor={t.textMuted}
                 style={[
                   styles.missionInput,
@@ -550,7 +576,24 @@ export function HouseMembersScreen({
                 ]}
               />
               <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                정원{currentHouse.memberCount ? ` (현재 ${currentHouse.memberCount}명)` : ''}
+                {tr('house.members.edit.descLabel')}
+              </Text>
+              <TextInput
+                value={editDesc}
+                onChangeText={setEditDesc}
+                accessibilityLabel={tr('house.members.edit.descA11y')}
+                placeholder={tr('house.members.edit.descPlaceholder')}
+                placeholderTextColor={t.textMuted}
+                style={[
+                  styles.missionInput,
+                  emph('normal'),
+                  { backgroundColor: t.surfaceMuted, color: t.text },
+                ]}
+              />
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                {currentHouse.memberCount
+                  ? tr('house.members.edit.capacityWithCurrent', { n: currentHouse.memberCount })
+                  : tr('house.members.edit.capacity')}
               </Text>
               <View style={styles.missionTypeRow}>
                 {houseCapacityOptions(currentHouse.maxMembers).map((n) => {
@@ -562,12 +605,12 @@ export function HouseMembersScreen({
                       key={n}
                       onPress={() =>
                         tooSmall
-                          ? toast('현재 인원보다 작게 줄일 수 없어요', 'error')
+                          ? toast(tr('house.members.edit.capacityTooSmall'), 'error')
                           : setEditMax(n)
                       }
                       accessibilityRole="radio"
                       accessibilityState={{ selected, disabled: tooSmall }}
-                      accessibilityLabel={`정원 ${n}명`}
+                      accessibilityLabel={tr('house.members.edit.capacityOptionA11y', { n })}
                       style={[
                         styles.capacityBtn,
                         {
@@ -592,21 +635,23 @@ export function HouseMembersScreen({
                 })}
               </View>
               {/* 공개 범위 (#1266) — 서버가 현재 값을 안 주면 둘 다 미선택으로 열린다. */}
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>공개 범위</Text>
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                {tr('house.members.edit.visibility')}
+              </Text>
               <View style={styles.privacyRow}>
                 <PrivacyCard
                   selected={editPublic === true}
                   accent={t.primary}
-                  title="공개"
-                  subtitle="집 탐색에 노출돼요"
+                  title={tr('house.members.edit.public')}
+                  subtitle={tr('house.members.edit.publicHint')}
                   onPress={() => setEditPublic(true)}
                   t={t}
                 />
                 <PrivacyCard
                   selected={editPublic === false}
                   accent={HOUSE_PRIVATE_ACCENT}
-                  title="비공개"
-                  subtitle="초대코드로만 입장 가능"
+                  title={tr('house.members.edit.private')}
+                  subtitle={tr('house.members.edit.privateHint')}
                   onPress={() => setEditPublic(false)}
                   t={t}
                 />
@@ -614,7 +659,9 @@ export function HouseMembersScreen({
               {covers.length > 0 ? (
                 <>
                   {/* 커버는 집의 겉모습 자체라 "집 테마"로 (#1112). */}
-                  <Text style={[Typography.supporting, { color: t.textMuted }]}>집 테마</Text>
+                  <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                    {tr('house.members.edit.theme')}
+                  </Text>
                   <HouseCoverPicker
                     covers={covers}
                     selectedKey={editCover}
@@ -628,22 +675,22 @@ export function HouseMembersScreen({
               <Pressable
                 onPress={() => setShowEditHouse(false)}
                 accessibilityRole="button"
-                accessibilityLabel="집 정보 수정 취소"
+                accessibilityLabel={tr('house.members.edit.cancelA11y')}
                 style={[styles.modalBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.text }]}>취소</Text>
+                <Text style={[Typography.label, { color: t.text }]}>{tr('common.cancel')}</Text>
               </Pressable>
               <Pressable
                 onPress={submitEditHouse}
                 accessibilityRole="button"
                 accessibilityState={{ disabled: !editNameValid }}
-                accessibilityLabel="집 정보 저장"
+                accessibilityLabel={tr('house.members.edit.saveA11y')}
                 style={[
                   styles.modalBtn,
                   { backgroundColor: editNameValid ? t.primary : t.disabledBg },
                 ]}>
                 <Text
                   style={[Typography.label, { color: editNameValid ? t.onPrimary : t.textMuted }]}>
-                  저장
+                  {tr('house.members.edit.save')}
                 </Text>
               </Pressable>
             </View>

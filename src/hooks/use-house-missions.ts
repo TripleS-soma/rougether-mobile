@@ -20,6 +20,7 @@ import {
 } from '@/api';
 import type { HouseMissionContributeResponse } from '@/api/types';
 import { useToast } from '@/components/ui/toast';
+import { i18n } from '@/i18n';
 import type { House, NewHouseMission } from '@/components/screens/house/types';
 
 export function useHouseMissions({
@@ -40,7 +41,12 @@ export function useHouseMissions({
       try {
         const res = await contributeHouseMission(houseId, missionId);
         setContributedMissionIds((prev) => new Set(prev).add(missionId));
-        toast(res.achieved ? '기여 완료! 목표를 달성했어요' : '기여했어요 (+1)', 'success');
+        toast(
+          res.achieved
+            ? i18n.t('house.missionToast.contributedAchieved')
+            : i18n.t('house.missionToast.contributed'),
+          'success',
+        );
         await reloadHouse(houseId);
       } catch (err) {
         // The server caps contributions at one per day per member.
@@ -48,7 +54,12 @@ export function useHouseMissions({
           err instanceof ApiError && err.code === ErrorCode.HOUSE_MISSION_ALREADY_CONTRIBUTED;
         // Already-today still means "contributed" — the card shows 기여됨.
         if (already) setContributedMissionIds((prev) => new Set(prev).add(missionId));
-        toast(already ? '오늘은 이미 기여했어요. 내일 또 만나요!' : '기여에 실패했어요', 'error');
+        toast(
+          already
+            ? i18n.t('house.missionToast.alreadyContributed')
+            : i18n.t('house.missionToast.contributeFailed'),
+          'error',
+        );
       }
     },
     [toast, reloadHouse],
@@ -63,7 +74,12 @@ export function useHouseMissions({
       const missionId = res.missionId;
       if (missionId == null) return;
       setContributedMissionIds((prev) => new Set(prev).add(missionId));
-      toast(res.achieved ? '기여 완료! 목표를 달성했어요' : '기여했어요 (+1)', 'success');
+      toast(
+        res.achieved
+          ? i18n.t('house.missionToast.contributedAchieved')
+          : i18n.t('house.missionToast.contributed'),
+        'success',
+      );
       const house = houses.find((h) => h.missions?.some((m) => m.id === missionId));
       if (house?.houseId != null) void reloadHouse(house.houseId);
     },
@@ -74,12 +90,20 @@ export function useHouseMissions({
     async (houseId: number, missionId: number) => {
       try {
         const res = await claimHouseMission(houseId, missionId);
-        toast(`보상 수령! 집 성장 포인트 +${res.grantedGrowthPoints ?? 0}`, 'success');
+        toast(
+          i18n.t('house.missionToast.claimed', { points: res.grantedGrowthPoints ?? 0 }),
+          'success',
+        );
         await reloadHouse(houseId);
       } catch (err) {
         const notAchieved =
           err instanceof ApiError && err.code === ErrorCode.HOUSE_MISSION_NOT_ACHIEVED;
-        toast(notAchieved ? '아직 목표를 달성하지 못했어요' : '보상 받기에 실패했어요', 'error');
+        toast(
+          notAchieved
+            ? i18n.t('house.missionToast.notAchieved')
+            : i18n.t('house.missionToast.claimFailed'),
+          'error',
+        );
       }
     },
     [toast, reloadHouse],
@@ -89,12 +113,17 @@ export function useHouseMissions({
     async (houseId: number, input: NewHouseMission) => {
       try {
         await createHouseMission(houseId, input);
-        toast('새 미션을 만들었어요!', 'success');
+        toast(i18n.t('house.missionToast.created'), 'success');
         await reloadHouse(houseId);
       } catch (err) {
         // The server restricts mission creation to the OWNER (403).
         const notOwner = err instanceof ApiError && err.code === ErrorCode.HOUSE_NOT_OWNER;
-        toast(notOwner ? '방장만 미션을 만들 수 있어요' : '미션 만들기에 실패했어요', 'error');
+        toast(
+          notOwner
+            ? i18n.t('house.missionToast.ownerOnlyCreate')
+            : i18n.t('house.missionToast.createFailed'),
+          'error',
+        );
       }
     },
     [toast, reloadHouse],
@@ -105,7 +134,7 @@ export function useHouseMissions({
     async (houseId: number, missionId: number): Promise<boolean> => {
       try {
         await deleteHouseMission(houseId, missionId);
-        toast('미션을 삭제했어요', 'success');
+        toast(i18n.t('house.missionToast.deleted'), 'success');
         await reloadHouse(houseId);
         return true;
       } catch (err) {
@@ -115,10 +144,10 @@ export function useHouseMissions({
         const notOwner = err instanceof ApiError && err.code === ErrorCode.HOUSE_NOT_OWNER;
         toast(
           claimed
-            ? '보상을 받은 미션은 삭제할 수 없어요'
+            ? i18n.t('house.missionToast.claimedNotDeletable')
             : notOwner
-              ? '방장만 미션을 삭제할 수 있어요'
-              : '미션 삭제에 실패했어요',
+              ? i18n.t('house.missionToast.ownerOnlyDelete')
+              : i18n.t('house.missionToast.deleteFailed'),
           'error',
         );
         return false;

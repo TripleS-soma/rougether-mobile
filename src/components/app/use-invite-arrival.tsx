@@ -8,6 +8,7 @@ import type { InviteCheck, InviteVia, RedeemResult } from '@/hooks/use-invites';
 import { useLatestRef } from '@/hooks/use-stable-value';
 import { track } from '@/lib/analytics';
 import { parseInviteText } from '@/lib/invite-code';
+import { i18n } from '@/i18n';
 import {
   clearPendingFriendInviteCode,
   hydratePendingInvites,
@@ -120,7 +121,7 @@ export function useInviteArrival({ offerPaste, check, redeem, onLater }: UseInvi
     setAccepting(false);
     // 실패(이미 사용·무효)는 redeem이 안내했다 — 같은 코드로 다시 묻지 않는다.
     finish();
-    if (result) toast(`코인 ${result.rewardCoin}개를 받았어요`, 'success');
+    if (result) toast(i18n.t('house.inviteArrival.received', { n: result.rewardCoin }), 'success');
   }, [arrival, accepting, redeemRef, finish, toast]);
 
   const later = useCallback(() => {
@@ -134,7 +135,7 @@ export function useInviteArrival({ offerPaste, check, redeem, onLater }: UseInvi
     const parsed = parseInviteText(text);
     if (!parsed) {
       track('invite_paste_result', { kind: 'invalid' });
-      setPasteError('초대코드를 찾지 못했어요. 초대 페이지에서 코드를 다시 복사해 주세요.');
+      setPasteError(i18n.t('house.invitePaste.codeNotFound'));
       return;
     }
     track('invite_paste_result', { kind: parsed.kind });

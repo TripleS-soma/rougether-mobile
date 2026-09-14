@@ -5,6 +5,7 @@ import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 /** iOS 시스템 붙여넣기 버튼은 크기를 직접 줘야 보인다(ClipboardPasteButton 문서). */
 const PASTE_BUTTON_H = 48;
@@ -31,6 +32,7 @@ export type InvitePasteSheetProps = {
  */
 export function InvitePasteSheet({ visible, onPaste, onDismiss, error }: InvitePasteSheetProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   const systemPaste = Platform.OS === 'ios' && Clipboard.isPasteButtonAvailable === true;
 
@@ -48,9 +50,9 @@ export function InvitePasteSheet({ visible, onPaste, onDismiss, error }: InviteP
       onClose={onDismiss}
       cardStyle={[styles.sheet, { backgroundColor: t.screen }]}>
       <View style={[styles.handle, { backgroundColor: t.border }]} />
-      <Text style={[Typography.h2, { color: t.text }]}>친구에게 초대받아 오셨나요?</Text>
+      <Text style={[Typography.h2, { color: t.text }]}>{tr('house.invitePaste.title')}</Text>
       <Text style={[Typography.body, styles.body, { color: t.textMuted }]}>
-        초대 페이지에서 복사한 초대코드를 붙여넣으면 코인을 받아요.
+        {tr('house.invitePaste.body')}
       </Text>
       <View style={styles.pasteRow}>
         {systemPaste ? (
@@ -68,10 +70,12 @@ export function InvitePasteSheet({ visible, onPaste, onDismiss, error }: InviteP
           <Pressable
             onPress={() => void pasteFromClipboard()}
             accessibilityRole="button"
-            accessibilityLabel="초대코드 붙여넣기"
+            accessibilityLabel={tr('house.invitePaste.pasteA11y')}
             style={[styles.pasteBtn, { backgroundColor: t.primary }]}>
             <Icon name="copy" size={16} color={t.onPrimary} />
-            <Text style={[Typography.label, { color: t.onPrimary }]}>붙여넣기</Text>
+            <Text style={[Typography.label, { color: t.onPrimary }]}>
+              {tr('house.invitePaste.paste')}
+            </Text>
           </Pressable>
         )}
       </View>
@@ -81,9 +85,11 @@ export function InvitePasteSheet({ visible, onPaste, onDismiss, error }: InviteP
       <Pressable
         onPress={onDismiss}
         accessibilityRole="button"
-        accessibilityLabel="초대받지 않았어요"
+        accessibilityLabel={tr('house.invitePaste.dismissA11y')}
         style={styles.dismiss}>
-        <Text style={[Typography.supporting, { color: t.textMuted }]}>아니에요</Text>
+        <Text style={[Typography.supporting, { color: t.textMuted }]}>
+          {tr('house.invitePaste.dismiss')}
+        </Text>
       </Pressable>
     </BottomSheet>
   );

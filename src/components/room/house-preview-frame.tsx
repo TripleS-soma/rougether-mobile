@@ -10,6 +10,7 @@ import {
 } from '@/components/room/room';
 import { Radius } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 import { useHouseFrame } from '@/hooks/use-house-frame';
 import { assetSource, isCdnKey } from '@/resources/asset';
 import { type HouseFrameOptions, houseWindowSeats } from '@/resources/house-frame';
@@ -56,6 +57,7 @@ export function HousePreviewFrame({
   previewTheme,
 }: HousePreviewFrameProps) {
   const t = useTokens();
+  const tr = useT();
   // 커버가 없으면 기본 프레임으로 — 모든 집이 같은 형태. (창틀 직접 그리기는
   // 에셋 자체가 깨진 비정상 키일 때만 남는 안전망.)
   const seats = rooms ? rooms.length : memberCount;
@@ -139,7 +141,9 @@ export function HousePreviewFrame({
             // 프리페치 효과가 절반만 난다 (#771).
             cachePolicy="memory-disk"
             recyclingKey={coverKey}
-            accessibilityLabel={name ? `${name} 집 미리보기` : '집 미리보기'}
+            accessibilityLabel={
+              name ? tr('house.previewFrame.a11y', { name }) : tr('house.previewFrame.a11yNoName')
+            }
           />
         </View>
       ) : null}

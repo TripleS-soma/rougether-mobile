@@ -34,6 +34,7 @@ import {
 import type { OnboardingMissionStepId } from '@/hooks/use-onboarding-missions';
 import type { useRoomLayouts } from '@/hooks/use-room-layouts';
 import { useResolvedScheme } from '@/hooks/use-tokens';
+import { i18n } from '@/i18n';
 import { clearPendingInviteCode, subscribePendingInviteCode } from '@/lib/pending-invite';
 import { assetSource } from '@/resources/asset';
 import { houseBackgroundKey } from '@/resources/house-background';
@@ -214,7 +215,7 @@ export function useHousePages({
         .filter((r) => r.requestId != null)
         .map((r) => ({
           requestId: r.requestId!,
-          name: r.houseName ?? '이름 없는 집',
+          name: r.houseName ?? i18n.t('house.pages.unnamedHouse'),
           requestedAt: r.requestedAt,
         })),
     [pendingJoinRequests],

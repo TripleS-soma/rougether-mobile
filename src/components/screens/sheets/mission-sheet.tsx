@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 export type MissionSheetProps = {
   visible: boolean;
@@ -33,6 +34,7 @@ export function MissionSheet({
   onClose,
 }: MissionSheetProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   const last = nextLabel == null;
 
@@ -43,16 +45,17 @@ export function MissionSheet({
       cardStyle={[styles.sheet, { backgroundColor: t.screen }]}>
       <View style={[styles.handle, { backgroundColor: t.border }]} />
       <Text style={[Typography.h2, { color: t.text }]}>
-        {last ? '🎉 모든 미션 완료!' : `✅ 미션 ${completedStep} 완료!`}
+        {last
+          ? tr('house.missionSheet.allDone')
+          : tr('house.missionSheet.stepDone', { n: completedStep })}
       </Text>
       {last ? (
         <Text style={[Typography.body, styles.body, { color: t.textMuted }]}>
-          {totalSteps}개 미션을 모두 마쳤어요. 이제 루틴을 쌓고 방을 꾸미며 루게더를 마음껏
-          즐겨보세요!
+          {tr('house.missionSheet.allDoneBody', { n: totalSteps })}
         </Text>
       ) : (
         <Text style={[Typography.body, styles.body, { color: t.textMuted }]}>
-          다음 미션: {nextLabel}
+          {tr('house.missionSheet.next', { label: nextLabel })}
           {/* 어디서·어떻게 한 줄 (#571 후속) — 방법을 몰라 막히는 이탈 방지. */}
           {nextHint ? `\n${nextHint}` : ''}
         </Text>
@@ -62,18 +65,22 @@ export function MissionSheet({
           <Pressable
             onPress={onClose}
             accessibilityRole="button"
-            accessibilityLabel="나중에 하기"
+            accessibilityLabel={tr('house.missionSheet.laterA11y')}
             style={[styles.btn, { backgroundColor: t.surfaceMuted }]}>
-            <Text style={[Typography.label, { color: t.text }]}>나중에</Text>
+            <Text style={[Typography.label, { color: t.text }]}>
+              {tr('house.missionSheet.later')}
+            </Text>
           </Pressable>
         )}
         <Pressable
           onPress={last ? onClose : onGo}
           accessibilityRole="button"
-          accessibilityLabel={last ? '미션 마치기' : '다음 미션 하러 가기'}
+          accessibilityLabel={
+            last ? tr('house.missionSheet.finishA11y') : tr('house.missionSheet.goA11y')
+          }
           style={[styles.btn, { backgroundColor: t.primary }]}>
           <Text style={[Typography.label, { color: t.onPrimary }]}>
-            {last ? '좋아요!' : '하러 가기'}
+            {last ? tr('house.missionSheet.finish') : tr('house.missionSheet.go')}
           </Text>
         </Pressable>
       </View>

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import type { House } from '@/components/screens/house/types';
 import { useToast } from '@/components/ui/toast';
+import { i18n } from '@/i18n';
 import { CATEGORY_COLORS, type Routine, type RoutineCategoryMeta } from '@/constants/routines';
 import type { CompletionToggleResult } from '@/hooks/use-my-room-data';
 import type { HouseMissionContributeResponse } from '@/api/types';
@@ -158,7 +159,7 @@ export function useMissionLinks({
       const linked = linkedRoutinesFor([missionId]);
       if (!(await deleteMission(houseId, missionId))) return;
       for (const r of linked) await deleteRoutine(r.id);
-      if (linked.length > 0) toast('연동된 루틴도 함께 삭제했어요');
+      if (linked.length > 0) toast(i18n.t('house.missionLinks.linkedDeleted'));
     },
     [linkedRoutinesFor, deleteMission, deleteRoutine, toast],
   );
@@ -172,7 +173,7 @@ export function useMissionLinks({
       const linked = linkedRoutinesFor([missionId]);
       if (linked.length === 0) return;
       for (const r of linked) await deleteRoutine(r.id);
-      toast('연동 루틴을 삭제했어요');
+      toast(i18n.t('house.missionLinks.routineDeleted'));
     },
     [linkedRoutinesFor, deleteRoutine, toast],
   );
@@ -184,7 +185,7 @@ export function useMissionLinks({
       if (!(await leaveHouse(houseId))) return;
       if (!cat) return;
       await deleteCategoryCascade(cat.id);
-      toast('연동된 카테고리와 루틴도 함께 삭제했어요');
+      toast(i18n.t('house.missionLinks.categoryDeleted'));
     },
     [categories, leaveHouse, deleteCategoryCascade, toast],
   );
@@ -262,10 +263,10 @@ export function useMissionLinks({
       const ended = stale.filter((r) => r.reason === 'ended').length;
       toast(
         ended === stale.length
-          ? '끝난 미션의 연동 루틴을 정리했어요'
+          ? i18n.t('house.missionLinks.cleanedEnded')
           : ended === 0
-            ? '사라진 미션의 연동 루틴을 정리했어요'
-            : '끝나거나 사라진 미션의 연동 루틴을 정리했어요',
+            ? i18n.t('house.missionLinks.cleanedGone')
+            : i18n.t('house.missionLinks.cleanedBoth'),
       );
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -285,7 +286,7 @@ export function useMissionLinks({
           (h.missions ?? []).some((m) => m.status === 'ACTIVE' && m.id === item.linkedMissionId),
         );
         if (linked) {
-          toast('미션에 기여된 루틴은 완료를 취소할 수 없어요', 'error');
+          toast(i18n.t('house.missionLinks.cannotUncomplete'), 'error');
           return null;
         }
       }
