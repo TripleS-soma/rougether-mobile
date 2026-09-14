@@ -3,7 +3,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { RecommendationItem } from '@/api';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { DAY_CODES, WEEKDAY_LABELS } from '@/constants/routines';
+import { DAY_CODES, getWeekdayLabels } from '@/constants/routines';
+import { i18n, useT } from '@/i18n';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 
@@ -11,8 +12,9 @@ import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 export function dayLabels(codes?: string[]): string {
   if (!codes?.length) return '';
   const picked = new Set(codes);
+  const labels = getWeekdayLabels();
   return DAY_CODES.filter((c) => picked.has(c))
-    .map((c) => WEEKDAY_LABELS[DAY_CODES.indexOf(c)])
+    .map((c) => labels[DAY_CODES.indexOf(c)])
     .join(' ');
 }
 
@@ -20,7 +22,9 @@ export function dayLabels(codes?: string[]): string {
 export function dayLabelsFromNums(days?: number[]): string {
   if (!days?.length) return '';
   const picked = new Set(days);
-  return WEEKDAY_LABELS.filter((_, i) => picked.has(i)).join(' ');
+  return getWeekdayLabels()
+    .filter((_, i) => picked.has(i))
+    .join(' ');
 }
 
 /**
@@ -34,7 +38,7 @@ export function daysLeftLabel(expiresAt?: string, now: Date = new Date()): strin
   const startOfDay = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
   const days = Math.round((startOfDay(end) - startOfDay(now)) / 86400000);
   if (days < 0) return null;
-  return days === 0 ? '오늘까지' : `D-${days}`;
+  return days === 0 ? i18n.t('routineTodo.recommendation.dueToday') : `D-${days}`;
 }
 
 export type RecommendationSectionProps = {
@@ -73,6 +77,7 @@ export function RecommendationSection({
   now,
 }: RecommendationSectionProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const [confirmId, setConfirmId] = useState<number | null>(null);
@@ -93,7 +98,9 @@ export function RecommendationSection({
 
   return (
     <View style={styles.section} testID="recommendation-section">
-      <Text style={[Typography.label, { color: t.text }]}>조정 제안 {items.length}</Text>
+      <Text style={[Typography.label, { color: t.text }]}>
+        {tr('routineTodo.recommendation.title', { count: items.length })}
+      </Text>
       {items.map((r) => {
         const busy = pendingId != null;
         const left = daysLeftLabel(r.expiresAt, now);
@@ -107,7 +114,7 @@ export function RecommendationSection({
               <Text
                 numberOfLines={1}
                 style={[Typography.label, styles.headTitle, { color: t.text }]}>
-                {r.routineTitle ?? '루틴'}
+                {r.routineTitle ?? tr('routineTodo.recommendation.routineFallback')}
               </Text>
               {left ? (
                 <Text style={[Typography.supporting, { color: t.textMuted }]}>{left}</Text>
@@ -126,19 +133,27 @@ export function RecommendationSection({
                 onPress={() => onDismiss(r.recommendationId)}
                 disabled={busy}
                 accessibilityRole="button"
-                accessibilityLabel={`${r.routineTitle ?? '루틴'} 제안 무시`}
+                accessibilityLabel={tr('routineTodo.recommendation.dismissA11y', {
+                  name: r.routineTitle ?? tr('routineTodo.recommendation.routineFallback'),
+                })}
                 accessibilityState={{ disabled: busy }}
                 style={[styles.btn, { backgroundColor: t.surface, opacity: busy ? 0.5 : 1 }]}>
-                <Text style={[Typography.label, { color: t.textMuted }]}>괜찮아요</Text>
+                <Text style={[Typography.label, { color: t.textMuted }]}>
+                  {tr('routineTodo.recommendation.dismiss')}
+                </Text>
               </Pressable>
               <Pressable
                 onPress={() => setConfirmId(r.recommendationId)}
                 disabled={busy}
                 accessibilityRole="button"
-                accessibilityLabel={`${r.routineTitle ?? '루틴'} 제안 적용하기`}
+                accessibilityLabel={tr('routineTodo.recommendation.acceptA11y', {
+                  name: r.routineTitle ?? tr('routineTodo.recommendation.routineFallback'),
+                })}
                 accessibilityState={{ disabled: busy }}
                 style={[styles.btn, { backgroundColor: t.primary, opacity: busy ? 0.5 : 1 }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>적용하기</Text>
+                <Text style={[Typography.label, { color: t.onPrimary }]}>
+                  {tr('routineTodo.recommendation.accept')}
+                </Text>
               </Pressable>
             </View>
           </View>
@@ -149,15 +164,15 @@ export function RecommendationSection({
           바뀌는지 한 번 더 보여주고 받는다. */}
       <ConfirmDialog
         visible={confirming !== null}
-        title="반복 요일을 바꿀까요?"
+        title={tr('routineTodo.recommendation.confirmTitle')}
         body={
           confirming
-            ? `${confirming.routineTitle ?? '루틴'}\n${changeLine(confirming) ?? ''}\n\n적용하면 되돌릴 수 없어요.`
+            ? `${confirming.routineTitle ?? tr('routineTodo.recommendation.routineFallback')}\n${changeLine(confirming) ?? ''}\n\n${tr('routineTodo.recommendation.confirmIrreversible')}`
             : ''
         }
-        confirmLabel="적용"
-        confirmAccessibilityLabel="제안 적용 확인"
-        cancelAccessibilityLabel="제안 적용 취소"
+        confirmLabel={tr('routineTodo.recommendation.confirm')}
+        confirmAccessibilityLabel={tr('routineTodo.recommendation.confirmA11y')}
+        cancelAccessibilityLabel={tr('routineTodo.recommendation.cancelA11y')}
         onConfirm={() => {
           const id = confirmId;
           setConfirmId(null);

@@ -14,8 +14,9 @@ import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
 import { horizontalFlingGesture } from '@/utils/gesture';
 import { useAnimatedValue, useAnimatedValueXY, useLatestRef } from '@/hooks/use-stable-value';
-import { WEEKDAY_LABELS as WEEKDAYS } from '@/constants/routines';
+import { WEEKDAY_KEYS, weekdayLabelKey } from '@/constants/routines';
 import { NATIVE_DRIVER } from '@/utils/animation';
+import { useT } from '@/i18n';
 
 // 선택 원 지름 — 원 배치 계산과 스타일이 공유하는 단일 출처.
 const SEL_SIZE = 34;
@@ -105,6 +106,7 @@ function CalendarBase({
   weekOf = null,
 }: CalendarProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const selected = parse(value);
@@ -285,7 +287,9 @@ function CalendarBase({
         <Pressable
           onPress={() => (collapsed ? shiftWeek(-1) : shiftMonth(-1))}
           accessibilityRole="button"
-          accessibilityLabel={collapsed ? '이전 주' : '이전 달'}
+          accessibilityLabel={
+            collapsed ? tr('routineTodo.calendar.prevWeek') : tr('routineTodo.calendar.prevMonth')
+          }
           style={[styles.navBtn, !glass && { backgroundColor: t.surfaceMuted }]}>
           {glass ? (
             <GlassSurface
@@ -299,7 +303,7 @@ function CalendarBase({
         <View style={styles.headCenter}>
           <Text
             style={[progressByDate || glass ? Typography.h3 : Typography.label, { color: t.text }]}>
-            {view.y}년 {view.m + 1}월
+            {tr('routineTodo.calendar.monthTitle', { year: view.y, month: view.m + 1 })}
           </Text>
           {showToday ? (
             /* 되돌아가는 버튼이지 "여기가 오늘"이라는 배지가 아니다 (#864).
@@ -311,7 +315,7 @@ function CalendarBase({
             <Pressable
               onPress={goToday}
               accessibilityRole="button"
-              accessibilityLabel="오늘로"
+              accessibilityLabel={tr('routineTodo.calendar.goToday')}
               style={[styles.todayChip, !glass && { backgroundColor: t.primarySoft }]}>
               {glass ? (
                 <GlassSurface
@@ -322,7 +326,7 @@ function CalendarBase({
               ) : null}
               <Icon name="rotate-ccw" size={12} color={t.primaryText} />
               <Text style={[Typography.supporting, emph('semibold'), { color: t.primaryText }]}>
-                오늘로
+                {tr('routineTodo.calendar.goToday')}
               </Text>
             </Pressable>
           ) : null}
@@ -330,7 +334,9 @@ function CalendarBase({
         <Pressable
           onPress={() => (collapsed ? shiftWeek(1) : shiftMonth(1))}
           accessibilityRole="button"
-          accessibilityLabel={collapsed ? '다음 주' : '다음 달'}
+          accessibilityLabel={
+            collapsed ? tr('routineTodo.calendar.nextWeek') : tr('routineTodo.calendar.nextMonth')
+          }
           style={[styles.navBtn, !glass && { backgroundColor: t.surfaceMuted }]}>
           {glass ? (
             <GlassSurface
@@ -359,8 +365,8 @@ function CalendarBase({
               ]}
             />
             <View style={styles.week}>
-              {WEEKDAYS.map((w, i) => (
-                <View key={w} style={styles.cell}>
+              {WEEKDAY_KEYS.map((w, i) => (
+                <View key={tr(weekdayLabelKey(i))} style={styles.cell}>
                   <Text
                     style={[
                       Typography.supporting,
@@ -423,11 +429,11 @@ function CalendarBase({
                           accessibilityLabel={[
                             date,
                             holiday,
-                            isToday ? '오늘' : null,
+                            isToday ? tr('routineTodo.calendar.today') : null,
                             progressByDate
-                              ? `${progressLabel(progress, date, today ?? date)}${!progress && markedDates?.has(date) ? ', 할 일 있음' : ''}`
+                              ? `${progressLabel(progress, date, today ?? date)}${!progress && markedDates?.has(date) ? `, ${tr('routineTodo.calendar.hasTodo')}` : ''}`
                               : markedDates?.has(date)
-                                ? '할 일 있음'
+                                ? tr('routineTodo.calendar.hasTodo')
                                 : null,
                           ]
                             .filter(Boolean)

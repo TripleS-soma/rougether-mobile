@@ -17,6 +17,7 @@ import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
 import { formatTime } from '@/utils/datetime';
+import { useT } from '@/i18n';
 
 export type RoutineManageScreenProps = {
   routines?: Routine[];
@@ -47,6 +48,7 @@ export function RoutineManageScreen({
   onEdit,
 }: RoutineManageScreenProps) {
   const t = useTokens();
+  const tr = useT();
   const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
@@ -66,14 +68,14 @@ export function RoutineManageScreen({
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader
-        title="루틴 관리"
+        title={tr('routineTodo.routineManage.title')}
         onBack={onBack}
-        backLabel="뒤로가기"
+        backLabel={tr('routineTodo.routineManage.back')}
         right={
           <Pressable
             onPress={onAdd}
             accessibilityRole="button"
-            accessibilityLabel="루틴 추가"
+            accessibilityLabel={tr('routineTodo.routineManage.addA11y')}
             style={[styles.iconBtn, { backgroundColor: t.primary }]}>
             <Icon name="add" size={20} color={t.onPrimary} />
           </Pressable>
@@ -90,26 +92,26 @@ export function RoutineManageScreen({
           <View style={styles.empty}>
             <Loading />
             <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
-              불러오는 중...
+              {tr('routineTodo.routineManage.loading')}
             </Text>
           </View>
         ) : null}
 
         {!loading && loadError ? (
           <View style={styles.empty}>
-            <RetryState message="데이터를 불러오지 못했어요." onRetry={onRetry} />
+            <RetryState message={tr('routineTodo.routineManage.loadFailed')} onRetry={onRetry} />
           </View>
         ) : null}
 
         {!loading && !loadError && routineItems.length === 0 ? (
           <View style={styles.empty}>
             <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
-              아직 만든 루틴이 없어요.
+              {tr('routineTodo.routineManage.emptyTitle')}
             </Text>
             <View style={styles.emptyHint}>
               <Icon name="add" size={16} color={t.textMuted} />
               <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
-                버튼으로 루틴을 추가해보세요.
+                {tr('routineTodo.routineManage.emptyHint')}
               </Text>
             </View>
           </View>

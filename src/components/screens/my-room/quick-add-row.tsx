@@ -5,6 +5,7 @@ import { BearCheck } from '@/components/ui/bear-check';
 import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 export type QuickAddRowProps = {
   /** 마감일 칩에 보일 문구 ("오늘" 또는 날짜). */
@@ -39,6 +40,7 @@ export const QuickAddRow = forwardRef<View, QuickAddRowProps>(function QuickAddR
   ref,
 ) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const [title, setTitle] = useState('');
@@ -53,7 +55,7 @@ export const QuickAddRow = forwardRef<View, QuickAddRowProps>(function QuickAddR
         onChangeText={setTitle}
         // 완료(단일행이라 submit=blur) 또는 다른 곳 탭 — 양쪽 다 저장으로.
         onBlur={() => onCommit(title)}
-        placeholder="할 일 입력 후 완료"
+        placeholder={tr('routineTodo.quickAdd.placeholder')}
         placeholderTextColor={t.textMuted}
         style={[styles.flex, styles.todoInput, emph('normal'), { color: t.text }]}
       />
@@ -61,7 +63,7 @@ export const QuickAddRow = forwardRef<View, QuickAddRowProps>(function QuickAddR
         onPressIn={onDatePickerPressIn}
         onPress={onOpenDatePicker}
         accessibilityRole="button"
-        accessibilityLabel="할 일 날짜 선택"
+        accessibilityLabel={tr('routineTodo.quickAdd.pickDateA11y')}
         style={[styles.dateChip, { backgroundColor: t.surfaceMuted }]}>
         <Icon name="calendar" size={13} color={t.textMuted} />
         <Text style={[Typography.supporting, { color: t.textMuted }]}>{dateLabel}</Text>

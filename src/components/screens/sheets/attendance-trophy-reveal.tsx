@@ -10,6 +10,7 @@ import { assetSource } from '@/resources/asset';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { NATIVE_DRIVER } from '@/utils/animation';
+import { useT } from '@/i18n';
 
 export type AttendanceTrophyRevealProps = {
   name: string;
@@ -31,6 +32,7 @@ export function AttendanceTrophyReveal({
   onClose,
 }: AttendanceTrophyRevealProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const pop = useAnimatedValue(0);
@@ -65,14 +67,16 @@ export function AttendanceTrophyReveal({
         </Animated.View>
       </View>
       <Text style={[Typography.h2, emph('bold'), styles.center, { color: t.text }]}>
-        {name} 획득!
+        {tr('routineTodo.attendance.trophyTitle', { name })}
       </Text>
       <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
-        10일 연속 출석을 채웠어요.
+        {tr('routineTodo.attendance.trophyBody')}
       </Text>
       <View style={styles.actions}>
-        {onGoToRoom ? <Button label="방에 배치하러 가기" onPress={onGoToRoom} /> : null}
-        <Button label="닫기" variant="secondary" onPress={onClose} />
+        {onGoToRoom ? (
+          <Button label={tr('routineTodo.attendance.goToRoom')} onPress={onGoToRoom} />
+        ) : null}
+        <Button label={tr('routineTodo.attendance.close')} variant="secondary" onPress={onClose} />
       </View>
     </View>
   );

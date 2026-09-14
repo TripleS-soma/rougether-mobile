@@ -37,6 +37,7 @@ import type { RoomGrowthProps } from '@/components/ui/room-growth-pill';
 import { queryKeys } from '@/lib/query-keys';
 import { useLatestRef } from '@/hooks/use-stable-value';
 import { calendarToday } from '@/utils/calendar-progress';
+import { i18n } from '@/i18n';
 
 type MyRoomData = ReturnType<typeof useMyRoomData>;
 type MissionLinks = ReturnType<typeof useMissionLinks>;
@@ -441,8 +442,8 @@ export function useMyRoomPages({
     setPushBanner({
       key: pushBannerSeq.current,
       type: 'WEEKLY_REPORT',
-      title: '주간회고가 도착했어요',
-      body: '지난주 루틴을 돌아보고 이번 주 조정 제안을 확인해 보세요',
+      title: i18n.t('routineTodo.weeklyReport.arrivedTitle'),
+      body: i18n.t('routineTodo.weeklyReport.arrivedBody'),
       onPress: () => openWeeklyReport(),
     });
   }, [weeklyReport.unread, weeklyReport.latest?.reportId, openWeeklyReport]);

@@ -12,6 +12,7 @@ import { FlyingCoin } from '@/components/ui/flying-coin';
 import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { i18n, useT } from '@/i18n';
 import type { AttendanceCheckInResult, AttendanceStatus } from '@/api/events';
 
 export type AttendanceSheetProps = {
@@ -35,7 +36,9 @@ export type AttendanceSheetProps = {
 /** "2026-08-16" → "8월 16일". */
 function shortDate(iso?: string) {
   const [, m, d] = (iso ?? '').split('-');
-  return m && d ? `${Number(m)}월 ${Number(d)}일` : '';
+  return m && d
+    ? i18n.t('routineTodo.attendance.shortDate', { month: Number(m), day: Number(d) })
+    : '';
 }
 
 /**
@@ -62,6 +65,7 @@ export function AttendanceSheet({
   onClose,
 }: AttendanceSheetProps) {
   const t = useTokens();
+  const tr = useT();
   const insets = useSafeAreaInsets();
   const Typography = useTypography();
   const emph = useFontEmphasis();
@@ -166,10 +170,10 @@ export function AttendanceSheet({
   const base = days[0]?.coinAmount ?? 0;
   const period = `${shortDate(status.startsOn)} ~ ${shortDate(status.endsOn)}`;
   const buttonLabel = status.completed
-    ? '이벤트를 완주했어요'
+    ? tr('routineTodo.attendance.completed')
     : status.checkedInToday
-      ? '오늘 출석 완료'
-      : '오늘 출석하기';
+      ? tr('routineTodo.attendance.checkedIn')
+      : tr('routineTodo.attendance.checkIn');
 
   return (
     <BottomSheet
@@ -192,11 +196,11 @@ export function AttendanceSheet({
       <View style={styles.streakRow}>
         <CountUpText
           value={status.currentStreak}
-          suffix="일차"
+          suffix={tr('routineTodo.attendance.daySuffix')}
           style={[Typography.display2, emph('bold'), { color: t.primaryText }]}
         />
         <Text style={[Typography.supporting, { color: t.textMuted }]}>
-          목표 {status.targetDays}일
+          {tr('routineTodo.attendance.target', { days: status.targetDays })}
         </Text>
       </View>
 
@@ -230,10 +234,12 @@ export function AttendanceSheet({
           <Icon name="sparkles" size={24} color={t.primaryText} />
           <Text style={[Typography.label, { color: t.text }]}>
             {status.completed
-              ? 'AI 가구 생성권 1회를 받았어요'
-              : '7일 연속 출석하면 AI 가구 생성권 1회'}
+              ? tr('routineTodo.attendance.creditReceived')
+              : tr('routineTodo.attendance.creditPromise')}
           </Text>
-          {status.completed ? <Button label="내 가구 만들러 가기" onPress={onGoToStudio} /> : null}
+          {status.completed ? (
+            <Button label={tr('routineTodo.attendance.goToStudio')} onPress={onGoToStudio} />
+          ) : null}
         </View>
       ) : null}
       <Button

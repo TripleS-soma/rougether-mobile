@@ -3,6 +3,7 @@ import { Modal, Pressable, StyleSheet, Text } from 'react-native';
 import { Calendar } from '@/components/ui/calendar';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 export type TodoDateDialogProps = {
   visible: boolean;
@@ -20,13 +21,14 @@ export type TodoDateDialogProps = {
  */
 export function TodoDateDialog({ visible, value, onSelect, onClose }: TodoDateDialogProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
 
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.dialogBackdrop} onPress={onClose}>
         <Pressable style={[styles.dialogCard, { backgroundColor: t.screen }]}>
-          <Text style={[Typography.h3, { color: t.text }]}>할 일 날짜</Text>
+          <Text style={[Typography.h3, { color: t.text }]}>{tr('routineTodo.todoDate.title')}</Text>
           <Calendar value={value} onSelect={onSelect} />
         </Pressable>
       </Pressable>

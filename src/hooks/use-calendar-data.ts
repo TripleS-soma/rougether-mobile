@@ -28,6 +28,7 @@ import type { CalendarDayItem } from '@/components/screens/my-room-screen';
 import { useToast } from '@/components/ui/toast';
 import type { Routine } from '@/constants/routines';
 import { queryKeys } from '@/lib/query-keys';
+import { i18n } from '@/i18n';
 
 type UserId = ReturnType<typeof getSessionUserId>;
 
@@ -124,7 +125,7 @@ export function useCalendarData({
       try {
         await qc.fetchQuery({ ...calendarDayOptions(userId, date), staleTime: 0 });
       } catch {
-        toast('달력 기록을 불러오지 못했어요', 'error');
+        toast(i18n.t('routineTodo.toast.calendarLoadFailed'), 'error');
       }
     },
     [qc, userId, toast],
@@ -218,7 +219,8 @@ export function useCalendarData({
       return (await completeRoutine(numId, date)).rewardAmount;
     },
     onSuccess: async (rewardAmount, { item, date }) => {
-      if (rewardAmount) toast(`+${rewardAmount} 코인 획득!`, 'success');
+      if (rewardAmount)
+        toast(i18n.t('routineTodo.toast.coinEarned', { amount: rewardAmount }), 'success');
       qc.setQueryData<CalendarDayData>(queryKeys.calendar.day(userId, date), (prev) =>
         prev
           ? {
@@ -232,7 +234,7 @@ export function useCalendarData({
       await Promise.all([qc.invalidateQueries({ queryKey: allKey }), refreshWallet()]);
     },
     onError: () => {
-      toast('완료 처리에 실패했어요', 'error');
+      toast(i18n.t('routineTodo.toast.completeFailed'), 'error');
     },
     // 완료 토글은 멱등이 아니다 — 서버에서는 성공했는데 응답만 잃은 요청을 자동으로
     // 다시 보내면 완료를 도로 뒤집는다(`use-gacha`의 뽑기와 같은 이유).

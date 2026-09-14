@@ -34,26 +34,21 @@ import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { formatDate, formatTime, todayIso } from '@/utils/datetime';
-import { WEEKDAY_LABELS as DAYS } from '@/constants/routines';
-
-const REPEAT_OPTIONS: { id: RepeatKind; label: string }[] = [
-  { id: 'daily', label: '매일' },
-  { id: 'weekly', label: '매주' },
-  { id: 'biweekly', label: '격주' },
-  { id: 'monthly', label: '매월' },
-  { id: 'yearly', label: '매년' },
-];
+import { WEEKDAY_KEYS, weekdayLabelKey } from '@/constants/routines';
+import { REPEAT_KINDS, repeatLabelKey } from '@/components/screens/sheets/compose-repeat-fields';
+import { useT } from '@/i18n';
 const MONTH_DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 
-type Preset = { title: string; category: RoutineCategory };
+// 제목은 `routineTodo.addRoutine.presets.<key>` (#893); category는 기본 카테고리 id.
+type Preset = { key: string; category: RoutineCategory };
 const PRESETS: Preset[] = [
-  { title: '아침 기상', category: '일정' },
-  { title: '독서 30분', category: '취미' },
-  { title: '물 2L 마시기', category: '건강' },
-  { title: '운동 인증', category: '건강' },
-  { title: '감사 일기', category: '취미' },
-  { title: '영어 공부', category: '공부' },
+  { key: 'morningWake', category: '일정' },
+  { key: 'reading', category: '취미' },
+  { key: 'water', category: '건강' },
+  { key: 'workout', category: '건강' },
+  { key: 'gratitude', category: '취미' },
+  { key: 'english', category: '공부' },
 ];
 
 export type AddRoutineScreenProps = {
@@ -88,6 +83,7 @@ export function AddRoutineScreen({
   onCreateCategory,
 }: AddRoutineScreenProps) {
   const t = useTokens();
+  const tr = useT();
   const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
@@ -196,14 +192,14 @@ export function AddRoutineScreen({
   const submit = () => {
     if (!canSubmit) {
       if (!categoryValid) {
-        setFormError('카테고리를 다시 선택해 주세요.');
+        setFormError(tr('routineTodo.addRoutine.errorCategory'));
         Keyboard.dismiss();
       } else if (title.trim().length === 0) {
-        setFormError('루틴 이름을 입력해주세요.');
+        setFormError(tr('routineTodo.addRoutine.errorTitle'));
       } else if (needsDays && days.length === 0) {
         // 매주/격주 with no day picked — the day picker is the fix, so point at
         // it with a toast rather than the footer error.
-        toast('반복 요일을 하나 선택해주세요', 'error');
+        toast(tr('routineTodo.addRoutine.errorDays'), 'error');
       }
       return;
     }
@@ -231,9 +227,9 @@ export function AddRoutineScreen({
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader
-        title={isEdit ? '루틴 수정' : '루틴 추가'}
+        title={isEdit ? tr('routineTodo.addRoutine.editTitle') : tr('routineTodo.addRoutine.title')}
         onBack={requestBack}
-        backLabel="뒤로가기"
+        backLabel={tr('routineTodo.addRoutine.back')}
       />
 
       {/* handled (#759): 제목 입력으로 키보드가 뜬 채 시트 버튼을 탭하면
@@ -248,13 +244,15 @@ export function AddRoutineScreen({
         keyboardShouldPersistTaps="handled">
         {/* Title */}
         <View style={styles.field}>
-          <Text style={[Typography.label, { color: t.text }]}>루틴 이름</Text>
+          <Text style={[Typography.label, { color: t.text }]}>
+            {tr('routineTodo.addRoutine.name')}
+          </Text>
           <View style={[styles.titleRow, { backgroundColor: t.surface }]}>
             <TextInput
               style={[styles.titleInput, emph('normal'), { color: t.text }]}
               value={title}
               onChangeText={setTitle}
-              placeholder="예) 매일 30분 산책"
+              placeholder={tr('routineTodo.addRoutine.namePlaceholder')}
               placeholderTextColor={t.textMuted}
             />
           </View>
@@ -263,18 +261,22 @@ export function AddRoutineScreen({
         {/* Category */}
         <View style={styles.field}>
           <View style={styles.fieldHead}>
-            <Text style={[Typography.label, { color: t.text }]}>카테고리</Text>
+            <Text style={[Typography.label, { color: t.text }]}>
+              {tr('routineTodo.addRoutine.category')}
+            </Text>
             <Pressable
               onPress={() => {
                 Keyboard.dismiss();
                 setShowCategoryManager(true);
               }}
               accessibilityRole="button"
-              accessibilityLabel="새 카테고리"
+              accessibilityLabel={tr('routineTodo.addRoutine.newCategoryA11y')}
               hitSlop={8}
               style={styles.manageBtn}>
               <Icon name="add" size={16} color={t.primaryText} />
-              <Text style={[Typography.label, { color: t.primaryText }]}>추가</Text>
+              <Text style={[Typography.label, { color: t.primaryText }]}>
+                {tr('routineTodo.addRoutine.add')}
+              </Text>
             </Pressable>
           </View>
           <ScrollView
@@ -284,10 +286,12 @@ export function AddRoutineScreen({
             <Pressable
               onPress={() => setCategory('')}
               accessibilityRole="button"
-              accessibilityLabel="미분류"
+              accessibilityLabel={tr('routineTodo.category.uncategorized')}
               accessibilityState={{ selected: !category }}
               style={[styles.chip, { backgroundColor: !category ? t.primarySoft : t.surface }]}>
-              <Text style={[Typography.label, { color: t.text }]}>미분류</Text>
+              <Text style={[Typography.label, { color: t.text }]}>
+                {tr('routineTodo.category.uncategorized')}
+              </Text>
             </Pressable>
             {categories.map((c) => {
               const active = category === c.id;
@@ -314,7 +318,7 @@ export function AddRoutineScreen({
           </ScrollView>
           {categories.length === 0 ? (
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              카테고리 없이 시작할 수 있어요.
+              {tr('routineTodo.addRoutine.noCategoryHint')}
             </Text>
           ) : null}
         </View>
@@ -326,42 +330,47 @@ export function AddRoutineScreen({
             <Pressable
               onPress={() => setPresetsOpen((v) => !v)}
               accessibilityRole="button"
-              accessibilityLabel="추천 루틴"
+              accessibilityLabel={tr('routineTodo.addRoutine.presetsTitle')}
               accessibilityState={{ expanded: presetsOpen }}
               style={styles.presetHead}>
-              <Text style={[Typography.label, { color: t.text }]}>추천 루틴</Text>
+              <Text style={[Typography.label, { color: t.text }]}>
+                {tr('routineTodo.addRoutine.presetsTitle')}
+              </Text>
               <View style={presetsOpen ? styles.chevronOpen : styles.chevronClosed}>
                 <Icon name="forward" size={16} color={t.textMuted} />
               </View>
             </Pressable>
             {presetsOpen ? (
               <View style={styles.presetGrid}>
-                {PRESETS.map((p) => (
-                  <Pressable
-                    key={p.title}
-                    onPress={() => {
-                      setTitle(p.title);
-                      // Presets name local category labels; only switch when the
-                      // user actually has a matching category.
-                      const match = categories.find(
-                        (c) => c.id === p.category || c.name === p.category,
-                      );
-                      if (match) setCategory(match.id);
-                    }}
-                    style={[
-                      styles.preset,
-                      {
-                        backgroundColor: t.surface,
-                        borderColor: title === p.title ? t.primary : 'transparent',
-                      },
-                    ]}>
-                    <Text
-                      style={[Typography.body, styles.flex, { color: t.text }]}
-                      numberOfLines={1}>
-                      {p.title}
-                    </Text>
-                  </Pressable>
-                ))}
+                {PRESETS.map((p) => {
+                  const presetTitle = tr(`routineTodo.addRoutine.presets.${p.key}`);
+                  return (
+                    <Pressable
+                      key={p.key}
+                      onPress={() => {
+                        setTitle(presetTitle);
+                        // Presets name local category labels; only switch when the
+                        // user actually has a matching category.
+                        const match = categories.find(
+                          (c) => c.id === p.category || c.name === p.category,
+                        );
+                        if (match) setCategory(match.id);
+                      }}
+                      style={[
+                        styles.preset,
+                        {
+                          backgroundColor: t.surface,
+                          borderColor: title === presetTitle ? t.primary : 'transparent',
+                        },
+                      ]}>
+                      <Text
+                        style={[Typography.body, styles.flex, { color: t.text }]}
+                        numberOfLines={1}>
+                        {presetTitle}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </View>
             ) : null}
           </View>
@@ -369,20 +378,23 @@ export function AddRoutineScreen({
 
         {/* Repeat cadence + days */}
         <View style={styles.field}>
-          <Text style={[Typography.label, { color: t.text }]}>반복</Text>
+          <Text style={[Typography.label, { color: t.text }]}>
+            {tr('routineTodo.addRoutine.repeat')}
+          </Text>
           <View style={styles.repeatRow}>
-            {REPEAT_OPTIONS.map((opt) => {
-              const active = repeat === opt.id;
+            {REPEAT_KINDS.map((id) => {
+              const active = repeat === id;
+              const optLabel = tr(repeatLabelKey(id));
               return (
                 <Pressable
-                  key={opt.id}
-                  onPress={() => setRepeat(opt.id)}
+                  key={id}
+                  onPress={() => setRepeat(id)}
                   accessibilityRole="button"
-                  accessibilityLabel={opt.label}
+                  accessibilityLabel={optLabel}
                   accessibilityState={{ selected: active }}
                   style={[styles.repeatChip, { backgroundColor: active ? t.primary : t.surface }]}>
                   <Text style={[Typography.label, { color: active ? t.onPrimary : t.textMuted }]}>
-                    {opt.label}
+                    {optLabel}
                   </Text>
                 </Pressable>
               );
@@ -390,14 +402,16 @@ export function AddRoutineScreen({
           </View>
           {repeat === 'biweekly' ? (
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              시작일이 속한 주부터 2주 간격으로 반복돼요.
+              {tr('routineTodo.addRoutine.biweeklyHint')}
             </Text>
           ) : null}
           {needsDays ? (
             <>
-              <Text style={[Typography.label, styles.dayLabel, { color: t.text }]}>반복 요일</Text>
+              <Text style={[Typography.label, styles.dayLabel, { color: t.text }]}>
+                {tr('routineTodo.addRoutine.repeatDays')}
+              </Text>
               <View style={styles.dayRow}>
-                {DAYS.map((d, i) => {
+                {WEEKDAY_KEYS.map((d, i) => {
                   const active = days.includes(i);
                   const bg = active ? (i === 0 ? t.danger : t.primary) : t.surface;
                   return (
@@ -409,7 +423,7 @@ export function AddRoutineScreen({
                       style={[styles.day, { backgroundColor: bg }]}>
                       <Text
                         style={[Typography.label, { color: active ? t.onPrimary : t.textMuted }]}>
-                        {d}
+                        {tr(weekdayLabelKey(i))}
                       </Text>
                     </Pressable>
                   );
@@ -419,7 +433,9 @@ export function AddRoutineScreen({
           ) : null}
           {repeat === 'yearly' ? (
             <>
-              <Text style={[Typography.label, styles.dayLabel, { color: t.text }]}>반복 월</Text>
+              <Text style={[Typography.label, styles.dayLabel, { color: t.text }]}>
+                {tr('routineTodo.addRoutine.repeatMonth')}
+              </Text>
               <View style={styles.dateGrid}>
                 {MONTHS.map((m) => {
                   const active = yearMonth === m;
@@ -428,7 +444,7 @@ export function AddRoutineScreen({
                       key={m}
                       onPress={() => setYearMonth(m)}
                       accessibilityRole="button"
-                      accessibilityLabel={`${m}월`}
+                      accessibilityLabel={tr('routineTodo.repeat.monthLabel', { month: m })}
                       accessibilityState={{ selected: active }}
                       style={[
                         styles.monthCell,
@@ -436,7 +452,7 @@ export function AddRoutineScreen({
                       ]}>
                       <Text
                         style={[Typography.label, { color: active ? t.onPrimary : t.textMuted }]}>
-                        {m}월
+                        {tr('routineTodo.repeat.monthLabel', { month: m })}
                       </Text>
                     </Pressable>
                   );
@@ -446,7 +462,9 @@ export function AddRoutineScreen({
           ) : null}
           {repeat === 'monthly' || repeat === 'yearly' ? (
             <>
-              <Text style={[Typography.label, styles.dayLabel, { color: t.text }]}>반복 일자</Text>
+              <Text style={[Typography.label, styles.dayLabel, { color: t.text }]}>
+                {tr('routineTodo.addRoutine.repeatDay')}
+              </Text>
               <View style={styles.dateGrid}>
                 {MONTH_DAYS.map((d) => {
                   const active = monthDay === d;
@@ -455,7 +473,7 @@ export function AddRoutineScreen({
                       key={d}
                       onPress={() => setMonthDay(d)}
                       accessibilityRole="button"
-                      accessibilityLabel={`${d}일`}
+                      accessibilityLabel={tr('routineTodo.repeat.dayOfMonthLabel', { day: d })}
                       accessibilityState={{ selected: active }}
                       style={[
                         styles.dateCell,
@@ -476,10 +494,12 @@ export function AddRoutineScreen({
         {/* Duration — 기본 꺼짐, 토글로 켜면 행이 나타나며 시트가 바로 열린다 (#1126). */}
         <View style={styles.field}>
           <View style={styles.fieldHead}>
-            <Text style={[Typography.label, { color: t.text }]}>지속 기간</Text>
+            <Text style={[Typography.label, { color: t.text }]}>
+              {tr('routineTodo.addRoutine.duration')}
+            </Text>
             <ToggleSwitch
               value={durationOn}
-              accessibilityLabel="지속 기간 설정"
+              accessibilityLabel={tr('routineTodo.addRoutine.durationToggleA11y')}
               onToggle={() => {
                 if (durationOn) {
                   // 끄면 오늘부터 계속 — 골랐던 기간은 버린다.
@@ -501,16 +521,19 @@ export function AddRoutineScreen({
                 setShowDateSheet(true);
               }}
               accessibilityRole="button"
-              accessibilityLabel="지속 기간 선택"
+              accessibilityLabel={tr('routineTodo.addRoutine.durationPickA11y')}
               style={[styles.infoRow, { backgroundColor: t.surface }]}>
               <View style={[styles.infoIcon, { backgroundColor: t.surfaceMuted }]}>
                 <Icon name="calendar" size={16} color={t.icon} />
               </View>
               <View style={styles.flex}>
                 <Text style={[Typography.body, { color: t.text }]}>
-                  {formatDate(startDate)} ~ {endDate ? formatDate(endDate) : '계속'}
+                  {formatDate(startDate)} ~{' '}
+                  {endDate ? formatDate(endDate) : tr('routineTodo.addRoutine.ongoing')}
                 </Text>
-                <Text style={[Typography.supporting, { color: t.textMuted }]}>기간 선택</Text>
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                  {tr('routineTodo.addRoutine.pickPeriod')}
+                </Text>
               </View>
               <Text style={[styles.chevron, { color: t.textDisabled }]}>›</Text>
             </Pressable>
@@ -520,10 +543,12 @@ export function AddRoutineScreen({
         {/* Alarm — 기본 꺼짐, 토글이 alarmEnabled 자체다 (#1126). 시트 안 켜기/끄기와 같은 값. */}
         <View style={styles.field}>
           <View style={styles.fieldHead}>
-            <Text style={[Typography.label, { color: t.text }]}>알림 시간</Text>
+            <Text style={[Typography.label, { color: t.text }]}>
+              {tr('routineTodo.addRoutine.alarm')}
+            </Text>
             <ToggleSwitch
               value={alarmEnabled}
-              accessibilityLabel="알림 설정"
+              accessibilityLabel={tr('routineTodo.addRoutine.alarmToggleA11y')}
               onToggle={() => {
                 if (alarmEnabled) {
                   setAlarmEnabled(false);
@@ -542,14 +567,16 @@ export function AddRoutineScreen({
                 setShowTimeSheet(true);
               }}
               accessibilityRole="button"
-              accessibilityLabel="알림 시간 선택"
+              accessibilityLabel={tr('routineTodo.addRoutine.alarmPickA11y')}
               style={[styles.infoRow, { backgroundColor: t.surface }]}>
               <View style={[styles.infoIcon, { backgroundColor: t.surfaceMuted }]}>
                 <Icon name="bell" size={16} color={t.icon} />
               </View>
               <View style={styles.flex}>
                 <Text style={[Typography.body, { color: t.text }]}>{formatTime(time)}</Text>
-                <Text style={[Typography.supporting, { color: t.textMuted }]}>시간 선택</Text>
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                  {tr('routineTodo.addRoutine.pickTime')}
+                </Text>
               </View>
               <Text style={[styles.chevron, { color: t.textDisabled }]}>›</Text>
             </Pressable>
@@ -604,7 +631,9 @@ export function AddRoutineScreen({
             tintColor={canSubmit ? t.primary : undefined}
             fallbackColor={canSubmit ? t.primary : t.disabledBg}>
             <Text style={[Typography.label, { color: canSubmit ? t.onPrimary : t.textMuted }]}>
-              {isEdit ? '수정하기' : '루틴 추가하기'}
+              {isEdit
+                ? tr('routineTodo.addRoutine.submitEdit')
+                : tr('routineTodo.addRoutine.submitAdd')}
             </Text>
           </GlassSurface>
         </Pressable>
@@ -612,12 +641,14 @@ export function AddRoutineScreen({
           <Pressable
             onPress={() => setConfirmDelete(true)}
             accessibilityRole="button"
-            accessibilityLabel="루틴 삭제"
+            accessibilityLabel={tr('routineTodo.addRoutine.deleteA11y')}
             style={styles.deleteBtn}>
             <GlassSurface
               fallbackColor={t.screen}
               style={[styles.deleteFace, { borderColor: t.danger }]}>
-              <Text style={[Typography.label, { color: t.danger }]}>삭제하기</Text>
+              <Text style={[Typography.label, { color: t.danger }]}>
+                {tr('routineTodo.addRoutine.delete')}
+              </Text>
             </GlassSurface>
           </Pressable>
         ) : null}
@@ -626,9 +657,9 @@ export function AddRoutineScreen({
       {editRoutine ? (
         <ConfirmDialog
           visible={confirmDelete}
-          title="루틴 삭제"
-          body={`“${editRoutine.title}” 루틴을 삭제할까요?\n삭제하면 지난 수행 기록도 함께 사라져요.`}
-          confirmLabel="삭제"
+          title={tr('routineTodo.addRoutine.deleteTitle')}
+          body={tr('routineTodo.addRoutine.deleteBody', { title: editRoutine.title })}
+          confirmLabel={tr('routineTodo.addRoutine.deleteConfirm')}
           destructive
           onConfirm={() => {
             setConfirmDelete(false);
@@ -641,9 +672,9 @@ export function AddRoutineScreen({
 
       <ConfirmDialog
         visible={confirmDiscard}
-        title="정말 나가시겠습니까?"
-        body="지금 나가면 입력한 내용이 저장되지 않고 사라져요."
-        confirmLabel="나가기"
+        title={tr('routineTodo.addRoutine.discardTitle')}
+        body={tr('routineTodo.addRoutine.discardBody')}
+        confirmLabel={tr('routineTodo.addRoutine.discardConfirm')}
         destructive
         onConfirm={() => {
           setConfirmDiscard(false);

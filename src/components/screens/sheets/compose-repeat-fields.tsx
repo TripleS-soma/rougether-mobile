@@ -1,16 +1,13 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { RepeatKind } from '@/constants/routines';
-import { WEEKDAY_LABELS } from '@/constants/routines';
+import { WEEKDAY_KEYS, weekdayLongLabelKey } from '@/constants/routines';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
-export const REPEAT_OPTIONS: { id: RepeatKind; label: string }[] = [
-  { id: 'daily', label: '매일' },
-  { id: 'weekly', label: '매주' },
-  { id: 'biweekly', label: '격주' },
-  { id: 'monthly', label: '매월' },
-  { id: 'yearly', label: '매년' },
-];
+/** 반복 종류 순서 — 라벨은 `routineTodo.repeat.<id>` (#893). */
+export const REPEAT_KINDS: RepeatKind[] = ['daily', 'weekly', 'biweekly', 'monthly', 'yearly'];
+export const repeatLabelKey = (id: RepeatKind) => `routineTodo.repeat.${id}` as const;
 export type RepeatDraft = { repeat: RepeatKind; days: number[]; dayOfMonth: number; month: number };
 export function ComposeRepeatFields({
   value,
@@ -20,6 +17,7 @@ export function ComposeRepeatFields({
   onChange: (value: RepeatDraft) => void;
 }) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   const choice = (label: string, selected: boolean, onPress: () => void) => (
     <Pressable
@@ -35,14 +33,16 @@ export function ComposeRepeatFields({
   return (
     <View style={styles.panel}>
       <View style={styles.choices}>
-        {REPEAT_OPTIONS.map(({ id, label }) =>
-          choice(label, value.repeat === id, () => onChange({ ...value, repeat: id })),
+        {REPEAT_KINDS.map((id) =>
+          choice(tr(repeatLabelKey(id)), value.repeat === id, () =>
+            onChange({ ...value, repeat: id }),
+          ),
         )}
       </View>
       {value.repeat === 'weekly' || value.repeat === 'biweekly' ? (
         <View style={styles.choices}>
-          {WEEKDAY_LABELS.map((label, day) =>
-            choice(`${label}요일`, value.days.includes(day), () =>
+          {WEEKDAY_KEYS.map((_, day) =>
+            choice(tr(weekdayLongLabelKey(day)), value.days.includes(day), () =>
               onChange({
                 ...value,
                 days: value.days.includes(day)
@@ -55,21 +55,25 @@ export function ComposeRepeatFields({
       ) : null}
       {value.repeat === 'biweekly' ? (
         <Text style={[Typography.supporting, { color: t.textMuted }]}>
-          시작일이 속한 주부터 2주마다 반복해요.
+          {tr('routineTodo.repeat.biweeklyHint')}
         </Text>
       ) : null}
       {value.repeat === 'yearly' ? (
         <View style={styles.choices}>
           {Array.from({ length: 12 }, (_, i) => i + 1).map((month) =>
-            choice(`${month}월`, value.month === month, () => onChange({ ...value, month })),
+            choice(tr('routineTodo.repeat.monthLabel', { month }), value.month === month, () =>
+              onChange({ ...value, month }),
+            ),
           )}
         </View>
       ) : null}
       {value.repeat === 'monthly' || value.repeat === 'yearly' ? (
         <View style={styles.choices}>
           {Array.from({ length: 31 }, (_, i) => i + 1).map((dayOfMonth) =>
-            choice(`${dayOfMonth}일`, value.dayOfMonth === dayOfMonth, () =>
-              onChange({ ...value, dayOfMonth }),
+            choice(
+              tr('routineTodo.repeat.dayOfMonthLabel', { day: dayOfMonth }),
+              value.dayOfMonth === dayOfMonth,
+              () => onChange({ ...value, dayOfMonth }),
             ),
           )}
         </View>

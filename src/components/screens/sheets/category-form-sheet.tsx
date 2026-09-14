@@ -10,10 +10,11 @@ import {
   type CategoryVisibility,
   type RoutineCategoryMeta,
   VISIBILITY_ICONS,
-  VISIBILITY_LABELS,
+  visibilityLabelKey,
 } from '@/constants/routines';
 import { Radius, Spacing, StaticWhite } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 const ICON_CHOICES: PictogramName[] = [
   'calendar',
@@ -36,12 +37,7 @@ const ICON_CHOICES: PictogramName[] = [
 
 // Icons come from the shared VISIBILITY_ICONS so the 나의 방 headers (#285)
 // and this picker always show the same mark per scope.
-const VISIBILITY_OPTIONS: { id: CategoryVisibility; desc: string }[] = [
-  { id: 'public', desc: '누구나 볼 수 있어요' },
-  { id: 'neighbor', desc: '이웃에게만 보여요' },
-  { id: 'partial', desc: '선택한 사람에게만' },
-  { id: 'private', desc: '나만 볼 수 있어요' },
-];
+const VISIBILITY_OPTIONS: CategoryVisibility[] = ['public', 'neighbor', 'partial', 'private'];
 
 export type CategoryFormSheetProps = {
   visible: boolean;
@@ -69,6 +65,7 @@ export function CategoryFormSheet({
   onClose,
 }: CategoryFormSheetProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   // 새 카테고리의 기본 색 — 기존 자동 배정(생성 순서 순환)과 같은 색에서 시작.
@@ -105,12 +102,14 @@ export function CategoryFormSheet({
       cardStyle={[styles.sheet, { backgroundColor: t.screen }]}>
       <View style={[styles.head, { borderBottomColor: t.border }]}>
         <Text style={[Typography.h3, { color: t.text }]}>
-          {editing ? `'${editing.name}' 수정하기` : '새 카테고리'}
+          {editing
+            ? tr('routineTodo.categoryForm.editTitle', { name: editing.name })
+            : tr('routineTodo.categoryForm.newTitle')}
         </Text>
         <Pressable
           onPress={onClose}
           accessibilityRole="button"
-          accessibilityLabel="닫기"
+          accessibilityLabel={tr('routineTodo.categoryForm.close')}
           style={[styles.close, { backgroundColor: t.surfaceMuted }]}>
           <Icon name="close" size={16} color={t.text} />
         </Pressable>
@@ -124,13 +123,15 @@ export function CategoryFormSheet({
             <TextInput
               value={name}
               onChangeText={setName}
-              placeholder="예) 자기계발"
+              placeholder={tr('routineTodo.categoryForm.namePlaceholder')}
               placeholderTextColor={t.textMuted}
               style={[styles.flex, styles.nameInput, emph('normal'), { color: t.text }]}
             />
           </View>
 
-          <Text style={[Typography.supporting, { color: t.textMuted }]}>아이콘</Text>
+          <Text style={[Typography.supporting, { color: t.textMuted }]}>
+            {tr('routineTodo.categoryForm.icon')}
+          </Text>
           <View style={styles.emojiGrid}>
             {ICON_CHOICES.map((e) => {
               const active = icon === e;
@@ -139,7 +140,7 @@ export function CategoryFormSheet({
                   key={e}
                   onPress={() => setIcon(e)}
                   accessibilityRole="button"
-                  accessibilityLabel={`아이콘 ${e}`}
+                  accessibilityLabel={tr('routineTodo.categoryForm.iconA11y', { icon: e })}
                   accessibilityState={{ selected: active }}
                   style={[
                     styles.emojiCell,
@@ -152,7 +153,9 @@ export function CategoryFormSheet({
             })}
           </View>
 
-          <Text style={[Typography.supporting, { color: t.textMuted }]}>색상</Text>
+          <Text style={[Typography.supporting, { color: t.textMuted }]}>
+            {tr('routineTodo.categoryForm.color')}
+          </Text>
           <View style={styles.colorRow}>
             {CATEGORY_COLORS.map((c) => {
               const active = color === c;
@@ -161,7 +164,7 @@ export function CategoryFormSheet({
                   key={c}
                   onPress={() => setColor(c)}
                   accessibilityRole="button"
-                  accessibilityLabel={`색상 ${c}`}
+                  accessibilityLabel={tr('routineTodo.categoryForm.colorA11y', { color: c })}
                   accessibilityState={{ selected: active }}
                   style={[
                     styles.colorCell,
@@ -174,23 +177,25 @@ export function CategoryFormSheet({
             })}
           </View>
 
-          <Text style={[Typography.supporting, { color: t.textMuted }]}>공개 설정</Text>
+          <Text style={[Typography.supporting, { color: t.textMuted }]}>
+            {tr('routineTodo.categoryForm.visibility')}
+          </Text>
           <View style={styles.segment}>
             {VISIBILITY_OPTIONS.map((v) => {
-              const active = visibility === v.id;
+              const active = visibility === v;
               return (
                 <Pressable
-                  key={v.id}
-                  onPress={() => setVisibility(v.id)}
+                  key={v}
+                  onPress={() => setVisibility(v)}
                   accessibilityRole="button"
                   accessibilityState={{ selected: active }}
-                  accessibilityLabel={VISIBILITY_LABELS[v.id]}
+                  accessibilityLabel={tr(visibilityLabelKey(v))}
                   style={[
                     styles.segItem,
                     { backgroundColor: active ? t.primary : t.surfaceMuted },
                   ]}>
                   <Pictogram
-                    name={VISIBILITY_ICONS[v.id]}
+                    name={VISIBILITY_ICONS[v]}
                     size={18}
                     color={active ? t.onPrimary : undefined}
                   />
@@ -200,14 +205,14 @@ export function CategoryFormSheet({
                       emph('semibold'),
                       { color: active ? t.onPrimary : t.textMuted },
                     ]}>
-                    {VISIBILITY_LABELS[v.id]}
+                    {tr(visibilityLabelKey(v))}
                   </Text>
                 </Pressable>
               );
             })}
           </View>
           <Text style={[Typography.supporting, styles.segDesc, { color: t.textMuted }]}>
-            {VISIBILITY_OPTIONS.find((v) => v.id === visibility)?.desc}
+            {tr(`routineTodo.categoryForm.visibilityDesc.${visibility}`)}
           </Text>
         </ScrollView>
       </SheetDragExclude>
@@ -217,11 +222,15 @@ export function CategoryFormSheet({
           onPress={submit}
           disabled={!canSubmit}
           accessibilityRole="button"
-          accessibilityLabel={editing ? '카테고리 저장' : '카테고리 추가'}
+          accessibilityLabel={
+            editing
+              ? tr('routineTodo.categoryForm.saveA11y')
+              : tr('routineTodo.categoryForm.create')
+          }
           style={[styles.submit, { backgroundColor: canSubmit ? t.primary : t.textDisabled }]}>
           <Icon name={editing ? 'check' : 'add'} size={18} color={t.onPrimary} />
           <Text style={[Typography.label, { color: t.onPrimary }]}>
-            {editing ? '저장하기' : '카테고리 추가'}
+            {editing ? tr('routineTodo.categoryForm.save') : tr('routineTodo.categoryForm.create')}
           </Text>
         </Pressable>
       </View>
