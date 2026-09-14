@@ -11,6 +11,7 @@ import { useToast } from '@/components/ui/toast';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 export type SignupScreenProps = {
   onBack?: () => void;
@@ -27,6 +28,7 @@ export type SignupScreenProps = {
  */
 export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
   const t = useTokens();
+  const tr = useT();
   const column = useResponsiveColumn();
   const emph = useFontEmphasis();
   const Typography = useTypography();
@@ -56,7 +58,7 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
   const passwordMatch = passwordConfirm.length > 0 && password === passwordConfirm;
   const nicknameError =
     nickname.length > 0 && (nickname.length < 2 || nickname.length > 10)
-      ? '2~10자로 입력해주세요'
+      ? tr('member.signup.nicknameLength')
       : undefined;
 
   const toggleAll = (next: boolean) => {
@@ -90,8 +92,8 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
 
   const handleSendCode = () => {
     // Blocked taps explain themselves (이미 인증 완료만 구조적으로 죽여둔다).
-    if (!emailValid) return toast('이메일 형식을 확인해주세요', 'error');
-    if (secondsLeft > 150) return toast('잠시 후 다시 시도해주세요', 'error');
+    if (!emailValid) return toast(tr('member.signup.emailInvalidToast'), 'error');
+    if (secondsLeft > 150) return toast(tr('member.signup.retryLater'), 'error');
     setCodeSent(true);
     setSecondsLeft(180);
     setVerificationCode('');
@@ -100,11 +102,11 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
 
   const handleVerifyCode = () => {
     if (verificationCode.length !== 6) {
-      setCodeError('6자리 인증번호를 입력해주세요');
+      setCodeError(tr('member.signup.codeLength'));
       return;
     }
     if (secondsLeft <= 0) {
-      setCodeError('인증 시간이 만료되었어요. 다시 발송해주세요');
+      setCodeError(tr('member.signup.codeExpired'));
       return;
     }
     setEmailVerified(true);
@@ -115,16 +117,16 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
-      <ScreenHeader title="회원가입" onBack={onBack} />
+      <ScreenHeader title={tr('member.signup.title')} onBack={onBack} />
 
       {/* 스크롤 컨테이너가 없어 블록마다 묶는다. 헤더는 풀폭 유지 (#725). */}
       <View style={[styles.intro, column, headerInset ? { paddingTop: headerInset } : null]}>
         <View style={styles.introTitleRow}>
-          <Text style={[Typography.h2, { color: t.text }]}>마을의 새 친구를 환영해요</Text>
+          <Text style={[Typography.h2, { color: t.text }]}>{tr('member.signup.welcome')}</Text>
           <PawPictogram size={18} />
         </View>
         <Text style={[styles.introSub, emph('normal'), { color: t.textMuted }]}>
-          정보를 입력하고 나만의 루게더를 시작하세요
+          {tr('member.signup.intro')}
         </Text>
       </View>
 
@@ -133,15 +135,14 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
       <View
         style={[styles.notice, column, { backgroundColor: t.warningSoft, borderColor: t.warning }]}>
         <Text style={[Typography.supporting, styles.noticeText, { color: t.text }]}>
-          이메일 가입은 준비 중이에요. 지금은 로그인 화면에서 이메일 칸을 비우고 로그인하면 새
-          계정이 만들어져요.
+          {tr('member.signup.notice')}
         </Text>
       </View>
 
       <View style={[styles.card, column, { backgroundColor: t.surface }]}>
         <Field
-          label="닉네임"
-          placeholder="2~10자 닉네임"
+          label={tr('member.common.nickname')}
+          placeholder={tr('member.signup.nicknamePlaceholder')}
           value={nickname}
           onChangeText={setNickname}
           error={nicknameError}
@@ -151,7 +152,7 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
         <View style={styles.fieldWrap}>
           <Text
             style={[Typography.supporting, emph('semibold'), styles.label, { color: t.textMuted }]}>
-            이메일
+            {tr('member.signup.email')}
           </Text>
           <View style={styles.inlineRow}>
             <View
@@ -193,18 +194,22 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
                 { backgroundColor: sendDisabled ? t.disabledBg : t.primary },
               ]}>
               <Text style={[Typography.label, { color: sendDisabled ? t.textMuted : t.onPrimary }]}>
-                {emailVerified ? '인증완료' : codeSent ? '재발송' : '인증요청'}
+                {emailVerified
+                  ? tr('member.signup.verified')
+                  : codeSent
+                    ? tr('member.signup.resend')
+                    : tr('member.signup.requestCode')}
               </Text>
             </Pressable>
           </View>
           {email.length > 0 && !emailValid ? (
             <Text style={[Typography.supporting, styles.msg, { color: t.danger }]}>
-              이메일 형식이 올바르지 않아요
+              {tr('member.signup.emailInvalid')}
             </Text>
           ) : null}
           {emailVerified ? (
             <Text style={[Typography.supporting, styles.msg, { color: t.primaryText }]}>
-              이메일 인증이 완료되었어요
+              {tr('member.signup.emailVerified')}
             </Text>
           ) : null}
         </View>
@@ -219,7 +224,7 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
                 styles.label,
                 { color: t.textMuted },
               ]}>
-              인증번호
+              {tr('member.signup.code')}
             </Text>
             <View style={styles.inlineRow}>
               <View
@@ -238,7 +243,7 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
                   ]}
                   value={verificationCode}
                   onChangeText={(v) => setVerificationCode(v.replace(/\D/g, '').slice(0, 6))}
-                  placeholder="6자리 인증번호"
+                  placeholder={tr('member.signup.codePlaceholder')}
                   placeholderTextColor={t.textMuted}
                   keyboardType="number-pad"
                   maxLength={6}
@@ -262,7 +267,7 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
                     Typography.label,
                     { color: verificationCode.length !== 6 ? t.textMuted : t.onPrimary },
                   ]}>
-                  확인
+                  {tr('common.confirm')}
                 </Text>
               </Pressable>
             </View>
@@ -272,37 +277,41 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
                 styles.msg,
                 { color: codeError ? t.danger : t.textMuted },
               ]}>
-              {codeError ?? '메일함을 확인하고 6자리 인증번호를 입력해주세요'}
+              {codeError ?? tr('member.signup.codeHint')}
             </Text>
           </View>
         ) : null}
 
         <Field
-          label="비밀번호"
-          placeholder="8자 이상"
+          label={tr('member.signup.password')}
+          placeholder={tr('member.signup.passwordPlaceholder')}
           value={password}
           onChangeText={setPassword}
           secureTextEntry={!showPw}
-          error={password.length > 0 && !passwordValid ? '비밀번호는 8자 이상이에요' : undefined}
+          error={
+            password.length > 0 && !passwordValid ? tr('member.signup.passwordTooShort') : undefined
+          }
           trailing={
             <Pressable onPress={() => setShowPw((v) => !v)} accessibilityRole="button">
               <Text style={[Typography.supporting, emph('semibold'), { color: t.textMuted }]}>
-                {showPw ? '숨김' : '보기'}
+                {showPw ? tr('member.common.hide') : tr('member.common.show')}
               </Text>
             </Pressable>
           }
         />
 
         <Field
-          label="비밀번호 확인"
-          placeholder="비밀번호를 다시 입력하세요"
+          label={tr('member.signup.passwordConfirm')}
+          placeholder={tr('member.signup.passwordConfirmPlaceholder')}
           value={passwordConfirm}
           onChangeText={setPasswordConfirm}
           secureTextEntry={!showPw}
           error={
-            passwordConfirm.length > 0 && !passwordMatch ? '비밀번호가 일치하지 않아요' : undefined
+            passwordConfirm.length > 0 && !passwordMatch
+              ? tr('member.signup.passwordMismatch')
+              : undefined
           }
-          success={passwordMatch ? '비밀번호가 일치해요' : undefined}
+          success={passwordMatch ? tr('member.signup.passwordMatch') : undefined}
         />
       </View>
 
@@ -313,13 +322,15 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
           accessibilityState={{ checked: agreeAll }}
           style={[styles.agreeAll, { borderBottomColor: t.border }]}>
           <CheckBox checked={agreeAll} />
-          <Text style={[styles.agreeAllText, emph('semibold'), { color: t.text }]}>전체 동의</Text>
+          <Text style={[styles.agreeAllText, emph('semibold'), { color: t.text }]}>
+            {tr('member.signup.agreeAll')}
+          </Text>
         </Pressable>
 
         <AgreementItem
           checked={agreeTerms}
           required
-          label="이용약관 동의"
+          label={tr('member.signup.agreeTerms')}
           onView={onViewPolicy && (() => onViewPolicy('terms'))}
           onChange={(v) => {
             setAgreeTerms(v);
@@ -329,7 +340,7 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
         <AgreementItem
           checked={agreePrivacy}
           required
-          label="개인정보 처리방침 동의"
+          label={tr('member.signup.agreePrivacy')}
           onView={onViewPolicy && (() => onViewPolicy('privacy'))}
           onChange={(v) => {
             setAgreePrivacy(v);
@@ -339,7 +350,7 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
         {/* Marketing consent has no standalone document yet — no '보기' link. */}
         <AgreementItem
           checked={agreeMarketing}
-          label="마케팅 정보 수신 동의"
+          label={tr('member.signup.agreeMarketing')}
           onChange={(v) => {
             setAgreeMarketing(v);
             syncAgreeAll(agreeTerms, agreePrivacy, v);
@@ -350,22 +361,22 @@ export function SignupScreen({ onBack, onViewPolicy }: SignupScreenProps) {
       {/* Signup API isn't available yet; keep the form as a preview but never
           submit (onSignupSuccess stays for when the backend lands). */}
       <Pressable
-        onPress={() => toast('이메일 가입은 서버 준비 중이에요', 'error')}
+        onPress={() => toast(tr('member.signup.submitNotReady'), 'error')}
         accessibilityRole="button"
         accessibilityState={{ disabled: true }}
         style={[styles.submit, { backgroundColor: t.disabledBg }]}>
         <Text style={[Typography.body, emph('semibold'), { color: t.textMuted }]}>
-          가입 준비 중
+          {tr('member.signup.submitLabel')}
         </Text>
       </Pressable>
 
       <View style={[styles.footer, column]}>
         <Text style={[Typography.supporting, styles.msg, { color: t.textMuted }]}>
-          이미 계정이 있으신가요?{' '}
+          {tr('member.signup.haveAccount')}{' '}
         </Text>
         <Pressable onPress={onBack} accessibilityRole="button">
           <Text style={[Typography.supporting, emph('semibold'), { color: t.primaryText }]}>
-            로그인
+            {tr('member.signup.login')}
           </Text>
         </Pressable>
       </View>
@@ -399,6 +410,7 @@ type AgreementItemProps = {
 
 function AgreementItem({ checked, label, required, onChange, onView }: AgreementItemProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   return (
@@ -412,13 +424,18 @@ function AgreementItem({ checked, label, required, onChange, onView }: Agreement
         <Text style={[styles.agreeLabel, emph('normal'), { color: t.text }]}>
           {label}{' '}
           <Text style={{ color: required ? t.danger : t.textMuted }}>
-            ({required ? '필수' : '선택'})
+            ({required ? tr('member.signup.required') : tr('member.signup.optional')})
           </Text>
         </Text>
       </Pressable>
       {onView ? (
-        <Pressable onPress={onView} accessibilityRole="button" accessibilityLabel={`${label} 보기`}>
-          <Text style={[Typography.supporting, styles.viewLink, { color: t.textMuted }]}>보기</Text>
+        <Pressable
+          onPress={onView}
+          accessibilityRole="button"
+          accessibilityLabel={tr('member.signup.viewDocA11y', { label })}>
+          <Text style={[Typography.supporting, styles.viewLink, { color: t.textMuted }]}>
+            {tr('member.common.show')}
+          </Text>
         </Pressable>
       ) : null}
     </View>

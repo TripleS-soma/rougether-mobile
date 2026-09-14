@@ -5,6 +5,8 @@
  * Pure data — the avatar component supplies its own fallback mark. Pure data — reusable
  * across onboarding, room, etc.
  */
+import { i18n } from '@/i18n';
+
 export type CharacterId =
   'cat' | 'dog' | 'tiger' | 'panda' | 'bear' | 'sheep' | 'horse' | 'otter' | 'moru';
 
@@ -18,47 +20,34 @@ export type CharacterOption = {
   rewardLevel?: number;
 };
 
+/**
+ * 이름·설명은 i18n (#893) — 접근 시점에 `i18n.t()`를 부르는 getter라 언어를 바꾸면
+ * 다음 렌더부터 새 언어로 읽힌다(모듈 로드 때 한 번 굳히면 언어 변경이 반영되지 않는다).
+ */
+function localized(id: CharacterId, bg: string, rewardLevel?: number): CharacterOption {
+  return {
+    id,
+    get name() {
+      return i18n.t(`member.characters.${id}.name`);
+    },
+    get description() {
+      return i18n.t(`member.characters.${id}.description`);
+    },
+    bg,
+    ...(rewardLevel == null ? {} : { rewardLevel }),
+  };
+}
+
 export const CHARACTER_OPTIONS: CharacterOption[] = [
-  {
-    id: 'cat',
-    name: '고양이',
-    description: '조용하고 따뜻한 루틴 친구',
-    bg: '#F5E6D3',
-  },
-  { id: 'dog', name: '강아지', description: '밝고 활발한 루틴 친구', bg: '#E3EEF8' },
-  {
-    id: 'tiger',
-    name: '호랑이',
-    description: '당차고 용감한 루틴 친구',
-    bg: '#FFF0D8',
-  },
-  {
-    id: 'panda',
-    name: '판다',
-    description: '느긋하고 다정한 루틴 친구',
-    bg: '#EDEDED',
-  },
-  { id: 'bear', name: '곰', description: '든든하고 포근한 루틴 친구', bg: '#F0E4D4' },
-  { id: 'sheep', name: '양', description: '부드럽고 순한 루틴 친구', bg: '#F3EFE8' },
-  {
-    id: 'horse',
-    name: '망아지',
-    description: '씩씩하고 활기찬 루틴 친구',
-    bg: '#F3E7D6',
-  },
-  {
-    id: 'otter',
-    name: '수달',
-    description: '장난기 많고 사랑스러운 루틴 친구',
-    bg: '#E6E0D6',
-  },
-  {
-    id: 'moru',
-    name: '모루',
-    description: '레벨 5에서 만나는 포근한 루틴 친구',
-    bg: '#E7F3E9',
-    rewardLevel: 5,
-  },
+  localized('cat', '#F5E6D3'),
+  localized('dog', '#E3EEF8'),
+  localized('tiger', '#FFF0D8'),
+  localized('panda', '#EDEDED'),
+  localized('bear', '#F0E4D4'),
+  localized('sheep', '#F3EFE8'),
+  localized('horse', '#F3E7D6'),
+  localized('otter', '#E6E0D6'),
+  localized('moru', '#E7F3E9', 5),
 ];
 
 export const STARTER_CHARACTER_OPTIONS = CHARACTER_OPTIONS.filter((c) => c.rewardLevel == null);

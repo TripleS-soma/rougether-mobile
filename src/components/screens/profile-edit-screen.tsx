@@ -20,6 +20,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useActionBarInset, useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 export type ProfileEditScreenProps = {
   initialNickname?: string;
@@ -47,6 +48,7 @@ export function ProfileEditScreen({
   const headerInset = useHeaderContentInset();
   const actionBarInset = useActionBarInset();
   const Typography = useTypography();
+  const tr = useT();
   const [nickname, setNickname] = useState(initialNickname);
   const [bio, setBio] = useState(initialBio);
   const character = CHARACTER_OPTIONS.find((c) => c.id === characterId) ?? CHARACTER_OPTIONS[0];
@@ -56,7 +58,7 @@ export function ProfileEditScreen({
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
-      <ScreenHeader title="프로필 편집" onBack={onBack} />
+      <ScreenHeader title={tr('member.profileEdit.title')} onBack={onBack} />
 
       {/* 저장 버튼이 ScrollView 밖 하단 고정이라 키보드에 덮인다 (#923).
           persistTaps="handled" 는 배경 탭에 키보드를 내리면서 버튼 탭은
@@ -78,23 +80,23 @@ export function ProfileEditScreen({
               <CharacterAvatar characterId={characterId} size={88} />
             </View>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              캐릭터는 나의 방에서 바꿀 수 있어요.
+              {tr('member.profileEdit.characterHint')}
             </Text>
           </View>
 
           <View style={styles.form}>
             <Field
-              label="닉네임"
+              label={tr('member.common.nickname')}
               value={nickname}
               onChangeText={setNickname}
-              placeholder="닉네임을 입력해주세요"
+              placeholder={tr('member.profileEdit.nicknamePlaceholder')}
               maxLength={NICKNAME_MAX}
             />
             <Field
-              label="한 줄 소개"
+              label={tr('member.profileEdit.bio')}
               value={bio}
               onChangeText={setBio}
-              placeholder="나를 한 줄로 소개해보세요"
+              placeholder={tr('member.profileEdit.bioPlaceholder')}
               maxLength={BIO_MAX}
             />
           </View>
@@ -106,14 +108,14 @@ export function ProfileEditScreen({
             onPress={() => canSave && onSave?.(trimmed, bio.trim())}
             disabled={!canSave}
             accessibilityRole="button"
-            accessibilityLabel="프로필 저장"
+            accessibilityLabel={tr('member.profileEdit.saveA11y')}
             style={styles.save}>
             <GlassSurface
               style={styles.saveFace}
               tintColor={canSave ? t.primary : undefined}
               fallbackColor={canSave ? t.primary : t.surfaceMuted}>
               <Text style={[Typography.label, { color: canSave ? t.onPrimary : t.textMuted }]}>
-                저장
+                {tr('member.common.save')}
               </Text>
             </GlassSurface>
           </Pressable>

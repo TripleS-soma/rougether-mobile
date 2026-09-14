@@ -28,6 +28,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/toast';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { i18n, useT } from '@/i18n';
 
 export type OnboardingGoal = { id: string; label: string; code?: string };
 
@@ -42,15 +43,8 @@ export const MAX_GOALS = 3;
  */
 const CONTENT_MAX_W = 480;
 
-const GOALS: OnboardingGoal[] = [
-  { id: 'exercise', label: '운동' },
-  { id: 'study', label: '공부' },
-  { id: 'sleep', label: '수면' },
-  { id: 'reading', label: '독서' },
-  { id: 'organizing', label: '정리' },
-  { id: 'career', label: '취업 준비' },
-  { id: 'habit', label: '생활 습관' },
-];
+/** 서버 마스터가 비었을 때의 로컬 목표 목록 — 라벨은 `member.onboarding.goals.<id>` (#893). */
+const GOAL_IDS = ['exercise', 'study', 'sleep', 'reading', 'organizing', 'career', 'habit'];
 
 export type OnboardingScreenProps = {
   onDone?: (goals: string[], characterId: CharacterId, nickname: string) => void;
@@ -114,6 +108,7 @@ export function OnboardingScreen({
   onSkip,
 }: OnboardingScreenProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   // 카드 폭은 앱 프레임 기준(웹 데스크톱 중앙 컬럼).
   const { width: windowW } = useAppFrame();
@@ -134,7 +129,10 @@ export function OnboardingScreen({
   // Pinned bottom action buttons → pad both edges so the notch / home indicator
   // don't clip the top title or the bottom buttons.
   const screenStyle = useScreenStyle(['top', 'bottom']);
-  const goalOptions = goals && goals.length > 0 ? goals : GOALS;
+  const goalOptions =
+    goals && goals.length > 0
+      ? goals
+      : GOAL_IDS.map((id) => ({ id, label: tr(`member.onboarding.goals.${id}`) }));
   // 첫 실행은 목표 설문부터 (#1282) — 소개는 로그인 전에 이미 봤다.
   const [showGoalSurvey, setShowGoalSurvey] = useState(!replay);
   const [showCharacterSelect, setShowCharacterSelect] = useState(false);
@@ -160,7 +158,7 @@ export function OnboardingScreen({
       if (prev.includes(id)) return prev.filter((g) => g !== id);
       // 상한 도달 시 차단하고 이유를 말한다 — 집 생성 서버 제약과 동일.
       if (prev.length >= MAX_GOALS) {
-        toast(`목표는 ${MAX_GOALS}개까지 고를 수 있어요`);
+        toast(tr('member.onboarding.goalLimit', { max: MAX_GOALS }));
         return prev;
       }
       return [...prev, id];
@@ -213,9 +211,11 @@ export function OnboardingScreen({
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           testID="onboarding-nickname-keyboard">
           <View style={styles.intro}>
-            <Text style={[Typography.h1, { color: t.text }]}>어떻게 불러드릴까요?</Text>
+            <Text style={[Typography.h1, { color: t.text }]}>
+              {tr('member.onboarding.nicknameTitle')}
+            </Text>
             <Text style={[Typography.supporting, styles.introBody, { color: t.textMuted }]}>
-              {active.name}가 부를 내 이름을 정해주세요.
+              {tr('member.onboarding.nicknameBody', { name: active.name })}
             </Text>
           </View>
           {/* accessible={false} — 배경을 스크린리더 대상으로 만들지 않는다. */}
@@ -228,12 +228,12 @@ export function OnboardingScreen({
             <TextInput
               value={nickname}
               onChangeText={(v) => setNickname(v.slice(0, NICKNAME_MAX))}
-              placeholder="닉네임 (12자까지)"
+              placeholder={tr('member.onboarding.nicknamePlaceholder', { max: NICKNAME_MAX })}
               placeholderTextColor={t.textDisabled}
               autoFocus
               autoCorrect={false}
               maxLength={NICKNAME_MAX}
-              accessibilityLabel="닉네임 입력"
+              accessibilityLabel={tr('member.onboarding.nicknameInputA11y')}
               returnKeyType="done"
               onSubmitEditing={Keyboard.dismiss}
               style={[
@@ -245,12 +245,15 @@ export function OnboardingScreen({
           </Pressable>
           <View style={styles.actions}>
             <PrimaryButton
-              label="시작하기"
+              label={tr('member.common.start')}
               disabled={!canStart}
-              blockedMessage="닉네임을 입력해주세요"
+              blockedMessage={tr('member.onboarding.nicknameRequired')}
               onPress={() => onDone?.(selectedGoals, selectedCharacter, trimmed)}
             />
-            <TextButton label="이전" onPress={() => setShowNicknameStep(false)} />
+            <TextButton
+              label={tr('member.common.previous')}
+              onPress={() => setShowNicknameStep(false)}
+            />
           </View>
         </KeyboardAvoidingView>
       </View>
@@ -277,9 +280,11 @@ export function OnboardingScreen({
     return (
       <View style={[styles.screen, screenStyle]}>
         <View style={styles.intro}>
-          <Text style={[Typography.h1, { color: t.text }]}>함께할 캐릭터를 골라주세요</Text>
+          <Text style={[Typography.h1, { color: t.text }]}>
+            {tr('member.onboarding.characterTitle')}
+          </Text>
           <Text style={[Typography.supporting, styles.introBody, { color: t.textMuted }]}>
-            옆으로 넘기며 마음에 드는 친구를 만나보세요.
+            {tr('member.onboarding.characterBody')}
           </Text>
         </View>
         <ScrollView
@@ -347,7 +352,7 @@ export function OnboardingScreen({
               key={c.id}
               onPress={() => focusCharacter(i)}
               accessibilityRole="button"
-              accessibilityLabel={`${c.name} 카드로 이동`}
+              accessibilityLabel={tr('member.onboarding.goToCard', { name: c.name })}
               style={[
                 styles.dot,
                 i === activeIndex
@@ -359,10 +364,16 @@ export function OnboardingScreen({
         </View>
         <View style={styles.actions}>
           <PrimaryButton
-            label={`${withRang(active.name)} 함께하기`}
+            // 한국어만 '이랑/랑' 조사 — 다른 언어는 이름 그대로 (#893).
+            label={tr('member.onboarding.goWith', {
+              name: i18n.language === 'ko' ? withRang(active.name) : active.name,
+            })}
             onPress={() => setShowNicknameStep(true)}
           />
-          <TextButton label="이전" onPress={() => setShowCharacterSelect(false)} />
+          <TextButton
+            label={tr('member.common.previous')}
+            onPress={() => setShowCharacterSelect(false)}
+          />
         </View>
       </View>
     );
@@ -374,10 +385,11 @@ export function OnboardingScreen({
     return (
       <View style={[styles.screen, screenStyle]}>
         <View style={styles.intro}>
-          <Text style={[Typography.h1, { color: t.text }]}>관심 있는 목표를 골라주세요</Text>
+          <Text style={[Typography.h1, { color: t.text }]}>
+            {tr('member.onboarding.goalTitle')}
+          </Text>
           <Text style={[Typography.supporting, styles.introBody, { color: t.textMuted }]}>
-            선택한 목표를 기반으로 루틴 제안과 미션을 더 잘 맞출 수 있어요. 최대 3개까지 고를 수
-            있어요.
+            {tr('member.onboarding.goalBody')}
           </Text>
         </View>
         <ScrollView contentContainerStyle={styles.grid}>
@@ -405,9 +417,9 @@ export function OnboardingScreen({
         </ScrollView>
         <View style={styles.actions}>
           <PrimaryButton
-            label="시작하기"
+            label={tr('member.common.start')}
             disabled={!canStart}
-            blockedMessage="목표를 하나 이상 선택해주세요"
+            blockedMessage={tr('member.onboarding.goalRequired')}
             onPress={() =>
               canStart &&
               // MVP 고양이 단일 (#637) — 캐러셀을 건너뛰고 닉네임으로 직행.
@@ -415,7 +427,12 @@ export function OnboardingScreen({
             }
           />
           {/* 첫 실행엔 돌아갈 소개가 없다 — 소개는 로그인 전에 끝났다 (#1282). */}
-          {replay ? <TextButton label="이전" onPress={() => setShowGoalSurvey(false)} /> : null}
+          {replay ? (
+            <TextButton
+              label={tr('member.common.previous')}
+              onPress={() => setShowGoalSurvey(false)}
+            />
+          ) : null}
         </View>
       </View>
     );
@@ -426,7 +443,7 @@ export function OnboardingScreen({
   // 소개를 다시 보고, 건너뛰기로 나가거나 목표 수정으로 이어진다.
   return (
     <IntroScreen
-      doneLabel="목표 선택하기"
+      doneLabel={tr('member.onboarding.pickGoals')}
       onDone={() => setShowGoalSurvey(true)}
       onSkip={replay ? onSkip : undefined}
     />

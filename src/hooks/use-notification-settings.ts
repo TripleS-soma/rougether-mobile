@@ -12,6 +12,7 @@ import {
   DEFAULT_NOTIFICATION_SETTINGS,
   type NotificationSettings,
 } from '@/components/screens/notification-settings-screen';
+import { i18n } from '@/i18n';
 
 export function useNotificationSettings(onError?: (message: string) => void) {
   const [settings, setSettings] = useState<NotificationSettings>(DEFAULT_NOTIFICATION_SETTINGS);
@@ -38,7 +39,7 @@ export function useNotificationSettings(onError?: (message: string) => void) {
         .then((res) => setSettings(toNotificationSettings(res)))
         .catch(() => {
           setSettings((prev) => ({ ...prev, [key]: !value }));
-          onError?.('알림 설정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
+          onError?.(i18n.t('member.notificationSettings.saveFailed'));
         });
     },
     [onError],

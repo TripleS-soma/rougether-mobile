@@ -1,4 +1,5 @@
 import type { OnboardingGoal } from '@/components/screens/onboarding-screen';
+import { i18n } from '@/i18n';
 
 export type StarterRoutine = {
   id: string;
@@ -7,42 +8,19 @@ export type StarterRoutine = {
   category: string;
 };
 
+/**
+ * 관심사별 첫 루틴 카탈로그. `label`은 옛 설문 캐시(한국어 라벨로 저장된 선택)와 대조하는
+ * **매칭 키**라 한국어 원문을 유지하고, `category`는 서버 카테고리 이름과 대조하는 키라
+ * 번역하지 않는다. 화면에 보이는 제목·목표 라벨은 `i18n.t()`로 호출 시점에 읽는다 (#893).
+ */
 const GOAL_ROUTINES = {
-  exercise: {
-    label: '운동',
-    category: '건강',
-    titles: ['스트레칭 3분', '가볍게 걷기 5분', '어깨 풀기 1분'],
-  },
-  study: {
-    label: '공부',
-    category: '공부',
-    titles: ['공부한 내용 한 줄 정리하기', '영어 단어 3개 익히기', '책상에서 공부 5분'],
-  },
-  sleep: {
-    label: '수면',
-    category: '건강',
-    titles: ['자기 전 휴대폰 내려놓기', '자기 전 조명 낮추기', '잠들기 전 천천히 숨 쉬기'],
-  },
-  reading: {
-    label: '독서',
-    category: '취미',
-    titles: ['책 2쪽 읽기', '마음에 든 문장 하나 적기', '독서 5분'],
-  },
-  organizing: {
-    label: '정리',
-    category: '일정',
-    titles: ['책상 위 물건 3개 정리하기', '입은 옷 제자리에 두기', '가방 속 물건 정리하기'],
-  },
-  career: {
-    label: '취업 준비',
-    category: '공부',
-    titles: ['관심 공고 하나 살펴보기', '오늘 배운 것 한 줄 적기', '면접 질문 하나 생각해보기'],
-  },
-  habit: {
-    label: '생활 습관',
-    category: '건강',
-    titles: ['물 한 잔 마시기', '창문 열어 환기하기', '오늘 좋았던 일 하나 적기'],
-  },
+  exercise: { label: '운동', category: '건강' },
+  study: { label: '공부', category: '공부' },
+  sleep: { label: '수면', category: '건강' },
+  reading: { label: '독서', category: '취미' },
+  organizing: { label: '정리', category: '일정' },
+  career: { label: '취업 준비', category: '공부' },
+  habit: { label: '생활 습관', category: '건강' },
 } as const;
 
 type GoalCode = keyof typeof GOAL_ROUTINES;
@@ -67,9 +45,11 @@ export function recommendStarterRoutines(goals: OnboardingGoal[]): StarterRoutin
       const group = GOAL_ROUTINES[code];
       result.push({
         id: `${code}-${rank + 1}`,
-        title: group.titles[rank],
+        title: i18n.t(`member.starterRoutine.goals.${code}.titles.${rank}`),
         category: group.category,
-        goalLabel: matched ? group.label : '가볍게 시작하기',
+        goalLabel: matched
+          ? i18n.t(`member.starterRoutine.goals.${code}.label`)
+          : i18n.t('member.starterRoutine.lightStart'),
       });
       if (result.length === 3) return result;
     }

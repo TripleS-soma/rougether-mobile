@@ -11,19 +11,16 @@ import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import type { DeviceCalendar } from '@/lib/device-calendar';
 import type { ImportCandidate, ImportOutcome } from '@/hooks/use-calendar-import';
+import { i18n, useT } from '@/i18n';
 
 /**
  * 반복 배지 문구 (#952). 이 표시가 붙은 일정은 회차마다 투두가 아니라
  * **루틴 하나**로 들어간다 — 가져오면 뭐가 생기는지 예측 가능해야 한다.
  * 서버가 못 담는 반복은 `repeat`이 비어 있어 배지도 안 붙는다(회차 투두).
  */
-const REPEAT_LABEL: Record<NonNullable<ImportCandidate['repeat']>, string> = {
-  daily: '매일 반복',
-  weekly: '매주 반복',
-  biweekly: '격주 반복',
-  monthly: '매월 반복',
-  yearly: '매년 반복',
-};
+function repeatLabel(repeat: NonNullable<ImportCandidate['repeat']>): string {
+  return i18n.t(`member.calendarImport.repeat.${repeat}`);
+}
 
 export type CalendarImportScreenProps = {
   /** null = 아직 연결 전(권한 요청 안 함). */
@@ -44,7 +41,9 @@ export type CalendarImportScreenProps = {
 /** "2026-08-20" → "8월 20일". */
 function shortDate(iso: string) {
   const [, m, d] = iso.split('-');
-  return m && d ? `${Number(m)}월 ${Number(d)}일` : iso;
+  return m && d
+    ? i18n.t('member.calendarImport.shortDate', { month: Number(m), day: Number(d) })
+    : iso;
 }
 
 /**
@@ -74,6 +73,7 @@ export function CalendarImportScreen({
   const headerInset = useHeaderContentInset();
   const Typography = useTypography();
   const emph = useFontEmphasis();
+  const tr = useT();
   const [picked, setPicked] = useState<string[]>([]);
   /**
    * 사용자가 **기본값을 뒤집은** 일정 id. 기본은 "가져옴"이되 비슷한 게 이미
@@ -95,7 +95,7 @@ export function CalendarImportScreen({
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
-      <ScreenHeader title="캘린더 연동" onBack={onBack} />
+      <ScreenHeader title={tr('member.calendarImport.title')} onBack={onBack} />
       <ScrollView
         contentContainerStyle={[
           styles.body,
@@ -103,25 +103,26 @@ export function CalendarImportScreen({
           headerInset ? { paddingTop: headerInset } : null,
         ]}>
         <Text style={[Typography.supporting, { color: t.textMuted }]}>
-          기기 캘린더의 오늘 이후 {'→'} 30일 일정을 할 일로 가져와요. 캘린더에 쓰지 않고 읽기만
-          해요.
+          {tr('member.calendarImport.intro')}
         </Text>
 
         {denied ? (
           <Text style={[Typography.body, { color: t.danger }]}>
-            캘린더 접근이 꺼져 있어요. 기기 설정에서 루게더의 캘린더 권한을 켜주세요.
+            {tr('member.calendarImport.denied')}
           </Text>
         ) : null}
 
         {calendars == null ? (
-          <Button label="캘린더 연결하기" onPress={onConnect} />
+          <Button label={tr('member.calendarImport.connect')} onPress={onConnect} />
         ) : calendars.length === 0 && !denied ? (
           <Text style={[Typography.body, { color: t.textMuted }]}>
-            읽을 수 있는 캘린더가 없어요.
+            {tr('member.calendarImport.noCalendars')}
           </Text>
         ) : (
           <>
-            <Text style={[Typography.label, { color: t.text }]}>가져올 캘린더</Text>
+            <Text style={[Typography.label, { color: t.text }]}>
+              {tr('member.calendarImport.pickCalendars')}
+            </Text>
             {calendars.map((c) => {
               const on = picked.includes(c.id);
               return (
@@ -132,7 +133,7 @@ export function CalendarImportScreen({
                   }
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: on }}
-                  accessibilityLabel={`캘린더 ${c.title}`}
+                  accessibilityLabel={tr('member.calendarImport.calendarA11y', { title: c.title })}
                   style={[styles.row, { backgroundColor: t.surfaceMuted }]}>
                   <BearCheck checked={on} size={20} />
                   <View style={styles.flex}>
@@ -147,7 +148,7 @@ export function CalendarImportScreen({
               );
             })}
             <Button
-              label="일정 불러오기"
+              label={tr('member.calendarImport.preview')}
               onPress={() => onPreview?.(picked)}
               disabled={picked.length === 0 || busy}
             />
@@ -159,16 +160,19 @@ export function CalendarImportScreen({
         {candidates != null && !busy ? (
           candidates.length === 0 ? (
             <Text style={[Typography.body, { color: t.textMuted }]}>
-              앞으로 30일 안에 가져올 일정이 없어요.
+              {tr('member.calendarImport.noEvents')}
             </Text>
           ) : (
             <>
               <Text style={[Typography.label, { color: t.text }]}>
-                가져올 일정 ({selected.length}/{candidates.length})
+                {tr('member.calendarImport.pickEvents', {
+                  selected: selected.length,
+                  total: candidates.length,
+                })}
               </Text>
               {!embeddingApplied ? (
                 <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                  지금은 제목이 똑같은 것만 겹침으로 표시돼요.
+                  {tr('member.calendarImport.exactOnly')}
                 </Text>
               ) : null}
               {candidates.map((c) => (
@@ -180,8 +184,8 @@ export function CalendarImportScreen({
                   accessibilityLabel={[
                     c.title,
                     shortDate(c.date),
-                    c.repeat ? REPEAT_LABEL[c.repeat] : null,
-                    c.similar.length > 0 ? '비슷한 항목 있음' : null,
+                    c.repeat ? repeatLabel(c.repeat) : null,
+                    c.similar.length > 0 ? tr('member.calendarImport.similarA11y') : null,
                   ]
                     .filter(Boolean)
                     .join(', ')}
@@ -199,15 +203,20 @@ export function CalendarImportScreen({
                           testID={`repeat-badge-${c.occurrenceId}`}
                           style={[styles.repeatBadge, { backgroundColor: t.primarySoft }]}>
                           <Text style={[Typography.supporting, { color: t.primaryText }]}>
-                            {REPEAT_LABEL[c.repeat]}
+                            {repeatLabel(c.repeat)}
                           </Text>
                         </View>
                       ) : null}
                     </View>
                     {c.similar.length > 0 ? (
                       <Text style={[Typography.supporting, { color: t.warningText }]}>
-                        비슷한 {c.similar[0].kind === 'ROUTINE' ? '루틴' : '할 일'}이 있어요 ·{' '}
-                        {c.similar[0].title}
+                        {tr('member.calendarImport.similarExists', {
+                          kind:
+                            c.similar[0].kind === 'ROUTINE'
+                              ? tr('member.calendarImport.kindRoutine')
+                              : tr('member.calendarImport.kindTodo'),
+                          title: c.similar[0].title,
+                        })}
                       </Text>
                     ) : null}
                   </View>
@@ -217,7 +226,7 @@ export function CalendarImportScreen({
                 </Pressable>
               ))}
               <Button
-                label={`${selected.length}개 가져오기`}
+                label={tr('member.calendarImport.import', { count: selected.length })}
                 onPress={() => onImport?.(selected)}
                 disabled={selected.length === 0 || busy}
               />
