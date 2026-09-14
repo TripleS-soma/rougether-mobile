@@ -29,6 +29,7 @@ import { useToast } from '@/components/ui/toast';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { track } from '@/lib/analytics';
 import { getCategoryGachas, getGachaCategory } from '@/constants/gacha';
+import { APP_FRAME_MAX_WIDTH, useAppFrame } from '@/hooks/use-app-frame';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
@@ -129,6 +130,7 @@ export function GachaScreen({
   soundEffectsEnabled = true,
 }: GachaScreenProps) {
   const t = useTokens();
+  const { split } = useAppFrame();
   const insets = useSafeAreaInsets();
   const Typography = useTypography();
   const emph = useFontEmphasis();
@@ -390,143 +392,154 @@ export function GachaScreen({
         navigationBarTranslucent
         animationType={shouldReduceMotion ? 'none' : 'fade'}
         onRequestClose={phase === 'reveal' ? close : skipAnimation}>
-        <View style={[styles.overlay, { backgroundColor: t.screen }]}>
-          {phase === 'charging' || phase === 'burst' ? (
-            <Pressable
-              onPress={skipAnimation}
-              accessibilityRole="button"
-              accessibilityLabel="뽑기 연출 건너뛰기"
-              style={[
-                styles.skipButton,
-                { top: Math.max(insets.top, Spacing.three), backgroundColor: Overlay.dim },
-              ]}>
-              <Text style={[Typography.supporting, emph('semibold'), styles.skipText]}>
-                건너뛰기
-              </Text>
-              <Icon name="forward" size={14} color={StaticWhite} />
-            </Pressable>
-          ) : null}
-          {phase === 'charging' ? (
-            <View style={styles.charging}>
-              <Image source={giftRoom} style={styles.chargingArt} contentFit="cover" />
-              <Loading />
-              <Text style={[Typography.label, { color: t.text }]}>선물을 준비하고 있어요</Text>
-              <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                잠깐만 기다려 주세요
-              </Text>
-            </View>
-          ) : phase === 'burst' ? (
-            revealPlan.items.length > 1 ? (
-              <MultiReveal
-                plan={revealPlan}
-                soundEffectsEnabled={soundEffectsEnabled}
-                reducedMotion={shouldReduceMotion}
-                onComplete={finishCinematic}
-              />
-            ) : (
-              <CinematicRevealShell
-                entry={featuredRevealItem}
-                profile={revealPlan.profile}
-                soundEffectsEnabled={soundEffectsEnabled}
-                reducedMotion={shouldReduceMotion}
-                onComplete={finishCinematic}
-              />
-            )
-          ) : phase === 'reveal' ? (
-            <>
-              <CinematicRewardStage
-                entry={featuredRevealItem}
-                tier={revealPlan.bestTier}
-                showArtwork={revealPlan.items.length === 1}
-              />
-              {revealPlan.items.length === 1 ? (
-                <View style={styles.singleCaption} accessibilityLiveRegion="polite">
-                  <Text style={[Typography.supporting, emph('semibold'), { color: t.onTint }]}>
-                    {featuredRevealItem?.badgeLabel ?? '나만의 새로운 발견'}
-                  </Text>
-                  <Text
-                    style={[Typography.h2, emph('bold'), styles.center, { color: t.onTint }]}
-                    numberOfLines={2}>
-                    {featuredRevealItem?.displayName}
-                  </Text>
-                  <Text style={[Typography.supporting, styles.center, { color: t.onTint }]}>
-                    {featuredRevealItem?.conversionLabel
-                      ? featuredRevealItem.conversionLabel
-                      : '새로운 선물이 내 방을 기다려요'}
-                  </Text>
-                </View>
-              ) : (
-                <View
-                  style={[
-                    styles.multiResults,
-                    {
-                      paddingTop: Math.max(insets.top, Spacing.four) + Spacing.four,
-                      bottom:
-                        resultActionsHeight +
-                        Math.max(insets.bottom, Spacing.three) +
-                        Spacing.two +
-                        Spacing.four,
-                    },
-                  ]}
-                  testID="gacha-multi-results">
-                  <Text style={[Typography.h2, emph('bold'), styles.center, { color: t.onTint }]}>
-                    뽑기 결과
-                  </Text>
-                  <Text
-                    style={[Typography.supporting, { color: t.onTint }]}
-                    accessibilityLiveRegion="polite">
-                    {revealPlan.items.length}개 획득
-                  </Text>
-                  <ScrollView
-                    style={styles.revealScroll}
-                    contentContainerStyle={styles.revealGrid}
-                    showsVerticalScrollIndicator={false}>
-                    {revealPlan.items.map((entry) => (
-                      <RevealCard
-                        key={`${entry.displayName}-${entry.index}`}
-                        entry={entry}
-                        // The cinematic already revealed every reward; never deal or flip again.
-                        reducedMotion
-                      />
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
-              <View
-                onLayout={({ nativeEvent }) => setResultActionsHeight(nativeEvent.layout.height)}
+        {/* 연출·결과는 세로 폰 화면(1080×2340 포스터) 좌표를 전제한다 — 넓은 창(웹 데스크톱·
+            2단 프레임)에서는 폰 폭 컬럼으로 가두고 바깥은 어둡게 레터박스. 안 그러면 포스터가
+            가로 폭 기준으로 커져 보상 그림 위쪽이 잘리고 버튼이 왼쪽에 붙는다 (2026-09-14). */}
+        <View style={[styles.overlay, { backgroundColor: split ? Overlay.strong : t.screen }]}>
+          <View
+            style={[
+              styles.stageFrame,
+              split && styles.stageFrameSplit,
+              { backgroundColor: t.screen },
+            ]}
+            testID="gacha-stage-frame">
+            {phase === 'charging' || phase === 'burst' ? (
+              <Pressable
+                onPress={skipAnimation}
+                accessibilityRole="button"
+                accessibilityLabel="뽑기 연출 건너뛰기"
                 style={[
-                  styles.resultActions,
-                  { bottom: Math.max(insets.bottom, Spacing.three) + Spacing.two },
+                  styles.skipButton,
+                  { top: Math.max(insets.top, Spacing.three), backgroundColor: Overlay.dim },
                 ]}>
-                {placeablePulled.length > 0 ? (
-                  <ScalePressable
-                    onPress={goPlace}
-                    accessibilityRole="button"
-                    accessibilityLabel="방 꾸미러 가기"
-                    style={[styles.confirmBtn, { backgroundColor: t.primary }]}>
-                    <Text style={[Typography.label, { color: t.onPrimary }]}>방 꾸미러 가기</Text>
-                    <Icon name="forward" size={18} color={t.onPrimary} />
-                  </ScalePressable>
-                ) : null}
-                <ScalePressable
-                  onPress={close}
-                  accessibilityRole="button"
-                  accessibilityLabel="확인"
-                  style={[
-                    styles.confirmBtn,
-                    { backgroundColor: placeablePulled.length ? t.surface : t.primary },
-                  ]}>
-                  <Text
-                    style={[
-                      Typography.label,
-                      { color: placeablePulled.length ? t.text : t.onPrimary },
-                    ]}>
-                    확인
-                  </Text>
-                </ScalePressable>
+                <Text style={[Typography.supporting, emph('semibold'), styles.skipText]}>
+                  건너뛰기
+                </Text>
+                <Icon name="forward" size={14} color={StaticWhite} />
+              </Pressable>
+            ) : null}
+            {phase === 'charging' ? (
+              <View style={styles.charging}>
+                <Image source={giftRoom} style={styles.chargingArt} contentFit="cover" />
+                <Loading />
+                <Text style={[Typography.label, { color: t.text }]}>선물을 준비하고 있어요</Text>
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                  잠깐만 기다려 주세요
+                </Text>
               </View>
-            </>
-          ) : null}
+            ) : phase === 'burst' ? (
+              revealPlan.items.length > 1 ? (
+                <MultiReveal
+                  plan={revealPlan}
+                  soundEffectsEnabled={soundEffectsEnabled}
+                  reducedMotion={shouldReduceMotion}
+                  onComplete={finishCinematic}
+                />
+              ) : (
+                <CinematicRevealShell
+                  entry={featuredRevealItem}
+                  profile={revealPlan.profile}
+                  soundEffectsEnabled={soundEffectsEnabled}
+                  reducedMotion={shouldReduceMotion}
+                  onComplete={finishCinematic}
+                />
+              )
+            ) : phase === 'reveal' ? (
+              <>
+                <CinematicRewardStage
+                  entry={featuredRevealItem}
+                  tier={revealPlan.bestTier}
+                  showArtwork={revealPlan.items.length === 1}
+                />
+                {revealPlan.items.length === 1 ? (
+                  <View style={styles.singleCaption} accessibilityLiveRegion="polite">
+                    <Text style={[Typography.supporting, emph('semibold'), { color: t.onTint }]}>
+                      {featuredRevealItem?.badgeLabel ?? '나만의 새로운 발견'}
+                    </Text>
+                    <Text
+                      style={[Typography.h2, emph('bold'), styles.center, { color: t.onTint }]}
+                      numberOfLines={2}>
+                      {featuredRevealItem?.displayName}
+                    </Text>
+                    <Text style={[Typography.supporting, styles.center, { color: t.onTint }]}>
+                      {featuredRevealItem?.conversionLabel
+                        ? featuredRevealItem.conversionLabel
+                        : '새로운 선물이 내 방을 기다려요'}
+                    </Text>
+                  </View>
+                ) : (
+                  <View
+                    style={[
+                      styles.multiResults,
+                      {
+                        paddingTop: Math.max(insets.top, Spacing.four) + Spacing.four,
+                        bottom:
+                          resultActionsHeight +
+                          Math.max(insets.bottom, Spacing.three) +
+                          Spacing.two +
+                          Spacing.four,
+                      },
+                    ]}
+                    testID="gacha-multi-results">
+                    <Text style={[Typography.h2, emph('bold'), styles.center, { color: t.onTint }]}>
+                      뽑기 결과
+                    </Text>
+                    <Text
+                      style={[Typography.supporting, { color: t.onTint }]}
+                      accessibilityLiveRegion="polite">
+                      {revealPlan.items.length}개 획득
+                    </Text>
+                    <ScrollView
+                      style={styles.revealScroll}
+                      contentContainerStyle={styles.revealGrid}
+                      showsVerticalScrollIndicator={false}>
+                      {revealPlan.items.map((entry) => (
+                        <RevealCard
+                          key={`${entry.displayName}-${entry.index}`}
+                          entry={entry}
+                          // The cinematic already revealed every reward; never deal or flip again.
+                          reducedMotion
+                        />
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+                <View
+                  onLayout={({ nativeEvent }) => setResultActionsHeight(nativeEvent.layout.height)}
+                  style={[
+                    styles.resultActions,
+                    { bottom: Math.max(insets.bottom, Spacing.three) + Spacing.two },
+                  ]}>
+                  {placeablePulled.length > 0 ? (
+                    <ScalePressable
+                      onPress={goPlace}
+                      accessibilityRole="button"
+                      accessibilityLabel="방 꾸미러 가기"
+                      style={[styles.confirmBtn, { backgroundColor: t.primary }]}>
+                      <Text style={[Typography.label, { color: t.onPrimary }]}>방 꾸미러 가기</Text>
+                      <Icon name="forward" size={18} color={t.onPrimary} />
+                    </ScalePressable>
+                  ) : null}
+                  <ScalePressable
+                    onPress={close}
+                    accessibilityRole="button"
+                    accessibilityLabel="확인"
+                    style={[
+                      styles.confirmBtn,
+                      { backgroundColor: placeablePulled.length ? t.surface : t.primary },
+                    ]}>
+                    <Text
+                      style={[
+                        Typography.label,
+                        { color: placeablePulled.length ? t.text : t.onPrimary },
+                      ]}>
+                      확인
+                    </Text>
+                  </ScalePressable>
+                </View>
+              </>
+            ) : null}
+          </View>
         </View>
       </Modal>
 
@@ -613,6 +626,8 @@ const styles = StyleSheet.create({
   rewardsGroupGap: { marginTop: Spacing.three },
   rarityDot: { width: 8, height: 8, borderRadius: Radius.pill },
   overlay: { flex: 1 },
+  stageFrame: { flex: 1, width: '100%', alignSelf: 'center', overflow: 'hidden' },
+  stageFrameSplit: { maxWidth: APP_FRAME_MAX_WIDTH },
   charging: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.three },
   chargingArt: { width: '100%', maxWidth: 520, aspectRatio: 4 / 3 },
   skipButton: {
