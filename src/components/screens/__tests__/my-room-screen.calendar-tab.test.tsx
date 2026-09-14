@@ -177,13 +177,12 @@ describe('MyRoomScreen', () => {
     );
     await pickCalendarDate(ui, YESTERDAY);
     // 미션 연동 카테고리는 달력에서도 + 미노출 (방탭과 같은 규칙).
-    expect(ui.queryByLabelText('일정에 추가')).toBeNull();
-    await fireEvent.press(ui.getByLabelText('건강에 추가'));
-    // 날짜 칩이 선택한 날짜(어제)로 프리필된다.
-    await fireEvent.press(ui.getAllByRole('tab', { name: '할 일' }).at(-1)!);
-    const input = ui.getByLabelText('할 일 제목');
+    expect(ui.queryByLabelText('일정 할 일 추가')).toBeNull();
+    await fireEvent.press(ui.getByLabelText('건강 할 일 추가'));
+    // 인라인 입력행 — 날짜 칩이 선택한 날짜(어제)로 프리필되고, 텍스트만 넣고 blur하면 저장.
+    const input = ui.getByPlaceholderText('할 일 입력 후 완료');
     await fireEvent.changeText(input, '어제 밀린 일');
-    await fireEvent.press(ui.getByLabelText('할 일 저장'));
+    await fireEvent(input, 'blur');
     expect(onQuickAddRoutine).toHaveBeenCalledWith('건강', '어제 밀린 일', YESTERDAY);
   });
 
@@ -193,13 +192,12 @@ describe('MyRoomScreen', () => {
       <MyRoomScreen routines={SAMPLE_ROUTINES} onQuickAddRoutine={onQuickAddRoutine} />,
     );
     await pickCalendarDate(ui, TODAY);
-    await fireEvent.press(ui.getByLabelText('건강에 추가'));
+    await fireEvent.press(ui.getByLabelText('건강 할 일 추가'));
     // 오늘이면 날짜 칩은 '오늘'.
-    await fireEvent.press(ui.getAllByRole('tab', { name: '할 일' }).at(-1)!);
     expect(ui.getByText('오늘')).toBeTruthy();
-    const input = ui.getByLabelText('할 일 제목');
+    const input = ui.getByPlaceholderText('할 일 입력 후 완료');
     await fireEvent.changeText(input, '오늘 할 일');
-    await fireEvent.press(ui.getByLabelText('할 일 저장'));
+    await fireEvent(input, 'blur');
     expect(onQuickAddRoutine).toHaveBeenCalledWith('건강', '오늘 할 일', TODAY);
   });
 
