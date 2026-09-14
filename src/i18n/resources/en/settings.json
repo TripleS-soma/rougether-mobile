@@ -1,18 +1,4 @@
 {
-  "common": {
-    "back": "Back",
-    "apply": "Apply",
-    "cancel": "Cancel",
-    "confirm": "OK"
-  },
-  "nav": {
-    "myRoom": "My Room",
-    "myRoomShort": "Room",
-    "calendar": "Calendar",
-    "house": "House",
-    "myPage": "Profile",
-    "badgeAbsent": "Not checked in today"
-  },
   "settings": {
     "title": "Settings",
     "sectionDesign": "Appearance",
