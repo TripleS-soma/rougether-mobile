@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
-import { CURRENCY_GUIDES } from '@/constants/currency';
+import { getCurrencyGuides } from '@/constants/currency';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 export type CurrencyGuideProps = {
   /** 펼친 채로 시작 — Dev 갤러리·테스트용. 실사용은 접힘이 기본. */
@@ -21,6 +22,7 @@ export type CurrencyGuideProps = {
  */
 export function CurrencyGuide({ initialOpen = false }: CurrencyGuideProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const [open, setOpen] = useState(initialOpen);
@@ -31,7 +33,7 @@ export function CurrencyGuide({ initialOpen = false }: CurrencyGuideProps) {
         onPress={() => setOpen((v) => !v)}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
-        accessibilityLabel="코인·다이아는 어떻게 모으나요?"
+        accessibilityLabel={tr('app.currency.guideA11y')}
         style={styles.head}>
         <Icon name="help" size={16} color={t.textMuted} />
         <Text style={[Typography.body, styles.flex, { color: t.text }]}>
@@ -44,7 +46,7 @@ export function CurrencyGuide({ initialOpen = false }: CurrencyGuideProps) {
 
       {open ? (
         <View style={styles.body}>
-          {CURRENCY_GUIDES.map((guide) => (
+          {getCurrencyGuides().map((guide) => (
             <View key={guide.currency} style={styles.block}>
               <View style={styles.blockHead}>
                 <Icon
@@ -59,8 +61,8 @@ export function CurrencyGuide({ initialOpen = false }: CurrencyGuideProps) {
 
               {(
                 [
-                  ['모으기', guide.earn],
-                  ['쓰기', guide.spend],
+                  [tr('app.currency.earn'), guide.earn],
+                  [tr('app.currency.spend'), guide.spend],
                 ] as const
               ).map(([title, items]) => (
                 <View key={title} style={styles.group}>

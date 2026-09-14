@@ -11,6 +11,7 @@ import { toGuestbookEntry } from '@/api/adapters';
 import { useToast } from '@/components/ui/toast';
 import type { GuestbookEntry } from '@/components/screens/friend-room-screen';
 import { track } from '@/lib/analytics';
+import { i18n } from '@/i18n';
 
 export function useGuestbook() {
   const [entries, setEntries] = useState<GuestbookEntry[] | undefined>(undefined);
@@ -41,7 +42,7 @@ export function useGuestbook() {
         // 로드 실패를 '방명록 없음'으로 위장하지 않도록 정직하게 알린다 (#549).
         setEntries([]);
         setHasNext(false);
-        toast('방명록을 불러오지 못했어요', 'error');
+        toast(i18n.t('app.guestbook.loadFailed'), 'error');
       } finally {
         setLoading(false);
       }
@@ -58,7 +59,7 @@ export function useGuestbook() {
       setEntries((prev) => [...(prev ?? []), ...page.items.map(toGuestbookEntry)]);
       setHasNext(page.hasNext);
     } catch {
-      toast('방명록을 더 불러오지 못했어요', 'error');
+      toast(i18n.t('app.guestbook.loadMoreFailed'), 'error');
     }
   }, [toast]);
 
@@ -75,11 +76,11 @@ export function useGuestbook() {
           content: created.content,
           createdAt: created.createdAt,
         });
-        setEntries((prev) => [{ ...entry, author: '나' }, ...(prev ?? [])]);
-        toast('방명록을 남겼어요', 'success');
+        setEntries((prev) => [{ ...entry, author: i18n.t('app.guestbook.me') }, ...(prev ?? [])]);
+        toast(i18n.t('app.guestbook.posted'), 'success');
         track('guestbook_write');
       } catch {
-        toast('방명록 작성에 실패했어요', 'error');
+        toast(i18n.t('app.guestbook.postFailed'), 'error');
       }
     },
     [toast],

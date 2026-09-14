@@ -54,6 +54,7 @@ import { calendarToday } from '@/utils/calendar-progress';
 import { CoachMarkOverlay, useCoachTargets } from '@/components/ui/coach-mark';
 import { useTabScroll } from '@/components/app/use-tab-scroll';
 import { MinigameActiveContext, useMinigameSurface } from '@/components/app/use-minigame-surface';
+import { useT } from '@/i18n';
 
 // 내비게이션 상수·backTargetFor는 navigation.ts로 이동 (#692) — 기존
 // 임포터(테스트 등)를 위한 재수출.
@@ -121,6 +122,7 @@ export function AppShell({
   // 집 하늘 연출용 현재 비 여부 (#360) — 서울 고정, 30분 캐시.
   // 위젯에 넘길 실효 라이트/다크 (#746) — 앱 테마 모드 설정이 적용된 값.
   const resolvedScheme = useResolvedScheme();
+  const tr = useT();
   const [screen, setScreen] = useState<Screen>(initialScreen);
   const minigames = useMinigameSurface({ screen, setScreen });
   // Remember where the add/edit-routine screen was opened from, so its back
@@ -791,7 +793,10 @@ export function AppShell({
           index={0}
           targets={coachTargets}
           frame={coachFrame}
-          caption={`미션 ${missions.stepIndex + 1}/${missions.totalSteps}`}
+          caption={tr('app.shell.missionCaption', {
+            index: missions.stepIndex + 1,
+            total: missions.totalSteps,
+          })}
         />
       ) : null}
     </View>

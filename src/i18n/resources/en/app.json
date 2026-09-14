@@ -1,3 +1,116 @@
 {
-  "app": {}
+  "app": {
+    "passwordChange": {
+      "title": "Change password",
+      "current": "Current password",
+      "new": "New password",
+      "newPlaceholder": "At least {{min}} characters",
+      "tooShort": "Password must be at least {{min}} characters.",
+      "sameAsCurrent": "Choose a password different from the current one.",
+      "confirm": "Confirm new password",
+      "confirmPlaceholder": "Enter the new password again",
+      "mismatch": "Passwords don't match.",
+      "match": "Passwords match.",
+      "pending": "Coming soon"
+    },
+    "currency": {
+      "coin": "Coins",
+      "diamond": "Diamonds",
+      "earnRoutine": "Routine completed",
+      "earnTodo": "To-do completed",
+      "earnDailyCap": "Today's completions only, up to 4 routines and to-dos combined per day",
+      "earnBonus": "Sign-up bonus · Friend invite rewards",
+      "earnDupCharacter": "Refund when a character draw gives one you already own",
+      "spendGacha": "Draws",
+      "spendGachaDetail": "Varies by machine",
+      "earnDupItem": "Converted when a draw gives an item you already own",
+      "spendFurniture": "Buying furniture in Decorate",
+      "spendFurnitureDetail": "Varies by item",
+      "guideA11y": "How do I earn coins and diamonds?",
+      "earn": "Earn",
+      "spend": "Spend"
+    },
+    "settingsToast": {
+      "themeApplied": "Applied the “{{name}}” theme",
+      "fontApplied": "Applied the “{{name}}” font",
+      "withdrawDone": "Your account has been deleted",
+      "withdrawFailed": "Couldn't delete the account. Please try again later",
+      "mailSubject": "[Rougether] Inquiry",
+      "linkFailed": "Couldn't open the link. Please try again later.",
+      "importedFailed": "Imported {{imported}}. {{failed}} failed.",
+      "importedSkipped": "Imported {{imported}}. {{skipped}} were already imported.",
+      "imported": "Imported {{imported}}."
+    },
+    "time": {
+      "am": "AM",
+      "pm": "PM",
+      "justNow": "Just now",
+      "minutesAgo": "{{count}}m ago",
+      "hoursAgo": "{{count}}h ago",
+      "daysAgo": "{{count}}d ago",
+      "monthDay": "{{month}}/{{day}}"
+    },
+    "invite": {
+      "alreadyRedeemed": "An invite code can only be used once",
+      "selfNotAllowed": "You can't use your own invite code",
+      "notUsable": "This invite code can't be used",
+      "notFound": "Invite code not found",
+      "checkFailed": "Couldn't verify the invite code",
+      "redeemFailed": "Couldn't use the invite code"
+    },
+    "navMenu": {
+      "close": "Close",
+      "changeCharacter": "Change character",
+      "decorate": "Decorate room",
+      "saveImage": "Save room image",
+      "manageCategories": "Manage categories",
+      "manageRoutines": "Manage routines"
+    },
+    "guestbook": {
+      "loadFailed": "Couldn't load the guestbook",
+      "loadMoreFailed": "Couldn't load more guestbook entries",
+      "me": "Me",
+      "posted": "Guestbook entry posted",
+      "postFailed": "Couldn't post to the guestbook"
+    },
+    "rename": {
+      "title": "Rename",
+      "placeholder": "Routine name",
+      "save": "Save"
+    },
+    "room": {
+      "decorateWall": "Decorate wall",
+      "decorateFloor": "Decorate floor",
+      "poseA11y": "{{name}}, tap to change pose",
+      "cleanCobweb": "Clear cobweb",
+      "cobwebA11y": "There's a cobweb"
+    },
+    "friendVisit": {
+      "friend": "Friend",
+      "cheerNotAllowed": "You can't send cheers in this room",
+      "cobwebAlreadyCleaned": "Someone cleared it first",
+      "cobwebFailed": "Couldn't clear the cobweb. Please try again later."
+    },
+    "characterPicker": {
+      "title": "Change character",
+      "close": "Close",
+      "wearA11y": "Wear {{name}}"
+    },
+    "policy": {
+      "terms": "Terms of Service",
+      "privacy": "Privacy Policy",
+      "loadFailed": "Couldn't load the document.",
+      "checkNetwork": "Please check your network connection."
+    },
+    "ui": {
+      "closeToast": "Dismiss",
+      "retry": "Retry",
+      "closeSheet": "Close sheet"
+    },
+    "shell": {
+      "exitHint": "Press back again to exit",
+      "missionCaption": "Mission {{index}}/{{total}}",
+      "goalFallback": "Goal"
+    }
+  }
 }

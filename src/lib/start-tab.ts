@@ -6,10 +6,11 @@ import type { NavTab } from '@/components/ui/bottom-nav';
 export const START_TAB_KEY = 'rougether.start-tab';
 export const DEFAULT_START_TAB: NavTab = 'myRoom';
 export const START_TAB_OPTIONS: { id: NavTab; name: string }[] = [
-  { id: 'myRoom', name: '나의 방' },
-  { id: 'calendar', name: '달력' },
-  { id: 'house', name: '집' },
-  { id: 'myPage', name: '내 정보' },
+  // name은 i18n 키 (#893) — 설정 화면이 tr(name)으로 그린다.
+  { id: 'myRoom', name: 'nav.myRoom' },
+  { id: 'calendar', name: 'nav.calendar' },
+  { id: 'house', name: 'nav.house' },
+  { id: 'myPage', name: 'nav.myPage' },
 ];
 
 export function isNavTab(value: unknown): value is NavTab {

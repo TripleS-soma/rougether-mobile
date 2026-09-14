@@ -112,10 +112,10 @@ export function useSettingsSurface({
       if (id === themeId) return;
       setThemeId(id);
       const name = THEME_OPTIONS.find((o) => o.id === id)?.name;
-      if (name) toast(`“${name}” 테마를 적용했어요`);
+      if (name) toast(tr('app.settingsToast.themeApplied', { name }));
       setScreen('settings');
     },
-    [themeId, setThemeId, toast, setScreen],
+    [themeId, setThemeId, toast, setScreen, tr],
   );
 
   const changeFontId = useCallback(
@@ -123,10 +123,10 @@ export function useSettingsSurface({
       if (id === fontId) return;
       setFontId(id);
       const name = FONT_OPTIONS.find((o) => o.id === id)?.name;
-      if (name) toast(`“${name}” 폰트를 적용했어요`);
+      if (name) toast(tr('app.settingsToast.fontApplied', { name }));
       setScreen('settings');
     },
-    [fontId, setFontId, toast, setScreen],
+    [fontId, setFontId, toast, setScreen, tr],
   );
   // 캘린더 임포트 상태 (#844) — 권한·조회·임포트를 훅이 쥔다.
   const calendarImport = useCalendarImport();
@@ -141,17 +141,17 @@ export function useSettingsSurface({
   const handleWithdraw = useCallback(() => {
     // 성공 시 status가 guest로 바뀌어 AppRoot가 로그인으로 보낸다 (#547).
     void withdraw().then((ok) => {
-      if (ok) toast('탈퇴가 완료됐어요');
-      else toast('탈퇴에 실패했어요. 잠시 후 다시 시도해 주세요', 'error');
+      if (ok) toast(tr('app.settingsToast.withdrawDone'));
+      else toast(tr('app.settingsToast.withdrawFailed'), 'error');
     });
-  }, [withdraw, toast]);
+  }, [withdraw, toast, tr]);
 
   // 외부 링크 — 핸들러 없는 기기(메일 앱 미설정 등)에서 reject되므로 토스트로 안내.
   const openSupportMail = useCallback(() => {
-    Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('[루게더] 문의')}`).catch(
-      () => toast('링크를 열 수 없어요. 잠시 후 다시 시도해 주세요.', 'error'),
-    );
-  }, [toast]);
+    Linking.openURL(
+      `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(tr('app.settingsToast.mailSubject'))}`,
+    ).catch(() => toast(tr('app.settingsToast.linkFailed'), 'error'));
+  }, [toast, tr]);
 
   // 버그 제보 (#496) — 화면을 열 때 내 제보 내역을 불러온다.
   const {
@@ -400,10 +400,16 @@ export function useSettingsSurface({
           if (out.imported > 0) onRoutinesImported?.();
           toast(
             out.failed > 0
-              ? `${out.imported}개를 가져왔어요. ${out.failed}개는 실패했어요.`
+              ? tr('app.settingsToast.importedFailed', {
+                  imported: out.imported,
+                  failed: out.failed,
+                })
               : out.skipped > 0
-                ? `${out.imported}개를 가져왔어요. ${out.skipped}개는 이미 가져온 일정이에요.`
-                : `${out.imported}개를 가져왔어요.`,
+                ? tr('app.settingsToast.importedSkipped', {
+                    imported: out.imported,
+                    skipped: out.skipped,
+                  })
+                : tr('app.settingsToast.imported', { imported: out.imported }),
           );
           return out;
         }}

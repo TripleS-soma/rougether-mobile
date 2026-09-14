@@ -7,6 +7,7 @@ import { RetryState } from '@/components/ui/retry-state';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 export type PolicyViewerScreenProps = {
   /** Header title (이용약관 / 개인정보처리방침). */
@@ -23,6 +24,7 @@ export type PolicyViewerScreenProps = {
  */
 export function PolicyViewerScreen({ title, url, onBack }: PolicyViewerScreenProps) {
   const t = useTokens();
+  const tr = useT();
   // 떠 있는 글래스 헤더(#1069) — 웹뷰는 RN 스크롤이 아니라 마진으로 비켜 준다.
   const headerInset = useHeaderContentInset();
   const [loading, setLoading] = useState(true);
@@ -37,8 +39,8 @@ export function PolicyViewerScreen({ title, url, onBack }: PolicyViewerScreenPro
       {failed ? (
         <View style={styles.center}>
           <RetryState
-            message="문서를 불러오지 못했어요."
-            detail="네트워크 연결을 확인해 주세요."
+            message={tr('app.policy.loadFailed')}
+            detail={tr('app.policy.checkNetwork')}
             onRetry={() => {
               setFailed(false);
               setLoading(true);

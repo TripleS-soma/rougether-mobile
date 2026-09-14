@@ -29,6 +29,7 @@ import { Overlay } from '@/constants/theme';
 import { useAnimatedValue, useConstant, useLatestRef } from '@/hooks/use-stable-value';
 import { useAndroidKeyboardHeight } from '@/hooks/use-android-keyboard-height';
 import { NATIVE_DRIVER } from '@/utils/animation';
+import { useT } from '@/i18n';
 
 // 스와이프-다운 닫기 (#469) — 이만큼 끌어내리거나(플링) 이 속도를 넘기면 닫는다.
 const DISMISS_DISTANCE = 96;
@@ -166,6 +167,7 @@ export function BottomSheet({
   children,
 }: BottomSheetProps) {
   const { height: windowH } = useWindowDimensions();
+  const tr = useT();
   const keyboardHeight = useAndroidKeyboardHeight(avoidKeyboard && Platform.OS === 'android');
   const progress = useAnimatedValue(0);
   // 손가락으로 끌어내린 추가 오프셋(아래로만). 놓으면 0으로 튕겨 돌아가거나 닫힘.
@@ -327,7 +329,7 @@ export function BottomSheet({
         style={StyleSheet.absoluteFill}
         onPress={onClose}
         accessibilityRole="button"
-        accessibilityLabel="시트 닫기"
+        accessibilityLabel={tr('app.ui.closeSheet')}
       />
       {/* 웹 데스크톱: 딤은 창 전체, 카드만 앱 프레임 폭(중앙 컬럼)에 맞춘다. */}
       <ModalFrame>

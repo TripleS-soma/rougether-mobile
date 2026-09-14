@@ -2,10 +2,11 @@ import { router, useLocalSearchParams } from 'expo-router';
 
 import { PolicyViewerScreen } from '@/components/screens/policy-viewer-screen';
 import { type PolicyDoc, PolicyUrls } from '@/constants/policy';
+import { i18n } from '@/i18n';
 
 const TITLES: Record<PolicyDoc, string> = {
-  terms: '이용약관',
-  privacy: '개인정보처리방침',
+  terms: 'app.policy.terms',
+  privacy: 'app.policy.privacy',
 };
 
 /** In-app policy viewer route — `/policy?doc=terms|privacy` (defaults to terms). */
@@ -14,7 +15,7 @@ export default function Policy() {
   const key: PolicyDoc = doc === 'privacy' ? 'privacy' : 'terms';
   return (
     <PolicyViewerScreen
-      title={TITLES[key]}
+      title={i18n.t(TITLES[key])}
       url={PolicyUrls[key]}
       onBack={() => (router.canGoBack() ? router.back() : router.replace('/'))}
     />

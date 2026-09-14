@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 export type RetryStateProps = {
   /**
@@ -23,14 +24,11 @@ export type RetryStateProps = {
  * gap) matches the replaced blocks — screens keep their own outer padding
  * containers around it.
  */
-export function RetryState({
-  message,
-  detail,
-  onRetry,
-  retryLabel = '다시 시도',
-}: RetryStateProps) {
+export function RetryState({ message, detail, onRetry, retryLabel }: RetryStateProps) {
   const t = useTokens();
   const Typography = useTypography();
+  const tr = useT();
+  const resolvedRetryLabel = retryLabel ?? tr('app.ui.retry');
   return (
     <View style={styles.wrap}>
       <Text
@@ -48,9 +46,9 @@ export function RetryState({
         <Pressable
           onPress={onRetry}
           accessibilityRole="button"
-          accessibilityLabel={retryLabel}
+          accessibilityLabel={resolvedRetryLabel}
           style={[styles.retryBtn, { backgroundColor: t.primary }]}>
-          <Text style={[Typography.label, { color: t.onPrimary }]}>{retryLabel}</Text>
+          <Text style={[Typography.label, { color: t.onPrimary }]}>{resolvedRetryLabel}</Text>
         </Pressable>
       ) : null}
     </View>
