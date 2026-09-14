@@ -9,6 +9,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useActionBarInset, useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 const MIN_LENGTH = 8;
 
@@ -27,6 +28,7 @@ export type PasswordChangeScreenProps = {
  */
 export function PasswordChangeScreen({ onBack }: PasswordChangeScreenProps) {
   const t = useTokens();
+  const tr = useT();
   const column = useResponsiveColumn();
   // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
   const headerInset = useHeaderContentInset();
@@ -41,7 +43,7 @@ export function PasswordChangeScreen({ onBack }: PasswordChangeScreenProps) {
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
-      <ScreenHeader title="비밀번호 변경" onBack={onBack} />
+      <ScreenHeader title={tr('app.passwordChange.title')} onBack={onBack} />
 
       <ScrollView
         contentContainerStyle={[
@@ -58,37 +60,37 @@ export function PasswordChangeScreen({ onBack }: PasswordChangeScreenProps) {
           </Text>
         </View>
         <Field
-          label="현재 비밀번호"
+          label={tr('app.passwordChange.current')}
           value={current}
           onChangeText={setCurrent}
-          placeholder="현재 비밀번호"
+          placeholder={tr('app.passwordChange.current')}
           secureTextEntry
           autoCapitalize="none"
         />
         <Field
-          label="새 비밀번호"
+          label={tr('app.passwordChange.new')}
           value={next}
           onChangeText={setNext}
-          placeholder={`${MIN_LENGTH}자 이상 입력해주세요`}
+          placeholder={tr('app.passwordChange.newPlaceholder', { min: MIN_LENGTH })}
           secureTextEntry
           autoCapitalize="none"
           error={
             tooShort
-              ? `비밀번호는 ${MIN_LENGTH}자 이상이어야 해요.`
+              ? tr('app.passwordChange.tooShort', { min: MIN_LENGTH })
               : next.length >= MIN_LENGTH && next === current
-                ? '현재 비밀번호와 다르게 입력해주세요.'
+                ? tr('app.passwordChange.sameAsCurrent')
                 : undefined
           }
         />
         <Field
-          label="새 비밀번호 확인"
+          label={tr('app.passwordChange.confirm')}
           value={confirm}
           onChangeText={setConfirm}
-          placeholder="새 비밀번호를 다시 입력해주세요"
+          placeholder={tr('app.passwordChange.confirmPlaceholder')}
           secureTextEntry
           autoCapitalize="none"
-          error={mismatch ? '비밀번호가 일치하지 않아요.' : undefined}
-          success={confirm.length > 0 && !mismatch ? '비밀번호가 일치해요.' : undefined}
+          error={mismatch ? tr('app.passwordChange.mismatch') : undefined}
+          success={confirm.length > 0 && !mismatch ? tr('app.passwordChange.match') : undefined}
         />
       </ScrollView>
 
@@ -98,10 +100,12 @@ export function PasswordChangeScreen({ onBack }: PasswordChangeScreenProps) {
           disabled
           accessibilityRole="button"
           accessibilityState={{ disabled: true }}
-          accessibilityLabel="비밀번호 변경"
+          accessibilityLabel={tr('app.passwordChange.title')}
           style={styles.submit}>
           <GlassSurface style={styles.submitFace} fallbackColor={t.surfaceMuted}>
-            <Text style={[Typography.label, { color: t.textMuted }]}>변경 준비 중</Text>
+            <Text style={[Typography.label, { color: t.textMuted }]}>
+              {tr('app.passwordChange.pending')}
+            </Text>
           </GlassSurface>
         </Pressable>
       </ActionBar>

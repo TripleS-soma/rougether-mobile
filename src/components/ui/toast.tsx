@@ -16,6 +16,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
 import { NATIVE_DRIVER } from '@/utils/animation';
+import { useT } from '@/i18n';
 
 export type ToastType = 'info' | 'success' | 'error';
 
@@ -105,6 +106,7 @@ function ToastView({
 }) {
   const t = useTokens();
   const Typography = useTypography();
+  const tr = useT();
   const insets = useContext(SafeAreaInsetsContext);
   // 기본(무타입) 토스트는 브랜드 primary — 테마를 바꾸면 토스트도 따라
   // 바뀐다(테마 연결 요청). error/success는 시맨틱 유지.
@@ -133,7 +135,10 @@ function ToastView({
         fallbackColor={bg}
         style={styles.face}
         testID="toast-face">
-        <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel="알림 닫기">
+        <Pressable
+          onPress={onPress}
+          accessibilityRole="button"
+          accessibilityLabel={tr('app.ui.closeToast')}>
           <Text style={[Typography.label, styles.text, { color: ink }]} numberOfLines={2}>
             {toast.message}
           </Text>

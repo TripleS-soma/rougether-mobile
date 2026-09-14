@@ -8,6 +8,7 @@ import { CHARACTER_OPTIONS, type CharacterId } from '@/constants/characters';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { assetSource, isCdnKey } from '@/resources/asset';
+import { useT } from '@/i18n';
 
 /** One owned character (server GET /me/characters). */
 export type OwnedCharacter = {
@@ -44,6 +45,7 @@ export function CharacterPickerSheet({
   onClose,
 }: CharacterPickerSheetProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   return (
@@ -52,11 +54,11 @@ export function CharacterPickerSheet({
       onClose={onClose}
       cardStyle={[styles.sheet, { backgroundColor: t.screen }]}>
       <View style={[styles.head, { borderBottomColor: t.border }]}>
-        <Text style={[Typography.h3, { color: t.text }]}>캐릭터 교체</Text>
+        <Text style={[Typography.h3, { color: t.text }]}>{tr('app.characterPicker.title')}</Text>
         <Pressable
           onPress={onClose}
           accessibilityRole="button"
-          accessibilityLabel="닫기"
+          accessibilityLabel={tr('app.characterPicker.close')}
           style={[styles.close, { backgroundColor: t.surfaceMuted }]}>
           <Icon name="close" size={16} color={t.text} />
         </Pressable>
@@ -82,7 +84,7 @@ export function CharacterPickerSheet({
                     }}
                     accessibilityRole="button"
                     // The avatar art inside already carries the bare name label.
-                    accessibilityLabel={`${c.name} 착용`}
+                    accessibilityLabel={tr('app.characterPicker.wearA11y', { name: c.name })}
                     accessibilityState={{ selected: c.selected }}
                     style={[
                       styles.cell,
