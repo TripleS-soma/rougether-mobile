@@ -10,6 +10,7 @@ import { loadIntroSeen, markIntroSeen } from '@/lib/intro-store';
 import { hasKakaoRedirect } from '@/lib/kakao-auth';
 import { loadLastLoginProvider, type SocialProvider } from '@/lib/last-login';
 import type { SocialLoginResult } from '@/lib/login-conflict';
+import { i18n } from '@/i18n';
 
 // 409 안내(LoginConflict)도 결과에 포함 — 계측은 취소만 보고 나머지는 그대로 화면에 넘긴다.
 type SocialLogin = () => Promise<SocialLoginResult>;
@@ -61,7 +62,7 @@ export default function Login() {
       if (result === 'ok') router.replace('/');
       else if (result === 'cancelled') track('login_cancel', { provider: 'kakao' });
       else {
-        const base = '카카오 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.';
+        const base = i18n.t('member.login.kakaoFailed');
         const f = getLastLoginFailure();
         setResumeError(f ? loginErrorMessage(base, f) : base);
       }

@@ -4,6 +4,7 @@ import { Loading } from '@/components/ui/loading';
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 /**
  * 집이 없을 때의 화면 — 로딩 / 로드 실패 + 다시 시도(#549) / 빈 상태(집 탐색
@@ -28,6 +29,7 @@ export function HouseEmptyState({
   onOpenSearch,
 }: HouseEmptyStateProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   return (
     <View style={[styles.screen, screenStyle]}>
@@ -35,36 +37,44 @@ export function HouseEmptyState({
         {loading ? (
           <>
             <Loading />
-            <Text style={[Typography.supporting, { color: t.textMuted }]}>불러오는 중...</Text>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              {tr('house.empty.loading')}
+            </Text>
           </>
         ) : loadError ? (
           // 로드 실패 (#549) — 집이 있는 사용자가 '집 없음' 가입 유도를 보지
           // 않도록 빈 상태 분기보다 먼저 처리한다.
           <>
-            <Text style={[Typography.h3, { color: t.text }]}>집 정보를 불러오지 못했어요</Text>
+            <Text style={[Typography.h3, { color: t.text }]}>
+              {tr('house.empty.loadErrorTitle')}
+            </Text>
             <Text style={[Typography.body, styles.emptyBody, { color: t.textMuted }]}>
-              네트워크 상태를 확인하고 다시 시도해 주세요.
+              {tr('house.empty.loadErrorBody')}
             </Text>
             <ScalePressable
               onPress={onRetry}
               accessibilityRole="button"
-              accessibilityLabel="다시 시도"
+              accessibilityLabel={tr('house.empty.retry')}
               style={[styles.emptyCta, { backgroundColor: t.primary }]}>
-              <Text style={[Typography.label, { color: t.onPrimary }]}>다시 시도</Text>
+              <Text style={[Typography.label, { color: t.onPrimary }]}>
+                {tr('house.empty.retry')}
+              </Text>
             </ScalePressable>
           </>
         ) : (
           <>
-            <Text style={[Typography.h3, { color: t.text }]}>아직 함께하는 집이 없어요</Text>
+            <Text style={[Typography.h3, { color: t.text }]}>{tr('house.empty.noHouseTitle')}</Text>
             <Text style={[Typography.body, styles.emptyBody, { color: t.textMuted }]}>
-              집을 만들거나 초대코드로 입주해 친구들과 루틴을 함께 키워보세요.
+              {tr('house.empty.noHouseBody')}
             </Text>
             <ScalePressable
               onPress={onOpenSearch}
               accessibilityRole="button"
-              accessibilityLabel="집 탐색"
+              accessibilityLabel={tr('house.empty.searchA11y')}
               style={[styles.emptyCta, { backgroundColor: t.primary }]}>
-              <Text style={[Typography.label, { color: t.onPrimary }]}>집 탐색하기</Text>
+              <Text style={[Typography.label, { color: t.onPrimary }]}>
+                {tr('house.empty.searchCta')}
+              </Text>
             </ScalePressable>
           </>
         )}

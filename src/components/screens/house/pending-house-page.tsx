@@ -9,6 +9,7 @@ import { Icon } from '@/components/ui/icon';
 import { ScalePressable } from '@/components/ui/scale-pressable';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 /**
  * 승인 대기 페이지 (#648) — 잠금형 카드. house-screen.tsx의 대체 return 분기를
@@ -48,6 +49,7 @@ export function PendingHousePage({
   onCancelJoinRequest,
 }: PendingHousePageProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   const [pendingToCancel, setPendingToCancel] = useState<PendingJoinHouse | null>(null);
 
@@ -64,23 +66,27 @@ export function PendingHousePage({
         <View style={[styles.pendingCard, { backgroundColor: t.surface }]}>
           <Icon name="lock" size={40} color={t.textDisabled} />
           <Text style={[Typography.h3, styles.pendingTitle, { color: t.text }]}>
-            방장 승인을 기다리고 있어요
+            {tr('house.pending.title')}
           </Text>
           <Text style={[Typography.body, styles.emptyBody, { color: t.textMuted }]}>
-            승인되면 이 자리에 집이 열려요. 조금만 기다려 주세요!
+            {tr('house.pending.body')}
           </Text>
           {pendingHouse.requestedAt ? (
             <Text style={[Typography.supporting, { color: t.textDisabled }]}>
-              {pendingHouse.requestedAt.slice(0, 10).replace(/-/g, '.')} 신청
+              {tr('house.pending.requestedAt', {
+                date: pendingHouse.requestedAt.slice(0, 10).replace(/-/g, '.'),
+              })}
             </Text>
           ) : null}
           {onCancelJoinRequest ? (
             <ScalePressable
               onPress={() => setPendingToCancel(pendingHouse)}
               accessibilityRole="button"
-              accessibilityLabel="입주 신청 취소"
+              accessibilityLabel={tr('house.pending.cancelA11y')}
               style={[styles.pendingCancelBtn, { borderColor: t.border }]}>
-              <Text style={[Typography.label, { color: t.textMuted }]}>신청 취소</Text>
+              <Text style={[Typography.label, { color: t.textMuted }]}>
+                {tr('house.pending.cancel')}
+              </Text>
             </ScalePressable>
           ) : null}
         </View>
@@ -95,15 +101,13 @@ export function PendingHousePage({
 
       <ConfirmDialog
         visible={pendingToCancel != null}
-        title="입주 신청을 취소할까요?"
+        title={tr('house.pending.confirmTitle')}
         body={
-          pendingToCancel
-            ? `'${pendingToCancel.name}' 집에 보낸 신청이 철회돼요. 초대코드가 있으면 다시 신청할 수 있어요.`
-            : ''
+          pendingToCancel ? tr('house.pending.confirmBody', { name: pendingToCancel.name }) : ''
         }
-        confirmLabel="신청 취소"
-        confirmAccessibilityLabel="신청 취소 확인"
-        cancelLabel="유지"
+        confirmLabel={tr('house.pending.confirmLabel')}
+        confirmAccessibilityLabel={tr('house.pending.confirmA11y')}
+        cancelLabel={tr('house.pending.keep')}
         destructive
         onConfirm={() => {
           if (pendingToCancel) onCancelJoinRequest?.(pendingToCancel.requestId);

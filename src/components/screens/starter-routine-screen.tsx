@@ -7,6 +7,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 export type StarterRoutineScreenProps = {
   recommendations: StarterRoutine[];
@@ -31,6 +32,7 @@ export function StarterRoutineScreen({
   onReload,
 }: StarterRoutineScreenProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   const column = useResponsiveColumn();
   const screenStyle = useScreenStyle(['top', 'bottom']);
@@ -41,14 +43,18 @@ export function StarterRoutineScreen({
     <View style={[styles.screen, screenStyle]}>
       <ScrollView contentContainerStyle={[styles.body, column]}>
         <View style={styles.intro}>
-          <Text style={[Typography.label, { color: t.primary }]}>나의 첫 루틴</Text>
-          <Text style={[Typography.h1, { color: t.text }]}>작게 시작해볼까요?</Text>
+          <Text style={[Typography.label, { color: t.primary }]}>
+            {tr('member.starterRoutine.eyebrow')}
+          </Text>
+          <Text style={[Typography.h1, { color: t.text }]}>
+            {tr('member.starterRoutine.title')}
+          </Text>
           <Text style={[Typography.body, { color: t.textMuted }]}>
-            {recommendations[0]?.goalLabel === '가볍게 시작하기'
-              ? '가볍게 시작할 루틴이에요.'
-              : '관심사에 맞춰 골랐어요.'}
+            {recommendations[0]?.goalLabel === tr('member.starterRoutine.lightStart')
+              ? tr('member.starterRoutine.bodyLight')
+              : tr('member.starterRoutine.bodyMatched')}
             {'\n'}
-            하나만 골라 시작해보세요.
+            {tr('member.starterRoutine.bodyPickOne')}
           </Text>
         </View>
         {recommendations.map((item) => {
@@ -72,7 +78,9 @@ export function StarterRoutineScreen({
               <View style={styles.cardCopy}>
                 <Text style={[Typography.supporting, { color: t.primary }]}>{item.goalLabel}</Text>
                 <Text style={[Typography.h3, { color: t.text }]}>{item.title}</Text>
-                <Text style={[Typography.supporting, { color: t.textMuted }]}>매일 · 오늘부터</Text>
+                <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                  {tr('member.starterRoutine.schedule')}
+                </Text>
               </View>
               <View
                 style={[
@@ -88,10 +96,13 @@ export function StarterRoutineScreen({
           );
         })}
         <Text style={[Typography.supporting, { color: t.textMuted }]}>
-          완료하면 체크만 해주세요. 알림은 꺼져 있고, 반복과 시간은 나중에 바꿀 수 있어요.
+          {tr('member.starterRoutine.footnote')}
         </Text>
         {loading ? (
-          <ActivityIndicator accessibilityLabel="내 루틴 확인 중" color={t.primary} />
+          <ActivityIndicator
+            accessibilityLabel={tr('member.starterRoutine.checkingA11y')}
+            color={t.primary}
+          />
         ) : null}
         {error ? (
           <Text accessibilityRole="alert" style={[Typography.body, { color: t.danger }]}>
@@ -111,10 +122,10 @@ export function StarterRoutineScreen({
           ]}>
           <Text style={[Typography.label, { color: t.onPrimary }]}>
             {saving
-              ? '루틴을 만들고 있어요'
+              ? tr('member.starterRoutine.creating')
               : needsReload
-                ? '다시 확인하기'
-                : '이 루틴으로 시작하기'}
+                ? tr('member.starterRoutine.recheck')
+                : tr('member.starterRoutine.startWithThis')}
           </Text>
         </Pressable>
         {/* 건너뛰기는 서버 오류로 추천을 못 받았을 때만 (#1324) — 루틴 없이 튜토리얼에
@@ -126,7 +137,9 @@ export function StarterRoutineScreen({
             accessibilityState={{ disabled: saving }}
             onPress={onSkip}
             style={styles.skip}>
-            <Text style={[Typography.label, { color: t.textMuted }]}>나중에 할게요</Text>
+            <Text style={[Typography.label, { color: t.textMuted }]}>
+              {tr('member.starterRoutine.later')}
+            </Text>
           </Pressable>
         ) : null}
       </View>

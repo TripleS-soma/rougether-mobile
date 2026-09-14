@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 import { shiftIso } from '@/utils/datetime';
 
 export type ActivityStripDay = {
@@ -44,6 +45,7 @@ export type ActivityStripProps = {
  */
 export function ActivityStrip({ days, today, expanded, onToggle }: ActivityStripProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   const emph = useFontEmphasis();
 
@@ -70,9 +72,11 @@ export function ActivityStrip({ days, today, expanded, onToggle }: ActivityStrip
         onPress={onToggle}
         accessibilityRole="button"
         accessibilityState={{ expanded: !!expanded }}
-        accessibilityLabel={`최근 ${SPAN_DAYS}일 중 ${doneCount}일 완료, 눌러서 자세히 보기`}
+        accessibilityLabel={tr('house.activity.a11y', { span: SPAN_DAYS, done: doneCount })}
         style={styles.row}>
-        <Text style={[Typography.supporting, { color: t.textMuted }]}>최근 2주</Text>
+        <Text style={[Typography.supporting, { color: t.textMuted }]}>
+          {tr('house.activity.recent')}
+        </Text>
         <View style={styles.dots}>
           {axis.map(({ date, day }) => (
             <View
@@ -92,14 +96,14 @@ export function ActivityStrip({ days, today, expanded, onToggle }: ActivityStrip
         </View>
         {/* 점만으로는 값을 셀 수 없다 — 숫자를 함께 둔다. */}
         <Text style={[Typography.supporting, emph('semibold'), { color: t.textMuted }]}>
-          {doneCount}/{SPAN_DAYS}일
+          {tr('house.activity.count', { done: doneCount, span: SPAN_DAYS })}
         </Text>
       </Pressable>
 
       {expanded ? (
         detail.length === 0 ? (
           <Text style={[Typography.supporting, styles.empty, { color: t.textMuted }]}>
-            최근 2주간 완료한 공개 루틴이 없어요.
+            {tr('house.activity.empty')}
           </Text>
         ) : (
           <View style={styles.detail}>
@@ -116,7 +120,7 @@ export function ActivityStrip({ days, today, expanded, onToggle }: ActivityStrip
               </View>
             ))}
             <Text style={[Typography.supporting, { color: t.textDisabled }]}>
-              공개 루틴만 표시돼요.
+              {tr('house.activity.publicOnly')}
             </Text>
           </View>
         )

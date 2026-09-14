@@ -8,6 +8,7 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import { Spacing } from '@/constants/theme';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
+import { useT } from '@/i18n';
 
 export type WeeklyReportScreenProps = WeeklyReportPanelProps & {
   onBack?: () => void;
@@ -20,11 +21,12 @@ export type WeeklyReportScreenProps = WeeklyReportPanelProps & {
  */
 export function WeeklyReportScreen({ onBack, ...panel }: WeeklyReportScreenProps) {
   const column = useResponsiveColumn();
+  const tr = useT();
   // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
   const headerInset = useHeaderContentInset();
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
-      <ScreenHeader title="주간회고" onBack={onBack} />
+      <ScreenHeader title={tr('routineTodo.weeklyReport.title')} onBack={onBack} />
       <ScrollView
         contentContainerStyle={[
           styles.body,

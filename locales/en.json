@@ -1,0 +1,13 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "Rougether",
+    "NSCalendarsUsageDescription": "Rougether reads your calendar to import events as to-dos. It never writes to your calendar.",
+    "NSCalendarsFullAccessUsageDescription": "Rougether reads your calendar to import events as to-dos. It never writes to your calendar.",
+    "NSRemindersUsageDescription": "Rougether does not use Reminders. Only calendar events are read and imported as to-dos.",
+    "NSPhotoLibraryUsageDescription": "Used to pick a screenshot from your library to attach to a bug report.",
+    "NSPhotoLibraryAddUsageDescription": "Used to save a picture of your room to your library."
+  },
+  "android": {
+    "app_name": "Rougether"
+  }
+}

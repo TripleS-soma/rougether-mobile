@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BottomSheet, SheetDragExclude } from '@/components/ui/bottom-sheet';
@@ -7,22 +7,14 @@ import { Icon } from '@/components/ui/icon';
 import { WHEEL_ITEM_HEIGHT, WHEEL_VISIBLE_ROWS, WheelPicker } from '@/components/ui/wheel-picker';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 1);
 const MINUTES = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
 
 type Ampm = 'AM' | 'PM';
 
-const AMPM_ITEMS = [
-  { value: 'AM' as Ampm, label: '오전' },
-  { value: 'PM' as Ampm, label: '오후' },
-];
-const HOUR_ITEMS = HOURS.map((h) => ({ value: h, label: String(h), accessibilityLabel: `${h}시` }));
-const MINUTE_ITEMS = MINUTES.map((m) => ({
-  value: m,
-  label: String(m).padStart(2, '0'),
-  accessibilityLabel: `${String(m).padStart(2, '0')}분`,
-}));
+const AMPM_VALUES: Ampm[] = ['AM', 'PM'];
 
 /** "HH:MM" 24h → { ampm, hour12, minute (snapped to 5) }. Exported for tests. */
 export function parse(time: string) {
@@ -62,7 +54,33 @@ export function TimePickerSheet({
   onClose,
 }: TimePickerSheetProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
+  // 휠 항목 라벨은 언어를 따른다 (#893) — tr이 바뀔 때만 다시 만든다.
+  const ampmItems = useMemo(
+    () => AMPM_VALUES.map((value) => ({ value, label: tr(`routineTodo.timePicker.${value}`) })),
+    [tr],
+  );
+  const hourItems = useMemo(
+    () =>
+      HOURS.map((h) => ({
+        value: h,
+        label: String(h),
+        accessibilityLabel: tr('routineTodo.timePicker.hourA11y', { hour: h }),
+      })),
+    [tr],
+  );
+  const minuteItems = useMemo(
+    () =>
+      MINUTES.map((m) => ({
+        value: m,
+        label: String(m).padStart(2, '0'),
+        accessibilityLabel: tr('routineTodo.timePicker.minuteA11y', {
+          minute: String(m).padStart(2, '0'),
+        }),
+      })),
+    [tr],
+  );
   const init = parse(initialTime || '07:00');
   const [enabled, setEnabled] = useState(initialEnabled);
   const [ampm, setAmpm] = useState<Ampm>(init.ampm);
@@ -89,11 +107,11 @@ export function TimePickerSheet({
       onClose={onClose}
       cardStyle={[styles.sheet, { backgroundColor: t.screen }]}>
       <View style={[styles.head, { borderBottomColor: t.border }]}>
-        <Text style={[Typography.h3, { color: t.text }]}>알림 시간</Text>
+        <Text style={[Typography.h3, { color: t.text }]}>{tr('routineTodo.timePicker.title')}</Text>
         <Pressable
           onPress={onClose}
           accessibilityRole="button"
-          accessibilityLabel="닫기"
+          accessibilityLabel={tr('routineTodo.timePicker.close')}
           style={[styles.close, { backgroundColor: t.surfaceMuted }]}>
           <Icon name="close" size={16} color={t.text} />
         </Pressable>
@@ -103,15 +121,19 @@ export function TimePickerSheet({
         <View style={[styles.enableRow, { backgroundColor: t.surface }]}>
           <Icon name={enabled ? 'bell' : 'bell-off'} size={20} color={t.text} />
           <View style={styles.flex}>
-            <Text style={[Typography.body, { color: t.text }]}>알림 받기</Text>
+            <Text style={[Typography.body, { color: t.text }]}>
+              {tr('routineTodo.timePicker.enable')}
+            </Text>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              {enabled ? '설정한 시간에 알려드려요' : '알림 없이 진행해요'}
+              {enabled
+                ? tr('routineTodo.timePicker.enabledHint')
+                : tr('routineTodo.timePicker.disabledHint')}
             </Text>
           </View>
           <ToggleSwitch
             value={enabled}
             onToggle={() => setEnabled((v) => !v)}
-            accessibilityLabel="알림 받기"
+            accessibilityLabel={tr('routineTodo.timePicker.enable')}
           />
         </View>
 
@@ -127,24 +149,24 @@ export function TimePickerSheet({
               {/* 휠은 세로 스와이프를 스스로 쓴다 — 시트 끌어내리기에서 제외 (#1132). */}
               <SheetDragExclude style={styles.wheels}>
                 <WheelPicker
-                  items={AMPM_ITEMS}
+                  items={ampmItems}
                   value={ampm}
                   onChange={setAmpm}
-                  accessibilityLabel="오전/오후 선택"
+                  accessibilityLabel={tr('routineTodo.timePicker.ampmPickerA11y')}
                   testID="wheel-ampm"
                 />
                 <WheelPicker
-                  items={HOUR_ITEMS}
+                  items={hourItems}
                   value={hour12}
                   onChange={setHour12}
-                  accessibilityLabel="시 선택"
+                  accessibilityLabel={tr('routineTodo.timePicker.hourPickerA11y')}
                   testID="wheel-hour"
                 />
                 <WheelPicker
-                  items={MINUTE_ITEMS}
+                  items={minuteItems}
                   value={minute}
                   onChange={setMinute}
-                  accessibilityLabel="분 선택"
+                  accessibilityLabel={tr('routineTodo.timePicker.minutePickerA11y')}
                   testID="wheel-minute"
                 />
               </SheetDragExclude>
@@ -157,9 +179,11 @@ export function TimePickerSheet({
         <Pressable
           onPress={save}
           accessibilityRole="button"
-          accessibilityLabel="알림 저장"
+          accessibilityLabel={tr('routineTodo.timePicker.saveA11y')}
           style={[styles.save, { backgroundColor: t.primary }]}>
-          <Text style={[Typography.label, { color: t.onPrimary }]}>저장</Text>
+          <Text style={[Typography.label, { color: t.onPrimary }]}>
+            {tr('routineTodo.timePicker.save')}
+          </Text>
         </Pressable>
       </View>
     </BottomSheet>

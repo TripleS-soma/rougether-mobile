@@ -10,6 +10,7 @@ import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 /** 스크린샷 첨부 한도 — 서버 계약(최대 3장, png·jpeg·webp 각 10MB). */
 export const MAX_BUG_REPORT_IMAGES = 3;
@@ -34,12 +35,6 @@ export type BugReportEntry = {
    * 화면이 `onLoadScreenshot`으로 바이트를 받아 data URI로 띄운다.
    */
   screenshotKeys?: string[];
-};
-
-const STATUS_LABEL: Record<BugReportStatus, string> = {
-  RECEIVED: '접수됨',
-  IN_PROGRESS: '처리 중',
-  RESOLVED: '해결됨',
 };
 
 export type BugReportImageInput = { uri: string; name: string; type: string };
@@ -81,6 +76,7 @@ export function BugReportScreen({
   const headerInset = useHeaderContentInset();
   const Typography = useTypography();
   const emph = useFontEmphasis();
+  const tr = useT();
   const { show: toast } = useToast();
   /** 크게 보는 중인 첨부 (#736) — null이면 뷰어를 안 띄운다. */
   const [viewerUri, setViewerUri] = useState<string | null>(null);
@@ -101,7 +97,7 @@ export function BugReportScreen({
   const submit = async () => {
     if (submitting) return;
     if (!canSubmit) {
-      toast('제목과 내용을 입력해주세요', 'error');
+      toast(tr('member.bugReport.fillRequired'), 'error');
       return;
     }
     setSubmitting(true);
@@ -113,9 +109,9 @@ export function BugReportScreen({
       setTitle('');
       setContent('');
       setImages([]);
-      toast('제보가 접수됐어요. 소중한 의견 감사해요!');
+      toast(tr('member.bugReport.submitted'));
     } else {
-      toast('제보 접수에 실패했어요. 잠시 후 다시 시도해 주세요.', 'error');
+      toast(tr('member.bugReport.submitFailed'), 'error');
     }
   };
 
@@ -127,7 +123,7 @@ export function BugReportScreen({
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
-      <ScreenHeader title="버그 제보" onBack={onBack} />
+      <ScreenHeader title={tr('member.bugReport.title')} onBack={onBack} />
 
       <ScrollView
         contentContainerStyle={[
@@ -138,15 +134,15 @@ export function BugReportScreen({
         keyboardShouldPersistTaps="handled">
         <View style={[styles.card, { backgroundColor: t.surface }]}>
           <Field
-            label="제목"
-            placeholder="어떤 문제가 있었나요?"
+            label={tr('member.bugReport.titleLabel')}
+            placeholder={tr('member.bugReport.titlePlaceholder')}
             value={title}
             onChangeText={setTitle}
             maxLength={100}
           />
           <View style={styles.contentWrap}>
             <Text style={[styles.contentLabel, emph('semibold'), { color: t.textMuted }]}>
-              내용
+              {tr('member.bugReport.content')}
             </Text>
             <TextInput
               style={[
@@ -154,7 +150,7 @@ export function BugReportScreen({
                 emph('normal'),
                 { backgroundColor: t.surfaceMuted, color: t.text },
               ]}
-              placeholder="발생 상황을 자세히 적어주시면 해결에 큰 도움이 돼요"
+              placeholder={tr('member.bugReport.contentPlaceholder')}
               placeholderTextColor={t.textMuted}
               value={content}
               onChangeText={setContent}
@@ -173,7 +169,7 @@ export function BugReportScreen({
                   hitSlop={8}
                   onPress={() => setImages((prev) => prev.filter((_, i) => i !== idx))}
                   accessibilityRole="button"
-                  accessibilityLabel={`스크린샷 ${idx + 1} 삭제`}>
+                  accessibilityLabel={tr('member.bugReport.removeShotA11y', { n: idx + 1 })}>
                   <Icon name="close" size={12} color={t.surface} />
                 </Pressable>
               </View>
@@ -183,7 +179,7 @@ export function BugReportScreen({
                 style={[styles.shotAdd, { borderColor: t.border }]}
                 onPress={addImage}
                 accessibilityRole="button"
-                accessibilityLabel="스크린샷 추가">
+                accessibilityLabel={tr('member.bugReport.addShotA11y')}>
                 <Icon name="camera" size={20} color={t.textMuted} />
                 <Text style={[Typography.supporting, { color: t.textMuted }]}>
                   {images.length}/{MAX_BUG_REPORT_IMAGES}
@@ -208,19 +204,19 @@ export function BugReportScreen({
                 emph('semibold'),
                 { color: canSubmit ? t.onPrimary : t.textMuted },
               ]}>
-              {submitting ? '접수 중...' : '제출하기'}
+              {submitting ? tr('member.bugReport.submitting') : tr('member.bugReport.submit')}
             </Text>
           </Pressable>
         </View>
 
         <Text
           style={[Typography.label, emph('semibold'), styles.sectionTitle, { color: t.textMuted }]}>
-          내 제보 내역
+          {tr('member.bugReport.history')}
         </Text>
         <View style={[styles.card, styles.listCard, { backgroundColor: t.surface }]}>
           {entries.length === 0 ? (
             <Text style={[Typography.supporting, styles.empty, { color: t.textMuted }]}>
-              아직 제보한 내용이 없어요
+              {tr('member.bugReport.empty')}
             </Text>
           ) : (
             entries.map((e, idx) => {
@@ -254,7 +250,7 @@ export function BugReportScreen({
                   </View>
                   <View style={[styles.badge, { backgroundColor: badge.bg }]}>
                     <Text style={[Typography.supporting, emph('semibold'), { color: badge.fg }]}>
-                      {STATUS_LABEL[e.status]}
+                      {tr(`member.bugReport.status.${e.status}`)}
                     </Text>
                   </View>
                 </View>
@@ -272,7 +268,7 @@ export function BugReportScreen({
         <Pressable
           onPress={() => setViewerUri(null)}
           accessibilityRole="button"
-          accessibilityLabel="첨부 닫기"
+          accessibilityLabel={tr('member.bugReport.closeViewerA11y')}
           style={[styles.viewerBackdrop, { backgroundColor: Overlay.strong }]}>
           {viewerUri ? (
             <Image source={{ uri: viewerUri }} style={styles.viewerImage} contentFit="contain" />
@@ -299,6 +295,7 @@ const EntryScreenshots = memo(function EntryScreenshots({
   load: (key: string) => Promise<string | null>;
   onOpen: (uri: string) => void;
 }) {
+  const tr = useT();
   const [uris, setUris] = useState<Record<string, string>>({});
   useEffect(() => {
     let alive = true;
@@ -324,7 +321,7 @@ const EntryScreenshots = memo(function EntryScreenshots({
           key={key}
           onPress={() => onOpen(uris[key])}
           accessibilityRole="button"
-          accessibilityLabel="첨부 스크린샷 크게 보기"
+          accessibilityLabel={tr('member.bugReport.openShotA11y')}
           testID={`bug-shot-${key}`}>
           <Image source={{ uri: uris[key] }} style={styles.shotThumb} contentFit="cover" />
         </Pressable>

@@ -9,6 +9,7 @@ import { GlassSurface } from '@/components/ui/glass-surface';
 import { RetryState } from '@/components/ui/retry-state';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 export type MinigameRunnerScreenProps = {
   gameName?: string;
@@ -29,8 +30,8 @@ export type MinigameRunnerScreenProps = {
 };
 
 export function MinigameRunnerScreen({
-  gameName = '루틴 러너',
-  instructions = '탭해서 점프',
+  gameName,
+  instructions,
   characterPose = 1,
   game,
   practice,
@@ -47,11 +48,14 @@ export function MinigameRunnerScreen({
 }: MinigameRunnerScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
+  const tr = useT();
+  const name = gameName ?? tr('roomShop.minigame.runner.name');
+  const hint = instructions ?? tr('roomShop.minigame.runner.instructions');
   return (
-    <MinigameLayout title={gameName} onBack={onBack}>
+    <MinigameLayout title={name} onBack={onBack}>
       {practice ? (
         <Text accessibilityRole="alert" style={[Typography.label, { color: t.primaryText }]}>
-          연습 · 기록 안 함
+          {tr('roomShop.minigame.practiceSection')}
         </Text>
       ) : null}
       {!result &&
@@ -62,28 +66,30 @@ export function MinigameRunnerScreen({
             fallbackColor={t.surface}
             style={styles.welcome}>
             <CharacterAvatar characterId="cat" pose={characterPose} size={Spacing.six * 2} />
-            <Text style={[Typography.body, { color: t.textMuted }]}>{instructions}</Text>
+            <Text style={[Typography.body, { color: t.textMuted }]}>{hint}</Text>
           </GlassSurface>
         ))}
       {pending ? (
         <ActivityIndicator
           color={t.primaryText}
-          accessibilityLabel={finished ? '기록 저장 중' : '게임 준비 중'}
+          accessibilityLabel={tr(
+            finished ? 'roomShop.minigame.play.savingA11y' : 'roomShop.minigame.play.preparingA11y',
+          )}
         />
       ) : null}
       {startError ? (
         <RetryState
-          message="게임을 시작하지 못했어요"
-          detail={submitError ? '이전 기록 저장 대기 중' : undefined}
+          message={tr('roomShop.minigame.play.startError')}
+          detail={submitError ? tr('roomShop.minigame.play.pendingSubmit') : undefined}
           onRetry={submitError && !pending ? onRetrySubmit : undefined}
-          retryLabel="다시 저장"
+          retryLabel={tr('roomShop.minigame.play.retrySave')}
         />
       ) : null}
       {submitError && !startError ? (
         <RetryState
-          message="기록을 저장하지 못했어요"
+          message={tr('roomShop.minigame.play.submitError')}
           onRetry={pending ? undefined : onRetrySubmit}
-          retryLabel="다시 저장"
+          retryLabel={tr('roomShop.minigame.play.retrySave')}
         />
       ) : null}
       {result ? (
@@ -93,11 +99,18 @@ export function MinigameRunnerScreen({
           fallbackColor={t.surface}
           style={styles.result}>
           {result.personalBest ? (
-            <Text style={[Typography.label, { color: t.primaryText }]}>최고 기록</Text>
+            <Text style={[Typography.label, { color: t.primaryText }]}>
+              {tr('roomShop.minigame.play.personalBest')}
+            </Text>
           ) : null}
-          <Text style={[Typography.h2, { color: t.text }]}>{result.score.toLocaleString()}점</Text>
+          <Text style={[Typography.h2, { color: t.text }]}>
+            {tr('roomShop.minigame.play.score', { score: result.score.toLocaleString() })}
+          </Text>
           <Text style={[Typography.body, { color: t.textMuted }]}>
-            최고 {result.bestScore.toLocaleString()}점 · 전체 {result.rank}위
+            {tr('roomShop.minigame.play.summary', {
+              best: result.bestScore.toLocaleString(),
+              rank: result.rank,
+            })}
           </Text>
         </GlassSurface>
       ) : null}
@@ -106,28 +119,32 @@ export function MinigameRunnerScreen({
           {onStart ? (
             <Button
               glass
-              label={game ? '다시 하기' : '시작'}
-              accessibilityLabel={
+              label={tr(game ? 'roomShop.minigame.play.retry' : 'roomShop.minigame.start')}
+              accessibilityLabel={tr(
                 submitError
-                  ? '저장 재시도를 그만하고 새 도전'
+                  ? 'roomShop.minigame.play.retryAfterErrorA11y'
                   : game
-                    ? '다시 랭킹 도전'
-                    : '랭킹 도전'
-              }
+                    ? 'roomShop.minigame.play.retryRankedA11y'
+                    : 'roomShop.minigame.play.rankedA11y',
+              )}
               onPress={onStart}
               disabled={pending}
             />
           ) : null}
           <Button
             glass
-            label={practice && game ? '다시 연습' : '연습'}
-            accessibilityLabel={
+            label={tr(
+              practice && game
+                ? 'roomShop.minigame.play.practiceAgain'
+                : 'roomShop.minigame.practice',
+            )}
+            accessibilityLabel={tr(
               submitError
-                ? '저장 재시도를 그만하고 연습'
+                ? 'roomShop.minigame.play.practiceAfterErrorA11y'
                 : practice && game
-                  ? '다시 연습하기'
-                  : '연습하기 · 랭킹 미기록'
-            }
+                  ? 'roomShop.minigame.play.practiceAgainA11y'
+                  : 'roomShop.minigame.play.practiceA11y',
+            )}
             onPress={onPractice}
             disabled={pending}
             variant="secondary"
@@ -137,8 +154,8 @@ export function MinigameRunnerScreen({
       {(!game || finished) && onLeaderboard ? (
         <Button
           glass
-          label="랭킹"
-          accessibilityLabel="전체 유저 랭킹 보기"
+          label={tr('roomShop.minigame.ranking')}
+          accessibilityLabel={tr('roomShop.minigame.play.leaderboardA11y')}
           onPress={onLeaderboard}
           variant="secondary"
           disabled={pending}

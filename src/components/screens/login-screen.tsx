@@ -23,6 +23,7 @@ import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import type { SocialProvider } from '@/lib/last-login';
 import { isLoginConflict, type LoginConflict, type SocialLoginResult } from '@/lib/login-conflict';
+import { useT } from '@/i18n';
 
 /** iOS Modal fade 닫힘(≈300ms)보다 넉넉한 예비 대기 — onDismiss 가 먼저 오면 그쪽이 실행한다. */
 const MODAL_DISMISS_FALLBACK_MS = 500;
@@ -92,6 +93,7 @@ export function LoginScreen({
   describeSocialFailure,
 }: LoginScreenProps) {
   const t = useTokens();
+  const tr = useT();
   const column = useResponsiveColumn();
   const emph = useFontEmphasis();
   const Typography = useTypography();
@@ -114,13 +116,13 @@ export function LoginScreen({
   const canSubmit = password.length > 0 && !submitting;
   // 비밀번호 찾기 / social sign-in have no backend yet — say so instead of
   // silently doing nothing.
-  const notReady = () => toast('서버 준비 중이에요');
+  const notReady = () => toast(tr('member.login.notReady'));
 
   const submit = async () => {
     // Blocked taps explain themselves; only the in-flight state stays silent.
     if (submitting) return;
     if (password.length === 0) {
-      toast('비밀번호를 입력해주세요', 'error');
+      toast(tr('member.login.passwordRequired'), 'error');
       return;
     }
     setSubmitting(true);
@@ -132,7 +134,7 @@ export function LoginScreen({
     const ok = onLogin ? await onLogin(userId) : true;
     setSubmitting(false);
     if (ok) onAuthSuccess?.();
-    else setError('로그인에 실패했어요. userId를 확인하고 다시 시도해 주세요.');
+    else setError(tr('member.login.devLoginFailed'));
   };
 
   // 소셜 로그인 (#489) — 취소는 조용히, 실패만 에러 문구로.
@@ -153,12 +155,9 @@ export function LoginScreen({
     // 가입을 막은 409 — 실패가 아니라 선택지. 다이얼로그가 다음 행동을 받는다.
     else if (isLoginConflict(result)) setConflict(result);
   };
-  const submitGoogle = () =>
-    submitSocial(onGoogleLogin, '구글 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.');
-  const submitKakao = () =>
-    submitSocial(onKakaoLogin, '카카오 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.');
-  const submitApple = () =>
-    submitSocial(onAppleLogin, '애플 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.');
+  const submitGoogle = () => submitSocial(onGoogleLogin, tr('member.login.googleFailed'));
+  const submitKakao = () => submitSocial(onKakaoLogin, tr('member.login.kakaoFailed'));
+  const submitApple = () => submitSocial(onAppleLogin, tr('member.login.appleFailed'));
 
   // 안내 다이얼로그의 [OO로 로그인] — 그 provider 의 평소 로그인 흐름으로 넘긴다.
   // 단, RN Modal 이 닫히는 중에 네이티브 시트(카카오·애플·구글)를 띄우면 iOS 가 present 를
@@ -189,7 +188,7 @@ export function LoginScreen({
     setSubmitting(false);
     if (result === 'ok') onAuthSuccess?.();
     else {
-      const failMessage = '새 계정 만들기에 실패했어요. 잠시 후 다시 시도해 주세요.';
+      const failMessage = tr('member.login.newAccountFailed');
       setError(describeSocialFailure?.(failMessage) ?? failMessage);
     }
   };
@@ -209,12 +208,12 @@ export function LoginScreen({
                 source={appIcon}
                 style={styles.avatarImg}
                 contentFit="cover"
-                accessibilityLabel="루게더 앱 아이콘"
+                accessibilityLabel={tr('member.login.appIconA11y')}
               />
             </View>
-            <Text style={[Typography.h1, { color: t.text }]}>루게더</Text>
+            <Text style={[Typography.h1, { color: t.text }]}>{tr('member.login.appName')}</Text>
             <Text style={[styles.subtitle, emph('normal'), { color: t.textMuted }]}>
-              매일의 루틴으로 나만의 방과 집을 함께 키워요.
+              {tr('member.login.tagline')}
             </Text>
           </View>
 
@@ -223,14 +222,14 @@ export function LoginScreen({
             <>
               <View style={[styles.card, { backgroundColor: t.surface, shadowColor: ShadowColor }]}>
                 <Field
-                  placeholder="이메일"
+                  placeholder={tr('member.login.emailPlaceholder')}
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />
                 <Field
-                  placeholder="비밀번호"
+                  placeholder={tr('member.login.passwordPlaceholder')}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPw}
@@ -238,7 +237,7 @@ export function LoginScreen({
                     <Pressable onPress={() => setShowPw((v) => !v)} accessibilityRole="button">
                       <Text
                         style={[Typography.supporting, emph('semibold'), { color: t.textMuted }]}>
-                        {showPw ? '숨김' : '보기'}
+                        {showPw ? tr('member.common.hide') : tr('member.common.show')}
                       </Text>
                     </Pressable>
                   }
@@ -258,12 +257,14 @@ export function LoginScreen({
                       ]}>
                       {keepLogin ? <Icon name="check" size={12} color={t.onPrimary} /> : null}
                     </View>
-                    <Text style={[Typography.supporting, { color: t.textMuted }]}>로그인 유지</Text>
+                    <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                      {tr('member.login.keepLogin')}
+                    </Text>
                   </Pressable>
                   <Pressable accessibilityRole="button" onPress={notReady}>
                     <Text
                       style={[Typography.supporting, emph('semibold'), { color: t.primaryText }]}>
-                      비밀번호 찾기
+                      {tr('member.login.findPassword')}
                     </Text>
                   </Pressable>
                 </View>
@@ -285,7 +286,7 @@ export function LoginScreen({
                     emph('semibold'),
                     { color: canSubmit ? t.onPrimary : t.textMuted },
                   ]}>
-                  {submitting ? '로그인 중...' : '로그인'}
+                  {submitting ? tr('member.login.loggingIn') : tr('member.login.login')}
                 </Text>
               </Pressable>
             </>
@@ -299,7 +300,9 @@ export function LoginScreen({
           ) : null}
           <View style={styles.divider}>
             <View style={[styles.line, { backgroundColor: t.border }]} />
-            <Text style={[Typography.supporting, { color: t.textMuted }]}>간편 로그인</Text>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              {tr('member.login.socialDivider')}
+            </Text>
             <View style={[styles.line, { backgroundColor: t.border }]} />
           </View>
 
@@ -407,6 +410,7 @@ function SocialButton({
   recent,
 }: SocialButtonProps) {
   const t = useTokens();
+  const tr = useT();
   const emph = useFontEmphasis();
   return (
     <Pressable
@@ -418,17 +422,21 @@ function SocialButton({
       ]}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={recent ? `${label}로 시작, 최근 로그인` : `${label}로 시작`}>
+      accessibilityLabel={
+        recent
+          ? tr('member.login.startWithRecentA11y', { label })
+          : tr('member.login.startWithA11y', { label })
+      }>
       <View style={styles.socialLogo}>{logo}</View>
       <Text style={[styles.socialLabel, emph('semibold'), { color: textColor }]}>
-        {`${label}로 시작하기`}
+        {tr('member.login.startWith', { label })}
       </Text>
       {/* 브랜드색 버튼(노랑/검정/흰색) 위 어디서든 읽히도록 배지는 버튼의
           textColor에서 파생 — 배경은 10% 틴트, 글자는 본문색 그대로. */}
       {recent ? (
         <View style={[styles.recentBadge, { backgroundColor: `${textColor}1A` }]}>
           <Text style={[styles.recentBadgeText, emph('semibold'), { color: textColor }]}>
-            최근 로그인
+            {tr('member.login.recentBadge')}
           </Text>
         </View>
       ) : null}

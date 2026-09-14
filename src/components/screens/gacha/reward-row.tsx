@@ -6,6 +6,7 @@ import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { assetSource, isCdnKey } from '@/resources/asset';
+import { useT } from '@/i18n';
 
 export type RewardRowProps = {
   /** 목록 행 식별자 — 테스트가 잡는 testID의 꼬리. */
@@ -27,6 +28,7 @@ export type RewardRowProps = {
 function RewardRowBase({ rowId, name, rarityColor, assetKey, isCharacter, owned }: RewardRowProps) {
   const t = useTokens();
   const Typography = useTypography();
+  const tr = useT();
 
   return (
     <View style={[styles.rewardRow, { backgroundColor: t.surface }]} testID={`reward-row-${rowId}`}>
@@ -47,14 +49,18 @@ function RewardRowBase({ rowId, name, rarityColor, assetKey, isCharacter, owned 
         )}
       </View>
       <Text numberOfLines={1} style={[Typography.body, styles.rewardName, { color: t.text }]}>
-        {name ?? '이름 없는 보상'}
+        {name ?? tr('roomShop.gacha.reward.unnamed')}
       </Text>
       {isCharacter ? (
-        <Text style={[Typography.supporting, { color: t.textMuted }]}>캐릭터</Text>
+        <Text style={[Typography.supporting, { color: t.textMuted }]}>
+          {tr('roomShop.gacha.reward.character')}
+        </Text>
       ) : null}
       {owned ? (
         <View style={[styles.ownedPill, { backgroundColor: t.surfaceMuted }]}>
-          <Text style={[Typography.supporting, { color: t.textMuted }]}>보유</Text>
+          <Text style={[Typography.supporting, { color: t.textMuted }]}>
+            {tr('roomShop.gacha.reward.owned')}
+          </Text>
         </View>
       ) : null}
     </View>

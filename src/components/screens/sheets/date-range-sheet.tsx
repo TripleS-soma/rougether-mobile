@@ -8,6 +8,7 @@ import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { formatDate } from '@/utils/datetime';
+import { useT } from '@/i18n';
 
 export type DateRangeSheetProps = {
   visible: boolean;
@@ -31,6 +32,7 @@ export function DateRangeSheet({
   onClose,
 }: DateRangeSheetProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   const [startDate, setStartDate] = useState(initialStartDate);
   const [hasEndDate, setHasEndDate] = useState(Boolean(initialEndDate));
@@ -78,11 +80,11 @@ export function DateRangeSheet({
       onClose={onClose}
       cardStyle={[styles.sheet, { backgroundColor: t.screen }]}>
       <View style={[styles.head, { borderBottomColor: t.border }]}>
-        <Text style={[Typography.h3, { color: t.text }]}>지속 기간</Text>
+        <Text style={[Typography.h3, { color: t.text }]}>{tr('routineTodo.dateRange.title')}</Text>
         <Pressable
           onPress={onClose}
           accessibilityRole="button"
-          accessibilityLabel="닫기"
+          accessibilityLabel={tr('routineTodo.dateRange.close')}
           style={[styles.close, { backgroundColor: t.surfaceMuted }]}>
           <Icon name="close" size={16} color={t.text} />
         </Pressable>
@@ -92,14 +94,14 @@ export function DateRangeSheet({
         <View style={styles.tabs}>
           <Tab
             active={editing === 'start'}
-            label="시작일"
+            label={tr('routineTodo.dateRange.start')}
             value={formatDate(startDate)}
             onPress={() => setEditing('start')}
           />
           <Tab
             active={editing === 'end'}
-            label="종료일"
-            value={hasEndDate ? formatDate(endDate) : '없음'}
+            label={tr('routineTodo.dateRange.end')}
+            value={hasEndDate ? formatDate(endDate) : tr('routineTodo.dateRange.none')}
             disabled={!hasEndDate}
             onPress={() => hasEndDate && setEditing('end')}
           />
@@ -107,12 +109,20 @@ export function DateRangeSheet({
 
         <View style={[styles.endRow, { backgroundColor: t.surface }]}>
           <View style={styles.flex}>
-            <Text style={[Typography.body, { color: t.text }]}>종료일 설정</Text>
+            <Text style={[Typography.body, { color: t.text }]}>
+              {tr('routineTodo.dateRange.endToggle')}
+            </Text>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              {hasEndDate ? '선택한 날짜까지 진행해요' : '종료일 없이 계속 진행해요'}
+              {hasEndDate
+                ? tr('routineTodo.dateRange.endOnHint')
+                : tr('routineTodo.dateRange.endOffHint')}
             </Text>
           </View>
-          <ToggleSwitch value={hasEndDate} onToggle={toggleEnd} accessibilityLabel="종료일 설정" />
+          <ToggleSwitch
+            value={hasEndDate}
+            onToggle={toggleEnd}
+            accessibilityLabel={tr('routineTodo.dateRange.endToggle')}
+          />
         </View>
 
         {editing === 'start' ? (
@@ -127,7 +137,7 @@ export function DateRangeSheet({
 
         {!endValid ? (
           <Text style={[Typography.supporting, { color: t.danger }]}>
-            종료일은 시작일 이후로 선택해주세요.
+            {tr('routineTodo.dateRange.endBeforeStart')}
           </Text>
         ) : null}
       </View>
@@ -137,9 +147,11 @@ export function DateRangeSheet({
           onPress={save}
           disabled={!endValid}
           accessibilityRole="button"
-          accessibilityLabel="기간 저장"
+          accessibilityLabel={tr('routineTodo.dateRange.saveA11y')}
           style={[styles.save, { backgroundColor: endValid ? t.primary : t.textDisabled }]}>
-          <Text style={[Typography.label, { color: t.onPrimary }]}>저장</Text>
+          <Text style={[Typography.label, { color: t.onPrimary }]}>
+            {tr('routineTodo.dateRange.save')}
+          </Text>
         </Pressable>
       </View>
     </BottomSheet>

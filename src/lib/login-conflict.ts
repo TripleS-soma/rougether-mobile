@@ -10,6 +10,7 @@
  */
 import { ApiError } from '@/api/http';
 import { SOCIAL_PROVIDERS, type SocialProvider } from '@/lib/last-login';
+import { i18n } from '@/i18n';
 
 export const LOGIN_CONFLICT_CODE = 'AUTH_EMAIL_LINKED_TO_OTHER_PROVIDER';
 
@@ -29,15 +30,9 @@ export type LoginConflict = {
  */
 export type SocialLoginResult = 'ok' | 'cancelled' | 'failed' | LoginConflict;
 
-const PROVIDER_LABEL: Record<SocialProvider, string> = {
-  kakao: '카카오',
-  apple: '애플',
-  google: '구글',
-};
-
-/** 사용자에게 보이는 provider 이름. */
+/** 사용자에게 보이는 provider 이름 — 호출 시점에 번역한다 (#893). */
 export function providerLabel(provider: SocialProvider): string {
-  return PROVIDER_LABEL[provider];
+  return i18n.t(`member.login.provider.${provider}`);
 }
 
 function toProvider(value: unknown): SocialProvider | null {
@@ -47,8 +42,11 @@ function toProvider(value: unknown): SocialProvider | null {
 
 /** 서버 문구가 없을 때의 폴백 안내. */
 export function conflictMessage(providers: SocialProvider[]): string {
-  const labels = providers.length > 0 ? providers.map(providerLabel).join('·') : '다른 소셜';
-  return `이 이메일은 ${labels} 로그인으로 가입되어 있어요.`;
+  const labels =
+    providers.length > 0
+      ? providers.map(providerLabel).join('·')
+      : i18n.t('member.login.provider.otherSocial');
+  return i18n.t('member.login.conflictFallback', { labels });
 }
 
 /** 409 안내 응답이면 providers·message 를 뽑고, 그 밖의 에러면 null. */

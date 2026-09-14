@@ -11,6 +11,7 @@ import { Radius } from '@/constants/theme';
 import { parseRunnerMessage, type RunnerGameProps } from '@/features/minigame/runner-bridge';
 import { createRunnerHtml } from '@/features/minigame/runner-html';
 import { useTokens } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 /** Keep the game document isolated from application navigation and lifecycle. */
 export function RunnerGame({
@@ -22,6 +23,7 @@ export function RunnerGame({
   testID = 'runner-game',
 }: RunnerGameProps) {
   const t = useTokens();
+  const tr = useT();
   const palette = useRef(t).current;
   const { channelId, finished, error, fail, retry, isCurrentChannel } = useGameRecovery(
     'runner',
@@ -99,7 +101,7 @@ export function RunnerGame({
           key={channelId}
           ref={webView}
           testID={testID}
-          accessibilityLabel="러너 게임"
+          accessibilityLabel={tr('roomShop.minigame.frame.runner')}
           source={source}
           style={[styles.game, { backgroundColor: t.surfaceMuted }]}
           originWhitelist={['*']}

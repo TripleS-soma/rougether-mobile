@@ -1,6 +1,7 @@
 import type { NewRoutine } from '@/constants/routines';
 import { isScheduledOn } from '@/components/screens/my-room/schedule';
 import { shiftIso } from '@/utils/datetime';
+import { i18n } from '@/i18n';
 
 /** Same scheduling rule as the day list, including skipped month ends and leap years. */
 export function firstRoutineDate(routine: NewRoutine): string | null {
@@ -16,12 +17,11 @@ export function firstRoutineDate(routine: NewRoutine): string | null {
 }
 
 export function routineComposeError(routine: NewRoutine, today: string): string | null {
-  if (routine.startDate < today) return '루틴 시작일은 오늘 이후로 선택해 주세요.';
+  if (routine.startDate < today) return i18n.t('routineTodo.compose.error.startDatePast');
   if ((routine.repeat === 'weekly' || routine.repeat === 'biweekly') && !routine.days.length)
-    return '반복할 요일을 선택해 주세요.';
+    return i18n.t('routineTodo.compose.error.pickWeekday');
   if (routine.endDate && routine.endDate < routine.startDate)
-    return '종료일은 시작일 이후로 선택해 주세요.';
-  if (!firstRoutineDate(routine))
-    return '이 기간에 반복되는 날짜가 없어요. 반복과 기간을 확인해 주세요.';
+    return i18n.t('routineTodo.compose.error.endBeforeStart');
+  if (!firstRoutineDate(routine)) return i18n.t('routineTodo.compose.error.noOccurrence');
   return null;
 }

@@ -5,6 +5,7 @@ import { GlassSurface } from '@/components/ui/glass-surface';
 import { Icon } from '@/components/ui/icon';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 /**
  * 집 스위처 줄 — ‹ 화살표 · 아이콘 + 이름 뱃지 · › 화살표. 일반 집 페이지와
@@ -23,6 +24,7 @@ export type HouseSwitcherProps = {
 
 export function HouseSwitcher({ icon, title, showArrows, onPrev, onNext }: HouseSwitcherProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   return (
     <View style={styles.switcher}>
@@ -30,7 +32,7 @@ export function HouseSwitcher({ icon, title, showArrows, onPrev, onNext }: House
         <Pressable
           onPress={onPrev}
           accessibilityRole="button"
-          accessibilityLabel="이전 집"
+          accessibilityLabel={tr('house.switcher.prev')}
           hitSlop={8}
           style={styles.iconBtn}>
           <GlassSurface style={styles.iconBtnFace} fallbackColor={t.surface}>
@@ -50,7 +52,7 @@ export function HouseSwitcher({ icon, title, showArrows, onPrev, onNext }: House
         <Pressable
           onPress={onNext}
           accessibilityRole="button"
-          accessibilityLabel="다음 집"
+          accessibilityLabel={tr('house.switcher.next')}
           hitSlop={8}
           style={styles.iconBtn}>
           <GlassSurface style={styles.iconBtnFace} fallbackColor={t.surface}>

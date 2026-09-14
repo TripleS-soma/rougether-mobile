@@ -15,6 +15,7 @@ import { useToast } from '@/components/ui/toast';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { i18n, useT } from '@/i18n';
 
 export type InviteInfo = {
   code?: string;
@@ -45,9 +46,11 @@ export type InvitePreview = {
   alreadyRedeemed: boolean;
 };
 
-/** 초대자 표시 — 닉네임이 없으면 '친구'. */
+/** 초대자 표시 — 닉네임이 없으면 '친구'. 호출 시점에 번역한다 (#893). */
 export function inviterLabel(nickname: string | null | undefined): string {
-  return nickname ? `${nickname}님` : '친구';
+  return nickname
+    ? i18n.t('member.inviteFriends.inviterName', { name: nickname })
+    : i18n.t('member.inviteFriends.inviterFallback');
 }
 
 export type InviteFriendsScreenProps = {
@@ -93,6 +96,7 @@ export function InviteFriendsScreen({
   const headerInset = useHeaderContentInset();
   const Typography = useTypography();
   const emph = useFontEmphasis();
+  const tr = useT();
   const [copied, setCopied] = useState(false);
   const [code, setCode] = useState('');
   const [redeeming, setRedeeming] = useState(false);
@@ -137,10 +141,10 @@ export function InviteFriendsScreen({
     // 서버 링크(#1007)가 오면 그걸로 — 설치 전 사용자도 설치 후 코드를 되찾는 랜딩.
     const link = info.shareUrl ?? friendInviteLink(info.code);
     const outcome = await shareOrCopy(
-      `루게더에서 함께 루틴 지켜요! 내 초대코드: ${info.code}\n${link}`,
+      tr('member.inviteFriends.shareMessage', { code: info.code, link }),
     );
     // 공유 시트가 없는 브라우저는 복사로 대신했으니 알려 준다. 취소는 조용히.
-    if (outcome === 'copied') toast('초대 링크를 복사했어요');
+    if (outcome === 'copied') toast(tr('member.inviteFriends.linkCopied'));
   };
 
   /** 실제 사용 — 성공하면 보상 표시로 바꾼다. */
@@ -194,7 +198,7 @@ export function InviteFriendsScreen({
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
-      <ScreenHeader title="친구 초대" onBack={onBack} />
+      <ScreenHeader title={tr('member.inviteFriends.title')} onBack={onBack} />
 
       <ScrollView
         contentContainerStyle={[
@@ -209,11 +213,11 @@ export function InviteFriendsScreen({
           </View>
         ) : loadError ? (
           <View style={styles.loadingBlock}>
-            <RetryState message="초대 정보를 불러오지 못했어요." onRetry={onRetry} />
+            <RetryState message={tr('member.inviteFriends.loadFailed')} onRetry={onRetry} />
           </View>
         ) : (
           <>
-            <Text style={sectionTitle}>내 초대코드</Text>
+            <Text style={sectionTitle}>{tr('member.inviteFriends.myCode')}</Text>
             <View style={[styles.card, { backgroundColor: t.surface }]}>
               <Text style={[Typography.h1, styles.code, { color: t.text }]}>
                 {info?.code ?? '-'}
@@ -222,7 +226,7 @@ export function InviteFriendsScreen({
                 <ScalePressable
                   onPress={copyCode}
                   accessibilityRole="button"
-                  accessibilityLabel="초대코드 복사"
+                  accessibilityLabel={tr('member.inviteFriends.copyA11y')}
                   style={[
                     styles.copyBtn,
                     { backgroundColor: copied ? t.surfaceMuted : t.primary },
@@ -233,51 +237,62 @@ export function InviteFriendsScreen({
                     color={copied ? t.text : t.onPrimary}
                   />
                   <Text style={[Typography.label, { color: copied ? t.text : t.onPrimary }]}>
-                    {copied ? '복사됨' : '복사하기'}
+                    {copied ? tr('member.inviteFriends.copied') : tr('member.inviteFriends.copy')}
                   </Text>
                 </ScalePressable>
                 {/* 링크 공유 (#667) — 메신저에서 눌리는 랜딩 경유 링크. */}
                 <ScalePressable
                   onPress={() => void shareLink()}
                   accessibilityRole="button"
-                  accessibilityLabel="초대 링크 공유"
+                  accessibilityLabel={tr('member.inviteFriends.shareA11y')}
                   style={[styles.copyBtn, { backgroundColor: t.primary }]}>
                   <Icon name="gift" size={14} color={t.onPrimary} />
-                  <Text style={[Typography.label, { color: t.onPrimary }]}>링크 공유</Text>
+                  <Text style={[Typography.label, { color: t.onPrimary }]}>
+                    {tr('member.inviteFriends.share')}
+                  </Text>
                 </ScalePressable>
               </View>
               <Text style={[Typography.supporting, styles.rewardHint, { color: t.textMuted }]}>
-                친구가 이 코드를 입력하면 나는 코인 {info?.inviterRewardCoin ?? 0}개, 친구는 코인{' '}
-                {info?.inviteeRewardCoin ?? 0}개를 받아요.
+                {tr('member.inviteFriends.rewardHint', {
+                  mine: info?.inviterRewardCoin ?? 0,
+                  theirs: info?.inviteeRewardCoin ?? 0,
+                })}
               </Text>
               <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                지금까지 {info?.rewardedCount ?? 0}
-                {info?.maxRewardedCount != null ? ` / ${info.maxRewardedCount}` : ''}명이 내 코드로
-                함께하고 있어요.
+                {tr('member.inviteFriends.rewardedCount', {
+                  count: `${info?.rewardedCount ?? 0}${
+                    info?.maxRewardedCount != null ? ` / ${info.maxRewardedCount}` : ''
+                  }`,
+                })}
               </Text>
             </View>
 
-            <Text style={sectionTitle}>받은 코드가 있나요?</Text>
+            <Text style={sectionTitle}>{tr('member.inviteFriends.haveCode')}</Text>
             <View style={[styles.card, { backgroundColor: t.surface }]}>
               {redeemedCoin != null ? (
                 <View style={styles.redeemedRow}>
                   <Icon name="coin" size={18} />
                   <Text style={[Typography.body, { color: t.text }]}>
-                    코인 {redeemedCoin}개를 받았어요!
+                    {tr('member.inviteFriends.redeemed', { coin: redeemedCoin })}
                   </Text>
                 </View>
               ) : confirming ? (
                 <>
                   <Text style={[Typography.body, styles.center, { color: t.text }]}>
-                    {inviterLabel(confirming.inviterNickname)}의 초대가 맞나요?
+                    {tr('member.inviteFriends.confirmInviter', {
+                      inviter: inviterLabel(confirming.inviterNickname),
+                    })}
                   </Text>
                   <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
-                    코드 {confirming.code} · 사용하면 코인 {confirming.rewardCoin}개를 받아요
+                    {tr('member.inviteFriends.confirmDetail', {
+                      code: confirming.code,
+                      coin: confirming.rewardCoin,
+                    })}
                   </Text>
                   <ScalePressable
                     onPress={() => void confirmRedeem()}
                     accessibilityRole="button"
-                    accessibilityLabel="초대코드 사용 확정"
+                    accessibilityLabel={tr('member.inviteFriends.confirmA11y')}
                     accessibilityState={{ disabled: redeeming }}
                     style={[
                       styles.redeemBtn,
@@ -285,16 +300,20 @@ export function InviteFriendsScreen({
                     ]}>
                     <Text
                       style={[Typography.label, { color: redeeming ? t.textMuted : t.onPrimary }]}>
-                      {redeeming ? '사용하는 중...' : `코인 ${confirming.rewardCoin}개 받기`}
+                      {redeeming
+                        ? tr('member.inviteFriends.redeeming')
+                        : tr('member.inviteFriends.receiveCoin', { coin: confirming.rewardCoin })}
                     </Text>
                   </ScalePressable>
                   <ScalePressable
                     onPress={() => setConfirming(null)}
                     disabled={redeeming}
                     accessibilityRole="button"
-                    accessibilityLabel="초대코드 다시 입력"
+                    accessibilityLabel={tr('member.inviteFriends.reenterA11y')}
                     style={styles.textBtn}>
-                    <Text style={[Typography.supporting, { color: t.textMuted }]}>다시 입력</Text>
+                    <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                      {tr('member.inviteFriends.reenter')}
+                    </Text>
                   </ScalePressable>
                 </>
               ) : (
@@ -305,11 +324,11 @@ export function InviteFriendsScreen({
                       setCode(value);
                       setAlreadyRedeemed(false);
                     }}
-                    placeholder="친구에게 받은 초대코드"
+                    placeholder={tr('member.inviteFriends.codePlaceholder')}
                     placeholderTextColor={t.textDisabled}
                     autoCapitalize="characters"
                     autoCorrect={false}
-                    accessibilityLabel="초대코드 입력"
+                    accessibilityLabel={tr('member.inviteFriends.codeInputA11y')}
                     style={[
                       styles.input,
                       // iOS placeholder 자간 이슈 — 값 있을 때만 자간.
@@ -320,7 +339,7 @@ export function InviteFriendsScreen({
                   <ScalePressable
                     onPress={() => void submitRedeem()}
                     accessibilityRole="button"
-                    accessibilityLabel="초대코드 사용"
+                    accessibilityLabel={tr('member.inviteFriends.redeemA11y')}
                     accessibilityState={{ disabled: !code.trim() || redeeming }}
                     style={[
                       styles.redeemBtn,
@@ -331,13 +350,15 @@ export function InviteFriendsScreen({
                         Typography.label,
                         { color: code.trim() && !redeeming ? t.onPrimary : t.textMuted },
                       ]}>
-                      {redeeming ? '확인 중...' : '사용하기'}
+                      {redeeming
+                        ? tr('member.inviteFriends.checking')
+                        : tr('member.inviteFriends.redeem')}
                     </Text>
                   </ScalePressable>
                   <Text style={[Typography.supporting, { color: t.textMuted }]}>
                     {alreadyRedeemed
-                      ? '이미 초대 보상을 받은 계정이에요.'
-                      : '초대코드는 한 번만 사용할 수 있어요.'}
+                      ? tr('member.inviteFriends.alreadyRedeemed')
+                      : tr('member.inviteFriends.onceOnly')}
                   </Text>
                 </>
               )}

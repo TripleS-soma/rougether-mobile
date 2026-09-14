@@ -15,6 +15,7 @@ import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style'
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { assetSource } from '@/resources/asset';
+import { useT } from '@/i18n';
 
 export type FurnitureStudioScreenProps = {
   balance: FurnitureCreditBalance | null;
@@ -47,6 +48,7 @@ export function FurnitureStudioScreen({
 }: FurnitureStudioScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
+  const tr = useT();
   const column = useResponsiveColumn();
   const inset = useHeaderContentInset();
   const screenStyle = useScreenStyle([]);
@@ -54,38 +56,52 @@ export function FurnitureStudioScreen({
   const ready = !loading && !submitting && !active && (balance?.available ?? 0) > 0;
   return (
     <View style={[styles.screen, screenStyle]}>
-      <ScreenHeader title="AI 가구 만들기" onBack={onBack} />
+      <ScreenHeader title={tr('roomShop.studio.title')} onBack={onBack} />
       <ScrollView
         contentContainerStyle={[styles.body, column, { paddingTop: inset || Spacing.four }]}>
         <View style={[styles.hero, { backgroundColor: t.surfaceMuted }]}>
           <Icon name="sparkles" size={36} color={t.primaryText} />
-          <Text style={[Typography.h2, { color: t.text }]}>사진 속 가구를 내 방으로</Text>
+          <Text style={[Typography.h2, { color: t.text }]}>{tr('roomShop.studio.heroTitle')}</Text>
           <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
-            좋아하는 가구 사진 한 장으로{`\n`}루게더 속 나만의 가구를 만들어보세요.
+            {tr('roomShop.studio.heroBody')}
           </Text>
           <View style={[styles.balance, { backgroundColor: t.surface }]}>
             <Icon name="ticket" size={18} color={t.primaryText} />
             <Text style={[Typography.label, { color: t.text }]}>
-              {balance ? `생성권 ${balance.available}회` : '생성권 확인 중'}
-              {balance && balance.reserved > 0 ? ` · 사용 중 ${balance.reserved}회` : ''}
+              {balance
+                ? tr('roomShop.studio.credits', { n: balance.available })
+                : tr('roomShop.studio.creditsChecking')}
+              {balance && balance.reserved > 0
+                ? tr('roomShop.studio.creditsReserved', { n: balance.reserved })
+                : ''}
             </Text>
           </View>
         </View>
         {loading ? (
-          <ActivityIndicator accessibilityLabel="생성권 불러오는 중" color={t.primaryText} />
+          <ActivityIndicator
+            accessibilityLabel={tr('roomShop.studio.creditsLoadingA11y')}
+            color={t.primaryText}
+          />
         ) : null}
         {error ? (
           <View accessibilityRole="alert" style={styles.section}>
             <Text style={[Typography.body, { color: t.danger }]}>{error}</Text>
-            <Button label="다시 확인" variant="secondary" onPress={onRetry} disabled={submitting} />
+            <Button
+              label={tr('roomShop.studio.recheck')}
+              variant="secondary"
+              onPress={onRetry}
+              disabled={submitting}
+            />
           </View>
         ) : null}
         {active ? (
           <View style={[styles.card, { backgroundColor: t.surface }]}>
             <ActivityIndicator color={t.primaryText} />
-            <Text style={[Typography.h3, { color: t.text }]}>가구를 만들고 있어요</Text>
+            <Text style={[Typography.h3, { color: t.text }]}>
+              {tr('roomShop.studio.makingTitle')}
+            </Text>
             <Text style={[Typography.body, { color: t.textMuted }]}>
-              잠시 걸릴 수 있어요. 다른 화면에 다녀와도 계속 만들어요.
+              {tr('roomShop.studio.makingBody')}
             </Text>
           </View>
         ) : (
@@ -95,11 +111,11 @@ export function FurnitureStudioScreen({
                 source={{ uri: photo.uri }}
                 style={styles.photo}
                 contentFit="contain"
-                accessibilityLabel="선택한 가구 사진"
+                accessibilityLabel={tr('roomShop.studio.photoA11y')}
               />
             ) : null}
             <Button
-              label={photo ? '사진 바꾸기' : '가구 사진 선택'}
+              label={tr(photo ? 'roomShop.studio.changePhoto' : 'roomShop.studio.choosePhoto')}
               leftIcon="camera"
               variant="secondary"
               onPress={onChoosePhoto}
@@ -107,29 +123,36 @@ export function FurnitureStudioScreen({
             />
             {photo ? (
               <Button
-                label={submitting ? '사진 보내는 중' : '생성권 1회로 만들기'}
+                label={tr(submitting ? 'roomShop.studio.sending' : 'roomShop.studio.submit')}
                 leftIcon="sparkles"
                 onPress={onSubmit}
                 disabled={!ready}
               />
             ) : null}
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              가구 하나가 잘 보이는 JPG·PNG 사진 · 최대 10MB{`\n`}사진은 AI 가구 제작에 사용돼요.
-              생성에 실패하면 생성권을 돌려드려요.
+              {tr('roomShop.studio.photoHint')}
             </Text>
           </View>
         )}
         {onAttendance ? (
           <View style={[styles.card, { backgroundColor: t.surfaceMuted }]}>
-            <Text style={[Typography.h3, { color: t.text }]}>7일 출석하고, 내 가구 만들기</Text>
-            <Text style={[Typography.body, { color: t.textMuted }]}>
-              7일 연속 출석하면 생성권 1회를 받아요.
+            <Text style={[Typography.h3, { color: t.text }]}>
+              {tr('roomShop.studio.attendanceTitle')}
             </Text>
-            <Button label="출석 이벤트 보기" variant="secondary" onPress={onAttendance} />
+            <Text style={[Typography.body, { color: t.textMuted }]}>
+              {tr('roomShop.studio.attendanceBody')}
+            </Text>
+            <Button
+              label={tr('roomShop.studio.attendanceCta')}
+              variant="secondary"
+              onPress={onAttendance}
+            />
           </View>
         ) : null}
         {jobs.length ? (
-          <Text style={[Typography.h3, { color: t.text }]}>내가 만든 가구</Text>
+          <Text style={[Typography.h3, { color: t.text }]}>
+            {tr('roomShop.studio.myFurniture')}
+          </Text>
         ) : null}
         {jobs
           .filter((job) => !isFurnitureJobActive(job))
@@ -140,17 +163,25 @@ export function FurnitureStudioScreen({
                   source={assetSource(job.assetKey)}
                   style={styles.result}
                   contentFit="contain"
-                  accessibilityLabel="완성된 AI 가구"
+                  accessibilityLabel={tr('roomShop.studio.resultA11y')}
                 />
               ) : null}
               <Text style={[Typography.label, { color: t.text }]}>
-                {job.status === 'SUCCEEDED' ? '내 가구함에 담았어요' : '이번에는 완성하지 못했어요'}
+                {tr(
+                  job.status === 'SUCCEEDED'
+                    ? 'roomShop.studio.succeeded'
+                    : 'roomShop.studio.failed',
+                )}
               </Text>
               {job.status === 'SUCCEEDED' || job.userItemId ? (
-                <Button label="방에 배치하기" onPress={onGoToRoom} variant="secondary" />
+                <Button
+                  label={tr('roomShop.studio.placeInRoom')}
+                  onPress={onGoToRoom}
+                  variant="secondary"
+                />
               ) : (
                 <Text style={[Typography.body, { color: t.textMuted }]}>
-                  사진을 바꿔 다시 시도해보세요.
+                  {tr('roomShop.studio.retryHint')}
                 </Text>
               )}
             </View>

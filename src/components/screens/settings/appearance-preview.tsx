@@ -4,6 +4,7 @@ import { CharacterAvatar } from '@/components/room/character-avatar';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 /**
  * 테마 색상·폰트 피커 공용 라이브 미리보기 카드 (#459 → #750에서 공유로 분리).
@@ -29,6 +30,7 @@ export function AppearancePreview({
   characterId = DEFAULT_CHARACTER_ID,
 }: AppearancePreviewProps = {}) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   const emph = useFontEmphasis();
 
@@ -48,7 +50,9 @@ export function AppearancePreview({
           style={[Typography.h2, styles.roomName, { color: t.text }]}
           numberOfLines={1}
           ellipsizeMode="tail">
-          {userName ? `${userName}의 방` : '내 방'}
+          {userName
+            ? tr('member.appearance.roomOf', { name: userName })
+            : tr('member.appearance.myRoom')}
         </Text>
         <View style={[styles.coinPill, { backgroundColor: t.surfaceMuted }]}>
           <Text style={[Typography.supporting, emph('bold'), { color: t.text }]}>9999+</Text>
@@ -62,7 +66,7 @@ export function AppearancePreview({
         </View>
         <View style={[styles.chip, { backgroundColor: t.primarySoft }]}>
           <Text style={[Typography.supporting, emph('semibold'), { color: t.primaryText }]}>
-            달력
+            {tr('member.appearance.calendarChip')}
           </Text>
         </View>
         <View style={[styles.addBtn, { backgroundColor: t.primary }]}>
@@ -71,7 +75,9 @@ export function AppearancePreview({
       </View>
 
       <View style={[styles.cta, { backgroundColor: t.primary }]}>
-        <Text style={[Typography.label, { color: t.onPrimary }]}>오늘 루틴 완료하기</Text>
+        <Text style={[Typography.label, { color: t.onPrimary }]}>
+          {tr('member.appearance.cta')}
+        </Text>
       </View>
     </View>
   );

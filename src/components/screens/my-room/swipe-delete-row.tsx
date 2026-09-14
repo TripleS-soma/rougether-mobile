@@ -7,6 +7,7 @@ import ReanimatedSwipeable, {
 import { PagerGestureContext } from '@/components/ui/pager-scroll-view';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 /**
  * 루틴/할일 행 스와이프 삭제 (#566) — 왼쪽으로 밀면 빨간 '삭제' 액션이
@@ -35,6 +36,7 @@ export function SwipeDeleteRow({
   children: ReactNode;
 }) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   const pager = useContext(PagerGestureContext);
   const swipeRef = useRef<SwipeableMethods>(null);
@@ -53,9 +55,11 @@ export function SwipeDeleteRow({
                   onDelete();
                 }}
                 accessibilityRole="button"
-                accessibilityLabel={`${label} 스와이프 삭제`}
+                accessibilityLabel={tr('routineTodo.swipeDelete.a11y', { label })}
                 style={[styles.deleteAction, { backgroundColor: t.danger }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>삭제</Text>
+                <Text style={[Typography.label, { color: t.onPrimary }]}>
+                  {tr('routineTodo.swipeDelete.label')}
+                </Text>
               </Pressable>
             )
           : undefined

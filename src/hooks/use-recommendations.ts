@@ -25,6 +25,7 @@ import {
   type RecommendationItem,
 } from '@/api';
 import { useToast } from '@/components/ui/toast';
+import { i18n } from '@/i18n';
 
 /** 추천 목록 쿼리 키 — 무효화 지점이 늘어날 때 여기서만 고친다. */
 
@@ -71,7 +72,7 @@ export function useRecommendations({ onAccepted, enabled = true }: UseRecommenda
    * 끝낸다.
    */
   const handleStale = useCallback(async () => {
-    toast('제안이 더는 유효하지 않아요', 'error');
+    toast(i18n.t('routineTodo.recommendation.stale'), 'error');
     await reload();
   }, [reload, toast]);
 
@@ -89,7 +90,7 @@ export function useRecommendations({ onAccepted, enabled = true }: UseRecommenda
     mutationFn: acceptRecommendation,
     onSuccess: (_res, recommendationId) => {
       dropFromCache(recommendationId);
-      toast('루틴에 적용했어요', 'success');
+      toast(i18n.t('routineTodo.recommendation.applied'), 'success');
       onAccepted?.();
     },
     onError: handleStale,

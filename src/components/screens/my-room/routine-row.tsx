@@ -17,6 +17,7 @@ import { Spacing } from '@/constants/theme';
 import { useLatestRef } from '@/hooks/use-stable-value';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { formatTime } from '@/utils/datetime';
+import { useT } from '@/i18n';
 
 /** 롱프레스 후 드래그 활성까지 (#716) — 그 전 세로 스크롤은 ScrollView 몫. */
 /** 루틴 행 드래그를 여는 꾹 누름. 집 순서(350ms)보다 짧다 — 행은 탭 동작이
@@ -102,6 +103,7 @@ function RoutineRowBase({
   registerRef,
 }: RoutineRowProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   const emph = useFontEmphasis();
 
@@ -157,7 +159,7 @@ function RoutineRowBase({
         <Pressable
           onPress={menuEnabled ? openMenu : undefined}
           accessibilityRole="button"
-          accessibilityLabel={`${title} 메뉴`}
+          accessibilityLabel={tr('routineTodo.row.menuA11y', { title })}
           style={[styles.flex, styles.rowBody]}>
           {/* 반복 마커(#576)는 제목과 같은 줄 — 아랫줄(알림 배지)에 두면
               시간까지 겹쳐 부제 줄이 길어진다. 긴 제목은 마커가 밀리지 않게

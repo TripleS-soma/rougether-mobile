@@ -1,4 +1,5 @@
 import type { Floor, House, RoomCell } from '@/components/screens/house/types';
+import { i18n } from '@/i18n';
 
 /**
  * A house's seat arrangement in display order (top-left seat first):
@@ -7,7 +8,14 @@ import type { Floor, House, RoomCell } from '@/components/screens/house/types';
  */
 export type RoomLayout = (number | null)[];
 
-const VACANT_CELL: RoomCell = { name: '빈방', color: 'transparent', vacant: true };
+// name은 getter — 모듈 로드 시점에 번역하면 언어 변경이 반영되지 않는다 (#893).
+const VACANT_CELL: RoomCell = {
+  get name() {
+    return i18n.t('roomShop.room.vacant');
+  },
+  color: 'transparent',
+  vacant: true,
+};
 
 /** Row lengths of the house grid, top row first (holds the odd half-row). */
 const rowShapes = (house: House) => house.floors.map((f) => f.rooms.length);

@@ -1,22 +1,11 @@
+import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { WHEEL_ITEM_HEIGHT, WHEEL_VISIBLE_ROWS, WheelPicker } from '@/components/ui/wheel-picker';
 import { parse, to24 } from '@/components/screens/sheets/time-picker-sheet';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
-const PERIODS = [
-  { value: 'AM' as const, label: '오전' },
-  { value: 'PM' as const, label: '오후' },
-];
-const HOURS = Array.from({ length: 12 }, (_, i) => ({
-  value: i + 1,
-  label: String(i + 1),
-  accessibilityLabel: `${i + 1}시`,
-}));
-const MINUTES = Array.from({ length: 12 }, (_, i) => ({
-  value: i * 5,
-  label: String(i * 5).padStart(2, '0'),
-  accessibilityLabel: `${i * 5}분`,
-}));
+import { useT } from '@/i18n';
+const PERIOD_VALUES = ['AM', 'PM'] as const;
 export function ComposeTimeFields({
   value,
   onChange,
@@ -25,28 +14,52 @@ export function ComposeTimeFields({
   onChange: (value: string) => void;
 }) {
   const t = useTokens();
+  const tr = useT();
+  // 휠 항목 라벨은 언어를 따른다 (#893).
+  const periods = useMemo(
+    () => PERIOD_VALUES.map((v) => ({ value: v, label: tr(`routineTodo.timePicker.${v}`) })),
+    [tr],
+  );
+  const hours = useMemo(
+    () =>
+      Array.from({ length: 12 }, (_, i) => ({
+        value: i + 1,
+        label: String(i + 1),
+        accessibilityLabel: tr('routineTodo.timePicker.hourA11y', { hour: i + 1 }),
+      })),
+    [tr],
+  );
+  const minutes = useMemo(
+    () =>
+      Array.from({ length: 12 }, (_, i) => ({
+        value: i * 5,
+        label: String(i * 5).padStart(2, '0'),
+        accessibilityLabel: tr('routineTodo.timePicker.minuteA11y', { minute: i * 5 }),
+      })),
+    [tr],
+  );
   const { ampm, hour12, minute } = parse(value);
   return (
     <View>
       <View pointerEvents="none" style={[styles.band, { backgroundColor: t.surfaceMuted }]} />
       <View style={styles.row}>
         <WheelPicker
-          items={PERIODS}
+          items={periods}
           value={ampm}
           onChange={(next) => onChange(to24(next, hour12, minute))}
-          accessibilityLabel="오전 오후"
+          accessibilityLabel={tr('routineTodo.timePicker.ampmA11y')}
         />
         <WheelPicker
-          items={HOURS}
+          items={hours}
           value={hour12}
           onChange={(next) => onChange(to24(ampm, next, minute))}
-          accessibilityLabel="시"
+          accessibilityLabel={tr('routineTodo.timePicker.hour')}
         />
         <WheelPicker
-          items={MINUTES}
+          items={minutes}
           value={minute}
           onChange={(next) => onChange(to24(ampm, hour12, next))}
-          accessibilityLabel="분"
+          accessibilityLabel={tr('routineTodo.timePicker.minute')}
         />
       </View>
     </View>
