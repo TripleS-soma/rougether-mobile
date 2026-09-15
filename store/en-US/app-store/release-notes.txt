@@ -1,5 +1,10 @@
-The cat has new expressions for you!
+Language setting, a new calendar, and a News tab in notifications!
 
-• Keep your routines and the cat app icon cheers up on its own. Stay consistent for 7+ days and it puts on a crown
-• If you haven't visited for a while, the cat sends a gentle comeback nudge. Tap it to return to your room
-• You can turn comeback pushes off under all notifications or routine reminders
+• Choose Korean or English in Settings > Language. If your device is in English, the app starts in English
+• The Calendar tab now shows just the month. Tap a date and the calendar folds to that week with the day's routines and to-dos below; swipe sideways to move between weeks
+• Notifications are split into [My alerts | News]. Feature and update news lives in the News tab, and alerts can be swiped away
+• Getting started now points at the actual buttons on screen, step by step. The first mission is "complete one routine today"
+• Tap + next to a category and an input opens right there — just type to add a to-do
+• Routine Runner keeps speeding up after 40 seconds. Go for a new best
+• If your email is already registered with a different sign-in method, we let you know
+• Fixed sideways swipes sometimes getting stuck on the House tab, and the keyboard covering the nickname field on first launch (Android)
