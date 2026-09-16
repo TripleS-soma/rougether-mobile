@@ -5,6 +5,7 @@ import { Icon, type IconName } from '@/components/ui/icon';
 import { Overlay, Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useAppFrame } from '@/hooks/use-app-frame';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 export type NavMenuPopoverProps = {
   visible: boolean;
@@ -53,6 +54,7 @@ export function NavMenuPopover({
   onManageRoutines,
 }: NavMenuPopoverProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   // 팝오버는 Modal(창 기준 좌표)에 뜬다. 웹 데스크톱의 중앙 컬럼 프레임(#1227)에서는
   // 창 오른쪽 끝이 아니라 프레임 오른쪽 끝에 붙어야 햄버거 버튼 아래에 놓인다.
@@ -66,7 +68,7 @@ export function NavMenuPopover({
         style={styles.popoverBackdrop}
         onPress={onClose}
         accessibilityRole="button"
-        accessibilityLabel="닫기">
+        accessibilityLabel={tr('app.navMenu.close')}>
         <GlassSurface
           interactive={false}
           fallbackColor={t.screen}
@@ -82,33 +84,33 @@ export function NavMenuPopover({
                 ? [
                     {
                       icon: 'profile' as const,
-                      label: '캐릭터 교체',
+                      label: tr('app.navMenu.changeCharacter'),
                       onPress: () => onOpenCharacterPicker(),
                     },
                   ]
                 : []),
               {
                 icon: 'edit' as const,
-                label: '방 꾸미기',
+                label: tr('app.navMenu.decorate'),
                 onPress: () => onEditRoom?.(),
               },
               ...(onSaveRoomImage
                 ? [
                     {
                       icon: 'camera' as const,
-                      label: '방 이미지 저장',
+                      label: tr('app.navMenu.saveImage'),
                       onPress: () => onSaveRoomImage(),
                     },
                   ]
                 : []),
               {
                 icon: 'folder' as const,
-                label: '카테고리 관리',
+                label: tr('app.navMenu.manageCategories'),
                 onPress: () => onOpenCategoryManager(),
               },
               {
                 icon: 'list' as const,
-                label: '루틴 관리',
+                label: tr('app.navMenu.manageRoutines'),
                 onPress: () => onManageRoutines?.(),
               },
             ] as { icon: IconName; label: string; onPress: () => void }[]

@@ -10,6 +10,7 @@ import type { BugReportEntry } from '@/components/screens/bug-report-screen';
 import type { NotificationSettings } from '@/components/screens/notification-settings-screen';
 import type { OwnedCharacter } from '@/components/screens/sheets/character-picker-sheet';
 import { characterIdFromCode } from '@/api/adapters/room';
+import { i18n } from '@/i18n';
 import type {
   BugReportResponse,
   CharacterAnimations,
@@ -26,7 +27,7 @@ import type {
 export function toOnboardingGoal(g: GoalItem, index: number): OnboardingGoal {
   return {
     id: String(g.id ?? index),
-    label: g.name ?? g.code ?? '목표',
+    label: g.name ?? g.code ?? i18n.t('app.shell.goalFallback'),
     code: g.code,
   };
 }

@@ -9,6 +9,7 @@ import { useFriendRoom } from '@/hooks/use-friend-room';
 import { useGuestbook } from '@/hooks/use-guestbook';
 import type { ShopCatalogue } from '@/api/adapters';
 import { track } from '@/lib/analytics';
+import { i18n } from '@/i18n';
 
 /**
  * 친구 방문 클러스터 (#149·#644, #692 4단계) — 방문 중인 친구 상태와
@@ -41,7 +42,9 @@ export function useFriendVisit({
   clearPreviewCobweb: (membershipId: number) => void;
 }) {
   const { show: toast } = useToast();
-  const [visitingFriend, setVisitingFriend] = useState<VisitedFriend>({ name: '친구' });
+  const [visitingFriend, setVisitingFriend] = useState<VisitedFriend>(() => ({
+    name: i18n.t('app.friendVisit.friend'),
+  }));
   // The visited friend's live room + today's routines (loads on visit, #149).
   const { friendRoom, load: loadFriendRoom, cleanCobweb } = useFriendRoom();
   // Guestbook for the friend room being visited (loads on visit).
@@ -121,7 +124,7 @@ export function useFriendVisit({
           // 응원은 같은 집 활성 멤버 사이에서만 — 서버 집 문맥이 있을 때만 배선.
           const { houseId, membershipId } = visitingFriend;
           if (houseId && membershipId) void cheerMember(houseId, membershipId, type);
-          else toast('이 방에서는 응원을 보낼 수 없어요', 'error');
+          else toast(i18n.t('app.friendVisit.cheerNotAllowed'), 'error');
         }}
         onLoadMoreGuestbook={() => {
           void loadMoreGuestbook();
@@ -144,13 +147,13 @@ export function useFriendVisit({
           if (!houseId || !membershipId) return null;
           try {
             const reward = await cleanCobweb(houseId, membershipId);
-            if (reward == null) toast('누가 먼저 치워줬어요');
+            if (reward == null) toast(i18n.t('app.friendVisit.cobwebAlreadyCleaned'));
             // 타일에 남은 거미줄도 같이 걷는다 — 돌아갔을 때 이미 치운 게
             // 그대로 껴 있으면 청소가 안 먹힌 것처럼 보인다.
             else clearPreviewCobweb(membershipId);
             return reward;
           } catch {
-            toast('거미줄을 치우지 못했어요. 잠시 후 다시 시도해 주세요.', 'error');
+            toast(i18n.t('app.friendVisit.cobwebFailed'), 'error');
             return null;
           }
         }}

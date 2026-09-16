@@ -871,7 +871,10 @@ export function AppShell({
           index={0}
           targets={coachTargets}
           frame={coachFrame}
-          caption={`미션 ${missions.stepIndex + 1}/${missions.totalSteps}`}
+          caption={tr('app.shell.missionCaption', {
+            index: missions.stepIndex + 1,
+            total: missions.totalSteps,
+          })}
         />
       ) : null}
     </View>

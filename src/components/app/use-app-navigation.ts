@@ -24,6 +24,7 @@ import {
   type Screen,
 } from '@/components/app/navigation';
 import { useToast } from '@/components/ui/toast';
+import { i18n } from '@/i18n';
 
 /**
  * 셸 내비게이션 컨트롤러 (#692) — 뒤로가기(하드웨어 백 #522 · iOS 엣지 백
@@ -72,7 +73,7 @@ export function useAppNavigation({
         return true;
       }
       lastBackRef.current = now;
-      toast('한 번 더 뒤로가면 앱이 꺼져요');
+      toast(i18n.t('app.shell.exitHint'));
       return true;
     });
     return () => sub.remove();
