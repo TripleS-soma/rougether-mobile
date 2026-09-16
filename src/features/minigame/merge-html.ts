@@ -1,5 +1,11 @@
 import type { SemanticColors } from '@/constants/theme';
 import { MERGE_ENGINE_SOURCE } from '@/features/minigame/merge-engine';
+import {
+  escapeHtml,
+  getMinigameCopy,
+  MINIGAME_FMT_SOURCE,
+  minigameDocumentLanguage,
+} from '@/features/minigame/minigame-copy';
 import { RUNNER_CAT_IDLE } from '@/features/minigame/runner-character';
 import { RunnerPalette } from '@/features/minigame/runner-palette';
 
@@ -16,6 +22,8 @@ export function createMergeHtml(options: MergeHtmlOptions): string {
   if (!Number.isInteger(options.seed) || options.seed < 1 || options.seed > 2147483647) {
     throw new Error('Invalid merge seed');
   }
+  const copy = getMinigameCopy('merge');
+  const h = (key: string) => escapeHtml(copy[key] ?? '');
   const t = options.colors;
   const palette = t
     ? {
@@ -37,8 +45,9 @@ export function createMergeHtml(options: MergeHtmlOptions): string {
     manualTime: options.practice === true && options.allowManualTime === true,
     palette,
     catImage: RUNNER_CAT_IDLE,
+    copy,
   }).replace(/</g, '\\u003c');
-  return `<!doctype html><html lang="ko"><head><meta charset="utf-8" />
+  return `<!doctype html><html lang="${minigameDocumentLanguage()}"><head><meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline';" />
 <style>
@@ -56,18 +65,18 @@ button:focus-visible{outline:3px solid ${palette.primaryDark};outline-offset:-2p
 #save-btn{left:12.5%;top:88.33%;width:75%;height:9%}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 [hidden]{display:none!important}
-</style></head><body><main aria-label="고양이 합치기">
-<canvas id="game" width="800" height="1200" tabindex="0" aria-label="4 곱하기 4 보드에서 같은 숫자를 합치는 고양이 게임">고양이 합치기 게임</canvas>
+</style></head><body><main aria-label="${h('mainA11y')}">
+<canvas id="game" width="800" height="1200" tabindex="0" aria-label="${h('canvasA11y')}">${h('canvasFallback')}</canvas>
 <p id="game-status" class="sr-only" role="status" aria-live="polite"></p>
-<button id="start-btn" aria-label="합치기 시작">합치기 시작</button>
-<button id="pause-btn" aria-label="일시정지" hidden>일시정지</button>
-<button id="resume-btn" aria-label="계속하기" hidden>계속하기</button>
-<button id="up-btn" class="direction" aria-label="위로 합치기" hidden>위로 합치기</button>
-<button id="right-btn" class="direction" aria-label="오른쪽으로 합치기" hidden>오른쪽으로 합치기</button>
-<button id="down-btn" class="direction" aria-label="아래로 합치기" hidden>아래로 합치기</button>
-<button id="left-btn" class="direction" aria-label="왼쪽으로 합치기" hidden>왼쪽으로 합치기</button>
-<button id="save-btn" aria-label="그만하고 기록 저장" hidden>그만하고 기록 저장</button>
-</main><script>${MERGE_ENGINE_SOURCE}\n(${MERGE_BROWSER_SOURCE})(${config});</script></body></html>`;
+<button id="start-btn" aria-label="${h('startA11y')}">${h('startA11y')}</button>
+<button id="pause-btn" aria-label="${h('pauseA11y')}" hidden>${h('pauseA11y')}</button>
+<button id="resume-btn" aria-label="${h('resume')}" hidden>${h('resume')}</button>
+<button id="up-btn" class="direction" aria-label="${h('upA11y')}" hidden>${h('upA11y')}</button>
+<button id="right-btn" class="direction" aria-label="${h('rightA11y')}" hidden>${h('rightA11y')}</button>
+<button id="down-btn" class="direction" aria-label="${h('downA11y')}" hidden>${h('downA11y')}</button>
+<button id="left-btn" class="direction" aria-label="${h('leftA11y')}" hidden>${h('leftA11y')}</button>
+<button id="save-btn" aria-label="${h('saveA11y')}" hidden>${h('saveA11y')}</button>
+</main><script>${MERGE_ENGINE_SOURCE}\n${MINIGAME_FMT_SOURCE}\n(${MERGE_BROWSER_SOURCE})(${config});</script></body></html>`;
 }
 
 const MERGE_BROWSER_SOURCE = String.raw`function runMerge(config) {
@@ -80,7 +89,8 @@ const MERGE_BROWSER_SOURCE = String.raw`function runMerge(config) {
   var resumeButton = document.getElementById('resume-btn');
   var saveButton = document.getElementById('save-btn');
   var status = document.getElementById('game-status');
-  saveButton.setAttribute('aria-label',config.practice?'여기까지 연습하기':'그만하고 기록 저장');
+  var copy = config.copy;
+  saveButton.setAttribute('aria-label',config.practice?copy.practiceStopA11y:copy.saveA11y);
   var directionButtons = ['up-btn', 'right-btn', 'down-btn', 'left-btn'].map(function (id) { return document.getElementById(id); });
   var names = ['UP', 'RIGHT', 'DOWN', 'LEFT'];
   var engine = createMergeEngine(config.seed);
@@ -131,21 +141,21 @@ const MERGE_BROWSER_SOURCE = String.raw`function runMerge(config) {
     directionButtons.forEach(function(button){button.hidden=mode!=='playing'||!hostActive;});
   }
   function announce() {
-    status.textContent='점수 '+state.score+'점. '+state.directions.length+'번 이동. '+
-      (mode==='ended'?'게임 종료. ':mode==='paused'?'일시정지. ':'')+
-      (state.movesUntilExtraTile===null?'':'추가 타일 '+state.movesUntilExtraTile+'턴 뒤. ')+
-      state.board.map(function(value,index){return (index%4===0?' '+(Math.floor(index/4)+1)+'행: ':'')+(value||'빈칸');}).join(', ');
+    status.textContent=fmt(copy.statusScore,{score:state.score,moves:state.directions.length})+' '+
+      (mode==='ended'?copy.statusEnded+' ':mode==='paused'?copy.statusPaused+' ':'')+
+      (state.movesUntilExtraTile===null?'':fmt(copy.statusExtraTile,{n:state.movesUntilExtraTile})+' ')+
+      state.board.map(function(value,index){return (index%4===0?' '+fmt(copy.statusRow,{row:Math.floor(index/4)+1})+' ':'')+(value||copy.statusEmpty);}).join(', ');
   }
   function render() {
     if(destroyed)return;
     ctx.fillStyle=colors.sky;ctx.fillRect(0,0,400,600);
     cat(12,5,75);
-    text(config.practice?'고양이 합치기 · 연습':'고양이 합치기',86,25,15,colors.primaryDark);
-    text(state.score+'점',86,53,25,colors.ink);
+    text(config.practice?copy.titlePractice:copy.title,86,25,15,colors.primaryDark);
+    text(fmt(copy.points,{score:state.score}),86,53,25,colors.ink);
     if(lastMerge>0&&glowTicks>0)text('+'+lastMerge,218,53,14,colors.primaryDark,'right');
     if(mode==='playing'){
       box(228,41,102,25,12,colors.paper);
-      text('추가 타일 '+state.movesUntilExtraTile+'턴',279,54,11,colors.primaryDark,'center');
+      text(fmt(copy.extraTile,{n:state.movesUntilExtraTile}),279,54,11,colors.primaryDark,'center');
       box(338,16,46,48,16,colors.paper);
       box(353,30,5,20,2,colors.primaryDark);box(364,30,5,20,2,colors.primaryDark);
     }
@@ -165,23 +175,23 @@ const MERGE_BROWSER_SOURCE = String.raw`function runMerge(config) {
     }
     if(mode==='playing'||mode==='paused'){
       box(50,530,300,54,17,colors.paper);
-      text(config.practice?'그만하기':'기록 저장',200,557,17,colors.primaryDark,'center');
+      text(config.practice?copy.stopButton:copy.saveButton,200,557,17,colors.primaryDark,'center');
     }
     if(mode==='ready'||mode==='paused'||mode==='ended'){
       ctx.fillStyle='rgba(255,253,244,0.88)';ctx.fillRect(20,80,360,360);
       cat(147,107,106);
-      if(mode!=='ready')text(mode==='paused'?'일시정지':'게임 종료',200,242,23,colors.ink,'center');
+      if(mode!=='ready')text(mode==='paused'?copy.paused:copy.gameOver,200,242,23,colors.ink,'center');
       if(mode==='ended'){
-        text(state.score+'점',200,294,38,colors.primaryDark,'center');
-        if(endReason==='blocked')text('이동 불가',200,342,15,colors.muted,'center');
+        text(fmt(copy.points,{score:state.score}),200,294,38,colors.primaryDark,'center');
+        if(endReason==='blocked')text(copy.blocked,200,342,15,colors.muted,'center');
       }else{
-        if(mode==='ready')text('스와이프 · 방향키',200,244,17,colors.muted,'center');
-        if(hostActive){box(100,284,200,56,20,colors.primaryDark);text(mode==='ready'?'시작':'계속하기',200,312,21,colors.white,'center');}
+        if(mode==='ready')text(copy.hint,200,244,17,colors.muted,'center');
+        if(hostActive){box(100,284,200,56,20,colors.primaryDark);text(mode==='ready'?copy.start:copy.resume,200,312,21,colors.white,'center');}
       }
     }
     if(mode==='loading'||mode==='error'){
       box(20,80,360,360,22,colors.paper);
-      text(mode==='loading'?'불러오는 중':'불러오기 실패',200,252,19,colors.ink,'center');
+      text(mode==='loading'?copy.loading:copy.loadFailed,200,252,19,colors.ink,'center');
     }
     syncButtons();
   }

@@ -9,6 +9,7 @@ import enRoomShop from '@/i18n/resources/en/roomShop.json';
 import enNotification from '@/i18n/resources/en/notification.json';
 import enApp from '@/i18n/resources/en/app.json';
 import enSettings from '@/i18n/resources/en/settings.json';
+import enMinigame from '@/i18n/resources/en/minigame.json';
 import koCommon from '@/i18n/resources/ko/common.json';
 import koMember from '@/i18n/resources/ko/member.json';
 import koRoutineTodo from '@/i18n/resources/ko/routineTodo.json';
@@ -17,6 +18,7 @@ import koRoomShop from '@/i18n/resources/ko/roomShop.json';
 import koNotification from '@/i18n/resources/ko/notification.json';
 import koApp from '@/i18n/resources/ko/app.json';
 import koSettings from '@/i18n/resources/ko/settings.json';
+import koMinigame from '@/i18n/resources/ko/minigame.json';
 
 /**
  * 앱 문구 i18n (#893). 한국어가 원문이자 폴백이고, 영어는 같은 키 집합을 반드시 갖는다
@@ -57,6 +59,7 @@ export const koResources = {
   ...koRoomShop,
   ...koNotification,
   ...koApp,
+  ...koMinigame,
 };
 export const enResources = {
   ...enCommon,
@@ -67,6 +70,7 @@ export const enResources = {
   ...enRoomShop,
   ...enNotification,
   ...enApp,
+  ...enMinigame,
 };
 
 export const resources = {

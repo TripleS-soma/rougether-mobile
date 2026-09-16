@@ -1,0 +1,64 @@
+{
+  "minigame": {
+    "common": {
+      "start": "시작",
+      "resume": "계속하기",
+      "pauseA11y": "일시정지",
+      "paused": "일시정지",
+      "gameOver": "게임 종료",
+      "points": "{{score}}점",
+      "loading": "불러오는 중",
+      "loadFailed": "불러오기 실패"
+    },
+    "merge": {
+      "mainA11y": "고양이 합치기",
+      "canvasA11y": "4 곱하기 4 보드에서 같은 숫자를 합치는 고양이 게임",
+      "canvasFallback": "고양이 합치기 게임",
+      "startA11y": "합치기 시작",
+      "upA11y": "위로 합치기",
+      "rightA11y": "오른쪽으로 합치기",
+      "downA11y": "아래로 합치기",
+      "leftA11y": "왼쪽으로 합치기",
+      "saveA11y": "그만하고 기록 저장",
+      "practiceStopA11y": "여기까지 연습하기",
+      "title": "고양이 합치기",
+      "titlePractice": "고양이 합치기 · 연습",
+      "extraTile": "추가 타일 {{n}}턴",
+      "saveButton": "기록 저장",
+      "stopButton": "그만하기",
+      "blocked": "이동 불가",
+      "hint": "스와이프 · 방향키",
+      "statusScore": "점수 {{score}}점. {{moves}}번 이동.",
+      "statusEnded": "게임 종료.",
+      "statusPaused": "일시정지.",
+      "statusExtraTile": "추가 타일 {{n}}턴 뒤.",
+      "statusRow": "{{row}}행:",
+      "statusEmpty": "빈칸"
+    },
+    "runner": {
+      "mainA11y": "고양이 달리기",
+      "canvasA11y": "화면을 탭하거나 스페이스 키를 눌러 점프하는 고양이 달리기",
+      "canvasFallback": "고양이 달리기 게임",
+      "startA11y": "달리기 시작",
+      "title": "루틴 러너",
+      "titlePractice": "루틴 러너 · 연습",
+      "hint": "탭 · 스페이스 · ↑"
+    },
+    "stairs": {
+      "mainA11y": "고양이 계단 오르기",
+      "canvasA11y": "다음 계단 방향에 맞춰 왼쪽 또는 오른쪽 버튼을 누르는 고양이 계단 오르기",
+      "canvasFallback": "고양이 계단 오르기 게임",
+      "startA11y": "계단 오르기 시작",
+      "leftA11y": "왼쪽 계단 오르기",
+      "rightA11y": "오른쪽 계단 오르기",
+      "title": "고양이 계단",
+      "titlePractice": "고양이 계단 · 연습",
+      "steps": "{{score}} 계단",
+      "seconds": "{{seconds}}초",
+      "left": "왼쪽",
+      "right": "오른쪽",
+      "timeout": "시간 초과",
+      "wrong": "잘못된 방향"
+    }
+  }
+}
