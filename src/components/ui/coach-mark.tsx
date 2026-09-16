@@ -103,6 +103,36 @@ export type CoachMarkOverlayProps = {
 };
 
 const HOLE_PAD = 6;
+/** 말풍선 최대 폭 — 웹 2단(1200px) 프레임에서 카드가 화면 전체로 늘지 않게. */
+const BUBBLE_MAX_W = 420;
+const BUBBLE_MARGIN = Spacing.four;
+
+/**
+ * 창 좌표 → 오버레이 좌표 (2026-09-16 데스크톱 보고). 대상은 `measureInWindow`로 **창 기준**
+ * 좌표를 등록하는데, 오버레이는 셸 안(웹 데스크톱에선 가운데 앱 프레임 안)에 그려진다.
+ * 프레임 여백만큼 원점이 어긋나 구멍·링이 대상 오른쪽으로 밀렸다 — 네이티브·좁은 웹은
+ * 원점이 (0,0)이라 드러나지 않았다. 오버레이 자신의 창 원점을 빼서 맞춘다.
+ */
+export function toOverlayRect(rect: TargetRect, origin: { x: number; y: number }): TargetRect {
+  return { x: rect.x - origin.x, y: rect.y - origin.y, w: rect.w, h: rect.h };
+}
+
+/**
+ * 말풍선 가로 배치 — 프레임이 넓으면 최대 폭으로 줄이고 구멍 가운데 아래(위)에 둔다.
+ * 좁은 화면(폭 − 여백 ≤ 최대 폭)은 종전처럼 좌우 여백만 두고 꽉 채운다.
+ */
+export function bubbleHorizontal(
+  frameW: number,
+  holeCenterX: number | null,
+): { left: number; width: number } {
+  const width = Math.min(frameW - BUBBLE_MARGIN * 2, BUBBLE_MAX_W);
+  const center = holeCenterX ?? frameW / 2;
+  const left = Math.min(
+    Math.max(center - width / 2, BUBBLE_MARGIN),
+    frameW - width - BUBBLE_MARGIN,
+  );
+  return { left, width };
+}
 
 /**
  * 스포트라이트 오버레이 (#351) — 대상 사각형만 남기고 4분할 딤을 깔고,
@@ -123,6 +153,13 @@ export function CoachMarkOverlay({
   const tr = useT();
   const Typography = useTypography();
   const step = steps[index];
+  const rootRef = useRef<View>(null);
+  const [origin, setOrigin] = useState({ x: 0, y: 0 });
+  const measureOrigin = () => {
+    rootRef.current?.measureInWindow((x, y) => {
+      setOrigin((prev) => (Math.abs(prev.x - x) < 1 && Math.abs(prev.y - y) < 1 ? prev : { x, y }));
+    });
+  };
   // 완전 잠금 중엔 안드로이드 뒤로가기도 오버레이가 먹는다 — 밑 화면의 백 핸들러가
   // 코치마크를 두고 화면을 바꾸면 대상이 사라진다.
   useEffect(() => {
@@ -137,7 +174,8 @@ export function CoachMarkOverlay({
   const rect = unionRect(
     [step.target, ...(step.targets ?? [])]
       .map((id) => (id ? targets[id] : undefined))
-      .filter((r): r is TargetRect => !!r),
+      .filter((r): r is TargetRect => !!r)
+      .map((r) => toOverlayRect(r, origin)),
   );
 
   const hole = rect
@@ -154,11 +192,15 @@ export function CoachMarkOverlay({
   const bubbleTop = hole ? (bubbleBelow ? hole.y + hole.h + 14 : undefined) : frameH * 0.4;
   const bubbleBottom = hole && !bubbleBelow ? frameH - hole.y + 14 : undefined;
 
+  const bubbleX = bubbleHorizontal(frameW, hole ? hole.x + hole.w / 2 : null);
+
   const dim = Overlay.spotlight;
   const last = index === steps.length - 1;
 
   return (
     <View
+      ref={rootRef}
+      onLayout={measureOrigin}
       style={[StyleSheet.absoluteFill, styles.root]}
       pointerEvents="auto"
       testID="coach-overlay">
@@ -210,7 +252,7 @@ export function CoachMarkOverlay({
       <View
         style={[
           styles.bubble,
-          { backgroundColor: t.screen },
+          { backgroundColor: t.screen, left: bubbleX.left, width: bubbleX.width },
           bubbleTop != null ? { top: bubbleTop } : null,
           bubbleBottom != null ? { bottom: bubbleBottom } : null,
         ]}>
@@ -279,8 +321,6 @@ const styles = StyleSheet.create({
   },
   bubble: {
     position: 'absolute',
-    left: Spacing.four,
-    right: Spacing.four,
     borderRadius: Radius.lg,
     padding: Spacing.four,
     gap: Spacing.two,
