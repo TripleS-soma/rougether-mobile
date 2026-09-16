@@ -131,9 +131,11 @@ export function IntroScreen({
 
   // 최신 콜백은 ref로 읽는다 — 부모가 매 렌더 새 함수를 넘겨도 같은 장에서 다시 쏘지 않게.
   const onSlideViewRef = useLatestRef(onSlideView);
+  // id는 언어 세트가 바뀌어도 같으므로(계측 이름) 언어 전환이 같은 장을 다시 쏘지 않는다.
+  const slideId = slide.id;
   useEffect(() => {
-    onSlideViewRef.current?.(slides[index].id, index);
-  }, [index, onSlideViewRef]);
+    onSlideViewRef.current?.(slideId, index);
+  }, [index, slideId, onSlideViewRef]);
 
   /**
    * 좌우 스와이프 (#825). 앱의 나머지 제스처가 전부 RNGH라 같은 유틸로 통일한다:
