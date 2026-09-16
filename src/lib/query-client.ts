@@ -14,12 +14,57 @@
  * 기존 훅은 그 파일을 만질 때 함께 옮긴다 (#1027의 3단계).
  */
 import { AppState, type AppStateStatus, Platform } from 'react-native';
-import { focusManager, QueryClient } from '@tanstack/react-query';
+import { focusManager, MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
 
 import { onSessionCleared } from '@/api/auth';
+import { ApiError } from '@/api/http';
+import { reportError } from '@/lib/error-reporting';
+
+/**
+ * 조회·변경 실패 중 Sentry로 보낼 것 (#1376). 화면은 실패를 토스트·재시도 UI로 삼키므로
+ * 여기서 걸러 남긴다.
+ *
+ * - `ApiError` 4xx: **보내지 않는다** — 없는 초대코드·권한 없음 같은 정상 비즈니스 흐름이고,
+ *   빈도는 GA4 `api_error`가 이미 센다. 보내면 한도(월 5천)가 노이즈로 찬다.
+ * - `ApiError` 5xx: 보낸다 — 서버 장애는 원인 추적이 필요하다.
+ * - 네트워크 실패(`TypeError: Network request failed`·`Failed to fetch`): 보내지 않는다 — 오프라인은
+ *   흔하고 원인이 기기 밖이다(GA4 `api_error` status 0으로 센다).
+ * - 그 외 예외(응답 파싱·코드 버그): 보낸다.
+ */
+export function shouldReportQueryError(error: unknown): boolean {
+  if (error instanceof ApiError) return error.status >= 500;
+  if (
+    error instanceof TypeError &&
+    /network request failed|failed to fetch|load failed/i.test(error.message)
+  ) {
+    return false;
+  }
+  return true;
+}
+
+/** 보고 메타 — 키의 첫 요소(도메인 이름)만. 뒤 요소에는 id·날짜 같은 값이 들어간다. */
+function keyLabel(key: readonly unknown[] | undefined): string {
+  const head = key?.[0];
+  return typeof head === 'string' ? head : 'unknown';
+}
 
 export function createQueryClient() {
   return new QueryClient({
+    // 재시도까지 끝난 최종 실패만 한 번 온다 — 캐시 단위 콜백이라 훅마다 중복 보고되지 않는다.
+    queryCache: new QueryCache({
+      onError: (error, query) => {
+        if (shouldReportQueryError(error)) {
+          reportError(error, { source: 'query', key: keyLabel(query.queryKey) });
+        }
+      },
+    }),
+    mutationCache: new MutationCache({
+      onError: (error, _variables, _context, mutation) => {
+        if (shouldReportQueryError(error)) {
+          reportError(error, { source: 'mutation', key: keyLabel(mutation.options.mutationKey) });
+        }
+      },
+    }),
     defaultOptions: {
       queries: {
         /**
