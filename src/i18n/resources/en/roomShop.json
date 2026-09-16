@@ -64,7 +64,7 @@
         "decor": "Decor",
         "wallpaper": "Wallpaper",
         "floor": "Floor",
-        "background": "Background"
+        "background": "Scene"
       },
       "tabA11y": "{{label}} tab",
       "slotPickerTitle": "Furniture for this spot",
