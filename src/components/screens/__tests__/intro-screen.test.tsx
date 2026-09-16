@@ -2,7 +2,12 @@ import { act, fireEvent, render } from '@testing-library/react-native';
 import { State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
-import { INTRO_SLIDES, IntroScreen } from '@/components/screens/intro-screen';
+import {
+  INTRO_SLIDES,
+  INTRO_SLIDES_EN,
+  IntroScreen,
+  introSlidesFor,
+} from '@/components/screens/intro-screen';
 
 const fling = (translationX: number) =>
   act(async () =>
@@ -131,5 +136,13 @@ describe('IntroScreen (#1282)', () => {
   it('슬라이드 id는 계측 이름이라 겹치지 않는다', () => {
     const ids = INTRO_SLIDES.map((s) => s.id);
     expect(ids).toEqual(['my-room', 'routines', 'decor', 'house', 'calendar']);
+  });
+
+  it('영어면 영어 캡처 세트를, 그 외엔 원본을 쓰고 id·순서는 같다 (#1369)', () => {
+    expect(introSlidesFor('en')).toBe(INTRO_SLIDES_EN);
+    expect(introSlidesFor('en-US')).toBe(INTRO_SLIDES_EN);
+    expect(introSlidesFor('ko')).toBe(INTRO_SLIDES);
+    expect(INTRO_SLIDES_EN.map((s) => s.id)).toEqual(INTRO_SLIDES.map((s) => s.id));
+    expect(INTRO_SLIDES_EN.map((s) => s.image)).not.toEqual(INTRO_SLIDES.map((s) => s.image));
   });
 });
