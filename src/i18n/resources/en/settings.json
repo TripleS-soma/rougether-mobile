@@ -29,7 +29,21 @@
     "withdrawConfirmTitle": "Delete your account?",
     "withdrawConfirmBody": "All routines, records, and your profile will be deleted and can't be recovered. Logging in again with the same account starts fresh.",
     "withdrawConfirmLabel": "Delete",
-    "withdrawConfirmA11y": "Confirm account deletion"
+    "withdrawConfirmA11y": "Confirm account deletion",
+    "themeName": {
+      "cozy": "Cozy",
+      "latte": "Latte",
+      "citrus": "Citrus Grove",
+      "pastel": "Pastel Candy",
+      "indigo": "Indigo Tide"
+    },
+    "fontName": {
+      "nanum": "NanumSquare Round",
+      "pretendard": "Pretendard",
+      "jua": "Jua Mix",
+      "suit": "SUIT",
+      "system": "System default"
+    }
   },
   "language": {
     "title": "Language",
