@@ -9,7 +9,7 @@ import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useConstant, useLatestRef } from '@/hooks/use-stable-value';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
-import { useT } from '@/i18n';
+import { i18n, useT } from '@/i18n';
 import { horizontalFlingGesture } from '@/utils/gesture';
 
 export type IntroSlide = { id: string; image: number };
@@ -44,6 +44,39 @@ export const INTRO_SLIDES: IntroSlide[] = [
     image: require('@/assets/images/onboarding/calendar.webp'),
   },
 ];
+
+/**
+ * 영어 UI 캡처판 (#1369) — 같은 5장을 English로 실행한 앱에서 찍었다(iPhone 17 Pro Max
+ * 시뮬 1320×2868 → 상태바 제거 → 689×1400). id·순서는 한국어판과 같다(계측 이름).
+ * 집 장면은 다른 멤버 닉네임이 한국어라 아직 한국어 캡처 그대로다 — 멤버가 바꾸면 재촬영.
+ */
+export const INTRO_SLIDES_EN: IntroSlide[] = [
+  {
+    id: 'my-room',
+    image: require('@/assets/images/onboarding/en/my-room.webp'),
+  },
+  {
+    id: 'routines',
+    image: require('@/assets/images/onboarding/en/routines.webp'),
+  },
+  {
+    id: 'decor',
+    image: require('@/assets/images/onboarding/en/decor.webp'),
+  },
+  {
+    id: 'house',
+    image: require('@/assets/images/onboarding/en/house.webp'),
+  },
+  {
+    id: 'calendar',
+    image: require('@/assets/images/onboarding/en/calendar.webp'),
+  },
+];
+
+/** 현재 언어의 슬라이드 — 영어면 영어 캡처, 그 외(한국어)는 원본. */
+export function introSlidesFor(language: string): IntroSlide[] {
+  return language.startsWith('en') ? INTRO_SLIDES_EN : INTRO_SLIDES;
+}
 
 /**
  * 공용 상한보다 좁게 묶는다 (#725) — 폰 목업이 가운데 서는 레이아웃이라 넓으면 허전하다.
@@ -90,15 +123,19 @@ export function IntroScreen({
   // 넓은 화면(태블릿·웹 데스크톱)에서 건너뛰기 줄·본문·도트·버튼을 같은 중앙 컬럼에 세운다.
   const column = useResponsiveColumn(CONTENT_MAX_W);
   const [index, setIndex] = useState(0);
-  const isLast = index === INTRO_SLIDES.length - 1;
-  const slide = INTRO_SLIDES[index];
+  // useT()가 언어 변경에 리렌더를 걸어 주므로 렌더 시점의 i18n.language로 고른다.
+  const slides = introSlidesFor(i18n.language);
+  const isLast = index === slides.length - 1;
+  const slide = slides[index];
   const slideTitle = tr(`member.intro.slides.${slide.id}.title`);
 
   // 최신 콜백은 ref로 읽는다 — 부모가 매 렌더 새 함수를 넘겨도 같은 장에서 다시 쏘지 않게.
   const onSlideViewRef = useLatestRef(onSlideView);
+  // id는 언어 세트가 바뀌어도 같으므로(계측 이름) 언어 전환이 같은 장을 다시 쏘지 않는다.
+  const slideId = slide.id;
   useEffect(() => {
-    onSlideViewRef.current?.(INTRO_SLIDES[index].id, index);
-  }, [index, onSlideViewRef]);
+    onSlideViewRef.current?.(slideId, index);
+  }, [index, slideId, onSlideViewRef]);
 
   /**
    * 좌우 스와이프 (#825). 앱의 나머지 제스처가 전부 RNGH라 같은 유틸로 통일한다:
@@ -164,7 +201,7 @@ export function IntroScreen({
       </ScrollView>
 
       <View style={[styles.dots, column]}>
-        {INTRO_SLIDES.map((s, i) => (
+        {slides.map((s, i) => (
           <Pressable
             key={s.id}
             onPress={() => setIndex(i)}
