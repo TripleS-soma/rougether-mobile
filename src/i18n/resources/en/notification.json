@@ -1,11 +1,11 @@
 {
   "notification": {
     "list": {
-      "title": "Notifications",
+      "title": "Alerts",
       "defaultTitle": "Notification",
-      "readAll": "Mark all read",
+      "readAll": "Read all",
       "readAllNewsA11y": "Mark all news read",
-      "deleteAll": "Delete all",
+      "deleteAll": "Clear all",
       "deleteAllA11y": "Delete all notifications",
       "delete": "Delete",
       "deleteRowA11y": "Delete {{label}}",
