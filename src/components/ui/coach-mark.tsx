@@ -8,7 +8,15 @@ import {
   useRef,
   useState,
 } from 'react';
-import { BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  BackHandler,
+  Pressable,
+  StyleSheet,
+  type StyleProp,
+  Text,
+  View,
+  type ViewStyle,
+} from 'react-native';
 
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
@@ -85,7 +93,16 @@ const EMPTY_RECTS: Record<string, TargetRect> = {};
  */
 const REMEASURE_MS = 250;
 
-export function CoachTarget({ id, children }: { id: string; children: ReactNode }) {
+export function CoachTarget({
+  id,
+  children,
+  style,
+}: {
+  id: string;
+  children: ReactNode;
+  /** 래퍼 레이아웃 — 행 안의 flex 버튼을 통째로 감쌀 때 flex를 래퍼로 옮긴다. */
+  style?: StyleProp<ViewStyle>;
+}) {
   const store = useContext(CoachTargetContext);
   const ref = useRef<View>(null);
   const setRect = store?.setRect;
@@ -97,7 +114,7 @@ export function CoachTarget({ id, children }: { id: string; children: ReactNode 
   const registerMeasure = store?.registerMeasure;
   useEffect(() => registerMeasure?.(id, measure), [registerMeasure, id, measure]);
   return (
-    <View ref={ref} collapsable={false} onLayout={measure}>
+    <View ref={ref} collapsable={false} onLayout={measure} style={style}>
       {children}
     </View>
   );
@@ -241,7 +258,11 @@ export function CoachMarkOverlay({
       ref={rootRef}
       onLayout={measureOrigin}
       style={[StyleSheet.absoluteFill, styles.root]}
-      pointerEvents="auto"
+      // 루트는 터치를 받지 않는다(box-none) — 딤 4조각·말풍선만 막고 **구멍 자리는 밑 화면으로
+      // 통과**시켜야 대상만 눌린다(#1333의 의도). 종전 'auto'는 화면 전체를 덮는 루트가 구멍
+      // 자리 터치까지 가져가, 웹에서 대상 버튼이 눌리지 않았다(2026-09-16 실측: elementFromPoint가
+      // coach-overlay). 네이티브도 루트가 히트 테스트 대상이 되면 형제인 버튼으로 전달되지 않는다.
+      pointerEvents="box-none"
       testID="coach-overlay">
       {hole ? (
         <>
