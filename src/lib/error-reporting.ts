@@ -54,6 +54,18 @@ export function setErrorUser(userId: number | string) {
   }
 }
 
+/**
+ * 앱 언어 태그 (#1369) — 영어 UI에서만 나는 크래시(레이아웃·문구 길이·로케일 포맷)를
+ * 이슈 목록에서 `app_language:en`으로 걸러 보기 위해. 분석의 user property와 짝.
+ */
+export function setErrorLanguage(language: string) {
+  try {
+    Sentry.setTag('app_language', language);
+  } catch {
+    // no-op
+  }
+}
+
 /** 로그아웃 — 이후 에러가 이전 사용자에게 붙지 않게 끊는다. */
 export function clearErrorUser() {
   try {

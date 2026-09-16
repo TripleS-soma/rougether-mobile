@@ -1,11 +1,11 @@
 {
   "notification": {
     "list": {
-      "title": "Notifications",
+      "title": "Alerts",
       "defaultTitle": "Notification",
-      "readAll": "Mark all read",
+      "readAll": "Read all",
       "readAllNewsA11y": "Mark all news read",
-      "deleteAll": "Delete all",
+      "deleteAll": "Clear all",
       "deleteAllA11y": "Delete all notifications",
       "delete": "Delete",
       "deleteRowA11y": "Delete {{label}}",
@@ -51,6 +51,18 @@
     },
     "push": {
       "channelName": "Notifications"
+    },
+    "widget": {
+      "moodCrying": "It's been {{days}} days… I miss you so much",
+      "moodSad": "Haven't seen you in {{days}} days. Miss you!",
+      "moodCrown": "{{streak}} days in a row! Amazing",
+      "moodHappy": "All done again today!",
+      "moodWorried": "{{count}} still to go",
+      "emptyToday": "No routines scheduled today",
+      "allDone": "All done! 🎉",
+      "more": "+{{count}} more",
+      "roomEmpty": "Open the app to hang your room here",
+      "streakDays": "🔥 {{streak}}d"
     }
   }
 }

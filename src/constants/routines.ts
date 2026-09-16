@@ -91,12 +91,33 @@ export const UNCATEGORIZED_META: RoutineCategoryMeta = {
   visibility: 'public',
 };
 
+/**
+ * 기본 카테고리 5종 — 화면 기본 prop·갤러리·테스트용 픽스처(실앱 카테고리는 서버).
+ * `id`는 기존 기록·테스트가 참조하는 데이터 키라 그대로 두고, 표시명만 언어를 따른다
+ * (#1369 — getter라 호출 시점 언어).
+ */
+const defaultCategory = (
+  id: string,
+  key: string,
+  icon: PictogramName,
+  color: string,
+  visibility: CategoryVisibility,
+): RoutineCategoryMeta => ({
+  id,
+  get name() {
+    return i18n.t(`routineTodo.category.defaults.${key}`);
+  },
+  icon,
+  color,
+  visibility,
+});
+
 export const ROUTINE_CATEGORIES: RoutineCategoryMeta[] = [
-  { id: '일정', name: '일정', icon: 'calendar', color: '#E8A87C', visibility: 'public' },
-  { id: '공부', name: '공부', icon: 'book', color: '#7FA8D4', visibility: 'public' },
-  { id: '취미', name: '취미', icon: 'palette', color: '#C8869C', visibility: 'neighbor' },
-  { id: '건강', name: '건강', icon: 'dumbbell', color: '#7FA87F', visibility: 'partial' },
-  { id: '기타', name: '기타', icon: 'sparkle', color: '#B5A89C', visibility: 'public' },
+  defaultCategory('일정', 'schedule', 'calendar', '#E8A87C', 'public'),
+  defaultCategory('공부', 'study', 'book', '#7FA8D4', 'public'),
+  defaultCategory('취미', 'hobby', 'palette', '#C8869C', 'neighbor'),
+  defaultCategory('건강', 'health', 'dumbbell', '#7FA87F', 'partial'),
+  defaultCategory('기타', 'etc', 'sparkle', '#B5A89C', 'public'),
 ];
 
 /**

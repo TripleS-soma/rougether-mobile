@@ -2,6 +2,7 @@ import { fireEvent, render } from '@testing-library/react-native';
 
 import { type HouseCover, HouseCoverPicker } from '@/components/room/house-cover-picker';
 import { FRAME_ASPECT } from '@/components/room/house-preview-frame';
+import { i18n } from '@/i18n';
 
 const COVERS: HouseCover[] = [
   {
@@ -17,6 +18,24 @@ const COVERS: HouseCover[] = [
 ];
 
 describe('HouseCoverPicker', () => {
+  afterEach(async () => {
+    await i18n.changeLanguage('ko');
+  });
+
+  it('영어에서는 커버 키 슬러그로 영어 이름을, 모르는 슬러그는 서버 이름을 쓴다 (#893)', async () => {
+    await i18n.changeLanguage('en');
+    const covers: HouseCover[] = [
+      ...COVERS,
+      { code: 'new', name: '새 집', coverImageKey: 'house/brand-new/frame.png' },
+    ];
+    const { getByText, getByLabelText } = await render(
+      <HouseCoverPicker covers={covers} onSelect={jest.fn()} />,
+    );
+    expect(getByText('Cloud Balloon House')).toBeTruthy();
+    expect(getByLabelText('Coral Aquarium House cover')).toBeTruthy();
+    expect(getByText('새 집')).toBeTruthy();
+  });
+
   it('긴 이름이 잘리지 않게 두 줄까지 허용한다 (#1112)', async () => {
     const covers: HouseCover[] = [
       { code: 'obs', name: '밤의 천문대 집', coverImageKey: 'house/obs/frame.png' },

@@ -107,4 +107,24 @@ describe('resolveWidgetMood', () => {
     expect(daysSince('not-a-date', noon)).toBe(0);
     expect(daysSince(hoursAgo(47, noon), noon)).toBe(1);
   });
+
+  // 위젯 문구 언어 (#893) — 요약에 남은 언어로 고른다. 없거나 모르는 값이면 한국어.
+  it('요약 lang이 en이면 영어 문구, 없거나 모르는 값이면 한국어', () => {
+    const at = (lang: string | undefined, now: Date, hours: number, over = {}) =>
+      resolveWidgetMood({
+        summary: base({ lang, ...over }),
+        todayIso: TODAY,
+        now,
+        lastActiveAt: hoursAgo(hours, now),
+      }).message;
+    expect(at('en', evening, 3)).toBe('2 still to go');
+    expect(at('en', noon, 1, { done: 3, remaining: [] })).toBe('All done again today!');
+    expect(at('en', noon, 1, { done: 3, remaining: [], streak: 7 })).toBe(
+      '7 days in a row! Amazing',
+    );
+    expect(at('en', noon, 49)).toBe("Haven't seen you in 2 days. Miss you!");
+    expect(at('en', noon, 121)).toBe("It's been 5 days… I miss you so much");
+    expect(at(undefined, evening, 3)).toBe('아직 2개 남았어요');
+    expect(at('ja', evening, 3)).toBe('아직 2개 남았어요');
+  });
 });

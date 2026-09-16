@@ -96,7 +96,7 @@ import { PendingNotice } from '@/components/ui/pending-notice';
 import { RetryState } from '@/components/ui/retry-state';
 import { ToastProvider, useToast } from '@/components/ui/toast';
 import { WheelPicker } from '@/components/ui/wheel-picker';
-import { PolicyUrls } from '@/constants/policy';
+import { policyUrl } from '@/constants/policy';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
 import { RECOMMENDED_HOUSES } from '@/mocks/fixtures';
 import { RoomRenderReference } from '@/dev/room-render-reference';
@@ -985,7 +985,7 @@ export const galleryEntries: GalleryEntry[] = [
     description: 'Ported from the prototype SignupScreen (#3). Preview at fixed height.',
     render: () => (
       <View style={{ height: 900, alignSelf: 'stretch' }}>
-        <SignupScreen onViewPolicy={(doc) => openBrowserAsync(PolicyUrls[doc])} />
+        <SignupScreen onViewPolicy={(doc) => openBrowserAsync(policyUrl(doc))} />
       </View>
     ),
   },

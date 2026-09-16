@@ -82,7 +82,7 @@ export function useAppIconSync() {
       try {
         const data = await client.fetchQuery({
           queryKey: key,
-          queryFn: fetchAppIcon,
+          queryFn: () => fetchAppIcon(),
           staleTime: 0,
           retry: false,
         });

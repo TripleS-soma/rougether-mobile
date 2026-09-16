@@ -22,6 +22,7 @@ import {
 import { DarkThemes, Themes } from '@/constants/theme';
 import { WIDGET_OPEN_URL } from '@/lib/app-open';
 import { todayIso } from '@/utils/datetime';
+import { widgetCopy } from '@/widgets/widget-copy';
 import {
   loadWidgetLastActive,
   loadWidgetRoomImage,
@@ -140,7 +141,7 @@ export function TodayListWidget({
       ) : null}
       {summary.total === 0 ? (
         <TextWidget
-          text="오늘 예정된 루틴이 없어요"
+          text={widgetCopy(summary.lang, 'emptyToday')}
           truncate="END"
           maxLines={2}
           style={{ fontSize: 12, color: t.textMuted as `#${string}` }}
@@ -148,7 +149,7 @@ export function TodayListWidget({
       ) : allDone ? (
         // 다 한 날에도 미접속(슬픔·울음)이 우선이면 그 문구가 오므로 색도 mood를 따른다.
         <TextWidget
-          text={mood.message ?? '모두 완료했어요! 🎉'}
+          text={mood.message ?? widgetCopy(summary.lang, 'allDone')}
           truncate="END"
           maxLines={2}
           style={{ fontSize: 12, fontWeight: '700', color: moodColor as `#${string}` }}
@@ -180,7 +181,9 @@ export function TodayListWidget({
           ))}
           {summary.total - summary.done > summary.remaining.length ? (
             <TextWidget
-              text={`+${summary.total - summary.done - summary.remaining.length}개 더`}
+              text={widgetCopy(summary.lang, 'more', {
+                count: summary.total - summary.done - summary.remaining.length,
+              })}
               style={{ fontSize: 11, color: t.textMuted as `#${string}`, paddingTop: 2 }}
             />
           ) : null}
@@ -246,7 +249,7 @@ export function MyRoomWidget({
           }}>
           <TextWidget text="🐾" style={{ fontSize: 28 }} />
           <TextWidget
-            text="앱을 열면 내 방이 여기 걸려요"
+            text={widgetCopy(summary.lang, 'roomEmpty')}
             style={{ fontSize: 11, color: t.textMuted as `#${string}`, paddingTop: 4 }}
           />
         </FlexWidget>
@@ -267,7 +270,7 @@ export function MyRoomWidget({
         <FlexWidget style={{ flex: 1 }} />
         {summary.streak > 0 ? (
           <TextWidget
-            text={`🔥 ${summary.streak}일`}
+            text={widgetCopy(summary.lang, 'streakDays', { streak: summary.streak })}
             style={{ fontSize: 12, fontWeight: '700', color: t.warningText as `#${string}` }}
           />
         ) : null}

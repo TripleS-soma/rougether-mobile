@@ -10,6 +10,7 @@ import {
   saveWidgetTheme,
 } from '@/widgets/widget-data';
 import type { Routine } from '@/constants/routines';
+import { i18n } from '@/i18n';
 
 const r = (id: string, title: string): Routine => ({ id, title, kind: 'routine' });
 
@@ -44,7 +45,8 @@ describe('widget-data (#604)', () => {
   it('요약·방 이미지 저장/로드 왕복', async () => {
     const summary = { done: 2, total: 4, streak: 1, remaining: ['산책'] };
     await saveWidgetSummary(summary);
-    expect(await loadWidgetSummary()).toEqual(summary);
+    // 저장 순간의 앱 언어가 찍힌다(#893) — 기본 언어는 한국어.
+    expect(await loadWidgetSummary()).toEqual({ ...summary, lang: 'ko' });
 
     await saveWidgetRoomImage('data:image/png;base64,QUJD');
     expect(await loadWidgetRoomImage()).toBe('data:image/png;base64,QUJD');
@@ -66,5 +68,24 @@ describe('widget-data (#604)', () => {
     expect(await loadWidgetLastActive()).toBeNull();
     await saveWidgetLastActive('2026-09-08T03:00:00.000Z');
     expect(await loadWidgetLastActive()).toBe('2026-09-08T03:00:00.000Z');
+  });
+
+  // 위젯 문구 언어 (#893) — 앱 언어를 요약에 남기고, 호출측이 명시하면 그 값을 쓴다.
+  describe('요약 언어 도장', () => {
+    afterEach(async () => {
+      await i18n.changeLanguage('ko');
+    });
+
+    it('앱이 영어면 lang=en으로 저장된다', async () => {
+      await i18n.changeLanguage('en');
+      await saveWidgetSummary({ done: 0, total: 1, streak: 0, remaining: ['Read'] });
+      expect((await loadWidgetSummary())?.lang).toBe('en');
+    });
+
+    it('호출측이 lang을 넘기면 앱 언어보다 우선한다', async () => {
+      await i18n.changeLanguage('en');
+      await saveWidgetSummary({ done: 0, total: 1, streak: 0, remaining: [], lang: 'ko' });
+      expect((await loadWidgetSummary())?.lang).toBe('ko');
+    });
   });
 });

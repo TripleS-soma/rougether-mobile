@@ -1,6 +1,12 @@
 import type { SemanticColors } from '@/constants/theme';
 import { RUNNER_CAT_IDLE, RUNNER_CAT_JUMP } from '@/features/minigame/runner-character';
 import { RUNNER_ENGINE_SOURCE } from '@/features/minigame/runner-engine';
+import {
+  escapeHtml,
+  getMinigameCopy,
+  MINIGAME_FMT_SOURCE,
+  minigameDocumentLanguage,
+} from '@/features/minigame/minigame-copy';
 import { RunnerPalette } from '@/features/minigame/runner-palette';
 
 export type RunnerHtmlOptions = {
@@ -18,6 +24,8 @@ export function createRunnerHtml(options: RunnerHtmlOptions): string {
   if (!Number.isInteger(options.seed) || options.seed < 1 || options.seed > 2147483647) {
     throw new Error('Invalid runner seed');
   }
+  const copy = getMinigameCopy('runner');
+  const h = (key: string) => escapeHtml(copy[key] ?? '');
   const t = options.colors;
   const palette = t
     ? {
@@ -41,8 +49,9 @@ export function createRunnerHtml(options: RunnerHtmlOptions): string {
     palette,
     idleImage: RUNNER_CAT_IDLE,
     jumpImage: RUNNER_CAT_JUMP,
+    copy,
   }).replace(/</g, '\\u003c');
-  return `<!doctype html><html lang="ko"><head><meta charset="utf-8" />
+  return `<!doctype html><html lang="${minigameDocumentLanguage()}"><head><meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline';" />
 <style>
@@ -54,12 +63,12 @@ button:focus-visible{outline:3px solid ${palette.primaryDark};outline-offset:2px
 #start-btn,#resume-btn{left:34.7%;top:49.3%;width:30.6%;height:15.7%}
 #pause-btn{right:2.8%;top:3.8%;width:9.2%;height:13.3%}
 [hidden]{display:none!important}
-</style></head><body><main aria-label="고양이 달리기">
-<canvas id="game" width="720" height="420" tabindex="0" aria-label="화면을 탭하거나 스페이스 키를 눌러 점프하는 고양이 달리기">고양이 달리기 게임</canvas>
-<button id="start-btn" aria-label="달리기 시작">달리기 시작</button>
-<button id="pause-btn" aria-label="일시정지" hidden>일시정지</button>
-<button id="resume-btn" aria-label="계속하기" hidden>계속하기</button>
-</main><script>${RUNNER_ENGINE_SOURCE}\n(${RUNNER_BROWSER_SOURCE})(${config});</script></body></html>`;
+</style></head><body><main aria-label="${h('mainA11y')}">
+<canvas id="game" width="720" height="420" tabindex="0" aria-label="${h('canvasA11y')}">${h('canvasFallback')}</canvas>
+<button id="start-btn" aria-label="${h('startA11y')}">${h('startA11y')}</button>
+<button id="pause-btn" aria-label="${h('pauseA11y')}" hidden>${h('pauseA11y')}</button>
+<button id="resume-btn" aria-label="${h('resume')}" hidden>${h('resume')}</button>
+</main><script>${RUNNER_ENGINE_SOURCE}\n${MINIGAME_FMT_SOURCE}\n(${RUNNER_BROWSER_SOURCE})(${config});</script></body></html>`;
 }
 
 const RUNNER_BROWSER_SOURCE = String.raw`function runRunner(config) {
@@ -83,6 +92,7 @@ const RUNNER_BROWSER_SOURCE = String.raw`function runRunner(config) {
   var manualClock = false;
   var manualRemainder = 0;
   var colors = config.palette;
+  var copy = config.copy;
   var imagesLoaded = 0;
   var idleImage = new Image();
   var jumpImage = new Image();
@@ -188,7 +198,7 @@ const RUNNER_BROWSER_SOURCE = String.raw`function runRunner(config) {
     scenery();
     state.obstacles.forEach(obstacle);
     cat();
-    text(config.practice ? '루틴 러너 · 연습' : '루틴 러너', 26, 35, 20, colors.primaryDark);
+    text(config.practice ? copy.titlePractice : copy.title, 26, 35, 20, colors.primaryDark);
     if (mode === 'playing' || mode === 'paused' || mode === 'ended') {
       text(String(state.score).padStart(4, '0'), 28, 71, 33, colors.ink);
     }
@@ -198,21 +208,21 @@ const RUNNER_BROWSER_SOURCE = String.raw`function runRunner(config) {
       roundRect(670, 32, 6, 24, 2, colors.primaryDark);
     }
     if (mode === 'ready') {
-      text('탭 · 스페이스 · ↑', 360, 169, 20, colors.muted, 'center');
-      pill('시작');
+      text(copy.hint, 360, 169, 20, colors.muted, 'center');
+      pill(copy.start);
     }
     if (mode === 'paused') {
       ctx.fillStyle = 'rgba(255,253,244,0.76)'; ctx.fillRect(0, 90, 720, 220);
-      text('일시정지', 360, 162, 32, colors.ink, 'center');
-      if (hostActive) pill('계속하기');
+      text(copy.paused, 360, 162, 32, colors.ink, 'center');
+      if (hostActive) pill(copy.resume);
     }
     if (mode === 'ended') {
       roundRect(220, 125, 280, 140, 26, colors.paper);
-      text('게임 종료', 360, 163, 26, colors.ink, 'center');
-      text(state.score + '점', 360, 216, 44, colors.primaryDark, 'center');
+      text(copy.gameOver, 360, 163, 26, colors.ink, 'center');
+      text(fmt(copy.points, { score: state.score }), 360, 216, 44, colors.primaryDark, 'center');
     }
     if (mode === 'loading' || mode === 'error') {
-      text(mode === 'loading' ? '불러오는 중' : '불러오기 실패', 360, 180, 28, colors.ink, 'center');
+      text(mode === 'loading' ? copy.loading : copy.loadFailed, 360, 180, 28, colors.ink, 'center');
     }
     syncButtons();
   }

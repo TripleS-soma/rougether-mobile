@@ -305,7 +305,7 @@ export const Room = memo(function Room({
           <Pressable
             onPress={() => onRegionPress?.('wall')}
             accessibilityRole="button"
-            accessibilityLabel="벽 꾸미기"
+            accessibilityLabel={tr('app.room.decorateWall')}
             style={[
               styles.wall,
               activeRegion === 'wall' && { borderWidth: 2.5, borderColor: t.primary },
@@ -314,7 +314,7 @@ export const Room = memo(function Room({
           <Pressable
             onPress={() => onRegionPress?.('floor')}
             accessibilityRole="button"
-            accessibilityLabel="바닥 꾸미기"
+            accessibilityLabel={tr('app.room.decorateFloor')}
             style={[
               styles.floor,
               activeRegion === 'floor' && { borderWidth: 2.5, borderColor: t.primary },
@@ -366,7 +366,7 @@ export const Room = memo(function Room({
           // sprites vs. the server's CDN animation set) — just keep counting.
           onPress={() => setPose((p) => p + 1)}
           accessibilityRole="button"
-          accessibilityLabel={`${character.name}, 눌러서 포즈 바꾸기`}
+          accessibilityLabel={tr('app.room.poseA11y', { name: character.name })}
           style={styles.character}>
           <CharacterAvatar
             characterId={characterId}
@@ -399,7 +399,7 @@ export const Room = memo(function Room({
           <Pressable
             onPress={(e) => onCleanCobweb({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY })}
             accessibilityRole="button"
-            accessibilityLabel="거미줄 치우기"
+            accessibilityLabel={tr('app.room.cleanCobweb')}
             style={styles.cobweb}>
             <Image
               source={assetSource(cobweb.assetKey)}
@@ -416,7 +416,7 @@ export const Room = memo(function Room({
             contentFit="contain"
             cachePolicy="memory-disk"
             transition={120}
-            accessibilityLabel="거미줄이 꼈어요"
+            accessibilityLabel={tr('app.room.cobwebA11y')}
           />
         )
       ) : null}

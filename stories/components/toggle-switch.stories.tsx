@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { useArgs } from 'storybook/preview-api';
 import { expect, fn, mocked, userEvent, within } from 'storybook/test';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { ToggleSwitch, type ToggleSwitchProps } from '@/components/ui/toggle-switch';
@@ -32,32 +33,46 @@ const meta = {
   },
   render: function Render(args) {
     const [{ value }, updateArgs] = useArgs<ToggleSwitchProps>();
-    const t = useTokens();
-    const Typography = useTypography();
-
-    return (
-      <View style={styles.row}>
-        <View style={styles.copy}>
-          <Text style={[Typography.label, { color: t.text }]}>{args.accessibilityLabel}</Text>
-          <Text style={[Typography.supporting, { color: t.textMuted }]}>
-            {value ? '알림이 켜져 있어요' : '알림이 꺼져 있어요'}
-          </Text>
-        </View>
-        <ToggleSwitch
-          {...args}
-          value={value}
-          onToggle={() => {
-            args.onToggle();
-            updateArgs({ value: !value });
-          }}
-        />
-      </View>
-    );
+    return <ToggleRow {...args} value={value} onArgsValue={(v) => updateArgs({ value: v })} />;
   },
 } satisfies Meta<typeof ToggleSwitch>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+/**
+ * 누르면 로컬 상태를 바로 바꾸고 Controls에도 알린다. Controls에서 바꾼 value는 받아들인다.
+ * (Vitest 포터블 스토리에서는 args 갱신이 다시 렌더로 돌아오지 않아 로컬 상태가 필요하다.)
+ */
+function ToggleRow({
+  onArgsValue,
+  ...props
+}: ToggleSwitchProps & { onArgsValue: (value: boolean) => void }) {
+  const t = useTokens();
+  const Typography = useTypography();
+  const [value, setValue] = useState(props.value);
+  useEffect(() => setValue(props.value), [props.value]);
+
+  return (
+    <View style={styles.row}>
+      <View style={styles.copy}>
+        <Text style={[Typography.label, { color: t.text }]}>{props.accessibilityLabel}</Text>
+        <Text style={[Typography.supporting, { color: t.textMuted }]}>
+          {value ? '알림이 켜져 있어요' : '알림이 꺼져 있어요'}
+        </Text>
+      </View>
+      <ToggleSwitch
+        {...props}
+        value={value}
+        onToggle={() => {
+          props.onToggle();
+          setValue(!value);
+          onArgsValue(!value);
+        }}
+      />
+    </View>
+  );
+}
 
 export const Off: Story = {
   name: '꺼짐',

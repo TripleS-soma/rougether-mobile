@@ -1,3 +1,121 @@
 {
-  "app": {}
+  "app": {
+    "currency": {
+      "coin": "코인",
+      "diamond": "다이아",
+      "earnRoutine": "루틴 완료",
+      "earnTodo": "할 일 완료",
+      "earnDailyCap": "오늘 완료만, 루틴·할 일 합쳐 하루 4건까지",
+      "earnBonus": "가입 보너스 · 친구 초대 보상",
+      "earnDupCharacter": "캐릭터 뽑기에서 이미 가진 캐릭터가 나오면 환급",
+      "spendGacha": "뽑기",
+      "spendGachaDetail": "머신마다 다름",
+      "earnDupItem": "뽑기에서 이미 가진 아이템이 나오면 전환",
+      "spendFurniture": "꾸미기에서 가구 구매",
+      "spendFurnitureDetail": "아이템마다 다름",
+      "guideA11y": "코인·다이아는 어떻게 모으나요?",
+      "earn": "모으기",
+      "spend": "쓰기"
+    },
+    "time": {
+      "am": "오전",
+      "pm": "오후",
+      "clock": "{{ampm}} {{hour}}:{{minute}}",
+      "justNow": "방금 전",
+      "minutesAgo": "{{count}}분 전",
+      "hoursAgo": "{{count}}시간 전",
+      "daysAgo": "{{count}}일 전",
+      "monthDay": "{{month}}월 {{day}}일"
+    },
+    "policy": {
+      "terms": "이용약관",
+      "privacy": "개인정보처리방침",
+      "loadFailed": "문서를 불러오지 못했어요.",
+      "checkNetwork": "네트워크 연결을 확인해 주세요."
+    },
+    "passwordChange": {
+      "title": "비밀번호 변경",
+      "current": "현재 비밀번호",
+      "new": "새 비밀번호",
+      "newPlaceholder": "{{min}}자 이상 입력해주세요",
+      "tooShort": "비밀번호는 {{min}}자 이상이어야 해요.",
+      "sameAsCurrent": "현재 비밀번호와 다르게 입력해주세요.",
+      "confirm": "새 비밀번호 확인",
+      "confirmPlaceholder": "새 비밀번호를 다시 입력해주세요",
+      "mismatch": "비밀번호가 일치하지 않아요.",
+      "match": "비밀번호가 일치해요.",
+      "pending": "변경 준비 중",
+      "devNotice": "비밀번호 변경은 준비 중이에요. 지금 계정은 개발 로그인이라 비밀번호가 없어요."
+    },
+    "settingsToast": {
+      "themeApplied": "“{{name}}” 테마를 적용했어요",
+      "fontApplied": "“{{name}}” 폰트를 적용했어요",
+      "withdrawDone": "탈퇴가 완료됐어요",
+      "withdrawFailed": "탈퇴에 실패했어요. 잠시 후 다시 시도해 주세요",
+      "mailSubject": "[루게더] 문의",
+      "linkFailed": "링크를 열 수 없어요. 잠시 후 다시 시도해 주세요.",
+      "importedFailed": "{{imported}}개를 가져왔어요. {{failed}}개는 실패했어요.",
+      "importedSkipped": "{{imported}}개를 가져왔어요. {{skipped}}개는 이미 가져온 일정이에요.",
+      "imported": "{{imported}}개를 가져왔어요."
+    },
+    "invite": {
+      "alreadyRedeemed": "초대코드는 한 번만 사용할 수 있어요",
+      "selfNotAllowed": "내 초대코드는 사용할 수 없어요",
+      "notUsable": "이 초대코드는 사용할 수 없어요",
+      "notFound": "초대코드를 찾을 수 없어요",
+      "checkFailed": "초대코드를 확인하지 못했어요",
+      "redeemFailed": "초대코드 사용에 실패했어요"
+    },
+    "navMenu": {
+      "close": "닫기",
+      "changeCharacter": "캐릭터 교체",
+      "decorate": "방 꾸미기",
+      "saveImage": "방 이미지 저장",
+      "manageCategories": "카테고리 관리",
+      "manageRoutines": "루틴 관리"
+    },
+    "guestbook": {
+      "loadFailed": "방명록을 불러오지 못했어요",
+      "loadMoreFailed": "방명록을 더 불러오지 못했어요",
+      "me": "나",
+      "posted": "방명록을 남겼어요",
+      "postFailed": "방명록 작성에 실패했어요"
+    },
+    "rename": {
+      "title": "이름 수정",
+      "placeholder": "루틴 이름",
+      "save": "저장",
+      "cancel": "취소"
+    },
+    "room": {
+      "decorateWall": "벽 꾸미기",
+      "decorateFloor": "바닥 꾸미기",
+      "poseA11y": "{{name}}, 눌러서 포즈 바꾸기",
+      "cleanCobweb": "거미줄 치우기",
+      "cobwebA11y": "거미줄이 꼈어요"
+    },
+    "friendVisit": {
+      "friend": "친구",
+      "cheerNotAllowed": "이 방에서는 응원을 보낼 수 없어요",
+      "cobwebAlreadyCleaned": "누가 먼저 치워줬어요",
+      "cobwebFailed": "거미줄을 치우지 못했어요. 잠시 후 다시 시도해 주세요."
+    },
+    "characterPicker": {
+      "title": "캐릭터 교체",
+      "close": "닫기",
+      "wearA11y": "{{name}} 착용",
+      "empty": "보유한 캐릭터가 없어요. 뽑기 상점에서 새 친구를 만나보세요!",
+      "wearing": "착용 중"
+    },
+    "ui": {
+      "closeToast": "알림 닫기",
+      "retry": "다시 시도",
+      "closeSheet": "시트 닫기"
+    },
+    "shell": {
+      "exitHint": "한 번 더 뒤로가면 앱이 꺼져요",
+      "missionCaption": "미션 {{index}}/{{total}}",
+      "goalFallback": "목표"
+    }
+  }
 }

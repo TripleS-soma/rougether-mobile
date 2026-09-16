@@ -1,5 +1,7 @@
 import '@/global.css';
 
+import { i18n } from '@/i18n';
+
 export const Colors = {
   light: {
     text: '#000000',
@@ -514,12 +516,26 @@ export const DEFAULT_THEME_ID: ThemeId = 'cozy';
  * but are intentionally omitted here.
  */
 export type ThemeOption = { id: ThemeId; name: string; swatch: string };
+/**
+ * `name`은 표시명 getter — 읽는 시점 언어의 `settings.themeName.<id>` (#893). 종전엔 한국어
+ * 브랜드명을 그대로 썼지만 영어 UI에서 설정 행·토스트에 한국어가 노출돼 표시명만 번역한다.
+ * id·swatch는 저장값·토큰 계약이라 불변.
+ */
+function themeOption(id: ThemeId, swatch: string): ThemeOption {
+  return {
+    id,
+    swatch,
+    get name() {
+      return i18n.t(`settings.themeName.${id}`);
+    },
+  };
+}
 export const THEME_OPTIONS: ThemeOption[] = [
-  { id: 'cozy', name: '포근', swatch: '#7FA87F' },
-  { id: 'latte', name: '라떼', swatch: '#DDB287' },
-  { id: 'citrus', name: '시트러스 그로브', swatch: '#B5D086' },
-  { id: 'pastel', name: '파스텔 캔디', swatch: '#F79B8D' },
-  { id: 'indigo', name: '인디고 타이드', swatch: '#7FC2DE' },
+  themeOption('cozy', '#7FA87F'),
+  themeOption('latte', '#DDB287'),
+  themeOption('citrus', '#B5D086'),
+  themeOption('pastel', '#F79B8D'),
+  themeOption('indigo', '#7FC2DE'),
 ];
 
 /** Light/dark mode preference: follow the OS, or force one. */
@@ -654,13 +670,24 @@ export type BrandFontId = 'nanum' | 'pretendard' | 'jua' | 'suit' | 'system';
 
 export const DEFAULT_FONT_ID: BrandFontId = 'nanum';
 
-/** Settings picker entries, in display order. */
+/**
+ * Settings picker entries, in display order. `name`은 읽는 시점 언어의 표시명 getter
+ * (`settings.fontName.<id>`, #893) — id는 저장값이라 불변.
+ */
+function fontOption(id: BrandFontId): { id: BrandFontId; name: string } {
+  return {
+    id,
+    get name() {
+      return i18n.t(`settings.fontName.${id}`);
+    },
+  };
+}
 export const FONT_OPTIONS: { id: BrandFontId; name: string }[] = [
-  { id: 'nanum', name: '나눔스퀘어라운드' },
-  { id: 'pretendard', name: '프리텐다드' },
-  { id: 'jua', name: '주아 혼합' },
-  { id: 'suit', name: 'SUIT' },
-  { id: 'system', name: '시스템 기본' },
+  fontOption('nanum'),
+  fontOption('pretendard'),
+  fontOption('jua'),
+  fontOption('suit'),
+  fontOption('system'),
 ];
 
 export type FontWeightKey = keyof typeof FontWeight;

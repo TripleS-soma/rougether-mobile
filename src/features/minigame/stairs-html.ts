@@ -2,6 +2,12 @@ import type { SemanticColors } from '@/constants/theme';
 import { RUNNER_CAT_IDLE, RUNNER_CAT_JUMP } from '@/features/minigame/runner-character';
 import { RunnerPalette } from '@/features/minigame/runner-palette';
 import { STAIRS_ENGINE_SOURCE } from '@/features/minigame/stairs-engine';
+import {
+  escapeHtml,
+  getMinigameCopy,
+  MINIGAME_FMT_SOURCE,
+  minigameDocumentLanguage,
+} from '@/features/minigame/minigame-copy';
 
 export type StairsHtmlOptions = {
   seed: number;
@@ -16,6 +22,8 @@ export function createStairsHtml(options: StairsHtmlOptions): string {
   if (!Number.isInteger(options.seed) || options.seed < 1 || options.seed > 2147483647) {
     throw new Error('Invalid stairs seed');
   }
+  const copy = getMinigameCopy('stairs');
+  const h = (key: string) => escapeHtml(copy[key] ?? '');
   const t = options.colors;
   const palette = t
     ? {
@@ -38,8 +46,9 @@ export function createStairsHtml(options: StairsHtmlOptions): string {
     palette,
     idleImage: RUNNER_CAT_IDLE,
     jumpImage: RUNNER_CAT_JUMP,
+    copy,
   }).replace(/</g, '\\u003c');
-  return `<!doctype html><html lang="ko"><head><meta charset="utf-8" />
+  return `<!doctype html><html lang="${minigameDocumentLanguage()}"><head><meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline';" />
 <style>
@@ -52,14 +61,14 @@ button:focus-visible{outline:3px solid ${palette.primaryDark};outline-offset:2px
 #left-btn{left:5.7%;top:83.1%;width:42.4%;height:13.1%}
 #right-btn{right:5.7%;top:83.1%;width:42.4%;height:13.1%}
 [hidden]{display:none!important}
-</style></head><body><main aria-label="고양이 계단 오르기">
-<canvas id="game" width="420" height="520" tabindex="0" aria-label="다음 계단 방향에 맞춰 왼쪽 또는 오른쪽 버튼을 누르는 고양이 계단 오르기">고양이 계단 오르기 게임</canvas>
-<button id="start-btn" aria-label="계단 오르기 시작">계단 오르기 시작</button>
-<button id="pause-btn" aria-label="일시정지" hidden>일시정지</button>
-<button id="resume-btn" aria-label="계속하기" hidden>계속하기</button>
-<button id="left-btn" aria-label="왼쪽 계단 오르기" hidden>왼쪽 계단 오르기</button>
-<button id="right-btn" aria-label="오른쪽 계단 오르기" hidden>오른쪽 계단 오르기</button>
-</main><script>${STAIRS_ENGINE_SOURCE}\n(${STAIRS_BROWSER_SOURCE})(${config});</script></body></html>`;
+</style></head><body><main aria-label="${h('mainA11y')}">
+<canvas id="game" width="420" height="520" tabindex="0" aria-label="${h('canvasA11y')}">${h('canvasFallback')}</canvas>
+<button id="start-btn" aria-label="${h('startA11y')}">${h('startA11y')}</button>
+<button id="pause-btn" aria-label="${h('pauseA11y')}" hidden>${h('pauseA11y')}</button>
+<button id="resume-btn" aria-label="${h('resume')}" hidden>${h('resume')}</button>
+<button id="left-btn" aria-label="${h('leftA11y')}" hidden>${h('leftA11y')}</button>
+<button id="right-btn" aria-label="${h('rightA11y')}" hidden>${h('rightA11y')}</button>
+</main><script>${STAIRS_ENGINE_SOURCE}\n${MINIGAME_FMT_SOURCE}\n(${STAIRS_BROWSER_SOURCE})(${config});</script></body></html>`;
 }
 
 const STAIRS_BROWSER_SOURCE = String.raw`function runStairs(config) {
@@ -86,6 +95,7 @@ const STAIRS_BROWSER_SOURCE = String.raw`function runStairs(config) {
   var stepAnimation = 1;
   var previousColumn = 0;
   var colors = config.palette;
+  var copy = config.copy;
   var imagesLoaded = 0;
   var idleImage = new Image();
   var jumpImage = new Image();
@@ -172,40 +182,40 @@ const STAIRS_BROWSER_SOURCE = String.raw`function runStairs(config) {
     scenery();stairs();cat();
     // The opaque header keeps higher stairs out of the score/timer area.
     ctx.fillStyle=colors.sky;ctx.fillRect(0,0,420,116);
-    text(config.practice?'고양이 계단 · 연습':'고양이 계단',24,28,17,colors.primaryDark);
+    text(config.practice?copy.titlePractice:copy.title,24,28,17,colors.primaryDark);
     if(mode==='playing'||mode==='paused'||mode==='ended') {
-      text(state.score+' 계단',24,61,29,colors.ink);
+      text(fmt(copy.steps,{score:state.score}),24,61,29,colors.ink);
       roundRect(24,88,300,9,5,colors.ground);
       if(state.timeLeft>0)roundRect(24,88,300*state.timeLeft/state.timeLimit,9,4,colors.primary);
     }
     if(mode==='playing') {
-      text((state.timeLeft/60).toFixed(1)+'초',341,92,14,colors.muted);
+      text(fmt(copy.seconds,{seconds:(state.timeLeft/60).toFixed(1)}),341,92,14,colors.muted);
       roundRect(350,18,52,52,18,colors.paper);
       roundRect(368,33,5,21,2,colors.primaryDark);roundRect(380,33,5,21,2,colors.primaryDark);
       roundRect(24,432,178,68,22,colors.paper);roundRect(218,432,178,68,22,colors.primaryDark);
-      arrow('LEFT',83,466,colors.primaryDark);text('왼쪽',137,466,22,colors.primaryDark,'center');
-      arrow('RIGHT',277,466,colors.white);text('오른쪽',336,466,22,colors.white,'center');
+      arrow('LEFT',83,466,colors.primaryDark);text(copy.left,137,466,22,colors.primaryDark,'center');
+      arrow('RIGHT',277,466,colors.white);text(copy.right,336,466,22,colors.white,'center');
     }
     if(mode==='ready') {
       roundRect(60,174,300,146,26,colors.paper);
       text('← · →',210,206,22,colors.muted,'center');
-      pill('시작');
+      pill(copy.start);
     }
     if(mode==='paused') {
       roundRect(60,158,300,162,26,colors.paper);
-      text('일시정지',210,198,26,colors.ink,'center');
-      if(hostActive)pill('계속하기');
+      text(copy.paused,210,198,26,colors.ink,'center');
+      if(hostActive)pill(copy.resume);
     }
     if(mode==='ended') {
       roundRect(60,148,300,166,26,colors.paper);
-      text('게임 종료',210,183,23,colors.ink,'center');
-      text(state.score+'점',210,231,38,colors.primaryDark,'center');
-      if(state.endReason==='timeout')text('시간 초과',210,280,16,colors.muted,'center');
-      else if(state.endReason==='wrong')text('잘못된 방향',210,280,16,colors.muted,'center');
+      text(copy.gameOver,210,183,23,colors.ink,'center');
+      text(fmt(copy.points,{score:state.score}),210,231,38,colors.primaryDark,'center');
+      if(state.endReason==='timeout')text(copy.timeout,210,280,16,colors.muted,'center');
+      else if(state.endReason==='wrong')text(copy.wrong,210,280,16,colors.muted,'center');
     }
     if(mode==='loading'||mode==='error') {
       roundRect(24,160,372,70,24,colors.paper);
-      text(mode==='loading'?'불러오는 중':'불러오기 실패',210,195,22,colors.ink,'center');
+      text(mode==='loading'?copy.loading:copy.loadFailed,210,195,22,colors.ink,'center');
     }
     syncButtons();
   }

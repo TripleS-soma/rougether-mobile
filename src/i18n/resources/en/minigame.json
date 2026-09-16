@@ -1,0 +1,64 @@
+{
+  "minigame": {
+    "common": {
+      "start": "Start",
+      "resume": "Resume",
+      "pauseA11y": "Pause",
+      "paused": "Paused",
+      "gameOver": "Game over",
+      "points": "{{score}} pts",
+      "loading": "Loading",
+      "loadFailed": "Couldn't load"
+    },
+    "merge": {
+      "mainA11y": "Cat Merge",
+      "canvasA11y": "A cat game where you merge matching numbers on a 4 by 4 board",
+      "canvasFallback": "Cat Merge game",
+      "startA11y": "Start merging",
+      "upA11y": "Merge up",
+      "rightA11y": "Merge right",
+      "downA11y": "Merge down",
+      "leftA11y": "Merge left",
+      "saveA11y": "Stop and save score",
+      "practiceStopA11y": "End practice here",
+      "title": "Cat Merge",
+      "titlePractice": "Cat Merge · Practice",
+      "extraTile": "New tile in {{n}}",
+      "saveButton": "Save score",
+      "stopButton": "Stop",
+      "blocked": "No moves left",
+      "hint": "Swipe · Arrow keys",
+      "statusScore": "Score {{score}}. {{moves}} moves.",
+      "statusEnded": "Game over.",
+      "statusPaused": "Paused.",
+      "statusExtraTile": "New tile in {{n}} turns.",
+      "statusRow": "Row {{row}}:",
+      "statusEmpty": "empty"
+    },
+    "runner": {
+      "mainA11y": "Cat Run",
+      "canvasA11y": "A cat running game where you tap the screen or press Space to jump",
+      "canvasFallback": "Cat Run game",
+      "startA11y": "Start running",
+      "title": "Routine Runner",
+      "titlePractice": "Routine Runner · Practice",
+      "hint": "Tap · Space · ↑"
+    },
+    "stairs": {
+      "mainA11y": "Cat Stairs",
+      "canvasA11y": "A cat stair-climbing game where you press left or right to match the next step",
+      "canvasFallback": "Cat Stairs game",
+      "startA11y": "Start climbing",
+      "leftA11y": "Climb left",
+      "rightA11y": "Climb right",
+      "title": "Cat Stairs",
+      "titlePractice": "Cat Stairs · Practice",
+      "steps": "{{score}} steps",
+      "seconds": "{{seconds}}s",
+      "left": "Left",
+      "right": "Right",
+      "timeout": "Time's up",
+      "wrong": "Wrong way"
+    }
+  }
+}

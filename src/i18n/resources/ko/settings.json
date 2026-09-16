@@ -29,7 +29,21 @@
     "withdrawConfirmTitle": "정말 탈퇴할까요?",
     "withdrawConfirmBody": "모든 루틴·기록·프로필이 삭제되고 복구할 수 없어요. 같은 계정으로 다시 로그인해도 새 계정으로 시작하게 돼요.",
     "withdrawConfirmLabel": "탈퇴하기",
-    "withdrawConfirmA11y": "회원탈퇴 확인"
+    "withdrawConfirmA11y": "회원탈퇴 확인",
+    "themeName": {
+      "cozy": "포근",
+      "latte": "라떼",
+      "citrus": "시트러스 그로브",
+      "pastel": "파스텔 캔디",
+      "indigo": "인디고 타이드"
+    },
+    "fontName": {
+      "nanum": "나눔스퀘어라운드",
+      "pretendard": "프리텐다드",
+      "jua": "주아 혼합",
+      "suit": "SUIT",
+      "system": "시스템 기본"
+    }
   },
   "language": {
     "title": "언어",

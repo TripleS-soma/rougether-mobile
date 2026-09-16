@@ -1,9 +1,14 @@
-/** "HH:MM" (24h) → "오전 7:00" / "오후 9:30". */
+import { i18n } from '@/i18n';
+
+/**
+ * "HH:MM" (24h) → 표시용 12시간제. 한국어 "오전 7:00" / "오후 9:30", 영어 "7:00 AM" (#1369).
+ * 표시 전용 — 언어 리소스 `app.time.clock`이 어순을 정한다.
+ */
 export function formatTime(time: string) {
   const [h, m] = time.split(':').map((v) => parseInt(v, 10));
-  const ampm = h >= 12 ? '오후' : '오전';
+  const ampm = i18n.t(h >= 12 ? 'app.time.pm' : 'app.time.am');
   const hour12 = h % 12 === 0 ? 12 : h % 12;
-  return `${ampm} ${hour12}:${String(m).padStart(2, '0')}`;
+  return i18n.t('app.time.clock', { ampm, hour: hour12, minute: String(m).padStart(2, '0') });
 }
 
 /** "2026-06-19" → "2026.06.19". */
@@ -83,16 +88,19 @@ export function todayIso() {
 export function relativeTimeLabel(at: Date, now: Date = new Date()): string {
   const diffMs = now.getTime() - at.getTime();
   const min = Math.floor(diffMs / 60_000);
-  if (min < 1) return '방금 전';
-  if (min < 60) return `${min}분 전`;
+  if (min < 1) return i18n.t('app.time.justNow');
+  if (min < 60) return i18n.t('app.time.minutesAgo', { count: min });
   const hours = Math.floor(min / 60);
-  if (hours < 24) return `${hours}시간 전`;
+  if (hours < 24) return i18n.t('app.time.hoursAgo', { count: hours });
   const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}일 전`;
+  if (days < 7) return i18n.t('app.time.daysAgo', { count: days });
   return monthDayLabel(at);
 }
 
-/** "M월 D일" — 방명록·알림·버그 제보 날짜와 relativeTimeLabel의 꼬리가 같은 모양. */
+/**
+ * "M월 D일" / 영어 "M/D" (#1369) — 방명록·알림·버그 제보 날짜와 relativeTimeLabel의 꼬리가
+ * 같은 모양. 표시 전용(언어 리소스 `app.time.monthDay`).
+ */
 export function monthDayLabel(d: Date): string {
-  return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+  return i18n.t('app.time.monthDay', { month: d.getMonth() + 1, day: d.getDate() });
 }

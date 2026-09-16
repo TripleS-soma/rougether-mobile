@@ -35,11 +35,17 @@ npx --no-install storybook build --output-dir web-build/storybook
 
 상단 도구 모음은 모든 스토리에 공통으로 적용됩니다.
 
-| 항목 | 선택지                                                                                                 |
-| ---- | ------------------------------------------------------------------------------------------------------ |
-| 테마 | 포근(`cozy`), 라떼(`latte`), 시트러스 그로브(`citrus`), 파스텔 캔디(`pastel`), 인디고 타이드(`indigo`) |
-| 화면 | 라이트, 다크                                                                                           |
-| 글꼴 | 나눔스퀘어라운드, 프리텐다드, 주아 혼합, SUIT, 시스템 기본                                             |
+| 항목   | 선택지                                                                                                 |
+| ------ | ------------------------------------------------------------------------------------------------------ |
+| 테마   | 포근(`cozy`), 라떼(`latte`), 시트러스 그로브(`citrus`), 파스텔 캔디(`pastel`), 인디고 타이드(`indigo`) |
+| 화면   | 라이트, 다크                                                                                           |
+| 글꼴   | 나눔스퀘어라운드, 프리텐다드, 주아 혼합, SUIT, 시스템 기본                                             |
+| 언어   | 한국어, English                                                                                        |
+| 뷰포트 | 소형 폰 320, iPhone 390, 웹 폰 컬럼 480, 웹 2단 시작 960, 웹 2단 최대 1200                             |
+
+**언어**는 앱과 같은 i18n 인스턴스의 언어만 바꿉니다. 앱의 언어 저장값이나 계측에는 흔적을 남기지 않습니다. 영어 문구 길이로 잘리는 곳은 언어를 English로, 뷰포트를 320으로 두고 확인하세요.
+
+**뷰포트**는 앱이 실제로 그려지는 폭입니다. 480·960·1200은 웹 앱 프레임 경계(`use-app-frame`)라 바텀시트 폭(폰 480 / 2단 640)도 여기서 확인합니다. 뷰포트를 고르면 캔버스 기본 폭 제한(420)이 풀립니다.
 
 테마와 글꼴 목록은 앱의 `THEME_OPTIONS`와 `FONT_OPTIONS`를 사용합니다. 폰트 파일은
 저장소의 `assets/fonts/`에서 로딩하므로 외부 폰트 서비스가 필요 없습니다. 선택은
@@ -54,14 +60,16 @@ npx --no-install storybook build --output-dir web-build/storybook
 
 ## 파일 구조
 
-| 경로                                                  | 역할                                                              |
-| ----------------------------------------------------- | ----------------------------------------------------------------- |
-| [`.storybook/main.ts`](../.storybook/main.ts)         | React Native Web + Vite 프레임워크, 스토리 검색 경로, import 별칭 |
-| [`.storybook/preview.tsx`](../.storybook/preview.tsx) | 공통 테마·밝기·글꼴 도구 모음과 캔버스 decorator                  |
-| [`.storybook/fonts.css`](../.storybook/fonts.css)     | 앱 폰트의 웹 로딩                                                 |
-| [`stories/foundations/`](../stories/foundations)      | 디자인 토큰 스토리                                                |
-| [`stories/components/`](../stories/components)        | 실제 공용 컴포넌트의 상태별 스토리                                |
-| [`src/constants/theme.ts`](../src/constants/theme.ts) | 앱과 Storybook이 공유하는 디자인 토큰                             |
+| 경로                                                            | 역할                                                                            |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| [`.storybook/main.ts`](../.storybook/main.ts)                   | React Native Web + Vite 프레임워크, 애드온(docs·a11y·vitest), svgr, import 별칭 |
+| [`.storybook/preview.tsx`](../.storybook/preview.tsx)           | 테마·밝기·글꼴·언어 도구, 뷰포트 프리셋, 캔버스 decorator                       |
+| [`vitest.config.ts`](../vitest.config.ts)                       | 스토리 테스트(Chromium 렌더·play·a11y)                                          |
+| [`playwright.visual.config.ts`](../playwright.visual.config.ts) | 시각 회귀 설정, 기준 이미지 `stories/__visual__/__screenshots__/`               |
+| [`.storybook/fonts.css`](../.storybook/fonts.css)               | 앱 폰트의 웹 로딩                                                               |
+| [`stories/foundations/`](../stories/foundations)                | 디자인 토큰 스토리                                                              |
+| [`stories/components/`](../stories/components)                  | 실제 공용 컴포넌트의 상태별 스토리                                              |
+| [`src/constants/theme.ts`](../src/constants/theme.ts)           | 앱과 Storybook이 공유하는 디자인 토큰                                           |
 
 스토리는 Expo Router의 `src/app/` 밖에 둡니다. 새 파일은
 `stories/**/*.stories.tsx` 패턴으로 자동 검색됩니다.
@@ -132,10 +140,41 @@ export const On: Story = { name: '켜짐', args: { value: true } };
 
 기존 **Dev 탭**(`/dev`, `src/dev/registry.tsx`)도 계속 사용합니다. Storybook은 브라우저에서
 색상·레이아웃·문구·상태 전환을 빠르게 비교하는 곳이고, 실제 기기의 햅틱과 네이티브 제스처,
-플랫폼별 렌더링은 Dev 갤러리와 앱에서 확인합니다. 웹에서 보이는 결과만으로 iOS·Android
-동작을 검증했다고 판단하지 않습니다.
+플랫폼별 렌더링(iOS 26 리퀴드 글래스 등)은 Dev 갤러리와 앱에서 확인합니다.
 
-변경 후에는 아래 검증을 실행합니다.
+### 웹에서 그리지 못하거나 제한되는 것
+
+- **글래스 표면**: 브라우저는 항상 `fallbackColor` 폴백 모습입니다(글래스 질감은 iOS 기기).
+- **하단 탭 문지르기·바텀시트 끌어내리기**: 제스처 손맛은 기기에서. 스토리는 탭·클릭만 확인합니다.
+- Modal 기반(바텀시트·확인 다이얼로그)은 캔버스 밖 body에 붙으므로 Docs 페이지 인라인 대신 개별 스토리로 봅니다.
+- 네이티브 모듈에 의존하는 화면 단위 컴포넌트(action-bar, pager-scroll-view, paw-refresh-scroll, flying-coin, coach-mark 등)는 아직 스토리가 없습니다. 추가할 때 이 목록에서 뺍니다.
+
+### 스토리 테스트 (렌더 · play · 접근성)
+
+모든 스토리를 실제 Chromium에서 렌더하고, `play` 함수와 addon-a11y 검사를 실행합니다.
+
+```bash
+npx --no-install playwright install chromium   # 처음 한 번
+npx --no-install vitest run --project=storybook
+```
+
+- 설정은 `vitest.config.ts`(스토리북 전용 — 앱 단위 테스트는 jest 그대로).
+- 스토리 `render`에서 Storybook 훅(`useArgs`)과 React 훅(`useState` 등)을 **한 함수에 섞지 마세요**. Vitest 포터블 스토리에서 오류가 납니다 — 로컬 상태는 내부 컴포넌트로 분리합니다(`field`·`toggle-switch` 스토리 참고).
+- 접근성 검사는 현재 `a11y: { test: 'todo' }`(경고)입니다. 2026-09-16 기준 `error`로 올리면 46건 실패 — 대부분 색 대비(color-contrast), 그다음 RN Web이 내보내는 ARIA 속성(aria-prohibited-attr, 진행률 이름 등). 정리하면 `.storybook/preview.tsx`에서 `error`로 올립니다.
+
+### 시각 회귀 (스크린샷 비교)
+
+핵심 스토리(버튼·카드·바텀시트·하단 탭·색상 토큰) × 라이트/다크를 Playwright로 찍어 기준 이미지와 비교합니다(`stories/__visual__/core.visual.ts`, `playwright.visual.config.ts`).
+
+- **기준 이미지는 linux(CI)에서만** 만들고 비교합니다. OS마다 폰트 래스터가 달라 macOS에서 만든 이미지로는 CI가 항상 실패하기 때문입니다. 로컬 macOS에서는 테스트가 건너뛰어집니다(확인만 하려면 `VISUAL_FORCE=1`, 생긴 `*-darwin.png`는 커밋하지 않습니다).
+- CI는 기준 이미지가 없는 스토리를 `--update-snapshots=missing`으로 새로 만들어 `storybook-visual` artifact에 올립니다. **받아서 `stories/__visual__/__screenshots__/`에 커밋**하면 다음 PR부터 비교합니다.
+- 의도한 디자인 변경으로 비교가 실패하면: Actions → **storybook-visual-baseline** 워크플로를 그 PR 브랜치에서 실행 → artifact의 스크린샷을 받아 커밋. 실패 diff는 `storybook-visual` artifact의 `visual-report`(HTML)에서 봅니다.
+
+### 공유 (CI artifact)
+
+CI가 매 PR·main 푸시에서 정적 빌드를 `storybook-static` artifact(보존 7일)로 올립니다. PR의 Checks → CI 실행 → Artifacts에서 받아 압축을 풀고 `npx http-server storybook-static`(또는 `python3 -m http.server`)으로 엽니다. 공개 호스팅은 하지 않습니다.
+
+### 변경 후 검증
 
 ```bash
 npm run typecheck
@@ -143,11 +182,10 @@ npm run lint
 npm run format:check
 npm test
 npx --no-install storybook build --output-dir web-build/storybook
+npx --no-install vitest run --project=storybook
 ```
 
-[`ci.yml`](../.github/workflows/ci.yml)도 기존 네 가지 검사에 이어 Storybook 정적 빌드를
-실행합니다. 정적 빌드 통과는 브라우저 상호작용이나 네이티브 동작 확인을 대신하지 않으므로,
-수정한 스토리를 열어 Controls·Actions·테마 전환을 직접 확인합니다.
+`ci.yml`이 위에 더해 시각 회귀와 artifact 업로드까지 실행합니다. 통과가 브라우저 상호작용 확인을 대신하지 않으므로, 수정한 스토리를 열어 Controls·Actions·테마·언어 전환을 직접 확인합니다.
 
 ## 참고 문서
 

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 
 import type { Routine } from '@/constants/routines';
+import { useLanguage } from '@/hooks/use-language';
 import { useWidgetPresence } from '@/hooks/use-widget-presence';
 import { isScheduledOn } from '@/components/screens/my-room-screen';
 import { todayIso } from '@/utils/datetime';
@@ -16,6 +17,8 @@ import { buildWidgetSummary, saveWidgetSummary, saveWidgetTheme } from '@/widget
  * - 다크모드 (#746): 앱의 테마 모드가 적용된 실효 스킴을 위젯 저장소에 기록한다. 위젯은
  *   시스템 설정만 볼 수 있어, 앱에서 다크로 바꿔도 위젯이 라이트로 남던 불일치를 없앤다.
  * - 마지막 접속 (#1122): 위젯이 미접속 일수로 표정을 바꾼다.
+ * - 언어 (#893): 요약에 앱 언어를 싣는다. 설정에서 언어만 바꿔도 요약을 다시 써서 위젯이
+ *   다음 루틴 변경까지 옛 언어로 남지 않게 한다.
  */
 export function useWidgetSync({
   resolvedScheme,
@@ -35,6 +38,7 @@ export function useWidgetSync({
 
   useWidgetPresence();
 
+  const { language } = useLanguage();
   const summarySigRef = useRef('');
   useEffect(() => {
     // 홈 위젯이 있는 플랫폼만 — 웹은 제외.
@@ -46,9 +50,10 @@ export function useWidgetSync({
       streak,
       today,
     );
+    summary.lang = language;
     const sig = JSON.stringify(summary);
     if (sig === summarySigRef.current) return;
     summarySigRef.current = sig;
     void saveWidgetSummary(summary).then(refreshWidgets);
-  }, [routines, completions, streak]);
+  }, [routines, completions, streak, language]);
 }

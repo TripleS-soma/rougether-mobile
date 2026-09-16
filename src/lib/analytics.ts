@@ -112,7 +112,15 @@ export type AnalyticsEvent =
   /** 안내에서 [새 계정으로 계속]을 고름 — [OO로 로그인]은 그 provider 의 login_success 로 잡힌다. */
   | 'login_conflict_continue'
   | 'purchase_blocked'
-  | 'api_error';
+  | 'api_error'
+  /**
+   * 강제 로그아웃 (#1388) — 서버가 refresh를 거부해 세션이 지워짐. reason(refresh_rejected·
+   * refresh_empty), status, code(서버 오류 코드), app_state(foreground/background). 사용자가
+   * 누른 로그아웃은 세지 않는다.
+   */
+  | 'session_forced_logout'
+  /** 갱신 거부 뒤 다른 실행 맥락이 회전해 둔 쌍을 채택해 로그아웃을 피함 (#1388). app_state. */
+  | 'session_refresh_adopted';
 
 // RNFirebase는 네이티브 전용 — 지연 require로 웹 번들에서 평가되지 않게 한다
 // (push-token.ts와 같은 계약). 네이티브 모듈이 없으면(Expo Go, 웹, 구버전
@@ -176,6 +184,19 @@ export function initAnalytics(options?: { collect?: boolean }) {
 export function identifyUser(userId: number | string) {
   try {
     if (ga && gaMod) void gaMod.setUserId(ga, String(userId)).catch(() => {});
+  } catch {
+    // no-op
+  }
+}
+
+/**
+ * 앱 언어 user property (#1369 글로벌 출시) — GA4에서 언어별 리텐션·퍼널을 가르는
+ * 유일한 차원. 국가는 GA4가 IP로 자동 수집하지만 **앱 언어**는 우리가 넣어야 한다.
+ * `LanguageProvider`가 초기 결정·변경 때마다 부른다.
+ */
+export function setAnalyticsLanguage(language: string) {
+  try {
+    if (ga && gaMod) void gaMod.setUserProperty(ga, 'app_language', language).catch(() => {});
   } catch {
     // no-op
   }
