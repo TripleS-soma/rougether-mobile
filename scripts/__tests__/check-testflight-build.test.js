@@ -295,3 +295,15 @@ describe('store-build workflow boundaries', () => {
     expect(verification['continue-on-error']).toBeUndefined();
   });
 });
+
+it('requires an explicit version when building a newer candidate while preserving the legacy default', () => {
+  const nextApp = JSON.parse(JSON.stringify(app));
+  nextApp.expo.version = '1.5.1';
+  expect(() => validateConfiguration(env, sha, nextApp, eas)).toThrow();
+  expect(() =>
+    validateConfiguration({ ...env, EXPECTED_APP_VERSION: '1.5.1' }, sha, nextApp, eas),
+  ).not.toThrow();
+  expect(() =>
+    validateConfiguration({ ...env, EXPECTED_APP_VERSION: '1.5.2' }, sha, nextApp, eas),
+  ).toThrow();
+});

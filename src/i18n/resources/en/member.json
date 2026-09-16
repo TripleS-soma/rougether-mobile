@@ -12,15 +12,42 @@
       "nickname": "Nickname"
     },
     "characters": {
-      "cat": { "name": "Cat", "description": "A quiet, warm routine buddy" },
-      "dog": { "name": "Puppy", "description": "A bright, lively routine buddy" },
-      "tiger": { "name": "Tiger", "description": "A bold, brave routine buddy" },
-      "panda": { "name": "Panda", "description": "A laid-back, gentle routine buddy" },
-      "bear": { "name": "Bear", "description": "A steady, cozy routine buddy" },
-      "sheep": { "name": "Sheep", "description": "A soft, mild routine buddy" },
-      "horse": { "name": "Pony", "description": "A spirited, energetic routine buddy" },
-      "otter": { "name": "Otter", "description": "A playful, lovable routine buddy" },
-      "moru": { "name": "Moru", "description": "A cozy routine buddy you meet at level 5" }
+      "cat": {
+        "name": "Cat",
+        "description": "A quiet, warm routine buddy"
+      },
+      "dog": {
+        "name": "Puppy",
+        "description": "A bright, lively routine buddy"
+      },
+      "tiger": {
+        "name": "Tiger",
+        "description": "A bold, brave routine buddy"
+      },
+      "panda": {
+        "name": "Panda",
+        "description": "A laid-back, gentle routine buddy"
+      },
+      "bear": {
+        "name": "Bear",
+        "description": "A steady, cozy routine buddy"
+      },
+      "sheep": {
+        "name": "Sheep",
+        "description": "A soft, mild routine buddy"
+      },
+      "horse": {
+        "name": "Pony",
+        "description": "A spirited, energetic routine buddy"
+      },
+      "otter": {
+        "name": "Otter",
+        "description": "A playful, lovable routine buddy"
+      },
+      "moru": {
+        "name": "Moru",
+        "description": "A cozy routine buddy you meet at level 5"
+      }
     },
     "intro": {
       "slides": {
@@ -357,7 +384,10 @@
           "label": "Routine reminders",
           "desc": "Routines, to-dos, weekly reviews and cat-return alerts"
         },
-        "house": { "label": "House alerts", "desc": "Cheers and news from your house" }
+        "house": {
+          "label": "House alerts",
+          "desc": "Cheers and news from your house"
+        }
       },
       "pushStep": {
         "permission-denied": "Notifications are off on this device. Turn them on in system settings to receive pushes.",
@@ -373,10 +403,13 @@
     "soundSettings": {
       "title": "Sound",
       "rows": {
-        "effects": { "label": "Sound effects", "desc": "Sounds for buttons, gacha and more" },
+        "effects": {
+          "label": "Sound effects",
+          "desc": "Sounds for buttons, gacha and more"
+        },
         "music": {
           "label": "Background music",
-          "desc": "Soft music plays while you're in your room"
+          "desc": "Allow background sound played from your speaker"
         }
       },
       "strength": {
@@ -385,10 +418,10 @@
         "medium": "Medium",
         "heavy": "Strong"
       },
-      "pending": "Sound settings are stored only on this device until the server is ready.",
       "haptic": "Haptic feedback",
       "hapticDesc": "Vibrates on key actions",
-      "hapticA11y": "Haptics {{label}}"
+      "hapticA11y": "Haptics {{label}}",
+      "localOnly": "Sound and haptic settings are stored on this device."
     },
     "missions": {
       "complete-routine": {
@@ -397,7 +430,7 @@
       },
       "first-draw": {
         "label": "Try the gacha once",
-        "hint": "Spend coins on one draw in the gacha"
+        "hint": "Draw your first furniture and place it in your room"
       },
       "place-furniture": {
         "label": "Save a room decoration",

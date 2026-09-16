@@ -16,6 +16,7 @@ import { hapticSelection } from '@/utils/haptics';
 import { useT } from '@/i18n';
 
 export function GachaLobby({
+  starterDrawState,
   machines,
   selected,
   onSelect,
@@ -27,6 +28,7 @@ export function GachaLobby({
   topInset = 0,
   bottomInset = 0,
 }: {
+  starterDrawState?: 'PENDING' | 'CLAIMED';
   machines: GachaMachine[];
   selected: GachaMachine;
   onSelect: (machine: GachaMachine) => void;
@@ -43,6 +45,16 @@ export function GachaLobby({
   const emph = useFontEmphasis();
   const tr = useT();
   const category = getGachaCategory(selected) ?? 'FURNITURE';
+  // 온보딩 첫 뽑기(#1325)는 스피커 확정 — 카테고리 탭을 숨기고 문구를 바꾼다.
+  const copy = starterDrawState
+    ? {
+        title: tr('roomShop.gacha.lobby.starter.title'),
+        detail: tr('roomShop.gacha.lobby.starter.detail'),
+      }
+    : {
+        title: tr(`roomShop.gacha.lobby.copy.${category}.title`),
+        detail: tr(`roomShop.gacha.lobby.copy.${category}.detail`),
+      };
   return (
     <View style={styles.root}>
       <ScrollView
@@ -57,37 +69,41 @@ export function GachaLobby({
           </Text>
         </View>
 
-        <View style={[styles.categories, { backgroundColor: t.surfaceMuted }]}>
-          {GACHA_CATEGORIES.map((key) => {
-            const machine = machines.find((candidate) => getGachaCategory(candidate) === key);
-            const active = category === key;
-            const meta = GACHA_CATEGORY_META[key];
-            return (
-              <ScalePressable
-                key={key}
-                disabled={!machine || busy}
-                accessibilityRole="tab"
-                accessibilityLabel={tr('roomShop.gacha.lobby.categoryA11y', { label: meta.label })}
-                accessibilityState={{ selected: active, disabled: !machine || busy }}
-                onPress={() => {
-                  if (machine) {
-                    hapticSelection();
-                    onSelect(machine);
-                  }
-                }}
-                style={[
-                  styles.category,
-                  active && { backgroundColor: t.surface },
-                  !machine && styles.unavailable,
-                ]}>
-                <Pictogram name={meta.icon} size={23} />
-                <Text style={[Typography.label, { color: active ? t.primaryText : t.textMuted }]}>
-                  {meta.label}
-                </Text>
-              </ScalePressable>
-            );
-          })}
-        </View>
+        {!starterDrawState ? (
+          <View style={[styles.categories, { backgroundColor: t.surfaceMuted }]}>
+            {GACHA_CATEGORIES.map((key) => {
+              const machine = machines.find((candidate) => getGachaCategory(candidate) === key);
+              const active = category === key;
+              const meta = GACHA_CATEGORY_META[key];
+              return (
+                <ScalePressable
+                  key={key}
+                  disabled={!machine || busy}
+                  accessibilityRole="tab"
+                  accessibilityLabel={tr('roomShop.gacha.lobby.categoryA11y', {
+                    label: meta.label,
+                  })}
+                  accessibilityState={{ selected: active, disabled: !machine || busy }}
+                  onPress={() => {
+                    if (machine) {
+                      hapticSelection();
+                      onSelect(machine);
+                    }
+                  }}
+                  style={[
+                    styles.category,
+                    active && { backgroundColor: t.surface },
+                    !machine && styles.unavailable,
+                  ]}>
+                  <Pictogram name={meta.icon} size={23} />
+                  <Text style={[Typography.label, { color: active ? t.primaryText : t.textMuted }]}>
+                    {meta.label}
+                  </Text>
+                </ScalePressable>
+              );
+            })}
+          </View>
+        ) : null}
 
         <View style={styles.hero}>
           <Image
@@ -104,11 +120,9 @@ export function GachaLobby({
         </View>
 
         <View style={styles.description}>
-          <Text style={[Typography.h3, styles.center, { color: t.text }]}>
-            {tr(`roomShop.gacha.lobby.copy.${category}.title`)}
-          </Text>
+          <Text style={[Typography.h3, styles.center, { color: t.text }]}>{copy.title}</Text>
           <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
-            {tr(`roomShop.gacha.lobby.copy.${category}.detail`)}
+            {copy.detail}
           </Text>
         </View>
 
@@ -151,12 +165,18 @@ export function GachaLobby({
           </Text>
         ) : null}
         <View style={styles.actions}>
-          {([1, 6] as const).map((count) => {
-            const primary = count === 6;
+          {(starterDrawState ? ([1] as const) : ([1, 6] as const)).map((count) => {
+            const primary = !!starterDrawState || count === 6;
             const affordable = canAfford(count);
             const cost = selected.costAmount * (primary ? 5 : 1);
             const label = tr(
-              primary ? 'roomShop.gacha.lobby.drawBonus' : 'roomShop.gacha.lobby.drawOne',
+              starterDrawState === 'CLAIMED'
+                ? 'roomShop.gacha.lobby.starter.claimed'
+                : starterDrawState
+                  ? 'roomShop.gacha.lobby.starter.drawFree'
+                  : count === 6
+                    ? 'roomShop.gacha.lobby.drawBonus'
+                    : 'roomShop.gacha.lobby.drawOne',
             );
             const ink = affordable ? (primary ? t.onPrimary : t.text) : t.textMuted;
             return (
@@ -166,15 +186,19 @@ export function GachaLobby({
                 disabled={busy}
                 accessibilityRole="button"
                 accessibilityState={{ disabled: busy }}
-                accessibilityLabel={tr('roomShop.gacha.lobby.drawA11y', {
-                  label,
-                  cost: formatAmount(cost),
-                  currency: tr(
-                    selected.costCurrencyType === 'COIN'
-                      ? 'roomShop.wallet.coin'
-                      : 'roomShop.wallet.diamond',
-                  ),
-                })}
+                accessibilityLabel={
+                  starterDrawState
+                    ? label
+                    : tr('roomShop.gacha.lobby.drawA11y', {
+                        label,
+                        cost: formatAmount(cost),
+                        currency: tr(
+                          selected.costCurrencyType === 'COIN'
+                            ? 'roomShop.wallet.coin'
+                            : 'roomShop.wallet.diamond',
+                        ),
+                      })
+                }
                 style={[
                   styles.draw,
                   {
@@ -183,20 +207,21 @@ export function GachaLobby({
                     backgroundColor: !affordable ? t.disabledBg : primary ? t.primary : t.surface,
                   },
                 ]}>
-                {/* 1회 뽑기는 튜토리얼 코치마크 대상 (#1324) — 버튼이 눌리는 면이라 내용을 측정. */}
                 <CoachTarget id={count === 1 ? 'gacha-draw' : `gacha-draw-${count}`}>
                   <Text style={[Typography.label, { color: ink }]}>{label}</Text>
                 </CoachTarget>
-                <View style={styles.cost}>
-                  <Icon
-                    name={selected.costCurrencyType === 'COIN' ? 'coin' : 'diamond'}
-                    size={14}
-                    color={selected.costCurrencyType === 'COIN' ? t.warning : ink}
-                  />
-                  <Text style={[Typography.supporting, emph('semibold'), { color: ink }]}>
-                    {formatAmount(cost)}
-                  </Text>
-                </View>
+                {!starterDrawState ? (
+                  <View style={styles.cost}>
+                    <Icon
+                      name={selected.costCurrencyType === 'COIN' ? 'coin' : 'diamond'}
+                      size={14}
+                      color={selected.costCurrencyType === 'COIN' ? t.warning : ink}
+                    />
+                    <Text style={[Typography.supporting, emph('semibold'), { color: ink }]}>
+                      {formatAmount(cost)}
+                    </Text>
+                  </View>
+                ) : null}
               </ScalePressable>
             );
           })}

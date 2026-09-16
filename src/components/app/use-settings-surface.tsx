@@ -229,6 +229,11 @@ export function useSettingsSurface({
   const persistDeviceSettings = (sound: SoundSettings) => {
     void AsyncStorage.setItem(DEVICE_SETTINGS_KEY, JSON.stringify({ sound })).catch(() => {});
   };
+  const enableSpeakerMusic = useStableCallback(() => {
+    const next = { ...soundSettings, music: true };
+    setSoundSettings(next);
+    persistDeviceSettings(next);
+  });
   // 햅틱 세기를 전역 게이트에 주입 (#586 → #974) — 이 이펙트가 없으면 설정이
   // 저장만 되고 아무것도 제어하지 않는다(휠 틱·완료 햅틱 등 전부 무조건 발사).
   useEffect(() => {
@@ -450,6 +455,7 @@ export function useSettingsSurface({
     settingsProps,
     subScreen,
     soundSettings,
+    enableSpeakerMusic,
     inviteSheets: inviteArrival.sheets,
   };
 }

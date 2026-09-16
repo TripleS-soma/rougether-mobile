@@ -194,9 +194,18 @@
         "duplicate": "Duplicate · {{label}}"
       },
       "category": {
-        "WALLPAPER": { "title": "Wallpaper draw", "label": "Wallpaper" },
-        "FLOOR": { "title": "Floor draw", "label": "Floor" },
-        "FURNITURE": { "title": "Furniture draw", "label": "Furniture" }
+        "WALLPAPER": {
+          "title": "Wallpaper draw",
+          "label": "Wallpaper"
+        },
+        "FLOOR": {
+          "title": "Floor draw",
+          "label": "Floor"
+        },
+        "FURNITURE": {
+          "title": "Furniture draw",
+          "label": "Furniture"
+        }
       },
       "lobby": {
         "copy": {
@@ -223,10 +232,17 @@
         "rewardsHint": "See possible rewards",
         "drawOne": "Draw 1",
         "drawBonus": "Draw 5+1",
-        "drawA11y": "{{label}}, {{cost}} {{currency}}"
+        "drawA11y": "{{label}}, {{cost}} {{currency}}",
+        "starter": {
+          "title": "Your first furniture: a cozy speaker",
+          "detail": "Your first draw gives you a speaker. Place it anywhere you like.",
+          "drawFree": "First furniture draw (free)",
+          "claimed": "See your speaker"
+        }
       },
       "giftOpenA11y": "Open the gift box",
-      "giftOpenHint": "Opens the gift you already drew. No extra currency is spent."
+      "giftOpenHint": "Opens the gift you already drew. No extra currency is spent.",
+      "starterMachineName": "First furniture"
     },
     "studio": {
       "title": "AI furniture studio",
@@ -338,6 +354,33 @@
         "loadError": "Couldn't load the game.",
         "restart": "Restart"
       }
+    },
+    "speaker": {
+      "sheetTitle": "Sounds in your room",
+      "sheetSubtitle": "What mood would you like to rest in today?",
+      "closeA11y": "Close speaker",
+      "volume": "Volume",
+      "volumeDownA11y": "Turn volume down",
+      "volumeA11y": "Speaker volume",
+      "volumeUpA11y": "Turn volume up",
+      "cancel": "Cancel",
+      "stop": "Stop",
+      "play": "Play",
+      "spriteOnA11y": "Speaker playing music",
+      "spriteOffA11y": "Speaker off",
+      "roomHint": "Long-press to change the sound and volume",
+      "roomSettingsAction": "Sound settings",
+      "roomStopA11y": "Stop speaker",
+      "roomPlayA11y": "Play speaker",
+      "playError": "Couldn't play the sound. Tap again.",
+      "nowPlayingTitle": "Sounds in your room",
+      "tracks": {
+        "fire": "Campfire",
+        "rain": "Rain outside the window",
+        "forest": "Forest ambience",
+        "piano": "Quiet piano"
+      },
+      "nowPlayingArtist": "Rougether"
     }
   }
 }

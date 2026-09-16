@@ -1,3 +1,5 @@
+import { SpeakerSprite } from '@/components/room/speaker-sprite';
+import { isSpeakerFurniture } from '@/resources/speaker';
 import { Image } from 'expo-image';
 import { memo, useMemo, useState } from 'react';
 import { Pressable, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
@@ -12,6 +14,7 @@ import {
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Radius } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 import { assetSource, isCdnKey } from '@/resources/asset';
 import {
   DEFAULT_WALLPAPER_COLOR,
@@ -36,6 +39,9 @@ export type RoomRegion = 'wall' | 'floor';
 export type RoomCobweb = { assetKey?: string; cleanable?: boolean };
 
 export type RoomProps = {
+  onSpeakerPress?: () => void;
+  onSpeakerLongPress?: () => void;
+  speakerPlaying?: boolean;
   wallpaperId?: string;
   /** Selected floor/background surface item ids (optional room layers). */
   floorId?: string | null;
@@ -108,6 +114,9 @@ export type RoomSceneProps = RoomCatalogProps &
     | 'placements'
     | 'cobweb'
     | 'onCleanCobweb'
+    | 'onSpeakerPress'
+    | 'onSpeakerLongPress'
+    | 'speakerPlaying'
   >;
 
 /**
@@ -168,6 +177,9 @@ export const Room = memo(function Room({
   cobweb = null,
   onCleanCobweb,
   interactiveCharacter = false,
+  onSpeakerPress,
+  onSpeakerLongPress,
+  speakerPlaying = false,
   editable = false,
   onRegionPress,
   activeRegion = null,
@@ -175,6 +187,7 @@ export const Room = memo(function Room({
   style,
 }: RoomProps) {
   const t = useTokens();
+  const tr = useT();
   const [pose, setPose] = useState(0);
 
   // 카탈로그 조회·배치 정렬은 방 하나만 보면 싸지만, 집 화면은 좌석 8~12칸이
@@ -312,8 +325,38 @@ export const Room = memo(function Room({
       {/* 자유 배치 경로 (#327) — z 오름차순, 중심점 앵커(폭 28%의 절반 보정). */}
       {freeItems
         ? freeItems.map(({ key, item, style: itemStyle }) => (
-            <View key={key} testID={`room-furniture-${key}`} pointerEvents="none" style={itemStyle}>
-              <FurniturePlaceholder item={item} sharp={fill} />
+            <View
+              key={key}
+              testID={`room-furniture-${key}`}
+              pointerEvents={
+                isSpeakerFurniture(item) && onSpeakerPress && !editable ? 'auto' : 'none'
+              }
+              style={itemStyle}>
+              {isSpeakerFurniture(item) && onSpeakerPress && !editable ? (
+                <Pressable
+                  style={{ flex: 1 }}
+                  onPress={onSpeakerPress}
+                  onLongPress={onSpeakerLongPress}
+                  accessibilityHint={tr('roomShop.speaker.roomHint')}
+                  accessibilityActions={
+                    onSpeakerLongPress
+                      ? [{ name: 'longpress', label: tr('roomShop.speaker.roomSettingsAction') }]
+                      : []
+                  }
+                  onAccessibilityAction={(event) => {
+                    if (event.nativeEvent.actionName === 'longpress') onSpeakerLongPress?.();
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={tr(
+                    speakerPlaying
+                      ? 'roomShop.speaker.roomStopA11y'
+                      : 'roomShop.speaker.roomPlayA11y',
+                  )}>
+                  <SpeakerSprite playing={speakerPlaying} />
+                </Pressable>
+              ) : (
+                <FurniturePlaceholder item={item} sharp={fill} />
+              )}
             </View>
           ))
         : null}

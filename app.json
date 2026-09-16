@@ -134,6 +134,7 @@
       ],
       "@react-native-firebase/app",
       "@react-native-firebase/messaging",
+      "./plugins/with-firebase-analytics-linker.js",
       "./plugins/with-fcm-manifest.js",
       [
         "@react-native-google-signin/google-signin",
@@ -242,7 +243,16 @@
           }
         ]
       ],
-      "./plugins/with-app-icon-launchers.js"
+      "./plugins/with-app-icon-launchers.js",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "enableBackgroundRecording": false,
+          "enableBackgroundPlayback": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

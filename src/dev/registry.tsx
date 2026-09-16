@@ -1,3 +1,5 @@
+import { StarterSpeakerPreview } from '@/dev/starter-speaker-preview';
+import { SpeakerPreview } from '@/dev/speaker-preview';
 import type { AppLanguage } from '@/i18n';
 import { openBrowserAsync } from 'expo-web-browser';
 import { type ReactNode, useState } from 'react';
@@ -463,6 +465,16 @@ function WheelPickerDemo() {
 }
 
 export const galleryEntries: GalleryEntry[] = [
+  {
+    name: 'StarterSpeakerPreview',
+    description: '온보딩 스피커 뽑기와 직접 배치 (API 호출 없음)',
+    render: () => <StarterSpeakerPreview />,
+  },
+  {
+    name: 'SpeakerPreview',
+    description: '첫 가구 스피커 · 애니메이션 · 배경음 4종 · 볼륨 · 실제 재생 (API 호출 없음)',
+    render: () => <SpeakerPreview />,
+  },
   {
     name: 'MinigamesPreview',
     description:
