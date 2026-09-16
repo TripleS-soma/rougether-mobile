@@ -7,6 +7,10 @@
  * avoiding an import cycle.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AppState } from 'react-native';
+
+import { track } from '@/lib/analytics';
+import { reportError } from '@/lib/error-reporting';
 
 import { ApiError, rawRequest } from './http';
 import type {
@@ -82,8 +86,35 @@ export function onSessionCleared(listener: SessionClearedListener): () => void {
   };
 }
 
+/**
+ * 세션이 지워진 이유 (#1388). 사용자가 스스로 나간 것(logout·withdraw)과 서버가 갱신을 거부해
+ * **강제로** 풀린 것을 가른다 — "하루에도 여러 번 로그인이 풀린다"는 보고의 실제 빈도·경로를
+ * 보려면 후자만 따로 세야 한다.
+ */
+export type SessionClearReason = 'logout' | 'withdraw' | 'refresh_rejected' | 'refresh_empty';
+
+/** 강제 로그아웃 계측 — 앱이 앞에 있었는지(foreground)와 서버 오류 코드를 함께 남긴다. */
+function reportForcedLogout(
+  reason: SessionClearReason,
+  detail: { status?: number; code?: string },
+) {
+  const props = {
+    reason,
+    status: String(detail.status ?? 0),
+    code: detail.code ?? 'none',
+    app_state: AppState.currentState ?? 'unknown',
+  };
+  track('session_forced_logout', props);
+  reportError(new Error(`forced logout: ${reason}`), props);
+}
+
 /** Clear the in-memory + persisted session (e.g. on logout or refresh failure). */
-export async function clearSession(): Promise<void> {
+export async function clearSession(
+  reason: SessionClearReason = 'logout',
+  detail: { status?: number; code?: string } = {},
+): Promise<void> {
+  if (reason === 'refresh_rejected' || reason === 'refresh_empty')
+    reportForcedLogout(reason, detail);
   sessionRevision += 1;
   session = null;
   await Promise.all([
@@ -258,6 +289,22 @@ function doRefreshSession(): Promise<boolean> {
   });
 }
 
+/**
+ * 갱신이 거부된 뒤, 우리가 보낸 refresh와 **다른** 쌍이 저장소에 있으면 다른 실행 맥락이 이미
+ * 회전한 것이다 (#1388) — Android 백그라운드 작업(앱 아이콘)이나 다른 탭이 같은 저장소로 먼저
+ * 갱신한 경우. 서버는 우리 토큰을 "재사용"으로 봤지만 저장소의 새 쌍은 살아 있으니 채택한다.
+ */
+async function adoptStoredAfterRejection(sentRefresh: string): Promise<boolean> {
+  const [access, refresh] = await Promise.all([
+    AsyncStorage.getItem(ACCESS_KEY),
+    AsyncStorage.getItem(REFRESH_KEY),
+  ]);
+  if (!access || !refresh || refresh === sentRefresh) return false;
+  session = { accessToken: access, refreshToken: refresh, userId: session?.userId };
+  track('session_refresh_adopted', { app_state: AppState.currentState ?? 'unknown' });
+  return true;
+}
+
 async function exchangeRefreshToken(): Promise<boolean> {
   const refreshToken = session?.refreshToken;
   if (!refreshToken) return false;
@@ -273,14 +320,17 @@ async function exchangeRefreshToken(): Promise<boolean> {
       });
       return true;
     }
-    await clearSession();
+    await clearSession('refresh_empty');
     return false;
   } catch (err) {
     // 서버가 토큰을 명시적으로 거부(4xx)했을 때만 로그아웃한다 (#515) —
     // 네트워크 오류(TypeError)는 물론, 재배포 순단·게이트웨이 타임아웃 같은
     // 5xx도 세션을 보존한다. 보존된 세션은 다음 요청의 401 → 재갱신 경로에서
     // 다시 기회를 얻는다.
-    if (err instanceof ApiError && err.status >= 400 && err.status < 500) await clearSession();
+    if (err instanceof ApiError && err.status >= 400 && err.status < 500) {
+      if (await adoptStoredAfterRejection(refreshToken)) return true;
+      await clearSession('refresh_rejected', { status: err.status, code: err.code });
+    }
     return false;
   }
 }

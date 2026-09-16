@@ -3,6 +3,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { clearSession, devLogin, getAccessToken, refreshSession } from '@/api/auth';
 
+jest.mock('@/lib/analytics', () => ({ track: jest.fn() }));
+jest.mock('@/lib/error-reporting', () => ({ reportError: jest.fn() }));
+
 const res = (status: number, body: unknown) => ({
   ok: status >= 200 && status < 300,
   status,
@@ -167,5 +170,56 @@ describe('refreshSession — 웹 다중 탭 (#1261)', () => {
     } finally {
       Object.defineProperty(globalThis, 'navigator', { configurable: true, value: original });
     }
+  });
+});
+
+describe('강제 로그아웃 진단·방어 (#1388)', () => {
+  it('갱신이 거부됐어도 저장소에 다른 맥락이 회전해 둔 새 쌍이 있으면 채택하고 세션을 지우지 않는다', async () => {
+    await seedSession();
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/auth/refresh')) {
+        // 서버가 거부하는 사이 백그라운드 작업이 먼저 회전해 저장소를 바꿔 둔 상황.
+        await AsyncStorage.setItem('rougether.auth.accessToken', 'a-bg');
+        await AsyncStorage.setItem('rougether.auth.refreshToken', 'r-bg');
+        return res(401, { code: 'AUTH_REFRESH_TOKEN_INVALID' });
+      }
+      return res(200, {});
+    }) as unknown as typeof fetch;
+
+    await expect(refreshSession()).resolves.toBe(true);
+    expect(getAccessToken()).toBe('a-bg');
+  });
+
+  it('진짜 거부면 세션을 지우고 강제 로그아웃을 이유·코드와 함께 계측한다', async () => {
+    const analytics = jest.requireMock('@/lib/analytics') as { track: jest.Mock };
+    await seedSession();
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/auth/refresh')) return res(401, { code: 'AUTH_REFRESH_TOKEN_INVALID' });
+      return res(200, {});
+    }) as unknown as typeof fetch;
+
+    await expect(refreshSession()).resolves.toBe(false);
+    expect(getAccessToken()).toBeNull();
+    expect(analytics.track).toHaveBeenCalledWith(
+      'session_forced_logout',
+      expect.objectContaining({
+        reason: 'refresh_rejected',
+        status: '401',
+        code: 'AUTH_REFRESH_TOKEN_INVALID',
+      }),
+    );
+  });
+
+  it('refreshOnUnauthorized: false면 401에 토큰을 회전하지 않는다(헤드리스 백그라운드)', async () => {
+    await seedSession();
+    let refreshCalls = 0;
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/auth/refresh')) refreshCalls += 1;
+      return res(401, { code: 'AUTH_TOKEN_EXPIRED' });
+    }) as unknown as typeof fetch;
+
+    await expect(apiGet('/me/app-icon', { refreshOnUnauthorized: false })).rejects.toThrow();
+    expect(refreshCalls).toBe(0);
+    expect(getAccessToken()).toBe('a1');
   });
 });

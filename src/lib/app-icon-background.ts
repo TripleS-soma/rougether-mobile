@@ -15,7 +15,7 @@ export async function refreshBackgroundAppIcon() {
   if (!getAccessToken()) await loadSession(() => appIconRevision() === version);
   if (!getAccessToken() || appIconRevision() !== version) return;
   const userId = getSessionUserId();
-  const response = await fetchAppIcon();
+  const response = await fetchAppIcon({ background: true });
   await applyAutomaticAppIcon(
     response,
     () => !!getAccessToken() && getSessionUserId() === userId,
