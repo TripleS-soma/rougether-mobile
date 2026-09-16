@@ -32,7 +32,13 @@ export const createSpeakerPlayer: SpeakerPlayerFactory = (source, volume, onPlay
       onPlaying(context.state === 'running');
     },
     stop() {
-      node?.stop();
+      // 사용자 정지는 오류가 아니다 — ended 핸들러를 먼저 떼야 onError가 울리지 않는다.
+      if (node) {
+        node.onended = null;
+        node.stop();
+        node.disconnect();
+        node = null;
+      }
       onPlaying(false);
     },
     setVolume(value) {

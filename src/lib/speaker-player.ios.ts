@@ -5,7 +5,7 @@ import type { SpeakerPlayerFactory } from '@/lib/speaker-player.types';
 import { i18n } from '@/i18n';
 
 type NativeSpeaker = {
-  prepare(id: string, uri: string, volume: number, title: string): Promise<void>;
+  prepare(id: string, uri: string, volume: number, title: string, artist: string): Promise<void>;
   play(id: string): Promise<void>;
   pause(id: string): Promise<void>;
   setVolume(id: string, volume: number): Promise<void>;
@@ -45,7 +45,14 @@ export const createSpeakerPlayer: SpeakerPlayerFactory = (
       const asset = await Asset.fromModule(source).downloadAsync();
       if (disposed || current !== operation) return;
       if (!asset.localUri) throw new Error('Audio file unavailable');
-      await native.prepare(id, asset.localUri, currentVolume, title);
+      // 아티스트도 Android 경로(speaker-player.ts)처럼 호출 시점 언어로 — Swift에 박지 않는다.
+      await native.prepare(
+        id,
+        asset.localUri,
+        currentVolume,
+        title,
+        i18n.t('roomShop.speaker.nowPlayingArtist'),
+      );
       if (disposed || current !== operation) {
         await native.dispose(id);
         return;

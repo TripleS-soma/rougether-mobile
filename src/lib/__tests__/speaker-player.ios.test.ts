@@ -18,7 +18,13 @@ it('prepares a local native loop and reflects lock screen pause/play for the mat
   const controller = createSpeakerPlayer(1, 0.4, emit, jest.fn(), '빗소리');
   await controller.play();
   const id = mockNative.prepare.mock.calls[0][0];
-  expect(mockNative.prepare).toHaveBeenCalledWith(id, 'file:///rain-loop.wav', 0.4, '빗소리');
+  expect(mockNative.prepare).toHaveBeenCalledWith(
+    id,
+    'file:///rain-loop.wav',
+    0.4,
+    '빗소리',
+    '루게더',
+  );
   expect(mockNative.play).toHaveBeenCalledWith(id);
   const notify = (
     mockNative.addListener.mock.calls as unknown as [string, (v: unknown) => void][]

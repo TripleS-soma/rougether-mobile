@@ -7,6 +7,7 @@ final class SpeakerEngine: NSObject, AVAudioPlayerDelegate {
   private var player: AVAudioPlayer?
   private var sessionId: String?
   private var title = ""
+  private var artist = ""
   private var commandTargets: [(MPRemoteCommand, Any)] = []
   private var observers: [NSObjectProtocol] = []
   var onStatus: ((String, Bool, Bool) -> Void)?
@@ -31,7 +32,7 @@ final class SpeakerEngine: NSObject, AVAudioPlayerDelegate {
     })
   }
 
-  func prepare(id: String, uri: String, volume: Double, title: String) throws {
+  func prepare(id: String, uri: String, volume: Double, title: String, artist: String) throws {
     guard let url = URL(string: uri), url.isFileURL else {
       throw NSError(domain: "RougetherSpeaker", code: 1, userInfo: [NSLocalizedDescriptionKey: "Expected a bundled audio file"])
     }
@@ -44,6 +45,7 @@ final class SpeakerEngine: NSObject, AVAudioPlayerDelegate {
     player = audio
     sessionId = id
     self.title = title
+    self.artist = artist
     installCommands()
   }
 
@@ -105,7 +107,7 @@ final class SpeakerEngine: NSObject, AVAudioPlayerDelegate {
     let playing = player?.isPlaying == true
     MPNowPlayingInfoCenter.default().nowPlayingInfo = [
       MPMediaItemPropertyTitle: title,
-      MPMediaItemPropertyArtist: "루게더",
+      MPMediaItemPropertyArtist: artist,
       MPNowPlayingInfoPropertyIsLiveStream: true,
       MPNowPlayingInfoPropertyPlaybackRate: playing ? 1.0 : 0.0
     ]

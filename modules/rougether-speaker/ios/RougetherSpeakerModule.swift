@@ -11,8 +11,8 @@ public class RougetherSpeakerModule: Module {
         self?.sendEvent("onStatus", ["id": id, "playing": playing, "error": error])
       }
     }
-    AsyncFunction("prepare") { (id: String, uri: String, volume: Double, title: String) in
-      try self.engine.prepare(id: id, uri: uri, volume: volume, title: title)
+    AsyncFunction("prepare") { (id: String, uri: String, volume: Double, title: String, artist: String) in
+      try self.engine.prepare(id: id, uri: uri, volume: volume, title: title, artist: artist)
     }.runOnQueue(.main)
     AsyncFunction("play") { (id: String) in try self.engine.play(id: id) }.runOnQueue(.main)
     AsyncFunction("pause") { (id: String) in self.engine.pause(id: id) }.runOnQueue(.main)

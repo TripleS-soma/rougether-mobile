@@ -1,5 +1,5 @@
 import { useToast } from '@/components/ui/toast';
-import { i18n } from '@/i18n';
+import { useT } from '@/i18n';
 import { useStarterGacha } from '@/hooks/use-starter-gacha';
 import { toGachaMachine } from '@/api/adapters';
 import { SpeakerSheet } from '@/components/room/speaker-sheet';
@@ -205,19 +205,21 @@ export function AppShell({
   const starterGacha = useStarterGacha(starterFlow);
   const starterAllowed =
     starterFlow && !starterGacha.unavailable && starterGacha.state?.state !== 'CLOSED';
+  const tr = useT();
+  // 언어가 바뀌면 tr 참조가 바뀌어 이름이 다시 계산된다 (#893) — i18n.t를 빈 deps로 굳히지 않는다.
   const starterMachines = useMemo(
     () => [
       toGachaMachine({
         gachaId: -1,
         code: 'onboarding_starter',
         category: 'FURNITURE',
-        name: i18n.t('roomShop.gacha.starterMachineName'),
+        name: tr('roomShop.gacha.starterMachineName'),
         costCurrencyType: 'COIN',
         costAmount: 0,
         drawCount: 1,
       }),
     ],
-    [],
+    [tr],
   );
   // Owned characters + worn one (GET /me/characters). Once loaded, the worn
   // character overrides the onboarding pick everywhere but friend rooms.
