@@ -48,7 +48,6 @@ export const INTRO_SLIDES: IntroSlide[] = [
 /**
  * 영어 UI 캡처판 (#1369) — 같은 5장을 English로 실행한 앱에서 찍었다(iPhone 17 Pro Max
  * 시뮬 1320×2868 → 상태바 제거 → 689×1400). id·순서는 한국어판과 같다(계측 이름).
- * 집 장면은 다른 멤버 닉네임이 한국어라 아직 한국어 캡처 그대로다 — 멤버가 바꾸면 재촬영.
  */
 export const INTRO_SLIDES_EN: IntroSlide[] = [
   {
