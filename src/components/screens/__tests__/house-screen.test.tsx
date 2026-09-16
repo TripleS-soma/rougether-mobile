@@ -10,6 +10,8 @@ import { BrandThemeProvider, useBrandTheme } from '@/hooks/use-tokens';
 import { assetSource } from '@/resources/asset';
 import { resolveHouseFrame } from '@/resources/house-frame';
 import { Spacing } from '@/constants/theme';
+import { CAM_PAN_SLOP } from '@/components/screens/house/camera';
+import { SWIPE_CLAIM_DX } from '@/utils/gesture';
 
 jest.mock('@/hooks/use-color-scheme', () => ({ useColorScheme: jest.fn(() => 'light') }));
 beforeEach(() => jest.mocked(useColorScheme).mockReturnValue('light'));
@@ -113,7 +115,7 @@ describe('HouseScreen', () => {
   });
 
   it.each(['pending', 'empty'])(
-    'releases a zoom lock when the camera is replaced by %s content',
+    'keeps the pager unlocked while zoomed and when the camera is replaced by %s content (#1347)',
     async (destination) => {
       const onPagerLockChange = jest.fn();
       const ui = await render(
@@ -150,7 +152,8 @@ describe('HouseScreen', () => {
         camera.handlers.onTouchesMove?.(touches(100), manager);
         camera.handlers.onTouchesMove?.(touches(160), manager);
       });
-      expect(onPagerLockChange).toHaveBeenLastCalledWith(true);
+      // 확대만으로는 탭 페이저를 잠그지 않는다 — 캔버스 위 가로 이동은 카메라가 먼저 가져간다.
+      expect(onPagerLockChange).not.toHaveBeenCalledWith(true);
       expect(ui.getByLabelText('확대 종료')).toBeTruthy();
       await ui.rerender(
         <HouseScreen
@@ -792,6 +795,16 @@ describe('HouseScreen', () => {
 
   // 확대 중 탭 방문 (#669) — 탭 지터(슬롭 이내)는 카메라가 가져가지 않아야
   // Pressable의 방 탭(방문)이 산다. 실제 팬(슬롭 초과)·핀치는 카메라 몫.
+  it('확대 중 캔버스 가로 이동은 카메라가 페이저보다 먼저 잡는다 — 슬롭 순서가 잠금을 대신한다 (#1347)', () => {
+    // 확대만으로는 페이저를 잠그지 않으므로, 카메라 슬롭이 페이저 클레임보다 작아야
+    // 캔버스 위 드래그가 탭 전환이 아니라 카메라 이동이 된다.
+    expect(CAM_PAN_SLOP).toBeLessThan(SWIPE_CLAIM_DX);
+    const between = (CAM_PAN_SLOP + SWIPE_CLAIM_DX) / 2;
+    expect(cameraClaimsMove(1, true, false, between, 0)).toBe(true);
+    // 비확대 한 손가락 가로 이동은 카메라가 안 잡는다 → 그대로 탭 스와이프.
+    expect(cameraClaimsMove(1, false, false, SWIPE_CLAIM_DX + 1, 0)).toBe(false);
+  });
+
   it('cameraClaimsMove: 탭 지터는 통과, 실제 팬·핀치만 캡처한다 (#669)', () => {
     expect(cameraClaimsMove(1, true, false, 2, 2)).toBe(false); // 확대 중 탭 지터
     expect(cameraClaimsMove(1, true, false, 0, 20)).toBe(true); // 확대 중 실제 팬
