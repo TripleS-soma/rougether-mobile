@@ -13,3 +13,8 @@ eas.json
 *.aab
 *.ipa
 *.zip
+# @bacons/apple-targets `images` 설정이 prebuild 때 생성하는 위젯 에셋 카탈로그 (#1364, 2026-09-16).
+# fingerprint.config.js가 targets/ 전체를 지문에 넣어, EAS(prebuild 후)와 CI 러너(prebuild 전)의
+# iOS 지문이 어긋나 빌드 124가 "Runtime version mismatch"로 실패했다. 원본 이미지 경로는
+# expo-target.config.js(지문 포함)에 있으므로 생성물만 제외한다.
+targets/**/Assets.xcassets/**
