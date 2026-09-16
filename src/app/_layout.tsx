@@ -1,9 +1,9 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { ThemeProvider } from '@react-navigation/native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-context';
@@ -14,7 +14,8 @@ import { notifyAppForegroundInteraction } from '@/lib/app-icon-events';
 import { AnimatedSplashOverlay } from '@/components/app/animated-splash-overlay';
 import { ToastProvider } from '@/components/ui/toast';
 import { AuthProvider } from '@/hooks/use-auth';
-import { BrandThemeProvider, useResolvedScheme } from '@/hooks/use-tokens';
+import { BrandThemeProvider, useResolvedScheme, useTokens } from '@/hooks/use-tokens';
+import { navigationThemeFor } from '@/lib/navigation-theme';
 import { LanguageProvider } from '@/hooks/use-language';
 import { useWebFonts } from '@/hooks/use-web-fonts';
 import { initAnalytics } from '@/lib/analytics';
@@ -52,8 +53,11 @@ void SplashScreen.preventAutoHideAsync().catch(() => {});
  */
 function NavigationTheme({ children }: { children: ReactNode }) {
   const scheme = useResolvedScheme();
+  const t = useTokens();
+  // 토큰이 바뀔 때만 새 객체 — 매 렌더 새 테마면 내비게이션 트리 전체가 다시 그려진다.
+  const theme = useMemo(() => navigationThemeFor(scheme, t), [scheme, t]);
   return (
-    <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={theme}>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       {children}
     </ThemeProvider>
