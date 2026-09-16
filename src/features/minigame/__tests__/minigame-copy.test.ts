@@ -15,7 +15,7 @@ const build = () => [
   createStairsHtml({ seed: 1, channelId: 'test' }),
 ];
 
-/** 미니게임 WebView 문구 (#893) — 문서를 만드는 시점의 언어로 문구가 실린다. */
+/** 미니게임 WebView 문구 (#893): 문서를 만드는 시점의 언어로 문구가 실린다. */
 describe('minigame copy', () => {
   afterEach(async () => {
     await i18n.changeLanguage('ko');
@@ -59,7 +59,7 @@ describe('minigame copy', () => {
       await i18n.changeLanguage(lng);
       for (const html of build()) {
         const script = html.slice(html.indexOf('<script>') + 8, html.lastIndexOf('</script>'));
-        // 실행하지 않고 파싱만 — DOM 없이 문법만 확인한다.
+        // 실행하지 않고 파싱만: DOM 없이 문법만 확인한다.
         expect(() => new Function(script)).not.toThrow();
       }
     }
