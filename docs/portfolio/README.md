@@ -43,6 +43,7 @@ Claude(또는 작업자)가 대화·작업 중 아래에 해당한다고 **스�
 
 ## 목록
 
+- [2026-09-16 · React Native 컴포넌트를 브라우저 테스트 파이프라인에 올리기 — 스토리북](2026-09-16-storybook-test-pipeline.md)
 - [2026-09-16 · 병렬 i18n 마이그레이션 — 1,400+ 키를 충돌 없이 나눠 끝내기](2026-09-16-parallel-i18n-migration.md)
 - [2026-09-16 · 심사 제출된 테스트 빌드가 개발 OTA를 받는 문제 — EAS 채널 재배선](2026-09-16-ota-channel-remap.md)
 - [2026-09-16 · prebuild 생성물이 런타임 지문을 갈라 iOS 빌드 실패](2026-09-16-fingerprint-prebuild-artifact.md)
