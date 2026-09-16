@@ -1,4 +1,4 @@
-import { parseInviteText } from '@/lib/invite-code';
+import { parseInstallReferrer, parseInviteText } from '@/lib/invite-code';
 
 describe('parseInviteText (#1007)', () => {
   it('서버 랜딩이 복사하는 봉투를 읽는다', () => {
@@ -61,5 +61,37 @@ describe('parseInviteText (#1007)', () => {
     expect(parseInviteText('')).toBeNull();
     expect(parseInviteText(null)).toBeNull();
     expect(parseInviteText('rougether-invite:friend:')).toBeNull();
+  });
+});
+
+describe('parseInstallReferrer (#1007 — Android 설치 referrer)', () => {
+  it('서버 랜딩이 Play 링크에 싣는 계약 문자열을 읽는다', () => {
+    expect(parseInstallReferrer('invite_type=friend&invite_code=abcd2345')).toEqual({
+      kind: 'friend',
+      code: 'ABCD2345',
+    });
+    expect(parseInstallReferrer('invite_type=house&invite_code=HOME77')).toEqual({
+      kind: 'house',
+      code: 'HOME77',
+    });
+  });
+
+  it('한 번 더 인코딩된 채 와도, 다른 파라미터가 섞여도 읽는다', () => {
+    expect(parseInstallReferrer('invite_type%3Dfriend%26invite_code%3DABCD2345')).toEqual({
+      kind: 'friend',
+      code: 'ABCD2345',
+    });
+    expect(
+      parseInstallReferrer('utm_source=rougether&invite_type=friend&invite_code=AB12&utm_medium=x'),
+    ).toEqual({ kind: 'friend', code: 'AB12' });
+  });
+
+  it('유기적 설치·다른 캠페인·모양이 아닌 코드는 null', () => {
+    expect(parseInstallReferrer('utm_source=google-play&utm_medium=organic')).toBeNull();
+    expect(parseInstallReferrer('invite_type=friend')).toBeNull();
+    expect(parseInstallReferrer('invite_type=friend&invite_code=has space')).toBeNull();
+    expect(parseInstallReferrer('invite_type=other&invite_code=ABCD')).toBeNull();
+    expect(parseInstallReferrer('')).toBeNull();
+    expect(parseInstallReferrer(null)).toBeNull();
   });
 });

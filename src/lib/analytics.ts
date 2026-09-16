@@ -66,7 +66,7 @@ export type AnalyticsEvent =
   | 'house_joined'
   | 'invite_code_copy'
   | 'invite_redeem'
-  /** 링크·붙여넣기로 들어온 친구 초대 확인 시트 노출 (#1007) — via: link|paste. */
+  /** 링크·붙여넣기·설치 referrer로 들어온 친구 초대 확인 시트 노출 (#1007) — via: link|paste|referrer. */
   | 'invite_arrival_view'
   /** 확인 시트에서 나중에 (#1007) — 코드는 친구 초대 화면 입력란에 남는다. */
   | 'invite_arrival_later'
@@ -74,6 +74,8 @@ export type AnalyticsEvent =
   | 'invite_paste_view'
   /** 붙여넣기 결과 (#1007) — kind: friend|house|invalid|dismiss. */
   | 'invite_paste_result'
+  /** Android 설치 referrer 읽기 결과 (#1007) — kind: friend|house|none. 설치당 1회. */
+  | 'invite_referrer_result'
   // 미니게임 (#1315) — 시작→완료 전환과 이탈 지점, 게임별 인기·점수 분포.
   // 전부 `useMinigameRun`/서피스 한 곳에서 — 화면·WebView는 모른다.
   /** 세션 시작 — game: room-runner|cat-stairs|cat-merge, mode: ranked|practice, via: picker|retry. */

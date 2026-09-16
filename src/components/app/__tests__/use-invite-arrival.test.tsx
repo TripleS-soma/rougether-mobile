@@ -16,6 +16,15 @@ jest.mock('@/lib/analytics', () => ({ track: (...args: unknown[]) => mockTrack(.
 const mockToast = jest.fn();
 jest.mock('@/components/ui/toast', () => ({ useToast: () => ({ show: mockToast }) }));
 
+// Android 설치 referrer (#1007 네이티브 절반) — 기본은 "읽을 것 없음". 각 테스트가 바꾼다.
+const mockReadInstallReferrer = jest.fn<
+  Promise<import('@/lib/install-referrer').InstallReferrerResult>,
+  []
+>();
+jest.mock('@/lib/install-referrer', () => ({
+  readInstallReferrerInvite: () => mockReadInstallReferrer(),
+}));
+
 /**
  * 이 테스트는 **흐름(오케스트레이션)** 만 본다 — 시트의 모양·애니메이션·iOS Modal
  * 직렬화는 시트 자체 테스트(invite-sheets.test.tsx) 몫이다. 그래서 두 시트를 받은
@@ -93,6 +102,10 @@ async function setup(overrides: Partial<UseInviteArrivalArgs> = {}) {
   const view = await render(<Harness {...props} />);
   return { props, view };
 }
+
+beforeEach(() => {
+  mockReadInstallReferrer.mockReset().mockResolvedValue({ kind: 'skipped' });
+});
 
 afterEach(() => {
   clearPendingFriendInviteCode();
@@ -278,5 +291,63 @@ describe('useInviteArrival (#1007)', () => {
       });
       expect(view.queryByText('paste-sheet')).toBeNull();
     });
+  });
+});
+
+describe('useInviteArrival — Android 설치 referrer (#1007)', () => {
+  it('설치 referrer의 친구 코드는 링크처럼 미리보기 → 확인 시트, via는 referrer', async () => {
+    mockReadInstallReferrer.mockResolvedValue({
+      kind: 'invite',
+      invite: { kind: 'friend', code: 'ROUGE123' },
+    });
+    const { props, view } = await setup();
+    await waitFor(() => expect(view.getByText('arrival:소마:50')).toBeTruthy());
+    expect(props.check).toHaveBeenCalledWith('ROUGE123');
+    expect(props.redeem).not.toHaveBeenCalled();
+    expect(mockTrack).toHaveBeenCalledWith('invite_arrival_view', { via: 'referrer' });
+
+    await fireEvent.press(view.getByLabelText('accept'));
+    await waitFor(() => expect(props.redeem).toHaveBeenCalledWith('ROUGE123', 'referrer'));
+  });
+
+  it('referrer로 코드가 왔으면 온보딩 직후 붙여넣기 시트를 묻지 않는다', async () => {
+    mockReadInstallReferrer.mockResolvedValue({
+      kind: 'invite',
+      invite: { kind: 'friend', code: 'ROUGE123' },
+    });
+    const { view } = await setup({ offerPaste: true });
+    await waitFor(() => expect(view.getByText('arrival:소마:50')).toBeTruthy());
+    expect(view.queryByText('paste-sheet')).toBeNull();
+    expect(mockTrack).not.toHaveBeenCalledWith('invite_paste_view');
+  });
+
+  it('링크로 이미 들어온 코드가 있으면 referrer가 덮지 않는다', async () => {
+    mockReadInstallReferrer.mockResolvedValue({
+      kind: 'invite',
+      invite: { kind: 'friend', code: 'FROMREF1' },
+    });
+    setPendingFriendInviteCode('FROMLINK');
+    const { props, view } = await setup();
+    await waitFor(() => expect(view.getByText('arrival:소마:50')).toBeTruthy());
+    expect(props.check).toHaveBeenCalledWith('FROMLINK');
+    expect(props.check).not.toHaveBeenCalledWith('FROMREF1');
+    expect(mockTrack).toHaveBeenCalledWith('invite_arrival_view', { via: 'link' });
+  });
+
+  it('집 코드는 집 탐색 채널로 넘긴다', async () => {
+    mockReadInstallReferrer.mockResolvedValue({
+      kind: 'invite',
+      invite: { kind: 'house', code: 'HOME77' },
+    });
+    const { props } = await setup();
+    await waitFor(() => expect(peekPendingInviteCode()).toBe('HOME77'));
+    expect(props.check).not.toHaveBeenCalled();
+  });
+
+  it('읽을 것이 없으면(유기적 설치·iOS·구 바이너리) 아무 일도 없고 붙여넣기 시트는 그대로 뜬다', async () => {
+    mockReadInstallReferrer.mockResolvedValue({ kind: 'none' });
+    const { props, view } = await setup({ offerPaste: true });
+    await waitFor(() => expect(view.getByText('paste-sheet')).toBeTruthy());
+    expect(props.check).not.toHaveBeenCalled();
   });
 });

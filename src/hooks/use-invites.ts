@@ -12,7 +12,7 @@ import { useToast } from '@/components/ui/toast';
 export type RedeemResult = { rewardCoin: number };
 
 /** 코드가 어디서 왔나 (#1007) — `invite_redeem`의 via. */
-export type InviteVia = 'manual' | 'link' | 'paste';
+export type InviteVia = 'manual' | 'link' | 'paste' | 'referrer';
 
 /** 미리보기 판정 (#1007) — 쓸 수 없는 코드와 일시적 실패를 가른다. */
 export type InviteCheck =
