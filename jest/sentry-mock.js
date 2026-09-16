@@ -7,4 +7,36 @@ module.exports = {
   captureException: jest.fn(),
   captureMessage: jest.fn(),
   wrap: (component) => component,
+  // 성능 추적 (#1376) — 통합 객체는 초기화 인자로만 쓰인다.
+  reactNavigationIntegration: jest.fn(() => ({
+    name: 'ReactNavigation',
+    registerNavigationContainer: jest.fn(),
+  })),
+  reactNativeTracingIntegration: jest.fn(() => ({ name: 'ReactNativeTracing' })),
+  // 실제 @sentry/react ErrorBoundary와 같은 계약: 자식 렌더 에러 시 fallback({ error, resetError }).
+  ErrorBoundary: (() => {
+    const React = require('react');
+    return class ErrorBoundary extends React.Component {
+      constructor(props) {
+        super(props);
+        this.state = { error: null };
+        this.resetError = () => this.setState({ error: null });
+      }
+      static getDerivedStateFromError(error) {
+        return { error };
+      }
+      componentDidCatch(error) {
+        this.props.onError?.(error);
+      }
+      render() {
+        if (this.state.error) {
+          const { fallback } = this.props;
+          return typeof fallback === 'function'
+            ? fallback({ error: this.state.error, resetError: this.resetError })
+            : (fallback ?? null);
+        }
+        return this.props.children;
+      }
+    };
+  })(),
 };

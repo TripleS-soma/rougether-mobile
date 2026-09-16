@@ -116,6 +116,10 @@
       "exitHint": "Press back again to exit",
       "missionCaption": "Mission {{index}}/{{total}}",
       "goalFallback": "Goal"
+    },
+    "errorBoundary": {
+      "title": "Something went wrong",
+      "body": "This screen hit an error. Please try again. If it keeps happening, let us know in Settings > Report a bug."
     }
   }
 }
