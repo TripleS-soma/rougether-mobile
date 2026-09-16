@@ -51,6 +51,18 @@
     },
     "push": {
       "channelName": "알림"
+    },
+    "widget": {
+      "moodCrying": "{{days}}일이나 못 봤어요… 흑흑",
+      "moodSad": "{{days}}일째 못 봤어요, 보고 싶어요",
+      "moodCrown": "{{streak}}일 연속! 최고예요",
+      "moodHappy": "오늘도 다 해냈어요!",
+      "moodWorried": "아직 {{count}}개 남았어요",
+      "emptyToday": "오늘 예정된 루틴이 없어요",
+      "allDone": "모두 완료했어요! 🎉",
+      "more": "+{{count}}개 더",
+      "roomEmpty": "앱을 열면 내 방이 여기 걸려요",
+      "streakDays": "🔥 {{streak}}일"
     }
   }
 }
