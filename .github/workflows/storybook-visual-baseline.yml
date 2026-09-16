@@ -1,0 +1,26 @@
+name: storybook-visual-baseline
+
+# 스토리북 시각 회귀 기준 이미지 갱신 (수동). 의도한 디자인 변경으로 비교가 실패할 때
+# 이 워크플로를 그 PR 브랜치에서 실행하고, artifact의 스크린샷을 받아 커밋한다.
+# 기준 이미지는 CI와 같은 ubuntu에서만 만든다(OS별 폰트 렌더 차이).
+on:
+  workflow_dispatch:
+
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx --no-install playwright install --with-deps chromium
+      - run: npx --no-install storybook build --output-dir web-build/storybook
+      - run: npx --no-install playwright test -c playwright.visual.config.ts --update-snapshots
+      - uses: actions/upload-artifact@v4
+        with:
+          name: storybook-visual-baseline
+          path: stories/__visual__/__screenshots__
+          retention-days: 7

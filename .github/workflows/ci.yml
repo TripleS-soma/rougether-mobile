@@ -34,6 +34,45 @@ jobs:
       - name: Build Storybook
         run: npx --no-install storybook build --output-dir web-build/storybook
 
+      # 스토리북 공유 (PR에서 내려받아 web-build/storybook/index.html을 열거나 정적 서버로 확인).
+      - name: Upload Storybook static build
+        uses: actions/upload-artifact@v4
+        with:
+          name: storybook-static
+          path: web-build/storybook
+          retention-days: 7
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright Chromium
+        run: npx --no-install playwright install --with-deps chromium
+
+      # 모든 스토리를 실제 Chromium에서 렌더하고 play 함수·a11y 검사(현재 todo 수준)를 실행한다.
+      # package.json 스크립트는 네이티브 지문 입력이라 CLI를 직접 호출한다.
+      - name: Storybook tests (render · play · a11y)
+        run: npx --no-install vitest run --project=storybook
+
+      # 핵심 스토리 스크린샷 비교. 기준 이미지가 없는 스토리는 이번 실행에서 만들어 artifact로 올린다
+      # (docs/storybook.md "시각 회귀" — 받아서 커밋하면 다음 PR부터 비교).
+      - name: Storybook visual regression
+        run: npx --no-install playwright test -c playwright.visual.config.ts --update-snapshots=missing
+
+      - name: Upload visual regression results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: storybook-visual
+          path: |
+            stories/__visual__/__screenshots__
+            web-build/visual-report
+            web-build/visual-results
+          retention-days: 7
+          if-no-files-found: ignore
+
       # spec contracts/date-boundary-cases.json 기준으로, 실제 요청 생성 코드가 만든 날짜를
       # 단말 시간대(TZ) 매트릭스에서 검증하고 요청 본문을 기록한다(서버 계약 테스트가 재생).
       - name: Date boundary contract (TZ matrix)
