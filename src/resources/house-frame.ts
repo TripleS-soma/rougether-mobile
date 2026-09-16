@@ -1,4 +1,5 @@
 import { ROOM_ASPECT_RATIO } from '@/components/room/room-render-contract';
+import { i18n } from '@/i18n';
 import { isCdnKey } from '@/resources/asset';
 
 export const FRAME_ASPECT = 567 / 508;
@@ -32,34 +33,48 @@ const ROUNDED_FRAME_RELEASE_BY_THEME: Readonly<Record<string, string | undefined
   'mushroom-forest': 'mushroom-grass-v1-20260909',
   'night-observatory': 'night-renewed-v1-20260909',
 };
+/**
+ * 테마 표시명은 i18n `house.coverNames.<id>` (#893) — 호출 시점 언어로 읽는다.
+ * id는 CDN 폴더 슬러그라 번역하지 않는다.
+ */
+const houseTheme = <Id extends string>(id: Id, group: 1 | 2 | 3, legacyKey: string | null) => ({
+  id,
+  get name(): string {
+    return i18n.t(`house.coverNames.${id}`);
+  },
+  group,
+  legacyKey,
+});
+
 export const STACKED_HOUSE_THEMES = [
-  { id: 'cloud-balloon', name: '구름 풍선 집', group: 1, legacyKey: DEFAULT_HOUSE_COVER_KEY },
-  {
-    id: 'coral-lagoon',
-    name: '산호 조개 집',
-    group: 1,
-    legacyKey: 'house/coral-aquarium/house-unified-coral-aquarium-frame.png',
-  },
-  {
-    id: 'mushroom-forest',
-    name: '버섯 숲 집',
-    group: 1,
-    legacyKey: 'house/mushroom-forest/house-unified-mushroom-forest-frame.png',
-  },
-  {
-    id: 'night-observatory',
-    name: '밤의 천문대 집',
-    group: 1,
-    legacyKey: 'house/night-observatory/house-unified-night-observatory-frame-v3.png',
-  },
-  { id: 'moonlit-hanok', name: '달빛 한옥', group: 2, legacyKey: null },
-  { id: 'morning-bakery', name: '아침 빵집', group: 2, legacyKey: null },
-  { id: 'sakura-teahouse', name: '벚꽃 찻집', group: 2, legacyKey: null },
-  { id: 'coastal-lighthouse', name: '바닷바람 등대집', group: 3, legacyKey: null },
-  { id: 'snowy-cabin', name: '눈꽃 통나무집', group: 3, legacyKey: null },
-  { id: 'herb-greenhouse', name: '허브 온실집', group: 3, legacyKey: null },
-  { id: 'clockwork-cottage', name: '태엽 시계집', group: 3, legacyKey: null },
+  houseTheme('cloud-balloon', 1, DEFAULT_HOUSE_COVER_KEY),
+  houseTheme('coral-lagoon', 1, 'house/coral-aquarium/house-unified-coral-aquarium-frame.png'),
+  houseTheme('mushroom-forest', 1, 'house/mushroom-forest/house-unified-mushroom-forest-frame.png'),
+  houseTheme(
+    'night-observatory',
+    1,
+    'house/night-observatory/house-unified-night-observatory-frame-v3.png',
+  ),
+  houseTheme('moonlit-hanok', 2, null),
+  houseTheme('morning-bakery', 2, null),
+  houseTheme('sakura-teahouse', 2, null),
+  houseTheme('coastal-lighthouse', 3, null),
+  houseTheme('snowy-cabin', 3, null),
+  houseTheme('herb-greenhouse', 3, null),
+  houseTheme('clockwork-cottage', 3, null),
 ] as const;
+
+/**
+ * 집 커버 표시명 (#893). 커버 카탈로그 이름은 서버가 한국어로 내려준다 — 한국어에서는
+ * 서버 이름을 그대로 쓰고(서버가 원본), 다른 언어에서는 커버 키의 폴더 슬러그
+ * (`house/<slug>/…`)로 `house.coverNames.<slug>`를 찾는다. 모르는 슬러그는 서버 이름.
+ */
+export function houseCoverName(coverImageKey: string, serverName: string): string {
+  if (i18n.language.startsWith('ko')) return serverName;
+  const slug = /^house\/([^/]+)\//.exec(coverImageKey)?.[1];
+  if (!slug) return serverName;
+  return i18n.t(`house.coverNames.${slug}`, { defaultValue: serverName });
+}
 export type StackedHouseThemeId = (typeof STACKED_HOUSE_THEMES)[number]['id'];
 
 // Enable the approved canonical covers by default. An explicit
