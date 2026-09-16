@@ -94,6 +94,7 @@ import { NotificationBanner } from '@/components/ui/notification-banner';
 import { MissionSheet } from '@/components/screens/sheets/mission-sheet';
 import { PendingNotice } from '@/components/ui/pending-notice';
 import { RetryState } from '@/components/ui/retry-state';
+import { AppErrorFallback } from '@/components/app/app-error-boundary';
 import { ToastProvider, useToast } from '@/components/ui/toast';
 import { WheelPicker } from '@/components/ui/wheel-picker';
 import { policyUrl } from '@/constants/policy';
@@ -1520,6 +1521,16 @@ export const galleryEntries: GalleryEntry[] = [
     name: 'UI · PendingNotice',
     description: '서버 준비 중(엔드포인트 미구현) 정직화 배너.',
     render: () => <PendingNotice text="이 기능은 서버 준비 중이에요." />,
+  },
+  {
+    name: 'App · 오류 복구 화면',
+    description:
+      '화면 렌더 중 예외가 나면 흰 화면 대신 뜨는 복구 화면 (#1376). 에러는 Sentry ErrorBoundary가 보내고, 다시 시도는 트리를 새로 그린다.',
+    render: () => (
+      <View style={{ height: 420, alignSelf: 'stretch' }}>
+        <AppErrorFallback onRetry={() => console.log('[dev] 다시 시도 — 경계 초기화')} />
+      </View>
+    ),
   },
   {
     name: 'UI · RetryState',

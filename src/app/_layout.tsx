@@ -1,6 +1,7 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
+import * as Sentry from '@sentry/react-native';
+import { Stack, useNavigationContainerRef } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { type ReactNode, useEffect, useState } from 'react';
@@ -8,6 +9,7 @@ import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AppErrorBoundary } from '@/components/app/app-error-boundary';
 import { AppFrame } from '@/components/app/app-frame';
 import { AppIconSync } from '@/components/app/app-icon-sync';
 import { notifyAppForegroundInteraction } from '@/lib/app-icon-events';
@@ -19,7 +21,7 @@ import { LanguageProvider } from '@/hooks/use-language';
 import { useWebFonts } from '@/hooks/use-web-fonts';
 import { initAnalytics } from '@/lib/analytics';
 import { initAppOpenTracking } from '@/lib/app-open';
-import { initErrorReporting } from '@/lib/error-reporting';
+import { initErrorReporting, registerNavigationContainer } from '@/lib/error-reporting';
 import { initPushDisplay } from '@/lib/push-events';
 import {
   bindSessionCacheReset,
@@ -65,9 +67,14 @@ function NavigationTheme({ children }: { children: ReactNode }) {
  * (`/login`, `/signup`). Auth gating (redirect when signed out) and the
  * post-signup onboarding step are follow-ups.
  */
-export default function RootLayout() {
+function RootLayout() {
   // Web-only app-font registration (#382); native embeds them at build time.
   useWebFonts();
+  // 화면 전환 추적 (#1376) — Expo Router의 내비게이션 컨테이너를 Sentry에 등록한다.
+  const navigationRef = useNavigationContainerRef();
+  useEffect(() => {
+    if (navigationRef) registerNavigationContainer(navigationRef);
+  }, [navigationRef]);
   // 클라이언트는 앱 수명 동안 하나다 — 렌더마다 새로 만들면 캐시가 매번
   // 비워진다. useState 초기화 함수로 첫 렌더에 1회만 생성한다 (#1027).
   const [queryClient] = useState(createQueryClient);
@@ -91,7 +98,10 @@ export default function RootLayout() {
                     <AnimatedSplashOverlay />
                     {/* 웹 데스크톱: 중앙 480px 컬럼. 네이티브는 그대로 통과. */}
                     <AppFrame>
-                      <Stack screenOptions={{ headerShown: false }} />
+                      {/* 렌더 예외 → 복구 화면 + Sentry (#1376). 토큰·문구를 쓰도록 프로바이더 안쪽. */}
+                      <AppErrorBoundary>
+                        <Stack screenOptions={{ headerShown: false }} />
+                      </AppErrorBoundary>
                     </AppFrame>
                   </NavigationTheme>
                 </ToastProvider>
@@ -105,3 +115,6 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({ root: { flex: 1 } });
+
+// 루트 래핑 (#1376) — 터치 브레드크럼·앱 시작 추적 등 SDK의 루트 계측을 붙인다.
+export default Sentry.wrap(RootLayout);
