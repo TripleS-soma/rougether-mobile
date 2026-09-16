@@ -21,7 +21,7 @@
     },
     "preview": {
       "distribution": "internal",
-      "channel": "dev",
+      "channel": "internal",
       "android": {
         "buildType": "apk"
       },
@@ -49,7 +49,7 @@
     },
     "testflight": {
       "autoIncrement": true,
-      "channel": "dev",
+      "channel": "internal",
       "ios": {
         "distribution": "store",
         "cocoapods": "1.17.0"
