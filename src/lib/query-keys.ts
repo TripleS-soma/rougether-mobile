@@ -16,6 +16,7 @@ export const queryKeys = {
   },
   recommendations: ['recommendations'] as const,
   gachas: ['gachas', 'categories'] as const,
+  starterGacha: (userId: number | null | undefined) => ['starter-gacha', userId] as const,
   starterRoutine: (userId: number | null | undefined) => ['starter-routine', userId] as const,
   appIcon: {
     all: ['app-icon'] as const,

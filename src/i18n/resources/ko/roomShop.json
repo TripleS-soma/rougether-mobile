@@ -194,9 +194,18 @@
         "duplicate": "중복 · {{label}}"
       },
       "category": {
-        "WALLPAPER": { "title": "벽지 뽑기", "label": "벽지" },
-        "FLOOR": { "title": "바닥 뽑기", "label": "바닥" },
-        "FURNITURE": { "title": "가구 뽑기", "label": "가구" }
+        "WALLPAPER": {
+          "title": "벽지 뽑기",
+          "label": "벽지"
+        },
+        "FLOOR": {
+          "title": "바닥 뽑기",
+          "label": "바닥"
+        },
+        "FURNITURE": {
+          "title": "가구 뽑기",
+          "label": "가구"
+        }
       },
       "lobby": {
         "copy": {
@@ -223,10 +232,17 @@
         "rewardsHint": "나올 수 있는 보상 보기",
         "drawOne": "1회 뽑기",
         "drawBonus": "5+1회 뽑기",
-        "drawA11y": "{{label}}, {{cost}} {{currency}}"
+        "drawA11y": "{{label}}, {{cost}} {{currency}}",
+        "starter": {
+          "title": "내 첫 가구, 포근한 스피커",
+          "detail": "첫 뽑기에서는 스피커를 받아요. 원하는 곳에 직접 놓아보세요.",
+          "drawFree": "첫 가구 뽑기 (무료)",
+          "claimed": "받은 스피커 확인"
+        }
       },
       "giftOpenA11y": "선물상자 열기",
-      "giftOpenHint": "이미 뽑은 선물을 열어요. 재화는 추가로 사용하지 않아요."
+      "giftOpenHint": "이미 뽑은 선물을 열어요. 재화는 추가로 사용하지 않아요.",
+      "starterMachineName": "첫 가구"
     },
     "studio": {
       "title": "AI 가구 만들기",
@@ -338,6 +354,33 @@
         "loadError": "게임을 불러오지 못했어요.",
         "restart": "다시 시작"
       }
+    },
+    "speaker": {
+      "sheetTitle": "방에 흐르는 소리",
+      "sheetSubtitle": "오늘은 어떤 분위기로 쉬어갈까요?",
+      "closeA11y": "스피커 닫기",
+      "volume": "볼륨",
+      "volumeDownA11y": "볼륨 줄이기",
+      "volumeA11y": "스피커 볼륨",
+      "volumeUpA11y": "볼륨 높이기",
+      "cancel": "취소",
+      "stop": "정지",
+      "play": "재생",
+      "spriteOnA11y": "음악이 흐르는 스피커",
+      "spriteOffA11y": "꺼진 스피커",
+      "roomHint": "길게 누르면 소리와 볼륨을 조절할 수 있어요",
+      "roomSettingsAction": "소리 설정",
+      "roomStopA11y": "스피커 정지",
+      "roomPlayA11y": "스피커 재생",
+      "playError": "소리를 재생하지 못했어요. 다시 눌러 주세요.",
+      "nowPlayingTitle": "방에 흐르는 소리",
+      "tracks": {
+        "fire": "모닥불",
+        "rain": "창밖의 빗소리",
+        "forest": "숲의 분위기",
+        "piano": "조용한 피아노"
+      },
+      "nowPlayingArtist": "루게더"
     }
   }
 }

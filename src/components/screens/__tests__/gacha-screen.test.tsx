@@ -607,3 +607,41 @@ describe('GachaScreen', () => {
     expect(onLoadRewards.mock.calls).toEqual([[103], [103]]);
   });
 });
+
+describe('onboarding starter draw', () => {
+  it('offers only one free draw with no category switching and requires manual placement', async () => {
+    const speaker: DrawResult = { ...reward, name: '포근한 스피커' };
+    const onDraw = jest.fn().mockResolvedValue([speaker]);
+    const onGoPlace = jest.fn();
+    const onResultsConfirmed = jest.fn();
+    const screen = await render(
+      <GachaScreen
+        gachas={[{ ...machine, id: -1, costAmount: 0 }]}
+        starterDrawState="PENDING"
+        coinBalance={0}
+        onDraw={onDraw}
+        onGoPlace={onGoPlace}
+        placeableItemIds={['7']}
+        onResultsConfirmed={onResultsConfirmed}
+        reducedMotion
+      />,
+    );
+    expect(screen.queryAllByRole('tab')).toHaveLength(0);
+    expect(screen.queryByText('5+1회 뽑기')).toBeNull();
+    await fireEvent.press(screen.getByLabelText('첫 가구 뽑기 (무료)'));
+    expect(onDraw).toHaveBeenCalledWith(-1, 1);
+    expect(screen.getByText('포근한 스피커')).toBeTruthy();
+    expect(onGoPlace).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByLabelText('방 꾸미러 가기'));
+    expect(onGoPlace).toHaveBeenCalledWith([speaker]);
+    expect(onResultsConfirmed).toHaveBeenCalledTimes(1);
+  });
+
+  it('labels an already granted result as recovery instead of a new free draw', async () => {
+    const screen = await render(
+      <GachaScreen gachas={[{ ...machine, costAmount: 0 }]} starterDrawState="CLAIMED" />,
+    );
+    expect(screen.getByLabelText('받은 스피커 확인')).toBeTruthy();
+    expect(screen.queryByLabelText('첫 가구 뽑기 (무료)')).toBeNull();
+  });
+});

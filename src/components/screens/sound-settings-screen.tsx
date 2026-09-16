@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { DEFAULT_HAPTIC_STRENGTH, type HapticStrength } from '@/utils/haptics';
-import { PendingNotice } from '@/components/ui/pending-notice';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Radius, Spacing } from '@/constants/theme';
@@ -81,7 +80,9 @@ export function SoundSettingsScreen({
           column,
           headerInset ? { paddingTop: headerInset } : null,
         ]}>
-        <PendingNotice text={tr('member.soundSettings.pending')} />
+        <Text style={[Typography.supporting, { color: t.textMuted }]}>
+          {tr('member.soundSettings.localOnly')}
+        </Text>
         <View style={[styles.card, { backgroundColor: t.surface }]}>
           {rows.map((r, idx) => (
             <View

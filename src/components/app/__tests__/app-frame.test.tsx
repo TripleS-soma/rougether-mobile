@@ -3,7 +3,11 @@ import { useEffect } from 'react';
 import { Platform, Text, View } from 'react-native';
 
 import { AppFrame, ModalFrame, PhoneColumn } from '@/components/app/app-frame';
-import { APP_FRAME_MAX_WIDTH, type AppFrame as AppFrameSize } from '@/hooks/use-app-frame';
+import {
+  APP_FRAME_MAX_WIDTH,
+  SHEET_FRAME_MAX_WIDTH,
+  type AppFrame as AppFrameSize,
+} from '@/hooks/use-app-frame';
 import { flattenStyle } from '@/test-utils/style';
 
 // 프레임 판정만 바꿔 가며 컴포넌트의 렌더 동작을 본다 — 순수 계산은 use-app-frame.test.
@@ -113,7 +117,29 @@ describe('AppFrame / ModalFrame (#1227)', () => {
       const inner = flattenStyle(getByTestId('modal-frame-inner').props.style);
       expect(inner.justifyContent).toBe('flex-end');
       expect(inner.width).toBe(APP_FRAME_MAX_WIDTH);
+      // 앱 프레임의 양옆 테두리를 시트가 물려받으면 검은 선이 보인다 (#1367).
+      expect(inner.borderLeftWidth).toBeUndefined();
+      expect(inner.borderRightWidth).toBeUndefined();
       expect(getByTestId('modal-frame').props.pointerEvents).toBe('box-none');
+    } finally {
+      os.restore();
+    }
+  });
+
+  it('2단 창에서는 시트 폭이 폰 컬럼보다 넓어지고(최대 640) 테두리는 없다 (#1367)', async () => {
+    const os = jest.replaceProperty(Platform, 'OS', 'web');
+    try {
+      mockFrame = SPLIT;
+      const { getByTestId } = await render(
+        <ModalFrame>
+          <View testID="card" />
+        </ModalFrame>,
+      );
+      const inner = flattenStyle(getByTestId('modal-frame-inner').props.style);
+      expect(inner.maxWidth).toBe(SHEET_FRAME_MAX_WIDTH);
+      expect(inner.width).toBe('100%');
+      expect(inner.borderLeftWidth).toBeUndefined();
+      expect(inner.justifyContent).toBe('flex-end');
     } finally {
       os.restore();
     }

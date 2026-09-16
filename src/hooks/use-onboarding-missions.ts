@@ -1,3 +1,4 @@
+import { completeOnboardingTutorial } from '@/api/starter-gacha';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -112,6 +113,7 @@ export function useOnboardingMissions(autoStart: boolean) {
     const next = s.stepIndex + 1;
     if (next >= ONBOARDING_MISSION_STEPS.length) {
       // 마지막 미션 — 배너는 소멸하고 축하 시트만 남는다.
+      void completeOnboardingTutorial().catch(() => {});
       void AsyncStorage.setItem(storeKey(), 'completed').catch(() => {});
       setState({ active: false, stepIndex: s.stepIndex, completedIndex: s.stepIndex });
       return;
@@ -125,6 +127,7 @@ export function useOnboardingMissions(autoStart: boolean) {
     const s = stateRef.current;
     if (!s.active) return;
     track('onboarding_mission_skip', { step: ONBOARDING_MISSION_STEPS[s.stepIndex].id });
+    void completeOnboardingTutorial().catch(() => {});
     void AsyncStorage.setItem(storeKey(), 'skipped').catch(() => {});
     setState({ active: false, stepIndex: s.stepIndex, completedIndex: null });
   }, []);

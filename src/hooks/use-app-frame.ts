@@ -14,6 +14,12 @@ export const APP_FRAME_MAX_WIDTH = 480;
  */
 export const SPLIT_MIN_WINDOW_WIDTH = 960;
 export const SPLIT_FRAME_MAX_WIDTH = 1200;
+/**
+ * 2단 창에서 바텀시트(Modal) 카드의 최대 폭 (#1367) — 폰 컬럼(480)에 갇히면 넓은
+ * 창에서 작성 시트가 좁고 왜소하다. 창 전체를 채우진 않되 폰보다 한 단계 넓힌다.
+ * 폰 컬럼(480~959)에서는 앱 컬럼과 같은 480.
+ */
+export const SHEET_FRAME_MAX_WIDTH = 640;
 
 export type AppFrame = ReturnType<typeof useWindowDimensions> & {
   /** 프레임이 창보다 좁아 중앙 컬럼으로 그리는 중인가(웹 데스크톱). */

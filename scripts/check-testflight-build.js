@@ -25,9 +25,14 @@ function validateConfiguration(env, checkoutSha, app, eas) {
     'Expected source SHA must match both GITHUB_SHA and checkout HEAD.',
   );
   requireCondition(env.GITHUB_REPOSITORY === REPOSITORY, 'Unexpected GitHub repository.');
+  const candidateVersion = env.EXPECTED_APP_VERSION || '1.5.0';
+  requireCondition(
+    /^\d+\.\d+\.\d+$/.test(candidateVersion),
+    'Expected candidate app version is invalid.',
+  );
   const profile = eas.build?.testflight;
   requireCondition(
-    app.expo?.version === '1.5.0' &&
+    app.expo?.version === candidateVersion &&
       app.expo?.extra?.eas?.projectId === PROJECT_ID &&
       app.expo?.runtimeVersion?.policy === 'fingerprint' &&
       eas.cli?.appVersionSource === 'remote' &&
@@ -39,7 +44,7 @@ function validateConfiguration(env, checkoutSha, app, eas) {
       !profile.extends &&
       !profile.developmentClient &&
       !profile.ios.simulator,
-    'Expected app 1.5.0, designated project, fingerprint runtime, and remote-incremented testflight/dev/preview/store profile.',
+    'Expected explicitly selected app version, designated project, fingerprint runtime, and remote-incremented testflight/dev/preview/store profile.',
   );
 }
 
@@ -206,7 +211,10 @@ function execute(env, app, eas, run = command, report = console.log, validateOnl
       ),
     'Production version-train history is incomplete.',
   );
-  requireCondition(checkTrain('1.5.0', production).ok, 'App 1.5.0 version train is not open.');
+  requireCondition(
+    checkTrain(app.expo.version, production).ok,
+    'Candidate app version train is not open.',
+  );
   requireCondition(next > 114, 'The new iOS build number must be greater than 114.');
   // Another actor may consume the remote counter even while Actions is serialized.
   requireCondition(
@@ -248,7 +256,7 @@ function execute(env, app, eas, run = command, report = console.log, validateOnl
   requireCondition(
     build.status === 'FINISHED' &&
       build.platform === 'IOS' &&
-      build.appVersion === '1.5.0' &&
+      build.appVersion === app.expo.version &&
       String(build.appBuildVersion) === String(next) &&
       build.gitCommitHash === env.EXPECTED_SOURCE_SHA &&
       runtime(build) === fingerprint &&

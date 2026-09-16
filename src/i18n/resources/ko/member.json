@@ -12,15 +12,42 @@
       "nickname": "닉네임"
     },
     "characters": {
-      "cat": { "name": "고양이", "description": "조용하고 따뜻한 루틴 친구" },
-      "dog": { "name": "강아지", "description": "밝고 활발한 루틴 친구" },
-      "tiger": { "name": "호랑이", "description": "당차고 용감한 루틴 친구" },
-      "panda": { "name": "판다", "description": "느긋하고 다정한 루틴 친구" },
-      "bear": { "name": "곰", "description": "든든하고 포근한 루틴 친구" },
-      "sheep": { "name": "양", "description": "부드럽고 순한 루틴 친구" },
-      "horse": { "name": "망아지", "description": "씩씩하고 활기찬 루틴 친구" },
-      "otter": { "name": "수달", "description": "장난기 많고 사랑스러운 루틴 친구" },
-      "moru": { "name": "모루", "description": "레벨 5에서 만나는 포근한 루틴 친구" }
+      "cat": {
+        "name": "고양이",
+        "description": "조용하고 따뜻한 루틴 친구"
+      },
+      "dog": {
+        "name": "강아지",
+        "description": "밝고 활발한 루틴 친구"
+      },
+      "tiger": {
+        "name": "호랑이",
+        "description": "당차고 용감한 루틴 친구"
+      },
+      "panda": {
+        "name": "판다",
+        "description": "느긋하고 다정한 루틴 친구"
+      },
+      "bear": {
+        "name": "곰",
+        "description": "든든하고 포근한 루틴 친구"
+      },
+      "sheep": {
+        "name": "양",
+        "description": "부드럽고 순한 루틴 친구"
+      },
+      "horse": {
+        "name": "망아지",
+        "description": "씩씩하고 활기찬 루틴 친구"
+      },
+      "otter": {
+        "name": "수달",
+        "description": "장난기 많고 사랑스러운 루틴 친구"
+      },
+      "moru": {
+        "name": "모루",
+        "description": "레벨 5에서 만나는 포근한 루틴 친구"
+      }
     },
     "intro": {
       "slides": {
@@ -337,7 +364,10 @@
           "label": "루틴 리마인더",
           "desc": "루틴·할 일, 주간 회고와 고양이 복귀 알림을 받아요"
         },
-        "house": { "label": "집 알림", "desc": "응원과 우리 집 소식을 알려드려요" }
+        "house": {
+          "label": "집 알림",
+          "desc": "응원과 우리 집 소식을 알려드려요"
+        }
       },
       "pushStep": {
         "permission-denied": "기기에서 알림이 꺼져 있어요. 시스템 설정의 알림에서 켜야 푸시가 도착해요.",
@@ -353,8 +383,14 @@
     "soundSettings": {
       "title": "효과음",
       "rows": {
-        "effects": { "label": "효과음", "desc": "버튼과 뽑기 등에서 소리가 나요" },
-        "music": { "label": "배경 음악", "desc": "방에 있을 때 잔잔한 음악이 흘러요" }
+        "effects": {
+          "label": "효과음",
+          "desc": "버튼과 뽑기 등에서 소리가 나요"
+        },
+        "music": {
+          "label": "배경 음악",
+          "desc": "스피커에서 직접 재생한 배경음을 허용해요"
+        }
       },
       "strength": {
         "off": "끄기",
@@ -362,17 +398,20 @@
         "medium": "보통",
         "heavy": "강"
       },
-      "pending": "사운드 설정은 서버 준비 중이라 아직 이 기기에만 저장돼요.",
       "haptic": "햅틱 진동",
       "hapticDesc": "주요 동작에서 진동으로 알려드려요",
-      "hapticA11y": "햅틱 {{label}}"
+      "hapticA11y": "햅틱 {{label}}",
+      "localOnly": "소리와 진동 설정은 이 기기에 저장돼요."
     },
     "missions": {
       "complete-routine": {
         "label": "오늘 루틴 1개 완료하기",
         "hint": "나의 방에서 루틴 체크를 눌러요"
       },
-      "first-draw": { "label": "뽑기 1회 해보기", "hint": "뽑기에서 코인으로 한 번 뽑아요" },
+      "first-draw": {
+        "label": "뽑기 1회 해보기",
+        "hint": "첫 가구를 뽑고 내 방에 놓아봐요"
+      },
       "place-furniture": {
         "label": "방 꾸미기 저장하기",
         "hint": "방 꾸미기에서 가구를 놓고 저장해요"

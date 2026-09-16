@@ -1,3 +1,4 @@
+import { SPEAKER_IMAGE, isSpeakerFurniture } from '@/resources/speaker';
 import { Image } from 'expo-image';
 import { memo } from 'react';
 
@@ -38,7 +39,7 @@ export const FurniturePlaceholder = memo(function FurniturePlaceholder({
     return (
       <View accessibilityLabel={item.name} style={[styles.tile, style]}>
         <Image
-          source={assetSource(item.assetKey)}
+          source={isSpeakerFurniture(item) ? SPEAKER_IMAGE : assetSource(item.assetKey)}
           style={styles.art}
           contentFit="contain"
           transition={120}
