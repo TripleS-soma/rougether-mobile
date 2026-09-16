@@ -1,3 +1,35 @@
 {
-  "app": {}
+  "app": {
+    "currency": {
+      "coin": "Coins",
+      "diamond": "Diamonds",
+      "earnRoutine": "Routine completed",
+      "earnTodo": "To-do completed",
+      "earnDailyCap": "Today's completions only, up to 4 routines and to-dos combined per day",
+      "earnBonus": "Sign-up bonus · Friend invite rewards",
+      "earnDupCharacter": "Refund when a character draw gives one you already own",
+      "spendGacha": "Draws",
+      "spendGachaDetail": "Varies by machine",
+      "earnDupItem": "Converted when a draw gives an item you already own",
+      "spendFurniture": "Buying furniture in Decorate",
+      "spendFurnitureDetail": "Varies by item",
+      "guideA11y": "How do I earn coins and diamonds?",
+      "earn": "Earn",
+      "spend": "Spend"
+    },
+    "time": {
+      "am": "AM",
+      "pm": "PM",
+      "clock": "{{hour}}:{{minute}} {{ampm}}",
+      "justNow": "Just now",
+      "minutesAgo": "{{count}}m ago",
+      "hoursAgo": "{{count}}h ago",
+      "daysAgo": "{{count}}d ago",
+      "monthDay": "{{month}}/{{day}}"
+    },
+    "policy": {
+      "terms": "Terms of Service",
+      "privacy": "Privacy Policy"
+    }
+  }
 }

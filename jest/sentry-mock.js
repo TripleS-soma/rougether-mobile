@@ -3,6 +3,7 @@
 module.exports = {
   init: jest.fn(),
   setUser: jest.fn(),
+  setTag: jest.fn(),
   captureException: jest.fn(),
   captureMessage: jest.fn(),
   wrap: (component) => component,

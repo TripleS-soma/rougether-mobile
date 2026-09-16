@@ -1,3 +1,5 @@
+import { i18n } from '@/i18n';
+
 /**
  * In-app currency, per spec (`user_wallets.currency_type`): two currencies.
  * - 코인(coin): earned by completing routines/todos; spent on gacha pulls.
@@ -30,28 +32,32 @@ export type CurrencyGuide = {
  * 실서버는 뽑기 −25 / 중복 전환 +3으로, 스펙 문서의 250·30과 다르다. 여기 값을
  * 박아 두면 운영이 가격을 바꾼 순간 안내가 거짓말이 된다.
  */
-export const CURRENCY_GUIDES: CurrencyGuide[] = [
-  {
-    currency: 'coin',
-    name: '코인',
-    earn: [
-      { label: '루틴 완료', detail: '+10' },
-      { label: '할 일 완료', detail: '+5' },
-      // 상한은 "왜 코인이 안 들어오지?"의 유일한 답 — 완료 토스트(#444)에만
-      // 있던 정보라 여기 적는다.
-      { label: '오늘 완료만, 루틴·할 일 합쳐 하루 4건까지' },
-      { label: '가입 보너스 · 친구 초대 보상' },
-      { label: '캐릭터 뽑기에서 이미 가진 캐릭터가 나오면 환급' },
-    ],
-    spend: [{ label: '뽑기', detail: '머신마다 다름' }],
-  },
-  {
-    currency: 'diamond',
-    name: '다이아',
-    earn: [{ label: '뽑기에서 이미 가진 아이템이 나오면 전환' }],
-    spend: [{ label: '꾸미기에서 가구 구매', detail: '아이템마다 다름' }],
-  },
-];
+export function getCurrencyGuides(): CurrencyGuide[] {
+  // 호출 시점에 번역 (#893·#1369) — 모듈 로드 때 고정하면 언어를 바꿔도 안 따라온다.
+  const t = (key: string) => i18n.t(`app.currency.${key}`);
+  return [
+    {
+      currency: 'coin',
+      name: t('coin'),
+      earn: [
+        { label: t('earnRoutine'), detail: '+10' },
+        { label: t('earnTodo'), detail: '+5' },
+        // 상한은 "왜 코인이 안 들어오지?"의 유일한 답 — 완료 토스트(#444)에만
+        // 있던 정보라 여기 적는다.
+        { label: t('earnDailyCap') },
+        { label: t('earnBonus') },
+        { label: t('earnDupCharacter') },
+      ],
+      spend: [{ label: t('spendGacha'), detail: t('spendGachaDetail') }],
+    },
+    {
+      currency: 'diamond',
+      name: t('diamond'),
+      earn: [{ label: t('earnDupItem') }],
+      spend: [{ label: t('spendFurniture'), detail: t('spendFurnitureDetail') }],
+    },
+  ];
+}
 
 /**
  * 재화 표시 — 천 단위 구분(기기 로캘). JS의 -0(#714: `Math.round(-0.2)`, JSON "-0")은

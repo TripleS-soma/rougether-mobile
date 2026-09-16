@@ -15,6 +15,7 @@ import {
   initAnalytics,
   resetAnalyticsUser,
   screenView,
+  setAnalyticsLanguage,
   track,
 } from '@/lib/analytics';
 
@@ -23,6 +24,7 @@ const mockLogEvent = jest.fn((..._a: unknown[]) => Promise.resolve());
 const mockSetCollection = jest.fn((..._a: unknown[]) => Promise.resolve());
 const mockSetUserId = jest.fn((..._a: unknown[]) => Promise.resolve());
 const mockLogScreenView = jest.fn((..._a: unknown[]) => Promise.resolve());
+const mockSetUserProperty = jest.fn((..._a: unknown[]) => Promise.resolve());
 
 jest.mock('@react-native-firebase/analytics', () => ({
   getAnalytics: () => {
@@ -34,6 +36,7 @@ jest.mock('@react-native-firebase/analytics', () => ({
   logEvent: (...a: unknown[]) => mockLogEvent(...a),
   setUserId: (...a: unknown[]) => mockSetUserId(...a),
   logScreenView: (...a: unknown[]) => mockLogScreenView(...a),
+  setUserProperty: (...a: unknown[]) => mockSetUserProperty(...a),
   setAnalyticsCollectionEnabled: (...a: unknown[]) => mockSetCollection(...a),
 }));
 
@@ -80,5 +83,10 @@ describe('analytics (#912)', () => {
     // 마이크로태스크를 비워 미처리 거부가 있으면 드러나게 한다.
     await Promise.resolve();
     await Promise.resolve();
+  });
+
+  it('앱 언어를 user property로 남긴다 (#1369)', () => {
+    setAnalyticsLanguage('en');
+    expect(mockSetUserProperty).toHaveBeenCalledWith(expect.anything(), 'app_language', 'en');
   });
 });

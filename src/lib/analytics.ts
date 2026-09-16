@@ -181,6 +181,19 @@ export function identifyUser(userId: number | string) {
   }
 }
 
+/**
+ * 앱 언어 user property (#1369 글로벌 출시) — GA4에서 언어별 리텐션·퍼널을 가르는
+ * 유일한 차원. 국가는 GA4가 IP로 자동 수집하지만 **앱 언어**는 우리가 넣어야 한다.
+ * `LanguageProvider`가 초기 결정·변경 때마다 부른다.
+ */
+export function setAnalyticsLanguage(language: string) {
+  try {
+    if (ga && gaMod) void gaMod.setUserProperty(ga, 'app_language', language).catch(() => {});
+  } catch {
+    // no-op
+  }
+}
+
 /** 로그아웃 — 익명 사용자로 리셋. */
 export function resetAnalyticsUser() {
   try {

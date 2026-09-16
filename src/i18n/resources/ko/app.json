@@ -1,3 +1,35 @@
 {
-  "app": {}
+  "app": {
+    "currency": {
+      "coin": "코인",
+      "diamond": "다이아",
+      "earnRoutine": "루틴 완료",
+      "earnTodo": "할 일 완료",
+      "earnDailyCap": "오늘 완료만, 루틴·할 일 합쳐 하루 4건까지",
+      "earnBonus": "가입 보너스 · 친구 초대 보상",
+      "earnDupCharacter": "캐릭터 뽑기에서 이미 가진 캐릭터가 나오면 환급",
+      "spendGacha": "뽑기",
+      "spendGachaDetail": "머신마다 다름",
+      "earnDupItem": "뽑기에서 이미 가진 아이템이 나오면 전환",
+      "spendFurniture": "꾸미기에서 가구 구매",
+      "spendFurnitureDetail": "아이템마다 다름",
+      "guideA11y": "코인·다이아는 어떻게 모으나요?",
+      "earn": "모으기",
+      "spend": "쓰기"
+    },
+    "time": {
+      "am": "오전",
+      "pm": "오후",
+      "clock": "{{ampm}} {{hour}}:{{minute}}",
+      "justNow": "방금 전",
+      "minutesAgo": "{{count}}분 전",
+      "hoursAgo": "{{count}}시간 전",
+      "daysAgo": "{{count}}일 전",
+      "monthDay": "{{month}}월 {{day}}일"
+    },
+    "policy": {
+      "terms": "이용약관",
+      "privacy": "개인정보처리방침"
+    }
+  }
 }
