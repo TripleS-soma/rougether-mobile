@@ -47,6 +47,8 @@ example
 # generated native folders
 /ios
 /android
+# apple-targets가 prebuild 때 expo-target.config.js `images`로 만드는 위젯 에셋 카탈로그 (#1122)
+/targets/*/Assets.xcassets/
 
 # secrets — never commit signing keys / API keys
 *.p8
