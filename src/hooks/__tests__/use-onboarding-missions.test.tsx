@@ -53,6 +53,33 @@ describe('useOnboardingMissions (#571)', () => {
     expect(track).toHaveBeenCalledWith('onboarding_mission_complete', { step: 'invite-house' });
   });
 
+  it('진행 중에 앱을 껐다 켜면(autoStart 없이 다시 마운트) 저장된 단계부터 이어간다', async () => {
+    const first = await renderHook(() => useOnboardingMissions(true));
+    await waitFor(() => expect(first.result.current.active).toBe(true));
+    await act(async () => first.result.current.complete('complete-routine'));
+    await waitFor(() => expect(first.result.current.stepIndex).toBe(1));
+    await waitFor(async () => expect(await AsyncStorage.getItem(KEY)).toBe('progress:1'));
+    await first.unmount();
+
+    // 재시작: 온보딩 직후가 아니므로 autoStart=false.
+    const second = await renderHook(() => useOnboardingMissions(false));
+    await waitFor(() => expect(second.result.current.active).toBe(true));
+    expect(second.result.current.step?.id).toBe('first-draw');
+    // 재개는 새 시작 이벤트를 다시 세지 않는다.
+    expect(
+      (track as jest.Mock).mock.calls.filter(
+        ([name, props]) => name === 'onboarding_mission_start' && props.step === 'first-draw',
+      ),
+    ).toHaveLength(1);
+  });
+
+  it('범위를 벗어난 진행 기록은 무시한다', async () => {
+    await AsyncStorage.setItem(KEY, 'progress:99');
+    const { result } = await renderHook(() => useOnboardingMissions(false));
+    await act(async () => {});
+    expect(result.current.active).toBe(false);
+  });
+
   it('autoStart가 아니면 시작하지 않는다', async () => {
     const { result } = await renderHook(() => useOnboardingMissions(false));
     await act(async () => {});

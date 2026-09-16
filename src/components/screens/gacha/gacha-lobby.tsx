@@ -180,49 +180,52 @@ export function GachaLobby({
             );
             const ink = affordable ? (primary ? t.onPrimary : t.text) : t.textMuted;
             return (
-              <ScalePressable
+              // 버튼 전체를 짚는다(글자만 재면 테두리가 라벨에만 뜬다) — flex는 래퍼로 옮긴다.
+              <CoachTarget
                 key={count}
-                onPress={() => onDraw(count)}
-                disabled={busy}
-                accessibilityRole="button"
-                accessibilityState={{ disabled: busy }}
-                accessibilityLabel={
-                  starterDrawState
-                    ? label
-                    : tr('roomShop.gacha.lobby.drawA11y', {
-                        label,
-                        cost: formatAmount(cost),
-                        currency: tr(
-                          selected.costCurrencyType === 'COIN'
-                            ? 'roomShop.wallet.coin'
-                            : 'roomShop.wallet.diamond',
-                        ),
-                      })
-                }
-                style={[
-                  styles.draw,
-                  {
-                    flex: primary ? 1.5 : 1,
-                    borderColor: primary ? 'transparent' : t.border,
-                    backgroundColor: !affordable ? t.disabledBg : primary ? t.primary : t.surface,
-                  },
-                ]}>
-                <CoachTarget id={count === 1 ? 'gacha-draw' : `gacha-draw-${count}`}>
+                id={count === 1 ? 'gacha-draw' : `gacha-draw-${count}`}
+                style={{ flex: primary ? 1.5 : 1 }}>
+                <ScalePressable
+                  onPress={() => onDraw(count)}
+                  disabled={busy}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: busy }}
+                  accessibilityLabel={
+                    starterDrawState
+                      ? label
+                      : tr('roomShop.gacha.lobby.drawA11y', {
+                          label,
+                          cost: formatAmount(cost),
+                          currency: tr(
+                            selected.costCurrencyType === 'COIN'
+                              ? 'roomShop.wallet.coin'
+                              : 'roomShop.wallet.diamond',
+                          ),
+                        })
+                  }
+                  style={[
+                    styles.draw,
+                    {
+                      flex: 1,
+                      borderColor: primary ? 'transparent' : t.border,
+                      backgroundColor: !affordable ? t.disabledBg : primary ? t.primary : t.surface,
+                    },
+                  ]}>
                   <Text style={[Typography.label, { color: ink }]}>{label}</Text>
-                </CoachTarget>
-                {!starterDrawState ? (
-                  <View style={styles.cost}>
-                    <Icon
-                      name={selected.costCurrencyType === 'COIN' ? 'coin' : 'diamond'}
-                      size={14}
-                      color={selected.costCurrencyType === 'COIN' ? t.warning : ink}
-                    />
-                    <Text style={[Typography.supporting, emph('semibold'), { color: ink }]}>
-                      {formatAmount(cost)}
-                    </Text>
-                  </View>
-                ) : null}
-              </ScalePressable>
+                  {!starterDrawState ? (
+                    <View style={styles.cost}>
+                      <Icon
+                        name={selected.costCurrencyType === 'COIN' ? 'coin' : 'diamond'}
+                        size={14}
+                        color={selected.costCurrencyType === 'COIN' ? t.warning : ink}
+                      />
+                      <Text style={[Typography.supporting, emph('semibold'), { color: ink }]}>
+                        {formatAmount(cost)}
+                      </Text>
+                    </View>
+                  ) : null}
+                </ScalePressable>
+              </CoachTarget>
             );
           })}
         </View>

@@ -8,7 +8,15 @@ import {
   useRef,
   useState,
 } from 'react';
-import { BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  BackHandler,
+  Pressable,
+  StyleSheet,
+  type StyleProp,
+  Text,
+  View,
+  type ViewStyle,
+} from 'react-native';
 
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
@@ -20,6 +28,10 @@ export type TargetRect = { x: number; y: number; w: number; h: number };
 type TargetStore = {
   rects: Record<string, TargetRect>;
   setRect: (key: string, rect: TargetRect) => void;
+  /** 대상별 재측정 함수 등록 — 해제 함수를 돌려준다. */
+  registerMeasure: (key: string, measure: () => void) => () => void;
+  /** 등록된 대상 전부를 다시 잰다. */
+  remeasureAll: () => void;
 };
 
 const CoachTargetContext = createContext<TargetStore | null>(null);
@@ -46,7 +58,20 @@ export function CoachTargetProvider({ children }: { children: ReactNode }) {
       return { ...prev, [key]: rect };
     });
   }, []);
-  const value = useMemo(() => ({ rects, setRect }), [rects, setRect]);
+  const measuresRef = useRef(new Map<string, () => void>());
+  const registerMeasure = useCallback((key: string, measure: () => void) => {
+    measuresRef.current.set(key, measure);
+    return () => {
+      if (measuresRef.current.get(key) === measure) measuresRef.current.delete(key);
+    };
+  }, []);
+  const remeasureAll = useCallback(() => {
+    measuresRef.current.forEach((measure) => measure());
+  }, []);
+  const value = useMemo(
+    () => ({ rects, setRect, registerMeasure, remeasureAll }),
+    [rects, setRect, registerMeasure, remeasureAll],
+  );
   return <CoachTargetContext.Provider value={value}>{children}</CoachTargetContext.Provider>;
 }
 
@@ -61,16 +86,35 @@ export function useCoachTargets(): Record<string, TargetRect> {
 }
 const EMPTY_RECTS: Record<string, TargetRect> = {};
 
-export function CoachTarget({ id, children }: { id: string; children: ReactNode }) {
+/**
+ * 오버레이가 떠 있는 동안 대상 좌표를 주기적으로 다시 잰다 (2026-09-16, iOS·Android 위치 어긋남).
+ * `onLayout`은 **자기 크기·부모 안 위치가 바뀔 때만** 불린다 — 스크롤, 탭 페이저 이동(부모
+ * transform), 배너 등장으로 인한 창 기준 위치 변화에는 안 불려 좌표가 낡는다.
+ */
+const REMEASURE_MS = 250;
+
+export function CoachTarget({
+  id,
+  children,
+  style,
+}: {
+  id: string;
+  children: ReactNode;
+  /** 래퍼 레이아웃 — 행 안의 flex 버튼을 통째로 감쌀 때 flex를 래퍼로 옮긴다. */
+  style?: StyleProp<ViewStyle>;
+}) {
   const store = useContext(CoachTargetContext);
   const ref = useRef<View>(null);
-  const measure = () => {
+  const setRect = store?.setRect;
+  const measure = useCallback(() => {
     ref.current?.measureInWindow((x, y, w, h) => {
-      if (store && w > 0 && h > 0) store.setRect(id, { x, y, w, h });
+      if (setRect && w > 0 && h > 0) setRect(id, { x, y, w, h });
     });
-  };
+  }, [id, setRect]);
+  const registerMeasure = store?.registerMeasure;
+  useEffect(() => registerMeasure?.(id, measure), [registerMeasure, id, measure]);
   return (
-    <View ref={ref} collapsable={false} onLayout={measure}>
+    <View ref={ref} collapsable={false} onLayout={measure} style={style}>
       {children}
     </View>
   );
@@ -155,11 +199,23 @@ export function CoachMarkOverlay({
   const step = steps[index];
   const rootRef = useRef<View>(null);
   const [origin, setOrigin] = useState({ x: 0, y: 0 });
-  const measureOrigin = () => {
+  const measureOrigin = useCallback(() => {
     rootRef.current?.measureInWindow((x, y) => {
       setOrigin((prev) => (Math.abs(prev.x - x) < 1 && Math.abs(prev.y - y) < 1 ? prev : { x, y }));
     });
-  };
+  }, []);
+  const remeasureAll = useContext(CoachTargetContext)?.remeasureAll;
+  const visible = step != null;
+  useEffect(() => {
+    if (!visible) return;
+    const tick = () => {
+      measureOrigin();
+      remeasureAll?.();
+    };
+    tick();
+    const timer = setInterval(tick, REMEASURE_MS);
+    return () => clearInterval(timer);
+  }, [visible, measureOrigin, remeasureAll]);
   // 완전 잠금 중엔 안드로이드 뒤로가기도 오버레이가 먹는다 — 밑 화면의 백 핸들러가
   // 코치마크를 두고 화면을 바꾸면 대상이 사라진다.
   useEffect(() => {
@@ -202,7 +258,11 @@ export function CoachMarkOverlay({
       ref={rootRef}
       onLayout={measureOrigin}
       style={[StyleSheet.absoluteFill, styles.root]}
-      pointerEvents="auto"
+      // 루트는 터치를 받지 않는다(box-none) — 딤 4조각·말풍선만 막고 **구멍 자리는 밑 화면으로
+      // 통과**시켜야 대상만 눌린다(#1333의 의도). 종전 'auto'는 화면 전체를 덮는 루트가 구멍
+      // 자리 터치까지 가져가, 웹에서 대상 버튼이 눌리지 않았다(2026-09-16 실측: elementFromPoint가
+      // coach-overlay). 네이티브도 루트가 히트 테스트 대상이 되면 형제인 버튼으로 전달되지 않는다.
+      pointerEvents="box-none"
       testID="coach-overlay">
       {hole ? (
         <>
