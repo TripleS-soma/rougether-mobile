@@ -8,6 +8,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 export type SoundSettings = {
   effects: boolean;
@@ -24,18 +25,11 @@ export const DEFAULT_SOUND_SETTINGS: SoundSettings = {
 
 type ToggleKey = 'effects' | 'music';
 
-const ROWS: { key: ToggleKey; label: string; desc: string }[] = [
-  { key: 'effects', label: '효과음', desc: '버튼과 뽑기 등에서 소리가 나요' },
-  { key: 'music', label: '배경 음악', desc: '스피커에서 직접 재생한 배경음을 허용해요' },
-];
+/** 행 문구는 `member.soundSettings.rows.<key>` (#893). */
+const ROW_KEYS: ToggleKey[] = ['effects', 'music'];
 
 /** 햅틱 세기 (#974) — 켜고 끄는 것만으로는 '너무 세다'를 해결할 수 없었다. */
-const STRENGTHS: { id: HapticStrength; label: string }[] = [
-  { id: 'off', label: '끄기' },
-  { id: 'light', label: '약' },
-  { id: 'medium', label: '보통' },
-  { id: 'heavy', label: '강' },
-];
+const STRENGTH_IDS: HapticStrength[] = ['off', 'light', 'medium', 'heavy'];
 
 export type SoundSettingsScreenProps = {
   initialSettings?: SoundSettings;
@@ -58,7 +52,17 @@ export function SoundSettingsScreen({
   // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
   const headerInset = useHeaderContentInset();
   const Typography = useTypography();
+  const tr = useT();
   const [settings, setSettings] = useState(initialSettings);
+  const rows = ROW_KEYS.map((key) => ({
+    key,
+    label: tr(`member.soundSettings.rows.${key}.label`),
+    desc: tr(`member.soundSettings.rows.${key}.desc`),
+  }));
+  const strengths = STRENGTH_IDS.map((id) => ({
+    id,
+    label: tr(`member.soundSettings.strength.${id}`),
+  }));
 
   const apply = (next: SoundSettings) => {
     setSettings(next);
@@ -68,7 +72,7 @@ export function SoundSettingsScreen({
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
-      <ScreenHeader title="효과음" onBack={onBack} />
+      <ScreenHeader title={tr('member.soundSettings.title')} onBack={onBack} />
 
       <ScrollView
         contentContainerStyle={[
@@ -77,15 +81,15 @@ export function SoundSettingsScreen({
           headerInset ? { paddingTop: headerInset } : null,
         ]}>
         <Text style={[Typography.supporting, { color: t.textMuted }]}>
-          소리와 진동 설정은 이 기기에 저장돼요.
+          {tr('member.soundSettings.localOnly')}
         </Text>
         <View style={[styles.card, { backgroundColor: t.surface }]}>
-          {ROWS.map((r, idx) => (
+          {rows.map((r, idx) => (
             <View
               key={r.key}
               style={[
                 styles.row,
-                idx !== ROWS.length - 1 && {
+                idx !== rows.length - 1 && {
                   borderBottomColor: t.border,
                   borderBottomWidth: StyleSheet.hairlineWidth,
                 },
@@ -106,12 +110,14 @@ export function SoundSettingsScreen({
         {/* 햅틱은 켜고 끄는 것만으로 부족하다 (#974) — 세기를 고른다. 다크 모드
             칩(설정)과 같은 모양이라 이 앱에서 처음 보는 컨트롤이 아니다. */}
         <View style={[styles.card, styles.strengthCard, { backgroundColor: t.surface }]}>
-          <Text style={[Typography.body, { color: t.text }]}>햅틱 진동</Text>
+          <Text style={[Typography.body, { color: t.text }]}>
+            {tr('member.soundSettings.haptic')}
+          </Text>
           <Text style={[Typography.supporting, { color: t.textMuted }]}>
-            주요 동작에서 진동으로 알려드려요
+            {tr('member.soundSettings.hapticDesc')}
           </Text>
           <View style={styles.strengthRow}>
-            {STRENGTHS.map((opt) => {
+            {strengths.map((opt) => {
               const active = settings.hapticStrength === opt.id;
               return (
                 <Pressable
@@ -121,7 +127,7 @@ export function SoundSettingsScreen({
                   // 선택이라 button이 아니라 radio가 맞다 (settings-screen과 동일).
                   accessibilityRole="radio"
                   accessibilityState={{ selected: active }}
-                  accessibilityLabel={`햅틱 ${opt.label}`}
+                  accessibilityLabel={tr('member.soundSettings.hapticA11y', { label: opt.label })}
                   style={[
                     styles.strengthChip,
                     { backgroundColor: active ? t.primary : t.surfaceMuted },

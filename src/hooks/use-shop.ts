@@ -40,6 +40,7 @@ import {
 import type { RoomWithLayout } from '@/api/rooms';
 import type { ItemResponse, MyItemSummary } from '@/api/types';
 import { useToast } from '@/components/ui/toast';
+import { i18n } from '@/i18n';
 import { type Wallet } from '@/constants/currency';
 import { useLatestRef } from '@/hooks/use-stable-value';
 import { track } from '@/lib/analytics';
@@ -152,10 +153,10 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
     } catch (err) {
       if (err instanceof ApiError && err.code === ErrorCode.ROOM_COBWEB_NOT_ACTIVE) {
         clearCobweb();
-        toast('누가 먼저 치워줬어요');
+        toast(i18n.t('roomShop.shop.cobwebAlreadyCleaned'));
         return null;
       }
-      toast('거미줄을 치우지 못했어요. 잠시 후 다시 시도해 주세요.', 'error');
+      toast(i18n.t('roomShop.shop.cobwebCleanFailed'), 'error');
       return null;
     }
   }, [cleanAsync, clearCobweb, setWallet, toast]);
@@ -185,14 +186,17 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
             : [...prev, { itemId: res.itemId ?? Number(itemId), userItemId: res.userItemId }],
         );
         track('shop_purchase', { itemId });
-        toast('구매 완료!', 'success');
+        toast(i18n.t('roomShop.shop.purchaseDone'), 'success');
         return true;
       } catch (err) {
         const broke =
           err instanceof ApiError &&
           err.status === 409 &&
           err.code === ErrorCode.SHOP_INSUFFICIENT_BALANCE;
-        toast(broke ? '다이아가 부족해요' : '구매에 실패했어요', 'error');
+        toast(
+          i18n.t(broke ? 'roomShop.shop.insufficientDiamond' : 'roomShop.shop.purchaseFailed'),
+          'error',
+        );
         return false;
       }
     },
@@ -251,13 +255,13 @@ export function useShop(setWallet: Dispatch<SetStateAction<Wallet>>) {
             (s): s is { slotType: string; userItemId: number } => s.userItemId != null,
           ),
         }));
-        toast('방 배치를 저장했어요', 'success');
+        toast(i18n.t('roomShop.shop.layoutSaved'), 'success');
         return 'ok';
       } catch (err) {
         if (err instanceof ApiError && err.code === ErrorCode.ROOM_LAYOUT_REVISION_CONFLICT) {
           return 'conflict';
         }
-        toast('방 배치 저장에 실패했어요', 'error');
+        toast(i18n.t('roomShop.shop.layoutSaveFailed'), 'error');
         return 'fail';
       }
     },

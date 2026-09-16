@@ -79,6 +79,21 @@ describe('useScreenTransition', () => {
     expect(ui.getByTestId('layer-b')).toBeEmptyElement();
   });
 
+  it('달력 탭 ↔ 주간 보기는 층을 바꾸지 않는다 — 화면이 스스로 접힘을 연출 (#1327)', async () => {
+    const ui = await render(<Harness screen="calendar" />);
+    await ui.rerender(<Harness screen="calendarWeek" />);
+    expect(ui.getByTestId('layer-a')).toHaveTextContent('screen:calendarWeek');
+    expect(ui.getByTestId('layer-b')).toBeEmptyElement();
+    await ui.rerender(<Harness screen="calendar" />);
+    expect(ui.getByTestId('layer-a')).toHaveTextContent('screen:calendar');
+    expect(ui.getByTestId('layer-b')).toBeEmptyElement();
+    // 주간 보기에서 연 서브화면은 종전대로 슬라이드.
+    await ui.rerender(<Harness screen="calendarWeek" />);
+    await ui.rerender(<Harness screen="addRoutine" />);
+    expect(ui.getByTestId('layer-b')).toHaveTextContent('screen:addRoutine');
+    expect(ui.getByTestId('layer-a')).toHaveTextContent('screen:calendarWeek');
+  });
+
   it('isBackTransition — 백맵·연 곳 복귀·서브→탭', () => {
     expect(isBackTransition('theme', 'settings', 'routineManage')).toBe(true);
     expect(isBackTransition('addRoutine', 'routineManage', 'routineManage')).toBe(true);

@@ -39,6 +39,7 @@ import {
 } from '@/api';
 import { toHousePreview } from '@/api/adapters';
 import { useToast } from '@/components/ui/toast';
+import { i18n } from '@/i18n';
 import type { House, HouseEditInput } from '@/components/screens/house/types';
 import { fetchHouseBundle } from '@/hooks/house-bundle';
 import { useHouseMissions } from '@/hooks/use-house-missions';
@@ -118,9 +119,9 @@ export function useHouses() {
       try {
         await cancelMyJoinRequest(requestId);
         setPendingJoinRequests((prev) => prev.filter((r) => r.requestId !== requestId));
-        toast('입주 신청을 취소했어요');
+        toast(i18n.t('house.toast.requestCancelled'));
       } catch {
-        toast('신청 취소에 실패했어요. 잠시 후 다시 시도해 주세요.', 'error');
+        toast(i18n.t('house.toast.requestCancelFailed'), 'error');
       }
     },
     [toast],
@@ -155,12 +156,12 @@ export function useHouses() {
         // 거부했다면 다른 기기에서 가입·탈퇴가 끼어든 것이다. 되돌리기만
         // 하면 낡은 목록이 그대로 남아 다시 시도해도 계속 실패한다.
         if (err instanceof ApiError && err.code === ErrorCode.HOUSE_ORDER_INVALID) {
-          toast('집 목록이 바뀌었어요. 다시 불러올게요.');
+          toast(i18n.t('house.toast.listChanged'));
           await reloadMyHouses().catch(() => setHouses(before));
           return;
         }
         setHouses(before);
-        toast('집 순서를 저장하지 못했어요. 잠시 후 다시 시도해 주세요.', 'error');
+        toast(i18n.t('house.toast.orderSaveFailed'), 'error');
       }
     },
     [houses, reloadMyHouses, toast],
@@ -254,7 +255,7 @@ export function useHouses() {
           track('house_join_request', { via: 'code' });
           return 'pending';
         }
-        toast('입주 완료!', 'success');
+        toast(i18n.t('house.toast.joined'), 'success');
         // 소셜 진입 완료 — 리텐션 분석의 핵심 분기 (#803).
         track('house_joined', { via: 'code' });
         await reloadMyHouses();
@@ -284,7 +285,7 @@ export function useHouses() {
       dropJoinRequestLocally(houseId, requestId);
       try {
         await acceptHouseJoinRequest(houseId, requestId);
-        toast('입주 신청을 수락했어요', 'success');
+        toast(i18n.t('house.toast.requestAccepted'), 'success');
       } catch (err) {
         // 신청자가 이미 탈퇴 (서버 #240) — 서버가 신청을 거절 처리해 뒀으므로
         // 목록에서 지운 채로 두고 이유만 알린다(재동기화가 정리분을 반영).
@@ -292,8 +293,8 @@ export function useHouses() {
           err instanceof ApiError &&
           err.code === ErrorCode.HOUSE_JOIN_REQUEST_APPLICANT_WITHDRAWN
         )
-          toast('탈퇴한 회원의 신청이라 자동으로 정리했어요');
-        else toast('입주 신청을 수락하지 못했어요. 정원을 확인해 주세요.', 'error');
+          toast(i18n.t('house.toast.applicantWithdrawn'));
+        else toast(i18n.t('house.toast.acceptFailed'), 'error');
       }
       // 성공(새 멤버 반영)·실패(신청 복원) 모두 해당 집만 재동기화.
       void reloadHouse(houseId);
@@ -306,9 +307,9 @@ export function useHouses() {
       dropJoinRequestLocally(houseId, requestId);
       try {
         await rejectHouseJoinRequest(houseId, requestId);
-        toast('입주 신청을 거절했어요');
+        toast(i18n.t('house.toast.requestRejected'));
       } catch {
-        toast('입주 신청을 거절하지 못했어요', 'error');
+        toast(i18n.t('house.toast.rejectFailed'), 'error');
       }
       void reloadHouse(houseId);
     },
@@ -346,7 +347,7 @@ export function useHouses() {
             .slice(0, 1);
         }
         if (goalIds.length === 0) {
-          toast('목표 데이터가 아직 준비되지 않아 집을 만들 수 없어요', 'error');
+          toast(i18n.t('house.toast.noGoals'), 'error');
           return false;
         }
         const created = await apiCreateHouse({ ...input, goalIds });
@@ -354,15 +355,15 @@ export function useHouses() {
         // 실패해도 집은 이미 생겼으니 생성 자체는 성공으로 두고 안내만 한다.
         if (input.isPublic === false && created.houseId != null) {
           await apiUpdateHouse(created.houseId, { isPublic: false }).catch(() =>
-            toast('비공개 설정은 집 관리에서 다시 저장해 주세요', 'error'),
+            toast(i18n.t('house.toast.privateSaveFailed'), 'error'),
           );
         }
         track('house_create');
-        toast('새 집이 만들어졌어요!', 'success');
+        toast(i18n.t('house.toast.created'), 'success');
         await reloadMyHouses();
         return true;
       } catch {
-        toast('집을 만들지 못했어요', 'error');
+        toast(i18n.t('house.toast.createFailed'), 'error');
         return false;
       }
     },
@@ -373,10 +374,10 @@ export function useHouses() {
     async (houseId: number, membershipId: number) => {
       try {
         await kickHouseMember(houseId, membershipId);
-        toast('멤버를 내보냈어요');
+        toast(i18n.t('house.toast.kicked'));
         await reloadHouse(houseId);
       } catch {
-        toast('강퇴에 실패했어요', 'error');
+        toast(i18n.t('house.toast.kickFailed'), 'error');
       }
     },
     [toast, reloadHouse],
@@ -387,11 +388,11 @@ export function useHouses() {
     async (houseId: number): Promise<boolean> => {
       try {
         await apiLeaveHouse(houseId);
-        toast('집에서 나왔어요');
+        toast(i18n.t('house.toast.left'));
         await reloadMyHouses();
         return true;
       } catch {
-        toast('나가기에 실패했어요', 'error');
+        toast(i18n.t('house.toast.leaveFailed'), 'error');
         return false;
       }
     },
@@ -403,12 +404,15 @@ export function useHouses() {
     async (houseId: number, membershipId: number, type: HouseCheerType) => {
       try {
         await cheerHouseMember(houseId, membershipId, type);
-        toast('응원을 보냈어요! 친구에게 알림이 가요', 'success');
+        toast(i18n.t('house.toast.cheerSent'), 'success');
         track('cheer_send', { type });
       } catch (err) {
         // 같은 대상·같은 타입은 하루(KST) 1회.
         const dup = err instanceof ApiError && err.code === ErrorCode.HOUSE_CHEER_DUPLICATED;
-        toast(dup ? '오늘은 이미 같은 응원을 보냈어요' : '응원 보내기에 실패했어요', 'error');
+        toast(
+          dup ? i18n.t('house.toast.cheerDuplicate') : i18n.t('house.toast.cheerFailed'),
+          'error',
+        );
       }
     },
     [toast],
@@ -418,7 +422,7 @@ export function useHouses() {
     async (houseId: number, input: HouseEditInput) => {
       try {
         const res = await apiUpdateHouse(houseId, input);
-        toast('집 정보를 수정했어요', 'success');
+        toast(i18n.t('house.toast.updated'), 'success');
         await reloadHouse(houseId);
         // GET이 isPublic을 아직 안 실어 줘도(#1266 서버 PR 전) 방금 저장한 값은 안다 —
         // 재조회로 덮인 뒤 응답값을 얹어 수정 시트가 현재 값을 보여주게 한다.
@@ -427,7 +431,7 @@ export function useHouses() {
           setHouses((prev) => prev.map((h) => (h.houseId === houseId ? { ...h, isPublic } : h)));
         }
       } catch {
-        toast('집 정보 수정에 실패했어요', 'error');
+        toast(i18n.t('house.toast.updateFailed'), 'error');
       }
     },
     [toast, reloadHouse],
@@ -437,13 +441,16 @@ export function useHouses() {
     async (houseId: number, membershipId: number) => {
       try {
         await transferHouseOwnership(houseId, membershipId);
-        toast('방장을 위임했어요', 'success');
+        toast(i18n.t('house.toast.transferred'), 'success');
         await reloadHouse(houseId);
       } catch (err) {
         // 봇에게 위임은 서버가 막는다 (#1013) — UI가 목록에서 빼지만 목록이
         // 낡은 사이 탭하면 도달한다. 이유 없는 실패로 두지 않는다.
         const toBot = err instanceof ApiError && err.code === ErrorCode.HOUSE_OWNER_TRANSFER_TO_BOT;
-        toast(toBot ? '봇에게는 방장을 위임할 수 없어요' : '방장 위임에 실패했어요', 'error');
+        toast(
+          toBot ? i18n.t('house.toast.transferToBot') : i18n.t('house.toast.transferFailed'),
+          'error',
+        );
       }
     },
     [toast, reloadHouse],
@@ -456,13 +463,13 @@ export function useHouses() {
         const res = await apiReissueInviteCode(houseId);
         // 확산 신호 (#803) — 코드를 새로 뽑았다는 건 누군가에게 줄 참이라는 뜻.
         track('invite_code_copy', { kind: 'house' });
-        toast('새 초대코드가 발급됐어요', 'success');
+        toast(i18n.t('house.toast.codeReissued'), 'success');
         // 소유자 공용 코드는 집 상세에 실려 온다 — 목록 갱신. 부원 개인
         // 코드는 상세에 없으므로 호출측이 반환값을 표시한다.
         await reloadHouse(houseId);
         return res.inviteCode ?? null;
       } catch {
-        toast('초대코드 재발급에 실패했어요', 'error');
+        toast(i18n.t('house.toast.reissueFailed'), 'error');
         return null;
       }
     },

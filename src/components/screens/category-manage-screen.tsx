@@ -7,11 +7,12 @@ import { Icon } from '@/components/ui/icon';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { CategoryIcon } from '@/components/ui/category-icon';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { type RoutineCategoryMeta, VISIBILITY_LABELS } from '@/constants/routines';
+import { type RoutineCategoryMeta, visibilityLabelKey } from '@/constants/routines';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 export type CategoryManageScreenProps = {
   categories?: RoutineCategoryMeta[];
@@ -45,6 +46,7 @@ export function CategoryManageScreen({
   onBack,
 }: CategoryManageScreenProps) {
   const t = useTokens();
+  const tr = useT();
   const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
@@ -70,15 +72,15 @@ export function CategoryManageScreen({
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader
-        title="카테고리 관리"
+        title={tr('routineTodo.categoryManage.title')}
         onBack={onBack}
-        backLabel="뒤로가기"
+        backLabel={tr('routineTodo.categoryManage.back')}
         right={
           <Pressable
             onPress={() => setFormTarget('new')}
             accessibilityRole="button"
             // 시트 제출 버튼('카테고리 추가')과 라벨이 겹치지 않게 구분.
-            accessibilityLabel="새 카테고리 추가"
+            accessibilityLabel={tr('routineTodo.categoryManage.addA11y')}
             style={[styles.iconBtn, { backgroundColor: t.primary }]}>
             <Icon name="add" size={20} color={t.onPrimary} />
           </Pressable>
@@ -94,20 +96,20 @@ export function CategoryManageScreen({
         {categories.length === 0 ? (
           <View style={styles.empty}>
             <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
-              아직 카테고리가 없어요.
+              {tr('routineTodo.categoryManage.emptyTitle')}
             </Text>
             <Text style={[Typography.supporting, styles.center, { color: t.textMuted }]}>
-              오른쪽 위 + 버튼으로 첫 카테고리를 만들어보세요.
+              {tr('routineTodo.categoryManage.emptyHint')}
             </Text>
           </View>
         ) : (
           <>
             <Text style={[Typography.label, { color: t.text }]}>
-              내 카테고리 ({categories.length})
+              {tr('routineTodo.categoryManage.mine', { count: categories.length })}
             </Text>
             {onReorder ? (
               <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                카테고리를 꾹 누르면 순서를 바꿀 수 있어요.
+                {tr('routineTodo.categoryManage.reorderHint')}
               </Text>
             ) : null}
             <View style={styles.catList}>
@@ -117,8 +119,10 @@ export function CategoryManageScreen({
                   <Pressable
                     key={c.id}
                     onLongPress={onReorder ? () => setMovingId(moving ? null : c.id) : undefined}
-                    accessibilityLabel={`${c.name} 카테고리`}
-                    accessibilityHint={onReorder ? '꾹 누르면 순서 이동 모드가 켜져요' : undefined}
+                    accessibilityLabel={tr('routineTodo.categoryManage.rowA11y', { name: c.name })}
+                    accessibilityHint={
+                      onReorder ? tr('routineTodo.categoryManage.rowHint') : undefined
+                    }
                     style={[
                       styles.catRow,
                       { backgroundColor: t.surface, borderLeftColor: c.color },
@@ -131,8 +135,8 @@ export function CategoryManageScreen({
                       <Text style={[Typography.body, { color: t.text }]}>{c.name}</Text>
                       <Text style={[Typography.supporting, { color: t.textMuted }]}>
                         {moving
-                          ? '순서 이동 중이에요. 완료를 누르면 끝나요'
-                          : VISIBILITY_LABELS[c.visibility]}
+                          ? tr('routineTodo.categoryManage.moving')
+                          : tr(visibilityLabelKey(c.visibility))}
                       </Text>
                     </View>
                     {moving ? (
@@ -141,7 +145,9 @@ export function CategoryManageScreen({
                           onPress={() => moveCategory(c.id, -1)}
                           disabled={idx === 0}
                           accessibilityRole="button"
-                          accessibilityLabel={`${c.name} 위로 이동`}
+                          accessibilityLabel={tr('routineTodo.categoryManage.moveUpA11y', {
+                            name: c.name,
+                          })}
                           style={[
                             styles.rowBtn,
                             { backgroundColor: idx === 0 ? t.surfaceMuted : t.primarySoft },
@@ -159,7 +165,9 @@ export function CategoryManageScreen({
                           onPress={() => moveCategory(c.id, 1)}
                           disabled={idx === categories.length - 1}
                           accessibilityRole="button"
-                          accessibilityLabel={`${c.name} 아래로 이동`}
+                          accessibilityLabel={tr('routineTodo.categoryManage.moveDownA11y', {
+                            name: c.name,
+                          })}
                           style={[
                             styles.rowBtn,
                             {
@@ -180,7 +188,7 @@ export function CategoryManageScreen({
                         <Pressable
                           onPress={() => setMovingId(null)}
                           accessibilityRole="button"
-                          accessibilityLabel="순서 이동 완료"
+                          accessibilityLabel={tr('routineTodo.categoryManage.moveDoneA11y')}
                           style={[styles.rowBtn, { backgroundColor: t.primary }]}>
                           <Icon name="check" size={16} color={t.onPrimary} />
                         </Pressable>
@@ -190,7 +198,9 @@ export function CategoryManageScreen({
                         <Pressable
                           onPress={() => setFormTarget(c)}
                           accessibilityRole="button"
-                          accessibilityLabel={`${c.name} 수정`}
+                          accessibilityLabel={tr('routineTodo.categoryManage.editA11y', {
+                            name: c.name,
+                          })}
                           style={[styles.rowBtn, { backgroundColor: t.surfaceMuted }]}>
                           <Icon name="edit" size={16} color={t.text} />
                         </Pressable>
@@ -202,7 +212,9 @@ export function CategoryManageScreen({
                             else setPendingDelete(c);
                           }}
                           accessibilityRole="button"
-                          accessibilityLabel={`${c.name} 삭제`}
+                          accessibilityLabel={tr('routineTodo.categoryManage.deleteA11y', {
+                            name: c.name,
+                          })}
                           style={[styles.rowBtn, { backgroundColor: t.dangerSoft }]}>
                           <Icon name="trash" size={16} color={t.danger} />
                         </Pressable>
@@ -228,10 +240,13 @@ export function CategoryManageScreen({
       {blockedDelete ? (
         <ConfirmDialog
           visible
-          title="루틴을 먼저 정리해주세요"
-          body={`“${blockedDelete.name}” 카테고리에 루틴 ${inUseCounts[blockedDelete.id]?.routines ?? 0}개가 있어요.\n루틴을 삭제하거나 다른 카테고리로 옮긴 뒤 삭제할 수 있어요.`}
-          confirmLabel="확인"
-          confirmAccessibilityLabel="삭제 불가 확인"
+          title={tr('routineTodo.categoryManage.blockedTitle')}
+          body={tr('routineTodo.categoryManage.blockedBody', {
+            name: blockedDelete.name,
+            count: inUseCounts[blockedDelete.id]?.routines ?? 0,
+          })}
+          confirmLabel={tr('routineTodo.categoryManage.blockedConfirm')}
+          confirmAccessibilityLabel={tr('routineTodo.categoryManage.blockedConfirmA11y')}
           cancelLabel={null}
           onConfirm={() => setBlockedDelete(null)}
           onCancel={() => setBlockedDelete(null)}
@@ -243,13 +258,13 @@ export function CategoryManageScreen({
           <Pressable style={styles.backdrop} onPress={() => setPendingDelete(null)} />
           <View style={[styles.confirmCard, { backgroundColor: t.screen }]}>
             <Text style={[Typography.h3, { color: t.text }]}>
-              &lsquo;{pendingDelete.name}&rsquo; 카테고리를 삭제할까요?
+              {tr('routineTodo.categoryManage.deleteTitle', { name: pendingDelete.name })}
             </Text>
             <Text style={[Typography.body, styles.confirmText, { color: t.textMuted }]}>
               {(inUseCounts[pendingDelete.id]?.todos ?? 0) > 0
-                ? `할 일 ${inUseCounts[pendingDelete.id]?.todos}개가 남아 있어요. 미분류로 남기거나 함께 삭제할 수 있어요.\n`
+                ? `${tr('routineTodo.categoryManage.deleteTodosLeft', { count: inUseCounts[pendingDelete.id]?.todos })}\n`
                 : ''}
-              완전 삭제는 이 카테고리 루틴의 과거 수행 기록까지 지워져 되돌릴 수 없어요.
+              {tr('routineTodo.categoryManage.deletePurgeWarning')}
             </Text>
             <View style={styles.leaveBtns}>
               <Pressable
@@ -258,9 +273,11 @@ export function CategoryManageScreen({
                   setPendingDelete(null);
                 }}
                 accessibilityRole="button"
-                accessibilityLabel="미분류로 두고 삭제"
+                accessibilityLabel={tr('routineTodo.categoryManage.deleteUnassign')}
                 style={[styles.leaveBtn, { backgroundColor: t.primary }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>미분류로 두고 삭제</Text>
+                <Text style={[Typography.label, { color: t.onPrimary }]}>
+                  {tr('routineTodo.categoryManage.deleteUnassign')}
+                </Text>
               </Pressable>
               <Pressable
                 onPress={() => {
@@ -268,16 +285,20 @@ export function CategoryManageScreen({
                   setPendingDelete(null);
                 }}
                 accessibilityRole="button"
-                accessibilityLabel="기록까지 완전 삭제"
+                accessibilityLabel={tr('routineTodo.categoryManage.deletePurge')}
                 style={[styles.leaveBtn, { backgroundColor: t.danger }]}>
-                <Text style={[Typography.label, { color: t.onPrimary }]}>기록까지 완전 삭제</Text>
+                <Text style={[Typography.label, { color: t.onPrimary }]}>
+                  {tr('routineTodo.categoryManage.deletePurge')}
+                </Text>
               </Pressable>
               <Pressable
                 onPress={() => setPendingDelete(null)}
                 accessibilityRole="button"
-                accessibilityLabel="취소"
+                accessibilityLabel={tr('common.cancel')}
                 style={styles.leaveStay}>
-                <Text style={[Typography.label, { color: t.textMuted }]}>취소</Text>
+                <Text style={[Typography.label, { color: t.textMuted }]}>
+                  {tr('common.cancel')}
+                </Text>
               </Pressable>
             </View>
           </View>

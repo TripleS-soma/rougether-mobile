@@ -15,6 +15,7 @@ import { furnitureClampBounds, ROOM_RENDER_CONTRACT } from '@/components/room/ro
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens } from '@/hooks/use-tokens';
 import type { FurnitureItem, PlacedFurniture } from '@/resources/furniture';
+import { useT } from '@/i18n';
 
 /** 크기 조절 클램프 (#333) — 서버 제약은 없지만 방을 벗어나지 않는 선. */
 export const SCALE_MIN = ROOM_RENDER_CONTRACT.furniture.editorScale.min;
@@ -88,6 +89,7 @@ export function DraggableFurniture({
 }: DraggableFurnitureProps) {
   const t = useTokens();
   const emph = useFontEmphasis();
+  const tr = useT();
   const cx = useSharedValue(placement.x * roomSize.w);
   const cy = useSharedValue(placement.y * roomSize.h);
   const scaleSV = useSharedValue(placement.scale ?? 1);
@@ -224,8 +226,13 @@ export function DraggableFurniture({
       <Animated.View
         accessible
         accessibilityRole="button"
-        accessibilityLabel={preview ? `${item.name} 프리뷰 옮기기` : `${item.name} 옮기기`}
-        accessibilityHint="탭해서 선택, 끌어서 이동해요"
+        accessibilityLabel={tr(
+          preview
+            ? 'roomShop.decor.furniture.movePreviewA11y'
+            : 'roomShop.decor.furniture.moveA11y',
+          { name: item.name },
+        )}
+        accessibilityHint={tr('roomShop.decor.furniture.moveHint')}
         accessibilityState={{ selected }}
         style={animStyle}>
         {/* 자식(이미지·이름표)이 이벤트 타깃이 되지 않게 — 제스처는 래퍼가 받는다. */}
@@ -255,7 +262,7 @@ export function DraggableFurniture({
               <Animated.View
                 accessible
                 accessibilityRole="adjustable"
-                accessibilityLabel={`${item.name} 크기 조절`}
+                accessibilityLabel={tr('roomShop.decor.furniture.resizeA11y', { name: item.name })}
                 hitSlop={10}
                 style={[styles.handle, { borderColor: t.primary, backgroundColor: t.surface }]}
               />

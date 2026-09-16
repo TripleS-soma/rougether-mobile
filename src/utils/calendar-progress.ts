@@ -1,4 +1,5 @@
 import type { CalendarDayCount } from '@/api/types';
+import { i18n } from '@/i18n';
 
 export type CalendarFilter = 'all' | 'routine' | 'todo';
 export type DayProgress = { total: number; completed: number };
@@ -32,10 +33,17 @@ export function calendarProgress(
 }
 
 export function progressLabel(progress: DayProgress | undefined, date: string, today: string) {
-  if (!progress) return '집계 확인 중';
-  if (progress.total === 0) return date < today ? '기록 없음' : '일정 없음';
-  if (date > today) return `예정 ${progress.total}개`;
-  return `${progress.completed}개 완료, 전체 ${progress.total}개`;
+  if (!progress) return i18n.t('routineTodo.calendarProgress.pending');
+  if (progress.total === 0)
+    return date < today
+      ? i18n.t('routineTodo.calendarProgress.noRecord')
+      : i18n.t('routineTodo.calendarProgress.noPlan');
+  if (date > today)
+    return i18n.t('routineTodo.calendarProgress.planned', { total: progress.total });
+  return i18n.t('routineTodo.calendarProgress.done', {
+    completed: progress.completed,
+    total: progress.total,
+  });
 }
 
 const KST_OFFSET = 9 * 60 * 60 * 1000;

@@ -23,6 +23,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 import { DEMO_NOTIFICATIONS } from '@/mocks/fixtures';
 
 /** One notification row (server GET /notifications). */
@@ -96,6 +97,7 @@ function DeleteAction({
 }) {
   const t = useTokens();
   const Typography = useTypography();
+  const tr = useT();
   const fill = useAnimatedStyle(() => ({
     width: Math.max(DELETE_ACTION_W, -translation.value - Spacing.two),
   }));
@@ -104,9 +106,11 @@ function DeleteAction({
       <Pressable
         onPress={onPress}
         accessibilityRole="button"
-        accessibilityLabel={`${label} 삭제`}
+        accessibilityLabel={tr('notification.list.deleteRowA11y', { label })}
         style={[styles.deleteAction, { backgroundColor: t.danger }]}>
-        <Text style={[Typography.label, { color: t.onPrimary }]}>삭제</Text>
+        <Text style={[Typography.label, { color: t.onPrimary }]}>
+          {tr('notification.list.delete')}
+        </Text>
       </Pressable>
     </Animated.View>
   );
@@ -197,6 +201,7 @@ export function NotificationListScreen({
   // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
   const headerInset = useHeaderContentInset();
   const Typography = useTypography();
+  const tr = useT();
   const entries = notifications ?? DEMO_NOTIFICATIONS;
   const hasUnread = entries.some((n) => !n.read);
   const hasUnreadNews = announcements?.some((a) => !a.read) ?? false;
@@ -218,7 +223,7 @@ export function NotificationListScreen({
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
       <ScreenHeader
-        title="알림"
+        title={tr('notification.list.title')}
         onBack={onBack}
         right={
           showingNews ? (
@@ -226,9 +231,11 @@ export function NotificationListScreen({
               <Pressable
                 onPress={onReadAllAnnouncements}
                 accessibilityRole="button"
-                accessibilityLabel="새 소식 모두 읽음"
+                accessibilityLabel={tr('notification.list.readAllNewsA11y')}
                 style={[styles.headerBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.primaryText }]}>모두 읽음</Text>
+                <Text style={[Typography.label, { color: t.primaryText }]}>
+                  {tr('notification.list.readAll')}
+                </Text>
               </Pressable>
             ) : undefined
           ) : entries.length > 0 ? (
@@ -237,17 +244,21 @@ export function NotificationListScreen({
                 <Pressable
                   onPress={onReadAll}
                   accessibilityRole="button"
-                  accessibilityLabel="모두 읽음"
+                  accessibilityLabel={tr('notification.list.readAll')}
                   style={[styles.headerBtn, { backgroundColor: t.surfaceMuted }]}>
-                  <Text style={[Typography.label, { color: t.primaryText }]}>모두 읽음</Text>
+                  <Text style={[Typography.label, { color: t.primaryText }]}>
+                    {tr('notification.list.readAll')}
+                  </Text>
                 </Pressable>
               ) : null}
               <Pressable
                 onPress={() => setConfirmDeleteAll(true)}
                 accessibilityRole="button"
-                accessibilityLabel="알림 전체 삭제"
+                accessibilityLabel={tr('notification.list.deleteAllA11y')}
                 style={[styles.headerBtn, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.danger }]}>전체 삭제</Text>
+                <Text style={[Typography.label, { color: t.danger }]}>
+                  {tr('notification.list.deleteAll')}
+                </Text>
               </Pressable>
             </View>
           ) : undefined
@@ -267,7 +278,7 @@ export function NotificationListScreen({
             onOpen={onOpenAnnouncement}
             collapsible={false}
             title={null}
-            emptyText="아직 새 소식이 없어요."
+            emptyText={tr('notification.news.empty')}
           />
         </ScrollView>
       ) : (
@@ -288,11 +299,11 @@ export function NotificationListScreen({
             ) : loadError ? (
               // 로드 실패 (#549) — 빈 상태('알림 없음')로 위장하지 않는다.
               <View style={styles.state}>
-                <RetryState message="알림을 불러오지 못했어요." onRetry={onRetry} />
+                <RetryState message={tr('notification.list.loadError')} onRetry={onRetry} />
               </View>
             ) : (
               <Text style={[Typography.supporting, styles.state, { color: t.textMuted }]}>
-                아직 받은 알림이 없어요.
+                {tr('notification.list.empty')}
               </Text>
             )
           }
@@ -301,9 +312,11 @@ export function NotificationListScreen({
               <Pressable
                 onPress={onLoadMore}
                 accessibilityRole="button"
-                accessibilityLabel="알림 더보기"
+                accessibilityLabel={tr('notification.list.moreA11y')}
                 style={[styles.more, { backgroundColor: t.surfaceMuted }]}>
-                <Text style={[Typography.label, { color: t.primaryText }]}>더보기</Text>
+                <Text style={[Typography.label, { color: t.primaryText }]}>
+                  {tr('notification.list.more')}
+                </Text>
               </Pressable>
             ) : null
           }
@@ -315,7 +328,9 @@ export function NotificationListScreen({
                 accessibilityLabel={n.title}
                 accessibilityState={{ selected: !n.read }}
                 // 스크린리더는 스와이프를 못 하니 행 동작으로 삭제를 연다.
-                accessibilityActions={onDelete ? [{ name: 'delete', label: '삭제' }] : undefined}
+                accessibilityActions={
+                  onDelete ? [{ name: 'delete', label: tr('notification.list.delete') }] : undefined
+                }
                 onAccessibilityAction={(e) => {
                   if (e.nativeEvent.actionName === 'delete') onDelete?.(n.id);
                 }}
@@ -346,10 +361,10 @@ export function NotificationListScreen({
 
       <ConfirmDialog
         visible={confirmDeleteAll}
-        title="알림을 모두 삭제할까요?"
-        body="삭제한 알림은 되돌릴 수 없어요."
-        confirmLabel="삭제"
-        confirmAccessibilityLabel="알림 전체 삭제 확인"
+        title={tr('notification.list.deleteAllConfirmTitle')}
+        body={tr('notification.list.deleteAllConfirmBody')}
+        confirmLabel={tr('notification.list.delete')}
+        confirmAccessibilityLabel={tr('notification.list.deleteAllConfirmA11y')}
         destructive
         onCancel={() => setConfirmDeleteAll(false)}
         onConfirm={() => {

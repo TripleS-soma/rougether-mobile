@@ -12,6 +12,7 @@ import {
   type FurniturePhoto,
 } from '@/api/furniture-generation';
 import { ApiError } from '@/api/http';
+import { i18n } from '@/i18n';
 
 // An idempotency identifier, not an authentication credential.
 function requestId() {
@@ -23,18 +24,19 @@ function requestId() {
 
 function errorMessage(error: unknown) {
   if (error instanceof ApiError) {
-    const messages: Record<string, string> = {
-      FURNITURE_CREDITS_REQUIRED: '생성권이 부족해요. 출석 이벤트에서 생성권을 받아보세요.',
-      FURNITURE_GENERATION_UNAVAILABLE:
-        '가구 만들기를 잠시 쉬고 있어요. 잠시 후 다시 이용해주세요.',
-      FURNITURE_DAILY_LIMIT: '오늘 만들 수 있는 횟수를 모두 사용했어요. 내일 다시 만나요.',
-      FURNITURE_JOB_IN_PROGRESS: '만들고 있는 가구가 있어요. 완료되면 새로 만들 수 있어요.',
-      FURNITURE_PHOTO_INVALID: '가구가 잘 보이는 JPG 또는 PNG 사진을 선택해주세요.',
-    };
-    if (error.code && messages[error.code]) return messages[error.code];
-    if (error.status === 413) return '10MB 이하의 사진을 선택해주세요.';
+    const codes = [
+      'FURNITURE_CREDITS_REQUIRED',
+      'FURNITURE_GENERATION_UNAVAILABLE',
+      'FURNITURE_DAILY_LIMIT',
+      'FURNITURE_JOB_IN_PROGRESS',
+      'FURNITURE_PHOTO_INVALID',
+    ];
+    if (error.code && codes.includes(error.code)) {
+      return i18n.t(`roomShop.studio.error.${error.code}`);
+    }
+    if (error.status === 413) return i18n.t('roomShop.studio.error.tooLarge');
   }
-  return '연결을 확인하고 다시 시도해주세요.';
+  return i18n.t('roomShop.studio.error.network');
 }
 
 export function useFurnitureStudio() {
@@ -100,11 +102,11 @@ export function useFurnitureStudio() {
       const asset = result.assets[0];
       const type = asset.mimeType ?? 'image/jpeg';
       if (!['image/jpeg', 'image/png'].includes(type)) {
-        setError('JPG 또는 PNG 사진을 선택해주세요.');
+        setError(i18n.t('roomShop.studio.error.wrongType'));
         return;
       }
       if (asset.fileSize != null && asset.fileSize > 10 * 1024 * 1024) {
-        setError('10MB 이하의 사진을 선택해주세요.');
+        setError(i18n.t('roomShop.studio.error.tooLarge'));
         return;
       }
       setPhoto({
@@ -115,7 +117,7 @@ export function useFurnitureStudio() {
       pendingId.current = requestId();
       setError(null);
     } catch {
-      if (mounted.current) setError('사진을 열지 못했어요. 사진 접근 설정을 확인해주세요.');
+      if (mounted.current) setError(i18n.t('roomShop.studio.error.openFailed'));
     }
   }, []);
 

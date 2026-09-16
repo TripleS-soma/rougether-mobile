@@ -11,7 +11,8 @@ import type { PictogramName } from '@/components/ui/pictograms';
  */
 export type HouseThemePreset = {
   id: string;
-  label: string;
+  /** i18n 키 (#893) — `house.themes.*`. */
+  labelKey: string;
   icon: PictogramName;
   /** 카드 채움. */
   bg: string;
@@ -20,12 +21,36 @@ export type HouseThemePreset = {
 };
 
 export const HOUSE_THEME_PRESETS: HouseThemePreset[] = [
-  { id: 'morning', label: '기상', icon: 'sunrise', bg: '#FFEFD8', border: '#F0C88A' },
-  { id: 'study', label: '공부', icon: 'book', bg: '#E4DCF0', border: '#B8A8D8' },
-  { id: 'code', label: '코딩', icon: 'laptop', bg: '#E4F0DC', border: '#A8C898' },
-  { id: 'fitness', label: '운동', icon: 'dumbbell', bg: '#FBE0E0', border: '#E8B0A0' },
-  { id: 'health', label: '건강', icon: 'water', bg: '#D8E8F0', border: '#A8C4D8' },
-  { id: 'hobby', label: '취미', icon: 'palette', bg: '#F5E1D8', border: '#E8B8A8' },
+  {
+    id: 'morning',
+    labelKey: 'house.themes.morning',
+    icon: 'sunrise',
+    bg: '#FFEFD8',
+    border: '#F0C88A',
+  },
+  { id: 'study', labelKey: 'house.themes.study', icon: 'book', bg: '#E4DCF0', border: '#B8A8D8' },
+  { id: 'code', labelKey: 'house.themes.code', icon: 'laptop', bg: '#E4F0DC', border: '#A8C898' },
+  {
+    id: 'fitness',
+    labelKey: 'house.themes.fitness',
+    icon: 'dumbbell',
+    bg: '#FBE0E0',
+    border: '#E8B0A0',
+  },
+  {
+    id: 'health',
+    labelKey: 'house.themes.health',
+    icon: 'water',
+    bg: '#D8E8F0',
+    border: '#A8C4D8',
+  },
+  {
+    id: 'hobby',
+    labelKey: 'house.themes.hobby',
+    icon: 'palette',
+    bg: '#F5E1D8',
+    border: '#E8B8A8',
+  },
 ];
 
 /** 비공개 집 배지·자물쇠의 강조색 — 위 프리셋과 같은 고정 팔레트 계열. */

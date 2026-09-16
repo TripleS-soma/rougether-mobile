@@ -7,6 +7,7 @@ import type { NavTab } from '@/components/ui/bottom-nav';
 export type Screen =
   | 'myRoom'
   | 'calendar'
+  | 'calendarWeek'
   | 'decor'
   | 'routineManage'
   | 'addRoutine'
@@ -26,6 +27,7 @@ export type Screen =
   | 'settings'
   | 'theme'
   | 'font'
+  | 'language'
   | 'profileEdit'
   | 'notificationList'
   | 'calendarImport'
@@ -41,6 +43,8 @@ export const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   myRoom: 'myRoom',
   // 달력 탭 (#1138) — 나의 방의 달력 뷰가 독립 탭으로.
   calendar: 'calendar',
+  // 주간 보기 (#1327) — 달력 탭에서 날짜를 누르면 미는 서브화면. 하단 탭 없음.
+  calendarWeek: null,
   decor: null,
   routineManage: null,
   addRoutine: null,
@@ -61,6 +65,8 @@ export const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   settings: null,
   theme: null,
   font: null,
+  // 언어 (#893) — 설정의 서브화면.
+  language: null,
   profileEdit: null,
   notificationList: null,
   calendarImport: null,
@@ -90,6 +96,7 @@ export const NAV_ORDER: NavTab[] = ['myRoom', 'calendar', 'house', 'myPage'];
 export const BACK_SCREEN: Record<Screen, Screen | null> = {
   myRoom: null,
   calendar: 'myRoom',
+  calendarWeek: 'calendar',
   decor: 'myRoom',
   routineManage: 'myRoom',
   addRoutine: 'routineManage',
@@ -110,6 +117,7 @@ export const BACK_SCREEN: Record<Screen, Screen | null> = {
   settings: 'myPage',
   theme: 'settings',
   font: 'settings',
+  language: 'settings',
   profileEdit: 'myPage',
   notificationList: 'myRoom',
   calendarImport: 'myPage',
@@ -156,7 +164,21 @@ export const FULL_SWIPE_BACK_EXCLUDED: ReadonlySet<Screen> = new Set<Screen>([
   'decor',
   'gacha',
   'addRoutine',
+  // calendarWeek: 좌우 스와이프로 주 이동 (#1327) — 왼쪽 가장자리만 뒤로.
+  'calendarWeek',
 ]);
+/**
+ * 슬라이드 없이 즉시 바뀌는 전환 (#1327) — 주간 보기는 달력 탭과 **같은 자리에 같은
+ * 달력**을 그리고 스스로 접힘/펼침을 연출하므로, 층을 밀어 넣으면 연출이 깨진다.
+ * 달력 탭 ↔ 주간 보기만 즉시 교체하고, 주간 보기에서 연 루틴 수정 같은 서브화면은
+ * 종전대로 슬라이드한다.
+ */
+export function isInstantTransition(prev: Screen, next: Screen): boolean {
+  return (
+    (prev === 'calendar' && next === 'calendarWeek') ||
+    (prev === 'calendarWeek' && next === 'calendar')
+  );
+}
 /** Screens that own input all the way to the screen edge. */
 export const EDGE_BACK_DISABLED_SCREENS: ReadonlySet<Screen> = new Set<Screen>(['minigameRunner']);
 // 이만큼 끌었거나(거리) 이 속도를 넘긴 릴리즈면 뒤로 간다.

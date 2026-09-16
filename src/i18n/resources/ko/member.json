@@ -1,0 +1,486 @@
+{
+  "member": {
+    "common": {
+      "next": "다음",
+      "start": "시작하기",
+      "previous": "이전",
+      "skip": "건너뛰기",
+      "show": "보기",
+      "hide": "숨김",
+      "close": "닫기",
+      "save": "저장",
+      "nickname": "닉네임"
+    },
+    "characters": {
+      "cat": {
+        "name": "고양이",
+        "description": "조용하고 따뜻한 루틴 친구"
+      },
+      "dog": {
+        "name": "강아지",
+        "description": "밝고 활발한 루틴 친구"
+      },
+      "tiger": {
+        "name": "호랑이",
+        "description": "당차고 용감한 루틴 친구"
+      },
+      "panda": {
+        "name": "판다",
+        "description": "느긋하고 다정한 루틴 친구"
+      },
+      "bear": {
+        "name": "곰",
+        "description": "든든하고 포근한 루틴 친구"
+      },
+      "sheep": {
+        "name": "양",
+        "description": "부드럽고 순한 루틴 친구"
+      },
+      "horse": {
+        "name": "망아지",
+        "description": "씩씩하고 활기찬 루틴 친구"
+      },
+      "otter": {
+        "name": "수달",
+        "description": "장난기 많고 사랑스러운 루틴 친구"
+      },
+      "moru": {
+        "name": "모루",
+        "description": "레벨 5에서 만나는 포근한 루틴 친구"
+      }
+    },
+    "intro": {
+      "slides": {
+        "my-room": {
+          "title": "매일의 루틴이\n포근한 방이 되는 곳",
+          "description": "루게더에 오신 걸 환영해요"
+        },
+        "routines": {
+          "title": "오늘의 루틴을\n곰 체크로 완료해요",
+          "description": "카테고리로 모아 보고, 알림·반복 설정까지"
+        },
+        "decor": {
+          "title": "모은 보상으로\n내 방을 꾸며요",
+          "description": "가구·벽지·바닥을 원하는 자리에 자유 배치"
+        },
+        "house": {
+          "title": "친구들과 한 집에서\n함께 자라요",
+          "description": "방 구경 · 응원 보내기 · 공동 미션으로 집 레벨 업"
+        },
+        "calendar": {
+          "title": "기록은 달력으로,\n보상은 뽑기로",
+          "description": "지난 완료를 돌아보고 캐릭터·가구를 모아요"
+        }
+      },
+      "skipA11y": "튜토리얼 건너뛰고 나가기",
+      "goToSlide": "{{n}}번째 슬라이드로 이동",
+      "haveAccount": "이미 계정이 있어요"
+    },
+    "login": {
+      "notReady": "서버 준비 중이에요",
+      "passwordRequired": "비밀번호를 입력해주세요",
+      "devLoginFailed": "로그인에 실패했어요. userId를 확인하고 다시 시도해 주세요.",
+      "googleFailed": "구글 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.",
+      "kakaoFailed": "카카오 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.",
+      "appleFailed": "애플 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.",
+      "newAccountFailed": "새 계정 만들기에 실패했어요. 잠시 후 다시 시도해 주세요.",
+      "appIconA11y": "루게더 앱 아이콘",
+      "appName": "루게더",
+      "tagline": "매일의 루틴으로 나만의 방과 집을 함께 키워요.",
+      "emailPlaceholder": "이메일",
+      "passwordPlaceholder": "비밀번호",
+      "keepLogin": "로그인 유지",
+      "findPassword": "비밀번호 찾기",
+      "loggingIn": "로그인 중...",
+      "login": "로그인",
+      "socialDivider": "간편 로그인",
+      "startWith": "{{label}}로 시작하기",
+      "startWithA11y": "{{label}}로 시작",
+      "startWithRecentA11y": "{{label}}로 시작, 최근 로그인",
+      "recentBadge": "최근 로그인",
+      "provider": {
+        "kakao": "카카오",
+        "apple": "애플",
+        "google": "구글",
+        "otherSocial": "다른 소셜"
+      },
+      "conflictFallback": "이 이메일은 {{labels}} 로그인으로 가입되어 있어요.",
+      "conflict": {
+        "title": "이미 가입된 이메일이에요",
+        "loginWith": "{{provider}}로 로그인",
+        "continueAsNew": "새 계정으로 계속",
+        "guideUseExisting": "기존 계정을 쓰려면 {{provider}}로 로그인하고, 새로 시작하려면 새 계정으로 계속해 주세요.",
+        "guideUnavailable": "이 기기에서는 {{provider}} 로그인을 쓸 수 없어요. iOS 기기에서 {{provider}}로 로그인하거나, 새로 시작하려면 새 계정으로 계속해 주세요.",
+        "guideMultiple": "기존 계정을 쓰려면 이 창을 닫고 {{labels}} 버튼으로 로그인하고, 새로 시작하려면 새 계정으로 계속해 주세요.",
+        "guideUnknown": "기존 계정을 쓰려면 가입했던 방법으로 로그인하고, 새로 시작하려면 새 계정으로 계속해 주세요."
+      }
+    },
+    "signup": {
+      "title": "회원가입",
+      "nicknameLength": "2~10자로 입력해주세요",
+      "emailInvalidToast": "이메일 형식을 확인해주세요",
+      "retryLater": "잠시 후 다시 시도해주세요",
+      "codeLength": "6자리 인증번호를 입력해주세요",
+      "codeExpired": "인증 시간이 만료되었어요. 다시 발송해주세요",
+      "welcome": "마을의 새 친구를 환영해요",
+      "intro": "정보를 입력하고 나만의 루게더를 시작하세요",
+      "notice": "이메일 가입은 준비 중이에요. 지금은 로그인 화면에서 이메일 칸을 비우고 로그인하면 새 계정이 만들어져요.",
+      "nicknamePlaceholder": "2~10자 닉네임",
+      "email": "이메일",
+      "verified": "인증완료",
+      "resend": "재발송",
+      "requestCode": "인증요청",
+      "emailInvalid": "이메일 형식이 올바르지 않아요",
+      "emailVerified": "이메일 인증이 완료되었어요",
+      "code": "인증번호",
+      "codePlaceholder": "6자리 인증번호",
+      "codeHint": "메일함을 확인하고 6자리 인증번호를 입력해주세요",
+      "password": "비밀번호",
+      "passwordPlaceholder": "8자 이상",
+      "passwordTooShort": "비밀번호는 8자 이상이에요",
+      "passwordConfirm": "비밀번호 확인",
+      "passwordConfirmPlaceholder": "비밀번호를 다시 입력하세요",
+      "passwordMismatch": "비밀번호가 일치하지 않아요",
+      "passwordMatch": "비밀번호가 일치해요",
+      "agreeAll": "전체 동의",
+      "agreeTerms": "이용약관 동의",
+      "agreePrivacy": "개인정보 처리방침 동의",
+      "agreeMarketing": "마케팅 정보 수신 동의",
+      "submitNotReady": "이메일 가입은 서버 준비 중이에요",
+      "submitLabel": "가입 준비 중",
+      "haveAccount": "이미 계정이 있으신가요?",
+      "login": "로그인",
+      "required": "필수",
+      "optional": "선택",
+      "viewDocA11y": "{{label}} 보기"
+    },
+    "onboarding": {
+      "goals": {
+        "exercise": "운동",
+        "study": "공부",
+        "sleep": "수면",
+        "reading": "독서",
+        "organizing": "정리",
+        "career": "취업 준비",
+        "habit": "생활 습관"
+      },
+      "goalLimit": "목표는 {{max}}개까지 고를 수 있어요",
+      "nicknameTitle": "어떻게 불러드릴까요?",
+      "nicknameBody": "{{name}}가 부를 내 이름을 정해주세요.",
+      "nicknamePlaceholder": "닉네임 ({{max}}자까지)",
+      "nicknameInputA11y": "닉네임 입력",
+      "nicknameRequired": "닉네임을 입력해주세요",
+      "characterTitle": "함께할 캐릭터를 골라주세요",
+      "characterBody": "옆으로 넘기며 마음에 드는 친구를 만나보세요.",
+      "goToCard": "{{name}} 카드로 이동",
+      "goWith": "{{name}} 함께하기",
+      "goalTitle": "관심 있는 목표를 골라주세요",
+      "goalBody": "선택한 목표를 기반으로 루틴 제안과 미션을 더 잘 맞출 수 있어요. 최대 3개까지 고를 수 있어요.",
+      "goalRequired": "목표를 하나 이상 선택해주세요",
+      "pickGoals": "목표 선택하기"
+    },
+    "starterRoutine": {
+      "lightStart": "가볍게 시작하기",
+      "goals": {
+        "exercise": {
+          "label": "운동",
+          "titles": ["스트레칭 3분", "가볍게 걷기 5분", "어깨 풀기 1분"]
+        },
+        "study": {
+          "label": "공부",
+          "titles": ["공부한 내용 한 줄 정리하기", "영어 단어 3개 익히기", "책상에서 공부 5분"]
+        },
+        "sleep": {
+          "label": "수면",
+          "titles": ["자기 전 휴대폰 내려놓기", "자기 전 조명 낮추기", "잠들기 전 천천히 숨 쉬기"]
+        },
+        "reading": {
+          "label": "독서",
+          "titles": ["책 2쪽 읽기", "마음에 든 문장 하나 적기", "독서 5분"]
+        },
+        "organizing": {
+          "label": "정리",
+          "titles": ["책상 위 물건 3개 정리하기", "입은 옷 제자리에 두기", "가방 속 물건 정리하기"]
+        },
+        "career": {
+          "label": "취업 준비",
+          "titles": [
+            "관심 공고 하나 살펴보기",
+            "오늘 배운 것 한 줄 적기",
+            "면접 질문 하나 생각해보기"
+          ]
+        },
+        "habit": {
+          "label": "생활 습관",
+          "titles": ["물 한 잔 마시기", "창문 열어 환기하기", "오늘 좋았던 일 하나 적기"]
+        }
+      },
+      "eyebrow": "나의 첫 루틴",
+      "title": "작게 시작해볼까요?",
+      "bodyLight": "가볍게 시작할 루틴이에요.",
+      "bodyMatched": "관심사에 맞춰 골랐어요.",
+      "bodyPickOne": "하나만 골라 시작해보세요.",
+      "schedule": "매일 · 오늘부터",
+      "footnote": "완료하면 체크만 해주세요. 알림은 꺼져 있고, 반복과 시간은 나중에 바꿀 수 있어요.",
+      "checkingA11y": "내 루틴 확인 중",
+      "creating": "루틴을 만들고 있어요",
+      "recheck": "다시 확인하기",
+      "startWithThis": "이 루틴으로 시작하기",
+      "later": "나중에 할게요",
+      "saveUnconfirmed": "루틴 저장을 확인하지 못했어요. 다시 확인해 주세요.",
+      "loadFailed": "내 루틴을 불러오지 못했어요. 연결 후 다시 확인해 주세요."
+    },
+    "myPage": {
+      "title": "내 정보",
+      "settingsA11y": "설정",
+      "weeklyReport": "주간회고 다시 보기",
+      "calendarImport": "캘린더 연동",
+      "inviteFriends": "친구 초대",
+      "help": "도움말",
+      "bugReport": "버그 제보",
+      "attendance": "출석 이벤트",
+      "walletHistory": "재화 내역",
+      "streakValue": "{{count}}일",
+      "streak": "연속",
+      "coin": "코인",
+      "diamond": "다이아",
+      "bioPlaceholder": "한 줄 소개를 적어보세요",
+      "editProfile": "프로필 편집"
+    },
+    "profileEdit": {
+      "title": "프로필 편집",
+      "characterHint": "캐릭터는 나의 방에서 바꿀 수 있어요.",
+      "nicknamePlaceholder": "닉네임을 입력해주세요",
+      "bio": "한 줄 소개",
+      "bioPlaceholder": "나를 한 줄로 소개해보세요",
+      "saveA11y": "프로필 저장"
+    },
+    "help": {
+      "title": "도움말",
+      "faqTitle": "자주 묻는 질문",
+      "faq": {
+        "addRoutine": {
+          "q": "루틴은 어떻게 추가하나요?",
+          "a": "나의 방 화면에서 카테고리의 + 버튼을 누르거나, 루틴 관리 화면에서 루틴을 추가할 수 있어요."
+        },
+        "currency": {
+          "q": "코인과 다이아는 어떻게 모으나요?",
+          "a": "매일 루틴을 완료하면 코인을 받아요. 코인으로 뽑기를 하고, 뽑기에서 이미 가진 아이템이 나오면 다이아로 바뀌어요. 다이아로는 방 꾸미기에서 가구를 살 수 있어요."
+        },
+        "friends": {
+          "q": "친구와 함께하려면 어떻게 하나요?",
+          "a": "집 탭에서 새 집을 만들거나 친구의 집에 참여해 함께 루틴을 이어갈 수 있어요."
+        }
+      },
+      "support": "지원",
+      "contact": "문의하기",
+      "version": "버전 {{version}}"
+    },
+    "bugReport": {
+      "title": "버그 제보",
+      "status": {
+        "RECEIVED": "접수됨",
+        "IN_PROGRESS": "처리 중",
+        "RESOLVED": "해결됨"
+      },
+      "fillRequired": "제목과 내용을 입력해주세요",
+      "submitted": "제보가 접수됐어요. 소중한 의견 감사해요!",
+      "submitFailed": "제보 접수에 실패했어요. 잠시 후 다시 시도해 주세요.",
+      "titleLabel": "제목",
+      "titlePlaceholder": "어떤 문제가 있었나요?",
+      "content": "내용",
+      "contentPlaceholder": "발생 상황을 자세히 적어주시면 해결에 큰 도움이 돼요",
+      "removeShotA11y": "스크린샷 {{n}} 삭제",
+      "addShotA11y": "스크린샷 추가",
+      "submitting": "접수 중...",
+      "submit": "제출하기",
+      "history": "내 제보 내역",
+      "empty": "아직 제보한 내용이 없어요",
+      "closeViewerA11y": "첨부 닫기",
+      "openShotA11y": "첨부 스크린샷 크게 보기"
+    },
+    "inviteFriends": {
+      "title": "친구 초대",
+      "inviterName": "{{name}}님",
+      "inviterFallback": "친구",
+      "shareMessage": "루게더에서 함께 루틴 지켜요! 내 초대코드: {{code}}\n{{link}}",
+      "linkCopied": "초대 링크를 복사했어요",
+      "loadFailed": "초대 정보를 불러오지 못했어요.",
+      "myCode": "내 초대코드",
+      "copyA11y": "초대코드 복사",
+      "copied": "복사됨",
+      "copy": "복사하기",
+      "shareA11y": "초대 링크 공유",
+      "share": "링크 공유",
+      "rewardHint": "친구가 이 코드를 입력하면 나는 코인 {{mine}}개, 친구는 코인 {{theirs}}개를 받아요.",
+      "rewardedCount": "지금까지 {{count}}명이 내 코드로 함께하고 있어요.",
+      "haveCode": "받은 코드가 있나요?",
+      "redeemed": "코인 {{coin}}개를 받았어요!",
+      "confirmInviter": "{{inviter}}의 초대가 맞나요?",
+      "confirmDetail": "코드 {{code}} · 사용하면 코인 {{coin}}개를 받아요",
+      "confirmA11y": "초대코드 사용 확정",
+      "redeeming": "사용하는 중...",
+      "receiveCoin": "코인 {{coin}}개 받기",
+      "reenterA11y": "초대코드 다시 입력",
+      "reenter": "다시 입력",
+      "codePlaceholder": "친구에게 받은 초대코드",
+      "codeInputA11y": "초대코드 입력",
+      "redeemA11y": "초대코드 사용",
+      "checking": "확인 중...",
+      "redeem": "사용하기",
+      "alreadyRedeemed": "이미 초대 보상을 받은 계정이에요.",
+      "onceOnly": "초대코드는 한 번만 사용할 수 있어요."
+    },
+    "calendarImport": {
+      "title": "캘린더 연동",
+      "repeat": {
+        "daily": "매일 반복",
+        "weekly": "매주 반복",
+        "biweekly": "격주 반복",
+        "monthly": "매월 반복",
+        "yearly": "매년 반복"
+      },
+      "shortDate": "{{month}}월 {{day}}일",
+      "intro": "기기 캘린더의 오늘 이후 → 30일 일정을 할 일로 가져와요. 캘린더에 쓰지 않고 읽기만 해요.",
+      "denied": "캘린더 접근이 꺼져 있어요. 기기 설정에서 루게더의 캘린더 권한을 켜주세요.",
+      "connect": "캘린더 연결하기",
+      "noCalendars": "읽을 수 있는 캘린더가 없어요.",
+      "pickCalendars": "가져올 캘린더",
+      "calendarA11y": "캘린더 {{title}}",
+      "preview": "일정 불러오기",
+      "noEvents": "앞으로 30일 안에 가져올 일정이 없어요.",
+      "pickEvents": "가져올 일정 ({{selected}}/{{total}})",
+      "exactOnly": "지금은 제목이 똑같은 것만 겹침으로 표시돼요.",
+      "similarA11y": "비슷한 항목 있음",
+      "kindRoutine": "루틴",
+      "kindTodo": "할 일",
+      "similarExists": "비슷한 {{kind}}이 있어요 · {{title}}",
+      "import": "{{count}}개 가져오기"
+    },
+    "notificationSettings": {
+      "title": "푸시 알림",
+      "rows": {
+        "reminder": {
+          "label": "루틴 리마인더",
+          "desc": "루틴·할 일, 주간 회고와 고양이 복귀 알림을 받아요"
+        },
+        "house": {
+          "label": "집 알림",
+          "desc": "응원과 우리 집 소식을 알려드려요"
+        }
+      },
+      "pushStep": {
+        "permission-denied": "기기에서 알림이 꺼져 있어요. 시스템 설정의 알림에서 켜야 푸시가 도착해요.",
+        "token-failed": "이 기기를 알림 서버에 등록하지 못했어요. 앱을 다시 켜보고, 계속되면 알려주세요.",
+        "register-failed": "이 기기 등록이 저장되지 않았어요. 네트워크를 확인하고 앱을 다시 켜보세요."
+      },
+      "loadFailed": "설정을 불러오지 못했어요. 지금 보이는 값은 실제 설정과 다를 수 있어요.",
+      "retry": "다시 불러오기",
+      "all": "전체 알림",
+      "allDesc": "모든 푸시 알림을 한 번에 켜고 꺼요",
+      "saveFailed": "알림 설정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요."
+    },
+    "soundSettings": {
+      "title": "효과음",
+      "rows": {
+        "effects": {
+          "label": "효과음",
+          "desc": "버튼과 뽑기 등에서 소리가 나요"
+        },
+        "music": {
+          "label": "배경 음악",
+          "desc": "스피커에서 직접 재생한 배경음을 허용해요"
+        }
+      },
+      "strength": {
+        "off": "끄기",
+        "light": "약",
+        "medium": "보통",
+        "heavy": "강"
+      },
+      "haptic": "햅틱 진동",
+      "hapticDesc": "주요 동작에서 진동으로 알려드려요",
+      "hapticA11y": "햅틱 {{label}}",
+      "localOnly": "소리와 진동 설정은 이 기기에 저장돼요."
+    },
+    "missions": {
+      "complete-routine": {
+        "label": "오늘 루틴 1개 완료하기",
+        "hint": "나의 방에서 루틴 체크를 눌러요"
+      },
+      "first-draw": {
+        "label": "뽑기 1회 해보기",
+        "hint": "첫 가구를 뽑고 내 방에 놓아봐요"
+      },
+      "place-furniture": {
+        "label": "방 꾸미기 저장하기",
+        "hint": "방 꾸미기에서 가구를 놓고 저장해요"
+      },
+      "invite-house": {
+        "label": "집에 친구 초대하기",
+        "hint": "집 관리에서 초대 링크를 친구에게 공유해요"
+      }
+    },
+    "tutorial": {
+      "skipA11y": "튜토리얼 건너뛰기",
+      "finishA11y": "튜토리얼 마치기",
+      "nextA11y": "다음 단계",
+      "coach": {
+        "backToRoom": {
+          "title": "나의 방으로 돌아가요",
+          "body": "아래 방 탭을 눌러 미션을 이어가요."
+        },
+        "completeRoutine": {
+          "title": "오늘 루틴을 완료해 봐요",
+          "body": "체크를 누르면 오늘 몫이 완료되고 코인을 받아요."
+        },
+        "draw": {
+          "title": "한 번 뽑아 볼까요?",
+          "body": "1회 뽑기를 눌러 방을 꾸밀 가구를 얻어요."
+        },
+        "goToGacha": {
+          "title": "뽑기로 가구를 얻어요",
+          "body": "오른쪽의 선물 버튼을 눌러 뽑기로 가요."
+        },
+        "placeFurniture": {
+          "title": "가구를 놓고 저장해요",
+          "body": "아래 목록에서 가구를 골라 방에 놓은 뒤 적용하기를 눌러요."
+        },
+        "goToDecor": {
+          "title": "방을 꾸며 볼까요?",
+          "body": "연필 버튼을 눌러 꾸미기로 가요."
+        },
+        "shareInvite": {
+          "title": "친구에게 초대 링크를 보내요",
+          "body": "링크 공유를 누르면 친구가 바로 집에 들어올 수 있어요."
+        },
+        "houseManage": {
+          "title": "집 관리로 들어가요",
+          "body": "집 관리에서 친구를 초대할 수 있어요."
+        },
+        "goToHouse": {
+          "title": "집으로 가요",
+          "body": "아래 집 탭을 눌러 친구를 초대해요."
+        }
+      }
+    },
+    "appearance": {
+      "roomOf": "{{name}}의 방",
+      "myRoom": "내 방",
+      "calendarChip": "달력",
+      "cta": "오늘 루틴 완료하기"
+    },
+    "theme": {
+      "title": "테마 색상",
+      "optionA11y": "{{name}} 테마"
+    },
+    "font": {
+      "title": "폰트",
+      "optionA11y": "{{name}} 폰트"
+    },
+    "myCharacters": {
+      "swapFailed": "캐릭터 교체에 실패했어요",
+      "swapped": "캐릭터를 교체했어요"
+    }
+  }
+}

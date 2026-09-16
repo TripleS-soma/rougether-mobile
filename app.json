@@ -269,7 +269,8 @@
       "url": "https://u.expo.dev/430c1f3b-4035-47c8-9864-8e07687d628c"
     },
     "locales": {
-      "ko": "./locales/ko.json"
+      "ko": "./locales/ko.json",
+      "en": "./locales/en.json"
     }
   }
 }

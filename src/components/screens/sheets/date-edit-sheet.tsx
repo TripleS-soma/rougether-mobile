@@ -4,10 +4,11 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SheetHandle } from '@/components/ui/sheet-handle';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Calendar } from '@/components/ui/calendar';
-import type { Routine } from '@/constants/routines';
+import { ROUTINE_OCCURRENCE_SKIP_ENABLED, type Routine } from '@/constants/routines';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { todayIso } from '@/utils/datetime';
+import { useT } from '@/i18n';
 
 export type DateEditSheetProps = {
   /** 날짜를 바꿀 루틴/투두 — null이면 시트가 닫힌다. */
@@ -37,13 +38,15 @@ export function DateEditSheet({
   onMoveRoutineOccurrence,
 }: DateEditSheetProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   const [draft, setDraft] = useState(() => todayIso());
   useEffect(() => {
     if (item) setDraft(item.dueDate ?? todayIso());
   }, [item]);
   const origin = fromDate ?? todayIso();
-  const pastOrigin = origin < todayIso();
+  // 서버 건너뜀이 꺼져 있으면(배포 전) 지난 날짜와 같은 안내 — 할 일만 추가된다.
+  const pastOrigin = !ROUTINE_OCCURRENCE_SKIP_ENABLED || origin < todayIso();
 
   return (
     <BottomSheet
@@ -52,13 +55,17 @@ export function DateEditSheet({
       cardStyle={[styles.sheet, { backgroundColor: t.screen }]}>
       <SheetHandle />
       <Text style={[Typography.h3, styles.sheetTitle, { color: t.text }]} numberOfLines={1}>
-        날짜 바꾸기
+        {tr('routineTodo.dateEdit.title')}
       </Text>
       {item?.kind !== 'todo' ? (
         <Text style={[Typography.supporting, styles.sheetNote, { color: t.textMuted }]}>
           {pastOrigin
-            ? '루틴 반복은 그대로 두고, 선택한 날짜에 이 날 몫이 할 일로 추가돼요.\n(지난 날짜 몫은 그대로 남아요)'
-            : '루틴 반복은 그대로 두고, 이 날 몫만 선택한 날짜로 옮겨요.\n(원래 날짜에서는 빠지고, 옮긴 날짜엔 할 일로 들어가요)'}
+            ? `${tr('routineTodo.dateEdit.pastNote')}\n${
+                ROUTINE_OCCURRENCE_SKIP_ENABLED
+                  ? tr('routineTodo.dateEdit.pastNoteSkipOn')
+                  : tr('routineTodo.dateEdit.pastNoteSkipOff')
+              }`
+            : tr('routineTodo.dateEdit.moveNote')}
         </Text>
       ) : null}
       <Calendar value={draft} onSelect={setDraft} />
@@ -66,9 +73,9 @@ export function DateEditSheet({
         <Pressable
           onPress={onClose}
           accessibilityRole="button"
-          accessibilityLabel="취소"
+          accessibilityLabel={tr('common.cancel')}
           style={[styles.dialogBtn, { backgroundColor: t.surfaceMuted }]}>
-          <Text style={[Typography.label, { color: t.text }]}>취소</Text>
+          <Text style={[Typography.label, { color: t.text }]}>{tr('common.cancel')}</Text>
         </Pressable>
         <Pressable
           onPress={() => {
@@ -79,9 +86,9 @@ export function DateEditSheet({
             else onMoveRoutineOccurrence?.(r.id, draft, origin);
           }}
           accessibilityRole="button"
-          accessibilityLabel="확인"
+          accessibilityLabel={tr('common.confirm')}
           style={[styles.dialogBtn, { backgroundColor: t.primary }]}>
-          <Text style={[Typography.label, { color: t.onPrimary }]}>확인</Text>
+          <Text style={[Typography.label, { color: t.onPrimary }]}>{tr('common.confirm')}</Text>
         </Pressable>
       </View>
     </BottomSheet>

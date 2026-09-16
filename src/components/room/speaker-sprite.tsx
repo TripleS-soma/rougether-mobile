@@ -3,8 +3,10 @@ import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, StyleSheet } from 'react-native';
 import { SPEAKER_IMAGE } from '@/resources/speaker';
 import { NATIVE_DRIVER } from '@/utils/animation';
+import { useT } from '@/i18n';
 
 export function SpeakerSprite({ playing = false }: { playing?: boolean }) {
+  const tr = useT();
   const pulse = useRef(new Animated.Value(0)).current;
   const [reduced, setReduced] = useState(true);
   useEffect(() => {
@@ -48,7 +50,9 @@ export function SpeakerSprite({ playing = false }: { playing?: boolean }) {
   return (
     <Animated.View
       testID="speaker-sprite"
-      accessibilityLabel={playing ? '음악이 흐르는 스피커' : '꺼진 스피커'}
+      accessibilityLabel={tr(
+        playing ? 'roomShop.speaker.spriteOnA11y' : 'roomShop.speaker.spriteOffA11y',
+      )}
       style={[
         styles.art,
         {

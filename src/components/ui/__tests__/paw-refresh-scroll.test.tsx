@@ -154,3 +154,35 @@ describe('PawRefreshScroll (#454 — 곰 발바닥 pull-to-refresh)', () => {
     expect(queryByTestId('paw-refresh-paw')).toBeNull();
   });
 });
+
+// 합성 제스처의 참조 고정 (#1207 잔여) — 렌더마다 새 Gesture.Simultaneous를 주면 iOS에서
+// 활성 중인 탭 페이저 팬이 떨어져 집 탭 스와이프가 되돌아갔다.
+describe('PawRefreshScroll — 제스처 참조 고정', () => {
+  it('리렌더해도 Gesture.Simultaneous를 다시 만들지 않는다', async () => {
+    const rngh = jest.requireActual(
+      'react-native-gesture-handler',
+    ) as typeof import('react-native-gesture-handler');
+    const spy = jest.spyOn(rngh.Gesture, 'Simultaneous');
+    // 콜백은 참조 고정 — 호출부(셸·화면)도 useStableCallback으로 고정해 넘긴다.
+    const onRefresh = jest.fn();
+    const ui = await render(
+      <PawRefreshScroll onRefresh={onRefresh} refreshTestID="probe">
+        <Text>하나</Text>
+      </PawRefreshScroll>,
+    );
+    const after = spy.mock.calls.length;
+    expect(after).toBeGreaterThanOrEqual(1);
+    await ui.rerender(
+      <PawRefreshScroll onRefresh={onRefresh} refreshTestID="probe">
+        <Text>둘</Text>
+      </PawRefreshScroll>,
+    );
+    await ui.rerender(
+      <PawRefreshScroll onRefresh={onRefresh} refreshTestID="probe" scrollEnabled={false}>
+        <Text>셋</Text>
+      </PawRefreshScroll>,
+    );
+    expect(spy.mock.calls.length).toBe(after);
+    spy.mockRestore();
+  });
+});

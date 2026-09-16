@@ -9,6 +9,8 @@ import { Loading } from '@/components/ui/loading';
 import { SpringProgressBar } from '@/components/ui/spring-progress';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { i18n, useT } from '@/i18n';
+import { weekdayLabelKey, weekdayLongLabelKey } from '@/constants/routines';
 import type { WeeklyReportDetailResponse } from '@/api/types';
 
 /**
@@ -16,19 +18,21 @@ import type { WeeklyReportDetailResponse } from '@/api/types';
  * 달력 탭의 요일 머리글과 같은 순서라야 눈이 같은 자리를 찾는다.
  */
 const WEEKDAYS = [
-  { key: 'SUNDAY', label: '일' },
-  { key: 'MONDAY', label: '월' },
-  { key: 'TUESDAY', label: '화' },
-  { key: 'WEDNESDAY', label: '수' },
-  { key: 'THURSDAY', label: '목' },
-  { key: 'FRIDAY', label: '금' },
-  { key: 'SATURDAY', label: '토' },
+  'SUNDAY',
+  'MONDAY',
+  'TUESDAY',
+  'WEDNESDAY',
+  'THURSDAY',
+  'FRIDAY',
+  'SATURDAY',
 ] as const;
 
 /** "2026-08-09" → "8월 9일". 연도는 기간 한 줄에서 반복할 필요가 없다. */
 function shortDate(iso?: string) {
   const [, m, d] = (iso ?? '').split('-');
-  return m && d ? `${Number(m)}월 ${Number(d)}일` : '';
+  return m && d
+    ? i18n.t('routineTodo.weeklyReport.shortDate', { month: Number(m), day: Number(d) })
+    : '';
 }
 
 export type WeeklyReportPanelProps = {
@@ -59,18 +63,24 @@ export type WeeklyReportPanelProps = {
  */
 export function WeeklyReportPanel({ report, loading, recommendations }: WeeklyReportPanelProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   const emph = useFontEmphasis();
 
   const stats = report?.stats;
   const byWeekday = useMemo(() => {
     const found = new Map((stats?.byWeekday ?? []).map((w) => [w.dayOfWeek, w]));
-    return WEEKDAYS.map(({ key, label }) => {
+    return WEEKDAYS.map((key, day) => {
       const done = found.get(key)?.completed ?? 0;
       const failed = found.get(key)?.failed ?? 0;
-      return { label, done, total: done + failed };
+      return {
+        label: tr(weekdayLabelKey(day)),
+        longLabel: tr(weekdayLongLabelKey(day)),
+        done,
+        total: done + failed,
+      };
     });
-  }, [stats?.byWeekday]);
+  }, [stats?.byWeekday, tr]);
 
   // 완료 많은 루틴부터 — 목록이 길어도 위에서 성과가 먼저 읽힌다.
   const byRoutine = useMemo(
@@ -78,13 +88,13 @@ export function WeeklyReportPanel({ report, loading, recommendations }: WeeklyRe
       [...(stats?.byRoutine ?? [])]
         .map((r) => ({
           key: String(r.lineageId ?? r.title),
-          title: r.title ?? '이름 없는 루틴',
+          title: r.title ?? tr('routineTodo.weeklyReport.untitledRoutine'),
           category: r.categoryName,
           done: r.completed ?? 0,
           total: (r.completed ?? 0) + (r.failed ?? 0),
         }))
         .sort((a, b) => b.done - a.done || b.total - a.total),
-    [stats?.byRoutine],
+    [stats?.byRoutine, tr],
   );
 
   const scheduled = report?.scheduledCount ?? 0;
@@ -107,7 +117,7 @@ export function WeeklyReportPanel({ report, loading, recommendations }: WeeklyRe
             <Loading />
           ) : (
             <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
-              아직 회고가 없어요.
+              {tr('routineTodo.weeklyReport.empty')}
             </Text>
           )}
         </View>
@@ -124,11 +134,14 @@ export function WeeklyReportPanel({ report, loading, recommendations }: WeeklyRe
       <View style={[styles.hero, { backgroundColor: t.surfaceMuted }]}>
         <Text style={[Typography.display1, emph('bold'), { color: t.primaryText }]}>{rate}%</Text>
         <Text style={[Typography.body, { color: t.textMuted }]}>
-          예정 {scheduled}개 중 {completed}개 완료
+          {tr('routineTodo.weeklyReport.headline', { scheduled, completed })}
         </Text>
         {stats?.streak ? (
           <Text style={[Typography.supporting, { color: t.textMuted }]}>
-            연속 {stats.streak.currentCount ?? 0}일 · 최장 {stats.streak.longestCount ?? 0}일
+            {tr('routineTodo.weeklyReport.streak', {
+              current: stats.streak.currentCount ?? 0,
+              longest: stats.streak.longestCount ?? 0,
+            })}
           </Text>
         ) : null}
       </View>
@@ -137,14 +150,14 @@ export function WeeklyReportPanel({ report, loading, recommendations }: WeeklyRe
         <Text style={[Typography.body, { color: t.text }]}>{report.summary}</Text>
       ) : null}
 
-      <ReportSection title="요일별">
+      <ReportSection title={tr('routineTodo.weeklyReport.byWeekday')}>
         {byWeekday.map((d) => (
-          <WeekdayRow key={d.label} label={d.label} done={d.done} total={d.total} />
+          <WeekdayRow key={d.label} {...d} />
         ))}
       </ReportSection>
 
       {byRoutine.length > 0 ? (
-        <ReportSection title="루틴별">
+        <ReportSection title={tr('routineTodo.weeklyReport.byRoutine')}>
           {byRoutine.map(({ key, ...r }) => (
             <RoutineRow key={key} {...r} />
           ))}
@@ -153,13 +166,22 @@ export function WeeklyReportPanel({ report, loading, recommendations }: WeeklyRe
 
       {hasText ? (
         <>
-          <TextSection title="잘한 점" items={report.highlights} />
-          <TextSection title="아쉬운 점" items={report.failurePatterns} />
-          <TextSection title="다음 주 제안" items={report.suggestions} />
+          <TextSection
+            title={tr('routineTodo.weeklyReport.highlights')}
+            items={report.highlights}
+          />
+          <TextSection
+            title={tr('routineTodo.weeklyReport.failurePatterns')}
+            items={report.failurePatterns}
+          />
+          <TextSection
+            title={tr('routineTodo.weeklyReport.suggestions')}
+            items={report.suggestions}
+          />
         </>
       ) : (
         <Text style={[Typography.supporting, { color: t.textMuted }]}>
-          이번 주는 회고 문구를 만들지 못해 통계만 보여드려요.
+          {tr('routineTodo.weeklyReport.fallback')}
         </Text>
       )}
 
@@ -195,14 +217,27 @@ function TextSection({ title, items }: { title: string; items?: string[] }) {
   );
 }
 
-function WeekdayRow({ label, done, total }: { label: string; done: number; total: number }) {
+function WeekdayRow({
+  label,
+  longLabel,
+  done,
+  total,
+}: {
+  label: string;
+  longLabel: string;
+  done: number;
+  total: number;
+}) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   return (
     <View
       style={styles.statRow}
       accessibilityLabel={
-        total > 0 ? `${label}요일 ${total}개 중 ${done}개 완료` : `${label}요일 예정 없음`
+        total > 0
+          ? tr('routineTodo.weeklyReport.weekdayA11y', { weekday: longLabel, total, done })
+          : tr('routineTodo.weeklyReport.weekdayNoneA11y', { weekday: longLabel })
       }>
       <Text style={[Typography.label, styles.weekdayLabel, { color: t.textMuted }]}>{label}</Text>
       <SpringProgressBar
@@ -231,9 +266,12 @@ function RoutineRow({
   total: number;
 }) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   return (
-    <View style={styles.routineRow} accessibilityLabel={`${title}, ${total}개 중 ${done}개 완료`}>
+    <View
+      style={styles.routineRow}
+      accessibilityLabel={tr('routineTodo.weeklyReport.routineA11y', { title, total, done })}>
       <View style={styles.routineHead}>
         <Text numberOfLines={1} style={[Typography.label, styles.routineTitle, { color: t.text }]}>
           {title}

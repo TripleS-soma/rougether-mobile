@@ -2,6 +2,7 @@ import { Asset } from 'expo-asset';
 import { AppState } from 'react-native';
 import { requireNativeModule } from 'expo-modules-core';
 import type { SpeakerPlayerFactory } from '@/lib/speaker-player.types';
+import { i18n } from '@/i18n';
 
 type NativeSpeaker = {
   prepare(id: string, uri: string, volume: number, title: string): Promise<void>;
@@ -21,7 +22,7 @@ export const createSpeakerPlayer: SpeakerPlayerFactory = (
   volume,
   onPlaying,
   onError,
-  title = '방에 흐르는 소리',
+  title = i18n.t('roomShop.speaker.nowPlayingTitle'),
 ) => {
   // Resolve lazily: older binaries can still launch and display a playback error.
   const native = requireNativeModule<NativeSpeaker>('RougetherSpeaker');

@@ -11,6 +11,7 @@ import { useToast } from '@/components/ui/toast';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 import {
   HOUSE_PRIVATE_ACCENT,
   HOUSE_THEME_PRESETS,
@@ -43,6 +44,7 @@ export type CreateHouseScreenProps = {
  */
 export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouseScreenProps) {
   const t = useTokens();
+  const tr = useT();
   const column = useResponsiveColumn();
   const Typography = useTypography();
   const emph = useFontEmphasis();
@@ -61,7 +63,7 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
 
   return (
     <View style={[styles.screen, useScreenStyle([])]}>
-      <ScreenHeader title="새 집 만들기" onBack={onBack} />
+      <ScreenHeader title={tr('house.create.title')} onBack={onBack} />
 
       <ScrollView
         contentContainerStyle={[
@@ -79,7 +81,7 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
                 maxMembers={capacity}
                 style={styles.previewCover}
                 legacyContentFit="cover"
-                name="선택한 집 테마"
+                name={tr('house.create.selectedThemeA11y')}
                 testID="preview-cover"
               />
             ) : (
@@ -90,27 +92,30 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
             <View style={styles.previewNameRow}>
               <CrownPictogram size={13} />
               <Text style={[Typography.label, { color: t.text }]} numberOfLines={1}>
-                {name.trim() || '집 이름'}
+                {name.trim() || tr('house.create.namePreview')}
               </Text>
             </View>
             <Text style={[Typography.supporting, { color: t.textMuted }]} numberOfLines={1}>
-              {description.trim() || '한 줄 설명이 여기에 표시돼요'}
+              {description.trim() || tr('house.create.descPreview')}
             </Text>
             <Text style={[styles.meta, emph('normal'), { color: t.textMuted }]}>
-              0 / {capacity}명 · {isPrivate ? '비공개' : '공개'}
+              {tr('house.create.previewMeta', {
+                n: capacity,
+                visibility: isPrivate ? tr('house.create.private') : tr('house.create.public'),
+              })}
             </Text>
           </View>
         </View>
 
         {/* Basic info */}
         <View style={[styles.card, { backgroundColor: t.surface }]}>
-          <Labeled label="집 이름" t={t}>
+          <Labeled label={tr('house.create.nameLabel')} t={t}>
             <View style={[styles.inputBox, { backgroundColor: t.surfaceMuted }]}>
               <TextInput
                 style={[styles.input, emph('normal'), { color: t.text }]}
                 value={name}
                 onChangeText={(v) => setName(v.slice(0, 16))}
-                placeholder="우리 집 이름을 정해주세요"
+                placeholder={tr('house.create.namePlaceholder')}
                 placeholderTextColor={t.textMuted}
               />
               <Text style={[styles.counter, emph('normal'), { color: t.textDisabled }]}>
@@ -118,13 +123,13 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
               </Text>
             </View>
           </Labeled>
-          <Labeled label="한 줄 설명" t={t}>
+          <Labeled label={tr('house.create.descLabel')} t={t}>
             <View style={[styles.inputBox, { backgroundColor: t.surfaceMuted }]}>
               <TextInput
                 style={[styles.input, emph('normal'), { color: t.text }]}
                 value={description}
                 onChangeText={(v) => setDescription(v.slice(0, 40))}
-                placeholder="어떤 루틴을 함께 할까요?"
+                placeholder={tr('house.create.descPlaceholder')}
                 placeholderTextColor={t.textMuted}
               />
               <Text style={[styles.counter, emph('normal'), { color: t.textDisabled }]}>
@@ -144,7 +149,7 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
                 styles.sectionLabel,
                 { color: t.textMuted },
               ]}>
-              집 테마
+              {tr('house.create.theme')}
             </Text>
             <HouseCoverPicker
               covers={covers}
@@ -164,7 +169,7 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
               styles.sectionLabel,
               { color: t.textMuted },
             ]}>
-            아이콘 색상
+            {tr('house.create.iconColor')}
           </Text>
           <View style={styles.themeGrid}>
             {HOUSE_THEME_PRESETS.map((x) => {
@@ -184,7 +189,7 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
                   ]}>
                   <Pictogram name={x.icon} size={22} />
                   <Text style={[Typography.supporting, emph('semibold'), { color: t.text }]}>
-                    {x.label}
+                    {tr(x.labelKey)}
                   </Text>
                 </Pressable>
               );
@@ -202,9 +207,11 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
                 styles.sectionLabel,
                 { color: t.textMuted },
               ]}>
-              정원
+              {tr('house.create.capacity')}
             </Text>
-            <Text style={[Typography.label, { color: t.primaryText }]}>{capacity}명</Text>
+            <Text style={[Typography.label, { color: t.primaryText }]}>
+              {tr('house.create.capacityValue', { n: capacity })}
+            </Text>
           </View>
           <View style={styles.capRow}>
             {HOUSE_CAPACITY_OPTIONS.map((n) => {
@@ -237,22 +244,22 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
               styles.sectionLabel,
               { color: t.textMuted },
             ]}>
-            공개 설정
+            {tr('house.create.visibility')}
           </Text>
           <View style={styles.privacyRow}>
             <PrivacyCard
               selected={!isPrivate}
               accent={t.primary}
-              title="공개"
-              subtitle="추천 목록에 노출돼요"
+              title={tr('house.create.public')}
+              subtitle={tr('house.create.publicHint')}
               onPress={() => setIsPrivate(false)}
               t={t}
             />
             <PrivacyCard
               selected={isPrivate}
               accent={HOUSE_PRIVATE_ACCENT}
-              title="비공개"
-              subtitle="초대코드로만 입장 가능"
+              title={tr('house.create.private')}
+              subtitle={tr('house.create.privateHint')}
               onPress={() => setIsPrivate(true)}
               t={t}
             />
@@ -268,18 +275,17 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
               styles.sectionLabel,
               { color: t.textMuted },
             ]}>
-            초대코드
+            {tr('house.create.inviteCode')}
           </Text>
           <Text style={[styles.hint, emph('normal'), { color: t.textMuted }]}>
-            집을 만들면 초대코드가 자동으로 발급돼요. 집 화면의 구성원 관리에서 확인하고 친구에게
-            공유할 수 있어요.
+            {tr('house.create.inviteHint')}
           </Text>
         </View>
 
         <Pressable
           onPress={() => {
             // Blocked tap explains itself instead of a dead gray button.
-            if (!canSubmit) return toast('집 이름을 2자 이상 입력해주세요', 'error');
+            if (!canSubmit) return toast(tr('house.create.nameRequired'), 'error');
             onCreate?.({
               name: name.trim(),
               description: description.trim(),
@@ -296,7 +302,7 @@ export function CreateHouseScreen({ covers = [], onBack, onCreate }: CreateHouse
             pressed && canSubmit && { backgroundColor: t.primaryActive },
           ]}>
           <Text style={[Typography.label, { color: canSubmit ? t.onPrimary : t.textMuted }]}>
-            집 만들기
+            {tr('house.create.submit')}
           </Text>
         </Pressable>
       </ScrollView>

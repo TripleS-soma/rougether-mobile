@@ -1,0 +1,506 @@
+{
+  "member": {
+    "common": {
+      "next": "Next",
+      "start": "Get started",
+      "previous": "Back",
+      "skip": "Skip",
+      "show": "Show",
+      "hide": "Hide",
+      "close": "Close",
+      "save": "Save",
+      "nickname": "Nickname"
+    },
+    "characters": {
+      "cat": {
+        "name": "Cat",
+        "description": "A quiet, warm routine buddy"
+      },
+      "dog": {
+        "name": "Puppy",
+        "description": "A bright, lively routine buddy"
+      },
+      "tiger": {
+        "name": "Tiger",
+        "description": "A bold, brave routine buddy"
+      },
+      "panda": {
+        "name": "Panda",
+        "description": "A laid-back, gentle routine buddy"
+      },
+      "bear": {
+        "name": "Bear",
+        "description": "A steady, cozy routine buddy"
+      },
+      "sheep": {
+        "name": "Sheep",
+        "description": "A soft, mild routine buddy"
+      },
+      "horse": {
+        "name": "Pony",
+        "description": "A spirited, energetic routine buddy"
+      },
+      "otter": {
+        "name": "Otter",
+        "description": "A playful, lovable routine buddy"
+      },
+      "moru": {
+        "name": "Moru",
+        "description": "A cozy routine buddy you meet at level 5"
+      }
+    },
+    "intro": {
+      "slides": {
+        "my-room": {
+          "title": "Where daily routines\nbecome a cozy room",
+          "description": "Welcome to Rougether"
+        },
+        "routines": {
+          "title": "Finish today's routines\nwith a bear check",
+          "description": "Group by category, with reminders and repeats"
+        },
+        "decor": {
+          "title": "Decorate your room\nwith the rewards you earn",
+          "description": "Place furniture, wallpaper and floors wherever you like"
+        },
+        "house": {
+          "title": "Grow together\nin one house with friends",
+          "description": "Visit rooms · send cheers · level up the house with shared missions"
+        },
+        "calendar": {
+          "title": "Track on the calendar,\nearn from the gacha",
+          "description": "Look back on past completions and collect characters and furniture"
+        }
+      },
+      "skipA11y": "Skip the tutorial and leave",
+      "goToSlide": "Go to slide {{n}}",
+      "haveAccount": "I already have an account"
+    },
+    "login": {
+      "notReady": "Server is getting ready",
+      "passwordRequired": "Enter your password",
+      "devLoginFailed": "Login failed. Check the userId and try again.",
+      "googleFailed": "Google login failed. Please try again later.",
+      "kakaoFailed": "Kakao login failed. Please try again later.",
+      "appleFailed": "Apple login failed. Please try again later.",
+      "newAccountFailed": "Couldn't create a new account. Please try again later.",
+      "appIconA11y": "Rougether app icon",
+      "appName": "Rougether",
+      "tagline": "Grow your own room and house together with daily routines.",
+      "emailPlaceholder": "Email",
+      "passwordPlaceholder": "Password",
+      "keepLogin": "Stay signed in",
+      "findPassword": "Forgot password",
+      "loggingIn": "Signing in...",
+      "login": "Sign in",
+      "socialDivider": "Quick sign-in",
+      "startWith": "Continue with {{label}}",
+      "startWithA11y": "Continue with {{label}}",
+      "startWithRecentA11y": "Continue with {{label}}, last used",
+      "recentBadge": "Last used",
+      "provider": {
+        "kakao": "Kakao",
+        "apple": "Apple",
+        "google": "Google",
+        "otherSocial": "another social"
+      },
+      "conflictFallback": "This email is already registered with {{labels}} login.",
+      "conflict": {
+        "title": "This email is already registered",
+        "loginWith": "Sign in with {{provider}}",
+        "continueAsNew": "Continue with a new account",
+        "guideUseExisting": "To use your existing account, sign in with {{provider}}. To start fresh, continue with a new account.",
+        "guideUnavailable": "{{provider}} login isn't available on this device. Sign in with {{provider}} on an iOS device, or continue with a new account to start fresh.",
+        "guideMultiple": "To use your existing account, close this dialog and sign in with the {{labels}} button. To start fresh, continue with a new account.",
+        "guideUnknown": "To use your existing account, sign in the way you signed up. To start fresh, continue with a new account."
+      }
+    },
+    "signup": {
+      "title": "Sign up",
+      "nicknameLength": "Use 2 to 10 characters",
+      "emailInvalidToast": "Check the email format",
+      "retryLater": "Please try again in a moment",
+      "codeLength": "Enter the 6-digit code",
+      "codeExpired": "The code has expired. Please resend it",
+      "welcome": "Welcome, new friend of the village",
+      "intro": "Fill in your details and start your own Rougether",
+      "notice": "Email sign-up is coming soon. For now, sign in from the login screen with the email field empty to create a new account.",
+      "nicknamePlaceholder": "Nickname (2–10 characters)",
+      "email": "Email",
+      "verified": "Verified",
+      "resend": "Resend",
+      "requestCode": "Send code",
+      "emailInvalid": "The email format is invalid",
+      "emailVerified": "Email verified",
+      "code": "Verification code",
+      "codePlaceholder": "6-digit code",
+      "codeHint": "Check your inbox and enter the 6-digit code",
+      "password": "Password",
+      "passwordPlaceholder": "At least 8 characters",
+      "passwordTooShort": "Password must be at least 8 characters",
+      "passwordConfirm": "Confirm password",
+      "passwordConfirmPlaceholder": "Enter your password again",
+      "passwordMismatch": "Passwords don't match",
+      "passwordMatch": "Passwords match",
+      "agreeAll": "Agree to all",
+      "agreeTerms": "Terms of Service",
+      "agreePrivacy": "Privacy Policy",
+      "agreeMarketing": "Marketing communications",
+      "submitNotReady": "Email sign-up isn't available on the server yet",
+      "submitLabel": "Sign-up coming soon",
+      "haveAccount": "Already have an account?",
+      "login": "Sign in",
+      "required": "required",
+      "optional": "optional",
+      "viewDocA11y": "View {{label}}"
+    },
+    "onboarding": {
+      "goals": {
+        "exercise": "Exercise",
+        "study": "Study",
+        "sleep": "Sleep",
+        "reading": "Reading",
+        "organizing": "Organizing",
+        "career": "Job prep",
+        "habit": "Daily habits"
+      },
+      "goalLimit": "You can pick up to {{max}} goals",
+      "nicknameTitle": "What should we call you?",
+      "nicknameBody": "Choose the name {{name}} will call you.",
+      "nicknamePlaceholder": "Nickname (up to {{max}} characters)",
+      "nicknameInputA11y": "Nickname input",
+      "nicknameRequired": "Enter a nickname",
+      "characterTitle": "Pick a character to join you",
+      "characterBody": "Swipe through and meet the friend you like.",
+      "goToCard": "Go to the {{name}} card",
+      "goWith": "Go with {{name}}",
+      "goalTitle": "Pick the goals you care about",
+      "goalBody": "Your goals help us tailor routine suggestions and missions. You can pick up to 3.",
+      "goalRequired": "Pick at least one goal",
+      "pickGoals": "Pick goals"
+    },
+    "starterRoutine": {
+      "lightStart": "Start light",
+      "goals": {
+        "exercise": {
+          "label": "Exercise",
+          "titles": [
+            "Stretch for 3 minutes",
+            "Take a light 5-minute walk",
+            "Loosen shoulders for 1 minute"
+          ]
+        },
+        "study": {
+          "label": "Study",
+          "titles": [
+            "Sum up what you studied in one line",
+            "Learn 3 English words",
+            "Study at your desk for 5 minutes"
+          ]
+        },
+        "sleep": {
+          "label": "Sleep",
+          "titles": [
+            "Put the phone down before bed",
+            "Dim the lights before bed",
+            "Breathe slowly before sleep"
+          ]
+        },
+        "reading": {
+          "label": "Reading",
+          "titles": ["Read 2 pages", "Write down one sentence you liked", "Read for 5 minutes"]
+        },
+        "organizing": {
+          "label": "Organizing",
+          "titles": [
+            "Tidy 3 things on your desk",
+            "Put worn clothes back in place",
+            "Organize what's in your bag"
+          ]
+        },
+        "career": {
+          "label": "Job prep",
+          "titles": [
+            "Look at one job posting",
+            "Write one line about what you learned today",
+            "Think of one interview question"
+          ]
+        },
+        "habit": {
+          "label": "Daily habits",
+          "titles": [
+            "Drink a glass of water",
+            "Open a window for fresh air",
+            "Write down one good thing about today"
+          ]
+        }
+      },
+      "eyebrow": "My first routine",
+      "title": "Shall we start small?",
+      "bodyLight": "Here are some light routines to start with.",
+      "bodyMatched": "Picked to match your interests.",
+      "bodyPickOne": "Choose just one to begin.",
+      "schedule": "Daily · from today",
+      "footnote": "Just check it off when you're done. Reminders are off, and you can change the repeat and time later.",
+      "checkingA11y": "Checking my routines",
+      "creating": "Creating your routine",
+      "recheck": "Check again",
+      "startWithThis": "Start with this routine",
+      "later": "Maybe later",
+      "saveUnconfirmed": "Couldn't confirm the routine was saved. Please check again.",
+      "loadFailed": "Couldn't load your routines. Check your connection and try again."
+    },
+    "myPage": {
+      "title": "Profile",
+      "settingsA11y": "Settings",
+      "weeklyReport": "Weekly review",
+      "calendarImport": "Calendar import",
+      "inviteFriends": "Invite friends",
+      "help": "Help",
+      "bugReport": "Report a bug",
+      "attendance": "Check-in event",
+      "walletHistory": "Wallet history",
+      "streakValue": "{{count}}d",
+      "streak": "Streak",
+      "coin": "Coins",
+      "diamond": "Diamonds",
+      "bioPlaceholder": "Write a one-line bio",
+      "editProfile": "Edit profile"
+    },
+    "profileEdit": {
+      "title": "Edit profile",
+      "characterHint": "You can change your character in My Room.",
+      "nicknamePlaceholder": "Enter a nickname",
+      "bio": "Bio",
+      "bioPlaceholder": "Introduce yourself in one line",
+      "saveA11y": "Save profile"
+    },
+    "help": {
+      "title": "Help",
+      "faqTitle": "FAQ",
+      "faq": {
+        "addRoutine": {
+          "q": "How do I add a routine?",
+          "a": "Tap the + button on a category in My Room, or add one from the routine management screen."
+        },
+        "currency": {
+          "q": "How do I earn coins and diamonds?",
+          "a": "You earn coins by completing routines every day. Spend coins on the gacha; if you draw an item you already own, it turns into diamonds. Use diamonds to buy furniture in room decoration."
+        },
+        "friends": {
+          "q": "How do I play with friends?",
+          "a": "Create a new house from the House tab or join a friend's house to keep up routines together."
+        }
+      },
+      "support": "Support",
+      "contact": "Contact us",
+      "version": "Version {{version}}"
+    },
+    "bugReport": {
+      "title": "Report a bug",
+      "status": {
+        "RECEIVED": "Received",
+        "IN_PROGRESS": "In progress",
+        "RESOLVED": "Resolved"
+      },
+      "fillRequired": "Enter a title and details",
+      "submitted": "Your report has been received. Thanks for the feedback!",
+      "submitFailed": "Couldn't submit the report. Please try again later.",
+      "titleLabel": "Title",
+      "titlePlaceholder": "What went wrong?",
+      "content": "Details",
+      "contentPlaceholder": "Describing what happened in detail helps us fix it faster",
+      "removeShotA11y": "Remove screenshot {{n}}",
+      "addShotA11y": "Add screenshot",
+      "submitting": "Submitting...",
+      "submit": "Submit",
+      "history": "My reports",
+      "empty": "No reports yet",
+      "closeViewerA11y": "Close attachment",
+      "openShotA11y": "View attached screenshot"
+    },
+    "inviteFriends": {
+      "title": "Invite friends",
+      "inviterName": "{{name}}",
+      "inviterFallback": "a friend",
+      "shareMessage": "Keep up routines together on Rougether! My invite code: {{code}}\n{{link}}",
+      "linkCopied": "Invite link copied",
+      "loadFailed": "Couldn't load invite info.",
+      "myCode": "My invite code",
+      "copyA11y": "Copy invite code",
+      "copied": "Copied",
+      "copy": "Copy",
+      "shareA11y": "Share invite link",
+      "share": "Share link",
+      "rewardHint": "When a friend enters this code, you get {{mine}} coins and your friend gets {{theirs}} coins.",
+      "rewardedCount": "{{count}} friends have joined with my code so far.",
+      "haveCode": "Got a code?",
+      "redeemed": "You received {{coin}} coins!",
+      "confirmInviter": "Is this an invite from {{inviter}}?",
+      "confirmDetail": "Code {{code}} · you'll get {{coin}} coins",
+      "confirmA11y": "Confirm invite code",
+      "redeeming": "Redeeming...",
+      "receiveCoin": "Get {{coin}} coins",
+      "reenterA11y": "Re-enter invite code",
+      "reenter": "Re-enter",
+      "codePlaceholder": "Invite code from a friend",
+      "codeInputA11y": "Invite code input",
+      "redeemA11y": "Use invite code",
+      "checking": "Checking...",
+      "redeem": "Use",
+      "alreadyRedeemed": "This account has already received an invite reward.",
+      "onceOnly": "An invite code can only be used once."
+    },
+    "calendarImport": {
+      "title": "Calendar import",
+      "repeat": {
+        "daily": "Repeats daily",
+        "weekly": "Repeats weekly",
+        "biweekly": "Repeats biweekly",
+        "monthly": "Repeats monthly",
+        "yearly": "Repeats yearly"
+      },
+      "shortDate": "{{month}}/{{day}}",
+      "intro": "Imports events from today → 30 days ahead from your device calendar as to-dos. Read-only, nothing is written to the calendar.",
+      "denied": "Calendar access is off. Enable Rougether's calendar permission in device settings.",
+      "connect": "Connect calendar",
+      "noCalendars": "No readable calendars.",
+      "pickCalendars": "Calendars to import",
+      "calendarA11y": "Calendar {{title}}",
+      "preview": "Load events",
+      "noEvents": "No events to import in the next 30 days.",
+      "pickEvents": "Events to import ({{selected}}/{{total}})",
+      "exactOnly": "Only exact title matches are flagged as overlaps right now.",
+      "similarA11y": "Similar item exists",
+      "kindRoutine": "routine",
+      "kindTodo": "to-do",
+      "similarExists": "A similar {{kind}} exists · {{title}}",
+      "import": "Import {{count}}"
+    },
+    "notificationSettings": {
+      "title": "Push notifications",
+      "rows": {
+        "reminder": {
+          "label": "Routine reminders",
+          "desc": "Routines, to-dos, weekly reviews and cat-return alerts"
+        },
+        "house": {
+          "label": "House alerts",
+          "desc": "Cheers and news from your house"
+        }
+      },
+      "pushStep": {
+        "permission-denied": "Notifications are off on this device. Turn them on in system settings to receive pushes.",
+        "token-failed": "Couldn't register this device with the notification server. Restart the app, and let us know if it keeps happening.",
+        "register-failed": "This device's registration wasn't saved. Check your network and restart the app."
+      },
+      "loadFailed": "Couldn't load settings. The values shown may differ from your actual settings.",
+      "retry": "Reload",
+      "all": "All notifications",
+      "allDesc": "Turn all push notifications on or off at once",
+      "saveFailed": "Couldn't save notification settings. Please try again later."
+    },
+    "soundSettings": {
+      "title": "Sound",
+      "rows": {
+        "effects": {
+          "label": "Sound effects",
+          "desc": "Sounds for buttons, gacha and more"
+        },
+        "music": {
+          "label": "Background music",
+          "desc": "Allow background sound played from your speaker"
+        }
+      },
+      "strength": {
+        "off": "Off",
+        "light": "Light",
+        "medium": "Medium",
+        "heavy": "Strong"
+      },
+      "haptic": "Haptic feedback",
+      "hapticDesc": "Vibrates on key actions",
+      "hapticA11y": "Haptics {{label}}",
+      "localOnly": "Sound and haptic settings are stored on this device."
+    },
+    "missions": {
+      "complete-routine": {
+        "label": "Complete 1 routine today",
+        "hint": "Tap a routine check in My Room"
+      },
+      "first-draw": {
+        "label": "Try the gacha once",
+        "hint": "Draw your first furniture and place it in your room"
+      },
+      "place-furniture": {
+        "label": "Save a room decoration",
+        "hint": "Place furniture in decoration mode and save"
+      },
+      "invite-house": {
+        "label": "Invite a friend to your house",
+        "hint": "Share the invite link from house management"
+      }
+    },
+    "tutorial": {
+      "skipA11y": "Skip tutorial",
+      "finishA11y": "Finish tutorial",
+      "nextA11y": "Next step",
+      "coach": {
+        "backToRoom": {
+          "title": "Back to My Room",
+          "body": "Tap the Room tab below to continue the mission."
+        },
+        "completeRoutine": {
+          "title": "Complete today's routine",
+          "body": "Tap the check to finish today's share and earn coins."
+        },
+        "draw": {
+          "title": "Shall we draw once?",
+          "body": "Tap Draw 1 to get furniture for your room."
+        },
+        "goToGacha": {
+          "title": "Get furniture from the gacha",
+          "body": "Tap the gift button on the right to go to the gacha."
+        },
+        "placeFurniture": {
+          "title": "Place furniture and save",
+          "body": "Pick furniture from the list below, place it in the room, then tap Apply."
+        },
+        "goToDecor": {
+          "title": "Shall we decorate?",
+          "body": "Tap the pencil button to start decorating."
+        },
+        "shareInvite": {
+          "title": "Send a friend an invite link",
+          "body": "Tap Share link and your friend can join the house right away."
+        },
+        "houseManage": {
+          "title": "Open house management",
+          "body": "You can invite friends from house management."
+        },
+        "goToHouse": {
+          "title": "Go to the house",
+          "body": "Tap the House tab below to invite friends."
+        }
+      }
+    },
+    "appearance": {
+      "roomOf": "{{name}}'s room",
+      "myRoom": "My room",
+      "calendarChip": "Calendar",
+      "cta": "Complete today's routine"
+    },
+    "theme": {
+      "title": "Theme color",
+      "optionA11y": "{{name}} theme"
+    },
+    "font": {
+      "title": "Font",
+      "optionA11y": "{{name}} font"
+    },
+    "myCharacters": {
+      "swapFailed": "Couldn't change character",
+      "swapped": "Character changed"
+    }
+  }
+}

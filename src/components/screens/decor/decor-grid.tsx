@@ -11,6 +11,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { assetSource, isCdnKey } from '@/resources/asset';
 import { type FurnitureItem, type Wallpaper } from '@/resources/furniture';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 /**
  * 꾸미기 카탈로그 그리드 (room-decor-screen에서 분리, #794 memo 경계 그대로).
@@ -98,18 +99,21 @@ function useOwnedPopStyle(isOwned: boolean) {
 /** 비우기 tile shared by the grids — clears the slot/surface being picked. */
 const ClearTile = memo(function ClearTile({ onClear, t }: { onClear?: () => void; t: Tokens }) {
   const emph = useFontEmphasis();
+  const tr = useT();
   const tileWidth = useTileWidthStyle();
   if (!onClear) return null;
   return (
     <Pressable
       onPress={onClear}
       accessibilityRole="button"
-      accessibilityLabel="비우기"
+      accessibilityLabel={tr('roomShop.decor.grid.clear')}
       style={[styles.tile, tileWidth, styles.clearTile, { borderColor: t.border }]}>
       <View style={[styles.thumbWrap, styles.clearThumb]}>
         <Icon name="close" size={18} color={t.textMuted} />
       </View>
-      <Text style={[styles.tileName, emph('medium'), { color: t.textMuted }]}>비우기</Text>
+      <Text style={[styles.tileName, emph('medium'), { color: t.textMuted }]}>
+        {tr('roomShop.decor.grid.clear')}
+      </Text>
     </Pressable>
   );
 });
@@ -173,6 +177,7 @@ const SwatchTile = memo(function SwatchTile({
   t: Tokens;
 }) {
   const emph = useFontEmphasis();
+  const tr = useT();
   const tileWidth = useTileWidthStyle();
   const popStyle = useOwnedPopStyle(isOwned);
   return (
@@ -190,7 +195,11 @@ const SwatchTile = memo(function SwatchTile({
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
       accessibilityLabel={
-        isOwned ? item.name : active ? `${item.name} 구매` : `${item.name} 미리 적용`
+        isOwned
+          ? item.name
+          : tr(active ? 'roomShop.decor.grid.buyA11y' : 'roomShop.decor.grid.previewApplyA11y', {
+              name: item.name,
+            })
       }
       style={[
         styles.tile,
@@ -214,7 +223,9 @@ const SwatchTile = memo(function SwatchTile({
       )}
       {/* 이름은 표시하지 않는다 (#487) — 이미지가 곧 정보. 접근성 라벨은 유지. */}
       {isOwned ? (
-        <Text style={[styles.tilePrice, emph('normal'), { color: t.textMuted }]}>보유</Text>
+        <Text style={[styles.tilePrice, emph('normal'), { color: t.textMuted }]}>
+          {tr('roomShop.decor.grid.owned')}
+        </Text>
       ) : (
         <View style={styles.priceRow}>
           <Icon name="diamond" size={10} color={t.primary} />
@@ -251,10 +262,11 @@ export const FurnitureGrid = memo(function FurnitureGrid({
   t: Tokens;
 }) {
   const Typography = useTypography();
+  const tr = useT();
   if (items.length === 0) {
     return (
       <Text style={[Typography.supporting, styles.emptyPicker, { color: t.textMuted }]}>
-        이 자리에 놓을 수 있는 가구가 아직 없어요.
+        {tr('roomShop.decor.grid.emptySlot')}
       </Text>
     );
   }
@@ -294,6 +306,7 @@ const FurnitureTile = memo(function FurnitureTile({
   t: Tokens;
 }) {
   const emph = useFontEmphasis();
+  const tr = useT();
   const tileWidth = useTileWidthStyle();
   const popStyle = useOwnedPopStyle(isOwned);
   return (
@@ -302,7 +315,9 @@ const FurnitureTile = memo(function FurnitureTile({
       onPress={() => onPlace(item)}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
-      accessibilityLabel={isOwned ? item.name : `${item.name} 미리 배치`}
+      accessibilityLabel={
+        isOwned ? item.name : tr('roomShop.decor.grid.previewPlaceA11y', { name: item.name })
+      }
       style={[
         styles.tile,
         tileWidth,
@@ -328,7 +343,9 @@ const FurnitureTile = memo(function FurnitureTile({
       ) : null}
       {/* 이름은 표시하지 않는다 (#487) — 접근성 라벨은 유지. */}
       {isOwned ? (
-        <Text style={[styles.tilePrice, emph('normal'), { color: t.textMuted }]}>보유</Text>
+        <Text style={[styles.tilePrice, emph('normal'), { color: t.textMuted }]}>
+          {tr('roomShop.decor.grid.owned')}
+        </Text>
       ) : (
         <View style={styles.priceRow}>
           <Icon name="diamond" size={10} color={t.primary} />

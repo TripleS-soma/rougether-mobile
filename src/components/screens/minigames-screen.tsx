@@ -9,6 +9,7 @@ import { RetryState } from '@/components/ui/retry-state';
 import { getMinigameDefinition } from '@/constants/minigames';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 export type MinigamesScreenProps = {
   games?: Minigame[];
@@ -35,6 +36,7 @@ export function MinigamesScreen({
 }: MinigamesScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
+  const tr = useT();
   const availablePracticeGames = error
     ? practiceGames
     : practiceGames.filter((game) => !games.some((ranked) => ranked.gameCode === game.gameCode));
@@ -61,8 +63,8 @@ export function MinigamesScreen({
         {practice ? (
           <Button
             glass
-            label="연습"
-            accessibilityLabel={`${game.name} 연습하기 · 랭킹 미기록`}
+            label={tr('roomShop.minigame.practice')}
+            accessibilityLabel={tr('roomShop.minigame.practiceA11y', { name: game.name })}
             variant="secondary"
             onPress={() => onPractice?.(game.gameCode)}
           />
@@ -70,15 +72,15 @@ export function MinigamesScreen({
           <View style={styles.actions}>
             <Button
               glass
-              label="시작"
-              accessibilityLabel={`${game.name} 시작`}
+              label={tr('roomShop.minigame.start')}
+              accessibilityLabel={tr('roomShop.minigame.startA11y', { name: game.name })}
               style={styles.action}
               onPress={() => onSelectGame?.(game.gameCode)}
             />
             <Button
               glass
-              label="랭킹"
-              accessibilityLabel={`${game.name} 랭킹`}
+              label={tr('roomShop.minigame.ranking')}
+              accessibilityLabel={tr('roomShop.minigame.rankingA11y', { name: game.name })}
               variant="secondary"
               style={styles.action}
               onPress={() => onLeaderboard?.(game.gameCode)}
@@ -89,19 +91,24 @@ export function MinigamesScreen({
     );
   };
   return (
-    <MinigameLayout title="미니게임" onBack={onBack}>
+    <MinigameLayout title={tr('roomShop.minigame.title')} onBack={onBack}>
       {loading ? (
-        <ActivityIndicator color={t.primaryText} accessibilityLabel="게임 불러오는 중" />
+        <ActivityIndicator
+          color={t.primaryText}
+          accessibilityLabel={tr('roomShop.minigame.loading')}
+        />
       ) : null}
-      {error ? <RetryState message="게임 목록을 불러오지 못했어요" onRetry={onRetry} /> : null}
+      {error ? <RetryState message={tr('roomShop.minigame.listError')} onRetry={onRetry} /> : null}
       {!loading && !error && games.length === 0 ? (
-        <Text style={[Typography.body, { color: t.textMuted }]}>지금은 등록된 게임이 없어요.</Text>
+        <Text style={[Typography.body, { color: t.textMuted }]}>
+          {tr('roomShop.minigame.empty')}
+        </Text>
       ) : null}
       {!error ? games.map((game) => renderGameCard(game)) : null}
       {showPractice ? (
         <View style={styles.practiceSection}>
           <Text accessibilityRole="header" style={[Typography.h3, { color: t.text }]}>
-            연습 · 기록 안 함
+            {tr('roomShop.minigame.practiceSection')}
           </Text>
           {availablePracticeGames.map((game) => renderGameCard(game, true))}
         </View>

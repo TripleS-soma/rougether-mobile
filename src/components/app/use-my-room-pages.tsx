@@ -7,7 +7,7 @@ import {
   type Dispatch,
   type SetStateAction,
 } from 'react';
-import { Linking } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { getSessionUserId } from '@/api/auth';
@@ -37,6 +37,7 @@ import type { RoomGrowthProps } from '@/components/ui/room-growth-pill';
 import { queryKeys } from '@/lib/query-keys';
 import { useLatestRef } from '@/hooks/use-stable-value';
 import { calendarToday } from '@/utils/calendar-progress';
+import { i18n } from '@/i18n';
 
 type MyRoomData = ReturnType<typeof useMyRoomData>;
 type MissionLinks = ReturnType<typeof useMissionLinks>;
@@ -208,6 +209,15 @@ export function useMyRoomPages({
     setSelectedDate: setCalendarSelectedDate,
     refresh: refreshCalendar,
   } = calendar;
+  // 달력 탭 날짜 탭 → 주간 보기 (#1327). 선택은 MyRoomScreen이 이미 바꿨다.
+  const openCalendarWeek = useCallback(
+    (date: string) => {
+      track('calendar_week_open', { today: date === calendar.today });
+      setScreen('calendarWeek');
+    },
+    [calendar.today, setScreen],
+  );
+  const closeCalendarWeek = useCallback(() => setScreen('calendar'), [setScreen]);
   const markedCalendarDates = useMemo(
     () => new Set([...(room.markedTodoDates ?? []), ...(calendar.monthTodoDates ?? [])]),
     [room.markedTodoDates, calendar.monthTodoDates],
@@ -343,6 +353,11 @@ export function useMyRoomPages({
     (r: Routine) => openEditRoutine(r, 'calendar'),
     [openEditRoutine],
   );
+  // 주간 보기에서 연 수정은 주간 보기로 돌아온다 (#1327).
+  const editRoutineFromCalendarWeek = useCallback(
+    (r: Routine) => openEditRoutine(r, 'calendarWeek'),
+    [openEditRoutine],
+  );
   const handleSelectDate = useCallback(
     (date: string) => {
       void loadCalendarDay(date);
@@ -427,8 +442,8 @@ export function useMyRoomPages({
     setPushBanner({
       key: pushBannerSeq.current,
       type: 'WEEKLY_REPORT',
-      title: '주간회고가 도착했어요',
-      body: '지난주 루틴을 돌아보고 이번 주 조정 제안을 확인해 보세요',
+      title: i18n.t('routineTodo.weeklyReport.arrivedTitle'),
+      body: i18n.t('routineTodo.weeklyReport.arrivedBody'),
       onPress: () => openWeeklyReport(),
     });
   }, [weeklyReport.unread, weeklyReport.latest?.reportId, openWeeklyReport]);
@@ -611,6 +626,17 @@ export function useMyRoomPages({
       selectedDate: calendarSelectedDate,
       onSelectedDateChange: setCalendarSelectedDate,
       onEditRoutine: editRoutineFromCalendar,
+      // 주간 보기는 앱만 (#1327 후속) — 웹은 화면이 넓어 종전처럼 월 달력 아래 목록을 그대로 둔다.
+      onOpenDay: Platform.OS === 'web' ? undefined : openCalendarWeek,
+    },
+    /** 주간 보기 (#1327) — 달력 탭과 같은 props에 week 모드·뒤로만 더한다. */
+    calendarWeekProps: {
+      ...tabProps,
+      selectedDate: calendarSelectedDate,
+      onSelectedDateChange: setCalendarSelectedDate,
+      onEditRoutine: editRoutineFromCalendarWeek,
+      calendarMode: 'week' as const,
+      onBack: closeCalendarWeek,
     },
     subScreen,
     /** 인앱 푸시 배너 (#902) — 셸이 상단에 그린다. */

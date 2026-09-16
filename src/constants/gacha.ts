@@ -2,32 +2,48 @@ import type { GachaMachine } from '@/api/adapters';
 import type { GachaCategory } from '@/api/types';
 import type { PictogramName } from '@/components/ui/pictograms';
 import { GachaAccents } from '@/constants/theme';
+import { i18n } from '@/i18n';
 
 export const GACHA_CATEGORIES = ['WALLPAPER', 'FLOOR', 'FURNITURE'] as const;
 
-/** Category identity must not change with server list order or room theme. */
+/**
+ * Category identity must not change with server list order or room theme.
+ * title·label은 getter — 모듈 로드 시점에 번역하면 언어 변경이 반영되지 않는다 (#893).
+ */
 export const GACHA_CATEGORY_META: Record<
   GachaCategory,
   { code: string; title: string; label: string; icon: PictogramName; accent: string }
 > = {
   WALLPAPER: {
     code: 'wallpaper_gacha',
-    title: '벽지 뽑기',
-    label: '벽지',
+    get title() {
+      return i18n.t('roomShop.gacha.category.WALLPAPER.title');
+    },
+    get label() {
+      return i18n.t('roomShop.gacha.category.WALLPAPER.label');
+    },
     icon: 'palette',
     accent: GachaAccents[3],
   },
   FLOOR: {
     code: 'floor_gacha',
-    title: '바닥 뽑기',
-    label: '바닥',
+    get title() {
+      return i18n.t('roomShop.gacha.category.FLOOR.title');
+    },
+    get label() {
+      return i18n.t('roomShop.gacha.category.FLOOR.label');
+    },
     icon: 'house',
     accent: GachaAccents[1],
   },
   FURNITURE: {
     code: 'furniture_gacha',
-    title: '가구 뽑기',
-    label: '가구',
+    get title() {
+      return i18n.t('roomShop.gacha.category.FURNITURE.title');
+    },
+    get label() {
+      return i18n.t('roomShop.gacha.category.FURNITURE.label');
+    },
     icon: 'gift',
     accent: GachaAccents[2],
   },

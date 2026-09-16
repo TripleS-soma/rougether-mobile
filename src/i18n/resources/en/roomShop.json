@@ -1,0 +1,386 @@
+{
+  "roomShop": {
+    "room": {
+      "vacant": "Vacant"
+    },
+    "wallet": {
+      "coin": "Coins",
+      "diamond": "Diamonds",
+      "reason": {
+        "ROUTINE_COMPLETE": "Routine completed",
+        "TODO_COMPLETE": "To-do completed",
+        "SIGNUP_BONUS": "Sign-up bonus",
+        "GACHA_DUPLICATE_CONVERT": "Duplicate draw converted",
+        "INVITE_REWARD": "Friend invite reward",
+        "GACHA_DRAW": "Gift draw",
+        "SHOP_PURCHASE": "Shop purchase",
+        "other": "Other"
+      },
+      "historyTitle": "Currency history",
+      "closeA11y": "Close currency history",
+      "historyError": "Couldn't load your currency history.",
+      "historyEmpty": "No currency history yet",
+      "balanceAfter": " · Balance {{balance}}",
+      "moreA11y": "More currency history",
+      "more": "More"
+    },
+    "growth": {
+      "hint": "Shows the points left until the next level",
+      "toast": "{{n}} points to the next level",
+      "a11y": "My room level {{level}}",
+      "a11yRemaining": ", {{n}} points to the next level",
+      "a11yPoints": ", {{n}} points in total"
+    },
+    "shop": {
+      "cobwebAlreadyCleaned": "Someone already cleaned it",
+      "cobwebCleanFailed": "Couldn't clean the cobweb. Please try again later.",
+      "purchaseDone": "Purchased!",
+      "insufficientDiamond": "Not enough diamonds",
+      "purchaseFailed": "Purchase failed",
+      "layoutSaved": "Room layout saved",
+      "layoutSaveFailed": "Couldn't save the room layout"
+    },
+    "decor": {
+      "back": "Back",
+      "deselectA11y": "Deselect",
+      "surface": {
+        "wallpaper": "Wallpaper",
+        "floor": "Floor",
+        "background": "Background"
+      },
+      "surfacePreviewBuyA11y": "Buy {{surface}} preview",
+      "tool": {
+        "rotateCcw": "Rotate left",
+        "rotateCw": "Rotate right",
+        "flip": "Flip horizontally",
+        "toFront": "Bring to front",
+        "toBack": "Send to back",
+        "remove": "Remove"
+      },
+      "catalogLoading": "Loading catalog...",
+      "catalogError": "Couldn't load the catalog.",
+      "tab": {
+        "furniture": "Furniture",
+        "decor": "Decor",
+        "wallpaper": "Wallpaper",
+        "floor": "Floor",
+        "background": "Background"
+      },
+      "tabA11y": "{{label}} tab",
+      "slotPickerTitle": "Furniture for this spot",
+      "closePickerA11y": "Close picker",
+      "ownedOnly": "Owned only",
+      "insufficientDiamond": "Not enough diamonds",
+      "alreadyPlaced": "This furniture is already placed",
+      "conflictTitle": "Saved first on another device",
+      "conflictBody": "Your room layout changed elsewhere, so this edit can't be saved.\nReloading will discard what you edited here.",
+      "conflictConfirm": "Reload",
+      "conflictCancel": "Keep viewing",
+      "conflictCloseA11y": "Close conflict dialog",
+      "grid": {
+        "clear": "Clear",
+        "buyA11y": "Buy {{name}}",
+        "previewApplyA11y": "Preview {{name}}",
+        "previewPlaceA11y": "Place {{name}} as preview",
+        "owned": "Owned",
+        "emptySlot": "No furniture for this spot yet."
+      },
+      "furniture": {
+        "moveA11y": "Move {{name}}",
+        "movePreviewA11y": "Move {{name}} preview",
+        "moveHint": "Tap to select, drag to move",
+        "resizeA11y": "Resize {{name}}"
+      },
+      "checkout": {
+        "title": "{{n}} unpurchased previews",
+        "total": "Total (you have {{balance}})",
+        "buyAllA11y": "Buy all and save",
+        "buying": "Buying...",
+        "insufficientDiamond": "Not enough diamonds",
+        "buyAll": "Buy all and save",
+        "saveWithoutA11y": "Save without previews",
+        "saveWithout": "Save without previews",
+        "stayA11y": "Keep previewing",
+        "stay": "Keep decorating"
+      },
+      "leave": {
+        "title": "Save your changes?",
+        "body": "You have decorating changes that haven't been applied.",
+        "saveAndLeave": "Save and leave",
+        "leaveWithoutSaving": "Leave without saving",
+        "stay": "Keep decorating"
+      },
+      "buy": {
+        "title": "Buy this item?",
+        "body": "Buy ‘{{name}}’ for {{price}} diamonds.\nPurchased items can be placed right away.",
+        "cancelA11y": "Cancel purchase",
+        "confirmA11y": "Confirm purchase",
+        "confirm": "Buy"
+      }
+    },
+    "friendRoom": {
+      "defaultName": "Friend",
+      "cheer": {
+        "great": "Great job!",
+        "support": "Cheer",
+        "best": "Best today!"
+      },
+      "title": "{{name}}'s room",
+      "back": "Back",
+      "loadError": "Couldn't load your friend's room",
+      "loadErrorDetail": "Check your connection and try again.",
+      "streakDays": "{{n}} days",
+      "pendingNotice": "Friend room decor and routine data are still being prepared on the server, so this is a preview.",
+      "routinesTitle": "{{name}}'s routines",
+      "noRoutines": "No routines scheduled today.",
+      "guestbook": "Guestbook",
+      "guestbookEmptyInput": "Write something in the guestbook first",
+      "me": "Me",
+      "today": "Today",
+      "guestbookPlaceholder": "Leave a warm note",
+      "guestbookInputA11y": "Guestbook input",
+      "guestbookSendA11y": "Post to guestbook",
+      "guestbookSend": "Post",
+      "guestbookEmpty": "No guestbook notes yet. Leave the first one!",
+      "bot": "Bot",
+      "guestbookMoreA11y": "More guestbook notes",
+      "more": "More",
+      "recheerTitle": "Cheer again",
+      "recheerBody": "You already sent a cheer today. Send another?",
+      "recheerCancelA11y": "Cancel cheering again",
+      "recheerConfirmA11y": "Confirm cheering again",
+      "send": "Send"
+    },
+    "gacha": {
+      "title": "Gift draw",
+      "listLoading": "Loading gift boxes...",
+      "listError": "Couldn't load the gift boxes.",
+      "insufficientBalance": "Not enough balance",
+      "drawFailed": "The draw failed.",
+      "emptyTitle": "New gifts are on the way",
+      "emptyBody": "Wallpaper, floor and furniture boxes will show up here once they're ready.",
+      "refreshListA11y": "Refresh gift boxes",
+      "refresh": "Refresh",
+      "skipA11y": "Skip the draw animation",
+      "skip": "Skip",
+      "preparing": "Preparing your gift",
+      "preparingHint": "Just a moment",
+      "newDiscovery": "A new discovery of your own",
+      "newGiftWaiting": "A new gift is waiting in your room",
+      "resultsTitle": "Draw results",
+      "resultsCount": "{{n}} items",
+      "goDecorate": "Decorate my room",
+      "rewardsTitle": "Possible rewards",
+      "rewardsHint": "Items you already own are converted into diamonds.",
+      "rewardsError": "Couldn't load the reward list.",
+      "rarity": {
+        "common": "Common",
+        "rare": "Rare",
+        "legendary": "Legendary",
+        "other": "Other"
+      },
+      "reward": {
+        "unnamed": "Unnamed reward",
+        "character": "Character",
+        "owned": "Owned"
+      },
+      "reveal": {
+        "coin": "Coins",
+        "diamond": "Diamonds",
+        "currency": "Currency",
+        "refund": "{{currency}} refund",
+        "characterReward": "Character reward",
+        "itemReward": "Item reward",
+        "duplicate": "Duplicate · {{label}}"
+      },
+      "category": {
+        "WALLPAPER": {
+          "title": "Wallpaper draw",
+          "label": "Wallpaper"
+        },
+        "FLOOR": {
+          "title": "Floor draw",
+          "label": "Floor"
+        },
+        "FURNITURE": {
+          "title": "Furniture draw",
+          "label": "Furniture"
+        }
+      },
+      "lobby": {
+        "copy": {
+          "WALLPAPER": {
+            "title": "A new look for your walls",
+            "detail": "Wallpapers from many themes, all in one box."
+          },
+          "FLOOR": {
+            "title": "Lay down some coziness",
+            "detail": "Change the mood of your room with floors from many themes."
+          },
+          "FURNITURE": {
+            "title": "A piece you'll love",
+            "detail": "Discover furniture and decor from many themes."
+          }
+        },
+        "eyebrow": "A little thrill for today",
+        "heading": "A gift arrived in your room",
+        "categoryA11y": "{{label}} draw",
+        "heroA11y": "A gift box with a green ribbon in a sunlit room",
+        "boxTag": "{{label}} box",
+        "rewardsA11y": "See possible rewards",
+        "rewardsTitle": "What gift awaits you?",
+        "rewardsHint": "See possible rewards",
+        "drawOne": "Draw 1",
+        "drawBonus": "Draw 5+1",
+        "drawA11y": "{{label}}, {{cost}} {{currency}}",
+        "starter": {
+          "title": "Your first furniture: a cozy speaker",
+          "detail": "Your first draw gives you a speaker. Place it anywhere you like.",
+          "drawFree": "First furniture draw (free)",
+          "claimed": "See your speaker"
+        }
+      },
+      "giftOpenA11y": "Open the gift box",
+      "giftOpenHint": "Opens the gift you already drew. No extra currency is spent.",
+      "starterMachineName": "First furniture"
+    },
+    "studio": {
+      "title": "AI furniture studio",
+      "heroTitle": "Bring furniture from a photo into your room",
+      "heroBody": "Turn one photo of furniture you love\ninto your own piece in Rougether.",
+      "credits": "{{n}} credits",
+      "creditsChecking": "Checking credits",
+      "creditsReserved": " · {{n}} in use",
+      "creditsLoadingA11y": "Loading credits",
+      "recheck": "Check again",
+      "makingTitle": "Making your furniture",
+      "makingBody": "This may take a moment. It keeps going even if you leave this screen.",
+      "photoA11y": "Selected furniture photo",
+      "changePhoto": "Change photo",
+      "choosePhoto": "Choose a furniture photo",
+      "sending": "Sending photo",
+      "submit": "Make it with 1 credit",
+      "photoHint": "A JPG or PNG photo showing one piece of furniture · up to 10MB\nThe photo is used to create AI furniture. Credits are refunded if generation fails.",
+      "attendanceTitle": "Check in for 7 days, make your own furniture",
+      "attendanceBody": "Check in 7 days in a row to earn 1 credit.",
+      "attendanceCta": "View attendance event",
+      "myFurniture": "Furniture I made",
+      "resultA11y": "Finished AI furniture",
+      "succeeded": "Added to your inventory",
+      "failed": "Couldn't finish this one",
+      "placeInRoom": "Place in my room",
+      "retryHint": "Try again with a different photo.",
+      "error": {
+        "FURNITURE_CREDITS_REQUIRED": "Not enough credits. Earn credits from the attendance event.",
+        "FURNITURE_GENERATION_UNAVAILABLE": "Furniture making is taking a break. Please try again later.",
+        "FURNITURE_DAILY_LIMIT": "You've used all of today's attempts. See you tomorrow.",
+        "FURNITURE_JOB_IN_PROGRESS": "A piece is still being made. You can start a new one once it's done.",
+        "FURNITURE_PHOTO_INVALID": "Choose a JPG or PNG photo that clearly shows the furniture.",
+        "tooLarge": "Choose a photo under 10MB.",
+        "network": "Check your connection and try again.",
+        "wrongType": "Choose a JPG or PNG photo.",
+        "openFailed": "Couldn't open the photo. Check your photo access settings.",
+        "inventoryLoadFailed": "Couldn't load your inventory. Please try again."
+      }
+    },
+    "minigame": {
+      "runner": {
+        "name": "Routine Runner",
+        "description": "Tap to jump over obstacles and chase your best score.",
+        "instructions": "Tap to jump"
+      },
+      "stairs": {
+        "name": "Cat Stairs",
+        "description": "Left, right! Climb higher with the cat.",
+        "instructions": "Move toward the next step"
+      },
+      "merge": {
+        "name": "Cat Merge",
+        "description": "Merge cats with the same number to make bigger ones.",
+        "instructions": "Swipe to merge matching numbers"
+      },
+      "frame": {
+        "runner": "Runner game",
+        "stairs": "Cat stairs climbing",
+        "merge": "Cat merge"
+      },
+      "title": "Minigames",
+      "practice": "Practice",
+      "practiceA11y": "Practice {{name}} · not ranked",
+      "start": "Start",
+      "startA11y": "Start {{name}}",
+      "ranking": "Ranking",
+      "rankingA11y": "{{name}} ranking",
+      "loading": "Loading games",
+      "listError": "Couldn't load the game list",
+      "empty": "No games available right now.",
+      "practiceSection": "Practice · not recorded",
+      "play": {
+        "savingA11y": "Saving score",
+        "preparingA11y": "Preparing game",
+        "startError": "Couldn't start the game",
+        "pendingSubmit": "Waiting to save the previous score",
+        "retrySave": "Save again",
+        "submitError": "Couldn't save your score",
+        "personalBest": "Personal best",
+        "score": "{{score}} pts",
+        "summary": "Best {{best}} pts · Rank {{rank}} overall",
+        "retry": "Play again",
+        "retryAfterErrorA11y": "Stop retrying the save and start a new run",
+        "retryRankedA11y": "Play ranked again",
+        "rankedA11y": "Play ranked",
+        "practiceAgain": "Practice again",
+        "practiceAfterErrorA11y": "Stop retrying the save and practice",
+        "practiceAgainA11y": "Practice again",
+        "practiceA11y": "Practice · not ranked",
+        "leaderboardA11y": "See the global ranking"
+      },
+      "leaderboard": {
+        "rowA11y": "Rank {{rank}} {{nickname}} {{score}} pts",
+        "rowMineA11y": "Rank {{rank}} {{nickname}} me {{score}} pts",
+        "rank": "#{{rank}}",
+        "meSuffix": " · me",
+        "score": "{{score}} pts",
+        "loading": "Loading ranking",
+        "error": "Couldn't load the ranking",
+        "myBest": "My best score",
+        "noRecord": "No record",
+        "players": "{{n}} players",
+        "refresh": "Refresh",
+        "refreshA11y": "Refresh ranking"
+      },
+      "recovery": {
+        "finishError": "Couldn't verify the game result.",
+        "loadError": "Couldn't load the game.",
+        "restart": "Restart"
+      }
+    },
+    "speaker": {
+      "sheetTitle": "Sounds in your room",
+      "sheetSubtitle": "What mood would you like to rest in today?",
+      "closeA11y": "Close speaker",
+      "volume": "Volume",
+      "volumeDownA11y": "Turn volume down",
+      "volumeA11y": "Speaker volume",
+      "volumeUpA11y": "Turn volume up",
+      "cancel": "Cancel",
+      "stop": "Stop",
+      "play": "Play",
+      "spriteOnA11y": "Speaker playing music",
+      "spriteOffA11y": "Speaker off",
+      "roomHint": "Long-press to change the sound and volume",
+      "roomSettingsAction": "Sound settings",
+      "roomStopA11y": "Stop speaker",
+      "roomPlayA11y": "Play speaker",
+      "playError": "Couldn't play the sound. Tap again.",
+      "nowPlayingTitle": "Sounds in your room",
+      "tracks": {
+        "fire": "Campfire",
+        "rain": "Rain outside the window",
+        "forest": "Forest ambience",
+        "piano": "Quiet piano"
+      },
+      "nowPlayingArtist": "Rougether"
+    }
+  }
+}

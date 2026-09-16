@@ -6,6 +6,7 @@ import { formatAmount } from '@/constants/currency';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
+import { useT } from '@/i18n';
 
 export type WalletPillsProps = {
   coin: number;
@@ -116,12 +117,13 @@ function Pill({
 /** Coin + diamond balance chips, shown in currency-spending screens (가챠 / 꾸미기). */
 export function WalletPills({ coin, diamond, compact = false, onOpenHistory }: WalletPillsProps) {
   const t = useTokens();
+  const tr = useT();
   return (
     <View style={styles.row}>
       <Pill
         icon="coin"
         color={t.warning}
-        label="코인"
+        label={tr('roomShop.wallet.coin')}
         value={coin}
         compact={compact}
         onOpenHistory={onOpenHistory}
@@ -130,7 +132,7 @@ export function WalletPills({ coin, diamond, compact = false, onOpenHistory }: W
         <Pill
           icon="diamond"
           color={t.primary}
-          label="다이아"
+          label={tr('roomShop.wallet.diamond')}
           value={diamond}
           onOpenHistory={onOpenHistory}
         />

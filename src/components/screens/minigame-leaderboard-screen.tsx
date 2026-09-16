@@ -7,6 +7,7 @@ import { RetryState } from '@/components/ui/retry-state';
 import { Button } from '@/components/ui/button';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 export type MinigameLeaderboardScreenProps = {
   gameName?: string;
@@ -20,22 +21,32 @@ export type MinigameLeaderboardScreenProps = {
 function RankingRow({ entry, mine = false }: { entry: MinigameRankingEntry; mine?: boolean }) {
   const t = useTokens();
   const Typography = useTypography();
+  const tr = useT();
   return (
     <View
-      accessibilityLabel={`${entry.rank}위 ${entry.nickname}${mine ? ' 나' : ''} ${entry.score}점`}
+      accessibilityLabel={tr(
+        mine
+          ? 'roomShop.minigame.leaderboard.rowMineA11y'
+          : 'roomShop.minigame.leaderboard.rowA11y',
+        { rank: entry.rank, nickname: entry.nickname, score: entry.score },
+      )}
       style={[styles.row, { borderColor: t.border }]}>
-      <Text style={[Typography.label, { color: t.primaryText }]}>{entry.rank}위</Text>
+      <Text style={[Typography.label, { color: t.primaryText }]}>
+        {tr('roomShop.minigame.leaderboard.rank', { rank: entry.rank })}
+      </Text>
       <Text numberOfLines={1} style={[Typography.body, styles.name, { color: t.text }]}>
         {entry.nickname}
-        {mine ? ' · 나' : ''}
+        {mine ? tr('roomShop.minigame.leaderboard.meSuffix') : ''}
       </Text>
-      <Text style={[Typography.label, { color: t.text }]}>{entry.score.toLocaleString()}점</Text>
+      <Text style={[Typography.label, { color: t.text }]}>
+        {tr('roomShop.minigame.leaderboard.score', { score: entry.score.toLocaleString() })}
+      </Text>
     </View>
   );
 }
 
 export function MinigameLeaderboardScreen({
-  gameName = '루틴 러너',
+  gameName,
   leaderboard = null,
   loading,
   error,
@@ -44,15 +55,23 @@ export function MinigameLeaderboardScreen({
 }: MinigameLeaderboardScreenProps) {
   const t = useTokens();
   const Typography = useTypography();
+  const tr = useT();
   return (
-    <MinigameLayout title="랭킹" onBack={onBack}>
+    <MinigameLayout title={tr('roomShop.minigame.ranking')} onBack={onBack}>
       <View style={styles.section}>
-        <Text style={[Typography.h2, { color: t.text }]}>{gameName}</Text>
+        <Text style={[Typography.h2, { color: t.text }]}>
+          {gameName ?? tr('roomShop.minigame.runner.name')}
+        </Text>
       </View>
       {loading ? (
-        <ActivityIndicator color={t.primaryText} accessibilityLabel="랭킹 불러오는 중" />
+        <ActivityIndicator
+          color={t.primaryText}
+          accessibilityLabel={tr('roomShop.minigame.leaderboard.loading')}
+        />
       ) : null}
-      {error ? <RetryState message="랭킹을 불러오지 못했어요" onRetry={onRetry} /> : null}
+      {error ? (
+        <RetryState message={tr('roomShop.minigame.leaderboard.error')} onRetry={onRetry} />
+      ) : null}
       {leaderboard ? (
         <>
           <GlassSurface
@@ -60,15 +79,21 @@ export function MinigameLeaderboardScreen({
             glassEffectStyle="clear"
             fallbackColor={t.surface}
             style={styles.card}>
-            <Text style={[Typography.h3, { color: t.text }]}>내 최고 기록</Text>
+            <Text style={[Typography.h3, { color: t.text }]}>
+              {tr('roomShop.minigame.leaderboard.myBest')}
+            </Text>
             {leaderboard.myEntry ? (
               <RankingRow entry={leaderboard.myEntry} mine />
             ) : (
-              <Text style={[Typography.body, { color: t.textMuted }]}>기록 없음</Text>
+              <Text style={[Typography.body, { color: t.textMuted }]}>
+                {tr('roomShop.minigame.leaderboard.noRecord')}
+              </Text>
             )}
           </GlassSurface>
           <Text style={[Typography.label, { color: t.textMuted }]}>
-            총 {leaderboard.totalPlayers.toLocaleString()}명 참여
+            {tr('roomShop.minigame.leaderboard.players', {
+              n: leaderboard.totalPlayers.toLocaleString(),
+            })}
           </Text>
           {leaderboard.items.length ? (
             <GlassSurface
@@ -90,8 +115,8 @@ export function MinigameLeaderboardScreen({
       {!loading && !error && onRetry ? (
         <Button
           glass
-          label="새로고침"
-          accessibilityLabel="랭킹 새로고침"
+          label={tr('roomShop.minigame.leaderboard.refresh')}
+          accessibilityLabel={tr('roomShop.minigame.leaderboard.refreshA11y')}
           onPress={onRetry}
           variant="secondary"
         />

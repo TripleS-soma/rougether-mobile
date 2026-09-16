@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FurnitureStudioScreen } from '@/components/screens/furniture-studio-screen';
 import { useFurnitureStudio } from '@/hooks/use-furniture-studio';
+import { useT } from '@/i18n';
 
 export function FurnitureStudio({
   onBack,
@@ -12,6 +13,7 @@ export function FurnitureStudio({
   onAttendance?: () => void;
 }) {
   const studio = useFurnitureStudio();
+  const tr = useT();
   const [placementError, setPlacementError] = useState<string | null>(null);
   return (
     <FurnitureStudioScreen
@@ -27,7 +29,7 @@ export function FurnitureStudio({
       onGoToRoom={async () => {
         setPlacementError(null);
         if (!(await onGoToRoom()))
-          setPlacementError('가구함을 불러오지 못했어요. 다시 시도해주세요.');
+          setPlacementError(tr('roomShop.studio.error.inventoryLoadFailed'));
       }}
       onAttendance={onAttendance}
     />

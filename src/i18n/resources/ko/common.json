@@ -1,0 +1,16 @@
+{
+  "common": {
+    "back": "뒤로 가기",
+    "apply": "적용하기",
+    "cancel": "취소",
+    "confirm": "확인"
+  },
+  "nav": {
+    "myRoom": "나의 방",
+    "myRoomShort": "방",
+    "calendar": "달력",
+    "house": "집",
+    "myPage": "내 정보",
+    "badgeAbsent": "오늘 미출석"
+  }
+}

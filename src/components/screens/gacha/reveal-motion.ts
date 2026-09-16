@@ -1,4 +1,5 @@
 import type { DrawResult } from '@/api/types';
+import { i18n } from '@/i18n';
 import { isCdnKey } from '@/resources/asset';
 
 export type RevealTier = 'ungraded' | 'common' | 'rare' | 'legendary';
@@ -184,14 +185,31 @@ function isCurrencyResult(result: DrawResult) {
   return result.converted === true || result.rewardType?.trim().toUpperCase() === 'CURRENCY';
 }
 
+/**
+ * 등급 표시 문구의 i18n 키 (#893) — 서버 등급 어휘('일반'·'희귀'·'전설')는 데이터라 그대로
+ * 두고, 화면은 이 키로 번역해 보여준다. 미지의 등급은 undefined(원문 그대로 표시).
+ */
+export function rarityLabelKey(rarity: string | null | undefined): string | undefined {
+  switch (toRevealTier(rarity)) {
+    case 'common':
+      return 'roomShop.gacha.rarity.common';
+    case 'rare':
+      return 'roomShop.gacha.rarity.rare';
+    case 'legendary':
+      return 'roomShop.gacha.rarity.legendary';
+    default:
+      return undefined;
+  }
+}
+
 function getCurrencyLabel(currencyType: unknown) {
   switch (currencyType) {
     case 'COIN':
-      return '코인';
+      return i18n.t('roomShop.gacha.reveal.coin');
     case 'DIAMOND':
-      return '다이아';
+      return i18n.t('roomShop.gacha.reveal.diamond');
     default:
-      return '재화';
+      return i18n.t('roomShop.gacha.reveal.currency');
   }
 }
 
@@ -208,15 +226,19 @@ function getDisplayName(result: DrawResult, renderKind: RevealRenderKind) {
           .trim()
       : '';
   if (suppliedName) return suppliedName.slice(0, 80);
-  if (renderKind === 'currency') return `${getCurrencyLabel(result.refundCurrencyType)} 환급`;
-  if (result.rewardType?.trim().toUpperCase() === 'CHARACTER') return '캐릭터 보상';
-  return '아이템 보상';
+  if (renderKind === 'currency')
+    return i18n.t('roomShop.gacha.reveal.refund', {
+      currency: getCurrencyLabel(result.refundCurrencyType),
+    });
+  if (result.rewardType?.trim().toUpperCase() === 'CHARACTER')
+    return i18n.t('roomShop.gacha.reveal.characterReward');
+  return i18n.t('roomShop.gacha.reveal.itemReward');
 }
 
 function getConversionLabel(result: DrawResult, renderKind: RevealRenderKind) {
   if (renderKind !== 'currency') return undefined;
-  const prefix = result.converted ? '중복 · ' : '';
-  return `${prefix}${getCurrencyLabel(result.refundCurrencyType)} +${getRefundAmount(result.refundAmount)}`;
+  const label = `${getCurrencyLabel(result.refundCurrencyType)} +${getRefundAmount(result.refundAmount)}`;
+  return result.converted ? i18n.t('roomShop.gacha.reveal.duplicate', { label }) : label;
 }
 
 /**

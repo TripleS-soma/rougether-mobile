@@ -7,6 +7,7 @@ import { GlassSurface } from '@/components/ui/glass-surface';
 import { MissionFlagPictogram } from '@/components/ui/pictograms';
 import { Radius, ShadowColor, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 export type MissionBannerProps = {
   /** 현재 미션 index (0-base) — 표기는 N/4. */
@@ -40,6 +41,7 @@ export function MissionBanner({
   canSkip = false,
 }: MissionBannerProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   const insets = useContext(SafeAreaInsetsContext);
   const [confirming, setConfirming] = useState(false);
@@ -56,7 +58,7 @@ export function MissionBanner({
         <Pressable
           onPress={onPress}
           accessibilityRole="button"
-          accessibilityLabel={`미션 ${stepIndex + 1} ${label}`}
+          accessibilityLabel={tr('house.missionBanner.a11y', { n: stepIndex + 1, label })}
           style={styles.goArea}>
           <MissionFlagPictogram size={26} />
           <View style={styles.texts}>
@@ -64,7 +66,7 @@ export function MissionBanner({
                 다리인데 눌러도 된다는 표시가 없었다. 기존 줄에 병합해
                 배너 높이는 그대로. */}
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              미션 {stepIndex + 1}/{totalSteps} · 눌러서 바로 시작해요
+              {tr('house.missionBanner.progress', { n: stepIndex + 1, total: totalSteps })}
             </Text>
             <Text style={[Typography.label, { color: t.text }]} numberOfLines={1}>
               {label}
@@ -75,19 +77,21 @@ export function MissionBanner({
           <Pressable
             onPress={() => setConfirming(true)}
             accessibilityRole="button"
-            accessibilityLabel="미션 건너뛰기"
+            accessibilityLabel={tr('house.missionBanner.skipA11y')}
             hitSlop={8}>
-            <Text style={[Typography.supporting, { color: t.textMuted }]}>건너뛰기</Text>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              {tr('house.missionBanner.skip')}
+            </Text>
           </Pressable>
         ) : null}
       </GlassSurface>
 
       <ConfirmDialog
         visible={confirming}
-        title="미션을 건너뛸까요?"
-        body="남은 온보딩 미션 안내가 사라져요. 설정의 튜토리얼 다시 보기로 언제든 다시 시작할 수 있어요."
-        confirmLabel="건너뛰기"
-        confirmAccessibilityLabel="미션 건너뛰기 확인"
+        title={tr('house.missionBanner.skipConfirm.title')}
+        body={tr('house.missionBanner.skipConfirm.body')}
+        confirmLabel={tr('house.missionBanner.skipConfirm.label')}
+        confirmAccessibilityLabel={tr('house.missionBanner.skipConfirm.a11y')}
         onConfirm={() => {
           setConfirming(false);
           onSkip?.();

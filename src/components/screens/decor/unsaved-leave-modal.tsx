@@ -2,6 +2,7 @@ import { Modal, Pressable, Text, View } from 'react-native';
 
 import { confirmStyles as styles } from '@/components/screens/decor/confirm-modal-styles';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 export type UnsavedLeaveModalProps = {
   visible: boolean;
@@ -25,35 +26,42 @@ export function UnsavedLeaveModal({
 }: UnsavedLeaveModalProps) {
   const t = useTokens();
   const Typography = useTypography();
+  const tr = useT();
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onStay}>
       <Pressable style={styles.confirmBackdrop} onPress={onStay}>
         <Pressable style={[styles.confirmCard, { backgroundColor: t.screen }]}>
-          <Text style={[Typography.h3, { color: t.text }]}>변경사항을 저장할까요?</Text>
+          <Text style={[Typography.h3, { color: t.text }]}>{tr('roomShop.decor.leave.title')}</Text>
           <Text style={[Typography.body, styles.confirmText, { color: t.textMuted }]}>
-            적용하지 않은 꾸미기 변경이 있어요.
+            {tr('roomShop.decor.leave.body')}
           </Text>
           <View style={styles.leaveBtns}>
             <Pressable
               onPress={onSaveAndLeave}
               accessibilityRole="button"
-              accessibilityLabel="저장하고 나가기"
+              accessibilityLabel={tr('roomShop.decor.leave.saveAndLeave')}
               style={[styles.leaveBtn, { backgroundColor: t.primary }]}>
-              <Text style={[Typography.label, { color: t.onPrimary }]}>저장하고 나가기</Text>
+              <Text style={[Typography.label, { color: t.onPrimary }]}>
+                {tr('roomShop.decor.leave.saveAndLeave')}
+              </Text>
             </Pressable>
             <Pressable
               onPress={onLeaveWithoutSaving}
               accessibilityRole="button"
-              accessibilityLabel="저장하지 않고 나가기"
+              accessibilityLabel={tr('roomShop.decor.leave.leaveWithoutSaving')}
               style={[styles.leaveBtn, { backgroundColor: t.surfaceMuted }]}>
-              <Text style={[Typography.label, { color: t.text }]}>저장하지 않고 나가기</Text>
+              <Text style={[Typography.label, { color: t.text }]}>
+                {tr('roomShop.decor.leave.leaveWithoutSaving')}
+              </Text>
             </Pressable>
             <Pressable
               onPress={onStay}
               accessibilityRole="button"
-              accessibilityLabel="계속 꾸미기"
+              accessibilityLabel={tr('roomShop.decor.leave.stay')}
               style={styles.leaveStay}>
-              <Text style={[Typography.label, { color: t.textMuted }]}>계속 꾸미기</Text>
+              <Text style={[Typography.label, { color: t.textMuted }]}>
+                {tr('roomShop.decor.leave.stay')}
+              </Text>
             </Pressable>
           </View>
         </Pressable>

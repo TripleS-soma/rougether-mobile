@@ -3,7 +3,7 @@ import { drawStarterGacha, fetchStarterGacha } from '@/api/starter-gacha';
 import { useStarterGacha } from '@/hooks/use-starter-gacha';
 import { createTestQueryClient, queryWrapper } from '@/test-utils/query-wrapper';
 import type { DrawResult, GachaDrawResponse } from '@/api/types';
-import { getSessionUserId } from '@/api';
+import { ApiError, getSessionUserId } from '@/api';
 import { queryKeys } from '@/lib/query-keys';
 
 jest.mock('@/api/starter-gacha');
@@ -95,4 +95,19 @@ it('fails closed when eligibility cannot be loaded', async () => {
   await waitFor(() => expect(result.current.error).toBe(true));
   await act(async () => expect(await result.current.draw()).toBeNull());
   expect(drawApi).not.toHaveBeenCalled();
+});
+
+it('reports the endpoint as unavailable on 404 so onboarding falls back to the regular gacha', async () => {
+  fetchState.mockRejectedValue(new ApiError(404, 'GET', '/onboarding/starter-gacha', ''));
+  const { result } = await renderHook(() => useStarterGacha(true), { wrapper: queryWrapper() });
+  await waitFor(() => expect(result.current.unavailable).toBe(true));
+  await act(async () => expect(await result.current.draw()).toBeNull());
+  expect(drawApi).not.toHaveBeenCalled();
+});
+
+it('does not treat a transient failure as unavailable (the free draw must not be lost)', async () => {
+  fetchState.mockRejectedValue(new ApiError(503, 'GET', '/onboarding/starter-gacha', ''));
+  const { result } = await renderHook(() => useStarterGacha(true), { wrapper: queryWrapper() });
+  await waitFor(() => expect(result.current.error).toBe(true));
+  expect(result.current.unavailable).toBe(false);
 });

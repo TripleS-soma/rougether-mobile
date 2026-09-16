@@ -1,4 +1,5 @@
 import { useToast } from '@/components/ui/toast';
+import { i18n } from '@/i18n';
 import { useStarterGacha } from '@/hooks/use-starter-gacha';
 import { toGachaMachine } from '@/api/adapters';
 import { SpeakerSheet } from '@/components/room/speaker-sheet';
@@ -202,14 +203,15 @@ export function AppShell({
 
   const starterFlow = missions.step?.id === 'first-draw' && !missionSkipEnabled;
   const starterGacha = useStarterGacha(starterFlow);
-  const starterAllowed = starterFlow && starterGacha.state?.state !== 'CLOSED';
+  const starterAllowed =
+    starterFlow && !starterGacha.unavailable && starterGacha.state?.state !== 'CLOSED';
   const starterMachines = useMemo(
     () => [
       toGachaMachine({
         gachaId: -1,
         code: 'onboarding_starter',
         category: 'FURNITURE',
-        name: '첫 가구',
+        name: i18n.t('roomShop.gacha.starterMachineName'),
         costCurrencyType: 'COIN',
         costAmount: 0,
         drawCount: 1,
@@ -595,11 +597,14 @@ export function AppShell({
 
   // 내비게이션 컨트롤러 (#692) — 뒤로가기·엣지 백·전환 손맛·페이저 정착.
   // noHouses·탐색 이탈 판정이 use-house-pages 반환값이라 훅 호출이 그 뒤에 선다.
+  // 주간 보기(#1327)가 하드웨어 백·엣지 백을 가로채 펼침 연출을 먼저 돌린다.
+  const weekBackRef = useRef<(() => boolean) | null>(null);
   const { edgeBackPan, activeTab, handlePageChange } = useAppNavigation({
     screen,
     setScreen,
     addReturnScreen,
     noHouses: housePages.noHouses,
+    backInterceptorRef: weekBackRef,
   });
 
   // 현재 화면 트리 — 슬라이드 전환(#1094)이 직전 렌더의 노드를 떠나는 층으로 들고 있는다.
@@ -637,6 +642,15 @@ export function AppShell({
       ) : null}
 
       {minigames.subScreen}
+      {/* 주간 보기 (#1327) — 달력 탭의 두 번째 인스턴스. 슬라이드 없이 즉시 바뀌고
+          (INSTANT_TRANSITION_SCREENS) 달력이 스스로 선택 주로 접힌다. */}
+      {screen === 'calendarWeek' ? (
+        <MyRoomScreen
+          {...myRoomPages.calendarWeekProps}
+          view="calendar"
+          backInterceptorRef={weekBackRef}
+        />
+      ) : null}
       {screen === 'furnitureStudio' ? (
         <FurnitureStudio
           key={`${attendance.status?.eventId ?? 0}:${attendance.status?.completed ?? false}`}

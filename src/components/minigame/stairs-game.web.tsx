@@ -9,6 +9,7 @@ import { Radius } from '@/constants/theme';
 import { parseStairsMessage, type StairsGameProps } from '@/features/minigame/stairs-bridge';
 import { createStairsHtml } from '@/features/minigame/stairs-html';
 import { useTokens } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 export function StairsGame({
   seed,
@@ -19,6 +20,7 @@ export function StairsGame({
   testID = 'stairs-game',
 }: StairsGameProps) {
   const t = useTokens();
+  const tr = useT();
   const palette = useRef(t).current;
   const { channelId, finished, error, fail, retry, isCurrentChannel } = useGameRecovery(
     'stairs',
@@ -88,7 +90,7 @@ export function StairsGame({
         <iframe
           key={channelId}
           ref={frame}
-          title="고양이 계단 오르기"
+          title={tr('roomShop.minigame.frame.stairs')}
           srcDoc={html}
           sandbox="allow-scripts"
           onLoad={syncActive}

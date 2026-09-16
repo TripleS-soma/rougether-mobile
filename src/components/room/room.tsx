@@ -14,6 +14,7 @@ import {
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { Radius } from '@/constants/theme';
 import { useTokens } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 import { assetSource, isCdnKey } from '@/resources/asset';
 import {
   DEFAULT_WALLPAPER_COLOR,
@@ -186,6 +187,7 @@ export const Room = memo(function Room({
   style,
 }: RoomProps) {
   const t = useTokens();
+  const tr = useT();
   const [pose, setPose] = useState(0);
 
   // 카탈로그 조회·배치 정렬은 방 하나만 보면 싸지만, 집 화면은 좌석 8~12칸이
@@ -335,15 +337,21 @@ export const Room = memo(function Room({
                   style={{ flex: 1 }}
                   onPress={onSpeakerPress}
                   onLongPress={onSpeakerLongPress}
-                  accessibilityHint="길게 누르면 소리와 볼륨을 조절할 수 있어요"
+                  accessibilityHint={tr('roomShop.speaker.roomHint')}
                   accessibilityActions={
-                    onSpeakerLongPress ? [{ name: 'longpress', label: '소리 설정' }] : []
+                    onSpeakerLongPress
+                      ? [{ name: 'longpress', label: tr('roomShop.speaker.roomSettingsAction') }]
+                      : []
                   }
                   onAccessibilityAction={(event) => {
                     if (event.nativeEvent.actionName === 'longpress') onSpeakerLongPress?.();
                   }}
                   accessibilityRole="button"
-                  accessibilityLabel={speakerPlaying ? '스피커 정지' : '스피커 재생'}>
+                  accessibilityLabel={tr(
+                    speakerPlaying
+                      ? 'roomShop.speaker.roomStopA11y'
+                      : 'roomShop.speaker.roomPlayA11y',
+                  )}>
                   <SpeakerSprite playing={speakerPlaying} />
                 </Pressable>
               ) : (

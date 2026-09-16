@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createSpeakerPlayer } from '@/lib/speaker-player';
+import { i18n } from '@/i18n';
 import type { SpeakerPlayer } from '@/lib/speaker-player.types';
 import {
   clampVolume,
@@ -73,7 +74,7 @@ export function useRoomSpeaker(active = true) {
     const fail = () => {
       if (current !== revision.current) return;
       stop();
-      setError('소리를 재생하지 못했어요. 다시 눌러 주세요.');
+      setError(i18n.t('roomShop.speaker.playError'));
     };
     try {
       const track = SPEAKER_TRACKS.find((t) => t.id === preferences.current.trackId)!;

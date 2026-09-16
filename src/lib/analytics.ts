@@ -88,6 +88,10 @@ export type AnalyticsEvent =
   | 'minigame_submit_failed'
   /** 알림 탭 새 소식 탭 (#1320) — id: 공지 id, kind: screen|url|none(행동 없는 소식). */
   | 'announcement_open'
+  /** 달력 탭에서 날짜를 눌러 주간 보기로 (#1327) — today: 오늘을 눌렀는지. */
+  | 'calendar_week_open'
+  /** 설정 > 언어 변경 (#893) — language: ko|en. */
+  | 'language_change'
   // 그 밖의 핵심 행동
   | 'shop_purchase'
   | 'cheer_send'

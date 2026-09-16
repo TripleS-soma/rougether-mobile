@@ -1,8 +1,19 @@
-import { memo, type ReactNode, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import {
+  memo,
+  type MutableRefObject,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   Animated,
   type GestureResponderEvent,
   KeyboardAvoidingView,
+  LayoutAnimation,
   Platform,
   Pressable,
   ScrollView,
@@ -50,6 +61,9 @@ import {
 } from '@/components/screens/sheets/character-picker-sheet';
 import { CategoryFormSheet } from '@/components/screens/sheets/category-form-sheet';
 import { DateEditSheet } from '@/components/screens/sheets/date-edit-sheet';
+import { TodoDateDialog } from '@/components/screens/sheets/todo-date-dialog';
+import { QuickAddRow } from '@/components/screens/my-room/quick-add-row';
+import { useQuickAddKeyboard } from '@/components/screens/my-room/use-quick-add-keyboard';
 import { RenameDialog } from '@/components/screens/sheets/rename-dialog';
 import { RoutineMenuSheet } from '@/components/screens/sheets/routine-menu-sheet';
 import { TimePickerSheet } from '@/components/screens/sheets/time-picker-sheet';
@@ -61,7 +75,7 @@ import { Loading } from '@/components/ui/loading';
 import type { CalendarDayCount } from '@/api/types';
 import { RoomGrowthPill, type RoomGrowthProps } from '@/components/ui/room-growth-pill';
 import { type CalendarFilter, calendarToday } from '@/utils/calendar-progress';
-import { Calendar } from '@/components/ui/calendar';
+import { Calendar, type CalendarSelectSource, WEEK_COLLAPSE_MS } from '@/components/ui/calendar';
 import { CoachTarget } from '@/components/ui/coach-mark';
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { CategoryIcon } from '@/components/ui/category-icon';
@@ -75,10 +89,11 @@ import {
   type CategoryVisibility,
   type NewRoutine,
   ROUTINE_CATEGORIES,
+  weekdayLongLabelKey,
   type Routine,
   type RoutineCategoryMeta,
   VISIBILITY_ICONS,
-  VISIBILITY_LABELS,
+  visibilityLabelKey,
 } from '@/constants/routines';
 import { Icon } from '@/components/ui/icon';
 import { ScalePressable } from '@/components/ui/scale-pressable';
@@ -90,9 +105,10 @@ import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { type ScrollRestoreProps, useScrollRestore } from '@/hooks/use-scroll-restore';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { readableTextColor } from '@/utils/color';
-import { localDate, monthDayLabel } from '@/utils/datetime';
+import { formatDate, localDate, monthDayLabel } from '@/utils/datetime';
 import { hapticSelection, hapticSuccess } from '@/utils/haptics';
 import { holidayName } from '@/utils/holidays';
+import { useT } from '@/i18n';
 
 // 스케줄 판정은 my-room/schedule로 이동 (#693) — 기존 임포트 경로 유지용 재수출.
 export { isScheduledOn };
@@ -114,6 +130,8 @@ export type CalendarDayItem = {
 // 떠 있는 크롬 (#1055) — 달력 제목·세그먼트 한 줄의 높이. 달력 탭의 콘텐츠 상단
 // 패딩과 보상 알약 위치가 같은 값을 본다.
 const CHROME_ROW_HEIGHT = 40;
+/** 주간 보기 헤더(뒤로 + 제목) 높이 (#1327) — 접힘과 함께 0→이 값으로 자란다. */
+const WEEK_HEADER_H = 44;
 const ZERO_INSETS = { top: 0, bottom: 0, left: 0, right: 0 };
 
 // RoomSceneProps: <Room />에 스프레드로 전달되는 씬 번들 (#691) — 내 방은
@@ -147,6 +165,20 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
     /** Controlled selection survives the tab pager unmounting for a sub-screen. */
     selectedDate?: string;
     onSelectedDateChange?: (date: string) => void;
+    /**
+     * 달력 탭 모드 (#1327). 'month'(기본)는 월 달력 — `onOpenDay`가 있으면 목록을 숨기고
+     * 날짜 탭에 그걸 부른다. 'week'는 주간 보기: 달력이 선택 주 한 줄로 접히고 목록이 붙는다.
+     */
+    calendarMode?: 'month' | 'week';
+    /** 월 달력에서 날짜를 눌렀을 때 (#1327) — 셸이 주간 보기를 민다. 없으면 종전처럼 목록이 아래에. */
+    onOpenDay?: (date: string) => void;
+    /** 주간 보기의 뒤로 (#1327) — 펼침 연출이 끝난 뒤 불린다. */
+    onBack?: () => void;
+    /**
+     * 셸의 뒤로가기 가로채기 (#1327 후속) — 주 모드에서 하드웨어 백·엣지 백도 화면 안
+     * 뒤로 버튼과 같은 펼침 연출을 타게, 여기 넣어 둔 함수를 셸이 먼저 부른다.
+     */
+    backInterceptorRef?: MutableRefObject<(() => boolean) | null>;
     /** Quick composer → routine form, preserving the selected calendar date. */
     /** Retained for existing callers; the personal room name is no longer displayed. */
     userName?: string;
@@ -284,8 +316,9 @@ export type MyRoomScreenProps = Omit<RoomSceneProps, 'characterId'> &
  */
 function VisibilityMark({ visibility }: { visibility: CategoryVisibility }) {
   const t = useTokens();
+  const tr = useT();
   return (
-    <View accessible accessibilityLabel={VISIBILITY_LABELS[visibility]}>
+    <View accessible accessibilityLabel={tr(visibilityLabelKey(visibility))}>
       <Pictogram name={VISIBILITY_ICONS[visibility]} size={12} color={t.textMuted} />
     </View>
   );
@@ -329,6 +362,10 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   calendarDays,
   selectedDate: controlledSelectedDate,
   onSelectedDateChange,
+  calendarMode = 'month',
+  onOpenDay,
+  onBack,
+  backInterceptorRef,
   onSelectDate,
   onToggleCalendarItem,
   completions = {},
@@ -367,6 +404,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   onScrollY,
 }: MyRoomScreenProps) {
   const t = useTokens();
+  const tr = useT();
   const column = useResponsiveColumn();
   // 웹 데스크톱 2단 (#1230) — 창 ≥ 960px에서만 true.
   const { split } = useAppFrame();
@@ -480,6 +518,13 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // 메뉴 → 날짜 바꾸기: calendar sheet. Todos move their dueDate; routines move
   // that day's occurrence only (repeat stays). The draft date lives in the sheet.
   const [dateEditId, setDateEditId] = useState<string | null>(null);
+  // 카테고리 + 의 인라인 빠른 추가 (#1280 롤백, 2026-09-14) — 어느 카테고리의 입력행이
+  // 열렸는지, 마감일, 날짜 피커. 입력 중인 제목은 QuickAddRow가 소유한다 (#769).
+  const [addingCategory, setAddingCategory] = useState<string | null>(null);
+  const [newTodoDate, setNewTodoDate] = useState(today);
+  const [todoDateOpen, setTodoDateOpen] = useState(false);
+  // 날짜 피커를 여는 blur는 커밋/닫기가 아니다.
+  const skipBlurCommit = useRef(false);
   // 날짜 바꾸기의 원래 날짜 — 메뉴를 연 날짜(방 탭은 오늘, 달력 탭은 선택한 날짜) (#189).
   const [dateEditFrom, setDateEditFrom] = useState(today);
   const dateEditItem = routines.find((r) => r.id === dateEditId) ?? null;
@@ -512,11 +557,56 @@ export const MyRoomScreen = memo(function MyRoomScreen({
     [routines, selectedDate, calendarFilter],
   );
   // 참조 고정 (#771) — Calendar가 memo라, 매 렌더 새 함수면 42칸이 매번 다시 그려진다.
-  const pickDate = useStableCallback((date: string) => {
+  const pickDate = useStableCallback((date: string, source: CalendarSelectSource = 'tap') => {
     if (controlledSelectedDate === undefined) setOwnSelectedDate(date);
     onSelectedDateChange?.(date);
     if (date !== today) onSelectDate?.(date);
+    // 월 모드의 날짜 **탭**만 주간 보기를 연다 (#1327) — '오늘로' 칩은 선택만 되돌리고,
+    // 주 모드의 탭·플링은 선택만 바꾼다.
+    if (calendarMode === 'month' && source === 'tap') onOpenDay?.(date);
   });
+  // 주간 보기 (#1327) — 뒤로는 달력이 다시 펼쳐진 뒤 닫는다. 헤더는 접힘과 같은 시간으로 자란다.
+  const weekMode = tab !== 'room' && calendarMode === 'week';
+  const hideDayList = tab !== 'room' && calendarMode === 'month' && !!onOpenDay;
+  const [weekLeaving, setWeekLeaving] = useState(false);
+  const weekIn = useAnimatedValue(0);
+  useEffect(() => {
+    if (!weekMode) return;
+    const anim = Animated.timing(weekIn, {
+      toValue: weekLeaving ? 0 : 1,
+      duration: WEEK_COLLAPSE_MS,
+      useNativeDriver: false,
+    });
+    anim.start();
+    return () => anim.stop();
+  }, [weekMode, weekLeaving, weekIn]);
+  // 뒤로: 펼침(WEEK_COLLAPSE_MS)이 끝난 뒤 닫는다 — 애니메이션 완료 콜백 대신 타이머로,
+  // 테스트(가짜 타이머)와 기기에서 같은 시점에 닫히게.
+  const onBackRef = useLatestRef(onBack);
+  const weekBackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (weekBackTimer.current) clearTimeout(weekBackTimer.current);
+    },
+    [],
+  );
+  const leaveWeek = useStableCallback(() => {
+    if (weekLeaving) return;
+    setWeekLeaving(true);
+    weekBackTimer.current = setTimeout(() => onBackRef.current?.(), WEEK_COLLAPSE_MS);
+  });
+  // 하드웨어 백·엣지 백도 같은 길로 (#1327 후속) — 셸이 setScreen하기 전에 펼침부터.
+  // 이미 떠나는 중이면 두 번째 뒤로는 삼킨다(타이머가 곧 닫는다).
+  useEffect(() => {
+    if (!weekMode || !backInterceptorRef) return;
+    backInterceptorRef.current = () => {
+      leaveWeek();
+      return true;
+    };
+    return () => {
+      backInterceptorRef.current = null;
+    };
+  }, [weekMode, backInterceptorRef, leaveWeek]);
   const catMeta = allCategories ?? categories;
   const serverBackedDay = !!onSelectDate && selectedDate !== today;
   const calendarTodayError = !serverBackedDay && loadError;
@@ -527,9 +617,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   );
   const selectedDay = localDate(selectedDate);
   const selectedDayLabel = monthDayLabel(selectedDay);
-  const selectedWeekday = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'][
-    selectedDay.getDay()
-  ];
+  const selectedWeekday = tr(weekdayLongLabelKey(selectedDay.getDay()));
   // 공휴일 이름 (#1292) — 달력 칸엔 빨간 숫자만, 이름은 선택한 날짜 제목에 붙인다.
   const selectedHoliday = holidayName(selectedDate);
 
@@ -618,6 +706,40 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   const scrollRef = useRef<ScrollView>(null);
   // 서브화면(꾸미기·루틴 관리 …)에 다녀와도 보던 자리로 (#763).
   const scrollRestore = useScrollRestore(scrollRef, { getInitialScrollY, onScrollY });
+  // 키보드 높이 추적·입력행 밀어 올리기 (my-room/use-quick-add-keyboard).
+  const { addRowRef, todoInputRef, keyboardPad, scrollYRef, scrollToQuickAdd } =
+    useQuickAddKeyboard(scrollRef, addingCategory);
+  // 방탭은 오늘, 달력탭은 선택한 날짜를 기본 마감일로 연다 (#323).
+  const openQuickAdd = (categoryId: string, defaultDate = today) => {
+    setNewTodoDate(defaultDate);
+    const opening = addingCategory !== categoryId;
+    setAddingCategory(opening ? categoryId : null);
+    if (opening) setTimeout(scrollToQuickAdd, 80);
+  };
+  const commitTodo = (categoryId: string, raw: string) => {
+    if (skipBlurCommit.current) {
+      skipBlurCommit.current = false;
+      return;
+    }
+    const title = raw.trim();
+    // 새 행이 뚝 나타나는 대신 부드럽게 삽입되고 기존 행이 밀려난다 (#452).
+    if (title) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    if (title) void onQuickAddRoutine?.(categoryId, title, newTodoDate);
+    setAddingCategory(null);
+  };
+  // 퀵애드 입력행 — 제목 입력 + 마감일 칩, blur가 커밋. 방탭·달력탭 공용 (#323).
+  const renderQuickAddRow = (categoryId: string) => (
+    <QuickAddRow
+      ref={addRowRef}
+      inputRef={todoInputRef}
+      dateLabel={newTodoDate === today ? tr('routineTodo.today') : formatDate(newTodoDate)}
+      onCommit={(title) => commitTodo(categoryId, title)}
+      onOpenDatePicker={() => setTodoDateOpen(true)}
+      onDatePickerPressIn={() => {
+        skipBlurCommit.current = true;
+      }}
+    />
+  );
   const openCompose = (date: string, category = '') =>
     setCompose({
       date,
@@ -627,9 +749,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   const renderQuickAddButton = (meta: RoutineCategoryMeta, date: string) =>
     canQuickAdd(meta.id) && !meta.deleted && meta.houseId == null ? (
       <ScalePressable
-        onPress={() => openCompose(date, meta.id)}
+        onPress={() => openQuickAdd(meta.id, date)}
         accessibilityRole="button"
-        accessibilityLabel={`${meta.name}에 추가`}
+        accessibilityLabel={tr('routineTodo.myRoom.quickAddA11y', { name: meta.name })}
         hitSlop={8}
         style={[styles.catAdd, { backgroundColor: meta.color }]}>
         <Icon name="add" size={14} color={t.onPrimary} />
@@ -662,7 +784,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
   // routine logs — reward is 0 coins for non-today completion, #183).
   const handleCalendarItemPress = (item: CalendarDayItem) => {
     if (selectedDate > today) {
-      toast('미래 날짜는 완료할 수 없어요', 'error');
+      toast(tr('routineTodo.myRoom.futureBlocked'), 'error');
       return;
     }
     if (item.completed) hapticSelection();
@@ -982,7 +1104,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             disabled={!meta.id || !onUpdateCategory}
             onPress={() => setEditingCategory(meta)}
             accessibilityRole="button"
-            accessibilityLabel={`${meta.name} 카테고리 수정`}>
+            accessibilityLabel={tr('routineTodo.myRoom.editCategoryA11y', { name: meta.name })}>
             <View style={[styles.catDot, { backgroundColor: `${meta.color}33` }]}>
               <CategoryIcon name={meta.icon} color={meta.color} size={18} />
             </View>
@@ -1005,6 +1127,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           <View style={styles.flex} />
           {renderQuickAddButton(meta, date)}
         </CategoryDragHandle>
+        {addingCategory === meta.id ? renderQuickAddRow(meta.id) : null}
         <View style={styles.rows}>
           {/* 카테고리 드래그 중엔 행 드래그를 끈다(배타) — 그룹이 통째로 들린 동안
               행이 따로 들리면 두 translateY가 겹친다. */}
@@ -1061,8 +1184,14 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               }
             : null,
         navInset ? { paddingBottom: Spacing.six + navInset } : null,
+        addingCategory != null && keyboardPad > 0 ? { paddingBottom: keyboardPad + 120 } : null,
       ]}
       {...scrollRestore}
+      onScroll={(e) => {
+        // 빠른 추가 입력행 스크롤인용 로컬 추적 + 셸의 탭별 기억(#763).
+        scrollYRef.current = e.nativeEvent.contentOffset.y;
+        scrollRestore.onScroll?.(e);
+      }}
       keyboardShouldPersistTaps="handled">
       {children}
     </PawRefreshScroll>
@@ -1122,7 +1251,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                 ref={menuBtnRef}
                 onPress={openNavMenu}
                 accessibilityRole="button"
-                accessibilityLabel="메뉴"
+                accessibilityLabel={tr('routineTodo.myRoom.menu')}
                 style={styles.floatBtn}>
                 <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
                   <Icon name="menu" size={20} color={t.text} />
@@ -1133,7 +1262,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               <Pressable
                 onPress={onOpenNotifications}
                 accessibilityRole="button"
-                accessibilityLabel="알림"
+                accessibilityLabel={tr('routineTodo.myRoom.notifications')}
                 style={styles.floatBtn}>
                 <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
                   <Icon name="bell" size={20} color={t.text} />
@@ -1148,7 +1277,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               <Pressable
                 onPress={onEdit}
                 accessibilityRole="button"
-                accessibilityLabel="방 꾸미기"
+                accessibilityLabel={tr('routineTodo.myRoom.decorate')}
                 style={styles.floatBtn}>
                 <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
                   {/* absolute 버튼이라 내용을 측정 (#351 → #1324). */}
@@ -1162,7 +1291,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               <Pressable
                 onPress={onOpenFurnitureStudio}
                 accessibilityRole="button"
-                accessibilityLabel="AI 가구 만들기"
+                accessibilityLabel={tr('routineTodo.myRoom.furnitureStudio')}
                 style={styles.floatBtn}>
                 <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
                   <Icon name="sparkles" size={20} color={t.primaryText} />
@@ -1173,7 +1302,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               <Pressable
                 onPress={onOpenMinigames}
                 accessibilityRole="button"
-                accessibilityLabel="미니게임"
+                accessibilityLabel={tr('routineTodo.myRoom.minigames')}
                 style={styles.floatBtn}>
                 <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
                   <Icon name="gamepad" size={20} color={t.primaryText} />
@@ -1183,7 +1312,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             <Pressable
               onPress={onOpenGacha}
               accessibilityRole="button"
-              accessibilityLabel="뽑기 상점"
+              accessibilityLabel={tr('routineTodo.myRoom.gacha')}
               style={styles.floatBtn}>
               <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
                 {/* absolute 버튼이라 래퍼 대신 내용을 측정 (#351). */}
@@ -1199,11 +1328,36 @@ export const MyRoomScreen = memo(function MyRoomScreen({
       // monthSwipe=false 유지 (#825) — 달력 위 가로 스와이프가 월 이동이라는 또 다른
       // 뜻을 갖게 되면 "가로 스와이프 = 하단 탭 이동" 규칙이 다시 깨진다. 월 이동은 ‹ › 버튼.
       <View style={styles.calendarOverview}>
+        {weekMode ? (
+          <Animated.View
+            testID="calendar-week-header"
+            style={[
+              styles.weekHead,
+              {
+                height: weekIn.interpolate({ inputRange: [0, 1], outputRange: [0, WEEK_HEADER_H] }),
+                opacity: weekIn,
+              },
+            ]}>
+            <Pressable
+              onPress={leaveWeek}
+              accessibilityRole="button"
+              accessibilityLabel={tr('common.back')}
+              hitSlop={8}>
+              <GlassSurface fallbackColor={t.surface} style={styles.weekBack}>
+                <Icon name="back" size={20} color={t.text} />
+              </GlassSurface>
+            </Pressable>
+            <Text style={[Typography.h3, { color: t.text }]}>
+              {tr('routineTodo.myRoom.weekView')}
+            </Text>
+          </Animated.View>
+        ) : null}
         <Calendar
           value={selectedDate}
           onSelect={pickDate}
           today={today}
           monthSwipe={false}
+          weekOf={weekMode && !weekLeaving ? selectedDate : null}
           markedDates={markedTodoDates}
           glass
           onVisibleMonthChange={onCalendarMonthChange}
@@ -1229,7 +1383,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                       Typography.label,
                       { color: calendarFilter === filter ? t.text : t.textMuted },
                     ]}>
-                    {filter === 'all' ? '전체' : filter === 'routine' ? '루틴' : '할 일'}
+                    {filter === 'all'
+                      ? tr('routineTodo.myRoom.filterAll')
+                      : tr(`routineTodo.kind.${filter}`)}
                   </Text>
                 </Pressable>
               ))}
@@ -1238,20 +1394,22 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         />
         {calendarMonthLoading ? (
           <Text style={[Typography.supporting, { color: t.textMuted }]}>
-            이번 달 기록을 불러오는 중이에요
+            {tr('routineTodo.myRoom.monthLoading')}
           </Text>
         ) : null}
         {calendarMonthError ? (
           <View style={styles.calendarState}>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              이번 달 기록을 새로 불러오지 못했어요
+              {tr('routineTodo.myRoom.monthLoadFailed')}
             </Text>
             <Pressable
               onPress={onRetryCalendarMonth}
               accessibilityRole="button"
-              accessibilityLabel="월 기록 다시 불러오기"
+              accessibilityLabel={tr('routineTodo.myRoom.monthRetryA11y')}
               style={styles.calendarRetry}>
-              <Text style={[Typography.label, { color: t.primaryText }]}>다시 시도</Text>
+              <Text style={[Typography.label, { color: t.primaryText }]}>
+                {tr('routineTodo.myRoom.retry')}
+              </Text>
             </Pressable>
           </View>
         ) : null}
@@ -1263,7 +1421,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
       <View style={[styles.section, column]}>
         <CoachTarget id="room-routines">
           <View style={styles.sectionHead}>
-            <Text style={[Typography.h2, { color: t.text }]}>오늘의 할 일</Text>
+            <Text style={[Typography.h2, { color: t.text }]}>
+              {tr('routineTodo.myRoom.todayTitle')}
+            </Text>
             <View style={styles.sectionHeadRight}>
               {roomRoutines.length > 0 ? (
                 <Text style={[Typography.label, { color: t.primaryText }]}>
@@ -1274,7 +1434,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                 <Pressable
                   onPress={() => openCompose(today)}
                   accessibilityRole="button"
-                  accessibilityLabel="오늘에 추가">
+                  accessibilityLabel={tr('routineTodo.myRoom.addTodayA11y')}>
                   <GlassSurface fallbackColor={t.surface} style={styles.quickAddTrigger}>
                     <Icon name="add" size={22} color={t.text} />
                   </GlassSurface>
@@ -1287,13 +1447,15 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         {loading ? (
           <View style={styles.stateBlock}>
             <Loading />
-            <Text style={[Typography.supporting, { color: t.textMuted }]}>불러오는 중...</Text>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              {tr('routineTodo.myRoom.loading')}
+            </Text>
           </View>
         ) : null}
 
         {!loading && loadError ? (
           <View style={styles.stateBlock}>
-            <RetryState message="데이터를 불러오지 못했어요." onRetry={onRetry} />
+            <RetryState message={tr('routineTodo.myRoom.loadFailed')} onRetry={onRetry} />
           </View>
         ) : null}
 
@@ -1315,14 +1477,18 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               ),
             )}
       </View>
-    ) : (
+    ) : hideDayList ? null : (
       <>
         <View style={styles.calListHead}>
           <View
             style={styles.calDateHeading}
             accessible
             accessibilityRole="header"
-            accessibilityLabel={`${selectedDay.getFullYear()}년 ${selectedDayLabel} ${selectedWeekday}${selectedHoliday ? `, ${selectedHoliday}` : ''}`}>
+            accessibilityLabel={`${tr('routineTodo.myRoom.dayHeadingA11y', {
+              year: selectedDay.getFullYear(),
+              date: selectedDayLabel,
+              weekday: selectedWeekday,
+            })}${selectedHoliday ? `, ${selectedHoliday}` : ''}`}>
             <Text style={[Typography.h3, { color: t.text }]}>{selectedDayLabel}</Text>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
               {selectedHoliday ? `${selectedWeekday} · ${selectedHoliday}` : selectedWeekday}
@@ -1332,7 +1498,7 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             <Pressable
               onPress={() => openCompose(selectedDate)}
               accessibilityRole="button"
-              accessibilityLabel="선택한 날에 추가">
+              accessibilityLabel={tr('routineTodo.myRoom.addSelectedA11y')}>
               <GlassSurface fallbackColor={t.surface} style={styles.quickAddTrigger}>
                 <Icon name="add" size={22} color={t.text} />
               </GlassSurface>
@@ -1342,14 +1508,16 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         {calendarDayError || calendarTodayError ? (
           <View style={styles.calendarState}>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              이 날의 기록을 새로 불러오지 못했어요
+              {tr('routineTodo.myRoom.dayLoadFailed')}
             </Text>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="선택일 기록 다시 불러오기"
+              accessibilityLabel={tr('routineTodo.myRoom.dayRetryA11y')}
               onPress={calendarTodayError ? onRetry : onRetryCalendarDay}
               style={styles.calendarRetry}>
-              <Text style={[Typography.label, { color: t.primaryText }]}>다시 시도</Text>
+              <Text style={[Typography.label, { color: t.primaryText }]}>
+                {tr('routineTodo.myRoom.retry')}
+              </Text>
             </Pressable>
           </View>
         ) : null}
@@ -1361,7 +1529,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
         ) : serverBackedDay && !dayItems ? null : serverBackedDay ? (
           calServerGroups!.length === 0 ? (
             <Text style={[Typography.body, styles.calEmpty, { color: t.textMuted }]}>
-              {selectedDate < today ? '기록이 없어요' : '일정이 없어요'}
+              {selectedDate < today
+                ? tr('routineTodo.myRoom.noRecord')
+                : tr('routineTodo.myRoom.noPlan')}
             </Text>
           ) : (
             calServerGroups!.map((group, gi) =>
@@ -1375,7 +1545,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           )
         ) : calClientGroups.length === 0 ? (
           <Text style={[Typography.body, styles.calEmpty, { color: t.textMuted }]}>
-            {selectedDate < today ? '기록이 없어요' : '일정이 없어요'}
+            {selectedDate < today
+              ? tr('routineTodo.myRoom.noRecord')
+              : tr('routineTodo.myRoom.noPlan')}
           </Text>
         ) : (
           calClientGroups.map((group, gi) =>
@@ -1447,8 +1619,8 @@ export const MyRoomScreen = memo(function MyRoomScreen({
           <GlassSurface interactive={false} fallbackColor={t.surface} style={styles.segment}>
             {(
               [
-                ['room', '방'],
-                ['calendar', '달력'],
+                ['room', tr('nav.myRoomShort')],
+                ['calendar', tr('nav.calendar')],
               ] as const
             ).map(([key, label]) => {
               const active = tab === key;
@@ -1496,7 +1668,9 @@ export const MyRoomScreen = memo(function MyRoomScreen({
               {streakDays > 0 ? (
                 <Animated.View style={[styles.streak, { transform: [{ scale: streakPulse }] }]}>
                   <Icon name="flame" size={14} color={t.warningText} />
-                  <Text style={[Typography.label, { color: t.warningText }]}>{streakDays}일</Text>
+                  <Text style={[Typography.label, { color: t.warningText }]}>
+                    {tr('routineTodo.myRoom.streakDays', { days: streakDays })}
+                  </Text>
                 </Animated.View>
               ) : null}
               <View style={styles.streak}>
@@ -1536,6 +1710,18 @@ export const MyRoomScreen = memo(function MyRoomScreen({
       />
 
       {/* 날짜 바꾸기: calendar bottom sheet — the pick stays a draft until 확인. */}
+      <TodoDateDialog
+        visible={todoDateOpen}
+        value={newTodoDate}
+        onSelect={(date) => {
+          setNewTodoDate(date);
+          setTodoDateOpen(false);
+          // 제목 입력으로 포커스를 되돌려 blur 커밋이 계속 동작하게.
+          setTimeout(() => todoInputRef.current?.focus(), 60);
+        }}
+        onClose={() => setTodoDateOpen(false)}
+      />
+
       <DateEditSheet
         item={dateEditItem}
         fromDate={dateEditFrom}
@@ -1576,7 +1762,10 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             }
             if (draft.date !== today)
               toast(
-                `${monthDayLabel(localDate(draft.date))}에 ${draft.kind === 'routine' ? '루틴' : '할 일'}을 추가했어요`,
+                tr('routineTodo.myRoom.addedOnDate', {
+                  date: monthDayLabel(localDate(draft.date)),
+                  kind: tr(`routineTodo.kind.${draft.kind}`),
+                }),
               );
           }
           return result;
@@ -1632,6 +1821,19 @@ const styles = StyleSheet.create({
   quickAddTrigger: {
     borderRadius: Radius.pill,
     padding: Spacing.three,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  /** 주간 보기 헤더 (#1327) — 높이가 0에서 자라므로 넘치는 내용은 숨긴다. */
+  weekHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    overflow: 'hidden',
+  },
+  weekBack: {
+    borderRadius: Radius.pill,
+    padding: Spacing.two,
     alignItems: 'center',
     justifyContent: 'center',
   },

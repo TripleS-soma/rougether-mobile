@@ -1,4 +1,5 @@
 import { type FurnitureItem, type PlacedFurniture, type Wallpaper } from '@/resources/furniture';
+import { i18n } from '@/i18n';
 
 /**
  * 프리뷰 경제 (#501) — room-decor-screen에서 분리한 순수 계산.
@@ -10,10 +11,17 @@ import { type FurnitureItem, type PlacedFurniture, type Wallpaper } from '@/reso
 
 export type SurfaceKind = 'wallpaper' | 'floor' | 'background';
 
+/** 표면류 표시 라벨 — getter라 언어 변경이 반영된다 (#893). */
 export const SURFACE_LABEL: Record<SurfaceKind, string> = {
-  wallpaper: '벽지',
-  floor: '바닥',
-  background: '배경',
+  get wallpaper() {
+    return i18n.t('roomShop.decor.surface.wallpaper');
+  },
+  get floor() {
+    return i18n.t('roomShop.decor.surface.floor');
+  },
+  get background() {
+    return i18n.t('roomShop.decor.surface.background');
+  },
 };
 
 /** 적용 시점에 구매가 필요한 아이템 한 건. */

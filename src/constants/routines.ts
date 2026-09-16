@@ -4,19 +4,21 @@
  * spec repo is the source of truth for the contract.
  */
 import type { PictogramName } from '@/components/ui/pictograms';
+import { i18n } from '@/i18n';
 
 export type RoutineCategory = string;
 
 /** Mirrors the API's four levels: PUBLIC / HOUSE / FRIENDS / PRIVATE. */
 export type CategoryVisibility = 'public' | 'neighbor' | 'partial' | 'private';
 
-/** Human labels for each visibility option (category manager). */
-export const VISIBILITY_LABELS: Record<CategoryVisibility, string> = {
-  public: '전체 공개',
-  neighbor: '이웃 공개',
-  partial: '일부 공개',
-  private: '비공개',
-};
+/**
+ * Human label key for each visibility option (category manager) — screens
+ * resolve it with `tr(visibilityLabelKey(v))` so a language change re-renders.
+ */
+export const visibilityLabelKey = (v: CategoryVisibility) => `routineTodo.visibility.${v}` as const;
+
+/** Call-time label (hooks/utils outside components). */
+export const getVisibilityLabel = (v: CategoryVisibility) => i18n.t(visibilityLabelKey(v));
 
 /**
  * Visibility pictogram per option — shared by the category manager sheet and
@@ -30,12 +32,23 @@ export const VISIBILITY_ICONS: Record<CategoryVisibility, PictogramName> = {
 };
 
 /**
- * 요일 라벨 — 일요일 시작. 달력 머리글·루틴 요일 칩·조정 추천 카드(#1006)가
- * 같은 순서를 써야 눈이 같은 자리를 찾는다.
+ * 요일 키 — 일요일 시작. 달력 머리글·루틴 요일 칩·조정 추천 카드(#1006)가
+ * 같은 순서를 써야 눈이 같은 자리를 찾는다. 라벨은 i18n(#893) —
+ * `routineTodo.weekday.<key>`(한 글자)·`routineTodo.weekdayLong.<key>`(요일명).
+ * 모듈 로드 시점에 번역하면 언어 변경이 안 먹으므로 호출 시점 getter로 푼다.
  */
-export const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'] as const;
+export const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
 
-/** 서버 요일 토큰 — 인덱스가 `WEEKDAY_LABELS`와 맞는다(일요일 0). */
+export const weekdayLabelKey = (day: number) =>
+  `routineTodo.weekday.${WEEKDAY_KEYS[day] ?? 'sun'}` as const;
+export const weekdayLongLabelKey = (day: number) =>
+  `routineTodo.weekdayLong.${WEEKDAY_KEYS[day] ?? 'sun'}` as const;
+
+/** 요일 한 글자 라벨 7개(일~토) — 호출 시점의 언어로. */
+export const getWeekdayLabels = (): string[] =>
+  WEEKDAY_KEYS.map((_, day) => i18n.t(weekdayLabelKey(day)));
+
+/** 서버 요일 토큰 — 인덱스가 `WEEKDAY_KEYS`와 맞는다(일요일 0). */
 export const DAY_CODES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'] as const;
 
 /** Color palette assigned to newly created categories (cycled by index). */
@@ -69,7 +82,10 @@ export type RoutineCategoryMeta = {
  */
 export const UNCATEGORIZED_META: RoutineCategoryMeta = {
   id: '',
-  name: '미분류',
+  // Getter so the label follows the active language (#893) — read at use time.
+  get name() {
+    return i18n.t('routineTodo.category.uncategorized');
+  },
   icon: 'sparkle',
   color: '#B5A89C',
   visibility: 'public',
@@ -127,6 +143,13 @@ export type Routine = {
    */
   skippedDates?: string[];
 };
+
+/**
+ * 루틴 몫 옮기기의 서버 건너뜀(SKIPPED) 사용 여부 (#189 · #1334). 서버 #390이 운영에 배포되기
+ * 전엔 false — 옛 서버는 `status`를 무시하고 그 POST를 **완료**로 기록하므로, 배포 확인
+ * (운영 api-docs `RoutineLogCreateRequest.status`) 뒤에 true로 올린다.
+ */
+export const ROUTINE_OCCURRENCE_SKIP_ENABLED = false;
 
 /** Payload for creating/editing a routine (from the Add/Edit routine screen). */
 export type NewRoutine = {

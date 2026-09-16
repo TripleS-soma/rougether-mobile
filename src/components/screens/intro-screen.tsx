@@ -9,47 +9,39 @@ import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useScreenStyle } from '@/hooks/use-screen-style';
 import { useConstant, useLatestRef } from '@/hooks/use-stable-value';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 import { horizontalFlingGesture } from '@/utils/gesture';
 
-export type IntroSlide = { id: string; image: number; title: string; description: string };
+export type IntroSlide = { id: string; image: number };
 
 /**
  * 소개 5장 (#412, design-sync A안). 비주얼은 실제 앱 화면 캡처(라이트, 1080×2192)를
  * 표시 3배수인 689×1400 WebP로 줄인 것이다(#746 → #1282 재촬영). UI가 크게 바뀌면
  * 다시 찍어 교체한다 — 캡처 비율이 바뀌면 styles.captureFrame도 함께.
  *
- * `id`는 계측(`intro_view`의 step)에 쓰는 이름이라 순서를 바꿔도 유지한다.
+ * `id`는 계측(`intro_view`의 step)에 쓰는 이름이라 순서를 바꿔도 유지한다. 제목·설명은
+ * `member.intro.slides.<id>` 키로 읽는다 (#893).
  */
 export const INTRO_SLIDES: IntroSlide[] = [
   {
     id: 'my-room',
     image: require('@/assets/images/onboarding/my-room.webp'),
-    title: '매일의 루틴이\n포근한 방이 되는 곳',
-    description: '루게더에 오신 걸 환영해요',
   },
   {
     id: 'routines',
     image: require('@/assets/images/onboarding/routines.webp'),
-    title: '오늘의 루틴을\n곰 체크로 완료해요',
-    description: '카테고리로 모아 보고, 알림·반복 설정까지',
   },
   {
     id: 'decor',
     image: require('@/assets/images/onboarding/decor.webp'),
-    title: '모은 보상으로\n내 방을 꾸며요',
-    description: '가구·벽지·바닥을 원하는 자리에 자유 배치',
   },
   {
     id: 'house',
     image: require('@/assets/images/onboarding/house.webp'),
-    title: '친구들과 한 집에서\n함께 자라요',
-    description: '방 구경 · 응원 보내기 · 공동 미션으로 집 레벨 업',
   },
   {
     id: 'calendar',
     image: require('@/assets/images/onboarding/calendar.webp'),
-    title: '기록은 달력으로,\n보상은 뽑기로',
-    description: '지난 완료를 돌아보고 캐릭터·가구를 모아요',
   },
 ];
 
@@ -84,12 +76,13 @@ export type IntroScreenProps = {
  */
 export function IntroScreen({
   onDone,
-  doneLabel = '시작하기',
+  doneLabel,
   onHaveAccount,
   onSkip,
   onSlideView,
 }: IntroScreenProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   // Pinned bottom action buttons → pad both edges so the notch / home indicator
   // don't clip the top title or the bottom buttons.
@@ -99,6 +92,7 @@ export function IntroScreen({
   const [index, setIndex] = useState(0);
   const isLast = index === INTRO_SLIDES.length - 1;
   const slide = INTRO_SLIDES[index];
+  const slideTitle = tr(`member.intro.slides.${slide.id}.title`);
 
   // 최신 콜백은 ref로 읽는다 — 부모가 매 렌더 새 함수를 넘겨도 같은 장에서 다시 쏘지 않게.
   const onSlideViewRef = useLatestRef(onSlideView);
@@ -131,9 +125,11 @@ export function IntroScreen({
           <Pressable
             onPress={onSkip}
             accessibilityRole="button"
-            accessibilityLabel="튜토리얼 건너뛰고 나가기"
+            accessibilityLabel={tr('member.intro.skipA11y')}
             hitSlop={8}>
-            <Text style={[Typography.supporting, { color: t.textMuted }]}>건너뛰기</Text>
+            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+              {tr('member.common.skip')}
+            </Text>
           </Pressable>
         ) : null}
       </View>
@@ -148,9 +144,9 @@ export function IntroScreen({
             붙을 대상이 없어진다 (친구 방 플링과 같은 규칙). */}
         <GestureDetector gesture={slideFling}>
           <View style={[styles.slideContent, column]} collapsable={false}>
-            <Text style={[Typography.h2, styles.center, { color: t.text }]}>{slide.title}</Text>
+            <Text style={[Typography.h2, styles.center, { color: t.text }]}>{slideTitle}</Text>
             <Text style={[Typography.body, styles.center, { color: t.textMuted }]}>
-              {slide.description}
+              {tr(`member.intro.slides.${slide.id}.description`)}
             </Text>
             {/* 실제 앱 화면 캡처 — 폰 프레임 카드 (#412). */}
             <View
@@ -160,7 +156,7 @@ export function IntroScreen({
                 style={styles.captureImage}
                 contentFit="cover"
                 transition={150}
-                accessibilityLabel={slide.title.replace('\n', ' ')}
+                accessibilityLabel={slideTitle.replace('\n', ' ')}
               />
             </View>
           </View>
@@ -173,7 +169,7 @@ export function IntroScreen({
             key={s.id}
             onPress={() => setIndex(i)}
             accessibilityRole="button"
-            accessibilityLabel={`${i + 1}번째 슬라이드로 이동`}
+            accessibilityLabel={tr('member.intro.goToSlide', { n: i + 1 })}
             style={[
               styles.dot,
               i === index
@@ -186,11 +182,11 @@ export function IntroScreen({
 
       <View style={[styles.actions, column]}>
         <PrimaryButton
-          label={isLast ? doneLabel : '다음'}
+          label={isLast ? (doneLabel ?? tr('member.common.start')) : tr('member.common.next')}
           onPress={() => (isLast ? onDone?.() : setIndex((i) => i + 1))}
         />
         {index === 0 && onHaveAccount ? (
-          <TextButton label="이미 계정이 있어요" onPress={onHaveAccount} />
+          <TextButton label={tr('member.intro.haveAccount')} onPress={onHaveAccount} />
         ) : null}
       </View>
     </View>

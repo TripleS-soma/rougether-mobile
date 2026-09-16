@@ -1,5 +1,6 @@
 import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import type { SpeakerPlayerFactory } from '@/lib/speaker-player.types';
+import { i18n } from '@/i18n';
 
 // Android ExoPlayer repeats a prejoined PCM file natively, even with JS suspended.
 export const createSpeakerPlayer: SpeakerPlayerFactory = (
@@ -7,7 +8,7 @@ export const createSpeakerPlayer: SpeakerPlayerFactory = (
   volume,
   onPlaying,
   onError,
-  title = '방에 흐르는 소리',
+  title = i18n.t('roomShop.speaker.nowPlayingTitle'),
 ) => {
   const player = createAudioPlayer(source, { updateInterval: 250 });
   player.loop = true;
@@ -30,7 +31,7 @@ export const createSpeakerPlayer: SpeakerPlayerFactory = (
       if (disposed || current !== operation) return;
       player.setActiveForLockScreen(
         true,
-        { title, artist: '루게더' },
+        { title, artist: i18n.t('roomShop.speaker.nowPlayingArtist') },
         { showSeekBackward: false, showSeekForward: false },
       );
       player.play();

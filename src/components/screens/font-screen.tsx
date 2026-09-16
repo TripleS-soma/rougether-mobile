@@ -17,6 +17,7 @@ import {
 import { useActionBarInset, useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { BrandThemePreview, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 /** 글자 스와치에 쓸 견본 — 받침·둥근 획이 다 들어가 얼굴 차이가 잘 드러난다. */
 const SWATCH_GLYPH = '가';
@@ -46,6 +47,7 @@ export function FontScreen({
   onBack,
 }: FontScreenProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   const column = useResponsiveColumn();
   // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
@@ -57,7 +59,7 @@ export function FontScreen({
 
   return (
     <View style={[pickerStyles.screen, useScreenStyle([])]}>
-      <ScreenHeader title="폰트" onBack={onBack} />
+      <ScreenHeader title={tr('member.font.title')} onBack={onBack} />
 
       <ScrollView
         contentContainerStyle={[
@@ -76,7 +78,7 @@ export function FontScreen({
               key={opt.id}
               name={opt.name}
               selected={opt.id === pending}
-              accessibilityLabel={`${opt.name} 폰트`}
+              accessibilityLabel={tr('member.font.optionA11y', { name: opt.name })}
               onPress={() => setPending(opt.id)}
               swatch={
                 <View
@@ -101,7 +103,7 @@ export function FontScreen({
           onPress={() => canApply && onApplyFont?.(pending)}
           disabled={!canApply}
           accessibilityRole="button"
-          accessibilityLabel="적용하기"
+          accessibilityLabel={tr('common.apply')}
           accessibilityState={{ disabled: !canApply }}
           style={styles.apply}>
           <GlassSurface
@@ -109,7 +111,7 @@ export function FontScreen({
             tintColor={canApply ? t.primary : undefined}
             fallbackColor={canApply ? t.primary : t.surfaceMuted}>
             <Text style={[Typography.label, { color: canApply ? t.onPrimary : t.textMuted }]}>
-              적용하기
+              {tr('common.apply')}
             </Text>
           </GlassSurface>
         </Pressable>

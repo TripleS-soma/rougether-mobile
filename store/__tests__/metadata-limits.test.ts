@@ -27,6 +27,16 @@ const LIMITS: Record<string, number> = {
   'ko-KR/play/title.txt': 30,
   'ko-KR/play/short-description.txt': 80,
   'ko-KR/play/full-description.txt': 4000,
+  // en-US (#893 3단계) — 상한은 언어와 무관하게 같다.
+  'en-US/app-store/name.txt': 30,
+  'en-US/app-store/subtitle.txt': 30,
+  'en-US/app-store/promotional-text.txt': 170,
+  'en-US/app-store/keywords.txt': 100,
+  'en-US/app-store/description.txt': 4000,
+  'en-US/app-store/release-notes.txt': 4000,
+  'en-US/play/title.txt': 30,
+  'en-US/play/short-description.txt': 80,
+  'en-US/play/full-description.txt': 4000,
 };
 
 /** 파일 내용 = 콘솔에 붙여넣을 값. 끝 개행은 우리 편의라 세지 않는다. */
@@ -47,7 +57,14 @@ describe('스토어 메타데이터 (#818)', () => {
    *
    * 기능을 되살리면(사진 인증은 #158) 여기서 해당 항목을 빼면 된다.
    */
-  const REMOVED_FEATURES = ['사진 인증', '사진인증', '인증 사진', '인증샷'];
+  const REMOVED_FEATURES = [
+    '사진 인증',
+    '사진인증',
+    '인증 사진',
+    '인증샷',
+    'photo verification',
+    'photo proof',
+  ];
 
   const COPY_FILES = [
     'ko-KR/app-store/description.txt',
@@ -56,6 +73,12 @@ describe('스토어 메타데이터 (#818)', () => {
     'ko-KR/app-store/keywords.txt',
     'ko-KR/play/short-description.txt',
     'ko-KR/play/full-description.txt',
+    'en-US/app-store/description.txt',
+    'en-US/app-store/promotional-text.txt',
+    'en-US/app-store/release-notes.txt',
+    'en-US/app-store/keywords.txt',
+    'en-US/play/short-description.txt',
+    'en-US/play/full-description.txt',
   ];
 
   it.each(COPY_FILES)('%s — 앱에 없는 기능을 홍보하지 않는다', (rel) => {

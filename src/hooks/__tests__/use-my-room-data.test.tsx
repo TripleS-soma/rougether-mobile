@@ -7,6 +7,12 @@ import { calendarToday } from '@/utils/calendar-progress';
 import type { NewRoutine } from '@/constants/routines';
 import { jsonRes as res } from '@/test-utils/fetch';
 import { createTestQueryClient, queryWrapper as wrapQuery } from '@/test-utils/query-wrapper';
+
+// 서버 건너뜀 플래그 (#1334 게이트) — 이 스위트는 서버가 배포된 상태를 검증한다.
+jest.mock('@/constants/routines', () => ({
+  ...jest.requireActual('@/constants/routines'),
+  ROUTINE_OCCURRENCE_SKIP_ENABLED: true,
+}));
 const clients: ReturnType<typeof createTestQueryClient>[] = [];
 const queryWrapper = () => {
   const client = createTestQueryClient();
@@ -824,5 +830,26 @@ describe('useMyRoomData — 루틴 몫 옮기기 (#189)', () => {
     const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.routines.find((r) => r.id === 'r5')!.skippedDates).toEqual([todayIso]);
+  });
+
+  it('플래그가 꺼져 있으면(서버 배포 전) 오늘 몫도 할 일만 만들고 건너뜀을 보내지 않는다', async () => {
+    const routinesModule = jest.requireMock('@/constants/routines') as {
+      ROUTINE_OCCURRENCE_SKIP_ENABLED: boolean;
+    };
+    routinesModule.ROUTINE_OCCURRENCE_SKIP_ENABLED = false;
+    try {
+      const { todayIso, calls } = setup();
+      const { result } = await renderHook(() => useMyRoomData(), { wrapper: queryWrapper() });
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      const routine = result.current.routines.find((r) => r.kind !== 'todo')!;
+      await act(() => result.current.moveRoutineOccurrence(routine.id, '2099-01-02', todayIso));
+      expect(calls.some((c) => c.url.endsWith('/routines/5/logs'))).toBe(false);
+      expect(calls.some((c) => c.method === 'POST' && c.url.endsWith('/todos'))).toBe(true);
+      expect(
+        result.current.routines.find((r) => r.id === routine.id)!.skippedDates,
+      ).toBeUndefined();
+    } finally {
+      routinesModule.ROUTINE_OCCURRENCE_SKIP_ENABLED = true;
+    }
   });
 });

@@ -5,6 +5,7 @@ import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { SpeakerSprite } from '@/components/room/speaker-sprite';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 import { clampVolume, SPEAKER_TRACKS, type SpeakerTrackId } from '@/resources/speaker';
 
 export type SpeakerSheetProps = {
@@ -35,6 +36,7 @@ export function SpeakerSheet({
 }: SpeakerSheetProps) {
   const t = useTokens();
   const Typography = useTypography();
+  const tr = useT();
   const slider = useRef<View>(null);
   const latest = useRef({ onVolumeChange, volume });
   latest.current = { onVolumeChange, volume };
@@ -71,14 +73,16 @@ export function SpeakerSheet({
       <ScrollView contentContainerStyle={[styles.content, { backgroundColor: t.surface }]}>
         <View style={styles.row}>
           <View style={styles.flex}>
-            <Text style={[Typography.h2, { color: t.text }]}>방에 흐르는 소리</Text>
+            <Text style={[Typography.h2, { color: t.text }]}>
+              {tr('roomShop.speaker.sheetTitle')}
+            </Text>
             <Text style={[Typography.supporting, { color: t.textMuted }]}>
-              오늘은 어떤 분위기로 쉬어갈까요?
+              {tr('roomShop.speaker.sheetSubtitle')}
             </Text>
           </View>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="스피커 닫기"
+            accessibilityLabel={tr('roomShop.speaker.closeA11y')}
             onPress={onClose}
             style={styles.smallButton}>
             <Ionicons name="close" size={Spacing.four} color={t.text} />
@@ -116,7 +120,7 @@ export function SpeakerSheet({
           ))}
         </View>
         <View style={styles.row}>
-          <Text style={[Typography.label, { color: t.text }]}>볼륨</Text>
+          <Text style={[Typography.label, { color: t.text }]}>{tr('roomShop.speaker.volume')}</Text>
           <Text style={[Typography.supporting, { color: t.textMuted }]}>
             {Math.round(volume * 100)}%
           </Text>
@@ -124,7 +128,7 @@ export function SpeakerSheet({
         <View style={styles.row}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="볼륨 줄이기"
+            accessibilityLabel={tr('roomShop.speaker.volumeDownA11y')}
             onPress={() => onVolumeChange(clampVolume(volume - 0.1))}
             style={styles.smallButton}>
             <Ionicons name="remove" size={Spacing.four} color={t.text} />
@@ -133,7 +137,7 @@ export function SpeakerSheet({
             ref={slider}
             {...gesture.panHandlers}
             accessibilityRole="adjustable"
-            accessibilityLabel="스피커 볼륨"
+            accessibilityLabel={tr('roomShop.speaker.volumeA11y')}
             accessibilityValue={{ min: 0, max: 100, now: Math.round(volume * 100) }}
             accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
             onAccessibilityAction={(event) =>
@@ -150,7 +154,7 @@ export function SpeakerSheet({
           </View>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="볼륨 높이기"
+            accessibilityLabel={tr('roomShop.speaker.volumeUpA11y')}
             onPress={() => onVolumeChange(clampVolume(volume + 0.1))}
             style={styles.smallButton}>
             <Text style={[Typography.h3, { color: t.text }]}>+</Text>
@@ -166,7 +170,13 @@ export function SpeakerSheet({
           onPress={playing || loading ? onStop : onPlay}
           style={[styles.play, { backgroundColor: t.primary }]}>
           <Text style={[Typography.label, { color: t.onPrimary }]}>
-            {loading ? '취소' : playing ? '정지' : '재생'}
+            {tr(
+              loading
+                ? 'roomShop.speaker.cancel'
+                : playing
+                  ? 'roomShop.speaker.stop'
+                  : 'roomShop.speaker.play',
+            )}
           </Text>
         </Pressable>
       </ScrollView>

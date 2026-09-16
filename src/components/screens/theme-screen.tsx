@@ -11,6 +11,7 @@ import { DEFAULT_THEME_ID, Radius, THEME_OPTIONS, type ThemeId } from '@/constan
 import { useActionBarInset, useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { BrandThemePreview, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 export type ThemeScreenProps = {
   /** 미리보기 카드에 그릴 내 정체성 (#899). */
@@ -38,6 +39,7 @@ export function ThemeScreen({
   onBack,
 }: ThemeScreenProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   const column = useResponsiveColumn();
   // 떠 있는 글래스 헤더(#1069) 밑으로 콘텐츠가 지나가도록 상단 패딩.
@@ -49,7 +51,7 @@ export function ThemeScreen({
 
   return (
     <View style={[pickerStyles.screen, useScreenStyle([])]}>
-      <ScreenHeader title="테마 색상" onBack={onBack} />
+      <ScreenHeader title={tr('member.theme.title')} onBack={onBack} />
 
       <ScrollView
         contentContainerStyle={[
@@ -68,7 +70,7 @@ export function ThemeScreen({
               key={opt.id}
               name={opt.name}
               selected={opt.id === pending}
-              accessibilityLabel={`${opt.name} 테마`}
+              accessibilityLabel={tr('member.theme.optionA11y', { name: opt.name })}
               onPress={() => setPending(opt.id)}
               swatch={
                 <View
@@ -86,7 +88,7 @@ export function ThemeScreen({
           onPress={() => canApply && onApplyThemeId?.(pending)}
           disabled={!canApply}
           accessibilityRole="button"
-          accessibilityLabel="적용하기"
+          accessibilityLabel={tr('common.apply')}
           accessibilityState={{ disabled: !canApply }}
           style={styles.apply}>
           <GlassSurface
@@ -94,7 +96,7 @@ export function ThemeScreen({
             tintColor={canApply ? t.primary : undefined}
             fallbackColor={canApply ? t.primary : t.surfaceMuted}>
             <Text style={[Typography.label, { color: canApply ? t.onPrimary : t.textMuted }]}>
-              적용하기
+              {tr('common.apply')}
             </Text>
           </GlassSurface>
         </Pressable>

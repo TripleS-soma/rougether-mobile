@@ -4,6 +4,7 @@ import { type InvitePreview, inviterLabel } from '@/components/screens/invite-fr
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 export type InviteArrivalSheetProps = {
   visible: boolean;
@@ -30,6 +31,7 @@ export function InviteArrivalSheet({
   onLater,
 }: InviteArrivalSheetProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   const coin = preview?.rewardCoin ?? 0;
   return (
@@ -40,29 +42,33 @@ export function InviteArrivalSheet({
       cardStyle={[styles.sheet, { backgroundColor: t.screen }]}>
       <View style={[styles.handle, { backgroundColor: t.border }]} />
       <Text style={[Typography.h2, { color: t.text }]}>
-        🎁 {inviterLabel(preview?.inviterNickname)}의 초대로 오셨어요
+        {tr('house.inviteArrival.title', { inviter: inviterLabel(preview?.inviterNickname) })}
       </Text>
       <Text style={[Typography.body, styles.body, { color: t.textMuted }]}>
-        초대코드를 쓰면 코인 {coin}개를 받아요. 초대코드는 한 번만 쓸 수 있어요.
+        {tr('house.inviteArrival.body', { n: coin })}
       </Text>
       <View style={styles.btns}>
         <Pressable
           onPress={onLater}
           disabled={busy}
           accessibilityRole="button"
-          accessibilityLabel="초대 나중에 받기"
+          accessibilityLabel={tr('house.inviteArrival.laterA11y')}
           style={[styles.btn, { backgroundColor: t.surfaceMuted }]}>
-          <Text style={[Typography.label, { color: t.text }]}>나중에</Text>
+          <Text style={[Typography.label, { color: t.text }]}>
+            {tr('house.inviteArrival.later')}
+          </Text>
         </Pressable>
         <Pressable
           onPress={onAccept}
           disabled={busy}
           accessibilityRole="button"
-          accessibilityLabel="초대 코인 받기"
+          accessibilityLabel={tr('house.inviteArrival.acceptA11y')}
           accessibilityState={{ disabled: busy }}
           style={[styles.btn, { backgroundColor: busy ? t.disabledBg : t.primary }]}>
           <Text style={[Typography.label, { color: busy ? t.textMuted : t.onPrimary }]}>
-            {busy ? '받는 중...' : `코인 ${coin}개 받기`}
+            {busy
+              ? tr('house.inviteArrival.accepting')
+              : tr('house.inviteArrival.accept', { n: coin })}
           </Text>
         </Pressable>
       </View>

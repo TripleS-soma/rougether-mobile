@@ -35,7 +35,8 @@ describe('backTargetFor (#564)', () => {
 
   it('전폭 스와이프 백 제외 화면 — 가로 제스처를 쓰는 곳만 (#1135)', () => {
     expect([...FULL_SWIPE_BACK_EXCLUDED].sort()).toEqual(
-      ['addRoutine', 'decor', 'friendRoom', 'gacha'].sort(),
+      // calendarWeek: 좌우 스와이프가 주 이동 (#1327).
+      ['addRoutine', 'decor', 'friendRoom', 'gacha', 'calendarWeek'].sort(),
     );
     // 설정·도움말 같은 세로 화면은 어디서나 우향 스와이프로 뒤로.
     expect(FULL_SWIPE_BACK_EXCLUDED.has('settings')).toBe(false);
