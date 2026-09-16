@@ -51,7 +51,7 @@ const build = (overrides = {}) => ({
   gitCommitHash: sha,
   runtime: { version: fingerprint },
   buildProfile: 'testflight',
-  channel: 'dev',
+  channel: 'internal',
   ...overrides,
 });
 

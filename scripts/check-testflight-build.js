@@ -4,6 +4,8 @@ const fs = require('node:fs');
 const { execFileSync } = require('node:child_process');
 const { checkTrain } = require('./check-version-train');
 
+// dev 레인 OTA 채널 — 2026-09-16 재배선(빌드 125가 채널 dev로 심사 제출돼 dev→production, 개발 레인은 internal).
+const DEV_LANE_CHANNEL = 'internal';
 const PROJECT_ID = '430c1f3b-4035-47c8-9864-8e07687d628c';
 const REPOSITORY = 'TripleS-soma/rougether-mobile';
 const REQUIRED_CHECKS = ['check', 'prebuild', 'ios-plist', 'android-manifest', 'release-smoke'];
@@ -36,7 +38,7 @@ function validateConfiguration(env, checkoutSha, app, eas) {
       app.expo?.extra?.eas?.projectId === PROJECT_ID &&
       app.expo?.runtimeVersion?.policy === 'fingerprint' &&
       eas.cli?.appVersionSource === 'remote' &&
-      profile?.channel === 'dev' &&
+      profile?.channel === DEV_LANE_CHANNEL &&
       profile?.environment === 'preview' &&
       profile?.ios?.distribution === 'store' &&
       profile?.autoIncrement === true &&
@@ -261,7 +263,7 @@ function execute(env, app, eas, run = command, report = console.log, validateOnl
       build.gitCommitHash === env.EXPECTED_SOURCE_SHA &&
       runtime(build) === fingerprint &&
       build.buildProfile === 'testflight' &&
-      (build.channel || build.updateChannel?.name) === 'dev' &&
+      (build.channel || build.updateChannel?.name) === DEV_LANE_CHANNEL &&
       build.distribution === 'STORE',
     'Build result does not match the authorized candidate. Do not submit or retry.',
   );
