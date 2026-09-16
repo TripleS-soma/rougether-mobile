@@ -1,6 +1,5 @@
-Language setting, a new calendar, and a News tab in notifications!
-
 • Choose Korean or English in Settings > Language. If your device is in English, the app starts in English
+• The cat in your iPhone home widget is happy when today's routines are done, worried if some are still left by evening, and sad after a few days away. Seven days in a row earns a crown
 • The Calendar tab now shows just the month. Tap a date and the calendar folds to that week with the day's routines and to-dos below; swipe sideways to move between weeks
 • Notifications are split into [My alerts | News]. Feature and update news lives in the News tab, and alerts can be swiped away
 • Getting started now points at the actual buttons on screen, step by step. The first mission is "complete one routine today"
