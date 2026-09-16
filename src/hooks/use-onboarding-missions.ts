@@ -68,6 +68,24 @@ export async function resetOnboardingMissions(): Promise<void> {
   }
 }
 
+/**
+ * 진행 중 기록 — 값 `progress:<stepIndex>`. 종료 플래그(`completed`·`skipped`)와 같은 키를 써서
+ * 한 계정에 상태가 하나만 남는다. 메모리에만 두면 앱 재시작 시 체인이 사라졌다.
+ */
+const PROGRESS_PREFIX = 'progress:';
+
+function parseProgress(flag: string | null): number | null {
+  if (!flag?.startsWith(PROGRESS_PREFIX)) return null;
+  const index = Number(flag.slice(PROGRESS_PREFIX.length));
+  return Number.isInteger(index) && index >= 0 && index < ONBOARDING_MISSION_STEPS.length
+    ? index
+    : null;
+}
+
+function saveProgress(stepIndex: number) {
+  void AsyncStorage.setItem(storeKey(), `${PROGRESS_PREFIX}${stepIndex}`).catch(() => {});
+}
+
 type MissionState = {
   active: boolean;
   stepIndex: number;
@@ -91,12 +109,20 @@ export function useOnboardingMissions(autoStart: boolean) {
   stateRef.current = state;
 
   useEffect(() => {
-    if (!autoStart) return;
     let mounted = true;
     void AsyncStorage.getItem(storeKey())
       .then((flag) => {
-        if (!mounted || flag != null || stateRef.current.active) return;
+        if (!mounted || stateRef.current.active) return;
+        // 진행 중 기록이 있으면 그 단계부터 이어간다 — 앱을 껐다 켜도 튜토리얼이 사라지지 않게
+        // (2026-09-16 보고: 첫 유입·다시 보기 모두 재시작 시 체인이 통째로 없어졌다).
+        const resumed = parseProgress(flag);
+        if (resumed != null) {
+          setState({ active: true, stepIndex: resumed, completedIndex: null });
+          return;
+        }
+        if (!autoStart || flag != null) return;
         setState({ active: true, stepIndex: 0, completedIndex: null });
+        saveProgress(0);
         track('onboarding_mission_start', { step: ONBOARDING_MISSION_STEPS[0].id });
       })
       .catch(() => {});
@@ -119,6 +145,7 @@ export function useOnboardingMissions(autoStart: boolean) {
       return;
     }
     track('onboarding_mission_start', { step: ONBOARDING_MISSION_STEPS[next].id });
+    saveProgress(next);
     setState({ active: true, stepIndex: next, completedIndex: s.stepIndex });
   }, []);
 

@@ -128,4 +128,34 @@ describe('CoachMarkOverlay (#351)', () => {
     // 폰 폭: 종전과 같은 좌우 24 여백으로 꽉.
     expect(bubbleHorizontal(360, 300)).toEqual({ left: 24, width: 312 });
   });
+
+  it('떠 있는 동안에만 대상 좌표 재측정 타이머를 돌리고, 사라지면 멈춘다', async () => {
+    const setSpy = jest.spyOn(global, 'setInterval');
+    const clearSpy = jest.spyOn(global, 'clearInterval');
+    try {
+      const tree = (steps: CoachStep[]) => (
+        <CoachTargetProvider>
+          <CoachTarget id="a">
+            <View />
+          </CoachTarget>
+          <CoachMarkOverlay
+            hardLock
+            steps={steps}
+            index={0}
+            targets={{}}
+            frame={{ w: 360, h: 800 }}
+          />
+        </CoachTargetProvider>
+      );
+      const { rerender } = await render(tree([{ target: 'a', title: '제목', body: '' }]));
+      const started = setSpy.mock.calls.filter(([, ms]) => ms === 250);
+      expect(started).toHaveLength(1);
+      const id = setSpy.mock.results[setSpy.mock.calls.findIndex(([, ms]) => ms === 250)].value;
+      await rerender(tree([]));
+      expect(clearSpy).toHaveBeenCalledWith(id);
+    } finally {
+      setSpy.mockRestore();
+      clearSpy.mockRestore();
+    }
+  });
 });

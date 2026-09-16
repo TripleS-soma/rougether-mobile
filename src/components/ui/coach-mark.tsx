@@ -20,6 +20,10 @@ export type TargetRect = { x: number; y: number; w: number; h: number };
 type TargetStore = {
   rects: Record<string, TargetRect>;
   setRect: (key: string, rect: TargetRect) => void;
+  /** 대상별 재측정 함수 등록 — 해제 함수를 돌려준다. */
+  registerMeasure: (key: string, measure: () => void) => () => void;
+  /** 등록된 대상 전부를 다시 잰다. */
+  remeasureAll: () => void;
 };
 
 const CoachTargetContext = createContext<TargetStore | null>(null);
@@ -46,7 +50,20 @@ export function CoachTargetProvider({ children }: { children: ReactNode }) {
       return { ...prev, [key]: rect };
     });
   }, []);
-  const value = useMemo(() => ({ rects, setRect }), [rects, setRect]);
+  const measuresRef = useRef(new Map<string, () => void>());
+  const registerMeasure = useCallback((key: string, measure: () => void) => {
+    measuresRef.current.set(key, measure);
+    return () => {
+      if (measuresRef.current.get(key) === measure) measuresRef.current.delete(key);
+    };
+  }, []);
+  const remeasureAll = useCallback(() => {
+    measuresRef.current.forEach((measure) => measure());
+  }, []);
+  const value = useMemo(
+    () => ({ rects, setRect, registerMeasure, remeasureAll }),
+    [rects, setRect, registerMeasure, remeasureAll],
+  );
   return <CoachTargetContext.Provider value={value}>{children}</CoachTargetContext.Provider>;
 }
 
@@ -61,14 +78,24 @@ export function useCoachTargets(): Record<string, TargetRect> {
 }
 const EMPTY_RECTS: Record<string, TargetRect> = {};
 
+/**
+ * 오버레이가 떠 있는 동안 대상 좌표를 주기적으로 다시 잰다 (2026-09-16, iOS·Android 위치 어긋남).
+ * `onLayout`은 **자기 크기·부모 안 위치가 바뀔 때만** 불린다 — 스크롤, 탭 페이저 이동(부모
+ * transform), 배너 등장으로 인한 창 기준 위치 변화에는 안 불려 좌표가 낡는다.
+ */
+const REMEASURE_MS = 250;
+
 export function CoachTarget({ id, children }: { id: string; children: ReactNode }) {
   const store = useContext(CoachTargetContext);
   const ref = useRef<View>(null);
-  const measure = () => {
+  const setRect = store?.setRect;
+  const measure = useCallback(() => {
     ref.current?.measureInWindow((x, y, w, h) => {
-      if (store && w > 0 && h > 0) store.setRect(id, { x, y, w, h });
+      if (setRect && w > 0 && h > 0) setRect(id, { x, y, w, h });
     });
-  };
+  }, [id, setRect]);
+  const registerMeasure = store?.registerMeasure;
+  useEffect(() => registerMeasure?.(id, measure), [registerMeasure, id, measure]);
   return (
     <View ref={ref} collapsable={false} onLayout={measure}>
       {children}
@@ -155,11 +182,23 @@ export function CoachMarkOverlay({
   const step = steps[index];
   const rootRef = useRef<View>(null);
   const [origin, setOrigin] = useState({ x: 0, y: 0 });
-  const measureOrigin = () => {
+  const measureOrigin = useCallback(() => {
     rootRef.current?.measureInWindow((x, y) => {
       setOrigin((prev) => (Math.abs(prev.x - x) < 1 && Math.abs(prev.y - y) < 1 ? prev : { x, y }));
     });
-  };
+  }, []);
+  const remeasureAll = useContext(CoachTargetContext)?.remeasureAll;
+  const visible = step != null;
+  useEffect(() => {
+    if (!visible) return;
+    const tick = () => {
+      measureOrigin();
+      remeasureAll?.();
+    };
+    tick();
+    const timer = setInterval(tick, REMEASURE_MS);
+    return () => clearInterval(timer);
+  }, [visible, measureOrigin, remeasureAll]);
   // 완전 잠금 중엔 안드로이드 뒤로가기도 오버레이가 먹는다 — 밑 화면의 백 핸들러가
   // 코치마크를 두고 화면을 바꾸면 대상이 사라진다.
   useEffect(() => {
