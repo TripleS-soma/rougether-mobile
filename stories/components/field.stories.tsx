@@ -44,38 +44,53 @@ const meta = {
     onChangeText: { control: false },
     trailing: { control: false, table: { disable: true } },
   },
-  render: function ControlledField(args) {
-    const [{ value: argsValue }, updateArgs] = useArgs<FieldProps>();
-    const [value, setValue] = useState(argsValue);
-    const pendingValues = useRef<string[]>([]);
-
-    useEffect(() => {
-      const acknowledged = pendingValues.current.lastIndexOf(argsValue);
-      if (acknowledged !== -1) {
-        // Delayed echoes must not replace text already entered locally.
-        pendingValues.current.splice(0, acknowledged + 1);
-        return;
-      }
-      setValue(argsValue);
-    }, [argsValue]);
-
+  render: function Render(args) {
+    // Storybook 훅(useArgs)과 React 훅을 한 함수에 섞지 않는다 — Vitest 포터블 스토리에서 오류.
+    const [{ value }, updateArgs] = useArgs<FieldProps>();
     return (
-      <Field
-        {...args}
-        value={value}
-        onChangeText={(nextValue) => {
-          pendingValues.current.push(nextValue);
-          setValue(nextValue);
-          args.onChangeText(nextValue);
-          updateArgs({ value: nextValue });
-        }}
-      />
+      <ControlledField {...args} value={value} onArgsValue={(v) => updateArgs({ value: v })} />
     );
   },
 } satisfies Meta<typeof Field>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+/**
+ * 입력은 로컬 상태로 즉시 반영하고 Controls에도 알린다. Controls(args) 쪽 변경은 되돌아온
+ * 메아리가 아닐 때만 받아들인다 — 빠른 입력 중 늦게 도착한 값이 글자를 지우지 않게.
+ * Storybook UI 밖(Vitest)에서는 args 갱신이 되돌아오지 않아도 로컬 상태로 동작한다.
+ */
+function ControlledField({
+  onArgsValue,
+  ...props
+}: FieldProps & { onArgsValue: (value: string) => void }) {
+  const argsValue = props.value;
+  const [value, setValue] = useState(argsValue);
+  const pendingValues = useRef<string[]>([]);
+
+  useEffect(() => {
+    const acknowledged = pendingValues.current.lastIndexOf(argsValue);
+    if (acknowledged !== -1) {
+      pendingValues.current.splice(0, acknowledged + 1);
+      return;
+    }
+    setValue(argsValue);
+  }, [argsValue]);
+
+  return (
+    <Field
+      {...props}
+      value={value}
+      onChangeText={(nextValue) => {
+        pendingValues.current.push(nextValue);
+        setValue(nextValue);
+        props.onChangeText?.(nextValue);
+        onArgsValue(nextValue);
+      }}
+    />
+  );
+}
 
 export const Empty: Story = { name: '입력 전' };
 
