@@ -64,3 +64,42 @@ export function parseInviteText(raw: string | null | undefined): ParsedInvite | 
   if (/\s/.test(text)) return null;
   return found('friend', text);
 }
+
+/**
+ * Play Install Referrer 원문에서 초대코드를 찾는다 (#1007 네이티브 절반).
+ *
+ * 서버 랜딩(`/i`·`/h`)이 Play 스토어 링크에 `referrer=invite_type%3Dfriend%26invite_code%3DCODE`를
+ * 실어 보내고, Play는 설치 후 그 값을 디코드해 `invite_type=friend&invite_code=CODE`로 돌려준다
+ * (rougether-server `InviteLandingPageRenderer`와의 계약). 유기적 설치는
+ * `utm_source=google-play&utm_medium=organic`이라 여기서 null이 된다.
+ *
+ * 한 번 더 인코딩된 채 오는 경우(`%3D`)도 받는다 — 어차피 사용 전 미리보기로 검증한다.
+ */
+export function parseInstallReferrer(raw: string | null | undefined): ParsedInvite | null {
+  if (!raw) return null;
+  let text = raw.trim();
+  if (!text) return null;
+  if (!text.includes('=') && /%3D/i.test(text)) {
+    try {
+      text = decodeURIComponent(text);
+    } catch {
+      return null;
+    }
+  }
+  const params: Record<string, string> = {};
+  for (const part of text.split('&')) {
+    const eq = part.indexOf('=');
+    if (eq <= 0) continue;
+    const key = part.slice(0, eq).trim().toLowerCase();
+    let value = part.slice(eq + 1).trim();
+    try {
+      value = decodeURIComponent(value);
+    } catch {
+      // 깨진 인코딩은 그대로 두고 모양 검사에 맡긴다.
+    }
+    if (key && !(key in params)) params[key] = value;
+  }
+  const type = params.invite_type?.toLowerCase();
+  if (type !== 'friend' && type !== 'house') return null;
+  return found(type, params.invite_code ?? '');
+}

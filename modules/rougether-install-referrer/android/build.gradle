@@ -1,0 +1,22 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.triples.rougether.installreferrer'
+version = '1.0.0'
+
+android {
+  namespace 'com.triples.rougether.installreferrer'
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+}
+
+dependencies {
+  // Play Install Referrer — 설치 전 눌렀던 초대 링크의 referrer를 첫 실행에 읽는다 (#1007).
+  // 라이브러리 매니페스트가 com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE를
+  // 선언한다 — Play 내부용 서명 권한이라 사용자에게 보이지 않고 런타임 요청도 없다.
+  implementation 'com.android.installreferrer:installreferrer:2.2'
+}
