@@ -7,6 +7,7 @@ import type { InvitePreview } from '@/components/screens/invite-friends-screen';
 import { track } from '@/lib/analytics';
 import { queryKeys } from '@/lib/query-keys';
 import { useToast } from '@/components/ui/toast';
+import { i18n } from '@/i18n';
 
 /** 초대코드 사용 결과 — 화면이 성공 연출(코인 +N)에 쓴다. */
 export type RedeemResult = { rewardCoin: number };
@@ -26,10 +27,10 @@ const INVALID_CODE_STATUSES = [400, 403, 404];
 /** 미리보기·사용 공통 에러 안내 — 서버 에러코드가 같다(#343). */
 function inviteErrorMessage(e: unknown, fallback: string): string {
   if (e instanceof ApiError) {
-    if (e.code === ErrorCode.INVITE_ALREADY_REDEEMED) return '초대코드는 한 번만 사용할 수 있어요';
-    if (e.code === ErrorCode.INVITE_SELF_NOT_ALLOWED) return '내 초대코드는 사용할 수 없어요';
-    if (e.code === ErrorCode.INVITE_BOT_NOT_ALLOWED) return '이 초대코드는 사용할 수 없어요';
-    if (e.status === 404) return '초대코드를 찾을 수 없어요';
+    if (e.code === ErrorCode.INVITE_ALREADY_REDEEMED) return i18n.t('app.invite.alreadyRedeemed');
+    if (e.code === ErrorCode.INVITE_SELF_NOT_ALLOWED) return i18n.t('app.invite.selfNotAllowed');
+    if (e.code === ErrorCode.INVITE_BOT_NOT_ALLOWED) return i18n.t('app.invite.notUsable');
+    if (e.status === 404) return i18n.t('app.invite.notFound');
   }
   return fallback;
 }
@@ -92,7 +93,7 @@ export function useInvites() {
       if (e instanceof ApiError && INVALID_CODE_STATUSES.includes(e.status)) {
         return {
           kind: 'invalid',
-          message: inviteErrorMessage(e, '이 초대코드는 사용할 수 없어요'),
+          message: inviteErrorMessage(e, i18n.t('app.invite.notUsable')),
         };
       }
       return { kind: 'unavailable' };
@@ -105,7 +106,7 @@ export function useInvites() {
       if (!code.trim()) return null;
       const result = await check(code);
       if (result.kind === 'ok') return result.preview;
-      toast(result.kind === 'invalid' ? result.message : '초대코드를 확인하지 못했어요', 'error');
+      toast(result.kind === 'invalid' ? result.message : i18n.t('app.invite.checkFailed'), 'error');
       return null;
     },
     [check, toast],
@@ -120,7 +121,7 @@ export function useInvites() {
         track('invite_redeem', { via });
         return { rewardCoin: res.rewardCoin ?? 0 };
       } catch (e) {
-        toast(inviteErrorMessage(e, '초대코드 사용에 실패했어요'), 'error');
+        toast(inviteErrorMessage(e, i18n.t('app.invite.redeemFailed')), 'error');
         return null;
       }
     },

@@ -4,6 +4,7 @@ import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-nativ
 import type { Routine } from '@/constants/routines';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 export type RenameDialogProps = {
   /** 이름을 바꿀 루틴/투두 — null이면 다이얼로그가 닫힌다. */
@@ -20,6 +21,7 @@ export type RenameDialogProps = {
  */
 export function RenameDialog({ item, onClose, onRename }: RenameDialogProps) {
   const t = useTokens();
+  const tr = useT();
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const [text, setText] = useState('');
@@ -31,12 +33,12 @@ export function RenameDialog({ item, onClose, onRename }: RenameDialogProps) {
     <Modal transparent visible={item !== null} animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.dialogBackdrop} onPress={onClose}>
         <Pressable style={[styles.dialogCard, { backgroundColor: t.screen }]}>
-          <Text style={[Typography.h3, { color: t.text }]}>이름 수정</Text>
+          <Text style={[Typography.h3, { color: t.text }]}>{tr('app.rename.title')}</Text>
           <TextInput
             autoFocus
             value={text}
             onChangeText={setText}
-            placeholder="루틴 이름"
+            placeholder={tr('app.rename.placeholder')}
             placeholderTextColor={t.textMuted}
             style={[
               styles.dialogInput,
@@ -48,9 +50,9 @@ export function RenameDialog({ item, onClose, onRename }: RenameDialogProps) {
             <Pressable
               onPress={onClose}
               accessibilityRole="button"
-              accessibilityLabel="취소"
+              accessibilityLabel={tr('app.rename.cancel')}
               style={[styles.dialogBtn, { backgroundColor: t.surfaceMuted }]}>
-              <Text style={[Typography.label, { color: t.text }]}>취소</Text>
+              <Text style={[Typography.label, { color: t.text }]}>{tr('app.rename.cancel')}</Text>
             </Pressable>
             <Pressable
               onPress={() => {
@@ -60,13 +62,13 @@ export function RenameDialog({ item, onClose, onRename }: RenameDialogProps) {
               }}
               disabled={!text.trim()}
               accessibilityRole="button"
-              accessibilityLabel="저장"
+              accessibilityLabel={tr('app.rename.save')}
               style={[
                 styles.dialogBtn,
                 { backgroundColor: text.trim() ? t.primary : t.surfaceMuted },
               ]}>
               <Text style={[Typography.label, { color: text.trim() ? t.onPrimary : t.textMuted }]}>
-                저장
+                {tr('app.rename.save')}
               </Text>
             </Pressable>
           </View>
