@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
 import type { Routine } from '@/constants/routines';
+import { currentWidgetLanguage } from '@/widgets/widget-copy';
 
 const SUMMARY_KEY = 'rougether.widget.summary.v1';
 const ROOM_IMAGE_KEY = 'rougether.widget.room-image.v1';
@@ -89,6 +90,12 @@ export type WidgetSummary = {
   remaining: string[];
   /** 요약이 가리키는 날짜(기기 로컬 "YYYY-MM-DD", #1122) — 자정이 지난 요약으로 "다 했다"고 우기지 않게. 구버전 저장값엔 없다. */
   date?: string;
+  /**
+   * 저장 시점의 앱 언어('ko'|'en', #893) — 위젯이 이 언어로 문구를 고른다. 안드로이드는
+   * 태스크 핸들러가, iOS는 App Group에 미러된 같은 JSON을 Swift가 읽는다(모르는 키는
+   * Decodable이 무시하므로 구버전 위젯 영향 없음). 구버전 저장값엔 없다 → 한국어.
+   */
+  lang?: string;
 };
 
 /**
@@ -116,12 +123,15 @@ export function buildWidgetSummary(
 }
 
 export async function saveWidgetSummary(summary: WidgetSummary): Promise<void> {
+  // 언어는 저장 순간의 앱 언어로 찍는다(#893) — 호출측이 명시하면 그 값을 존중.
+  const stamped: WidgetSummary = { ...summary, lang: summary.lang ?? currentWidgetLanguage() };
+  const json = JSON.stringify(stamped);
   try {
-    await AsyncStorage.setItem(SUMMARY_KEY, JSON.stringify(summary));
+    await AsyncStorage.setItem(SUMMARY_KEY, json);
   } catch {
     // 위젯은 부가 표면 — 저장 실패는 다음 갱신으로 수렴한다.
   }
-  mirrorToIosWidgets(IOS_SUMMARY_KEY, JSON.stringify(summary));
+  mirrorToIosWidgets(IOS_SUMMARY_KEY, json);
 }
 
 export async function loadWidgetSummary(): Promise<WidgetSummary | null> {

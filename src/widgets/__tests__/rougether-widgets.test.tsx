@@ -95,4 +95,40 @@ describe('TodayListWidget 표정 문구', () => {
     // 문구는 한 번만 — 위 줄과 목록 자리에 중복으로 찍히지 않는다.
     expect(texts(sad).filter((s) => s.includes('못 봤어요'))).toHaveLength(1);
   });
+
+  // 위젯 고정 문구 (#893) — 요약 lang으로 고른다. 앱 언어(i18n 인스턴스)는 건드리지 않는다.
+  it('요약 lang이 en이면 빈 날·완료·더보기·방 폴백·스트릭 문구가 영어', () => {
+    const empty = TodayListWidget({
+      summary: { done: 0, total: 0, streak: 0, remaining: [], lang: 'en' },
+      dark: false,
+    });
+    expect(texts(empty)).toContain('No routines scheduled today');
+    const allDone = TodayListWidget({
+      summary: { done: 2, total: 2, streak: 0, remaining: [], lang: 'en' },
+      dark: false,
+    });
+    expect(texts(allDone)).toContain('All done! 🎉');
+    const more = TodayListWidget({
+      summary: { done: 0, total: 5, streak: 0, remaining: ['A', 'B', 'C'], lang: 'en' },
+      dark: false,
+    });
+    expect(texts(more)).toContain('+2 more');
+    const room = MyRoomWidget({
+      summary: { done: 1, total: 2, streak: 4, remaining: ['A'], lang: 'en' },
+      roomImage: null,
+      dark: false,
+    });
+    expect(texts(room)).toEqual(
+      expect.arrayContaining(['Open the app to hang your room here', '🔥 4d']),
+    );
+    // 같은 트리를 lang 없이(구버전 요약) 그리면 한국어 그대로.
+    const koRoom = MyRoomWidget({
+      summary: { done: 1, total: 2, streak: 4, remaining: ['A'] },
+      roomImage: null,
+      dark: false,
+    });
+    expect(texts(koRoom)).toEqual(
+      expect.arrayContaining(['앱을 열면 내 방이 여기 걸려요', '🔥 4일']),
+    );
+  });
 });

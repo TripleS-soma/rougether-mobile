@@ -8,6 +8,7 @@
  * 기쁨) > 저녁인데 남음(걱정) > 평소. 앱 아이콘 자동 변경(#1147)과 같은
  * 임계값(48h·96h는 아이콘, 여기선 위젯 스펙의 2일·5일)이라 결이 맞는다.
  */
+import { widgetCopy } from '@/widgets/widget-copy';
 import type { WidgetSummary } from '@/widgets/widget-data';
 
 export type WidgetFace = 'neutral' | 'happy' | 'crown' | 'worried' | 'sad' | 'crying';
@@ -57,23 +58,25 @@ export function resolveWidgetMood({
   now: Date;
   lastActiveAt: string | null | undefined;
 }): WidgetMood {
+  // 문구 언어는 앱이 요약에 남긴 언어(#893) — 없으면 한국어.
+  const lang = summary.lang;
   const inactiveDays = daysSince(lastActiveAt, now);
   if (inactiveDays >= WIDGET_CRYING_DAYS) {
-    return { face: 'crying', message: `${inactiveDays}일이나 못 봤어요… 흑흑` };
+    return { face: 'crying', message: widgetCopy(lang, 'moodCrying', { days: inactiveDays }) };
   }
   if (inactiveDays >= WIDGET_SAD_DAYS) {
-    return { face: 'sad', message: `${inactiveDays}일째 못 봤어요, 보고 싶어요` };
+    return { face: 'sad', message: widgetCopy(lang, 'moodSad', { days: inactiveDays }) };
   }
   // `date`가 없는 요약은 구버전 앱이 남긴 것 — 오늘 것으로 간주한다(호환).
   const isToday = summary.date == null || summary.date === todayIso;
   const remaining = summary.total - summary.done;
   if (isToday && summary.total > 0 && remaining <= 0) {
     return summary.streak >= WIDGET_CROWN_STREAK
-      ? { face: 'crown', message: `${summary.streak}일 연속! 최고예요` }
-      : { face: 'happy', message: '오늘도 다 해냈어요!' };
+      ? { face: 'crown', message: widgetCopy(lang, 'moodCrown', { streak: summary.streak }) }
+      : { face: 'happy', message: widgetCopy(lang, 'moodHappy') };
   }
   if (isToday && remaining > 0 && now.getHours() >= WIDGET_EVENING_HOUR) {
-    return { face: 'worried', message: `아직 ${remaining}개 남았어요` };
+    return { face: 'worried', message: widgetCopy(lang, 'moodWorried', { count: remaining }) };
   }
   return { face: 'neutral' };
 }
