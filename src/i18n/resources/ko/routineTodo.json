@@ -30,7 +30,14 @@
       "private": "비공개"
     },
     "category": {
-      "uncategorized": "미분류"
+      "uncategorized": "미분류",
+      "defaults": {
+        "schedule": "일정",
+        "study": "공부",
+        "hobby": "취미",
+        "health": "건강",
+        "etc": "기타"
+      }
     },
     "repeat": {
       "daily": "매일",

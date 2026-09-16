@@ -30,7 +30,14 @@
       "private": "Private"
     },
     "category": {
-      "uncategorized": "Uncategorized"
+      "uncategorized": "Uncategorized",
+      "defaults": {
+        "schedule": "Schedule",
+        "study": "Study",
+        "hobby": "Hobby",
+        "health": "Health",
+        "etc": "Other"
+      }
     },
     "repeat": {
       "daily": "Daily",

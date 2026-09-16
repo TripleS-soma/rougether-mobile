@@ -11,6 +11,8 @@ import {
 import { getLocales } from 'expo-localization';
 
 import { type AppLanguage, DEFAULT_LANGUAGE, i18n, isAppLanguage } from '@/i18n';
+import { setAnalyticsLanguage } from '@/lib/analytics';
+import { setErrorLanguage } from '@/lib/error-reporting';
 import { loadLanguage, saveLanguage } from '@/lib/language-store';
 
 /**
@@ -56,6 +58,11 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       alive = false;
     };
   }, []);
+  // 계측 차원 (#1369) — 초기 결정(저장값/기기 언어)과 변경 둘 다 여기서 한 번에 잡힌다.
+  useEffect(() => {
+    setAnalyticsLanguage(language);
+    setErrorLanguage(language);
+  }, [language]);
   const setLanguage = useCallback((next: AppLanguage) => {
     setLanguageState(next);
     void i18n.changeLanguage(next);

@@ -4,6 +4,7 @@ import {
   clearErrorUser,
   initErrorReporting,
   reportError,
+  setErrorLanguage,
   setErrorUser,
 } from '@/lib/error-reporting';
 
@@ -34,5 +35,10 @@ describe('error-reporting (#801)', () => {
     const call = (Sentry.captureException as jest.Mock).mock.calls.at(-1);
     expect(call?.[0]).toBeInstanceOf(Error);
     expect(call?.[1]).toMatchObject({ extra: { screen: 'myRoom' } });
+  });
+
+  it('앱 언어를 태그로 남긴다 (#1369)', () => {
+    setErrorLanguage('en');
+    expect(Sentry.setTag).toHaveBeenCalledWith('app_language', 'en');
   });
 });

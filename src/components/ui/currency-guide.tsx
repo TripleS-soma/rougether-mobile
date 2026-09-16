@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
-import { CURRENCY_GUIDES } from '@/constants/currency';
+import { getCurrencyGuides } from '@/constants/currency';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 export type CurrencyGuideProps = {
   /** 펼친 채로 시작 — Dev 갤러리·테스트용. 실사용은 접힘이 기본. */
@@ -14,7 +15,7 @@ export type CurrencyGuideProps = {
 /**
  * 재화 안내 (#789) — "코인·다이아는 어떻게 모으고 쓰나요?" 접이식 블록.
  * 재화 내역 시트(#734) 맨 위에 붙어, 내역을 보러 온 사람을 막지 않도록 기본은
- * 접혀 있다. 문구·수치는 `CURRENCY_GUIDES` 한곳에서 온다.
+ * 접혀 있다. 문구·수치는 `getCurrencyGuides()` 한곳에서 온다.
  *
  * 두 재화를 늘 함께 보여준다 — 코인으로 뽑고 → 중복이 다이아가 되고 → 다이아로
  * 가구를 사는 흐름이라, 한쪽만 떼면 경제가 이해되지 않는다.
@@ -23,7 +24,10 @@ export function CurrencyGuide({ initialOpen = false }: CurrencyGuideProps) {
   const t = useTokens();
   const Typography = useTypography();
   const emph = useFontEmphasis();
+  const tr = useT();
   const [open, setOpen] = useState(initialOpen);
+  // 언어가 바뀌면 `tr`이 바뀌어 리렌더되고, 그때 다시 번역된 안내를 만든다.
+  const guides = getCurrencyGuides();
 
   return (
     <View style={[styles.card, { backgroundColor: t.surface }]}>
@@ -31,11 +35,11 @@ export function CurrencyGuide({ initialOpen = false }: CurrencyGuideProps) {
         onPress={() => setOpen((v) => !v)}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
-        accessibilityLabel="코인·다이아는 어떻게 모으나요?"
+        accessibilityLabel={tr('app.currency.guideA11y')}
         style={styles.head}>
         <Icon name="help" size={16} color={t.textMuted} />
         <Text style={[Typography.body, styles.flex, { color: t.text }]}>
-          코인·다이아는 어떻게 모으나요?
+          {tr('app.currency.guideA11y')}
         </Text>
         <View style={open ? styles.chevronOpen : undefined}>
           <Icon name="forward" size={16} color={t.textMuted} />
@@ -44,7 +48,7 @@ export function CurrencyGuide({ initialOpen = false }: CurrencyGuideProps) {
 
       {open ? (
         <View style={styles.body}>
-          {CURRENCY_GUIDES.map((guide) => (
+          {guides.map((guide) => (
             <View key={guide.currency} style={styles.block}>
               <View style={styles.blockHead}>
                 <Icon
@@ -59,8 +63,8 @@ export function CurrencyGuide({ initialOpen = false }: CurrencyGuideProps) {
 
               {(
                 [
-                  ['모으기', guide.earn],
-                  ['쓰기', guide.spend],
+                  [tr('app.currency.earn'), guide.earn],
+                  [tr('app.currency.spend'), guide.spend],
                 ] as const
               ).map(([title, items]) => (
                 <View key={title} style={styles.group}>
