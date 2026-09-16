@@ -435,6 +435,20 @@
       "routineFallback": "Routine",
       "todoFallback": "To-do",
       "monthDay": "{{month}}/{{day}}"
+    },
+    "coverNames": {
+      "cloud-balloon": "Cloud Balloon House",
+      "coral-lagoon": "Coral Shell House",
+      "coral-aquarium": "Coral Aquarium House",
+      "mushroom-forest": "Mushroom Forest House",
+      "night-observatory": "Night Observatory House",
+      "moonlit-hanok": "Moonlit Hanok",
+      "morning-bakery": "Morning Bakery",
+      "sakura-teahouse": "Cherry Blossom Teahouse",
+      "coastal-lighthouse": "Seaside Lighthouse",
+      "snowy-cabin": "Snowy Log Cabin",
+      "herb-greenhouse": "Herb Greenhouse",
+      "clockwork-cottage": "Clockwork Cottage"
     }
   }
 }

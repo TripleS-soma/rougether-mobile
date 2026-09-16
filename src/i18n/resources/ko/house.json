@@ -435,6 +435,20 @@
       "routineFallback": "루틴",
       "todoFallback": "할 일",
       "monthDay": "{{month}}월 {{day}}일"
+    },
+    "coverNames": {
+      "cloud-balloon": "구름 풍선 집",
+      "coral-lagoon": "산호 조개 집",
+      "coral-aquarium": "산호 수족관 집",
+      "mushroom-forest": "버섯 숲 집",
+      "night-observatory": "밤의 천문대 집",
+      "moonlit-hanok": "달빛 한옥",
+      "morning-bakery": "아침 빵집",
+      "sakura-teahouse": "벚꽃 찻집",
+      "coastal-lighthouse": "바닷바람 등대집",
+      "snowy-cabin": "눈꽃 통나무집",
+      "herb-greenhouse": "허브 온실집",
+      "clockwork-cottage": "태엽 시계집"
     }
   }
 }

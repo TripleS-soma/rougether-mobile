@@ -4,7 +4,7 @@ import { HouseCoverArt } from '@/components/room/house-cover-art';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
-import { FRAME_ASPECT, type HouseFrameOptions } from '@/resources/house-frame';
+import { FRAME_ASPECT, type HouseFrameOptions, houseCoverName } from '@/resources/house-frame';
 
 /** One selectable house cover (server GET /houses/cover-images). */
 export type HouseCover = {
@@ -44,13 +44,14 @@ export function HouseCoverPicker({
     <View style={styles.grid}>
       {covers.map((c) => {
         const selected = c.coverImageKey === selectedKey;
+        const name = houseCoverName(c.coverImageKey, c.name);
         return (
           <Pressable
             key={c.code}
             onPress={() => onSelect(c.coverImageKey)}
             accessibilityRole="radio"
             accessibilityState={{ selected }}
-            accessibilityLabel={tr('house.coverPicker.coverA11y', { name: c.name })}
+            accessibilityLabel={tr('house.coverPicker.coverA11y', { name })}
             style={[
               styles.cell,
               {
@@ -66,7 +67,7 @@ export function HouseCoverPicker({
               maxMembers={maxMembers}
               enabled={enabled}
               style={styles.art}
-              name={c.name}
+              name={name}
               testID="cover-art"
             />
             {/* Supporting base; the label carries the selection so it reads bolder.
@@ -76,7 +77,7 @@ export function HouseCoverPicker({
               style={[Typography.supporting, emph('semibold'), styles.label, { color: t.text }]}
               numberOfLines={2}
               testID="cover-label">
-              {c.name}
+              {name}
             </Text>
           </Pressable>
         );
