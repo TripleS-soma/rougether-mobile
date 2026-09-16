@@ -1,7 +1,12 @@
 import type { ReactNode } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 
-import { APP_FRAME_MAX_WIDTH, SPLIT_FRAME_MAX_WIDTH, useAppFrame } from '@/hooks/use-app-frame';
+import {
+  APP_FRAME_MAX_WIDTH,
+  SHEET_FRAME_MAX_WIDTH,
+  SPLIT_FRAME_MAX_WIDTH,
+  useAppFrame,
+} from '@/hooks/use-app-frame';
 import { useTokens } from '@/hooks/use-tokens';
 
 /**
@@ -55,14 +60,21 @@ export function AppFrame({ children }: { children: ReactNode }) {
  * Modal 안에서 쓰는 변형 — 배경(딤)은 창 전체, 내용만 프레임 폭.
  * 안쪽은 `justifyContent: 'flex-end'` — 바텀시트 overlay가 카드를 바닥에 붙이는
  * 배치를 이 래퍼가 끊지 않게(#1227 리뷰: 시트가 위쪽에 붙던 것).
+ *
+ * 앱 프레임의 `innerFramed`(양옆 hairline 테두리)를 공유하지 않는다 (#1367) —
+ * Modal은 프레임 밖 body에 붙어 테두리 색이 안 내려오니 검은 선 두 줄이 시트
+ * 양옆에 그려졌다. 폭은 폰 컬럼이면 480, 2단이면 `SHEET_FRAME_MAX_WIDTH`.
  */
 export function ModalFrame({ children }: { children: ReactNode }) {
-  const { framed } = useAppFrame();
+  const { framed, split } = useAppFrame();
   if (Platform.OS !== 'web') return <>{children}</>;
   return (
     <View style={styles.modalOuter} pointerEvents="box-none" testID="modal-frame">
       <View
-        style={[styles.modalInner, framed ? styles.innerFramed : styles.innerFull]}
+        style={[
+          styles.modalInner,
+          framed ? (split ? styles.modalSplit : styles.modalPhone) : styles.innerFull,
+        ]}
         pointerEvents="box-none"
         testID="modal-frame-inner">
         {children}
@@ -99,4 +111,6 @@ const styles = StyleSheet.create({
   },
   modalOuter: { ...StyleSheet.absoluteFillObject, alignItems: 'center' },
   modalInner: { flex: 1, justifyContent: 'flex-end' },
+  modalPhone: { width: APP_FRAME_MAX_WIDTH },
+  modalSplit: { width: '100%', maxWidth: SHEET_FRAME_MAX_WIDTH },
 });
