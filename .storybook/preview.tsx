@@ -15,6 +15,7 @@ import {
 import { BrandThemePreview, useTokens } from '@/hooks/use-tokens';
 import { type AppLanguage, DEFAULT_LANGUAGE, i18n, isAppLanguage, LANGUAGE_OPTIONS } from '@/i18n';
 
+import './canvas.css';
 import './fonts.css';
 
 /**

@@ -1,0 +1,14 @@
+/*
+ * 스토리 캔버스가 뷰포트 전체를 채우게 한다. #storybook-root가 block이면 그 아래 flex: 1
+ * 래퍼(테마·세이프에어리어 프로바이더)가 늘어나지 않아 캔버스의 minHeight 100%가 내용 높이로
+ * 줄고, 짧은 스토리 아래가 흰색으로 남는다(다크 모드·시각 회귀 스크린샷에서 드러남).
+ */
+html,
+body,
+#storybook-root {
+  height: 100%;
+}
+#storybook-root {
+  display: flex;
+  flex-direction: column;
+}
