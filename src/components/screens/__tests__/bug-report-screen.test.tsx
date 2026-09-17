@@ -168,4 +168,34 @@ describe('BugReportScreen', () => {
       ),
     );
   });
+
+  it('진단 미리보기는 지금 본문 기준으로 계산하고, 제출·토글 뒤에는 접힌다 (#1162)', async () => {
+    const onSubmit = jest.fn(async () => true);
+    const diagnosticsPreview = jest.fn(
+      (content: string) => `--- diagnostics (auto) ---\nlen ${content.length}`,
+    );
+    const { getByText, getByLabelText, getByPlaceholderText, getByTestId, queryByTestId } =
+      await render(
+        <ToastProvider>
+          <BugReportScreen onSubmit={onSubmit} diagnosticsPreview={diagnosticsPreview} />
+        </ToastProvider>,
+      );
+    const body = getByPlaceholderText('발생 상황을 자세히 적어주시면 해결에 큰 도움이 돼요');
+    await fireEvent.press(getByText('보낼 내용 보기'));
+    expect(getByTestId('bug-report-diagnostics-preview').props.children).toContain('len 0');
+    await fireEvent.changeText(body, '  내용입니다  ');
+    expect(getByTestId('bug-report-diagnostics-preview').props.children).toContain('len 5');
+
+    // 토글을 껐다 켜면 접힌 상태로 돌아간다.
+    await fireEvent.press(getByLabelText('진단 정보 첨부'));
+    await fireEvent.press(getByLabelText('진단 정보 첨부'));
+    expect(queryByTestId('bug-report-diagnostics-preview')).toBeNull();
+
+    // 제출에 성공하면 접힌다 — 다음 제보에 지난 스냅샷이 남지 않게.
+    await fireEvent.press(getByText('보낼 내용 보기'));
+    await fireEvent.changeText(getByPlaceholderText('어떤 문제가 있었나요?'), '제목');
+    await fireEvent.press(getByText('제출하기'));
+    await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+    await waitFor(() => expect(queryByTestId('bug-report-diagnostics-preview')).toBeNull());
+  });
 });

@@ -1,6 +1,11 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
-import { DIAGNOSTICS_HEADER, useBugReports, withDiagnostics } from '@/hooks/use-bug-reports';
+import {
+  DIAGNOSTICS_HEADER,
+  previewDiagnostics,
+  useBugReports,
+  withDiagnostics,
+} from '@/hooks/use-bug-reports';
 import * as diagnosticsLog from '@/lib/diagnostics-log';
 import { jsonRes as res } from '@/test-utils/fetch';
 
@@ -76,6 +81,17 @@ describe('useBugReports', () => {
     expect(long.length).toBeLessThanOrEqual(2000);
     const full = withDiagnostics('가'.repeat(2000), 10_100);
     expect(full).toBe('가'.repeat(2000));
+  });
+
+  it('미리보기는 같은 본문으로 실제 붙는 요약과 똑같다 — 긴 본문이면 미리보기도 줄거나 빠진다', () => {
+    diagnosticsLog.__resetDiagnosticsForTests();
+    for (let i = 0; i < 40; i += 1) diagnosticsLog.recordScreen(`screen-${i}`, 10_000 + i);
+    for (const content of ['버그 설명', '가'.repeat(1900), '가'.repeat(1990), '가'.repeat(2000)]) {
+      const sent = withDiagnostics(content, 10_100);
+      const preview = previewDiagnostics(content, 10_100);
+      expect(sent).toBe(preview ? `${content}\n\n${preview}` : content);
+    }
+    expect(previewDiagnostics('가'.repeat(2000), 10_100)).toBe('');
   });
 
   it('진단 요약 생성이 실패해도 원문으로 제보가 나간다', async () => {

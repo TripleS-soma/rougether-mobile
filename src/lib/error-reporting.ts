@@ -3,6 +3,7 @@ import * as Updates from 'expo-updates';
 import { Platform } from 'react-native';
 
 import { API_BASE } from '@/api/config';
+import { normalizeDiagnosticsPath } from '@/lib/diagnostics-log';
 
 /**
  * 에러 리포팅·성능 추적 (#801, #1376) — Sentry. 분석(`lib/analytics.ts`, GA4)과 창구를 나눈다:
@@ -72,12 +73,11 @@ export function resolveReportingLane(
 
 /**
  * URL에서 식별 가능한 값을 걷어낸다 (#1376) — 쿼리 문자열(초대코드·날짜 등)을 통째로 지우고
- * 경로의 숫자 id는 `{id}`로. 스팬 설명·브레드크럼에 붙는 요청 주소가 그대로 Sentry로
- * 가지 않게. GA4 `api_error`의 엔드포인트 정규화(client.ts)와 같은 규칙.
+ * 경로의 식별자(숫자 id·UUID·초대코드 같은 영숫자)는 `{id}`로. 스팬 설명·브레드크럼에 붙는 요청 주소가 그대로 Sentry로
+ * 가지 않게. GA4 `api_error`·버그 제보 진단 기록과 같은 규칙(`normalizeDiagnosticsPath`).
  */
 export function scrubUrl(url: string): string {
-  const [withoutQuery] = url.split(/[?#]/);
-  return withoutQuery.replace(/\/\d+(?=\/|$)/g, '/{id}');
+  return normalizeDiagnosticsPath(url);
 }
 
 /** 스팬을 만들 요청인가 — 우리 API만. 이미지 CDN·소셜 SDK·개발 서버 요청은 제외. */
