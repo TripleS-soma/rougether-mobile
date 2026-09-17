@@ -110,7 +110,10 @@
     "ui": {
       "closeToast": "Dismiss",
       "retry": "Retry",
-      "closeSheet": "Close sheet"
+      "closeSheet": "Close sheet",
+      "progress": "Progress",
+      "loading": "Loading",
+      "sheet": "Sheet"
     },
     "shell": {
       "exitHint": "Press back again to exit",

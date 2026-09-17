@@ -110,7 +110,9 @@ export function BearCheck({
     <Pressable
       onPress={onPress}
       accessibilityRole="checkbox"
-      accessibilityState={{ checked }}
+      // aria-checked: RN Web 0.21은 accessibilityState를 DOM으로 옮기지 않아 웹에서 상태가 빠졌다
+      // (axe aria-required-attr). 네이티브도 aria-checked를 accessibilityState로 합친다.
+      aria-checked={checked}
       accessibilityLabel={accessibilityLabel}
       hitSlop={8}
       style={({ pressed }) => (pressed ? styles.pressed : undefined)}>

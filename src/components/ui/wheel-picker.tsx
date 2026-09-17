@@ -113,7 +113,12 @@ export function WheelPicker<T extends string | number>({
       accessible
       accessibilityRole="adjustable"
       accessibilityLabel={accessibilityLabel}
-      accessibilityValue={{ text: items[index]?.label ?? '' }}
+      // aria-value*: 웹 slider는 aria-valuenow가 필수(axe aria-required-attr)이고 RN Web은
+      // accessibilityValue 객체를 옮기지 않는다. valuetext가 있어 스크린리더는 종전처럼 라벨을 읽는다.
+      aria-valuemin={0}
+      aria-valuemax={Math.max(items.length - 1, 0)}
+      aria-valuenow={index}
+      aria-valuetext={items[index]?.label ?? ''}
       accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
       onAccessibilityAction={(e) => {
         // increment = 다음 값(아래로 스크롤), decrement = 이전 값.
