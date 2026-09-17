@@ -31,7 +31,7 @@ import { useCalendarImport } from '@/hooks/use-calendar-import';
 import type { CharacterId } from '@/constants/characters';
 import { SUPPORT_EMAIL } from '@/constants/policy';
 import { useAuth } from '@/hooks/use-auth';
-import { useBugReports } from '@/hooks/use-bug-reports';
+import { previewDiagnostics, useBugReports } from '@/hooks/use-bug-reports';
 import { type InviteVia, useInvites } from '@/hooks/use-invites';
 import { useNotificationSettings } from '@/hooks/use-notification-settings';
 import { useBrandTheme } from '@/hooks/use-tokens';
@@ -435,6 +435,7 @@ export function useSettingsSurface({
         entries={bugReports}
         onLoadScreenshot={loadBugScreenshot}
         onSubmit={submitBugReport}
+        diagnosticsPreview={previewDiagnostics}
         onPickImage={pickLibraryImage}
         onBack={backToMyPage}
       />

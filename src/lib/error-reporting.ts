@@ -220,3 +220,15 @@ export function reportError(error: unknown, context?: Record<string, string | nu
     // no-op
   }
 }
+
+/**
+ * 가장 최근에 보낸 Sentry 이벤트 ID (#1162) — 버그 제보에 붙여 운영자가 Sentry 이슈로 바로
+ * 건너가게 한다. 초기화 전·개발 빌드·실패면 undefined.
+ */
+export function lastErrorEventId(): string | undefined {
+  try {
+    return Sentry.lastEventId() || undefined;
+  } catch {
+    return undefined;
+  }
+}

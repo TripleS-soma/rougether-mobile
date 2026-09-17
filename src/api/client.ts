@@ -5,6 +5,7 @@
  * responses wrapped in `{ items: [...] }`, JWT bearer auth.
  */
 import { track } from '@/lib/analytics';
+import { recordApi } from '@/lib/diagnostics-log';
 
 import { getAccessToken, refreshSession } from './auth';
 import { ApiError, type HttpMethod, rawRequest } from './http';
@@ -59,7 +60,33 @@ function reportApiError(
   });
 }
 
+/**
+ * 버그 제보 진단 기록 (#1162) — 경로·상태·소요 시간만. 본문·헤더·쿼리 값은 넘기지 않고,
+ * 기록 쪽이 경로의 식별자를 지운다. 기록 실패는 요청 결과에 영향을 주지 않는다.
+ */
 async function request<T>(
+  method: HttpMethod,
+  path: string,
+  body?: unknown,
+  options: RequestOptions = {},
+): Promise<T> {
+  const started = Date.now();
+  try {
+    const result = await requestWithRefresh<T>(method, path, body, options);
+    recordApi({ method, path, status: 'ok', durationMs: Date.now() - started });
+    return result;
+  } catch (err) {
+    recordApi({
+      method,
+      path,
+      status: err instanceof ApiError ? err.status : 0,
+      durationMs: Date.now() - started,
+    });
+    throw err;
+  }
+}
+
+async function requestWithRefresh<T>(
   method: HttpMethod,
   path: string,
   body?: unknown,

@@ -13,6 +13,9 @@ import {
 import { toBugReportEntry } from '@/api/adapters';
 import type { BugReportEntry } from '@/components/screens/bug-report-screen';
 import { appVersion, deviceInfo } from '@/lib/app-info';
+import { formatDiagnostics } from '@/lib/diagnostics-log';
+import { lastErrorEventId } from '@/lib/error-reporting';
+import { MAX_BUG_REPORT_CONTENT } from '@/components/screens/bug-report-screen';
 
 export function useBugReports() {
   const [entries, setEntries] = useState<BugReportEntry[]>([]);
@@ -26,11 +29,28 @@ export function useBugReports() {
     }
   }, []);
 
-  /** Submit a report (appVersion/deviceInfo 자동 첨부). Resolves true on success. */
+  /**
+   * Submit a report (appVersion/deviceInfo 자동 첨부). Resolves true on success.
+   * `includeDiagnostics`면 최근 화면 이동·API 요청 요약을 본문 끝에 붙인다 (#1162) — 서버
+   * 스키마에 구조 필드가 아직 없어(deviceInfo는 100자) 2000자 본문 안에서 하위 호환으로 싣는다.
+   * 요약 생성이 실패해도 제보는 원문으로 보낸다.
+   */
   const submit = useCallback(
-    async (input: { title: string; content: string; images: BugReportImage[] }) => {
+    async (input: {
+      title: string;
+      content: string;
+      images: BugReportImage[];
+      includeDiagnostics?: boolean;
+    }) => {
+      const { includeDiagnostics = false, ...rest } = input;
+      const content = includeDiagnostics ? withDiagnostics(rest.content) : rest.content;
       try {
-        await submitBugReport({ ...input, appVersion: appVersion(), deviceInfo: deviceInfo() });
+        await submitBugReport({
+          ...rest,
+          content,
+          appVersion: appVersion(),
+          deviceInfo: deviceInfo(),
+        });
         void load();
         return true;
       } catch {
@@ -47,4 +67,37 @@ export function useBugReports() {
     load,
     submit,
   };
+}
+
+/** 운영자가 읽는 구분선 — 언어와 무관하게 고정(서버·어드민에서 검색 가능). */
+export const DIAGNOSTICS_HEADER = '--- diagnostics (auto) ---';
+
+/** 본문 + 진단 요약. 서버 본문 한도(2000자) 안에서 요약이 남는 만큼만 붙인다. */
+export function withDiagnostics(content: string, now?: number): string {
+  try {
+    const separator = '\n\n';
+    const budget = MAX_BUG_REPORT_CONTENT - content.length - separator.length;
+    const summary = formatDiagnostics({
+      budget,
+      header: DIAGNOSTICS_HEADER,
+      sentryEventId: lastErrorEventId(),
+      now,
+    });
+    return summary ? `${content}${separator}${summary}` : content;
+  } catch {
+    return content;
+  }
+}
+
+/** 제보 화면 '펼쳐 보기'용 — 지금 보낼 요약(본문 없이). */
+export function previewDiagnostics(): string {
+  try {
+    return formatDiagnostics({
+      budget: MAX_BUG_REPORT_CONTENT,
+      header: DIAGNOSTICS_HEADER,
+      sentryEventId: lastErrorEventId(),
+    });
+  } catch {
+    return '';
+  }
 }

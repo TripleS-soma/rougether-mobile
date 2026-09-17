@@ -317,7 +317,12 @@
       "history": "My reports",
       "empty": "No reports yet",
       "closeViewerA11y": "Close attachment",
-      "openShotA11y": "View attached screenshot"
+      "openShotA11y": "View attached screenshot",
+      "diagnosticsLabel": "Attach diagnostics",
+      "diagnosticsHint": "Sends your screen visits and server requests from the last 10 minutes (path, result, duration). What you typed and your account details are not included.",
+      "diagnosticsShow": "Show what will be sent",
+      "diagnosticsHide": "Hide",
+      "diagnosticsEmpty": "Nothing recorded yet"
     },
     "inviteFriends": {
       "title": "Invite friends",
