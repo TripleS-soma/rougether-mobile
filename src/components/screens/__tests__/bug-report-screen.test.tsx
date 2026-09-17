@@ -53,6 +53,7 @@ describe('BugReportScreen', () => {
         title: '앱이 꺼져요',
         content: '방 화면에서 사진 저장을 누르면 꺼집니다',
         images: [{ uri: 'file://shot.png', name: 'shot.png', type: 'image/png' }],
+        includeDiagnostics: false,
       }),
     );
     // 성공 시 폼 초기화 + 접수 안내.
@@ -128,5 +129,43 @@ describe('BugReportScreen', () => {
       const { queryByLabelText } = await render(<BugReportScreen entries={withShot} />);
       expect(queryByLabelText('첨부 스크린샷 크게 보기')).toBeNull();
     });
+  });
+
+  it('진단 정보 첨부는 기본 켜짐이고, 펼치면 보낼 요약을 보여주며, 끄면 첨부 없이 제출한다 (#1162)', async () => {
+    const onSubmit = jest.fn(async () => true);
+    const diagnosticsPreview = jest.fn(() => '--- diagnostics (auto) ---\n-3s screen myRoom');
+    const { getByText, getByLabelText, getByPlaceholderText, getByTestId } = await render(
+      <ToastProvider>
+        <BugReportScreen onSubmit={onSubmit} diagnosticsPreview={diagnosticsPreview} />
+      </ToastProvider>,
+    );
+    expect(getByText('진단 정보 첨부')).toBeTruthy();
+    await fireEvent.press(getByText('보낼 내용 보기'));
+    expect(getByTestId('bug-report-diagnostics-preview').props.children).toContain('screen myRoom');
+
+    await fireEvent.changeText(getByPlaceholderText('어떤 문제가 있었나요?'), '제목');
+    await fireEvent.changeText(
+      getByPlaceholderText('발생 상황을 자세히 적어주시면 해결에 큰 도움이 돼요'),
+      '내용',
+    );
+    await fireEvent.press(getByText('제출하기'));
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenLastCalledWith(
+        expect.objectContaining({ includeDiagnostics: true }),
+      ),
+    );
+
+    await fireEvent.press(getByLabelText('진단 정보 첨부'));
+    await fireEvent.changeText(getByPlaceholderText('어떤 문제가 있었나요?'), '제목2');
+    await fireEvent.changeText(
+      getByPlaceholderText('발생 상황을 자세히 적어주시면 해결에 큰 도움이 돼요'),
+      '내용2',
+    );
+    await fireEvent.press(getByText('제출하기'));
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenLastCalledWith(
+        expect.objectContaining({ includeDiagnostics: false }),
+      ),
+    );
   });
 });

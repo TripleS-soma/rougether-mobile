@@ -40,6 +40,7 @@ import { screenView, track } from '@/lib/analytics';
 import { todayIso } from '@/utils/datetime';
 import { useAttendanceSurface } from '@/components/app/use-attendance-surface';
 import { useWidgetSync } from '@/components/app/use-widget-sync';
+import { useDiagnosticsRecorder } from '@/hooks/use-diagnostics-recorder';
 import { useGacha } from '@/hooks/use-gacha';
 import {
   type OnboardingMissionStepId,
@@ -129,6 +130,8 @@ export function AppShell({
   // 위젯에 넘길 실효 라이트/다크 (#746) — 앱 테마 모드 설정이 적용된 값.
   const resolvedScheme = useResolvedScheme();
   const [screen, setScreen] = useState<Screen>(initialScreen);
+  // 버그 제보 진단 기록 (#1162) — 화면 이동·앱 상태를 메모리에만.
+  useDiagnosticsRecorder(screen);
   const minigames = useMinigameSurface({ screen, setScreen });
   // Remember where the add/edit-routine screen was opened from, so its back
   // button returns to the right place (my-room or routine manage).

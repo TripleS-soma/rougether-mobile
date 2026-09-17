@@ -6,6 +6,7 @@ module.exports = {
   setTag: jest.fn(),
   captureException: jest.fn(),
   captureMessage: jest.fn(),
+  lastEventId: jest.fn(() => undefined),
   wrap: (component) => component,
   // 성능 추적 (#1376) — 통합 객체는 초기화 인자로만 쓰인다.
   reactNavigationIntegration: jest.fn(() => ({
