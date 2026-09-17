@@ -44,7 +44,13 @@ export function ConfirmDialog({
   const t = useTokens();
   const Typography = useTypography();
   return (
-    <Modal transparent visible={visible} animationType="fade" onRequestClose={onCancel}>
+    <Modal
+      transparent
+      visible={visible}
+      animationType="fade"
+      onRequestClose={onCancel}
+      // 다이얼로그 이름(axe aria-dialog-name) — RN Web은 Modal의 나머지 props를 dialog 요소로 넘긴다.
+      aria-label={title}>
       <Pressable style={styles.backdrop} onPress={onCancel}>
         {/* Inner Pressable swallows taps so the card doesn't dismiss itself. */}
         <Pressable style={[styles.card, { backgroundColor: t.screen }]}>

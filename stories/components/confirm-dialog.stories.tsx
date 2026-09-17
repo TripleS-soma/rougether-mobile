@@ -38,9 +38,17 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+/**
+ * RN Web Modal은 페이드 애니메이션이 끝나 onShow가 불린 뒤에야 `role="dialog"`를 붙인다 — 그 전엔
+ * `aria-modal`만 있는 div라 접근성 검사가 aria-allowed-attr로 실패한다(실제 화면엔 곧 붙는 과도 상태).
+ * 검사가 열린 상태를 보도록 다이얼로그 역할이 붙을 때까지 기다린다.
+ */
+const waitForDialog = () => screen.findByRole('dialog', undefined, { timeout: 3000 });
+
 export const Destructive: Story = {
   name: '위험 동작',
   play: async ({ args, userEvent }) => {
+    await waitForDialog();
     // Modal은 캔버스 밖(body)에 붙으므로 screen으로 찾는다.
     await userEvent.click(await screen.findByRole('button', { name: '삭제' }));
     await expect(args.onConfirm).toHaveBeenCalled();
@@ -54,6 +62,9 @@ export const Neutral: Story = {
     confirmLabel: '로그아웃',
     destructive: false,
   },
+  play: async () => {
+    await waitForDialog();
+  },
 };
 export const ConfirmOnly: Story = {
   name: '안내형(확인만)',
@@ -63,5 +74,8 @@ export const ConfirmOnly: Story = {
     confirmLabel: '확인',
     cancelLabel: null,
     destructive: false,
+  },
+  play: async () => {
+    await waitForDialog();
   },
 };

@@ -19,6 +19,7 @@ function SpacingScale() {
             <Text style={[Typography.supporting, { color: t.textMuted }]}>{value}px</Text>
           </View>
           <View
+            accessibilityRole="image"
             accessibilityLabel={`${name}: ${value}px`}
             style={[styles.spacingBar, { width: value, backgroundColor: t.primary }]}
           />
@@ -43,6 +44,7 @@ function RadiusScale() {
             <Text style={[Typography.supporting, { color: t.textMuted }]}>{value}px</Text>
           </View>
           <View
+            accessibilityRole="image"
             accessibilityLabel={`${name}: ${value}px`}
             style={[
               styles.radiusSample,

@@ -133,6 +133,8 @@ export function SheetDragExclude({
 
 export type BottomSheetProps = {
   visible: boolean;
+  /** 다이얼로그 이름 — 스크린리더·웹 dialog 이름(axe aria-dialog-name). 없으면 '시트'. */
+  accessibilityLabel?: string;
   /** 백드롭 탭·퇴장 트리거. 닫힘 애니메이션은 이 컴포넌트가 재생한다. */
   onClose?: () => void;
   /** 시트 카드 스타일 — 각 시트의 기존 styles.sheet를 그대로 넘긴다. */
@@ -158,6 +160,7 @@ export type BottomSheetProps = {
  */
 export function BottomSheet({
   visible,
+  accessibilityLabel,
   onClose,
   cardStyle,
   dragScope = 'card',
@@ -360,7 +363,13 @@ export function BottomSheet({
   );
 
   return (
-    <Modal transparent visible statusBarTranslucent animationType="none" onRequestClose={onClose}>
+    <Modal
+      transparent
+      visible
+      statusBarTranslucent
+      animationType="none"
+      onRequestClose={onClose}
+      aria-label={accessibilityLabel ?? tr('app.ui.sheet')}>
       {useNativeDrag ? (
         <GestureHandlerRootView style={styles.gestureRoot}>{content}</GestureHandlerRootView>
       ) : (
