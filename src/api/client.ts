@@ -5,7 +5,7 @@
  * responses wrapped in `{ items: [...] }`, JWT bearer auth.
  */
 import { track } from '@/lib/analytics';
-import { recordApi } from '@/lib/diagnostics-log';
+import { normalizeDiagnosticsPath, recordApi } from '@/lib/diagnostics-log';
 
 import { getAccessToken, refreshSession } from './auth';
 import { ApiError, type HttpMethod, rawRequest } from './http';
@@ -54,7 +54,7 @@ function reportApiError(
 ) {
   if (err instanceof ApiError && expectedStatuses?.includes(err.status)) return;
   track('api_error', {
-    endpoint: `${method} ${path.split('?')[0].replace(/\/\d+/g, '/{id}')}`,
+    endpoint: `${method} ${normalizeDiagnosticsPath(path)}`,
     // 네트워크 실패(응답 자체가 없음)는 0 — GA4에서 '0'으로 묶인다.
     status: String(err instanceof ApiError ? err.status : 0),
   });

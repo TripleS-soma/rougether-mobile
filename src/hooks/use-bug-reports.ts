@@ -72,31 +72,35 @@ export function useBugReports() {
 /** 운영자가 읽는 구분선 — 언어와 무관하게 고정(서버·어드민에서 검색 가능). */
 export const DIAGNOSTICS_HEADER = '--- diagnostics (auto) ---';
 
+const DIAGNOSTICS_SEPARATOR = '\n\n';
+
+/** 본문 옆에 붙일 진단 요약 — 서버 본문 한도(2000자)에서 본문이 쓰고 남은 만큼만. 전송과 미리보기가 같은 계산을 쓴다. */
+function diagnosticsSummaryFor(content: string, now?: number): string {
+  return formatDiagnostics({
+    budget: MAX_BUG_REPORT_CONTENT - content.length - DIAGNOSTICS_SEPARATOR.length,
+    header: DIAGNOSTICS_HEADER,
+    sentryEventId: lastErrorEventId(),
+    now,
+  });
+}
+
 /** 본문 + 진단 요약. 서버 본문 한도(2000자) 안에서 요약이 남는 만큼만 붙인다. */
 export function withDiagnostics(content: string, now?: number): string {
   try {
-    const separator = '\n\n';
-    const budget = MAX_BUG_REPORT_CONTENT - content.length - separator.length;
-    const summary = formatDiagnostics({
-      budget,
-      header: DIAGNOSTICS_HEADER,
-      sentryEventId: lastErrorEventId(),
-      now,
-    });
-    return summary ? `${content}${separator}${summary}` : content;
+    const summary = diagnosticsSummaryFor(content, now);
+    return summary ? `${content}${DIAGNOSTICS_SEPARATOR}${summary}` : content;
   } catch {
     return content;
   }
 }
 
-/** 제보 화면 '펼쳐 보기'용 — 지금 보낼 요약(본문 없이). */
-export function previewDiagnostics(): string {
+/**
+ * 제보 화면 '펼쳐 보기'용 — 지금 이 본문으로 보내면 붙을 요약(본문 없이).
+ * 본문 길이에 따라 요약이 줄거나 빠지므로 전송(`withDiagnostics`)과 같은 예산으로 계산한다.
+ */
+export function previewDiagnostics(content = '', now?: number): string {
   try {
-    return formatDiagnostics({
-      budget: MAX_BUG_REPORT_CONTENT,
-      header: DIAGNOSTICS_HEADER,
-      sentryEventId: lastErrorEventId(),
-    });
+    return diagnosticsSummaryFor(content, now);
   } catch {
     return '';
   }

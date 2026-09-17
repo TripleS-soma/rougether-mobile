@@ -80,6 +80,13 @@ describe('레인·샘플링·URL 정리 (#1376)', () => {
     expect(scrubUrl('https://api.example.com/api/v1/routines/9')).toBe(
       'https://api.example.com/api/v1/routines/{id}',
     );
+    // 초대코드·UUID 같은 영숫자 식별자도 지운다 — 진단 기록·GA4와 같은 규칙.
+    expect(scrubUrl('https://api.example.com/api/v1/invites/AB12CD/join')).toBe(
+      'https://api.example.com/api/v1/invites/{id}/join',
+    );
+    expect(
+      scrubUrl('https://api.example.com/api/v1/items/3f2b8c1e-0a4d-4e5f-9b6a-1c2d3e4f5a6b'),
+    ).toBe('https://api.example.com/api/v1/items/{id}');
     // 이름 속 숫자는 건드리지 않는다.
     expect(scrubUrl('https://cdn.example.com/items/v2/icon123.png')).toBe(
       'https://cdn.example.com/items/v2/icon123.png',

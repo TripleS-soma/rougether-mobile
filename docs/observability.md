@@ -57,7 +57,7 @@
 ## 4. 개인정보 처리
 
 - `sendDefaultPii: false` — IP·기기 식별자 등 기본 PII를 수집하지 않습니다. 사용자 식별은 서버 회원 id만.
-- **URL 정리**(`scrubUrl`): 스팬 설명·스팬 데이터(`url`·`http.url`)·브레드크럼 URL에서 쿼리·해시를 지우고 경로의 숫자 id를 `{id}`로 바꿉니다. 초대코드·날짜·회원 id가 Sentry로 가지 않게. `http.query`·`http.fragment`는 비웁니다.
+- **URL 정리**(`scrubUrl`): 스팬 설명·스팬 데이터(`url`·`http.url`)·브레드크럼 URL에서 쿼리·해시를 지우고 경로의 식별자(숫자 id·UUID·숫자가 섞인 6자 이상 영숫자)를 `{id}`로 바꿉니다. GA4 `api_error`의 endpoint와 버그 제보 진단 기록도 같은 함수(`normalizeDiagnosticsPath`)를 씁니다. 초대코드·날짜·회원 id가 Sentry로 가지 않게. `http.query`·`http.fragment`는 비웁니다.
 - 요청·응답 본문, 토큰, 사용자 입력은 어디에도 싣지 않습니다. react-query 키는 첫 요소만.
 - 세션 리플레이는 끕니다(마스킹 검증 전).
 
