@@ -22,6 +22,12 @@ export type RequestOptions = {
    * 그대로다 — **계측에서만 빠진다.**
    */
   expectedStatuses?: number[];
+  /**
+   * 401이면 토큰을 갱신하고 재요청할지 (기본 true). 헤드리스 백그라운드 작업은 false로 —
+   * refresh는 1회용이라 앱 본체와 동시에 회전하면 서버가 재사용으로 보고 **회원의 모든 기기
+   * 토큰을 폐기**한다 (#1388). 백그라운드는 만료면 조용히 건너뛰고 앱이 켜질 때 갱신한다.
+   */
+  refreshOnUnauthorized?: boolean;
 };
 
 function authHeaders(): Record<string, string> {
@@ -59,7 +65,7 @@ async function request<T>(
   body?: unknown,
   options: RequestOptions = {},
 ): Promise<T> {
-  const { auth = true, expectedStatuses } = options;
+  const { auth = true, expectedStatuses, refreshOnUnauthorized = true } = options;
   if (!auth) return rawRequest<T>(method, path, { body });
 
   try {
@@ -67,7 +73,7 @@ async function request<T>(
   } catch (err) {
     // On an expired token, refresh once and replay; give up (and log out) if the
     // refresh fails or the replay still 401s.
-    if (err instanceof ApiError && err.status === 401) {
+    if (err instanceof ApiError && err.status === 401 && refreshOnUnauthorized) {
       const refreshed = await refreshSession();
       if (refreshed) {
         // 재요청이 또 실패하는 경로도 계측한다 — 여기서 그냥 던지면 갱신 후

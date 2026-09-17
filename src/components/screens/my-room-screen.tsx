@@ -1274,18 +1274,18 @@ export const MyRoomScreen = memo(function MyRoomScreen({
             ) : null}
             {/* 방 꾸미기 1탭 승격 (#727) — 보상 루프의 종착지를 뽑기 옆에. */}
             {onEdit ? (
-              <Pressable
-                onPress={onEdit}
-                accessibilityRole="button"
-                accessibilityLabel={tr('routineTodo.myRoom.decorate')}
-                style={styles.floatBtn}>
-                <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
-                  {/* absolute 버튼이라 내용을 측정 (#351 → #1324). */}
-                  <CoachTarget id="room-decor">
+              // 버튼 전체를 짚는다 — 안쪽 아이콘만 재면 강조 테두리가 원형 버튼 안에 작게 뜬다.
+              <CoachTarget id="room-decor">
+                <Pressable
+                  onPress={onEdit}
+                  accessibilityRole="button"
+                  accessibilityLabel={tr('routineTodo.myRoom.decorate')}
+                  style={styles.floatBtn}>
+                  <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
                     <Icon name="edit" size={20} color={t.text} />
-                  </CoachTarget>
-                </GlassSurface>
-              </Pressable>
+                  </GlassSurface>
+                </Pressable>
+              </CoachTarget>
             ) : null}
             {onOpenFurnitureStudio ? (
               <Pressable
@@ -1309,18 +1309,17 @@ export const MyRoomScreen = memo(function MyRoomScreen({
                 </GlassSurface>
               </Pressable>
             ) : null}
-            <Pressable
-              onPress={onOpenGacha}
-              accessibilityRole="button"
-              accessibilityLabel={tr('routineTodo.myRoom.gacha')}
-              style={styles.floatBtn}>
-              <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
-                {/* absolute 버튼이라 래퍼 대신 내용을 측정 (#351). */}
-                <CoachTarget id="room-gacha">
+            <CoachTarget id="room-gacha">
+              <Pressable
+                onPress={onOpenGacha}
+                accessibilityRole="button"
+                accessibilityLabel={tr('routineTodo.myRoom.gacha')}
+                style={styles.floatBtn}>
+                <GlassSurface style={styles.floatFace} fallbackColor={t.surface}>
                   <Icon name="gift" size={20} color={t.text} />
-                </CoachTarget>
-              </GlassSurface>
-            </Pressable>
+                </GlassSurface>
+              </Pressable>
+            </CoachTarget>
           </View>
         )}
       </View>

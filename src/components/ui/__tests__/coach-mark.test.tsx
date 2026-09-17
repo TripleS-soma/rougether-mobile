@@ -2,10 +2,12 @@ import { fireEvent, render } from '@testing-library/react-native';
 import { BackHandler, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import {
+  bubbleHorizontal,
   CoachMarkOverlay,
   type CoachStep,
   CoachTarget,
   CoachTargetProvider,
+  toOverlayRect,
 } from '@/components/ui/coach-mark';
 
 const STEPS: CoachStep[] = [
@@ -105,5 +107,55 @@ describe('CoachMarkOverlay (#351)', () => {
     if (typeof top === 'string') throw new Error('expected a view');
     const flat = StyleSheet.flatten(top.props.style as StyleProp<ViewStyle>) as ViewStyle;
     expect(flat.height).toBe(94);
+  });
+
+  it('창 좌표 대상을 오버레이 원점만큼 빼서 그린다 — 웹 2단 프레임 여백만큼 밀리던 것', () => {
+    // 선물 버튼이 창 x=616, 앱 프레임이 창 x=200에서 시작(1600px 창, 2026-09-16 실측).
+    expect(toOverlayRect({ x: 616, y: 649, w: 44, h: 44 }, { x: 200, y: 0 })).toEqual({
+      x: 416,
+      y: 649,
+      w: 44,
+      h: 44,
+    });
+  });
+
+  it('넓은 프레임에선 말풍선을 최대 폭으로 줄여 구멍 가운데에 두고, 좁은 화면은 꽉 채운다', () => {
+    const wide = bubbleHorizontal(1200, 438);
+    expect(wide.width).toBe(420);
+    expect(wide.left).toBe(228);
+    // 가장자리 대상이면 프레임 안으로 클램프.
+    expect(bubbleHorizontal(1200, 20).left).toBe(24);
+    // 폰 폭: 종전과 같은 좌우 24 여백으로 꽉.
+    expect(bubbleHorizontal(360, 300)).toEqual({ left: 24, width: 312 });
+  });
+
+  it('떠 있는 동안에만 대상 좌표 재측정 타이머를 돌리고, 사라지면 멈춘다', async () => {
+    const setSpy = jest.spyOn(global, 'setInterval');
+    const clearSpy = jest.spyOn(global, 'clearInterval');
+    try {
+      const tree = (steps: CoachStep[]) => (
+        <CoachTargetProvider>
+          <CoachTarget id="a">
+            <View />
+          </CoachTarget>
+          <CoachMarkOverlay
+            hardLock
+            steps={steps}
+            index={0}
+            targets={{}}
+            frame={{ w: 360, h: 800 }}
+          />
+        </CoachTargetProvider>
+      );
+      const { rerender } = await render(tree([{ target: 'a', title: '제목', body: '' }]));
+      const started = setSpy.mock.calls.filter(([, ms]) => ms === 250);
+      expect(started).toHaveLength(1);
+      const id = setSpy.mock.results[setSpy.mock.calls.findIndex(([, ms]) => ms === 250)].value;
+      await rerender(tree([]));
+      expect(clearSpy).toHaveBeenCalledWith(id);
+    } finally {
+      setSpy.mockRestore();
+      clearSpy.mockRestore();
+    }
   });
 });
