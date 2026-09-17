@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Animated, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
+import { useT } from '@/i18n';
 
 import { Radius, StaticWhite } from '@/constants/theme';
 
@@ -14,6 +15,8 @@ export type SpringProgressBarProps = {
   /** 트랙 높이 (기본 10; 집 탐색 미션 미리보기는 6). */
   height?: number;
   style?: StyleProp<ViewStyle>;
+  /** 스크린리더 이름 — 없으면 '진행률'. progressbar는 이름이 필수다(axe aria-progressbar-name). */
+  accessibilityLabel?: string;
 };
 
 /**
@@ -28,7 +31,9 @@ export function SpringProgressBar({
   trackColor,
   height = 10,
   style,
+  accessibilityLabel,
 }: SpringProgressBarProps) {
+  const tr = useT();
   const w = useAnimatedValue(progress);
   const flash = useAnimatedValue(0);
   const prev = useRef(progress);
@@ -52,7 +57,11 @@ export function SpringProgressBar({
     <View
       accessible
       accessibilityRole="progressbar"
-      accessibilityValue={{ min: 0, max: 100, now: Math.round(progress * 100) }}
+      aria-label={accessibilityLabel ?? tr('app.ui.progress')}
+      // aria-value*: RN Web은 accessibilityValue 객체를 DOM으로 옮기지 않는다. 네이티브도 같은 값으로 합친다.
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(progress * 100)}
       style={[styles.track, { backgroundColor: trackColor, height }, style]}>
       <Animated.View
         style={[

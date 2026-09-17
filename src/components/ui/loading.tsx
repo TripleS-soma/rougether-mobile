@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { useTokens } from '@/hooks/use-tokens';
+import { useT } from '@/i18n';
 
 /**
  * 표시를 미루는 시간(ms) — 이보다 빨리 끝나는 로딩은 **아무것도 안 보인다**.
@@ -32,6 +33,7 @@ export type LoadingProps = {
  */
 export function Loading({ size, delayMs = LOADING_DELAY_MS, style, fill }: LoadingProps) {
   const t = useTokens();
+  const tr = useT();
   const [visible, setVisible] = useState(delayMs <= 0);
 
   useEffect(() => {
@@ -43,7 +45,10 @@ export function Loading({ size, delayMs = LOADING_DELAY_MS, style, fill }: Loadi
   // 지연 중에는 자리도 잡지 않는다 — 빈 상자가 잠깐 보이면 그것도 깜빡임이다.
   if (!visible) return null;
 
-  const indicator = <ActivityIndicator size={size} color={t.primary} />;
+  // 웹 progressbar는 이름이 필수(axe aria-progressbar-name) — 네이티브에서도 '불러오는 중'으로 읽힌다.
+  const indicator = (
+    <ActivityIndicator size={size} color={t.primary} aria-label={tr('app.ui.loading')} />
+  );
   if (!fill) return style ? <View style={style}>{indicator}</View> : indicator;
   return <View style={[styles.fill, style]}>{indicator}</View>;
 }

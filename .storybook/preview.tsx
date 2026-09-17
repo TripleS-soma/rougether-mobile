@@ -121,8 +121,9 @@ const preview: Preview = {
     options: { storySort: { order: ['디자인 토큰', '컴포넌트'] } },
     backgrounds: { disable: true },
     viewport: { options: APP_VIEWPORTS },
-    // 접근성 검사 (addon-a11y) — 기존 위반이 정리될 때까지 'todo'(경고)로 두고 CI를 막지 않는다.
-    a11y: { test: 'todo' },
+    // 접근성 검사 (addon-a11y) — 위반이 있으면 CI 실패. 색 대비(color-contrast)만 제외한다: 테마 5종 토큰
+    // 조정이 필요한 디자인 결정이라 #1389 잔여로 남긴다. 스토리에서 rules를 덮어쓸 땐 이 제외도 함께 적을 것.
+    a11y: { test: 'error', config: { rules: [{ id: 'color-contrast', enabled: false }] } },
   },
   decorators: [
     (Story, { globals, parameters }) => {

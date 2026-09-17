@@ -297,7 +297,12 @@
       "history": "내 제보 내역",
       "empty": "아직 제보한 내용이 없어요",
       "closeViewerA11y": "첨부 닫기",
-      "openShotA11y": "첨부 스크린샷 크게 보기"
+      "openShotA11y": "첨부 스크린샷 크게 보기",
+      "diagnosticsLabel": "진단 정보 첨부",
+      "diagnosticsHint": "최근 10분의 화면 이동과 서버 요청 기록(주소·결과·걸린 시간)을 함께 보내요. 입력한 내용과 계정 정보는 담기지 않아요.",
+      "diagnosticsShow": "보낼 내용 보기",
+      "diagnosticsHide": "접기",
+      "diagnosticsEmpty": "아직 기록이 없어요"
     },
     "inviteFriends": {
       "title": "친구 초대",

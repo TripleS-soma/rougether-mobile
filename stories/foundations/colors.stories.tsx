@@ -58,6 +58,7 @@ function ColorTokens() {
             key={name}
             style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }]}>
             <View
+              accessibilityRole="image"
               accessibilityLabel={`${name}: ${value}`}
               style={[styles.swatch, { backgroundColor: value, borderColor: t.border }]}
             />

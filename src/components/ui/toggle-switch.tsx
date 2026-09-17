@@ -20,7 +20,8 @@ export function ToggleSwitch({ value, onToggle, accessibilityLabel }: ToggleSwit
         onToggle();
       }}
       accessibilityRole="switch"
-      accessibilityState={{ checked: value }}
+      // aria-checked: RN Web은 accessibilityState를 DOM으로 옮기지 않는다(bear-check와 같은 이유).
+      aria-checked={value}
       accessibilityLabel={accessibilityLabel}
       style={[styles.track, { backgroundColor: value ? t.primary : t.disabledBg }]}>
       <View style={[styles.thumb, value && styles.thumbOn]} />

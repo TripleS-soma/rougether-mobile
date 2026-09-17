@@ -5,6 +5,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 import { Field } from '@/components/ui/field';
 import { Icon } from '@/components/ui/icon';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { useToast } from '@/components/ui/toast';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
@@ -47,7 +48,14 @@ export type BugReportScreenProps = {
     title: string;
     content: string;
     images: BugReportImageInput[];
+    /** 진단 정보 첨부 여부 (#1162) — 셸 훅이 본문 끝에 요약을 붙인다. */
+    includeDiagnostics: boolean;
   }) => Promise<boolean>;
+  /**
+   * 지금 첨부될 진단 요약 미리보기 (#1162). 생략하면 첨부 토글을 숨긴다(데모·갤러리).
+   * 함수인 이유: 펼치는 순간의 최신 기록을 보여준다.
+   */
+  diagnosticsPreview?: (content: string) => string;
   /** Open the photo library; resolve the picked image or null on cancel. */
   onPickImage?: () => Promise<BugReportImageInput | null>;
   /**
@@ -68,6 +76,7 @@ export function BugReportScreen({
   onSubmit,
   onPickImage,
   onLoadScreenshot,
+  diagnosticsPreview,
   onBack,
 }: BugReportScreenProps) {
   const t = useTokens();
@@ -85,6 +94,14 @@ export function BugReportScreen({
   const [content, setContent] = useState('');
   const [images, setImages] = useState<BugReportImageInput[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  // 진단 정보 첨부 (#1162) — 기본 켜짐, 무엇이 가는지 펼쳐서 확인할 수 있다.
+  const [includeDiagnostics, setIncludeDiagnostics] = useState(true);
+  // 펼친 동안은 매 렌더 다시 계산한다 — 본문 길이(예산)·최근 기록이 바뀌면 보낼 내용도 바뀐다.
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const diagnosticsText =
+    diagnosticsPreview && includeDiagnostics && showDiagnostics
+      ? diagnosticsPreview(content.trim())
+      : null;
 
   const canSubmit = title.trim().length > 0 && content.trim().length > 0 && !submitting;
 
@@ -102,13 +119,19 @@ export function BugReportScreen({
     }
     setSubmitting(true);
     const ok = onSubmit
-      ? await onSubmit({ title: title.trim(), content: content.trim(), images })
+      ? await onSubmit({
+          title: title.trim(),
+          content: content.trim(),
+          images,
+          includeDiagnostics: !!diagnosticsPreview && includeDiagnostics,
+        })
       : true;
     setSubmitting(false);
     if (ok) {
       setTitle('');
       setContent('');
       setImages([]);
+      setShowDiagnostics(false);
       toast(tr('member.bugReport.submitted'));
     } else {
       toast(tr('member.bugReport.submitFailed'), 'error');
@@ -187,6 +210,52 @@ export function BugReportScreen({
               </Pressable>
             ) : null}
           </View>
+
+          {diagnosticsPreview ? (
+            <View style={styles.diagnostics}>
+              <View style={styles.diagnosticsRow}>
+                <Text style={[Typography.body, emph('semibold'), styles.flex, { color: t.text }]}>
+                  {tr('member.bugReport.diagnosticsLabel')}
+                </Text>
+                <ToggleSwitch
+                  value={includeDiagnostics}
+                  onToggle={() => {
+                    setIncludeDiagnostics((v) => !v);
+                    setShowDiagnostics(false);
+                  }}
+                  accessibilityLabel={tr('member.bugReport.diagnosticsLabel')}
+                />
+              </View>
+              <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                {tr('member.bugReport.diagnosticsHint')}
+              </Text>
+              {includeDiagnostics ? (
+                <Pressable
+                  onPress={() => setShowDiagnostics((v) => !v)}
+                  accessibilityRole="button"
+                  hitSlop={8}>
+                  <Text style={[Typography.supporting, emph('semibold'), { color: t.primaryText }]}>
+                    {diagnosticsText == null
+                      ? tr('member.bugReport.diagnosticsShow')
+                      : tr('member.bugReport.diagnosticsHide')}
+                  </Text>
+                </Pressable>
+              ) : null}
+              {diagnosticsText != null ? (
+                <Text
+                  testID="bug-report-diagnostics-preview"
+                  style={[
+                    Typography.supporting,
+                    styles.diagnosticsPreview,
+                    { backgroundColor: t.surfaceMuted, color: t.textMuted },
+                  ]}>
+                  {diagnosticsText.split('\n').length > 1
+                    ? diagnosticsText
+                    : tr('member.bugReport.diagnosticsEmpty')}
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
 
           <Pressable
             disabled={submitting}
@@ -331,6 +400,10 @@ const EntryScreenshots = memo(function EntryScreenshots({
 });
 
 const styles = StyleSheet.create({
+  diagnostics: { gap: Spacing.two },
+  diagnosticsRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
+  flex: { flex: 1 },
+  diagnosticsPreview: { borderRadius: Radius.md, padding: Spacing.three },
   screen: {
     flex: 1,
   },
