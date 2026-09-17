@@ -718,12 +718,17 @@ export const HouseScreen = memo(function HouseScreen({
   // "어디선 탭이 넘어가고 어디선 집이 넘어가는" 불예측성이 남았다. 가로
   // 스와이프는 항상 탭 전환이고, 집 순회는 상단 ‹ › 화살표·점 인디케이터로만.
   // cameraClaimsMove가 한 손가락·비확대에서 false라 프레임 위 스와이프도
-  // 그대로 페이저로 흐른다 (확대·드래그 중엔 아래 잠금이 페이저를 막는다).
-
-  // 확대·자리 드래그 동안 셸의 탭 페이저를 잠근다 (#563).
+  // 그대로 페이저로 흐른다.
+  //
+  // 확대 중에는 페이저를 잠그지 않는다 (#1347). 종전(#563)엔 확대만 해도 '확대 종료'를
+  // 누를 때까지 탭 스와이프가 통째로 막혀, 확대가 남은 채 돌아온 사용자가 "집 탭에서
+  // 스와이프가 안 된다"고 느꼈다. 대신 순서로 가른다: 캔버스 위 한 손가락 가로 이동은
+  // 카메라가 CAM_PAN_SLOP(8)에서 먼저 활성화되고, 활성화된 제스처가 아직 SWIPE_CLAIM_DX(24)에
+  // 못 미친 페이저를 취소한다. 캔버스 밖(헤더·목록)에서 시작한 스와이프는 카메라가 받지
+  // 않으니 그대로 탭 이동이다. 자리 드래그는 같은 터치 안에서 전권을 가져가야 해 잠금 유지.
   // Pending/empty content keeps HouseScreen mounted but removes the camera and
   // its reset button. A hidden camera must not keep the entire pager locked.
-  const pagerLocked = currentHouse != null && !pendingHouse && (zoomed || dragSeat != null);
+  const pagerLocked = currentHouse != null && !pendingHouse && dragSeat != null;
   useEffect(() => {
     onPagerLockChange?.(pagerLocked);
   }, [pagerLocked, onPagerLockChange]);
