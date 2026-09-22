@@ -250,6 +250,24 @@
       "saveUnconfirmed": "Couldn't confirm the routine was saved. Please check again.",
       "loadFailed": "Couldn't load your routines. Check your connection and try again."
     },
+    "onboardingHouse": {
+      "eyebrow": "A house to share",
+      "title": "Want us to find a house to share routines with?",
+      "body": "Housemates cheer on each other's routines. You can skip this now and join one later from house search.",
+      "autoJoin": "Yes, please",
+      "autoJoinHint": "Join a public house with an open seat right away",
+      "personal": "Not now",
+      "personalHint": "Start alone in your own house",
+      "joiningA11y": "Finding a house",
+      "joinedTitle": "You joined '{{name}}'!",
+      "joinedTitleNoName": "You joined a new house!",
+      "joinedBody": "{{count}} members are here with you",
+      "joinedBodyUnknown": "Meet your housemates in the House tab",
+      "noMatchTitle": "No house to join yet",
+      "noMatchBody": "We made your house public. The next person who says yes will move in with you.",
+      "continue": "Continue",
+      "failed": "Couldn't set up a house. You can try again from the House tab."
+    },
     "myPage": {
       "title": "Profile",
       "settingsA11y": "Settings",

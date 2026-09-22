@@ -43,6 +43,8 @@ export type AnalyticsEvent =
   | 'login_success'
   | 'onboarding_complete'
   | 'starter_routine_view'
+  | 'onboarding_house_view'
+  | 'onboarding_house_choice'
   | 'starter_routine_skip'
   | 'starter_routine_failed'
   | 'routine_create'

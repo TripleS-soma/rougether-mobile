@@ -22,6 +22,8 @@ export const queryKeys = {
     all: ['app-icon'] as const,
     byUser: (userId: number | null | undefined) => ['app-icon', userId] as const,
   },
+  /** 집 온보딩 자동 입주 허용 (#1407, 방장 전용 GET /houses/{id}/auto-join). */
+  houseAutoJoin: (houseId: number | undefined) => ['house', 'auto-join', houseId] as const,
   /** 친구 초대 리워드 (#518) — 내 코드·보상 현황. */
   invites: (userId: number | null | undefined) => ['invites', userId] as const,
   /** 재화 증감 이력 (#734) — 무한 쿼리, 페이지 파라미터는 0부터. */

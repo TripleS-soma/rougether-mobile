@@ -1,3 +1,4 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import {
   useCallback,
@@ -20,6 +21,7 @@ import {
 } from '@/components/screens/house/types';
 import { HouseMissionsScreen } from '@/components/screens/house-missions-screen';
 import { HouseMembersScreen } from '@/components/screens/house-members-screen';
+import { useToast } from '@/components/ui/toast';
 import { manageableMembers } from '@/components/screens/house/members';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { type CharacterId } from '@/constants/characters';
@@ -39,6 +41,8 @@ import { clearPendingInviteCode, subscribePendingInviteCode } from '@/lib/pendin
 import { assetSource } from '@/resources/asset';
 import { houseBackgroundKey } from '@/resources/house-background';
 import type { ShopCatalogue } from '@/api/adapters';
+import { fetchHouseAutoJoin, updateHouseAutoJoin } from '@/api/houses';
+import { queryKeys } from '@/lib/query-keys';
 
 type HousesData = ReturnType<typeof useHouses>;
 type MissionLinks = ReturnType<typeof useMissionLinks>;
@@ -383,11 +387,27 @@ export function useHousePages({
     },
     [removeMissionRoutine],
   );
+  // 온보딩 자동 입주 허용 (#1407) — 방장이 집 관리를 열었을 때만 조회해 수정 시트의 현재 값으로.
+  const { show: toast } = useToast();
+  const queryClient = useQueryClient();
+  const ownerHouseId =
+    currentHouse?.myRole === 'OWNER' && currentHouse.houseId ? currentHouse.houseId : undefined;
+  const autoJoinQuery = useQuery({
+    queryKey: queryKeys.houseAutoJoin(ownerHouseId),
+    queryFn: () => fetchHouseAutoJoin(ownerHouseId as number),
+    enabled: ownerHouseId != null && screen === 'houseMembers',
+  });
   const handleUpdateHouse = useCallback(
     (houseId: number, input: HouseEditInput) => {
-      void updateHouse(houseId, input);
+      const { autoJoinEnabled, ...rest } = input;
+      void updateHouse(houseId, rest);
+      if (autoJoinEnabled === undefined) return;
+      // 별도 엔드포인트 — 집 정보 저장과 독립적으로 실패할 수 있어 따로 알린다.
+      void updateHouseAutoJoin(houseId, autoJoinEnabled)
+        .then(() => queryClient.invalidateQueries({ queryKey: queryKeys.houseAutoJoin(houseId) }))
+        .catch(() => toast(i18n.t('house.toast.autoJoinSaveFailed'), 'error'));
     },
-    [updateHouse],
+    [updateHouse, queryClient, toast],
   );
   const handleTransferOwnership = useCallback(
     (houseId: number, membershipId: number) => {
@@ -477,6 +497,7 @@ export function useHousePages({
         onTransferOwnership={handleTransferOwnership}
         onReissueInviteCode={handleReissueInviteCode}
         onUpdateHouse={handleUpdateHouse}
+        autoJoinEnabled={autoJoinQuery.data?.enabled}
         onLeaveHouse={handleLeaveHouse}
         onLeaveDone={closeMembers}
       />

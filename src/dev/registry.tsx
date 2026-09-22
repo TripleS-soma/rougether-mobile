@@ -44,6 +44,7 @@ import { MyPageScreen } from '@/components/screens/my-page-screen';
 import { ListRow } from '@/components/ui/list-row';
 import { NotificationSettingsScreen } from '@/components/screens/notification-settings-screen';
 import { OnboardingScreen } from '@/components/screens/onboarding-screen';
+import { OnboardingHouseScreen } from '@/components/screens/onboarding-house-screen';
 import { StarterRoutineScreen } from '@/components/screens/starter-routine-screen';
 import { recommendStarterRoutines } from '@/constants/starter-routines';
 import { PasswordChangeScreen } from '@/components/screens/password-change-screen';
@@ -1025,6 +1026,27 @@ export const galleryEntries: GalleryEntry[] = [
             { id: 'reading', label: '독서' },
             { id: 'organizing', label: '정리' },
           ])}
+        />
+      </View>
+    ),
+  },
+  {
+    name: 'OnboardingHouseScreen · 집 선택',
+    description:
+      '첫 루틴 뒤, 앱 진입 직전의 집 선택 (#1407). 좋아요는 자동 입주 허용 공개 집에 합류, 괜찮아요는 내 집. 서버 쓰기 없이 화면만.',
+    render: () => (
+      <View style={{ height: 720, alignSelf: 'stretch' }}>
+        <OnboardingHouseScreen onChoose={(choice) => console.log('choose', choice)} />
+      </View>
+    ),
+  },
+  {
+    name: 'OnboardingHouseScreen · 합류 결과',
+    description: "좋아요를 골라 '아침형 인간들'에 합류한 결과 카드 (#1407).",
+    render: () => (
+      <View style={{ height: 720, alignSelf: 'stretch' }}>
+        <OnboardingHouseScreen
+          outcome={{ result: 'JOINED', houseName: '아침형 인간들', memberCount: 3 }}
         />
       </View>
     ),

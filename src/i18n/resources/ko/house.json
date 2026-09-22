@@ -154,7 +154,11 @@
         "theme": "집 테마",
         "cancelA11y": "집 정보 수정 취소",
         "saveA11y": "집 정보 저장",
-        "save": "저장"
+        "save": "저장",
+        "autoJoin": "자동 입주 허용",
+        "autoJoinHint": "온보딩에서 '좋아요'를 고른 새 사용자가 승인 없이 들어와요",
+        "autoJoinPrivateHint": "공개 집에만 적용돼요",
+        "autoJoinA11y": "자동 입주 허용"
       }
     },
     "missions": {
@@ -353,7 +357,8 @@
       "transferToBot": "봇에게는 방장을 위임할 수 없어요",
       "transferFailed": "방장 위임에 실패했어요",
       "codeReissued": "새 초대코드가 발급됐어요",
-      "reissueFailed": "초대코드 재발급에 실패했어요"
+      "reissueFailed": "초대코드 재발급에 실패했어요",
+      "autoJoinSaveFailed": "자동 입주 설정을 저장하지 못했어요"
     },
     "missionToast": {
       "contributedAchieved": "기여 완료! 목표를 달성했어요",
