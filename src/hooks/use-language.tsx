@@ -10,6 +10,7 @@ import {
 
 import { getLocales } from 'expo-localization';
 
+import { setRequestLanguage } from '@/api/request-language';
 import { type AppLanguage, DEFAULT_LANGUAGE, i18n, isAppLanguage } from '@/i18n';
 import { setAnalyticsLanguage } from '@/lib/analytics';
 import { setErrorLanguage } from '@/lib/error-reporting';
@@ -58,10 +59,12 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       alive = false;
     };
   }, []);
-  // 계측 차원 (#1369) — 초기 결정(저장값/기기 언어)과 변경 둘 다 여기서 한 번에 잡힌다.
+  // 계측 차원 (#1369)과 요청 헤더 언어 (#1410) — 초기 결정(저장값/기기 언어)과 변경 둘 다
+  // 여기서 한 번에 잡힌다.
   useEffect(() => {
     setAnalyticsLanguage(language);
     setErrorLanguage(language);
+    setRequestLanguage(language);
   }, [language]);
   const setLanguage = useCallback((next: AppLanguage) => {
     setLanguageState(next);

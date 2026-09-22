@@ -1,8 +1,9 @@
 /** Current user + wallet endpoints. */
-import { apiDelete, apiGet, apiGetList, apiGetPage, apiPut } from './client';
+import { apiDelete, apiGet, apiGetList, apiGetPage, apiPatch, apiPut } from './client';
 import type {
   CharacterSelectResponse,
   MeResponse,
+  MemberPreferencesRequest,
   MemberUpdateRequest,
   MyCharacterItem,
   MyItemSummary,
@@ -44,6 +45,14 @@ export function fetchMyItems() {
 /** PUT /me — update the profile (nickname, ≤30 chars, no blanks). */
 export function updateMe(body: MemberUpdateRequest) {
   return apiPut<MeResponse>('/me', body);
+}
+
+/**
+ * PATCH /me — 계정 언어·시간대 (#1410, 서버 #396). 응답은 GET /me와 같다.
+ * 호출은 `lib/preferences-sync`가 한다(변경 없으면 재전송하지 않음).
+ */
+export function updatePreferences(body: MemberPreferencesRequest) {
+  return apiPatch<MeResponse>('/me', body);
 }
 
 /**

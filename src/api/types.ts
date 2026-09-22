@@ -586,6 +586,19 @@ export type MeResponse = {
   profileImageKey?: string;
   lastAccessedAt?: string;
   onboarding?: OnboardingSummary;
+  /** 계정 언어 (서버 #396). 설정 미전송 계정은 `ko`. */
+  language?: 'ko' | 'en';
+  /** 개인 리마인드 시간대, IANA ID (서버 #396). 기본 `Asia/Seoul`. */
+  timeZone?: string;
+};
+
+/**
+ * PATCH /me (#1410, 서버 #396) — 언어·시간대 부분 수정. 둘 다 선택이되 하나는 있어야 한다.
+ * `timeZone`은 Java TZDB의 IANA ID만(고정 오프셋 `+09:00`은 400 `VALIDATION_FAILED`).
+ */
+export type MemberPreferencesRequest = {
+  language?: 'ko' | 'en';
+  timeZone?: string;
 };
 
 export type MemberCategoryItem = {

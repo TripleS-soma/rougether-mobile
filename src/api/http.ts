@@ -5,6 +5,7 @@
  * dependency-free lets `auth.ts` use it without an import cycle.
  */
 import { API_BASE } from './config';
+import { getRequestLanguage } from './request-language';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -96,7 +97,14 @@ export async function rawRequest<T>(
   path: string,
   options: RawRequestOptions = {},
 ): Promise<T> {
-  const headers: Record<string, string> = { Accept: 'application/json', ...options.headers };
+  // `Accept-Language` (#1410, 서버 #396): 응답의 표시 언어(카탈로그 이름·추천 문구). 로그인·
+  // 갱신을 포함한 모든 요청에 실리도록 가장 아래 계층에 둔다. CORS 안전 목록 헤더라 웹에서도
+  // preflight 없이 나간다.
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    'Accept-Language': getRequestLanguage(),
+    ...options.headers,
+  };
   let body: string | FormData | undefined;
   if (typeof FormData !== 'undefined' && options.body instanceof FormData) {
     body = options.body;
