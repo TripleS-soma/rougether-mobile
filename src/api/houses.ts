@@ -21,6 +21,7 @@ import type {
   HousePreviewDetailResponse,
   HousePreviewResponse,
   HouseSummary,
+  HouseAutoJoinResponse,
   HouseUpdateRequest,
   HouseUpdateResponse,
   MemberSummary,
@@ -155,6 +156,16 @@ export function reissueInviteCode(houseId: number) {
 }
 
 /** PUT /houses/{id} — edit name/description/maxMembers (owner; omitted fields keep). */
+/** GET /houses/{id}/auto-join — 온보딩 자동 입주 허용 여부 (#1407, 소유자 전용). */
+export function fetchHouseAutoJoin(houseId: number) {
+  return apiGet<HouseAutoJoinResponse>(`/houses/${houseId}/auto-join`);
+}
+
+/** PUT /houses/{id}/auto-join — 자동 입주 허용 변경 (#1407). 공개 집에만 실제 적용된다. */
+export function updateHouseAutoJoin(houseId: number, enabled: boolean) {
+  return apiPut<HouseAutoJoinResponse>(`/houses/${houseId}/auto-join`, { enabled });
+}
+
 export function updateHouse(houseId: number, body: HouseUpdateRequest) {
   return apiPut<HouseUpdateResponse>(`/houses/${houseId}`, body);
 }

@@ -21,6 +21,7 @@ import type { CharacterItem, GoalItem } from '@/api/types';
 import { useResolvedScheme, useTokens } from '@/hooks/use-tokens';
 import { SplashBackground, SplashBackgroundDark } from '@/constants/theme';
 import { AppShell } from '@/components/app/app-shell';
+import { OnboardingHouseGate } from '@/components/app/onboarding-house-gate';
 import { StarterRoutineGate } from '@/components/app/starter-routine-gate';
 import { OnboardingScreen, type OnboardingGoal } from '@/components/screens/onboarding-screen';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
@@ -37,6 +38,11 @@ import {
   saveOnboarding,
 } from '@/lib/onboarding-store';
 import { markAppReady } from '@/lib/app-ready';
+import {
+  loadOnboardingHouseStep,
+  type OnboardingHouseStep,
+  saveOnboardingHouseStep,
+} from '@/lib/onboarding-house-store';
 import {
   loadStarterRoutineProgress,
   saveStarterRoutineProgress,
@@ -73,6 +79,8 @@ export function AppRoot() {
   const [selectedGoalIds, setSelectedGoalIds] = useState<string[]>([]);
   const [characters, setCharacters] = useState<CharacterItem[]>([]);
   const [starterProgress, setStarterProgress] = useState<StarterRoutineProgress | null>(null);
+  // 온보딩 집 선택 단계 (#1407) — 첫 온보딩을 마친 계정만 `pending`, 지나면 `done`.
+  const [houseStep, setHouseStep] = useState<OnboardingHouseStep | null>(null);
   const userId = status === 'authed' ? getSessionUserId() : undefined;
   const [loadedUserId, setLoadedUserId] = useState<number | undefined | null>(null);
   // 시작 화면 설정 (#1139) — 셸의 첫 화면. 읽기 전엔 부팅 대기.
@@ -84,17 +92,19 @@ export function AppRoot() {
     void (async () => {
       // Local cache + server state + masters in one round; the server may be
       // unreachable (offline) — every remote call degrades to the local cache.
-      const [saved, remote, goals, chars, starter] = await Promise.all([
+      const [saved, remote, goals, chars, starter, houseStepSaved] = await Promise.all([
         loadOnboarding(userId),
         fetchOnboarding().catch(() => null),
         fetchGoals().catch(() => [] as GoalItem[]),
         fetchCharacters().catch(() => [] as CharacterItem[]),
         loadStarterRoutineProgress(userId),
+        loadOnboardingHouseStep(userId),
       ]);
       if (!active) return;
       setCharacters(chars);
       setLoadedUserId(userId);
       setStarterProgress(starter?.status === 'pending' ? starter : null);
+      setHouseStep(houseStepSaved === 'pending' ? 'pending' : null);
       setServerGoals(goals.map(toOnboardingGoal));
       const remoteGoalIds =
         remote?.goals?.flatMap((g) => (g.goalId != null ? [String(g.goalId)] : [])) ?? [];
@@ -132,6 +142,12 @@ export function AppRoot() {
       active = false;
     };
   }, [status, userId]);
+
+  const finishHouseStep = useCallback(async () => {
+    if (getSessionUserId() !== userId) return;
+    await saveOnboardingHouseStep(userId, 'done');
+    if (getSessionUserId() === userId) setHouseStep(null);
+  }, [userId]);
 
   const finishStarter = useCallback(
     async (outcome: 'created' | 'skipped' | 'existing') => {
@@ -203,6 +219,9 @@ export function AppRoot() {
             };
             setStarterProgress(progress);
             void saveStarterRoutineProgress(userId, progress);
+            // 집 선택 (#1407)은 첫 루틴 뒤, 앱 진입 직전 — 첫 온보딩에서만.
+            setHouseStep('pending');
+            void saveOnboardingHouseStep(userId, 'pending');
           }
           // 퍼널 (#799) — 목표·캐릭터·닉네임까지 마친 지점. 닉네임은 값이
           // 아니라 입력 여부만 남긴다(개인정보를 분석 도구로 흘리지 않는다).
@@ -237,6 +256,10 @@ export function AppRoot() {
         onFinish={finishStarter}
       />
     );
+  }
+
+  if (houseStep === 'pending') {
+    return <OnboardingHouseGate key={userId} onFinish={finishHouseStep} />;
   }
 
   return (

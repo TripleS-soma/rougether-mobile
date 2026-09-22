@@ -140,6 +140,9 @@ describe('AppRoot', () => {
     await waitFor(() => expect(ui.getByLabelText('스트레칭 3분')).toBeEnabled());
     await fireEvent.press(ui.getByLabelText('스트레칭 3분'));
     await fireEvent.press(ui.getByText('이 루틴으로 시작하기'));
+    // 집 선택 단계 (#1407) — 첫 가입만 지난다. 기본 응답(items)엔 result가 없어 곧장 통과한다.
+    await waitFor(() => expect(ui.getByText('루틴을 함께할 집을 찾아드릴까요?')).toBeTruthy());
+    await fireEvent.press(ui.getByText('괜찮아요'));
     // 게이트가 닫히면 셸이 뜨고, 루틴 완료 미션부터 시작한다 (#1324).
     await waitFor(() => expect(ui.getByTestId('mission-banner')).toBeTruthy());
     expect(ui.getByText('오늘 루틴 1개 완료하기')).toBeTruthy();
@@ -178,6 +181,9 @@ describe('AppRoot', () => {
     await waitFor(() => expect(ui.getByLabelText('스트레칭 3분')).toBeEnabled());
     await fireEvent.press(ui.getByLabelText('스트레칭 3분'));
     await fireEvent.press(ui.getByText('이 루틴으로 시작하기'));
+    // 집 선택 단계 (#1407) — 첫 가입만 지난다. 기본 응답(items)엔 result가 없어 곧장 통과한다.
+    await waitFor(() => expect(ui.getByText('루틴을 함께할 집을 찾아드릴까요?')).toBeTruthy());
+    await fireEvent.press(ui.getByText('괜찮아요'));
     await waitFor(() => expect(ui.getByTestId('mission-banner')).toBeTruthy());
   });
 
@@ -379,6 +385,9 @@ describe('AppRoot', () => {
     await waitFor(() => expect(ui.getByLabelText('책 2쪽 읽기')).toBeEnabled());
     await fireEvent.press(ui.getByLabelText('책 2쪽 읽기'));
     await fireEvent.press(ui.getByText('이 루틴으로 시작하기'));
+    // 집 선택 단계 (#1407) — 첫 가입만 지난다. 기본 응답(items)엔 result가 없어 곧장 통과한다.
+    await waitFor(() => expect(ui.getByText('루틴을 함께할 집을 찾아드릴까요?')).toBeTruthy());
+    await fireEvent.press(ui.getByText('괜찮아요'));
     await waitFor(() => expect(ui.getByText('오늘의 할 일')).toBeTruthy());
     expect(posts).toEqual([{ title: '책 2쪽 읽기', authType: 'CHECK', repeatType: 'DAILY' }]);
     await waitFor(() => expect(ui.getAllByText('책 2쪽 읽기').length).toBeGreaterThan(0));
@@ -388,5 +397,55 @@ describe('AppRoot', () => {
     // 게이트가 닫히면 루틴 완료 미션부터 시작한다 (#1324).
     await waitFor(() => expect(ui.getByTestId('mission-banner')).toBeTruthy());
     expect(ui.getByText('오늘 루틴 1개 완료하기')).toBeTruthy();
+  });
+
+  it('첫 가입의 집 선택에서 좋아요를 고르면 합류 카드를 보여주고, 다음 실행엔 다시 묻지 않는다 (#1407)', async () => {
+    await AsyncStorage.setItem('rougether.auth.userId', '74');
+    const calls: { url: string; method?: string; body?: string }[] = [];
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      calls.push({ url, method: init?.method, body: init?.body ? String(init.body) : undefined });
+      if (url.endsWith('/onboarding/house') && init?.method === 'PUT') {
+        return {
+          ok: true,
+          status: 200,
+          text: async () =>
+            JSON.stringify({ completed: true, choice: 'AUTO_JOIN', result: 'JOINED', houseId: 42 }),
+        };
+      }
+      if (url.endsWith('/onboarding/house')) {
+        return { ok: true, status: 200, text: async () => JSON.stringify({ completed: false }) };
+      }
+      if (url.endsWith('/houses/42')) {
+        return {
+          ok: true,
+          status: 200,
+          text: async () =>
+            JSON.stringify({ houseId: 42, name: '아침형 인간들', currentMemberCount: 3 }),
+        };
+      }
+      return emptyRes(url, init);
+    }) as unknown as typeof fetch;
+    const ui = await renderApp();
+    await waitFor(() => expect(ui.getByText('관심 있는 목표를 골라주세요')).toBeTruthy());
+    await fireEvent.press(ui.getByText('독서'));
+    await fireEvent.press(ui.getByText('시작하기'));
+    await fireEvent.changeText(ui.getByLabelText('닉네임 입력'), '새친구');
+    await fireEvent.press(ui.getByText('시작하기'));
+    await waitFor(() => expect(ui.getByLabelText('책 2쪽 읽기')).toBeEnabled());
+    await fireEvent.press(ui.getByLabelText('책 2쪽 읽기'));
+    await fireEvent.press(ui.getByText('이 루틴으로 시작하기'));
+    await waitFor(() => expect(ui.getByText('루틴을 함께할 집을 찾아드릴까요?')).toBeTruthy());
+    await fireEvent.press(ui.getByText('좋아요'));
+    await waitFor(() => expect(ui.getByText("'아침형 인간들'에 합류했어요!")).toBeTruthy());
+    expect(ui.getByText('구성원 3명이 함께해요')).toBeTruthy();
+    const put = calls.find((c) => c.url.endsWith('/onboarding/house') && c.method === 'PUT');
+    expect(JSON.parse(put!.body!)).toEqual({ choice: 'AUTO_JOIN' });
+    await fireEvent.press(ui.getByText('계속'));
+    await waitFor(() => expect(ui.getByText('오늘의 할 일')).toBeTruthy());
+    expect(await AsyncStorage.getItem('rougether.onboarding-house.v1.74')).toBe('done');
+    await ui.unmount();
+    const restarted = await renderApp();
+    await waitFor(() => expect(restarted.getByText('오늘의 할 일')).toBeTruthy());
+    expect(restarted.queryByText('루틴을 함께할 집을 찾아드릴까요?')).toBeNull();
   });
 });

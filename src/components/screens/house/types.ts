@@ -96,6 +96,8 @@ export type HouseEditInput = {
   coverImageKey?: string;
   /** 공개 범위 (#1266); omitted = keep the current one. */
   isPublic?: boolean;
+  /** 온보딩 자동 입주 허용 (#1407, `PUT /houses/{id}/auto-join`); omitted = keep. */
+  autoJoinEnabled?: boolean;
 };
 
 /** Group mission (server house mission) shown in the missions card. */

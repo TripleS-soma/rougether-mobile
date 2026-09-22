@@ -810,6 +810,25 @@ export type OnboardingResponse = {
   completed?: boolean;
 };
 
+/** 온보딩 집 선택 (#1407, 서버 #389) — `GET/PUT /onboarding/house`. 손으로 추가(#1412). */
+export type OnboardingHouseChoice = 'AUTO_JOIN' | 'PERSONAL';
+export type OnboardingHouseResponse = {
+  /** 집 선택 처리 여부. 기존 온보딩 completed와 별개. */
+  completed?: boolean;
+  choice?: OnboardingHouseChoice;
+  /** JOINED: 자동 합류, PERSONAL: 개인집 선택, NO_MATCH: 후보 없음으로 개인집 시작(공개·자동 입주 허용 전환). */
+  result?: 'JOINED' | 'PERSONAL' | 'NO_MATCH';
+  /** 선택 처리 당시 시작할 집. 이후 탈퇴·해체 여부는 내 집 목록으로. */
+  houseId?: number;
+  membershipId?: number;
+};
+
+/** 집 자동 입주 허용 (#1407, 서버 #389) — `GET/PUT /houses/{id}/auto-join`, 소유자 전용. */
+export type HouseAutoJoinResponse = {
+  houseId?: number;
+  enabled?: boolean;
+};
+
 export type OnboardingSummary = {
   completed?: boolean;
   primaryGoalId?: number;
