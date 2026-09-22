@@ -1,5 +1,6 @@
 import { StarterSpeakerPreview } from '@/dev/starter-speaker-preview';
 import { SpeakerPreview } from '@/dev/speaker-preview';
+import { BandInstrumentsPreview } from '@/dev/band-instruments-preview';
 import type { AppLanguage } from '@/i18n';
 import { openBrowserAsync } from 'expo-web-browser';
 import { type ReactNode, useState } from 'react';
@@ -476,6 +477,11 @@ export const galleryEntries: GalleryEntry[] = [
     name: 'SpeakerPreview',
     description: '첫 가구 스피커 · 애니메이션 · 배경음 4종 · 볼륨 · 실제 재생 (API 호출 없음)',
     render: () => <SpeakerPreview />,
+  },
+  {
+    name: 'BandInstrumentsPreview',
+    description: '밴드 악기 4종 · 내 방 터치 효과음 · 음소거 · 꾸미기 모드 (API 호출 없음)',
+    render: () => <BandInstrumentsPreview />,
   },
   {
     name: 'MinigamesPreview',

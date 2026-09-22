@@ -1,5 +1,18 @@
 {
   "roomShop": {
+    "instruments": {
+      "playA11y": "Play {{name}}",
+      "tapHint": "Tap to hear a short instrument sound",
+      "playError": "Couldn't play the instrument. Please tap again.",
+      "previewTitle": "Our Room Band",
+      "previewHint": "Tap an instrument to play. Instruments stay quiet while decorating.",
+      "effects": "Instrument sounds",
+      "editing": "Decorating mode",
+      "guitar": "Apricot electric guitar",
+      "drums": "Little drum kit",
+      "bass": "Sage bass guitar",
+      "keyboard": "Cream keyboard"
+    },
     "room": {
       "vacant": "Vacant"
     },

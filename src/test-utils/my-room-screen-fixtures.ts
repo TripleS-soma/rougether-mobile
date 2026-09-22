@@ -42,11 +42,12 @@ export const TOMORROW = isoShift(1);
 
 /** Open the 달력 tab and select a date, hopping months when needed. */
 export const pickCalendarDate = async (
-  ui: { getByText: (t: string) => any; getByLabelText: (t: string) => any },
+  ui: { getByText: (t: string) => any; getByLabelText: (t: string | RegExp) => any },
   date: string,
 ) => {
   await fireEvent.press(ui.getByText('달력'));
   if (date.slice(0, 7) < TODAY.slice(0, 7)) await fireEvent.press(ui.getByLabelText('이전 달'));
   if (date.slice(0, 7) > TODAY.slice(0, 7)) await fireEvent.press(ui.getByLabelText('다음 달'));
-  await fireEvent.press(ui.getByLabelText(date));
+  // 날짜 뒤에는 공휴일·오늘·진행률 안내가 붙을 수 있다.
+  await fireEvent.press(ui.getByLabelText(new RegExp(`^${date}(?:,|$)`)));
 };

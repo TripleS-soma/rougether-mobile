@@ -1,5 +1,18 @@
 {
   "roomShop": {
+    "instruments": {
+      "playA11y": "{{name}} 연주",
+      "tapHint": "눌러서 짧은 악기 소리를 들어보세요",
+      "playError": "악기 소리를 재생하지 못했어요. 다시 눌러주세요.",
+      "previewTitle": "우리 방 밴드부",
+      "previewHint": "악기를 톡 눌러보세요. 꾸미는 동안에는 소리가 나지 않아요.",
+      "effects": "악기 효과음",
+      "editing": "꾸미기 모드",
+      "guitar": "살구빛 일렉기타",
+      "drums": "작은 합주 드럼",
+      "bass": "세이지 베이스",
+      "keyboard": "크림 키보드"
+    },
     "room": {
       "vacant": "빈방"
     },

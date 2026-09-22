@@ -203,30 +203,35 @@ export function useSettingsSurface({
   // 사운드 설정은 서버 API가 생기기 전까지 기기(AsyncStorage)에 보관 (#405).
   // 예전 저장값의 notifications 필드는 서버 이관(#495) 후 무시된다.
   const [soundSettings, setSoundSettings] = useState<SoundSettings>(DEFAULT_SOUND_SETTINGS);
+  const [soundSettingsLoaded, setSoundSettingsLoaded] = useState(false);
   useEffect(() => {
-    void AsyncStorage.getItem(DEVICE_SETTINGS_KEY).then((raw) => {
-      if (!raw) return;
-      try {
-        // 종전 저장값은 `haptics: boolean`이었다 (#586 → #974). 켜져 있던 사람은
-        // '보통', 꺼둔 사람은 '끄기'로 옮긴다 — 안 하면 저장값이 그대로 남아
-        // hapticStrength가 undefined가 되고 기본값(보통)으로 되살아난다.
-        const saved = JSON.parse(raw) as {
-          sound?: Partial<SoundSettings> & { haptics?: boolean };
-        };
-        if (saved.sound) {
-          const { haptics, ...rest } = saved.sound;
-          const migrated =
-            rest.hapticStrength ?? (haptics === undefined ? undefined : haptics ? 'medium' : 'off');
-          setSoundSettings((p) => ({
-            ...p,
-            ...rest,
-            ...(migrated ? { hapticStrength: migrated } : {}),
-          }));
+    void AsyncStorage.getItem(DEVICE_SETTINGS_KEY)
+      .then((raw) => {
+        if (!raw) return;
+        try {
+          // 종전 저장값은 `haptics: boolean`이었다 (#586 → #974). 켜져 있던 사람은
+          // '보통', 꺼둔 사람은 '끄기'로 옮긴다 — 안 하면 저장값이 그대로 남아
+          // hapticStrength가 undefined가 되고 기본값(보통)으로 되살아난다.
+          const saved = JSON.parse(raw) as {
+            sound?: Partial<SoundSettings> & { haptics?: boolean };
+          };
+          if (saved.sound) {
+            const { haptics, ...rest } = saved.sound;
+            const migrated =
+              rest.hapticStrength ??
+              (haptics === undefined ? undefined : haptics ? 'medium' : 'off');
+            setSoundSettings((p) => ({
+              ...p,
+              ...rest,
+              ...(migrated ? { hapticStrength: migrated } : {}),
+            }));
+          }
+        } catch {
+          // 손상된 저장값은 기본값으로 무시.
         }
-      } catch {
-        // 손상된 저장값은 기본값으로 무시.
-      }
-    });
+      })
+      .catch(() => {})
+      .finally(() => setSoundSettingsLoaded(true));
   }, []);
   const persistDeviceSettings = (sound: SoundSettings) => {
     void AsyncStorage.setItem(DEVICE_SETTINGS_KEY, JSON.stringify({ sound })).catch(() => {});
@@ -463,6 +468,7 @@ export function useSettingsSurface({
     settingsProps,
     subScreen,
     soundSettings,
+    soundSettingsLoaded,
     enableSpeakerMusic,
     inviteSheets: inviteArrival.sheets,
   };
