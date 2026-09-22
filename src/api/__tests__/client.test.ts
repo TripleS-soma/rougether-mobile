@@ -38,6 +38,9 @@ describe('API client', () => {
 
     const me = await fetchMe();
     expect(me.nickname).toBe('준서');
+    // 표시 언어 헤더 (#1410) — 인증 요청·비인증 요청 모두에 실린다.
+    const langs = calls.map((c) => (c.init?.headers as Record<string, string>)['Accept-Language']);
+    expect(langs).toEqual(['ko', 'ko']);
     const meCall = calls.find((c) => c.url.endsWith('/me'));
     expect((meCall?.init?.headers as Record<string, string>).Authorization).toBe('Bearer a1');
   });
