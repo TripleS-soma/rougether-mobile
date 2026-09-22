@@ -166,11 +166,12 @@ export type Routine = {
 };
 
 /**
- * 루틴 몫 옮기기의 서버 건너뜀(SKIPPED) 사용 여부 (#189 · #1334). 서버 #390이 운영에 배포되기
- * 전엔 false — 옛 서버는 `status`를 무시하고 그 POST를 **완료**로 기록하므로, 배포 확인
- * (운영 api-docs `RoutineLogCreateRequest.status`) 뒤에 true로 올린다.
+ * 루틴 몫 옮기기의 서버 건너뜀(SKIPPED) 사용 여부 (#189 · #1334). 서버 #390 배포 전엔 false였다 —
+ * 옛 서버는 `status`를 무시하고 그 POST를 **완료**로 기록했다. 2026-09-22 운영 api-docs에
+ * `RoutineLogCreateRequest.status`(SKIPPED 포함)가 노출된 것을 확인하고 true로 올렸다.
+ * 플래그는 롤백 스위치로 남긴다.
  */
-export const ROUTINE_OCCURRENCE_SKIP_ENABLED = false;
+export const ROUTINE_OCCURRENCE_SKIP_ENABLED = true;
 
 /** Payload for creating/editing a routine (from the Add/Edit routine screen). */
 export type NewRoutine = {
