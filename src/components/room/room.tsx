@@ -1,5 +1,6 @@
 import { SpeakerSprite } from '@/components/room/speaker-sprite';
 import { isSpeakerFurniture } from '@/resources/speaker';
+import { getInstrumentSound } from '@/resources/instrument-sounds';
 import { Image } from 'expo-image';
 import { memo, useMemo, useState } from 'react';
 import { Pressable, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
@@ -39,6 +40,7 @@ export type RoomRegion = 'wall' | 'floor';
 export type RoomCobweb = { assetKey?: string; cleanable?: boolean };
 
 export type RoomProps = {
+  onInstrumentPress?: (assetKey: string) => void;
   onSpeakerPress?: () => void;
   onSpeakerLongPress?: () => void;
   speakerPlaying?: boolean;
@@ -117,6 +119,7 @@ export type RoomSceneProps = RoomCatalogProps &
     | 'onSpeakerPress'
     | 'onSpeakerLongPress'
     | 'speakerPlaying'
+    | 'onInstrumentPress'
   >;
 
 /**
@@ -180,6 +183,7 @@ export const Room = memo(function Room({
   onSpeakerPress,
   onSpeakerLongPress,
   speakerPlaying = false,
+  onInstrumentPress,
   editable = false,
   onRegionPress,
   activeRegion = null,
@@ -329,7 +333,11 @@ export const Room = memo(function Room({
               key={key}
               testID={`room-furniture-${key}`}
               pointerEvents={
-                isSpeakerFurniture(item) && onSpeakerPress && !editable ? 'auto' : 'none'
+                !editable &&
+                ((isSpeakerFurniture(item) && onSpeakerPress) ||
+                  (!fill && getInstrumentSound(item.assetKey) && onInstrumentPress))
+                  ? 'auto'
+                  : 'none'
               }
               style={itemStyle}>
               {isSpeakerFurniture(item) && onSpeakerPress && !editable ? (
@@ -353,6 +361,15 @@ export const Room = memo(function Room({
                       : 'roomShop.speaker.roomPlayA11y',
                   )}>
                   <SpeakerSprite playing={speakerPlaying} />
+                </Pressable>
+              ) : getInstrumentSound(item.assetKey) && onInstrumentPress && !editable && !fill ? (
+                <Pressable
+                  style={({ pressed }) => ({ flex: 1, opacity: pressed ? 0.8 : 1 })}
+                  onPress={() => onInstrumentPress(item.assetKey!)}
+                  accessibilityRole="button"
+                  accessibilityLabel={tr('roomShop.instruments.playA11y', { name: item.name })}
+                  accessibilityHint={tr('roomShop.instruments.tapHint')}>
+                  <FurniturePlaceholder item={item} />
                 </Pressable>
               ) : (
                 <FurniturePlaceholder item={item} sharp={fill} />

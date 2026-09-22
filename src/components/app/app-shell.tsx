@@ -4,6 +4,7 @@ import { useStarterGacha } from '@/hooks/use-starter-gacha';
 import { toGachaMachine } from '@/api/adapters';
 import { SpeakerSheet } from '@/components/room/speaker-sheet';
 import { useRoomSpeaker } from '@/hooks/use-room-speaker';
+import { useRoomInstrumentSounds } from '@/hooks/use-room-instrument-sounds';
 import { isSpeakerFurniture } from '@/resources/speaker';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
@@ -422,10 +423,18 @@ export function AppShell({
     ),
   );
   const speaker = useRoomSpeaker(speakerPlaced);
+  const instruments = useRoomInstrumentSounds(
+    screen === 'myRoom' &&
+      settingsSurface.soundSettingsLoaded &&
+      settingsSurface.soundSettings.effects,
+  );
   const { show: showSpeakerError } = useToast();
   useEffect(() => {
     if (speaker.error) showSpeakerError(speaker.error);
   }, [speaker.error, showSpeakerError]);
+  useEffect(() => {
+    if (instruments.error) showSpeakerError(instruments.error, 'error');
+  }, [instruments.error, showSpeakerError]);
   const playSpeaker = useStableCallback(() => {
     settingsSurface.enableSpeakerMusic();
     speaker.play();
@@ -631,6 +640,7 @@ export function AppShell({
             onSpeakerPress={toggleSpeaker}
             onSpeakerLongPress={openSpeaker}
             speakerPlaying={speaker.playing}
+            onInstrumentPress={instruments.play}
             {...tabScroll.myRoom}
             onOpenFurnitureStudio={openFurnitureStudio}
             onOpenMinigames={minigames.openMinigames}

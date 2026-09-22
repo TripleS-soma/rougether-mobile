@@ -15,6 +15,61 @@ import { Room } from '@/components/room/room';
 import { BrandThemeProvider, useBrandTheme } from '@/hooks/use-tokens';
 import { assetSource } from '@/resources/asset';
 import { renderWithProviders } from '@/test-utils/render';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createInstrumentPlayer } from '@/lib/instrument-player';
+import { INSTRUMENT_SOUNDS } from '@/resources/instrument-sounds';
+
+jest.mock('@/lib/instrument-player', () => ({ createInstrumentPlayer: jest.fn() }));
+
+it('저장된 효과음 설정을 읽기 전에는 악기를 재생하지 않는다', async () => {
+  const storage = jest.mocked(AsyncStorage.getItem);
+  const getItem = storage.getMockImplementation()!;
+  let resolve!: (value: string | null) => void;
+  storage.mockImplementation((key) =>
+    key === 'rougether.device-settings'
+      ? new Promise((r) => {
+          resolve = r;
+        })
+      : getItem(key),
+  );
+  try {
+    const player = { replay: jest.fn().mockResolvedValue(undefined), dispose: jest.fn() };
+    jest.mocked(createInstrumentPlayer).mockReturnValue(player);
+    await renderWithProviders(<AppShell />);
+    const play = mockMyRoomRenders.findLast((props) => props.view === 'room')
+      ?.onInstrumentPress as (key: string) => void;
+    await act(() => play(INSTRUMENT_SOUNDS[0].assetKey));
+    expect(createInstrumentPlayer).not.toHaveBeenCalled();
+    await act(() => resolve(JSON.stringify({ sound: { effects: true } })));
+    await act(() => play(INSTRUMENT_SOUNDS[0].assetKey));
+    expect(player.replay).toHaveBeenCalledTimes(1);
+  } finally {
+    storage.mockImplementation(getItem);
+  }
+});
+
+it.each([true, false])(
+  '저장된 효과음 설정(%s)을 내 방 악기에 적용하고 탭 이탈 시 정지한다',
+  async (effects) => {
+    await AsyncStorage.setItem(
+      'rougether.device-settings',
+      JSON.stringify({ sound: { effects, music: false, hapticStrength: 'medium' } }),
+    );
+    const player = { replay: jest.fn().mockResolvedValue(undefined), dispose: jest.fn() };
+    jest.mocked(createInstrumentPlayer).mockReturnValue(player);
+    const ui = await renderWithProviders(<AppShell />);
+    await waitFor(() => expect(mockMyRoomRenders.at(-1)?.loading).toBe(false));
+    const play = mockMyRoomRenders.findLast((props) => props.view === 'room')
+      ?.onInstrumentPress as (key: string) => void;
+    expect(play).toEqual(expect.any(Function));
+    await act(() => play(INSTRUMENT_SOUNDS[0].assetKey));
+    expect(player.replay).toHaveBeenCalledTimes(effects ? 1 : 0);
+    await fireEvent.press(ui.getByLabelText('집'));
+    expect(player.dispose).toHaveBeenCalledTimes(effects ? 1 : 0);
+    await act(() => play(INSTRUMENT_SOUNDS[1].assetKey));
+    expect(player.replay).toHaveBeenCalledTimes(effects ? 1 : 0);
+  },
+);
 
 // 렌더마다 받은 props를 기록하는 MyRoomScreen 프로브.
 const mockMyRoomRenders: Record<string, unknown>[] = [];
