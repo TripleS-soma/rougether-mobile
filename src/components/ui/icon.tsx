@@ -41,7 +41,6 @@ const ICONS = {
   'heart-outline': 'heart-outline',
   comment: 'chatbubble-outline',
   image: 'image-outline',
-  send: 'send',
   // 방 꾸미기 선택 툴바 (#333)
   flip: 'swap-horizontal',
   'rotate-ccw': 'arrow-undo-outline',

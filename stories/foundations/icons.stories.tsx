@@ -37,7 +37,6 @@ const ICON_LABELS = {
   'heart-outline': '빈 하트',
   comment: '댓글',
   image: '사진',
-  send: '보내기',
   flip: '뒤집기',
   'rotate-ccw': '왼쪽 회전',
   'rotate-cw': '오른쪽 회전',
