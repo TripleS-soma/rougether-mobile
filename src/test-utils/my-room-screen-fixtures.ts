@@ -40,13 +40,20 @@ export const isoShift = (days: number) => {
 export const YESTERDAY = isoShift(-1);
 export const TOMORROW = isoShift(1);
 
+/**
+ * 달력 셀의 접근성 라벨 매처 — 셀 라벨은 `날짜[, 공휴일][, 오늘][, 진행]`이라 날짜만으로 정확
+ * 일치하면 공휴일·오늘에 걸린 날은 못 찾는다(2026-09-23 CI: 내일이 추석 연휴라 실패).
+ * 날짜로 시작하는 라벨을 잡는다.
+ */
+export const calendarCellLabel = (date: string) => new RegExp(`^${date}(,|$)`);
+
 /** Open the 달력 tab and select a date, hopping months when needed. */
 export const pickCalendarDate = async (
-  ui: { getByText: (t: string) => any; getByLabelText: (t: string) => any },
+  ui: { getByText: (t: string) => any; getByLabelText: (t: string | RegExp) => any },
   date: string,
 ) => {
   await fireEvent.press(ui.getByText('달력'));
   if (date.slice(0, 7) < TODAY.slice(0, 7)) await fireEvent.press(ui.getByLabelText('이전 달'));
   if (date.slice(0, 7) > TODAY.slice(0, 7)) await fireEvent.press(ui.getByLabelText('다음 달'));
-  await fireEvent.press(ui.getByLabelText(date));
+  await fireEvent.press(ui.getByLabelText(calendarCellLabel(date)));
 };
