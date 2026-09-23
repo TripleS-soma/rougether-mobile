@@ -93,4 +93,14 @@ export const ErrorCode = {
   FEED_UPLOAD_LIMIT: 'FEED_UPLOAD_LIMIT',
   /** 503 — 사진 저장소 일시 오류. */
   FEED_STORAGE_UNAVAILABLE: 'FEED_STORAGE_UNAVAILABLE',
+  /** 404 — 채팅방 없음 (#1408). */
+  CHAT_ROOM_NOT_FOUND: 'CHAT_ROOM_NOT_FOUND',
+  /** 403 — 비구성원·탈퇴/강퇴·삭제된 집 등 채팅 접근 불가 (#1408). */
+  CHAT_FORBIDDEN: 'CHAT_FORBIDDEN',
+  /** 400 — 커서·읽음 위치·본문 오류 (#1408). */
+  CHAT_INPUT_INVALID: 'CHAT_INPUT_INVALID',
+  /** 400 — 금칙어 포함 (#1408). 어떤 단어인지는 응답에 없다. */
+  CHAT_CONTENT_BANNED: 'CHAT_CONTENT_BANNED',
+  /** 409 — 같은 clientMessageId로 다른 본문을 보냄 (#1408). */
+  CHAT_MESSAGE_CONFLICT: 'CHAT_MESSAGE_CONFLICT',
 } as const;

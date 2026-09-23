@@ -38,6 +38,7 @@ export {
 export * from './bug-reports';
 export * from './calendar-import';
 export * from './categories';
+export * from './chat';
 export * from './events';
 export * from './feed';
 export * from './houses';

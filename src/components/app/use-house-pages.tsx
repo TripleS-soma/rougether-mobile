@@ -21,11 +21,13 @@ import {
 } from '@/components/screens/house/types';
 import { HouseMissionsScreen } from '@/components/screens/house-missions-screen';
 import { HouseMembersScreen } from '@/components/screens/house-members-screen';
+import { HouseChatPage } from '@/components/app/house-chat-page';
 import { useToast } from '@/components/ui/toast';
 import { manageableMembers } from '@/components/screens/house/members';
 import { HouseSearchScreen } from '@/components/screens/house-search-screen';
 import { type CharacterId } from '@/constants/characters';
 import { type Wallet } from '@/constants/currency';
+import { useHouseChatUnread } from '@/hooks/use-house-chat';
 import { useHouseCovers } from '@/hooks/use-house-covers';
 import type { useHouses } from '@/hooks/use-houses';
 import {
@@ -327,10 +329,21 @@ export function useHousePages({
   // 공동 미션 화면 (#875) — 예전엔 집 화면 위 모달이었다.
   const openMissions = useCallback(() => setScreen('houseMissions'), [setScreen]);
   const closeMissions = useCallback(() => setScreen('house'), [setScreen]);
+  // 집 채팅 (#1408) — 레일 '채팅'. 배지는 방 상태 캐시(POST chat-room)에서 파생하고,
+  // 채팅 화면의 소켓·읽음 응답이 같은 캐시를 갱신한다. 집 탭·채팅에서만 조회한다.
+  const openChat = useCallback(() => setScreen('houseChat'), [setScreen]);
+  const closeChat = useCallback(() => setScreen('house'), [setScreen]);
+  const chatUnread = useHouseChatUnread(
+    currentHouse?.houseId,
+    screen === 'house' || screen === 'houseChat',
+  );
   // 관리 중 집이 사라지면(마지막 집 나가기·삭제, 갱신으로 강퇴 확인 등) 집
   // 탭으로 돌린다 — currentHouse 없는 구성원 화면은 그릴 것이 없다.
   useEffect(() => {
-    if ((screen === 'houseMembers' || screen === 'houseMissions') && !currentHouse)
+    if (
+      ((screen === 'houseMembers' || screen === 'houseMissions') && !currentHouse) ||
+      (screen === 'houseChat' && !currentHouse?.houseId)
+    )
       setScreen('house');
   }, [screen, currentHouse, setScreen]);
   const handleAcceptJoinRequest = useCallback(
@@ -458,6 +471,9 @@ export function useHousePages({
     onCreateMission: handleCreateMission,
     onDeleteMission: handleDeleteMission,
     onOpenMissions: openMissions,
+    // houseId가 있는 내 집에서만 레일에 '채팅'이 뜬다.
+    onOpenChat: currentHouse?.houseId ? openChat : undefined,
+    chatUnread,
     onUpdateHouse: handleUpdateHouse,
     onTransferOwnership: handleTransferOwnership,
     onReissueInviteCode: handleReissueInviteCode,
@@ -466,7 +482,13 @@ export function useHousePages({
 
   /** 현재 화면이 집 서브화면 3종이면 그 JSX, 아니면 null — 셸이 그대로 렌더. */
   const subScreen =
-    screen === 'houseMissions' && currentHouse ? (
+    screen === 'houseChat' && currentHouse?.houseId ? (
+      <HouseChatPage
+        houseId={currentHouse.houseId}
+        houseName={currentHouse.name}
+        onBack={closeChat}
+      />
+    ) : screen === 'houseMissions' && currentHouse ? (
       <HouseMissionsScreen
         house={currentHouse}
         missions={currentHouse.missions ?? []}

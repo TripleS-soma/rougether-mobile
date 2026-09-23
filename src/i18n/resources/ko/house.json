@@ -454,6 +454,26 @@
       "snowy-cabin": "눈꽃 통나무집",
       "herb-greenhouse": "허브 온실집",
       "clockwork-cottage": "태엽 시계집"
+    },
+    "chat": {
+      "title": "집 채팅",
+      "rail": "채팅",
+      "railA11y": "집 채팅",
+      "railA11yUnread": "집 채팅, 안 읽은 메시지 {{n}}개",
+      "placeholder": "메시지 보내기",
+      "inputA11y": "메시지 입력",
+      "send": "보내기",
+      "sending": "보내는 중",
+      "failed": "전송 실패 · 다시 보내기",
+      "retryA11y": "다시 보내기",
+      "unreadA11y": "안 읽은 사람 {{n}}명",
+      "unknownSender": "알 수 없음",
+      "empty": "아직 대화가 없어요. 먼저 인사를 건네 보세요!",
+      "loadFailed": "채팅을 불러오지 못했어요",
+      "retry": "다시 시도",
+      "banned": "사용할 수 없는 단어가 들어 있어요",
+      "forbidden": "이 집의 채팅에 참여할 수 없어요",
+      "invalid": "메시지를 보낼 수 없어요. 내용을 확인해 주세요."
     }
   }
 }

@@ -21,6 +21,7 @@ export type Screen =
   | 'house'
   | 'houseMembers'
   | 'houseMissions'
+  | 'houseChat'
   | 'friendRoom'
   | 'houseSearch'
   | 'createHouse'
@@ -62,6 +63,8 @@ export const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   house: 'house',
   houseMembers: null,
   houseMissions: null,
+  // 집 채팅 (#1408) — 입력줄이 바닥에 붙으므로 하단 탭을 숨긴다.
+  houseChat: null,
   friendRoom: null,
   houseSearch: null,
   createHouse: null,
@@ -127,6 +130,7 @@ export const BACK_SCREEN: Record<Screen, Screen | null> = {
   house: 'myRoom',
   houseMembers: 'house',
   houseMissions: 'house',
+  houseChat: 'house',
   friendRoom: 'house',
   houseSearch: 'house',
   createHouse: 'houseSearch',
