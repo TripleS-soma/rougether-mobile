@@ -4,7 +4,7 @@ import { calendarToday } from '@/utils/calendar-progress';
 import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { ToastProvider } from '@/components/ui/toast';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
-import { OTHER_DAY, TODAY } from '@/test-utils/my-room-screen-fixtures';
+import { calendarCellLabel, OTHER_DAY, TODAY } from '@/test-utils/my-room-screen-fixtures';
 
 describe('MyRoomScreen', () => {
   it('행 메뉴 → 루틴 수정을 누르면 그 루틴으로 onEditRoutine을 부른다 (#465)', async () => {
@@ -52,7 +52,9 @@ describe('MyRoomScreen', () => {
     expect(queryByText('시간 수정')).toBeNull(); // 시간 없는 항목은 '시간 추가' (#325)
 
     await fireEvent.press(getByText('날짜 바꾸기')); // → calendar bottom sheet
-    await fireEvent.press(await findByLabelText(OTHER_DAY, {}, { timeout: 3000 })); // draft only — not saved yet
+    await fireEvent.press(
+      await findByLabelText(calendarCellLabel(OTHER_DAY), {}, { timeout: 3000 }),
+    ); // draft only — not saved yet
     expect(onUpdateTodoDueDate).not.toHaveBeenCalled();
 
     await fireEvent.press(getByLabelText('확인'));
@@ -102,7 +104,9 @@ describe('MyRoomScreen', () => {
 
     await fireEvent.press(getByText('장보기'));
     await fireEvent.press(getByText('날짜 바꾸기'));
-    await fireEvent.press(await findByLabelText(OTHER_DAY, {}, { timeout: 3000 }));
+    await fireEvent.press(
+      await findByLabelText(calendarCellLabel(OTHER_DAY), {}, { timeout: 3000 }),
+    );
     await fireEvent.press(getByLabelText('취소'));
     expect(onUpdateTodoDueDate).not.toHaveBeenCalled();
   });
@@ -118,7 +122,7 @@ describe('MyRoomScreen', () => {
     // Routines get the occurrence-move note.
     expect(await findByText(/루틴 반복은 그대로 두고/, {}, { timeout: 3000 })).toBeTruthy();
 
-    await fireEvent.press(getByLabelText(OTHER_DAY));
+    await fireEvent.press(getByLabelText(calendarCellLabel(OTHER_DAY)));
     expect(onMoveRoutineOccurrence).not.toHaveBeenCalled();
     await fireEvent.press(getByLabelText('확인'));
     // 방 탭에서 연 메뉴라 원래 날짜는 오늘 (#189).

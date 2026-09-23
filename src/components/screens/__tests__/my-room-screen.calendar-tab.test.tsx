@@ -7,6 +7,7 @@ import { MyRoomScreen } from '@/components/screens/my-room-screen';
 import { ToastProvider } from '@/components/ui/toast';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
 import {
+  calendarCellLabel,
   calendarHeading,
   OTHER_DAY,
   pickCalendarDate,
@@ -309,7 +310,7 @@ describe('MyRoomScreen', () => {
       <MyRoomScreen routines={SAMPLE_ROUTINES} calendarDays={{}} onSelectDate={jest.fn()} />,
     );
     await fireEvent.press(getByText('달력'));
-    await fireEvent.press(getByLabelText(OTHER_DAY));
+    await fireEvent.press(getByLabelText(calendarCellLabel(OTHER_DAY)));
     expect(queryByText('예정된 루틴이 없어요.')).toBeNull();
   });
 });
