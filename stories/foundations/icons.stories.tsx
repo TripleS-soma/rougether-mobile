@@ -50,6 +50,8 @@ const ICON_LABELS = {
   palette: '테마',
   moon: '다크 모드',
   refresh: '새로고침',
+  chat: '집 채팅',
+  send: '보내기',
   myRoom: '나의 방',
   house: '공동집',
   settings: '설정',
