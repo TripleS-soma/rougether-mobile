@@ -34,6 +34,9 @@ import { InvitePasteSheet } from '@/components/screens/sheets/invite-paste-sheet
 import { parseInviteText } from '@/lib/invite-code';
 import { BugReportScreen } from '@/components/screens/bug-report-screen';
 import { NotificationListScreen } from '@/components/screens/notification-list-screen';
+import { FeedScreen } from '@/components/screens/feed-screen';
+import { FeedPostScreen } from '@/components/screens/feed-post-screen';
+import { FeedComposeScreen } from '@/components/screens/feed-compose-screen';
 import { AnnouncementSection } from '@/components/notifications/announcement-section';
 import {
   NotificationTabs,
@@ -100,7 +103,12 @@ import { ToastProvider, useToast } from '@/components/ui/toast';
 import { WheelPicker } from '@/components/ui/wheel-picker';
 import { policyUrl } from '@/constants/policy';
 import { SAMPLE_ROUTINES } from '@/constants/routines';
-import { RECOMMENDED_HOUSES } from '@/mocks/fixtures';
+import {
+  DEMO_FEED_COMMENTS,
+  DEMO_FEED_DRAFT,
+  DEMO_FEED_POSTS,
+  RECOMMENDED_HOUSES,
+} from '@/mocks/fixtures';
 import { RoomRenderReference } from '@/dev/room-render-reference';
 import { TokenSwatches } from '@/dev/token-swatches';
 import { TypeScalePreview } from '@/dev/type-scale-preview';
@@ -1167,6 +1175,42 @@ export const galleryEntries: GalleryEntry[] = [
         <NotificationListScreen
           announcements={getAnnouncements().map((a, i) => ({ ...a, read: i > 0 }))}
         />
+      </View>
+    ),
+  },
+  {
+    name: 'FeedScreen',
+    description:
+      '공개 피드 탭 (#1409, FEED_ENABLED로 숨김): 카드(작성자·첫 사진+장수·본문 3줄·좋아요/댓글), 떠 있는 + 작성 버튼. 로컬 픽스처 — 서버 요청·쓰기 없음, 사진은 자리표시.',
+    render: () => (
+      <View style={{ height: 720, alignSelf: 'stretch' }}>
+        <FeedScreen posts={DEMO_FEED_POSTS} onCompose={() => {}} onToggleLike={() => {}} />
+      </View>
+    ),
+  },
+  {
+    name: 'FeedPostScreen',
+    description:
+      '피드 게시물 상세 (#1409): 사진 가로 넘김, 본문, 좋아요, 오래된 순 댓글 + 입력칸. 내 댓글에만 삭제. 로컬 픽스처.',
+    render: () => (
+      <View style={{ height: 720, alignSelf: 'stretch' }}>
+        <FeedPostScreen
+          post={DEMO_FEED_POSTS[0]}
+          comments={DEMO_FEED_COMMENTS}
+          onAddComment={() => true}
+          onDeleteComment={() => {}}
+          onToggleLike={() => {}}
+        />
+      </View>
+    ),
+  },
+  {
+    name: 'FeedComposeScreen',
+    description:
+      '피드 작성 (#1409): 사진 타일(올리는 중·완료·실패 다시), 본문 2,000자 카운터. 전부 올라가야 올리기가 켜진다. 로컬 픽스처.',
+    render: () => (
+      <View style={{ height: 640, alignSelf: 'stretch' }}>
+        <FeedComposeScreen images={DEMO_FEED_DRAFT} content="오늘의 루틴 인증" />
       </View>
     ),
   },

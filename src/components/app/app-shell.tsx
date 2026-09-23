@@ -17,11 +17,14 @@ import { useStoreReview } from '@/hooks/use-store-review';
 import { useScreenTransition } from '@/components/app/use-screen-transition';
 import { useFriendVisit } from '@/components/app/use-friend-visit';
 import { useHousePages } from '@/components/app/use-house-pages';
+import { useFeedPages } from '@/components/app/use-feed-pages';
 import { useMissionLinks } from '@/components/app/use-mission-links';
 import { useMyRoomPages } from '@/components/app/use-my-room-pages';
 import { useSettingsSurface } from '@/components/app/use-settings-surface';
 import { GachaScreen } from '@/components/screens/gacha-screen';
 import { HouseScreen } from '@/components/screens/house-screen';
+import { FeedScreen } from '@/components/screens/feed-screen';
+import { FEED_ENABLED } from '@/constants/feed';
 import { isScheduledOn, MyRoomScreen } from '@/components/screens/my-room-screen';
 import {
   type DecorTab,
@@ -582,6 +585,10 @@ export function AppShell({
     roomPreviewStore: memberRoomPreviews,
   });
 
+  // 피드 페이지 배선 (#1409) — 피드 탭과 서브화면 2종(상세·작성). FEED_ENABLED가 꺼져
+  // 있으면 요청도 화면도 없다.
+  const feedPages = useFeedPages({ nav: { screen, setScreen } });
+
   // 코치마크 단계 (#1324) — housePages.noHouses를 읽으므로 그 아래에서 계산.
   const coachStep =
     missions.step && missions.completedIndex == null
@@ -642,6 +649,8 @@ export function AppShell({
           <PhoneColumn>
             <HouseScreen {...housePages.tabProps} {...tabScroll.house} />
           </PhoneColumn>
+          {/* 피드 (#1409) — 집과 내 정보 사이. 꺼져 있으면 페이지 자체가 없다(NAV_ORDER와 같이). */}
+          {FEED_ENABLED ? <FeedScreen {...feedPages.tabProps} {...tabScroll.feed} /> : null}
           <MyPageScreen {...settingsSurface.myPageProps} {...tabScroll.myPage} />
         </TabPager>
       ) : null}
@@ -760,6 +769,9 @@ export function AppShell({
 
       {/* 집 서브화면 2종 (#692 6단계) — use-house-pages가 그린다. */}
       {housePages.subScreen}
+
+      {/* 피드 서브화면 2종 (#1409) — use-feed-pages가 그린다. */}
+      {feedPages.subScreen}
 
       {/* 내 정보 서브화면 9종(설정 포함, #692 → #1088) — use-settings-surface가 그린다. */}
       {settingsSurface.subScreen}

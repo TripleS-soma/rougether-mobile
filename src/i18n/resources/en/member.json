@@ -410,6 +410,10 @@
         "house": {
           "label": "House alerts",
           "desc": "Cheers and news from your house"
+        },
+        "feed": {
+          "label": "Feed comments",
+          "desc": "When someone comments on your post"
         }
       },
       "pushStep": {

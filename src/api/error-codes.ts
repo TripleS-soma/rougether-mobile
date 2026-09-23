@@ -70,4 +70,27 @@ export const ErrorCode = {
   ATTENDANCE_EVENT_NOT_FOUND: 'ATTENDANCE_EVENT_NOT_FOUND',
   /** 409 — 이미 가져온 캘린더 일정 (#844). 지운 조합도 재등록되지 않는다. */
   TODO_EXTERNAL_DUPLICATE: 'TODO_EXTERNAL_DUPLICATE',
+  // --- 공개 SNS 피드 (#1409, spec domains/feed/api.md "오류") ---
+  /** 400 — 본문/사진 수/중복 사진/커서/목록 크기 오류. */
+  FEED_INPUT_INVALID: 'FEED_INPUT_INVALID',
+  /** 400 — 본문·댓글 금칙어. */
+  FEED_CONTENT_BANNED: 'FEED_CONTENT_BANNED',
+  /** 400 — JPEG/PNG 아님, 용량·화소 제한, 손상 이미지. */
+  FEED_IMAGE_INVALID: 'FEED_IMAGE_INVALID',
+  /** 403 — 다른 사람의 글·댓글·미게시 사진 변경. */
+  FEED_FORBIDDEN: 'FEED_FORBIDDEN',
+  /** 404 — 없거나 삭제·탈퇴로 숨긴 글. */
+  FEED_POST_NOT_FOUND: 'FEED_POST_NOT_FOUND',
+  /** 404 — 해당 글의 댓글이 없음. */
+  FEED_COMMENT_NOT_FOUND: 'FEED_COMMENT_NOT_FOUND',
+  /** 404 — 없음·만료·삭제·탈퇴·타인의 미게시 사진. */
+  FEED_IMAGE_NOT_FOUND: 'FEED_IMAGE_NOT_FOUND',
+  /** 409 — 재시도 UUID를 다른 요청/삭제 결과에 재사용. */
+  FEED_REQUEST_CONFLICT: 'FEED_REQUEST_CONFLICT',
+  /** 409 — 사진이 본인 소유/완료/미사용/유효 상태가 아님. */
+  FEED_IMAGE_UNAVAILABLE: 'FEED_IMAGE_UNAVAILABLE',
+  /** 429 — 미사용 업로드 30개 상한. 취소·만료 정리 후 재시도. */
+  FEED_UPLOAD_LIMIT: 'FEED_UPLOAD_LIMIT',
+  /** 503 — 사진 저장소 일시 오류. */
+  FEED_STORAGE_UNAVAILABLE: 'FEED_STORAGE_UNAVAILABLE',
 } as const;

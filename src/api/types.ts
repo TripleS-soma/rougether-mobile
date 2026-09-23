@@ -760,11 +760,15 @@ export type NotificationItem = {
     | 'HOUSE_MEMBER_LEFT'
     | 'HOUSE_JOIN_REQUEST_REJECTED'
     | 'HOUSE_JOIN_REQUEST_ACCEPTED'
-    | 'ROOM_COBWEB_CLEANED';
+    | 'ROOM_COBWEB_CLEANED'
+    // 피드 댓글 (#1409) — refId = 게시물 ID.
+    | 'FEED_COMMENT';
   title?: string;
   body?: string;
   isRead?: boolean;
   createdAt?: string;
+  /** 알림 대상 ID — FEED_COMMENT는 게시물 ID (#1409). */
+  refId?: number;
 };
 
 export type NotificationListResponse = {
@@ -777,12 +781,15 @@ export type NotificationSettingResponse = {
   all?: boolean;
   reminder?: boolean;
   house?: boolean;
+  /** 피드 댓글 푸시 (#1409) — 기본 true. */
+  feed?: boolean;
 };
 
 export type NotificationSettingUpdateRequest = {
   all?: boolean;
   reminder?: boolean;
   house?: boolean;
+  feed?: boolean;
 };
 
 export type OnboardingCharacterRequest = {
@@ -1287,4 +1294,58 @@ export type WeeklyStatsResponse = {
   byWeekday?: WeekdayStatResponse[];
   byRoutine?: RoutineStatResponse[];
   streak?: StreakResponse;
+};
+
+// --- 공개 SNS 피드 (#1409) — 타입 재생성이 깨져 있어(#1412) 운영 /v3/api-docs를 보고 손으로 옮겼다.
+
+export type FeedAuthorResponse = {
+  userId?: number;
+  nickname?: string | null;
+  profileImageKey?: string | null;
+};
+
+export type FeedImageResponse = {
+  imageId?: number;
+  /** 비공개 객체 식별자 — **CDN 주소로 조합하지 않는다**. 표시는 GET /feed/images/{imageId}. */
+  storageKey?: string;
+  width?: number;
+  height?: number;
+  contentType?: string;
+};
+
+export type FeedPostResponse = {
+  postId?: number;
+  author?: FeedAuthorResponse;
+  content?: string | null;
+  images?: FeedImageResponse[];
+  likeCount?: number;
+  commentCount?: number;
+  likedByMe?: boolean;
+  mine?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type FeedCommentResponse = {
+  commentId?: number;
+  postId?: number;
+  author?: FeedAuthorResponse;
+  content?: string;
+  mine?: boolean;
+  createdAt?: string;
+};
+
+export type FeedCreateRequest = {
+  clientPostId: string;
+  content?: string;
+  imageIds: number[];
+};
+
+export type FeedUpdateRequest = {
+  content: string;
+};
+
+export type FeedCommentRequest = {
+  clientCommentId: string;
+  content: string;
 };
