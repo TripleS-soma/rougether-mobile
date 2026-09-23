@@ -454,6 +454,26 @@
       "snowy-cabin": "Snowy Log Cabin",
       "herb-greenhouse": "Herb Greenhouse",
       "clockwork-cottage": "Clockwork Cottage"
+    },
+    "chat": {
+      "title": "House chat",
+      "rail": "Chat",
+      "railA11y": "House chat",
+      "railA11yUnread": "House chat, {{n}} unread messages",
+      "placeholder": "Send a message",
+      "inputA11y": "Message input",
+      "send": "Send",
+      "sending": "Sending",
+      "failed": "Failed · Tap to resend",
+      "retryA11y": "Resend",
+      "unreadA11y": "{{n}} haven't read",
+      "unknownSender": "Unknown",
+      "empty": "No messages yet. Say hi first!",
+      "loadFailed": "Couldn't load the chat",
+      "retry": "Try again",
+      "banned": "Your message contains a word that isn't allowed",
+      "forbidden": "You can't join this house's chat",
+      "invalid": "Couldn't send the message. Please check the content."
     }
   }
 }

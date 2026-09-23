@@ -24,6 +24,12 @@ export const queryKeys = {
   },
   /** 집 온보딩 자동 입주 허용 (#1407, 방장 전용 GET /houses/{id}/auto-join). */
   houseAutoJoin: (houseId: number | undefined) => ['house', 'auto-join', houseId] as const,
+  /**
+   * 집 채팅 (#1408) — 방 상태(POST /houses/{id}/chat-room의 응답). 레일의 안 읽음 배지와
+   * 채팅 화면이 같은 캐시를 본다. 소켓·읽음 응답이 오면 setQueryData로 갱신한다.
+   */
+  chatRoom: (userId: number | null | undefined, houseId: number | undefined) =>
+    ['chat', userId, 'house-room', houseId] as const,
   /** 친구 초대 리워드 (#518) — 내 코드·보상 현황. */
   invites: (userId: number | null | undefined) => ['invites', userId] as const,
   /** 재화 증감 이력 (#734) — 무한 쿼리, 페이지 파라미터는 0부터. */

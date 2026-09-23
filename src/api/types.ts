@@ -829,6 +829,51 @@ export type HouseAutoJoinResponse = {
   enabled?: boolean;
 };
 
+/**
+ * 집 채팅 (#1408, 서버 채팅 도메인) — `POST /houses/{id}/chat-room`, `/chat/rooms/{roomId}/…`.
+ * 손으로 추가(#1412). 스펙: rougether-spec domains/chat/api.md.
+ */
+export type ChatReader = {
+  userId?: number;
+  membershipId?: number;
+  /** 이 순서까지 읽음 — 0부터, 낮아지지 않는다. */
+  lastReadSequence?: number;
+};
+
+export type ChatRoomResponse = {
+  roomId?: number;
+  roomType?: 'HOUSE';
+  houseId?: number;
+  /** 방의 마지막 메시지 순서 — 방별 1부터. 메시지가 없으면 0. */
+  lastSequence?: number;
+  /** 현재 읽음 집계 대상(봇·탈퇴 제외 ACTIVE 구성원). */
+  readers?: ChatReader[];
+};
+
+export type ChatMessageResponse = {
+  messageId?: number;
+  roomId?: number;
+  sequence?: number;
+  clientMessageId?: string;
+  senderUserId?: number;
+  /** 탈퇴한 발신자는 비어 온다. */
+  senderNickname?: string;
+  senderProfileImageKey?: string;
+  content?: string;
+  createdAt?: string;
+  unreadCount?: number;
+};
+
+export type ChatSendRequest = { clientMessageId: string; content: string };
+
+/** `GET /chat/rooms/{roomId}/messages` — 커서 페이지 + 최신 방 상태. */
+export type ChatMessagePage = {
+  items?: ChatMessageResponse[];
+  nextCursor?: number;
+  hasNext?: boolean;
+  room?: ChatRoomResponse;
+};
+
 export type OnboardingSummary = {
   completed?: boolean;
   primaryGoalId?: number;

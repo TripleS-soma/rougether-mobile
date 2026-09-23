@@ -101,6 +101,10 @@ export type AnalyticsEvent =
   | 'cheer_send'
   | 'guestbook_write'
   | 'friend_room_visit'
+  /** 집 채팅 화면 진입 (#1408) — 마운트당 1회. */
+  | 'house_chat_view'
+  /** 집 채팅 전송 성공 (#1408) — 서버가 저장을 확인한 뒤. */
+  | 'house_chat_send'
   | 'onboarding_mission_start'
   | 'onboarding_mission_complete'
   | 'onboarding_mission_skip'

@@ -56,6 +56,9 @@ const ICONS = {
   palette: 'color-palette-outline',
   moon: 'moon-outline',
   refresh: 'refresh-outline',
+  // 집 채팅 (#1408)
+  chat: 'chatbubbles-outline',
+  send: 'send',
   // Bottom-nav
   myRoom: 'home',
   house: 'business',

@@ -19,6 +19,7 @@ import { GachaPhonePreview } from '@/dev/gacha-phone-preview';
 import { GachaStorybookPreview } from '@/dev/gacha-preview';
 import { HouseScreen, type House } from '@/components/screens/house-screen';
 import { HouseMissionsScreen } from '@/components/screens/house-missions-screen';
+import { HouseChatScreen } from '@/components/screens/house-chat-screen';
 import { HouseMembersScreen } from '@/components/screens/house-members-screen';
 import { manageableMembers } from '@/components/screens/house/members';
 import { HelpScreen } from '@/components/screens/help-screen';
@@ -930,6 +931,30 @@ export const galleryEntries: GalleryEntry[] = [
         </View>
       );
     },
+  },
+  {
+    name: 'HouseChatScreen',
+    description:
+      '집 → 채팅 (#1408): 내 말풍선(오른쪽)·다른 구성원(왼쪽·닉네임), 안 읽은 수, 보내는 중·실패 상태. 픽스처라 서버에 쓰지 않는다.',
+    render: () => (
+      <View style={{ height: 700, alignSelf: 'stretch' }}>
+        <HouseChatScreen
+          houseName="데모 하우스"
+          myUserId={1}
+          messages={[
+            { key: 's1', sequence: 1, senderUserId: 2, senderNickname: '이웃', content: '오늘 루틴 다들 했어요?', createdAt: '2026-09-21T12:58:00Z', unreadCount: 0, status: 'sent' }, // prettier-ignore
+            { key: 's2', sequence: 2, senderUserId: 2, senderNickname: '이웃', content: '저는 아침 스트레칭 완료!', createdAt: '2026-09-21T12:59:00Z', unreadCount: 0, status: 'sent' }, // prettier-ignore
+            { key: 's3', sequence: 3, senderUserId: 1, senderNickname: '나', content: '저도 방금 끝냈어요 🙌', createdAt: '2026-09-21T13:00:00Z', unreadCount: 2, status: 'sent' }, // prettier-ignore
+            { key: 'cA', clientMessageId: 'A', senderUserId: 1, content: '내일도 같이 해요', unreadCount: 0, status: 'pending' }, // prettier-ignore
+            { key: 'cB', clientMessageId: 'B', senderUserId: 1, content: '전송 실패 예시', unreadCount: 0, status: 'failed' }, // prettier-ignore
+          ]}
+          onSend={() => {}}
+          onRetrySend={() => {}}
+          onVisible={() => {}}
+          onBack={() => {}}
+        />
+      </View>
+    ),
   },
   {
     name: 'HouseMembersScreen',
