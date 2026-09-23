@@ -18,6 +18,7 @@ import { Icon } from '@/components/ui/icon';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Radius, Spacing } from '@/constants/theme';
 import { useAndroidKeyboardHeight } from '@/hooks/use-android-keyboard-height';
+import { useResponsiveColumn } from '@/hooks/use-responsive-column';
 import { useHeaderContentInset, useScreenStyle } from '@/hooks/use-screen-style';
 import { useFontEmphasis, useTokens, useTypography } from '@/hooks/use-tokens';
 import { useT } from '@/i18n';
@@ -108,6 +109,8 @@ export function HouseChatScreen({
   const Typography = useTypography();
   const emph = useFontEmphasis();
   const tr = useT();
+  // 웹 데스크톱 중앙 컬럼 (#725) — 목록 내용과 입력줄만 좁히고 배경 띠는 전체 폭.
+  const column = useResponsiveColumn();
   const insets = useSafeAreaInsets();
   const headerInset = useHeaderContentInset();
   const androidKeyboard = useAndroidKeyboardHeight(Platform.OS === 'android');
@@ -248,7 +251,7 @@ export function HouseChatScreen({
           </Text>
         </View>
       }
-      contentContainerStyle={styles.listContent}
+      contentContainerStyle={[styles.listContent, column]}
     />
   );
 
@@ -268,30 +271,32 @@ export function HouseChatScreen({
               paddingBottom: (androidKeyboard > 0 ? androidKeyboard : insets.bottom) + Spacing.two,
             },
           ]}>
-          <TextInput
-            value={draft}
-            onChangeText={setDraft}
-            placeholder={tr('house.chat.placeholder')}
-            placeholderTextColor={t.textMuted}
-            accessibilityLabel={tr('house.chat.inputA11y')}
-            multiline
-            maxLength={CHAT_MAX_LENGTH}
-            style={[
-              styles.input,
-              Typography.body,
-              emph('normal'),
-              { color: t.text, backgroundColor: t.surfaceMuted },
-            ]}
-          />
-          <Pressable
-            onPress={send}
-            disabled={!canSend}
-            accessibilityRole="button"
-            accessibilityLabel={tr('house.chat.send')}
-            accessibilityState={{ disabled: !canSend }}
-            style={[styles.sendBtn, { backgroundColor: canSend ? t.primary : t.surfaceMuted }]}>
-            <Icon name="send" size={20} color={canSend ? t.onPrimary : t.textMuted} />
-          </Pressable>
+          <View style={[styles.inputInner, column]}>
+            <TextInput
+              value={draft}
+              onChangeText={setDraft}
+              placeholder={tr('house.chat.placeholder')}
+              placeholderTextColor={t.textMuted}
+              accessibilityLabel={tr('house.chat.inputA11y')}
+              multiline
+              maxLength={CHAT_MAX_LENGTH}
+              style={[
+                styles.input,
+                Typography.body,
+                emph('normal'),
+                { color: t.text, backgroundColor: t.surfaceMuted },
+              ]}
+            />
+            <Pressable
+              onPress={send}
+              disabled={!canSend}
+              accessibilityRole="button"
+              accessibilityLabel={tr('house.chat.send')}
+              accessibilityState={{ disabled: !canSend }}
+              style={[styles.sendBtn, { backgroundColor: canSend ? t.primary : t.surfaceMuted }]}>
+              <Icon name="send" size={20} color={canSend ? t.onPrimary : t.textMuted} />
+            </Pressable>
+          </View>
         </View>
       </KeyboardAvoidingView>
       <ScreenHeader title={houseName ?? tr('house.chat.title')} onBack={onBack} />
@@ -327,13 +332,11 @@ const styles = StyleSheet.create({
   bubbleOther: { borderWidth: StyleSheet.hairlineWidth },
   pending: { opacity: 0.6 },
   inputRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: Spacing.two,
     paddingHorizontal: Spacing.three,
     paddingTop: Spacing.two,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
+  inputInner: { flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.two },
   input: {
     flex: 1,
     maxHeight: INPUT_MAX_HEIGHT,
