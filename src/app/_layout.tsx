@@ -12,6 +12,7 @@ import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-c
 import { AppErrorBoundary } from '@/components/app/app-error-boundary';
 import { AppFrame } from '@/components/app/app-frame';
 import { AppIconSync } from '@/components/app/app-icon-sync';
+import { PreferencesSync } from '@/components/app/preferences-sync';
 import { notifyAppForegroundInteraction } from '@/lib/app-icon-events';
 import { AnimatedSplashOverlay } from '@/components/app/animated-splash-overlay';
 import { ToastProvider } from '@/components/ui/toast';
@@ -96,6 +97,8 @@ function RootLayout() {
           <AuthProvider>
             <AppIconSync />
             <LanguageProvider>
+              {/* 계정 언어·시간대 서버 동기화 (#1410) — 인증·언어·쿼리 프로바이더 안쪽. */}
+              <PreferencesSync />
               <BrandThemeProvider>
                 <ToastProvider>
                   <NavigationTheme>

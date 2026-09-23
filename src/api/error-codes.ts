@@ -40,6 +40,8 @@ export const ErrorCode = {
   HOUSE_CHEER_DUPLICATED: 'HOUSE_CHEER_DUPLICATED',
   /** 403 — 방장 전용 동작 (미션 생성/삭제 등). */
   HOUSE_NOT_OWNER: 'HOUSE_NOT_OWNER',
+  /** 온보딩 집 선택을 다른 값으로 바꾸려 함 (#1407) — 사용자당 1회. */
+  ONBOARDING_HOUSE_ALREADY_SELECTED: 'ONBOARDING_HOUSE_ALREADY_SELECTED',
   /** 4xx — 이미 보상을 받은(COMPLETED) 미션 삭제 시도. */
   HOUSE_MISSION_ALREADY_CLAIMED: 'HOUSE_MISSION_ALREADY_CLAIMED',
   /** 409 — 살아있는 루틴이 있는 카테고리 삭제 (DELETE /categories/{id}, #517). */

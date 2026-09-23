@@ -230,6 +230,24 @@
       "saveUnconfirmed": "루틴 저장을 확인하지 못했어요. 다시 확인해 주세요.",
       "loadFailed": "내 루틴을 불러오지 못했어요. 연결 후 다시 확인해 주세요."
     },
+    "onboardingHouse": {
+      "eyebrow": "함께 사는 집",
+      "title": "루틴을 함께할 집을 찾아드릴까요?",
+      "body": "같은 집 사람들과 서로의 루틴을 응원할 수 있어요. 지금 정하지 않아도 나중에 집 탐색에서 들어갈 수 있어요.",
+      "autoJoin": "좋아요",
+      "autoJoinHint": "빈자리가 있는 공개 집에 바로 들어가요",
+      "personal": "괜찮아요",
+      "personalHint": "내 집에서 혼자 시작해요",
+      "joiningA11y": "집을 찾는 중",
+      "joinedTitle": "'{{name}}'에 합류했어요!",
+      "joinedTitleNoName": "새 집에 합류했어요!",
+      "joinedBody": "구성원 {{count}}명이 함께해요",
+      "joinedBodyUnknown": "집 탭에서 구성원을 만나보세요",
+      "noMatchTitle": "아직 함께할 집이 없어요",
+      "noMatchBody": "내 집을 공개해 두었어요. 다음에 '좋아요'를 누른 사람이 이 집으로 들어와요.",
+      "continue": "계속",
+      "failed": "집을 정하지 못했어요. 집 탭에서 다시 시도할 수 있어요."
+    },
     "myPage": {
       "title": "내 정보",
       "settingsA11y": "설정",

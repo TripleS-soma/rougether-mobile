@@ -138,6 +138,22 @@ describe('HouseMembersScreen — 구성원 관리 (구 house-screen 흐름, #753
     expect(Object.keys(onUpdateHouse.mock.calls[0][1])).not.toContain('isPublic');
   });
 
+  it('자동 입주 토글을 건드린 경우에만 autoJoinEnabled를 보낸다 (#1407)', async () => {
+    const onUpdateHouse = jest.fn();
+    const ui = await render(screenFor(MISSION_HOUSE, { onUpdateHouse, autoJoinEnabled: false }));
+    await fireEvent.press(ui.getByLabelText('집 정보 수정'));
+    await fireEvent.press(ui.getByLabelText('집 정보 저장'));
+    expect(Object.keys(onUpdateHouse.mock.calls[0][1])).not.toContain('autoJoinEnabled');
+
+    await fireEvent.press(ui.getByLabelText('집 정보 수정'));
+    await fireEvent.press(ui.getByLabelText('자동 입주 허용'));
+    await fireEvent.press(ui.getByLabelText('집 정보 저장'));
+    expect(onUpdateHouse).toHaveBeenLastCalledWith(
+      7,
+      expect.objectContaining({ autoJoinEnabled: true }),
+    );
+  });
+
   it('집 정보 수정에서 비공개를 고르면 isPublic=false를 보낸다 (#1266)', async () => {
     const onUpdateHouse = jest.fn();
     const ui = await render(screenFor(MISSION_HOUSE, { onUpdateHouse }));

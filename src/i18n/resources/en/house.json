@@ -154,7 +154,11 @@
         "theme": "House theme",
         "cancelA11y": "Cancel editing house info",
         "saveA11y": "Save house info",
-        "save": "Save"
+        "save": "Save",
+        "autoJoin": "Allow auto move-in",
+        "autoJoinHint": "New users who say yes during onboarding join without approval",
+        "autoJoinPrivateHint": "Only applies to public houses",
+        "autoJoinA11y": "Allow auto move-in"
       }
     },
     "missions": {
@@ -353,7 +357,8 @@
       "transferToBot": "Ownership can't be transferred to a bot",
       "transferFailed": "Couldn't transfer ownership",
       "codeReissued": "New invite code issued",
-      "reissueFailed": "Couldn't reissue the invite code"
+      "reissueFailed": "Couldn't reissue the invite code",
+      "autoJoinSaveFailed": "Couldn't save the auto move-in setting"
     },
     "missionToast": {
       "contributedAchieved": "Contributed! Goal reached",

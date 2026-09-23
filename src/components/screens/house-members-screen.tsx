@@ -10,6 +10,7 @@ import { Icon } from '@/components/ui/icon';
 import { CrownPictogram, DoorPictogram, PencilPictogram } from '@/components/ui/pictograms';
 import { useToast } from '@/components/ui/toast';
 import { CoachTarget } from '@/components/ui/coach-mark';
+import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { shareOrCopy } from '@/lib/share-link';
 import type { CharacterId } from '@/constants/characters';
 import { HOUSE_PRIVATE_ACCENT, houseCapacityOptions } from '@/constants/house-themes';
@@ -62,6 +63,11 @@ export type HouseMembersScreenProps = {
   onReissueInviteCode?: (houseId: number) => Promise<string | null> | void;
   /** Edit the house settings via the API (owner only). */
   onUpdateHouse?: (houseId: number, input: HouseEditInput) => void;
+  /**
+   * 온보딩 자동 입주 허용의 현재 값 (#1407, `GET /houses/{id}/auto-join`) — 방장에게만 온다.
+   * undefined면 아직 모름(조회 전·실패): 토글은 꺼진 채 열리고 안 건드리면 보내지 않는다.
+   */
+  autoJoinEnabled?: boolean;
   /** Leave the current house via the API. */
   onLeaveHouse?: (houseId: number) => void;
   /** After a confirmed leave — the parent closes this sub-view. */
@@ -89,6 +95,7 @@ export function HouseMembersScreen({
   onTransferOwnership,
   onReissueInviteCode,
   onUpdateHouse,
+  autoJoinEnabled,
   onLeaveHouse,
   onLeaveDone,
 }: HouseMembersScreenProps) {
@@ -139,6 +146,8 @@ export function HouseMembersScreen({
   const [editName, setEditName] = useState('');
   // 공개 범위 (#1266) — undefined는 '현재 값 모름'(서버가 GET에 아직 안 실어 줌).
   const [editPublic, setEditPublic] = useState<boolean | undefined>(undefined);
+  // 자동 입주 허용 (#1407) — undefined는 '안 건드림'(서버 값 유지).
+  const [editAutoJoin, setEditAutoJoin] = useState<boolean | undefined>(undefined);
   const [editDesc, setEditDesc] = useState('');
   const [editMax, setEditMax] = useState<number | undefined>(undefined);
   const [editCover, setEditCover] = useState<string | undefined>(undefined);
@@ -156,6 +165,7 @@ export function HouseMembersScreen({
     setEditMax(currentHouse.maxMembers);
     setEditCover(currentHouse.coverImageKey);
     setEditPublic(currentHouse.isPublic);
+    setEditAutoJoin(undefined);
     setShowEditHouse(true);
   };
   const editNameValid = editName.trim().length >= 2 && editName.trim().length <= 30;
@@ -170,6 +180,8 @@ export function HouseMembersScreen({
       coverImageKey: editCover,
       // 공개 범위도 고른 경우에만 — 미선택(현재 값 모름)이면 유지.
       ...(editPublic === undefined ? {} : { isPublic: editPublic }),
+      // 자동 입주도 토글을 건드린 경우에만 (#1407).
+      ...(editAutoJoin === undefined ? {} : { autoJoinEnabled: editAutoJoin }),
     });
     setShowEditHouse(false);
   };
@@ -656,6 +668,24 @@ export function HouseMembersScreen({
                   t={t}
                 />
               </View>
+              {/* 온보딩 자동 입주 허용 (#1407) — 공개 집에만 실제 적용된다. */}
+              <View style={styles.autoJoinRow}>
+                <View style={styles.autoJoinCopy}>
+                  <Text style={[Typography.body, { color: t.text }]}>
+                    {tr('house.members.edit.autoJoin')}
+                  </Text>
+                  <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                    {editPublic === false
+                      ? tr('house.members.edit.autoJoinPrivateHint')
+                      : tr('house.members.edit.autoJoinHint')}
+                  </Text>
+                </View>
+                <ToggleSwitch
+                  value={editAutoJoin ?? autoJoinEnabled ?? false}
+                  onToggle={() => setEditAutoJoin(!(editAutoJoin ?? autoJoinEnabled ?? false))}
+                  accessibilityLabel={tr('house.members.edit.autoJoinA11y')}
+                />
+              </View>
               {covers.length > 0 ? (
                 <>
                   {/* 커버는 집의 겉모습 자체라 "집 테마"로 (#1112). */}
@@ -882,6 +912,8 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   privacyRow: { flexDirection: 'row', gap: Spacing.two },
+  autoJoinRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
+  autoJoinCopy: { flex: 1, gap: Spacing.one },
   capacityBtn: {
     flex: 1,
     borderRadius: Radius.pill,
