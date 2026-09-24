@@ -29,6 +29,7 @@ store/ko-KR/
     title.txt             제목               ≤ 30자
     short-description.txt 간단한 설명         ≤ 80자
     full-description.txt  자세한 설명         ≤ 4000자
+    release-notes.txt     새로운 기능         ≤ 500자 (Play 상한, App Store와 다름)
 ```
 
 `store/__tests__/metadata-limits.test.ts`가 글자 수 상한과 "앱에 없는 기능 홍보 금지"를
@@ -68,6 +69,7 @@ store/ko-KR/
 | play / title                     | ⬜ 콘솔 미반영        | 문구 작성됨. 앱 생성 시 이 이름으로 (ASO — `루게더`만으론 검색량 없음)                                                                                                                     |
 | play / short-description         | ⬜ 콘솔 미반영        | 문구 작성됨                                                                                                                                                                                |
 | play / full-description          | ⬜ 콘솔 미반영        | 문구 작성됨                                                                                                                                                                                |
+| play / release-notes             | ⬜ 1.5.3 (2026-09-24) | App Store 1.5.3 문구에서 iPhone 위젯 줄을 빼고 500자 안으로(427자). Android 1.5.3(vc12) 프로덕션 제출 시 붙여넣을 것. Android 1.5.1(vc10) 첫 출시 9/24 승인                                |
 | **en-US** (app-store 6 · play 3) | ⬜ 콘솔 미반영        | 2026-09-14 작성(#893 3단계). ASC·Play에 영어 로컬라이제이션 추가 후 붙여넣기. **판매 지역이 한국뿐이면 먼저 열 것** — 지역이 닫혀 있으면 외국 스토어 검색에 안 뜬다                        |
 
 ## 정책 문서는 여기 없다 — 다른 레포다
