@@ -96,6 +96,15 @@ export type AnalyticsEvent =
   | 'calendar_week_open'
   /** 설정 > 언어 변경 (#893) — language: ko|en. */
   | 'language_change'
+  // 공개 SNS 피드 (#1409) — FEED_ENABLED가 꺼져 있는 동안은 발생하지 않는다.
+  /** 피드 탭 진입 — 탭 전환마다. */
+  | 'feed_view'
+  /** 게시물 등록 성공 — image_count, has_text. */
+  | 'feed_post_create'
+  /** 좋아요 반영 성공 — liked: true(누름)|false(취소). */
+  | 'feed_like'
+  /** 댓글 등록 성공. */
+  | 'feed_comment'
   // 그 밖의 핵심 행동
   | 'shop_purchase'
   | 'cheer_send'

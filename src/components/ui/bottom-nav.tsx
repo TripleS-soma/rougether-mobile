@@ -8,6 +8,8 @@ import Reanimated from 'react-native-reanimated';
 import { APP_FRAME_MAX_WIDTH, useAppFrame } from '@/hooks/use-app-frame';
 import CalendarActive from '@/assets/images/common/calendar-icon-active.svg';
 import CalendarInactive from '@/assets/images/common/calendar-icon.svg';
+import FeedActive from '@/assets/images/common/feed-icon-active.svg';
+import FeedInactive from '@/assets/images/common/feed-icon.svg';
 import HomeActive from '@/assets/images/common/home-icon-active.svg';
 import HomeInactive from '@/assets/images/common/home-icon.svg';
 import HouseActive from '@/assets/images/common/house-icon-active.svg';
@@ -26,22 +28,24 @@ import {
 import { CoachTarget } from '@/components/ui/coach-mark';
 import { GlassSurface } from '@/components/ui/glass-surface';
 import { useBottomNavScrub } from '@/components/ui/use-bottom-nav-scrub';
+import { FEED_ENABLED } from '@/constants/feed';
 import { Radius, Spacing } from '@/constants/theme';
 import { useT } from '@/i18n';
 import { useTokens, useTypography } from '@/hooks/use-tokens';
 import { useAnimatedValue } from '@/hooks/use-stable-value';
 import { NATIVE_DRIVER } from '@/utils/animation';
 
-export type NavTab = 'myRoom' | 'calendar' | 'house' | 'myPage';
+export type NavTab = 'myRoom' | 'calendar' | 'house' | 'feed' | 'myPage';
 
 // 라벨은 i18n 키 (#893) — 방 탭은 짧은 표기('방')와 접근성 라벨('나의 방')이 다르다.
-const TABS: {
+type TabDef = {
   key: NavTab;
   labelKey: string;
   accessibilityLabelKey?: string;
   active: FC<SvgProps>;
   inactive: FC<SvgProps>;
-}[] = [
+};
+const ALL_TABS: TabDef[] = [
   {
     key: 'myRoom',
     labelKey: 'nav.myRoomShort',
@@ -52,9 +56,12 @@ const TABS: {
   // 달력 (#1138) — 나의 방 안의 방/달력 알약에서 하단 탭으로.
   { key: 'calendar', labelKey: 'nav.calendar', active: CalendarActive, inactive: CalendarInactive },
   { key: 'house', labelKey: 'nav.house', active: HouseActive, inactive: HouseInactive },
+  // 피드 (#1409) — FEED_ENABLED일 때만 아래 TABS에 남는다.
+  { key: 'feed', labelKey: 'nav.feed', active: FeedActive, inactive: FeedInactive },
   // 내 정보 (#1088) — 설정 탭을 대체. 설정은 내 정보 헤더의 톱니로 들어간다.
   { key: 'myPage', labelKey: 'nav.myPage', active: ProfileActive, inactive: ProfileInactive },
 ];
+const TABS = FEED_ENABLED ? ALL_TABS : ALL_TABS.filter((tab) => tab.key !== 'feed');
 const MIN_TAB_TOUCH_SIZE = 44;
 /** 좁은 화면에서 라벨을 함께 줄일 때의 하한 배율 (#1098 후속). */
 const MIN_LABEL_SCALE = 0.8;

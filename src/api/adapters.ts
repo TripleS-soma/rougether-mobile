@@ -14,3 +14,4 @@ export * from '@/api/adapters/room';
 export * from '@/api/adapters/house';
 export * from '@/api/adapters/shop-gacha';
 export * from '@/api/adapters/notification';
+export * from '@/api/adapters/feed';

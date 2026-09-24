@@ -1,3 +1,4 @@
+import type { FeedComment, FeedDraftImage, FeedPost } from '@/components/screens/feed/types';
 import type { House, HouseMission } from '@/components/screens/house/types';
 import type { GuestbookEntry } from '@/components/screens/friend-room-screen';
 import type { NotificationEntry } from '@/components/screens/notification-list-screen';
@@ -149,4 +150,72 @@ export const DEMO_GUESTBOOK: GuestbookEntry[] = [
 export const DEMO_NOTIFICATIONS: NotificationEntry[] = [
   { id: 1, type: 'ROUTINE_REMINDER', title: '루틴 리마인드', body: '물 마시기 할 시간이에요', read: false, date: '오늘' }, // prettier-ignore
   { id: 2, type: 'HOUSE_KICK', title: '집 알림', body: '아침 기상단에서 내보내졌어요', read: true, date: '7월 5일' }, // prettier-ignore
+];
+
+/** 피드 갤러리·테스트용 게시물 (#1409) — 사진은 로더가 없어 자리표시로 그려진다. */
+export const DEMO_FEED_POSTS: FeedPost[] = [
+  {
+    postId: 3,
+    author: { userId: 7, nickname: '루틴친구', profileImageKey: null },
+    content: '오늘 아침 루틴 완료! 물 한 잔, 스트레칭 10분, 일기 세 줄.',
+    images: [
+      { imageId: 31, width: 1200, height: 1600 },
+      { imageId: 32, width: 1600, height: 1200 },
+    ],
+    likeCount: 3,
+    commentCount: 2,
+    likedByMe: false,
+    mine: false,
+    createdAt: '2026-09-22T03:00:00Z',
+    updatedAt: '2026-09-22T03:00:00Z',
+  },
+  {
+    postId: 2,
+    author: { userId: 4, nickname: '나', profileImageKey: null },
+    content: '방을 새로 꾸몄어요. 창가 화분이 제일 마음에 들어요.',
+    images: [{ imageId: 21, width: 1200, height: 1200 }],
+    likeCount: 12,
+    commentCount: 0,
+    likedByMe: true,
+    mine: true,
+    createdAt: '2026-09-21T12:30:00Z',
+    updatedAt: '2026-09-21T13:00:00Z',
+  },
+  {
+    postId: 1,
+    author: { userId: 9, nickname: null, profileImageKey: null },
+    content: '',
+    images: [{ imageId: 11, width: 1600, height: 900 }],
+    likeCount: 0,
+    commentCount: 1,
+    likedByMe: false,
+    mine: false,
+    createdAt: '2026-09-15T08:00:00Z',
+    updatedAt: '2026-09-15T08:00:00Z',
+  },
+];
+
+export const DEMO_FEED_COMMENTS: FeedComment[] = [
+  {
+    commentId: 301,
+    postId: 3,
+    author: { userId: 8, nickname: '이웃', profileImageKey: null },
+    content: '멋져요! 저도 내일부터 스트레칭 해볼게요.',
+    mine: false,
+    createdAt: '2026-09-22T03:02:00Z',
+  },
+  {
+    commentId: 302,
+    postId: 3,
+    author: { userId: 4, nickname: '나', profileImageKey: null },
+    content: '같이 해요 🙌',
+    mine: true,
+    createdAt: '2026-09-22T03:10:00Z',
+  },
+];
+
+export const DEMO_FEED_DRAFT: FeedDraftImage[] = [
+  { key: 'draft-1', uri: '', status: 'done', imageId: 41 },
+  { key: 'draft-2', uri: '', status: 'uploading' },
+  { key: 'draft-3', uri: '', status: 'failed', error: '사진 저장소가 잠시 불안정해요.' },
 ];

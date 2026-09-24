@@ -14,7 +14,7 @@ import { useConstant, useStableCallback } from '@/hooks/use-stable-value';
  */
 export function useTabScroll(): Record<NavTab, ScrollRestoreProps> {
   const offsets = useConstant(
-    () => ({ myRoom: 0, calendar: 0, house: 0, myPage: 0 }) as Record<NavTab, number>,
+    () => ({ myRoom: 0, calendar: 0, house: 0, feed: 0, myPage: 0 }) as Record<NavTab, number>,
   );
 
   const myRoom: ScrollRestoreProps = {
@@ -35,6 +35,12 @@ export function useTabScroll(): Record<NavTab, ScrollRestoreProps> {
       offsets.house = y;
     }),
   };
+  const feed: ScrollRestoreProps = {
+    getInitialScrollY: useStableCallback(() => offsets.feed),
+    onScrollY: useStableCallback((y: number) => {
+      offsets.feed = y;
+    }),
+  };
   const myPage: ScrollRestoreProps = {
     getInitialScrollY: useStableCallback(() => offsets.myPage),
     onScrollY: useStableCallback((y: number) => {
@@ -42,5 +48,5 @@ export function useTabScroll(): Record<NavTab, ScrollRestoreProps> {
     }),
   };
 
-  return { myRoom, calendar, house, myPage };
+  return { myRoom, calendar, house, feed, myPage };
 }

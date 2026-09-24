@@ -69,7 +69,9 @@ export type TabPagerProps = {
  */
 export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps) {
   const arbitrateScroll = Platform.OS === 'ios';
-  const count = children.length;
+  // 조건부 페이지(피드 #1409 — FEED_ENABLED)는 null로 들어온다 — 빈 자리를 페이지로 세지 않는다.
+  const pages = children.filter((child) => child != null && child !== false);
+  const count = pages.length;
   const [width, setWidth] = useState(0);
   // 공유값은 첫 렌더 인스턴스에 앵커링(useRef) — 프로덕션 useSharedValue는
   // 원래 참조가 안정적이지만, jest 환경은 렌더마다 새 객체를 돌려줘(실측)
@@ -247,7 +249,7 @@ export function TabPager({ index, onIndexChange, lock, children }: TabPagerProps
           <Animated.View
             testID="tab-pager-row"
             style={[styles.row, { width: width * count || undefined }, rowStyle]}>
-            {children.map((child, i) => (
+            {pages.map((child, i) => (
               <Page key={i} index={i} width={width} active={i === index} revealAll={revealAll}>
                 {child}
               </Page>

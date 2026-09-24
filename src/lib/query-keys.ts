@@ -62,4 +62,18 @@ export const queryKeys = {
     month: (userId: number | null | undefined, yearMonth: string) =>
       ['calendar', userId, 'month', yearMonth] as const,
   },
+  /**
+   * 공개 SNS 피드 (#1409). 목록은 무한 쿼리(cursor = 마지막 postId), 상세·댓글은 게시물별.
+   * 좋아요·댓글 수는 목록과 상세 캐시를 함께 고친다(`hooks/feed-cache.ts`).
+   */
+  feed: {
+    all: (userId: number | null | undefined) => ['feed', userId] as const,
+    lists: (userId: number | null | undefined) => ['feed', userId, 'posts'] as const,
+    list: (userId: number | null | undefined, authorId: number | null) =>
+      ['feed', userId, 'posts', authorId] as const,
+    post: (userId: number | null | undefined, postId: number | null) =>
+      ['feed', userId, 'post', postId] as const,
+    comments: (userId: number | null | undefined, postId: number | null) =>
+      ['feed', userId, 'comments', postId] as const,
+  },
 };
