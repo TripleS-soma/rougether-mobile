@@ -149,7 +149,11 @@
       "recheerBody": "You already sent a cheer today. Send another?",
       "recheerCancelA11y": "Cancel cheering again",
       "recheerConfirmA11y": "Confirm cheering again",
-      "send": "Send"
+      "send": "Send",
+      "dayTitle": "{{weekday}}, {{month}}/{{day}}",
+      "dayTitleToday": "Today · {{weekday}}, {{month}}/{{day}}",
+      "noRoutinesOnDay": "No shared routines or to-dos on this day.",
+      "dayLoadError": "Couldn't load this day."
     },
     "gacha": {
       "title": "Gift draw",

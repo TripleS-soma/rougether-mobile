@@ -76,7 +76,7 @@ import { CATEGORY_ICON_GEOMETRY, CategoryIcon } from '@/components/ui/category-i
 import { Button } from '@/components/ui/button';
 import { FurnitureStudioScreen } from '@/components/screens/furniture-studio-screen';
 import { AttendanceSheet } from '@/components/screens/sheets/attendance-sheet';
-import { ActivityStrip } from '@/components/screens/house/activity-strip';
+import { FriendWeekStrip } from '@/components/screens/house/friend-week-strip';
 import { shiftIso, todayIso } from '@/utils/datetime';
 import { Calendar } from '@/components/ui/calendar';
 import { RecommendationSection } from '@/components/screens/my-room/recommendation-section';
@@ -421,23 +421,22 @@ function CharacterPickerSheetDemo() {
   );
 }
 
-/** 최근 활동 스트립 데모 (#860) — 탭해서 상세 펼침을 확인한다. */
-function ActivityStripDemo() {
-  const [open, setOpen] = useState(false);
+/** 친구 방 주간 날짜 줄 데모 (#1423) — 날짜를 누르거나 주를 넘겨 본다. */
+function FriendWeekStripDemo() {
   const today = todayIso();
+  const [selected, setSelected] = useState(today);
   return (
     <View style={{ alignSelf: 'stretch' }}>
-      <ActivityStrip
+      <FriendWeekStrip
+        selected={selected}
         today={today}
-        expanded={open}
-        onToggle={() => setOpen((v) => !v)}
-        days={[
-          { date: today, label: '오늘', titles: ['아침 기상', '물 1L 마시기'] },
-          { date: shiftIso(today, -1), label: '어제', titles: ['독서 30분'] },
-          { date: shiftIso(today, -2), label: '이틀 전', titles: ['아침 기상'] },
-          { date: shiftIso(today, -5), label: '닷새 전', titles: ['영양제 챙겨먹기'] },
-          { date: shiftIso(today, -9), label: '9일 전', titles: ['아침 기상', '독서 30분'] },
-        ]}
+        onSelect={setSelected}
+        doneCounts={{
+          [today]: 2,
+          [shiftIso(today, -1)]: 1,
+          [shiftIso(today, -3)]: 3,
+          [shiftIso(today, -8)]: 1,
+        }}
       />
     </View>
   );
@@ -1423,9 +1422,9 @@ export const galleryEntries: GalleryEntry[] = [
     render: () => <HouseCoverPickerDemo />,
   },
   {
-    name: 'ActivityStrip',
-    description: '친구 방 최근 활동 — 14칸 점 스트립, 탭하면 날짜별 상세 (#860).',
-    render: () => <ActivityStripDemo />,
+    name: 'FriendWeekStrip',
+    description: '친구 방 주간 날짜 줄 — 날짜별 완료 점, 누르면 그날 목록 (#1423).',
+    render: () => <FriendWeekStripDemo />,
   },
   {
     name: 'AttendanceSheet',
