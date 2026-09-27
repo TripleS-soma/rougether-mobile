@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { getSessionUserId } from '@/api/auth';
 import {
@@ -52,6 +52,39 @@ export function useMinigameLeaderboard(gameCode: string, enabled: boolean) {
     () => ({ leaderboard: data ?? null, loading: isFetching, error: isError, retry }),
     [data, isFetching, isError, retry],
   );
+}
+
+/** 게임 목록 카드의 내 기록 (#1425) — 랭킹 응답의 `myEntry`. 기록이 없으면 null. */
+export type MinigameBest = { score: number; rank: number; totalPlayers: number } | null;
+
+/**
+ * 목록 카드용 내 최고 기록 (#1425). 게임별 랭킹 조회와 **같은 캐시 키**를 쓴다 — 랭킹
+ * 화면을 연 적이 있으면 요청 없이 채워지고, 새 기록 저장 시 랭킹 무효화가 카드도 갱신한다.
+ * 아직 응답이 없는 게임은 키가 없다(카드는 아무것도 안 그린다).
+ */
+export function useMinigameBests(
+  gameCodes: readonly string[],
+  enabled: boolean,
+): Record<string, MinigameBest> {
+  const userId = getSessionUserId();
+  return useQueries({
+    queries: gameCodes.map((gameCode) => ({
+      queryKey: queryKeys.minigames.leaderboard(userId, gameCode),
+      queryFn: () => fetchMinigameLeaderboard(gameCode),
+      enabled,
+    })),
+    combine: (results) => {
+      const bests: Record<string, MinigameBest> = {};
+      results.forEach((r, i) => {
+        if (!r.data) return;
+        const mine = r.data.myEntry;
+        bests[gameCodes[i]] = mine
+          ? { score: mine.score, rank: mine.rank, totalPlayers: r.data.totalPlayers }
+          : null;
+      });
+      return bests;
+    },
+  });
 }
 
 type Session = {

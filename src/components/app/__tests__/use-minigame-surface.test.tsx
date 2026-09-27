@@ -102,7 +102,11 @@ it('navigates catalog to runner and starts an authenticated run only on an expli
   const ui = await setup();
   await waitFor(() => expect(ui.getByLabelText('루틴 러너 시작')).toBeTruthy());
   expect(start).not.toHaveBeenCalled();
-  expect(ranking).not.toHaveBeenCalled();
+  // 목록 카드의 내 최고 기록 (#1425) — 게임별 랭킹을 한 번씩 읽는다(랭킹 화면과 같은 캐시).
+  await waitFor(() => expect(ranking).toHaveBeenCalledTimes(3));
+  expect(new Set(ranking.mock.calls.map(([code]) => code))).toEqual(
+    new Set(['room-runner', 'cat-stairs', 'cat-merge']),
+  );
   await fireEvent.press(ui.getByLabelText('루틴 러너 시작'));
   expect(ui.getByText('탭해서 점프')).toBeTruthy();
   await fireEvent.press(ui.getByLabelText('랭킹 도전'));
