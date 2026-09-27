@@ -50,54 +50,52 @@ describe('FriendRoomScreen', () => {
   });
 
   /**
-   * 최근 활동은 카드 섹션이 아니라 한 줄 스트립이다 (#860) — 접힌 상태에선
-   * 요약만 보이고, 탭해야 날짜별 상세가 펼쳐진다.
+   * 날짜별 보기 (#1423) — 투두메이트식 주간 줄. 날짜를 누르면 부모가 그날 목록을 준다.
+   * 화면은 순수하다: 선택·점·로딩은 전부 prop.
    */
-  it('접힌 상태에선 요약만, 탭하면 날짜별 상세를 펼친다 (#860)', async () => {
+  it('주간 날짜 줄: 오늘이 기본 선택, 누르면 onSelectDate, 완료한 날엔 점 (#1423)', async () => {
     const today = todayIso();
-    const recentActivity = [
-      { date: today, label: '오늘', titles: ['아침 기상'] },
-      { date: isoShift(today, -1), label: '어제', titles: ['아침 기상', '독서 30분'] },
-    ];
-    const { getByText, queryByText, getByLabelText } = await render(
-      <FriendRoomScreen recentActivity={recentActivity} />,
+    const yesterday = isoShift(today, -1);
+    const onSelectDate = jest.fn();
+    const ui = await render(
+      <FriendRoomScreen
+        routines={[]}
+        selectedDate={today}
+        onSelectDate={onSelectDate}
+        doneCounts={{ [yesterday]: 2 }}
+      />,
     );
-    // 14일 중 2일 완료 — 숫자로도 읽힌다(점만으로는 못 센다).
-    expect(getByText('최근 2주')).toBeTruthy();
-    expect(getByText('2/14일')).toBeTruthy();
-    // 접힌 상태에선 상세가 없다 — 이게 방명록을 위로 올린 핵심이다.
-    expect(queryByText('아침 기상 · 독서 30분')).toBeNull();
-
-    await fireEvent.press(getByLabelText(/최근 14일 중 2일 완료/));
-    expect(getByText('아침 기상 · 독서 30분')).toBeTruthy();
-    expect(getByText('어제')).toBeTruthy();
+    expect(ui.getByText(/^오늘 · /)).toBeTruthy();
+    expect(ui.getByText('오늘 예정된 루틴이 없어요.')).toBeTruthy();
+    // 어제가 같은 주에 있을 때만 셀이 보인다(일요일이면 이전 주).
+    const cells = ui.queryAllByLabelText(new RegExp(`^${yesterday}, 2개 완료`));
+    if (cells.length > 0) {
+      await fireEvent.press(cells[0]);
+      expect(onSelectDate).toHaveBeenLastCalledWith(yesterday);
+    }
+    await fireEvent.press(ui.getByLabelText('이전 주'));
+    expect(onSelectDate).toHaveBeenLastCalledWith(isoShift(today, -7));
   });
 
-  /**
-   * 서버는 **완료가 있는 날만** 보낸다. 배열 길이를 그대로 세면 쉰 날이
-   * 사라져 추이가 실제보다 좋아 보인다 — 오늘 기준 14일 축으로 세야 한다.
-   */
-  it('완료가 없는 날도 축에 세어 14일 기준으로 센다 (#860)', async () => {
-    const today = todayIso();
-    const recentActivity = [
-      // 20일 전은 14일 축 밖 — 세면 안 된다.
-      { date: isoShift(today, -20), label: '옛날', titles: ['아침 기상'] },
-      { date: isoShift(today, -3), label: '3일 전', titles: ['아침 기상'] },
-    ];
-    const { getByText } = await render(<FriendRoomScreen recentActivity={recentActivity} />);
-    expect(getByText('1/14일')).toBeTruthy();
+  it('다른 날을 보면 날짜 제목·빈 문구가 그날 기준이고, 로딩·실패를 구분한다 (#1423)', async () => {
+    const day = isoShift(todayIso(), -10);
+    const [, m, d] = day.split('-').map(Number);
+    const empty = await render(
+      <FriendRoomScreen routines={[]} selectedDate={day} onSelectDate={jest.fn()} />,
+    );
+    expect(empty.getByText(new RegExp(`^${m}월 ${d}일 \\(`))).toBeTruthy();
+    expect(empty.getByText('이날은 공개된 루틴·할 일이 없어요.')).toBeTruthy();
+    await empty.unmount();
+
+    const failed = await render(
+      <FriendRoomScreen routines={[]} selectedDate={day} onSelectDate={jest.fn()} dayError />,
+    );
+    expect(failed.getByText('이날 목록을 불러오지 못했어요.')).toBeTruthy();
   });
 
-  it('기록이 없으면 0/14일, 펼치면 빈 상태 문구 (#860)', async () => {
-    const { getByText, getByLabelText } = await render(<FriendRoomScreen recentActivity={[]} />);
-    expect(getByText('0/14일')).toBeTruthy();
-    await fireEvent.press(getByLabelText(/최근 14일 중 0일 완료/));
-    expect(getByText('최근 2주간 완료한 공개 루틴이 없어요.')).toBeTruthy();
-  });
-
-  it('미배선이면 스트립 자체를 그리지 않는다', async () => {
-    const { queryByText } = await render(<FriendRoomScreen />);
-    expect(queryByText('최근 2주')).toBeNull();
+  it('미배선(데모)이면 날짜 줄을 그리지 않는다', async () => {
+    const { queryByLabelText } = await render(<FriendRoomScreen />);
+    expect(queryByLabelText('이전 주')).toBeNull();
   });
 
   it('첫 탭 후 5초 연타 윈도우 — 연타는 전송 0, 5초 지점에 1회만 (#491)', async () => {

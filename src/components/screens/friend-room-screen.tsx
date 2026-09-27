@@ -18,7 +18,12 @@ import { GestureDetector } from 'react-native-gesture-handler';
 import { CharacterAvatar } from '@/components/room/character-avatar';
 import { Room, type RoomSceneProps } from '@/components/room/room';
 import { CHARACTER_OPTIONS, type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
-import { type Routine, type RoutineCategoryMeta, UNCATEGORIZED_META } from '@/constants/routines';
+import {
+  type Routine,
+  type RoutineCategoryMeta,
+  UNCATEGORIZED_META,
+  weekdayLabelKey,
+} from '@/constants/routines';
 import { Loading } from '@/components/ui/loading';
 import { BearCheck } from '@/components/ui/bear-check';
 import { CategoryIcon } from '@/components/ui/category-icon';
@@ -29,7 +34,7 @@ import { ScalePressable } from '@/components/ui/scale-pressable';
 import { horizontalFlingGesture } from '@/utils/gesture';
 import { PendingNotice } from '@/components/ui/pending-notice';
 import { RetryState } from '@/components/ui/retry-state';
-import { ActivityStrip, type ActivityStripDay } from '@/components/screens/house/activity-strip';
+import { FriendWeekStrip } from '@/components/screens/house/friend-week-strip';
 import { SpringProgressBar } from '@/components/ui/spring-progress';
 import { BookOpenPictogram, Pictogram, type PictogramName } from '@/components/ui/pictograms';
 import { Overlay, Radius, Spacing } from '@/constants/theme';
@@ -52,14 +57,6 @@ const CHEERS: { type: CheerType; icon: PictogramName; labelKey: string }[] = [
   { type: 'support', icon: 'heart', labelKey: 'roomShop.friendRoom.cheer.support' },
   { type: 'best', icon: 'sparkle', labelKey: 'roomShop.friendRoom.cheer.best' },
 ];
-
-/** One day of a friend's completion history (server GET …/routine-completions). */
-/**
- * 최근 활동 하루치 — 정의는 ActivityStrip이 갖는다 (#860). adapters·훅이
- * 이 이름으로 임포트하고 있어 공개 이름은 여기 유지한다. 두 군데 각자
- * 정의하면 한쪽만 바뀌어도 조용히 어긋난다(리뷰 지적).
- */
-export type FriendActivityDay = ActivityStripDay;
 
 /** One guestbook note on this room (server GET /rooms/{id}/guestbooks). */
 export type GuestbookEntry = {
@@ -86,7 +83,7 @@ export type FriendRoomScreenProps = Omit<RoomSceneProps, 'characterId'> & {
   onSwipeFriend?: (dir: 'left' | 'right') => void;
   streakDays?: number;
   characterId?: CharacterId;
-  /** Friend's routines+todos for today; omit for the demo preview list. */
+  /** Friend's routines+todos for `selectedDate` (today by default); omit for the demo preview list. */
   routines?: Routine[];
   /**
    * 그날 루틴·투두의 공개 카테고리 메타 (#528, 서버 #237) — 있으면 루틴
@@ -95,11 +92,17 @@ export type FriendRoomScreenProps = Omit<RoomSceneProps, 'characterId'> & {
    */
   categories?: RoutineCategoryMeta[];
   /**
-   * Recent completion history (last 14 days, HOUSE/PUBLIC categories), date
-   * desc. Omit to hide the 최근 활동 section (unwired/demo); [] shows an
-   * empty-state line.
+   * 목록 날짜 (#1423) — 주간 날짜 줄의 선택. 생략하면 오늘. `onSelectDate`가 없으면
+   * 날짜 줄을 숨긴다(데모·미배선).
    */
-  recentActivity?: FriendActivityDay[];
+  selectedDate?: string;
+  onSelectDate?: (date: string) => void;
+  /** 날짜별 완료 개수 — 날짜 줄의 점. undefined면 점을 숨긴다. */
+  doneCounts?: Record<string, number>;
+  /** 다른 날짜의 목록을 받는 중. */
+  dayLoading?: boolean;
+  /** 고른 날짜의 목록을 못 받음. */
+  dayError?: boolean;
   /** True while the friend's room/routines are loading from the server. */
   loading?: boolean;
   /** True when the visit load failed entirely (#549) — 빈 방 대신 실패+다시 시도. */
@@ -141,7 +144,11 @@ export function FriendRoomScreen({
   backgrounds,
   routines,
   categories,
-  recentActivity,
+  selectedDate,
+  onSelectDate,
+  doneCounts,
+  dayLoading = false,
+  dayError = false,
   loading = false,
   loadError = false,
   onRetry,
@@ -195,6 +202,20 @@ export function FriendRoomScreen({
     return groups.length > 0 ? groups : null;
   }, [categories, routineList]);
   const completedCount = routineList.filter((r) => r.completed).length;
+  // 날짜별 보기 (#1423) — 목록 머리의 날짜. 오늘은 '오늘'을 붙인다.
+  const today = todayIso();
+  const listDate = selectedDate ?? today;
+  const listIsToday = listDate === today;
+  const dayTitle = (() => {
+    const [y, m, d] = listDate.split('-').map(Number);
+    const dow = new Date(Date.UTC(y, m - 1, d, 12)).getUTCDay();
+    return tr(listIsToday ? 'roomShop.friendRoom.dayTitleToday' : 'roomShop.friendRoom.dayTitle', {
+      month: m,
+      day: d,
+      weekday: tr(weekdayLabelKey(dow)),
+    });
+  })();
+  const listBusy = loading || dayLoading;
   const progress = routineList.length > 0 ? completedCount / routineList.length : 0;
 
   // 응원 재요청 확인 (#427) — 이번 방문에서 전송한 타입을 기억하고, 같은
@@ -202,8 +223,6 @@ export function FriendRoomScreen({
   // 앱 재시작 후 중복은 기존 서버 409 토스트가 방어한다.
   const [cheeredTypes, setCheeredTypes] = useState<CheerType[]>([]);
   const [confirmCheer, setConfirmCheer] = useState<CheerType | null>(null);
-  // 최근 활동 상세 펼침 (#860) — 기본은 접힌 한 줄.
-  const [activityOpen, setActivityOpen] = useState(false);
   // 응원 발사 (#450) — 탭마다 해당 이모지가 버튼에서 떠올라 사라진다.
   const burstSeq = useRef(0);
   const [bursts, setBursts] = useState<{ id: number; type: CheerType }[]>([]);
@@ -377,11 +396,24 @@ export function FriendRoomScreen({
           ) : null}
 
           <View style={styles.section}>
+            <Text style={[Typography.h2, { color: t.text }]}>
+              {tr('roomShop.friendRoom.routinesTitle', { name: friendName })}
+            </Text>
+
+            {/* 날짜별 보기 (#1423) — 투두메이트식 주간 줄. 예전 '최근 2주' 한 줄(#860)을
+                대신한다: 점으로 "요즘 꾸준한가"를, 탭으로 그날 무엇을 했는지를 본다. */}
+            {onSelectDate ? (
+              <FriendWeekStrip
+                selected={listDate}
+                today={today}
+                doneCounts={doneCounts}
+                onSelect={onSelectDate}
+              />
+            ) : null}
+
             <View style={styles.sectionHead}>
-              <Text style={[Typography.h2, { color: t.text }]}>
-                {tr('roomShop.friendRoom.routinesTitle', { name: friendName })}
-              </Text>
-              {loading ? null : (
+              <Text style={[Typography.label, { color: t.text }]}>{dayTitle}</Text>
+              {listBusy ? null : (
                 <Text style={[Typography.label, { color: t.primaryText }]}>
                   {completedCount} / {routineList.length}
                 </Text>
@@ -390,84 +422,84 @@ export function FriendRoomScreen({
 
             <SpringProgressBar progress={progress} color={t.primary} trackColor={t.surfaceMuted} />
 
-            {/* 최근 활동 (#860) — 카드 14장 섹션을 한 줄로 접었다. 그 섹션이
-                방명록을 아래로 밀어냈고, 정작 궁금한 "요즘 꾸준한가"는 카드를
-                훑어야 알 수 있었다. 탭하면 날짜별 상세가 펼쳐진다. */}
-            {recentActivity ? (
-              <ActivityStrip
-                days={recentActivity}
-                today={todayIso()}
-                expanded={activityOpen}
-                onToggle={() => setActivityOpen((v) => !v)}
-              />
-            ) : null}
-
-            {loading ? (
+            {listBusy ? (
               <View style={styles.listState}>
                 <Loading />
               </View>
+            ) : dayError ? (
+              <Text style={[Typography.supporting, styles.listState, { color: t.textMuted }]}>
+                {tr('roomShop.friendRoom.dayLoadError')}
+              </Text>
             ) : routineList.length === 0 ? (
               <Text style={[Typography.supporting, styles.listState, { color: t.textMuted }]}>
-                {tr('roomShop.friendRoom.noRoutines')}
+                {listIsToday
+                  ? tr('roomShop.friendRoom.noRoutines')
+                  : tr('roomShop.friendRoom.noRoutinesOnDay')}
               </Text>
             ) : null}
 
-            {(() => {
-              const renderRow = (routine: Routine) => (
-                <View key={routine.id} style={styles.row}>
-                  <BearCheck checked={!!routine.completed} size={22} />
-                  <View style={styles.flex}>
-                    <Text
-                      style={[
-                        Typography.body,
-                        routine.completed
-                          ? { color: t.textMuted, textDecorationLine: 'line-through' }
-                          : { color: t.text },
-                      ]}>
-                      {routine.title}
-                    </Text>
-                    {routine.alarmEnabled && routine.time ? (
-                      <View style={styles.badges}>
+            {listBusy || dayError
+              ? null
+              : (() => {
+                  const renderRow = (routine: Routine) => (
+                    <View key={routine.id} style={styles.row}>
+                      <BearCheck checked={!!routine.completed} size={22} />
+                      <View style={styles.flex}>
+                        <Text
+                          style={[
+                            Typography.body,
+                            routine.completed
+                              ? { color: t.textMuted, textDecorationLine: 'line-through' }
+                              : { color: t.text },
+                          ]}>
+                          {routine.title}
+                        </Text>
                         {routine.alarmEnabled && routine.time ? (
-                          <View style={styles.badge}>
-                            <Icon name="bell" size={11} color={t.textMuted} />
-                            <Text
-                              style={[styles.badgeText, emph('normal'), { color: t.textMuted }]}>
-                              {formatTime(routine.time)}
-                            </Text>
+                          <View style={styles.badges}>
+                            {routine.alarmEnabled && routine.time ? (
+                              <View style={styles.badge}>
+                                <Icon name="bell" size={11} color={t.textMuted} />
+                                <Text
+                                  style={[
+                                    styles.badgeText,
+                                    emph('normal'),
+                                    { color: t.textMuted },
+                                  ]}>
+                                  {formatTime(routine.time)}
+                                </Text>
+                              </View>
+                            ) : null}
                           </View>
                         ) : null}
                       </View>
-                    ) : null}
-                  </View>
-                </View>
-              );
-              // 카테고리 메타가 있으면 본인 화면처럼 그룹으로 (#528).
-              return categoryGroups ? (
-                <View style={styles.groups}>
-                  {categoryGroups.map((g) => (
-                    <View key={g.meta.id || 'uncat'} style={styles.group}>
-                      <View style={styles.catHeader}>
-                        <View style={[styles.catDot, { backgroundColor: `${g.meta.color}33` }]}>
-                          <CategoryIcon name={g.meta.icon} color={g.meta.color} size={16} />
-                        </View>
-                        <Text
-                          style={[Typography.label, styles.flex, { color: t.text }]}
-                          numberOfLines={1}>
-                          {g.meta.name}
-                        </Text>
-                        <Text style={[Typography.supporting, { color: t.textMuted }]}>
-                          {g.items.filter((r) => r.completed).length}/{g.items.length}
-                        </Text>
-                      </View>
-                      <View style={styles.rows}>{g.items.map(renderRow)}</View>
                     </View>
-                  ))}
-                </View>
-              ) : (
-                <View style={styles.rows}>{routineList.map(renderRow)}</View>
-              );
-            })()}
+                  );
+                  // 카테고리 메타가 있으면 본인 화면처럼 그룹으로 (#528).
+                  return categoryGroups ? (
+                    <View style={styles.groups}>
+                      {categoryGroups.map((g) => (
+                        <View key={g.meta.id || 'uncat'} style={styles.group}>
+                          <View style={styles.catHeader}>
+                            <View style={[styles.catDot, { backgroundColor: `${g.meta.color}33` }]}>
+                              <CategoryIcon name={g.meta.icon} color={g.meta.color} size={16} />
+                            </View>
+                            <Text
+                              style={[Typography.label, styles.flex, { color: t.text }]}
+                              numberOfLines={1}>
+                              {g.meta.name}
+                            </Text>
+                            <Text style={[Typography.supporting, { color: t.textMuted }]}>
+                              {g.items.filter((r) => r.completed).length}/{g.items.length}
+                            </Text>
+                          </View>
+                          <View style={styles.rows}>{g.items.map(renderRow)}</View>
+                        </View>
+                      ))}
+                    </View>
+                  ) : (
+                    <View style={styles.rows}>{routineList.map(renderRow)}</View>
+                  );
+                })()}
 
             <View style={styles.cheers}>
               {bursts.map((b) => (

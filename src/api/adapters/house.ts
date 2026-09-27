@@ -17,7 +17,7 @@ import type {
   MemberRoomPreview,
   RoomCell,
 } from '@/components/screens/house/types';
-import type { FriendActivityDay, GuestbookEntry } from '@/components/screens/friend-room-screen';
+import type { GuestbookEntry } from '@/components/screens/friend-room-screen';
 import { type PictogramName } from '@/components/ui/pictograms';
 import type {
   HousePreview,
@@ -365,24 +365,16 @@ export function toFriendCategories(day: HouseMemberDayResponse): RoutineCategory
 }
 
 /**
- * Completion history (GET …/routine-completions) → per-day rows for the
- * friend-room 최근 활동 list. The server already sorts date desc; rows keep
- * that order, each with a "M월 D일" label and the day's completed titles.
+ * 날짜별 완료 개수 (#1423) — 친구 방 주간 날짜 줄의 점. 같은 날 여러 루틴을 끝냈으면
+ * 그 수만큼 센다(점은 1 이상이면 채운다).
  */
-export function toFriendActivity(
+export function toFriendDoneCounts(
   resp: HouseMemberRoutineCompletionListResponse,
-): FriendActivityDay[] {
-  const days: FriendActivityDay[] = [];
+): Record<string, number> {
+  const counts: Record<string, number> = {};
   for (const c of resp.items ?? []) {
-    const date = c.routineDate ?? '';
-    if (!date) continue;
-    let day = days[days.length - 1];
-    if (!day || day.date !== date) {
-      const [, m, d] = date.split('-').map(Number);
-      day = { date, label: i18n.t('house.adapter.monthDay', { month: m, day: d }), titles: [] };
-      days.push(day);
-    }
-    day.titles.push(c.title ?? i18n.t('house.adapter.routineFallback'));
+    const date = c.routineDate;
+    if (date) counts[date] = (counts[date] ?? 0) + 1;
   }
-  return days;
+  return counts;
 }

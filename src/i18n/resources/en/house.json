@@ -474,6 +474,11 @@
       "banned": "Your message contains a word that isn't allowed",
       "forbidden": "You can't join this house's chat",
       "invalid": "Couldn't send the message. Please check the content."
+    },
+    "friendWeek": {
+      "range": "{{sm}}/{{sd}} – {{em}}/{{ed}}",
+      "done": "{{n}} done",
+      "none": "Nothing done"
     }
   }
 }
