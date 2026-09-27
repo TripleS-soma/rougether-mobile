@@ -357,7 +357,9 @@
         "finishError": "Couldn't verify the game result.",
         "loadError": "Couldn't load the game.",
         "restart": "Restart"
-      }
+      },
+      "best": "My best {{score}} · #{{rank}} of {{total}}",
+      "noBest": "No record yet. Set your first!"
     },
     "speaker": {
       "sheetTitle": "Sounds in your room",

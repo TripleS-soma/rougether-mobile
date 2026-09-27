@@ -229,6 +229,8 @@ const MERGE_BROWSER_SOURCE = String.raw`function runMerge(config) {
     var tick=Math.max(1,ticks,actions.length?actions[actions.length-1].tick+1:1);
     ticks=tick;actions.push({tick:tick,direction:names[direction]});
     lastMerge=state.score-before.score;glowTicks=30;
+    if(lastMerge>=128)post('fx',{kind:'milestone'});else if(lastMerge>0)post('fx',{kind:'merge'});
+    if(state.ended&&state.endReason!=='limit')post('fx',{kind:'over'});
     if(state.ended)finish(state.endReason);else if(ticks>=18000)finish('limit');else{render();announce();}
   }
   function save() {if(hostActive&&(mode==='playing'||mode==='paused'))finish('saved');}

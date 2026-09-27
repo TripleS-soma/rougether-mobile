@@ -226,9 +226,9 @@ const STAIRS_BROWSER_SOURCE = String.raw`function runStairs(config) {
   function step() {
     if(mode!=='playing'||!hostActive||destroyed)return;
     var old=state;state=engine.step(pendingDirection);pendingDirection=undefined;
-    if(state.score!==old.score){previousColumn=old.column;stepAnimation=0;}
+    if(state.score!==old.score){previousColumn=old.column;stepAnimation=0;post('fx',{kind:state.score%10===0?'milestone':'step'});}
     else stepAnimation=Math.min(1,stepAnimation+1/10);
-    if(state.ended)finish();
+    if(state.ended){if(state.endReason!=='limit')post('fx',{kind:'over'});finish();}
   }
   function begin() {
     if(!hostActive||destroyed||mode!=='ready')return;

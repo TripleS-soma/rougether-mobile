@@ -22,7 +22,12 @@ import {
   type MinigameCode,
 } from '@/constants/minigames';
 import { useLatestRef } from '@/hooks/use-stable-value';
-import { useMinigames, useMinigameLeaderboard, useMinigameRun } from '@/hooks/use-minigames';
+import {
+  useMinigameBests,
+  useMinigames,
+  useMinigameLeaderboard,
+  useMinigameRun,
+} from '@/hooks/use-minigames';
 import { track } from '@/lib/analytics';
 
 // Retained transition nodes must match the current session, not just the game screen.
@@ -66,6 +71,11 @@ export function useMinigameSurface({
   const definition = MINIGAME_DEFINITIONS[gameCode];
   const catalog = useMinigames(screen === 'minigames');
   const ranking = useMinigameLeaderboard(gameCode, screen === 'minigameLeaderboard');
+  // 목록 카드의 내 최고 기록 (#1425) — 랭킹과 같은 캐시.
+  const bests = useMinigameBests(
+    catalog.games.map((g) => g.gameCode),
+    screen === 'minigames',
+  );
   // Independent sessions preserve failed submissions when the user visits another game.
   const runner = useMinigameRun('room-runner');
   const stairs = useMinigameRun('cat-stairs');
@@ -127,6 +137,7 @@ export function useMinigameSurface({
       <MinigamesScreen
         {...catalog}
         practiceGames={PLAYABLE_MINIGAMES}
+        bests={bests}
         onRetry={catalog.retry}
         onSelectGame={openGame}
         onLeaderboard={openLeaderboard}
