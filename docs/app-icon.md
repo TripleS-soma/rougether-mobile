@@ -8,7 +8,7 @@
 - iOS는 앱이 active일 때 서버 상태를 자동 적용한다. 변경 시 시스템 안내가 나타나며 같은 아이콘은 다시 설정하지 않는다. 앱 미실행 중 미접속 단계 교체는 구현하지 않는다. 복귀하면 방문 기록이 초기화되므로 미접속 아이콘을 보여 주려고 복귀 전 상태를 잠깐 적용하지 않는다.
 - Android는 background 조회 때도 자동 적용한다. 상태 우선순위는 7일 유효 스트릭 > 오늘 루틴·할 일 완료 > 미접속 시간이다. 미접속 경계는 48·96·168시간이다.
 - 로그인 후 실제 foreground 진입과 활동에서만 `POST /me/app-activity`를 호출한다. 터치는 5분 이내 호출을 합친다. 완료·취소 후에는 `GET /me/app-icon`으로 재조회한다.
-- Android background 작업은 상태 조회만 한다. `expo-background-task`를 60분 최소 간격으로 등록하나 WorkManager 실행 시각은 OS가 정한다. 앱 강제 종료나 배터리 제한으로 실행되지 않을 수 있다. background 아이콘 교체는 24시간 최대 1회이며 실제 복귀의 회복은 즉시 반영한다.
+- Android background 작업은 상태 조회만 한다. `expo-background-task`를 60분 최소 간격으로 등록하나 WorkManager 실행 시각은 OS가 정한다. 앱 강제 종료나 배터리 제한으로 실행되지 않을 수 있다. background 아이콘 교체는 24시간 최대 1회다. 실제 복귀의 회복은 iOS는 즉시, **Android는 앱이 화면을 떠날 때(background) 반영한다** — 떠 있는 동안 activity-alias를 바꾸면 런처가 현재 창을 닫아 앱이 꺼진 것처럼 보인다(크래시가 아니라 Sentry에 안 남음). 떠 있는 동안 정한 아이콘은 `app-icon-controller`가 기억했다가 마지막 결정만 적용한다.
 - 미접속 푸시 `APP_INACTIVITY_REMINDER`를 누르면 내 방을 연다. 수신만으로 방문을 기록하지 않는다. 기존 전체·루틴 리마인더 설정을 따른다.
 
 ## 네이티브 구성
