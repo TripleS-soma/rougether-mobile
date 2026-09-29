@@ -75,6 +75,10 @@ export function applyAutomaticAppIcon(
       deferUntilBackground(appIconName(state.state));
       return;
     }
+    // 백그라운드 작업의 결정이 더 새롭다 — 미뤄 둔 옛 결정이 다음 전환 때 덮어쓰지 않게.
+    // (invalidateAppIconWork에서는 비우지 않는다: 훅이 background 전환 때 그걸 먼저 불러
+    // flush보다 앞서 미뤄 둔 결정을 지워 버린다.)
+    if (background) deferred = null;
     const changed = await setNativeAppIcon(appIconName(state.state));
     if (changed && background && isCurrent() && revision === expectedRevision) {
       await AsyncStorage.setItem(BACKGROUND_CHANGED_AT, String(Date.now()));

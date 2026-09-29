@@ -121,3 +121,23 @@ it('continues the serialized queue after an OS failure', async () => {
   await applyAutomaticAppIcon(response, () => true, appIconRevision());
   expect(setNativeAppIcon).toHaveBeenCalledTimes(2);
 });
+
+it('Android: 백그라운드 작업이 직접 바꾸면 미뤄 둔 옛 결정은 버린다', async () => {
+  AppState.currentState = 'active';
+  await applyAutomaticAppIcon(
+    { ...response, state: 'DAILY_SUCCESS' },
+    () => true,
+    appIconRevision(),
+  );
+  AppState.currentState = 'background';
+  await applyAutomaticAppIcon(
+    { ...response, state: 'SOBBING' },
+    () => true,
+    appIconRevision(),
+    true,
+  );
+  expect(hasDeferredAppIcon()).toBe(false);
+  await flushDeferredAppIcon();
+  expect(setNativeAppIcon).toHaveBeenCalledTimes(1);
+  expect(setNativeAppIcon).not.toHaveBeenCalledWith('DailySuccess');
+});
