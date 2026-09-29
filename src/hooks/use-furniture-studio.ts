@@ -30,6 +30,8 @@ function errorMessage(error: unknown) {
       'FURNITURE_DAILY_LIMIT',
       'FURNITURE_JOB_IN_PROGRESS',
       'FURNITURE_PHOTO_INVALID',
+      // 거래소에 상장된 가구는 재검수를 받을 수 없다 (#1427).
+      'FURNITURE_MARKET_LISTED',
     ];
     if (error.code && codes.includes(error.code)) {
       return i18n.t(`roomShop.studio.error.${error.code}`);

@@ -44,7 +44,10 @@ export type Screen =
   // 공개 SNS 피드 (#1409) — FEED_ENABLED일 때만 도달한다.
   | 'feed'
   | 'feedPost'
-  | 'feedCompose';
+  | 'feedCompose'
+  // 가구 거래소 (#1427) — MARKET_ENABLED일 때만 도달한다(꾸미기의 거래소 탭·스튜디오 발행).
+  | 'marketAsset'
+  | 'marketOrders';
 
 /** Which bottom-nav tab is active for each screen, or null to hide the nav. */
 export const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
@@ -91,6 +94,9 @@ export const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   feed: 'feed',
   feedPost: null,
   feedCompose: null,
+  // 거래소 상세·내 주문 (#1427) — 꾸미기에서 미는 서브화면. 하단 탭 없음.
+  marketAsset: null,
+  marketOrders: null,
 };
 
 export const SCREEN_FOR_TAB: Record<NavTab, Screen> = {
@@ -157,6 +163,9 @@ export const BACK_SCREEN: Record<Screen, Screen | null> = {
   feed: 'myRoom',
   feedPost: 'feed',
   feedCompose: 'feed',
+  // 거래소는 꾸미기(상점)의 탭 — 상세·내 주문 모두 꾸미기로 돌아간다 (#1427).
+  marketAsset: 'decor',
+  marketOrders: 'decor',
 };
 
 /** 더블 백 종료 허용 창 (#522) — 토스트 표시와 체감이 맞는 2초. */

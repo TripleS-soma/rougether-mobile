@@ -111,6 +111,16 @@ export type AnalyticsEvent =
   | 'content_report'
   /** 사용자 차단 성공 — via: post|comment(어디서 차단했는지). */
   | 'user_block'
+  // 가구 거래소 (#1427) — MARKET_ENABLED가 꺼져 있는 동안은 발생하지 않는다.
+  /** 거래소 화면 진입 — screen: list(꾸미기 거래소 탭)|asset(상세)|orders(내 주문). */
+  | 'market_view'
+  /**
+   * 주문·취소 결과 — side(BUY|SELL|CANCEL), source(INVENTORY|ISSUANCE|none),
+   * result(filled|open|cancelled|rejected|pending|error). rejected면 code에 거절 사유.
+   */
+  | 'market_order'
+  /** 발행 — total_supply, result(ok|error). */
+  | 'market_issue'
   // 그 밖의 핵심 행동
   | 'shop_purchase'
   | 'cheer_send'

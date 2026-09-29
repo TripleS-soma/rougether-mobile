@@ -7,10 +7,13 @@ export function FurnitureStudio({
   onBack,
   onGoToRoom,
   onAttendance,
+  onIssue,
 }: {
   onBack: () => void;
   onGoToRoom: () => Promise<boolean>;
   onAttendance?: () => void;
+  /** 거래소에 올리기 (#1427) — 셸이 MARKET_ENABLED일 때만 넘긴다. */
+  onIssue?: (userItemId: number, totalSupply: number) => Promise<boolean>;
 }) {
   const studio = useFurnitureStudio();
   const tr = useT();
@@ -32,6 +35,7 @@ export function FurnitureStudio({
           setPlacementError(tr('roomShop.studio.error.inventoryLoadFailed'));
       }}
       onAttendance={onAttendance}
+      onIssue={onIssue}
     />
   );
 }

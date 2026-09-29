@@ -42,6 +42,7 @@ export * from './chat';
 export * from './events';
 export * from './feed';
 export * from './houses';
+export * from './market';
 export * from './masters';
 export * from './onboarding';
 export * from './me';

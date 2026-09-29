@@ -1,0 +1,151 @@
+{
+  "market": {
+    "creatorUnknown": "탈퇴한 회원",
+    "creator": "{{name}} 제작",
+    "coins": "{{n}}코인",
+    "imageA11y": "{{name}} 이미지",
+    "list": {
+      "myOrders": "내 주문",
+      "refreshA11y": "거래소 새로고침",
+      "empty": "아직 거래소에 올라온 가구가 없어요",
+      "emptyHint": "AI 가구 스튜디오에서 만든 가구를 올려 보세요.",
+      "error": "거래소를 불러오지 못했어요.",
+      "more": "더 보기",
+      "fromPrice": "{{price}}코인부터",
+      "noAsk": "판매 대기 없음",
+      "lastPrice": "최근 거래 {{price}}코인",
+      "noTrade": "거래 전",
+      "cardA11y": "{{name}} 보기"
+    },
+    "asset": {
+      "title": "가구 상세",
+      "loadError": "가구 정보를 불러오지 못했어요.",
+      "suspended": "거래가 정지된 가구예요",
+      "edition": "총 {{n}}개 발행",
+      "lastTrade": "최근 거래가",
+      "bestAsk": "최저 판매가",
+      "none": "없음",
+      "book": "호가",
+      "asks": "판매 대기",
+      "bids": "구매 대기",
+      "bookEmpty": "대기 중인 주문이 없어요",
+      "levelQty": "{{n}}개",
+      "trades": "최근 거래",
+      "tradesEmpty": "아직 거래가 없어요",
+      "buy": "구매하기",
+      "sell": "판매하기",
+      "sellIssuance": "발행 재고 판매",
+      "unissued": "남은 발행 재고 {{n}}개",
+      "ownedReason": "이미 가지고 있는 가구예요. 같은 가구는 1개만 가질 수 있어요.",
+      "report": "신고하기",
+      "myOrders": "내 주문"
+    },
+    "order": {
+      "buyTitle": "구매 주문",
+      "sellTitle": "판매 주문",
+      "issuanceTitle": "발행 재고 판매",
+      "price": "개당 가격 (코인)",
+      "pricePlaceholder": "1~1,000",
+      "priceInvalid": "1~1,000코인 사이 정수로 입력해 주세요.",
+      "quantity": "수량",
+      "decreaseA11y": "수량 줄이기",
+      "increaseA11y": "수량 늘리기",
+      "quantityValue": "{{n}}개",
+      "balance": "보유 코인 {{n}}",
+      "total": "주문 금액 {{n}}코인",
+      "notEnough": "코인이 부족해요",
+      "buyNote": "가장 싼 판매가보다 높게 걸면 싼 값에 체결되고, 차액은 코인으로 돌려드려요.",
+      "proceeds": "예상 수령액",
+      "proceedsNote": "로열티 10%·수수료 5%를 뗀 금액이에요. 더 비싼 구매 주문과 체결되면 더 받아요.",
+      "proceedsNoteNoRoyalty": "수수료 5%를 뗀 금액이에요(로열티 없음). 더 비싼 구매 주문과 체결되면 더 받아요.",
+      "sellWarning": "판매하는 동안 가구는 인벤토리와 방에서 빠져요. 취소해도 방 배치는 복구되지 않아요.",
+      "expiryNote": "7일 안에 체결되지 않으면 자동으로 취소되고 돌려드려요.",
+      "submitBuy": "구매 주문하기",
+      "submitSell": "판매 주문하기",
+      "submitting": "주문하는 중...",
+      "closeA11y": "주문 닫기"
+    },
+    "orders": {
+      "title": "내 주문",
+      "tabOpen": "대기 중",
+      "tabClosed": "완료",
+      "tabA11y": "{{label}} 주문",
+      "empty": "주문이 없어요",
+      "error": "주문을 불러오지 못했어요.",
+      "side": {
+        "BUY": "구매",
+        "SELL": "판매"
+      },
+      "status": {
+        "OPEN": "대기 중",
+        "FILLED": "체결",
+        "CANCELLED": "취소",
+        "EXPIRED": "만료"
+      },
+      "priceLine": "{{price}}코인 · {{filled}}/{{quantity}}개 체결",
+      "issuance": "발행 재고",
+      "expires": {
+        "days": "{{n}}일 후 만료",
+        "hours": "{{n}}시간 후 만료",
+        "soon": "곧 만료"
+      },
+      "cancel": "취소",
+      "cancelA11y": "{{name}} 주문 취소",
+      "cancelTitle": "주문을 취소할까요?",
+      "cancelBody": "맡겨 둔 코인이나 가구를 돌려드려요. 판매를 취소해도 방 배치는 복구되지 않아요.",
+      "cancelConfirm": "주문 취소",
+      "cancelKeep": "그대로 두기",
+      "more": "더 보기",
+      "rowA11y": "{{name}} 상세 보기"
+    },
+    "selling": {
+      "row": "판매 중인 가구 {{n}}개",
+      "rowHint": "판매 중인 가구는 가구함과 방에서 빠져 있어요.",
+      "open": "내 주문 보기"
+    },
+    "issue": {
+      "cta": "거래소에 올리기",
+      "title": "거래소에 올리기",
+      "supply": "발행 수량",
+      "body": "내 보유분 1개 포함, 나머지는 거래소에 보관돼요. 한 번 올리면 추가 발행할 수 없고, 가구 다시 검수를 받을 수 없어요.",
+      "submit": "{{n}}개 발행하기",
+      "submitting": "올리는 중...",
+      "done": "거래소에 올렸어요",
+      "closeA11y": "발행 닫기"
+    },
+    "toast": {
+      "buyFilled": "구매 완료",
+      "sellFilled": "판매 완료",
+      "buyOpen": "구매 대기 중이에요",
+      "sellOpen": "판매 대기 중이에요",
+      "cancelled": "주문을 취소했어요",
+      "pending": "처리 중이에요. 내 주문에서 확인해 주세요."
+    },
+    "error": {
+      "MARKET_INSUFFICIENT_COIN": "코인이 부족해요.",
+      "MARKET_ALREADY_HOLDING": "이미 가지고 있거나 구매 대기 중인 가구예요.",
+      "MARKET_OWN_ORDER_CONFLICT": "이 가구에 반대 방향 주문이 걸려 있어요. 내 주문을 먼저 확인해 주세요.",
+      "MARKET_ITEM_NOT_OWNED": "판매할 가구가 없어요.",
+      "MARKET_NOT_CREATOR": "제작자만 할 수 있어요.",
+      "MARKET_INSUFFICIENT_SUPPLY": "남은 발행 재고보다 많아요.",
+      "MARKET_ASSET_SUSPENDED": "거래가 정지된 가구예요.",
+      "MARKET_REQUEST_CONFLICT": "같은 주문이 다른 내용으로 접수돼 있어요. 다시 시도해 주세요.",
+      "MARKET_ASSET_NOT_FOUND": "거래소에서 찾을 수 없는 가구예요.",
+      "MARKET_ORDER_NOT_FOUND": "주문을 찾을 수 없어요.",
+      "MARKET_ORDER_NOT_OPEN": "이미 체결되었거나 취소된 주문이에요.",
+      "MARKET_ITEM_NOT_TRADABLE": "거래소에 올릴 수 없는 가구예요.",
+      "MARKET_ASSET_ALREADY_LISTED": "이미 거래소에 올린 가구예요.",
+      "MARKET_ITEM_REVIEW_IN_PROGRESS": "가구를 만들거나 다시 검수하는 중이에요. 끝난 뒤에 올려 주세요.",
+      "VALIDATION_FAILED": "입력값을 확인해 주세요.",
+      "generic": "요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요."
+    },
+    "reject": {
+      "MARKET_SELF_TRADE": "내 주문과 맞물려 처리하지 못했어요. 맡긴 코인·가구는 돌려드렸어요.",
+      "MARKET_ASSET_SUSPENDED": "거래가 정지된 가구라 처리하지 못했어요. 맡긴 코인·가구는 돌려드렸어요.",
+      "MARKET_ORDER_NOT_OPEN": "이미 체결되었거나 취소된 주문이에요.",
+      "MARKET_ENGINE_ERROR": "처리에 실패했어요. 맡긴 코인·가구는 돌려드렸어요.",
+      "MARKET_ENGINE_ERROR_UNREFUNDED": "처리에 실패했어요. 고객센터로 문의해 주세요.",
+      "generic": "처리하지 못했어요. 맡긴 코인·가구는 돌려드렸어요."
+    }
+  }
+}

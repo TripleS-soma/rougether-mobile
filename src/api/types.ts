@@ -1424,3 +1424,97 @@ export type BlockedUserResponse = {
   /** 차단 시각(ISO-8601 UTC). */
   blockedAt?: string;
 };
+
+// --- 가구 거래소 (#1427) — 타입 재생성이 깨져 있어(#1412) 운영 /v3/api-docs를 보고 손으로 옮겼다.
+
+export type MarketSide = 'BUY' | 'SELL';
+export type MarketSource = 'INVENTORY' | 'ISSUANCE';
+export type MarketAssetStatus = 'ACTIVE' | 'SUSPENDED';
+export type MarketOrderStatus = 'OPEN' | 'FILLED' | 'CANCELLED' | 'EXPIRED';
+export type MarketCommandStatus = 'PENDING' | 'APPLIED' | 'REJECTED';
+
+export type AssetCard = {
+  assetId?: number;
+  itemId?: number;
+  name?: string;
+  assetKey?: string;
+  creatorNickname?: string | null;
+  totalSupply?: number;
+  bestAskPrice?: number | null;
+  askQuantity?: number;
+  lastTradePrice?: number | null;
+  status?: MarketAssetStatus;
+};
+
+export type PriceLevel = {
+  price?: number;
+  quantity?: number;
+};
+
+export type MarketAssetResponse = {
+  assetId?: number;
+  itemId?: number;
+  name?: string;
+  assetKey?: string;
+  creatorNickname?: string | null;
+  isCreator?: boolean;
+  totalSupply?: number;
+  unissuedQuantity?: number;
+  status?: MarketAssetStatus;
+  lastTradePrice?: number | null;
+  owned?: boolean;
+  asks?: PriceLevel[];
+  bids?: PriceLevel[];
+};
+
+export type TradeItem = {
+  tradeId?: number;
+  price?: number;
+  quantity?: number;
+  tradedAt?: string;
+};
+
+export type MarketAssetIssueRequest = {
+  userItemId: number;
+  totalSupply: number;
+};
+
+export type PlaceOrderRequest = {
+  requestId: string;
+  assetId: number;
+  side: MarketSide;
+  price: number;
+  quantity: number;
+  source?: MarketSource | null;
+};
+
+export type CancelOrderRequest = {
+  requestId: string;
+};
+
+export type MarketCommandAcceptedResponse = {
+  commandId?: number;
+  status?: MarketCommandStatus;
+};
+
+export type MarketOrderResponse = {
+  orderId?: number;
+  assetId?: number;
+  name?: string;
+  assetKey?: string;
+  side?: MarketSide;
+  source?: MarketSource | null;
+  price?: number;
+  quantity?: number;
+  filledQuantity?: number;
+  status?: MarketOrderStatus;
+  expiresAt?: string;
+  createdAt?: string;
+};
+
+export type MarketCommandResponse = {
+  commandId?: number;
+  status?: MarketCommandStatus;
+  rejectCode?: string | null;
+  order?: MarketOrderResponse | null;
+};
