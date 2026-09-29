@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 
+import type { ReportReason } from '@/api/types';
 import {
   FeedActionRow,
   FeedAuthorRow,
@@ -21,9 +22,12 @@ import {
 } from '@/components/feed/feed-parts';
 import { FeedPhoto, feedImageAspect } from '@/components/feed/feed-photo';
 import type { FeedComment, FeedImageLoader, FeedPost } from '@/components/screens/feed/types';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Icon } from '@/components/ui/icon';
 import { Loading } from '@/components/ui/loading';
+import { ReportSheet } from '@/components/ui/report-sheet';
+import { SheetHandle } from '@/components/ui/sheet-handle';
 import { RetryState } from '@/components/ui/retry-state';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { FEED_MAX_COMMENT, FEED_MAX_CONTENT } from '@/constants/feed';
@@ -36,6 +40,13 @@ import { useT } from '@/i18n';
 
 const NO_COMMENTS: FeedComment[] = [];
 const SEND_SIZE = 40;
+const MENU_ICON_SIZE = 40;
+
+/** 남의 글·댓글 더보기 메뉴의 대상 (#1428). */
+type ModerationTarget =
+  { kind: 'post'; authorId: number } | { kind: 'comment'; commentId: number; authorId: number };
+
+type ReportResult = Promise<boolean> | boolean;
 
 export type FeedPostScreenProps = {
   post?: FeedPost | null;
@@ -57,6 +68,23 @@ export type FeedPostScreenProps = {
   onDeletePost?: (postId: number) => void;
   /** 내 글 본문 수정 — true면 편집 창을 닫는다. */
   onEditPost?: (postId: number, content: string) => Promise<boolean> | boolean;
+  /**
+   * 남의 글 신고 (#1428) — true를 돌려주면 신고 시트를 닫는다. 없으면 메뉴에 신고가 없다.
+   * 결과 안내(토스트)는 셸 몫.
+   */
+  onReportPost?: (postId: number, reason: ReportReason, detail?: string) => ReportResult;
+  /** 남의 댓글 신고 (#1428) — true면 시트를 닫는다. */
+  onReportComment?: (
+    postId: number,
+    commentId: number,
+    reason: ReportReason,
+    detail?: string,
+  ) => ReportResult;
+  /**
+   * 작성자 차단 (#1428) — 확인 다이얼로그를 통과했을 때만 호출된다. `via`는 글·댓글 중
+   * 어디서 차단했는지(계측용).
+   */
+  onBlockUser?: (userId: number, via: 'post' | 'comment') => void;
   onBack?: () => void;
   loadImage?: FeedImageLoader;
   now?: Date;
@@ -168,7 +196,8 @@ function EditPostDialog({
 
 /**
  * 피드 게시물 상세 (#1409) — 사진 전체·본문·좋아요, 오래된 순 댓글과 입력칸. 내 글이면
- * 헤더에서 본문 수정·삭제, 내 댓글은 삭제할 수 있다. 순수·prop 기반.
+ * 헤더에서 본문 수정·삭제, 내 댓글은 삭제할 수 있다. 남의 글·댓글은 더보기(…)에서 신고·
+ * 작성자 차단(#1428, App Store 1.2). 순수·prop 기반.
  */
 export function FeedPostScreen({
   post = null,
@@ -186,6 +215,9 @@ export function FeedPostScreen({
   onToggleLike,
   onDeletePost,
   onEditPost,
+  onReportPost,
+  onReportComment,
+  onBlockUser,
   onBack,
   loadImage,
   now,
@@ -203,6 +235,29 @@ export function FeedPostScreen({
   const [confirmPost, setConfirmPost] = useState(false);
   const [confirmComment, setConfirmComment] = useState<number | null>(null);
   const [editing, setEditing] = useState(false);
+  // 신고·차단 (#1428) — 더보기 메뉴 → 신고 시트 / 차단 확인.
+  const [menuTarget, setMenuTarget] = useState<ModerationTarget | null>(null);
+  const [reportTarget, setReportTarget] = useState<ModerationTarget | null>(null);
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [blockTarget, setBlockTarget] = useState<ModerationTarget | null>(null);
+  const canReportPost = !!onReportPost;
+  const canReportComment = !!onReportComment;
+  const canBlock = !!onBlockUser;
+  const menuCanReport = menuTarget?.kind === 'post' ? canReportPost : canReportComment;
+
+  const submitReport = async (reason: ReportReason, detail?: string) => {
+    if (!post || !reportTarget || reportSubmitting) return;
+    setReportSubmitting(true);
+    try {
+      const ok =
+        reportTarget.kind === 'post'
+          ? await onReportPost?.(post.postId, reason, detail)
+          : await onReportComment?.(post.postId, reportTarget.commentId, reason, detail);
+      if (ok) setReportTarget(null);
+    } finally {
+      setReportSubmitting(false);
+    }
+  };
 
   const trimmed = draft.trim();
   const canSend = !!post && !!onAddComment && trimmed.length > 0 && !sending;
@@ -247,6 +302,15 @@ export function FeedPostScreen({
               </Pressable>
             ) : null}
           </View>
+        ) : post && (canReportPost || canBlock) ? (
+          <Pressable
+            onPress={() => setMenuTarget({ kind: 'post', authorId: post.author.userId })}
+            accessibilityRole="button"
+            accessibilityLabel={tr('member.moderation.postMenuA11y')}
+            hitSlop={Spacing.one}
+            style={[styles.menuBtn, { backgroundColor: t.surfaceMuted }]}>
+            <Icon name="kebab" size={20} color={t.text} />
+          </Pressable>
         ) : undefined
       }
     />
@@ -358,6 +422,21 @@ export function FeedPostScreen({
                   </Text>
                 </Pressable>
               ) : null}
+              {!c.mine && (canReportComment || canBlock) ? (
+                <Pressable
+                  onPress={() =>
+                    setMenuTarget({
+                      kind: 'comment',
+                      commentId: c.commentId,
+                      authorId: c.author.userId,
+                    })
+                  }
+                  accessibilityRole="button"
+                  accessibilityLabel={tr('member.moderation.commentMenuA11y')}
+                  hitSlop={Spacing.two}>
+                  <Icon name="kebab" size={18} color={t.textMuted} />
+                </Pressable>
+              ) : null}
             </View>
           )}
         />
@@ -422,6 +501,75 @@ export function FeedPostScreen({
           if (id != null) onDeleteComment?.(id);
         }}
       />
+      <BottomSheet
+        visible={menuTarget !== null}
+        onClose={() => setMenuTarget(null)}
+        accessibilityLabel={tr('member.moderation.menuTitle')}
+        nativeDrag
+        cardStyle={[styles.menuSheet, { backgroundColor: t.screen }]}>
+        <SheetHandle />
+        {menuCanReport ? (
+          <Pressable
+            onPress={() => {
+              const target = menuTarget;
+              setMenuTarget(null);
+              if (target) setReportTarget(target);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={tr('member.moderation.menu.report')}
+            style={styles.menuItem}>
+            <View style={[styles.menuIcon, { backgroundColor: t.surfaceMuted }]}>
+              <Icon name="flag" size={18} color={t.text} />
+            </View>
+            <Text style={[Typography.body, { color: t.text }]}>
+              {tr('member.moderation.menu.report')}
+            </Text>
+          </Pressable>
+        ) : null}
+        {canBlock ? (
+          <Pressable
+            onPress={() => {
+              const target = menuTarget;
+              setMenuTarget(null);
+              if (target) setBlockTarget(target);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={tr('member.moderation.menu.block')}
+            style={styles.menuItem}>
+            <View style={[styles.menuIcon, { backgroundColor: t.surfaceMuted }]}>
+              <Icon name="block" size={18} color={t.danger} />
+            </View>
+            <Text style={[Typography.body, { color: t.danger }]}>
+              {tr('member.moderation.menu.block')}
+            </Text>
+          </Pressable>
+        ) : null}
+      </BottomSheet>
+      <ReportSheet
+        visible={reportTarget !== null}
+        targetLabel={
+          reportTarget?.kind === 'comment'
+            ? tr('member.moderation.target.comment')
+            : tr('member.moderation.target.post')
+        }
+        submitting={reportSubmitting}
+        onSubmit={(reason, detail) => void submitReport(reason, detail)}
+        onClose={() => setReportTarget(null)}
+      />
+      <ConfirmDialog
+        visible={blockTarget !== null}
+        title={tr('member.moderation.block.title')}
+        body={tr('member.moderation.block.body')}
+        confirmLabel={tr('member.moderation.block.confirm')}
+        confirmAccessibilityLabel={tr('member.moderation.block.confirmA11y')}
+        destructive
+        onCancel={() => setBlockTarget(null)}
+        onConfirm={() => {
+          const target = blockTarget;
+          setBlockTarget(null);
+          if (target) onBlockUser?.(target.authorId, target.kind);
+        }}
+      />
       {onEditPost ? (
         <EditPostDialog
           visible={editing}
@@ -474,6 +622,34 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     gap: Spacing.two,
+  },
+  menuBtn: {
+    width: MENU_ICON_SIZE,
+    height: MENU_ICON_SIZE,
+    borderRadius: Radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuSheet: {
+    borderTopLeftRadius: Radius.lg,
+    borderTopRightRadius: Radius.lg,
+    paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.two,
+    paddingBottom: Spacing.six,
+    gap: Spacing.two,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    paddingVertical: Spacing.two,
+  },
+  menuIcon: {
+    width: MENU_ICON_SIZE,
+    height: MENU_ICON_SIZE,
+    borderRadius: Radius.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerBtn: {
     paddingHorizontal: Spacing.three,

@@ -78,6 +78,37 @@ export function removeFeedPost(qc: QueryClient, userId: UserId, postId: number) 
   qc.removeQueries({ queryKey: queryKeys.feed.comments(userId, postId), exact: true });
 }
 
+/**
+ * 차단한 작성자의 글·댓글을 캐시에서 지운다 (#1428) — spec: "이미 받아 둔 화면은 프론트가
+ * 차단 직후 상대 콘텐츠를 목록에서 지우고 새로고침한다". 목록·댓글에서 뺀다. 그 사람 글의
+ * 상세는 남긴다 — 떠나는 전환(#1094) 동안 같은 글을 그려야 한다. 새로고침(무효화)은 호출부가
+ * 하고, 상세는 재조회에서 404가 된다.
+ */
+export function removeFeedAuthor(qc: QueryClient, userId: UserId, authorId: number) {
+  qc.setQueriesData<FeedPostPages>({ queryKey: queryKeys.feed.lists(userId) }, (data) =>
+    data
+      ? {
+          ...data,
+          pages: data.pages.map((page) => ({
+            ...page,
+            items: page.items.filter((p) => p.author.userId !== authorId),
+          })),
+        }
+      : data,
+  );
+  qc.setQueriesData<FeedCommentPages>({ queryKey: queryKeys.feed.allComments(userId) }, (data) =>
+    data
+      ? {
+          ...data,
+          pages: data.pages.map((page) => ({
+            ...page,
+            items: page.items.filter((c) => c.author.userId !== authorId),
+          })),
+        }
+      : data,
+  );
+}
+
 /** 게시물이 서버에서 사라졌는가 (삭제·탈퇴로 숨김). */
 export function isFeedPostGone(err: unknown): boolean {
   return err instanceof ApiError && err.code === 'FEED_POST_NOT_FOUND';

@@ -57,6 +57,9 @@ const ICONS = {
   sound: 'volume-high-outline',
   help: 'help-circle-outline',
   bug: 'bug-outline',
+  // 신고·차단 (#1428).
+  flag: 'flag-outline',
+  block: 'ban-outline',
   palette: 'color-palette-outline',
   moon: 'moon-outline',
   refresh: 'refresh-outline',

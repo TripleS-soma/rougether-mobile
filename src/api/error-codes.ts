@@ -103,4 +103,11 @@ export const ErrorCode = {
   CHAT_CONTENT_BANNED: 'CHAT_CONTENT_BANNED',
   /** 409 — 같은 clientMessageId로 다른 본문을 보냄 (#1408). */
   CHAT_MESSAGE_CONFLICT: 'CHAT_MESSAGE_CONFLICT',
+  // --- 신고·차단 (#1428, spec domains/feed/api.md "신고·차단") ---
+  /** 400 — 내 글·댓글·가구를 신고. */
+  REPORT_SELF_TARGET: 'REPORT_SELF_TARGET',
+  /** 400 — 나 자신을 차단(해제 포함). */
+  BLOCK_SELF: 'BLOCK_SELF',
+  /** 404 — 차단 대상이 없거나 탈퇴·봇 계정. */
+  USER_NOT_FOUND: 'USER_NOT_FOUND',
 } as const;

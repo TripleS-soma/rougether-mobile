@@ -37,6 +37,7 @@ import { BugReportScreen } from '@/components/screens/bug-report-screen';
 import { NotificationListScreen } from '@/components/screens/notification-list-screen';
 import { FeedScreen } from '@/components/screens/feed-screen';
 import { FeedPostScreen } from '@/components/screens/feed-post-screen';
+import { BlockedUsersScreen } from '@/components/screens/blocked-users-screen';
 import { FeedComposeScreen } from '@/components/screens/feed-compose-screen';
 import { AnnouncementSection } from '@/components/notifications/announcement-section';
 import {
@@ -93,6 +94,7 @@ import { CurrencyGuide } from '@/components/ui/currency-guide';
 import { WalletHistorySheet } from '@/components/screens/sheets/wallet-history-sheet';
 import { SpringProgressBar } from '@/components/ui/spring-progress';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { ReportSheet } from '@/components/ui/report-sheet';
 import { SheetHandle } from '@/components/ui/sheet-handle';
 import { MissionBanner } from '@/components/ui/mission-banner';
 import { NotificationBanner } from '@/components/ui/notification-banner';
@@ -1224,6 +1226,30 @@ export const galleryEntries: GalleryEntry[] = [
           onAddComment={() => true}
           onDeleteComment={() => {}}
           onToggleLike={() => {}}
+          onReportPost={() => true}
+          onReportComment={() => true}
+          onBlockUser={() => {}}
+        />
+      </View>
+    ),
+  },
+  {
+    name: 'BlockedUsersScreen',
+    description:
+      '설정 > 차단한 사용자 (#1428, MODERATION_ENABLED로 숨김): 최근 차단순 목록, 차단 해제는 확인 다이얼로그 뒤. 로컬 픽스처 — 서버 요청 없음.',
+    render: () => (
+      <View style={{ height: 560, alignSelf: 'stretch' }}>
+        <BlockedUsersScreen
+          users={[
+            {
+              userId: 8,
+              nickname: '이웃',
+              profileImageKey: null,
+              blockedAt: '2026-09-29T03:00:00Z',
+            },
+            { userId: 9, nickname: null, profileImageKey: null, blockedAt: '2026-09-28T03:00:00Z' },
+          ]}
+          onUnblock={() => {}}
         />
       </View>
     ),
@@ -1637,6 +1663,12 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
+    name: 'UI · ReportSheet',
+    description:
+      '콘텐츠 신고 시트 (#1428) — 사유 7종 라디오, 선택 설명 500자, 사유를 골라야 신고하기가 켜진다. 버튼으로 열어보기.',
+    render: () => <ReportSheetDemo />,
+  },
+  {
     name: 'UI · ConfirmDialog',
     description: '백드롭+카드 확인 다이얼로그 (#557) — 버튼으로 열어보기.',
     render: () => <ConfirmDialogDemo />,
@@ -1766,6 +1798,21 @@ function MissionSheetDemo() {
         totalSteps={3}
         nextLabel={last ? null : '뽑기 1회 해보기'}
         onGo={() => setVisible(false)}
+        onClose={() => setVisible(false)}
+      />
+    </View>
+  );
+}
+
+function ReportSheetDemo() {
+  const [visible, setVisible] = useState(false);
+  return (
+    <View style={{ alignSelf: 'stretch' }}>
+      <Button label="신고 시트 열기" variant="danger" onPress={() => setVisible(true)} />
+      <ReportSheet
+        visible={visible}
+        targetLabel="게시물"
+        onSubmit={() => setVisible(false)}
         onClose={() => setVisible(false)}
       />
     </View>

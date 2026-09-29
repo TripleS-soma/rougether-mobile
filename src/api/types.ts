@@ -1394,3 +1394,33 @@ export type FeedCommentRequest = {
   clientCommentId: string;
   content: string;
 };
+
+// --- 신고·차단 (#1428, 서버 #399 / spec domains/feed/api.md "신고·차단") — 서버 미배포라 계약을 보고 손으로 옮겼다(#1412).
+
+/** 신고 사유 — 서버 enum `ContentReportReason`과 같은 순서. */
+export type ReportReason =
+  'SPAM' | 'ABUSE' | 'SEXUAL' | 'VIOLENCE' | 'PERSONAL_INFO' | 'COPYRIGHT' | 'OTHER';
+
+/** POST …/reports 본문. `detail`은 선택·최대 500자(서버가 앞뒤 공백을 떼고 빈 값은 null). */
+export type ContentReportRequest = {
+  reason: ReportReason;
+  detail?: string;
+};
+
+/** RECEIVED(검토 대기) · ACTIONED(숨김 조치) · DISMISSED(조치 없음 종료). */
+export type ContentReportStatus = 'RECEIVED' | 'ACTIONED' | 'DISMISSED';
+
+/** 201 Report — 같은 대상 재신고도 처음 신고를 201로 돌려준다(멱등). */
+export type ContentReportResponse = {
+  reportId?: number;
+  status?: ContentReportStatus;
+};
+
+/** GET /me/blocks 항목. */
+export type BlockedUserResponse = {
+  userId?: number;
+  nickname?: string | null;
+  profileImageKey?: string | null;
+  /** 차단 시각(ISO-8601 UTC). */
+  blockedAt?: string;
+};

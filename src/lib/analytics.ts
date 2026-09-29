@@ -106,6 +106,11 @@ export type AnalyticsEvent =
   | 'feed_like'
   /** 댓글 등록 성공. */
   | 'feed_comment'
+  // 신고·차단 (#1428) — App Store 1.2. 신고량·사유 분포로 운영 대기열 부담을 가늠한다.
+  /** 신고 접수 성공 — target: post|comment|asset, reason: 서버 enum(SPAM…OTHER). */
+  | 'content_report'
+  /** 사용자 차단 성공 — via: post|comment(어디서 차단했는지). */
+  | 'user_block'
   // 그 밖의 핵심 행동
   | 'shop_purchase'
   | 'cheer_send'

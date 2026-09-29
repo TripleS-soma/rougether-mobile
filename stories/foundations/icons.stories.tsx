@@ -50,6 +50,8 @@ const ICON_LABELS = {
   sound: '소리',
   help: '도움말',
   bug: '오류 제보',
+  flag: '신고',
+  block: '차단',
   palette: '테마',
   moon: '다크 모드',
   refresh: '새로고침',

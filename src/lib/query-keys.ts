@@ -75,5 +75,9 @@ export const queryKeys = {
       ['feed', userId, 'post', postId] as const,
     comments: (userId: number | null | undefined, postId: number | null) =>
       ['feed', userId, 'comments', postId] as const,
+    /** 모든 게시물의 댓글 — 차단(#1428) 직후 그 작성자 댓글을 한꺼번에 지울 때. */
+    allComments: (userId: number | null | undefined) => ['feed', userId, 'comments'] as const,
   },
+  /** 내가 차단한 사용자 (#1428, GET /me/blocks) — 무한 쿼리, cursor = 차단 기록 id. */
+  blockedUsers: (userId: number | null | undefined) => ['blocked-users', userId] as const,
 };

@@ -45,6 +45,7 @@ export * from './houses';
 export * from './masters';
 export * from './onboarding';
 export * from './me';
+export * from './moderation';
 export * from './notifications';
 export * from './recommendations';
 export * from './reports';

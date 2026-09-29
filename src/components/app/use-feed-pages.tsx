@@ -9,6 +9,7 @@ import {
 } from 'react';
 
 import { fetchFeedImage } from '@/api/feed';
+import type { ReportReason } from '@/api/types';
 import { type Screen } from '@/components/app/navigation';
 import { FeedComposeScreen } from '@/components/screens/feed-compose-screen';
 import { FeedPostScreen } from '@/components/screens/feed-post-screen';
@@ -18,6 +19,7 @@ import { FEED_ENABLED, FEED_MAX_IMAGES } from '@/constants/feed';
 import { useFeed } from '@/hooks/use-feed';
 import { useFeedCompose } from '@/hooks/use-feed-compose';
 import { useFeedPost } from '@/hooks/use-feed-post';
+import { useModeration } from '@/hooks/use-moderation';
 import { useLatestRef } from '@/hooks/use-stable-value';
 import { i18n } from '@/i18n';
 import { track } from '@/lib/analytics';
@@ -112,6 +114,35 @@ export function useFeedPages({
     [deleteComment],
   );
 
+  // 신고·차단 (#1428). 신고는 접수 안내만 — 서버가 자동으로 숨기지 않는다(운영자 검토).
+  const { report, block } = useModeration({ onError: showError });
+  const handleReportPost = useCallback(
+    async (id: number, reason: ReportReason, detail?: string) => {
+      const ok = await report({ kind: 'post', postId: id }, reason, detail);
+      if (ok) toast(i18n.t('member.moderation.toast.reported'), 'success');
+      return ok;
+    },
+    [report, toast],
+  );
+  const handleReportComment = useCallback(
+    async (id: number, commentId: number, reason: ReportReason, detail?: string) => {
+      const ok = await report({ kind: 'comment', postId: id, commentId }, reason, detail);
+      if (ok) toast(i18n.t('member.moderation.toast.reported'), 'success');
+      return ok;
+    },
+    [report, toast],
+  );
+  // 보고 있던 글의 작성자를 차단하면 그 글은 곧 404가 된다 — 피드로 돌아간다.
+  const detailAuthorRef = useLatestRef(detail.post?.author.userId);
+  const handleBlockUser = useCallback(
+    async (userId: number, via: 'post' | 'comment') => {
+      if (!(await block(userId, via))) return;
+      toast(i18n.t('member.moderation.toast.blocked'), 'success');
+      if (detailAuthorRef.current === userId) setScreen('feed');
+    },
+    [block, toast, detailAuthorRef, setScreen],
+  );
+
   /** 탭 페이저의 피드 페이지 prop — 참조 고정(#539). */
   const tabProps: FeedScreenProps = useMemo(
     () => ({
@@ -151,6 +182,9 @@ export function useFeedPages({
         onToggleLike={handleToggleLike}
         onDeletePost={(id) => void handleDeletePost(id)}
         onEditPost={detail.editPost}
+        onReportPost={handleReportPost}
+        onReportComment={handleReportComment}
+        onBlockUser={(userId, via) => void handleBlockUser(userId, via)}
         onBack={() => setScreen('feed')}
         loadImage={fetchFeedImage}
       />
