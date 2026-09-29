@@ -64,7 +64,8 @@
         "decor": "소품",
         "wallpaper": "벽지",
         "floor": "바닥",
-        "background": "배경"
+        "background": "배경",
+        "market": "거래소"
       },
       "tabA11y": "{{label}} 탭",
       "slotPickerTitle": "이 자리에 놓을 가구",
@@ -284,7 +285,8 @@
         "network": "연결을 확인하고 다시 시도해주세요.",
         "wrongType": "JPG 또는 PNG 사진을 선택해주세요.",
         "openFailed": "사진을 열지 못했어요. 사진 접근 설정을 확인해주세요.",
-        "inventoryLoadFailed": "가구함을 불러오지 못했어요. 다시 시도해주세요."
+        "inventoryLoadFailed": "가구함을 불러오지 못했어요. 다시 시도해주세요.",
+        "FURNITURE_MARKET_LISTED": "거래소에 올린 가구는 다시 검수를 받을 수 없어요."
       }
     },
     "minigame": {

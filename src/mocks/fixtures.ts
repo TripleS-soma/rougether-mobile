@@ -1,3 +1,4 @@
+import type { MarketAsset, MarketAssetCard, MarketOrder, MarketTrade } from '@/api/market';
 import type { FeedComment, FeedDraftImage, FeedPost } from '@/components/screens/feed/types';
 import type { House, HouseMission } from '@/components/screens/house/types';
 import type { GuestbookEntry } from '@/components/screens/friend-room-screen';
@@ -218,4 +219,95 @@ export const DEMO_FEED_DRAFT: FeedDraftImage[] = [
   { key: 'draft-1', uri: '', status: 'done', imageId: 41 },
   { key: 'draft-2', uri: '', status: 'uploading' },
   { key: 'draft-3', uri: '', status: 'failed', error: '사진 저장소가 잠시 불안정해요.' },
+];
+
+// --- 가구 거래소 (#1427) — 로컬 픽스처. 그림 키는 AI 가구와 같은 CDN 경로 모양(실물 없음 → 빈 칸).
+
+export const DEMO_MARKET_ASSETS: MarketAssetCard[] = [
+  {
+    assetId: 1,
+    itemId: 320,
+    name: '고양이 소파',
+    assetKey: 'items/photo-furniture/furniture/demo-cat-sofa.png',
+    creatorNickname: '영희',
+    totalSupply: 5,
+    bestAskPrice: 28,
+    askQuantity: 3,
+    lastTradePrice: 30,
+    status: 'ACTIVE',
+  },
+  {
+    assetId: 2,
+    itemId: 321,
+    name: '원목 책상',
+    assetKey: 'items/photo-furniture/furniture/demo-desk.png',
+    creatorNickname: null,
+    totalSupply: 3,
+    bestAskPrice: null,
+    askQuantity: 0,
+    lastTradePrice: null,
+    status: 'ACTIVE',
+  },
+  {
+    assetId: 3,
+    itemId: 322,
+    name: '초록 스탠드',
+    assetKey: 'items/photo-furniture/furniture/demo-lamp.png',
+    creatorNickname: '철수',
+    totalSupply: 10,
+    bestAskPrice: 12,
+    askQuantity: 1,
+    lastTradePrice: 15,
+    status: 'ACTIVE',
+  },
+];
+
+export const DEMO_MARKET_ASSET: MarketAsset = {
+  ...DEMO_MARKET_ASSETS[0],
+  isCreator: false,
+  unissuedQuantity: 2,
+  owned: false,
+  asks: [
+    { price: 28, quantity: 1 },
+    { price: 30, quantity: 2 },
+    { price: 35, quantity: 1 },
+    { price: 40, quantity: 1 },
+  ],
+  bids: [{ price: 25, quantity: 2 }],
+};
+
+export const DEMO_MARKET_TRADES: MarketTrade[] = [
+  { tradeId: 7, price: 30, quantity: 1, tradedAt: '2026-09-29T02:00:00Z' },
+  { tradeId: 6, price: 27, quantity: 1, tradedAt: '2026-09-28T09:00:00Z' },
+];
+
+export const DEMO_MARKET_ORDERS: MarketOrder[] = [
+  {
+    orderId: 5,
+    assetId: 1,
+    name: '고양이 소파',
+    assetKey: 'items/photo-furniture/furniture/demo-cat-sofa.png',
+    side: 'SELL',
+    source: 'INVENTORY',
+    price: 30,
+    quantity: 1,
+    filledQuantity: 0,
+    status: 'OPEN',
+    expiresAt: '2026-10-05T03:00:00Z',
+    createdAt: '2026-09-28T03:00:00Z',
+  },
+  {
+    orderId: 4,
+    assetId: 3,
+    name: '초록 스탠드',
+    assetKey: 'items/photo-furniture/furniture/demo-lamp.png',
+    side: 'BUY',
+    source: null,
+    price: 12,
+    quantity: 1,
+    filledQuantity: 0,
+    status: 'OPEN',
+    expiresAt: '2026-09-29T08:00:00Z',
+    createdAt: '2026-09-22T08:00:00Z',
+  },
 ];

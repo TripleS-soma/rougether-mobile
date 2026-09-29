@@ -39,6 +39,10 @@ import { FeedScreen } from '@/components/screens/feed-screen';
 import { FeedPostScreen } from '@/components/screens/feed-post-screen';
 import { BlockedUsersScreen } from '@/components/screens/blocked-users-screen';
 import { FeedComposeScreen } from '@/components/screens/feed-compose-screen';
+import { MarketAssetScreen } from '@/components/screens/market-asset-screen';
+import { MarketOrdersScreen } from '@/components/screens/market-orders-screen';
+import { MarketList } from '@/components/screens/market/market-list';
+import { MarketIssueSheet } from '@/components/screens/market/market-issue-sheet';
 import { AnnouncementSection } from '@/components/notifications/announcement-section';
 import {
   NotificationTabs,
@@ -110,6 +114,10 @@ import {
   DEMO_FEED_COMMENTS,
   DEMO_FEED_DRAFT,
   DEMO_FEED_POSTS,
+  DEMO_MARKET_ASSET,
+  DEMO_MARKET_ASSETS,
+  DEMO_MARKET_ORDERS,
+  DEMO_MARKET_TRADES,
   RECOMMENDED_HOUSES,
 } from '@/mocks/fixtures';
 import { RoomRenderReference } from '@/dev/room-render-reference';
@@ -1255,6 +1263,44 @@ export const galleryEntries: GalleryEntry[] = [
     ),
   },
   {
+    name: 'MarketList',
+    description:
+      '가구 거래소 목록 (#1427, MARKET_ENABLED로 숨김) — 꾸미기의 거래소 탭 안 카드 격자: 그림·이름·제작자(탈퇴 시 탈퇴한 회원)·최저 판매가/판매 대기 없음·최근 거래가, 내 주문·새로고침. 로컬 픽스처.',
+    render: () => <MarketList assets={DEMO_MARKET_ASSETS} hasNext />,
+  },
+  {
+    name: 'MarketAssetScreen',
+    description:
+      '거래소 가구 상세 (#1427): 그림·제작자·발행 수·최저 판매가·최근 거래가, 구매하기/판매하기/발행 재고 판매(보유·제작자 여부로), 호가 위 3단계, 최근 거래, 신고하기(onReport 있을 때만). 버튼을 누르면 주문 시트(가격 1~1,000·예상 수령액). 로컬 픽스처.',
+    render: () => (
+      <View style={{ height: 720, alignSelf: 'stretch' }}>
+        <MarketAssetScreen
+          asset={{ ...DEMO_MARKET_ASSET, owned: true, isCreator: true }}
+          trades={DEMO_MARKET_TRADES}
+          coinBalance={120}
+          onPlaceOrder={() => true}
+          onReport={() => true}
+        />
+      </View>
+    ),
+  },
+  {
+    name: 'MarketOrdersScreen',
+    description:
+      '거래소 내 주문 (#1427): 대기 중/완료 탭, 행(그림·이름·구매/판매·가격·체결 수량·상태·만료까지), 대기 중은 확인 후 취소. 로컬 픽스처.',
+    render: () => (
+      <View style={{ height: 640, alignSelf: 'stretch' }}>
+        <MarketOrdersScreen orders={DEMO_MARKET_ORDERS} onCancel={() => {}} />
+      </View>
+    ),
+  },
+  {
+    name: 'MarketIssueSheet',
+    description:
+      '거래소에 올리기 (#1427) — AI 가구 스튜디오의 발행 시트: 발행 수량 1~10, 추가 발행·재검수 불가 안내.',
+    render: () => <MarketIssueSheetDemo />,
+  },
+  {
     name: 'FeedComposeScreen',
     description:
       '피드 작성 (#1409): 사진 타일(올리는 중·완료·실패 다시), 본문 2,000자 카운터. 전부 올라가야 올리기가 켜진다. 로컬 픽스처.',
@@ -1832,6 +1878,21 @@ function ConfirmDialogDemo() {
         destructive
         onConfirm={() => setVisible(false)}
         onCancel={() => setVisible(false)}
+      />
+    </View>
+  );
+}
+
+/** 발행 시트 열기 버튼 (#1427). */
+function MarketIssueSheetDemo() {
+  const [visible, setVisible] = useState(false);
+  return (
+    <View style={{ alignSelf: 'stretch', minHeight: 120 }}>
+      <Button label="거래소에 올리기" onPress={() => setVisible(true)} />
+      <MarketIssueSheet
+        visible={visible}
+        onSubmit={() => setVisible(false)}
+        onClose={() => setVisible(false)}
       />
     </View>
   );

@@ -80,4 +80,18 @@ export const queryKeys = {
   },
   /** 내가 차단한 사용자 (#1428, GET /me/blocks) — 무한 쿼리, cursor = 차단 기록 id. */
   blockedUsers: (userId: number | null | undefined) => ['blocked-users', userId] as const,
+  /**
+   * 가구 거래소 (#1427) — 상세의 `owned`·`isCreator`가 요청자 기준이라 목록까지 전부 사용자별.
+   * 주문·취소·발행 결과가 나오면 `all`로 통째 무효화한다(목록·상세·체결·내 주문).
+   */
+  market: {
+    all: (userId: number | null | undefined) => ['market', userId] as const,
+    assets: (userId: number | null | undefined) => ['market', userId, 'assets'] as const,
+    asset: (userId: number | null | undefined, assetId: number | null) =>
+      ['market', userId, 'asset', assetId] as const,
+    trades: (userId: number | null | undefined, assetId: number | null) =>
+      ['market', userId, 'trades', assetId] as const,
+    orders: (userId: number | null | undefined, status: 'OPEN' | 'CLOSED') =>
+      ['market', userId, 'orders', status] as const,
+  },
 };

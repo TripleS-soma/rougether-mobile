@@ -18,6 +18,7 @@ import { useScreenTransition } from '@/components/app/use-screen-transition';
 import { useFriendVisit } from '@/components/app/use-friend-visit';
 import { useHousePages } from '@/components/app/use-house-pages';
 import { useFeedPages } from '@/components/app/use-feed-pages';
+import { useMarketPages } from '@/components/app/use-market-pages';
 import { useMissionLinks } from '@/components/app/use-mission-links';
 import { useMyRoomPages } from '@/components/app/use-my-room-pages';
 import { useSettingsSurface } from '@/components/app/use-settings-surface';
@@ -334,7 +335,8 @@ export function AppShell({
     if (screen !== 'decor') {
       setNewDecorItemIds([]);
       // 다음에 꾸미기를 직접 열면 기본 탭이어야 한다 — 뽑기에서 온 게 아니다.
-      setDecorInitialTab(undefined);
+      // 거래소 상세·내 주문(#1427)은 꾸미기로 돌아오는 서브화면이라 연 탭을 기억한다.
+      if (screen !== 'marketAsset' && screen !== 'marketOrders') setDecorInitialTab(undefined);
     }
   }, [screen]);
 
@@ -589,6 +591,16 @@ export function AppShell({
   // 있으면 요청도 화면도 없다.
   const feedPages = useFeedPages({ nav: { screen, setScreen } });
 
+  // 가구 거래소 배선 (#1427) — 꾸미기의 거래소 탭·판매 중 줄, 상세·내 주문 서브화면, 스튜디오
+  // 발행. MARKET_ENABLED가 꺼져 있으면 요청도 화면도 없다.
+  const openDecorMarketTab = useCallback(() => setDecorInitialTab('market'), []);
+  const marketPages = useMarketPages({
+    nav: { screen, setScreen },
+    coinBalance: wallet.coin,
+    onWalletChanged: myRoomData.refreshWallet,
+    onLeaveDecorFromMarketTab: openDecorMarketTab,
+  });
+
   // 코치마크 단계 (#1324) — housePages.noHouses를 읽으므로 그 아래에서 계산.
   const coachStep =
     missions.step && missions.completedIndex == null
@@ -680,6 +692,7 @@ export function AppShell({
             }
             return refreshed;
           }}
+          onIssue={marketPages.onIssue}
         />
       ) : null}
       {screen === 'decor' ? (
@@ -726,6 +739,9 @@ export function AppShell({
             void retryShop();
           }}
           onBack={() => setScreen('myRoom')}
+          renderMarket={marketPages.renderMarket}
+          sellingCount={marketPages.sellingCount}
+          onOpenSelling={marketPages.onOpenSelling}
         />
       ) : null}
 
@@ -772,6 +788,9 @@ export function AppShell({
 
       {/* 피드 서브화면 2종 (#1409) — use-feed-pages가 그린다. */}
       {feedPages.subScreen}
+
+      {/* 거래소 서브화면 2종 (#1427) — use-market-pages가 그린다. */}
+      {marketPages.subScreen}
 
       {/* 내 정보 서브화면 9종(설정 포함, #692 → #1088) — use-settings-surface가 그린다. */}
       {settingsSurface.subScreen}

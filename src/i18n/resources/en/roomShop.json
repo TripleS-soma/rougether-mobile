@@ -64,7 +64,8 @@
         "decor": "Decor",
         "wallpaper": "Wallpaper",
         "floor": "Floor",
-        "background": "Scene"
+        "background": "Scene",
+        "market": "Market"
       },
       "tabA11y": "{{label}} tab",
       "slotPickerTitle": "Furniture for this spot",
@@ -284,7 +285,8 @@
         "network": "Check your connection and try again.",
         "wrongType": "Choose a JPG or PNG photo.",
         "openFailed": "Couldn't open the photo. Check your photo access settings.",
-        "inventoryLoadFailed": "Couldn't load your inventory. Please try again."
+        "inventoryLoadFailed": "Couldn't load your inventory. Please try again.",
+        "FURNITURE_MARKET_LISTED": "Furniture listed on the market can't be re-reviewed."
       }
     },
     "minigame": {
