@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BottomSheet } from '@/components/ui/bottom-sheet';
@@ -24,7 +25,7 @@ export type MissionSheetProps = {
  * 미션 완료 전환 시트 (#571) — "미션 N 완료!"와 다음 미션으로 가는 손잡이.
  * 마지막 미션이면 축하 문구만 남기고 닫는다(배너는 이미 소멸).
  */
-export function MissionSheet({
+function MissionSheetBase({
   visible,
   completedStep,
   totalSteps,
@@ -119,3 +120,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
+
+/** 셸이 렌더될 때마다 같이 그려지지 않게 (성능 장부 R9) — 셸은 콜백 참조를 고정해 넘긴다. */
+export const MissionSheet = memo(MissionSheetBase);

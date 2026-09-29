@@ -15,6 +15,9 @@ import { todayIso } from '@/utils/datetime';
  * 루틴.linkedMissionId == 미션 id (이름 매칭 폐지). 반환 콜백·파생값은 전부
  * 참조 고정 — memo 화면(MyRoomScreen·HouseScreen)의 prop으로 흘러간다 (#539).
  */
+type LinkedRoutine = { missionId: number; completedToday: boolean };
+const NO_LINKED_ROUTINES: LinkedRoutine[] = [];
+
 export function useMissionLinks({
   houses,
   currentHouse,
@@ -121,10 +124,13 @@ export function useMissionLinks({
 
   // 현재 집 미션에 연동된 내 루틴 (미션 카드의 연동/기여함 라벨 판정 —
   // 오늘 완료 여부가 곧 '기여함'이라 앱 재시작 후에도 라벨이 유지된다).
+  // completions는 토글마다 새 객체라, 내용이 같으면 이전 배열을 돌려 집 화면 memo를
+  // 지킨다(성능 장부 R7 — 연동 루틴이 없는 대부분의 토글에서 집 화면이 다시 그려졌다).
+  const linkedRef = useRef<LinkedRoutine[]>(NO_LINKED_ROUTINES);
   const houseLinkedRoutines = useMemo(() => {
     const missionIds = new Set((currentHouse?.missions ?? []).map((m) => m.id));
     const today = todayIso();
-    return routines
+    const next = routines
       .filter(
         (r) =>
           r.kind === 'routine' && r.linkedMissionId != null && missionIds.has(r.linkedMissionId),
@@ -133,6 +139,14 @@ export function useMissionLinks({
         missionId: r.linkedMissionId!,
         completedToday: (completions[r.id] ?? []).includes(today),
       }));
+    const prev = linkedRef.current;
+    const same =
+      prev.length === next.length &&
+      prev.every(
+        (p, i) => p.missionId === next[i].missionId && p.completedToday === next[i].completedToday,
+      );
+    if (!same) linkedRef.current = next.length === 0 ? NO_LINKED_ROUTINES : next;
+    return linkedRef.current;
   }, [currentHouse, routines, completions]);
 
   // HouseScreen은 배열 prop을 받는다 — Set에서 파생한 배열의 참조를 고정.
