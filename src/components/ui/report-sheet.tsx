@@ -99,6 +99,8 @@ export function ReportSheet({
                   accessibilityRole="radio"
                   accessibilityLabel={label}
                   accessibilityState={{ checked: selected, disabled: submitting }}
+                  // RN Web은 accessibilityState를 DOM으로 옮기지 않는다(bear-check와 같은 이유).
+                  aria-checked={selected}
                   style={[
                     styles.reasonRow,
                     { backgroundColor: selected ? t.primarySoft : t.surfaceMuted },
