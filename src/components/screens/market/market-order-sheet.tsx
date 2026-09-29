@@ -149,7 +149,7 @@ export function MarketOrderSheet({
               accessibilityState={{ disabled: quantity <= 1 || submitting }}
               style={[styles.stepBtn, { backgroundColor: t.surfaceMuted }]}>
               <Text style={[Typography.label, { color: quantity <= 1 ? t.textDisabled : t.text }]}>
-                −
+                -
               </Text>
             </Pressable>
             <Text style={[Typography.label, styles.qty, { color: t.text }]}>
