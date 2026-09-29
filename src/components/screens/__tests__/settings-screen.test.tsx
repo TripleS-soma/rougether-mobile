@@ -94,6 +94,18 @@ describe('SettingsScreen', () => {
     expect(onLogout).not.toHaveBeenCalled();
   });
 
+  it('차단한 사용자 행은 콜백이 없으면 숨는다 (#1428)', async () => {
+    const { queryByText } = await render(<SettingsScreen />);
+    expect(queryByText('차단한 사용자')).toBeNull();
+  });
+
+  it('차단한 사용자 행을 누르면 onOpenBlockedUsers (#1428)', async () => {
+    const onOpenBlockedUsers = jest.fn();
+    const { getByText } = await render(<SettingsScreen onOpenBlockedUsers={onOpenBlockedUsers} />);
+    await fireEvent.press(getByText('차단한 사용자'));
+    expect(onOpenBlockedUsers).toHaveBeenCalled();
+  });
+
   it('폰트는 인라인 칩이 아니라 현재값을 단 행이다 (#750)', async () => {
     const { getByLabelText, queryByLabelText } = await render(<SettingsScreen fontId="suit" />);
     // 인라인 라디오 칩(#382)은 사라지고 별도 화면으로 갔다.

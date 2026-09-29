@@ -71,6 +71,8 @@ export type SettingsScreenProps = ScrollRestoreProps & {
   onChangePassword?: () => void;
   onOpenNotifications?: () => void;
   onOpenSound?: () => void;
+  /** 차단한 사용자 (#1428) — 없으면 행을 숨긴다(MODERATION_ENABLED가 꺼져 있을 때). */
+  onOpenBlockedUsers?: () => void;
   onReplayOnboarding?: () => void;
   /** 스토어 요건 — 인앱 약관/개인정보처리방침 링크 (#545). */
   onOpenTerms?: () => void;
@@ -110,6 +112,7 @@ export const SettingsScreen = memo(function SettingsScreen({
   onOpenLanguage,
   onOpenNotifications,
   onOpenSound,
+  onOpenBlockedUsers,
   onOpenTerms,
   onOpenPrivacy,
   onReplayOnboarding,
@@ -161,6 +164,15 @@ export const SettingsScreen = memo(function SettingsScreen({
       title: tr('settings.sectionEtc'),
       rows: [
         { icon: 'refresh', label: tr('settings.replayTutorial'), onPress: onReplayOnboarding },
+        ...(onOpenBlockedUsers
+          ? [
+              {
+                icon: 'block' as const,
+                label: tr('member.moderation.blockedUsers.title'),
+                onPress: onOpenBlockedUsers,
+              },
+            ]
+          : []),
         { icon: 'list', label: tr('settings.terms'), onPress: onOpenTerms },
         { icon: 'lock', label: tr('settings.privacy'), onPress: onOpenPrivacy },
         { icon: 'leave', label: tr('settings.logout'), onPress: () => setConfirmLogout(true) },

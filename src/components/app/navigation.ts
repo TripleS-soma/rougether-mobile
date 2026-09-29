@@ -36,6 +36,8 @@ export type Screen =
   | 'bugReport'
   | 'notifications'
   | 'sound'
+  // 차단한 사용자 (#1428) — 설정의 서브화면, MODERATION_ENABLED일 때만 도달한다.
+  | 'blockedUsers'
   | 'help'
   | 'inviteFriends'
   | 'weeklyReport'
@@ -81,6 +83,7 @@ export const TAB_FOR_SCREEN: Record<Screen, NavTab | null> = {
   bugReport: null,
   notifications: null,
   sound: null,
+  blockedUsers: null,
   help: null,
   inviteFriends: null,
   weeklyReport: null,
@@ -146,6 +149,7 @@ export const BACK_SCREEN: Record<Screen, Screen | null> = {
   bugReport: 'myPage',
   notifications: 'settings',
   sound: 'settings',
+  blockedUsers: 'settings',
   help: 'myPage',
   inviteFriends: 'myPage',
   // 내 정보에서도, 새 회고 배너에서도 열린다 — 실제 목적지는 addReturnScreen (#1056).

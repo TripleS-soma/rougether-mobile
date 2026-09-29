@@ -528,6 +528,70 @@
     "myCharacters": {
       "swapFailed": "Couldn't change character",
       "swapped": "Character changed"
+    },
+    "moderation": {
+      "menuTitle": "More",
+      "postMenuA11y": "Post options",
+      "commentMenuA11y": "Comment options",
+      "menu": {
+        "report": "Report",
+        "block": "Block this user"
+      },
+      "target": {
+        "post": "Post",
+        "comment": "Comment",
+        "asset": "Furniture"
+      },
+      "report": {
+        "title": "Report",
+        "subtitle": "Reporting a {{target}} — pick one reason.",
+        "detailPlaceholder": "Add details (optional)",
+        "detailA11y": "Report details",
+        "counter": "{{count}}/{{max}}",
+        "notice": "Our team reviews every report. The other person is never told who reported them.",
+        "submit": "Report",
+        "submitting": "Sending…",
+        "sheetA11y": "Choose a report reason"
+      },
+      "reason": {
+        "SPAM": "Spam or ads",
+        "ABUSE": "Abuse or harassment",
+        "SEXUAL": "Sexual content",
+        "VIOLENCE": "Violence or danger",
+        "PERSONAL_INFO": "Personal information",
+        "COPYRIGHT": "Copyright infringement",
+        "OTHER": "Other"
+      },
+      "block": {
+        "title": "Block this user?",
+        "body": "You won't see their posts or comments. You can unblock them anytime in Settings.",
+        "confirm": "Block",
+        "confirmA11y": "Confirm block"
+      },
+      "toast": {
+        "reported": "Report received. We'll review it and take action.",
+        "reportSelf": "You can't report your own content.",
+        "reportGone": "This content no longer exists.",
+        "reportFailed": "Couldn't send the report. Please try again shortly.",
+        "blocked": "User blocked",
+        "blockSelf": "You can't block yourself.",
+        "userGone": "This user has left Rougether.",
+        "blockFailed": "Couldn't block this user. Please try again shortly.",
+        "unblocked": "User unblocked",
+        "unblockFailed": "Couldn't unblock this user. Please try again shortly."
+      },
+      "blockedUsers": {
+        "title": "Blocked users",
+        "empty": "You haven't blocked anyone",
+        "emptyBody": "People you block from the feed show up here.",
+        "loadError": "Couldn't load blocked users",
+        "more": "Load more",
+        "unblock": "Unblock",
+        "unblockA11y": "Unblock {{name}}",
+        "unblockTitle": "Unblock this user?",
+        "unblockBody": "You'll see {{name}}'s posts and comments again.",
+        "anonymous": "Unknown user"
+      }
     }
   }
 }

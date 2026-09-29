@@ -80,4 +80,106 @@ describe('FeedPostScreen (#1409)', () => {
     const { getByText } = await render(<FeedPostScreen post={null} notFound />);
     expect(getByText('삭제되었거나 볼 수 없는 게시물이에요.')).toBeTruthy();
   });
+
+  describe('신고·차단 (#1428)', () => {
+    const moderation = () => ({
+      onReportPost: jest.fn().mockResolvedValue(true),
+      onReportComment: jest.fn().mockResolvedValue(true),
+      onBlockUser: jest.fn(),
+    });
+
+    it('남의 글에는 더보기(수정·삭제 없음)', async () => {
+      const handlers = moderation();
+      const other = await render(
+        <FeedPostScreen
+          post={OTHER_POST}
+          onEditPost={() => true}
+          onDeletePost={() => {}}
+          {...handlers}
+        />,
+      );
+      expect(other.getByLabelText('게시물 더보기')).toBeTruthy();
+      expect(other.queryByLabelText('게시물 삭제')).toBeNull();
+    });
+
+    it('내 글에는 더보기가 없다', async () => {
+      const handlers = moderation();
+      const mine = await render(
+        <FeedPostScreen
+          post={MY_POST}
+          onEditPost={() => true}
+          onDeletePost={() => {}}
+          {...handlers}
+        />,
+      );
+      expect(mine.queryByLabelText('게시물 더보기')).toBeNull();
+      expect(mine.getByText('수정')).toBeTruthy();
+    });
+
+    it('댓글 더보기는 남의 댓글에만', async () => {
+      const { getAllByLabelText } = await render(
+        <FeedPostScreen post={OTHER_POST} comments={DEMO_FEED_COMMENTS} {...moderation()} />,
+      );
+      // 301(이웃) 한 개 — 302는 내 댓글.
+      expect(getAllByLabelText('댓글 더보기')).toHaveLength(1);
+    });
+
+    it('콜백이 없으면 더보기도 없다', async () => {
+      const { queryByLabelText } = await render(
+        <FeedPostScreen post={OTHER_POST} comments={DEMO_FEED_COMMENTS} />,
+      );
+      expect(queryByLabelText('게시물 더보기')).toBeNull();
+      expect(queryByLabelText('댓글 더보기')).toBeNull();
+    });
+
+    it('글 신고: 메뉴 → 사유 → 신고하기가 글 id로', async () => {
+      const handlers = moderation();
+      const { getByLabelText, findByLabelText } = await render(
+        <FeedPostScreen post={OTHER_POST} {...handlers} />,
+      );
+      await fireEvent.press(getByLabelText('게시물 더보기'));
+      await fireEvent.press(await findByLabelText('신고하기'));
+      await fireEvent.press(await findByLabelText('스팸·광고'));
+      await fireEvent.press(getByLabelText('신고하기'));
+      await waitFor(() =>
+        expect(handlers.onReportPost).toHaveBeenCalledWith(OTHER_POST.postId, 'SPAM', undefined),
+      );
+    });
+
+    it('댓글 신고는 글 id·댓글 id로', async () => {
+      const handlers = moderation();
+      const { getByLabelText, findByLabelText } = await render(
+        <FeedPostScreen post={OTHER_POST} comments={DEMO_FEED_COMMENTS} {...handlers} />,
+      );
+      await fireEvent.press(getByLabelText('댓글 더보기'));
+      await fireEvent.press(await findByLabelText('신고하기'));
+      await fireEvent.press(await findByLabelText('저작권 침해'));
+      await fireEvent.press(getByLabelText('신고하기'));
+      await waitFor(() =>
+        expect(handlers.onReportComment).toHaveBeenCalledWith(
+          OTHER_POST.postId,
+          301,
+          'COPYRIGHT',
+          undefined,
+        ),
+      );
+    });
+
+    it('차단은 확인 다이얼로그 뒤에 작성자 id로', async () => {
+      const handlers = moderation();
+      const { getByLabelText, findByLabelText, findByText } = await render(
+        <FeedPostScreen post={OTHER_POST} {...handlers} />,
+      );
+      await fireEvent.press(getByLabelText('게시물 더보기'));
+      await fireEvent.press(await findByLabelText('이 사용자 차단'));
+      expect(
+        await findByText(
+          '차단하면 이 사용자의 게시물과 댓글이 보이지 않아요. 설정에서 언제든 해제할 수 있어요.',
+        ),
+      ).toBeTruthy();
+      expect(handlers.onBlockUser).not.toHaveBeenCalled();
+      await fireEvent.press(getByLabelText('사용자 차단 확인'));
+      expect(handlers.onBlockUser).toHaveBeenCalledWith(OTHER_POST.author.userId, 'post');
+    });
+  });
 });
