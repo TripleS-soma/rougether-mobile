@@ -1,3 +1,5 @@
+import { IS_INTERNAL_CHANNEL } from '@/constants/release-channel';
+
 /**
  * 가구 거래소 (#1427) — 서버 계약 `rougether-spec/domains/market`.
  *
@@ -8,8 +10,11 @@
  * 신고 API(TripleS-soma/rougether-server#423)가 배포되고 상세 화면의 `onReport`에
  * 연결한 뒤에 켠다. 켤 때는 개인정보 처리방침·스토어 문구도 같이 고친다(AGENTS.md
  * "새 데이터·새 권한").
+ *
+ * 2026-09-29부터 **내부 테스트 채널에서만** 켠다(실기기 확인용, `IS_INTERNAL_CHANNEL`).
+ * 스토어 사용자에게 여는 것(`true`로 바꾸기)은 사용자(제품 오너)가 확인한 뒤에만.
  */
-export const MARKET_ENABLED = false;
+export const MARKET_ENABLED = IS_INTERNAL_CHANNEL;
 
 /** 주문 가격 1~1,000 코인 정수 (POST /market/orders `price`). */
 export const MARKET_PRICE_MIN = 1;
