@@ -1,3 +1,5 @@
+import { IS_INTERNAL_CHANNEL } from '@/constants/release-channel';
+
 /**
  * 공개 SNS 피드 (#1409) — 서버 계약 `rougether-spec/domains/feed`.
  *
@@ -6,8 +8,11 @@
  * 신고·차단 수단이 앱 안에 있어야 한다(App Store 심사 가이드 1.2). 서버의 신고·차단 API
  * (TripleS-soma/rougether-server#399)가 생기고 앱에 연결한 뒤에 켠다. 켤 때는 개인정보
  * 처리방침·스토어 문구도 같이 고친다(AGENTS.md "새 데이터·새 권한").
+ *
+ * 2026-09-29부터 **내부 테스트 채널에서만** 켠다(실기기 확인용, `IS_INTERNAL_CHANNEL`).
+ * 스토어 사용자에게 여는 것(`true`로 바꾸기)은 사용자(제품 오너)가 확인한 뒤에만.
  */
-export const FEED_ENABLED = false;
+export const FEED_ENABLED = IS_INTERNAL_CHANNEL;
 
 /** 게시물당 사진 1–10장 (POST /feed/posts `imageIds`). */
 export const FEED_MAX_IMAGES = 10;
