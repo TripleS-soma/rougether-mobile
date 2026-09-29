@@ -8,6 +8,8 @@ import {
   fetchMyMarketOrders,
   issueMarketAsset,
   placeMarketOrder,
+  toMarketAssetCard,
+  toMarketOrder,
 } from '@/api/market';
 
 const realFetch = global.fetch;
@@ -163,7 +165,7 @@ describe('거래소 API (#1427)', () => {
     });
 
     fetchMock = mockResponse(
-      { assetId: 9, totalSupply: 5, unissuedQuantity: 4, isCreator: true },
+      { assetId: 9, status: 'ACTIVE', totalSupply: 5, unissuedQuantity: 4, isCreator: true },
       201,
     );
     const asset = await issueMarketAsset({ userItemId: 77, totalSupply: 5 });
@@ -173,5 +175,15 @@ describe('거래소 API (#1427)', () => {
       body: { userItemId: 77, totalSupply: 5 },
     });
     expect(asset).toMatchObject({ assetId: 9, unissuedQuantity: 4 });
+  });
+
+  it('상태·방향이 빠진 응답을 그럴듯한 값으로 채우지 않는다', () => {
+    expect(toMarketOrder({ orderId: 1, assetId: 2, side: 'SELL' })).toBeNull();
+    expect(toMarketOrder({ orderId: 1, assetId: 2, status: 'OPEN' })).toBeNull();
+    expect(toMarketAssetCard({ assetId: 1, name: '의자' })).toBeNull();
+    expect(toMarketOrder({ orderId: 1, assetId: 2, side: 'SELL', status: 'OPEN' })).toMatchObject({
+      side: 'SELL',
+      status: 'OPEN',
+    });
   });
 });

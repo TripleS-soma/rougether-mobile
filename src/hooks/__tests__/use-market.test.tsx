@@ -181,6 +181,56 @@ describe('useMarketActions — 주문 흐름 (#1427)', () => {
     expect(third).not.toBe(first[0]);
   });
 
+  it('재시도까지 네트워크 실패면 같은 내용 재탭은 같은 requestId, 내용이 바뀌면 새 requestId', async () => {
+    jest.mocked(fetchMarketCommand).mockResolvedValue(applied('FILLED'));
+    const net = new TypeError('Network request failed');
+    jest
+      .mocked(placeMarketOrder)
+      .mockRejectedValueOnce(net)
+      .mockRejectedValueOnce(net)
+      .mockRejectedValueOnce(net)
+      .mockResolvedValueOnce(pending)
+      .mockResolvedValueOnce(pending);
+    const { result } = await setup();
+
+    await act(async () => {
+      await result.current.placeOrder(BUY);
+    });
+    await act(async () => {
+      await result.current.placeOrder(BUY);
+    });
+    const ids = jest.mocked(placeMarketOrder).mock.calls.map((c) => c[0].requestId);
+    expect(ids).toHaveLength(4);
+    expect(new Set(ids).size).toBe(1);
+
+    await act(async () => {
+      await result.current.placeOrder({ ...BUY, price: 31 });
+    });
+    expect(jest.mocked(placeMarketOrder).mock.calls[4][0].requestId).not.toBe(ids[0]);
+  });
+
+  it('4xx 뒤 같은 내용 재탭은 새 requestId — 접수 안 된 게 확실하다', async () => {
+    jest
+      .mocked(placeMarketOrder)
+      .mockRejectedValue(
+        new ApiError(
+          409,
+          'POST',
+          '/market/orders',
+          JSON.stringify({ code: 'MARKET_INSUFFICIENT_COIN' }),
+        ),
+      );
+    const { result } = await setup();
+    await act(async () => {
+      await result.current.placeOrder(BUY);
+    });
+    await act(async () => {
+      await result.current.placeOrder(BUY);
+    });
+    const ids = jest.mocked(placeMarketOrder).mock.calls.map((c) => c[0].requestId);
+    expect(ids[0]).not.toBe(ids[1]);
+  });
+
   it('즉시 4xx는 재시도하지 않고 코드별 문구 — 접수 안 됨(accepted false)', async () => {
     jest
       .mocked(placeMarketOrder)

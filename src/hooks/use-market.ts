@@ -11,7 +11,7 @@
  * 꺼내 쓰고, 최신 콜백은 ref로 읽는다.
  */
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 
 import { getSessionUserId } from '@/api/auth';
 import { ErrorCode } from '@/api/error-codes';
@@ -123,8 +123,10 @@ export async function pollMarketCommand(
 }
 
 /** 같은 requestId로 네트워크 실패만 재시도한다. */
-async function sendWithRetry<T>(send: (requestId: string) => Promise<T>): Promise<T> {
-  const requestId = newRequestId();
+async function sendWithRetry<T>(
+  requestId: string,
+  send: (requestId: string) => Promise<T>,
+): Promise<T> {
   let lastErr: unknown;
   for (let attempt = 0; attempt <= MARKET_NETWORK_RETRIES; attempt += 1) {
     try {
@@ -308,8 +310,8 @@ export type MarketOrderInput = {
 };
 
 /**
- * 주문 결과. `accepted`는 접수(202)까지 갔는지 — false면 즉시 거절(4xx·네트워크)이라
- * 아무것도 맡기지 않았고, 시트를 열어 둔 채 고칠 수 있다.
+ * 주문 결과. `accepted`는 접수(202)를 확인했는지. false면 4xx 거절이거나 네트워크 실패다 —
+ * 네트워크 실패는 접수됐을 수도 있어서, 같은 내용으로 다시 누르면 같은 requestId를 보낸다.
  */
 export type MarketOrderOutcome =
   | { accepted: true; result: 'filled' | 'open' | 'cancelled' | 'pending' }
@@ -336,6 +338,20 @@ export function useMarketActions({
   const toastRef = useLatestRef(toast);
   const walletRef = useLatestRef(onWalletChanged);
   const pollRef = useLatestRef(poll);
+  // 접수 여부를 모르는 채 끝난 요청(네트워크·5xx·응답 파싱 실패) — 같은 내용으로 다시 누르면
+  // 같은 requestId를 보내 서버 멱등을 탄다. 응답을 잃었을 뿐 접수됐을 수 있어서다.
+  const unsettledRef = useRef<{ key: string; requestId: string } | null>(null);
+  const requestIdFor = useCallback((key: string) => {
+    const prev = unsettledRef.current;
+    if (prev && prev.key === key) return prev.requestId;
+    const requestId = newRequestId();
+    unsettledRef.current = { key, requestId };
+    return requestId;
+  }, []);
+  /** 결과가 확정됐으면(접수 또는 4xx 거절) 다음 누름은 새 요청이다. */
+  const settleRequest = useCallback((err?: unknown) => {
+    if (err === undefined || !isRetryable(err)) unsettledRef.current = null;
+  }, []);
 
   const { mutateAsync: placeAsync } = useMutation({
     mutationFn: ({ input, requestId }: { input: MarketOrderInput; requestId: string }) =>
@@ -431,15 +447,27 @@ export function useMarketActions({
   const placeOrder = useCallback(
     async (input: MarketOrderInput): Promise<MarketOrderOutcome> => {
       const kind = { side: input.side, source: input.side === 'SELL' ? input.source : undefined };
+      const key = JSON.stringify([
+        'order',
+        input.assetId,
+        input.side,
+        input.source ?? null,
+        input.price,
+        input.quantity,
+      ]);
       let accepted: MarketCommand;
       try {
-        accepted = await sendWithRetry((requestId) => placeAsync({ input, requestId }));
+        accepted = await sendWithRetry(requestIdFor(key), (requestId) =>
+          placeAsync({ input, requestId }),
+        );
       } catch (err) {
+        settleRequest(err);
         return fail(err, kind);
       }
+      settleRequest();
       return settle(accepted, kind);
     },
-    [placeAsync, settle, fail],
+    [placeAsync, settle, fail, requestIdFor, settleRequest],
   );
 
   /** 주문 취소 — 같은 접수·폴링 흐름. */
@@ -448,17 +476,22 @@ export function useMarketActions({
       const kind = { side: 'CANCEL' as const };
       let accepted: MarketCommand;
       try {
-        accepted = await sendWithRetry((requestId) => cancelAsync({ orderId, requestId }));
+        accepted = await sendWithRetry(
+          requestIdFor(JSON.stringify(['cancel', orderId])),
+          (requestId) => cancelAsync({ orderId, requestId }),
+        );
       } catch (err) {
+        settleRequest(err);
         if (err instanceof ApiError && err.code === ErrorCode.MARKET_ORDER_NOT_OPEN) {
           // 이미 끝난 주문 — 목록이 낡았다.
           void qc.invalidateQueries({ queryKey: queryKeys.market.all(userId) });
         }
         return fail(err, kind);
       }
+      settleRequest();
       return settle(accepted, kind);
     },
-    [cancelAsync, settle, fail, qc, userId],
+    [cancelAsync, settle, fail, qc, userId, requestIdFor, settleRequest],
   );
 
   /** 발행 — 성공하면 새 종목 상세(캐시에도 심는다), 실패하면 null. */

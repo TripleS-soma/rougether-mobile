@@ -83,7 +83,8 @@ const toLevel = (l: PriceLevel): MarketPriceLevel | null =>
   l.price == null ? null : { price: l.price, quantity: l.quantity ?? 0 };
 
 export function toMarketAssetCard(res: AssetCard): MarketAssetCard | null {
-  if (res.assetId == null) return null;
+  // 상태를 모르는 종목을 활성으로 보여 주지 않는다.
+  if (res.assetId == null || res.status == null) return null;
   return {
     assetId: res.assetId,
     itemId: res.itemId ?? null,
@@ -94,12 +95,12 @@ export function toMarketAssetCard(res: AssetCard): MarketAssetCard | null {
     bestAskPrice: res.bestAskPrice ?? null,
     askQuantity: res.askQuantity ?? 0,
     lastTradePrice: res.lastTradePrice ?? null,
-    status: res.status ?? 'ACTIVE',
+    status: res.status,
   };
 }
 
 export function toMarketAsset(res: MarketAssetResponse): MarketAsset {
-  if (res.assetId == null) throw new Error('market asset without id');
+  if (res.assetId == null || res.status == null) throw new Error('market asset without id/status');
   const asks = (res.asks ?? []).map(toLevel).filter((l): l is MarketPriceLevel => l !== null);
   const bids = (res.bids ?? []).map(toLevel).filter((l): l is MarketPriceLevel => l !== null);
   return {
@@ -112,7 +113,7 @@ export function toMarketAsset(res: MarketAssetResponse): MarketAsset {
     bestAskPrice: asks[0]?.price ?? null,
     askQuantity: asks.reduce((sum, l) => sum + l.quantity, 0),
     lastTradePrice: res.lastTradePrice ?? null,
-    status: res.status ?? 'ACTIVE',
+    status: res.status,
     isCreator: res.isCreator ?? false,
     unissuedQuantity: res.unissuedQuantity ?? 0,
     owned: res.owned ?? false,
@@ -127,18 +128,20 @@ const toTrade = (t: TradeItem): MarketTrade | null =>
     : { tradeId: t.tradeId, price: t.price, quantity: t.quantity ?? 1, tradedAt: t.tradedAt ?? '' };
 
 export function toMarketOrder(res: MarketOrderResponse | null | undefined): MarketOrder | null {
-  if (!res || res.orderId == null || res.assetId == null) return null;
+  // 방향·상태를 모르는 주문을 "대기 중 구매"로 꾸미지 않는다(취소 버튼·판매 중 개수가 틀어진다).
+  if (!res || res.orderId == null || res.assetId == null || res.side == null || res.status == null)
+    return null;
   return {
     orderId: res.orderId,
     assetId: res.assetId,
     name: res.name ?? '',
     assetKey: res.assetKey ?? null,
-    side: res.side ?? 'BUY',
+    side: res.side,
     source: res.source ?? null,
     price: res.price ?? 0,
     quantity: res.quantity ?? 1,
     filledQuantity: res.filledQuantity ?? 0,
-    status: res.status ?? 'OPEN',
+    status: res.status,
     expiresAt: res.expiresAt ?? null,
     createdAt: res.createdAt ?? null,
   };
