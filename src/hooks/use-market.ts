@@ -506,6 +506,10 @@ export function useMarketActions({
         return asset;
       } catch (err) {
         const code = err instanceof ApiError ? err.code : undefined;
+        // 4xx가 아니면 서버에선 발행됐을 수 있다(응답 유실·파싱 실패) — 목록을 다시 받게 한다.
+        if (!(err instanceof ApiError) || err.status >= 500) {
+          void qc.invalidateQueries({ queryKey: queryKeys.market.all(userId) });
+        }
         track('market_issue', {
           total_supply: totalSupply,
           result: 'error',
