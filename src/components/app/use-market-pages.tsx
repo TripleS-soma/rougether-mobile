@@ -8,6 +8,7 @@ import {
 } from 'react';
 
 import type { MarketOrdersFilter } from '@/api/market';
+import type { ReportReason } from '@/api/types';
 import { type Screen } from '@/components/app/navigation';
 import { MarketAssetScreen, type MarketPlaceOrder } from '@/components/screens/market-asset-screen';
 import { MarketOrdersScreen } from '@/components/screens/market-orders-screen';
@@ -21,7 +22,9 @@ import {
   useMarketAssets,
   useMyMarketOrders,
 } from '@/hooks/use-market';
+import { useModeration } from '@/hooks/use-moderation';
 import { useLatestRef } from '@/hooks/use-stable-value';
+import { i18n } from '@/i18n';
 import { track } from '@/lib/analytics';
 
 type ListState = ReturnType<typeof useMarketAssets>;
@@ -109,6 +112,18 @@ export function useMarketPages({
     onWalletChanged,
   });
 
+  // 가구 신고 (#1428) — 접수 안내만. 숨김은 운영자 검토 뒤 서버가 한다.
+  const showError = useCallback((message: string) => toast(message, 'error'), [toast]);
+  const { report } = useModeration({ onError: showError });
+  const reportAsset = useCallback(
+    async (id: number, reason: ReportReason, detail?: string) => {
+      const ok = await report({ kind: 'asset', assetId: id }, reason, detail);
+      if (ok) toast(i18n.t('member.moderation.toast.reported'), 'success');
+      return ok;
+    },
+    [report, toast],
+  );
+
   useEffect(() => {
     if (!MARKET_ENABLED) return;
     if (screen === 'marketAsset') track('market_view', { screen: 'asset' });
@@ -187,7 +202,7 @@ export function useMarketPages({
       coinBalance={coinBalance}
       onPlaceOrder={placeOrder}
       onOpenOrders={openOrdersScreen}
-      // TODO(#1427): 신고 API(서버 #423) 배선 후 onReport를 넘긴다 — 그 전엔 MARKET_ENABLED를 켜지 않는다.
+      onReport={reportAsset}
       onBack={() => setScreen('decor')}
     />
   ) : screen === 'marketOrders' ? (

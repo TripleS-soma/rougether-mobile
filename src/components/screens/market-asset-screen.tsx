@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { MarketAsset, MarketPriceLevel, MarketTrade } from '@/api/market';
-import type { MarketSide, MarketSource } from '@/api/types';
+import type { MarketSide, MarketSource, ReportReason } from '@/api/types';
 import { MarketAssetImage } from '@/components/screens/market/market-asset-image';
 import {
   MarketOrderSheet,
@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Loading } from '@/components/ui/loading';
 import { PawRefreshScroll } from '@/components/ui/paw-refresh-scroll';
+import { ReportSheet } from '@/components/ui/report-sheet';
 import { RetryState } from '@/components/ui/retry-state';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { MARKET_BOOK_DEPTH } from '@/constants/market';
@@ -52,10 +53,10 @@ export type MarketAssetScreenProps = {
   onPlaceOrder?: MarketPlaceOrder;
   onOpenOrders?: () => void;
   /**
-   * 신고 (App Store 1.2 — 공개 UGC). 넘겼을 때만 "신고하기"를 보여준다 — 신고 API
-   * (서버 #423) 배선은 별도 작업.
+   * 신고 (App Store 1.2 — 공개 UGC, #1428). 넘겼을 때만 "신고하기"를 보여준다.
+   * true면 접수된 것 — 시트를 닫는다. 결과 안내(토스트)는 호출부 몫.
    */
-  onReport?: (assetId: number) => void;
+  onReport?: (assetId: number, reason: ReportReason, detail?: string) => Promise<boolean> | boolean;
   onBack?: () => void;
   /** 상대 시각 기준 — 테스트 고정용. */
   now?: Date;
@@ -93,6 +94,18 @@ export function MarketAssetScreen({
   const screenStyle = useScreenStyle([]);
   const [draft, setDraft] = useState<MarketOrderDraft | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+
+  const submitReport = async (reason: ReportReason, detail?: string) => {
+    if (!asset || !onReport || reportSubmitting) return;
+    setReportSubmitting(true);
+    try {
+      if (await onReport(asset.assetId, reason, detail)) setReportOpen(false);
+    } finally {
+      setReportSubmitting(false);
+    }
+  };
 
   const submit = async ({ price, quantity }: { price: number; quantity: number }) => {
     if (!draft || submitting) return;
@@ -268,7 +281,7 @@ export function MarketAssetScreen({
                 <Button
                   label={tr('market.asset.report')}
                   variant="secondary"
-                  onPress={() => onReport(asset.assetId)}
+                  onPress={() => setReportOpen(true)}
                 />
               ) : null}
             </View>
@@ -276,6 +289,15 @@ export function MarketAssetScreen({
         )}
       </PawRefreshScroll>
 
+      {onReport ? (
+        <ReportSheet
+          visible={reportOpen}
+          targetLabel={tr('member.moderation.target.asset')}
+          submitting={reportSubmitting}
+          onSubmit={(reason, detail) => void submitReport(reason, detail)}
+          onClose={() => setReportOpen(false)}
+        />
+      ) : null}
       {asset ? (
         <MarketOrderSheet
           visible={draft != null}

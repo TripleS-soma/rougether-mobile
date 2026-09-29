@@ -67,11 +67,13 @@ describe('MarketAssetScreen (#1427)', () => {
     }
   });
 
-  it('onReport를 넘기면 신고하기가 종목 id로 부른다', async () => {
-    const onReport = jest.fn();
+  it('onReport를 넘기면 신고하기 → 사유를 골라 종목 id로 신고한다', async () => {
+    const onReport = jest.fn().mockResolvedValue(true);
     const ui = await render(<MarketAssetScreen asset={DEMO_MARKET_ASSET} onReport={onReport} />);
     await fireEvent.press(ui.getByLabelText('신고하기'));
-    expect(onReport).toHaveBeenCalledWith(1);
+    await fireEvent.press(ui.getByLabelText('저작권 침해'));
+    await fireEvent.press(ui.getAllByText('신고하기').at(-1)!);
+    expect(onReport).toHaveBeenCalledWith(1, 'COPYRIGHT', undefined);
   });
 
   it('구매 시트 — 최저 판매가로 채우고 보유 코인·환불 안내, 1~1,000 밖이면 막는다', async () => {

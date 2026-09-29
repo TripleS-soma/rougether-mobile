@@ -1279,7 +1279,7 @@ export const galleryEntries: GalleryEntry[] = [
           trades={DEMO_MARKET_TRADES}
           coinBalance={120}
           onPlaceOrder={() => true}
-          onReport={() => {}}
+          onReport={() => true}
         />
       </View>
     ),
