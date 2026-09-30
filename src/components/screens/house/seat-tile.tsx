@@ -190,6 +190,8 @@ function SeatTileBase({
               // 재실 좌석은 캐릭터 미지정 시 빈 방이 아니라 기본 캐릭터로.
               characterId={preview?.characterId}
               fill
+              // 평소엔 타일 크기로 줄여 푼다 — 원본은 집을 확대했을 때만 (성능 장부 M2).
+              sharp={zoomed}
               style={styles.roomPreviewFill}
             />
           </View>
@@ -203,6 +205,7 @@ function SeatTileBase({
               floorId={vacantFloor[0].id}
               floors={vacantFloor}
               fill
+              sharp={zoomed}
               style={vacantRoomStyle}
             />
           </View>
