@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { type RefObject, useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, type View } from 'react-native';
 
 import { useAnimatedValue } from '@/hooks/use-stable-value';
@@ -19,9 +19,8 @@ export type FlyingCoinSpec = { id: number; x: number; y: number; tx: number; ty:
  * 읽는 것 그대로다: 루트/알약 ref, 알약·스트릭 펄스 값, 날고 있는 코인 목록,
  * 표시 중인 보상, 그리고 보상을 띄우는 `showReward`.
  */
-export function useRewardFly(streakDays: number) {
+export function useRewardFly(streakDays: number, rootRef: RefObject<View | null>) {
   // 코인 플라이 (#440) — 완료 탭 지점에서 보상 알약(#1055)으로 포물선 비행.
-  const rootRef = useRef<View>(null);
   const rewardPillRef = useRef<View>(null);
   const flyTarget = useRef({ x: 0, y: 0 });
   const rewardPulse = useAnimatedValue(1);
@@ -50,7 +49,10 @@ export function useRewardFly(streakDays: number) {
       ]);
     });
   };
-  const showReward = (coins: number, from: FlyOrigin | null) => {
+  // 참조 고정 — 화면이 ref 핸들로 부른다(성능 장부 R4). 안에서 쓰는 건 전부 ref·setter다.
+  const launchRef = useRef(launchCoinAt);
+  launchRef.current = launchCoinAt;
+  const showReward = useCallback((coins: number, from: FlyOrigin | null) => {
     setReward((prev) => ({ coins: (prev?.coins ?? 0) + coins }));
     if (rewardTimer.current) clearTimeout(rewardTimer.current);
     rewardTimer.current = setTimeout(() => {
@@ -58,9 +60,9 @@ export function useRewardFly(streakDays: number) {
       flyTarget.current = { x: 0, y: 0 };
     }, REWARD_PILL_MS);
     if (!from) return;
-    if (flyTarget.current.x || flyTarget.current.y) launchCoinAt(from);
+    if (flyTarget.current.x || flyTarget.current.y) launchRef.current(from);
     else pendingFly.current = from;
-  };
+  }, []);
   const measureRewardPill = () => {
     rewardPillRef.current?.measureInWindow((x, y, w, h) => {
       flyTarget.current = { x: x + w / 2, y: y + h / 2 };
@@ -98,7 +100,6 @@ export function useRewardFly(streakDays: number) {
   }, [streakDays, streakPulse]);
 
   return {
-    rootRef,
     rewardPillRef,
     rewardPulse,
     streakPulse,
