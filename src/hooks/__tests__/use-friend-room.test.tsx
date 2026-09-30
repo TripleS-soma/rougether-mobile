@@ -3,7 +3,8 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 import type { ShopCatalogue } from '@/api/adapters';
 import { useFriendRoom } from '@/hooks/use-friend-room';
 import { jsonRes as res } from '@/test-utils/fetch';
-import { invalidateMemberRoom } from '@/lib/member-room-cache';
+import { createTestQueryClient, queryWrapper } from '@/test-utils/query-wrapper';
+import { useMemberRoomPreviews } from '@/hooks/use-member-room-previews';
 
 const CATALOGUE: ShopCatalogue = {
   furniture: [
@@ -16,8 +17,6 @@ const CATALOGUE: ShopCatalogue = {
 };
 
 const realFetch = global.fetch;
-// 구성원 방 공유 캐시(성능 장부 N5)는 모듈 수준이라 테스트마다 비운다 — 같은 id끼리 응답이 샌다.
-beforeEach(() => invalidateMemberRoom());
 afterEach(() => {
   global.fetch = realFetch;
 });
@@ -59,7 +58,7 @@ describe('useFriendRoom', () => {
       });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useFriendRoom());
+    const { result } = await renderHook(() => useFriendRoom(), { wrapper: queryWrapper() });
     await act(async () => {
       await result.current.load(11, 42, CATALOGUE);
     });
@@ -108,7 +107,7 @@ describe('useFriendRoom', () => {
       return res({});
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useFriendRoom());
+    const { result } = await renderHook(() => useFriendRoom(), { wrapper: queryWrapper() });
     await act(async () => {
       await result.current.load(11, 42, CATALOGUE);
     });
@@ -138,7 +137,7 @@ describe('useFriendRoom', () => {
     }) as unknown as typeof fetch;
 
     const masterFrames = { cat: ['characters/pose-a.webp', 'characters/pose-b.webp'] };
-    const { result } = await renderHook(() => useFriendRoom());
+    const { result } = await renderHook(() => useFriendRoom(), { wrapper: queryWrapper() });
     await act(async () => {
       await result.current.load(11, 42, CATALOGUE, masterFrames);
     });
@@ -164,7 +163,7 @@ describe('useFriendRoom', () => {
       return res({});
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useFriendRoom());
+    const { result } = await renderHook(() => useFriendRoom(), { wrapper: queryWrapper() });
     await act(async () => {
       // 마스터를 못 받은 상태(빈 맵) — 폴백이 살아 있어야 한다.
       await result.current.load(11, 42, CATALOGUE, {});
@@ -184,7 +183,7 @@ describe('useFriendRoom', () => {
       return res({});
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useFriendRoom());
+    const { result } = await renderHook(() => useFriendRoom(), { wrapper: queryWrapper() });
     await act(async () => {
       await result.current.load(11, 42, CATALOGUE);
     });
@@ -202,7 +201,7 @@ describe('useFriendRoom', () => {
       return res({});
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useFriendRoom());
+    const { result } = await renderHook(() => useFriendRoom(), { wrapper: queryWrapper() });
     await act(async () => {
       await result.current.load(11, 42, CATALOGUE);
     });
@@ -219,7 +218,7 @@ describe('useFriendRoom', () => {
 
   it('resets to the empty state when the ids are missing (demo houses)', async () => {
     global.fetch = jest.fn() as unknown as typeof fetch;
-    const { result } = await renderHook(() => useFriendRoom());
+    const { result } = await renderHook(() => useFriendRoom(), { wrapper: queryWrapper() });
     await act(async () => {
       await result.current.load(undefined, undefined, CATALOGUE);
     });
@@ -246,7 +245,7 @@ describe('useFriendRoom — 구성원 방 거미줄 청소 (#831)', () => {
   };
 
   const loaded = async () => {
-    const { result } = await renderHook(() => useFriendRoom());
+    const { result } = await renderHook(() => useFriendRoom(), { wrapper: queryWrapper() });
     await act(async () => {
       await result.current.load(1, 2, CATALOGUE);
     });
@@ -312,7 +311,7 @@ describe('useFriendRoom — 구성원 방 거미줄 청소 (#831)', () => {
       return res({});
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useFriendRoom());
+    const { result } = await renderHook(() => useFriendRoom(), { wrapper: queryWrapper() });
     await act(async () => {
       await result.current.load(11, 42, CATALOGUE);
     });
@@ -333,5 +332,55 @@ describe('useFriendRoom — 구성원 방 거미줄 청소 (#831)', () => {
     expect(result.current.friendRoom.routines.map((r) => r.title)).toEqual(['독서 30분']);
     expect(result.current.friendRoom.dayLoading).toBe(false);
     expect(dayUrls.some((u) => u.endsWith('/houses/11/members/42/day?date=2026-07-02'))).toBe(true);
+  });
+});
+
+describe('구성원 방 응답 공유 (성능 장부 N5)', () => {
+  const roomCalls = () =>
+    (global.fetch as jest.Mock).mock.calls.filter(([u]) => /\/members\/42\/room$/.test(String(u)))
+      .length;
+  const world = () => {
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.endsWith('/members/42/room')) return res({ slots: [], placements: [] });
+      return res({ items: [] });
+    }) as unknown as typeof fetch;
+  };
+
+  it('좌석 미리보기 직후 친구 방에 들어가면 방을 다시 받지 않는다', async () => {
+    world();
+    const client = createTestQueryClient();
+    const wrapper = queryWrapper(client);
+    const previews = await renderHook(() => useMemberRoomPreviews(), { wrapper });
+    const friend = await renderHook(() => useFriendRoom(), { wrapper });
+    await act(async () => {
+      await previews.result.current.load(11, [42], { furniture: [], wallpapers: [], floors: [], backgrounds: [], ownedIds: [] }); // prettier-ignore
+    });
+    expect(roomCalls()).toBe(1);
+    await act(async () => {
+      await friend.result.current.load(11, 42);
+    });
+    expect(roomCalls()).toBe(1);
+  });
+
+  it('거미줄을 치우면 다음 방문은 방을 다시 받는다', async () => {
+    world();
+    const client = createTestQueryClient();
+    const wrapper = queryWrapper(client);
+    const friend = await renderHook(() => useFriendRoom(), { wrapper });
+    await act(async () => {
+      await friend.result.current.load(11, 42);
+    });
+    (global.fetch as jest.Mock).mockImplementation(async (url: string) =>
+      url.includes('/cobweb')
+        ? res({ rewardAmount: 3 })
+        : res({ slots: [], placements: [], items: [] }),
+    );
+    await act(async () => {
+      await friend.result.current.cleanCobweb(11, 42);
+    });
+    await act(async () => {
+      await friend.result.current.load(11, 42);
+    });
+    expect(roomCalls()).toBe(2);
   });
 });

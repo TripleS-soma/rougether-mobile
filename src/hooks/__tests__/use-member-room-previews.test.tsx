@@ -8,7 +8,7 @@ import {
 } from '@/hooks/use-member-room-previews';
 import type { House, MemberRoomPreview } from '@/components/screens/house-screen';
 import { jsonRes as res } from '@/test-utils/fetch';
-import { invalidateMemberRoom } from '@/lib/member-room-cache';
+import { queryWrapper } from '@/test-utils/query-wrapper';
 
 const CATALOGUE: ShopCatalogue = {
   furniture: [
@@ -21,8 +21,6 @@ const CATALOGUE: ShopCatalogue = {
 };
 
 const realFetch = global.fetch;
-// 구성원 방 공유 캐시(성능 장부 N5)는 모듈 수준이라 테스트마다 비운다 — 같은 id끼리 응답이 샌다.
-beforeEach(() => invalidateMemberRoom());
 afterEach(() => {
   global.fetch = realFetch;
 });
@@ -42,7 +40,7 @@ describe('useMemberRoomPreviews', () => {
       return { ok: false, status: 500, text: async () => '{}' };
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useMemberRoomPreviews());
+    const { result } = await renderHook(() => useMemberRoomPreviews(), { wrapper: queryWrapper() });
     await act(async () => {
       await result.current.load(11, [42, 43], CATALOGUE);
     });
@@ -59,7 +57,7 @@ describe('useMemberRoomPreviews', () => {
       res({ character: { characterId: 1, code: 'otter' }, slots: [] }),
     );
     global.fetch = fetchMock as unknown as typeof fetch;
-    const { result } = await renderHook(() => useMemberRoomPreviews());
+    const { result } = await renderHook(() => useMemberRoomPreviews(), { wrapper: queryWrapper() });
     await act(async () => {
       await result.current.load(11, [42], CATALOGUE);
     });
@@ -83,7 +81,7 @@ describe('useMemberRoomPreviews', () => {
   it('does not poison the cache while the catalogue is still loading', async () => {
     global.fetch = jest.fn(async () => res({ slots: [] })) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useMemberRoomPreviews());
+    const { result } = await renderHook(() => useMemberRoomPreviews(), { wrapper: queryWrapper() });
     await act(async () => {
       // Pre-load catalogue (EMPTY): must neither fetch nor mark the house done.
       await result.current.load(11, [42], CATALOGUE, false);
@@ -108,7 +106,7 @@ describe('useMemberRoomPreviews', () => {
       return res({ slots: [] });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useMemberRoomPreviews());
+    const { result } = await renderHook(() => useMemberRoomPreviews(), { wrapper: queryWrapper() });
     let loading: Promise<void> | undefined;
     await act(async () => {
       loading = result.current.load(11, [42, 43], CATALOGUE);
@@ -128,7 +126,7 @@ describe('useMemberRoomPreviews', () => {
   it('loads a house once and refetches only when the house changes', async () => {
     global.fetch = jest.fn(async () => res({ slots: [] })) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useMemberRoomPreviews());
+    const { result } = await renderHook(() => useMemberRoomPreviews(), { wrapper: queryWrapper() });
     await act(async () => {
       await result.current.load(11, [42], CATALOGUE);
       await result.current.load(11, [42], CATALOGUE); // same house — cached
@@ -214,7 +212,7 @@ describe('useMemberRoomPreviews — clearCobweb (#831)', () => {
       });
     }) as unknown as typeof fetch;
 
-    const { result } = await renderHook(() => useMemberRoomPreviews());
+    const { result } = await renderHook(() => useMemberRoomPreviews(), { wrapper: queryWrapper() });
     await act(async () => {
       await result.current.load(1, [2, 3], CATALOGUE);
     });

@@ -4,6 +4,7 @@
  * the shop catalogue, keyed by membershipId. Loaded per house (cached until
  * the house changes); members whose fetch fails simply keep the plain tile.
  */
+import { type QueryClient, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useRef, useState } from 'react';
 
 import {
@@ -15,7 +16,8 @@ import {
 import type { House, MemberRoomPreview, RoomCell } from '@/components/screens/house/types';
 import { type CharacterId, DEFAULT_CHARACTER_ID } from '@/constants/characters';
 import { DEFAULT_WALLPAPER_ID } from '@/resources/furniture';
-import { fetchMemberRoomShared, invalidateMemberRoom } from '@/lib/member-room-cache';
+import { fetchHouseMemberRoom } from '@/api';
+import { queryKeys } from '@/lib/query-keys';
 
 /**
  * Re-derive my tiles' character from the live worn character (#282). The
@@ -60,7 +62,25 @@ export function characterIdForMember(
   );
 }
 
+/**
+ * 구성원 방 응답은 30초 동안 좌석 미리보기와 친구 방 방문이 나눠 쓴다 (성능 장부 N5) — 좌석을
+ * 보고 바로 들어가면 같은 방을 또 받던 것. react-query 캐시라 진행 중인 요청 공유·로그아웃 시
+ * 비우기가 따라온다. 방이 바뀐 걸 알면(거미줄 청소·내 방 저장) 그 키를 지운다.
+ */
+export const MEMBER_ROOM_STALE_MS = 30_000;
+
+export function fetchMemberRoom(qc: QueryClient, houseId: number, membershipId: number) {
+  return qc.fetchQuery({
+    queryKey: queryKeys.memberRoom.one(houseId, membershipId),
+    queryFn: () => fetchHouseMemberRoom(houseId, membershipId),
+    staleTime: MEMBER_ROOM_STALE_MS,
+    // 실패는 호출부가 조용히 접는다(타일은 단색으로 남음) — 재시도로 집 진입을 늦추지 않는다.
+    retry: false,
+  });
+}
+
 export function useMemberRoomPreviews() {
+  const qc = useQueryClient();
   const [previews, setPreviews] = useState<Record<number, MemberRoomPreview>>({});
   // One load per house — house switches replace the cache wholesale.
   const loadedHouseRef = useRef<number | null>(null);
@@ -82,7 +102,7 @@ export function useMemberRoomPreviews() {
         membershipIds.map(async (membershipId) => {
           try {
             // 친구 방 방문과 같은 응답을 나눠 쓴다 (성능 장부 N5).
-            const room = await fetchMemberRoomShared(houseId, membershipId);
+            const room = await fetchMemberRoom(qc, houseId, membershipId);
             // 표면(벽지·바닥·배경)만 슬롯에서 읽는다 — 서버가 거기 저장한다.
             const surfaces = fromFriendRoomSlots(room.slots ?? [], catalogue);
             const preview: MemberRoomPreview = {
@@ -109,7 +129,7 @@ export function useMemberRoomPreviews() {
         }),
       );
     },
-    [],
+    [qc],
   );
 
   /**
@@ -132,9 +152,9 @@ export function useMemberRoomPreviews() {
    */
   const invalidate = useCallback(() => {
     loadedHouseRef.current = null;
-    // 공유 응답 캐시도 — 안 버리면 다음 진입이 30초 안의 옛 방을 다시 쓴다.
-    invalidateMemberRoom();
-  }, []);
+    // 공유 응답도 — 안 버리면 다음 진입이 30초 안의 옛 방을 다시 쓴다.
+    qc.removeQueries({ queryKey: queryKeys.memberRoom.all });
+  }, [qc]);
 
   return { previews, load, clearCobweb, invalidate };
 }
